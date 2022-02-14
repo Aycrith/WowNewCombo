@@ -197,7 +197,7 @@
         "WhenUsable": true,
         "Requirements": [
           "SpellInRange:1",
-          "TargetCastingSpell || Health% < 33"
+          "(TargetCastingSpell && !TargetCastingSpell:3131) || Health% < 33"
         ],
         "MinRage": 10,
         "Form": "Druid_Bear"
