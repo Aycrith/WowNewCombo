@@ -1,4 +1,4 @@
-﻿using Core.Database;
+using Core.Database;
 using Core.GOAP;
 using SharedLib.NpcFinder;
 using Microsoft.Extensions.Logging;
@@ -194,25 +194,18 @@ namespace Core.Goals
 
         private void CheckForSkinning()
         {
-            if (classConfiguration.Skin)
+            if (!classConfiguration.Skin)
+                return;
+
+            bool targetSkinnable = false;
+            if (areaDb.CurrentArea != null && areaDb.CurrentArea.skinnable != null)
             {
-                var targetSkinnable = !playerReader.Unskinnable;
-
-                if (areaDb.CurrentArea != null && areaDb.CurrentArea.skinnable != null)
-                {
-                    targetSkinnable = areaDb.CurrentArea.skinnable.Contains(playerReader.TargetId);
-                    Log($"{playerReader.TargetId} is skinnable? {targetSkinnable}");
-                }
-                else
-                {
-                    Log($"{playerReader.TargetId} was not found in the database!");
-                }
-
-                Log($"Should skin ? {targetSkinnable}");
-                AddEffect(GoapKey.shouldskin, targetSkinnable);
-
-                SendActionEvent(new ActionEventArgs(GoapKey.shouldskin, targetSkinnable));
+                targetSkinnable = areaDb.CurrentArea.skinnable.Contains(playerReader.TargetId);
             }
+
+            Log($"Should skin {playerReader.TargetId} ? {targetSkinnable}");
+            AddEffect(GoapKey.shouldskin, targetSkinnable);
+            SendActionEvent(new ActionEventArgs(GoapKey.shouldskin, targetSkinnable));
         }
 
         private void GoalExit()

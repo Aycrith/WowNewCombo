@@ -69,7 +69,7 @@ namespace Core
 
         public PlayerClassEnum Class => (PlayerClassEnum)(reader.GetIntAtCell(46) - ((int)Race * 100f));
 
-        public bool Unskinnable => reader.GetIntAtCell(47) != 0; // Returns 1 if creature is unskinnable
+        // 47 empty
 
         public Stance Stance => new Stance(reader.GetIntAtCell(48));
         public Form Form => Stance.Get(this, Class);
