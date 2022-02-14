@@ -1,4 +1,4 @@
-﻿using Core.GOAP;
+using Core.GOAP;
 using SharedLib.NpcFinder;
 using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
@@ -7,9 +7,9 @@ namespace Core.Goals
 {
     public class SkinningGoal : GoapGoal
     {
-        public override float CostOfPerformingAction { get => 4.6f; }
+        public override float CostOfPerformingAction => 4.6f;
 
-        private ILogger logger;
+        private readonly ILogger logger;
         private readonly ConfigurableInput input;
         private readonly PlayerReader playerReader;
         private readonly Wait wait;
@@ -20,6 +20,7 @@ namespace Core.Goals
         private readonly CombatUtil combatUtil;
 
         private int lastLoot;
+        private bool canRun;
 
         public SkinningGoal(ILogger logger, ConfigurableInput input, AddonReader addonReader, Wait wait, StopMoving stopMoving, NpcNameTargeting npcNameTargeting, CombatUtil combatUtil)
         {
@@ -35,6 +36,12 @@ namespace Core.Goals
             this.npcNameTargeting = npcNameTargeting;
             this.combatUtil = combatUtil;
 
+            canRun = HaveItemRequirement();
+            bagReader.DataChanged -= BagReader_DataChanged;
+            bagReader.DataChanged += BagReader_DataChanged;
+            equipmentReader.OnEquipmentChanged -= EquipmentReader_OnEquipmentChanged;
+            equipmentReader.OnEquipmentChanged += EquipmentReader_OnEquipmentChanged;
+
             AddPrecondition(GoapKey.dangercombat, false);
             AddPrecondition(GoapKey.shouldskin, true);
 
@@ -48,20 +55,20 @@ namespace Core.Goals
             bagReader.HasItem(12709) ||
             bagReader.HasItem(19901) ||
 
-            equipmentReader.HasItem(7005) ||
-            equipmentReader.HasItem(12709) ||
-            equipmentReader.HasItem(19901);
+        public override bool CheckIfActionCanRun()
+        {
+            return canRun;
         }
 
         public override ValueTask OnEnter()
         {
             if (bagReader.BagsFull)
             {
-                logger.LogWarning("Inventory is full");
+                LogWarning("Inventory is full!");
                 SendActionEvent(new ActionEventArgs(GoapKey.shouldskin, false));
             }
 
-            Log($"OnEnter: Search for {NpcNames.Corpse}");
+            Log($"Search for {NpcNames.Corpse}");
             npcNameTargeting.ChangeNpcType(NpcNames.Corpse);
 
             lastLoot = playerReader.LastLootTime;
@@ -69,7 +76,6 @@ namespace Core.Goals
             stopMoving.Stop();
             combatUtil.Update();
 
-            Log($"Try to find {NpcNames.Corpse}");
             npcNameTargeting.WaitForNUpdate(1);
 
             int attempts = 1;
@@ -80,7 +86,6 @@ namespace Core.Goals
                     if (combatUtil.AquiredTarget())
                     {
                         Log("Interrupted!");
-
                         return ValueTask.CompletedTask;
                     }
                 }
@@ -95,7 +100,6 @@ namespace Core.Goals
                     if (foundTarget)
                     {
                         Log("Interrupted!");
-
                         return ValueTask.CompletedTask;
                     }
 
@@ -130,7 +134,7 @@ namespace Core.Goals
                 }
                 else
                 {
-                    Log($"Target is not skinnable - NPC Count: {npcNameTargeting.NpcCount}");
+                    Log($"Target({playerReader.TargetId}) is not skinnable - NPC Count: {npcNameTargeting.NpcCount}");
 
                     GoalExit();
                     return ValueTask.CompletedTask;
@@ -168,10 +172,38 @@ namespace Core.Goals
             wait.Update(1);
         }
 
+        private void EquipmentReader_OnEquipmentChanged(object? sender, (int, int) e)
+        {
+            canRun = HaveItemRequirement();
+        }
+
+        private void BagReader_DataChanged(object? sender, EventArgs e)
+        {
+            canRun = HaveItemRequirement();
+        }
+
+        private bool HaveItemRequirement()
+        {
+            return
+                bagReader.HasItem(7005) ||
+                bagReader.HasItem(12709) ||
+                bagReader.HasItem(19901) ||
+                bagReader.HasItem(40772) ||
+                bagReader.HasItem(40893) ||
+
+                equipmentReader.HasItem(7005) ||
+                equipmentReader.HasItem(12709) ||
+                equipmentReader.HasItem(19901);
+        }
+
         private void Log(string text)
         {
             logger.LogInformation($"{nameof(SkinningGoal)}: {text}");
         }
 
+        private void LogWarning(string text)
+        {
+            logger.LogWarning($"{nameof(SkinningGoal)}: {text}");
+        }
     }
 }
