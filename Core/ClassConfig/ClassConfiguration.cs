@@ -22,7 +22,7 @@ namespace Core
     }
 
 
-    public class ClassConfiguration
+    public class ClassConfiguration : IDisposable
     {
         public string ClassName { get; set; } = string.Empty;
         public bool Loot { get; set; } = true;
@@ -210,6 +210,15 @@ namespace Core
             }
 
             CheckConfigConsistency(logger);
+        }
+
+        public void Dispose()
+        {
+            Pull.Dispose();
+            Combat.Dispose();
+            Parallel.Dispose();
+            Adhoc.Dispose();
+            NPC.Dispose();
         }
 
         private void CheckConfigConsistency(ILogger logger)

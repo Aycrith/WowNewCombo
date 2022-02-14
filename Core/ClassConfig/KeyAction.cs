@@ -7,7 +7,7 @@ using System.Numerics;
 
 namespace Core
 {
-    public partial class KeyAction
+    public partial class KeyAction : IDisposable
     {
         public string Name { get; set; } = string.Empty;
         public bool HasCastBar { get; set; }
@@ -77,6 +77,7 @@ namespace Core
         }
 
         private PlayerReader playerReader = null!;
+        private ActionBarCostReader costReader = null!;
 
         private ILogger logger = null!;
 
@@ -88,6 +89,7 @@ namespace Core
         public void Initialise(AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger, KeyActions? keyActions = null)
         {
             this.playerReader = addonReader.PlayerReader;
+            this.costReader = addonReader.ActionBarCostReader;
             this.logger = logger;
 
             ResetCharges();
@@ -126,6 +128,11 @@ namespace Core
             InitMinPowerType(playerReader, addonReader.ActionBarCostReader);
 
             requirementFactory.InitialiseRequirements(this, keyActions);
+        }
+
+        public void Dispose()
+        {
+            costReader.OnActionCostChanged -= ActionBarCostReader_OnActionCostChanged;
         }
 
         public void InitialiseForm(AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger)
@@ -242,7 +249,11 @@ namespace Core
                     formCost = playerReader.FormCost[FormEnum];
                 }
 
-                logger.LogInformation($"[{Name}] Update {type} cost to {cost} from {oldValue}" + (formCost > 0 ? $" +{formCost} Mana to change {FormEnum} Form" : ""));
+                LogPowerCostChange(logger, Name, type, cost, oldValue);
+                if (formCost > 0)
+                {
+                    logger.LogInformation($"[{Name}] +{formCost} Mana to change {FormEnum} Form");
+                }
             }
 
             actionBarCostReader.OnActionCostChanged -= ActionBarCostReader_OnActionCostChanged;

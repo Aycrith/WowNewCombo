@@ -1,9 +1,10 @@
 ﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 
 namespace Core
 {
-    public partial class KeyActions
+    public partial class KeyActions : IDisposable
     {
         public List<KeyAction> Sequence { get; } = new List<KeyAction>();
 
@@ -25,6 +26,11 @@ namespace Core
             }
 
             Sequence.ForEach(i => i.Initialise(addonReader, requirementFactory, logger, this));
+        }
+
+        public void Dispose()
+        {
+            Sequence.ForEach(i => i.Dispose());
         }
 
         [LoggerMessage(
