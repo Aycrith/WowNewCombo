@@ -7,7 +7,7 @@ using System.Numerics;
 
 namespace Core
 {
-    public class KeyAction
+    public partial class KeyAction : IDisposable
     {
         public string Name { get; set; } = string.Empty;
         public bool HasCastBar { get; set; }
@@ -77,17 +77,19 @@ namespace Core
         }
 
         private PlayerReader playerReader = null!;
+        private ActionBarCostReader costReader = null!;
 
         private ILogger logger = null!;
 
-        public void CreateDynamicBinding(RequirementFactory requirementFactory)
+        public void InitDynamicBinding(RequirementFactory requirementFactory)
         {
-            requirementFactory.CreateDynamicBindings(this);
+            requirementFactory.InitDynamicBindings(this);
         }
 
         public void Initialise(AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger, KeyActions? keyActions = null)
         {
             this.playerReader = addonReader.PlayerReader;
+            this.costReader = addonReader.ActionBarCostReader;
             this.logger = logger;
 
             ResetCharges();
@@ -123,9 +125,14 @@ namespace Core
 
             ConsoleKeyFormHash = ((int)FormEnum * 1000) + (int)ConsoleKey;
 
-            InitialiseMinResourceRequirement(playerReader, addonReader.ActionBarCostReader);
+            InitMinPowerType(playerReader, addonReader.ActionBarCostReader);
 
             requirementFactory.InitialiseRequirements(this, keyActions);
+        }
+
+        public void Dispose()
+        {
+            costReader.OnActionCostChanged -= ActionBarCostReader_OnActionCostChanged;
         }
 
         public void InitialiseForm(AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger)
@@ -214,7 +221,7 @@ namespace Core
             return !string.IsNullOrEmpty(Form);
         }
 
-        private void InitialiseMinResourceRequirement(PlayerReader playerReader, ActionBarCostReader actionBarCostReader)
+        private void InitMinPowerType(PlayerReader playerReader, ActionBarCostReader actionBarCostReader)
         {
             var (type, cost) = actionBarCostReader.GetCostByActionBarSlot(playerReader, this);
             if (cost != 0)
@@ -242,7 +249,11 @@ namespace Core
                     formCost = playerReader.FormCost[FormEnum];
                 }
 
-                logger.LogInformation($"[{Name}] Update {type} cost to {cost} from {oldValue}" + (formCost > 0 ? $" +{formCost} Mana to change {FormEnum} Form" : ""));
+                LogPowerCostChange(logger, Name, type, cost, oldValue);
+                if (formCost > 0)
+                {
+                    logger.LogInformation($"[{Name}] +{formCost} Mana to change {FormEnum} Form");
+                }
             }
 
             actionBarCostReader.OnActionCostChanged -= ActionBarCostReader_OnActionCostChanged;
@@ -279,17 +290,27 @@ namespace Core
 
                 if (e.cost != oldValue)
                 {
-                    logger.LogInformation($"[{Name}] Update {e.powerType} cost to {e.cost} from {oldValue}");
+                    LogPowerCostChange(logger, Name, e.powerType, e.cost, oldValue);
                 }
             }
         }
+
+        #region Logging
 
         public void LogInformation(string message)
         {
             if (Log)
             {
-                logger.LogInformation($"{Name}: {message}");
+                logger.LogInformation($"[{Name}]: {message}");
             }
         }
+
+        [LoggerMessage(
+            EventId = 9,
+            Level = LogLevel.Information,
+            Message = "[{name}] Update {type} cost to {newCost} from {oldCost}")]
+        static partial void LogPowerCostChange(ILogger logger, string name, PowerType type, int newCost, int oldCost);
+
+        #endregion
     }
 }

@@ -286,6 +286,7 @@ namespace Core
             Stopwatch stopwatch = Stopwatch.StartNew();
             try
             {
+                ClassConfig?.Dispose();
                 ClassConfig = ReadClassConfiguration(classFile, pathFile);
             }
             catch (Exception e)
