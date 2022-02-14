@@ -22,17 +22,17 @@ namespace Core
 
         private readonly KeyActions keyActions;
 
-        private readonly Dictionary<string, Func<int>> valueDictionary = new Dictionary<string, Func<int>>();
-
-        private readonly Dictionary<string, Func<bool>> booleanDictionary = new Dictionary<string, Func<bool>>();
-
-        private readonly Dictionary<string, Func<string, Requirement>> keywordDictionary = new Dictionary<string, Func<string, Requirement>>();
-
-        private readonly List<string> negate = new List<string>()
+        private readonly List<string> negateKeywords = new()
         {
-           "not ",
-           "!"
+            "not ",
+            "!"
         };
+
+        private readonly Dictionary<string, Func<int>> intVariables;
+
+        private readonly Dictionary<string, Func<bool>> boolVariables;
+
+        private readonly Dictionary<string, Func<string, Requirement>> requirementMap;
 
         public RequirementFactory(ILogger logger, AddonReader addonReader, NpcNameFinder npcNameFinder)
         {
@@ -48,26 +48,26 @@ namespace Core
 
             this.keyActions = new KeyActions();
 
-            keywordDictionary = new Dictionary<string, Func<string, Requirement>>()
+            requirementMap = new Dictionary<string, Func<string, Requirement>>()
             {
-                { ">=", GetInclusiveValueBasedRequirement },
-                { "<=", GetInclusiveValueBasedRequirement },
-                { ">", GetExcusiveValueBasedRequirement },
-                { "<", GetExcusiveValueBasedRequirement },
-                { "==", GetEqualsValueBasedRequirement },
-                { "npcID:", CreateNpcRequirement },
-                { "BagItem:", CreateBagItemRequirement },
-                { "SpellInRange:", CreateSpellInRangeRequirement },
-                { "TargetCastingSpell", CreateTargetCastingSpellRequirement },
-                { "Form", CreateFormRequirement },
-                { "Race", CreateRaceRequirement },
-                { "Spell", CreateSpellRequirement },
-                { "Talent", CreateTalentRequirement },
-                { "Trigger:", CreateTriggerRequirement },
-                { "Usable:", CreateUsableRequirement }
+                { ">=", CreateGreaterOrEquals },
+                { "<=", CreateLesserOrEquals },
+                { ">", CreateGreaterThen },
+                { "<", CreateLesserThen },
+                { "==", CreateEquals },
+                { "npcID:", CreateNpcId },
+                { "BagItem:", CreateBagItem },
+                { "SpellInRange:", CreateSpellInRange },
+                { "TargetCastingSpell", CreateTargetCastingSpell },
+                { "Form", CreateForm },
+                { "Race", CreateRace },
+                { "Spell", CreateSpell },
+                { "Talent", CreateTalent },
+                { "Trigger:", CreateTrigger },
+                { "Usable:", CreateUsable }
             };
 
-            booleanDictionary = new Dictionary<string, Func<bool>>
+            boolVariables = new Dictionary<string, Func<bool>>
             {
                 // Target Based
                 { "TargetYieldXP", () => playerReader.TargetYieldXP },
@@ -240,7 +240,7 @@ namespace Core
                 { "Serpent Sting", ()=> playerReader.TargetDebuffs.SerpentSting },
             };
 
-            valueDictionary = new Dictionary<string, Func<int>>
+            intVariables = new Dictionary<string, Func<int>>
             {
                 { "Health%", () => playerReader.HealthPercent },
                 { "TargetHealth%", () => playerReader.TargetHealthPercentage },
@@ -268,26 +268,26 @@ namespace Core
             if (keyActions != null)
                 this.keyActions.Sequence.AddRange(keyActions.Sequence);
 
-            CreateConsumableRequirement("Water", item);
-            CreateConsumableRequirement("Food", item);
+            AddConsumableRequirement("Water", item);
+            AddConsumableRequirement("Food", item);
 
-            CreatePerKeyActionRequirements(item);
+            InitPerKeyActionRequirements(item);
 
             item.RequirementObjects.Clear();
             foreach (string requirement in item.Requirements)
             {
                 List<string> expressions = InfixToPostfix.Convert(requirement);
-                Stack<Requirement> stack = new Stack<Requirement>();
-                foreach (string c in expressions)
+                Stack<Requirement> stack = new();
+                foreach (string expr in expressions)
                 {
-                    if (c.Contains("&&"))
+                    if (expr.Contains("&&"))
                     {
                         var a = stack.Pop();
                         var b = stack.Pop();
 
                         stack.Push(b.And(a));
                     }
-                    else if (c.Contains("||"))
+                    else if (expr.Contains("||"))
                     {
                         var a = stack.Pop();
                         var b = stack.Pop();
@@ -296,20 +296,21 @@ namespace Core
                     }
                     else
                     {
-                        if (string.IsNullOrEmpty(c.Trim()))
+                        string trim = expr.Trim();
+                        if (string.IsNullOrEmpty(trim))
                         {
                             continue;
                         }
 
-                        stack.Push(GetRequirement(item.Name, c));
+                        stack.Push(CreateRequirement(item.Name, trim));
                     }
                 }
 
                 item.RequirementObjects.Add(stack.Pop());
             }
 
-            CreateMinRequirement(item.RequirementObjects, item);
-            CreateTargetIsCastingRequirement(item.RequirementObjects, item);
+            AddMinRequirement(item.RequirementObjects, item);
+            AddTargetIsCastingRequirement(item.RequirementObjects, item);
 
             if (item.WhenUsable && !string.IsNullOrEmpty(item.Key))
             {
@@ -317,15 +318,15 @@ namespace Core
                 item.RequirementObjects.Add(CreateActionNotInGameCooldown(item));
             }
 
-            CreateCooldownRequirement(item.RequirementObjects, item);
-            CreateChargeRequirement(item.RequirementObjects, item);
+            AddCooldownRequirement(item.RequirementObjects, item);
+            AddChargeRequirement(item.RequirementObjects, item);
         }
 
-        public void PopulateUserDefinedIntVariables(Dictionary<string, int> intKeyValues)
+        public void InitUserDefinedIntVariables(Dictionary<string, int> intKeyValues)
         {
             foreach (var kvp in intKeyValues)
             {
-                if (!valueDictionary.TryAdd(kvp.Key, () => kvp.Value))
+                if (!intVariables.TryAdd(kvp.Key, () => kvp.Value))
                 {
                     throw new Exception($"Unable to add user defined variable to values. [{kvp.Key} -> {kvp.Value}]");
                 }
@@ -336,29 +337,49 @@ namespace Core
             }
         }
 
-        public void CreateDynamicBindings(KeyAction item)
+        public void InitDynamicBindings(KeyAction item)
         {
             BindCooldown(item);
             BindMinCost(item);
         }
 
-        private void CreatePerKeyActionRequirements(KeyAction item)
+        private void BindCooldown(KeyAction item)
         {
-            CreatePerKeyActionRequirementByKey(item, "CD");
-            CreatePerKeyActionRequirementByKey(item, "Cost");
+            string key = $"CD_{item.Name}";
+            if (!intVariables.ContainsKey(key))
+            {
+                intVariables.Add(key,
+                    () => addonReader.ActionBarCooldownReader.GetRemainingCooldown(playerReader, item));
+            }
         }
 
-        private void CreatePerKeyActionRequirementByKey(KeyAction item, string prefixKey)
+        private void BindMinCost(KeyAction item)
+        {
+            string key = $"Cost_{item.Name}";
+            if (!intVariables.ContainsKey(key))
+            {
+                intVariables.Add(key,
+                    () => addonReader.ActionBarCostReader.GetCostByActionBarSlot(playerReader, item).cost);
+            }
+        }
+
+        private void InitPerKeyActionRequirements(KeyAction item)
+        {
+            InitPerKeyActionRequirementByKey(item, "CD");
+            InitPerKeyActionRequirementByKey(item, "Cost");
+        }
+
+        private void InitPerKeyActionRequirementByKey(KeyAction item, string prefixKey)
         {
             string key = $"{prefixKey}_{item.Name}";
-            if (valueDictionary.ContainsKey(prefixKey))
-                valueDictionary.Remove(prefixKey);
+            if (intVariables.ContainsKey(prefixKey))
+                intVariables.Remove(prefixKey);
 
-            if (valueDictionary.ContainsKey(key))
-                valueDictionary.Add(prefixKey, valueDictionary[key]);
+            if (intVariables.ContainsKey(key))
+                intVariables.Add(prefixKey, intVariables[key]);
         }
 
-        private void CreateTargetIsCastingRequirement(List<Requirement> itemRequirementObjects, KeyAction item)
+        private void AddTargetIsCastingRequirement(List<Requirement> itemRequirementObjects, KeyAction item)
         {
             if (item.UseWhenTargetIsCasting != null)
             {
@@ -370,15 +391,15 @@ namespace Core
             }
         }
 
-        private void CreateMinRequirement(List<Requirement> RequirementObjects, KeyAction item)
+        private void AddMinRequirement(List<Requirement> RequirementObjects, KeyAction item)
         {
-            CreateMinRequirement(RequirementObjects, PowerType.Mana, item);
-            CreateMinRequirement(RequirementObjects, PowerType.Rage, item);
-            CreateMinRequirement(RequirementObjects, PowerType.Energy, item);
-            CreateMinComboPointsRequirement(RequirementObjects, item);
+            AddMinPowerTypeRequirement(RequirementObjects, PowerType.Mana, item);
+            AddMinPowerTypeRequirement(RequirementObjects, PowerType.Rage, item);
+            AddMinPowerTypeRequirement(RequirementObjects, PowerType.Energy, item);
+            AddMinComboPointsRequirement(RequirementObjects, item);
         }
 
-        private void CreateMinRequirement(List<Requirement> RequirementObjects, PowerType type, KeyAction keyAction)
+        private void AddMinPowerTypeRequirement(List<Requirement> RequirementObjects, PowerType type, KeyAction keyAction)
         {
             switch (type)
             {
@@ -393,7 +414,7 @@ namespace Core
                 case PowerType.Rage:
                     RequirementObjects.Add(new Requirement
                     {
-                        HasRequirement = () => playerReader.PTCurrent >= keyAction.MinRage,
+                        HasRequirement = () => playerReader.PTCurrent >= keyAction.MinRage || playerReader.Buffs.Clearcasting,
                         LogMessage = () => $"{type} {playerReader.PTCurrent} >= {keyAction.MinRage}",
                         VisibleIfHasRequirement = keyAction.MinRage > 0
                     });
@@ -401,7 +422,7 @@ namespace Core
                 case PowerType.Energy:
                     RequirementObjects.Add(new Requirement
                     {
-                        HasRequirement = () => playerReader.PTCurrent >= keyAction.MinEnergy,
+                        HasRequirement = () => playerReader.PTCurrent >= keyAction.MinEnergy || playerReader.Buffs.Clearcasting,
                         LogMessage = () => $"{type} {playerReader.PTCurrent} >= {keyAction.MinEnergy}",
                         VisibleIfHasRequirement = keyAction.MinEnergy > 0
                     });
@@ -409,7 +430,7 @@ namespace Core
             }
         }
 
-        private void CreateMinComboPointsRequirement(List<Requirement> RequirementObjects, KeyAction item)
+        private void AddMinComboPointsRequirement(List<Requirement> RequirementObjects, KeyAction item)
         {
             if (item.MinComboPoints > 0)
             {
@@ -419,6 +440,80 @@ namespace Core
                     LogMessage = () => $"Combo point {playerReader.ComboPoints} >= {item.MinComboPoints}"
                 });
             }
+        }
+
+        private static void AddCooldownRequirement(List<Requirement> RequirementObjects, KeyAction item)
+        {
+            if (item.Cooldown > 0)
+            {
+                RequirementObjects.Add(new Requirement
+                {
+                    HasRequirement = () => item.GetCooldownRemaining() == 0,
+                    LogMessage = () => $"Cooldown {item.GetCooldownRemaining() / 1000:F1}",
+                    VisibleIfHasRequirement = false
+                });
+            }
+        }
+
+        private static void AddChargeRequirement(List<Requirement> RequirementObjects, KeyAction item)
+        {
+            if (item.Charge > 1)
+            {
+                RequirementObjects.Add(new Requirement
+                {
+                    HasRequirement = () => item.GetChargeRemaining() != 0,
+                    LogMessage = () => $"Charge {item.GetChargeRemaining()}"
+                });
+            }
+        }
+
+        private static void AddConsumableRequirement(string name, KeyAction item)
+        {
+            if (item.Name == name)
+            {
+                item.StopBeforeCast = true;
+                item.WhenUsable = true;
+                item.AfterCastWaitBuff = true;
+
+                item.Requirements.Add("!Swimming");
+                item.Requirements.Add("!Falling");
+            }
+        }
+
+
+        public Requirement CreateRequirement(string name, string requirement)
+        {
+            LogProcessingRequirement(logger, name, requirement);
+
+            string? negated = negateKeywords.FirstOrDefault(x => requirement.StartsWith(x));
+            if (!string.IsNullOrEmpty(negated))
+            {
+                requirement = requirement[negated.Length..];
+            }
+
+            string? key = requirementMap.Keys.FirstOrDefault(x => requirement.Contains(x));
+            if (!string.IsNullOrEmpty(key))
+            {
+                var requirementObj = requirementMap[key](requirement);
+                return negated != null ? requirementObj.Negate(negated) : requirementObj;
+            }
+
+            if (boolVariables.ContainsKey(requirement))
+            {
+                var requirementObj = new Requirement
+                {
+                    HasRequirement = boolVariables[requirement],
+                    LogMessage = () => requirement
+                };
+                return negated != null ? requirementObj.Negate(negated) : requirementObj;
+            }
+
+            LogUnknownRequirement(logger, requirement, string.Join(", ", boolVariables.Keys));
+            return new Requirement
+            {
+                HasRequirement = () => false,
+                LogMessage = () => $"UNKNOWN REQUIREMENT! {requirement}"
+            };
         }
 
         private Requirement CreateActionUsableRequirement(KeyAction item)
@@ -442,114 +537,14 @@ namespace Core
             string key = $"CD_{item.Name}";
             return new Requirement
             {
-                HasRequirement = () => valueDictionary[key]() == 0,
+                HasRequirement = () => intVariables[key]() == 0,
                 VisibleIfHasRequirement = false,
                 LogMessage = () =>
-                    $"CD {valueDictionary[key]() / 1000:F1}"
+                    $"CD {intVariables[key]() / 1000:F1}"
             };
         }
 
-        private void BindCooldown(KeyAction item)
-        {
-            string key = $"CD_{item.Name}";
-            if (!valueDictionary.ContainsKey(key))
-            {
-                valueDictionary.Add(key,
-                    () => addonReader.ActionBarCooldownReader.GetRemainingCooldown(playerReader, item));
-            }
-        }
-
-        private void BindMinCost(KeyAction item)
-        {
-            string key = $"Cost_{item.Name}";
-            if (!valueDictionary.ContainsKey(key))
-            {
-                valueDictionary.Add(key,
-                    () => addonReader.ActionBarCostReader.GetCostByActionBarSlot(playerReader, item).cost);
-            }
-        }
-
-        private static void CreateCooldownRequirement(List<Requirement> RequirementObjects, KeyAction item)
-        {
-            if (item.Cooldown > 0)
-            {
-                RequirementObjects.Add(new Requirement
-                {
-                    HasRequirement = () => item.GetCooldownRemaining() == 0,
-                    LogMessage = () => $"Cooldown {item.GetCooldownRemaining() / 1000:F1}",
-                    VisibleIfHasRequirement = false
-                });
-            }
-        }
-
-        private static void CreateChargeRequirement(List<Requirement> RequirementObjects, KeyAction item)
-        {
-            if (item.Charge > 1)
-            {
-                RequirementObjects.Add(new Requirement
-                {
-                    HasRequirement = () => item.GetChargeRemaining() != 0,
-                    LogMessage = () => $"Charge {item.GetChargeRemaining()}",
-                    VisibleIfHasRequirement = true
-                });
-            }
-        }
-
-        private static void CreateConsumableRequirement(string name, KeyAction item)
-        {
-            if (item.Name == name)
-            {
-                item.StopBeforeCast = true;
-                item.WhenUsable = true;
-                item.AfterCastWaitBuff = true;
-
-                item.Requirements.Add("not Swimming");
-                item.Requirements.Add("not Falling");
-            }
-        }
-
-
-        public Requirement GetRequirement(string name, string requirement)
-        {
-            LogProcessingRequirement(logger, name, requirement);
-
-            requirement = requirement.Trim();
-
-            bool negated = false;
-            string negateKeyword = negate.FirstOrDefault(x => requirement.StartsWith(x)) ?? string.Empty;
-            if (!string.IsNullOrEmpty(negateKeyword))
-            {
-                requirement = requirement[negateKeyword.Length..];
-                negated = true;
-            }
-
-            string? key = keywordDictionary.Keys.FirstOrDefault(x => requirement.Contains(x));
-            if (!string.IsNullOrEmpty(key))
-            {
-                var requirementObj = keywordDictionary[key](requirement);
-                return negated ? requirementObj.Negate(negateKeyword) : requirementObj;
-            }
-
-            if (booleanDictionary.ContainsKey(requirement))
-            {
-                var requirementObj = new Requirement
-                {
-                    HasRequirement = booleanDictionary[requirement],
-                    LogMessage = () => $"{requirement}"
-                };
-                return negated ? requirementObj.Negate(negateKeyword) : requirementObj;
-            }
-
-            logger.LogInformation($"UNKNOWN REQUIREMENT! \"{requirement}\": try one of: {string.Join(", ", booleanDictionary.Keys)}");
-            return new Requirement
-            {
-                HasRequirement = () => false,
-                LogMessage = () => $"UNKNOWN REQUIREMENT! {requirement}"
-            };
-        }
-
-
-        private Requirement CreateTargetCastingSpellRequirement(string requirement)
+        private Requirement CreateTargetCastingSpell(string requirement)
         {
             if (requirement.Contains(':'))
             {
@@ -576,7 +571,7 @@ namespace Core
             }
         }
 
-        private Requirement CreateFormRequirement(string requirement)
+        private Requirement CreateForm(string requirement)
         {
             var parts = requirement.Split(":");
             var form = Enum.Parse<Form>(parts[1]);
@@ -588,7 +583,7 @@ namespace Core
             };
         }
 
-        private Requirement CreateRaceRequirement(string requirement)
+        private Requirement CreateRace(string requirement)
         {
             var parts = requirement.Split(":");
             var race = Enum.Parse<RaceEnum>(parts[1]);
@@ -600,7 +595,7 @@ namespace Core
             };
         }
 
-        private Requirement CreateSpellRequirement(string requirement)
+        private Requirement CreateSpell(string requirement)
         {
             var parts = requirement.Split(":");
             var name = parts[1].Trim();
@@ -621,7 +616,7 @@ namespace Core
             };
         }
 
-        private Requirement CreateTalentRequirement(string requirement)
+        private Requirement CreateTalent(string requirement)
         {
             var parts = requirement.Split(":");
             var name = parts[1].Trim();
@@ -634,7 +629,7 @@ namespace Core
             };
         }
 
-        private Requirement CreateTriggerRequirement(string requirement)
+        private Requirement CreateTrigger(string requirement)
         {
             var parts = requirement.Split(":");
             int bit = int.Parse(parts[1]);
@@ -647,7 +642,7 @@ namespace Core
             };
         }
 
-        private Requirement CreateNpcRequirement(string requirement)
+        private Requirement CreateNpcId(string requirement)
         {
             var parts = requirement.Split(":");
             var npcId = int.Parse(parts[1]);
@@ -665,7 +660,7 @@ namespace Core
             };
         }
 
-        private Requirement CreateBagItemRequirement(string requirement)
+        private Requirement CreateBagItem(string requirement)
         {
             var parts = requirement.Split(":");
             var itemId = int.Parse(parts[1]);
@@ -684,7 +679,7 @@ namespace Core
             };
         }
 
-        private Requirement CreateSpellInRangeRequirement(string requirement)
+        private Requirement CreateSpellInRange(string requirement)
         {
             var parts = requirement.Split(":");
             var bitId = int.Parse(parts[1]);
@@ -696,133 +691,55 @@ namespace Core
             };
         }
 
-        private Requirement CreateUsableRequirement(string requirement)
+        private Requirement CreateUsable(string requirement)
         {
             var parts = requirement.Split(":");
             string name = parts[1].Trim();
-
-            if (keyActions == null)
-            {
-                throw new ArgumentNullException("keyActions must be present!");
-            }
 
             var keyAction = keyActions.Sequence.First(x => x.Name == name);
             return CreateActionUsableRequirement(keyAction);
         }
 
-        private Requirement GetExcusiveValueBasedRequirement(string requirement)
+
+        private Requirement CreateGreaterThen(string requirement)
         {
-            var symbol = "<";
-            if (requirement.Contains('>'))
-            {
-                symbol = ">";
-            }
-
-            var parts = requirement.Split(symbol);
-            var key = parts[0].Trim();
-
-            Func<int> value = () => 0;
-            if (int.TryParse(parts[1], out int v))
-            {
-                value = () => v;
-            }
-            else
-            {
-                string variable = parts[1].Trim();
-                if (valueDictionary.ContainsKey(variable))
-                {
-                    value = valueDictionary[variable];
-                }
-            }
-
-            if (!valueDictionary.ContainsKey(key))
-            {
-                logger.LogInformation($"UNKNOWN REQUIREMENT! {requirement}: try one of: {string.Join(", ", valueDictionary.Keys)}");
-                return new Requirement
-                {
-                    HasRequirement = () => false,
-                    LogMessage = () => $"UNKNOWN REQUIREMENT! {requirement}"
-                };
-            }
-
-            var valueCheck = valueDictionary[key];
-            if (symbol == ">")
-            {
-                return new Requirement
-                {
-                    HasRequirement = () => valueCheck() > value(),
-                    LogMessage = () => $"{key} {valueCheck()} > {value()}"
-                };
-            }
-            else
-            {
-                return new Requirement
-                {
-                    HasRequirement = () => valueCheck() < value(),
-                    LogMessage = () => $"{key} {valueCheck()} < {value()}"
-                };
-            }
+            return CreateArithmeticRequirement(">", requirement);
         }
 
-        private Requirement GetInclusiveValueBasedRequirement(string requirement)
+        private Requirement CreateLesserThen(string requirement)
         {
-            var symbol = "<=";
-            if (requirement.Contains(">="))
-            {
-                symbol = ">=";
-            }
-
-            var parts = requirement.Split(symbol);
-            var key = parts[0].Trim();
-
-            Func<int> value = () => 0;
-            if (int.TryParse(parts[1], out int v))
-            {
-                value = () => v;
-            }
-            else
-            {
-                string variable = parts[1].Trim();
-                if (valueDictionary.ContainsKey(variable))
-                {
-                    value = valueDictionary[variable];
-                }
-            }
-
-            if (!valueDictionary.ContainsKey(key))
-            {
-                logger.LogInformation($"UNKNOWN REQUIREMENT! {requirement}: try one of: {string.Join(", ", valueDictionary.Keys)}");
-                return new Requirement
-                {
-                    HasRequirement = () => false,
-                    LogMessage = () => $"UNKNOWN REQUIREMENT! {requirement}"
-                };
-            }
-
-            var valueCheck = valueDictionary[key];
-            if (symbol == ">=")
-            {
-                return new Requirement
-                {
-                    HasRequirement = () => valueCheck() >= value(),
-                    LogMessage = () => $"{key} {valueCheck()} >= {value()}"
-                };
-            }
-            else
-            {
-                return new Requirement
-                {
-                    HasRequirement = () => valueCheck() <= value(),
-                    LogMessage = () => $"{key} {valueCheck()} <= {value()}"
-                };
-            }
+            return CreateArithmeticRequirement("<", requirement);
         }
 
-        private Requirement GetEqualsValueBasedRequirement(string requirement)
+        private Requirement CreateGreaterOrEquals(string requirement)
         {
-            var symbol = "==";
+            return CreateArithmeticRequirement(">=", requirement);
+        }
+
+        private Requirement CreateLesserOrEquals(string requirement)
+        {
+            return CreateArithmeticRequirement("<=", requirement);
+        }
+
+        private Requirement CreateEquals(string requirement)
+        {
+            return CreateArithmeticRequirement("==", requirement);
+        }
+
+        private Requirement CreateArithmeticRequirement(string symbol, string requirement)
+        {
             var parts = requirement.Split(symbol);
             var key = parts[0].Trim();
+
+            if (!intVariables.ContainsKey(key))
+            {
+                LogUnknownRequirement(logger, requirement, string.Join(", ", intVariables.Keys));
+                return new Requirement
+                {
+                    HasRequirement = () => false,
+                    LogMessage = () => $"UNKNOWN REQUIREMENT! {requirement}"
+                };
+            }
 
             Func<int> value = () => 0;
             if (int.TryParse(parts[1], out int v))
@@ -832,40 +749,67 @@ namespace Core
             else
             {
                 string variable = parts[1].Trim();
-                if (valueDictionary.ContainsKey(variable))
+                if (intVariables.ContainsKey(variable))
                 {
-                    value = valueDictionary[variable];
+                    value = intVariables[variable];
                 }
             }
 
-            if (!valueDictionary.ContainsKey(key))
+            return symbol switch
             {
-                logger.LogInformation($"UNKNOWN REQUIREMENT! {requirement}: try one of: {string.Join(", ", valueDictionary.Keys)}");
-                return new Requirement
+                "==" => new Requirement
+                {
+                    HasRequirement = () => intVariables[key]() == value(),
+                    LogMessage = () => $"{key} {intVariables[key]()} {symbol} {value()}"
+                },
+                ">" => new Requirement
+                {
+                    HasRequirement = () => intVariables[key]() > value(),
+                    LogMessage = () => $"{key} {intVariables[key]()} {symbol} {value()}"
+                },
+                "<" => new Requirement
+                {
+                    HasRequirement = () => intVariables[key]() < value(),
+                    LogMessage = () => $"{key} {intVariables[key]()} {symbol} {value()}"
+                },
+                ">=" => new Requirement
+                {
+                    HasRequirement = () => intVariables[key]() >= value(),
+                    LogMessage = () => $"{key} {intVariables[key]()} {symbol} {value()}"
+                },
+                "<=" => new Requirement
+                {
+                    HasRequirement = () => intVariables[key]() <= value(),
+                    LogMessage = () => $"{key} {intVariables[key]()} {symbol} {value()}"
+                },
+                _ => new Requirement
                 {
                     HasRequirement = () => false,
-                    LogMessage = () => $"UNKNOWN REQUIREMENT! {requirement}"
-                };
-            }
-
-            var valueCheck = valueDictionary[key];
-            return new Requirement
-            {
-                HasRequirement = () => valueCheck() == value(),
-                LogMessage = () => $"{key} {valueCheck()} == {value()}"
+                    LogMessage = () => $"UNKNOWN ARITHMETIC REQUIREMENT! {key} {intVariables[key]()} ? {value()}"
+                },
             };
         }
+
+        #region Logging
+
+        [LoggerMessage(
+            EventId = 11,
+            Level = LogLevel.Information,
+            Message = "[{typeName}] Defined int variable [{key} -> {value}]")]
+        static partial void LogUserDefinedValue(ILogger logger, string typeName, string key, int value);
 
         [LoggerMessage(
             EventId = 12,
             Level = LogLevel.Information,
-            Message = "[{typeName}] Added user defined int variable [{key} -> {value}]")]
-        static partial void LogUserDefinedValue(ILogger logger, string typeName, string key, int value);
+            Message = "[{name}] Requirement: \"{requirement}\"")]
+        static partial void LogProcessingRequirement(ILogger logger, string name, string requirement);
 
         [LoggerMessage(
             EventId = 13,
-            Level = LogLevel.Information,
-            Message = "[{name}] Processing requirement: \"{requirement}\"")]
-        static partial void LogProcessingRequirement(ILogger logger, string name, string requirement);
+            Level = LogLevel.Error,
+            Message = "UNKNOWN REQUIREMENT! {requirement}: try one of: {available}")]
+        static partial void LogUnknownRequirement(ILogger logger, string requirement, string available);
+
+        #endregion
     }
 }

@@ -14,7 +14,7 @@ namespace Core
                 LogDynamicBinding(logger, prefix);
             }
 
-            Sequence.ForEach(i => i.CreateDynamicBinding(requirementFactory));
+            Sequence.ForEach(i => i.InitDynamicBinding(requirementFactory));
         }
 
         public void Initialise(string prefix, AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger)

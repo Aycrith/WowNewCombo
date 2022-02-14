@@ -108,7 +108,7 @@ namespace Core
         {
             SpiritPathFilename = string.Empty;
 
-            requirementFactory.PopulateUserDefinedIntVariables(IntVariables);
+            requirementFactory.InitUserDefinedIntVariables(IntVariables);
 
             Jump.Key = JumpKey;
             Jump.Initialise(addonReader, requirementFactory, logger);

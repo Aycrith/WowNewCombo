@@ -7,7 +7,7 @@ using System.Numerics;
 
 namespace Core
 {
-    public class KeyAction
+    public partial class KeyAction
     {
         public string Name { get; set; } = string.Empty;
         public bool HasCastBar { get; set; }
@@ -80,9 +80,9 @@ namespace Core
 
         private ILogger logger = null!;
 
-        public void CreateDynamicBinding(RequirementFactory requirementFactory)
+        public void InitDynamicBinding(RequirementFactory requirementFactory)
         {
-            requirementFactory.CreateDynamicBindings(this);
+            requirementFactory.InitDynamicBindings(this);
         }
 
         public void Initialise(AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger, KeyActions? keyActions = null)
@@ -123,7 +123,7 @@ namespace Core
 
             ConsoleKeyFormHash = ((int)FormEnum * 1000) + (int)ConsoleKey;
 
-            InitialiseMinResourceRequirement(playerReader, addonReader.ActionBarCostReader);
+            InitMinPowerType(playerReader, addonReader.ActionBarCostReader);
 
             requirementFactory.InitialiseRequirements(this, keyActions);
         }
@@ -214,7 +214,7 @@ namespace Core
             return !string.IsNullOrEmpty(Form);
         }
 
-        private void InitialiseMinResourceRequirement(PlayerReader playerReader, ActionBarCostReader actionBarCostReader)
+        private void InitMinPowerType(PlayerReader playerReader, ActionBarCostReader actionBarCostReader)
         {
             var (type, cost) = actionBarCostReader.GetCostByActionBarSlot(playerReader, this);
             if (cost != 0)
@@ -279,17 +279,27 @@ namespace Core
 
                 if (e.cost != oldValue)
                 {
-                    logger.LogInformation($"[{Name}] Update {e.powerType} cost to {e.cost} from {oldValue}");
+                    LogPowerCostChange(logger, Name, e.powerType, e.cost, oldValue);
                 }
             }
         }
+
+        #region Logging
 
         public void LogInformation(string message)
         {
             if (Log)
             {
-                logger.LogInformation($"{Name}: {message}");
+                logger.LogInformation($"[{Name}]: {message}");
             }
         }
+
+        [LoggerMessage(
+            EventId = 9,
+            Level = LogLevel.Information,
+            Message = "[{name}] Update {type} cost to {newCost} from {oldCost}")]
+        static partial void LogPowerCostChange(ILogger logger, string name, PowerType type, int newCost, int oldCost);
+
+        #endregion
     }
 }
