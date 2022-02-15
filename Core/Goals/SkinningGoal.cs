@@ -1,11 +1,12 @@
-using Core.GOAP;
+﻿using Core.GOAP;
 using SharedLib.NpcFinder;
 using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
+using System;
 
 namespace Core.Goals
 {
-    public class SkinningGoal : GoapGoal
+    public class SkinningGoal : GoapGoal, IDisposable
     {
         public override float CostOfPerformingAction => 4.6f;
 
@@ -48,12 +49,11 @@ namespace Core.Goals
             AddEffect(GoapKey.shouldskin, false);
         }
 
-        public override bool CheckIfActionCanRun()
+        public void Dispose()
         {
-            return
-            bagReader.HasItem(7005) ||
-            bagReader.HasItem(12709) ||
-            bagReader.HasItem(19901) ||
+            bagReader.DataChanged -= BagReader_DataChanged;
+            equipmentReader.OnEquipmentChanged -= EquipmentReader_OnEquipmentChanged;
+        }
 
         public override bool CheckIfActionCanRun()
         {

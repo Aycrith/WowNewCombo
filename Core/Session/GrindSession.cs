@@ -1,19 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
 
 namespace Core.Session
 {
-    public class GrindSession : IGrindSession
+    public class GrindSession : IGrindSession, IDisposable
     {
         private readonly IBotController _botController;
         private readonly IGrindSessionHandler _grindSessionHandler;
+        private readonly CancellationTokenSource cts;
         private Thread? _autoUpdateThread;
 
         public GrindSession(IBotController botController, IGrindSessionHandler grindSessionHandler)
         {
+            cts = new CancellationTokenSource();
             _botController = botController;
             _grindSessionHandler = grindSessionHandler;
         }
@@ -73,6 +74,11 @@ namespace Core.Session
             }
         }
 
+        public void Dispose()
+        {
+            cts?.Cancel();
+        }
+
         public void StartBotSession()
         {
             Active = true;
@@ -83,19 +89,16 @@ namespace Core.Session
             LevelFrom = _botController.AddonReader.PlayerReader.Level.Value;
             XpFrom = _botController.AddonReader.PlayerReader.PlayerXp.Value;
             MobsKilled = _botController.AddonReader.LevelTracker.MobsKilled;
-            _autoUpdateThread = new Thread(() => Task.Factory.StartNew(AutoUpdate));
+            _autoUpdateThread = new Thread(() => AutoUpdate());
             _autoUpdateThread.Start();
         }
 
-        private async Task AutoUpdate()
+        private void AutoUpdate()
         {
-            if (_autoUpdateThread != null)
+            while (Active && !cts.IsCancellationRequested)
             {
-                while (Active)
-                {
-                    StopBotSession("auto save", true);
-                    await Task.Delay(TimeSpan.FromMinutes(1));
-                }
+                StopBotSession("auto save", true);
+                cts.Token.WaitHandle.WaitOne(TimeSpan.FromMinutes(1));
             }
         }
 

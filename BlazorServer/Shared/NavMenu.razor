@@ -1,8 +1,10 @@
 ﻿@inject Core.IBotController botController
 @inject Microsoft.Extensions.Logging.ILogger logger
 
-@using SharedLib;
-@using Game;
+@implements IDisposable
+
+@using SharedLib
+@using Game
 
 <div class="top-row pl-4 navbar navbar-dark">
     <button class="sidebar-text-toggler" @onclick="ToggleNavText">
@@ -183,29 +185,27 @@ else
 
         if (DataFrameConfiguration.Exists())
         {
-            botController.ProfileLoaded += (o, e) =>
-            {
-                base.InvokeAsync(() =>
-                {
-                    try
-                    {
-                        StateHasChanged();
-                    }
-                    catch { }
-                });
-            };
+            botController.ProfileLoaded -= OnProfileLoaded;
+            botController.ProfileLoaded += OnProfileLoaded;
 
-            botController.StatusChanged += (o, e) =>
-            {
-                base.InvokeAsync(() =>
-                {
-                    try
-                    {
-                        StateHasChanged();
-                    }
-                    catch { }
-                });
-            };
+            botController.StatusChanged -= OnStatusChanged;
+            botController.StatusChanged += OnStatusChanged;
         }
+    }
+
+    public void Dispose()
+    {
+        botController.ProfileLoaded -= OnProfileLoaded;
+        botController.StatusChanged -= OnStatusChanged;
+    }
+
+    private void OnProfileLoaded(object? s, EventArgs e)
+    {
+        base.InvokeAsync(() => StateHasChanged());
+    }
+
+    private void OnStatusChanged(object? s, EventArgs e)
+    {
+        base.InvokeAsync(() => StateHasChanged());
     }
 }

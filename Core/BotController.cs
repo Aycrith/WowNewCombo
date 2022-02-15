@@ -70,7 +70,7 @@ namespace Core
         private Wait wait;
 
         public event EventHandler? ProfileLoaded;
-        public event EventHandler<bool>? StatusChanged;
+        public event EventHandler? StatusChanged;
 
         private readonly AutoResetEvent addonAutoResetEvent = new(false);
         private readonly AutoResetEvent npcNameFinderAutoResetEvent = new(false);
@@ -258,7 +258,7 @@ namespace Core
                     AddonReader.SoftReset();
                 }
 
-                StatusChanged?.Invoke(this, actionThread.Active);
+                StatusChanged?.Invoke(this, EventArgs.Empty);
             }
         }
 
@@ -362,10 +362,34 @@ namespace Core
 
         public void Dispose()
         {
+            if (GrindSession is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
+
+            // hookup events between actions
+            GoapAgent?.AvailableGoals.ToList().ForEach(a =>
+            {
+                if (this.actionThread != null)
+                {
+                    a.ActionEvent -= this.actionThread.OnActionEvent;
+                }
+
+                a.ActionEvent -= GoapAgent.OnActionEvent;
+
+                // tell other action about my actions
+                GoapAgent?.AvailableGoals.ToList().ForEach(b =>
+                {
+                    if (b != a) { a.ActionEvent -= b.OnActionEvent; }
+                });
+            });
+            GoapAgent?.Dispose();
+
             npcNameFinderAutoResetEvent.Dispose();
             addonAutoResetEvent.Dispose();
             WowScreen.Dispose();
             addonDataProvider?.Dispose();
+            AddonReader.Dispose();
         }
 
         public void StopBot()
@@ -373,7 +397,7 @@ namespace Core
             if (actionThread != null)
             {
                 actionThread.Active = false;
-                StatusChanged?.Invoke(this, actionThread.Active);
+                StatusChanged?.Invoke(this, EventArgs.Empty);
             }
         }
 

@@ -1,6 +1,8 @@
 ﻿@using Core
+@using SharedLib
 @inject Core.IBotController botController
 @inject Core.IAddonReader addonReader
+@implements IDisposable
 
 @if (addonReader.PlayerReader != null)
 {
@@ -27,26 +29,27 @@
 </div>
 }
 
-@using SharedLib; 
 @code {
 
     protected override void OnInitialized()
     {
         if (DataFrameConfiguration.Exists())
         {
-            ((Core.AddonReader)addonReader).AddonDataChanged += (o, e) =>
-            {
-                base.InvokeAsync(() =>
-                {
-                    try
-                    {
-                        StateHasChanged();
-                    }
-                    catch { }
-                });
-            };
+            addonReader.AddonDataChanged -= OnAddonDataChanged;
+            addonReader.AddonDataChanged += OnAddonDataChanged;
         }
     }
+
+    public void Dispose()
+    {
+        addonReader.AddonDataChanged -= OnAddonDataChanged;
+    }
+
+    private void OnAddonDataChanged(object? s, EventArgs e)
+    {
+        base.InvokeAsync(() => StateHasChanged());
+    }
+
 
     public class ObjectField
     {

@@ -2,8 +2,9 @@
 
 namespace Core
 {
-    public class LevelTracker
+    public class LevelTracker : IDisposable
     {
+        private readonly AddonReader addonReader;
         private readonly PlayerReader playerReader;
 
         private DateTime levelStartTime = DateTime.UtcNow;
@@ -15,9 +16,10 @@ namespace Core
         public int MobsKilled { get; private set; }
         public int Death { get; private set; }
 
-        public LevelTracker(PlayerReader playerReader, EventHandler? playerDeath, CreatureHistory creatureHistory)
+        public LevelTracker(AddonReader addonReader)
         {
-            this.playerReader = playerReader;
+            this.addonReader = addonReader;
+            this.playerReader = addonReader.PlayerReader;
 
             playerReader.Level.Changed -= PlayerLevel_Changed;
             playerReader.Level.Changed += PlayerLevel_Changed;
@@ -25,11 +27,19 @@ namespace Core
             playerReader.PlayerXp.Changed -= PlayerExp_Changed;
             playerReader.PlayerXp.Changed += PlayerExp_Changed;
 
-            playerDeath -= OnPlayerDeath;
-            playerDeath += OnPlayerDeath;
+            addonReader.PlayerDeath -= OnPlayerDeath;
+            addonReader.PlayerDeath += OnPlayerDeath;
 
-            creatureHistory.KillCredit -= OnKillCredit;
-            creatureHistory.KillCredit += OnKillCredit;
+            addonReader.CreatureHistory.KillCredit -= OnKillCredit;
+            addonReader.CreatureHistory.KillCredit += OnKillCredit;
+        }
+
+        public void Dispose()
+        {
+            playerReader.Level.Changed -= PlayerLevel_Changed;
+            playerReader.PlayerXp.Changed -= PlayerExp_Changed;
+            addonReader.PlayerDeath -= OnPlayerDeath;
+            addonReader.CreatureHistory.KillCredit -= OnKillCredit;
         }
 
         public void Reset()

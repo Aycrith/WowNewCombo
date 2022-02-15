@@ -1,7 +1,8 @@
 ﻿@using Core
+@using SharedLib
 @inject Core.IBotController botController
 @inject Core.IAddonReader addonReader
-@using SharedLib;
+@implements IDisposable
 
 <button class="btn btn-sm btn-primary" @onclick="ToggleBot" disabled="@(disableButton ? "disabled" : null)">
 @if (!botController.IsBotActive)
@@ -27,18 +28,20 @@ else
             botController.ProfileLoaded -= OnProfileLoaded;
             botController.ProfileLoaded += OnProfileLoaded;
 
-            ((Core.AddonReader)addonReader).AddonDataChanged += (o, e) =>
-            {
-                base.InvokeAsync(() =>
-                {
-                    try
-                    {
-                        StateHasChanged();
-                    }
-                    catch { }
-                });
-            };
+            addonReader.AddonDataChanged -= OnAddonDataChanged;
+            addonReader.AddonDataChanged += OnAddonDataChanged;
         }
+    }
+
+    public void Dispose()
+    {
+        addonReader.AddonDataChanged -= OnAddonDataChanged;
+        botController.ProfileLoaded -= OnProfileLoaded;
+    }
+
+    private void OnAddonDataChanged(object? s, EventArgs e)
+    {
+        base.InvokeAsync(() => StateHasChanged());
     }
 
     private void ToggleBot()

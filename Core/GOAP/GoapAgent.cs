@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace Core.GOAP
 {
@@ -49,6 +48,7 @@ namespace Core.GOAP
 
         public void Dispose()
         {
+            this.AvailableGoals.Where(x => x is IDisposable).AsEnumerable().OfType<IDisposable>().ToList().ForEach(x => x.Dispose());
             this.addonReader.CreatureHistory.KillCredit -= OnKillCredit;
         }
 
