@@ -1,6 +1,7 @@
 ﻿@using Core
 @inject Core.IBotController botController
 @inject Core.IAddonReader addonReader
+@implements IDisposable
 
 <div class="card" style="margin-top: 10px">
     <div class="card-header">
@@ -39,17 +40,18 @@
     {
         if (DataFrameConfiguration.Exists())
         {
-            ((Core.AddonReader)addonReader).AddonDataChanged += (o, e) =>
-            {
-                base.InvokeAsync(() =>
-                {
-                    try
-                    {
-                        StateHasChanged();
-                    }
-                    catch { }
-                });
-            };
+            addonReader.AddonDataChanged -= OnAddonDataChanged;
+            addonReader.AddonDataChanged += OnAddonDataChanged;
         }
+    }
+
+    public void Dispose()
+    {
+        addonReader.AddonDataChanged -= OnAddonDataChanged;
+    }
+
+    private void OnAddonDataChanged(object? s, EventArgs e)
+    {
+        base.InvokeAsync(() => StateHasChanged());
     }
 }

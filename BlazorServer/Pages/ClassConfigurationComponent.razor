@@ -1,6 +1,7 @@
 ﻿@using Core
 @inject Core.IBotController botController
 @inject Core.IAddonReader addonReader
+@implements IDisposable
 
 @if (classConfig != null)
 {
@@ -71,18 +72,20 @@
             botController.ProfileLoaded -= OnProfileLoaded;
             botController.ProfileLoaded += OnProfileLoaded;
 
-            ((Core.AddonReader)addonReader).AddonDataChanged += (o, e) =>
-            {
-                base.InvokeAsync(() =>
-                {
-                    try
-                    {
-                        StateHasChanged();
-                    }
-                    catch { }
-                });
-            };
+            addonReader.AddonDataChanged -= OnAddonDataChanged;
+            addonReader.AddonDataChanged += OnAddonDataChanged;
         }
+    }
+
+    public void Dispose()
+    {
+        addonReader.AddonDataChanged -= OnAddonDataChanged;
+        botController.ProfileLoaded -= OnProfileLoaded;
+    }
+
+    private void OnAddonDataChanged(object? s, EventArgs e)
+    {
+        base.InvokeAsync(() => StateHasChanged());
     }
 
     public void OnGet()

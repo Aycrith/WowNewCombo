@@ -56,6 +56,11 @@
         LoggerSink.OnLogChanged += LogChanged;
     }
 
+    public void Dispose()
+    {
+        LoggerSink.OnLogChanged -= LogChanged;
+    }
+
     private async void LogChanged(object? sender, EventArgs args)
     {
         await InvokeAsync(() =>
@@ -64,8 +69,4 @@
         });
     }
 
-    public void Dispose()
-    {
-        LoggerSink.OnLogChanged -= LogChanged;
-    }
 }

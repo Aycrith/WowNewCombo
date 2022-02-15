@@ -1,6 +1,7 @@
 ﻿@using SharedLib
 @inject Core.IBotController botController
 @inject Core.IAddonReader addonReader
+@implements IDisposable
 
 <style>
     .form-group > * {
@@ -59,23 +60,24 @@
         {
             RefreshData();
 
-            ((Core.AddonReader)addonReader).AddonDataChanged += (o, e) =>
-            {
-                base.InvokeAsync(() =>
-                {
-                    try
-                    {
-                        StateHasChanged();
-                    }
-                    catch { }
-                });
-            };
+            addonReader.AddonDataChanged -= OnAddonDataChanged;
+            addonReader.AddonDataChanged += OnAddonDataChanged;
         }
+    }
+
+    public void Dispose()
+    {
+        addonReader.AddonDataChanged -= OnAddonDataChanged;
     }
 
     public void OnGet()
     {
         RefreshData();
+    }
+
+    private void OnAddonDataChanged(object? s, EventArgs e)
+    {
+        base.InvokeAsync(() => StateHasChanged());
     }
 
     private void LoadClassProfile()

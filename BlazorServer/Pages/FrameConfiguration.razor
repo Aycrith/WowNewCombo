@@ -184,6 +184,9 @@ else if (frameConfigurator != null)
 
     public void Dispose()
     {
+        if (frameConfigurator != null)
+            frameConfigurator.OnUpdate -= OnUpdate;
+
         frameConfigurator?.Dispose();
     }
 

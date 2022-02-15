@@ -215,8 +215,8 @@
 
     protected override void OnInitialized()
     {
-        ((Core.AddonReader)addonReader).AddonDataChanged -= OnAddonDataChanged;
-        ((Core.AddonReader)addonReader).AddonDataChanged += OnAddonDataChanged;
+        addonReader.AddonDataChanged -= OnAddonDataChanged;
+        addonReader.AddonDataChanged += OnAddonDataChanged;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -233,7 +233,7 @@
 
     protected async ValueTask DisposeAsync()
     {
-        ((Core.AddonReader)addonReader).AddonDataChanged -= OnAddonDataChanged;
+        addonReader.AddonDataChanged -= OnAddonDataChanged;
 
         await JSRuntime.InvokeVoidAsync("dispose");
     }

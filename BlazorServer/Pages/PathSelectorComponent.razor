@@ -2,6 +2,7 @@
 @using SharedLib; 
 @inject Core.IBotController botController
 @inject Core.IAddonReader addonReader
+@implements IDisposable
 
 <div class="card @(Hide ? "hide" : "")" style="margin-top: 10px">
     <div class="card-header">
@@ -48,18 +49,15 @@
             botController.ProfileLoaded -= OnProfileLoaded;
             botController.ProfileLoaded += OnProfileLoaded;
 
-            ((Core.AddonReader)addonReader).AddonDataChanged += (o, e) =>
-            {
-                base.InvokeAsync(() =>
-                {
-                    try
-                    {
-                        StateHasChanged();
-                    }
-                    catch { }
-                });
-            };
+            addonReader.AddonDataChanged -= OnAddonDataChanged;
+            addonReader.AddonDataChanged += OnAddonDataChanged;
         }
+    }
+
+    public void Dispose()
+    {
+        addonReader.AddonDataChanged -= OnAddonDataChanged;
+        botController.ProfileLoaded -= OnProfileLoaded;
     }
 
     public void OnGet()
@@ -75,6 +73,11 @@
     private void OnProfileLoaded(object? sender, EventArgs e)
     {
         ValidateButton();
+    }
+
+    private void OnAddonDataChanged(object? s, EventArgs e)
+    {
+        base.InvokeAsync(() => StateHasChanged());
     }
 
     private void ValidateButton()

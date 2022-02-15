@@ -125,14 +125,14 @@
         botController.ProfileLoaded -= OnProfileLoaded;
         botController.ProfileLoaded += OnProfileLoaded;
 
-        ((Core.AddonReader)addonReader).AddonDataChanged -= OnAddonDataChanged;
-        ((Core.AddonReader)addonReader).AddonDataChanged += OnAddonDataChanged;
+        addonReader.AddonDataChanged -= OnAddonDataChanged;
+        addonReader.AddonDataChanged += OnAddonDataChanged;
 
-        ((Core.AddonReader)addonReader).ZoneChanged -= OnZoneChanged;
-        ((Core.AddonReader)addonReader).ZoneChanged += OnZoneChanged;
+        addonReader.ZoneChanged -= OnZoneChanged;
+        addonReader.ZoneChanged += OnZoneChanged;
 
-        ((Core.AddonReader)addonReader).PlayerDeath -= OnPlayerDeath;
-        ((Core.AddonReader)addonReader).PlayerDeath += OnPlayerDeath;
+        addonReader.PlayerDeath -= OnPlayerDeath;
+        addonReader.PlayerDeath += OnPlayerDeath;
 
         UpdateZoneName();
         UpdateDeaths();
@@ -153,9 +153,9 @@
 
         botController.ProfileLoaded -= OnProfileLoaded;
 
-        ((Core.AddonReader)addonReader).AddonDataChanged -= OnAddonDataChanged;
-        ((Core.AddonReader)addonReader).ZoneChanged -= OnZoneChanged;
-        ((Core.AddonReader)addonReader).PlayerDeath -= OnPlayerDeath;
+        addonReader.AddonDataChanged -= OnAddonDataChanged;
+        addonReader.ZoneChanged -= OnZoneChanged;
+        addonReader.PlayerDeath -= OnPlayerDeath;
     }
 
 
