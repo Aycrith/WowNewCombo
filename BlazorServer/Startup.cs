@@ -16,6 +16,8 @@ using MatBlazor;
 using SharedLib;
 using Game;
 using Core.Database;
+using System;
+using System.Collections.Generic;
 
 namespace BlazorServer
 {
@@ -46,6 +48,8 @@ namespace BlazorServer
         }
 
         public IConfiguration Configuration { get; }
+
+        private readonly static List<IDisposable> disposables = new();
 
         // This method gets called by the runtime. Use this method to add services to the container.
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
@@ -85,6 +89,10 @@ namespace BlazorServer
                 services.AddSingleton<IGrindSession>(botController.GrindSession);
                 services.AddSingleton<IAddonReader>(botController.AddonReader);
                 services.AddMatBlazor();
+
+                disposables.Add(botController);
+                if (pather is IDisposable disposable)
+                    disposables.Add(disposable);
             }
             else
             {
@@ -161,7 +169,7 @@ namespace BlazorServer
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public static void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public static void Configure(IApplicationBuilder app, IHostApplicationLifetime lifetime, IWebHostEnvironment env)
         {
             if (env.IsDevelopment())
             {
@@ -181,6 +189,14 @@ namespace BlazorServer
                 endpoints.MapBlazorHub();
                 endpoints.MapFallbackToPage("/_Host");
             });
+
+            lifetime.ApplicationStopping.Register(OnShutdown);
+        }
+
+        private static void OnShutdown()
+        {
+            disposables.ForEach(x => x.Dispose());
+            disposables.Clear();
         }
     }
 }
