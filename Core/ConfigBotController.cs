@@ -35,7 +35,7 @@ namespace Core
         public ExecGameCommand ExecGameCommand { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
         public event EventHandler? ProfileLoaded;
-        public event EventHandler<bool>? StatusChanged;
+        public event EventHandler? StatusChanged;
 
         public double AvgScreenLatency { get => throw new NotImplementedException(); }
         public double AvgNPCLatency { get => throw new NotImplementedException(); }
@@ -47,7 +47,7 @@ namespace Core
 
         public void StopBot()
         {
-            StatusChanged?.Invoke(this, false);
+            StatusChanged?.Invoke(this, EventArgs.Empty);
             throw new NotImplementedException();
         }
 

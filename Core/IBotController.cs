@@ -1,4 +1,5 @@
 ﻿using Core.GOAP;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using Core.Session;
@@ -30,8 +31,8 @@ namespace Core
         string SelectedClassFilename { get; set; }
         string? SelectedPathFilename { get; set; }
 
-        event System.EventHandler? ProfileLoaded;
-        event System.EventHandler<bool> StatusChanged;
+        event EventHandler? ProfileLoaded;
+        event EventHandler? StatusChanged;
 
         double AvgScreenLatency { get; }
         double AvgNPCLatency { get; }

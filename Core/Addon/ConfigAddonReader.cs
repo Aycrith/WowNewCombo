@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Drawing;
 using Core.Database;
 
 namespace Core.Addon
@@ -26,10 +25,11 @@ namespace Core.Addon
 
         public RecordInt UIMapId => throw new NotImplementedException();
 
-        private void ConfigAddonReader_AddonDataChanged(object sender, EventArgs e)
-        {
-            throw new NotImplementedException();
-        }
+#pragma warning disable CS0067 // The event is never used
+        public event EventHandler? AddonDataChanged;
+        public event EventHandler? ZoneChanged;
+        public event EventHandler? PlayerDeath;
+#pragma warning restore CS0067
 
         public int GetIntAt(int index)
         {

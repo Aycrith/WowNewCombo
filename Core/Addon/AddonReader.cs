@@ -97,27 +97,27 @@ namespace Core
             this.SpellBookReader = new SpellBookReader(squareReader, 71, spellDb);
 
             this.PlayerReader = new PlayerReader(squareReader);
-            this.LevelTracker = new LevelTracker(PlayerReader, PlayerDeath, CreatureHistory);
+            this.LevelTracker = new LevelTracker(this);
             this.TalentReader = new TalentReader(squareReader, 72, PlayerReader, talentDB);
 
             UpdateLatencys = new CircularBuffer<double>(10);
 
-            UIMapId.Changed += (object? obj, EventArgs e) =>
-            {
-                this.AreaDb.Update(WorldMapAreaDb.GetAreaId(UIMapId.Value));
-                ZoneChanged?.Invoke(this, EventArgs.Empty);
-            };
+            UIMapId.Changed -= OnUIMapIdChanged;
+            UIMapId.Changed += OnUIMapIdChanged;
 
-            GlobalTime.Changed += (object? obj, EventArgs e) =>
-            {
-                UpdateLatencys.Put((DateTime.UtcNow - GlobalTime.LastChanged).TotalMilliseconds);
-                AvgUpdateLatency = 0;
-                for (int i = 0; i < UpdateLatencys.Size; i++)
-                {
-                    AvgUpdateLatency += UpdateLatencys.PeekAt(i);
-                }
-                AvgUpdateLatency /= UpdateLatencys.Size;
-            };
+            GlobalTime.Changed -= GlobalTimeChanged;
+            GlobalTime.Changed += GlobalTimeChanged;
+        }
+
+        public void Dispose()
+        {
+            BagReader.Dispose();
+            LevelTracker.Dispose();
+
+            UIMapId.Changed -= OnUIMapIdChanged;
+            GlobalTime.Changed -= GlobalTimeChanged;
+
+            addonDataProvider?.Dispose();
         }
 
         public void AddonRefresh()
@@ -187,14 +187,26 @@ namespace Core
             return addonDataProvider.GetInt(index);
         }
 
-        public void Dispose()
-        {
-            addonDataProvider?.Dispose();
-        }
-
         public void PlayerDied()
         {
             PlayerDeath?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void OnUIMapIdChanged(object? s, EventArgs e)
+        {
+            this.AreaDb.Update(WorldMapAreaDb.GetAreaId(UIMapId.Value));
+            ZoneChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void GlobalTimeChanged(object? s, EventArgs e)
+        {
+            UpdateLatencys.Put((DateTime.UtcNow - GlobalTime.LastChanged).TotalMilliseconds);
+            AvgUpdateLatency = 0;
+            for (int i = 0; i < UpdateLatencys.Size; i++)
+            {
+                AvgUpdateLatency += UpdateLatencys.PeekAt(i);
+            }
+            AvgUpdateLatency /= UpdateLatencys.Size;
         }
     }
 }

@@ -12,7 +12,7 @@ using System.Numerics;
 
 namespace Core
 {
-    public sealed class RemotePathingAPIV3 : IPPather
+    public sealed class RemotePathingAPIV3 : IPPather, IDisposable
     {
         public enum EMessageType
         {
@@ -54,6 +54,11 @@ namespace Core
             Client = new AnTcpClient(ip, port);
             ConnectionWatchdog = new Thread(ObserveConnection);
             ConnectionWatchdog.Start();
+        }
+
+        public void Dispose()
+        {
+            RequestDisconnect();
         }
 
         #region old

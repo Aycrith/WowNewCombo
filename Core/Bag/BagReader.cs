@@ -1,12 +1,11 @@
-﻿using SharedLib;
-using Core.Database;
+﻿using Core.Database;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace Core
 {
-    public class BagReader
+    public class BagReader : IDisposable
     {
         private readonly int cBagMeta;
         private readonly int cItemNumCount;
@@ -49,6 +48,11 @@ namespace Core
                     Bags[i].Name = "Backpack";
                 }
             }
+        }
+
+        public void Dispose()
+        {
+            this.equipmentReader.OnEquipmentChanged -= OnEquipmentChanged;
         }
 
         public void Read()
