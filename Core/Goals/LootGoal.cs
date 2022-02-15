@@ -12,9 +12,11 @@ namespace Core.Goals
 {
     public class LootGoal : GoapGoal
     {
-        public override float CostOfPerformingAction { get => 4.4f; }
+        public override float CostOfPerformingAction => 4.4f;
 
-        private ILogger logger;
+        private readonly bool debug = true;
+
+        private readonly ILogger logger;
         private readonly ConfigurableInput input;
 
         private readonly PlayerReader playerReader;
@@ -27,10 +29,9 @@ namespace Core.Goals
         private readonly CombatUtil combatUtil;
         private readonly IPlayerDirection playerDirection;
 
-        private bool debug = true;
-        private int lastLoot;
+        private readonly List<Vector3> corpseLocations = new();
 
-        private List<Vector3> corpseLocations = new();
+        private int lastLoot;
 
         public LootGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, StopMoving stopMoving, ClassConfiguration classConfiguration, NpcNameTargeting npcNameTargeting, CombatUtil combatUtil, IPlayerDirection playerDirection)
         {
@@ -60,11 +61,11 @@ namespace Core.Goals
         {
             if (bagReader.BagsFull)
             {
-                logger.LogWarning("Inventory is full");
+                LogWarning("Inventory is full!");
                 SendActionEvent(new ActionEventArgs(GoapKey.shouldloot, false));
             }
 
-            Log($"OnEnter: Search for {NpcNames.Corpse}");
+            Log($"Search for {NpcNames.Corpse}");
             npcNameTargeting.ChangeNpcType(NpcNames.Corpse);
 
             lastLoot = playerReader.LastLootTime;
@@ -194,25 +195,18 @@ namespace Core.Goals
 
         private void CheckForSkinning()
         {
-            if (classConfiguration.Skin)
+            if (!classConfiguration.Skin)
+                return;
+
+            bool targetSkinnable = false;
+            if (areaDb.CurrentArea != null && areaDb.CurrentArea.skinnable != null)
             {
-                var targetSkinnable = !playerReader.Unskinnable;
-
-                if (areaDb.CurrentArea != null && areaDb.CurrentArea.skinnable != null)
-                {
-                    targetSkinnable = areaDb.CurrentArea.skinnable.Contains(playerReader.TargetId);
-                    Log($"{playerReader.TargetId} is skinnable? {targetSkinnable}");
-                }
-                else
-                {
-                    Log($"{playerReader.TargetId} was not found in the database!");
-                }
-
-                Log($"Should skin ? {targetSkinnable}");
-                AddEffect(GoapKey.shouldskin, targetSkinnable);
-
-                SendActionEvent(new ActionEventArgs(GoapKey.shouldskin, targetSkinnable));
+                targetSkinnable = areaDb.CurrentArea.skinnable.Contains(playerReader.TargetId);
             }
+
+            Log($"Should skin {playerReader.TargetId} ? {targetSkinnable}");
+            AddEffect(GoapKey.shouldskin, targetSkinnable);
+            SendActionEvent(new ActionEventArgs(GoapKey.shouldskin, targetSkinnable));
         }
 
         private void GoalExit()
@@ -227,8 +221,6 @@ namespace Core.Goals
 
                 SendActionEvent(new ActionEventArgs(GoapKey.shouldskin, false));
             }
-
-            lastLoot = playerReader.LastLootTime;
 
             SendActionEvent(new ActionEventArgs(GoapKey.shouldloot, false));
 
@@ -246,6 +238,11 @@ namespace Core.Goals
             {
                 logger.LogInformation($"{nameof(LootGoal)}: {text}");
             }
+        }
+
+        private void LogWarning(string text)
+        {
+            logger.LogWarning($"{nameof(LootGoal)}: {text}");
         }
     }
 }

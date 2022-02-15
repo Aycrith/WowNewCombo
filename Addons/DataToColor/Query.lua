@@ -600,23 +600,10 @@ function DataToColor:IsPetVisible()
 end
 
 function DataToColor:petHappy()
-    local happiness, damagePercentage, loyaltyRate = GetPetHappiness()
+    local happiness, _, _ = GetPetHappiness()
     -- (1 = unhappy, 2 = content, 3 = happy)
     if happiness ~= nil and happiness == 3 then
         return 1
     end
     return 0
-end
-
--- Returns 0 if target is unskinnable or if we have no target.
-function DataToColor:isUnskinnable()
-    local creatureType = UnitCreatureType(DataToColor.C.unitTarget)
-    -- Demons COULD be included in this list, but there are some skinnable demon dogs.
-    if creatureType == DataToColor.C.Humanoid or creatureType == DataToColor.C.Elemental or creatureType == DataToColor.C.Mechanical or creatureType == DataToColor.C.Totem then
-        return 1
-    else if creatureType ~= nil then
-            return 0
-        end
-    end
-    return 1
 end
