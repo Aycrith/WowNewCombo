@@ -16,8 +16,6 @@ using MatBlazor;
 using SharedLib;
 using Game;
 using Core.Database;
-using System;
-using System.Collections.Generic;
 
 namespace BlazorServer
 {
@@ -49,8 +47,6 @@ namespace BlazorServer
 
         public IConfiguration Configuration { get; }
 
-        private readonly static List<IDisposable> disposables = new();
-
         // This method gets called by the runtime. Use this method to add services to the container.
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
@@ -61,11 +57,12 @@ namespace BlazorServer
             var wowProcess = new WowProcess();
             var wowScreen = new WowScreen(logger, wowProcess);
             wowScreen.GetRectangle(out var rect);
+            wowScreen.Dispose();
 
             var addonConfig = AddonConfig.Load();
             var addonConfigurator = new AddonConfigurator(logger, addonConfig);
 
-            if(!addonConfig.IsDefault() && !addonConfigurator.Installed())
+            if (!addonConfig.IsDefault() && !addonConfigurator.Installed())
             {
                 // At this point the webpage never loads so fallback to configuration page
                 AddonConfig.Delete();
@@ -81,25 +78,19 @@ namespace BlazorServer
 
             if (AddonConfig.Exists() && DataFrameConfiguration.Exists())
             {
-                var dataConfig = DataConfig.Load();
-                var pather = GetPather(logger, dataConfig);
-                var botController = new BotController(logger, pather, dataConfig, Configuration);
-                services.AddSingleton<IBotController>(botController);
-                services.AddSingleton<IGrindSessionHandler>(botController.GrindSessionHandler);
-                services.AddSingleton<IGrindSession>(botController.GrindSession);
-                services.AddSingleton<IAddonReader>(botController.AddonReader);
-                services.AddMatBlazor();
-
-                disposables.Add(botController);
-                if (pather is IDisposable disposable)
-                    disposables.Add(disposable);
+                services.AddSingleton<IPPather>(x => GetPather(logger, DataConfig.Load()));
+                services.AddSingleton<IBotController>(x => new BotController(logger, x.GetRequiredService<IPPather>(), DataConfig.Load(), Configuration));
+                services.AddSingleton<IGrindSessionHandler>(x => x.GetRequiredService<IBotController>().GrindSessionHandler);
+                services.AddSingleton<IGrindSession>(x => x.GetRequiredService<IBotController>().GrindSession);
+                services.AddSingleton<IAddonReader>(x => x.GetRequiredService<IBotController>().AddonReader);
             }
             else
             {
-                services.AddSingleton<IBotController>(new ConfigBotController());
-                services.AddSingleton<IAddonReader>(new ConfigAddonReader());
+                services.AddSingleton<IBotController>(x => new ConfigBotController());
+                services.AddSingleton<IAddonReader>(x => new ConfigAddonReader());
             }
 
+            services.AddMatBlazor();
             services.AddRazorPages();
             services.AddServerSideBlazor();
             services.AddBlazorTable();
@@ -169,7 +160,7 @@ namespace BlazorServer
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public static void Configure(IApplicationBuilder app, IHostApplicationLifetime lifetime, IWebHostEnvironment env)
+        public static void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             if (env.IsDevelopment())
             {
@@ -189,14 +180,6 @@ namespace BlazorServer
                 endpoints.MapBlazorHub();
                 endpoints.MapFallbackToPage("/_Host");
             });
-
-            lifetime.ApplicationStopping.Register(OnShutdown);
-        }
-
-        private static void OnShutdown()
-        {
-            disposables.ForEach(x => x.Dispose());
-            disposables.Clear();
         }
     }
 }
