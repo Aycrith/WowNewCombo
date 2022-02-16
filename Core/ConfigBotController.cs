@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Core.Session;
-using SharedLib;
 using Game;
 
 namespace Core
@@ -22,6 +21,7 @@ namespace Core
         public WowProcessInput WowProcessInput { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public ConfigurableInput? ConfigurableInput { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public IGrindSession GrindSession { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        public IGrindSessionHandler GrindSessionHandler { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public string SelectedClassFilename { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public string? SelectedPathFilename { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 

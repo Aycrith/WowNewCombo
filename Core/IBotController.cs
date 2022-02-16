@@ -14,7 +14,6 @@ namespace Core
         Thread? screenshotThread { get; set; }
         Thread addonThread { get; set; }
         Thread? botThread { get; set; }
-        //GoalFactory ActionFactory { get; set; }
         GoapAgent? GoapAgent { get; set; }
         RouteInfo? RouteInfo { get; set; }
         WowScreen WowScreen { get; set; }
@@ -27,6 +26,7 @@ namespace Core
 
         ActionBarPopulator? ActionBarPopulator { get; set; }
         public IGrindSession GrindSession { get; set; }
+        public IGrindSessionHandler GrindSessionHandler { get; set; }
 
         string SelectedClassFilename { get; set; }
         string? SelectedPathFilename { get; set; }

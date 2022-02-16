@@ -66,7 +66,7 @@ namespace Core
 
         public ExecGameCommand ExecGameCommand { get; set; }
 
-        private bool Enabled = true;
+        private readonly CancellationTokenSource cts;
         private Wait wait;
 
         public event EventHandler? ProfileLoaded;
@@ -109,6 +109,8 @@ namespace Core
             this.pather = pather;
             this.DataConfig = dataConfig;
 
+            cts = new CancellationTokenSource();
+
             updatePlayerPostion.Start();
             wowProcess = new WowProcess();
             WowScreen = new WowScreen(logger, wowProcess);
@@ -148,6 +150,8 @@ namespace Core
             addonThread.Start();
 
             // wait for addon to read the wow state
+            wait.Update(1);
+
             var sw = new Stopwatch();
             sw.Start();
             while (!Enum.GetValues(typeof(PlayerClassEnum)).Cast<PlayerClassEnum>().Contains(AddonReader.PlayerReader.Class))
@@ -167,15 +171,13 @@ namespace Core
             WowScreen.AddDrawAction(npcNameFinder.ShowNames);
             WowScreen.AddDrawAction(npcNameTargeting.ShowClickPositions);
 
-            //ActionFactory = new GoalFactory(AddonReader, logger, wowProcess, npcNameFinder);
-
             screenshotThread = new Thread(ScreenshotRefreshThread);
             screenshotThread.Start();
         }
 
         public void AddonRefreshThread()
         {
-            while (this.AddonReader.Active && this.Enabled)
+            while (!cts.IsCancellationRequested)
             {
                 this.AddonReader.AddonRefresh();
                 this.GoapAgent?.UpdateWorldState();
@@ -190,7 +192,7 @@ namespace Core
         {
             var nodeFound = false;
             var stopWatch = new Stopwatch();
-            while (this.Enabled)
+            while (!cts.IsCancellationRequested)
             {
                 if ((DateTime.UtcNow - lastScreenshot).TotalMilliseconds > screenshotTickMs)
                 {
@@ -231,7 +233,7 @@ namespace Core
                     updatePlayerPostion.Restart();
                 }
 
-                Thread.Sleep(5);
+                cts.Token.WaitHandle.WaitOne(5);
             }
             this.logger.LogInformation("Screenshot thread stoppped!");
         }
@@ -268,7 +270,7 @@ namespace Core
             {
                 actionThread.ResumeIfNeeded();
 
-                while (actionThread.Active && Enabled)
+                while (actionThread.Active && !cts.IsCancellationRequested)
                 {
                     actionThread.GoapPerformGoal();
                 }
@@ -362,12 +364,14 @@ namespace Core
 
         public void Dispose()
         {
+            cts?.Cancel();
+
             if (GrindSession is IDisposable disposable)
             {
                 disposable.Dispose();
             }
 
-            // hookup events between actions
+            // cleanup eventlisteners between actions
             GoapAgent?.AvailableGoals.ToList().ForEach(a =>
             {
                 if (this.actionThread != null)
@@ -403,7 +407,7 @@ namespace Core
 
         public void Shutdown()
         {
-            this.Enabled = false;
+            cts.Cancel();
         }
 
         public void LoadClassProfile(string classFilename)

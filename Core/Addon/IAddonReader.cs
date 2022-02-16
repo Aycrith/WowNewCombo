@@ -5,8 +5,6 @@ namespace Core
 {
     public interface IAddonReader
     {
-        bool Active { get; set; }
-
         PlayerReader PlayerReader { get; }
 
         BagReader BagReader { get; }
