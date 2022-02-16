@@ -128,7 +128,8 @@ namespace SharedLib
             {
                 for (int y = 0; y < bmp.Height; y++)
                 {
-                    if (bmp.GetPixel(x, y).B == dataframe)
+                    var pixel = bmp.GetPixel(x, y);
+                    if (pixel.B == dataframe && pixel.R == 0 && pixel.G == 0)
                     {
                         return new Point(x, y);
                     }
