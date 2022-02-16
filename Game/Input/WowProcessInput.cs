@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Drawing;
+using System.Threading;
 using WinAPI;
 
 namespace Game
@@ -111,7 +112,7 @@ namespace Game
             }
         }
 
-        public void KeyPressSleep(ConsoleKey key, int milliseconds, string description = "")
+        public void KeyPressSleep(ConsoleKey key, int milliseconds, CancellationTokenSource cts, string description = "")
         {
             if (milliseconds < 1)
                 return;
@@ -122,7 +123,7 @@ namespace Game
             }
 
             keyDict[key] = true;
-            nativeInput.KeyPressSleep((int)key, milliseconds);
+            nativeInput.KeyPressSleep((int)key, milliseconds, cts);
             keyDict[key] = false;
         }
 
