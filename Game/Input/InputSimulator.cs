@@ -8,7 +8,7 @@ using WinAPI;
 
 namespace Game
 {
-    public class InputSimulator : IInput
+    public class InputSimulator : IInput, IDisposable
     {
         private readonly int MIN_DELAY;
         private readonly int MAX_DELAY;
@@ -16,6 +16,8 @@ namespace Game
         private readonly Random random = new();
         private readonly GregsStack.InputSimulatorStandard.InputSimulator simulator;
         private readonly Process process;
+
+        private readonly CancellationTokenSource _cts;
 
         public InputSimulator(Process process, int minDelay, int maxDelay)
         {
@@ -25,12 +27,18 @@ namespace Game
             MAX_DELAY = maxDelay;
 
             simulator = new GregsStack.InputSimulatorStandard.InputSimulator();
+            _cts = new CancellationTokenSource();
+        }
+
+        public void Dispose()
+        {
+            _cts.Dispose();
         }
 
         private int Delay(int milliseconds)
         {
             int delay = milliseconds + random.Next(1, MAX_DELAY);
-            Thread.Sleep(delay);
+            _cts.Token.WaitHandle.WaitOne(delay);
             return delay;
         }
 
@@ -58,10 +66,10 @@ namespace Game
             return delay;
         }
 
-        public void KeyPressSleep(int key, int milliseconds)
+        public void KeyPressSleep(int key, int milliseconds, CancellationTokenSource cts)
         {
             simulator.Keyboard.KeyDown((VirtualKeyCode)key);
-            Thread.Sleep(milliseconds);
+            cts.Token.WaitHandle.WaitOne(milliseconds);
             simulator.Keyboard.KeyUp((VirtualKeyCode)key);
         }
 

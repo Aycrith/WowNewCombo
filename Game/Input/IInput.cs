@@ -1,4 +1,5 @@
 ﻿using System.Drawing;
+using System.Threading;
 
 namespace Game
 {
@@ -10,7 +11,7 @@ namespace Game
 
         int KeyPress(int key, int milliseconds);
 
-        void KeyPressSleep(int key, int milliseconds);
+        void KeyPressSleep(int key, int milliseconds, CancellationTokenSource cts);
 
         void SetCursorPosition(Point p);
 

@@ -39,7 +39,7 @@ namespace Core.Goals
         }
     }
 
-    public class Navigation
+    public class Navigation : IDisposable
     {
         private readonly bool debug = false;
         private readonly float RADIAN = MathF.PI * 2;
@@ -82,6 +82,8 @@ namespace Core.Goals
         private readonly ConcurrentQueue<PathResult> pathResults = new();
         private Thread? pathfinderThread;
 
+        private CancellationTokenSource _cts;
+
         public Navigation(ILogger logger, IPlayerDirection playerDirection, ConfigurableInput input, AddonReader addonReader, StopMoving stopMoving, StuckDetector stuckDetector, IPPather pather, MountHandler mountHandler)
         {
             this.logger = logger;
@@ -95,9 +97,21 @@ namespace Core.Goals
             this.mountHandler = mountHandler;
 
             AvgDistance = MinDistance;
+
+            _cts = new CancellationTokenSource();
+        }
+
+        public void Dispose()
+        {
+            _cts.Dispose();
         }
 
         public void Update()
+        {
+            Update(_cts);
+        }
+
+        public void Update(CancellationTokenSource cts)
         {
             active = true;
 
@@ -170,7 +184,7 @@ namespace Core.Goals
                     stuckDetector.SetTargetLocation(routeToNextWaypoint.Peek());
 
                     heading = DirectionCalculator.CalculateHeading(location, routeToNextWaypoint.Peek());
-                    AdjustHeading(heading, "Turn to next point");
+                    AdjustHeading(heading, cts, "Turn to next point");
                     return;
                 }
             }
@@ -183,7 +197,14 @@ namespace Core.Goals
                     {
                         // TODO: test this
                         AdjustNextWaypointPointToClosest();
-                        AdjustHeading(heading, "unstuck Further away");
+                        AdjustHeading(heading, cts, "unstuck Further away");
+                    }
+                    else if (stuckDetector.actionDurationSeconds > 10)
+                    {
+                        Log($"Clear route to waypoit since stucked for {stuckDetector.actionDurationSeconds}");
+                        stuckDetector.ResetStuckParameters();
+                        routeToNextWaypoint.Clear();
+                        return;
                     }
 
                     if (HasBeenActiveRecently())
@@ -198,7 +219,7 @@ namespace Core.Goals
                 }
                 else // distance closer
                 {
-                    AdjustHeading(heading);
+                    AdjustHeading(heading, cts);
                 }
             }
 
@@ -330,7 +351,7 @@ namespace Core.Goals
                 routeToNextWaypoint.Push(wayPoints.Peek());
 
                 var heading = DirectionCalculator.CalculateHeading(location, wayPoints.Peek());
-                AdjustHeading(heading, "Reached waypoint");
+                AdjustHeading(heading, _cts, "Reached waypoint");
 
                 stuckDetector.SetTargetLocation(routeToNextWaypoint.Peek());
                 UpdateTotalRoute();
@@ -370,7 +391,7 @@ namespace Core.Goals
             }
         }
 
-        private void AdjustHeading(float heading, string source = "")
+        private void AdjustHeading(float heading, CancellationTokenSource cts, string source = "")
         {
             var diff1 = MathF.Abs(RADIAN + heading - playerReader.Direction) % RADIAN;
             var diff2 = MathF.Abs(heading - playerReader.Direction - RADIAN) % RADIAN;
@@ -383,7 +404,7 @@ namespace Core.Goals
                     stopMoving.Stop();
                 }
 
-                playerDirection.SetDirection(heading, routeToNextWaypoint.Peek(), source, MinDistance);
+                playerDirection.SetDirection(heading, routeToNextWaypoint.Peek(), source, MinDistance, cts);
             }
         }
 

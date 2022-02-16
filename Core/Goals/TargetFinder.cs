@@ -28,7 +28,7 @@ namespace Core.Goals
             this.npcNameTargeting = npcNameTargeting;
         }
 
-        public bool Search(NpcNames target, Func<bool> validTarget, string source, CancellationToken cts)
+        public bool Search(NpcNames target, Func<bool> validTarget, string source, CancellationTokenSource cts)
         {
             if (LookForTarget(target, source, cts))
             {
@@ -50,7 +50,7 @@ namespace Core.Goals
             return false;
         }
 
-        private bool LookForTarget(NpcNames target, string source, CancellationToken cts)
+        private bool LookForTarget(NpcNames target, string source, CancellationTokenSource cts)
         {
             if (!cts.IsCancellationRequested)
             {

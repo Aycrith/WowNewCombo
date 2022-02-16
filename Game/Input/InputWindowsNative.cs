@@ -16,6 +16,8 @@ namespace Game
         private readonly Process process;
         private readonly Random random = new();
 
+        private readonly CancellationTokenSource _cts;
+
         private readonly IEnumerable<ConsoleKey> consoleKeys = (IEnumerable<ConsoleKey>)Enum.GetValues(typeof(ConsoleKey));
 
         public InputWindowsNative(Process process, int minDelay, int maxDelay)
@@ -24,12 +26,13 @@ namespace Game
 
             MIN_DELAY = minDelay;
             MAX_DELAY = maxDelay;
+            _cts = new CancellationTokenSource();
         }
 
         private int Delay(int milliseconds)
         {
             int delay = milliseconds + random.Next(1, MAX_DELAY);
-            Thread.Sleep(delay);
+            _cts.Token.WaitHandle.WaitOne(delay);
             return delay;
         }
 
@@ -52,10 +55,10 @@ namespace Game
             return delay;
         }
 
-        public void KeyPressSleep(int key, int milliseconds)
+        public void KeyPressSleep(int key, int milliseconds, CancellationTokenSource cts)
         {
             NativeMethods.PostMessage(process.MainWindowHandle, NativeMethods.WM_KEYDOWN, key, 0);
-            Thread.Sleep(milliseconds);
+            cts.Token.WaitHandle.WaitOne(milliseconds);
             NativeMethods.PostMessage(process.MainWindowHandle, NativeMethods.WM_KEYUP, key, 0);
         }
 

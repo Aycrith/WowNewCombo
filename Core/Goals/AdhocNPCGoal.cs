@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Numerics;
 using System.Linq;
+using System.Threading;
 
 namespace Core.Goals
 {
@@ -196,7 +197,8 @@ namespace Core.Goals
                 if (targetTimeout)
                 {
                     LogWarn("No target found!");
-                    input.KeyPressSleep(input.TurnLeftKey, 250, "Turn left to find NPC");
+                    using var cts = new CancellationTokenSource();
+                    input.KeyPressSleep(input.TurnLeftKey, 250, cts, "Turn left to find NPC");
                     return;
                 }
 

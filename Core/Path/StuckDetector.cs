@@ -6,7 +6,6 @@ using System;
 using System.Diagnostics;
 using System.Numerics;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Core
 {
@@ -105,7 +104,7 @@ namespace Core
                     Thread.Sleep(actionDuration);
                     input.SetKeyState(input.BackwardKey, false, false, "StuckDetector");
                 }
-                this.stopMoving?.Stop();
+                this.stopMoving.Stop();
 
                 // Turn
                 var r = random.Next(0, 2);

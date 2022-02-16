@@ -56,7 +56,7 @@ namespace Core.Goals
         }
 
 
-        public void TargetingAndClickNpc(bool leftClick, CancellationToken cancellationToken)
+        public void TargetingAndClickNpc(bool leftClick, CancellationTokenSource cts)
         {
             if (npcNameFinder.NpcCount == 0)
                 return;
@@ -66,14 +66,14 @@ namespace Core.Goals
 
             foreach (var location in locTargetingAndClickNpc)
             {
-                if (cancellationToken.IsCancellationRequested)
+                if (cts.IsCancellationRequested)
                     return;
 
                 var clickPostion = npcNameFinder.ToScreenCoordinates(npc.ClickPoint.X + location.X, npc.ClickPoint.Y + location.Y);
                 input.SetCursorPosition(clickPostion);
-                Thread.Sleep(MOUSE_DELAY);
+                cts.Token.WaitHandle.WaitOne(MOUSE_DELAY);
 
-                if (cancellationToken.IsCancellationRequested)
+                if (cts.IsCancellationRequested)
                     return;
 
                 CursorClassifier.Classify(out var cls);
