@@ -14,7 +14,6 @@ namespace Core
 
         public bool Initialized { get; private set; }
 
-        public bool Active { get; set; } = true;
         public PlayerReader PlayerReader { get; private set; }
 
         public CreatureHistory CreatureHistory { get; private set; }

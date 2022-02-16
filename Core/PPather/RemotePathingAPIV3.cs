@@ -44,12 +44,14 @@ namespace Core
         private AnTcpClient Client { get; }
         private Thread ConnectionWatchdog { get; }
 
-        private bool ShouldExit { get; set; }
+        private CancellationTokenSource cts;
 
         public RemotePathingAPIV3(ILogger logger, string ip, int port, WorldMapAreaDB worldMapAreaDB)
         {
             this.logger = logger;
             this.worldMapAreaDB = worldMapAreaDB;
+
+            cts = new CancellationTokenSource();
 
             Client = new AnTcpClient(ip, port);
             ConnectionWatchdog = new Thread(ObserveConnection);
@@ -159,15 +161,14 @@ namespace Core
 
         public void RequestDisconnect()
         {
-            ShouldExit = true;
-            ConnectionWatchdog.Join();
+            cts.Cancel();
         }
 
         #endregion old
 
         private void ObserveConnection()
         {
-            while (!ShouldExit)
+            while (!cts.IsCancellationRequested)
             {
                 if (!Client.IsConnected)
                 {
@@ -181,7 +182,7 @@ namespace Core
                     }
                 }
 
-                Thread.Sleep(watchdogPollMs);
+                cts.Token.WaitHandle.WaitOne(watchdogPollMs);
             }
         }
 
