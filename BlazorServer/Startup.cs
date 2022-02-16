@@ -10,6 +10,7 @@ using Serilog;
 using Serilog.Events;
 using Serilog.Extensions.Logging;
 using System.Threading;
+using System.Threading.Tasks;
 using BlazorTable;
 using Core.Session;
 using MatBlazor;
@@ -122,7 +123,9 @@ namespace BlazorServer
             if (scp.Type == StartupConfigPathing.Types.RemoteV1 || failed)
             {
                 var api = new RemotePathingAPI(logger, scp.hostv1, scp.portv1);
-                if (api.PingServer().Result)
+                var task1 = Task.Factory.StartNew(api.PingServer);
+                task1.Wait();
+                if (task1.Result.Result)
                 {
                     Log.Information("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
 
