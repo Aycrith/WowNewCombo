@@ -1,18 +1,19 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Numerics;
+using System.Threading;
 using SharedLib.Extensions;
 
 namespace Core
 {
-    public class PlayerDirection : IPlayerDirection
+    public class PlayerDirection : IPlayerDirection, IDisposable
     {
         private readonly bool debug = false;
 
         private readonly ILogger logger;
         private readonly ConfigurableInput input;
         private readonly PlayerReader playerReader;
-
+        private readonly CancellationTokenSource _cts;
         private readonly float RADIAN = MathF.PI * 2;
 
         private const int DefaultIgnoreDistance = 10;
@@ -24,14 +25,20 @@ namespace Core
             this.logger = logger;
             this.input = input;
             this.playerReader = playerReader;
+            _cts = new CancellationTokenSource();
+        }
+
+        public void Dispose()
+        {
+            _cts.Dispose();
         }
 
         public void SetDirection(float desiredDirection, Vector3 point, string source)
         {
-            SetDirection(desiredDirection, point, source, DefaultIgnoreDistance);
+            SetDirection(desiredDirection, point, source, DefaultIgnoreDistance, _cts);
         }
 
-        public void SetDirection(float desiredDirection, Vector3 point, string source, int ignoreDistance)
+        public void SetDirection(float desiredDirection, Vector3 point, string source, int ignoreDistance, CancellationTokenSource cts)
         {
             float distance = playerReader.PlayerLocation.DistanceXYTo(point);
             if (distance < ignoreDistance)
@@ -42,6 +49,7 @@ namespace Core
 
             input.KeyPressSleep(GetDirectionKeyToPress(desiredDirection),
                 TurnDuration(desiredDirection),
+                cts,
                 debug ? $"SetDirection: {source}-- Current: {playerReader.Direction:0.000} -> Target: {desiredDirection:0.000} - Distance: {distance:0.000}" : string.Empty);
 
             LastSetDirection = DateTime.UtcNow;

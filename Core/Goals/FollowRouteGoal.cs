@@ -29,11 +29,10 @@ namespace Core.Goals
         private readonly List<Vector3> routePoints;
 
         private readonly TargetFinder targetFinder;
-        private CancellationTokenSource? targetFinderCts;
-        private Thread? targetFinderThread;
+        private CancellationTokenSource targetFinderCts;
+        private Thread targetFinderThread = null!;
         private readonly int minMs = 500, maxMs = 1000;
         private readonly NpcNames NpcNameToFind = NpcNames.Enemy | NpcNames.Neutral;
-
 
         private bool shouldMount;
 
@@ -86,13 +85,15 @@ namespace Core.Goals
                 AddPrecondition(GoapKey.producedcorpse, false);
                 AddPrecondition(GoapKey.consumecorpse, false);
             }
+
+            targetFinderCts = new CancellationTokenSource();
         }
 
         public override void OnActionEvent(object sender, ActionEventArgs e)
         {
             if (e.Key == GoapKey.abort)
             {
-                targetFinderCts?.Cancel();
+                targetFinderCts.Cancel();
             }
 
             if (e.Key == GoapKey.resume)
@@ -146,7 +147,7 @@ namespace Core.Goals
         public override ValueTask OnExit()
         {
             navigation.Stop();
-            targetFinderCts?.Cancel();
+            targetFinderCts.Cancel();
 
             return base.OnExit();
         }
@@ -171,7 +172,7 @@ namespace Core.Goals
 
             if (playerReader.Bits.PlayerInCombat && classConfig.Mode != Mode.AttendedGather) { return ValueTask.CompletedTask; }
 
-            navigation.Update();
+            navigation.Update(targetFinderCts);
 
             RandomJump();
 
@@ -182,7 +183,7 @@ namespace Core.Goals
 
         private void StartLookingForTarget()
         {
-            targetFinderCts?.Dispose();
+            targetFinderCts.Dispose();
             targetFinderCts = new CancellationTokenSource();
 
             targetFinderThread = new Thread(Thread_LookingForTarget);
@@ -191,12 +192,6 @@ namespace Core.Goals
 
         private void Thread_LookingForTarget()
         {
-            if (targetFinderCts == null)
-            {
-                logger.LogWarning($"{nameof(FollowRouteGoal)}: .. Unable to start search target!");
-                return;
-            }
-
             Log("Start searching for target...");
 
             Func<bool> validTarget = () =>
@@ -206,19 +201,18 @@ namespace Core.Goals
             bool found = false;
             while (!found && !targetFinderCts.IsCancellationRequested)
             {
-                if (classConfig.TargetNearestTarget.MillisecondsSinceLastClick > random.Next(minMs, maxMs) &&
-                    !input.IsKeyDown(input.TurnLeftKey) && !input.IsKeyDown(input.TurnRightKey))
+                if (classConfig.TargetNearestTarget.MillisecondsSinceLastClick > random.Next(minMs, maxMs))
                 {
-                    found = targetFinder.Search(NpcNameToFind, validTarget, nameof(FollowRouteGoal), targetFinderCts.Token);
+                    found = targetFinder.Search(NpcNameToFind, validTarget, nameof(FollowRouteGoal), targetFinderCts);
                 }
                 wait.Update(1);
             }
 
             if (found)
+            {
+                targetFinderCts.Cancel();
                 Log("Found target!");
-
-            if (targetFinderCts.IsCancellationRequested)
-                Log("Finding target aborted!");
+            }
         }
 
 
