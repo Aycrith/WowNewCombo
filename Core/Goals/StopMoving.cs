@@ -3,10 +3,11 @@ using System.Threading;
 
 namespace Core.Goals
 {
-    public class StopMoving
+    public class StopMoving : IDisposable
     {
         private readonly ConfigurableInput input;
         private readonly PlayerReader playerReader;
+        private readonly CancellationTokenSource cts;
 
         private const double MinDist = 0.01;
 
@@ -18,6 +19,12 @@ namespace Core.Goals
         {
             this.input = input;
             this.playerReader = playerReader;
+            this.cts = new CancellationTokenSource();
+        }
+
+        public void Dispose()
+        {
+            cts.Dispose();
         }
 
         public void Stop()
@@ -34,12 +41,13 @@ namespace Core.Goals
                     (MathF.Abs(XCoord - playerReader.XCoord) > MinDist || MathF.Abs(YCoord - playerReader.YCoord) > MinDist))
                 {
                     input.SetKeyState(input.ForwardKey, true, false, "StopForward - Cancel interact");
-                    Thread.Sleep(1);
+                    cts.Token.WaitHandle.WaitOne(2);
                 }
 
                 input.SetKeyState(input.ForwardKey, false, false, "");
+                cts.Token.WaitHandle.WaitOne(2);
                 input.SetKeyState(input.BackwardKey, false, false, "StopForward");
-                Thread.Sleep(10);
+                cts.Token.WaitHandle.WaitOne(10);
             }
 
             this.XCoord = playerReader.XCoord;
@@ -52,7 +60,7 @@ namespace Core.Goals
             {
                 input.SetKeyState(input.TurnLeftKey, false, false, "");
                 input.SetKeyState(input.TurnRightKey, false, false, "StopTurn");
-                Thread.Sleep(1);
+                cts.Token.WaitHandle.WaitOne(1);
             }
 
             this.Direction = playerReader.Direction;
