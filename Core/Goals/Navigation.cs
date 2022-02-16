@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -198,6 +198,13 @@ namespace Core.Goals
                         // TODO: test this
                         AdjustNextWaypointPointToClosest();
                         AdjustHeading(heading, cts, "unstuck Further away");
+                    }
+                    else if (stuckDetector.actionDurationSeconds > 10)
+                    {
+                        Log($"Clear route to waypoit since stucked for {stuckDetector.actionDurationSeconds}");
+                        stuckDetector.ResetStuckParameters();
+                        routeToNextWaypoint.Clear();
+                        return;
                     }
 
                     if (HasBeenActiveRecently())
