@@ -64,8 +64,6 @@ namespace Core.Goals
             }
 
             input.TapApproachKey($"{nameof(PullTargetGoal)}: OnEnter - Face the target and stop");
-            stopMoving.Stop();
-            wait.Update(1);
 
             pullStart = DateTime.UtcNow;
 
