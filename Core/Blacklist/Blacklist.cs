@@ -69,7 +69,7 @@ namespace Core
                 return true; // ignore elites
             }
 
-            if (playerReader.Bits.IsTagged)
+            if (!playerReader.Bits.TargetIsDead && playerReader.Bits.IsTagged)
             {
                 if (lastGuid != playerReader.TargetGuid)
                 {
