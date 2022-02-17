@@ -1,5 +1,4 @@
 ﻿using Core.Goals;
-using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 
 namespace Core.GOAP
@@ -10,13 +9,6 @@ namespace Core.GOAP
 
     public class GoapPlanner
     {
-        private ILogger logger;
-
-        public GoapPlanner(ILogger logger)
-        {
-            this.logger = logger;
-        }
-
         public static void RefreshState(IEnumerable<GoapGoal> availableActions)
         {
             foreach (GoapGoal a in availableActions)
@@ -61,9 +53,6 @@ namespace Core.GOAP
 
             if (!success)
             {
-                // oh no, we didn't get a plan
-                logger.LogInformation("New Plan= NO PLAN");
-
                 return new Queue<GoapGoal>();
             }
 

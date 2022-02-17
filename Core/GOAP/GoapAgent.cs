@@ -1,4 +1,4 @@
-﻿using Core.Goals;
+using Core.Goals;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -23,7 +23,6 @@ namespace Core.GOAP
         public IEnumerable<GoapGoal> AvailableGoals { get; set; }
         public GoapGoal? CurrentGoal { get; set; }
 
-        private readonly Dictionary<GoapKey, object> actionState = new Dictionary<GoapKey, object>();
         public HashSet<KeyValuePair<GoapKey, object>> WorldState { get; private set; } = new HashSet<KeyValuePair<GoapKey, object>>();
 
         public GoapAgent(ILogger logger, GoapAgentState goapAgentState, ConfigurableInput input, AddonReader addonReader, HashSet<GoapGoal> availableGoals, IBlacklist blacklist)
@@ -43,7 +42,7 @@ namespace Core.GOAP
             this.AvailableGoals = availableGoals.OrderBy(a => a.CostOfPerformingAction);
             this.blacklist = blacklist;
 
-            this.planner = new GoapPlanner(logger);
+            this.planner = new GoapPlanner();
         }
 
         public void Dispose()
@@ -124,15 +123,6 @@ namespace Core.GOAP
                 case GoapKey.shouldskin:
                     GoapAgentState.NeedSkin = (bool)e.Value;
                     break;
-            }
-
-            if (!actionState.ContainsKey(e.Key))
-            {
-                actionState.Add(e.Key, e.Value);
-            }
-            else
-            {
-                actionState[e.Key] = e.Value;
             }
         }
 
