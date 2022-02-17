@@ -27,7 +27,7 @@ namespace Core
 
         public IGrindSession GrindSession { get; set; }
         public IGrindSessionHandler GrindSessionHandler { get; set; }
-        public string SelectedClassFilename { get; set; } = String.Empty;
+        public string SelectedClassFilename { get; set; } = string.Empty;
         public string? SelectedPathFilename { get; set; }
 
         public DataConfig DataConfig { get; set; }
@@ -51,15 +51,15 @@ namespace Core
 
         public ConfigurableInput? ConfigurableInput { get; set; }
 
-        private NpcNameFinder npcNameFinder;
+        private readonly NpcNameFinder npcNameFinder;
 
-        private NpcNameTargeting npcNameTargeting;
+        private readonly NpcNameTargeting npcNameTargeting;
 
-        private IAddonDataProvider addonDataProvider;
+        private readonly IAddonDataProvider addonDataProvider;
 
         public ClassConfiguration? ClassConfig { get; set; }
 
-        private INodeFinder minimapNodeFinder;
+        private readonly INodeFinder minimapNodeFinder;
         public IImageProvider? MinimapImageFinder { get; set; }
 
         public ActionBarPopulator? ActionBarPopulator { get; set; }
@@ -67,7 +67,7 @@ namespace Core
         public ExecGameCommand ExecGameCommand { get; set; }
 
         private readonly CancellationTokenSource cts;
-        private Wait wait;
+        private readonly Wait wait;
 
         public event EventHandler? ProfileLoaded;
         public event EventHandler? StatusChanged;
