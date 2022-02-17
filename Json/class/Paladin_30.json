@@ -1,13 +1,14 @@
 {
   "ClassName": "Paladin",
   "PathFilename": "_p2\\25-30_hillsbrad.json",
-  "UseMount": true,
+  "UseMount": false,
   "MountKey": "N0",
   "PathThereAndBack": false,
   "IntVariables": {
     "MIN_SPEED_SEAL": 3000,
     "MIN_TARGET_HP%": 20,
-    "MIN_HP_BEFORE_HEAL%": 20
+    "MIN_HP_BEFORE_HEAL%": 20,
+    "MIN_MANA%": 50
   },
   "Pull": {
     "Sequence": [
@@ -116,7 +117,8 @@
         "WhenUsable": true,
         "Requirements": [
           "!Judgement of the Crusader || Hammer of Justice || CD_Hammer of Justice > CD_Judgement",
-          "Seal of Command || Seal of Righteousness || Seal of the Crusader"
+          "Seal of Command || Seal of Righteousness || Seal of the Crusader",
+          "Mana% >= MIN_MANA%"
         ],
         "DelayAfterCast": 400
       },
@@ -169,10 +171,10 @@
   "Adhoc": {
     "Sequence": [
       {
-        "Name": "Blessing of Might",
+        "Name": "Blessing of Wisdom",
         "Key": "4",
         "WaitBuffAfterCast": true,
-        "Requirement": "!Blessing of Might"
+        "Requirement": "!Blessing of Wisdom"
       },
       {
 /*
