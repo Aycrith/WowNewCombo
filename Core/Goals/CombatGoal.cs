@@ -59,7 +59,8 @@ namespace Core.Goals
         {
             if (playerReader.Bits.HasPet && !playerReader.PetHasTarget)
             {
-                input.TapPetAttack("");
+                if (input.ClassConfig.PetAttack.GetCooldownRemaining() == 0)
+                    input.TapPetAttack();
             }
 
             foreach (var item in Keys)

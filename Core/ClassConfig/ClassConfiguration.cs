@@ -137,6 +137,7 @@ namespace Core
 
             PetAttack.Key = PetAttackKey;
             PetAttack.PressDuration = 10;
+            PetAttack.Cooldown = 400;
             PetAttack.Initialise(addonReader, requirementFactory, logger);
 
             Mount.Key = MountKey;
