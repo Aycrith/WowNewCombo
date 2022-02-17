@@ -5,7 +5,7 @@ namespace Core.Goals
 {
     public class TargetPetTarget : GoapGoal
     {
-        public override float CostOfPerformingAction { get => 4.01f; }
+        public override float CostOfPerformingAction => 4.01f;
 
         private readonly ConfigurableInput input;
         private readonly PlayerReader playerReader;

@@ -4,9 +4,9 @@ using Core.GOAP;
 
 namespace Core.Goals
 {
-    public class ConsumeCorpse : GoapGoal
+    public partial class ConsumeCorpse : GoapGoal
     {
-        public override float CostOfPerformingAction { get => 4.1f; }
+        public override float CostOfPerformingAction => 4.1f;
 
         private readonly ILogger logger;
         private readonly ClassConfiguration classConfig;
@@ -37,7 +37,7 @@ namespace Core.Goals
 
         public override ValueTask OnEnter()
         {
-            logger.LogWarning("----- Safe to consume a corpse.");
+            LogConsume(logger);
             SendActionEvent(new ActionEventArgs(GoapKey.consumecorpse, true));
 
             if (classConfig.Loot)
@@ -52,5 +52,11 @@ namespace Core.Goals
         {
             return ValueTask.CompletedTask;
         }
+
+        [LoggerMessage(
+            EventId = 100,
+            Level = LogLevel.Information,
+            Message = "----- Safe to consume a corpse.")]
+        static partial void LogConsume(ILogger logger);
     }
 }

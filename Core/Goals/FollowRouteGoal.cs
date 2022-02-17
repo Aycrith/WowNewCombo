@@ -11,9 +11,9 @@ using SharedLib.Extensions;
 
 namespace Core.Goals
 {
-    public class FollowRouteGoal : GoapGoal, IRouteProvider
+    public class FollowRouteGoal : GoapGoal, IRouteProvider, IDisposable
     {
-        public override float CostOfPerformingAction { get => 20f; }
+        public override float CostOfPerformingAction => 20f;
 
         private readonly bool debug = false;
 
@@ -87,6 +87,11 @@ namespace Core.Goals
             }
 
             targetFinderCts = new CancellationTokenSource();
+        }
+
+        public void Dispose()
+        {
+            targetFinderCts.Dispose();
         }
 
         public override void OnActionEvent(object sender, ActionEventArgs e)

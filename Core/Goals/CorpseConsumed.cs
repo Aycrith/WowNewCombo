@@ -4,9 +4,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Core.Goals
 {
-    public class CorpseConsumed : GoapGoal
+    public partial class CorpseConsumed : GoapGoal
     {
-        public override float CostOfPerformingAction { get => 4.7f; }
+        public override float CostOfPerformingAction => 4.7f;
 
         private readonly ILogger logger;
         private readonly GoapAgentState goapAgentState;
@@ -25,7 +25,7 @@ namespace Core.Goals
         public override ValueTask OnEnter()
         {
             goapAgentState.DecKillCount();
-            logger.LogInformation($"----- Corpse consumed. Remaining: {goapAgentState.LastCombatKillCount}");
+            LogConsumed(logger, goapAgentState.LastCombatKillCount);
 
             SendActionEvent(new ActionEventArgs(GoapKey.consumecorpse, false));
 
@@ -36,5 +36,12 @@ namespace Core.Goals
         {
             return ValueTask.CompletedTask;
         }
+
+
+        [LoggerMessage(
+            EventId = 101,
+            Level = LogLevel.Information,
+            Message = "----- Corpse consumed. Remaining: {remains}")]
+        static partial void LogConsumed(ILogger logger, int remains);
     }
 }

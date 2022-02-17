@@ -8,8 +8,8 @@ namespace Core.Goals
 {
     public class GoapPreCondition
     {
-        public string Description { get; private set; }
-        public object State { get; private set; }
+        public string Description { get; private init; }
+        public object State { get; private init; }
 
         public GoapPreCondition(string description, object state)
         {
@@ -20,8 +20,8 @@ namespace Core.Goals
 
     public class ActionEventArgs : EventArgs
     {
-        public GoapKey Key { get; private set; }
-        public object Value { get; private set; }
+        public GoapKey Key { get; private init; }
+        public object Value { get; private init; }
 
         public ActionEventArgs(GoapKey key, object value)
         {

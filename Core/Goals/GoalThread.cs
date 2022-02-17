@@ -7,14 +7,14 @@ using System.Threading;
 
 namespace Core.Goals
 {
-    public class GoalThread
+    public partial class GoalThread
     {
         private readonly ILogger logger;
         private readonly GoapAgent goapAgent;
         private readonly AddonReader addonReader;
+        private readonly RouteInfo? routeInfo;
 
         private GoapGoal? currentGoal;
-        private RouteInfo? routeInfo;
 
         private bool active;
         public bool Active
@@ -24,10 +24,13 @@ namespace Core.Goals
             {
                 active = value;
                 if (!active)
-                    goapAgent?.AvailableGoals.ToList().ForEach(goal => goal.OnActionEvent(this, new ActionEventArgs(GoapKey.abort, true)));
-
-                if (goapAgent != null)
-                    goapAgent.Active = active;
+                {
+                    foreach (var goal in goapAgent.AvailableGoals)
+                    {
+                        goal.OnActionEvent(this, new ActionEventArgs(GoapKey.abort, true));
+                    }
+                }
+                goapAgent.Active = active;
             }
         }
 
@@ -44,7 +47,6 @@ namespace Core.Goals
             if (e.Key == GoapKey.corpselocation && e.Value is CorpseLocation corpseLocation)
             {
                 routeInfo?.PoiList.Add(new RouteInfoPoi(corpseLocation.WowPoint, "Corpse", "black", corpseLocation.Radius));
-                //logger.LogInformation($"{nameof(GoalThread)} Kill location added to list");
             }
             else if (e.Key == GoapKey.consumecorpse && (bool)e.Value == false)
             {
@@ -64,57 +66,53 @@ namespace Core.Goals
 
         public void GoapPerformGoal()
         {
-            if (goapAgent != null)
+            var newGoal = goapAgent.GetAction();
+            if (newGoal != null)
             {
-                var newGoal = goapAgent.GetAction();
-                if (newGoal != null)
+                if (newGoal != currentGoal)
                 {
-                    if (newGoal != currentGoal)
+                    if (currentGoal != null)
                     {
-                        if (currentGoal != null)
+                        try
                         {
-                            try
-                            {
-                                currentGoal.OnExit();
-                            }
-                            catch (Exception ex)
-                            {
-                                logger.LogError(ex, $"OnExit on {currentGoal.Name}");
-                            }
+                            currentGoal.OnExit();
                         }
-
-                        currentGoal = newGoal;
-
-                        logger.LogInformation("---------------------------------");
-                        logger.LogInformation($"New Plan= {newGoal.Name}");
-                        
-                        if (currentGoal != null)
+                        catch (Exception ex)
                         {
-                            try
-                            {
-                                currentGoal.OnEnter();
-                            }
-                            catch (Exception ex)
-                            {
-                                logger.LogError(ex, $"OnEnter on {currentGoal.Name}");
-                            }
+                            logger.LogError(ex, $"{nameof(currentGoal.OnExit)} on {currentGoal.Name}");
                         }
                     }
 
-                    try
+                    currentGoal = newGoal;
+
+                    LogNewGoal(logger, newGoal.Name);
+
+                    if (currentGoal != null)
                     {
-                        newGoal.PerformAction();
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(ex, $"PerformAction on {newGoal.Name}");
+                        try
+                        {
+                            currentGoal.OnEnter();
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogError(ex, $"{nameof(newGoal.OnEnter)} on {currentGoal.Name}");
+                        }
                     }
                 }
-                else
+
+                try
                 {
-                    //logger.LogInformation($"Current Plan= {currentGoal?.Name} -- New Plan= NULL");
-                    Thread.Sleep(10);
+                    newGoal.PerformAction();
                 }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, $"{nameof(newGoal.PerformAction)} on {newGoal.Name}");
+                }
+            }
+            else
+            {
+                LogNewEmptyGoal(logger);
+                Thread.Sleep(10);
             }
         }
 
@@ -122,5 +120,22 @@ namespace Core.Goals
         {
             currentGoal?.OnActionEvent(this, new ActionEventArgs(GoapKey.resume, true));
         }
+
+
+        #region Logging
+
+        [LoggerMessage(
+            EventId = 40,
+            Level = LogLevel.Information,
+            Message = "New Plan= {name}")]
+        static partial void LogNewGoal(ILogger logger, string name);
+
+        [LoggerMessage(
+            EventId = 41,
+            Level = LogLevel.Warning,
+            Message = "New Plan= NO PLAN")]
+        static partial void LogNewEmptyGoal(ILogger logger);
+
+        #endregion
     }
 }
