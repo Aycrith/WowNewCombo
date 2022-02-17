@@ -50,7 +50,6 @@
         "Name": "Rejuvenation",
         "Key": "6",
         "StopBeforeCast": true,
-        "HasCastBar": true,
         "AfterCastWaitBuff": true,
         "Requirements": [
           "Health% < 75",
