@@ -48,12 +48,6 @@ namespace Core.Goals
 
         public override ValueTask OnEnter()
         {
-            if (key.StopBeforeCast)
-            {
-                stopMoving.Stop();
-                wait.Update(1);
-            }
-
             if (mountHandler.IsMounted())
             {
                 mountHandler.Dismount();
