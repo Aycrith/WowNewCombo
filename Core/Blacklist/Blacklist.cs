@@ -4,9 +4,9 @@ using System.Linq;
 
 namespace Core
 {
-    public class Blacklist : IBlacklist
+    public partial class Blacklist : IBlacklist
     {
-        private readonly List<string> blacklist = new List<string>();
+        private readonly HashSet<string> blacklist = new();
 
         private readonly AddonReader addonReader;
         private readonly PlayerReader playerReader;
@@ -15,7 +15,7 @@ namespace Core
         private readonly int below;
         private readonly bool checkTargetGivesExp;
 
-        private int LastWarningTargetGuid;
+        private int lastGuid;
 
         public Blacklist(ILogger logger, AddonReader addonReader, int above, int below, bool checkTargetGivesExp, List<string> blacklisted)
         {
@@ -27,22 +27,19 @@ namespace Core
 
             this.checkTargetGivesExp = checkTargetGivesExp;
 
-            blacklisted.ForEach(npc => blacklist.Add(npc.ToUpper()));
+            blacklisted.ForEach(name => blacklist.Add(name.ToUpper()));
         }
 
         public void Add(string name)
         {
-            if (!blacklist.Contains(name))
-            {
-                blacklist.Add(name);
-            }
+            blacklist.Add(name);
         }
 
         public bool IsTargetBlacklisted()
         {
             if (!playerReader.HasTarget)
             {
-                LastWarningTargetGuid = 0;
+                lastGuid = 0;
                 return false;
             }
             else if (addonReader.CreatureHistory.DamageTaken.Exists(x => x.HealthPercent > 0 && x.Guid == playerReader.TargetGuid))
@@ -63,20 +60,35 @@ namespace Core
 
             if (!playerReader.Bits.TargetIsNormal)
             {
-                Warn($"Target is not a normal mob {playerReader.TargetGuid} - {playerReader.TargetId}");
+                if (lastGuid != playerReader.TargetGuid)
+                {
+                    LogNotNormal(logger, playerReader.TargetId, playerReader.TargetGuid, addonReader.TargetName);
+                    lastGuid = playerReader.TargetGuid;
+                }
+
                 return true; // ignore elites
             }
 
             if (playerReader.Bits.IsTagged)
             {
-                Warn($"Target is tagged - {playerReader.TargetGuid} - {playerReader.TargetId}");
+                if (lastGuid != playerReader.TargetGuid)
+                {
+                    LogTagged(logger, playerReader.TargetId, playerReader.TargetGuid, addonReader.TargetName);
+                    lastGuid = playerReader.TargetGuid;
+                }
+
                 return true; // ignore tagged mobs
             }
 
 
-            if (playerReader.TargetLevel > playerReader.Level.Value + above)
+            if (playerReader.Bits.TargetCanBeHostile && playerReader.TargetLevel > playerReader.Level.Value + above)
             {
-                Warn($"Target is too high a level {playerReader.TargetGuid} - {playerReader.TargetId}");
+                if (lastGuid != playerReader.TargetGuid)
+                {
+                    LogLevelHigh(logger, playerReader.TargetId, playerReader.TargetGuid, addonReader.TargetName);
+                    lastGuid = playerReader.TargetGuid;
+                }
+
                 return true; // ignore if current level + 2
             }
 
@@ -84,33 +96,76 @@ namespace Core
             {
                 if (!playerReader.TargetYieldXP)
                 {
-                    Warn($"Target is not yield experience {playerReader.TargetGuid} - {playerReader.TargetId}");
+                    if (lastGuid != playerReader.TargetGuid)
+                    {
+                        LogNoExperienceGain(logger, playerReader.TargetId, playerReader.TargetGuid, addonReader.TargetName);
+                        lastGuid = playerReader.TargetGuid;
+                    }
                     return true;
                 }
             }
-            else if (playerReader.TargetLevel < playerReader.Level.Value - below)
+            else if (playerReader.Bits.TargetCanBeHostile && playerReader.TargetLevel < playerReader.Level.Value - below)
             {
-                Warn($"Target is too low a level {playerReader.TargetGuid} - {playerReader.TargetId}");
+                if (lastGuid != playerReader.TargetGuid)
+                {
+                    LogLevelLow(logger, playerReader.TargetId, playerReader.TargetGuid, addonReader.TargetName);
+                    lastGuid = playerReader.TargetGuid;
+                }
                 return true; // ignore if current level - 7
             }
 
-            string blacklistMatch = blacklist.FirstOrDefault(s => addonReader.TargetName.ToUpper().StartsWith(s)) ?? string.Empty;
-            if (!string.IsNullOrEmpty(blacklistMatch))
+            string? match = blacklist.FirstOrDefault(s => addonReader.TargetName.ToUpper().StartsWith(s));
+            if (!string.IsNullOrEmpty(match))
             {
-                Warn($"Target is in the blacklist {addonReader.TargetName} starts with {blacklistMatch}");
+                if (lastGuid != playerReader.TargetGuid)
+                {
+                    LogNameMatch(logger, playerReader.TargetId, playerReader.TargetGuid, addonReader.TargetName, match);
+                    lastGuid = playerReader.TargetGuid;
+                }
                 return true;
             }
 
             return false;
         }
 
-        private void Warn(string message)
-        {
-            if (playerReader.TargetGuid != LastWarningTargetGuid)
-            {
-                logger.LogWarning($"Blacklisted: {message}");
-            }
-            LastWarningTargetGuid = playerReader.TargetGuid;
-        }
+        #region logging
+
+        [LoggerMessage(
+            EventId = 60,
+            Level = LogLevel.Warning,
+            Message = "Blacklisted ({id},{guid},{name}) not a normal mob!")]
+        static partial void LogNotNormal(ILogger logger, int id, int guid, string name);
+
+        [LoggerMessage(
+            EventId = 61,
+            Level = LogLevel.Warning,
+            Message = "Blacklisted ({id},{guid},{name}) is tagged!")]
+        static partial void LogTagged(ILogger logger, int id, int guid, string name);
+
+        [LoggerMessage(
+            EventId = 62,
+            Level = LogLevel.Warning,
+            Message = "Blacklisted ({id},{guid},{name}) too high level!")]
+        static partial void LogLevelHigh(ILogger logger, int id, int guid, string name);
+
+        [LoggerMessage(
+            EventId = 63,
+            Level = LogLevel.Warning,
+            Message = "Blacklisted ({id},{guid},{name}) too low level!")]
+        static partial void LogLevelLow(ILogger logger, int id, int guid, string name);
+
+        [LoggerMessage(
+            EventId = 64,
+            Level = LogLevel.Warning,
+            Message = "Blacklisted ({id},{guid},{name}) not yield experience!")]
+        static partial void LogNoExperienceGain(ILogger logger, int id, int guid, string name);
+
+        [LoggerMessage(
+            EventId = 65,
+            Level = LogLevel.Warning,
+            Message = "Blacklisted ({id},{guid},{name}) name match {match}!")]
+        static partial void LogNameMatch(ILogger logger, int id, int guid, string name, string match);
+
+        #endregion
     }
 }
