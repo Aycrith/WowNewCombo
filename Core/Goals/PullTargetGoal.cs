@@ -63,7 +63,14 @@ namespace Core.Goals
                 mountHandler.Dismount();
             }
 
-            input.TapApproachKey($"{nameof(PullTargetGoal)}: OnEnter - Face the target and stop");
+            if (Keys.Count != 0)
+            {
+                if (input.ClassConfig.StopAttack.GetCooldownRemaining() == 0)
+                {
+                    input.TapStopAttack("Stop auto interact!");
+                    wait.Update(1);
+                }
+            }
 
             pullStart = DateTime.UtcNow;
 
@@ -80,7 +87,7 @@ namespace Core.Goals
 
         public override ValueTask PerformAction()
         {
-            if (SecondsSincePullStarted > 7)
+            if (SecondsSincePullStarted > 10)
             {
                 input.TapClearTarget();
                 input.KeyPress(random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey, 1000, "Too much time to pull!");
@@ -95,7 +102,7 @@ namespace Core.Goals
             {
                 if (HasPickedUpAnAdd)
                 {
-                    Log($"Combat={this.playerReader.Bits.PlayerInCombat}, Is Target targetting me={this.playerReader.Bits.TargetOfTargetIsPlayer}");
+                    Log($"Combat={playerReader.Bits.PlayerInCombat}, targeting me={playerReader.Bits.TargetOfTargetIsPlayer}");
                     Log($"Add on approach");
 
                     stopMoving.Stop();
@@ -103,12 +110,10 @@ namespace Core.Goals
                     input.TapNearestTarget();
                     wait.Update(1);
 
-                    if (this.playerReader.HasTarget && playerReader.Bits.TargetInCombat)
+                    if (playerReader.HasTarget && playerReader.Bits.TargetInCombat &&
+                        playerReader.TargetTarget == TargetTargetEnum.TargetIsTargettingMe)
                     {
-                        if (this.playerReader.TargetTarget == TargetTargetEnum.TargetIsTargettingMe)
-                        {
-                            return ValueTask.CompletedTask;
-                        }
+                        return ValueTask.CompletedTask;
                     }
 
                     input.TapClearTarget();
@@ -185,12 +190,6 @@ namespace Core.Goals
 
         public bool Pull()
         {
-            if (Keys.Count != 0)
-            {
-                input.TapStopAttack();
-                wait.Update(1);
-            }
-
             if (playerReader.Bits.HasPet && !playerReader.PetHasTarget)
             {
                 if (input.ClassConfig.PetAttack.GetCooldownRemaining() == 0)
