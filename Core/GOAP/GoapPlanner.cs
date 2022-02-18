@@ -27,7 +27,7 @@ namespace Core.GOAP
                                       HashSet<KeyValuePair<GoapKey, object>> worldState,
                                       HashSet<KeyValuePair<GoapKey, GoapPreCondition>> goal)
         {
-            Node start = new Node(null, 0, worldState, null);
+            Node start = new(null, 0, worldState, null);
 
             // check what actions can run using their checkProceduralPrecondition
             HashSet<GoapGoal> usableActions = new HashSet<GoapGoal>();
@@ -46,7 +46,7 @@ namespace Core.GOAP
             // we now have all actions that can run, stored in usableActions
 
             // build up the tree and record the leaf nodes that provide a solution to the goal.
-            List<Node> leaves = new List<Node>();
+            List<Node> leaves = new();
 
             // build graph
             bool success = BuildGraph(start, leaves, usableActions, goal);
@@ -72,7 +72,7 @@ namespace Core.GOAP
             }
 
             // get its node and work back through the parents
-            List<GoapGoal> result = new List<GoapGoal>();
+            List<GoapGoal> result = new();
             Node? n = cheapest;
             while (n != null)
             {
@@ -192,7 +192,7 @@ namespace Core.GOAP
 
         private static HashSet<KeyValuePair<GoapKey, object>> PopulateState(HashSet<KeyValuePair<GoapKey, object>> currentState, HashSet<KeyValuePair<GoapKey, object>> stateChange)
         {
-            HashSet<KeyValuePair<GoapKey, object>> state = new HashSet<KeyValuePair<GoapKey, object>>();
+            HashSet<KeyValuePair<GoapKey, object>> state = new();
             // copy the KVPs over as new objects
             foreach (KeyValuePair<GoapKey, object> s in currentState)
             {

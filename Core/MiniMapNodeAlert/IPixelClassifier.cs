@@ -4,8 +4,8 @@
     {
         bool IsMatch(byte red, byte green, byte blue);
 
-        int MaxBlue { get; set; }
+        int MaxBlue { get; }
 
-        int MinRedGreen { get; set; }
+        int MinRedGreen { get; }
     }
 }

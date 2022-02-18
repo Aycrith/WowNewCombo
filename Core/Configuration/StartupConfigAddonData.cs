@@ -19,11 +19,11 @@ namespace Core
             this.connectPort = connectPort;
         }
 
-        public string Mode { get; set; }
-        public int myPort { get; set; }
+        public string Mode { get; init; }
+        public int myPort { get; init; }
 
-        public string connectTo { get; set; }
+        public string connectTo { get; init; }
 
-        public int connectPort { get; set; }
+        public int connectPort { get; init; }
     }
 }

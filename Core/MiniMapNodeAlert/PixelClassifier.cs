@@ -4,9 +4,9 @@ namespace Core
 {
     public class PixelClassifier : IPixelClassifier
     {
-        public int MaxBlue { get; set; } = 34;
+        public int MaxBlue { get; } = 34;
 
-        public int MinRedGreen { get; set; } = 176;
+        public int MinRedGreen { get; } = 176;
 
         public bool IsMatch(byte red, byte green, byte blue)
         {

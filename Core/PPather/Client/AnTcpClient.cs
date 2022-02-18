@@ -16,11 +16,11 @@ namespace AnTCP.Client
             Port = port;
         }
 
-        public string Ip { get; private set; }
+        public string Ip { get; }
 
         public bool IsConnected => Client != null && Client.Connected;
 
-        public int Port { get; private set; }
+        public int Port { get; }
 
         private TcpClient Client { get; set; }
 

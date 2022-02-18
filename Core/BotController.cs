@@ -24,56 +24,49 @@ namespace Core
         private readonly WowProcess wowProcess;
         private readonly ILogger logger;
         private readonly IPPather pather;
+        private readonly NpcNameFinder npcNameFinder;
+        private readonly NpcNameTargeting npcNameTargeting;
+        private readonly IAddonDataProvider addonDataProvider;
+        private readonly INodeFinder minimapNodeFinder;
+        private readonly CancellationTokenSource cts;
+        private readonly Wait wait;
+        private readonly AutoResetEvent addonAutoResetEvent = new(false);
+        private readonly AutoResetEvent npcNameFinderAutoResetEvent = new(false);
 
-        public IGrindSession GrindSession { get; set; }
-        public IGrindSessionHandler GrindSessionHandler { get; set; }
-        public string SelectedClassFilename { get; set; } = string.Empty;
-        public string? SelectedPathFilename { get; set; }
+        public DataConfig DataConfig { get; }
 
-        public DataConfig DataConfig { get; set; }
-        public AddonReader AddonReader { get; set; }
+        public AddonReader AddonReader { get; }
 
-        public Thread? screenshotThread { get; set; }
+        public Thread? screenshotThread { get; }
 
-        private const int screenshotTickMs = 200;
-        private DateTime lastScreenshot;
+        public Thread addonThread { get; }
 
-        public Thread addonThread { get; set; }
         public Thread? botThread { get; set; }
 
         public GoapAgent? GoapAgent { get; set; }
+
         public RouteInfo? RouteInfo { get; set; }
 
-        private GoalThread? actionThread;
-
-        public WowScreen WowScreen { get; set; }
-        public WowProcessInput WowProcessInput { get; set; }
+        public WowScreen WowScreen { get; }
+        public WowProcessInput WowProcessInput { get; }
 
         public ConfigurableInput? ConfigurableInput { get; set; }
 
-        private readonly NpcNameFinder npcNameFinder;
-
-        private readonly NpcNameTargeting npcNameTargeting;
-
-        private readonly IAddonDataProvider addonDataProvider;
-
         public ClassConfiguration? ClassConfig { get; set; }
 
-        private readonly INodeFinder minimapNodeFinder;
-        public IImageProvider? MinimapImageFinder { get; set; }
+        public IImageProvider? MinimapImageFinder { get; }
+
+        public ExecGameCommand ExecGameCommand { get; }
 
         public ActionBarPopulator? ActionBarPopulator { get; set; }
 
-        public ExecGameCommand ExecGameCommand { get; set; }
-
-        private readonly CancellationTokenSource cts;
-        private readonly Wait wait;
+        public IGrindSession GrindSession { get; }
+        public IGrindSessionHandler GrindSessionHandler { get; }
+        public string SelectedClassFilename { get; set; } = string.Empty;
+        public string? SelectedPathFilename { get; set; }
 
         public event EventHandler? ProfileLoaded;
         public event EventHandler? StatusChanged;
-
-        private readonly AutoResetEvent addonAutoResetEvent = new(false);
-        private readonly AutoResetEvent npcNameFinderAutoResetEvent = new(false);
 
         public double AvgScreenLatency
         {
@@ -102,6 +95,11 @@ namespace Core
             }
         }
         private readonly CircularBuffer<double> NPCLatencys;
+
+        private const int screenshotTickMs = 200;
+        private DateTime lastScreenshot;
+
+        private GoalThread? actionThread;
 
         public BotController(ILogger logger, IPPather pather, DataConfig dataConfig, IConfiguration configuration)
         {

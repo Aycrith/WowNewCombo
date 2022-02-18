@@ -27,7 +27,7 @@ namespace Game
         public bool EnablePostProcess { get; set; } = true;
 
         private Bitmap bitmap1, bitmap2;
-        private bool isBitmap1 = false;
+        private bool isBitmap1;
         public Bitmap Bitmap
         {
             get

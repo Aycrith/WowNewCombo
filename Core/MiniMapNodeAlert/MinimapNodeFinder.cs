@@ -26,19 +26,19 @@ namespace Core
 
         public Point? Find(bool highlight)
         {
-            this.bitmap = wowScreen.GetCroppedMinimapBitmap(highlight);
+            bitmap = wowScreen.GetCroppedMinimapBitmap(highlight);
 
             Score? best = Score.ScorePoints(FindYellowPoints());
 
-            var e = new NodeEventArgs() { Bitmap = this.bitmap };
-            if (best != null && best.count>2)
+            var point = new Point();
+            if (best != null && best.count > 2)
             {
-                e.Point = best.point;
+                point = best.point;
             }
 
-            NodeEvent?.Invoke(this, e);
+            NodeEvent?.Invoke(this, new NodeEventArgs(bitmap, point));
 
-            this.bitmap.Dispose();
+            bitmap.Dispose();
 
             return best?.point;
         }

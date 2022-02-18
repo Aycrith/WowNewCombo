@@ -145,7 +145,7 @@ namespace Core.Goals
             if (e.Key == GoapKey.corpselocation && e.Value is CorpseLocation location)
             {
                 //logger.LogInformation($"{nameof(LootGoal)}: --- Target is killed! Recorded death location.");
-                corpseLocations.Add(location.WowPoint);
+                corpseLocations.Add(location.Location);
             }
         }
 

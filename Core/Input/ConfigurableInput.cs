@@ -8,7 +8,7 @@ namespace Core
     {
         private readonly bool log = true;
 
-        public ClassConfiguration ClassConfig { private set; get; }
+        public ClassConfiguration ClassConfig { get; }
 
         public readonly int defaultKeyPress = 50;
 

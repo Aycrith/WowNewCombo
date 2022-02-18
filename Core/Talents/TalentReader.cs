@@ -14,7 +14,7 @@ namespace Core
         private readonly TalentDB talentDB;
         public int Count => Talents.Sum(x => x.Value.CurrentRank);
 
-        public Dictionary<int, Talent> Talents { get; private set; } = new Dictionary<int, Talent>();
+        public Dictionary<int, Talent> Talents { get; } = new();
 
         public TalentReader(ISquareReader reader, int cTalent, PlayerReader playerReader, TalentDB talentDB)
         {

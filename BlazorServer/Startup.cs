@@ -106,7 +106,7 @@ namespace BlazorServer
 
             if (scp.Type == StartupConfigPathing.Types.RemoteV3)
             {
-                var worldmapAreaDb = new WorldMapAreaDB(logger, dataConfig);
+                var worldmapAreaDb = new WorldMapAreaDB(dataConfig);
                 var api = new RemotePathingAPIV3(logger, scp.hostv3, scp.portv3, worldmapAreaDb);
                 if (api.PingServer().Result)
                 {

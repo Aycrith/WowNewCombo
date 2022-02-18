@@ -8,8 +8,8 @@ namespace Core.Goals
 {
     public class GoapPreCondition
     {
-        public string Description { get; private init; }
-        public object State { get; private init; }
+        public string Description { get; }
+        public object State { get; }
 
         public GoapPreCondition(string description, object state)
         {
@@ -20,8 +20,8 @@ namespace Core.Goals
 
     public class ActionEventArgs : EventArgs
     {
-        public GoapKey Key { get; private init; }
-        public object Value { get; private init; }
+        public GoapKey Key { get; }
+        public object Value { get; }
 
         public ActionEventArgs(GoapKey key, object value)
         {
@@ -32,10 +32,12 @@ namespace Core.Goals
 
     public abstract class GoapGoal
     {
-        public HashSet<KeyValuePair<GoapKey, GoapPreCondition>> Preconditions { get; private set; } = new HashSet<KeyValuePair<GoapKey, GoapPreCondition>>();
-        public HashSet<KeyValuePair<GoapKey, object>> Effects { get; private set; } = new HashSet<KeyValuePair<GoapKey, object>>();
+        public HashSet<KeyValuePair<GoapKey, GoapPreCondition>> Preconditions { get; } = new();
+        public HashSet<KeyValuePair<GoapKey, object>> Effects { get; } = new();
 
-        public List<KeyAction> Keys { get; private set; } = new List<KeyAction>();
+        public List<KeyAction> Keys { get; } = new();
+
+        public Dictionary<string, bool> State { get; private set; } = new();
 
         public abstract float CostOfPerformingAction { get; }
 
@@ -62,8 +64,6 @@ namespace Core.Goals
         {
             ActionEvent?.Invoke(this, e);
         }
-
-        public Dictionary<string, bool> State { get; private set; } = new Dictionary<string, bool>();
 
         public void SetState(Dictionary<string, bool> newState)
         {

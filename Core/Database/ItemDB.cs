@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.IO;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using SharedLib;
 
@@ -8,13 +7,13 @@ namespace Core.Database
 {
     public class ItemDB
     {
-        public Dictionary<int, Item> Items { get; } = new Dictionary<int, Item>();
-        public HashSet<int> FoodIds { get; } = new HashSet<int>();
-        public HashSet<int> WaterIds { get; } = new HashSet<int>();
+        public Dictionary<int, Item> Items { get; } = new();
+        public HashSet<int> FoodIds { get; } = new();
+        public HashSet<int> WaterIds { get; } = new();
 
-        public HashSet<int> ContainerIds { get; } = new HashSet<int>();
+        public HashSet<int> ContainerIds { get; } = new();
 
-        public ItemDB(ILogger logger, DataConfig dataConfig)
+        public ItemDB(DataConfig dataConfig)
         {
             var items = JsonConvert.DeserializeObject<List<Item>>(File.ReadAllText(Path.Join(dataConfig.Dbc, "items.json")));
             items.ForEach(i =>

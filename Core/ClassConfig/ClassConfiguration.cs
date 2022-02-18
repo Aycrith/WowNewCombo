@@ -48,61 +48,59 @@ namespace Core
         public bool CheckTargetGivesExp { get; set; }
         public List<string> Blacklist { get; } = new List<string>();
 
-        public Dictionary<int, List<SchoolMask>> ImmunityBlacklist { get; } = new Dictionary<int, List<SchoolMask>>();
+        public Dictionary<int, List<SchoolMask>> ImmunityBlacklist { get; } = new();
 
-        public Dictionary<string, int> IntVariables { get; } = new Dictionary<string, int>();
+        public Dictionary<string, int> IntVariables { get; } = new();
 
-        public KeyActions Pull { get; set; } = new KeyActions();
-        public KeyActions Combat { get; set; } = new KeyActions();
-        public KeyActions Adhoc { get; set; } = new KeyActions();
-        public KeyActions Parallel { get; set; } = new KeyActions();
-        public KeyActions NPC { get; set; } = new KeyActions();
+        public KeyActions Pull { get; set; } = new();
+        public KeyActions Combat { get; set; } = new();
+        public KeyActions Adhoc { get; set; } = new();
+        public KeyActions Parallel { get; set; } = new();
+        public KeyActions NPC { get; set; } = new();
 
-        public List<KeyAction> Form { get; } = new List<KeyAction>();
-        public List<KeyAction> GatherFindKeyConfig { get; } = new List<KeyAction>();
-        public List<string> GatherFindKeys { get; } = new List<string>();
+        public List<KeyAction> Form { get; } = new();
+        public List<KeyAction> GatherFindKeyConfig { get; } = new();
+        public List<string> GatherFindKeys { get; } = new();
 
-        public KeyAction Jump { get; set; } = new KeyAction();
+        public KeyAction Jump { get; set; } = new();
         public string JumpKey { get; set; } = "Spacebar";
 
-        public KeyAction Interact { get; set; } = new KeyAction();
+        public KeyAction Interact { get; set; } = new();
         public string InteractKey { get; set; } = "I";
 
-        public KeyAction Approach { get; set; } = new KeyAction();
-        public KeyAction AutoAttack { get; set; } = new KeyAction();
+        public KeyAction Approach { get; set; } = new();
+        public KeyAction AutoAttack { get; set; } = new();
 
-        public KeyAction TargetLastTarget { get; set; } = new KeyAction();
+        public KeyAction TargetLastTarget { get; set; } = new();
         public string TargetLastTargetKey { get; set; } = "G";
 
-        public KeyAction StandUp { get; set; } = new KeyAction();
+        public KeyAction StandUp { get; set; } = new();
         public string StandUpKey { get; set; } = "X";
 
-        public KeyAction ClearTarget { get; set; } = new KeyAction();
+        public KeyAction ClearTarget { get; set; } = new();
         public string ClearTargetKey { get; set; } = "Insert";
 
-        public KeyAction StopAttack { get; set; } = new KeyAction();
+        public KeyAction StopAttack { get; set; } = new();
         public string StopAttackKey { get; set; } = "Delete";
 
-        public KeyAction TargetNearestTarget { get; set; } = new KeyAction();
+        public KeyAction TargetNearestTarget { get; set; } = new();
         public string TargetNearestTargetKey { get; set; } = "Tab";
 
-        public KeyAction TargetTargetOfTarget { get; set; } = new KeyAction();
+        public KeyAction TargetTargetOfTarget { get; set; } = new();
         public string TargetTargetOfTargetKey { get; set; } = "F";
-        public KeyAction TargetPet { get; set; } = new KeyAction();
+        public KeyAction TargetPet { get; set; } = new();
         public string TargetPetKey { get; set; } = "Multiply";
 
-        public KeyAction PetAttack { get; set; } = new KeyAction();
+        public KeyAction PetAttack { get; set; } = new();
         public string PetAttackKey { get; set; } = "Subtract";
 
-        public KeyAction Mount { get; set; } = new KeyAction();
+        public KeyAction Mount { get; set; } = new();
         public string MountKey { get; set; } = "O";
 
         public ConsoleKey ForwardKey { get; set; } = ConsoleKey.UpArrow;  // 38
         public ConsoleKey BackwardKey { get; set; } = ConsoleKey.DownArrow; // 40
         public ConsoleKey TurnLeftKey { get; set; } = ConsoleKey.LeftArrow; // 37
         public ConsoleKey TurnRightKey { get; set; } = ConsoleKey.RightArrow; // 39
-
-        public static Dictionary<Form, ConsoleKey> FormKeys { get; private set; } = new Dictionary<Form, ConsoleKey>();
 
         public void Initialise(DataConfig dataConfig, AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger, string? overridePathProfileFile)
         {

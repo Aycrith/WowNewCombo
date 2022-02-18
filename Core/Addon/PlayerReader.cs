@@ -12,22 +12,22 @@ namespace Core
             this.reader = reader;
         }
 
-        public Dictionary<Form, int> FormCost { private set; get; } = new Dictionary<Form, int>();
+        public Dictionary<Form, int> FormCost { get; } = new();
 
-        public Vector3 PlayerLocation => new Vector3(XCoord, YCoord, ZCoord);
+        public Vector3 PlayerLocation => new(XCoord, YCoord, ZCoord);
 
         public float XCoord => reader.GetFixedPointAtCell(1) * 10;
         public float YCoord => reader.GetFixedPointAtCell(2) * 10;
         public float ZCoord { get; set; }
         public float Direction => reader.GetFixedPointAtCell(3);
 
-        public RecordInt Level { private set; get; } = new RecordInt(5);
+        public RecordInt Level { get; } = new(5);
 
-        public Vector3 CorpseLocation => new Vector3(CorpseX, CorpseY, 0);
+        public Vector3 CorpseLocation => new(CorpseX, CorpseY, 0);
         public float CorpseX => reader.GetFixedPointAtCell(6) * 10;
         public float CorpseY => reader.GetFixedPointAtCell(7) * 10;
 
-        public AddonBits Bits => new AddonBits(reader.GetIntAtCell(8), reader.GetIntAtCell(9));
+        public AddonBits Bits => new(reader.GetIntAtCell(8), reader.GetIntAtCell(9));
 
         public int HealthMax => reader.GetIntAtCell(10);
         public int HealthCurrent => reader.GetIntAtCell(11);
@@ -54,12 +54,12 @@ namespace Core
         public int PetHealthPercentage => PetMaxHealth == 0 || PetHealth == 1 ? 0 : (PetHealth * 100) / PetMaxHealth;
 
 
-        public SpellInRange SpellInRange => new SpellInRange(reader.GetIntAtCell(40));
+        public SpellInRange SpellInRange => new(reader.GetIntAtCell(40));
         public bool WithInPullRange => SpellInRange.WithinPullRange(this, Class);
         public bool WithInCombatRange => SpellInRange.WithinCombatRange(this, Class);
 
-        public BuffStatus Buffs => new BuffStatus(reader.GetIntAtCell(41));
-        public TargetDebuffStatus TargetDebuffs => new TargetDebuffStatus(reader.GetIntAtCell(42));
+        public BuffStatus Buffs => new(reader.GetIntAtCell(41));
+        public TargetDebuffStatus TargetDebuffs => new(reader.GetIntAtCell(42));
 
         public int TargetLevel => reader.GetIntAtCell(43);
 
@@ -71,7 +71,7 @@ namespace Core
 
         // 47 empty
 
-        public Stance Stance => new Stance(reader.GetIntAtCell(48));
+        public Stance Stance => new(reader.GetIntAtCell(48));
         public Form Form => Stance.Get(this, Class);
 
         public int MinRange => (int)(reader.GetIntAtCell(49) / 100000f);
@@ -80,7 +80,7 @@ namespace Core
         public bool IsInMeleeRange => MinRange == 0 && MaxRange != 0 && MaxRange <= 5;
         public bool IsInDeadZone => MinRange >= 5 && Bits.IsInDeadZoneRange; // between 5-8 yard - hunter and warrior
 
-        public RecordInt PlayerXp { private set; get; } = new RecordInt(50);
+        public RecordInt PlayerXp { get; } = new(50);
 
         public int PlayerMaxXp => reader.GetIntAtCell(51);
         public int PlayerXpPercentage => (PlayerXp.Value * 100) / (PlayerMaxXp == 0 ? 1 : PlayerMaxXp);
@@ -93,7 +93,7 @@ namespace Core
 
         public int ComboPoints => reader.GetIntAtCell(54);
 
-        public AuraCount AuraCount => new AuraCount(reader, 55);
+        public AuraCount AuraCount => new(reader, 55);
 
         public int TargetId => reader.GetIntAtCell(56);
         public int TargetGuid => reader.GetIntAtCell(57);
@@ -103,10 +103,10 @@ namespace Core
 
         public TargetTargetEnum TargetTarget => (TargetTargetEnum)reader.GetIntAtCell(59);
 
-        public RecordInt AutoShot { private set; get; } = new RecordInt(60);
-        public RecordInt MainHandSwing { private set; get; } = new RecordInt(61);
-        public RecordInt CastEvent { private set; get; } = new RecordInt(62);
-        public RecordInt CastSpellId { private set; get; } = new RecordInt(63);
+        public RecordInt AutoShot { get; } = new(60);
+        public RecordInt MainHandSwing { get; } = new(61);
+        public RecordInt CastEvent { get; } = new(62);
+        public RecordInt CastSpellId { get; } = new(63);
 
         public int PetGuid => reader.GetIntAtCell(68);
         public int PetTargetGuid => reader.GetIntAtCell(69);
@@ -114,7 +114,7 @@ namespace Core
 
         public int CastCount => reader.GetIntAtCell(70);
 
-        public BitStatus CustomTrigger1 => new BitStatus(reader.GetIntAtCell(74));
+        public BitStatus CustomTrigger1 => new(reader.GetIntAtCell(74));
 
         public int MainHandSpeedMs => (int)(reader.GetIntAtCell(75) / 10000f) * 10;
 

@@ -32,8 +32,8 @@ namespace SharedLib.NpcFinder
         private readonly SearchMode searchMode = SearchMode.Simple;
         private NpcNames nameType = NpcNames.Enemy | NpcNames.Neutral;
 
-        private readonly List<LineOfNpcName> npcNameLine = new List<LineOfNpcName>();
-        private readonly List<List<LineOfNpcName>> npcs = new List<List<LineOfNpcName>>();
+        private readonly List<LineOfNpcName> npcNameLine = new();
+        private readonly List<List<LineOfNpcName>> npcs = new();
 
         private readonly ILogger logger;
         private readonly IBitmapProvider bitmapProvider;
@@ -44,10 +44,10 @@ namespace SharedLib.NpcFinder
         private const float refWidth = 1920;
         private const float refHeight = 1080;
 
-        public float scaleToRefWidth { private set; get; } = 1;
-        public float scaleToRefHeight { private set; get; } = 1;
+        public float ScaleToRefWidth { private set; get; } = 1;
+        public float ScaleToRefHeight { private set; get; } = 1;
 
-        public List<NpcPosition> Npcs { get; private set; } = new List<NpcPosition>();
+        public List<NpcPosition> Npcs { get; private set; } = new();
         public int NpcCount => Npcs.Count;
         public int AddCount { private set; get; }
         public int TargetCount { private set; get; }
@@ -243,8 +243,8 @@ namespace SharedLib.NpcFinder
 
         public void Update()
         {
-            scaleToRefWidth = ScaleWidth(1);
-            scaleToRefHeight = ScaleHeight(1);
+            ScaleToRefWidth = ScaleWidth(1);
+            ScaleToRefHeight = ScaleHeight(1);
 
             Area = new Rectangle(new Point(0, (int)ScaleHeight(topOffset)),
                 new Size((int)(bitmapProvider.Bitmap.Width * 0.87f), (int)(bitmapProvider.Bitmap.Height * 0.6f)));

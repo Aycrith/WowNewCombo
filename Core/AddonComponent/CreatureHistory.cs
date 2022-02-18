@@ -11,16 +11,16 @@ namespace Core
 
         public event EventHandler? KillCredit;
 
-        public List<CreatureRecord> Creatures { private set; get; } = new List<CreatureRecord>();
-        public List<CreatureRecord> Targets { private set; get; } = new List<CreatureRecord>();
-        public List<CreatureRecord> DamageDone { private set; get; } = new List<CreatureRecord>();
-        public List<CreatureRecord> DamageTaken { private set; get; } = new List<CreatureRecord>();
-        public List<CreatureRecord> Deads { private set; get; } = new List<CreatureRecord>();
+        public List<CreatureRecord> Creatures { get; } = new();
+        public List<CreatureRecord> Targets { get; } = new();
+        public List<CreatureRecord> DamageDone { get; } = new();
+        public List<CreatureRecord> DamageTaken { get; } = new();
+        public List<CreatureRecord> Deads { get; } = new();
 
-        public RecordInt CombatCreatureGuid { private set; get; }
-        public RecordInt CombatDamageDoneGuid { private set; get; }
-        public RecordInt CombatDamageTakenGuid { private set; get; }
-        public RecordInt CombatDeadGuid { private set; get; }
+        public RecordInt CombatCreatureGuid { get; }
+        public RecordInt CombatDamageDoneGuid { get; }
+        public RecordInt CombatDamageTakenGuid { get; }
+        public RecordInt CombatDeadGuid { get; }
 
         public CreatureHistory(ISquareReader reader, int cCreature, int cDamageDone, int cDamageTaken, int cDead)
         {

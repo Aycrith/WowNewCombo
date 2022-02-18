@@ -18,9 +18,9 @@ namespace Core
 
         private DateTime lastEvent;
 
-        public List<BagItem> BagItems { get; private set; } = new List<BagItem>();
+        public List<BagItem> BagItems { get; } = new();
 
-        public Bag[] Bags { get; private set; } = new Bag[5];
+        public Bag[] Bags { get; } = new Bag[5];
 
         public event EventHandler? DataChanged;
 

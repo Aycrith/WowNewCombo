@@ -46,7 +46,7 @@ namespace Core.Goals
         {
             if (e.Key == GoapKey.corpselocation && e.Value is CorpseLocation corpseLocation)
             {
-                routeInfo?.PoiList.Add(new RouteInfoPoi(corpseLocation.WowPoint, "Corpse", "black", corpseLocation.Radius));
+                routeInfo?.PoiList.Add(new RouteInfoPoi(corpseLocation.Location, "Corpse", "black", corpseLocation.Radius));
             }
             else if (e.Key == GoapKey.consumecorpse && (bool)e.Value == false)
             {

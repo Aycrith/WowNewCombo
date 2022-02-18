@@ -34,8 +34,8 @@ namespace Core
 
     public class RouteInfo
     {
-        public List<Vector3> PathPoints { get; private set; }
-        public List<Vector3> SpiritPath { get; private set; }
+        public List<Vector3> PathPoints { get; }
+        public List<Vector3> SpiritPath { get; }
 
         public List<Vector3>? RouteToWaypoint
         {
@@ -49,10 +49,10 @@ namespace Core
             }
         }
 
-        private List<IRouteProvider> pathedRoutes = new List<IRouteProvider>();
+        private List<IRouteProvider> pathedRoutes = new();
         private readonly AddonReader addonReader;
 
-        public List<RouteInfoPoi> PoiList { get; } = new List<RouteInfoPoi>();
+        public List<RouteInfoPoi> PoiList { get; } = new();
 
         private double min;
         private double diff;

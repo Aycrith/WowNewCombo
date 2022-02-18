@@ -9,24 +9,24 @@ namespace Core
 {
     public interface IBotController
     {
-        DataConfig DataConfig { get; set; }
-        AddonReader AddonReader { get; set; }
-        Thread? screenshotThread { get; set; }
-        Thread addonThread { get; set; }
+        DataConfig DataConfig { get; }
+        AddonReader AddonReader { get; }
+        Thread? screenshotThread { get; }
+        Thread addonThread { get; }
         Thread? botThread { get; set; }
         GoapAgent? GoapAgent { get; set; }
         RouteInfo? RouteInfo { get; set; }
-        WowScreen WowScreen { get; set; }
-        WowProcessInput WowProcessInput { get; set; }
+        WowScreen WowScreen { get; }
+        WowProcessInput WowProcessInput { get; }
         ConfigurableInput? ConfigurableInput { get; set; }
         ClassConfiguration? ClassConfig { get; set; }
-        IImageProvider? MinimapImageFinder { get; set; }
+        IImageProvider? MinimapImageFinder { get; }
 
-        ExecGameCommand ExecGameCommand { get; set; }
+        ExecGameCommand ExecGameCommand { get; }
 
         ActionBarPopulator? ActionBarPopulator { get; set; }
-        public IGrindSession GrindSession { get; set; }
-        public IGrindSessionHandler GrindSessionHandler { get; set; }
+        public IGrindSession GrindSession { get; }
+        public IGrindSessionHandler GrindSessionHandler { get; }
 
         string SelectedClassFilename { get; set; }
         string? SelectedPathFilename { get; set; }

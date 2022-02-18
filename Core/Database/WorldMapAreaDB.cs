@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using SharedLib;
 using SharedLib.Data;
@@ -10,13 +9,10 @@ namespace Core.Database
 {
     public class WorldMapAreaDB
     {
-        private readonly ILogger logger;
-        private Dictionary<int, WorldMapArea> areas = new Dictionary<int, WorldMapArea>();
+        private readonly Dictionary<int, WorldMapArea> areas = new();
 
-        public WorldMapAreaDB(ILogger logger, DataConfig dataConfig)
+        public WorldMapAreaDB(DataConfig dataConfig)
         {
-            this.logger = logger;
-
             var list = JsonConvert.DeserializeObject<List<WorldMapArea>>(File.ReadAllText(Path.Join(dataConfig.WorldToMap, "WorldMapArea.json")));
             list.ForEach(x =>
             {

@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.IO;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Core.Talents;
 using SharedLib;
@@ -14,7 +13,7 @@ namespace Core.Database
         private readonly List<TalentTab> talentTabs;
         private readonly List<TalentTreeElement> talentTreeElements;
 
-        public TalentDB(ILogger logger, DataConfig dataConfig, SpellDB spellDB)
+        public TalentDB(DataConfig dataConfig, SpellDB spellDB)
         {
             this.spellDB = spellDB;
 

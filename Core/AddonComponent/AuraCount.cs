@@ -1,14 +1,12 @@
 ﻿namespace Core
 {
-#pragma warning disable CA1815 // Override equals and operator equals on value types
     public struct AuraCount
-#pragma warning restore CA1815 // Override equals and operator equals on value types
     {
-        public int Hash { private set; get; }
-        public int PlayerDebuff { private set; get; }
-        public int PlayerBuff { private set; get; }
-        public int TargetDebuff { private set; get; }
-        public int TargetBuff { private set; get; }
+        public int Hash { get; }
+        public int PlayerDebuff { get; }
+        public int PlayerBuff { get; }
+        public int TargetDebuff { get; }
+        public int TargetBuff { get; }
 
         public AuraCount(ISquareReader squareReader, int cell)
         {
