@@ -28,9 +28,10 @@ namespace Core
             DateTime start = DateTime.UtcNow;
             while ((DateTime.UtcNow - start).TotalMilliseconds < timeoutMs)
             {
-                Update(1);
                 if (interrupt())
                     return false;
+
+                Update(1);
             }
 
             return true;
@@ -43,9 +44,10 @@ namespace Core
             while ((elapsedMs = (DateTime.UtcNow - start).TotalMilliseconds) < timeoutMs)
             {
                 repeat?.Invoke();
-                Update(1);
                 if (interrupt())
                     return (false, elapsedMs);
+
+                Update(1);
             }
 
             return (true, elapsedMs);
