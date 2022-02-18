@@ -18,7 +18,7 @@ namespace Core.Session
             _botController = botController;
             _grindSessionHandler = grindSessionHandler;
         }
-        [JsonIgnore] 
+        [JsonIgnore]
         public bool Active { get; set; }
         public Guid SessionId { get; set; }
         public string PathName { get; set; } = "No path selected";

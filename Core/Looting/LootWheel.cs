@@ -9,9 +9,7 @@ namespace Core.Looting
 {
     public class LootWheel
     {
-        private ILogger logger;
-
-        private readonly WowScreen wowScreen;
+        private readonly ILogger logger;
         private readonly WowProcessInput input;
         private readonly PlayerReader playerReader;
         private readonly float num_theta = 32f;
@@ -29,7 +27,6 @@ namespace Core.Looting
         {
             this.logger = logger;
             this.input = input;
-            this.wowScreen = wowScreen;
             this.playerReader = playerReader;
 
             wowScreen.GetRectangle(out var rect);

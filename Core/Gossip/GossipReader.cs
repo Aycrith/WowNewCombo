@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 
 namespace Core
 {
@@ -10,10 +8,8 @@ namespace Core
 
         private readonly ISquareReader reader;
 
-        private DateTime lastEvent;
-
         public int Count { private set; get; }
-        public Dictionary<Gossip, int> Gossips { get; private set; } = new Dictionary<Gossip, int>();
+        public Dictionary<Gossip, int> Gossips { get; } = new();
 
         private int data;
 
@@ -48,8 +44,6 @@ namespace Core
             {
                 Count = 0;
                 Gossips.Clear();
-                lastEvent = DateTime.UtcNow;
-
                 return;
             }
 

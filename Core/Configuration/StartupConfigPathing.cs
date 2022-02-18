@@ -1,7 +1,4 @@
-﻿
-using System.Collections.Generic;
-
-namespace Core
+﻿namespace Core
 {
     public class StartupConfigPathing
     {
@@ -35,12 +32,12 @@ namespace Core
 
         public Types Type => System.Enum.TryParse(Mode, out Types m) ? m : Types.Local;
 
-        public string Mode { get; set; }
+        public string Mode { get; init; }
 
-        public string hostv1 { get; set; }
-        public int portv1 { get; set; }
+        public string hostv1 { get; init; }
+        public int portv1 { get; init; }
 
-        public string hostv3 { get; set; }
-        public int portv3 { get; set; }
+        public string hostv3 { get; init; }
+        public int portv3 { get; init; }
     }
 }

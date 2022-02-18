@@ -8,17 +8,20 @@ namespace Core.Goals
 {
     public class WrongZoneGoal : GoapGoal
     {
-        private float RADIAN = MathF.PI * 2;
-        private ConfigurableInput input;
+        public override float CostOfPerformingAction => 19f;
 
+        private readonly ILogger logger;
+        private readonly ConfigurableInput input;
         private readonly AddonReader addonReader;
         private readonly PlayerReader playerReader;
         private readonly IPlayerDirection playerDirection;
         private readonly StuckDetector stuckDetector;
         private readonly ClassConfiguration classConfiguration;
+
+        private readonly float RADIAN = MathF.PI * 2;
         private float lastDistance = 999;
-        public DateTime LastActive { get; set; }
-        private ILogger logger;
+
+        public DateTime LastActive { get; private set; }
 
         public WrongZoneGoal(AddonReader addonReader, ConfigurableInput input, IPlayerDirection playerDirection, ILogger logger, StuckDetector stuckDetector, ClassConfiguration classConfiguration)
         {
@@ -36,8 +39,6 @@ namespace Core.Goals
         {
             return addonReader.UIMapId.Value == this.classConfiguration.WrongZone.ZoneId;
         }
-
-        public override float CostOfPerformingAction { get => 19f; }
 
         public override async ValueTask PerformAction()
         {

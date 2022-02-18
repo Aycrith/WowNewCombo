@@ -9,7 +9,7 @@ namespace Core.Goals
 {
     public partial class WalkToCorpseGoal : GoapGoal, IRouteProvider
     {
-        public override float CostOfPerformingAction { get => 1f; }
+        public override float CostOfPerformingAction => 1f;
 
         private readonly ILogger logger;
         private readonly Wait wait;
@@ -20,7 +20,7 @@ namespace Core.Goals
         private readonly Navigation navigation;
         private readonly StopMoving stopMoving;
 
-        public List<Vector3> Deaths { get; private init; } = new();
+        public List<Vector3> Deaths { get; } = new();
 
         private readonly Random random = new();
 
@@ -81,7 +81,7 @@ namespace Core.Goals
 
             Deaths.Add(corpseLocation);
 
-            navigation.SetWayPoints(new List<Vector3>() { corpseLocation });
+            navigation.SetWayPoints(new() { corpseLocation });
 
             return base.OnEnter();
         }

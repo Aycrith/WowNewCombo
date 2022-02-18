@@ -67,12 +67,12 @@ namespace Core
             if (classConfig.Mode == Mode.CorpseRun)
             {
                 availableActions.Add(new WaitGoal(logger));
-                availableActions.Add(new CorpseRunGoal(addonReader.PlayerReader, input, playerDirection, spiritPath, stopMoving, logger, stuckDetector));
+                availableActions.Add(new CorpseRunGoal(addonReader.PlayerReader, input, playerDirection, spiritPath, logger, stuckDetector));
             }
             else if (classConfig.Mode == Mode.AttendedGather)
             {
                 availableActions.Add(followRouteAction);
-                availableActions.Add(new CorpseRunGoal(addonReader.PlayerReader, input, playerDirection, spiritPath, stopMoving, logger, stuckDetector));
+                availableActions.Add(new CorpseRunGoal(addonReader.PlayerReader, input, playerDirection, spiritPath, logger, stuckDetector));
             }
             else
             {

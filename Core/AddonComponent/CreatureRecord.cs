@@ -4,7 +4,7 @@ namespace Core
 {
     public struct CreatureRecord
     {
-        public int Guid { get; set; }
+        public int Guid { init; get; }
         public float HealthPercent { get; set; }
         public DateTime LastEvent { get; set; }
 

@@ -10,26 +10,25 @@ namespace Core.Goals
 {
     public partial class CorpseRunGoal : GoapGoal
     {
-        private float RADIAN = MathF.PI * 2;
-        private ConfigurableInput input;
+        private readonly ILogger logger;
+        private readonly ConfigurableInput input;
         private readonly PlayerReader playerReader;
         private readonly IPlayerDirection playerDirection;
-        private readonly StopMoving stopMoving;
-        private float lastDistance = 999;
         private readonly List<Vector3> spiritWalkerPath;
         private readonly StuckDetector stuckDetector;
-        private Stack<Vector3> points = new Stack<Vector3>();
-        public List<Vector3> Deaths { get; } = new List<Vector3>();
+        private readonly Stack<Vector3> points = new();
+        public List<Vector3> Deaths { get; } = new();
 
-        private ILogger logger;
-        public DateTime LastActive { get; set; }
+        public DateTime LastActive { get; private set; }
 
-        public CorpseRunGoal(PlayerReader playerReader, ConfigurableInput input, IPlayerDirection playerDirection, List<Vector3> spiritWalker, StopMoving stopMoving, ILogger logger, StuckDetector stuckDetector)
+        private readonly float RADIAN = MathF.PI * 2;
+        private float lastDistance = 999;
+
+        public CorpseRunGoal(PlayerReader playerReader, ConfigurableInput input, IPlayerDirection playerDirection, List<Vector3> spiritWalker, ILogger logger, StuckDetector stuckDetector)
         {
             this.playerReader = playerReader;
             this.input = input;
             this.playerDirection = playerDirection;
-            this.stopMoving = stopMoving;
             this.spiritWalkerPath = spiritWalker;
             this.logger = logger;
             this.stuckDetector = stuckDetector;

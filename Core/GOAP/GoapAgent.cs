@@ -18,12 +18,12 @@ namespace Core.GOAP
 
         public bool Active { get; set; }
 
-        public GoapAgentState GoapAgentState { private set; get; }
+        public GoapAgentState GoapAgentState { get; }
 
-        public IEnumerable<GoapGoal> AvailableGoals { get; set; }
-        public GoapGoal? CurrentGoal { get; set; }
+        public IEnumerable<GoapGoal> AvailableGoals { get; }
+        public GoapGoal? CurrentGoal { get; private set; }
 
-        public HashSet<KeyValuePair<GoapKey, object>> WorldState { get; private set; } = new HashSet<KeyValuePair<GoapKey, object>>();
+        public HashSet<KeyValuePair<GoapKey, object>> WorldState { get; private set; } = new();
 
         public GoapAgent(ILogger logger, GoapAgentState goapAgentState, ConfigurableInput input, AddonReader addonReader, HashSet<GoapGoal> availableGoals, IBlacklist blacklist)
         {

@@ -9,11 +9,11 @@ namespace Core
         private readonly int cSpellId;
 
         private readonly ISquareReader reader;
-        public SpellDB SpellDB { private set; get; }
+        public SpellDB SpellDB { get; }
 
         public int Count => Spells.Count;
 
-        public Dictionary<int, Spell> Spells { get; private set; } = new Dictionary<int, Spell>();
+        public Dictionary<int, Spell> Spells { get; } = new();
 
         public SpellBookReader(ISquareReader reader, int cSpellId, SpellDB spellDB)
         {

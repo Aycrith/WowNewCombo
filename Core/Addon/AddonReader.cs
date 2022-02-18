@@ -14,42 +14,42 @@ namespace Core
 
         public bool Initialized { get; private set; }
 
-        public PlayerReader PlayerReader { get; private set; }
+        public PlayerReader PlayerReader { get; }
 
-        public CreatureHistory CreatureHistory { get; private set; }
+        public CreatureHistory CreatureHistory { get; }
 
-        public BagReader BagReader { get; private set; }
-        public EquipmentReader EquipmentReader { get; private set; }
+        public BagReader BagReader { get; }
+        public EquipmentReader EquipmentReader { get; }
 
-        public ActionBarCostReader ActionBarCostReader { get; private set; }
+        public ActionBarCostReader ActionBarCostReader { get; }
 
-        public ActionBarCooldownReader ActionBarCooldownReader { get; private set; }
+        public ActionBarCooldownReader ActionBarCooldownReader { get; }
 
         public ActionBarBits CurrentAction => new ActionBarBits(PlayerReader, squareReader, 26, 27, 28, 29, 30);
         public ActionBarBits UsableAction => new ActionBarBits(PlayerReader, squareReader, 31, 32, 33, 34, 35);
 
-        public GossipReader GossipReader { get; private set; }
+        public GossipReader GossipReader { get; }
 
-        public SpellBookReader SpellBookReader { get; private set; }
-        public TalentReader TalentReader { get; private set; }
+        public SpellBookReader SpellBookReader { get; }
+        public TalentReader TalentReader { get; }
 
-        public LevelTracker LevelTracker { get; private set; }
+        public LevelTracker LevelTracker { get; }
 
         public event EventHandler? AddonDataChanged;
         public event EventHandler? ZoneChanged;
         public event EventHandler? PlayerDeath;
 
-        public WorldMapAreaDB WorldMapAreaDb { get; private set; }
-        public ItemDB ItemDb { get; private set; }
-        public CreatureDB CreatureDb { get; private set; }
-        public AreaDB AreaDb { get; private set; }
+        public WorldMapAreaDB WorldMapAreaDb { get; }
+        public ItemDB ItemDb { get; }
+        public CreatureDB CreatureDb { get; }
+        public AreaDB AreaDb { get; }
 
         private readonly SpellDB spellDb;
         private readonly TalentDB talentDB;
 
-        public RecordInt UIMapId { private set; get; } = new RecordInt(4);
+        public RecordInt UIMapId { get; } = new RecordInt(4);
 
-        public RecordInt GlobalTime { private set; get; } = new RecordInt(98);
+        public RecordInt GlobalTime { get; } = new RecordInt(98);
 
         public int CombatCreatureCount => CreatureHistory.DamageTaken.Count(c => c.HealthPercent > 0);
 
@@ -77,11 +77,11 @@ namespace Core
             this.squareReader = new SquareReader(this);
 
             this.AreaDb = new AreaDB(logger, dataConfig);
-            this.WorldMapAreaDb = new WorldMapAreaDB(logger, dataConfig);
-            this.ItemDb = new ItemDB(logger, dataConfig);
-            this.CreatureDb = new CreatureDB(logger, dataConfig);
-            this.spellDb = new SpellDB(logger, dataConfig);
-            this.talentDB = new TalentDB(logger, dataConfig, spellDb);
+            this.WorldMapAreaDb = new WorldMapAreaDB(dataConfig);
+            this.ItemDb = new ItemDB(dataConfig);
+            this.CreatureDb = new CreatureDB(dataConfig);
+            this.spellDb = new SpellDB(dataConfig);
+            this.talentDB = new TalentDB(dataConfig, spellDb);
 
             this.CreatureHistory = new CreatureHistory(squareReader, 64, 65, 66, 67);
 

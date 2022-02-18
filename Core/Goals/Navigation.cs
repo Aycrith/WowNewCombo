@@ -11,10 +11,10 @@ namespace Core.Goals
 {
     internal readonly struct PathRequest
     {
-        public int MapId { init; get; }
-        public Vector3 Start { init; get; }
-        public Vector3 End { init; get; }
-        public Action<List<Vector3>, bool> Callback { init; get; }
+        public int MapId { get; }
+        public Vector3 Start { get; }
+        public Vector3 End { get; }
+        public Action<List<Vector3>, bool> Callback { get; }
 
         public PathRequest(int mapId, Vector3 start, Vector3 end, Action<List<Vector3>, bool> callback)
         {
@@ -27,9 +27,9 @@ namespace Core.Goals
 
     internal readonly struct PathResult
     {
-        public List<Vector3> Path { init; get; }
-        public bool Success { init; get; }
-        public Action<List<Vector3>, bool> Callback { init; get; }
+        public List<Vector3> Path { get; }
+        public bool Success { get; }
+        public Action<List<Vector3>, bool> Callback { get; }
 
         public PathResult(List<Vector3> path, bool success, Action<List<Vector3>, bool> callback)
         {
@@ -82,7 +82,7 @@ namespace Core.Goals
         private readonly ConcurrentQueue<PathResult> pathResults = new();
         private Thread? pathfinderThread;
 
-        private CancellationTokenSource _cts;
+        private readonly CancellationTokenSource _cts;
 
         public Navigation(ILogger logger, IPlayerDirection playerDirection, ConfigurableInput input, AddonReader addonReader, StopMoving stopMoving, StuckDetector stuckDetector, IPPather pather, MountHandler mountHandler)
         {

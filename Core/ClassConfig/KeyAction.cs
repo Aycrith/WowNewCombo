@@ -28,7 +28,7 @@ namespace Core
         public int MinComboPoints { get; set; }
 
         public string Requirement { get; set; } = string.Empty;
-        public List<string> Requirements { get; } = new List<string>();
+        public List<string> Requirements { get; } = new();
 
         public bool WhenUsable { get; set; }
 
@@ -54,17 +54,17 @@ namespace Core
         public bool? UseWhenTargetIsCasting { get; set; }
 
         public string PathFilename { get; set; } = string.Empty;
-        public List<Vector3> Path { get; } = new List<Vector3>();
+        public List<Vector3> Path { get; } = new();
 
         public int StepBackAfterCast { get; set; }
 
         public Vector3 LastClickPostion { get; private set; }
 
-        public List<Requirement> RequirementObjects { get; } = new List<Requirement>();
+        public List<Requirement> RequirementObjects { get; } = new();
 
         public int ConsoleKeyFormHash { private set; get; }
 
-        protected static ConcurrentDictionary<int, DateTime> LastClicked { get; } = new ConcurrentDictionary<int, DateTime>();
+        protected static ConcurrentDictionary<int, DateTime> LastClicked { get; } = new();
 
         public static int LastKeyClicked()
         {

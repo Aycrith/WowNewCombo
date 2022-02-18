@@ -4,12 +4,12 @@ namespace Core.GOAP
 {
     public class CorpseLocation
     {
-        public Vector3 WowPoint { get; private set; }
-        public double Radius { get; private set; }
+        public Vector3 Location { get; }
+        public double Radius { get; }
 
-        public CorpseLocation(Vector3 wowPoint, double radius)
+        public CorpseLocation(Vector3 location, double radius)
         {
-            WowPoint = wowPoint;
+            Location = location;
             Radius = radius;
         }
     }

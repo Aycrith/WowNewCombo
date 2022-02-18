@@ -20,8 +20,8 @@ namespace Core.Goals
 
         public int NpcCount => npcNameFinder.NpcCount;
 
-        public List<Point> locTargetingAndClickNpc { get; private set; }
-        public List<Point> locFindByCursorType { get; private set; }
+        public List<Point> locTargetingAndClickNpc { get; }
+        public List<Point> locFindByCursorType { get; }
 
         public NpcNameTargeting(ILogger logger, NpcNameFinder npcNameFinder, IMouseInput input)
         {
@@ -33,15 +33,15 @@ namespace Core.Goals
             locTargetingAndClickNpc = new List<Point>
             {
                 new Point(0, 0),
-                new Point(-10, 15).Scale(npcNameFinder.scaleToRefWidth, npcNameFinder.scaleToRefHeight),
-                new Point(10, 15).Scale(npcNameFinder.scaleToRefWidth, npcNameFinder.scaleToRefHeight),
+                new Point(-10, 15).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+                new Point(10, 15).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
             };
 
             locFindByCursorType = new List<Point>
             {
                 new Point(0, 0),
-                new Point(0, 25).Scale(npcNameFinder.scaleToRefWidth, npcNameFinder.scaleToRefHeight),
-                new Point(0, 75).Scale(npcNameFinder.scaleToRefWidth, npcNameFinder.scaleToRefHeight),
+                new Point(0, 25).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+                new Point(0, 75).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
             };
         }
 
@@ -94,8 +94,8 @@ namespace Core.Goals
                 attemptPoints.AddRange(locFindByCursorType);
                 foreach(var point in locFindByCursorType)
                 {
-                    attemptPoints.Add(new Point(npc.Width / 2, point.Y).Scale(npcNameFinder.scaleToRefWidth, npcNameFinder.scaleToRefHeight));
-                    attemptPoints.Add(new Point(-npc.Width / 2, point.Y).Scale(npcNameFinder.scaleToRefWidth, npcNameFinder.scaleToRefHeight));
+                    attemptPoints.Add(new Point(npc.Width / 2, point.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight));
+                    attemptPoints.Add(new Point(-npc.Width / 2, point.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight));
                 }
 
                 foreach (var location in attemptPoints)
