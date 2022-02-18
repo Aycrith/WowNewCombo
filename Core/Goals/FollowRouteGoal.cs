@@ -38,6 +38,8 @@ namespace Core.Goals
 
         private readonly Random random = new();
 
+        private DateTime onEnterTime;
+
         #region IRouteProvider
 
         public DateTime LastActive => navigation.LastActive;
@@ -145,6 +147,8 @@ namespace Core.Goals
             {
                 StartLookingForTarget();
             }
+
+            onEnterTime = DateTime.UtcNow;
 
             return base.OnEnter();
         }
@@ -322,7 +326,7 @@ namespace Core.Goals
 
         private void RandomJump()
         {
-            if (classConfig.Jump.MillisecondsSinceLastClick > random.Next(15_000, 45_000))
+            if ((DateTime.UtcNow - onEnterTime).TotalSeconds > 5 && classConfig.Jump.MillisecondsSinceLastClick > random.Next(10_000, 25_000))
             {
                 input.TapJump("Random jump");
             }

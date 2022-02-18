@@ -201,7 +201,7 @@ namespace Core.Goals
 
         private void RandomJump()
         {
-            if (input.ClassConfig.Jump.MillisecondsSinceLastClick > random.Next(12_000, 30_000))
+            if ((DateTime.UtcNow - approachStart).TotalSeconds > 2 && input.ClassConfig.Jump.MillisecondsSinceLastClick > random.Next(5000, 25_000))
             {
                 input.TapJump();
             }
