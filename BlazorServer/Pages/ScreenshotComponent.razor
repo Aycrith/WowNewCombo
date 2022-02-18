@@ -37,7 +37,7 @@
         }
     }
 
-    protected async void Toggle()
+    protected void Toggle()
     {
         if (Enabled)
         {
@@ -46,10 +46,7 @@
 
         this.botController.WowScreen.EnablePostProcess = !this.botController.WowScreen.EnablePostProcess;
 
-        await InvokeAsync(() =>
-        {
-            base.StateHasChanged();
-        });
+        base.InvokeAsync(StateHasChanged);
     }
 
     private async void ImageChanged(object sender, ScreenChangeEventArgs args)

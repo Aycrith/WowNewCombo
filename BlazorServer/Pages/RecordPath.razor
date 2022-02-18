@@ -242,31 +242,26 @@
     {
         base.InvokeAsync(() =>
         {
-            try
+            if (!UpdateRecording() && lastPlayerPoint != addonReader.PlayerReader.PlayerLocation)
             {
-                if (!UpdateRecording() && lastPlayerPoint != addonReader.PlayerReader.PlayerLocation)
-                {
-                    lastPlayerPoint = addonReader.PlayerReader.PlayerLocation;
-                    UpdateRouteMarkup();
-                }
-
-                /*
-                // requires async
-                if(botController.RouteInfo != null)
-                {
-                    var p = addonReader.PlayerReader.PlayerLocation;
-                    var pp = new Vector3(
-                        botController.RouteInfo.ToCanvasPointX(p.X),
-                        botController.RouteInfo.ToCanvasPointY(p.Y),
-                        0);
-
-                    await JSRuntime.InvokeVoidAsync("focusAt", JsonConvert.SerializeObject(pp));
-                }
-                */
-
+                lastPlayerPoint = addonReader.PlayerReader.PlayerLocation;
+                UpdateRouteMarkup();
                 StateHasChanged();
             }
-            catch { }
+
+            /*
+            // requires async
+            if(botController.RouteInfo != null)
+            {
+                var p = addonReader.PlayerReader.PlayerLocation;
+                var pp = new Vector3(
+                    botController.RouteInfo.ToCanvasPointX(p.X),
+                    botController.RouteInfo.ToCanvasPointY(p.Y),
+                    0);
+
+                await JSRuntime.InvokeVoidAsync("focusAt", JsonConvert.SerializeObject(pp));
+            }
+            */     
         });
     }
 

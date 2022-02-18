@@ -182,12 +182,8 @@
     {
         base.InvokeAsync(() =>
         {
-            try
-            {
-                Update();
-                StateHasChanged();
-            }
-            catch { }
+            Update();
+            StateHasChanged();
         });
     }
 
@@ -195,12 +191,8 @@
     {
         base.InvokeAsync(() =>
         {
-            try
-            {
-                UpdateZoneName();
-                StateHasChanged();
-            }
-            catch { }
+            UpdateZoneName();
+            StateHasChanged();
         });
     }
 
@@ -208,12 +200,8 @@
     {
         base.InvokeAsync(() =>
         {
-            try
-            {
-                UpdateDeaths();
-                StateHasChanged();
-            }
-            catch { }
+            UpdateDeaths();
+            StateHasChanged();
         });
     }
 

@@ -201,11 +201,11 @@ else
 
     private void OnProfileLoaded(object? s, EventArgs e)
     {
-        base.InvokeAsync(() => StateHasChanged());
+        base.InvokeAsync(StateHasChanged);
     }
 
     private void OnStatusChanged(object? s, EventArgs e)
     {
-        base.InvokeAsync(() => StateHasChanged());
+        base.InvokeAsync(StateHasChanged);
     }
 }

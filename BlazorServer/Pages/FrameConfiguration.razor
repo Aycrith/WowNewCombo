@@ -176,10 +176,7 @@ else if (frameConfigurator != null)
             saved = frameConfigurator.Saved;
         }
 
-        InvokeAsync(() =>
-        {
-            base.StateHasChanged();
-        });
+        base.InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()

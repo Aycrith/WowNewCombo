@@ -75,7 +75,7 @@
         {
             vendMoney = Item.ToSellPrice(bagReader.BagItems.Sum(s => s.Item.SellPrice * s.Count));
 
-            base.InvokeAsync(() => { try { StateHasChanged(); } catch { } });
+            base.InvokeAsync(StateHasChanged);
         };
     }
 }

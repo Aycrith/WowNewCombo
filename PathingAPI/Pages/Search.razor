@@ -48,7 +48,7 @@
             //DoSearch(PatherPath.Graph.PathGraph.eSearchScoreSpot.OriginalPather, 1, "Test");
 
             IsDisabled = false;
-            await InvokeAsyncBase(() => StateHasChanged());
+            await InvokeAsyncBase(StateHasChanged);
         }
     }
 
@@ -83,7 +83,7 @@
         PatherPath.Graph.PathGraph.ProgressTimeoutSeconds = 60;
         PatherPath.Graph.PathGraph.TimeoutSeconds = 600;
 
-        await InvokeAsyncBase(() => StateHasChanged());
+        await InvokeAsyncBase(StateHasChanged);
 
         searchPathThread = new System.Threading.Thread(new System.Threading.ThreadStart(SearchPathThread));
         searchPathThread.Start();

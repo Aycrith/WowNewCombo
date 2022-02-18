@@ -47,7 +47,7 @@
 
     private void OnAddonDataChanged(object? s, EventArgs e)
     {
-        base.InvokeAsync(() => StateHasChanged());
+        base.InvokeAsync(StateHasChanged);
     }
 
 

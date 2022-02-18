@@ -74,10 +74,7 @@
                     this.lastnode = this.image;
                 }
 
-                InvokeAsync(() =>
-                {
-                    base.StateHasChanged();
-                });
+                base.InvokeAsync(StateHasChanged);
             };
         }
     }

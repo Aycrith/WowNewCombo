@@ -48,7 +48,7 @@
 
             money = Item.ToSellPrice(this.NewItems.Sum(ItemValue));
 
-            base.InvokeAsync(() => { try { StateHasChanged(); } catch { } });
+            base.InvokeAsync(StateHasChanged);
         };
     }
 
