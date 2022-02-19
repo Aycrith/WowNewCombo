@@ -332,7 +332,7 @@ namespace BlazorServer
         {
             using (System.IO.MemoryStream ms = new System.IO.MemoryStream())
             {
-                screenshot.Save(ms, System.Drawing.Imaging.ImageFormat.Jpeg);
+                screenshot.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
                 this.ImageBase64 = Convert.ToBase64String(ms.ToArray());
             }
         }

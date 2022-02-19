@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
@@ -67,7 +67,7 @@ namespace SharedLib
 
             using (MemoryStream ms = new MemoryStream())
             {
-                resized.Save(ms, ImageFormat.Jpeg);
+                resized.Save(ms, ImageFormat.Png);
                 resized.Dispose();
                 return Convert.ToBase64String(ms.ToArray()); // Get Base64
             }

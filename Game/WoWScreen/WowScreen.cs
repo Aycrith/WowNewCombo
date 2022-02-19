@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using SharedLib;
 using System;
 using System.Collections.Generic;
@@ -208,7 +208,7 @@ namespace Game
 
             using (MemoryStream ms = new MemoryStream())
             {
-                resized.Save(ms, ImageFormat.Jpeg);
+                resized.Save(ms, ImageFormat.Png);
                 resized.Dispose();
                 byte[] byteImage = ms.ToArray();
                 return Convert.ToBase64String(byteImage); // Get Base64
