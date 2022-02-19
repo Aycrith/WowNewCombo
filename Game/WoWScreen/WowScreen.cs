@@ -24,7 +24,7 @@ namespace Game
 
         public bool Enabled { get; set; } = true;
 
-        public bool EnablePostProcess { get; set; } = true;
+        public bool EnablePostProcess { get; set; }
         public Bitmap Bitmap { get; private set; }
 
         private Rectangle rect;
