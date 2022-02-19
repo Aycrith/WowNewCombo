@@ -1,55 +1,50 @@
 ﻿@inject Core.IAddonReader addonReader
 @inject Core.IBotController botController
 @inject IJSRuntime JSRuntime
+@implements IDisposable
 @using SharedLib
 @using Core
 @using Microsoft.AspNetCore.Html
 
+@if(NewItems.Count() > 0)
+{
 <div class="card">
-    <div class="card-header">
-        Bag Changes
-        <div class="float-right">
-            <Money Value="money" />
-        </div>
-    </div>
-    <div class="card-body">
-        @foreach (var bagItem in NewItems)
-        {
-            <div class="animate__animated animate__backInUp">
-                <BagItemComponent BagItem="bagItem" ShowChangesPrice="true" />
-                <hr style="margin:2px" />
-            </div>
-        }
+<div class="card-header">
+    Bag Changes
+    <div class="float-right">
+        <Money Value="money" />
     </div>
 </div>
+<div class="card-body">
+    @foreach (var bagItem in NewItems)
+    {
+        <div class="animate__animated animate__backInUp">
+            <BagItemComponent BagItem="bagItem" ShowChangesPrice="true" />
+            <hr style="margin:2px" />
+        </div>
+    }
+</div>
+</div>
+}
 @code {
 
-    List<Core.BagItem> NewItems = new List<Core.BagItem>();
+    IEnumerable<Core.BagItem> NewItems = null!;
 
-    int maxItemToShow = 14;
+    const int maxItemToShow = 14;
 
     int[] money = new int[0];
 
     protected override void OnInitialized()
     {
-        addonReader.BagReader.DataChanged += (o, e) =>
-        {
-            this.NewItems = addonReader.BagReader.BagItems.Where(i => i.WasRecentlyUpdated).ToList();
+        this.NewItems = addonReader.BagReader.BagItems.Where(i => i.WasRecentlyUpdated);
 
-            if(this.NewItems.Count > maxItemToShow)
-            {
-                this.NewItems = this.NewItems.Take(maxItemToShow).ToList();
-                
-                for(int i=0; i<NewItems.Count; i++)
-                {
-                    NewItems[i].LastUpdated -= TimeSpan.FromSeconds((i/4));
-                }
-            }
+        addonReader.BagReader.DataChanged -= OnBagReaderDataChanged;
+        addonReader.BagReader.DataChanged += OnBagReaderDataChanged;
+    }
 
-            money = Item.ToSellPrice(this.NewItems.Sum(ItemValue));
-
-            base.InvokeAsync(StateHasChanged);
-        };
+    public void Dispose()
+    {
+        addonReader.BagReader.DataChanged -= OnBagReaderDataChanged;
     }
 
     protected int ItemValue(BagItem item)
@@ -59,5 +54,24 @@
             return item.Item.SellPrice;
         }
         return item.LastChange * item.Item.SellPrice;
+    }
+
+    public void OnBagReaderDataChanged(object? s, EventArgs e)
+    {
+        this.NewItems = addonReader.BagReader.BagItems.Where(i => i.WasRecentlyUpdated);
+
+        if (this.NewItems.Count() > maxItemToShow)
+        {
+            this.NewItems = this.NewItems.Take(maxItemToShow);
+            int i = 0;
+            foreach (var item in NewItems)
+            {
+                item.LastUpdated -= TimeSpan.FromSeconds(i / 4);
+                i++;
+            }
+        }
+
+        money = Item.ToSellPrice(this.NewItems.Sum(ItemValue));
+        base.InvokeAsync(StateHasChanged);
     }
 }

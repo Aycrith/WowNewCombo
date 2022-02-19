@@ -3,6 +3,7 @@
 @inject Core.IAddonReader addonReader
 @inject Core.IBotController botController
 @inject IJSRuntime JSRuntime;
+@implements IDisposable
 @using Core
 @using SharedLib
 
@@ -71,11 +72,18 @@
     protected override void OnInitialized()
     {
         bagReader = addonReader.BagReader;
-        bagReader.DataChanged += (o, e) =>
-        {
-            vendMoney = Item.ToSellPrice(bagReader.BagItems.Sum(s => s.Item.SellPrice * s.Count));
+        bagReader.DataChanged -= OnBagReaderDataChanged;
+        bagReader.DataChanged += OnBagReaderDataChanged;
+    }
 
-            base.InvokeAsync(StateHasChanged);
-        };
+    public void Dispose()
+    {
+        bagReader.DataChanged -= OnBagReaderDataChanged;
+    }
+
+    public void OnBagReaderDataChanged(object? s, EventArgs e)
+    {
+        vendMoney = Item.ToSellPrice(bagReader.BagItems.Sum(s => s.Item.SellPrice * s.Count));
+        base.InvokeAsync(StateHasChanged);
     }
 }

@@ -2,7 +2,7 @@
 
 <div class="@(Stretch ? "w-100 h-auto m-0 p-0" : "")">
     <div class="row" @onclick="Toggle">
-        <img class="@(Stretch ? "img-fluid w-100" : "")" src="data:image/png;base64, @image" alt="dot" />
+        <img class="@(Stretch ? "img-fluid w-100" : "")" src="data:image/png;base64, @image" alt="Toggle preview!" />
     </div>
 </div>
 
@@ -15,11 +15,7 @@
     [Parameter]
     public bool Stretch { get; set; } = false;
 
-    private bool Enabled { get; set; } = true;
-
-    const string defaultImage = "iVBORw0KGgoAAAANSUhEUgAAAA8AAAAPCAYAAAA71pVKAAAAGklEQVR42mM0NTH5z0AmYBzVPKp5VDOVNQMA2VMYNGMHmqcAAAAASUVORK5CYII=";
-
-    string image = defaultImage;
+    private string image = string.Empty;
 
     protected override void OnInitialized()
     {
@@ -28,8 +24,6 @@
 
     protected override void OnAfterRender(bool firstRender)
     {
-        // execute conditionally for loading data, otherwise this will load
-        // every time the page refreshes
         if (firstRender)
         {
             this.botController.WowScreen.OnScreenChanged -= this.ImageChanged;
@@ -39,22 +33,25 @@
 
     protected void Toggle()
     {
-        if (Enabled)
+        if(this.botController.WowScreen.EnablePostProcess)
         {
-            image = defaultImage;
+            this.image = string.Empty;
         }
 
         this.botController.WowScreen.EnablePostProcess = !this.botController.WowScreen.EnablePostProcess;
-
         base.InvokeAsync(StateHasChanged);
     }
 
     private async void ImageChanged(object sender, ScreenChangeEventArgs args)
     {
         if (!this.botController.WowScreen.EnablePostProcess)
-            return;
-
-        this.image = args.Screenshot;
+        {
+            this.image = string.Empty;
+        }
+        else
+        {
+            this.image = args.Screenshot;    
+        }
 
         await InvokeAsync(() =>
         {
