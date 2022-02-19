@@ -17,8 +17,13 @@ namespace Core
         private readonly Color firstColor = Color.FromArgb(255, 0, 0, 0);
         private readonly Color lastColor = Color.FromArgb(255, 30, 132, 129);
 
+        private readonly PixelFormat pixelFormat = PixelFormat.Format32bppPArgb;
+        private readonly int bytesPerPixel;
+
+        private readonly Rectangle bitmapRect;
+
         private Rectangle rect;
-        private Bitmap bitmap;
+        private Bitmap bitmap = null!;
 
         public AddonDataProvider(IWowScreen wowScreen, List<DataFrame> frames)
         {
@@ -30,7 +35,9 @@ namespace Core
             rect.Width = frames.Last().point.X + 1;
             rect.Height = frames.Max(f => f.point.Y) + 1;
 
-            bitmap = new Bitmap(rect.Width, rect.Height, PixelFormat.Format32bppPArgb);
+            bytesPerPixel = Bitmap.GetPixelFormatSize(pixelFormat) / 8;
+            bitmap = new Bitmap(rect.Width, rect.Height, pixelFormat);
+            bitmapRect = new Rectangle(0, 0, bitmap.Width, bitmap.Height);
         }
 
         public void Update()
@@ -39,39 +46,33 @@ namespace Core
             rect.X = p.X;
             rect.Y = p.Y;
 
-            bitmap.Dispose();
-            bitmap = new Bitmap(rect.Width, rect.Height, PixelFormat.Format32bppPArgb);
             using (var graphics = Graphics.FromImage(bitmap))
             {
                 graphics.CopyFromScreen(rect.Left, rect.Top, 0, 0, bitmap.Size);
             }
 
-            if (!Visible()) return;
-
-            Process();
-        }
-
-        private bool Visible()
-        {
-            return bitmap.GetPixel(frames[0].point.X, frames[0].point.Y) == firstColor &&
-                bitmap.GetPixel(frames[^1].point.X, frames[^1].point.Y) == lastColor;
-        }
-
-        private void Process()
-        {
             unsafe
             {
-                BitmapData bitmapData = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height), ImageLockMode.ReadOnly, bitmap.PixelFormat);
-                int bytesPerPixel = Bitmap.GetPixelFormatSize(bitmap.PixelFormat) / 8;
+                BitmapData data = bitmap.LockBits(bitmapRect, ImageLockMode.ReadOnly, bitmap.PixelFormat);
 
-                for (int i = 0; i < frames.Length; i++)
+                byte* fLine = (byte*)data.Scan0 + (frames[0].point.Y * data.Stride);
+                int fx = frames[0].point.X * bytesPerPixel;
+
+                byte* lLine = (byte*)data.Scan0 + (frames[^1].point.Y * data.Stride);
+                int lx = frames[^1].point.X * bytesPerPixel;
+
+                if (fLine[fx + 2] == firstColor.R && fLine[fx + 1] == firstColor.G && fLine[fx] == firstColor.B &&
+                    lLine[lx + 2] == lastColor.R && lLine[lx + 1] == lastColor.G && lLine[lx] == lastColor.B)
                 {
-                    byte* currentLine = (byte*)bitmapData.Scan0 + (frames[i].point.Y * bitmapData.Stride);
-                    int x = frames[i].point.X * bytesPerPixel;
+                    for (int i = 0; i < frames.Length; i++)
+                    {
+                        byte* line = (byte*)data.Scan0 + (frames[i].point.Y * data.Stride);
+                        int x = frames[i].point.X * bytesPerPixel;
 
-                    data[frames[i].index] = (currentLine[x + 2] * 65536) + (currentLine[x + 1] * 256) + currentLine[x];
+                        this.data[frames[i].index] = (line[x + 2] * 65536) + (line[x + 1] * 256) + line[x];
+                    }
                 }
-                bitmap.UnlockBits(bitmapData);
+                bitmap.UnlockBits(data);
             }
         }
 
@@ -82,7 +83,7 @@ namespace Core
 
         public void Dispose()
         {
-            bitmap?.Dispose();
+            bitmap.Dispose();
         }
     }
 }

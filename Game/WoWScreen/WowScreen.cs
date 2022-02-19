@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using SharedLib;
 using System;
 using System.Collections.Generic;
@@ -25,30 +25,7 @@ namespace Game
         public bool Enabled { get; set; } = true;
 
         public bool EnablePostProcess { get; set; } = true;
-
-        private Bitmap bitmap1, bitmap2;
-        private bool isBitmap1;
-        public Bitmap Bitmap
-        {
-            get
-            {
-                return isBitmap1 ? bitmap1 : bitmap2;
-            }
-            set
-            {
-                if (isBitmap1)
-                {
-                    bitmap2 = value;
-                    if (bitmap1 != null) bitmap1.Dispose();
-                }
-                else
-                {
-                    bitmap1 = value;
-                    if (bitmap2 != null) bitmap2.Dispose();
-                }
-                isBitmap1 = !isBitmap1;
-            }
-        }
+        public Bitmap Bitmap { get; private set; }
 
         private Rectangle rect;
         public Rectangle Rect => rect;
@@ -57,6 +34,12 @@ namespace Game
         {
             this.logger = logger;
             this.wowProcess = wowProcess;
+
+            GetPosition(out var p);
+            GetRectangle(out rect);
+            rect.X = p.X;
+            rect.Y = p.Y;
+            Bitmap = new Bitmap(rect.Width, rect.Height, PixelFormat.Format32bppPArgb);
         }
 
         public void UpdateScreenshot()
@@ -66,7 +49,11 @@ namespace Game
             rect.X = p.X;
             rect.Y = p.Y;
 
-            Bitmap = new Bitmap(rect.Width, rect.Height, PixelFormat.Format32bppPArgb);
+            if (Bitmap.Size != rect.Size)
+            {
+                Bitmap.Dispose();
+                Bitmap = new Bitmap(rect.Width, rect.Height, PixelFormat.Format32bppPArgb);
+            }
             using (var graphics = Graphics.FromImage(Bitmap))
             {
                 graphics.CopyFromScreen(rect.Left, rect.Top, 0, 0, Bitmap.Size);
@@ -145,7 +132,7 @@ namespace Game
 
         public void Dispose()
         {
-            Bitmap?.Dispose();
+            Bitmap.Dispose();
         }
 
         private static Bitmap CropImage(Bitmap img, bool highlight)
