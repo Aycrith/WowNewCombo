@@ -1,4 +1,4 @@
-﻿using Core.Goals;
+using Core.Goals;
 using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -109,7 +109,7 @@ namespace Core
 
             cts = new CancellationTokenSource();
 
-            updatePlayerPostion.Start();
+            //updatePlayerPostion.Start();
             wowProcess = new WowProcess();
             WowScreen = new WowScreen(logger, wowProcess);
             WowProcessInput = new WowProcessInput(logger, wowProcess);
@@ -219,6 +219,7 @@ namespace Core
                     nodeFound = this.minimapNodeFinder.Find(nodeFound) != null;
                 }
 
+                /*
                 if (updatePlayerPostion.ElapsedMilliseconds > 500)
                 {
                     this.pather.DrawSphere(new Core.PPather.SphereArgs
@@ -228,8 +229,9 @@ namespace Core
                         MapId = this.AddonReader.UIMapId.Value,
                         Spot = this.AddonReader.PlayerReader.PlayerLocation
                     });
-                    updatePlayerPostion.Restart();
+                    //updatePlayerPostion.Restart();
                 }
+                */
 
                 cts.Token.WaitHandle.WaitOne(5);
             }
