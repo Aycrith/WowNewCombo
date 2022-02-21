@@ -2,11 +2,11 @@
 {
     public enum TargetTargetEnum
     {
-        TargetHasNoTarget = 2,
-        TargetIsSelf = 0,
-        TargetIsTargettingPet = 4,
-        TargetIsTargettingMe = 1,
-        PetHasATarget = 5,
+        Self = 0,
+        Me = 1,
+        None = 2,
         Unknown = 3,
+        Pet = 4,
+        PetHasATarget = 5
     };
 }

@@ -78,7 +78,7 @@ namespace Core.Goals
                     lastKnownMaxDistance = playerReader.MaxRange;
                 }
 
-                if (castingHandler.CastIfReady(item, item.DelayBeforeCast))
+                if (!playerReader.Bits.TargetIsDead && castingHandler.CastIfReady(item))
                 {
                     if (item.Name == classConfiguration.Approach.Name ||
                         item.Name == classConfiguration.AutoAttack.Name)

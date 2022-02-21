@@ -71,9 +71,9 @@ namespace Core
             {
                 // Target Based
                 { "TargetYieldXP", () => playerReader.TargetYieldXP },
-                { "TargetsMe", () => playerReader.TargetTarget == TargetTargetEnum.TargetIsTargettingMe },
-                { "TargetsPet", () => playerReader.TargetTarget == TargetTargetEnum.TargetIsTargettingPet },
-                { "TargetsNone", () => playerReader.TargetTarget == TargetTargetEnum.TargetHasNoTarget },
+                { "TargetsMe", () => playerReader.TargetTarget == TargetTargetEnum.Me },
+                { "TargetsPet", () => playerReader.TargetTarget == TargetTargetEnum.Pet },
+                { "TargetsNone", () => playerReader.TargetTarget == TargetTargetEnum.None },
 
                 { "AddVisible", () => npcNameFinder.PotentialAddsExist },
 

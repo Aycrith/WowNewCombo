@@ -60,7 +60,7 @@ namespace Core.Goals
 
             await AsyncExt.Loop(Keys, (KeyAction key) =>
             {
-                var pressed = castingHandler.CastIfReady(key, key.DelayBeforeCast);
+                var pressed = castingHandler.CastIfReady(key, () => false);
                 key.ResetCooldown();
                 key.SetClicked();
                 return Task.CompletedTask;

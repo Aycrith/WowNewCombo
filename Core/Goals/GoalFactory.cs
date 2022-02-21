@@ -124,21 +124,22 @@ namespace Core
                     var genericCombat = new CombatGoal(logger, input, wait, addonReader, stopMoving, classConfig, castingHandler, mountHandler);
                     availableActions.Add(genericCombat);
 
-                    if (addonReader.PlayerReader.Class == PlayerClassEnum.Hunter ||
-                       addonReader.PlayerReader.Class == PlayerClassEnum.Warlock ||
-                       addonReader.PlayerReader.Class == PlayerClassEnum.Mage)
+                    if (addonReader.PlayerReader.Class is
+                        PlayerClassEnum.Hunter or
+                        PlayerClassEnum.Warlock or
+                        PlayerClassEnum.Mage)
                     {
                         availableActions.Add(new TargetPetTarget(input, addonReader.PlayerReader));
                     }
 
-                    availableActions.Add(new PullTargetGoal(logger, input, wait, addonReader, stopMoving, castingHandler, mountHandler, stuckDetector, classConfig));
+                    availableActions.Add(new PullTargetGoal(logger, input, wait, addonReader, blacklist, stopMoving, castingHandler, mountHandler, stuckDetector, classConfig));
 
                     availableActions.Add(new ConsumeCorpse(logger, classConfig));
                     availableActions.Add(new CorpseConsumed(logger, goapAgentState));
 
                     foreach (var item in classConfig.Adhoc.Sequence)
                     {
-                        availableActions.Add(new AdhocGoal(logger, input, wait, item, addonReader.PlayerReader, stopMoving, castingHandler, mountHandler));
+                        availableActions.Add(new AdhocGoal(logger, input, wait, item, addonReader, stopMoving, castingHandler, mountHandler));
                     }
                 }
                 catch (Exception ex)
