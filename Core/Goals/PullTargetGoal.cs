@@ -45,6 +45,12 @@ namespace Core.Goals
             this.stuckDetector = stuckDetector;
             this.classConfiguration = classConfiguration;
 
+            pullPrevention = () => blacklist.IsTargetBlacklisted() &&
+                playerReader.TargetTarget is not
+                TargetTargetEnum.None or
+                TargetTargetEnum.Me or
+                TargetTargetEnum.Pet;
+
             classConfiguration.Pull.Sequence.Where(k => k != null).ToList().ForEach(key => Keys.Add(key));
 
             AddPrecondition(GoapKey.targetisalive, true);
@@ -111,7 +117,7 @@ namespace Core.Goals
                     wait.Update(1);
 
                     if (playerReader.HasTarget && playerReader.Bits.TargetInCombat &&
-                        playerReader.TargetTarget == TargetTargetEnum.TargetIsTargettingMe)
+                        playerReader.TargetTarget == TargetTargetEnum.Me)
                     {
                         return ValueTask.CompletedTask;
                     }
@@ -219,8 +225,9 @@ namespace Core.Goals
             if (castAny)
             {
                 (bool timeout, double elapsedMs) = wait.Until(1000,
-                    () => playerReader.TargetTarget == TargetTargetEnum.TargetIsTargettingMe ||
-                          playerReader.TargetTarget == TargetTargetEnum.TargetIsTargettingPet);
+                    () => playerReader.TargetTarget is
+                        TargetTargetEnum.Me or
+                        TargetTargetEnum.Pet);
                 if (!timeout)
                 {
                     Log($"Entered combat after {elapsedMs}ms");

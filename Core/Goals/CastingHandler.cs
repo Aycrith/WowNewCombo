@@ -1,4 +1,4 @@
-﻿using SharedLib.NpcFinder;
+using SharedLib.NpcFinder;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
@@ -550,7 +550,7 @@ namespace Core.Goals
                     if (playerReader.Bits.PlayerInCombat && playerReader.HasTarget && !playerReader.IsTargetCasting)
                     {
                         wait.Update(2);
-                        if (playerReader.TargetTarget == TargetTargetEnum.TargetIsTargettingMe)
+                        if (playerReader.TargetTarget == TargetTargetEnum.Me)
                         {
                             logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_SPELL_OUT_OF_RANGE} -- Just wait for the target to get in range.");
                             
