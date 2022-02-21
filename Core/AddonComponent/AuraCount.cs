@@ -24,5 +24,10 @@
             TargetDebuff = (int)(TargetBuff / 100f);
             TargetBuff -= 100 * TargetDebuff;
         }
+
+        public override string ToString()
+        {
+            return $"pb: {PlayerBuff} | pd: {PlayerDebuff} | tb: {TargetBuff} | td: {TargetDebuff}";
+        }
     }
 }

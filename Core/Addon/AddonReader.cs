@@ -25,8 +25,8 @@ namespace Core
 
         public ActionBarCooldownReader ActionBarCooldownReader { get; }
 
-        public ActionBarBits CurrentAction => new ActionBarBits(PlayerReader, squareReader, 26, 27, 28, 29, 30);
-        public ActionBarBits UsableAction => new ActionBarBits(PlayerReader, squareReader, 31, 32, 33, 34, 35);
+        public ActionBarBits CurrentAction => new(PlayerReader, squareReader, 26, 27, 28, 29, 30);
+        public ActionBarBits UsableAction => new(PlayerReader, squareReader, 31, 32, 33, 34, 35);
 
         public GossipReader GossipReader { get; }
 
@@ -47,9 +47,9 @@ namespace Core
         private readonly SpellDB spellDb;
         private readonly TalentDB talentDB;
 
-        public RecordInt UIMapId { get; } = new RecordInt(4);
+        public RecordInt UIMapId { get; } = new(4);
 
-        public RecordInt GlobalTime { get; } = new RecordInt(98);
+        public RecordInt GlobalTime { get; } = new(98);
 
         public int CombatCreatureCount => CreatureHistory.DamageTaken.Count(c => c.HealthPercent > 0);
 

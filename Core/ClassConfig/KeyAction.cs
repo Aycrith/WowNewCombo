@@ -305,6 +305,14 @@ namespace Core
             }
         }
 
+        public void LogWarning(string message)
+        {
+            if (Log)
+            {
+                logger.LogWarning($"[{Name}]: {message}");
+            }
+        }
+
         [LoggerMessage(
             EventId = 9,
             Level = LogLevel.Information,

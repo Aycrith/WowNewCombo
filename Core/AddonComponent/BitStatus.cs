@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Text;
+﻿using System.Text;
 
 namespace Core
 {
@@ -26,11 +25,6 @@ namespace Core
             }
 
             return sb.ToString();
-        }
-
-        internal void Dump()
-        {
-            Debug.WriteLine(ToString());
         }
     }
 }
