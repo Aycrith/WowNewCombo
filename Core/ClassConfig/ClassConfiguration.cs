@@ -122,6 +122,7 @@ namespace Core
 
             StopAttack.Key = StopAttackKey;
             StopAttack.Initialise(addonReader, requirementFactory, logger);
+            StopAttack.PressDuration = 10;
             StopAttack.Cooldown = 400;
 
             TargetNearestTarget.Key = TargetNearestTargetKey;

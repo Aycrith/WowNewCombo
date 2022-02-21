@@ -8,18 +8,18 @@ namespace Core.Goals
 {
     public class PullTargetGoal : GoapGoal
     {
-        public override float CostOfPerformingAction { get => 7f; }
+        public override float CostOfPerformingAction => 7f;
 
         private readonly ILogger logger;
         private readonly ConfigurableInput input;
-
         private readonly Wait wait;
         private readonly AddonReader addonReader;
         private readonly PlayerReader playerReader;
+        private readonly IBlacklist blacklist;
         private readonly StopMoving stopMoving;
         private readonly StuckDetector stuckDetector;
         private readonly ClassConfiguration classConfiguration;
-        
+
         private readonly CastingHandler castingHandler;
         private readonly MountHandler mountHandler;
 
@@ -29,16 +29,17 @@ namespace Core.Goals
 
         private int SecondsSincePullStarted => (int)(DateTime.UtcNow - pullStart).TotalSeconds;
 
-        public PullTargetGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, StopMoving stopMoving, CastingHandler castingHandler, MountHandler mountHandler, StuckDetector stuckDetector, ClassConfiguration classConfiguration)
+        private readonly Func<bool> pullPrevention;
+
+        public PullTargetGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, IBlacklist blacklist, StopMoving stopMoving, CastingHandler castingHandler, MountHandler mountHandler, StuckDetector stuckDetector, ClassConfiguration classConfiguration)
         {
             this.logger = logger;
             this.input = input;
-
             this.wait = wait;
             this.addonReader = addonReader;
             this.playerReader = addonReader.PlayerReader;
+            this.blacklist = blacklist;
             this.stopMoving = stopMoving;
-            
             this.castingHandler = castingHandler;
             this.mountHandler = mountHandler;
 
@@ -134,10 +135,9 @@ namespace Core.Goals
                     stuckDetector.Unstick();
                 }
 
-                if (classConfiguration.Approach.GetCooldownRemaining() == 0)
+                if (playerReader.HasTarget && classConfiguration.Approach.GetCooldownRemaining() == 0)
                 {
                     input.TapApproachKey($"{nameof(PullTargetGoal)}");
-                    wait.Update(1);
                 }
             }
             else
@@ -186,7 +186,7 @@ namespace Core.Goals
                 if (lastCastSuccess && addonReader.UsableAction.Is(item))
                 {
                     Log($"While waiting, repeat current action: {item.Name}");
-                    lastCastSuccess = castingHandler.CastIfReady(item, item.DelayBeforeCast);
+                    lastCastSuccess = castingHandler.CastIfReady(item);
                     Log($"Repeat current action: {lastCastSuccess}");
                 }
 
@@ -205,7 +205,12 @@ namespace Core.Goals
             bool castAny = false;
             foreach (var item in Keys)
             {
-                var success = castingHandler.CastIfReady(item, item.DelayBeforeCast);
+                if (!castingHandler.CanRun(item))
+                {
+                    continue;
+                }
+
+                var success = castingHandler.Cast(item, pullPrevention);
                 if (success)
                 {
                     if (!playerReader.HasTarget)
@@ -219,6 +224,17 @@ namespace Core.Goals
                     {
                         WaitForWithinMeleeRange(item, success);
                     }
+                }
+                else if (pullPrevention() &&
+                    (playerReader.IsCasting ||
+                     playerReader.Bits.IsAutoRepeatSpellOn_AutoAttack ||
+                     playerReader.Bits.IsAutoRepeatSpellOn_AutoShot ||
+                     playerReader.Bits.IsAutoRepeatSpellOn_Shoot))
+                {
+                    input.TapStopAttack("Preventing pulling possible tagged target!");
+                    input.TapClearTarget();
+                    wait.Update(1);
+                    return false;
                 }
             }
 

@@ -12,6 +12,7 @@ namespace Core.Goals
 
         private readonly Wait wait;
         private readonly StopMoving stopMoving;
+        private readonly AddonReader addonReader;
         private readonly PlayerReader playerReader;
         
         private readonly KeyAction key;
@@ -19,18 +20,24 @@ namespace Core.Goals
         private readonly MountHandler mountHandler;
         public override float CostOfPerformingAction => key.Cost;
 
+        private readonly Func<bool> dangerCombat;
+
         public override string Name => Keys.Count == 0 ? base.Name : Keys[0].Name;
 
-        public AdhocGoal(ILogger logger, ConfigurableInput input, Wait wait, KeyAction key, PlayerReader playerReader, StopMoving stopMoving, CastingHandler castingHandler, MountHandler mountHandler)
+        public AdhocGoal(ILogger logger, ConfigurableInput input, Wait wait, KeyAction key, AddonReader addonReader, StopMoving stopMoving, CastingHandler castingHandler, MountHandler mountHandler)
         {
             this.logger = logger;
             this.input = input;
             this.wait = wait;
             this.stopMoving = stopMoving;
-            this.playerReader = playerReader;
+            this.addonReader = addonReader;
+            this.playerReader = addonReader.PlayerReader;
             this.key = key;
             this.castingHandler = castingHandler;
             this.mountHandler = mountHandler;
+
+            dangerCombat = () => addonReader.PlayerReader.Bits.PlayerInCombat &&
+                addonReader.CombatCreatureCount > 0;
 
             if (key.InCombat == "false")
             {
@@ -54,13 +61,13 @@ namespace Core.Goals
                 wait.Update(1);
             }
 
-            castingHandler.CastIfReady(key, key.DelayBeforeCast);
+            castingHandler.CastIfReady(key, dangerCombat);
 
             bool wasDrinkingOrEating = playerReader.Buffs.Drinking || playerReader.Buffs.Eating;
 
             DateTime startTime = DateTime.UtcNow;
 
-            while ((playerReader.Buffs.Drinking || playerReader.Buffs.Eating || playerReader.IsCasting) && !playerReader.Bits.PlayerInCombat)
+            while ((playerReader.Buffs.Drinking || playerReader.Buffs.Eating || playerReader.IsCasting) && !dangerCombat())
             {
                 wait.Update(1);
 
@@ -96,7 +103,7 @@ namespace Core.Goals
         {
             if (key.Charge >= 1)
             {
-                castingHandler.CastIfReady(key, key.DelayBeforeCast);
+                castingHandler.CastIfReady(key);
             }
 
             wait.Update(1);

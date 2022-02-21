@@ -1,5 +1,4 @@
-using SharedLib.NpcFinder;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
 using System.Numerics;
@@ -7,7 +6,7 @@ using System.Threading;
 
 namespace Core.Goals
 {
-    public class CastingHandler
+    public class CastingHandler : IDisposable
     {
         private readonly ILogger logger;
         private readonly ConfigurableInput input;
@@ -15,12 +14,14 @@ namespace Core.Goals
         private readonly Wait wait;
         private readonly AddonReader addonReader;
         private readonly PlayerReader playerReader;
-        
+
         private readonly ClassConfiguration classConfig;
         private readonly IPlayerDirection direction;
         private readonly StopMoving stopMoving;
 
-        private readonly KeyAction defaultKeyAction = new KeyAction();
+        private readonly KeyAction defaultKeyAction = new();
+
+        private readonly Func<bool> defaultInterrupt;
 
         private const int GCD = 1500;
         private const int SpellQueueTimeMs = 400;
@@ -38,10 +39,17 @@ namespace Core.Goals
             this.wait = wait;
             this.addonReader = addonReader;
             this.playerReader = addonReader.PlayerReader;
-            
+
             this.classConfig = classConfig;
             this.direction = direction;
             this.stopMoving = stopMoving;
+
+            defaultInterrupt = () => playerReader.HasTarget;
+        }
+
+        public void Dispose()
+        {
+            defaultKeyAction.Dispose();
         }
 
         public bool CanRun(KeyAction item)
@@ -66,9 +74,10 @@ namespace Core.Goals
         private static bool CastSuccessfull(UI_ERROR uiEvent)
         {
             return
-                uiEvent == UI_ERROR.CAST_START ||
-                uiEvent == UI_ERROR.CAST_SUCCESS ||
-                uiEvent == UI_ERROR.NONE;
+                uiEvent is
+                UI_ERROR.CAST_START or
+                UI_ERROR.CAST_SUCCESS or
+                UI_ERROR.NONE;
         }
 
         private bool CastInstant(KeyAction item)
@@ -136,7 +145,7 @@ namespace Core.Goals
             return true;
         }
 
-        private bool CastCastbar(KeyAction item)
+        private bool CastCastbar(KeyAction item, Func<bool> interrupt)
         {
             if (playerReader.Bits.IsFalling)
             {
@@ -147,10 +156,17 @@ namespace Core.Goals
                 }
             }
 
+            if (playerReader.IsCasting && interrupt())
+            {
+                return false;
+            }
+
             stopMoving.Stop();
             wait.Update(1);
+            stopMoving.Stop();
+            wait.Update(2);
 
-            bool beforeHasTarget = playerReader.HasTarget;
+            bool prevState = interrupt();
 
             bool beforeUsable = addonReader.UsableAction.Is(item);
             int beforeCastEventValue = playerReader.CastEvent.Value;
@@ -192,30 +208,40 @@ namespace Core.Goals
 
             if (playerReader.IsCasting)
             {
-                item.LogInformation(" ... waiting for visible cast bar to end or target loss.");
-                wait.Until(MaxCastTimeMs, () => !playerReader.IsCasting || beforeHasTarget != playerReader.HasTarget);
+                item.LogInformation(" ... waiting for visible cast bar to end or interrupt.");
+                wait.Until(MaxCastTimeMs, () => !playerReader.IsCasting || prevState != interrupt());
+                if (prevState != interrupt())
+                {
+                    item.LogWarning(" ... visible castbar interrupted!");
+                    return false;
+                }
             }
             else if ((UI_ERROR)playerReader.CastEvent.Value == UI_ERROR.CAST_START)
             {
                 beforeCastEventValue = playerReader.CastEvent.Value;
-                item.LogInformation(" ... waiting for hidden cast bar to end or target loss.");
-                wait.Until(MaxCastTimeMs, () => beforeCastEventValue != playerReader.CastEvent.Value || beforeHasTarget != playerReader.HasTarget);
+                item.LogInformation(" ... waiting for hidden cast bar to end or interrupt.");
+                wait.Until(MaxCastTimeMs, () => beforeCastEventValue != playerReader.CastEvent.Value || prevState != interrupt());
+                if (prevState != interrupt())
+                {
+                    item.LogWarning(" ... hidden castbar interrupted!");
+                    return false;
+                }
             }
 
             return true;
         }
 
-        public bool CastIfReady(KeyAction item, int sleepBeforeCast)
+        public bool CastIfReady(KeyAction item)
         {
-            if (!CanRun(item))
-            {
-                return false;
-            }
-
-            return Cast(item, sleepBeforeCast);
+            return CanRun(item) && Cast(item, defaultInterrupt);
         }
 
-        public bool Cast(KeyAction item, int sleepBeforeCast)
+        public bool CastIfReady(KeyAction item, Func<bool> interrupt)
+        {
+            return CanRun(item) && Cast(item, interrupt);
+        }
+
+        public bool Cast(KeyAction item, Func<bool> interrupt)
         {
             if (item.HasFormRequirement() && playerReader.Form != item.FormEnum)
             {
@@ -229,7 +255,8 @@ namespace Core.Goals
 
                 if (beforeForm != playerReader.Form)
                 {
-                    WaitForGCD(item, playerReader.HasTarget);
+                    if (!WaitForGCD(item, interrupt))
+                        return false;
 
                     //TODO: upon form change and GCD - have to check Usable state
                     if (!beforeUsable && !addonReader.UsableAction.Is(item))
@@ -247,7 +274,7 @@ namespace Core.Goals
                 wait.Update(1);
             }
 
-            if (sleepBeforeCast > 0)
+            if (item.DelayBeforeCast > 0)
             {
                 if (item.StopBeforeCast || item.HasCastBar)
                 {
@@ -257,14 +284,14 @@ namespace Core.Goals
                     wait.Update(1);
                 }
 
-                item.LogInformation($" Wait {sleepBeforeCast}ms before press.");
-                Thread.Sleep(sleepBeforeCast);
+                item.LogInformation($" Wait {item.DelayBeforeCast}ms before press.");
+                Thread.Sleep(item.DelayBeforeCast);
             }
 
-            bool beforeHasTarget = playerReader.HasTarget;
             int auraHash = playerReader.AuraCount.Hash;
+            bool prevState = interrupt();
 
-            if (item.WaitForGCD && !WaitForGCD(item, beforeHasTarget))
+            if (item.WaitForGCD && !WaitForGCD(item, interrupt))
             {
                 return false;
             }
@@ -282,10 +309,10 @@ namespace Core.Goals
             }
             else
             {
-                if (!CastCastbar(item))
+                if (!CastCastbar(item, interrupt))
                 {
                     // try again after reacted to UI_ERROR
-                    if (!CastCastbar(item))
+                    if (!CastCastbar(item, interrupt))
                     {
                         return false;
                     }
@@ -295,7 +322,7 @@ namespace Core.Goals
             if (item.AfterCastWaitBuff)
             {
                 (bool changeTimeOut, double elapsedMs) = wait.Until(MaxWaitBuffTimeMs, () => auraHash != playerReader.AuraCount.Hash);
-                item.LogInformation($" ... AfterCastWaitBuff: Buff: {!changeTimeOut} | pb: {playerReader.AuraCount.PlayerBuff} | pd: {playerReader.AuraCount.PlayerDebuff} | tb: {playerReader.AuraCount.TargetBuff} | td: {playerReader.AuraCount.TargetDebuff} | Delay: {elapsedMs}ms");
+                item.LogInformation($" ... AfterCastWaitBuff: Buff: {!changeTimeOut} | {playerReader.AuraCount} | Delay: {elapsedMs}ms");
             }
 
             if (item.DelayAfterCast != defaultKeyAction.DelayAfterCast)
@@ -318,10 +345,10 @@ namespace Core.Goals
                 else if (item.DelayAfterCast > 0)
                 {
                     item.LogInformation($" ... delay after cast {item.DelayAfterCast}ms");
-                    (bool delayTimeOut, double delayElaspedMs) = wait.Until(item.DelayAfterCast, () => beforeHasTarget != playerReader.HasTarget);
+                    (bool delayTimeOut, double delayElaspedMs) = wait.Until(item.DelayAfterCast, () => prevState != interrupt());
                     if (!delayTimeOut)
                     {
-                        item.LogInformation($" .... delay after cast interrupted, target changed {delayElaspedMs}ms");
+                        item.LogInformation($" .... delay after cast interrupted {delayElaspedMs}ms");
                     }
                     else
                     {
@@ -333,10 +360,10 @@ namespace Core.Goals
             {
                 if (item.RequirementObjects.Count > 0)
                 {
-                    (bool firstReq, double firstReqElapsedMs) = wait.Until(SpellQueueTimeMs,
+                    (bool canRun, double canRunElapsedMs) = wait.Until(SpellQueueTimeMs,
                         () => !item.CanRun()
                     );
-                    item.LogInformation($" ... instant interrupt: {!firstReq} | CanRun: {item.CanRun()} | Delay: {firstReqElapsedMs}ms");
+                    item.LogInformation($" ... instant interrupt: {!canRun} | CanRun: {item.CanRun()} | Delay: {canRunElapsedMs}ms");
                 }
             }
 
@@ -344,10 +371,10 @@ namespace Core.Goals
             {
                 input.SetKeyState(input.BackwardKey, true, false, $"Step back for {item.StepBackAfterCast}ms");
                 (bool stepbackTimeOut, double stepbackElapsedMs) =
-                    wait.Until(item.StepBackAfterCast, () => beforeHasTarget != playerReader.HasTarget);
+                    wait.Until(item.StepBackAfterCast, () => prevState != interrupt());
                 if (!stepbackTimeOut)
                 {
-                    item.LogInformation($" .... interrupted stepback | lost target? {beforeHasTarget != playerReader.HasTarget} | {stepbackElapsedMs}ms");
+                    item.LogInformation($" .... interrupted stepback | interrupted? {prevState != interrupt()} | {stepbackElapsedMs}ms");
                 }
                 input.SetKeyState(input.BackwardKey, false, false);
             }
@@ -361,18 +388,17 @@ namespace Core.Goals
             return true;
         }
 
-        private bool WaitForGCD(KeyAction item, bool beforeHasTarget)
+        private bool WaitForGCD(KeyAction item, Func<bool> interrupt)
         {
+            bool before = interrupt();
             (bool timeout, double elapsedMs) = wait.Until(GCD,
-                () => addonReader.UsableAction.Is(item) || beforeHasTarget != playerReader.HasTarget);
-
+                () => addonReader.UsableAction.Is(item) || before != interrupt());
             if (!timeout)
             {
                 item.LogInformation($" ... gcd interrupted {elapsedMs}ms");
-
-                if (beforeHasTarget != playerReader.HasTarget)
+                if (before != interrupt())
                 {
-                    item.LogInformation($" ... lost target!");
+                    item.LogInformation($" ... gcd interrupted!");
                     return false;
                 }
             }
