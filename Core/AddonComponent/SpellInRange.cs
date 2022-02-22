@@ -2,8 +2,18 @@
 {
     public class SpellInRange : BitStatus
     {
-        public SpellInRange(int value) : base(value)
+        private readonly ISquareReader reader;
+        private readonly int cell;
+
+        public SpellInRange(ISquareReader reader, int cell) : base(reader.GetIntAtCell(cell))
         {
+            this.reader = reader;
+            this.cell = cell;
+        }
+
+        public void SetDirty()
+        {
+            Update(reader.GetIntAtCell(cell));
         }
 
         // Warrior
