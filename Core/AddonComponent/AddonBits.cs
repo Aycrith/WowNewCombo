@@ -2,13 +2,27 @@
 {
     public class AddonBits
     {
-        private readonly BitStatus v1;
-        private readonly BitStatus v2;
+        private readonly ISquareReader reader;
+        private readonly int cell1;
+        private readonly int cell2;
 
-        public AddonBits(int value1, int value2)
+        private BitStatus v1 = null!;
+        private BitStatus v2 = null!;
+
+        public AddonBits(ISquareReader reader, int cell1, int cell2)
         {
-            v1 = new BitStatus(value1);
-            v2 = new BitStatus(value2);
+            this.reader = reader;
+            this.cell1 = cell1;
+            this.cell2 = cell2;
+
+            v1 = new BitStatus(reader.GetIntAtCell(cell1));
+            v2 = new BitStatus(reader.GetIntAtCell(cell2));
+        }
+
+        public void SetDirty()
+        {
+            v1.Update(reader.GetIntAtCell(cell1));
+            v2.Update(reader.GetIntAtCell(cell2));
         }
 
         // -- value1 based flags

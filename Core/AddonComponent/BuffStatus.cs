@@ -2,8 +2,18 @@
 {
     public class BuffStatus : BitStatus
     {
-        public BuffStatus(int value) : base(value)
+        private readonly ISquareReader reader;
+        private readonly int cell;
+
+        public BuffStatus(ISquareReader reader, int cell) : base(reader.GetIntAtCell(cell))
         {
+            this.reader = reader;
+            this.cell = cell;
+        }
+
+        public void SetDirty()
+        {
+            Update(reader.GetIntAtCell(cell));
         }
 
         // All

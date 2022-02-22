@@ -25,8 +25,8 @@ namespace Core
 
         public ActionBarCooldownReader ActionBarCooldownReader { get; }
 
-        public ActionBarBits CurrentAction => new(PlayerReader, squareReader, 26, 27, 28, 29, 30);
-        public ActionBarBits UsableAction => new(PlayerReader, squareReader, 31, 32, 33, 34, 35);
+        public ActionBarBits CurrentAction { get; }
+        public ActionBarBits UsableAction { get; }
 
         public GossipReader GossipReader { get; }
 
@@ -98,6 +98,9 @@ namespace Core
             this.PlayerReader = new PlayerReader(squareReader);
             this.LevelTracker = new LevelTracker(this);
             this.TalentReader = new TalentReader(squareReader, 72, PlayerReader, talentDB);
+
+            this.CurrentAction = new(PlayerReader, squareReader, 26, 27, 28, 29, 30);
+            this.UsableAction = new(PlayerReader, squareReader, 31, 32, 33, 34, 35);
 
             UpdateLatencys = new CircularBuffer<double>(10);
 
@@ -206,6 +209,10 @@ namespace Core
                 AvgUpdateLatency += UpdateLatencys.PeekAt(i);
             }
             AvgUpdateLatency /= UpdateLatencys.Size;
+
+            CurrentAction.SetDirty();
+            UsableAction.SetDirty();
+            PlayerReader.SetDirty();
         }
     }
 }

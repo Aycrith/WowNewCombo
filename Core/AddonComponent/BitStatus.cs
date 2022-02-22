@@ -4,11 +4,16 @@ namespace Core
 {
     public class BitStatus
     {
-        private readonly int value;
+        private int value;
 
         public BitStatus(int value)
         {
             this.value = value;
+        }
+
+        public void Update(int v)
+        {
+            value = v;
         }
 
         public bool IsBitSet(int pos)

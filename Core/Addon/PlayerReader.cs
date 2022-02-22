@@ -10,6 +10,12 @@ namespace Core
         public PlayerReader(ISquareReader reader)
         {
             this.reader = reader;
+            Bits = new(reader, 8, 9);
+            SpellInRange = new(reader, 40);
+            Buffs = new(reader, 41);
+            TargetDebuffs = new(reader, 42);
+            Stance = new(reader, 48);
+            CustomTrigger1 = new(reader.GetIntAtCell(74));
         }
 
         public Dictionary<Form, int> FormCost { get; } = new();
@@ -27,7 +33,7 @@ namespace Core
         public float CorpseX => reader.GetFixedPointAtCell(6) * 10;
         public float CorpseY => reader.GetFixedPointAtCell(7) * 10;
 
-        public AddonBits Bits => new(reader.GetIntAtCell(8), reader.GetIntAtCell(9));
+        public AddonBits Bits { get; }
 
         public int HealthMax => reader.GetIntAtCell(10);
         public int HealthCurrent => reader.GetIntAtCell(11);
@@ -41,7 +47,6 @@ namespace Core
         public int ManaCurrent => reader.GetIntAtCell(15);
         public int ManaPercentage => ManaMax == 0 ? 0 : (ManaCurrent * 100) / ManaMax;
 
-        // TODO: check this
         public bool HasTarget => Bits.HasTarget;// || TargetHealth > 0;
 
         public int TargetMaxHealth => reader.GetIntAtCell(18);
@@ -54,12 +59,12 @@ namespace Core
         public int PetHealthPercentage => PetMaxHealth == 0 || PetHealth == 1 ? 0 : (PetHealth * 100) / PetMaxHealth;
 
 
-        public SpellInRange SpellInRange => new(reader.GetIntAtCell(40));
+        public SpellInRange SpellInRange { get; }
         public bool WithInPullRange => SpellInRange.WithinPullRange(this, Class);
         public bool WithInCombatRange => SpellInRange.WithinCombatRange(this, Class);
 
-        public BuffStatus Buffs => new(reader.GetIntAtCell(41));
-        public TargetDebuffStatus TargetDebuffs => new(reader.GetIntAtCell(42));
+        public BuffStatus Buffs { get; }
+        public TargetDebuffStatus TargetDebuffs { get; }
 
         public int TargetLevel => reader.GetIntAtCell(43);
 
@@ -71,7 +76,7 @@ namespace Core
 
         // 47 empty
 
-        public Stance Stance => new(reader.GetIntAtCell(48));
+        public Stance Stance { get; }
         public Form Form => Stance.Get(this, Class);
 
         public int MinRange => (int)(reader.GetIntAtCell(49) / 100000f);
@@ -114,7 +119,7 @@ namespace Core
 
         public int CastCount => reader.GetIntAtCell(70);
 
-        public BitStatus CustomTrigger1 => new(reader.GetIntAtCell(74));
+        public BitStatus CustomTrigger1 { get; }
 
         public int MainHandSpeedMs => (int)(reader.GetIntAtCell(75) / 10000f) * 10;
 
@@ -146,6 +151,16 @@ namespace Core
             MainHandSwing.Update(reader);
             CastEvent.Update(reader);
             CastSpellId.Update(reader);
+        }
+
+        public void SetDirty()
+        {
+            Bits.SetDirty();
+            SpellInRange.SetDirty();
+            Buffs.SetDirty();
+            TargetDebuffs.SetDirty();
+            Stance.SetDirty();
+            CustomTrigger1.Update(reader.GetIntAtCell(74));
         }
 
         public void Reset()
