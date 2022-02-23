@@ -6,8 +6,8 @@
         private readonly int cell1;
         private readonly int cell2;
 
-        private BitStatus v1 = null!;
-        private BitStatus v2 = null!;
+        private readonly BitStatus v1;
+        private readonly BitStatus v2;
 
         public AddonBits(ISquareReader reader, int cell1, int cell2)
         {
