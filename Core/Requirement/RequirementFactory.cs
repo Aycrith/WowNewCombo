@@ -67,201 +67,356 @@ namespace Core
                 { "Usable:", CreateUsable }
             };
 
+
+            bool TargetYieldXP() => playerReader.TargetYieldXP;
+            bool TargetsMe() => playerReader.TargetTarget == TargetTargetEnum.Me;
+            bool TargetsPet() => playerReader.TargetTarget == TargetTargetEnum.Pet;
+            bool TargetsNone() => playerReader.TargetTarget == TargetTargetEnum.None;
+            bool AddVisible() => npcNameFinder.PotentialAddsExist;
+
+            bool IsInMeleeRange() => playerReader.IsInMeleeRange;
+            bool IsInDeadZone() => playerReader.IsInDeadZone;
+            bool WithInCombatRange() => !playerReader.WithInCombatRange;
+            bool InCombatRange() => playerReader.WithInCombatRange;
+
+            bool HasPet() => playerReader.Bits.HasPet;
+            bool PetHappy() => playerReader.Bits.PetHappy;
+
+            bool AutoAttacking() => playerReader.Bits.IsAutoRepeatSpellOn_AutoAttack;
+            bool Shooting() => playerReader.Bits.IsAutoRepeatSpellOn_Shoot;
+            bool AutoShot() => playerReader.Bits.IsAutoRepeatSpellOn_AutoShot;
+
+            bool HasMainHandEnchant() => playerReader.Bits.MainHandEnchant_Active;
+            bool HasOffHandEnchant() => playerReader.Bits.OffHandEnchant_Active;
+
+            bool ItemsBroken() => playerReader.Bits.ItemsAreBroken;
+            bool BagFull() => bagReader.BagsFull;
+            bool BagGreyItem() => bagReader.AnyGreyItem;
+            bool HasRangedWeapon() => equipmentReader.HasRanged();
+            bool HasAmmo() => playerReader.Bits.HasAmmo;
+
+            bool Eating() => playerReader.Buffs.Eating;
+            bool Drinking() => playerReader.Buffs.Drinking;
+            bool ManaRegeneration() => playerReader.Buffs.ManaRegeneration;
+            bool WellFed() => playerReader.Buffs.WellFed;
+            bool Clearcasting() => playerReader.Buffs.Clearcasting;
+
+            bool Swimming() => playerReader.Bits.IsSwimming;
+            bool Falling() => playerReader.Bits.IsFalling;
+
+            bool Fortitude() => playerReader.Buffs.Fortitude;
+            bool InnerFire() => playerReader.Buffs.InnerFire;
+            bool DivineSpirit() => playerReader.Buffs.DivineSpirit;
+            bool Renew() => playerReader.Buffs.Renew;
+
+            bool Shield() => playerReader.Buffs.Shield;
+            bool MarkOfTheWild() => playerReader.Buffs.MarkOfTheWild;
+            bool Thorns() => playerReader.Buffs.Thorns;
+            bool TigersFury() => playerReader.Buffs.TigersFury;
+            bool Prowl() => playerReader.Buffs.Prowl;
+            bool Rejuvenation() => playerReader.Buffs.Rejuvenation;
+            bool Regrowth() => playerReader.Buffs.Regrowth;
+            bool OmenOfClarity() => playerReader.Buffs.OmenOfClarity;
+
+            bool Paladin_Concentration_Aura() => playerReader.Form == Form.Paladin_Concentration_Aura;
+            bool Paladin_Crusader_Aura() => playerReader.Form == Form.Paladin_Crusader_Aura;
+            bool Paladin_Devotion_Aura() => playerReader.Form == Form.Paladin_Devotion_Aura;
+            bool Paladin_Sanctity_Aura() => playerReader.Form == Form.Paladin_Sanctity_Aura;
+            bool Paladin_Fire_Resistance_Aura() => playerReader.Form == Form.Paladin_Fire_Resistance_Aura;
+            bool Paladin_Frost_Resistance_Aura() => playerReader.Form == Form.Paladin_Frost_Resistance_Aura;
+            bool Paladin_Retribution_Aura() => playerReader.Form == Form.Paladin_Retribution_Aura;
+            bool Paladin_Shadow_Resistance_Aura() => playerReader.Form == Form.Paladin_Shadow_Resistance_Aura;
+            bool SealofRighteousness() => playerReader.Buffs.SealofRighteousness;
+            bool SealoftheCrusader() => playerReader.Buffs.SealoftheCrusader;
+            bool SealofCommand() => playerReader.Buffs.SealofCommand;
+            bool SealofWisdom() => playerReader.Buffs.SealofWisdom;
+            bool SealofLight() => playerReader.Buffs.SealofLight;
+            bool SealofBlood() => playerReader.Buffs.SealofBlood;
+            bool SealofVengeance() => playerReader.Buffs.SealofVengeance;
+            bool BlessingofMight() => playerReader.Buffs.BlessingofMight;
+            bool BlessingofProtection() => playerReader.Buffs.BlessingofProtection;
+            bool BlessingofWisdom() => playerReader.Buffs.BlessingofWisdom;
+            bool BlessingofKings() => playerReader.Buffs.BlessingofKings;
+            bool BlessingofSalvation() => playerReader.Buffs.BlessingofSalvation;
+            bool BlessingofSanctuary() => playerReader.Buffs.BlessingofSanctuary;
+            bool BlessingofLight() => playerReader.Buffs.BlessingofLight;
+            bool RighteousFury() => playerReader.Buffs.RighteousFury;
+            bool DivineProtection() => playerReader.Buffs.DivineProtection;
+            bool AvengingWrath() => playerReader.Buffs.AvengingWrath;
+            bool HolyShield() => playerReader.Buffs.HolyShield;
+
+            bool FrostArmor() => playerReader.Buffs.FrostArmor;
+            bool ArcaneIntellect() => playerReader.Buffs.ArcaneIntellect;
+            bool IceBarrier() => playerReader.Buffs.IceBarrier;
+            bool Ward() => playerReader.Buffs.Ward;
+            bool FirePower() => playerReader.Buffs.FirePower;
+            bool ManaShield() => playerReader.Buffs.ManaShield;
+            bool PresenceOfMind() => playerReader.Buffs.PresenceOfMind;
+            bool ArcanePower() => playerReader.Buffs.ArcanePower;
+
+            bool SliceAndDice() => playerReader.Buffs.SliceAndDice;
+            bool Stealth() => playerReader.Buffs.Stealth;
+
+            bool BattleShout() => playerReader.Buffs.BattleShout;
+            bool Bloodrage() => playerReader.Buffs.Bloodrage;
+
+            bool Demon() => playerReader.Buffs.Demon;
+            bool SoulLink() => playerReader.Buffs.SoulLink;
+            bool SoulstoneResurrection() => playerReader.Buffs.SoulstoneResurrection;
+            bool ShadowTrance() => playerReader.Buffs.ShadowTrance;
+
+            bool LightningShield() => playerReader.Buffs.LightningShield;
+            bool WaterShield() => playerReader.Buffs.WaterShield;
+            bool ShamanisticFocus() => playerReader.Buffs.ShamanisticFocus;
+            bool Stoneskin() => playerReader.Buffs.Stoneskin;
+
+            bool AspectoftheCheetah() => playerReader.Buffs.AspectoftheCheetah;
+            bool AspectofthePack() => playerReader.Buffs.AspectofthePack;
+            bool AspectoftheHawk() => playerReader.Buffs.AspectoftheHawk;
+            bool AspectoftheMonkey() => playerReader.Buffs.AspectoftheMonkey;
+            bool AspectoftheViper() => playerReader.Buffs.AspectoftheViper;
+            bool RapidFire() => playerReader.Buffs.RapidFire;
+            bool QuickShots() => playerReader.Buffs.QuickShots;
+
+            bool Roar() => playerReader.TargetDebuffs.Roar;
+            bool FaerieFire() => playerReader.TargetDebuffs.FaerieFire;
+            bool Rip() => playerReader.TargetDebuffs.Rip;
+            bool Moonfire() => playerReader.TargetDebuffs.Moonfire;
+            bool EntanglingRoots() => playerReader.TargetDebuffs.EntanglingRoots;
+            bool Rake() => playerReader.TargetDebuffs.Rake;
+
+            bool JudgementoftheCrusader() => playerReader.TargetDebuffs.JudgementoftheCrusader;
+            bool HammerOfJustice() => playerReader.TargetDebuffs.HammerOfJustice;
+
+            bool Rend() => playerReader.TargetDebuffs.Rend;
+            bool ThunderClap() => playerReader.TargetDebuffs.ThunderClap;
+            bool Hamstring() => playerReader.TargetDebuffs.Hamstring;
+            bool ChargeStun() => playerReader.TargetDebuffs.ChargeStun;
+
+            bool ShadowWordPain() => playerReader.TargetDebuffs.ShadowWordPain;
+
+            bool Frostbite() => playerReader.TargetDebuffs.Frostbite;
+            bool Slow() => playerReader.TargetDebuffs.Slow;
+
+            bool Curseof() => playerReader.TargetDebuffs.Curseof;
+            bool Corruption() => playerReader.TargetDebuffs.Corruption;
+            bool Immolate() => playerReader.TargetDebuffs.Immolate;
+            bool SiphonLife() => playerReader.TargetDebuffs.SiphonLife;
+
+            bool SerpentSting() => playerReader.TargetDebuffs.SerpentSting;
+
             boolVariables = new Dictionary<string, Func<bool>>
             {
                 // Target Based
-                { "TargetYieldXP", () => playerReader.TargetYieldXP },
-                { "TargetsMe", () => playerReader.TargetTarget == TargetTargetEnum.Me },
-                { "TargetsPet", () => playerReader.TargetTarget == TargetTargetEnum.Pet },
-                { "TargetsNone", () => playerReader.TargetTarget == TargetTargetEnum.None },
+                { "TargetYieldXP", TargetYieldXP },
+                { "TargetsMe", TargetsMe },
+                { "TargetsPet", TargetsPet },
+                { "TargetsNone", TargetsNone },
 
-                { "AddVisible", () => npcNameFinder.PotentialAddsExist },
+                { "AddVisible", AddVisible },
 
                 // Range
-                { "InMeleeRange", ()=> playerReader.IsInMeleeRange },
-                { "InDeadZoneRange", ()=> playerReader.IsInDeadZone },
-                { "OutOfCombatRange", ()=> !playerReader.WithInCombatRange },
-                { "InCombatRange", ()=> playerReader.WithInCombatRange },
+                { "InMeleeRange", IsInMeleeRange },
+                { "InDeadZoneRange", IsInDeadZone },
+                { "OutOfCombatRange", WithInCombatRange },
+                { "InCombatRange", InCombatRange },
                 
                 // Pet
-                { "Has Pet", ()=> playerReader.Bits.HasPet },
-                { "Pet Happy", ()=> playerReader.Bits.PetHappy },
+                { "Has Pet", HasPet },
+                { "Pet Happy", PetHappy },
                 
                 // Auto Spell
-                { "AutoAttacking", ()=> playerReader.Bits.IsAutoRepeatSpellOn_AutoAttack },
-                { "Shooting", ()=> playerReader.Bits.IsAutoRepeatSpellOn_Shoot },
-                { "AutoShot", ()=> playerReader.Bits.IsAutoRepeatSpellOn_AutoShot },
+                { "AutoAttacking", AutoAttacking },
+                { "Shooting", Shooting },
+                { "AutoShot", AutoShot },
                 
                 // Temporary Enchants
-                { "HasMainHandEnchant", ()=> playerReader.Bits.MainHandEnchant_Active },
-                { "HasOffHandEnchant", ()=> playerReader.Bits.OffHandEnchant_Active },
+                { "HasMainHandEnchant", HasMainHandEnchant },
+                { "HasOffHandEnchant", HasOffHandEnchant },
                 
                 // Equipment - Bag
-                { "Items Broken", ()=> playerReader.Bits.ItemsAreBroken },
-                { "BagFull", ()=> bagReader.BagsFull },
-                { "BagGreyItem", ()=> bagReader.AnyGreyItem },
-                { "HasRangedWeapon", ()=> equipmentReader.HasRanged() },
-                { "HasAmmo", ()=> playerReader.Bits.HasAmmo },
+                { "Items Broken", ItemsBroken },
+                { "BagFull", BagFull },
+                { "BagGreyItem", BagGreyItem },
+                { "HasRangedWeapon", HasRangedWeapon },
+                { "HasAmmo", HasAmmo },
                 
                 // General Buff Condition
-                { "Eating", ()=> playerReader.Buffs.Eating },
-                { "Drinking", ()=> playerReader.Buffs.Drinking },
-                { "Mana Regeneration", ()=> playerReader.Buffs.ManaRegeneration },
-                { "Well Fed", ()=> playerReader.Buffs.WellFed },
-                { "Clearcasting", ()=> playerReader.Buffs.Clearcasting },
+                { "Eating", Eating },
+                { "Drinking", Drinking },
+                { "Mana Regeneration", ManaRegeneration },
+                { "Well Fed", WellFed },
+                { "Clearcasting", Clearcasting },
 
                 // Player Affected
-                { "Swimming", ()=> playerReader.Bits.IsSwimming },
-                { "Falling", ()=> playerReader.Bits.IsFalling },
+                { "Swimming", Swimming },
+                { "Falling", Falling },
 
                 //Priest
-                { "Fortitude", ()=> playerReader.Buffs.Fortitude },
-                { "InnerFire", ()=> playerReader.Buffs.InnerFire },
-                { "Divine Spirit", ()=> playerReader.Buffs.DivineSpirit },
-                { "Renew", ()=> playerReader.Buffs.Renew },
-                { "Shield", ()=> playerReader.Buffs.Shield },
+                { "Fortitude", Fortitude },
+                { "InnerFire", InnerFire },
+                { "Divine Spirit", DivineSpirit },
+                { "Renew", Renew },
+                { "Shield", Shield },
 
                 // Druid
-                { "Mark of the Wild", ()=> playerReader.Buffs.MarkOfTheWild },
-                { "Thorns", ()=> playerReader.Buffs.Thorns },
-                { "TigersFury", ()=> playerReader.Buffs.TigersFury },
-                { "Prowl", ()=> playerReader.Buffs.Prowl },
-                { "Rejuvenation", ()=> playerReader.Buffs.Rejuvenation },
-                { "Regrowth", ()=> playerReader.Buffs.Regrowth },
-                { "Omen of Clarity", ()=> playerReader.Buffs.OmenOfClarity },
+                { "Mark of the Wild", MarkOfTheWild },
+                { "Thorns", Thorns },
+                { "TigersFury", TigersFury },
+                { "Prowl", Prowl },
+                { "Rejuvenation", Rejuvenation },
+                { "Regrowth", Regrowth },
+                { "Omen of Clarity", OmenOfClarity },
 
                 // Paladin
-                { "Concentration Aura", ()=> playerReader.Form == Form.Paladin_Concentration_Aura },
-                { "Crusader Aura", ()=> playerReader.Form == Form.Paladin_Crusader_Aura },
-                { "Devotion Aura", ()=> playerReader.Form == Form.Paladin_Devotion_Aura },
-                { "Sanctity Aura", ()=> playerReader.Form == Form.Paladin_Sanctity_Aura },
-                { "Fire Resistance Aura", ()=> playerReader.Form == Form.Paladin_Fire_Resistance_Aura },
-                { "Frost Resistance Aura", ()=> playerReader.Form == Form.Paladin_Frost_Resistance_Aura },
-                { "Retribution Aura", ()=> playerReader.Form == Form.Paladin_Retribution_Aura },
-                { "Shadow Resistance Aura", ()=> playerReader.Form == Form.Paladin_Shadow_Resistance_Aura },
-                { "Seal of Righteousness", ()=> playerReader.Buffs.SealofRighteousness },
-                { "Seal of the Crusader", ()=> playerReader.Buffs.SealoftheCrusader },
-                { "Seal of Command", ()=> playerReader.Buffs.SealofCommand },
-                { "Seal of Wisdom", ()=> playerReader.Buffs.SealofWisdom },
-                { "Seal of Light", ()=> playerReader.Buffs.SealofLight },
-                { "Seal of Blood", ()=> playerReader.Buffs.SealofBlood },
-                { "Seal of Vengeance", ()=> playerReader.Buffs.SealofVengeance },
-                { "Blessing of Might", ()=> playerReader.Buffs.BlessingofMight },
-                { "Blessing of Protection", ()=> playerReader.Buffs.BlessingofProtection },
-                { "Blessing of Wisdom", ()=> playerReader.Buffs.BlessingofWisdom },
-                { "Blessing of Kings", ()=> playerReader.Buffs.BlessingofKings },
-                { "Blessing of Salvation", ()=> playerReader.Buffs.BlessingofSalvation },
-                { "Blessing of Sanctuary", ()=> playerReader.Buffs.BlessingofSanctuary },
-                { "Blessing of Light", ()=> playerReader.Buffs.BlessingofLight },
-                { "Righteous Fury", ()=> playerReader.Buffs.RighteousFury },
-                { "Divine Protection", ()=> playerReader.Buffs.DivineProtection },
-                { "Avenging Wrath", ()=> playerReader.Buffs.AvengingWrath },
-                { "Holy Shield", ()=> playerReader.Buffs.HolyShield },
+                { "Concentration Aura", Paladin_Concentration_Aura },
+                { "Crusader Aura", Paladin_Crusader_Aura },
+                { "Devotion Aura", Paladin_Devotion_Aura },
+                { "Sanctity Aura", Paladin_Sanctity_Aura },
+                { "Fire Resistance Aura", Paladin_Fire_Resistance_Aura },
+                { "Frost Resistance Aura", Paladin_Frost_Resistance_Aura },
+                { "Retribution Aura", Paladin_Retribution_Aura },
+                { "Shadow Resistance Aura", Paladin_Shadow_Resistance_Aura },
+                { "Seal of Righteousness", SealofRighteousness },
+                { "Seal of the Crusader", SealoftheCrusader },
+                { "Seal of Command", SealofCommand },
+                { "Seal of Wisdom", SealofWisdom },
+                { "Seal of Light", SealofLight },
+                { "Seal of Blood", SealofBlood },
+                { "Seal of Vengeance", SealofVengeance },
+                { "Blessing of Might", BlessingofMight },
+                { "Blessing of Protection", BlessingofProtection },
+                { "Blessing of Wisdom", BlessingofWisdom },
+                { "Blessing of Kings", BlessingofKings },
+                { "Blessing of Salvation", BlessingofSalvation },
+                { "Blessing of Sanctuary", BlessingofSanctuary },
+                { "Blessing of Light", BlessingofLight },
+                { "Righteous Fury", RighteousFury },
+                { "Divine Protection", DivineProtection },
+                { "Avenging Wrath", AvengingWrath },
+                { "Holy Shield", HolyShield },
                 // Mage
-                { "Frost Armor", ()=> playerReader.Buffs.FrostArmor },
-                { "Ice Armor", ()=> playerReader.Buffs.FrostArmor },
-                { "Molten Armor", ()=> playerReader.Buffs.FrostArmor },
-                { "Mage Armor", ()=> playerReader.Buffs.FrostArmor },
-                { "Arcane Intellect", ()=> playerReader.Buffs.ArcaneIntellect },
-                { "Ice Barrier", ()=>playerReader.Buffs.IceBarrier },
-                { "Ward", ()=>playerReader.Buffs.Ward },
-                { "Fire Power", ()=>playerReader.Buffs.FirePower },
-                { "Mana Shield", ()=>playerReader.Buffs.ManaShield },
-                { "Presence of Mind", ()=>playerReader.Buffs.PresenceOfMind },
-                { "Arcane Power", ()=>playerReader.Buffs.ArcanePower },
+                { "Frost Armor", FrostArmor },
+                { "Ice Armor", FrostArmor },
+                { "Molten Armor", FrostArmor },
+                { "Mage Armor", FrostArmor },
+                { "Arcane Intellect", ArcaneIntellect },
+                { "Ice Barrier", IceBarrier },
+                { "Ward", Ward },
+                { "Fire Power", FirePower },
+                { "Mana Shield", ManaShield },
+                { "Presence of Mind", PresenceOfMind },
+                { "Arcane Power", ArcanePower },
                 
                 // Rogue
-                { "Slice and Dice", ()=> playerReader.Buffs.SliceAndDice },
-                { "Stealth", ()=> playerReader.Buffs.Stealth },
+                { "Slice and Dice", SliceAndDice },
+                { "Stealth", Stealth },
                 
                 // Warrior
-                { "Battle Shout", ()=> playerReader.Buffs.BattleShout },
-                { "Bloodrage", ()=> playerReader.Buffs.Bloodrage },
+                { "Battle Shout", BattleShout },
+                { "Bloodrage", Bloodrage },
                 
                 // Warlock
-                { "Demon Skin", ()=> playerReader.Buffs.Demon },
-                { "Demon Armor", ()=> playerReader.Buffs.Demon },
-                { "Soul Link", ()=> playerReader.Buffs.SoulLink },
-                { "Soulstone Resurrection", ()=> playerReader.Buffs.SoulstoneResurrection },
-                { "Shadow Trance", ()=> playerReader.Buffs.ShadowTrance },
+                { "Demon Skin", Demon },
+                { "Demon Armor", Demon },
+                { "Soul Link", SoulLink },
+                { "Soulstone Resurrection", SoulstoneResurrection },
+                { "Shadow Trance", ShadowTrance },
                 
                 // Shaman
-                { "Lightning Shield", ()=> playerReader.Buffs.LightningShield },
-                { "Water Shield", ()=> playerReader.Buffs.WaterShield },
-                { "Shamanistic Focus", ()=> playerReader.Buffs.ShamanisticFocus },
-                { "Focused", ()=> playerReader.Buffs.ShamanisticFocus },
-                { "Stoneskin", ()=> playerReader.Buffs.Stoneskin },
+                { "Lightning Shield", LightningShield },
+                { "Water Shield", WaterShield },
+                { "Shamanistic Focus", ShamanisticFocus },
+                { "Focused", ShamanisticFocus },
+                { "Stoneskin", Stoneskin },
                 
                 //Hunter
-                { "Aspect of the Cheetah", ()=> playerReader.Buffs.AspectoftheCheetah },
-                { "Aspect of the Pack", ()=> playerReader.Buffs.AspectofthePack },
-                { "Aspect of the Hawk", ()=> playerReader.Buffs.AspectoftheHawk },
-                { "Aspect of the Monkey", ()=> playerReader.Buffs.AspectoftheMonkey },
-                { "Aspect of the Viper", ()=> playerReader.Buffs.AspectoftheViper },
-                { "Rapid Fire", ()=> playerReader.Buffs.RapidFire },
-                { "Quick Shots", ()=> playerReader.Buffs.QuickShots },
+                { "Aspect of the Cheetah", AspectoftheCheetah },
+                { "Aspect of the Pack", AspectofthePack },
+                { "Aspect of the Hawk", AspectoftheHawk },
+                { "Aspect of the Monkey", AspectoftheMonkey },
+                { "Aspect of the Viper", AspectoftheViper },
+                { "Rapid Fire", RapidFire },
+                { "Quick Shots", QuickShots },
 
                 // Debuff Section
                 // Druid Debuff
-                { "Demoralizing Roar", ()=> playerReader.TargetDebuffs.Roar },
-                { "Faerie Fire", ()=> playerReader.TargetDebuffs.FaerieFire },
-                { "Rip", ()=> playerReader.TargetDebuffs.Rip },
-                { "Moonfire", ()=> playerReader.TargetDebuffs.Moonfire },
-                { "Entangling Roots", ()=> playerReader.TargetDebuffs.EntanglingRoots },
-                { "Rake", ()=> playerReader.TargetDebuffs.Rake },
+                { "Demoralizing Roar", Roar },
+                { "Faerie Fire", FaerieFire },
+                { "Rip", Rip },
+                { "Moonfire", Moonfire },
+                { "Entangling Roots", EntanglingRoots },
+                { "Rake", Rake },
                 
                 // Paladin Debuff
-                { "Judgement of the Crusader", ()=> playerReader.TargetDebuffs.JudgementoftheCrusader },
-                { "Hammer of Justice", ()=> playerReader.TargetDebuffs.HammerOfJustice },
+                { "Judgement of the Crusader", JudgementoftheCrusader },
+                { "Hammer of Justice", HammerOfJustice },
 
                 // Warrior Debuff
-                { "Rend", ()=> playerReader.TargetDebuffs.Rend },
-                { "Thunder Clap", ()=> playerReader.TargetDebuffs.ThunderClap },
-                { "Hamstring", ()=> playerReader.TargetDebuffs.Hamstring },
-                { "Charge Stun", ()=> playerReader.TargetDebuffs.ChargeStun },
+                { "Rend", Rend },
+                { "Thunder Clap", ThunderClap },
+                { "Hamstring", Hamstring },
+                { "Charge Stun", ChargeStun },
                 
                 // Priest Debuff
-                { "Shadow Word: Pain", ()=> playerReader.TargetDebuffs.ShadowWordPain },
+                { "Shadow Word: Pain", ShadowWordPain },
                 
                 // Mage Debuff
-                { "Frostbite", ()=> playerReader.TargetDebuffs.Frostbite },
-                { "Slow", ()=> playerReader.TargetDebuffs.Slow },
+                { "Frostbite", Frostbite },
+                { "Slow", Slow },
                 
                 // Warlock Debuff
-                { "Curse of Weakness", ()=> playerReader.TargetDebuffs.Curseof },
-                { "Curse of Elements", ()=> playerReader.TargetDebuffs.Curseof },
-                { "Curse of Recklessness", ()=> playerReader.TargetDebuffs.Curseof },
-                { "Curse of Shadow", ()=> playerReader.TargetDebuffs.Curseof },
-                { "Curse of Agony", ()=> playerReader.TargetDebuffs.Curseof },
-                { "Curse of", ()=> playerReader.TargetDebuffs.Curseof },
-                { "Corruption", ()=> playerReader.TargetDebuffs.Corruption },
-                { "Immolate", ()=> playerReader.TargetDebuffs.Immolate },
-                { "Siphon Life", ()=> playerReader.TargetDebuffs.SiphonLife },
+                { "Curse of Weakness", Curseof },
+                { "Curse of Elements", Curseof },
+                { "Curse of Recklessness", Curseof },
+                { "Curse of Shadow", Curseof },
+                { "Curse of Agony", Curseof },
+                { "Curse of", Curseof },
+                { "Corruption", Corruption },
+                { "Immolate", Immolate },
+                { "Siphon Life", SiphonLife },
                 
                 // Hunter Debuff
-                { "Serpent Sting", ()=> playerReader.TargetDebuffs.SerpentSting },
+                { "Serpent Sting", SerpentSting },
             };
+
+
+            int HealthPercent() => playerReader.HealthPercent;
+            int TargetHealthPercentage() => playerReader.TargetHealthPercentage;
+            int PetHealthPercentage() => playerReader.PetHealthPercentage;
+            int ManaPercentage() => playerReader.ManaPercentage;
+            int ManaCurrent() => playerReader.ManaCurrent;
+            int PTCurrent() => playerReader.PTCurrent;
+            int ComboPoints() => playerReader.ComboPoints;
+            int BagCount() => bagReader.BagItems.Count;
+            int MobCount() => addonReader.CombatCreatureCount;
+            int MinRange() => playerReader.MinRange;
+            int MaxRange() => playerReader.MaxRange;
+            int LastAutoShotMs() => playerReader.AutoShot.ElapsedMs;
+            int LastMainHandMs() => playerReader.MainHandSwing.ElapsedMs;
+            int MainHandSpeed() => playerReader.MainHandSpeedMs;
+            int MainHandSwing() => Math.Clamp(playerReader.MainHandSwing.ElapsedMs - playerReader.MainHandSpeedMs, -playerReader.MainHandSpeedMs, 0);
 
             intVariables = new Dictionary<string, Func<int>>
             {
-                { "Health%", () => playerReader.HealthPercent },
-                { "TargetHealth%", () => playerReader.TargetHealthPercentage },
-                { "PetHealth%", () => playerReader.PetHealthPercentage },
-                { "Mana%", () => playerReader.ManaPercentage },
-                { "Mana", () => playerReader.ManaCurrent },
-                { "Energy", () => playerReader.PTCurrent },
-                { "Rage", () => playerReader.PTCurrent },
-                { "Combo Point", () => playerReader.ComboPoints },
-                { "BagCount", () => bagReader.BagItems.Count },
-                { "MobCount", () => addonReader.CombatCreatureCount },
-                { "MinRange", () => playerReader.MinRange },
-                { "MaxRange", () => playerReader.MaxRange },
-                { "LastAutoShotMs", () => playerReader.AutoShot.ElapsedMs },
-                { "LastMainHandMs", () => playerReader.MainHandSwing.ElapsedMs }, 
+                { "Health%", HealthPercent },
+                { "TargetHealth%", TargetHealthPercentage },
+                { "PetHealth%", PetHealthPercentage },
+                { "Mana%", ManaPercentage },
+                { "Mana", ManaCurrent },
+                { "Energy", PTCurrent },
+                { "Rage", PTCurrent },
+                { "Combo Point", ComboPoints },
+                { "BagCount", BagCount },
+                { "MobCount", MobCount },
+                { "MinRange", MinRange },
+                { "MaxRange", MaxRange },
+                { "LastAutoShotMs", LastAutoShotMs },
+                { "LastMainHandMs", LastMainHandMs }, 
                 //"CD_{KeyAction.Name}
                 //"Cost_{KeyAction.Name}"
-                { "MainHandSpeed", () => playerReader.MainHandSpeedMs },
-                { "MainHandSwing", () => Math.Clamp(playerReader.MainHandSwing.ElapsedMs - playerReader.MainHandSpeedMs, -playerReader.MainHandSpeedMs, 0) }
+                { "MainHandSpeed", MainHandSpeed },
+                { "MainHandSwing", MainHandSwing }
             };
         }
 
@@ -385,10 +540,12 @@ namespace Core
         {
             if (item.UseWhenTargetIsCasting != null)
             {
+                bool f() => playerReader.IsTargetCasting == item.UseWhenTargetIsCasting.Value;
+                string l() => "Target casting";
                 itemRequirementObjects.Add(new Requirement
                 {
-                    HasRequirement = () => playerReader.IsTargetCasting == item.UseWhenTargetIsCasting.Value,
-                    LogMessage = () => "Target casting"
+                    HasRequirement = f,
+                    LogMessage = l
                 });
             }
         }
@@ -406,26 +563,32 @@ namespace Core
             switch (type)
             {
                 case PowerType.Mana:
+                    bool fmana() => playerReader.ManaCurrent >= keyAction.MinMana || playerReader.Buffs.Clearcasting;
+                    string smana() => $"{type} {playerReader.ManaCurrent} >= {keyAction.MinMana}";
                     RequirementObjects.Add(new Requirement
                     {
-                        HasRequirement = () => playerReader.ManaCurrent >= keyAction.MinMana || playerReader.Buffs.Clearcasting,
-                        LogMessage = () => $"{type} {playerReader.ManaCurrent} >= {keyAction.MinMana}",
+                        HasRequirement = fmana,
+                        LogMessage = smana,
                         VisibleIfHasRequirement = keyAction.MinMana > 0
                     });
                     break;
                 case PowerType.Rage:
+                    bool frage() => playerReader.PTCurrent >= keyAction.MinRage || playerReader.Buffs.Clearcasting;
+                    string srage() => $"{type} {playerReader.PTCurrent} >= {keyAction.MinRage}";
                     RequirementObjects.Add(new Requirement
                     {
-                        HasRequirement = () => playerReader.PTCurrent >= keyAction.MinRage || playerReader.Buffs.Clearcasting,
-                        LogMessage = () => $"{type} {playerReader.PTCurrent} >= {keyAction.MinRage}",
+                        HasRequirement = frage,
+                        LogMessage = srage,
                         VisibleIfHasRequirement = keyAction.MinRage > 0
                     });
                     break;
                 case PowerType.Energy:
+                    bool fenergy() => playerReader.PTCurrent >= keyAction.MinEnergy || playerReader.Buffs.Clearcasting;
+                    string senergy() => $"{type} {playerReader.PTCurrent} >= {keyAction.MinEnergy}";
                     RequirementObjects.Add(new Requirement
                     {
-                        HasRequirement = () => playerReader.PTCurrent >= keyAction.MinEnergy || playerReader.Buffs.Clearcasting,
-                        LogMessage = () => $"{type} {playerReader.PTCurrent} >= {keyAction.MinEnergy}",
+                        HasRequirement = fenergy,
+                        LogMessage = senergy,
                         VisibleIfHasRequirement = keyAction.MinEnergy > 0
                     });
                     break;
@@ -436,10 +599,12 @@ namespace Core
         {
             if (item.MinComboPoints > 0)
             {
+                bool f() => playerReader.ComboPoints >= item.MinComboPoints;
+                string s() => $"Combo point {playerReader.ComboPoints} >= {item.MinComboPoints}";
                 RequirementObjects.Add(new Requirement
                 {
-                    HasRequirement = () => playerReader.ComboPoints >= item.MinComboPoints,
-                    LogMessage = () => $"Combo point {playerReader.ComboPoints} >= {item.MinComboPoints}"
+                    HasRequirement = f,
+                    LogMessage = s
                 });
             }
         }
@@ -448,10 +613,12 @@ namespace Core
         {
             if (item.Cooldown > 0)
             {
+                bool f() => item.GetCooldownRemaining() == 0;
+                string s() => $"Cooldown {item.GetCooldownRemaining() / 1000:F1}";
                 RequirementObjects.Add(new Requirement
                 {
-                    HasRequirement = () => item.GetCooldownRemaining() == 0,
-                    LogMessage = () => $"Cooldown {item.GetCooldownRemaining() / 1000:F1}",
+                    HasRequirement = f,
+                    LogMessage = s,
                     VisibleIfHasRequirement = false
                 });
             }
@@ -461,10 +628,12 @@ namespace Core
         {
             if (item.Charge > 1)
             {
+                bool f() => item.GetChargeRemaining() != 0;
+                string s() => $"Charge {item.GetChargeRemaining()}";
                 RequirementObjects.Add(new Requirement
                 {
-                    HasRequirement = () => item.GetChargeRemaining() != 0,
-                    LogMessage = () => $"Charge {item.GetChargeRemaining()}"
+                    HasRequirement = f,
+                    LogMessage = s
                 });
             }
         }
@@ -502,10 +671,11 @@ namespace Core
 
             if (boolVariables.ContainsKey(requirement))
             {
+                string s() => requirement;
                 var requirementObj = new Requirement
                 {
                     HasRequirement = boolVariables[requirement],
-                    LogMessage = () => requirement
+                    LogMessage = s
                 };
                 return negated != null ? requirementObj.Negate(negated) : requirementObj;
             }
@@ -520,29 +690,34 @@ namespace Core
 
         private Requirement CreateActionUsableRequirement(KeyAction item)
         {
-            return new Requirement
-            {
-                HasRequirement = () =>
+            bool f() =>
                     !item.HasFormRequirement() ? addonReader.UsableAction.Is(item) :
                     (playerReader.Form == item.FormEnum && addonReader.UsableAction.Is(item)) ||
-                    (playerReader.Form != item.FormEnum && item.CanDoFormChangeAndHaveMinimumMana()),
+                    (playerReader.Form != item.FormEnum && item.CanDoFormChangeAndHaveMinimumMana());
 
-                LogMessage = () =>
+            string s() =>
                     !item.HasFormRequirement() ? $"Usable" : // {playerReader.UsableAction.Num(item)}
                     (playerReader.Form != item.FormEnum && item.CanDoFormChangeAndHaveMinimumMana()) ? $"Usable after Form change" : // {playerReader.UsableAction.Num(item)}
-                    (playerReader.Form == item.FormEnum && addonReader.UsableAction.Is(item)) ? $"Usable current Form" : $"not Usable current Form" // {playerReader.UsableAction.Num(item)}
+                    (playerReader.Form == item.FormEnum && addonReader.UsableAction.Is(item)) ? $"Usable current Form" : $"not Usable current Form"; // {playerReader.UsableAction.Num(item)}
+
+            return new Requirement
+            {
+                HasRequirement = f,
+                LogMessage = s
             };
         }
 
         private Requirement CreateActionNotInGameCooldown(KeyAction item)
         {
             string key = $"CD_{item.Name}";
+            bool f() => intVariables[key]() == 0;
+            string s() => $"CD {intVariables[key]() / 1000}";
+
             return new Requirement
             {
-                HasRequirement = () => intVariables[key]() == 0,
+                HasRequirement = f,
                 VisibleIfHasRequirement = false,
-                LogMessage = () =>
-                    $"CD {intVariables[key]() / 1000:F1}"
+                LogMessage = s
             };
         }
 
@@ -556,19 +731,22 @@ namespace Core
 
                 var spellIdsStringFormatted = string.Join(", ", spellIds);
 
+                bool f() => spellIds.Contains(playerReader.SpellBeingCastByTarget);
+                string s() => $"Target casting {playerReader.SpellBeingCastByTarget} ∈ [{spellIdsStringFormatted}]";
                 return new Requirement
                 {
-                    HasRequirement = () => spellIds.Contains(playerReader.SpellBeingCastByTarget),
-                    LogMessage = () =>
-                        $"Target casting {playerReader.SpellBeingCastByTarget} ∈ [{spellIdsStringFormatted}]"
+                    HasRequirement = f,
+                    LogMessage = s
                 };
             }
             else
             {
+                bool f() => playerReader.IsTargetCasting;
+                string s() => "Target casting";
                 return new Requirement
                 {
-                    HasRequirement = () => playerReader.IsTargetCasting,
-                    LogMessage = () => "Target casting"
+                    HasRequirement = f,
+                    LogMessage = s
                 };
             }
         }
@@ -578,10 +756,13 @@ namespace Core
             var parts = requirement.Split(":");
             var form = Enum.Parse<Form>(parts[1]);
 
+            bool f() => playerReader.Form == form;
+            string s() => $"{playerReader.Form}";
+
             return new Requirement
             {
-                HasRequirement = () => playerReader.Form == form,
-                LogMessage = () => $"{playerReader.Form}"
+                HasRequirement = f,
+                LogMessage = s
             };
         }
 
@@ -590,10 +771,13 @@ namespace Core
             var parts = requirement.Split(":");
             var race = Enum.Parse<RaceEnum>(parts[1]);
 
+            bool f() => playerReader.Race == race;
+            string s() => $"{playerReader.Race}";
+
             return new Requirement
             {
-                HasRequirement = () => playerReader.Race == race,
-                LogMessage = () => $"{playerReader.Race}"
+                HasRequirement = f,
+                LogMessage = s
             };
         }
 
@@ -611,10 +795,13 @@ namespace Core
                 id = spellBookReader.GetSpellIdByName(name);
             }
 
+            bool f() => spellBookReader.Spells.ContainsKey(id);
+            string s() => $"Spell {name}";
+
             return new Requirement
             {
-                HasRequirement = () => spellBookReader.Spells.ContainsKey(id),
-                LogMessage = () => $"Spell {name}"
+                HasRequirement = f,
+                LogMessage = s
             };
         }
 
@@ -624,10 +811,13 @@ namespace Core
             var name = parts[1].Trim();
             var rank = parts.Length < 3 ? 1 : int.Parse(parts[2]);
 
+            bool f() => talentReader.HasTalent(name, rank);
+            string s() => rank == 1 ? $"Talent {name}" : $"Talent {name} (Rank {rank})";
+
             return new Requirement
             {
-                HasRequirement = () => talentReader.HasTalent(name, rank),
-                LogMessage = () => rank == 1 ? $"Talent {name}" : $"Talent {name} (Rank {rank})"
+                HasRequirement = f,
+                LogMessage = s
             };
         }
 
@@ -637,10 +827,13 @@ namespace Core
             int bit = int.Parse(parts[1]);
             string text = parts.Length > 2 ? parts[2] : string.Empty;
 
+            bool f() => playerReader.CustomTrigger1.IsBitSet(bit);
+            string s() => $"Trigger({bit}) {text}";
+
             return new Requirement
             {
-                HasRequirement = () => playerReader.CustomTrigger1.IsBitSet(bit),
-                LogMessage = () => $"Trigger({bit}) {text}"
+                HasRequirement = f,
+                LogMessage = s
             };
         }
 
@@ -655,10 +848,13 @@ namespace Core
                 npcName = creature.Name;
             }
 
+            bool f() => playerReader.TargetId == npcId;
+            string s() => $"TargetID {npcName}({npcId})";
+
             return new Requirement
             {
-                HasRequirement = () => playerReader.TargetId == npcId,
-                LogMessage = () => $"TargetID {npcName}({npcId})"
+                HasRequirement = f,
+                LogMessage = s
             };
         }
 
@@ -674,10 +870,13 @@ namespace Core
                 itemName = item.Name;
             }
 
+            bool f() => bagReader.ItemCount(itemId) >= count;
+            string s() => count == 1 ? $"in bag {itemName}({itemId})" : $"{itemName}({itemId}) count >= {count}";
+
             return new Requirement
             {
-                HasRequirement = () => bagReader.ItemCount(itemId) >= count,
-                LogMessage = () => count == 1 ? $"in bag {itemName}({itemId})" : $"{itemName}({itemId}) count >= {count}"
+                HasRequirement = f,
+                LogMessage = s
             };
         }
 
@@ -686,10 +885,13 @@ namespace Core
             var parts = requirement.Split(":");
             var bitId = int.Parse(parts[1]);
 
+            bool f() => playerReader.SpellInRange.IsBitSet(bitId);
+            string s() => $"SpellInRange {bitId}";
+
             return new Requirement
             {
-                HasRequirement = () => playerReader.SpellInRange.IsBitSet(bitId),
-                LogMessage = () => $"SpellInRange {bitId}"
+                HasRequirement = f,
+                LogMessage = s
             };
         }
 
@@ -743,10 +945,12 @@ namespace Core
                 };
             }
 
-            Func<int> value = () => 0;
+            int zero() => 0;
+            Func<int> value = zero;
             if (int.TryParse(parts[1], out int v))
             {
-                value = () => v;
+                int c() => v;
+                value = c;
             }
             else
             {
@@ -757,38 +961,55 @@ namespace Core
                 }
             }
 
-            return symbol switch
+            switch(symbol)
             {
-                "==" => new Requirement
-                {
-                    HasRequirement = () => intVariables[key]() == value(),
-                    LogMessage = () => $"{key} {intVariables[key]()} {symbol} {value()}"
-                },
-                ">" => new Requirement
-                {
-                    HasRequirement = () => intVariables[key]() > value(),
-                    LogMessage = () => $"{key} {intVariables[key]()} {symbol} {value()}"
-                },
-                "<" => new Requirement
-                {
-                    HasRequirement = () => intVariables[key]() < value(),
-                    LogMessage = () => $"{key} {intVariables[key]()} {symbol} {value()}"
-                },
-                ">=" => new Requirement
-                {
-                    HasRequirement = () => intVariables[key]() >= value(),
-                    LogMessage = () => $"{key} {intVariables[key]()} {symbol} {value()}"
-                },
-                "<=" => new Requirement
-                {
-                    HasRequirement = () => intVariables[key]() <= value(),
-                    LogMessage = () => $"{key} {intVariables[key]()} {symbol} {value()}"
-                },
-                _ => new Requirement
-                {
-                    HasRequirement = () => false,
-                    LogMessage = () => $"UNKNOWN ARITHMETIC REQUIREMENT! {key} {intVariables[key]()} ? {value()}"
-                },
+                case "==":
+                    bool e() => intVariables[key]() == value();
+                    string es() => $"{key} {intVariables[key]()} {symbol} {value()}";
+                    return new Requirement
+                    {
+                        HasRequirement = e,
+                        LogMessage = es
+                    };
+                case ">":
+                    bool g() => intVariables[key]() > value();
+                    string gs() => $"{key} {intVariables[key]()} {symbol} {value()}";
+                    return new Requirement
+                    {
+                        HasRequirement = g,
+                        LogMessage = gs
+                    };
+                case "<":
+                    bool l() => intVariables[key]() < value();
+                    string ls() => $"{key} {intVariables[key]()} {symbol} {value()}";
+                    return new Requirement
+                    {
+                        HasRequirement = l,
+                        LogMessage = ls
+                    };
+                case ">=":
+                    bool ge() => intVariables[key]() >= value();
+                    string ges() => $"{key} {intVariables[key]()} {symbol} {value()}";
+                    return new Requirement
+                    {
+                        HasRequirement = ge,
+                        LogMessage = ges
+                    };
+                case "<=":
+                    bool le() => intVariables[key]() <= value();
+                    string les() => $"{key} {intVariables[key]()} {symbol} {value()}";
+                    return new Requirement
+                    {
+                        HasRequirement = le,
+                        LogMessage = les
+                    };
+
+                default:
+                    return new Requirement
+                    {
+                        HasRequirement = () => false,
+                        LogMessage = () => $"UNKNOWN ARITHMETIC REQUIREMENT! {key} {intVariables[key]()} ? {value()}"
+                    };
             };
         }
 
