@@ -160,6 +160,8 @@ namespace Core
                 // Mage
                 { "Frost Armor", ()=> playerReader.Buffs.FrostArmor },
                 { "Ice Armor", ()=> playerReader.Buffs.FrostArmor },
+                { "Molten Armor", ()=> playerReader.Buffs.FrostArmor },
+                { "Mage Armor", ()=> playerReader.Buffs.FrostArmor },
                 { "Arcane Intellect", ()=> playerReader.Buffs.ArcaneIntellect },
                 { "Ice Barrier", ()=>playerReader.Buffs.IceBarrier },
                 { "Ward", ()=>playerReader.Buffs.Ward },

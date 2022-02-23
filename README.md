@@ -1010,6 +1010,8 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | Druid | `"Regrowth"` |
 | Mage | `"Frost Armor"` |
 | Mage | `"Ice Armor"` |
+| Mage | `"Molten Armor"` |
+| Mage | `"Mage Armor"` |
 | Mage | `"Arcane Intellect"` |
 | Mage | `"Ice Barrier"` |
 | Mage | `"Ward"` |
