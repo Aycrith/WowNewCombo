@@ -45,7 +45,7 @@ namespace BlazorServer
         {
             if (!Enabled)
             {
-                logger.LogWarning($"Pathing is disabled, please check the messages when the bot started.");
+                LogWarning($"Pathing is disabled, please check the messages when the bot started.");
                 return new ValueTask<List<Vector3>>();
             }
 
@@ -57,12 +57,12 @@ namespace BlazorServer
 
             if (path == null)
             {
-                logger.LogWarning($"[{nameof(LocalPathingApi)}]: Failed to find a path from {fromPoint} to {toPoint}");
+                LogWarning($"Failed to find a path from {fromPoint} to {toPoint}");
                 return new ValueTask<List<Vector3>>();
             }
             else
             {
-                logger.LogInformation($"[{nameof(LocalPathingApi)}]: Finding route from {fromPoint} map {map} to {toPoint} took {sw.ElapsedMilliseconds} ms.");
+                LogInformation($"Finding route from {fromPoint} map {map} to {toPoint} took {sw.ElapsedMilliseconds} ms.");
                 service.Save();
             }
 
@@ -73,22 +73,46 @@ namespace BlazorServer
 
         public bool SelfTest()
         {
-            var mpqFiles = MPQTriangleSupplier.GetArchiveNames(DataConfig.Load(), s => logger.LogInformation(s));
+            var mpqFiles = MPQTriangleSupplier.GetArchiveNames(DataConfig.Load(), s => LogInformation(s));
 
             var countOfMPQFiles = mpqFiles.Where(f => File.Exists(f)).Count();
             if (countOfMPQFiles == 0)
             {
-                logger.LogWarning("Some of these MPQ files should exist!");
-                mpqFiles.ToList().ForEach(l => logger.LogInformation(l));
-                logger.LogError("No MPQ files found, refer to the Readme to download them.");
+                LogWarning("Some of these MPQ files should exist!");
+                mpqFiles.ToList().ForEach(l => LogInformation(l));
+                LogError("No MPQ files found, refer to the Readme to download them.");
                 Enabled = false;
             }
             else
             {
-                logger.LogDebug("Hooray, MPQ files exist.");
+                LogDebug("Hooray, MPQ files exist.");
             }
 
             return countOfMPQFiles > 0;
         }
+
+        #region Logging
+
+        private void LogError(string text)
+        {
+            logger.LogError($"{nameof(LocalPathingApi)}: {text}");
+        }
+
+        private void LogInformation(string text)
+        {
+            logger.LogInformation($"{nameof(LocalPathingApi)}: {text}");
+        }
+
+        private void LogDebug(string text)
+        {
+            logger.LogDebug($"{nameof(LocalPathingApi)}: {text}");
+        }
+
+        private void LogWarning(string text)
+        {
+            logger.LogWarning($"{nameof(LocalPathingApi)}: {text}");
+        }
+
+        #endregion
     }
 }

@@ -3,12 +3,8 @@ using PatherPath.Graph;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
-using System.Threading;
 using WowTriangles;
-using Newtonsoft.Json;
 using PathingAPI.Data;
-
 using SharedLib;
 using SharedLib.Data;
 

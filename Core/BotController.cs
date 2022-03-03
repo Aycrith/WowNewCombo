@@ -101,6 +101,8 @@ namespace Core
 
         private GoalThread? actionThread;
 
+        private readonly Stopwatch updatePlayerPostion = new Stopwatch();
+
         public BotController(ILogger logger, IPPather pather, DataConfig dataConfig, IConfiguration configuration)
         {
             this.logger = logger;
@@ -109,7 +111,11 @@ namespace Core
 
             cts = new CancellationTokenSource();
 
-            //updatePlayerPostion.Start();
+            if (pather is RemotePathingAPI)
+            {
+                updatePlayerPostion.Start();
+            }
+
             wowProcess = new WowProcess();
             WowScreen = new WowScreen(logger, wowProcess);
             WowProcessInput = new WowProcessInput(logger, wowProcess);
@@ -185,8 +191,6 @@ namespace Core
             this.logger.LogInformation("Addon thread stoppped!");
         }
 
-        Stopwatch updatePlayerPostion = new Stopwatch();
-
         public void ScreenshotRefreshThread()
         {
             var nodeFound = false;
@@ -220,19 +224,17 @@ namespace Core
                     nodeFound = this.minimapNodeFinder.Find(nodeFound) != null;
                 }
 
-                /*
                 if (updatePlayerPostion.ElapsedMilliseconds > 500)
                 {
-                    this.pather.DrawSphere(new Core.PPather.SphereArgs
+                    this.pather.DrawSphere(new PPather.SphereArgs
                     {
                         Colour = AddonReader.PlayerReader.Bits.PlayerInCombat ? 1 : AddonReader.PlayerReader.HasTarget ? 6 : 2,
                         Name = "Player",
                         MapId = this.AddonReader.UIMapId.Value,
                         Spot = this.AddonReader.PlayerReader.PlayerLocation
                     });
-                    //updatePlayerPostion.Restart();
+                    updatePlayerPostion.Restart();
                 }
-                */
 
                 cts.Token.WaitHandle.WaitOne(5);
             }
