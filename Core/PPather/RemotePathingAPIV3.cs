@@ -5,7 +5,6 @@ using Microsoft.Extensions.Logging;
 using Core.PPather;
 using Core.Database;
 using System.Threading;
-using System.Diagnostics;
 using AnTCP.Client;
 using SharedLib;
 using System.Numerics;
@@ -44,7 +43,7 @@ namespace Core
         private AnTcpClient Client { get; }
         private Thread ConnectionWatchdog { get; }
 
-        private CancellationTokenSource cts;
+        private readonly CancellationTokenSource cts;
 
         public RemotePathingAPIV3(ILogger logger, string ip, int port, WorldMapAreaDB worldMapAreaDB)
         {
@@ -106,7 +105,7 @@ namespace Core
                 }
 
                 if (debug)
-                    logger.LogInformation($"Finding route from {fromPoint}({start}) map {uiMapId} to {toPoint}({end}) map {uiMapId}...");
+                    LogInformation($"Finding route from {fromPoint}({start}) map {uiMapId} to {toPoint}({end}) map {uiMapId}...");
 
                 var path = Client.Send((byte)EMessageType.PATH, (area.MapID, PathRequestFlags.FIND_LOCATION | PathRequestFlags.CATMULLROM, start, end)).AsArray<Vector3>();
                 if (path.Length == 1 && path[0] == Vector3.Zero)
@@ -115,7 +114,7 @@ namespace Core
                 for (int i = 0; i < path.Length; i++)
                 {
                     if (debug)
-                        logger.LogInformation($"new float[] {{ {path[i].X}f, {path[i].Y}f, {path[i].Z}f }},");
+                        LogInformation($"new float[] {{ {path[i].X}f, {path[i].Y}f, {path[i].Z}f }},");
 
                     Vector3 point = worldMapAreaDB.ToAreaLoc(path[i].X, path[i].Y, path[i].Z, area.Continent, uiMapId);
                     result.Add(point);
@@ -125,43 +124,37 @@ namespace Core
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, $"Finding route from {fromPoint} to {toPoint}");
+                LogError($"Finding route from {fromPoint} to {toPoint}", ex);
                 Console.WriteLine(ex);
                 return new ValueTask<List<Vector3>>();
             }
         }
 
 
-        public Task<bool> PingServer()
+        public bool PingServer()
         {
-            CancellationTokenSource cts = new CancellationTokenSource();
+            CancellationTokenSource cts = new();
+            cts.CancelAfter(2 * watchdogPollMs);
 
-            var task = Task.Run(() =>
+            while (!cts.IsCancellationRequested)
             {
-                cts.CancelAfter(2 * watchdogPollMs);
-                Stopwatch sw = Stopwatch.StartNew();
-
-                while (!cts.IsCancellationRequested)
+                if (Client.IsConnected)
                 {
-                    if (Client.IsConnected)
-                    {
-                        break;
-                    }
+                    break;
                 }
+                cts.Token.WaitHandle.WaitOne(1);
+            }
 
-                sw.Stop();
-
-                logger.LogInformation($"{nameof(RemotePathingAPIV3)} PingServer {sw.ElapsedMilliseconds}ms {Client.IsConnected}");
-
-                return Client.IsConnected;
-            });
-
-            return task;
+            return Client.IsConnected;
         }
 
-        public void RequestDisconnect()
+        private void RequestDisconnect()
         {
             cts.Cancel();
+            if (Client.IsConnected)
+            {
+                Client.Disconnect();
+            }
         }
 
         #endregion old
@@ -176,8 +169,9 @@ namespace Core
                     {
                         Client.Connect();
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        LogError(ex.Message, ex);
                         // ignored, will happen when we cant connect
                     }
                 }
@@ -186,5 +180,28 @@ namespace Core
             }
         }
 
+        #region Logging
+
+        private void LogError(string text, Exception? ex = null)
+        {
+            logger.LogError($"{nameof(RemotePathingAPIV3)}: {text}", ex);
+        }
+
+        private void LogInformation(string text)
+        {
+            logger.LogInformation($"{nameof(RemotePathingAPIV3)}: {text}");
+        }
+
+        private void LogDebug(string text)
+        {
+            logger.LogDebug($"{nameof(RemotePathingAPIV3)}: {text}");
+        }
+
+        private void LogWarning(string text)
+        {
+            logger.LogWarning($"{nameof(RemotePathingAPIV3)}: {text}");
+        }
+
+        #endregion
     }
 }

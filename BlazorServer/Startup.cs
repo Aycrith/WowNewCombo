@@ -79,7 +79,7 @@ namespace BlazorServer
 
             if (AddonConfig.Exists() && DataFrameConfiguration.Exists())
             {
-                services.AddSingleton<IPPather>(x => GetPather(logger, DataConfig.Load()));
+                services.AddSingleton<IPPather>(x => GetPather(logger));
                 services.AddSingleton<IBotController>(x => new BotController(logger, x.GetRequiredService<IPPather>(), DataConfig.Load(), Configuration));
                 services.AddSingleton<IGrindSessionHandler>(x => x.GetRequiredService<IBotController>().GrindSessionHandler);
                 services.AddSingleton<IGrindSession>(x => x.GetRequiredService<IBotController>().GrindSession);
@@ -97,35 +97,34 @@ namespace BlazorServer
             services.AddBlazorTable();
         }
 
-        private IPPather GetPather(Microsoft.Extensions.Logging.ILogger logger, DataConfig dataConfig)
+        private IPPather GetPather(Microsoft.Extensions.Logging.ILogger logger)
         {
             var scp = new StartupConfigPathing();
             Configuration.GetSection(StartupConfigPathing.Position).Bind(scp);
 
             bool failed = false;
+            var dataConfig = DataConfig.Load();
 
             if (scp.Type == StartupConfigPathing.Types.RemoteV3)
             {
-                var worldmapAreaDb = new WorldMapAreaDB(dataConfig);
-                var api = new RemotePathingAPIV3(logger, scp.hostv3, scp.portv3, worldmapAreaDb);
-                if (api.PingServer().Result)
+                var api = new RemotePathingAPIV3(logger, scp.hostv3, scp.portv3, new WorldMapAreaDB(dataConfig));
+                if (api.PingServer())
                 {
                     Log.Information("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
                     Log.Debug($"Using {StartupConfigPathing.Types.RemoteV3}({api.GetType().Name}) {scp.hostv3}:{scp.portv3}");
                     Log.Information("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
                     return api;
                 }
-
-                api.RequestDisconnect();
+                api.Dispose();
                 failed = true;
             }
 
             if (scp.Type == StartupConfigPathing.Types.RemoteV1 || failed)
             {
                 var api = new RemotePathingAPI(logger, scp.hostv1, scp.portv1);
-                var task1 = Task.Factory.StartNew(api.PingServer);
-                task1.Wait();
-                if (task1.Result.Result)
+                var pingTask = Task.Run(api.PingServer);
+                pingTask.Wait();
+                if (pingTask.Result)
                 {
                     Log.Information("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
 
@@ -149,8 +148,7 @@ namespace BlazorServer
             }
             Log.Information("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
 
-            var pathingService = new PPatherService(LogWrite, dataConfig);
-            var localApi = new LocalPathingApi(logger, pathingService);
+            var localApi = new LocalPathingApi(logger, new PPatherService(LogWrite, dataConfig));
             localApi.SelfTest();
             Log.Information($"Using {StartupConfigPathing.Types.Local}({localApi.GetType().Name}) pathing API.");
             Log.Information("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
