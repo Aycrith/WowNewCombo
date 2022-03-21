@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using SharedLib;
@@ -42,7 +42,8 @@ namespace Core
 
         public void Update()
         {
-            wowScreen.GetPosition(out Point p);
+            Point p = new();
+            wowScreen.GetPosition(ref p);
             rect.X = p.X;
             rect.Y = p.Y;
 

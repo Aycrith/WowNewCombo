@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using SharedLib;
 using System;
 using System.Collections.Generic;
@@ -35,7 +35,8 @@ namespace Game
             this.logger = logger;
             this.wowProcess = wowProcess;
 
-            GetPosition(out var p);
+            Point p = new();
+            GetPosition(ref p);
             GetRectangle(out rect);
             rect.X = p.X;
             rect.Y = p.Y;
@@ -44,8 +45,8 @@ namespace Game
 
         public void UpdateScreenshot()
         {
-            GetPosition(out var p);
-            GetRectangle(out rect);
+            Point p = new();
+            GetPosition(ref p);
             rect.X = p.X;
             rect.Y = p.Y;
 
@@ -83,9 +84,9 @@ namespace Game
             this.OnScreenChanged?.Invoke(this, new ScreenChangeEventArgs(ToBase64(Bitmap, Size)));
         }
 
-        public void GetPosition(out Point point)
+        public void GetPosition(ref Point point)
         {
-            NativeMethods.GetPosition(wowProcess.WarcraftProcess.MainWindowHandle, out point);
+            NativeMethods.GetPosition(wowProcess.WarcraftProcess.MainWindowHandle, ref point);
         }
 
         public void GetRectangle(out Rectangle rect)
