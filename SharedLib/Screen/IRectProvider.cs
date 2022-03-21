@@ -4,7 +4,7 @@ namespace SharedLib
 {
     public interface IRectProvider
     {
-        void GetPosition(out Point point);
+        void GetPosition(ref Point point);
         void GetRectangle(out Rectangle rect);
     }
 }

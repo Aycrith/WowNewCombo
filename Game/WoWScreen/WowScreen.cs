@@ -35,29 +35,25 @@ namespace Game
             this.logger = logger;
             this.wowProcess = wowProcess;
 
-            GetPosition(out var p);
+            Point p = new();
+            GetPosition(ref p);
             GetRectangle(out rect);
             rect.X = p.X;
             rect.Y = p.Y;
+
             Bitmap = new Bitmap(rect.Width, rect.Height, PixelFormat.Format32bppPArgb);
         }
 
-        public void UpdateScreenshot()
+        public void Update()
         {
-            GetPosition(out var p);
-            GetRectangle(out rect);
+            Point p = new();
+            GetPosition(ref p);
             rect.X = p.X;
             rect.Y = p.Y;
 
-            if (Bitmap.Size != rect.Size)
-            {
-                Bitmap.Dispose();
-                Bitmap = new Bitmap(rect.Width, rect.Height, PixelFormat.Format32bppPArgb);
-            }
-            using (var graphics = Graphics.FromImage(Bitmap))
-            {
-                graphics.CopyFromScreen(rect.Left, rect.Top, 0, 0, Bitmap.Size);
-            }
+            var graphics = Graphics.FromImage(Bitmap);
+            graphics.CopyFromScreen(rect.Left, rect.Top, 0, 0, Bitmap.Size);
+            graphics.Dispose();
         }
 
         public void AddDrawAction(Action<Graphics> a)
@@ -83,9 +79,9 @@ namespace Game
             this.OnScreenChanged?.Invoke(this, new ScreenChangeEventArgs(ToBase64(Bitmap, Size)));
         }
 
-        public void GetPosition(out Point point)
+        public void GetPosition(ref Point point)
         {
-            NativeMethods.GetPosition(wowProcess.WarcraftProcess.MainWindowHandle, out point);
+            NativeMethods.GetPosition(wowProcess.WarcraftProcess.MainWindowHandle, ref point);
         }
 
         public void GetRectangle(out Rectangle rect)
@@ -96,7 +92,7 @@ namespace Game
 
         public Bitmap GetBitmap(int width, int height)
         {
-            UpdateScreenshot();
+            Update();
 
             Bitmap bitmap = new Bitmap(width, height);
             Rectangle sourceRect = new Rectangle(0, 0, width, height);

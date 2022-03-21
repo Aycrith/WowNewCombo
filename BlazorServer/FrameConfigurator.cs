@@ -169,8 +169,8 @@ namespace BlazorServer
 
         private DataFrameMeta GetDataFrameMeta()
         {
-            System.Drawing.Point location = System.Drawing.Point.Empty;
-            wowScreen?.GetPosition(out location);
+            System.Drawing.Point location = new();
+            wowScreen?.GetPosition(ref location);
             if (location.X < 0)
             {
                 logger.LogWarning($"Client window outside of the visible area of the screen by {location}");
@@ -229,7 +229,8 @@ namespace BlazorServer
             logger.LogInformation("Found WowProcess");
 
             if (wowScreen == null) return false;
-            wowScreen.GetPosition(out var location);
+            System.Drawing.Point location = new();
+            wowScreen.GetPosition(ref location);
 
             if (location.X < 0)
             {

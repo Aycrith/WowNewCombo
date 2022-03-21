@@ -1,4 +1,4 @@
-﻿using Core.Goals;
+using Core.Goals;
 using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -202,7 +202,7 @@ namespace Core
                     if (this.WowScreen.Enabled)
                     {
                         stopWatch.Restart();
-                        this.WowScreen.UpdateScreenshot();
+                        this.WowScreen.Update();
                         ScreenLatencys.Put(stopWatch.ElapsedMilliseconds);
 
                         stopWatch.Restart();

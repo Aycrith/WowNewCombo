@@ -42,14 +42,14 @@ namespace Core
 
         public void Update()
         {
-            wowScreen.GetPosition(out Point p);
+            Point p = new();
+            wowScreen.GetPosition(ref p);
             rect.X = p.X;
             rect.Y = p.Y;
 
-            using (var graphics = Graphics.FromImage(bitmap))
-            {
-                graphics.CopyFromScreen(rect.Left, rect.Top, 0, 0, bitmap.Size);
-            }
+            var graphics = Graphics.FromImage(bitmap);
+            graphics.CopyFromScreen(rect.Left, rect.Top, 0, 0, bitmap.Size);
+            graphics.Dispose();
 
             unsafe
             {

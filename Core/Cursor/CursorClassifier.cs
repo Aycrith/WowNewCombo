@@ -26,27 +26,26 @@ namespace Core
         public static void Classify(out CursorType classification)
         {
             Size size = NativeMethods.GetCursorSize();
-            Bitmap cursor = new Bitmap(size.Width, size.Height);
+            Bitmap bitmap = new(size.Width, size.Height);
 
-            var cursorInfo = new NativeMethods.CURSORINFO();
+            NativeMethods.CURSORINFO cursorInfo = new();
             cursorInfo.cbSize = Marshal.SizeOf(cursorInfo);
-            if (NativeMethods.GetCursorInfo(out cursorInfo))
+            if (NativeMethods.GetCursorInfo(ref cursorInfo) &&
+                cursorInfo.flags == NativeMethods.CURSOR_SHOWING)
             {
-                using Graphics g = Graphics.FromImage(cursor);
-                if (cursorInfo.flags == NativeMethods.CURSOR_SHOWING)
-                {
-                    NativeMethods.DrawIcon(g.GetHdc(), 0, 0, cursorInfo.hCursor);
-                }
+                Graphics g = Graphics.FromImage(bitmap);
+                NativeMethods.DrawIcon(g.GetHdc(), 0, 0, cursorInfo.hCursor);
+                g.Dispose();
             }
 
-            var hash = ImageHashing.AverageHash(cursor);
+            var hash = ImageHashing.AverageHash(bitmap);
             //var filename = hash + ".bmp";
             //var path = System.IO.Path.Join("../Cursors/", filename);
             //if (!System.IO.File.Exists(path))
             //{
-            //    cursor.Save(path);
+            //    bitmap.Save(path);
             //}
-            cursor.Dispose();
+            bitmap.Dispose();
 
             var matching = imageHashes
                 .SelectMany(i => i.Value.Select(v => (similarity: ImageHashing.Similarity(hash, v), imagehash: i)))

@@ -55,9 +55,10 @@ namespace Server
 
         private void Update()
         {
-            while(Enabled)
+            while (Enabled)
             {
-                wowScreen.GetPosition(out var p);
+                Point p = new();
+                wowScreen.GetPosition(ref p);
                 rectangle.X = p.X;
                 rectangle.Y = p.Y;
                 capturer.Capture(rectangle);
@@ -71,7 +72,7 @@ namespace Server
 
         public byte[] GetData()
         {
-            for(int i = 0; i<FrameColor.Length; i++)
+            for (int i = 0; i < FrameColor.Length; i++)
             {
                 bytes[3 * i + 0] = FrameColor[i].R;
                 bytes[3 * i + 1] = FrameColor[i].G;

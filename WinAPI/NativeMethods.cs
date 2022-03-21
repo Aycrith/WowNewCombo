@@ -13,22 +13,15 @@ namespace WinAPI
             public Int32 cbSize;
             public Int32 flags;
             public IntPtr hCursor;
-            public POINTAPI ptScreenPos;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        public struct POINTAPI
-        {
-            public int x;
-            public int y;
+            public Point ptScreenPos;
         }
 
         [DllImport("user32.dll")]
-        public static extern bool GetCursorInfo(out CURSORINFO pci);
+        public static extern bool GetCursorInfo(ref CURSORINFO pci);
 
         [DllImport("user32.dll", SetLastError = true)]
         public static extern bool DrawIconEx(IntPtr hdc, int xLeft, int yTop, IntPtr hIcon, int cxWidth, int cyHeight, int istepIfAniCur, IntPtr hbrFlickerFreeDraw, int diFlags);
-        
+
         [DllImport("user32.dll")]
         public static extern bool DrawIcon(IntPtr hDC, int x, int y, IntPtr hIcon);
 
@@ -65,19 +58,19 @@ namespace WinAPI
 
         [DllImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool GetWindowRect(IntPtr hWnd, ref RECT lpRect);
+        private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
         [DllImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool GetClientRect(IntPtr hWnd, ref RECT lpRect);
+        private static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
 
         [DllImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool ClientToScreen(IntPtr hWnd, ref POINT lpRect);
+        private static extern bool ClientToScreen(IntPtr hWnd, ref Point lpPoint);
 
         [DllImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool ScreenToClient(IntPtr hWnd, ref POINT lpRect);
+        public static extern bool ScreenToClient(IntPtr hWnd, ref Point lpPoint);
 
         [DllImport("user32.dll")]
         static extern int GetSystemMetrics(int nIndexn);
@@ -90,56 +83,40 @@ namespace WinAPI
 
         private static int LOGPIXELSX = 88;
 
-        private static bool IsWindowedMode(POINT point)
+        private static bool IsWindowedMode(Point point)
         {
-            return point.x != 0 || point.y != 0;
+            return point.X != 0 || point.Y != 0;
         }
 
-        private static void GetNativeClientRect(IntPtr hWnd, out Rectangle rect)
+        public static void GetPosition(IntPtr hWnd, ref Point point)
         {
-            RECT nRect = new RECT();
-            if (GetClientRect(hWnd, ref nRect))
-            {
-                rect = new Rectangle
-                {
-                    X = nRect.left,
-                    Y = nRect.top,
-                    Width = (nRect.right - nRect.left),
-                    Height = (nRect.bottom - nRect.top)
-                };
-            }
-            else
-            {
-                rect = Rectangle.Empty;
-            }
-        }
-
-        public static void GetPosition(IntPtr hWnd, out Point point)
-        {
-            var p = new POINT();
-            ClientToScreen(hWnd, ref p);
-            point = new Point(p.x, p.y);
+            ClientToScreen(hWnd, ref point);
         }
 
         public static void GetWindowRect(IntPtr hWnd, out Rectangle rect)
         {
-            GetNativeClientRect(hWnd, out rect);
+            GetClientRect(hWnd, out RECT nRect);
+            rect = new Rectangle
+            {
+                X = nRect.left,
+                Y = nRect.top,
+                Width = nRect.right - nRect.left,
+                Height = nRect.bottom - nRect.top
+            };
 
-            var topLeft = new POINT();
+            Point topLeft = new();
             ClientToScreen(hWnd, ref topLeft);
             if (IsWindowedMode(topLeft))
             {
-                rect.X = topLeft.x;
-                rect.Y = topLeft.y;
+                rect.X = topLeft.X;
+                rect.Y = topLeft.Y;
             }
         }
 
         private static int GetDpi()
         {
-            Graphics g = Graphics.FromHwnd(IntPtr.Zero);
-            IntPtr desktop = g.GetHdc();
-            var dpi = GetDeviceCaps(desktop, LOGPIXELSX);
-            return dpi;
+            using Graphics g = Graphics.FromHwnd(IntPtr.Zero);
+            return GetDeviceCaps(g.GetHdc(), LOGPIXELSX);
         }
 
         public static Size GetCursorSize()

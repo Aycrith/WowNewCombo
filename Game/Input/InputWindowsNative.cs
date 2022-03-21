@@ -66,26 +66,16 @@ namespace Game
         {
             SetCursorPosition(p);
 
-            var pp = new PInvoke.POINT
-            {
-                x = p.X,
-                y = p.Y
-            };
-            NativeMethods.ScreenToClient(process.MainWindowHandle, ref pp);
-            int lparam = NativeMethods.MakeLParam(pp.x, pp.y);
+            NativeMethods.ScreenToClient(process.MainWindowHandle, ref p);
+            int lparam = NativeMethods.MakeLParam(p.X, p.Y);
 
             NativeMethods.PostMessage(process.MainWindowHandle, NativeMethods.WM_LBUTTONDOWN, 0, lparam);
 
             Delay(MIN_DELAY);
 
             NativeMethods.GetCursorPos(out p);
-            pp = new PInvoke.POINT
-            {
-                x = p.X,
-                y = p.Y
-            };
-            NativeMethods.ScreenToClient(process.MainWindowHandle, ref pp);
-            lparam = NativeMethods.MakeLParam(pp.x, pp.y);
+            NativeMethods.ScreenToClient(process.MainWindowHandle, ref p);
+            lparam = NativeMethods.MakeLParam(p.X, p.Y);
 
             NativeMethods.PostMessage(process.MainWindowHandle, NativeMethods.WM_LBUTTONUP, 0, lparam);
         }
@@ -94,26 +84,16 @@ namespace Game
         {
             SetCursorPosition(p);
 
-            var pp = new PInvoke.POINT
-            {
-                x = p.X,
-                y = p.Y
-            };
-            NativeMethods.ScreenToClient(process.MainWindowHandle, ref pp);
-            int lparam = NativeMethods.MakeLParam(pp.x, pp.y);
+            NativeMethods.ScreenToClient(process.MainWindowHandle, ref p);
+            int lparam = NativeMethods.MakeLParam(p.X, p.Y);
 
             NativeMethods.PostMessage(process.MainWindowHandle, NativeMethods.WM_RBUTTONDOWN, 0, lparam);
 
             Delay(MIN_DELAY);
 
             NativeMethods.GetCursorPos(out p);
-            pp = new PInvoke.POINT
-            {
-                x = p.X,
-                y = p.Y
-            };
-            NativeMethods.ScreenToClient(process.MainWindowHandle, ref pp);
-            lparam = NativeMethods.MakeLParam(pp.x, pp.y);
+            NativeMethods.ScreenToClient(process.MainWindowHandle, ref p);
+            lparam = NativeMethods.MakeLParam(p.X, p.Y);
 
             NativeMethods.PostMessage(process.MainWindowHandle, NativeMethods.WM_RBUTTONUP, 0, lparam);
         }
