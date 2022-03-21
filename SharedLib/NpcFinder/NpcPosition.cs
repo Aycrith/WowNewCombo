@@ -1,42 +1,42 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Drawing;
 
 namespace SharedLib.NpcFinder
 {
-    public struct NpcPosition
+    public readonly struct NpcPosition
     {
-        public Point Min;
-        public Point Max;
+        public readonly Point Min { get; }
+        public readonly Point Max { get; }
 
-        public int Height => Max.Y - Min.Y;
-        public int Width => Max.X - Min.X;
+        public readonly int Height { get; }
+        public readonly int Width { get; }
+
+        public readonly Point ClickPoint { get; }
+
+        public readonly bool IsAdd { get; }
 
         public readonly int screenMid;
         public readonly int screenTargetBuffer;
         public readonly int screenMidBuffer;
         public readonly int screenAddBuffer;
 
-        private readonly float yOffset;
-        private readonly float heightMul;
-
-        public bool IsAdd =>
-            (ClickPoint.X < screenMid - screenTargetBuffer && ClickPoint.X > screenMid - screenAddBuffer) ||
-            (ClickPoint.X > screenMid + screenTargetBuffer && ClickPoint.X < screenMid + screenAddBuffer);
-
-        public Point ClickPoint => new Point(Min.X + (Width / 2), (int)(Max.Y + yOffset + (Height * heightMul)));
-
         public NpcPosition(Point min, Point max, int screenWidth, float yOffset, float heightMul)
         {
             Min = min;
             Max = max;
+
+            Height = Max.Y - Min.Y;
+            Width = Max.X - Min.X;
+
             screenMid = screenWidth / 2;
             screenMidBuffer = screenWidth / 15;
             screenTargetBuffer = screenMidBuffer / 2;
             screenAddBuffer = screenMidBuffer * 3;
 
-            this.yOffset = yOffset;
-            this.heightMul = heightMul;
+            ClickPoint = new(Min.X + (Width / 2), (int)(Max.Y + yOffset + (Height * heightMul)));
+
+            IsAdd = (ClickPoint.X < screenMid - screenTargetBuffer && ClickPoint.X > screenMid - screenAddBuffer) ||
+            (ClickPoint.X > screenMid + screenTargetBuffer && ClickPoint.X < screenMid + screenAddBuffer);
         }
     }
 
