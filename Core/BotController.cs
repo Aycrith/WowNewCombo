@@ -1,4 +1,4 @@
-using Core.Goals;
+﻿using Core.Goals;
 using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -186,7 +186,7 @@ namespace Core
                 this.AddonReader.AddonRefresh();
                 this.GoapAgent?.UpdateWorldState();
                 addonAutoResetEvent.Set();
-                Thread.Sleep(1);
+                cts.Token.WaitHandle.WaitOne(1);
             }
             this.logger.LogInformation("Addon thread stoppped!");
         }
@@ -235,8 +235,7 @@ namespace Core
                     });
                     updatePlayerPostion.Restart();
                 }
-
-                cts.Token.WaitHandle.WaitOne(5);
+                cts.Token.WaitHandle.WaitOne(1);
             }
             this.logger.LogInformation("Screenshot thread stoppped!");
         }
@@ -276,6 +275,7 @@ namespace Core
                 while (actionThread.Active && !cts.IsCancellationRequested)
                 {
                     actionThread.GoapPerformGoal();
+                    cts.Token.WaitHandle.WaitOne(1);
                 }
             }
 
