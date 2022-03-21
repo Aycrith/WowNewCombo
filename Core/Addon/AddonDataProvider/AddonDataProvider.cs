@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using SharedLib;
@@ -47,10 +47,9 @@ namespace Core
             rect.X = p.X;
             rect.Y = p.Y;
 
-            using (var graphics = Graphics.FromImage(bitmap))
-            {
-                graphics.CopyFromScreen(rect.Left, rect.Top, 0, 0, bitmap.Size);
-            }
+            var graphics = Graphics.FromImage(bitmap);
+            graphics.CopyFromScreen(rect.Left, rect.Top, 0, 0, bitmap.Size);
+            graphics.Dispose();
 
             unsafe
             {

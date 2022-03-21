@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using SharedLib;
 using System;
 using System.Collections.Generic;
@@ -40,25 +40,20 @@ namespace Game
             GetRectangle(out rect);
             rect.X = p.X;
             rect.Y = p.Y;
+
             Bitmap = new Bitmap(rect.Width, rect.Height, PixelFormat.Format32bppPArgb);
         }
 
-        public void UpdateScreenshot()
+        public void Update()
         {
             Point p = new();
             GetPosition(ref p);
             rect.X = p.X;
             rect.Y = p.Y;
 
-            if (Bitmap.Size != rect.Size)
-            {
-                Bitmap.Dispose();
-                Bitmap = new Bitmap(rect.Width, rect.Height, PixelFormat.Format32bppPArgb);
-            }
-            using (var graphics = Graphics.FromImage(Bitmap))
-            {
-                graphics.CopyFromScreen(rect.Left, rect.Top, 0, 0, Bitmap.Size);
-            }
+            var graphics = Graphics.FromImage(Bitmap);
+            graphics.CopyFromScreen(rect.Left, rect.Top, 0, 0, Bitmap.Size);
+            graphics.Dispose();
         }
 
         public void AddDrawAction(Action<Graphics> a)
@@ -97,7 +92,7 @@ namespace Game
 
         public Bitmap GetBitmap(int width, int height)
         {
-            UpdateScreenshot();
+            Update();
 
             Bitmap bitmap = new Bitmap(width, height);
             Rectangle sourceRect = new Rectangle(0, 0, width, height);
