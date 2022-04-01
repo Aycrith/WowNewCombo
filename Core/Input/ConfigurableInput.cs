@@ -6,8 +6,6 @@ namespace Core
 {
     public class ConfigurableInput : WowProcessInput
     {
-        private readonly bool log = true;
-
         public ClassConfiguration ClassConfig { get; }
 
         public readonly int defaultKeyPress = 50;
@@ -25,98 +23,94 @@ namespace Core
             BackwardKey = classConfig.BackwardKey;
             TurnLeftKey = classConfig.TurnLeftKey;
             TurnRightKey = classConfig.TurnRightKey;
-
-            if (log)
-            {
-                logger.LogInformation($"[{nameof(ConfigurableInput)}] Movement Keys. Forward: {ForwardKey} - Backward: {BackwardKey} - TurnLeft: {TurnLeftKey} - TurnRight: {TurnRightKey}");
-            }
         }
 
-        public void TapStopKey(string desc = "")
+        public void Stop()
         {
-            KeyPress(ForwardKey, defaultKeyPress, log ? $"TapStopKey: {desc}" : "");
+            KeyPress(ForwardKey, defaultKeyPress);
         }
 
-        public void TapInteractKey(string source)
+        public void Interact()
         {
-            KeyPress(ClassConfig.Interact.ConsoleKey, defaultKeyPress, log && string.IsNullOrEmpty(source) ? "" : $"TapInteract ({source})");
-            this.ClassConfig.Interact.SetClicked();
+            KeyPress(ClassConfig.Interact.ConsoleKey, defaultKeyPress);
+            ClassConfig.Interact.SetClicked();
         }
 
-        public void TapApproachKey(string source)
+        public void Approach()
         {
-            KeyPress(ClassConfig.Approach.ConsoleKey, ClassConfig.Approach.PressDuration, log && string.IsNullOrEmpty(source) ? "" : $"TapApproachKey ({source})");
-            this.ClassConfig.Approach.SetClicked();
+            KeyPress(ClassConfig.Approach.ConsoleKey, ClassConfig.Approach.PressDuration);
+            ClassConfig.Approach.SetClicked();
         }
 
-        public void TapLastTargetKey(string source)
+        public void LastTarget()
         {
-            KeyPress(ClassConfig.TargetLastTarget.ConsoleKey, defaultKeyPress, log ? $"TapLastTarget ({source})" : "");
-            this.ClassConfig.TargetLastTarget.SetClicked();
+            KeyPress(ClassConfig.TargetLastTarget.ConsoleKey, defaultKeyPress);
+            ClassConfig.TargetLastTarget.SetClicked();
         }
 
-        public void TapStandUpKey(string desc = "")
+        public void StandUp()
         {
-            KeyPress(ClassConfig.StandUp.ConsoleKey, defaultKeyPress, log ? $"TapStandUpKey: {desc}" : "");
-            this.ClassConfig.StandUp.SetClicked();
+            KeyPress(ClassConfig.StandUp.ConsoleKey, defaultKeyPress);
+            ClassConfig.StandUp.SetClicked();
         }
 
-        public void TapClearTarget(string desc = "")
+        public void ClearTarget()
         {
-            KeyPress(ClassConfig.ClearTarget.ConsoleKey, defaultKeyPress, log && string.IsNullOrEmpty(desc) ? "" : $"TapClearTarget: {desc}");
-            this.ClassConfig.ClearTarget.SetClicked();
+            KeyPress(ClassConfig.ClearTarget.ConsoleKey, defaultKeyPress);
+            ClassConfig.ClearTarget.SetClicked();
         }
 
-        public void TapStopAttack(string desc = "")
+        public void StopAttack()
         {
-            KeyPress(ClassConfig.StopAttack.ConsoleKey, ClassConfig.StopAttack.PressDuration, log && string.IsNullOrEmpty(desc) ? "" : $"TapStopAttack: {desc}");
-            this.ClassConfig.StopAttack.SetClicked();
+            KeyPress(ClassConfig.StopAttack.ConsoleKey, ClassConfig.StopAttack.PressDuration);
+            ClassConfig.StopAttack.SetClicked();
         }
 
-        public void TapNearestTarget(string desc = "")
+        public void NearestTarget()
         {
-            KeyPress(ClassConfig.TargetNearestTarget.ConsoleKey, defaultKeyPress, log ? $"TapNearestTarget: {desc}" : "");
-            this.ClassConfig.TargetNearestTarget.SetClicked();
+            KeyPress(ClassConfig.TargetNearestTarget.ConsoleKey, defaultKeyPress);
+            ClassConfig.TargetNearestTarget.SetClicked();
         }
 
-        public void TapTargetPet(string desc = "")
+        public void TargetPet()
         {
-            KeyPress(ClassConfig.TargetPet.ConsoleKey, defaultKeyPress, log ? $"TapTargetPet: {desc}" : "");
-            this.ClassConfig.TargetPet.SetClicked();
+            KeyPress(ClassConfig.TargetPet.ConsoleKey, defaultKeyPress);
+            ClassConfig.TargetPet.SetClicked();
         }
 
-        public void TapTargetOfTarget(string desc = "")
+        public void TargetOfTarget()
         {
-            KeyPress(ClassConfig.TargetTargetOfTarget.ConsoleKey, defaultKeyPress, log ? $"TapTargetsTarget: {desc}" : "");
-            this.ClassConfig.TargetTargetOfTarget.SetClicked();
+            KeyPress(ClassConfig.TargetTargetOfTarget.ConsoleKey, defaultKeyPress);
+            ClassConfig.TargetTargetOfTarget.SetClicked();
         }
 
-        public void TapJump(string desc = "")
+        public void Jump()
         {
-            KeyPress(ClassConfig.Jump.ConsoleKey, defaultKeyPress, log ? $"TapJump: {desc}" : "");
-            this.ClassConfig.Jump.SetClicked();
+            KeyPress(ClassConfig.Jump.ConsoleKey, defaultKeyPress);
+            ClassConfig.Jump.SetClicked();
         }
 
-        public void TapPetAttack(string source = "")
+        public void PetAttack()
         {
-            KeyPress(ClassConfig.PetAttack.ConsoleKey, ClassConfig.PetAttack.PressDuration, log ? $"TapPetAttack ({source})" : "");
-            this.ClassConfig.PetAttack.SetClicked();
+            KeyPress(ClassConfig.PetAttack.ConsoleKey, ClassConfig.PetAttack.PressDuration);
+            ClassConfig.PetAttack.SetClicked();
         }
 
-        public void TapHearthstone()
+        public void Hearthstone()
         {
-            KeyPress(ConsoleKey.I, defaultKeyPress, log ? "TapHearthstone" : "");
+            KeyPress(ClassConfig.Hearthstone.ConsoleKey, defaultKeyPress);
+            ClassConfig.Hearthstone.SetClicked();
         }
 
-        public void TapMount()
+        public void Mount()
         {
-            KeyPress(ClassConfig.Mount.ConsoleKey, defaultKeyPress, log ? "TapMount" : "");
-            this.ClassConfig.Mount.SetClicked();
+            KeyPress(ClassConfig.Mount.ConsoleKey, defaultKeyPress);
+            ClassConfig.Mount.SetClicked();
         }
 
-        public void TapDismount()
+        public void Dismount()
         {
-            KeyPress(ClassConfig.Mount.ConsoleKey, defaultKeyPress, log ? "TapDismount" : "");
+            KeyPress(ClassConfig.Mount.ConsoleKey, defaultKeyPress);
         }
     }
 }
