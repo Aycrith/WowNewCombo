@@ -93,7 +93,7 @@ namespace Core.Goals
 
             if (wasDrinkingOrEating)
             {
-                input.TapStopKey();
+                input.Stop();
             }
 
             wait.Update(1);

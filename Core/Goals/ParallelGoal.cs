@@ -95,7 +95,7 @@ namespace Core.Goals
 
             if (wasDrinkingOrEating)
             {
-                input.TapStandUpKey();
+                input.StandUp();
             }
         }
 

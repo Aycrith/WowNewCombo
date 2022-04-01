@@ -120,7 +120,8 @@ namespace Core.Goals
         {
             if ((DateTime.UtcNow - onEnterTime).TotalSeconds > 5 && input.ClassConfig.Jump.MillisecondsSinceLastClick > random.Next(10_000, 25_000))
             {
-                input.TapJump("Random jump");
+                Log("Random jump");
+                input.Jump();
             }
         }
 

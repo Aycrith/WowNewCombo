@@ -95,13 +95,13 @@ namespace Core.Goals
                     logger.LogInformation($"Combat={playerReader.Bits.PlayerInCombat}, Is Target targetting me={playerReader.Bits.TargetOfTargetIsPlayer}");
 
                     stopMoving.Stop();
-                    input.TapClearTarget();
+                    input.ClearTarget();
                     wait.Update(1);
 
                     if (playerReader.PetHasTarget)
                     {
-                        input.TapTargetPet();
-                        input.TapTargetOfTarget();
+                        input.TargetPet();
+                        input.TargetOfTarget();
                         wait.Update(1);
                     }
                 }
@@ -111,7 +111,7 @@ namespace Core.Goals
 
             if (input.ClassConfig.Approach.GetCooldownRemaining() == 0)
             {
-                input.TapApproachKey("");
+                input.Approach();
             }
 
             lastPlayerDistance = playerReader.PlayerLocation.DistanceXYTo(lastPlayerLocation);
@@ -120,24 +120,27 @@ namespace Core.Goals
             {
                 playerReader.LastUIErrorMessage = UI_ERROR.NONE;
 
-                input.SetKeyState(input.ForwardKey, true, false, $"{nameof(ApproachTargetGoal)}: Too far, start moving forward!");
+                Log("Too far, start moving forward!");
+                input.SetKeyState(input.ForwardKey, true);
                 wait.Update(1);
             }
 
             if (SecondsSinceApproachStarted > 1 && lastPlayerDistance < 0.05 && !playerReader.Bits.PlayerInCombat)
             {
-                input.TapClearTarget("");
+                input.ClearTarget();
                 wait.Update(1);
-                input.KeyPress(random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey, 1000, $"Seems stuck! Clear Target. Turn away. d: {lastPlayerDistance}");
+                Log($"Seems stuck! Clear Target. Turn away. d: {lastPlayerDistance}");
+                input.KeyPress(random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey, 1000);
 
                 approachStart = DateTime.UtcNow;
             }
 
             if (SecondsSinceApproachStarted > 15 && !playerReader.Bits.PlayerInCombat)
             {
-                input.TapClearTarget("");
+                input.ClearTarget();
                 wait.Update(1);
-                input.KeyPress(random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey, 1000, "Too long time. Clear Target. Turn away.");
+                Log("Too long time. Clear Target. Turn away.");
+                input.KeyPress(random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey, 1000);
 
                 approachStart = DateTime.UtcNow;
             }
@@ -149,7 +152,8 @@ namespace Core.Goals
                 {
                     if (input.ClassConfig.TargetNearestTarget.GetCooldownRemaining() == 0)
                     {
-                        input.TapNearestTarget("Try to find closer target...");
+                        Log("Try to find closer target...");
+                        input.NearestTarget();
                         wait.Update(1);
                     }
                 }
@@ -166,7 +170,8 @@ namespace Core.Goals
                         else
                         {
                             initialTargetGuid = -1;
-                            input.TapLastTargetKey($"Stick to initial target!");
+                            Log("Stick to initial target!");
+                            input.LastTarget();
                             wait.Update(1);
                         }
                     }
@@ -180,7 +185,7 @@ namespace Core.Goals
             if (initialMinRange < playerReader.MinRange && !playerReader.Bits.PlayerInCombat)
             {
                 Log($"We are going away from the target! {initialMinRange} < {playerReader.MinRange}");
-                input.TapClearTarget();
+                input.ClearTarget();
                 wait.Update(1);
 
                 approachStart = DateTime.UtcNow;
@@ -203,7 +208,7 @@ namespace Core.Goals
         {
             if ((DateTime.UtcNow - approachStart).TotalSeconds > 2 && input.ClassConfig.Jump.MillisecondsSinceLastClick > random.Next(5000, 25_000))
             {
-                input.TapJump();
+                input.Jump();
             }
         }
 

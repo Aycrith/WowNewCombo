@@ -74,7 +74,8 @@ namespace Core.Goals
             {
                 if (input.ClassConfig.StopAttack.GetCooldownRemaining() == 0)
                 {
-                    input.TapStopAttack("Stop auto interact!");
+                    Log("Stop auto interact!");
+                    input.StopAttack();
                     wait.Update(1);
                 }
             }
@@ -96,8 +97,9 @@ namespace Core.Goals
         {
             if (SecondsSincePullStarted > 10)
             {
-                input.TapClearTarget();
-                input.KeyPress(random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey, 1000, "Too much time to pull!");
+                input.ClearTarget();
+                Log("Too much time to pull!");
+                input.KeyPress(random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey, 1000);
                 pullStart = DateTime.UtcNow;
 
                 return ValueTask.CompletedTask;
@@ -114,7 +116,7 @@ namespace Core.Goals
 
                     stopMoving.Stop();
 
-                    input.TapNearestTarget();
+                    input.NearestTarget();
                     wait.Update(1);
 
                     if (playerReader.HasTarget && playerReader.Bits.TargetInCombat &&
@@ -123,7 +125,7 @@ namespace Core.Goals
                         return ValueTask.CompletedTask;
                     }
 
-                    input.TapClearTarget();
+                    input.ClearTarget();
                     wait.Update(1);
                     pullStart = DateTime.UtcNow;
 
@@ -137,7 +139,7 @@ namespace Core.Goals
 
                 if (playerReader.HasTarget && classConfiguration.Approach.GetCooldownRemaining() == 0)
                 {
-                    input.TapApproachKey($"{nameof(PullTargetGoal)}");
+                    input.Approach();
                 }
             }
             else
@@ -199,7 +201,7 @@ namespace Core.Goals
             if (playerReader.Bits.HasPet && !playerReader.PetHasTarget)
             {
                 if (input.ClassConfig.PetAttack.GetCooldownRemaining() == 0)
-                    input.TapPetAttack();
+                    input.PetAttack();
             }
 
             bool castAny = false;
@@ -231,8 +233,9 @@ namespace Core.Goals
                      playerReader.Bits.IsAutoRepeatSpellOn_AutoShot ||
                      playerReader.Bits.IsAutoRepeatSpellOn_Shoot))
                 {
-                    input.TapStopAttack("Preventing pulling possible tagged target!");
-                    input.TapClearTarget();
+                    Log("Preventing pulling possible tagged target!");
+                    input.StopAttack();
+                    input.ClearTarget();
                     wait.Update(1);
                     return false;
                 }

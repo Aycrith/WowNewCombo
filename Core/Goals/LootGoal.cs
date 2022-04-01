@@ -100,7 +100,8 @@ namespace Core.Goals
             {
                 corpseLocations.Remove(GetClosestCorpse());
 
-                input.TapLastTargetKey($"{nameof(LootGoal)}: No corpse name found - check last dead target exists");
+                Log("No corpse name found - check last dead target exists");
+                input.LastTarget();
                 wait.Update(1);
                 if (playerReader.HasTarget)
                 {
@@ -108,7 +109,8 @@ namespace Core.Goals
                     {
                         CheckForSkinning();
 
-                        input.TapInteractKey($"{nameof(LootGoal)}: Found last dead target");
+                        Log("Found last dead target");
+                        input.Interact();
                         wait.Update(1);
 
                         (bool foundTarget, bool moved) = combatUtil.FoundTargetWhileMoved();
@@ -120,12 +122,14 @@ namespace Core.Goals
 
                         if (moved)
                         {
-                            input.TapInteractKey($"{nameof(LootGoal)}: Last dead target double");
+                            Log("Last dead target double");
+                            input.Interact();
                         }
                     }
                     else
                     {
-                        input.TapClearTarget($"{nameof(LootGoal)}: Don't attack the target!");
+                        Log("Don't attack the target!");
+                        input.ClearTarget();
                     }
                 }
             }
@@ -174,7 +178,8 @@ namespace Core.Goals
 
             if (moved)
             {
-                input.TapInteractKey($"{nameof(LootGoal)}: Had to move so interact again");
+                Log("Had to move so interact again");
+                input.Interact();
                 wait.Update(1);
             }
 
@@ -226,7 +231,7 @@ namespace Core.Goals
 
             if (playerReader.HasTarget && playerReader.Bits.TargetIsDead)
             {
-                input.TapClearTarget($"{nameof(LootGoal)}: Exit Goal");
+                input.ClearTarget();
             }
 
             wait.Update(1);

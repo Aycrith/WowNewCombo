@@ -60,7 +60,7 @@ namespace Core.Goals
             if (playerReader.Bits.HasPet && !playerReader.PetHasTarget)
             {
                 if (input.ClassConfig.PetAttack.GetCooldownRemaining() == 0)
-                    input.TapPetAttack();
+                    input.PetAttack();
             }
 
             foreach (var item in Keys)
@@ -195,15 +195,16 @@ namespace Core.Goals
                 logger.LogWarning("---- My pet has a target!");
                 ResetCooldowns();
 
-                input.TapTargetPet();
-                input.TapTargetOfTarget();
+                input.TargetPet();
+                input.TargetOfTarget();
                 wait.Update(1);
                 return;
             }
 
             if (addonReader.CombatCreatureCount > 1)
             {
-                input.TapNearestTarget($"{nameof(CombatGoal)}: Checking target in front of me");
+                logger.LogInformation($"{nameof(CombatGoal)}: Checking target in front of me");
+                input.NearestTarget();
                 wait.Update(1);
                 if (playerReader.HasTarget)
                 {
@@ -211,14 +212,14 @@ namespace Core.Goals
                     {
                         ResetCooldowns();
 
-                        logger.LogWarning("---- Somebody is attacking me!");
-                        input.TapInteractKey("Found new target to attack");
+                        logger.LogWarning($"{nameof(CombatGoal)}: Somebody is attacking me! Found new target to attack");
+                        input.Interact();
                         stopMoving.Stop();
                         wait.Update(1);
                         return;
                     }
 
-                    input.TapClearTarget();
+                    input.ClearTarget();
                     wait.Update(1);
                 }
                 else
@@ -236,7 +237,8 @@ namespace Core.Goals
 
         private void StopDrowning()
         {
-            input.TapJump("Drowning! Swim up");
+            logger.LogWarning($"{nameof(CombatGoal)}: Drowning! Swim up");
+            input.Jump();
             wait.Update(1);
         }
 

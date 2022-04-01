@@ -274,6 +274,7 @@ Take a look at the class files in `/Json/class` for examples of what you can do.
 
 | Property Name | Description | Optional | Default value |
 | --- | --- | --- | --- |
+| `"Log"` | Should logging enabled for `KeyAction(s)`. Requires restart. | true | `true` |
 | `"Loot"` | Should loot the mob | true | `true` |
 | `"Skin"` | Should skin the mob | true | `false` |
 | `"UseMount"` | Should use mount when its possible | true | `false` |
@@ -308,6 +309,7 @@ Take a look at the class files in `/Json/class` for examples of what you can do.
 | `"TargetPetKey"` | `Consolekey` to be pressed to target pet | true | `"Multiply"` |
 | `"PetAttackKey"` | `Consolekey` to be pressed to send attack pet | true | `"Subtract"` |
 | `"MountKey"` | `Consolekey` to be pressed to use mount | true | `"O"` |
+| `"HearthstoneKey"` | `Consolekey` to be pressed to use hearthstone | true | `"I"` |
 | `"ForwardKey"` | `Consolekey` to be pressed to move forward | true | `"UpArrow"` |
 | `"BackwardKey"` | `Consolekey` to be pressed to move backward | true | `"DownArrow"` |
 | `"TurnLeftKey"` | `Consolekey` to be pressed to turn left | true | `"LeftArrow"` |

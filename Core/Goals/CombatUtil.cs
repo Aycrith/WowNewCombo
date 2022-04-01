@@ -62,16 +62,17 @@ namespace Core
             {
                 if (this.playerReader.PetHasTarget)
                 {
-                    input.TapTargetPet();
+                    input.TargetPet();
                     Log($"Pets target {this.playerReader.TargetTarget}");
                     if (this.playerReader.TargetTarget == TargetTargetEnum.PetHasATarget)
                     {
-                        input.TapTargetOfTarget($"{nameof(CombatUtil)}.AquiredTarget: Found target by pet");
+                        Log($"{nameof(CombatUtil)}.AquiredTarget: Found target by pet");
+                        input.TargetOfTarget();
                         return true;
                     }
                 }
 
-                input.TapNearestTarget();
+                input.NearestTarget();
                 wait.Update(1);
                 if (this.playerReader.HasTarget && playerReader.Bits.TargetInCombat &&
                     playerReader.Bits.TargetOfTargetIsPlayer)
@@ -85,7 +86,8 @@ namespace Core
                     return true;
                 }
 
-                input.TapClearTarget($"{nameof(CombatUtil)}.AquiredTarget: No target found");
+                Log($"{nameof(CombatUtil)}.AquiredTarget: No target found");
+                input.ClearTarget();
                 wait.Update(1);
             }
             return false;

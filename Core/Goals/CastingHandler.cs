@@ -67,7 +67,14 @@ namespace Core.Goals
         private void PressKeyAction(KeyAction item)
         {
             playerReader.LastUIErrorMessage = UI_ERROR.NONE;
-            input.KeyPress(item.ConsoleKey, item.PressDuration, item.Log ? item.Name + (item.AfterCastWaitNextSwing ? " and wait for next swing!" : "") : string.Empty);
+
+            if (item.AfterCastWaitNextSwing)
+            {
+                if (item.Log)
+                    item.LogInformation("wait for next swing!");
+            }
+
+            input.KeyPress(item.ConsoleKey, item.PressDuration);
             item.SetClicked();
         }
 
@@ -97,7 +104,8 @@ namespace Core.Goals
 
             if (item.SkipValidation)
             {
-                item.LogInformation($" ... instant skip validation");
+                if (item.Log)
+                    item.LogInformation($" ... instant skip validation");
                 return true;
             }
 
@@ -112,7 +120,7 @@ namespace Core.Goals
                     {
                         if (classConfig.Approach.GetCooldownRemaining() == 0)
                         {
-                            input.TapApproachKey("");
+                            input.Approach();
                         }
                     });
             }
@@ -127,15 +135,18 @@ namespace Core.Goals
 
             if (!inputTimeOut)
             {
-                item.LogInformation($" ... instant input {inputElapsedMs}ms");
+                if (item.Log)
+                    item.LogInformation($" ... instant input {inputElapsedMs}ms");
             }
             else
             {
-                item.LogInformation($" ... instant input not registered! {inputElapsedMs}ms");
+                if (item.Log)
+                    item.LogInformation($" ... instant input not registered! {inputElapsedMs}ms");
                 return false;
             }
 
-            item.LogInformation($" ... usable: {beforeUsable}->{addonReader.UsableAction.Is(item)} -- ({(UI_ERROR)beforeCastEventValue}->{(UI_ERROR)playerReader.CastEvent.Value})");
+            if (item.Log)
+                item.LogInformation($" ... usable: {beforeUsable}->{addonReader.UsableAction.Is(item)} -- ({(UI_ERROR)beforeCastEventValue}->{(UI_ERROR)playerReader.CastEvent.Value})");
 
             if (!CastSuccessfull((UI_ERROR)playerReader.CastEvent.Value))
             {
@@ -152,12 +163,15 @@ namespace Core.Goals
                 (bool fallTimeOut, double fallElapsedMs) = wait.Until(MaxAirTimeMs, () => !playerReader.Bits.IsFalling);
                 if (!fallTimeOut)
                 {
-                    item.LogInformation($" ... castbar waited for landing {fallElapsedMs}ms");
+                    if (item.Log)
+                        item.LogInformation($" ... castbar waited for landing {fallElapsedMs}ms");
                 }
             }
 
             if (playerReader.IsCasting && interrupt())
             {
+                //if (item.Log) // really spammy
+                //    item.LogInformation($" ... castbar during cast interrupted!");
                 return false;
             }
 
@@ -177,7 +191,8 @@ namespace Core.Goals
 
             if (item.SkipValidation)
             {
-                item.LogInformation($" ... castbar skip validation");
+                if (item.Log)
+                    item.LogInformation($" ... castbar skip validation");
                 return true;
             }
 
@@ -190,15 +205,17 @@ namespace Core.Goals
 
             if (!inputTimeOut)
             {
-                item.LogInformation($" ... castbar input {inputElapsedMs}ms");
+                if (item.Log)
+                    item.LogInformation($" ... castbar input {inputElapsedMs}ms");
             }
             else
             {
-                item.LogInformation($" ... castbar input not registered! {inputElapsedMs}ms");
+                if (item.Log)
+                    item.LogInformation($" ... castbar input not registered! {inputElapsedMs}ms");
                 return false;
             }
-
-            item.LogInformation($" ... casting: {playerReader.IsCasting} -- count:{playerReader.CastCount} -- usable: {beforeUsable}->{addonReader.UsableAction.Is(item)} -- {(UI_ERROR)beforeCastEventValue}->{(UI_ERROR)playerReader.CastEvent.Value}");
+            if (item.Log)
+                item.LogInformation($" ... casting: {playerReader.IsCasting} -- count:{playerReader.CastCount} -- usable: {beforeUsable}->{addonReader.UsableAction.Is(item)} -- {(UI_ERROR)beforeCastEventValue}->{(UI_ERROR)playerReader.CastEvent.Value}");
 
             if (!CastSuccessfull((UI_ERROR)playerReader.CastEvent.Value))
             {
@@ -208,22 +225,26 @@ namespace Core.Goals
 
             if (playerReader.IsCasting)
             {
-                item.LogInformation(" ... waiting for visible cast bar to end or interrupt.");
+                if (item.Log)
+                    item.LogInformation(" ... waiting for visible cast bar to end or interrupt.");
                 wait.Until(MaxCastTimeMs, () => !playerReader.IsCasting || prevState != interrupt());
                 if (prevState != interrupt())
                 {
-                    item.LogWarning(" ... visible castbar interrupted!");
+                    if (item.Log)
+                        item.LogWarning(" ... visible castbar interrupted!");
                     return false;
                 }
             }
             else if ((UI_ERROR)playerReader.CastEvent.Value == UI_ERROR.CAST_START)
             {
                 beforeCastEventValue = playerReader.CastEvent.Value;
-                item.LogInformation(" ... waiting for hidden cast bar to end or interrupt.");
+                if (item.Log)
+                    item.LogInformation(" ... waiting for hidden cast bar to end or interrupt.");
                 wait.Until(MaxCastTimeMs, () => beforeCastEventValue != playerReader.CastEvent.Value || prevState != interrupt());
                 if (prevState != interrupt())
                 {
-                    item.LogWarning(" ... hidden castbar interrupted!");
+                    if (item.Log)
+                        item.LogWarning(" ... hidden castbar interrupted!");
                     return false;
                 }
             }
@@ -261,7 +282,8 @@ namespace Core.Goals
                     //TODO: upon form change and GCD - have to check Usable state
                     if (!beforeUsable && !addonReader.UsableAction.Is(item))
                     {
-                        item.LogInformation($" ... after switch {beforeForm}->{playerReader.Form} still not usable!");
+                        if (item.Log)
+                            item.LogInformation($" ... after switch {beforeForm}->{playerReader.Form} still not usable!");
                         return false;
                     }
                 }
@@ -269,8 +291,9 @@ namespace Core.Goals
 
             if (playerReader.Bits.IsAutoRepeatSpellOn_Shoot)
             {
-                input.TapStopAttack("Stop AutoRepeat Shoot");
-                input.TapStopAttack("Stop AutoRepeat Shoot");
+                logger.LogInformation("Stop AutoRepeat Shoot");
+                input.StopAttack();
+                input.StopAttack();
                 wait.Update(1);
             }
 
@@ -284,7 +307,8 @@ namespace Core.Goals
                     wait.Update(1);
                 }
 
-                item.LogInformation($" Wait {item.DelayBeforeCast}ms before press.");
+                if (item.Log)
+                    item.LogInformation($" Wait {item.DelayBeforeCast}ms before press.");
                 Thread.Sleep(item.DelayBeforeCast);
             }
 
@@ -322,14 +346,16 @@ namespace Core.Goals
             if (item.AfterCastWaitBuff)
             {
                 (bool changeTimeOut, double elapsedMs) = wait.Until(MaxWaitBuffTimeMs, () => auraHash != playerReader.AuraCount.Hash);
-                item.LogInformation($" ... AfterCastWaitBuff: Buff: {!changeTimeOut} | {playerReader.AuraCount} | Delay: {elapsedMs}ms");
+                if (item.Log)
+                    item.LogInformation($" ... AfterCastWaitBuff: Buff: {!changeTimeOut} | {playerReader.AuraCount} | Delay: {elapsedMs}ms");
             }
 
             if (item.DelayAfterCast != defaultKeyAction.DelayAfterCast)
             {
                 if (item.DelayUntilCombat) // stop waiting if the mob is targetting me
                 {
-                    item.LogInformation($" ... DelayUntilCombat ... delay after cast {item.DelayAfterCast}ms");
+                    if (item.Log)
+                        item.LogInformation($" ... DelayUntilCombat ... delay after cast {item.DelayAfterCast}ms");
 
                     var sw = new Stopwatch();
                     sw.Start();
@@ -344,15 +370,19 @@ namespace Core.Goals
                 }
                 else if (item.DelayAfterCast > 0)
                 {
-                    item.LogInformation($" ... delay after cast {item.DelayAfterCast}ms");
+                    if (item.Log)
+                        item.LogInformation($" ... delay after cast {item.DelayAfterCast}ms");
                     (bool delayTimeOut, double delayElaspedMs) = wait.Until(item.DelayAfterCast, () => prevState != interrupt());
-                    if (!delayTimeOut)
+                    if (item.Log)
                     {
-                        item.LogInformation($" .... delay after cast interrupted {delayElaspedMs}ms");
-                    }
-                    else
-                    {
-                        item.LogInformation($" .... delay after cast not interrupted {delayElaspedMs}ms");
+                        if (!delayTimeOut)
+                        {
+                            item.LogInformation($" .... delay after cast interrupted {delayElaspedMs}ms");
+                        }
+                        else
+                        {
+                            item.LogInformation($" .... delay after cast not interrupted {delayElaspedMs}ms");
+                        }
                     }
                 }
             }
@@ -363,20 +393,24 @@ namespace Core.Goals
                     (bool canRun, double canRunElapsedMs) = wait.Until(SpellQueueTimeMs,
                         () => !item.CanRun()
                     );
-                    item.LogInformation($" ... instant interrupt: {!canRun} | CanRun: {item.CanRun()} | Delay: {canRunElapsedMs}ms");
+                    if (item.Log)
+                        item.LogInformation($" ... instant interrupt: {!canRun} | CanRun: {item.CanRun()} | Delay: {canRunElapsedMs}ms");
                 }
             }
 
             if (item.StepBackAfterCast > 0)
             {
-                input.SetKeyState(input.BackwardKey, true, false, $"Step back for {item.StepBackAfterCast}ms");
+                if (item.Log)
+                    item.LogInformation($"Step back for {item.StepBackAfterCast}ms");
+                input.SetKeyState(input.BackwardKey, true);
                 (bool stepbackTimeOut, double stepbackElapsedMs) =
                     wait.Until(item.StepBackAfterCast, () => prevState != interrupt());
                 if (!stepbackTimeOut)
                 {
-                    item.LogInformation($" .... interrupted stepback | interrupted? {prevState != interrupt()} | {stepbackElapsedMs}ms");
+                    if (item.Log)
+                        item.LogInformation($" .... interrupted stepback | interrupted? {prevState != interrupt()} | {stepbackElapsedMs}ms");
                 }
-                input.SetKeyState(input.BackwardKey, false, false);
+                input.SetKeyState(input.BackwardKey, false);
             }
 
             if (item.AfterCastWaitNextSwing)
@@ -395,16 +429,18 @@ namespace Core.Goals
                 () => addonReader.UsableAction.Is(item) || before != interrupt());
             if (!timeout)
             {
-                item.LogInformation($" ... gcd interrupted {elapsedMs}ms");
+                //item.LogInformation($" ... gcd interrupted {elapsedMs}ms");
                 if (before != interrupt())
                 {
-                    item.LogInformation($" ... gcd interrupted!");
+                    if (item.Log)
+                        item.LogInformation($" ... gcd interrupted! interrupt: {before} -> {interrupt()}");
                     return false;
                 }
             }
             else
             {
-                item.LogInformation($" ... gcd fully waited {elapsedMs}ms");
+                if (item.Log)
+                    item.LogInformation($" ... gcd fully waited {elapsedMs}ms");
             }
 
             return true;
@@ -422,7 +458,8 @@ namespace Core.Goals
             PressKeyAction(classConfig.Form[index]);
 
             (bool changedTimeOut, double elapsedMs) = wait.Until(SpellQueueTimeMs, () => playerReader.Form == item.FormEnum);
-            item.LogInformation($" ... form changed: {!changedTimeOut} | {beforeForm} -> {playerReader.Form} | Delay: {elapsedMs}ms");
+            if (item.Log)
+                item.LogInformation($" ... form changed: {!changedTimeOut} | {beforeForm} -> {playerReader.Form} | Delay: {elapsedMs}ms");
 
             return playerReader.Form == item.FormEnum;
         }
@@ -461,8 +498,8 @@ namespace Core.Goals
                     }
 
                     logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_SPELL_OUT_OF_RANGE} -- Face enemy and start moving forward");
-                    input.TapInteractKey("");
-                    input.SetKeyState(input.ForwardKey, true, false, "");
+                    input.Interact();
+                    input.SetKeyState(input.ForwardKey, true);
 
                     wait.Update(1);
                     playerReader.LastUIErrorMessage = UI_ERROR.NONE;
@@ -472,7 +509,7 @@ namespace Core.Goals
                     if (playerReader.IsInMeleeRange)
                     {
                         logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_BADATTACKFACING} -- Interact!");
-                        input.TapInteractKey("");
+                        input.Interact();
                     }
                     else
                     {
@@ -510,7 +547,7 @@ namespace Core.Goals
                     if (playerReader.Bits.IsAutoRepeatSpellOn_AutoAttack)
                     {
                         logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_BADATTACKPOS} -- Interact!");
-                        input.TapInteractKey("");
+                        input.Interact();
                         stopMoving.Stop();
                         wait.Update(1);
 
@@ -588,14 +625,14 @@ namespace Core.Goals
                     else
                     {
                         double beforeDirection = playerReader.Direction;
-                        input.TapInteractKey("");
-                        input.TapStopAttack();
+                        input.Interact();
+                        input.StopAttack();
                         stopMoving.Stop();
                         wait.Update(1);
 
                         if (beforeDirection != playerReader.Direction)
                         {
-                            input.TapInteractKey("");
+                            input.Interact();
 
                             (bool timeout, double elapsedMs) = wait.Until(MaxWaitCastTimeMs,
                                 () => minRange != playerReader.MinRange);
@@ -605,7 +642,7 @@ namespace Core.Goals
                         else
                         {
                             logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_SPELL_OUT_OF_RANGE} -- Start moving forward");
-                            input.SetKeyState(input.ForwardKey, true, false, "");
+                            input.SetKeyState(input.ForwardKey, true);
                         }
 
 
@@ -616,7 +653,7 @@ namespace Core.Goals
                     if (playerReader.IsInMeleeRange)
                     {
                         logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_BADATTACKFACING} -- Interact!");
-                        input.TapInteractKey("");
+                        input.Interact();
                     }
                     else
                     {
@@ -645,7 +682,7 @@ namespace Core.Goals
                     if (playerReader.Bits.IsAutoRepeatSpellOn_AutoAttack)
                     {
                         logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_BADATTACKPOS} -- Interact!");
-                        input.TapInteractKey("");
+                        input.Interact();
                         stopMoving.Stop();
                         wait.Update(1);
                     }

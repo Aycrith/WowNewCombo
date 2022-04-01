@@ -119,7 +119,7 @@ namespace Core.Goals
         {
             SendActionEvent(new ActionEventArgs(GoapKey.fighting, false));
 
-            input.TapClearTarget();
+            input.ClearTarget();
             stopMoving.Stop();
 
             var path = key.Path.ToList();
@@ -151,7 +151,8 @@ namespace Core.Goals
 
             if (playerReader.Bits.IsDrowning)
             {
-                input.TapJump("Drowning! Swim up");
+                LogWarn("Drowning! Swim up");
+                input.Jump();
             }
 
             if (pathState != PathState.Finished)
@@ -181,7 +182,7 @@ namespace Core.Goals
                 LogDebug("Reached defined path end");
                 stopMoving.Stop();
 
-                input.TapClearTarget();
+                input.ClearTarget();
                 wait.Update(1);
 
                 npcNameTargeting.ChangeNpcType(NpcNames.Friendly | NpcNames.Neutral);
@@ -196,9 +197,9 @@ namespace Core.Goals
                 (bool targetTimeout, double targetElapsedMs) = wait.Until(400, () => playerReader.HasTarget);
                 if (targetTimeout)
                 {
-                    LogWarn("No target found!");
+                    LogWarn("No target found! Turn left to find NPC");
                     using var cts = new CancellationTokenSource();
-                    input.KeyPressSleep(input.TurnLeftKey, 250, cts, "Turn left to find NPC");
+                    input.KeyPressSleep(input.TurnLeftKey, 250, cts);
                     return;
                 }
 
@@ -206,7 +207,8 @@ namespace Core.Goals
 
                 if (!foundVendor)
                 {
-                    input.TapInteractKey("Interact with target from macro");
+                    LogWarn("Interact with target from macro");
+                    input.Interact();
                 }
 
                 if (OpenMerchantWindow())
@@ -217,7 +219,7 @@ namespace Core.Goals
                     }
 
                     input.KeyPress(ConsoleKey.Escape, input.defaultKeyPress);
-                    input.TapClearTarget();
+                    input.ClearTarget();
                     wait.Update(1);
 
                     var path = key.Path.ToList();

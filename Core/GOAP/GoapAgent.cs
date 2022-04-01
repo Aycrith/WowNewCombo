@@ -64,8 +64,8 @@ namespace Core.GOAP
         {
             if (blacklist.IsTargetBlacklisted())
             {
-                input.TapStopAttack();
-                input.TapClearTarget();
+                input.StopAttack();
+                input.ClearTarget();
                 UpdateWorldState();
             }
 

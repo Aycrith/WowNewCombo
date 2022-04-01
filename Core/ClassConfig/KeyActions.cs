@@ -18,14 +18,14 @@ namespace Core
             Sequence.ForEach(i => i.InitDynamicBinding(requirementFactory));
         }
 
-        public void Initialise(string prefix, AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger)
+        public void Initialise(string prefix, AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger, bool globalLog)
         {
             if (Sequence.Count > 0)
             {
                 LogInitKeyActions(logger, prefix);
             }
 
-            Sequence.ForEach(i => i.Initialise(addonReader, requirementFactory, logger, this));
+            Sequence.ForEach(i => i.Initialise(addonReader, requirementFactory, logger, globalLog, this));
         }
 
         public void Dispose()

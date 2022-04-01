@@ -24,8 +24,7 @@ namespace Core.Goals
 
         public override ValueTask PerformAction()
         {
-            input.TapLastTargetKey(nameof(TargetLastDeadGoal));
-
+            input.LastTarget();
             return ValueTask.CompletedTask;
         }
 

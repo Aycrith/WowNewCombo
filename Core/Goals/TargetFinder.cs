@@ -28,20 +28,21 @@ namespace Core.Goals
             this.npcNameTargeting = npcNameTargeting;
         }
 
-        public bool Search(NpcNames target, Func<bool> validTarget, string source, CancellationTokenSource cts)
+        public bool Search(NpcNames target, Func<bool> validTarget, CancellationTokenSource cts)
         {
-            if (LookForTarget(target, source, cts))
+            if (LookForTarget(target, cts))
             {
                 if (validTarget() && !blacklist.IsTargetBlacklisted())
                 {
-                    logger.LogInformation($"{source}: Has target!");
+                    logger.LogInformation("Has target!");
                     return true;
                 }
                 else
                 {
                     if (!cts.IsCancellationRequested)
                     {
-                        input.TapClearTarget($"{source}: Target is invalid!");
+                        logger.LogWarning("Target is invalid!");
+                        input.ClearTarget();
                         wait.Update(1);
                     }
                 }
@@ -50,12 +51,12 @@ namespace Core.Goals
             return false;
         }
 
-        private bool LookForTarget(NpcNames target, string source, CancellationTokenSource cts)
+        private bool LookForTarget(NpcNames target, CancellationTokenSource cts)
         {
             if (!cts.IsCancellationRequested)
             {
                 npcNameTargeting.ChangeNpcType(target);
-                input.TapNearestTarget(source);
+                input.NearestTarget();
                 wait.Update(1);
             }
 

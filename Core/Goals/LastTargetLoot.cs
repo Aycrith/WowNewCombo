@@ -54,13 +54,15 @@ namespace Core.Goals
             stopMoving.Stop();
             combatUtil.Update();
 
-            input.TapLastTargetKey($"{nameof(LastTargetLoot)}: No corpse name found - check last dead target exists");
+            Log("No corpse name found - check last dead target exists");
+            input.LastTarget();
             wait.Update(1);
             if (playerReader.HasTarget)
             {
                 if (playerReader.Bits.TargetIsDead)
                 {
-                    input.TapInteractKey($"{nameof(LastTargetLoot)}: Found last dead target");
+                    Log("Found last dead target");
+                    input.Interact();
                     wait.Update(1);
 
                     (bool foundTarget, bool moved) = combatUtil.FoundTargetWhileMoved();
@@ -72,12 +74,14 @@ namespace Core.Goals
 
                     if (moved)
                     {
-                        input.TapInteractKey($"{nameof(LastTargetLoot)}: Last dead target double");
+                        Log("Last dead target double");
+                        input.Interact();
                     }
                 }
                 else
                 {
-                    input.TapClearTarget($"{nameof(LastTargetLoot)}: Don't attack the target!");
+                    Log("Don't attack the target!");
+                    input.ClearTarget();
                 }
             }
 
@@ -108,7 +112,8 @@ namespace Core.Goals
 
             if (playerReader.HasTarget && playerReader.Bits.TargetIsDead)
             {
-                input.TapClearTarget($"{nameof(LastTargetLoot)}: Exit Goal");
+                //$"{nameof(LastTargetLoot)}: Exit Goal"
+                input.ClearTarget();
                 wait.Update(1);
             }
         }

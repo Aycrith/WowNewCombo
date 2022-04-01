@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -64,16 +63,16 @@ namespace Core
 
         public int ConsoleKeyFormHash { private set; get; }
 
-        protected static ConcurrentDictionary<int, DateTime> LastClicked { get; } = new();
+        protected static Dictionary<int, DateTime> LastClicked { get; } = new();
 
         public static int LastKeyClicked()
         {
-            var last = LastClicked.OrderByDescending(s => s.Value).FirstOrDefault();
-            if (last.Key == 0 || (DateTime.UtcNow - last.Value).TotalSeconds > 2)
+            var (key, lastTime) = LastClicked.OrderByDescending(s => s.Value).First();
+            if ((DateTime.UtcNow - lastTime).TotalSeconds > 2)
             {
                 return (int)ConsoleKey.NoName;
             }
-            return last.Key;
+            return key;
         }
 
         private PlayerReader playerReader = null!;
@@ -86,11 +85,14 @@ namespace Core
             requirementFactory.InitDynamicBindings(this);
         }
 
-        public void Initialise(AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger, KeyActions? keyActions = null)
+        public void Initialise(AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger, bool globalLog, KeyActions? keyActions = null)
         {
             this.playerReader = addonReader.PlayerReader;
             this.costReader = addonReader.ActionBarCostReader;
             this.logger = logger;
+
+            if (!globalLog)
+                Log = false;
 
             ResetCharges();
 
@@ -124,6 +126,7 @@ namespace Core
             }
 
             ConsoleKeyFormHash = ((int)FormEnum * 1000) + (int)ConsoleKey;
+            ResetCooldown();
 
             InitMinPowerType(playerReader, addonReader.ActionBarCostReader);
 
@@ -135,9 +138,9 @@ namespace Core
             costReader.OnActionCostChanged -= ActionBarCostReader_OnActionCostChanged;
         }
 
-        public void InitialiseForm(AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger)
+        public void InitialiseForm(AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger, bool globalLog)
         {
-            Initialise(addonReader, requirementFactory, logger);
+            Initialise(addonReader, requirementFactory, logger, globalLog);
 
             if (HasFormRequirement())
             {
@@ -167,11 +170,7 @@ namespace Core
         internal void SetClicked()
         {
             LastClickPostion = playerReader.PlayerLocation;
-
-            if (!LastClicked.TryAdd(ConsoleKeyFormHash, DateTime.UtcNow))
-            {
-                LastClicked[ConsoleKeyFormHash] = DateTime.UtcNow;
-            }
+            LastClicked[ConsoleKeyFormHash] = DateTime.UtcNow;
         }
 
         public double MillisecondsSinceLastClick =>
@@ -179,9 +178,9 @@ namespace Core
             (DateTime.UtcNow - lastTime).TotalMilliseconds :
             double.MaxValue;
 
-        internal void ResetCooldown()
+        public void ResetCooldown()
         {
-            LastClicked.TryRemove(ConsoleKeyFormHash, out _);
+            LastClicked[ConsoleKeyFormHash] = DateTime.Now.AddDays(-1);
         }
 
         public int GetChargeRemaining()
@@ -299,18 +298,12 @@ namespace Core
 
         public void LogInformation(string message)
         {
-            if (Log)
-            {
-                logger.LogInformation($"[{Name}]: {message}");
-            }
+            logger.LogInformation($"[{Name}]: {message}");
         }
 
         public void LogWarning(string message)
         {
-            if (Log)
-            {
-                logger.LogWarning($"[{Name}]: {message}");
-            }
+            logger.LogWarning($"[{Name}]: {message}");
         }
 
         [LoggerMessage(
