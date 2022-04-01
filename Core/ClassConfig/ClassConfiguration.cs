@@ -97,6 +97,9 @@ namespace Core
         public KeyAction Mount { get; set; } = new();
         public string MountKey { get; set; } = "O";
 
+        public KeyAction Hearthstone { get; set; } = new();
+        public string HearthstoneKey { get; set; } = "I";
+
         public ConsoleKey ForwardKey { get; set; } = ConsoleKey.UpArrow;  // 38
         public ConsoleKey BackwardKey { get; set; } = ConsoleKey.DownArrow; // 40
         public ConsoleKey TurnLeftKey { get; set; } = ConsoleKey.LeftArrow; // 37
@@ -142,6 +145,9 @@ namespace Core
 
             Mount.Key = MountKey;
             Mount.Initialise(addonReader, requirementFactory, logger);
+
+            Hearthstone.Key = HearthstoneKey;
+            Hearthstone.Initialise(addonReader, requirementFactory, logger);
 
             Interact.Key = InteractKey;
             Interact.Name = "Interact";
