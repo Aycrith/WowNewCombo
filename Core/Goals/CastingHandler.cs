@@ -170,8 +170,8 @@ namespace Core.Goals
 
             if (playerReader.IsCasting && interrupt())
             {
-                if (item.Log)
-                    item.LogInformation($" ... castbar during cast interrupted!");
+                //if (item.Log) // really spammy
+                //    item.LogInformation($" ... castbar during cast interrupted!");
                 return false;
             }
 
