@@ -85,11 +85,14 @@ namespace Core
             requirementFactory.InitDynamicBindings(this);
         }
 
-        public void Initialise(AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger, KeyActions? keyActions = null)
+        public void Initialise(AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger, bool globalLog, KeyActions? keyActions = null)
         {
             this.playerReader = addonReader.PlayerReader;
             this.costReader = addonReader.ActionBarCostReader;
             this.logger = logger;
+
+            if (!globalLog)
+                Log = false;
 
             ResetCharges();
 
@@ -135,9 +138,9 @@ namespace Core
             costReader.OnActionCostChanged -= ActionBarCostReader_OnActionCostChanged;
         }
 
-        public void InitialiseForm(AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger)
+        public void InitialiseForm(AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger, bool globalLog)
         {
-            Initialise(addonReader, requirementFactory, logger);
+            Initialise(addonReader, requirementFactory, logger, globalLog);
 
             if (HasFormRequirement())
             {
@@ -295,18 +298,12 @@ namespace Core
 
         public void LogInformation(string message)
         {
-            if (Log)
-            {
-                logger.LogInformation($"[{Name}]: {message}");
-            }
+            logger.LogInformation($"[{Name}]: {message}");
         }
 
         public void LogWarning(string message)
         {
-            if (Log)
-            {
-                logger.LogWarning($"[{Name}]: {message}");
-            }
+            logger.LogWarning($"[{Name}]: {message}");
         }
 
         [LoggerMessage(

@@ -24,6 +24,8 @@ namespace Core
 
     public class ClassConfiguration : IDisposable
     {
+        public bool Log { get; set; } = true;
+
         public string ClassName { get; set; } = string.Empty;
         public bool Loot { get; set; } = true;
         public bool Skin { get; set; }
@@ -112,42 +114,42 @@ namespace Core
             requirementFactory.InitUserDefinedIntVariables(IntVariables);
 
             Jump.Key = JumpKey;
-            Jump.Initialise(addonReader, requirementFactory, logger);
+            Jump.Initialise(addonReader, requirementFactory, logger, Log);
 
             TargetLastTarget.Key = TargetLastTargetKey;
-            TargetLastTarget.Initialise(addonReader, requirementFactory, logger);
+            TargetLastTarget.Initialise(addonReader, requirementFactory, logger, Log);
 
             StandUp.Key = StandUpKey;
-            StandUp.Initialise(addonReader, requirementFactory, logger);
+            StandUp.Initialise(addonReader, requirementFactory, logger, Log);
 
             ClearTarget.Key = ClearTargetKey;
-            ClearTarget.Initialise(addonReader, requirementFactory, logger);
+            ClearTarget.Initialise(addonReader, requirementFactory, logger, Log);
 
             StopAttack.Key = StopAttackKey;
-            StopAttack.Initialise(addonReader, requirementFactory, logger);
+            StopAttack.Initialise(addonReader, requirementFactory, logger, Log);
             StopAttack.PressDuration = 10;
             StopAttack.Cooldown = 400;
 
             TargetNearestTarget.Key = TargetNearestTargetKey;
             TargetNearestTarget.Cooldown = 400;
-            TargetNearestTarget.Initialise(addonReader, requirementFactory, logger);
+            TargetNearestTarget.Initialise(addonReader, requirementFactory, logger, Log);
 
             TargetPet.Key = TargetPetKey;
-            TargetPet.Initialise(addonReader, requirementFactory, logger);
+            TargetPet.Initialise(addonReader, requirementFactory, logger, Log);
 
             TargetTargetOfTarget.Key = TargetTargetOfTargetKey;
-            TargetTargetOfTarget.Initialise(addonReader, requirementFactory, logger);
+            TargetTargetOfTarget.Initialise(addonReader, requirementFactory, logger, Log);
 
             PetAttack.Key = PetAttackKey;
             PetAttack.PressDuration = 10;
             PetAttack.Cooldown = 400;
-            PetAttack.Initialise(addonReader, requirementFactory, logger);
+            PetAttack.Initialise(addonReader, requirementFactory, logger, Log);
 
             Mount.Key = MountKey;
-            Mount.Initialise(addonReader, requirementFactory, logger);
+            Mount.Initialise(addonReader, requirementFactory, logger, Log);
 
             Hearthstone.Key = HearthstoneKey;
-            Hearthstone.Initialise(addonReader, requirementFactory, logger);
+            Hearthstone.Initialise(addonReader, requirementFactory, logger, Log);
 
             Interact.Key = InteractKey;
             Interact.Name = "Interact";
@@ -155,7 +157,7 @@ namespace Core
             Interact.DelayAfterCast = 0;
             Interact.PressDuration = 30;
             Interact.SkipValidation = true;
-            Interact.Initialise(addonReader, requirementFactory, logger);
+            Interact.Initialise(addonReader, requirementFactory, logger, Log);
 
             Approach.Key = InteractKey;
             Approach.Name = "Approach";
@@ -164,14 +166,14 @@ namespace Core
             Approach.PressDuration = 10;
             Approach.Cooldown = 400;
             Approach.SkipValidation = true;
-            Approach.Initialise(addonReader, requirementFactory, logger);
+            Approach.Initialise(addonReader, requirementFactory, logger, Log);
 
             AutoAttack.Key = InteractKey;
             AutoAttack.Name = "AutoAttack";
             AutoAttack.WaitForGCD = false;
             AutoAttack.DelayAfterCast = 0;
             AutoAttack.SkipValidation = true;
-            AutoAttack.Initialise(addonReader, requirementFactory, logger);
+            AutoAttack.Initialise(addonReader, requirementFactory, logger, Log);
 
             StopAttack.Name = "StopAttack";
             StopAttack.WaitForGCD = false;
@@ -182,7 +184,7 @@ namespace Core
             InitializeKeyActions(Combat, Interact, Approach, AutoAttack, StopAttack);
 
             logger.LogInformation($"[{nameof(Form)}] Initialise KeyActions.");
-            Form.ForEach(i => i.InitialiseForm(addonReader, requirementFactory, logger));
+            Form.ForEach(i => i.InitialiseForm(addonReader, requirementFactory, logger, Log));
 
             Pull.PreInitialise(nameof(Pull), requirementFactory, logger);
             Combat.PreInitialise(nameof(Combat), requirementFactory, logger);
@@ -190,16 +192,16 @@ namespace Core
             NPC.PreInitialise(nameof(NPC), requirementFactory, logger);
             Parallel.PreInitialise(nameof(Parallel), requirementFactory, logger);
 
-            Pull.Initialise(nameof(Pull), addonReader, requirementFactory, logger);
-            Combat.Initialise(nameof(Combat), addonReader, requirementFactory, logger);
-            Adhoc.Initialise(nameof(Adhoc), addonReader, requirementFactory, logger);
-            NPC.Initialise(nameof(NPC), addonReader, requirementFactory, logger);
-            Parallel.Initialise(nameof(Parallel), addonReader, requirementFactory, logger);
+            Pull.Initialise(nameof(Pull), addonReader, requirementFactory, logger, Log);
+            Combat.Initialise(nameof(Combat), addonReader, requirementFactory, logger, Log);
+            Adhoc.Initialise(nameof(Adhoc), addonReader, requirementFactory, logger, Log);
+            NPC.Initialise(nameof(NPC), addonReader, requirementFactory, logger, Log);
+            Parallel.Initialise(nameof(Parallel), addonReader, requirementFactory, logger, Log);
 
             GatherFindKeys.ForEach(key =>
             {
                 GatherFindKeyConfig.Add(new KeyAction { Key = key });
-                GatherFindKeyConfig.Last().Initialise(addonReader, requirementFactory, logger);
+                GatherFindKeyConfig.Last().Initialise(addonReader, requirementFactory, logger, Log);
             });
 
             OverridePathFilename = overridePathProfileFile;

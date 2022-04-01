@@ -105,7 +105,8 @@ namespace Core.Goals
 
                     if (moved)
                     {
-                        input.TapInteractKey($"{nameof(SkinningGoal)}: Had to move so interact again");
+                        Log("Had to move so interact again");
+                        input.Interact();
                         wait.Update(1);
                     }
 
@@ -166,7 +167,7 @@ namespace Core.Goals
 
             if (playerReader.HasTarget && playerReader.Bits.TargetIsDead)
             {
-                input.TapClearTarget();
+                input.ClearTarget();
             }
 
             wait.Update(1);

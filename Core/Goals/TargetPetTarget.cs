@@ -24,11 +24,11 @@ namespace Core.Goals
 
         public override ValueTask PerformAction()
         {
-            input.TapTargetPet();
-            input.TapTargetOfTarget();
+            input.TargetPet();
+            input.TargetOfTarget();
             if (playerReader.HasTarget && (playerReader.Bits.TargetIsDead || playerReader.TargetGuid == playerReader.PetGuid))
             {
-                input.TapClearTarget();
+                input.ClearTarget();
             }
 
             return ValueTask.CompletedTask;

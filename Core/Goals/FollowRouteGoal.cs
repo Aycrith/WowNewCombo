@@ -165,13 +165,15 @@ namespace Core.Goals
         {
             if (playerReader.HasTarget && playerReader.Bits.TargetIsDead)
             {
-                input.TapClearTarget("Has target but its dead.");
+                Log("Has target but its dead.");
+                input.ClearTarget();
                 wait.Update(1);
             }
 
             if (playerReader.Bits.IsDrowning)
             {
-                input.TapJump("Drowning! Swim up");
+                Log("Drowning! Swim up");
+                input.Jump();
             }
 
             if (classConfig.Mode == Mode.AttendedGather)
@@ -212,7 +214,7 @@ namespace Core.Goals
             {
                 if (classConfig.TargetNearestTarget.MillisecondsSinceLastClick > random.Next(minMs, maxMs))
                 {
-                    found = targetFinder.Search(NpcNameToFind, validTarget, nameof(FollowRouteGoal), targetFinderCts);
+                    found = targetFinder.Search(NpcNameToFind, validTarget, targetFinderCts);
                 }
                 wait.Update(1);
             }
@@ -328,7 +330,8 @@ namespace Core.Goals
         {
             if ((DateTime.UtcNow - onEnterTime).TotalSeconds > 5 && classConfig.Jump.MillisecondsSinceLastClick > random.Next(10_000, 25_000))
             {
-                input.TapJump("Random jump");
+                Log("Random jump");
+                input.Jump();
             }
         }
 

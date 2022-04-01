@@ -274,6 +274,7 @@ Take a look at the class files in `/Json/class` for examples of what you can do.
 
 | Property Name | Description | Optional | Default value |
 | --- | --- | --- | --- |
+| `"Log"` | Should logging enabled for `KeyAction(s)`. Requires restart. | true | `true` |
 | `"Loot"` | Should loot the mob | true | `true` |
 | `"Skin"` | Should skin the mob | true | `false` |
 | `"UseMount"` | Should use mount when its possible | true | `false` |

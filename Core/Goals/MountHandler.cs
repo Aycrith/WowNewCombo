@@ -63,7 +63,7 @@ namespace Core
             stopMoving.Stop();
             wait.Update(1);
 
-            input.TapMount();
+            input.Mount();
 
             (bool castStartTimeOut, double castStartElapsedMs) = wait.Until(spellQueueWindowMs, () => playerReader.Bits.IsMounted || playerReader.IsCasting);
             Log($"casting: {!castStartTimeOut} | Mounted: {playerReader.Bits.IsMounted} | Delay: {castStartElapsedMs}ms");
@@ -95,7 +95,7 @@ namespace Core
             }
             else
             {
-                input.TapDismount();
+                input.Dismount();
             }
         }
 

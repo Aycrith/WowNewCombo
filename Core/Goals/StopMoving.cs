@@ -40,13 +40,15 @@ namespace Core.Goals
                 if (!input.IsKeyDown(input.BackwardKey) && !input.IsKeyDown(input.ForwardKey) &&
                     (MathF.Abs(XCoord - playerReader.XCoord) > MinDist || MathF.Abs(YCoord - playerReader.YCoord) > MinDist))
                 {
-                    input.SetKeyState(input.ForwardKey, true, false, "StopForward - Cancel interact");
+                    //"StopForward - Cancel interact"
+                    input.SetKeyState(input.ForwardKey, true);
                     cts.Token.WaitHandle.WaitOne(2);
                 }
 
-                input.SetKeyState(input.ForwardKey, false, false, "");
+                input.SetKeyState(input.ForwardKey, false);
                 cts.Token.WaitHandle.WaitOne(2);
-                input.SetKeyState(input.BackwardKey, false, false, "StopForward");
+                //"StopForward"
+                input.SetKeyState(input.BackwardKey, false);
                 cts.Token.WaitHandle.WaitOne(10);
             }
 
@@ -58,8 +60,9 @@ namespace Core.Goals
         {
             if (Direction != playerReader.Direction)
             {
-                input.SetKeyState(input.TurnLeftKey, false, false, "");
-                input.SetKeyState(input.TurnRightKey, false, false, "StopTurn");
+                input.SetKeyState(input.TurnLeftKey, false);
+                //"StopTurn"
+                input.SetKeyState(input.TurnRightKey, false);
                 cts.Token.WaitHandle.WaitOne(1);
             }
 

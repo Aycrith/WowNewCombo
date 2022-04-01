@@ -74,7 +74,7 @@ namespace Core
 
         public void Unstick()
         {
-            input.TapJump();
+            input.Jump();
 
             logger.LogInformation($"Stuck for {actionDurationSeconds}s, last tried to unstick {unstickSeconds}s ago. Unstick seconds={unstickSeconds}.");
 
@@ -99,10 +99,10 @@ namespace Core
                 {
                     // back up a bit, added "remove" move forward
                     logger.LogInformation($"Trying to unstick by backing up for {actionDuration}ms");
-                    input.SetKeyState(input.BackwardKey, true, false, "StuckDetector_back_up");
-                    input.SetKeyState(input.ForwardKey, false, false, "StuckDetector");
+                    input.SetKeyState(input.BackwardKey, true);
+                    input.SetKeyState(input.ForwardKey, false);
                     Thread.Sleep(actionDuration);
-                    input.SetKeyState(input.BackwardKey, false, false, "StuckDetector");
+                    input.SetKeyState(input.BackwardKey, false);
                 }
                 this.stopMoving.Stop();
 
@@ -111,17 +111,17 @@ namespace Core
                 var key = r == 0 ? input.TurnLeftKey : input.TurnRightKey;
                 var turnDuration = random.Next(0, 800) + 200;
                 logger.LogInformation($"Trying to unstick by turning for {turnDuration}ms");
-                input.SetKeyState(key, true, false, "StuckDetector");
+                input.SetKeyState(key, true);
                 Thread.Sleep(turnDuration);
-                input.SetKeyState(key, false, false, "StuckDetector");
+                input.SetKeyState(key, false);
 
                 // Move forward
                 var strafeDuration = random.Next(0, 2000) + actionDurationSeconds;
                 logger.LogInformation($"Trying to unstick by moving forward after turning for {strafeDuration}ms");
-                input.SetKeyState(input.ForwardKey, true, false, "StuckDetector");
+                input.SetKeyState(input.ForwardKey, true);
                 Thread.Sleep(strafeDuration);
 
-                input.TapJump();
+                input.Jump();
 
                 var heading = DirectionCalculator.CalculateHeading(this.playerReader.PlayerLocation, targetLocation);
                 playerDirection.SetDirection(heading, targetLocation, "Move to next point");
@@ -131,7 +131,7 @@ namespace Core
             }
             else
             {
-                input.TapJump();
+                input.Jump();
             }
         }
 

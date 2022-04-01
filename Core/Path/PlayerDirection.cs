@@ -43,14 +43,18 @@ namespace Core
             float distance = playerReader.PlayerLocation.DistanceXYTo(point);
             if (distance < ignoreDistance)
             {
-                Log($"Too close, ignoring direction change. {distance} < {ignoreDistance}");
+                if(debug)
+                    Log($"Too close, ignoring direction change. {distance} < {ignoreDistance}");
+
                 return;
             }
 
+            if(debug)
+                Log($"SetDirection: {source}-- Current: {playerReader.Direction:0.000} -> Target: {desiredDirection:0.000} - Distance: {distance:0.000}");
+
             input.KeyPressSleep(GetDirectionKeyToPress(desiredDirection),
                 TurnDuration(desiredDirection),
-                cts,
-                debug ? $"SetDirection: {source}-- Current: {playerReader.Direction:0.000} -> Target: {desiredDirection:0.000} - Distance: {distance:0.000}" : string.Empty);
+                cts);
 
             LastSetDirection = DateTime.UtcNow;
         }
@@ -75,10 +79,7 @@ namespace Core
 
         private void Log(string text)
         {
-            if (debug)
-            {
-                logger.LogInformation($"[{nameof(PlayerDirection)}]: {text}");
-            }
+            logger.LogInformation($"[{nameof(PlayerDirection)}]: {text}");
         }
     }
 }
