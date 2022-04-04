@@ -14,7 +14,7 @@ namespace Server
         private readonly WowScreen wowScreen;
         private readonly DataFrame[] frames;
 
-        private readonly DirectBitmapCapturer capturer;
+        private readonly BitmapCapturer capturer;
 
         private readonly int width;
         private readonly int height;
@@ -46,7 +46,7 @@ namespace Server
             rectangle.Width = width;
             rectangle.Height = height;
             rectangle = new Rectangle(0, 0, width, height);
-            capturer = new DirectBitmapCapturer(rectangle);
+            capturer = new BitmapCapturer(rectangle);
 
             Enabled = true;
             thread = new Thread(() => Update());
