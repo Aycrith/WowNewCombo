@@ -18,7 +18,7 @@ namespace CoreTests
             //WowScreen.GetRectangle(out rect);
         }
 
-        public void GetPosition(out Point p)
+        public void GetPosition(ref Point p)
         {
             p = new Point();
         }
