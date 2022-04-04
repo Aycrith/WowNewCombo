@@ -24,8 +24,8 @@ namespace CoreTests
         {
             CreateLogger();
 
-            //var test = new Test_NpcNameFinderTarget(logger);
-            var test = new Test_NpcNameFinderLoot(logger);
+            var test = new Test_NpcNameFinderTarget(logger, true);
+            //var test = new Test_NpcNameFinderLoot(logger, false);
             int count = 1;
             int i = 0;
             while (i < count)
