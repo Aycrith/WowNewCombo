@@ -6,7 +6,7 @@ using SharedLib.Extensions;
 
 namespace Core
 {
-    public class PlayerDirection : IPlayerDirection, IDisposable
+    public partial class PlayerDirection : IPlayerDirection, IDisposable
     {
         private readonly bool debug = false;
 
@@ -17,8 +17,6 @@ namespace Core
         private readonly float RADIAN = MathF.PI * 2;
 
         private const int DefaultIgnoreDistance = 10;
-
-        public DateTime LastSetDirection { get; private set; }
 
         public PlayerDirection(ILogger logger, ConfigurableInput input, PlayerReader playerReader)
         {
@@ -33,30 +31,28 @@ namespace Core
             _cts.Dispose();
         }
 
-        public void SetDirection(float desiredDirection, Vector3 point, string source)
+        public void SetDirection(float desiredDirection, Vector3 point)
         {
-            SetDirection(desiredDirection, point, source, DefaultIgnoreDistance, _cts);
+            SetDirection(desiredDirection, point, DefaultIgnoreDistance, _cts);
         }
 
-        public void SetDirection(float desiredDirection, Vector3 point, string source, int ignoreDistance, CancellationTokenSource cts)
+        public void SetDirection(float desiredDirection, Vector3 point, int ignoreDistance, CancellationTokenSource cts)
         {
             float distance = playerReader.PlayerLocation.DistanceXYTo(point);
             if (distance < ignoreDistance)
             {
-                if(debug)
-                    Log($"Too close, ignoring direction change. {distance} < {ignoreDistance}");
+                if (debug)
+                    LogDebugClose(logger, distance, ignoreDistance);
 
                 return;
             }
 
-            if(debug)
-                Log($"SetDirection: {source}-- Current: {playerReader.Direction:0.000} -> Target: {desiredDirection:0.000} - Distance: {distance:0.000}");
+            if (debug)
+                LogDebugSetDirection(logger, playerReader.Direction, desiredDirection, distance);
 
             input.KeyPressSleep(GetDirectionKeyToPress(desiredDirection),
                 TurnDuration(desiredDirection),
                 cts);
-
-            LastSetDirection = DateTime.UtcNow;
         }
 
         private float TurnAmount(float desiredDirection)
@@ -77,9 +73,20 @@ namespace Core
                 ? input.TurnLeftKey : input.TurnRightKey;
         }
 
-        private void Log(string text)
-        {
-            logger.LogInformation($"[{nameof(PlayerDirection)}]: {text}");
-        }
+        #region Logging
+
+        [LoggerMessage(
+            EventId = 30,
+            Level = LogLevel.Debug,
+            Message = "SetDirection: Too close, ignored direction change. {distance} < {ignoreDistance}")]
+        static partial void LogDebugClose(ILogger logger, float distance, float ignoreDistance);
+
+        [LoggerMessage(
+            EventId = 31,
+            Level = LogLevel.Debug,
+            Message = "SetDirection: {direction:0.000} -> {desiredDirection:0.000} - {distance:0.000}")]
+        static partial void LogDebugSetDirection(ILogger logger, float direction, float desiredDirection, float distance);
+
+        #endregion
     }
 }

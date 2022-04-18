@@ -184,7 +184,9 @@ namespace Core.Goals
                     stuckDetector.SetTargetLocation(routeToNextWaypoint.Peek());
 
                     heading = DirectionCalculator.CalculateHeading(location, routeToNextWaypoint.Peek());
-                    AdjustHeading(heading, cts, "Turn to next point");
+                    if (debug)
+                        LogDebug("Turn to next point");
+                    AdjustHeading(heading, cts);
                     return;
                 }
             }
@@ -197,7 +199,9 @@ namespace Core.Goals
                     {
                         // TODO: test this
                         AdjustNextWaypointPointToClosest();
-                        AdjustHeading(heading, cts, "unstuck Further away");
+                        if (debug)
+                            LogDebug("unstuck Further away");
+                        AdjustHeading(heading, cts);
                     }
                     else if (stuckDetector.actionDurationSeconds > 10)
                     {
@@ -351,7 +355,9 @@ namespace Core.Goals
                 routeToNextWaypoint.Push(wayPoints.Peek());
 
                 var heading = DirectionCalculator.CalculateHeading(location, wayPoints.Peek());
-                AdjustHeading(heading, _cts, "Reached waypoint");
+                if (debug)
+                    LogDebug("Reached waypoint");
+                AdjustHeading(heading, _cts);
 
                 stuckDetector.SetTargetLocation(routeToNextWaypoint.Peek());
                 UpdateTotalRoute();
@@ -391,7 +397,7 @@ namespace Core.Goals
             }
         }
 
-        private void AdjustHeading(float heading, CancellationTokenSource cts, string source = "")
+        private void AdjustHeading(float heading, CancellationTokenSource cts)
         {
             var diff1 = MathF.Abs(RADIAN + heading - playerReader.Direction) % RADIAN;
             var diff2 = MathF.Abs(heading - playerReader.Direction - RADIAN) % RADIAN;
@@ -404,7 +410,7 @@ namespace Core.Goals
                     stopMoving.Stop();
                 }
 
-                playerDirection.SetDirection(heading, routeToNextWaypoint.Peek(), source, MinDistance, cts);
+                playerDirection.SetDirection(heading, routeToNextWaypoint.Peek(), MinDistance, cts);
             }
         }
 

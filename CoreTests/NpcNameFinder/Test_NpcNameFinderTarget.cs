@@ -32,12 +32,13 @@ namespace CoreTests
 
             npcNameFinder = new NpcNameFinder(logger, capturer, new AutoResetEvent(false));
             npcNameTargeting = new NpcNameTargeting(logger, npcNameFinder, mockWoWProcess);
+
+            //npcNameFinder.ChangeNpcType(NpcNames.Enemy | NpcNames.Neutral);
+            npcNameFinder.ChangeNpcType(NpcNames.Friendly);
         }
 
         public void Execute()
         {
-            npcNameFinder.ChangeNpcType(NpcNames.Enemy | NpcNames.Neutral);
-
             stopwatch.Restart();
             capturer.Capture();
             stopwatch.Stop();

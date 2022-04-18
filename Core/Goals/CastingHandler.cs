@@ -517,7 +517,7 @@ namespace Core.Goals
 
                         float desiredDirection = playerReader.Direction + MathF.PI;
                         desiredDirection = desiredDirection > MathF.PI * 2 ? desiredDirection - (MathF.PI * 2) : desiredDirection;
-                        direction.SetDirection(desiredDirection, Vector3.Zero, "");
+                        direction.SetDirection(desiredDirection, Vector3.Zero);
                     }
 
                     wait.Update(1);
@@ -661,7 +661,7 @@ namespace Core.Goals
 
                         float desiredDirection = playerReader.Direction + MathF.PI;
                         desiredDirection = desiredDirection > MathF.PI * 2 ? desiredDirection - (MathF.PI * 2) : desiredDirection;
-                        direction.SetDirection(desiredDirection, Vector3.Zero, "");
+                        direction.SetDirection(desiredDirection, Vector3.Zero);
 
                         wait.Update(1);
                     }
