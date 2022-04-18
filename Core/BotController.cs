@@ -184,7 +184,6 @@ namespace Core
             while (!cts.IsCancellationRequested)
             {
                 this.AddonReader.AddonRefresh();
-                this.GoapAgent?.UpdateWorldState();
                 addonAutoResetEvent.Set();
                 cts.Token.WaitHandle.WaitOne(1);
             }
