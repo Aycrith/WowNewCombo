@@ -1,4 +1,4 @@
-﻿using Core.Goals;
+using Core.Goals;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -18,7 +18,7 @@ namespace Core.GOAP
 
         public bool Active { get; set; }
 
-        public GoapAgentState GoapAgentState { get; }
+        public GoapAgentState State { get; }
 
         public IEnumerable<GoapGoal> AvailableGoals { get; }
         public GoapGoal? CurrentGoal { get; private set; }
@@ -28,7 +28,7 @@ namespace Core.GOAP
         public GoapAgent(ILogger logger, GoapAgentState goapAgentState, ConfigurableInput input, AddonReader addonReader, HashSet<GoapGoal> availableGoals, IBlacklist blacklist)
         {
             this.logger = logger;
-            this.GoapAgentState = goapAgentState;
+            this.State = goapAgentState;
             this.input = input;
 
             this.addonReader = addonReader;
@@ -38,11 +38,10 @@ namespace Core.GOAP
             this.addonReader.CreatureHistory.KillCredit += OnKillCredit;
 
             this.stopMoving = new StopMoving(input, playerReader);
+            this.blacklist = blacklist;
+            this.planner = new GoapPlanner();
 
             this.AvailableGoals = availableGoals.OrderBy(a => a.CostOfPerformingAction);
-            this.blacklist = blacklist;
-
-            this.planner = new GoapPlanner();
         }
 
         public void Dispose()
@@ -116,13 +115,13 @@ namespace Core.GOAP
             switch (e.Key)
             {
                 case GoapKey.consumecorpse:
-                    GoapAgentState.ShouldConsumeCorpse = (bool)e.Value;
+                    State.ShouldConsumeCorpse = (bool)e.Value;
                     break;
                 case GoapKey.shouldloot:
-                    GoapAgentState.NeedLoot = (bool)e.Value;
+                    State.NeedLoot = (bool)e.Value;
                     break;
                 case GoapKey.shouldskin:
-                    GoapAgentState.NeedSkin = (bool)e.Value;
+                    State.NeedSkin = (bool)e.Value;
                     break;
             }
         }
@@ -131,7 +130,7 @@ namespace Core.GOAP
         {
             if (Active)
             {
-                GoapAgentState.IncKillCount();
+                State.LastCombatKillCount++;
 
                 if (CurrentGoal == null)
                 {
@@ -142,7 +141,7 @@ namespace Core.GOAP
                     CurrentGoal.OnActionEvent(this, new ActionEventArgs(GoapKey.producedcorpse, true));
                 }
 
-                LogActiveKillDetected(logger, GoapAgentState.LastCombatKillCount, addonReader.CombatCreatureCount);
+                LogActiveKillDetected(logger, State.LastCombatKillCount, addonReader.CombatCreatureCount);
             }
             else
             {

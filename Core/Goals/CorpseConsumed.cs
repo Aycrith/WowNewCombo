@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Core.GOAP;
 using Microsoft.Extensions.Logging;
 
@@ -11,10 +12,10 @@ namespace Core.Goals
         private readonly ILogger logger;
         private readonly GoapAgentState goapAgentState;
 
-        public CorpseConsumed(ILogger logger, GoapAgentState goapAgentSate)
+        public CorpseConsumed(ILogger logger, GoapAgentState goapAgentState)
         {
             this.logger = logger;
-            this.goapAgentState = goapAgentSate;
+            this.goapAgentState = goapAgentState;
 
             AddPrecondition(GoapKey.dangercombat, false);
             AddPrecondition(GoapKey.consumecorpse, true);
@@ -24,7 +25,7 @@ namespace Core.Goals
 
         public override ValueTask OnEnter()
         {
-            goapAgentState.DecKillCount();
+            goapAgentState.LastCombatKillCount = Math.Max(goapAgentState.LastCombatKillCount - 1, 0);
             LogConsumed(logger, goapAgentState.LastCombatKillCount);
 
             SendActionEvent(new ActionEventArgs(GoapKey.consumecorpse, false));
