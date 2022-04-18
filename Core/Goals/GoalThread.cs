@@ -15,6 +15,7 @@ namespace Core.Goals
         private readonly RouteInfo? routeInfo;
 
         private GoapGoal? currentGoal;
+        private bool wasEmpty;
 
         private bool active;
         public bool Active
@@ -69,6 +70,7 @@ namespace Core.Goals
             var newGoal = goapAgent.GetAction();
             if (newGoal != null)
             {
+                wasEmpty = false;
                 if (newGoal != currentGoal)
                 {
                     if (currentGoal != null)
@@ -111,8 +113,11 @@ namespace Core.Goals
             }
             else
             {
-                LogNewEmptyGoal(logger);
-                Thread.Sleep(10);
+                if (!wasEmpty)
+                {
+                    LogNewEmptyGoal(logger);
+                    wasEmpty = true;
+                }
             }
         }
 
