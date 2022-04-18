@@ -123,8 +123,9 @@ namespace Core
 
                 input.Jump();
 
+                logger.LogInformation("Move to next point");
                 var heading = DirectionCalculator.CalculateHeading(this.playerReader.PlayerLocation, targetLocation);
-                playerDirection.SetDirection(heading, targetLocation, "Move to next point");
+                playerDirection.SetDirection(heading, targetLocation);
 
                 LastUnstickAttemptTimer.Reset();
                 LastUnstickAttemptTimer.Start();

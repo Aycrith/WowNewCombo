@@ -62,7 +62,8 @@ namespace Core.Goals
 
             if (lastDistance < distance)
             {
-                playerDirection.SetDirection(heading, targetLocation, "Further away");
+                logger.LogInformation("Further away");
+                playerDirection.SetDirection(heading, targetLocation);
             }
             else if (!this.stuckDetector.IsGettingCloser())
             {
@@ -86,7 +87,8 @@ namespace Core.Goals
 
                 if (MathF.Min(diff1, diff2) > 0.3)
                 {
-                    playerDirection.SetDirection(heading, targetLocation, "Correcting direction");
+                    logger.LogInformation("Correcting direction");
+                    playerDirection.SetDirection(heading, targetLocation);
                 }
             }
 
