@@ -80,6 +80,8 @@ namespace Core.Goals
                 }
             }
 
+            stuckDetector.ResetStuckParameters();
+
             pullStart = DateTime.UtcNow;
 
             return ValueTask.CompletedTask;
