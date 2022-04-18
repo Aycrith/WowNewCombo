@@ -1,4 +1,4 @@
-using Core.Goals;
+﻿using Core.Goals;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -22,8 +22,6 @@ namespace Core.GOAP
 
         public IEnumerable<GoapGoal> AvailableGoals { get; }
         public GoapGoal? CurrentGoal { get; private set; }
-
-        public HashSet<KeyValuePair<GoapKey, object>> WorldState { get; private set; } = new();
 
         public GoapAgent(ILogger logger, GoapAgentState goapAgentState, ConfigurableInput input, AddonReader addonReader, HashSet<GoapGoal> availableGoals, IBlacklist blacklist)
         {
@@ -54,60 +52,41 @@ namespace Core.GOAP
             addonReader.CreatureHistory.KillCredit -= OnKillCredit;
         }
 
-        public void UpdateWorldState()
-        {
-            WorldState = GetWorldState();
-        }
-
         public GoapGoal? GetAction()
         {
             if (blacklist.IsTargetBlacklisted())
             {
                 input.StopAttack();
                 input.ClearTarget();
-                UpdateWorldState();
             }
 
-            var goal = new HashSet<KeyValuePair<GoapKey, GoapPreCondition>>();
-
-            //Plan
-            Queue<GoapGoal> plan = planner.Plan(AvailableGoals, WorldState, goal);
-            if (plan != null && plan.Count > 0)
-            {
-                CurrentGoal = plan.Peek();
-            }
-            else
-            {
-                CurrentGoal = null;
-            }
-
+            var plan = planner.Plan(AvailableGoals, GetWorldState(), new());
+            CurrentGoal = plan.Count > 0 ? plan.Peek() : null;
             return CurrentGoal;
         }
 
-        private HashSet<KeyValuePair<GoapKey, object>> GetWorldState()
+        private HashSet<KeyValuePair<GoapKey, bool>> GetWorldState()
         {
-            var state = new HashSet<KeyValuePair<GoapKey, object>>
+            return new()
             {
-                new (GoapKey.hastarget, !blacklist.IsTargetBlacklisted() && playerReader.HasTarget),
-                new (GoapKey.dangercombat, addonReader.PlayerReader.Bits.PlayerInCombat && addonReader.CombatCreatureCount > 0),
-                new (GoapKey.pethastarget, playerReader.PetHasTarget),
-                new (GoapKey.targetisalive, playerReader.HasTarget && !playerReader.Bits.TargetIsDead),
-                new (GoapKey.incombat, playerReader.Bits.PlayerInCombat),
-                new (GoapKey.withinpullrange, playerReader.WithInPullRange),
-                new (GoapKey.incombatrange, playerReader.WithInCombatRange),
-                new (GoapKey.pulled, false),
-                new (GoapKey.isdead, playerReader.Bits.DeadStatus),
-                new (GoapKey.isswimming, playerReader.Bits.IsSwimming),
-                new (GoapKey.itemsbroken, playerReader.Bits.ItemsAreBroken),
-                new (GoapKey.producedcorpse, GoapAgentState.LastCombatKillCount > 0),
+                new(GoapKey.hastarget, !blacklist.IsTargetBlacklisted() && playerReader.HasTarget),
+                new(GoapKey.dangercombat, addonReader.PlayerReader.Bits.PlayerInCombat && addonReader.CombatCreatureCount > 0),
+                new(GoapKey.pethastarget, playerReader.PetHasTarget),
+                new(GoapKey.targetisalive, playerReader.HasTarget && !playerReader.Bits.TargetIsDead),
+                new(GoapKey.incombat, playerReader.Bits.PlayerInCombat),
+                new(GoapKey.withinpullrange, playerReader.WithInPullRange),
+                new(GoapKey.incombatrange, playerReader.WithInCombatRange),
+                new(GoapKey.pulled, false),
+                new(GoapKey.isdead, playerReader.Bits.DeadStatus),
+                new(GoapKey.isswimming, playerReader.Bits.IsSwimming),
+                new(GoapKey.itemsbroken, playerReader.Bits.ItemsAreBroken),
+                new(GoapKey.producedcorpse, State.LastCombatKillCount > 0),
 
                 // these hold their state
-                new (GoapKey.consumecorpse, GoapAgentState.ShouldConsumeCorpse),
-                new (GoapKey.shouldloot, GoapAgentState.NeedLoot),
-                new (GoapKey.shouldskin, GoapAgentState.NeedSkin)
+                new(GoapKey.consumecorpse, State.ShouldConsumeCorpse),
+                new(GoapKey.shouldloot, State.NeedLoot),
+                new(GoapKey.shouldskin, State.NeedSkin)
             };
-
-            return state;
         }
 
         public void OnActionEvent(object sender, ActionEventArgs e)

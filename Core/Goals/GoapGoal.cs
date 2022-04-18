@@ -33,7 +33,7 @@ namespace Core.Goals
     public abstract class GoapGoal
     {
         public HashSet<KeyValuePair<GoapKey, GoapPreCondition>> Preconditions { get; } = new();
-        public HashSet<KeyValuePair<GoapKey, object>> Effects { get; } = new();
+        public HashSet<KeyValuePair<GoapKey, bool>> Effects { get; } = new();
 
         public List<KeyAction> Keys { get; } = new();
 
@@ -98,9 +98,9 @@ namespace Core.Goals
             Preconditions.RemoveWhere(o => o.Key.Equals(key));
         }
 
-        public void AddEffect(GoapKey key, object value)
+        public void AddEffect(GoapKey key, bool value)
         {
-            Effects.Add(new KeyValuePair<GoapKey, object>(key, value));
+            Effects.Add(new(key, value));
         }
 
         public void RemoveEffect(GoapKey key)
