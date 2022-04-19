@@ -16,7 +16,7 @@ namespace Core.Looting
         private readonly float radiusLarge;
         private readonly float dtheta;
         private readonly Point centre;
-        private readonly bool debug = true;
+        private const bool debug = true;
         
 
         public CursorType Classification { get; set; }
@@ -36,7 +36,7 @@ namespace Core.Looting
             dtheta = 2 * MathF.PI / num_theta;
         }
 
-        private void Log(string text)
+        private static void Log(string text)
         {
             if (debug && !string.IsNullOrEmpty(text))
             {

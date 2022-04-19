@@ -19,7 +19,7 @@ namespace Core.Goals
         private readonly StopMoving stopMoving;
         private readonly MountHandler mountHandler;
 
-        private readonly bool debug = true;
+        private const bool debug = true;
 
         private readonly Random random = new();
 

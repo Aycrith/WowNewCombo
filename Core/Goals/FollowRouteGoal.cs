@@ -15,7 +15,7 @@ namespace Core.Goals
     {
         public override float CostOfPerformingAction => 20f;
 
-        private readonly bool debug = false;
+        private const bool debug = false;
 
         private readonly ILogger logger;
         private readonly ConfigurableInput input;

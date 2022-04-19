@@ -8,7 +8,7 @@ namespace Core
 {
     public partial class PlayerDirection : IPlayerDirection, IDisposable
     {
-        private readonly bool debug = false;
+        private const bool debug = false;
 
         private readonly ILogger logger;
         private readonly ConfigurableInput input;

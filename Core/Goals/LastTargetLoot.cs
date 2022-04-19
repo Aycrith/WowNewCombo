@@ -17,7 +17,7 @@ namespace Core.Goals
         private readonly BagReader bagReader;
         private readonly CombatUtil combatUtil;
 
-        private bool debug = true;
+        private const bool debug = true;
         private int lastLoot;
 
         public LastTargetLoot(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, StopMoving stopMoving, CombatUtil combatUtil)

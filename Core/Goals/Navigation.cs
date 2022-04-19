@@ -41,7 +41,7 @@ namespace Core.Goals
 
     public class Navigation : IDisposable
     {
-        private readonly bool debug = false;
+        private const bool debug = false;
         private readonly float RADIAN = MathF.PI * 2;
 
         private readonly ILogger logger;

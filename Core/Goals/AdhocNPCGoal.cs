@@ -21,7 +21,7 @@ namespace Core.Goals
 
         private PathState pathState;
 
-        private readonly bool debug = false;
+        private const bool debug = false;
 
         private readonly ILogger logger;
         private readonly ConfigurableInput input;

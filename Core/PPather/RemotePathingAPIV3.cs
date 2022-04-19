@@ -33,7 +33,7 @@ namespace Core
 
         private readonly ILogger logger;
         private readonly WorldMapAreaDB worldMapAreaDB;
-        private readonly bool debug = false;
+        private const bool debug = false;
 
         // TODO remove this
         private int watchdogPollMs = 1000;

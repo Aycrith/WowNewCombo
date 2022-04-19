@@ -10,7 +10,7 @@ namespace Core.Goals
 
         private readonly ILogger logger;
         private readonly ConfigurableInput input;
-        private bool debug = true;
+        private const bool debug = true;
         
 
         public TargetLastDeadGoal(ILogger logger, ConfigurableInput input)

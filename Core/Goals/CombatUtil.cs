@@ -1,8 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using SharedLib.Extensions;
-using System;
 using System.Numerics;
-using System.Threading.Tasks;
 
 namespace Core
 {
@@ -13,7 +11,7 @@ namespace Core
         private readonly ConfigurableInput input;
         private readonly Wait wait;
 
-        private readonly bool debug = true;
+        private const bool debug = true;
 
         private bool outOfCombat;
         private Vector3 lastPosition;
