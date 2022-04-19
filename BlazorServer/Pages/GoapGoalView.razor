@@ -1,4 +1,5 @@
 ﻿@using System.Text
+@using Core.GOAP;
 
 <tr class="@ActionClass(this.IsSelected)">
     <td>
@@ -7,7 +8,7 @@
     <td>
         @foreach (var item in this.goal.State)
         {
-            <span class="badge @Badge(item)">@item.Key</span>
+            <span class="badge @Badge(item.Value)">@GoapKeyDescription.ToString(item.Key, this.goal.Preconditions.GetValueOrDefault(item.Key))</span>
         }
         @if (this.goal.Keys.Count == 1)
         {
@@ -15,7 +16,7 @@
             {
                 if (requirement.VisibleIfHasRequirement || !requirement.HasRequirement())
                 {
-                    @((MarkupString)DisplayRequirementBadges(requirement))
+                    @(DisplayRequirementBadges(requirement))
                 }
             }
         }
@@ -41,7 +42,7 @@
                                 {
                                     if (requirement.VisibleIfHasRequirement || !requirement.HasRequirement())
                                     {
-                                        @((MarkupString)DisplayRequirementBadges(requirement))
+                                        @(DisplayRequirementBadges(requirement))
                                     }
                                 }
                             </td>
@@ -63,11 +64,6 @@
 
     [Parameter]
     public Core.Goals.GoapGoal goal { get; set; } = new Core.Goals.NullGoal();
-
-    public string Badge(KeyValuePair<string, bool> item)
-    {
-        return item.Value ? "badge-success" : "badge-danger";
-    }
 
     public string Badge(bool value)
     {
@@ -96,7 +92,7 @@
     private StringBuilder stringBuilder = new StringBuilder();
     private string[] split = new string[0];
 
-    public string DisplayRequirementBadges(Core.Requirement requirement)
+    public MarkupString DisplayRequirementBadges(Core.Requirement requirement)
     {
         split = requirement.LogMessage().Split(delimiters, StringSplitOptions.None);
         if (split.Length > 1)
@@ -121,11 +117,11 @@
                     original = original[delOr.Length..];
                 }
             }
-            return stringBuilder.ToString();
+            return new MarkupString(stringBuilder.ToString());
         }
         else
         {
-            return $"<span class=\"badge {Badge(requirement.HasRequirement())}\">{requirement.LogMessage()}</span>\n";
+            return new MarkupString($"<span class=\"badge {Badge(requirement.HasRequirement())}\">{requirement.LogMessage()}</span>\n");
         }
     }
 }

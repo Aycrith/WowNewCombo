@@ -8,15 +8,10 @@ namespace Core.GOAP
 	 * Plans what actions can be completed in order to fulfill a goal state.
 	 */
 
-    public class GoapPlanner
+    public static class GoapPlanner
     {
-        public static void RefreshState(IEnumerable<GoapGoal> availableActions)
-        {
-            foreach (GoapGoal a in availableActions)
-            {
-                a.SetState(InState(a.Preconditions, new()));
-            }
-        }
+        public static readonly Dictionary<GoapKey, bool> EmptyGoalState = new();
+        public static readonly Stack<GoapGoal> EmptyGoal = new();
 
         /**
 		 * Plan what sequence of actions can fulfill the goal.
@@ -24,9 +19,9 @@ namespace Core.GOAP
 		 * that must be performed, in order, to fulfill the goal.
 		 */
 
-        public Stack<GoapGoal> Plan(IEnumerable<GoapGoal> availableActions,
-            HashSet<KeyValuePair<GoapKey, bool>> worldState,
-            HashSet<KeyValuePair<GoapKey, GoapPreCondition>> goal)
+        public static Stack<GoapGoal> Plan(IEnumerable<GoapGoal> availableActions,
+            Dictionary<GoapKey, bool> worldState,
+            Dictionary<GoapKey, bool> goal)
         {
             Node root = new(null, 0, worldState, null);
 
@@ -48,7 +43,7 @@ namespace Core.GOAP
             List<Node> leaves = new();
             if (!BuildGraph(root, leaves, usableActions, goal))
             {
-                return new();
+                return EmptyGoal;
             }
 
             // get the cheapest leaf
@@ -72,7 +67,7 @@ namespace Core.GOAP
 		 * sequence.
 		 */
 
-        private bool BuildGraph(Node parent, List<Node> leaves, HashSet<GoapGoal> usableActions, HashSet<KeyValuePair<GoapKey, GoapPreCondition>> goal)
+        private static bool BuildGraph(Node parent, List<Node> leaves, HashSet<GoapGoal> usableActions, Dictionary<GoapKey, bool> goal)
         {
             bool foundOne = false;
 
@@ -119,12 +114,8 @@ namespace Core.GOAP
 
         private static HashSet<GoapGoal> ActionSubset(HashSet<GoapGoal> actions, GoapGoal removeMe)
         {
-            HashSet<GoapGoal> subset = new();
-            foreach (GoapGoal a in actions)
-            {
-                if (!a.Equals(removeMe))
-                    subset.Add(a);
-            }
+            HashSet<GoapGoal> subset = new(actions);
+            subset.Remove(removeMe);
             return subset;
         }
 
@@ -133,26 +124,13 @@ namespace Core.GOAP
 		 * then this returns false.
 		 */
 
-        private static Dictionary<string, bool> InState(HashSet<KeyValuePair<GoapKey, GoapPreCondition>> test, HashSet<KeyValuePair<GoapKey, bool>> state)
+        private static Dictionary<GoapKey, bool> InState(Dictionary<GoapKey, bool> test, Dictionary<GoapKey, bool> state)
         {
-            Dictionary<string, bool> resultState = new();
+            Dictionary<GoapKey, bool> resultState = new();
             foreach (var t in test)
             {
-                bool found = false;
-                foreach (var s in state)
-                {
-                    found = s.Key == t.Key;
-                    if (found)
-                    {
-                        resultState.Add(t.Value.Description, s.Value.Equals(t.Value.State));
-                        break;
-                    }
-                }
-
-                if (!found)
-                {
-                    resultState.Add(t.Value.Description, false);
-                }
+                bool exists = state.TryGetValue(t.Key, out bool current);
+                resultState[t.Key] = exists && test[t.Key].Equals(current);
             }
             return resultState;
         }
@@ -161,40 +139,12 @@ namespace Core.GOAP
 		 * Apply the stateChange to the currentState
 		 */
 
-        private static HashSet<KeyValuePair<GoapKey, bool>> PopulateState(HashSet<KeyValuePair<GoapKey, bool>> currentState, HashSet<KeyValuePair<GoapKey, bool>> stateChange)
+        private static Dictionary<GoapKey, bool> PopulateState(Dictionary<GoapKey, bool> currentState, Dictionary<GoapKey, bool> futureState)
         {
-            HashSet<KeyValuePair<GoapKey, bool>> state = new();
-            // copy the KVPs over as new objects
-            foreach (var s in currentState)
+            Dictionary<GoapKey, bool> state = new(currentState);
+            foreach (var kv in futureState)
             {
-                state.Add(new(s.Key, s.Value));
-            }
-
-            foreach (var change in stateChange)
-            {
-                // if the key exists in the current state, update the Value
-                bool exists = false;
-
-                foreach (var s in state)
-                {
-                    if (s.Equals(change))
-                    {
-                        exists = true;
-                        break;
-                    }
-                }
-
-                if (exists)
-                {
-                    state.RemoveWhere((KeyValuePair<GoapKey, bool> kvp) => { return kvp.Key.Equals(change.Key); });
-                    KeyValuePair<GoapKey, bool> updated = new(change.Key, change.Value);
-                    state.Add(updated);
-                }
-                // if it does not exist in the current state, add it
-                else
-                {
-                    state.Add(new(change.Key, change.Value));
-                }
+                state[kv.Key] = kv.Value;
             }
             return state;
         }
@@ -207,10 +157,10 @@ namespace Core.GOAP
         {
             public readonly Node? parent;
             public readonly float runningCost;
-            public readonly HashSet<KeyValuePair<GoapKey, bool>> state;
+            public readonly Dictionary<GoapKey, bool> state;
             public readonly GoapGoal? action;
 
-            public Node(Node? parent, float runningCost, HashSet<KeyValuePair<GoapKey, bool>> state, GoapGoal? action)
+            public Node(Node? parent, float runningCost, Dictionary<GoapKey, bool> state, GoapGoal? action)
             {
                 this.parent = parent;
                 this.runningCost = runningCost;

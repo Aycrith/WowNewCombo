@@ -6,18 +6,6 @@ using System.Threading.Tasks;
 
 namespace Core.Goals
 {
-    public class GoapPreCondition
-    {
-        public string Description { get; }
-        public object State { get; }
-
-        public GoapPreCondition(string description, object state)
-        {
-            this.Description = description;
-            this.State = state;
-        }
-    }
-
     public class ActionEventArgs : EventArgs
     {
         public GoapKey Key { get; }
@@ -32,12 +20,11 @@ namespace Core.Goals
 
     public abstract class GoapGoal
     {
-        public HashSet<KeyValuePair<GoapKey, GoapPreCondition>> Preconditions { get; } = new();
-        public HashSet<KeyValuePair<GoapKey, bool>> Effects { get; } = new();
+        public Dictionary<GoapKey, bool> Preconditions { get; } = new();
+        public Dictionary<GoapKey, bool> Effects { get; } = new();
+        public Dictionary<GoapKey, bool> State { get; private set; } = new();
 
         public List<KeyAction> Keys { get; } = new();
-
-        public Dictionary<string, bool> State { get; private set; } = new();
 
         public abstract float CostOfPerformingAction { get; }
 
@@ -65,7 +52,7 @@ namespace Core.Goals
             ActionEvent?.Invoke(this, e);
         }
 
-        public void SetState(Dictionary<string, bool> newState)
+        public void SetState(Dictionary<GoapKey, bool> newState)
         {
             State = newState;
         }
@@ -87,25 +74,24 @@ namespace Core.Goals
 
         public abstract ValueTask PerformAction();
 
-        public void AddPrecondition(GoapKey key, object value)
+        public void AddPrecondition(GoapKey key, bool value)
         {
-            var precondition = new GoapPreCondition(GoapKeyDescription.ToString(key, value), value);
-            Preconditions.Add(new KeyValuePair<GoapKey, GoapPreCondition>(key, precondition));
+            Preconditions[key] = value;
         }
 
         public void RemovePrecondition(GoapKey key)
         {
-            Preconditions.RemoveWhere(o => o.Key.Equals(key));
+            Preconditions.Remove(key);
         }
 
         public void AddEffect(GoapKey key, bool value)
         {
-            Effects.Add(new(key, value));
+            Effects[key] = value;
         }
 
         public void RemoveEffect(GoapKey key)
         {
-            Effects.RemoveWhere(o => o.Key.Equals(key));
+            Effects.Remove(key);
         }
 
         public virtual void OnActionEvent(object sender, ActionEventArgs e)

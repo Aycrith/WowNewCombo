@@ -1,4 +1,6 @@
-﻿namespace Core.GOAP
+﻿using System.Collections.Generic;
+
+namespace Core.GOAP
 {
     public enum GoapKey
     {
@@ -10,12 +12,9 @@
         withinpullrange = 40,
         incombatrange = 50,
         pulled = 60,
-        shouldheal = 70,
         isdead = 80,
         shouldloot = 90,
-        postloot = 91,
         shouldskin = 92,
-        usehealingpotion = 100,
         newtarget = 110,
         fighting = 120,
         producedcorpse = 130,
@@ -23,85 +22,75 @@
         corpselocation = 999,
         abort = 140,
         resume = 141,
-        shoulddrink = 150,
-        classMount = 160,
-        isalive=170,
-        isswimming=180,
-        itemsbroken=190
+        isalive = 170,
+        isswimming = 180,
+        itemsbroken = 190
     }
 
     public static class GoapKeyDescription
     {
-        public static string ToString(GoapKey key, object state)
-             => (key, state) switch
-             {
-                 (GoapKey.hastarget, true) => "Has a target",
-                 (GoapKey.hastarget, false) => "Has no target",
+        private static readonly string unknown = "Unknown";
 
-                 (GoapKey.dangercombat, true) => "Danger from combat",
-                 (GoapKey.dangercombat, false) => "No danger",
+        private static readonly Dictionary<KeyValuePair<GoapKey, bool>, string> table = new()
+        {
+            { new(GoapKey.hastarget, true), "Target" },
+            { new(GoapKey.hastarget, false), "!Target" },
 
-                 (GoapKey.targetisalive, true) => "Target alive",
-                 (GoapKey.targetisalive, false) => "Target dead",
+            { new(GoapKey.dangercombat, true), "Danger" },
+            { new(GoapKey.dangercombat, false), "!Danger" },
 
-                 (GoapKey.incombat, true) => "In combat",
-                 (GoapKey.incombat, false) => "Out of combat",
+            { new(GoapKey.targetisalive, true), "Target alive" },
+            { new(GoapKey.targetisalive, false), "Target dead" },
 
-                 (GoapKey.pethastarget, true) => "Pet has target",
-                 (GoapKey.pethastarget, false) => "Pet has no target",
+            { new(GoapKey.incombat, true), "Combat" },
+            { new(GoapKey.incombat, false), "!Combat" },
 
-                 (GoapKey.withinpullrange, true) => "In pull range",
-                 (GoapKey.withinpullrange, false) => "Out of pull range",
+            { new(GoapKey.pethastarget, true), "Pet target" },
+            { new(GoapKey.pethastarget, false), "!Pet target" },
 
-                 (GoapKey.incombatrange, true) => "In combat range",
-                 (GoapKey.incombatrange, false) => "Out of combat range",
+            { new(GoapKey.withinpullrange, true), "Pull range" },
+            { new(GoapKey.withinpullrange, false), "!Pull range" },
 
-                 (GoapKey.pulled, true) => "Pulled",
-                 (GoapKey.pulled, false) => "Not pulled",
+            { new(GoapKey.incombatrange, true), "Combat range" },
+            { new(GoapKey.incombatrange, false), "!combat range" },
 
-                 (GoapKey.shouldheal, true) => "Need to heal",
-                 (GoapKey.shouldheal, false) => "Health ok",
+            { new(GoapKey.pulled, true), "Pulled" },
+            { new(GoapKey.pulled, false), "!Pulled" },
 
-                 (GoapKey.isdead, true) => "I am dead",
-                 (GoapKey.isdead, false) => "I am alive",
+            { new(GoapKey.isdead, true), "Dead" },
+            { new(GoapKey.isdead, false), "Alive" },
 
-                 (GoapKey.shouldloot, true) => "Need to loot",
-                 (GoapKey.shouldloot, false) => "No need to loot",
+            { new(GoapKey.shouldloot, true), "Loot" },
+            { new(GoapKey.shouldloot, false), "!Loot" },
 
-                 (GoapKey.shouldskin, true) => "Need to skin",
-                 (GoapKey.shouldskin, false) => "No need to skin",
+            { new(GoapKey.shouldskin, true), "Skin" },
+            { new(GoapKey.shouldskin, false), "!Skin" },
 
-                 (GoapKey.usehealingpotion, true) => "Use healing pot",
-                 (GoapKey.usehealingpotion, false) => "My health is ok",
+            { new(GoapKey.newtarget, true), "New target" },
+            { new(GoapKey.newtarget, false), "!New target" },
 
-                 (GoapKey.newtarget, true) => "Has a new target",
-                 (GoapKey.newtarget, false) => "No new target",
+            { new(GoapKey.fighting, true), "Fighting" },
+            { new(GoapKey.fighting, false), "!Fighting" },
 
-                 (GoapKey.fighting, true) => "Is fighting",
-                 (GoapKey.fighting, false) => "Is not fighting",
+            { new(GoapKey.producedcorpse, true), "Killing blow" },
+            { new(GoapKey.producedcorpse, false), "!Killing blow" },
 
-                 (GoapKey.producedcorpse, true) => "Kill credit",
-                 (GoapKey.producedcorpse, false) => "No kill",
+            { new(GoapKey.consumecorpse, true), "Corpse nearby" },
+            { new(GoapKey.consumecorpse, false), "!Corpse nearby" },
 
-                 (GoapKey.consumecorpse, true) => "Corpse nearby",
-                 (GoapKey.consumecorpse, false) => "No corpse",
+            { new(GoapKey.abort, true), "Abort" },
+            { new(GoapKey.abort, false), "!Abort" },
 
-                 (GoapKey.abort, true) => "Should abort",
-                 (GoapKey.abort, false) => "Should not abort",
+            { new(GoapKey.isswimming, true), "Swimming" },
+            { new(GoapKey.isswimming, false), "!Swimming" },
 
-                 (GoapKey.shoulddrink, true) => "Mana low",
-                 (GoapKey.shoulddrink, false) => "Mana ok",
+            { new(GoapKey.itemsbroken, true), "Broken" },
+            { new(GoapKey.itemsbroken, false), "!Broken" },
+        };
 
-                 (GoapKey.classMount, true) => "Should mount",
-                 (GoapKey.classMount, false) => "No need to mount",
-
-                 (GoapKey.isswimming, true) => "Swimming",
-                 (GoapKey.isswimming, false) => "Not Swimming",
-
-                 (GoapKey.itemsbroken, true) => "Gear is red",
-                 (GoapKey.itemsbroken, false) => "Gear is not red",
-
-                 (_, _) => "Unknown"
-             };
+        public static string ToString(GoapKey key, bool state)
+        {
+            return table.TryGetValue(new(key, state), out var text) ? text : unknown;
+        }
     }
 }

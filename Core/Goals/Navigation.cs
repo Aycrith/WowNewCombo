@@ -452,6 +452,7 @@ namespace Core.Goals
                 else
                 {
                     Log($"[{pather.GetType().Name}] distance is close {distance}. Keep RouteToWaypoint.");
+                    ResetStuckParameters();
                 }
             }
             else

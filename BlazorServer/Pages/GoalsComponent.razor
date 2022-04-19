@@ -12,16 +12,25 @@
         Npc: @botController.AvgNPCLatency.ToString("0.0")ms | 
         Bot: @addonReader.AvgUpdateLatency.ToString("0.0")ms</span>
     </div>
-    @if (ShowGoals)
+
+    @if(ShowPlan && botController.GoapAgent != null && botController.GoapAgent.Plan.Count > 0)
     {
         <div class="card-body">
             <table class="table table-sm table-striped">
-                @if (botController.GoapAgent != null)
+                @foreach (var goal in botController.GoapAgent.Plan)
                 {
-                    foreach (var goal in botController.GoapAgent.AvailableGoals)
-                    {
-                        <GoapGoalView goal="goal" IsSelected="(goal == botController.GoapAgent.CurrentGoal)" Expand="@(Expand || goal.GetType().Name == "ParallelGoal")" />
-                    }
+                    <GoapGoalView goal="goal" IsSelected="false" Expand="false" />
+                }
+            </table>
+        </div>
+    }
+    @if (ShowGoals && botController.GoapAgent != null)
+    {
+        <div class="card-body">
+            <table class="table table-sm table-striped">
+                @foreach (var goal in botController.GoapAgent.AvailableGoals)
+                {
+                    <GoapGoalView goal="goal" IsSelected="(goal == botController.GoapAgent.CurrentGoal)" Expand="@(Expand || goal.GetType().Name == "ParallelGoal")" />
                 }
             </table>
         </div>
@@ -33,6 +42,9 @@
 
     [Parameter]
     public bool ShowGoals { get; set; } = true;
+
+    [Parameter]
+    public bool ShowPlan { get; set; } = true;
 
     public bool Expand { get; set; } = false;
 
