@@ -63,7 +63,7 @@ namespace Core.GOAP
             { new(GoapKey.shouldloot, true), "Loot" },
             { new(GoapKey.shouldloot, false), "!Loot" },
 
-            { new(GoapKey.shouldskin, true), "!Skin" },
+            { new(GoapKey.shouldskin, true), "Skin" },
             { new(GoapKey.shouldskin, false), "!Skin" },
 
             { new(GoapKey.newtarget, true), "New target" },
@@ -72,8 +72,8 @@ namespace Core.GOAP
             { new(GoapKey.fighting, true), "Fighting" },
             { new(GoapKey.fighting, false), "!Fighting" },
 
-            { new(GoapKey.producedcorpse, true), "Killing Blow" },
-            { new(GoapKey.producedcorpse, false), "!Killing Blow" },
+            { new(GoapKey.producedcorpse, true), "Killing blow" },
+            { new(GoapKey.producedcorpse, false), "!Killing blow" },
 
             { new(GoapKey.consumecorpse, true), "Corpse nearby" },
             { new(GoapKey.consumecorpse, false), "!Corpse nearby" },
