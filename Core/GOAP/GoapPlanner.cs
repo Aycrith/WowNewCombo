@@ -8,13 +8,16 @@ namespace Core.GOAP
 	 * Plans what actions can be completed in order to fulfill a goal state.
 	 */
 
-    public class GoapPlanner
+    public static class GoapPlanner
     {
+        public static readonly HashSet<KeyValuePair<GoapKey, bool>> EmptyGoalState = new();
+        public static readonly Stack<GoapGoal> EmptyGoal = new();
+
         public static void RefreshState(IEnumerable<GoapGoal> availableActions)
         {
             foreach (GoapGoal a in availableActions)
             {
-                a.SetState(InState(a.Preconditions, new()));
+                a.SetState(InState(a.Preconditions, EmptyGoalState));
             }
         }
 
@@ -24,9 +27,9 @@ namespace Core.GOAP
 		 * that must be performed, in order, to fulfill the goal.
 		 */
 
-        public Stack<GoapGoal> Plan(IEnumerable<GoapGoal> availableActions,
+        public static Stack<GoapGoal> Plan(IEnumerable<GoapGoal> availableActions,
             HashSet<KeyValuePair<GoapKey, bool>> worldState,
-            HashSet<KeyValuePair<GoapKey, GoapPreCondition>> goal)
+            HashSet<KeyValuePair<GoapKey, bool>> goal)
         {
             Node root = new(null, 0, worldState, null);
 
@@ -48,7 +51,7 @@ namespace Core.GOAP
             List<Node> leaves = new();
             if (!BuildGraph(root, leaves, usableActions, goal))
             {
-                return new();
+                return EmptyGoal;
             }
 
             // get the cheapest leaf
@@ -72,7 +75,7 @@ namespace Core.GOAP
 		 * sequence.
 		 */
 
-        private bool BuildGraph(Node parent, List<Node> leaves, HashSet<GoapGoal> usableActions, HashSet<KeyValuePair<GoapKey, GoapPreCondition>> goal)
+        private static bool BuildGraph(Node parent, List<Node> leaves, HashSet<GoapGoal> usableActions, HashSet<KeyValuePair<GoapKey, bool>> goal)
         {
             bool foundOne = false;
 
@@ -133,9 +136,9 @@ namespace Core.GOAP
 		 * then this returns false.
 		 */
 
-        private static Dictionary<string, bool> InState(HashSet<KeyValuePair<GoapKey, GoapPreCondition>> test, HashSet<KeyValuePair<GoapKey, bool>> state)
+        private static Dictionary<GoapKey, bool> InState(HashSet<KeyValuePair<GoapKey, bool>> test, HashSet<KeyValuePair<GoapKey, bool>> state)
         {
-            Dictionary<string, bool> resultState = new();
+            Dictionary<GoapKey, bool> resultState = new();
             foreach (var t in test)
             {
                 bool found = false;
@@ -144,14 +147,14 @@ namespace Core.GOAP
                     found = s.Key == t.Key;
                     if (found)
                     {
-                        resultState.Add(t.Value.Description, s.Value.Equals(t.Value.State));
+                        resultState.Add(t.Key, s.Value.Equals(t.Value));
                         break;
                     }
                 }
 
                 if (!found)
                 {
-                    resultState.Add(t.Value.Description, false);
+                    resultState.Add(t.Key, false);
                 }
             }
             return resultState;

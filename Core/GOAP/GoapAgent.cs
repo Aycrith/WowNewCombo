@@ -14,7 +14,6 @@ namespace Core.GOAP
         private readonly PlayerReader playerReader;
         private readonly StopMoving stopMoving;
         private readonly IBlacklist blacklist;
-        private readonly GoapPlanner planner;
 
         public bool Active { get; set; }
 
@@ -37,7 +36,6 @@ namespace Core.GOAP
 
             this.stopMoving = new StopMoving(input, playerReader);
             this.blacklist = blacklist;
-            this.planner = new GoapPlanner();
 
             this.AvailableGoals = availableGoals.OrderBy(a => a.CostOfPerformingAction);
         }
@@ -60,7 +58,7 @@ namespace Core.GOAP
                 input.ClearTarget();
             }
 
-            var plan = planner.Plan(AvailableGoals, GetWorldState(), new());
+            var plan = GoapPlanner.Plan(AvailableGoals, GetWorldState(), GoapPlanner.EmptyGoalState);
             CurrentGoal = plan.Count > 0 ? plan.Peek() : null;
             return CurrentGoal;
         }
