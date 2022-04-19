@@ -20,6 +20,8 @@ namespace Core.GOAP
         public GoapAgentState State { get; }
 
         public IEnumerable<GoapGoal> AvailableGoals { get; }
+
+        public Stack<GoapGoal> Plan { get; private set; }
         public GoapGoal? CurrentGoal { get; private set; }
 
         public GoapAgent(ILogger logger, GoapAgentState goapAgentState, ConfigurableInput input, AddonReader addonReader, HashSet<GoapGoal> availableGoals, IBlacklist blacklist)
@@ -38,6 +40,7 @@ namespace Core.GOAP
             this.blacklist = blacklist;
 
             this.AvailableGoals = availableGoals.OrderBy(a => a.CostOfPerformingAction);
+            this.Plan = new();
         }
 
         public void Dispose()
@@ -58,32 +61,36 @@ namespace Core.GOAP
                 input.ClearTarget();
             }
 
-            var plan = GoapPlanner.Plan(AvailableGoals, GetWorldState(), GoapPlanner.EmptyGoalState);
-            CurrentGoal = plan.Count > 0 ? plan.Peek() : null;
+            if (Plan.Count == 0)
+            {
+                Plan = GoapPlanner.Plan(AvailableGoals, GetWorldState(), GoapPlanner.EmptyGoalState);
+            }
+            CurrentGoal = Plan.Count > 0 ? Plan.Pop() : null;
+
             return CurrentGoal;
         }
 
-        private HashSet<KeyValuePair<GoapKey, bool>> GetWorldState()
+        private Dictionary<GoapKey, bool> GetWorldState()
         {
             return new()
             {
-                new(GoapKey.hastarget, !blacklist.IsTargetBlacklisted() && playerReader.HasTarget),
-                new(GoapKey.dangercombat, addonReader.PlayerReader.Bits.PlayerInCombat && addonReader.CombatCreatureCount > 0),
-                new(GoapKey.pethastarget, playerReader.PetHasTarget),
-                new(GoapKey.targetisalive, playerReader.HasTarget && !playerReader.Bits.TargetIsDead),
-                new(GoapKey.incombat, playerReader.Bits.PlayerInCombat),
-                new(GoapKey.withinpullrange, playerReader.WithInPullRange),
-                new(GoapKey.incombatrange, playerReader.WithInCombatRange),
-                new(GoapKey.pulled, false),
-                new(GoapKey.isdead, playerReader.Bits.DeadStatus),
-                new(GoapKey.isswimming, playerReader.Bits.IsSwimming),
-                new(GoapKey.itemsbroken, playerReader.Bits.ItemsAreBroken),
-                new(GoapKey.producedcorpse, State.LastCombatKillCount > 0),
+                { GoapKey.hastarget, !blacklist.IsTargetBlacklisted() && playerReader.HasTarget },
+                { GoapKey.dangercombat, addonReader.PlayerReader.Bits.PlayerInCombat && addonReader.CombatCreatureCount > 0 },
+                { GoapKey.pethastarget, playerReader.PetHasTarget },
+                { GoapKey.targetisalive, playerReader.HasTarget && !playerReader.Bits.TargetIsDead },
+                { GoapKey.incombat, playerReader.Bits.PlayerInCombat },
+                { GoapKey.withinpullrange, playerReader.WithInPullRange },
+                { GoapKey.incombatrange, playerReader.WithInCombatRange },
+                { GoapKey.pulled, false },
+                { GoapKey.isdead, playerReader.Bits.DeadStatus },
+                { GoapKey.isswimming, playerReader.Bits.IsSwimming },
+                { GoapKey.itemsbroken, playerReader.Bits.ItemsAreBroken },
+                { GoapKey.producedcorpse, State.LastCombatKillCount > 0 },
 
                 // these hold their state
-                new(GoapKey.consumecorpse, State.ShouldConsumeCorpse),
-                new(GoapKey.shouldloot, State.NeedLoot),
-                new(GoapKey.shouldskin, State.NeedSkin)
+                { GoapKey.consumecorpse, State.ShouldConsumeCorpse },
+                { GoapKey.shouldloot, State.NeedLoot },
+                { GoapKey.shouldskin, State.NeedSkin }
             };
         }
 
