@@ -76,6 +76,7 @@ namespace Core.Goals
         public event EventHandler? OnPathCalculated;
         public event EventHandler? OnWayPointReached;
         public event EventHandler? OnDestinationReached;
+        public event EventHandler? OnAnyPointReached;
 
         public bool SimplifyRouteToWaypoint { get; set; } = true;
 
@@ -162,6 +163,8 @@ namespace Core.Goals
                         ReduceByDistance(MinDistance);
                     else
                         routeToNextWaypoint.Pop();
+
+                    OnAnyPointReached?.Invoke(this, EventArgs.Empty);
 
                     lastDistance = float.MaxValue;
                     UpdateTotalRoute();
