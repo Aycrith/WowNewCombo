@@ -1,6 +1,7 @@
 ﻿@using Core
 @using SharedLib;
 @using Game;
+@implements IDisposable
 @inject Core.IBotController botController
 @inject Core.IAddonReader addonReader
 
@@ -10,83 +11,70 @@
             <tr>
                 <td>
                     Minimap
-                    <span class="badge @CombatBadge()" style="margin-left:30px">@Core.GOAP.GoapKeyDescription.ToString(Core.GOAP.GoapKey.incombat, PlayerInCombat)</span>
-                    <button class="btn btn-sm btn-primary float-right" @onclick="ToggleBot">
-                        @if (!botController.IsBotActive)
-                        {
-                            <span>Start Bot</span>
-                        }
-                        else
-                        {
-                            <span>Stop Bot</span>
-                        }
-                    </button>
+                    <span style="float: right">
+                        <button class="btn btn-sm @(previewEnabled ? "btn-danger" : "btn-primary")" @onclick="TogglePreview">Preview</button>
+                        <ToggleButton/>
+                    </span>
                 </td>
             </tr>
         </table>
     </div>
-    <div class="card-body">
-        <img src="data:image/png;base64, @image" alt="Red dot" />
-        <img src="data:image/png;base64, @lastnode" alt="Red dot" />
+    <div class="card-body" style="padding: 0 0 0 0">
+        @if(previewEnabled)
+        {
+            <img src="data:image/png;base64, @WowScreen.ToBase64(botController.WowScreen.MiniMapBitmap, Size)" alt="Red dot" />
+        }
     </div>
 </div>
 
 @code {
+    [Parameter]
+    public int Size { get; set; } = 200;
 
     [Parameter]
-    public int Size { get; set; } = 1024;
+    public EventCallback<bool> OnNodeFound { get; set; }
 
-    [Parameter] public EventCallback<bool> OnNodeFound { get; set; }
+    private bool lastNodeFound = false;
 
-    public bool PlayerInCombat => this.addonReader.PlayerReader.Bits.PlayerInCombat;
-
-    string image = "iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==";
-    //string eventTime = "";
-    string lastnode = "iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==";
-
-    bool lastNodeFound = false;
+    private bool previewEnabled = true;
 
     protected override void OnInitialized()
     {
-        if (this.botController.MinimapImageFinder != null)
+        if (botController.MinimapImageFinder != null && OnNodeFound.HasDelegate)
         {
-            this.botController.MinimapImageFinder.NodeEvent += (s, e) =>
-            {
-                var nodeFound = e.Point != default && e.Point.X > 0 && e.Point.Y > 0;
-
-                if (lastNodeFound != nodeFound)
-                {
-                    if (OnNodeFound.HasDelegate)
-                    {
-                        base.InvokeAsync(() =>
-                        {
-                            OnNodeFound.InvokeAsync(nodeFound);
-                        });
-                    }
-                }
-                lastNodeFound = nodeFound;
-
-                this.image = WowScreen.ToBase64(e.Bitmap, Size);
-                //this.eventTime = DateTime.Now.ToString("HH:mm:ss");
-
-                if (nodeFound)
-                {
-                    this.lastnode = this.image;
-                }
-
-                base.InvokeAsync(StateHasChanged);
-            };
+            botController.MinimapImageFinder.NodeEvent += NodeFound;
         }
     }
 
-    private void ToggleBot()
+    public void Dispose()
     {
-        botController.ToggleBotStatus();
+        if (botController.MinimapImageFinder != null && OnNodeFound.HasDelegate)
+        {
+            botController.MinimapImageFinder.NodeEvent -= NodeFound;
+        }
     }
 
-    public string CombatBadge()
+    private void NodeFound(object? source, NodeEventArgs e)
     {
-        return !PlayerInCombat ? "badge-success" : "badge-danger";
+        var nodeFound = e.Point.X > 0 && e.Point.Y > 0;
+
+        if (lastNodeFound != nodeFound)
+        {
+            base.InvokeAsync(() =>
+            {
+                OnNodeFound.InvokeAsync(nodeFound);
+            });
+        }
+        lastNodeFound = nodeFound;
+
+        if (previewEnabled)
+        {
+            base.InvokeAsync(StateHasChanged);
+        }
     }
 
+    private void TogglePreview()
+    {
+        previewEnabled = !previewEnabled;
+    }
 }
