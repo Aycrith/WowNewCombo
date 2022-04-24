@@ -11,6 +11,8 @@ namespace WowheadDB
         public List<NPC> repair;
         public List<NPC> vendor;
         public List<NPC> trainer;
+        public Dictionary<string, List<Node>> herb;
+        public Dictionary<string, List<Node>> vein;
 
         public List<int> skinnable;
     }

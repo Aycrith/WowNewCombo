@@ -5,17 +5,13 @@ using SharedLib.Extensions;
 
 namespace WowheadDB
 {
-    public class NPC
+    public class Node
     {
         public List<List<float>> coords;
-
         public int level;
         public string name;
         public int type;
         public int id;
-        public int reacthorde;
-        public int reactalliance;
-        public string description;
 
         [JsonIgnore]
         public List<Vector3> points => VectorExt.FromList(coords);
