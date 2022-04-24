@@ -2,108 +2,124 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using Game;
+using SharedLib.Extensions;
 
-#nullable enable
 namespace Core
 {
     public class MinimapNodeFinder : INodeFinder, IImageProvider
     {
         private readonly WowScreen wowScreen;
         private readonly IPixelClassifier pixelClassifier;
-
-        private Bitmap bitmap = new Bitmap(1, 1);
-
-        public event EventHandler<NodeEventArgs> NodeEvent;
+        public event EventHandler<NodeEventArgs>? NodeEvent;
 
         public MinimapNodeFinder(WowScreen wowScreen, IPixelClassifier pixelClassifier)
         {
             this.wowScreen = wowScreen;
             this.pixelClassifier = pixelClassifier;
-            NodeEvent += (s, e) => { };
         }
 
-        public Point? Find(bool highlight)
+        public void TryFind()
         {
-            bitmap = wowScreen.GetCroppedMinimapBitmap(highlight);
+            wowScreen.UpdateMinimapBitmap();
 
-            Score? best = Score.ScorePoints(FindYellowPoints());
-
-            var point = new Point();
-            if (best != null && best.count > 2)
-            {
-                point = best.point;
-            }
-
-            NodeEvent?.Invoke(this, new NodeEventArgs(bitmap, point));
-
-            bitmap.Dispose();
-
-            return best?.point;
+            var list = FindYellowPoints();
+            ScorePoints(list, out Score best);
+            NodeEvent?.Invoke(this, new NodeEventArgs(best.point));
         }
 
         private List<Score> FindYellowPoints()
         {
-            var points = new List<Score>();
+            List<Score> points = new();
+            Bitmap bitmap = wowScreen.MiniMapBitmap;
 
-            var minX = Math.Max(0, 0);
-            var maxX = Math.Min(this.bitmap.Width, this.bitmap.Width);
-            var minY = Math.Max(0, 0);
-            var maxY = Math.Min(this.bitmap.Height, this.bitmap.Height);
+            // TODO: adjust these values based on resolution
+            // The reference resolution is 1920x1080
+            int minX = 6;
+            int maxX = 170;
+            int minY = 36;
+            int maxY = bitmap.Height - 6;
 
-            Stopwatch sw = new Stopwatch();
-            sw.Start();
+            Rectangle rect = new(minX, minY, maxX - minX, maxY - minY);
+            Point center = rect.Centre();
+            float radius = (maxX - minX) / 2f;
 
-            for (int x = minX; x < maxX; x++)
+            unsafe
             {
-                for (int y = minY; y < maxY; y++)
+                BitmapData data = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height), ImageLockMode.ReadWrite, bitmap.PixelFormat);
+                int bytesPerPixel = Bitmap.GetPixelFormatSize(bitmap.PixelFormat) / 8;
+
+                //for (int y = minY; y < maxY; y++)
+                Parallel.For(minY, maxY, y =>
                 {
-                    ProcessPixel(points, x, y);
-                }
+                    byte* currentLine = (byte*)data.Scan0 + (y * data.Stride);
+                    for (int x = minX; x < maxX; x++)
+                    {
+                        if (!IsValidSquareLocation(x, y, center, radius))
+                            continue;
+
+                        int xi = x * bytesPerPixel;
+                        if (pixelClassifier.IsMatch(currentLine[xi + 2], currentLine[xi + 1], currentLine[xi]))
+                        {
+                            points.Add(new Score { point = new Point(x, y), count = 0 });
+                            currentLine[xi + 2] = 255;
+                            currentLine[xi + 1] = 0;
+                            currentLine[xi + 0] = 0;
+                        }
+                    }
+                });
+
+                bitmap.UnlockBits(data);
             }
-            sw.Stop();
 
             if (points.Count > 100)
             {
-                System.Diagnostics.Debug.WriteLine("Error: Too much yellow in this image, adjust the configuration !");
+                Debug.WriteLine("Error: Too much yellow in this image, adjust the configuration !");
                 points.Clear();
             }
 
             return points;
         }
 
-        private void ProcessPixel(List<Score> points, int x, int y)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool IsValidSquareLocation(int x, int y, Point center, float width)
         {
-            var p = this.bitmap.GetPixel(x, y);
-
-            bool isMatch = this.pixelClassifier.IsMatch(p.R, p.G, p.B);
-
-            if (isMatch)
-            {
-                points.Add(new Score { point = new Point(x, y) });
-                this.bitmap.SetPixel(x, y, Color.Red);
-            }
+            return Math.Sqrt(((x - center.X) * (x - center.X)) + ((y - center.Y) * (y - center.Y))) < width;
         }
 
-        private class Score
+        private static bool ScorePoints(List<Score> points, out Score best)
+        {
+            best = new Score();
+            const int size = 5;
+
+            for (int i = 0; i < points.Count; i++)
+            {
+                Score p = points[i];
+                p.count = points.Where(s => Math.Abs(s.point.X - p.point.X) < size) // + or - n pixels horizontally
+                    .Where(s => Math.Abs(s.point.Y - p.point.Y) < size) // + or - n pixels vertically
+                    .Count();
+                points[i] = p;
+            }
+
+            points.Sort((a, b) => a.count.CompareTo(b.count));
+
+            if (points.Count > 0 && points[^1].count > 2)
+            {
+                best = points[^1];
+                return true;
+            }
+
+            return false;
+        }
+
+        private struct Score
         {
             public Point point;
             public int count;
-
-            public static Score? ScorePoints(List<Score> points)
-            {
-                var size = 5;
-
-                foreach (Score p in points)
-                {
-                    p.count = points.Where(s => Math.Abs(s.point.X - p.point.X) < size) // + or - n pixels horizontally
-                        .Where(s => Math.Abs(s.point.Y - p.point.Y) < size) // + or - n pixels vertically
-                        .Count();
-                }
-
-                return points.OrderByDescending(s => s.count).FirstOrDefault();
-            }
         }
     }
 }

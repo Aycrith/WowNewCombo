@@ -10,12 +10,10 @@ namespace Core
 
     public class NodeEventArgs : EventArgs
     {
-        public Bitmap Bitmap { get; }
         public Point Point { get; }
 
-        public NodeEventArgs(Bitmap bitmap, Point point)
+        public NodeEventArgs(Point point)
         {
-            Bitmap = bitmap;
             Point = point;
         }
     }

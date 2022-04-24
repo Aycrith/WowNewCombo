@@ -22,10 +22,15 @@ namespace Game
 
         public int Size { get; set; } = 1024;
 
-        public bool Enabled { get; set; } = true;
+        // TODO: make it work for higher resolution ex. 4k
+        public const int MinimapSize = 200;
+
+        public bool Enabled { get; set; } = false;
 
         public bool EnablePostProcess { get; set; }
         public Bitmap Bitmap { get; private set; }
+
+        public Bitmap MiniMapBitmap { get; private set; }
 
         private Rectangle rect;
         public Rectangle Rect => rect;
@@ -42,6 +47,7 @@ namespace Game
             rect.Y = p.Y;
 
             Bitmap = new Bitmap(rect.Width, rect.Height, PixelFormat.Format32bppPArgb);
+            MiniMapBitmap = new Bitmap(MinimapSize, MinimapSize, PixelFormat.Format32bppPArgb);
         }
 
         public void Update()
@@ -108,22 +114,13 @@ namespace Game
             return Bitmap.GetPixel(point.X, point.Y);
         }
 
-        public Bitmap GetCroppedMinimapBitmap(bool highlight)
-        {
-            return CropImage(GetMinimapBitmap(), highlight);
-        }
-
-        private Bitmap GetMinimapBitmap()
+        public void UpdateMinimapBitmap()
         {
             GetRectangle(out var rect);
 
-            int Size = 200;
-            var bmpScreen = new Bitmap(Size, Size);
-            using (var graphics = Graphics.FromImage(bmpScreen))
-            {
-                graphics.CopyFromScreen(rect.Right - Size, rect.Top, 0, 0, bmpScreen.Size);
-            }
-            return bmpScreen;
+            var graphics = Graphics.FromImage(MiniMapBitmap);
+            graphics.CopyFromScreen(rect.Right - MinimapSize, rect.Top, 0, 0, MiniMapBitmap.Size);
+            graphics.Dispose();
         }
 
         public void Dispose()

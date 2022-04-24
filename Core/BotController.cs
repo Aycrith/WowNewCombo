@@ -192,7 +192,6 @@ namespace Core
 
         public void ScreenshotRefreshThread()
         {
-            var nodeFound = false;
             var stopWatch = new Stopwatch();
             while (!cts.IsCancellationRequested)
             {
@@ -215,12 +214,12 @@ namespace Core
                         this.npcNameFinder.FakeUpdate();
                     }
 
-                    lastScreenshot = DateTime.UtcNow;
-                }
+                    if (ClassConfig != null && this.ClassConfig.Mode == Mode.AttendedGather)
+                    {
+                        minimapNodeFinder.TryFind();
+                    }
 
-                if (ClassConfig != null && this.ClassConfig.Mode == Mode.AttendedGather)
-                {
-                    nodeFound = this.minimapNodeFinder.Find(nodeFound) != null;
+                    lastScreenshot = DateTime.UtcNow;
                 }
 
                 if (updatePlayerPostion.ElapsedMilliseconds > 500)
