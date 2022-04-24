@@ -1,4 +1,4 @@
-﻿using Core.Goals;
+using Core.Goals;
 using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -247,7 +247,11 @@ namespace Core
             {
                 if (!actionThread.Active)
                 {
-                    this.GrindSession.StartBotSession();
+                    if (ClassConfig?.Mode is Mode.AttendedGrind or Mode.Grind)
+                    {
+                        this.GrindSession.StartBotSession();
+                    }
+
                     this.pather.DrawLines();
 
                     actionThread.Active = true;
@@ -257,7 +261,11 @@ namespace Core
                 else
                 {
                     actionThread.Active = false;
-                    GrindSession.StopBotSession("Stopped By Player", false);
+                    if (ClassConfig?.Mode is Mode.AttendedGrind or Mode.Grind)
+                    {
+                        GrindSession.StopBotSession("Stopped By Player", false);
+                    }
+
                     AddonReader.SoftReset();
                 }
 
