@@ -429,7 +429,7 @@ namespace Core
                 SelectedClassFilename = classFilename;
             }
 
-            ProfileLoaded?.Invoke(this, EventArgs.Empty);
+            LoadProfile();
         }
 
         public List<string> ClassFileList()
@@ -456,12 +456,18 @@ namespace Core
         public void LoadPathProfile(string pathFilename)
         {
             StopBot();
-            if(InitialiseFromFile(SelectedClassFilename, pathFilename))
+            if (InitialiseFromFile(SelectedClassFilename, pathFilename))
             {
                 SelectedPathFilename = pathFilename;
             }
 
+            LoadProfile();
+        }
+
+        private void LoadProfile()
+        {
             ProfileLoaded?.Invoke(this, EventArgs.Empty);
+            WowScreen.Enabled = ClassConfig?.Mode != Mode.AttendedGather;
         }
 
         public void OverrideClassConfig(ClassConfiguration classConfiguration)
