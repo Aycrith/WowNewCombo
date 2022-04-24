@@ -31,10 +31,11 @@ namespace Core.Goals
         private readonly List<Vector3> routePoints;
 
         private readonly TargetFinder targetFinder;
-        private CancellationTokenSource targetFinderCts;
-        private Thread targetFinderThread = null!;
         private readonly int minMs = 500, maxMs = 1000;
         private readonly NpcNames NpcNameToFind = NpcNames.Enemy | NpcNames.Neutral;
+
+        private CancellationTokenSource sideActivityCts;
+        private Thread sideActivityThread = null!;
 
         private bool shouldMount;
 
@@ -83,50 +84,37 @@ namespace Core.Goals
             navigation.OnDestinationReached += Navigation_OnDestinationReached;
             navigation.OnWayPointReached += Navigation_OnWayPointReached;
 
+            AddPrecondition(GoapKey.dangercombat, false);
+
             if (classConfig.Mode != Mode.AttendedGather)
             {
-                AddPrecondition(GoapKey.dangercombat, false);
                 AddPrecondition(GoapKey.producedcorpse, false);
                 AddPrecondition(GoapKey.consumecorpse, false);
             }
+            else if (classConfig.Mode == Mode.AttendedGather)
+            {
+                navigation.OnAnyPointReached += Navigation_OnWayPointReached;
+            }
 
-            targetFinderCts = new CancellationTokenSource();
+            sideActivityCts = new CancellationTokenSource();
         }
 
         public void Dispose()
         {
-            targetFinderCts.Dispose();
+            sideActivityCts.Dispose();
         }
 
-        public override void OnActionEvent(object sender, ActionEventArgs e)
+        private void Abort()
         {
-            if (e.Key == GoapKey.abort)
-            {
-                targetFinderCts.Cancel();
-            }
-
-            if (e.Key == GoapKey.resume)
-            {
-                if (classConfig.Mode != Mode.AttendedGather)
-                {
-                    StartLookingForTarget();
-                    navigation.ResetStuckParameters();
-
-                    if (!navigation.HasWaypoint())
-                    {
-                        RefillWaypoints(true);
-                    }
-                    else
-                    {
-                        navigation.Resume();
-                    }
-                }
-            }
+            sideActivityCts.Cancel();
+            navigation.Stop();
         }
 
-        public override ValueTask OnEnter()
+        private void Resume()
         {
-            SendActionEvent(new ActionEventArgs(GoapKey.fighting, false));
+            onEnterTime = DateTime.UtcNow;
+
+            StartSideActivity();
 
             if (!navigation.HasWaypoint())
             {
@@ -144,22 +132,30 @@ namespace Core.Goals
                 shouldMount = true;
                 Log("Mount up since desination far away");
             }
+        }
 
-            if (classConfig.Mode != Mode.AttendedGather)
+        public override void OnActionEvent(object sender, ActionEventArgs e)
+        {
+            if (e.Key == GoapKey.abort)
             {
-                StartLookingForTarget();
+                Abort();
             }
 
-            onEnterTime = DateTime.UtcNow;
+            if (e.Key == GoapKey.resume)
+            {
+                Resume();
+            }
+        }
 
+        public override ValueTask OnEnter()
+        {
+            Resume();
             return base.OnEnter();
         }
 
         public override ValueTask OnExit()
         {
-            navigation.Stop();
-            targetFinderCts.Cancel();
-
+            Abort();
             return base.OnExit();
         }
 
@@ -178,14 +174,9 @@ namespace Core.Goals
                 input.Jump();
             }
 
-            if (classConfig.Mode == Mode.AttendedGather)
-            {
-                AlternateGatherTypes();
-            }
-
             if (playerReader.Bits.PlayerInCombat && classConfig.Mode != Mode.AttendedGather) { return ValueTask.CompletedTask; }
 
-            navigation.Update(targetFinderCts);
+            navigation.Update(sideActivityCts);
 
             RandomJump();
 
@@ -194,13 +185,24 @@ namespace Core.Goals
             return ValueTask.CompletedTask;
         }
 
-        private void StartLookingForTarget()
+        private void StartSideActivity()
         {
-            targetFinderCts.Dispose();
-            targetFinderCts = new CancellationTokenSource();
+            sideActivityCts.Dispose();
+            sideActivityCts = new CancellationTokenSource();
 
-            targetFinderThread = new Thread(Thread_LookingForTarget);
-            targetFinderThread.Start();
+            if (classConfig.Mode == Mode.AttendedGather)
+            {
+                if (classConfig.GatherFindKeyConfig.Count > 1)
+                {
+                    sideActivityThread = new Thread(Thread_AttendedGather);
+                    sideActivityThread.Start();
+                }
+            }
+            else
+            {
+                sideActivityThread = new Thread(Thread_LookingForTarget);
+                sideActivityThread.Start();
+            }
         }
 
         private void Thread_LookingForTarget()
@@ -212,30 +214,33 @@ namespace Core.Goals
                 !playerReader.Bits.TargetIsDead;
 
             bool found = false;
-            while (!found && !targetFinderCts.IsCancellationRequested)
+            while (!found && !sideActivityCts.IsCancellationRequested)
             {
                 if (classConfig.TargetNearestTarget.MillisecondsSinceLastClick > random.Next(minMs, maxMs))
                 {
-                    found = targetFinder.Search(NpcNameToFind, validTarget, targetFinderCts);
+                    found = targetFinder.Search(NpcNameToFind, validTarget, sideActivityCts);
                 }
                 wait.Update(1);
             }
 
             if (found)
             {
-                targetFinderCts.Cancel();
+                sideActivityCts.Cancel();
                 Log("Found target!");
             }
         }
 
+        private void Thread_AttendedGather()
+        {
+            while (!sideActivityCts.IsCancellationRequested)
+            {
+                AlternateGatherTypes();
+                wait.Update(1);
+            }
+        }
 
         private void AlternateGatherTypes()
         {
-            if (classConfig.GatherFindKeyConfig.Count < 1)
-            {
-                return;
-            }
-
             var oldestKey = classConfig.GatherFindKeyConfig.OrderByDescending(x => x.MillisecondsSinceLastClick).First();
             if (oldestKey.MillisecondsSinceLastClick > 3000)
             {
@@ -277,6 +282,11 @@ namespace Core.Goals
 
         private void Navigation_OnWayPointReached(object? sender, EventArgs e)
         {
+            if (classConfig.Mode == Mode.AttendedGather && !mountHandler.IsMounted())
+            {
+                shouldMount = true;
+            }
+
             MountIfRequired();
         }
 
