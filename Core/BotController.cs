@@ -192,7 +192,6 @@ namespace Core
 
         public void ScreenshotRefreshThread()
         {
-            var nodeFound = false;
             var stopWatch = new Stopwatch();
             while (!cts.IsCancellationRequested)
             {
@@ -215,12 +214,12 @@ namespace Core
                         this.npcNameFinder.FakeUpdate();
                     }
 
-                    lastScreenshot = DateTime.UtcNow;
-                }
+                    if (ClassConfig != null && this.ClassConfig.Mode == Mode.AttendedGather)
+                    {
+                        minimapNodeFinder.TryFind();
+                    }
 
-                if (ClassConfig != null && this.ClassConfig.Mode == Mode.AttendedGather)
-                {
-                    nodeFound = this.minimapNodeFinder.Find(nodeFound) != null;
+                    lastScreenshot = DateTime.UtcNow;
                 }
 
                 if (updatePlayerPostion.ElapsedMilliseconds > 500)
@@ -247,7 +246,11 @@ namespace Core
             {
                 if (!actionThread.Active)
                 {
-                    this.GrindSession.StartBotSession();
+                    if (ClassConfig?.Mode is Mode.AttendedGrind or Mode.Grind)
+                    {
+                        this.GrindSession.StartBotSession();
+                    }
+
                     this.pather.DrawLines();
 
                     actionThread.Active = true;
@@ -257,8 +260,13 @@ namespace Core
                 else
                 {
                     actionThread.Active = false;
-                    GrindSession.StopBotSession("Stopped By Player", false);
+                    if (ClassConfig?.Mode is Mode.AttendedGrind or Mode.Grind)
+                    {
+                        GrindSession.StopBotSession("Stopped By Player", false);
+                    }
+
                     AddonReader.SoftReset();
+                    ConfigurableInput?.Reset();
                 }
 
                 StatusChanged?.Invoke(this, EventArgs.Empty);
@@ -320,12 +328,12 @@ namespace Core
             var actionFactory = new GoalFactory(logger, AddonReader, ConfigurableInput, DataConfig, npcNameFinder, npcNameTargeting, pather, ExecGameCommand);
 
             var goapAgentState = new GoapAgentState();
-            var availableActions = actionFactory.CreateGoals(config, blacklist, goapAgentState, wait);
+            var (routeInfo, availableActions) = actionFactory.CreateGoals(config, blacklist, goapAgentState, wait);
 
             this.GoapAgent?.Dispose();
             this.GoapAgent = new GoapAgent(logger, goapAgentState, ConfigurableInput, AddonReader, availableActions, blacklist);
 
-            RouteInfo = actionFactory.RouteInfo;
+            RouteInfo = routeInfo;
             this.actionThread = new GoalThread(logger, GoapAgent, AddonReader, RouteInfo);
 
             // hookup events between actions
@@ -420,7 +428,7 @@ namespace Core
                 SelectedClassFilename = classFilename;
             }
 
-            ProfileLoaded?.Invoke(this, EventArgs.Empty);
+            LoadProfile();
         }
 
         public List<string> ClassFileList()
@@ -447,12 +455,18 @@ namespace Core
         public void LoadPathProfile(string pathFilename)
         {
             StopBot();
-            if(InitialiseFromFile(SelectedClassFilename, pathFilename))
+            if (InitialiseFromFile(SelectedClassFilename, pathFilename))
             {
                 SelectedPathFilename = pathFilename;
             }
 
+            LoadProfile();
+        }
+
+        private void LoadProfile()
+        {
             ProfileLoaded?.Invoke(this, EventArgs.Empty);
+            WowScreen.Enabled = ClassConfig?.Mode != Mode.AttendedGather;
         }
 
         public void OverrideClassConfig(ClassConfiguration classConfiguration)

@@ -4,6 +4,8 @@ using System.Numerics;
 using System.Threading;
 using SharedLib.Extensions;
 
+#pragma warning disable 162
+
 namespace Core
 {
     public partial class PlayerDirection : IPlayerDirection, IDisposable

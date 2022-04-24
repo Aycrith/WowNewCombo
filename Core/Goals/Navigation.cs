@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,6 +6,8 @@ using System.Numerics;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using SharedLib.Extensions;
+
+#pragma warning disable 162
 
 namespace Core.Goals
 {
@@ -74,6 +76,7 @@ namespace Core.Goals
         public event EventHandler? OnPathCalculated;
         public event EventHandler? OnWayPointReached;
         public event EventHandler? OnDestinationReached;
+        public event EventHandler? OnAnyPointReached;
 
         public bool SimplifyRouteToWaypoint { get; set; } = true;
 
@@ -138,7 +141,7 @@ namespace Core.Goals
             }
 
             LastActive = DateTime.UtcNow;
-            input.SetKeyState(input.ForwardKey, true);
+            input.SetKeyState(input.ForwardKey, true, true);
 
             // main loop
             var location = playerReader.PlayerLocation;
@@ -160,6 +163,8 @@ namespace Core.Goals
                         ReduceByDistance(MinDistance);
                     else
                         routeToNextWaypoint.Pop();
+
+                    OnAnyPointReached?.Invoke(this, EventArgs.Empty);
 
                     lastDistance = float.MaxValue;
                     UpdateTotalRoute();

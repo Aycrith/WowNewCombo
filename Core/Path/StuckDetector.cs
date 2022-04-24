@@ -99,10 +99,10 @@ namespace Core
                 {
                     // back up a bit, added "remove" move forward
                     logger.LogInformation($"Trying to unstick by backing up for {actionDuration}ms");
-                    input.SetKeyState(input.BackwardKey, true);
-                    input.SetKeyState(input.ForwardKey, false);
+                    input.SetKeyState(input.BackwardKey, true, true);
+                    input.SetKeyState(input.ForwardKey, false, true);
                     Thread.Sleep(actionDuration);
-                    input.SetKeyState(input.BackwardKey, false);
+                    input.SetKeyState(input.BackwardKey, false, true);
                 }
                 this.stopMoving.Stop();
 
@@ -111,14 +111,14 @@ namespace Core
                 var key = r == 0 ? input.TurnLeftKey : input.TurnRightKey;
                 var turnDuration = random.Next(0, 800) + 200;
                 logger.LogInformation($"Trying to unstick by turning for {turnDuration}ms");
-                input.SetKeyState(key, true);
+                input.SetKeyState(key, true, true);
                 Thread.Sleep(turnDuration);
-                input.SetKeyState(key, false);
+                input.SetKeyState(key, false, true);
 
                 // Move forward
                 var strafeDuration = random.Next(0, 2000) + actionDurationSeconds;
                 logger.LogInformation($"Trying to unstick by moving forward after turning for {strafeDuration}ms");
-                input.SetKeyState(input.ForwardKey, true);
+                input.SetKeyState(input.ForwardKey, true, true);
                 Thread.Sleep(strafeDuration);
 
                 input.Jump();

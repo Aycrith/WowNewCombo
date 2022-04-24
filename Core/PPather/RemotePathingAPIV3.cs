@@ -9,6 +9,8 @@ using AnTCP.Client;
 using SharedLib;
 using System.Numerics;
 
+#pragma warning disable 162
+
 namespace Core
 {
     public sealed class RemotePathingAPIV3 : IPPather, IDisposable
