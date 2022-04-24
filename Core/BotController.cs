@@ -1,4 +1,4 @@
-using Core.Goals;
+﻿using Core.Goals;
 using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -328,12 +328,12 @@ namespace Core
             var actionFactory = new GoalFactory(logger, AddonReader, ConfigurableInput, DataConfig, npcNameFinder, npcNameTargeting, pather, ExecGameCommand);
 
             var goapAgentState = new GoapAgentState();
-            var availableActions = actionFactory.CreateGoals(config, blacklist, goapAgentState, wait);
+            var (routeInfo, availableActions) = actionFactory.CreateGoals(config, blacklist, goapAgentState, wait);
 
             this.GoapAgent?.Dispose();
             this.GoapAgent = new GoapAgent(logger, goapAgentState, ConfigurableInput, AddonReader, availableActions, blacklist);
 
-            RouteInfo = actionFactory.RouteInfo;
+            RouteInfo = routeInfo;
             this.actionThread = new GoalThread(logger, GoapAgent, AddonReader, RouteInfo);
 
             // hookup events between actions
