@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Numerics;
+using Newtonsoft.Json;
 using SharedLib.Extensions;
 
 namespace WowheadDB
@@ -12,6 +13,7 @@ namespace WowheadDB
         public int type;
         public int id;
 
+        [JsonIgnore]
         public List<Vector3> points => VectorExt.FromList(coords);
     }
 }
