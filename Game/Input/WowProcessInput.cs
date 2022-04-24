@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -30,6 +30,17 @@ namespace Game
 
             this.nativeInput = new InputWindowsNative(wowProcess.WarcraftProcess, MIN_DELAY, MAX_DELAY);
             this.simulatorInput = new InputSimulator(wowProcess.WarcraftProcess, MIN_DELAY, MAX_DELAY);
+        }
+
+        public void Reset()
+        {
+            lock (keyDownDict)
+            {
+                foreach (var kvp in keyDownDict)
+                {
+                    keyDownDict[kvp.Key] = false;
+                }
+            }
         }
 
         private void KeyDown(ConsoleKey key, bool forced)

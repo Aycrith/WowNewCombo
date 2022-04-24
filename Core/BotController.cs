@@ -267,6 +267,7 @@ namespace Core
                     }
 
                     AddonReader.SoftReset();
+                    ConfigurableInput?.Reset();
                 }
 
                 StatusChanged?.Invoke(this, EventArgs.Empty);
