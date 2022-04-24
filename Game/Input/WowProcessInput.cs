@@ -32,10 +32,13 @@ namespace Game
             this.simulatorInput = new InputSimulator(wowProcess.WarcraftProcess, MIN_DELAY, MAX_DELAY);
         }
 
-        private void KeyDown(ConsoleKey key)
+        private void KeyDown(ConsoleKey key, bool forced)
         {
             if (IsKeyDown(key))
-                return;
+            {
+                if (!forced)
+                    return;
+            }
 
             if (LogInput)
                 LogKeyDown(logger, key);
@@ -44,10 +47,13 @@ namespace Game
             nativeInput.KeyDown((int)key);
         }
 
-        private void KeyUp(ConsoleKey key)
+        private void KeyUp(ConsoleKey key, bool forced)
         {
             if (!IsKeyDown(key))
-                return;
+            {
+                if (!forced)
+                    return;
+            }
 
             if (LogInput)
                 LogKeyUp(logger, key);
@@ -105,9 +111,9 @@ namespace Game
             keyDownDict[key] = false;
         }
 
-        public void SetKeyState(ConsoleKey key, bool pressDown)
+        public void SetKeyState(ConsoleKey key, bool pressDown, bool forced = false)
         {
-            if (pressDown) { KeyDown(key); } else { KeyUp(key); }
+            if (pressDown) { KeyDown(key, forced); } else { KeyUp(key, forced); }
         }
 
         public void SetCursorPosition(Point position)

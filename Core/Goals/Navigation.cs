@@ -140,7 +140,7 @@ namespace Core.Goals
             }
 
             LastActive = DateTime.UtcNow;
-            input.SetKeyState(input.ForwardKey, true);
+            input.SetKeyState(input.ForwardKey, true, true);
 
             // main loop
             var location = playerReader.PlayerLocation;

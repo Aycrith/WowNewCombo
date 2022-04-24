@@ -41,14 +41,14 @@ namespace Core.Goals
                     (MathF.Abs(XCoord - playerReader.XCoord) > MinDist || MathF.Abs(YCoord - playerReader.YCoord) > MinDist))
                 {
                     //"StopForward - Cancel interact"
-                    input.SetKeyState(input.ForwardKey, true);
+                    input.SetKeyState(input.ForwardKey, true, true);
                     cts.Token.WaitHandle.WaitOne(2);
                 }
 
-                input.SetKeyState(input.ForwardKey, false);
+                input.SetKeyState(input.ForwardKey, false, true);
                 cts.Token.WaitHandle.WaitOne(2);
                 //"StopForward"
-                input.SetKeyState(input.BackwardKey, false);
+                input.SetKeyState(input.BackwardKey, false, true);
                 cts.Token.WaitHandle.WaitOne(10);
             }
 
@@ -60,9 +60,9 @@ namespace Core.Goals
         {
             if (Direction != playerReader.Direction)
             {
-                input.SetKeyState(input.TurnLeftKey, false);
+                input.SetKeyState(input.TurnLeftKey, false, true);
                 //"StopTurn"
-                input.SetKeyState(input.TurnRightKey, false);
+                input.SetKeyState(input.TurnRightKey, false, true);
                 cts.Token.WaitHandle.WaitOne(1);
             }
 
