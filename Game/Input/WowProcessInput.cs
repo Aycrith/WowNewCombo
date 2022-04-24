@@ -1,15 +1,17 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Threading;
 using WinAPI;
 
+#pragma warning disable 162
+
 namespace Game
 {
     public partial class WowProcessInput : IMouseInput
     {
-        public readonly bool LogInput = false;
+        public const bool LogInput = false;
 
         private const int MIN_DELAY = 25;
         private const int MAX_DELAY = 55;

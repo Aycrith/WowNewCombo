@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,6 +6,8 @@ using System.Numerics;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using SharedLib.Extensions;
+
+#pragma warning disable 162
 
 namespace Core.Goals
 {

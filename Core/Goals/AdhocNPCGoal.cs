@@ -8,6 +8,8 @@ using System.Numerics;
 using System.Linq;
 using System.Threading;
 
+#pragma warning disable 162
+
 namespace Core.Goals
 {
     public class AdhocNPCGoal : GoapGoal, IRouteProvider

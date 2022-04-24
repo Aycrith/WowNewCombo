@@ -1,8 +1,10 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Numerics;
 using System.Threading;
 using SharedLib.Extensions;
+
+#pragma warning disable 162
 
 namespace Core
 {

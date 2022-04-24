@@ -9,6 +9,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using SharedLib.Extensions;
 
+#pragma warning disable 162
+
 namespace Core.Goals
 {
     public class FollowRouteGoal : GoapGoal, IRouteProvider, IDisposable
