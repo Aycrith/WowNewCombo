@@ -76,9 +76,12 @@ namespace Core
             }
             else if (classConfig.Mode == Mode.AttendedGather)
             {
+                followNav.SimplifyRouteToWaypoint = false;
+
                 availableActions.Add(walkToCorpseAction);
                 availableActions.Add(genericCombat);
                 availableActions.Add(approachTarget);
+                availableActions.Add(new WaitForGathering(logger, wait, addonReader.PlayerReader, stopMoving));
                 availableActions.Add(followRouteAction);
 
                 if (classConfig.Parallel.Sequence.Count > 0)

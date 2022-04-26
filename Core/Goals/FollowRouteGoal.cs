@@ -86,14 +86,14 @@ namespace Core.Goals
 
             AddPrecondition(GoapKey.dangercombat, false);
 
-            if (classConfig.Mode != Mode.AttendedGather)
+            if (classConfig.Mode == Mode.AttendedGather)
+            {
+                navigation.OnAnyPointReached += Navigation_OnWayPointReached;
+            }
+            else
             {
                 AddPrecondition(GoapKey.producedcorpse, false);
                 AddPrecondition(GoapKey.consumecorpse, false);
-            }
-            else if (classConfig.Mode == Mode.AttendedGather)
-            {
-                navigation.OnAnyPointReached += Navigation_OnWayPointReached;
             }
 
             sideActivityCts = new CancellationTokenSource();
