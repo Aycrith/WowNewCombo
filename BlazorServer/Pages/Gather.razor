@@ -24,11 +24,14 @@ else
             <audio id="audio_player" controls loop></audio>
         </div>
     </div>
+    <div class="row">
+        <LogComponent />
+    </div>
 </div>
 }
 
 @code {
-    private bool lastFound = false;
+    private int lastAmount;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -38,15 +41,17 @@ else
         }
     }
 
-    protected void NodeFoundHandler(bool nodeFound)
+    protected void NodeFoundHandler(int nodeFound)
     {
-        if(lastFound != nodeFound)
-        {
-            lastFound = nodeFound;
+        if (!botController.IsBotActive)
+            return;
 
-            if (nodeFound)
+        if (lastAmount != nodeFound)
+        {
+            lastAmount = nodeFound;
+            if (nodeFound > 0)
             {
-                botController.StopBot();
+                botController.MinimapNodeFound();
                 JSRuntime.InvokeVoidAsync("play");
             }
             else

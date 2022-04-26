@@ -50,6 +50,11 @@ namespace Core
             throw new NotImplementedException();
         }
 
+        public void MinimapNodeFound()
+        {
+            throw new NotImplementedException();
+        }
+
         public void ToggleBotStatus()
         {
             throw new NotImplementedException();

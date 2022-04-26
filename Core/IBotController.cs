@@ -40,6 +40,8 @@ namespace Core
         void ToggleBotStatus();
         void StopBot();
 
+        void MinimapNodeFound();
+
         void Shutdown();
 
         bool IsBotActive { get; }

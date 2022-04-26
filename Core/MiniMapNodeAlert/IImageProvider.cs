@@ -12,9 +12,12 @@ namespace Core
     {
         public Point Point { get; }
 
-        public NodeEventArgs(Point point)
+        public int Amount { get; }
+
+        public NodeEventArgs(Point point, int amount)
         {
             Point = point;
+            Amount = amount;
         }
     }
 }
