@@ -1,4 +1,4 @@
-using Core.Goals;
+﻿using Core.Goals;
 using SharedLib.NpcFinder;
 using Core.PPather;
 using Microsoft.Extensions.Logging;
@@ -54,10 +54,10 @@ namespace Core
 
             TargetFinder targetFinder = new(logger, input, classConfig, wait, addonReader.PlayerReader, blacklist, npcNameTargeting);
 
-            Navigation followNav = new(logger, playerDirection, input, addonReader, stopMoving, stuckDetector, pather, mountHandler);
+            Navigation followNav = new(logger, playerDirection, input, addonReader, stopMoving, stuckDetector, pather, mountHandler, classConfig.Mode);
             FollowRouteGoal followRouteAction = new(logger, input, wait, addonReader, classConfig, pathPoints, followNav, mountHandler, npcNameFinder, targetFinder);
 
-            Navigation corpseNav = new(logger, playerDirection, input, addonReader, stopMoving, stuckDetector, pather, mountHandler);
+            Navigation corpseNav = new(logger, playerDirection, input, addonReader, stopMoving, stuckDetector, pather, mountHandler, classConfig.Mode);
             WalkToCorpseGoal walkToCorpseAction = new(logger, input, wait, addonReader, corpseNav, stopMoving);
 
             CombatGoal genericCombat = new(logger, input, wait, addonReader, stopMoving, classConfig, castingHandler, mountHandler);
@@ -133,7 +133,7 @@ namespace Core
 
                 foreach (var item in classConfig.NPC.Sequence)
                 {
-                    var nav = new Navigation(logger, playerDirection, input, addonReader, stopMoving, stuckDetector, pather, mountHandler);
+                    var nav = new Navigation(logger, playerDirection, input, addonReader, stopMoving, stuckDetector, pather, mountHandler, classConfig.Mode);
                     availableActions.Add(new AdhocNPCGoal(logger, input, item, wait, addonReader, nav, stopMoving, npcNameTargeting, classConfig, blacklist, mountHandler, exec));
                     item.Path.Clear();
                     item.Path.AddRange(ReadPath(item.Name, item.PathFilename));
@@ -218,7 +218,7 @@ namespace Core
 
                 foreach (var item in classConfig.NPC.Sequence)
                 {
-                    var nav = new Navigation(logger, playerDirection, input, addonReader, stopMoving, stuckDetector, pather, mountHandler);
+                    var nav = new Navigation(logger, playerDirection, input, addonReader, stopMoving, stuckDetector, pather, mountHandler, classConfig.Mode);
                     availableActions.Add(new AdhocNPCGoal(logger, input, item, wait, addonReader, nav, stopMoving, npcNameTargeting, classConfig, blacklist, mountHandler, exec));
                     item.Path.Clear();
                     item.Path.AddRange(ReadPath(item.Name, item.PathFilename));

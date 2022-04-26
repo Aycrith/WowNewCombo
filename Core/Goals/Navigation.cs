@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -87,7 +87,7 @@ namespace Core.Goals
 
         private readonly CancellationTokenSource _cts;
 
-        public Navigation(ILogger logger, IPlayerDirection playerDirection, ConfigurableInput input, AddonReader addonReader, StopMoving stopMoving, StuckDetector stuckDetector, IPPather pather, MountHandler mountHandler)
+        public Navigation(ILogger logger, IPlayerDirection playerDirection, ConfigurableInput input, AddonReader addonReader, StopMoving stopMoving, StuckDetector stuckDetector, IPPather pather, MountHandler mountHandler, Mode mode)
         {
             this.logger = logger;
             this.playerDirection = playerDirection;
@@ -102,6 +102,13 @@ namespace Core.Goals
             AvgDistance = MinDistance;
 
             _cts = new CancellationTokenSource();
+
+            switch (mode)
+            {
+                case Mode.AttendedGather:
+                    MaxDistance = MinDistance;
+                    break;
+            }
         }
 
         public void Dispose()
@@ -174,15 +181,14 @@ namespace Core.Goals
                 {
                     if (wayPoints.Count > 0)
                     {
-                        routeToNextWaypoint.Push(wayPoints.Pop());
-                        stuckDetector.SetTargetLocation(routeToNextWaypoint.Peek());
+                        wayPoints.Pop();
                         UpdateTotalRoute();
+
+                        if (debug)
+                            LogDebug($"Reached wayPoint! Distance: {distance} -- Remains: {wayPoints.Count}");
+
+                        OnWayPointReached?.Invoke(this, EventArgs.Empty);
                     }
-
-                    if (debug)
-                        LogDebug($"Move to next wayPoint! Remains: {wayPoints.Count} -- distance: {distance}");
-
-                    OnWayPointReached?.Invoke(this, EventArgs.Empty);
                 }
                 else
                 {
