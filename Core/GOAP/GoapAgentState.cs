@@ -7,5 +7,6 @@ namespace Core.GOAP
         public bool NeedLoot { get; set; }
         public bool NeedSkin { get; set; }
         public int LastCombatKillCount { get; set; }
+        public bool Gathering { get; set; }
     }
 }

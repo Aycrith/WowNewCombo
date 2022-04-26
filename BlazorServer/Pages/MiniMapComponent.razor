@@ -32,9 +32,10 @@
     public int Size { get; set; } = 200;
 
     [Parameter]
-    public EventCallback<bool> OnNodeFound { get; set; }
+    public EventCallback<int> OnNodeFound { get; set; }
 
     private bool lastNodeFound = false;
+    private int lastNodeCount = 0;
 
     private bool previewEnabled = true;
 
@@ -56,14 +57,16 @@
 
     private void NodeFound(object? source, NodeEventArgs e)
     {
-        var nodeFound = e.Point.X > 0 && e.Point.Y > 0;
+        if (!botController.IsBotActive) return;
 
-        if (lastNodeFound != nodeFound)
+        bool nodeFound = e.Point.X > 0 && e.Point.Y > 0;
+        if (lastNodeFound != nodeFound || e.Amount != lastNodeCount)
         {
             base.InvokeAsync(() =>
             {
-                OnNodeFound.InvokeAsync(nodeFound);
+                OnNodeFound.InvokeAsync(e.Amount);
             });
+            lastNodeCount = e.Amount;
         }
         lastNodeFound = nodeFound;
 

@@ -297,7 +297,7 @@ Take a look at the class files in `/Json/class` for examples of what you can do.
 | `"Parallel"` | Sequence of `KeyAction(s)` to execute upon [Parallel Goal](#Parallel-Goals) | true | `[]` |
 | `"NPC"` | Sequence of `KeyAction(s)` to execute upon [NPC Goal](#NPC-Goals) | true | `[]` |
 | --- | --- | --- | --- |
-| `"GatherFindKeys"` | List of strings for switching between gathering profiles | true | `[]` |
+| `"GatherFindKeys"` | List of strings for switching between gathering profiles | true | `string[]` |
 | `"JumpKey"` | `Consolekey` to be pressed on Jump | true | `"Spacebar"` |
 | `"InteractKey"` | `Consolekey` to be pressed on Interact | true | `"I"` |
 | `"TargetLastTargetKey"` | `Consolekey` to be pressed to Target last target | true | `"G"` |
@@ -1204,7 +1204,7 @@ e.g. Rogue.json
 {
     "PathFilename": "Herb_EPL.json",
     "Mode": "AttendedGather",
-    "GatherFindKeys":  [1,2]
+    "GatherFindKeys":  ["1","2"]
 }
 ```
 
@@ -1214,7 +1214,7 @@ The available modes are:
 | --- | --- |
 | `"Grind"` | This is the default mode where the bot will pull mobs and follow a route |
 | `"CorpseRun"` | This mode only has 2 goals. The "Wait" goal waits while you are alive. The "CorpseRun" will run back to your corpse when you die. This can be useful if you are farming an instance and die, the bot will run you back some or all of the way to the instance entrance. |
-| `"AttendedGather"` | When this mode is active and the Gather tab in the UI is selected, it will run the path and scan the minimap for the yellow nodes which indicate a herb or mining node. When it finds a node it will stop and alert you by playing a youtube video, you will then have to manually pick the herb/mine and then start the bot again. |
+| `"AttendedGather"` | When this mode is active, you have to `Start Bot` under `Gather` tab and stay at `Gather` tab. It will follow the path and scan the minimap for the yellow nodes which indicate a herb or mining node. Upon found one, the player movement going to stop and alert you by playing beeping sound. Manually have to click at the herb/mine. In the `LogComponent` the necessary prompt will be shown to proceed. **Important note**: `Falling` and `Jumping` means the same thing. So if you lose the ground the bot going to take over control however if a yellow node is visible on the minimap you going to get the control back! Be patient. |
 | `"AttendedGrind"` | This is useful if you want to control the path the bot takes, but want it to pull and kill any targets you select. |
 
 # User Interface

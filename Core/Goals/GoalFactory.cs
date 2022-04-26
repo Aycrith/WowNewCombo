@@ -50,14 +50,14 @@ namespace Core
 
             StuckDetector stuckDetector = new(logger, input, addonReader.PlayerReader, playerDirection, stopMoving);
             CombatUtil combatUtil = new(logger, input, wait, addonReader.PlayerReader);
-            MountHandler mountHandler = new(logger, input, classConfig, wait, addonReader.PlayerReader, castingHandler, stopMoving);
+            MountHandler mountHandler = new(logger, input, classConfig, wait, addonReader, castingHandler, stopMoving);
 
             TargetFinder targetFinder = new(logger, input, classConfig, wait, addonReader.PlayerReader, blacklist, npcNameTargeting);
 
-            Navigation followNav = new(logger, playerDirection, input, addonReader, stopMoving, stuckDetector, pather, mountHandler);
+            Navigation followNav = new(logger, playerDirection, input, addonReader, stopMoving, stuckDetector, pather, mountHandler, classConfig.Mode);
             FollowRouteGoal followRouteAction = new(logger, input, wait, addonReader, classConfig, pathPoints, followNav, mountHandler, npcNameFinder, targetFinder);
 
-            Navigation corpseNav = new(logger, playerDirection, input, addonReader, stopMoving, stuckDetector, pather, mountHandler);
+            Navigation corpseNav = new(logger, playerDirection, input, addonReader, stopMoving, stuckDetector, pather, mountHandler, classConfig.Mode);
             WalkToCorpseGoal walkToCorpseAction = new(logger, input, wait, addonReader, corpseNav, stopMoving);
 
             CombatGoal genericCombat = new(logger, input, wait, addonReader, stopMoving, classConfig, castingHandler, mountHandler);
@@ -76,9 +76,12 @@ namespace Core
             }
             else if (classConfig.Mode == Mode.AttendedGather)
             {
+                followNav.SimplifyRouteToWaypoint = false;
+
                 availableActions.Add(walkToCorpseAction);
                 availableActions.Add(genericCombat);
                 availableActions.Add(approachTarget);
+                availableActions.Add(new WaitForGathering(logger, wait, addonReader.PlayerReader, stopMoving));
                 availableActions.Add(followRouteAction);
 
                 if (classConfig.Parallel.Sequence.Count > 0)
@@ -130,7 +133,7 @@ namespace Core
 
                 foreach (var item in classConfig.NPC.Sequence)
                 {
-                    var nav = new Navigation(logger, playerDirection, input, addonReader, stopMoving, stuckDetector, pather, mountHandler);
+                    var nav = new Navigation(logger, playerDirection, input, addonReader, stopMoving, stuckDetector, pather, mountHandler, classConfig.Mode);
                     availableActions.Add(new AdhocNPCGoal(logger, input, item, wait, addonReader, nav, stopMoving, npcNameTargeting, classConfig, blacklist, mountHandler, exec));
                     item.Path.Clear();
                     item.Path.AddRange(ReadPath(item.Name, item.PathFilename));
@@ -215,7 +218,7 @@ namespace Core
 
                 foreach (var item in classConfig.NPC.Sequence)
                 {
-                    var nav = new Navigation(logger, playerDirection, input, addonReader, stopMoving, stuckDetector, pather, mountHandler);
+                    var nav = new Navigation(logger, playerDirection, input, addonReader, stopMoving, stuckDetector, pather, mountHandler, classConfig.Mode);
                     availableActions.Add(new AdhocNPCGoal(logger, input, item, wait, addonReader, nav, stopMoving, npcNameTargeting, classConfig, blacklist, mountHandler, exec));
                     item.Path.Clear();
                     item.Path.AddRange(ReadPath(item.Name, item.PathFilename));

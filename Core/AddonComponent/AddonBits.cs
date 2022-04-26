@@ -55,5 +55,7 @@
         public bool IsDrowning => v2.IsBitSet(0);
 
         public bool IsCorpseInRange => v2.IsBitSet(1);
+
+        public bool IsIndoors => v2.IsBitSet(2);
     }
 }

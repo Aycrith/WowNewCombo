@@ -51,7 +51,8 @@ end
 function DataToColor:Base2Converter2()
     return
     DataToColor:MakeIndexBase2(DataToColor:IsPlayerDrowning(), 0) +
-    DataToColor:MakeIndexBase2(DataToColor.corpseInRange, 1)
+    DataToColor:MakeIndexBase2(DataToColor.corpseInRange, 1) +
+    DataToColor:MakeIndexBase2(DataToColor:IsIndoors(), 2)
 end
 
 function DataToColor:Base2CustomTrigger(t)
@@ -543,6 +544,10 @@ end
 
 function DataToColor:IsPlayerFalling()
     return IsFalling() and 1 or 0
+end
+
+function DataToColor:IsIndoors()
+    return IsIndoors() and 1 or 0
 end
 
 function DataToColor:IsPlayerDrowning()

@@ -255,7 +255,7 @@ namespace Core.Goals
 
         private void MountIfRequired()
         {
-            if (shouldMount && !mountHandler.IsMounted())
+            if (shouldMount && mountHandler.CanMount())
             {
                 shouldMount = false;
                 mountHandler.MountUp();

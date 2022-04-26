@@ -51,6 +51,7 @@ function DataToColor:RegisterEvents()
     DataToColor:RegisterEvent('ACTIONBAR_SLOT_CHANGED', 'ActionbarSlotChanged')
     DataToColor:RegisterEvent('CORPSE_IN_RANGE', 'CorpseInRangeEvent')
     DataToColor:RegisterEvent('CORPSE_OUT_OF_RANGE', 'CorpseOutOfRangeEvent')
+    DataToColor:RegisterEvent('CHAT_MSG_OPENING', 'ChatMessageOpeningEvent')
 end
 
 function DataToColor:OnUIErrorMessage(event, messageType, message)
@@ -281,6 +282,17 @@ end
 
 function DataToColor:CorpseOutOfRangeEvent(event)
     DataToColor.corpseInRange = 0
+end
+
+function DataToColor:ChatMessageOpeningEvent(event, ...)
+    local _, playerName, _, _, playerName2 = ...
+    local function isempty(s)
+        return s == nil or s == ''
+    end
+    if isempty(playerName) and isempty(playerName2) then
+        DataToColor.lastCastEvent = CAST_SUCCESS
+        DataToColor.uiErrorMessage = CAST_SUCCESS
+    end
 end
 
 DataToColor.playerInteractIterator = 0

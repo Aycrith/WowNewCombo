@@ -24,7 +24,8 @@ namespace Core.GOAP
         resume = 141,
         isalive = 170,
         isswimming = 180,
-        itemsbroken = 190
+        itemsbroken = 190,
+        gathering = 200
     }
 
     public static class GoapKeyDescription
@@ -86,6 +87,9 @@ namespace Core.GOAP
 
             { new(GoapKey.itemsbroken, true), "Broken" },
             { new(GoapKey.itemsbroken, false), "!Broken" },
+
+            { new(GoapKey.gathering, true), "Gathering" },
+            { new(GoapKey.gathering, false), "!Gathering" },
         };
 
         public static string ToString(GoapKey key, bool state)

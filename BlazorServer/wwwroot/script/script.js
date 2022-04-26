@@ -3,8 +3,10 @@ const clip = 'data:audio/ogg;base64,T2dnUwACAAAAAAAAAADSeWyXAAAAAHTSMw8BHgF2b3Ji
 
 function initAudioPlayer() {
     audio = document.getElementById("audio_player");
-    if(audio != null)
+    if (audio != null) {
         audio.src = clip;
+        audio.volume = 0.25;
+    }
 }
 
 function play() {

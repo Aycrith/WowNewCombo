@@ -86,14 +86,14 @@ namespace Core.Goals
 
             AddPrecondition(GoapKey.dangercombat, false);
 
-            if (classConfig.Mode != Mode.AttendedGather)
+            if (classConfig.Mode == Mode.AttendedGather)
+            {
+                navigation.OnAnyPointReached += Navigation_OnWayPointReached;
+            }
+            else
             {
                 AddPrecondition(GoapKey.producedcorpse, false);
                 AddPrecondition(GoapKey.consumecorpse, false);
-            }
-            else if (classConfig.Mode == Mode.AttendedGather)
-            {
-                navigation.OnAnyPointReached += Navigation_OnWayPointReached;
             }
 
             sideActivityCts = new CancellationTokenSource();
@@ -125,8 +125,9 @@ namespace Core.Goals
                 navigation.Resume();
             }
 
-            if (classConfig.UseMount &&
-                mountHandler.CanMount() && !shouldMount &&
+            if (!shouldMount &&
+                classConfig.UseMount &&
+                mountHandler.CanMount() &&
                 mountHandler.ShouldMount(navigation.TotalRoute.Last()))
             {
                 shouldMount = true;
@@ -170,7 +171,7 @@ namespace Core.Goals
 
             if (playerReader.Bits.IsDrowning)
             {
-                Log("Drowning! Swim up");
+                //Log("Drowning! Swim up");
                 input.Jump();
             }
 
@@ -251,19 +252,13 @@ namespace Core.Goals
 
         private void MountIfRequired()
         {
-            if (shouldMount && !mountHandler.IsMounted())
+            if (shouldMount && classConfig.UseMount && !npcNameFinder.MobsVisible &&
+                mountHandler.CanMount())
             {
-                if (!npcNameFinder.MobsVisible)
-                {
-                    shouldMount = false;
-                    Log("Mount up");
-                    mountHandler.MountUp();
-                    navigation.ResetStuckParameters();
-                }
-                else
-                {
-                    LogDebug("Not mounting as can see NPC.");
-                }
+                shouldMount = false;
+                Log("Mount up");
+                mountHandler.MountUp();
+                navigation.ResetStuckParameters();
             }
         }
 
@@ -282,7 +277,7 @@ namespace Core.Goals
 
         private void Navigation_OnWayPointReached(object? sender, EventArgs e)
         {
-            if (classConfig.Mode == Mode.AttendedGather && !mountHandler.IsMounted())
+            if (classConfig.Mode == Mode.AttendedGather)
             {
                 shouldMount = true;
             }

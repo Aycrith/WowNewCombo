@@ -90,7 +90,8 @@ namespace Core.GOAP
                 // these hold their state
                 { GoapKey.consumecorpse, State.ShouldConsumeCorpse },
                 { GoapKey.shouldloot, State.NeedLoot },
-                { GoapKey.shouldskin, State.NeedSkin }
+                { GoapKey.shouldskin, State.NeedSkin },
+                { GoapKey.gathering, State.Gathering }
             };
         }
 
@@ -107,6 +108,9 @@ namespace Core.GOAP
                 case GoapKey.shouldskin:
                     State.NeedSkin = (bool)e.Value;
                     break;
+                case GoapKey.gathering:
+                    State.Gathering = (bool)e.Value;
+                    break;
             }
         }
 
@@ -115,15 +119,7 @@ namespace Core.GOAP
             if (Active)
             {
                 State.LastCombatKillCount++;
-
-                if (CurrentGoal == null)
-                {
-                    AvailableGoals.ToList().ForEach(x => x.OnActionEvent(this, new ActionEventArgs(GoapKey.producedcorpse, true)));
-                }
-                else
-                {
-                    CurrentGoal.OnActionEvent(this, new ActionEventArgs(GoapKey.producedcorpse, true));
-                }
+                Broadcast(GoapKey.producedcorpse, true);
 
                 LogActiveKillDetected(logger, State.LastCombatKillCount, addonReader.CombatCreatureCount);
             }
@@ -133,6 +129,24 @@ namespace Core.GOAP
             }
         }
 
+        private void Broadcast(GoapKey goapKey, bool value)
+        {
+            if (CurrentGoal == null)
+            {
+                AvailableGoals.ToList().ForEach(x => x.OnActionEvent(this, new ActionEventArgs(goapKey, value)));
+            }
+            else
+            {
+                CurrentGoal.OnActionEvent(this, new ActionEventArgs(goapKey, value));
+            }
+        }
+
+
+        public void NodeFound()
+        {
+            State.Gathering = true;
+            Broadcast(GoapKey.gathering, true);
+        }
 
         #region Logging
 

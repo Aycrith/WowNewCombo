@@ -214,7 +214,7 @@ namespace Core
                         this.npcNameFinder.FakeUpdate();
                     }
 
-                    if (ClassConfig != null && this.ClassConfig.Mode == Mode.AttendedGather)
+                    if (ClassConfig?.Mode == Mode.AttendedGather)
                     {
                         minimapNodeFinder.TryFind();
                     }
@@ -238,7 +238,7 @@ namespace Core
             this.logger.LogInformation("Screenshot thread stoppped!");
         }
 
-        public bool IsBotActive => actionThread == null ? false : actionThread.Active;
+        public bool IsBotActive => actionThread != null && actionThread.Active;
 
         public void ToggleBotStatus()
         {
@@ -413,6 +413,11 @@ namespace Core
                 actionThread.Active = false;
                 StatusChanged?.Invoke(this, EventArgs.Empty);
             }
+        }
+
+        public void MinimapNodeFound()
+        {
+            GoapAgent?.NodeFound();
         }
 
         public void Shutdown()

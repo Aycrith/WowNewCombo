@@ -9,6 +9,11 @@
         padding-right: 10px !important;
     }
 
+    .scrollable-wrapper {
+      max-height: 400px;
+      overflow: auto;
+    }
+
     .success {
         color: #28a745;
     }
@@ -26,6 +31,7 @@
     }
 </style>
 
+<div class="col-sm scrollable-wrapper">
 <table class="table table-borderless table-dark" cellspacing="20">
 @foreach (var evt in LoggerSink.Log.Reverse())
 {
@@ -35,6 +41,7 @@
     </tr>
 }
 </table>
+</div>
 
 @code {
 
