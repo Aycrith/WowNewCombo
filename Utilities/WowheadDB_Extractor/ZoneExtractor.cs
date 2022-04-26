@@ -27,6 +27,8 @@ namespace WowheadDB_Extractor
         {
             // bad
             //Dictionary<string, int> temp = new() { { "Isle of Quel'Danas", 4080 } };
+
+            // test
             //Dictionary<string, int> temp = new() { { "Elwynn Forest", 12 } };
             //foreach (var entry in temp)
             foreach (KeyValuePair<string, int> entry in Areas.List)
@@ -40,7 +42,7 @@ namespace WowheadDB_Extractor
                     PerZoneSkinnable perZoneSkinnable = new PerZoneSkinnable(entry.Value, z);
                     await perZoneSkinnable.Run();
 
-                    //SaveZone(z, entry.Value.ToString());
+                    SaveZone(z, entry.Value.ToString());
                     SaveZoneNode(entry, z.herb, nameof(z.herb), false, true);
                     SaveZoneNode(entry, z.vein, nameof(z.vein), false, true);
 
@@ -108,10 +110,10 @@ namespace WowheadDB_Extractor
                 solver.Evolve();
             }
             sw.Stop();
+            Console.WriteLine($" - TSP Solver {points.Count} {type} nodes {sw.ElapsedMilliseconds} ms");
 
             string prefix = $"{zonekvp.Value}_{zonekvp.Key}_{type}";
 
-            Console.WriteLine($" - TSP Solver {points.Count} {type} nodes {sw.ElapsedMilliseconds} ms");
             if (saveImage)
                 //solver.Draw($"{prefix}.bmp");
                 solver.Draw(Path.Join(outputPath, outputNodePath, $"_{type}", $"{prefix}.bmp"));
