@@ -1,17 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using System.IO;
 using System.Net.Http;
 using WowheadDB;
+using System.Numerics;
+using System.Diagnostics;
 
 namespace WowheadDB_Extractor
 {
     public class ZoneExtractor
     {
         private const string outputPath = "../../../../../Json/area/";
+        private const string outputNodePath = "../path/";
+        //private const string outputPath = ".";
         private const string ZONE_CLASSIC_URL = "https://classic.wowhead.com/zone=";
         private const string ZONE_TBC_URL = "https://tbc.wowhead.com/zone=";
 
@@ -22,6 +25,10 @@ namespace WowheadDB_Extractor
 
         static async Task ExtractZones()
         {
+            // bad
+            //Dictionary<string, int> temp = new() { { "Isle of Quel'Danas", 4080 } };
+            //Dictionary<string, int> temp = new() { { "Elwynn Forest", 12 } };
+            //foreach (var entry in temp)
             foreach (KeyValuePair<string, int> entry in Areas.List)
             {
                 if (entry.Value == 0) continue;
@@ -33,7 +40,9 @@ namespace WowheadDB_Extractor
                     PerZoneSkinnable perZoneSkinnable = new PerZoneSkinnable(entry.Value, z);
                     await perZoneSkinnable.Run();
 
-                    SaveZone(z, entry.Value.ToString());
+                    //SaveZone(z, entry.Value.ToString());
+                    SaveZoneNode(entry, z.herb, nameof(z.herb), false, true);
+                    SaveZoneNode(entry, z.vein, nameof(z.vein), false, true);
 
                     Console.WriteLine($"Saved {entry.Value,5}={entry.Key}");
                 }
@@ -79,6 +88,46 @@ namespace WowheadDB_Extractor
 
             File.WriteAllText(file, output);
         }
+
+        static void SaveZoneNode(KeyValuePair<string, int> zonekvp, Dictionary<string, List<Node>> nodes, string type, bool saveImage, bool onlyOptimalPath)
+        {
+            if (nodes == null)
+                return;
+
+            List<Vector2> points = new();
+            foreach (var kvp in nodes)
+            {
+                points.AddRange(Array.ConvertAll(kvp.Value[0].points.ToArray(), (Vector3 v3) => new Vector2(v3.X, v3.Y)));
+            }
+
+            GeneticTSPSolver solver = new(points);
+            Stopwatch sw = new();
+            sw.Start();
+            while (solver.UnchangedGens < solver.Length)
+            {
+                solver.Evolve();
+            }
+            sw.Stop();
+
+            string prefix = $"{zonekvp.Value}_{zonekvp.Key}_{type}";
+
+            Console.WriteLine($" - TSP Solver {points.Count} {type} nodes {sw.ElapsedMilliseconds} ms");
+            if (saveImage)
+                //solver.Draw($"{prefix}.bmp");
+                solver.Draw(Path.Join(outputPath, outputNodePath, $"_{type}", $"{prefix}.bmp"));
+
+            if (!onlyOptimalPath)
+            {
+                var output_points = JsonConvert.SerializeObject(points);
+                var file_points = Path.Join(outputPath, outputNodePath, $"_{type}", $"{prefix}.json");
+                File.WriteAllText(file_points, output_points);
+            }
+
+            var output_tsp = JsonConvert.SerializeObject(solver.Result);
+            var file_tsp = Path.Join(outputPath, outputNodePath, $"_{type}", $"{prefix}_optimal.json");
+            File.WriteAllText(file_tsp, output_tsp);
+        }
+
 
 
         #region local tests
