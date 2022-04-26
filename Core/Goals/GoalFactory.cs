@@ -1,4 +1,4 @@
-﻿using Core.Goals;
+using Core.Goals;
 using SharedLib.NpcFinder;
 using Core.PPather;
 using Microsoft.Extensions.Logging;
@@ -50,7 +50,7 @@ namespace Core
 
             StuckDetector stuckDetector = new(logger, input, addonReader.PlayerReader, playerDirection, stopMoving);
             CombatUtil combatUtil = new(logger, input, wait, addonReader.PlayerReader);
-            MountHandler mountHandler = new(logger, input, classConfig, wait, addonReader.PlayerReader, castingHandler, stopMoving);
+            MountHandler mountHandler = new(logger, input, classConfig, wait, addonReader, castingHandler, stopMoving);
 
             TargetFinder targetFinder = new(logger, input, classConfig, wait, addonReader.PlayerReader, blacklist, npcNameTargeting);
 
