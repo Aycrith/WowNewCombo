@@ -17,6 +17,8 @@ namespace Core
         private readonly IPixelClassifier pixelClassifier;
         public event EventHandler<NodeEventArgs>? NodeEvent;
 
+        private const int MinScore = 2;
+
         public MinimapNodeFinder(WowScreen wowScreen, IPixelClassifier pixelClassifier)
         {
             this.wowScreen = wowScreen;
@@ -29,12 +31,12 @@ namespace Core
 
             var list = FindYellowPoints();
             ScorePoints(list, out Score best);
-            NodeEvent?.Invoke(this, new NodeEventArgs(best.point));
+            NodeEvent?.Invoke(this, new NodeEventArgs(best.point, list.Count(x => x.count > MinScore)));
         }
 
         private List<Score> FindYellowPoints()
         {
-            List<Score> points = new();
+            List<Score> points = new(100);
             Bitmap bitmap = wowScreen.MiniMapBitmap;
 
             // TODO: adjust these values based on resolution
@@ -65,6 +67,9 @@ namespace Core
                         int xi = x * bytesPerPixel;
                         if (pixelClassifier.IsMatch(currentLine[xi + 2], currentLine[xi + 1], currentLine[xi]))
                         {
+                            if (points.Capacity == points.Count)
+                                return;
+
                             points.Add(new Score { point = new Point(x, y), count = 0 });
                             currentLine[xi + 2] = 255;
                             currentLine[xi + 1] = 0;
@@ -76,7 +81,7 @@ namespace Core
                 bitmap.UnlockBits(data);
             }
 
-            if (points.Count > 100)
+            if (points.Count == points.Capacity)
             {
                 Debug.WriteLine("Error: Too much yellow in this image, adjust the configuration !");
                 points.Clear();
@@ -107,7 +112,7 @@ namespace Core
 
             points.Sort((a, b) => a.count.CompareTo(b.count));
 
-            if (points.Count > 0 && points[^1].count > 2)
+            if (points.Count > 0 && points[^1].count > MinScore)
             {
                 best = points[^1];
                 return true;
