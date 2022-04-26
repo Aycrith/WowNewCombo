@@ -80,7 +80,7 @@
         function draw() {
 
             gridNode = document.getElementById("grid")
-            panzoom = Panzoom(gridNode, { /*contain: 'outside',*/ excludeClass: 'group2', minScale: 0.99, roundPixels: true })
+            panzoom = Panzoom(gridNode, { /*contain: 'outside',*/ excludeClass: 'group2', minScale: 0.99, maxScale: 8, roundPixels: true })
             const parent = gridNode.parentElement
             parent.addEventListener('wheel', panzoom.zoomWithWheel)
 
