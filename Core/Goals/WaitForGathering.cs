@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Core.Goals
 {
-    public class WaitForGathering : GoapGoal
+    public partial class WaitForGathering : GoapGoal
     {
         public override float CostOfPerformingAction => 17;
 
@@ -17,8 +17,6 @@ namespace Core.Goals
         private readonly PlayerReader playerReader;
         private readonly StopMoving stopMoving;
         private readonly Stopwatch stopWatch;
-
-        private int lastKnownCast;
 
         private readonly List<int> herbSpells = new()
         {
@@ -47,7 +45,9 @@ namespace Core.Goals
             Success,
             WaitUserInput,
         }
+
         private CastState state;
+        private int lastKnownCast;
 
         public WaitForGathering(ILogger logger, Wait wait, PlayerReader playerReader, StopMoving stopMoving)
         {
@@ -70,17 +70,17 @@ namespace Core.Goals
                 wait.Update(1);
             }
 
-            logger.LogInformation("Waiting indefinitely for [Gathering cast to start] or [Press Jump to Abort]");
+            LogOnEnter(logger);
 
             return base.OnEnter();
         }
 
         public override ValueTask OnExit()
         {
-            logger.LogInformation($"{state} -- Exit");
-
             state = CastState.None;
             lastKnownCast = 0;
+
+            LogState(logger, state);
 
             stopWatch.Reset();
             stopWatch.Stop();
@@ -93,43 +93,30 @@ namespace Core.Goals
             switch (state)
             {
                 case CastState.None:
-                    if (playerReader.IsCasting &&
-                        (herbSpells.Contains(playerReader.CastSpellId.Value) ||
-                        miningSpells.Contains(playerReader.CastSpellId.Value)))
-                    {
-                        lastKnownCast = playerReader.CastSpellId.Value;
-                        state = CastState.Casting;
-
-                        logger.LogInformation(state.ToString());
-                    }
-
-                    if (playerReader.Bits.IsFalling)
-                    {
-                        state = CastState.Abort;
-                        logger.LogInformation(state.ToString());
-                    }
+                    CheckCastStarted(false);
                     break;
                 case CastState.Casting:
                     if (!playerReader.IsCasting)
                     {
+                        wait.Update(1);
                         if (playerReader.LastUIErrorMessage == UI_ERROR.ERR_SPELL_FAILED_S)
                         {
                             state = CastState.Failed;
-                            logger.LogInformation($"{state} -- Waiting(max {Timeout} ms) for [Gathering cast to start] or [Press Jump to Abort]");
+                            LogFailed(logger, state, Timeout);
                         }
                         else
                         {
                             if (miningSpells.Contains(lastKnownCast))
                             {
                                 state = CastState.WaitUserInput;
-                                logger.LogInformation($"{CastState.Success} -> {state} Waiting(max {Timeout} ms) for [More Mining cast] or [Press Jump to Abort]");
+                                LogSuccessMining(logger, CastState.Success, state, Timeout);
                                 stopWatch.Restart();
                                 wait.Update(1);
                             }
                             else
                             {
                                 state = CastState.Success;
-                                logger.LogInformation(state.ToString());
+                                LogState(logger, state);
                             }
                         }
                     }
@@ -137,7 +124,7 @@ namespace Core.Goals
                 case CastState.Failed:
                     stopWatch.Restart();
                     state = CastState.WaitUserInput;
-                    logger.LogInformation($"{state} -- Waiting(max {Timeout} ms) for [Gathering cast to start] or [Press Jump to Abort]");
+                    LogFailed(logger, state, Timeout);
                     wait.Update(1);
                     break;
                 case CastState.Success:
@@ -145,24 +132,7 @@ namespace Core.Goals
                     SendActionEvent(new ActionEventArgs(GoapKey.gathering, false));
                     break;
                 case CastState.WaitUserInput:
-                    if (playerReader.IsCasting &&
-                        (herbSpells.Contains(playerReader.CastSpellId.Value) ||
-                        miningSpells.Contains(playerReader.CastSpellId.Value)))
-                    {
-                        lastKnownCast = playerReader.CastSpellId.Value;
-                        state = CastState.Casting;
-
-                        logger.LogInformation(state.ToString());
-
-                        stopWatch.Reset();
-                        stopWatch.Stop();
-                    }
-
-                    if (playerReader.Bits.IsFalling)
-                    {
-                        state = CastState.Abort;
-                        logger.LogInformation(state.ToString());
-                    }
+                    CheckCastStarted(true);
 
                     if (stopWatch.ElapsedMilliseconds > Timeout)
                     {
@@ -174,5 +144,59 @@ namespace Core.Goals
             wait.Update(1);
             return ValueTask.CompletedTask;
         }
+
+        private void CheckCastStarted(bool restartTimer)
+        {
+            if (playerReader.IsCasting &&
+                (herbSpells.Contains(playerReader.CastSpellId.Value) ||
+                miningSpells.Contains(playerReader.CastSpellId.Value)))
+            {
+                lastKnownCast = playerReader.CastSpellId.Value;
+                state = CastState.Casting;
+
+                LogState(logger, state);
+
+                if (restartTimer)
+                {
+                    stopWatch.Reset();
+                    stopWatch.Stop();
+                }
+            }
+
+            if (playerReader.Bits.IsFalling)
+            {
+                state = CastState.Abort;
+                LogState(logger, state);
+            }
+        }
+
+
+        #region Logging
+
+        [LoggerMessage(
+            EventId = 101,
+            Level = LogLevel.Information,
+            Message = "{state}")]
+        static partial void LogState(ILogger logger, CastState state);
+
+        [LoggerMessage(
+            EventId = 102,
+            Level = LogLevel.Warning,
+            Message = "Waiting indefinitely for [Gathering cast to start] or [Press Jump to Abort]")]
+        static partial void LogOnEnter(ILogger logger);
+
+        [LoggerMessage(
+            EventId = 103,
+            Level = LogLevel.Error,
+            Message = "{state} -- Waiting(max {Timeout} ms) for [Gathering cast to start] or [Press Jump to Abort]")]
+        static partial void LogFailed(ILogger logger, CastState state, int Timeout);
+
+        [LoggerMessage(
+            EventId = 104,
+            Level = LogLevel.Information,
+            Message = "{success} -> {state} Waiting(max {Timeout} ms) for [More Mining cast] or [Press Jump to Abort]")]
+        static partial void LogSuccessMining(ILogger logger, CastState success, CastState state, int Timeout);
+
+        #endregion
     }
 }
