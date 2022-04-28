@@ -200,7 +200,7 @@ namespace Core
 
             GatherFindKeys.ForEach(key =>
             {
-                GatherFindKeyConfig.Add(new KeyAction { Key = key });
+                GatherFindKeyConfig.Add(new KeyAction { Key = key, Name = $"Profession {GatherFindKeys.IndexOf(key)}" });
                 GatherFindKeyConfig.Last().Initialise(addonReader, requirementFactory, logger, Log);
             });
 

@@ -34,6 +34,9 @@ namespace Core.Goals
         private readonly int minMs = 500, maxMs = 1000;
         private readonly NpcNames NpcNameToFind = NpcNames.Enemy | NpcNames.Neutral;
 
+        private const int MIN_TIME_TO_START_CYCLE_PROFESSION = 5000;
+        private const int CYCLE_PROFESSION_PERIOD = 8000;
+
         private CancellationTokenSource sideActivityCts;
         private Thread sideActivityThread = null!;
 
@@ -235,16 +238,21 @@ namespace Core.Goals
         {
             while (!sideActivityCts.IsCancellationRequested)
             {
-                AlternateGatherTypes();
-                wait.Update(1);
+                if ((DateTime.UtcNow - onEnterTime).TotalMilliseconds > MIN_TIME_TO_START_CYCLE_PROFESSION)
+                {
+                    AlternateGatherTypes();
+                }
+                sideActivityCts.Token.WaitHandle.WaitOne(CYCLE_PROFESSION_PERIOD);
             }
         }
 
         private void AlternateGatherTypes()
         {
-            var oldestKey = classConfig.GatherFindKeyConfig.OrderByDescending(x => x.MillisecondsSinceLastClick).First();
-            if (oldestKey.MillisecondsSinceLastClick > 3000)
+            var oldestKey = classConfig.GatherFindKeyConfig.MaxBy(x => x.MillisecondsSinceLastClick);
+            if (!playerReader.IsCasting &&
+                oldestKey?.MillisecondsSinceLastClick > CYCLE_PROFESSION_PERIOD)
             {
+                logger.LogInformation($"[{oldestKey.Key}] {oldestKey.Name} pressed for {input.defaultKeyPress}ms");
                 input.KeyPress(oldestKey.ConsoleKey, input.defaultKeyPress);
                 oldestKey.SetClicked();
             }
