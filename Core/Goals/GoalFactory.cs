@@ -84,11 +84,6 @@ namespace Core
                 availableActions.Add(new WaitForGathering(logger, wait, addonReader.PlayerReader, stopMoving));
                 availableActions.Add(followRouteAction);
 
-                if (classConfig.Parallel.Sequence.Count > 0)
-                {
-                    availableActions.Add(new ParallelGoal(logger, input, wait, addonReader.PlayerReader, stopMoving, classConfig.Parallel.Sequence, castingHandler, mountHandler));
-                }
-
                 if (classConfig.Loot)
                 {
                     availableActions.Add(new ConsumeCorpse(logger, classConfig));
