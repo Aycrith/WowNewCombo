@@ -27,13 +27,13 @@ namespace Core.Goals
         private readonly ClassConfiguration classConfiguration;
         private readonly NpcNameTargeting npcNameTargeting;
         private readonly CombatUtil combatUtil;
-        private readonly IPlayerDirection playerDirection;
+        private readonly PlayerDirection playerDirection;
 
         private readonly List<Vector3> corpseLocations = new();
 
         private int lastLoot;
 
-        public LootGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, StopMoving stopMoving, ClassConfiguration classConfiguration, NpcNameTargeting npcNameTargeting, CombatUtil combatUtil, IPlayerDirection playerDirection)
+        public LootGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, StopMoving stopMoving, ClassConfiguration classConfiguration, NpcNameTargeting npcNameTargeting, CombatUtil combatUtil, PlayerDirection playerDirection)
         {
             this.logger = logger;
             this.input = input;

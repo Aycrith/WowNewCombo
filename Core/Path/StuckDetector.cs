@@ -19,7 +19,7 @@ namespace Core
         private readonly StopMoving stopMoving;
         
         private readonly Random random = new();
-        private readonly IPlayerDirection playerDirection;
+        private readonly PlayerDirection playerDirection;
 
         private Vector3 targetLocation;
 
@@ -28,7 +28,7 @@ namespace Core
         private float previousDistanceToTarget = 99999;
         private DateTime timeOfLastSignificantMovement;
 
-        public StuckDetector(ILogger logger, ConfigurableInput input, PlayerReader playerReader, IPlayerDirection playerDirection, StopMoving stopMoving)
+        public StuckDetector(ILogger logger, ConfigurableInput input, PlayerReader playerReader, PlayerDirection playerDirection, StopMoving stopMoving)
         {
             this.logger = logger;
             this.input = input;
