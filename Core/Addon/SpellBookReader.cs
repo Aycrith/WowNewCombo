@@ -8,14 +8,14 @@ namespace Core
     {
         private readonly int cSpellId;
 
-        private readonly ISquareReader reader;
+        private readonly SquareReader reader;
         public SpellDB SpellDB { get; }
 
         public int Count => Spells.Count;
 
         public Dictionary<int, Spell> Spells { get; } = new();
 
-        public SpellBookReader(ISquareReader reader, int cSpellId, SpellDB spellDB)
+        public SpellBookReader(SquareReader reader, int cSpellId, SpellDB spellDB)
         {
             this.reader = reader;
             this.cSpellId = cSpellId;
@@ -24,7 +24,7 @@ namespace Core
 
         public void Read()
         {
-            int spellId = reader.GetIntAtCell(cSpellId);
+            int spellId = reader.GetInt(cSpellId);
             if (spellId == 0) return;
             if (!Spells.ContainsKey(spellId) && SpellDB.Spells.TryGetValue(spellId, out Spell spell))
             {

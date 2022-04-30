@@ -2,12 +2,12 @@
 {
     public class Stance
     {
-        private readonly ISquareReader reader;
+        private readonly SquareReader reader;
         private readonly int cell;
 
         private int value;
 
-        public Stance(ISquareReader reader, int cell)
+        public Stance(SquareReader reader, int cell)
         {
             this.reader = reader;
             this.cell = cell;
@@ -16,7 +16,7 @@
 
         public void SetDirty()
         {
-            value = reader.GetIntAtCell(cell);
+            value = reader.GetInt(cell);
         }
 
         public Form Get(PlayerReader playerReader, PlayerClassEnum playerClass) => value == 0 ? Form.None : playerClass switch

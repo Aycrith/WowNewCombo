@@ -1,29 +1,32 @@
-﻿namespace Core
-{
-    public class SquareReader : ISquareReader
-    {
-        private readonly IAddonReader addonReader;
+﻿using System.Runtime.CompilerServices;
 
-        public SquareReader(IAddonReader addonReader)
+namespace Core
+{
+    public class SquareReader
+    {
+        private readonly AddonReader addonReader;
+
+        public SquareReader(AddonReader addonReader)
         {
             this.addonReader = addonReader;
         }
 
-        // Converts a cell's hexideciml color code to decimal data
-        public int GetIntAtCell(int index)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int GetInt(int index)
         {
             return addonReader.GetIntAt(index);
         }
 
-        // Converts a cell's hexidecimal color to a 6 point decimal
-        public float GetFixedPointAtCell(int index)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public float GetFixed(int index)
         {
-            return GetIntAtCell(index) / 100000f;
+            return GetInt(index) / 100000f;
         }
 
-        public string GetStringAtCell(int index)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public string GetString(int index)
         {
-            int color = GetIntAtCell(index);
+            int color = GetInt(index);
             if (color != 0)
             {
                 string colorString = color.ToString();

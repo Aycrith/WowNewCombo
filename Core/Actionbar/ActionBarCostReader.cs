@@ -19,7 +19,7 @@ namespace Core
 
     public class ActionBarCostReader
     {
-        private readonly ISquareReader reader;
+        private readonly SquareReader reader;
         private readonly int cActionbarNum;
 
         private readonly float MAX_POWER_TYPE = 1000000f;
@@ -36,7 +36,7 @@ namespace Core
 
         public event EventHandler<ActionBarCostEventArgs>? OnActionCostChanged;
 
-        public ActionBarCostReader(ISquareReader reader, int cActionbarNum)
+        public ActionBarCostReader(SquareReader reader, int cActionbarNum)
         {
             this.cActionbarNum = cActionbarNum;
             this.reader = reader;
@@ -46,7 +46,7 @@ namespace Core
         {
             // formula
             // MAX_POWER_TYPE * type + MAX_ACTION_IDX * slot + cost
-            int data = reader.GetIntAtCell(cActionbarNum);
+            int data = reader.GetInt(cActionbarNum);
             if (data == 0) return;
 
             int type = (int)(data / MAX_POWER_TYPE);

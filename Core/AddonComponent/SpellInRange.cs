@@ -2,10 +2,10 @@
 {
     public class SpellInRange : BitStatus
     {
-        private readonly ISquareReader reader;
+        private readonly SquareReader reader;
         private readonly int cell;
 
-        public SpellInRange(ISquareReader reader, int cell) : base(reader.GetIntAtCell(cell))
+        public SpellInRange(SquareReader reader, int cell) : base(reader.GetInt(cell))
         {
             this.reader = reader;
             this.cell = cell;
@@ -13,7 +13,7 @@
 
         public void SetDirty()
         {
-            Update(reader.GetIntAtCell(cell));
+            Update(reader.GetInt(cell));
         }
 
         // Warrior

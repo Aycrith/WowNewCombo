@@ -9,14 +9,14 @@ namespace Core
     {
         private readonly int cTalent;
 
-        private readonly ISquareReader reader;
+        private readonly SquareReader reader;
         private readonly PlayerReader playerReader;
         private readonly TalentDB talentDB;
         public int Count => Talents.Sum(x => x.Value.CurrentRank);
 
         public Dictionary<int, Talent> Talents { get; } = new();
 
-        public TalentReader(ISquareReader reader, int cTalent, PlayerReader playerReader, TalentDB talentDB)
+        public TalentReader(SquareReader reader, int cTalent, PlayerReader playerReader, TalentDB talentDB)
         {
             this.reader = reader;
             this.cTalent = cTalent;
@@ -27,7 +27,7 @@ namespace Core
 
         public void Read()
         {
-            int data = reader.GetIntAtCell(cTalent);
+            int data = reader.GetInt(cTalent);
             if (data == 0 || Talents.ContainsKey(data)) return;
 
             int hash = data;

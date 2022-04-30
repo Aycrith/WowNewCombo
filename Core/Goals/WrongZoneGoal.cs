@@ -14,7 +14,7 @@ namespace Core.Goals
         private readonly ConfigurableInput input;
         private readonly AddonReader addonReader;
         private readonly PlayerReader playerReader;
-        private readonly IPlayerDirection playerDirection;
+        private readonly PlayerDirection playerDirection;
         private readonly StuckDetector stuckDetector;
         private readonly ClassConfiguration classConfiguration;
 
@@ -23,7 +23,7 @@ namespace Core.Goals
 
         public DateTime LastActive { get; private set; }
 
-        public WrongZoneGoal(AddonReader addonReader, ConfigurableInput input, IPlayerDirection playerDirection, ILogger logger, StuckDetector stuckDetector, ClassConfiguration classConfiguration)
+        public WrongZoneGoal(AddonReader addonReader, ConfigurableInput input, PlayerDirection playerDirection, ILogger logger, StuckDetector stuckDetector, ClassConfiguration classConfiguration)
         {
             this.addonReader = addonReader;
             this.playerReader = addonReader.PlayerReader;

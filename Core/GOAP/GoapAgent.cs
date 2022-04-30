@@ -1,4 +1,5 @@
 ﻿using Core.Goals;
+using Game;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -14,6 +15,7 @@ namespace Core.GOAP
         private readonly PlayerReader playerReader;
         private readonly StopMoving stopMoving;
         private readonly IBlacklist blacklist;
+        private readonly WowScreen wowScreen;
 
         public bool Active { get; set; }
 
@@ -24,9 +26,10 @@ namespace Core.GOAP
         public Stack<GoapGoal> Plan { get; private set; }
         public GoapGoal? CurrentGoal { get; private set; }
 
-        public GoapAgent(ILogger logger, GoapAgentState goapAgentState, ConfigurableInput input, AddonReader addonReader, HashSet<GoapGoal> availableGoals, IBlacklist blacklist)
+        public GoapAgent(ILogger logger, WowScreen wowScreen, GoapAgentState goapAgentState, ConfigurableInput input, AddonReader addonReader, HashSet<GoapGoal> availableGoals, IBlacklist blacklist)
         {
             this.logger = logger;
+            this.wowScreen = wowScreen;
             this.State = goapAgentState;
             this.input = input;
 
@@ -110,6 +113,9 @@ namespace Core.GOAP
                     break;
                 case GoapKey.gathering:
                     State.Gathering = (bool)e.Value;
+                    break;
+                case GoapKey.wowscreen:
+                    wowScreen.Enabled = (bool)e.Value;
                     break;
             }
         }

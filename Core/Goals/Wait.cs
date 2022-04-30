@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace Core
@@ -14,6 +15,7 @@ namespace Core
             this.autoResetEvent = autoResetEvent;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Update(int n)
         {
             int s = addonReader.GlobalTime.Value;
@@ -23,6 +25,7 @@ namespace Core
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Till(int timeoutMs, Func<bool> interrupt)
         {
             DateTime start = DateTime.UtcNow;
@@ -37,6 +40,7 @@ namespace Core
             return true;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public (bool timeout, double elapsedMs) Until(int timeoutMs, Func<bool> interrupt, Action? repeat = null)
         {
             DateTime start = DateTime.UtcNow;
@@ -53,6 +57,7 @@ namespace Core
             return (true, elapsedMs);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void While(Func<bool> condition)
         {
             while (condition())

@@ -19,9 +19,9 @@ namespace Core
             this.cell = cell;
         }
 
-        public bool Updated(ISquareReader reader)
+        public bool Updated(SquareReader reader)
         {
-            temp = reader.GetIntAtCell(cell);
+            temp = reader.GetInt(cell);
             if (temp != Value)
             {
                 Value = temp;
@@ -33,9 +33,9 @@ namespace Core
             return false;
         }
 
-        public void Update(ISquareReader reader)
+        public void Update(SquareReader reader)
         {
-            temp = reader.GetIntAtCell(cell);
+            temp = reader.GetInt(cell);
             if (temp != Value)
             {
                 Value = temp;

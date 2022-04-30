@@ -16,7 +16,7 @@ namespace Core.Goals
         private readonly PlayerReader playerReader;
 
         private readonly ClassConfiguration classConfig;
-        private readonly IPlayerDirection direction;
+        private readonly PlayerDirection direction;
         private readonly StopMoving stopMoving;
 
         private readonly KeyAction defaultKeyAction = new();
@@ -31,7 +31,7 @@ namespace Core.Goals
         private const int MaxCastTimeMs = 15000;
         private const int MaxAirTimeMs = 10000;
 
-        public CastingHandler(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, ClassConfiguration classConfig, IPlayerDirection direction, StopMoving stopMoving)
+        public CastingHandler(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, ClassConfiguration classConfig, PlayerDirection direction, StopMoving stopMoving)
         {
             this.logger = logger;
             this.input = input;

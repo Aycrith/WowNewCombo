@@ -6,7 +6,7 @@ namespace Core
     {
         private readonly int cGossip;
 
-        private readonly ISquareReader reader;
+        private readonly SquareReader reader;
 
         public int Count { private set; get; }
         public Dictionary<Gossip, int> Gossips { get; } = new();
@@ -26,7 +26,7 @@ namespace Core
 
         public bool MerchantWindowSellingFinished => data == 9999996;
 
-        public GossipReader(ISquareReader reader, int cGossip)
+        public GossipReader(SquareReader reader, int cGossip)
         {
             this.reader = reader;
             this.cGossip = cGossip;
@@ -34,7 +34,7 @@ namespace Core
 
         public void Read()
         {
-            data = reader.GetIntAtCell(cGossip);
+            data = reader.GetInt(cGossip);
 
             // used for merchant window open state
             if (MerchantWindowClosed || MerchantWindowOpened || MerchantWindowSelling || MerchantWindowSellingFinished || GossipEnd)

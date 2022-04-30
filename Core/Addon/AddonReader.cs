@@ -11,7 +11,7 @@ namespace Core
     public sealed class AddonReader : IAddonReader, IDisposable
     {
         private readonly ILogger logger;
-        private readonly ISquareReader squareReader;
+        private readonly SquareReader squareReader;
         private readonly IAddonDataProvider addonDataProvider;
 
         public bool Initialized { get; private set; }
@@ -61,7 +61,7 @@ namespace Core
             {
                 return CreatureDb.Entries.TryGetValue(PlayerReader.TargetId, out SharedLib.Creature creature)
                     ? creature.Name
-                    : squareReader.GetStringAtCell(16) + squareReader.GetStringAtCell(17);
+                    : squareReader.GetString(16) + squareReader.GetString(17);
             }
         }
 

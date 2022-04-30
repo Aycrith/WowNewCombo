@@ -47,7 +47,7 @@ namespace Core.Goals
         private readonly float RADIAN = MathF.PI * 2;
 
         private readonly ILogger logger;
-        private readonly IPlayerDirection playerDirection;
+        private readonly PlayerDirection playerDirection;
         private readonly ConfigurableInput input;
         private readonly AddonReader addonReader;
         private readonly PlayerReader playerReader;
@@ -87,7 +87,7 @@ namespace Core.Goals
 
         private readonly CancellationTokenSource _cts;
 
-        public Navigation(ILogger logger, IPlayerDirection playerDirection, ConfigurableInput input, AddonReader addonReader, StopMoving stopMoving, StuckDetector stuckDetector, IPPather pather, MountHandler mountHandler, Mode mode)
+        public Navigation(ILogger logger, PlayerDirection playerDirection, ConfigurableInput input, AddonReader addonReader, StopMoving stopMoving, StuckDetector stuckDetector, IPPather pather, MountHandler mountHandler, Mode mode)
         {
             this.logger = logger;
             this.playerDirection = playerDirection;

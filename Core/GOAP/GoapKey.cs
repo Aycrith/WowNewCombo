@@ -25,7 +25,8 @@ namespace Core.GOAP
         isalive = 170,
         isswimming = 180,
         itemsbroken = 190,
-        gathering = 200
+        gathering = 200,
+        wowscreen = 9999,
     }
 
     public static class GoapKeyDescription

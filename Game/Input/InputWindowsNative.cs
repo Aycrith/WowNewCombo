@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Linq;
 using System.Threading;
 using WinAPI;
+using System.Runtime.CompilerServices;
 
 namespace Game
 {
@@ -29,6 +30,7 @@ namespace Game
             _cts = new CancellationTokenSource();
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int Delay(int milliseconds)
         {
             int delay = milliseconds + random.Next(1, MAX_DELAY);
@@ -36,16 +38,19 @@ namespace Game
             return delay;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void KeyDown(int key)
         {
             NativeMethods.PostMessage(process.MainWindowHandle, NativeMethods.WM_KEYDOWN, key, 0);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void KeyUp(int key)
         {
             NativeMethods.PostMessage(process.MainWindowHandle, NativeMethods.WM_KEYUP, key, 0);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int KeyPress(int key, int milliseconds)
         {
             NativeMethods.PostMessage(process.MainWindowHandle, NativeMethods.WM_KEYDOWN, key, 0);
@@ -55,6 +60,7 @@ namespace Game
             return delay;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void KeyPressSleep(int key, int milliseconds, CancellationTokenSource cts)
         {
             NativeMethods.PostMessage(process.MainWindowHandle, NativeMethods.WM_KEYDOWN, key, 0);

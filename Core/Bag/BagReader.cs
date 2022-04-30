@@ -12,7 +12,7 @@ namespace Core
         private readonly int cItemId;
         private readonly int cItemBits;
 
-        private readonly ISquareReader reader;
+        private readonly SquareReader reader;
         private readonly ItemDB itemDb;
         private readonly EquipmentReader equipmentReader;
 
@@ -26,7 +26,7 @@ namespace Core
 
         private bool changedFromEvent;
 
-        public BagReader(ISquareReader reader, ItemDB itemDb, EquipmentReader equipmentReader, int cbagMeta, int citemNumCount, int cItemId, int cItemBits)
+        public BagReader(SquareReader reader, ItemDB itemDb, EquipmentReader equipmentReader, int cbagMeta, int citemNumCount, int cItemId, int cItemBits)
         {
             this.reader = reader;
             this.itemDb = itemDb;
@@ -74,7 +74,7 @@ namespace Core
             changed = false;
 
             //bagType * 1000000 + bagNum * 100000 + freeSlots * 1000 + self:bagSlots(bagNum)
-            int data = reader.GetIntAtCell(cBagMeta);
+            int data = reader.GetInt(cBagMeta);
             if (data == 0) return;
 
             int bagType = (int)(data / 1000000f);
@@ -114,7 +114,7 @@ namespace Core
             hasChanged = false;
 
             // 20 -- 0-4 bagNum + 1-21 itenNum + 1-1000 quantity
-            int itemCount = reader.GetIntAtCell(cItemNumCount);
+            int itemCount = reader.GetInt(cItemNumCount);
             if (itemCount == 0) return;
 
             int bag = (int)(itemCount / 1000000f);
@@ -124,10 +124,10 @@ namespace Core
             itemCount -= 10000 * slot;
 
             // 21 -- 1-999999 itemId
-            int itemId = reader.GetIntAtCell(cItemId);
+            int itemId = reader.GetInt(cItemId);
 
             // 22 -- 0-24 item bits
-            int itemBits = reader.GetIntAtCell(cItemBits);
+            int itemBits = reader.GetInt(cItemBits);
 
             bool isSoulbound = itemBits == 1;
 

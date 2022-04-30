@@ -13,7 +13,7 @@ namespace Core.Goals
         private readonly ILogger logger;
         private readonly ConfigurableInput input;
         private readonly PlayerReader playerReader;
-        private readonly IPlayerDirection playerDirection;
+        private readonly PlayerDirection playerDirection;
         private readonly List<Vector3> spiritWalkerPath;
         private readonly StuckDetector stuckDetector;
         private readonly Stack<Vector3> points = new();
@@ -24,7 +24,7 @@ namespace Core.Goals
         private readonly float RADIAN = MathF.PI * 2;
         private float lastDistance = 999;
 
-        public CorpseRunGoal(PlayerReader playerReader, ConfigurableInput input, IPlayerDirection playerDirection, List<Vector3> spiritWalker, ILogger logger, StuckDetector stuckDetector)
+        public CorpseRunGoal(PlayerReader playerReader, ConfigurableInput input, PlayerDirection playerDirection, List<Vector3> spiritWalker, ILogger logger, StuckDetector stuckDetector)
         {
             this.playerReader = playerReader;
             this.input = input;
