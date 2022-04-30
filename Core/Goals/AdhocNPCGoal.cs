@@ -143,6 +143,7 @@ namespace Core.Goals
         public override ValueTask OnExit()
         {
             navigation.Stop();
+            SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, false));
 
             return base.OnExit();
         }
@@ -187,6 +188,7 @@ namespace Core.Goals
                 input.ClearTarget();
                 wait.Update(1);
 
+                SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, true));
                 npcNameTargeting.ChangeNpcType(NpcNames.Friendly | NpcNames.Neutral);
                 npcNameTargeting.WaitForNUpdate(1);
                 bool foundVendor = npcNameTargeting.FindBy(CursorType.Vendor, CursorType.Repair, CursorType.Innkeeper);
