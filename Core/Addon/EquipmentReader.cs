@@ -34,7 +34,7 @@ namespace Core
     {
         private const int MAX_EQUIPMENT_COUNT = 24;
 
-        private readonly ISquareReader reader;
+        private readonly SquareReader reader;
         private readonly int cItemId;
         private readonly int cSlotNum;
 
@@ -42,7 +42,7 @@ namespace Core
 
         public event EventHandler<(int, int)>? OnEquipmentChanged;
 
-        public EquipmentReader(ISquareReader reader, int cSlotNum, int cItemId)
+        public EquipmentReader(SquareReader reader, int cSlotNum, int cItemId)
         {
             this.reader = reader;
 
@@ -52,10 +52,10 @@ namespace Core
 
         public void Read()
         {
-            int index = reader.GetIntAtCell(cSlotNum);
+            int index = reader.GetInt(cSlotNum);
             if (index < MAX_EQUIPMENT_COUNT && index >= 0)
             {
-                int itemId = reader.GetIntAtCell(cItemId);
+                int itemId = reader.GetInt(cItemId);
                 bool changed = equipment[index] != itemId;
 
                 equipment[index] = itemId;

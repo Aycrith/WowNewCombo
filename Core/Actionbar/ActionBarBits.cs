@@ -2,7 +2,7 @@
 {
     public class ActionBarBits
     {
-        private readonly ISquareReader reader;
+        private readonly SquareReader reader;
         private readonly int[] cells;
 
         private readonly BitStatus[] bits;
@@ -10,7 +10,7 @@
 
         private bool isDirty;
 
-        public ActionBarBits(PlayerReader playerReader, ISquareReader reader, params int[] cells)
+        public ActionBarBits(PlayerReader playerReader, SquareReader reader, params int[] cells)
         {
             this.reader = reader;
             this.playerReader = playerReader;
@@ -19,7 +19,7 @@
             bits = new BitStatus[cells.Length];
             for (int i = 0; i < bits.Length; i++)
             {
-                bits[i] = new(reader.GetIntAtCell(cells[i]));
+                bits[i] = new(reader.GetInt(cells[i]));
             }
         }
 
@@ -32,7 +32,7 @@
         {
             for (int i = 0; i < bits.Length; i++)
             {
-                bits[i].Update(reader.GetIntAtCell(cells[i]));
+                bits[i].Update(reader.GetInt(cells[i]));
             }
         }
 

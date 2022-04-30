@@ -5,7 +5,7 @@ namespace Core
 {
     public class ActionBarCooldownReader
     {
-        private readonly ISquareReader reader;
+        private readonly SquareReader reader;
         private readonly int cActionbarNum;
 
         private readonly float MAX_ACTION_IDX = 100000f;
@@ -13,7 +13,7 @@ namespace Core
 
         private readonly Dictionary<int, (int duration, DateTime startTime)> dict = new();
 
-        public ActionBarCooldownReader(ISquareReader reader, int cActionbarNum)
+        public ActionBarCooldownReader(SquareReader reader, int cActionbarNum)
         {
             this.reader = reader;
             this.cActionbarNum = cActionbarNum;
@@ -23,7 +23,7 @@ namespace Core
         {
             // formula
             // MAX_ACTION_IDX * index + (cooldown / MAX_VALUE_MUL)
-            float newCooldown = reader.GetIntAtCell(cActionbarNum);
+            float newCooldown = reader.GetInt(cActionbarNum);
             if (newCooldown == 0) return;
 
             int index = (int)(newCooldown / MAX_ACTION_IDX);
