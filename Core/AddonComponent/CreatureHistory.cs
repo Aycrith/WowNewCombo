@@ -9,7 +9,7 @@ namespace Core
 
         private const int LifeTimeInSeconds = 60;
 
-        public event EventHandler? KillCredit;
+        public event EmptyEvent? KillCredit;
 
         public List<CreatureRecord> Creatures { get; } = new();
         public List<CreatureRecord> Targets { get; } = new();
@@ -88,7 +88,7 @@ namespace Core
                 if (Targets.Exists(x => x.Guid == CombatDeadGuid.Value) &&
                     (DamageDone.Exists(x => x.Guid == CombatDeadGuid.Value) || DamageTaken.Exists(x => x.Guid == CombatDeadGuid.Value)))
                 {
-                    KillCredit?.Invoke(this, EventArgs.Empty);
+                    KillCredit?.Invoke();
                 }
             }
 

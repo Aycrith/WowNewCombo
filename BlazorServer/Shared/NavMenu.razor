@@ -199,12 +199,12 @@ else
         botController.StatusChanged -= OnStatusChanged;
     }
 
-    private void OnProfileLoaded(object? s, EventArgs e)
+    private void OnProfileLoaded()
     {
         base.InvokeAsync(StateHasChanged);
     }
 
-    private void OnStatusChanged(object? s, EventArgs e)
+    private void OnStatusChanged()
     {
         base.InvokeAsync(StateHasChanged);
     }

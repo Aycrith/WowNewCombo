@@ -73,10 +73,10 @@ namespace Core.Goals
 
         public DateTime LastActive { get; private set; }
 
-        public event EventHandler? OnPathCalculated;
-        public event EventHandler? OnWayPointReached;
-        public event EventHandler? OnDestinationReached;
-        public event EventHandler? OnAnyPointReached;
+        public event EmptyEvent? OnPathCalculated;
+        public event EmptyEvent? OnWayPointReached;
+        public event EmptyEvent? OnDestinationReached;
+        public event EmptyEvent? OnAnyPointReached;
 
         public bool SimplifyRouteToWaypoint { get; set; } = true;
 
@@ -127,7 +127,7 @@ namespace Core.Goals
 
             if (wayPoints.Count == 0 && routeToNextWaypoint.Count == 0)
             {
-                OnDestinationReached?.Invoke(this, EventArgs.Empty);
+                OnDestinationReached?.Invoke();
                 return;
             }
 
@@ -171,7 +171,7 @@ namespace Core.Goals
                     else
                         routeToNextWaypoint.Pop();
 
-                    OnAnyPointReached?.Invoke(this, EventArgs.Empty);
+                    OnAnyPointReached?.Invoke();
 
                     lastDistance = float.MaxValue;
                     UpdateTotalRoute();
@@ -187,7 +187,7 @@ namespace Core.Goals
                         if (debug)
                             LogDebug($"Reached wayPoint! Distance: {distance} -- Remains: {wayPoints.Count}");
 
-                        OnWayPointReached?.Invoke(this, EventArgs.Empty);
+                        OnWayPointReached?.Invoke();
                     }
                 }
                 else
@@ -356,7 +356,7 @@ namespace Core.Goals
                     stuckDetector.SetTargetLocation(routeToNextWaypoint.Peek());
                     UpdateTotalRoute();
 
-                    OnPathCalculated?.Invoke(this, EventArgs.Empty);
+                    OnPathCalculated?.Invoke();
                 }));
             }
             else

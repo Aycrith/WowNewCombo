@@ -272,18 +272,18 @@ namespace Core.Goals
 
         #region Refill rules
 
-        private void Navigation_OnPathCalculated(object? sender, EventArgs e)
+        private void Navigation_OnPathCalculated()
         {
             MountIfRequired();
         }
 
-        private void Navigation_OnDestinationReached(object? sender, EventArgs e)
+        private void Navigation_OnDestinationReached()
         {
             LogDebug("Navigation_OnDestinationReached");
             RefillWaypoints(false);
         }
 
-        private void Navigation_OnWayPointReached(object? sender, EventArgs e)
+        private void Navigation_OnWayPointReached()
         {
             if (classConfig.Mode == Mode.AttendedGather)
             {

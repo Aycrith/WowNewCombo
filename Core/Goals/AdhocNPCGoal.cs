@@ -168,7 +168,7 @@ namespace Core.Goals
         }
 
 
-        private void Navigation_OnWayPointReached(object? sender, EventArgs e)
+        private void Navigation_OnWayPointReached()
         {
             if (pathState is PathState.ApproachPathStart)
             {
@@ -177,7 +177,7 @@ namespace Core.Goals
             }
         }
 
-        private void Navigation_OnDestinationReached(object? sender, EventArgs e)
+        private void Navigation_OnDestinationReached()
         {
             if (pathState == PathState.ApproachPathStart)
             {

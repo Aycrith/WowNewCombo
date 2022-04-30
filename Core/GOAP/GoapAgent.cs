@@ -114,7 +114,7 @@ namespace Core.GOAP
             }
         }
 
-        private void OnKillCredit(object? obj, EventArgs e)
+        private void OnKillCredit()
         {
             if (Active)
             {

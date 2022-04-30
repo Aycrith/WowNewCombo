@@ -12,7 +12,7 @@ namespace Core
 
         public int ElapsedMs => (int)(DateTime.UtcNow - LastChanged).TotalMilliseconds;
 
-        public event EventHandler? Changed;
+        public event EmptyEvent? Changed;
 
         public RecordInt(int cell)
         {
@@ -25,7 +25,7 @@ namespace Core
             if (temp != Value)
             {
                 Value = temp;
-                Changed?.Invoke(this, EventArgs.Empty);
+                Changed?.Invoke();
                 LastChanged = DateTime.UtcNow;
                 return true;
             }
@@ -39,7 +39,7 @@ namespace Core
             if (temp != Value)
             {
                 Value = temp;
-                Changed?.Invoke(this, EventArgs.Empty);
+                Changed?.Invoke();
                 LastChanged = DateTime.UtcNow;
             }
         }

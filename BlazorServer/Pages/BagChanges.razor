@@ -56,7 +56,7 @@
         return item.LastChange * item.Item.SellPrice;
     }
 
-    public void OnBagReaderDataChanged(object? s, EventArgs e)
+    public void OnBagReaderDataChanged()
     {
         this.NewItems = addonReader.BagReader.BagItems.Where(i => i.WasRecentlyUpdated);
 

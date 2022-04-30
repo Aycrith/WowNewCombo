@@ -68,7 +68,7 @@
         LoggerSink.OnLogChanged -= LogChanged;
     }
 
-    private void LogChanged(object? sender, EventArgs args)
+    private void LogChanged()
     {
         base.InvokeAsync(StateHasChanged);
     }

@@ -24,14 +24,15 @@ namespace BlazorServer
 
     public class LoggerSink : ILogEventSink
     {
-        public static event EventHandler? OnLogChanged;
+        public delegate void EmptyEvent();
+        public static event EmptyEvent? OnLogChanged;
 
         public static CircularBuffer<LogItem> Log { get; private set; } = new CircularBuffer<LogItem>(250);
 
         public void Emit(LogEvent logEvent)
         {
             Log.Put(new LogItem { Timestamp = logEvent.Timestamp, Level = logEvent.Level, Message = logEvent.RenderMessage() });
-            OnLogChanged?.Invoke(this, EventArgs.Empty);
+            OnLogChanged?.Invoke();
         }
 
         public override bool Equals(object? obj)

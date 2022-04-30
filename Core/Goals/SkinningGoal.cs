@@ -178,7 +178,7 @@ namespace Core.Goals
             canRun = HaveItemRequirement();
         }
 
-        private void BagReader_DataChanged(object? sender, EventArgs e)
+        private void BagReader_DataChanged()
         {
             canRun = HaveItemRequirement();
         }

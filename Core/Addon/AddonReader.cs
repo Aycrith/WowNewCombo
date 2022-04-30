@@ -6,6 +6,8 @@ using System.Linq;
 
 namespace Core
 {
+    public delegate void EmptyEvent();
+
     public sealed class AddonReader : IAddonReader, IDisposable
     {
         private readonly ILogger logger;
@@ -35,9 +37,9 @@ namespace Core
 
         public LevelTracker LevelTracker { get; }
 
-        public event EventHandler? AddonDataChanged;
-        public event EventHandler? ZoneChanged;
-        public event EventHandler? PlayerDeath;
+        public event EmptyEvent? AddonDataChanged;
+        public event EmptyEvent? ZoneChanged;
+        public event EmptyEvent? PlayerDeath;
 
         public WorldMapAreaDB WorldMapAreaDb { get; }
         public ItemDB ItemDb { get; }
@@ -141,7 +143,7 @@ namespace Core
 
             if ((DateTime.UtcNow - lastFrontendUpdate).TotalMilliseconds >= FrontendUpdateIntervalMs)
             {
-                AddonDataChanged?.Invoke(this, EventArgs.Empty);
+                AddonDataChanged?.Invoke();
                 lastFrontendUpdate = DateTime.UtcNow;
             }
         }
@@ -191,16 +193,16 @@ namespace Core
 
         public void PlayerDied()
         {
-            PlayerDeath?.Invoke(this, EventArgs.Empty);
+            PlayerDeath?.Invoke();
         }
 
-        private void OnUIMapIdChanged(object? s, EventArgs e)
+        private void OnUIMapIdChanged()
         {
             this.AreaDb.Update(WorldMapAreaDb.GetAreaId(UIMapId.Value));
-            ZoneChanged?.Invoke(this, EventArgs.Empty);
+            ZoneChanged?.Invoke();
         }
 
-        private void GlobalTimeChanged(object? s, EventArgs e)
+        private void GlobalTimeChanged()
         {
             UpdateLatencys.Put((DateTime.UtcNow - GlobalTime.LastChanged).TotalMilliseconds);
             AvgUpdateLatency = 0;

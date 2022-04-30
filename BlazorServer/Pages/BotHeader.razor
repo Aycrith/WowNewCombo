@@ -101,7 +101,7 @@
         addonReader.AddonDataChanged -= OnAddonDataChanged;
     }
 
-    private void OnAddonDataChanged(object? s, EventArgs e)
+    private void OnAddonDataChanged()
     {
         base.InvokeAsync(StateHasChanged);
     }

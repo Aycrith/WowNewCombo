@@ -50,23 +50,23 @@ namespace Core
             UpdateExpPerHour();
         }
 
-        private void PlayerExp_Changed(object? sender, EventArgs e)
+        private void PlayerExp_Changed()
         {
             UpdateExpPerHour();
         }
 
-        private void PlayerLevel_Changed(object? sender, EventArgs e)
+        private void PlayerLevel_Changed()
         {
             levelStartTime = DateTime.UtcNow;
             levelStartXP = playerReader.PlayerXp.Value;
         }
 
-        private void OnPlayerDeath(object? sender, EventArgs e)
+        private void OnPlayerDeath()
         {
             Death++;
         }
 
-        private void OnKillCredit(object? sender, EventArgs e)
+        private void OnKillCredit()
         {
             MobsKilled++;
         }
