@@ -7,6 +7,9 @@ using System.Linq;
 using System.Drawing.Imaging;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Runtime.CompilerServices;
+
+#pragma warning disable 162
 
 namespace SharedLib.NpcFinder
 {
@@ -28,20 +31,20 @@ namespace SharedLib.NpcFinder
 
     public class NpcNameFinder
     {
-        private readonly SearchMode searchMode = SearchMode.Simple;
+        private const SearchMode searchMode = SearchMode.Simple;
         private NpcNames nameType = NpcNames.Enemy | NpcNames.Neutral;
 
         private readonly ILogger logger;
         private readonly IBitmapProvider bitmapProvider;
         private readonly AutoResetEvent autoResetEvent;
 
-        public Rectangle Area { private set; get; }
+        public Rectangle Area { get; }
 
         private const float refWidth = 1920;
         private const float refHeight = 1080;
 
-        public float ScaleToRefWidth { private set; get; } = 1;
-        public float ScaleToRefHeight { private set; get; } = 1;
+        public float ScaleToRefWidth { get; } = 1;
+        public float ScaleToRefHeight { get; } = 1;
 
         public List<NpcPosition> Npcs { get; private set; } = new();
         public int NpcCount => Npcs.Count;
@@ -106,11 +109,13 @@ namespace SharedLib.NpcFinder
                 new Size((int)(bitmapProvider.Bitmap.Width * 0.87f), (int)(bitmapProvider.Bitmap.Height * 0.6f)));
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private float ScaleWidth(int value)
         {
             return value * (bitmapProvider.Bitmap.Width / refWidth);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private float ScaleHeight(int value)
         {
             return value * (bitmapProvider.Bitmap.Height / refHeight);
@@ -118,25 +123,25 @@ namespace SharedLib.NpcFinder
 
         public void ChangeNpcType(NpcNames type)
         {
-            if (nameType != type)
+            if (nameType == type)
+                return;
+
+            nameType = type;
+
+            Npcs.Clear();
+
+            if (nameType.HasFlag(NpcNames.Corpse))
             {
-                Npcs.Clear();
-
-                nameType = type;
-
-                if (nameType.HasFlag(NpcNames.Corpse))
-                {
-                    npcPosYHeightMul = 15;
-                }
-                else
-                {
-                    npcPosYHeightMul = 10;
-                }
-
-                UpdateSearchMode();
-
-                logger.LogInformation($"{nameof(NpcNameFinder)}.{nameof(ChangeNpcType)} = {type} | searchMode = {searchMode}");
+                npcPosYHeightMul = 15;
             }
+            else
+            {
+                npcPosYHeightMul = 10;
+            }
+
+            UpdateSearchMode();
+
+            logger.LogInformation($"{nameof(NpcNameFinder)}.{nameof(ChangeNpcType)} = {type} | searchMode = {searchMode}");
         }
 
         private void UpdateSearchMode()
@@ -155,15 +160,16 @@ namespace SharedLib.NpcFinder
 
         #region Simple Color matcher
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void BakeSimpleColorMatcher()
         {
             switch (nameType)
             {
                 case NpcNames.Enemy | NpcNames.Neutral:
-                    colorMatcher = (Color c) => SimpleColorEnemy(c) || SimpleColorNeutral(c);
+                    colorMatcher = CombinedEnemyNeutrual;
                     return;
                 case NpcNames.Friendly | NpcNames.Neutral:
-                    colorMatcher = (Color c) => SimpleColorFriendly(c) || SimpleColorNeutral(c);
+                    colorMatcher = CombinedFriendlyNeutrual;
                     return;
                 case NpcNames.Enemy:
                     colorMatcher = SimpleColorEnemy;
@@ -180,24 +186,41 @@ namespace SharedLib.NpcFinder
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool SimpleColorEnemy(Color p)
         {
             return p.R > sEnemy.R && p.G <= sEnemy.G && p.B <= sEnemy.B;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool SimpleColorFriendly(Color p)
         {
             return p.R == sFriendly.R && p.G > sFriendly.G && p.B == sFriendly.B;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool SimpleColorNeutral(Color p)
         {
             return p.R > sNeutrual.R && p.G > sNeutrual.G && p.B == sNeutrual.B;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool SimpleColorCorpse(Color p)
         {
             return p.R == fCorpse.R && p.G == fCorpse.G && p.B == fCorpse.B;
+        }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool CombinedFriendlyNeutrual(Color c)
+        {
+            return SimpleColorFriendly(c) || SimpleColorNeutral(c);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool CombinedEnemyNeutrual(Color c)
+        {
+            return SimpleColorEnemy(c) || SimpleColorNeutral(c);
         }
 
         #endregion
@@ -270,8 +293,8 @@ namespace SharedLib.NpcFinder
 
         public void UpdatePotentialAddsExist()
         {
-            TargetCount = Npcs.Where(c => !c.IsAdd && Math.Abs(c.ClickPoint.X - c.screenMid) < c.screenTargetBuffer).Count();
-            AddCount = Npcs.Where(c => c.IsAdd).Count();
+            TargetCount = Npcs.Count(c => !c.IsAdd && Math.Abs(c.ClickPoint.X - c.screenMid) < c.screenTargetBuffer);
+            AddCount = Npcs.Count(c => c.IsAdd);
 
             if (AddCount > 0 && TargetCount >= 1)
             {
