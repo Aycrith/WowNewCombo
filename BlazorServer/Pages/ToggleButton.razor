@@ -39,7 +39,7 @@ else
         botController.ProfileLoaded -= OnProfileLoaded;
     }
 
-    private void OnAddonDataChanged(object? s, EventArgs e)
+    private void OnAddonDataChanged()
     {
         base.InvokeAsync(StateHasChanged);
     }
@@ -49,7 +49,7 @@ else
         botController.ToggleBotStatus();
     }
 
-    private void OnProfileLoaded(object? sender, EventArgs e)
+    private void OnProfileLoaded()
     {
         ValidateButton();
     }

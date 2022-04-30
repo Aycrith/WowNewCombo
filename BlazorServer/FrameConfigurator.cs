@@ -39,7 +39,8 @@ namespace BlazorServer
 
         private const int interval = 500;
 
-        public event EventHandler? OnUpdate;
+        public delegate void EmptyEvent();
+        public event EmptyEvent? OnUpdate;
 
         public FrameConfigurator(ILogger logger)
         {
@@ -69,7 +70,7 @@ namespace BlazorServer
                             AddonNotVisible = false;
                             dataFrameMeta = GetDataFrameMeta();
 
-                            OnUpdate?.Invoke(this, EventArgs.Empty);
+                            OnUpdate?.Invoke();
                         }
                         else
                         {
@@ -79,7 +80,7 @@ namespace BlazorServer
                                 AddonNotVisible = true;
                                 dataFrameMeta = DataFrameMeta.Empty;
 
-                                OnUpdate?.Invoke(this, EventArgs.Empty);
+                                OnUpdate?.Invoke();
                             }
                         }
 
@@ -132,7 +133,7 @@ namespace BlazorServer
                                         AddonReader = new AddonReader(logger, dataConfig, addonDataProvider);
                                     }
 
-                                    OnUpdate?.Invoke(this, EventArgs.Empty);
+                                    OnUpdate?.Invoke();
                                 }
                             }
                             else
@@ -140,7 +141,7 @@ namespace BlazorServer
                                 AddonNotVisible = true;
                                 dataFrameMeta = DataFrameMeta.Empty;
 
-                                OnUpdate?.Invoke(this, EventArgs.Empty);
+                                OnUpdate?.Invoke();
                             }
                         }
                     }
@@ -156,7 +157,7 @@ namespace BlazorServer
                     AddonNotVisible = true;
                     dataFrameMeta = DataFrameMeta.Empty;
 
-                    OnUpdate?.Invoke(this, EventArgs.Empty);
+                    OnUpdate?.Invoke();
                 }
 
                 autoResetEvent.Set();
@@ -212,7 +213,7 @@ namespace BlazorServer
             DataFrameConfiguration.SaveConfiguration(rect, version, dataFrameMeta, dataFrames);
             Saved = true;
 
-            OnUpdate?.Invoke(this, EventArgs.Empty);
+            OnUpdate?.Invoke();
 
             return true;
         }
@@ -283,7 +284,7 @@ namespace BlazorServer
 
             UpdatePreview(screenshot);
 
-            OnUpdate?.Invoke(this, EventArgs.Empty);
+            OnUpdate?.Invoke();
             Wait();
 
             var dataFrames = DataFrameConfiguration.CreateFrames(meta, screenshot);
@@ -310,7 +311,7 @@ namespace BlazorServer
 
             logger.LogInformation("Found Class!");
 
-            OnUpdate?.Invoke(this, EventArgs.Empty);
+            OnUpdate?.Invoke();
             Wait();
 
             DataFrameConfiguration.SaveConfiguration(rect, version, meta, dataFrames);
@@ -318,7 +319,7 @@ namespace BlazorServer
 
             logger.LogInformation($"Frame configuration was successful! Configuration saved!");
 
-            OnUpdate?.Invoke(this, EventArgs.Empty);
+            OnUpdate?.Invoke();
             Wait();
 
             return true;

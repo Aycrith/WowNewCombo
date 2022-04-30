@@ -22,7 +22,7 @@ namespace Core
 
         public Bag[] Bags { get; } = new Bag[5];
 
-        public event EventHandler? DataChanged;
+        public event EmptyEvent? DataChanged;
 
         private bool changedFromEvent;
 
@@ -64,7 +64,7 @@ namespace Core
             if (changedFromEvent || metaChanged || inventoryChanged || (DateTime.UtcNow - this.lastEvent).TotalSeconds > 11)
             {
                 changedFromEvent = false;
-                DataChanged?.Invoke(this, EventArgs.Empty);
+                DataChanged?.Invoke();
                 lastEvent = DateTime.UtcNow;
             }
         }

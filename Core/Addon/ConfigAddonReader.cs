@@ -25,9 +25,9 @@ namespace Core.Addon
         public RecordInt UIMapId => throw new NotImplementedException();
 
 #pragma warning disable CS0067 // The event is never used
-        public event EventHandler? AddonDataChanged;
-        public event EventHandler? ZoneChanged;
-        public event EventHandler? PlayerDeath;
+        public event EmptyEvent? AddonDataChanged;
+        public event EmptyEvent? ZoneChanged;
+        public event EmptyEvent? PlayerDeath;
 #pragma warning restore CS0067
 
         public int GetIntAt(int index)

@@ -33,8 +33,8 @@ namespace Core
 
         public ExecGameCommand ExecGameCommand => throw new NotImplementedException();
 
-        public event EventHandler? ProfileLoaded;
-        public event EventHandler? StatusChanged;
+        public event EmptyEvent? ProfileLoaded;
+        public event EmptyEvent? StatusChanged;
 
         public double AvgScreenLatency => throw new NotImplementedException();
         public double AvgNPCLatency => throw new NotImplementedException();
@@ -46,7 +46,7 @@ namespace Core
 
         public void StopBot()
         {
-            StatusChanged?.Invoke(this, EventArgs.Empty);
+            StatusChanged?.Invoke();
             throw new NotImplementedException();
         }
 
@@ -62,7 +62,7 @@ namespace Core
 
         public void LoadClassProfile(string classFilename)
         {
-            ProfileLoaded?.Invoke(this, EventArgs.Empty);
+            ProfileLoaded?.Invoke();
             throw new NotImplementedException();
         }
 
@@ -78,7 +78,7 @@ namespace Core
 
         public void LoadPathProfile(string pathFilename)
         {
-            ProfileLoaded?.Invoke(this, EventArgs.Empty);
+            ProfileLoaded?.Invoke();
             throw new NotImplementedException();
         }
 

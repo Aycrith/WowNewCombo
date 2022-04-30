@@ -178,7 +178,7 @@
         RefreshPathMarkup();
     }
 
-    private void OnAddonDataChanged(object? s, EventArgs e)
+    private void OnAddonDataChanged()
     {
         base.InvokeAsync(() =>
         {
@@ -187,7 +187,7 @@
         });
     }
 
-    private void OnZoneChanged(object? s, EventArgs e)
+    private void OnZoneChanged()
     {
         base.InvokeAsync(() =>
         {
@@ -196,7 +196,7 @@
         });
     }
 
-    private void OnPlayerDeath(object? s, EventArgs e)
+    private void OnPlayerDeath()
     {
         base.InvokeAsync(() =>
         {
@@ -234,7 +234,7 @@
 
     }
 
-    private void OnProfileLoaded(object? sender, EventArgs e)
+    private void OnProfileLoaded()
     {
         if (!refreshTimer.Enabled)
         {

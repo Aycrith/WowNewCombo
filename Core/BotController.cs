@@ -65,8 +65,8 @@ namespace Core
         public string SelectedClassFilename { get; set; } = string.Empty;
         public string? SelectedPathFilename { get; set; }
 
-        public event EventHandler? ProfileLoaded;
-        public event EventHandler? StatusChanged;
+        public event EmptyEvent? ProfileLoaded;
+        public event EmptyEvent? StatusChanged;
 
         public double AvgScreenLatency
         {
@@ -269,7 +269,7 @@ namespace Core
                     ConfigurableInput?.Reset();
                 }
 
-                StatusChanged?.Invoke(this, EventArgs.Empty);
+                StatusChanged?.Invoke();
             }
         }
 
@@ -411,7 +411,7 @@ namespace Core
             if (actionThread != null)
             {
                 actionThread.Active = false;
-                StatusChanged?.Invoke(this, EventArgs.Empty);
+                StatusChanged?.Invoke();
             }
         }
 
@@ -470,7 +470,7 @@ namespace Core
 
         private void LoadProfile()
         {
-            ProfileLoaded?.Invoke(this, EventArgs.Empty);
+            ProfileLoaded?.Invoke();
             WowScreen.Enabled = ClassConfig?.Mode != Mode.AttendedGather;
         }
 
