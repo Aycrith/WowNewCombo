@@ -331,7 +331,7 @@ namespace Core
             var (routeInfo, availableActions) = actionFactory.CreateGoals(config, blacklist, goapAgentState, wait);
 
             this.GoapAgent?.Dispose();
-            this.GoapAgent = new GoapAgent(logger, goapAgentState, ConfigurableInput, AddonReader, availableActions, blacklist);
+            this.GoapAgent = new GoapAgent(logger, WowScreen, goapAgentState, ConfigurableInput, AddonReader, availableActions, blacklist);
 
             RouteInfo = routeInfo;
             this.actionThread = new GoalThread(logger, GoapAgent, AddonReader, RouteInfo);

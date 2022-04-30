@@ -204,6 +204,7 @@ namespace Core.Goals
             }
             else
             {
+                SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, true));
                 sideActivityThread = new Thread(Thread_LookingForTarget);
                 sideActivityThread.Start();
             }
@@ -213,7 +214,7 @@ namespace Core.Goals
         {
             Log("Start searching for target...");
 
-            Func<bool> validTarget = () =>
+            bool validTarget() =>
                 playerReader.HasTarget &&
                 !playerReader.Bits.TargetIsDead;
 
@@ -231,6 +232,7 @@ namespace Core.Goals
             {
                 sideActivityCts.Cancel();
                 Log("Found target!");
+                SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, false));
             }
         }
 
