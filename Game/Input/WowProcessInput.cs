@@ -18,7 +18,7 @@ namespace Game
 
         protected readonly ILogger logger;
         private readonly WowProcess wowProcess;
-        private readonly IInput nativeInput;
+        private readonly InputWindowsNative nativeInput;
         private readonly IInput simulatorInput;
 
         private readonly Dictionary<ConsoleKey, bool> keyDownDict = new();
