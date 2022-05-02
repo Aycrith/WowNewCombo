@@ -1,5 +1,6 @@
 ﻿@page "/"
 
+@inject Microsoft.Extensions.Logging.ILogger logger
 @inject Core.IAddonReader addonReader
 @inject Core.IBotController botController
 @inject IJSRuntime JSRuntime
@@ -30,8 +31,23 @@
             </div>
 
             <div class="col-sm" style="margin-left:10px">
-                <BotHeader ShowActiveGoal="false" Hide="@(botController.IsBotActive)" />
+                @if(updateAvailable)
+                {
+                    <div class="card" style="margin-bottom: 10px">
+                        <div class="card-header">
+                            <b>New Addon version available!</b>
+                            <span class="float-right">
+                                <button class="btn btn-sm btn-success">
+                                <NavLink class="nav-link" href="AddonConfiguration">
+                                    <span style="text-decoration: none;font-weight: bold;color: white;">Update</span>
+                                </NavLink>
+                                </button>
+                            </span>
+                        </div>
+                    </div>
+                }
 
+                <BotHeader ShowActiveGoal="false" Hide="@(botController.IsBotActive)" />
                 <ProfileSelectorComponent Hide="@(botController.IsBotActive)" />
                 <PathSelectorComponent Hide="@(botController.IsBotActive)" />
                 <GoalsComponent />
@@ -52,6 +68,7 @@
 
 
 @code {
+    private bool updateAvailable;
 
     protected override void OnInitialized()
     {
@@ -59,6 +76,9 @@
         {
             addonReader.AddonDataChanged -= OnAddonDataChanged;
             addonReader.AddonDataChanged += OnAddonDataChanged;
+
+            AddonConfigurator addonConfigurator = new (logger, AddonConfig.Load());
+            updateAvailable = addonConfigurator.UpdateAvailable();
         }
     }
 
