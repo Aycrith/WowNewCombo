@@ -34,6 +34,8 @@ namespace Core
 
         private readonly Dictionary<string, Func<string, Requirement>> requirementMap;
 
+        public const string AddVisible = "AddVisible";
+
         public RequirementFactory(ILogger logger, AddonReader addonReader, NpcNameFinder npcNameFinder)
         {
             this.logger = logger;
@@ -72,7 +74,7 @@ namespace Core
             bool TargetsMe() => playerReader.TargetTarget == TargetTargetEnum.Me;
             bool TargetsPet() => playerReader.TargetTarget == TargetTargetEnum.Pet;
             bool TargetsNone() => playerReader.TargetTarget == TargetTargetEnum.None;
-            bool AddVisible() => npcNameFinder.PotentialAddsExist;
+            bool PotentialAddsExist() => npcNameFinder.PotentialAddsExist;
 
             bool IsInMeleeRange() => playerReader.IsInMeleeRange;
             bool IsInDeadZone() => playerReader.IsInDeadZone;
@@ -213,7 +215,7 @@ namespace Core
                 { "TargetsPet", TargetsPet },
                 { "TargetsNone", TargetsNone },
 
-                { "AddVisible", AddVisible },
+                { AddVisible, PotentialAddsExist },
 
                 // Range
                 { "InMeleeRange", IsInMeleeRange },

@@ -31,6 +31,8 @@ namespace Core.Goals
 
         private readonly Func<bool> pullPrevention;
 
+        private bool? requiresNpcNameFinder;
+
         public PullTargetGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, IBlacklist blacklist, StopMoving stopMoving, CastingHandler castingHandler, MountHandler mountHandler, StuckDetector stuckDetector, ClassConfiguration classConfiguration)
         {
             this.logger = logger;
@@ -72,6 +74,18 @@ namespace Core.Goals
 
             if (Keys.Count != 0)
             {
+                if (requiresNpcNameFinder == null)
+                {
+                    requiresNpcNameFinder = false;
+                    Keys.ForEach(key =>
+                    {
+                        if (key.Requirements.Contains(RequirementFactory.AddVisible))
+                        {
+                            requiresNpcNameFinder = true;
+                        }
+                    });
+                }
+
                 if (input.ClassConfig.StopAttack.GetCooldownRemaining() == 0)
                 {
                     Log("Stop auto interact!");
@@ -80,9 +94,23 @@ namespace Core.Goals
                 }
             }
 
+            if (requiresNpcNameFinder == true)
+            {
+                SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, true));
+            }
+
             pullStart = DateTime.UtcNow;
 
             return ValueTask.CompletedTask;
+        }
+
+        public override ValueTask OnExit()
+        {
+            if (requiresNpcNameFinder == true)
+            {
+                SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, false));
+            }
+            return base.OnExit();
         }
 
         public override void OnActionEvent(object sender, ActionEventArgs e)
