@@ -18,7 +18,7 @@ namespace Game
         public delegate void ScreenChangeEventHandler(object sender, ScreenChangeEventArgs args);
         public event ScreenChangeEventHandler OnScreenChanged;
 
-        private readonly List<Action<Graphics>> drawActions = new List<Action<Graphics>>();
+        private readonly List<Action<Graphics>> drawActions = new();
 
         public int Size { get; set; } = 1024;
 
@@ -69,9 +69,6 @@ namespace Game
 
         public void PostProcess()
         {
-            if (!EnablePostProcess)
-                return;
-
             using (var gr = Graphics.FromImage(Bitmap))
             {
                 using (var blackPen = new SolidBrush(Color.Black))

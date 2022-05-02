@@ -188,8 +188,8 @@ namespace Core.Goals
                 input.ClearTarget();
                 wait.Update(1);
 
-                SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, true));
                 npcNameTargeting.ChangeNpcType(NpcNames.Friendly | NpcNames.Neutral);
+                SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, true));
                 npcNameTargeting.WaitForNUpdate(1);
                 bool foundVendor = npcNameTargeting.FindBy(CursorType.Vendor, CursorType.Repair, CursorType.Innkeeper);
                 if (!foundVendor)

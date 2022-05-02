@@ -29,7 +29,6 @@ namespace Core.Goals
             LogConsumed(logger, goapAgentState.LastCombatKillCount);
 
             SendActionEvent(new ActionEventArgs(GoapKey.consumecorpse, false));
-            SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, false));
 
             return base.OnEnter();
         }

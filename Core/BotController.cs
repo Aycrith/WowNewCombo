@@ -97,11 +97,11 @@ namespace Core
         private readonly CircularBuffer<double> NPCLatencys;
 
         private const int screenshotTickMs = 200;
-        private DateTime lastScreenshot;
 
         private GoalThread? actionThread;
 
-        private readonly Stopwatch updatePlayerPostion = new Stopwatch();
+        private readonly Thread? remotePathing;
+        private const int remotePathingTickMs = 500;
 
         public BotController(ILogger logger, IPPather pather, DataConfig dataConfig, IConfiguration configuration)
         {
@@ -110,11 +110,6 @@ namespace Core
             this.DataConfig = dataConfig;
 
             cts = new CancellationTokenSource();
-
-            if (pather is RemotePathingAPI)
-            {
-                updatePlayerPostion.Start();
-            }
 
             wowProcess = new WowProcess();
             WowScreen = new WowScreen(logger, wowProcess);
@@ -156,8 +151,7 @@ namespace Core
             // wait for addon to read the wow state
             wait.Update(1);
 
-            var sw = new Stopwatch();
-            sw.Start();
+            Stopwatch sw = Stopwatch.StartNew();
             while (!Enum.GetValues(typeof(PlayerClassEnum)).Cast<PlayerClassEnum>().Contains(AddonReader.PlayerReader.Class))
             {
                 if (sw.ElapsedMilliseconds > 5000)
@@ -177,100 +171,118 @@ namespace Core
 
             screenshotThread = new Thread(ScreenshotRefreshThread);
             screenshotThread.Start();
+
+            if (pather is RemotePathingAPI)
+            {
+                remotePathing = new(RemotePathingThread);
+                remotePathing.Start();
+            }
         }
 
         public void AddonRefreshThread()
         {
             while (!cts.IsCancellationRequested)
             {
-                this.AddonReader.AddonRefresh();
+                AddonReader.AddonRefresh();
                 addonAutoResetEvent.Set();
                 cts.Token.WaitHandle.WaitOne(1);
             }
-            this.logger.LogInformation("Addon thread stoppped!");
+            logger.LogInformation("Addon thread stoppped!");
         }
 
         public void ScreenshotRefreshThread()
         {
-            var stopWatch = new Stopwatch();
+            Stopwatch stopWatch = new();
             while (!cts.IsCancellationRequested)
             {
-                if ((DateTime.UtcNow - lastScreenshot).TotalMilliseconds > screenshotTickMs)
+                if (WowScreen.Enabled)
                 {
-                    if (this.WowScreen.Enabled)
-                    {
-                        stopWatch.Restart();
-                        this.WowScreen.Update();
-                        ScreenLatencys.Put(stopWatch.ElapsedMilliseconds);
+                    stopWatch.Restart();
+                    WowScreen.Update();
+                    ScreenLatencys.Put(stopWatch.ElapsedMilliseconds);
 
-                        stopWatch.Restart();
-                        this.npcNameFinder.Update();
-                        NPCLatencys.Put(stopWatch.ElapsedMilliseconds);
+                    stopWatch.Restart();
+                    npcNameFinder.Update();
+                    NPCLatencys.Put(stopWatch.ElapsedMilliseconds);
 
-                        this.WowScreen.PostProcess();
-                    }
-                    else
-                    {
-                        this.npcNameFinder.FakeUpdate();
-                    }
+                    if (WowScreen.EnablePostProcess)
+                        WowScreen.PostProcess();
+                }
+                else
+                {
+                    if (ClassConfig?.Mode is not Mode.AttendedGather)
+                        ScreenLatencys.Clear();
 
-                    if (ClassConfig?.Mode == Mode.AttendedGather)
-                    {
-                        minimapNodeFinder.TryFind();
-                    }
+                    NPCLatencys.Clear();
 
-                    lastScreenshot = DateTime.UtcNow;
+                    npcNameFinder.FakeUpdate();
                 }
 
-                if (updatePlayerPostion.ElapsedMilliseconds > 500)
+                if (ClassConfig?.Mode == Mode.AttendedGather)
                 {
-                    this.pather.DrawSphere(new PPather.SphereArgs
-                    {
-                        Colour = AddonReader.PlayerReader.Bits.PlayerInCombat ? 1 : AddonReader.PlayerReader.HasTarget ? 6 : 2,
-                        Name = "Player",
-                        MapId = this.AddonReader.UIMapId.Value,
-                        Spot = this.AddonReader.PlayerReader.PlayerLocation
-                    });
-                    updatePlayerPostion.Restart();
+                    stopWatch.Restart();
+                    minimapNodeFinder.TryFind();
+                    ScreenLatencys.Put(stopWatch.ElapsedMilliseconds);
                 }
-                cts.Token.WaitHandle.WaitOne(1);
+
+                cts.Token.WaitHandle.WaitOne(WowScreen.Enabled ||
+                    ClassConfig?.Mode == Mode.AttendedGather ? screenshotTickMs : 1);
             }
-            this.logger.LogInformation("Screenshot thread stoppped!");
+            logger.LogInformation("Screenshot thread stoppped!");
+        }
+
+        private void RemotePathingThread()
+        {
+            while (!cts.IsCancellationRequested)
+            {
+                pather.DrawSphere(new PPather.SphereArgs
+                {
+                    Colour = AddonReader.PlayerReader.Bits.PlayerInCombat ? 1 : AddonReader.PlayerReader.HasTarget ? 6 : 2,
+                    Name = "Player",
+                    MapId = this.AddonReader.UIMapId.Value,
+                    Spot = this.AddonReader.PlayerReader.PlayerLocation
+                });
+
+                cts.Token.WaitHandle.WaitOne(remotePathingTickMs);
+            }
+            logger.LogInformation("RemotePathing thread stoppped!");
         }
 
         public bool IsBotActive => actionThread != null && actionThread.Active;
 
         public void ToggleBotStatus()
         {
-            if (actionThread != null)
+            if (actionThread == null)
+                return;
+
+            if (!actionThread.Active)
             {
-                if (!actionThread.Active)
+                if (ClassConfig?.Mode is Mode.AttendedGrind or Mode.Grind)
                 {
-                    if (ClassConfig?.Mode is Mode.AttendedGrind or Mode.Grind)
-                    {
-                        this.GrindSession.StartBotSession();
-                    }
-
-                    this.pather.DrawLines();
-
-                    actionThread.Active = true;
-                    botThread = new Thread(() => Task.Factory.StartNew(() => BotThread()));
-                    botThread.Start();
-                }
-                else
-                {
-                    actionThread.Active = false;
-                    if (ClassConfig?.Mode is Mode.AttendedGrind or Mode.Grind)
-                    {
-                        GrindSession.StopBotSession("Stopped By Player", false);
-                    }
-
-                    AddonReader.SoftReset();
-                    ConfigurableInput?.Reset();
+                    this.GrindSession.StartBotSession();
                 }
 
-                StatusChanged?.Invoke();
+                this.pather.DrawLines();
+
+                actionThread.Active = true;
+                botThread = new Thread(() => Task.Factory.StartNew(BotThread));
+                botThread.Start();
             }
+            else
+            {
+                actionThread.Active = false;
+                if (ClassConfig?.Mode is Mode.AttendedGrind or Mode.Grind)
+                {
+                    GrindSession.StopBotSession("Stopped By Player", false);
+                }
+
+                WowScreen.Enabled = false;
+
+                AddonReader.SoftReset();
+                ConfigurableInput?.Reset();
+            }
+
+            StatusChanged?.Invoke();
         }
 
         public ValueTask BotThread()
@@ -428,12 +440,12 @@ namespace Core
         public void LoadClassProfile(string classFilename)
         {
             StopBot();
-            if(InitialiseFromFile(classFilename, SelectedPathFilename))
+            if (InitialiseFromFile(classFilename, SelectedPathFilename))
             {
                 SelectedClassFilename = classFilename;
             }
 
-            LoadProfile();
+            ProfileLoaded?.Invoke();
         }
 
         public List<string> ClassFileList()
@@ -465,13 +477,7 @@ namespace Core
                 SelectedPathFilename = pathFilename;
             }
 
-            LoadProfile();
-        }
-
-        private void LoadProfile()
-        {
             ProfileLoaded?.Invoke();
-            WowScreen.Enabled = ClassConfig?.Mode != Mode.AttendedGather;
         }
 
         public void OverrideClassConfig(ClassConfiguration classConfiguration)

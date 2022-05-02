@@ -70,6 +70,7 @@ namespace Core.Goals
 
             Log($"Search for {NpcNames.Corpse}");
             npcNameTargeting.ChangeNpcType(NpcNames.Corpse);
+            SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, true));
 
             lastLoot = playerReader.LastLootTime;
 
@@ -143,6 +144,12 @@ namespace Core.Goals
             }
 
             return ValueTask.CompletedTask;
+        }
+
+        public override ValueTask OnExit()
+        {
+            SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, false));
+            return base.OnExit();
         }
 
         public override ValueTask PerformAction()

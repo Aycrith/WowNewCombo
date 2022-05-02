@@ -32,7 +32,7 @@ namespace Core.Goals
 
         private readonly TargetFinder targetFinder;
         private readonly int minMs = 500, maxMs = 1000;
-        private readonly NpcNames NpcNameToFind = NpcNames.Enemy | NpcNames.Neutral;
+        private const NpcNames NpcNameToFind = NpcNames.Enemy | NpcNames.Neutral;
 
         private const int MIN_TIME_TO_START_CYCLE_PROFESSION = 5000;
         private const int CYCLE_PROFESSION_PERIOD = 8000;
@@ -204,7 +204,6 @@ namespace Core.Goals
             }
             else
             {
-                SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, true));
                 sideActivityThread = new Thread(Thread_LookingForTarget);
                 sideActivityThread.Start();
             }
@@ -214,9 +213,13 @@ namespace Core.Goals
         {
             Log("Start searching for target...");
 
-            bool validTarget() =>
-                playerReader.HasTarget &&
-                !playerReader.Bits.TargetIsDead;
+            bool validTarget()
+            {
+                return playerReader.HasTarget &&
+                    !playerReader.Bits.TargetIsDead;
+            }
+
+            SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, true));
 
             bool found = false;
             while (!found && !sideActivityCts.IsCancellationRequested)
@@ -232,8 +235,9 @@ namespace Core.Goals
             {
                 sideActivityCts.Cancel();
                 Log("Found target!");
-                SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, false));
             }
+
+            SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, false));
         }
 
         private void Thread_AttendedGather()
