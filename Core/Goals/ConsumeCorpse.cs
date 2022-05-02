@@ -42,7 +42,6 @@ namespace Core.Goals
 
             if (classConfig.Loot)
             {
-                SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, true));
                 SendActionEvent(new ActionEventArgs(GoapKey.shouldloot, true));
             }
 
