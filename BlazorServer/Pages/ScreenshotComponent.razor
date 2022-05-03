@@ -1,12 +1,19 @@
 ﻿@inject Core.IBotController botController
+@using Game;
 
-<div class="@(Stretch ? "w-100 h-auto m-0 p-0" : "")">
+<div class="@(Stretch ? "w-100 h-auto m-0 p-0" : string.Empty)">
     <div class="row" @onclick="Toggle">
-        <img class="@(Stretch ? "img-fluid w-100" : "")" src="data:image/png;base64, @image" alt="Toggle preview!" />
+        @if(this.botController.WowScreen.EnablePostProcess)
+        {
+            <img class="@(Stretch ? "img-fluid w-100" : string.Empty)" src="data:image/png;base64, @WowScreen.ToBase64(botController.WowScreen.Bitmap, Size)" alt="Toggle preview!" />
+        }
+        else
+        {
+            <img alt="Toggle preview!" />
+        }
     </div>
 </div>
 
-@using Game;
 @code {
 
     [Parameter]
@@ -15,52 +22,26 @@
     [Parameter]
     public bool Stretch { get; set; } = false;
 
-    private string image = string.Empty;
-
-    protected override void OnInitialized()
-    {
-        this.botController.WowScreen.Size = Size;
-    }
-
     protected override void OnAfterRender(bool firstRender)
     {
         if (firstRender)
         {
-            this.botController.WowScreen.OnScreenChanged -= this.ImageChanged;
             this.botController.WowScreen.OnScreenChanged += this.ImageChanged;
         }
-    }
-
-    protected void Toggle()
-    {
-        if(this.botController.WowScreen.EnablePostProcess)
-        {
-            this.image = string.Empty;
-        }
-
-        this.botController.WowScreen.EnablePostProcess = !this.botController.WowScreen.EnablePostProcess;
-        base.InvokeAsync(StateHasChanged);
-    }
-
-    private async void ImageChanged(object sender, ScreenChangeEventArgs args)
-    {
-        if (!this.botController.WowScreen.EnablePostProcess)
-        {
-            this.image = string.Empty;
-        }
-        else
-        {
-            this.image = args.Screenshot;    
-        }
-
-        await InvokeAsync(() =>
-        {
-            base.StateHasChanged();
-        });
     }
 
     public void Dispose()
     {
         this.botController.WowScreen.OnScreenChanged -= this.ImageChanged;
+    }
+
+    protected void Toggle()
+    {
+        this.botController.WowScreen.EnablePostProcess = !this.botController.WowScreen.EnablePostProcess;
+    }
+
+    private async void ImageChanged()
+    {
+        await base.InvokeAsync(StateHasChanged);
     }
 }

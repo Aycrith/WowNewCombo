@@ -19,17 +19,20 @@
             </tr>
         </table>
     </div>
-    <div class="card-body" style="padding: 0 0 0 0">
+    <div class="card-body" style="padding: 0 0 0 0; width:@(Size)px; height:@(Size)px">
         @if(previewEnabled)
         {
-            <img src="data:image/png;base64, @WowScreen.ToBase64(botController.WowScreen.MiniMapBitmap, Size)" alt="Red dot" />
+            <img style="width:@(Size)px; height:@(Size)px" src="data:image/png;base64, @WowScreen.ToBase64(botController.WowScreen.MiniMapBitmap, (int)(Size * DownScale))" alt="Red dot" />
         }
     </div>
 </div>
 
 @code {
     [Parameter]
-    public int Size { get; set; } = 200;
+    public int Size { get; set; } = 400;
+
+    [Parameter]
+    public float DownScale { get; set; } = 0.5f;
 
     [Parameter]
     public EventCallback<int> OnNodeFound { get; set; }

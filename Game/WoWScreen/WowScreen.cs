@@ -15,12 +15,10 @@ namespace Game
         private readonly ILogger logger;
         private readonly WowProcess wowProcess;
 
-        public delegate void ScreenChangeEventHandler(object sender, ScreenChangeEventArgs args);
-        public event ScreenChangeEventHandler OnScreenChanged;
+        public delegate void EmptyEvent();
+        public event EmptyEvent OnScreenChanged;
 
         private readonly List<Action<Graphics>> drawActions = new();
-
-        public int Size { get; set; } = 1024;
 
         // TODO: make it work for higher resolution ex. 4k
         public const int MinimapSize = 200;
@@ -79,7 +77,7 @@ namespace Game
                 drawActions.ForEach(x => x(gr));
             }
 
-            this.OnScreenChanged?.Invoke(this, new ScreenChangeEventArgs(ToBase64(Bitmap, Size)));
+            OnScreenChanged?.Invoke();
         }
 
         public void GetPosition(ref Point point)
