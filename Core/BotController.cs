@@ -448,19 +448,20 @@ namespace Core
 
         public List<string> ClassFileList()
         {
-            DirectoryInfo directory = new DirectoryInfo(DataConfig.Class);
-            var list = directory.GetFiles().Select(i => i.Name).ToList();
-            list.Sort(new NaturalStringComparer());
-            list.Insert(0, "Press Init State first!");
-            return list;
+            var root = DataConfig.Class;
+            var files = Directory.EnumerateFiles(root, "*.json*", SearchOption.AllDirectories)
+                .Select(path => path.Replace(root, string.Empty)).ToList();
+
+            files.Sort(new NaturalStringComparer());
+            files.Insert(0, "Press Init State first!");
+            return files;
         }
 
         public List<string> PathFileList()
         {
             var root = DataConfig.Path;
-
             var files = Directory.EnumerateFiles(root, "*.json*", SearchOption.AllDirectories)
-                .Select(path => path.Replace(root, "")).ToList();
+                .Select(path => path.Replace(root, string.Empty)).ToList();
 
             files.Sort(new NaturalStringComparer());
             files.Insert(0, "Use Class Profile Default");
