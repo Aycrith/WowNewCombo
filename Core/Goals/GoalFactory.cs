@@ -41,7 +41,7 @@ namespace Core
         {
             HashSet<GoapGoal> availableActions = new();
 
-            GetPaths(out List<Vector3> pathPoints, out List<Vector3> spiritPath, classConfig);
+            GetPath(out List<Vector3> pathPoints, classConfig);
 
             PlayerDirection playerDirection = new(logger, input, addonReader.PlayerReader);
             StopMoving stopMoving = new(input, addonReader.PlayerReader);
@@ -63,16 +63,12 @@ namespace Core
             CombatGoal genericCombat = new(logger, input, wait, addonReader, stopMoving, classConfig, castingHandler, mountHandler);
             ApproachTargetGoal approachTarget = new(logger, input, wait, addonReader.PlayerReader, stopMoving, mountHandler);
 
-            RouteInfo routeInfo;
-
             availableActions.Clear();
 
             if (classConfig.Mode == Mode.CorpseRun)
             {
                 availableActions.Add(new WaitGoal(logger));
-                availableActions.Add(new CorpseRunGoal(addonReader.PlayerReader, input, playerDirection, spiritPath, logger, stuckDetector));
-
-                routeInfo = new RouteInfo(pathPoints, spiritPath, new(), addonReader);
+                availableActions.Add(walkToCorpseAction);
             }
             else if (classConfig.Mode == Mode.AttendedGather)
             {
@@ -133,18 +129,6 @@ namespace Core
                     item.Path.Clear();
                     item.Path.AddRange(ReadPath(item.Name, item.PathFilename));
                 }
-
-                var pathProviders = availableActions.Where(a => a is IRouteProvider)
-                    .Cast<IRouteProvider>()
-                    .ToList();
-
-                routeInfo = new RouteInfo(pathPoints, spiritPath, pathProviders, addonReader);
-
-                this.pather.DrawLines(new List<LineArgs>()
-                {
-                    new LineArgs  { Spots = pathPoints, Name = "grindpath", Colour = 2, MapId = addonReader.UIMapId.Value },
-                    new LineArgs { Spots = spiritPath, Name = "spirithealer", Colour = 3, MapId = addonReader.UIMapId.Value }
-                });
             }
             else
             {
@@ -218,39 +202,32 @@ namespace Core
                     item.Path.Clear();
                     item.Path.AddRange(ReadPath(item.Name, item.PathFilename));
                 }
-
-                var pathProviders = availableActions.Where(a => a is IRouteProvider)
-                    .Cast<IRouteProvider>()
-                    .ToList();
-
-                routeInfo = new RouteInfo(pathPoints, spiritPath, pathProviders, addonReader);
-
-                this.pather.DrawLines(new List<LineArgs>()
-                {
-                    new LineArgs  { Spots = pathPoints, Name = "grindpath", Colour = 2, MapId = addonReader.UIMapId.Value },
-                    new LineArgs { Spots = spiritPath, Name = "spirithealer", Colour = 3, MapId = addonReader.UIMapId.Value }
-                });
             }
+
+            var pathProviders = availableActions.Where(a => a is IRouteProvider)
+                .Cast<IRouteProvider>()
+                .ToList();
+
+            RouteInfo routeInfo = new(pathPoints, pathProviders, addonReader);
+
+            this.pather.DrawLines(new()
+            {
+                new LineArgs { Spots = pathPoints, Name = "grindpath", Colour = 2, MapId = addonReader.UIMapId.Value }
+            });
 
             return (routeInfo, availableActions);
         }
 
         private string FixPathFilename(string path)
         {
-            if (!path.Contains(':') && !string.IsNullOrEmpty(path) && !path.Contains(dataConfig.Path))
-            {
-                return Path.Join(dataConfig.Path, path);
-            }
-            return path;
+            return !path.Contains(dataConfig.Path) ? Path.Join(dataConfig.Path, path) : path;
         }
 
-        private void GetPaths(out List<Vector3> pathPoints, out List<Vector3> spiritPath, ClassConfiguration classConfig)
+        private void GetPath(out List<Vector3> pathPoints, ClassConfiguration classConfig)
         {
             classConfig.PathFilename = FixPathFilename(classConfig.PathFilename);
-            classConfig.SpiritPathFilename = FixPathFilename(classConfig.SpiritPathFilename);
 
             pathPoints = CreatePathPoints(classConfig);
-            spiritPath = CreateSpiritPathPoints(pathPoints, classConfig);
         }
 
         private IEnumerable<Vector3> ReadPath(string name, string pathFilename)
@@ -263,7 +240,7 @@ namespace Core
                 }
                 else
                 {
-                    return JsonConvert.DeserializeObject<List<Vector3>>(File.ReadAllText(FixPathFilename(pathFilename)));
+                    return JsonConvert.DeserializeObject<Vector3[]>(File.ReadAllText(FixPathFilename(pathFilename)));
                 }
             }
             catch (Exception ex)
@@ -273,36 +250,23 @@ namespace Core
             }
         }
 
-        private static List<Vector3> CreateSpiritPathPoints(List<Vector3> pathPoints, ClassConfiguration classConfig)
-        {
-            List<Vector3> spiritPath;
-            if (string.IsNullOrEmpty(classConfig.SpiritPathFilename))
-            {
-                spiritPath = new List<Vector3> { pathPoints.First() };
-            }
-            else
-            {
-                string spiritText = File.ReadAllText(classConfig.SpiritPathFilename);
-                spiritPath = JsonConvert.DeserializeObject<List<Vector3>>(spiritText);
-            }
-
-            return spiritPath;
-        }
-
         private static List<Vector3> CreatePathPoints(ClassConfiguration classConfig)
         {
-            List<Vector3> output = new List<Vector3>();
+            List<Vector3> output = new();
 
             string text = File.ReadAllText(classConfig.PathFilename);
-            var points = JsonConvert.DeserializeObject<List<Vector3>>(text);
+            var points = JsonConvert.DeserializeObject<Vector3[]>(text);
 
             int step = classConfig.PathReduceSteps ? 2 : 1;
-            for (int i = 0; i < points.Count; i += step)
+            for (int i = 0; i < points.Length; i += step)
             {
-                if (i < points.Count)
-                {
-                    output.Add(points[i]);
-                }
+                output.Add(points[i]);
+            }
+
+            // last point of the path is added
+            if (points.Length > 0 && points.Length % step != 0)
+            {
+                output.Add(points[^1]);
             }
 
             return output;

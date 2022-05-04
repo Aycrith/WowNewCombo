@@ -280,7 +280,6 @@ Take a look at the class files in `/Json/class` for examples of what you can do.
 | `"UseMount"` | Should use mount when its possible | true | `false` |
 | `"KeyboardOnly"` | Use keyboard to interact only. See [KeyboardOnly](#KeyboardOnly) | false | `true` |
 | `"PathFilename"` | [Path](#Path) to use while alive | **false** | `""` |
-| `"SpiritPathFilename"` | Path to use while dead | true | `""` |
 | `"PathThereAndBack"` | While using the path, [should go start to and reverse](#There-and-back) | true | `true` |
 | `"PathReduceSteps"` | Reduce the number of path points | true | `false` |
 | `"Mode"` | What kind of [behaviour](#Modes) should the bot operate | true | `Mode.Grind` |
@@ -1255,7 +1254,6 @@ Show the player state. A hyper link to wowhead appears for the mob you are fight
 This component shows:
 
 * The main path
-* The spirit healer path
 * Your location
 * The location of any deaths
 * Pathed routes

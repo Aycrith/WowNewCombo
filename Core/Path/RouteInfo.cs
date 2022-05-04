@@ -35,7 +35,6 @@ namespace Core
     public class RouteInfo
     {
         public List<Vector3> PathPoints { get; }
-        public List<Vector3> SpiritPath { get; }
 
         public List<Vector3>? RouteToWaypoint
         {
@@ -99,10 +98,9 @@ namespace Core
             return value / 100f * pointToGrid;
         }
 
-        public RouteInfo(List<Vector3> pathPoints, List<Vector3> spiritPath, List<IRouteProvider> pathedRoutes, AddonReader addonReader)
+        public RouteInfo(List<Vector3> pathPoints, List<IRouteProvider> pathedRoutes, AddonReader addonReader)
         {
             this.PathPoints = pathPoints.ToList();
-            this.SpiritPath = spiritPath.ToList();
 
             this.pathedRoutes = pathedRoutes;
             this.addonReader = addonReader;
@@ -130,9 +128,6 @@ namespace Core
         private void CalculateDiffs()
         {
             var allPoints = this.PathPoints.ToList();
-
-            if (SpiritPath.Count > 1)
-                allPoints.AddRange(this.SpiritPath);
 
             var wayPoints = RouteToWaypoint;
             if (wayPoints != null)
