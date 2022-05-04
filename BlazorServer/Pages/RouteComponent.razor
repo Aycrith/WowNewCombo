@@ -32,7 +32,7 @@
                     @{
                         var colour = addonReader.PlayerReader.Bits.PlayerInCombat ? "red" : "orange";
 
-                        if (botController.GoapAgent != null && botController.GoapAgent.CurrentGoal?.GetType() == typeof(Core.Goals.FollowRouteGoal))
+                        if (botController.GoapAgent?.CurrentGoal is Core.Goals.FollowRouteGoal)
                         {
                             colour = "blue";
                         }
