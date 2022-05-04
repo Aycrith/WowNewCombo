@@ -65,7 +65,7 @@ namespace Core
             }
 
             stopMoving.Stop();
-            wait.Update(1);
+            wait.Update();
 
             input.Mount();
 

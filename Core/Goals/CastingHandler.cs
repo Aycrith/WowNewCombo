@@ -92,7 +92,7 @@ namespace Core.Goals
             if (item.StopBeforeCast)
             {
                 stopMoving.Stop();
-                wait.Update(1);
+                wait.Update();
             }
 
             playerReader.CastEvent.ForceUpdate(0);
@@ -176,9 +176,10 @@ namespace Core.Goals
             }
 
             stopMoving.Stop();
-            wait.Update(1);
+            wait.Update();
             stopMoving.Stop();
-            wait.Update(2);
+            wait.Update();
+            wait.Update();
 
             bool prevState = interrupt();
 
@@ -294,7 +295,7 @@ namespace Core.Goals
                 logger.LogInformation("Stop AutoRepeat Shoot");
                 input.StopAttack();
                 input.StopAttack();
-                wait.Update(1);
+                wait.Update();
             }
 
             if (item.DelayBeforeCast > 0)
@@ -302,9 +303,9 @@ namespace Core.Goals
                 if (item.StopBeforeCast || item.HasCastBar)
                 {
                     stopMoving.Stop();
-                    wait.Update(1);
+                    wait.Update();
                     stopMoving.Stop();
-                    wait.Update(1);
+                    wait.Update();
                 }
 
                 if (item.Log)
@@ -361,7 +362,7 @@ namespace Core.Goals
                     sw.Start();
                     while (sw.ElapsedMilliseconds < item.DelayAfterCast)
                     {
-                        wait.Update(1);
+                        wait.Update();
                         if (playerReader.Bits.TargetOfTargetIsPlayer)
                         {
                             break;
@@ -415,7 +416,7 @@ namespace Core.Goals
 
             if (item.AfterCastWaitNextSwing)
             {
-                wait.Update(1);
+                wait.Update();
             }
 
             item.ConsumeCharge();
@@ -482,7 +483,7 @@ namespace Core.Goals
                         logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_SPELL_FAILED_STUNNED} -- Wait till losing debuff!");
                         wait.While(() => debuffCount == playerReader.AuraCount.PlayerDebuff);
 
-                        wait.Update(1);
+                        wait.Update();
                         playerReader.LastUIErrorMessage = UI_ERROR.NONE;
                     }
                     else
@@ -501,7 +502,7 @@ namespace Core.Goals
                     input.Interact();
                     input.SetKeyState(input.ForwardKey, true);
 
-                    wait.Update(1);
+                    wait.Update();
                     playerReader.LastUIErrorMessage = UI_ERROR.NONE;
                     break;
                 case UI_ERROR.ERR_BADATTACKFACING:
@@ -520,27 +521,27 @@ namespace Core.Goals
                         direction.SetDirection(desiredDirection, Vector3.Zero);
                     }
 
-                    wait.Update(1);
+                    wait.Update();
                     playerReader.LastUIErrorMessage = UI_ERROR.NONE;
                     break;
                 case UI_ERROR.SPELL_FAILED_MOVING:
                     logger.LogInformation($"{source} -- React to {UI_ERROR.SPELL_FAILED_MOVING} -- Stop moving!");
 
                     stopMoving.Stop();
-                    wait.Update(1);
+                    wait.Update();
                     playerReader.LastUIErrorMessage = UI_ERROR.NONE;
                     break;
                 case UI_ERROR.ERR_SPELL_FAILED_ANOTHER_IN_PROGRESS:
                     logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_SPELL_FAILED_ANOTHER_IN_PROGRESS} -- Wait till casting!");
                     wait.While(() => playerReader.IsCasting);
 
-                    wait.Update(1);
+                    wait.Update();
                     playerReader.LastUIErrorMessage = UI_ERROR.NONE;
                     break;
                 case UI_ERROR.ERR_SPELL_COOLDOWN:
                     logger.LogInformation($"{source} -- Cant react to {UI_ERROR.ERR_SPELL_FAILED_ANOTHER_IN_PROGRESS}");
 
-                    wait.Update(1);
+                    wait.Update();
                     playerReader.LastUIErrorMessage = UI_ERROR.NONE;
                     break;
                 case UI_ERROR.ERR_BADATTACKPOS:
@@ -549,7 +550,7 @@ namespace Core.Goals
                         logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_BADATTACKPOS} -- Interact!");
                         input.Interact();
                         stopMoving.Stop();
-                        wait.Update(1);
+                        wait.Update();
 
                         playerReader.LastUIErrorMessage = UI_ERROR.NONE;
                     }
@@ -612,7 +613,8 @@ namespace Core.Goals
                     float minRange = playerReader.MinRange;
                     if (playerReader.Bits.PlayerInCombat && playerReader.HasTarget && !playerReader.IsTargetCasting)
                     {
-                        wait.Update(2);
+                        wait.Update();
+                        wait.Update();
                         if (playerReader.TargetTarget == TargetTargetEnum.Me)
                         {
                             logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_SPELL_OUT_OF_RANGE} -- Just wait for the target to get in range.");
@@ -628,7 +630,7 @@ namespace Core.Goals
                         input.Interact();
                         input.StopAttack();
                         stopMoving.Stop();
-                        wait.Update(1);
+                        wait.Update();
 
                         if (beforeDirection != playerReader.Direction)
                         {
@@ -663,14 +665,14 @@ namespace Core.Goals
                         desiredDirection = desiredDirection > MathF.PI * 2 ? desiredDirection - (MathF.PI * 2) : desiredDirection;
                         direction.SetDirection(desiredDirection, Vector3.Zero);
 
-                        wait.Update(1);
+                        wait.Update();
                     }
 
                     break;
                 case UI_ERROR.SPELL_FAILED_MOVING:
                     logger.LogInformation($"{source} -- React to {UI_ERROR.SPELL_FAILED_MOVING} -- Stop moving!");
                     stopMoving.Stop();
-                    wait.Update(1);
+                    wait.Update();
 
                     break;
                 case UI_ERROR.ERR_SPELL_FAILED_ANOTHER_IN_PROGRESS:
@@ -684,7 +686,7 @@ namespace Core.Goals
                         logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_BADATTACKPOS} -- Interact!");
                         input.Interact();
                         stopMoving.Stop();
-                        wait.Update(1);
+                        wait.Update();
                     }
                     else
                     {

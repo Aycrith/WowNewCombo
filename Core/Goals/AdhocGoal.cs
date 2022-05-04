@@ -58,7 +58,7 @@ namespace Core.Goals
             if (mountHandler.IsMounted())
             {
                 mountHandler.Dismount();
-                wait.Update(1);
+                wait.Update();
             }
 
             castingHandler.CastIfReady(key, dangerCombat);
@@ -69,7 +69,7 @@ namespace Core.Goals
 
             while ((playerReader.Buffs.Drinking || playerReader.Buffs.Eating || playerReader.IsCasting) && !dangerCombat())
             {
-                wait.Update(1);
+                wait.Update();
 
                 if (playerReader.Buffs.Drinking)
                 {
@@ -96,7 +96,7 @@ namespace Core.Goals
                 input.Stop();
             }
 
-            wait.Update(1);
+            wait.Update();
             return base.OnEnter();
         }
 
@@ -107,7 +107,7 @@ namespace Core.Goals
                 castingHandler.CastIfReady(key);
             }
 
-            wait.Update(1);
+            wait.Update();
             return ValueTask.CompletedTask;
         }
     }

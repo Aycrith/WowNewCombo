@@ -95,7 +95,7 @@ namespace Core.Goals
                 if (foundCursor)
                 {
                     Log("Found corpse - interacted with right click");
-                    wait.Update(1);
+                    wait.Update();
 
                     (bool foundTarget, bool moved) = combatUtil.FoundTargetWhileMoved();
                     if (foundTarget)
@@ -108,7 +108,7 @@ namespace Core.Goals
                     {
                         Log("Had to move so interact again");
                         input.Interact();
-                        wait.Update(1);
+                        wait.Update();
                     }
 
                     // wait until start casting
@@ -177,7 +177,7 @@ namespace Core.Goals
                 input.ClearTarget();
             }
 
-            wait.Update(1);
+            wait.Update();
         }
 
         private void EquipmentReader_OnEquipmentChanged(object? sender, (int, int) e)

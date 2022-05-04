@@ -43,7 +43,7 @@ namespace Core.Goals
                     {
                         logger.LogWarning("Target is invalid!");
                         input.ClearTarget();
-                        wait.Update(1);
+                        wait.Update();
                     }
                 }
             }
@@ -57,7 +57,7 @@ namespace Core.Goals
             {
                 npcNameTargeting.ChangeNpcType(target);
                 input.NearestTarget();
-                wait.Update(1);
+                wait.Update();
             }
 
             if (!cts.IsCancellationRequested && !classConfig.KeyboardOnly && !playerReader.HasTarget)
@@ -66,7 +66,7 @@ namespace Core.Goals
                 if (!cts.IsCancellationRequested && npcNameTargeting.NpcCount > 0)
                 {
                     npcNameTargeting.TargetingAndClickNpc(true, cts);
-                    wait.Update(1);
+                    wait.Update();
                 }
             }
 

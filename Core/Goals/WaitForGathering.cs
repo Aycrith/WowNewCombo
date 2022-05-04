@@ -63,11 +63,11 @@ namespace Core.Goals
         public override ValueTask OnEnter()
         {
             stopMoving.Stop();
-            wait.Update(1);
+            wait.Update();
 
             while (playerReader.Bits.IsFalling)
             {
-                wait.Update(1);
+                wait.Update();
             }
 
             LogOnEnter(logger);
@@ -98,7 +98,7 @@ namespace Core.Goals
                 case CastState.Casting:
                     if (!playerReader.IsCasting)
                     {
-                        wait.Update(1);
+                        wait.Update();
                         if (playerReader.LastUIErrorMessage == UI_ERROR.ERR_SPELL_FAILED_S)
                         {
                             state = CastState.Failed;
@@ -111,7 +111,7 @@ namespace Core.Goals
                                 state = CastState.WaitUserInput;
                                 LogSuccessMining(logger, CastState.Success, state, Timeout);
                                 stopWatch.Restart();
-                                wait.Update(1);
+                                wait.Update();
                             }
                             else
                             {
@@ -125,7 +125,7 @@ namespace Core.Goals
                     stopWatch.Restart();
                     state = CastState.WaitUserInput;
                     LogFailed(logger, state, Timeout);
-                    wait.Update(1);
+                    wait.Update();
                     break;
                 case CastState.Success:
                 case CastState.Abort:
@@ -141,7 +141,7 @@ namespace Core.Goals
                     break;
             }
 
-            wait.Update(1);
+            wait.Update();
             return ValueTask.CompletedTask;
         }
 

@@ -163,7 +163,7 @@ namespace Core.Goals
 
             MountIfRequired();
 
-            wait.Update(1);
+            wait.Update();
 
             return ValueTask.CompletedTask;
         }
@@ -186,7 +186,7 @@ namespace Core.Goals
                 stopMoving.Stop();
 
                 input.ClearTarget();
-                wait.Update(1);
+                wait.Update();
 
                 npcNameTargeting.ChangeNpcType(NpcNames.Friendly | NpcNames.Neutral);
                 SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, true));
@@ -224,7 +224,7 @@ namespace Core.Goals
 
                     input.KeyPress(ConsoleKey.Escape, input.defaultKeyPress);
                     input.ClearTarget();
-                    wait.Update(1);
+                    wait.Update();
 
                     var path = key.Path.ToList();
                     path.Reverse();
@@ -241,7 +241,7 @@ namespace Core.Goals
                     while (navigation.HasWaypoint())
                     {
                         navigation.Update();
-                        wait.Update(1);
+                        wait.Update();
                     }
 
                     pathState = PathState.Finished;

@@ -36,7 +36,7 @@ namespace Core
 
         public bool EnteredCombat()
         {
-            wait.Update(1);
+            wait.Update();
             if (!outOfCombat && !playerReader.Bits.PlayerInCombat)
             {
                 Log("Combat Leave");
@@ -71,7 +71,7 @@ namespace Core
                 }
 
                 input.NearestTarget();
-                wait.Update(1);
+                wait.Update();
                 if (this.playerReader.HasTarget && playerReader.Bits.TargetInCombat &&
                     playerReader.Bits.TargetOfTargetIsPlayer)
                 {
@@ -86,7 +86,7 @@ namespace Core
 
                 Log($"{nameof(CombatUtil)}.AquiredTarget: No target found");
                 input.ClearTarget();
-                wait.Update(1);
+                wait.Update();
             }
             return false;
         }

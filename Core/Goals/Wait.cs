@@ -6,20 +6,20 @@ namespace Core
 {
     public class Wait
     {
-        private readonly AddonReader addonReader;
+        private readonly RecordInt globalTime;
         private readonly AutoResetEvent autoResetEvent;
 
-        public Wait(AddonReader addonReader, AutoResetEvent autoResetEvent)
+        public Wait(RecordInt globalTime, AutoResetEvent autoResetEvent)
         {
-            this.addonReader = addonReader;
+            this.globalTime = globalTime;
             this.autoResetEvent = autoResetEvent;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Update(int n)
+        public void Update()
         {
-            int s = addonReader.GlobalTime.Value;
-            while (Math.Abs(s - addonReader.GlobalTime.Value) <= n)
+            int s = globalTime.Value;
+            while (s == globalTime.Value)
             {
                 autoResetEvent.WaitOne();
             }
@@ -34,7 +34,7 @@ namespace Core
                 if (interrupt())
                     return false;
 
-                Update(1);
+                Update();
             }
 
             return true;
@@ -51,7 +51,7 @@ namespace Core
                 if (interrupt())
                     return (false, elapsedMs);
 
-                Update(1);
+                Update();
             }
 
             return (true, elapsedMs);
@@ -62,7 +62,7 @@ namespace Core
         {
             while (condition())
             {
-                Update(1);
+                Update();
             }
         }
     }
