@@ -4,7 +4,6 @@
   "NPCMaxLevels_Below": 8,
 
   "PathFilename": "Herb_EPL.json",
-  "SpiritPathFilename": "Herb_EPL.json",
   "PathThereAndBack": false,
   "PathReduceSteps": false,
 

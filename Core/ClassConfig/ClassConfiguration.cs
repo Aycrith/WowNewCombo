@@ -33,7 +33,6 @@ namespace Core
         public bool KeyboardOnly { get; set; }
 
         public string PathFilename { get; set; } = string.Empty;
-        public string SpiritPathFilename { get; set; } = string.Empty;
 
         public string? OverridePathFilename { get; set; } = string.Empty;
 
@@ -109,8 +108,6 @@ namespace Core
 
         public void Initialise(DataConfig dataConfig, AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger, string? overridePathProfileFile)
         {
-            SpiritPathFilename = string.Empty;
-
             requirementFactory.InitUserDefinedIntVariables(IntVariables);
 
             Jump.Key = JumpKey;

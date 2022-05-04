@@ -47,13 +47,6 @@
                         }
                     }
 
-                    <g stroke-width="1" stroke="lightgray">
-                        @this.SpiritLines
-                    </g>
-                    <g fill="gray">
-                        @this.SpiritPathPoints
-                    </g>
-
                     <g stroke-width="1" stroke="gray">
                         @this.PathLines
                     </g>
@@ -109,8 +102,6 @@
     private MarkupString PathLines = new MarkupString();
     private MarkupString PathPoints = new MarkupString();
 
-    private MarkupString SpiritLines = new MarkupString();
-    private MarkupString SpiritPathPoints = new MarkupString();
     private Timer refreshTimer = new Timer();
 
     private float PlayerDir => -addonReader.PlayerReader.Direction * (180f / MathF.PI);
@@ -214,10 +205,6 @@
         var paths = routeinfo.PathPoints;
         this.PathLines = new MarkupString(routeinfo.RenderPathLines(paths));
         this.PathPoints = new MarkupString(routeinfo.RenderPathPoints(paths));
-
-        var spirits = routeinfo.SpiritPath;
-        this.SpiritLines = new MarkupString(routeinfo.RenderPathLines(spirits));
-        this.SpiritPathPoints = new MarkupString(routeinfo.RenderPathPoints(spirits));
 
         var waypoints = routeinfo.RouteToWaypoint;
         if(waypoints != null)
