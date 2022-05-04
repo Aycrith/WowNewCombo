@@ -16,14 +16,33 @@ namespace BlazorServer
     {
         private readonly ILogger logger;
 
-        private PPatherService service;
+        private readonly PPatherService service;
 
-        private bool Enabled = true;
+        private readonly bool Enabled;
+
+        private readonly Stopwatch stopwatch;
 
         public LocalPathingApi(ILogger logger, PPatherService service)
         {
             this.logger = logger;
             this.service = service;
+            stopwatch = new();
+
+            var mpqFiles = MPQTriangleSupplier.GetArchiveNames(DataConfig.Load(), LogInformation);
+            var countOfMPQFiles = mpqFiles.Where(f => File.Exists(f)).Count();
+            if (countOfMPQFiles == 0)
+            {
+                LogWarning("Some of these MPQ files should exist!");
+                mpqFiles.ToList().ForEach(LogInformation);
+                LogError("No MPQ files found, refer to the Readme to download them.");
+                Enabled = false;
+            }
+            else
+            {
+                LogDebug("Hooray, MPQ files exist.");
+            }
+
+            Enabled = countOfMPQFiles > 0;
         }
 
         public ValueTask DrawLines(List<LineArgs> lineArgs)
@@ -49,11 +68,12 @@ namespace BlazorServer
                 return new ValueTask<List<Vector3>>();
             }
 
-            var sw = new Stopwatch();
-            sw.Start();
+            stopwatch.Restart();
 
             service.SetLocations(service.GetWorldLocation(map, fromPoint.X, fromPoint.Y, fromPoint.Z), service.GetWorldLocation(map, toPoint.X, toPoint.Y));
             var path = service.DoSearch(PatherPath.Graph.PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
+
+            stopwatch.Stop();
 
             if (path == null)
             {
@@ -62,33 +82,13 @@ namespace BlazorServer
             }
             else
             {
-                LogInformation($"Finding route from {fromPoint} map {map} to {toPoint} took {sw.ElapsedMilliseconds} ms.");
+                LogInformation($"Finding route from {fromPoint} map {map} to {toPoint} took {stopwatch.ElapsedMilliseconds} ms.");
                 service.Save();
             }
 
             var worldLocations = path.locations.Select(s => service.ToMapAreaSpot(s.X, s.Y, s.Z, map));
             var result = worldLocations.Select(l => new Vector3(l.X, l.Y, l.Z)).ToList();
             return new ValueTask<List<Vector3>>(result);
-        }
-
-        public bool SelfTest()
-        {
-            var mpqFiles = MPQTriangleSupplier.GetArchiveNames(DataConfig.Load(), s => LogInformation(s));
-
-            var countOfMPQFiles = mpqFiles.Where(f => File.Exists(f)).Count();
-            if (countOfMPQFiles == 0)
-            {
-                LogWarning("Some of these MPQ files should exist!");
-                mpqFiles.ToList().ForEach(l => LogInformation(l));
-                LogError("No MPQ files found, refer to the Readme to download them.");
-                Enabled = false;
-            }
-            else
-            {
-                LogDebug("Hooray, MPQ files exist.");
-            }
-
-            return countOfMPQFiles > 0;
         }
 
         #region Logging
