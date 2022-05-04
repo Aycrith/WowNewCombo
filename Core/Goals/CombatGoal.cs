@@ -183,13 +183,13 @@ namespace Core.Goals
                 CreatureTargetMeOrMyPet();
             }
 
-            wait.Update(1);
+            wait.Update();
             return ValueTask.CompletedTask;
         }
 
         private void CreatureTargetMeOrMyPet()
         {
-            wait.Update(1);
+            wait.Update();
             if (playerReader.PetHasTarget && addonReader.CreatureHistory.CombatDeadGuid.Value != playerReader.PetTargetGuid)
             {
                 logger.LogWarning("---- My pet has a target!");
@@ -197,7 +197,7 @@ namespace Core.Goals
 
                 input.TargetPet();
                 input.TargetOfTarget();
-                wait.Update(1);
+                wait.Update();
                 return;
             }
 
@@ -205,7 +205,7 @@ namespace Core.Goals
             {
                 logger.LogInformation($"{nameof(CombatGoal)}: Checking target in front of me");
                 input.NearestTarget();
-                wait.Update(1);
+                wait.Update();
                 if (playerReader.HasTarget)
                 {
                     if (playerReader.Bits.TargetInCombat && playerReader.Bits.TargetOfTargetIsPlayer)
@@ -215,12 +215,12 @@ namespace Core.Goals
                         logger.LogWarning($"{nameof(CombatGoal)}: Somebody is attacking me! Found new target to attack");
                         input.Interact();
                         stopMoving.Stop();
-                        wait.Update(1);
+                        wait.Update();
                         return;
                     }
 
                     input.ClearTarget();
-                    wait.Update(1);
+                    wait.Update();
                 }
                 else
                 {
@@ -239,7 +239,7 @@ namespace Core.Goals
         {
             logger.LogWarning($"{nameof(CombatGoal)}: Drowning! Swim up");
             input.Jump();
-            wait.Update(1);
+            wait.Update();
         }
 
         private Vector3 GetCorpseLocation(float distance)

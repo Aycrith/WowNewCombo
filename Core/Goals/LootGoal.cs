@@ -104,7 +104,7 @@ namespace Core.Goals
 
                 Log("No corpse name found - check last dead target exists");
                 input.LastTarget();
-                wait.Update(1);
+                wait.Update();
                 if (playerReader.HasTarget)
                 {
                     if (playerReader.Bits.TargetIsDead)
@@ -113,7 +113,7 @@ namespace Core.Goals
 
                         Log("Found last dead target");
                         input.Interact();
-                        wait.Update(1);
+                        wait.Update();
 
                         (bool foundTarget, bool moved) = combatUtil.FoundTargetWhileMoved();
                         if (foundTarget)
@@ -188,7 +188,7 @@ namespace Core.Goals
             {
                 Log("Had to move so interact again");
                 input.Interact();
-                wait.Update(1);
+                wait.Update();
             }
 
             return true;
@@ -242,7 +242,7 @@ namespace Core.Goals
                 input.ClearTarget();
             }
 
-            wait.Update(1);
+            wait.Update();
         }
 
         private void Log(string text)

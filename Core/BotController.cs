@@ -137,7 +137,7 @@ namespace Core
 
             AddonReader = new AddonReader(logger, DataConfig, addonDataProvider);
 
-            wait = new Wait(AddonReader, addonAutoResetEvent);
+            wait = new Wait(AddonReader.GlobalTime, addonAutoResetEvent);
 
             minimapNodeFinder = new MinimapNodeFinder(WowScreen, new PixelClassifier());
             MinimapImageFinder = minimapNodeFinder as IImageProvider;
@@ -148,19 +148,17 @@ namespace Core
             addonThread = new Thread(AddonRefreshThread);
             addonThread.Start();
 
-            // wait for addon to read the wow state
-            wait.Update(1);
-
             Stopwatch sw = Stopwatch.StartNew();
-            while (!Enum.GetValues(typeof(PlayerClassEnum)).Cast<PlayerClassEnum>().Contains(AddonReader.PlayerReader.Class))
+            do
             {
+                wait.Update();
+
                 if (sw.ElapsedMilliseconds > 5000)
                 {
                     logger.LogWarning("There is a problem with the addon, I have been unable to read the player class. Is it running ?");
                     sw.Restart();
                 }
-                wait.Update(1);
-            }
+            } while (!Enum.GetValues(typeof(PlayerClassEnum)).Cast<PlayerClassEnum>().Contains(AddonReader.PlayerReader.Class));
 
             logger.LogDebug($"Woohoo, I have read the player class. You are a {AddonReader.PlayerReader.Race} {AddonReader.PlayerReader.Class}.");
 

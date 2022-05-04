@@ -111,7 +111,7 @@ namespace Core.Goals
 
             RandomJump();
 
-            wait.Update(1);
+            wait.Update();
 
             return ValueTask.CompletedTask;
         }

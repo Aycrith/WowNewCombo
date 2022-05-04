@@ -49,12 +49,12 @@ namespace Core.Goals
             if (Keys.Any(k => k.StopBeforeCast))
             {
                 stopMoving.Stop();
-                wait.Update(1);
+                wait.Update();
 
                 if (mountHandler.IsMounted())
                 {
                     mountHandler.Dismount();
-                    wait.Update(1);
+                    wait.Update();
                 }
             }
 
@@ -71,7 +71,7 @@ namespace Core.Goals
             DateTime startTime = DateTime.UtcNow;
             while ((playerReader.Buffs.Drinking || playerReader.Buffs.Eating || playerReader.IsCasting) && !playerReader.Bits.PlayerInCombat)
             {
-                wait.Update(1);
+                wait.Update();
 
                 if (playerReader.Buffs.Drinking && playerReader.Buffs.Eating)
                 {

@@ -169,7 +169,7 @@ namespace Core.Goals
             {
                 Log("Has target but its dead.");
                 input.ClearTarget();
-                wait.Update(1);
+                wait.Update();
             }
 
             if (playerReader.Bits.IsDrowning)
@@ -184,7 +184,7 @@ namespace Core.Goals
 
             RandomJump();
 
-            wait.Update(1);
+            wait.Update();
 
             return ValueTask.CompletedTask;
         }
@@ -228,7 +228,7 @@ namespace Core.Goals
                 {
                     found = targetFinder.Search(NpcNameToFind, validTarget, sideActivityCts);
                 }
-                wait.Update(1);
+                wait.Update();
             }
 
             if (found)

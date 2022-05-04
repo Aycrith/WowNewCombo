@@ -90,7 +90,7 @@ namespace Core.Goals
                 {
                     Log("Stop auto interact!");
                     input.StopAttack();
-                    wait.Update(1);
+                    wait.Update();
                 }
             }
 
@@ -145,7 +145,7 @@ namespace Core.Goals
                     stopMoving.Stop();
 
                     input.NearestTarget();
-                    wait.Update(1);
+                    wait.Update();
 
                     if (playerReader.HasTarget && playerReader.Bits.TargetInCombat &&
                         playerReader.TargetTarget == TargetTargetEnum.Me)
@@ -154,7 +154,7 @@ namespace Core.Goals
                     }
 
                     input.ClearTarget();
-                    wait.Update(1);
+                    wait.Update();
                     pullStart = DateTime.UtcNow;
 
                     return ValueTask.CompletedTask;
@@ -175,7 +175,7 @@ namespace Core.Goals
                 SendActionEvent(new ActionEventArgs(GoapKey.pulled, true));
             }
 
-            wait.Update(1);
+            wait.Update();
 
             return ValueTask.CompletedTask;
         }
@@ -191,7 +191,7 @@ namespace Core.Goals
         protected void WaitForWithinMeleeRange(KeyAction item, bool lastCastSuccess)
         {
             stopMoving.Stop();
-            wait.Update(1);
+            wait.Update();
 
             var start = DateTime.UtcNow;
             var lastKnownHealth = playerReader.HealthCurrent;
@@ -220,7 +220,7 @@ namespace Core.Goals
                     Log($"Repeat current action: {lastCastSuccess}");
                 }
 
-                wait.Update(1);
+                wait.Update();
             }
         }
 
@@ -264,7 +264,7 @@ namespace Core.Goals
                     Log("Preventing pulling possible tagged target!");
                     input.StopAttack();
                     input.ClearTarget();
-                    wait.Update(1);
+                    wait.Update();
                     return false;
                 }
             }
