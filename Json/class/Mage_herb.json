@@ -5,7 +5,6 @@
   "NPCMaxLevels_Above": 2,
 
   "PathFilename": "Mine_Hinterlands.json",
-  "SpiritPathFilename": "Mine_Hinterlands.json",
   "PathThereAndBack": false,
   "PathReduceSteps": false,
 

@@ -5,7 +5,6 @@
   "NPCMaxLevels_Above": 2,
 
   "PathFilename": "44_Tanaris.json",
-  "SpiritPathFilename": "44_Tanaris_SpiritHealer.json",
   "PathThereAndBack": false,
   "PathReduceSteps": true,
 

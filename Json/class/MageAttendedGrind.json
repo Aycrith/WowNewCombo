@@ -5,7 +5,6 @@
   "NPCMaxLevels_Above": 2,
 
   "PathFilename": "60_Silithus_scorpid.2.json",
-  "SpiritPathFilename": "60_Silithus_scorpid_SpiritHealer.json",
   "PathThereAndBack": true,
   "PathReduceSteps": false,
 

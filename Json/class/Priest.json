@@ -4,7 +4,6 @@
   "NPCMaxLevels_Below": 8,
 
   "PathFilename": "56_Felwood.json",
-  "SpiritPathFilename": "56_Felwood_SpirirtHealer.json",
   "PathThereAndBack": true,
   "PathReduceSteps": true,
 
