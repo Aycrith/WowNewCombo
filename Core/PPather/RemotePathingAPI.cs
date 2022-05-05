@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using System;
 using System.Linq;
 using System.Collections.Generic;
@@ -9,6 +9,7 @@ using System.Diagnostics;
 using Core.PPather;
 using System.Text;
 using System.Numerics;
+using SharedLib;
 
 namespace Core
 {

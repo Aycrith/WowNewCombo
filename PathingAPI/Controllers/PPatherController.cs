@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using PatherPath;
 using PatherPath.Graph;
 using PathingAPI.Data;
@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using WowTriangles;
+using SharedLib;
 
 namespace PathingAPI.Controllers
 {
