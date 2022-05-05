@@ -24,7 +24,7 @@ namespace PatherPath.Graph
 {
     public class Spot
     {
-        private ILogger logger;
+        private readonly ILogger logger;
 
         public Spot(ILogger logger)
         {

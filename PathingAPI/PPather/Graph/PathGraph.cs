@@ -112,8 +112,8 @@ namespace PatherPath.Graph
         public static int TimeoutSeconds = 20;
         public static int ProgressTimeoutSeconds = 10;
 
-        private ILogger logger;
-        private DataConfig dataConfig;
+        private readonly ILogger logger;
+        private readonly DataConfig dataConfig;
 
         public PathGraph(string continent,
                          ChunkedTriangleCollection triangles,

@@ -24,7 +24,7 @@ namespace PatherPath.Graph
 {
     public class GraphChunk
     {
-        private ILogger logger;
+        private readonly ILogger logger;
 
         public const int CHUNK_SIZE = 512;
 

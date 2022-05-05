@@ -58,7 +58,7 @@ namespace WowTriangles
             }
         }
 
-        private ILogger logger;
+        private readonly ILogger logger;
 
         public ChunkedTriangleCollection(float chunkSize, ILogger logger)
         {

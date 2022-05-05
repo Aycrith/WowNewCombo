@@ -14,7 +14,7 @@ namespace WowTriangles
     /// </summary>
     public class TriangleCollection
     {
-        private ILogger logger;
+        private readonly ILogger logger;
 
         public TriangleCollection(ILogger logger)
         {

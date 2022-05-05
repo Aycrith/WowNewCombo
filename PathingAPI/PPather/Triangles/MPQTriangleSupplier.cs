@@ -63,7 +63,7 @@ namespace WowTriangles
             base.Close();
         }
 
-        private ILogger logger;
+        private readonly ILogger logger;
 
         public MPQTriangleSupplier(ILogger logger, DataConfig dataConfig)
         {
