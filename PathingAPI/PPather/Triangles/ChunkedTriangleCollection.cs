@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Part of PPather
  *  Copyright Pontus Borg 2008
  *
@@ -7,6 +7,7 @@
 using PatherPath;
 using System;
 using System.Linq;
+using System.Numerics;
 using System.Collections.Generic;
 using Wmo;
 using Microsoft.Extensions.Logging;
@@ -151,19 +152,19 @@ namespace WowTriangles
 
             foreach (int t in ts)
             {
-                Vector vertex0;
-                Vector vertex1;
-                Vector vertex2;
+                Vector3 vertex0;
+                Vector3 vertex1;
+                Vector3 vertex2;
                 int t_flags, sequence;
 
                 tc.GetTriangleVertices(t,
-                        out vertex0.x, out vertex0.y, out vertex0.z,
-                        out vertex1.x, out vertex1.y, out vertex1.z,
-                        out vertex2.x, out vertex2.y, out vertex2.z, out t_flags, out sequence);
+                        out vertex0.X, out vertex0.Y, out vertex0.Z,
+                        out vertex1.X, out vertex1.Y, out vertex1.Z,
+                        out vertex2.X, out vertex2.Y, out vertex2.Z, out t_flags, out sequence);
 
-                if (vertex0.z > best_z) { best_z = vertex0.z; }
-                if (vertex1.z > best_z) { best_z = vertex1.z; }
-                if (vertex2.z > best_z) { best_z = vertex2.z; }
+                if (vertex0.Z > best_z) { best_z = vertex0.Z; }
+                if (vertex1.Z > best_z) { best_z = vertex1.Z; }
+                if (vertex2.Z > best_z) { best_z = vertex2.Z; }
             }
             return best_z;
         }
@@ -238,23 +239,20 @@ namespace WowTriangles
                 tsm = ts = tm.GetAllCloseTo(x, y, toonSize);
             }
 
-            Vector toon;
-            toon.x = x;
-            toon.y = y;
-            toon.z = z + toonHeight - toonSize;
+            Vector3 toon = new(x, y, z + toonHeight - toonSize);
 
             //            for(int t = 0 ; t<tc.GetNumberOfTriangles(); t++)
             //            {
             foreach (int t in ts)
             {
-                Vector vertex0;
-                Vector vertex1;
-                Vector vertex2;
+                Vector3 vertex0;
+                Vector3 vertex1;
+                Vector3 vertex2;
                 int flags, sequence; ;
                 tc.GetTriangleVertices(t,
-                        out vertex0.x, out vertex0.y, out vertex0.z,
-                        out vertex1.x, out vertex1.y, out vertex1.z,
-                        out vertex2.x, out vertex2.y, out vertex2.z, out flags, out sequence);
+                        out vertex0.X, out vertex0.Y, out vertex0.Z,
+                        out vertex1.X, out vertex1.Y, out vertex1.Z,
+                        out vertex2.X, out vertex2.Y, out vertex2.Z, out flags, out sequence);
                 float d = Utils.PointDistanceToTriangle(toon, vertex0, vertex1, vertex2);
                 if (d < toonSize)
                     return true;
@@ -269,28 +267,24 @@ namespace WowTriangles
             TriangleMatrix tm = tc.GetTriangleMatrix();
             ICollection<int> ts = tm.GetAllCloseTo(x, y, 15.0f);
 
-            Vector s0;
-            Vector s1;
-            s0.x = x;
-            s0.y = y;
-            s0.z = z;
-
+            Vector3 s0 = new(x, y, z);
+            Vector3 s1;
             foreach (int t in ts)
             //for(int t = 0 ; t<tc.GetNumberOfTriangles(); t++)
             {
-                Vector vertex0;
-                Vector vertex1;
-                Vector vertex2;
-                Vector intersect;
+                Vector3 vertex0;
+                Vector3 vertex1;
+                Vector3 vertex2;
+                Vector3 intersect;
 
                 tc.GetTriangleVertices(t,
-                        out vertex0.x, out vertex0.y, out vertex0.z,
-                        out vertex1.x, out vertex1.y, out vertex1.z,
-                        out vertex2.x, out vertex2.y, out vertex2.z);
+                        out vertex0.X, out vertex0.Y, out vertex0.Z,
+                        out vertex1.X, out vertex1.Y, out vertex1.Z,
+                        out vertex2.X, out vertex2.Y, out vertex2.Z);
 
-                s1.x = (vertex0.x + vertex1.x + vertex2.x) / 3;
-                s1.y = (vertex0.y + vertex1.y + vertex2.y) / 3;
-                s1.z = (vertex0.z + vertex1.z + vertex2.z) / 3 - 0.1f;
+                s1.X = (vertex0.X + vertex1.X + vertex2.X) / 3;
+                s1.Y = (vertex0.Y + vertex1.Y + vertex2.Y) / 3;
+                s1.Z = (vertex0.Z + vertex1.Z + vertex2.Z) / 3 - 0.1f;
                 //paintI.AddMarker(s1.x, s1.y, s1.z + 0.1f);
 
                 if (Utils.SegmentTriangleIntersect(s0, s1, vertex0, vertex1, vertex2, out intersect))
@@ -361,22 +355,22 @@ namespace WowTriangles
 
             // 3: check collision with objects
 
-            Vector from, from_up, from_low;
-            Vector to, to_up, to_low;
+            Vector3 from, from_up, from_low;
+            Vector3 to, to_up, to_low;
 
-            from.x = x0;
-            from.y = y0;
-            from.z = z0 + toonSize; //+0.5
+            from.X = x0;
+            from.Y = y0;
+            from.Z = z0 + toonSize; //+0.5
 
-            to.x = x1;
-            to.y = y1;
-            to.z = z1 + toonSize;
+            to.X = x1;
+            to.Y = y1;
+            to.Z = z1 + toonSize;
 
-            from_up = new Vector(from);
-            from_up.z = z0 + toonHeight - toonSize;
+            from_up = new Vector3(from.X, from.Y, from.Z);
+            from_up.Z = z0 + toonHeight - toonSize;
 
-            to_up = new Vector(to);
-            to_up.z = z1 + toonHeight - toonSize;
+            to_up = new Vector3(to.X, from.Y, from.Z);
+            to_up.Z = z1 + toonHeight - toonSize;
 
             //diagonal
             if (CheckForCollision(tc, ts, ref from, ref to_up)) { return true; }
@@ -388,25 +382,25 @@ namespace WowTriangles
             // if (CheckForCollision(tc, ts, ref from_up, ref to_up)) { return true; }
 
             //close to the ground
-            from_low = new Vector(from);
-            from_low.z = z0 + 0.2f;
-            to_low = new Vector(to);
-            to_low.z = z1 + 0.2f;
+            from_low = new Vector3(from.X, from.Y, from.Z);
+            from_low.Z = z0 + 0.2f;
+            to_low = new Vector3(to.X, to.Y, to.Z);
+            to_low.Z = z1 + 0.2f;
             if (CheckForCollision(tc, ts, ref from_low, ref to_low)) { return true; }
 
             float ddx, ddy;
             GetNormal(x0, y0, x1, y1, out ddx, out ddy, 0.2f);
 
-            from_low.x += ddy;
-            from_low.y += ddx;
-            to_low.x += ddy;
-            to_low.y += ddx;
+            from_low.X += ddy;
+            from_low.Y += ddx;
+            to_low.X += ddy;
+            to_low.Y += ddx;
             if (CheckForCollision(tc, ts, ref from_low, ref to_low)) { return true; }
 
-            from_low.x -= 2 * ddy;
-            from_low.y -= 2 * ddx;
-            to_low.x -= 2 * ddy;
-            to_low.y -= 2 * ddx;
+            from_low.X -= 2 * ddy;
+            from_low.Y -= 2 * ddx;
+            to_low.X -= 2 * ddy;
+            to_low.Y -= 2 * ddx;
             if (CheckForCollision(tc, ts, ref from_low, ref to_low)) { return true; }
 
             return false;
@@ -432,20 +426,20 @@ namespace WowTriangles
             dy *= factor;
         }
 
-        private static bool CheckForCollision(TriangleCollection tc, ICollection<int> ts, ref Vector from, ref Vector to)
+        private static bool CheckForCollision(TriangleCollection tc, ICollection<int> ts, ref Vector3 from, ref Vector3 to)
         {
             foreach (int t in ts)
             //for(int t = 0 ; t<tc.GetNumberOfTriangles(); t++)
             {
-                Vector vertex0;
-                Vector vertex1;
-                Vector vertex2;
-                Vector intersect;
+                Vector3 vertex0;
+                Vector3 vertex1;
+                Vector3 vertex2;
+                Vector3 intersect;
 
                 tc.GetTriangleVertices(t,
-                        out vertex0.x, out vertex0.y, out vertex0.z,
-                        out vertex1.x, out vertex1.y, out vertex1.z,
-                        out vertex2.x, out vertex2.y, out vertex2.z);
+                        out vertex0.X, out vertex0.Y, out vertex0.Z,
+                        out vertex1.X, out vertex1.Y, out vertex1.Z,
+                        out vertex2.X, out vertex2.Y, out vertex2.Z);
 
                 if (Utils.SegmentTriangleIntersect(from, to, vertex0, vertex1, vertex2, out intersect))
                 {
@@ -481,23 +475,23 @@ namespace WowTriangles
                 tsm = ts = tm.GetAllCloseTo(x, y, 2.0f);
             }
 
-            Vector s0, s1, s2, s3, s4, s5, s6, s7, s8, s9;
-            s0.x = x; s0.y = y; s0.z = min_z;
-            s1.x = x; s1.y = y; s1.z = max_z;
+            Vector3 s0, s1, s2, s3, s4, s5, s6, s7, s8, s9;
+            s0.X = x; s0.Y = y; s0.Z = min_z;
+            s1.X = x; s1.Y = y; s1.Z = max_z;
 
             float gap = (float)0.2;
 
-            s2.x = x + gap; s2.y = y; s2.z = min_z;
-            s3.x = x + gap; s3.y = y; s3.z = max_z;
+            s2.X = x + gap; s2.Y = y; s2.Z = min_z;
+            s3.X = x + gap; s3.Y = y; s3.Z = max_z;
 
-            s4.x = x - gap; s4.y = y; s4.z = min_z;
-            s5.x = x - gap; s5.y = y; s5.z = max_z;
+            s4.X = x - gap; s4.Y = y; s4.Z = min_z;
+            s5.X = x - gap; s5.Y = y; s5.Z = max_z;
 
-            s6.x = x; s6.y = y + gap; s6.z = min_z;
-            s7.x = x; s7.y = y + gap; s7.z = max_z;
+            s6.X = x; s6.Y = y + gap; s6.Z = min_z;
+            s7.X = x; s7.Y = y + gap; s7.Z = max_z;
 
-            s8.x = x; s8.y = y - gap; s8.z = min_z;
-            s9.x = x; s9.y = y - gap; s9.z = max_z;
+            s8.X = x; s8.Y = y - gap; s8.Z = min_z;
+            s9.X = x; s9.Y = y - gap; s9.Z = max_z;
 
             float best_z = -1E30f;
             int best_flags = 0;
@@ -506,23 +500,23 @@ namespace WowTriangles
             //logger.WriteLine(string.Format("x: {0} y: {1} min_z: {2} max_z: {3}", x, y, min_z, max_z));
             foreach (int t in ts)
             {
-                Vector vertex0;
-                Vector vertex1;
-                Vector vertex2;
-                Vector intersect;
+                Vector3 vertex0;
+                Vector3 vertex1;
+                Vector3 vertex2;
+                Vector3 intersect;
                 int t_flags, sequence;
 
                 tc.GetTriangleVertices(t,
-                        out vertex0.x, out vertex0.y, out vertex0.z,
-                        out vertex1.x, out vertex1.y, out vertex1.z,
-                        out vertex2.x, out vertex2.y, out vertex2.z, out t_flags, out sequence);
+                        out vertex0.X, out vertex0.Y, out vertex0.Z,
+                        out vertex1.X, out vertex1.Y, out vertex1.Z,
+                        out vertex2.X, out vertex2.Y, out vertex2.Z, out t_flags, out sequence);
 
                 // logger.WriteLine(string.Format("x: {0},{1},{2} y: {3},{4},{5} z: {6},{7},{8}",vertex0.x,vertex1.x,vertex2.x,vertex0.y,vertex1.y,vertex2.y,vertex0.z,vertex1.z,vertex2.z));
 
-                Vector normal;
+                Vector3 normal;
                 Utils.GetTriangleNormal(vertex0, vertex1, vertex2, out normal);
                 float angle_z = (float)Math.Sin(40.0 / 360.0 * Math.PI * 2); //
-                if (Utils.abs(normal.z) > angle_z || IgnoreGradient)
+                if (Utils.abs(normal.Z) > angle_z || IgnoreGradient)
                 {
                     bool hasIntersected = false;
 
@@ -534,11 +528,12 @@ namespace WowTriangles
 
                     if (hasIntersected)
                     {
-                        if (intersect.z > best_z)
+                        if (intersect.Z > best_z)
                         {
-                            if (!IsSpotBlocked(intersect.x, intersect.y, intersect.z, toonHeight, toonSize))
+                            if (!IsSpotBlocked(intersect.X, intersect.Y, intersect.Z, toonHeight, toonSize))
                             {
                                 logger.LogDebug("new best z:" + intersect.Z.ToString());
+                                best_z = intersect.Z;
                                 best_flags = t_flags;
                                 found = true;
                             }
@@ -560,22 +555,22 @@ namespace WowTriangles
             }
             if (found)
             {
-                Vector up, dn, tmp;
-                up.z = best_z + 2;
-                dn.z = best_z - 5;
+                Vector3 up, dn, tmp;
+                up.Z = best_z + 2;
+                dn.Z = best_z - 5;
                 bool[] nearCliff = { true, true, true, true };
 
                 bool allGood = true;
                 foreach (int t in ts)
                 {
-                    Vector vertex0;
-                    Vector vertex1;
-                    Vector vertex2;
+                    Vector3 vertex0;
+                    Vector3 vertex1;
+                    Vector3 vertex2;
 
                     tc.GetTriangleVertices(t,
-                            out vertex0.x, out vertex0.y, out vertex0.z,
-                            out vertex1.x, out vertex1.y, out vertex1.z,
-                            out vertex2.x, out vertex2.y, out vertex2.z);
+                            out vertex0.X, out vertex0.Y, out vertex0.Z,
+                            out vertex1.X, out vertex1.Y, out vertex1.Z,
+                            out vertex2.X, out vertex2.Y, out vertex2.Z);
 
                     float[] dx = { minCliffD, -minCliffD, 0, 0 };
                     float[] dy = { 0, 0, minCliffD, -minCliffD };
@@ -586,8 +581,8 @@ namespace WowTriangles
                     {
                         if (nearCliff[i])
                         {
-                            up.x = dn.x = x + dx[i];
-                            up.y = dn.y = y + dy[i];
+                            up.X = dn.X = x + dx[i];
+                            up.Y = dn.Y = y + dy[i];
                             if (Utils.SegmentTriangleIntersect(up, dn, vertex0, vertex1, vertex2, out tmp))
                                 nearCliff[i] = false;
                         }
@@ -654,28 +649,23 @@ namespace WowTriangles
                 tsm = ts = tm.GetAllCloseTo(x, y, 1.0f);
             }
 
-            Vector s0, s1;
-            s0.x = x;
-            s0.y = y;
-            s0.z = min_z;
-            s1.x = x;
-            s1.y = y;
-            s1.z = max_z;
+            Vector3 s0 = new(x, y, min_z);
+            Vector3 s1 = new(x,y, max_z);
 
             foreach (int t in ts)
             {
-                Vector vertex0;
-                Vector vertex1;
-                Vector vertex2;
-                Vector intersect;
+                Vector3 vertex0;
+                Vector3 vertex1;
+                Vector3 vertex2;
+                Vector3 intersect;
                 int t_flags, sequence;
 
                 tc.GetTriangleVertices(t,
-                        out vertex0.x, out vertex0.y, out vertex0.z,
-                        out vertex1.x, out vertex1.y, out vertex1.z,
-                        out vertex2.x, out vertex2.y, out vertex2.z, out t_flags, out sequence);
+                        out vertex0.X, out vertex0.Y, out vertex0.Z,
+                        out vertex1.X, out vertex1.Y, out vertex1.Z,
+                        out vertex2.X, out vertex2.Y, out vertex2.Z, out t_flags, out sequence);
 
-                Vector normal;
+                Vector3 normal;
                 Utils.GetTriangleNormal(vertex0, vertex1, vertex2, out normal);
 
                 if (Utils.SegmentTriangleIntersect(s0, s1, vertex0, vertex1, vertex2, out intersect))
@@ -699,25 +689,25 @@ namespace WowTriangles
 
             foreach (int t in tm.GetAllCloseTo(x, y, range))
             {
-                Vector vertex0;
-                Vector vertex1;
-                Vector vertex2;
+                Vector3 vertex0;
+                Vector3 vertex1;
+                Vector3 vertex2;
                 int t_flags, sequence;
 
                 tc.GetTriangleVertices(t,
-                        out vertex0.x, out vertex0.y, out vertex0.z,
-                        out vertex1.x, out vertex1.y, out vertex1.z,
-                        out vertex2.x, out vertex2.y, out vertex2.z, out t_flags, out sequence);
+                        out vertex0.X, out vertex0.Y, out vertex0.Z,
+                        out vertex1.X, out vertex1.Y, out vertex1.Z,
+                        out vertex2.X, out vertex2.Y, out vertex2.Z, out t_flags, out sequence);
 
                 if (t_flags == 0)
                 {
-                    if (vertex0.z > maxZ) { maxZ = vertex0.z; }
-                    if (vertex2.z > maxZ) { maxZ = vertex1.z; }
-                    if (vertex1.z > maxZ) { maxZ = vertex2.z; }
+                    if (vertex0.Z > maxZ) { maxZ = vertex0.Z; }
+                    if (vertex2.Z > maxZ) { maxZ = vertex1.Z; }
+                    if (vertex1.Z > maxZ) { maxZ = vertex2.Z; }
 
-                    if (vertex0.z < minZ) { minZ = vertex0.z; }
-                    if (vertex2.z < minZ) { minZ = vertex1.z; }
-                    if (vertex1.z < minZ) { minZ = vertex2.z; }
+                    if (vertex0.Z < minZ) { minZ = vertex0.Z; }
+                    if (vertex2.Z < minZ) { minZ = vertex1.Z; }
+                    if (vertex1.Z < minZ) { minZ = vertex2.Z; }
                 }
             }
             int g = (int)((maxZ - minZ));
@@ -735,15 +725,15 @@ namespace WowTriangles
 
             foreach (int t in tm.GetAllCloseTo(x, y, range))
             {
-                Vector vertex0;
-                Vector vertex1;
-                Vector vertex2;
+                Vector3 vertex0;
+                Vector3 vertex1;
+                Vector3 vertex2;
                 int t_flags, sequence;
 
                 tc.GetTriangleVertices(t,
-                        out vertex0.x, out vertex0.y, out vertex0.z,
-                        out vertex1.x, out vertex1.y, out vertex1.z,
-                        out vertex2.x, out vertex2.y, out vertex2.z, out t_flags, out sequence);
+                        out vertex0.X, out vertex0.Y, out vertex0.Z,
+                        out vertex1.X, out vertex1.Y, out vertex1.Z,
+                        out vertex2.X, out vertex2.Y, out vertex2.Z, out t_flags, out sequence);
 
                 //check triangle is part of a model
                 if ((t_flags & TriangleFlagObject) != 0 || (t_flags & TriangleFlagModel) != 0)
@@ -753,9 +743,9 @@ namespace WowTriangles
 
                     //and the vertex is close to the char
                     if (
-                        (vertex0.z > z + minHeight && vertex0.z < z + height)
-                       || (vertex1.z > z + minHeight && vertex1.z < z + height)
-                        || (vertex2.z > z + minHeight && vertex2.z < z + height)
+                        (vertex0.Z > z + minHeight && vertex0.Z < z + height)
+                       || (vertex1.Z > z + minHeight && vertex1.Z < z + height)
+                        || (vertex2.Z > z + minHeight && vertex2.Z < z + height)
                         )
                     {
                         return true;
@@ -778,26 +768,21 @@ namespace WowTriangles
                 ts = tm.GetAllCloseTo(a.X, a.Y, a.GetDistanceTo(b) + 1);
             }
 
-            Vector s0, s1;
-            s0.x = a.X;
-            s0.y = a.Y;
-            s0.z = a.Z;
-            s1.x = b.X;
-            s1.y = b.Y;
-            s1.z = b.Z;
+            Vector3 s0 = new(a.X, a.Y, a.Z);
+            Vector3 s1 = new(b.X, b.Y, b.Z);
 
             foreach (int t in ts)
             {
-                Vector vertex0;
-                Vector vertex1;
-                Vector vertex2;
-                Vector intersect;
+                Vector3 vertex0;
+                Vector3 vertex1;
+                Vector3 vertex2;
+                Vector3 intersect;
                 int t_flags, sequence;
 
                 tc.GetTriangleVertices(t,
-                        out vertex0.x, out vertex0.y, out vertex0.z,
-                        out vertex1.x, out vertex1.y, out vertex1.z,
-                        out vertex2.x, out vertex2.y, out vertex2.z, out t_flags, out sequence);
+                        out vertex0.X, out vertex0.Y, out vertex0.Z,
+                        out vertex1.X, out vertex1.Y, out vertex1.Z,
+                        out vertex2.X, out vertex2.Y, out vertex2.Z, out t_flags, out sequence);
 
                 if (Utils.SegmentTriangleIntersect(s0, s1, vertex0, vertex1, vertex2, out intersect))
                 {
@@ -827,13 +812,8 @@ namespace WowTriangles
                 tsm = ts = tm.GetAllCloseTo(x, y, 1.0f);
             }
 
-            Vector s0, s1;
-            s0.x = x;
-            s0.y = y;
-            s0.z = min_z;
-            s1.x = x;
-            s1.y = y;
-            s1.z = max_z;
+            Vector3 s0 = new(x, y, min_z);
+            Vector3 s1 = new(x, y, max_z);
 
             float best_z = -1E30f;
             int best_flags = 0;
@@ -841,31 +821,31 @@ namespace WowTriangles
 
             foreach (int t in ts)
             {
-                Vector vertex0;
-                Vector vertex1;
-                Vector vertex2;
-                Vector intersect;
+                Vector3 vertex0;
+                Vector3 vertex1;
+                Vector3 vertex2;
+                Vector3 intersect;
                 int t_flags, sequence;
 
                 tc.GetTriangleVertices(t,
-                        out vertex0.x, out vertex0.y, out vertex0.z,
-                        out vertex1.x, out vertex1.y, out vertex1.z,
-                        out vertex2.x, out vertex2.y, out vertex2.z, out t_flags, out sequence);
+                        out vertex0.X, out vertex0.Y, out vertex0.Z,
+                        out vertex1.X, out vertex1.Y, out vertex1.Z,
+                        out vertex2.X, out vertex2.Y, out vertex2.Z, out t_flags, out sequence);
 
                 if (allowedFlags == null || allowedFlags.Contains(t_flags))
                 {
-                    Vector normal;
+                    Vector3 normal;
                     Utils.GetTriangleNormal(vertex0, vertex1, vertex2, out normal);
                     float angle_z = (float)Math.Sin(45.0 / 360.0 * Math.PI * 2); //
-                    if (Utils.abs(normal.z) > angle_z)
+                    if (Utils.abs(normal.Z) > angle_z)
                     {
                         if (Utils.SegmentTriangleIntersect(s0, s1, vertex0, vertex1, vertex2, out intersect))
                         {
-                            if (intersect.z > best_z)
+                            if (intersect.Z > best_z)
                             {
-                                if (!IsSpotBlocked(intersect.x, intersect.y, intersect.z, toonHeight, toonSize))
+                                if (!IsSpotBlocked(intersect.X, intersect.Y, intersect.Z, toonHeight, toonSize))
                                 {
-                                    best_z = intersect.z;
+                                    best_z = intersect.Z;
                                     best_flags = t_flags;
                                     found = true;
                                 }
@@ -876,22 +856,22 @@ namespace WowTriangles
             }
             if (found)
             {
-                Vector up, dn, tmp;
-                up.z = best_z + 2;
-                dn.z = best_z - 5;
+                Vector3 up, dn, tmp;
+                up.Z = best_z + 2;
+                dn.Z = best_z - 5;
                 bool[] nearCliff = { true, true, true, true };
 
                 bool allGood = true;
                 foreach (int t in ts)
                 {
-                    Vector vertex0;
-                    Vector vertex1;
-                    Vector vertex2;
+                    Vector3 vertex0;
+                    Vector3 vertex1;
+                    Vector3 vertex2;
 
                     tc.GetTriangleVertices(t,
-                            out vertex0.x, out vertex0.y, out vertex0.z,
-                            out vertex1.x, out vertex1.y, out vertex1.z,
-                            out vertex2.x, out vertex2.y, out vertex2.z);
+                            out vertex0.X, out vertex0.Y, out vertex0.Z,
+                            out vertex1.X, out vertex1.Y, out vertex1.Z,
+                            out vertex2.X, out vertex2.Y, out vertex2.Z);
 
                     float[] dx = { minCliffD, -minCliffD, 0, 0 };
                     float[] dy = { 0, 0, minCliffD, -minCliffD };
@@ -902,8 +882,8 @@ namespace WowTriangles
                     {
                         if (nearCliff[i])
                         {
-                            up.x = dn.x = x + dx[i];
-                            up.y = dn.y = y + dy[i];
+                            up.X = dn.X = x + dx[i];
+                            up.Y = dn.Y = y + dy[i];
                             if (Utils.SegmentTriangleIntersect(up, dn, vertex0, vertex1, vertex2, out tmp))
                                 nearCliff[i] = false;
                         }

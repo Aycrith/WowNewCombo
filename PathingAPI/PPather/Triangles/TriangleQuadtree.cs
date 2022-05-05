@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Part of PPather
  *  Copyright Pontus Borg 2008
  *
@@ -6,6 +6,7 @@
 
 using Microsoft.Extensions.Logging;
 using PatherPath;
+using System.Numerics;
 
 namespace WowTriangles
 {
@@ -19,14 +20,14 @@ namespace WowTriangles
         public Node rootNode;
         private TriangleCollection tc;
 
-        private Vector min;
-        private Vector max;
+        private Vector3 min;
+        private Vector3 max;
 
         public class Node
         {
-            public Vector min;
-            public Vector mid;
-            public Vector max;
+            public Vector3 min;
+            public Vector3 mid;
+            public Vector3 max;
 
             private TriangleQuadtree tree;
 
@@ -38,15 +39,17 @@ namespace WowTriangles
             private readonly ILogger logger;
 
             public Node(TriangleQuadtree tree,
+                        Vector3 min,
+                        Vector3 max,
                         ILogger logger)
             {
                 this.logger = logger;
                 this.tree = tree;
                 this.min = min;
                 this.max = max;
-                this.mid.x = (min.x + max.x) / 2;
-                this.mid.y = (min.y + max.y) / 2;
-                this.mid.z = 0;
+                this.mid.X = (min.X + max.X) / 2;
+                this.mid.Y = (min.Y + max.Y) / 2;
+                this.mid.Z = 0;
             }
 
             public void Build(SimpleLinkedList triangles, int depth)
@@ -64,7 +67,7 @@ namespace WowTriangles
                     }
                     if (triangles.Count >= SplitSize)
                     {
-                        Vector size;
+                        Vector3 size;
                         Utils.sub(out size, ref max, ref min);
                         logger.LogDebug("New leaf " + depth + " size: " + triangles.Count + " " + size);
                     }
@@ -73,19 +76,19 @@ namespace WowTriangles
                 {
                     this.triangles = null;
 
-                    float[] xl = new float[3] { min.x, mid.x, max.x };
-                    float[] yl = new float[3] { min.y, mid.y, max.y };
+                    float[] xl = new float[3] { min.X, mid.X, max.X };
+                    float[] yl = new float[3] { min.Y, mid.Y, max.Y };
 
-                    Vector boxhalfsize = new Vector(
-                           mid.x - min.x,
-                           mid.y - min.y,
+                    Vector3 boxhalfsize = new Vector3(
+                           mid.X - min.X,
+                           mid.Y - min.Y,
                            1E10f);
 
                     children = new Node[2, 2];
 
-                    Vector vertex0;
-                    Vector vertex1;
-                    Vector vertex2;
+                    Vector3 vertex0;
+                    Vector3 vertex1;
+                    Vector3 vertex2;
 
                     // if (depth <= 3)
                     //     logger.WriteLine(depth + " Pre tris: " + triangles.Count);
@@ -100,8 +103,8 @@ namespace WowTriangles
                             SimpleLinkedList childTris = new SimpleLinkedList(this.logger);
 
                             children[x, y] = new Node(tree,
-                                                         new Vector(xl[x], yl[y], 0),
-                                                         new Vector(xl[x + 1], yl[y + 1], 0), this.logger);
+                                                         new Vector3(xl[x], yl[y], 0),
+                                                         new Vector3(xl[x + 1], yl[y + 1], 0), this.logger);
                             children[x, y].parent = this;
                             int c = 0;
                             while (rover != null)
@@ -110,9 +113,9 @@ namespace WowTriangles
                                 SimpleLinkedList.Node next = rover.next;
                                 int triangle = rover.val;
                                 tree.tc.GetTriangleVertices(triangle,
-                                        out vertex0.x, out vertex0.y, out vertex0.z,
-                                        out vertex1.x, out vertex1.y, out vertex1.z,
-                                        out vertex2.x, out vertex2.y, out vertex2.z);
+                                        out vertex0.X, out vertex0.Y, out vertex0.Z,
+                                        out vertex1.X, out vertex1.Y, out vertex1.Z,
+                                        out vertex2.X, out vertex2.Y, out vertex2.Z);
 
                                 if (Utils.TestTriangleBoxIntersect(vertex0, vertex1, vertex2,
                                                                   children[x, y].mid, boxhalfsize))
@@ -151,8 +154,8 @@ namespace WowTriangles
             this.logger = logger;
             logger.LogDebug("Build oct " + tc.GetNumberOfTriangles());
             this.tc = tc;
-            tc.GetBBox(out min.x, out min.y, out min.z,
-                       out max.x, out max.y, out max.z);
+            tc.GetBBox(out min.X, out min.Y, out min.Z,
+                       out max.X, out max.Y, out max.Z);
             rootNode = new Node(this, min, max, this.logger);
 
             SimpleLinkedList tlist = new SimpleLinkedList(this.logger);

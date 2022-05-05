@@ -20,7 +20,7 @@
 
 using PatherPath;
 using System;
-using System.Linq;
+using System.Numerics;
 using System.Collections.Generic;
 using Wmo;
 using System.IO;
@@ -243,14 +243,14 @@ namespace WowTriangles
                         // logger.WriteLine("    wmo: " + fn + " at " + wi.pos);
                         if (fn != null)
                         {
-                            WMO old = instances.Get((int)wi.pos.x, (int)wi.pos.y, (int)wi.pos.z);
+                            WMO old = instances.Get((int)wi.pos.X, (int)wi.pos.Y, (int)wi.pos.Z);
                             if (old == wi.wmo)
                             {
                                 //logger.WriteLine("Already got " + fn);
                             }
                             else
                             {
-                                instances.Set((int)wi.pos.x, (int)wi.pos.y, (int)wi.pos.z, wi.wmo);
+                                instances.Set((int)wi.pos.X, (int)wi.pos.Y, (int)wi.pos.Z, wi.wmo);
                                 AddTriangles(triangles, wi);
                             }
                         }
@@ -406,13 +406,13 @@ namespace WowTriangles
 
         private void AddTriangles(TriangleCollection s, WMOInstance wi)
         {
-            float dx = wi.pos.x;
-            float dy = wi.pos.y;
-            float dz = wi.pos.z;
+            float dx = wi.pos.X;
+            float dy = wi.pos.Y;
+            float dz = wi.pos.Z;
 
-            float dir_x = wi.dir.z;
-            float dir_y = wi.dir.y - 90;
-            float dir_z = -wi.dir.x;
+            float dir_x = wi.dir.Z;
+            float dir_y = wi.dir.Y - 90;
+            float dir_z = -wi.dir.X;
 
             //logger.WriteLine("modeli: " + dir_x + " " + dir_y + " " + dir_z);
             WMO wmo = wi.wmo;
@@ -497,24 +497,24 @@ namespace WowTriangles
             }
         }
 
-        private void AddTrianglesGroupDoodads(TriangleCollection s, ModelInstance mi, Vec3D world_dir, Vec3D world_off, float rot)
+        private void AddTrianglesGroupDoodads(TriangleCollection s, ModelInstance mi, System.Numerics.Vector3 world_dir, System.Numerics.Vector3 world_off, float rot)
         {
             sequence++;
-            float dx = mi.pos.x;
-            float dy = mi.pos.y;
-            float dz = mi.pos.z;
+            float dx = mi.pos.X;
+            float dy = mi.pos.Y;
+            float dz = mi.pos.Z;
 
             rotate(dx, dz, rot + 90f, out dx, out dz);
 
-            dx += world_off.x;
-            dy += world_off.y;
-            dz += world_off.z;
+            dx += world_off.X;
+            dy += world_off.Y;
+            dz += world_off.Z;
 
             Quaternion q;
-            q.x = mi.dir.z;
-            q.y = mi.dir.x;
-            q.z = mi.dir.y;
-            q.w = mi.w;
+            q.X = mi.dir.Z;
+            q.Y = mi.dir.X;
+            q.Z = mi.dir.Y;
+            q.W = mi.w;
             Matrix4 rotMatrix = new Matrix4();
             rotMatrix.makeQuaternionRotate(q);
 
@@ -539,18 +539,15 @@ namespace WowTriangles
                     y *= mi.sc;
                     z *= -mi.sc;
 
-                    Vector pos;
-                    pos.x = x;
-                    pos.y = y;
-                    pos.z = z;
-                    Vector new_pos = rotMatrix.mutiply(pos);
-                    x = pos.x;
-                    y = pos.y;
-                    z = pos.z;
+                    Vector3 pos = new(x, y, z);
+                    Vector3 new_pos = rotMatrix.mutiply(pos);
+                    x = pos.X;
+                    y = pos.Y;
+                    z = pos.Z;
 
-                    float dir_x = world_dir.z;
-                    float dir_y = world_dir.y - 90;
-                    float dir_z = -world_dir.x;
+                    float dir_x = world_dir.Z;
+                    float dir_y = world_dir.Y - 90;
+                    float dir_z = -world_dir.X;
 
                     rotate(z, y, dir_x, out z, out y);
                     rotate(x, y, dir_z, out x, out y);
@@ -581,13 +578,13 @@ namespace WowTriangles
         private void AddTriangles(TriangleCollection s, ModelInstance mi)
         {
             sequence++;
-            float dx = mi.pos.x;
-            float dy = mi.pos.y;
-            float dz = mi.pos.z;
+            float dx = mi.pos.X;
+            float dy = mi.pos.Y;
+            float dz = mi.pos.Z;
 
-            float dir_x = mi.dir.z;
-            float dir_y = mi.dir.y - 90; // -90 is correct!
-            float dir_z = -mi.dir.x;
+            float dir_x = mi.dir.Z;
+            float dir_y = mi.dir.Y - 90; // -90 is correct!
+            float dir_z = -mi.dir.X;
 
             Model m = mi.model;
             if (m == null)
