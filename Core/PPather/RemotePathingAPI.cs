@@ -1,4 +1,4 @@
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System;
 using System.Linq;
 using System.Collections.Generic;
@@ -17,11 +17,11 @@ namespace Core
     {
         private readonly ILogger logger;
 
-        private string host = "localhost";
+        private readonly string host = "localhost";
 
-        private int port = 5001;
+        private readonly int port = 5001;
 
-        private string api => $"http://{host}:{port}/api/PPather/";
+        private readonly string api;
 
         private List<LineArgs> lineArgs = new List<LineArgs>();
 
@@ -30,6 +30,8 @@ namespace Core
             this.logger = logger;
             this.host = host;
             this.port = port;
+
+            api = $"http://{host}:{port}/api/PPather/";
         }
 
         public async ValueTask DrawLines(List<LineArgs> lineArgs)
@@ -60,8 +62,7 @@ namespace Core
             {
                 LogInformation($"Finding route from {fromPoint} map {map} to {toPoint} map {map}...");
                 var url = $"{api}MapRoute?map1={map}&x1={fromPoint.X}&y1={fromPoint.Y}&map2={map}&x2={toPoint.X}&y2={toPoint.Y}";
-                var sw = new Stopwatch();
-                sw.Start();
+                var sw = Stopwatch.StartNew();
 
                 using var client = new HttpClient();
                 var responseString = await client.GetStringAsync(url);
