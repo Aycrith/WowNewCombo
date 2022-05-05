@@ -24,6 +24,7 @@ using System.Linq;
 using System.Collections.Generic;
 using Wmo;
 using System.IO;
+using Microsoft.Extensions.Logging;
 
 namespace WowTriangles
 {
@@ -62,14 +63,14 @@ namespace WowTriangles
             base.Close();
         }
 
-        private Logger logger;
+        private ILogger logger;
 
-        public MPQTriangleSupplier(Logger logger, DataConfig dataConfig)
+        public MPQTriangleSupplier(ILogger logger, DataConfig dataConfig)
         {
             this.logger = logger;
             this.dataConfig = dataConfig;
 
-            string[] archiveNames = GetArchiveNames(dataConfig, s => logger.WriteLine(s));
+            string[] archiveNames = GetArchiveNames(dataConfig);
 
             archive = new StormDll.ArchiveSet(this.logger);
             archive.AddArchives(archiveNames);
@@ -126,10 +127,9 @@ namespace WowTriangles
             }
         }
 
-        public static string[] GetArchiveNames(DataConfig dataConfig, Action<string> log)
+        public static string[] GetArchiveNames(DataConfig dataConfig)
         {
             //log("MPQ dir is " + dataConfig.MPQ);
-
             return Directory.GetFiles(dataConfig.MPQ);
         }
 
@@ -304,7 +304,7 @@ namespace WowTriangles
             }
             if (chunk_y == 64 || chunk_x == 64)
             {
-                logger.WriteLine(x + " " + y + " is at " + chunk_x + " " + chunk_y);
+                logger.LogDebug(x + " " + y + " is at " + chunk_x + " " + chunk_y);
                 //GetChunkCoord(x, y, out chunk_x, out chunk_y);
             }
         }

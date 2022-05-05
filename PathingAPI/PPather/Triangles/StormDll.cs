@@ -18,7 +18,7 @@
 
  */
 
-using PatherPath;
+using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
@@ -114,9 +114,9 @@ int   WINAPI SFileAddListFile(HANDLE hMpq, const char * szListFile);
 
     public unsafe class ArchiveSet
     {
-        private Logger logger;
+        private readonly ILogger logger;
 
-        public ArchiveSet(Logger logger)
+        public ArchiveSet(ILogger logger)
         {
             this.logger = logger;
         }
@@ -142,7 +142,7 @@ int   WINAPI SFileAddListFile(HANDLE hMpq, const char * szListFile);
             if (a.IsOpen())
             {
                 archives.Add(a);
-                logger.WriteLine("Add archive " + file);
+                logger.LogDebug("Add archive " + file);
                 return true;
             }
             return false;
@@ -179,7 +179,7 @@ int   WINAPI SFileAddListFile(HANDLE hMpq, const char * szListFile);
                     bool ok = a.ExtractFile(from, to);
                     if (!ok)
                     {
-                        logger.Debug("  result: " + ok);
+                        logger.LogDebug("  result: " + ok);
                     }
                     return ok;
                 }
@@ -201,9 +201,9 @@ int   WINAPI SFileAddListFile(HANDLE hMpq, const char * szListFile);
     {
         private void* handle = null;
 
-        private Logger logger;
+        private readonly ILogger logger;
 
-        public Archive(string file, uint Prio, uint Flags, Logger logger)
+        public Archive(string file, uint Prio, uint Flags, ILogger logger)
         {
             this.logger = logger;
             bool r = Open(file, Prio, Flags);
@@ -221,7 +221,7 @@ int   WINAPI SFileAddListFile(HANDLE hMpq, const char * szListFile);
             void** hp = &h;
             bool r = StormDll.SFileOpenArchive(file, Prio, Flags, hp);
             handle = h;
-            logger.WriteLine("Open " + file + " = " + r);
+            logger.LogDebug("Open " + file + " = " + r);
             return r;
         }
 

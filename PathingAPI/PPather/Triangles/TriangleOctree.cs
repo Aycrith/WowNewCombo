@@ -1,9 +1,10 @@
-﻿/*
+/*
  *  Part of PPather
  *  Copyright Pontus Borg 2008
  *
  */
 
+using Microsoft.Extensions.Logging;
 using PatherPath;
 
 namespace WowTriangles
@@ -30,11 +31,10 @@ namespace WowTriangles
             public Node[,,] children; // [2,2,2]
 
             public int[] triangles;
-            private Logger logger;
+            private readonly ILogger logger;
 
             public Node(TriangleOctree tree,
-                        Vector min,
-                        Vector max, Logger logger)
+                        ILogger logger)
             {
                 this.logger = logger;
                 this.tree = tree;
@@ -99,8 +99,7 @@ namespace WowTriangles
                                 SimpleLinkedList childTris = new SimpleLinkedList(this.logger);
 
                                 children[x, y, z] = new Node(tree,
-                                                             new Vector(xl[x], yl[y], zl[z]),
-                                                             new Vector(xl[x + 1], yl[y + 1], zl[z + 1]), this.logger);
+                                                             this.logger);
                                 children[x, y, z].parent = this;
                                 int c = 0;
                                 while (rover != null)
@@ -178,12 +177,12 @@ namespace WowTriangles
             return found;
         }
 
-        private Logger logger;
+        private readonly ILogger logger;
 
-        public TriangleOctree(TriangleCollection tc, Logger logger)
+        public TriangleOctree(TriangleCollection tc, ILogger logger)
         {
             this.logger = logger;
-            logger.WriteLine("Build oct " + tc.GetNumberOfTriangles());
+            logger.LogDebug("Build oct " + tc.GetNumberOfTriangles());
             this.tc = tc;
             tc.GetBBox(out min.x, out min.y, out min.z,
                          out max.x, out max.y, out max.z);
@@ -195,7 +194,7 @@ namespace WowTriangles
                 tlist.AddNew(i);
             }
             rootNode.Build(tlist, 0);
-            logger.WriteLine("done");
+            logger.LogDebug("done");
         }
     }
 }

@@ -1,9 +1,10 @@
-﻿/*
+/*
  *  Part of PPather
  *  Copyright Pontus Borg 2008
  *
  */
 
+using Microsoft.Extensions.Logging;
 using PatherPath;
 using System.Collections.Generic;
 
@@ -34,14 +35,14 @@ namespace WowTriangles
                 maxAtOne = l.Count;
         }
 
-        private Logger logger;
+        private readonly ILogger logger;
 
-        public TriangleMatrix(TriangleCollection tc, Logger logger)
+        public TriangleMatrix(TriangleCollection tc, ILogger logger)
         {
             this.logger = logger;
 
             System.DateTime pre = System.DateTime.UtcNow;
-            logger.WriteLine("Build hash  " + tc.GetNumberOfTriangles());
+            logger.LogDebug("Build hash  " + tc.GetNumberOfTriangles());
             matrix = new SparseFloatMatrix2D<List<int>>(resolution, tc.GetNumberOfTriangles());
 
             Vector vertex0;
@@ -85,7 +86,7 @@ namespace WowTriangles
             }
             System.DateTime post = System.DateTime.UtcNow;
             System.TimeSpan ts = post.Subtract(pre);
-            logger.WriteLine("done " + maxAtOne + " time " + ts);
+            logger.LogDebug("done " + maxAtOne + " time " + ts);
         }
 
         public Set<int> GetAllCloseTo(float x, float y, float distance)

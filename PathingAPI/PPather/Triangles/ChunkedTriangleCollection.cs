@@ -1,4 +1,4 @@
-﻿/*
+/*
  *  Part of PPather
  *  Copyright Pontus Borg 2008
  *
@@ -9,6 +9,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using Wmo;
+using Microsoft.Extensions.Logging;
 
 namespace WowTriangles
 {
@@ -56,9 +57,9 @@ namespace WowTriangles
             }
         }
 
-        private Logger logger;
+        private ILogger logger;
 
-        public ChunkedTriangleCollection(float chunkSize, Logger logger)
+        public ChunkedTriangleCollection(float chunkSize, ILogger logger)
         {
             this.logger = logger;
             // this.chunkSize = chunkSize;
@@ -537,8 +538,7 @@ namespace WowTriangles
                         {
                             if (!IsSpotBlocked(intersect.x, intersect.y, intersect.z, toonHeight, toonSize))
                             {
-                                logger.WriteLine("new best z:" + intersect.z.ToString());
-                                best_z = intersect.z;
+                                logger.LogDebug("new best z:" + intersect.Z.ToString());
                                 best_flags = t_flags;
                                 found = true;
                             }

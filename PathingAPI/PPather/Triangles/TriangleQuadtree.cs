@@ -1,9 +1,10 @@
-﻿/*
+/*
  *  Part of PPather
  *  Copyright Pontus Borg 2008
  *
  */
 
+using Microsoft.Extensions.Logging;
 using PatherPath;
 
 namespace WowTriangles
@@ -34,11 +35,10 @@ namespace WowTriangles
 
             public int[] triangles;
 
-            private Logger logger;
+            private readonly ILogger logger;
 
             public Node(TriangleQuadtree tree,
-                        Vector min,
-                        Vector max, Logger logger)
+                        ILogger logger)
             {
                 this.logger = logger;
                 this.tree = tree;
@@ -66,7 +66,7 @@ namespace WowTriangles
                     {
                         Vector size;
                         Utils.sub(out size, ref max, ref min);
-                        logger.WriteLine("New leaf " + depth + " size: " + triangles.Count + " " + size);
+                        logger.LogDebug("New leaf " + depth + " size: " + triangles.Count + " " + size);
                     }
                 }
                 else
@@ -144,12 +144,12 @@ namespace WowTriangles
             }
         }
 
-        private Logger logger;
+        private readonly ILogger logger;
 
-        public TriangleQuadtree(TriangleCollection tc, Logger logger)
+        public TriangleQuadtree(TriangleCollection tc, ILogger logger)
         {
             this.logger = logger;
-            logger.WriteLine("Build oct " + tc.GetNumberOfTriangles());
+            logger.LogDebug("Build oct " + tc.GetNumberOfTriangles());
             this.tc = tc;
             tc.GetBBox(out min.x, out min.y, out min.z,
                        out max.x, out max.y, out max.z);
@@ -161,7 +161,7 @@ namespace WowTriangles
                 tlist.AddNew(i);
             }
             rootNode.Build(tlist, 0);
-            logger.WriteLine("done");
+            logger.LogDebug("done");
         }
     }
 }

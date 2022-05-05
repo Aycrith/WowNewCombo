@@ -1,4 +1,4 @@
-﻿@page "/Watch"
+@page "/Watch"
 
 @using System.Collections.Generic
 @using PathingAPI.Data
@@ -27,7 +27,7 @@
     {
         if (firstRender)
         {
-            pPatherService.OnLog = Log;
+            PathingAPILoggerSink.OnLog += Log;
             await jsRuntime.InvokeVoidAsync("createScene");
             Initialise();
         }
@@ -63,18 +63,10 @@
         });
     }
 
-    public void Log(string message)
+    public void Log(object? s, string message)
     {
-        try
-        {
-            System.Diagnostics.Debug.WriteLine(">" + message);
-            InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("log", message)).Wait();
-            if (!initialised) { Initialise(); }
-        }
-        catch (Exception ex)
-        {
-            Log(ex.Message);
-        }
+        InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("log", message)).Wait();
+        if (!initialised) { Initialise(); }
     }
 
     public void DrawFinalPath(PatherPath.Graph.Path spotPath)
@@ -92,7 +84,7 @@
         }
         else
         {
-            Log("No path found");
+            Log(this, "No path found");
         }
     }
 
@@ -151,7 +143,7 @@
                 }
                 catch (Exception ex)
                 {
-                    Log(ex.Message);
+                    Log(this, ex.Message);
                 }
             }
             System.Threading.Thread.Sleep(50);

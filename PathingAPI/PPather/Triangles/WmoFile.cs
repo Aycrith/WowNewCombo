@@ -22,6 +22,7 @@ using PatherPath;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Microsoft.Extensions.Logging;
 
 namespace Wmo
 {
@@ -747,7 +748,7 @@ namespace Wmo
         private string name;
         private StormDll.ArchiveSet archive;
 
-        private Logger logger;
+        private readonly ILogger logger;
         private DataConfig dataConfig;
 
         //Alterac Valley> ZonePath :� world\\maps\\PVPZone01\\PVPZone01�
@@ -943,7 +944,7 @@ namespace Wmo
         // 58.
         //WailingCarverns
 
-        public WDTFile(StormDll.ArchiveSet archive, string name, WDT wdt, WMOManager wmomanager, ModelManager modelmanager, Logger logger, DataConfig dataConfig)
+        public WDTFile(StormDll.ArchiveSet archive, string name, WDT wdt, WMOManager wmomanager, ModelManager modelmanager, ILogger logger, DataConfig dataConfig)
         {
             this.logger = logger;
             this.dataConfig = dataConfig;
@@ -993,7 +994,7 @@ namespace Wmo
                     }
                     else
                     {
-                        logger.WriteLine("WDT Unknown " + type);
+                        logger.LogWarning("WDT Unknown " + type);
                         //done = true;
                     }
                     file.BaseStream.Seek(curpos + size, System.IO.SeekOrigin.Begin);
@@ -1021,7 +1022,7 @@ namespace Wmo
                 var path = Path.Join(dataConfig.PPather, "adt.tmp");
                 if (archive.ExtractFile(filename, path))
                 {
-                    logger.Debug("Reading adt: " + filename);
+                    logger.LogDebug("Reading adt: " + filename);
                     //PPather.mover.Stop();
                     MapTileFile f = new MapTileFile(path, t, wmomanager, modelmanager);
                     if (t.models.Count != 0 || t.wmos.Count != 0)
@@ -1095,9 +1096,9 @@ namespace Wmo
         private System.IO.BinaryReader file;
         private DBC dbc;
 
-        private Logger logger;
+        private readonly ILogger logger;
 
-        public DBCFile(string name, DBC dbc, Logger logger)
+        public DBCFile(string name, DBC dbc, ILogger logger)
         {
             this.logger = logger;
             this.dbc = dbc;
@@ -1119,7 +1120,7 @@ namespace Wmo
                     }
                     else
                     {
-                        logger.WriteLine("DBC Unknown " + type);
+                        logger.LogWarning("DBC Unknown " + type);
                         //done = true;
                     }
                     //file.BaseStream.Seek(curpos + size, System.IO.SeekOrigin.Begin);
@@ -1145,7 +1146,7 @@ namespace Wmo
             if (dbc.fieldCount * 4 != dbc.recordSize)
             {
                 // !!!
-                logger.WriteLine("WOOT");
+                logger.LogWarning("WOOT");
             }
             int off = 0;
             uint[] raw = new uint[dbc.fieldCount * dbc.recordCount];
@@ -1236,9 +1237,9 @@ namespace Wmo
 
     internal class MapTileFile // adt file
     {
-        private Logger logger;
+        private readonly ILogger logger;
 
-        public MapTileFile(Logger logger)
+        public MapTileFile(ILogger logger)
         {
             this.logger = logger;
         }
@@ -1573,37 +1574,37 @@ namespace Wmo
                     {
                         size = 0x1C0; // WTF
                         if (debug)
-                            logger.WriteLine("MCNR " + size);
+                            logger.LogDebug("MCNR " + size);
                         HandleChunkMCNR(chunk, size);
                     }
                     else if (type == ChunkReader.MCVT)
                     {
                         if (debug)
-                            logger.WriteLine("MCVT " + size);
+                            logger.LogDebug("MCVT " + size);
                         HandleChunkMCVT(chunk, size);
                     }
                     else if (type == ChunkReader.MCRF)
                     {
                         if (debug)
-                            logger.WriteLine("MCRF " + size);
+                            logger.LogDebug("MCRF " + size);
                         HandleChunkMCRF(chunk, size);
                     }
                     else if (type == ChunkReader.MCLY)
                     {
                         if (debug)
-                            logger.WriteLine("MCLY " + size);
+                            logger.LogDebug("MCLY " + size);
                         HandleChunkMCLY(chunk, size);
                     }
                     else if (type == ChunkReader.MCSH)
                     {
                         if (debug)
-                            logger.WriteLine("MCSH " + size);
+                            logger.LogDebug("MCSH " + size);
                         HandleChunkMCSH(chunk, size);
                     }
                     else if (type == ChunkReader.MCAL)
                     {
                         if (debug)
-                            logger.WriteLine("MCAL " + size);
+                            logger.LogDebug("MCAL " + size);
                         HandleChunkMCAL(chunk, size);
                         // TODO rumors are that the size of this chunk is wrong sometimes
                     }
@@ -1614,7 +1615,7 @@ namespace Wmo
                         size = sizeLiquid;
                         if (debug)
                         {
-                            logger.Debug(string.Format("MCLQ {0}", size));
+                            logger.LogDebug(string.Format("MCLQ {0}", size));
                         }
                         if (sizeLiquid != 8)
                         {
@@ -1626,7 +1627,7 @@ namespace Wmo
                     else if (type == ChunkReader.MCSE)
                     {
                         if (debug)
-                            logger.WriteLine("MCSE " + size);
+                            logger.LogDebug("MCSE " + size);
                         HandleChunkMCSE(chunk, size);
                     }
                     else if (type == ChunkReader.MCNK)

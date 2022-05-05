@@ -16,6 +16,7 @@
 
 */
 
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 
@@ -23,9 +24,9 @@ namespace PatherPath.Graph
 {
     public class Spot
     {
-        private Logger logger;
+        private ILogger logger;
 
-        public Spot(Logger logger)
+        public Spot(ILogger logger)
         {
             this.logger = logger;
         }
@@ -291,7 +292,7 @@ namespace PatherPath.Graph
             }
             if (found_index != -1)
             {
-                logger.Debug(string.Format("Remove path ({0}) to {1} {2} {3}", found_index, x, y, n_paths));
+                logger.LogDebug(string.Format("Remove path ({0}) to {1} {2} {3}", found_index, x, y, n_paths));
                 for (int i = found_index; i < n_paths - 1; i++)
                 {
                     int off = i * 3;
@@ -305,7 +306,7 @@ namespace PatherPath.Graph
             }
             else
             {
-                logger.Debug(string.Format("Found not path to remove ({0}) to {1} {2} ", found_index, x, y));
+                logger.LogDebug(string.Format("Found not path to remove ({0}) to {1} {2} ", found_index, x, y));
             }
         }
 
