@@ -532,7 +532,8 @@ namespace WowTriangles
                         {
                             if (!IsSpotBlocked(intersect.X, intersect.Y, intersect.Z, toonHeight, toonSize))
                             {
-                                logger.LogDebug("new best z:" + intersect.Z.ToString());
+                                if (logger.IsEnabled(LogLevel.Debug))
+                                    logger.LogDebug("new best z:" + intersect.Z.ToString());
                                 best_z = intersect.Z;
                                 best_flags = t_flags;
                                 found = true;

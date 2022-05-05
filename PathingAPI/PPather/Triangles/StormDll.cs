@@ -142,7 +142,8 @@ int   WINAPI SFileAddListFile(HANDLE hMpq, const char * szListFile);
             if (a.IsOpen())
             {
                 archives.Add(a);
-                logger.LogDebug("Add archive " + file);
+                if (logger.IsEnabled(LogLevel.Debug))
+                    logger.LogDebug("Add archive " + file);
                 return true;
             }
             return false;
@@ -179,7 +180,8 @@ int   WINAPI SFileAddListFile(HANDLE hMpq, const char * szListFile);
                     bool ok = a.ExtractFile(from, to);
                     if (!ok)
                     {
-                        logger.LogDebug("  result: " + ok);
+                        if (logger.IsEnabled(LogLevel.Debug))
+                            logger.LogDebug("  result: " + ok);
                     }
                     return ok;
                 }
@@ -221,7 +223,8 @@ int   WINAPI SFileAddListFile(HANDLE hMpq, const char * szListFile);
             void** hp = &h;
             bool r = StormDll.SFileOpenArchive(file, Prio, Flags, hp);
             handle = h;
-            logger.LogDebug("Open " + file + " = " + r);
+            if (logger.IsEnabled(LogLevel.Debug))
+                logger.LogDebug("Open " + file + " = " + r);
             return r;
         }
 

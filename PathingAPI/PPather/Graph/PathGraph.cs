@@ -188,7 +188,8 @@ namespace PatherPath.Graph
         {
             lock (m_LockObject)
             {
-                logger.LogDebug("Saving GraphChunks.....");
+                if (logger.IsEnabled(LogLevel.Debug))
+                    logger.LogDebug("Saving GraphChunks.....");
                 ICollection<GraphChunk> l = chunks.GetAllElements();
                 foreach (GraphChunk gc in l)
                 {
@@ -439,7 +440,8 @@ namespace PatherPath.Graph
                 if (isAtSpot.IsFlagSet(Spot.FLAG_BLOCKED))
                 {
                     isAtSpot.SetFlag(Spot.FLAG_BLOCKED, false);
-                    logger.LogDebug("Cleared blocked flag");
+                    if (logger.IsEnabled(LogLevel.Debug))
+                        logger.LogDebug("Cleared blocked flag");
                 }
                 if (wasAt != null)
                 {
@@ -459,7 +461,8 @@ namespace PatherPath.Graph
                         // Log("  connect to " + other.location);
                     }
                 }
-                logger.LogDebug("Learned a new spot at " + isAtSpot.location + " connected to " + connected + " other spots");
+                if (logger.IsEnabled(LogLevel.Debug))
+                    logger.LogDebug("Learned a new spot at " + isAtSpot.location + " connected to " + connected + " other spots");
                 wasAt = isAtSpot;
             }
             else

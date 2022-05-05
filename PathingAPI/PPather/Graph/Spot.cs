@@ -292,7 +292,8 @@ namespace PatherPath.Graph
             }
             if (found_index != -1)
             {
-                logger.LogDebug(string.Format("Remove path ({0}) to {1} {2} {3}", found_index, x, y, n_paths));
+                if (logger.IsEnabled(LogLevel.Debug))
+                    logger.LogDebug(string.Format("Remove path ({0}) to {1} {2} {3}", found_index, x, y, n_paths));
                 for (int i = found_index; i < n_paths - 1; i++)
                 {
                     int off = i * 3;
@@ -306,7 +307,8 @@ namespace PatherPath.Graph
             }
             else
             {
-                logger.LogDebug(string.Format("Found not path to remove ({0}) to {1} {2} ", found_index, x, y));
+                if (logger.IsEnabled(LogLevel.Debug))
+                    logger.LogDebug(string.Format("Found not path to remove ({0}) to {1} {2} ", found_index, x, y));
             }
         }
 

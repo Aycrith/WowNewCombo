@@ -304,7 +304,8 @@ namespace WowTriangles
             }
             if (chunk_y == 64 || chunk_x == 64)
             {
-                logger.LogDebug(x + " " + y + " is at " + chunk_x + " " + chunk_y);
+                if (logger.IsEnabled(LogLevel.Debug))
+                    logger.LogDebug(x + " " + y + " is at " + chunk_x + " " + chunk_y);
                 //GetChunkCoord(x, y, out chunk_x, out chunk_y);
             }
         }

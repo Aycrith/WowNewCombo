@@ -69,7 +69,8 @@ namespace WowTriangles
                     {
                         Vector3 size;
                         Utils.sub(out size, ref max, ref min);
-                        logger.LogDebug("New leaf " + depth + " size: " + triangles.Count + " " + size);
+                        if (logger.IsEnabled(LogLevel.Debug))
+                            logger.LogDebug("New leaf " + depth + " size: " + triangles.Count + " " + size);
                     }
                 }
                 else
@@ -152,7 +153,8 @@ namespace WowTriangles
         public TriangleQuadtree(TriangleCollection tc, ILogger logger)
         {
             this.logger = logger;
-            logger.LogDebug("Build oct " + tc.GetNumberOfTriangles());
+            if (logger.IsEnabled(LogLevel.Debug))
+                logger.LogDebug("Build oct " + tc.GetNumberOfTriangles());
             this.tc = tc;
             tc.GetBBox(out min.X, out min.Y, out min.Z,
                        out max.X, out max.Y, out max.Z);
@@ -164,7 +166,8 @@ namespace WowTriangles
                 tlist.AddNew(i);
             }
             rootNode.Build(tlist, 0);
-            logger.LogDebug("done");
+            if (logger.IsEnabled(LogLevel.Debug))
+                logger.LogDebug("done");
         }
     }
 }

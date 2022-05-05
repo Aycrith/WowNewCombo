@@ -43,7 +43,8 @@ namespace WowTriangles
             this.logger = logger;
 
             System.DateTime pre = System.DateTime.UtcNow;
-            logger.LogDebug("Build hash  " + tc.GetNumberOfTriangles());
+            if (logger.IsEnabled(LogLevel.Debug))
+                logger.LogDebug("Build hash  " + tc.GetNumberOfTriangles());
             matrix = new SparseFloatMatrix2D<List<int>>(resolution, tc.GetNumberOfTriangles());
 
             Vector3 vertex0;
@@ -87,7 +88,8 @@ namespace WowTriangles
             }
             System.DateTime post = System.DateTime.UtcNow;
             System.TimeSpan ts = post.Subtract(pre);
-            logger.LogDebug("done " + maxAtOne + " time " + ts);
+            if (logger.IsEnabled(LogLevel.Debug))
+                logger.LogDebug("done " + maxAtOne + " time " + ts);
         }
 
         public Set<int> GetAllCloseTo(float x, float y, float distance)

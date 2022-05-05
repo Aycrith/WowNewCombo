@@ -379,8 +379,11 @@ namespace WowTriangles
 
         public void ReportSize(string pre)
         {
-            logger.LogDebug(pre + "no_vertices: " + no_vertices);
-            logger.LogDebug(pre + "no_triangles: " + no_triangles);
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug(pre + "no_vertices: " + no_vertices);
+                logger.LogDebug(pre + "no_triangles: " + no_triangles);
+            }
         }
 
         public void AddAllTrianglesFrom(TriangleCollection set)
