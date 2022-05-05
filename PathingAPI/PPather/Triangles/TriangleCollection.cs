@@ -4,6 +4,7 @@
  *
  */
 
+using Microsoft.Extensions.Logging;
 using PatherPath;
 
 namespace WowTriangles
@@ -13,9 +14,9 @@ namespace WowTriangles
     /// </summary>
     public class TriangleCollection
     {
-        private Logger logger;
+        private readonly ILogger logger;
 
-        public TriangleCollection(Logger logger)
+        public TriangleCollection(ILogger logger)
         {
             this.logger = logger;
         }
@@ -378,8 +379,11 @@ namespace WowTriangles
 
         public void ReportSize(string pre)
         {
-            logger.WriteLine(pre + "no_vertices: " + no_vertices);
-            logger.WriteLine(pre + "no_triangles: " + no_triangles);
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug(pre + "no_vertices: " + no_vertices);
+                logger.LogDebug(pre + "no_triangles: " + no_triangles);
+            }
         }
 
         public void AddAllTrianglesFrom(TriangleCollection set)

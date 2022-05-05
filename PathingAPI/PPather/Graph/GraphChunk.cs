@@ -16,6 +16,7 @@
 
 */
 
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 
@@ -23,7 +24,7 @@ namespace PatherPath.Graph
 {
     public class GraphChunk
     {
-        private Logger logger;
+        private readonly ILogger logger;
 
         public const int CHUNK_SIZE = 512;
 
@@ -34,7 +35,7 @@ namespace PatherPath.Graph
 
         private Spot[,] spots;
 
-        public GraphChunk(float base_x, float base_y, int ix, int iy, Logger logger)
+        public GraphChunk(float base_x, float base_y, int ix, int iy, ILogger logger)
         {
             this.logger = logger;
             this.base_x = base_x;
@@ -194,15 +195,15 @@ namespace PatherPath.Graph
             }
             catch (System.IO.FileNotFoundException e)
             {
-                logger.Debug(e.Message);
+                logger.LogError(e.Message);
             }
             catch (System.IO.DirectoryNotFoundException e)
             {
-                logger.Debug(e.Message);
+                logger.LogError(e.Message);
             }
             catch (Exception e)
             {
-                logger.Debug(e.Message);
+                logger.LogError(e.Message);
             }
 
             if (file != null)
@@ -214,7 +215,8 @@ namespace PatherPath.Graph
                 stream.Close();
             }
 
-            Log("Loaded " + fileName + " " + n_spots + " spots " + n_steps + " steps");
+            if (logger.IsEnabled(LogLevel.Debug))
+                logger.LogDebug("Loaded " + fileName + " " + n_spots + " spots " + n_steps + " steps");
 
             modified = false;
             return false;
@@ -308,13 +310,14 @@ namespace PatherPath.Graph
                 }
                 else
                 {
-                    Log("Save failed");
+                    logger.LogError("Save failed");
                 }
-                Log("Saved " + fileName + " " + n_spots + " spots " + n_steps + " steps");
+                if (logger.IsEnabled(LogLevel.Debug))
+                    logger.LogDebug("Saved " + fileName + " " + n_spots + " spots " + n_steps + " steps");
             }
             catch (Exception e)
             {
-                Log("Save failed " + e);
+                logger.LogError("Save failed " + e);
             }
 
             if (file != null)
@@ -330,12 +333,6 @@ namespace PatherPath.Graph
             }
 
             return false;
-        }
-
-        private void Log(String s)
-        {
-            //logger.WriteLine(s);
-            logger.Debug(s);
         }
     }
 }

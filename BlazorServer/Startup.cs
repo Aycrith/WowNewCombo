@@ -148,7 +148,7 @@ namespace BlazorServer
             }
             Log.Information("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
 
-            var localApi = new LocalPathingApi(logger, new PPatherService(Log.Information, dataConfig));
+            var localApi = new LocalPathingApi(logger, new PPatherService(logger, dataConfig));
             Log.Information($"Using {StartupConfigPathing.Types.Local}({localApi.GetType().Name}) pathing API.");
             Log.Information("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
             return localApi;

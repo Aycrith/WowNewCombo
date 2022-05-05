@@ -1,7 +1,6 @@
-﻿
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 
-namespace Core
+namespace SharedLib
 {
     [JsonObject(MemberSerialization.OptIn)]
     public class WorldMapAreaSpot

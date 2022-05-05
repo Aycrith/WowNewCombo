@@ -1,5 +1,4 @@
-﻿using PathingAPI.WorldToMap;
-using PatherPath.Graph;
+﻿using PatherPath.Graph;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,6 +6,7 @@ using WowTriangles;
 using PathingAPI.Data;
 using SharedLib;
 using SharedLib.Data;
+using Microsoft.Extensions.Logging;
 
 namespace PathingAPI
 {
@@ -14,10 +14,9 @@ namespace PathingAPI
     {
         private readonly List<WorldMapArea> worldMapAreas;
         private Search search { get; set; }
-        private readonly PatherPath.Logger logger;
+        private readonly ILogger logger;
         private readonly DataConfig dataConfig;
         private Action<Path> OnPathCreated;
-        public Action<string> OnLog { get; set; }
         public Action OnReset { get; set; }
         public Action<ChunkAddedEventArgs> OnChunkAdded { get; set; }
         public Action<LinesEventArgs> OnLinesAdded { get; set; }
@@ -27,31 +26,13 @@ namespace PathingAPI
         private Path lastPath;
         public bool HasInitialised;
 
-        public PPatherService()
-        {
-            logger = new PatherPath.Logger((s)=>Log(s));
-            dataConfig = DataConfig.Load();
-            this.worldMapAreas = WorldMapAreaFactory.Read(logger, dataConfig);
-        }
+        public PPatherService(ILogger logger) : this(logger, DataConfig.Load()) { }
 
-        public PPatherService(Action<string> onWrite, DataConfig dataConfig)
+        public PPatherService(ILogger logger, DataConfig dataConfig)
         {
             this.dataConfig = dataConfig;
-            logger = new PatherPath.Logger(onWrite);
+            this.logger = logger;
             this.worldMapAreas = WorldMapAreaFactory.Read(logger, dataConfig);
-        }
-
-        public void Log(string message)
-        {
-            try
-            {
-                Console.WriteLine(message);
-                OnLog?.Invoke(message);
-            }
-            catch (Exception ex)
-            {
-                Log(ex.Message);
-            }
         }
 
         public void Reset()

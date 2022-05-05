@@ -19,91 +19,37 @@
  */
 
 using System;
-
-//using System.Collections;
+using System.Numerics;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 namespace WowTriangles
 {
-    [StructLayout(LayoutKind.Explicit)]
-    public struct Vector
-    {
-        [FieldOffset(0)]
-        public float x;
-
-        [FieldOffset(4)]
-        public float y;
-
-        [FieldOffset(8)]
-        public float z;
-
-        public Vector(float x, float y, float z)
-        {
-            this.x = x;
-            this.y = y;
-            this.z = z;
-        }
-
-        public Vector(Vector v)
-        {
-            this.x = v.x;
-            this.y = v.y;
-            this.z = v.z;
-        }
-
-        public override string ToString()
-        {
-            return String.Format("({0:.00} {1:.00} {2:.00})", x, y, z);
-        }
-    }
-
-    public struct Quaternion
-    {
-        public float x;
-        public float y;
-        public float z;
-        public float w;
-
-        public Quaternion(float x, float y, float z, float w)
-        {
-            this.x = x;
-            this.y = y;
-            this.z = z;
-            this.w = w;
-        }
-
-        public override string ToString()
-        {
-            return String.Format("({0:.00} {1:.00} {2:.00} {3:.00})", x, y, z, w);
-        }
-    }
-
     public class Matrix4
     {
         private float[,] m = new float[4, 4];
 
         public void makeQuaternionRotate(Quaternion q)
         {
-            m[0, 0] = 1.0f - 2.0f * q.y * q.y - 2.0f * q.z * q.z;
-            m[0, 1] = 2.0f * q.x * q.y + 2.0f * q.w * q.z;
-            m[0, 2] = 2.0f * q.x * q.z - 2.0f * q.w * q.y;
-            m[1, 0] = 2.0f * q.x * q.y - 2.0f * q.w * q.z;
-            m[1, 1] = 1.0f - 2.0f * q.x * q.x - 2.0f * q.z * q.z;
-            m[1, 2] = 2.0f * q.y * q.z + 2.0f * q.w * q.x;
-            m[2, 0] = 2.0f * q.x * q.z + 2.0f * q.w * q.y;
-            m[2, 1] = 2.0f * q.y * q.z - 2.0f * q.w * q.x;
-            m[2, 2] = 1.0f - 2.0f * q.x * q.x - 2.0f * q.y * q.y;
+            m[0, 0] = 1.0f - 2.0f * q.Y * q.Y - 2.0f * q.Z * q.Z;
+            m[0, 1] = 2.0f * q.X * q.Y + 2.0f * q.W * q.Z;
+            m[0, 2] = 2.0f * q.X * q.Z - 2.0f * q.W * q.Y;
+            m[1, 0] = 2.0f * q.X * q.Y - 2.0f * q.W * q.Z;
+            m[1, 1] = 1.0f - 2.0f * q.X * q.X - 2.0f * q.Z * q.Z;
+            m[1, 2] = 2.0f * q.Y * q.Z + 2.0f * q.W * q.X;
+            m[2, 0] = 2.0f * q.X * q.Z + 2.0f * q.W * q.Y;
+            m[2, 1] = 2.0f * q.Y * q.Z - 2.0f * q.W * q.X;
+            m[2, 2] = 1.0f - 2.0f * q.X * q.X - 2.0f * q.Y * q.Y;
             m[0, 3] = m[1, 3] = m[2, 3] = m[3, 0] = m[3, 1] = m[3, 2] = 0;
             m[3, 3] = 1.0f;
         }
 
-        public Vector mutiply(Vector v)
+        public Vector3 mutiply(Vector3 v)
         {
-            Vector o;
-            o.x = m[0, 0] * v.x + m[0, 1] * v.y + m[0, 2] * v.z + m[0, 3];
-            o.y = m[1, 0] * v.x + m[1, 1] * v.y + m[1, 2] * v.z + m[1, 3];
-            o.z = m[2, 0] * v.x + m[2, 1] * v.y + m[2, 2] * v.z + m[2, 3];
+            Vector3 o;
+            o.X = m[0, 0] * v.X + m[0, 1] * v.Y + m[0, 2] * v.Z + m[0, 3];
+            o.Y = m[1, 0] * v.X + m[1, 1] * v.Y + m[1, 2] * v.Z + m[1, 3];
+            o.Z = m[2, 0] * v.X + m[2, 1] * v.Y + m[2, 2] * v.Z + m[2, 3];
             return o;
         }
     }
@@ -155,9 +101,9 @@ namespace WowTriangles
             return c;
         }
 
-        public static float VecLength(ref Vector d)
+        public static float VecLength(ref Vector3 d)
         {
-            return (float)Math.Sqrt(d.x * d.x + d.y * d.y + d.z * d.z);
+            return (float)Math.Sqrt(d.X * d.X + d.Y * d.Y + d.Z * d.Z);
         }
 
         public static void findMinMax(float a, float b, float c, out float min, out float max)
@@ -166,58 +112,58 @@ namespace WowTriangles
             max = Utils.max(a, b, c);
         }
 
-        public static void sub(out Vector C, ref Vector A, ref Vector B)
+        public static void sub(out Vector3 C, ref Vector3 A, ref Vector3 B)
         {
-            C.x = A.x - B.x;
-            C.y = A.y - B.y;
-            C.z = A.z - B.z;
+            C.X = A.X - B.X;
+            C.Y = A.Y - B.Y;
+            C.Z = A.Z - B.Z;
         }
 
-        public static void add(out Vector C, ref Vector A, ref Vector B)
+        public static void add(out Vector3 C, ref Vector3 A, ref Vector3 B)
         {
-            C.x = A.x + B.x;
-            C.y = A.y + B.y;
-            C.z = A.z + B.z;
+            C.X = A.X + B.X;
+            C.Y = A.Y + B.Y;
+            C.Z = A.Z + B.Z;
         }
 
-        public static void mul(out Vector C, ref Vector A, float b)
+        public static void mul(out Vector3 C, ref Vector3 A, float b)
         {
-            C.x = A.x * b;
-            C.y = A.y * b;
-            C.z = A.z * b;
+            C.X = A.X * b;
+            C.Y = A.Y * b;
+            C.Z = A.Z * b;
         }
 
-        public static void div(out Vector C, ref Vector A, float b)
+        public static void div(out Vector3 C, ref Vector3 A, float b)
         {
-            C.x = A.x / b;
-            C.y = A.y / b;
-            C.z = A.z / b;
+            C.X = A.X / b;
+            C.Y = A.Y / b;
+            C.Z = A.Z / b;
         }
 
-        public static void cross(out Vector dest, ref Vector v1, ref Vector v2)
+        public static void cross(out Vector3 dest, ref Vector3 v1, ref Vector3 v2)
         {
-            dest.x = v1.y * v2.z - v1.z * v2.y;
-            dest.y = v1.z * v2.x - v1.x * v2.z;
-            dest.z = v1.x * v2.y - v1.y * v2.x;
+            dest.X = v1.Y * v2.Z - v1.Z * v2.Y;
+            dest.Y = v1.Z * v2.X - v1.X * v2.Z;
+            dest.Z = v1.X * v2.Y - v1.Y * v2.X;
         }
 
-        public static float dot(ref Vector v0, ref Vector v1)
+        public static float dot(ref Vector3 v0, ref Vector3 v1)
         {
-            return v0.x * v1.x + v0.y * v1.y + v0.z * v1.z;
+            return v0.X * v1.X + v0.Y * v1.Y + v0.Z * v1.Z;
         }
 
-        public static bool SegmentTriangleIntersect(Vector p0, Vector p1,
-                                                    Vector t0, Vector t1, Vector t2,
-                                                    out Vector I)
+        public static bool SegmentTriangleIntersect(Vector3 p0, Vector3 p1,
+                                                    Vector3 t0, Vector3 t1, Vector3 t2,
+                                                    out Vector3 I)
         {
-            I.x = I.y = I.z = 0;
+            I.X = I.Y = I.Z = 0;
 
-            Vector u; sub(out u, ref t1, ref t0); // triangle vector 1
-            Vector v; sub(out v, ref t2, ref t0); // triangle vector 2
-            Vector n; cross(out n, ref u, ref v); // triangle normal
+            Vector3 u; sub(out u, ref t1, ref t0); // triangle vector 1
+            Vector3 v; sub(out v, ref t2, ref t0); // triangle vector 2
+            Vector3 n; cross(out n, ref u, ref v); // triangle normal
 
-            Vector dir; sub(out dir, ref p1, ref p0); // ray direction vector
-            Vector w0; sub(out w0, ref p0, ref t0);
+            Vector3 dir; sub(out dir, ref p1, ref p0); // ray direction vector
+            Vector3 w0; sub(out w0, ref p0, ref t0);
             float a = -dot(ref n, ref w0);
             float b = dot(ref n, ref dir);
             if (abs(b) < float.Epsilon) return false; // parallel
@@ -227,14 +173,14 @@ namespace WowTriangles
             if (r < 0.0) return false; // "before" p0
             if (r > 1.0) return false; // "after" p1
 
-            Vector M; mul(out M, ref dir, r);
+            Vector3 M; mul(out M, ref dir, r);
             add(out I, ref p0, ref M);// intersect point of line and plane
 
             // is I inside T?
             float uu = dot(ref u, ref u);
             float uv = dot(ref u, ref v);
             float vv = dot(ref v, ref v);
-            Vector w; sub(out w, ref I, ref t0);
+            Vector3 w; sub(out w, ref I, ref t0);
             float wu = dot(ref w, ref u);
             float wv = dot(ref w, ref v);
             float D = uv * uv - uu * vv;
@@ -251,54 +197,54 @@ namespace WowTriangles
             return true;
         }
 
-        public static float PointDistanceToSegment(Vector p0,
-                                           Vector x1, Vector x2)
+        public static float PointDistanceToSegment(Vector3 p0,
+                                           Vector3 x1, Vector3 x2)
         {
-            Vector L; sub(out L, ref x2, ref x1); // the segment vector
+            Vector3 L; sub(out L, ref x2, ref x1); // the segment vector
             float l2 = dot(ref L, ref L);   // square length of the segment
 
-            Vector D; sub(out D, ref p0, ref x1);   // vector from point to segment start
+            Vector3 D; sub(out D, ref p0, ref x1);   // vector from point to segment start
             float d = dot(ref D, ref L);     // projection factor [x2-x1].[p0-x1]
 
             if (d < 0.0f) // closest to x1
                 return VecLength(ref D);
 
-            Vector E; mul(out E, ref L, d / l2); // intersect
+            Vector3 E; mul(out E, ref L, d / l2); // intersect
 
             if (dot(ref E, ref L) > l2) // closest to x2
             {
-                Vector L2; sub(out L2, ref D, ref L);
+                Vector3 L2; sub(out L2, ref D, ref L);
                 return VecLength(ref L2);
             }
 
-            Vector L3; sub(out L3, ref D, ref E);
+            Vector3 L3; sub(out L3, ref D, ref E);
             return VecLength(ref L3);
         }
 
-        public static void GetTriangleNormal(Vector t0, Vector t1, Vector t2, out Vector normal)
+        public static void GetTriangleNormal(Vector3 t0, Vector3 t1, Vector3 t2, out Vector3 normal)
         {
-            Vector u; sub(out u, ref t1, ref t0); // triangle vector 1
-            Vector v; sub(out v, ref t2, ref t0); // triangle vector 2
+            Vector3 u; sub(out u, ref t1, ref t0); // triangle vector 1
+            Vector3 v; sub(out v, ref t2, ref t0); // triangle vector 2
             cross(out normal, ref u, ref v); // triangle normal
             float l = VecLength(ref normal);
             div(out normal, ref normal, l);
         }
 
-        public static float PointDistanceToTriangle(Vector p0,
-                                                    Vector t0, Vector t1, Vector t2)
+        public static float PointDistanceToTriangle(Vector3 p0,
+                                                    Vector3 t0, Vector3 t1, Vector3 t2)
         {
-            Vector u; sub(out u, ref t1, ref t0); // triangle vector 1
-            Vector v; sub(out v, ref t2, ref t0); // triangle vector 2
-            Vector n; cross(out n, ref u, ref v); // triangle normal
-            n.x *= -1E6f;
-            n.y *= -1E6f;
-            n.z *= -1E6f;
+            Vector3 u; sub(out u, ref t1, ref t0); // triangle vector 1
+            Vector3 v; sub(out v, ref t2, ref t0); // triangle vector 2
+            Vector3 n; cross(out n, ref u, ref v); // triangle normal
+            n.X *= -1E6f;
+            n.Y *= -1E6f;
+            n.Z *= -1E6f;
 
-            Vector intersect;
+            Vector3 intersect;
             bool hit = SegmentTriangleIntersect(p0, n, t0, t1, t2, out intersect);
             if (hit)
             {
-                Vector L; sub(out L, ref intersect, ref p0);
+                Vector3 L; sub(out L, ref intersect, ref p0);
                 return VecLength(ref L);
             }
 
@@ -309,36 +255,36 @@ namespace WowTriangles
             return min(d0, d1, d2);
         }
 
-        private static void VecMin(Vector v0, Vector v1, Vector v2, out Vector min)
+        private static void VecMin(Vector3 v0, Vector3 v1, Vector3 v2, out Vector3 min)
         {
-            min.x = Utils.min(v0.x, v1.x, v2.x);
-            min.y = Utils.min(v0.y, v1.y, v2.y);
-            min.z = Utils.min(v0.z, v1.z, v2.z);
+            min.X = Utils.min(v0.X, v1.X, v2.X);
+            min.Y = Utils.min(v0.Y, v1.Y, v2.Y);
+            min.Z = Utils.min(v0.Z, v1.Z, v2.Z);
         }
 
-        private static void VecMax(Vector v0, Vector v1, Vector v2, out Vector max)
+        private static void VecMax(Vector3 v0, Vector3 v1, Vector3 v2, out Vector3 max)
         {
-            max.x = Utils.max(v0.x, v1.x, v2.x);
-            max.y = Utils.max(v0.y, v1.y, v2.y);
-            max.z = Utils.max(v0.z, v1.z, v2.z);
+            max.X = Utils.max(v0.X, v1.X, v2.X);
+            max.Y = Utils.max(v0.Y, v1.Y, v2.Y);
+            max.Z = Utils.max(v0.Z, v1.Z, v2.Z);
         }
 
-        public static bool TestBoxBoxIntersect(Vector box0_min, Vector box0_max,
-                                               Vector box1_min, Vector box1_max)
+        public static bool TestBoxBoxIntersect(Vector3 box0_min, Vector3 box0_max,
+                                               Vector3 box1_min, Vector3 box1_max)
         {
-            if (box0_min.x > box1_max.x) return false;
-            if (box0_min.y > box1_max.y) return false;
-            if (box0_min.z > box1_max.z) return false;
+            if (box0_min.X > box1_max.X) return false;
+            if (box0_min.Y > box1_max.Y) return false;
+            if (box0_min.Z > box1_max.Z) return false;
 
-            if (box1_min.x > box0_max.x) return false;
-            if (box1_min.y > box0_max.y) return false;
-            if (box1_min.z > box0_max.z) return false;
+            if (box1_min.X > box0_max.X) return false;
+            if (box1_min.Y > box0_max.Y) return false;
+            if (box1_min.Z > box0_max.Z) return false;
 
             return true;
         }
 
-        public static bool TestTriangleBoxIntersect(Vector vertex0, Vector vertex1, Vector vertex2,
-                                                    Vector boxcenter, Vector boxhalfsize)
+        public static bool TestTriangleBoxIntersect(Vector3 vertex0, Vector3 vertex1, Vector3 vertex2,
+                                                    Vector3 boxcenter, Vector3 boxhalfsize)
         {
             int i = 0;
             float* pcenter = (float*)&boxcenter;
@@ -627,56 +573,28 @@ namespace WowTriangles
 
     public class SparseMatrix3D<T>
     {
-        private SuperMap<XYZ, T> dic = new SuperMap<XYZ, T>();
-
-        private class XYZ
-        {
-            private int x, y, z;
-
-            public XYZ(int x, int y, int z)
-            {
-                this.x = x; this.y = y; this.z = z;
-            }
-
-            public override bool Equals(object obj)
-            {
-                XYZ other = (XYZ)obj;
-                if (other == this) return true;
-                return other.x == x && other.y == y && other.z == z;
-            }
-
-            public override int GetHashCode()
-            {
-                return x + y * 1000 + z * 1000000;
-            }
-        }
+        private SuperMap<Vector3, T> dic = new SuperMap<Vector3, T>();
 
         public T Get(int x, int y, int z)
         {
-            XYZ c = new XYZ(x, y, z);
-            T r = default(T);
-            dic.TryGetValue(c, out r);
+            dic.TryGetValue(new(x, y, z), out var r);
             return r;
         }
 
         public bool IsSet(int x, int y, int z)
         {
-            XYZ c = new XYZ(x, y, z);
-            T r = default(T);
-            return dic.TryGetValue(c, out r);
+            return dic.TryGetValue(new(x, y, z), out var r);
         }
 
         public void Set(int x, int y, int z, T val)
         {
-            XYZ c = new XYZ(x, y, z);
-            if (dic.ContainsKey(c))
-                dic.Remove(c);
-            dic.Add(c, val);
+            Clear(x, y, z);
+            dic.Add(new(x, y, z), val);
         }
 
         public void Clear(int x, int y, int z)
         {
-            XYZ c = new XYZ(x, y, z);
+            Vector3 c = new Vector3(x, y, z);
             if (dic.ContainsKey(c))
                 dic.Remove(c);
         }

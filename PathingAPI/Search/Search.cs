@@ -1,4 +1,5 @@
-﻿using PatherPath;
+﻿using Microsoft.Extensions.Logging;
+using PatherPath;
 using PatherPath.Graph;
 using System;
 using System.Collections.Generic;
@@ -15,7 +16,7 @@ namespace PathingAPI
         public string continent;
 
         private readonly DataConfig dataConfig;
-        private Logger logger;
+        private readonly ILogger logger;
 
         public Location locationFrom { get; set; }
         public Location locationTo { get; set; }
@@ -26,7 +27,7 @@ namespace PathingAPI
         private static DateTime startTime;
 
 
-        public Search(string continent, Logger logger, DataConfig dataConfig)
+        public Search(string continent, ILogger logger, DataConfig dataConfig)
         {
             this.logger = logger;
             this.continent = continent;
@@ -113,7 +114,7 @@ namespace PathingAPI
             }
             catch(Exception ex)
             {
-                logger.WriteLine(ex.Message);
+                logger.LogError(ex.Message);
                 return null;
             }
         }

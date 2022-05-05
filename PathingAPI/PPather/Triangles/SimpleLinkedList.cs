@@ -4,6 +4,7 @@
  *
  */
 
+using Microsoft.Extensions.Logging;
 using PatherPath;
 
 namespace WowTriangles
@@ -38,9 +39,9 @@ namespace WowTriangles
             return first;
         }
 
-        private Logger logger;
+        private readonly ILogger logger;
 
-        public SimpleLinkedList(Logger logger)
+        public SimpleLinkedList(ILogger logger)
         {
             this.logger = logger;
         }
@@ -59,19 +60,14 @@ namespace WowTriangles
             nodes++;
         }
 
-        private void Error(string error)
-        {
-            logger.WriteLine(error);
-        }
-
         public void Check()
         {
             if (first != null && first.prev != null)
-                Error("First element must have prev == null");
+                logger.LogError("First element must have prev == null");
             if (last != null && last.next != null)
-                Error("Last element must have next == null");
+                logger.LogError("Last element must have next == null");
             if (Count != RealCount)
-                Error("Count != RealCount");
+                logger.LogError("Count != RealCount");
         }
 
         public void Steal(Node n, SimpleLinkedList from)

@@ -1,13 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using PatherPath;
 using PatherPath.Graph;
 using PathingAPI.Data;
-using PathingAPI.WorldToMap;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using WowTriangles;
+using SharedLib;
+using Microsoft.Extensions.Logging;
 
 namespace PathingAPI.Controllers
 {
@@ -25,13 +24,13 @@ namespace PathingAPI.Controllers
     [ApiController]
     public class PPatherController : ControllerBase
     {
-        private PPatherService service;
-        private Logger logger;
+        private readonly PPatherService service;
+        private readonly ILogger logger;
 
         private static bool isBusy;
         private static bool initialised;
 
-        public PPatherController(PPatherService service, Logger logger)
+        public PPatherController(PPatherService service, ILogger logger)
         {
             this.service = service;
             this.logger = logger;
@@ -161,19 +160,19 @@ namespace PathingAPI.Controllers
         [Produces("application/json")]
         public JsonResult SelfTest()
         {
-            var mpqFiles = MPQTriangleSupplier.GetArchiveNames(DataConfig.Load(), s => logger.WriteLine(s));
+            var mpqFiles = MPQTriangleSupplier.GetArchiveNames(DataConfig.Load());
 
             var countOfMPQFiles = mpqFiles.Where(f => System.IO.File.Exists(f)).Count();
 
             if (countOfMPQFiles == 0)
             {
-                logger.WriteLine("Some of these MPQ files should exist!");
-                mpqFiles.ToList().ForEach(l => logger.WriteLine(l));
-                logger.WriteLine("No MPQ files found, refer to the Readme to download them.");
+                logger.LogInformation("Some of these MPQ files should exist!");
+                mpqFiles.ToList().ForEach(l => logger.LogInformation(l));
+                logger.LogInformation("No MPQ files found, refer to the Readme to download them.");
             }
             else
             {
-                logger.WriteLine("MPQ files exist.");
+                logger.LogInformation("MPQ files exist.");
             }
 
             return new JsonResult(countOfMPQFiles > 0);

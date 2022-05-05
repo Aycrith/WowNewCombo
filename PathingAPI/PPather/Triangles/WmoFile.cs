@@ -20,8 +20,10 @@
 
 using PatherPath;
 using System;
+using System.Numerics;
 using System.Collections.Generic;
 using System.IO;
+using Microsoft.Extensions.Logging;
 
 namespace Wmo
 {
@@ -168,23 +170,6 @@ namespace Wmo
         }
     }
 
-    public class Vec3D
-    {
-        public float x, y, z;
-
-        public Vec3D(float x, float y, float z)
-        {
-            this.x = x;
-            this.y = y;
-            this.z = z;
-        }
-
-        public override string ToString()
-        {
-            return x + " " + y + " " + z;
-        }
-    }
-
     public class WMOManager : Manager<WMO>
     {
         private StormDll.ArchiveSet set;
@@ -225,8 +210,8 @@ namespace Wmo
     {
         public WMO wmo;
         public int id;
-        public Vec3D pos, pos2, pos3;
-        public Vec3D dir;
+        public Vector3 pos, pos2, pos3;
+        public Vector3 dir;
         public int d2, d3;
         public int doodadset;
 
@@ -240,26 +225,26 @@ namespace Wmo
                 float f0 = file.ReadSingle();
                 float f1 = file.ReadSingle();
                 float f2 = file.ReadSingle();
-                pos = new Vec3D(f0, f1, f2);
+                pos = new Vector3(f0, f1, f2);
             }
             {
                 float f0 = file.ReadSingle();
                 float f1 = file.ReadSingle();
                 float f2 = file.ReadSingle();
-                dir = new Vec3D(f0, f1, f2);
+                dir = new Vector3(f0, f1, f2);
             }
 
             {
                 float f0 = file.ReadSingle();
                 float f1 = file.ReadSingle();
                 float f2 = file.ReadSingle();
-                pos2 = new Vec3D(f0, f1, f2);
+                pos2 = new Vector3(f0, f1, f2);
             }
             {
                 float f0 = file.ReadSingle();
                 float f1 = file.ReadSingle();
                 float f2 = file.ReadSingle();
-                pos3 = new Vec3D(f0, f1, f2);
+                pos3 = new Vector3(f0, f1, f2);
             }
 
             d2 = file.ReadInt32();
@@ -280,7 +265,7 @@ namespace Wmo
         public WMOGroup[] groups;
 
         //int nTextures, nGroups, nP, nLight nX;
-        public Vec3D v1, v2; // bounding box
+        public Vector3 v1, v2; // bounding box
 
         public byte[] MODNraw;
         public uint nModels;
@@ -418,8 +403,8 @@ namespace Wmo
     public class ModelInstance
     {
         public Model model;
-        public Vec3D pos;
-        public Vec3D dir;
+        public Vector3 pos;
+        public Vector3 dir;
         public float w;
 
         //bool w_is_set = false;
@@ -433,19 +418,19 @@ namespace Wmo
                 float f0 = file.ReadSingle();
                 float f1 = file.ReadSingle();
                 float f2 = file.ReadSingle();
-                pos = new Vec3D(f0, f1, f2);
+                pos = new Vector3(f0, f1, f2);
             }
             {
                 float f0 = file.ReadSingle();
                 float f1 = file.ReadSingle();
                 float f2 = file.ReadSingle();
-                dir = new Vec3D(f0, f1, f2);
+                dir = new Vector3(f0, f1, f2);
             }
             uint scale = file.ReadUInt32();
             sc = (float)scale / 1024.0f;
         }
 
-        public ModelInstance(Model m, Vec3D pos, Vec3D dir, float sc, float w)
+        public ModelInstance(Model m, Vector3 pos, Vector3 dir, float sc, float w)
         {
             this.model = m;
             this.pos = pos;
@@ -700,8 +685,8 @@ namespace Wmo
     {
         public uint nameStart, nameStart2;
         public uint flags;
-        public Vec3D v1;
-        public Vec3D v2;
+        public Vector3 v1;
+        public Vector3 v2;
         public UInt16 batchesA;
         public UInt16 batchesB;
         public UInt16 batchesC;
@@ -747,7 +732,7 @@ namespace Wmo
         private string name;
         private StormDll.ArchiveSet archive;
 
-        private Logger logger;
+        private readonly ILogger logger;
         private DataConfig dataConfig;
 
         //Alterac Valley> ZonePath :� world\\maps\\PVPZone01\\PVPZone01�
@@ -943,7 +928,7 @@ namespace Wmo
         // 58.
         //WailingCarverns
 
-        public WDTFile(StormDll.ArchiveSet archive, string name, WDT wdt, WMOManager wmomanager, ModelManager modelmanager, Logger logger, DataConfig dataConfig)
+        public WDTFile(StormDll.ArchiveSet archive, string name, WDT wdt, WMOManager wmomanager, ModelManager modelmanager, ILogger logger, DataConfig dataConfig)
         {
             this.logger = logger;
             this.dataConfig = dataConfig;
@@ -993,7 +978,7 @@ namespace Wmo
                     }
                     else
                     {
-                        logger.WriteLine("WDT Unknown " + type);
+                        logger.LogWarning("WDT Unknown " + type);
                         //done = true;
                     }
                     file.BaseStream.Seek(curpos + size, System.IO.SeekOrigin.Begin);
@@ -1021,7 +1006,8 @@ namespace Wmo
                 var path = Path.Join(dataConfig.PPather, "adt.tmp");
                 if (archive.ExtractFile(filename, path))
                 {
-                    logger.Debug("Reading adt: " + filename);
+                    if (logger.IsEnabled(LogLevel.Debug))
+                        logger.LogDebug("Reading adt: " + filename);
                     //PPather.mover.Stop();
                     MapTileFile f = new MapTileFile(path, t, wmomanager, modelmanager);
                     if (t.models.Count != 0 || t.wmos.Count != 0)
@@ -1095,9 +1081,9 @@ namespace Wmo
         private System.IO.BinaryReader file;
         private DBC dbc;
 
-        private Logger logger;
+        private readonly ILogger logger;
 
-        public DBCFile(string name, DBC dbc, Logger logger)
+        public DBCFile(string name, DBC dbc, ILogger logger)
         {
             this.logger = logger;
             this.dbc = dbc;
@@ -1119,7 +1105,7 @@ namespace Wmo
                     }
                     else
                     {
-                        logger.WriteLine("DBC Unknown " + type);
+                        logger.LogWarning("DBC Unknown " + type);
                         //done = true;
                     }
                     //file.BaseStream.Seek(curpos + size, System.IO.SeekOrigin.Begin);
@@ -1145,7 +1131,7 @@ namespace Wmo
             if (dbc.fieldCount * 4 != dbc.recordSize)
             {
                 // !!!
-                logger.WriteLine("WOOT");
+                logger.LogWarning("WOOT");
             }
             int off = 0;
             uint[] raw = new uint[dbc.fieldCount * dbc.recordCount];
@@ -1236,9 +1222,9 @@ namespace Wmo
 
     internal class MapTileFile // adt file
     {
-        private Logger logger;
+        private readonly ILogger logger;
 
-        public MapTileFile(Logger logger)
+        public MapTileFile(ILogger logger)
         {
             this.logger = logger;
         }
@@ -1573,37 +1559,37 @@ namespace Wmo
                     {
                         size = 0x1C0; // WTF
                         if (debug)
-                            logger.WriteLine("MCNR " + size);
+                            logger.LogDebug("MCNR " + size);
                         HandleChunkMCNR(chunk, size);
                     }
                     else if (type == ChunkReader.MCVT)
                     {
                         if (debug)
-                            logger.WriteLine("MCVT " + size);
+                            logger.LogDebug("MCVT " + size);
                         HandleChunkMCVT(chunk, size);
                     }
                     else if (type == ChunkReader.MCRF)
                     {
                         if (debug)
-                            logger.WriteLine("MCRF " + size);
+                            logger.LogDebug("MCRF " + size);
                         HandleChunkMCRF(chunk, size);
                     }
                     else if (type == ChunkReader.MCLY)
                     {
                         if (debug)
-                            logger.WriteLine("MCLY " + size);
+                            logger.LogDebug("MCLY " + size);
                         HandleChunkMCLY(chunk, size);
                     }
                     else if (type == ChunkReader.MCSH)
                     {
                         if (debug)
-                            logger.WriteLine("MCSH " + size);
+                            logger.LogDebug("MCSH " + size);
                         HandleChunkMCSH(chunk, size);
                     }
                     else if (type == ChunkReader.MCAL)
                     {
                         if (debug)
-                            logger.WriteLine("MCAL " + size);
+                            logger.LogDebug("MCAL " + size);
                         HandleChunkMCAL(chunk, size);
                         // TODO rumors are that the size of this chunk is wrong sometimes
                     }
@@ -1614,7 +1600,7 @@ namespace Wmo
                         size = sizeLiquid;
                         if (debug)
                         {
-                            logger.Debug(string.Format("MCLQ {0}", size));
+                            logger.LogDebug(string.Format("MCLQ {0}", size));
                         }
                         if (sizeLiquid != 8)
                         {
@@ -1626,7 +1612,7 @@ namespace Wmo
                     else if (type == ChunkReader.MCSE)
                     {
                         if (debug)
-                            logger.WriteLine("MCSE " + size);
+                            logger.LogDebug("MCSE " + size);
                         HandleChunkMCSE(chunk, size);
                     }
                     else if (type == ChunkReader.MCNK)
@@ -1824,12 +1810,12 @@ namespace Wmo
             float f0 = file.ReadSingle();
             float f1 = file.ReadSingle();
             float f2 = file.ReadSingle();
-            wmo.v1 = new Vec3D(f0, f1, f2);
+            wmo.v1 = new Vector3(f0, f1, f2);
 
             float f3 = file.ReadSingle();
             float f4 = file.ReadSingle();
             float f5 = file.ReadSingle();
-            wmo.v2 = new Vec3D(f3, f4, f5);
+            wmo.v2 = new Vector3(f3, f4, f5);
 
             wmo.groups = new WMOGroup[nGroups];
         }
@@ -1891,8 +1877,8 @@ namespace Wmo
                 String name = ChunkReader.ExtractString(wmo.MODNraw, (int)nameOffsetInMODN);
                 Model m = modelmanager.AddAndLoadIfNeeded(name);
 
-                Vec3D pos = new Vec3D(posx, posy, posz);
-                Vec3D dir = new Vec3D(quatz, quaty, quatz);
+                Vector3 pos = new Vector3(posx, posy, posz);
+                Vector3 dir = new Vector3(quatz, quaty, quatz);
 
                 ModelInstance mi = new ModelInstance(m, pos, dir, scale, quatw);
                 wmo.doodadInstances[i] = mi;
@@ -1920,12 +1906,12 @@ namespace Wmo
                 float f0 = file.ReadSingle();
                 float f1 = file.ReadSingle();
                 float f2 = file.ReadSingle();
-                g.v1 = new Vec3D(f0, f1, f2);
+                g.v1 = new Vector3(f0, f1, f2);
 
                 float f3 = file.ReadSingle();
                 float f4 = file.ReadSingle();
                 float f5 = file.ReadSingle();
-                g.v2 = new Vec3D(f3, f4, f5);
+                g.v2 = new Vector3(f3, f4, f5);
 
                 uint nameOfs = file.ReadUInt32();
             }
@@ -2157,12 +2143,12 @@ namespace Wmo
             float bound1X = file.ReadSingle();
             float bound1Y = file.ReadSingle();
             float bound1Z = file.ReadSingle();
-            g.v1 = new Vec3D(bound1X, bound1Y, bound1Z);
+            g.v1 = new Vector3(bound1X, bound1Y, bound1Z);
 
             float bound2X = file.ReadSingle();
             float bound2Y = file.ReadSingle();
             float bound2Z = file.ReadSingle();
-            g.v2 = new Vec3D(bound1X, bound1Y, bound1Z);
+            g.v2 = new Vector3(bound1X, bound1Y, bound1Z);
 
             g.portalStart = file.ReadUInt16();
             g.portalCount = file.ReadUInt16();

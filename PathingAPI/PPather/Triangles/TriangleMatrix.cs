@@ -4,8 +4,10 @@
  *
  */
 
+using Microsoft.Extensions.Logging;
 using PatherPath;
 using System.Collections.Generic;
+using System.Numerics;
 
 namespace WowTriangles
 {
@@ -34,37 +36,38 @@ namespace WowTriangles
                 maxAtOne = l.Count;
         }
 
-        private Logger logger;
+        private readonly ILogger logger;
 
-        public TriangleMatrix(TriangleCollection tc, Logger logger)
+        public TriangleMatrix(TriangleCollection tc, ILogger logger)
         {
             this.logger = logger;
 
             System.DateTime pre = System.DateTime.UtcNow;
-            logger.WriteLine("Build hash  " + tc.GetNumberOfTriangles());
+            if (logger.IsEnabled(LogLevel.Debug))
+                logger.LogDebug("Build hash  " + tc.GetNumberOfTriangles());
             matrix = new SparseFloatMatrix2D<List<int>>(resolution, tc.GetNumberOfTriangles());
 
-            Vector vertex0;
-            Vector vertex1;
-            Vector vertex2;
+            Vector3 vertex0;
+            Vector3 vertex1;
+            Vector3 vertex2;
 
             for (int i = 0; i < tc.GetNumberOfTriangles(); i++)
             {
                 tc.GetTriangleVertices(i,
-                        out vertex0.x, out vertex0.y, out vertex0.z,
-                        out vertex1.x, out vertex1.y, out vertex1.z,
-                        out vertex2.x, out vertex2.y, out vertex2.z);
+                        out vertex0.X, out vertex0.Y, out vertex0.Z,
+                        out vertex1.X, out vertex1.Y, out vertex1.Z,
+                        out vertex2.X, out vertex2.Y, out vertex2.Z);
 
-                float minx = Utils.min(vertex0.x, vertex1.x, vertex2.x);
-                float maxx = Utils.max(vertex0.x, vertex1.x, vertex2.x);
-                float miny = Utils.min(vertex0.y, vertex1.y, vertex2.y);
-                float maxy = Utils.max(vertex0.y, vertex1.y, vertex2.y);
+                float minx = Utils.min(vertex0.X, vertex1.X, vertex2.X);
+                float maxx = Utils.max(vertex0.X, vertex1.X, vertex2.X);
+                float miny = Utils.min(vertex0.Y, vertex1.Y, vertex2.Y);
+                float maxy = Utils.max(vertex0.Y, vertex1.Y, vertex2.Y);
 
-                Vector box_center;
-                Vector box_halfsize;
-                box_halfsize.x = resolution / 2;
-                box_halfsize.y = resolution / 2;
-                box_halfsize.z = 1E6f;
+                Vector3 box_center;
+                Vector3 box_halfsize;
+                box_halfsize.X = resolution / 2;
+                box_halfsize.Y = resolution / 2;
+                box_halfsize.Z = 1E6f;
 
                 int startx = matrix.LocalToGrid(minx);
                 int endx = matrix.LocalToGrid(maxx);
@@ -76,16 +79,17 @@ namespace WowTriangles
                     {
                         float grid_x = matrix.GridToLocal(x);
                         float grid_y = matrix.GridToLocal(y);
-                        box_center.x = grid_x + resolution / 2;
-                        box_center.y = grid_y + resolution / 2;
-                        box_center.z = 0;
+                        box_center.X = grid_x + resolution / 2;
+                        box_center.Y = grid_y + resolution / 2;
+                        box_center.Z = 0;
                         if (Utils.TestTriangleBoxIntersect(vertex0, vertex1, vertex2, box_center, box_halfsize))
                             AddTriangleAt(grid_x, grid_y, i);
                     }
             }
             System.DateTime post = System.DateTime.UtcNow;
             System.TimeSpan ts = post.Subtract(pre);
-            logger.WriteLine("done " + maxAtOne + " time " + ts);
+            if (logger.IsEnabled(LogLevel.Debug))
+                logger.LogDebug("done " + maxAtOne + " time " + ts);
         }
 
         public Set<int> GetAllCloseTo(float x, float y, float distance)

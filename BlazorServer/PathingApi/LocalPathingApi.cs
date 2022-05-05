@@ -28,7 +28,7 @@ namespace BlazorServer
             this.service = service;
             stopwatch = new();
 
-            var mpqFiles = MPQTriangleSupplier.GetArchiveNames(DataConfig.Load(), LogInformation);
+            var mpqFiles = MPQTriangleSupplier.GetArchiveNames(DataConfig.Load());
             var countOfMPQFiles = mpqFiles.Where(f => File.Exists(f)).Count();
             if (countOfMPQFiles == 0)
             {

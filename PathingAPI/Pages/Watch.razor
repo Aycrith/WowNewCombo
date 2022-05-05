@@ -3,6 +3,9 @@
 @using System.Collections.Generic
 @using PathingAPI.Data
 @using PatherPath.Graph
+@using System.Threading
+
+@implements IDisposable
 
 @inject IJSRuntime jsRuntime
 @inject PPatherService pPatherService
@@ -15,7 +18,8 @@
 @code {
 
     private bool initialised = false;
-    System.Threading.Thread RefreshSearchThread;
+    private Thread RefreshSearchThread;
+    private CancellationTokenSource cts;
 
     [Parameter]
     public int PathColour { get; set; } = 1;
@@ -23,11 +27,16 @@
     [Parameter]
     public string Name { get; set; } = "path";
 
+    protected override void OnInitialized()
+    {
+        cts = new();
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            pPatherService.OnLog = Log;
+            PathingAPILoggerSink.OnLog += Log;
             await jsRuntime.InvokeVoidAsync("createScene");
             Initialise();
         }
@@ -48,11 +57,16 @@
             pPatherService.SetOnPathCreated(DrawFinalPath);
             RefreshSearchThread = new System.Threading.Thread(new System.Threading.ThreadStart(SearchPathRefresh));
             RefreshSearchThread.Start();
-            pPatherService.OnReset = () => { InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("clear")).Wait(); ; };
+            pPatherService.OnReset = () => { InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("clear")).Wait(); };
 
             pPatherService.OnLinesAdded = Drawlines;
             pPatherService.OnSphereAdded = DrawSphere;
         }
+    }
+
+    public void Dispose()
+    {
+        cts.Cancel();
     }
 
     public async Task InvokeAsyncBase(Action action)
@@ -63,18 +77,10 @@
         });
     }
 
-    public void Log(string message)
+    public void Log(object? s, string message)
     {
-        try
-        {
-            System.Diagnostics.Debug.WriteLine(">" + message);
-            InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("log", message)).Wait();
-            if (!initialised) { Initialise(); }
-        }
-        catch (Exception ex)
-        {
-            Log(ex.Message);
-        }
+        InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("log", message)).Wait();
+        if (!initialised) { Initialise(); }
     }
 
     public void DrawFinalPath(PatherPath.Graph.Path spotPath)
@@ -82,17 +88,17 @@
         if (spotPath != null)
         {
             var path = spotPath.locations.Select(s => Vertex.Create(s.X, s.Y, s.Z)).ToList();
-            InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("removeMeshes", Name)).Wait(); ;
-            InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("drawPath", path, PathColour, Name)).Wait(); ;
+            InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("removeMeshes", Name)).Wait();
+            InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("drawPath", path, PathColour, Name)).Wait();
 
             System.Threading.Thread.Sleep(1000);
-            InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("removeMeshes", "search")).Wait(); ;
-            InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("removeMeshes", "closest")).Wait(); ;
-            InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("removeMeshes", "end")).Wait(); ;
+            InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("removeMeshes", "search")).Wait();
+            InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("removeMeshes", "closest")).Wait();
+            InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("removeMeshes", "end")).Wait();
         }
         else
         {
-            Log("No path found");
+            Log(this, "No path found");
         }
     }
 
@@ -103,7 +109,7 @@
 
     public void SearchPathRefresh()
     {
-        while (true)
+        while (!cts.IsCancellationRequested)
         {
             if (PatherPath.Graph.PathGraph.SearchEnabled)
             {
@@ -115,7 +121,7 @@
                         var path = spots.Where(s => s != null).Select(s => Vertex.Create(s.X, s.Y, s.Z));
                         if (path.Count() > 0)
                         {
-                            InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("drawPath", path, 4, "search")).Wait(); ;
+                            InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("drawPath", path, 4, "search")).Wait();
                         }
                     }
 
@@ -151,22 +157,22 @@
                 }
                 catch (Exception ex)
                 {
-                    Log(ex.Message);
+                    Log(this, ex.Message);
                 }
             }
-            System.Threading.Thread.Sleep(50);
+            cts.Token.WaitHandle.WaitOne(50);
         }
     }
 
     private void DrawSphere(SphereEventArgs e)
     {
-        InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("drawSphere", e.Vertex, e.Colour, e.Name)).Wait(); ;
+        InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("drawSphere", e.Vertex, e.Colour, e.Name)).Wait();
     }
 
 
     private void Drawlines(LinesEventArgs e)
     {
-        InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("drawPath", e.Lines, e.Colour, e.Name)).Wait(); ;
+        InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("drawPath", e.Lines, e.Colour, e.Name)).Wait();
     }
 
     private void TriangleWorld_NotifyChunkAdded(WowTriangles.ChunkAddedEventArgs e)

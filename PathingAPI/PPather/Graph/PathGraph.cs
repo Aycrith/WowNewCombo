@@ -16,6 +16,7 @@
 
 */
 
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -111,12 +112,12 @@ namespace PatherPath.Graph
         public static int TimeoutSeconds = 20;
         public static int ProgressTimeoutSeconds = 10;
 
-        private Logger logger;
-        private DataConfig dataConfig;
+        private readonly ILogger logger;
+        private readonly DataConfig dataConfig;
 
         public PathGraph(string continent,
                          ChunkedTriangleCollection triangles,
-                         TriangleCollection paint, Logger logger, DataConfig dataConfig)
+                         TriangleCollection paint, ILogger logger, DataConfig dataConfig)
         {
             this.logger = logger;
             this.Continent = continent;
@@ -187,7 +188,8 @@ namespace PatherPath.Graph
         {
             lock (m_LockObject)
             {
-                Log("Saving GraphChunks.....");
+                if (logger.IsEnabled(LogLevel.Debug))
+                    logger.LogDebug("Saving GraphChunks.....");
                 ICollection<GraphChunk> l = chunks.GetAllElements();
                 foreach (GraphChunk gc in l)
                 {
@@ -305,7 +307,7 @@ namespace PatherPath.Graph
             }
             catch (Exception ex)
             {
-                logger.WriteLine($"Failed to find closest spot to {description}: {l.X},{l.Y} - {ex.Message}");
+                logger.LogWarning($"Failed to find closest spot to {description}: {l.X},{l.Y} - {ex.Message}");
                 return null;
             }
         }
@@ -438,7 +440,8 @@ namespace PatherPath.Graph
                 if (isAtSpot.IsFlagSet(Spot.FLAG_BLOCKED))
                 {
                     isAtSpot.SetFlag(Spot.FLAG_BLOCKED, false);
-                    Log("Cleared blocked flag");
+                    if (logger.IsEnabled(LogLevel.Debug))
+                        logger.LogDebug("Cleared blocked flag");
                 }
                 if (wasAt != null)
                 {
@@ -458,7 +461,8 @@ namespace PatherPath.Graph
                         // Log("  connect to " + other.location);
                     }
                 }
-                Log("Learned a new spot at " + isAtSpot.location + " connected to " + connected + " other spots");
+                if (logger.IsEnabled(LogLevel.Debug))
+                    logger.LogDebug("Learned a new spot at " + isAtSpot.location + " connected to " + connected + " other spots");
                 wasAt = isAtSpot;
             }
             else
@@ -654,7 +658,7 @@ namespace PatherPath.Graph
 
                 if (timeSinceProgress.Elapsed.TotalSeconds > ProgressTimeoutSeconds || searchDuration.Elapsed.TotalSeconds > TimeoutSeconds)
                 {
-                    logger.WriteLine("search failed, 10 seconds since last progress, returning the closest spot.");
+                    logger.LogWarning("search failed, 10 seconds since last progress, returning the closest spot.");
                     return ClosestSpot;
                 }
 
@@ -676,7 +680,7 @@ namespace PatherPath.Graph
 
             if (ClosestSpot != null && closest < MaximumAllowedRangeFromTarget)
             {
-                logger.WriteLine("search failed, returning the closest spot.");
+                logger.LogWarning("search failed, returning the closest spot.");
                 return ClosestSpot;
             }
             return null;
@@ -934,7 +938,7 @@ namespace PatherPath.Graph
                 }
                 else
                 {
-                    logger.WriteLine($"Closest spot is too far from target. {newTo.GetDistanceTo(to)}>{MaximumAllowedRangeFromTarget}");
+                    logger.LogWarning($"Closest spot is too far from target. {newTo.GetDistanceTo(to)}>{MaximumAllowedRangeFromTarget}");
                     return null;
                 }
             }
@@ -977,10 +981,9 @@ namespace PatherPath.Graph
 
         public Path CreatePath(Location fromLoc, Location toLoc, float howClose, ILocationHeuristics locationHeuristics)
         {
-            logger.WriteLine($"Creating Path from {fromLoc} to {toLoc}");
+            logger.LogInformation($"Creating Path from {fromLoc} to {toLoc}");
 
-            var sw = new Stopwatch();
-            sw.Start();
+            var sw = Stopwatch.StartNew();
 
             fromLoc = GetBestLocations(fromLoc);
             toLoc = GetBestLocations(toLoc);
@@ -1013,7 +1016,7 @@ namespace PatherPath.Graph
                     prev = l;
                 }
             }
-            logger.WriteLine($"CreatePath took {sw.ElapsedMilliseconds}ms");
+            logger.LogInformation($"CreatePath took {sw.ElapsedMilliseconds}ms");
             if (rawPath == null)
             {
                 return null;
@@ -1025,12 +1028,6 @@ namespace PatherPath.Graph
             }
             LastPath = rawPath;
             return rawPath;
-        }
-
-        private void Log(String s)
-        {
-            //logger.WriteLine(s);
-            logger.Debug(s);
         }
     }
 }
