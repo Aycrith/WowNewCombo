@@ -33,8 +33,8 @@ namespace Core
 
         public ExecGameCommand ExecGameCommand => throw new NotImplementedException();
 
-        public event EmptyEvent? ProfileLoaded;
-        public event EmptyEvent? StatusChanged;
+        public event Action? ProfileLoaded;
+        public event Action? StatusChanged;
 
         public double AvgScreenLatency => throw new NotImplementedException();
         public double AvgNPCLatency => throw new NotImplementedException();

@@ -73,10 +73,10 @@ namespace Core.Goals
 
         public DateTime LastActive { get; private set; }
 
-        public event EmptyEvent? OnPathCalculated;
-        public event EmptyEvent? OnWayPointReached;
-        public event EmptyEvent? OnDestinationReached;
-        public event EmptyEvent? OnAnyPointReached;
+        public event Action? OnPathCalculated;
+        public event Action? OnWayPointReached;
+        public event Action? OnDestinationReached;
+        public event Action? OnAnyPointReached;
 
         public bool SimplifyRouteToWaypoint { get; set; } = true;
 

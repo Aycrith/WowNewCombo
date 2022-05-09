@@ -12,7 +12,7 @@ namespace Core
 
         public int ElapsedMs => (int)(DateTime.UtcNow - LastChanged).TotalMilliseconds;
 
-        public event EmptyEvent? Changed;
+        public event Action? Changed;
 
         public RecordInt(int cell)
         {

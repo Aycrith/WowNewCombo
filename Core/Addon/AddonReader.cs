@@ -6,8 +6,6 @@ using System.Linq;
 
 namespace Core
 {
-    public delegate void EmptyEvent();
-
     public sealed class AddonReader : IAddonReader, IDisposable
     {
         private readonly ILogger logger;
@@ -37,9 +35,9 @@ namespace Core
 
         public LevelTracker LevelTracker { get; }
 
-        public event EmptyEvent? AddonDataChanged;
-        public event EmptyEvent? ZoneChanged;
-        public event EmptyEvent? PlayerDeath;
+        public event Action? AddonDataChanged;
+        public event Action? ZoneChanged;
+        public event Action? PlayerDeath;
 
         public WorldMapAreaDB WorldMapAreaDb { get; }
         public ItemDB ItemDb { get; }

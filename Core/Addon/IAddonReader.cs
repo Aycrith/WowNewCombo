@@ -1,4 +1,5 @@
 ﻿using Core.Database;
+using System;
 
 namespace Core
 {
@@ -28,9 +29,9 @@ namespace Core
 
         RecordInt UIMapId { get; }
 
-        event EmptyEvent? AddonDataChanged;
-        event EmptyEvent? ZoneChanged;
-        event EmptyEvent? PlayerDeath;
+        event Action? AddonDataChanged;
+        event Action? ZoneChanged;
+        event Action? PlayerDeath;
 
         void Refresh();
         void Reset();

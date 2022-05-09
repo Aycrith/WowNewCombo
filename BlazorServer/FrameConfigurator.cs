@@ -39,8 +39,7 @@ namespace BlazorServer
 
         private const int interval = 500;
 
-        public delegate void EmptyEvent();
-        public event EmptyEvent? OnUpdate;
+        public event Action? OnUpdate;
 
         public FrameConfigurator(ILogger logger)
         {

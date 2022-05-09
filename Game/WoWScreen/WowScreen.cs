@@ -15,8 +15,7 @@ namespace Game
         private readonly ILogger logger;
         private readonly WowProcess wowProcess;
 
-        public delegate void EmptyEvent();
-        public event EmptyEvent OnScreenChanged;
+        public event Action OnScreenChanged;
 
         private readonly List<Action<Graphics>> drawActions = new();
 

@@ -24,8 +24,7 @@ namespace BlazorServer
 
     public class LoggerSink : ILogEventSink
     {
-        public delegate void EmptyEvent();
-        public static event EmptyEvent? OnLogChanged;
+        public static event Action? OnLogChanged;
 
         public static CircularBuffer<LogItem> Log { get; private set; } = new CircularBuffer<LogItem>(250);
 

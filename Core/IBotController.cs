@@ -31,8 +31,8 @@ namespace Core
         string SelectedClassFilename { get; set; }
         string? SelectedPathFilename { get; set; }
 
-        event EmptyEvent? ProfileLoaded;
-        event EmptyEvent? StatusChanged;
+        event Action? ProfileLoaded;
+        event Action? StatusChanged;
 
         double AvgScreenLatency { get; }
         double AvgNPCLatency { get; }

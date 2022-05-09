@@ -9,7 +9,7 @@ namespace Core
 
         private const int LifeTimeInSeconds = 60;
 
-        public event EmptyEvent? KillCredit;
+        public event Action? KillCredit;
 
         public List<CreatureRecord> Creatures { get; } = new();
         public List<CreatureRecord> Targets { get; } = new();

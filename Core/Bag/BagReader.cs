@@ -22,7 +22,7 @@ namespace Core
 
         public Bag[] Bags { get; } = new Bag[5];
 
-        public event EmptyEvent? DataChanged;
+        public event Action? DataChanged;
 
         private bool changedFromEvent;
 

@@ -65,8 +65,8 @@ namespace Core
         public string SelectedClassFilename { get; set; } = string.Empty;
         public string? SelectedPathFilename { get; set; }
 
-        public event EmptyEvent? ProfileLoaded;
-        public event EmptyEvent? StatusChanged;
+        public event Action? ProfileLoaded;
+        public event Action? StatusChanged;
 
         public double AvgScreenLatency
         {
