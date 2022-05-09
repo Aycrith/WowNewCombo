@@ -143,7 +143,9 @@ namespace BlazorServer
 
         private void RenameAddon()
         {
-            Directory.Move(Path.Join(AddonBasePath, DefaultAddonName), FinalAddonPath);
+            string src = Path.Join(AddonBasePath, DefaultAddonName);
+            if (src != FinalAddonPath)
+                Directory.Move(src, FinalAddonPath);
         }
 
         private void MakeUnique()
