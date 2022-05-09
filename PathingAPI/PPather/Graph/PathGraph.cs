@@ -1005,9 +1005,9 @@ namespace PatherPath.Graph
             if (rawPath != null && paint != null)
             {
                 Location prev = null;
-                for (int i = 0; i < rawPath.Count(); i++)
+                for (int i = 0; i < rawPath.Count; i++)
                 {
-                    Location l = rawPath.Get(i);
+                    Location l = rawPath[i];
                     paint.AddBigMarker(l.X, l.Y, l.Z);
                     if (prev != null)
                     {
@@ -1023,8 +1023,8 @@ namespace PatherPath.Graph
             }
             else
             {
-                Location last = rawPath.GetLast();
-                if (last.GetDistanceTo(toLoc) > 1.0) { rawPath.AddLast(toLoc); }
+                Location last = rawPath.GetLast;
+                if (last.GetDistanceTo(toLoc) > 1.0) { rawPath.Add(toLoc); }
             }
             LastPath = rawPath;
             return rawPath;

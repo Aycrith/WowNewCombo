@@ -27,19 +27,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Wmo
 {
-    internal class Dbg
-    {
-        public static void Log(string s)
-        {
-            // System.Diagnostics.Debug.Write(s);
-        }
-
-        public static void LogLine(string s)
-        {
-            // logger.WriteLine(s);
-        }
-    }
-
     internal unsafe class ChunkReader
     {
         public static float TILESIZE = 533.33333f;
@@ -47,22 +34,22 @@ namespace Wmo
         public static float CHUNKSIZE = ((TILESIZE) / 16.0f);
         public static float UNITSIZE = (CHUNKSIZE / 8.0f);
 
-        public static uint ToBin(String s)
+        public static uint ToBin(string s)
         {
             char[] ca = s.ToCharArray();
-            uint b0 = (uint)ca[0];
-            uint b1 = (uint)ca[1];
-            uint b2 = (uint)ca[2];
-            uint b3 = (uint)ca[3];
+            uint b0 = ca[0];
+            uint b1 = ca[1];
+            uint b2 = ca[2];
+            uint b3 = ca[3];
             uint r = b3 | (b2 << 8) | (b1 << 16) | (b0 << 24);
             return r;
         }
 
-        public static string ReadString(System.IO.BinaryReader file)
+        public static string ReadString(BinaryReader file)
         {
             char[] bytes = new char[1024];
             int len = 0;
-            sbyte b = 0;
+            sbyte b;
             do
             {
                 b = file.ReadSByte();
@@ -70,7 +57,7 @@ namespace Wmo
                 len++;
             } while (b != 0);
 
-            string s = new string(bytes, 0, len - 1);
+            string s = new(bytes, 0, len - 1);
             return s;
         }
 
@@ -187,7 +174,6 @@ namespace Wmo
         public override WMO Load(String path)
         {
             string localPath = Path.Join(dataConfig.PPather, "wmo.tmp");
-            Dbg.Log(" wmo");
             set.ExtractFile(path, localPath);
             WMO w = new WMO();
             w.fileName = path;
@@ -198,7 +184,6 @@ namespace Wmo
             {
                 string part = path.Substring(0, path.Length - 4);
                 string gf = String.Format("{0}_{1,3:000}.wmo", part, i);
-                Dbg.Log(" wmog");
                 set.ExtractFile(gf, localPath);
                 new WmoGroupFile(w.groups[i], localPath);
             }
@@ -388,7 +373,6 @@ namespace Wmo
 
             //logger.WriteLine("Load model " + path);
             string localPath = Path.Join(dataConfig.PPather, "model.tmp");
-            Dbg.Log(" m");
             if (set.ExtractFile(file, localPath))
             {
                 Model w = new Model();
@@ -933,7 +917,6 @@ namespace Wmo
             this.logger = logger;
             this.dataConfig = dataConfig;
             string wdtfile = "World\\Maps\\" + name + "\\" + name + ".wdt";
-            Dbg.Log(" wdt");
             var path = Path.Join(dataConfig.PPather, "wdt.tmp");
             if (!archive.ExtractFile(wdtfile, path))
                 return;
@@ -1002,7 +985,6 @@ namespace Wmo
                 MapTile t = new MapTile();
 
                 string filename = "World\\Maps\\" + name + "\\" + name + "_" + x + "_" + y + ".adt";
-                Dbg.Log(" adt");
                 var path = Path.Join(dataConfig.PPather, "adt.tmp");
                 if (archive.ExtractFile(filename, path))
                 {

@@ -16,7 +16,6 @@
 
 */
 
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 
@@ -24,13 +23,6 @@ namespace PatherPath.Graph
 {
     public class Spot
     {
-        private readonly ILogger logger;
-
-        public Spot(ILogger logger)
-        {
-            this.logger = logger;
-        }
-
         public const float Z_RESOLUTION = 2.0f; // Z spots max this close
 
         public const uint FLAG_VISITED = 0x0001;
@@ -62,12 +54,7 @@ namespace PatherPath.Graph
             this.Z = z;
         }
 
-        public Spot(Location l)
-        {
-            this.X = l.X;
-            this.Y = l.Y;
-            this.Z = l.Z;
-        }
+        public Spot(Location l) : this(l.X, l.Y, l.Z) { }
 
         public bool IsCloseToModel()
         {
@@ -81,9 +68,7 @@ namespace PatherPath.Graph
 
         public bool IsInWater()
         {
-            if (IsFlagSet(FLAG_WATER))
-                return true;
-            return false;
+            return IsFlagSet(FLAG_WATER);
         }
 
         public Location location
@@ -292,8 +277,6 @@ namespace PatherPath.Graph
             }
             if (found_index != -1)
             {
-                if (logger.IsEnabled(LogLevel.Debug))
-                    logger.LogDebug(string.Format("Remove path ({0}) to {1} {2} {3}", found_index, x, y, n_paths));
                 for (int i = found_index; i < n_paths - 1; i++)
                 {
                     int off = i * 3;
@@ -304,11 +287,6 @@ namespace PatherPath.Graph
                 n_paths--;
                 if (chunk != null)
                     chunk.modified = true;
-            }
-            else
-            {
-                if (logger.IsEnabled(LogLevel.Debug))
-                    logger.LogDebug(string.Format("Found not path to remove ({0}) to {1} {2} ", found_index, x, y));
             }
         }
 

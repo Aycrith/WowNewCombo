@@ -37,11 +37,6 @@ namespace PatherPath.Graph
         [JsonIgnore]
         private string description;
 
-        public string ToPatherString()
-        {
-            return string.Format("[{0},{1},{2}]", (int)X, (int)Y, (int)Z);
-        }
-
         [JsonIgnore]
         public string Description { get { return description; } }
 
