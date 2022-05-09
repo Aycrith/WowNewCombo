@@ -1,9 +1,7 @@
 ﻿using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using SharedLib.Extensions;
-using System;
 using System.Linq;
-using System.Threading;
 
 namespace Core.Goals
 {
@@ -70,46 +68,17 @@ namespace Core.Goals
             var newGoal = goapAgent.GetAction();
             if (newGoal != null)
             {
-                wasEmpty = false;
                 if (newGoal != currentGoal)
                 {
-                    if (currentGoal != null)
-                    {
-                        try
-                        {
-                            currentGoal.OnExit();
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.LogError(ex, $"{nameof(currentGoal.OnExit)} on {currentGoal.Name}");
-                        }
-                    }
-
+                    wasEmpty = false;
+                    currentGoal?.OnExit();
                     currentGoal = newGoal;
 
                     LogNewGoal(logger, newGoal.Name);
-
-                    if (currentGoal != null)
-                    {
-                        try
-                        {
-                            currentGoal.OnEnter();
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.LogError(ex, $"{nameof(newGoal.OnEnter)} on {currentGoal.Name}");
-                        }
-                    }
+                    currentGoal.OnEnter();
                 }
 
-                try
-                {
-                    newGoal.PerformAction();
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, $"{nameof(newGoal.PerformAction)} on {newGoal.Name}");
-                }
+                newGoal.PerformAction();
             }
             else
             {
