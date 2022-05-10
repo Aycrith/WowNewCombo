@@ -4,15 +4,9 @@ namespace Core
 {
     public struct CreatureRecord
     {
-        public int Guid { init; get; }
+        public int Guid { get; init; }
         public float HealthPercent { get; set; }
         public DateTime LastEvent { get; set; }
-
-        public bool HasExpired(int seconds)
-        {
-            return (DateTime.UtcNow - LastEvent).TotalSeconds > seconds;
-        }
-
 
         public override string ToString()
         {
