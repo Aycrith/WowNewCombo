@@ -21,12 +21,14 @@ namespace Core.Goals
 
         private const bool debug = true;
 
+        private const float minDistance = 0.01f;
+
         private readonly Random random = new();
 
         private DateTime approachStart;
 
         private bool playerWasInCombat;
-        private float lastPlayerDistance;
+        private float distance;
         private Vector3 lastPlayerLocation;
 
         private int initialTargetGuid;
@@ -52,7 +54,7 @@ namespace Core.Goals
             this.stopMoving = stopMoving;
             this.mountHandler = mountHandler;
 
-            lastPlayerDistance = 0;
+            distance = 0;
             lastPlayerLocation = playerReader.PlayerLocation;
 
             initialTargetGuid = playerReader.TargetGuid;
@@ -72,6 +74,8 @@ namespace Core.Goals
             initialTargetGuid = playerReader.TargetGuid;
             initialMinRange = playerReader.MinRange;
 
+            lastPlayerLocation = playerReader.PlayerLocation;
+
             approachStart = DateTime.UtcNow;
 
             return ValueTask.CompletedTask;
@@ -79,9 +83,6 @@ namespace Core.Goals
 
         public override ValueTask PerformAction()
         {
-            lastPlayerLocation = playerReader.PlayerLocation;
-            wait.Update();
-
             if (!playerReader.Bits.PlayerInCombat)
             {
                 playerWasInCombat = false;
@@ -114,23 +115,21 @@ namespace Core.Goals
                 input.Approach();
             }
 
-            lastPlayerDistance = playerReader.PlayerLocation.DistanceXYTo(lastPlayerLocation);
+            distance = playerReader.PlayerLocation.DistanceXYTo(lastPlayerLocation);
 
-            if (lastPlayerDistance < 0.05 && playerReader.LastUIErrorMessage == UI_ERROR.ERR_AUTOFOLLOW_TOO_FAR)
+            if (distance < minDistance && playerReader.LastUIErrorMessage == UI_ERROR.ERR_AUTOFOLLOW_TOO_FAR)
             {
                 playerReader.LastUIErrorMessage = UI_ERROR.NONE;
 
                 Log("Too far, start moving forward!");
                 input.SetKeyState(input.ForwardKey, true);
-                wait.Update();
             }
 
-            if (SecondsSinceApproachStarted > 1 && lastPlayerDistance < 0.05 && !playerReader.Bits.PlayerInCombat)
+            if (SecondsSinceApproachStarted > 1 && distance < minDistance && !playerReader.Bits.PlayerInCombat)
             {
                 input.ClearTarget();
-                wait.Update();
-                Log($"Seems stuck! Clear Target. Turn away. d: {lastPlayerDistance}");
-                input.KeyPress(random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey, 1000);
+                Log($"Seems stuck! Clear Target. Turn away. d: {distance}");
+                input.KeyPress(random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey, 300 + random.Next(800));
 
                 approachStart = DateTime.UtcNow;
             }
@@ -138,9 +137,8 @@ namespace Core.Goals
             if (SecondsSinceApproachStarted > 15 && !playerReader.Bits.PlayerInCombat)
             {
                 input.ClearTarget();
-                wait.Update();
                 Log("Too long time. Clear Target. Turn away.");
-                input.KeyPress(random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey, 1000);
+                input.KeyPress(random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey, 300 + random.Next(800));
 
                 approachStart = DateTime.UtcNow;
             }
@@ -172,7 +170,6 @@ namespace Core.Goals
                             initialTargetGuid = -1;
                             Log("Stick to initial target!");
                             input.LastTarget();
-                            wait.Update();
                         }
                     }
                     else
@@ -186,13 +183,17 @@ namespace Core.Goals
             {
                 Log($"We are going away from the target! {initialMinRange} < {playerReader.MinRange}");
                 input.ClearTarget();
-                wait.Update();
 
                 approachStart = DateTime.UtcNow;
             }
 
             RandomJump();
 
+            lastPlayerLocation = playerReader.PlayerLocation;
+
+            // due limited precision
+            wait.Update();
+            wait.Update();
             return ValueTask.CompletedTask;
         }
 

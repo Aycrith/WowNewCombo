@@ -8,7 +8,7 @@ namespace Core.Goals
     {
         public override float CostOfPerformingAction { get => 4.3f; }
 
-        private ILogger logger;
+        private readonly ILogger logger;
         private readonly ConfigurableInput input;
 
         private readonly PlayerReader playerReader;
@@ -47,8 +47,6 @@ namespace Core.Goals
                 SendActionEvent(new ActionEventArgs(GoapKey.shouldloot, false));
             }
 
-            int lastHealth = playerReader.HealthCurrent;
-            var lastPosition = playerReader.PlayerLocation;
             lastLoot = playerReader.LastLootTime;
 
             stopMoving.Stop();
@@ -63,7 +61,6 @@ namespace Core.Goals
                 {
                     Log("Found last dead target");
                     input.Interact();
-                    wait.Update();
 
                     (bool foundTarget, bool moved) = combatUtil.FoundTargetWhileMoved();
                     if (foundTarget)
@@ -75,6 +72,12 @@ namespace Core.Goals
                     if (moved)
                     {
                         Log("Last dead target double");
+                        input.Interact();
+                    }
+
+                    if (!foundTarget && !moved)
+                    {
+                        Log("Just for safety Interact once more.");
                         input.Interact();
                     }
                 }

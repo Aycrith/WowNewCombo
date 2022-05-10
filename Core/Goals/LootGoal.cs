@@ -113,7 +113,6 @@ namespace Core.Goals
 
                         Log("Found last dead target");
                         input.Interact();
-                        wait.Update();
 
                         (bool foundTarget, bool moved) = combatUtil.FoundTargetWhileMoved();
                         if (foundTarget)
@@ -125,6 +124,12 @@ namespace Core.Goals
                         if (moved)
                         {
                             Log("Last dead target double");
+                            input.Interact();
+                        }
+
+                        if (!foundTarget && !moved)
+                        {
+                            Log("Just for safety Interact once more.");
                             input.Interact();
                         }
                     }

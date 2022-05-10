@@ -26,11 +26,11 @@ namespace Core
         private readonly IPPather pather;
         private readonly NpcNameFinder npcNameFinder;
         private readonly NpcNameTargeting npcNameTargeting;
-        private readonly IAddonDataProvider addonDataProvider;
+        private readonly AddonDataProvider addonDataProvider;
         private readonly INodeFinder minimapNodeFinder;
         private readonly CancellationTokenSource cts;
         private readonly Wait wait;
-        private readonly AutoResetEvent addonAutoResetEvent = new(false);
+        private readonly AutoResetEvent globalTimeAutoResetEvent = new(false);
         private readonly AutoResetEvent npcNameFinderAutoResetEvent = new(false);
 
         public DataConfig DataConfig { get; }
@@ -103,7 +103,10 @@ namespace Core
         private readonly Thread? remotePathing;
         private const int remotePathingTickMs = 500;
 
-        public BotController(ILogger logger, IPPather pather, DataConfig dataConfig, IConfiguration configuration)
+        private readonly Thread frontendThread;
+        private const int frontendTickMs = 250;
+
+        public BotController(ILogger logger, IPPather pather, DataConfig dataConfig)
         {
             this.logger = logger;
             this.pather = pather;
@@ -122,31 +125,22 @@ namespace Core
 
             var frames = DataFrameConfiguration.LoadFrames();
 
-            var scad = new StartupConfigAddonData();
-            configuration.GetSection(StartupConfigAddonData.Position).Bind(scad);
-            if (scad.Mode == "Network")
-            {
-                logger.LogInformation("Using NetworkedAddonDataProvider");
-                addonDataProvider = new NetworkedAddonDataProvider(logger, scad.myPort, scad.connectTo, scad.connectPort);
-            }
-            else
-            {
-                logger.LogInformation("Using AddonDataProvider");
-                addonDataProvider = new AddonDataProvider(WowScreen, frames);
-            }
+            addonDataProvider = new AddonDataProvider(WowScreen, frames);
+            AddonReader = new AddonReader(logger, DataConfig, addonDataProvider, globalTimeAutoResetEvent);
 
-            AddonReader = new AddonReader(logger, DataConfig, addonDataProvider);
-
-            wait = new Wait(AddonReader.GlobalTime, addonAutoResetEvent);
+            wait = new Wait(globalTimeAutoResetEvent);
 
             minimapNodeFinder = new MinimapNodeFinder(WowScreen, new PixelClassifier());
             MinimapImageFinder = minimapNodeFinder as IImageProvider;
 
-            ScreenLatencys = new CircularBuffer<double>(5);
-            NPCLatencys = new CircularBuffer<double>(5);
+            ScreenLatencys = new CircularBuffer<double>(8);
+            NPCLatencys = new CircularBuffer<double>(8);
 
-            addonThread = new Thread(AddonRefreshThread);
+            addonThread = new Thread(AddonThread);
             addonThread.Start();
+
+            frontendThread = new(FrontendThread);
+            frontendThread.Start();
 
             Stopwatch sw = Stopwatch.StartNew();
             do
@@ -167,7 +161,7 @@ namespace Core
             WowScreen.AddDrawAction(npcNameFinder.ShowNames);
             WowScreen.AddDrawAction(npcNameTargeting.ShowClickPositions);
 
-            screenshotThread = new Thread(ScreenshotRefreshThread);
+            screenshotThread = new Thread(ScreenshotThread);
             screenshotThread.Start();
 
             if (pather is RemotePathingAPI)
@@ -177,18 +171,17 @@ namespace Core
             }
         }
 
-        public void AddonRefreshThread()
+        public void AddonThread()
         {
             while (!cts.IsCancellationRequested)
             {
-                AddonReader.AddonRefresh();
-                addonAutoResetEvent.Set();
-                cts.Token.WaitHandle.WaitOne(1);
+                AddonReader.Update();
+                //cts.Token.WaitHandle.WaitOne(1);
             }
             logger.LogInformation("Addon thread stoppped!");
         }
 
-        public void ScreenshotRefreshThread()
+        public void ScreenshotThread()
         {
             Stopwatch stopWatch = new();
             while (!cts.IsCancellationRequested)
@@ -208,11 +201,6 @@ namespace Core
                 }
                 else
                 {
-                    if (ClassConfig?.Mode is not Mode.AttendedGather)
-                        ScreenLatencys.Clear();
-
-                    NPCLatencys.Clear();
-
                     npcNameFinder.FakeUpdate();
                 }
 
@@ -224,7 +212,7 @@ namespace Core
                 }
 
                 cts.Token.WaitHandle.WaitOne(WowScreen.Enabled ||
-                    ClassConfig?.Mode == Mode.AttendedGather ? screenshotTickMs : 1);
+                    ClassConfig?.Mode == Mode.AttendedGather ? screenshotTickMs : 4);
             }
             logger.LogInformation("Screenshot thread stoppped!");
         }
@@ -244,6 +232,15 @@ namespace Core
                 cts.Token.WaitHandle.WaitOne(remotePathingTickMs);
             }
             logger.LogInformation("RemotePathing thread stoppped!");
+        }
+
+        private void FrontendThread()
+        {
+            while (!cts.IsCancellationRequested)
+            {
+                AddonReader.UpdateUI();
+                cts.Token.WaitHandle.WaitOne(frontendTickMs);
+            }
         }
 
         public bool IsBotActive => actionThread != null && actionThread.Active;
@@ -384,7 +381,7 @@ namespace Core
 
         public void Dispose()
         {
-            cts?.Cancel();
+            cts.Cancel();
 
             if (GrindSession is IDisposable disposable)
             {
@@ -410,7 +407,7 @@ namespace Core
             GoapAgent?.Dispose();
 
             npcNameFinderAutoResetEvent.Dispose();
-            addonAutoResetEvent.Dispose();
+            globalTimeAutoResetEvent.Dispose();
             WowScreen.Dispose();
             addonDataProvider?.Dispose();
             AddonReader.Dispose();

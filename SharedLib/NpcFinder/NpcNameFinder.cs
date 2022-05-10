@@ -287,6 +287,9 @@ namespace SharedLib.NpcFinder
 
         public void FakeUpdate()
         {
+            TargetCount = 0;
+            AddCount = 0;
+
             Npcs.Clear();
             autoResetEvent.Set();
         }

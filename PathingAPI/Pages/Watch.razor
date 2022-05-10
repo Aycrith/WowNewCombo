@@ -77,7 +77,7 @@
         });
     }
 
-    public void Log(object? s, string message)
+    public void Log(object s, string message)
     {
         InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("log", message)).Wait();
         if (!initialised) { Initialise(); }

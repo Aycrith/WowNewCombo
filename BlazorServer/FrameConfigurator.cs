@@ -26,7 +26,7 @@ namespace BlazorServer
 
         public List<DataFrame> dataFrames { get; private set; } = new List<DataFrame>();
 
-        private IAddonDataProvider? addonDataProvider;
+        private AddonDataProvider? addonDataProvider;
         public AddonReader? AddonReader { get; private set; }
 
         public bool Saved { get; private set; }
@@ -129,7 +129,7 @@ namespace BlazorServer
                                             addonDataProvider = new AddonDataProvider(wowScreen, dataFrames);
                                         }
 
-                                        AddonReader = new AddonReader(logger, dataConfig, addonDataProvider);
+                                        AddonReader = new AddonReader(logger, dataConfig, addonDataProvider, new(false));
                                     }
 
                                     OnUpdate?.Invoke();
@@ -300,7 +300,7 @@ namespace BlazorServer
             AddonReader?.Dispose();
 
             addonDataProvider = new AddonDataProvider(wowScreen, dataFrames);
-            AddonReader = new AddonReader(logger, dataConfig, addonDataProvider);
+            AddonReader = new AddonReader(logger, dataConfig, addonDataProvider, new(false));
 
             if (!ResolveClass())
             {
@@ -343,7 +343,7 @@ namespace BlazorServer
         {
             if (AddonReader != null)
             {
-                AddonReader.Refresh();
+                AddonReader.FetchData();
                 return Enum.GetValues(typeof(PlayerClassEnum)).Cast<PlayerClassEnum>().Contains(AddonReader.PlayerReader.Class);
             }
             return false;

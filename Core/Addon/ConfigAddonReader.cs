@@ -30,17 +30,17 @@ namespace Core.Addon
         public event Action? PlayerDeath;
 #pragma warning restore CS0067
 
-        public int GetIntAt(int index)
+        public int GetInt(int index)
         {
             throw new NotImplementedException();
         }
 
-        public void Refresh()
+        public void FetchData()
         {
             throw new NotImplementedException();
         }
 
-        public void Reset()
+        public void FullReset()
         {
             throw new NotImplementedException();
         }

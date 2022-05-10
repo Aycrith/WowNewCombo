@@ -361,7 +361,8 @@ namespace Core.Goals
             }
             else
             {
-                Log($"non pathfinder - {distance} - {location} -> {wayPoints.Peek()}");
+                if (debug)
+                    LogDebug($"non pathfinder - {distance} - {location} -> {wayPoints.Peek()}");
 
                 routeToNextWaypoint.Push(wayPoints.Peek());
 

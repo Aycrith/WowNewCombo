@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using System;
 using Cyotek.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace Core
 {
@@ -10,7 +12,8 @@ namespace Core
     {
         private readonly ILogger logger;
         private readonly SquareReader squareReader;
-        private readonly IAddonDataProvider addonDataProvider;
+        private readonly AddonDataProvider addonDataProvider;
+        private readonly AutoResetEvent autoResetEvent;
 
         public bool Initialized { get; private set; }
 
@@ -63,18 +66,15 @@ namespace Core
             }
         }
 
-        public double AvgUpdateLatency { private set; get; } = 5;
+        public double AvgUpdateLatency { private set; get; }
         private readonly CircularBuffer<double> UpdateLatencys;
 
-        private DateTime lastFrontendUpdate;
-        private readonly int FrontendUpdateIntervalMs = 250;
-
-        public AddonReader(ILogger logger, DataConfig dataConfig, IAddonDataProvider addonDataProvider)
+        public AddonReader(ILogger logger, DataConfig dataConfig, AddonDataProvider addonDataProvider, AutoResetEvent autoResetEvent)
         {
             this.logger = logger;
             this.addonDataProvider = addonDataProvider;
-
             this.squareReader = new SquareReader(this);
+            this.autoResetEvent = autoResetEvent;
 
             this.AreaDb = new AreaDB(logger, dataConfig);
             this.WorldMapAreaDb = new WorldMapAreaDB(dataConfig);
@@ -102,12 +102,9 @@ namespace Core
             this.CurrentAction = new(PlayerReader, squareReader, 26, 27, 28, 29, 30);
             this.UsableAction = new(PlayerReader, squareReader, 31, 32, 33, 34, 35);
 
-            UpdateLatencys = new CircularBuffer<double>(10);
+            UpdateLatencys = new(16);
 
-            UIMapId.Changed -= OnUIMapIdChanged;
             UIMapId.Changed += OnUIMapIdChanged;
-
-            GlobalTime.Changed -= GlobalTimeChanged;
             GlobalTime.Changed += GlobalTimeChanged;
         }
 
@@ -122,42 +119,20 @@ namespace Core
             addonDataProvider?.Dispose();
         }
 
-        public void AddonRefresh()
+        public void Update()
         {
-            Refresh();
-
-            CreatureHistory.Update(PlayerReader.TargetGuid, PlayerReader.TargetHealthPercentage);
-
-            BagReader.Read();
-            EquipmentReader.Read();
-
-            ActionBarCostReader.Read();
-            ActionBarCooldownReader.Read();
-
-            GossipReader.Read();
-
-            SpellBookReader.Read();
-            TalentReader.Read();
-
-            if ((DateTime.UtcNow - lastFrontendUpdate).TotalMilliseconds >= FrontendUpdateIntervalMs)
-            {
-                AddonDataChanged?.Invoke();
-                lastFrontendUpdate = DateTime.UtcNow;
-            }
-        }
-
-        public void Refresh()
-        {
-            addonDataProvider.Update();
+            FetchData();
 
             if (GlobalTime.Updated(squareReader) && (GlobalTime.Value <= 3 || !Initialized))
             {
-                Reset();
+                FullReset();
             }
+        }
 
-            PlayerReader.Updated();
-
-            UIMapId.Update(squareReader);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void FetchData()
+        {
+            addonDataProvider.Update();
         }
 
         public void SoftReset()
@@ -166,7 +141,7 @@ namespace Core
             CreatureHistory.Reset();
         }
 
-        public void Reset()
+        public void FullReset()
         {
             Initialized = false;
 
@@ -184,7 +159,8 @@ namespace Core
             Initialized = true;
         }
 
-        public int GetIntAt(int index)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int GetInt(int index)
         {
             return addonDataProvider.GetInt(index);
         }
@@ -212,7 +188,30 @@ namespace Core
 
             CurrentAction.SetDirty();
             UsableAction.SetDirty();
-            PlayerReader.SetDirty();
+
+            PlayerReader.Update();
+
+            UIMapId.Update(squareReader);
+
+            CreatureHistory.Update(PlayerReader.TargetGuid, PlayerReader.TargetHealthPercentage);
+
+            BagReader.Read();
+            EquipmentReader.Read();
+
+            ActionBarCostReader.Read();
+            ActionBarCooldownReader.Read();
+
+            GossipReader.Read();
+
+            SpellBookReader.Read();
+            TalentReader.Read();
+
+            autoResetEvent.Set();
+        }
+
+        public void UpdateUI()
+        {
+            AddonDataChanged?.Invoke();
         }
     }
 }

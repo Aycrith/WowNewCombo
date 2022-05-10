@@ -113,6 +113,8 @@ namespace Core
                     if (AquiredTarget())
                         return (true, !movedTimeOut);
                 }
+                // due limited precision
+                wait.Update();
             }
 
             return (false, !movedTimeOut);

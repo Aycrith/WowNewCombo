@@ -7,7 +7,7 @@ namespace Core
     {
         private readonly SquareReader reader;
 
-        private const int LifeTimeInSeconds = 60;
+        private const double LifeTimeInSec = 60;
 
         public event Action? KillCredit;
 
@@ -99,26 +99,26 @@ namespace Core
             RemoveExpired(Deads);
         }
 
-        private static void Update(int creatureId, float healthPercent, List<CreatureRecord> CombatCreatures)
+        private static void Update(int creatureId, float healthPercent, List<CreatureRecord> creatures)
         {
             if (creatureId <= 0) return;
 
-            int index = CombatCreatures.FindIndex(c => c.Guid == creatureId);
+            int index = creatures.FindIndex(c => c.Guid == creatureId);
             if (index > -1)
             {
-                if (healthPercent < CombatCreatures[index].HealthPercent)
+                if (healthPercent < creatures[index].HealthPercent)
                 {
-                    CreatureRecord creature = CombatCreatures[index];
+                    CreatureRecord creature = creatures[index];
 
                     creature.HealthPercent = healthPercent;
                     creature.LastEvent = DateTime.UtcNow;
 
-                    CombatCreatures[index] = creature;
+                    creatures[index] = creature;
                 }
             }
             else
             {
-                CombatCreatures.Add(new CreatureRecord
+                creatures.Add(new CreatureRecord
                 {
                     Guid = creatureId,
                     HealthPercent = healthPercent,
@@ -127,9 +127,16 @@ namespace Core
             }
         }
 
-        private static void RemoveExpired(List<CreatureRecord> CombatCreatures)
+        private static void RemoveExpired(List<CreatureRecord> creatures)
         {
-            CombatCreatures.RemoveAll(x => x.HasExpired(LifeTimeInSeconds));
+            DateTime now = DateTime.UtcNow;
+            for (int i = creatures.Count - 1; i >= 0; i--)
+            {
+                if ((now - creatures[i].LastEvent).TotalSeconds > LifeTimeInSec)
+                {
+                    creatures.RemoveAt(i);
+                }
+            }
         }
     }
 }

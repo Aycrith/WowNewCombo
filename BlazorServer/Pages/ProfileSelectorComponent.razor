@@ -89,7 +89,7 @@
 
     private void LoadState()
     {
-        addonReader.Reset();
+        addonReader.FullReset();
 
         var config = AddonConfig.Load();
         botController.ExecGameCommand.Run("/" + config.Command + "flush");
