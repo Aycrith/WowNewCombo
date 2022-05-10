@@ -14,7 +14,7 @@ namespace Core
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetInt(int index)
         {
-            return addonReader.GetIntAt(index);
+            return addonReader.GetInt(index);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

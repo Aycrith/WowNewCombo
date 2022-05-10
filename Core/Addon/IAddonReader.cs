@@ -33,9 +33,9 @@ namespace Core
         event Action? ZoneChanged;
         event Action? PlayerDeath;
 
-        void Refresh();
-        void Reset();
+        void FetchData();
+        void FullReset();
 
-        int GetIntAt(int index);
+        int GetInt(int index);
     }
 }

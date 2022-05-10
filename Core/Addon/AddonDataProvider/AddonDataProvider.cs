@@ -4,6 +4,7 @@ using System.Linq;
 using SharedLib;
 using Game;
 using System.Drawing.Imaging;
+using System.Runtime.CompilerServices;
 
 namespace Core
 {
@@ -12,7 +13,7 @@ namespace Core
         private readonly DataFrame[] frames;
         private readonly int[] data;
 
-        private readonly IWowScreen wowScreen;
+        private readonly WowScreen wowScreen;
 
         private readonly Color firstColor = Color.FromArgb(255, 0, 0, 0);
         private readonly Color lastColor = Color.FromArgb(255, 30, 132, 129);
@@ -23,9 +24,9 @@ namespace Core
         private readonly Rectangle bitmapRect;
 
         private Rectangle rect;
-        private Bitmap bitmap = null!;
+        private readonly Bitmap bitmap = null!;
 
-        public AddonDataProvider(IWowScreen wowScreen, List<DataFrame> frames)
+        public AddonDataProvider(WowScreen wowScreen, List<DataFrame> frames)
         {
             this.wowScreen = wowScreen;
 
@@ -40,6 +41,7 @@ namespace Core
             bitmapRect = new Rectangle(0, 0, bitmap.Width, bitmap.Height);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Update()
         {
             Point p = new();
@@ -76,6 +78,7 @@ namespace Core
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetInt(int index)
         {
             return data[index];

@@ -6,23 +6,17 @@ namespace Core
 {
     public class Wait
     {
-        private readonly RecordInt globalTime;
-        private readonly AutoResetEvent autoResetEvent;
+        private readonly AutoResetEvent globalTimeChange;
 
-        public Wait(RecordInt globalTime, AutoResetEvent autoResetEvent)
+        public Wait(AutoResetEvent globalTimeChange)
         {
-            this.globalTime = globalTime;
-            this.autoResetEvent = autoResetEvent;
+            this.globalTimeChange = globalTimeChange;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Update()
         {
-            int s = globalTime.Value;
-            while (s == globalTime.Value)
-            {
-                autoResetEvent.WaitOne();
-            }
+            globalTimeChange.WaitOne();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

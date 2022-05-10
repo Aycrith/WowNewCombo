@@ -90,7 +90,7 @@ namespace Core
         public int PlayerMaxXp => reader.GetInt(51);
         public int PlayerXpPercentage => (PlayerXp.Value * 100) / (PlayerMaxXp == 0 ? 1 : PlayerMaxXp);
 
-        private int UIErrorMessage => reader.GetInt(52);
+        private UI_ERROR UIErrorMessage => (UI_ERROR)reader.GetInt(52);
         public UI_ERROR LastUIErrorMessage { get; set; }
 
         public int SpellBeingCast => reader.GetInt(53);
@@ -137,9 +137,16 @@ namespace Core
             _ => false
         };
 
-        internal void Updated()
+        public void Update()
         {
-            if (UIErrorMessage > 0)
+            Bits.SetDirty();
+            SpellInRange.SetDirty();
+            Buffs.SetDirty();
+            TargetDebuffs.SetDirty();
+            Stance.SetDirty();
+            CustomTrigger1.Update(reader.GetInt(74));
+
+            if (UIErrorMessage != UI_ERROR.NONE)
             {
                 LastUIErrorMessage = (UI_ERROR)UIErrorMessage;
             }
@@ -151,16 +158,6 @@ namespace Core
             MainHandSwing.Update(reader);
             CastEvent.Update(reader);
             CastSpellId.Update(reader);
-        }
-
-        public void SetDirty()
-        {
-            Bits.SetDirty();
-            SpellInRange.SetDirty();
-            Buffs.SetDirty();
-            TargetDebuffs.SetDirty();
-            Stance.SetDirty();
-            CustomTrigger1.Update(reader.GetInt(74));
         }
 
         public void Reset()
