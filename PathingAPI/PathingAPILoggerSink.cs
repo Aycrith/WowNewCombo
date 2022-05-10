@@ -16,14 +16,14 @@ namespace PathingAPI
 
     public class PathingAPILoggerSink : ILogEventSink
     {
-        public static event EventHandler<string>? OnLog;
+        public static event EventHandler<string> OnLog;
 
         public void Emit(LogEvent logEvent)
         {
             OnLog?.Invoke(this, logEvent.RenderMessage());
         }
 
-        public override bool Equals(object? obj)
+        public override bool Equals(object obj)
         {
             return obj is PathingAPILoggerSink;
         }
