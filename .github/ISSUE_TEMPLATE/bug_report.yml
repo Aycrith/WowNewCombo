@@ -30,7 +30,7 @@ body:
     description: What version of World of Warcraft are are you running?
     options:
       - The Burning Crusade Classic
-      - Classic
+      - Retail
       - Season of Mastery
   validations:
     required: true
