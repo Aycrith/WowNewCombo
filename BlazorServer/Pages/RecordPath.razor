@@ -9,9 +9,6 @@
 @inject Core.IBotController botController
 @inject IJSRuntime JSRuntime
 
-@if (botController.RouteInfo == null)
-    return;
-
 <div class="row">
     <div class="col-sm">
         <h3>Path Editor/Recorder</h3>
@@ -26,7 +23,7 @@
         @if (recording || editing)
         {
             <button class="btn btn-success"
-                    disabled="@(botController.RouteInfo.PathPoints.Count == 0 ? "disabled" : null)"
+                    disabled="@(routeInfo.PathPoints.Count == 0 ? "disabled" : null)"
                     @onclick="Save">Save</button>
             <button class="btn btn-danger" @onclick="Clear">Clear</button>
         }
@@ -46,14 +43,11 @@
             <svg width="@(Size)px" height="@(Size)px">
                 <g class="background"></g>
 
-                @if (botController.RouteInfo != null)
-                {
-                    <g id="playerloc" transform='translate(@(botController.RouteInfo.ToCanvasPointX(addonReader.PlayerReader.XCoord)-5), @(botController.RouteInfo.ToCanvasPointY(addonReader.PlayerReader.YCoord)-5)) rotate(@PlayerDir 5 5)'>
-                        <svg width="10" height="10">
-                            <polygon points="5,0 8.5,8.5 1.5,8.5 5,0" fill="orange" />
-                        </svg>
-                    </g>
-                }
+                <g id="playerloc" transform='translate(@(routeInfo.ToCanvasPointX(addonReader.PlayerReader.XCoord)-5), @(routeInfo.ToCanvasPointY(addonReader.PlayerReader.YCoord)-5)) rotate(@PlayerDir 5 5)'>
+                    <svg width="10" height="10">
+                        <polygon points="5,0 8.5,8.5 1.5,8.5 5,0" fill="orange" />
+                    </svg>
+                </g>
 
                 <g class="group2">
                     <g stroke-width="1" stroke="gray">
@@ -69,13 +63,13 @@
                         @this.PreviewPoints
                     </g>
 
-                @if (recording && botController.RouteInfo != null && botController.RouteInfo.PathPoints.Count > 0)
+                @if (recording && routeInfo.PathPoints.Count > 0)
                 {
                     <g>
                         <circle fill="transparent" stroke="black"
-                            cx='@(botController.RouteInfo.ToCanvasPointX(botController.RouteInfo.PathPoints.Last().X))'
-                            cy='@(botController.RouteInfo.ToCanvasPointY(botController.RouteInfo.PathPoints.Last().Y))'
-                            r='@(botController.RouteInfo.DistanceToGrid(Distance))' />
+                            cx='@(routeInfo.ToCanvasPointX(routeInfo.PathPoints.Last().X))'
+                            cy='@(routeInfo.ToCanvasPointY(routeInfo.PathPoints.Last().Y))'
+                            r='@(routeInfo.DistanceToGrid(Distance))' />
                     </g>
                 }
                 </g>
@@ -151,12 +145,12 @@
     </table>
     }
 
-    @if ((recording || editing) && botController.RouteInfo != null)
+    @if (recording || editing)
     {
         <h3>Available Points</h3>
-        @for (int i = 0; i < botController.RouteInfo.PathPoints.Count; i++)
+        @for (int i = 0; i < routeInfo.PathPoints.Count; i++)
         {
-            var point = botController.RouteInfo.PathPoints[i];
+            var point = routeInfo.PathPoints[i];
             int index = i;
             <span class="badge @DisplayBadge(point)" @onclick="() => UpdateSelectedPoint(point, index)">
                 @point.X.ToString("0.00"),@point.Y.ToString("0.00")&nbsp;
@@ -212,9 +206,12 @@
 
     protected Vector3 lastPlayerPoint;
 
+    private Core.RouteInfo routeInfo = null!;
 
     protected override void OnInitialized()
     {
+        routeInfo = botController.RouteInfo!;
+
         addonReader.AddonDataChanged -= OnAddonDataChanged;
         addonReader.AddonDataChanged += OnAddonDataChanged;
     }
@@ -251,16 +248,13 @@
 
             /*
             // requires async
-            if(botController.RouteInfo != null)
-            {
-                var p = addonReader.PlayerReader.PlayerLocation;
-                var pp = new Vector3(
-                    botController.RouteInfo.ToCanvasPointX(p.X),
-                    botController.RouteInfo.ToCanvasPointY(p.Y),
-                    0);
+            var p = addonReader.PlayerReader.PlayerLocation;
+            var pp = new Vector3(
+                route.ToCanvasPointX(p.X),
+                route.ToCanvasPointY(p.Y),
+                0);
 
-                await JSRuntime.InvokeVoidAsync("focusAt", JsonConvert.SerializeObject(pp));
-            }
+            await JSRuntime.InvokeVoidAsync("focusAt", JsonConvert.SerializeObject(pp));
             */     
         });
     }
@@ -279,20 +273,18 @@
 
     protected void UpdateRouteMarkup()
     {
-        if (botController.RouteInfo == null) { return; }
+        error = string.Empty;
+        routeInfo.SetMargin(Margin);
+        routeInfo.SetCanvasSize(Size);
 
-        error = "";
-        botController.RouteInfo.SetMargin(Margin);
-        botController.RouteInfo.SetCanvasSize(Size);
-
-        if (botController.RouteInfo.PathPoints.Count > 0)
+        if (routeInfo.PathPoints.Count > 0)
         {
-            this.PathLines = new MarkupString(botController.RouteInfo.RenderPathLines(botController.RouteInfo.PathPoints));
-            this.PathPoints = new MarkupString(botController.RouteInfo.RenderPathPoints(botController.RouteInfo.PathPoints.Where(p => p != this.selectedPoint).ToList()));
-            this.SelectedPoints = new MarkupString(botController.RouteInfo.RenderPathPoints(new List<Vector3> { this.selectedPoint }));
+            this.PathLines = new MarkupString(routeInfo.RenderPathLines(routeInfo.PathPoints));
+            this.PathPoints = new MarkupString(routeInfo.RenderPathPoints(routeInfo.PathPoints.Where(p => p != this.selectedPoint).ToList()));
+            this.SelectedPoints = new MarkupString(routeInfo.RenderPathPoints(new List<Vector3> { this.selectedPoint }));
             if (this.selectedPoint != this.previewPoint)
             {
-                this.PreviewPoints = new MarkupString(botController.RouteInfo.RenderPathPoints(new List<Vector3> { this.previewPoint }));
+                this.PreviewPoints = new MarkupString(routeInfo.RenderPathPoints(new List<Vector3> { this.previewPoint }));
             }
             else
             {
@@ -316,11 +308,9 @@
 
     protected void Clear()
     {
-        if (botController.RouteInfo == null) { return; }
-
         recording = false;
 
-        botController.RouteInfo.PathPoints.Clear();
+        routeInfo.PathPoints.Clear();
 
         cachedIndex = 0;
         selectedPoint = default;
@@ -336,25 +326,22 @@
 
     protected void Save()
     {
-        if (botController.RouteInfo == null) { return; }
         recording = false;
 
         var filename = $"__Path_{ DateTime.Now.ToString("yyyyMMddHHmmss")}.json";
         var filepath = Path.Join(botController.DataConfig.Path, filename);
-        File.WriteAllText(filepath, JsonConvert.SerializeObject(botController.RouteInfo.PathPoints));
+        File.WriteAllText(filepath, JsonConvert.SerializeObject(routeInfo.PathPoints));
         message = $"Saved to: {filepath}";
     }
 
 
     protected void StartRecording()
     {
-        if (botController.RouteInfo == null) { return; }
-
         recording = true;
         editing = false;
 
-        botController.RouteInfo.PathPoints.Clear();
-        botController.RouteInfo.PoiList.Clear();
+        routeInfo.PathPoints.Clear();
+        routeInfo.PoiList.Clear();
 
         ClearMarkup();
 
@@ -366,14 +353,13 @@
     protected bool UpdateRecording()
     {
         if (!recording) { return false; }
-        if (botController.RouteInfo == null) { return false; }
 
         var location = addonReader.PlayerReader.PlayerLocation;
 
-        if (botController.RouteInfo.PathPoints.Count == 0 ||
-            location.DistanceXYTo(botController.RouteInfo.PathPoints.Last()) > Distance)
+        if (routeInfo.PathPoints.Count == 0 ||
+            location.DistanceXYTo(routeInfo.PathPoints.Last()) > Distance)
         {
-            botController.RouteInfo.PathPoints.Add(location);
+            routeInfo.PathPoints.Add(location);
             UpdateRouteMarkup();
             return true;
         }
@@ -406,18 +392,17 @@
 
     protected void UpdateSourcePoint(ref Vector3 src, Vector3 target)
     {
-        if (botController.RouteInfo == null) { return; }
         if (src == default) { return; }
 
-        for (int i = 0; i < botController.RouteInfo.PathPoints.Count; i++)
+        for (int i = 0; i < routeInfo.PathPoints.Count; i++)
         {
-            if (botController.RouteInfo.PathPoints[i] == src)
+            if (routeInfo.PathPoints[i] == src)
             {
-                var temp = botController.RouteInfo.PathPoints[i];
+                var temp = routeInfo.PathPoints[i];
                 temp.X = target.X;
                 temp.Y = target.Y;
                 temp.Z = target.Z;
-                botController.RouteInfo.PathPoints[i] = temp;
+                routeInfo.PathPoints[i] = temp;
             }
         }
 
@@ -456,22 +441,20 @@
 
     protected void RemoveAllSelected()
     {
-        if (botController.RouteInfo == null) { return; }
-
-        int index = botController.RouteInfo.PathPoints.FindIndex(cachedIndex, p => p == selectedPoint);
-        int removed = botController.RouteInfo.PathPoints.RemoveAll(p => p == selectedPoint);
+        int index = routeInfo.PathPoints.FindIndex(cachedIndex, p => p == selectedPoint);
+        int removed = routeInfo.PathPoints.RemoveAll(p => p == selectedPoint);
         if (removed > 0)
         {
             this.previewPoint = selectedPoint;
 
-            if (index > -1 && botController.RouteInfo.PathPoints.Count > 0)
+            if (index > -1 && routeInfo.PathPoints.Count > 0)
             {
-                if (index >= botController.RouteInfo.PathPoints.Count)
+                if (index >= routeInfo.PathPoints.Count)
                 {
                     index -= removed;
                 }
 
-                this.selectedPoint = botController.RouteInfo.PathPoints[index];
+                this.selectedPoint = routeInfo.PathPoints[index];
                 cachedIndex = index;
             }
             else
@@ -487,47 +470,44 @@
 
     protected void Previous()
     {
-        if (botController.RouteInfo == null) return;
         if (selectedPoint == default) return;
 
-        int index = botController.RouteInfo.PathPoints.FindIndex(cachedIndex, p => p == selectedPoint);
+        int index = routeInfo.PathPoints.FindIndex(cachedIndex, p => p == selectedPoint);
         if (index > -1)
         {
             cachedIndex = index;
 
-            index = Math.Clamp(index - 1, 0, botController.RouteInfo.PathPoints.Count - 1);
+            index = Math.Clamp(index - 1, 0, routeInfo.PathPoints.Count - 1);
 
-            UpdateSelectedPoint(botController.RouteInfo.PathPoints[index], index);
+            UpdateSelectedPoint(routeInfo.PathPoints[index], index);
         }
     }
 
     protected void Next()
     {
-        if (botController.RouteInfo == null) return;
         if (selectedPoint == default) return;
 
-        int index = botController.RouteInfo.PathPoints.FindIndex(cachedIndex, p => p == selectedPoint);
+        int index = routeInfo.PathPoints.FindIndex(cachedIndex, p => p == selectedPoint);
         if (index > -1)
         {
             cachedIndex = index;
 
-            index = Math.Clamp(index + 1, 0, botController.RouteInfo.PathPoints.Count - 1);
+            index = Math.Clamp(index + 1, 0, routeInfo.PathPoints.Count - 1);
 
-            UpdateSelectedPoint(botController.RouteInfo.PathPoints[index], index);
+            UpdateSelectedPoint(routeInfo.PathPoints[index], index);
         }
     }
 
 
     protected void InsertPlayerLocationAfterSelected()
     {
-        if (botController.RouteInfo == null) return;
         if (selectedPoint == default) return;
 
-        int index = botController.RouteInfo.PathPoints.FindIndex(p => p == selectedPoint);
+        int index = routeInfo.PathPoints.FindIndex(p => p == selectedPoint);
         if (index == -1) return;
 
         var target = addonReader.PlayerReader.PlayerLocation;
-        botController.RouteInfo.PathPoints.Insert(index + 1, target);
+        routeInfo.PathPoints.Insert(index + 1, target);
 
         selectedPoint = target;
         UpdateRouteMarkup();
