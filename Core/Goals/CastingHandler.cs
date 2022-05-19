@@ -363,7 +363,7 @@ namespace Core.Goals
                     while (sw.ElapsedMilliseconds < item.DelayAfterCast)
                     {
                         wait.Update();
-                        if (playerReader.Bits.TargetOfTargetIsPlayer)
+                        if (playerReader.Bits.TargetOfTargetIsPlayerOrPet)
                         {
                             break;
                         }

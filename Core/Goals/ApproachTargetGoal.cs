@@ -18,6 +18,7 @@ namespace Core.Goals
         private readonly PlayerReader playerReader;
         private readonly StopMoving stopMoving;
         private readonly MountHandler mountHandler;
+        private readonly CombatUtil combatUtil;
 
         private const bool debug = true;
 
@@ -27,7 +28,6 @@ namespace Core.Goals
 
         private DateTime approachStart;
 
-        private bool playerWasInCombat;
         private float distance;
         private Vector3 lastPlayerLocation;
 
@@ -36,15 +36,11 @@ namespace Core.Goals
 
         private int SecondsSinceApproachStarted => (int)(DateTime.UtcNow - approachStart).TotalSeconds;
 
-        private bool HasPickedUpAnAdd
-        {
-            get
-            {
-                return playerReader.Bits.PlayerInCombat && !playerReader.Bits.TargetOfTargetIsPlayer;
-            }
-        }
+        private bool HasPickedUpAnAdd =>
+            playerReader.Bits.PlayerInCombat &&
+            !playerReader.Bits.TargetOfTargetIsPlayerOrPet;
 
-        public ApproachTargetGoal(ILogger logger, ConfigurableInput input, Wait wait, PlayerReader playerReader, StopMoving stopMoving, MountHandler mountHandler)
+        public ApproachTargetGoal(ILogger logger, ConfigurableInput input, Wait wait, PlayerReader playerReader, StopMoving stopMoving, MountHandler mountHandler, CombatUtil combatUtil)
         {
             this.logger = logger;
             this.input = input;
@@ -53,6 +49,7 @@ namespace Core.Goals
             this.playerReader = playerReader;
             this.stopMoving = stopMoving;
             this.mountHandler = mountHandler;
+            this.combatUtil = combatUtil;
 
             distance = 0;
             lastPlayerLocation = playerReader.PlayerLocation;
@@ -69,7 +66,7 @@ namespace Core.Goals
 
         public override ValueTask OnEnter()
         {
-            playerWasInCombat = playerReader.Bits.PlayerInCombat;
+            combatUtil.Update();
 
             initialTargetGuid = playerReader.TargetGuid;
             initialMinRange = playerReader.MinRange;
@@ -83,31 +80,17 @@ namespace Core.Goals
 
         public override ValueTask PerformAction()
         {
-            if (!playerReader.Bits.PlayerInCombat)
+            combatUtil.Update();
+
+            if (HasPickedUpAnAdd)
             {
-                playerWasInCombat = false;
-            }
-            else
-            {
-                // we are in combat
-                if (!playerWasInCombat && HasPickedUpAnAdd)
-                {
-                    logger.LogInformation("WARN Bodypull -- Looks like we have an add on approach");
-                    logger.LogInformation($"Combat={playerReader.Bits.PlayerInCombat}, Is Target targetting me={playerReader.Bits.TargetOfTargetIsPlayer}");
+                logger.LogWarning($"Add on approach! Combat={playerReader.Bits.PlayerInCombat}, Targets me={playerReader.Bits.TargetOfTargetIsPlayerOrPet}");
 
-                    stopMoving.Stop();
-                    input.ClearTarget();
-                    wait.Update();
+                stopMoving.Stop();
+                stopMoving.Stop();
+                combatUtil.AquiredTarget();
 
-                    if (playerReader.PetHasTarget)
-                    {
-                        input.TargetPet();
-                        input.TargetOfTarget();
-                        wait.Update();
-                    }
-                }
-
-                playerWasInCombat = true;
+                return ValueTask.CompletedTask;
             }
 
             if (input.ClassConfig.Approach.GetCooldownRemaining() == 0)

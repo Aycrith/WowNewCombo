@@ -61,10 +61,10 @@ namespace Core
                 if (this.playerReader.PetHasTarget)
                 {
                     input.TargetPet();
-                    Log($"Pets target {this.playerReader.TargetTarget}");
-                    if (this.playerReader.TargetTarget == TargetTargetEnum.PetHasATarget)
+                    Log($"Pets target {playerReader.TargetTarget}");
+                    if (playerReader.TargetTarget == TargetTargetEnum.PetHasATarget)
                     {
-                        Log($"{nameof(CombatUtil)}.AquiredTarget: Found target by pet");
+                        Log($"{nameof(AquiredTarget)}: Found target by pet");
                         input.TargetOfTarget();
                         return true;
                     }
@@ -72,19 +72,19 @@ namespace Core
 
                 input.NearestTarget();
                 wait.Update();
-                if (this.playerReader.HasTarget && playerReader.Bits.TargetInCombat &&
-                    playerReader.Bits.TargetOfTargetIsPlayer)
+                if (playerReader.HasTarget && playerReader.Bits.TargetInCombat &&
+                    playerReader.Bits.TargetOfTargetIsPlayerOrPet)
                 {
                     Log("Found from nearest target");
                     return true;
                 }
 
-                if (wait.Till(200, () => playerReader.HasTarget))
+                if (wait.Till(400, () => playerReader.HasTarget || playerReader.PetHasTarget))
                 {
                     return true;
                 }
 
-                Log($"{nameof(CombatUtil)}.AquiredTarget: No target found");
+                Log($"{nameof(AquiredTarget)}: No target found");
                 input.ClearTarget();
                 wait.Update();
             }
@@ -124,7 +124,7 @@ namespace Core
         {
             if (debug)
             {
-                logger.LogInformation($"{nameof(CombatUtil)}: {text}");
+                logger.LogDebug($"{nameof(CombatUtil)}: {text}");
             }
         }
     }

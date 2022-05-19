@@ -46,6 +46,7 @@ namespace Core.Goals
             AddPrecondition(GoapKey.incombat, true);
             AddPrecondition(GoapKey.hastarget, true);
             AddPrecondition(GoapKey.targetisalive, true);
+            AddPrecondition(GoapKey.targettargetsus, true);
             AddPrecondition(GoapKey.incombatrange, true);
 
             AddEffect(GoapKey.producedcorpse, true);
@@ -128,7 +129,7 @@ namespace Core.Goals
             get
             {
                 return this.playerReader.Bits.PlayerInCombat &&
-                    !this.playerReader.Bits.TargetOfTargetIsPlayer
+                    !this.playerReader.Bits.TargetOfTargetIsPlayerOrPet
                     && this.playerReader.TargetHealthPercentage == 100;
             }
         }
@@ -208,7 +209,7 @@ namespace Core.Goals
                 wait.Update();
                 if (playerReader.HasTarget)
                 {
-                    if (playerReader.Bits.TargetInCombat && playerReader.Bits.TargetOfTargetIsPlayer)
+                    if (playerReader.Bits.TargetInCombat && playerReader.Bits.TargetOfTargetIsPlayerOrPet)
                     {
                         ResetCooldowns();
 

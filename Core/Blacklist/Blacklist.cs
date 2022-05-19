@@ -53,7 +53,7 @@ namespace Core
             }
 
             // it is trying to kill me
-            if (playerReader.Bits.TargetOfTargetIsPlayer)
+            if (playerReader.Bits.TargetOfTargetIsPlayerOrPet)
             {
                 return false;
             }
