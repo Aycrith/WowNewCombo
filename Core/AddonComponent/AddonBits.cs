@@ -41,7 +41,7 @@
         public bool PetHappy => v1.IsBitSet(12);
         public bool HasAmmo => v1.IsBitSet(13);
         public bool PlayerInCombat => v1.IsBitSet(14);
-        public bool TargetOfTargetIsPlayer => v1.IsBitSet(15);
+        public bool TargetOfTargetIsPlayerOrPet => v1.IsBitSet(15);
         public bool IsAutoRepeatSpellOn_AutoShot => v1.IsBitSet(16);
         public bool HasTarget => v1.IsBitSet(17);
         public bool IsMounted => v1.IsBitSet(18);

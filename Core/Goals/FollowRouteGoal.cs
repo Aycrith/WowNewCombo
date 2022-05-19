@@ -87,14 +87,14 @@ namespace Core.Goals
             navigation.OnDestinationReached += Navigation_OnDestinationReached;
             navigation.OnWayPointReached += Navigation_OnWayPointReached;
 
-            AddPrecondition(GoapKey.dangercombat, false);
-
             if (classConfig.Mode == Mode.AttendedGather)
             {
+                AddPrecondition(GoapKey.dangercombat, false);
                 navigation.OnAnyPointReached += Navigation_OnWayPointReached;
             }
             else
             {
+                AddPrecondition(GoapKey.incombat, false);
                 AddPrecondition(GoapKey.producedcorpse, false);
                 AddPrecondition(GoapKey.consumecorpse, false);
             }

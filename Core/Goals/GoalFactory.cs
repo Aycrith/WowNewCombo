@@ -61,7 +61,7 @@ namespace Core
             WalkToCorpseGoal walkToCorpseAction = new(logger, input, wait, addonReader, corpseNav, stopMoving);
 
             CombatGoal genericCombat = new(logger, input, wait, addonReader, stopMoving, classConfig, castingHandler, mountHandler);
-            ApproachTargetGoal approachTarget = new(logger, input, wait, addonReader.PlayerReader, stopMoving, mountHandler);
+            ApproachTargetGoal approachTarget = new(logger, input, wait, addonReader.PlayerReader, stopMoving, mountHandler, combatUtil);
 
             availableActions.Clear();
 
@@ -183,7 +183,7 @@ namespace Core
                     availableActions.Add(new TargetPetTarget(input, addonReader.PlayerReader));
                 }
 
-                availableActions.Add(new PullTargetGoal(logger, input, wait, addonReader, blacklist, stopMoving, castingHandler, mountHandler, stuckDetector, classConfig));
+                availableActions.Add(new PullTargetGoal(logger, input, wait, addonReader, blacklist, stopMoving, castingHandler, mountHandler, stuckDetector, classConfig, combatUtil));
 
                 if (classConfig.Parallel.Sequence.Count > 0)
                 {

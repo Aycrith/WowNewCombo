@@ -7,6 +7,7 @@ namespace Core.GOAP
         hastarget = 10,
         dangercombat = 11,
         targetisalive = 20,
+        targettargetsus = 21,
         incombat = 30,
         pethastarget = 31,
         withinpullrange = 40,
@@ -43,6 +44,9 @@ namespace Core.GOAP
 
             { new(GoapKey.targetisalive, true), "Target alive" },
             { new(GoapKey.targetisalive, false), "Target dead" },
+
+            { new(GoapKey.targettargetsus, true), "Targets us" },
+            { new(GoapKey.targettargetsus, false), "!Targets us" },
 
             { new(GoapKey.incombat, true), "Combat" },
             { new(GoapKey.incombat, false), "!Combat" },

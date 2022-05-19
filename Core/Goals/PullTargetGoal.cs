@@ -22,6 +22,7 @@ namespace Core.Goals
 
         private readonly CastingHandler castingHandler;
         private readonly MountHandler mountHandler;
+        private readonly CombatUtil combatUtil;
 
         private readonly Random random = new();
 
@@ -33,7 +34,7 @@ namespace Core.Goals
 
         private bool? requiresNpcNameFinder;
 
-        public PullTargetGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, IBlacklist blacklist, StopMoving stopMoving, CastingHandler castingHandler, MountHandler mountHandler, StuckDetector stuckDetector, ClassConfiguration classConfiguration)
+        public PullTargetGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, IBlacklist blacklist, StopMoving stopMoving, CastingHandler castingHandler, MountHandler mountHandler, StuckDetector stuckDetector, ClassConfiguration classConfiguration, CombatUtil combatUtil)
         {
             this.logger = logger;
             this.input = input;
@@ -47,6 +48,7 @@ namespace Core.Goals
 
             this.stuckDetector = stuckDetector;
             this.classConfiguration = classConfiguration;
+            this.combatUtil = combatUtil;
 
             pullPrevention = () => blacklist.IsTargetBlacklisted() &&
                 playerReader.TargetTarget is not
@@ -67,6 +69,8 @@ namespace Core.Goals
 
         public override ValueTask OnEnter()
         {
+            combatUtil.Update();
+
             if (mountHandler.IsMounted())
             {
                 mountHandler.Dismount();
@@ -123,6 +127,8 @@ namespace Core.Goals
 
         public override ValueTask PerformAction()
         {
+            combatUtil.Update();
+
             if (SecondsSincePullStarted > 10)
             {
                 input.ClearTarget();
@@ -139,23 +145,14 @@ namespace Core.Goals
             {
                 if (HasPickedUpAnAdd)
                 {
-                    Log($"Combat={playerReader.Bits.PlayerInCombat}, targeting me={playerReader.Bits.TargetOfTargetIsPlayer}");
-                    Log($"Add on approach");
+                    Log($"Add on approach! Combat={playerReader.Bits.PlayerInCombat}, Targets me={playerReader.Bits.TargetOfTargetIsPlayerOrPet}");
 
                     stopMoving.Stop();
-
-                    input.NearestTarget();
-                    wait.Update();
-
-                    if (playerReader.HasTarget && playerReader.Bits.TargetInCombat &&
-                        playerReader.TargetTarget == TargetTargetEnum.Me)
+                    stopMoving.Stop();
+                    if (combatUtil.AquiredTarget())
                     {
-                        return ValueTask.CompletedTask;
+                        pullStart = DateTime.UtcNow;
                     }
-
-                    input.ClearTarget();
-                    wait.Update();
-                    pullStart = DateTime.UtcNow;
 
                     return ValueTask.CompletedTask;
                 }
@@ -180,13 +177,9 @@ namespace Core.Goals
             return ValueTask.CompletedTask;
         }
 
-        protected bool HasPickedUpAnAdd
-        {
-            get
-            {
-                return this.playerReader.Bits.PlayerInCombat && !this.playerReader.Bits.TargetOfTargetIsPlayer && this.playerReader.HealthPercent > 98;
-            }
-        }
+        protected bool HasPickedUpAnAdd =>
+            playerReader.Bits.PlayerInCombat &&
+            !playerReader.Bits.TargetOfTargetIsPlayerOrPet;
 
         protected void WaitForWithinMeleeRange(KeyAction item, bool lastCastSuccess)
         {

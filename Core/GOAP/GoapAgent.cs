@@ -81,6 +81,10 @@ namespace Core.GOAP
                 { GoapKey.dangercombat, addonReader.PlayerReader.Bits.PlayerInCombat && addonReader.CombatCreatureCount > 0 },
                 { GoapKey.pethastarget, playerReader.PetHasTarget },
                 { GoapKey.targetisalive, playerReader.HasTarget && !playerReader.Bits.TargetIsDead },
+                { GoapKey.targettargetsus, playerReader.TargetTarget is
+                    TargetTargetEnum.Me or
+                    TargetTargetEnum.Pet or
+                    TargetTargetEnum.PartyOrPet },
                 { GoapKey.incombat, playerReader.Bits.PlayerInCombat },
                 { GoapKey.withinpullrange, playerReader.WithInPullRange },
                 { GoapKey.incombatrange, playerReader.WithInCombatRange },
