@@ -3,6 +3,8 @@ local DataToColor = unpack(Load)
 
 DataToColor.C.unitPlayer = "player"
 DataToColor.C.unitTarget = "target"
+DataToColor.C.unitParty = "party"
+DataToColor.C.unitRaid = "raid"
 DataToColor.C.unitPet = "pet"
 DataToColor.C.unitPetTarget = "pettarget"
 DataToColor.C.unitTargetTarget = "targettarget"

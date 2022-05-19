@@ -37,7 +37,7 @@ function DataToColor:Base2Converter()
     DataToColor:MakeIndexBase2(DataToColor:petHappy(), 12) +
     DataToColor:MakeIndexBase2(DataToColor:hasAmmo(), 13) +
     DataToColor:MakeIndexBase2(DataToColor:playerCombatStatus(), 14) +
-    DataToColor:MakeIndexBase2(DataToColor:IsTargetOfTargetPlayer(), 15) +
+    DataToColor:MakeIndexBase2(DataToColor:IsTargetOfTargetPlayerOrPet(), 15) +
     DataToColor:MakeIndexBase2(DataToColor:IsAutoRepeatSpellOn(DataToColor.C.Spell.AutoShotId), 16) +
     DataToColor:MakeIndexBase2(DataToColor:hasTarget(), 17) +
     DataToColor:MakeIndexBase2(DataToColor:IsPlayerMounted(), 18) +
@@ -562,18 +562,38 @@ function DataToColor:IsPlayerMounted()
     return IsMounted() and 1 or 0
 end
 
-function DataToColor:IsTargetOfTargetPlayerAsNumber()
+function DataToColor:TargetOfTargetAsNumber()
     if not(UnitName(DataToColor.C.unitTargetTarget)) then return 2 end -- target has no target
     if DataToColor.C.CHARACTER_NAME == UnitName(DataToColor.C.unitTarget) then return 0 end -- targeting self
     if UnitName(DataToColor.C.unitPet) == UnitName(DataToColor.C.unitTargetTarget) then return 4 end -- targetting my pet
     if DataToColor.C.CHARACTER_NAME == UnitName(DataToColor.C.unitTargetTarget) then return 1 end -- targetting me
     if UnitName(DataToColor.C.unitPet) == UnitName(DataToColor.C.unitTarget) and UnitName(DataToColor.C.unitTargetTarget) ~= nil then return 5 end
+    if IsInGroup() and DataToColor:TargetTargetsPartyOrPet() then return 6 end
     return 3
 end
 
+function DataToColor:TargetTargetsPartyOrPet()
+    for i=1, 4 do
+        local unit = DataToColor.C.unitParty..i
+        if UnitExists(unit) == false then
+            return false
+        end
+        local name = UnitName(unit)
+        if name == UnitName(DataToColor.C.unitTargetTarget) then return true end
+
+        unit = DataToColor.C.unitParty..i..DataToColor.C.unitPet
+        if UnitExists(unit) == false then
+            return false
+        end
+        name = UnitName(unit)
+        if name == UnitName(DataToColor.C.unitTargetTarget) then return true end
+    end
+    return false
+end
+
 -- Returns true if target of our target is us
-function DataToColor:IsTargetOfTargetPlayer()
-    local x = DataToColor:IsTargetOfTargetPlayerAsNumber()
+function DataToColor:IsTargetOfTargetPlayerOrPet()
+    local x = DataToColor:TargetOfTargetAsNumber()
     if x==1 or x==4 then return 1 else return 0 end
 end
 

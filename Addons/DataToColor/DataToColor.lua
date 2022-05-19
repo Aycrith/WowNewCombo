@@ -644,7 +644,7 @@ function DataToColor:CreateFrames(n)
 
             MakePixelSquareArrI(DataToColor:CastingInfoSpellId(DataToColor.C.unitTarget), 58) -- Spell being cast by target
 
-            MakePixelSquareArrI(DataToColor:IsTargetOfTargetPlayerAsNumber(),59) -- IsTargetOfTargetPlayerAsNumber
+            MakePixelSquareArrI(DataToColor:TargetOfTargetAsNumber(),59) -- IsTargetOfTargetPlayerAsNumber
 
             MakePixelSquareArrI(DataToColor.lastAutoShot, 60)
             MakePixelSquareArrI(DataToColor.lastMainHandMeleeSwing, 61)
