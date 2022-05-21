@@ -13,8 +13,9 @@ namespace Core
         private readonly int cItemBits;
 
         private readonly SquareReader reader;
-        private readonly ItemDB itemDb;
         private readonly EquipmentReader equipmentReader;
+
+        public ItemDB ItemDB { get; private set; }
 
         private DateTime lastEvent;
 
@@ -29,7 +30,7 @@ namespace Core
         public BagReader(SquareReader reader, ItemDB itemDb, EquipmentReader equipmentReader, int cbagMeta, int citemNumCount, int cItemId, int cItemBits)
         {
             this.reader = reader;
-            this.itemDb = itemDb;
+            this.ItemDB = itemDb;
             this.equipmentReader = equipmentReader;
 
             this.equipmentReader.OnEquipmentChanged -= OnEquipmentChanged;
@@ -158,7 +159,7 @@ namespace Core
 
                 if (addItem)
                 {
-                    if (itemDb.Items.TryGetValue(itemId, out var item))
+                    if (ItemDB.Items.TryGetValue(itemId, out var item))
                     {
                         BagItems.Add(new BagItem(bag, slot, itemId, itemCount, item, isSoulbound));
                         hasChanged = true;
@@ -198,14 +199,14 @@ namespace Core
 
         public int HighestQuantityOfWaterId()
         {
-            return itemDb.WaterIds.
+            return ItemDB.WaterIds.
                 OrderByDescending(c => ItemCount(c)).
                 FirstOrDefault();
         }
 
         public int HighestQuantityOfFoodId()
         {
-            return itemDb.FoodIds.
+            return ItemDB.FoodIds.
                 OrderByDescending(c => ItemCount(c)).
                 FirstOrDefault();
         }
@@ -225,7 +226,7 @@ namespace Core
 
         private void UpdateBagName(int index)
         {
-            if (itemDb.Items.TryGetValue(Bags[index].ItemId, out var item))
+            if (ItemDB.Items.TryGetValue(Bags[index].ItemId, out var item))
             {
                 Bags[index].Name = item.Name;
             }

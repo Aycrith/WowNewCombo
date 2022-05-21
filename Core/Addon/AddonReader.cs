@@ -85,7 +85,7 @@ namespace Core
 
             this.CreatureHistory = new CreatureHistory(squareReader, 64, 65, 66, 67);
 
-            this.EquipmentReader = new EquipmentReader(squareReader, 24, 25);
+            this.EquipmentReader = new EquipmentReader(squareReader, ItemDb, 24, 25);
             this.BagReader = new BagReader(squareReader, ItemDb, EquipmentReader, 20, 21, 22, 23);
 
             this.ActionBarCostReader = new ActionBarCostReader(squareReader, 36);

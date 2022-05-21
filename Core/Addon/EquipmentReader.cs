@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using Core.Database;
+using SharedLib;
 
 namespace Core
 {
@@ -13,15 +16,15 @@ namespace Core
         Waist = 6,
         Legs = 7,
         Feet = 8,
-        Wrist = 9,
+        Wrists = 9,
         Hands = 10,
         Finger_1 = 11,
         Finger_2 = 12,
         Trinket_1 = 13,
         Trinket_2 = 14,
         Back = 15,
-        Main_hand = 16,
-        Off_hand = 17,
+        Mainhand = 16,
+        Offhand = 17,
         Ranged = 18,
         Tabard = 19,
         Bag_0 = 20,
@@ -35,19 +38,26 @@ namespace Core
         private const int MAX_EQUIPMENT_COUNT = 24;
 
         private readonly SquareReader reader;
+        private readonly ItemDB itemDB;
         private readonly int cItemId;
         private readonly int cSlotNum;
 
-        private readonly int[] equipment = new int[MAX_EQUIPMENT_COUNT];
+        private readonly int[] equipmentIds = new int[MAX_EQUIPMENT_COUNT];
+        public Item[] Items { get; private set; } = new Item[MAX_EQUIPMENT_COUNT];
 
         public event EventHandler<(int, int)>? OnEquipmentChanged;
 
-        public EquipmentReader(SquareReader reader, int cSlotNum, int cItemId)
+        public EquipmentReader(SquareReader reader, ItemDB itemDB, int cSlotNum, int cItemId)
         {
             this.reader = reader;
-
+            this.itemDB = itemDB;
             this.cSlotNum = cSlotNum;
             this.cItemId = cItemId;
+
+            for (int i = 0; i < MAX_EQUIPMENT_COUNT; i++)
+            {
+                Items[i] = ItemDB.EmptyItem;
+            }
         }
 
         public void Read()
@@ -56,30 +66,41 @@ namespace Core
             if (index < MAX_EQUIPMENT_COUNT && index >= 0)
             {
                 int itemId = reader.GetInt(cItemId);
-                bool changed = equipment[index] != itemId;
+                bool changed = equipmentIds[index] != itemId;
 
-                equipment[index] = itemId;
+                equipmentIds[index] = itemId;
 
                 if (changed)
+                {
+                    if (itemId == 0)
+                    {
+                        Items[index] = ItemDB.EmptyItem;
+                    }
+                    else if (itemDB.Items.TryGetValue(itemId, out Item item))
+                    {
+                        Items[index] = item;
+                    }
+
                     OnEquipmentChanged?.Invoke(this, (index, itemId));
+                }
             }
         }
 
         public string ToStringList()
         {
-            return string.Join(", ", equipment);
+            return string.Join(", ", equipmentIds);
         }
 
         public bool HasRanged()
         {
-            return equipment[(int)InventorySlotId.Ranged] != 0;
+            return equipmentIds[(int)InventorySlotId.Ranged] != 0;
         }
 
         public bool HasItem(int itemId)
         {
-            for (int i = 0; i < equipment.Length; i++)
+            for (int i = 0; i < equipmentIds.Length; i++)
             {
-                if (equipment[i] == itemId)
+                if (equipmentIds[i] == itemId)
                     return true;
             }
 
@@ -88,7 +109,7 @@ namespace Core
 
         public int GetId(int slot)
         {
-            return (int)equipment[slot];
+            return equipmentIds[slot];
         }
     }
 }
