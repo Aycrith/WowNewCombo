@@ -16,6 +16,9 @@ public class AddonConfig
     public string Title { get; set; }
     public string Command { get; set; }
 
+    [JsonIgnore]
+    public string CommandFlush => Command + "flush";
+
     public bool IsDefault()
     {
         return string.IsNullOrEmpty(InstallPath) ||
