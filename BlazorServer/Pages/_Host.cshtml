@@ -51,15 +51,6 @@
         <a href="" class="reload">Reload</a>
         <a class="dismiss">🗙</a>
     </div>
-    <style>
-        #tooltip {
-            background: cornsilk;
-            border: 1px solid black;
-            border-radius: 5px;
-            padding: 5px;
-            color: black;
-        }
-    </style>
 
     <script src="_framework/blazor.server.js"></script>
 
@@ -116,13 +107,13 @@
                 .attr("class", "row");
 
             var column = row.selectAll(".square")
-                .data(function (d) { return d; })
+                .data(function(d) { return d; })
                 .enter().append("rect")
                 .attr("class", "square")
-                .attr("x", function (d) { return d.x; })
-                .attr("y", function (d) { return d.y; })
-                .attr("width", function (d) { return d.width; })
-                .attr("height", function (d) { return d.height; })
+                .attr("x", function(d) { return d.x; })
+                .attr("y", function(d) { return d.y; })
+                .attr("width", function(d) { return d.width; })
+                .attr("height", function(d) { return d.height; })
                 .style("fill", "#444")
                 .style("stroke-width", "0.5px")
                 .style("stroke", "#666");

@@ -224,3 +224,11 @@ app {
 .bg-majestic {
     background-color: #620693;
 }
+
+#tooltip {
+    background: cornsilk;
+    border: 1px solid black;
+    border-radius: 5px;
+    padding: 5px;
+    color: black;
+}
