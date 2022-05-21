@@ -3,17 +3,21 @@
 @inject Core.IAddonReader addonReader
 @implements IDisposable
 
+@using SharedLib
+
 <div class="card" style="margin-top: 10px">
     <div class="card-header">
         Goals -> @addonReader.PlayerReader.MinRange - @addonReader.PlayerReader.MaxRange
         | Expand <input type="checkbox" @bind="@Expand" />
+        <ToggleButton />
         <span class="float-right">
-        Cap: @botController.AvgScreenLatency.ToString("0.0")ms | 
-        Npc: @botController.AvgNPCLatency.ToString("0.0")ms | 
-        Bot: @addonReader.AvgUpdateLatency.ToString("0.0")ms</span>
+            Cap: @botController.AvgScreenLatency.ToString("0.0")ms |
+            Npc: @botController.AvgNPCLatency.ToString("0.0")ms |
+            Bot: @addonReader.AvgUpdateLatency.ToString("0.0")ms
+        </span>
     </div>
 
-    @if(ShowPlan && botController.GoapAgent != null && botController.GoapAgent.Plan.Count > 0)
+    @if (ShowPlan && botController.GoapAgent != null && botController.GoapAgent.Plan.Count > 0)
     {
         <div class="card-body">
             <table class="table table-sm table-striped">
@@ -37,7 +41,6 @@
     }
 </div>
 
-@using SharedLib; 
 @code {
 
     [Parameter]
@@ -50,11 +53,7 @@
 
     protected override void OnInitialized()
     {
-        if (DataFrameConfiguration.Exists())
-        {
-            addonReader.AddonDataChanged -= OnAddonDataChanged;
-            addonReader.AddonDataChanged += OnAddonDataChanged;
-        }
+        addonReader.AddonDataChanged += OnAddonDataChanged;
     }
 
     public void Dispose()
