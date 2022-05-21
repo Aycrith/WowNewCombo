@@ -9,7 +9,7 @@
     <div class="card-header">
         Goals -> @addonReader.PlayerReader.MinRange - @addonReader.PlayerReader.MaxRange
         | Expand <input type="checkbox" @bind="@Expand" />
-        <ToggleButton />
+        <ToggleButton Disable="@(botController.ClassConfig?.Mode == Mode.AttendedGather)" />
         <span class="float-right">
             Cap: @botController.AvgScreenLatency.ToString("0.0")ms |
             Npc: @botController.AvgNPCLatency.ToString("0.0")ms |
