@@ -1,45 +1,30 @@
-﻿@using Core
-@using SharedLib
-@inject Core.IBotController botController
+﻿@inject Core.IBotController botController
 @inject Core.IAddonReader addonReader
 @implements IDisposable
 
-<button class="btn btn-sm btn-primary" @onclick="ToggleBot" disabled="@(disableButton ? "disabled" : null)">
-@if (!botController.IsBotActive)
-{
-    <span>Start Bot</span>
-}
-else
-{
-    <span>Stop Bot</span>
-}
+<button class="btn btn-sm btn-primary" @onclick="ToggleBot" disabled="@(DisableButton)">
+    <span>@(botController.IsBotActive ? "Stop Bot" : "Start Bot")</span>
 </button>
 
 @code {
 
-    private bool disableButton;
+    private bool DisableButton { get; set; }
 
     protected override void OnInitialized()
     {
-        if (DataFrameConfiguration.Exists())
-        {
-            ValidateButton();
+        ValidateButton();
 
-            botController.ProfileLoaded -= OnProfileLoaded;
-            botController.ProfileLoaded += OnProfileLoaded;
-
-            addonReader.AddonDataChanged -= OnAddonDataChanged;
-            addonReader.AddonDataChanged += OnAddonDataChanged;
-        }
+        botController.ProfileLoaded += OnProfileLoaded;
+        botController.StatusChanged += OnStatusChanged;
     }
 
     public void Dispose()
     {
-        addonReader.AddonDataChanged -= OnAddonDataChanged;
+        botController.StatusChanged -= OnStatusChanged;
         botController.ProfileLoaded -= OnProfileLoaded;
     }
 
-    private void OnAddonDataChanged()
+    private void OnStatusChanged()
     {
         base.InvokeAsync(StateHasChanged);
     }
@@ -52,10 +37,11 @@ else
     private void OnProfileLoaded()
     {
         ValidateButton();
+        OnStatusChanged();
     }
 
     private void ValidateButton()
     {
-        disableButton = string.IsNullOrEmpty(botController.SelectedClassFilename);
+        DisableButton = string.IsNullOrEmpty(botController.SelectedClassFilename);
     }
 }

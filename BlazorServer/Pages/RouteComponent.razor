@@ -1,14 +1,16 @@
-﻿@inject Core.IAddonReader addonReader
-@inject Core.IBotController botController
-@inject IJSRuntime JSRuntime
-
-@implements IDisposable
-
+﻿@using Core
+@using Core.Goals
 @using System.Linq
 @using System.Numerics
 @using System.Timers
 @using System.Threading.Tasks
 @using SharedLib
+
+@inject IAddonReader addonReader
+@inject IBotController botController
+@inject IJSRuntime JSRuntime
+
+@implements IDisposable
 
 <div class="card">
     <div class="card-header">
@@ -31,8 +33,7 @@
                 <g class="group2">
                     @{
                         var colour = addonReader.PlayerReader.Bits.PlayerInCombat ? "red" : "orange";
-
-                        if (botController.GoapAgent?.CurrentGoal is Core.Goals.FollowRouteGoal)
+                        if (botController.GoapAgent?.CurrentGoal is FollowRouteGoal)
                         {
                             colour = "blue";
                         }
@@ -113,21 +114,24 @@
 
     protected override void OnInitialized()
     {
-        botController.ProfileLoaded -= OnProfileLoaded;
         botController.ProfileLoaded += OnProfileLoaded;
-
-        addonReader.AddonDataChanged -= OnAddonDataChanged;
         addonReader.AddonDataChanged += OnAddonDataChanged;
-
-        addonReader.ZoneChanged -= OnZoneChanged;
         addonReader.ZoneChanged += OnZoneChanged;
-
-        addonReader.PlayerDeath -= OnPlayerDeath;
         addonReader.PlayerDeath += OnPlayerDeath;
 
         UpdateZoneName();
         UpdateDeaths();
         UpdateSymbol();
+    }
+
+    public void Dispose()
+    {
+        refreshTimer.Dispose();
+
+        botController.ProfileLoaded -= OnProfileLoaded;
+        addonReader.AddonDataChanged -= OnAddonDataChanged;
+        addonReader.ZoneChanged -= OnZoneChanged;
+        addonReader.PlayerDeath -= OnPlayerDeath;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -138,33 +142,21 @@
         }
     }
 
-    public void Dispose()
-    {
-        refreshTimer?.Dispose();
-
-        botController.ProfileLoaded -= OnProfileLoaded;
-
-        addonReader.AddonDataChanged -= OnAddonDataChanged;
-        addonReader.ZoneChanged -= OnZoneChanged;
-        addonReader.PlayerDeath -= OnPlayerDeath;
-    }
-
-
     private void Update()
     {
-        if (botController.RouteInfo != null)
-        {
-            botController.RouteInfo.SetMargin(margin);
-            botController.RouteInfo.SetCanvasSize(Size);
+        if (botController.RouteInfo == null) return;
 
-            RefreshPathMarkup();
-        }
+        botController.RouteInfo.SetMargin(margin);
+        botController.RouteInfo.SetCanvasSize(Size);
+
+        RefreshPathMarkup();
     }
 
 
     private void OnTimerTick(object? s, ElapsedEventArgs e)
     {
         if (botController.RouteInfo == null) return;
+
         botController.RouteInfo.CalculatePointToGrid();
         RefreshPathMarkup();
     }
@@ -199,7 +191,8 @@
 
     private void RefreshPathMarkup()
     {
-        if (botController.RouteInfo == null) { return; }
+        if (botController.RouteInfo == null) return;
+
         var routeinfo = botController.RouteInfo;
 
         var paths = routeinfo.PathPoints;
@@ -207,7 +200,7 @@
         this.PathPoints = new MarkupString(routeinfo.RenderPathPoints(paths));
 
         var waypoints = routeinfo.RouteToWaypoint;
-        if(waypoints != null)
+        if (waypoints != null)
         {
             var waylist = waypoints.ToList();
             this.RouteToWaypointLines = new MarkupString(routeinfo.RenderPathLines(waylist));
@@ -228,7 +221,6 @@
             refreshTimer.Interval = 1000;
             refreshTimer.Enabled = true;
 
-            refreshTimer.Elapsed -= OnTimerTick;
             refreshTimer.Elapsed += OnTimerTick;
 
             refreshTimer.Start();
@@ -239,12 +231,11 @@
 
     private void UpdateSymbol()
     {
-        if (botController.ClassConfig != null)
-        {
-            routeSymbol = botController.ClassConfig.PathThereAndBack ? 
-            new MarkupString("<span style=\"font-size: 125%;\">⥹</span>") : 
-            new MarkupString("<span style=\"font-size: 125%;\">⟳</span>");
-        }
+        if (botController.ClassConfig == null) return;
+
+        routeSymbol = botController.ClassConfig.PathThereAndBack ?
+        new MarkupString("<span style=\"font-size: 125%;\">⥹</span>"):
+        new MarkupString("<span style=\"font-size: 125%;\">⟳</span>");
     }
 
     private void UpdateZoneName()
@@ -257,13 +248,13 @@
 
     private void UpdateDeaths()
     {
-        if (botController.GoapAgent != null)
+        if (botController.GoapAgent == null) return;
+
+        var walkToCorpseGoal = botController.GoapAgent.AvailableGoals
+            .FirstOrDefault(a => a.GetType() == typeof(WalkToCorpseGoal)) as WalkToCorpseGoal;
+        if (walkToCorpseGoal != null)
         {
-            var walkToCorpseGoal = botController.GoapAgent.AvailableGoals.FirstOrDefault(a => a.GetType() == typeof(Core.Goals.WalkToCorpseGoal)) as Core.Goals.WalkToCorpseGoal;
-            if (walkToCorpseGoal != null)
-            {
-                deaths = walkToCorpseGoal.Deaths;
-            }
+            deaths = walkToCorpseGoal.Deaths;
         }
     }
 }

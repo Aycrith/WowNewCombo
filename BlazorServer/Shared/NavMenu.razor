@@ -1,10 +1,10 @@
-﻿@inject Core.IBotController botController
-@inject Microsoft.Extensions.Logging.ILogger logger
-
-@implements IDisposable
-
-@using SharedLib
+﻿@using SharedLib
 @using Game
+@using Core
+@inject IBotController botController
+@inject Microsoft.Extensions.Logging.ILogger logger
+@inject AddonConfigurator addonConfigurator
+@implements IDisposable
 
 <div class="top-row pl-4 navbar navbar-dark">
     <button class="sidebar-text-toggler" @onclick="ToggleNavText">
@@ -18,18 +18,17 @@
 
 @if (AddonConfig.Exists() && DataFrameConfiguration.Exists())
 {
-
     <div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
         <ul class="nav flex-column">
             <li class="nav-item px-3">
                 <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                    <span class="oi oi-home" aria-hidden="true"></span> 
+                    <span class="oi oi-home" aria-hidden="true"></span>
                     <span class="@NavMenuTextCssClass">Dashboard</span>
                 </NavLink>
             </li>
             <li class="nav-item px-3 @(HideClassConfig ? "hide" : "")">
                 <NavLink class="nav-link" href="ClassConfigPage">
-                    <span class="oi oi-cog" aria-hidden="true"></span> 
+                    <span class="oi oi-cog" aria-hidden="true"></span>
                     <span class="@NavMenuTextCssClass">Class Configuration</span>
                 </NavLink>
             </li>
@@ -41,41 +40,41 @@
             </li>
             <li class="nav-item px-3">
                 <NavLink class="nav-link" href="Swag">
-                    <span class="oi oi-box" aria-hidden="true"></span> 
+                    <span class="oi oi-box" aria-hidden="true"></span>
                     <span class="@NavMenuTextCssClass">Swag</span>
                 </NavLink>
             </li>
             <li class="nav-item px-3 @(HideClassConfig ? "hide" : "")">
-              <NavLink class="nav-link" href="RecordPath">
-                <span class="oi oi-media-record" aria-hidden="true"></span>
-                <span class="@NavMenuTextCssClass">Path Editor</span>
-              </NavLink>
+                <NavLink class="nav-link" href="RecordPath">
+                    <span class="oi oi-media-record" aria-hidden="true"></span>
+                    <span class="@NavMenuTextCssClass">Path Editor</span>
+                </NavLink>
             </li>
             <li class="nav-item px-3">
-              <NavLink class="nav-link" href="History">
-                <span class="oi oi-header" aria-hidden="true"></span>
-                <span class="@NavMenuTextCssClass">History</span>
-              </NavLink>
+                <NavLink class="nav-link" href="History">
+                    <span class="oi oi-header" aria-hidden="true"></span>
+                    <span class="@NavMenuTextCssClass">History</span>
+                </NavLink>
             </li>
             <li class="nav-item px-3">
-              <NavLink class="nav-link" href="RawPlayerReader">
-                <span class="oi oi-cog" aria-hidden="true"></span>
-                <span class="@NavMenuTextCssClass">Raw Values</span>
-              </NavLink>
+                <NavLink class="nav-link" href="RawPlayerReader">
+                    <span class="oi oi-cog" aria-hidden="true"></span>
+                    <span class="@NavMenuTextCssClass">Raw Values</span>
+                </NavLink>
             </li>
             <li class="nav-item px-3">
-              <NavLink class="nav-link" href="Gather">
-                <span class="oi oi-basket" aria-hidden="true"></span>
-                @if (this.botController.ClassConfig?.Mode == Core.Mode.AttendedGather)
-                {
-                  <span class="@NavMenuTextCssClass">Gather</span>
-                }
-                else
-                {
-                  <s class="@NavMenuTextCssClass">Gather</s>
-                }
+                <NavLink class="nav-link" href="Gather">
+                    <span class="oi oi-basket" aria-hidden="true"></span>
+                    @if (this.botController.ClassConfig?.Mode == Core.Mode.AttendedGather)
+                    {
+                        <span class="@NavMenuTextCssClass">Gather</span>
+                    }
+                    else
+                    {
+                        <s class="@NavMenuTextCssClass">Gather</s>
+                    }
 
-              </NavLink>
+                </NavLink>
             </li>
 
             <li class="nav-item px-3">
@@ -86,7 +85,7 @@
             </li>
             <li class="nav-item px-3">
                 <NavLink class="nav-link" href="FrameConfiguration">
-                    <span class="oi oi-cog" aria-hidden="true"></span> 
+                    <span class="oi oi-cog" aria-hidden="true"></span>
                     <span class="@NavMenuTextCssClass">Frame Config</span>
                 </NavLink>
             </li>
@@ -98,7 +97,7 @@
             </li>
             <li class="nav-item px-3">
                 <NavLink class="nav-link" href="RestartServer">
-                    <span class="oi oi-media-stop" aria-hidden="true"></span> 
+                    <span class="oi oi-media-stop" aria-hidden="true"></span>
                     <span class="@NavMenuTextCssClass">Restart</span>
                 </NavLink>
             </li>
@@ -148,8 +147,6 @@ else
     </div>
 }
 
-
-
 @code {
 
     private bool collapseNavMenu = true;
@@ -164,10 +161,7 @@ else
 
     private bool WoWProcessRunning => WowProcess.Get() != null;
 
-    private bool AddonConfigExists => AddonConfig.Exists() && addonConfigurator != null && addonConfigurator.Installed();
-
-    private AddonConfigurator? addonConfigurator;
-
+    private bool AddonConfigExists => AddonConfig.Exists() && addonConfigurator.Installed();
 
     private void ToggleNavMenu()
     {
@@ -181,30 +175,19 @@ else
 
     protected override void OnInitialized()
     {
-        addonConfigurator = new AddonConfigurator(logger, AddonConfig.Load());
-
-        if (DataFrameConfiguration.Exists())
-        {
-            botController.ProfileLoaded -= OnProfileLoaded;
-            botController.ProfileLoaded += OnProfileLoaded;
-
-            botController.StatusChanged -= OnStatusChanged;
-            botController.StatusChanged += OnStatusChanged;
-        }
+        addonConfigurator.OnChange += OnChanged;
+        botController.ProfileLoaded += OnChanged;
+        botController.StatusChanged += OnChanged;
     }
 
     public void Dispose()
     {
-        botController.ProfileLoaded -= OnProfileLoaded;
-        botController.StatusChanged -= OnStatusChanged;
+        addonConfigurator.OnChange -= OnChanged;
+        botController.ProfileLoaded -= OnChanged;
+        botController.StatusChanged -= OnChanged;
     }
 
-    private void OnProfileLoaded()
-    {
-        base.InvokeAsync(StateHasChanged);
-    }
-
-    private void OnStatusChanged()
+    private void OnChanged()
     {
         base.InvokeAsync(StateHasChanged);
     }

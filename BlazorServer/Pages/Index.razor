@@ -1,29 +1,26 @@
 ﻿@page "/"
 
+@using SharedLib
+
 @inject Microsoft.Extensions.Logging.ILogger logger
 @inject Core.IAddonReader addonReader
 @inject Core.IBotController botController
 @inject IJSRuntime JSRuntime
+@inject AddonConfigurator addonConfigurator
 @implements IDisposable
-@using SharedLib
 
 <div class="container-fluid">
     <div class="row">
-
         @if (AddonConfig.Exists() && DataFrameConfiguration.Exists())
         {
-
             <div class="col-sm">
                 <ScreenshotComponent Size="800" Stretch="false" />
-                <table width="100%" style="margin-top: 10px">
+                <table width="100%" style="margin-top: 10px; margin-bottom: 10px;">
                     <tr>
-                        <td valign="top"><div><RouteComponent Size="400" /></div></td>
                         <td valign="top">
-                            <div class="card text-center @(!botController.IsBotActive ? "hide" : "")">
-                                <div class="card-header">
-                                    <ToggleButton/>
-                                </div>
-                            </div>
+                            <RouteComponent Size="400" />
+                        </td>
+                        <td valign="top">
                             <BagChanges />
                         </td>
                     </tr>
@@ -31,16 +28,16 @@
             </div>
 
             <div class="col-sm" style="margin-left:10px">
-                @if(updateAvailable)
+                @if (updateAvailable)
                 {
                     <div class="card" style="margin-bottom: 10px">
                         <div class="card-header">
                             <b>New Addon version available!</b>
                             <span class="float-right">
                                 <button class="btn btn-sm btn-success">
-                                <NavLink class="nav-link" href="AddonConfiguration">
-                                    <span style="text-decoration: none;font-weight: bold;color: white;">Update</span>
-                                </NavLink>
+                                    <NavLink class="nav-link" href="AddonConfiguration">
+                                        <span style="text-decoration: none;font-weight: bold;color: white;">Update</span>
+                                    </NavLink>
                                 </button>
                             </span>
                         </div>
@@ -72,22 +69,17 @@
 
     protected override void OnInitialized()
     {
-        if (AddonConfig.Exists() && DataFrameConfiguration.Exists())
-        {
-            addonReader.AddonDataChanged -= OnAddonDataChanged;
-            addonReader.AddonDataChanged += OnAddonDataChanged;
+        botController.StatusChanged += OnStatusChanged;
 
-            AddonConfigurator addonConfigurator = new (logger, AddonConfig.Load());
-            updateAvailable = addonConfigurator.UpdateAvailable();
-        }
+        updateAvailable = addonConfigurator.UpdateAvailable();
     }
 
     public void Dispose()
     {
-        addonReader.AddonDataChanged -= OnAddonDataChanged;
+        botController.StatusChanged -= OnStatusChanged;
     }
 
-    private void OnAddonDataChanged()
+    private void OnStatusChanged()
     {
         base.InvokeAsync(StateHasChanged);
     }
