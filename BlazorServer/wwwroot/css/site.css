@@ -213,6 +213,24 @@ app {
     display: none;
 }
 
+.mat-autocomplete-list {
+    display: block;
+    width: 75%;
+}
+
+.mat-text-field {
+    background-color: #191d21 !important;
+}
+
+.mat-text-field-input, .mdc-text-field__input {
+    color: #d3d3d3 !important;
+}
+
+.mat-text-field, .mdc-text-field, .mdc-text-field--filled, .mdc-ripple-upgraded {
+    display: flex;
+    color: #d3d3d3;
+}
+
 .mat-autocomplete-list-popup {
     background-color: #191d21;
 }
@@ -223,4 +241,12 @@ app {
 
 .bg-majestic {
     background-color: #620693;
+}
+
+#tooltip {
+    background: cornsilk;
+    border: 1px solid black;
+    border-radius: 5px;
+    padding: 5px;
+    color: black;
 }

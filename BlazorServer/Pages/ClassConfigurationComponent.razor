@@ -1,79 +1,83 @@
-﻿@using Core
-@inject Core.IBotController botController
-@inject Core.IAddonReader addonReader
+﻿@using System
+@using Core
+@using SharedLib
+@inject IBotController botController
+@inject IAddonReader addonReader
 @implements IDisposable
 
-@if (classConfig != null)
-{
-    <div class="container">
-        <div class="card">
-            <div class="card-header">
-                Class Configuration
-            </div>
-            <div class="card-body" style="padding-bottom: 0">
-                <table class="table table-bordered">
-                    @foreach (var property in classConfig.GetType().GetProperties())
-                    {
-                        if (property.Name.Contains(nameof(classConfig.ClassName)) ||
-                            property.Name.Contains(nameof(classConfig.PathFilename)) ||
-                            property.Name.Contains(nameof(classConfig.OverridePathFilename))
-                            )
-                            continue;
-                    <tr>         
-                    
-                        @switch (System.Type.GetTypeCode(property.PropertyType))
+<div class="container">
+    <div class="card">
+        <div class="card-header">
+            Class Configuration
+        </div>
+        <div class="card-body" style="padding-bottom: 0">
+            <table class="table table-bordered">
+                @foreach (var property in classConfig.GetType().GetProperties())
+                {
+                    <tr>
+                        @switch (Type.GetTypeCode(property.PropertyType))
                         {
                             case TypeCode.String:
                                 <td>@(property.Name)</td>
                                 <td>
-                                    <input value="@property.GetValue(classConfig)" class="form-control"
-                                           @onchange="c => { property.SetValue(classConfig, c.Value); Update(); }" />
+                                    <input value="@property.GetValue(classConfig)" class="form-control" disabled="@(!editables.Contains(property.Name))"
+                               @onchange="c => { property.SetValue(classConfig, c.Value); Update(); }" />
                                 </td>
                                 break;
 
                             case TypeCode.Int32:
                                 <td>@(property.Name)</td>
                                 <td>
-                                    <input value="@property.GetValue(classConfig)" class="form-control"
-                                           @onchange="c => { int n = System.Convert.ToInt32(c.Value); property.SetValue(classConfig, n); Update(); }" />
+                                    <input value="@property.GetValue(classConfig)" class="form-control" disabled="@(!editables.Contains(property.Name))"
+                               @onchange="c => { property.SetValue(classConfig, Convert.ToInt32(c.Value)); Update(); }" />
                                 </td>
                                 break;
                             case TypeCode.Boolean:
                                 <td>@(property.Name)</td>
                                 <td>
-                                    <input type="checkbox" class="form-control" checked="@(CBool(property.GetValue(classConfig)))"
-                                           @onchange="c => { property.SetValue(classConfig, c.Value); Update(); }" />
+                                    <input type="checkbox" class="form-control" disabled="@(!editables.Contains(property.Name))"
+                               checked="@(CBool(property.GetValue(classConfig)))"
+                               @onchange="c => { property.SetValue(classConfig, c.Value); Update(); }" />
                                 </td>
                                 break;
-                            default: 
+                            default:
                                 <!--<input Text="@value?.ToString()" Disabled="true" />-->
                                 break;
                         }
                     </tr>
-                    }
-                </table>
-            </div>
+                }
+            </table>
         </div>
     </div>
-}
+</div>
 
-@using SharedLib; 
 @code {
 
-    private ClassConfiguration? classConfig;
+    private ClassConfiguration classConfig = null!;
+
+    private HashSet<string> editables = null!;
 
     protected override void OnInitialized()
     {
-        if (DataFrameConfiguration.Exists())
+        RefreshData();
+
+        editables = new()
         {
-            RefreshData();
+            // Int
+            nameof(classConfig.NPCMaxLevels_Above),
+            nameof(classConfig.NPCMaxLevels_Below),
+            // booleans
+            nameof(classConfig.Skin),
+            nameof(classConfig.Loot),
+            nameof(classConfig.UseMount),
+            nameof(classConfig.KeyboardOnly),
+            nameof(classConfig.PathThereAndBack),
+            nameof(classConfig.PathReduceSteps),
+            nameof(classConfig.CheckTargetGivesExp),
+        };
 
-            botController.ProfileLoaded -= OnProfileLoaded;
-            botController.ProfileLoaded += OnProfileLoaded;
-
-            addonReader.AddonDataChanged -= OnAddonDataChanged;
-            addonReader.AddonDataChanged += OnAddonDataChanged;
-        }
+        botController.ProfileLoaded += OnProfileLoaded;
+        addonReader.AddonDataChanged += OnAddonDataChanged;
     }
 
     public void Dispose()
@@ -99,13 +103,12 @@
 
     private void RefreshData()
     {
-        classConfig = botController.ClassConfig;
+        classConfig = botController.ClassConfig!;
     }
 
     private void Update()
     {
-        if(classConfig != null)
-            botController.OverrideClassConfig(classConfig);
+        botController.OverrideClassConfig(classConfig);
     }
 
     private bool CBool(object? o)

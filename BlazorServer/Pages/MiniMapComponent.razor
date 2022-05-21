@@ -1,9 +1,9 @@
 ﻿@using Core
-@using SharedLib;
-@using Game;
+@using SharedLib
+@using Game
 @implements IDisposable
-@inject Core.IBotController botController
-@inject Core.IAddonReader addonReader
+@inject IBotController botController
+@inject IAddonReader addonReader
 
 <div class="card">
     <div class="card-header">
@@ -13,14 +13,14 @@
                     Minimap
                     <span style="float: right">
                         <button class="btn btn-sm @(previewEnabled ? "btn-danger" : "btn-primary")" @onclick="TogglePreview">Preview</button>
-                        <ToggleButton/>
+                        <ToggleButton />
                     </span>
                 </td>
             </tr>
         </table>
     </div>
     <div class="card-body" style="padding: 0 0 0 0; width:@(Size)px; height:@(Size)px">
-        @if(previewEnabled)
+        @if (previewEnabled)
         {
             <img style="width:@(Size)px; height:@(Size)px" src="data:image/png;base64, @WowScreen.ToBase64(botController.WowScreen.MiniMapBitmap, (int)(Size * DownScale))" alt="Red dot" />
         }

@@ -16,6 +16,11 @@
             Update(reader.GetInt(cell));
         }
 
+        public override string ToString()
+        {
+            return string.Empty;
+        }
+
         // All
         public bool Eating => IsBitSet(0);
         public bool Drinking => IsBitSet(1);

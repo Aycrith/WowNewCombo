@@ -1,4 +1,4 @@
-﻿@if (Value != null && Value.Length == 3)
+﻿@if (Value.Length == 3)
 {
     <span class="float-right" style="font-size:small">
         @for (int i = 0; i < 2; i++)
@@ -14,5 +14,5 @@
     [Parameter]
     public int[] Value { get; set; } = new int[3] { 0, 0, 0 };
 
-    private static List<string> images = new List<string> { "money-gold.png", "money-silver.png", "money-copper.png" };
+    private static readonly List<string> images = new() { "money-gold.png", "money-silver.png", "money-copper.png" };
 }

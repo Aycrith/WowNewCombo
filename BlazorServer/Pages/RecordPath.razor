@@ -4,9 +4,9 @@
 @using System.IO
 @using System.Numerics
 @using SharedLib.Extensions
-
-@inject Core.IAddonReader addonReader
-@inject Core.IBotController botController
+@using Core
+@inject IAddonReader addonReader
+@inject IBotController botController
 @inject IJSRuntime JSRuntime
 
 <div class="row">
@@ -23,8 +23,10 @@
         @if (recording || editing)
         {
             <button class="btn btn-success"
-                    disabled="@(routeInfo.PathPoints.Count == 0 ? "disabled" : null)"
-                    @onclick="Save">Save</button>
+                disabled="@(routeInfo.PathPoints.Count == 0 ? "disabled" : null)"
+                @onclick="Save">
+                Save
+            </button>
             <button class="btn btn-danger" @onclick="Clear">Clear</button>
         }
         <div>@message</div>
@@ -63,100 +65,102 @@
                         @this.PreviewPoints
                     </g>
 
-                @if (recording && routeInfo.PathPoints.Count > 0)
-                {
-                    <g>
-                        <circle fill="transparent" stroke="black"
-                            cx='@(routeInfo.ToCanvasPointX(routeInfo.PathPoints.Last().X))'
-                            cy='@(routeInfo.ToCanvasPointY(routeInfo.PathPoints.Last().Y))'
-                            r='@(routeInfo.DistanceToGrid(Distance))' />
-                    </g>
-                }
+                    @if (recording && routeInfo.PathPoints.Count > 0)
+                    {
+                        <g>
+                            <circle fill="transparent" stroke="black"
+                                cx='@(routeInfo.ToCanvasPointX(routeInfo.PathPoints.Last().X))'
+                                cy='@(routeInfo.ToCanvasPointY(routeInfo.PathPoints.Last().Y))'
+                                r='@(routeInfo.DistanceToGrid(Distance))' />
+                        </g>
+                    }
                 </g>
             </svg>
         </div>
     </div>
 
     <div class="col-sm">
-    @if (editing && selectedPoint != default)
-    {
-        <table>
-            <tr>
-                <td>
-                    <h3>&#128308; Selected</h3>
-                </td>
-                <td>
-                @if (selectedPoint != previewPoint)
-                {
-                    <h3>&#128993; Preview</h3>
-                }
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <input type="text" id="posx" class="col-sm-6 form-control" @bind="X" />
-                    <input type="text" id="posy" class="col-sm-6 form-control" @bind="Y" />
-                </td>
-                <td>
-                @if (selectedPoint != previewPoint)
-                {
-                    <input type="text" class="col-sm-6 form-control" disabled="disabled" @bind="selectedPoint.X" />
-                    <input type="text" class="col-sm-6 form-control" disabled="disabled" @bind="selectedPoint.Y" />
-                }
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <hr />
-                    <button class="btn btn-danger" @onclick="RemoveAllSelected">Remove</button>
-                    <hr />
-                    <button class="btn btn-primary"
-                            disabled="@(this.selectedPoint != this.previewPoint ? null : "disabled")"
-                            @onclick="UpdateSelectedWithPreview">Move to preview</button>
-                    <hr />
-                    <button class="btn btn-primary" @onclick="UpdateSelectedWithPlayer">Move to player</button>
-                    <hr />
-                    <button class="btn btn-success" @onclick="InsertPlayerLocationAfterSelected">Insert player location after selected</button>
-                </td>
-                <td>
-                </td>
-            </tr>
-        </table>
-
-        <hr>
-        <button class="btn btn-primary" @onclick="Previous">Previous</button>
-        <button class="btn btn-primary" @onclick="Next">Next</button>
-
-        <div>@error</div>
-        <br />
-    }
-
-    @if (recording)
-    {
-    <table>
-        <tr>
-            <td>
-                Distance between spots =  @Distance
-            </td>
-            <td>
-                <input class="form-control slider" type="range" min="@MIN_DISTANCE" max="@MAX_DISTANCE" @bind="Distance" style="width:300px; margin-left:20px">
-            </td>
-        </tr>
-    </table>
-    }
-
-    @if (recording || editing)
-    {
-        <h3>Available Points</h3>
-        @for (int i = 0; i < routeInfo.PathPoints.Count; i++)
+        @if (editing && selectedPoint != default)
         {
-            var point = routeInfo.PathPoints[i];
-            int index = i;
-            <span class="badge @DisplayBadge(point)" @onclick="() => UpdateSelectedPoint(point, index)">
-                @point.X.ToString("0.00"),@point.Y.ToString("0.00")&nbsp;
-            </span>
+            <table>
+                <tr>
+                    <td>
+                        <h3>&#128308; Selected</h3>
+                    </td>
+                    <td>
+                        @if (selectedPoint != previewPoint)
+                        {
+                            <h3>&#128993; Preview</h3>
+                        }
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <input type="text" id="posx" class="col-sm-6 form-control" @bind="X" />
+                        <input type="text" id="posy" class="col-sm-6 form-control" @bind="Y" />
+                    </td>
+                    <td>
+                        @if (selectedPoint != previewPoint)
+                        {
+                            <input type="text" class="col-sm-6 form-control" disabled="disabled" @bind="selectedPoint.X" />
+                            <input type="text" class="col-sm-6 form-control" disabled="disabled" @bind="selectedPoint.Y" />
+                        }
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <hr />
+                        <button class="btn btn-danger" @onclick="RemoveAllSelected">Remove</button>
+                        <hr />
+                        <button class="btn btn-primary"
+                            disabled="@(this.selectedPoint != this.previewPoint ? null : "disabled")"
+                            @onclick="UpdateSelectedWithPreview">
+                            Move to preview
+                        </button>
+                        <hr />
+                        <button class="btn btn-primary" @onclick="UpdateSelectedWithPlayer">Move to player</button>
+                        <hr />
+                        <button class="btn btn-success" @onclick="InsertPlayerLocationAfterSelected">Insert player location after selected</button>
+                    </td>
+                    <td>
+                    </td>
+                </tr>
+            </table>
+
+            <hr>
+            <button class="btn btn-primary" @onclick="Previous">Previous</button>
+            <button class="btn btn-primary" @onclick="Next">Next</button>
+
+            <div>@error</div>
+            <br />
         }
-    }
+
+        @if (recording)
+        {
+            <table>
+                <tr>
+                    <td>
+                        Distance between spots =  @Distance
+                    </td>
+                    <td>
+                        <input class="form-control slider" type="range" min="@MIN_DISTANCE" max="@MAX_DISTANCE" @bind="Distance" style="width:300px; margin-left:20px">
+                    </td>
+                </tr>
+            </table>
+        }
+
+        @if (recording || editing)
+        {
+            <h3>Available Points</h3>
+            @for (int i = 0; i < routeInfo.PathPoints.Count; i++)
+            {
+                var point = routeInfo.PathPoints[i];
+                int index = i;
+                <span class="badge @DisplayBadge(point)" @onclick="() => UpdateSelectedPoint(point, index)">
+                    @point.X.ToString("0.00"),@point.Y.ToString("0.00")&nbsp;
+                </span>
+            }
+        }
     </div>
 </div>
 
@@ -206,13 +210,12 @@
 
     protected Vector3 lastPlayerPoint;
 
-    private Core.RouteInfo routeInfo = null!;
+    private RouteInfo routeInfo = null!;
 
     protected override void OnInitialized()
     {
         routeInfo = botController.RouteInfo!;
 
-        addonReader.AddonDataChanged -= OnAddonDataChanged;
         addonReader.AddonDataChanged += OnAddonDataChanged;
     }
 
@@ -252,10 +255,10 @@
             var pp = new Vector3(
                 route.ToCanvasPointX(p.X),
                 route.ToCanvasPointY(p.Y),
-                0);
+            0);
 
             await JSRuntime.InvokeVoidAsync("focusAt", JsonConvert.SerializeObject(pp));
-            */     
+            */
         });
     }
 
@@ -328,7 +331,7 @@
     {
         recording = false;
 
-        var filename = $"__Path_{ DateTime.Now.ToString("yyyyMMddHHmmss")}.json";
+        var filename = $"__Path_{DateTime.Now.ToString("yyyyMMddHHmmss")}.json";
         var filepath = Path.Join(botController.DataConfig.Path, filename);
         File.WriteAllText(filepath, JsonConvert.SerializeObject(routeInfo.PathPoints));
         message = $"Saved to: {filepath}";

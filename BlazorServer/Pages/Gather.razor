@@ -12,22 +12,22 @@
 }
 else
 {
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-sm">
-            <MiniMapComponent Size="400" DownScale="0.5f" OnNodeFound="NodeFoundHandler" />
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-sm">
+                <MiniMapComponent Size="400" DownScale="0.5f" OnNodeFound="NodeFoundHandler" />
+            </div>
+            <div class="col-sm">
+                <RouteComponent Size="400" />
+            </div>
+            <div class="col-sm">
+                <audio id="audio_player" controls loop></audio>
+            </div>
         </div>
-        <div class="col-sm">
-            <RouteComponent Size="400" />
-        </div>
-        <div class="col-sm">
-            <audio id="audio_player" controls loop></audio>
+        <div class="row">
+            <LogComponent />
         </div>
     </div>
-    <div class="row">
-        <LogComponent />
-    </div>
-</div>
 }
 
 @code {

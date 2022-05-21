@@ -11,21 +11,24 @@ namespace BlazorServer
     public class AddonConfigurator
     {
         private readonly ILogger logger;
-        private readonly AddonConfig addonConfig;
         private readonly WowProcess wowProcess;
+
+        public AddonConfig Config { get; private set; }
 
         private const string DefaultAddonName = "DataToColor";
         private const string AddonSourcePath = @".\Addons\";
 
-        private string AddonBasePath => Path.Join(addonConfig.InstallPath, "Interface", "AddOns");
+        private string AddonBasePath => Path.Join(Config.InstallPath, "Interface", "AddOns");
 
         private string DefaultAddonPath => Path.Join(AddonBasePath, DefaultAddonName);
-        private string FinalAddonPath => Path.Join(AddonBasePath, addonConfig.Title);
+        private string FinalAddonPath => Path.Join(AddonBasePath, Config.Title);
 
-        public AddonConfigurator(ILogger logger, AddonConfig addonConfig)
+        public event Action? OnChange;
+
+        public AddonConfigurator(ILogger logger)
         {
             this.logger = logger;
-            this.addonConfig = addonConfig;
+            this.Config = AddonConfig.Load();
 
             this.wowProcess = new WowProcess();
         }
@@ -37,50 +40,50 @@ namespace BlazorServer
 
         public bool Validate()
         {
-            if (!Directory.Exists(addonConfig.InstallPath))
+            if (!Directory.Exists(Config.InstallPath))
             {
-                logger.LogError($"{nameof(addonConfig)}.{nameof(addonConfig.InstallPath)} - error - does not exists: '{addonConfig.InstallPath}'");
+                logger.LogError($"{nameof(Config)}.{nameof(Config.InstallPath)} - error - does not exists: '{Config.InstallPath}'");
                 return false;
             }
             else
             {
-                logger.LogInformation($"{nameof(addonConfig)}.{nameof(addonConfig.InstallPath)} - correct: '{addonConfig.InstallPath}'");
+                logger.LogInformation($"{nameof(Config)}.{nameof(Config.InstallPath)} - correct: '{Config.InstallPath}'");
                 if (!Directory.Exists(AddonBasePath))
                 {
-                    logger.LogError($"{nameof(addonConfig)}.{nameof(addonConfig.InstallPath)} - error - unable to locate Interface\\Addons folder: '{addonConfig.InstallPath}'");
+                    logger.LogError($"{nameof(Config)}.{nameof(Config.InstallPath)} - error - unable to locate Interface\\Addons folder: '{Config.InstallPath}'");
                     return false;
                 }
                 else
                 {
-                    logger.LogInformation($"{nameof(addonConfig)}.{nameof(addonConfig.InstallPath)} - correct - Interface\\Addons : '{addonConfig.InstallPath}'");
+                    logger.LogInformation($"{nameof(Config)}.{nameof(Config.InstallPath)} - correct - Interface\\Addons : '{Config.InstallPath}'");
                 }
             }
 
-            if (string.IsNullOrEmpty(addonConfig.Author))
+            if (string.IsNullOrEmpty(Config.Author))
             {
-                logger.LogError($"{nameof(addonConfig)}.{nameof(addonConfig.Author)} - error - cannot be empty: '{addonConfig.Author}'");
+                logger.LogError($"{nameof(Config)}.{nameof(Config.Author)} - error - cannot be empty: '{Config.Author}'");
                 return false;
             }
 
-            if (!string.IsNullOrEmpty(addonConfig.Title))
+            if (!string.IsNullOrEmpty(Config.Title))
             {
                 // this will appear in the lua code so
                 // special character not allowed
                 // also numbers not allowed
-                addonConfig.Title = Regex.Replace(addonConfig.Title, @"[^\u0000-\u007F]+", string.Empty);
-                addonConfig.Title = new string(addonConfig.Title.Where(char.IsLetter).ToArray());
-                addonConfig.Title = addonConfig.Title.Trim();
-                addonConfig.Title = addonConfig.Title.Replace(" ", "");
+                Config.Title = Regex.Replace(Config.Title, @"[^\u0000-\u007F]+", string.Empty);
+                Config.Title = new string(Config.Title.Where(char.IsLetter).ToArray());
+                Config.Title = Config.Title.Trim();
+                Config.Title = Config.Title.Replace(" ", "");
 
-                if (addonConfig.Title.Length == 0)
+                if (Config.Title.Length == 0)
                 {
-                    logger.LogError($"{nameof(addonConfig)}.{nameof(addonConfig.Title)} - error - use letters only: '{addonConfig.Title}'");
+                    logger.LogError($"{nameof(Config)}.{nameof(Config.Title)} - error - use letters only: '{Config.Title}'");
                     return false;
                 }
             }
             else
             {
-                logger.LogError($"{nameof(addonConfig)}.{nameof(addonConfig.Title)} - error - cannot be empty: '{addonConfig.Title}'");
+                logger.LogError($"{nameof(Config)}.{nameof(Config.Title)} - error - cannot be empty: '{Config.Title}'");
                 return false;
             }
 
@@ -112,7 +115,7 @@ namespace BlazorServer
                 Directory.Delete(DefaultAddonPath, true);
             }
 
-            if (!string.IsNullOrEmpty(addonConfig.Title) && Directory.Exists(FinalAddonPath))
+            if (!string.IsNullOrEmpty(Config.Title) && Directory.Exists(FinalAddonPath))
             {
                 logger.LogInformation($"{nameof(AddonConfigurator)}.{nameof(DeleteAddon)} -> Unique Addon Exists");
                 Directory.Delete(FinalAddonPath, true);
@@ -150,7 +153,7 @@ namespace BlazorServer
 
         private void MakeUnique()
         {
-            BulkRename(FinalAddonPath, DefaultAddonName, addonConfig.Title);
+            BulkRename(FinalAddonPath, DefaultAddonName, Config.Title);
             EditToc();
             EditMainLua();
             EditModulesLua();
@@ -188,26 +191,26 @@ namespace BlazorServer
 
         private void EditToc()
         {
-            string tocPath = Path.Join(FinalAddonPath, addonConfig.Title + ".toc");
+            string tocPath = Path.Join(FinalAddonPath, Config.Title + ".toc");
             string text = File.ReadAllText(tocPath);
-            text = text.Replace(DefaultAddonName, addonConfig.Title);
+            text = text.Replace(DefaultAddonName, Config.Title);
 
             // edit author
-            text = text.Replace("## Author: FreeHongKongMMO", "## Author: " + addonConfig.Author);
+            text = text.Replace("## Author: FreeHongKongMMO", "## Author: " + Config.Author);
 
             File.WriteAllText(tocPath, text);
         }
 
         private void EditMainLua()
         {
-            string mainLuaPath = Path.Join(FinalAddonPath, addonConfig.Title + ".lua");
+            string mainLuaPath = Path.Join(FinalAddonPath, Config.Title + ".lua");
             string text = File.ReadAllText(mainLuaPath);
-            text = text.Replace(DefaultAddonName, addonConfig.Title);
+            text = text.Replace(DefaultAddonName, Config.Title);
 
             //edit slash command
-            addonConfig.Command = addonConfig.Title.Trim().ToLower();
-            text = text.Replace("dc", addonConfig.Command);
-            text = text.Replace("DC", addonConfig.Command);
+            Config.Command = Config.Title.Trim().ToLower();
+            text = text.Replace("dc", Config.Command);
+            text = text.Replace("DC", Config.Command);
 
             File.WriteAllText(mainLuaPath, text);
         }
@@ -221,7 +224,7 @@ namespace BlazorServer
                 {
                     string path = f.FullName;
                     string text = File.ReadAllText(path);
-                    text = text.Replace(DefaultAddonName, addonConfig.Title);
+                    text = text.Replace(DefaultAddonName, Config.Title);
 
                     File.WriteAllText(path, text);
                 }
@@ -232,11 +235,15 @@ namespace BlazorServer
         {
             DeleteAddon();
             AddonConfig.Delete();
+
+            OnChange?.Invoke();
         }
 
         public void Save()
         {
-            addonConfig.Save();
+            Config.Save();
+
+            OnChange?.Invoke();
         }
 
 
@@ -246,15 +253,15 @@ namespace BlazorServer
         {
             if (wowProcess.WarcraftProcess != null)
             {
-                addonConfig.InstallPath = ExecutablePath.Get(wowProcess.WarcraftProcess);
-                if (!string.IsNullOrEmpty(addonConfig.InstallPath))
+                Config.InstallPath = ExecutablePath.Get(wowProcess.WarcraftProcess);
+                if (!string.IsNullOrEmpty(Config.InstallPath))
                 {
-                    logger.LogInformation($"{nameof(addonConfig)}.{nameof(addonConfig.InstallPath)} - found running instance: '{addonConfig.InstallPath}'");
+                    logger.LogInformation($"{nameof(Config)}.{nameof(Config.InstallPath)} - found running instance: '{Config.InstallPath}'");
                     return;
                 }
             }
 
-            logger.LogError($"{nameof(addonConfig)}.{nameof(addonConfig.InstallPath)} - game not running");
+            logger.LogError($"{nameof(Config)}.{nameof(Config.InstallPath)} - game not running");
         }
 
         #endregion
@@ -297,7 +304,7 @@ namespace BlazorServer
 
         public bool UpdateAvailable()
         {
-            if (addonConfig.IsDefault())
+            if (Config.IsDefault())
                 return false;
 
             Version? repo = GetRepoVerion();
@@ -329,7 +336,7 @@ namespace BlazorServer
 
         public Version? GetInstalledVersion()
         {
-            return GetVersion(FinalAddonPath, addonConfig.Title);
+            return GetVersion(FinalAddonPath, Config.Title);
         }
 
         private static Version? GetVersion(string path, string fileName)

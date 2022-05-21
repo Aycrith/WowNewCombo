@@ -60,22 +60,23 @@ namespace BlazorServer
             wowScreen.GetRectangle(out var rect);
             wowScreen.Dispose();
 
-            var addonConfig = AddonConfig.Load();
-            var addonConfigurator = new AddonConfigurator(logger, addonConfig);
+            var addonConfigurator = new AddonConfigurator(logger);
 
-            if (!addonConfig.IsDefault() && !addonConfigurator.Installed())
+            if (!addonConfigurator.Config.IsDefault() && !addonConfigurator.Installed())
             {
                 // At this point the webpage never loads so fallback to configuration page
                 AddonConfig.Delete();
                 DataFrameConfiguration.RemoveConfiguration();
             }
 
-            if(DataFrameConfiguration.Exists() && 
+            if (DataFrameConfiguration.Exists() &&
                 !DataFrameConfiguration.IsValid(rect, addonConfigurator.GetInstalledVersion()))
             {
                 // At this point the webpage never loads so fallback to configuration page
                 DataFrameConfiguration.RemoveConfiguration();
             }
+
+            services.AddSingleton<AddonConfigurator>();
 
             if (AddonConfig.Exists() && DataFrameConfiguration.Exists())
             {

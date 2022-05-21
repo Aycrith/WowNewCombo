@@ -16,6 +16,11 @@
             Update(reader.GetInt(cell));
         }
 
+        public override string ToString()
+        {
+            return string.Empty;
+        }
+
         // Priest
         public bool ShadowWordPain => IsBitSet(0);
 

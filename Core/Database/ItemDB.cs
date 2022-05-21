@@ -7,6 +7,8 @@ namespace Core.Database
 {
     public class ItemDB
     {
+        public static readonly Item EmptyItem = new() { Entry = 0, Name = string.Empty, Quality = 0, SellPrice = 0 };
+
         public Dictionary<int, Item> Items { get; } = new();
         public HashSet<int> FoodIds { get; } = new();
         public HashSet<int> WaterIds { get; } = new();

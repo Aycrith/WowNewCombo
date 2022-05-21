@@ -9,44 +9,44 @@
         padding-right: 10px !important;
     }
 
-    .scrollable-wrapper {
-      max-height: 400px;
-      overflow: auto;
-    }
-
     .success {
         color: #28a745;
     }
+
     .info {
         color: #17a2b8;
     }
+
     .warning {
         color: #ffc107;
     }
+
     .danger {
         color: #dc3545;
     }
+
     .light {
         color: #f8f9fa;
     }
 </style>
 
-<div class="col-sm scrollable-wrapper">
-<table class="table table-borderless table-dark" cellspacing="20">
-@foreach (var evt in LoggerSink.Log.Reverse())
-{
-    <tr class="@logLevelColor[evt.Level]">
-        <td class="log">@evt.Timestamp.ToString("HH:mm:ss")</td>
-        <td class="log">@evt.Message</td>
-    </tr>
-}
-</table>
+<div class="col-sm" style="@(MaxHeight > 0 ? $"overflow: auto; max-height: {MaxHeight}px;" : string.Empty)">
+    <table class="table table-borderless table-dark" cellspacing="20">
+        @foreach (var evt in LoggerSink.Log.Reverse())
+        {
+            <tr class="@logLevelColor[evt.Level]">
+                <td class="log">@evt.Timestamp.ToString("HH:mm:ss")</td>
+                <td class="log">@evt.Message</td>
+            </tr>
+        }
+    </table>
 </div>
 
 @code {
+    [Parameter]
+    public int MaxHeight { get; set; } = 400;
 
-    private readonly Dictionary<LogEventLevel, string> logLevelColor =
-        new Dictionary<LogEventLevel, string>
+    private readonly Dictionary<LogEventLevel, string> logLevelColor = new()
     {
         { LogEventLevel.Verbose, string.Empty },
         { LogEventLevel.Debug, "success" },
@@ -59,7 +59,6 @@
 
     protected override void OnInitialized()
     {
-        LoggerSink.OnLogChanged -= LogChanged;
         LoggerSink.OnLogChanged += LogChanged;
     }
 
