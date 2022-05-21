@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.Logging;
@@ -41,13 +41,11 @@ namespace BlazorServer
 
         public event Action? OnUpdate;
 
-        public FrameConfigurator(ILogger logger)
+        public FrameConfigurator(ILogger logger, AddonConfigurator addonConfigurator)
         {
             this.logger = logger;
-
-            dataConfig = DataConfig.Load();
-            addonConfig = AddonConfig.Load();
-            addonConfigurator = new AddonConfigurator(logger, addonConfig);
+            this.dataConfig = DataConfig.Load();
+            this.addonConfigurator = addonConfigurator;
         }
 
         public void Dispose()
