@@ -1,43 +1,39 @@
 ﻿@using Core
 @using SharedLib
-@inject Core.IBotController botController
-@inject Core.IAddonReader addonReader
+@inject IBotController botController
+@inject IAddonReader addonReader
 @implements IDisposable
 
 @if (addonReader.PlayerReader != null)
 {
-<div class="container">
-    <div class="card">
-        <div class="card-header">
-            Raw PlayerReader
-        </div>
-        <div class="card-body" style="padding-bottom: 0">
-            <table class="table table-bordered">
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                Raw PlayerReader
+            </div>
+            <div class="card-body" style="padding-bottom: 0">
+                <table class="table table-bordered">
 
-                @foreach (var property in GetPropertyValues(addonReader.PlayerReader))
-                {
-                <tr>
-                    <td>@(property.Name)</td>
-                    <td>
-                        <input value="@property.Value" class="form-control" Disabled="true" />
-                    </td>
-                </tr>
-                }
-            </table>
+                    @foreach (var property in GetPropertyValues(addonReader.PlayerReader))
+                    {
+                        <tr>
+                            <td>@(property.Name)</td>
+                            <td>
+                                <input value="@property.Value" class="form-control" Disabled="true" />
+                            </td>
+                        </tr>
+                    }
+                </table>
+            </div>
         </div>
     </div>
-</div>
 }
 
 @code {
 
     protected override void OnInitialized()
     {
-        if (DataFrameConfiguration.Exists())
-        {
-            addonReader.AddonDataChanged -= OnAddonDataChanged;
-            addonReader.AddonDataChanged += OnAddonDataChanged;
-        }
+        addonReader.AddonDataChanged += OnAddonDataChanged;
     }
 
     public void Dispose()
@@ -53,8 +49,8 @@
 
     public class ObjectField
     {
-        public string Name { get; set; } = string.Empty;
-        public string Value { get; set; } = string.Empty;
+        public string Name { get; init; } = string.Empty;
+        public string Value { get; init; } = string.Empty;
     }
 
     static List<ObjectField> GetPropertyValues(object obj)
@@ -94,20 +90,38 @@
                 {
                     propList.Add(new ObjectField() { Name = objName + pinfo.Name, Value = value.ToString() ?? "" });
                 }
-                else if(value is RecordInt recordInt)
+                else if (value is RecordInt recordInt)
                 {
                     propList.Add(new ObjectField() { Name = objName + pinfo.Name, Value = recordInt.Value.ToString() });
                 }
-                else if(value is BitStatus bitStatus)
+                else if (value is AddonBits addonBits)
                 {
-                    propList.Add(new ObjectField() { Name = objName + pinfo.Name, Value = bitStatus.ToString() });
-                }
-                /*
-                else if(pinfo.PropertyType.IsGenericType)
-                {
-                    var lst = GetPropertyValues(value);
+                    var lst = GetPropertyValues(addonBits);
                     if (lst != null && lst.Count > 0)
                         propList.AddRange(lst);
+                }
+                else if (value is SpellInRange spellInRange)
+                {
+                    var lst = GetPropertyValues(spellInRange);
+                    if (lst != null && lst.Count > 0)
+                        propList.AddRange(lst);
+                }
+                else if (value is BuffStatus buffStatus)
+                {
+                    var lst = GetPropertyValues(buffStatus);
+                    if (lst != null && lst.Count > 0)
+                        propList.AddRange(lst);
+                }
+                else if (value is TargetDebuffStatus targetDebuffStatus)
+                {
+                    var lst = GetPropertyValues(targetDebuffStatus);
+                    if (lst != null && lst.Count > 0)
+                        propList.AddRange(lst);
+                }
+                /*
+                else if (value is BitStatus bitStatus)
+                {
+                    propList.Add(new ObjectField() { Name = objName + pinfo.Name, Value = bitStatus.ToString() });
                 }
                 */
             }

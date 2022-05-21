@@ -16,6 +16,11 @@
             Update(reader.GetInt(cell));
         }
 
+        public override string ToString()
+        {
+            return string.Empty;
+        }
+
         // Warrior
         public bool Warrior_Charge => IsBitSet(0);
         public bool Warrior_Rend => IsBitSet(1);
