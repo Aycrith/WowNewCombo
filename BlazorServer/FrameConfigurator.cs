@@ -1,4 +1,7 @@
-using System;
+﻿using System;
+using System.IO;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.Logging;
@@ -18,9 +21,11 @@ namespace BlazorServer
         private WowProcess? wowProcess;
         private WowScreen? wowScreen;
 
-        private readonly AddonConfig addonConfig;
+        private Thread? screenshotThread;
+        private CancellationTokenSource cts = new();
+        private const int interval = 500;
+
         private readonly AddonConfigurator addonConfigurator;
-        private readonly AutoResetEvent autoResetEvent = new(false);
 
         public DataFrameMeta dataFrameMeta { get; private set; } = DataFrameMeta.Empty;
 
@@ -34,11 +39,6 @@ namespace BlazorServer
 
         public string ImageBase64 { private set; get; } = "iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==";
 
-        private Thread? screenshotThread;
-        private CancellationTokenSource? cts;
-
-        private const int interval = 500;
-
         public event Action? OnUpdate;
 
         public FrameConfigurator(ILogger logger, AddonConfigurator addonConfigurator)
@@ -50,13 +50,13 @@ namespace BlazorServer
 
         public void Dispose()
         {
-            cts?.Cancel();
+            cts.Cancel();
             wowScreen?.Dispose();
         }
 
         private void ScreenshotRefreshThread()
         {
-            while (cts != null && !cts.Token.IsCancellationRequested)
+            while (!cts.Token.IsCancellationRequested)
             {
                 try
                 {
@@ -83,7 +83,7 @@ namespace BlazorServer
 
                         if (dataFrameMeta != DataFrameMeta.Empty)
                         {
-                            wowScreen.GetRectangle(out var screenRect);
+                            wowScreen.GetRectangle(out Rectangle screenRect);
 
                             if (screenRect.Location.X < 0 || screenRect.Location.Y < 0)
                             {
@@ -157,17 +157,14 @@ namespace BlazorServer
                     OnUpdate?.Invoke();
                 }
 
-                autoResetEvent.Set();
-                Thread.Sleep(interval);
+                cts.Token.WaitHandle.WaitOne(interval);
             }
-
-            cts?.Dispose();
-            cts = null;
+            screenshotThread = null;
         }
 
         private DataFrameMeta GetDataFrameMeta()
         {
-            System.Drawing.Point location = new();
+            Point location = new();
             wowScreen?.GetPosition(ref location);
             if (location.X < 0)
             {
@@ -182,21 +179,22 @@ namespace BlazorServer
 
         public void ToggleManualConfig()
         {
-            if (cts == null)
+            if (screenshotThread == null)
             {
+                cts.Dispose();
                 cts = new CancellationTokenSource();
                 screenshotThread = new Thread(ScreenshotRefreshThread);
                 screenshotThread.Start();
             }
             else
             {
-                cts?.Cancel();
+                cts.Cancel();
             }
         }
 
         public bool FinishManualConfig()
         {
-            var version = addonConfigurator?.GetInstalledVersion();
+            var version = addonConfigurator.GetInstalledVersion();
             if (version == null) return false;
 
             if (dataFrames.Count != dataFrameMeta.frames)
@@ -205,7 +203,7 @@ namespace BlazorServer
             }
 
             if (wowScreen == null) return false;
-            wowScreen.GetRectangle(out var rect);
+            wowScreen.GetRectangle(out Rectangle rect);
 
             DataFrameConfiguration.SaveConfiguration(rect, version, dataFrameMeta, dataFrames);
             Saved = true;
@@ -225,29 +223,35 @@ namespace BlazorServer
 
             if (wowProcess == null) return false;
             logger.LogInformation("Found WowProcess");
+            OnUpdate?.Invoke();
 
             if (wowScreen == null) return false;
-            System.Drawing.Point location = new();
+            Point location = new();
             wowScreen.GetPosition(ref location);
 
             if (location.X < 0)
             {
                 logger.LogWarning($"Please make sure the client window does not outside of the visible area! Currently outside by {location}");
+                OnUpdate?.Invoke();
                 return false;
             }
 
-            wowScreen.GetRectangle(out var rect);
+            wowScreen.GetRectangle(out Rectangle rect);
             logger.LogInformation($"Found WowScreen Location: {location} - Size: {rect}");
 
-            var wowProcessInput = new WowProcessInput(logger, wowProcess);
-            var execGameCommand = new ExecGameCommand(logger, wowProcessInput);
+            WowProcessInput wowProcessInput = new(logger, wowProcess);
+            ExecGameCommand execGameCommand = new(logger, wowProcessInput);
 
-            var version = addonConfigurator?.GetInstalledVersion();
-            if (version == null) return false;
+            var version = addonConfigurator.GetInstalledVersion();
+            if (version == null)
+            {
+                OnUpdate?.Invoke();
+                return false;
+            }
             logger.LogInformation($"Addon installed. Version {version}");
 
             wowProcessInput.SetForegroundWindow();
-            Thread.Sleep(100);
+            cts.Token.WaitHandle.WaitOne(100);
 
             var meta = GetDataFrameMeta();
             if (meta == DataFrameMeta.Empty || meta.hash == 0)
@@ -255,13 +259,14 @@ namespace BlazorServer
                 logger.LogInformation("Enter configuration mode.");
 
                 ToggleInGameConfiguration(execGameCommand);
-                Wait();
+                cts.Token.WaitHandle.WaitOne(interval);
                 meta = GetDataFrameMeta();
             }
 
             if (meta == DataFrameMeta.Empty)
             {
                 logger.LogWarning("Unable to enter configuration mode! You most likely running the game with admin privileges! Please restart the game without it!");
+                OnUpdate?.Invoke();
                 return false;
             }
 
@@ -271,18 +276,23 @@ namespace BlazorServer
             if (size.Height > 50 || size.IsEmpty)
             {
                 logger.LogWarning($"Something is worng. esimated size: {size}.");
+                OnUpdate?.Invoke();
                 return false;
             }
 
             var screenshot = wowScreen.GetBitmap(size.Width, size.Height);
-            if (screenshot == null) return false;
+            if (screenshot == null)
+            {
+                OnUpdate?.Invoke();
+                return false;
+            }
 
             logger.LogInformation($"Found cells - {rect} - estimated size {size}");
 
             UpdatePreview(screenshot);
 
             OnUpdate?.Invoke();
-            Wait();
+            cts.Token.WaitHandle.WaitOne(interval);
 
             var dataFrames = DataFrameConfiguration.CreateFrames(meta, screenshot);
             if (dataFrames.Count != meta.frames)
@@ -292,7 +302,7 @@ namespace BlazorServer
 
             logger.LogInformation($"Exit configuration mode.");
             ToggleInGameConfiguration(execGameCommand);
-            Wait();
+            cts.Token.WaitHandle.WaitOne(interval);
 
             addonDataProvider?.Dispose();
             AddonReader?.Dispose();
@@ -309,7 +319,7 @@ namespace BlazorServer
             logger.LogInformation("Found Class!");
 
             OnUpdate?.Invoke();
-            Wait();
+            cts.Token.WaitHandle.WaitOne(interval);
 
             DataFrameConfiguration.SaveConfiguration(rect, version, meta, dataFrames);
             Saved = true;
@@ -317,23 +327,21 @@ namespace BlazorServer
             logger.LogInformation($"Frame configuration was successful! Configuration saved!");
 
             OnUpdate?.Invoke();
-            Wait();
+            cts.Token.WaitHandle.WaitOne(interval);
 
             return true;
         }
 
         private void ToggleInGameConfiguration(ExecGameCommand execGameCommand)
         {
-            execGameCommand.Run($"/{addonConfig.Command}");
+            execGameCommand.Run($"/{addonConfigurator.Config.Command}");
         }
 
-        private void UpdatePreview(System.Drawing.Bitmap screenshot)
+        private void UpdatePreview(Bitmap screenshot)
         {
-            using (System.IO.MemoryStream ms = new System.IO.MemoryStream())
-            {
-                screenshot.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-                this.ImageBase64 = Convert.ToBase64String(ms.ToArray());
-            }
+            using MemoryStream ms = new();
+            screenshot.Save(ms, ImageFormat.Png);
+            this.ImageBase64 = Convert.ToBase64String(ms.ToArray());
         }
 
 
@@ -346,21 +354,5 @@ namespace BlazorServer
             }
             return false;
         }
-
-        public void Wait()
-        {
-            if (cts != null)
-            {
-                while (!autoResetEvent.WaitOne())
-                {
-                    Thread.Sleep(1);
-                }
-            }
-            else
-            {
-                Thread.Sleep(interval);
-            }
-        }
-
     }
 }
