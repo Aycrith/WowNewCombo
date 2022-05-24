@@ -9,6 +9,7 @@ namespace Core.Goals
     public class CastingHandler : IDisposable
     {
         private readonly ILogger logger;
+        private readonly CancellationTokenSource cts;
         private readonly ConfigurableInput input;
 
         private readonly Wait wait;
@@ -31,9 +32,10 @@ namespace Core.Goals
         private const int MaxCastTimeMs = 15000;
         private const int MaxAirTimeMs = 10000;
 
-        public CastingHandler(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, ClassConfiguration classConfig, PlayerDirection direction, StopMoving stopMoving)
+        public CastingHandler(ILogger logger, CancellationTokenSource cts, ConfigurableInput input, Wait wait, AddonReader addonReader, ClassConfiguration classConfig, PlayerDirection direction, StopMoving stopMoving)
         {
             this.logger = logger;
+            this.cts = cts;
             this.input = input;
 
             this.wait = wait;
@@ -310,7 +312,8 @@ namespace Core.Goals
 
                 if (item.Log)
                     item.LogInformation($" Wait {item.DelayBeforeCast}ms before press.");
-                Thread.Sleep(item.DelayBeforeCast);
+
+                cts.Token.WaitHandle.WaitOne(item.DelayBeforeCast);
             }
 
             int auraHash = playerReader.AuraCount.Hash;

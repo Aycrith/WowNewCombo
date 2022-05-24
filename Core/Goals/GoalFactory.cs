@@ -1,9 +1,10 @@
-﻿using Core.Goals;
+using Core.Goals;
 using SharedLib.NpcFinder;
 using Core.PPather;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System;
+using System.Threading;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -37,7 +38,7 @@ namespace Core
             this.exec = execGameCommand;
         }
 
-        public (RouteInfo, HashSet<GoapGoal>) CreateGoals(ClassConfiguration classConfig, IBlacklist blacklist, GoapAgentState goapAgentState, Wait wait)
+        public (RouteInfo, HashSet<GoapGoal>) CreateGoals(ClassConfiguration classConfig, IBlacklist blacklist, GoapAgentState goapAgentState, CancellationTokenSource cts, Wait wait)
         {
             HashSet<GoapGoal> availableActions = new();
 
@@ -46,7 +47,7 @@ namespace Core
             PlayerDirection playerDirection = new(logger, input, addonReader.PlayerReader);
             StopMoving stopMoving = new(input, addonReader.PlayerReader);
 
-            CastingHandler castingHandler = new(logger, input, wait, addonReader, classConfig, playerDirection, stopMoving);
+            CastingHandler castingHandler = new(logger, cts, input, wait, addonReader, classConfig, playerDirection, stopMoving);
 
             StuckDetector stuckDetector = new(logger, input, addonReader.PlayerReader, playerDirection, stopMoving);
             CombatUtil combatUtil = new(logger, input, wait, addonReader.PlayerReader);
