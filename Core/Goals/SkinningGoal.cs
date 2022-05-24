@@ -71,13 +71,15 @@ namespace Core.Goals
             Log($"Search for {NpcNames.Corpse}");
             npcNameTargeting.ChangeNpcType(NpcNames.Corpse);
             SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, true));
+            // attempt to add some delay
+            // upon an npc become corpse 
+            npcNameTargeting.WaitForUpdate();
+            npcNameTargeting.WaitForUpdate();
 
             lastLoot = playerReader.LastLootTime;
 
             stopMoving.Stop();
             combatUtil.Update();
-
-            npcNameTargeting.WaitForUpdate();
 
             int attempts = 1;
             while (attempts < 5)
