@@ -190,7 +190,7 @@ namespace Core.Goals
 
                 npcNameTargeting.ChangeNpcType(NpcNames.Friendly | NpcNames.Neutral);
                 SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, true));
-                npcNameTargeting.WaitForNUpdate(1);
+                npcNameTargeting.WaitForUpdate();
                 bool foundVendor = npcNameTargeting.FindBy(CursorType.Vendor, CursorType.Repair, CursorType.Innkeeper);
                 if (!foundVendor)
                 {

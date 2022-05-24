@@ -76,7 +76,6 @@ namespace Core.Goals
 
             bool foundByCursor = false;
 
-            npcNameTargeting.WaitForNUpdate(1);
             if (FoundByCursor())
             {
                 foundByCursor = true;
@@ -90,7 +89,6 @@ namespace Core.Goals
                 playerDirection.SetDirection(heading, closestCorpse);
                 logger.LogInformation("Look at possible corpse and try again");
 
-                npcNameTargeting.WaitForNUpdate(1);
                 if (FoundByCursor())
                 {
                     foundByCursor = true;
@@ -168,6 +166,7 @@ namespace Core.Goals
 
         private bool FoundByCursor()
         {
+            npcNameTargeting.WaitForUpdate();
             if (!npcNameTargeting.FindBy(CursorType.Loot))
             {
                 return false;

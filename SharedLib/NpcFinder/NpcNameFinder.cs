@@ -405,13 +405,9 @@ namespace SharedLib.NpcFinder
             return npcNameLine;
         }
 
-        public void WaitForNUpdate(int n)
+        public void WaitForUpdate()
         {
-            while (n >= 0)
-            {
-                autoResetEvent.WaitOne();
-                n--;
-            }
+            autoResetEvent.WaitOne();
         }
 
         public void ShowNames(Graphics gr)

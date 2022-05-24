@@ -77,7 +77,7 @@ namespace Core.Goals
             stopMoving.Stop();
             combatUtil.Update();
 
-            npcNameTargeting.WaitForNUpdate(1);
+            npcNameTargeting.WaitForUpdate();
 
             int attempts = 1;
             while (attempts < 5)

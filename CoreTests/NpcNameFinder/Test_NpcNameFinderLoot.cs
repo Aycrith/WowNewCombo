@@ -30,7 +30,7 @@ namespace CoreTests
             capturer = new BitmapCapturer(rect);
 
             npcNameFinder = new NpcNameFinder(logger, capturer, new AutoResetEvent(false));
-            npcNameTargeting = new NpcNameTargeting(logger, npcNameFinder, mockWoWProcess);
+            npcNameTargeting = new NpcNameTargeting(logger, new(), npcNameFinder, mockWoWProcess);
         }
 
         public void Execute()

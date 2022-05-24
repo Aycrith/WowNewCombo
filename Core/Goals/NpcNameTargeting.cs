@@ -15,6 +15,7 @@ namespace Core.Goals
         private const int MOUSE_DELAY = 40;
 
         private readonly ILogger logger;
+        private readonly CancellationTokenSource cts;
         private readonly NpcNameFinder npcNameFinder;
         private readonly IMouseInput input;
 
@@ -23,9 +24,10 @@ namespace Core.Goals
         public List<Point> locTargetingAndClickNpc { get; }
         public List<Point> locFindByCursorType { get; }
 
-        public NpcNameTargeting(ILogger logger, NpcNameFinder npcNameFinder, IMouseInput input)
+        public NpcNameTargeting(ILogger logger, CancellationTokenSource cts, NpcNameFinder npcNameFinder, IMouseInput input)
         {
             this.logger = logger;
+            this.cts = cts;
             this.npcNameFinder = npcNameFinder;
             this.input = input;
 
@@ -50,17 +52,14 @@ namespace Core.Goals
             npcNameFinder.ChangeNpcType(npcNames);
         }
 
-        public void WaitForNUpdate(int n)
+        public void WaitForUpdate()
         {
-            npcNameFinder.WaitForNUpdate(n);
+            npcNameFinder.WaitForUpdate();
         }
 
 
         public void TargetingAndClickNpc(bool leftClick, CancellationTokenSource cts)
         {
-            if (npcNameFinder.NpcCount == 0)
-                return;
-
             var npc = npcNameFinder.Npcs.First();
             logger.LogInformation($"> NPCs found: ({npc.Min.X},{npc.Min.Y})[{npc.Width},{npc.Height}]");
 
@@ -102,7 +101,7 @@ namespace Core.Goals
                 {
                     var clickPostion = npcNameFinder.ToScreenCoordinates(npc.ClickPoint.X + location.X, npc.ClickPoint.Y + location.Y);
                     input.SetCursorPosition(clickPostion);
-                    Thread.Sleep(MOUSE_DELAY);
+                    cts.Token.WaitHandle.WaitOne(MOUSE_DELAY);
                     CursorClassifier.Classify(out var cls);
                     if (cursor.Contains(cls))
                     {

@@ -1,4 +1,4 @@
-﻿using Core.Goals;
+using Core.Goals;
 using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -157,7 +157,7 @@ namespace Core
             logger.LogDebug($"Woohoo, I have read the player class. You are a {AddonReader.PlayerReader.Race} {AddonReader.PlayerReader.Class}.");
 
             npcNameFinder = new NpcNameFinder(logger, WowScreen, npcNameFinderAutoResetEvent);
-            npcNameTargeting = new NpcNameTargeting(logger, npcNameFinder, WowProcessInput);
+            npcNameTargeting = new NpcNameTargeting(logger, cts, npcNameFinder, WowProcessInput);
             WowScreen.AddDrawAction(npcNameFinder.ShowNames);
             WowScreen.AddDrawAction(npcNameTargeting.ShowClickPositions);
 
