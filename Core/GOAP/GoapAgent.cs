@@ -1,4 +1,4 @@
-using Core.Goals;
+﻿using Core.Goals;
 using Game;
 using Microsoft.Extensions.Logging;
 using System;
@@ -13,7 +13,6 @@ namespace Core.GOAP
         private readonly ConfigurableInput input;
         private readonly AddonReader addonReader;
         private readonly PlayerReader playerReader;
-        private readonly StopMoving stopMoving;
         private readonly IBlacklist blacklist;
         private readonly WowScreen wowScreen;
 
@@ -39,7 +38,6 @@ namespace Core.GOAP
             this.addonReader.CreatureHistory.KillCredit -= OnKillCredit;
             this.addonReader.CreatureHistory.KillCredit += OnKillCredit;
 
-            this.stopMoving = new StopMoving(input, playerReader);
             this.blacklist = blacklist;
 
             this.AvailableGoals = availableGoals.OrderBy(a => a.CostOfPerformingAction);
@@ -86,6 +84,10 @@ namespace Core.GOAP
                     TargetTargetEnum.Pet or
                     TargetTargetEnum.PartyOrPet },
                 { GoapKey.incombat, playerReader.Bits.PlayerInCombat },
+                { GoapKey.ismounted,
+                    (playerReader.Class == PlayerClassEnum.Druid &&
+                    playerReader.Form is Form.Druid_Travel or Form.Druid_Flight)
+                    || playerReader.Bits.IsMounted },
                 { GoapKey.withinpullrange, playerReader.WithInPullRange },
                 { GoapKey.incombatrange, playerReader.WithInCombatRange },
                 { GoapKey.pulled, false },

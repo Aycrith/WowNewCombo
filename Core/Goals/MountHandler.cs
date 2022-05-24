@@ -50,7 +50,7 @@ namespace Core
         {
             if (playerReader.Class == PlayerClassEnum.Druid)
             {
-                int index = classConfig.Form.FindIndex(s => s.FormEnum == Form.Druid_Travel);
+                int index = classConfig.Form.FindIndex(s => s.FormEnum is Form.Druid_Flight or Form.Druid_Travel);
                 if (index > -1 &&
                     castingHandler.SwitchForm(playerReader.Form, classConfig.Form[index]))
                 {
@@ -92,26 +92,24 @@ namespace Core
 
         public void Dismount()
         {
-            if (playerReader.Form == Form.Druid_Travel)
+            if (playerReader.Form is Form.Druid_Flight or Form.Druid_Travel)
             {
-                int index = classConfig.Form.FindIndex(s => s.FormEnum == Form.Druid_Travel);
+                int index = classConfig.Form.FindIndex(s => s.FormEnum == playerReader.Form);
                 if (index > -1)
                 {
                     input.KeyPress(classConfig.Form[index].ConsoleKey, input.defaultKeyPress);
+                    return;
                 }
             }
-            else
-            {
-                input.Dismount();
-            }
+
+            input.Dismount();
         }
 
         public bool IsMounted()
         {
-            return playerReader.Class == PlayerClassEnum.Druid &&
-                playerReader.Form == Form.Druid_Travel
-                ? true
-                : playerReader.Bits.IsMounted;
+            return (playerReader.Class == PlayerClassEnum.Druid &&
+                playerReader.Form is Form.Druid_Flight or Form.Druid_Travel)
+                || playerReader.Bits.IsMounted;
         }
 
         private void Log(string text)

@@ -10,6 +10,7 @@ namespace Core.GOAP
         targettargetsus = 21,
         incombat = 30,
         pethastarget = 31,
+        ismounted = 32,
         withinpullrange = 40,
         incombatrange = 50,
         pulled = 60,
@@ -53,6 +54,9 @@ namespace Core.GOAP
 
             { new(GoapKey.pethastarget, true), "Pet target" },
             { new(GoapKey.pethastarget, false), "!Pet target" },
+
+            { new(GoapKey.ismounted, true), "Mounted" },
+            { new(GoapKey.ismounted, false), "!Mounted" },
 
             { new(GoapKey.withinpullrange, true), "Pull range" },
             { new(GoapKey.withinpullrange, false), "!Pull range" },
