@@ -1,4 +1,4 @@
-﻿using Core.Goals;
+using Core.Goals;
 using Game;
 using Microsoft.Extensions.Logging;
 using System;
@@ -78,10 +78,10 @@ namespace Core.GOAP
             return new()
             {
                 { GoapKey.hastarget, !blacklist.IsTargetBlacklisted() && playerReader.HasTarget },
-                { GoapKey.dangercombat, addonReader.PlayerReader.Bits.PlayerInCombat && addonReader.CombatCreatureCount > 0 },
+                { GoapKey.dangercombat, playerReader.Bits.PlayerInCombat && addonReader.CombatCreatureCount > 0 },
                 { GoapKey.pethastarget, playerReader.PetHasTarget },
                 { GoapKey.targetisalive, playerReader.HasTarget && !playerReader.Bits.TargetIsDead },
-                { GoapKey.targettargetsus, playerReader.TargetTarget is
+                { GoapKey.targettargetsus, (playerReader.HasTarget && playerReader.TargetHealthPercentage < 30) || playerReader.TargetTarget is // hacky way to keep attacking fleeing humanoids
                     TargetTargetEnum.Me or
                     TargetTargetEnum.Pet or
                     TargetTargetEnum.PartyOrPet },
