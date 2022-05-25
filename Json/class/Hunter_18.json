@@ -6,7 +6,7 @@
       {
         "Name": "Concussive Shot",
         "Key": "9",
-        "MinMana": 15,
+        "StopBeforeCast": true,
         "Cooldown": 12000,
         "Requirements": ["HasRangedWeapon", "HasAmmo", "!InMeleeRange"]
       },
@@ -15,7 +15,6 @@
         "Key": "4",
         "WhenUsable": true,
         "AfterCastWaitNextSwing": true,
-        "MinMana": 15,
         "Requirements": ["InMeleeRange", "!AutoShot"]
       }
     ]
@@ -32,14 +31,12 @@
       {
         "Name": "Mend Pet",
         "Key": "N7",
-        "MinMana": 200,
         "Cooldown": 15000,
         "Requirements": ["Has Pet", "PetHealth% < 50"]
       },
       {
         "Name": "Serpent Sting",
         "Key": "2",
-        "MinMana": 15,
         "Cooldown": 4000,
         "Requirements": ["HasRangedWeapon", "HasAmmo", "!InMeleeRange", "Mana% > 55", "!Serpent Sting"]
       },
@@ -52,7 +49,6 @@
       {
         "Name": "Arcane Shot",
         "Key": "8",
-        "MinMana": 15,
         "Cooldown": 6000,
         "WhenUsable": true,
         "Requirements": ["HasRangedWeapon", "HasAmmo", "!InMeleeRange", "!Rapid Fire", "!Quick Shots", "TargetHealth% > 60", "Mana% > 70"]
@@ -62,7 +58,6 @@
         "Key": "4",
         "WhenUsable": true,
         "AfterCastWaitNextSwing": true,
-        "MinMana": 15,
         "StepBackAfterCast": 1200,
         "Requirements": ["InMeleeRange", "!AutoShot"]
       },
@@ -77,7 +72,6 @@
       {
         "Name": "Aspect of the Hawk",
         "Key": "5",
-        "MinMana": 20,
         "Requirement": "!Aspect of the Hawk"
       },
       {
@@ -90,7 +84,6 @@
       {
         "Name": "sumpet",
         "Key": "N6",
-        "MinMana": 20,
         "HasCastBar": true,
         "Cooldown": 4000,
         "Requirement": "!Has Pet"

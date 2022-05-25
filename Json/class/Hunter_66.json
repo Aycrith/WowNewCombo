@@ -43,28 +43,24 @@
       {
         "Name": "Mend Pet",
         "Key": "N7",
-        "MinMana": 200,
         "Cooldown": 15000,
         "Requirements": ["Has Pet", "PetHealth% < 50"]
       },
       {
         "Name": "Intimidation",
         "Key": "N4",
-        "MinMana": 15,
         "WhenUsable": true,
         "Requirements": ["Has Pet", "(TargetHealth% < 95 && TargetsMe) || TargetCastingSpell"]
       },
       {
         "Name": "Bestial Wrath",
         "Key": "N2",
-        "MinMana": 15,
         "WhenUsable": true,
         "Requirements": ["!InMeleeRange", "HasRangedWeapon", "HasAmmo", "Has Pet", "TargetHealth% > MIN_TARGET_HP_CD%"]
       },
       {
         "Name": "Rapid Fire",
         "Key": "N3",
-        "MinMana": 15,
         "WhenUsable": true,
         "Requirements": ["!InMeleeRange", "HasRangedWeapon", "HasAmmo", "TargetHealth% > MIN_TARGET_HP_CD%"]
       },
@@ -96,7 +92,6 @@
         "Key": "N8",
         "WhenUsable": true,
         "Cooldown": 5000,
-        "MinMana": 15,
         "Requirements": ["InMeleeRange", "TargetsMe", "AutoAttacking"]
       },
       {
@@ -104,7 +99,6 @@
         "Key": "4",
         "WhenUsable": true,
         "AfterCastWaitNextSwing": true,
-        "MinMana": 15,
         "StepBackAfterCast": 1000,
         "Requirements": ["InMeleeRange", "!AutoShot"]
       },
@@ -140,7 +134,6 @@
       {
         "Name": "sumpet",
         "Key": "N6",
-        "MinMana": 20,
         "HasCastBar": true,
         "Cooldown": 4000,
         "Requirement": "!Has Pet"

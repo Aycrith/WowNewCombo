@@ -13,6 +13,7 @@
         "Name": "Concussive Shot",
         "Key": "9",
         "StopBeforeCast": true,
+        "DelayBeforeCast": 500,
         "Requirements": ["HasRangedWeapon", "!InMeleeRange", "HasAmmo"]
       },
       {
@@ -20,7 +21,6 @@
         "Key": "4",
         "AfterCastWaitNextSwing": true,
         "WhenUsable": true,
-        "MinMana": 15,
         "Requirements": ["InMeleeRange", "!AutoShot"]
       }
     ]
@@ -37,28 +37,24 @@
       {
         "Name": "Mend Pet",
         "Key": "N7",
-        "MinMana": 200,
         "Cooldown": 15000,
         "Requirements": ["Has Pet", "PetHealth% < 50"]
       },
       {
         "Name": "Intimidation",
         "Key": "N4",
-        "MinMana": 15,
         "WhenUsable": true,
         "Requirements": ["Has Pet", "TargetHealth% < 70 || TargetCastingSpell"]
       },
       {
         "Name": "Bestial Wrath",
         "Key": "N2",
-        "MinMana": 15,
         "WhenUsable": true,
         "Requirements": ["!InMeleeRange", "HasRangedWeapon", "HasAmmo", "Has Pet", "TargetHealth% > 85"]
       },
       {
         "Name": "Rapid Fire",
         "Key": "N3",
-        "MinMana": 15,
         "WhenUsable": true,
         "Requirements": ["!InMeleeRange", "HasRangedWeapon", "HasAmmo", "TargetHealth% > 75"]
       },
@@ -83,7 +79,6 @@
         "Key": "N8",
         "WhenUsable": true,
         "Cooldown": 5000,
-        "MinMana": 15,
         "Requirements": ["InMeleeRange", "AutoAttacking"]
       },
       {
@@ -91,7 +86,6 @@
         "Key": "4",
         "WhenUsable": true,
         "AfterCastWaitNextSwing": true,
-        "MinMana": 15,
         "StepBackAfterCast": 1000,
         "Requirements": ["InMeleeRange", "!AutoShot"]
       },
@@ -106,7 +100,6 @@
       {
         "Name": "Aspect of the Hawk",
         "Key": "5",
-        "MinMana": 20,
         "Requirement": "!Aspect of the Hawk"
       },
       {
@@ -119,7 +112,6 @@
       {
         "Name": "sumpet",
         "Key": "N6",
-        "MinMana": 20,
         "HasCastBar": true,
         "Cooldown": 4000,
         "Requirement": "!Has Pet"

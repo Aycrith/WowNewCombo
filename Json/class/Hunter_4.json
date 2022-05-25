@@ -6,8 +6,7 @@
       {
         "Name": "Serpent Sting",
         "Key": "2",
-        "MinMana": 15,
-        "Cooldown": 2000,
+        "StopBeforeCast": true,
         "Requirements": ["HasRangedWeapon", "HasAmmo", "!InMeleeRange", "!Serpent Sting"]
       },
       {
@@ -39,7 +38,6 @@
         "Key": "4",
         "WhenUsable": true,
         "AfterCastWaitNextSwing": true,
-        "MinMana": 15,
         "Requirements": ["InMeleeRange", "!AutoShot"]
       },
       {
@@ -53,7 +51,6 @@
       {
         "Name": "Aspect of the Monkey",
         "Key": "5",
-        "MinMana": 20,
         "Requirement": "!Aspect of the Monkey"
       }
     ]

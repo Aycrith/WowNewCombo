@@ -15,7 +15,6 @@
         "WhenUsable": true,
         "AfterCastWaitNextSwing": true,
         "StepBackAfterCast": 1000,
-        "MinMana": 15,
         "Requirements": ["InMeleeRange", "!AutoShot"]
       }
     ]
@@ -33,7 +32,6 @@
         "Key": "4",
         "WhenUsable": true,
         "AfterCastWaitNextSwing": true,
-        "MinMana": 15,
         "Requirements": ["InMeleeRange", "!AutoShot"]
       },
       {
