@@ -1057,6 +1057,9 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | Warlock | `"Shadow Trance"` |
 | Warlock | `"Soulstone Resurraction"` |
 | Warlock | `"Soul Link"` |
+| Warlock | `"Fel Armor"` |
+| Warlock | `"Fel Domination"` |
+| Warlock | `"Demonic Sacrifice"` |
 | Warrior | `"Battle Shout"` |
 | Warrior | `"Bloodrage"` |
 | Shaman | `"Lightning Shield"` |

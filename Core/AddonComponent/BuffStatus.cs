@@ -89,6 +89,9 @@
         public bool SoulLink => IsBitSet(11);
         public bool SoulstoneResurrection => IsBitSet(12);
         public bool ShadowTrance => IsBitSet(13);
+        public bool FelArmor => IsBitSet(14);
+        public bool FelDomination => IsBitSet(15);
+        public bool DemonicSacrifice => IsBitSet(16);
 
         // Shaman
         public bool LightningShield => IsBitSet(10);

@@ -166,6 +166,9 @@ namespace Core
             bool SoulLink() => playerReader.Buffs.SoulLink;
             bool SoulstoneResurrection() => playerReader.Buffs.SoulstoneResurrection;
             bool ShadowTrance() => playerReader.Buffs.ShadowTrance;
+            bool FelArmor() => playerReader.Buffs.FelArmor;
+            bool FelDomination() => playerReader.Buffs.FelDomination;
+            bool DemonicSacrifice() => playerReader.Buffs.DemonicSacrifice;
 
             bool LightningShield() => playerReader.Buffs.LightningShield;
             bool WaterShield() => playerReader.Buffs.WaterShield;
@@ -324,6 +327,9 @@ namespace Core
                 { "Soul Link", SoulLink },
                 { "Soulstone Resurrection", SoulstoneResurrection },
                 { "Shadow Trance", ShadowTrance },
+                { "Fel Armor", FelArmor },
+                { "Fel Domination", FelDomination },
+                { "Demonic Sacrifice", DemonicSacrifice },
                 
                 // Shaman
                 { "Lightning Shield", LightningShield },
