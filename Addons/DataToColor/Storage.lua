@@ -137,6 +137,9 @@ function CreatePlayerBuffList()
         DataToColor.S.playerBuffs[11] = { "Soul Link", [136160]=1 }
         DataToColor.S.playerBuffs[12] = { "Soulstone Resurrection", [136210]=1 }
         DataToColor.S.playerBuffs[13] = { "Shadow Trance", [136223]=1 }
+        DataToColor.S.playerBuffs[14] = { "Fel Armor", [136156]=1 }
+        DataToColor.S.playerBuffs[15] = { "Fel Domination", [136082]=1 }
+        DataToColor.S.playerBuffs[16] = { "Demonic Sacrifice", [136184]=1 }
     elseif DataToColor.C.CHARACTER_CLASS == "SHAMAN" then
         DataToColor.S.playerBuffs[10] = { "Lightning Shield", [136051]=1 }
         DataToColor.S.playerBuffs[11] = { "Water Shield", [132315]=1 }
