@@ -176,7 +176,7 @@ namespace Core
             while (!cts.IsCancellationRequested)
             {
                 AddonReader.Update();
-                //cts.Token.WaitHandle.WaitOne(1);
+                cts.Token.WaitHandle.WaitOne(1);
             }
             logger.LogInformation("Addon thread stoppped!");
         }
