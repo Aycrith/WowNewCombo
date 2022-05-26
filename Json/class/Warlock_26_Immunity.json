@@ -11,7 +11,10 @@
     ]
   },
   "IntVariables": {
-    "DOT_MIN_HEALTH%": 35
+    "DOT_MIN_HEALTH%": 35,
+    "DRAIN_MIN_HP%": 70,
+    "TAP_MIN_MANA%": 65,
+    "MIN_FOOD_DRINK%": 30
   },
   "Pull": {
     "Sequence": [
@@ -19,14 +22,17 @@
         "Name": "Immolate",
         "Key": "5",
         "HasCastBar": true,
-        "DelayBeforeCast": 1500,
         "Requirements": [
-          "TargetHealth% > DOT_MIN_HEALTH%",
-          "!Immolate"
+          "!Has Pet"
         ],
-        "ResetOnNewTarget": true,
-        "MinMana": 90,
         "School": "Fire"
+      },
+      {
+        "Name": "Approach",
+        "Requirements": [
+          "Has Pet",
+          "MinRange > 15"
+        ]
       }
     ]
   },
@@ -36,11 +42,19 @@
         "Name": "heal",
         "Key": "N3",
         "Requirements": [
-          "Health% < 50",
+          "Health% < 35",
           "BagItem:19005:1"
         ],
         "Cooldown": 120000,
         "InCombat": "true"
+      },
+      {
+        "Name": "Shadow Bolt",
+        "Key": "2",
+        "Requirements": [
+          "Talent:Nightfall",
+          "Shadow Trance"
+        ]
       },
       {
         "Name": "Drain Soul",
@@ -51,17 +65,18 @@
           "!BagItem:6265:3",
           "TargetYieldXP"
         ],
-        "School": "Shadow",
-        "MinMana": 55
+        "School": "Shadow"
       },
       {
-        "Name": "Drain Life",
-        "Key": "N4",
+        "Name": "Health Funnel",
+        "Key": "N6",
         "HasCastBar": true,
+        "WhenUsable": true,
         "Requirements": [
-          "Health% < 30"
-        ],
-        "MinMana": 55
+          "Has Pet",
+          "Health% > MIN_FOOD_DRINK%",
+          "PetHealth% <= DOT_MIN_HEALTH%"
+        ]
       },
       {
         "Name": "Immolate",
@@ -72,55 +87,47 @@
           "!Immolate",
           "!TargetsMe"
         ],
-        "ResetOnNewTarget": true,
-        "MinMana": 90,
         "School": "Fire"
       },
       {
         "Name": "Curse of Agony",
         "Key": "1",
-        "ResetOnNewTarget": true,
+        "StopBeforeCast": true,
         "Requirements": [
           "TargetHealth% > DOT_MIN_HEALTH%",
           "!Curse of Agony"
         ],
-        "MinMana": 50,
         "School": "Shadow"
       },
       {
         "Name": "Corruption",
         "Key": "7",
+        "StopBeforeCast": true,
         "Requirements": [
           "TargetHealth% > DOT_MIN_HEALTH%",
           "!Corruption",
           "Talent:Improved Corruption:5"
         ],
-        "ResetOnNewTarget": true,
-        "MinMana": 55,
         "School": "Shadow"
       },
       {
         "Name": "Shadow Bolt",
         "Key": "2",
         "HasCastBar": true,
-        "ResetOnNewTarget": true,
-        "MinMana": 110,
         "Requirements": [
-          "TargetHealth% > DOT_MIN_HEALTH%",
-          "!TargetsMe"
+          "!TargetsMe",
+          "Health% > DRAIN_MIN_HP%",
+          "TargetHealth% > 40"
         ],
         "School": "Shadow",
-        "Cooldown": 8000
+        "Cooldown": 4000
       },
       {
-        "Name": "Health Funnel",
-        "Key": "N6",
+        "Name": "Drain Life",
+        "Key": "N4",
         "HasCastBar": true,
-        "WhenUsable": true,
         "Requirements": [
-          "Has Pet",
-          "Health% > 70",
-          "PetHealth% < 30"
+          "Health% < DRAIN_MIN_HP%"
         ]
       },
       {
@@ -147,12 +154,12 @@
       {
         "Name": "Food",
         "Key": "=",
-        "Requirement": "Health% < 50"
+        "Requirement": "Health% < MIN_FOOD_DRINK%"
       },
       {
         "Name": "Water",
         "Key": "-",
-        "Requirement": "Mana% < 40"
+        "Requirement": "Mana% < MIN_FOOD_DRINK%"
       }
     ]
   },
@@ -161,14 +168,12 @@
       {
         "Name": "Demon Armor",
         "Key": "3",
-        "MinMana": 275,
         "Requirement": "!Demon Armor"
       },
       {
         "Name": "Summon Voidwalker",
         "HasCastBar": true,
         "Key": "4",
-        "MinMana": 122,
         "Requirements": [
           "BagItem:6265:1",
           "!Has Pet"
@@ -176,11 +181,14 @@
       },
       {
         "Name": "Life Tap",
+        "Cost": 3,
         "Key": "8",
+        "InCombat": "i dont care",
         "Charge": 2,
         "Requirements": [
-          "Health% > 70",
-          "Mana% < 60"
+          "!Casting",
+          "Health% > TAP_MIN_MANA%",
+          "Mana% < TAP_MIN_MANA%"
         ]
       },
       {
