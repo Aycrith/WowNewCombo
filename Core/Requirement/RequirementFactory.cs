@@ -97,6 +97,8 @@ namespace Core
             bool HasRangedWeapon() => equipmentReader.HasRanged();
             bool HasAmmo() => playerReader.Bits.HasAmmo;
 
+            bool IsCasting() => playerReader.IsCasting;
+
             bool Eating() => playerReader.Buffs.Eating;
             bool Drinking() => playerReader.Buffs.Drinking;
             bool ManaRegeneration() => playerReader.Buffs.ManaRegeneration;
@@ -245,7 +247,9 @@ namespace Core
                 { "BagGreyItem", BagGreyItem },
                 { "HasRangedWeapon", HasRangedWeapon },
                 { "HasAmmo", HasAmmo },
-                
+
+                { "Casting", IsCasting },
+
                 // General Buff Condition
                 { "Eating", Eating },
                 { "Drinking", Drinking },
