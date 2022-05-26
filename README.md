@@ -982,6 +982,7 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | `"Items Broken"` | Has any broken(red) worn item |
 | `"HasRangedWeapon"` | Has equipped ranged weapon (wand/crossbow/bow/gun) |
 | `"HasAmmo"` | AmmoSlot has equipped ammo and count is greater than zero |
+| `"IsCasting"` | The player is currently casting any spell. |
 | `"InMeleeRange"` | Target is approximately 0-5 yard range |
 | `"InDeadZoneRange"` | Target is approximately 5-11 yard range |
 | `"InCombatRange"` | Class based - Have any ability which allows you to attack target from current place |

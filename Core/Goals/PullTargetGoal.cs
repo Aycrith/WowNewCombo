@@ -15,10 +15,8 @@ namespace Core.Goals
         private readonly Wait wait;
         private readonly AddonReader addonReader;
         private readonly PlayerReader playerReader;
-        private readonly IBlacklist blacklist;
         private readonly StopMoving stopMoving;
         private readonly StuckDetector stuckDetector;
-        private readonly ClassConfiguration classConfiguration;
 
         private readonly CastingHandler castingHandler;
         private readonly MountHandler mountHandler;
@@ -26,29 +24,33 @@ namespace Core.Goals
 
         private readonly Random random = new();
 
-        private DateTime pullStart;
-
-        private int SecondsSincePullStarted => (int)(DateTime.UtcNow - pullStart).TotalSeconds;
+        private readonly KeyAction? approachKey;
+        private readonly Action approachAction;
 
         private readonly Func<bool> pullPrevention;
 
-        private bool? requiresNpcNameFinder;
+        private readonly bool requiresNpcNameFinder;
 
-        public PullTargetGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, IBlacklist blacklist, StopMoving stopMoving, CastingHandler castingHandler, MountHandler mountHandler, StuckDetector stuckDetector, ClassConfiguration classConfiguration, CombatUtil combatUtil)
+        private DateTime pullStart;
+
+        private double PullDurationMs => (DateTime.UtcNow - pullStart).TotalMilliseconds;
+
+        public PullTargetGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, IBlacklist blacklist, StopMoving stopMoving, CastingHandler castingHandler, MountHandler mountHandler, StuckDetector stuckDetector, CombatUtil combatUtil)
         {
             this.logger = logger;
             this.input = input;
             this.wait = wait;
             this.addonReader = addonReader;
             this.playerReader = addonReader.PlayerReader;
-            this.blacklist = blacklist;
             this.stopMoving = stopMoving;
             this.castingHandler = castingHandler;
             this.mountHandler = mountHandler;
 
             this.stuckDetector = stuckDetector;
-            this.classConfiguration = classConfiguration;
             this.combatUtil = combatUtil;
+
+            approachKey = input.ClassConfig.Pull.Sequence.Find(x => x.Name == input.ClassConfig.Approach.Name);
+            approachAction = approachKey == null ? DefaultApproach : ConditionalApproach;
 
             pullPrevention = () => blacklist.IsTargetBlacklisted() &&
                 playerReader.TargetTarget is not
@@ -56,7 +58,9 @@ namespace Core.Goals
                 TargetTargetEnum.Me or
                 TargetTargetEnum.Pet;
 
-            classConfiguration.Pull.Sequence.Where(k => k != null).ToList().ForEach(key => Keys.Add(key));
+            input.ClassConfig.Pull.Sequence.Where(k => k != null).ToList().ForEach(key => Keys.Add(key));
+
+            requiresNpcNameFinder = Keys.Exists(k => k.Requirements.Contains(RequirementFactory.AddVisible));
 
             AddPrecondition(GoapKey.targetisalive, true);
             AddPrecondition(GoapKey.incombat, false);
@@ -76,29 +80,14 @@ namespace Core.Goals
                 mountHandler.Dismount();
             }
 
-            if (Keys.Count != 0)
+            if (Keys.Count != 0 && input.ClassConfig.StopAttack.GetCooldownRemaining() == 0)
             {
-                if (requiresNpcNameFinder == null)
-                {
-                    requiresNpcNameFinder = false;
-                    Keys.ForEach(key =>
-                    {
-                        if (key.Requirements.Contains(RequirementFactory.AddVisible))
-                        {
-                            requiresNpcNameFinder = true;
-                        }
-                    });
-                }
-
-                if (input.ClassConfig.StopAttack.GetCooldownRemaining() == 0)
-                {
-                    Log("Stop auto interact!");
-                    input.StopAttack();
-                    wait.Update();
-                }
+                Log("Stop auto interact!");
+                input.StopAttack();
+                wait.Update();
             }
 
-            if (requiresNpcNameFinder == true)
+            if (requiresNpcNameFinder)
             {
                 SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, true));
             }
@@ -110,7 +99,7 @@ namespace Core.Goals
 
         public override ValueTask OnExit()
         {
-            if (requiresNpcNameFinder == true)
+            if (requiresNpcNameFinder)
             {
                 SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, false));
             }
@@ -128,13 +117,13 @@ namespace Core.Goals
         public override ValueTask PerformAction()
         {
             combatUtil.Update();
+            wait.Update();
 
-            if (SecondsSincePullStarted > 10)
+            if (PullDurationMs > 15_000)
             {
                 input.ClearTarget();
-                Log("Too much time to pull!");
+                Log("Pull taking too long. Clear target and face away!");
                 input.KeyPress(random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey, 1000);
-                pullStart = DateTime.UtcNow;
 
                 return ValueTask.CompletedTask;
             }
@@ -143,34 +132,23 @@ namespace Core.Goals
             {
                 if (HasPickedUpAnAdd)
                 {
-                    Log($"Add on approach! Combat={playerReader.Bits.PlayerInCombat}, Targets me={playerReader.Bits.TargetOfTargetIsPlayerOrPet}");
+                    Log($"Add on pull! Combat={playerReader.Bits.PlayerInCombat}, Targets me={playerReader.Bits.TargetOfTargetIsPlayerOrPet}");
 
-                    stopMoving.Stop();
                     stopMoving.Stop();
                     if (combatUtil.AquiredTarget())
                     {
                         pullStart = DateTime.UtcNow;
                     }
-
+                    stopMoving.Stop();
                     return ValueTask.CompletedTask;
                 }
 
-                if (!stuckDetector.IsMoving())
-                {
-                    stuckDetector.Unstick();
-                }
-
-                if (playerReader.HasTarget && classConfiguration.Approach.GetCooldownRemaining() == 0)
-                {
-                    input.Approach();
-                }
+                approachAction();
             }
             else
             {
                 SendActionEvent(new ActionEventArgs(GoapKey.pulled, true));
             }
-
-            wait.Update();
 
             return ValueTask.CompletedTask;
         }
@@ -186,11 +164,11 @@ namespace Core.Goals
 
             var start = DateTime.UtcNow;
             var lastKnownHealth = playerReader.HealthCurrent;
-            int maxWaitTime = 10;
+            double maxWaitTimeMs = 10_000;
 
-            Log($"Waiting for the target to reach melee range - max {maxWaitTime}s");
+            Log($"Waiting for the target to reach melee range - max {maxWaitTimeMs}ms");
 
-            while (playerReader.HasTarget && !playerReader.IsInMeleeRange && (DateTime.UtcNow - start).TotalSeconds < maxWaitTime)
+            while (playerReader.HasTarget && !playerReader.IsInMeleeRange && (DateTime.UtcNow - start).TotalMilliseconds < maxWaitTimeMs)
             {
                 if (playerReader.HealthCurrent < lastKnownHealth)
                 {
@@ -231,7 +209,7 @@ namespace Core.Goals
                     continue;
                 }
 
-                var success = castingHandler.Cast(item, pullPrevention);
+                bool success = castingHandler.Cast(item, pullPrevention);
                 if (success)
                 {
                     if (!playerReader.HasTarget)
@@ -265,7 +243,8 @@ namespace Core.Goals
                 (bool timeout, double elapsedMs) = wait.Until(1000,
                     () => playerReader.TargetTarget is
                         TargetTargetEnum.Me or
-                        TargetTargetEnum.Pet);
+                        TargetTargetEnum.Pet or
+                        TargetTargetEnum.PartyOrPet);
                 if (!timeout)
                 {
                     Log($"Entered combat after {elapsedMs}ms");
@@ -275,9 +254,43 @@ namespace Core.Goals
             return playerReader.Bits.PlayerInCombat;
         }
 
-        private void Log(string s)
+        private void DefaultApproach()
         {
-            logger.LogInformation($"{nameof(PullTargetGoal)}: {s}");
+            if (!stuckDetector.IsMoving())
+            {
+                stuckDetector.Update();
+            }
+
+            if (input.ClassConfig.Approach.GetCooldownRemaining() == 0)
+            {
+                input.Approach();
+            }
+        }
+
+        private void ConditionalApproach()
+        {
+            if (approachKey != null && approachKey.CanRun())
+            {
+                if (approachKey.GetCooldownRemaining() == 0)
+                {
+                    input.Approach();
+                }
+
+                if (!stuckDetector.IsMoving())
+                {
+                    stuckDetector.Update();
+                }
+            }
+            else
+            {
+                stopMoving.Stop();
+                stopMoving.Stop();
+            }
+        }
+
+        private void Log(string text)
+        {
+            logger.LogInformation(text);
         }
     }
 }
