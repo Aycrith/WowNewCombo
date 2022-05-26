@@ -12,7 +12,7 @@ namespace Core.Goals
 {
     public class NpcNameTargeting
     {
-        private const int MOUSE_DELAY = 40;
+        private const int MOUSE_DELAY = 50;
 
         private readonly ILogger logger;
         private readonly CancellationTokenSource cts;
@@ -108,6 +108,7 @@ namespace Core.Goals
                         AquireTargetAtCursor(clickPostion, npc);
                         return true;
                     }
+                    cts.Token.WaitHandle.WaitOne(5);
                 }
                 attemptPoints.Clear();
             }

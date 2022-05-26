@@ -84,7 +84,7 @@ namespace Core
                 if (classConfig.Loot)
                 {
                     availableActions.Add(new ConsumeCorpse(logger, classConfig));
-                    availableActions.Add(new CorpseConsumed(logger, goapAgentState));
+                    availableActions.Add(new CorpseConsumed(logger, goapAgentState, wait));
 
                     if (classConfig.KeyboardOnly)
                     {
@@ -153,7 +153,7 @@ namespace Core
                 if (classConfig.Loot)
                 {
                     availableActions.Add(new ConsumeCorpse(logger, classConfig));
-                    availableActions.Add(new CorpseConsumed(logger, goapAgentState));
+                    availableActions.Add(new CorpseConsumed(logger, goapAgentState, wait));
 
                     if (classConfig.KeyboardOnly)
                     {

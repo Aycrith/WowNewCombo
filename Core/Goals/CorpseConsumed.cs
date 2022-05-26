@@ -11,11 +11,13 @@ namespace Core.Goals
 
         private readonly ILogger logger;
         private readonly GoapAgentState goapAgentState;
+        private readonly Wait wait;
 
-        public CorpseConsumed(ILogger logger, GoapAgentState goapAgentState)
+        public CorpseConsumed(ILogger logger, GoapAgentState goapAgentState, Wait wait)
         {
             this.logger = logger;
             this.goapAgentState = goapAgentState;
+            this.wait = wait;
 
             AddPrecondition(GoapKey.dangercombat, false);
             AddPrecondition(GoapKey.consumecorpse, true);
@@ -29,6 +31,18 @@ namespace Core.Goals
             LogConsumed(logger, goapAgentState.LastCombatKillCount);
 
             SendActionEvent(new ActionEventArgs(GoapKey.consumecorpse, false));
+
+            // Issue
+            // After combat having multiple Corpse around the player
+            // NPCNameFinder picks the same corpse after each round
+            // Solve: Wait unknown amount of time
+            if (goapAgentState.LastCombatKillCount > 0)
+            {
+                wait.Update();
+                wait.Update();
+                wait.Update();
+                wait.Update();
+            }
 
             return base.OnEnter();
         }
