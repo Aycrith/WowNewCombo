@@ -1,6 +1,8 @@
 {
   "ClassName": "Warrior",
-  "PathFilename": "24-30 Duskwood wolf ravager.json",
+  "PathFilename": "_pack\\20-30\\Duskwood\\23-26 Near Twilight Grove v3 - wolves-ghostwalk.json",
+  "PathThereAndBack": false,
+  "PathReduceSteps": false,
   "Pull": {
     "Sequence": [
       {
@@ -10,7 +12,7 @@
         "Requirement": "Health% > 50"
       },
       {
-        "Name": "Throw",
+        "Name": "Shoot",
         "Key": "9",
         "HasCastbar": true,
         "WhenUsable": true,
@@ -19,7 +21,7 @@
           "AddVisible",
           "HasRangedWeapon",
           "!Items Broken",
-          "SpellInRange:3"
+          "SpellInRange:2 || SpellInRange:3"
         ]
       },
       {
@@ -31,11 +33,11 @@
       },
       {
         "Name": "StopAttack",
-        "DelayBeforeCast": 30,
+        "DelayBeforeCast": 25,
         "Requirements": [
           "Battle Shout && AutoAttacking && Rage >= Cost_Heroic Strike"
         ],
-        "DelayAfterCast": 50
+        "DelayAfterCast": 25
       },
       {
         "Name": "Approach",
@@ -83,7 +85,7 @@
         "WhenUsable": true,
         "MinRage": 20,
         "Requirements": [
-          "!Charge Stun && MainHandSwing > -400",
+          "MainHandSwing > -400",
           "MobCount > 1"
         ],
         "AfterCastWaitNextSwing": true
@@ -94,7 +96,7 @@
         "WhenUsable": true,
         "MinRage": 15,
         "Requirements": [
-          "!Charge Stun && MainHandSwing > -400",
+          "MainHandSwing > -400",
           "MobCount < 2"
         ],
         "AfterCastWaitNextSwing": true
@@ -105,7 +107,7 @@
         "WhenUsable": true,
         "MinRage": 10,
         "Requirements": [
-          "!Charge Stun && TargetHealth% > 50",
+          "!Charge Stun && TargetHealth% > 50 && TargetHealth% < 98",
           "!Rend"
         ],
         "Form": "Warrior_BattleStance"
@@ -142,6 +144,14 @@
         "Key": "=",
         "Requirement": "Health% < 40",
         "Cost": 3
+      },
+      {
+        "Cost": 18,
+        "Name": "sharpen",
+        "Key": "F4",
+        "WhenUsable": true,
+        "HasCastbar": true,
+        "Requirement": "!HasMainHandEnchant"
       }
     ]
   },
@@ -151,7 +161,7 @@
         "Name": "Repair",
         "Key": "C",
         "Requirement": "Items Broken",
-        "PathFilename": "10_Loch_Modan_Vendor.json",
+        "PathFilename": "23_Duskwood_Vendor.json",
         "Cost": 6
       },
       {
@@ -161,7 +171,7 @@
           "BagFull",
           "BagGreyItem"
         ],
-        "PathFilename": "10_Loch_Modan_Vendor.json",
+        "PathFilename": "23_Duskwood_Vendor.json",
         "Cost": 6
       }
     ]
