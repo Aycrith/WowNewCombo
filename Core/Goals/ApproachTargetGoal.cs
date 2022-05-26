@@ -5,26 +5,26 @@ using System;
 using System.Numerics;
 using System.Threading.Tasks;
 
+#pragma warning disable 162
+
 namespace Core.Goals
 {
     public class ApproachTargetGoal : GoapGoal
     {
-        public override float CostOfPerformingAction { get => 8f; }
+        private const bool debug = false;
+
+        public override float CostOfPerformingAction => 8f;
 
         private readonly ILogger logger;
         private readonly ConfigurableInput input;
-
         private readonly Wait wait;
         private readonly PlayerReader playerReader;
         private readonly StopMoving stopMoving;
-        private readonly MountHandler mountHandler;
         private readonly CombatUtil combatUtil;
 
-        private const bool debug = true;
+        private readonly Random random = new();
 
         private const float minDistance = 0.01f;
-
-        private readonly Random random = new();
 
         private DateTime approachStart;
 
@@ -34,13 +34,13 @@ namespace Core.Goals
         private int initialTargetGuid;
         private float initialMinRange;
 
-        private int SecondsSinceApproachStarted => (int)(DateTime.UtcNow - approachStart).TotalSeconds;
+        private double ApproachDurationMs => (DateTime.UtcNow - approachStart).TotalMilliseconds;
 
         private bool HasPickedUpAnAdd =>
             playerReader.Bits.PlayerInCombat &&
             !playerReader.Bits.TargetOfTargetIsPlayerOrPet;
 
-        public ApproachTargetGoal(ILogger logger, ConfigurableInput input, Wait wait, PlayerReader playerReader, StopMoving stopMoving, MountHandler mountHandler, CombatUtil combatUtil)
+        public ApproachTargetGoal(ILogger logger, ConfigurableInput input, Wait wait, PlayerReader playerReader, StopMoving stopMoving, CombatUtil combatUtil)
         {
             this.logger = logger;
             this.input = input;
@@ -48,14 +48,11 @@ namespace Core.Goals
             this.wait = wait;
             this.playerReader = playerReader;
             this.stopMoving = stopMoving;
-            this.mountHandler = mountHandler;
             this.combatUtil = combatUtil;
 
-            distance = 0;
             lastPlayerLocation = playerReader.PlayerLocation;
 
             initialTargetGuid = playerReader.TargetGuid;
-            initialMinRange = 0;
 
             AddPrecondition(GoapKey.hastarget, true);
             AddPrecondition(GoapKey.targetisalive, true);
@@ -66,8 +63,6 @@ namespace Core.Goals
 
         public override ValueTask OnEnter()
         {
-            combatUtil.Update();
-
             initialTargetGuid = playerReader.TargetGuid;
             initialMinRange = playerReader.MinRange;
 
@@ -80,63 +75,75 @@ namespace Core.Goals
 
         public override ValueTask PerformAction()
         {
+            wait.Update();
             combatUtil.Update();
 
             if (HasPickedUpAnAdd)
             {
-                logger.LogWarning($"Add on approach! Combat={playerReader.Bits.PlayerInCombat}, Targets me={playerReader.Bits.TargetOfTargetIsPlayerOrPet}");
+                if (debug)
+                    Log($"Add on approach! PlayerCombat={playerReader.Bits.PlayerInCombat}, Targets us={playerReader.Bits.TargetOfTargetIsPlayerOrPet}");
 
                 stopMoving.Stop();
-                stopMoving.Stop();
                 combatUtil.AquiredTarget();
+                stopMoving.Stop();
 
                 return ValueTask.CompletedTask;
             }
+
+            distance = playerReader.PlayerLocation.DistanceXYTo(lastPlayerLocation);
+            lastPlayerLocation = playerReader.PlayerLocation;
 
             if (input.ClassConfig.Approach.GetCooldownRemaining() == 0)
             {
                 input.Approach();
             }
 
-            distance = playerReader.PlayerLocation.DistanceXYTo(lastPlayerLocation);
-
-            if (distance < minDistance && playerReader.LastUIErrorMessage == UI_ERROR.ERR_AUTOFOLLOW_TOO_FAR)
+            if (distance < minDistance)
             {
-                playerReader.LastUIErrorMessage = UI_ERROR.NONE;
+                if (playerReader.LastUIErrorMessage == UI_ERROR.ERR_AUTOFOLLOW_TOO_FAR)
+                {
+                    playerReader.LastUIErrorMessage = UI_ERROR.NONE;
 
-                Log("Too far, start moving forward!");
-                input.SetKeyState(input.ForwardKey, true);
+                    if (debug)
+                        Log("Too far, start moving forward!");
+
+                    input.SetKeyState(input.ForwardKey, true);
+                    return ValueTask.CompletedTask;
+                }
+
+                if (ApproachDurationMs > 500)
+                {
+                    if (debug)
+                        Log($"Seems stuck! Clear Target. Turn away. d: {distance}");
+
+                    input.ClearTarget();
+                    input.KeyPress(random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey, 250 + random.Next(250));
+
+                    return ValueTask.CompletedTask;
+                }
             }
 
-            if (SecondsSinceApproachStarted > 1 && distance < minDistance && !playerReader.Bits.PlayerInCombat)
+            if (ApproachDurationMs > 15_000)
             {
+                if (debug)
+                    Log("Too long time. Clear Target. Turn away.");
+
                 input.ClearTarget();
-                Log($"Seems stuck! Clear Target. Turn away. d: {distance}");
-                input.KeyPress(random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey, 300 + random.Next(800));
+                input.KeyPress(random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey, 250 + random.Next(250));
 
-                approachStart = DateTime.UtcNow;
-            }
-
-            if (SecondsSinceApproachStarted > 15 && !playerReader.Bits.PlayerInCombat)
-            {
-                input.ClearTarget();
-                Log("Too long time. Clear Target. Turn away.");
-                input.KeyPress(random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey, 300 + random.Next(800));
-
-                approachStart = DateTime.UtcNow;
+                return ValueTask.CompletedTask;
             }
 
             if (playerReader.TargetGuid == initialTargetGuid)
             {
-                var initialTargetMinRange = playerReader.MinRange;
-                if (!playerReader.Bits.PlayerInCombat)
+                int initialTargetMinRange = playerReader.MinRange;
+                if (input.ClassConfig.TargetNearestTarget.GetCooldownRemaining() == 0)
                 {
-                    if (input.ClassConfig.TargetNearestTarget.GetCooldownRemaining() == 0)
-                    {
+                    if (debug)
                         Log("Try to find closer target...");
-                        input.NearestTarget();
-                        wait.Update();
-                    }
+
+                    input.NearestTarget();
+                    wait.Update();
                 }
 
                 if (playerReader.TargetGuid != initialTargetGuid)
@@ -145,38 +152,38 @@ namespace Core.Goals
                     {
                         if (playerReader.MinRange < initialTargetMinRange)
                         {
-                            Log($"Found a closer target! {playerReader.MinRange} < {initialTargetMinRange}");
+                            if (debug)
+                                Log($"Found a closer target! {playerReader.MinRange} < {initialTargetMinRange}");
+
                             initialMinRange = playerReader.MinRange;
                         }
                         else
                         {
                             initialTargetGuid = -1;
-                            Log("Stick to initial target!");
+                            if (debug)
+                                Log("Stick to initial target!");
+
                             input.LastTarget();
                         }
                     }
                     else
                     {
-                        Log($"Lost the target due blacklist!");
+                        if (debug)
+                            Log($"Lost the target due blacklist!");
                     }
                 }
             }
 
-            if (initialMinRange < playerReader.MinRange && !playerReader.Bits.PlayerInCombat)
+            if (initialMinRange < playerReader.MinRange)
             {
-                Log($"We are going away from the target! {initialMinRange} < {playerReader.MinRange}");
-                input.ClearTarget();
+                if (debug)
+                    Log($"We are going away from the target! {initialMinRange} < {playerReader.MinRange}");
 
-                approachStart = DateTime.UtcNow;
+                input.ClearTarget();
             }
 
             RandomJump();
 
-            lastPlayerLocation = playerReader.PlayerLocation;
-
-            // due limited precision
-            wait.Update();
-            wait.Update();
             return ValueTask.CompletedTask;
         }
 
@@ -190,7 +197,8 @@ namespace Core.Goals
 
         private void RandomJump()
         {
-            if ((DateTime.UtcNow - approachStart).TotalSeconds > 2 && input.ClassConfig.Jump.MillisecondsSinceLastClick > random.Next(5000, 25_000))
+            if (ApproachDurationMs > 2000 &&
+                input.ClassConfig.Jump.MillisecondsSinceLastClick > random.Next(5000, 25_000))
             {
                 input.Jump();
             }
@@ -198,11 +206,7 @@ namespace Core.Goals
 
         private void Log(string text)
         {
-            if (debug)
-            {
-                logger.LogInformation($"{nameof(ApproachTargetGoal)}: {text}");
-            }
+            logger.LogDebug(text);
         }
-
     }
 }
