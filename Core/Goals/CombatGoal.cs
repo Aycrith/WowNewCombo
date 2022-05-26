@@ -46,7 +46,7 @@ namespace Core.Goals
             AddPrecondition(GoapKey.incombat, true);
             AddPrecondition(GoapKey.hastarget, true);
             AddPrecondition(GoapKey.targetisalive, true);
-            AddPrecondition(GoapKey.targettargetsus, true);
+            //AddPrecondition(GoapKey.targettargetsus, true);
             AddPrecondition(GoapKey.incombatrange, true);
 
             AddEffect(GoapKey.producedcorpse, true);
@@ -68,7 +68,7 @@ namespace Core.Goals
             {
                 if (!playerReader.HasTarget)
                 {
-                    logger.LogInformation($"{nameof(CombatGoal)}: Lost Target!");
+                    logger.LogInformation("Lost Target!");
                     stopMoving.Stop();
                     return;
                 }
@@ -84,7 +84,7 @@ namespace Core.Goals
                     if (item.Name == classConfiguration.Approach.Name ||
                         item.Name == classConfiguration.AutoAttack.Name)
                     {
-                        castingHandler.ReactToLastUIErrorMessage($"{nameof(CombatGoal)}: Fight {item.Name}");
+                        castingHandler.ReactToLastUIErrorMessage($"Fight {item.Name}");
                     }
 
                     break;
@@ -96,7 +96,7 @@ namespace Core.Goals
         {
             if (e.Key == GoapKey.newtarget)
             {
-                logger.LogInformation($"{nameof(CombatGoal)}: Reset cooldowns");
+                logger.LogInformation("Reset cooldowns");
 
                 ResetCooldowns();
             }
@@ -105,7 +105,7 @@ namespace Core.Goals
             {
                 // have to check range
                 // ex. target died far away have to consider the range and approximate
-                //logger.LogInformation($"{nameof(CombatGoal)}: --- Target is killed! Record death location.");
+                //logger.LogInformation($"--- Target is killed! Record death location.");
                 float distance = (lastKnownMaxDistance + lastKnownMinDistance) / 2f;
                 SendActionEvent(new ActionEventArgs(GoapKey.corpselocation, new CorpseLocation(GetCorpseLocation(distance), distance)));
             }
@@ -162,7 +162,7 @@ namespace Core.Goals
         {
             if (MathF.Abs(lastDirectionForTurnAround - playerReader.Direction) > MathF.PI / 2)
             {
-                logger.LogInformation($"{nameof(CombatGoal)}: Turning too fast!");
+                logger.LogInformation("Turning too fast!");
                 stopMoving.Stop();
 
                 lastDirectionForTurnAround = playerReader.Direction;
@@ -204,7 +204,7 @@ namespace Core.Goals
 
             if (addonReader.CombatCreatureCount > 1)
             {
-                logger.LogInformation($"{nameof(CombatGoal)}: Checking target in front of me");
+                logger.LogInformation("Checking target in front of me");
                 input.NearestTarget();
                 wait.Update();
                 if (playerReader.HasTarget)
@@ -213,7 +213,7 @@ namespace Core.Goals
                     {
                         ResetCooldowns();
 
-                        logger.LogWarning($"{nameof(CombatGoal)}: Somebody is attacking me! Found new target to attack");
+                        logger.LogWarning("Somebody is attacking me! Found new target to attack");
                         input.Interact();
                         stopMoving.Stop();
                         wait.Update();
@@ -238,7 +238,7 @@ namespace Core.Goals
 
         private void StopDrowning()
         {
-            logger.LogWarning($"{nameof(CombatGoal)}: Drowning! Swim up");
+            logger.LogWarning("Drowning! Swim up");
             input.Jump();
             wait.Update();
         }
