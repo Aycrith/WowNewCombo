@@ -18,7 +18,6 @@ namespace Core.GOAP
         shouldloot = 90,
         shouldskin = 92,
         newtarget = 110,
-        fighting = 120,
         producedcorpse = 130,
         consumecorpse = 131,
         corpselocation = 999,
@@ -78,9 +77,6 @@ namespace Core.GOAP
 
             { new(GoapKey.newtarget, true), "New target" },
             { new(GoapKey.newtarget, false), "!New target" },
-
-            { new(GoapKey.fighting, true), "Fighting" },
-            { new(GoapKey.fighting, false), "!Fighting" },
 
             { new(GoapKey.producedcorpse, true), "Killing blow" },
             { new(GoapKey.producedcorpse, false), "!Killing blow" },

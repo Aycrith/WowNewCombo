@@ -44,8 +44,6 @@ namespace Core.Goals
         {
             var targetLocation = this.classConfiguration.WrongZone.ExitZoneLocation;
 
-            SendActionEvent(new ActionEventArgs(GoapKey.fighting, false));
-
             await Task.Delay(200);
             input.SetKeyState(input.ForwardKey, true);
 

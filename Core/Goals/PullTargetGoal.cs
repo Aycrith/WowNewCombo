@@ -139,8 +139,6 @@ namespace Core.Goals
                 return ValueTask.CompletedTask;
             }
 
-            SendActionEvent(new ActionEventArgs(GoapKey.fighting, true));
-
             if (!Pull())
             {
                 if (HasPickedUpAnAdd)

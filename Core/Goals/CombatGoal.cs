@@ -143,8 +143,6 @@ namespace Core.Goals
 
             lastDirectionForTurnAround = playerReader.Direction;
 
-            SendActionEvent(new ActionEventArgs(GoapKey.fighting, true));
-
             return ValueTask.CompletedTask;
         }
 

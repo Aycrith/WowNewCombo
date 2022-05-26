@@ -119,8 +119,6 @@ namespace Core.Goals
 
         public override ValueTask OnEnter()
         {
-            SendActionEvent(new ActionEventArgs(GoapKey.fighting, false));
-
             input.ClearTarget();
             stopMoving.Stop();
 
