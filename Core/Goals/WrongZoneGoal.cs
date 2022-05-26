@@ -72,7 +72,7 @@ namespace Core.Goals
                 await Task.Delay(100);
                 if (HasBeenActiveRecently())
                 {
-                    this.stuckDetector.Unstick();
+                    this.stuckDetector.Update();
                 }
                 else
                 {

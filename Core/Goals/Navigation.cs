@@ -206,25 +206,17 @@ namespace Core.Goals
             {
                 if (!stuckDetector.IsGettingCloser())
                 {
-                    if (lastDistance < distance)
+                    if (stuckDetector.ActionDurationMs > 10_000)
                     {
-                        // TODO: test this
-                        AdjustNextWaypointPointToClosest();
-                        if (debug)
-                            LogDebug("unstuck Further away");
-                        AdjustHeading(heading, cts);
-                    }
-                    else if (stuckDetector.actionDurationSeconds > 10)
-                    {
-                        Log($"Clear route to waypoit since stucked for {stuckDetector.actionDurationSeconds}");
-                        stuckDetector.ResetStuckParameters();
+                        Log($"Clear route to waypoit since stucked for {stuckDetector.ActionDurationMs} ms");
+                        stuckDetector.Reset();
                         routeToNextWaypoint.Clear();
                         return;
                     }
 
                     if (HasBeenActiveRecently())
                     {
-                        stuckDetector.Unstick();
+                        stuckDetector.Update();
                         distance = location.DistanceXYTo(routeToNextWaypoint.Peek());
                     }
                     else
@@ -309,7 +301,7 @@ namespace Core.Goals
 
         public void ResetStuckParameters()
         {
-            stuckDetector.ResetStuckParameters();
+            stuckDetector.Reset();
         }
 
         private void RefillRouteToNextWaypoint()

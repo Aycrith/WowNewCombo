@@ -1,32 +1,39 @@
 ﻿using Core.Goals;
-using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using SharedLib.Extensions;
 using System;
-using System.Diagnostics;
 using System.Numerics;
-using System.Threading;
+
+#pragma warning disable 162
 
 namespace Core
 {
     public class StuckDetector
     {
+        private const bool debug = false;
+
+        private const float MIN_RANGE_DIFF = 5;
+        private const float MIN_DISTANCE = 1;
+        private const float MAX_RANGE = 999999;
+        private const double UNSTUCK_AFTER_MS = 2000;
+        private const double ACTION_STUCK_TIME = 3000;
+
         private readonly ILogger logger;
         private readonly ConfigurableInput input;
 
         private readonly PlayerReader playerReader;
-        
-        private readonly StopMoving stopMoving;
-        
-        private readonly Random random = new();
         private readonly PlayerDirection playerDirection;
+        private readonly StopMoving stopMoving;
 
-        private Vector3 targetLocation;
+        private readonly Random random = new();
 
-        private Stopwatch LastReachedDestiationTimer = new();
-        private Stopwatch LastUnstickAttemptTimer = new();
-        private float previousDistanceToTarget = 99999;
-        private DateTime timeOfLastSignificantMovement;
+        private Vector3 target;
+        private float prevDistance = MAX_RANGE;
+        private DateTime startTime;
+        private DateTime attemptTime;
+
+        public double ActionDurationMs => (DateTime.UtcNow - startTime).TotalMilliseconds;
+        private double UnstuckMs => (DateTime.UtcNow - attemptTime).TotalMilliseconds;
 
         public StuckDetector(ILogger logger, ConfigurableInput input, PlayerReader playerReader, PlayerDirection playerDirection, StopMoving stopMoving)
         {
@@ -34,101 +41,53 @@ namespace Core
             this.input = input;
 
             this.playerReader = playerReader;
-            this.stopMoving = stopMoving;
             this.playerDirection = playerDirection;
+            this.stopMoving = stopMoving;
 
-            ResetStuckParameters();
+            Reset();
         }
 
-        public void SetTargetLocation(Vector3 targetLocation)
+        public void SetTargetLocation(Vector3 target)
         {
-            this.targetLocation = targetLocation;
-            ResetStuckParameters();
+            this.target = target;
+            Reset();
         }
 
-        public void ResetStuckParameters()
+        public void Reset()
         {
-            LastReachedDestiationTimer.Reset();
-            LastReachedDestiationTimer.Start();
+            attemptTime = DateTime.UtcNow;
+            startTime = DateTime.UtcNow;
 
-            LastUnstickAttemptTimer.Reset();
-            LastUnstickAttemptTimer.Start();
-
-            previousDistanceToTarget = 99999;
-            timeOfLastSignificantMovement = DateTime.UtcNow;
-
-            //logger.LogInformation("ResetStuckParameters()");
+            prevDistance = MAX_RANGE;
         }
 
-        public delegate void ActionEventHandler(object sender, ActionEventArgs e);
-
-        public event ActionEventHandler? ActionEvent;
-
-        public void SendActionEvent(ActionEventArgs e)
+        public void Update()
         {
-            ActionEvent?.Invoke(this, e);
-        }
+            if (debug)
+                logger.LogDebug($"Stuck for {ActionDurationMs}ms, last tried to unstick {UnstuckMs}ms ago.");
 
-        public int actionDurationSeconds => (int)(LastReachedDestiationTimer.ElapsedMilliseconds / 1000);
-        public int unstickSeconds => (int)(LastUnstickAttemptTimer.ElapsedMilliseconds / 1000);
-
-        public void Unstick()
-        {
-            input.Jump();
-
-            logger.LogInformation($"Stuck for {actionDurationSeconds}s, last tried to unstick {unstickSeconds}s ago. Unstick seconds={unstickSeconds}.");
-
-            if (actionDurationSeconds > 240)
+            if (UnstuckMs > UNSTUCK_AFTER_MS)
             {
-                // stuck for 4 minutes
-                logger.LogInformation("Stuck for 4 minutes");
-                SendActionEvent(new ActionEventArgs(GoapKey.abort, true));
-                Thread.Sleep(120000);
-            }
-
-            if (unstickSeconds > 2)
-            {
-                int actionDuration = (int)(1000 + (((double)actionDurationSeconds * 1000) / 8));
-
-                if (actionDuration > 20000)
-                {
-                    actionDuration = 20000;
-                }
-
-                if (actionDurationSeconds > 10)
-                {
-                    // back up a bit, added "remove" move forward
-                    logger.LogInformation($"Trying to unstick by backing up for {actionDuration}ms");
-                    input.SetKeyState(input.BackwardKey, true, true);
-                    input.SetKeyState(input.ForwardKey, false, true);
-                    Thread.Sleep(actionDuration);
-                    input.SetKeyState(input.BackwardKey, false, true);
-                }
-                this.stopMoving.Stop();
+                stopMoving.Stop();
 
                 // Turn
-                var r = random.Next(0, 2);
-                var key = r == 0 ? input.TurnLeftKey : input.TurnRightKey;
-                var turnDuration = random.Next(0, 800) + 200;
-                logger.LogInformation($"Trying to unstick by turning for {turnDuration}ms");
-                input.SetKeyState(key, true, true);
-                Thread.Sleep(turnDuration);
-                input.SetKeyState(key, false, true);
+                ConsoleKey turnKey = random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey;
+                int turnDuration = random.Next(125) + 125; // Turn atleast 45 deg to 90 deg
+                logger.LogInformation($"Unstuck by turning for {turnDuration}ms");
+                input.KeyPress(turnKey, turnDuration);
 
-                // Move forward
-                var strafeDuration = random.Next(0, 2000) + actionDurationSeconds;
-                logger.LogInformation($"Trying to unstick by moving forward after turning for {strafeDuration}ms");
-                input.SetKeyState(input.ForwardKey, true, true);
-                Thread.Sleep(strafeDuration);
+                // Move
+                ConsoleKey moveKey = random.Next(2) == 0 ? input.ForwardKey : input.BackwardKey;
+                int moveDuration = random.Next(375) + 125;
+                logger.LogInformation($"Unstuck by moving for {moveDuration}ms");
+                input.KeyPress(moveKey, moveDuration);
 
                 input.Jump();
 
-                logger.LogInformation("Move to next point");
-                var heading = DirectionCalculator.CalculateHeading(this.playerReader.PlayerLocation, targetLocation);
-                playerDirection.SetDirection(heading, targetLocation);
+                float heading = DirectionCalculator.CalculateHeading(playerReader.PlayerLocation, target);
+                playerDirection.SetDirection(heading, target);
 
-                LastUnstickAttemptTimer.Reset();
-                LastUnstickAttemptTimer.Start();
+                attemptTime = DateTime.UtcNow;
             }
             else
             {
@@ -136,49 +95,30 @@ namespace Core
             }
         }
 
-        internal bool IsGettingCloser()
+        public bool IsGettingCloser()
         {
-            float currentDistanceToTarget = playerReader.PlayerLocation.DistanceXYTo(targetLocation);
-
-            if (currentDistanceToTarget < previousDistanceToTarget - 5)
+            float distance = playerReader.PlayerLocation.DistanceXYTo(target);
+            if (distance < prevDistance - MIN_RANGE_DIFF)
             {
-                ResetStuckParameters();
-                previousDistanceToTarget = currentDistanceToTarget;
+                Reset();
+                prevDistance = distance;
                 return true;
             }
 
-            if (currentDistanceToTarget > previousDistanceToTarget + 5)
-            {
-                currentDistanceToTarget = previousDistanceToTarget;
-            }
-
-            if ((DateTime.UtcNow - timeOfLastSignificantMovement).TotalSeconds > 3)
-            {
-                logger.LogInformation("We seem to be stuck!");
-                return false;
-            }
-
-            return true;
+            return ActionDurationMs < ACTION_STUCK_TIME;
         }
 
-        internal bool IsMoving()
+        public bool IsMoving()
         {
-            float currentDistanceToTarget = playerReader.PlayerLocation.DistanceXYTo(targetLocation);
-
-            if (MathF.Abs(currentDistanceToTarget - previousDistanceToTarget) > 1)
+            float distance = playerReader.PlayerLocation.DistanceXYTo(target);
+            if (MathF.Abs(distance - prevDistance) > MIN_DISTANCE)
             {
-                ResetStuckParameters();
-                previousDistanceToTarget = currentDistanceToTarget;
+                Reset();
+                prevDistance = distance;
                 return true;
             }
 
-            if ((DateTime.UtcNow - timeOfLastSignificantMovement).TotalSeconds > 3)
-            {
-                logger.LogInformation("We seem to be stuck!");
-                return false;
-            }
-
-            return true;
+            return ActionDurationMs < ACTION_STUCK_TIME;
         }
     }
 }
