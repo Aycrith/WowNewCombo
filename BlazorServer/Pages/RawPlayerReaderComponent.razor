@@ -4,30 +4,37 @@
 @inject IAddonReader addonReader
 @implements IDisposable
 
-@if (addonReader.PlayerReader != null)
-{
-    <div class="container">
-        <div class="card">
-            <div class="card-header">
-                Raw PlayerReader
-            </div>
-            <div class="card-body" style="padding-bottom: 0">
-                <table class="table table-bordered">
-
-                    @foreach (var property in GetPropertyValues(addonReader.PlayerReader))
-                    {
-                        <tr>
-                            <td>@(property.Name)</td>
-                            <td>
-                                <input value="@property.Value" class="form-control" Disabled="true" />
-                            </td>
-                        </tr>
-                    }
-                </table>
-            </div>
+<div class="container">
+    <div class="card">
+        <div class="card-header">
+            Raw PlayerReader
+        </div>
+        <div class="card-body" style="padding-bottom: 0">
+            <table class="table table-bordered">
+                @foreach (var property in GetPropertyValues(addonReader.PlayerReader))
+                {
+                    <tr>
+                        <td>@(property.Name)</td>
+                        <td>
+                            <input value="@property.Value" class="form-control" Disabled="true" />
+                        </td>
+                    </tr>
+                }
+            </table>
+            <table class="table table-bordered">
+                @foreach (var property in GetPropertyValues(addonReader))
+                {
+                    <tr>
+                        <td>@(property.Name)</td>
+                        <td>
+                            <input value="@property.Value" class="form-control" Disabled="true" />
+                        </td>
+                    </tr>
+                }
+            </table>
         </div>
     </div>
-}
+</div>
 
 @code {
 
@@ -84,6 +91,21 @@
                     }
                 }
             }
+            else if (pinfo.PropertyType.IsGenericType)
+            {
+                if (value.GetType() == typeof(List<CreatureRecord>))
+                {
+                    var collection = value as IEnumerable<CreatureRecord>;
+                    if (collection == null) continue;
+
+                    int i = 0;
+                    foreach(var item in collection)
+                    {
+                        propList.Add(new ObjectField() { Name = "    " + objName + pinfo.Name + $"[{i.ToString()}]", Value = item.ToString() ?? "" });
+                        i++;
+                    }
+                }
+            }
             else
             {
                 if (pinfo.PropertyType.IsPrimitive || pinfo.PropertyType.IsEnum || value.GetType() == typeof(string))
@@ -118,12 +140,12 @@
                     if (lst != null && lst.Count > 0)
                         propList.AddRange(lst);
                 }
-                /*
-                else if (value is BitStatus bitStatus)
+                else if (value is CreatureHistory creatureHistory)
                 {
-                    propList.Add(new ObjectField() { Name = objName + pinfo.Name, Value = bitStatus.ToString() });
+                    var lst = GetPropertyValues(creatureHistory);
+                    if (lst != null && lst.Count > 0)
+                        propList.AddRange(lst);
                 }
-                */
             }
         }
         return propList;
