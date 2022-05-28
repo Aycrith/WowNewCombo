@@ -1,7 +1,6 @@
 ﻿using Core.GOAP;
 using SharedLib.NpcFinder;
 using Microsoft.Extensions.Logging;
-using System.Threading.Tasks;
 using System;
 
 namespace Core.Goals
@@ -60,7 +59,7 @@ namespace Core.Goals
             return canRun;
         }
 
-        public override ValueTask OnEnter()
+        public override void OnEnter()
         {
             if (bagReader.BagsFull)
             {
@@ -89,7 +88,7 @@ namespace Core.Goals
                     if (combatUtil.AquiredTarget())
                     {
                         Log("Interrupted!");
-                        return ValueTask.CompletedTask;
+                        return;
                     }
                 }
 
@@ -103,7 +102,7 @@ namespace Core.Goals
                     if (foundTarget)
                     {
                         Log("Interrupted!");
-                        return ValueTask.CompletedTask;
+                        return;
                     }
 
                     if (moved)
@@ -128,7 +127,7 @@ namespace Core.Goals
                         Log($"Skinning Successful! {playerReader.LastUIErrorMessage}");
 
                         GoalExit();
-                        return ValueTask.CompletedTask;
+                        return;
                     }
                     else
                     {
@@ -141,22 +140,19 @@ namespace Core.Goals
                     Log($"Target({playerReader.TargetId}) is not skinnable - NPC Count: {npcNameTargeting.NpcCount}");
 
                     GoalExit();
-                    return ValueTask.CompletedTask;
+                    return;
                 }
             }
-
-            return ValueTask.CompletedTask;
         }
 
-        public override ValueTask OnExit()
+        public override void OnExit()
         {
             SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, false));
-            return base.OnExit();
         }
 
-        public override ValueTask PerformAction()
+        public override void PerformAction()
         {
-            return ValueTask.CompletedTask;
+
         }
 
         private void GoalExit()

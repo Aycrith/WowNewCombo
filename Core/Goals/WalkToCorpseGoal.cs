@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using System.Threading.Tasks;
 
 namespace Core.Goals
 {
@@ -70,7 +69,7 @@ namespace Core.Goals
             }
         }
 
-        public override ValueTask OnEnter()
+        public override void OnEnter()
         {
             playerReader.ZCoord = 0;
             addonReader.PlayerDied();
@@ -86,18 +85,14 @@ namespace Core.Goals
             navigation.SetWayPoints(new() { corpseLocation });
 
             onEnterTime = DateTime.UtcNow;
-
-            return base.OnEnter();
         }
 
-        public override ValueTask OnExit()
+        public override void OnExit()
         {
             navigation.Stop();
-
-            return base.OnExit();
         }
 
-        public override ValueTask PerformAction()
+        public override void PerformAction()
         {
             if (!playerReader.Bits.IsCorpseInRange)
             {
@@ -112,8 +107,6 @@ namespace Core.Goals
             RandomJump();
 
             wait.Update();
-
-            return ValueTask.CompletedTask;
         }
 
         private void RandomJump()

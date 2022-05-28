@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
-using System.Threading.Tasks;
 using SharedLib.Extensions;
 
 #pragma warning disable 162
@@ -151,19 +150,17 @@ namespace Core.Goals
             }
         }
 
-        public override ValueTask OnEnter()
+        public override void OnEnter()
         {
             Resume();
-            return base.OnEnter();
         }
 
-        public override ValueTask OnExit()
+        public override void OnExit()
         {
             Abort();
-            return base.OnExit();
         }
 
-        public override ValueTask PerformAction()
+        public override void PerformAction()
         {
             if (playerReader.HasTarget && playerReader.Bits.TargetIsDead)
             {
@@ -178,15 +175,13 @@ namespace Core.Goals
                 input.Jump();
             }
 
-            if (playerReader.Bits.PlayerInCombat && classConfig.Mode != Mode.AttendedGather) { return ValueTask.CompletedTask; }
+            if (playerReader.Bits.PlayerInCombat && classConfig.Mode != Mode.AttendedGather) { return; }
 
             navigation.Update(sideActivityCts);
 
             RandomJump();
 
             wait.Update();
-
-            return ValueTask.CompletedTask;
         }
 
         private void StartSideActivity()

@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Core.GOAP;
 
 namespace Core.Goals
@@ -35,7 +34,7 @@ namespace Core.Goals
             }
         }
 
-        public override ValueTask OnEnter()
+        public override void OnEnter()
         {
             LogConsume(logger);
             SendActionEvent(new ActionEventArgs(GoapKey.consumecorpse, true));
@@ -44,13 +43,10 @@ namespace Core.Goals
             {
                 SendActionEvent(new ActionEventArgs(GoapKey.shouldloot, true));
             }
-
-            return base.OnEnter();
         }
 
-        public override ValueTask PerformAction()
+        public override void PerformAction()
         {
-            return ValueTask.CompletedTask;
         }
 
         [LoggerMessage(

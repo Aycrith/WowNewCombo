@@ -23,7 +23,6 @@ namespace Core.GOAP
         corpselocation = 999,
         abort = 140,
         resume = 141,
-        isalive = 170,
         isswimming = 180,
         itemsbroken = 190,
         gathering = 200,

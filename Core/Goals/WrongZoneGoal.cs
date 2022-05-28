@@ -2,13 +2,14 @@
 using Microsoft.Extensions.Logging;
 using SharedLib.Extensions;
 using System;
-using System.Threading.Tasks;
 
 namespace Core.Goals
 {
     public class WrongZoneGoal : GoapGoal
     {
         public override float CostOfPerformingAction => 19f;
+
+        private const float RADIAN = MathF.PI * 2;
 
         private readonly ILogger logger;
         private readonly ConfigurableInput input;
@@ -18,7 +19,6 @@ namespace Core.Goals
         private readonly StuckDetector stuckDetector;
         private readonly ClassConfiguration classConfiguration;
 
-        private readonly float RADIAN = MathF.PI * 2;
         private float lastDistance = 999;
 
         public DateTime LastActive { get; private set; }
@@ -32,24 +32,22 @@ namespace Core.Goals
             this.logger = logger;
             this.stuckDetector = stuckDetector;
             this.classConfiguration = classConfiguration;
+
             AddPrecondition(GoapKey.incombat, false);
         }
 
         public override bool CheckIfActionCanRun()
         {
-            return addonReader.UIMapId.Value == this.classConfiguration.WrongZone.ZoneId;
+            return addonReader.UIMapId.Value == classConfiguration.WrongZone.ZoneId;
         }
 
-        public override async ValueTask PerformAction()
+        public override void PerformAction()
         {
-            var targetLocation = this.classConfiguration.WrongZone.ExitZoneLocation;
+            var targetLocation = classConfiguration.WrongZone.ExitZoneLocation;
 
-            await Task.Delay(200);
             input.SetKeyState(input.ForwardKey, true);
 
-            if (this.playerReader.Bits.PlayerInCombat) { return; }
-
-            if ((DateTime.UtcNow - LastActive).TotalSeconds > 10)
+            if ((DateTime.UtcNow - LastActive).TotalMilliseconds > 10000)
             {
                 this.stuckDetector.SetTargetLocation(targetLocation);
             }
@@ -63,18 +61,17 @@ namespace Core.Goals
                 logger.LogInformation("Further away");
                 playerDirection.SetDirection(heading, targetLocation);
             }
-            else if (!this.stuckDetector.IsGettingCloser())
+            else if (!stuckDetector.IsGettingCloser())
             {
                 // stuck so jump
                 input.SetKeyState(input.ForwardKey, true);
-                await Task.Delay(100);
+
                 if (HasBeenActiveRecently())
                 {
-                    this.stuckDetector.Update();
+                    stuckDetector.Update();
                 }
                 else
                 {
-                    await Task.Delay(1000);
                     logger.LogInformation("Resuming movement");
                 }
             }
@@ -97,7 +94,7 @@ namespace Core.Goals
 
         private bool HasBeenActiveRecently()
         {
-            return (DateTime.UtcNow - LastActive).TotalSeconds < 2;
+            return (DateTime.UtcNow - LastActive).TotalMilliseconds < 2000;
         }
     }
 }

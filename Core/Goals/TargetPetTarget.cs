@@ -1,5 +1,4 @@
 ﻿using Core.GOAP;
-using System.Threading.Tasks;
 
 namespace Core.Goals
 {
@@ -22,7 +21,7 @@ namespace Core.Goals
             AddEffect(GoapKey.hastarget, true);
         }
 
-        public override ValueTask PerformAction()
+        public override void PerformAction()
         {
             input.TargetPet();
             input.TargetOfTarget();
@@ -30,8 +29,6 @@ namespace Core.Goals
             {
                 input.ClearTarget();
             }
-
-            return ValueTask.CompletedTask;
         }
     }
 }

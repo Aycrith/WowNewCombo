@@ -44,7 +44,7 @@ namespace Core.Goals
             return Keys.Any(key => key.CanRun());
         }
 
-        public override async ValueTask OnEnter()
+        public override async void OnEnter()
         {
             if (Keys.Any(k => k.StopBeforeCast))
             {
@@ -99,9 +99,8 @@ namespace Core.Goals
             }
         }
 
-        public override ValueTask PerformAction()
+        public override void PerformAction()
         {
-            return ValueTask.CompletedTask;
         }
     }
 }

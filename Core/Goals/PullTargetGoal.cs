@@ -2,7 +2,6 @@ using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace Core.Goals
 {
@@ -71,7 +70,7 @@ namespace Core.Goals
             AddEffect(GoapKey.pulled, true);
         }
 
-        public override ValueTask OnEnter()
+        public override void OnEnter()
         {
             combatUtil.Update();
 
@@ -93,17 +92,14 @@ namespace Core.Goals
             }
 
             pullStart = DateTime.UtcNow;
-
-            return ValueTask.CompletedTask;
         }
 
-        public override ValueTask OnExit()
+        public override void OnExit()
         {
             if (requiresNpcNameFinder)
             {
                 SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, false));
             }
-            return base.OnExit();
         }
 
         public override void OnActionEvent(object sender, ActionEventArgs e)
@@ -114,7 +110,7 @@ namespace Core.Goals
             }
         }
 
-        public override ValueTask PerformAction()
+        public override void PerformAction()
         {
             combatUtil.Update();
             wait.Update();
@@ -125,7 +121,7 @@ namespace Core.Goals
                 Log("Pull taking too long. Clear target and face away!");
                 input.KeyPress(random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey, 1000);
 
-                return ValueTask.CompletedTask;
+                return;
             }
 
             if (!Pull())
@@ -140,7 +136,7 @@ namespace Core.Goals
                         pullStart = DateTime.UtcNow;
                     }
                     stopMoving.Stop();
-                    return ValueTask.CompletedTask;
+                    return;
                 }
 
                 approachAction();
@@ -149,8 +145,6 @@ namespace Core.Goals
             {
                 SendActionEvent(new ActionEventArgs(GoapKey.pulled, true));
             }
-
-            return ValueTask.CompletedTask;
         }
 
         protected bool HasPickedUpAnAdd =>
