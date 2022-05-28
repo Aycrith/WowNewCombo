@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
 using System.Numerics;
@@ -58,6 +58,8 @@ namespace Core.Goals
             {
                 if (item.Log)
                     item.LogInformation("wait for next swing!");
+
+                input.StopAttack();
             }
 
             input.KeyPress(item.ConsoleKey, item.PressDuration);
@@ -100,12 +102,16 @@ namespace Core.Goals
 
             if (item.AfterCastWaitNextSwing)
             {
+                int MainHandSwing() => Math.Clamp(playerReader.MainHandSwing.ElapsedMs - playerReader.MainHandSpeedMs, -playerReader.MainHandSpeedMs, 0);
+
                 (inputTimeOut, inputElapsedMs) = wait.Until(playerReader.MainHandSpeedMs,
-                    interrupt: () => !addonReader.CurrentAction.Is(item),
+                    interrupt: () => !addonReader.CurrentAction.Is(item) ||
+                        MainHandSwing() > -playerReader.MainHandSpeedMs + SpellQueueTimeMs, // interrupt when swing timer reseted from parry
                     repeat: () =>
                     {
                         if (classConfig.Approach.GetCooldownRemaining() == 0)
                         {
+                            stopMoving.Stop();
                             input.Approach();
                         }
                     });
