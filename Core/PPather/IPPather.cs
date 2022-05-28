@@ -9,7 +9,6 @@ namespace Core
     {
         ValueTask<List<Vector3>> FindRoute(int map, Vector3 fromPoint, Vector3 toPoint);
         ValueTask DrawLines(List<LineArgs> lineArgs);
-        ValueTask DrawLines();
         ValueTask DrawSphere(SphereArgs args);
     }
 }

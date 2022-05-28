@@ -23,7 +23,7 @@ namespace Core
 
         private readonly string api;
 
-        private List<LineArgs> lineArgs = new List<LineArgs>();
+        private readonly Stopwatch stopwatch;
 
         public RemotePathingAPI(ILogger logger, string host = "", int port = 0)
         {
@@ -31,22 +31,17 @@ namespace Core
             this.host = host;
             this.port = port;
 
+            stopwatch = new();
+
             api = $"http://{host}:{port}/api/PPather/";
         }
 
         public async ValueTask DrawLines(List<LineArgs> lineArgs)
         {
-            this.lineArgs = lineArgs;
-
             using var client = new HttpClient();
             using var content = new StringContent(JsonConvert.SerializeObject(lineArgs), Encoding.UTF8, "application/json");
             LogInformation($"Drawing lines '{string.Join(", ", lineArgs.Select(l => l.MapId))}'...");
             await client.PostAsync($"{api}Drawlines", content);
-        }
-
-        public async ValueTask DrawLines()
-        {
-            await DrawLines(lineArgs);
         }
 
         public async ValueTask DrawSphere(SphereArgs args)
@@ -62,13 +57,13 @@ namespace Core
             {
                 LogInformation($"Finding route from {fromPoint} map {map} to {toPoint} map {map}...");
                 var url = $"{api}MapRoute?map1={map}&x1={fromPoint.X}&y1={fromPoint.Y}&map2={map}&x2={toPoint.X}&y2={toPoint.Y}";
-                var sw = Stopwatch.StartNew();
-
+                stopwatch.Restart();
                 using var client = new HttpClient();
                 var responseString = await client.GetStringAsync(url);
-                LogInformation($"Finding route from {fromPoint} map {map} to {toPoint} took {sw.ElapsedMilliseconds} ms.");
+                LogInformation($"Finding route from {fromPoint} map {map} to {toPoint} took {stopwatch.ElapsedMilliseconds} ms.");
                 var path = JsonConvert.DeserializeObject<IEnumerable<WorldMapAreaSpot>>(responseString);
                 var result = path.Select(l => new Vector3(l.X, l.Y, l.Z)).ToList();
+                stopwatch.Stop();
                 return result;
             }
             catch (Exception ex)
@@ -107,16 +102,6 @@ namespace Core
         private void LogInformation(string text)
         {
             logger.LogInformation($"{nameof(RemotePathingAPI)}: {text}");
-        }
-
-        private void LogDebug(string text)
-        {
-            logger.LogDebug($"{nameof(RemotePathingAPI)}: {text}");
-        }
-
-        private void LogWarning(string text)
-        {
-            logger.LogWarning($"{nameof(RemotePathingAPI)}: {text}");
         }
 
         #endregion

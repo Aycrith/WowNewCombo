@@ -1,4 +1,4 @@
-﻿using Core.Goals;
+using Core.Goals;
 using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -256,8 +256,6 @@ namespace Core
                 {
                     this.GrindSession.StartBotSession();
                 }
-
-                this.pather.DrawLines();
 
                 actionThread.Active = true;
                 botThread = new Thread(() => Task.Factory.StartNew(BotThread));

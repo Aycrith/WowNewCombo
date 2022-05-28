@@ -15,6 +15,9 @@ namespace Core
 {
     public sealed class RemotePathingAPIV3 : IPPather, IDisposable
     {
+        private const bool debug = false;
+        private const int watchdogPollMs = 1000;
+
         public enum EMessageType
         {
             PATH,
@@ -32,15 +35,8 @@ namespace Core
             FIND_LOCATION = 4
         };
 
-
         private readonly ILogger logger;
         private readonly WorldMapAreaDB worldMapAreaDB;
-        private const bool debug = false;
-
-        // TODO remove this
-        private int watchdogPollMs = 1000;
-
-        private List<LineArgs> lineArgs = new List<LineArgs>();
 
         private AnTcpClient Client { get; }
         private Thread ConnectionWatchdog { get; }
@@ -52,7 +48,7 @@ namespace Core
             this.logger = logger;
             this.worldMapAreaDB = worldMapAreaDB;
 
-            cts = new CancellationTokenSource();
+            cts = new();
 
             Client = new AnTcpClient(ip, port);
             ConnectionWatchdog = new Thread(ObserveConnection);
@@ -71,11 +67,6 @@ namespace Core
             return ValueTask.CompletedTask;
         }
 
-        public ValueTask DrawLines()
-        {
-            return DrawLines(lineArgs);
-        }
-
         public ValueTask DrawSphere(SphereArgs args)
         {
             return ValueTask.CompletedTask;
@@ -90,13 +81,13 @@ namespace Core
 
             try
             {
+                if (!worldMapAreaDB.TryGet(uiMapId, out WorldMapArea area))
+                    return new ValueTask<List<Vector3>>();
+
+                List<Vector3> result = new();
+
                 Vector3 start = worldMapAreaDB.GetWorldLocation(uiMapId, fromPoint, true);
                 Vector3 end = worldMapAreaDB.GetWorldLocation(uiMapId, toPoint, true);
-
-                var result = new List<Vector3>();
-
-                if (!worldMapAreaDB.TryGet(uiMapId, out WorldMapArea area))
-                    return new ValueTask<List<Vector3>>(result);
 
                 // incase haven't asked a pathfinder for a route this value will be 0
                 // that case use the highest location
@@ -109,9 +100,9 @@ namespace Core
                 if (debug)
                     LogInformation($"Finding route from {fromPoint}({start}) map {uiMapId} to {toPoint}({end}) map {uiMapId}...");
 
-                var path = Client.Send((byte)EMessageType.PATH, (area.MapID, PathRequestFlags.FIND_LOCATION | PathRequestFlags.CATMULLROM, start, end)).AsArray<Vector3>();
+                Vector3[] path = Client.Send((byte)EMessageType.PATH, (area.MapID, PathRequestFlags.FIND_LOCATION | PathRequestFlags.CATMULLROM, start, end)).AsArray<Vector3>();
                 if (path.Length == 1 && path[0] == Vector3.Zero)
-                    return new ValueTask<List<Vector3>>(result);
+                    return new ValueTask<List<Vector3>>();
 
                 for (int i = 0; i < path.Length; i++)
                 {
@@ -192,16 +183,6 @@ namespace Core
         private void LogInformation(string text)
         {
             logger.LogInformation($"{nameof(RemotePathingAPIV3)}: {text}");
-        }
-
-        private void LogDebug(string text)
-        {
-            logger.LogDebug($"{nameof(RemotePathingAPIV3)}: {text}");
-        }
-
-        private void LogWarning(string text)
-        {
-            logger.LogWarning($"{nameof(RemotePathingAPIV3)}: {text}");
         }
 
         #endregion

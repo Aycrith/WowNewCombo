@@ -29,7 +29,7 @@ namespace BlazorServer
             stopwatch = new();
 
             var mpqFiles = MPQTriangleSupplier.GetArchiveNames(DataConfig.Load());
-            var countOfMPQFiles = mpqFiles.Where(f => File.Exists(f)).Count();
+            int countOfMPQFiles = mpqFiles.Count(f => File.Exists(f));
             if (countOfMPQFiles == 0)
             {
                 LogWarning("Some of these MPQ files should exist!");
@@ -46,11 +46,6 @@ namespace BlazorServer
         }
 
         public ValueTask DrawLines(List<LineArgs> lineArgs)
-        {
-            return ValueTask.CompletedTask;
-        }
-
-        public ValueTask DrawLines()
         {
             return ValueTask.CompletedTask;
         }
