@@ -114,15 +114,18 @@ namespace Core
                 return true; // ignore if current level - 7
             }
 
-            string? match = blacklist.FirstOrDefault(s => addonReader.TargetName.ToUpper().StartsWith(s));
-            if (!string.IsNullOrEmpty(match))
+            if (blacklist.Count > 0)
             {
-                if (lastGuid != playerReader.TargetGuid)
+                string? match = blacklist.FirstOrDefault(s => addonReader.TargetName.ToUpper().StartsWith(s));
+                if (!string.IsNullOrEmpty(match))
                 {
-                    LogNameMatch(logger, playerReader.TargetId, playerReader.TargetGuid, addonReader.TargetName, match);
-                    lastGuid = playerReader.TargetGuid;
+                    if (lastGuid != playerReader.TargetGuid)
+                    {
+                        LogNameMatch(logger, playerReader.TargetId, playerReader.TargetGuid, addonReader.TargetName, match);
+                        lastGuid = playerReader.TargetGuid;
+                    }
+                    return true;
                 }
-                return true;
             }
 
             return false;

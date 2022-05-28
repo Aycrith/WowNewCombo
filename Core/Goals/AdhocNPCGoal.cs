@@ -34,7 +34,6 @@ namespace Core.Goals
         private readonly StopMoving stopMoving;
         private readonly ClassConfiguration classConfig;
         private readonly NpcNameTargeting npcNameTargeting;
-        private readonly IBlacklist blacklist;
         private readonly MountHandler mountHandler;
 
         private readonly ExecGameCommand execGameCommand;
@@ -68,7 +67,7 @@ namespace Core.Goals
 
         #endregion
 
-        public AdhocNPCGoal(ILogger logger, ConfigurableInput input, KeyAction key, Wait wait, AddonReader addonReader, Navigation navigation, StopMoving stopMoving, NpcNameTargeting npcNameTargeting, ClassConfiguration classConfig, IBlacklist blacklist, MountHandler mountHandler, ExecGameCommand exec)
+        public AdhocNPCGoal(ILogger logger, ConfigurableInput input, KeyAction key, Wait wait, AddonReader addonReader, Navigation navigation, StopMoving stopMoving, NpcNameTargeting npcNameTargeting, ClassConfiguration classConfig, MountHandler mountHandler, ExecGameCommand exec)
         {
             this.logger = logger;
             this.input = input;
@@ -78,12 +77,8 @@ namespace Core.Goals
             this.playerReader = addonReader.PlayerReader;
             this.stopMoving = stopMoving;
             this.npcNameTargeting = npcNameTargeting;
-
             this.classConfig = classConfig;
-
-            this.blacklist = blacklist;
             this.mountHandler = mountHandler;
-
             this.execGameCommand = exec;
             this.gossipReader = addonReader.GossipReader;
 
