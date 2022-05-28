@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
 using System.Numerics;
@@ -22,8 +22,6 @@ namespace Core.Goals
 
         private readonly KeyAction defaultKeyAction = new();
 
-        private readonly Func<bool> defaultInterrupt;
-
         private const int GCD = 1500;
         private const int SpellQueueTimeMs = 400;
 
@@ -45,8 +43,6 @@ namespace Core.Goals
             this.classConfig = classConfig;
             this.direction = direction;
             this.stopMoving = stopMoving;
-
-            defaultInterrupt = () => playerReader.HasTarget;
         }
 
         public void Dispose()
@@ -230,7 +226,7 @@ namespace Core.Goals
             {
                 if (item.Log)
                     item.LogInformation(" ... waiting for visible cast bar to end or interrupt.");
-                wait.Until(MaxCastTimeMs, () => !playerReader.IsCasting || prevState != interrupt());
+                wait.Until(MaxCastTimeMs, () => !playerReader.IsCasting || prevState != interrupt(), CommandPetAttack);
                 if (prevState != interrupt())
                 {
                     if (item.Log)
@@ -243,7 +239,7 @@ namespace Core.Goals
                 beforeCastEventValue = playerReader.CastEvent.Value;
                 if (item.Log)
                     item.LogInformation(" ... waiting for hidden cast bar to end or interrupt.");
-                wait.Until(MaxCastTimeMs, () => beforeCastEventValue != playerReader.CastEvent.Value || prevState != interrupt());
+                wait.Until(MaxCastTimeMs, () => beforeCastEventValue != playerReader.CastEvent.Value || prevState != interrupt(), CommandPetAttack);
                 if (prevState != interrupt())
                 {
                     if (item.Log)
@@ -257,7 +253,7 @@ namespace Core.Goals
 
         public bool CastIfReady(KeyAction item)
         {
-            return CanRun(item) && Cast(item, defaultInterrupt);
+            return CanRun(item) && Cast(item, PlayerHasTarget);
         }
 
         public bool CastIfReady(KeyAction item, Func<bool> interrupt)
@@ -707,6 +703,21 @@ namespace Core.Goals
                     //case UI_ERROR.ERR_AUTOFOLLOW_TOO_FAR:
                     //    this.playerReader.LastUIErrorMessage = UI_ERROR.NONE;
                     //    break;
+            }
+        }
+
+        private bool PlayerHasTarget()
+        {
+            return playerReader.HasTarget;
+        }
+
+        private void CommandPetAttack()
+        {
+            if (playerReader.Bits.HasPet &&
+                !playerReader.PetHasTarget &&
+                input.ClassConfig.PetAttack.GetCooldownRemaining() == 0)
+            {
+                input.PetAttack();
             }
         }
     }
