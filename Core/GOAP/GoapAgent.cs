@@ -35,7 +35,6 @@ namespace Core.GOAP
             this.addonReader = addonReader;
             this.playerReader = addonReader.PlayerReader;
 
-            this.addonReader.CreatureHistory.KillCredit -= OnKillCredit;
             this.addonReader.CreatureHistory.KillCredit += OnKillCredit;
 
             this.blacklist = blacklist;
@@ -46,7 +45,7 @@ namespace Core.GOAP
 
         public void Dispose()
         {
-            foreach (var goal in AvailableGoals.Where(x => x is IDisposable).AsEnumerable().OfType<IDisposable>())
+            foreach (var goal in AvailableGoals.Where(x => x is IDisposable).OfType<IDisposable>())
             {
                 goal.Dispose();
             }
@@ -143,13 +142,16 @@ namespace Core.GOAP
 
         private void Broadcast(GoapKey goapKey, bool value)
         {
-            if (CurrentGoal == null)
+            if (CurrentGoal != null)
             {
-                AvailableGoals.ToList().ForEach(x => x.OnActionEvent(this, new ActionEventArgs(goapKey, value)));
+                CurrentGoal.OnActionEvent(this, new ActionEventArgs(goapKey, value));
             }
             else
             {
-                CurrentGoal.OnActionEvent(this, new ActionEventArgs(goapKey, value));
+                foreach (GoapGoal goal in AvailableGoals)
+                {
+                    goal.OnActionEvent(this, new ActionEventArgs(goapKey, value));
+                }
             }
         }
 
