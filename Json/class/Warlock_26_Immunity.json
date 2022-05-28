@@ -68,17 +68,6 @@
         "School": "Shadow"
       },
       {
-        "Name": "Health Funnel",
-        "Key": "N6",
-        "HasCastBar": true,
-        "WhenUsable": true,
-        "Requirements": [
-          "Has Pet",
-          "Health% > MIN_FOOD_DRINK%",
-          "PetHealth% <= DOT_MIN_HEALTH%"
-        ]
-      },
-      {
         "Name": "Immolate",
         "Key": "5",
         "HasCastBar": true,
@@ -109,6 +98,16 @@
           "Talent:Improved Corruption:5"
         ],
         "School": "Shadow"
+      },
+      {
+        "Name": "Health Funnel",
+        "Key": "N6",
+        "HasCastBar": true,
+        "Requirements": [
+          "Has Pet",
+          "Health% > MIN_FOOD_DRINK%",
+          "PetHealth% <= DOT_MIN_HEALTH%"
+        ]
       },
       {
         "Name": "Shadow Bolt",
