@@ -19,7 +19,7 @@ namespace BlazorServer.Test
         {
             _controller = Substitute.For<IBotController>();
             _grindSessionHandler = Substitute.For<IGrindSessionHandler>();
-            _grindSession = new GrindSession(_controller, _grindSessionHandler);
+            _grindSession = new GrindSession(_controller, _grindSessionHandler, new());
         }
 
         [Test]

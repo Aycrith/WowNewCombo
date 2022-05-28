@@ -121,7 +121,7 @@ namespace Core
             ExecGameCommand = new ExecGameCommand(logger, WowProcessInput);
 
             GrindSessionHandler = new LocalGrindSessionHandler(dataConfig.History);
-            GrindSession = new GrindSession(this, GrindSessionHandler);
+            GrindSession = new GrindSession(this, GrindSessionHandler, cts);
 
             var frames = DataFrameConfiguration.LoadFrames();
 
@@ -254,7 +254,7 @@ namespace Core
             {
                 if (ClassConfig?.Mode is Mode.AttendedGrind or Mode.Grind)
                 {
-                    this.GrindSession.StartBotSession();
+                    GrindSession.StartBotSession();
                 }
 
                 actionThread.Active = true;
@@ -266,7 +266,7 @@ namespace Core
                 actionThread.Active = false;
                 if (ClassConfig?.Mode is Mode.AttendedGrind or Mode.Grind)
                 {
-                    GrindSession.StopBotSession("Stopped By Player", false);
+                    GrindSession.StopBotSession("stopped", false);
                 }
 
                 WowScreen.Enabled = false;

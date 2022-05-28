@@ -26,7 +26,7 @@ namespace Core.Session
                 Directory.CreateDirectory(_historyPath);
                 return new List<GrindSession>();
             }
-                
+
             var previousSessions =
                 Directory.EnumerateFiles(_historyPath, "*.json")
                     .Select(file => JsonConvert.DeserializeObject<GrindSession>(File.ReadAllText(file)))
@@ -38,9 +38,10 @@ namespace Core.Session
 
         public void Save(IGrindSession grindSession)
         {
-            var json = JsonConvert.SerializeObject(grindSession);
             if (!Directory.Exists(_historyPath))
                 Directory.CreateDirectory(_historyPath);
+
+            var json = JsonConvert.SerializeObject(grindSession);
             File.WriteAllText($"{_historyPath}{grindSession.SessionId}.json", json);
         }
     }
