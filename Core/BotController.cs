@@ -258,7 +258,7 @@ namespace Core
                 }
 
                 actionThread.Active = true;
-                botThread = new Thread(() => Task.Factory.StartNew(BotThread));
+                botThread = new Thread(BotThread);
                 botThread.Start();
             }
             else
@@ -278,24 +278,23 @@ namespace Core
             StatusChanged?.Invoke();
         }
 
-        public ValueTask BotThread()
+        public void BotThread()
         {
             if (actionThread != null)
             {
                 actionThread.ResumeIfNeeded();
 
-                while (actionThread.Active && !cts.IsCancellationRequested)
+                while (!cts.IsCancellationRequested && actionThread.Active)
                 {
                     actionThread.GoapPerformGoal();
                     cts.Token.WaitHandle.WaitOne(1);
                 }
             }
 
-            if (ConfigurableInput != null)
-                new StopMoving(ConfigurableInput, AddonReader.PlayerReader).Stop();
+            if (configurableInput != null)
+                new StopMoving(configurableInput, AddonReader.PlayerReader).Stop();
 
             logger.LogInformation("Bot thread stopped!");
-            return ValueTask.CompletedTask;
         }
 
         public bool InitialiseFromFile(string classFile, string? pathFile)
