@@ -712,7 +712,8 @@ namespace Core.Goals
 
         private void CommandPetAttack()
         {
-            if (playerReader.Bits.HasPet &&
+            if (playerReader.Bits.PlayerInCombat &&
+                playerReader.Bits.HasPet &&
                 !playerReader.PetHasTarget &&
                 input.ClassConfig.PetAttack.GetCooldownRemaining() == 0)
             {
