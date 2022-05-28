@@ -15,22 +15,14 @@ namespace BlazorServer
         }
     }
 
-    public readonly struct LogItem
-    {
-        public DateTimeOffset Timestamp { get; init; }
-        public LogEventLevel Level { get; init; }
-        public string Message { get; init; }
-    }
-
     public class LoggerSink : ILogEventSink
     {
         public static event Action? OnLogChanged;
-
-        public static CircularBuffer<LogItem> Log { get; private set; } = new CircularBuffer<LogItem>(250);
+        public static CircularBuffer<LogEvent> Log { get; private set; } = new(250);
 
         public void Emit(LogEvent logEvent)
         {
-            Log.Put(new LogItem { Timestamp = logEvent.Timestamp, Level = logEvent.Level, Message = logEvent.RenderMessage() });
+            Log.Put(logEvent);
             OnLogChanged?.Invoke();
         }
 
