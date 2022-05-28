@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading.Tasks;
 using Core.GOAP;
 using Microsoft.Extensions.Logging;
 
@@ -25,7 +24,7 @@ namespace Core.Goals
             AddEffect(GoapKey.consumecorpse, false);
         }
 
-        public override ValueTask OnEnter()
+        public override void OnEnter()
         {
             goapAgentState.LastCombatKillCount = Math.Max(goapAgentState.LastCombatKillCount - 1, 0);
             LogConsumed(logger, goapAgentState.LastCombatKillCount);
@@ -43,13 +42,10 @@ namespace Core.Goals
                 wait.Update();
                 wait.Update();
             }
-
-            return base.OnEnter();
         }
 
-        public override ValueTask PerformAction()
+        public override void PerformAction()
         {
-            return ValueTask.CompletedTask;
         }
 
 

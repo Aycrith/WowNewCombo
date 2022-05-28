@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Threading.Tasks;
 
 namespace Core.Goals
 {
@@ -60,7 +59,7 @@ namespace Core.Goals
             AddPrecondition(GoapKey.gathering, true);
         }
 
-        public override ValueTask OnEnter()
+        public override void OnEnter()
         {
             stopMoving.Stop();
             wait.Update();
@@ -71,11 +70,9 @@ namespace Core.Goals
             }
 
             LogOnEnter(logger);
-
-            return base.OnEnter();
         }
 
-        public override ValueTask OnExit()
+        public override void OnExit()
         {
             state = CastState.None;
             lastKnownCast = 0;
@@ -84,11 +81,9 @@ namespace Core.Goals
 
             stopWatch.Reset();
             stopWatch.Stop();
-
-            return base.OnExit();
         }
 
-        public override ValueTask PerformAction()
+        public override void PerformAction()
         {
             switch (state)
             {
@@ -142,7 +137,6 @@ namespace Core.Goals
             }
 
             wait.Update();
-            return ValueTask.CompletedTask;
         }
 
         private void CheckCastStarted(bool restartTimer)

@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace Core.Goals
 {
@@ -62,17 +61,11 @@ namespace Core.Goals
             return true;
         }
 
-        public virtual ValueTask OnEnter()
-        {
-            return ValueTask.CompletedTask;
-        }
+        public virtual void OnEnter() { }
 
-        public virtual ValueTask OnExit()
-        {
-            return ValueTask.CompletedTask;
-        }
+        public virtual void OnExit() { }
 
-        public abstract ValueTask PerformAction();
+        public abstract void PerformAction();
 
         public void AddPrecondition(GoapKey key, bool value)
         {
@@ -94,9 +87,7 @@ namespace Core.Goals
             Effects.Remove(key);
         }
 
-        public virtual void OnActionEvent(object sender, ActionEventArgs e)
-        {
-        }
+        public virtual void OnActionEvent(object sender, ActionEventArgs e) { }
 
         public virtual string Description()
         {

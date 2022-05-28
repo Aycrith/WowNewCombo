@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using System.Threading.Tasks;
 
 namespace Core.Goals
 {
@@ -21,11 +20,10 @@ namespace Core.Goals
             return playerReader.Bits.ItemsAreBroken;
         }
 
-        public override ValueTask PerformAction()
+        public override void PerformAction()
         {
             logger.LogInformation("Items are broken");
             SendActionEvent(new ActionEventArgs(GOAP.GoapKey.abort, true));
-            return ValueTask.CompletedTask;
         }
     }
 }

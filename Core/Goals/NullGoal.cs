@@ -1,14 +1,11 @@
-﻿using System.Threading.Tasks;
-
-namespace Core.Goals
+﻿namespace Core.Goals
 {
     public class NullGoal : GoapGoal
     {
         public override float CostOfPerformingAction => 0;
 
-        public override ValueTask PerformAction()
+        public override void PerformAction()
         {
-            return ValueTask.CompletedTask;
         }
     }
 }

@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Numerics;
-using System.Threading.Tasks;
 
 namespace Core.Goals
 {
@@ -134,7 +133,7 @@ namespace Core.Goals
             }
         }
 
-        public override ValueTask OnEnter()
+        public override void OnEnter()
         {
             if (mountHandler.IsMounted())
             {
@@ -142,21 +141,17 @@ namespace Core.Goals
             }
 
             lastDirectionForTurnAround = playerReader.Direction;
-
-            return ValueTask.CompletedTask;
         }
 
-        public override ValueTask OnExit()
+        public override void OnExit()
         {
             if (addonReader.CombatCreatureCount > 0 && !playerReader.HasTarget)
             {
                 stopMoving.Stop();
             }
-
-            return ValueTask.CompletedTask;
         }
 
-        public override ValueTask PerformAction()
+        public override void PerformAction()
         {
             if (MathF.Abs(lastDirectionForTurnAround - playerReader.Direction) > MathF.PI / 2)
             {
@@ -169,7 +164,7 @@ namespace Core.Goals
             if (playerReader.Bits.IsDrowning)
             {
                 StopDrowning();
-                return ValueTask.CompletedTask;
+                return;
             }
 
             if (playerReader.HasTarget)
@@ -183,7 +178,6 @@ namespace Core.Goals
             }
 
             wait.Update();
-            return ValueTask.CompletedTask;
         }
 
         private void CreatureTargetMeOrMyPet()

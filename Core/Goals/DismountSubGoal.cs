@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using Core.GOAP;
+﻿using Core.GOAP;
 
 namespace Core.Goals
 {
@@ -17,10 +16,9 @@ namespace Core.Goals
             AddEffect(GoapKey.ismounted, false);
         }
 
-        public override ValueTask PerformAction()
+        public override void PerformAction()
         {
             mountHandler.Dismount();
-            return ValueTask.CompletedTask;
         }
     }
 }

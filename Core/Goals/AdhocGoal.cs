@@ -1,7 +1,6 @@
 ﻿using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Threading.Tasks;
 
 namespace Core.Goals
 {
@@ -53,7 +52,7 @@ namespace Core.Goals
 
         public override bool CheckIfActionCanRun() => key.CanRun();
 
-        public override ValueTask OnEnter()
+        public override void OnEnter()
         {
             if (mountHandler.IsMounted())
             {
@@ -97,10 +96,9 @@ namespace Core.Goals
             }
 
             wait.Update();
-            return base.OnEnter();
         }
 
-        public override ValueTask PerformAction()
+        public override void PerformAction()
         {
             if (key.CanRun() && key.Charge > 1)
             {
@@ -108,7 +106,6 @@ namespace Core.Goals
             }
 
             wait.Update();
-            return ValueTask.CompletedTask;
         }
     }
 }

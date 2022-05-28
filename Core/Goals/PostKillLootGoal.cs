@@ -1,6 +1,5 @@
 ﻿using Core.GOAP;
 using Microsoft.Extensions.Logging;
-using System.Threading.Tasks;
 
 namespace Core.Goals
 {
@@ -20,10 +19,10 @@ namespace Core.Goals
             AddPrecondition(GoapKey.shouldloot, true);
         }
 
-        public override ValueTask PerformAction()
+        public override void PerformAction()
         {
             SendActionEvent(new ActionEventArgs(GoapKey.shouldloot, false));
-            return base.PerformAction();
+            base.PerformAction();
         }
     }
 }

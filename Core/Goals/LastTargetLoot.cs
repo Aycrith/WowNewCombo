@@ -1,6 +1,5 @@
 ﻿using Core.GOAP;
 using Microsoft.Extensions.Logging;
-using System.Threading.Tasks;
 
 namespace Core.Goals
 {
@@ -39,7 +38,7 @@ namespace Core.Goals
             AddEffect(GoapKey.shouldloot, false);
         }
 
-        public override ValueTask OnEnter()
+        public override void OnEnter()
         {
             if (bagReader.BagsFull)
             {
@@ -66,7 +65,7 @@ namespace Core.Goals
                     if (foundTarget)
                     {
                         Log("Goal interrupted!");
-                        return ValueTask.CompletedTask;
+                        return;
                     }
 
                     if (moved)
@@ -89,13 +88,10 @@ namespace Core.Goals
             }
 
             GoalExit();
-
-            return ValueTask.CompletedTask;
         }
 
-        public override ValueTask PerformAction()
+        public override void PerformAction()
         {
-            return ValueTask.CompletedTask;
         }
 
         private void GoalExit()

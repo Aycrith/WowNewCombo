@@ -68,7 +68,6 @@ namespace Core
 
             if (classConfig.Mode == Mode.CorpseRun)
             {
-                availableActions.Add(new WaitGoal(logger));
                 availableActions.Add(walkToCorpseAction);
             }
             else if (classConfig.Mode == Mode.AttendedGather)
@@ -135,7 +134,7 @@ namespace Core
             {
                 if (classConfig.Mode == Mode.AttendedGrind)
                 {
-                    availableActions.Add(new WaitGoal(logger));
+                    availableActions.Add(new WaitGoal(logger, wait));
                 }
                 else
                 {

@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using SharedLib.Extensions;
 using System;
 using System.Numerics;
-using System.Threading.Tasks;
 
 #pragma warning disable 162
 
@@ -61,7 +60,7 @@ namespace Core.Goals
             AddEffect(GoapKey.incombatrange, true);
         }
 
-        public override ValueTask OnEnter()
+        public override void OnEnter()
         {
             initialTargetGuid = playerReader.TargetGuid;
             initialMinRange = playerReader.MinRange;
@@ -69,11 +68,9 @@ namespace Core.Goals
             lastPlayerLocation = playerReader.PlayerLocation;
 
             approachStart = DateTime.UtcNow;
-
-            return ValueTask.CompletedTask;
         }
 
-        public override ValueTask PerformAction()
+        public override void PerformAction()
         {
             wait.Update();
             combatUtil.Update();
@@ -87,7 +84,7 @@ namespace Core.Goals
                 combatUtil.AquiredTarget();
                 stopMoving.Stop();
 
-                return ValueTask.CompletedTask;
+                return;
             }
 
             distance = playerReader.PlayerLocation.DistanceXYTo(lastPlayerLocation);
@@ -108,7 +105,7 @@ namespace Core.Goals
                         Log("Too far, start moving forward!");
 
                     input.SetKeyState(input.ForwardKey, true);
-                    return ValueTask.CompletedTask;
+                    return;
                 }
 
                 if (ApproachDurationMs > 500)
@@ -119,7 +116,7 @@ namespace Core.Goals
                     input.ClearTarget();
                     input.KeyPress(random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey, 250 + random.Next(250));
 
-                    return ValueTask.CompletedTask;
+                    return;
                 }
             }
 
@@ -131,7 +128,7 @@ namespace Core.Goals
                 input.ClearTarget();
                 input.KeyPress(random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey, 250 + random.Next(250));
 
-                return ValueTask.CompletedTask;
+                return;
             }
 
             if (playerReader.TargetGuid == initialTargetGuid)
@@ -183,8 +180,6 @@ namespace Core.Goals
             }
 
             RandomJump();
-
-            return ValueTask.CompletedTask;
         }
 
         public override void OnActionEvent(object sender, ActionEventArgs e)

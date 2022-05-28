@@ -3,7 +3,6 @@ using SharedLib.NpcFinder;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using System.Numerics;
 using System.Linq;
 using System.Threading;
@@ -81,7 +80,7 @@ namespace Core.Goals
             this.npcNameTargeting = npcNameTargeting;
 
             this.classConfig = classConfig;
-            
+
             this.blacklist = blacklist;
             this.mountHandler = mountHandler;
 
@@ -117,7 +116,7 @@ namespace Core.Goals
             }
         }
 
-        public override ValueTask OnEnter()
+        public override void OnEnter()
         {
             input.ClearTarget();
             stopMoving.Stop();
@@ -134,21 +133,17 @@ namespace Core.Goals
                 shouldMount = true;
                 Log("Mount up since desination far away");
             }
-
-            return base.OnEnter();
         }
 
-        public override ValueTask OnExit()
+        public override void OnExit()
         {
             navigation.Stop();
             SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, false));
-
-            return base.OnExit();
         }
 
-        public override ValueTask PerformAction()
+        public override void PerformAction()
         {
-            if (this.playerReader.Bits.PlayerInCombat && this.classConfig.Mode != Mode.AttendedGather) { return ValueTask.CompletedTask; }
+            if (playerReader.Bits.PlayerInCombat && classConfig.Mode != Mode.AttendedGather) { return; }
 
             if (playerReader.Bits.IsDrowning)
             {
@@ -162,8 +157,6 @@ namespace Core.Goals
             MountIfRequired();
 
             wait.Update();
-
-            return ValueTask.CompletedTask;
         }
 
 
@@ -326,7 +319,7 @@ namespace Core.Goals
 
         private void LogDebug(string text)
         {
-            if(debug)
+            if (debug)
                 logger.LogDebug($"[{nameof(AdhocNPCGoal)}]: {text}");
         }
 
