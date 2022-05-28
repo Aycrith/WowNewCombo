@@ -320,15 +320,10 @@ namespace Core.Goals
                     if (!active)
                         return;
 
-                    if (!success || path == null)
+                    if (!success || path == null || path.Count == 0)
                     {
                         LogWarn($"Unable to find path {location} -> {wayPoints.Peek()}. Character may stuck!");
                         return;
-                    }
-
-                    if (path.Count == 0)
-                    {
-                        LogWarn($"Unable to find path {location} -> {wayPoints.Peek()}. Character may stuck!");
                     }
 
                     path.Reverse();
