@@ -204,7 +204,7 @@ namespace Core.Goals
             bool castAny = false;
             foreach (var item in Keys)
             {
-                if (!castingHandler.CanRun(item))
+                if (!item.CanRun())
                 {
                     continue;
                 }

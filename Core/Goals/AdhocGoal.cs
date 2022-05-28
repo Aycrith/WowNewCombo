@@ -102,9 +102,9 @@ namespace Core.Goals
 
         public override ValueTask PerformAction()
         {
-            if (castingHandler.CanRun(key) && key.Charge > 1)
+            if (key.CanRun() && key.Charge > 1)
             {
-                castingHandler.CastIfReady(key);
+                castingHandler.Cast(key);
             }
 
             wait.Update();

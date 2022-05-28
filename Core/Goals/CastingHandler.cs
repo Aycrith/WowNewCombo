@@ -30,7 +30,7 @@ namespace Core.Goals
         private const int MaxCastTimeMs = 15000;
         private const int MaxAirTimeMs = 10000;
 
-        public CastingHandler(ILogger logger, CancellationTokenSource cts, ConfigurableInput input, Wait wait, AddonReader addonReader, ClassConfiguration classConfig, PlayerDirection direction, StopMoving stopMoving)
+        public CastingHandler(ILogger logger, CancellationTokenSource cts, ConfigurableInput input, Wait wait, AddonReader addonReader, PlayerDirection direction, StopMoving stopMoving)
         {
             this.logger = logger;
             this.cts = cts;
@@ -40,7 +40,7 @@ namespace Core.Goals
             this.addonReader = addonReader;
             this.playerReader = addonReader.PlayerReader;
 
-            this.classConfig = classConfig;
+            this.classConfig = input.ClassConfig;
             this.direction = direction;
             this.stopMoving = stopMoving;
         }
@@ -48,18 +48,6 @@ namespace Core.Goals
         public void Dispose()
         {
             defaultKeyAction.Dispose();
-        }
-
-        public bool CanRun(KeyAction item)
-        {
-            if (item.School != SchoolMask.None &&
-                classConfig.ImmunityBlacklist.TryGetValue(playerReader.TargetId, out var list) &&
-                list.Contains(item.School))
-            {
-                return false;
-            }
-
-            return item.CanRun();
         }
 
         private void PressKeyAction(KeyAction item)
@@ -253,12 +241,17 @@ namespace Core.Goals
 
         public bool CastIfReady(KeyAction item)
         {
-            return CanRun(item) && Cast(item, PlayerHasTarget);
+            return item.CanRun() && Cast(item, PlayerHasTarget);
         }
 
         public bool CastIfReady(KeyAction item, Func<bool> interrupt)
         {
-            return CanRun(item) && Cast(item, interrupt);
+            return item.CanRun() && Cast(item, interrupt);
+        }
+
+        public bool Cast(KeyAction item)
+        {
+            return Cast(item, PlayerHasTarget);
         }
 
         public bool Cast(KeyAction item, Func<bool> interrupt)
@@ -561,12 +554,12 @@ namespace Core.Goals
                 default:
                     logger.LogInformation($"{source} -- Didn't know how to React to {playerReader.LastUIErrorMessage}");
                     break;
-                //case UI_ERROR.ERR_SPELL_FAILED_S:
-                //case UI_ERROR.ERR_BADATTACKPOS:
-                //case UI_ERROR.ERR_SPELL_OUT_OF_RANGE:
-                //case UI_ERROR.ERR_AUTOFOLLOW_TOO_FAR:
-                //    this.playerReader.LastUIErrorMessage = UI_ERROR.NONE;
-                //    break;
+                    //case UI_ERROR.ERR_SPELL_FAILED_S:
+                    //case UI_ERROR.ERR_BADATTACKPOS:
+                    //case UI_ERROR.ERR_SPELL_OUT_OF_RANGE:
+                    //case UI_ERROR.ERR_AUTOFOLLOW_TOO_FAR:
+                    //    this.playerReader.LastUIErrorMessage = UI_ERROR.NONE;
+                    //    break;
             }
         }
 
@@ -617,7 +610,7 @@ namespace Core.Goals
                         if (playerReader.TargetTarget == TargetTargetEnum.Me)
                         {
                             logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_SPELL_OUT_OF_RANGE} -- Just wait for the target to get in range.");
-                            
+
                             (bool timeout, double elapsedMs) = wait.Until(MaxWaitCastTimeMs,
                                 () => minRange != playerReader.MinRange || playerReader.IsTargetCasting
                             );

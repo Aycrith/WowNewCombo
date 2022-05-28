@@ -47,7 +47,7 @@ namespace Core
             PlayerDirection playerDirection = new(logger, input, addonReader.PlayerReader);
             StopMoving stopMoving = new(input, addonReader.PlayerReader);
 
-            CastingHandler castingHandler = new(logger, cts, input, wait, addonReader, classConfig, playerDirection, stopMoving);
+            CastingHandler castingHandler = new(logger, cts, input, wait, addonReader, playerDirection, stopMoving);
 
             StuckDetector stuckDetector = new(logger, input, addonReader.PlayerReader, playerDirection, stopMoving);
             CombatUtil combatUtil = new(logger, input, wait, addonReader.PlayerReader);

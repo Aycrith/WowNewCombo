@@ -22,6 +22,8 @@ namespace Core
 
         private readonly KeyActions keyActions;
 
+        private readonly Dictionary<int, List<SchoolMask>> immunityBlacklist;
+
         private readonly List<string> negateKeywords = new()
         {
             "not ",
@@ -36,7 +38,7 @@ namespace Core
 
         public const string AddVisible = "AddVisible";
 
-        public RequirementFactory(ILogger logger, AddonReader addonReader, NpcNameFinder npcNameFinder)
+        public RequirementFactory(ILogger logger, AddonReader addonReader, NpcNameFinder npcNameFinder, Dictionary<int, List<SchoolMask>> immunityBlacklist)
         {
             this.logger = logger;
             this.addonReader = addonReader;
@@ -47,6 +49,7 @@ namespace Core
             this.talentReader = addonReader.TalentReader;
             this.creatureDb = addonReader.CreatureDb;
             this.itemDb = addonReader.ItemDb;
+            this.immunityBlacklist = immunityBlacklist;
 
             this.keyActions = new KeyActions();
 
@@ -68,7 +71,6 @@ namespace Core
                 { "Trigger:", CreateTrigger },
                 { "Usable:", CreateUsable }
             };
-
 
             bool TargetYieldXP() => playerReader.TargetYieldXP;
             bool TargetsMe() => playerReader.TargetTarget == TargetTargetEnum.Me;
@@ -489,6 +491,8 @@ namespace Core
 
             AddCooldownRequirement(item.RequirementObjects, item);
             AddChargeRequirement(item.RequirementObjects, item);
+
+            AddSpellSchoolRequirement(item.RequirementObjects, item);
         }
 
         public void InitUserDefinedIntVariables(Dictionary<string, int> intKeyValues)
@@ -660,6 +664,21 @@ namespace Core
 
                 item.Requirements.Add("!Swimming");
                 item.Requirements.Add("!Falling");
+            }
+        }
+
+        private void AddSpellSchoolRequirement(List<Requirement> RequirementObjects, KeyAction item)
+        {
+            if (item.School != SchoolMask.None)
+            {
+                bool f() => immunityBlacklist.TryGetValue(playerReader.TargetId, out var immuneAgaints) ? !immuneAgaints.Contains(item.School) : true;
+                string s() => item.School.ToString();
+                RequirementObjects.Add(new Requirement
+                {
+                    HasRequirement = f,
+                    LogMessage = s,
+                    VisibleIfHasRequirement = false
+                });
             }
         }
 
@@ -973,7 +992,7 @@ namespace Core
                 }
             }
 
-            switch(symbol)
+            switch (symbol)
             {
                 case "==":
                     bool e() => intVariables[key]() == value();
