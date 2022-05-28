@@ -38,11 +38,15 @@ namespace Core
             this.exec = execGameCommand;
         }
 
-        public (RouteInfo, HashSet<GoapGoal>) CreateGoals(ClassConfiguration classConfig, IBlacklist blacklist, GoapAgentState goapAgentState, CancellationTokenSource cts, Wait wait)
+        public (RouteInfo, HashSet<GoapGoal>) CreateGoals(ClassConfiguration classConfig, GoapAgentState goapAgentState, CancellationTokenSource cts, Wait wait)
         {
             HashSet<GoapGoal> availableActions = new();
 
             GetPath(out List<Vector3> pathPoints, classConfig);
+
+            IBlacklist blacklist = classConfig.Mode != Mode.Grind ?
+                new NoBlacklist() :
+                new Blacklist(logger, addonReader, classConfig.NPCMaxLevels_Above, classConfig.NPCMaxLevels_Below, classConfig.CheckTargetGivesExp, classConfig.Blacklist);
 
             PlayerDirection playerDirection = new(logger, input, addonReader.PlayerReader);
             StopMoving stopMoving = new(input, addonReader.PlayerReader);
@@ -53,7 +57,7 @@ namespace Core
             CombatUtil combatUtil = new(logger, input, wait, addonReader.PlayerReader);
             MountHandler mountHandler = new(logger, input, classConfig, wait, addonReader, castingHandler, stopMoving);
 
-            TargetFinder targetFinder = new(logger, input, classConfig, wait, addonReader.PlayerReader, blacklist, npcNameTargeting);
+            TargetFinder targetFinder = new(input, classConfig, addonReader.PlayerReader, npcNameTargeting);
 
             Navigation followNav = new(logger, playerDirection, input, addonReader, stopMoving, stuckDetector, pather, mountHandler, classConfig.Mode);
             FollowRouteGoal followRouteAction = new(logger, input, wait, addonReader, classConfig, pathPoints, followNav, mountHandler, npcNameFinder, targetFinder);
@@ -65,6 +69,11 @@ namespace Core
             ApproachTargetGoal approachTarget = new(logger, input, wait, addonReader.PlayerReader, stopMoving, combatUtil);
 
             availableActions.Clear();
+
+            if (blacklist is Blacklist)
+            {
+                availableActions.Add(new BlacklistTargetGoal(addonReader.PlayerReader, input, blacklist));
+            }
 
             if (classConfig.Mode == Mode.CorpseRun)
             {

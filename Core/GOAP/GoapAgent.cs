@@ -10,10 +10,8 @@ namespace Core.GOAP
     public sealed partial class GoapAgent : IDisposable
     {
         private readonly ILogger logger;
-        private readonly ConfigurableInput input;
         private readonly AddonReader addonReader;
         private readonly PlayerReader playerReader;
-        private readonly IBlacklist blacklist;
         private readonly WowScreen wowScreen;
 
         public bool Active { get; set; }
@@ -25,19 +23,15 @@ namespace Core.GOAP
         public Stack<GoapGoal> Plan { get; private set; }
         public GoapGoal? CurrentGoal { get; private set; }
 
-        public GoapAgent(ILogger logger, WowScreen wowScreen, GoapAgentState goapAgentState, ConfigurableInput input, AddonReader addonReader, HashSet<GoapGoal> availableGoals, IBlacklist blacklist)
+        public GoapAgent(ILogger logger, WowScreen wowScreen, GoapAgentState goapAgentState, AddonReader addonReader, HashSet<GoapGoal> availableGoals)
         {
             this.logger = logger;
             this.wowScreen = wowScreen;
             this.State = goapAgentState;
-            this.input = input;
-
             this.addonReader = addonReader;
             this.playerReader = addonReader.PlayerReader;
 
             this.addonReader.CreatureHistory.KillCredit += OnKillCredit;
-
-            this.blacklist = blacklist;
 
             this.AvailableGoals = availableGoals.OrderBy(a => a.CostOfPerformingAction);
             this.Plan = new();
@@ -55,12 +49,6 @@ namespace Core.GOAP
 
         public GoapGoal? GetAction()
         {
-            if (blacklist.IsTargetBlacklisted())
-            {
-                input.StopAttack();
-                input.ClearTarget();
-            }
-
             if (Plan.Count == 0)
             {
                 Plan = GoapPlanner.Plan(AvailableGoals, GetWorldState(), GoapPlanner.EmptyGoalState);
@@ -74,7 +62,7 @@ namespace Core.GOAP
         {
             return new()
             {
-                { GoapKey.hastarget, !blacklist.IsTargetBlacklisted() && playerReader.HasTarget },
+                { GoapKey.hastarget, playerReader.HasTarget },
                 { GoapKey.dangercombat, playerReader.Bits.PlayerInCombat && addonReader.CombatCreatureCount > 0 },
                 { GoapKey.pethastarget, playerReader.PetHasTarget },
                 { GoapKey.targetisalive, playerReader.HasTarget && !playerReader.Bits.TargetIsDead },

@@ -314,15 +314,13 @@ namespace Core
 
             ActionBarPopulator = new(logger, config, AddonReader, ExecGameCommand);
 
-            IBlacklist blacklist = config.Mode != Mode.Grind ? new NoBlacklist() : new Blacklist(logger, AddonReader, config.NPCMaxLevels_Above, config.NPCMaxLevels_Below, config.CheckTargetGivesExp, config.Blacklist);
-
             GoalFactory goalFactory = new(logger, AddonReader, configurableInput, DataConfig, npcNameFinder, npcNameTargeting, pather, ExecGameCommand);
 
             GoapAgentState goapAgentState = new();
-            (RouteInfo routeInfo, HashSet<GoapGoal> availableActions) = goalFactory.CreateGoals(config, blacklist, goapAgentState, cts, wait);
+            (RouteInfo routeInfo, HashSet<GoapGoal> availableActions) = goalFactory.CreateGoals(config, goapAgentState, cts, wait);
 
             GoapAgent?.Dispose();
-            GoapAgent = new(logger, WowScreen, goapAgentState, configurableInput, AddonReader, availableActions, blacklist);
+            GoapAgent = new(logger, WowScreen, goapAgentState, AddonReader, availableActions);
 
             RouteInfo = routeInfo;
             goalThread = new(logger, GoapAgent, AddonReader, configurableInput, RouteInfo!);

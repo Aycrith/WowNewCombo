@@ -206,12 +206,12 @@ namespace Core.Goals
 
         private void Thread_LookingForTarget()
         {
-            Log("Start searching for target...");
+            if (debug)
+                LogDebug("Start searching for target...");
 
             bool validTarget()
             {
-                return playerReader.HasTarget &&
-                    !playerReader.Bits.TargetIsDead;
+                return !playerReader.Bits.TargetIsDead;
             }
 
             SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, true));
@@ -229,7 +229,8 @@ namespace Core.Goals
             if (found)
             {
                 sideActivityCts.Cancel();
-                Log("Found target!");
+                if (debug)
+                    LogDebug("Found target!");
             }
 
             SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, false));
@@ -280,7 +281,8 @@ namespace Core.Goals
 
         private void Navigation_OnDestinationReached()
         {
-            LogDebug("Navigation_OnDestinationReached");
+            if (debug)
+                LogDebug("Navigation_OnDestinationReached");
             RefillWaypoints(false);
         }
 
@@ -313,7 +315,8 @@ namespace Core.Goals
             if (onlyClosest)
             {
                 var closestPath = new List<Vector3> { closestPoint };
-                LogDebug($"RefillWaypoints: Closest wayPoint: {closestPoint}");
+                if (debug)
+                    LogDebug($"RefillWaypoints: Closest wayPoint: {closestPoint}");
                 navigation.SetWayPoints(closestPath);
                 return;
             }
@@ -353,10 +356,7 @@ namespace Core.Goals
 
         private void LogDebug(string text)
         {
-            if (debug)
-            {
-                logger.LogDebug($"{nameof(FollowRouteGoal)}: {text}");
-            }
+            logger.LogDebug($"{nameof(FollowRouteGoal)}: {text}");
         }
 
         private void Log(string text)
