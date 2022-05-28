@@ -1,7 +1,6 @@
 ﻿using Core.GOAP;
 using System;
 using System.Collections.Generic;
-using System.Threading;
 using Core.Session;
 using Game;
 
@@ -11,25 +10,20 @@ namespace Core
     {
         DataConfig DataConfig { get; }
         AddonReader AddonReader { get; }
-        Thread? screenshotThread { get; }
-        Thread addonThread { get; }
-        Thread? botThread { get; set; }
-        GoapAgent? GoapAgent { get; set; }
-        RouteInfo? RouteInfo { get; set; }
         WowScreen WowScreen { get; }
-        WowProcessInput WowProcessInput { get; }
-        ConfigurableInput? ConfigurableInput { get; set; }
-        ClassConfiguration? ClassConfig { get; set; }
-        IImageProvider? MinimapImageFinder { get; }
-
-        ExecGameCommand ExecGameCommand { get; }
-
-        ActionBarPopulator? ActionBarPopulator { get; set; }
-        public IGrindSession GrindSession { get; }
-        public IGrindSessionHandler GrindSessionHandler { get; }
 
         string SelectedClassFilename { get; set; }
         string? SelectedPathFilename { get; set; }
+        ClassConfiguration? ClassConfig { get; set; }
+        GoapAgent? GoapAgent { get; set; }
+        RouteInfo? RouteInfo { get; set; }
+        ActionBarPopulator? ActionBarPopulator { get; set; }
+
+        ExecGameCommand ExecGameCommand { get; }
+        public IGrindSession GrindSession { get; }
+        public IGrindSessionHandler GrindSessionHandler { get; }
+
+        IImageProvider? MinimapImageFinder { get; }
 
         event Action? ProfileLoaded;
         event Action? StatusChanged;
@@ -38,7 +32,6 @@ namespace Core
         double AvgNPCLatency { get; }
 
         void ToggleBotStatus();
-        void StopBot();
 
         void MinimapNodeFound();
 
@@ -46,14 +39,14 @@ namespace Core
 
         bool IsBotActive { get; }
 
-        List<string> ClassFileList();
+        IEnumerable<string> ClassFiles();
+
+        IEnumerable<string> PathFiles();
 
         void LoadClassProfile(string classFilename);
 
-        List<string> PathFileList();
-
         void LoadPathProfile(string pathFilename);
 
-        void OverrideClassConfig(ClassConfiguration classConfiguration);
+        void OverrideClassConfig(ClassConfiguration classConfig);
     }
 }

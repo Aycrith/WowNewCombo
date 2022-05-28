@@ -33,7 +33,7 @@
     [Parameter]
     public bool Hide { get; set; } = false;
 
-    private List<string> Files { get; set; } = new();
+    private IEnumerable<string> Files { get; set; } = null!;
 
     private string Selected { get; set; } = string.Empty;
     private bool DisableLoadButton { get; set; } = true;
@@ -97,12 +97,12 @@
             Selected = (string)changeEventArgs.Value;
         }
 
-        DisableLoadButton = string.IsNullOrEmpty(Selected) || Selected == Files[0];
+        DisableLoadButton = string.IsNullOrEmpty(Selected) || Selected == Files.First();
     }
 
     private void RefreshData()
     {
-        Files = botController.ClassFileList();
+        Files = botController.ClassFiles();
         Selected = botController.SelectedClassFilename;
         DisableLoadButton = string.IsNullOrEmpty(Selected);
     }

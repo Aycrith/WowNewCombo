@@ -30,7 +30,7 @@
     [Parameter]
     public bool Hide { get; set; } = false;
 
-    private List<string> Files { get; set; } = new();
+    private IEnumerable<string> Files { get; set; } = null!;
 
     private int VisibleNum { get; set; } = 10;
     private string Selected { get; set; } = string.Empty;
@@ -81,7 +81,7 @@
     private void OnSelectedPathChanged(string pick)
     {
         Selected = pick;
-        if (string.IsNullOrEmpty(Selected) || Selected.Contains("Use Class Profile Default"))
+        if (string.IsNullOrEmpty(Selected) || Selected == Files.First())
         {
             Selected = string.Empty;
         }
@@ -114,7 +114,7 @@
 
     private void GetData()
     {
-        Files = botController.PathFileList();
+        Files = botController.PathFiles();
         Selected = botController.SelectedPathFilename ?? string.Empty;
     }
 }
