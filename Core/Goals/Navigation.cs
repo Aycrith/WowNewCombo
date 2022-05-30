@@ -82,9 +82,11 @@ namespace Core.Goals
 
         private bool active;
 
+        private readonly ConcurrentQueue<PathRequest> pathRequests = new();
         private readonly ConcurrentQueue<PathResult> pathResults = new();
-        private Thread? pathfinderThread;
-
+        private readonly Thread? pathfinderThread;
+        private readonly ManualResetEvent manualReset;
+        private bool isWorking;
         private readonly CancellationTokenSource _cts;
 
         public Navigation(ILogger logger, PlayerDirection playerDirection, ConfigurableInput input, AddonReader addonReader, StopMoving stopMoving, StuckDetector stuckDetector, IPPather pather, MountHandler mountHandler, Mode mode)
@@ -101,7 +103,10 @@ namespace Core.Goals
 
             AvgDistance = MinDistance;
 
-            _cts = new CancellationTokenSource();
+            manualReset = new(false);
+            _cts = new();
+            pathfinderThread = new(PathFinderThread);
+            pathfinderThread.Start();
 
             switch (mode)
             {
@@ -113,6 +118,8 @@ namespace Core.Goals
 
         public void Dispose()
         {
+            manualReset.Set();
+            _cts.Cancel();
             _cts.Dispose();
         }
 
@@ -136,7 +143,7 @@ namespace Core.Goals
                 result.Callback(result.Path, result.Success);
             }
 
-            if (pathfinderThread != null)
+            if (isWorking)
             {
                 return;
             }
@@ -365,16 +372,29 @@ namespace Core.Goals
 
         private void PathRequest(PathRequest pathRequest)
         {
-            pathfinderThread = new Thread(async () =>
+            pathRequests.Enqueue(pathRequest);
+            manualReset.Set();
+        }
+
+        private async void PathFinderThread()
+        {
+            while (!_cts.IsCancellationRequested)
             {
-                var path = await pather.FindRoute(pathRequest.MapId, pathRequest.Start, pathRequest.End);
-                if (active)
+                manualReset.WaitOne();
+                isWorking = true;
+
+                if (pathRequests.TryDequeue(out PathRequest pathRequest))
                 {
-                    pathResults.Enqueue(new PathResult(path, true, pathRequest.Callback));
+                    var path = await pather.FindRoute(pathRequest.MapId, pathRequest.Start, pathRequest.End);
+                    if (active)
+                    {
+                        pathResults.Enqueue(new PathResult(path, true, pathRequest.Callback));
+                    }
                 }
-                pathfinderThread = null;
-            });
-            pathfinderThread.Start();
+
+                isWorking = false;
+                manualReset.Reset();
+            }
         }
 
         private int ReachedDistance(int minDistance)

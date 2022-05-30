@@ -6,7 +6,7 @@ using System.Numerics;
 
 namespace Core.Goals
 {
-    public partial class WalkToCorpseGoal : GoapGoal, IRouteProvider
+    public partial class WalkToCorpseGoal : GoapGoal, IRouteProvider, IDisposable
     {
         public override float CostOfPerformingAction => 1f;
 
@@ -59,6 +59,11 @@ namespace Core.Goals
             this.navigation = navigation;
 
             AddPrecondition(GoapKey.isdead, true);
+        }
+
+        public void Dispose()
+        {
+            navigation.Dispose();
         }
 
         public override void OnActionEvent(object sender, ActionEventArgs e)

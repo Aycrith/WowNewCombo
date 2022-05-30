@@ -11,7 +11,7 @@ using System.Threading;
 
 namespace Core.Goals
 {
-    public class AdhocNPCGoal : GoapGoal, IRouteProvider
+    public class AdhocNPCGoal : GoapGoal, IRouteProvider, IDisposable
     {
         private enum PathState
         {
@@ -96,6 +96,11 @@ namespace Core.Goals
             }
 
             this.Keys.Add(key);
+        }
+
+        public void Dispose()
+        {
+            navigation.Dispose();
         }
 
         public override bool CheckIfActionCanRun()

@@ -36,8 +36,9 @@ namespace Core.Goals
         private const int MIN_TIME_TO_START_CYCLE_PROFESSION = 5000;
         private const int CYCLE_PROFESSION_PERIOD = 8000;
 
-        private CancellationTokenSource sideActivityCts;
-        private Thread sideActivityThread = null!;
+        private readonly ManualResetEvent sideActivityManualReset;
+        private readonly CancellationTokenSource sideActivityCts;
+        private readonly Thread? sideActivityThread;
 
         private bool shouldMount;
 
@@ -98,17 +99,40 @@ namespace Core.Goals
                 AddPrecondition(GoapKey.consumecorpse, false);
             }
 
-            sideActivityCts = new CancellationTokenSource();
+            sideActivityCts = new();
+            sideActivityManualReset = new(false);
+
+            if (classConfig.Mode == Mode.AttendedGather)
+            {
+                if (classConfig.GatherFindKeyConfig.Count > 1)
+                {
+                    sideActivityThread = new(Thread_AttendedGather);
+                    sideActivityThread.Start();
+                }
+            }
+            else
+            {
+                sideActivityThread = new(Thread_LookingForTarget);
+                sideActivityThread.Start();
+            }
         }
 
         public void Dispose()
         {
+            navigation.Dispose();
+
+            sideActivityManualReset.Set();
+            sideActivityCts.Cancel();
             sideActivityCts.Dispose();
         }
 
         private void Abort()
         {
-            sideActivityCts.Cancel();
+            if (classConfig.Mode != Mode.AttendedGather)
+            {
+                SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, false));
+            }
+
             navigation.Stop();
         }
 
@@ -116,7 +140,10 @@ namespace Core.Goals
         {
             onEnterTime = DateTime.UtcNow;
 
-            StartSideActivity();
+            if (classConfig.Mode != Mode.AttendedGather)
+            {
+                SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, true));
+            }
 
             if (!navigation.HasWaypoint())
             {
@@ -162,6 +189,8 @@ namespace Core.Goals
 
         public override void PerformAction()
         {
+            sideActivityManualReset.Set();
+
             if (playerReader.HasTarget && playerReader.Bits.TargetIsDead)
             {
                 Log("Has target but its dead.");
@@ -177,74 +206,46 @@ namespace Core.Goals
 
             if (playerReader.Bits.PlayerInCombat && classConfig.Mode != Mode.AttendedGather) { return; }
 
-            navigation.Update(sideActivityCts);
+            navigation.Update();
 
             RandomJump();
 
             wait.Update();
         }
 
-        private void StartSideActivity()
-        {
-            sideActivityCts.Dispose();
-            sideActivityCts = new CancellationTokenSource();
-
-            if (classConfig.Mode == Mode.AttendedGather)
-            {
-                if (classConfig.GatherFindKeyConfig.Count > 1)
-                {
-                    sideActivityThread = new Thread(Thread_AttendedGather);
-                    sideActivityThread.Start();
-                }
-            }
-            else
-            {
-                sideActivityThread = new Thread(Thread_LookingForTarget);
-                sideActivityThread.Start();
-            }
-        }
-
         private void Thread_LookingForTarget()
         {
-            if (debug)
-                LogDebug("Start searching for target...");
-
             bool validTarget()
             {
                 return !playerReader.Bits.TargetIsDead;
             }
 
-            SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, true));
-
-            bool found = false;
-            while (!found && !sideActivityCts.IsCancellationRequested)
+            while (!sideActivityCts.IsCancellationRequested)
             {
+                sideActivityManualReset.Reset();
+
                 if (classConfig.TargetNearestTarget.MillisecondsSinceLastClick > random.Next(minMs, maxMs))
                 {
-                    found = targetFinder.Search(NpcNameToFind, validTarget, sideActivityCts);
+                    targetFinder.Search(NpcNameToFind, validTarget, sideActivityCts);
                 }
-                wait.Update();
-            }
 
-            if (found)
-            {
-                sideActivityCts.Cancel();
-                if (debug)
-                    LogDebug("Found target!");
+                sideActivityManualReset.WaitOne();
             }
-
-            SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, false));
         }
 
         private void Thread_AttendedGather()
         {
             while (!sideActivityCts.IsCancellationRequested)
             {
+                sideActivityManualReset.Reset();
+
                 if ((DateTime.UtcNow - onEnterTime).TotalMilliseconds > MIN_TIME_TO_START_CYCLE_PROFESSION)
                 {
                     AlternateGatherTypes();
                 }
                 sideActivityCts.Token.WaitHandle.WaitOne(CYCLE_PROFESSION_PERIOD);
+
+                sideActivityManualReset.WaitOne();
             }
         }
 
