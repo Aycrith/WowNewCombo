@@ -21,7 +21,7 @@ namespace BlazorServer
                         .Build()
                         .Run();
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     Log.Information($"Program.Main(): {ex.Message}");
                     Log.Information("");

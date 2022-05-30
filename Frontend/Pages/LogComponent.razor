@@ -1,6 +1,8 @@
 ﻿@using System.Linq
 @using Serilog.Events
 
+@inject ILogger logger
+
 <style>
     .log {
         font-family: "Courier New", Courier, monospace;
@@ -59,12 +61,12 @@
 
     protected override void OnInitialized()
     {
-        LoggerSink.OnLogChanged += LogChanged;
+        //LoggerSink.OnLogChanged += LogChanged;
     }
 
     public void Dispose()
     {
-        LoggerSink.OnLogChanged -= LogChanged;
+        //LoggerSink.OnLogChanged -= LogChanged;
     }
 
     private void LogChanged()

@@ -5,7 +5,7 @@ using Serilog.Events;
 using System;
 using Cyotek.Collections.Generic;
 
-namespace BlazorServer
+namespace Core
 {
     public static class LoggerSinkExtensions
     {

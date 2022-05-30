@@ -28,11 +28,10 @@
   <ItemGroup>
     <ProjectReference Include="..\AddonConfig\AddonConfig.csproj" />
     <ProjectReference Include="..\Core\Core.csproj" />
+    <ProjectReference Include="..\Frontend\Frontend.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="BlazorTable" Version="1.17.0" />
-    <PackageReference Include="MatBlazor" Version="2.8.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="5.0.0" />
     <PackageReference Include="Serilog.Enrichers.Environment" Version="2.2.0" />
     <PackageReference Include="Serilog.Enrichers.Process" Version="2.0.2" />

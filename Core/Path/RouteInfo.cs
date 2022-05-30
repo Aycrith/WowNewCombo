@@ -208,7 +208,7 @@ namespace Core
         public string DeathImage(Vector3 pt)
         {
             var size = this.canvasSize / 25;
-            return pt == Vector3.Zero ? string.Empty : $"<image href = 'death.svg' x = '{ToCanvasPointX(pt.X) - size / 2}' y = '{ToCanvasPointY(pt.Y) - size / 2}' height='{size}' width='{size}' />";
+            return pt == Vector3.Zero ? string.Empty : $"<image href = '_content/Frontend/death.svg' x = '{ToCanvasPointX(pt.X) - size / 2}' y = '{ToCanvasPointY(pt.Y) - size / 2}' height='{size}' width='{size}' />";
         }
 
         public string DrawPoi(RouteInfoPoi poi)
