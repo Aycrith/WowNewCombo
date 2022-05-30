@@ -241,7 +241,7 @@ The `"Target Last Target"` keybind helps with looting.
 ## 7.1. Actionbar Key Bindings:
 
 The default class profiles assumes the following `Keybinds` setup and using English Keyboard layout.
-In total, `34` key supported.
+In total, `36` key supported.
 
 Highly recommended to use the default setup, in order to get properly working the `ActionBarSlotCost` and `ActionBarSlotUsable`!
 
