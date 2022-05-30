@@ -141,7 +141,7 @@ One of the following IDE or command line
 e.g. Build from Powershell
 ```ps
 cd C:\WowClassicGrindBot
-dotnet build
+dotnet build --configuration Release
 ```
 
 ![Build](https://raw.githubusercontent.com/julianperrott/WowClassicGrindBot/master/images/build.png)
