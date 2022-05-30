@@ -150,14 +150,14 @@ dotnet build --configuration Release
 
 The bot reads the game state using small blocks of colour shown at the top of the screen by an Addon. This needs to be configured.
 
-1. Edit the batch script in `C:\WowClassicGrindBot\BlazorServer` called run.bat, change it to point at where you have put the repo BlazorServer folder
+1. Edit the batch script in `C:\WowClassicGrindBot\BlazorServer` called `run.bat`, change it to point at where you have put the repo BlazorServer folder
 
     e.g.
     ```ps
     start "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" "http://localhost:5000"
     c:
     cd C:\WowClassicGrindBot\BlazorServer
-    dotnet run
+    dotnet run --configuration Release
     pause
     ```
 
@@ -1377,7 +1377,7 @@ In visual studio just set PathingAPI as the startup project or from the command 
 
 ```ps
 cd C:\WowClassicGrindBot\PathingAPI
-dotnet run
+dotnet run --configuration Release
 ```
 
 Then in a browser go to http://localhost:5001
@@ -1400,16 +1400,16 @@ Search gives some predefined locations to search from and to.
 
 In visual studio right click the solution and set Multiple startup projects to BlazorServer and PathingApi and run.
 
-Or from 2 command lines dotnet run each.
+Or from 2 command lines `dotnet run` each.
 
 ```ps
 cd c:\WowClassicGrindBot\PathingAPI
-dotnet run
+dotnet run --configuration Release
 ```
 
 ```ps
 cd c:\WowClassicGrindBot\BlazorServer
-dotnet run
+dotnet run --configuration Release
 ```
 
 ## As a library used within the bot
