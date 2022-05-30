@@ -72,13 +72,13 @@ namespace Core
 
                 // Turn
                 ConsoleKey turnKey = random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey;
-                int turnDuration = random.Next(125) + 125; // Turn atleast 45 deg to 90 deg
+                int turnDuration = random.Next(125) + 350;
                 logger.LogInformation($"Unstuck by turning for {turnDuration}ms");
                 input.KeyPress(turnKey, turnDuration);
 
                 // Move
                 ConsoleKey moveKey = random.Next(2) == 0 ? input.ForwardKey : input.BackwardKey;
-                int moveDuration = random.Next(375) + 125;
+                int moveDuration = random.Next(375) + 350;
                 logger.LogInformation($"Unstuck by moving for {moveDuration}ms");
                 input.KeyPress(moveKey, moveDuration);
 
