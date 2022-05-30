@@ -10,10 +10,14 @@ using System.Numerics;
 using System.Threading.Tasks;
 using WowTriangles;
 
+#pragma warning disable 162
+
 namespace Core
 {
     public class LocalPathingApi : IPPather
     {
+        private const bool debug = false;
+
         private readonly ILogger logger;
 
         private readonly PPatherService service;
@@ -72,12 +76,16 @@ namespace Core
 
             if (path == null)
             {
-                LogWarning($"Failed to find a path from {fromPoint} to {toPoint}");
+                if (debug)
+                    LogWarning($"Failed to find a path from {fromPoint} to {toPoint}");
+
                 return new ValueTask<List<Vector3>>();
             }
             else
             {
-                LogInformation($"Finding route from {fromPoint} map {map} to {toPoint} took {stopwatch.ElapsedMilliseconds} ms.");
+                if (debug)
+                    LogDebug($"Finding route from {fromPoint} map {map} to {toPoint} took {stopwatch.ElapsedMilliseconds} ms.");
+
                 service.Save();
             }
 

@@ -981,7 +981,8 @@ namespace PPather.Graph
 
         public Path CreatePath(Location fromLoc, Location toLoc, float howClose, ILocationHeuristics locationHeuristics)
         {
-            logger.LogInformation($"Creating Path from {fromLoc} to {toLoc}");
+            if (logger.IsEnabled(LogLevel.Debug))
+                logger.LogDebug($"Creating Path from {fromLoc} to {toLoc}");
 
             var sw = Stopwatch.StartNew();
 
@@ -1016,7 +1017,10 @@ namespace PPather.Graph
                     prev = l;
                 }
             }
-            logger.LogInformation($"CreatePath took {sw.ElapsedMilliseconds}ms");
+
+            if (logger.IsEnabled(LogLevel.Debug))
+                logger.LogDebug($"CreatePath took {sw.ElapsedMilliseconds}ms");
+
             if (rawPath == null)
             {
                 return null;
