@@ -86,7 +86,8 @@ namespace Core.Goals
                 var closestCorpse = GetClosestCorpse();
                 var heading = DirectionCalculator.CalculateHeading(location, closestCorpse);
                 playerDirection.SetDirection(heading, closestCorpse);
-                wait.Update();
+                npcNameTargeting.WaitForUpdate();
+                npcNameTargeting.WaitForUpdate();
                 logger.LogInformation("Look at possible corpse and try again");
 
                 if (FoundByCursor())
