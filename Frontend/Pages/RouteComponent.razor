@@ -1,0 +1,257 @@
+﻿@using Core.Goals
+@using System.Linq
+@using System.Numerics
+@using System.Timers
+
+@inject IAddonReader addonReader
+@inject IBotController botController
+@inject IJSRuntime JSRuntime
+
+@implements IDisposable
+
+<div class="card">
+    <div class="card-header">
+        <table width="100%">
+            <tr>
+                <td>Route @routeSymbol</td>
+                <td>
+                    <div class="float-right">
+                        [@addonReader.PlayerReader.XCoord.ToString("00.0000"),@addonReader.PlayerReader.YCoord.ToString("00.0000")] @(AreaName) (@addonReader.UIMapId.Value)
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div class="card-body" style="padding: 0 0 0 0">
+        <div id="grid">
+            <svg width="@(Size+2)px" height="@(Size+2)px" style="margin-top:0px">
+                <g class="background">
+                </g>
+                <g class="group2">
+                    @{
+                        var colour = addonReader.PlayerReader.Bits.PlayerInCombat ? "red" : "orange";
+                        if (botController.GoapAgent?.CurrentGoal is FollowRouteGoal)
+                        {
+                            colour = "blue";
+                        }
+
+                        @if (botController.RouteInfo != null)
+                        {
+                            <g id="playerloc" transform='translate(@(botController.RouteInfo.ToCanvasPointX(addonReader.PlayerReader.XCoord)-5), @(botController.RouteInfo.ToCanvasPointY(addonReader.PlayerReader.YCoord)-5)) rotate(@PlayerDir 5 5)'>
+                                <svg width="10" height="10">
+                                    <polygon points="5,0 8.5,8.5 1.5,8.5 5,0" fill="@colour" />
+                                </svg>
+                            </g>
+                        }
+                    }
+
+                    <g stroke-width="1" stroke="gray">
+                        @this.PathLines
+                    </g>
+                    <g fill="white">
+                        @this.PathPoints
+                    </g>
+
+                    <g stroke-width="1" stroke="white">
+                        @this.RouteToWaypointLines
+                    </g>
+                    <g fill="green">
+                        @this.RouteToWaypointPoints
+                    </g>
+
+                    @if (botController.RouteInfo != null)
+                    {
+                        <g fill="blue">
+                            @((MarkupString)botController.RouteInfo.RenderNextPoint())
+                        </g>
+
+                        <g>
+                            @foreach (var death in this.deaths)
+                            {
+                                @((MarkupString)botController.RouteInfo.DeathImage(death))
+                            }
+                        </g>
+
+                        <g>
+                            @foreach (var poi in this.botController.RouteInfo.PoiList)
+                            {
+                                @((MarkupString)botController.RouteInfo.DrawPoi(poi))
+                            }
+                        </g>
+                    }
+                </g>
+            </svg>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    [Parameter]
+    public int Size { get; set; } = 1024;
+
+    public int margin = 10;
+
+    private MarkupString routeSymbol = new MarkupString();
+
+    private MarkupString RouteToWaypointLines = new MarkupString();
+    private MarkupString RouteToWaypointPoints = new MarkupString();
+
+    private MarkupString PathLines = new MarkupString();
+    private MarkupString PathPoints = new MarkupString();
+
+    private Timer refreshTimer = new Timer();
+
+    private float PlayerDir => -addonReader.PlayerReader.Direction * (180f / MathF.PI);
+
+    private List<Vector3> deaths = new List<Vector3>();
+
+    private string AreaName { get; set; } = string.Empty;
+
+
+    protected override void OnInitialized()
+    {
+        botController.ProfileLoaded += OnProfileLoaded;
+        addonReader.AddonDataChanged += OnAddonDataChanged;
+        addonReader.ZoneChanged += OnZoneChanged;
+        addonReader.PlayerDeath += OnPlayerDeath;
+
+        UpdateZoneName();
+        UpdateDeaths();
+        UpdateSymbol();
+    }
+
+    public void Dispose()
+    {
+        refreshTimer.Dispose();
+
+        botController.ProfileLoaded -= OnProfileLoaded;
+        addonReader.AddonDataChanged -= OnAddonDataChanged;
+        addonReader.ZoneChanged -= OnZoneChanged;
+        addonReader.PlayerDeath -= OnPlayerDeath;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeAsync<string>("draw");
+        }
+    }
+
+    private void Update()
+    {
+        if (botController.RouteInfo == null) return;
+
+        botController.RouteInfo.SetMargin(margin);
+        botController.RouteInfo.SetCanvasSize(Size);
+
+        RefreshPathMarkup();
+    }
+
+
+    private void OnTimerTick(object? s, ElapsedEventArgs e)
+    {
+        if (botController.RouteInfo == null) return;
+
+        botController.RouteInfo.CalculatePointToGrid();
+        RefreshPathMarkup();
+    }
+
+    private void OnAddonDataChanged()
+    {
+        base.InvokeAsync(() =>
+        {
+            Update();
+            StateHasChanged();
+        });
+    }
+
+    private void OnZoneChanged()
+    {
+        base.InvokeAsync(() =>
+        {
+            UpdateZoneName();
+            StateHasChanged();
+        });
+    }
+
+    private void OnPlayerDeath()
+    {
+        base.InvokeAsync(() =>
+        {
+            UpdateDeaths();
+            StateHasChanged();
+        });
+    }
+
+
+    private void RefreshPathMarkup()
+    {
+        if (botController.RouteInfo == null) return;
+
+        var routeinfo = botController.RouteInfo;
+
+        var paths = routeinfo.PathPoints;
+        this.PathLines = new MarkupString(routeinfo.RenderPathLines(paths));
+        this.PathPoints = new MarkupString(routeinfo.RenderPathPoints(paths));
+
+        var waypoints = routeinfo.RouteToWaypoint;
+        if (waypoints != null)
+        {
+            var waylist = waypoints.ToList();
+            this.RouteToWaypointLines = new MarkupString(routeinfo.RenderPathLines(waylist));
+            this.RouteToWaypointPoints = new MarkupString(routeinfo.RenderPathPoints(waylist));
+        }
+        else
+        {
+            this.RouteToWaypointLines = new MarkupString();
+            this.RouteToWaypointPoints = new MarkupString();
+        }
+
+    }
+
+    private void OnProfileLoaded()
+    {
+        if (!refreshTimer.Enabled)
+        {
+            refreshTimer.Interval = 1000;
+            refreshTimer.Enabled = true;
+
+            refreshTimer.Elapsed += OnTimerTick;
+
+            refreshTimer.Start();
+        }
+
+        UpdateSymbol();
+    }
+
+    private void UpdateSymbol()
+    {
+        if (botController.ClassConfig == null) return;
+
+        routeSymbol = botController.ClassConfig.PathThereAndBack ?
+        new MarkupString("<span style=\"font-size: 125%;\">⥹</span>") :
+        new MarkupString("<span style=\"font-size: 125%;\">⟳</span>");
+    }
+
+    private void UpdateZoneName()
+    {
+        if (addonReader.WorldMapAreaDb.TryGet(addonReader.UIMapId.Value, out WorldMapArea wma))
+        {
+            AreaName = wma.AreaName;
+        }
+    }
+
+    private void UpdateDeaths()
+    {
+        if (botController.GoapAgent == null) return;
+
+        var walkToCorpseGoal = botController.GoapAgent.AvailableGoals
+            .FirstOrDefault(a => a.GetType() == typeof(WalkToCorpseGoal)) as WalkToCorpseGoal;
+        if (walkToCorpseGoal != null)
+        {
+            deaths = walkToCorpseGoal.Deaths;
+        }
+    }
+}

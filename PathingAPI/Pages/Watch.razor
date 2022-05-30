@@ -1,8 +1,8 @@
 ﻿@page "/Watch"
 
 @using System.Collections.Generic
-@using PathingAPI.Data
-@using PatherPath.Graph
+@using PPather.Data
+@using PPather.Graph
 @using System.Threading
 
 @implements IDisposable
@@ -83,7 +83,7 @@
         if (!initialised) { Initialise(); }
     }
 
-    public void DrawFinalPath(PatherPath.Graph.Path spotPath)
+    public void DrawFinalPath(PPather.Graph.Path spotPath)
     {
         if (spotPath != null)
         {
@@ -111,7 +111,7 @@
     {
         while (!cts.IsCancellationRequested)
         {
-            if (PatherPath.Graph.PathGraph.SearchEnabled)
+            if (PPather.Graph.PathGraph.SearchEnabled)
             {
                 try
                 {
@@ -198,7 +198,7 @@
         }
     }
 
-    private void FixMaxWaterHeight(int[] waterPoints, PathingAPI.Data.Vertex[] positions)
+    private void FixMaxWaterHeight(int[] waterPoints, Vertex[] positions)
     {
         var zlist = waterPoints.Select(pt => positions[pt].z).ToList();
         if (zlist.Count > 1)

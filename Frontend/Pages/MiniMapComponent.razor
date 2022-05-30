@@ -1,0 +1,83 @@
+﻿@implements IDisposable
+@inject IBotController botController
+@inject IAddonReader addonReader
+
+<div class="card">
+    <div class="card-header">
+        <table width="100%">
+            <tr>
+                <td>
+                    Minimap
+                    <span style="float: right">
+                        <button class="btn btn-sm @(previewEnabled ? "btn-danger" : "btn-primary")" @onclick="TogglePreview">Preview</button>
+                        <ToggleButton />
+                    </span>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div class="card-body" style="padding: 0 0 0 0; width:@(Size)px; height:@(Size)px">
+        @if (previewEnabled)
+        {
+            <img style="width:@(Size)px; height:@(Size)px" src="data:image/png;base64, @WowScreen.ToBase64(botController.WowScreen.MiniMapBitmap, (int)(Size * DownScale))" alt="Red dot" />
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int Size { get; set; } = 400;
+
+    [Parameter]
+    public float DownScale { get; set; } = 0.5f;
+
+    [Parameter]
+    public EventCallback<int> OnNodeFound { get; set; }
+
+    private bool lastNodeFound = false;
+    private int lastNodeCount = 0;
+
+    private bool previewEnabled = true;
+
+    protected override void OnInitialized()
+    {
+        if (botController.MinimapImageFinder != null && OnNodeFound.HasDelegate)
+        {
+            botController.MinimapImageFinder.NodeEvent += NodeFound;
+        }
+    }
+
+    public void Dispose()
+    {
+        if (botController.MinimapImageFinder != null && OnNodeFound.HasDelegate)
+        {
+            botController.MinimapImageFinder.NodeEvent -= NodeFound;
+        }
+    }
+
+    private void NodeFound(object? source, NodeEventArgs e)
+    {
+        if (!botController.IsBotActive) return;
+
+        bool nodeFound = e.Point.X > 0 && e.Point.Y > 0;
+        if (lastNodeFound != nodeFound || e.Amount != lastNodeCount)
+        {
+            base.InvokeAsync(() =>
+            {
+                OnNodeFound.InvokeAsync(e.Amount);
+            });
+            lastNodeCount = e.Amount;
+        }
+        lastNodeFound = nodeFound;
+
+        if (previewEnabled)
+        {
+            base.InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void TogglePreview()
+    {
+        previewEnabled = !previewEnabled;
+    }
+}

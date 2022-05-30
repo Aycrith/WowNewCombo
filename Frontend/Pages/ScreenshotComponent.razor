@@ -1,0 +1,46 @@
+﻿@inject IBotController botController
+
+<div class="@(Stretch ? "w-100 h-auto m-0 p-0" : string.Empty)">
+    <div class="row" @onclick="Toggle">
+        @if (this.botController.WowScreen.EnablePostProcess)
+        {
+            <img class="@(Stretch ? "img-fluid w-100" : string.Empty)" src="data:image/png;base64, @WowScreen.ToBase64(botController.WowScreen.Bitmap, Size)" alt="Toggle preview!" />
+        }
+        else
+        {
+            <img alt="Toggle preview!" />
+        }
+    </div>
+</div>
+
+@code {
+
+    [Parameter]
+    public int Size { get; set; } = 1024;
+
+    [Parameter]
+    public bool Stretch { get; set; } = false;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            botController.WowScreen.OnScreenChanged += this.ImageChanged;
+        }
+    }
+
+    public void Dispose()
+    {
+        botController.WowScreen.OnScreenChanged -= this.ImageChanged;
+    }
+
+    protected void Toggle()
+    {
+        botController.WowScreen.EnablePostProcess = !this.botController.WowScreen.EnablePostProcess;
+    }
+
+    private async void ImageChanged()
+    {
+        await base.InvokeAsync(StateHasChanged);
+    }
+}

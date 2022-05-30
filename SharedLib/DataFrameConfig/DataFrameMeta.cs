@@ -44,9 +44,8 @@ namespace SharedLib
             return estimatedSize.ToSize();
         }
 
-        private static readonly DataFrameMeta empty = new DataFrameMeta(-1, 0, 0, 0, 0);
         [JsonIgnore]
-        public static DataFrameMeta Empty => empty;
+        public static DataFrameMeta Empty { get; } = new(-1, 0, 0, 0, 0);
 
         public override bool Equals(object obj)
         {

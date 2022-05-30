@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
@@ -9,14 +8,14 @@ namespace SharedLib.Extensions
     {
         public static List<Vector3> FromList(List<List<float>> points)
         {
-            var output = new List<Vector3>();
+            List<Vector3> output = new();
             points.ForEach(p => output.Add(new Vector3(p[0], p[1], 0)));
             return output;
         }
 
-        public static float DistanceXYTo(this Vector3 l1, Vector3 l2)
+        public static float DistanceXYTo(this Vector3 l1, in Vector3 l2)
         {
-            return Vector2.Distance(l1.AsVector2() * 100, l2.AsVector2() * 100); // would be nice to remove that 100 multiplier :sweat:
+            return DistanceXY(l1, l2);
         }
 
         public static float DistanceXY(Vector3 l1, Vector3 l2)
@@ -51,7 +50,7 @@ namespace SharedLib.Extensions
             return result;
         }
 
-        public static Vector2 GetClosestPointOnLineSegment(Vector2 A, Vector2 B, Vector2 P)
+        public static Vector2 GetClosestPointOnLineSegment(in Vector2 A, in Vector2 B, in Vector2 P)
         {
             Vector2 AP = P - A;       //Vector from A to P
             Vector2 AB = B - A;       //Vector from A to B
@@ -75,9 +74,9 @@ namespace SharedLib.Extensions
         }
 
 
-        public static Vector2 AsVector2(this Vector3 v)
+        public static Vector2 AsVector2(this Vector3 v3)
         {
-            return new Vector2(v.X, v.Y);
+            return new Vector2(v3.X, v3.Y);
         }
     }
 }

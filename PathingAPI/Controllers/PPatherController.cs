@@ -1,12 +1,13 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using PatherPath.Graph;
-using PathingAPI.Data;
+using Microsoft.Extensions.Logging;
+using PPather;
+using PPather.Data;
+using PPather.Graph;
+using SharedLib;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using WowTriangles;
-using SharedLib;
-using Microsoft.Extensions.Logging;
 
 namespace PathingAPI.Controllers
 {
@@ -64,7 +65,7 @@ namespace PathingAPI.Controllers
         {
             isBusy = true;
             service.SetLocations(service.GetWorldLocation(map1, x1, y1), service.GetWorldLocation(map2, x2, y2));
-            var path = service.DoSearch(PatherPath.Graph.PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
+            var path = service.DoSearch(PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
 
             var worldLocations = path == null ? new List<WorldMapAreaSpot>() : path.locations.Select(s => service.ToMapAreaSpot(s.X, s.Y, s.Z, map1));
             isBusy = false;
@@ -102,7 +103,7 @@ namespace PathingAPI.Controllers
         /// <returns></returns>
         [HttpPost("Drawlines")]
         [Produces("application/json")]
-        public bool Drawlines(List<Lines> lines)
+        public bool Drawlines(List<LineArgs> lines)
         {
             if (isBusy) { return false; }
             isBusy = true;
@@ -127,7 +128,7 @@ namespace PathingAPI.Controllers
         /// <returns></returns>
         [HttpPost("DrawSphere")]
         [Produces("application/json")]
-        public bool DrawSphere(Sphere sphere)
+        public bool DrawSphere(SphereArgs sphere)
         {
             if (isBusy || !initialised) { return false; }
             isBusy = true;
@@ -140,10 +141,10 @@ namespace PathingAPI.Controllers
             return true;
         }
 
-        private List<Location> CreateLocations(Lines lines)
+        private List<Location> CreateLocations(LineArgs lines)
         {
             var result = new List<Location>();
-            foreach(var s in lines.Spots)
+            foreach (var s in lines.Spots)
             {
                 var location = service.GetWorldLocation(lines.MapId, (float)s.X, (float)s.Y);
                 result.Add(location);
@@ -183,21 +184,21 @@ namespace PathingAPI.Controllers
         public bool DrawPathTest()
         {
             string continent = "Azeroth";
-            var coords = new List<float[]>()
+            List<float[]> coords = new()
             {
-                new float[] {-5609.00f,-479.00f,397.49f},
-                new float[] {-5609.33f,-444.00f,405.22f},
-                new float[] {-5609.33f,-438.40f,406.02f},
-                new float[] {-5608.80f,-427.73f,404.69f},
-                new float[] {-5608.80f,-426.67f,404.69f},
-                new float[] {-5610.67f,-405.33f,402.02f},
-                new float[] {-5635.20f,-368.00f,392.15f},
-                new float[] {-5645.07f,-362.67f,385.49f},
-                new float[] {-5646.40f,-362.13f,384.69f},
-                new float[] {-5664.27f,-355.73f,378.29f},
-                new float[] {-5696.00f,-362.67f,366.02f},
-                new float[] {-5758.93f,-385.87f,366.82f},
-                new float[] {-5782.00f,-394.00f,366.09f}
+                new float[] {-5609.00f,-479.00f,397.49f },
+                new float[] {-5609.33f,-444.00f,405.22f },
+                new float[] {-5609.33f,-438.40f,406.02f },
+                new float[] {-5608.80f,-427.73f,404.69f },
+                new float[] {-5608.80f,-426.67f,404.69f },
+                new float[] {-5610.67f,-405.33f,402.02f },
+                new float[] {-5635.20f,-368.00f,392.15f },
+                new float[] {-5645.07f,-362.67f,385.49f },
+                new float[] {-5646.40f,-362.13f,384.69f },
+                new float[] {-5664.27f,-355.73f,378.29f },
+                new float[] {-5696.00f,-362.67f,366.02f },
+                new float[] {-5758.93f,-385.87f,366.82f },
+                new float[] {-5782.00f,-394.00f,366.09f }
             };
 
             if (isBusy) { return false; }

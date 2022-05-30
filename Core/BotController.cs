@@ -14,6 +14,8 @@ using Game;
 using WinAPI;
 using SharedLib.NpcFinder;
 using Cyotek.Collections.Generic;
+using Core.Addon;
+using PPather.Data;
 
 namespace Core
 {
@@ -214,12 +216,17 @@ namespace Core
         {
             while (!cts.IsCancellationRequested)
             {
-                pather.DrawSphere(new PPather.SphereArgs
+                _ = pather.DrawSphere(new SphereArgs
                 {
                     Colour = AddonReader.PlayerReader.Bits.PlayerInCombat ? 1 : AddonReader.PlayerReader.HasTarget ? 6 : 2,
                     Name = "Player",
-                    MapId = this.AddonReader.UIMapId.Value,
-                    Spot = this.AddonReader.PlayerReader.PlayerLocation
+                    MapId = AddonReader.UIMapId.Value,
+                    Spot = new DummyVector3
+                    {
+                        X = AddonReader.PlayerReader.XCoord,
+                        Y = AddonReader.PlayerReader.YCoord,
+                        Z = AddonReader.PlayerReader.ZCoord,
+                    }
                 });
 
                 cts.Token.WaitHandle.WaitOne(remotePathingTickMs);

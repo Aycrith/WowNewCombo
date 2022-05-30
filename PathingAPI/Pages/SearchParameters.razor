@@ -1,5 +1,6 @@
-﻿@inject IJSRuntime jsRuntime;
-@using PatherPath.Graph
+﻿@using PPather.Graph
+
+@inject IJSRuntime jsRuntime
 
 <span class="form-inline">
 
@@ -76,12 +77,12 @@
         }
 
         var searchParameters = new SearchParam
-        {
-            From = locations.Where(l => l.Description == this.From).FirstOrDefault(),
-            To = locations.Where(l => l.Description == this.To).FirstOrDefault(),
-            SearchType = (PathGraph.eSearchScoreSpot)this.SearchType,
-            Continent = this.Continent
-        };
+            {
+                From = locations.Where(l => l.Description == this.From).FirstOrDefault(),
+                To = locations.Where(l => l.Description == this.To).FirstOrDefault(),
+                SearchType = (PathGraph.eSearchScoreSpot)this.SearchType,
+                Continent = this.Continent
+            };
 
         await OnSearch.InvokeAsync(searchParameters);
 

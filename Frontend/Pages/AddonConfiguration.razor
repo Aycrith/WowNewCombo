@@ -1,0 +1,172 @@
+﻿@page "/AddonConfiguration"
+
+@inject ILogger logger
+@inject IHostApplicationLifetime lifetime
+@inject NavigationManager NavigationManager
+@inject IBotController botController
+@inject AddonConfigurator addonConfigurator
+
+@implements IDisposable
+
+<style>
+    h5 {
+        margin-top: 20px
+    }
+</style>
+
+<div class="container mt-3">
+    <div class="row">
+        <div class="col-10">
+            <h3>
+                Addon configuration(@(AddonConfigMeta.DefaultFileName)) file @(AddonConfig.Exists()? "exists" : "not exists") and @(!addonConfig.IsDefault() ? "valid" : "not valid")
+            </h3>
+        </div>
+        <div class="w-100"></div>
+        <div class="col-1">
+            <h6>0.</h6>
+        </div>
+        <div class="col">
+            <h5>Addon Status</h5>
+        </div>
+        <div class="col">
+            @(AddonStatus())
+        </div>
+        <div class="w-100"></div>
+        <div class="col-1">
+            <h6>1.</h6>
+        </div>
+        <div class="col">
+            <h5>Find the <b>InstallPath</b> by running game instance:</h5>
+        </div>
+        <div class="col">
+            <button class="btn btn-sm btn-primary" @onclick="FindPathByExe">
+                <span>Find InstallPath by running client</span>
+            </button>
+        </div>
+        <div class="w-100"></div>
+        <div class="col-1">
+            <h6>2.</h6>
+        </div>
+        <div class="col">
+            <h5>Delete previous <b>AddonConfig</b> and installed addon</h5>
+        </div>
+        <div class="col">
+            <button class="btn btn-sm btn-danger" @onclick="Delete">
+                <span>Delete current configuration</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="container mt-3">
+    <div class="card">
+        <div class="card-header">
+            Addon Configuration
+        </div>
+        <div class="card-body" style="padding-bottom: 0">
+            <table class="table table-bordered">
+                @foreach (var property in addonConfig.GetType().GetProperties())
+                {
+                    <tr>
+                        @switch (Type.GetTypeCode(property.PropertyType))
+                        {
+                            case TypeCode.String:
+                                <td>@(property.Name)</td>
+                                <td>
+                                    <input value="@property.GetValue(addonConfig)?.ToString()"
+                               class="form-control"
+                               disabled="@(property.Name.Contains(nameof(addonConfig.Command)) || addonConfigurator.Installed())"
+                               @onchange="c => { property.SetValue(addonConfig, c.Value); }" />
+                                </td>
+                                break;
+                        }
+                    </tr>
+                }
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="container mt-3">
+    <div class="row">
+        <div class="col-1">
+            <h6>3.</h6>
+        </div>
+        <div class="col">
+            <h5>Finalize AddonConfig setup, addon will be installed:</h5>
+        </div>
+        <div class="col">
+            <button class="btn btn-sm btn-success" @onclick="Install">
+                <span>Install & Save</span>
+            </button>
+        </div>
+    </div>
+    <hr />
+    <LogComponent />
+</div>
+
+@code {
+
+    private AddonConfig addonConfig = null!;
+
+    protected override void OnInitialized()
+    {
+        addonConfigurator.OnChange += OnChanged;
+        addonConfig = addonConfigurator.Config;
+    }
+
+    public void Dispose()
+    {
+        addonConfigurator.OnChange -= OnChanged;
+    }
+
+    public void OnChanged()
+    {
+        base.InvokeAsync(StateHasChanged);
+    }
+
+    private void Delete()
+    {
+        addonConfigurator.Delete();
+
+        if (DataFrameConfiguration.Exists())
+        {
+            NavigationManager.NavigateTo("/RestartServer");
+        }
+        else
+        {
+            NavigationManager.NavigateTo("/", true);
+        }
+    }
+
+    private void FindPathByExe()
+    {
+        addonConfigurator.FindPathByExecutable();
+    }
+
+    private void Install()
+    {
+        if (addonConfigurator.Validate())
+        {
+            addonConfigurator.Install();
+            addonConfigurator.Save();
+        }
+    }
+
+    private MarkupString AddonStatus()
+    {
+        if (AddonConfig.Exists() && addonConfigurator.Installed())
+        {
+            if (addonConfigurator.UpdateAvailable())
+            {
+                return new("<p class=\"text-warning\">Update available - press <b>Install & Save</b></p>");
+            }
+            else
+            {
+                return new("<p class=\"text-success\">Up to Date</p>");
+            }
+        }
+
+        return new("<p class=\"text-danger\">Not Installed</p>");
+    }
+}

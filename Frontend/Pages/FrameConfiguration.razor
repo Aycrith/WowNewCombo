@@ -1,0 +1,212 @@
+﻿@page "/FrameConfiguration"
+
+@inject ILogger logger
+@inject IHostApplicationLifetime lifetime
+@inject NavigationManager NavigationManager
+@inject IBotController botController
+@inject AddonConfigurator addonConfigurator
+
+@implements IDisposable
+
+<div class="container">
+
+    @if (saved)
+    {
+        <h1>Saved! - Please wait until restart! And press <b>Reload</b> when it prompts!</h1>
+        <span class="row col-md-12">@playerClass</span>
+    }
+    @if (DataFrameConfiguration.Exists())
+    {
+        <h1>Frame Configuration file already exists</h1>
+    }
+    else
+    {
+        <h1>Frame configuration not found !</h1>
+    }
+
+    @if (DataFrameConfiguration.Exists())
+    {
+        <hr />
+        <h4 class="text-warning">Tinkering with the following fields are not recommend! Unless experinecing strange behaviours then repeat the Frame Configuration process!</h4>
+    }
+
+    <div class="card-deck mb-3 text-center">
+        <div class="card mb-4 box-shadow">
+            <div class="card-header">
+                <h4 class="my-0 font-weight-normal">Auto</h4>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mt-1 mb-1">
+                    <li>1-Click</li>
+                    <li>Recommended in general</li>
+                </ul>
+                <button class="btn btn-lg btn-block btn-primary" @onclick="StartAutoConfigure" disabled="@manual">
+                    <span>Start</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="card mb-4 box-shadow">
+            <div class="card-header">
+                <h4 class="my-0 font-weight-normal">Manual</h4>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mt-1 mb-1">
+                    <li>Follow few steps</li>
+                    <li>Recommended for troubleshooting</li>
+                </ul>
+                <button type="button" class="btn btn-lg btn-block @manualButtonStyle" @onclick="ToggleManualConfig">@manualButtonText</button>
+            </div>
+        </div>
+    </div>
+
+    @if (frameConfigurator.AddonNotVisible)
+    {
+        <ul class="list-group">
+            <li class="list-group-item">
+                I saw @frameConfigurator.dataFrames.Count data frames. But its keep changing! The addon is not visible.
+            </li>
+            <li class="list-group-item">
+                <p class="text-danger">Restart the game</p>
+            </li>
+            <li class="list-group-item">
+                <p class="text-danger">Enable the addon</p>
+            </li>
+            <li class="list-group-item">
+                <p class="text-danger">Make sure nothing obstruct</p>
+            </li>
+        </ul>
+        <br>
+    }
+
+    <h5 class="row col-md-12">Your screen:</h5>
+
+    <div class="row col-md-12">
+        @if (@frameConfigurator.dataFrames.Count != frameConfigurator.dataFrameMeta.frames)
+        {
+            <img style="border:1px solid red; margin: 5px" src="data:image/png;base64, @frameConfigurator.ImageBase64" alt="Red dot" />
+        }
+        else
+        {
+            <img style="border:1px solid green; margin: 5px" src="data:image/png;base64, @frameConfigurator.ImageBase64" alt="Red dot" />
+        }
+    </div>
+
+    <span class="row col-md-12">@playerClass</span>
+
+    @if (manual)
+    {
+        <br>
+        <ul class="list-group">
+            <li class="list-group-item">
+                Step 1: Please ensure the addon <span class="px-2"><b>@addonConfig.Title</b></span> found in the addon folders is running. You should see the multi-coloured pixels at the top left of the screen.
+                @if (frameConfigurator.dataFrames.Count != frameConfigurator.dataFrameMeta.frames)
+                {
+                    <br>
+                    <img src="_content/Frontend/Addon_Normal.png" />
+                }
+            </li>
+            <li class="list-group-item">
+                Step 2: Now we are going to put the addon into configuration mode, this will change the addon colours displayed. In the wow chat window: type <span class="ml-1"><b>&#47;@addonConfig.Command</b></span>
+                @if (frameConfigurator.dataFrames.Count != frameConfigurator.dataFrameMeta.frames)
+                {
+                    <br>
+                    <img src="_content/Frontend/Addon_Config.png" />
+                }
+            </li>
+            <li class="list-group-item">
+                Step 3: Should see @frameConfigurator.dataFrameMeta.frames frames - Now i see @frameConfigurator.dataFrames.Count data frames.
+            </li>
+            @if (frameConfigurator.dataFrameMeta.frames != 0 && frameConfigurator.dataFrames.Count == frameConfigurator.dataFrameMeta.frames)
+            {
+                <li class="list-group-item">
+                    <span>Step 4: Now return to normal mode, In the wow chat window: type <span class="ml-1"><b>&#47;@addonConfig.Command</b></span></span>
+                </li>
+            }
+            @if (!string.IsNullOrEmpty(playerClass) && !playerClass.ToLower().Contains("unable to read player class") && !playerClass.ToLower().Contains("none"))
+            {
+                <li class="list-group-item">
+                    Step 5: This is perfect, just click the Save button.
+                    <br>
+                    <button class="btn btn-sm btn-success" @onclick="FinishManualConfigure">
+                        <span>Save</span>
+                    </button>
+                </li>
+            }
+        </ul>
+    }
+    <hr />
+    <LogComponent />
+</div>
+@code {
+
+    private AddonConfig addonConfig = null!;
+
+    private bool saved = false;
+    private bool manual { get; set; } = false;
+    private string manualButtonText { get; set; } = "Start";
+    private string manualButtonStyle => manualButtonText == "Start" ? "btn-primary" : "btn-danger";
+    private string playerClass = string.Empty;
+
+    private FrameConfigurator frameConfigurator = null!;
+
+    protected override void OnInitialized()
+    {
+        addonConfig = addonConfigurator.Config;
+
+        frameConfigurator = new FrameConfigurator(logger, addonConfigurator);
+        frameConfigurator.OnUpdate += OnUpdate;
+    }
+
+    public void Dispose()
+    {
+        frameConfigurator.OnUpdate -= OnUpdate;
+        frameConfigurator.Dispose();
+    }
+
+
+    private void OnUpdate()
+    {
+        if (frameConfigurator.ResolveClass() && frameConfigurator.AddonReader != null)
+        {
+            playerClass = frameConfigurator.AddonReader.PlayerReader.Race.ToString()
+                + " " + frameConfigurator.AddonReader.PlayerReader.Class.ToString();
+        }
+        else
+        {
+            playerClass = "unable to read player class";
+        }
+
+        saved = frameConfigurator.Saved;
+
+        base.InvokeAsync(StateHasChanged);
+    }
+
+    public void ToggleManualConfig()
+    {
+        manual = !manual;
+        if (manual)
+        {
+            manualButtonText = "Stop";
+        }
+        else
+        {
+            playerClass = string.Empty;
+            manualButtonText = "Start";
+        }
+
+        frameConfigurator.ToggleManualConfig();
+    }
+
+    public void FinishManualConfigure()
+    {
+        if (frameConfigurator.FinishManualConfig())
+            NavigationManager.NavigateTo("/RestartServer");
+    }
+
+    public void StartAutoConfigure()
+    {
+        if (frameConfigurator.StartAutoConfig())
+            NavigationManager.NavigateTo("/RestartServer");
+    }
+}

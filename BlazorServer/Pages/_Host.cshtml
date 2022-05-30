@@ -1,6 +1,6 @@
 ﻿@page "/"
-@using Microsoft.JSInterop
 @namespace BlazorServer.Pages
+@using Frontend
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 @{
     Layout = null;
@@ -13,10 +13,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BlazorServer</title>
     <base href="~/" />
-    <link rel="stylesheet" href="css/bootstrap/bootstrap.icons.min.css" />
-    <!--<link rel="stylesheet" href="css/bootstrap/bootstrap-theme.min.css" />-->
-    <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
-    <link rel="stylesheet" href="css/bootstrap/bootstrap-dark.min.css" />
+    <link rel="stylesheet" href="_content/Frontend/css/bootstrap/bootstrap.icons.min.css" />
+    <!--<link rel="stylesheet" href="_content/Frontend/css/bootstrap/bootstrap-theme.min.css" />-->
+    <link rel="stylesheet" href="_content/Frontend/css/bootstrap/bootstrap.min.css" />
+    <link rel="stylesheet" href="_content/Frontend/css/bootstrap/bootstrap-dark.min.css" />
     <script src="_content/BlazorTable/BlazorTable.min.js"></script>
 
     @*<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootswatch/4.5.0/sketchy/bootstrap.min.css" />*@
@@ -24,7 +24,7 @@
     <script src="_content/MatBlazor/dist/matBlazor.js"></script>
     <link href="_content/MatBlazor/dist/matBlazor.css" rel="stylesheet" />
 
-    <link href="css/site.css" rel="stylesheet" />
+    <link href="_content/Frontend/css/site.css" rel="stylesheet" />
     <script src="https://d3js.org/d3.v4.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.0.0/animate.min.css" />
 
@@ -33,8 +33,8 @@
 
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
 
-    <script src="~/script/panzoom.min.js"></script>
-    <script src="~/script/script.js"></script>
+    <script src="_content/Frontend/script/panzoom.min.js"></script>
+    <script src="_content/Frontend/script/script.js"></script>
 </head>
 <body>
     <app>

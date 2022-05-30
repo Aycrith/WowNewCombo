@@ -1,0 +1,107 @@
+﻿@inject IAddonReader addonReader
+@inject IBotController botController
+
+@implements IDisposable
+
+<div class="card @(Hide ? "hide" : string.Empty)">
+    <div class="card-header">
+        Player <InitButton /> <ToggleButton Disable="@(botController.ClassConfig?.Mode == Mode.AttendedGather)" />
+        <span class="float-right badge @CombatBadge()">@Core.GOAP.GoapKeyDescription.ToString(Core.GOAP.GoapKey.incombat, PlayerInCombat)</span>
+        <span class="float-right">@playerReader.Race @playerReader.Class</span>
+    </div>
+    <div class="card-body p-0">
+        <table class="table">
+            <tr>
+                <th>Level @playerReader.Level.Value<br>(XP: @((int)playerReader.PlayerXpPercentage)%)</th>
+                <th>Health / Resource:</th>
+                <th>Bag Items:</th>
+                <th>Actionbar / Spell / Talent:</th>
+                <th>Target:</th>
+            </tr>
+            <tr>
+                <td>
+                    Time to level: @levelTracker.TimeToLevel<br />
+                    at @levelTracker.PredictedLevelUpTime.ToString("HH:mm:ss")
+                </td>
+                <td>@playerReader.HealthCurrent (@playerReader.HealthPercent %)<br />@playerReader.PTCurrent (@playerReader.PTPercentage %)</td>
+
+                <td>@addonReader.BagReader.BagItems.Count / @addonReader.BagReader.SlotCount</td>
+                <td>@addonReader.ActionBarCostReader.Count / @addonReader.SpellBookReader.Count / @addonReader.TalentReader.Count</td>
+                <td>
+                    @if (addonReader.PlayerReader.Bits.HasTarget)
+                    {
+                        <a href="@($"{WApi.NpcId}{playerReader.TargetId}")" target="_blank">
+                            <div>
+                                @addonReader.TargetName<br />
+                                (@playerReader.TargetLevel) @((int)playerReader.TargetHealthPercentage) %<br />
+                                GUID: @playerReader.TargetGuid
+
+                                @if (!playerReader.Bits.TargetIsNormal)
+                                {
+                                    <div>NOT NORMAL</div>
+                                }
+                                else if (playerReader.ComboPoints > 0)
+                                {
+                                    <div>Combo Points: @playerReader.ComboPoints</div>
+                                }
+                                @if (addonReader.CombatCreatureCount > 1)
+                                {
+                                    <div>Fighting @addonReader.CombatCreatureCount Mobs</div>
+                                }
+
+                            </div>
+                        </a>
+                    }
+                    else
+                    {
+                        <div>Kills: @levelTracker.MobsKilled</div>
+                    }
+                </td>
+            </tr>
+        </table>
+
+        @if (ShowActiveGoal)
+        {
+            <table class="table table-sm table-striped">
+                @if (botController.GoapAgent != null && botController.GoapAgent.CurrentGoal != null)
+                {
+                    <GoapGoalView goal="botController.GoapAgent.CurrentGoal" IsSelected="true" />
+                }
+            </table>
+        }
+    </div>
+</div>
+
+@code {
+
+    [Parameter]
+    public bool Hide { get; set; } = false;
+
+    [Parameter]
+    public bool ShowActiveGoal { get; set; } = true;
+
+    private PlayerReader playerReader => addonReader.PlayerReader;
+    private LevelTracker levelTracker => addonReader.LevelTracker;
+
+    private bool PlayerInCombat => this.playerReader.Bits.PlayerInCombat;
+
+    private string CombatBadge()
+    {
+        return !PlayerInCombat ? "badge-success" : "badge-danger";
+    }
+
+    protected override void OnInitialized()
+    {
+        addonReader.AddonDataChanged += OnAddonDataChanged;
+    }
+
+    public void Dispose()
+    {
+        addonReader.AddonDataChanged -= OnAddonDataChanged;
+    }
+
+    private void OnAddonDataChanged()
+    {
+        base.InvokeAsync(StateHasChanged);
+    }
+}

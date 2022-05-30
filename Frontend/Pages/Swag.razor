@@ -1,0 +1,103 @@
+﻿@page "/Swag"
+
+@inject IAddonReader addonReader
+@inject IBotController botController
+@inject IJSRuntime JSRuntime
+
+@implements IDisposable
+
+<BotHeader ShowActiveGoal="false" />
+
+<div class="card mt-1">
+    <div class="card-header">
+        Equipments
+    </div>
+    <div class="card-body">
+        <div class="row p-0 m-0">
+            @for (int index = 0; index < (int)InventorySlotId.Bag_0; index++)
+            {
+                <div class="col">
+                    <EquipmentComponent Slot="index" Item="equipmentReader.Items[index]" ShowIcon="!botController.IsBotActive" />
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="card mt-1">
+    <div class="card-header">
+        Bag Contents
+        <div class="float-right">
+            <Money Value="TotalVendorMoney" />
+        </div>
+    </div>
+    <div class="card-body" style="padding-bottom: 0">
+        <table class="table table-sm table-striped table-no-border">
+            <thead class="thead-dark">
+                <tr>
+                    @foreach (var bag in bagReader.Bags.Reverse())
+                    {
+                        <th>
+                            <a href="@($"{WApi.ItemId}{bag.ItemId}")" target="_blank">@bag.Name</a>
+                        </th>
+                    }
+                </tr>
+            </thead>
+            @for (int bagIndex = 0; bagIndex < MaxSlot; bagIndex++)
+            {
+                <tr>
+                    @for (int bag = 4; bag >= 0; bag--)
+                    {
+                        <td width="20%">
+                            @{
+                                var bagItem = bagReader.BagItems.Where(i => i.Bag == bag).Where(i => i.BagIndex == bagIndex).FirstOrDefault();
+                            }
+                            @if (bagItem != null)
+                            {
+                                <BagItemComponent BagItem="bagItem" ShowIcon="!botController.IsBotActive" />
+                            }
+                        </td>
+                    }
+                </tr>
+            }
+        </table>
+    </div>
+</div>
+
+<div id="tooltip" display="none" style="position: absolute; display: none;"></div>
+
+@code {
+
+    private int[] TotalVendorMoney { get; set; } = new int[3] { 0, 0, 0 };
+
+    private BagReader bagReader = null!;
+    private EquipmentReader equipmentReader = null!;
+
+    private int MaxSlot => bagReader.Bags.Max(b => b.SlotCount);
+
+    protected override void OnInitialized()
+    {
+        bagReader = addonReader.BagReader;
+        bagReader.DataChanged += OnBagReaderDataChanged;
+
+        equipmentReader = addonReader.EquipmentReader;
+        equipmentReader.OnEquipmentChanged += OnEquipmentChanged;
+    }
+
+    public void Dispose()
+    {
+        bagReader.DataChanged -= OnBagReaderDataChanged;
+        equipmentReader.OnEquipmentChanged -= OnEquipmentChanged;
+    }
+
+    public void OnBagReaderDataChanged()
+    {
+        TotalVendorMoney = Item.ToSellPrice(bagReader.BagItems.Sum(s => s.Item.SellPrice * s.Count));
+        base.InvokeAsync(StateHasChanged);
+    }
+
+    public void OnEquipmentChanged(object? s, (int, int) tuple)
+    {
+        base.InvokeAsync(StateHasChanged);
+    }
+}

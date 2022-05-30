@@ -1,0 +1,16 @@
+﻿<span class="float-right" style="font-size:small">
+    @for (int i = 0; i < 2; i++)
+    {
+        @if (Value[i] > 0)
+        {
+            @Value[i] <img height="12px" src="@images[i]" />
+        }
+    }
+</span>
+
+@code {
+    [Parameter]
+    public int[] Value { get; set; } = new int[3] { 0, 0, 0 };
+
+    private static readonly List<string> images = new() { "_content/Frontend/money-gold.png", "_content/Frontend/money-silver.png", "_content/Frontend/money-copper.png" };
+}

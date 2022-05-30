@@ -1,0 +1,89 @@
+﻿<a href="@($"{WApi.ItemId}{BagItem.ItemId}")" target="_blank" data-wowhead="item=@BagItem.ItemId" class="small" style="text-decoration:none">
+    <b>
+        <span style="color:@BagItemColour(BagItem.Item);font-weight:normal">
+            @if (BagItem.Count > 1)
+            {
+                @BagItem.Count
+
+                <span>&nbsp;</span>
+            }
+
+            @if (iconName != string.Empty)
+            {
+                <img src="@imgLink" />
+            }
+            @BagItem.Item.Name
+            @if (BagItem.IsSoulbound)
+            {
+                <span>(S)</span>
+            }
+            @if (ShowPrice && BagItem.Item.SellPrice > 0)
+            {
+                <Money Value="GetItemPrice(BagItem)" />
+            }
+            @if (BagItem.WasRecentlyUpdated)
+            {
+                <span class="float-right badge badge-info">@BagItem.LastChangeDescription</span>
+            }
+        </span>
+    </b>
+</a>
+
+@code {
+    [Parameter]
+    public BagItem BagItem { get; set; } = null!;
+
+    [Parameter]
+    public bool ShowChangesPrice { get; set; } = false;
+
+    [Parameter]
+    public bool ShowPrice { get; set; } = false;
+
+    [Parameter]
+    public bool ShowIcon { get; set; }
+
+    private string iconName { get; set; } = string.Empty;
+    private string imgLink => string.Format(WApi.TinyIconUrl, iconName);
+
+    private static readonly List<string> colors = new() { "#9d9d9d", "#fff", "#1eff00", "#0070dd", "#9345ff", "#ff8000", "#e5cc80", "#e5cc80" };
+    private static readonly List<string> itemBadge = new() { "badge-secondary", "badge-dark", "badge-success", "badge-primary", "badge-warning", "badge-warning", "badge-warning", "badge-warning" };
+
+    private static Dictionary<int, string> icons = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!ShowIcon || BagItem.ItemId == 0) return;
+
+        if (icons.TryGetValue(BagItem.ItemId, out var icon))
+        {
+            iconName = icon;
+            return;
+        }
+
+        iconName = await WApi.FetchItemIconName(BagItem.ItemId);
+        icons.TryAdd(BagItem.ItemId, iconName);
+    }
+
+    private string BagItemColour(Item item)
+    {
+        if (item.Quality < 0 || item.Quality > 7) { return "black"; }
+        return colors[item.Quality];
+    }
+
+    private string BagItemBadge(Item item)
+    {
+        if (item.Quality < 0 || item.Quality > 7) { return "badge-dark"; }
+        return itemBadge[item.Quality];
+    }
+
+    private int[] GetItemPrice(BagItem item)
+    {
+        var value = item.Count * item.Item.SellPrice;
+        if (ShowChangesPrice)
+        {
+            value = (item.LastChange == 0 ? item.Count : item.LastChange) * item.Item.SellPrice;
+        }
+
+        return Item.ToSellPrice(value);
+    }
+}

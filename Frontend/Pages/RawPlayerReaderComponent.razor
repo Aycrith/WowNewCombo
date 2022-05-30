@@ -1,0 +1,153 @@
+﻿@inject IBotController botController
+@inject IAddonReader addonReader
+
+@implements IDisposable
+
+<div class="container">
+    <div class="card">
+        <div class="card-header">
+            Raw PlayerReader
+        </div>
+        <div class="card-body" style="padding-bottom: 0">
+            <table class="table table-bordered">
+                @foreach (var property in GetPropertyValues(addonReader.PlayerReader))
+                {
+                    <tr>
+                        <td>@(property.Name)</td>
+                        <td>
+                            <input value="@property.Value" class="form-control" Disabled="true" />
+                        </td>
+                    </tr>
+                }
+            </table>
+            <table class="table table-bordered">
+                @foreach (var property in GetPropertyValues(addonReader))
+                {
+                    <tr>
+                        <td>@(property.Name)</td>
+                        <td>
+                            <input value="@property.Value" class="form-control" Disabled="true" />
+                        </td>
+                    </tr>
+                }
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    protected override void OnInitialized()
+    {
+        addonReader.AddonDataChanged += OnAddonDataChanged;
+    }
+
+    public void Dispose()
+    {
+        addonReader.AddonDataChanged -= OnAddonDataChanged;
+    }
+
+    private void OnAddonDataChanged()
+    {
+        base.InvokeAsync(StateHasChanged);
+    }
+
+
+    public class ObjectField
+    {
+        public string Name { get; init; } = string.Empty;
+        public string Value { get; init; } = string.Empty;
+    }
+
+    static List<ObjectField> GetPropertyValues(object obj)
+    {
+        List<ObjectField> propList = new List<ObjectField>();
+        string objName = obj.ToString() ?? "";
+        if (objName.Length > 0) objName += ".";
+
+        foreach (var pinfo in obj.GetType().GetProperties())
+        {
+            if (pinfo.GetIndexParameters().Length != 0) return propList;
+
+            var value = pinfo.GetValue(obj, null);
+            if (value == null) continue;
+
+            if (pinfo.PropertyType.IsArray)
+            {
+                var arr = value as object[];
+                if (arr == null) continue;
+                for (var i = 0; i < arr.Length; i++)
+                {
+                    if (arr[i] != null && arr[i].GetType().IsPrimitive)
+                    {
+                        propList.Add(new ObjectField() { Name = objName + pinfo.Name + i.ToString(), Value = arr[i].ToString() ?? "" });
+                    }
+                    else
+                    {
+                        var lst = GetPropertyValues(arr[i]);
+                        if (lst != null && lst.Count > 0)
+                            propList.AddRange(lst);
+                    }
+                }
+            }
+            else if (pinfo.PropertyType.IsGenericType)
+            {
+                if (value.GetType() == typeof(List<CreatureRecord>))
+                {
+                    var collection = value as IEnumerable<CreatureRecord>;
+                    if (collection == null) continue;
+
+                    int i = 0;
+                    foreach (var item in collection)
+                    {
+                        propList.Add(new ObjectField() { Name = "    " + objName + pinfo.Name + $"[{i.ToString()}]", Value = item.ToString() ?? "" });
+                        i++;
+                    }
+                }
+            }
+            else
+            {
+                if (pinfo.PropertyType.IsPrimitive || pinfo.PropertyType.IsEnum || value.GetType() == typeof(string))
+                {
+                    propList.Add(new ObjectField() { Name = objName + pinfo.Name, Value = value.ToString() ?? "" });
+                }
+                else if (value is RecordInt recordInt)
+                {
+                    propList.Add(new ObjectField() { Name = objName + pinfo.Name, Value = recordInt.Value.ToString() });
+                }
+                else if (value is AddonBits addonBits)
+                {
+                    var lst = GetPropertyValues(addonBits);
+                    if (lst != null && lst.Count > 0)
+                        propList.AddRange(lst);
+                }
+                else if (value is SpellInRange spellInRange)
+                {
+                    var lst = GetPropertyValues(spellInRange);
+                    if (lst != null && lst.Count > 0)
+                        propList.AddRange(lst);
+                }
+                else if (value is BuffStatus buffStatus)
+                {
+                    var lst = GetPropertyValues(buffStatus);
+                    if (lst != null && lst.Count > 0)
+                        propList.AddRange(lst);
+                }
+                else if (value is TargetDebuffStatus targetDebuffStatus)
+                {
+                    var lst = GetPropertyValues(targetDebuffStatus);
+                    if (lst != null && lst.Count > 0)
+                        propList.AddRange(lst);
+                }
+                else if (value is CreatureHistory creatureHistory)
+                {
+                    var lst = GetPropertyValues(creatureHistory);
+                    if (lst != null && lst.Count > 0)
+                        propList.AddRange(lst);
+                }
+            }
+        }
+        return propList;
+    }
+
+}
