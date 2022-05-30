@@ -1,6 +1,6 @@
 using Core.Goals;
 using SharedLib.NpcFinder;
-using Core.PPather;
+using PPather.Data;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System;
@@ -219,9 +219,12 @@ namespace Core
 
             RouteInfo routeInfo = new(pathPoints, pathProviders, addonReader);
 
-            this.pather.DrawLines(new()
+            List<DummyVector3> dummyList = new();
+            dummyList.AddRange(Array.ConvertAll(pathPoints.ToArray(), (Vector3 v3) => new DummyVector3 { X = v3.X, Y = v3.Y, Z = v3.Z }));
+
+            pather.DrawLines(new()
             {
-                new LineArgs { Spots = pathPoints, Name = "grindpath", Colour = 2, MapId = addonReader.UIMapId.Value }
+                new LineArgs { Spots = dummyList, Name = "grindpath", Colour = 2, MapId = addonReader.UIMapId.Value }
             });
 
             return (routeInfo, availableActions);

@@ -26,16 +26,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DataConfig\DataConfig.csproj" />
+    <ProjectReference Include="..\PPather\PPather.csproj" />
     <ProjectReference Include="..\SharedLib\SharedLib.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="MPQ\ccode.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="MPQ\StormLib.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
 
 </Project>

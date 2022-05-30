@@ -1,10 +1,9 @@
-﻿namespace SharedLib
+﻿namespace PPather.Data
 {
-    public class WorldMapAreaSpot
+    public class DummyVector3
     {
         public float X { get; set; }
         public float Y { get; set; }
         public float Z { get; set; }
-        public int MapID { get; set; }
     }
 }

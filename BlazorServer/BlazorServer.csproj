@@ -28,7 +28,6 @@
   <ItemGroup>
     <ProjectReference Include="..\AddonConfig\AddonConfig.csproj" />
     <ProjectReference Include="..\Core\Core.csproj" />
-    <ProjectReference Include="..\PathingAPI\PathingAPI.csproj" />
   </ItemGroup>
 
   <ItemGroup>

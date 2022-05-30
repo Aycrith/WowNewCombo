@@ -22,7 +22,7 @@ namespace Game
         // TODO: make it work for higher resolution ex. 4k
         public const int MinimapSize = 200;
 
-        public bool Enabled { get; set; } = false;
+        public bool Enabled { get; set; }
 
         public bool EnablePostProcess { get; set; }
         public Bitmap Bitmap { get; private set; }

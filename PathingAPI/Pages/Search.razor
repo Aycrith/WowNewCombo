@@ -1,6 +1,8 @@
 ﻿@page "/Search"
 
-@using PathingAPI.Data
+@using PPather
+@using PPather.Data
+@using PPather.Graph
 
 @inject IJSRuntime jsRuntime
 @inject PPatherService pPatherService
@@ -13,7 +15,7 @@
 @code {
     bool IsDisabled = true;
 
-    PatherPath.Graph.PathGraph.eSearchScoreSpot searchType;
+    PathGraph.eSearchScoreSpot searchType;
     int pathColour = 1;
     string name;
     SearchParam parameters;
@@ -26,7 +28,7 @@
         {
             await jsRuntime.InvokeVoidAsync("createScene");
 
-            PatherPath.Graph.PathGraph.SearchEnabled = true;
+            PathGraph.SearchEnabled = true;
 
             pPatherService.Reset();
 
@@ -71,7 +73,7 @@
         await DoSearch(parameters.SearchType, ((int)parameters.SearchType) + 1, parameters.SearchType.ToString());
     }
 
-    private async Task DoSearch(PatherPath.Graph.PathGraph.eSearchScoreSpot searchType, int colour, string name)
+    private async Task DoSearch(PathGraph.eSearchScoreSpot searchType, int colour, string name)
     {
         IsDisabled = true;
 
@@ -79,9 +81,9 @@
         this.pathColour = colour;
         this.name = name;
 
-        PatherPath.Graph.PathGraph.SearchEnabled = true;
-        PatherPath.Graph.PathGraph.ProgressTimeoutSeconds = 60;
-        PatherPath.Graph.PathGraph.TimeoutSeconds = 600;
+        PathGraph.SearchEnabled = true;
+        PathGraph.ProgressTimeoutSeconds = 60;
+        PathGraph.TimeoutSeconds = 600;
 
         await InvokeAsyncBase(StateHasChanged);
 

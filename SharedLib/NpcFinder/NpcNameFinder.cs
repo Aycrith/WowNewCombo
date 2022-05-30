@@ -62,7 +62,7 @@ namespace SharedLib.NpcFinder
 
         public int topOffset { get; set; } = 110;
 
-        public int npcPosYOffset { get; set; } = 0;
+        public int npcPosYOffset { get; set; }
         public int npcPosYHeightMul { get; set; } = 10;
 
         public int npcNameMaxWidth { get; set; } = 250;
