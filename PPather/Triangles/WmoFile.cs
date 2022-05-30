@@ -184,7 +184,7 @@ namespace Wmo
                 string part = path.Substring(0, path.Length - 4);
                 string gf = String.Format("{0}_{1,3:000}.wmo", part, i);
                 set.ExtractFile(gf, localPath);
-                //new WmoGroupFile(w.groups[i], localPath);
+                _ = new WmoGroupFile(w.groups[i], localPath);
             }
             return w;
         }
