@@ -10,7 +10,7 @@ using System.Numerics;
 using System.Threading.Tasks;
 using WowTriangles;
 
-namespace BlazorServer
+namespace Core
 {
     public class LocalPathingApi : IPPather
     {
