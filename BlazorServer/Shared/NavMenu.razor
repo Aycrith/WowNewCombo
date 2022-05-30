@@ -1,9 +1,7 @@
-﻿@using SharedLib
-@using Game
-@using Core
+﻿@inject ILogger logger
 @inject IBotController botController
-@inject Microsoft.Extensions.Logging.ILogger logger
 @inject AddonConfigurator addonConfigurator
+
 @implements IDisposable
 
 <div class="top-row pl-4 navbar navbar-dark">

@@ -1,11 +1,12 @@
 ﻿@page "/History"
 
+@using Core.Session
+
 @inject IGrindSession Session
 
 @{
-    var pageSize = new List<int> { 15, 50, 100 };
+    List<int> pageSize = new() { 15, 50, 100 };
 }
-
 
 @if (PreviousBotSessions.Any())
 {

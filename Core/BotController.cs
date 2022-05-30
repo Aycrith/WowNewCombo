@@ -14,6 +14,7 @@ using Game;
 using WinAPI;
 using SharedLib.NpcFinder;
 using Cyotek.Collections.Generic;
+using Core.Addon;
 
 namespace Core
 {

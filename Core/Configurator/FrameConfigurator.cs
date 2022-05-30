@@ -1,16 +1,16 @@
-﻿using System;
-using System.IO;
+﻿using Core.Addon;
+using Game;
+using Microsoft.Extensions.Logging;
+using SharedLib;
+using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using Microsoft.Extensions.Logging;
-using Core;
 using System.Threading;
-using SharedLib;
-using Game;
 
-namespace BlazorServer
+namespace Core
 {
     public sealed class FrameConfigurator : IDisposable
     {

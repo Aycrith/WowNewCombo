@@ -1,12 +1,12 @@
 ﻿@page "/FrameConfiguration"
-@inject Microsoft.Extensions.Logging.ILogger logger
-@inject Microsoft.Extensions.Hosting.IHostApplicationLifetime lifetime
-@inject NavigationManager NavigationManager
-@inject Core.IBotController botController
-@inject AddonConfigurator addonConfigurator
-@implements IDisposable
 
-@using SharedLib
+@inject ILogger logger
+@inject IHostApplicationLifetime lifetime
+@inject NavigationManager NavigationManager
+@inject IBotController botController
+@inject AddonConfigurator addonConfigurator
+
+@implements IDisposable
 
 <div class="container">
 

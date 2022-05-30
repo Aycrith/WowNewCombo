@@ -1,7 +1,6 @@
-﻿@using Core
-@using SharedLib
-@inject IBotController botController
+﻿@inject IBotController botController
 @inject IAddonReader addonReader
+
 @implements IDisposable
 
 <div class="container">
@@ -99,7 +98,7 @@
                     if (collection == null) continue;
 
                     int i = 0;
-                    foreach(var item in collection)
+                    foreach (var item in collection)
                     {
                         propList.Add(new ObjectField() { Name = "    " + objName + pinfo.Name + $"[{i.ToString()}]", Value = item.ToString() ?? "" });
                         i++;

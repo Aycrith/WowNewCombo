@@ -1,10 +1,8 @@
-﻿@using SharedLib
-@using Core
-@using Microsoft.AspNetCore.Html
-@implements IDisposable
-@inject IJSRuntime JSRuntime
+﻿@inject IJSRuntime JSRuntime
 @inject IAddonReader addonReader
 @inject IBotController botController
+
+@implements IDisposable
 
 @if (NewItems.Count() > 0)
 {

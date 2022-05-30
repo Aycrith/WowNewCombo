@@ -1,5 +1,10 @@
+using BlazorTable;
 using Core;
 using Core.Addon;
+using Core.Database;
+using Core.Session;
+using Game;
+using MatBlazor;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -9,14 +14,9 @@ using PathingAPI;
 using Serilog;
 using Serilog.Events;
 using Serilog.Extensions.Logging;
+using SharedLib;
 using System.Threading;
 using System.Threading.Tasks;
-using BlazorTable;
-using Core.Session;
-using MatBlazor;
-using SharedLib;
-using Game;
-using Core.Database;
 
 namespace BlazorServer
 {

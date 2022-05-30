@@ -1,5 +1,6 @@
-﻿@inject Core.IBotController botController
-@inject Core.IAddonReader addonReader
+﻿@inject IBotController botController
+@inject IAddonReader addonReader
+
 @implements IDisposable
 
 <button class="btn btn-sm btn-primary" @onclick="ToggleBot" disabled="@(Disable || DisableButton)">

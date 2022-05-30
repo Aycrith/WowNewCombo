@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 using Game;
 using WinAPI;
 
-namespace BlazorServer
+namespace Core
 {
     public class AddonConfigurator
     {
@@ -28,9 +28,9 @@ namespace BlazorServer
         public AddonConfigurator(ILogger logger)
         {
             this.logger = logger;
-            this.Config = AddonConfig.Load();
+            Config = AddonConfig.Load();
 
-            this.wowProcess = new WowProcess();
+            wowProcess = new WowProcess();
         }
 
         public bool Installed()

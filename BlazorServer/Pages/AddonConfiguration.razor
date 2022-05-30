@@ -1,11 +1,7 @@
 ﻿@page "/AddonConfiguration"
 
-@using SharedLib
-@using Core
-@using System
-
-@inject Microsoft.Extensions.Logging.ILogger logger
-@inject Microsoft.Extensions.Hosting.IHostApplicationLifetime lifetime
+@inject ILogger logger
+@inject IHostApplicationLifetime lifetime
 @inject NavigationManager NavigationManager
 @inject IBotController botController
 @inject AddonConfigurator addonConfigurator

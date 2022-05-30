@@ -1,10 +1,7 @@
-﻿@using Core
-@using Core.Goals
+﻿@using Core.Goals
 @using System.Linq
 @using System.Numerics
 @using System.Timers
-@using System.Threading.Tasks
-@using SharedLib
 
 @inject IAddonReader addonReader
 @inject IBotController botController
@@ -234,7 +231,7 @@
         if (botController.ClassConfig == null) return;
 
         routeSymbol = botController.ClassConfig.PathThereAndBack ?
-        new MarkupString("<span style=\"font-size: 125%;\">⥹</span>"):
+        new MarkupString("<span style=\"font-size: 125%;\">⥹</span>") :
         new MarkupString("<span style=\"font-size: 125%;\">⟳</span>");
     }
 

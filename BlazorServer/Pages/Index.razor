@@ -1,12 +1,11 @@
 ﻿@page "/"
 
-@using SharedLib
-
-@inject Microsoft.Extensions.Logging.ILogger logger
-@inject Core.IAddonReader addonReader
-@inject Core.IBotController botController
+@inject ILogger logger
+@inject IAddonReader addonReader
+@inject IBotController botController
 @inject IJSRuntime JSRuntime
 @inject AddonConfigurator addonConfigurator
+
 @implements IDisposable
 
 <div class="container-fluid">

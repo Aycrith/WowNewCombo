@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
 using System.Xml;
 
-namespace BlazorServer
+namespace Core
 {
     public static class WApi
     {
