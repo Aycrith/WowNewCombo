@@ -54,7 +54,7 @@ namespace Core
             CastingHandler castingHandler = new(logger, cts, input, wait, addonReader, playerDirection, stopMoving);
 
             StuckDetector stuckDetector = new(logger, input, addonReader.PlayerReader, playerDirection, stopMoving);
-            CombatUtil combatUtil = new(logger, input, wait, addonReader.PlayerReader);
+            CombatUtil combatUtil = new(logger, input, wait, addonReader);
             MountHandler mountHandler = new(logger, input, classConfig, wait, addonReader, castingHandler, stopMoving);
 
             TargetFinder targetFinder = new(input, classConfig, addonReader.PlayerReader, npcNameTargeting);

@@ -7,6 +7,7 @@ namespace Core
     public class CombatUtil
     {
         private readonly ILogger logger;
+        private readonly AddonReader addonReader;
         private readonly PlayerReader playerReader;
         private readonly ConfigurableInput input;
         private readonly Wait wait;
@@ -16,12 +17,13 @@ namespace Core
         private bool outOfCombat;
         private Vector3 lastPosition;
 
-        public CombatUtil(ILogger logger, ConfigurableInput input, Wait wait, PlayerReader playerReader)
+        public CombatUtil(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader)
         {
             this.logger = logger;
             this.input = input;
             this.wait = wait;
-            this.playerReader = playerReader;
+            this.addonReader = addonReader;
+            this.playerReader = addonReader.PlayerReader;
 
             outOfCombat = !playerReader.Bits.PlayerInCombat;
             lastPosition = playerReader.PlayerLocation;
@@ -72,10 +74,13 @@ namespace Core
 
                 input.NearestTarget();
                 wait.Update();
-                if (playerReader.HasTarget && playerReader.Bits.TargetInCombat &&
-                    playerReader.Bits.TargetOfTargetIsPlayerOrPet)
+
+                if (playerReader.HasTarget &&
+                    playerReader.Bits.TargetInCombat &&
+                    (playerReader.Bits.TargetOfTargetIsPlayerOrPet ||
+                    addonReader.CreatureHistory.DamageDone.Exists(x => x.Guid == playerReader.TargetGuid)))
                 {
-                    Log("Found from nearest target");
+                    Log("Found target");
                     return true;
                 }
 
