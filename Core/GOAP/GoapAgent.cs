@@ -1,44 +1,135 @@
 ﻿using Core.Goals;
 using Game;
 using Microsoft.Extensions.Logging;
+using SharedLib.Extensions;
 using System;
+using System.Threading;
 using System.Collections.Generic;
 using System.Linq;
+using Core.Session;
 
 namespace Core.GOAP
 {
     public sealed partial class GoapAgent : IDisposable
     {
         private readonly ILogger logger;
+        private readonly ClassConfiguration classConfig;
+        private readonly IGrindSession session;
         private readonly AddonReader addonReader;
         private readonly PlayerReader playerReader;
         private readonly WowScreen wowScreen;
+        private readonly RouteInfo routeInfo;
+        private readonly ConfigurableInput input;
 
-        public bool Active { get; set; }
+        private readonly StopMoving stopMoving;
+
+        private bool active;
+        public bool Active
+        {
+            get => active;
+            set
+            {
+                active = value;
+                if (!active)
+                {
+                    manualReset.Reset();
+
+                    foreach (GoapGoal goal in AvailableGoals)
+                    {
+                        goal.OnActionEvent(this, new ActionEventArgs(GoapKey.abort, true));
+                    }
+
+                    addonReader.SoftReset();
+                    input.Reset();
+
+                    stopMoving.Stop();
+
+                    if (classConfig.Mode is Mode.AttendedGrind or Mode.Grind)
+                    {
+                        session.StopBotSession("stopped", false);
+                    }
+
+                    wowScreen.Enabled = false;
+                }
+                else
+                {
+                    CurrentGoal?.OnActionEvent(this, new ActionEventArgs(GoapKey.resume, true));
+                    manualReset.Set();
+
+                    if (classConfig.Mode is Mode.AttendedGrind or Mode.Grind)
+                    {
+                        session.StartBotSession();
+                    }
+                }
+            }
+        }
 
         public GoapAgentState State { get; }
-
         public IEnumerable<GoapGoal> AvailableGoals { get; }
 
         public Stack<GoapGoal> Plan { get; private set; }
         public GoapGoal? CurrentGoal { get; private set; }
 
-        public GoapAgent(ILogger logger, WowScreen wowScreen, GoapAgentState goapAgentState, AddonReader addonReader, HashSet<GoapGoal> availableGoals)
+        private bool wasEmpty;
+
+        private readonly Thread goapThread;
+        private readonly CancellationTokenSource cts;
+        private readonly ManualResetEvent manualReset;
+
+        public GoapAgent(ILogger logger, ClassConfiguration classConfig, IGrindSession session, WowScreen wowScreen, GoapAgentState goapAgentState, AddonReader addonReader, HashSet<GoapGoal> availableGoals, RouteInfo routeInfo, ConfigurableInput input)
         {
             this.logger = logger;
+            this.classConfig = classConfig;
+            this.session = session;
+            this.cts = new();
             this.wowScreen = wowScreen;
             this.State = goapAgentState;
             this.addonReader = addonReader;
             this.playerReader = addonReader.PlayerReader;
+            this.routeInfo = routeInfo;
+            this.input = input;
+
+            stopMoving = new StopMoving(input, playerReader);
 
             this.addonReader.CreatureHistory.KillCredit += OnKillCredit;
 
             this.AvailableGoals = availableGoals.OrderBy(a => a.CostOfPerformingAction);
             this.Plan = new();
+
+            foreach (GoapGoal a in AvailableGoals)
+            {
+                a.ActionEvent += OnActionEvent;
+
+                foreach (GoapGoal b in AvailableGoals)
+                {
+                    if (b != a)
+                        a.ActionEvent += b.OnActionEvent;
+                }
+            }
+
+            manualReset = new(false);
+            goapThread = new(GoapThread);
+            goapThread.Start();
         }
 
         public void Dispose()
         {
+            cts.Cancel();
+            manualReset.Set();
+
+            foreach (GoapGoal a in AvailableGoals)
+            {
+                a.ActionEvent -= OnActionEvent;
+
+                foreach (GoapGoal b in AvailableGoals)
+                {
+                    if (b != a)
+                        a.ActionEvent -= b.OnActionEvent;
+                }
+            }
+
+            stopMoving.Dispose();
+
             foreach (var goal in AvailableGoals.Where(x => x is IDisposable).OfType<IDisposable>())
             {
                 goal.Dispose();
@@ -47,15 +138,47 @@ namespace Core.GOAP
             addonReader.CreatureHistory.KillCredit -= OnKillCredit;
         }
 
-        public GoapGoal? GetAction()
+        private void GoapThread()
+        {
+            while (!cts.IsCancellationRequested)
+            {
+                manualReset.WaitOne();
+
+                GoapGoal? newGoal = NextGoal();
+                if (!cts.IsCancellationRequested && newGoal != null)
+                {
+                    if (newGoal != CurrentGoal)
+                    {
+                        wasEmpty = false;
+                        CurrentGoal?.OnExit();
+                        CurrentGoal = newGoal;
+
+                        LogNewGoal(logger, newGoal.Name);
+                        CurrentGoal.OnEnter();
+                    }
+
+                    newGoal.PerformAction();
+                }
+                else if (!cts.IsCancellationRequested && !wasEmpty)
+                {
+                    LogNewEmptyGoal(logger);
+                    wasEmpty = true;
+                }
+
+                cts.Token.WaitHandle.WaitOne(1);
+            }
+
+            logger.LogInformation("Bot thread stopped!");
+        }
+
+        private GoapGoal? NextGoal()
         {
             if (Plan.Count == 0)
             {
                 Plan = GoapPlanner.Plan(AvailableGoals, GetWorldState(), GoapPlanner.EmptyGoalState);
             }
-            CurrentGoal = Plan.Count > 0 ? Plan.Pop() : null;
 
-            return CurrentGoal;
+            return Plan.Count > 0 ? Plan.Pop() : null;
         }
 
         private Dictionary<GoapKey, bool> GetWorldState()
@@ -91,7 +214,7 @@ namespace Core.GOAP
             };
         }
 
-        public void OnActionEvent(object sender, ActionEventArgs e)
+        private void OnActionEvent(object sender, ActionEventArgs e)
         {
             switch (e.Key)
             {
@@ -110,6 +233,25 @@ namespace Core.GOAP
                 case GoapKey.wowscreen:
                     wowScreen.Enabled = (bool)e.Value;
                     break;
+            }
+
+            if (e.Key == GoapKey.corpselocation && e.Value is CorpseLocation corpseLocation)
+            {
+                routeInfo.PoiList.Add(new RouteInfoPoi(corpseLocation.Location, "Corpse", "black", corpseLocation.Radius));
+            }
+            else if (e.Key == GoapKey.consumecorpse && (bool)e.Value == false)
+            {
+                if (routeInfo.PoiList.Count > 0)
+                {
+                    var closest = routeInfo.PoiList.Where(p => p.Name == "Corpse").
+                        Select(i => new { i, d = addonReader.PlayerReader.PlayerLocation.DistanceXYTo(i.Location) }).
+                        Aggregate((a, b) => a.d <= b.d ? a : b);
+
+                    if (closest.i != null)
+                    {
+                        routeInfo.PoiList.Remove(closest.i);
+                    }
+                }
             }
         }
 
@@ -143,7 +285,6 @@ namespace Core.GOAP
             }
         }
 
-
         public void NodeFound()
         {
             State.Gathering = true;
@@ -160,10 +301,21 @@ namespace Core.GOAP
 
         [LoggerMessage(
             EventId = 51,
-            EventName = $"{nameof(GoapAgent)}",
             Level = LogLevel.Information,
             Message = "Inactive, kill credit detected!")]
         static partial void LogInactiveKillDetected(ILogger logger);
+
+        [LoggerMessage(
+            EventId = 52,
+            Level = LogLevel.Information,
+            Message = "New Plan= {name}")]
+        static partial void LogNewGoal(ILogger logger, string name);
+
+        [LoggerMessage(
+            EventId = 53,
+            Level = LogLevel.Warning,
+            Message = "New Plan= NO PLAN")]
+        static partial void LogNewEmptyGoal(ILogger logger);
 
         #endregion
     }

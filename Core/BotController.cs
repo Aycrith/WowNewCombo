@@ -59,9 +59,6 @@ namespace Core
         private readonly Thread? screenshotThread;
         private const int screenshotTickMs = 200;
 
-        private GoalThread? goalThread;
-        private Thread? botThread;
-
         public event Action? ProfileLoaded;
         public event Action? StatusChanged;
 
@@ -99,7 +96,7 @@ namespace Core
         private readonly Thread frontendThread;
         private const int frontendTickMs = 250;
 
-        public bool IsBotActive => goalThread != null && goalThread.Active;
+        public bool IsBotActive => GoapAgent != null && GoapAgent.Active;
 
         public BotController(ILogger logger, IPPather pather, DataConfig dataConfig)
         {
@@ -244,53 +241,15 @@ namespace Core
             logger.LogInformation("Frontend Thread stopped!");
         }
 
-        private void BotThread()
-        {
-            if (goalThread != null)
-            {
-                goalThread.ResumeIfNeeded();
-
-                while (!cts.IsCancellationRequested && goalThread.Active)
-                {
-                    goalThread.Update();
-                    cts.Token.WaitHandle.WaitOne(1);
-                }
-            }
-
-            logger.LogInformation("Bot thread stopped!");
-        }
-
-
         public void ToggleBotStatus()
         {
-            if (goalThread == null)
+            if (GoapAgent == null)
                 return;
 
-            if (!goalThread.Active)
-            {
-                if (ClassConfig?.Mode is Mode.AttendedGrind or Mode.Grind)
-                {
-                    GrindSession.StartBotSession();
-                }
-
-                goalThread.Active = true;
-                botThread = new(BotThread);
-                botThread.Start();
-            }
-            else
-            {
-                goalThread.Active = false;
-                if (ClassConfig?.Mode is Mode.AttendedGrind or Mode.Grind)
-                {
-                    GrindSession.StopBotSession("stopped", false);
-                }
-
-                WowScreen.Enabled = false;
-            }
+            GoapAgent.Active = !GoapAgent.Active;
 
             StatusChanged?.Invoke();
         }
-
 
         private bool InitialiseFromFile(string classFile, string? pathFile)
         {
@@ -317,77 +276,38 @@ namespace Core
         {
             AddonReader.SoftReset();
 
-            ConfigurableInput configurableInput = new(logger, wowProcess, config);
+            ConfigurableInput configInput = new(logger, wowProcess, config);
 
             ActionBarPopulator = new(logger, config, AddonReader, ExecGameCommand);
 
-            GoalFactory goalFactory = new(logger, AddonReader, configurableInput, DataConfig, npcNameFinder, npcNameTargeting, pather, ExecGameCommand);
+            GoalFactory goalFactory = new(logger, AddonReader, configInput, DataConfig, npcNameFinder, npcNameTargeting, pather, ExecGameCommand);
 
             GoapAgentState goapAgentState = new();
             (RouteInfo routeInfo, HashSet<GoapGoal> availableActions) = goalFactory.CreateGoals(config, goapAgentState, cts, wait);
 
-            GoapAgent?.Dispose();
-            GoapAgent = new(logger, WowScreen, goapAgentState, AddonReader, availableActions);
-
             RouteInfo = routeInfo;
-            goalThread = new(logger, GoapAgent, AddonReader, configurableInput, RouteInfo!);
 
-            foreach (GoapGoal a in availableActions)
-            {
-                a.ActionEvent += goalThread.OnActionEvent;
-                a.ActionEvent += GoapAgent.OnActionEvent;
-
-                foreach (GoapGoal b in availableActions)
-                {
-                    if (b != a) { a.ActionEvent += b.OnActionEvent; }
-                }
-            }
+            GoapAgent?.Dispose();
+            GoapAgent = new(logger, config, GrindSession, WowScreen, goapAgentState, AddonReader, availableActions, routeInfo, configInput);
         }
 
-        private ClassConfiguration ReadClassConfiguration(string classFilename, string? pathFilename)
+        private ClassConfiguration ReadClassConfiguration(string classFile, string? pathFile)
         {
-            if (!classFilename.ToLower().Contains(AddonReader.PlayerReader.Class.ToString().ToLower()))
-            {
-                throw new Exception($"[{nameof(BotController)}] Not allowed to load other class profile!");
-            }
+            string filePath = Path.Join(DataConfig.Class, classFile);
 
-            var classFilePath = Path.Join(DataConfig.Class, classFilename);
-            if (File.Exists(classFilePath))
-            {
-                ClassConfiguration classConfig = JsonConvert.DeserializeObject<ClassConfiguration>(File.ReadAllText(classFilePath));
-                RequirementFactory requirementFactory = new(logger, AddonReader, npcNameFinder, classConfig.ImmunityBlacklist);
-                classConfig.Initialise(DataConfig, AddonReader, requirementFactory, logger, pathFilename);
+            ClassConfiguration classConfig = JsonConvert.DeserializeObject<ClassConfiguration>(File.ReadAllText(filePath));
+            RequirementFactory requirementFactory = new(logger, AddonReader, npcNameFinder, classConfig.ImmunityBlacklist);
+            classConfig.Initialise(DataConfig, AddonReader, requirementFactory, logger, pathFile);
 
-                logger.LogInformation($"[{nameof(BotController)}] Profile Loaded `{classFilename}` with `{classConfig.PathFilename}`.");
+            logger.LogInformation($"[{nameof(BotController)}] Profile Loaded `{classFile}` with `{classConfig.PathFilename}`.");
 
-                return classConfig;
-            }
-
-            throw new ArgumentOutOfRangeException($"Class config file not found {classFilename}");
+            return classConfig;
         }
 
         public void Dispose()
         {
             cts.Cancel();
-
-            if (GoapAgent != null)
-            {
-                foreach (GoapGoal a in GoapAgent.AvailableGoals)
-                {
-                    if (goalThread != null)
-                    {
-                        a.ActionEvent -= goalThread.OnActionEvent;
-                    }
-                    a.ActionEvent -= GoapAgent.OnActionEvent;
-
-                    foreach (GoapGoal b in GoapAgent.AvailableGoals)
-                    {
-                        if (b != a) { a.ActionEvent -= b.OnActionEvent; }
-                    }
-                }
-
-                GoapAgent.Dispose();
-            }
+            GoapAgent?.Dispose();
 
             npcNameFinderAutoResetEvent.Dispose();
             globalTimeAutoResetEvent.Dispose();
