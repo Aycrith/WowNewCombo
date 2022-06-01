@@ -1,5 +1,4 @@
-﻿using Core;
-using PPather.Data;
+﻿using PPather.Data;
 using Microsoft.Extensions.Logging;
 using PPather;
 using System.Collections.Generic;
@@ -9,6 +8,7 @@ using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
 using WowTriangles;
+using System;
 
 #pragma warning disable 162
 
@@ -25,6 +25,8 @@ namespace Core
         private readonly bool Enabled;
 
         private readonly Stopwatch stopwatch;
+
+        private DateTime lastSave;
 
         public LocalPathingApi(ILogger logger, PPatherService service)
         {
@@ -86,7 +88,11 @@ namespace Core
                 if (debug)
                     LogDebug($"Finding route from {fromPoint} map {map} to {toPoint} took {stopwatch.ElapsedMilliseconds} ms.");
 
-                service.Save();
+                if ((DateTime.UtcNow - lastSave).TotalMinutes >= 1)
+                {
+                    service.Save();
+                    lastSave = DateTime.UtcNow;
+                }
             }
 
             var worldLocations = path.locations.Select(s => service.ToMapAreaSpot(s.X, s.Y, s.Z, map));
