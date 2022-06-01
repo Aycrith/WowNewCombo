@@ -37,7 +37,7 @@ namespace Core
     {
         private const int MAX_EQUIPMENT_COUNT = 24;
 
-        private readonly SquareReader reader;
+        private readonly AddonDataProvider reader;
         private readonly ItemDB itemDB;
         private readonly int cItemId;
         private readonly int cSlotNum;
@@ -47,7 +47,7 @@ namespace Core
 
         public event EventHandler<(int, int)>? OnEquipmentChanged;
 
-        public EquipmentReader(SquareReader reader, ItemDB itemDB, int cSlotNum, int cItemId)
+        public EquipmentReader(AddonDataProvider reader, ItemDB itemDB, int cSlotNum, int cItemId)
         {
             this.reader = reader;
             this.itemDB = itemDB;

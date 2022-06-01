@@ -6,8 +6,8 @@ namespace Core
 {
     public partial class PlayerReader
     {
-        private readonly SquareReader reader;
-        public PlayerReader(SquareReader reader)
+        private readonly AddonDataProvider reader;
+        public PlayerReader(AddonDataProvider reader)
         {
             this.reader = reader;
             Bits = new(reader, 8, 9);
@@ -37,26 +37,26 @@ namespace Core
 
         public int HealthMax => reader.GetInt(10);
         public int HealthCurrent => reader.GetInt(11);
-        public int HealthPercent => HealthMax == 0 || HealthCurrent == 1 ? 0 : (HealthCurrent * 100) / HealthMax;
+        public int HealthPercent => HealthMax == 0 || HealthCurrent == 1 ? 0 : HealthCurrent * 100 / HealthMax;
 
         public int PTMax => reader.GetInt(12); // Maximum amount of Power Type (dynamic)
         public int PTCurrent => reader.GetInt(13); // Current amount of Power Type (dynamic)
-        public int PTPercentage => PTMax == 0 ? 0 : (PTCurrent * 100) / PTMax; // Power Type (dynamic) in terms of a percentage
+        public int PTPercentage => PTMax == 0 ? 0 : PTCurrent * 100 / PTMax; // Power Type (dynamic) in terms of a percentage
 
         public int ManaMax => reader.GetInt(14);
         public int ManaCurrent => reader.GetInt(15);
-        public int ManaPercentage => ManaMax == 0 ? 0 : (ManaCurrent * 100) / ManaMax;
+        public int ManaPercentage => ManaMax == 0 ? 0 : ManaCurrent * 100 / ManaMax;
 
         public bool HasTarget => Bits.HasTarget;// || TargetHealth > 0;
 
         public int TargetMaxHealth => reader.GetInt(18);
         public int TargetHealth => reader.GetInt(19);
-        public int TargetHealthPercentage => TargetMaxHealth == 0 || TargetHealth == 1 ? 0 : (TargetHealth * 100) / TargetMaxHealth;
+        public int TargetHealthPercentage => TargetMaxHealth == 0 || TargetHealth == 1 ? 0 : TargetHealth * 100 / TargetMaxHealth;
 
 
         public int PetMaxHealth => reader.GetInt(38);
         public int PetHealth => reader.GetInt(39);
-        public int PetHealthPercentage => PetMaxHealth == 0 || PetHealth == 1 ? 0 : (PetHealth * 100) / PetMaxHealth;
+        public int PetHealthPercentage => PetMaxHealth == 0 || PetHealth == 1 ? 0 : PetHealth * 100 / PetMaxHealth;
 
 
         public SpellInRange SpellInRange { get; }
@@ -88,7 +88,7 @@ namespace Core
         public RecordInt PlayerXp { get; } = new(50);
 
         public int PlayerMaxXp => reader.GetInt(51);
-        public int PlayerXpPercentage => (PlayerXp.Value * 100) / (PlayerMaxXp == 0 ? 1 : PlayerMaxXp);
+        public int PlayerXpPercentage => PlayerXp.Value * 100 / (PlayerMaxXp == 0 ? 1 : PlayerMaxXp);
 
         private UI_ERROR UIErrorMessage => (UI_ERROR)reader.GetInt(52);
         public UI_ERROR LastUIErrorMessage { get; set; }
@@ -131,9 +131,9 @@ namespace Core
         public bool TargetYieldXP => Level.Value switch
         {
             int n when n < 5 => true,
-            int n when n >= 6 && n <= 39 => TargetLevel > (Level.Value - MathF.Floor(Level.Value / 10f) - 5),
-            int n when n >= 40 && n <= 59 => TargetLevel > (Level.Value - MathF.Floor(Level.Value / 5f) - 5),
-            int n when n >= 60 && n <= 70 => TargetLevel > Level.Value - 9,
+            int n when n is >= 6 and <= 39 => TargetLevel > (Level.Value - MathF.Floor(Level.Value / 10f) - 5),
+            int n when n is >= 40 and <= 59 => TargetLevel > (Level.Value - MathF.Floor(Level.Value / 5f) - 5),
+            int n when n is >= 60 and <= 70 => TargetLevel > Level.Value - 9,
             _ => false
         };
 
@@ -148,7 +148,7 @@ namespace Core
 
             if (UIErrorMessage != UI_ERROR.NONE)
             {
-                LastUIErrorMessage = (UI_ERROR)UIErrorMessage;
+                LastUIErrorMessage = UIErrorMessage;
             }
 
             PlayerXp.Update(reader);

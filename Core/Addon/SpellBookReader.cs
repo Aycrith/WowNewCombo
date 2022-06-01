@@ -8,14 +8,14 @@ namespace Core
     {
         private readonly int cSpellId;
 
-        private readonly SquareReader reader;
+        private readonly AddonDataProvider reader;
         public SpellDB SpellDB { get; }
 
         public int Count => Spells.Count;
 
         public Dictionary<int, Spell> Spells { get; } = new();
 
-        public SpellBookReader(SquareReader reader, int cSpellId, SpellDB spellDB)
+        public SpellBookReader(AddonDataProvider reader, int cSpellId, SpellDB spellDB)
         {
             this.reader = reader;
             this.cSpellId = cSpellId;

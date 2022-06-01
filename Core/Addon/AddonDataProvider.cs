@@ -4,10 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Linq;
 using System.Runtime.CompilerServices;
 
-namespace Core.Addon
+namespace Core
 {
     public sealed class AddonDataProvider : IDisposable
     {
@@ -16,10 +15,11 @@ namespace Core.Addon
         private readonly DataFrame[] frames;
         private readonly int[] data;
 
-        private readonly Color firstColor = Color.FromArgb(255, 0, 0, 0);
-        private readonly Color lastColor = Color.FromArgb(255, 30, 132, 129);
+        //                                 B  G  R
+        private readonly byte[] fColor = { 0, 0, 0 };
+        private readonly byte[] lColor = { 129, 132, 30 };
 
-        private readonly PixelFormat pixelFormat = PixelFormat.Format32bppPArgb;
+        private const PixelFormat pixelFormat = PixelFormat.Format32bppPArgb;
         private readonly int bytesPerPixel;
 
         private readonly Rectangle bitmapRect;
@@ -34,8 +34,19 @@ namespace Core.Addon
             this.frames = frames.ToArray();
             data = new int[this.frames.Length];
 
-            rect.Width = frames.Last().point.X + 1;
-            rect.Height = frames.Max(f => f.point.Y) + 1;
+            int maxX = -1;
+            int maxY = -1;
+            for (int i = 0; i < this.frames.Length; i++)
+            {
+                if (frames[i].point.X > maxX)
+                    maxX = frames[i].point.X;
+
+                if (frames[i].point.Y > maxY)
+                    maxY = frames[i].point.Y;
+            }
+
+            rect.Width = maxX + 1;
+            rect.Height = maxY + 1;
 
             bytesPerPixel = Image.GetPixelFormatSize(pixelFormat) / 8;
             bitmap = new(rect.Width, rect.Height, pixelFormat);
@@ -47,35 +58,38 @@ namespace Core.Addon
         {
             Point p = new();
             wowScreen.GetPosition(ref p);
-            rect.X = p.X;
-            rect.Y = p.Y;
+            rect.Location = p;
 
-            var graphics = Graphics.FromImage(bitmap);
-            graphics.CopyFromScreen(rect.Left, rect.Top, 0, 0, bitmap.Size);
+            Graphics graphics = Graphics.FromImage(bitmap);
+            graphics.CopyFromScreen(rect.Location, Point.Empty, bitmap.Size);
             graphics.Dispose();
 
             unsafe
             {
-                BitmapData data = bitmap.LockBits(bitmapRect, ImageLockMode.ReadOnly, bitmap.PixelFormat);
+                BitmapData bd = bitmap.LockBits(bitmapRect, ImageLockMode.ReadOnly, pixelFormat);
 
-                byte* fLine = (byte*)data.Scan0 + frames[0].point.Y * data.Stride;
+                byte* fLine = (byte*)bd.Scan0 + (frames[0].point.Y * bd.Stride);
                 int fx = frames[0].point.X * bytesPerPixel;
 
-                byte* lLine = (byte*)data.Scan0 + frames[^1].point.Y * data.Stride;
+                byte* lLine = (byte*)bd.Scan0 + (frames[^1].point.Y * bd.Stride);
                 int lx = frames[^1].point.X * bytesPerPixel;
 
-                if (fLine[fx + 2] == firstColor.R && fLine[fx + 1] == firstColor.G && fLine[fx] == firstColor.B &&
-                    lLine[lx + 2] == lastColor.R && lLine[lx + 1] == lastColor.G && lLine[lx] == lastColor.B)
+                for (int i = 0; i < 3; i++)
                 {
-                    for (int i = 0; i < frames.Length; i++)
-                    {
-                        byte* line = (byte*)data.Scan0 + frames[i].point.Y * data.Stride;
-                        int x = frames[i].point.X * bytesPerPixel;
-
-                        this.data[frames[i].index] = line[x + 2] * 65536 + line[x + 1] * 256 + line[x];
-                    }
+                    if (fLine[fx + i] != fColor[i] || lLine[lx + i] != lColor[i])
+                        goto Exit;
                 }
-                bitmap.UnlockBits(data);
+
+                for (int i = 0; i < frames.Length; i++)
+                {
+                    byte* line = (byte*)bd.Scan0 + (frames[i].point.Y * bd.Stride);
+                    int x = frames[i].point.X * bytesPerPixel;
+
+                    data[frames[i].index] = (line[x + 2] * 65536) + (line[x + 1] * 256) + line[x];
+                }
+
+            Exit:
+                bitmap.UnlockBits(bd);
             }
         }
 
@@ -83,6 +97,34 @@ namespace Core.Addon
         public int GetInt(int index)
         {
             return data[index];
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public float GetFixed(int index)
+        {
+            return GetInt(index) / 100000f;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public string GetString(int index)
+        {
+            int color = GetInt(index);
+            if (color != 0)
+            {
+                string colorString = color.ToString();
+                if (colorString.Length > 6) { return string.Empty; }
+                string colorText = "000000"[..(6 - colorString.Length)] + colorString;
+                return ToChar(colorText, 0) + ToChar(colorText, 2) + ToChar(colorText, 4);
+            }
+            else
+            {
+                return string.Empty;
+            }
+        }
+
+        private static string ToChar(string colorText, int start)
+        {
+            return ((char)int.Parse(colorText.Substring(start, 2))).ToString();
         }
 
         public void Dispose()

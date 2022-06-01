@@ -8,9 +8,9 @@
         public int TargetDebuff { get; }
         public int TargetBuff { get; }
 
-        public AuraCount(SquareReader squareReader, int cell)
+        public AuraCount(AddonDataProvider reader, int cell)
         {
-            Hash = TargetBuff = squareReader.GetInt(cell);
+            Hash = TargetBuff = reader.GetInt(cell);
 
             // formula
             // playerDebuffCount * 1000000 + playerBuffCount * 10000 + targetDebuffCount * 100 + targetBuffCount

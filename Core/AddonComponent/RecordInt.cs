@@ -19,7 +19,7 @@ namespace Core
             this.cell = cell;
         }
 
-        public bool Updated(SquareReader reader)
+        public bool Updated(AddonDataProvider reader)
         {
             temp = reader.GetInt(cell);
             if (temp != Value)
@@ -33,7 +33,7 @@ namespace Core
             return false;
         }
 
-        public void Update(SquareReader reader)
+        public void Update(AddonDataProvider reader)
         {
             temp = reader.GetInt(cell);
             if (temp != Value)
