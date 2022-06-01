@@ -12,7 +12,7 @@ namespace Core
         private readonly int cItemId;
         private readonly int cItemBits;
 
-        private readonly SquareReader reader;
+        private readonly AddonDataProvider reader;
         private readonly EquipmentReader equipmentReader;
 
         public ItemDB ItemDB { get; private set; }
@@ -27,7 +27,7 @@ namespace Core
 
         private bool changedFromEvent;
 
-        public BagReader(SquareReader reader, ItemDB itemDb, EquipmentReader equipmentReader, int cbagMeta, int citemNumCount, int cItemId, int cItemBits)
+        public BagReader(AddonDataProvider reader, ItemDB itemDb, EquipmentReader equipmentReader, int cbagMeta, int citemNumCount, int cItemId, int cItemBits)
         {
             this.reader = reader;
             this.ItemDB = itemDb;

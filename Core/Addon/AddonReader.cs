@@ -1,18 +1,18 @@
+using Core.Addon;
 using Core.Database;
-using Microsoft.Extensions.Logging;
-using System;
 using Cyotek.Collections.Generic;
+using Microsoft.Extensions.Logging;
+using SharedLib;
+using System;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using Core.Addon;
 
 namespace Core
 {
     public sealed class AddonReader : IAddonReader, IDisposable
     {
         private readonly ILogger logger;
-        private readonly SquareReader squareReader;
         private readonly AddonDataProvider addonDataProvider;
         private readonly AutoResetEvent autoResetEvent;
 
@@ -57,15 +57,7 @@ namespace Core
 
         public int CombatCreatureCount => CreatureHistory.DamageTaken.Count(c => c.HealthPercent > 0);
 
-        public string TargetName
-        {
-            get
-            {
-                return CreatureDb.Entries.TryGetValue(PlayerReader.TargetId, out SharedLib.Creature creature)
-                    ? creature.Name
-                    : squareReader.GetString(16) + squareReader.GetString(17);
-            }
-        }
+        public string TargetName { get; private set; } = string.Empty;
 
         public double AvgUpdateLatency { private set; get; }
         private readonly CircularBuffer<double> UpdateLatencys;
@@ -74,7 +66,6 @@ namespace Core
         {
             this.logger = logger;
             this.addonDataProvider = addonDataProvider;
-            this.squareReader = new SquareReader(this);
             this.autoResetEvent = autoResetEvent;
 
             this.AreaDb = new AreaDB(logger, dataConfig);
@@ -84,24 +75,24 @@ namespace Core
             this.spellDb = new SpellDB(dataConfig);
             this.talentDB = new TalentDB(dataConfig, spellDb);
 
-            this.CreatureHistory = new CreatureHistory(squareReader, 64, 65, 66, 67);
+            this.CreatureHistory = new CreatureHistory(addonDataProvider, 64, 65, 66, 67);
 
-            this.EquipmentReader = new EquipmentReader(squareReader, ItemDb, 24, 25);
-            this.BagReader = new BagReader(squareReader, ItemDb, EquipmentReader, 20, 21, 22, 23);
+            this.EquipmentReader = new EquipmentReader(addonDataProvider, ItemDb, 24, 25);
+            this.BagReader = new BagReader(addonDataProvider, ItemDb, EquipmentReader, 20, 21, 22, 23);
 
-            this.ActionBarCostReader = new ActionBarCostReader(squareReader, 36);
-            this.ActionBarCooldownReader = new ActionBarCooldownReader(squareReader, 37);
+            this.ActionBarCostReader = new ActionBarCostReader(addonDataProvider, 36);
+            this.ActionBarCooldownReader = new ActionBarCooldownReader(addonDataProvider, 37);
 
-            this.GossipReader = new GossipReader(squareReader, 73);
+            this.GossipReader = new GossipReader(addonDataProvider, 73);
 
-            this.SpellBookReader = new SpellBookReader(squareReader, 71, spellDb);
+            this.SpellBookReader = new SpellBookReader(addonDataProvider, 71, spellDb);
 
-            this.PlayerReader = new PlayerReader(squareReader);
+            this.PlayerReader = new PlayerReader(addonDataProvider);
             this.LevelTracker = new LevelTracker(this);
-            this.TalentReader = new TalentReader(squareReader, 72, PlayerReader, talentDB);
+            this.TalentReader = new TalentReader(addonDataProvider, 72, PlayerReader, talentDB);
 
-            this.CurrentAction = new(PlayerReader, squareReader, 26, 27, 28, 29, 30);
-            this.UsableAction = new(PlayerReader, squareReader, 31, 32, 33, 34, 35);
+            this.CurrentAction = new(PlayerReader, addonDataProvider, 26, 27, 28, 29, 30);
+            this.UsableAction = new(PlayerReader, addonDataProvider, 31, 32, 33, 34, 35);
 
             UpdateLatencys = new(16);
 
@@ -124,7 +115,7 @@ namespace Core
         {
             FetchData();
 
-            if (GlobalTime.Updated(squareReader) && (GlobalTime.Value <= 3 || !Initialized))
+            if (GlobalTime.Updated(addonDataProvider) && (GlobalTime.Value <= 3 || !Initialized))
             {
                 FullReset();
             }
@@ -192,7 +183,10 @@ namespace Core
 
             PlayerReader.Update();
 
-            UIMapId.Update(squareReader);
+            TargetName = CreatureDb.Entries.TryGetValue(PlayerReader.TargetId, out Creature creature)
+                ? creature.Name : addonDataProvider.GetString(16) + addonDataProvider.GetString(17);
+
+            UIMapId.Update(addonDataProvider);
 
             CreatureHistory.Update(PlayerReader.TargetGuid, PlayerReader.TargetHealthPercentage);
 

@@ -2,14 +2,14 @@
 {
     public class AddonBits
     {
-        private readonly SquareReader reader;
+        private readonly AddonDataProvider reader;
         private readonly int cell1;
         private readonly int cell2;
 
         private readonly BitStatus v1;
         private readonly BitStatus v2;
 
-        public AddonBits(SquareReader reader, int cell1, int cell2)
+        public AddonBits(AddonDataProvider reader, int cell1, int cell2)
         {
             this.reader = reader;
             this.cell1 = cell1;

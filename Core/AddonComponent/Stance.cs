@@ -2,12 +2,12 @@
 {
     public class Stance
     {
-        private readonly SquareReader reader;
+        private readonly AddonDataProvider reader;
         private readonly int cell;
 
         private int value;
 
-        public Stance(SquareReader reader, int cell)
+        public Stance(AddonDataProvider reader, int cell)
         {
             this.reader = reader;
             this.cell = cell;

@@ -9,14 +9,14 @@ namespace Core
     {
         private readonly int cTalent;
 
-        private readonly SquareReader reader;
+        private readonly AddonDataProvider reader;
         private readonly PlayerReader playerReader;
         private readonly TalentDB talentDB;
         public int Count => Talents.Sum(x => x.Value.CurrentRank);
 
         public Dictionary<int, Talent> Talents { get; } = new();
 
-        public TalentReader(SquareReader reader, int cTalent, PlayerReader playerReader, TalentDB talentDB)
+        public TalentReader(AddonDataProvider reader, int cTalent, PlayerReader playerReader, TalentDB talentDB)
         {
             this.reader = reader;
             this.cTalent = cTalent;

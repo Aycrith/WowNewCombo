@@ -5,7 +5,7 @@ namespace Core
 {
     public class ActionBarCooldownReader
     {
-        private readonly SquareReader reader;
+        private readonly AddonDataProvider reader;
         private readonly int cActionbarNum;
 
         private readonly float MAX_ACTION_IDX = 100000f;
@@ -13,7 +13,7 @@ namespace Core
 
         private readonly Dictionary<int, (int duration, DateTime startTime)> dict = new();
 
-        public ActionBarCooldownReader(SquareReader reader, int cActionbarNum)
+        public ActionBarCooldownReader(AddonDataProvider reader, int cActionbarNum)
         {
             this.reader = reader;
             this.cActionbarNum = cActionbarNum;

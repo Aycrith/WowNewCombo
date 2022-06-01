@@ -2,10 +2,10 @@
 {
     public class TargetDebuffStatus : BitStatus
     {
-        private readonly SquareReader reader;
+        private readonly AddonDataProvider reader;
         private readonly int cell;
 
-        public TargetDebuffStatus(SquareReader reader, int cell) : base(reader.GetInt(cell))
+        public TargetDebuffStatus(AddonDataProvider reader, int cell) : base(reader.GetInt(cell))
         {
             this.reader = reader;
             this.cell = cell;

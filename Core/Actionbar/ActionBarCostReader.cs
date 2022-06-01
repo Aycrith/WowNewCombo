@@ -19,7 +19,7 @@ namespace Core
 
     public class ActionBarCostReader
     {
-        private readonly SquareReader reader;
+        private readonly AddonDataProvider reader;
         private readonly int cActionbarNum;
 
         private readonly float MAX_POWER_TYPE = 1000000f;
@@ -36,7 +36,7 @@ namespace Core
 
         public event EventHandler<ActionBarCostEventArgs>? OnActionCostChanged;
 
-        public ActionBarCostReader(SquareReader reader, int cActionbarNum)
+        public ActionBarCostReader(AddonDataProvider reader, int cActionbarNum)
         {
             this.cActionbarNum = cActionbarNum;
             this.reader = reader;

@@ -5,7 +5,7 @@ namespace Core
 {
     public class CreatureHistory
     {
-        private readonly SquareReader reader;
+        private readonly AddonDataProvider reader;
 
         private const double LifeTimeInSec = 60;
 
@@ -22,7 +22,7 @@ namespace Core
         public RecordInt CombatDamageTakenGuid { get; }
         public RecordInt CombatDeadGuid { get; }
 
-        public CreatureHistory(SquareReader reader, int cCreature, int cDamageDone, int cDamageTaken, int cDead)
+        public CreatureHistory(AddonDataProvider reader, int cCreature, int cDamageDone, int cDamageTaken, int cDead)
         {
             this.reader = reader;
 

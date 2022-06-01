@@ -6,7 +6,7 @@ namespace Core
     {
         private readonly int cGossip;
 
-        private readonly SquareReader reader;
+        private readonly AddonDataProvider reader;
 
         public int Count { private set; get; }
         public Dictionary<Gossip, int> Gossips { get; } = new();
@@ -26,7 +26,7 @@ namespace Core
 
         public bool MerchantWindowSellingFinished => data == 9999996;
 
-        public GossipReader(SquareReader reader, int cGossip)
+        public GossipReader(AddonDataProvider reader, int cGossip)
         {
             this.reader = reader;
             this.cGossip = cGossip;

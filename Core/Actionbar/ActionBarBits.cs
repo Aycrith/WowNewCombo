@@ -2,7 +2,7 @@
 {
     public class ActionBarBits
     {
-        private readonly SquareReader reader;
+        private readonly AddonDataProvider reader;
         private readonly int[] cells;
 
         private readonly BitStatus[] bits;
@@ -10,7 +10,7 @@
 
         private bool isDirty;
 
-        public ActionBarBits(PlayerReader playerReader, SquareReader reader, params int[] cells)
+        public ActionBarBits(PlayerReader playerReader, AddonDataProvider reader, params int[] cells)
         {
             this.reader = reader;
             this.playerReader = playerReader;
