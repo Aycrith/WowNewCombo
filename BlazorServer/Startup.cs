@@ -80,16 +80,16 @@ namespace BlazorServer
 
             if (AddonConfig.Exists() && DataFrameConfiguration.Exists())
             {
+                services.AddSingleton(DataConfig.Load());
+                services.AddSingleton<IGrindSessionDAO, LocalGrindSessionDAO>();
                 services.AddSingleton<IPPather>(x => GetPather(logger));
-                services.AddSingleton<IBotController>(x => new BotController(logger, x.GetRequiredService<IPPather>(), DataConfig.Load()));
-                services.AddSingleton<IGrindSessionHandler>(x => x.GetRequiredService<IBotController>().GrindSessionHandler);
-                services.AddSingleton<IGrindSession>(x => x.GetRequiredService<IBotController>().GrindSession);
+                services.AddSingleton<IBotController, BotController>();
                 services.AddSingleton<IAddonReader>(x => x.GetRequiredService<IBotController>().AddonReader);
             }
             else
             {
-                services.AddSingleton<IBotController>(x => new ConfigBotController());
-                services.AddSingleton<IAddonReader>(x => new ConfigAddonReader());
+                services.AddSingleton<IBotController, ConfigBotController>();
+                services.AddSingleton<IAddonReader, ConfigAddonReader>();
             }
 
             services.AddMatBlazor();
