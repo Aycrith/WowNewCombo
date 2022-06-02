@@ -1,4 +1,4 @@
-using Core.Goals;
+﻿using Core.Goals;
 using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -167,7 +167,7 @@ namespace Core
                 AddonReader.Update();
                 cts.Token.WaitHandle.WaitOne(1);
             }
-            logger.LogInformation("Addon thread stoppped!");
+            logger.LogWarning("Addon thread stoppped!");
         }
 
         private void ScreenshotThread()
@@ -203,7 +203,9 @@ namespace Core
                 cts.Token.WaitHandle.WaitOne(WowScreen.Enabled ||
                     ClassConfig?.Mode == Mode.AttendedGather ? screenshotTickMs : 4);
             }
-            logger.LogInformation("Screenshot thread stoppped!");
+
+            if (logger.IsEnabled(LogLevel.Debug))
+                logger.LogDebug("Screenshot thread stopped!");
         }
 
         private void RemotePathingThread()
@@ -225,7 +227,9 @@ namespace Core
 
                 cts.Token.WaitHandle.WaitOne(remotePathingTickMs);
             }
-            logger.LogInformation("RemotePathing thread stoppped!");
+
+            if (logger.IsEnabled(LogLevel.Debug))
+                logger.LogDebug("RemotePathing thread stopped!");
         }
 
         private void FrontendThread()
@@ -235,7 +239,9 @@ namespace Core
                 AddonReader.UpdateUI();
                 cts.Token.WaitHandle.WaitOne(frontendTickMs);
             }
-            logger.LogInformation("Frontend Thread stopped!");
+
+            if (logger.IsEnabled(LogLevel.Debug))
+                logger.LogDebug("Frontend thread stopped!");
         }
 
         public void ToggleBotStatus()

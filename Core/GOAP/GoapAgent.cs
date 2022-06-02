@@ -1,4 +1,4 @@
-using Core.Goals;
+﻿using Core.Goals;
 using Game;
 using Microsoft.Extensions.Logging;
 using SharedLib.Extensions;
@@ -172,7 +172,8 @@ namespace Core.GOAP
                 cts.Token.WaitHandle.WaitOne(1);
             }
 
-            logger.LogInformation("Bot thread stopped!");
+            if (logger.IsEnabled(LogLevel.Debug))
+                logger.LogDebug("Goap thread stopped!");
         }
 
         private GoapGoal? NextGoal()

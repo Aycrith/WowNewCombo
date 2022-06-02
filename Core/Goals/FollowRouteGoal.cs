@@ -231,6 +231,9 @@ namespace Core.Goals
 
                 sideActivityManualReset.WaitOne();
             }
+
+            if (logger.IsEnabled(LogLevel.Debug))
+                logger.LogDebug("LookingForTarget thread stopped!");
         }
 
         private void Thread_AttendedGather()
@@ -247,6 +250,9 @@ namespace Core.Goals
 
                 sideActivityManualReset.WaitOne();
             }
+
+            if (logger.IsEnabled(LogLevel.Debug))
+                logger.LogDebug("AttendedGather thread stopped!");
         }
 
         private void AlternateGatherTypes()

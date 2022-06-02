@@ -395,6 +395,9 @@ namespace Core.Goals
                 isWorking = false;
                 manualReset.Reset();
             }
+
+            if (logger.IsEnabled(LogLevel.Debug))
+                logger.LogDebug("PathFinder thread stopped!");
         }
 
         private int ReachedDistance(int minDistance)
