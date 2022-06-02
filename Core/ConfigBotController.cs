@@ -13,8 +13,7 @@ namespace Core
         public GoapAgent? GoapAgent { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public RouteInfo? RouteInfo { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public WowScreen WowScreen => throw new NotImplementedException();
-        public IGrindSession GrindSession => throw new NotImplementedException();
-        public IGrindSessionHandler GrindSessionHandler => throw new NotImplementedException();
+        public IGrindSessionDAO GrindSessionDAO => throw new NotImplementedException();
         public string SelectedClassFilename { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public string? SelectedPathFilename { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 

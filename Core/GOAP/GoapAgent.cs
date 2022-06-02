@@ -1,4 +1,4 @@
-﻿using Core.Goals;
+using Core.Goals;
 using Game;
 using Microsoft.Extensions.Logging;
 using SharedLib.Extensions;
@@ -14,12 +14,14 @@ namespace Core.GOAP
     {
         private readonly ILogger logger;
         private readonly ClassConfiguration classConfig;
-        private readonly IGrindSession session;
+        private readonly IGrindSessionDAO sessionDAO;
         private readonly AddonReader addonReader;
         private readonly PlayerReader playerReader;
         private readonly WowScreen wowScreen;
         private readonly RouteInfo routeInfo;
         private readonly ConfigurableInput input;
+
+        private readonly IGrindSessionHandler sessionHandler;
 
         private readonly StopMoving stopMoving;
 
@@ -39,15 +41,15 @@ namespace Core.GOAP
                         goal.OnActionEvent(this, new ActionEventArgs(GoapKey.abort, true));
                     }
 
-                    addonReader.SoftReset();
                     input.Reset();
-
                     stopMoving.Stop();
 
                     if (classConfig.Mode is Mode.AttendedGrind or Mode.Grind)
                     {
-                        session.StopBotSession("stopped", false);
+                        sessionHandler.Stop("Stopped", false);
                     }
+
+                    addonReader.SessionReset();
 
                     wowScreen.Enabled = false;
                 }
@@ -58,7 +60,7 @@ namespace Core.GOAP
 
                     if (classConfig.Mode is Mode.AttendedGrind or Mode.Grind)
                     {
-                        session.StartBotSession();
+                        sessionHandler.Start(classConfig.OverridePathFilename ?? classConfig.PathFilename);
                     }
                 }
             }
@@ -76,11 +78,11 @@ namespace Core.GOAP
         private readonly CancellationTokenSource cts;
         private readonly ManualResetEvent manualReset;
 
-        public GoapAgent(ILogger logger, ClassConfiguration classConfig, IGrindSession session, WowScreen wowScreen, GoapAgentState goapAgentState, AddonReader addonReader, HashSet<GoapGoal> availableGoals, RouteInfo routeInfo, ConfigurableInput input)
+        public GoapAgent(ILogger logger, ClassConfiguration classConfig, IGrindSessionDAO sessionDAO, WowScreen wowScreen, GoapAgentState goapAgentState, AddonReader addonReader, HashSet<GoapGoal> availableGoals, RouteInfo routeInfo, ConfigurableInput input)
         {
             this.logger = logger;
             this.classConfig = classConfig;
-            this.session = session;
+            this.sessionDAO = sessionDAO;
             this.cts = new();
             this.wowScreen = wowScreen;
             this.State = goapAgentState;
@@ -88,6 +90,8 @@ namespace Core.GOAP
             this.playerReader = addonReader.PlayerReader;
             this.routeInfo = routeInfo;
             this.input = input;
+
+            sessionHandler = new GrindSessionHandler(logger, addonReader, sessionDAO, cts);
 
             stopMoving = new StopMoving(input, playerReader);
 

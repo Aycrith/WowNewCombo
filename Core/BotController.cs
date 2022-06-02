@@ -1,4 +1,4 @@
-﻿using Core.Goals;
+using Core.Goals;
 using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -44,8 +44,7 @@ namespace Core
 
         public ExecGameCommand ExecGameCommand { get; }
 
-        public IGrindSession GrindSession { get; }
-        public IGrindSessionHandler GrindSessionHandler { get; }
+        public IGrindSessionDAO GrindSessionDAO { get; }
 
         public string SelectedClassFilename { get; set; } = string.Empty;
         public string? SelectedPathFilename { get; set; }
@@ -98,11 +97,12 @@ namespace Core
 
         public bool IsBotActive => GoapAgent != null && GoapAgent.Active;
 
-        public BotController(ILogger logger, IPPather pather, DataConfig dataConfig)
+        public BotController(ILogger logger, IPPather pather, IGrindSessionDAO grindSessionDAO, DataConfig dataConfig)
         {
             this.logger = logger;
             this.pather = pather;
             this.DataConfig = dataConfig;
+            GrindSessionDAO = grindSessionDAO;
 
             cts = new();
 
@@ -111,9 +111,6 @@ namespace Core
             wowProcessInput = new(logger, wowProcess);
 
             ExecGameCommand = new(logger, wowProcessInput);
-
-            GrindSessionHandler = new LocalGrindSessionHandler(dataConfig.History);
-            GrindSession = new GrindSession(this, GrindSessionHandler, cts);
 
             List<DataFrame> frames = DataFrameConfiguration.LoadFrames();
 
@@ -274,7 +271,7 @@ namespace Core
 
         private void Initialize(ClassConfiguration config)
         {
-            AddonReader.SoftReset();
+            AddonReader.SessionReset();
 
             ConfigurableInput configInput = new(logger, wowProcess, config);
 
@@ -288,7 +285,7 @@ namespace Core
             RouteInfo = routeInfo;
 
             GoapAgent?.Dispose();
-            GoapAgent = new(logger, config, GrindSession, WowScreen, goapAgentState, AddonReader, availableActions, routeInfo, configInput);
+            GoapAgent = new(logger, config, GrindSessionDAO, WowScreen, goapAgentState, AddonReader, availableActions, routeInfo, configInput);
         }
 
         private ClassConfiguration ReadClassConfiguration(string classFile, string? pathFile)

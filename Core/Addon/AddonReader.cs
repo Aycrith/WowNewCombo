@@ -127,7 +127,7 @@ namespace Core
             addonDataProvider.Update();
         }
 
-        public void SoftReset()
+        public void SessionReset()
         {
             LevelTracker.Reset();
             CreatureHistory.Reset();
@@ -146,7 +146,7 @@ namespace Core
             SpellBookReader.Reset();
             TalentReader.Reset();
 
-            SoftReset();
+            SessionReset();
 
             Initialized = true;
         }

@@ -2,23 +2,18 @@
 
 @using Core.Session
 
-@inject IGrindSession Session
+@inject IGrindSessionDAO grindSessionDAO
 
-@{
-    List<int> pageSize = new() { 15, 50, 100 };
-}
-
-@if (PreviousBotSessions.Any())
+@if (Sessions.Any())
 {
-    <Table class="table table-dark table-striped table-hover" TableItem="GrindSession" Items="PreviousBotSessions" PageSize="15" ColumnReorder="true" ShowSearchBar="true">
+    <Table class="table table-dark table-striped table-hover" TableItem="GrindSession" Items="Sessions" PageSize="15" ColumnReorder="true" ShowSearchBar="true">
         <Column TableItem="GrindSession" Title="Date" Field="@(x => x.SessionStart)" Sortable="true" Filterable="true" Width="10%" DefaultSortColumn="true" DefaultSortDescending="true"></Column>
         <Column TableItem="GrindSession" Title="Path" Field="@(x => x.PathName)" Sortable="true" Filterable="true" Width="15%"></Column>
         <Column TableItem="GrindSession" Title="Class" Field="@(x => x.PlayerClass)" Sortable="true" Filterable="true" Width="5%"></Column>
         <Column TableItem="GrindSession" Title="Duration" Field="@(x => x.TotalTimeInMinutes)" Sortable="true" Filterable="true" Width="5%">
             <Template>
                 @{
-                    var theSession = (context as GrindSession);
-                    <span>@theSession?.TotalTimeInMinutes minutes</span>
+                    <span>@context.TotalTimeInMinutes minutes</span>
                 }
             </Template>
         </Column>
@@ -33,15 +28,15 @@
 }
 else
 {
-    <div>No previous bot sessions</div>
+    <div>No previous sessions!</div>
 }
 
 @code {
-    [Parameter]
-    public List<GrindSession> PreviousBotSessions { get; set; } = new List<GrindSession>();
+    private readonly List<int> pageSize = new() { 15, 25, 50, 100 };
+    private IEnumerable<GrindSession> Sessions = null!;
 
     protected override void OnInitialized()
     {
-        PreviousBotSessions = Session.Load();
+        Sessions = grindSessionDAO.Load();
     }
 }

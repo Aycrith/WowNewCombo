@@ -20,8 +20,7 @@ namespace Core
         ActionBarPopulator? ActionBarPopulator { get; set; }
 
         ExecGameCommand ExecGameCommand { get; }
-        public IGrindSession GrindSession { get; }
-        public IGrindSessionHandler GrindSessionHandler { get; }
+        IGrindSessionDAO GrindSessionDAO { get; }
 
         IImageProvider? MinimapImageFinder { get; }
 
