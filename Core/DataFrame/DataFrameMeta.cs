@@ -1,10 +1,14 @@
-﻿using System.Drawing;
+﻿using System;
+using System.Drawing;
 using Newtonsoft.Json;
 
-namespace SharedLib
+namespace Core
 {
-    public struct DataFrameMeta : System.IEquatable<object>, System.IEquatable<DataFrameMeta>
+    public readonly struct DataFrameMeta : IEquatable<DataFrameMeta>
     {
+        [JsonIgnore]
+        public static DataFrameMeta Empty { get; } = new(-1, 0, 0, 0, 0);
+
         [JsonConstructor]
         public DataFrameMeta(int hash, int spacing, int size, int rows, int frames)
         {
@@ -15,15 +19,15 @@ namespace SharedLib
             this.frames = frames;
         }
 
-        public int hash { private set; get; }
+        public int hash { get; }
 
-        public int spacing { private set; get; }
+        public int spacing { get; }
 
-        public int size { private set; get; }
+        public int size { get; }
 
-        public int rows { private set; get; }
+        public int rows { get; }
 
-        public int frames { private set; get; }
+        public int frames { get; }
 
         public Size EstimatedSize(Rectangle screenRect)
         {
@@ -33,7 +37,7 @@ namespace SharedLib
             if (squareSize <= 0)
                 return Size.Empty;
 
-            SizeF estimatedSize = new SizeF((float)System.Math.Ceiling(frames / (float)rows) * squareSize, rows * squareSize);
+            SizeF estimatedSize = new((float)Math.Ceiling(frames / (float)rows) * squareSize, rows * squareSize);
 
             if (estimatedSize.Width > screenRect.Width ||
                 estimatedSize.Height > screenRect.Height)
@@ -42,15 +46,6 @@ namespace SharedLib
             }
 
             return estimatedSize.ToSize();
-        }
-
-        [JsonIgnore]
-        public static DataFrameMeta Empty { get; } = new(-1, 0, 0, 0, 0);
-
-        public override bool Equals(object obj)
-        {
-            if (!(obj is DataFrameMeta other)) return false;
-            return Equals(other);
         }
 
         public override int GetHashCode()
@@ -75,6 +70,11 @@ namespace SharedLib
                 other.size == size &&
                 other.rows == rows &&
                 other.frames == frames;
+        }
+
+        public override bool Equals(object? obj)
+        {
+            return obj is DataFrameMeta && Equals((DataFrameMeta)obj);
         }
     }
 }

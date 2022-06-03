@@ -1,9 +1,7 @@
-﻿using Core.Addon;
-using Game;
+﻿using Game;
 using Microsoft.Extensions.Logging;
 using SharedLib;
 using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -15,8 +13,11 @@ namespace Core
     public sealed class FrameConfigurator : IDisposable
     {
         private readonly ILogger logger;
-
         private readonly DataConfig dataConfig;
+        private readonly AddonConfigurator addonConfigurator;
+
+        private AddonDataProvider? addonDataProvider;
+        public AddonReader? AddonReader { get; private set; }
 
         private WowProcess? wowProcess;
         private WowScreen? wowScreen;
@@ -25,14 +26,10 @@ namespace Core
         private CancellationTokenSource cts = new();
         private const int interval = 500;
 
-        private readonly AddonConfigurator addonConfigurator;
 
-        public DataFrameMeta dataFrameMeta { get; private set; } = DataFrameMeta.Empty;
+        public DataFrameMeta DataFrameMeta { get; private set; } = DataFrameMeta.Empty;
 
-        public List<DataFrame> dataFrames { get; private set; } = new List<DataFrame>();
-
-        private AddonDataProvider? addonDataProvider;
-        public AddonReader? AddonReader { get; private set; }
+        public DataFrame[] DataFrames { get; private set; } = Array.Empty<DataFrame>();
 
         public bool Saved { get; private set; }
         public bool AddonNotVisible { get; private set; }
@@ -41,10 +38,10 @@ namespace Core
 
         public event Action? OnUpdate;
 
-        public FrameConfigurator(ILogger logger, AddonConfigurator addonConfigurator)
+        public FrameConfigurator(ILogger logger, AddonConfigurator addonConfigurator, DataConfig dataConfig)
         {
             this.logger = logger;
-            this.dataConfig = DataConfig.Load();
+            this.dataConfig = dataConfig;
             this.addonConfigurator = addonConfigurator;
         }
 
@@ -62,26 +59,26 @@ namespace Core
                 {
                     if (wowProcess != null && wowScreen != null)
                     {
-                        if (dataFrameMeta == DataFrameMeta.Empty)
+                        if (DataFrameMeta == DataFrameMeta.Empty)
                         {
                             AddonNotVisible = false;
-                            dataFrameMeta = GetDataFrameMeta();
+                            DataFrameMeta = GetDataFrameMeta();
 
                             OnUpdate?.Invoke();
                         }
                         else
                         {
                             var temp = GetDataFrameMeta();
-                            if (temp != DataFrameMeta.Empty && temp.rows != dataFrameMeta.rows)
+                            if (temp != DataFrameMeta.Empty && temp.rows != DataFrameMeta.rows)
                             {
                                 AddonNotVisible = true;
-                                dataFrameMeta = DataFrameMeta.Empty;
+                                DataFrameMeta = DataFrameMeta.Empty;
 
                                 OnUpdate?.Invoke();
                             }
                         }
 
-                        if (dataFrameMeta != DataFrameMeta.Empty)
+                        if (DataFrameMeta != DataFrameMeta.Empty)
                         {
                             wowScreen.GetRectangle(out Rectangle screenRect);
 
@@ -91,7 +88,7 @@ namespace Core
                                 return;
                             }
 
-                            var addonRect = dataFrameMeta.EstimatedSize(screenRect);
+                            var addonRect = DataFrameMeta.EstimatedSize(screenRect);
 
                             if (!addonRect.IsEmpty &&
                                 addonRect.Width <= screenRect.Size.Width &&
@@ -103,18 +100,18 @@ namespace Core
                                 {
                                     UpdatePreview(screenshot);
 
-                                    if (dataFrameMeta == DataFrameMeta.Empty)
+                                    if (DataFrameMeta == DataFrameMeta.Empty)
                                     {
-                                        dataFrameMeta = DataFrameConfiguration.GetMeta(screenshot);
+                                        DataFrameMeta = FrameConfig.GetMeta(screenshot.GetPixel(0, 0));
                                     }
 
-                                    if (dataFrames.Count != dataFrameMeta.frames)
+                                    if (DataFrames.Length != DataFrameMeta.frames)
                                     {
-                                        dataFrames = DataFrameConfiguration.CreateFrames(dataFrameMeta, screenshot);
+                                        DataFrames = FrameConfig.TryCreateFrames(DataFrameMeta, screenshot);
                                     }
                                     screenshot.Dispose();
 
-                                    if (dataFrames.Count == dataFrameMeta.frames)
+                                    if (DataFrames.Length == DataFrameMeta.frames)
                                     {
                                         if (AddonReader != null)
                                         {
@@ -124,7 +121,7 @@ namespace Core
 
                                         if (addonDataProvider == null)
                                         {
-                                            addonDataProvider = new AddonDataProvider(wowScreen, dataFrames);
+                                            addonDataProvider = new AddonDataProvider(wowScreen, DataFrames);
                                         }
 
                                         AddonReader = new AddonReader(logger, dataConfig, addonDataProvider, new(false));
@@ -136,7 +133,7 @@ namespace Core
                             else
                             {
                                 AddonNotVisible = true;
-                                dataFrameMeta = DataFrameMeta.Empty;
+                                DataFrameMeta = DataFrameMeta.Empty;
 
                                 OnUpdate?.Invoke();
                             }
@@ -152,7 +149,7 @@ namespace Core
                 {
                     logger.LogError(e, e.StackTrace);
                     AddonNotVisible = true;
-                    dataFrameMeta = DataFrameMeta.Empty;
+                    DataFrameMeta = DataFrameMeta.Empty;
 
                     OnUpdate?.Invoke();
                 }
@@ -174,7 +171,7 @@ namespace Core
 
             var screenshot = wowScreen?.GetBitmap(5, 5);
             if (screenshot == null) return DataFrameMeta.Empty;
-            return DataFrameConfiguration.GetMeta(screenshot);
+            return FrameConfig.GetMeta(screenshot.GetPixel(0, 0));
         }
 
         public void ToggleManualConfig()
@@ -194,10 +191,10 @@ namespace Core
 
         public bool FinishManualConfig()
         {
-            var version = addonConfigurator.GetInstalledVersion();
+            var version = addonConfigurator.GetInstallVersion();
             if (version == null) return false;
 
-            if (dataFrames.Count != dataFrameMeta.frames)
+            if (DataFrames.Length != DataFrameMeta.frames)
             {
                 return false;
             }
@@ -205,7 +202,7 @@ namespace Core
             if (wowScreen == null) return false;
             wowScreen.GetRectangle(out Rectangle rect);
 
-            DataFrameConfiguration.SaveConfiguration(rect, version, dataFrameMeta, dataFrames);
+            FrameConfig.Save(rect, version, DataFrameMeta, DataFrames);
             Saved = true;
 
             OnUpdate?.Invoke();
@@ -242,7 +239,7 @@ namespace Core
             WowProcessInput wowProcessInput = new(logger, wowProcess);
             ExecGameCommand execGameCommand = new(logger, wowProcessInput);
 
-            var version = addonConfigurator.GetInstalledVersion();
+            var version = addonConfigurator.GetInstallVersion();
             if (version == null)
             {
                 OnUpdate?.Invoke();
@@ -294,8 +291,8 @@ namespace Core
             OnUpdate?.Invoke();
             cts.Token.WaitHandle.WaitOne(interval);
 
-            var dataFrames = DataFrameConfiguration.CreateFrames(meta, screenshot);
-            if (dataFrames.Count != meta.frames)
+            var dataFrames = FrameConfig.TryCreateFrames(meta, screenshot);
+            if (dataFrames.Length != meta.frames)
             {
                 return false;
             }
@@ -321,13 +318,10 @@ namespace Core
             OnUpdate?.Invoke();
             cts.Token.WaitHandle.WaitOne(interval);
 
-            DataFrameConfiguration.SaveConfiguration(rect, version, meta, dataFrames);
+            FrameConfig.Save(rect, version, meta, dataFrames);
             Saved = true;
 
             logger.LogInformation($"Frame configuration was successful! Configuration saved!");
-
-            OnUpdate?.Invoke();
-            cts.Token.WaitHandle.WaitOne(interval);
 
             return true;
         }
