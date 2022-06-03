@@ -26,12 +26,12 @@ namespace Core
             this.logger = logger;
             this.input = input;
             this.playerReader = playerReader;
-            _cts = new CancellationTokenSource();
+            _cts = new();
         }
 
         public void Dispose()
         {
-            _cts.Dispose();
+            _cts.Cancel();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

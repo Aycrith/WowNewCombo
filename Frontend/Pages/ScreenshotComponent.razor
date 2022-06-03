@@ -1,10 +1,10 @@
-﻿@inject IBotController botController
+﻿@inject WowScreen wowScreen
 
 <div class="@(Stretch ? "w-100 h-auto m-0 p-0" : string.Empty)">
     <div class="row" @onclick="Toggle">
-        @if (this.botController.WowScreen.EnablePostProcess)
+        @if (wowScreen.EnablePostProcess)
         {
-            <img class="@(Stretch ? "img-fluid w-100" : string.Empty)" src="data:image/png;base64, @WowScreen.ToBase64(botController.WowScreen.Bitmap, Size)" alt="Toggle preview!" />
+            <img class="@(Stretch ? "img-fluid w-100" : string.Empty)" src="data:image/png;base64, @WowScreen.ToBase64(wowScreen.Bitmap, Size)" alt="Toggle preview!" />
         }
         else
         {
@@ -25,18 +25,18 @@
     {
         if (firstRender)
         {
-            botController.WowScreen.OnScreenChanged += this.ImageChanged;
+            wowScreen.OnScreenChanged += this.ImageChanged;
         }
     }
 
     public void Dispose()
     {
-        botController.WowScreen.OnScreenChanged -= this.ImageChanged;
+        wowScreen.OnScreenChanged -= this.ImageChanged;
     }
 
     protected void Toggle()
     {
-        botController.WowScreen.EnablePostProcess = !this.botController.WowScreen.EnablePostProcess;
+        wowScreen.EnablePostProcess = !wowScreen.EnablePostProcess;
     }
 
     private async void ImageChanged()

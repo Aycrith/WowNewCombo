@@ -1,6 +1,8 @@
 ﻿@implements IDisposable
 @inject IBotController botController
+@inject WowScreen wowScreen
 @inject IAddonReader addonReader
+@inject MinimapNodeFinder minimapNodeFinder
 
 <div class="card">
     <div class="card-header">
@@ -19,7 +21,7 @@
     <div class="card-body" style="padding: 0 0 0 0; width:@(Size)px; height:@(Size)px">
         @if (previewEnabled)
         {
-            <img style="width:@(Size)px; height:@(Size)px" src="data:image/png;base64, @WowScreen.ToBase64(botController.WowScreen.MiniMapBitmap, (int)(Size * DownScale))" alt="Red dot" />
+            <img style="width:@(Size)px; height:@(Size)px" src="data:image/png;base64, @WowScreen.ToBase64(wowScreen.MiniMapBitmap, (int)(Size * DownScale))" alt="Red dot" />
         }
     </div>
 </div>
@@ -41,25 +43,25 @@
 
     protected override void OnInitialized()
     {
-        if (botController.MinimapImageFinder != null && OnNodeFound.HasDelegate)
+        if (OnNodeFound.HasDelegate)
         {
-            botController.MinimapImageFinder.NodeEvent += NodeFound;
+            minimapNodeFinder.NodeEvent += NodeFound;
         }
     }
 
     public void Dispose()
     {
-        if (botController.MinimapImageFinder != null && OnNodeFound.HasDelegate)
+        if (OnNodeFound.HasDelegate)
         {
-            botController.MinimapImageFinder.NodeEvent -= NodeFound;
+            minimapNodeFinder.NodeEvent -= NodeFound;
         }
     }
 
-    private void NodeFound(object? source, NodeEventArgs e)
+    private void NodeFound(object? source, MinimapNodeEventArgs e)
     {
         if (!botController.IsBotActive) return;
 
-        bool nodeFound = e.Point.X > 0 && e.Point.Y > 0;
+        bool nodeFound = e.X > 0 && e.Y > 0;
         if (lastNodeFound != nodeFound || e.Amount != lastNodeCount)
         {
             base.InvokeAsync(() =>

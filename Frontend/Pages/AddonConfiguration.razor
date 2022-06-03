@@ -2,8 +2,8 @@
 
 @inject ILogger logger
 @inject NavigationManager NavigationManager
-@inject IBotController botController
 @inject AddonConfigurator addonConfigurator
+@inject ExecGameCommand exec
 
 @implements IDisposable
 
@@ -127,8 +127,9 @@
     private void Delete()
     {
         addonConfigurator.Delete();
+        exec.Run("/reload");
 
-        if (DataFrameConfiguration.Exists())
+        if (FrameConfig.Exists())
         {
             NavigationManager.NavigateTo("/RestartServer");
         }
@@ -149,6 +150,8 @@
         {
             addonConfigurator.Install();
             addonConfigurator.Save();
+
+            exec.Run("/reload");
         }
     }
 

@@ -19,12 +19,13 @@ namespace Core.Goals
         {
             this.input = input;
             this.playerReader = playerReader;
-            this.cts = new CancellationTokenSource();
+
+            cts = new();
         }
 
         public void Dispose()
         {
-            cts.Dispose();
+            cts.Cancel();
         }
 
         public void Stop()

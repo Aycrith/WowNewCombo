@@ -9,12 +9,10 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using Core.Session;
-using SharedLib;
 using Game;
 using WinAPI;
 using SharedLib.NpcFinder;
 using Cyotek.Collections.Generic;
-using Core.Addon;
 using PPather.Data;
 
 namespace Core
@@ -25,69 +23,20 @@ namespace Core
         private readonly WowProcessInput wowProcessInput;
         private readonly ILogger logger;
         private readonly IPPather pather;
+        private readonly MinimapNodeFinder minimapNodeFinder;
+        private readonly Wait wait;
+        private readonly ExecGameCommand execGameCommand;
+        private readonly DataConfig dataConfig;
+
+        private readonly CancellationTokenSource cts;
+        private readonly AutoResetEvent npcNameFinderEvent;
         private readonly NpcNameFinder npcNameFinder;
         private readonly NpcNameTargeting npcNameTargeting;
-        private readonly AddonDataProvider addonDataProvider;
-        private readonly INodeFinder minimapNodeFinder;
-        private readonly CancellationTokenSource cts;
-        private readonly Wait wait;
-        private readonly AutoResetEvent globalTimeAutoResetEvent = new(false);
-        private readonly AutoResetEvent npcNameFinderAutoResetEvent = new(false);
-
-        public DataConfig DataConfig { get; }
-
-        public AddonReader AddonReader { get; }
-
-        public WowScreen WowScreen { get; }
-
-        public IImageProvider? MinimapImageFinder { get; }
-
-        public ExecGameCommand ExecGameCommand { get; }
-
-        public IGrindSessionDAO GrindSessionDAO { get; }
-
-        public string SelectedClassFilename { get; set; } = string.Empty;
-        public string? SelectedPathFilename { get; set; }
-        public ClassConfiguration? ClassConfig { get; set; }
-        public ActionBarPopulator? ActionBarPopulator { get; set; }
-        public GoapAgent? GoapAgent { get; set; }
-        public RouteInfo? RouteInfo { get; set; }
 
         private readonly Thread addonThread;
 
-        private readonly Thread? screenshotThread;
+        private readonly Thread screenshotThread;
         private const int screenshotTickMs = 200;
-
-        public event Action? ProfileLoaded;
-        public event Action? StatusChanged;
-
-        public double AvgScreenLatency
-        {
-            get
-            {
-                double avg = 0;
-                for (int i = 0; i < ScreenLatencys.Size; i++)
-                {
-                    avg += ScreenLatencys.PeekAt(i);
-                }
-                return avg /= ScreenLatencys.Size;
-            }
-        }
-        private readonly CircularBuffer<double> ScreenLatencys;
-
-        public double AvgNPCLatency
-        {
-            get
-            {
-                double avg = 0;
-                for (int i = 0; i < NPCLatencys.Size; i++)
-                {
-                    avg += NPCLatencys.PeekAt(i);
-                }
-                return avg /= NPCLatencys.Size;
-            }
-        }
-        private readonly CircularBuffer<double> NPCLatencys;
 
         private readonly Thread? remotePathing;
         private const int remotePathingTickMs = 500;
@@ -96,31 +45,63 @@ namespace Core
         private const int frontendTickMs = 250;
 
         public bool IsBotActive => GoapAgent != null && GoapAgent.Active;
+        public AddonReader AddonReader { get; }
+        public WowScreen WowScreen { get; }
+        public IGrindSessionDAO GrindSessionDAO { get; }
 
-        public BotController(ILogger logger, IPPather pather, IGrindSessionDAO grindSessionDAO, DataConfig dataConfig)
+        public string SelectedClassFilename { get; private set; } = string.Empty;
+        public string? SelectedPathFilename { get; private set; }
+        public ClassConfiguration? ClassConfig { get; private set; }
+        public GoapAgent? GoapAgent { get; private set; }
+        public RouteInfo? RouteInfo { get; private set; }
+
+        public event Action? ProfileLoaded;
+        public event Action? StatusChanged;
+
+        public double AvgScreenLatency
+        {
+            get
+            {
+                double sum = 0;
+                for (int i = 0; i < ScreenLatencys.Size; i++)
+                {
+                    sum += ScreenLatencys.PeekAt(i);
+                }
+                return sum /= ScreenLatencys.Size;
+            }
+        }
+        private readonly CircularBuffer<double> ScreenLatencys;
+
+        public double AvgNPCLatency
+        {
+            get
+            {
+                double sum = 0;
+                for (int i = 0; i < NPCLatencys.Size; i++)
+                {
+                    sum += NPCLatencys.PeekAt(i);
+                }
+                return sum /= NPCLatencys.Size;
+            }
+        }
+        private readonly CircularBuffer<double> NPCLatencys;
+
+        public BotController(ILogger logger, IPPather pather, IGrindSessionDAO grindSessionDAO, DataConfig dataConfig, WowProcess wowProcess, WowScreen wowScreen, WowProcessInput wowProcessInput, ExecGameCommand execGameCommand, Wait wait, IAddonReader addonReader, MinimapNodeFinder minimapNodeFinder)
         {
             this.logger = logger;
             this.pather = pather;
-            this.DataConfig = dataConfig;
+            this.dataConfig = dataConfig;
             GrindSessionDAO = grindSessionDAO;
+            this.wowProcess = wowProcess;
+            this.WowScreen = wowScreen;
+            this.wowProcessInput = wowProcessInput;
+            this.execGameCommand = execGameCommand;
+            this.AddonReader = (addonReader as AddonReader)!;
+            this.wait = wait;
+            this.minimapNodeFinder = minimapNodeFinder;
 
             cts = new();
-
-            wowProcess = new();
-            WowScreen = new(logger, wowProcess);
-            wowProcessInput = new(logger, wowProcess);
-
-            ExecGameCommand = new(logger, wowProcessInput);
-
-            List<DataFrame> frames = DataFrameConfiguration.LoadFrames();
-
-            addonDataProvider = new(WowScreen, frames);
-            AddonReader = new(logger, DataConfig, addonDataProvider, globalTimeAutoResetEvent);
-
-            wait = new(globalTimeAutoResetEvent);
-
-            minimapNodeFinder = new MinimapNodeFinder(WowScreen, new PixelClassifier());
-            MinimapImageFinder = minimapNodeFinder as IImageProvider;
+            npcNameFinderEvent = new(false);
 
             ScreenLatencys = new(8);
             NPCLatencys = new(8);
@@ -145,7 +126,7 @@ namespace Core
 
             logger.LogDebug($"Woohoo, I have read the player class. You are a {AddonReader.PlayerReader.Race} {AddonReader.PlayerReader.Class}.");
 
-            npcNameFinder = new(logger, WowScreen, npcNameFinderAutoResetEvent);
+            npcNameFinder = new(logger, WowScreen, npcNameFinderEvent);
             npcNameTargeting = new(logger, cts, npcNameFinder, wowProcessInput);
             WowScreen.AddDrawAction(npcNameFinder.ShowNames);
             WowScreen.AddDrawAction(npcNameTargeting.ShowClickPositions);
@@ -280,11 +261,7 @@ namespace Core
             AddonReader.SessionReset();
 
             ConfigurableInput configInput = new(logger, wowProcess, config);
-
-            ActionBarPopulator = new(logger, config, AddonReader, ExecGameCommand);
-
-            GoalFactory goalFactory = new(logger, AddonReader, configInput, DataConfig, npcNameFinder, npcNameTargeting, pather, ExecGameCommand);
-
+            GoalFactory goalFactory = new(logger, AddonReader, configInput, dataConfig, npcNameFinder, npcNameTargeting, pather, execGameCommand);
             GoapAgentState goapAgentState = new();
             (RouteInfo routeInfo, HashSet<GoapGoal> availableActions) = goalFactory.CreateGoals(config, goapAgentState, cts, wait);
 
@@ -296,11 +273,11 @@ namespace Core
 
         private ClassConfiguration ReadClassConfiguration(string classFile, string? pathFile)
         {
-            string filePath = Path.Join(DataConfig.Class, classFile);
+            string filePath = Path.Join(dataConfig.Class, classFile);
 
             ClassConfiguration classConfig = JsonConvert.DeserializeObject<ClassConfiguration>(File.ReadAllText(filePath));
             RequirementFactory requirementFactory = new(logger, AddonReader, npcNameFinder, classConfig.ImmunityBlacklist);
-            classConfig.Initialise(DataConfig, AddonReader, requirementFactory, logger, pathFile);
+            classConfig.Initialise(dataConfig, AddonReader, requirementFactory, logger, pathFile);
 
             logger.LogInformation($"[{nameof(BotController)}] Profile Loaded `{classFile}` with `{classConfig.PathFilename}`.");
 
@@ -310,13 +287,10 @@ namespace Core
         public void Dispose()
         {
             cts.Cancel();
+            ClassConfig?.Dispose();
             GoapAgent?.Dispose();
 
-            npcNameFinderAutoResetEvent.Dispose();
-            globalTimeAutoResetEvent.Dispose();
-            WowScreen.Dispose();
-            addonDataProvider?.Dispose();
-            AddonReader.Dispose();
+            npcNameFinderEvent.Dispose();
         }
 
         public void MinimapNodeFound()
@@ -331,7 +305,7 @@ namespace Core
 
         public IEnumerable<string> ClassFiles()
         {
-            var root = DataConfig.Class;
+            var root = dataConfig.Class;
             var files = Directory.EnumerateFiles(root, "*.json*", SearchOption.AllDirectories)
                 .Select(path => path.Replace(root, string.Empty))
                 .OrderBy(x => x, new NaturalStringComparer())
@@ -343,7 +317,7 @@ namespace Core
 
         public IEnumerable<string> PathFiles()
         {
-            var root = DataConfig.Path;
+            var root = dataConfig.Path;
             var files = Directory.EnumerateFiles(root, "*.json*", SearchOption.AllDirectories)
                 .Select(path => path.Replace(root, string.Empty))
                 .OrderBy(x => x, new NaturalStringComparer())

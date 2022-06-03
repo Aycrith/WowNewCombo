@@ -10,7 +10,7 @@
 
 <div class="container-fluid">
     <div class="row">
-        @if (AddonConfig.Exists() && DataFrameConfiguration.Exists())
+        @if (AddonConfig.Exists() && FrameConfig.Exists())
         {
             <div class="col-sm">
                 <ScreenshotComponent Size="800" Stretch="false" />
@@ -53,7 +53,7 @@
         {
             <AddonConfiguration />
         }
-        else if (!DataFrameConfiguration.Exists())
+        else if (!FrameConfig.Exists())
         {
             <FrameConfiguration />
         }

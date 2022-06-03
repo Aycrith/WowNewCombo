@@ -58,15 +58,14 @@
         { LogEventLevel.Fatal, "danger" },
     };
 
-
     protected override void OnInitialized()
     {
-        //LoggerSink.OnLogChanged += LogChanged;
+        LoggerSink.OnLogChanged += LogChanged;
     }
 
     public void Dispose()
     {
-        //LoggerSink.OnLogChanged -= LogChanged;
+        LoggerSink.OnLogChanged -= LogChanged;
     }
 
     private void LogChanged()

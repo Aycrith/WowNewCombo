@@ -7,22 +7,32 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Game;
+using Microsoft.Extensions.Logging;
 using SharedLib.Extensions;
 
 namespace Core
 {
-    public class MinimapNodeFinder : INodeFinder, IImageProvider
+    public class MinimapNodeFinder
     {
+        private struct Score
+        {
+            public int X;
+            public int Y;
+            public int count;
+        }
+
+        private readonly ILogger logger;
         private readonly WowScreen wowScreen;
-        private readonly IPixelClassifier pixelClassifier;
-        public event EventHandler<NodeEventArgs>? NodeEvent;
+        public event EventHandler<MinimapNodeEventArgs>? NodeEvent;
 
         private const int MinScore = 2;
+        private const int MaxBlue = 34;
+        private const int MinRedGreen = 176;
 
-        public MinimapNodeFinder(WowScreen wowScreen, IPixelClassifier pixelClassifier)
+        public MinimapNodeFinder(ILogger logger, WowScreen wowScreen)
         {
+            this.logger = logger;
             this.wowScreen = wowScreen;
-            this.pixelClassifier = pixelClassifier;
         }
 
         public void TryFind()
@@ -31,7 +41,7 @@ namespace Core
 
             var list = FindYellowPoints();
             ScorePoints(list, out Score best);
-            NodeEvent?.Invoke(this, new NodeEventArgs(best.point, list.Count(x => x.count > MinScore)));
+            NodeEvent?.Invoke(this, new MinimapNodeEventArgs(best.X, best.Y, list.Count(x => x.count > MinScore)));
         }
 
         private List<Score> FindYellowPoints()
@@ -41,9 +51,9 @@ namespace Core
 
             // TODO: adjust these values based on resolution
             // The reference resolution is 1920x1080
-            int minX = 6;
-            int maxX = 170;
-            int minY = 36;
+            const int minX = 6;
+            const int maxX = 170;
+            const int minY = 36;
             int maxY = bitmap.Height - 6;
 
             Rectangle rect = new(minX, minY, maxX - minX, maxY - minY);
@@ -65,12 +75,12 @@ namespace Core
                             continue;
 
                         int xi = x * bytesPerPixel;
-                        if (pixelClassifier.IsMatch(currentLine[xi + 2], currentLine[xi + 1], currentLine[xi]))
+                        if (IsMatch(currentLine[xi + 2], currentLine[xi + 1], currentLine[xi]))
                         {
                             if (points.Capacity == points.Count)
                                 return;
 
-                            points.Add(new Score { point = new Point(x, y), count = 0 });
+                            points.Add(new Score { X = x, Y = y, count = 0 });
                             currentLine[xi + 2] = 255;
                             currentLine[xi + 1] = 0;
                             currentLine[xi + 0] = 0;
@@ -83,11 +93,17 @@ namespace Core
 
             if (points.Count == points.Capacity)
             {
-                Debug.WriteLine("Error: Too much yellow in this image, adjust the configuration !");
+                logger.LogWarning("Too much yellow in this image!");
                 points.Clear();
             }
 
             return points;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsMatch(byte red, byte green, byte blue)
+        {
+            return blue < MaxBlue && red > MinRedGreen && green > MinRedGreen;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -104,9 +120,10 @@ namespace Core
             for (int i = 0; i < points.Count; i++)
             {
                 Score p = points[i];
-                p.count = points.Where(s => Math.Abs(s.point.X - p.point.X) < size) // + or - n pixels horizontally
-                    .Where(s => Math.Abs(s.point.Y - p.point.Y) < size) // + or - n pixels vertically
-                    .Count();
+                p.count =
+                    points.Where(s => Math.Abs(s.X - p.X) < size) // + or - n pixels horizontally
+                    .Count(s => Math.Abs(s.Y - p.Y) < size);
+
                 points[i] = p;
             }
 
@@ -119,12 +136,6 @@ namespace Core
             }
 
             return false;
-        }
-
-        private struct Score
-        {
-            public Point point;
-            public int count;
         }
     }
 }
