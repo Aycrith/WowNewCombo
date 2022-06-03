@@ -19,6 +19,7 @@
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace PPather.Graph
 {
@@ -63,8 +64,7 @@ namespace PPather.Graph
 
         public Spot GetSpot2D(float x, float y)
         {
-            int ix, iy;
-            LocalCoords(x, y, out ix, out iy);
+            LocalCoords(x, y, out int ix, out int iy);
             Spot s = spots[ix, iy];
             return s;
         }
@@ -102,7 +102,7 @@ namespace PPather.Graph
 
         public List<Spot> GetAllSpots()
         {
-            List<Spot> l = new List<Spot>();
+            List<Spot> l = new();
             for (int x = 0; x < CHUNK_SIZE; x++)
             {
                 for (int y = 0; y < CHUNK_SIZE; y++)
@@ -120,7 +120,7 @@ namespace PPather.Graph
 
         private string FileName()
         {
-            return String.Format("c_{0,3:000}_{1,3:000}.bin", ix, iy);
+            return string.Format("c_{0,3:000}_{1,3:000}.bin", ix, iy);
         }
 
         private const uint FILE_MAGIC = 0x12341234;
@@ -151,13 +151,13 @@ namespace PPather.Graph
             int n_steps = 0;
             try
             {
-                if (!System.IO.Directory.Exists(filenamebin) || !System.IO.File.Exists(filenamebin))
+                if (!Directory.Exists(filenamebin) || !File.Exists(filenamebin))
                     return false;
 
-                stream = System.IO.File.OpenRead(filenamebin);
+                stream = File.OpenRead(filenamebin);
                 if (stream != null)
                 {
-                    file = new System.IO.BinaryReader(stream);
+                    file = new BinaryReader(stream);
                     if (file != null)
                     {
                         uint magic = file.ReadUInt32();
@@ -175,7 +175,7 @@ namespace PPather.Graph
                                 uint n_paths = file.ReadUInt32();
                                 if (x != 0 && y != 0)
                                 {
-                                    Spot s = new Spot(x, y, z);
+                                    Spot s = new(x, y, z);
                                     s.flags = flags;
 
                                     for (uint i = 0; i < n_paths; i++)
@@ -193,11 +193,11 @@ namespace PPather.Graph
                     }
                 }
             }
-            catch (System.IO.FileNotFoundException e)
+            catch (FileNotFoundException e)
             {
                 logger.LogError(e.Message);
             }
-            catch (System.IO.DirectoryNotFoundException e)
+            catch (DirectoryNotFoundException e)
             {
                 logger.LogError(e.Message);
             }
@@ -238,23 +238,23 @@ namespace PPather.Graph
             string fileName = FileName();
             string filename = baseDir + fileName;
 
-            System.IO.Stream fileout = null;
-            System.IO.BinaryWriter file = null;
+            Stream fileout = null;
+            BinaryWriter file = null;
 
             //try {
-            if (!System.IO.Directory.Exists(baseDir))
-                System.IO.Directory.CreateDirectory(baseDir);
+            if (!Directory.Exists(baseDir))
+                Directory.CreateDirectory(baseDir);
             //} catch { };
 
             int n_spots = 0;
             int n_steps = 0;
             try
             {
-                fileout = System.IO.File.Create(filename + ".new");
+                fileout = File.Create(filename + ".new");
 
                 if (fileout != null)
                 {
-                    file = new System.IO.BinaryWriter(fileout);
+                    file = new BinaryWriter(fileout);
 
                     if (file != null)
                     {
@@ -265,18 +265,18 @@ namespace PPather.Graph
                         {
                             file.Write(SPOT_MAGIC);
                             file.Write((uint)0); // reserved
-                            file.Write((uint)s.flags);
-                            file.Write((float)s.X);
-                            file.Write((float)s.Y);
-                            file.Write((float)s.Z);
+                            file.Write(s.flags);
+                            file.Write(s.X);
+                            file.Write(s.Y);
+                            file.Write(s.Z);
                             uint n_paths = (uint)s.n_paths;
-                            file.Write((uint)n_paths);
+                            file.Write(n_paths);
                             for (uint i = 0; i < n_paths; i++)
                             {
                                 uint off = i * 3;
-                                file.Write((float)s.paths[off]);
-                                file.Write((float)s.paths[off + 1]);
-                                file.Write((float)s.paths[off + 2]);
+                                file.Write(s.paths[off]);
+                                file.Write(s.paths[off + 1]);
+                                file.Write(s.paths[off + 2]);
                                 n_steps++;
                             }
                             n_spots++;
@@ -296,15 +296,18 @@ namespace PPather.Graph
                         fileout = null;
                     }
 
-                    String old = filename + ".bak";
+                    string old = filename + ".bak";
 
-                    if (System.IO.File.Exists(old))
-                        System.IO.File.Delete(old);
-                    if (System.IO.File.Exists(filename))
-                        System.IO.File.Move(filename, old);
-                    System.IO.File.Move(filename + ".new", filename);
-                    if (System.IO.File.Exists(old))
-                        System.IO.File.Delete(old);
+                    if (File.Exists(old))
+                        File.Delete(old);
+
+                    if (File.Exists(filename))
+                        File.Move(filename, old);
+
+                    File.Move(filename + ".new", filename);
+
+                    if (File.Exists(old))
+                        File.Delete(old);
 
                     modified = false;
                 }
@@ -312,8 +315,9 @@ namespace PPather.Graph
                 {
                     logger.LogError("Save failed");
                 }
-                if (logger.IsEnabled(LogLevel.Debug))
-                    logger.LogDebug("Saved " + fileName + " " + n_spots + " spots " + n_steps + " steps");
+
+                if (logger.IsEnabled(LogLevel.Trace))
+                    logger.LogTrace($"Saved {fileName} {n_spots} spots {n_steps} steps");
             }
             catch (Exception e)
             {

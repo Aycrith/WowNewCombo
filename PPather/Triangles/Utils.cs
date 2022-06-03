@@ -22,6 +22,8 @@ using System;
 using System.Numerics;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using static System.MathF;
+using static System.Numerics.Vector3;
 
 namespace WowTriangles
 {
@@ -69,120 +71,37 @@ namespace WowTriangles
 
     public unsafe class Utils
     {
-        public static float abs(float a)
-        {
-            if (a < 0.0f) return -a;
-            return a;
-        }
-
-        public static float min(float a, float b)
-        {
-            if (a < b) return a;
-            return b;
-        }
-
-        public static float min(float a, float b, float c)
-        {
-            if (a < b && a < c) return a;
-            if (b < c) return b;
-            return c;
-        }
-
-        public static float max(float a, float b)
-        {
-            if (a > b) return a;
-            return b;
-        }
-
-        public static float max(float a, float b, float c)
-        {
-            if (a > b && a > c) return a;
-            if (b > c) return b;
-            return c;
-        }
-
-        public static float VecLength(ref Vector3 d)
-        {
-            return (float)Math.Sqrt(d.X * d.X + d.Y * d.Y + d.Z * d.Z);
-        }
-
-        public static void findMinMax(float a, float b, float c, out float min, out float max)
-        {
-            min = Utils.min(a, b, c);
-            max = Utils.max(a, b, c);
-        }
-
-        public static void sub(out Vector3 C, ref Vector3 A, ref Vector3 B)
-        {
-            C.X = A.X - B.X;
-            C.Y = A.Y - B.Y;
-            C.Z = A.Z - B.Z;
-        }
-
-        public static void add(out Vector3 C, ref Vector3 A, ref Vector3 B)
-        {
-            C.X = A.X + B.X;
-            C.Y = A.Y + B.Y;
-            C.Z = A.Z + B.Z;
-        }
-
-        public static void mul(out Vector3 C, ref Vector3 A, float b)
-        {
-            C.X = A.X * b;
-            C.Y = A.Y * b;
-            C.Z = A.Z * b;
-        }
-
-        public static void div(out Vector3 C, ref Vector3 A, float b)
-        {
-            C.X = A.X / b;
-            C.Y = A.Y / b;
-            C.Z = A.Z / b;
-        }
-
-        public static void cross(out Vector3 dest, ref Vector3 v1, ref Vector3 v2)
-        {
-            dest.X = v1.Y * v2.Z - v1.Z * v2.Y;
-            dest.Y = v1.Z * v2.X - v1.X * v2.Z;
-            dest.Z = v1.X * v2.Y - v1.Y * v2.X;
-        }
-
-        public static float dot(ref Vector3 v0, ref Vector3 v1)
-        {
-            return v0.X * v1.X + v0.Y * v1.Y + v0.Z * v1.Z;
-        }
-
         public static bool SegmentTriangleIntersect(Vector3 p0, Vector3 p1,
                                                     Vector3 t0, Vector3 t1, Vector3 t2,
                                                     out Vector3 I)
         {
-            I.X = I.Y = I.Z = 0;
+            I = new();
 
-            Vector3 u; sub(out u, ref t1, ref t0); // triangle vector 1
-            Vector3 v; sub(out v, ref t2, ref t0); // triangle vector 2
-            Vector3 n; cross(out n, ref u, ref v); // triangle normal
+            Vector3 u = Subtract(t1, t0); // triangle vector 1
+            Vector3 v = Subtract(t2, t0); // triangle vector 2
+            Vector3 n = Cross(u, v); // triangle normal
 
-            Vector3 dir; sub(out dir, ref p1, ref p0); // ray direction vector
-            Vector3 w0; sub(out w0, ref p0, ref t0);
-            float a = -dot(ref n, ref w0);
-            float b = dot(ref n, ref dir);
-            if (abs(b) < float.Epsilon) return false; // parallel
+            Vector3 dir = Subtract(p1, p0); // ray direction vector
+            Vector3 w0 = Subtract(p0, t0);
+            float a = -Dot(n, w0);
+            float b = Dot(n, dir);
+            if (Abs(b) < float.Epsilon) return false; // parallel
 
             // get intersect point of ray with triangle plane
             float r = a / b;
             if (r < 0.0) return false; // "before" p0
             if (r > 1.0) return false; // "after" p1
 
-            Vector3 M; mul(out M, ref dir, r);
-            add(out I, ref p0, ref M);// intersect point of line and plane
+            Vector3 M = Multiply(dir, r);
+            I = Add(p0, M);// intersect point of line and plane
 
             // is I inside T?
-            float uu = dot(ref u, ref u);
-            float uv = dot(ref u, ref v);
-            float vv = dot(ref v, ref v);
-            Vector3 w; sub(out w, ref I, ref t0);
-            float wu = dot(ref w, ref u);
-            float wv = dot(ref w, ref v);
+            float uu = Dot(u, u);
+            float uv = Dot(u, v);
+            float vv = Dot(v, v);
+            Vector3 w = Subtract(I, t0);
+            float wu = Dot(w, u);
+            float wv = Dot(w, v);
             float D = uv * uv - uu * vv;
 
             // get and test parametric coords
@@ -200,73 +119,57 @@ namespace WowTriangles
         public static float PointDistanceToSegment(Vector3 p0,
                                            Vector3 x1, Vector3 x2)
         {
-            Vector3 L; sub(out L, ref x2, ref x1); // the segment vector
-            float l2 = dot(ref L, ref L);   // square length of the segment
+            Vector3 L = Subtract(x2, x1); // the segment vector
+            float l2 = Dot(L, L);   // square length of the segment
 
-            Vector3 D; sub(out D, ref p0, ref x1);   // vector from point to segment start
-            float d = dot(ref D, ref L);     // projection factor [x2-x1].[p0-x1]
+            Vector3 D = Subtract(p0, x1);   // vector from point to segment start
+            float d = Dot(D, L);     // projection factor [x2-x1].[p0-x1]
 
             if (d < 0.0f) // closest to x1
-                return VecLength(ref D);
+                return D.Length();
 
-            Vector3 E; mul(out E, ref L, d / l2); // intersect
+            Vector3 E = Multiply(L, d / l2); // intersect
 
-            if (dot(ref E, ref L) > l2) // closest to x2
+            if (Dot(E, L) > l2) // closest to x2
             {
-                Vector3 L2; sub(out L2, ref D, ref L);
-                return VecLength(ref L2);
+                Vector3 L2 = Subtract(D, L);
+                return L2.Length();
             }
 
-            Vector3 L3; sub(out L3, ref D, ref E);
-            return VecLength(ref L3);
+            Vector3 L3 = Subtract(D, E);
+            return L3.Length();
         }
 
         public static void GetTriangleNormal(Vector3 t0, Vector3 t1, Vector3 t2, out Vector3 normal)
         {
-            Vector3 u; sub(out u, ref t1, ref t0); // triangle vector 1
-            Vector3 v; sub(out v, ref t2, ref t0); // triangle vector 2
-            cross(out normal, ref u, ref v); // triangle normal
-            float l = VecLength(ref normal);
-            div(out normal, ref normal, l);
+            Vector3 u = Subtract(t1, t0); // triangle vector 1
+            Vector3 v = Subtract(t2, t0); // triangle vector 2
+            normal = Cross(u, v); // triangle normal
+            float l = normal.Length();
+            normal = Divide(normal, l);
         }
 
         public static float PointDistanceToTriangle(Vector3 p0,
                                                     Vector3 t0, Vector3 t1, Vector3 t2)
         {
-            Vector3 u; sub(out u, ref t1, ref t0); // triangle vector 1
-            Vector3 v; sub(out v, ref t2, ref t0); // triangle vector 2
-            Vector3 n; cross(out n, ref u, ref v); // triangle normal
+            Vector3 u = Subtract(t1, t0); // triangle vector 1
+            Vector3 v = Subtract(t2, t0); // triangle vector 2
+            Vector3 n = Cross(u, v); // triangle normal
             n.X *= -1E6f;
             n.Y *= -1E6f;
             n.Z *= -1E6f;
 
-            Vector3 intersect;
-            bool hit = SegmentTriangleIntersect(p0, n, t0, t1, t2, out intersect);
-            if (hit)
+            if (SegmentTriangleIntersect(p0, n, t0, t1, t2, out Vector3 intersect))
             {
-                Vector3 L; sub(out L, ref intersect, ref p0);
-                return VecLength(ref L);
+                Vector3 L = Subtract(intersect, p0);
+                return L.Length();
             }
 
             float d0 = PointDistanceToSegment(p0, t0, t1);
             float d1 = PointDistanceToSegment(p0, t0, t1);
             float d2 = PointDistanceToSegment(p0, t0, t1);
 
-            return min(d0, d1, d2);
-        }
-
-        private static void VecMin(Vector3 v0, Vector3 v1, Vector3 v2, out Vector3 min)
-        {
-            min.X = Utils.min(v0.X, v1.X, v2.X);
-            min.Y = Utils.min(v0.Y, v1.Y, v2.Y);
-            min.Z = Utils.min(v0.Z, v1.Z, v2.Z);
-        }
-
-        private static void VecMax(Vector3 v0, Vector3 v1, Vector3 v2, out Vector3 max)
-        {
-            max.X = Utils.max(v0.X, v1.X, v2.X);
-            max.Y = Utils.max(v0.Y, v1.Y, v2.Y);
-            max.Z = Utils.max(v0.Z, v1.Z, v2.Z);
+            return Min(Min(d0, d1), d2);
         }
 
         public static bool TestBoxBoxIntersect(Vector3 box0_min, Vector3 box0_max,
@@ -344,38 +247,12 @@ namespace WowTriangles
             return (int)((f + offset) / gridSize);
         }
 
-        public List<T> GetAllInCube(float min_x, float min_y, float min_z,
-                                    float max_x, float max_y, float max_z)
-        {
-            int startx = LocalToGrid(min_x);
-            int starty = LocalToGrid(min_y);
-            int startz = LocalToGrid(min_z);
-
-            int stopx = LocalToGrid(max_x);
-            int stopy = LocalToGrid(max_y);
-            int stopz = LocalToGrid(max_z);
-            List<T> l = new List<T>();
-
-            for (; startx <= stopx; startx++)
-            {
-                for (; starty <= stopy; starty++)
-                {
-                    for (; startz <= stopz; startz++)
-                    {
-                        if (base.IsSet(startx, starty, startz))
-                            l.Add(base.Get(startx, starty, startz));
-                    }
-                }
-            }
-            return l;
-        }
-
         public T Get(float x, float y, float z)
         {
             int ix = LocalToGrid(x);
             int iy = LocalToGrid(y);
             int iz = LocalToGrid(z);
-            return base.Get((int)ix, (int)iy, (int)iz);
+            return base.Get(ix, iy, iz);
         }
 
         public bool IsSet(float x, float y, float z)
@@ -383,7 +260,7 @@ namespace WowTriangles
             int ix = LocalToGrid(x);
             int iy = LocalToGrid(y);
             int iz = LocalToGrid(z);
-            return base.IsSet((int)ix, (int)iy, (int)iz);
+            return base.IsSet(ix, iy, iz);
         }
 
         public void Set(float x, float y, float z, T val)
@@ -391,13 +268,14 @@ namespace WowTriangles
             int ix = LocalToGrid(x);
             int iy = LocalToGrid(y);
             int iz = LocalToGrid(z);
-            base.Set((int)ix, (int)iy, (int)iz, val);
+            base.Set(ix, iy, iz, val);
         }
     }
 
     public class SparseFloatMatrix2D<T> : SparseMatrix2D<T>
     {
-        private float gridSize;
+        private const float offset = 100000f;
+        private readonly float gridSize;
 
         public SparseFloatMatrix2D(float gridSize)
             : base(0)
@@ -411,17 +289,9 @@ namespace WowTriangles
             this.gridSize = gridSize;
         }
 
-        public void GetGridStartAt(float x, float y, out float grid_x, out float grid_y)
-        {
-            grid_x = GridToLocal(LocalToGrid(x));
-            grid_y = GridToLocal(LocalToGrid(y));
-        }
-
-        private const float offset = 100000f;
-
         public float GridToLocal(int grid)
         {
-            return (float)grid * gridSize - offset;
+            return (grid * gridSize) - offset;
         }
 
         public int LocalToGrid(float f)
@@ -438,7 +308,7 @@ namespace WowTriangles
             int starty = LocalToGrid(min_y);
             int stopy = LocalToGrid(max_y);
 
-            List<T> l = new List<T>();
+            List<T> l = new();
 
             for (int x = startx; x <= stopx; x++)
             {
@@ -456,15 +326,7 @@ namespace WowTriangles
             int ix = LocalToGrid(x);
             int iy = LocalToGrid(y);
 
-            return base.Get((int)ix, (int)iy);
-        }
-
-        public bool IsSet(float x, float y)
-        {
-            int ix = LocalToGrid(x);
-            int iy = LocalToGrid(y);
-
-            return base.IsSet((int)ix, (int)iy);
+            return base.Get(ix, iy);
         }
 
         public void Set(float x, float y, T val)
@@ -472,84 +334,38 @@ namespace WowTriangles
             int ix = LocalToGrid(x);
             int iy = LocalToGrid(y);
 
-            base.Set((int)ix, (int)iy, val);
-        }
-
-        public void Clear(float x, float y)
-        {
-            int ix = LocalToGrid(x);
-            int iy = LocalToGrid(y);
-
-            base.Clear((int)ix, (int)iy);
+            base.Set(ix, iy, val);
         }
     }
 
     public class SparseMatrix2D<T>
     {
-        public SuperMap<XY, T> dic = new SuperMap<XY, T>();
+        private readonly Dictionary<(int x, int y), T> dic;
 
-        private bool last;
-        private bool last_HasValue;
-        private int last_x, last_y;
-        private T last_value;
-
-        public class XY
-        {
-            public int x, y;
-
-            public XY(int x, int y)
-            {
-                this.x = x; this.y = y;
-            }
-
-            public override bool Equals(object obj)
-            {
-                XY other = (XY)obj;
-                if (other == this) return true;
-                return other.x == x && other.y == y;
-            }
-
-            public override int GetHashCode()
-            {
-                return x + y * 100000;
-            }
-        }
 
         public SparseMatrix2D(int initialCapacity)
         {
-            dic = new SuperMap<XY, T>(initialCapacity);
+            dic = new(initialCapacity);
         }
 
         public bool HasValue(int x, int y)
         {
-            if (last && x == last_x && y == last_y) return last_HasValue;
-            XY c = new XY(x, y);
-            T r = default(T);
-            bool b = dic.TryGetValue(c, out r);
-            last = true;
-            last_x = x; last_y = y; last_HasValue = b; last_value = r;
-            return b;
+            return dic.ContainsKey((x, y));
         }
 
         public T Get(int x, int y)
         {
-            if (last && x == last_x && y == last_y && last_HasValue) return last_value;
-            XY c = new XY(x, y);
-            T r = default(T);
-            bool b = dic.TryGetValue(c, out r);
-            last = true;
-            last_x = x; last_y = y; last_HasValue = b; last_value = r;
+            T r = default;
+            dic.TryGetValue((x, y), out r);
             return r;
         }
 
         public void Set(int x, int y, T val)
         {
-            XY c = new XY(x, y);
-            if (dic.ContainsKey(c))
-                dic.Remove(c);
-            dic.Add(c, val);
-            last = true;
-            last_x = x; last_y = y; last_HasValue = true; last_value = val;
+            if (dic.ContainsKey((x, y)))
+                dic.Remove((x, y));
+
+            dic.Add((x, y), val);
         }
 
         public bool IsSet(int x, int y)
@@ -559,49 +375,42 @@ namespace WowTriangles
 
         public void Clear(int x, int y)
         {
-            XY c = new XY(x, y);
-            if (dic.ContainsKey(c))
-                dic.Remove(c);
-            if (last_x == x && last_y == y) last = false;
+            if (dic.ContainsKey((x, y)))
+                dic.Remove((x, y));
         }
 
         public ICollection<T> GetAllElements()
         {
-            return dic.GetAllValues();
+            return dic.Values;
         }
     }
 
     public class SparseMatrix3D<T>
     {
-        private SuperMap<Vector3, T> dic = new SuperMap<Vector3, T>();
+        private readonly Dictionary<Vector3, T> dict = new();
 
         public T Get(int x, int y, int z)
         {
-            dic.TryGetValue(new(x, y, z), out var r);
+            dict.TryGetValue(new(x, y, z), out T r);
             return r;
         }
 
         public bool IsSet(int x, int y, int z)
         {
-            return dic.TryGetValue(new(x, y, z), out var r);
+            return dict.ContainsKey(new(x, y, z));
         }
 
         public void Set(int x, int y, int z, T val)
         {
             Clear(x, y, z);
-            dic.Add(new(x, y, z), val);
+            dict.Add(new(x, y, z), val);
         }
 
         public void Clear(int x, int y, int z)
         {
-            Vector3 c = new Vector3(x, y, z);
-            if (dic.ContainsKey(c))
-                dic.Remove(c);
-        }
-
-        public ICollection<T> GetAllElements()
-        {
-            return dic.GetAllValues();
+            Vector3 c = new(x, y, z);
+            if (dict.ContainsKey(c))
+                dict.Remove(c);
         }
     }
 
@@ -655,9 +464,9 @@ namespace WowTriangles
             int i0, i1;
             getIndices(index, out i0, out i1);
 
-            x = default(T);
-            y = default(T);
-            z = default(T);
+            x = default;
+            y = default;
+            z = default;
 
             T[] a1 = arrays[i0];
             if (a1 == null) return;
@@ -722,11 +531,11 @@ namespace WowTriangles
             int i0, i1;
             getIndices(index, out i0, out i1);
 
-            x = default(T);
-            y = default(T);
-            z = default(T);
-            w = default(T);
-            sequence = default(T);
+            x = default;
+            y = default;
+            z = default;
+            w = default;
+            sequence = default;
 
             T[] a1 = arrays[i0];
             if (a1 == null) return;
@@ -739,90 +548,6 @@ namespace WowTriangles
             w = innermost[i1 + 3];
             sequence = innermost[i1 + 4];
         }
-    }
-
-    /// <summary>
-    /// Default implementation of ISet.
-    /// </summary>
-    public class Set<T> : ICollection<T>
-    {
-        // Use an ISuperMap to implement.
-
-        private SuperHash<T> dictionary = new SuperHash<T>(); // bool?!?!?
-
-        public Set()
-        {
-        }
-
-        public bool IsReadOnly { get { return false; } }
-
-        public void CopyTo(T[] a, int off)
-        {
-            foreach (T e in this)
-            {
-                a[off++] = e;
-            }
-        }
-
-        public Set(ICollection<T> objects)
-        {
-            AddRange(objects);
-        }
-
-        #region ISet Members
-
-        public void Add(T anObject)
-        {
-            dictionary.Add(anObject);
-        }
-
-        public void AddRange(ICollection<T> objects)
-        {
-            foreach (T obj in objects) Add(obj);
-        }
-
-        public void Clear()
-        {
-            this.dictionary.Clear(0);
-        }
-
-        public bool Contains(T anObject)
-        {
-            return this.dictionary.Contains(anObject);
-        }
-
-        public bool Remove(T anObject)
-        {
-            return this.dictionary.Remove(anObject);
-        }
-
-        #endregion ISet Members
-
-        #region ICollection Members
-
-        public int Count
-        {
-            get
-            {
-                return this.dictionary.Count;
-            }
-        }
-
-        #endregion ICollection Members
-
-        #region IEnumerable Members
-
-        public IEnumerator<T> GetEnumerator()
-        {
-            return dictionary.GetAll().GetEnumerator();
-        }
-
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
-
-        #endregion IEnumerable Members
     }
 
     /// <summary>
@@ -869,24 +594,20 @@ namespace WowTriangles
     {
         private PriorityQueueItem<TValue, TPriority>[] items;
 
-        private const Int32 DefaultCapacity = 16;
-        private Int32 capacity;
-        private Int32 numItems;
-
+        private const int DefaultCapacity = 16;
+        private int capacity;
         private Comparison<TPriority> compareFunc;
+
+        public int Count { get; private set; }
+
+        public int Capacity
+        {
+            get => items.Length;
+            set => SetCapacity(value);
+        }
 
         public PriorityQueue()
             : this(DefaultCapacity, Comparer<TPriority>.Default)
-        {
-        }
-
-        public PriorityQueue(Int32 initialCapacity)
-            : this(initialCapacity, Comparer<TPriority>.Default)
-        {
-        }
-
-        public PriorityQueue(IComparer<TPriority> comparer)
-            : this(DefaultCapacity, comparer)
         {
         }
 
@@ -895,33 +616,12 @@ namespace WowTriangles
             Init(initialCapacity, new Comparison<TPriority>(comparer.Compare));
         }
 
-        public PriorityQueue(Comparison<TPriority> comparison)
-            : this(DefaultCapacity, comparison)
-        {
-        }
-
-        public PriorityQueue(int initialCapacity, Comparison<TPriority> comparison)
-        {
-            Init(initialCapacity, comparison);
-        }
-
         // Initializes the queue
         private void Init(int initialCapacity, Comparison<TPriority> comparison)
         {
-            numItems = 0;
+            Count = 0;
             compareFunc = comparison;
             SetCapacity(initialCapacity);
-        }
-
-        public int Count
-        {
-            get { return numItems; }
-        }
-
-        public int Capacity
-        {
-            get { return items.Length; }
-            set { SetCapacity(value); }
         }
 
         // Set the queue's capacity.
@@ -932,7 +632,7 @@ namespace WowTriangles
                 newCap = DefaultCapacity;
 
             // throw exception if newCapacity < numItems
-            if (newCap < numItems)
+            if (newCap < Count)
                 throw new ArgumentOutOfRangeException("newCapacity", "New capacity is less than Count");
 
             this.capacity = newCap;
@@ -949,7 +649,7 @@ namespace WowTriangles
 
         public void Enqueue(TValue value, TPriority priority)
         {
-            if (numItems == capacity)
+            if (Count == capacity)
             {
                 // need to increase capacity
                 // grow by 50 percent
@@ -957,10 +657,9 @@ namespace WowTriangles
             }
 
             // Create the new item
-            PriorityQueueItem<TValue, TPriority> newItem =
-                new PriorityQueueItem<TValue, TPriority>(value, priority);
-            int i = numItems;
-            ++numItems;
+            PriorityQueueItem<TValue, TPriority> newItem = new(value, priority);
+            int i = Count;
+            ++Count;
 
             // and insert it into the heap.
             while ((i > 0) && (compareFunc(items[i / 2].Priority, newItem.Priority) < 0))
@@ -976,9 +675,9 @@ namespace WowTriangles
         {
             // remove an item from the heap
             PriorityQueueItem<TValue, TPriority> o = items[index];
-            PriorityQueueItem<TValue, TPriority> tmp = items[numItems - 1];
-            items[--numItems] = default(PriorityQueueItem<TValue, TPriority>);
-            if (numItems > 0)
+            PriorityQueueItem<TValue, TPriority> tmp = items[Count - 1];
+            items[--Count] = default(PriorityQueueItem<TValue, TPriority>);
+            if (Count > 0)
             {
                 int i = index;
                 int j = i + 1;
@@ -1008,556 +707,6 @@ namespace WowTriangles
             PriorityQueueItem<TValue, TPriority> item = RemoveAt(0);
             prio = item.Priority;
             return item.Value;
-        }
-
-        public void Remove(TValue item, IEqualityComparer<TValue> comparer)
-        {
-            // need to find the PriorityQueueItem that has the Data value of o
-            for (int index = 0; index < numItems; ++index)
-            {
-                if (comparer.Equals(item, items[index].Value))
-                {
-                    RemoveAt(index);
-                    return;
-                }
-            }
-            //throw new ApplicationException("The specified itemm is not in the queue.");
-        }
-
-        public void Remove(TValue item)
-        {
-            Remove(item, EqualityComparer<TValue>.Default);
-        }
-
-        /// <returns>The object at the beginning of the queue.</returns>
-        private PriorityQueueItem<TValue, TPriority> Peek()
-        {
-            if (Count == 0)
-                throw new InvalidOperationException("The queue is empty");
-            return items[0];
-        }
-
-        /// <summary>
-        /// Removes all objects from the queue.
-        /// </summary>
-        public void Clear()
-        {
-            numItems = 0;
-            TrimExcess();
-        }
-
-        /// <summary>
-        /// Sets the capacity to the actual number of elements in the Queue,
-        /// if that number is less than 90 percent of current capacity.
-        /// </summary>
-        public void TrimExcess()
-        {
-            if (numItems < (0.9 * capacity))
-                SetCapacity(numItems);
-        }
-
-        /// <summary>
-        /// Determines whether an element is in the queue.
-        /// </summary>
-        /// <param name="item">The object to locate in the queue.</param>
-        /// <returns>True if item found in the queue.  False otherwise.</returns>
-        public bool Contains(TValue item)
-        {
-            EqualityComparer<TValue> comparer = EqualityComparer<TValue>.Default;
-            // need to find the PriorityQueueItem that has the Data value of o
-            for (int index = 0; index < numItems; ++index)
-            {
-                if (comparer.Equals(item, items[index].Value))
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-    }
-
-    public class SuperMap<TKey, TValue>
-    {
-        public class Entry
-        {
-            public TKey key;
-            public TValue value;
-            public Entry next;
-
-            public Entry(TKey k, TValue v)
-            {
-                key = k;
-                value = v;
-            }
-        }
-
-        // table of good has size tables
-        private static uint[] sizes = {
-           89,
-           179,
-           359,
-           719,
-           1439,
-           2879,
-           5759,
-           11519,
-           23039,
-           46079,
-           92159,
-           184319,
-           368639,
-           737279,
-           1474559,
-           2949119,
-           5898239,
-           11796479,
-           23592959,
-           47185919,
-           94371839,
-           188743679,
-           377487359,
-           754974719,
-           1509949439
-         };
-
-        private int elements; // elements in hash
-        private int size_table_entry;
-        private Entry[] array;
-
-        public SuperMap()
-        {
-            Clear(16);
-        }
-
-        public SuperMap(int initialCapacity)
-        {
-            Clear(initialCapacity);
-        }
-
-        private static uint GetEntryIn(Entry[] array, TKey key)
-        {
-            return (uint)key.GetHashCode() % (uint)array.Length;
-        }
-
-        private static void AddToArrayNoCheck(Entry[] array, Entry e)
-        {
-            uint key = GetEntryIn(array, e.key);
-            e.next = array[key];
-            array[key] = e;
-        }
-
-        private static bool HasValue(Entry[] array, TKey k, TValue val)
-        {
-            uint key = GetEntryIn(array, k);
-            Entry rover = array[key];
-            while (rover != null)
-            {
-                if (rover.value.Equals(val))
-                    return true;
-                rover = rover.next;
-            }
-            return false;
-        }
-
-        private static void AddToArray(Entry[] array, Entry e)
-        {
-            uint key = GetEntryIn(array, e.key);
-            TValue val = e.value;
-            // check for existance
-            Entry rover = array[key];
-            while (rover != null)
-            {
-                if (rover.key.Equals(e.key))
-                    return;
-
-                rover = rover.next;
-            }
-            e.next = array[key];
-            array[key] = e;
-        }
-
-        private void MakeLarger()
-        {
-            size_table_entry++;
-            uint new_size = sizes[size_table_entry];
-            Entry[] new_array = new Entry[sizes[size_table_entry]];
-
-            // add all old stuff to the new one
-
-            for (int i = 0; i < array.Length; i++)
-            {
-                Entry rover = array[i];
-                while (rover != null)
-                {
-                    Entry next = rover.next;
-                    AddToArrayNoCheck(new_array, rover);
-                    rover = next;
-                }
-            }
-            array = new_array;
-        }
-
-        private void MakeSmaller()
-        {
-            if (size_table_entry == 0) return;
-            size_table_entry--;
-            uint new_size = sizes[size_table_entry];
-            Entry[] new_array = new Entry[sizes[size_table_entry]];
-
-            // add all old stuff to the new one
-
-            for (int i = 0; i < array.Length; i++)
-            {
-                Entry rover = array[i];
-                while (rover != null)
-                {
-                    Entry next = rover.next;
-                    AddToArrayNoCheck(new_array, rover);
-                    rover = next;
-                }
-            }
-            array = new_array;
-        }
-
-        public void Add(TKey k, TValue v)
-        {
-            AddToArray(array, new Entry(k, v));
-            elements++;
-            if (elements > array.Length * 2)
-            {
-                MakeLarger();
-            }
-        }
-
-        public void Clear(int initialCapacity)
-        {
-            elements = 0;
-            size_table_entry = 0;
-            for (size_table_entry = 0; sizes[size_table_entry] < initialCapacity; size_table_entry++) ;
-            array = new Entry[sizes[size_table_entry]];
-        }
-
-        public bool ContainsValue(TValue val)
-        {
-            throw new Exception("ContainsValue not implemented");
-        }
-
-        public bool ContainsKey(TKey k)
-        {
-            uint key = GetEntryIn(array, k);
-            Entry rover = array[key];
-            while (rover != null)
-            {
-                if (rover.next == rover)
-                {
-                    Console.WriteLine("lsdfjlskfjkl>");
-                }
-                if (rover.key.Equals(k))
-                    return true;
-                rover = rover.next;
-            }
-            return false;
-        }
-
-        public bool TryGetValue(TKey k, out TValue v)
-        {
-            uint key = GetEntryIn(array, k);
-            Entry rover = array[key];
-            while (rover != null)
-            {
-                if (rover.next == rover)
-                {
-                    Console.WriteLine("ksjdflksdjf");
-                }
-                if (rover.key.Equals(k))
-                {
-                    v = rover.value;
-                    return true;
-                }
-                rover = rover.next;
-            }
-            v = default(TValue);
-            return false;
-        }
-
-        public bool Remove(TKey k)
-        {
-            uint key = GetEntryIn(array, k);
-            Entry rover = array[key];
-            Entry prev = null;
-            while (rover != null)
-            {
-                if (rover.key.Equals(k))
-                {
-                    if (prev == null)
-                        array[key] = rover.next;
-                    else
-                        prev.next = rover.next;
-                    elements--;
-                    return true;
-                }
-                rover = rover.next;
-            }
-            return false;
-        }
-
-        public ICollection<TValue> GetAllValues()
-        {
-            List<TValue> list = new List<TValue>();
-            for (int i = 0; i < array.Length; i++)
-            {
-                Entry rover = array[i];
-                while (rover != null)
-                {
-                    list.Add(rover.value);
-                    rover = rover.next;
-                }
-            }
-            return list;
-        }
-
-        public ICollection<TKey> GetAllKeys()
-        {
-            List<TKey> list = new List<TKey>();
-            for (int i = 0; i < array.Length; i++)
-            {
-                Entry rover = array[i];
-                while (rover != null)
-                {
-                    list.Add(rover.key);
-                    rover = rover.next;
-                }
-            }
-            return list;
-        }
-
-        public int Count
-        {
-            get
-            {
-                return elements;
-            }
-        }
-    }
-
-    public class SuperHash<T>
-    {
-        public class Entry
-        {
-            public T value;
-            public Entry next;
-
-            public Entry(T v)
-            {
-                value = v;
-            }
-        }
-
-        // table of good has size tables
-        private static uint[] sizes = {
-           89,
-           179,
-           359,
-           719,
-           1439,
-           2879,
-           5759,
-           11519,
-           23039,
-           46079,
-           92159,
-           184319,
-           368639,
-           737279,
-           1474559,
-           2949119,
-           5898239,
-           11796479,
-           23592959,
-           47185919,
-           94371839,
-           188743679,
-           377487359,
-           754974719,
-           1509949439
-         };
-
-        private int elements; // elements in hash
-        private int size_table_entry;
-        private Entry[] array;
-
-        public SuperHash()
-        {
-            Clear(16);
-        }
-
-        public SuperHash(int initialCapacity)
-        {
-            Clear(initialCapacity);
-        }
-
-        private static uint GetEntryIn(Entry[] array, T key)
-        {
-            return (uint)key.GetHashCode() % (uint)array.Length;
-        }
-
-        private static void AddToArrayNoCheck(Entry[] array, Entry e)
-        {
-            uint key = GetEntryIn(array, e.value);
-            e.next = array[key];
-            array[key] = e;
-        }
-
-        private static bool HasValue(Entry[] array, T k)
-        {
-            uint key = GetEntryIn(array, k);
-            Entry rover = array[key];
-            while (rover != null)
-            {
-                if (rover.value.Equals(k))
-                    return true;
-                rover = rover.next;
-            }
-            return false;
-        }
-
-        private static void AddToArray(Entry[] array, Entry e)
-        {
-            uint key = GetEntryIn(array, e.value);
-            T val = e.value;
-            // check for existance
-            Entry rover = array[key];
-            while (rover != null)
-            {
-                if (rover.value.Equals(e.value))
-                    return;
-
-                rover = rover.next;
-            }
-            e.next = array[key];
-            array[key] = e;
-        }
-
-        private void MakeLarger()
-        {
-            size_table_entry++;
-            uint new_size = sizes[size_table_entry];
-            Entry[] new_array = new Entry[sizes[size_table_entry]];
-
-            // add all old stuff to the new one
-
-            for (int i = 0; i < array.Length; i++)
-            {
-                Entry rover = array[i];
-                while (rover != null)
-                {
-                    Entry next = rover.next;
-                    AddToArrayNoCheck(new_array, rover);
-                    rover = next;
-                }
-            }
-            array = new_array;
-        }
-
-        private void MakeSmaller()
-        {
-            if (size_table_entry == 0) return;
-            size_table_entry--;
-            uint new_size = sizes[size_table_entry];
-            Entry[] new_array = new Entry[sizes[size_table_entry]];
-
-            // add all old stuff to the new one
-
-            for (int i = 0; i < array.Length; i++)
-            {
-                Entry rover = array[i];
-                while (rover != null)
-                {
-                    Entry next = rover.next;
-                    AddToArrayNoCheck(new_array, rover);
-                    rover = next;
-                }
-            }
-            array = new_array;
-        }
-
-        public void Add(T k)
-        {
-            AddToArray(array, new Entry(k));
-            elements++;
-            if (elements > array.Length * 2)
-            {
-                MakeLarger();
-            }
-        }
-
-        public void Clear(int initialCapacity)
-        {
-            elements = 0;
-            size_table_entry = 0;
-            for (size_table_entry = 0; sizes[size_table_entry] < initialCapacity; size_table_entry++) ;
-            array = new Entry[sizes[size_table_entry]];
-        }
-
-        public bool Contains(T k)
-        {
-            uint key = GetEntryIn(array, k);
-            Entry rover = array[key];
-            while (rover != null)
-            {
-                if (rover.next == rover)
-                {
-                    Console.WriteLine("lsdfjlskfjkl>");
-                }
-                if (rover.value.Equals(k))
-                    return true;
-                rover = rover.next;
-            }
-            return false;
-        }
-
-        public bool Remove(T k)
-        {
-            uint key = GetEntryIn(array, k);
-            Entry rover = array[key];
-            Entry prev = null;
-            while (rover != null)
-            {
-                if (rover.value.Equals(k))
-                {
-                    if (prev == null)
-                        array[key] = rover.next;
-                    else
-                        prev.next = rover.next;
-                    elements--;
-                    return true;
-                }
-                rover = rover.next;
-            }
-            return false;
-        }
-
-        public ICollection<T> GetAll()
-        {
-            List<T> list = new List<T>();
-            for (int i = 0; i < array.Length; i++)
-            {
-                Entry rover = array[i];
-                while (rover != null)
-                {
-                    list.Add(rover.value);
-                    rover = rover.next;
-                }
-            }
-            return list;
-        }
-
-        public int Count
-        {
-            get
-            {
-                return elements;
-            }
         }
     }
 }

@@ -236,7 +236,7 @@ namespace WowTriangles
                 {
                     if (wi != null && wi.wmo != null)
                     {
-                        String fn = wi.wmo.fileName;
+                        string fn = wi.wmo.fileName;
                         int last = fn.LastIndexOf('\\');
                         fn = fn.Substring(last + 1);
                         // logger.WriteLine("    wmo: " + fn + " at " + wi.pos);
@@ -260,7 +260,7 @@ namespace WowTriangles
                 {
                     if (mi != null && mi.model != null)
                     {
-                        String fn = mi.model.fileName;
+                        string fn = mi.model.fileName;
                         int last = fn.LastIndexOf('\\');
                         // fn = fn.Substring(last + 1);
                         //logger.WriteLine("    wmi: " + fn + " at " + mi.pos);

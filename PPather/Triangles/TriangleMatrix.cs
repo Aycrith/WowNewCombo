@@ -5,8 +5,10 @@
  */
 
 using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Numerics;
+using static System.MathF;
 
 namespace WowTriangles
 {
@@ -41,9 +43,11 @@ namespace WowTriangles
         {
             this.logger = logger;
 
-            System.DateTime pre = System.DateTime.UtcNow;
-            if (logger.IsEnabled(LogLevel.Debug))
-                logger.LogDebug("Build hash  " + tc.GetNumberOfTriangles());
+            DateTime pre = DateTime.UtcNow;
+
+            if (logger.IsEnabled(LogLevel.Trace))
+                logger.LogTrace($"Build hash  {tc.GetNumberOfTriangles()}");
+
             matrix = new SparseFloatMatrix2D<List<int>>(resolution, tc.GetNumberOfTriangles());
 
             Vector3 vertex0;
@@ -57,10 +61,10 @@ namespace WowTriangles
                         out vertex1.X, out vertex1.Y, out vertex1.Z,
                         out vertex2.X, out vertex2.Y, out vertex2.Z);
 
-                float minx = Utils.min(vertex0.X, vertex1.X, vertex2.X);
-                float maxx = Utils.max(vertex0.X, vertex1.X, vertex2.X);
-                float miny = Utils.min(vertex0.Y, vertex1.Y, vertex2.Y);
-                float maxy = Utils.max(vertex0.Y, vertex1.Y, vertex2.Y);
+                float minx = Min(Min(vertex0.X, vertex1.X), vertex2.X);
+                float maxx = Max(Max(vertex0.X, vertex1.X), vertex2.X);
+                float miny = Min(Min(vertex0.Y, vertex1.Y), vertex2.Y);
+                float maxy = Max(Max(vertex0.Y, vertex1.Y), vertex2.Y);
 
                 Vector3 box_center;
                 Vector3 box_halfsize;
@@ -85,32 +89,38 @@ namespace WowTriangles
                             AddTriangleAt(grid_x, grid_y, i);
                     }
             }
-            System.DateTime post = System.DateTime.UtcNow;
-            System.TimeSpan ts = post.Subtract(pre);
-            if (logger.IsEnabled(LogLevel.Debug))
-                logger.LogDebug("done " + maxAtOne + " time " + ts);
+
+            if (logger.IsEnabled(LogLevel.Trace))
+                logger.LogTrace($"done {maxAtOne} time {(DateTime.UtcNow - pre)}");
         }
 
-        public Set<int> GetAllCloseTo(float x, float y, float distance)
+        public HashSet<int> GetAllCloseTo(float x, float y, float distance)
         {
             List<List<int>> close = matrix.GetAllInSquare(x - distance, y - distance, x + distance, y + distance);
-            Set<int> all = new Set<int>();
+            HashSet<int> all = new();
 
             foreach (List<int> l in close)
             {
-                all.AddRange(l);
+                foreach (int inner in l)
+                {
+                    all.Add(inner);
+                }
             }
+
             return all;
         }
 
         public ICollection<int> GetAllInSquare(float x0, float y0, float x1, float y1)
         {
-            Set<int> all = new Set<int>();
+            HashSet<int> all = new();
             List<List<int>> close = matrix.GetAllInSquare(x0, y0, x1, y1);
 
             foreach (List<int> l in close)
             {
-                all.AddRange(l);
+                foreach (int inner in l)
+                {
+                    all.Add(inner);
+                }
             }
             return all;
         }
