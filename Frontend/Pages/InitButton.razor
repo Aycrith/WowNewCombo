@@ -1,6 +1,6 @@
-﻿@inject IBotController botController
-@inject IAddonReader addonReader
+﻿@inject IAddonReader addonReader
 @inject AddonConfigurator addonConfigurator
+@inject ExecGameCommand exec
 
 <button class="btn btn-sm btn-primary" @onclick="InitState">
     <span>Init State</span>
@@ -10,6 +10,6 @@
     private void InitState()
     {
         addonReader.FullReset();
-        botController.ExecGameCommand.Run($"/{addonConfigurator.Config.CommandFlush}");
+        exec.Run($"/{addonConfigurator.Config.CommandFlush}");
     }
 }

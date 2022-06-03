@@ -1,7 +1,10 @@
 ﻿@using System.IO
 
+@inject ILogger logger
 @inject IBotController botController
 @inject IAddonReader addonReader
+@inject DataConfig dataConfig
+@inject ExecGameCommand exec
 
 @implements IDisposable
 
@@ -40,13 +43,15 @@
 
     private FileSystemWatcher watcher = null!;
 
+    private ActionBarPopulator ActionBarPopulator { get; set; } = null!;
+
     protected override void OnInitialized()
     {
         RefreshData();
 
-        var config = DataConfig.Load();
-        watcher = new(config.Class);
+        ActionBarPopulator = new(logger, botController.ClassConfig!, (addonReader as AddonReader)!, exec); 
 
+        watcher = new(dataConfig.Class);
         watcher.NotifyFilter = NotifyFilters.Attributes
             | NotifyFilters.CreationTime
             | NotifyFilters.DirectoryName
@@ -109,6 +114,6 @@
 
     private void SyncActionBar()
     {
-        botController.ActionBarPopulator?.Execute();
+        ActionBarPopulator.Execute();
     }
 }

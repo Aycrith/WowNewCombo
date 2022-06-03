@@ -8,6 +8,7 @@
 @inject IAddonReader addonReader
 @inject IBotController botController
 @inject IJSRuntime JSRuntime
+@inject DataConfig dataConfig
 
 <div class="row">
     <div class="col-sm">
@@ -332,7 +333,7 @@
         recording = false;
 
         var filename = $"__Path_{DateTime.Now.ToString("yyyyMMddHHmmss")}.json";
-        var filepath = Path.Join(botController.DataConfig.Path, filename);
+        var filepath = Path.Join(dataConfig.Path, filename);
         File.WriteAllText(filepath, JsonConvert.SerializeObject(routeInfo.PathPoints));
         message = $"Saved to: {filepath}";
     }

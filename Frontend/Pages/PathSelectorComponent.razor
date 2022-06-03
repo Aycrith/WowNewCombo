@@ -3,6 +3,7 @@
 
 @inject IBotController botController
 @inject IAddonReader addonReader
+@inject DataConfig dataConfig
 
 @implements IDisposable
 
@@ -43,8 +44,7 @@
         GetData();
         ValidateLoadButton();
 
-        var config = DataConfig.Load();
-        watcher = new(config.Path);
+        watcher = new(dataConfig.Path);
 
         watcher.NotifyFilter = NotifyFilters.Attributes
             | NotifyFilters.CreationTime
