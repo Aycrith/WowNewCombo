@@ -8,29 +8,23 @@ namespace Core
 {
     public class ConfigBotController : IBotController
     {
-        public DataConfig DataConfig => DataConfig.Load();
         public AddonReader AddonReader => throw new NotImplementedException();
-        public GoapAgent? GoapAgent { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public RouteInfo? RouteInfo { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        public GoapAgent? GoapAgent => throw new NotImplementedException();
+        public RouteInfo? RouteInfo => throw new NotImplementedException();
         public WowScreen WowScreen => throw new NotImplementedException();
         public IGrindSessionDAO GrindSessionDAO => throw new NotImplementedException();
-        public string SelectedClassFilename { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public string? SelectedPathFilename { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        public string SelectedClassFilename => throw new NotImplementedException();
+        public string? SelectedPathFilename => throw new NotImplementedException();
+
+        public ClassConfiguration? ClassConfig => null;
 
         public bool IsBotActive => false;
 
-        public IImageProvider? MinimapImageFinder => throw new NotImplementedException();
-        public ClassConfiguration? ClassConfig { get => null; set => throw new NotImplementedException(); }
-
-        public ActionBarPopulator? ActionBarPopulator { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-
-        public ExecGameCommand ExecGameCommand => throw new NotImplementedException();
+        public double AvgScreenLatency => throw new NotImplementedException();
+        public double AvgNPCLatency => throw new NotImplementedException();
 
         public event Action? ProfileLoaded;
         public event Action? StatusChanged;
-
-        public double AvgScreenLatency => throw new NotImplementedException();
-        public double AvgNPCLatency => throw new NotImplementedException();
 
         public void Shutdown()
         {
@@ -44,12 +38,6 @@ namespace Core
 
         public void ToggleBotStatus()
         {
-            throw new NotImplementedException();
-        }
-
-        public void LoadClassProfile(string classFilename)
-        {
-            ProfileLoaded?.Invoke();
             StatusChanged?.Invoke();
             throw new NotImplementedException();
         }
@@ -61,6 +49,12 @@ namespace Core
 
         public IEnumerable<string> PathFiles()
         {
+            throw new NotImplementedException();
+        }
+
+        public void LoadClassProfile(string classFilename)
+        {
+            ProfileLoaded?.Invoke();
             throw new NotImplementedException();
         }
 

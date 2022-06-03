@@ -15,8 +15,11 @@ using Serilog;
 using Serilog.Events;
 using Serilog.Extensions.Logging;
 using SharedLib;
+using System;
+using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
+using WinAPI;
 
 namespace BlazorServer
 {
@@ -28,7 +31,6 @@ namespace BlazorServer
 
             var logfile = "out.log";
             var config = new LoggerConfiguration()
-                //.Enrich.FromLogContext()
                 .MinimumLevel.Debug()
                 .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
                 .WriteTo.LoggerSink()
@@ -55,36 +57,45 @@ namespace BlazorServer
             var logger = new SerilogLoggerProvider(Log.Logger).CreateLogger(nameof(Program));
             services.AddSingleton(logger);
 
-            var wowProcess = new WowProcess();
-            var wowScreen = new WowScreen(logger, wowProcess);
-            wowScreen.GetRectangle(out var rect);
-            wowScreen.Dispose();
+            WowProcess wowProcess = new();
+            NativeMethods.GetWindowRect(wowProcess.WarcraftProcess.MainWindowHandle, out Rectangle rect);
 
-            var addonConfigurator = new AddonConfigurator(logger);
+            AddonConfigurator addonConfigurator = new(logger, wowProcess);
+            Version? installVersion = addonConfigurator.GetInstallVersion();
 
-            if (!addonConfigurator.Config.IsDefault() && !addonConfigurator.Installed())
+            if (addonConfigurator.IsDefault() || installVersion == null)
             {
                 // At this point the webpage never loads so fallback to configuration page
-                AddonConfig.Delete();
-                DataFrameConfiguration.RemoveConfiguration();
+                addonConfigurator.Delete();
+                FrameConfig.Delete();
             }
 
-            if (DataFrameConfiguration.Exists() &&
-                !DataFrameConfiguration.IsValid(rect, addonConfigurator.GetInstalledVersion()))
+            if (FrameConfig.Exists() && !FrameConfig.IsValid(rect, installVersion!))
             {
                 // At this point the webpage never loads so fallback to configuration page
-                DataFrameConfiguration.RemoveConfiguration();
+                FrameConfig.Delete();
             }
 
+            services.AddSingleton(DataConfig.Load());
+            services.AddSingleton<WowProcess>();
+            services.AddSingleton<WowScreen>();
+            services.AddSingleton<WowProcessInput>();
+            services.AddSingleton<ExecGameCommand>();
             services.AddSingleton<AddonConfigurator>();
 
-            if (AddonConfig.Exists() && DataFrameConfiguration.Exists())
+            if (AddonConfig.Exists() && FrameConfig.Exists())
             {
-                services.AddSingleton(DataConfig.Load());
+                services.AddSingleton<MinimapNodeFinder>();
+
                 services.AddSingleton<IGrindSessionDAO, LocalGrindSessionDAO>();
-                services.AddSingleton<IPPather>(x => GetPather(logger));
+                services.AddSingleton<IPPather>(x => GetPather(logger, x.GetRequiredService<DataConfig>()));
+
+                services.AddSingleton<AutoResetEvent>(x => new(false));
+                services.AddSingleton<DataFrame[]>(x => FrameConfig.LoadFrames());
+                services.AddSingleton<AddonDataProvider>();
+                services.AddSingleton<Wait>();
+                services.AddSingleton<IAddonReader, AddonReader>();
                 services.AddSingleton<IBotController, BotController>();
-                services.AddSingleton<IAddonReader>(x => x.GetRequiredService<IBotController>().AddonReader);
             }
             else
             {
@@ -98,13 +109,12 @@ namespace BlazorServer
             services.AddBlazorTable();
         }
 
-        private IPPather GetPather(Microsoft.Extensions.Logging.ILogger logger)
+        private IPPather GetPather(Microsoft.Extensions.Logging.ILogger logger, DataConfig dataConfig)
         {
             var scp = new StartupConfigPathing();
             Configuration.GetSection(StartupConfigPathing.Position).Bind(scp);
 
             bool failed = false;
-            var dataConfig = DataConfig.Load();
 
             if (scp.Type == StartupConfigPathing.Types.RemoteV3)
             {
@@ -149,7 +159,7 @@ namespace BlazorServer
             }
             Log.Information("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
 
-            var localApi = new LocalPathingApi(logger, new PPatherService(logger, dataConfig));
+            var localApi = new LocalPathingApi(logger, new PPatherService(logger, dataConfig), dataConfig);
             Log.Information($"Using {StartupConfigPathing.Types.Local}({localApi.GetType().Name}) pathing API.");
             Log.Information("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
             return localApi;

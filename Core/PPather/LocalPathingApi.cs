@@ -28,13 +28,13 @@ namespace Core
 
         private DateTime lastSave;
 
-        public LocalPathingApi(ILogger logger, PPatherService service)
+        public LocalPathingApi(ILogger logger, PPatherService service, DataConfig dataConfig)
         {
             this.logger = logger;
             this.service = service;
             stopwatch = new();
 
-            var mpqFiles = MPQTriangleSupplier.GetArchiveNames(DataConfig.Load());
+            var mpqFiles = MPQTriangleSupplier.GetArchiveNames(dataConfig);
             int countOfMPQFiles = mpqFiles.Count(f => File.Exists(f));
             if (countOfMPQFiles == 0)
             {
