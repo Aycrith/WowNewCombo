@@ -13,7 +13,7 @@ namespace Core
         private readonly ILogger logger;
         private readonly WowProcess wowProcess;
 
-        public AddonConfig Config { get; private set; }
+        public AddonConfig Config { get; init; }
 
         private const string DefaultAddonName = "DataToColor";
         private const string AddonSourcePath = @".\Addons\";
@@ -25,17 +25,22 @@ namespace Core
 
         public event Action? OnChange;
 
-        public AddonConfigurator(ILogger logger)
+        public AddonConfigurator(ILogger logger, WowProcess wowProcess)
         {
             this.logger = logger;
-            Config = AddonConfig.Load();
+            this.wowProcess = wowProcess;
 
-            wowProcess = new WowProcess();
+            Config = AddonConfig.Load();
         }
 
         public bool Installed()
         {
-            return GetInstalledVersion() != null;
+            return GetInstallVersion() != null;
+        }
+
+        public bool IsDefault()
+        {
+            return Config.IsDefault();
         }
 
         public bool Validate()
@@ -72,14 +77,17 @@ namespace Core
                 // also numbers not allowed
                 Config.Title = Regex.Replace(Config.Title, @"[^\u0000-\u007F]+", string.Empty);
                 Config.Title = new string(Config.Title.Where(char.IsLetter).ToArray());
-                Config.Title = Config.Title.Trim();
-                Config.Title = Config.Title.Replace(" ", "");
+                Config.Title =
+                    Config.Title.Trim()
+                    .Replace(" ", "");
 
                 if (Config.Title.Length == 0)
                 {
                     logger.LogError($"{nameof(Config)}.{nameof(Config.Title)} - error - use letters only: '{Config.Title}'");
                     return false;
                 }
+
+                Config.Command = Config.Title.Trim().ToLower();
             }
             else
             {
@@ -161,42 +169,29 @@ namespace Core
 
         private static void BulkRename(string fPath, string match, string fNewName)
         {
-            string fExt;
-            string fFromName;
-            string fToName;
-
-            //copy all files from fPath to files array
-            FileInfo[] files = new DirectoryInfo(fPath).GetFiles();
-            //loop through all files
-            foreach (var f in files)
+            foreach (FileInfo f in new DirectoryInfo(fPath).GetFiles())
             {
-                //get the filename without the extension
-                fFromName = Path.GetFileNameWithoutExtension(f.Name);
+                string fromName = Path.GetFileNameWithoutExtension(f.Name);
 
-                if (!fFromName.Contains(match))
+                if (!fromName.Contains(match))
                     continue;
 
-                //get the file extension
-                fExt = Path.GetExtension(f.Name);
+                string ext = Path.GetExtension(f.Name);
 
-                //set fFromName to the path + name of the existing file
-                fFromName = Path.Join(fPath, f.Name); //string.Format("{0}{1}", fPath, f.Name);
-                //set the fToName as path + new name + _i + file extension
-                fToName = Path.Join(fPath, fNewName) + fExt; //string.Format("{0}{1}{2}", fPath, fNewName, fExt);
+                fromName = Path.Join(fPath, f.Name);
+                string toName = Path.Join(fPath, fNewName) + ext;
 
-                //rename the file by moving to the same place and renaming
-                File.Move(fFromName, fToName);
+                File.Move(fromName, toName);
             }
         }
 
         private void EditToc()
         {
             string tocPath = Path.Join(FinalAddonPath, Config.Title + ".toc");
-            string text = File.ReadAllText(tocPath);
-            text = text.Replace(DefaultAddonName, Config.Title);
-
-            // edit author
-            text = text.Replace("## Author: FreeHongKongMMO", "## Author: " + Config.Author);
+            string text =
+                File.ReadAllText(tocPath)
+                .Replace(DefaultAddonName, Config.Title)
+                .Replace("## Author: FreeHongKongMMO", "## Author: " + Config.Author);
 
             File.WriteAllText(tocPath, text);
         }
@@ -204,13 +199,11 @@ namespace Core
         private void EditMainLua()
         {
             string mainLuaPath = Path.Join(FinalAddonPath, Config.Title + ".lua");
-            string text = File.ReadAllText(mainLuaPath);
-            text = text.Replace(DefaultAddonName, Config.Title);
-
-            //edit slash command
-            Config.Command = Config.Title.Trim().ToLower();
-            text = text.Replace("dc", Config.Command);
-            text = text.Replace("DC", Config.Command);
+            string text =
+                File.ReadAllText(mainLuaPath)
+                .Replace(DefaultAddonName, Config.Title)
+                .Replace("dc", Config.Command)
+                .Replace("DC", Config.Command);
 
             File.WriteAllText(mainLuaPath, text);
         }
@@ -308,7 +301,7 @@ namespace Core
                 return false;
 
             Version? repo = GetRepoVerion();
-            Version? installed = GetInstalledVersion();
+            Version? installed = GetInstallVersion();
 
             return installed != null && repo != null && repo > installed;
         }
@@ -322,9 +315,7 @@ namespace Core
 
                 if (repo == null)
                 {
-                    string parentFolder = ".";
-
-                    repo = GetVersion(Path.Join(parentFolder + AddonSourcePath, DefaultAddonName), DefaultAddonName);
+                    repo = GetVersion(Path.Join("." + AddonSourcePath, DefaultAddonName), DefaultAddonName);
                 }
             }
             catch (Exception e)
@@ -334,7 +325,7 @@ namespace Core
             return repo;
         }
 
-        public Version? GetInstalledVersion()
+        public Version? GetInstallVersion()
         {
             return GetVersion(FinalAddonPath, Config.Title);
         }
@@ -353,10 +344,7 @@ namespace Core
                 .FirstOrDefault();
 
             string? versionStr = line?.Split(begin)[1];
-            if (Version.TryParse(versionStr, out var version))
-                return version;
-
-            return null;
+            return Version.TryParse(versionStr, out Version? version) ? version : null;
         }
     }
 }
