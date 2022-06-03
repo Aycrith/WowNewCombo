@@ -123,7 +123,6 @@ namespace Core.Goals
 
             sideActivityManualReset.Set();
             sideActivityCts.Cancel();
-            sideActivityCts.Dispose();
         }
 
         private void Abort()

@@ -57,7 +57,6 @@ namespace Core.Goals
             npcNameFinder.WaitForUpdate();
         }
 
-
         public void TargetingAndClickNpc(bool leftClick, CancellationTokenSource cts)
         {
             var npc = npcNameFinder.Npcs.First();
@@ -91,7 +90,7 @@ namespace Core.Goals
             foreach (var npc in npcNameFinder.Npcs)
             {
                 attemptPoints.AddRange(locFindByCursorType);
-                foreach(var point in locFindByCursorType)
+                foreach (var point in locFindByCursorType)
                 {
                     attemptPoints.Add(new Point(npc.Width / 2, point.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight));
                     attemptPoints.Add(new Point(-npc.Width / 2, point.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight));

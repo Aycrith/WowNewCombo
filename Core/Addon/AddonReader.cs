@@ -1,4 +1,3 @@
-using Core.Addon;
 using Core.Database;
 using Cyotek.Collections.Generic;
 using Microsoft.Extensions.Logging;
@@ -107,8 +106,6 @@ namespace Core
 
             UIMapId.Changed -= OnUIMapIdChanged;
             GlobalTime.Changed -= GlobalTimeChanged;
-
-            addonDataProvider?.Dispose();
         }
 
         public void Update()

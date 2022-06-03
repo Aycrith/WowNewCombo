@@ -23,6 +23,7 @@ namespace CoreTests
         public Test_NpcNameFinderLoot(ILogger logger, bool saveImage)
         {
             this.logger = logger;
+            this.saveImage = saveImage;
 
             MockWoWProcess mockWoWProcess = new MockWoWProcess();
             rectProvider = new RectProvider();

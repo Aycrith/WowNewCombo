@@ -120,7 +120,6 @@ namespace Core.Goals
         {
             manualReset.Set();
             _cts.Cancel();
-            _cts.Dispose();
         }
 
         public void Update()

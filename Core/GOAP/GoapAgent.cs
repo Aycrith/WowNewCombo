@@ -22,8 +22,13 @@ namespace Core.GOAP
         private readonly ConfigurableInput input;
 
         private readonly IGrindSessionHandler sessionHandler;
-
         private readonly StopMoving stopMoving;
+
+        private readonly Thread goapThread;
+        private readonly CancellationTokenSource cts;
+        private readonly ManualResetEvent manualReset;
+
+        private bool wasEmpty;
 
         private bool active;
         public bool Active
@@ -71,12 +76,6 @@ namespace Core.GOAP
 
         public Stack<GoapGoal> Plan { get; private set; }
         public GoapGoal? CurrentGoal { get; private set; }
-
-        private bool wasEmpty;
-
-        private readonly Thread goapThread;
-        private readonly CancellationTokenSource cts;
-        private readonly ManualResetEvent manualReset;
 
         public GoapAgent(ILogger logger, ClassConfiguration classConfig, IGrindSessionDAO sessionDAO, WowScreen wowScreen, GoapAgentState goapAgentState, AddonReader addonReader, HashSet<GoapGoal> availableGoals, RouteInfo routeInfo, ConfigurableInput input)
         {

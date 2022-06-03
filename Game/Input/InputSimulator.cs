@@ -32,7 +32,7 @@ namespace Game
 
         public void Dispose()
         {
-            _cts.Dispose();
+            _cts.Cancel();
         }
 
         private int Delay(int milliseconds)
