@@ -987,8 +987,8 @@ namespace Wmo
                 var path = Path.Join(dataConfig.PPather, "adt.tmp");
                 if (archive.ExtractFile(filename, path))
                 {
-                    if (logger.IsEnabled(LogLevel.Debug))
-                        logger.LogDebug("Reading adt: " + filename);
+                    if (logger.IsEnabled(LogLevel.Trace))
+                        logger.LogTrace($"Reading adt: {filename}");
                     //PPather.mover.Stop();
                     MapTileFile f = new MapTileFile(path, t, wmomanager, modelmanager);
                     if (t.models.Count != 0 || t.wmos.Count != 0)

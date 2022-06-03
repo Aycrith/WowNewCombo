@@ -6,6 +6,7 @@
 
 using Microsoft.Extensions.Logging;
 using System.Numerics;
+using static System.Numerics.Vector3;
 
 namespace WowTriangles
 {
@@ -66,8 +67,7 @@ namespace WowTriangles
                     }
                     if (triangles.Count >= SplitSize)
                     {
-                        Vector3 size;
-                        Utils.sub(out size, ref max, ref min);
+                        Vector3 size = Subtract(max, min);
                         if (logger.IsEnabled(LogLevel.Debug))
                             logger.LogDebug("New leaf " + depth + " size: " + triangles.Count + " " + size);
                     }

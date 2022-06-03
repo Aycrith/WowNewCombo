@@ -15,38 +15,15 @@ namespace WowTriangles
     {
         private readonly ILogger logger;
 
-        public TriangleCollection(ILogger logger)
-        {
-            this.logger = logger;
-        }
-
         public bool changed = true;
         public int LRU;
         public float base_x, base_y;
         public int grid_x, grid_y;
 
-        private class VertexArray : TrioArray<float>
-        {
-        }
-
-        private class IndexArray : QuadArray<int>
-        {
-        }
-
-        public int TriangleCount()
-        {
-            return no_triangles;
-        }
-
-        public int VertexCount()
-        {
-            return no_vertices;
-        }
-
-        private VertexArray vertices = new VertexArray();
+        private readonly TrioArray<float> vertices = new();
         private int no_vertices;
 
-        private IndexArray triangles = new IndexArray();
+        private readonly QuadArray<int> triangles = new();
         private int no_triangles;
 
         private SparseFloatMatrix3D<int> vertexMatrix = new SparseFloatMatrix3D<int>(0.1f);
@@ -71,6 +48,21 @@ namespace WowTriangles
 
         public float[] color;
         public bool fill;
+
+        public TriangleCollection(ILogger logger)
+        {
+            this.logger = logger;
+        }
+
+        public int TriangleCount()
+        {
+            return no_triangles;
+        }
+
+        public int VertexCount()
+        {
+            return no_vertices;
+        }
 
         public void Clear()
         {

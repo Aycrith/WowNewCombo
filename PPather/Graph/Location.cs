@@ -114,16 +114,15 @@ namespace PPather.Graph
             return (float)Math.Sqrt(dx * dx + dy * dy);
         }
 
-        public override String ToString()
+        public override string ToString()
         {
-            String s = Continent + ":" + description + "[" + (int)x + "," + (int)y + "," + (int)z + "]";
-            return s;
+            return Continent + ":" + description + "[" + (int)x + "," + (int)y + "," + (int)z + "]";
         }
 
         public Location InFrontOf(float heading, float d)
         {
-            float nx = x + (float)Math.Cos(heading) * d;
-            float ny = y + (float)Math.Sin(heading) * d;
+            float nx = x + (MathF.Cos(heading) * d);
+            float ny = y + (MathF.Sin(heading) * d);
             float nz = z;
             return new Location(nx, ny, nz);
         }

@@ -152,8 +152,7 @@ namespace PPather.Graph
 
         private GraphChunk GetChunkAt(float x, float y)
         {
-            int ix, iy;
-            GetChunkCoord(x, y, out ix, out iy);
+            GetChunkCoord(x, y, out int ix, out int iy);
             GraphChunk c = chunks.Get(ix, iy);
             if (c != null)
                 c.LRU = LRU++;
@@ -188,10 +187,10 @@ namespace PPather.Graph
         {
             lock (m_LockObject)
             {
-                if (logger.IsEnabled(LogLevel.Debug))
-                    logger.LogDebug("Saving GraphChunks.....");
-                ICollection<GraphChunk> l = chunks.GetAllElements();
-                foreach (GraphChunk gc in l)
+                if (logger.IsEnabled(LogLevel.Trace))
+                    logger.LogTrace("Saving GraphChunks.....");
+
+                foreach (GraphChunk gc in chunks.GetAllElements())
                 {
                     if (gc.modified)
                     {
@@ -289,7 +288,7 @@ namespace PPather.Graph
             return FindClosestSpot(l_d, 30.0f, null);
         }
 
-        public Spot FindClosestSpot(Location l_d, Set<Spot> Not)
+        public Spot FindClosestSpot(Location l_d, HashSet<Spot> Not)
         {
             return FindClosestSpot(l_d, 30.0f, Not);
         }
@@ -313,7 +312,7 @@ namespace PPather.Graph
         }
 
         // this can be slow...
-        public Spot FindClosestSpot(Location l, float max_d, Set<Spot> Not)
+        public Spot FindClosestSpot(Location l, float max_d, HashSet<Spot> Not)
         {
             Spot closest = null;
             float closest_d = 1E30f;
@@ -612,7 +611,7 @@ namespace PPather.Graph
             //searchProgress = new SearchProgress(fromSpot, destinationSpot, searchID);
 
             // lowest first queue
-            WowTriangles.PriorityQueue<Spot, float> prioritySpotQueue = new WowTriangles.PriorityQueue<Spot, float>(); // (new SpotSearchComparer(dst, score)); ;
+            WowTriangles.PriorityQueue<Spot, float> prioritySpotQueue = new(); // (new SpotSearchComparer(dst, score)); ;
             prioritySpotQueue.Enqueue(fromSpot, -fromSpot.GetDistanceTo(destinationSpot) * heuristicsFactor);
 
             fromSpot.SearchScoreSet(currentSearchID, 0.0f);
@@ -624,8 +623,7 @@ namespace PPather.Graph
             {
                 if (sleepMSBetweenSpots != 0) { Thread.Sleep(sleepMSBetweenSpots); } // slow down the pathing
 
-                float prio;
-                currentSearchSpot = prioritySpotQueue.Dequeue(out prio); // .Value;
+                currentSearchSpot = prioritySpotQueue.Dequeue(out float prio);
 
                 // force the world to be loaded
                 TriangleCollection tc = triangleWorld.GetChunkAt(currentSearchSpot.X, currentSearchSpot.Y);
@@ -981,8 +979,8 @@ namespace PPather.Graph
 
         public Path CreatePath(Location fromLoc, Location toLoc, float howClose, ILocationHeuristics locationHeuristics)
         {
-            if (logger.IsEnabled(LogLevel.Debug))
-                logger.LogDebug($"Creating Path from {fromLoc} to {toLoc}");
+            if (logger.IsEnabled(LogLevel.Trace))
+                logger.LogTrace($"Creating Path from {fromLoc} to {toLoc}");
 
             var sw = Stopwatch.StartNew();
 
@@ -1018,8 +1016,8 @@ namespace PPather.Graph
                 }
             }
 
-            if (logger.IsEnabled(LogLevel.Debug))
-                logger.LogDebug($"CreatePath took {sw.ElapsedMilliseconds}ms");
+            if (logger.IsEnabled(LogLevel.Trace))
+                logger.LogTrace($"CreatePath took {sw.ElapsedMilliseconds}ms");
 
             if (rawPath == null)
             {

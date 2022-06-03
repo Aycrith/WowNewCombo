@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using Wmo;
 using Microsoft.Extensions.Logging;
 using PPather.Graph;
+using static System.MathF;
 
 #pragma warning disable 162
 
@@ -30,11 +31,11 @@ namespace WowTriangles
         public static int TriangleFlagObject = 2;
         public static int TriangleFlagModel = 4;
 
-        private List<TriangleSupplier> suppliers = new List<TriangleSupplier>();
+        private List<TriangleSupplier> suppliers = new();
 
         private SparseMatrix2D<TriangleCollection> chunks;
 
-        public List<TriangleCollection> loadedChunks = new List<TriangleCollection>();
+        public List<TriangleCollection> loadedChunks = new();
         private int NOW;
         private int maxCached = 1000;
 
@@ -42,14 +43,8 @@ namespace WowTriangles
 
         public bool Updated
         {
-            get
-            {
-                return m_Updated;
-            }
-            set
-            {
-                m_Updated = false;
-            }
+            get => m_Updated;
+            set => m_Updated = false;
         }
 
         public List<TriangleCollection> LoadedChunks
@@ -85,13 +80,15 @@ namespace WowTriangles
 
         public void EvictAll()
         {
-            TriangleCollection toEvict = null;
+            TriangleCollection toEvict;
             while (loadedChunks.Count > 0)
             {
-                toEvict = (TriangleCollection)loadedChunks[0];
+                toEvict = loadedChunks[0];
                 loadedChunks.Remove(toEvict);
                 chunks.Clear(toEvict.grid_x, toEvict.grid_y);
-                Console.WriteLine("Evict chunk at " + toEvict.base_x + " " + toEvict.base_y);
+
+                if (logger.IsEnabled(LogLevel.Trace))
+                    logger.LogTrace($"Evict chunk at {toEvict.base_x} {toEvict.base_y}");
             }
         }
 
@@ -110,7 +107,10 @@ namespace WowTriangles
                 }
                 loadedChunks.Remove(toEvict);
                 chunks.Clear(toEvict.grid_x, toEvict.grid_y);
-                Console.WriteLine("Evict chunk at " + toEvict.base_x + " " + toEvict.base_y);
+
+                if (logger.IsEnabled(LogLevel.Trace))
+                    logger.LogTrace($"Evict chunk at {toEvict.base_x} {toEvict.base_y}");
+
                 m_Updated = true;
             }
         }
@@ -184,8 +184,11 @@ namespace WowTriangles
             float min_x, max_x, min_y, max_y;
             GetGridLimits(grid_x, grid_y, out min_x, out min_y, out max_x, out max_y);
 
-            Console.WriteLine("Got asked for triangles at " + x + ", " + y + " grid [" + grid_x + "," + grid_y + "]");
-            Console.WriteLine("Need triangles grid (" + min_x + " , " + min_y + ") - (" + max_x + ", " + max_y);
+            if (logger.IsEnabled(LogLevel.Trace))
+                logger.LogTrace($"Got asked for triangles at {x}, {y} grid [{grid_x}, {grid_y}]");
+
+            if (logger.IsEnabled(LogLevel.Trace))
+                logger.LogTrace($"Need triangles grid [{min_x}, {min_y}] - [{max_x}, {max_y}]");
 
             tc.SetLimits(min_x - 1, min_y - 1, -1E30f, max_x + 1, max_y + 1, 1E30f);
             foreach (TriangleSupplier s in suppliers)
@@ -196,15 +199,20 @@ namespace WowTriangles
             tc.ClearVertexMatrix(); // not needed anymore
             tc.base_x = grid_x;
             tc.base_y = grid_y;
-            Console.WriteLine("  it got " + tc.GetNumberOfTriangles() + " triangles and " + tc.GetNumberOfVertices() + " vertices");
+
+            if (logger.IsEnabled(LogLevel.Trace))
+                logger.LogTrace($"Got {tc.GetNumberOfTriangles()} triangles and {tc.GetNumberOfVertices()} vertices");
 
             loadedChunks.Add(tc);
             NotifyChunkAdded?.Invoke(new ChunkAddedEventArgs(tc));
-            System.Threading.Thread.Sleep(1000);
+            // slows down! but RemotePathingV1 no longer updates the scene realtime!
+            //System.Threading.Thread.Sleep(1000);
 
             chunks.Set(grid_x, grid_y, tc);
 
-            Console.WriteLine("Got triangles grid (" + tc.min_x + " , " + tc.min_y + ") - (" + tc.max_x + ", " + tc.max_y);
+            if (logger.IsEnabled(LogLevel.Trace))
+                logger.LogTrace($"Got triangles grid [{tc.min_x}, {tc.min_y}] - [{tc.max_x}, {tc.max_y}]");
+
             m_Updated = true;
         }
 
@@ -216,7 +224,9 @@ namespace WowTriangles
             int grid_x, grid_y;
             GetGridStartAt(x, y, out grid_x, out grid_y);
             TriangleCollection tc = chunks.Get(grid_x, grid_y);
-            tc.LRU = NOW++;
+            if (tc != null)
+                tc.LRU = NOW++;
+
             LastTriangleCollection = tc;
             return tc;
         }
@@ -346,13 +356,13 @@ namespace WowTriangles
             if (UseOctree)
             {
                 TriangleOctree ot = tc.GetOctree();
-                tst = ts = ot.FindTrianglesInBox(Utils.min(x0, x1), Utils.min(y0, y1), Utils.min(z0, z1),
-                                           Utils.max(x0, x1), Utils.max(y0, y1), Utils.max(z0, z1));
+                tst = ts = ot.FindTrianglesInBox(Min(x0, x1), Min(y0, y1), Min(z0, z1),
+                                           Max(x0, x1), Max(y0, y1), Max(z0, z1));
             }
             if (UseMatrix)
             {
                 TriangleMatrix tm = tc.GetTriangleMatrix();
-                tsm = ts = tm.GetAllInSquare(Utils.min(x0, x1), Utils.min(y0, y1), Utils.max(x0, x1), Utils.max(y0, y1));
+                tsm = ts = tm.GetAllInSquare(Min(x0, x1), Min(y0, y1), Max(x0, x1), Max(y0, y1));
             }
 
             // 3: check collision with objects
@@ -518,7 +528,7 @@ namespace WowTriangles
                 Vector3 normal;
                 Utils.GetTriangleNormal(vertex0, vertex1, vertex2, out normal);
                 float angle_z = (float)Math.Sin(40.0 / 360.0 * Math.PI * 2); //
-                if (Utils.abs(normal.Z) > angle_z || IgnoreGradient)
+                if (Abs(normal.Z) > angle_z || IgnoreGradient)
                 {
                     bool hasIntersected = false;
 
@@ -534,8 +544,9 @@ namespace WowTriangles
                         {
                             if (!IsSpotBlocked(intersect.X, intersect.Y, intersect.Z, toonHeight, toonSize))
                             {
-                                if (logger.IsEnabled(LogLevel.Debug))
-                                    logger.LogDebug("new best z:" + intersect.Z.ToString());
+                                if (logger.IsEnabled(LogLevel.Trace))
+                                    logger.LogTrace($"new best z: {intersect.Z}");
+
                                 best_z = intersect.Z;
                                 best_flags = t_flags;
                                 found = true;
@@ -653,7 +664,7 @@ namespace WowTriangles
             }
 
             Vector3 s0 = new(x, y, min_z);
-            Vector3 s1 = new(x,y, max_z);
+            Vector3 s1 = new(x, y, max_z);
 
             foreach (int t in ts)
             {
@@ -840,7 +851,7 @@ namespace WowTriangles
                     Vector3 normal;
                     Utils.GetTriangleNormal(vertex0, vertex1, vertex2, out normal);
                     float angle_z = (float)Math.Sin(45.0 / 360.0 * Math.PI * 2); //
-                    if (Utils.abs(normal.Z) > angle_z)
+                    if (Abs(normal.Z) > angle_z)
                     {
                         if (Utils.SegmentTriangleIntersect(s0, s1, vertex0, vertex1, vertex2, out intersect))
                         {

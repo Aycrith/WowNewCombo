@@ -5,6 +5,7 @@
  */
 
 using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
 using System.Numerics;
 
 namespace WowTriangles
@@ -144,11 +145,12 @@ namespace WowTriangles
                 }
             }
 
-            public void FindTrianglesInBox(Vector3 box_min, Vector3 box_max, Set<int> found)
+            public void FindTrianglesInBox(Vector3 box_min, Vector3 box_max, HashSet<int> found)
             {
                 if (triangles != null)
                 {
-                    found.AddRange(triangles);
+                    foreach(int tri in triangles)
+                        found.Add(tri);
                 }
                 else
                 {
@@ -171,12 +173,12 @@ namespace WowTriangles
             }
         }
 
-        public Set<int> FindTrianglesInBox(float min_x, float min_y, float min_z,
+        public HashSet<int> FindTrianglesInBox(float min_x, float min_y, float min_z,
                                            float max_x, float max_y, float max_z)
         {
-            Vector3 min = new Vector3(min_x, min_y, min_z);
-            Vector3 max = new Vector3(max_x, max_y, max_z);
-            Set<int> found = new Set<int>();
+            Vector3 min = new(min_x, min_y, min_z);
+            Vector3 max = new(max_x, max_y, max_z);
+            HashSet<int> found = new();
             rootNode.FindTrianglesInBox(min, max, found);
             return found;
         }
