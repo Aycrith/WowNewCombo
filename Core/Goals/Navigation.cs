@@ -16,14 +16,16 @@ namespace Core.Goals
         public int MapId { get; }
         public Vector3 Start { get; }
         public Vector3 End { get; }
-        public Action<List<Vector3>, bool> Callback { get; }
+        public Action<PathResult> Callback { get; }
+        public DateTime Time { get; }
 
-        public PathRequest(int mapId, Vector3 start, Vector3 end, Action<List<Vector3>, bool> callback)
+        public PathRequest(int mapId, Vector3 start, Vector3 end, Action<PathResult> callback)
         {
             MapId = mapId;
             Start = start;
             End = end;
             Callback = callback;
+            Time = DateTime.UtcNow;
         }
     }
 
@@ -31,12 +33,14 @@ namespace Core.Goals
     {
         public List<Vector3> Path { get; }
         public bool Success { get; }
-        public Action<List<Vector3>, bool> Callback { get; }
+        public double ElapsedMs { get; }
+        public Action<PathResult> Callback { get; }
 
-        public PathResult(List<Vector3> path, bool success, Action<List<Vector3>, bool> callback)
+        public PathResult(List<Vector3> path, bool success, double elapsedMs, Action<PathResult> callback)
         {
             Path = path;
             Success = success;
+            ElapsedMs = elapsedMs;
             Callback = callback;
         }
     }
@@ -84,10 +88,11 @@ namespace Core.Goals
 
         private readonly ConcurrentQueue<PathRequest> pathRequests = new();
         private readonly ConcurrentQueue<PathResult> pathResults = new();
-        private readonly Thread? pathfinderThread;
-        private readonly ManualResetEvent manualReset;
-        private bool isWorking;
+
         private readonly CancellationTokenSource _cts;
+        private readonly Thread pathfinderThread;
+        private readonly ManualResetEvent manualReset;
+        private bool searchingPath;
 
         public Navigation(ILogger logger, PlayerDirection playerDirection, ConfigurableInput input, AddonReader addonReader, StopMoving stopMoving, StuckDetector stuckDetector, IPPather pather, MountHandler mountHandler, Mode mode)
         {
@@ -139,10 +144,10 @@ namespace Core.Goals
 
             while (pathResults.TryDequeue(out PathResult result))
             {
-                result.Callback(result.Path, result.Success);
+                result.Callback(result);
             }
 
-            if (isWorking)
+            if (searchingPath)
             {
                 return;
             }
@@ -320,20 +325,21 @@ namespace Core.Goals
             {
                 stopMoving.Stop();
 
-                Log($"pathfinder - {distance} - {location} -> {wayPoints.Peek()}");
-                PathRequest(new PathRequest(addonReader.UIMapId.Value, location, wayPoints.Peek(), (List<Vector3> path, bool success) =>
+                PathRequest(new PathRequest(addonReader.UIMapId.Value, location, wayPoints.Peek(), (PathResult result) =>
                 {
                     if (!active)
                         return;
 
-                    if (!success || path == null || path.Count == 0)
+                    if (!result.Success || result.Path == null || result.Path.Count == 0)
                     {
-                        LogWarn($"Unable to find path {location} -> {wayPoints.Peek()}. Character may stuck!");
+                        LogWarn($"Unable to find path {location} -> {wayPoints.Peek()}. Character may stuck! {result.ElapsedMs} ms");
                         return;
                     }
 
-                    path.Reverse();
-                    path.ForEach(p => routeToNextWaypoint.Push(p));
+                    Log($"pathfinder - {distance} - {location} -> {wayPoints.Peek()} {result.ElapsedMs} ms");
+
+                    result.Path.Reverse();
+                    result.Path.ForEach(p => routeToNextWaypoint.Push(p));
 
                     if (SimplifyRouteToWaypoint)
                         SimplyfyRouteToWaypoint();
@@ -359,9 +365,10 @@ namespace Core.Goals
 
                 routeToNextWaypoint.Push(wayPoints.Peek());
 
-                var heading = DirectionCalculator.CalculateHeading(location, wayPoints.Peek());
                 if (debug)
                     LogDebug("Reached waypoint");
+
+                float heading = DirectionCalculator.CalculateHeading(location, wayPoints.Peek());
                 AdjustHeading(heading, _cts);
 
                 stuckDetector.SetTargetLocation(routeToNextWaypoint.Peek());
@@ -380,18 +387,18 @@ namespace Core.Goals
             while (!_cts.IsCancellationRequested)
             {
                 manualReset.WaitOne();
-                isWorking = true;
+                searchingPath = true;
 
                 if (pathRequests.TryDequeue(out PathRequest pathRequest))
                 {
                     var path = await pather.FindRoute(pathRequest.MapId, pathRequest.Start, pathRequest.End);
                     if (active)
                     {
-                        pathResults.Enqueue(new PathResult(path, true, pathRequest.Callback));
+                        pathResults.Enqueue(new PathResult(path, true, (DateTime.UtcNow - pathRequest.Time).TotalMilliseconds, pathRequest.Callback));
                     }
                 }
 
-                isWorking = false;
+                searchingPath = false;
                 manualReset.Reset();
             }
 
