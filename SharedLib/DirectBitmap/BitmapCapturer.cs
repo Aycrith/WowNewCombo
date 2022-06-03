@@ -10,18 +10,21 @@ namespace SharedLib
 
         public Bitmap Bitmap { get; private set; }
 
+        private readonly Graphics graphics;
+
         public BitmapCapturer(Rectangle rect)
         {
             this.Rect = rect;
             Bitmap = new(rect.Width, rect.Height, PixelFormat.Format32bppPArgb);
+            graphics = Graphics.FromImage(Bitmap);
+
         }
 
         public void Capture()
         {
-            var graphics = Graphics.FromImage(Bitmap);
-            graphics.CopyFromScreen(Rect.Left, Rect.Top, 0, 0, Bitmap.Size);
-            graphics.Dispose();
+            graphics.CopyFromScreen(Rect.Location, Point.Empty, Bitmap.Size);
         }
+
         public void Capture(Rectangle rect)
         {
             Rect = rect;
@@ -46,7 +49,8 @@ namespace SharedLib
 
         public void Dispose()
         {
-            Bitmap?.Dispose();
+            Bitmap.Dispose();
+            graphics.Dispose();
         }
     }
 }

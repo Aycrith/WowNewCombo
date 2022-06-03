@@ -32,6 +32,9 @@ namespace Game
         private Rectangle rect;
         public Rectangle Rect => rect;
 
+        private readonly Graphics graphics;
+        private readonly Graphics graphicsMinimap;
+
         public WowScreen(ILogger logger, WowProcess wowProcess)
         {
             this.logger = logger;
@@ -40,23 +43,22 @@ namespace Game
             Point p = new();
             GetPosition(ref p);
             GetRectangle(out rect);
-            rect.X = p.X;
-            rect.Y = p.Y;
+            rect.Location = p;
 
             Bitmap = new Bitmap(rect.Width, rect.Height, PixelFormat.Format32bppPArgb);
+            graphics = Graphics.FromImage(Bitmap);
+
             MiniMapBitmap = new Bitmap(MinimapSize, MinimapSize, PixelFormat.Format32bppPArgb);
+            graphicsMinimap = Graphics.FromImage(MiniMapBitmap);
         }
 
         public void Update()
         {
             Point p = new();
             GetPosition(ref p);
-            rect.X = p.X;
-            rect.Y = p.Y;
+            rect.Location = p;
 
-            var graphics = Graphics.FromImage(Bitmap);
-            graphics.CopyFromScreen(rect.Left, rect.Top, 0, 0, Bitmap.Size);
-            graphics.Dispose();
+            graphics.CopyFromScreen(rect.Location, Point.Empty, Bitmap.Size);
         }
 
         public void AddDrawAction(Action<Graphics> a)
@@ -111,15 +113,14 @@ namespace Game
         public void UpdateMinimapBitmap()
         {
             GetRectangle(out var rect);
-
-            var graphics = Graphics.FromImage(MiniMapBitmap);
-            graphics.CopyFromScreen(rect.Right - MinimapSize, rect.Top, 0, 0, MiniMapBitmap.Size);
-            graphics.Dispose();
+            graphicsMinimap.CopyFromScreen(rect.Right - MinimapSize, rect.Top, 0, 0, MiniMapBitmap.Size);
         }
 
         public void Dispose()
         {
             Bitmap.Dispose();
+            graphics.Dispose();
+            graphicsMinimap.Dispose();
         }
 
         private static Bitmap CropImage(Bitmap img, bool highlight)
