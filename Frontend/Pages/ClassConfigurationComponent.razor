@@ -27,7 +27,7 @@
                                 <td>@(property.Name)</td>
                                 <td>
                                     <input value="@property.GetValue(classConfig)" class="form-control" disabled="@(!editables.Contains(property.Name))"
-                               @onchange="c => { property.SetValue(classConfig, Convert.ToInt32(c.Value)); Update(); }" />
+                               @onchange="c => { if(int.TryParse(c.Value?.ToString(), out int n)) { property.SetValue(classConfig, n); Update(); } }" />
                                 </td>
                                 break;
                             case TypeCode.Boolean:
