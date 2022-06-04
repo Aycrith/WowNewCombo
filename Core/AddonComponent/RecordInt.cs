@@ -44,6 +44,11 @@ namespace Core
             }
         }
 
+        public void UpdateTime()
+        {
+            LastChanged = DateTime.UtcNow;
+        }
+
         public void Reset()
         {
             Value = 0;
