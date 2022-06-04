@@ -89,8 +89,8 @@ namespace WowTriangles
 
             // get intersect point of ray with triangle plane
             float r = a / b;
-            if (r < 0.0) return false; // "before" p0
-            if (r > 1.0) return false; // "after" p1
+            if (r < 0.0f) return false; // "before" p0
+            if (r > 1.0f) return false; // "after" p1
 
             Vector3 M = Multiply(dir, r);
             I = Add(p0, M);// intersect point of line and plane
@@ -106,11 +106,11 @@ namespace WowTriangles
 
             // get and test parametric coords
             float s = (uv * wv - vv * wu) / D;
-            if (s < 0.0 || s > 1.0)        // I is outside T
+            if (s < 0.0f || s > 1.0f)        // I is outside T
                 return false;
 
             float t = (uv * wu - uu * wv) / D;
-            if (t < 0.0 || (s + t) > 1.0)  // I is outside T
+            if (t < 0.0f || (s + t) > 1.0f)  // I is outside T
                 return false;
 
             return true;
@@ -547,166 +547,6 @@ namespace WowTriangles
             z = innermost[i1 + 2];
             w = innermost[i1 + 3];
             sequence = innermost[i1 + 4];
-        }
-    }
-
-    /// <summary>
-    /// Represents an item stored in a priority queue.
-    /// </summary>
-    /// <typeparam name="TValue">The type of object in the queue.</typeparam>
-    /// <typeparam name="TPriority">The type of the priority field.</typeparam>
-
-    internal struct PriorityQueueItem<TValue, TPriority>
-    {
-        private TValue value;
-        private TPriority priority;
-
-        public PriorityQueueItem(TValue val, TPriority pri)
-        {
-            this.value = val;
-            this.priority = pri;
-        }
-
-        /// <summary>
-        /// Gets the value of this PriorityQueueItem.
-        /// </summary>
-        public TValue Value
-        {
-            get { return value; }
-        }
-
-        /// <summary>
-        /// Gets the priority associated with this PriorityQueueItem.
-        /// </summary>
-        public TPriority Priority
-        {
-            get { return priority; }
-        }
-    }
-
-    /// <summary>
-    /// Represents a binary heap priority queue.
-    /// </summary>
-    /// <typeparam name="TValue">The type of object in the queue.</typeparam>
-    /// <typeparam name="TPriority">The type of the priority field.</typeparam>
-
-    public class PriorityQueue<TValue, TPriority>
-    {
-        private PriorityQueueItem<TValue, TPriority>[] items;
-
-        private const int DefaultCapacity = 16;
-        private int capacity;
-        private Comparison<TPriority> compareFunc;
-
-        public int Count { get; private set; }
-
-        public int Capacity
-        {
-            get => items.Length;
-            set => SetCapacity(value);
-        }
-
-        public PriorityQueue()
-            : this(DefaultCapacity, Comparer<TPriority>.Default)
-        {
-        }
-
-        public PriorityQueue(int initialCapacity, IComparer<TPriority> comparer)
-        {
-            Init(initialCapacity, new Comparison<TPriority>(comparer.Compare));
-        }
-
-        // Initializes the queue
-        private void Init(int initialCapacity, Comparison<TPriority> comparison)
-        {
-            Count = 0;
-            compareFunc = comparison;
-            SetCapacity(initialCapacity);
-        }
-
-        // Set the queue's capacity.
-        private void SetCapacity(int newCapacity)
-        {
-            int newCap = newCapacity;
-            if (newCap < DefaultCapacity)
-                newCap = DefaultCapacity;
-
-            // throw exception if newCapacity < numItems
-            if (newCap < Count)
-                throw new ArgumentOutOfRangeException("newCapacity", "New capacity is less than Count");
-
-            this.capacity = newCap;
-            if (items == null)
-            {
-                // Initial allocation.
-                items = new PriorityQueueItem<TValue, TPriority>[newCap];
-                return;
-            }
-
-            // Resize the array.
-            Array.Resize(ref items, newCap);
-        }
-
-        public void Enqueue(TValue value, TPriority priority)
-        {
-            if (Count == capacity)
-            {
-                // need to increase capacity
-                // grow by 50 percent
-                SetCapacity((3 * Capacity) / 2);
-            }
-
-            // Create the new item
-            PriorityQueueItem<TValue, TPriority> newItem = new(value, priority);
-            int i = Count;
-            ++Count;
-
-            // and insert it into the heap.
-            while ((i > 0) && (compareFunc(items[i / 2].Priority, newItem.Priority) < 0))
-            {
-                items[i] = items[i / 2];
-                i /= 2;
-            }
-            items[i] = newItem;
-        }
-
-        // Remove a node at a particular position in the queue.
-        private PriorityQueueItem<TValue, TPriority> RemoveAt(Int32 index)
-        {
-            // remove an item from the heap
-            PriorityQueueItem<TValue, TPriority> o = items[index];
-            PriorityQueueItem<TValue, TPriority> tmp = items[Count - 1];
-            items[--Count] = default(PriorityQueueItem<TValue, TPriority>);
-            if (Count > 0)
-            {
-                int i = index;
-                int j = i + 1;
-                while (i < Count / 2)
-                {
-                    if ((j < Count - 1) && (compareFunc(items[j].Priority, items[j + 1].Priority) < 0))
-                    {
-                        j++;
-                    }
-                    if (compareFunc(items[j].Priority, tmp.Priority) <= 0)
-                    {
-                        break;
-                    }
-                    items[i] = items[j];
-                    i = j;
-                    j *= 2;
-                }
-                items[i] = tmp;
-            }
-            return o;
-        }
-
-        public TValue Dequeue(out TPriority prio)
-        {
-            if (Count == 0)
-                throw new InvalidOperationException("The queue is empty");
-            PriorityQueueItem<TValue, TPriority> item = RemoveAt(0);
-            prio = item.Priority;
-            return item.Value;
         }
     }
 }
