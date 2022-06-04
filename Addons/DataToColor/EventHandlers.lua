@@ -38,7 +38,7 @@ local errorList = {
 
 function DataToColor:RegisterEvents()
     DataToColor:RegisterEvent("UI_ERROR_MESSAGE", 'OnUIErrorMessage')
-    DataToColor:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED", 'OnCombatEvent')
+    DataToColor:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED", 'UnfilteredCombatEvent')
     DataToColor:RegisterEvent('LOOT_CLOSED','OnLootClosed')
     DataToColor:RegisterEvent('BAG_UPDATE','OnBagUpdate')
     DataToColor:RegisterEvent('BAG_CLOSED','OnBagUpdate')
@@ -134,8 +134,25 @@ local swing_reset_spells = {
     [132340]=1
 }
 
+local miss_type = {
+    ["ABSORB"]=0,
+    ["BLOCK"]=1,
+    ["DEFLECT"]=2,
+    ["DODGE"]=3,
+    ["EVADE"]=4,
+    ["IMMUNE"]=5,
+    ["MISS"]=6,
+    ["PARRY"]=7,
+    ["REFLECT"]=8,
+    ["RESIST"]=9,
+}
+
+function DataToColor:UnfilteredCombatEvent()
+    DataToColor:OnCombatEvent(CombatLogGetCurrentEventInfo())
+end
+
 function DataToColor:OnCombatEvent(...)
-    local _, eventType, _, sourceGUID, sourceName, _, _, destGUID, destName, _, _, spellId, _, _ = CombatLogGetCurrentEventInfo();
+    local _, eventType, _, sourceGUID, sourceName, _, _, destGUID, destName, _, _, spellId, _, _ = ...
     --print(CombatLogGetCurrentEventInfo())
     if eventType=="SPELL_PERIODIC_DAMAGE" then
         DataToColor.lastCombatCreature=0;
@@ -173,7 +190,7 @@ function DataToColor:OnCombatEvent(...)
 
             if string.find(eventType, "_CAST_FAILED") then
                 --local lastCastEvent = DataToColor.lastCastEvent
-                local failedType = select(15, CombatLogGetCurrentEventInfo())
+                local failedType = select(15, ...)
                 DataToColor.lastCastEvent = DataToColor:GetErrorCode(nil, failedType)
                 --print(lastCastEvent.." -> "..DataToColor.lastCastEvent.." "..failedType.." "..spellId)
             else
@@ -185,6 +202,14 @@ function DataToColor:OnCombatEvent(...)
         if not string.find(eventType, "SPELL_PERIODIC") and
             (string.find(eventType, "_DAMAGE") or string.find(eventType, "_MISSED")) then
             DataToColor.lastCombatDamageDoneCreature = DataToColor:getGuidFromUUID(destGUID);
+
+            if string.find(eventType, "_MISSED") then
+                local missType = select(-2, ...)
+                if type(missType) == "boolean" then -- some spells has 3 args like Charge Stun
+                    missType = select(-3, ...)
+                end
+                DataToColor.stack:push(DataToColor.CombatMissTypeQueue, miss_type[missType])
+            end
         end
 
         if string.find(eventType, "SWING_") then
