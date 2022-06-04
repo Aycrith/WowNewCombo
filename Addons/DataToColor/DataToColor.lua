@@ -151,6 +151,7 @@ DataToColor.actionBarCooldownQueue = {}
 DataToColor.spellBookQueue = {}
 DataToColor.talentQueue = {}
 DataToColor.CombatDamageTakenQueue = {}
+DataToColor.CombatMissTypeQueue = {}
 
 local equipmentSlot = nil
 local bagNum = nil
@@ -656,6 +657,7 @@ function DataToColor:CreateFrames(n)
 
             if DataToColor:Modulo(globalCounter, COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE) == 0 then
                 MakePixelSquareArrI(DataToColor.stack:pop(DataToColor.CombatDamageTakenQueue) or 0, 66) -- Last Combat Damage taken
+                MakePixelSquareArrI(DataToColor.stack:pop(DataToColor.CombatMissTypeQueue) or 0, 76) -- Last Combat Miss type
             end
 
             MakePixelSquareArrI(DataToColor.lastCombatCreatureDied, 67) -- Last Killed Unit
@@ -692,6 +694,8 @@ function DataToColor:CreateFrames(n)
 
             MakePixelSquareArrI(DataToColor:Base2CustomTrigger(DataToColor.customTrigger1), 74)
             MakePixelSquareArrI(DataToColor:getMeleeAttackSpeed(DataToColor.C.unitPlayer), 75)
+
+            -- 76 taken by combat miss type Queue
 
             -- Timers
             MakePixelSquareArrI(DataToColor.lastLoot, 97)

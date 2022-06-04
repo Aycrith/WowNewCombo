@@ -112,6 +112,9 @@ namespace Core
         public RecordInt MainHandSwing { get; } = new(61);
         public RecordInt CastEvent { get; } = new(62);
         public RecordInt CastSpellId { get; } = new(63);
+        public RecordInt TargetLastMissType { get; } = new(76);
+        public RecordInt LastTargetDodge { get; } = new(76);
+        public MissType MissType => (MissType)TargetLastMissType.Value;
 
         public int PetGuid => reader.GetInt(68);
         public int PetTargetGuid => reader.GetInt(69);
@@ -158,6 +161,11 @@ namespace Core
             MainHandSwing.Update(reader);
             CastEvent.Update(reader);
             CastSpellId.Update(reader);
+
+            if (TargetLastMissType.Updated(reader) && MissType == MissType.DODGE)
+            {
+                LastTargetDodge.UpdateTime();
+            }
         }
 
         public void Reset()
@@ -169,6 +177,9 @@ namespace Core
             MainHandSwing.Reset();
             CastEvent.Reset();
             CastSpellId.Reset();
+
+            TargetLastMissType.Reset();
+            LastTargetDodge.Reset();
 
             PlayerXp.Reset();
             Level.Reset();

@@ -273,7 +273,8 @@ namespace Core
                 { "MinRange", () => playerReader.MinRange },
                 { "MaxRange", () => playerReader.MaxRange },
                 { "LastAutoShotMs", () => playerReader.AutoShot.ElapsedMs },
-                { "LastMainHandMs", () => playerReader.MainHandSwing.ElapsedMs }, 
+                { "LastMainHandMs", () => playerReader.MainHandSwing.ElapsedMs },
+                { "LastTargetDodgeMs", () => Math.Max(0, playerReader.LastTargetDodge.ElapsedMs) },
                 //"CD_{KeyAction.Name}
                 //"Cost_{KeyAction.Name}"
                 { "MainHandSpeed", () => playerReader.MainHandSpeedMs },
