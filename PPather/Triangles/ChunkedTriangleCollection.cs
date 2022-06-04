@@ -205,8 +205,6 @@ namespace WowTriangles
 
             loadedChunks.Add(tc);
             NotifyChunkAdded?.Invoke(new ChunkAddedEventArgs(tc));
-            // slows down! but RemotePathingV1 no longer updates the scene realtime!
-            //System.Threading.Thread.Sleep(1000);
 
             chunks.Set(grid_x, grid_y, tc);
 

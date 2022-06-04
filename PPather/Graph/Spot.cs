@@ -159,14 +159,13 @@ namespace PPather.Graph
 
         public Spot GetToSpot(PathGraph pg, int i)
         {
-            float x, y, z;
-            GetPath(i, out x, out y, out z);
+            GetPath(i, out float x, out float y, out float z);
             return pg.GetSpot(x, y, z);
         }
 
         public List<Spot> GetPathsToSpots(PathGraph pg)
         {
-            List<Spot> list = new List<Spot>(n_paths);
+            List<Spot> list = new(n_paths);
             for (int i = 0; i < n_paths; i++)
             {
                 Spot spot = GetToSpot(pg, i);
@@ -177,13 +176,13 @@ namespace PPather.Graph
 
         public List<Location> GetPaths()
         {
-            List<Location> l = new List<Location>();
+            List<Location> l = new();
             if (paths == null)
                 return l;
             for (int i = 0; i < n_paths; i++)
             {
                 int off = i * 3;
-                Location loc = new Location(paths[off], paths[off + 1], paths[off + 2]);
+                Location loc = new(paths[off], paths[off + 1], paths[off + 2]);
                 l.Add(loc);
             }
             return l;
@@ -244,7 +243,7 @@ namespace PPather.Graph
                 int new_size = old_size * 2;
                 if (new_size < 4)
                     new_size = 4;
-                Array.Resize<float>(ref paths, new_size * 3);
+                Array.Resize(ref paths, new_size * 3);
             }
 
             int off = n_paths * 3;

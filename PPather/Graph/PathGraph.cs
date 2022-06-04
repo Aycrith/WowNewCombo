@@ -29,7 +29,7 @@ namespace PPather.Graph
     {
         public static bool SearchEnabled;
 
-        private static Object m_LockObject = new Object();
+        private static readonly object m_LockObject = new();
 
         public enum eSearchScoreSpot
         {
@@ -37,6 +37,8 @@ namespace PPather.Graph
             A_Star,
             A_Star_With_Model_Avoidance,
         }
+
+        public static int gradiantMax = 5;
 
         public eSearchScoreSpot searchScoreSpot = eSearchScoreSpot.A_Star_With_Model_Avoidance;
         public int sleepMSBetweenSpots;
@@ -113,7 +115,6 @@ namespace PPather.Graph
         public static int ProgressTimeoutSeconds = 10;
 
         private readonly ILogger logger;
-        private readonly DataConfig dataConfig;
 
         public PathGraph(string continent,
                          ChunkedTriangleCollection triangles,
@@ -123,7 +124,6 @@ namespace PPather.Graph
             this.Continent = continent;
             this.triangleWorld = triangles;
             this.paint = paint;
-            this.dataConfig = dataConfig;
             BaseDir = dataConfig.PathInfo;
             Clear();
         }
@@ -611,8 +611,8 @@ namespace PPather.Graph
             //searchProgress = new SearchProgress(fromSpot, destinationSpot, searchID);
 
             // lowest first queue
-            WowTriangles.PriorityQueue<Spot, float> prioritySpotQueue = new(); // (new SpotSearchComparer(dst, score)); ;
-            prioritySpotQueue.Enqueue(fromSpot, -fromSpot.GetDistanceTo(destinationSpot) * heuristicsFactor);
+            PriorityQueue<Spot, float> prioritySpotQueue = new();
+            prioritySpotQueue.Enqueue(fromSpot, fromSpot.GetDistanceTo(destinationSpot) * heuristicsFactor);
 
             fromSpot.SearchScoreSet(currentSearchID, 0.0f);
             fromSpot.traceBack = null;
@@ -623,10 +623,10 @@ namespace PPather.Graph
             {
                 if (sleepMSBetweenSpots != 0) { Thread.Sleep(sleepMSBetweenSpots); } // slow down the pathing
 
-                currentSearchSpot = prioritySpotQueue.Dequeue(out float prio);
+                currentSearchSpot = prioritySpotQueue.Dequeue();
 
                 // force the world to be loaded
-                TriangleCollection tc = triangleWorld.GetChunkAt(currentSearchSpot.X, currentSearchSpot.Y);
+                _ = triangleWorld.GetChunkAt(currentSearchSpot.X, currentSearchSpot.Y);
 
                 if (currentSearchSpot.SearchIsClosed(currentSearchID)) { continue; }
                 currentSearchSpot.SearchClose(currentSearchID);
@@ -636,7 +636,7 @@ namespace PPather.Graph
 
                 // are we there?
 
-                var distance = currentSearchSpot.location.GetDistanceTo(destinationSpot.location);
+                float distance = currentSearchSpot.location.GetDistanceTo(destinationSpot.location);
 
                 if (distance <= minHowClose)
                 {
@@ -684,7 +684,7 @@ namespace PPather.Graph
             return null;
         }
 
-        private void ScoreSpot(Spot spotLinkedToCurrent, Spot destinationSpot, int currentSearchID, ILocationHeuristics locationHeuristics, WowTriangles.PriorityQueue<Spot, float> prioritySpotQueue)
+        private void ScoreSpot(Spot spotLinkedToCurrent, Spot destinationSpot, int currentSearchID, ILocationHeuristics locationHeuristics, PriorityQueue<Spot, float> prioritySpotQueue)
         {
             switch (searchScoreSpot)
             {
@@ -703,7 +703,7 @@ namespace PPather.Graph
             }
         }
 
-        public void ScoreSpot_A_Star(Spot spotLinkedToCurrent, Spot destinationSpot, int currentSearchID, ILocationHeuristics locationHeuristics, WowTriangles.PriorityQueue<Spot, float> prioritySpotQueue)
+        public void ScoreSpot_A_Star(Spot spotLinkedToCurrent, Spot destinationSpot, int currentSearchID, ILocationHeuristics locationHeuristics, PriorityQueue<Spot, float> prioritySpotQueue)
         {
             //score spot
             float G_Score = currentSearchSpot.traceBackDistance + currentSearchSpot.GetDistanceTo(spotLinkedToCurrent);//  the movement cost to move from the starting point A to a given square on the grid, following the path generated to get there.
@@ -718,13 +718,11 @@ namespace PPather.Graph
                 spotLinkedToCurrent.traceBack = currentSearchSpot;
                 spotLinkedToCurrent.traceBackDistance = G_Score;
                 spotLinkedToCurrent.SearchScoreSet(currentSearchID, F_Score);
-                prioritySpotQueue.Enqueue(spotLinkedToCurrent, -F_Score);
+                prioritySpotQueue.Enqueue(spotLinkedToCurrent, F_Score);
             }
         }
 
-        public static int gradiantMax = 5;
-
-        public void ScoreSpot_A_Star_With_Model_And_Gradient_Avoidance(Spot spotLinkedToCurrent, Spot destinationSpot, int currentSearchID, ILocationHeuristics locationHeuristics, WowTriangles.PriorityQueue<Spot, float> prioritySpotQueue)
+        public void ScoreSpot_A_Star_With_Model_And_Gradient_Avoidance(Spot spotLinkedToCurrent, Spot destinationSpot, int currentSearchID, ILocationHeuristics locationHeuristics, PriorityQueue<Spot, float> prioritySpotQueue)
         {
             //score spot
             float G_Score = currentSearchSpot.traceBackDistance + currentSearchSpot.GetDistanceTo(spotLinkedToCurrent);//  the movement cost to move from the starting point A to a given square on the grid, following the path generated to get there.
@@ -743,11 +741,11 @@ namespace PPather.Graph
                 spotLinkedToCurrent.traceBack = currentSearchSpot;
                 spotLinkedToCurrent.traceBackDistance = G_Score;
                 spotLinkedToCurrent.SearchScoreSet(currentSearchID, F_Score);
-                prioritySpotQueue.Enqueue(spotLinkedToCurrent, -F_Score);
+                prioritySpotQueue.Enqueue(spotLinkedToCurrent, F_Score);
             }
         }
 
-        public void ScoreSpot_Pather(Spot spotLinkedToCurrent, Spot destinationSpot, int currentSearchID, ILocationHeuristics locationHeuristics, WowTriangles.PriorityQueue<Spot, float> prioritySpotQueue)
+        public void ScoreSpot_Pather(Spot spotLinkedToCurrent, Spot destinationSpot, int currentSearchID, ILocationHeuristics locationHeuristics, PriorityQueue<Spot, float> prioritySpotQueue)
         {
             //score spots
             float currentSearchSpotScore = currentSearchSpot.SearchScoreGet(currentSearchID);
@@ -767,7 +765,7 @@ namespace PPather.Graph
                 // shorter path to here found
                 spotLinkedToCurrent.traceBack = currentSearchSpot;
                 spotLinkedToCurrent.SearchScoreSet(currentSearchID, new_score);
-                prioritySpotQueue.Enqueue(spotLinkedToCurrent, -(new_score + spotLinkedToCurrent.GetDistanceTo(destinationSpot) * heuristicsFactor));
+                prioritySpotQueue.Enqueue(spotLinkedToCurrent, (new_score + spotLinkedToCurrent.GetDistanceTo(destinationSpot) * heuristicsFactor));
             }
         }
 
