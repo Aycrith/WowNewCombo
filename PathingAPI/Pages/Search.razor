@@ -3,6 +3,7 @@
 @using PPather
 @using PPather.Data
 @using PPather.Graph
+@using System.Numerics
 
 @inject IJSRuntime jsRuntime
 @inject PPatherService pPatherService
@@ -102,7 +103,7 @@
             var from = parameters.From;
             var to = parameters.To;
 
-            pPatherService.SetLocations(from, to);
+            pPatherService.SetLocations(from.Location, to.Location);
 
             var patherPath = pPatherService.DoSearch(searchType);
 

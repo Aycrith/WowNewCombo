@@ -37,6 +37,7 @@ namespace Core.Goals
 
         private bool HasPickedUpAnAdd =>
             playerReader.Bits.PlayerInCombat &&
+            !playerReader.Bits.TargetInCombat &&
             !playerReader.Bits.TargetOfTargetIsPlayerOrPet;
 
         public ApproachTargetGoal(ILogger logger, ConfigurableInput input, Wait wait, PlayerReader playerReader, StopMoving stopMoving, CombatUtil combatUtil)

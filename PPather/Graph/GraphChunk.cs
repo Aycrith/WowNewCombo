@@ -85,14 +85,14 @@ namespace PPather.Graph
         // or the same as passed the function if all was ok
         public Spot AddSpot(Spot s)
         {
-            Spot old = GetSpot(s.X, s.Y, s.Z);
+            Spot old = GetSpot(s.Loc.X, s.Loc.Y, s.Loc.Z);
             if (old != null)
                 return old;
             int x, y;
 
             s.chunk = this;
 
-            LocalCoords(s.X, s.Y, out x, out y);
+            LocalCoords(s.Loc.X, s.Loc.Y, out x, out y);
 
             s.next = spots[x, y];
             spots[x, y] = s;
@@ -266,9 +266,9 @@ namespace PPather.Graph
                             file.Write(SPOT_MAGIC);
                             file.Write((uint)0); // reserved
                             file.Write(s.flags);
-                            file.Write(s.X);
-                            file.Write(s.Y);
-                            file.Write(s.Z);
+                            file.Write(s.Loc.X);
+                            file.Write(s.Loc.Y);
+                            file.Write(s.Loc.Z);
                             uint n_paths = (uint)s.n_paths;
                             file.Write(n_paths);
                             for (uint i = 0; i < n_paths; i++)

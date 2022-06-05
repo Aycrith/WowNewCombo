@@ -56,7 +56,8 @@ namespace Core
             try
             {
                 LogInformation($"Finding route from {fromPoint} map {map} to {toPoint} map {map}...");
-                var url = $"{api}MapRoute?map1={map}&x1={fromPoint.X}&y1={fromPoint.Y}&map2={map}&x2={toPoint.X}&y2={toPoint.Y}";
+                var url = $"{api}MapRoute?uimap1={map}&x1={fromPoint.X}&y1={fromPoint.Y}&uimap2={map}&x2={toPoint.X}&y2={toPoint.Y}";
+
                 stopwatch.Restart();
                 using var client = new HttpClient();
                 var responseString = await client.GetStringAsync(url);

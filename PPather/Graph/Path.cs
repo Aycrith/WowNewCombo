@@ -18,28 +18,29 @@
 
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 
 namespace PPather.Graph
 {
     public class Path
     {
-        public List<Location> locations { get; set; } = new List<Location>();
+        public List<Vector3> locations { get; set; } = new();
 
         public int Count => locations.Count;
 
-        public Location GetLast => locations[^1];
+        public Vector3 GetLast => locations[^1];
 
-        public Location this[int index] => locations[index];
+        public Vector3 this[int index] => locations[index];
 
         public Path(List<Spot> steps)
         {
             foreach (Spot s in steps)
             {
-                Add(s.location);
+                Add(s.Loc);
             }
         }
 
-        public void Add(Location l)
+        public void Add(Vector3 l)
         {
             locations.Add(l);
         }

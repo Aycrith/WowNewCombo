@@ -61,7 +61,7 @@ namespace Core
             return ValueTask.CompletedTask;
         }
 
-        public ValueTask<List<Vector3>> FindRoute(int map, Vector3 fromPoint, Vector3 toPoint)
+        public ValueTask<List<Vector3>> FindRoute(int uimap, Vector3 fromPoint, Vector3 toPoint)
         {
             if (!Enabled)
             {
@@ -71,7 +71,7 @@ namespace Core
 
             stopwatch.Restart();
 
-            service.SetLocations(service.GetWorldLocation(map, fromPoint.X, fromPoint.Y, fromPoint.Z), service.GetWorldLocation(map, toPoint.X, toPoint.Y));
+            service.SetLocations(service.GetWorldLocation(uimap, fromPoint.X, fromPoint.Y, fromPoint.Z), service.GetWorldLocation(uimap, toPoint.X, toPoint.Y));
             var path = service.DoSearch(PPather.Graph.PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
 
             stopwatch.Stop();
@@ -86,7 +86,7 @@ namespace Core
             else
             {
                 if (debug)
-                    LogDebug($"Finding route from {fromPoint} map {map} to {toPoint} took {stopwatch.ElapsedMilliseconds} ms.");
+                    LogDebug($"Finding route from {fromPoint} map {uimap} to {toPoint} took {stopwatch.ElapsedMilliseconds} ms.");
 
                 if ((DateTime.UtcNow - lastSave).TotalMinutes >= 1)
                 {
@@ -95,7 +95,7 @@ namespace Core
                 }
             }
 
-            var worldLocations = path.locations.Select(s => service.ToMapAreaSpot(s.X, s.Y, s.Z, map));
+            var worldLocations = path.locations.Select(s => service.ToMapAreaSpot(s.X, s.Y, s.Z, uimap));
             var result = worldLocations.Select(l => new Vector3(l.X, l.Y, l.Z)).ToList();
             return new ValueTask<List<Vector3>>(result);
         }

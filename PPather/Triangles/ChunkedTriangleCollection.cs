@@ -37,7 +37,7 @@ namespace WowTriangles
 
         public List<TriangleCollection> loadedChunks = new();
         private int NOW;
-        private int maxCached = 1000;
+        private int maxCached = 512;
 
         private bool m_Updated;
 
@@ -57,10 +57,9 @@ namespace WowTriangles
 
         private readonly ILogger logger;
 
-        public ChunkedTriangleCollection(float chunkSize, ILogger logger)
+        public ChunkedTriangleCollection(ILogger logger)
         {
             this.logger = logger;
-            // this.chunkSize = chunkSize;
             chunks = new SparseMatrix2D<TriangleCollection>(8);
         }
 
@@ -769,7 +768,7 @@ namespace WowTriangles
 
         public bool LineOfSightExists(Spot a, Spot b)
         {
-            TriangleCollection tc = GetChunkAt(a.X, a.Y);
+            TriangleCollection tc = GetChunkAt(a.Loc.X, a.Loc.Y);
             ICollection<int> ts;
 
             ts = null;
@@ -777,11 +776,11 @@ namespace WowTriangles
             if (UseMatrix)
             {
                 TriangleMatrix tm = tc.GetTriangleMatrix();
-                ts = tm.GetAllCloseTo(a.X, a.Y, a.GetDistanceTo(b) + 1);
+                ts = tm.GetAllCloseTo(a.Loc.X, a.Loc.Y, a.GetDistanceTo(b) + 1);
             }
 
-            Vector3 s0 = new(a.X, a.Y, a.Z);
-            Vector3 s1 = new(b.X, b.Y, b.Z);
+            Vector3 s0 = a.Loc;
+            Vector3 s1 = b.Loc;
 
             foreach (int t in ts)
             {

@@ -2,39 +2,38 @@
 using PPather.Graph;
 using System;
 using WowTriangles;
+using System.Numerics;
+using SharedLib.Extensions;
 
 namespace PPather
 {
     public class Search
     {
         public PathGraph PathGraph { get; set; }
-        public string continent;
+        public float MapId { get; set; }
 
         private readonly DataConfig dataConfig;
         private readonly ILogger logger;
 
-        public Location locationFrom { get; set; }
-        public Location locationTo { get; set; }
+        public Vector4 locationFrom { get; set; }
+        public Vector4 locationTo { get; set; }
 
         private const float toonHeight = 2.0f;
         private const float toonSize = 0.5f;
 
-        private static DateTime startTime;
-
-
-        public Search(string continent, ILogger logger, DataConfig dataConfig)
+        public Search(float mapId, ILogger logger, DataConfig dataConfig)
         {
             this.logger = logger;
-            this.continent = continent;
+            this.MapId = mapId;
             this.dataConfig = dataConfig;
 
             if (PathGraph == null)
             {
-                CreatePathGraph(continent);
+                CreatePathGraph(mapId);
             }
         }
 
-        public Location CreateLocation(float x, float y, float z = 0)
+        public Vector4 CreateLocation(float x, float y, float z, int mapId)
         {
             // find model 0 i.e. terrain
             var z0 = GetZValueAt(x, y, new int[] { (int)z });
@@ -44,7 +43,7 @@ namespace PPather
 
             if (z0 == float.MinValue) { z0 = 0; }
 
-            return new Location(x, y, z0 - toonHeight, "", continent);
+            return new Vector4(x, y, z0 - toonHeight, mapId);
         }
 
         private float GetZValueAt(float x, float y, int[] allowedModels)
@@ -74,27 +73,23 @@ namespace PPather
             return z0;
         }
 
-        public void CreatePathGraph(string continent)
+        public void CreatePathGraph(float mapId)
         {
-            MPQTriangleSupplier mpq = new MPQTriangleSupplier(this.logger, dataConfig);
-            mpq.SetContinent(continent);
-            var triangleWorld = new ChunkedTriangleCollection(512, this.logger);
+            this.MapId = mapId;
+
+            MPQTriangleSupplier mpq = new(logger, dataConfig, mapId);
+
+            ChunkedTriangleCollection triangleWorld = new(logger);
             triangleWorld.SetMaxCached(512);
             triangleWorld.AddSupplier(mpq);
-            PathGraph = new PathGraph(continent, triangleWorld, null, this.logger, dataConfig);
-            this.continent = continent;
-            startTime = DateTime.UtcNow;
+
+            PathGraph = new PathGraph(mapId, triangleWorld, null, logger, dataConfig);
+
+            //startTime = DateTime.UtcNow;
         }
 
         public Path DoSearch(PathGraph.eSearchScoreSpot searchType)
         {
-            //create a new path graph if required
-            const int ResetAfterMinutes = 15;
-            if (PathGraph == null || this.continent != locationFrom.Continent || (DateTime.UtcNow - startTime).TotalMinutes >= ResetAfterMinutes)
-            {
-                CreatePathGraph(locationFrom.Continent);
-            }
-
             PathGraph.SearchEnabled = true;
 
             // tell the pathgraph which type of search to do
@@ -105,7 +100,7 @@ namespace PPather
 
             try
             {
-                return PathGraph.CreatePath(locationFrom, locationTo, 5, null);
+                return PathGraph.CreatePath(locationFrom.AsVector3(), locationTo.AsVector3(), 5, null);
             }
             catch(Exception ex)
             {

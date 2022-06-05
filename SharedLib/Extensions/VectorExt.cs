@@ -78,5 +78,10 @@ namespace SharedLib.Extensions
         {
             return new Vector2(v3.X, v3.Y);
         }
+
+        public static Vector3 AsVector3(this Vector4 v4)
+        {
+            return new Vector3(v4.X, v4.Y, v4.Z);
+        }
     }
 }

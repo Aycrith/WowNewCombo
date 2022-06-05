@@ -1,4 +1,5 @@
 ﻿@using PPather.Graph
+@using SharedLib.Data
 
 @inject IJSRuntime jsRuntime
 
@@ -6,10 +7,10 @@
 
     <!-- Continent Combo -->
     <label>Continent:</label>
-    <select disabled="@IsDisabled" class="form-control" @bind="Continent">
-        @foreach (var continent in continents)
+    <select disabled="@IsDisabled" class="form-control" @bind="MapId">
+        @foreach (var kvp in ContinentDB.IdToName)
         {
-            <option value="@continent">@continent</option>
+            <option value="@kvp.Key">@kvp.Value</option>
         }
     </select>
 
@@ -17,7 +18,7 @@
     <label style="margin-left: 10px">From:</label>
     <select disabled="@IsDisabled" class="form-control" @bind="From">
         <option value=""></option>
-        @foreach (var location in locations.Where(l => l.Continent == Continent))
+        @foreach (var location in locations.Where(l => l.Location.W == MapId))
         {
             <option value="@location.Description">@location.Description</option>
         }
@@ -27,7 +28,7 @@
     <label style="margin-left: 10px">To:</label>
     <select disabled="@IsDisabled" class="form-control" @bind="To">
         <option value=""></option>
-        @foreach (var location in locations.Where(l => l.Continent == Continent))
+        @foreach (var location in locations.Where(l => l.Location.W == MapId))
         {
             <option value="@location.Description">@location.Description</option>
         }
@@ -59,14 +60,14 @@
     [Parameter]
     public bool IsDisabled { get; set; }
 
-    string Continent { get; set; } = "Kalimdor";
+    float MapId { get; set; }
     string From { get; set; } = "Durotar, Orgrimmar gates";
     string To { get; set; }
     int SearchType { get; set; }
 
     public async Task Search()
     {
-        var error = string.Empty;
+        string error = string.Empty;
         if (string.IsNullOrEmpty(From)) { error += "From is required. "; }
         if (string.IsNullOrEmpty(To)) { error += "To is required. "; }
 
@@ -81,50 +82,48 @@
                 From = locations.Where(l => l.Description == this.From).FirstOrDefault(),
                 To = locations.Where(l => l.Description == this.To).FirstOrDefault(),
                 SearchType = (PathGraph.eSearchScoreSpot)this.SearchType,
-                Continent = this.Continent
+                Continent = ContinentDB.IdToName[this.MapId]
             };
 
         await OnSearch.InvokeAsync(searchParameters);
 
     }
 
-    List<string> continents = new List<string>()
-{
-        "Azeroth",
-        "Kalimdor",
-        "Expansion01",
-        "Northrend"
-     };
+    private static readonly float Kalimdor = ContinentDB.NameToId["Kalimdor"];
+    private static readonly float Expansion01 = ContinentDB.NameToId["Expansion01"];
+    private static readonly float Azeroth = ContinentDB.NameToId["Azeroth"];
+    //private static readonly float Northrend = ContinentDB.NameToId["Northrend"];
 
-    List<Location> locations = new List<Location>()
-{
-        new Location(-7899, -3563, 50, "Tanaris", "Kalimdor"),
-        new Location(-7200, -3770, 8, "Krinkle Goodsteel", "Kalimdor"),
-        new Location(-1863, 5419, -10, "Shattrath", "Expansion01"),
-        new Location(-2623, 4445, 36, "Terrokar,Stonebreaker Hold", "Expansion01"),
-        new Location(-2712, 3743, -2, "Terrokar,Grind spot", "Expansion01"),
-        new Location(-3561.1f, 639.1f, 3.1f, "Shadowmoon Valley", "Expansion01"),
+    readonly List<SearchLocation> locations = new()
+    {
+        new(-7899, -3563, 50, Kalimdor, "Tanaris"),
+        new(-7200, -3770, 8, Kalimdor, "Krinkle Goodsteel"),
+        new(-1863, 5419, -10, Expansion01, "Shattrath"),
+        new(-2623, 4445, 36, Expansion01, "Terrokar,Stonebreaker Hold"),
+        new(-2712, 3743, -2, Expansion01, "Terrokar,Grind spot"),
+        new(-3561.1f, 639.1f, 3.1f, Expansion01, "Shadowmoon Valley"),
 
-        new Location(-7217,907,-3, "Silithus, The calling", "Kalimdor"),
-        new Location(-6861,754,40, "Silithus, Repair", "Kalimdor"),
+        new(-7217,907,-3, Kalimdor, "Silithus, The calling"),
+        new(-6861,754,40, Kalimdor, "Silithus, Repair"),
 
-        new Location(-8264,-2689,134, "Burning Steppes, Flight path", "Azeroth"),
-        new Location(-7558,-2167,154, "Burning Steppes, Ragged John", "Azeroth"),
+        new(-8264,-2689,134, Azeroth, "Burning Steppes, Flight path"),
+        new(-7558,-2167,154, Azeroth, "Burning Steppes, Ragged John"),
 
-        new Location(-6236,134,428, "Dun morogh, Cold ridge valley", "Azeroth"),
-        new Location(-5880,-116,362, "Dun morogh, Cold ridge pass", "Azeroth"),
+        new(-6236,134,428, Azeroth, "Dun morogh, Cold ridge valley"),
+        new(-5880,-116,362, Azeroth, "Dun morogh, Cold ridge pass"),
 
-        new Location(1381, -4368, 26, "Durotar, Orgrimmar gates", "Kalimdor"),
-        new Location(-896, -3770, 11, "Barrens,Rachet", "Kalimdor"),
-        new Location(-441, -2596, 96, "Barrens,Crossroads,Barrens", "Kalimdor"),
-        new Location(-2380, -1882, 95, "Barrens,Camp Taurajo,Barrens", "Kalimdor"),
-        new Location(965, 1040, 104, "Stone talon,Sun Rock Retreat", "Kalimdor"),
-        new Location(-1718, 3198, 4, "Desolace,Shadowprey village", "Kalimdor"),
+        new(1381, -4368, 26, Kalimdor, "Durotar, Orgrimmar gates"),
+        new(-896, -3770, 11, Kalimdor, "Barrens,Rachet"),
+        new(-441, -2596, 96, Kalimdor, "Barrens,Crossroads,Barrens"),
+        new(-2380, -1882, 95, Kalimdor, "Barrens,Camp Taurajo,Barrens"),
+        new(965, 1040, 104, Kalimdor, "Stone talon,Sun Rock Retreat"),
+        new(-1718, 3198, 4, Kalimdor, "Desolace,Shadowprey village"),
 
-        new Location(5565, 5757, -75, "Sholazar,Nesingwary Base", "Northrend"),
-        new Location(6033, 5520, -77, "Sholazar,Spot 1", "Northrend"),
-        new Location(5649, 5956, -47, "Sholazar,Spot 2", "Northrend"),
-        new Location(5241, 5922, -60, "Sholazar,Spot 3", "Northrend"),
-        new Location(5194, 5709, -85, "Sholazar,Spot 4", "Northrend"),
+        // No data yet
+        //new(5565, 5757, -75, Northrend, "Sholazar,Nesingwary Base"),
+        //new(6033, 5520, -77, Northrend, "Sholazar,Spot 1"),
+        //new(5649, 5956, -47, Northrend, "Sholazar,Spot 2"),
+        //new(5241, 5922, -60, Northrend, "Sholazar,Spot 3"),
+        //new(5194, 5709, -85, Northrend, "Sholazar,Spot 4"),
     };
 }

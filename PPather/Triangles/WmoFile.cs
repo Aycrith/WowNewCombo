@@ -23,6 +23,7 @@ using System.Numerics;
 using System.Collections.Generic;
 using System.IO;
 using Microsoft.Extensions.Logging;
+using SharedLib.Data;
 
 namespace Wmo
 {
@@ -199,7 +200,7 @@ namespace Wmo
         public int d2, d3;
         public int doodadset;
 
-        public WMOInstance(WMO wmo, System.IO.BinaryReader file)
+        public WMOInstance(WMO wmo, BinaryReader file)
         {
             // read X bytes from file
             this.wmo = wmo;
@@ -393,7 +394,7 @@ namespace Wmo
         //bool w_is_set = false;
         public float sc;
 
-        public ModelInstance(Model m, System.IO.BinaryReader file)
+        public ModelInstance(Model m, BinaryReader file)
         {
             model = m;
             uint d1 = file.ReadUInt32();
@@ -410,7 +411,7 @@ namespace Wmo
                 dir = new Vector3(f0, f1, f2);
             }
             uint scale = file.ReadUInt32();
-            sc = (float)scale / 1024.0f;
+            sc = scale / 1024.0f;
         }
 
         public ModelInstance(Model m, Vector3 pos, Vector3 dir, float sc, float w)
@@ -451,20 +452,20 @@ namespace Wmo
 
     public class ModelFile
     {
-        private System.IO.Stream model_stream;
-        private System.IO.BinaryReader file;
+        private Stream model_stream;
+        private BinaryReader file;
         private Model model;
 
         public ModelFile(string path, Model m)
         {
             this.model = m;
-            model_stream = System.IO.File.OpenRead(path);
-            file = new System.IO.BinaryReader(model_stream);
+            model_stream = File.OpenRead(path);
+            file = new BinaryReader(model_stream);
             try
             {
                 ReadHeader();
             }
-            catch (System.IO.EndOfStreamException)
+            catch (EndOfStreamException)
             {
             }
             file.Close();
@@ -567,7 +568,7 @@ namespace Wmo
         {
             if (nVertices == 0)
                 return null;
-            file.BaseStream.Seek(ofsVertices, System.IO.SeekOrigin.Begin);
+            file.BaseStream.Seek(ofsVertices, SeekOrigin.Begin);
             float[] vertices = new float[nVertices * 3];
             for (int i = 0; i < vertices.Length; i++)
             {
@@ -580,7 +581,7 @@ namespace Wmo
         {
             if (nTriangles == 0)
                 return null;
-            file.BaseStream.Seek(ofsTriangles, System.IO.SeekOrigin.Begin);
+            file.BaseStream.Seek(ofsTriangles, SeekOrigin.Begin);
             UInt16[] triangles = new UInt16[nTriangles];
             for (int i = 0; i < triangles.Length; i++)
             {
@@ -592,7 +593,7 @@ namespace Wmo
         private float[] ReadVertices(uint nVertices, uint ofcVertices)
         {
             float[] vertices = new float[nVertices * 3];
-            file.BaseStream.Seek(ofcVertices, System.IO.SeekOrigin.Begin);
+            file.BaseStream.Seek(ofcVertices, SeekOrigin.Begin);
             for (int i = 0; i < nVertices; i++)
             {
                 vertices[i * 3 + 0] = file.ReadSingle();
@@ -616,7 +617,7 @@ namespace Wmo
 
         private ModelView[] ReadViews(uint nViews, uint offset)
         {
-            file.BaseStream.Seek(offset, System.IO.SeekOrigin.Begin);
+            file.BaseStream.Seek(offset, SeekOrigin.Begin);
             ModelView[] views = new ModelView[nViews];
             for (uint i = 0; i < nViews; i++)
             {
@@ -651,12 +652,12 @@ namespace Wmo
 
         private void ReadView(ModelView view)
         {
-            file.BaseStream.Seek(view.offIndex, System.IO.SeekOrigin.Begin);
+            file.BaseStream.Seek(view.offIndex, SeekOrigin.Begin);
             for (int i = 0; i < view.indexList.Length; i++)
             {
                 view.indexList[i] = file.ReadUInt16();
             }
-            file.BaseStream.Seek(view.offTriangle, System.IO.SeekOrigin.Begin);
+            file.BaseStream.Seek(view.offTriangle, SeekOrigin.Begin);
             for (int i = 0; i < view.triangleList.Length; i++)
             {
                 view.triangleList[i] = file.ReadUInt16();
@@ -698,8 +699,8 @@ namespace Wmo
         public bool[,] maps = new bool[64, 64];
         public int gnWMO;
         public int nMaps;
-        public List<string> gwmos = new List<string>();
-        public List<WMOInstance> gwmois = new List<WMOInstance>();
+        public List<string> gwmos = new();
+        public List<WMOInstance> gwmois = new();
 
         public MapTile[,] maptiles = new MapTile[64, 64];
     }
@@ -707,12 +708,12 @@ namespace Wmo
     internal class WDTFile
     {
         public bool loaded;
-        private System.IO.Stream stream;
-        private System.IO.BinaryReader file;
+        private Stream stream;
+        private BinaryReader file;
         private WMOManager wmomanager;
         private ModelManager modelmanager;
         private WDT wdt;
-        private string name;
+        private string pathName;
         private StormDll.ArchiveSet archive;
 
         private readonly ILogger logger;
@@ -744,7 +745,7 @@ namespace Wmo
         // 245.
         //  The Battle for Gilneas > ZonePath : �world\\maps\\Gilneas_BG_2\\Gilneas_BG_2�*/
 
-        //        1.
+        // 1.
         //Azeroth
 
         // 2.
@@ -911,24 +912,28 @@ namespace Wmo
         // 58.
         //WailingCarverns
 
-        public WDTFile(StormDll.ArchiveSet archive, string name, WDT wdt, WMOManager wmomanager, ModelManager modelmanager, ILogger logger, DataConfig dataConfig)
+        public WDTFile(StormDll.ArchiveSet archive, float mapId, WDT wdt, WMOManager wmomanager, ModelManager modelmanager, ILogger logger, DataConfig dataConfig)
         {
             this.logger = logger;
             this.dataConfig = dataConfig;
-            string wdtfile = "World\\Maps\\" + name + "\\" + name + ".wdt";
+
+            this.pathName = ContinentDB.IdToName[mapId];
+
+            //string wdtfile = "World\\Maps\\" + fileName + "\\" + fileName + ".wdt";
+            string wdtfile = $"World\\Maps\\{pathName}\\{pathName}.wdt";
+
             var path = Path.Join(dataConfig.PPather, "wdt.tmp");
             if (!archive.ExtractFile(wdtfile, path))
                 return;
 
-            loaded = true;
-            this.name = name;
+            loaded = true; 
             this.wdt = wdt;
             this.wmomanager = wmomanager;
             this.modelmanager = modelmanager;
             this.archive = archive;
 
-            stream = System.IO.File.OpenRead(path);
-            file = new System.IO.BinaryReader(stream);
+            stream = File.OpenRead(path);
+            file = new BinaryReader(stream);
 
             bool done = false;
             do
@@ -963,9 +968,9 @@ namespace Wmo
                         logger.LogWarning("WDT Unknown " + type);
                         //done = true;
                     }
-                    file.BaseStream.Seek(curpos + size, System.IO.SeekOrigin.Begin);
+                    file.BaseStream.Seek(curpos + size, SeekOrigin.Begin);
                 }
-                catch (System.IO.EndOfStreamException)
+                catch (EndOfStreamException)
                 {
                     done = true;
                 }
@@ -983,12 +988,14 @@ namespace Wmo
             {
                 MapTile t = new MapTile();
 
-                string filename = "World\\Maps\\" + name + "\\" + name + "_" + x + "_" + y + ".adt";
+                string filename = "World\\Maps\\" + pathName + "\\" + pathName + "_" + x + "_" + y + ".adt";
                 var path = Path.Join(dataConfig.PPather, "adt.tmp");
                 if (archive.ExtractFile(filename, path))
                 {
+
                     if (logger.IsEnabled(LogLevel.Trace))
                         logger.LogTrace($"Reading adt: {filename}");
+
                     //PPather.mover.Stop();
                     MapTileFile f = new MapTileFile(path, t, wmomanager, modelmanager);
                     if (t.models.Count != 0 || t.wmos.Count != 0)
@@ -1058,8 +1065,8 @@ namespace Wmo
 
     internal class DBCFile
     {
-        private System.IO.Stream stream;
-        private System.IO.BinaryReader file;
+        private Stream stream;
+        private BinaryReader file;
         private DBC dbc;
 
         private readonly ILogger logger;
@@ -1068,8 +1075,8 @@ namespace Wmo
         {
             this.logger = logger;
             this.dbc = dbc;
-            stream = System.IO.File.OpenRead(name);
-            file = new System.IO.BinaryReader(stream);
+            stream = File.OpenRead(name);
+            file = new BinaryReader(stream);
 
             bool done = false;
             do
@@ -1089,9 +1096,9 @@ namespace Wmo
                         logger.LogWarning("DBC Unknown " + type);
                         //done = true;
                     }
-                    //file.BaseStream.Seek(curpos + size, System.IO.SeekOrigin.Begin);
+                    //file.BaseStream.Seek(curpos + size, SeekOrigin.Begin);
                 }
-                catch (System.IO.EndOfStreamException)
+                catch (EndOfStreamException)
                 {
                     done = true;
                 }
@@ -1192,11 +1199,11 @@ namespace Wmo
     {
         // public int x, z; // matches maps in WDT
 
-        public List<ModelInstance> modelis = new List<ModelInstance>();
-        public List<WMOInstance> wmois = new List<WMOInstance>();
+        public List<ModelInstance> modelis = new();
+        public List<WMOInstance> wmois = new();
 
-        public List<string> wmos = new List<string>();
-        public List<string> models = new List<string>();
+        public List<string> wmos = new();
+        public List<string> models = new();
 
         public MapChunk[,] chunks = new MapChunk[16, 16];
     }
@@ -1212,8 +1219,8 @@ namespace Wmo
 
         private MapTile tile;
         private LiquidData[] LiquidDataChunk; //256 elements
-        private System.IO.Stream stream;
-        private System.IO.BinaryReader file;
+        private Stream stream;
+        private BinaryReader file;
         private int[] mcnk_offsets = new int[256];
         private int[] mcnk_sizes = new int[256];
         private WMOManager wmomanager;
@@ -1224,8 +1231,8 @@ namespace Wmo
             this.tile = tile;
             this.wmomanager = wmomanager;
             this.modelmanager = modelmanager;
-            stream = System.IO.File.OpenRead(name);
-            file = new System.IO.BinaryReader(stream);
+            stream = File.OpenRead(name);
+            file = new BinaryReader(stream);
             bool done = false;
             do
             {
@@ -1258,9 +1265,9 @@ namespace Wmo
                         //logger.WriteLine("MapTile Unknown " + type);
                         //done = true;
                     }
-                    file.BaseStream.Seek(curpos + size, System.IO.SeekOrigin.Begin);
+                    file.BaseStream.Seek(curpos + size, SeekOrigin.Begin);
                 }
-                catch (System.IO.EndOfStreamException)
+                catch (EndOfStreamException)
                 {
                     done = true;
                 }
@@ -1271,7 +1278,7 @@ namespace Wmo
                 for (int i = 0; i < 16; i++)
                 {
                     int off = mcnk_offsets[j * 16 + i];
-                    file.BaseStream.Seek(off, System.IO.SeekOrigin.Begin);
+                    file.BaseStream.Seek(off, SeekOrigin.Begin);
                     //logger.WriteLine("Chunk " + i + " " + j + " at off " + off);
                     MapChunk chunk = new MapChunk();
                     ReadMapChunk(chunk);
@@ -1347,7 +1354,7 @@ namespace Wmo
             {
                 if (LiquidDataChunk[i].offsetData1 != 0)
                 {
-                    file.BaseStream.Seek(chunkStart + LiquidDataChunk[i].offsetData1, System.IO.SeekOrigin.Begin);
+                    file.BaseStream.Seek(chunkStart + LiquidDataChunk[i].offsetData1, SeekOrigin.Begin);
                     LiquidDataChunk[i].data1 = new MH2OData1();
                     LiquidDataChunk[i].data1.flags = file.ReadUInt16();
                     LiquidDataChunk[i].data1.type = file.ReadUInt16();
@@ -1368,7 +1375,7 @@ namespace Wmo
                     LiquidDataChunk[k].data1 != null && LiquidDataChunk[k].data1.offsetData2b != 0
                     && (LiquidDataChunk[k].data1.flags & 1) == 1)
                 {
-                    file.BaseStream.Seek(chunkStart + LiquidDataChunk[k].data1.offsetData2b, System.IO.SeekOrigin.Begin);
+                    file.BaseStream.Seek(chunkStart + LiquidDataChunk[k].data1.offsetData2b, SeekOrigin.Begin);
 
                     for (int x = LiquidDataChunk[k].data1.xOffset; x <= LiquidDataChunk[k].data1.xOffset + LiquidDataChunk[k].data1.Width; x++)
                     {
@@ -1607,9 +1614,9 @@ namespace Wmo
                         //logger.WriteLine("MapChunk Unknown " + type);
                         //done = true;
                     }
-                    file.BaseStream.Seek(curpos + size, System.IO.SeekOrigin.Begin);
+                    file.BaseStream.Seek(curpos + size, SeekOrigin.Begin);
                 }
-                catch (System.IO.EndOfStreamException)
+                catch (EndOfStreamException)
                 {
                     done = true;
                 }
@@ -1705,8 +1712,8 @@ namespace Wmo
 
     internal class WmoRootFile
     {
-        private System.IO.Stream stream;
-        private System.IO.BinaryReader file;
+        private Stream stream;
+        private BinaryReader file;
         private ModelManager modelmanager;
 
         public WMO wmo;
@@ -1716,8 +1723,8 @@ namespace Wmo
         {
             this.wmo = wmo;
             this.modelmanager = modelmanager;
-            stream = System.IO.File.OpenRead(name);
-            file = new System.IO.BinaryReader(stream);
+            stream = File.OpenRead(name);
+            file = new BinaryReader(stream);
             bool done = false;
             do
             {
@@ -1760,9 +1767,9 @@ namespace Wmo
                         //logger.WriteLine("Root Unknown " + type);
                         //done = true;
                     }
-                    file.BaseStream.Seek(curpos + size, System.IO.SeekOrigin.Begin);
+                    file.BaseStream.Seek(curpos + size, SeekOrigin.Begin);
                 }
-                catch (System.IO.EndOfStreamException)
+                catch (EndOfStreamException)
                 {
                     done = true;
                 }
@@ -1901,21 +1908,21 @@ namespace Wmo
 
     internal class WmoGroupFile
     {
-        private System.IO.Stream stream;
-        private System.IO.BinaryReader file;
+        private Stream stream;
+        private BinaryReader file;
         private WMOGroup g;
 
         //long indicesFileMarker;
         public WmoGroupFile(WMOGroup group, string name)
         {
             g = group;
-            stream = System.IO.File.OpenRead(name);
-            file = new System.IO.BinaryReader(stream);
+            stream = File.OpenRead(name);
+            file = new BinaryReader(stream);
 
-            file.BaseStream.Seek(0x14, System.IO.SeekOrigin.Begin);
+            file.BaseStream.Seek(0x14, SeekOrigin.Begin);
             HandleMOGP(11);
 
-            file.BaseStream.Seek(0x58, System.IO.SeekOrigin.Begin);// first chunk
+            file.BaseStream.Seek(0x58, SeekOrigin.Begin);// first chunk
 
             bool done = false;
             do
@@ -1979,9 +1986,9 @@ namespace Wmo
                         //logger.WriteLine("Group Unknown " + type);
                         //done = true;
                     }
-                    file.BaseStream.Seek(curpos + size, System.IO.SeekOrigin.Begin);
+                    file.BaseStream.Seek(curpos + size, SeekOrigin.Begin);
                 }
-                catch (System.IO.EndOfStreamException)
+                catch (EndOfStreamException)
                 {
                     done = true;
                 }

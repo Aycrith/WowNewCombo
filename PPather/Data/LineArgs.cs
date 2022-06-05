@@ -4,11 +4,9 @@ namespace PPather.Data
 {
     public class LineArgs
     {
-        public LineArgs() { }
-
-        public string Name { get; set; }
-        public List<DummyVector3> Spots { get; set; }
-        public int Colour { get; set; }
-        public int MapId { get; set; }
+        public string Name { get; init; }
+        public List<DummyVector3> Spots { get; init; }
+        public int Colour { get; init; }
+        public int MapId { get; init; }
     }
 }
