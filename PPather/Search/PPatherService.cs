@@ -8,7 +8,6 @@ using SharedLib;
 using SharedLib.Data;
 using Microsoft.Extensions.Logging;
 using System.Numerics;
-using SharedLib.Extensions;
 
 namespace PPather
 {
@@ -51,12 +50,18 @@ namespace PPather
                 HasInitialised = true;
                 PathGraph.SearchEnabled = false;
                 search = new Search(mapId, logger, dataConfig);
-                search.PathGraph.triangleWorld.NotifyChunkAdded = (e) => OnChunkAdded?.Invoke(e);
+                search.PathGraph.triangleWorld.NotifyChunkAdded = ChunkAdded;
                 OnReset?.Invoke();
                 return true;
             }
             return false;
         }
+
+        public void ChunkAdded(ChunkAddedEventArgs e)
+        {
+            OnChunkAdded?.Invoke(e);
+        }
+
         public Vector4 GetWorldLocation(int uiMapId, float x, float y, float z = 0)
         {
             WorldMapArea worldMapArea = worldMapAreas.First(i => i.UIMapId == uiMapId);
@@ -149,7 +154,7 @@ namespace PPather
 
         public Vector3? PeekLocation => search?.PathGraph?.PeekSpot?.Loc;
 
-        public void DrawPath(int mapId, List<float[]> coords)
+        public void DrawPath(float mapId, List<float[]> coords)
         {
             var first = coords[0];
             var last = coords[^1];
@@ -164,11 +169,10 @@ namespace PPather
                 search.CreatePathGraph(mapId);
             }
 
-            List<Spot> spots = new List<Spot>();
+            List<Spot> spots = new();
             for (int i = 0; i < coords.Count; i++)
             {
-                Vector3 l = new(coords[i][0], coords[i][1], coords[i][2]);
-                Spot spot = new(l);
+                Spot spot = new(new(coords[i][0], coords[i][1], coords[i][2]));
                 spots.Add(spot);
                 search.PathGraph.CreateSpotsAroundSpot(spot, false);
             }

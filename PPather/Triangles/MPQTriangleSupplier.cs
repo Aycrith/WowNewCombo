@@ -76,8 +76,8 @@ namespace WowTriangles
             wmomanager = new WMOManager(archive, modelmanager, 30, dataConfig);
 
             var path = Path.Join(dataConfig.PPather, "AreaTable.dbc");
+            //archive.ExtractFile("DBFilesClient\\AreaTable.dbc", path);
 
-            archive.ExtractFile("..\\PathingAPI\\DBFilesClient\\AreaTable.dbc", path);
             DBC areas = new DBC();
             DBCFile af = new DBCFile(path, areas, this.logger);
             for (int i = 0; i < areas.recordCount; i++)

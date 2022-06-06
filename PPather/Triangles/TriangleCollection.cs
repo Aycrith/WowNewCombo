@@ -26,7 +26,7 @@ namespace WowTriangles
         private readonly QuadArray<int> triangles = new();
         private int no_triangles;
 
-        private SparseFloatMatrix3D<int> vertexMatrix = new SparseFloatMatrix3D<int>(0.1f);
+        private SparseFloatMatrix3D<int> vertexMatrix = new(0.1f);
 
         private TriangleMatrix collisionMatrix;
 
@@ -68,7 +68,7 @@ namespace WowTriangles
         {
             no_triangles = 0;
             no_vertices = 0;
-            vertexMatrix = new SparseFloatMatrix3D<int>(0.1f);
+            vertexMatrix = new(0.1f);
             changed = true;
         }
 
@@ -104,8 +104,7 @@ namespace WowTriangles
                 if (used_indices[i])
                 {
                     old_to_new[i] = sum;
-                    float x, y, z;
-                    vertices.Get(i, out x, out y, out z);
+                    vertices.Get(i, out float x, out float y, out float z);
                     vertices.Set(sum, x, y, z);
                     sum++;
                 }
@@ -137,7 +136,8 @@ namespace WowTriangles
         public TriangleMatrix GetTriangleMatrix()
         {
             if (collisionMatrix == null)
-                collisionMatrix = new TriangleMatrix(this, this.logger);
+                collisionMatrix = new TriangleMatrix(this, logger);
+
             return collisionMatrix;
         }
 
@@ -365,7 +365,7 @@ namespace WowTriangles
 
         public void ClearVertexMatrix()
         {
-            vertexMatrix = new SparseFloatMatrix3D<int>(0.1f);
+            vertexMatrix = new(0.1f);
         }
 
         public void ReportSize(string pre)

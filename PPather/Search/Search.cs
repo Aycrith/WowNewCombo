@@ -27,10 +27,7 @@ namespace PPather
             this.MapId = mapId;
             this.dataConfig = dataConfig;
 
-            if (PathGraph == null)
-            {
-                CreatePathGraph(mapId);
-            }
+            CreatePathGraph(mapId);
         }
 
         public Vector4 CreateLocation(float x, float y, float z, int mapId)
@@ -78,14 +75,8 @@ namespace PPather
             this.MapId = mapId;
 
             MPQTriangleSupplier mpq = new(logger, dataConfig, mapId);
-
-            ChunkedTriangleCollection triangleWorld = new(logger);
-            triangleWorld.SetMaxCached(512);
-            triangleWorld.AddSupplier(mpq);
-
+            ChunkedTriangleCollection triangleWorld = new(logger, 64, mpq);
             PathGraph = new PathGraph(mapId, triangleWorld, null, logger, dataConfig);
-
-            //startTime = DateTime.UtcNow;
         }
 
         public Path DoSearch(PathGraph.eSearchScoreSpot searchType)
@@ -96,7 +87,7 @@ namespace PPather
             PathGraph.searchScoreSpot = searchType;
 
             //slow down the search if required.
-            PathGraph.sleepMSBetweenSpots = 0;
+            //PathGraph.sleepMSBetweenSpots = 0;
 
             try
             {

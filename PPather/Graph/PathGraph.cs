@@ -24,6 +24,9 @@ using System.Threading;
 using WowTriangles;
 using SharedLib.Data;
 using System.Numerics;
+using System.IO;
+
+#pragma warning disable 162
 
 namespace PPather.Graph
 {
@@ -43,7 +46,7 @@ namespace PPather.Graph
         public static int gradiantMax = 5;
 
         public eSearchScoreSpot searchScoreSpot = eSearchScoreSpot.A_Star_With_Model_Avoidance;
-        public int sleepMSBetweenSpots;
+        public const int sleepMSBetweenSpots = 0;
 
         public const float toonHeight = 2.0f;
         public const float toonSize = 0.5f;
@@ -63,14 +66,17 @@ namespace PPather.Graph
 
         public const float CHUNK_BASE = 100000.0f; // Always keep positive
         public const float MaximumAllowedRangeFromTarget = 100;
-        public string BaseDir = string.Empty;
+
+        private readonly string chunkDir;
+
         private float MapId;
-        private SparseMatrix2D<GraphChunk> chunks;
+
+        private readonly SparseMatrix2D<GraphChunk> chunks;
 
         public ChunkedTriangleCollection triangleWorld;
         public TriangleCollection paint;
 
-        private List<GraphChunk> ActiveChunks = new List<GraphChunk>();
+        private readonly List<GraphChunk> ActiveChunks = new();
         private long LRU;
 
         public int GetTriangleClosenessScore(Vector3 loc)
@@ -126,18 +132,17 @@ namespace PPather.Graph
             this.MapId = mapId;
             this.triangleWorld = triangles;
             this.paint = paint;
-            BaseDir = dataConfig.PathInfo;
-            Clear();
+
+            chunkDir = System.IO.Path.Join(dataConfig.PathInfo, ContinentDB.IdToName[MapId]);
+            if (!Directory.Exists(chunkDir))
+                Directory.CreateDirectory(chunkDir);
+
+            chunks = new SparseMatrix2D<GraphChunk>(8);
         }
 
         public void Close()
         {
             triangleWorld.Close();
-        }
-
-        public void Clear()
-        {
-            chunks = new SparseMatrix2D<GraphChunk>(8);
         }
 
         private static void GetChunkCoord(float x, float y, out int ix, out int iy)
@@ -177,8 +182,7 @@ namespace PPather.Graph
                     }
                 }
 
-                // It is full!
-                evict.Save(BaseDir + "\\" + ContinentDB.IdToName[MapId] + "\\");
+                evict.Save();
                 ActiveChunks.Remove(evict);
                 chunks.Clear(evict.ix, evict.iy);
                 evict.Clear();
@@ -189,16 +193,17 @@ namespace PPather.Graph
         {
             lock (m_LockObject)
             {
-                if (logger.IsEnabled(LogLevel.Trace))
-                    logger.LogTrace("Saving GraphChunks.....");
-
+                Stopwatch sw = Stopwatch.StartNew();
                 foreach (GraphChunk gc in chunks.GetAllElements())
                 {
                     if (gc.modified)
                     {
-                        gc.Save(BaseDir + "\\" + ContinentDB.IdToName[MapId] + "\\");
+                        gc.Save();
                     }
                 }
+
+                if (logger.IsEnabled(LogLevel.Trace))
+                    logger.LogTrace($"Saved GraphChunks {sw.ElapsedMilliseconds} ms");
             }
         }
 
@@ -214,12 +219,12 @@ namespace PPather.Graph
                 float base_x, base_y;
                 GetChunkBase(ix, iy, out base_x, out base_y);
 
-                gc = new GraphChunk(base_x, base_y, ix, iy, this.logger);
+                gc = new GraphChunk(base_x, base_y, ix, iy, logger, chunkDir);
                 gc.LRU = LRU++;
 
                 CheckForChunkEvict();
 
-                gc.Load(BaseDir + "\\" + ContinentDB.IdToName[MapId] + "\\");
+                gc.Load();
                 chunks.Set(ix, iy, gc);
                 ActiveChunks.Add(gc);
             }
@@ -365,24 +370,25 @@ namespace PPather.Graph
 
         public List<Spot> FindAllSpots(Vector3 l, float max_d)
         {
-            List<Spot> sl = new List<Spot>();
+            List<Spot> sl = new();
 
             int d = 0;
             while (d <= max_d + 0.1f)
             {
                 for (int i = -d; i <= d; i++)
                 {
-                    float x_up = l.X + (float)d;
-                    float x_dn = l.X - (float)d;
-                    float y_up = l.Y + (float)d;
-                    float y_dn = l.Y - (float)d;
+                    float x_up = l.X + d;
+                    float x_dn = l.X - d;
+                    float y_up = l.Y + d;
+                    float y_dn = l.Y - d;
 
-                    Spot s0 = GetSpot2D(x_up, l.Y + i);
-                    Spot s2 = GetSpot2D(x_dn, l.Y + i);
+                    Spot[] sv = {
+                        GetSpot2D(x_up, l.Y + i),
+                        GetSpot2D(x_dn, l.Y + i),
+                        GetSpot2D(l.X + i, y_dn),
+                        GetSpot2D(l.X + i, y_up)
+                    };
 
-                    Spot s1 = GetSpot2D(l.X + i, y_dn);
-                    Spot s3 = GetSpot2D(l.X + i, y_up);
-                    Spot[] sv = { s0, s1, s2, s3 };
                     foreach (Spot s in sv)
                     {
                         Spot ss = s;
@@ -402,29 +408,6 @@ namespace PPather.Graph
             return sl;
         }
 
-        public List<Spot> FindAllSpots(float min_x, float min_y, float max_x, float max_y)
-        {
-            // hmm, do it per chunk
-            List<Spot> l = new List<Spot>();
-            for (float mx = min_x; mx <= max_x + GraphChunk.CHUNK_SIZE - 1; mx += GraphChunk.CHUNK_SIZE)
-            {
-                for (float my = min_y; my <= max_y + GraphChunk.CHUNK_SIZE - 1; my += GraphChunk.CHUNK_SIZE)
-                {
-                    LoadChunk(mx, my);
-                    GraphChunk gc = GetChunkAt(mx, my);
-                    List<Spot> sl = gc.GetAllSpots();
-                    foreach (Spot s in sl)
-                    {
-                        if (s.Loc.X >= min_x && s.Loc.X <= max_x &&
-                           s.Loc.Y >= min_y && s.Loc.Y <= max_y)
-                        {
-                            l.Add(s);
-                        }
-                    }
-                }
-            }
-            return l;
-        }
 
         public Spot TryAddSpot(Spot wasAt, Vector3 isAt)
         {
@@ -505,33 +488,6 @@ namespace PPather.Graph
             return false;
         }
 
-        public void MarkBlockedAt(Vector3 loc)
-        {
-            Spot s = new Spot(loc);
-            s = AddSpot(s);
-            s.SetFlag(Spot.FLAG_BLOCKED, true);
-            // Find all paths leading though this one
-
-            List<Spot> sl = FindAllSpots(s.Loc, 5.0f);
-            foreach (Spot sp in sl)
-            {
-                foreach (Vector3 to in sp.GetPaths())
-                {
-                    if (LineCrosses(sp.Loc, to, loc))
-                    {
-                        sp.RemovePathTo(to);
-                    }
-                }
-            }
-        }
-
-        public void BlacklistStep(Vector3 from, Vector3 to)
-        {
-            Spot froms = GetSpot(from);
-            if (froms != null)
-                froms.RemovePathTo(to);
-        }
-
         //////////////////////////////////////////////////////
         // Searching
         //////////////////////////////////////////////////////
@@ -597,7 +553,7 @@ namespace PPather.Graph
             searchDuration.Restart();
             timeSinceProgress.Restart();
 
-            var closest = 99999f;
+            float closest = 99999f;
             ClosestSpot = null;
 
             currentSearchStartSpot = fromSpot;
@@ -614,10 +570,9 @@ namespace PPather.Graph
             fromSpot.traceBackDistance = 0;
 
             // A* -ish algorithm
-            //while (prioritySpotQueue.Count != 0 && SearchEnabled)
-            while (prioritySpotQueue.TryDequeue(out currentSearchSpot, out float prio))
+            while (prioritySpotQueue.TryDequeue(out currentSearchSpot, out _))
             {
-                if (sleepMSBetweenSpots != 0) { Thread.Sleep(sleepMSBetweenSpots); } // slow down the pathing
+                if (sleepMSBetweenSpots > 0) { Thread.Sleep(sleepMSBetweenSpots); } // slow down the pathing
 
                 // force the world to be loaded
                 _ = triangleWorld.GetChunkAt(currentSearchSpot.Loc.X, currentSearchSpot.Loc.Y);
@@ -784,8 +739,8 @@ namespace PPather.Graph
                 for (float radianAngle = 0; radianAngle < PI * 2; radianAngle += PI / 8)
                 {
                     //calculate the location of the spot at the angle
-                    float nx = currentSearchSpot.Loc.X + (float)Math.Sin(radianAngle) * WantedStepLength;// *0.8f;
-                    float ny = currentSearchSpot.Loc.Y + (float)Math.Cos(radianAngle) * WantedStepLength;// *0.8f;
+                    float nx = currentSearchSpot.Loc.X + (MathF.Sin(radianAngle) * WantedStepLength);// *0.8f;
+                    float ny = currentSearchSpot.Loc.Y + (MathF.Cos(radianAngle) * WantedStepLength);// *0.8f;
 
                     PeekSpot = new Spot(nx, ny, currentSearchSpot.Loc.Z);
 
@@ -800,9 +755,7 @@ namespace PPather.Graph
                     } // TODO: this is slow
 
                     // check we can stand at this new location
-                    float new_z;
-                    int flags;
-                    if (!triangleWorld.FindStandableAt(nx, ny, currentSearchSpot.Loc.Z - WantedStepLength * .75f, currentSearchSpot.Loc.Z + WantedStepLength * .75f, out new_z, out flags, toonHeight, toonSize))
+                    if (!triangleWorld.FindStandableAt(nx, ny, currentSearchSpot.Loc.Z - WantedStepLength * .75f, currentSearchSpot.Loc.Z + WantedStepLength * .75f, out float new_z, out int flags, toonHeight, toonSize))
                     {
                         continue;
                     }
@@ -851,36 +804,19 @@ namespace PPather.Graph
             }
 
             lastCurrentSearchSpot = currentSearchSpot;
-            return FollowTraceBack(currentSearchStartSpot, currentSearchSpot); ;
+            return FollowTraceBack(currentSearchStartSpot, currentSearchSpot);
         }
 
         private static List<Spot> FollowTraceBack(Spot from, Spot to)
         {
-            List<Spot> path = new List<Spot>();
-            int count = 0;
-
-            Spot r = to;
-            path.Insert(0, to); // add last
-            while (r != null)
+            List<Spot> path = new();
+            Spot backtrack = to;
+            while (backtrack != from && backtrack != null)
             {
-                Spot s = r.traceBack;
-
-                if (s != null)
-                {
-                    path.Insert(0, s); // add first
-                    r = s;
-                    if (r == from)
-                    {
-                        r = null;  // found source
-                    }
-                }
-                else
-                {
-                    r = null;
-                }
-                count++;
+                path.Insert(0, backtrack);
+                backtrack = backtrack.traceBack;
             }
-            path.Insert(0, from); // add first
+            path.Insert(0, from);
             return path;
         }
 
