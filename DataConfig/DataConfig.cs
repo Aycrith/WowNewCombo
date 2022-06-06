@@ -4,37 +4,35 @@ using Newtonsoft.Json;
 
 public static class DataConfigMeta
 {
-    public const int Version = 9;
+    public const int Version = 10;
     public const string DefaultFileName = "data_config.json";
 }
 
 public class DataConfig
 {
     public int Version = DataConfigMeta.Version;
-    public string Root { get; set; } = "../json/";
+    public string Root { get; set; } = Join("..", "json");
 
     [JsonIgnore]
-    public string Class => Join(Root, "class/");
+    public string Class => Join(Root, "class");
     [JsonIgnore]
-    public string Path => Join(Root, "path/");
+    public string Path => Join(Root, "path");
     [JsonIgnore]
-    public string Dbc => Join(Root, "dbc/");
+    public string Dbc => Join(Root, "dbc");
     [JsonIgnore]
-    public string WorldToMap => Join(Root, "WorldToMap/");
+    public string WorldToMap => Join(Root, "WorldToMap");
     [JsonIgnore]
-    public string PathInfo => Join(Root, "PathInfo/");
+    public string PathInfo => Join(Root, "PathInfo");
     [JsonIgnore]
-    public string MPQ => Join(Root, "MPQ/");
+    public string MPQ => Join(Root, "MPQ");
     [JsonIgnore]
-    public string Area => Join(Root, "area/");
+    public string Area => Join(Root, "area");
     [JsonIgnore]
-    public string PPather => Join(Root, "PPather/");
+    public string PPather => Join(Root, "PPather");
     [JsonIgnore]
-    public string History => Join(Root, "History/");
+    public string History => Join(Root, "History");
     [JsonIgnore]
-    public string Experience => Join(Root, "experience/");
-    [JsonIgnore]
-    public string AuctionHouse => Join(Root, "ah/");
+    public string Experience => Join(Root, "experience");
 
     public static DataConfig Load()
     {

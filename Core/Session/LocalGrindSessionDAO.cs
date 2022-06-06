@@ -42,7 +42,7 @@ namespace Core.Session
         public void Save(GrindSession session)
         {
             string json = JsonConvert.SerializeObject(session);
-            File.WriteAllText($"{path}{session.SessionId}.json", json);
+            File.WriteAllText(Path.Join(path, $"{session.SessionId}.json"), json);
         }
     }
 }

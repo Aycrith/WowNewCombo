@@ -332,7 +332,7 @@
     {
         recording = false;
 
-        var filename = $"__Path_{DateTime.Now.ToString("yyyyMMddHHmmss")}.json";
+        var filename = $"__Path_{DateTime.Now.ToString("yyyy_MM_dd_HH_mm_ss")}.json";
         var filepath = Path.Join(dataConfig.Path, filename);
         File.WriteAllText(filepath, JsonConvert.SerializeObject(routeInfo.PathPoints));
         message = $"Saved to: {filepath}";
