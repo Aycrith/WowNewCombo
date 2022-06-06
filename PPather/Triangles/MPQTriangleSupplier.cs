@@ -29,7 +29,7 @@ namespace WowTriangles
 {
     public class MPQTriangleSupplier : TriangleSupplier
     {
-        private string continentFile;
+        private float mapId;
 
         private StormDll.ArchiveSet archive;
 
@@ -43,10 +43,9 @@ namespace WowTriangles
         private WMOManager wmomanager;
         private DataConfig dataConfig;
 
-        private Dictionary<String, int> zoneToMapId = new Dictionary<string, int>();
-        private Dictionary<int, String> mapIdToFile = new Dictionary<int, string>();
-
-        private Dictionary<int, String> areaIdToName = new Dictionary<int, string>();
+        private Dictionary<string, int> zoneToMapId = new();
+        private Dictionary<int, String> mapIdToFile = new();
+        private Dictionary<int, string> areaIdToName = new();
 
         public override void Close()
         {
@@ -64,7 +63,7 @@ namespace WowTriangles
 
         private readonly ILogger logger;
 
-        public MPQTriangleSupplier(ILogger logger, DataConfig dataConfig)
+        public MPQTriangleSupplier(ILogger logger, DataConfig dataConfig, float mapId)
         {
             this.logger = logger;
             this.dataConfig = dataConfig;
@@ -77,8 +76,8 @@ namespace WowTriangles
             wmomanager = new WMOManager(archive, modelmanager, 30, dataConfig);
 
             var path = Path.Join(dataConfig.PPather, "AreaTable.dbc");
+            //archive.ExtractFile("DBFilesClient\\AreaTable.dbc", path);
 
-            archive.ExtractFile("..\\PathingAPI\\DBFilesClient\\AreaTable.dbc", path);
             DBC areas = new DBC();
             DBCFile af = new DBCFile(path, areas, this.logger);
             for (int i = 0; i < areas.recordCount; i++)
@@ -124,6 +123,8 @@ namespace WowTriangles
                 //1 	uint 	Continent (refers to a WorldID)
                 //2 	uint 	Region (refers to an AreaID)
             }
+
+            SetMap(mapId);
         }
 
         public static string[] GetArchiveNames(DataConfig dataConfig)
@@ -132,67 +133,23 @@ namespace WowTriangles
             return Directory.GetFiles(dataConfig.MPQ);
         }
 
-        public void SetContinent(string continent)
+        public void SetMap(float mapId)
         {
-            continentFile = continent;
+            this.mapId = mapId;
 
             wdt = new WDT();
 
-            wdtf = new WDTFile(archive, continentFile, wdt, wmomanager, modelmanager, this.logger, dataConfig);
+            wdtf = new WDTFile(archive, this.mapId, wdt, wmomanager, modelmanager, this.logger, dataConfig);
             if (!wdtf.loaded)
             {
                 wdt = null; // bad
-                throw new Exception("Failed to set continent to: " + continent);
+                throw new Exception("Failed to set continent to: " + mapId);
             }
             else
             {
                 // logger.WriteLine("  global Objects " + wdt.gwmois.Count + " Models " + wdt.gwmois.Count);
                 //global_triangles.color = new float[3] { 0.8f, 0.8f, 1.0f };
             }
-        }
-
-        public string SetZone(string zone)
-        {
-            int continentID;
-
-            if (!zoneToMapId.TryGetValue(zone, out continentID))
-            {
-                int colon = zone.IndexOf(":");
-                if (colon == -1)
-                    return null;
-                zone = zone.Substring(colon);
-                if (!zoneToMapId.TryGetValue(zone, out continentID))
-                {
-                    return null;
-                }
-            }
-
-            var path = Path.Join(dataConfig.PPather, "Map.dbc");
-
-            archive.ExtractFile("..\\PathingAPI\\DBFilesClient\\Map.dbc", "PPather\\Map.dbc");
-            DBC maps = new DBC();
-            DBCFile mf = new DBCFile(path, maps, this.logger);
-
-            for (int i = 0; i < maps.recordCount; i++)
-            {
-                int mapID = maps.GetInt(i, 0);
-                // logger.WriteLine("   ID:" + maps.GetInt(i, 0));
-                // logger.WriteLine(" File: " + maps.GetString(i, 1));
-                // logger.WriteLine(" Name: " + maps.GetString(i, 4)); // the file!!!
-
-                if (mapID == continentID) // file == continentFile)
-                {
-                    //  logger.WriteLine(String.Format("{0,4} {1}", mapID, maps.GetString(i, 1)));
-                    string file = maps.GetString(i, 1);
-                    SetContinent(file);
-                    return continentFile;
-                }
-            }
-            if (wdt == null)
-            {
-                return "Failed to open file files for continent ID" + continentID;
-            }
-            return null;
         }
 
         private void GetChunkData(TriangleCollection triangles, int chunk_x, int chunk_y, SparseMatrix3D<WMO> instances)
@@ -702,9 +659,9 @@ namespace WowTriangles
 
         public static void rotate(float x, float y, float angle, out float nx, out float ny)
         {
-            double rot = (angle) / 360.0 * Math.PI * 2;
-            float c_y = (float)Math.Cos(rot);
-            float s_y = (float)Math.Sin(rot);
+            float rot = angle / 360.0f * MathF.PI * 2;
+            float c_y = MathF.Cos(rot);
+            float s_y = MathF.Sin(rot);
 
             nx = c_y * x - s_y * y;
             ny = s_y * x + c_y * y;

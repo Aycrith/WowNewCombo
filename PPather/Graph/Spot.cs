@@ -18,21 +18,24 @@
 
 using System;
 using System.Collections.Generic;
+using System.Numerics;
+using SharedLib.Extensions;
 
 namespace PPather.Graph
 {
     public class Spot
     {
-        public const float Z_RESOLUTION = 2.0f; // Z spots max this close
+        public static float Z_RESOLUTION = 2.0f; // Z spots max this close
 
-        public const uint FLAG_VISITED = 0x0001;
-        public const uint FLAG_BLOCKED = 0x0002;
-        public const uint FLAG_MPQ_MAPPED = 0x0004;
-        public const uint FLAG_WATER = 0x0008;
-        public const uint FLAG_INDOORS = 0x0010;
-        public const uint FLAG_CLOSETOMODEL = 0x0020;
+        public static uint FLAG_VISITED = 0x0001;
+        public static uint FLAG_BLOCKED = 0x0002;
+        public static uint FLAG_MPQ_MAPPED = 0x0004;
+        public static uint FLAG_WATER = 0x0008;
+        public static uint FLAG_INDOORS = 0x0010;
+        public static uint FLAG_CLOSETOMODEL = 0x0020;
 
-        public float X, Y, Z;
+        public Vector3 Loc { get; }
+
         public uint flags;
 
         public int n_paths;
@@ -49,12 +52,13 @@ namespace PPather.Graph
 
         public Spot(float x, float y, float z)
         {
-            this.X = x;
-            this.Y = y;
-            this.Z = z;
+            Loc = new(x, y, z);
         }
 
-        public Spot(Location l) : this(l.X, l.Y, l.Z) { }
+        public Spot(Vector3 l)
+        {
+            Loc = l;
+        }
 
         public bool IsCloseToModel()
         {
@@ -71,38 +75,24 @@ namespace PPather.Graph
             return IsFlagSet(FLAG_WATER);
         }
 
-        public Location location
+        public float GetDistanceTo(Vector3 l)
         {
-            get
-            {
-                return new Location(X, Y, Z);
-            }
-        }
-
-        public float GetDistanceTo(Location l)
-        {
-            float dx = l.X - X;
-            float dy = l.Y - Y;
-            float dz = l.Z - Z;
-            return (float)Math.Sqrt(dx * dx + dy * dy + dz * dz);
+            return Vector3.Distance(Loc, l);
         }
 
         public float GetDistanceTo(Spot s)
         {
-            float dx = s.X - X;
-            float dy = s.Y - Y;
-            float dz = s.Z - Z;
-            return (float)Math.Sqrt(dx * dx + dy * dy + dz * dz);
+            return Vector3.Distance(Loc, s.Loc);
         }
 
         public float GetDistanceTo2D(Spot s)
         {
-            return MathF.Sqrt(MathF.Pow(X - s.X, 2.0f) + MathF.Pow(Y - s.Y, 2.0f));
+            return Vector2.Distance(Loc.AsVector2(), s.Loc.AsVector2());
         }
 
         public bool IsCloseZ(float z)
         {
-            float dz = z - this.Z;
+            float dz = z - this.Loc.Z;
             if (dz > Z_RESOLUTION)
                 return false;
             if (dz < -Z_RESOLUTION)
@@ -126,30 +116,12 @@ namespace PPather.Graph
             return (flags & flag) != 0;
         }
 
-        public void SetLocation(Location l)
-        {
-            X = l.X;
-            Y = l.Y;
-            Z = l.Z;
-            if (chunk != null)
-                chunk.modified = true;
-        }
-
-        public Location GetLocation()
-        {
-            return new Location(X, Y, Z);
-        }
-
-        public override string ToString()
-        {
-            return GetLocation().ToString();
-        }
-
         public bool GetPath(int i, out float x, out float y, out float z)
         {
             x = y = z = 0;
             if (i > n_paths)
                 return false;
+
             int off = i * 3;
             x = paths[off];
             y = paths[off + 1];
@@ -174,18 +146,18 @@ namespace PPather.Graph
             return list;
         }
 
-        public List<Location> GetPaths()
+        public Vector3[] GetPaths()
         {
-            List<Location> l = new();
-            if (paths == null)
-                return l;
+            Vector3[] array = new Vector3[n_paths];
+            if (n_paths == 0)
+                return array;
+
             for (int i = 0; i < n_paths; i++)
             {
                 int off = i * 3;
-                Location loc = new(paths[off], paths[off + 1], paths[off + 2]);
-                l.Add(loc);
+                array[off] = (new(paths[off], paths[off + 1], paths[off + 2]));
             }
-            return l;
+            return array;
         }
 
         public bool HasPathTo(PathGraph pg, Spot s)
@@ -199,7 +171,7 @@ namespace PPather.Graph
             return false;
         }
 
-        public bool HasPathTo(Location l)
+        public bool HasPathTo(Vector3 l)
         {
             return HasPathTo(l.X, l.Y, l.Z);
         }
@@ -221,10 +193,10 @@ namespace PPather.Graph
 
         public void AddPathTo(Spot s)
         {
-            AddPathTo(s.X, s.Y, s.Z);
+            AddPathTo(s.Loc.X, s.Loc.Y, s.Loc.Z);
         }
 
-        public void AddPathTo(Location l)
+        public void AddPathTo(Vector3 l)
         {
             AddPathTo(l.X, l.Y, l.Z);
         }
@@ -255,7 +227,7 @@ namespace PPather.Graph
                 chunk.modified = true;
         }
 
-        public void RemovePathTo(Location l)
+        public void RemovePathTo(Vector3 l)
         {
             RemovePathTo(l.X, l.Y, l.Z);
         }

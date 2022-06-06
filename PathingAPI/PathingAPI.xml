@@ -9,7 +9,7 @@
              Allows a route to be calculated from one point to another using minimap coords.
              </summary>
              <remarks>
-             map1 and map2 are the map ids. See https://wow.gamepedia.com/API_C_Map.GetBestMapForUnit
+             uimap1 and uimap2 are the map ids. See https://wow.gamepedia.com/API_C_Map.GetBestMapForUnit
             
                  /dump C_Map.GetBestMapForUnit("player")
             
@@ -20,15 +20,15 @@
             
                  local posX, posY = GetPlayerMapPosition("player");
              </remarks>
-             <param name="map1">from map e.g. 1451</param>
+             <param name="uimap1">from map e.g. 1451</param>
              <param name="x1">from X e.g. 46.8</param>
              <param name="y1">from Y e.g. 54.2</param>
-             <param name="map2">to map e.g. 1451</param>
+             <param name="uimap2">to map e.g. 1451</param>
              <param name="x2">to X e.g. 51.2</param>
              <param name="y2">to Y e.g. 38.9</param>
              <returns>A list of x,y,z and mapid</returns>
         </member>
-        <member name="M:PathingAPI.Controllers.PPatherController.WorldRoute(System.Single,System.Single,System.Single,System.Single,System.Single,System.Single,System.String)">
+        <member name="M:PathingAPI.Controllers.PPatherController.WorldRoute(System.Single,System.Single,System.Single,System.Single,System.Single,System.Single,System.Single)">
             <summary>
             Allows a route to be calculated from one point to another using world coords.
             e.g. -896, -3770, 11, (Barrens,Rachet) to -441, -2596, 96, (Barrens,Crossroads,Barrens)
@@ -39,7 +39,7 @@
             <param name="x2">to X e.g. -441</param>
             <param name="y2">to Y e.g. -2596</param>
             <param name="z2">from Y e.g. 96</param>
-            <param name="continent">from ["Azeroth", "Kalimdor", "Northrend", "Expansion01"] e.g. Kalimdor</param>
+            <param name="mapid">from ["Azeroth=0", "Kalimdor=1", "Northrend=??", "Expansion01=530"] e.g. Kalimdor</param>
             <returns>A list of x,y,z</returns>
         </member>
         <member name="M:PathingAPI.Controllers.PPatherController.Drawlines(System.Collections.Generic.List{PPather.Data.LineArgs})">

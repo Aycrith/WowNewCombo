@@ -7,6 +7,7 @@ using PPather.Data;
 using SharedLib;
 using SharedLib.Data;
 using Microsoft.Extensions.Logging;
+using System.Numerics;
 
 namespace PPather
 {
@@ -32,7 +33,8 @@ namespace PPather
         {
             this.dataConfig = dataConfig;
             this.logger = logger;
-            this.worldMapAreas = WorldMapAreaFactory.Read(logger, dataConfig);
+            this.worldMapAreas = WorldMapAreaFactory.Read(dataConfig);
+            ContinentDB.Init(worldMapAreas);
         }
 
         public void Reset()
@@ -41,35 +43,39 @@ namespace PPather
             this.search = null;
         }
 
-        private bool Initialise(string continent)
+        private bool Initialise(float mapId)
         {
-            if (search == null || continent != search.continent)
+            if (search == null || mapId != search.MapId)
             {
                 HasInitialised = true;
                 PathGraph.SearchEnabled = false;
-                search = new Search(continent, logger, dataConfig);
-                search.PathGraph.triangleWorld.NotifyChunkAdded = (e) => OnChunkAdded?.Invoke(e);
+                search = new Search(mapId, logger, dataConfig);
+                search.PathGraph.triangleWorld.NotifyChunkAdded = ChunkAdded;
                 OnReset?.Invoke();
                 return true;
             }
             return false;
         }
-        public Location GetWorldLocation(int uiMapId, float v1, float v2, float z = 0)
+
+        public void ChunkAdded(ChunkAddedEventArgs e)
         {
-            var worldMapArea = worldMapAreas.First(i => i.UIMapId == uiMapId);
-            var worldX = worldMapArea.ToWorldX(v2);
-            var worldY = worldMapArea.ToWorldY(v1);
-
-            Initialise(worldMapArea.Continent);
-
-            var location = search.CreateLocation(worldX, worldY, z);
-            location.Continent = worldMapArea.Continent;
-            return location;
+            OnChunkAdded?.Invoke(e);
         }
 
-        public WorldMapAreaSpot ToMapAreaSpot(float x, float y, float z, int mapHint)
+        public Vector4 GetWorldLocation(int uiMapId, float x, float y, float z = 0)
         {
-            var area = WorldMapAreaFactory.GetWorldMapArea(worldMapAreas, x, y, search.continent, mapHint);
+            WorldMapArea worldMapArea = worldMapAreas.First(i => i.UIMapId == uiMapId);
+            float worldX = worldMapArea.ToWorldX(y);
+            float worldY = worldMapArea.ToWorldY(x);
+
+            Initialise(worldMapArea.MapID);
+
+            return search.CreateLocation(worldX, worldY, z, worldMapArea.MapID);
+        }
+
+        public WorldMapAreaSpot ToMapAreaSpot(float x, float y, float z, int uimap)
+        {
+            var area = WorldMapAreaFactory.GetWorldMapArea(worldMapAreas, x, y, search.MapId, uimap);
             return new WorldMapAreaSpot
             {
                 Y = area.ToMapX(x),
@@ -110,20 +116,12 @@ namespace PPather
             }
         }
 
-        public bool SetLocations(Location from, Location to)
+        public void SetLocations(Vector4 from, Vector4 to)
         {
-            this.Initialise(from.Continent);
+            Initialise(from.W);
 
-            bool hasChanged = this.search.locationFrom == null || this.search.locationTo == null ||
-                from.X != this.search.locationFrom.X ||
-                from.Y != this.search.locationFrom.Y ||
-                to.X != this.search.locationTo.X ||
-                to.Y != this.search.locationTo.Y;
-
-            this.search.locationFrom = from;
-            this.search.locationTo = to;
-
-            return hasChanged;
+            search.locationFrom = from;
+            search.locationTo = to;
         }
 
         public List<TriangleCollection> SetNotifyChunkAdded(Action<ChunkAddedEventArgs> action)
@@ -148,34 +146,33 @@ namespace PPather
             return search.PathGraph.CurrentSearchPath();
         }
 
-        public Location SearchFrom => this.search?.locationFrom;
+        public Vector4? SearchFrom => search?.locationFrom;
 
-        public Location SearchTo => this.search?.locationTo;
+        public Vector4? SearchTo => search?.locationTo;
 
-        public Location ClosestLocation => this.search?.PathGraph?.ClosestSpot?.location;
+        public Vector3? ClosestLocation => search?.PathGraph?.ClosestSpot?.Loc;
 
-        public Location PeekLocation => this.search?.PathGraph?.PeekSpot?.location;
+        public Vector3? PeekLocation => search?.PathGraph?.PeekSpot?.Loc;
 
-        public void DrawPath(string continent, List<float[]> coords)
+        public void DrawPath(float mapId, List<float[]> coords)
         {
             var first = coords[0];
             var last = coords[^1];
 
-            var fromLoc = new Location(first[0], first[1], first[2], "l1", continent);
-            var toLoc = new Location(last[0], last[1], last[2], "l2", continent);
+            var fromLoc = new Vector4(first[0], first[1], first[2], mapId);
+            var toLoc = new Vector4(last[0], last[1], last[2], mapId);
 
             SetLocations(fromLoc, toLoc);
 
             if (search.PathGraph == null)
             {
-                search.CreatePathGraph(continent);
+                search.CreatePathGraph(mapId);
             }
 
-            List<Spot> spots = new List<Spot>();
+            List<Spot> spots = new();
             for (int i = 0; i < coords.Count; i++)
             {
-                Location l = new Location(coords[i][0], coords[i][1], coords[i][2], "l" + i.ToString(), continent);
-                Spot spot = new Spot(l);
+                Spot spot = new(new(coords[i][0], coords[i][1], coords[i][2]));
                 spots.Add(spot);
                 search.PathGraph.CreateSpotsAroundSpot(spot, false);
             }

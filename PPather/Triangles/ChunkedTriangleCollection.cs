@@ -25,57 +25,39 @@ namespace WowTriangles
         private const bool UseOctree = false;
         private const bool UseMatrix = true;
 
+        private readonly ILogger logger;
+        private readonly List<TriangleSupplier> suppliers;
+        private readonly SparseMatrix2D<TriangleCollection> chunks;
+        private readonly int maxCached;
+        public List<TriangleCollection> loadedChunks;
+
         public Action<ChunkAddedEventArgs> NotifyChunkAdded;
 
         public static int TriangleFlagDeepWater = 1;
         public static int TriangleFlagObject = 2;
         public static int TriangleFlagModel = 4;
 
-        private List<TriangleSupplier> suppliers = new();
-
-        private SparseMatrix2D<TriangleCollection> chunks;
-
-        public List<TriangleCollection> loadedChunks = new();
         private int NOW;
-        private int maxCached = 1000;
 
-        private bool m_Updated;
+        public List<TriangleCollection> LoadedChunks => loadedChunks;
 
-        public bool Updated
-        {
-            get => m_Updated;
-            set => m_Updated = false;
-        }
-
-        public List<TriangleCollection> LoadedChunks
-        {
-            get
-            {
-                return loadedChunks;
-            }
-        }
-
-        private readonly ILogger logger;
-
-        public ChunkedTriangleCollection(float chunkSize, ILogger logger)
+        public ChunkedTriangleCollection(ILogger logger, int maxCached, TriangleSupplier supplier)
         {
             this.logger = logger;
-            // this.chunkSize = chunkSize;
+            this.maxCached = maxCached;
+
+            loadedChunks = new();
+            suppliers = new() { supplier };
+
             chunks = new SparseMatrix2D<TriangleCollection>(8);
         }
 
         public void Close()
         {
             foreach (TriangleSupplier s in suppliers)
+            {
                 s.Close();
-            suppliers = null;
-            loadedChunks = null;
-            chunks = null;
-        }
-
-        public void SetMaxCached(int maxCached)
-        {
-            this.maxCached = maxCached;
+            }
         }
 
         public void EvictAll()
@@ -94,37 +76,30 @@ namespace WowTriangles
 
         private void EvictIfNeeded()
         {
-            if (loadedChunks.Count >= maxCached)
+            if (loadedChunks.Count < maxCached)
+                return;
+
+            TriangleCollection toEvict = null;
+            foreach (TriangleCollection tc in loadedChunks)
             {
-                TriangleCollection toEvict = null;
-                foreach (TriangleCollection tc in loadedChunks)
+                int LRU = tc.LRU;
+                if (toEvict == null || LRU < toEvict.LRU)
                 {
-                    int LRU = tc.LRU;
-                    if (toEvict == null || LRU < toEvict.LRU)
-                    {
-                        toEvict = tc;
-                    }
+                    toEvict = tc;
                 }
-                loadedChunks.Remove(toEvict);
-                chunks.Clear(toEvict.grid_x, toEvict.grid_y);
-
-                if (logger.IsEnabled(LogLevel.Trace))
-                    logger.LogTrace($"Evict chunk at {toEvict.base_x} {toEvict.base_y}");
-
-                m_Updated = true;
             }
-        }
+            loadedChunks.Remove(toEvict);
+            chunks.Clear(toEvict.grid_x, toEvict.grid_y);
 
-        public void AddSupplier(TriangleSupplier supplier)
-        {
-            suppliers.Add(supplier);
+            if (logger.IsEnabled(LogLevel.Trace))
+                logger.LogTrace($"Evict chunk at {toEvict.base_x} {toEvict.base_y} -- Count: {loadedChunks.Count}");
         }
 
         public static void GetGridStartAt(float x, float y, out int grid_x, out int grid_y)
         {
-            x = Wmo.ChunkReader.ZEROPOINT - x;
+            x = ChunkReader.ZEROPOINT - x;
             grid_x = (int)(x / ChunkReader.TILESIZE);
-            y = Wmo.ChunkReader.ZEROPOINT - y;
+            y = ChunkReader.ZEROPOINT - y;
             grid_y = (int)(y / ChunkReader.TILESIZE);
         }
 
@@ -142,8 +117,6 @@ namespace WowTriangles
         {
             TriangleCollection tc = GetChunkAt(x, y);
             ICollection<int> ts;
-
-            ts = null;
             if (UseMatrix)
             {
                 TriangleMatrix tm = tc.GetTriangleMatrix();
@@ -173,16 +146,16 @@ namespace WowTriangles
 
         private void LoadChunkAt(float x, float y)
         {
-            int grid_x, grid_y;
-            GetGridStartAt(x, y, out grid_x, out grid_y);
+            GetGridStartAt(x, y, out int grid_x, out int grid_y);
 
             if (chunks.IsSet(grid_x, grid_y))
                 return;
-            EvictIfNeeded();
-            TriangleCollection tc = new TriangleCollection(this.logger);
 
-            float min_x, max_x, min_y, max_y;
-            GetGridLimits(grid_x, grid_y, out min_x, out min_y, out max_x, out max_y);
+            EvictIfNeeded();
+
+            TriangleCollection tc = new(logger);
+
+            GetGridLimits(grid_x, grid_y, out float min_x, out float min_y, out float max_x, out float max_y);
 
             if (logger.IsEnabled(LogLevel.Trace))
                 logger.LogTrace($"Got asked for triangles at {x}, {y} grid [{grid_x}, {grid_y}]");
@@ -197,21 +170,20 @@ namespace WowTriangles
             }
             tc.CompactVertices();
             tc.ClearVertexMatrix(); // not needed anymore
+
             tc.base_x = grid_x;
             tc.base_y = grid_y;
 
-            if (logger.IsEnabled(LogLevel.Trace))
-                logger.LogTrace($"Got {tc.GetNumberOfTriangles()} triangles and {tc.GetNumberOfVertices()} vertices");
-
             loadedChunks.Add(tc);
             NotifyChunkAdded?.Invoke(new ChunkAddedEventArgs(tc));
+
+            if (logger.IsEnabled(LogLevel.Trace))
+                logger.LogTrace($"Got {tc.GetNumberOfTriangles()} triangles and {tc.GetNumberOfVertices()} vertices -- Count: {loadedChunks.Count}");
 
             chunks.Set(grid_x, grid_y, tc);
 
             if (logger.IsEnabled(LogLevel.Trace))
                 logger.LogTrace($"Got triangles grid [{tc.min_x}, {tc.min_y}] - [{tc.max_x}, {tc.max_y}]");
-
-            m_Updated = true;
         }
 
         public TriangleCollection LastTriangleCollection;
@@ -769,7 +741,7 @@ namespace WowTriangles
 
         public bool LineOfSightExists(Spot a, Spot b)
         {
-            TriangleCollection tc = GetChunkAt(a.X, a.Y);
+            TriangleCollection tc = GetChunkAt(a.Loc.X, a.Loc.Y);
             ICollection<int> ts;
 
             ts = null;
@@ -777,11 +749,11 @@ namespace WowTriangles
             if (UseMatrix)
             {
                 TriangleMatrix tm = tc.GetTriangleMatrix();
-                ts = tm.GetAllCloseTo(a.X, a.Y, a.GetDistanceTo(b) + 1);
+                ts = tm.GetAllCloseTo(a.Loc.X, a.Loc.Y, a.GetDistanceTo(b) + 1);
             }
 
-            Vector3 s0 = new(a.X, a.Y, a.Z);
-            Vector3 s1 = new(b.X, b.Y, b.Z);
+            Vector3 s0 = a.Loc;
+            Vector3 s1 = b.Loc;
 
             foreach (int t in ts)
             {

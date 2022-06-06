@@ -4,6 +4,8 @@
 @using PPather.Data
 @using PPather.Graph
 @using System.Threading
+@using System.Numerics
+@using SharedLib.Extensions
 
 @implements IDisposable
 
@@ -42,11 +44,11 @@
         }
     }
 
-    private void Initialise()
+    private async void Initialise()
     {
         if (!pPatherService.HasInitialised)
         {
-            InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("log", "Waiting for first search from the API...")).Wait();
+            await jsRuntime.InvokeVoidAsync("log", "Waiting for first search from the API...");
         }
         else
         {
@@ -55,46 +57,54 @@
             this.AddChunks(chunks);
 
             pPatherService.SetOnPathCreated(DrawFinalPath);
-            RefreshSearchThread = new System.Threading.Thread(new System.Threading.ThreadStart(SearchPathRefresh));
+            RefreshSearchThread = new Thread(SearchPathRefresh);
             RefreshSearchThread.Start();
-            pPatherService.OnReset = () => { InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("clear")).Wait(); };
 
+            pPatherService.OnReset = Reset;
             pPatherService.OnLinesAdded = Drawlines;
             pPatherService.OnSphereAdded = DrawSphere;
         }
     }
 
+    public async void Reset()
+    {
+        await jsRuntime.InvokeVoidAsync("clear");
+    }
+
     public void Dispose()
     {
+        PathingAPILoggerSink.OnLog -= Log;
+
+        if (pPatherService != null) {
+            pPatherService.OnReset = null;
+            pPatherService.SetNotifyChunkAdded(null);
+            pPatherService.SetOnPathCreated(null);
+
+            pPatherService.OnLinesAdded = null;
+            pPatherService.OnSphereAdded = null;
+        }
+
         cts.Cancel();
     }
 
-    public async Task InvokeAsyncBase(Action action)
+    public async void Log(object s, string message)
     {
-        await base.InvokeAsync(() =>
-        {
-            try { action(); } catch { }
-        });
-    }
-
-    public void Log(object s, string message)
-    {
-        InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("log", message)).Wait();
+        await jsRuntime.InvokeVoidAsync("log", message);
         if (!initialised) { Initialise(); }
     }
 
-    public void DrawFinalPath(PPather.Graph.Path spotPath)
+    public async void DrawFinalPath(PPather.Graph.Path spotPath)
     {
         if (spotPath != null)
         {
             var path = spotPath.locations.Select(s => Vertex.Create(s.X, s.Y, s.Z)).ToList();
-            InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("removeMeshes", Name)).Wait();
-            InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("drawPath", path, PathColour, Name)).Wait();
+            await jsRuntime.InvokeVoidAsync("removeMeshes", Name);
+            await jsRuntime.InvokeVoidAsync("drawPath", path, PathColour, Name);
 
-            System.Threading.Thread.Sleep(1000);
-            InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("removeMeshes", "search")).Wait();
-            InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("removeMeshes", "closest")).Wait();
-            InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("removeMeshes", "end")).Wait();
+            //System.Threading.Thread.Sleep(1000);
+            await jsRuntime.InvokeVoidAsync("removeMeshes", "search");
+            await jsRuntime.InvokeVoidAsync("removeMeshes", "closest");
+            await jsRuntime.InvokeVoidAsync("removeMeshes", "end");
         }
         else
         {
@@ -102,12 +112,12 @@
         }
     }
 
-    private Location lastFrom = new Location(0, 0,0);
-    private Location lastTo = new Location(0, 0, 0);
-    private Location lastClosest = new Location(0, 0, 0);
-    private Location lastPeek = new Location(0, 0, 0);
+    private Vector3 lastFrom = new();
+    private Vector3 lastTo = new();
+    private Vector3 lastClosest = new();
+    private Vector3 lastPeek = new();
 
-    public void SearchPathRefresh()
+    public async void SearchPathRefresh()
     {
         while (!cts.IsCancellationRequested)
         {
@@ -118,39 +128,39 @@
                     var spots = pPatherService.GetCurrentSearchPath();
                     if (spots != null)
                     {
-                        var path = spots.Where(s => s != null).Select(s => Vertex.Create(s.X, s.Y, s.Z));
+                        var path = spots.Where(s => s != null).Select(s => Vertex.Create(s.Loc.X, s.Loc.Y, s.Loc.Z));
                         if (path.Count() > 0)
                         {
-                            InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("drawPath", path, 4, "search")).Wait();
+                            await jsRuntime.InvokeVoidAsync("drawPath", path, 4, "search");
                         }
                     }
 
-                    var from = pPatherService.SearchFrom;
-                    var to = pPatherService.SearchTo;
-
-                    if (from != null && to != null && lastFrom.X != from.X || lastTo.X != lastTo.X)
+                    if (pPatherService.SearchFrom.HasValue && pPatherService.SearchTo.HasValue && lastFrom.X != pPatherService.SearchFrom.Value.X /*|| lastTo.X != lastTo.X*/)
                     {
-                        jsRuntime.InvokeVoidAsync("drawLine", Vertex.Create(from.X, from.Y, from.Z), 2, "start2").ConfigureAwait(false);
-                        jsRuntime.InvokeVoidAsync("drawLine", Vertex.Create(to.X, to.Y, to.Z), 3, "end").ConfigureAwait(false);
-                        lastFrom = from;
-                        lastTo = to;
+                        Vector4 from = pPatherService.SearchFrom.Value;
+                        Vector4 to = pPatherService.SearchTo.Value;
+
+                        await jsRuntime.InvokeVoidAsync("drawLine", Vertex.Create(from.X, from.Y, from.Z), 2, "start2");
+                        await jsRuntime.InvokeVoidAsync("drawLine", Vertex.Create(to.X, to.Y, to.Z), 3, "end");
+                        lastFrom = from.AsVector3();
+                        lastTo = to.AsVector3();
                     }
 
-                    if (pPatherService.ClosestLocation != null)
+                    if (pPatherService.ClosestLocation.HasValue)
                     {
-                        if (lastClosest.X != pPatherService.ClosestLocation.X)
+                        if (lastClosest.X != pPatherService.ClosestLocation.Value.X)
                         {
-                            jsRuntime.InvokeVoidAsync("drawLine", Vertex.Create(pPatherService.ClosestLocation.X, pPatherService.ClosestLocation.Y, pPatherService.ClosestLocation.Z), 5, "closest").ConfigureAwait(false);
-                            lastClosest = pPatherService.ClosestLocation;
+                            await jsRuntime.InvokeVoidAsync("drawLine", Vertex.Create(pPatherService.ClosestLocation.Value.X, pPatherService.ClosestLocation.Value.Y, pPatherService.ClosestLocation.Value.Z), 5, "closest");
+                            lastClosest = pPatherService.ClosestLocation.Value;
                         }
                     }
 
-                    if (pPatherService.PeekLocation != null)
+                    if (pPatherService.PeekLocation.HasValue)
                     {
-                        if (lastPeek.X != pPatherService.PeekLocation.X)
+                        if (lastPeek.X != pPatherService.PeekLocation.Value.X)
                         {
-                            jsRuntime.InvokeVoidAsync("drawLine", Vertex.Create(pPatherService.PeekLocation.X, pPatherService.PeekLocation.Y, pPatherService.PeekLocation.Z), 6, "peek").ConfigureAwait(false);
-                            lastPeek = pPatherService.PeekLocation;
+                            await jsRuntime.InvokeVoidAsync("drawLine", Vertex.Create(pPatherService.PeekLocation.Value.X, pPatherService.PeekLocation.Value.Y, pPatherService.PeekLocation.Value.Z), 6, "peek");
+                            lastPeek = pPatherService.PeekLocation.Value;
                         }
                     }
 
@@ -164,15 +174,15 @@
         }
     }
 
-    private void DrawSphere(SphereEventArgs e)
+    private async void DrawSphere(SphereEventArgs e)
     {
-        InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("drawSphere", e.Vertex, e.Colour, e.Name)).Wait();
+        await jsRuntime.InvokeVoidAsync("drawSphere", e.Vertex, e.Colour, e.Name);
     }
 
 
-    private void Drawlines(LinesEventArgs e)
+    private async void Drawlines(LinesEventArgs e)
     {
-        InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("drawPath", e.Lines, e.Colour, e.Name)).Wait();
+        await jsRuntime.InvokeVoidAsync("drawPath", e.Lines, e.Colour, e.Name);
     }
 
     private void TriangleWorld_NotifyChunkAdded(WowTriangles.ChunkAddedEventArgs e)
@@ -181,21 +191,18 @@
         AddChunks(triangles);
     }
 
-    private void AddChunks(List<WowTriangles.TriangleCollection> chunks)
+    private async void AddChunks(List<WowTriangles.TriangleCollection> chunks)
     {
-        lock (this)
-        {
-            var positions = MeshFactory.CreatePointList(chunks);
-            var water = MeshFactory.CreateTrianglesList(1, chunks);
-            FixMaxWaterHeight(water, positions);
-            var models = new List<int[]>();
-            models.Add(MeshFactory.CreateTrianglesList(0, chunks));
-            models.Add(water);
-            models.Add(MeshFactory.CreateTrianglesList(2, chunks));
-            models.Add(MeshFactory.CreateTrianglesList(4, chunks));
+        var positions = MeshFactory.CreatePointList(chunks);
+        var water = MeshFactory.CreateTrianglesList(1, chunks);
+        FixMaxWaterHeight(water, positions);
+        var models = new List<int[]>();
+        models.Add(MeshFactory.CreateTrianglesList(0, chunks));
+        models.Add(water);
+        models.Add(MeshFactory.CreateTrianglesList(2, chunks));
+        models.Add(MeshFactory.CreateTrianglesList(4, chunks));
 
-            InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("addModels", models, positions)).Wait();
-        }
+        await jsRuntime.InvokeVoidAsync("addModels", models, positions);
     }
 
     private void FixMaxWaterHeight(int[] waterPoints, Vertex[] positions)

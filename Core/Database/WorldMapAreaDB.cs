@@ -43,20 +43,9 @@ namespace Core.Database
             }
         }
 
-        public WorldMapAreaSpot ToMapAreaSpot(float x, float y, float z, string continent, int mapHint)
+        public Vector3 ToAreaLoc(float x, float y, float z, float mapId, int uiMap)
         {
-            var area = WorldMapAreaFactory.GetWorldMapArea(areas.Values, x, y, continent, mapHint);
-            return new WorldMapAreaSpot
-            {
-                X = area.ToMapY(y),
-                Y = area.ToMapX(x),
-                Z = z,
-                MapID = area.UIMapId
-            };
-        }
-        public Vector3 ToAreaLoc(float x, float y, float z, string continent, int mapHint)
-        {
-            var area = WorldMapAreaFactory.GetWorldMapArea(areas.Values, x, y, continent, mapHint);
+            var area = WorldMapAreaFactory.GetWorldMapArea(areas.Values, x, y, mapId, uiMap);
             return new Vector3(area.ToMapY(y), area.ToMapX(x), z);
         }
 
