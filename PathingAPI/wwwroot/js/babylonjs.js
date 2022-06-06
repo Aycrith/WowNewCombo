@@ -111,6 +111,10 @@
         window.addEventListener('resize', function () { engine.resize(); });
 
         camera = new BABYLON.FreeCamera('camera1', new BABYLON.Vector3(0, 50, -0), scene);
+        camera.keysUp.push(87);     // "w"
+        camera.keysDown.push(83);   // "s"
+        camera.keysLeft.push(65);   // "a"
+        camera.keysRight.push(68);  // "d"
         camera.attachControl(canvas, false); // attach the camera to the canvas
 
         var cameraMinSpeed = 0.1;
@@ -133,18 +137,18 @@
             }
         });
 
-        var energy = 1000, shiftPressed = false;
+        var energy = 0, shiftPressed = false;
         scene.onBeforeRenderObservable.add(function () {
             if (shiftPressed) {
+                camera.speed = cameraMaxSpeed;
+                energy = 25;
+            } else {
                 if (energy > 0) {
-                    camera.speed = cameraMaxSpeed;
                     energy--;
                 }
                 else {
                     camera.speed = cameraMinSpeed;
                 }
-            } else {
-                camera.speed = cameraMinSpeed;
             }
         });
         scene.onKeyboardObservable.add((kbInfo) => {
@@ -174,8 +178,6 @@
 
     addModels = function (loadedIndices, loadedPositions) {
         log("addModels: " + modelId);
-        var positions = [];
-
         if (loadedPositions.length === 0) {
             return;
         }
@@ -185,6 +187,7 @@
             camera.position = new BABYLON.Vector3(loadedPositions[loadedPositions.length - 1].x, loadedPositions[loadedPositions.length - 1].z + 10, loadedPositions[loadedPositions.length-1].y);
         }
 
+        var positions = [];
         for (i = 0; i < loadedPositions.length; i++) {
             positions.push(loadedPositions[i].x);
             positions.push(loadedPositions[i].z);
