@@ -4,6 +4,7 @@
 @using PPather.Data
 @using PPather.Graph
 @using System.Numerics
+@using System.Threading
 
 @inject IJSRuntime jsRuntime
 @inject PPatherService pPatherService
@@ -28,39 +29,12 @@
         if (firstRender)
         {
             await jsRuntime.InvokeVoidAsync("createScene");
-
             PathGraph.SearchEnabled = true;
-
             pPatherService.Reset();
 
-
-            //var mapId = 1451;
-            //this.parameters = new SearchParam
-            //{
-            //    From = pPatherService.GetWorldLocation(mapId, 46.8f, 54.2f),
-            //    To = pPatherService.GetWorldLocation(mapId, 51.2f, 38.9f)
-            //};
-
-            //var mapId = 1428;
-            //this.parameters = new SearchParam
-            //{
-            //    From= pPatherService.GetWorldLocation(mapId, 82.7f, 63.2f),
-            //    To= pPatherService.GetWorldLocation(mapId, 64.9f, 27.0f)
-            //};
-
-            //DoSearch(PatherPath.Graph.PathGraph.eSearchScoreSpot.OriginalPather, 1, "Test");
-
             IsDisabled = false;
-            await InvokeAsyncBase(StateHasChanged);
+            await InvokeAsync(StateHasChanged);
         }
-    }
-
-    public async Task InvokeAsyncBase(Action action)
-    {
-        await base.InvokeAsync(() =>
-        {
-            try { action(); } catch { }
-        });
     }
 
     public async Task OnSearch(SearchParam searchParameters)
@@ -86,32 +60,30 @@
         PathGraph.ProgressTimeoutSeconds = 60;
         PathGraph.TimeoutSeconds = 600;
 
-        await InvokeAsyncBase(StateHasChanged);
+        await InvokeAsync(StateHasChanged);
 
-        searchPathThread = new System.Threading.Thread(new System.Threading.ThreadStart(SearchPathThread));
+        searchPathThread = new Thread(SearchPathThread);
         searchPathThread.Start();
     }
 
-    public void SearchPathThread()
+    public async void SearchPathThread()
     {
         try
         {
-            InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("removeMeshes", name)).Wait();
-            InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("removeMeshes", "search")).Wait();
+            await jsRuntime.InvokeVoidAsync("removeMeshes", name);
+            await jsRuntime.InvokeVoidAsync("removeMeshes", "search");
 
-
-            var from = parameters.From;
-            var to = parameters.To;
-
-            pPatherService.SetLocations(from.Location, to.Location);
+            pPatherService.SetLocations(parameters.From.Location, parameters.To.Location);
 
             var patherPath = pPatherService.DoSearch(searchType);
 
-            InvokeAsyncBase(() => { IsDisabled = false; StateHasChanged(); }).Wait();
+            IsDisabled = false;
         }
         catch (Exception ex)
         {
-            InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("log", ex.Message)).Wait();
+            await jsRuntime.InvokeVoidAsync("log", ex.Message);
         }
+
+        await InvokeAsync(StateHasChanged);
     }
 }

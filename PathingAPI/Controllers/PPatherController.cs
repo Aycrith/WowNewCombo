@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text.Json;
 using WowTriangles;
 using System.Numerics;
+using SharedLib.Data;
 
 namespace PathingAPI.Controllers
 {
@@ -57,7 +58,10 @@ namespace PathingAPI.Controllers
             isBusy = true;
             service.SetLocations(service.GetWorldLocation(uimap1, x1, y1), service.GetWorldLocation(uimap2, x2, y2));
             var path = service.DoSearch(PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
-
+            if (path != null)
+            {
+                service.Save();
+            }
             var worldLocations = path == null ? new List<WorldMapAreaSpot>() : path.locations.Select(s => service.ToMapAreaSpot(s.X, s.Y, s.Z, uimap1));
             isBusy = false;
             return new JsonResult(worldLocations, new JsonSerializerOptions { WriteIndented = true });
@@ -82,6 +86,10 @@ namespace PathingAPI.Controllers
             isBusy = true;
             service.SetLocations(new(x1, y1, z1, mapid), new(x2, y2, z2, mapid));
             var path = service.DoSearch(PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
+            if (path != null)
+            {
+                service.Save();
+            }
             isBusy = false;
             return new JsonResult(path, new JsonSerializerOptions { WriteIndented = true });
         }
@@ -152,8 +160,7 @@ namespace PathingAPI.Controllers
         {
             var mpqFiles = MPQTriangleSupplier.GetArchiveNames(DataConfig.Load());
 
-            var countOfMPQFiles = mpqFiles.Where(f => System.IO.File.Exists(f)).Count();
-
+            int countOfMPQFiles = mpqFiles.Count(f => System.IO.File.Exists(f));
             if (countOfMPQFiles == 0)
             {
                 logger.LogInformation("Some of these MPQ files should exist!");
@@ -172,7 +179,7 @@ namespace PathingAPI.Controllers
         [Produces("application/json")]
         public bool DrawPathTest()
         {
-            int mapId = 0; // Azeroth
+            float mapId = ContinentDB.NameToId["Azeroth"]; // Azeroth
             List<float[]> coords = new()
             {
                 new float[] { -5609.00f,-479.00f,397.49f },
