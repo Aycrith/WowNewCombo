@@ -305,7 +305,7 @@ namespace Core
 
         public IEnumerable<string> ClassFiles()
         {
-            var root = dataConfig.Class;
+            var root = Path.Join(dataConfig.Class, Path.DirectorySeparatorChar.ToString());
             var files = Directory.EnumerateFiles(root, "*.json*", SearchOption.AllDirectories)
                 .Select(path => path.Replace(root, string.Empty))
                 .OrderBy(x => x, new NaturalStringComparer())
@@ -317,7 +317,7 @@ namespace Core
 
         public IEnumerable<string> PathFiles()
         {
-            var root = dataConfig.Path;
+            var root = Path.Join(dataConfig.Path, Path.DirectorySeparatorChar.ToString());
             var files = Directory.EnumerateFiles(root, "*.json*", SearchOption.AllDirectories)
                 .Select(path => path.Replace(root, string.Empty))
                 .OrderBy(x => x, new NaturalStringComparer())
