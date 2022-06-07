@@ -49,8 +49,11 @@ namespace Core
 
         public void SetTargetLocation(Vector3 target)
         {
-            this.target = target;
-            Reset();
+            if (this.target != target)
+            {
+                this.target = target;
+                Reset();
+            }
         }
 
         public void Reset()

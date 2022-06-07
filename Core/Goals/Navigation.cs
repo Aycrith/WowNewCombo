@@ -16,14 +16,16 @@ namespace Core.Goals
         public int MapId { get; }
         public Vector3 Start { get; }
         public Vector3 End { get; }
+        public float Distance { get; }
         public Action<PathResult> Callback { get; }
         public DateTime Time { get; }
 
-        public PathRequest(int mapId, Vector3 start, Vector3 end, Action<PathResult> callback)
+        public PathRequest(int mapId, Vector3 start, Vector3 end, float distance, Action<PathResult> callback)
         {
             MapId = mapId;
             Start = start;
             End = end;
+            Distance = distance;
             Callback = callback;
             Time = DateTime.UtcNow;
         }
@@ -31,24 +33,30 @@ namespace Core.Goals
 
     internal readonly struct PathResult
     {
+        public Vector3 Start { get; }
+        public Vector3 End { get; }
+        public float Distance { get; }
         public List<Vector3> Path { get; }
         public bool Success { get; }
         public double ElapsedMs { get; }
         public Action<PathResult> Callback { get; }
 
-        public PathResult(List<Vector3> path, bool success, double elapsedMs, Action<PathResult> callback)
+        public PathResult(in PathRequest request, List<Vector3> path, bool success, Action<PathResult> callback)
         {
+            Start = request.Start;
+            End = request.End;
+            Distance = request.Distance;
             Path = path;
             Success = success;
-            ElapsedMs = elapsedMs;
             Callback = callback;
+            ElapsedMs = (DateTime.UtcNow - request.Time).TotalMilliseconds;
         }
     }
 
-    public class Navigation : IDisposable
+    public partial class Navigation : IDisposable
     {
         private const bool debug = false;
-        private readonly float RADIAN = MathF.PI * 2;
+        private const float RADIAN = MathF.PI * 2;
 
         private readonly ILogger logger;
         private readonly PlayerDirection playerDirection;
@@ -60,15 +68,17 @@ namespace Core.Goals
         private readonly IPPather pather;
         private readonly MountHandler mountHandler;
 
-        private readonly int MinDistance = 10;
-        private readonly int MinDistanceMount = 15;
+        private readonly string patherName;
+
+        private const int MinDistance = 10;
+        private const int MinDistanceMount = 15;
         private readonly int MaxDistance = 200;
 
         private float AvgDistance;
         private float lastDistance = float.MaxValue;
 
-        private readonly float minAngleToTurn = MathF.PI / 35;          // 5.14 degree
-        private readonly float minAngleToStopBeforeTurn = MathF.PI / 3; // 60 degree
+        private const float minAngleToTurn = MathF.PI / 35;          // 5.14 degree
+        private const float minAngleToStopBeforeTurn = MathF.PI / 3; // 60 degree
 
         private readonly Stack<Vector3> wayPoints = new();
         private readonly Stack<Vector3> routeToNextWaypoint = new();
@@ -86,13 +96,16 @@ namespace Core.Goals
 
         private bool active;
 
-        private readonly ConcurrentQueue<PathRequest> pathRequests = new();
-        private readonly ConcurrentQueue<PathResult> pathResults = new();
+        private readonly Queue<PathRequest> pathRequests = new();
+        private readonly Queue<PathResult> pathResults = new();
 
         private readonly CancellationTokenSource _cts;
         private readonly Thread pathfinderThread;
         private readonly ManualResetEvent manualReset;
         private bool searchingPath;
+
+        private int failedAttempt;
+        private Vector3 lastFailedDestination;
 
         public Navigation(ILogger logger, PlayerDirection playerDirection, ConfigurableInput input, AddonReader addonReader, StopMoving stopMoving, StuckDetector stuckDetector, IPPather pather, MountHandler mountHandler, Mode mode)
         {
@@ -105,6 +118,8 @@ namespace Core.Goals
             this.stuckDetector = stuckDetector;
             this.pather = pather;
             this.mountHandler = mountHandler;
+
+            patherName = pather.GetType().Name;
 
             AvgDistance = MinDistance;
 
@@ -147,7 +162,7 @@ namespace Core.Goals
                 result.Callback(result);
             }
 
-            if (searchingPath)
+            if (searchingPath || cts.IsCancellationRequested)
             {
                 return;
             }
@@ -219,7 +234,7 @@ namespace Core.Goals
                 {
                     if (stuckDetector.ActionDurationMs > 10_000)
                     {
-                        Log($"Clear route to waypoit since stucked for {stuckDetector.ActionDurationMs} ms");
+                        LogClearRouteToWaypointStuck(logger, stuckDetector.ActionDurationMs);
                         stuckDetector.Reset();
                         routeToNextWaypoint.Clear();
                         return;
@@ -230,12 +245,8 @@ namespace Core.Goals
                         stuckDetector.Update();
                         distance = location.DistanceXYTo(routeToNextWaypoint.Peek());
                     }
-                    else
-                    {
-                        Log("Resume from stuck");
-                    }
                 }
-                else // distance closer
+                else if (!cts.IsCancellationRequested) // distance closer
                 {
                     AdjustHeading(heading, cts);
                 }
@@ -324,39 +335,7 @@ namespace Core.Goals
             if (distance > MaxDistance || distance > (AvgDistance + MinDistance))
             {
                 stopMoving.Stop();
-
-                PathRequest(new PathRequest(addonReader.UIMapId.Value, location, wayPoints.Peek(), (PathResult result) =>
-                {
-                    if (!active)
-                        return;
-
-                    if (!result.Success || result.Path == null || result.Path.Count == 0)
-                    {
-                        LogWarn($"Unable to find path {location} -> {wayPoints.Peek()}. Character may stuck! {result.ElapsedMs} ms");
-                        return;
-                    }
-
-                    Log($"pathfinder - {distance} - {location} -> {wayPoints.Peek()} {result.ElapsedMs} ms");
-
-                    result.Path.Reverse();
-                    result.Path.ForEach(p => routeToNextWaypoint.Push(p));
-
-                    if (SimplifyRouteToWaypoint)
-                        SimplyfyRouteToWaypoint();
-
-                    if (routeToNextWaypoint.Count == 0)
-                    {
-                        routeToNextWaypoint.Push(wayPoints.Peek());
-
-                        if (debug)
-                            LogDebug($"RefillRouteToNextWaypoint -- WayPoint reached! {wayPoints.Count}");
-                    }
-
-                    stuckDetector.SetTargetLocation(routeToNextWaypoint.Peek());
-                    UpdateTotalRoute();
-
-                    OnPathCalculated?.Invoke();
-                }));
+                PathRequest(new PathRequest(addonReader.UIMapId.Value, location, wayPoints.Peek(), distance, PathCalculatedCallback));
             }
             else
             {
@@ -382,6 +361,52 @@ namespace Core.Goals
             manualReset.Set();
         }
 
+        private void PathCalculatedCallback(PathResult result)
+        {
+            if (!active)
+                return;
+
+            if (!result.Success || result.Path == null || result.Path.Count == 0)
+            {
+                if (lastFailedDestination != result.End)
+                {
+                    lastFailedDestination = result.End;
+                    LogPathfinderFailed(logger, result.Start, result.End, result.ElapsedMs);
+                }
+
+                failedAttempt++;
+                if (failedAttempt > 2)
+                {
+                    failedAttempt = 0;
+                    stuckDetector.SetTargetLocation(result.End);
+                    stuckDetector.Update();
+                }
+                return;
+            }
+
+            failedAttempt = 0;
+            LogPathfinderSuccess(logger, result.Distance, result.Start, result.End, result.ElapsedMs);
+
+            result.Path.Reverse();
+            result.Path.ForEach(p => routeToNextWaypoint.Push(p));
+
+            if (SimplifyRouteToWaypoint)
+                SimplyfyRouteToWaypoint();
+
+            if (routeToNextWaypoint.Count == 0)
+            {
+                routeToNextWaypoint.Push(wayPoints.Peek());
+
+                if (debug)
+                    LogDebug($"RefillRouteToNextWaypoint -- WayPoint reached! {wayPoints.Count}");
+            }
+
+            stuckDetector.SetTargetLocation(routeToNextWaypoint.Peek());
+            UpdateTotalRoute();
+
+            OnPathCalculated?.Invoke();
+        }
+
         private async void PathFinderThread()
         {
             while (!_cts.IsCancellationRequested)
@@ -394,7 +419,7 @@ namespace Core.Goals
                     var path = await pather.FindRoute(pathRequest.MapId, pathRequest.Start, pathRequest.End);
                     if (active)
                     {
-                        pathResults.Enqueue(new PathResult(path, true, (DateTime.UtcNow - pathRequest.Time).TotalMilliseconds, pathRequest.Callback));
+                        pathResults.Enqueue(new PathResult(pathRequest, path, true, pathRequest.Callback));
                     }
                 }
 
@@ -474,18 +499,18 @@ namespace Core.Goals
                 float distance = location.DistanceXYTo(routeToNextWaypoint.Peek());
                 if (distance > 2 * MinDistanceMount)
                 {
-                    Log($"[{pather.GetType().Name}] distance from nearlest point is {distance}. Have to clear RouteToWaypoint.");
+                    LogV1ClearRouteToWaypoint(logger, patherName, distance);
                     routeToNextWaypoint.Clear();
                 }
                 else
                 {
-                    Log($"[{pather.GetType().Name}] distance is close {distance}. Keep RouteToWaypoint.");
+                    LogV1KeepRouteToWaypoint(logger, patherName, distance);
                     ResetStuckParameters();
                 }
             }
             else
             {
-                Log($"[{pather.GetType().Name}] total distance {totalDistance}<{MaxDistance / 2}. Have to clear RouteToWaypoint.");
+                LogV1ClearRouteToWaypointTooFar(logger, patherName, totalDistance, MaxDistance / 2);
                 routeToNextWaypoint.Clear();
             }
         }
@@ -517,14 +542,44 @@ namespace Core.Goals
             logger.LogDebug($"{nameof(Navigation)}: {text}");
         }
 
-        private void Log(string text)
-        {
-            logger.LogInformation($"{nameof(Navigation)}: {text}");
-        }
+        #region Logging
 
-        private void LogWarn(string text)
-        {
-            logger.LogWarning($"{nameof(Navigation)}: {text}");
-        }
+        [LoggerMessage(
+            EventId = 40,
+            Level = LogLevel.Warning,
+            Message = "Unable to find path {start} -> {end}. Character may stuck! {elapsedMs}ms")]
+        static partial void LogPathfinderFailed(ILogger logger, Vector3 start, Vector3 end, double elapsedMs);
+
+        [LoggerMessage(
+            EventId = 41,
+            Level = LogLevel.Information,
+            Message = "Pathfinder - {distance} - {start} -> {end} {elapsedMs}ms")]
+        static partial void LogPathfinderSuccess(ILogger logger, float distance, Vector3 start, Vector3 end, double elapsedMs);
+
+        [LoggerMessage(
+            EventId = 42,
+            Level = LogLevel.Information,
+            Message = "Clear route to waypoint! Stucked for {elapsedMs}ms")]
+        static partial void LogClearRouteToWaypointStuck(ILogger logger, double elapsedMs);
+
+        [LoggerMessage(
+            EventId = 43,
+            Level = LogLevel.Information,
+            Message = "[{name}] distance from nearlest point is {distance}. Have to clear RouteToWaypoint.")]
+        static partial void LogV1ClearRouteToWaypoint(ILogger logger, string name, float distance);
+
+        [LoggerMessage(
+            EventId = 44,
+            Level = LogLevel.Information,
+            Message = "[{name}] distance is close {distance}. Keep RouteToWaypoint.")]
+        static partial void LogV1KeepRouteToWaypoint(ILogger logger, string name, float distance);
+
+        [LoggerMessage(
+            EventId = 45,
+            Level = LogLevel.Information,
+            Message = "[{name}] total distance {totalDistance} > {maxDistancehalf}. Have to clear RouteToWaypoint.")]
+        static partial void LogV1ClearRouteToWaypointTooFar(ILogger logger, string name, float totalDistance, float maxDistancehalf);
+
+        #endregion
     }
 }
