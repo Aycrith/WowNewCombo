@@ -58,8 +58,7 @@
         "Name": "Thunder Clap",
         "Key": "6",
         "WhenUsable": true,
-        "MinRage": 20,
-        "Cooldown": 14000,
+        "Cooldown": 16000,
         "Requirements": [
           "!Thunder Clap && MobCount > 1"
         ],
@@ -68,16 +67,14 @@
       {
         "Name": "Overpower",
         "Key": "0",
-        "WhenUsable": true,
-        "MinRage": 5
+        "WhenUsable": true
       },
       {
         "Name": "Cleave",
         "Key": "1",
         "WhenUsable": true,
-        "MinRage": 20,
         "Requirements": [
-          "!Charge Stun && MainHandSwing > -400",
+          "MainHandSwing > -400",
           "MobCount > 1"
         ],
         "AfterCastWaitNextSwing": true
@@ -86,9 +83,8 @@
         "Name": "Heroic Strike",
         "Key": "2",
         "WhenUsable": true,
-        "MinRage": 15,
         "Requirements": [
-          "!Charge Stun && MainHandSwing > -400",
+          "MainHandSwing > -400",
           "MobCount < 2"
         ],
         "AfterCastWaitNextSwing": true
@@ -97,24 +93,18 @@
         "Name": "Rend",
         "Key": "5",
         "WhenUsable": true,
-        "MinRage": 10,
         "Requirements": [
-          "!Charge Stun && TargetHealth% > 50",
+          "TargetHealth% > 50",
           "!Rend"
         ],
         "Form": "Warrior_BattleStance"
       },
       {
         "Name": "AutoAttack",
-        "Requirements": [
-          "InMeleeRange",
-          "!Charge Stun",
-          "!AutoAttacking"
-        ]
+        "Requirement": "!AutoAttacking"
       },
       {
         "Name": "Approach",
-        "Requirement": "!Charge Stun",
         "Log": false
       }
     ]
@@ -127,7 +117,6 @@
         "Key": "4",
         "InCombat": "i dont care",
         "WhenUsable": true,
-        "MinRage": 10,
         "Requirement": "!Battle Shout",
         "AfterCastWaitBuff": true
       },
