@@ -1,5 +1,6 @@
 ﻿using Serilog;
 using Serilog.Extensions.Logging;
+using SharedLib.NpcFinder;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -24,9 +25,13 @@ namespace CoreTests
         {
             CreateLogger();
 
-            var test = new Test_NpcNameFinderTarget(logger, true);
-            //var test = new Test_NpcNameFinderLoot(logger, false);
-            int count = 1;
+            //var types = NpcNames.Enemy;
+            //var types = NpcNames.Corpse;
+            var types = NpcNames.Enemy | NpcNames.Neutral;
+            //var types = NpcNames.Friendly | NpcNames.Neutral;
+
+            var test = new Test_NpcNameFinder(logger, true, types);
+            int count = 100;
             int i = 0;
             while (i < count)
             {

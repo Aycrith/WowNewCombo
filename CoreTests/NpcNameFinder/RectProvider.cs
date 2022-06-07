@@ -1,5 +1,4 @@
-﻿using Core;
-using SharedLib;
+﻿using SharedLib;
 using System.Drawing;
 
 namespace CoreTests
@@ -18,9 +17,9 @@ namespace CoreTests
             //WowScreen.GetRectangle(out rect);
         }
 
-        public void GetPosition(ref Point p)
+        public void GetPosition(ref Point point)
         {
-            p = new Point();
+            point = new();
         }
     }
 }
