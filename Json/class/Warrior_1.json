@@ -7,7 +7,6 @@
         "Name": "Heroic Strike",
         "Key": "2",
         "WhenUsable": true,
-        "MinRage": 15,
         "AfterCastWaitNextSwing": true,
         "Requirement": "MainHandSwing > -400"
       },
@@ -43,7 +42,10 @@
       {
         "Name": "Sell",
         "Key": "C",
-        "Requirements": ["BagFull", "BagGreyItem"],
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ],
         "PathFilename": "1_Gnome_Vendor.json",
         "Cost": 6
       }
