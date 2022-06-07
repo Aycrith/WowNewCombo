@@ -238,7 +238,9 @@ namespace Core.Goals
                     () => playerReader.TargetTarget is
                         TargetTargetEnum.Me or
                         TargetTargetEnum.Pet or
-                        TargetTargetEnum.PartyOrPet);
+                        TargetTargetEnum.PartyOrPet ||
+                        addonReader.CreatureHistory.CombatDamageDoneGuid.ElapsedMs < CastingHandler.GCD ||
+                        playerReader.IsInMeleeRange);
                 if (!timeout)
                 {
                     Log($"Entered combat after {elapsedMs}ms");

@@ -22,8 +22,8 @@ namespace Core.Goals
 
         private readonly KeyAction defaultKeyAction = new();
 
-        private const int GCD = 1500;
-        private const int SpellQueueTimeMs = 400;
+        public const int GCD = 1500;
+        public const int SpellQueueTimeMs = 400;
 
         private const int MaxWaitCastTimeMs = GCD;
         private const int MaxWaitBuffTimeMs = GCD;
