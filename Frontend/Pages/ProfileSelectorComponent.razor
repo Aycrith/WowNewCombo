@@ -25,7 +25,7 @@
             <span>Load Profile</span>
         </button>
 
-        <button class="btn btn-sm btn-primary" @onclick="SyncActionBar" disabled="@(string.IsNullOrEmpty(botController.SelectedClassFilename))">
+        <button class="btn btn-sm btn-primary" @onclick="SyncActionBar" disabled="@(string.IsNullOrEmpty(botController.SelectedClassFilename) || ActionBarPopulator == null)">
             <span>Sync Actionbar</span>
         </button>
     </div>
@@ -48,8 +48,6 @@
     protected override void OnInitialized()
     {
         RefreshData();
-
-        ActionBarPopulator = new(logger, botController.ClassConfig!, (addonReader as AddonReader)!, exec); 
 
         watcher = new(dataConfig.Class);
         watcher.NotifyFilter = NotifyFilters.Attributes
@@ -93,6 +91,7 @@
             return;
 
         botController.LoadClassProfile(Selected);
+        CreateNewActionBarPopulator();
     }
 
     private void OnListBoxChanged(ChangeEventArgs changeEventArgs)
@@ -110,10 +109,18 @@
         Files = botController.ClassFiles();
         Selected = botController.SelectedClassFilename;
         DisableLoadButton = string.IsNullOrEmpty(Selected);
+
+        CreateNewActionBarPopulator();
     }
 
     private void SyncActionBar()
     {
         ActionBarPopulator.Execute();
+    }
+
+    private void CreateNewActionBarPopulator()
+    {
+        if (botController.ClassConfig != null)
+            ActionBarPopulator = new(logger, botController.ClassConfig!, (addonReader as AddonReader)!, exec);
     }
 }
