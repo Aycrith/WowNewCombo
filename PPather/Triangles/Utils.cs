@@ -22,6 +22,7 @@ using System;
 using System.Numerics;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 using static System.MathF;
 using static System.Numerics.Vector3;
 
@@ -233,15 +234,15 @@ namespace WowTriangles
 
     public class SparseFloatMatrix3D<T> : SparseMatrix3D<T>
     {
-        private float gridSize;
+        private const float offset = 100000f;
+        private readonly float gridSize;
 
         public SparseFloatMatrix3D(float gridSize)
         {
             this.gridSize = gridSize;
         }
 
-        private const float offset = 100000f;
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int LocalToGrid(float f)
         {
             return (int)((f + offset) / gridSize);
@@ -249,26 +250,17 @@ namespace WowTriangles
 
         public T Get(float x, float y, float z)
         {
-            int ix = LocalToGrid(x);
-            int iy = LocalToGrid(y);
-            int iz = LocalToGrid(z);
-            return base.Get(ix, iy, iz);
+            return base.Get(LocalToGrid(x), LocalToGrid(y), LocalToGrid(z));
         }
 
         public bool IsSet(float x, float y, float z)
         {
-            int ix = LocalToGrid(x);
-            int iy = LocalToGrid(y);
-            int iz = LocalToGrid(z);
-            return base.IsSet(ix, iy, iz);
+            return base.IsSet(LocalToGrid(x), LocalToGrid(y), LocalToGrid(z));
         }
 
         public void Set(float x, float y, float z, T val)
         {
-            int ix = LocalToGrid(x);
-            int iy = LocalToGrid(y);
-            int iz = LocalToGrid(z);
-            base.Set(ix, iy, iz, val);
+            base.Set(LocalToGrid(x), LocalToGrid(y), LocalToGrid(z), val);
         }
     }
 
@@ -323,49 +315,39 @@ namespace WowTriangles
 
         public T Get(float x, float y)
         {
-            int ix = LocalToGrid(x);
-            int iy = LocalToGrid(y);
-
-            return base.Get(ix, iy);
+            return base.Get(LocalToGrid(x), LocalToGrid(y));
         }
 
         public void Set(float x, float y, T val)
         {
-            int ix = LocalToGrid(x);
-            int iy = LocalToGrid(y);
-
-            base.Set(ix, iy, val);
+            base.Set(LocalToGrid(x), LocalToGrid(y), val);
         }
     }
 
     public class SparseMatrix2D<T>
     {
-        private readonly Dictionary<(int x, int y), T> dic;
-
+        private readonly Dictionary<(int x, int y), T> dict;
 
         public SparseMatrix2D(int initialCapacity)
         {
-            dic = new(initialCapacity);
+            dict = new(initialCapacity);
         }
 
         public bool HasValue(int x, int y)
         {
-            return dic.ContainsKey((x, y));
+            return dict.ContainsKey((x, y));
         }
 
         public T Get(int x, int y)
         {
             T r = default;
-            dic.TryGetValue((x, y), out r);
+            dict.TryGetValue((x, y), out r);
             return r;
         }
 
         public void Set(int x, int y, T val)
         {
-            if (dic.ContainsKey((x, y)))
-                dic.Remove((x, y));
-
-            dic.Add((x, y), val);
+            dict[(x, y)] = val;
         }
 
         public bool IsSet(int x, int y)
@@ -375,42 +357,38 @@ namespace WowTriangles
 
         public void Clear(int x, int y)
         {
-            if (dic.ContainsKey((x, y)))
-                dic.Remove((x, y));
+            dict.Remove((x, y));
         }
 
         public ICollection<T> GetAllElements()
         {
-            return dic.Values;
+            return dict.Values;
         }
     }
 
     public class SparseMatrix3D<T>
     {
-        private readonly Dictionary<Vector3, T> dict = new();
+        private readonly Dictionary<(int x, int y, int z), T> dict = new();
 
         public T Get(int x, int y, int z)
         {
-            dict.TryGetValue(new(x, y, z), out T r);
+            dict.TryGetValue((x, y, z), out T r);
             return r;
         }
 
         public bool IsSet(int x, int y, int z)
         {
-            return dict.ContainsKey(new(x, y, z));
+            return dict.ContainsKey((x, y, z));
         }
 
         public void Set(int x, int y, int z, T val)
         {
-            Clear(x, y, z);
-            dict.Add(new(x, y, z), val);
+            dict[(x, y, z)] = val;
         }
 
         public void Clear(int x, int y, int z)
         {
-            Vector3 c = new(x, y, z);
-            if (dict.ContainsKey(c))
-                dict.Remove(c);
+            dict.Remove((x, y, z));
         }
     }
 
@@ -441,16 +419,14 @@ namespace WowTriangles
         public void SetSize(int new_size)
         {
             if (arrays == null) return;
-            int i0, i1;
-            getIndices(new_size, out i0, out i1);
+            getIndices(new_size, out int i0, out int i1);
             for (int i = i0 + 1; i < SIZE; i++)
                 arrays[i] = null;
         }
 
         public void Set(int index, T x, T y, T z)
         {
-            int i0, i1;
-            getIndices(index, out i0, out i1);
+            getIndices(index, out int i0, out int i1);
             allocateAt(i0, i1);
             T[] innermost = arrays[i0];
             i1 *= 3;
@@ -461,8 +437,7 @@ namespace WowTriangles
 
         public void Get(int index, out T x, out T y, out T z)
         {
-            int i0, i1;
-            getIndices(index, out i0, out i1);
+            getIndices(index, out int i0, out int i1);
 
             x = default;
             y = default;
