@@ -62,7 +62,7 @@ namespace PPather
             OnChunkAdded?.Invoke(e);
         }
 
-        public Vector4 GetWorldLocation(int uiMapId, float x, float y, float z = 0)
+        public Vector4 ToWorld(int uiMapId, float x, float y, float z = 0)
         {
             WorldMapArea worldMapArea = worldMapAreas.First(i => i.UIMapId == uiMapId);
             float worldX = worldMapArea.ToWorldX(y);
@@ -70,19 +70,13 @@ namespace PPather
 
             Initialise(worldMapArea.MapID);
 
-            return search.CreateLocation(worldX, worldY, z, worldMapArea.MapID);
+            return search.CreateWorldLocation(worldX, worldY, z, worldMapArea.MapID);
         }
 
-        public WorldMapAreaSpot ToMapAreaSpot(float x, float y, float z, int uimap)
+        public Vector3 ToLocal(Vector3 world, float mapId, int uiMapId)
         {
-            var area = WorldMapAreaFactory.GetWorldMapArea(worldMapAreas, x, y, search.MapId, uimap);
-            return new WorldMapAreaSpot
-            {
-                Y = area.ToMapX(x),
-                X = area.ToMapY(y),
-                Z = z,
-                MapID = area.UIMapId
-            };
+            var area = WorldMapAreaFactory.GetWorldMapArea(worldMapAreas, world.X, world.Y, mapId, uiMapId);
+            return new Vector3(area.ToMapY(world.Y), area.ToMapX(world.X), world.Z);
         }
 
         public Path DoSearch(PathGraph.eSearchScoreSpot searchType)
