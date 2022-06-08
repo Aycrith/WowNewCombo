@@ -30,7 +30,7 @@ namespace PPather
             CreatePathGraph(mapId);
         }
 
-        public Vector4 CreateLocation(float x, float y, float z, int mapId)
+        public Vector4 CreateWorldLocation(float x, float y, float z, int mapId)
         {
             // find model 0 i.e. terrain
             var z0 = GetZValueAt(x, y, new int[] { (int)z });

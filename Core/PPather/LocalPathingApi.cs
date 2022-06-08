@@ -71,7 +71,7 @@ namespace Core
 
             stopwatch.Restart();
 
-            service.SetLocations(service.GetWorldLocation(uimap, fromPoint.X, fromPoint.Y, fromPoint.Z), service.GetWorldLocation(uimap, toPoint.X, toPoint.Y));
+            service.SetLocations(service.ToWorld(uimap, fromPoint.X, fromPoint.Y, fromPoint.Z), service.ToWorld(uimap, toPoint.X, toPoint.Y));
             var path = service.DoSearch(PPather.Graph.PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
 
             stopwatch.Stop();
@@ -95,9 +95,9 @@ namespace Core
                 }
             }
 
-            var worldLocations = path.locations.Select(s => service.ToMapAreaSpot(s.X, s.Y, s.Z, uimap));
-            var result = worldLocations.Select(l => new Vector3(l.X, l.Y, l.Z)).ToList();
-            return new ValueTask<List<Vector3>>(result);
+            return
+                new ValueTask<List<Vector3>>(path.locations
+                    .Select(s => service.ToLocal(s, (int)service.SearchFrom!.Value.W, uimap)).ToList());
         }
 
         #region Logging

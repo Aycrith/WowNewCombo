@@ -8,9 +8,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using Serilog;
-using Serilog.Events;
 using Serilog.Extensions.Logging;
 using PPather;
+using SharedLib.Converters;
 
 namespace PathingAPI
 {
@@ -45,7 +45,12 @@ namespace PathingAPI
             services.AddRazorPages();
             services.AddServerSideBlazor();
             services.AddSingleton<PPatherService>();
-            services.AddControllers();
+            services.AddControllers().AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+                options.JsonSerializerOptions.Converters.Add(new Vector3Converter());
+                options.JsonSerializerOptions.Converters.Add(new Vector4Converter());
+            });
 
             // Register the Swagger generator, defining 1 or more Swagger documents
             services.AddSwaggerGen(c =>

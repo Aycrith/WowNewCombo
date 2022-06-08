@@ -193,18 +193,12 @@ namespace Core
         {
             while (!cts.IsCancellationRequested)
             {
-                _ = pather.DrawSphere(new SphereArgs
-                {
-                    Colour = AddonReader.PlayerReader.Bits.PlayerInCombat ? 1 : AddonReader.PlayerReader.HasTarget ? 6 : 2,
-                    Name = "Player",
-                    MapId = AddonReader.UIMapId.Value,
-                    Spot = new DummyVector3
-                    {
-                        X = AddonReader.PlayerReader.XCoord,
-                        Y = AddonReader.PlayerReader.YCoord,
-                        Z = AddonReader.PlayerReader.ZCoord,
-                    }
-                });
+                _ = pather.DrawSphere(
+                    new SphereArgs("Player",
+                    AddonReader.PlayerReader.PlayerLocation,
+                    AddonReader.PlayerReader.Bits.PlayerInCombat ? 1 : AddonReader.PlayerReader.HasTarget ? 6 : 2,
+                    AddonReader.UIMapId.Value
+                ));
 
                 cts.Token.WaitHandle.WaitOne(remotePathingTickMs);
             }
