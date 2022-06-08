@@ -86,8 +86,8 @@ namespace Core
 
                 List<Vector3> result = new();
 
-                Vector3 start = worldMapAreaDB.GetWorldLocation(uiMapId, fromPoint, true);
-                Vector3 end = worldMapAreaDB.GetWorldLocation(uiMapId, toPoint, true);
+                Vector3 start = worldMapAreaDB.ToWorld(uiMapId, fromPoint, true);
+                Vector3 end = worldMapAreaDB.ToWorld(uiMapId, toPoint, true);
 
                 // incase haven't asked a pathfinder for a route this value will be 0
                 // that case use the highest location
@@ -109,8 +109,7 @@ namespace Core
                     if (debug)
                         LogInformation($"new float[] {{ {path[i].X}f, {path[i].Y}f, {path[i].Z}f }},");
 
-                    Vector3 point = worldMapAreaDB.ToAreaLoc(path[i].X, path[i].Y, path[i].Z, area.MapID, uiMapId);
-                    result.Add(point);
+                    result.Add(worldMapAreaDB.ToLocal(path[i], area.MapID, uiMapId));
                 }
 
                 return new ValueTask<List<Vector3>>(result);

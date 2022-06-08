@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json;
 using System;
 using System.Linq;
 using System.Collections.Generic;
@@ -10,6 +10,7 @@ using PPather.Data;
 using System.Text;
 using System.Numerics;
 using SharedLib;
+using SharedLib.Converters;
 
 namespace Core
 {
@@ -25,6 +26,8 @@ namespace Core
 
         private readonly Stopwatch stopwatch;
 
+        private readonly JsonSerializerOptions options;
+
         public RemotePathingAPI(ILogger logger, string host = "", int port = 0)
         {
             this.logger = logger;
@@ -33,13 +36,20 @@ namespace Core
 
             stopwatch = new();
 
+            options = new()
+            {
+                PropertyNameCaseInsensitive = true
+            };
+            options.Converters.Add(new Vector3Converter());
+            options.Converters.Add(new Vector4Converter());
+
             api = $"http://{host}:{port}/api/PPather/";
         }
 
         public async ValueTask DrawLines(List<LineArgs> lineArgs)
         {
             using var client = new HttpClient();
-            using var content = new StringContent(JsonConvert.SerializeObject(lineArgs), Encoding.UTF8, "application/json");
+            using var content = new StringContent(JsonSerializer.Serialize(lineArgs, options), Encoding.UTF8, "application/json");
             LogInformation($"Drawing lines '{string.Join(", ", lineArgs.Select(l => l.MapId))}'...");
             await client.PostAsync($"{api}Drawlines", content);
         }
@@ -47,7 +57,7 @@ namespace Core
         public async ValueTask DrawSphere(SphereArgs args)
         {
             using var client = new HttpClient();
-            using var content = new StringContent(JsonConvert.SerializeObject(args), Encoding.UTF8, "application/json");
+            using var content = new StringContent(JsonSerializer.Serialize(args, options), Encoding.UTF8, "application/json");
             await client.PostAsync($"{api}DrawSphere", content);
         }
 
@@ -60,18 +70,15 @@ namespace Core
 
                 stopwatch.Restart();
                 using var client = new HttpClient();
-                var responseString = await client.GetStringAsync(url);
+                string responseString = await client.GetStringAsync(url);
                 LogInformation($"Finding route from {fromPoint} map {map} to {toPoint} took {stopwatch.ElapsedMilliseconds} ms.");
-                var path = JsonConvert.DeserializeObject<IEnumerable<WorldMapAreaSpot>>(responseString);
-                var result = path.Select(l => new Vector3(l.X, l.Y, l.Z)).ToList();
-                stopwatch.Stop();
-                return result;
+                return JsonSerializer.Deserialize<List<Vector3>>(responseString, options) ?? new();
             }
             catch (Exception ex)
             {
                 LogError($"Finding route from {fromPoint} to {toPoint}", ex);
                 Console.WriteLine(ex);
-                return new List<Vector3>();
+                return new();
             }
         }
 
@@ -83,7 +90,7 @@ namespace Core
 
                 using var client = new HttpClient();
                 var responseString = await client.GetStringAsync(url);
-                var result = JsonConvert.DeserializeObject<bool>(responseString);
+                var result = JsonSerializer.Deserialize<bool>(responseString);
                 return result;
             }
             catch (Exception ex)
