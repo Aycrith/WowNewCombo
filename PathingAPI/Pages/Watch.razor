@@ -6,12 +6,20 @@
 @using System.Threading
 @using System.Numerics
 @using SharedLib.Extensions
+@using WowTriangles
+@using System.Text.Json
+@using SharedLib.Converters
 
 @implements IDisposable
 
 @inject IJSRuntime jsRuntime
 @inject PPatherService pPatherService
 
+@*
+<button @onclick="ResetService">
+    <span>Reset</span>
+</button>
+*@
 <div id="canvasText" style="position: relative; z-index: 2; left: 0px;padding-left:10px; top: 20px; height:30px; background-color: black;color:white">
     ...
 </div>
@@ -29,9 +37,35 @@
     [Parameter]
     public string Name { get; set; } = "path";
 
+    private JsonSerializerOptions options = new();
+
+    private Vector3 lastFrom = new();
+    private Vector3 lastTo = new();
+    private Vector3 lastClosest = new();
+    private Vector3 lastPeek = new();
+
     protected override void OnInitialized()
     {
         cts = new();
+        options.Converters.Add(new Vector3Converter());
+        options.Converters.Add(new Vector4Converter());
+    }
+
+    public void Dispose()
+    {
+        PathingAPILoggerSink.OnLog -= Log;
+
+        if (pPatherService != null)
+        {
+            pPatherService.OnReset = null;
+            pPatherService.SetNotifyChunkAdded(null);
+            pPatherService.SetOnPathCreated(null);
+
+            pPatherService.OnLinesAdded = null;
+            pPatherService.OnSphereAdded = null;
+        }
+
+        cts.Cancel();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -71,20 +105,10 @@
         await jsRuntime.InvokeVoidAsync("clear");
     }
 
-    public void Dispose()
+    public async void ResetService()
     {
-        PathingAPILoggerSink.OnLog -= Log;
-
-        if (pPatherService != null) {
-            pPatherService.OnReset = null;
-            pPatherService.SetNotifyChunkAdded(null);
-            pPatherService.SetOnPathCreated(null);
-
-            pPatherService.OnLinesAdded = null;
-            pPatherService.OnSphereAdded = null;
-        }
-
-        cts.Cancel();
+        pPatherService.Reset();
+        await jsRuntime.InvokeVoidAsync("clear");
     }
 
     public async void Log(object s, string message)
@@ -93,15 +117,14 @@
         if (!initialised) { Initialise(); }
     }
 
-    public async void DrawFinalPath(PPather.Graph.Path spotPath)
+    public async void DrawFinalPath(Path spotPath)
     {
         if (spotPath != null)
         {
-            var path = spotPath.locations.Select(s => Vertex.Create(s.X, s.Y, s.Z)).ToList();
             await jsRuntime.InvokeVoidAsync("removeMeshes", Name);
-            await jsRuntime.InvokeVoidAsync("drawPath", path, PathColour, Name);
+            await jsRuntime.InvokeVoidAsync("drawPath",
+                JsonSerializer.Serialize(spotPath.locations, options), PathColour, Name);
 
-            //System.Threading.Thread.Sleep(1000);
             await jsRuntime.InvokeVoidAsync("removeMeshes", "search");
             await jsRuntime.InvokeVoidAsync("removeMeshes", "closest");
             await jsRuntime.InvokeVoidAsync("removeMeshes", "end");
@@ -111,11 +134,6 @@
             Log(this, "No path found");
         }
     }
-
-    private Vector3 lastFrom = new();
-    private Vector3 lastTo = new();
-    private Vector3 lastClosest = new();
-    private Vector3 lastPeek = new();
 
     public async void SearchPathRefresh()
     {
@@ -128,40 +146,39 @@
                     var spots = pPatherService.GetCurrentSearchPath();
                     if (spots != null)
                     {
-                        var path = spots.Where(s => s != null).Select(s => Vertex.Create(s.Loc.X, s.Loc.Y, s.Loc.Z));
+                        var path = spots.Where(s => s != null).Select(s => s.Loc);
                         if (path.Count() > 0)
                         {
-                            await jsRuntime.InvokeVoidAsync("drawPath", path, 4, "search");
+                            await jsRuntime.InvokeVoidAsync("drawPath",
+                                JsonSerializer.Serialize(path, options), 4, "search");
                         }
                     }
 
-                    if (pPatherService.SearchFrom.HasValue && pPatherService.SearchTo.HasValue && lastFrom.X != pPatherService.SearchFrom.Value.X /*|| lastTo.X != lastTo.X*/)
+                    if (pPatherService.SearchFrom.HasValue && pPatherService.SearchTo.HasValue &&
+                        lastFrom.X != pPatherService.SearchFrom.Value.X)
                     {
-                        Vector4 from = pPatherService.SearchFrom.Value;
-                        Vector4 to = pPatherService.SearchTo.Value;
+                        lastFrom = pPatherService.SearchFrom.Value.AsVector3();
+                        lastTo = pPatherService.SearchTo.Value.AsVector3();
 
-                        await jsRuntime.InvokeVoidAsync("drawLine", Vertex.Create(from.X, from.Y, from.Z), 2, "start2");
-                        await jsRuntime.InvokeVoidAsync("drawLine", Vertex.Create(to.X, to.Y, to.Z), 3, "end");
-                        lastFrom = from.AsVector3();
-                        lastTo = to.AsVector3();
+                        await jsRuntime.InvokeVoidAsync("drawLine",
+                            JsonSerializer.Serialize(lastFrom, options), 2, "start2");
+                        await jsRuntime.InvokeVoidAsync("drawLine",
+                            JsonSerializer.Serialize(lastTo, options), 3, "end");
                     }
 
-                    if (pPatherService.ClosestLocation.HasValue)
+                    if (pPatherService.ClosestLocation.HasValue &&
+                        lastClosest.X != pPatherService.ClosestLocation.Value.X)
                     {
-                        if (lastClosest.X != pPatherService.ClosestLocation.Value.X)
-                        {
-                            await jsRuntime.InvokeVoidAsync("drawLine", Vertex.Create(pPatherService.ClosestLocation.Value.X, pPatherService.ClosestLocation.Value.Y, pPatherService.ClosestLocation.Value.Z), 5, "closest");
-                            lastClosest = pPatherService.ClosestLocation.Value;
-                        }
+                        await jsRuntime.InvokeVoidAsync("drawLine",
+                            JsonSerializer.Serialize(pPatherService.ClosestLocation.Value, options), 5, "closest");
+                        lastClosest = pPatherService.ClosestLocation.Value;
                     }
 
-                    if (pPatherService.PeekLocation.HasValue)
+                    if (pPatherService.PeekLocation.HasValue && lastPeek.X != pPatherService.PeekLocation.Value.X)
                     {
-                        if (lastPeek.X != pPatherService.PeekLocation.Value.X)
-                        {
-                            await jsRuntime.InvokeVoidAsync("drawLine", Vertex.Create(pPatherService.PeekLocation.Value.X, pPatherService.PeekLocation.Value.Y, pPatherService.PeekLocation.Value.Z), 6, "peek");
-                            lastPeek = pPatherService.PeekLocation.Value;
-                        }
+                        await jsRuntime.InvokeVoidAsync("drawLine",
+                            JsonSerializer.Serialize(pPatherService.PeekLocation.Value, options), 6, "peek");
+                        lastPeek = pPatherService.PeekLocation.Value;
                     }
 
                 }
@@ -176,46 +193,51 @@
 
     private async void DrawSphere(SphereEventArgs e)
     {
-        await jsRuntime.InvokeVoidAsync("drawSphere", e.Vertex, e.Colour, e.Name);
+        await jsRuntime.InvokeVoidAsync("drawSphere",
+            JsonSerializer.Serialize(e.Location, options), e.Colour, e.Name);
     }
-
 
     private async void Drawlines(LinesEventArgs e)
     {
-        await jsRuntime.InvokeVoidAsync("drawPath", e.Lines, e.Colour, e.Name);
+        await jsRuntime.InvokeVoidAsync("drawPath",
+            JsonSerializer.Serialize(e.Locations, options), e.Colour, e.Name);
     }
 
-    private void TriangleWorld_NotifyChunkAdded(WowTriangles.ChunkAddedEventArgs e)
+    private void TriangleWorld_NotifyChunkAdded(ChunkAddedEventArgs e)
     {
-        var triangles = new List<WowTriangles.TriangleCollection> { e.Triangles };
-        AddChunks(triangles);
+        AddChunks(new() { e.Triangles });
     }
 
-    private async void AddChunks(List<WowTriangles.TriangleCollection> chunks)
+    private async void AddChunks(List<TriangleCollection> chunks)
     {
-        var positions = MeshFactory.CreatePointList(chunks);
-        var water = MeshFactory.CreateTrianglesList(1, chunks);
-        FixMaxWaterHeight(water, positions);
-        var models = new List<int[]>();
+        Vector3[] positions = MeshFactory.CreatePointList(chunks);
+        int[] water = MeshFactory.CreateTrianglesList(1, chunks);
+        //FixMaxWaterHeight(water, positions);
+
+        List<int[]> models = new();
         models.Add(MeshFactory.CreateTrianglesList(0, chunks));
         models.Add(water);
         models.Add(MeshFactory.CreateTrianglesList(2, chunks));
         models.Add(MeshFactory.CreateTrianglesList(4, chunks));
 
-        await jsRuntime.InvokeVoidAsync("addModels", models, positions);
+        await jsRuntime.InvokeVoidAsync("addModels",
+            JsonSerializer.Serialize(models),
+            JsonSerializer.Serialize(positions, options));
     }
 
-    private void FixMaxWaterHeight(int[] waterPoints, Vertex[] positions)
+    private void FixMaxWaterHeight(int[] waterPoints, Vector3[] positions)
     {
-        var zlist = waterPoints.Select(pt => positions[pt].z).ToList();
+        List<float> zlist = waterPoints.Select(pt => positions[pt].Z).ToList();
         if (zlist.Count > 1)
         {
-            var meanz = zlist[zlist.Count / 2];
-            var minz = zlist.Min();
-            waterPoints.ToList().ForEach(pt =>
+            float minz = zlist.Min();
+            for (int i = 0; i < waterPoints.Length; i++)
             {
-                if (positions[pt].z > minz) { positions[pt].z = minz; }
-            });
+                waterPoints.ToList().ForEach(i =>
+                {
+                    if (positions[i].Z > minz) { positions[i].Z = minz; }
+                });
+            }
         }
     }
 }

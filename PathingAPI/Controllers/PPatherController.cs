@@ -6,7 +6,6 @@ using PPather.Graph;
 using SharedLib;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
 using WowTriangles;
 using System.Numerics;
 using SharedLib.Data;
@@ -56,15 +55,20 @@ namespace PathingAPI.Controllers
         public JsonResult MapRoute(int uimap1, float x1, float y1, int uimap2, float x2, float y2)
         {
             isBusy = true;
-            service.SetLocations(service.GetWorldLocation(uimap1, x1, y1), service.GetWorldLocation(uimap2, x2, y2));
+            service.SetLocations(service.ToWorld(uimap1, x1, y1), service.ToWorld(uimap2, x2, y2));
             var path = service.DoSearch(PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
             if (path != null)
             {
                 service.Save();
             }
-            var worldLocations = path == null ? new List<WorldMapAreaSpot>() : path.locations.Select(s => service.ToMapAreaSpot(s.X, s.Y, s.Z, uimap1));
+
+            var localPositions = path == null ?
+                new List<Vector3>() :
+                path.locations.Select(s => service.ToLocal(s, (int)service.SearchFrom.Value.W, uimap1));
+
             isBusy = false;
-            return new JsonResult(worldLocations, new JsonSerializerOptions { WriteIndented = true });
+
+            return new JsonResult(localPositions);
         }
 
         /// <summary>
@@ -91,7 +95,7 @@ namespace PathingAPI.Controllers
                 service.Save();
             }
             isBusy = false;
-            return new JsonResult(path, new JsonSerializerOptions { WriteIndented = true });
+            return new JsonResult(path);
         }
 
         /// <summary>
@@ -106,14 +110,13 @@ namespace PathingAPI.Controllers
         {
             if (isBusy) { return false; }
             isBusy = true;
+
             lines.ForEach(l =>
             {
                 var locations = CreateLocations(l);
-                if (service.OnLinesAdded != null)
-                {
-                    service.OnLinesAdded(new LinesEventArgs(l.Name, locations, l.Colour));
-                }
+                service.OnLinesAdded?.Invoke(new LinesEventArgs(l.Name, locations, l.Colour));
             });
+
             isBusy = false;
             initialised = true;
             return true;
@@ -131,11 +134,10 @@ namespace PathingAPI.Controllers
         {
             if (isBusy || !initialised) { return false; }
             isBusy = true;
-            var location = service.GetWorldLocation(sphere.MapId, sphere.Spot.X, sphere.Spot.Y);
-            if (service.OnSphereAdded != null)
-            {
-                service.OnSphereAdded(new SphereEventArgs(sphere.Name, location, sphere.Colour));
-            }
+
+            Vector4 location = service.ToWorld(sphere.MapId, sphere.Spot.X, sphere.Spot.Y);
+            service.OnSphereAdded?.Invoke(new SphereEventArgs(sphere.Name, location, sphere.Colour));
+
             isBusy = false;
             return true;
         }
@@ -145,7 +147,7 @@ namespace PathingAPI.Controllers
             List<Vector4> result = new();
             foreach (var s in lines.Spots)
             {
-                result.Add(service.GetWorldLocation(lines.MapId, s.X, s.Y));
+                result.Add(service.ToWorld(lines.MapId, s.X, s.Y, s.Z));
             }
             return result;
         }
