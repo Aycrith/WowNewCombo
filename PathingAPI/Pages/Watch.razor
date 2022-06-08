@@ -12,6 +12,7 @@
 
 @implements IDisposable
 
+@inject ILogger logger
 @inject IJSRuntime jsRuntime
 @inject PPatherService pPatherService
 
@@ -37,41 +38,35 @@
     [Parameter]
     public string Name { get; set; } = "path";
 
-    private JsonSerializerOptions options = new();
+    private JsonSerializerOptions options;
 
     private Vector3 lastFrom = new();
     private Vector3 lastTo = new();
     private Vector3 lastClosest = new();
     private Vector3 lastPeek = new();
 
-    protected override void OnInitialized()
-    {
-        cts = new();
-        options.Converters.Add(new Vector3Converter());
-        options.Converters.Add(new Vector4Converter());
-    }
-
     public void Dispose()
     {
         PathingAPILoggerSink.OnLog -= Log;
 
-        if (pPatherService != null)
-        {
-            pPatherService.OnReset = null;
-            pPatherService.SetNotifyChunkAdded(null);
-            pPatherService.SetOnPathCreated(null);
+        pPatherService.OnReset = null;
+        pPatherService.SetNotifyChunkAdded(null);
+        pPatherService.SetOnPathCreated(null);
 
-            pPatherService.OnLinesAdded = null;
-            pPatherService.OnSphereAdded = null;
-        }
+        pPatherService.OnLinesAdded = null;
+        pPatherService.OnSphereAdded = null;
 
-        cts.Cancel();
+        cts?.Cancel();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
+            options = new();
+            options.Converters.Add(new Vector3Converter());
+            options.Converters.Add(new Vector4Converter());
+
             PathingAPILoggerSink.OnLog += Log;
             await jsRuntime.InvokeVoidAsync("createScene");
             Initialise();
@@ -87,9 +82,14 @@
         else
         {
             initialised = true;
-            var chunks = pPatherService.SetNotifyChunkAdded(TriangleWorld_NotifyChunkAdded);
-            this.AddChunks(chunks);
+            pPatherService.SetNotifyChunkAdded(TriangleWorld_NotifyChunkAdded);
 
+            if (pPatherService.SearchExists)
+            {
+                this.AddChunks(pPatherService.GetLoadedChunks());
+            }
+
+            cts = new();
             pPatherService.SetOnPathCreated(DrawFinalPath);
             RefreshSearchThread = new Thread(SearchPathRefresh);
             RefreshSearchThread.Start();
@@ -114,7 +114,10 @@
     public async void Log(object s, string message)
     {
         await jsRuntime.InvokeVoidAsync("log", message);
-        if (!initialised) { Initialise(); }
+        if (!initialised)
+        {
+            Initialise();
+        }
     }
 
     public async void DrawFinalPath(Path spotPath)
@@ -189,6 +192,7 @@
             }
             cts.Token.WaitHandle.WaitOne(50);
         }
+        logger.LogInformation("SearchPathRefresh thread stopped!");
     }
 
     private async void DrawSphere(SphereEventArgs e)

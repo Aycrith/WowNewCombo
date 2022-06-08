@@ -15,6 +15,8 @@ namespace PPather
     {
         private readonly List<WorldMapArea> worldMapAreas;
         private Search search { get; set; }
+        public bool SearchExists => search != null;
+
         private readonly ILogger logger;
         private readonly DataConfig dataConfig;
         private Action<Path> OnPathCreated;
@@ -118,16 +120,14 @@ namespace PPather
             search.locationTo = to;
         }
 
-        public List<TriangleCollection> SetNotifyChunkAdded(Action<ChunkAddedEventArgs> action)
+        public void SetNotifyChunkAdded(Action<ChunkAddedEventArgs> action)
         {
             OnChunkAdded = action;
+        }
 
-            if (search == null)
-            {
-                return new List<TriangleCollection>();
-            }
-
-            return search.PathGraph.triangleWorld.LoadedChunks;
+        public List<TriangleCollection> GetLoadedChunks()
+        {
+            return search.PathGraph.triangleWorld.LoadedChunks ?? new();
         }
 
         public List<Spot> GetCurrentSearchPath()
