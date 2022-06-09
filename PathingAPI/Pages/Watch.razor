@@ -9,15 +9,16 @@
 @using WowTriangles
 @using System.Text.Json
 @using SharedLib.Converters
-
-@implements IDisposable
+@using Serilog.Events
 
 @inject ILogger logger
 @inject IJSRuntime jsRuntime
 @inject PPatherService pPatherService
 
+@implements IDisposable
+
 @*
-<button @onclick="ResetService">
+<button @onclick="Reset">
     <span>Reset</span>
 </button>
 *@
@@ -27,100 +28,129 @@
 <canvas id="renderCanvas" style="background:black">
 </canvas>
 @code {
-
-    private bool initialised = false;
-    private Thread RefreshSearchThread;
-    private CancellationTokenSource cts;
-
     [Parameter]
     public int PathColour { get; set; } = 1;
 
     [Parameter]
     public string Name { get; set; } = "path";
 
+    private Thread thread;
+    private CancellationTokenSource cts;
     private JsonSerializerOptions options;
 
-    private Vector3 lastFrom = new();
-    private Vector3 lastTo = new();
-    private Vector3 lastClosest = new();
-    private Vector3 lastPeek = new();
+    private Vector3 lastFrom;
+    private Vector3 lastTo;
+    private Vector3 lastClosest;
+    private Vector3 lastPeek;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await jsRuntime.InvokeVoidAsync("log", "Waiting for first search from the API...");
+            await jsRuntime.InvokeVoidAsync("createScene");
+
+            options = new();
+            options.Converters.Add(new Vector3Converter());
+            options.Converters.Add(new Vector4Converter());
+
+            PathingAPILoggerSink.OnLog += OnLog;
+            pPatherService.OnReset = Reset;
+            pPatherService.SetNotifyChunkAdded(OnChunkAdded);
+            pPatherService.SetOnPathCreated(OnDrawFinalPath);
+            pPatherService.OnLinesAdded = OnDrawlines;
+            pPatherService.OnSphereAdded = OnDrawSphere;
+            pPatherService.SetOnSearchBegin(OnSearchBegin);
+        }
+    }
 
     public void Dispose()
     {
-        PathingAPILoggerSink.OnLog -= Log;
-
+        PathingAPILoggerSink.OnLog -= OnLog;
         pPatherService.OnReset = null;
+        pPatherService.SetOnSearchBegin(null);
         pPatherService.SetNotifyChunkAdded(null);
         pPatherService.SetOnPathCreated(null);
-
         pPatherService.OnLinesAdded = null;
         pPatherService.OnSphereAdded = null;
 
         cts?.Cancel();
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+
+    private async void Reset()
     {
-        if (firstRender)
-        {
-            options = new();
-            options.Converters.Add(new Vector3Converter());
-            options.Converters.Add(new Vector4Converter());
-
-            PathingAPILoggerSink.OnLog += Log;
-            await jsRuntime.InvokeVoidAsync("createScene");
-            Initialise();
-        }
-    }
-
-    private async void Initialise()
-    {
-        if (!pPatherService.HasInitialised)
-        {
-            await jsRuntime.InvokeVoidAsync("log", "Waiting for first search from the API...");
-        }
-        else
-        {
-            initialised = true;
-            pPatherService.SetNotifyChunkAdded(TriangleWorld_NotifyChunkAdded);
-
-            if (pPatherService.SearchExists)
-            {
-                this.AddChunks(pPatherService.GetLoadedChunks());
-            }
-
-            cts = new();
-            pPatherService.SetOnPathCreated(DrawFinalPath);
-            RefreshSearchThread = new Thread(SearchPathRefresh);
-            RefreshSearchThread.Start();
-
-            pPatherService.OnReset = Reset;
-            pPatherService.OnLinesAdded = Drawlines;
-            pPatherService.OnSphereAdded = DrawSphere;
-        }
-    }
-
-    public async void Reset()
-    {
+        //pPatherService.Reset();
         await jsRuntime.InvokeVoidAsync("clear");
     }
 
-    public async void ResetService()
+    public void OnLog(LogEvent logEvent)
     {
-        pPatherService.Reset();
-        await jsRuntime.InvokeVoidAsync("clear");
+        Log(logEvent.RenderMessage());
     }
 
-    public async void Log(object s, string message)
+    private async void Log(string message)
     {
         await jsRuntime.InvokeVoidAsync("log", message);
-        if (!initialised)
-        {
-            Initialise();
-        }
     }
 
-    public async void DrawFinalPath(Path spotPath)
+
+    private async void SearchPath_Thread()
+    {
+        while (!cts.IsCancellationRequested)
+        {
+            var spots = pPatherService.GetCurrentSearchPath();
+            if (spots != null)
+            {
+                var path = spots.Where(s => s != null).Select(s => s.Loc);
+                if (path.Count() > 0)
+                {
+                    await jsRuntime.InvokeVoidAsync("drawPath",
+                        JsonSerializer.Serialize(path, options), 4, "search");
+                }
+            }
+
+            if (pPatherService.SearchFrom.HasValue && pPatherService.SearchTo.HasValue &&
+                lastFrom.X != pPatherService.SearchFrom.Value.X)
+            {
+                lastFrom = pPatherService.SearchFrom.Value.AsVector3();
+                lastTo = pPatherService.SearchTo.Value.AsVector3();
+
+                await jsRuntime.InvokeVoidAsync("drawLine",
+                    JsonSerializer.Serialize(lastFrom, options), 2, "start2");
+                await jsRuntime.InvokeVoidAsync("drawLine",
+                    JsonSerializer.Serialize(lastTo, options), 3, "end");
+            }
+
+            if (pPatherService.ClosestLocation.HasValue &&
+                lastClosest.X != pPatherService.ClosestLocation.Value.X)
+            {
+                await jsRuntime.InvokeVoidAsync("drawLine",
+                    JsonSerializer.Serialize(pPatherService.ClosestLocation.Value, options), 5, "closest");
+                lastClosest = pPatherService.ClosestLocation.Value;
+            }
+
+            if (pPatherService.PeekLocation.HasValue && lastPeek.X != pPatherService.PeekLocation.Value.X)
+            {
+                await jsRuntime.InvokeVoidAsync("drawLine",
+                    JsonSerializer.Serialize(pPatherService.PeekLocation.Value, options), 6, "peek");
+                lastPeek = pPatherService.PeekLocation.Value;
+            }
+
+            cts.Token.WaitHandle.WaitOne(100);
+        }
+        //logger.LogInformation("SearchPathRefresh thread stopped!");
+    }
+
+
+    private void OnSearchBegin()
+    {
+        cts = new();
+        thread = new Thread(SearchPath_Thread);
+        thread.Start();
+    }
+
+    private async void OnDrawFinalPath(Path spotPath)
     {
         if (spotPath != null)
         {
@@ -131,117 +161,44 @@
             await jsRuntime.InvokeVoidAsync("removeMeshes", "search");
             await jsRuntime.InvokeVoidAsync("removeMeshes", "closest");
             await jsRuntime.InvokeVoidAsync("removeMeshes", "end");
+
+            cts?.Cancel();
         }
         else
         {
-            Log(this, "No path found");
+            Log("No path found");
         }
+
+        cts?.Cancel();
     }
 
-    public async void SearchPathRefresh()
-    {
-        while (!cts.IsCancellationRequested)
-        {
-            if (PPather.Graph.PathGraph.SearchEnabled)
-            {
-                try
-                {
-                    var spots = pPatherService.GetCurrentSearchPath();
-                    if (spots != null)
-                    {
-                        var path = spots.Where(s => s != null).Select(s => s.Loc);
-                        if (path.Count() > 0)
-                        {
-                            await jsRuntime.InvokeVoidAsync("drawPath",
-                                JsonSerializer.Serialize(path, options), 4, "search");
-                        }
-                    }
-
-                    if (pPatherService.SearchFrom.HasValue && pPatherService.SearchTo.HasValue &&
-                        lastFrom.X != pPatherService.SearchFrom.Value.X)
-                    {
-                        lastFrom = pPatherService.SearchFrom.Value.AsVector3();
-                        lastTo = pPatherService.SearchTo.Value.AsVector3();
-
-                        await jsRuntime.InvokeVoidAsync("drawLine",
-                            JsonSerializer.Serialize(lastFrom, options), 2, "start2");
-                        await jsRuntime.InvokeVoidAsync("drawLine",
-                            JsonSerializer.Serialize(lastTo, options), 3, "end");
-                    }
-
-                    if (pPatherService.ClosestLocation.HasValue &&
-                        lastClosest.X != pPatherService.ClosestLocation.Value.X)
-                    {
-                        await jsRuntime.InvokeVoidAsync("drawLine",
-                            JsonSerializer.Serialize(pPatherService.ClosestLocation.Value, options), 5, "closest");
-                        lastClosest = pPatherService.ClosestLocation.Value;
-                    }
-
-                    if (pPatherService.PeekLocation.HasValue && lastPeek.X != pPatherService.PeekLocation.Value.X)
-                    {
-                        await jsRuntime.InvokeVoidAsync("drawLine",
-                            JsonSerializer.Serialize(pPatherService.PeekLocation.Value, options), 6, "peek");
-                        lastPeek = pPatherService.PeekLocation.Value;
-                    }
-
-                }
-                catch (Exception ex)
-                {
-                    Log(this, ex.Message);
-                }
-            }
-            cts.Token.WaitHandle.WaitOne(50);
-        }
-        logger.LogInformation("SearchPathRefresh thread stopped!");
-    }
-
-    private async void DrawSphere(SphereEventArgs e)
+    private async void OnDrawSphere(SphereEventArgs e)
     {
         await jsRuntime.InvokeVoidAsync("drawSphere",
             JsonSerializer.Serialize(e.Location, options), e.Colour, e.Name);
     }
 
-    private async void Drawlines(LinesEventArgs e)
+    private async void OnDrawlines(LinesEventArgs e)
     {
         await jsRuntime.InvokeVoidAsync("drawPath",
             JsonSerializer.Serialize(e.Locations, options), e.Colour, e.Name);
     }
 
-    private void TriangleWorld_NotifyChunkAdded(ChunkAddedEventArgs e)
+    private async void OnChunkAdded(ChunkAddedEventArgs e)
     {
-        AddChunks(new() { e.Triangles });
-    }
+        TriangleCollection chunks = e.Triangles;
 
-    private async void AddChunks(List<TriangleCollection> chunks)
-    {
-        Vector3[] positions = MeshFactory.CreatePointList(chunks);
-        int[] water = MeshFactory.CreateTrianglesList(1, chunks);
-        //FixMaxWaterHeight(water, positions);
+        int i = 0;
+        int[][] models = new int[4][];
+        models[i++] = MeshFactory.CreateTriangles(0, chunks);
+        models[i++] = MeshFactory.CreateTriangles(1, chunks);
+        models[i++] = MeshFactory.CreateTriangles(2, chunks);
+        models[i++] = MeshFactory.CreateTriangles(4, chunks);
 
-        List<int[]> models = new();
-        models.Add(MeshFactory.CreateTrianglesList(0, chunks));
-        models.Add(water);
-        models.Add(MeshFactory.CreateTrianglesList(2, chunks));
-        models.Add(MeshFactory.CreateTrianglesList(4, chunks));
+        Vector3[] positions = MeshFactory.CreatePoints(chunks);
 
         await jsRuntime.InvokeVoidAsync("addModels",
             JsonSerializer.Serialize(models),
             JsonSerializer.Serialize(positions, options));
-    }
-
-    private void FixMaxWaterHeight(int[] waterPoints, Vector3[] positions)
-    {
-        List<float> zlist = waterPoints.Select(pt => positions[pt].Z).ToList();
-        if (zlist.Count > 1)
-        {
-            float minz = zlist.Min();
-            for (int i = 0; i < waterPoints.Length; i++)
-            {
-                waterPoints.ToList().ForEach(i =>
-                {
-                    if (positions[i].Z > minz) { positions[i].Z = minz; }
-                });
-            }
-        }
     }
 }

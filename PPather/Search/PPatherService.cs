@@ -19,6 +19,8 @@ namespace PPather
 
         private readonly ILogger logger;
         private readonly DataConfig dataConfig;
+
+        private Action SearchBegin;
         private Action<Path> OnPathCreated;
         public Action OnReset { get; set; }
         public Action<ChunkAddedEventArgs> OnChunkAdded { get; set; }
@@ -83,6 +85,7 @@ namespace PPather
 
         public Path DoSearch(PathGraph.eSearchScoreSpot searchType)
         {
+            SearchBegin?.Invoke();
             var path = search.DoSearch(searchType);
             OnPathCreated?.Invoke(path);
             lastPath = path;
@@ -92,6 +95,11 @@ namespace PPather
         public void Save()
         {
             search.PathGraph.Save();
+        }
+
+        public void SetOnSearchBegin(Action action)
+        {
+            SearchBegin = action;
         }
 
         public void SetOnPathCreated(Action<Path> action)
