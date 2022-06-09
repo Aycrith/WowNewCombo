@@ -92,7 +92,7 @@ namespace Core.GOAP
 
             sessionHandler = new GrindSessionHandler(logger, addonReader, sessionDAO, cts);
 
-            stopMoving = new StopMoving(input, playerReader);
+            stopMoving = new StopMoving(input, playerReader, cts);
 
             this.addonReader.CreatureHistory.KillCredit += OnKillCredit;
 
@@ -130,8 +130,6 @@ namespace Core.GOAP
                         a.ActionEvent -= b.OnActionEvent;
                 }
             }
-
-            stopMoving.Dispose();
 
             foreach (var goal in AvailableGoals.Where(x => x is IDisposable).OfType<IDisposable>())
             {

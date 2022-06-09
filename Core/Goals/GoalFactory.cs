@@ -49,7 +49,7 @@ namespace Core
                 new Blacklist(logger, addonReader, classConfig.NPCMaxLevels_Above, classConfig.NPCMaxLevels_Below, classConfig.CheckTargetGivesExp, classConfig.Blacklist);
 
             PlayerDirection playerDirection = new(logger, input, addonReader.PlayerReader);
-            StopMoving stopMoving = new(input, addonReader.PlayerReader);
+            StopMoving stopMoving = new(input, addonReader.PlayerReader, cts);
 
             CastingHandler castingHandler = new(logger, cts, input, wait, addonReader, playerDirection, stopMoving);
 

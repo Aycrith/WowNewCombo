@@ -274,6 +274,8 @@ namespace Core.Goals
         public void Stop()
         {
             active = false;
+            if (input.IsKeyDown(input.ForwardKey))
+                input.SetKeyState(input.ForwardKey, false, true);
 
             if (pather is RemotePathingAPIV3)
                 routeToNextWaypoint.Clear();

@@ -135,7 +135,6 @@ namespace Core.Goals
                     if (combatUtil.AquiredTarget(5000))
                     {
                         pullStart = DateTime.UtcNow;
-                        stopMoving.Stop();
                     }
 
                     return;
@@ -281,7 +280,6 @@ namespace Core.Goals
             }
             else
             {
-                stopMoving.Stop();
                 stopMoving.Stop();
             }
         }

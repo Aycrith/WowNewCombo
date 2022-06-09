@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
 using System.Numerics;
@@ -169,9 +169,6 @@ namespace Core.Goals
 
             stopMoving.Stop();
             wait.Update();
-            stopMoving.Stop();
-            wait.Update();
-            wait.Update();
 
             bool prevState = interrupt();
 
@@ -299,8 +296,6 @@ namespace Core.Goals
             {
                 if (item.StopBeforeCast || item.HasCastBar)
                 {
-                    stopMoving.Stop();
-                    wait.Update();
                     stopMoving.Stop();
                     wait.Update();
                 }
