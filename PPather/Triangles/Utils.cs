@@ -291,26 +291,29 @@ namespace WowTriangles
             return (int)((f + offset) / gridSize);
         }
 
-        public List<T> GetAllInSquare(float min_x, float min_y,
+        public (T[], int) GetAllInSquare(float min_x, float min_y,
                                       float max_x, float max_y)
         {
-            int startx = LocalToGrid(min_x);
-            int stopx = LocalToGrid(max_x);
+            int sx = LocalToGrid(min_x);
+            int ex = LocalToGrid(max_x);
 
-            int starty = LocalToGrid(min_y);
-            int stopy = LocalToGrid(max_y);
+            int sy = LocalToGrid(min_y);
+            int ey = LocalToGrid(max_y);
 
-            List<T> l = new();
-
-            for (int x = startx; x <= stopx; x++)
+            T[] l = new T[(int)Math.Ceiling(((ex - sx + 1) * gridSize) + ((ey - sy + 1) * gridSize))];
+            int i = 0;
+            for (int x = sx; x <= ex; x++)
             {
-                for (int y = starty; y <= stopy; y++)
+                for (int y = sy; y <= ey; y++)
                 {
                     if (base.IsSet(x, y))
-                        l.Add(base.Get(x, y));
+                    {
+                        l[i++] = base.Get(x, y);
+                    }
                 }
             }
-            return l;
+
+            return (l, i);
         }
 
         public T Get(float x, float y)
@@ -394,7 +397,7 @@ namespace WowTriangles
 
     public class TrioArray<T>
     {
-        private const int SIZE = 4096; // Max size if SIZE*SIZE = 16M
+        private const int SIZE = 1024; // Max size if SIZE*SIZE = 16M
 
         // Jagged array
         // pointer chasing FTL
@@ -410,16 +413,21 @@ namespace WowTriangles
 
         private void allocateAt(int i0, int i1)
         {
-            if (arrays == null) arrays = new T[SIZE][];
+            if (arrays == null)
+                arrays = new T[SIZE][];
 
             T[] a1 = arrays[i0];
-            if (a1 == null) { a1 = new T[SIZE * 3]; arrays[i0] = a1; }
+            if (a1 == null)
+            {
+                a1 = new T[SIZE * 3];
+                arrays[i0] = a1;
+            }
         }
 
         public void SetSize(int new_size)
         {
             if (arrays == null) return;
-            getIndices(new_size, out int i0, out int i1);
+            getIndices(new_size, out int i0, out _);
             for (int i = i0 + 1; i < SIZE; i++)
                 arrays[i] = null;
         }
@@ -456,7 +464,7 @@ namespace WowTriangles
 
     public class QuadArray<T>
     {
-        private const int SIZE = 1024 * 5; // Max size if SIZE*SIZE = 16M
+        private const int SIZE = 512 * 5; // Max size if SIZE*SIZE = 16M
 
         // Jagged array
         // pointer chasing FTL
@@ -481,16 +489,14 @@ namespace WowTriangles
         public void SetSize(int new_size)
         {
             if (arrays == null) return;
-            int i0, i1;
-            getIndices(new_size, out i0, out i1);
+            getIndices(new_size, out int i0, out int i1);
             for (int i = i0 + 1; i < SIZE; i++)
                 arrays[i] = null;
         }
 
         public void Set(int index, T x, T y, T z, T w, T sequence)
         {
-            int i0, i1;
-            getIndices(index, out i0, out i1);
+            getIndices(index, out int i0, out int i1);
             allocateAt(i0, i1);
             T[] innermost = arrays[i0];
             i1 *= 5;
@@ -503,8 +509,7 @@ namespace WowTriangles
 
         public void Get(int index, out T x, out T y, out T z, out T w, out T sequence)
         {
-            int i0, i1;
-            getIndices(index, out i0, out i1);
+            getIndices(index, out int i0, out int i1);
 
             x = default;
             y = default;
