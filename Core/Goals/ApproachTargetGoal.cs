@@ -1,6 +1,5 @@
 ﻿using Core.GOAP;
 using Microsoft.Extensions.Logging;
-using SharedLib.Extensions;
 using System;
 using System.Numerics;
 
@@ -11,6 +10,7 @@ namespace Core.Goals
     public class ApproachTargetGoal : GoapGoal
     {
         private const bool debug = false;
+        private const double STUCK_INTERVAL_MS = 100;
 
         public override float CostOfPerformingAction => 8f;
 
@@ -20,14 +20,13 @@ namespace Core.Goals
         private readonly PlayerReader playerReader;
         private readonly StopMoving stopMoving;
         private readonly CombatUtil combatUtil;
+        private readonly IBlacklist blacklist;
 
         private readonly Random random = new();
 
-        private const float minDistance = 0.01f;
-
         private DateTime approachStart;
 
-        private float distance;
+        private double nextStuckCheckTime;
         private Vector3 lastPlayerLocation;
 
         private int initialTargetGuid;
@@ -37,10 +36,9 @@ namespace Core.Goals
 
         private bool HasPickedUpAnAdd =>
             playerReader.Bits.PlayerInCombat &&
-            !playerReader.Bits.TargetInCombat &&
-            !playerReader.Bits.TargetOfTargetIsPlayerOrPet;
+            !playerReader.Bits.TargetInCombat;
 
-        public ApproachTargetGoal(ILogger logger, ConfigurableInput input, Wait wait, PlayerReader playerReader, StopMoving stopMoving, CombatUtil combatUtil)
+        public ApproachTargetGoal(ILogger logger, ConfigurableInput input, Wait wait, PlayerReader playerReader, StopMoving stopMoving, CombatUtil combatUtil, IBlacklist blacklist)
         {
             this.logger = logger;
             this.input = input;
@@ -49,10 +47,7 @@ namespace Core.Goals
             this.playerReader = playerReader;
             this.stopMoving = stopMoving;
             this.combatUtil = combatUtil;
-
-            lastPlayerLocation = playerReader.PlayerLocation;
-
-            initialTargetGuid = playerReader.TargetGuid;
+            this.blacklist = blacklist;
 
             AddPrecondition(GoapKey.hastarget, true);
             AddPrecondition(GoapKey.targetisalive, true);
@@ -61,14 +56,24 @@ namespace Core.Goals
             AddEffect(GoapKey.incombatrange, true);
         }
 
+        public override void OnActionEvent(object sender, ActionEventArgs e)
+        {
+            if (e.Key == GoapKey.resume)
+            {
+                approachStart = DateTime.UtcNow;
+            }
+        }
+
         public override void OnEnter()
         {
             initialTargetGuid = playerReader.TargetGuid;
             initialMinRange = playerReader.MinRange;
-
             lastPlayerLocation = playerReader.PlayerLocation;
 
+            combatUtil.Update();
+
             approachStart = DateTime.UtcNow;
+            SetNextStuckTimeCheck();
         }
 
         public override void PerformAction()
@@ -76,43 +81,56 @@ namespace Core.Goals
             wait.Update();
             combatUtil.Update();
 
-            if (HasPickedUpAnAdd)
+            if (combatUtil.EnteredCombat() && HasPickedUpAnAdd)
             {
                 if (debug)
                     Log($"Add on approach! PlayerCombat={playerReader.Bits.PlayerInCombat}, Targets us={playerReader.Bits.TargetOfTargetIsPlayerOrPet}");
 
                 stopMoving.Stop();
-                combatUtil.AquiredTarget();
-                stopMoving.Stop();
+                if (combatUtil.AquiredTarget(5000))
+                {
+                    stopMoving.Stop();
+                }
 
                 return;
             }
-
-            distance = playerReader.PlayerLocation.DistanceXYTo(lastPlayerLocation);
-            lastPlayerLocation = playerReader.PlayerLocation;
 
             if (input.ClassConfig.Approach.GetCooldownRemaining() == 0)
             {
                 input.Approach();
             }
 
-            if (distance < minDistance)
+            if (!playerReader.Bits.PlayerInCombat)
             {
-                if (playerReader.LastUIErrorMessage == UI_ERROR.ERR_AUTOFOLLOW_TOO_FAR)
+                NonCombatApproach();
+            }
+
+            RandomJump();
+        }
+
+        private void NonCombatApproach()
+        {
+            if (ApproachDurationMs >= nextStuckCheckTime)
+            {
+                SetNextStuckTimeCheck();
+
+                Vector3 last = lastPlayerLocation;
+                lastPlayerLocation = playerReader.PlayerLocation;
+                if (!combatUtil.IsPlayerMoving(last))
                 {
-                    playerReader.LastUIErrorMessage = UI_ERROR.NONE;
+                    if (playerReader.LastUIErrorMessage == UI_ERROR.ERR_AUTOFOLLOW_TOO_FAR)
+                    {
+                        playerReader.LastUIErrorMessage = UI_ERROR.NONE;
+
+                        if (debug)
+                            Log("Too far, start moving forward!");
+
+                        input.SetKeyState(input.ForwardKey, true);
+                        return;
+                    }
 
                     if (debug)
-                        Log("Too far, start moving forward!");
-
-                    input.SetKeyState(input.ForwardKey, true);
-                    return;
-                }
-
-                if (ApproachDurationMs > 500)
-                {
-                    if (debug)
-                        Log($"Seems stuck! Clear Target. Turn away. d: {distance}");
+                        Log($"Seems stuck! Clear Target.");
 
                     input.ClearTarget();
                     input.KeyPress(random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey, 250 + random.Next(250));
@@ -137,16 +155,13 @@ namespace Core.Goals
                 int initialTargetMinRange = playerReader.MinRange;
                 if (input.ClassConfig.TargetNearestTarget.GetCooldownRemaining() == 0)
                 {
-                    if (debug)
-                        Log("Try to find closer target...");
-
                     input.NearestTarget();
                     wait.Update();
                 }
 
                 if (playerReader.TargetGuid != initialTargetGuid)
                 {
-                    if (playerReader.HasTarget) // blacklist
+                    if (playerReader.HasTarget && !blacklist.IsTargetBlacklisted()) // blacklist
                     {
                         if (playerReader.MinRange < initialTargetMinRange)
                         {
@@ -162,6 +177,7 @@ namespace Core.Goals
                                 Log("Stick to initial target!");
 
                             input.LastTarget();
+                            wait.Update();
                         }
                     }
                     else
@@ -172,23 +188,18 @@ namespace Core.Goals
                 }
             }
 
-            if (initialMinRange < playerReader.MinRange)
+            if (ApproachDurationMs > 2000 && initialMinRange < playerReader.MinRange)
             {
                 if (debug)
-                    Log($"We are going away from the target! {initialMinRange} < {playerReader.MinRange}");
+                    Log($"Going away from the target! {initialMinRange} < {playerReader.MinRange}");
 
                 input.ClearTarget();
             }
-
-            RandomJump();
         }
 
-        public override void OnActionEvent(object sender, ActionEventArgs e)
+        private void SetNextStuckTimeCheck()
         {
-            if (e.Key == GoapKey.resume)
-            {
-                approachStart = DateTime.UtcNow;
-            }
+            nextStuckCheckTime = ApproachDurationMs + STUCK_INTERVAL_MS;
         }
 
         private void RandomJump()

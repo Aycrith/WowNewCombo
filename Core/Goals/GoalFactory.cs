@@ -66,7 +66,7 @@ namespace Core
             WalkToCorpseGoal walkToCorpseAction = new(logger, input, wait, addonReader, corpseNav, stopMoving);
 
             CombatGoal genericCombat = new(logger, input, wait, addonReader, stopMoving, classConfig, castingHandler, mountHandler);
-            ApproachTargetGoal approachTarget = new(logger, input, wait, addonReader.PlayerReader, stopMoving, combatUtil);
+            ApproachTargetGoal approachTarget = new(logger, input, wait, addonReader.PlayerReader, stopMoving, combatUtil, blacklist);
 
             availableActions.Clear();
 

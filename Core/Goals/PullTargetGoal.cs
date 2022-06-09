@@ -55,9 +55,10 @@ namespace Core.Goals
                 playerReader.TargetTarget is not
                 TargetTargetEnum.None or
                 TargetTargetEnum.Me or
-                TargetTargetEnum.Pet;
+                TargetTargetEnum.Pet or
+                TargetTargetEnum.PartyOrPet;
 
-            input.ClassConfig.Pull.Sequence.Where(k => k != null).ToList().ForEach(key => Keys.Add(key));
+            input.ClassConfig.Pull.Sequence.ForEach(key => Keys.Add(key));
 
             requiresNpcNameFinder = Keys.Exists(k => k.Requirements.Contains(RequirementFactory.AddVisible));
 
@@ -126,16 +127,17 @@ namespace Core.Goals
 
             if (!Pull())
             {
-                if (HasPickedUpAnAdd)
+                if (combatUtil.EnteredCombat() && HasPickedUpAnAdd)
                 {
                     Log($"Add on pull! Combat={playerReader.Bits.PlayerInCombat}, Targets me={playerReader.Bits.TargetOfTargetIsPlayerOrPet}");
 
                     stopMoving.Stop();
-                    if (combatUtil.AquiredTarget())
+                    if (combatUtil.AquiredTarget(5000))
                     {
                         pullStart = DateTime.UtcNow;
+                        stopMoving.Stop();
                     }
-                    stopMoving.Stop();
+
                     return;
                 }
 
@@ -149,7 +151,7 @@ namespace Core.Goals
 
         protected bool HasPickedUpAnAdd =>
             playerReader.Bits.PlayerInCombat &&
-            !playerReader.Bits.TargetOfTargetIsPlayerOrPet;
+            !playerReader.Bits.TargetInCombat;
 
         protected void WaitForWithinMeleeRange(KeyAction item, bool lastCastSuccess)
         {
@@ -179,7 +181,7 @@ namespace Core.Goals
                 if (lastCastSuccess && addonReader.UsableAction.Is(item))
                 {
                     Log($"While waiting, repeat current action: {item.Name}");
-                    lastCastSuccess = castingHandler.CastIfReady(item);
+                    lastCastSuccess = castingHandler.CastIfReady(item, () => playerReader.IsInMeleeRange);
                     Log($"Repeat current action: {lastCastSuccess}");
                 }
 

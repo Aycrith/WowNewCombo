@@ -6,6 +6,8 @@ namespace Core
 {
     public class CombatUtil
     {
+        private const float MIN_DISTANCE = 0.01f;
+
         private readonly ILogger logger;
         private readonly AddonReader addonReader;
         private readonly PlayerReader playerReader;
@@ -38,7 +40,6 @@ namespace Core
 
         public bool EnteredCombat()
         {
-            wait.Update();
             if (!outOfCombat && !playerReader.Bits.PlayerInCombat)
             {
                 Log("Combat Leave");
@@ -56,7 +57,7 @@ namespace Core
             return false;
         }
 
-        public bool AquiredTarget()
+        public bool AquiredTarget(int maxTimeMs = 400)
         {
             if (this.playerReader.Bits.PlayerInCombat)
             {
@@ -84,12 +85,12 @@ namespace Core
                     return true;
                 }
 
-                if (wait.Till(400, () => playerReader.HasTarget || playerReader.PetHasTarget))
+                if (wait.Till(maxTimeMs, () => playerReader.HasTarget || playerReader.PetHasTarget))
                 {
                     return true;
                 }
 
-                Log($"{nameof(AquiredTarget)}: No target found");
+                Log($"{nameof(AquiredTarget)}: No target found after {maxTimeMs}ms");
                 input.ClearTarget();
                 wait.Update();
             }
@@ -98,8 +99,8 @@ namespace Core
 
         public bool IsPlayerMoving(Vector3 lastPos)
         {
-            var distance = playerReader.PlayerLocation.DistanceXYTo(lastPos);
-            return distance > 0.01f;
+            float distance = playerReader.PlayerLocation.DistanceXYTo(lastPos);
+            return distance > MIN_DISTANCE;
         }
 
         public (bool foundTarget, bool hadToMove) FoundTargetWhileMoved()
