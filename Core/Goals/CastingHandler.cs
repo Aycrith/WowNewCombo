@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
 using System.Numerics;
@@ -102,19 +102,10 @@ namespace Core.Goals
 
             if (item.AfterCastWaitNextSwing)
             {
-                int MainHandSwing() => Math.Clamp(playerReader.MainHandSwing.ElapsedMs - playerReader.MainHandSpeedMs, -playerReader.MainHandSpeedMs, 0);
-
                 (inputTimeOut, inputElapsedMs) = wait.Until(playerReader.MainHandSpeedMs,
                     interrupt: () => !addonReader.CurrentAction.Is(item) ||
-                        MainHandSwing() > -playerReader.MainHandSpeedMs + SpellQueueTimeMs, // interrupt when swing timer reseted from parry
-                    repeat: () =>
-                    {
-                        if (classConfig.Approach.GetCooldownRemaining() == 0)
-                        {
-                            stopMoving.Stop();
-                            input.Approach();
-                        }
-                    });
+                        playerReader.MainHandSwing.ElapsedMs < SpellQueueTimeMs, // swing timer reset from any miss
+                    repeat: RepeatStayCloseToTarget);
             }
             else
             {
@@ -217,7 +208,7 @@ namespace Core.Goals
             {
                 if (item.Log)
                     item.LogInformation(" ... waiting for visible cast bar to end or interrupt.");
-                wait.Until(MaxCastTimeMs, () => !playerReader.IsCasting || prevState != interrupt(), CommandPetAttack);
+                wait.Until(MaxCastTimeMs, () => !playerReader.IsCasting || prevState != interrupt(), RepeatPetAttack);
                 if (prevState != interrupt())
                 {
                     if (item.Log)
@@ -230,7 +221,7 @@ namespace Core.Goals
                 beforeCastEventValue = playerReader.CastEvent.Value;
                 if (item.Log)
                     item.LogInformation(" ... waiting for hidden cast bar to end or interrupt.");
-                wait.Until(MaxCastTimeMs, () => beforeCastEventValue != playerReader.CastEvent.Value || prevState != interrupt(), CommandPetAttack);
+                wait.Until(MaxCastTimeMs, () => beforeCastEventValue != playerReader.CastEvent.Value || prevState != interrupt(), RepeatPetAttack);
                 if (prevState != interrupt())
                 {
                     if (item.Log)
@@ -705,7 +696,7 @@ namespace Core.Goals
             return playerReader.HasTarget;
         }
 
-        private void CommandPetAttack()
+        private void RepeatPetAttack()
         {
             if (playerReader.Bits.PlayerInCombat &&
                 playerReader.Bits.HasPet &&
@@ -713,6 +704,14 @@ namespace Core.Goals
                 input.ClassConfig.PetAttack.GetCooldownRemaining() == 0)
             {
                 input.PetAttack();
+            }
+        }
+
+        private void RepeatStayCloseToTarget()
+        {
+            if (classConfig.Approach.GetCooldownRemaining() == 0)
+            {
+                input.Approach();
             }
         }
     }
