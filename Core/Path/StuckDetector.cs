@@ -66,6 +66,9 @@ namespace Core
 
         public void Update()
         {
+            if (playerReader.Bits.IsFalling)
+                return;
+
             if (debug)
                 logger.LogDebug($"Stuck for {ActionDurationMs}ms, last tried to unstick {UnstuckMs}ms ago.");
 
@@ -80,8 +83,8 @@ namespace Core
                 input.KeyPress(turnKey, turnDuration);
 
                 // Move
-                ConsoleKey moveKey = random.Next(2) == 0 ? input.ForwardKey : input.BackwardKey;
-                int moveDuration = random.Next(375) + 350;
+                ConsoleKey moveKey = random.Next(100) >= 25 ? input.ForwardKey : input.BackwardKey;
+                int moveDuration = random.Next(750) + 350;
                 logger.LogInformation($"Unstuck by moving for {moveDuration}ms");
                 input.KeyPress(moveKey, moveDuration);
 
