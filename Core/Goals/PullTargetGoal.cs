@@ -199,6 +199,9 @@ namespace Core.Goals
             bool castAny = false;
             foreach (var item in Keys)
             {
+                if (item.Name == input.ClassConfig.Approach.Name)
+                    continue;
+
                 if (!item.CanRun())
                 {
                     continue;
@@ -266,7 +269,7 @@ namespace Core.Goals
 
         private void ConditionalApproach()
         {
-            if (approachKey != null && approachKey.CanRun())
+            if (approachKey != null && (approachKey.CanRun() || approachKey.GetCooldownRemaining() > 0))
             {
                 if (approachKey.GetCooldownRemaining() == 0)
                 {
