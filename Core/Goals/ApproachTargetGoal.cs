@@ -9,8 +9,8 @@ namespace Core.Goals
 {
     public class ApproachTargetGoal : GoapGoal
     {
-        private const bool debug = false;
-        private const double STUCK_INTERVAL_MS = 200;
+        private const bool debug = true;
+        private const double STUCK_INTERVAL_MS = 400; // cant be lower than Approach.Cooldown
 
         public override float CostOfPerformingAction => 8f;
 
@@ -87,10 +87,7 @@ namespace Core.Goals
                     Log($"Add on approach! PlayerCombat={playerReader.Bits.PlayerInCombat}, Targets us={playerReader.Bits.TargetOfTargetIsPlayerOrPet}");
 
                 stopMoving.Stop();
-                if (combatUtil.AquiredTarget(5000))
-                {
-                    stopMoving.Stop();
-                }
+                combatUtil.AquiredTarget(5000);
 
                 return;
             }
