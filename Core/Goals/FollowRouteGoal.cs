@@ -30,15 +30,15 @@ namespace Core.Goals
         private readonly List<Vector3> routePoints;
 
         private readonly TargetFinder targetFinder;
-        private readonly int minMs = 500, maxMs = 1000;
+        private const int minMs = 500, maxMs = 1000;
         private const NpcNames NpcNameToFind = NpcNames.Enemy | NpcNames.Neutral;
 
         private const int MIN_TIME_TO_START_CYCLE_PROFESSION = 5000;
         private const int CYCLE_PROFESSION_PERIOD = 8000;
 
         private readonly ManualResetEvent sideActivityManualReset;
-        private readonly CancellationTokenSource sideActivityCts;
         private readonly Thread? sideActivityThread;
+        private CancellationTokenSource sideActivityCts;
 
         private bool shouldMount;
 
@@ -205,7 +205,7 @@ namespace Core.Goals
 
             if (playerReader.Bits.PlayerInCombat && classConfig.Mode != Mode.AttendedGather) { return; }
 
-            navigation.Update();
+            navigation.Update(sideActivityCts);
 
             RandomJump();
 
@@ -221,14 +221,24 @@ namespace Core.Goals
 
             while (!sideActivityCts.IsCancellationRequested)
             {
+                bool found = false;
                 sideActivityManualReset.Reset();
 
                 if (classConfig.TargetNearestTarget.MillisecondsSinceLastClick > random.Next(minMs, maxMs))
                 {
-                    targetFinder.Search(NpcNameToFind, validTarget, sideActivityCts);
+                    found = targetFinder.Search(NpcNameToFind, validTarget, sideActivityCts);
+                    if (found)
+                    {
+                        sideActivityCts.Cancel();
+                    }
                 }
 
                 sideActivityManualReset.WaitOne();
+                if (found)
+                {
+                    sideActivityCts = new();
+                    found = false;
+                }
             }
 
             if (logger.IsEnabled(LogLevel.Debug))
