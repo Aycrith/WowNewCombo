@@ -14,47 +14,24 @@ namespace WowTriangles
 {
     public class TriangleMatrix
     {
-        private float resolution = 2.0f;
-        private SparseFloatMatrix2D<List<int>> matrix;
-        private int maxAtOne;
-
-        private void AddTriangleAt(float x, float y, int triangle)
-        {
-            List<int> l = matrix.Get(x, y);
-            if (l == null)
-            {
-                l = new List<int>(8); // hmm
-                l.Add(triangle);
-
-                matrix.Set(x, y, l);
-            }
-            else
-            {
-                l.Add(triangle);
-            }
-
-            if (l.Count > maxAtOne)
-                maxAtOne = l.Count;
-        }
-
-        private readonly ILogger logger;
+        private const float resolution = 2.0f;
+        private readonly SparseFloatMatrix2D<List<int>> matrix;
+        private readonly int maxAtOne;
 
         public TriangleMatrix(TriangleCollection tc, ILogger logger)
         {
-            this.logger = logger;
-
             DateTime pre = DateTime.UtcNow;
 
             if (logger.IsEnabled(LogLevel.Trace))
-                logger.LogTrace($"Build hash  {tc.GetNumberOfTriangles()}");
+                logger.LogTrace($"Build hash for {tc.TriangleCount} triangles");
 
-            matrix = new SparseFloatMatrix2D<List<int>>(resolution, tc.GetNumberOfTriangles());
+            matrix = new SparseFloatMatrix2D<List<int>>(resolution, tc.TriangleCount);
 
             Vector3 vertex0;
             Vector3 vertex1;
             Vector3 vertex2;
 
-            for (int i = 0; i < tc.GetNumberOfTriangles(); i++)
+            for (int i = 0; i < tc.TriangleCount; i++)
             {
                 tc.GetTriangleVertices(i,
                         out vertex0.X, out vertex0.Y, out vertex0.Z,
@@ -78,32 +55,47 @@ namespace WowTriangles
                 int endy = matrix.LocalToGrid(maxy);
 
                 for (int x = startx; x <= endx; x++)
+                {
                     for (int y = starty; y <= endy; y++)
                     {
                         float grid_x = matrix.GridToLocal(x);
                         float grid_y = matrix.GridToLocal(y);
-                        box_center.X = grid_x + resolution / 2;
-                        box_center.Y = grid_y + resolution / 2;
+                        box_center.X = grid_x + (resolution / 2);
+                        box_center.Y = grid_y + (resolution / 2);
                         box_center.Z = 0;
+
                         if (Utils.TestTriangleBoxIntersect(vertex0, vertex1, vertex2, box_center, box_halfsize))
-                            AddTriangleAt(grid_x, grid_y, i);
+                        {
+                            List<int> list = matrix.Get(grid_x, grid_y);
+                            if (list == null)
+                            {
+                                list = new();
+                                matrix.Set(grid_x, grid_y, list);
+                            }
+
+                            list.Add(i);
+
+                            if (list.Count > maxAtOne)
+                                maxAtOne = list.Count;
+                        }
                     }
+                }
             }
 
             if (logger.IsEnabled(LogLevel.Trace))
-                logger.LogTrace($"done {maxAtOne} time {(DateTime.UtcNow - pre)}");
+                logger.LogTrace($"Build hash done {maxAtOne} - time {DateTime.UtcNow - pre}");
         }
 
-        public HashSet<int> GetAllCloseTo(float x, float y, float distance)
+        public ICollection<int> GetAllCloseTo(float x, float y, float distance)
         {
-            List<List<int>> close = matrix.GetAllInSquare(x - distance, y - distance, x + distance, y + distance);
             HashSet<int> all = new();
 
-            foreach (List<int> l in close)
+            (List<int>[] close, int count) = matrix.GetAllInSquare(x - distance, y - distance, x + distance, y + distance);
+            for (int i = 0; i < count; i++)
             {
-                foreach (int inner in l)
+                for (int j = 0; j < close[i].Count; j++)
                 {
-                    all.Add(inner);
+                    all.Add(close[i][j]);
                 }
             }
 
@@ -113,13 +105,13 @@ namespace WowTriangles
         public ICollection<int> GetAllInSquare(float x0, float y0, float x1, float y1)
         {
             HashSet<int> all = new();
-            List<List<int>> close = matrix.GetAllInSquare(x0, y0, x1, y1);
+            (List<int>[] close, int count) = matrix.GetAllInSquare(x0, y0, x1, y1);
 
-            foreach (List<int> l in close)
+            for (int i = 0; i < count; i++)
             {
-                foreach (int inner in l)
+                for (int j = 0; j < close[i].Count; j++)
                 {
-                    all.Add(inner);
+                    all.Add(close[i][j]);
                 }
             }
             return all;

@@ -23,7 +23,7 @@ namespace PathingAPI
             var logfile = "out.log";
             var config = new LoggerConfiguration()
                 //.MinimumLevel.Debug()
-                .MinimumLevel.Verbose()
+                //.MinimumLevel.Verbose()
                 .WriteTo.PathingAPILoggerSink()
                 .WriteTo.File(logfile, rollingInterval: RollingInterval.Day)
                 .WriteTo.Debug(outputTemplate: "[{Timestamp:HH:mm:ss:fff} {Level:u3}] {Message:lj}{NewLine}{Exception}")

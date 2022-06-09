@@ -14,21 +14,15 @@ namespace WowTriangles
     public class TriangleCollection
     {
         private readonly ILogger logger;
+        private readonly TrioArray<float> vertices = new();
+        private readonly QuadArray<int> triangles = new();
+
+        private TriangleMatrix matrix;
 
         public bool changed = true;
         public int LRU;
         public float base_x, base_y;
         public int grid_x, grid_y;
-
-        private readonly TrioArray<float> vertices = new();
-        private int no_vertices;
-
-        private readonly QuadArray<int> triangles = new();
-        private int no_triangles;
-
-        private SparseFloatMatrix3D<int> vertexMatrix = new(0.1f);
-
-        private TriangleMatrix collisionMatrix;
 
         public float max_x = -1E30f;
         public float max_y = -1E30f;
@@ -46,49 +40,41 @@ namespace WowTriangles
         private float limit_min_y = -1E30f;
         private float limit_min_z = -1E30f;
 
-        public float[] color;
-        public bool fill;
+        public int TriangleCount { get; private set; }
+
+        public int VertexCount { get; private set; }
 
         public TriangleCollection(ILogger logger)
         {
             this.logger = logger;
         }
 
-        public int TriangleCount()
-        {
-            return no_triangles;
-        }
-
-        public int VertexCount()
-        {
-            return no_vertices;
-        }
-
         public void Clear()
         {
-            no_triangles = 0;
-            no_vertices = 0;
-            vertexMatrix = new(0.1f);
+            vertices.SetSize(0);
+            triangles.SetSize(0);
+
+            TriangleCount = 0;
+            VertexCount = 0;
+
             changed = true;
         }
 
-        private TriangleOctree oct;
-
-        public TriangleOctree GetOctree()
+        public TriangleMatrix GetTriangleMatrix()
         {
-            if (oct == null)
-                oct = new TriangleOctree(this, this.logger);
-            return oct;
+            if (matrix == null)
+                matrix = new TriangleMatrix(this, logger);
+
+            return matrix;
         }
 
-        // remove unused vertices
         public void CompactVertices()
         {
-            bool[] used_indices = new bool[GetNumberOfVertices()];
-            int[] old_to_new = new int[GetNumberOfVertices()];
+            bool[] used_indices = new bool[VertexCount];
+            int[] old_to_new = new int[VertexCount];
 
             // check what vertives are used
-            for (int i = 0; i < GetNumberOfTriangles(); i++)
+            for (int i = 0; i < TriangleCount; i++)
             {
                 int v0, v1, v2;
                 GetTriangle(i, out v0, out v1, out v2);
@@ -109,36 +95,20 @@ namespace WowTriangles
                     sum++;
                 }
                 else
+                {
                     old_to_new[i] = -1;
+                }
             }
 
             vertices.SetSize(sum);
 
             // Change all triangles
-            for (int i = 0; i < GetNumberOfTriangles(); i++)
+            for (int i = 0; i < TriangleCount; i++)
             {
-                int v0, v1, v2, flags, sequence;
-                GetTriangle(i, out v0, out v1, out v2, out flags, out sequence);
+                GetTriangle(i, out int v0, out int v1, out int v2, out int flags, out int sequence);
                 triangles.Set(i, old_to_new[v0], old_to_new[v1], old_to_new[v2], flags, sequence);
             }
-            no_vertices = sum;
-        }
-
-        private TriangleQuadtree quad;
-
-        public TriangleQuadtree GetQuadtree()
-        {
-            if (quad == null)
-                quad = new TriangleQuadtree(this, this.logger);
-            return quad;
-        }
-
-        public TriangleMatrix GetTriangleMatrix()
-        {
-            if (collisionMatrix == null)
-                collisionMatrix = new TriangleMatrix(this, logger);
-
-            return collisionMatrix;
+            VertexCount = sum;
         }
 
         public void SetLimits(float min_x, float min_y, float min_z,
@@ -171,25 +141,8 @@ namespace WowTriangles
             int v1 = AddVertex(x, y, z + 0.5f);
             int v2 = AddVertex(x2, y2, z2 + 0.1f);
 
-            //int v0 = AddVertex(x, y, z + 2.0f - 0.5f);
-            //int v1 = AddVertex(x, y, z + 2.0f);
-            //int v2 = AddVertex(x2, y2, z2+2.0f-0.5f);
-
             AddTriangle(v0, v1, v2);
             AddTriangle(v2, v1, v0);
-        }
-
-        public void AddMarker(float x, float y, float z)
-        {
-            int v0 = AddVertex(x, y, z);
-            int v1 = AddVertex(x + 0.3f, y, z + 1.0f);
-            int v2 = AddVertex(x - 0.3f, y, z + 1.0f);
-            int v3 = AddVertex(x, y + 0.3f, z + 1.0f);
-            int v4 = AddVertex(x, y - 0.3f, z + 1.0f);
-            AddTriangle(v0, v1, v2);
-            AddTriangle(v2, v1, v0);
-            AddTriangle(v0, v3, v4);
-            AddTriangle(v4, v3, v0);
         }
 
         public void AddBigMarker(float x, float y, float z)
@@ -219,14 +172,8 @@ namespace WowTriangles
 
         public int AddVertex(float x, float y, float z)
         {
-            // Create new if needed or return old one
-
-            if (vertexMatrix.IsSet(x, y, z))
-                return vertexMatrix.Get(x, y, z);
-
-            vertices.Set(no_vertices, x, y, z);
-            vertexMatrix.Set(x, y, z, no_vertices);
-            return no_vertices++;
+            vertices.Set(VertexCount, x, y, z);
+            return VertexCount++;
         }
 
         // big list if triangles (3 vertice IDs per triangle)
@@ -237,14 +184,15 @@ namespace WowTriangles
                 !CheckVertexLimits(v1) &&
                 !CheckVertexLimits(v2))
                 return -1;
+
             // Create new
             SetMinMax(v0);
             SetMinMax(v1);
             SetMinMax(v2);
 
-            triangles.Set(no_triangles, v0, v1, v2, flags, sequence);
+            triangles.Set(TriangleCount, v0, v1, v2, flags, sequence);
             changed = true;
-            return no_triangles++;
+            return TriangleCount++;
         }
 
         // big list if triangles (3 vertice IDs per triangle)
@@ -255,8 +203,7 @@ namespace WowTriangles
 
         private void SetMinMax(int v)
         {
-            float x, y, z;
-            GetVertex(v, out x, out y, out z);
+            GetVertex(v, out float x, out float y, out float z);
             if (x < min_x)
                 min_x = x;
             if (y < min_y)
@@ -274,8 +221,8 @@ namespace WowTriangles
 
         private bool CheckVertexLimits(int v)
         {
-            float x, y, z;
-            GetVertex(v, out x, out y, out z);
+            GetVertex(v, out float x, out float y, out float z);
+
             if (x < limit_min_x || x > limit_max_x)
                 return false;
             if (y < limit_min_y || y > limit_max_y)
@@ -300,16 +247,6 @@ namespace WowTriangles
             z = min_z;
         }
 
-        public int GetNumberOfTriangles()
-        {
-            return no_triangles;
-        }
-
-        public int GetNumberOfVertices()
-        {
-            return no_vertices;
-        }
-
         public void GetVertex(int i, out float x, out float y, out float z)
         {
             vertices.Get(i, out x, out y, out z);
@@ -317,8 +254,7 @@ namespace WowTriangles
 
         public void GetTriangle(int i, out int v0, out int v1, out int v2)
         {
-            int w;
-            triangles.Get(i, out v0, out v1, out v2, out w, out int sequence);
+            triangles.Get(i, out v0, out v1, out v2, out _, out _);
         }
 
         public void GetTriangle(int i, out int v0, out int v1, out int v2, out int flags, out int sequence)
@@ -331,9 +267,7 @@ namespace WowTriangles
                                         out float x1, out float y1, out float z1,
                                         out float x2, out float y2, out float z2, out int flags, out int sequence)
         {
-            int v0, v1, v2;
-
-            triangles.Get(i, out v0, out v1, out v2, out flags, out sequence);
+            triangles.Get(i, out int v0, out int v1, out int v2, out flags, out sequence);
             vertices.Get(v0, out x0, out y0, out z0);
             vertices.Get(v1, out x1, out y1, out z1);
             vertices.Get(v2, out x2, out y2, out z2);
@@ -344,9 +278,7 @@ namespace WowTriangles
                                         out float x1, out float y1, out float z1,
                                         out float x2, out float y2, out float z2)
         {
-            int v0, v1, v2, flags, sequence;
-
-            triangles.Get(i, out v0, out v1, out v2, out flags, out sequence);
+            triangles.Get(i, out int v0, out int v1, out int v2, out _, out _);
             vertices.Get(v0, out x0, out y0, out z0);
             vertices.Get(v1, out x1, out y1, out z1);
             vertices.Get(v2, out x2, out y2, out z2);
@@ -354,8 +286,8 @@ namespace WowTriangles
 
         public float[] GetFlatVertices()
         {
-            float[] flat = new float[no_vertices * 3];
-            for (int i = 0; i < no_vertices; i++)
+            float[] flat = new float[VertexCount * 3];
+            for (int i = 0; i < VertexCount; i++)
             {
                 int off = i * 3;
                 vertices.Get(i, out flat[off], out flat[off + 1], out flat[off + 2]);
@@ -363,31 +295,19 @@ namespace WowTriangles
             return flat;
         }
 
-        public void ClearVertexMatrix()
-        {
-            vertexMatrix = new(0.1f);
-        }
-
-        public void ReportSize(string pre)
-        {
-            if (logger.IsEnabled(LogLevel.Debug))
-            {
-                logger.LogDebug(pre + "no_vertices: " + no_vertices);
-                logger.LogDebug(pre + "no_triangles: " + no_triangles);
-            }
-        }
-
         public void AddAllTrianglesFrom(TriangleCollection set)
         {
-            for (int i = 0; i < set.GetNumberOfTriangles(); i++)
+            for (int i = 0; i < set.TriangleCount; i++)
             {
                 float v0x, v0y, v0z;
                 float v1x, v1y, v1z;
                 float v2x, v2y, v2z;
+
                 set.GetTriangleVertices(i,
                     out v0x, out v0y, out v0z,
                     out v1x, out v1y, out v1z,
                     out v2x, out v2y, out v2z);
+
                 int v0 = AddVertex(v0x, v0y, v0z);
                 int v1 = AddVertex(v1x, v1y, v1z);
                 int v2 = AddVertex(v2x, v2y, v2z);
