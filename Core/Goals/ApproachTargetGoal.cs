@@ -10,7 +10,7 @@ namespace Core.Goals
     public class ApproachTargetGoal : GoapGoal
     {
         private const bool debug = false;
-        private const double STUCK_INTERVAL_MS = 100;
+        private const double STUCK_INTERVAL_MS = 200;
 
         public override float CostOfPerformingAction => 8f;
 
