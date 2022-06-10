@@ -51,9 +51,8 @@ namespace ReadDBC_CSV
             };
 
             var talenttabs = new List<TalentTab>();
-            Action<string> extractLine = line =>
+            void extractLine(string[] values)
             {
-                var values = line.Split(",");
                 if (values.Length > idIndex && values.Length > orderIndex)
                 {
                     talenttabs.Add(new TalentTab
@@ -64,7 +63,7 @@ namespace ReadDBC_CSV
                         OrderIndex = int.Parse(values[orderIndex])
                     });
                 }
-            };
+            }
 
             extractor.ExtractTemplate(path, extractLine);
 
@@ -103,9 +102,8 @@ namespace ReadDBC_CSV
 
 
             var talents = new List<TalentTreeElement>();
-            Action<string> extractLine = line =>
+            void extractLine(string[] values)
             {
-                var values = line.Split(",");
                 if (values.Length > idIndex && values.Length > spellRank4Index)
                 {
                     //Console.WriteLine($"{values[entryIndex]} - {values[nameIndex]}");
@@ -125,7 +123,7 @@ namespace ReadDBC_CSV
                         }
                     });
                 }
-            };
+            }
 
             extractor.ExtractTemplate(path, extractLine);
 

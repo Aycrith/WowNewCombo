@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.RegularExpressions;
 using SharedLib;
 
 namespace ReadDBC_CSV
@@ -48,14 +47,8 @@ namespace ReadDBC_CSV
             };
 
             var items = new List<Item>();
-            Action<string> extractLine = line =>
+            void extractLine(string[] values)
             {
-                string[] values = line.Split(",");
-                if (line.Contains('\"'))
-                    values = CSVExtractor.SplitQuotes(line);
-                else
-                    values = line.Split(",");
-
                 if (values.Length > idIndex &&
                     values.Length > nameIndex &&
                     values.Length > qualityIndex &&
@@ -69,7 +62,7 @@ namespace ReadDBC_CSV
                         SellPrice = int.Parse(values[sellPriceIndex])
                     });
                 }
-            };
+            }
 
             extractor.ExtractTemplate(path, extractLine);
             return items;

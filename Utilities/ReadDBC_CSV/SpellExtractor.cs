@@ -47,9 +47,8 @@ namespace ReadDBC_CSV
             };
 
             var spells = new List<Spell>();
-            Action<string> extractLine = line =>
+            void extractLine(string[] values)
             {
-                var values = line.Split(",");
                 if (values.Length > entryIndex && values.Length > nameIndex)
                 {
                     spells.Add(new Spell
@@ -58,7 +57,7 @@ namespace ReadDBC_CSV
                         Name = values[nameIndex]
                     });
                 }
-            };
+            }
 
             extractor.ExtractTemplate(path, extractLine);
 
@@ -75,13 +74,12 @@ namespace ReadDBC_CSV
             extractor.HeaderAction = () =>
             {
                 entryIndex = extractor.FindIndex("ID");
-                spellIdIndex = extractor.FindIndex("SpellID");
-                baseLevelIndex = extractor.FindIndex("BaseLevel");
+                spellIdIndex = extractor.FindIndex("SpellID", 6);
+                baseLevelIndex = extractor.FindIndex("BaseLevel", 2);
             };
 
-            Action<string> extractLine = line =>
+            void extractLine(string[] values)
             {
-                var values = line.Split(",");
                 if (values.Length > entryIndex &&
                     values.Length > spellIdIndex &&
                     values.Length > baseLevelIndex)
@@ -101,7 +99,7 @@ namespace ReadDBC_CSV
                         }
                     }
                 }
-            };
+            }
 
             extractor.ExtractTemplate(path, extractLine);
         }

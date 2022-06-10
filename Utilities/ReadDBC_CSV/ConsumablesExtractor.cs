@@ -61,9 +61,8 @@ namespace ReadDBC_CSV
             };
 
             var items = new List<EntityId>();
-            Action<string> extractLine = line =>
+            void extractLine(string[] values)
             {
-                var values = line.Split(",");
                 if (values.Length > entryIndex &&
                     values.Length > descIndex &&
                     values[descIndex].Contains(descLang))
@@ -73,7 +72,7 @@ namespace ReadDBC_CSV
                         Id = int.Parse(values[entryIndex])
                     });
                 }
-            };
+            }
 
             extractor.ExtractTemplate(path, extractLine);
             return items;
@@ -89,14 +88,13 @@ namespace ReadDBC_CSV
             extractor.HeaderAction = () =>
             {
                 entryIndex = extractor.FindIndex("ID");
-                spellIdIndex = extractor.FindIndex("SpellID");
-                ParentItemIDIndex = extractor.FindIndex("ParentItemID");
+                spellIdIndex = extractor.FindIndex("SpellID", 7);
+                ParentItemIDIndex = extractor.FindIndex("ParentItemID", 9);
             };
 
             var items = new List<EntityId>();
-            Action<string> extractLine = line =>
+            void extractLine(string[] values)
             {
-                var values = line.Split(",");
                 if (values.Length > entryIndex &&
                     values.Length > spellIdIndex &&
                     values.Length > ParentItemIDIndex)
@@ -111,7 +109,7 @@ namespace ReadDBC_CSV
                         });
                     }
                 }
-            };
+            }
 
             extractor.ExtractTemplate(path, extractLine);
 

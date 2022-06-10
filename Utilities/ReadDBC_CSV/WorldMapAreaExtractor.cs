@@ -46,29 +46,39 @@ namespace ReadDBC_CSV
         {
             int idIndex = -1;
             int nameIndex = -1;
+            int systemIndex = -1;
 
             var extractor = new CSVExtractor();
             extractor.HeaderAction = () =>
             {
                 idIndex = extractor.FindIndex("ID");
                 nameIndex = extractor.FindIndex("Name_lang");
+                systemIndex = extractor.FindIndex("System");
             };
 
             var items = new List<WorldMapArea>();
-            Action<string> extractLine = line =>
+            void extractLine(string[] values)
             {
-                var values = line.Split(",");
                 if (values.Length > idIndex &&
-                    values.Length > nameIndex)
+                    values.Length > nameIndex &&
+                    values.Length > systemIndex)
                 {
                     int uiMapId = int.Parse(values[idIndex]);
+                    int system = int.Parse(values[systemIndex]);
+
+                    // 1 ([DEPRECATED] Legacy Taxi)
+                    if (system == 1)
+                    {
+                        return;
+                    }
+
                     items.Add(new WorldMapArea
                     {
                         UIMapId = uiMapId,
-                        AreaName = values[nameIndex]
+                        AreaName = values[nameIndex],
                     });
                 }
-            };
+            }
 
             extractor.ExtractTemplate(path, extractLine);
             return items;
@@ -103,9 +113,8 @@ namespace ReadDBC_CSV
                 region4Index = extractor.FindIndex("Region[4]");
             };
 
-            Action<string> extractLine = line =>
+            void extractLine(string[] values)
             {
-                var values = line.Split(",");
                 if (values.Length > uiMapIdIndex &&
                     values.Length > mapIdIndex &&
                     values.Length > areaIdIndex &&
@@ -141,7 +150,7 @@ namespace ReadDBC_CSV
                         };
                     }
                 }
-            };
+            }
 
             extractor.ExtractTemplate(path, extractLine);
         }
@@ -155,27 +164,24 @@ namespace ReadDBC_CSV
             extractor.HeaderAction = () =>
             {
                 mapIdIndex = extractor.FindIndex("ID");
-                directoryIndex = extractor.FindIndex("Directory");
+                directoryIndex = extractor.FindIndex("Directory", 1);
             };
 
-            Action<string> extractLine = line =>
+            void extractLine(string[] values)
             {
-                string[] values;
-                if (line.Contains('\"'))
-                    values = CSVExtractor.SplitQuotes(line);
-                else
-                    values = line.Split(",");
-
                 if (values.Length > directoryIndex &&
                     values.Length > mapIdIndex)
                 {
                     int mapId = int.Parse(values[mapIdIndex]);
+                    string directory = values[directoryIndex];
 
-                    var list = wmas.FindAll(x => x.MapID == mapId);
-                    for (int i = 0; i < list.Count; i++)
+                    for (int i = 0; i < wmas.Count; i++)
                     {
-                        var wma = list[i];
-                        list[i] = new WorldMapArea
+                        if (wmas[i].MapID != mapId)
+                            continue;
+
+                        WorldMapArea wma = wmas[i];
+                        wmas[i] = new WorldMapArea
                         {
                             MapID = wma.MapID,
                             AreaID = wma.AreaID,
@@ -189,11 +195,11 @@ namespace ReadDBC_CSV
                             LocLeft = wma.LocLeft,
 
                             UIMapId = wma.UIMapId,
-                            Continent = values[directoryIndex]
+                            Continent = directory
                         };
                     }
                 }
-            };
+            }
 
             extractor.ExtractTemplate(path, extractLine);
         }

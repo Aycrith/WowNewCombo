@@ -26,7 +26,7 @@ namespace ReadDBC_CSV
 
         static Locale locale = Locale.enUS;
         static string path = "../../../data/";
-        static string build = "2.5.2.40617";
+        static string build = "2.5.2.40617"; // TBCC 2.5.2.40617 // WOTLK alpha 3.4.0.44064
 
         static void Main(string[] args)
         {
