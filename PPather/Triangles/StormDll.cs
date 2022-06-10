@@ -108,68 +108,35 @@ int   WINAPI SFileAddListFile(HANDLE hMpq, const char * szListFile);
 
         public static uint GetLocale()
         {
-            return StormDll.SFileGetLocale();
+            return SFileGetLocale();
         }
     }
 
     public unsafe class ArchiveSet
     {
         private readonly ILogger logger;
+        private readonly HashSet<Archive> archives;
 
-        public ArchiveSet(ILogger logger)
+        public ArchiveSet(ILogger logger, string[] files)
         {
             this.logger = logger;
-        }
 
-        private List<Archive> archives = new List<Archive>();
+            archives = new();
 
-        //public string SetGameDirFromReg()
-        //{
-        //	RegistryKey key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey("SOFTWARE\\Blizzard Entertainment\\World of Warcraft");
-        //	if (key == null)
-        //		return null;
-        //	Object val = key.GetValue("InstallPath");
-        //	if (val == null)
-        //		return null;
-        //	string s = val.ToString();
-        //	SetGameDir(s + "Data\\");
-        //	return s;
-        //}
-
-        public bool AddArchive(string file)
-        {
-            Archive a = new Archive(file, 0, 0, this.logger);
-            if (a.IsOpen())
+            for (int i = 0; i < files.Length; i++)
             {
-                archives.Add(a);
+                Archive a = new(files[i], 0, 0, logger);
+                if (a.IsOpen())
+                {
+                    archives.Add(a);
+
+                    if (logger.IsEnabled(LogLevel.Trace))
+                        logger.LogTrace($"Add archive {files[i]}");
+                }
 
                 if (logger.IsEnabled(LogLevel.Trace))
-                    logger.LogTrace($"Add archive {file}");
-
-                return true;
+                    logger.LogTrace($"Failed archive {files[i]}");
             }
-            return false;
-        }
-
-        public int AddArchives(string[] files)
-        {
-            int n = 0;
-            foreach (string s in files)
-            {
-                if (AddArchive(s))
-                    n++;
-            }
-            return n;
-        }
-
-        public bool HasFile(string name)
-        {
-            foreach (Archive a in archives)
-            {
-                if (a.HasFile(name))
-                    return true;
-            }
-            return false;
         }
 
         public bool ExtractFile(string from, string to)
@@ -178,7 +145,6 @@ int   WINAPI SFileAddListFile(HANDLE hMpq, const char * szListFile);
             {
                 if (a.HasFile(from))
                 {
-                    //logger.LogTrace("Extract " + from + " from " + a.FileName);
                     bool ok = a.ExtractFile(from, to);
                     if (!ok)
                     {
@@ -203,33 +169,22 @@ int   WINAPI SFileAddListFile(HANDLE hMpq, const char * szListFile);
 
     public unsafe class Archive
     {
-        private void* handle = null;
-
-        private readonly ILogger logger;
+        private void* handle;
 
         public Archive(string file, uint Prio, uint Flags, ILogger logger)
         {
-            this.logger = logger;
-            bool r = Open(file, Prio, Flags);
-        }
-
-        public bool IsOpen()
-        {
-            return handle != null;
-        }
-
-        private bool Open(string file, uint Prio, uint Flags)
-        {
-            FileName = file;
             void* h;
             void** hp = &h;
             bool r = StormDll.SFileOpenArchive(file, Prio, Flags, hp);
             handle = h;
 
             if (logger.IsEnabled(LogLevel.Trace))
-                logger.LogTrace($"Open {file} = {r}");
+                logger.LogTrace($"Archive open ? {r} -> {file}");
+        }
 
-            return r;
+        public bool IsOpen()
+        {
+            return handle != null;
         }
 
         public bool Close()
@@ -240,60 +195,14 @@ int   WINAPI SFileAddListFile(HANDLE hMpq, const char * szListFile);
             return r;
         }
 
-        public string FileName { get; set; } = string.Empty;
-
-        public File OpenFile(string szFileName, uint dwSearchScope)
-        {
-            FileName = szFileName;
-
-            void* h;
-            void** hp = &h;
-            bool r = StormDll.SFileOpenFileEx(handle, szFileName, dwSearchScope, hp);
-            if (!r)
-                return null;
-            return new File(this, h);
-        }
-
         public bool HasFile(string name)
         {
-            bool r = StormDll.SFileHasFile(handle, name);
-            return r;
+            return StormDll.SFileHasFile(handle, name);
         }
 
         public bool ExtractFile(string from, string to)
         {
-            bool r = StormDll.SFileExtractFile(handle, from, to);
-            return r;
-        }
-    }
-
-    public unsafe class File
-    {
-        private void* handle;
-        private Archive archive;
-
-        public File(Archive a, void* h)
-        {
-            archive = a;
-            handle = h;
-        }
-
-        public bool Close()
-        {
-            bool r = StormDll.SFileCloseFile(handle);
-            if (r)
-                handle = null;
-            return r;
-        }
-
-        public ulong GetSize()
-        {
-            uint high;
-            uint* phigh = &high;
-            uint low = StormDll.SFileGetFileSize(handle, phigh);
-            //if (low == 0xffffffff)
-            //    return 0;
-            return low;
+            return StormDll.SFileExtractFile(handle, from, to);
         }
     }
 }

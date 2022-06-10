@@ -25,7 +25,7 @@ namespace WowTriangles
         public const int TriangleFlagModel = 4;
 
         private readonly ILogger logger;
-        private readonly List<TriangleSupplier> suppliers;
+        private readonly List<MPQTriangleSupplier> suppliers;
         private readonly SparseMatrix2D<TriangleCollection> chunks;
         private readonly int maxCached;
 
@@ -35,7 +35,7 @@ namespace WowTriangles
         private int NOW;
         public Action<ChunkAddedEventArgs> NotifyChunkAdded;
 
-        public ChunkedTriangleCollection(ILogger logger, int maxCached, TriangleSupplier supplier)
+        public ChunkedTriangleCollection(ILogger logger, int maxCached, MPQTriangleSupplier supplier)
         {
             this.logger = logger;
             this.maxCached = maxCached;
@@ -48,7 +48,7 @@ namespace WowTriangles
 
         public void Close()
         {
-            foreach (TriangleSupplier s in suppliers)
+            foreach (MPQTriangleSupplier s in suppliers)
             {
                 s.Close();
             }
