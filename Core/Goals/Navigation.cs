@@ -96,13 +96,12 @@ namespace Core.Goals
 
         private bool active;
 
-        private readonly Queue<PathRequest> pathRequests = new();
-        private readonly Queue<PathResult> pathResults = new();
+        private readonly Queue<PathRequest> pathRequests = new(1);
+        private readonly Queue<PathResult> pathResults = new(1);
 
         private readonly CancellationTokenSource _cts;
         private readonly Thread pathfinderThread;
         private readonly ManualResetEvent manualReset;
-        private bool searchingPath;
 
         private int failedAttempt;
         private Vector3 lastFailedDestination;
@@ -162,7 +161,7 @@ namespace Core.Goals
                 result.Callback(result);
             }
 
-            if (searchingPath || cts.IsCancellationRequested)
+            if (pathRequests.Count > 0 || cts.IsCancellationRequested)
             {
                 return;
             }
@@ -413,20 +412,17 @@ namespace Core.Goals
         {
             while (!_cts.IsCancellationRequested)
             {
-                manualReset.WaitOne();
-                searchingPath = true;
-
-                if (pathRequests.TryDequeue(out PathRequest pathRequest))
+                manualReset.Reset();
+                if (pathRequests.TryPeek(out PathRequest pathRequest))
                 {
                     var path = await pather.FindRoute(pathRequest.MapId, pathRequest.Start, pathRequest.End);
                     if (active)
                     {
                         pathResults.Enqueue(new PathResult(pathRequest, path, true, pathRequest.Callback));
                     }
+                    pathRequests.Dequeue();
                 }
-
-                searchingPath = false;
-                manualReset.Reset();
+                manualReset.WaitOne();
             }
 
             if (logger.IsEnabled(LogLevel.Debug))
