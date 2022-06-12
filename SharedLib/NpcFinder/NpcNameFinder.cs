@@ -37,6 +37,7 @@ namespace SharedLib.NpcFinder
         private readonly ILogger logger;
         private readonly IBitmapProvider bitmapProvider;
         private readonly AutoResetEvent autoResetEvent;
+        private readonly OverlappingNames comparer;
 
         public Rectangle Area { get; }
 
@@ -94,11 +95,15 @@ namespace SharedLib.NpcFinder
 
         #endregion
 
+        private readonly Pen whitePen;
+        private readonly Pen greyPen;
+
         public NpcNameFinder(ILogger logger, IBitmapProvider bitmapProvider, AutoResetEvent autoResetEvent)
         {
             this.logger = logger;
             this.bitmapProvider = bitmapProvider;
             this.autoResetEvent = autoResetEvent;
+            this.comparer = new();
 
             UpdateSearchMode();
 
@@ -107,6 +112,9 @@ namespace SharedLib.NpcFinder
 
             Area = new Rectangle(new Point(0, (int)ScaleHeight(topOffset)),
                 new Size((int)(bitmapProvider.Bitmap.Width * 0.87f), (int)(bitmapProvider.Bitmap.Height * 0.6f)));
+
+            whitePen = new Pen(Color.White, 3);
+            greyPen = new Pen(Color.Gray, 3);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -128,6 +136,8 @@ namespace SharedLib.NpcFinder
 
             nameType = type;
 
+            TargetCount = 0;
+            AddCount = 0;
             Npcs.Clear();
 
             if (nameType.HasFlag(NpcNames.Corpse))
@@ -183,6 +193,9 @@ namespace SharedLib.NpcFinder
                 case NpcNames.Corpse:
                     colorMatcher = SimpleColorCorpse;
                     return;
+                case NpcNames.None:
+                    colorMatcher = NoMatch;
+                    return;
             }
         }
 
@@ -221,6 +234,11 @@ namespace SharedLib.NpcFinder
         private bool CombinedEnemyNeutrual(Color c)
         {
             return SimpleColorEnemy(c) || SimpleColorNeutral(c);
+        }
+
+        private static bool NoMatch(Color c)
+        {
+            return false;
         }
 
         #endregion
@@ -276,7 +294,7 @@ namespace SharedLib.NpcFinder
                     bitmapProvider.Bitmap.Width,
                     ScaleHeight(npcPosYOffset), ScaleHeight(npcPosYHeightMul)))
                 .Where(npcPos => npcPos.Width < ScaleWidth(npcNameMaxWidth))
-                .Distinct(new OverlappingNames())
+                .Distinct(comparer)
                 .OrderBy(npcPos => RectangleExt.SqrDistance(Area.BottomCentre(), npcPos.ClickPoint))
                 .ToList();
 
@@ -285,14 +303,6 @@ namespace SharedLib.NpcFinder
             autoResetEvent.Set();
         }
 
-        public void FakeUpdate()
-        {
-            TargetCount = 0;
-            AddCount = 0;
-
-            Npcs.Clear();
-            autoResetEvent.Set();
-        }
 
         public void UpdatePotentialAddsExist()
         {
@@ -412,14 +422,6 @@ namespace SharedLib.NpcFinder
 
         public void ShowNames(Graphics gr)
         {
-            if (Npcs.Count <= 0)
-            {
-                return;
-            }
-
-            using var whitePen = new Pen(Color.White, 3);
-            using var greyPen = new Pen(Color.Gray, 3);
-
             /*
             if (Npcs.Any())
             {

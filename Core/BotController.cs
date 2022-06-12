@@ -127,7 +127,7 @@ namespace Core
             logger.LogDebug($"Woohoo, I have read the player class. You are a {AddonReader.PlayerReader.Race} {AddonReader.PlayerReader.Class}.");
 
             npcNameFinder = new(logger, WowScreen, npcNameFinderEvent);
-            npcNameTargeting = new(logger, cts, npcNameFinder, wowProcessInput);
+            npcNameTargeting = new(logger, cts, WowScreen, npcNameFinder, wowProcessInput);
             WowScreen.AddDrawAction(npcNameFinder.ShowNames);
             WowScreen.AddDrawAction(npcNameTargeting.ShowClickPositions);
 
@@ -168,10 +168,6 @@ namespace Core
 
                     if (WowScreen.EnablePostProcess)
                         WowScreen.PostProcess();
-                }
-                else
-                {
-                    npcNameFinder.FakeUpdate();
                 }
 
                 if (ClassConfig?.Mode == Mode.AttendedGather)
