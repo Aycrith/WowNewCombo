@@ -20,6 +20,11 @@ namespace Core.Goals
             this.npcNameTargeting = npcNameTargeting;
         }
 
+        public void Reset()
+        {
+            npcNameTargeting.ChangeNpcType(NpcNames.None);
+        }
+
         public bool Search(NpcNames target, Func<bool> validTarget, CancellationTokenSource cts)
         {
             return LookForTarget(target, cts) && validTarget();
@@ -43,5 +48,6 @@ namespace Core.Goals
 
             return playerReader.HasTarget;
         }
+
     }
 }

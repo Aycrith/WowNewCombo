@@ -42,7 +42,7 @@ namespace Core.Goals
             this.areaDb = addonReader.AreaDb;
             this.stopMoving = stopMoving;
             this.bagReader = addonReader.BagReader;
-            
+
             this.classConfiguration = classConfiguration;
             this.npcNameTargeting = npcNameTargeting;
             this.combatUtil = combatUtil;
@@ -66,7 +66,6 @@ namespace Core.Goals
 
             Log($"Search for {NpcNames.Corpse}");
             npcNameTargeting.ChangeNpcType(NpcNames.Corpse);
-            SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, true));
 
             lastLoot = playerReader.LastLootTime;
 
@@ -86,8 +85,6 @@ namespace Core.Goals
                 var closestCorpse = GetClosestCorpse();
                 var heading = DirectionCalculator.CalculateHeading(location, closestCorpse);
                 playerDirection.SetDirection(heading, closestCorpse);
-                npcNameTargeting.WaitForUpdate();
-                npcNameTargeting.WaitForUpdate();
                 logger.LogInformation("Look at possible corpse and try again");
 
                 if (FoundByCursor())
@@ -145,7 +142,10 @@ namespace Core.Goals
 
         public override void OnExit()
         {
-            SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, false));
+            if (!classConfiguration.Skin)
+            {
+                npcNameTargeting.ChangeNpcType(NpcNames.None);
+            }
         }
 
         public override void PerformAction()
@@ -156,7 +156,6 @@ namespace Core.Goals
         {
             if (e.Key == GoapKey.corpselocation && e.Value is CorpseLocation location)
             {
-                //logger.LogInformation($"{nameof(LootGoal)}: --- Target is killed! Recorded death location.");
                 corpseLocations.Add(location.Location);
             }
         }

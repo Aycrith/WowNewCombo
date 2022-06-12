@@ -127,22 +127,13 @@ namespace Core.Goals
 
         private void Abort()
         {
-            if (classConfig.Mode != Mode.AttendedGather)
-            {
-                SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, false));
-            }
-
             navigation.Stop();
+            targetFinder.Reset();
         }
 
         private void Resume()
         {
             onEnterTime = DateTime.UtcNow;
-
-            if (classConfig.Mode != Mode.AttendedGather)
-            {
-                SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, true));
-            }
 
             if (!navigation.HasWaypoint())
             {
@@ -218,6 +209,8 @@ namespace Core.Goals
             {
                 return !playerReader.Bits.TargetIsDead;
             }
+
+            sideActivityManualReset.WaitOne();
 
             while (!sideActivityCts.IsCancellationRequested)
             {

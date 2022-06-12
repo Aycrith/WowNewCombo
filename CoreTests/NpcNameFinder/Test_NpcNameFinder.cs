@@ -39,7 +39,8 @@ namespace CoreTests
             npcNameFinder = new(logger, capturer, new AutoResetEvent(false));
 
             MockWoWProcess mockWoWProcess = new();
-            npcNameTargeting = new(logger, new(), npcNameFinder, mockWoWProcess);
+            MockWoWScreen mockWoWScreen = new();
+            npcNameTargeting = new(logger, new(), mockWoWScreen, npcNameFinder, mockWoWProcess);
 
             npcNameFinder.ChangeNpcType(types);
 
@@ -90,10 +91,10 @@ namespace CoreTests
 
                 npcNameFinder.Npcs.ForEach(n =>
                 {
-                    npcNameTargeting.locTargetingAndClickNpc.ForEach(l =>
+                    foreach (var l in npcNameTargeting.locTargetingAndClickNpc)
                     {
                         paint.DrawEllipse(whitePen, l.X + n.ClickPoint.X, l.Y + n.ClickPoint.Y, 5, 5);
-                    });
+                    }
                 });
 
                 npcNameFinder.Npcs.ForEach(n => paint.DrawRectangle(whitePen, new Rectangle(n.Min, new Size(n.Width, n.Height))));
