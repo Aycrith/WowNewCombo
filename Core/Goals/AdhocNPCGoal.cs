@@ -138,7 +138,7 @@ namespace Core.Goals
         public override void OnExit()
         {
             navigation.Stop();
-            SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, false));
+            npcNameTargeting.ChangeNpcType(NpcNames.None);
         }
 
         public override void PerformAction()
@@ -180,7 +180,6 @@ namespace Core.Goals
                 wait.Update();
 
                 npcNameTargeting.ChangeNpcType(NpcNames.Friendly | NpcNames.Neutral);
-                SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, true));
                 npcNameTargeting.WaitForUpdate();
                 bool foundVendor = npcNameTargeting.FindBy(CursorType.Vendor, CursorType.Repair, CursorType.Innkeeper);
                 if (!foundVendor)

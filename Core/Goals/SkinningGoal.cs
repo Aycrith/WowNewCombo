@@ -69,10 +69,6 @@ namespace Core.Goals
 
             Log($"Search for {NpcNames.Corpse}");
             npcNameTargeting.ChangeNpcType(NpcNames.Corpse);
-            SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, true));
-            // attempt to add some delay
-            // upon an npc become corpse 
-            npcNameTargeting.WaitForUpdate();
             npcNameTargeting.WaitForUpdate();
 
             lastLoot = playerReader.LastLootTime;
@@ -147,7 +143,7 @@ namespace Core.Goals
 
         public override void OnExit()
         {
-            SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, false));
+            npcNameTargeting.ChangeNpcType(NpcNames.None);
         }
 
         public override void PerformAction()

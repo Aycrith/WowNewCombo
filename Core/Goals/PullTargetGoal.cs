@@ -1,5 +1,6 @@
 using Core.GOAP;
 using Microsoft.Extensions.Logging;
+using SharedLib.NpcFinder;
 using System;
 using System.Linq;
 
@@ -16,7 +17,7 @@ namespace Core.Goals
         private readonly PlayerReader playerReader;
         private readonly StopMoving stopMoving;
         private readonly StuckDetector stuckDetector;
-
+        private readonly NpcNameTargeting npcNameTargeting;
         private readonly CastingHandler castingHandler;
         private readonly MountHandler mountHandler;
         private readonly CombatUtil combatUtil;
@@ -34,7 +35,7 @@ namespace Core.Goals
 
         private double PullDurationMs => (DateTime.UtcNow - pullStart).TotalMilliseconds;
 
-        public PullTargetGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, IBlacklist blacklist, StopMoving stopMoving, CastingHandler castingHandler, MountHandler mountHandler, StuckDetector stuckDetector, CombatUtil combatUtil)
+        public PullTargetGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, IBlacklist blacklist, StopMoving stopMoving, CastingHandler castingHandler, MountHandler mountHandler, NpcNameTargeting npcNameTargeting, StuckDetector stuckDetector, CombatUtil combatUtil)
         {
             this.logger = logger;
             this.input = input;
@@ -44,7 +45,7 @@ namespace Core.Goals
             this.stopMoving = stopMoving;
             this.castingHandler = castingHandler;
             this.mountHandler = mountHandler;
-
+            this.npcNameTargeting = npcNameTargeting;
             this.stuckDetector = stuckDetector;
             this.combatUtil = combatUtil;
 
@@ -89,7 +90,7 @@ namespace Core.Goals
 
             if (requiresNpcNameFinder)
             {
-                SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, true));
+                npcNameTargeting.ChangeNpcType(NpcNames.Enemy);
             }
 
             pullStart = DateTime.UtcNow;
@@ -99,7 +100,7 @@ namespace Core.Goals
         {
             if (requiresNpcNameFinder)
             {
-                SendActionEvent(new ActionEventArgs(GoapKey.wowscreen, false));
+                npcNameTargeting.ChangeNpcType(NpcNames.None);
             }
         }
 

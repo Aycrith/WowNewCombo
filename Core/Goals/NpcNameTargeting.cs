@@ -16,30 +16,35 @@ namespace Core.Goals
 
         private readonly ILogger logger;
         private readonly CancellationTokenSource cts;
+        private readonly IWowScreen wowScreen;
         private readonly NpcNameFinder npcNameFinder;
         private readonly IMouseInput input;
 
+        private readonly Pen whitePen;
+
         public int NpcCount => npcNameFinder.NpcCount;
 
-        public List<Point> locTargetingAndClickNpc { get; }
-        public List<Point> locFindByCursorType { get; }
+        public Point[] locTargetingAndClickNpc { get; }
+        public Point[] locFindByCursorType { get; }
 
-        public NpcNameTargeting(ILogger logger, CancellationTokenSource cts, NpcNameFinder npcNameFinder, IMouseInput input)
+        public NpcNameTargeting(ILogger logger, CancellationTokenSource cts, IWowScreen wowScreen, NpcNameFinder npcNameFinder, IMouseInput input)
         {
             this.logger = logger;
             this.cts = cts;
+            this.wowScreen = wowScreen;
             this.npcNameFinder = npcNameFinder;
             this.input = input;
 
+            whitePen = new Pen(Color.White, 3);
 
-            locTargetingAndClickNpc = new List<Point>
+            locTargetingAndClickNpc = new Point[]
             {
                 new Point(0, 0),
                 new Point(-10, 15).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
                 new Point(10, 15).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
             };
 
-            locFindByCursorType = new List<Point>
+            locFindByCursorType = new Point[]
             {
                 new Point(0, 0),
                 new Point(0, 25).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
@@ -50,6 +55,7 @@ namespace Core.Goals
         public void ChangeNpcType(NpcNames npcNames)
         {
             npcNameFinder.ChangeNpcType(npcNames);
+            wowScreen.Enabled = npcNames != NpcNames.None;
         }
 
         public void WaitForUpdate()
@@ -62,20 +68,20 @@ namespace Core.Goals
             var npc = npcNameFinder.Npcs.First();
             logger.LogInformation($"> NPCs found: ({npc.Min.X},{npc.Min.Y})[{npc.Width},{npc.Height}]");
 
-            foreach (var location in locTargetingAndClickNpc)
+            foreach (Point p in locTargetingAndClickNpc)
             {
                 if (cts.IsCancellationRequested)
                     return;
 
-                var clickPostion = npcNameFinder.ToScreenCoordinates(npc.ClickPoint.X + location.X, npc.ClickPoint.Y + location.Y);
+                var clickPostion = npcNameFinder.ToScreenCoordinates(npc.ClickPoint.X + p.X, npc.ClickPoint.Y + p.Y);
                 input.SetCursorPosition(clickPostion);
                 cts.Token.WaitHandle.WaitOne(MOUSE_DELAY);
 
                 if (cts.IsCancellationRequested)
                     return;
 
-                CursorClassifier.Classify(out var cls);
-                if (cls == CursorType.Kill || cls == CursorType.Vendor)
+                CursorClassifier.Classify(out CursorType cls);
+                if (cls is CursorType.Kill or CursorType.Vendor)
                 {
                     AquireTargetAtCursor(clickPostion, npc, leftClick);
                     return;
@@ -85,23 +91,26 @@ namespace Core.Goals
 
         public bool FindBy(params CursorType[] cursor)
         {
-            List<Point> attemptPoints = new List<Point>();
-
-            foreach (var npc in npcNameFinder.Npcs)
+            int c = locFindByCursorType.Length;
+            foreach (NpcPosition npc in npcNameFinder.Npcs)
             {
-                attemptPoints.AddRange(locFindByCursorType);
-                foreach (var point in locFindByCursorType)
+                var attemptPoints = new Point[c + (c * 2)];
+                for (int i = 0; i < c; i++)
                 {
-                    attemptPoints.Add(new Point(npc.Width / 2, point.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight));
-                    attemptPoints.Add(new Point(-npc.Width / 2, point.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight));
+                    Point p = locFindByCursorType[i];
+                    attemptPoints[i] = p;
+                    attemptPoints[i + c] = new Point(npc.Width / 2, p.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight);
+                    attemptPoints[i + c] = new Point(-npc.Width / 2, p.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight);
                 }
 
-                foreach (var location in attemptPoints)
+                foreach (Point p in attemptPoints)
                 {
-                    var clickPostion = npcNameFinder.ToScreenCoordinates(npc.ClickPoint.X + location.X, npc.ClickPoint.Y + location.Y);
+                    Point clickPostion = npcNameFinder.ToScreenCoordinates(npc.ClickPoint.X + p.X, npc.ClickPoint.Y + p.Y);
                     input.SetCursorPosition(clickPostion);
+
                     cts.Token.WaitHandle.WaitOne(MOUSE_DELAY);
-                    CursorClassifier.Classify(out var cls);
+
+                    CursorClassifier.Classify(out CursorType cls);
                     if (cursor.Contains(cls))
                     {
                         AquireTargetAtCursor(clickPostion, npc);
@@ -109,7 +118,6 @@ namespace Core.Goals
                     }
                     cts.Token.WaitHandle.WaitOne(5);
                 }
-                attemptPoints.Clear();
             }
             return false;
         }
@@ -126,22 +134,13 @@ namespace Core.Goals
 
         public void ShowClickPositions(Graphics gr)
         {
-            if (NpcCount <= 0)
+            npcNameFinder.Npcs.ForEach(npc =>
             {
-                return;
-            }
-
-            using (var whitePen = new Pen(Color.White, 3))
-            {
-                npcNameFinder.Npcs.ForEach(n =>
+                foreach (Point p in locFindByCursorType)
                 {
-                    locFindByCursorType.ForEach(l =>
-                    {
-                        gr.DrawEllipse(whitePen, l.X + n.ClickPoint.X, l.Y + n.ClickPoint.Y, 5, 5);
-                    });
-                });
-            }
+                    gr.DrawEllipse(whitePen, p.X + npc.ClickPoint.X, p.Y + npc.ClickPoint.Y, 5, 5);
+                }
+            });
         }
-
     }
 }

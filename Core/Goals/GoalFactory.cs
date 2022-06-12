@@ -192,7 +192,7 @@ namespace Core
                     availableActions.Add(new TargetPetTarget(input, addonReader.PlayerReader));
                 }
 
-                availableActions.Add(new PullTargetGoal(logger, input, wait, addonReader, blacklist, stopMoving, castingHandler, mountHandler, stuckDetector, combatUtil));
+                availableActions.Add(new PullTargetGoal(logger, input, wait, addonReader, blacklist, stopMoving, castingHandler, mountHandler, npcNameTargeting, stuckDetector, combatUtil));
 
                 if (classConfig.Parallel.Sequence.Count > 0)
                 {

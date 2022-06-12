@@ -17,7 +17,7 @@ namespace Core.GOAP
         private readonly IGrindSessionDAO sessionDAO;
         private readonly AddonReader addonReader;
         private readonly PlayerReader playerReader;
-        private readonly WowScreen wowScreen;
+        private readonly IWowScreen wowScreen;
         private readonly RouteInfo routeInfo;
         private readonly ConfigurableInput input;
 
@@ -77,7 +77,7 @@ namespace Core.GOAP
         public Stack<GoapGoal> Plan { get; private set; }
         public GoapGoal? CurrentGoal { get; private set; }
 
-        public GoapAgent(ILogger logger, ClassConfiguration classConfig, IGrindSessionDAO sessionDAO, WowScreen wowScreen, GoapAgentState goapAgentState, AddonReader addonReader, HashSet<GoapGoal> availableGoals, RouteInfo routeInfo, ConfigurableInput input)
+        public GoapAgent(ILogger logger, ClassConfiguration classConfig, IGrindSessionDAO sessionDAO, IWowScreen wowScreen, GoapAgentState goapAgentState, AddonReader addonReader, HashSet<GoapGoal> availableGoals, RouteInfo routeInfo, ConfigurableInput input)
         {
             this.logger = logger;
             this.classConfig = classConfig;
@@ -231,9 +231,6 @@ namespace Core.GOAP
                     break;
                 case GoapKey.gathering:
                     State.Gathering = (bool)e.Value;
-                    break;
-                case GoapKey.wowscreen:
-                    wowScreen.Enabled = (bool)e.Value;
                     break;
             }
 
