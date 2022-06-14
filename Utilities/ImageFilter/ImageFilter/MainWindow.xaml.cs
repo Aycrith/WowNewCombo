@@ -32,6 +32,7 @@ namespace ImageFilter
         private readonly Font drawFont = new Font("Arial", 10);
         private readonly SolidBrush drawBrush = new SolidBrush(Color.White);
         private readonly System.Drawing.Pen whitePen = new(Color.White, 1);
+        //private readonly System.Drawing.Pen greyPen = new(Color.Gray, 1);
 
         private readonly Stopwatch stopwatch = new();
 
@@ -90,6 +91,7 @@ namespace ImageFilter
                     graphics.DrawEllipse(whitePen, n.ClickPoint.X, n.ClickPoint.Y, 5, 5);
                 });
 
+                //npcNameFinder.Npcs.ForEach(n => graphics.DrawRectangle(n.IsAdd ? greyPen : whitePen, n.Rect));
                 npcNameFinder.Npcs.ForEach(n => graphics.DrawRectangle(whitePen, n.Rect));
                 npcNameFinder.Npcs.ForEach(n => graphics.DrawString(npcNameFinder.Npcs.IndexOf(n).ToString(), drawFont, drawBrush, new PointF(n.Left - 20f, n.Top)));
             }
