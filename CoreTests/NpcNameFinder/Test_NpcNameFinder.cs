@@ -27,7 +27,7 @@ namespace CoreTests
         private readonly SolidBrush brush = new(Color.White);
         private readonly Pen whitePen = new(Color.White, 1);
 
-        public Test_NpcNameFinder(ILogger logger, bool saveImage, NpcNames types)
+        public Test_NpcNameFinder(ILogger logger, NpcNames types, bool saveImage)
         {
             this.logger = logger;
             this.saveImage = saveImage;
@@ -66,7 +66,7 @@ namespace CoreTests
                 SaveImage();
             }
 
-            stringBuilder.Clear();
+            stringBuilder.Length = 0;
 
             if (npcNameFinder.Npcs.Count > 0)
                 stringBuilder.AppendLine();
@@ -75,7 +75,7 @@ namespace CoreTests
             {
                 stringBuilder.Append($"{npcNameFinder.Npcs.IndexOf(n),2}");
                 stringBuilder.Append(" -> rect=");
-                stringBuilder.Append(new Rectangle(n.Min.X, n.Min.Y, n.Width, n.Height));
+                stringBuilder.Append(n.Rect);
                 stringBuilder.Append(" ClickPoint=");
                 stringBuilder.AppendLine($"{{{n.ClickPoint.X,4},{n.ClickPoint.Y,4}}}");
             });
@@ -97,8 +97,8 @@ namespace CoreTests
                     }
                 });
 
-                npcNameFinder.Npcs.ForEach(n => paint.DrawRectangle(whitePen, new Rectangle(n.Min, new Size(n.Width, n.Height))));
-                npcNameFinder.Npcs.ForEach(n => paint.DrawString(npcNameFinder.Npcs.IndexOf(n).ToString(), font, brush, new PointF(n.Min.X - 20f, n.Min.Y)));
+                npcNameFinder.Npcs.ForEach(n => paint.DrawRectangle(whitePen, n.Rect));
+                npcNameFinder.Npcs.ForEach(n => paint.DrawString(npcNameFinder.Npcs.IndexOf(n).ToString(), font, brush, new PointF(n.Left - 20f, n.Top)));
             }
 
             paintBitmap.Save("target_names.png");

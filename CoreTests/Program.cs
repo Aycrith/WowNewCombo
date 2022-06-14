@@ -30,7 +30,7 @@ namespace CoreTests
             var types = NpcNames.Enemy | NpcNames.Neutral;
             //var types = NpcNames.Friendly | NpcNames.Neutral;
 
-            var test = new Test_NpcNameFinder(logger, true, types);
+            var test = new Test_NpcNameFinder(logger, types, true);
             int count = 100;
             int i = 0;
             while (i < count)

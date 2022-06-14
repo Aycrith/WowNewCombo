@@ -66,7 +66,7 @@ namespace Core.Goals
         public void TargetingAndClickNpc(bool leftClick, CancellationTokenSource cts)
         {
             var npc = npcNameFinder.Npcs.First();
-            logger.LogInformation($"> NPCs found: ({npc.Min.X},{npc.Min.Y})[{npc.Width},{npc.Height}]");
+            logger.LogInformation($"> NPCs found: {npc.Rect}");
 
             foreach (Point p in locTargetingAndClickNpc)
             {

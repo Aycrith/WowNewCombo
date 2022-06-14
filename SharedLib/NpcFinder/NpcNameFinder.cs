@@ -103,7 +103,7 @@ namespace SharedLib.NpcFinder
             this.logger = logger;
             this.bitmapProvider = bitmapProvider;
             this.autoResetEvent = autoResetEvent;
-            this.comparer = new();
+            this.comparer = new((int)ScaleWidth(LinesOfNpcMinLength), (int)ScaleHeight(DetermineNpcsHeightOffset1));
 
             UpdateSearchMode();
 
@@ -287,16 +287,21 @@ namespace SharedLib.NpcFinder
             var npcNameLines = PopulateLinesOfNpcNames();
             var npcs = DetermineNpcs(npcNameLines);
 
+            float yOffset = ScaleHeight(npcPosYOffset);
+            float heightMul = ScaleHeight(npcPosYHeightMul);
+
             Npcs = npcs.
                 Select(lineofNpcName =>
-                    new NpcPosition(new Point(lineofNpcName.Min(x => x.XStart), lineofNpcName.Min(x => x.Y)),
-                    new Point(lineofNpcName.Max(x => x.XEnd), lineofNpcName.Max(x => x.Y)),
-                    bitmapProvider.Bitmap.Width,
-                    ScaleHeight(npcPosYOffset), ScaleHeight(npcPosYHeightMul)))
-                .Where(npcPos => npcPos.Width < ScaleWidth(npcNameMaxWidth))
-                .Distinct(comparer)
-                .OrderBy(npcPos => RectangleExt.SqrDistance(Area.BottomCentre(), npcPos.ClickPoint))
-                .ToList();
+                    new NpcPosition(
+                        new Point(lineofNpcName.Min(x => x.XStart), lineofNpcName.Min(x => x.Y)),
+                        new Point(lineofNpcName.Max(x => x.XEnd), lineofNpcName.Max(x => x.Y)),
+                        bitmapProvider.Bitmap.Width,
+                        yOffset, heightMul))
+
+            .Where(npcPos => npcPos.Width < ScaleWidth(npcNameMaxWidth))
+            .Distinct(comparer)
+            .OrderBy(npcPos => RectangleExt.SqrDistance(Area.BottomCentre(), npcPos.ClickPoint))
+            .ToList();
 
             UpdatePotentialAddsExist();
 
@@ -435,7 +440,7 @@ namespace SharedLib.NpcFinder
             }
             */
 
-            Npcs.ForEach(n => gr.DrawRectangle(n.IsAdd ? greyPen : whitePen, new Rectangle(n.Min, new Size(n.Width, n.Height))));
+            Npcs.ForEach(n => gr.DrawRectangle(n.IsAdd ? greyPen : whitePen, n.Rect));
         }
 
         public Point ToScreenCoordinates(int x, int y)
