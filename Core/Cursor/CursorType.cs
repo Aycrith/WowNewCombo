@@ -2,15 +2,15 @@
 {
     public enum CursorType
     {
-        Kill = 10,
-        Loot = 20,
-        None = 30,
-        Skin = 40,
-        Mine = 50,
-        Herb = 60,
-        Vendor = 70,
-        Repair = 80,
-        Innkeeper = 90,
-        Quest = 100
+        None = 0,
+        Kill = 1,
+        Loot = 2,
+        Skin = 4,
+        Mine = 5,
+        Herb = 6,
+        Vendor = 7,
+        Repair = 8,
+        Innkeeper = 9,
+        Quest = 10
     }
 }
