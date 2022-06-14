@@ -57,6 +57,7 @@ namespace Core
         public int CombatCreatureCount => CreatureHistory.DamageTaken.Count(c => c.HealthPercent > 0);
 
         public string TargetName { get; private set; } = string.Empty;
+        public string TargetNameUpper { get; private set; } = string.Empty;
 
         public double AvgUpdateLatency { private set; get; }
         private readonly CircularBuffer<double> UpdateLatencys;
@@ -182,6 +183,8 @@ namespace Core
 
             TargetName = CreatureDb.Entries.TryGetValue(PlayerReader.TargetId, out Creature creature)
                 ? creature.Name : addonDataProvider.GetString(16) + addonDataProvider.GetString(17);
+
+            TargetNameUpper = TargetName.ToUpper();
 
             UIMapId.Update(addonDataProvider);
 

@@ -2,13 +2,6 @@
 {
     public class NoBlacklist : IBlacklist
     {
-        public void Add(string name)
-        {
-        }
-
-        public bool IsTargetBlacklisted()
-        {
-            return false;
-        }
+        public bool IsTargetBlacklisted() => false;
     }
 }

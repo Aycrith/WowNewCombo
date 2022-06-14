@@ -6,7 +6,7 @@ namespace Core
 {
     public partial class Blacklist : IBlacklist
     {
-        private readonly HashSet<string> blacklist = new();
+        private readonly string[] blacklist;
 
         private readonly AddonReader addonReader;
         private readonly PlayerReader playerReader;
@@ -27,12 +27,11 @@ namespace Core
 
             this.checkTargetGivesExp = checkTargetGivesExp;
 
-            blacklisted.ForEach(name => blacklist.Add(name.ToUpper()));
-        }
-
-        public void Add(string name)
-        {
-            blacklist.Add(name);
+            blacklist = new string[blacklisted.Count];
+            for (int i = 0; i < blacklist.Length; i++)
+            {
+                blacklist[i] = blacklisted[i].ToUpper();
+            }
         }
 
         public bool IsTargetBlacklisted()
@@ -114,9 +113,9 @@ namespace Core
                 return true; // ignore if current level - 7
             }
 
-            if (blacklist.Count > 0)
+            if (blacklist.Length > 0)
             {
-                string? match = blacklist.FirstOrDefault(s => addonReader.TargetName.ToUpper().StartsWith(s));
+                string? match = blacklist.FirstOrDefault(s => addonReader.TargetNameUpper.StartsWith(s));
                 if (!string.IsNullOrEmpty(match))
                 {
                     if (lastGuid != playerReader.TargetGuid)
