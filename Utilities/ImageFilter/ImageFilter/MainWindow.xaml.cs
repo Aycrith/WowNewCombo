@@ -12,30 +12,34 @@ using Serilog.Extensions.Logging;
 using SharedLib;
 using SharedLib.NpcFinder;
 using System.Windows.Media.Imaging;
-using System.IO;
-using System.Drawing.Imaging;
+using System.Windows.Interop;
+using System.Windows.Media;
 
 namespace ImageFilter
 {
     public partial class MainWindow : Window
     {
-        private System.Timers.Timer? timer;
+        private readonly Timer timer;
         private int redwidth = 10;
 
         private readonly Microsoft.Extensions.Logging.ILogger logger;
-        private readonly DirectBitmapCapturer capturer;
+        private readonly BitmapCapturer capturer;
         private readonly NpcNameFinder npcNameFinder;
+
+        private readonly Bitmap bitmap;
+        private readonly Graphics graphics;
+
+        private readonly Font drawFont = new Font("Arial", 10);
+        private readonly SolidBrush drawBrush = new SolidBrush(Color.White);
+        private readonly System.Drawing.Pen whitePen = new(Color.White, 1);
+
+        private readonly Stopwatch stopwatch = new();
+
+        private bool firstRender;
 
         public MainWindow()
         {
-            InitializeComponent();
-            timer = new Timer(1000);
-            timer.Elapsed += OnTimedEvent;
-            timer.AutoReset = true;
-            timer.Enabled = true;
-
             var logConfig = new LoggerConfiguration()
-                //.WriteTo.File("names.log")
                 .WriteTo.Debug()
                 .CreateLogger();
 
@@ -43,71 +47,60 @@ namespace ImageFilter
             logger = new SerilogLoggerProvider(Log.Logger).CreateLogger(nameof(MainWindow));
 
             var rect = new Rectangle(0, 0, 1920, 1080);
-            capturer = new DirectBitmapCapturer(rect);
+            capturer = new(rect);
 
-            npcNameFinder = new NpcNameFinder(logger, capturer);
+            npcNameFinder = new NpcNameFinder(logger, capturer, new(false));
             npcNameFinder.ChangeNpcType(NpcNames.Neutral | NpcNames.Friendly);
 
+            bitmap = new Bitmap(capturer.Rect.Width, capturer.Rect.Height);
+            graphics = Graphics.FromImage(bitmap);
+
+            timer = new Timer(1000);
+            timer.Elapsed += OnTimedEvent;
+            timer.AutoReset = true;
+            timer.Enabled = false;
+
+            this.Initialized += MainWindow_Initialized;
+
+            InitializeComponent();
+            firstRender = true;
             InitSliders();
+        }
+
+        private void MainWindow_Initialized(object sender, EventArgs e)
+        {
+            timer.Enabled = true;
         }
 
         private void OnTimedEvent(object sender, ElapsedEventArgs e)
         {
+            stopwatch.Restart();
+
             capturer.Capture();
+            npcNameFinder.Update();
 
-            Stopwatch stopwatch = new Stopwatch();
+            graphics.DrawImage(capturer.Bitmap, PointF.Empty);
 
-            stopwatch.Start();
-            this.npcNameFinder.Update();
-            stopwatch.Stop();
-            //logger.LogInformation($"Update: {stopwatch.ElapsedMilliseconds}ms");
-
-            var bitmap = new Bitmap(capturer.Rect.Width, capturer.Rect.Height);
-            using (var gr = Graphics.FromImage(bitmap))
+            if (npcNameFinder.Npcs.Count > 0)
             {
-                Font drawFont = new Font("Arial", 10);
-                SolidBrush drawBrush = new SolidBrush(Color.White);
+                graphics.DrawRectangle(whitePen, npcNameFinder.Area);
 
-                if (npcNameFinder.Npcs.Count > 0)
+                npcNameFinder.Npcs.ForEach(n =>
                 {
-                    using (var whitePen = new Pen(Color.White, 1))
-                    {
-                        gr.DrawRectangle(whitePen, npcNameFinder.Area);
+                    graphics.DrawEllipse(whitePen, n.ClickPoint.X, n.ClickPoint.Y, 5, 5);
+                });
 
-                        npcNameFinder.Npcs.ForEach(n =>
-                        {
-                            //npcNameTargeting.locTargetingAndClickNpc.ForEach(l =>
-                            //{
-                            //gr.DrawEllipse(whitePen, l.X + n.ClickPoint.X, l.Y + n.ClickPoint.Y, 5, 5);
-                            gr.DrawEllipse(whitePen, n.ClickPoint.X, n.ClickPoint.Y, 5, 5);
-                            //});
-                        });
-
-
-                        npcNameFinder.Npcs.ForEach(n => gr.DrawRectangle(whitePen, new Rectangle(n.Min, new System.Drawing.Size(n.Width, n.Height))));
-                        npcNameFinder.Npcs.ForEach(n => gr.DrawString(npcNameFinder.Npcs.IndexOf(n).ToString(), drawFont, drawBrush, new PointF(n.Min.X - 20f, n.Min.Y)));
-                    }
-                }
+                npcNameFinder.Npcs.ForEach(n => graphics.DrawRectangle(whitePen, n.Rect));
+                npcNameFinder.Npcs.ForEach(n => graphics.DrawString(npcNameFinder.Npcs.IndexOf(n).ToString(), drawFont, drawBrush, new PointF(n.Left - 20f, n.Top)));
             }
 
-            npcNameFinder.Npcs.ForEach(n =>
-            {
-               //logger.LogInformation($"{npcNameFinder.Npcs.IndexOf(n),2} -> rect={new Rectangle(n.Min.X, n.Min.Y, n.Width, n.Height)} ClickPoint={{{n.ClickPoint.X,4},{n.ClickPoint.Y,4}}}");
-            });
+            Application.Current.Dispatcher.Invoke(Update);
+        }
 
-            //logger.LogInformation("\n");
-
-            Application.Current.Dispatcher.Invoke(new Action(() =>
-            {
-                if(capturer != null)
-                    this.Screenshot.Source = ToBitmapImage(capturer.DirectBitmap.Bitmap);
-
-                this.Screenshot2.Source = ToBitmapImage(bitmap);
-                Duration.Content = "Duration: " + stopwatch.ElapsedMilliseconds + "ms";
-
-                bitmap.Dispose();
-                bitmap = null;
-            }));
+        private void Update()
+        {
+            this.Screenshot.Source = ImageSourceForBitmap(bitmap);
+            Duration.Content = "Duration: " + stopwatch.ElapsedMilliseconds + "ms";
         }
 
         private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -121,23 +114,23 @@ namespace ImageFilter
             }
         }
 
+        [DllImport("gdi32.dll", EntryPoint = "DeleteObject")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool DeleteObject([In] IntPtr hObject);
 
-        public static BitmapImage ToBitmapImage(Bitmap Bitmap)
+        private static ImageSource ImageSourceForBitmap(Bitmap bmp)
         {
-            using (var memory = new MemoryStream())
+            var handle = bmp.GetHbitmap();
+            try
             {
-                Bitmap.Save(memory, ImageFormat.Png);
-                memory.Position = 0;
-
-                var bitmapImage = new BitmapImage();
-                bitmapImage.BeginInit();
-                bitmapImage.StreamSource = memory;
-                bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-                bitmapImage.EndInit();
-                bitmapImage.Freeze();
-
-                memory.Dispose();
-                return bitmapImage;
+                ImageSource newSource = Imaging.CreateBitmapSourceFromHBitmap(handle, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+                DeleteObject(handle);
+                return newSource;
+            }
+            catch
+            {
+                DeleteObject(handle);
+                return null;
             }
         }
 
@@ -190,89 +183,66 @@ namespace ImageFilter
 
         public void npcPosYOffset_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            if (npcNameFinder == null) return;
-
+            if (!firstRender) return;
             npcNameFinder.npcPosYOffset = (int)e.NewValue;
             lnpcPosYOffset.Content = "npcPosYOffset: " + npcNameFinder.npcPosYOffset;
-            //logger.LogInformation($"npcNameFinder.npcPosYOffset: {npcNameFinder.npcPosYOffset}");
         }
 
         public void npcPosYHeightMul_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            if (npcNameFinder == null) return;
-
+            if (!firstRender) return;
             npcNameFinder.npcPosYHeightMul = (int)e.NewValue;
             lnpcPosYHeightMul.Content = "npcPosYHeightMul: " + npcNameFinder.npcPosYHeightMul;
-            //logger.LogInformation($"npcNameFinder.npcPosYHeightMul: {npcNameFinder.npcPosYHeightMul}");
         }
-
 
         public void npcNameMaxWidth_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            if (npcNameFinder == null) return;
-
+            if (!firstRender) return;
             npcNameFinder.npcNameMaxWidth = (int)e.NewValue;
             lnpcNameMaxWidth.Content = "npcNameMaxWidth: " + npcNameFinder.npcNameMaxWidth;
-            //logger.LogInformation($"npcNameFinder.npcNameMaxWidth: {npcNameFinder.npcNameMaxWidth}");
         }
-
 
         public void LinesOfNpcMinLength_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            if (npcNameFinder == null) return;
-
+            if (!firstRender) return;
             npcNameFinder.LinesOfNpcMinLength = (int)e.NewValue;
             lLinesOfNpcMinLength.Content = "LinesOfNpcMinLength: " + npcNameFinder.LinesOfNpcMinLength;
-            //logger.LogInformation($"npcNameFinder.LinesOfNpcMinLength: {npcNameFinder.LinesOfNpcMinLength}");
         }
 
         public void LinesOfNpcLengthDiff_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            if (npcNameFinder == null) return;
-
+            if (!firstRender) return;
             npcNameFinder.LinesOfNpcLengthDiff = (int)e.NewValue;
             lLinesOfNpcLengthDiff.Content = "LinesOfNpcLengthDiff: " + npcNameFinder.LinesOfNpcLengthDiff;
-            //logger.LogInformation($"npcNameFinder.LinesOfNpcLengthDiff: {npcNameFinder.LinesOfNpcLengthDiff}");
         }
-
 
         public void DetermineNpcsHeightOffset1_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            if (npcNameFinder == null) return;
-
+            if (!firstRender) return;
             npcNameFinder.DetermineNpcsHeightOffset1 = (int)e.NewValue;
             lDetermineNpcsHeightOffset1.Content = "DetermineNpcsHeightOffset1: " + npcNameFinder.DetermineNpcsHeightOffset1;
-            //logger.LogInformation($"npcNameFinder.DetermineNpcsHeightOffset1: {npcNameFinder.DetermineNpcsHeightOffset1}");
         }
 
         public void DetermineNpcsHeightOffset2_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            if (npcNameFinder == null) return;
-
+            if (!firstRender) return;
             npcNameFinder.DetermineNpcsHeightOffset2 = (int)e.NewValue;
             lDetermineNpcsHeightOffset2.Content = "DetermineNpcsHeightOffset2: " + npcNameFinder.DetermineNpcsHeightOffset2;
-            //logger.LogInformation($"npcNameFinder.DetermineNpcsHeightOffset2: {npcNameFinder.DetermineNpcsHeightOffset2}");
         }
 
         public void incX_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            if (npcNameFinder == null) return;
-
+            if (!firstRender) return;
             npcNameFinder.incX = (int)e.NewValue;
             lincX.Content = "incX: " + npcNameFinder.incX;
-            //logger.LogInformation($"npcNameFinder.DetermineNpcsHeightOffset2: {npcNameFinder.DetermineNpcsHeightOffset2}");
         }
 
         public void incY_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            if (npcNameFinder == null) return;
-
+            if (!firstRender) return;
             npcNameFinder.incY = (int)e.NewValue;
             lincY.Content = "incY: " + npcNameFinder.incY;
-            //logger.LogInformation($"npcNameFinder.DetermineNpcsHeightOffset2: {npcNameFinder.DetermineNpcsHeightOffset2}");
         }
-
-
 
         #endregion
     }
