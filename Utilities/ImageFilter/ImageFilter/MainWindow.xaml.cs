@@ -14,6 +14,7 @@ using SharedLib.NpcFinder;
 using System.Windows.Media.Imaging;
 using System.Windows.Interop;
 using System.Windows.Media;
+using Point = System.Drawing.Point;
 
 namespace ImageFilter
 {
@@ -32,11 +33,12 @@ namespace ImageFilter
         private readonly Font drawFont = new Font("Arial", 10);
         private readonly SolidBrush drawBrush = new SolidBrush(Color.White);
         private readonly System.Drawing.Pen whitePen = new(Color.White, 1);
-        //private readonly System.Drawing.Pen greyPen = new(Color.Gray, 1);
+        private readonly System.Drawing.Pen greyPen = new(Color.Gray, 1);
 
         private readonly Stopwatch stopwatch = new();
 
         private bool firstRender;
+        private const bool showAdds = false;
 
         public MainWindow()
         {
@@ -86,13 +88,27 @@ namespace ImageFilter
             {
                 graphics.DrawRectangle(whitePen, npcNameFinder.Area);
 
+                if (showAdds)
+                {
+                    var fist = npcNameFinder.Npcs[0];
+                    var Area = npcNameFinder.Area;
+
+                    // target area
+                    graphics.DrawLine(whitePen, new Point(fist.screenMid - fist.screenTargetBuffer, Area.Top), new Point(fist.screenMid - fist.screenTargetBuffer, Area.Bottom));
+                    graphics.DrawLine(whitePen, new Point(fist.screenMid + fist.screenTargetBuffer, Area.Top), new Point(fist.screenMid + fist.screenTargetBuffer, Area.Bottom));
+
+                    // adds area
+                    graphics.DrawLine(greyPen, new Point(fist.screenMid - fist.screenAddBuffer, Area.Top), new Point(fist.screenMid - fist.screenAddBuffer, Area.Bottom));
+                    graphics.DrawLine(greyPen, new Point(fist.screenMid + fist.screenAddBuffer, Area.Top), new Point(fist.screenMid + fist.screenAddBuffer, Area.Bottom));
+
+                }
+
                 npcNameFinder.Npcs.ForEach(n =>
                 {
                     graphics.DrawEllipse(whitePen, n.ClickPoint.X, n.ClickPoint.Y, 5, 5);
                 });
 
-                //npcNameFinder.Npcs.ForEach(n => graphics.DrawRectangle(n.IsAdd ? greyPen : whitePen, n.Rect));
-                npcNameFinder.Npcs.ForEach(n => graphics.DrawRectangle(whitePen, n.Rect));
+                npcNameFinder.Npcs.ForEach(n => graphics.DrawRectangle(showAdds ? (n.IsAdd ? greyPen : whitePen) : whitePen, n.Rect));
                 npcNameFinder.Npcs.ForEach(n => graphics.DrawString(npcNameFinder.Npcs.IndexOf(n).ToString(), drawFont, drawBrush, new PointF(n.Left - 20f, n.Top)));
             }
 
