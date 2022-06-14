@@ -94,6 +94,7 @@ namespace Core.Goals
 
         public override void OnExit()
         {
+            navigation.StopMovement();
             navigation.Stop();
         }
 

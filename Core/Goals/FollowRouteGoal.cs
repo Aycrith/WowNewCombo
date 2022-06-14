@@ -29,6 +29,7 @@ namespace Core.Goals
         private readonly Navigation navigation;
         private readonly List<Vector3> routePoints;
 
+        private readonly IBlacklist blacklist;
         private readonly TargetFinder targetFinder;
         private const int minMs = 500, maxMs = 1000;
         private const NpcNames NpcNameToFind = NpcNames.Enemy | NpcNames.Neutral;
@@ -68,7 +69,7 @@ namespace Core.Goals
         #endregion
 
 
-        public FollowRouteGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, ClassConfiguration classConfig, List<Vector3> points, Navigation navigation, MountHandler mountHandler, NpcNameFinder npcNameFinder, TargetFinder targetFinder)
+        public FollowRouteGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, ClassConfiguration classConfig, List<Vector3> points, Navigation navigation, MountHandler mountHandler, NpcNameFinder npcNameFinder, TargetFinder targetFinder, IBlacklist blacklist)
         {
             this.logger = logger;
             this.input = input;
@@ -81,6 +82,7 @@ namespace Core.Goals
             this.npcNameFinder = npcNameFinder;
             this.mountHandler = mountHandler;
             this.targetFinder = targetFinder;
+            this.blacklist = blacklist;
 
             this.navigation = navigation;
             navigation.OnPathCalculated += Navigation_OnPathCalculated;
@@ -121,19 +123,30 @@ namespace Core.Goals
         {
             navigation.Dispose();
 
-            sideActivityManualReset.Set();
             sideActivityCts.Cancel();
+            sideActivityManualReset.Set();
         }
 
         private void Abort()
         {
+            if (!blacklist.IsTargetBlacklisted())
+                navigation.StopMovement();
+
             navigation.Stop();
+
+            sideActivityManualReset.Reset();
             targetFinder.Reset();
         }
 
         private void Resume()
         {
             onEnterTime = DateTime.UtcNow;
+
+            if (sideActivityCts.IsCancellationRequested)
+            {
+                sideActivityCts = new();
+            }
+            sideActivityManualReset.Set();
 
             if (!navigation.HasWaypoint())
             {
@@ -167,20 +180,12 @@ namespace Core.Goals
             }
         }
 
-        public override void OnEnter()
-        {
-            Resume();
-        }
+        public override void OnEnter() => Resume();
 
-        public override void OnExit()
-        {
-            Abort();
-        }
+        public override void OnExit() => Abort();
 
         public override void PerformAction()
         {
-            sideActivityManualReset.Set();
-
             if (playerReader.HasTarget && playerReader.Bits.TargetIsDead)
             {
                 Log("Has target but its dead.");
@@ -190,13 +195,13 @@ namespace Core.Goals
 
             if (playerReader.Bits.IsDrowning)
             {
-                //Log("Drowning! Swim up");
                 input.Jump();
             }
 
             if (playerReader.Bits.PlayerInCombat && classConfig.Mode != Mode.AttendedGather) { return; }
 
-            navigation.Update(sideActivityCts);
+            if (!sideActivityCts.IsCancellationRequested)
+                navigation.Update(sideActivityCts);
 
             RandomJump();
 
@@ -214,24 +219,16 @@ namespace Core.Goals
 
             while (!sideActivityCts.IsCancellationRequested)
             {
-                bool found = false;
-                sideActivityManualReset.Reset();
+                wait.Update();
 
-                if (classConfig.TargetNearestTarget.MillisecondsSinceLastClick > random.Next(minMs, maxMs))
+                if (classConfig.TargetNearestTarget.MillisecondsSinceLastClick > random.Next(minMs, maxMs) &&
+                    targetFinder.Search(NpcNameToFind, validTarget, sideActivityCts))
                 {
-                    found = targetFinder.Search(NpcNameToFind, validTarget, sideActivityCts);
-                    if (found)
-                    {
-                        sideActivityCts.Cancel();
-                    }
+                    sideActivityCts.Cancel();
+                    sideActivityManualReset.Reset();
                 }
 
                 sideActivityManualReset.WaitOne();
-                if (found)
-                {
-                    sideActivityCts = new();
-                    found = false;
-                }
             }
 
             if (logger.IsEnabled(LogLevel.Debug))
@@ -240,16 +237,15 @@ namespace Core.Goals
 
         private void Thread_AttendedGather()
         {
+            sideActivityManualReset.WaitOne();
+
             while (!sideActivityCts.IsCancellationRequested)
             {
-                sideActivityManualReset.Reset();
-
                 if ((DateTime.UtcNow - onEnterTime).TotalMilliseconds > MIN_TIME_TO_START_CYCLE_PROFESSION)
                 {
                     AlternateGatherTypes();
                 }
                 sideActivityCts.Token.WaitHandle.WaitOne(CYCLE_PROFESSION_PERIOD);
-
                 sideActivityManualReset.WaitOne();
             }
 

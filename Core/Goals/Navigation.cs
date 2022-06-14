@@ -222,7 +222,9 @@ namespace Core.Goals
                     heading = DirectionCalculator.CalculateHeading(location, routeToNextWaypoint.Peek());
                     if (debug)
                         LogDebug("Turn to next point");
-                    AdjustHeading(heading, cts);
+
+                    if (!cts.IsCancellationRequested)
+                        AdjustHeading(heading, cts);
                     return;
                 }
             }
@@ -273,13 +275,17 @@ namespace Core.Goals
         public void Stop()
         {
             active = false;
-            if (input.IsKeyDown(input.ForwardKey))
-                input.SetKeyState(input.ForwardKey, false, true);
 
             if (pather is RemotePathingAPIV3)
                 routeToNextWaypoint.Clear();
 
             ResetStuckParameters();
+        }
+
+        public void StopMovement()
+        {
+            if (input.IsKeyDown(input.ForwardKey))
+                input.SetKeyState(input.ForwardKey, false, true);
         }
 
         public bool HasWaypoint()
