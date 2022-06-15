@@ -258,6 +258,8 @@ namespace Core.Goals
 
         public void Resume()
         {
+            ResetStuckParameters();
+
             if (pather is not RemotePathingAPIV3 && routeToNextWaypoint.Count > 0)
             {
                 V1_AttemptToKeepRouteToWaypoint();

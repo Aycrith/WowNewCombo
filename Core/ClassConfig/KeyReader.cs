@@ -133,16 +133,13 @@ namespace Core
                 key.ConsoleKey = consoleKey;
             }
 
-            if (!string.IsNullOrEmpty(key.Name))
+            if (ActionBarSlotMap.TryGetValue(key.Key, out int s))
             {
-                if (ActionBarSlotMap.TryGetValue(key.Key, out int s))
-                {
-                    key.Slot = s;
-                }
-                else
-                {
-                    logger.LogWarning($"[{key.Name}] unable to assign Actionbar {nameof(KeyAction.Slot)}!");
-                }
+                key.Slot = s;
+            }
+            else
+            {
+                logger.LogWarning($"[{key.Name}] unable to assign Actionbar {nameof(KeyAction.Slot)}!");
             }
 
             if (!string.IsNullOrEmpty(key.Name))

@@ -111,45 +111,57 @@ namespace Core
             requirementFactory.InitUserDefinedIntVariables(IntVariables);
 
             Jump.Key = JumpKey;
+            Jump.Name = nameof(Jump);
             Jump.Initialise(addonReader, requirementFactory, logger, Log);
 
             TargetLastTarget.Key = TargetLastTargetKey;
+            TargetLastTarget.Name = nameof(TargetLastTarget);
             TargetLastTarget.Initialise(addonReader, requirementFactory, logger, Log);
 
             StandUp.Key = StandUpKey;
+            StandUp.Name = nameof(StandUp);
             StandUp.Initialise(addonReader, requirementFactory, logger, Log);
 
             ClearTarget.Key = ClearTargetKey;
+            ClearTarget.Name = nameof(ClearTarget);
             ClearTarget.Initialise(addonReader, requirementFactory, logger, Log);
 
             StopAttack.Key = StopAttackKey;
-            StopAttack.Initialise(addonReader, requirementFactory, logger, Log);
-            StopAttack.PressDuration = 10;
+            StopAttack.Name = nameof(StopAttack);
             StopAttack.Cooldown = 400;
+            StopAttack.WaitForGCD = false;
+            StopAttack.PressDuration = 20;
+            StopAttack.SkipValidation = true;
+            StopAttack.Initialise(addonReader, requirementFactory, logger, Log);
 
             TargetNearestTarget.Key = TargetNearestTargetKey;
+            TargetNearestTarget.Name = nameof(TargetNearestTarget);
             TargetNearestTarget.Cooldown = 400;
             TargetNearestTarget.Initialise(addonReader, requirementFactory, logger, Log);
 
             TargetPet.Key = TargetPetKey;
+            TargetPet.Name = nameof(TargetPet);
             TargetPet.Initialise(addonReader, requirementFactory, logger, Log);
 
             TargetTargetOfTarget.Key = TargetTargetOfTargetKey;
+            TargetTargetOfTarget.Name = nameof(TargetTargetOfTarget);
             TargetTargetOfTarget.Initialise(addonReader, requirementFactory, logger, Log);
 
             PetAttack.Key = PetAttackKey;
+            Mount.Name = nameof(PetAttack);
             PetAttack.PressDuration = 10;
             PetAttack.Cooldown = 400;
             PetAttack.Initialise(addonReader, requirementFactory, logger, Log);
 
             Mount.Key = MountKey;
+            Mount.Name = nameof(Mount);
             Mount.Initialise(addonReader, requirementFactory, logger, Log);
 
             Hearthstone.Key = HearthstoneKey;
             Hearthstone.Initialise(addonReader, requirementFactory, logger, Log);
 
             Interact.Key = InteractKey;
-            Interact.Name = "Interact";
+            Interact.Name = nameof(Interact);
             Interact.WaitForGCD = false;
             Interact.DelayAfterCast = 0;
             Interact.PressDuration = 30;
@@ -157,7 +169,7 @@ namespace Core
             Interact.Initialise(addonReader, requirementFactory, logger, Log);
 
             Approach.Key = InteractKey;
-            Approach.Name = "Approach";
+            Approach.Name = nameof(Approach);
             Approach.WaitForGCD = false;
             Approach.DelayAfterCast = 0;
             Approach.PressDuration = 10;
@@ -166,16 +178,11 @@ namespace Core
             Approach.Initialise(addonReader, requirementFactory, logger, Log);
 
             AutoAttack.Key = InteractKey;
-            AutoAttack.Name = "AutoAttack";
+            AutoAttack.Name = nameof(AutoAttack);
             AutoAttack.WaitForGCD = false;
             AutoAttack.DelayAfterCast = 0;
             AutoAttack.SkipValidation = true;
             AutoAttack.Initialise(addonReader, requirementFactory, logger, Log);
-
-            StopAttack.Name = "StopAttack";
-            StopAttack.WaitForGCD = false;
-            StopAttack.PressDuration = 20;
-            StopAttack.SkipValidation = true;
 
             InitializeKeyActions(Pull, Interact, Approach, AutoAttack, StopAttack);
             InitializeKeyActions(Combat, Interact, Approach, AutoAttack, StopAttack);
