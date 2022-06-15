@@ -113,7 +113,7 @@ namespace Core
         {
             if (string.IsNullOrEmpty(key.Key))
             {
-                logger.LogError($"You must specify either 'Key' (ConsoleKey value) or 'KeyName' (ConsoleKey enum name) for { key.Name}");
+                logger.LogError($"You must specify either 'Key' (ConsoleKey value) or 'KeyName' (ConsoleKey enum name) for {key.Name}");
                 return false;
             }
 
@@ -123,14 +123,26 @@ namespace Core
             }
             else
             {
-                var consoleKey = consoleKeys.FirstOrDefault(k => k.ToString() == key.Key);
+                ConsoleKey consoleKey = consoleKeys.FirstOrDefault(k => k.ToString() == key.Key);
                 if (consoleKey == 0)
                 {
-                    logger.LogError($"You must specify a valid 'KeyName' (ConsoleKey enum name) for { key.Name}");
+                    logger.LogError($"You must specify a valid 'Name' (ConsoleKey enum name) for {key.Name}");
                     return false;
                 }
 
                 key.ConsoleKey = consoleKey;
+            }
+
+            if (!string.IsNullOrEmpty(key.Name))
+            {
+                if (ActionBarSlotMap.TryGetValue(key.Key, out int s))
+                {
+                    key.Slot = s;
+                }
+                else
+                {
+                    logger.LogWarning($"[{key.Name}] unable to assign Actionbar {nameof(KeyAction.Slot)}!");
+                }
             }
 
             if (!string.IsNullOrEmpty(key.Name))

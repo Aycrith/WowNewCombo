@@ -150,7 +150,7 @@ namespace Core
 
             if (int.TryParse(key, out int hotkey))
             {
-                if (offset == 0 && hotkey <= 12)
+                if (offset == 0 && hotkey <= ActionBar.MAIN_ACTIONBAR_SLOT)
                 {
                     offset += Stance.RuntimeSlotToActionBar(a.KeyAction, addonReader.PlayerReader, hotkey);
                 }

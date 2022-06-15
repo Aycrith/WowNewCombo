@@ -1,19 +1,30 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace Core
 {
     public class ActionBarCostEventArgs : EventArgs
     {
-        public readonly int index;
-        public readonly PowerType powerType;
-        public readonly int cost;
+        public int Index { get; }
+        public PowerType PowerType { get; }
+        public int Cost { get; }
 
         public ActionBarCostEventArgs(int index, PowerType powerType, int cost)
         {
-            this.index = index;
-            this.powerType = powerType;
-            this.cost = cost;
+            Index = index;
+            PowerType = powerType;
+            Cost = cost;
+        }
+    }
+
+    public readonly struct ActionBarCost
+    {
+        public readonly PowerType PowerType { get; }
+        public readonly int Cost { get; }
+
+        public ActionBarCost(PowerType powerType, int cost)
+        {
+            PowerType = powerType;
+            Cost = cost;
         }
     }
 
@@ -22,17 +33,14 @@ namespace Core
         private readonly AddonDataProvider reader;
         private readonly int cActionbarNum;
 
-        private readonly float MAX_POWER_TYPE = 1000000f;
-        private readonly float MAX_ACTION_IDX = 1000f;
+        private const float MAX_POWER_TYPE = 1000000f;
+        private const float MAX_ACTION_IDX = 1000f;
 
         //https://wowwiki-archive.fandom.com/wiki/ActionSlot
-        private readonly Dictionary<int, (PowerType type, int cost)> dict = new Dictionary<int, (PowerType, int)>();
+        private readonly ActionBarCost defaultCost = new(PowerType.Mana, 0);
+        private readonly ActionBarCost[] data;
 
-        private readonly (PowerType type, int cost) empty = (PowerType.Mana, 0);
-
-        public int MaxCount { get; } = 108; // maximum amount of actionbar slot which tracked
-
-        public int Count => dict.Count;
+        public int Count { get; private set; }
 
         public event EventHandler<ActionBarCostEventArgs>? OnActionCostChanged;
 
@@ -40,55 +48,47 @@ namespace Core
         {
             this.cActionbarNum = cActionbarNum;
             this.reader = reader;
+
+            data = new ActionBarCost[ActionBar.CELL_COUNT * ActionBar.BIT_PER_CELL];
+            Reset();
         }
 
         public void Read()
         {
             // formula
             // MAX_POWER_TYPE * type + MAX_ACTION_IDX * slot + cost
-            int data = reader.GetInt(cActionbarNum);
-            if (data == 0) return;
+            int cost = reader.GetInt(cActionbarNum);
+            if (cost == 0) return;
 
-            int type = (int)(data / MAX_POWER_TYPE);
-            data -= (int)MAX_POWER_TYPE * type;
+            int type = (int)(cost / MAX_POWER_TYPE);
+            cost -= (int)MAX_POWER_TYPE * type;
 
-            int index = (int)(data / MAX_ACTION_IDX);
-            data -= (int)MAX_ACTION_IDX * index;
+            int index = (int)(cost / MAX_ACTION_IDX);
+            cost -= (int)MAX_ACTION_IDX * index;
 
-            int cost = data;
+            ActionBarCost temp = data[index];
+            data[index] = new((PowerType)type, cost);
 
-            if (dict.TryGetValue(index, out var tuple) && tuple.cost != cost)
-            {
-                dict.Remove(index);
-            }
+            if (cost != temp.Cost)
+                OnActionCostChanged?.Invoke(this, new(index, (PowerType)type, cost));
 
-            if (dict.TryAdd(index, ((PowerType)type, cost)))
-            {
-                OnActionCostChanged?.Invoke(this, new ActionBarCostEventArgs(index, (PowerType)type, cost));
-            }
+            if (index > Count)
+                Count = index;
         }
 
         public void Reset()
         {
-            dict.Clear();
+            Count = 0;
+            for (int i = 0; i < data.Length; i++)
+            {
+                data[i] = defaultCost;
+            }
         }
 
-        public (PowerType type, int cost) GetCostByActionBarSlot(PlayerReader playerReader, KeyAction keyAction)
+        public ActionBarCost GetCostByActionBarSlot(PlayerReader playerReader, KeyAction keyAction)
         {
-            if (KeyReader.ActionBarSlotMap.TryGetValue(keyAction.Key, out int slot))
-            {
-                if (slot <= 12)
-                {
-                    slot += Stance.RuntimeSlotToActionBar(keyAction, playerReader, slot);
-                }
-
-                if (dict.TryGetValue(slot, out var tuple))
-                {
-                    return tuple;
-                }
-            }
-
-            return empty;
+            int index = keyAction.Slot + Stance.RuntimeSlotToActionBar(keyAction, playerReader, keyAction.Slot);
+            return data[index];
         }
     }
 }

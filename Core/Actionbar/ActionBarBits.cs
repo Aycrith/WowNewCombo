@@ -38,7 +38,7 @@
 
 
         // https://wowwiki-archive.fandom.com/wiki/ActionSlot
-        public bool Is(KeyAction item)
+        public bool Is(KeyAction keyAction)
         {
             if (isDirty)
             {
@@ -46,26 +46,9 @@
                 isDirty = false;
             }
 
-            if (KeyReader.ActionBarSlotMap.TryGetValue(item.Key, out int slot))
-            {
-                slot += Stance.RuntimeSlotToActionBar(item, playerReader, slot);
-
-                int array = slot / 24;
-                return bits[array].IsBitSet((slot - 1) % 24);
-            }
-
-            return false;
-        }
-
-        public int Num(KeyAction item)
-        {
-            if (KeyReader.ActionBarSlotMap.TryGetValue(item.Key, out int slot))
-            {
-                slot += Stance.RuntimeSlotToActionBar(item, playerReader, slot);
-                return slot;
-            }
-
-            return 0;
+            int slot = keyAction.Slot + Stance.RuntimeSlotToActionBar(keyAction, playerReader, keyAction.Slot);
+            int array = slot / ActionBar.BIT_PER_CELL;
+            return bits[array].IsBitSet((slot - 1) % ActionBar.BIT_PER_CELL);
         }
     }
 }

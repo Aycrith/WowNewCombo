@@ -24,7 +24,7 @@ namespace Core
         public override string ToString()
         {
             var sb = new StringBuilder();
-            for (int i = 1; i < 24; i++)
+            for (int i = 1; i < ActionBar.BIT_PER_CELL; i++)
             {
                 sb.Append($"{i}:{IsBitSet(i - 1)},");
             }

@@ -13,6 +13,7 @@ namespace Core
         public bool StopBeforeCast { get; set; }
         public ConsoleKey ConsoleKey { get; set; }
         public string Key { get; set; } = string.Empty;
+        public int Slot { get; set; }
         public int PressDuration { get; set; } = 50;
         public string Form { get; set; } = string.Empty;
         public Form FormEnum { get; set; } = Core.Form.None;
@@ -80,6 +81,14 @@ namespace Core
 
         private ILogger logger = null!;
 
+        public void InitialiseSlot(ILogger logger)
+        {
+            if (!KeyReader.ReadKey(logger, this))
+            {
+                throw new Exception($"[{Name}] has no valid Key={ConsoleKey}");
+            }
+        }
+
         public void InitDynamicBinding(RequirementFactory requirementFactory)
         {
             requirementFactory.InitDynamicBindings(this);
@@ -96,10 +105,7 @@ namespace Core
 
             ResetCharges();
 
-            if (!KeyReader.ReadKey(logger, this))
-            {
-                throw new Exception($"[{Name}] has no valid Key={ConsoleKey}");
-            }
+            InitialiseSlot(logger);
 
             if (!string.IsNullOrEmpty(this.Requirement))
             {
@@ -128,7 +134,8 @@ namespace Core
             ConsoleKeyFormHash = ((int)FormEnum * 1000) + (int)ConsoleKey;
             ResetCooldown();
 
-            InitMinPowerType(playerReader, addonReader.ActionBarCostReader);
+            if (Slot > 0)
+                InitMinPowerType(playerReader, addonReader.ActionBarCostReader);
 
             requirementFactory.InitialiseRequirements(this, keyActions);
         }
@@ -222,23 +229,23 @@ namespace Core
 
         private void InitMinPowerType(PlayerReader playerReader, ActionBarCostReader actionBarCostReader)
         {
-            var (type, cost) = actionBarCostReader.GetCostByActionBarSlot(playerReader, this);
-            if (cost != 0)
+            ActionBarCost abc = actionBarCostReader.GetCostByActionBarSlot(playerReader, this);
+            if (abc.Cost != 0)
             {
                 int oldValue = 0;
-                switch (type)
+                switch (abc.PowerType)
                 {
                     case PowerType.Mana:
                         oldValue = MinMana;
-                        MinMana = cost;
+                        MinMana = abc.Cost;
                         break;
                     case PowerType.Rage:
                         oldValue = MinRage;
-                        MinRage = cost;
+                        MinRage = abc.Cost;
                         break;
                     case PowerType.Energy:
                         oldValue = MinEnergy;
-                        MinEnergy = cost;
+                        MinEnergy = abc.Cost;
                         break;
                 }
 
@@ -248,49 +255,42 @@ namespace Core
                     formCost = playerReader.FormCost[FormEnum];
                 }
 
-                LogPowerCostChange(logger, Name, type, cost, oldValue);
+                LogPowerCostChange(logger, Name, abc.PowerType, abc.Cost, oldValue);
                 if (formCost > 0)
                 {
                     logger.LogInformation($"[{Name}] +{formCost} Mana to change {FormEnum} Form");
                 }
             }
 
-            actionBarCostReader.OnActionCostChanged -= ActionBarCostReader_OnActionCostChanged;
             actionBarCostReader.OnActionCostChanged += ActionBarCostReader_OnActionCostChanged;
         }
 
         private void ActionBarCostReader_OnActionCostChanged(object? sender, ActionBarCostEventArgs e)
         {
-            if (!KeyReader.ActionBarSlotMap.TryGetValue(Key, out int slot)) return;
+            int slot = Slot + Stance.RuntimeSlotToActionBar(this, playerReader, Slot);
+            if (slot != e.Index)
+                return;
 
-            if (slot <= 12)
+            int oldValue = 0;
+            switch (e.PowerType)
             {
-                slot += Stance.RuntimeSlotToActionBar(this, playerReader, slot);
+                case PowerType.Mana:
+                    oldValue = MinMana;
+                    MinMana = e.Cost;
+                    break;
+                case PowerType.Rage:
+                    oldValue = MinRage;
+                    MinRage = e.Cost;
+                    break;
+                case PowerType.Energy:
+                    oldValue = MinEnergy;
+                    MinEnergy = e.Cost;
+                    break;
             }
 
-            if (slot == e.index)
+            if (e.Cost != oldValue)
             {
-                int oldValue = 0;
-                switch (e.powerType)
-                {
-                    case PowerType.Mana:
-                        oldValue = MinMana;
-                        MinMana = e.cost;
-                        break;
-                    case PowerType.Rage:
-                        oldValue = MinRage;
-                        MinRage = e.cost;
-                        break;
-                    case PowerType.Energy:
-                        oldValue = MinEnergy;
-                        MinEnergy = e.cost;
-                        break;
-                }
-
-                if (e.cost != oldValue)
-                {
-                    LogPowerCostChange(logger, Name, e.powerType, e.cost, oldValue);
-                }
+                LogPowerCostChange(logger, Name, e.PowerType, e.Cost, oldValue);
             }
         }
 

@@ -334,7 +334,9 @@ namespace Core
             if (item.WhenUsable && !string.IsNullOrEmpty(item.Key))
             {
                 item.RequirementObjects.Add(CreateActionUsableRequirement(item));
-                item.RequirementObjects.Add(CreateActionNotInGameCooldown(item));
+
+                if (item.Slot > 0)
+                    item.RequirementObjects.Add(CreateActionNotInGameCooldown(item));
             }
 
             AddCooldownRequirement(item.RequirementObjects, item);
@@ -360,6 +362,8 @@ namespace Core
 
         public void InitDynamicBindings(KeyAction item)
         {
+            if (string.IsNullOrEmpty(item.Name) || item.Slot == 0) return;
+
             BindCooldown(item);
             BindMinCost(item);
         }
@@ -380,7 +384,7 @@ namespace Core
             if (!intVariables.ContainsKey(key))
             {
                 intVariables.Add(key,
-                    () => addonReader.ActionBarCostReader.GetCostByActionBarSlot(playerReader, item).cost);
+                    () => addonReader.ActionBarCostReader.GetCostByActionBarSlot(playerReader, item).Cost);
             }
         }
 

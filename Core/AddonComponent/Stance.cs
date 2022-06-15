@@ -32,12 +32,9 @@
 
         public static int RuntimeSlotToActionBar(KeyAction item, PlayerReader playerReader, int slot)
         {
-            if (slot <= 12)
-            {
-                return (int)FormToActionBar(playerReader.Class, item.HasFormRequirement() ? item.FormEnum : playerReader.Form);
-            }
-
-            return 0;
+            return slot <= ActionBar.MAIN_ACTIONBAR_SLOT
+                ? (int)FormToActionBar(playerReader.Class, item.HasFormRequirement() ? item.FormEnum : playerReader.Form)
+                : 0;
         }
 
         private static StanceActionBar FormToActionBar(PlayerClassEnum playerClass, Form form)
