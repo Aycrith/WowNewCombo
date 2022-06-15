@@ -81,11 +81,13 @@ namespace Core.Goals
             }
             else if (corpseLocations.Count > 0)
             {
+                npcNameTargeting.ChangeNpcType(NpcNames.None);
                 var location = playerReader.PlayerLocation;
                 var closestCorpse = GetClosestCorpse();
                 var heading = DirectionCalculator.CalculateHeading(location, closestCorpse);
                 playerDirection.SetDirection(heading, closestCorpse);
                 logger.LogInformation("Look at possible corpse and try again");
+                npcNameTargeting.ChangeNpcType(NpcNames.Corpse);
 
                 if (FoundByCursor())
                 {
