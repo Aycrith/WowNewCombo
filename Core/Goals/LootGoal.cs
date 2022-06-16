@@ -171,7 +171,7 @@ namespace Core.Goals
             }
 
             Log("Found corpse - clicked");
-            (bool searchTimeOut, double elapsedMs) = wait.Until(200, () => playerReader.HasTarget);
+            (bool searchTimeOut, double elapsedMs) = wait.Until(200, HasTarget);
             if (!searchTimeOut)
             {
                 Log($"Found target after {elapsedMs}ms");
@@ -226,13 +226,13 @@ namespace Core.Goals
 
         private void GoalExit()
         {
-            if (!wait.Till(1000, () => lastLoot != playerReader.LastLootTime))
+            if (!wait.Till(1000, LootChanged))
             {
-                Log($"Loot Successfull");
+                Log("Loot Successfull");
             }
             else
             {
-                Log($"Loot Failed");
+                Log("Loot Failed");
 
                 SendActionEvent(new ActionEventArgs(GoapKey.shouldskin, false));
             }
@@ -242,9 +242,18 @@ namespace Core.Goals
             if (playerReader.HasTarget && playerReader.Bits.TargetIsDead)
             {
                 input.ClearTarget();
+                wait.Update();
             }
+        }
 
-            wait.Update();
+        private bool LootChanged()
+        {
+            return lastLoot != playerReader.LastLootTime;
+        }
+
+        private bool HasTarget()
+        {
+            return playerReader.HasTarget;
         }
 
         private void Log(string text)

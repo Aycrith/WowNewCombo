@@ -85,7 +85,7 @@ namespace Core
                     return true;
                 }
 
-                if (wait.Till(maxTimeMs, () => playerReader.HasTarget || playerReader.PetHasTarget))
+                if (wait.Till(maxTimeMs, PlayerOrPetHasTarget))
                 {
                     return true;
                 }
@@ -105,7 +105,7 @@ namespace Core
 
         public (bool foundTarget, bool hadToMove) FoundTargetWhileMoved()
         {
-            (bool movedTimeOut, double elapsedMs) = wait.Until(200, () => lastPosition != playerReader.PlayerLocation);
+            (bool movedTimeOut, double elapsedMs) = wait.Until(200, StartedMoving);
             if (!movedTimeOut)
             {
                 Log($"  Went for corpse {elapsedMs}ms");
@@ -124,6 +124,16 @@ namespace Core
             }
 
             return (false, !movedTimeOut);
+        }
+
+        private bool PlayerOrPetHasTarget()
+        {
+            return playerReader.HasTarget || playerReader.PetHasTarget;
+        }
+
+        private bool StartedMoving()
+        {
+            return lastPosition != playerReader.PlayerLocation;
         }
 
         private void Log(string text)

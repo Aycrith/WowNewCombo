@@ -52,7 +52,10 @@ namespace Core.Goals
             AddEffect(GoapKey.targetisalive, false);
             AddEffect(GoapKey.hastarget, false);
 
-            classConfiguration.Combat.Sequence.Where(k => k != null).ToList().ForEach(key => Keys.Add(key));
+            foreach (KeyAction key in classConfiguration.Combat.Sequence)
+            {
+                Keys.Add(key);
+            }
         }
 
         protected void Fight()

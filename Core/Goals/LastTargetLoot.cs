@@ -96,13 +96,13 @@ namespace Core.Goals
 
         private void GoalExit()
         {
-            if (!wait.Till(1000, () => lastLoot != playerReader.LastLootTime))
+            if (!wait.Till(1000, LootChanged))
             {
-                Log($"Loot Successfull");
+                Log("Loot Successfull");
             }
             else
             {
-                Log($"Loot Failed");
+                Log("Loot Failed");
             }
 
             lastLoot = playerReader.LastLootTime;
@@ -111,10 +111,14 @@ namespace Core.Goals
 
             if (playerReader.HasTarget && playerReader.Bits.TargetIsDead)
             {
-                //$"{nameof(LastTargetLoot)}: Exit Goal"
                 input.ClearTarget();
                 wait.Update();
             }
+        }
+
+        private bool LootChanged()
+        {
+            return lastLoot != playerReader.LastLootTime;
         }
 
         private void Log(string text)

@@ -21,13 +21,12 @@ namespace Core.Goals
         private readonly CastingHandler castingHandler;
         private readonly MountHandler mountHandler;
         private readonly CombatUtil combatUtil;
+        private readonly IBlacklist blacklist;
 
         private readonly Random random = new();
 
         private readonly KeyAction? approachKey;
         private readonly Action approachAction;
-
-        private readonly Func<bool> pullPrevention;
 
         private readonly bool requiresNpcNameFinder;
 
@@ -48,20 +47,19 @@ namespace Core.Goals
             this.npcNameTargeting = npcNameTargeting;
             this.stuckDetector = stuckDetector;
             this.combatUtil = combatUtil;
+            this.blacklist = blacklist;
 
             approachKey = input.ClassConfig.Pull.Sequence.Find(x => x.Name == input.ClassConfig.Approach.Name);
             approachAction = approachKey == null ? DefaultApproach : ConditionalApproach;
 
-            pullPrevention = () => blacklist.IsTargetBlacklisted() &&
-                playerReader.TargetTarget is not
-                TargetTargetEnum.None or
-                TargetTargetEnum.Me or
-                TargetTargetEnum.Pet or
-                TargetTargetEnum.PartyOrPet;
-
-            input.ClassConfig.Pull.Sequence.ForEach(key => Keys.Add(key));
-
-            requiresNpcNameFinder = Keys.Exists(k => k.Requirements.Contains(RequirementFactory.AddVisible));
+            foreach (KeyAction key in input.ClassConfig.Pull.Sequence)
+            {
+                Keys.Add(key);
+                if (key.Requirements.Contains(RequirementFactory.AddVisible))
+                {
+                    requiresNpcNameFinder = true;
+                }
+            }
 
             AddPrecondition(GoapKey.targetisalive, true);
             AddPrecondition(GoapKey.incombat, false);
@@ -181,7 +179,7 @@ namespace Core.Goals
                 if (lastCastSuccess && addonReader.UsableAction.Is(item))
                 {
                     Log($"While waiting, repeat current action: {item.Name}");
-                    lastCastSuccess = castingHandler.CastIfReady(item, () => playerReader.IsInMeleeRange);
+                    lastCastSuccess = castingHandler.CastIfReady(item, IsInMeleeRange);
                     Log($"Repeat current action: {lastCastSuccess}");
                 }
 
@@ -208,7 +206,7 @@ namespace Core.Goals
                     continue;
                 }
 
-                bool success = castingHandler.Cast(item, pullPrevention);
+                bool success = castingHandler.Cast(item, PullPrevention);
                 if (success)
                 {
                     if (!playerReader.HasTarget)
@@ -223,7 +221,7 @@ namespace Core.Goals
                         WaitForWithinMeleeRange(item, success);
                     }
                 }
-                else if (pullPrevention() &&
+                else if (PullPrevention() &&
                     (playerReader.IsCasting ||
                      playerReader.Bits.IsAutoRepeatSpellOn_AutoAttack ||
                      playerReader.Bits.IsAutoRepeatSpellOn_AutoShot ||
@@ -239,13 +237,7 @@ namespace Core.Goals
 
             if (castAny)
             {
-                (bool timeout, double elapsedMs) = wait.Until(1000,
-                    () => playerReader.TargetTarget is
-                        TargetTargetEnum.Me or
-                        TargetTargetEnum.Pet or
-                        TargetTargetEnum.PartyOrPet ||
-                        addonReader.CreatureHistory.CombatDamageDoneGuid.ElapsedMs < CastingHandler.GCD ||
-                        playerReader.IsInMeleeRange);
+                (bool timeout, double elapsedMs) = wait.Until(1000, SuccessfullPull);
                 if (!timeout)
                 {
                     Log($"Entered combat after {elapsedMs}ms");
@@ -286,6 +278,31 @@ namespace Core.Goals
             {
                 stopMoving.Stop();
             }
+        }
+
+        private bool SuccessfullPull()
+        {
+            return playerReader.TargetTarget is
+                        TargetTargetEnum.Me or
+                        TargetTargetEnum.Pet or
+                        TargetTargetEnum.PartyOrPet ||
+                        addonReader.CreatureHistory.CombatDamageDoneGuid.ElapsedMs < CastingHandler.GCD ||
+                        playerReader.IsInMeleeRange;
+        }
+
+        private bool PullPrevention()
+        {
+            return blacklist.IsTargetBlacklisted() &&
+                playerReader.TargetTarget is not
+                TargetTargetEnum.None or
+                TargetTargetEnum.Me or
+                TargetTargetEnum.Pet or
+                TargetTargetEnum.PartyOrPet;
+        }
+
+        private bool IsInMeleeRange()
+        {
+            return playerReader.IsInMeleeRange;
         }
 
         private void Log(string text)

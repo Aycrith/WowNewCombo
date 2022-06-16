@@ -109,13 +109,12 @@ namespace Core.Goals
                     }
 
                     // wait until start casting
-                    wait.Till(500, () => playerReader.IsCasting);
+                    wait.Till(500, StartsCasting);
                     Log("Started casting...");
 
                     playerReader.LastUIError = UI_ERROR.NONE;
 
-                    wait.Till(3000, () => !playerReader.IsCasting || playerReader.LastUIError != UI_ERROR.NONE);
-                    Log("Cast finished!");
+                    wait.Till(3000, CastFinishedOrInterrupted);
 
                     if (playerReader.LastUIError != UI_ERROR.ERR_SPELL_FAILED_S)
                     {
@@ -148,18 +147,17 @@ namespace Core.Goals
 
         public override void PerformAction()
         {
-
         }
 
         private void GoalExit()
         {
-            if (!wait.Till(1000, () => lastLoot != playerReader.LastLootTime))
+            if (!wait.Till(1000, LootChanged))
             {
-                Log($"Skin-Loot Successfull");
+                Log("Loot Successfull");
             }
             else
             {
-                Log($"Skin-Loot Failed");
+                Log("Loot Failed");
             }
 
             lastLoot = playerReader.LastLootTime;
@@ -169,9 +167,8 @@ namespace Core.Goals
             if (playerReader.HasTarget && playerReader.Bits.TargetIsDead)
             {
                 input.ClearTarget();
+                wait.Update();
             }
-
-            wait.Update();
         }
 
         private void EquipmentReader_OnEquipmentChanged(object? sender, (int, int) e)
@@ -196,6 +193,21 @@ namespace Core.Goals
                 equipmentReader.HasItem(7005) ||
                 equipmentReader.HasItem(12709) ||
                 equipmentReader.HasItem(19901);
+        }
+
+        private bool LootChanged()
+        {
+            return lastLoot != playerReader.LastLootTime;
+        }
+
+        private bool StartsCasting()
+        {
+            return playerReader.IsCasting;
+        }
+
+        private bool CastFinishedOrInterrupted()
+        {
+            return !playerReader.IsCasting || playerReader.LastUIError != UI_ERROR.NONE;
         }
 
         private void Log(string text)

@@ -79,7 +79,7 @@ namespace Core.Goals
             playerReader.ZCoord = 0;
             addonReader.PlayerDied();
 
-            wait.While(() => playerReader.CorpseLocation == Vector3.Zero);
+            wait.While(AliveOrLoadingScreen);
             Log($"Player teleported to the graveyard!");
 
             var corpseLocation = playerReader.CorpseLocation;
@@ -122,6 +122,11 @@ namespace Core.Goals
                 Log("Random jump");
                 input.Jump();
             }
+        }
+
+        private bool AliveOrLoadingScreen()
+        {
+            return playerReader.CorpseLocation == Vector3.Zero;
         }
 
         private void Log(string text)
