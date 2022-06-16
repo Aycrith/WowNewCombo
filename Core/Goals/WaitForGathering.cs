@@ -94,7 +94,7 @@ namespace Core.Goals
                     if (!playerReader.IsCasting)
                     {
                         wait.Update();
-                        if (playerReader.LastUIErrorMessage == UI_ERROR.ERR_SPELL_FAILED_S)
+                        if (playerReader.LastUIError == UI_ERROR.ERR_SPELL_FAILED_S)
                         {
                             state = CastState.Failed;
                             LogFailed(logger, state, Timeout);

@@ -90,8 +90,8 @@ namespace Core
         public int PlayerMaxXp => reader.GetInt(51);
         public int PlayerXpPercentage => PlayerXp.Value * 100 / (PlayerMaxXp == 0 ? 1 : PlayerMaxXp);
 
-        private UI_ERROR UIErrorMessage => (UI_ERROR)reader.GetInt(52);
-        public UI_ERROR LastUIErrorMessage { get; set; }
+        private UI_ERROR UIError => (UI_ERROR)reader.GetInt(52);
+        public UI_ERROR LastUIError { get; set; }
 
         public int SpellBeingCast => reader.GetInt(53);
         public bool IsCasting => SpellBeingCast != 0;
@@ -149,9 +149,9 @@ namespace Core
             Stance.SetDirty();
             CustomTrigger1.Update(reader.GetInt(74));
 
-            if (UIErrorMessage != UI_ERROR.NONE)
+            if (UIError != UI_ERROR.NONE)
             {
-                LastUIErrorMessage = UIErrorMessage;
+                LastUIError = UIError;
             }
 
             PlayerXp.Update(reader);

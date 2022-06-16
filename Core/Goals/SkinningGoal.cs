@@ -112,15 +112,15 @@ namespace Core.Goals
                     wait.Till(500, () => playerReader.IsCasting);
                     Log("Started casting...");
 
-                    playerReader.LastUIErrorMessage = UI_ERROR.NONE;
+                    playerReader.LastUIError = UI_ERROR.NONE;
 
-                    wait.Till(3000, () => !playerReader.IsCasting || playerReader.LastUIErrorMessage != UI_ERROR.NONE);
+                    wait.Till(3000, () => !playerReader.IsCasting || playerReader.LastUIError != UI_ERROR.NONE);
                     Log("Cast finished!");
 
-                    if (playerReader.LastUIErrorMessage != UI_ERROR.ERR_SPELL_FAILED_S)
+                    if (playerReader.LastUIError != UI_ERROR.ERR_SPELL_FAILED_S)
                     {
-                        playerReader.LastUIErrorMessage = UI_ERROR.NONE;
-                        Log($"Skinning Successful! {playerReader.LastUIErrorMessage}");
+                        playerReader.LastUIError = UI_ERROR.NONE;
+                        Log($"Skinning Successful! {playerReader.LastUIError.ToStringF()}");
 
                         GoalExit();
                         return;

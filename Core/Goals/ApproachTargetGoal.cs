@@ -115,9 +115,9 @@ namespace Core.Goals
                 lastPlayerLocation = playerReader.PlayerLocation;
                 if (!combatUtil.IsPlayerMoving(last))
                 {
-                    if (playerReader.LastUIErrorMessage == UI_ERROR.ERR_AUTOFOLLOW_TOO_FAR)
+                    if (playerReader.LastUIError == UI_ERROR.ERR_AUTOFOLLOW_TOO_FAR)
                     {
-                        playerReader.LastUIErrorMessage = UI_ERROR.NONE;
+                        playerReader.LastUIError = UI_ERROR.NONE;
 
                         if (debug)
                             Log("Too far, start moving forward!");
