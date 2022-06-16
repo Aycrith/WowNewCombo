@@ -37,10 +37,10 @@ namespace Core
         public bool CanMount()
         {
             return playerReader.Level.Value >= minLevelToMount &&
-                !playerReader.Bits.IsIndoors &&
-                !playerReader.Bits.PlayerInCombat &&
-                !playerReader.Bits.IsSwimming &&
-                !playerReader.Bits.IsFalling &&
+                !playerReader.Bits.IsIndoors() &&
+                !playerReader.Bits.PlayerInCombat() &&
+                !playerReader.Bits.IsSwimming() &&
+                !playerReader.Bits.IsFalling() &&
                 !IsMounted() &&
                 addonReader.UsableAction.Is(classConfig.Mount) &&
                 addonReader.ActionBarCooldownReader.GetRemainingCooldown(playerReader, classConfig.Mount) == 0;
@@ -58,9 +58,9 @@ namespace Core
                 }
             }
 
-            if (playerReader.Bits.IsFalling)
+            if (playerReader.Bits.IsFalling())
             {
-                (bool fallTimeOut, double fallElapsedMs) = wait.Until(maxFallTimeMs, () => !playerReader.Bits.IsFalling);
+                (bool fallTimeOut, double fallElapsedMs) = wait.UntilNot(maxFallTimeMs, playerReader.Bits.IsFalling);
                 Log($"waited for landing interrupted: {!fallTimeOut} - {fallElapsedMs}ms");
             }
 
@@ -69,17 +69,17 @@ namespace Core
 
             input.Mount();
 
-            (bool castStartTimeOut, double castStartElapsedMs) = wait.Until(spellQueueWindowMs, () => playerReader.Bits.IsMounted || playerReader.IsCasting);
-            Log($"cast_start: {!castStartTimeOut} | Mounted: {playerReader.Bits.IsMounted} | Delay: {castStartElapsedMs}ms");
+            (bool castStartTimeOut, double castStartElapsedMs) = wait.Until(spellQueueWindowMs, () => playerReader.Bits.IsMounted() || playerReader.IsCasting());
+            Log($"cast_start: {!castStartTimeOut} | Mounted: {playerReader.Bits.IsMounted()} | Delay: {castStartElapsedMs}ms");
 
-            if (!playerReader.Bits.IsMounted)
+            if (!playerReader.Bits.IsMounted())
             {
-                bool hadTarget = playerReader.HasTarget;
-                (bool castEndTimeOut, double elapsedMs) = wait.Until(mountCastTimeMs, () => playerReader.Bits.IsMounted || !playerReader.IsCasting || playerReader.HasTarget != hadTarget);
-                Log($"cast_ended: {!castEndTimeOut} | Mounted: {playerReader.Bits.IsMounted} | Delay: {elapsedMs}ms");
+                bool hadTarget = playerReader.Bits.HasTarget();
+                (bool castEndTimeOut, double elapsedMs) = wait.Until(mountCastTimeMs, () => playerReader.Bits.IsMounted() || !playerReader.IsCasting() || playerReader.Bits.HasTarget() != hadTarget);
+                Log($"cast_ended: {!castEndTimeOut} | Mounted: {playerReader.Bits.IsMounted()} | Delay: {elapsedMs}ms");
 
-                (bool mountedTimeOut, elapsedMs) = wait.Until(spellQueueWindowMs, () => playerReader.Bits.IsMounted);
-                Log($"interupted: {!mountedTimeOut} | Mounted: {playerReader.Bits.IsMounted} | Delay: {elapsedMs}ms");
+                (bool mountedTimeOut, elapsedMs) = wait.Until(spellQueueWindowMs, playerReader.Bits.IsMounted);
+                Log($"interupted: {!mountedTimeOut} | Mounted: {playerReader.Bits.IsMounted()} | Delay: {elapsedMs}ms");
             }
         }
 
@@ -109,7 +109,7 @@ namespace Core
         {
             return (playerReader.Class == PlayerClassEnum.Druid &&
                 playerReader.Form is Form.Druid_Flight or Form.Druid_Travel)
-                || playerReader.Bits.IsMounted;
+                || playerReader.Bits.IsMounted();
         }
 
         private void Log(string text)

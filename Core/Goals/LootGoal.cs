@@ -103,9 +103,9 @@ namespace Core.Goals
                 Log("No corpse name found - check last dead target exists");
                 input.LastTarget();
                 wait.Update();
-                if (playerReader.HasTarget)
+                if (playerReader.Bits.HasTarget())
                 {
-                    if (playerReader.Bits.TargetIsDead)
+                    if (playerReader.Bits.TargetIsDead())
                     {
                         CheckForSkinning();
 
@@ -171,7 +171,7 @@ namespace Core.Goals
             }
 
             Log("Found corpse - clicked");
-            (bool searchTimeOut, double elapsedMs) = wait.Until(200, HasTarget);
+            (bool searchTimeOut, double elapsedMs) = wait.Until(200, playerReader.Bits.HasTarget);
             if (!searchTimeOut)
             {
                 Log($"Found target after {elapsedMs}ms");
@@ -239,7 +239,7 @@ namespace Core.Goals
 
             SendActionEvent(new ActionEventArgs(GoapKey.shouldloot, false));
 
-            if (playerReader.HasTarget && playerReader.Bits.TargetIsDead)
+            if (playerReader.Bits.HasTarget() && playerReader.Bits.TargetIsDead())
             {
                 input.ClearTarget();
                 wait.Update();
@@ -249,11 +249,6 @@ namespace Core.Goals
         private bool LootChanged()
         {
             return lastLoot != playerReader.LastLootTime;
-        }
-
-        private bool HasTarget()
-        {
-            return playerReader.HasTarget;
         }
 
         private void Log(string text)

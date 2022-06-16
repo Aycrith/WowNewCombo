@@ -64,7 +64,7 @@ namespace Core.Goals
             stopMoving.Stop();
             wait.Update();
 
-            while (playerReader.Bits.IsFalling)
+            while (playerReader.Bits.IsFalling())
             {
                 wait.Update();
             }
@@ -91,7 +91,7 @@ namespace Core.Goals
                     CheckCastStarted(false);
                     break;
                 case CastState.Casting:
-                    if (!playerReader.IsCasting)
+                    if (!playerReader.IsCasting())
                     {
                         wait.Update();
                         if (playerReader.LastUIError == UI_ERROR.ERR_SPELL_FAILED_S)
@@ -141,7 +141,7 @@ namespace Core.Goals
 
         private void CheckCastStarted(bool restartTimer)
         {
-            if (playerReader.IsCasting &&
+            if (playerReader.IsCasting() &&
                 (herbSpells.Contains(playerReader.CastSpellId.Value) ||
                 miningSpells.Contains(playerReader.CastSpellId.Value)))
             {
@@ -157,7 +157,7 @@ namespace Core.Goals
                 }
             }
 
-            if (playerReader.Bits.IsFalling)
+            if (playerReader.Bits.IsFalling())
             {
                 state = CastState.Abort;
                 LogState(logger, state);

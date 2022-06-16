@@ -109,7 +109,7 @@ namespace Core.Goals
                     }
 
                     // wait until start casting
-                    wait.Till(500, StartsCasting);
+                    wait.Till(500, playerReader.IsCasting);
                     Log("Started casting...");
 
                     playerReader.LastUIError = UI_ERROR.NONE;
@@ -164,7 +164,7 @@ namespace Core.Goals
 
             SendActionEvent(new ActionEventArgs(GoapKey.shouldskin, false));
 
-            if (playerReader.HasTarget && playerReader.Bits.TargetIsDead)
+            if (playerReader.Bits.HasTarget() && playerReader.Bits.TargetIsDead())
             {
                 input.ClearTarget();
                 wait.Update();
@@ -200,14 +200,9 @@ namespace Core.Goals
             return lastLoot != playerReader.LastLootTime;
         }
 
-        private bool StartsCasting()
-        {
-            return playerReader.IsCasting;
-        }
-
         private bool CastFinishedOrInterrupted()
         {
-            return !playerReader.IsCasting || playerReader.LastUIError != UI_ERROR.NONE;
+            return !playerReader.IsCasting() || playerReader.LastUIError != UI_ERROR.NONE;
         }
 
         private void Log(string text)

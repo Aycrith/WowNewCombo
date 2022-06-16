@@ -128,7 +128,7 @@ namespace Core.Goals
             {
                 if (combatUtil.EnteredCombat() && HasPickedUpAnAdd)
                 {
-                    Log($"Add on pull! Combat={playerReader.Bits.PlayerInCombat}, Targets me={playerReader.Bits.TargetOfTargetIsPlayerOrPet}");
+                    Log($"Add on pull! Combat={playerReader.Bits.PlayerInCombat()}, Targets me={playerReader.Bits.TargetOfTargetIsPlayerOrPet()}");
 
                     stopMoving.Stop();
                     if (combatUtil.AquiredTarget(5000))
@@ -148,8 +148,8 @@ namespace Core.Goals
         }
 
         protected bool HasPickedUpAnAdd =>
-            playerReader.Bits.PlayerInCombat &&
-            !playerReader.Bits.TargetInCombat;
+            playerReader.Bits.PlayerInCombat() &&
+            !playerReader.Bits.TargetInCombat();
 
         protected void WaitForWithinMeleeRange(KeyAction item, bool lastCastSuccess)
         {
@@ -157,20 +157,20 @@ namespace Core.Goals
             wait.Update();
 
             var start = DateTime.UtcNow;
-            var lastKnownHealth = playerReader.HealthCurrent;
+            var lastKnownHealth = playerReader.HealthCurrent();
             double maxWaitTimeMs = 10_000;
 
             Log($"Waiting for the target to reach melee range - max {maxWaitTimeMs}ms");
 
-            while (playerReader.HasTarget && !playerReader.IsInMeleeRange && (DateTime.UtcNow - start).TotalMilliseconds < maxWaitTimeMs)
+            while (playerReader.Bits.HasTarget() && !playerReader.IsInMeleeRange() && (DateTime.UtcNow - start).TotalMilliseconds < maxWaitTimeMs)
             {
-                if (playerReader.HealthCurrent < lastKnownHealth)
+                if (playerReader.HealthCurrent() < lastKnownHealth)
                 {
                     Log("Got damage. Stop waiting for melee range.");
                     break;
                 }
 
-                if (playerReader.IsTargetCasting)
+                if (playerReader.IsTargetCasting())
                 {
                     Log("Target started casting. Stop waiting for melee range.");
                     break;
@@ -189,7 +189,7 @@ namespace Core.Goals
 
         public bool Pull()
         {
-            if (playerReader.Bits.HasPet && !playerReader.PetHasTarget)
+            if (playerReader.Bits.HasPet() && !playerReader.PetHasTarget)
             {
                 if (input.ClassConfig.PetAttack.GetCooldownRemaining() == 0)
                     input.PetAttack();
@@ -209,7 +209,7 @@ namespace Core.Goals
                 bool success = castingHandler.Cast(item, PullPrevention);
                 if (success)
                 {
-                    if (!playerReader.HasTarget)
+                    if (!playerReader.Bits.HasTarget())
                     {
                         return false;
                     }
@@ -222,10 +222,10 @@ namespace Core.Goals
                     }
                 }
                 else if (PullPrevention() &&
-                    (playerReader.IsCasting ||
-                     playerReader.Bits.IsAutoRepeatSpellOn_AutoAttack ||
-                     playerReader.Bits.IsAutoRepeatSpellOn_AutoShot ||
-                     playerReader.Bits.IsAutoRepeatSpellOn_Shoot))
+                    (playerReader.IsCasting() ||
+                     playerReader.Bits.SpellOn_AutoAttack() ||
+                     playerReader.Bits.SpellOn_AutoShot() ||
+                     playerReader.Bits.SpellOn_Shoot()))
                 {
                     Log("Preventing pulling possible tagged target!");
                     input.StopAttack();
@@ -244,7 +244,7 @@ namespace Core.Goals
                 }
             }
 
-            return playerReader.Bits.PlayerInCombat;
+            return playerReader.Bits.PlayerInCombat();
         }
 
         private void DefaultApproach()
@@ -286,8 +286,8 @@ namespace Core.Goals
                         TargetTargetEnum.Me or
                         TargetTargetEnum.Pet or
                         TargetTargetEnum.PartyOrPet ||
-                        addonReader.CreatureHistory.CombatDamageDoneGuid.ElapsedMs < CastingHandler.GCD ||
-                        playerReader.IsInMeleeRange;
+                        addonReader.CreatureHistory.CombatDamageDoneGuid.ElapsedMs() < CastingHandler.GCD ||
+                        playerReader.IsInMeleeRange();
         }
 
         private bool PullPrevention()
@@ -302,7 +302,7 @@ namespace Core.Goals
 
         private bool IsInMeleeRange()
         {
-            return playerReader.IsInMeleeRange;
+            return playerReader.IsInMeleeRange();
         }
 
         private void Log(string text)

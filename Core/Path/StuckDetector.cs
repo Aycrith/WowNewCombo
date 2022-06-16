@@ -66,7 +66,7 @@ namespace Core
 
         public void Update()
         {
-            if (playerReader.Bits.IsFalling)
+            if (playerReader.Bits.IsFalling())
                 return;
 
             if (debug)

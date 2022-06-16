@@ -5,7 +5,7 @@
 
 <div class="card" style="margin-top: 10px">
     <div class="card-header">
-        Goals -> @addonReader.PlayerReader.MinRange - @addonReader.PlayerReader.MaxRange
+        Goals -> @addonReader.PlayerReader.MinRange() - @addonReader.PlayerReader.MaxRange()
         | Expand <input type="checkbox" @bind="@Expand" />
         <ToggleButton Disable="@(botController.ClassConfig?.Mode == Mode.AttendedGather)" />
         <span class="float-right">

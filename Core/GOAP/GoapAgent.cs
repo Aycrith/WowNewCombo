@@ -187,25 +187,25 @@ namespace Core.GOAP
         {
             return new()
             {
-                { GoapKey.hastarget, playerReader.HasTarget },
-                { GoapKey.dangercombat, playerReader.Bits.PlayerInCombat && addonReader.CombatCreatureCount > 0 },
+                { GoapKey.hastarget, playerReader.Bits.HasTarget() },
+                { GoapKey.dangercombat, playerReader.Bits.PlayerInCombat() && addonReader.CombatCreatureCount > 0 },
                 { GoapKey.pethastarget, playerReader.PetHasTarget },
-                { GoapKey.targetisalive, playerReader.HasTarget && !playerReader.Bits.TargetIsDead },
-                { GoapKey.targettargetsus, (playerReader.HasTarget && playerReader.TargetHealthPercentage < 30) || playerReader.TargetTarget is // hacky way to keep attacking fleeing humanoids
+                { GoapKey.targetisalive, playerReader.Bits.HasTarget() && !playerReader.Bits.TargetIsDead() },
+                { GoapKey.targettargetsus, (playerReader.Bits.HasTarget() && playerReader.TargetHealthPercentage() < 30) || playerReader.TargetTarget is // hacky way to keep attacking fleeing humanoids
                     TargetTargetEnum.Me or
                     TargetTargetEnum.Pet or
                     TargetTargetEnum.PartyOrPet },
-                { GoapKey.incombat, playerReader.Bits.PlayerInCombat },
+                { GoapKey.incombat, playerReader.Bits.PlayerInCombat() },
                 { GoapKey.ismounted,
                     (playerReader.Class == PlayerClassEnum.Druid &&
                     playerReader.Form is Form.Druid_Travel or Form.Druid_Flight)
-                    || playerReader.Bits.IsMounted },
-                { GoapKey.withinpullrange, playerReader.WithInPullRange },
-                { GoapKey.incombatrange, playerReader.WithInCombatRange },
+                    || playerReader.Bits.IsMounted() },
+                { GoapKey.withinpullrange, playerReader.WithInPullRange() },
+                { GoapKey.incombatrange, playerReader.WithInCombatRange() },
                 { GoapKey.pulled, false },
-                { GoapKey.isdead, playerReader.Bits.DeadStatus },
-                { GoapKey.isswimming, playerReader.Bits.IsSwimming },
-                { GoapKey.itemsbroken, playerReader.Bits.ItemsAreBroken },
+                { GoapKey.isdead, playerReader.Bits.DeadStatus() },
+                { GoapKey.isswimming, playerReader.Bits.IsSwimming() },
+                { GoapKey.itemsbroken, playerReader.Bits.ItemsAreBroken() },
                 { GoapKey.producedcorpse, State.LastCombatKillCount > 0 },
 
                 // these hold their state

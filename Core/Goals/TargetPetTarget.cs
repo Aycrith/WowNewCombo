@@ -25,7 +25,7 @@ namespace Core.Goals
         {
             input.TargetPet();
             input.TargetOfTarget();
-            if (playerReader.HasTarget && (playerReader.Bits.TargetIsDead || playerReader.TargetGuid == playerReader.PetGuid))
+            if (playerReader.Bits.HasTarget() && (playerReader.Bits.TargetIsDead() || playerReader.TargetGuid == playerReader.PetGuid))
             {
                 input.ClearTarget();
             }

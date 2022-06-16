@@ -37,7 +37,7 @@ namespace Core.Goals
             this.addonReader = addonReader;
             this.playerReader = addonReader.PlayerReader;
             this.stopMoving = stopMoving;
-            
+
             this.classConfiguration = classConfiguration;
             this.castingHandler = castingHandler;
             this.mountHandler = mountHandler;
@@ -60,7 +60,7 @@ namespace Core.Goals
 
         protected void Fight()
         {
-            if (playerReader.Bits.HasPet && !playerReader.PetHasTarget)
+            if (playerReader.Bits.HasPet() && !playerReader.PetHasTarget)
             {
                 if (input.ClassConfig.PetAttack.GetCooldownRemaining() == 0)
                     input.PetAttack();
@@ -68,7 +68,7 @@ namespace Core.Goals
 
             foreach (var item in Keys)
             {
-                if (!playerReader.HasTarget)
+                if (playerReader.Bits.TargetIsDead() || !playerReader.Bits.HasTarget())
                 {
                     logger.LogInformation("Lost Target!");
                     stopMoving.Stop();
@@ -77,18 +77,12 @@ namespace Core.Goals
                 else
                 {
                     lastKnwonPlayerDirection = playerReader.Direction;
-                    lastKnownMinDistance = playerReader.MinRange;
-                    lastKnownMaxDistance = playerReader.MaxRange;
+                    lastKnownMinDistance = playerReader.MinRange();
+                    lastKnownMaxDistance = playerReader.MaxRange();
                 }
 
-                if (!playerReader.Bits.TargetIsDead && castingHandler.CastIfReady(item))
+                if (castingHandler.CastIfReady(item))
                 {
-                    if (item.Name == classConfiguration.Approach.Name ||
-                        item.Name == classConfiguration.AutoAttack.Name)
-                    {
-                        castingHandler.ReactToLastUIErrorMessage($"Fight {item.Name}");
-                    }
-
                     break;
                 }
             }
@@ -130,9 +124,9 @@ namespace Core.Goals
         {
             get
             {
-                return this.playerReader.Bits.PlayerInCombat &&
-                    !this.playerReader.Bits.TargetOfTargetIsPlayerOrPet
-                    && this.playerReader.TargetHealthPercentage == 100;
+                return this.playerReader.Bits.PlayerInCombat() &&
+                    !this.playerReader.Bits.TargetOfTargetIsPlayerOrPet()
+                    && this.playerReader.TargetHealthPercentage() == 100;
             }
         }
 
@@ -148,7 +142,7 @@ namespace Core.Goals
 
         public override void OnExit()
         {
-            if (addonReader.CombatCreatureCount > 0 && !playerReader.HasTarget)
+            if (addonReader.CombatCreatureCount > 0 && !playerReader.Bits.HasTarget())
             {
                 stopMoving.Stop();
             }
@@ -164,18 +158,18 @@ namespace Core.Goals
                 lastDirectionForTurnAround = playerReader.Direction;
             }
 
-            if (playerReader.Bits.IsDrowning)
+            if (playerReader.Bits.IsDrowning())
             {
                 StopDrowning();
                 return;
             }
 
-            if (playerReader.HasTarget)
+            if (playerReader.Bits.HasTarget())
             {
                 Fight();
             }
 
-            if (!playerReader.HasTarget && addonReader.CombatCreatureCount > 0)
+            if (!playerReader.Bits.HasTarget() && addonReader.CombatCreatureCount > 0)
             {
                 CreatureTargetMeOrMyPet();
             }
@@ -202,9 +196,9 @@ namespace Core.Goals
                 logger.LogInformation("Checking target in front of me");
                 input.NearestTarget();
                 wait.Update();
-                if (playerReader.HasTarget)
+                if (playerReader.Bits.HasTarget())
                 {
-                    if (playerReader.Bits.TargetInCombat && playerReader.Bits.TargetOfTargetIsPlayerOrPet)
+                    if (playerReader.Bits.TargetInCombat() && playerReader.Bits.TargetOfTargetIsPlayerOrPet())
                     {
                         ResetCooldowns();
 
@@ -225,7 +219,7 @@ namespace Core.Goals
                     if (anyDamageTakens.Any())
                     {
                         logger.LogWarning($"---- Possible threats found behind {anyDamageTakens.Count()}. Waiting for my target to change!");
-                        wait.Till(2000, () => playerReader.HasTarget);
+                        wait.Till(2000, playerReader.Bits.HasTarget);
                     }
                 }
             }

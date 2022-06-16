@@ -102,9 +102,9 @@ namespace Core.Goals
 
             if (item.AfterCastWaitNextSwing)
             {
-                (inputTimeOut, inputElapsedMs) = wait.Until(playerReader.MainHandSpeedMs,
+                (inputTimeOut, inputElapsedMs) = wait.Until(playerReader.MainHandSpeedMs(),
                     interrupt: () => !addonReader.CurrentAction.Is(item) ||
-                        playerReader.MainHandSwing.ElapsedMs < SpellQueueTimeMs, // swing timer reset from any miss
+                        playerReader.MainHandSwing.ElapsedMs() < SpellQueueTimeMs, // swing timer reset from any miss
                     repeat: RepeatStayCloseToTarget);
             }
             else
@@ -141,9 +141,9 @@ namespace Core.Goals
 
         private bool CastCastbar(KeyAction item, Func<bool> interrupt)
         {
-            if (playerReader.Bits.IsFalling)
+            if (playerReader.Bits.IsFalling())
             {
-                (bool fallTimeOut, double fallElapsedMs) = wait.Until(MaxAirTimeMs, () => !playerReader.Bits.IsFalling);
+                (bool fallTimeOut, double fallElapsedMs) = wait.UntilNot(MaxAirTimeMs, playerReader.Bits.IsFalling);
                 if (!fallTimeOut)
                 {
                     if (item.Log)
@@ -151,7 +151,7 @@ namespace Core.Goals
                 }
             }
 
-            if (playerReader.IsCasting && interrupt())
+            if (playerReader.IsCasting() && interrupt())
             {
                 //if (item.Log) // really spammy
                 //    item.LogInformation($" ... castbar during cast interrupted!");
@@ -196,7 +196,7 @@ namespace Core.Goals
                 return false;
             }
             if (item.Log)
-                item.LogInformation($" ... casting: {playerReader.IsCasting} -- count:{playerReader.CastCount} -- usable: {beforeUsable}->{addonReader.UsableAction.Is(item)} -- {((UI_ERROR)beforeCastEventValue).ToStringF()}->{((UI_ERROR)playerReader.CastEvent.Value).ToStringF()}");
+                item.LogInformation($" ... casting: {playerReader.IsCasting()} -- count:{playerReader.CastCount} -- usable: {beforeUsable}->{addonReader.UsableAction.Is(item)} -- {((UI_ERROR)beforeCastEventValue).ToStringF()}->{((UI_ERROR)playerReader.CastEvent.Value).ToStringF()}");
 
             if (!CastSuccessfull((UI_ERROR)playerReader.CastEvent.Value))
             {
@@ -204,11 +204,11 @@ namespace Core.Goals
                 return false;
             }
 
-            if (playerReader.IsCasting)
+            if (playerReader.IsCasting())
             {
                 if (item.Log)
                     item.LogInformation(" ... waiting for visible cast bar to end or interrupt.");
-                wait.Until(MaxCastTimeMs, () => !playerReader.IsCasting || prevState != interrupt(), RepeatPetAttack);
+                wait.Until(MaxCastTimeMs, () => !playerReader.IsCasting() || prevState != interrupt(), RepeatPetAttack);
                 if (prevState != interrupt())
                 {
                     if (item.Log)
@@ -235,7 +235,7 @@ namespace Core.Goals
 
         public bool CastIfReady(KeyAction item)
         {
-            return item.CanRun() && Cast(item, PlayerHasTarget);
+            return item.CanRun() && Cast(item, playerReader.Bits.HasTarget);
         }
 
         public bool CastIfReady(KeyAction item, Func<bool> interrupt)
@@ -245,7 +245,7 @@ namespace Core.Goals
 
         public bool Cast(KeyAction item)
         {
-            return Cast(item, PlayerHasTarget);
+            return Cast(item, playerReader.Bits.HasTarget);
         }
 
         public bool Cast(KeyAction item, Func<bool> interrupt)
@@ -253,7 +253,7 @@ namespace Core.Goals
             if (item.HasFormRequirement() && playerReader.Form != item.FormEnum)
             {
                 bool beforeUsable = addonReader.UsableAction.Is(item);
-                var beforeForm = playerReader.Form;
+                Form beforeForm = playerReader.Form;
 
                 if (!SwitchForm(beforeForm, item))
                 {
@@ -269,13 +269,13 @@ namespace Core.Goals
                     if (!beforeUsable && !addonReader.UsableAction.Is(item))
                     {
                         if (item.Log)
-                            item.LogInformation($" ... after switch {beforeForm}->{playerReader.Form} still not usable!");
+                            item.LogInformation($" ... after switch {beforeForm.ToStringF()}->{playerReader.Form.ToStringF()} still not usable!");
                         return false;
                     }
                 }
             }
 
-            if (playerReader.Bits.IsAutoRepeatSpellOn_Shoot)
+            if (playerReader.Bits.SpellOn_Shoot())
             {
                 logger.LogInformation("Stop AutoRepeat Shoot");
                 input.StopAttack();
@@ -347,7 +347,7 @@ namespace Core.Goals
                     while (sw.ElapsedMilliseconds < item.DelayAfterCast)
                     {
                         wait.Update();
-                        if (playerReader.Bits.TargetOfTargetIsPlayerOrPet)
+                        if (playerReader.Bits.TargetOfTargetIsPlayerOrPet())
                         {
                             break;
                         }
@@ -375,9 +375,7 @@ namespace Core.Goals
             {
                 if (item.RequirementObjects.Count > 0)
                 {
-                    (bool canRun, double canRunElapsedMs) = wait.Until(SpellQueueTimeMs,
-                        () => !item.CanRun()
-                    );
+                    (bool canRun, double canRunElapsedMs) = wait.UntilNot(SpellQueueTimeMs, item.CanRun);
                     if (item.Log)
                         item.LogInformation($" ... instant interrupt: {!canRun} | CanRun: {item.CanRun()} | Delay: {canRunElapsedMs}ms");
                 }
@@ -444,7 +442,7 @@ namespace Core.Goals
 
             (bool changedTimeOut, double elapsedMs) = wait.Until(SpellQueueTimeMs, () => playerReader.Form == item.FormEnum);
             if (item.Log)
-                item.LogInformation($" ... form changed: {!changedTimeOut} | {beforeForm} -> {playerReader.Form} | Delay: {elapsedMs}ms");
+                item.LogInformation($" ... form changed: {!changedTimeOut} | {beforeForm.ToStringF()} -> {playerReader.Form.ToStringF()} | Delay: {elapsedMs}ms");
 
             return playerReader.Form == item.FormEnum;
         }
@@ -476,7 +474,7 @@ namespace Core.Goals
                     }
                     break;
                 case UI_ERROR.ERR_SPELL_OUT_OF_RANGE:
-                    if (playerReader.Class == PlayerClassEnum.Hunter && playerReader.IsInMeleeRange)
+                    if (playerReader.Class == PlayerClassEnum.Hunter && playerReader.IsInMeleeRange())
                     {
                         logger.LogInformation($"{source} -- As a Hunter didn't know how to react {UI_ERROR.ERR_SPELL_OUT_OF_RANGE.ToStringF()}");
                         return;
@@ -491,7 +489,7 @@ namespace Core.Goals
                     break;
                 case UI_ERROR.ERR_BADATTACKFACING:
 
-                    if (playerReader.IsInMeleeRange)
+                    if (playerReader.IsInMeleeRange())
                     {
                         logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_BADATTACKFACING.ToStringF()} -- Interact!");
                         input.Interact();
@@ -517,7 +515,7 @@ namespace Core.Goals
                     break;
                 case UI_ERROR.ERR_SPELL_FAILED_ANOTHER_IN_PROGRESS:
                     logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_SPELL_FAILED_ANOTHER_IN_PROGRESS.ToStringF()} -- Wait till casting!");
-                    wait.While(() => playerReader.IsCasting);
+                    wait.While(playerReader.IsCasting);
 
                     wait.Update();
                     playerReader.LastUIError = UI_ERROR.NONE;
@@ -529,7 +527,7 @@ namespace Core.Goals
                     playerReader.LastUIError = UI_ERROR.NONE;
                     break;
                 case UI_ERROR.ERR_BADATTACKPOS:
-                    if (playerReader.Bits.IsAutoRepeatSpellOn_AutoAttack)
+                    if (playerReader.Bits.SpellOn_AutoAttack())
                     {
                         logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_BADATTACKPOS.ToStringF()} -- Interact!");
                         input.Interact();
@@ -588,14 +586,14 @@ namespace Core.Goals
 
                     break;
                 case UI_ERROR.ERR_SPELL_OUT_OF_RANGE:
-                    if (playerReader.Class == PlayerClassEnum.Hunter && playerReader.IsInMeleeRange)
+                    if (playerReader.Class == PlayerClassEnum.Hunter && playerReader.IsInMeleeRange())
                     {
                         logger.LogInformation($"{source} -- As a Hunter didn't know how to react {UI_ERROR.ERR_SPELL_OUT_OF_RANGE.ToStringF()}");
                         return;
                     }
 
-                    float minRange = playerReader.MinRange;
-                    if (playerReader.Bits.PlayerInCombat && playerReader.HasTarget && !playerReader.IsTargetCasting)
+                    float minRange = playerReader.MinRange();
+                    if (playerReader.Bits.PlayerInCombat() && playerReader.Bits.HasTarget() && !playerReader.IsTargetCasting())
                     {
                         wait.Update();
                         wait.Update();
@@ -604,7 +602,7 @@ namespace Core.Goals
                             logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_SPELL_OUT_OF_RANGE.ToStringF()} -- Just wait for the target to get in range.");
 
                             (bool timeout, double elapsedMs) = wait.Until(MaxWaitCastTimeMs,
-                                () => minRange != playerReader.MinRange || playerReader.IsTargetCasting
+                                () => minRange != playerReader.MinRange() || playerReader.IsTargetCasting()
                             );
                         }
                     }
@@ -621,22 +619,20 @@ namespace Core.Goals
                             input.Interact();
 
                             (bool timeout, double elapsedMs) = wait.Until(MaxWaitCastTimeMs,
-                                () => minRange != playerReader.MinRange);
+                                () => minRange != playerReader.MinRange());
 
-                            logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_SPELL_OUT_OF_RANGE.ToStringF()} -- Approached target {minRange}->{playerReader.MinRange}");
+                            logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_SPELL_OUT_OF_RANGE.ToStringF()} -- Approached target {minRange}->{playerReader.MinRange()}");
                         }
                         else
                         {
                             logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_SPELL_OUT_OF_RANGE.ToStringF()} -- Start moving forward");
                             input.SetKeyState(input.ForwardKey, true);
                         }
-
-
                     }
 
                     break;
                 case UI_ERROR.ERR_BADATTACKFACING:
-                    if (playerReader.IsInMeleeRange)
+                    if (playerReader.IsInMeleeRange())
                     {
                         logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_BADATTACKFACING.ToStringF()} -- Interact!");
                         input.Interact();
@@ -661,11 +657,11 @@ namespace Core.Goals
                     break;
                 case UI_ERROR.ERR_SPELL_FAILED_ANOTHER_IN_PROGRESS:
                     logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_SPELL_FAILED_ANOTHER_IN_PROGRESS.ToStringF()} -- Wait till casting!");
-                    wait.While(() => playerReader.IsCasting);
+                    wait.While(playerReader.IsCasting);
 
                     break;
                 case UI_ERROR.ERR_BADATTACKPOS:
-                    if (playerReader.Bits.IsAutoRepeatSpellOn_AutoAttack)
+                    if (playerReader.Bits.SpellOn_AutoAttack())
                     {
                         logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_BADATTACKPOS.ToStringF()} -- Interact!");
                         input.Interact();
@@ -691,15 +687,10 @@ namespace Core.Goals
             }
         }
 
-        private bool PlayerHasTarget()
-        {
-            return playerReader.HasTarget;
-        }
-
         private void RepeatPetAttack()
         {
-            if (playerReader.Bits.PlayerInCombat &&
-                playerReader.Bits.HasPet &&
+            if (playerReader.Bits.PlayerInCombat() &&
+                playerReader.Bits.HasPet() &&
                 !playerReader.PetHasTarget &&
                 input.ClassConfig.PetAttack.GetCooldownRemaining() == 0)
             {

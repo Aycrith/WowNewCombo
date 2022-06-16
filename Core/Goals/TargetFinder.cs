@@ -37,7 +37,7 @@ namespace Core.Goals
                 input.NearestTarget();
             }
 
-            if (!cts.IsCancellationRequested && !classConfig.KeyboardOnly && !playerReader.HasTarget)
+            if (!cts.IsCancellationRequested && !classConfig.KeyboardOnly && !playerReader.Bits.HasTarget())
             {
                 npcNameTargeting.ChangeNpcType(target);
                 if (!cts.IsCancellationRequested && npcNameTargeting.NpcCount > 0)
@@ -46,7 +46,7 @@ namespace Core.Goals
                 }
             }
 
-            return playerReader.HasTarget;
+            return playerReader.Bits.HasTarget();
         }
 
     }

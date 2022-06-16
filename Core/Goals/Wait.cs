@@ -52,6 +52,23 @@ namespace Core
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public (bool timeout, double elapsedMs) UntilNot(int timeoutMs, Func<bool> interrupt, Action? repeat = null)
+        {
+            DateTime start = DateTime.UtcNow;
+            double elapsedMs;
+            while ((elapsedMs = (DateTime.UtcNow - start).TotalMilliseconds) < timeoutMs)
+            {
+                repeat?.Invoke();
+                if (!interrupt())
+                    return (false, elapsedMs);
+
+                Update();
+            }
+
+            return (true, elapsedMs);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void While(Func<bool> condition)
         {
             while (condition())

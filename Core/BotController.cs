@@ -124,7 +124,7 @@ namespace Core
                 }
             } while (!Enum.GetValues(typeof(PlayerClassEnum)).Cast<PlayerClassEnum>().Contains(AddonReader.PlayerReader.Class));
 
-            logger.LogDebug($"Woohoo, I have read the player class. You are a {AddonReader.PlayerReader.Race} {AddonReader.PlayerReader.Class}.");
+            logger.LogDebug($"Woohoo, I have read the player class. You are a {AddonReader.PlayerReader.Race.ToStringF()} {AddonReader.PlayerReader.Class.ToStringF()}.");
 
             npcNameFinder = new(logger, WowScreen, npcNameFinderEvent);
             npcNameTargeting = new(logger, cts, WowScreen, npcNameFinder, wowProcessInput);
@@ -192,7 +192,7 @@ namespace Core
                 _ = pather.DrawSphere(
                     new SphereArgs("Player",
                     AddonReader.PlayerReader.PlayerLocation,
-                    AddonReader.PlayerReader.Bits.PlayerInCombat ? 1 : AddonReader.PlayerReader.HasTarget ? 6 : 2,
+                    AddonReader.PlayerReader.Bits.PlayerInCombat() ? 1 : AddonReader.PlayerReader.Bits.HasTarget() ? 6 : 2,
                     AddonReader.UIMapId.Value
                 ));
 

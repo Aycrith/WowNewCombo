@@ -35,8 +35,8 @@ namespace Core.Goals
         private double ApproachDurationMs => (DateTime.UtcNow - approachStart).TotalMilliseconds;
 
         private bool HasPickedUpAnAdd =>
-            playerReader.Bits.PlayerInCombat &&
-            !playerReader.Bits.TargetInCombat;
+            playerReader.Bits.PlayerInCombat() &&
+            !playerReader.Bits.TargetInCombat();
 
         public ApproachTargetGoal(ILogger logger, ConfigurableInput input, Wait wait, PlayerReader playerReader, StopMoving stopMoving, CombatUtil combatUtil, IBlacklist blacklist)
         {
@@ -67,7 +67,7 @@ namespace Core.Goals
         public override void OnEnter()
         {
             initialTargetGuid = playerReader.TargetGuid;
-            initialMinRange = playerReader.MinRange;
+            initialMinRange = playerReader.MinRange();
             lastPlayerLocation = playerReader.PlayerLocation;
 
             combatUtil.Update();
@@ -84,7 +84,7 @@ namespace Core.Goals
             if (combatUtil.EnteredCombat() && HasPickedUpAnAdd)
             {
                 if (debug)
-                    Log($"Add on approach! PlayerCombat={playerReader.Bits.PlayerInCombat}, Targets us={playerReader.Bits.TargetOfTargetIsPlayerOrPet}");
+                    Log($"Add on approach! PlayerCombat={playerReader.Bits.PlayerInCombat()}, Targets us={playerReader.Bits.TargetOfTargetIsPlayerOrPet()}");
 
                 stopMoving.Stop();
                 combatUtil.AquiredTarget(5000);
@@ -97,7 +97,7 @@ namespace Core.Goals
                 input.Approach();
             }
 
-            if (!playerReader.Bits.PlayerInCombat)
+            if (!playerReader.Bits.PlayerInCombat())
             {
                 NonCombatApproach();
             }
@@ -149,7 +149,7 @@ namespace Core.Goals
 
             if (playerReader.TargetGuid == initialTargetGuid)
             {
-                int initialTargetMinRange = playerReader.MinRange;
+                int initialTargetMinRange = playerReader.MinRange();
                 if (input.ClassConfig.TargetNearestTarget.GetCooldownRemaining() == 0)
                 {
                     input.NearestTarget();
@@ -158,14 +158,14 @@ namespace Core.Goals
 
                 if (playerReader.TargetGuid != initialTargetGuid)
                 {
-                    if (playerReader.HasTarget && !blacklist.IsTargetBlacklisted()) // blacklist
+                    if (playerReader.Bits.HasTarget() && !blacklist.IsTargetBlacklisted()) // blacklist
                     {
-                        if (playerReader.MinRange < initialTargetMinRange)
+                        if (playerReader.MinRange() < initialTargetMinRange)
                         {
                             if (debug)
-                                Log($"Found a closer target! {playerReader.MinRange} < {initialTargetMinRange}");
+                                Log($"Found a closer target! {playerReader.MinRange()} < {initialTargetMinRange}");
 
-                            initialMinRange = playerReader.MinRange;
+                            initialMinRange = playerReader.MinRange();
                         }
                         else
                         {
@@ -185,10 +185,10 @@ namespace Core.Goals
                 }
             }
 
-            if (ApproachDurationMs > 2000 && initialMinRange < playerReader.MinRange)
+            if (ApproachDurationMs > 2000 && initialMinRange < playerReader.MinRange())
             {
                 if (debug)
-                    Log($"Going away from the target! {initialMinRange} < {playerReader.MinRange}");
+                    Log($"Going away from the target! {initialMinRange} < {playerReader.MinRange()}");
 
                 input.ClearTarget();
             }

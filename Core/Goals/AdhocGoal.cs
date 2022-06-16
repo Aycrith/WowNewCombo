@@ -35,7 +35,7 @@ namespace Core.Goals
             this.castingHandler = castingHandler;
             this.mountHandler = mountHandler;
 
-            dangerCombat = () => addonReader.PlayerReader.Bits.PlayerInCombat &&
+            dangerCombat = () => addonReader.PlayerReader.Bits.PlayerInCombat() &&
                 addonReader.CombatCreatureCount > 0;
 
             if (key.InCombat == "false")
@@ -62,21 +62,21 @@ namespace Core.Goals
 
             castingHandler.CastIfReady(key, dangerCombat);
 
-            bool wasDrinkingOrEating = playerReader.Buffs.Drinking || playerReader.Buffs.Eating;
+            bool wasDrinkingOrEating = playerReader.Buffs.Drink() || playerReader.Buffs.Food();
 
             DateTime startTime = DateTime.UtcNow;
 
-            while ((playerReader.Buffs.Drinking || playerReader.Buffs.Eating || playerReader.IsCasting) && !dangerCombat())
+            while ((playerReader.Buffs.Drink() || playerReader.Buffs.Food() || playerReader.IsCasting()) && !dangerCombat())
             {
                 wait.Update();
 
-                if (playerReader.Buffs.Drinking)
+                if (playerReader.Buffs.Drink())
                 {
-                    if (playerReader.ManaPercentage > 98) { break; }
+                    if (playerReader.ManaPercentage() > 98) { break; }
                 }
-                else if (playerReader.Buffs.Eating && !key.Requirement.Contains("Well Fed"))
+                else if (playerReader.Buffs.Food() && !key.Requirement.Contains("Well Fed"))
                 {
-                    if (playerReader.HealthPercent > 98) { break; }
+                    if (playerReader.HealthPercent() > 98) { break; }
                 }
                 else if (!key.CanRun())
                 {
