@@ -1,6 +1,6 @@
 ﻿namespace Core
 {
-    public struct AuraCount
+    public readonly struct AuraCount
     {
         public int Hash { get; }
         public int PlayerDebuff { get; }
