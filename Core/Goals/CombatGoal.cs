@@ -1,4 +1,4 @@
-﻿using Core.GOAP;
+using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
@@ -81,14 +81,8 @@ namespace Core.Goals
                     lastKnownMaxDistance = playerReader.MaxRange;
                 }
 
-                if (!playerReader.Bits.TargetIsDead && castingHandler.CastIfReady(item))
+                if (castingHandler.CastIfReady(item))
                 {
-                    if (item.Name == classConfiguration.Approach.Name ||
-                        item.Name == classConfiguration.AutoAttack.Name)
-                    {
-                        castingHandler.ReactToLastUIErrorMessage($"Fight {item.Name}");
-                    }
-
                     break;
                 }
             }
