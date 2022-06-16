@@ -10,7 +10,7 @@ namespace Core
         public int Value { private set; get; }
         public DateTime LastChanged { private set; get; }
 
-        public int ElapsedMs => (int)(DateTime.UtcNow - LastChanged).TotalMilliseconds;
+        public int ElapsedMs() => (int)(DateTime.UtcNow - LastChanged).TotalMilliseconds;
 
         public event Action? Changed;
 

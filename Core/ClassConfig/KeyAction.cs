@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -171,7 +171,7 @@ namespace Core
         public bool CanDoFormChangeAndHaveMinimumMana()
         {
             return playerReader.FormCost.ContainsKey(FormEnum) &&
-                playerReader.ManaCurrent >= playerReader.FormCost[FormEnum] + MinMana;
+                playerReader.ManaCurrent() >= playerReader.FormCost[FormEnum] + MinMana;
         }
 
         internal void SetClicked()

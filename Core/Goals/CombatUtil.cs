@@ -27,27 +27,27 @@ namespace Core
             this.addonReader = addonReader;
             this.playerReader = addonReader.PlayerReader;
 
-            outOfCombat = !playerReader.Bits.PlayerInCombat;
+            outOfCombat = !playerReader.Bits.PlayerInCombat();
             lastPosition = playerReader.PlayerLocation;
         }
 
         public void Update()
         {
             // TODO: have to find a better way to reset outOfCombat
-            outOfCombat = !playerReader.Bits.PlayerInCombat;
+            outOfCombat = !playerReader.Bits.PlayerInCombat();
             lastPosition = playerReader.PlayerLocation;
         }
 
         public bool EnteredCombat()
         {
-            if (!outOfCombat && !playerReader.Bits.PlayerInCombat)
+            if (!outOfCombat && !playerReader.Bits.PlayerInCombat())
             {
                 Log("Combat Leave");
                 outOfCombat = true;
                 return false;
             }
 
-            if (outOfCombat && playerReader.Bits.PlayerInCombat)
+            if (outOfCombat && playerReader.Bits.PlayerInCombat())
             {
                 Log("Combat Enter");
                 outOfCombat = false;
@@ -59,7 +59,7 @@ namespace Core
 
         public bool AquiredTarget(int maxTimeMs = 400)
         {
-            if (this.playerReader.Bits.PlayerInCombat)
+            if (this.playerReader.Bits.PlayerInCombat())
             {
                 if (this.playerReader.PetHasTarget)
                 {
@@ -76,9 +76,9 @@ namespace Core
                 input.NearestTarget();
                 wait.Update();
 
-                if (playerReader.HasTarget &&
-                    playerReader.Bits.TargetInCombat &&
-                    (playerReader.Bits.TargetOfTargetIsPlayerOrPet ||
+                if (playerReader.Bits.HasTarget() &&
+                    playerReader.Bits.TargetInCombat() &&
+                    (playerReader.Bits.TargetOfTargetIsPlayerOrPet() ||
                     addonReader.CreatureHistory.DamageDone.Exists(x => x.Guid == playerReader.TargetGuid)))
                 {
                     Log("Found target");
@@ -128,7 +128,7 @@ namespace Core
 
         private bool PlayerOrPetHasTarget()
         {
-            return playerReader.HasTarget || playerReader.PetHasTarget;
+            return playerReader.Bits.HasTarget() || playerReader.PetHasTarget;
         }
 
         private bool StartedMoving()

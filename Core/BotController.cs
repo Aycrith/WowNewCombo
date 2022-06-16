@@ -1,4 +1,4 @@
-using Core.Goals;
+﻿using Core.Goals;
 using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -192,7 +192,7 @@ namespace Core
                 _ = pather.DrawSphere(
                     new SphereArgs("Player",
                     AddonReader.PlayerReader.PlayerLocation,
-                    AddonReader.PlayerReader.Bits.PlayerInCombat ? 1 : AddonReader.PlayerReader.HasTarget ? 6 : 2,
+                    AddonReader.PlayerReader.Bits.PlayerInCombat() ? 1 : AddonReader.PlayerReader.Bits.HasTarget() ? 6 : 2,
                     AddonReader.UIMapId.Value
                 ));
 

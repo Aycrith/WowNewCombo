@@ -54,9 +54,9 @@ namespace Core.Goals
             Log("No corpse name found - check last dead target exists");
             input.LastTarget();
             wait.Update();
-            if (playerReader.HasTarget)
+            if (playerReader.Bits.HasTarget())
             {
-                if (playerReader.Bits.TargetIsDead)
+                if (playerReader.Bits.TargetIsDead())
                 {
                     Log("Found last dead target");
                     input.Interact();
@@ -109,7 +109,7 @@ namespace Core.Goals
 
             SendActionEvent(new ActionEventArgs(GoapKey.shouldloot, false));
 
-            if (playerReader.HasTarget && playerReader.Bits.TargetIsDead)
+            if (playerReader.Bits.HasTarget() && playerReader.Bits.TargetIsDead())
             {
                 input.ClearTarget();
                 wait.Update();

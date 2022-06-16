@@ -144,9 +144,9 @@ namespace Core.Goals
 
         public override void PerformAction()
         {
-            if (playerReader.Bits.PlayerInCombat && classConfig.Mode != Mode.AttendedGather) { return; }
+            if (playerReader.Bits.PlayerInCombat() && classConfig.Mode != Mode.AttendedGather) { return; }
 
-            if (playerReader.Bits.IsDrowning)
+            if (playerReader.Bits.IsDrowning())
             {
                 LogWarn("Drowning! Swim up");
                 input.Jump();
@@ -189,7 +189,7 @@ namespace Core.Goals
                     input.KeyPress(key.ConsoleKey, input.defaultKeyPress);
                 }
 
-                (bool targetTimeout, double targetElapsedMs) = wait.Until(400, () => playerReader.HasTarget);
+                (bool targetTimeout, double targetElapsedMs) = wait.Until(400, playerReader.Bits.HasTarget);
                 if (targetTimeout)
                 {
                     LogWarn("No target found! Turn left to find NPC");
@@ -257,14 +257,14 @@ namespace Core.Goals
 
         private bool OpenMerchantWindow()
         {
-            (bool timeout, double elapsedMs) = wait.Until(GossipTimeout, () => gossipReader.GossipStart || gossipReader.MerchantWindowOpened);
-            if (gossipReader.MerchantWindowOpened)
+            (bool timeout, double elapsedMs) = wait.Until(GossipTimeout, gossipReader.GossipStartOrMerchantWindowOpened);
+            if (gossipReader.MerchantWindowOpened())
             {
                 LogWarn($"Gossip no options! {elapsedMs}ms");
             }
             else
             {
-                (bool gossipEndTimeout, double gossipEndElapsedMs) = wait.Until(GossipTimeout, () => gossipReader.GossipEnd);
+                (bool gossipEndTimeout, double gossipEndElapsedMs) = wait.Until(GossipTimeout, gossipReader.GossipEnd);
                 if (timeout)
                 {
                     LogWarn($"Gossip - {nameof(gossipReader.GossipEnd)} not fired after {gossipEndElapsedMs}ms");
@@ -287,12 +287,12 @@ namespace Core.Goals
 
             Log($"Merchant window opened after {elapsedMs}ms");
 
-            (bool sellStartedTimeout, double sellStartedElapsedMs) = wait.Until(GossipTimeout, () => gossipReader.MerchantWindowSelling);
+            (bool sellStartedTimeout, double sellStartedElapsedMs) = wait.Until(GossipTimeout, gossipReader.MerchantWindowSelling);
             if (!sellStartedTimeout)
             {
                 Log($"Merchant sell grey items started after {sellStartedElapsedMs}ms");
 
-                (bool sellFinishedTimeout, double sellFinishedElapsedMs) = wait.Until(GossipTimeout, () => gossipReader.MerchantWindowSellingFinished);
+                (bool sellFinishedTimeout, double sellFinishedElapsedMs) = wait.Until(GossipTimeout, gossipReader.MerchantWindowSellingFinished);
                 if (!sellFinishedTimeout)
                 {
                     Log($"Merchant sell grey items finished, took {sellFinishedElapsedMs}ms");

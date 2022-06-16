@@ -53,7 +53,7 @@ namespace Core
 
             this.keyActions = new KeyActions();
 
-            requirementMap = new Dictionary<string, Func<string, Requirement>>()
+            requirementMap = new()
             {
                 { ">=", CreateGreaterOrEquals },
                 { "<=", CreateLesserOrEquals },
@@ -72,10 +72,7 @@ namespace Core
                 { "Usable:", CreateUsable }
             };
 
-            bool FrostArmor() => playerReader.Buffs.FrostArmor;
-            bool Curseof() => playerReader.TargetDebuffs.Curseof;
-
-            boolVariables = new Dictionary<string, Func<bool>>
+            boolVariables = new()
             {
                 // Target Based
                 { "TargetYieldXP", () => playerReader.TargetYieldXP },
@@ -86,59 +83,59 @@ namespace Core
                 { AddVisible, () => npcNameFinder.PotentialAddsExist },
 
                 // Range
-                { "InMeleeRange", () => playerReader.IsInMeleeRange },
-                { "InDeadZoneRange", () => playerReader.IsInDeadZone },
-                { "OutOfCombatRange", () => !playerReader.WithInCombatRange },
-                { "InCombatRange", () => playerReader.WithInCombatRange },
+                { "InMeleeRange", playerReader.IsInMeleeRange },
+                { "InDeadZoneRange", playerReader.IsInDeadZone },
+                { "OutOfCombatRange", () => !playerReader.WithInCombatRange() },
+                { "InCombatRange", playerReader.WithInCombatRange },
                 
                 // Pet
-                { "Has Pet", () => playerReader.Bits.HasPet },
-                { "Pet Happy", () => playerReader.Bits.PetHappy },
+                { "Has Pet", playerReader.Bits.HasPet },
+                { "Pet Happy", playerReader.Bits.PetHappy },
                 
                 // Auto Spell
-                { "AutoAttacking", () => playerReader.Bits.IsAutoRepeatSpellOn_AutoAttack },
-                { "Shooting", () => playerReader.Bits.IsAutoRepeatSpellOn_Shoot },
-                { "AutoShot", () => playerReader.Bits.IsAutoRepeatSpellOn_AutoShot },
+                { "AutoAttacking", playerReader.Bits.SpellOn_AutoAttack },
+                { "Shooting", playerReader.Bits.SpellOn_Shoot },
+                { "AutoShot", playerReader.Bits.SpellOn_AutoShot },
                 
                 // Temporary Enchants
-                { "HasMainHandEnchant", () => playerReader.Bits.MainHandEnchant_Active },
-                { "HasOffHandEnchant", () => playerReader.Bits.OffHandEnchant_Active },
+                { "HasMainHandEnchant", playerReader.Bits.MainHandEnchant_Active },
+                { "HasOffHandEnchant", playerReader.Bits.OffHandEnchant_Active },
                 
                 // Equipment - Bag
-                { "Items Broken", () => playerReader.Bits.ItemsAreBroken },
+                { "Items Broken", playerReader.Bits.ItemsAreBroken },
                 { "BagFull", () => bagReader.BagsFull },
                 { "BagGreyItem", () => bagReader.AnyGreyItem },
                 { "HasRangedWeapon", () => equipmentReader.HasRanged() },
-                { "HasAmmo", () => playerReader.Bits.HasAmmo },
+                { "HasAmmo", playerReader.Bits.HasAmmo },
 
-                { "Casting", () => playerReader.IsCasting },
+                { "Casting", playerReader.IsCasting },
 
                 // General Buff Condition
-                { "Eating", () => playerReader.Buffs.Eating },
-                { "Drinking", () => playerReader.Buffs.Drinking },
-                { "Mana Regeneration", () => playerReader.Buffs.ManaRegeneration },
-                { "Well Fed", () => playerReader.Buffs.WellFed },
-                { "Clearcasting", () => playerReader.Buffs.Clearcasting },
+                { "Eating", playerReader.Buffs.Food },
+                { "Drinking", playerReader.Buffs.Drink },
+                { "Mana Regeneration", playerReader.Buffs.Mana_Regeneration },
+                { "Well Fed", playerReader.Buffs.Well_Fed },
+                { "Clearcasting", playerReader.Buffs.Clearcasting },
 
                 // Player Affected
-                { "Swimming", () => playerReader.Bits.IsSwimming },
-                { "Falling", () => playerReader.Bits.IsFalling },
+                { "Swimming", playerReader.Bits.IsSwimming },
+                { "Falling", playerReader.Bits.IsFalling },
 
                 //Priest
-                { "Fortitude", () => playerReader.Buffs.Fortitude },
-                { "InnerFire", () => playerReader.Buffs.InnerFire },
-                { "Divine Spirit", () => playerReader.Buffs.DivineSpirit },
-                { "Renew", () => playerReader.Buffs.Renew },
-                { "Shield", () => playerReader.Buffs.Shield },
+                { "Fortitude", playerReader.Buffs.Fortitude },
+                { "InnerFire", playerReader.Buffs.InnerFire },
+                { "Divine Spirit", playerReader.Buffs.DivineSpirit },
+                { "Renew", playerReader.Buffs.Renew },
+                { "Shield", playerReader.Buffs.Shield },
 
                 // Druid
-                { "Mark of the Wild", () => playerReader.Buffs.MarkOfTheWild },
-                { "Thorns", () => playerReader.Buffs.Thorns },
-                { "TigersFury", () => playerReader.Buffs.TigersFury },
-                { "Prowl", () => playerReader.Buffs.Prowl },
-                { "Rejuvenation", () => playerReader.Buffs.Rejuvenation },
-                { "Regrowth", () => playerReader.Buffs.Regrowth },
-                { "Omen of Clarity", () => playerReader.Buffs.OmenOfClarity },
+                { "Mark of the Wild", playerReader.Buffs.MarkOfTheWild },
+                { "Thorns", playerReader.Buffs.Thorns },
+                { "TigersFury", playerReader.Buffs.TigersFury },
+                { "Prowl", playerReader.Buffs.Prowl },
+                { "Rejuvenation", playerReader.Buffs.Rejuvenation },
+                { "Regrowth", playerReader.Buffs.Regrowth },
+                { "Omen of Clarity", playerReader.Buffs.OmenOfClarity },
 
                 // Paladin
                 { "Concentration Aura", () => playerReader.Form is Form.Paladin_Concentration_Aura },
@@ -149,136 +146,135 @@ namespace Core
                 { "Frost Resistance Aura", () => playerReader.Form is Form.Paladin_Frost_Resistance_Aura },
                 { "Retribution Aura", () => playerReader.Form is Form.Paladin_Retribution_Aura },
                 { "Shadow Resistance Aura", () => playerReader.Form is Form.Paladin_Shadow_Resistance_Aura },
-                { "Seal of Righteousness", () => playerReader.Buffs.SealofRighteousness },
-                { "Seal of the Crusader", () => playerReader.Buffs.SealoftheCrusader },
-                { "Seal of Command", () => playerReader.Buffs.SealofCommand },
-                { "Seal of Wisdom", () => playerReader.Buffs.SealofWisdom },
-                { "Seal of Light", () => playerReader.Buffs.SealofLight },
-                { "Seal of Blood", () => playerReader.Buffs.SealofBlood },
-                { "Seal of Vengeance", () => playerReader.Buffs.SealofVengeance },
-                { "Blessing of Might", () => playerReader.Buffs.BlessingofMight },
-                { "Blessing of Protection", () => playerReader.Buffs.BlessingofProtection },
-                { "Blessing of Wisdom", () => playerReader.Buffs.BlessingofWisdom },
-                { "Blessing of Kings", () => playerReader.Buffs.BlessingofKings },
-                { "Blessing of Salvation", () => playerReader.Buffs.BlessingofSalvation },
-                { "Blessing of Sanctuary", () => playerReader.Buffs.BlessingofSanctuary },
-                { "Blessing of Light", () => playerReader.Buffs.BlessingofLight },
-                { "Righteous Fury", () => playerReader.Buffs.RighteousFury },
-                { "Divine Protection", () => playerReader.Buffs.DivineProtection },
-                { "Avenging Wrath", () => playerReader.Buffs.AvengingWrath },
-                { "Holy Shield", () => playerReader.Buffs.HolyShield },
+
+                { "Seal of Righteousness", playerReader.Buffs.SealofRighteousness },
+                { "Seal of the Crusader", playerReader.Buffs.SealoftheCrusader },
+                { "Seal of Command", playerReader.Buffs.SealofCommand },
+                { "Seal of Wisdom", playerReader.Buffs.SealofWisdom },
+                { "Seal of Light", playerReader.Buffs.SealofLight },
+                { "Seal of Blood", playerReader.Buffs.SealofBlood },
+                { "Seal of Vengeance", playerReader.Buffs.SealofVengeance },
+                { "Blessing of Might", playerReader.Buffs.BlessingofMight },
+                { "Blessing of Protection", playerReader.Buffs.BlessingofProtection },
+                { "Blessing of Wisdom", playerReader.Buffs.BlessingofWisdom },
+                { "Blessing of Kings", playerReader.Buffs.BlessingofKings },
+                { "Blessing of Salvation", playerReader.Buffs.BlessingofSalvation },
+                { "Blessing of Sanctuary", playerReader.Buffs.BlessingofSanctuary },
+                { "Blessing of Light", playerReader.Buffs.BlessingofLight },
+                { "Righteous Fury", playerReader.Buffs.RighteousFury },
+                { "Divine Protection", playerReader.Buffs.DivineProtection },
+                { "Avenging Wrath", playerReader.Buffs.AvengingWrath },
+                { "Holy Shield", playerReader.Buffs.HolyShield },
 
                 // Mage
-                { "Frost Armor", FrostArmor },
-                { "Ice Armor", FrostArmor },
-                { "Molten Armor", FrostArmor },
-                { "Mage Armor", FrostArmor },
-                { "Arcane Intellect", () => playerReader.Buffs.ArcaneIntellect },
-                { "Ice Barrier", () => playerReader.Buffs.IceBarrier },
-                { "Ward", () => playerReader.Buffs.Ward },
-                { "Fire Power", () => playerReader.Buffs.FirePower },
-                { "Mana Shield", () => playerReader.Buffs.ManaShield },
-                { "Presence of Mind", () => playerReader.Buffs.PresenceOfMind },
-                { "Arcane Power", () => playerReader.Buffs.ArcanePower },
+                { "Frost Armor", playerReader.Buffs.FrostArmor },
+                { "Ice Armor", playerReader.Buffs.FrostArmor },
+                { "Molten Armor", playerReader.Buffs.FrostArmor },
+                { "Mage Armor", playerReader.Buffs.FrostArmor },
+                { "Arcane Intellect", playerReader.Buffs.ArcaneIntellect },
+                { "Ice Barrier", playerReader.Buffs.IceBarrier },
+                { "Ward", playerReader.Buffs.Ward },
+                { "Fire Power", playerReader.Buffs.FirePower },
+                { "Mana Shield", playerReader.Buffs.ManaShield },
+                { "Presence of Mind", playerReader.Buffs.PresenceOfMind },
+                { "Arcane Power", playerReader.Buffs.ArcanePower },
                 
                 // Rogue
-                { "Slice and Dice", () => playerReader.Buffs.SliceAndDice },
-                { "Stealth", () => playerReader.Buffs.Stealth },
+                { "Slice and Dice", playerReader.Buffs.SliceAndDice },
+                { "Stealth", playerReader.Buffs.Stealth },
                 
                 // Warrior
-                { "Battle Shout", () => playerReader.Buffs.BattleShout },
-                { "Bloodrage", () => playerReader.Buffs.Bloodrage },
+                { "Battle Shout", playerReader.Buffs.BattleShout },
+                { "Bloodrage", playerReader.Buffs.Bloodrage },
                 
                 // Warlock
-                { "Demon Skin", () => playerReader.Buffs.Demon },
-                { "Demon Armor", () => playerReader.Buffs.Demon },
-                { "Soul Link", () => playerReader.Buffs.SoulLink },
-                { "Soulstone Resurrection", () => playerReader.Buffs.SoulstoneResurrection },
-                { "Shadow Trance", () => playerReader.Buffs.ShadowTrance },
-                { "Fel Armor", () => playerReader.Buffs.FelArmor },
-                { "Fel Domination", () => playerReader.Buffs.FelDomination },
-                { "Demonic Sacrifice", () => playerReader.Buffs.DemonicSacrifice },
+                { "Demon Skin", playerReader.Buffs.Demon },
+                { "Demon Armor", playerReader.Buffs.Demon },
+                { "Soul Link", playerReader.Buffs.SoulLink },
+                { "Soulstone Resurrection", playerReader.Buffs.SoulstoneResurrection },
+                { "Shadow Trance", playerReader.Buffs.ShadowTrance },
+                { "Fel Armor", playerReader.Buffs.FelArmor },
+                { "Fel Domination", playerReader.Buffs.FelDomination },
+                { "Demonic Sacrifice", playerReader.Buffs.DemonicSacrifice },
                 
                 // Shaman
-                { "Lightning Shield", () => playerReader.Buffs.LightningShield },
-                { "Water Shield", () => playerReader.Buffs.WaterShield },
-                { "Shamanistic Focus", () => playerReader.Buffs.ShamanisticFocus },
-                { "Focused", () => playerReader.Buffs.ShamanisticFocus },
-                { "Stoneskin", () => playerReader.Buffs.Stoneskin },
+                { "Lightning Shield", playerReader.Buffs.LightningShield },
+                { "Water Shield", playerReader.Buffs.WaterShield },
+                { "Shamanistic Focus", playerReader.Buffs.ShamanisticFocus },
+                { "Focused", playerReader.Buffs.ShamanisticFocus },
+                { "Stoneskin", playerReader.Buffs.Stoneskin },
                 
                 //Hunter
-                { "Aspect of the Cheetah", () => playerReader.Buffs.AspectoftheCheetah },
-                { "Aspect of the Pack", () => playerReader.Buffs.AspectofthePack },
-                { "Aspect of the Hawk", () => playerReader.Buffs.AspectoftheHawk },
-                { "Aspect of the Monkey", () => playerReader.Buffs.AspectoftheMonkey },
-                { "Aspect of the Viper", () => playerReader.Buffs.AspectoftheViper },
-                { "Rapid Fire", () => playerReader.Buffs.RapidFire },
-                { "Quick Shots", () => playerReader.Buffs.QuickShots },
+                { "Aspect of the Cheetah", playerReader.Buffs.AspectoftheCheetah },
+                { "Aspect of the Pack", playerReader.Buffs.AspectofthePack },
+                { "Aspect of the Hawk", playerReader.Buffs.AspectoftheHawk },
+                { "Aspect of the Monkey", playerReader.Buffs.AspectoftheMonkey },
+                { "Aspect of the Viper", playerReader.Buffs.AspectoftheViper },
+                { "Rapid Fire", playerReader.Buffs.RapidFire },
+                { "Quick Shots", playerReader.Buffs.QuickShots },
 
                 // Debuff Section
                 // Druid Debuff
-                { "Demoralizing Roar", () => playerReader.TargetDebuffs.Roar },
-                { "Faerie Fire", () => playerReader.TargetDebuffs.FaerieFire },
-                { "Rip", () => playerReader.TargetDebuffs.Rip },
-                { "Moonfire", () => playerReader.TargetDebuffs.Moonfire },
-                { "Entangling Roots", () => playerReader.TargetDebuffs.EntanglingRoots },
-                { "Rake", () => playerReader.TargetDebuffs.Rake },
+                { "Demoralizing Roar", playerReader.TargetDebuffs.Roar },
+                { "Faerie Fire", playerReader.TargetDebuffs.FaerieFire },
+                { "Rip", playerReader.TargetDebuffs.Rip },
+                { "Moonfire", playerReader.TargetDebuffs.Moonfire },
+                { "Entangling Roots", playerReader.TargetDebuffs.EntanglingRoots },
+                { "Rake", playerReader.TargetDebuffs.Rake },
                 
                 // Paladin Debuff
-                { "Judgement of the Crusader", () => playerReader.TargetDebuffs.JudgementoftheCrusader },
-                { "Hammer of Justice", () => playerReader.TargetDebuffs.HammerOfJustice },
+                { "Judgement of the Crusader", playerReader.TargetDebuffs.JudgementoftheCrusader },
+                { "Hammer of Justice", playerReader.TargetDebuffs.HammerOfJustice },
 
                 // Warrior Debuff
-                { "Rend", () => playerReader.TargetDebuffs.Rend },
-                { "Thunder Clap", () => playerReader.TargetDebuffs.ThunderClap },
-                { "Hamstring", () => playerReader.TargetDebuffs.Hamstring },
-                { "Charge Stun", () => playerReader.TargetDebuffs.ChargeStun },
+                { "Rend", playerReader.TargetDebuffs.Rend },
+                { "Thunder Clap", playerReader.TargetDebuffs.ThunderClap },
+                { "Hamstring", playerReader.TargetDebuffs.Hamstring },
+                { "Charge Stun", playerReader.TargetDebuffs.ChargeStun },
                 
                 // Priest Debuff
-                { "Shadow Word: Pain", () => playerReader.TargetDebuffs.ShadowWordPain },
+                { "Shadow Word: Pain", playerReader.TargetDebuffs.ShadowWordPain },
                 
                 // Mage Debuff
-                { "Frostbite", () => playerReader.TargetDebuffs.Frostbite },
-                { "Slow", () => playerReader.TargetDebuffs.Slow },
+                { "Frostbite", playerReader.TargetDebuffs.Frostbite },
+                { "Slow", playerReader.TargetDebuffs.Slow },
                 
                 // Warlock Debuff
-                { "Curse of Weakness", Curseof },
-                { "Curse of Elements", Curseof },
-                { "Curse of Recklessness", Curseof },
-                { "Curse of Shadow", Curseof },
-                { "Curse of Agony", Curseof },
-                { "Curse of", Curseof },
-                { "Corruption", () => playerReader.TargetDebuffs.Corruption },
-                { "Immolate", () => playerReader.TargetDebuffs.Immolate },
-                { "Siphon Life", () => playerReader.TargetDebuffs.SiphonLife },
+                { "Curse of Weakness", playerReader.TargetDebuffs.Curseof },
+                { "Curse of Elements", playerReader.TargetDebuffs.Curseof },
+                { "Curse of Recklessness", playerReader.TargetDebuffs.Curseof },
+                { "Curse of Shadow", playerReader.TargetDebuffs.Curseof },
+                { "Curse of Agony", playerReader.TargetDebuffs.Curseof },
+                { "Curse of", playerReader.TargetDebuffs.Curseof },
+                { "Corruption", playerReader.TargetDebuffs.Corruption },
+                { "Immolate", playerReader.TargetDebuffs.Immolate },
+                { "Siphon Life", playerReader.TargetDebuffs.SiphonLife },
                 
                 // Hunter Debuff
-                { "Serpent Sting", () => playerReader.TargetDebuffs.SerpentSting },
+                { "Serpent Sting", playerReader.TargetDebuffs.SerpentSting },
             };
-
-            int PTCurrent() => playerReader.PTCurrent;
 
             intVariables = new Dictionary<string, Func<int>>
             {
-                { "Health%", () => playerReader.HealthPercent },
-                { "TargetHealth%", () => playerReader.TargetHealthPercentage },
-                { "PetHealth%", () => playerReader.PetHealthPercentage },
-                { "Mana%", () => playerReader.ManaPercentage },
-                { "Mana", () => playerReader.ManaCurrent },
-                { "Energy", PTCurrent },
-                { "Rage", PTCurrent },
+                { "Health%", playerReader.HealthPercent },
+                { "TargetHealth%", playerReader.TargetHealthPercentage },
+                { "PetHealth%", playerReader.PetHealthPercentage },
+                { "Mana%", playerReader.ManaPercentage },
+                { "Mana", playerReader.ManaCurrent },
+                { "Energy", playerReader.PTCurrent },
+                { "Rage", playerReader.PTCurrent },
                 { "Combo Point", () => playerReader.ComboPoints },
                 { "BagCount", () => bagReader.BagItems.Count },
                 { "MobCount", () => addonReader.CombatCreatureCount },
-                { "MinRange", () => playerReader.MinRange },
-                { "MaxRange", () => playerReader.MaxRange },
-                { "LastAutoShotMs", () => playerReader.AutoShot.ElapsedMs },
-                { "LastMainHandMs", () => playerReader.MainHandSwing.ElapsedMs },
-                { "LastTargetDodgeMs", () => Math.Max(0, playerReader.LastTargetDodge.ElapsedMs) },
+                { "MinRange", playerReader.MinRange },
+                { "MaxRange", playerReader.MaxRange },
+                { "LastAutoShotMs", playerReader.AutoShot.ElapsedMs },
+                { "LastMainHandMs", playerReader.MainHandSwing.ElapsedMs },
+                { "LastTargetDodgeMs", () => Math.Max(0, playerReader.LastTargetDodge.ElapsedMs()) },
                 //"CD_{KeyAction.Name}
                 //"Cost_{KeyAction.Name}"
-                { "MainHandSpeed", () => playerReader.MainHandSpeedMs },
-                { "MainHandSwing", () => Math.Clamp(playerReader.MainHandSwing.ElapsedMs - playerReader.MainHandSpeedMs, -playerReader.MainHandSpeedMs, 0) }
+                { "MainHandSpeed", playerReader.MainHandSpeedMs },
+                { "MainHandSwing", () => Math.Clamp(playerReader.MainHandSwing.ElapsedMs() - playerReader.MainHandSpeedMs(), -playerReader.MainHandSpeedMs(), 0) }
             };
         }
 
@@ -408,7 +404,7 @@ namespace Core
         {
             if (item.UseWhenTargetIsCasting != null)
             {
-                bool f() => playerReader.IsTargetCasting == item.UseWhenTargetIsCasting.Value;
+                bool f() => playerReader.IsTargetCasting() == item.UseWhenTargetIsCasting.Value;
                 string l() => "Target casting";
                 itemRequirementObjects.Add(new Requirement
                 {
@@ -431,8 +427,8 @@ namespace Core
             switch (type)
             {
                 case PowerType.Mana:
-                    bool fmana() => playerReader.ManaCurrent >= keyAction.MinMana || playerReader.Buffs.Clearcasting;
-                    string smana() => $"{type} {playerReader.ManaCurrent} >= {keyAction.MinMana}";
+                    bool fmana() => playerReader.ManaCurrent() >= keyAction.MinMana || playerReader.Buffs.Clearcasting();
+                    string smana() => $"{type.ToStringF()} {playerReader.ManaCurrent()} >= {keyAction.MinMana}";
                     RequirementObjects.Add(new Requirement
                     {
                         HasRequirement = fmana,
@@ -441,8 +437,8 @@ namespace Core
                     });
                     break;
                 case PowerType.Rage:
-                    bool frage() => playerReader.PTCurrent >= keyAction.MinRage || playerReader.Buffs.Clearcasting;
-                    string srage() => $"{type} {playerReader.PTCurrent} >= {keyAction.MinRage}";
+                    bool frage() => playerReader.PTCurrent() >= keyAction.MinRage || playerReader.Buffs.Clearcasting();
+                    string srage() => $"{type.ToStringF()} {playerReader.PTCurrent()} >= {keyAction.MinRage}";
                     RequirementObjects.Add(new Requirement
                     {
                         HasRequirement = frage,
@@ -451,8 +447,8 @@ namespace Core
                     });
                     break;
                 case PowerType.Energy:
-                    bool fenergy() => playerReader.PTCurrent >= keyAction.MinEnergy || playerReader.Buffs.Clearcasting;
-                    string senergy() => $"{type} {playerReader.PTCurrent} >= {keyAction.MinEnergy}";
+                    bool fenergy() => playerReader.PTCurrent() >= keyAction.MinEnergy || playerReader.Buffs.Clearcasting();
+                    string senergy() => $"{type.ToStringF()} {playerReader.PTCurrent()} >= {keyAction.MinEnergy}";
                     RequirementObjects.Add(new Requirement
                     {
                         HasRequirement = fenergy,
@@ -524,7 +520,7 @@ namespace Core
             if (item.School != SchoolMask.None)
             {
                 bool f() => immunityBlacklist.TryGetValue(playerReader.TargetId, out var immuneAgaints) ? !immuneAgaints.Contains(item.School) : true;
-                string s() => item.School.ToString();
+                string s() => item.School.ToStringF();
                 RequirementObjects.Add(new Requirement
                 {
                     HasRequirement = f,
@@ -624,11 +620,10 @@ namespace Core
             }
             else
             {
-                bool f() => playerReader.IsTargetCasting;
                 string s() => "Target casting";
                 return new Requirement
                 {
-                    HasRequirement = f,
+                    HasRequirement = playerReader.IsTargetCasting,
                     LogMessage = s
                 };
             }
@@ -655,7 +650,7 @@ namespace Core
             var race = Enum.Parse<RaceEnum>(parts[1]);
 
             bool f() => playerReader.Race == race;
-            string s() => $"{playerReader.Race}";
+            string s() => playerReader.Race.ToStringF();
 
             return new Requirement
             {

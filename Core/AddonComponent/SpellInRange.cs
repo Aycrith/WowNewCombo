@@ -70,14 +70,14 @@
 
         public bool WithinPullRange(PlayerReader playerReader, PlayerClassEnum playerClass) => playerClass switch
         {
-            PlayerClassEnum.Warrior => (playerReader.Level.Value >= 4 && Warrior_Charge) || playerReader.IsInMeleeRange,
+            PlayerClassEnum.Warrior => (playerReader.Level.Value >= 4 && Warrior_Charge) || playerReader.IsInMeleeRange(),
             PlayerClassEnum.Rogue => Rogue_Throw,
             PlayerClassEnum.Priest => Priest_Smite,
             PlayerClassEnum.Druid => Druid_Wrath,
-            PlayerClassEnum.Paladin => (playerReader.Level.Value >= 4 && Paladin_Judgement) || playerReader.IsInMeleeRange ||
-                                       (playerReader.Level.Value >= 20 && playerReader.MinRange <= 20 && playerReader.MaxRange <= 25),
+            PlayerClassEnum.Paladin => (playerReader.Level.Value >= 4 && Paladin_Judgement) || playerReader.IsInMeleeRange() ||
+                                       (playerReader.Level.Value >= 20 && playerReader.MinRange() <= 20 && playerReader.MaxRange() <= 25),
             PlayerClassEnum.Mage => (playerReader.Level.Value >= 4 && Mage_Frostbolt) || Mage_Fireball,
-            PlayerClassEnum.Hunter => (playerReader.Level.Value >= 4 && Hunter_SerpentSting) || Hunter_AutoShoot,
+            PlayerClassEnum.Hunter => (playerReader.Level.Value >= 4 && Hunter_SerpentSting) || Hunter_AutoShoot || playerReader.IsInMeleeRange(),
             PlayerClassEnum.Warlock => Warlock_ShadowBolt,
             PlayerClassEnum.Shaman => (playerReader.Level.Value >= 4 && Shaman_EarthShock) || Shaman_LightningBolt,
             _ => true
@@ -85,13 +85,13 @@
 
         public bool WithinCombatRange(PlayerReader playerReader, PlayerClassEnum playerClass) => playerClass switch
         {
-            PlayerClassEnum.Warrior => (playerReader.Level.Value >= 4 && Warrior_Rend) || playerReader.IsInMeleeRange,
+            PlayerClassEnum.Warrior => (playerReader.Level.Value >= 4 && Warrior_Rend) || playerReader.IsInMeleeRange(),
             PlayerClassEnum.Rogue => Rogue_SinisterStrike,
             PlayerClassEnum.Priest => Priest_Smite,
-            PlayerClassEnum.Druid => Druid_Wrath || playerReader.IsInMeleeRange,
-            PlayerClassEnum.Paladin => (playerReader.Level.Value >= 4 && Paladin_Judgement) || playerReader.IsInMeleeRange,
+            PlayerClassEnum.Druid => Druid_Wrath || playerReader.IsInMeleeRange(),
+            PlayerClassEnum.Paladin => (playerReader.Level.Value >= 4 && Paladin_Judgement) || playerReader.IsInMeleeRange(),
             PlayerClassEnum.Mage => Mage_Frostbolt || Mage_Fireball,
-            PlayerClassEnum.Hunter => (playerReader.Level.Value >= 4 && Hunter_SerpentSting) || Hunter_AutoShoot || playerReader.IsInMeleeRange,
+            PlayerClassEnum.Hunter => (playerReader.Level.Value >= 4 && Hunter_SerpentSting) || Hunter_AutoShoot || playerReader.IsInMeleeRange(),
             PlayerClassEnum.Warlock => Warlock_ShadowBolt,
             PlayerClassEnum.Shaman => Shaman_LightningBolt,
             _ => true

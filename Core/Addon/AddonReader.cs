@@ -188,7 +188,7 @@ namespace Core
 
             UIMapId.Update(addonDataProvider);
 
-            CreatureHistory.Update(PlayerReader.TargetGuid, PlayerReader.TargetHealthPercentage);
+            CreatureHistory.Update(PlayerReader.TargetGuid, PlayerReader.TargetHealthPercentage());
 
             BagReader.Read();
             EquipmentReader.Read();

@@ -36,7 +36,7 @@ namespace Core
 
         public bool IsTargetBlacklisted()
         {
-            if (!playerReader.HasTarget)
+            if (!playerReader.Bits.HasTarget())
             {
                 lastGuid = 0;
                 return false;
@@ -52,12 +52,12 @@ namespace Core
             }
 
             // it is trying to kill me
-            if (playerReader.Bits.TargetOfTargetIsPlayerOrPet)
+            if (playerReader.Bits.TargetOfTargetIsPlayerOrPet())
             {
                 return false;
             }
 
-            if (!playerReader.Bits.TargetIsNormal)
+            if (!playerReader.Bits.TargetIsNormal())
             {
                 if (lastGuid != playerReader.TargetGuid)
                 {
@@ -68,7 +68,7 @@ namespace Core
                 return true; // ignore elites
             }
 
-            if (!playerReader.Bits.TargetIsDead && playerReader.Bits.IsTagged)
+            if (!playerReader.Bits.TargetIsDead() && playerReader.Bits.IsTagged())
             {
                 if (lastGuid != playerReader.TargetGuid)
                 {
@@ -80,7 +80,7 @@ namespace Core
             }
 
 
-            if (playerReader.Bits.TargetCanBeHostile && playerReader.TargetLevel > playerReader.Level.Value + above)
+            if (playerReader.Bits.TargetCanBeHostile() && playerReader.TargetLevel > playerReader.Level.Value + above)
             {
                 if (lastGuid != playerReader.TargetGuid)
                 {
@@ -103,7 +103,7 @@ namespace Core
                     return true;
                 }
             }
-            else if (playerReader.Bits.TargetCanBeHostile && playerReader.TargetLevel < playerReader.Level.Value - below)
+            else if (playerReader.Bits.TargetCanBeHostile() && playerReader.TargetLevel < playerReader.Level.Value - below)
             {
                 if (lastGuid != playerReader.TargetGuid)
                 {

@@ -186,19 +186,19 @@ namespace Core.Goals
 
         public override void PerformAction()
         {
-            if (playerReader.HasTarget && playerReader.Bits.TargetIsDead)
+            if (playerReader.Bits.HasTarget() && playerReader.Bits.TargetIsDead())
             {
                 Log("Has target but its dead.");
                 input.ClearTarget();
                 wait.Update();
             }
 
-            if (playerReader.Bits.IsDrowning)
+            if (playerReader.Bits.IsDrowning())
             {
                 input.Jump();
             }
 
-            if (playerReader.Bits.PlayerInCombat && classConfig.Mode != Mode.AttendedGather) { return; }
+            if (playerReader.Bits.PlayerInCombat() && classConfig.Mode != Mode.AttendedGather) { return; }
 
             if (!sideActivityCts.IsCancellationRequested)
                 navigation.Update(sideActivityCts);
@@ -212,7 +212,7 @@ namespace Core.Goals
         {
             bool validTarget()
             {
-                return !playerReader.Bits.TargetIsDead;
+                return !playerReader.Bits.TargetIsDead();
             }
 
             sideActivityManualReset.WaitOne();
@@ -256,7 +256,7 @@ namespace Core.Goals
         private void AlternateGatherTypes()
         {
             var oldestKey = classConfig.GatherFindKeyConfig.MaxBy(x => x.MillisecondsSinceLastClick);
-            if (!playerReader.IsCasting &&
+            if (!playerReader.IsCasting() &&
                 oldestKey?.MillisecondsSinceLastClick > CYCLE_PROFESSION_PERIOD)
             {
                 logger.LogInformation($"[{oldestKey.Key}] {oldestKey.Name} pressed for {input.defaultKeyPress}ms");

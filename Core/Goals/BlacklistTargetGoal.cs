@@ -17,7 +17,7 @@
 
         public override bool CheckIfActionCanRun()
         {
-            return playerReader.HasTarget && blacklist.IsTargetBlacklisted();
+            return playerReader.Bits.HasTarget() && blacklist.IsTargetBlacklisted();
         }
 
         public override void OnEnter()

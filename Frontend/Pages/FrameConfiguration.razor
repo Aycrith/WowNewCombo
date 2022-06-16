@@ -168,8 +168,8 @@
     {
         if (frameConfigurator.ResolveClass() && frameConfigurator.AddonReader != null)
         {
-            playerClass = frameConfigurator.AddonReader.PlayerReader.Race.ToString()
-                + " " + frameConfigurator.AddonReader.PlayerReader.Class.ToString();
+            playerClass = frameConfigurator.AddonReader.PlayerReader.Race.ToStringF()
+                + " " + frameConfigurator.AddonReader.PlayerReader.Class.ToStringF();
         }
         else
         {

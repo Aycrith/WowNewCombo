@@ -66,24 +66,24 @@ namespace Core.Goals
                 return Task.CompletedTask;
             });
 
-            bool wasDrinkingOrEating = playerReader.Buffs.Drinking || playerReader.Buffs.Eating;
+            bool wasDrinkingOrEating = playerReader.Buffs.Drink() || playerReader.Buffs.Food();
 
             DateTime startTime = DateTime.UtcNow;
-            while ((playerReader.Buffs.Drinking || playerReader.Buffs.Eating || playerReader.IsCasting) && !playerReader.Bits.PlayerInCombat)
+            while ((playerReader.Buffs.Drink() || playerReader.Buffs.Food() || playerReader.IsCasting()) && !playerReader.Bits.PlayerInCombat())
             {
                 wait.Update();
 
-                if (playerReader.Buffs.Drinking && playerReader.Buffs.Eating)
+                if (playerReader.Buffs.Drink() && playerReader.Buffs.Food())
                 {
-                    if (playerReader.ManaPercentage > 98 && playerReader.HealthPercent > 98) { break; }
+                    if (playerReader.ManaPercentage() > 98 && playerReader.HealthPercent() > 98) { break; }
                 }
-                else if (playerReader.Buffs.Drinking)
+                else if (playerReader.Buffs.Drink())
                 {
-                    if (playerReader.ManaPercentage > 98) { break; }
+                    if (playerReader.ManaPercentage() > 98) { break; }
                 }
-                else if (playerReader.Buffs.Eating)
+                else if (playerReader.Buffs.Food())
                 {
-                    if (playerReader.HealthPercent > 98) { break; }
+                    if (playerReader.HealthPercent() > 98) { break; }
                 }
 
                 if ((DateTime.UtcNow - startTime).TotalSeconds >= 25)

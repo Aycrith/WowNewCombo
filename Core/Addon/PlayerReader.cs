@@ -35,33 +35,31 @@ namespace Core
 
         public AddonBits Bits { get; }
 
-        public int HealthMax => reader.GetInt(10);
-        public int HealthCurrent => reader.GetInt(11);
-        public int HealthPercent => HealthMax == 0 || HealthCurrent == 1 ? 0 : HealthCurrent * 100 / HealthMax;
+        public int HealthMax() => reader.GetInt(10);
+        public int HealthCurrent() => reader.GetInt(11);
+        public int HealthPercent() => HealthMax() == 0 || HealthCurrent() == 1 ? 0 : HealthCurrent() * 100 / HealthMax();
 
-        public int PTMax => reader.GetInt(12); // Maximum amount of Power Type (dynamic)
-        public int PTCurrent => reader.GetInt(13); // Current amount of Power Type (dynamic)
-        public int PTPercentage => PTMax == 0 ? 0 : PTCurrent * 100 / PTMax; // Power Type (dynamic) in terms of a percentage
+        public int PTMax() => reader.GetInt(12); // Maximum amount of Power Type (dynamic)
+        public int PTCurrent() => reader.GetInt(13); // Current amount of Power Type (dynamic)
+        public int PTPercentage() => PTMax() == 0 ? 0 : PTCurrent() * 100 / PTMax(); // Power Type (dynamic) in terms of a percentage
 
-        public int ManaMax => reader.GetInt(14);
-        public int ManaCurrent => reader.GetInt(15);
-        public int ManaPercentage => ManaMax == 0 ? 0 : ManaCurrent * 100 / ManaMax;
+        public int ManaMax() => reader.GetInt(14);
+        public int ManaCurrent() => reader.GetInt(15);
+        public int ManaPercentage() => ManaMax() == 0 ? 0 : ManaCurrent() * 100 / ManaMax();
 
-        public bool HasTarget => Bits.HasTarget;// || TargetHealth > 0;
-
-        public int TargetMaxHealth => reader.GetInt(18);
-        public int TargetHealth => reader.GetInt(19);
-        public int TargetHealthPercentage => TargetMaxHealth == 0 || TargetHealth == 1 ? 0 : TargetHealth * 100 / TargetMaxHealth;
+        public int TargetMaxHealth() => reader.GetInt(18);
+        public int TargetHealth() => reader.GetInt(19);
+        public int TargetHealthPercentage() => TargetMaxHealth() == 0 || TargetHealth() == 1 ? 0 : TargetHealth() * 100 / TargetMaxHealth();
 
 
-        public int PetMaxHealth => reader.GetInt(38);
-        public int PetHealth => reader.GetInt(39);
-        public int PetHealthPercentage => PetMaxHealth == 0 || PetHealth == 1 ? 0 : PetHealth * 100 / PetMaxHealth;
+        public int PetMaxHealth() => reader.GetInt(38);
+        public int PetHealth() => reader.GetInt(39);
+        public int PetHealthPercentage() => PetMaxHealth() == 0 || PetHealth() == 1 ? 0 : PetHealth() * 100 / PetMaxHealth();
 
 
         public SpellInRange SpellInRange { get; }
-        public bool WithInPullRange => SpellInRange.WithinPullRange(this, Class);
-        public bool WithInCombatRange => SpellInRange.WithinCombatRange(this, Class);
+        public bool WithInPullRange() => SpellInRange.WithinPullRange(this, Class);
+        public bool WithInCombatRange() => SpellInRange.WithinCombatRange(this, Class);
 
         public BuffStatus Buffs { get; }
         public TargetDebuffStatus TargetDebuffs { get; }
@@ -79,11 +77,11 @@ namespace Core
         public Stance Stance { get; }
         public Form Form => Stance.Get(this, Class);
 
-        public int MinRange => (int)(reader.GetInt(49) / 100000f);
-        public int MaxRange => (int)((reader.GetInt(49) - (MinRange * 100000f)) / 100f);
+        public int MinRange() => (int)(reader.GetInt(49) / 100000f);
+        public int MaxRange() => (int)((reader.GetInt(49) - (MinRange() * 100000f)) / 100f);
 
-        public bool IsInMeleeRange => MinRange == 0 && MaxRange != 0 && MaxRange <= 5;
-        public bool IsInDeadZone => MinRange >= 5 && Bits.IsInDeadZoneRange; // between 5-8 yard - hunter and warrior
+        public bool IsInMeleeRange() => MinRange() == 0 && MaxRange() != 0 && MaxRange() <= 5;
+        public bool IsInDeadZone() => MinRange() >= 5 && Bits.IsInDeadZoneRange(); // between 5-8 yard - hunter and warrior
 
         public RecordInt PlayerXp { get; } = new(50);
 
@@ -94,7 +92,7 @@ namespace Core
         public UI_ERROR LastUIError { get; set; }
 
         public int SpellBeingCast => reader.GetInt(53);
-        public bool IsCasting => SpellBeingCast != 0;
+        public bool IsCasting() => SpellBeingCast != 0;
 
         public int ComboPoints => reader.GetInt(54);
 
@@ -104,7 +102,7 @@ namespace Core
         public int TargetGuid => reader.GetInt(57);
 
         public int SpellBeingCastByTarget => reader.GetInt(58);
-        public bool IsTargetCasting => SpellBeingCastByTarget != 0;
+        public bool IsTargetCasting() => SpellBeingCastByTarget != 0;
 
         public TargetTargetEnum TargetTarget => (TargetTargetEnum)reader.GetInt(59);
 
@@ -124,9 +122,9 @@ namespace Core
 
         public BitStatus CustomTrigger1 { get; }
 
-        public int MainHandSpeedMs => (int)(reader.GetInt(75) / 10000f) * 10;
+        public int MainHandSpeedMs() => (int)(reader.GetInt(75) / 10000f) * 10;
 
-        public int OffHandSpeed => (int)(reader.GetInt(75) - (MainHandSpeedMs * 1000f));  // supposed to be 10000f - but theres a 10x
+        public int OffHandSpeed => (int)(reader.GetInt(75) - (MainHandSpeedMs() * 1000f));  // supposed to be 10000f - but theres a 10x
 
         public int LastLootTime => reader.GetInt(97);
 
