@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Core.GOAP
+﻿namespace Core.GOAP
 {
     public enum GoapKey
     {
@@ -28,76 +26,67 @@ namespace Core.GOAP
         gathering = 200
     }
 
-    public static class GoapKeyDescription
+    public static class GoapKey_Extension
     {
         private static readonly string unknown = "Unknown";
 
-        private static readonly Dictionary<KeyValuePair<GoapKey, bool>, string> table = new()
+        private static string ToStringTrue(GoapKey value) => value switch
         {
-            { new(GoapKey.hastarget, true), "Target" },
-            { new(GoapKey.hastarget, false), "!Target" },
-
-            { new(GoapKey.dangercombat, true), "Danger" },
-            { new(GoapKey.dangercombat, false), "!Danger" },
-
-            { new(GoapKey.targetisalive, true), "Target alive" },
-            { new(GoapKey.targetisalive, false), "Target dead" },
-
-            { new(GoapKey.targettargetsus, true), "Targets us" },
-            { new(GoapKey.targettargetsus, false), "!Targets us" },
-
-            { new(GoapKey.incombat, true), "Combat" },
-            { new(GoapKey.incombat, false), "!Combat" },
-
-            { new(GoapKey.pethastarget, true), "Pet target" },
-            { new(GoapKey.pethastarget, false), "!Pet target" },
-
-            { new(GoapKey.ismounted, true), "Mounted" },
-            { new(GoapKey.ismounted, false), "!Mounted" },
-
-            { new(GoapKey.withinpullrange, true), "Pull range" },
-            { new(GoapKey.withinpullrange, false), "!Pull range" },
-
-            { new(GoapKey.incombatrange, true), "Combat range" },
-            { new(GoapKey.incombatrange, false), "!combat range" },
-
-            { new(GoapKey.pulled, true), "Pulled" },
-            { new(GoapKey.pulled, false), "!Pulled" },
-
-            { new(GoapKey.isdead, true), "Dead" },
-            { new(GoapKey.isdead, false), "Alive" },
-
-            { new(GoapKey.shouldloot, true), "Loot" },
-            { new(GoapKey.shouldloot, false), "!Loot" },
-
-            { new(GoapKey.shouldskin, true), "Skin" },
-            { new(GoapKey.shouldskin, false), "!Skin" },
-
-            { new(GoapKey.newtarget, true), "New target" },
-            { new(GoapKey.newtarget, false), "!New target" },
-
-            { new(GoapKey.producedcorpse, true), "Killing blow" },
-            { new(GoapKey.producedcorpse, false), "!Killing blow" },
-
-            { new(GoapKey.consumecorpse, true), "Corpse nearby" },
-            { new(GoapKey.consumecorpse, false), "!Corpse nearby" },
-
-            { new(GoapKey.abort, true), "Abort" },
-            { new(GoapKey.abort, false), "!Abort" },
-
-            { new(GoapKey.isswimming, true), "Swimming" },
-            { new(GoapKey.isswimming, false), "!Swimming" },
-
-            { new(GoapKey.itemsbroken, true), "Broken" },
-            { new(GoapKey.itemsbroken, false), "!Broken" },
-
-            { new(GoapKey.gathering, true), "Gathering" },
-            { new(GoapKey.gathering, false), "!Gathering" },
+            GoapKey.hastarget => "Target",
+            GoapKey.dangercombat => "Danger",
+            GoapKey.targetisalive => "Target alive",
+            GoapKey.targettargetsus => "Targets us",
+            GoapKey.incombat => "Combat",
+            GoapKey.pethastarget => "Pet target",
+            GoapKey.ismounted => "Mounted",
+            GoapKey.withinpullrange => "Pull range",
+            GoapKey.incombatrange => "Combat range",
+            GoapKey.pulled => "Pulled",
+            GoapKey.isdead => "Dead",
+            GoapKey.shouldloot => "Loot",
+            GoapKey.shouldskin => "Skin",
+            GoapKey.newtarget => "New target",
+            GoapKey.producedcorpse => "Killing blow",
+            GoapKey.consumecorpse => "Corpse nearby",
+            GoapKey.abort => "Abort",
+            GoapKey.isswimming => "Swimming",
+            GoapKey.itemsbroken => "Broken",
+            GoapKey.gathering => "Gathering",
+            GoapKey.corpselocation => throw new System.NotImplementedException(),
+            GoapKey.resume => throw new System.NotImplementedException(),
+            _ => unknown
         };
 
-        public static string ToString(GoapKey key, bool state)
+        private static string ToStringFalse(GoapKey value) => value switch
         {
-            return table.TryGetValue(new(key, state), out var text) ? text : unknown;
+            GoapKey.hastarget => "!Target",
+            GoapKey.dangercombat => "!Danger",
+            GoapKey.targetisalive => "!Target alive",
+            GoapKey.targettargetsus => "!Targets us",
+            GoapKey.incombat => "!Combat",
+            GoapKey.pethastarget => "!Pet target",
+            GoapKey.ismounted => "!Mounted",
+            GoapKey.withinpullrange => "!Pull range",
+            GoapKey.incombatrange => "!Combat range",
+            GoapKey.pulled => "!Pulled",
+            GoapKey.isdead => "!Dead",
+            GoapKey.shouldloot => "!Loot",
+            GoapKey.shouldskin => "!Skin",
+            GoapKey.newtarget => "!New target",
+            GoapKey.producedcorpse => "!Killing blow",
+            GoapKey.consumecorpse => "!Corpse nearby",
+            GoapKey.abort => "!Abort",
+            GoapKey.isswimming => "!Swimming",
+            GoapKey.itemsbroken => "!Broken",
+            GoapKey.gathering => "!Gathering",
+            GoapKey.corpselocation => throw new System.NotImplementedException(),
+            GoapKey.resume => throw new System.NotImplementedException(),
+            _ => unknown
+        };
+
+        public static string ToStringF(this GoapKey key, bool state)
+        {
+            return state ? ToStringTrue(key) : ToStringFalse(key);
         }
     }
 }

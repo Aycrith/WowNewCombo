@@ -53,7 +53,7 @@ namespace Core
                 .FirstOrDefault();
 
             classification = (CursorType)matching.index;
-            Debug.WriteLine($"[CursorClassifier.Classify] {classification} - {matching.similarity}");
+            Debug.WriteLine($"[CursorClassifier.Classify] {classification.ToStringF()} - {matching.similarity}");
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
 using System.Numerics;
@@ -196,7 +196,7 @@ namespace Core.Goals
                 return false;
             }
             if (item.Log)
-                item.LogInformation($" ... casting: {playerReader.IsCasting} -- count:{playerReader.CastCount} -- usable: {beforeUsable}->{addonReader.UsableAction.Is(item)} -- {((UI_ERROR)beforeCastEventValue).ToStringF()}->{((UI_ERROR)playerReader.CastEvent.Value).ToStringF()}");
+                item.LogInformation($" ... casting: {playerReader.IsCasting()} -- count:{playerReader.CastCount} -- usable: {beforeUsable}->{addonReader.UsableAction.Is(item)} -- {((UI_ERROR)beforeCastEventValue).ToStringF()}->{((UI_ERROR)playerReader.CastEvent.Value).ToStringF()}");
 
             if (!CastSuccessfull((UI_ERROR)playerReader.CastEvent.Value))
             {
@@ -269,7 +269,7 @@ namespace Core.Goals
                     if (!beforeUsable && !addonReader.UsableAction.Is(item))
                     {
                         if (item.Log)
-                            item.LogInformation($" ... after switch {beforeForm}->{playerReader.Form} still not usable!");
+                            item.LogInformation($" ... after switch {beforeForm.ToStringF()}->{playerReader.Form.ToStringF()} still not usable!");
                         return false;
                     }
                 }
@@ -444,7 +444,7 @@ namespace Core.Goals
 
             (bool changedTimeOut, double elapsedMs) = wait.Until(SpellQueueTimeMs, () => playerReader.Form == item.FormEnum);
             if (item.Log)
-                item.LogInformation($" ... form changed: {!changedTimeOut} | {beforeForm} -> {playerReader.Form} | Delay: {elapsedMs}ms");
+                item.LogInformation($" ... form changed: {!changedTimeOut} | {beforeForm.ToStringF()} -> {playerReader.Form.ToStringF()} | Delay: {elapsedMs}ms");
 
             return playerReader.Form == item.FormEnum;
         }
@@ -623,7 +623,7 @@ namespace Core.Goals
                             (bool timeout, double elapsedMs) = wait.Until(MaxWaitCastTimeMs,
                                 () => minRange != playerReader.MinRange);
 
-                            logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_SPELL_OUT_OF_RANGE.ToStringF()} -- Approached target {minRange}->{playerReader.MinRange}");
+                            logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_SPELL_OUT_OF_RANGE.ToStringF()} -- Approached target {minRange}->{playerReader.MinRange()}");
                         }
                         else
                         {

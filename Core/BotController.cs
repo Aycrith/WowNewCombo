@@ -1,4 +1,4 @@
-﻿using Core.Goals;
+using Core.Goals;
 using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -124,7 +124,7 @@ namespace Core
                 }
             } while (!Enum.GetValues(typeof(PlayerClassEnum)).Cast<PlayerClassEnum>().Contains(AddonReader.PlayerReader.Class));
 
-            logger.LogDebug($"Woohoo, I have read the player class. You are a {AddonReader.PlayerReader.Race} {AddonReader.PlayerReader.Class}.");
+            logger.LogDebug($"Woohoo, I have read the player class. You are a {AddonReader.PlayerReader.Race.ToStringF()} {AddonReader.PlayerReader.Class.ToStringF()}.");
 
             npcNameFinder = new(logger, WowScreen, npcNameFinderEvent);
             npcNameTargeting = new(logger, cts, WowScreen, npcNameFinder, wowProcessInput);

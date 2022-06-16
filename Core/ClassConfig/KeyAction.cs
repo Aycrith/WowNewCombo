@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -117,7 +117,7 @@ namespace Core
                 if (Enum.TryParse(Form, out Form desiredForm))
                 {
                     this.FormEnum = desiredForm;
-                    this.logger.LogInformation($"[{Name}] Required Form: {FormEnum}");
+                    this.logger.LogInformation($"[{Name}] Required Form: {FormEnum.ToStringF()}");
 
                     if (KeyReader.ActionBarSlotMap.TryGetValue(Key, out int slot))
                     {
@@ -255,10 +255,10 @@ namespace Core
                     formCost = playerReader.FormCost[FormEnum];
                 }
 
-                LogPowerCostChange(logger, Name, abc.PowerType, abc.Cost, oldValue);
+                LogPowerCostChange(logger, Name, abc.PowerType.ToStringF(), abc.Cost, oldValue);
                 if (formCost > 0)
                 {
-                    logger.LogInformation($"[{Name}] +{formCost} Mana to change {FormEnum} Form");
+                    logger.LogInformation($"[{Name}] +{formCost} Mana to change {FormEnum.ToStringF()} Form");
                 }
             }
 
@@ -290,7 +290,7 @@ namespace Core
 
             if (e.Cost != oldValue)
             {
-                LogPowerCostChange(logger, Name, e.PowerType, e.Cost, oldValue);
+                LogPowerCostChange(logger, Name, e.PowerType.ToStringF(), e.Cost, oldValue);
             }
         }
 
@@ -310,7 +310,7 @@ namespace Core
             EventId = 9,
             Level = LogLevel.Information,
             Message = "[{name}] Update {type} cost to {newCost} from {oldCost}")]
-        static partial void LogPowerCostChange(ILogger logger, string name, PowerType type, int newCost, int oldCost);
+        static partial void LogPowerCostChange(ILogger logger, string name, string type, int newCost, int oldCost);
 
         #endregion
     }
