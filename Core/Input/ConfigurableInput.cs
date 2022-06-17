@@ -10,10 +10,10 @@ namespace Core
 
         public readonly int defaultKeyPress = 50;
 
-        public readonly ConsoleKey ForwardKey;
-        public readonly ConsoleKey BackwardKey;
-        public readonly ConsoleKey TurnLeftKey;
-        public readonly ConsoleKey TurnRightKey;
+        public ConsoleKey ForwardKey { get; }
+        public ConsoleKey BackwardKey { get; }
+        public ConsoleKey TurnLeftKey { get; }
+        public ConsoleKey TurnRightKey { get; }
 
         public ConfigurableInput(ILogger logger, WowProcess wowProcess, ClassConfiguration classConfig) : base(logger, wowProcess)
         {

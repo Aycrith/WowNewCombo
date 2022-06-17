@@ -108,6 +108,9 @@ namespace Game
 
         public void PasteFromClipboard()
         {
+            if (NativeMethods.GetForegroundWindow() != process.MainWindowHandle)
+                NativeMethods.SetForegroundWindow(process.MainWindowHandle);
+
             simulator.Keyboard.ModifiedKeyStroke(VirtualKeyCode.LCONTROL, VirtualKeyCode.VK_V);
         }
     }

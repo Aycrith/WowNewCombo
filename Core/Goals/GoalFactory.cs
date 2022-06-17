@@ -68,8 +68,6 @@ namespace Core
             CombatGoal genericCombat = new(logger, input, wait, addonReader, stopMoving, classConfig, castingHandler, mountHandler);
             ApproachTargetGoal approachTarget = new(logger, input, wait, addonReader.PlayerReader, stopMoving, combatUtil, blacklist);
 
-            availableActions.Clear();
-
             if (blacklist is Blacklist)
             {
                 availableActions.Add(new BlacklistTargetGoal(addonReader.PlayerReader, input, blacklist));

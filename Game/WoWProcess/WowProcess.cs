@@ -8,17 +8,17 @@ namespace Game
 {
     public class WowProcess
     {
-        private Process _warcraftProcess;
+        private Process process;
         public Process WarcraftProcess
         {
             get
             {
-                if (this._warcraftProcess == null)
+                if (process == null)
                 {
-                    var process = Get();
+                    Process? process = Get();
                     if (process == null)
                     {
-                        throw new ArgumentOutOfRangeException("Unable to find the Wow process");
+                        throw new ArgumentOutOfRangeException("Unable to find the Wow process!");
                     }
 
                     if (process.MainWindowHandle == IntPtr.Zero)
@@ -26,15 +26,15 @@ namespace Game
                         throw new NullReferenceException($"Unable read {nameof(process.MainWindowHandle)} {process.ProcessName} - {process.Id} - {process.Handle}");
                     }
 
-                    this._warcraftProcess = process;
+                    this.process = process;
                 }
 
-                return this._warcraftProcess;
+                return process;
             }
         }
 
-        private static readonly List<string> defaultProcessNames = 
-            new List<string> { "Wow", "WowClassic", "WowClassicT", "Wow-64", "WowClassicB" };
+        private static readonly List<string> defaultProcessNames = new()
+            { "Wow", "WowClassic", "WowClassicT", "Wow-64", "WowClassicB" };
 
         public WowProcess()
         {
@@ -49,18 +49,17 @@ namespace Game
                 throw new NullReferenceException($"Unable read {nameof(process.MainWindowHandle)} {process.ProcessName} - {process.Id} - {process.Handle}");
             }
 
-            this._warcraftProcess = process;
+            this.process = process;
         }
 
         //Get the wow-process, if success returns the process else null
-        public static Process? Get(string name = "")
+        public static Process? Get()
         {
-            var names = string.IsNullOrEmpty(name) ? defaultProcessNames : new List<string> { name };
-
-            var processList = Process.GetProcesses();
-            foreach (var p in processList)
+            Process[] processList = Process.GetProcesses();
+            for (int i = 0; i < processList.Length; i++)
             {
-                if (names.Contains(p.ProcessName))
+                Process p = processList[i];
+                if (defaultProcessNames.Contains(p.ProcessName))
                 {
                     return p;
                 }
