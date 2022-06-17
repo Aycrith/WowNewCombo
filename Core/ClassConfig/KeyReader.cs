@@ -15,8 +15,6 @@ namespace Core
         public const string BL = "F";
         public const int BLIdx = 60; //61 - 1
 
-        private static readonly IEnumerable<ConsoleKey> consoleKeys = (IEnumerable<ConsoleKey>)Enum.GetValues(typeof(ConsoleKey));
-
         public static Dictionary<string, ConsoleKey> KeyMapping { get; } = new()
         {
             { "1", ConsoleKey.D1 },
@@ -113,7 +111,7 @@ namespace Core
         {
             if (string.IsNullOrEmpty(key.Key))
             {
-                logger.LogError($"You must specify either 'Key' (ConsoleKey value) or 'KeyName' (ConsoleKey enum name) for {key.Name}");
+                logger.LogError($"[{key.Name}] Must specify '{nameof(key.Key)}'");
                 return false;
             }
 
@@ -123,10 +121,11 @@ namespace Core
             }
             else
             {
+                var consoleKeys = (IEnumerable<ConsoleKey>)Enum.GetValues(typeof(ConsoleKey));
                 ConsoleKey consoleKey = consoleKeys.FirstOrDefault(k => k.ToString() == key.Key);
                 if (consoleKey == 0)
                 {
-                    logger.LogError($"You must specify a valid 'Name' (ConsoleKey enum name) for {key.Name}");
+                    logger.LogError($"[{key.Name}] Must specify a valid '{nameof(key.Key)}' (ConsoleKey enum)");
                     return false;
                 }
 
@@ -139,11 +138,10 @@ namespace Core
             }
             else
             {
-                logger.LogWarning($"[{key.Name}] unable to assign Actionbar {nameof(KeyAction.Slot)}!");
+                logger.LogWarning($"[{key.Name}] Unable to assign Actionbar {nameof(KeyAction.Slot)}!");
             }
 
-            if (!string.IsNullOrEmpty(key.Name))
-                logger.LogInformation($"[{key.Name}] uses \"{key.Key}\" -> {key.ConsoleKey}");
+            logger.LogInformation($"[{key.Name}] Uses \"{key.Key}\" -> {key.ConsoleKey} - Slot: {key.Slot}");
 
             return true;
         }
