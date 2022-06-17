@@ -23,7 +23,7 @@ namespace Core.Goals
         public Dictionary<GoapKey, bool> Effects { get; } = new();
         public Dictionary<GoapKey, bool> State { get; private set; } = new();
 
-        public List<KeyAction> Keys { get; } = new();
+        public KeyAction[] Keys { get; protected set; } = Array.Empty<KeyAction>();
 
         public abstract float CostOfPerformingAction { get; }
 
@@ -91,7 +91,7 @@ namespace Core.Goals
 
         public virtual string Description()
         {
-            return $"{Name} " + (Keys.Count == 1 ? $"[{Keys[0].ConsoleKey}]" : "");
+            return $"{Name} " + (Keys.Length == 1 ? $"[{Keys[0].ConsoleKey}]" : "");
         }
     }
 }

@@ -21,7 +21,7 @@ namespace Core.Goals
 
         private readonly Func<bool> dangerCombat;
 
-        public override string Name => Keys.Count == 0 ? base.Name : Keys[0].Name;
+        public override string Name => Keys.Length == 0 ? base.Name : Keys[0].Name;
 
         public AdhocGoal(ILogger logger, ConfigurableInput input, Wait wait, KeyAction key, AddonReader addonReader, StopMoving stopMoving, CastingHandler castingHandler, MountHandler mountHandler)
         {
@@ -47,7 +47,7 @@ namespace Core.Goals
                 AddPrecondition(GoapKey.incombat, true);
             }
 
-            Keys.Add(key);
+            Keys = new KeyAction[1] { key };
         }
 
         public override bool CheckIfActionCanRun() => key.CanRun();

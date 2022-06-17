@@ -52,9 +52,10 @@ namespace Core.Goals
             AddEffect(GoapKey.targetisalive, false);
             AddEffect(GoapKey.hastarget, false);
 
-            foreach (KeyAction key in classConfiguration.Combat.Sequence)
+            Keys = new KeyAction[classConfiguration.Combat.Sequence.Count];
+            for (int i = 0; i < classConfiguration.Combat.Sequence.Count; i++)
             {
-                Keys.Add(key);
+                Keys[i] = classConfiguration.Combat.Sequence[i];
             }
         }
 
@@ -66,7 +67,7 @@ namespace Core.Goals
                     input.PetAttack();
             }
 
-            foreach (var item in Keys)
+            for (int i = 0; i < Keys.Length; i++)
             {
                 if (playerReader.Bits.TargetIsDead() || !playerReader.Bits.HasTarget())
                 {
@@ -81,7 +82,7 @@ namespace Core.Goals
                     lastKnownMaxDistance = playerReader.MaxRange();
                 }
 
-                if (castingHandler.CastIfReady(item))
+                if (castingHandler.CastIfReady(Keys[i]))
                 {
                     break;
                 }

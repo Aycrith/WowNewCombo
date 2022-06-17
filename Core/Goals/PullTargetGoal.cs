@@ -52,10 +52,11 @@ namespace Core.Goals
             approachKey = input.ClassConfig.Pull.Sequence.Find(x => x.Name == input.ClassConfig.Approach.Name);
             approachAction = approachKey == null ? DefaultApproach : ConditionalApproach;
 
-            foreach (KeyAction key in input.ClassConfig.Pull.Sequence)
+            Keys = new KeyAction[input.ClassConfig.Pull.Sequence.Count];
+            for (int i = 0; i < input.ClassConfig.Pull.Sequence.Count; i++)
             {
-                Keys.Add(key);
-                if (key.Requirements.Contains(RequirementFactory.AddVisible))
+                Keys[i] = input.ClassConfig.Pull.Sequence[i];
+                if (Keys[i].Requirements.Contains(RequirementFactory.AddVisible))
                 {
                     requiresNpcNameFinder = true;
                 }
@@ -79,7 +80,7 @@ namespace Core.Goals
                 mountHandler.Dismount();
             }
 
-            if (Keys.Count != 0 && input.ClassConfig.StopAttack.GetCooldownRemaining() == 0)
+            if (Keys.Length != 0 && input.ClassConfig.StopAttack.GetCooldownRemaining() == 0)
             {
                 Log("Stop auto interact!");
                 input.StopAttack();
@@ -196,17 +197,17 @@ namespace Core.Goals
             }
 
             bool castAny = false;
-            foreach (var item in Keys)
+            for (int i = 0; i < Keys.Length; i++)
             {
-                if (item.Name == input.ClassConfig.Approach.Name)
+                if (Keys[i].Name == input.ClassConfig.Approach.Name)
                     continue;
 
-                if (!item.CanRun())
+                if (!Keys[i].CanRun())
                 {
                     continue;
                 }
 
-                bool success = castingHandler.Cast(item, PullPrevention);
+                bool success = castingHandler.Cast(Keys[i], PullPrevention);
                 if (success)
                 {
                     if (!playerReader.Bits.HasTarget())
@@ -216,9 +217,9 @@ namespace Core.Goals
 
                     castAny = true;
 
-                    if (item.WaitForWithinMeleeRange)
+                    if (Keys[i].WaitForWithinMeleeRange)
                     {
-                        WaitForWithinMeleeRange(item, success);
+                        WaitForWithinMeleeRange(Keys[i], success);
                     }
                 }
                 else if (PullPrevention() &&

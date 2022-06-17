@@ -36,7 +36,11 @@ namespace Core.Goals
 
             AddPrecondition(GoapKey.incombat, false);
 
-            keysConfig.ForEach(key => Keys.Add(key));
+            Keys = new KeyAction[keysConfig.Count];
+            for (int i = 0; i < keysConfig.Count; i++)
+            {
+                Keys[i] = keysConfig[i];
+            }
         }
 
         public override bool CheckIfActionCanRun()

@@ -43,7 +43,7 @@ namespace Core.Goals
 
         private bool shouldMount;
 
-        public override string Name => Keys.Count == 0 ? base.Name : $"{base.Name} ({Keys[0].Name})";
+        public override string Name => Keys.Length == 0 ? base.Name : $"{base.Name} ({Keys[0].Name})";
         public override float CostOfPerformingAction => key.Cost;
 
         #region IRouteProvider
@@ -95,7 +95,7 @@ namespace Core.Goals
                 AddPrecondition(GoapKey.incombat, true);
             }
 
-            this.Keys.Add(key);
+            Keys = new KeyAction[1] { key };
         }
 
         public void Dispose()
