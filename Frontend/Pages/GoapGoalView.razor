@@ -1,16 +1,17 @@
 ﻿@using System.Text
 @using Core.GOAP
+@using System.Text.RegularExpressions
 
 <tr class="@ActionClass(this.IsSelected)">
     <td>
-        <b style="color:@DisplayColour(goal.CheckIfActionCanRun())">@goal.CostOfPerformingAction: @goal.Description()</b>
+        <b style="color:@DisplayCanRun(goal.CheckIfActionCanRun())">@goal.CostOfPerformingAction: @goal.Description()</b>
     </td>
     <td>
         @foreach (var item in this.goal.State)
         {
             <span class="badge @Badge(item.Value)">@item.Key.ToStringF(this.goal.Preconditions.GetValueOrDefault(item.Key))</span>
         }
-        @if (this.goal.Keys.Count == 1)
+        @if (this.goal.Keys.Length == 1)
         {
             @foreach (var requirement in this.goal.Keys[0].RequirementObjects)
             {
@@ -22,32 +23,30 @@
         }
     </td>
 </tr>
-@if (this.goal.Keys.Count > 1 && (this.IsSelected || this.Expand))
+@if (this.goal.Keys.Length > 1 && (this.IsSelected || this.Expand))
 {
     <tr>
         <td colspan="2" style="padding-top: 0 !important; padding-bottom: 0 !important; border-top: 0 !important;">
             <table style="margin-left: 15px;">
-
-                @if (this.goal.Keys != null)
-                {
+                @{
                     int lastKeyClicked = Core.KeyAction.LastKeyClicked();
-                    foreach (var key in this.goal.Keys)
-                    {
-                        <tr class="@ActionClass(lastKeyClicked==key.ConsoleKeyFormHash)">
-                            <td>
-                                <b style="color:@DisplayColour(key.CanRun())">@key.Name [@key.ConsoleKey]</b>
-                            </td>
-                            <td>
-                                @foreach (var requirement in key.RequirementObjects)
+                }
+                @for (int i = 0; i < this.goal.Keys.Length; i++)
+                {
+                    <tr class="@ActionClass(lastKeyClicked==this.goal.Keys[i].ConsoleKeyFormHash)">
+                        <td>
+                            <b style="color:@DisplayCanRun(this.goal.Keys[i].CanRun())">@this.goal.Keys[i].Name [@this.goal.Keys[i].ConsoleKey]</b>
+                        </td>
+                        <td>
+                            @for (int j = 0; j < this.goal.Keys[i].RequirementObjects.Count; j++)
+                            {
+                                if (this.goal.Keys[i].RequirementObjects[j].VisibleIfHasRequirement || !this.goal.Keys[i].RequirementObjects[j].HasRequirement())
                                 {
-                                    if (requirement.VisibleIfHasRequirement || !requirement.HasRequirement())
-                                    {
-                                        @(DisplayRequirementBadges(requirement))
-                                    }
+                                    @(DisplayRequirementBadges(this.goal.Keys[i].RequirementObjects[j]))
                                 }
-                            </td>
-                        </tr>
-                    }
+                            }
+                        </td>
+                    </tr>
                 }
             </table>
         </td>
@@ -65,63 +64,46 @@
     [Parameter]
     public Core.Goals.GoapGoal goal { get; set; } = new Core.Goals.NullGoal();
 
-    public string Badge(bool value)
+    private static readonly string and = " and ";
+    private static readonly string or = " or ";
+    private static readonly Regex regex = new($"({and})|({or})", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly StringBuilder stringBuilder = new();
+
+    private static MarkupString DisplayRequirementBadges(Core.Requirement requirement)
+    {
+        stringBuilder.Clear();
+        foreach (string match in regex.Split(requirement.LogMessage()))
+        {
+            if (match.StartsWith(and) || match.StartsWith(or))
+            {
+                stringBuilder.Append("<span class=\"badge badge-secondary\">");
+                stringBuilder.Append(match.Trim());
+                stringBuilder.Append("</span>\n");
+            }
+            else
+            {
+                stringBuilder.Append("<span class=\"badge ");
+                stringBuilder.Append(Badge(requirement.HasRequirement()));
+                stringBuilder.Append("\">");
+                stringBuilder.Append(match.Trim());
+                stringBuilder.Append("</span>\n");
+            }
+        }
+        return new MarkupString(stringBuilder.ToString());
+    }
+
+    private static string Badge(bool value)
     {
         return value ? "badge-success" : "badge-danger";
     }
 
-    public string ActionClass(bool item)
+    private static string ActionClass(bool item)
     {
-        if (item == true)
-        {
-            return "bg-majestic animate__animated animate__fadeIn";
-        }
-
-        return "table-default";
+        return item ? "bg-majestic animate__animated animate__fadeIn" : "table-default";
     }
 
-    public string DisplayColour(bool item)
+    private static string DisplayCanRun(bool item)
     {
         return item ? "black" : "gray";
-    }
-
-
-    private const string delAnd = " and ";
-    private const string delOr = " or ";
-    private string[] delimiters = new string[] { delAnd, delOr };
-    private StringBuilder stringBuilder = new StringBuilder();
-    private string[] split = new string[0];
-
-    public MarkupString DisplayRequirementBadges(Core.Requirement requirement)
-    {
-        split = requirement.LogMessage().Split(delimiters, StringSplitOptions.None);
-        if (split.Length > 1)
-        {
-            stringBuilder.Clear();
-            string original = requirement.LogMessage();
-            string badge = Badge(requirement.HasRequirement());
-
-            foreach (var sub in split)
-            {
-                stringBuilder.AppendLine($"<span class=\"badge {badge}\">{sub}</span>");
-                original = original[sub.Length..];
-
-                if (original.StartsWith(delAnd))
-                {
-                    stringBuilder.AppendLine($"<span class=\"badge badge-secondary\">{delAnd.Trim()}</span>\n");
-                    original = original[delAnd.Length..];
-                }
-                else if (original.StartsWith(delOr))
-                {
-                    stringBuilder.AppendLine($"<span class=\"badge badge-secondary\">{delOr.Trim()}</span>\n");
-                    original = original[delOr.Length..];
-                }
-            }
-            return new MarkupString(stringBuilder.ToString());
-        }
-        else
-        {
-            return new MarkupString($"<span class=\"badge {Badge(requirement.HasRequirement())}\">{requirement.LogMessage()}</span>\n");
-        }
     }
 }
