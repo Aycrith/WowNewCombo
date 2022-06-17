@@ -121,6 +121,6 @@
     private void CreateNewActionBarPopulator()
     {
         if (botController.ClassConfig != null)
-            ActionBarPopulator = new(logger, botController.ClassConfig!, (addonReader as AddonReader)!, exec);
+            ActionBarPopulator = new(botController.ClassConfig!, ((addonReader as AddonReader)!).BagReader, exec);
     }
 }

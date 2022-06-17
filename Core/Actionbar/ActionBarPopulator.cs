@@ -1,125 +1,107 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Collections.Generic;
-
-namespace Core
+﻿namespace Core
 {
     public class ActionBarPopulator
     {
-        struct ActionBarSource
+        private readonly struct ActionBarSlotItem
         {
-            public string Name;
-            public string Key;
-            public bool Item;
-            public KeyAction KeyAction;
+            public string Name { get; }
+            public KeyAction KeyAction { get; }
+            public bool IsItem { get; }
+
+            public ActionBarSlotItem(string name, KeyAction keyAction, bool isItem)
+            {
+                Name = name;
+                KeyAction = keyAction;
+                IsItem = isItem;
+            }
         }
 
-        private readonly ILogger logger;
         private readonly ClassConfiguration config;
-        private readonly AddonReader addonReader;
+        private readonly BagReader bagReader;
         private readonly ExecGameCommand execGameCommand;
 
-        public ActionBarPopulator(ILogger logger, ClassConfiguration config, AddonReader addonReader, ExecGameCommand execGameCommand)
+        private int count;
+
+        public ActionBarPopulator(ClassConfiguration config, BagReader bagReader, ExecGameCommand execGameCommand)
         {
-            this.logger = logger;
             this.config = config;
-            this.addonReader = addonReader;
+            this.bagReader = bagReader;
             this.execGameCommand = execGameCommand;
         }
 
-        private readonly List<ActionBarSource> sources = new List<ActionBarSource>();
-
-
         public void Execute()
         {
-            CollectKeyActions();
-            Run();
-        }
+            ActionBarSlotItem[] items = new ActionBarSlotItem[
+                config.Form.Count +
+                config.Adhoc.Sequence.Count +
+                config.Parallel.Sequence.Count +
+                config.Pull.Sequence.Count +
+                config.Combat.Sequence.Count +
+                config.NPC.Sequence.Count];
 
-        private void CollectKeyActions()
-        {
-            sources.Clear();
+            config.Form.ForEach(k => AddUnique(ref items, k));
+            config.Adhoc.Sequence.ForEach(k => AddUnique(ref items, k));
+            config.Parallel.Sequence.ForEach(k => AddUnique(ref items, k));
+            config.Pull.Sequence.ForEach(k => AddUnique(ref items, k));
+            config.Combat.Sequence.ForEach(k => AddUnique(ref items, k));
+            config.NPC.Sequence.ForEach(k => AddUnique(ref items, k));
 
-            config.Form.ForEach(k => AddUnique(k));
-            config.Adhoc.Sequence.ForEach(k => AddUnique(k));
-            config.Parallel.Sequence.ForEach(k => AddUnique(k));
-            config.Pull.Sequence.ForEach(k => AddUnique(k));
-            config.Combat.Sequence.ForEach(k => AddUnique(k));
-            config.NPC.Sequence.ForEach(k => AddUnique(k));
+            System.Array.Resize(ref items, count);
+            System.Array.Sort(items, (a, b) => a.KeyAction.Slot.CompareTo(b.KeyAction.Slot));
 
-            ResolveConsumables();
-
-            sources.Sort((a, b) => a.Key.CompareTo(b.Key));
-        }
-
-
-        private void AddUnique(KeyAction a)
-        {
-            if (!KeyReader.KeyMapping.ContainsKey(a.Key)) return;
-            if (sources.FindIndex(i => i.KeyAction.ConsoleKeyFormHash == a.ConsoleKeyFormHash) > -1) return;
-
-            var source = new ActionBarSource
+            for (int i = 0; i < count; i++)
             {
-                Name = a.Name,
-                Key = a.Key,
-                Item = false,
-                KeyAction = a
-            };
-
-            sources.Add(source);
-        }
-
-        private void Run()
-        {
-            foreach (var a in sources)
-            {
-                var content = ScriptBuilder(a);
+                string content = ScriptBuilder(items[i]);
                 execGameCommand.Run(content);
             }
         }
 
-
-        #region Consumable
-
-        private void ResolveConsumables()
+        private void AddUnique(ref ActionBarSlotItem[] items, KeyAction keyAction)
         {
-            ReplaceIfExists("Water", 
-                addonReader.BagReader.HighestQuantityOfWaterId().ToString());
+            // not bound to actionbar slot
+            if (keyAction.Slot == 0) return;
 
-            ReplaceIfExists("Food",
-                addonReader.BagReader.HighestQuantityOfFoodId().ToString());
-        }
-
-        private void ReplaceIfExists(string key, string val)
-        {
-            int index = sources.FindIndex(i => i.Name == key);
-            if (index != -1)
+            for (int i = 0; i < count; i++)
             {
-                var item = sources[index];
-                item.Item = true;
-                item.Name = val;
-                sources[index] = item;
+                if (items[i].KeyAction.Slot == keyAction.Slot)
+                    return;
             }
+
+            string name = keyAction.Name;
+            bool isItem = false;
+            switch (name)
+            {
+                case "water":
+                case "Water":
+                    name = bagReader.HighestQuantityOfWaterId().ToString();
+                    isItem = true;
+                    break;
+                case "food":
+                case "Food":
+                    name = bagReader.HighestQuantityOfFoodId().ToString();
+                    isItem = true;
+                    break;
+            }
+
+            items[count++] = (new(name, keyAction, isItem));
         }
 
-        #endregion
-
-
-        private string ScriptBuilder(ActionBarSource a)
+        private static string ScriptBuilder(ActionBarSlotItem abs)
         {
-            string nameOrId = $"\"{a.Name}\"";
-            if (int.TryParse(a.Name, out int id))
+            string nameOrId = $"\"{abs.Name}\"";
+            if (int.TryParse(abs.Name, out int id))
             {
                 nameOrId = id.ToString();
             }
 
-            string func = GetFunction(a);
-            string slot = GetActionBarSlotHotkey(a);
+            string func = GetFunction(abs);
+            int slot = abs.KeyAction.Slot;
             return $"/run {func}({nameOrId})PlaceAction({slot})ClearCursor()--";
         }
 
-        private static string GetFunction(ActionBarSource a)
+        private static string GetFunction(ActionBarSlotItem a)
         {
-            if (a.Item)
+            if (a.IsItem)
                 return "PickupItem";
 
             if (char.IsLower(a.Name[0]))
@@ -127,42 +109,5 @@ namespace Core
 
             return "PickupSpellBookItem";
         }
-        
-        private string GetActionBarSlotHotkey(ActionBarSource a)
-        {
-            if(a.Key.StartsWith(KeyReader.BR))
-                return CalculateActionNumber(a, a.Key, KeyReader.BR, KeyReader.BRIdx);
-
-            if (a.Key.StartsWith(KeyReader.BL))
-                return CalculateActionNumber(a, a.Key, KeyReader.BL, KeyReader.BLIdx);
-
-            // "-" "=" keys
-            if (KeyReader.ActionBarSlotMap.ContainsKey(a.Key))
-                return CalculateActionNumber(a, KeyReader.ActionBarSlotMap[a.Key].ToString(), "", 0);
-
-            return CalculateActionNumber(a, a.Key, "", 0);
-        }
-
-        private string CalculateActionNumber(ActionBarSource a, string key, string prefix, int offset)
-        {
-            if (!string.IsNullOrEmpty(prefix))
-                key = key.Replace(prefix, "");
-
-            if (int.TryParse(key, out int hotkey))
-            {
-                if (offset == 0 && hotkey <= ActionBar.MAIN_ACTIONBAR_SLOT)
-                {
-                    offset += Stance.RuntimeSlotToActionBar(a.KeyAction, addonReader.PlayerReader, hotkey);
-                }
-
-                if (hotkey == 0)
-                    return (offset + 10).ToString();
-
-                return (offset + hotkey).ToString();
-            }
-
-            return key;
-        }
-
     }
 }
