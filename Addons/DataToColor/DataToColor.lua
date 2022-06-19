@@ -84,74 +84,16 @@ local targetBuffCount = 0
 
 local bagCache = {}
 
--- Update Queue
-local stack = {}
-DataToColor.stack = stack
-
-function stack:push(t, key, value)
-    t[key] = value or key
-end
-
-function stack:pop(t)
-    local key, value = minKey(t)
-    if key ~= nil then
-        value = t[key]
-        t[key] = nil
-        return key, value
-    end
-end
-
-function minKey(t)
-    local k
-    for i, v in pairs(t) do
-      k = k or i
-      if v < t[k] then k = i end
-    end
-    return k
-end
-
-
-local struct = {}
-DataToColor.struct = struct
-
-function struct:push(t, key, value)
-    t[key] = { value = value or key, dirty = 0 }
-end
-
-function struct:get(t)
-    for k, v in pairs(t) do
-        if v.dirty == 0 then
-            return k, v.value
-        end
-    end
-end
-
-function struct:exists(t, key)
-    return t[key] ~= nil
-end
-
-function struct:setDirty(t, key)
-    t[key].dirty = 1
-end
-
-function struct:isDirty(t, key)
-    return t[key].dirty == 1
-end
-
-function struct:remove(t, key)
-    t[key] = nil
-end
-
-DataToColor.equipmentQueue = {}
-DataToColor.bagQueue = {}
-DataToColor.inventoryQueue = {}
-DataToColor.gossipQueue = {}
-DataToColor.actionBarCostQueue = {}
-DataToColor.actionBarCooldownQueue = {}
-DataToColor.spellBookQueue = {}
-DataToColor.talentQueue = {}
-DataToColor.CombatDamageTakenQueue = {}
-DataToColor.CombatMissTypeQueue = {}
+DataToColor.equipmentQueue = DataToColor.Queue:new()
+DataToColor.bagQueue = DataToColor.Queue:new()
+DataToColor.inventoryQueue = DataToColor.Queue:new()
+DataToColor.gossipQueue = DataToColor.Queue:new()
+DataToColor.actionBarCostQueue = DataToColor.Queue:new()
+DataToColor.actionBarCooldownQueue = DataToColor.struct:new()
+DataToColor.spellBookQueue = DataToColor.Queue:new()
+DataToColor.talentQueue = DataToColor.Queue:new()
+DataToColor.CombatDamageTakenQueue = DataToColor.Queue:new()
+DataToColor.CombatMissTypeQueue = DataToColor.Queue:new()
 
 local equipmentSlot = nil
 local bagNum = nil
@@ -325,7 +267,7 @@ end
 
 function DataToColor:InitEquipmentQueue()
     for eqNum = 1, 23 do
-        DataToColor.stack:push(DataToColor.equipmentQueue, eqNum)
+        DataToColor.equipmentQueue:push(eqNum)
     end
 end
 
@@ -333,7 +275,7 @@ function DataToColor:InitInventoryQueue(containerID)
     if containerID >= 0 and containerID <= 4 then
         for i = 1, GetContainerNumSlots(containerID) do
             if DataToColor:BagSlotChanged(containerID, i) then
-                DataToColor.stack:push(DataToColor.inventoryQueue, containerID * 1000 + i)
+                DataToColor.inventoryQueue:push(containerID * 1000 + i)
             end
         end
     end
@@ -366,14 +308,14 @@ function DataToColor:InitBagQueue(min, max)
     min = min or 0
     max = max or 4
     for bag = min, max do
-        DataToColor.stack:push(DataToColor.bagQueue, bag)
+        DataToColor.bagQueue:push(bag)
     end
 end
 
 function DataToColor:InitActionBarCostQueue()
     for slot=1, MAX_ACTIONBAR_SLOT do
         if HasAction(slot) then
-            DataToColor.stack:push(DataToColor.actionBarCostQueue, slot)
+            DataToColor.actionBarCostQueue:push(slot)
         end
     end
 end
@@ -386,7 +328,7 @@ function DataToColor:InitSpellBookQueue()
         if not contextualID then
             break
         end
-        DataToColor.stack:push(DataToColor.spellBookQueue, contextualID)
+        DataToColor.spellBookQueue:push(contextualID)
         num = num + 1
     end
 end
@@ -398,7 +340,7 @@ function DataToColor:InitTalentQueue()
             if currentRank > 0 then
                 --                     1-3 +         1-11 +          1-4 +         1-5
                 local hash = tab * 1000000 + tier * 10000 + column * 10 + currentRank
-                DataToColor.stack:push(DataToColor.talentQueue, hash)
+                DataToColor.talentQueue:push(hash)
                 --DataToColor:Print("talentQueue tab:"..tab.." | tier: "..tier.." | column: "..column.." | rank: "..currentRank)
             end
         end
@@ -494,7 +436,7 @@ function DataToColor:CreateFrames(n)
 
             if DataToColor:Modulo(globalCounter, ITEM_ITERATION_FRAME_CHANGE_RATE) == 0 then
                 -- 20
-                bagNum = DataToColor.stack:pop(DataToColor.bagQueue)
+                bagNum = DataToColor.bagQueue:shift()
                 if bagNum then
                     local freeSlots, bagType = GetContainerNumFreeSlots(bagNum)
                     if not bagType then
@@ -509,7 +451,7 @@ function DataToColor:CreateFrames(n)
                 end
 
                 -- 21 22 23
-                bagSlotNum = DataToColor.stack:pop(DataToColor.inventoryQueue)
+                bagSlotNum = DataToColor.inventoryQueue:shift()
                 if bagSlotNum then
 
                     bagNum = math.floor(bagSlotNum / 1000)
@@ -545,7 +487,7 @@ function DataToColor:CreateFrames(n)
                 end
 
                 -- 24 25
-                equipmentSlot = DataToColor.stack:pop(DataToColor.equipmentQueue)
+                equipmentSlot = DataToColor.equipmentQueue:shift()
                 if equipmentSlot then
                     MakePixelSquareArrI(equipmentSlot, 24)
                     MakePixelSquareArrI(DataToColor:equipSlotItemId(equipmentSlot), 25)
@@ -570,22 +512,22 @@ function DataToColor:CreateFrames(n)
             -- moonkin actionbar missing :(
 
             if DataToColor:Modulo(globalCounter, ACTION_BAR_ITERATION_FRAME_CHANGE_RATE) == 0 then
-                actionCostNum = DataToColor.stack:pop(DataToColor.actionBarCostQueue)
+                actionCostNum = DataToColor.actionBarCostQueue:shift()
                 if actionCostNum then
                     MakePixelSquareArrI(DataToColor:actionbarCost(actionCostNum), 36)
                 else
                     MakePixelSquareArrI(0, 36)
                 end
 
-                actionCooldownKey, actionCooldownValue = DataToColor.struct:get(DataToColor.actionBarCooldownQueue)
+                actionCooldownKey, actionCooldownValue = DataToColor.actionBarCooldownQueue:get()
                 if actionCooldownKey then
-                    DataToColor.struct:setDirty(DataToColor.actionBarCooldownQueue, actionCooldownKey)
+                    DataToColor.actionBarCooldownQueue:setDirty(actionCooldownKey)
 
                     --DataToColor:Print("actionBarCooldownQueue: "..actionCooldownKey.." "..math.floor(actionCooldownValue) * 100)
                     MakePixelSquareArrI(actionCooldownKey * 100000 + math.floor(actionCooldownValue) * 100, 37)
 
                     if actionCooldownValue == 0 then
-                        DataToColor.struct:remove(DataToColor.actionBarCooldownQueue, actionCooldownKey)
+                        DataToColor.actionBarCooldownQueue:remove(actionCooldownKey)
                     end
                 else
                     MakePixelSquareArrI(0, 37)
@@ -656,8 +598,8 @@ function DataToColor:CreateFrames(n)
             MakePixelSquareArrI(DataToColor.lastCombatDamageDoneCreature, 65) -- Last Combat damage done
 
             if DataToColor:Modulo(globalCounter, COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE) == 0 then
-                MakePixelSquareArrI(DataToColor.stack:pop(DataToColor.CombatDamageTakenQueue) or 0, 66) -- Last Combat Damage taken
-                MakePixelSquareArrI(DataToColor.stack:pop(DataToColor.CombatMissTypeQueue) or 0, 76) -- Last Combat Miss type
+                MakePixelSquareArrI(DataToColor.CombatDamageTakenQueue:shift() or 0, 66) -- Last Combat Damage taken
+                MakePixelSquareArrI(DataToColor.CombatMissTypeQueue:shift() or 0, 76) -- Last Combat Miss type
             end
 
             MakePixelSquareArrI(DataToColor.lastCombatCreatureDied, 67) -- Last Killed Unit
@@ -667,25 +609,15 @@ function DataToColor:CreateFrames(n)
             MakePixelSquareArrI(DataToColor.CastNum, 70)
 
             if DataToColor:Modulo(globalCounter, SPELLBOOK_ITERATION_FRAME_CHANGE_RATE) == 0 then
-                spellId = DataToColor.stack:pop(DataToColor.spellBookQueue)
-                if spellId then
-                    MakePixelSquareArrI(spellId, 71)
-                else
-                    MakePixelSquareArrI(0, 71)
-                end
+                MakePixelSquareArrI(DataToColor.spellBookQueue:shift() or 0, 71)
             end
 
             if DataToColor:Modulo(globalCounter, TALENT_ITERATION_FRAME_CHANGE_RATE) == 0 then
-                talentNum = DataToColor.stack:pop(DataToColor.talentQueue)
-                if talentNum then
-                    MakePixelSquareArrI(talentNum, 72)
-                else
-                    MakePixelSquareArrI(0, 72)
-                end
+                MakePixelSquareArrI(DataToColor.talentQueue:shift() or 0, 72)
             end
 
             if DataToColor:Modulo(globalCounter, GOSSIP_ITERATION_FRAME_CHANGE_RATE) == 0 then
-                gossipNum = DataToColor.stack:pop(DataToColor.gossipQueue)
+                gossipNum = DataToColor.gossipQueue:shift()
                 if gossipNum then
                     --DataToColor:Print("gossipQueue:" .. gossipNum)
                     MakePixelSquareArrI(gossipNum, 73)
