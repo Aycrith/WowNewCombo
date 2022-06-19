@@ -47,9 +47,9 @@
             case InventorySlotId.Finger_2:
                 return "finger";
             case InventorySlotId.Back:
-                return InventorySlotId.Chest.ToString().ToLower();
+                return InventorySlotId.Chest.ToStringF().ToLower();
             default:
-                return i.ToString().ToLower();
+                return i.ToStringF().ToLower();
         }
     }
 }
