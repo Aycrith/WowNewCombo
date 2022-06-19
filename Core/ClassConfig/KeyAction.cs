@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -272,25 +272,25 @@ namespace Core
                 return;
 
             int oldValue = 0;
-            switch (e.PowerType)
+            switch (e.ActionBarCost.PowerType)
             {
                 case PowerType.Mana:
                     oldValue = MinMana;
-                    MinMana = e.Cost;
+                    MinMana = e.ActionBarCost.Cost;
                     break;
                 case PowerType.Rage:
                     oldValue = MinRage;
-                    MinRage = e.Cost;
+                    MinRage = e.ActionBarCost.Cost;
                     break;
                 case PowerType.Energy:
                     oldValue = MinEnergy;
-                    MinEnergy = e.Cost;
+                    MinEnergy = e.ActionBarCost.Cost;
                     break;
             }
 
-            if (e.Cost != oldValue)
+            if (e.ActionBarCost.Cost != oldValue)
             {
-                LogPowerCostChange(logger, Name, e.PowerType.ToStringF(), e.Cost, oldValue);
+                LogPowerCostChange(logger, Name, e.ActionBarCost.PowerType.ToStringF(), e.ActionBarCost.Cost, oldValue);
             }
         }
 
