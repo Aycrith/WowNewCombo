@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using Core.Talents;
 using Core.Database;
-using System.Linq;
 
 namespace Core
 {
@@ -12,7 +11,7 @@ namespace Core
         private readonly AddonDataProvider reader;
         private readonly PlayerReader playerReader;
         private readonly TalentDB talentDB;
-        public int Count => Talents.Sum(x => x.Value.CurrentRank);
+        public int Count { get; private set; }
 
         public Dictionary<int, Talent> Talents { get; } = new();
 
@@ -53,11 +52,13 @@ namespace Core
             if (talentDB.Update(ref talent, playerReader.Class))
             {
                 Talents.Add(hash, talent);
+                Count += talent.CurrentRank;
             }
         }
 
         public void Reset()
         {
+            Count = 0;
             Talents.Clear();
         }
 
@@ -65,9 +66,8 @@ namespace Core
         {
             foreach (var kvp in Talents)
             {
-                if (!string.IsNullOrEmpty(kvp.Value.Name) &&
-                    kvp.Value.Name.ToLower() == name.ToLower() &&
-                    kvp.Value.CurrentRank >= rank)
+                if (kvp.Value.CurrentRank >= rank &&
+                    kvp.Value.Name.Equals(name, System.StringComparison.OrdinalIgnoreCase))
                 {
                     return true;
                 }

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿using System;
 using System.IO;
 using Newtonsoft.Json;
 using Core.Talents;
@@ -10,33 +10,51 @@ namespace Core.Database
     {
         private readonly SpellDB spellDB;
 
-        private readonly List<TalentTab> talentTabs;
-        private readonly List<TalentTreeElement> talentTreeElements;
+        private readonly TalentTab[] talentTabs;
+        private readonly TalentTreeElement[] talentTreeElements;
 
         public TalentDB(DataConfig dataConfig, SpellDB spellDB)
         {
             this.spellDB = spellDB;
 
-            talentTabs = JsonConvert.DeserializeObject<List<TalentTab>>(File.ReadAllText(Path.Join(dataConfig.Dbc, "talenttab.json")));
-            talentTreeElements = JsonConvert.DeserializeObject<List<TalentTreeElement>>(File.ReadAllText(Path.Join(dataConfig.Dbc, "talent.json")));
+            talentTabs = JsonConvert.DeserializeObject<TalentTab[]>(File.ReadAllText(Path.Join(dataConfig.Dbc, "talenttab.json")));
+            talentTreeElements = JsonConvert.DeserializeObject<TalentTreeElement[]>(File.ReadAllText(Path.Join(dataConfig.Dbc, "talent.json")));
         }
 
         public bool Update(ref Talent talent, PlayerClassEnum playerClassEnum)
         {
-            if (talentTabs.Count == 0 || talentTreeElements.Count == 0)
-                return false;
+            string playerClass = playerClassEnum.ToStringF();
 
-            string playerClass = playerClassEnum.ToString().ToLower();
             int tabIndex = talent.TabNum - 1;
+            int talentTabIndex = -1;
+            for (int i = 0; i < talentTabs.Length; i++)
+            {
+                if (talentTabs[i].BackgroundFile.Contains(playerClass, StringComparison.OrdinalIgnoreCase) &&
+                    talentTabs[i].OrderIndex == tabIndex)
+                {
+                    talentTabIndex = i;
+                    break;
+                }
+            }
+            if (talentTabIndex == -1) return false;
+
             int tierIndex = talent.TierNum - 1;
             int columnIndex = talent.ColumnNum - 1;
+            int rankIndex = talent.CurrentRank - 1;
 
-            int talentTabIndex = talentTabs.FindIndex(x => x.BackgroundFile.ToLower().Contains(playerClass) && x.OrderIndex == tabIndex);
-            if (talentTabIndex == -1) return false;
-            int talentElementIndex = talentTreeElements.FindIndex(x => x.TabID == talentTabs[talentTabIndex].Id && x.TierID == tierIndex && x.ColumnIndex == columnIndex);
-            if (talentElementIndex == -1) return false;
+            int talentElementIndex = -1;
+            for (int i = 0; i < talentTreeElements.Length; i++)
+            {
+                if (talentTreeElements[i].TabID == talentTabs[talentTabIndex].Id &&
+                    talentTreeElements[i].TierID == tierIndex &&
+                    talentTreeElements[i].ColumnIndex == columnIndex)
+                {
+                    talentElementIndex = i;
+                    break;
+                }
+            }
 
-            var spellId = talentTreeElements[talentElementIndex].SpellIds[talent.CurrentRank - 1];
+            int spellId = talentTreeElements[talentElementIndex].SpellIds[rankIndex];
             if (spellDB.Spells.TryGetValue(spellId, out Spell spell))
             {
                 talent.Name = spell.Name;
@@ -45,6 +63,5 @@ namespace Core.Database
 
             return false;
         }
-
     }
 }
