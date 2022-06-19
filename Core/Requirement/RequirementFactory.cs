@@ -288,7 +288,8 @@ namespace Core
 
             InitPerKeyActionRequirements(item);
 
-            item.RequirementObjects.Clear();
+            List<Requirement> requirements = new();
+
             foreach (string requirement in item.Requirements)
             {
                 List<string> expressions = InfixToPostfix.Convert(requirement);
@@ -321,24 +322,26 @@ namespace Core
                     }
                 }
 
-                item.RequirementObjects.Add(stack.Pop());
+                requirements.Add(stack.Pop());
             }
 
-            AddMinRequirement(item.RequirementObjects, item);
-            AddTargetIsCastingRequirement(item.RequirementObjects, item);
+            AddMinRequirement(requirements, item);
+            AddTargetIsCastingRequirement(requirements, item);
 
             if (item.WhenUsable && !string.IsNullOrEmpty(item.Key))
             {
-                item.RequirementObjects.Add(CreateActionUsableRequirement(item));
+                requirements.Add(CreateActionUsableRequirement(item));
 
                 if (item.Slot > 0)
-                    item.RequirementObjects.Add(CreateActionNotInGameCooldown(item));
+                    requirements.Add(CreateActionNotInGameCooldown(item));
             }
 
-            AddCooldownRequirement(item.RequirementObjects, item);
-            AddChargeRequirement(item.RequirementObjects, item);
+            AddCooldownRequirement(requirements, item);
+            AddChargeRequirement(requirements, item);
 
-            AddSpellSchoolRequirement(item.RequirementObjects, item);
+            AddSpellSchoolRequirement(requirements, item);
+
+            item.RequirementsRuntime = requirements.ToArray();
         }
 
         public void InitUserDefinedIntVariables(Dictionary<string, int> intKeyValues)

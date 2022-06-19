@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,6 +29,7 @@ namespace Core
 
         public string Requirement { get; set; } = string.Empty;
         public List<string> Requirements { get; } = new();
+        public Requirement[] RequirementsRuntime { get; set; } = Array.Empty<Requirement>();
 
         public bool WhenUsable { get; set; }
 
@@ -59,8 +60,6 @@ namespace Core
         public int StepBackAfterCast { get; set; }
 
         public Vector3 LastClickPostion { get; private set; }
-
-        public List<Requirement> RequirementObjects { get; } = new();
 
         public int ConsoleKeyFormHash { private set; get; }
 
@@ -219,7 +218,13 @@ namespace Core
 
         public bool CanRun()
         {
-            return !this.RequirementObjects.Any(r => !r.HasRequirement());
+            for (int i = 0; i < RequirementsRuntime.Length; i++)
+            {
+                if (!RequirementsRuntime[i].HasRequirement())
+                    return false;
+            }
+
+            return true;
         }
 
         public bool HasFormRequirement()
