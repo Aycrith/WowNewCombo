@@ -224,8 +224,8 @@ function DataToColor:OnCombatEvent(...)
     if eventType=="UNIT_DIED" then
         if string.find(destGUID, "Creature") then
             --print(CombatLogGetCurrentEventInfo())
-            DataToColor.lastCombatCreatureDied = DataToColor:getGuidFromUUID(destGUID);
-            --print("v_killing blow " .. destGUID .. " " .. DataToColor.lastCombatCreatureDied .. " " .. destName)
+            DataToColor.CombatCreatureDiedQueue:push(DataToColor:getGuidFromUUID(destGUID))
+            --print("v_killing blow " .. destGUID .. " " .. DataToColor.CombatCreatureDiedQueue .. " " .. destName)
         else
             --print("i_killing blow " .. destGUID .. " " .. destName)
         end

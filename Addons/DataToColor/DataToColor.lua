@@ -59,7 +59,6 @@ DataToColor.uiErrorMessage = 0
 
 DataToColor.lastCombatDamageDoneCreature = 0
 DataToColor.lastCombatCreature = 0
-DataToColor.lastCombatCreatureDied = 0
 
 DataToColor.lastAutoShot = 0
 DataToColor.lastMainHandMeleeSwing = 0
@@ -93,6 +92,7 @@ DataToColor.actionBarCooldownQueue = DataToColor.struct:new()
 DataToColor.spellBookQueue = DataToColor.Queue:new()
 DataToColor.talentQueue = DataToColor.Queue:new()
 DataToColor.CombatDamageTakenQueue = DataToColor.Queue:new()
+DataToColor.CombatCreatureDiedQueue = DataToColor.Queue:new()
 DataToColor.CombatMissTypeQueue = DataToColor.Queue:new()
 
 local equipmentSlot = nil
@@ -180,7 +180,6 @@ function DataToColor:Reset()
 
     DataToColor.lastCombatDamageDoneCreature = 0
     DataToColor.lastCombatCreature = 0
-    DataToColor.lastCombatCreatureDied = 0
 
     DataToColor.lastAutoShot = 0
     DataToColor.lastMainHandMeleeSwing = 0
@@ -599,10 +598,9 @@ function DataToColor:CreateFrames(n)
 
             if DataToColor:Modulo(globalCounter, COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE) == 0 then
                 MakePixelSquareArrI(DataToColor.CombatDamageTakenQueue:shift() or 0, 66) -- Last Combat Damage taken
+                MakePixelSquareArrI(DataToColor.CombatCreatureDiedQueue:shift() or 0, 67) -- Last Killed Unit
                 MakePixelSquareArrI(DataToColor.CombatMissTypeQueue:shift() or 0, 76) -- Last Combat Miss type
             end
-
-            MakePixelSquareArrI(DataToColor.lastCombatCreatureDied, 67) -- Last Killed Unit
 
             MakePixelSquareArrI(DataToColor:getGuid(DataToColor.C.unitPet), 68) -- pet guid
             MakePixelSquareArrI(DataToColor:getGuid(DataToColor.C.unitPetTarget), 69) -- pet target
