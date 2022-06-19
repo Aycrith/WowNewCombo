@@ -11,11 +11,11 @@ namespace Core.Database
 
         public SpellDB(DataConfig dataConfig)
         {
-            var items = JsonConvert.DeserializeObject<List<Spell>>(File.ReadAllText(Path.Join(dataConfig.Dbc, "spells.json")));
-            items.ForEach(i =>
+            Spell[] temp = JsonConvert.DeserializeObject<Spell[]>(File.ReadAllText(Path.Join(dataConfig.Dbc, "spells.json")));
+            for (int i = 0; i < temp.Length; i++)
             {
-                Spells.Add(i.Id, i);
-            });
+                Spells.Add(temp[i].Id, temp[i]);
+            }
         }
     }
 }

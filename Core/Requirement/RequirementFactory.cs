@@ -662,18 +662,18 @@ namespace Core
         private Requirement CreateSpell(string requirement)
         {
             var parts = requirement.Split(":");
-            var name = parts[1].Trim();
+            string name = parts[1].Trim();
 
-            if (int.TryParse(parts[1], out int id) && spellBookReader.SpellDB.Spells.TryGetValue(id, out Spell spell))
+            if (int.TryParse(name, out int id) && spellBookReader.TryGetValue(id, out Spell spell))
             {
                 name = $"{spell.Name}({id})";
             }
             else
             {
-                id = spellBookReader.GetSpellIdByName(name);
+                id = spellBookReader.GetId(name);
             }
 
-            bool f() => spellBookReader.Spells.ContainsKey(id);
+            bool f() => spellBookReader.Has(id);
             string s() => $"Spell {name}";
 
             return new Requirement
