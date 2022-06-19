@@ -29,6 +29,7 @@ namespace Core
 
         public string Requirement { get; set; } = string.Empty;
         public List<string> Requirements { get; } = new();
+        public Requirement[] RequirementsRuntime { get; set; } = Array.Empty<Requirement>();
 
         public bool WhenUsable { get; set; }
 
@@ -59,8 +60,6 @@ namespace Core
         public int StepBackAfterCast { get; set; }
 
         public Vector3 LastClickPostion { get; private set; }
-
-        public List<Requirement> RequirementObjects { get; } = new();
 
         public int ConsoleKeyFormHash { private set; get; }
 
@@ -219,7 +218,13 @@ namespace Core
 
         public bool CanRun()
         {
-            return !this.RequirementObjects.Any(r => !r.HasRequirement());
+            for (int i = 0; i < RequirementsRuntime.Length; i++)
+            {
+                if (!RequirementsRuntime[i].HasRequirement())
+                    return false;
+            }
+
+            return true;
         }
 
         public bool HasFormRequirement()
@@ -272,25 +277,25 @@ namespace Core
                 return;
 
             int oldValue = 0;
-            switch (e.PowerType)
+            switch (e.ActionBarCost.PowerType)
             {
                 case PowerType.Mana:
                     oldValue = MinMana;
-                    MinMana = e.Cost;
+                    MinMana = e.ActionBarCost.Cost;
                     break;
                 case PowerType.Rage:
                     oldValue = MinRage;
-                    MinRage = e.Cost;
+                    MinRage = e.ActionBarCost.Cost;
                     break;
                 case PowerType.Energy:
                     oldValue = MinEnergy;
-                    MinEnergy = e.Cost;
+                    MinEnergy = e.ActionBarCost.Cost;
                     break;
             }
 
-            if (e.Cost != oldValue)
+            if (e.ActionBarCost.Cost != oldValue)
             {
-                LogPowerCostChange(logger, Name, e.PowerType.ToStringF(), e.Cost, oldValue);
+                LogPowerCostChange(logger, Name, e.ActionBarCost.PowerType.ToStringF(), e.ActionBarCost.Cost, oldValue);
             }
         }
 

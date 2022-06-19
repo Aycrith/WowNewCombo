@@ -52,7 +52,7 @@ namespace Core
         {
             for (int i = 0; i < data.Length; i++)
             {
-                data[i] = new(0, default);
+                data[i] = new(0, DateTime.UtcNow);
             }
         }
 

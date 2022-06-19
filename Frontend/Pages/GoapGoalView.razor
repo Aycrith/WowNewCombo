@@ -13,11 +13,12 @@
         }
         @if (this.goal.Keys.Length == 1)
         {
-            @foreach (var requirement in this.goal.Keys[0].RequirementObjects)
+            @for (int r = 0; r < this.goal.Keys[0].RequirementsRuntime.Length; r++)
             {
-                if (requirement.VisibleIfHasRequirement || !requirement.HasRequirement())
+                if (this.goal.Keys[0].RequirementsRuntime[r].VisibleIfHasRequirement ||
+                    !this.goal.Keys[0].RequirementsRuntime[r].HasRequirement())
                 {
-                    @(DisplayRequirementBadges(requirement))
+                    @(DisplayRequirementBadges(this.goal.Keys[0].RequirementsRuntime[r]))
                 }
             }
         }
@@ -31,18 +32,19 @@
                 @{
                     int lastKeyClicked = Core.KeyAction.LastKeyClicked();
                 }
-                @for (int i = 0; i < this.goal.Keys.Length; i++)
+                @for (int k = 0; k < this.goal.Keys.Length; k++)
                 {
-                    <tr class="@ActionClass(lastKeyClicked==this.goal.Keys[i].ConsoleKeyFormHash)">
+                    <tr class="@ActionClass(lastKeyClicked==this.goal.Keys[k].ConsoleKeyFormHash)">
                         <td>
-                            <b style="color:@DisplayCanRun(this.goal.Keys[i].CanRun())">@this.goal.Keys[i].Name [@this.goal.Keys[i].ConsoleKey]</b>
+                            <b style="color:@DisplayCanRun(this.goal.Keys[k].CanRun())">@this.goal.Keys[k].Name [@this.goal.Keys[k].ConsoleKey]</b>
                         </td>
                         <td>
-                            @for (int j = 0; j < this.goal.Keys[i].RequirementObjects.Count; j++)
+                            @for (int r = 0; r < this.goal.Keys[k].RequirementsRuntime.Length; r++)
                             {
-                                if (this.goal.Keys[i].RequirementObjects[j].VisibleIfHasRequirement || !this.goal.Keys[i].RequirementObjects[j].HasRequirement())
+                                if (this.goal.Keys[k].RequirementsRuntime[r].VisibleIfHasRequirement ||
+                                    !this.goal.Keys[k].RequirementsRuntime[r].HasRequirement())
                                 {
-                                    @(DisplayRequirementBadges(this.goal.Keys[i].RequirementObjects[j]))
+                                    @(DisplayRequirementBadges(this.goal.Keys[k].RequirementsRuntime[r]))
                                 }
                             }
                         </td>
@@ -64,9 +66,7 @@
     [Parameter]
     public Core.Goals.GoapGoal goal { get; set; } = new Core.Goals.NullGoal();
 
-    private static readonly string and = " and ";
-    private static readonly string or = " or ";
-    private static readonly Regex regex = new($"({and})|({or})", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex regex = new($"({Requirement.And})|({Requirement.Or})", RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private static readonly StringBuilder stringBuilder = new();
 
     private static MarkupString DisplayRequirementBadges(Core.Requirement requirement)
@@ -74,7 +74,7 @@
         stringBuilder.Clear();
         foreach (string match in regex.Split(requirement.LogMessage()))
         {
-            if (match.StartsWith(and) || match.StartsWith(or))
+            if (match.StartsWith(Requirement.And) || match.StartsWith(Requirement.Or))
             {
                 stringBuilder.Append("<span class=\"badge badge-secondary\">");
                 stringBuilder.Append(match.Trim());

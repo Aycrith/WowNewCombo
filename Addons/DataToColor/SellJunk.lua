@@ -46,7 +46,7 @@ function StopSelling()
 
     if mSelling then
         mSelling = false
-        DataToColor.stack:push(DataToColor.gossipQueue, MERCHANT_SELLING_FINISHED)
+        DataToColor.gossipQueue:push(MERCHANT_SELLING_FINISHED)
     end
 end
 
@@ -78,7 +78,7 @@ function SellJunkFunc()
                             mBagID, mBagSlot = bagID, bagSlot
                             if not mSelling then
                                 mSelling = true
-                                DataToColor.stack:push(DataToColor.gossipQueue, MERCHANT_SELLING)
+                                DataToColor.gossipQueue:push(MERCHANT_SELLING)
                             end
                         end
                     end

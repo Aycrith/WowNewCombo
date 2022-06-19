@@ -5,14 +5,12 @@ namespace Core
     public class ActionBarCostEventArgs : EventArgs
     {
         public int Index { get; }
-        public PowerType PowerType { get; }
-        public int Cost { get; }
+        public ActionBarCost ActionBarCost { get; }
 
         public ActionBarCostEventArgs(int index, PowerType powerType, int cost)
         {
             Index = index;
-            PowerType = powerType;
-            Cost = cost;
+            ActionBarCost = new(powerType, cost);
         }
     }
 

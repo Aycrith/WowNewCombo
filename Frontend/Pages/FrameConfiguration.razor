@@ -122,7 +122,7 @@
                     <span>Step 4: Now return to normal mode, In the wow chat window: type <span class="ml-1"><b>&#47;@addonConfig.Command</b></span></span>
                 </li>
             }
-            @if (!string.IsNullOrEmpty(playerClass) && !playerClass.ToLower().Contains("unable to read player class") && !playerClass.ToLower().Contains("none"))
+            @if (!string.IsNullOrEmpty(playerClass) && !playerClass.Contains("unable to read player class", StringComparison.OrdinalIgnoreCase) && !playerClass.Contains("none", StringComparison.OrdinalIgnoreCase))
             {
                 <li class="list-group-item">
                     Step 5: This is perfect, just click the Save button.

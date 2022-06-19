@@ -163,7 +163,7 @@ function DataToColor:OnCombatEvent(...)
     end
 
     if string.find(sourceGUID, "Creature") and (destGUID == DataToColor.playerGUID or destGUID == DataToColor.petGUID) then
-        DataToColor.stack:push(DataToColor.CombatDamageTakenQueue, DataToColor:getGuidFromUUID(sourceGUID))
+        DataToColor.CombatDamageTakenQueue:push(DataToColor:getGuidFromUUID(sourceGUID))
     end
 
     if sourceGUID == DataToColor.playerGUID then
@@ -208,7 +208,7 @@ function DataToColor:OnCombatEvent(...)
                 if type(missType) == "boolean" then -- some spells has 3 args like Charge Stun
                     missType = select(-3, ...)
                 end
-                DataToColor.stack:push(DataToColor.CombatMissTypeQueue, miss_type[missType])
+                DataToColor.CombatMissTypeQueue:push(miss_type[missType])
             end
         end
 
@@ -224,8 +224,8 @@ function DataToColor:OnCombatEvent(...)
     if eventType=="UNIT_DIED" then
         if string.find(destGUID, "Creature") then
             --print(CombatLogGetCurrentEventInfo())
-            DataToColor.lastCombatCreatureDied = DataToColor:getGuidFromUUID(destGUID);
-            --print("v_killing blow " .. destGUID .. " " .. DataToColor.lastCombatCreatureDied .. " " .. destName)
+            DataToColor.CombatCreatureDiedQueue:push(DataToColor:getGuidFromUUID(destGUID))
+            --print("v_killing blow " .. destGUID .. " " .. DataToColor.CombatCreatureDiedQueue .. " " .. destName)
         else
             --print("i_killing blow " .. destGUID .. " " .. destName)
         end
@@ -239,22 +239,22 @@ end
 
 function DataToColor:OnBagUpdate(event, containerID)
     if containerID >= 0 and containerID <=4 then
-        DataToColor.stack:push(DataToColor.bagQueue, containerID)
+        DataToColor.bagQueue:push(containerID)
         DataToColor:InitInventoryQueue(containerID)
 
         if containerID >= 1 then
-            DataToColor.stack:push(DataToColor.equipmentQueue, 19 + containerID) -- from tabard
+            DataToColor.equipmentQueue:push(19 + containerID) -- from tabard
         end
     end
     --DataToColor:Print("OnBagUpdate "..containerID)
 end
 
 function DataToColor:OnMerchantShow(event)
-    DataToColor.stack:push(DataToColor.gossipQueue, MERCHANT_SHOW_V)
+    DataToColor.gossipQueue:push(MERCHANT_SHOW_V)
 end
 
 function DataToColor:OnMerchantClosed(event)
-    DataToColor.stack:push(DataToColor.gossipQueue, MERCHANT_CLOSED_V)
+    DataToColor.gossipQueue:push(MERCHANT_CLOSED_V)
 end
 
 function DataToColor:OnPlayerTargetChanged(event)
@@ -262,7 +262,7 @@ function DataToColor:OnPlayerTargetChanged(event)
 end
 
 function DataToColor:OnPlayerEquipmentChanged(event, equipmentSlot, hasCurrent)
-    DataToColor.stack:push(DataToColor.equipmentQueue, equipmentSlot)
+    DataToColor.equipmentQueue:push(equipmentSlot)
     --local c = hasCurrent and 1 or 0
     --DataToColor:Print("OnPlayerEquipmentChanged "..equipmentSlot.." -> "..c)
 end
@@ -273,7 +273,7 @@ function DataToColor:OnGossipShow(event)
         return
     end
 
-    DataToColor.stack:push(DataToColor.gossipQueue, GOSSIP_START)
+    DataToColor.gossipQueue:push(GOSSIP_START)
 
     -- returns variable string - format of one entry
     -- [1] localized name
@@ -281,12 +281,11 @@ function DataToColor:OnGossipShow(event)
     local GossipOptions = { GetGossipOptions() }
     local count = table.getn(GossipOptions) / 2
     for k, v in pairs(GossipOptions) do
-        -- do something
         if k % 2 == 0 then
-            DataToColor.stack:push(DataToColor.gossipQueue, 10000 * count + 100 * (k/2) + DataToColor.C.Gossip[v])
+            DataToColor.gossipQueue:push(10000 * count + 100 * (k/2) + DataToColor.C.Gossip[v])
         end
     end
-    DataToColor.stack:push(DataToColor.gossipQueue, GOSSIP_END)
+    DataToColor.gossipQueue:push(GOSSIP_END)
 end
 
 function DataToColor:OnSpellsChanged(event)
@@ -297,7 +296,7 @@ end
 
 function DataToColor:ActionbarSlotChanged(event, slot)
     if slot and HasAction(slot) then
-        DataToColor.stack:push(DataToColor.actionBarCostQueue, slot)
+        DataToColor.actionBarCostQueue:push(slot)
     end
 end
 

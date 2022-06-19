@@ -11,7 +11,7 @@ namespace Core
                 HasRequirement = () => f1.HasRequirement() || f2.HasRequirement(),
                 LogMessage = () => string.IsNullOrEmpty(f1.LogMessage()) ?
                 f2.LogMessage() :
-                string.Join(" or ", f1.LogMessage(), f2.LogMessage())
+                string.Join(Requirement.Or, f1.LogMessage(), f2.LogMessage())
             };
         }
 
@@ -22,7 +22,7 @@ namespace Core
                 HasRequirement = () => f1.HasRequirement() && f2.HasRequirement(),
                 LogMessage = () => string.IsNullOrEmpty(f1.LogMessage()) ?
                 f2.LogMessage() :
-                string.Join(" and ", f1.LogMessage(), f2.LogMessage())
+                string.Join(Requirement.And, f1.LogMessage(), f2.LogMessage())
             };
         }
 
@@ -38,6 +38,9 @@ namespace Core
 
     public class Requirement
     {
+        public static readonly string And = " and ";
+        public static readonly string Or = " or ";
+
         public Func<bool> HasRequirement { get; init; } = () => false;
         public Func<string> LogMessage { get; init; } = () => "Unknown requirement";
         public bool VisibleIfHasRequirement { get; init; } = true;

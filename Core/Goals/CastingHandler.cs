@@ -373,7 +373,7 @@ namespace Core.Goals
             }
             else
             {
-                if (item.RequirementObjects.Count > 0)
+                if (item.RequirementsRuntime.Length > 0)
                 {
                     (bool canRun, double canRunElapsedMs) = wait.UntilNot(SpellQueueTimeMs, item.CanRun);
                     if (item.Log)
