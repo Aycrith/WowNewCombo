@@ -21,19 +21,8 @@ namespace Core.Database
                 Items.Add(items[i].Entry, items[i]);
             }
 
-            EntityId[] foods = JsonConvert.DeserializeObject<EntityId[]>(File.ReadAllText(Path.Join(dataConfig.Dbc, "foods.json")));
-            FoodIds = new int[foods.Length];
-            for (int i = 0; i < foods.Length; i++)
-            {
-                FoodIds[i] = foods[i].Id;
-            }
-
-            EntityId[] waters = JsonConvert.DeserializeObject<EntityId[]>(File.ReadAllText(Path.Join(dataConfig.Dbc, "waters.json")));
-            WaterIds = new int[waters.Length];
-            for (int i = 0; i < waters.Length; i++)
-            {
-                WaterIds[i] = waters[i].Id;
-            }
+            FoodIds = JsonConvert.DeserializeObject<int[]>(File.ReadAllText(Path.Join(dataConfig.Dbc, "foods.json")));
+            WaterIds = JsonConvert.DeserializeObject<int[]>(File.ReadAllText(Path.Join(dataConfig.Dbc, "waters.json")));
         }
     }
 }
