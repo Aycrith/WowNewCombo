@@ -32,19 +32,42 @@
         public void Execute()
         {
             ActionBarSlotItem[] items = new ActionBarSlotItem[
-                config.Form.Count +
-                config.Adhoc.Sequence.Count +
-                config.Parallel.Sequence.Count +
-                config.Pull.Sequence.Count +
-                config.Combat.Sequence.Count +
-                config.NPC.Sequence.Count];
+                config.Form.Length +
+                config.Adhoc.Sequence.Length +
+                config.Parallel.Sequence.Length +
+                config.Pull.Sequence.Length +
+                config.Combat.Sequence.Length +
+                config.NPC.Sequence.Length];
 
-            config.Form.ForEach(k => AddUnique(ref items, k));
-            config.Adhoc.Sequence.ForEach(k => AddUnique(ref items, k));
-            config.Parallel.Sequence.ForEach(k => AddUnique(ref items, k));
-            config.Pull.Sequence.ForEach(k => AddUnique(ref items, k));
-            config.Combat.Sequence.ForEach(k => AddUnique(ref items, k));
-            config.NPC.Sequence.ForEach(k => AddUnique(ref items, k));
+            foreach (var k in config.Form)
+            {
+                AddUnique(ref items, k);
+            }
+
+            foreach (var k in config.Adhoc.Sequence)
+            {
+                AddUnique(ref items, k);
+            }
+
+            foreach (var k in config.Parallel.Sequence)
+            {
+                AddUnique(ref items, k);
+            }
+
+            foreach (var k in config.Pull.Sequence)
+            {
+                AddUnique(ref items, k);
+            }
+
+            foreach (var k in config.Combat.Sequence)
+            {
+                AddUnique(ref items, k);
+            }
+
+            foreach (var k in config.NPC.Sequence)
+            {
+                AddUnique(ref items, k);
+            }
 
             System.Array.Resize(ref items, count);
             System.Array.Sort(items, (a, b) => a.KeyAction.Slot.CompareTo(b.KeyAction.Slot));

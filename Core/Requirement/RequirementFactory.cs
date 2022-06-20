@@ -20,7 +20,7 @@ namespace Core
         private readonly CreatureDB creatureDb;
         private readonly ItemDB itemDb;
 
-        private readonly KeyActions keyActions;
+        private KeyAction[] keyActions = Array.Empty<KeyAction>();
 
         private readonly Dictionary<int, List<SchoolMask>> immunityBlacklist;
 
@@ -281,7 +281,15 @@ namespace Core
         public void InitialiseRequirements(KeyAction item, KeyActions? keyActions)
         {
             if (keyActions != null)
-                this.keyActions.Sequence.AddRange(keyActions.Sequence);
+            {
+                int sizeBefore = this.keyActions.Length;
+                Array.Resize(ref this.keyActions, this.keyActions.Length + keyActions.Sequence.Length);
+
+                for (int i = 0; i < keyActions.Sequence.Length; i++)
+                {
+                    this.keyActions[sizeBefore + i] = keyActions.Sequence[i];
+                }
+            }
 
             AddConsumableRequirement("Water", item);
             AddConsumableRequirement("Food", item);
@@ -781,7 +789,7 @@ namespace Core
             var parts = requirement.Split(":");
             string name = parts[1].Trim();
 
-            var keyAction = keyActions.Sequence.First(x => x.Name == name);
+            var keyAction = keyActions.First(x => x.Name == name);
             return CreateActionUsableRequirement(keyAction);
         }
 

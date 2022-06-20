@@ -119,7 +119,7 @@ namespace Core
                     availableActions.Add(new TargetPetTarget(input, addonReader.PlayerReader));
                 }
 
-                if (classConfig.Parallel.Sequence.Count > 0)
+                if (classConfig.Parallel.Sequence.Length > 0)
                 {
                     availableActions.Add(new ParallelGoal(logger, input, wait, addonReader.PlayerReader, stopMoving, classConfig.Parallel.Sequence, castingHandler, mountHandler));
                 }
@@ -192,7 +192,7 @@ namespace Core
 
                 availableActions.Add(new PullTargetGoal(logger, input, wait, addonReader, blacklist, stopMoving, castingHandler, mountHandler, npcNameTargeting, stuckDetector, combatUtil));
 
-                if (classConfig.Parallel.Sequence.Count > 0)
+                if (classConfig.Parallel.Sequence.Length > 0)
                 {
                     availableActions.Add(new ParallelGoal(logger, input, wait, addonReader.PlayerReader, stopMoving, classConfig.Parallel.Sequence, castingHandler, mountHandler));
                 }

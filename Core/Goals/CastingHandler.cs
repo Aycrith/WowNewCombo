@@ -431,7 +431,15 @@ namespace Core.Goals
 
         public bool SwitchForm(Form beforeForm, KeyAction item)
         {
-            int index = classConfig.Form.FindIndex(x => x.FormEnum == item.FormEnum);
+            int index = -1;
+            for (int i = 0; i < classConfig.Form.Length; i++)
+            {
+                if (classConfig.Form[i].FormEnum == item.FormEnum)
+                {
+                    index = i;
+                    break;
+                }
+            }
             if (index == -1)
             {
                 logger.LogWarning($"Unable to find Key in ClassConfig.Form to transform into {item.FormEnum}");

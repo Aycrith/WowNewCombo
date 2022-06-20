@@ -20,8 +20,6 @@ namespace Core.Goals
         private readonly CastingHandler castingHandler;
         private readonly MountHandler mountHandler;
 
-        private readonly ClassConfiguration classConfiguration;
-
         private float lastDirectionForTurnAround;
 
         private float lastKnwonPlayerDirection;
@@ -37,8 +35,6 @@ namespace Core.Goals
             this.addonReader = addonReader;
             this.playerReader = addonReader.PlayerReader;
             this.stopMoving = stopMoving;
-
-            this.classConfiguration = classConfiguration;
             this.castingHandler = castingHandler;
             this.mountHandler = mountHandler;
 
@@ -52,11 +48,7 @@ namespace Core.Goals
             AddEffect(GoapKey.targetisalive, false);
             AddEffect(GoapKey.hastarget, false);
 
-            Keys = new KeyAction[classConfiguration.Combat.Sequence.Count];
-            for (int i = 0; i < classConfiguration.Combat.Sequence.Count; i++)
-            {
-                Keys[i] = classConfiguration.Combat.Sequence[i];
-            }
+            Keys = classConfiguration.Combat.Sequence;
         }
 
         protected void Fight()
@@ -110,24 +102,25 @@ namespace Core.Goals
 
         private void ResetCooldowns()
         {
-            this.classConfiguration.Combat.Sequence
-            .Where(i => i.ResetOnNewTarget)
-            .ToList()
-            .ForEach(item =>
+            for (int i = 0; i < Keys.Length; i++)
             {
-                logger.LogInformation($"Reset cooldown on {item.Name}");
-                item.ResetCooldown();
-                item.ResetCharges();
-            });
+                var item = Keys[i];
+                if (item.ResetOnNewTarget)
+                {
+                    logger.LogInformation($"Reset cooldown on {item.Name}");
+                    item.ResetCooldown();
+                    item.ResetCharges();
+                }
+            }
         }
 
         protected bool HasPickedUpAnAdd
         {
             get
             {
-                return this.playerReader.Bits.PlayerInCombat() &&
-                    !this.playerReader.Bits.TargetOfTargetIsPlayerOrPet()
-                    && this.playerReader.TargetHealthPercentage() == 100;
+                return playerReader.Bits.PlayerInCombat() &&
+                    !playerReader.Bits.TargetOfTargetIsPlayerOrPet() &&
+                    playerReader.TargetHealthPercentage() == 100;
             }
         }
 
