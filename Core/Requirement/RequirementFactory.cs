@@ -22,7 +22,7 @@ namespace Core
 
         private KeyAction[] keyActions = Array.Empty<KeyAction>();
 
-        private readonly Dictionary<int, List<SchoolMask>> immunityBlacklist;
+        private readonly Dictionary<int, SchoolMask[]> immunityBlacklist;
 
         private readonly List<string> negateKeywords = new()
         {
@@ -38,7 +38,7 @@ namespace Core
 
         public const string AddVisible = "AddVisible";
 
-        public RequirementFactory(ILogger logger, AddonReader addonReader, NpcNameFinder npcNameFinder, Dictionary<int, List<SchoolMask>> immunityBlacklist)
+        public RequirementFactory(ILogger logger, AddonReader addonReader, NpcNameFinder npcNameFinder, Dictionary<int, SchoolMask[]> immunityBlacklist)
         {
             this.logger = logger;
             this.addonReader = addonReader;
@@ -50,8 +50,6 @@ namespace Core
             this.creatureDb = addonReader.CreatureDb;
             this.itemDb = addonReader.ItemDb;
             this.immunityBlacklist = immunityBlacklist;
-
-            this.keyActions = new KeyActions();
 
             requirementMap = new()
             {
@@ -306,17 +304,19 @@ namespace Core
                 {
                     if (expr.Contains("&&"))
                     {
-                        var a = stack.Pop();
-                        var b = stack.Pop();
+                        Requirement a = stack.Pop();
+                        Requirement b = stack.Pop();
+                        b.And(a);
 
-                        stack.Push(b.And(a));
+                        stack.Push(b);
                     }
                     else if (expr.Contains("||"))
                     {
-                        var a = stack.Pop();
-                        var b = stack.Pop();
+                        Requirement a = stack.Pop();
+                        Requirement b = stack.Pop();
+                        b.Or(a);
 
-                        stack.Push(b.Or(a));
+                        stack.Push(b);
                     }
                     else
                     {
@@ -530,7 +530,7 @@ namespace Core
         {
             if (item.School != SchoolMask.None)
             {
-                bool f() => immunityBlacklist.TryGetValue(playerReader.TargetId, out var immuneAgaints) ? !immuneAgaints.Contains(item.School) : true;
+                bool f() => !immunityBlacklist.TryGetValue(playerReader.TargetId, out SchoolMask[]? immuneAgaints) || !immuneAgaints.Contains(item.School);
                 string s() => item.School.ToStringF();
                 RequirementObjects.Add(new Requirement
                 {
@@ -556,7 +556,11 @@ namespace Core
             if (!string.IsNullOrEmpty(key))
             {
                 var requirementObj = requirementMap[key](requirement);
-                return negated != null ? requirementObj.Negate(negated) : requirementObj;
+                if (negated != null)
+                {
+                    requirementObj.Negate(negated);
+                }
+                return requirementObj;
             }
 
             if (boolVariables.ContainsKey(requirement))
@@ -567,13 +571,17 @@ namespace Core
                     HasRequirement = boolVariables[requirement],
                     LogMessage = s
                 };
-                return negated != null ? requirementObj.Negate(negated) : requirementObj;
+
+                if (negated != null)
+                {
+                    requirementObj.Negate(negated);
+                }
+                return requirementObj;
             }
 
             LogUnknownRequirement(logger, requirement, string.Join(", ", boolVariables.Keys));
             return new Requirement
             {
-                HasRequirement = () => false,
                 LogMessage = () => $"UNKNOWN REQUIREMENT! {requirement}"
             };
         }
@@ -829,7 +837,6 @@ namespace Core
                 LogUnknownRequirement(logger, requirement, string.Join(", ", intVariables.Keys));
                 return new Requirement
                 {
-                    HasRequirement = () => false,
                     LogMessage = () => $"UNKNOWN REQUIREMENT! {requirement}"
                 };
             }
@@ -896,7 +903,6 @@ namespace Core
                 default:
                     return new Requirement
                     {
-                        HasRequirement = () => false,
                         LogMessage = () => $"UNKNOWN ARITHMETIC REQUIREMENT! {key} {intVariables[key]()} ? {value()}"
                     };
             };
