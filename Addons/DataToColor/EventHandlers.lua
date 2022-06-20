@@ -151,23 +151,28 @@ function DataToColor:UnfilteredCombatEvent()
     DataToColor:OnCombatEvent(CombatLogGetCurrentEventInfo())
 end
 
+local playerDamageTakenEvents = {
+    SWING_DAMAGE = true,
+    SPELL_DAMAGE = true,
+}
+
 function DataToColor:OnCombatEvent(...)
-    local _, eventType, _, sourceGUID, sourceName, _, _, destGUID, destName, _, _, spellId, _, _ = ...
+    local _, subEvent, _, sourceGUID, sourceName, _, _, destGUID, destName, _, _, spellId, _, _ = ...
     --print(CombatLogGetCurrentEventInfo())
-    if eventType=="SPELL_PERIODIC_DAMAGE" then
-        DataToColor.lastCombatCreature=0;
+    if subEvent == "SPELL_PERIODIC_DAMAGE" then
+        DataToColor.lastCombatCreature = 0;
     elseif string.find(sourceGUID, "Creature") then
         DataToColor.lastCombatCreature = DataToColor:getGuidFromUUID(sourceGUID);
     else
-        DataToColor.lastCombatCreature=0;
+        DataToColor.lastCombatCreature = 0;
     end
 
-    if string.find(sourceGUID, "Creature") and (destGUID == DataToColor.playerGUID or destGUID == DataToColor.petGUID) then
+    if playerDamageTakenEvents[subEvent] and (destGUID == DataToColor.playerGUID or destGUID == DataToColor.petGUID) then
         DataToColor.CombatDamageTakenQueue:push(DataToColor:getGuidFromUUID(sourceGUID))
     end
 
     if sourceGUID == DataToColor.playerGUID then
-        if eventType=="SPELL_CAST_SUCCESS" then
+        if subEvent == "SPELL_CAST_SUCCESS" then
             if watchedSpells[spellId] then watchedSpells[spellId]() end
 
             local _, _, icon = GetSpellInfo(spellId)
@@ -177,18 +182,18 @@ function DataToColor:OnCombatEvent(...)
             end
         end
 
-        if string.find(eventType, "_CAST_START") then
+        if string.find(subEvent, "_CAST_START") then
             DataToColor.lastCastEvent = CAST_START
             DataToColor.lastCastSpellId = spellId
             --print(CombatLogGetCurrentEventInfo())
             --print("_CAST_START "..spellId)
         end
 
-        if string.find(eventType, "_CAST_SUCCESS") or string.find(eventType, "_CAST_FAILED") then
+        if string.find(subEvent, "_CAST_SUCCESS") or string.find(subEvent, "_CAST_FAILED") then
             --print(CombatLogGetCurrentEventInfo())
             DataToColor.lastCastSpellId = spellId
 
-            if string.find(eventType, "_CAST_FAILED") then
+            if string.find(subEvent, "_CAST_FAILED") then
                 --local lastCastEvent = DataToColor.lastCastEvent
                 local failedType = select(15, ...)
                 DataToColor.lastCastEvent = DataToColor:GetErrorCode(nil, failedType)
@@ -199,11 +204,11 @@ function DataToColor:OnCombatEvent(...)
         end
 
         -- matches SWING_ RANGE_ SPELL_ but not SPELL_PERIODIC
-        if not string.find(eventType, "SPELL_PERIODIC") and
-            (string.find(eventType, "_DAMAGE") or string.find(eventType, "_MISSED")) then
+        if not string.find(subEvent, "SPELL_PERIODIC") and
+            (string.find(subEvent, "_DAMAGE") or string.find(subEvent, "_MISSED")) then
             DataToColor.lastCombatDamageDoneCreature = DataToColor:getGuidFromUUID(destGUID);
 
-            if string.find(eventType, "_MISSED") then
+            if string.find(subEvent, "_MISSED") then
                 local missType = select(-2, ...)
                 if type(missType) == "boolean" then -- some spells has 3 args like Charge Stun
                     missType = select(-3, ...)
@@ -212,7 +217,7 @@ function DataToColor:OnCombatEvent(...)
             end
         end
 
-        if string.find(eventType, "SWING_") then
+        if string.find(subEvent, "SWING_") then
             local _, _, _, _, _, _, _, _, _, isOffHand = select(12, ...)
             if not isOffHand then
                 --DataToColor:Print("Normal Melee Swing detected")
@@ -221,7 +226,7 @@ function DataToColor:OnCombatEvent(...)
         end
     end
 
-    if eventType=="UNIT_DIED" then
+    if subEvent == "UNIT_DIED" then
         if string.find(destGUID, "Creature") then
             --print(CombatLogGetCurrentEventInfo())
             DataToColor.CombatCreatureDiedQueue:push(DataToColor:getGuidFromUUID(destGUID))
