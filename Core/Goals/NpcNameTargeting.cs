@@ -134,13 +134,13 @@ namespace Core.Goals
 
         public void ShowClickPositions(Graphics gr)
         {
-            npcNameFinder.Npcs.ForEach(npc =>
+            foreach (var npc in npcNameFinder.Npcs)
             {
                 foreach (Point p in locFindByCursorType)
                 {
                     gr.DrawEllipse(whitePen, p.X + npc.ClickPoint.X, p.Y + npc.ClickPoint.Y, 5, 5);
                 }
-            });
+            }
         }
     }
 }

@@ -67,7 +67,6 @@ namespace Core.Goals
                 SendActionEvent(new ActionEventArgs(GoapKey.shouldskin, false));
             }
 
-            Log($"Search for {NpcNames.Corpse}");
             npcNameTargeting.ChangeNpcType(NpcNames.Corpse);
             npcNameTargeting.WaitForUpdate();
 

@@ -23,10 +23,33 @@ namespace SharedLib.NpcFinder
         Corpse = 8
     }
 
+    public static class NpcNames_Extension
+    {
+        public static string ToStringF(this NpcNames value) => value switch
+        {
+            NpcNames.None => nameof(NpcNames.None),
+            NpcNames.Enemy => nameof(NpcNames.Enemy),
+            NpcNames.Friendly => nameof(NpcNames.Friendly),
+            NpcNames.Neutral => nameof(NpcNames.Neutral),
+            NpcNames.Corpse => nameof(NpcNames.Corpse),
+            _ => nameof(NpcNames.None),
+        };
+    }
+
     public enum SearchMode
     {
         Simple = 0,
         Fuzzy = 1
+    }
+
+    public static class SearchMode_Extension
+    {
+        public static string ToStringF(this SearchMode value) => value switch
+        {
+            SearchMode.Simple => nameof(SearchMode.Simple),
+            SearchMode.Fuzzy => nameof(SearchMode.Fuzzy),
+            _ => nameof(SearchMode.Simple),
+        };
     }
 
     public class NpcNameFinder
@@ -36,8 +59,11 @@ namespace SharedLib.NpcFinder
 
         private readonly ILogger logger;
         private readonly IBitmapProvider bitmapProvider;
+        private readonly PixelFormat pixelFormat;
         private readonly AutoResetEvent autoResetEvent;
         private readonly OverlappingNames comparer;
+
+        private readonly int bytesPerPixel;
 
         public Rectangle Area { get; }
 
@@ -47,11 +73,14 @@ namespace SharedLib.NpcFinder
         public float ScaleToRefWidth { get; } = 1;
         public float ScaleToRefHeight { get; } = 1;
 
-        public List<NpcPosition> Npcs { get; private set; } = new();
-        public int NpcCount => Npcs.Count;
+        private float yOffset;
+        private float heightMul;
+
+        public IEnumerable<NpcPosition> Npcs { get; private set; } = Enumerable.Empty<NpcPosition>();
+        public int NpcCount => Npcs.Count();
         public int AddCount { private set; get; }
         public int TargetCount { private set; get; }
-        public bool MobsVisible => Npcs.Count > 0;
+        public bool MobsVisible => NpcCount > 0;
         public bool PotentialAddsExist { get; private set; }
         public DateTime LastPotentialAddsSeen { get; private set; }
 
@@ -102,13 +131,19 @@ namespace SharedLib.NpcFinder
         {
             this.logger = logger;
             this.bitmapProvider = bitmapProvider;
+            this.pixelFormat = bitmapProvider.Bitmap.PixelFormat;
             this.autoResetEvent = autoResetEvent;
             this.comparer = new((int)ScaleWidth(LinesOfNpcMinLength), (int)ScaleHeight(DetermineNpcsHeightOffset1));
+
+            this.bytesPerPixel = Bitmap.GetPixelFormatSize(pixelFormat) / 8;
 
             UpdateSearchMode();
 
             ScaleToRefWidth = ScaleWidth(1);
             ScaleToRefHeight = ScaleHeight(1);
+
+            yOffset = ScaleHeight(npcPosYOffset);
+            heightMul = ScaleHeight(npcPosYHeightMul);
 
             Area = new Rectangle(new Point(0, (int)ScaleHeight(topOffset)),
                 new Size((int)(bitmapProvider.Bitmap.Width * 0.87f), (int)(bitmapProvider.Bitmap.Height * 0.6f)));
@@ -120,13 +155,13 @@ namespace SharedLib.NpcFinder
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private float ScaleWidth(int value)
         {
-            return value * (bitmapProvider.Bitmap.Width / refWidth);
+            return value * (bitmapProvider.Rect.Width / refWidth);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private float ScaleHeight(int value)
         {
-            return value * (bitmapProvider.Bitmap.Height / refHeight);
+            return value * (bitmapProvider.Rect.Height / refHeight);
         }
 
         public void ChangeNpcType(NpcNames type)
@@ -138,7 +173,7 @@ namespace SharedLib.NpcFinder
 
             TargetCount = 0;
             AddCount = 0;
-            Npcs.Clear();
+            Npcs = Enumerable.Empty<NpcPosition>();
 
             if (nameType.HasFlag(NpcNames.Corpse))
             {
@@ -151,7 +186,7 @@ namespace SharedLib.NpcFinder
 
             UpdateSearchMode();
 
-            logger.LogInformation($"{nameof(NpcNameFinder)}.{nameof(ChangeNpcType)} = {type} | searchMode = {searchMode}");
+            logger.LogInformation($"{nameof(NpcNameFinder)}.{nameof(ChangeNpcType)} = {type.ToStringF()} | searchMode = {searchMode.ToStringF()}");
         }
 
         private void UpdateSearchMode()
@@ -287,21 +322,17 @@ namespace SharedLib.NpcFinder
             var npcNameLines = PopulateLinesOfNpcNames();
             var npcs = DetermineNpcs(npcNameLines);
 
-            float yOffset = ScaleHeight(npcPosYOffset);
-            float heightMul = ScaleHeight(npcPosYHeightMul);
-
             Npcs = npcs.
                 Select(lineofNpcName =>
                     new NpcPosition(
                         new Point(lineofNpcName.Min(x => x.XStart), lineofNpcName.Min(x => x.Y)),
                         new Point(lineofNpcName.Max(x => x.XEnd), lineofNpcName.Max(x => x.Y)),
-                        bitmapProvider.Bitmap.Width,
+                        bitmapProvider.Rect.Width,
                         yOffset, heightMul))
 
             .Where(npcPos => npcPos.Width < ScaleWidth(npcNameMaxWidth))
             .Distinct(comparer)
-            .OrderBy(npcPos => RectangleExt.SqrDistance(Area.BottomCentre(), npcPos.ClickPoint))
-            .ToList();
+            .OrderBy(npcPos => RectangleExt.SqrDistance(Area.BottomCentre(), npcPos.ClickPoint));
 
             UpdatePotentialAddsExist();
 
@@ -372,15 +403,13 @@ namespace SharedLib.NpcFinder
 
             unsafe
             {
-                BitmapData bitmapData = bitmapProvider.Bitmap.LockBits(new Rectangle(0, 0, bitmapProvider.Bitmap.Width, bitmapProvider.Bitmap.Height), ImageLockMode.ReadOnly, bitmapProvider.Bitmap.PixelFormat);
-                int bytesPerPixel = Bitmap.GetPixelFormatSize(bitmapProvider.Bitmap.PixelFormat) / 8;
+                BitmapData bitmapData = bitmapProvider.Bitmap.LockBits(new Rectangle(0, 0, bitmapProvider.Rect.Width, bitmapProvider.Rect.Height), ImageLockMode.ReadOnly, pixelFormat);
 
                 //for (int y = Area.Top; y < Area.Height; y += incY)
                 Parallel.For(Area.Top, Area.Height, y =>
                 {
-                    bool isEndOfSection;
-                    var lengthStart = -1;
-                    var lengthEnd = -1;
+                    int lengthStart = -1;
+                    int lengthEnd = -1;
 
                     byte* currentLine = (byte*)bitmapData.Scan0 + (y * bitmapData.Stride);
                     for (int x = Area.Left; x < Area.Right; x += incX)
@@ -395,8 +424,7 @@ namespace SharedLib.NpcFinder
                             }
                             else
                             {
-                                isEndOfSection = lengthStart > -1 && lengthEnd - lengthStart > minEndLength;
-                                if (isEndOfSection)
+                                if (lengthStart > -1 && lengthEnd - lengthStart > minEndLength)
                                 {
                                     npcNameLine.Add(new LineOfNpcName(lengthStart, lengthEnd, y));
                                 }
@@ -407,8 +435,7 @@ namespace SharedLib.NpcFinder
                         }
                     }
 
-                    isEndOfSection = lengthStart > -1 && lengthEnd - lengthStart > minEndLength;
-                    if (isEndOfSection)
+                    if (lengthStart > -1 && lengthEnd - lengthStart > minEndLength)
                     {
                         npcNameLine.Add(new LineOfNpcName(lengthStart, lengthEnd, y));
                     }
@@ -440,7 +467,10 @@ namespace SharedLib.NpcFinder
             }
             */
 
-            Npcs.ForEach(n => gr.DrawRectangle(n.IsAdd ? greyPen : whitePen, n.Rect));
+            foreach (var n in Npcs)
+            {
+                gr.DrawRectangle(n.IsAdd ? greyPen : whitePen, n.Rect);
+            }
         }
 
         public Point ToScreenCoordinates(int x, int y)

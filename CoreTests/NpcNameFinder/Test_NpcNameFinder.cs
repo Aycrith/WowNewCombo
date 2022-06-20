@@ -6,6 +6,7 @@ using SharedLib;
 using System.Threading;
 using System.Text;
 using System.Diagnostics;
+using System.Linq;
 
 namespace CoreTests
 {
@@ -68,37 +69,41 @@ namespace CoreTests
 
             stringBuilder.Length = 0;
 
-            if (npcNameFinder.Npcs.Count > 0)
+            if (npcNameFinder.Npcs.Any())
                 stringBuilder.AppendLine();
 
-            npcNameFinder.Npcs.ForEach(n =>
+            int i = 0;
+            foreach (var n in npcNameFinder.Npcs)
             {
-                stringBuilder.Append($"{npcNameFinder.Npcs.IndexOf(n),2}");
+                stringBuilder.Append($"{i,2}");
                 stringBuilder.Append(" -> rect=");
                 stringBuilder.Append(n.Rect);
                 stringBuilder.Append(" ClickPoint=");
                 stringBuilder.AppendLine($"{{{n.ClickPoint.X,4},{n.ClickPoint.Y,4}}}");
-            });
+                i++;
+            }
 
             logger.LogInformation(stringBuilder.ToString());
         }
 
         private void SaveImage()
         {
-            if (npcNameFinder.Npcs.Count > 0)
+            if (npcNameFinder.Npcs.Any())
             {
                 paint.DrawRectangle(whitePen, npcNameFinder.Area);
 
-                npcNameFinder.Npcs.ForEach(n =>
+                int i = 0;
+                foreach (var n in npcNameFinder.Npcs)
                 {
                     foreach (var l in npcNameTargeting.locTargetingAndClickNpc)
                     {
                         paint.DrawEllipse(whitePen, l.X + n.ClickPoint.X, l.Y + n.ClickPoint.Y, 5, 5);
                     }
-                });
 
-                npcNameFinder.Npcs.ForEach(n => paint.DrawRectangle(whitePen, n.Rect));
-                npcNameFinder.Npcs.ForEach(n => paint.DrawString(npcNameFinder.Npcs.IndexOf(n).ToString(), font, brush, new PointF(n.Left - 20f, n.Top)));
+                    paint.DrawRectangle(whitePen, n.Rect);
+                    paint.DrawString(i.ToString(), font, brush, new PointF(n.Left - 20f, n.Top));
+                    i++;
+                }
             }
 
             paintBitmap.Save("target_names.png");

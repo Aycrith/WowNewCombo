@@ -51,7 +51,6 @@ namespace Core.Goals
             stopMoving.Stop();
             combatUtil.Update();
 
-            Log("No corpse name found - check last dead target exists");
             input.LastTarget();
             wait.Update();
             if (playerReader.Bits.HasTarget())

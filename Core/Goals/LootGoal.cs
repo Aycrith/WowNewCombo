@@ -64,7 +64,6 @@ namespace Core.Goals
                 SendActionEvent(new ActionEventArgs(GoapKey.shouldloot, false));
             }
 
-            Log($"Search for {NpcNames.Corpse}");
             npcNameTargeting.ChangeNpcType(NpcNames.Corpse);
 
             lastLoot = playerReader.LastLootTime;
