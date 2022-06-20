@@ -23,10 +23,13 @@ namespace Core
 
         public override string ToString()
         {
-            var sb = new StringBuilder();
+            StringBuilder sb = new();
             for (int i = 1; i < ActionBar.BIT_PER_CELL; i++)
             {
-                sb.Append($"{i}:{IsBitSet(i - 1)},");
+                sb.Append(i);
+                sb.Append(':');
+                sb.Append(IsBitSet(i - 1));
+                sb.Append(',');
             }
 
             return sb.ToString();

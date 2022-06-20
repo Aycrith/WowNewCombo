@@ -34,8 +34,9 @@
 
 <div class="col-sm" style="@(MaxHeight > 0 ? $"overflow: auto; max-height: {MaxHeight}px;" : string.Empty)">
     <table class="table table-borderless table-dark" cellspacing="20">
-        @foreach (var evt in LoggerSink.Log.Reverse())
+        @for(int i=LoggerSink.Log.Count()-1; i >= 0; i--)
         {
+            var evt = LoggerSink.Log.PeekAt(i);
             <tr class="@logLevelColor[evt.Level]">
                 <td class="log">@evt.Timestamp.ToString("HH:mm:ss")</td>
                 <td class="log">@evt.RenderMessage()</td>

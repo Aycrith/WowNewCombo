@@ -1,5 +1,4 @@
 using Core.Database;
-using Cyotek.Collections.Generic;
 using Microsoft.Extensions.Logging;
 using SharedLib;
 using System;
@@ -60,7 +59,8 @@ namespace Core
         public string TargetNameUpper { get; private set; } = string.Empty;
 
         public double AvgUpdateLatency { private set; get; }
-        private readonly CircularBuffer<double> UpdateLatencys;
+        private readonly double[] UpdateLatencys = new double[16];
+        private int LatencyIndex;
 
         public AddonReader(ILogger logger, DataConfig dataConfig, AddonDataProvider addonDataProvider, AutoResetEvent autoResetEvent)
         {
@@ -94,7 +94,10 @@ namespace Core
             this.CurrentAction = new(PlayerReader, addonDataProvider, 26, 27, 28, 29, 30);
             this.UsableAction = new(PlayerReader, addonDataProvider, 31, 32, 33, 34, 35);
 
-            UpdateLatencys = new(16);
+            for (int i = 0; i < UpdateLatencys.Length; i++)
+            {
+                UpdateLatencys[i] = 0;
+            }
 
             UIMapId.Changed += OnUIMapIdChanged;
             GlobalTime.Changed += GlobalTimeChanged;
@@ -168,13 +171,16 @@ namespace Core
 
         private void GlobalTimeChanged()
         {
-            UpdateLatencys.Put((DateTime.UtcNow - GlobalTime.LastChanged).TotalMilliseconds);
+            UpdateLatencys[LatencyIndex++] = (DateTime.UtcNow - GlobalTime.LastChanged).TotalMilliseconds;
+            if (LatencyIndex >= UpdateLatencys.Length)
+                LatencyIndex = 0;
+
             AvgUpdateLatency = 0;
-            for (int i = 0; i < UpdateLatencys.Size; i++)
+            for (int i = 0; i < UpdateLatencys.Length; i++)
             {
-                AvgUpdateLatency += UpdateLatencys.PeekAt(i);
+                AvgUpdateLatency += UpdateLatencys[i];
             }
-            AvgUpdateLatency /= UpdateLatencys.Size;
+            AvgUpdateLatency /= UpdateLatencys.Length;
 
             CurrentAction.SetDirty();
             UsableAction.SetDirty();
@@ -183,7 +189,6 @@ namespace Core
 
             TargetName = CreatureDb.Entries.TryGetValue(PlayerReader.TargetId, out Creature creature)
                 ? creature.Name : addonDataProvider.GetString(16) + addonDataProvider.GetString(17);
-
             TargetNameUpper = TargetName.ToUpper();
 
             UIMapId.Update(addonDataProvider);
