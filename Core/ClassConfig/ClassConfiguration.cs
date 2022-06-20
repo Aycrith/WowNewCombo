@@ -2,15 +2,14 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Numerics;
 
 namespace Core
 {
     public class BadZone
     {
-        public int ZoneId { get; set; } = -1;
-        public Vector3 ExitZoneLocation { get; set; }
+        public int ZoneId { get; init; } = -1;
+        public Vector3 ExitZoneLocation { get; init; }
     }
 
     public enum Mode
@@ -25,8 +24,6 @@ namespace Core
     public class ClassConfiguration : IDisposable
     {
         public bool Log { get; set; } = true;
-
-        public string ClassName { get; set; } = string.Empty;
         public bool Loot { get; set; } = true;
         public bool Skin { get; set; }
         public bool UseMount { get; set; } = true;
@@ -39,72 +36,72 @@ namespace Core
         public bool PathThereAndBack { get; set; } = true;
         public bool PathReduceSteps { get; set; }
 
-        public Mode Mode { get; set; } = Mode.Grind;
+        public Mode Mode { get; init; } = Mode.Grind;
 
-        public BadZone WrongZone { get; set; } = new BadZone();
+        public BadZone WrongZone { get; } = new BadZone();
 
         public int NPCMaxLevels_Above { get; set; } = 1;
         public int NPCMaxLevels_Below { get; set; } = 7;
 
         public bool CheckTargetGivesExp { get; set; }
-        public List<string> Blacklist { get; } = new List<string>();
+        public string[] Blacklist { get; init; } = Array.Empty<string>();
 
-        public Dictionary<int, List<SchoolMask>> ImmunityBlacklist { get; } = new();
+        public Dictionary<int, SchoolMask[]> ImmunityBlacklist { get; } = new();
 
         public Dictionary<string, int> IntVariables { get; } = new();
 
-        public KeyActions Pull { get; set; } = new();
-        public KeyActions Combat { get; set; } = new();
-        public KeyActions Adhoc { get; set; } = new();
-        public KeyActions Parallel { get; set; } = new();
-        public KeyActions NPC { get; set; } = new();
+        public KeyActions Pull { get; } = new();
+        public KeyActions Combat { get; } = new();
+        public KeyActions Adhoc { get; } = new();
+        public KeyActions Parallel { get; } = new();
+        public KeyActions NPC { get; } = new();
 
-        public List<KeyAction> Form { get; } = new();
-        public List<KeyAction> GatherFindKeyConfig { get; } = new();
-        public List<string> GatherFindKeys { get; } = new();
+        public KeyAction[] Form { get; init; } = Array.Empty<KeyAction>();
+        public KeyAction[] GatherFindKeyConfig { get; set; } = Array.Empty<KeyAction>();
+        public string[] GatherFindKeys { get; init; } = Array.Empty<string>();
 
-        public KeyAction Jump { get; set; } = new();
-        public string JumpKey { get; set; } = "Spacebar";
+        public KeyAction Jump { get; } = new();
+        public string JumpKey { get; init; } = "Spacebar";
 
-        public KeyAction Interact { get; set; } = new();
-        public string InteractKey { get; set; } = "I";
+        public KeyAction Interact { get; } = new();
+        public string InteractKey { get; init; } = "I";
 
-        public KeyAction Approach { get; set; } = new();
-        public KeyAction AutoAttack { get; set; } = new();
+        public KeyAction Approach { get; } = new();
+        public KeyAction AutoAttack { get; } = new();
 
-        public KeyAction TargetLastTarget { get; set; } = new();
-        public string TargetLastTargetKey { get; set; } = "G";
+        public KeyAction TargetLastTarget { get; } = new();
+        public string TargetLastTargetKey { get; init; } = "G";
 
-        public KeyAction StandUp { get; set; } = new();
-        public string StandUpKey { get; set; } = "X";
+        public KeyAction StandUp { get; } = new();
+        public string StandUpKey { get; init; } = "X";
 
-        public KeyAction ClearTarget { get; set; } = new();
-        public string ClearTargetKey { get; set; } = "Insert";
+        public KeyAction ClearTarget { get; } = new();
+        public string ClearTargetKey { get; init; } = "Insert";
 
-        public KeyAction StopAttack { get; set; } = new();
-        public string StopAttackKey { get; set; } = "Delete";
+        public KeyAction StopAttack { get; } = new();
+        public string StopAttackKey { get; init; } = "Delete";
 
-        public KeyAction TargetNearestTarget { get; set; } = new();
-        public string TargetNearestTargetKey { get; set; } = "Tab";
+        public KeyAction TargetNearestTarget { get; } = new();
+        public string TargetNearestTargetKey { get; init; } = "Tab";
 
-        public KeyAction TargetTargetOfTarget { get; set; } = new();
-        public string TargetTargetOfTargetKey { get; set; } = "F";
-        public KeyAction TargetPet { get; set; } = new();
-        public string TargetPetKey { get; set; } = "Multiply";
+        public KeyAction TargetTargetOfTarget { get; } = new();
+        public string TargetTargetOfTargetKey { get; init; } = "F";
+        public KeyAction TargetPet { get; } = new();
+        public string TargetPetKey { get; init; } = "Multiply";
 
-        public KeyAction PetAttack { get; set; } = new();
-        public string PetAttackKey { get; set; } = "Subtract";
+        public KeyAction PetAttack { get; } = new();
+        public string PetAttackKey { get; init; } = "Subtract";
 
-        public KeyAction Mount { get; set; } = new();
-        public string MountKey { get; set; } = "O";
+        public KeyAction Mount { get; } = new();
+        public string MountKey { get; init; } = "O";
 
-        public KeyAction Hearthstone { get; set; } = new();
-        public string HearthstoneKey { get; set; } = "I";
+        public KeyAction Hearthstone { get; } = new();
+        public string HearthstoneKey { get; init; } = "I";
 
-        public ConsoleKey ForwardKey { get; set; } = ConsoleKey.UpArrow;  // 38
-        public ConsoleKey BackwardKey { get; set; } = ConsoleKey.DownArrow; // 40
-        public ConsoleKey TurnLeftKey { get; set; } = ConsoleKey.LeftArrow; // 37
-        public ConsoleKey TurnRightKey { get; set; } = ConsoleKey.RightArrow; // 39
+        public ConsoleKey ForwardKey { get; init; } = ConsoleKey.UpArrow;  // 38
+        public ConsoleKey BackwardKey { get; init; } = ConsoleKey.DownArrow; // 40
+        public ConsoleKey TurnLeftKey { get; init; } = ConsoleKey.LeftArrow; // 37
+        public ConsoleKey TurnRightKey { get; init; } = ConsoleKey.RightArrow; // 39
 
         public void Initialise(DataConfig dataConfig, AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger, string? overridePathProfileFile)
         {
@@ -188,7 +185,10 @@ namespace Core
             InitializeKeyActions(Combat, Interact, Approach, AutoAttack, StopAttack);
 
             logger.LogInformation($"[{nameof(Form)}] Initialise KeyActions.");
-            Form.ForEach(i => i.InitialiseForm(addonReader, requirementFactory, logger, Log));
+            for (int i = 0; i < Form.Length; i++)
+            {
+                Form[i].InitialiseForm(addonReader, requirementFactory, logger, Log);
+            }
 
             Pull.PreInitialise(nameof(Pull), requirementFactory, logger);
             Combat.PreInitialise(nameof(Combat), requirementFactory, logger);
@@ -202,11 +202,14 @@ namespace Core
             NPC.Initialise(nameof(NPC), addonReader, requirementFactory, logger, Log);
             Parallel.Initialise(nameof(Parallel), addonReader, requirementFactory, logger, Log);
 
-            GatherFindKeys.ForEach(key =>
+            int index = 0;
+            GatherFindKeyConfig = new KeyAction[GatherFindKeys.Length];
+            for (int i = 0; i < GatherFindKeys.Length; i++)
             {
-                GatherFindKeyConfig.Add(new KeyAction { Key = key, Name = $"Profession {GatherFindKeys.IndexOf(key)}" });
-                GatherFindKeyConfig.Last().Initialise(addonReader, requirementFactory, logger, Log);
-            });
+                GatherFindKeyConfig[index] = new KeyAction { Key = GatherFindKeys[index], Name = $"Profession {index}" };
+                GatherFindKeyConfig[index].Initialise(addonReader, requirementFactory, logger, Log);
+                index++;
+            }
 
             OverridePathFilename = overridePathProfileFile;
             if (!string.IsNullOrEmpty(OverridePathFilename))
@@ -249,36 +252,37 @@ namespace Core
 
         private static void InitializeKeyActions(KeyActions userActions, params KeyAction[] defaultActions)
         {
-            KeyAction dummyDefault = new KeyAction();
-            var defaults = defaultActions.ToList();
-
-            userActions.Sequence.ForEach(user =>
+            KeyAction dummyDefault = new();
+            for (int i = 0; i < userActions.Sequence.Length; i++)
             {
-                defaults.ForEach(@default =>
+                KeyAction user = userActions.Sequence[i];
+                for (int d = 0; d < defaultActions.Length; d++)
                 {
-                    if (user.Name == @default.Name)
-                    {
-                        user.Key = @default.Key;
-                        user.WaitForGCD = @default.WaitForGCD;
+                    KeyAction @default = defaultActions[d];
 
-                        //if (!string.IsNullOrEmpty(@default.Requirement))
-                        //    user.Requirement += " " + @default.Requirement;
-                        //user.Requirements.AddRange(@default.Requirements);
+                    if (user.Name != @default.Name)
+                        continue;
 
-                        if (user.DelayAfterCast == dummyDefault.DelayAfterCast)
-                            user.DelayAfterCast = @default.DelayAfterCast;
+                    user.Key = @default.Key;
+                    user.WaitForGCD = @default.WaitForGCD;
 
-                        if (user.DelayAfterCast == dummyDefault.DelayAfterCast)
-                            user.PressDuration = @default.PressDuration;
+                    //if (!string.IsNullOrEmpty(@default.Requirement))
+                    //    user.Requirement += " " + @default.Requirement;
+                    //user.Requirements.AddRange(@default.Requirements);
 
-                        if (user.Cooldown == dummyDefault.Cooldown)
-                            user.Cooldown = @default.Cooldown;
+                    if (user.DelayAfterCast == dummyDefault.DelayAfterCast)
+                        user.DelayAfterCast = @default.DelayAfterCast;
 
-                        if (user.SkipValidation == dummyDefault.SkipValidation)
-                            user.SkipValidation = @default.SkipValidation;
-                    }
-                });
-            });
+                    if (user.DelayAfterCast == dummyDefault.DelayAfterCast)
+                        user.PressDuration = @default.PressDuration;
+
+                    if (user.Cooldown == dummyDefault.Cooldown)
+                        user.Cooldown = @default.Cooldown;
+
+                    if (user.SkipValidation == dummyDefault.SkipValidation)
+                        user.SkipValidation = @default.SkipValidation;
+                }
+            }
         }
     }
 }

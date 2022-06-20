@@ -22,7 +22,7 @@ namespace Core.Goals
         private readonly CastingHandler castingHandler;
         private readonly MountHandler mountHandler;
 
-        public ParallelGoal(ILogger logger, ConfigurableInput input, Wait wait, PlayerReader playerReader, StopMoving stopMoving, List<KeyAction> keysConfig, CastingHandler castingHandler, MountHandler mountHandler)
+        public ParallelGoal(ILogger logger, ConfigurableInput input, Wait wait, PlayerReader playerReader, StopMoving stopMoving, KeyAction[] keysConfig, CastingHandler castingHandler, MountHandler mountHandler)
         {
             this.logger = logger;
             this.input = input;
@@ -36,11 +36,7 @@ namespace Core.Goals
 
             AddPrecondition(GoapKey.incombat, false);
 
-            Keys = new KeyAction[keysConfig.Count];
-            for (int i = 0; i < keysConfig.Count; i++)
-            {
-                Keys[i] = keysConfig[i];
-            }
+            Keys = keysConfig;
         }
 
         public override bool CheckIfActionCanRun()

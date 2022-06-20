@@ -1,40 +1,46 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
 
 namespace Core
 {
     public partial class KeyActions : IDisposable
     {
-        public List<KeyAction> Sequence { get; } = new List<KeyAction>();
+        public KeyAction[] Sequence { get; init; } = Array.Empty<KeyAction>();
 
         public void PreInitialise(string prefix, RequirementFactory requirementFactory, ILogger logger)
         {
-            if (Sequence.Count > 0)
+            if (Sequence.Length > 0)
             {
                 LogDynamicBinding(logger, prefix);
             }
 
-            Sequence.ForEach(keyAction =>
+            for (int i = 0; i < Sequence.Length; i++)
             {
+                var keyAction = Sequence[i];
                 keyAction.InitialiseSlot(logger);
                 keyAction.InitDynamicBinding(requirementFactory);
-            });
+            }
         }
 
         public void Initialise(string prefix, AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger, bool globalLog)
         {
-            if (Sequence.Count > 0)
+            if (Sequence.Length > 0)
             {
                 LogInitKeyActions(logger, prefix);
             }
 
-            Sequence.ForEach(i => i.Initialise(addonReader, requirementFactory, logger, globalLog, this));
+            for (int i = 0; i < Sequence.Length; i++)
+            {
+                Sequence[i].Initialise(addonReader, requirementFactory, logger, globalLog, this);
+            }
         }
 
         public void Dispose()
         {
-            Sequence.ForEach(i => i.Dispose());
+            for (int i = 0; i < Sequence.Length; i++)
+            {
+                Sequence[i].Dispose();
+            }
         }
 
         [LoggerMessage(

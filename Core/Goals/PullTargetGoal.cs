@@ -49,13 +49,13 @@ namespace Core.Goals
             this.combatUtil = combatUtil;
             this.blacklist = blacklist;
 
-            approachKey = input.ClassConfig.Pull.Sequence.Find(x => x.Name == input.ClassConfig.Approach.Name);
+            Keys = input.ClassConfig.Pull.Sequence;
+
+            approachKey = Keys.FirstOrDefault(x => x.Name == input.ClassConfig.Approach.Name);
             approachAction = approachKey == null ? DefaultApproach : ConditionalApproach;
 
-            Keys = new KeyAction[input.ClassConfig.Pull.Sequence.Count];
-            for (int i = 0; i < input.ClassConfig.Pull.Sequence.Count; i++)
+            for (int i = 0; i < Keys.Length; i++)
             {
-                Keys[i] = input.ClassConfig.Pull.Sequence[i];
                 if (Keys[i].Requirements.Contains(RequirementFactory.AddVisible))
                 {
                     requiresNpcNameFinder = true;

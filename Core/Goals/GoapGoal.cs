@@ -91,7 +91,7 @@ namespace Core.Goals
 
         public virtual string Description()
         {
-            return $"{Name} " + (Keys.Length == 1 ? $"[{Keys[0].ConsoleKey}]" : "");
+            return $"{Name} " + (Keys.Length == 1 ? $"[{Keys[0].ConsoleKey}]" : string.Empty);
         }
     }
 }

@@ -50,7 +50,16 @@ namespace Core
         {
             if (playerReader.Class == PlayerClassEnum.Druid)
             {
-                int index = classConfig.Form.FindIndex(s => s.FormEnum is Form.Druid_Flight or Form.Druid_Travel);
+                int index = -1;
+                for (int i = 0; i < classConfig.Form.Length; i++)
+                {
+                    if (classConfig.Form[i].FormEnum is Form.Druid_Flight or Form.Druid_Travel)
+                    {
+                        index = i;
+                        break;
+                    }
+                }
+
                 if (index > -1 &&
                     castingHandler.SwitchForm(playerReader.Form, classConfig.Form[index]))
                 {
@@ -94,7 +103,16 @@ namespace Core
         {
             if (playerReader.Form is Form.Druid_Flight or Form.Druid_Travel)
             {
-                int index = classConfig.Form.FindIndex(s => s.FormEnum == playerReader.Form);
+                int index = -1;
+                for (int i = 0; i < classConfig.Form.Length; i++)
+                {
+                    if (classConfig.Form[i].FormEnum == playerReader.Form)
+                    {
+                        index = i;
+                        break;
+                    }
+                }
+
                 if (index > -1)
                 {
                     input.KeyPress(classConfig.Form[index].ConsoleKey, input.defaultKeyPress);

@@ -106,7 +106,7 @@ namespace Core.Goals
 
             if (classConfig.Mode == Mode.AttendedGather)
             {
-                if (classConfig.GatherFindKeyConfig.Count > 1)
+                if (classConfig.GatherFindKeyConfig.Length > 1)
                 {
                     sideActivityThread = new(Thread_AttendedGather);
                     sideActivityThread.Start();

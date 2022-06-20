@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace Core
@@ -17,7 +16,7 @@ namespace Core
 
         private int lastGuid;
 
-        public Blacklist(ILogger logger, AddonReader addonReader, int above, int below, bool checkTargetGivesExp, List<string> blacklisted)
+        public Blacklist(ILogger logger, AddonReader addonReader, int above, int below, bool checkTargetGivesExp, string[] blacklist)
         {
             this.addonReader = addonReader;
             playerReader = addonReader.PlayerReader;
@@ -27,11 +26,10 @@ namespace Core
 
             this.checkTargetGivesExp = checkTargetGivesExp;
 
-            blacklist = new string[blacklisted.Count];
-            for (int i = 0; i < blacklist.Length; i++)
-            {
-                blacklist[i] = blacklisted[i].ToUpper();
-            }
+            this.blacklist = blacklist;
+
+            if (blacklist.Length > 0)
+                logger.LogInformation($"[{nameof(Blacklist)}] {string.Join(", ", this.blacklist)}");
         }
 
         public bool IsTargetBlacklisted()
