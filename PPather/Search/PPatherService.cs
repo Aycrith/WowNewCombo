@@ -13,7 +13,7 @@ namespace PPather
 {
     public class PPatherService
     {
-        private readonly List<WorldMapArea> worldMapAreas;
+        private readonly WorldMapArea[] worldMapAreas;
         private Search search { get; set; }
         public bool SearchExists => search != null;
 
@@ -79,7 +79,7 @@ namespace PPather
 
         public Vector3 ToLocal(Vector3 world, float mapId, int uiMapId)
         {
-            var area = WorldMapAreaFactory.GetWorldMapArea(worldMapAreas, world.X, world.Y, mapId, uiMapId);
+            WorldMapArea area = WorldMapAreaFactory.GetWorldMapArea(worldMapAreas, world.X, world.Y, mapId, uiMapId);
             return new Vector3(area.ToMapY(world.Y), area.ToMapX(world.X), world.Z);
         }
 
