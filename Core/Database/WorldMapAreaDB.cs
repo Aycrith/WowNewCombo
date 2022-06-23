@@ -13,16 +13,16 @@ namespace Core.Database
 
         public WorldMapAreaDB(DataConfig dataConfig)
         {
-            var list = JsonConvert.DeserializeObject<List<WorldMapArea>>(File.ReadAllText(Path.Join(dataConfig.WorldToMap, "WorldMapArea.json")));
-            list.ForEach(x =>
+            WorldMapArea[] wmas = JsonConvert.DeserializeObject<WorldMapArea[]>(File.ReadAllText(Path.Join(dataConfig.Dbc, "WorldMapArea.json")));
+            for (int i = 0; i < wmas.Length; i++)
             {
-                areas.Add(x.UIMapId, x);
-            });
+                areas.Add(wmas[i].UIMapId, wmas[i]);
+            }
         }
 
         public int GetAreaId(int uiMapId)
         {
-            if(areas.TryGetValue(uiMapId, out var map))
+            if (areas.TryGetValue(uiMapId, out var map))
             {
                 return map.AreaID;
             }

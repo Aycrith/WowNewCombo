@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 
 public static class DataConfigMeta
 {
-    public const int Version = 10;
+    public const int Version = 11;
     public const string DefaultFileName = "data_config.json";
 }
 
@@ -19,8 +19,6 @@ public class DataConfig
     public string Path => Join(Root, "path");
     [JsonIgnore]
     public string Dbc => Join(Root, "dbc");
-    [JsonIgnore]
-    public string WorldToMap => Join(Root, "WorldToMap");
     [JsonIgnore]
     public string PathInfo => Join(Root, "PathInfo");
     [JsonIgnore]

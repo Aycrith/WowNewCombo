@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -9,20 +8,20 @@ namespace SharedLib.Data
 {
     public static class WorldMapAreaFactory
     {
-        public static List<WorldMapArea> Read(DataConfig dataConfig)
+        public static WorldMapArea[] Read(DataConfig dataConfig)
         {
-            return JsonConvert.DeserializeObject<List<WorldMapArea>>(File.ReadAllText(Path.Join(dataConfig.WorldToMap, "WorldMapArea.json")));
+            return JsonConvert.DeserializeObject<WorldMapArea[]>(File.ReadAllText(Path.Join(dataConfig.Dbc, "WorldMapArea.json")));
         }
 
         public static WorldMapArea GetWorldMapArea(IEnumerable<WorldMapArea> worldMapAreas, float x, float y, float mapId, int uiMap)
         {
-            var maps = worldMapAreas
-                .Where(i => x <= i.LocTop)
-                .Where(i => x >= i.LocBottom)
-                .Where(i => y <= i.LocLeft)
-                .Where(i => y >= i.LocRight)
-                .Where(i => i.MapID == mapId);
-                //.Where(i => i.UIMapId == uiMap);
+            IEnumerable<WorldMapArea> maps =
+                worldMapAreas.Where(i =>
+                    x <= i.LocTop &&
+                    x >= i.LocBottom &&
+                    y <= i.LocLeft &&
+                    y >= i.LocRight &&
+                    i.MapID == (int)mapId);
 
             if (!maps.Any())
             {
