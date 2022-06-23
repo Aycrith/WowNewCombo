@@ -55,7 +55,7 @@ namespace Core
         public bool? UseWhenTargetIsCasting { get; set; }
 
         public string PathFilename { get; set; } = string.Empty;
-        public List<Vector3> Path { get; } = new();
+        public Vector3[] Path { get; set; } = Array.Empty<Vector3>();
 
         public int StepBackAfterCast { get; set; }
 

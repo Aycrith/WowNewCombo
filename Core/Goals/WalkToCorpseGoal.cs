@@ -87,7 +87,7 @@ namespace Core.Goals
 
             Deaths.Add(corpseLocation);
 
-            navigation.SetWayPoints(new() { corpseLocation });
+            navigation.SetWayPoints(new Vector3[] { corpseLocation });
 
             onEnterTime = DateTime.UtcNow;
         }
