@@ -5,7 +5,6 @@ namespace Core
     public class RecordInt
     {
         private readonly int cell;
-        private int temp;
 
         public int Value { private set; get; }
         public DateTime LastChanged { private set; get; }
@@ -21,7 +20,7 @@ namespace Core
 
         public bool Updated(AddonDataProvider reader)
         {
-            temp = reader.GetInt(cell);
+            int temp = reader.GetInt(cell);
             if (temp != Value)
             {
                 Value = temp;
@@ -35,7 +34,7 @@ namespace Core
 
         public void Update(AddonDataProvider reader)
         {
-            temp = reader.GetInt(cell);
+            int temp = reader.GetInt(cell);
             if (temp != Value)
             {
                 Value = temp;
@@ -52,7 +51,6 @@ namespace Core
         public void Reset()
         {
             Value = 0;
-            temp = 0;
             LastChanged = default;
         }
 
