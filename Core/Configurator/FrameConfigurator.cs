@@ -1,11 +1,9 @@
 ﻿using Game;
 using Microsoft.Extensions.Logging;
-using SharedLib;
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
-using System.Linq;
 using System.Threading;
 
 namespace Core
@@ -13,11 +11,9 @@ namespace Core
     public sealed class FrameConfigurator : IDisposable
     {
         private readonly ILogger logger;
-        private readonly DataConfig dataConfig;
         private readonly AddonConfigurator addonConfigurator;
 
         private AddonDataProvider? addonDataProvider;
-        public AddonReader? AddonReader { get; private set; }
 
         private WowProcess? wowProcess;
         private WowScreen? wowScreen;
@@ -25,7 +21,6 @@ namespace Core
         private Thread? screenshotThread;
         private CancellationTokenSource cts = new();
         private const int interval = 500;
-
 
         public DataFrameMeta DataFrameMeta { get; private set; } = DataFrameMeta.Empty;
 
@@ -38,10 +33,9 @@ namespace Core
 
         public event Action? OnUpdate;
 
-        public FrameConfigurator(ILogger logger, AddonConfigurator addonConfigurator, DataConfig dataConfig)
+        public FrameConfigurator(ILogger logger, AddonConfigurator addonConfigurator)
         {
             this.logger = logger;
-            this.dataConfig = dataConfig;
             this.addonConfigurator = addonConfigurator;
         }
 
@@ -111,22 +105,10 @@ namespace Core
                                     }
                                     screenshot.Dispose();
 
-                                    if (DataFrames.Length == DataFrameMeta.frames)
+                                    if (DataFrames.Length == DataFrameMeta.frames && addonDataProvider == null)
                                     {
-                                        if (AddonReader != null)
-                                        {
-                                            AddonReader.Dispose();
-                                            addonDataProvider = null;
-                                        }
-
-                                        if (addonDataProvider == null)
-                                        {
-                                            addonDataProvider = new AddonDataProvider(wowScreen, DataFrames);
-                                        }
-
-                                        AddonReader = new AddonReader(logger, dataConfig, addonDataProvider, new(false));
+                                        addonDataProvider = new AddonDataProvider(wowScreen, DataFrames);
                                     }
-
                                     OnUpdate?.Invoke();
                                 }
                             }
@@ -191,7 +173,7 @@ namespace Core
 
         public bool FinishManualConfig()
         {
-            var version = addonConfigurator.GetInstallVersion();
+            Version? version = addonConfigurator.GetInstallVersion();
             if (version == null) return false;
 
             if (DataFrames.Length != DataFrameMeta.frames)
@@ -302,18 +284,15 @@ namespace Core
             cts.Token.WaitHandle.WaitOne(interval);
 
             addonDataProvider?.Dispose();
-            AddonReader?.Dispose();
-
             addonDataProvider = new AddonDataProvider(wowScreen, dataFrames);
-            AddonReader = new AddonReader(logger, dataConfig, addonDataProvider, new(false));
 
-            if (!ResolveClass())
+            if (!TryResolveRaceAndClass(out RaceEnum race, out PlayerClassEnum @class))
             {
-                logger.LogError("Unable to find class.");
+                logger.LogError($"Unable to identify {nameof(RaceEnum)} and {nameof(PlayerClassEnum)}!");
                 return false;
             }
 
-            logger.LogInformation("Found Class!");
+            logger.LogInformation($"Found {race.ToStringF()} {@class.ToStringF()}!");
 
             OnUpdate?.Invoke();
             cts.Token.WaitHandle.WaitOne(interval);
@@ -339,14 +318,23 @@ namespace Core
         }
 
 
-        public bool ResolveClass()
+        public bool TryResolveRaceAndClass(out RaceEnum raceEnum, out PlayerClassEnum playerClassEnum)
         {
-            if (AddonReader != null)
+            if (addonDataProvider == null)
             {
-                AddonReader.FetchData();
-                return Enum.GetValues(typeof(PlayerClassEnum)).Cast<PlayerClassEnum>().Contains(AddonReader.PlayerReader.Class);
+                raceEnum = RaceEnum.None;
+                playerClassEnum = PlayerClassEnum.None;
+
+                return false;
             }
-            return false;
+
+            addonDataProvider.Update();
+            int raceClassCombo = addonDataProvider.GetInt(46);
+
+            raceEnum = (RaceEnum)(raceClassCombo / 100f);
+            playerClassEnum = (PlayerClassEnum)(raceClassCombo - ((int)raceEnum * 100f));
+
+            return Enum.IsDefined(raceEnum) && Enum.IsDefined(playerClassEnum);
         }
     }
 }

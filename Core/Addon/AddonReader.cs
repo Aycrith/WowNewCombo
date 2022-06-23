@@ -41,13 +41,11 @@ namespace Core
         public event Action? ZoneChanged;
         public event Action? PlayerDeath;
 
-        public WorldMapAreaDB WorldMapAreaDb { get; }
+        private readonly WorldMapAreaDB WorldMapAreaDb;
+
         public ItemDB ItemDb { get; }
         public CreatureDB CreatureDb { get; }
         public AreaDB AreaDb { get; }
-
-        private readonly SpellDB spellDb;
-        private readonly TalentDB talentDB;
 
         public RecordInt UIMapId { get; } = new(4);
 
@@ -62,18 +60,18 @@ namespace Core
         private readonly double[] UpdateLatencys = new double[16];
         private int LatencyIndex;
 
-        public AddonReader(ILogger logger, DataConfig dataConfig, AddonDataProvider addonDataProvider, AutoResetEvent autoResetEvent)
+        public AddonReader(ILogger logger, AddonDataProvider addonDataProvider, AutoResetEvent autoResetEvent,
+            AreaDB areaDB, WorldMapAreaDB worldMapAreaDB, ItemDB itemDB,
+            CreatureDB creatureDB, SpellDB spellDB, TalentDB talentDB)
         {
             this.logger = logger;
             this.addonDataProvider = addonDataProvider;
             this.autoResetEvent = autoResetEvent;
 
-            this.AreaDb = new AreaDB(logger, dataConfig);
-            this.WorldMapAreaDb = new WorldMapAreaDB(dataConfig);
-            this.ItemDb = new ItemDB(dataConfig);
-            this.CreatureDb = new CreatureDB(dataConfig);
-            this.spellDb = new SpellDB(dataConfig);
-            this.talentDB = new TalentDB(dataConfig, spellDb);
+            this.AreaDb = areaDB;
+            this.WorldMapAreaDb = worldMapAreaDB;
+            this.ItemDb = itemDB;
+            this.CreatureDb = creatureDB;
 
             this.CreatureHistory = new CreatureHistory(addonDataProvider, 64, 65, 66, 67);
 
@@ -85,7 +83,7 @@ namespace Core
 
             this.GossipReader = new GossipReader(addonDataProvider, 73);
 
-            this.SpellBookReader = new SpellBookReader(addonDataProvider, 71, spellDb);
+            this.SpellBookReader = new SpellBookReader(addonDataProvider, 71, spellDB);
 
             this.PlayerReader = new PlayerReader(addonDataProvider);
             this.LevelTracker = new LevelTracker(this);

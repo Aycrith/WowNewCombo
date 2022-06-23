@@ -1,20 +1,17 @@
 ﻿using System;
-using Core.Database;
 
 namespace Core.Addon
 {
     public class ConfigAddonReader : IAddonReader
     {
-        public PlayerReader PlayerReader { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public BagReader BagReader { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public EquipmentReader EquipmentReader { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public LevelTracker LevelTracker { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public ActionBarCostReader ActionBarCostReader { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        public PlayerReader PlayerReader => throw new NotImplementedException();
+        public BagReader BagReader => throw new NotImplementedException();
+        public EquipmentReader EquipmentReader => throw new NotImplementedException();
+        public LevelTracker LevelTracker => throw new NotImplementedException();
+        public ActionBarCostReader ActionBarCostReader => throw new NotImplementedException();
 
-        public SpellBookReader SpellBookReader { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public TalentReader TalentReader { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-
-        public WorldMapAreaDB WorldMapAreaDb { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        public SpellBookReader SpellBookReader => throw new NotImplementedException();
+        public TalentReader TalentReader => throw new NotImplementedException();
 
         public double AvgUpdateLatency => throw new NotImplementedException();
 

@@ -140,6 +140,7 @@
 @code {
 
     private AddonConfig addonConfig = null!;
+    private FrameConfigurator frameConfigurator = null!;
 
     private bool saved = false;
     private bool manual { get; set; } = false;
@@ -147,13 +148,11 @@
     private string manualButtonStyle => manualButtonText == "Start" ? "btn-primary" : "btn-danger";
     private string playerClass = string.Empty;
 
-    private FrameConfigurator frameConfigurator = null!;
-
     protected override void OnInitialized()
     {
         addonConfig = addonConfigurator.Config;
 
-        frameConfigurator = new FrameConfigurator(logger, addonConfigurator, dataConfig);
+        frameConfigurator = new FrameConfigurator(logger, addonConfigurator);
         frameConfigurator.OnUpdate += OnUpdate;
     }
 
@@ -166,10 +165,9 @@
 
     private void OnUpdate()
     {
-        if (frameConfigurator.ResolveClass() && frameConfigurator.AddonReader != null)
+        if (frameConfigurator.TryResolveRaceAndClass(out RaceEnum race, out PlayerClassEnum @class))
         {
-            playerClass = frameConfigurator.AddonReader.PlayerReader.Race.ToStringF()
-                + " " + frameConfigurator.AddonReader.PlayerReader.Class.ToStringF();
+            playerClass = race.ToStringF() + " " + @class.ToStringF();
         }
         else
         {

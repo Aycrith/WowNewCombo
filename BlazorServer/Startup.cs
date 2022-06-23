@@ -94,6 +94,14 @@ namespace BlazorServer
                 services.AddSingleton<DataFrame[]>(x => FrameConfig.LoadFrames());
                 services.AddSingleton<AddonDataProvider>();
                 services.AddSingleton<Wait>();
+
+                services.AddSingleton<AreaDB>();
+                services.AddSingleton<WorldMapAreaDB>();
+                services.AddSingleton<ItemDB>();
+                services.AddSingleton<CreatureDB>();
+                services.AddSingleton<SpellDB>();
+                services.AddSingleton<TalentDB>();
+
                 services.AddSingleton<IAddonReader, AddonReader>();
                 services.AddSingleton<IBotController, BotController>();
             }

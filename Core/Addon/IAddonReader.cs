@@ -1,5 +1,4 @@
-﻿using Core.Database;
-using System;
+﻿using System;
 
 namespace Core
 {
@@ -18,8 +17,6 @@ namespace Core
         TalentReader TalentReader { get; }
 
         LevelTracker LevelTracker { get; }
-
-        WorldMapAreaDB WorldMapAreaDb { get; }
 
         double AvgUpdateLatency { get; }
 

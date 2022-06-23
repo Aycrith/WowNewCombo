@@ -37,7 +37,7 @@ namespace Core.Database
                 this.areaId = areaId;
             }
         }
-        
+
         public Vector3? GetNearestVendor(Vector3 playerLocation)
         {
             if (CurrentArea == null || CurrentArea.vendor.Count == 0)
