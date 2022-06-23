@@ -65,27 +65,20 @@ namespace Core
             // where 
             // '|' means "||"
             // '&' means "&&"
-            return c is '(' or ')' or '|' or '&';
+            return c is '(' or ')' or '&' or '|';
         }
 
         private static bool IsOperator(string s, int index, out string @operator)
         {
             @operator = s.Substring(index, 2);
-            return @operator is "&&" or "||";
+            return @operator is Requirement.SymbolAnd or Requirement.SymbolOr;
         }
 
-        private static int OperatorPriority(string o)
+        private static int OperatorPriority(string o) => o switch
         {
-            if (o == "&&")
-            {
-                return 2;
-            }
-            else if (o == "||")
-            {
-                return 1;
-            }
-
-            return 0; // "(" or ")"
-        }
+            Requirement.SymbolAnd => 2,
+            Requirement.SymbolOr => 1,
+            _ => 0, // "(" or ")"
+        };
     }
 }

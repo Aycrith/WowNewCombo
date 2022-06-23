@@ -59,6 +59,7 @@ namespace Core.Goals
                 if (Keys[i].Requirements.Contains(RequirementFactory.AddVisible))
                 {
                     requiresNpcNameFinder = true;
+                    break;
                 }
             }
 

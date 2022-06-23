@@ -302,7 +302,7 @@ namespace Core
                 Stack<Requirement> stack = new();
                 foreach (string expr in expressions)
                 {
-                    if (expr.Contains("&&"))
+                    if (expr.Contains(Requirement.SymbolAnd))
                     {
                         Requirement a = stack.Pop();
                         Requirement b = stack.Pop();
@@ -310,7 +310,7 @@ namespace Core
 
                         stack.Push(b);
                     }
-                    else if (expr.Contains("||"))
+                    else if (expr.Contains(Requirement.SymbolOr))
                     {
                         Requirement a = stack.Pop();
                         Requirement b = stack.Pop();

@@ -37,6 +37,9 @@ namespace Core
         public const string And = " and ";
         public const string Or = " or ";
 
+        public const string SymbolAnd = "&&";
+        public const string SymbolOr = "||";
+
         public static bool False() => false;
         public static string Default() => "Unknown requirement";
 

@@ -74,7 +74,7 @@ namespace Core.Goals
                 {
                     if (playerReader.ManaPercentage() > 98) { break; }
                 }
-                else if (playerReader.Buffs.Food() && !key.Requirement.Contains("Well Fed"))
+                else if (playerReader.Buffs.Food() && !key.Requirements.Contains("Well Fed"))
                 {
                     if (playerReader.HealthPercent() > 98) { break; }
                 }
