@@ -26,7 +26,7 @@ namespace ReadDBC_CSV
 
         static Locale locale = Locale.enUS;
         static string path = "../../../data/";
-        static string build = "2.5.2.40617"; // TBCC 2.5.2.40617 // WOTLK alpha 3.4.0.44064
+        static string build = "2.5.4.44171"; // TBCC 2.5.2.40617 // TBCC latest 2.5.4.44171 // WOTLK alpha 3.4.0.44064
 
         static void Main(string[] args)
         {
@@ -39,7 +39,7 @@ namespace ReadDBC_CSV
 
         private static void GenerateItems(string path)
         {
-            var extractor = new ItemExtractor(path);
+            ItemExtractor extractor = new(path);
             DownloadRequirements(path, extractor, build);
             extractor.Run();
         }
@@ -54,28 +54,28 @@ namespace ReadDBC_CSV
                 waterDesc = "Restores $o1 mana over $d";
             }
 
-            var extractor = new ConsumablesExtractor(path, foodDesc, waterDesc);
+            ConsumablesExtractor extractor = new(path, foodDesc, waterDesc);
             DownloadRequirements(path, extractor, build);
             extractor.Run();
         }
 
         private static void GenerateSpells(string path)
         {
-            var extractor = new SpellExtractor(path);
+            SpellExtractor extractor = new(path);
             DownloadRequirements(path, extractor, build);
             extractor.Run();
         }
 
         private static void GenerateTalents(string path)
         {
-            var extractor = new TalentExtractor(path);
+            TalentExtractor extractor = new(path);
             DownloadRequirements(path, extractor, build);
             extractor.Run();
         }
 
         private static void GenerateWorldMapArea(string path)
         {
-            var extractor = new WorldMapAreaExtractor(path);
+            WorldMapAreaExtractor extractor = new(path);
             DownloadRequirements(path, extractor, build);
             extractor.Run();
         }
@@ -85,7 +85,7 @@ namespace ReadDBC_CSV
 
         private static void DownloadRequirements(string path, IExtractor extractor, params string[] builds)
         {
-            foreach(var file in extractor.FileRequirement)
+            foreach (string file in extractor.FileRequirement)
             {
                 if (File.Exists(Path.Join(path, file)))
                 {
@@ -93,30 +93,28 @@ namespace ReadDBC_CSV
                     continue;
                 }
 
-                foreach (var build in builds)
+                foreach (string build in builds)
                 {
-                    using (var client = new WebClient())
+                    using WebClient client = new();
+                    client.Headers.Add("user-agent", userAgent);
+
+                    try
                     {
-                        client.Headers.Add("user-agent", userAgent);
+                        string url = DownloadURL(build, file);
+                        client.DownloadFile(url, Path.Join(path, file));
 
-                        try
+                        Console.WriteLine($"{file} - {build} - Downloaded - {url}");
+
+                        break;
+                    }
+                    catch (Exception e)
+                    {
+                        if (File.Exists(Path.Join(path, file)))
                         {
-                            string url = DownloadURL(build, file);
-                            client.DownloadFile(url, Path.Join(path, file));
-
-                            Console.WriteLine($"{file} - {build} - Downloaded - {url}");
-
-                            break;
+                            File.Delete(Path.Join(path, file));
                         }
-                        catch (Exception e)
-                        {
-                            if (File.Exists(Path.Join(path, file)))
-                            {
-                                File.Delete(Path.Join(path, file));
-                            }
 
-                            Console.WriteLine($"{file} - {build} - {e.Message}");
-                        }
+                        Console.WriteLine($"{file} - {build} - {e.Message}");
                     }
                 }
             }

@@ -25,16 +25,16 @@ namespace ReadDBC_CSV
         public void Run()
         {
             // UIMapId - AreaName
-            var uimap = Path.Join(path, FileRequirement[0]);
-            var wmas = ExtractUIMap(uimap);
+            string uimapFile = Path.Join(path, FileRequirement[0]);
+            List<WorldMapArea> wmas = ExtractUIMap(uimapFile);
 
             // MapID - AreaID - LocBottom - LocRight - LocTop - LocLeft
-            var uimapassignment = Path.Join(path, FileRequirement[1]);
-            ExtractBoundaries(uimapassignment, wmas);
+            string uimapassignmentFile = Path.Join(path, FileRequirement[1]);
+            ExtractBoundaries(uimapassignmentFile, wmas);
 
             // Continent / Directory
-            var map = Path.Join(path, FileRequirement[2]);
-            ExtractContinent(map, wmas);
+            string mapFile = Path.Join(path, FileRequirement[2]);
+            ExtractContinent(mapFile, wmas);
 
             ClearEmptyBound(wmas);
 
@@ -48,7 +48,7 @@ namespace ReadDBC_CSV
             int nameIndex = -1;
             int systemIndex = -1;
 
-            var extractor = new CSVExtractor();
+            CSVExtractor extractor = new();
             extractor.HeaderAction = () =>
             {
                 idIndex = extractor.FindIndex("ID");
@@ -56,28 +56,23 @@ namespace ReadDBC_CSV
                 systemIndex = extractor.FindIndex("System");
             };
 
-            var items = new List<WorldMapArea>();
+            List<WorldMapArea> items = new();
             void extractLine(string[] values)
             {
-                if (values.Length > idIndex &&
-                    values.Length > nameIndex &&
-                    values.Length > systemIndex)
+                int uiMapId = int.Parse(values[idIndex]);
+                int system = int.Parse(values[systemIndex]);
+
+                // 1 ([DEPRECATED] Legacy Taxi)
+                if (system == 1)
                 {
-                    int uiMapId = int.Parse(values[idIndex]);
-                    int system = int.Parse(values[systemIndex]);
-
-                    // 1 ([DEPRECATED] Legacy Taxi)
-                    if (system == 1)
-                    {
-                        return;
-                    }
-
-                    items.Add(new WorldMapArea
-                    {
-                        UIMapId = uiMapId,
-                        AreaName = values[nameIndex],
-                    });
+                    return;
                 }
+
+                items.Add(new WorldMapArea
+                {
+                    UIMapId = uiMapId,
+                    AreaName = values[nameIndex],
+                });
             }
 
             extractor.ExtractTemplate(path, extractLine);
@@ -97,7 +92,7 @@ namespace ReadDBC_CSV
             int region3Index = -1;
             int region4Index = -1;
 
-            var extractor = new CSVExtractor();
+            CSVExtractor extractor = new();
             extractor.HeaderAction = () =>
             {
                 uiMapIdIndex = extractor.FindIndex("UiMapID");
@@ -115,40 +110,29 @@ namespace ReadDBC_CSV
 
             void extractLine(string[] values)
             {
-                if (values.Length > uiMapIdIndex &&
-                    values.Length > mapIdIndex &&
-                    values.Length > areaIdIndex &&
+                int uiMapId = int.Parse(values[uiMapIdIndex]);
+                int orderIndex = int.Parse(values[orderIndexIndex]);
 
-                    values.Length > region0Index &&
-                    values.Length > region1Index &&
-                    values.Length > region3Index &&
-                    values.Length > region4Index
-                    )
+                int index = wmas.FindIndex(x => x.UIMapId == uiMapId && orderIndex == 0);
+                if (index > -1)
                 {
-                    int uiMapId = int.Parse(values[uiMapIdIndex]);
-                    int orderIndex = int.Parse(values[orderIndexIndex]);
-
-                    int index = wmas.FindIndex(x => x.UIMapId == uiMapId && orderIndex == 0);
-                    if (index > -1)
+                    WorldMapArea wma = wmas[index];
+                    wmas[index] = new WorldMapArea
                     {
-                        var wma = wmas[index];
-                        wmas[index] = new WorldMapArea
-                        {
-                            MapID = int.Parse(values[mapIdIndex]),
-                            AreaID = int.Parse(values[areaIdIndex]),
+                        MapID = int.Parse(values[mapIdIndex]),
+                        AreaID = int.Parse(values[areaIdIndex]),
 
-                            AreaName = wma.AreaName,
+                        AreaName = wma.AreaName,
 
-                            LocBottom = float.Parse(values[region0Index]),
-                            LocRight = float.Parse(values[region1Index]),
+                        LocBottom = float.Parse(values[region0Index]),
+                        LocRight = float.Parse(values[region1Index]),
 
-                            LocTop = float.Parse(values[region3Index]),
-                            LocLeft = float.Parse(values[region4Index]),
+                        LocTop = float.Parse(values[region3Index]),
+                        LocLeft = float.Parse(values[region4Index]),
 
-                            UIMapId = wma.UIMapId,
-                            Continent = wma.Continent,
-                        };
-                    }
+                        UIMapId = wma.UIMapId,
+                        Continent = wma.Continent,
+                    };
                 }
             }
 
@@ -160,7 +144,7 @@ namespace ReadDBC_CSV
             int mapIdIndex = -1;
             int directoryIndex = -1;
 
-            var extractor = new CSVExtractor();
+            CSVExtractor extractor = new();
             extractor.HeaderAction = () =>
             {
                 mapIdIndex = extractor.FindIndex("ID");
@@ -169,35 +153,31 @@ namespace ReadDBC_CSV
 
             void extractLine(string[] values)
             {
-                if (values.Length > directoryIndex &&
-                    values.Length > mapIdIndex)
+                int mapId = int.Parse(values[mapIdIndex]);
+                string directory = values[directoryIndex];
+
+                for (int i = 0; i < wmas.Count; i++)
                 {
-                    int mapId = int.Parse(values[mapIdIndex]);
-                    string directory = values[directoryIndex];
+                    if (wmas[i].MapID != mapId)
+                        continue;
 
-                    for (int i = 0; i < wmas.Count; i++)
+                    WorldMapArea wma = wmas[i];
+                    wmas[i] = new WorldMapArea
                     {
-                        if (wmas[i].MapID != mapId)
-                            continue;
+                        MapID = wma.MapID,
+                        AreaID = wma.AreaID,
 
-                        WorldMapArea wma = wmas[i];
-                        wmas[i] = new WorldMapArea
-                        {
-                            MapID = wma.MapID,
-                            AreaID = wma.AreaID,
+                        AreaName = wma.AreaName,
 
-                            AreaName = wma.AreaName,
+                        LocBottom = wma.LocBottom,
+                        LocRight = wma.LocRight,
 
-                            LocBottom = wma.LocBottom,
-                            LocRight = wma.LocRight,
+                        LocTop = wma.LocTop,
+                        LocLeft = wma.LocLeft,
 
-                            LocTop = wma.LocTop,
-                            LocLeft = wma.LocLeft,
-
-                            UIMapId = wma.UIMapId,
-                            Continent = directory
-                        };
-                    }
+                        UIMapId = wma.UIMapId,
+                        Continent = directory
+                    };
                 }
             }
 

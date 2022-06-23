@@ -30,19 +30,19 @@ namespace ReadDBC_CSV
 
         public void Run()
         {
-            var spell = Path.Join(path, FileRequirement[0]);
+            string spellFile = Path.Join(path, FileRequirement[0]);
 
-            var foodSpells = ExtractSpells(spell, foodDesc);
-            var waterSpells = ExtractSpells(spell, waterDesc);
+            List<int> foodSpells = ExtractSpells(spellFile, foodDesc);
+            List<int> waterSpells = ExtractSpells(spellFile, waterDesc);
 
-            var itemEffect = Path.Join(path, FileRequirement[1]);
+            string itemEffectFile = Path.Join(path, FileRequirement[1]);
 
-            var foodIds = ExtractItem(itemEffect, foodSpells);
+            List<int> foodIds = ExtractItem(itemEffectFile, foodSpells);
             foodIds.Sort();
             Console.WriteLine($"Foods: {foodIds.Count}");
             File.WriteAllText(Path.Join(path, "foods.json"), JsonConvert.SerializeObject(foodIds));
 
-            var waterIds = ExtractItem(itemEffect, waterSpells);
+            List<int> waterIds = ExtractItem(itemEffectFile, waterSpells);
             waterIds.Sort();
             Console.WriteLine($"Waters: {waterIds.Count}");
             File.WriteAllText(Path.Join(path, "waters.json"), JsonConvert.SerializeObject(waterIds));
@@ -53,19 +53,17 @@ namespace ReadDBC_CSV
             int entryIndex = -1;
             int descIndex = -1;
 
-            var extractor = new CSVExtractor();
+            CSVExtractor extractor = new();
             extractor.HeaderAction = () =>
             {
                 entryIndex = extractor.FindIndex("ID");
                 descIndex = extractor.FindIndex("Description_lang");
             };
 
-            var items = new List<int>();
+            List<int> items = new();
             void extractLine(string[] values)
             {
-                if (values.Length > entryIndex &&
-                    values.Length > descIndex &&
-                    values[descIndex].Contains(descLang))
+                if (values[descIndex].Contains(descLang))
                 {
                     items.Add(int.Parse(values[entryIndex]));
                 }
@@ -81,7 +79,7 @@ namespace ReadDBC_CSV
             int spellIdIndex = -1;
             int ParentItemIDIndex = -1;
 
-            var extractor = new CSVExtractor();
+            CSVExtractor extractor = new();
             extractor.HeaderAction = () =>
             {
                 entryIndex = extractor.FindIndex("ID");
@@ -89,19 +87,14 @@ namespace ReadDBC_CSV
                 ParentItemIDIndex = extractor.FindIndex("ParentItemID", 9);
             };
 
-            var items = new List<int>();
+            List<int> items = new();
             void extractLine(string[] values)
             {
-                if (values.Length > entryIndex &&
-                    values.Length > spellIdIndex &&
-                    values.Length > ParentItemIDIndex)
+                int spellId = int.Parse(values[spellIdIndex]);
+                if (spells.Any(s => s == spellId))
                 {
-                    int spellId = int.Parse(values[spellIdIndex]);
-                    if (spells.Any(s => s == spellId))
-                    {
-                        int ItemId = int.Parse(values[ParentItemIDIndex]);
-                        items.Add(ItemId);
-                    }
+                    int ItemId = int.Parse(values[ParentItemIDIndex]);
+                    items.Add(ItemId);
                 }
             }
 

@@ -14,8 +14,8 @@ namespace ReadDBC_CSV
 
         public void ExtractTemplate(string file, Action<string[]> extractLine)
         {
-            using (var reader = new StreamReader(file))
-            using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+            using (StreamReader reader = new(file))
+            using (CsvReader csv = new(reader, CultureInfo.InvariantCulture))
             {
                 csv.Read();
                 csv.ReadHeader();
@@ -24,13 +24,12 @@ namespace ReadDBC_CSV
 
                 while (csv.Read())
                 {
-                    var record = csv.GetRecord<dynamic>();
+                    IDictionary<string, object> record = csv.GetRecord<dynamic>();
                     string[] data = new string[ColumnIndexes.Count];
                     int i = 0;
                     foreach (KeyValuePair<string, object> r in record)
                     {
-                        data[i] = r.Value.ToString();
-                        i++;
+                        data[i++] = r.Value.ToString();
                     }
 
                     extractLine(data);
