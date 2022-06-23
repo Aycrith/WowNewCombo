@@ -180,7 +180,7 @@ namespace Core.Goals
                 if (lastCastSuccess && addonReader.UsableAction.Is(item))
                 {
                     Log($"While waiting, repeat current action: {item.Name}");
-                    lastCastSuccess = castingHandler.CastIfReady(item, IsInMeleeRange);
+                    lastCastSuccess = castingHandler.CastIfReady(item, playerReader.IsInMeleeRange);
                     Log($"Repeat current action: {lastCastSuccess}");
                 }
 
@@ -299,11 +299,6 @@ namespace Core.Goals
                 TargetTargetEnum.Me or
                 TargetTargetEnum.Pet or
                 TargetTargetEnum.PartyOrPet;
-        }
-
-        private bool IsInMeleeRange()
-        {
-            return playerReader.IsInMeleeRange();
         }
 
         private void Log(string text)

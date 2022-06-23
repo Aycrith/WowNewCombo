@@ -1,10 +1,8 @@
 ﻿using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Core.Extensions;
 
 namespace Core.Goals
 {
@@ -14,11 +12,9 @@ namespace Core.Goals
 
         private readonly ILogger logger;
         private readonly ConfigurableInput input;
-
         private readonly StopMoving stopMoving;
         private readonly Wait wait;
         private readonly PlayerReader playerReader;
-
         private readonly CastingHandler castingHandler;
         private readonly MountHandler mountHandler;
 
@@ -26,11 +22,9 @@ namespace Core.Goals
         {
             this.logger = logger;
             this.input = input;
-
             this.stopMoving = stopMoving;
             this.wait = wait;
             this.playerReader = playerReader;
-
             this.castingHandler = castingHandler;
             this.mountHandler = mountHandler;
 
@@ -41,30 +35,29 @@ namespace Core.Goals
 
         public override bool CheckIfActionCanRun()
         {
-            return Keys.Any(key => key.CanRun());
+            for (int i = 0; i < Keys.Length; i++)
+            {
+                if (Keys[i].CanRun())
+                    return true;
+            }
+            return false;
         }
 
-        public override async void OnEnter()
+        public override void OnEnter()
         {
+            if (mountHandler.IsMounted())
+            {
+                mountHandler.Dismount();
+                wait.Update();
+            }
+
             if (Keys.Any(k => k.StopBeforeCast))
             {
                 stopMoving.Stop();
                 wait.Update();
-
-                if (mountHandler.IsMounted())
-                {
-                    mountHandler.Dismount();
-                    wait.Update();
-                }
             }
 
-            await AsyncExt.Loop(Keys, (KeyAction key) =>
-            {
-                var pressed = castingHandler.CastIfReady(key, () => false);
-                key.ResetCooldown();
-                key.SetClicked();
-                return Task.CompletedTask;
-            });
+            Parallel.For(0, Keys.Length, Execute);
 
             bool wasDrinkingOrEating = playerReader.Buffs.Drink() || playerReader.Buffs.Food();
 
@@ -101,6 +94,15 @@ namespace Core.Goals
 
         public override void PerformAction()
         {
+        }
+
+        private void Execute(int i)
+        {
+            if (castingHandler.CastIfReady(Keys[i], () => false))
+            {
+                Keys[i].ResetCooldown();
+                Keys[i].SetClicked();
+            }
         }
     }
 }
