@@ -5,13 +5,13 @@
         None = 0,
         Kill = 1,
         Loot = 2,
-        Skin = 4,
-        Mine = 5,
-        Herb = 6,
-        Vendor = 7,
-        Repair = 8,
-        Innkeeper = 9,
-        Quest = 10
+        Skin = 3,
+        Mine = 4,
+        Herb = 5,
+        Vendor = 6,
+        Repair = 7,
+        Innkeeper = 8,
+        Quest = 9
     }
 
     public static class CursorType_Extension
