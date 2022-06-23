@@ -192,14 +192,14 @@
 
         var routeinfo = botController.RouteInfo;
 
-        var paths = routeinfo.PathPoints;
+        var paths = routeinfo.Route;
         this.PathLines = new MarkupString(routeinfo.RenderPathLines(paths));
         this.PathPoints = new MarkupString(routeinfo.RenderPathPoints(paths));
 
         var waypoints = routeinfo.RouteToWaypoint;
         if (waypoints != null)
         {
-            var waylist = waypoints.ToList();
+            var waylist = waypoints.ToArray();
             this.RouteToWaypointLines = new MarkupString(routeinfo.RenderPathLines(waylist));
             this.RouteToWaypointPoints = new MarkupString(routeinfo.RenderPathPoints(waylist));
         }

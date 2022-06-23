@@ -12,7 +12,7 @@ using SharedLib.Extensions;
 
 namespace Core.Goals
 {
-    public class FollowRouteGoal : GoapGoal, IRouteProvider, IDisposable
+    public class FollowRouteGoal : GoapGoal, IRouteProvider, IEditedRouteReceiver, IDisposable
     {
         public override float CostOfPerformingAction => 20f;
 
@@ -27,7 +27,6 @@ namespace Core.Goals
         private readonly ClassConfiguration classConfig;
         private readonly MountHandler mountHandler;
         private readonly Navigation navigation;
-        private readonly List<Vector3> routePoints;
 
         private readonly IBlacklist blacklist;
         private readonly TargetFinder targetFinder;
@@ -40,6 +39,8 @@ namespace Core.Goals
         private readonly ManualResetEvent sideActivityManualReset;
         private readonly Thread? sideActivityThread;
         private CancellationTokenSource sideActivityCts;
+
+        private Vector3[] route;
 
         private bool shouldMount;
 
@@ -69,7 +70,7 @@ namespace Core.Goals
         #endregion
 
 
-        public FollowRouteGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, ClassConfiguration classConfig, List<Vector3> points, Navigation navigation, MountHandler mountHandler, NpcNameFinder npcNameFinder, TargetFinder targetFinder, IBlacklist blacklist)
+        public FollowRouteGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, ClassConfiguration classConfig, Vector3[] route, Navigation navigation, MountHandler mountHandler, NpcNameFinder npcNameFinder, TargetFinder targetFinder, IBlacklist blacklist)
         {
             this.logger = logger;
             this.input = input;
@@ -78,7 +79,7 @@ namespace Core.Goals
             this.addonReader = addonReader;
             this.classConfig = classConfig;
             this.playerReader = addonReader.PlayerReader;
-            this.routePoints = points;
+            this.route = route;
             this.npcNameFinder = npcNameFinder;
             this.mountHandler = mountHandler;
             this.targetFinder = targetFinder;
@@ -305,28 +306,30 @@ namespace Core.Goals
         {
             Log($"RefillWaypoints - findClosest:{onlyClosest} - ThereAndBack:{input.ClassConfig.PathThereAndBack}");
 
-            var player = playerReader.PlayerLocation;
-            var path = routePoints.ToList();
+            Vector3 player = playerReader.PlayerLocation;
+            Vector3[] path = route.ToArray();
 
-            var distanceToFirst = player.DistanceXYTo(path[0]);
-            var distanceToLast = player.DistanceXYTo(path[^1]);
+            float distanceToFirst = player.DistanceXYTo(path[0]);
+            float distanceToLast = player.DistanceXYTo(path[^1]);
 
             if (distanceToLast < distanceToFirst)
             {
-                path.Reverse();
+                Array.Reverse(path);
             }
 
-            var closestPoint = path.ToList().OrderBy(p => player.DistanceXYTo(p)).First();
+            var closestPoint = path.OrderBy(p => player.DistanceXYTo(p)).First();
             if (onlyClosest)
             {
-                var closestPath = new List<Vector3> { closestPoint };
+                var closestPath = new Vector3[] { closestPoint };
+
                 if (debug)
                     LogDebug($"RefillWaypoints: Closest wayPoint: {closestPoint}");
                 navigation.SetWayPoints(closestPath);
+
                 return;
             }
 
-            int closestIndex = path.IndexOf(closestPoint);
+            int closestIndex = Array.IndexOf(path, closestPoint);
             if (closestPoint == path[0] || closestPoint == path[^1])
             {
                 if (input.ClassConfig.PathThereAndBack)
@@ -335,20 +338,25 @@ namespace Core.Goals
                 }
                 else
                 {
-                    path.Reverse();
+                    Array.Reverse(path);
                     navigation.SetWayPoints(path);
                 }
             }
             else
             {
-                var points = path.Take(closestIndex).ToList();
-                points.Reverse();
-                Log($"RefillWaypoints - Set destination from closest to nearest endpoint - with {points.Count} waypoints");
+                Vector3[] points = path.Take(closestIndex).ToArray();
+                Array.Reverse(points);
+                Log($"RefillWaypoints - Set destination from closest to nearest endpoint - with {points.Length} waypoints");
                 navigation.SetWayPoints(points);
             }
         }
 
         #endregion
+
+        public void ReceivePath(Vector3[] newRoute)
+        {
+            route = newRoute;
+        }
 
         private void RandomJump()
         {

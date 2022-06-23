@@ -34,7 +34,7 @@ namespace Core
 
     public class RouteInfo
     {
-        public List<Vector3> PathPoints { get; }
+        public Vector3[] Route { get; private set; }
 
         public List<Vector3>? RouteToWaypoint
         {
@@ -48,7 +48,7 @@ namespace Core
             }
         }
 
-        private List<IRouteProvider> pathedRoutes = new();
+        private readonly IEnumerable<IRouteProvider> pathedRoutes;
         private readonly AddonReader addonReader;
 
         public List<RouteInfoPoi> PoiList { get; } = new();
@@ -64,7 +64,33 @@ namespace Core
 
         private double pointToGrid;
 
-        private int dSize = 2;
+        private const int dSize = 2;
+
+        public RouteInfo(Vector3[] route, IEnumerable<IRouteProvider> pathedRoutes, AddonReader addonReader)
+        {
+            this.Route = route;
+
+            this.pathedRoutes = pathedRoutes;
+            this.addonReader = addonReader;
+
+            //addonReader.UIMapId.Changed -= OnZoneChanged;
+            //addonReader.UIMapId.Changed += OnZoneChanged;
+            //OnZoneChanged(this, EventArgs.Empty);
+
+            CalculateDiffs();
+        }
+
+        public void UpdateRoute(IEnumerable<Vector3> newRoute)
+        {
+            Route = newRoute.ToArray();
+
+            IEnumerable<IEditedRouteReceiver> routeReceivers = pathedRoutes.Where(a => a is IEditedRouteReceiver).Cast<IEditedRouteReceiver>();
+            foreach (IEditedRouteReceiver receiver in routeReceivers)
+            {
+                receiver.ReceivePath(Route);
+            }
+        }
+
         public void SetMargin(int margin)
         {
             this.margin = margin;
@@ -98,20 +124,6 @@ namespace Core
             return value / 100f * pointToGrid;
         }
 
-        public RouteInfo(List<Vector3> pathPoints, List<IRouteProvider> pathedRoutes, AddonReader addonReader)
-        {
-            this.PathPoints = pathPoints.ToList();
-
-            this.pathedRoutes = pathedRoutes;
-            this.addonReader = addonReader;
-
-            //addonReader.UIMapId.Changed -= OnZoneChanged;
-            //addonReader.UIMapId.Changed += OnZoneChanged;
-            //OnZoneChanged(this, EventArgs.Empty);
-
-            CalculateDiffs();
-        }
-
         private void OnZoneChanged(object sender, EventArgs e)
         {
             if (addonReader.AreaDb.CurrentArea != null)
@@ -127,13 +139,13 @@ namespace Core
 
         private void CalculateDiffs()
         {
-            var allPoints = this.PathPoints.ToList();
+            var allPoints = Route.ToList();
 
             var wayPoints = RouteToWaypoint;
             if (wayPoints != null)
                 allPoints.AddRange(wayPoints);
 
-            var pois = this.PoiList.Select(p => p.Location);
+            var pois = PoiList.Select(p => p.Location);
             allPoints.AddRange(pois);
 
             allPoints.Add(addonReader.PlayerReader.PlayerLocation);
@@ -163,14 +175,14 @@ namespace Core
             }
         }
 
-        public string RenderPathLines(List<Vector3> path)
+        public string RenderPathLines(Vector3[] path)
         {
-            StringBuilder sb = new StringBuilder();
-            for (var i = 0; i < path.Count - 1; i++)
+            StringBuilder sb = new();
+            for (int i = 0; i < path.Length - 1; i++)
             {
-                var pt1 = path[i];
-                var pt2 = path[i + 1];
-                sb.AppendLine($"<line x1 = '{ToCanvasPointX(pt1.X)}' y1 = '{ToCanvasPointY(pt1.Y)}' x2 = '{ToCanvasPointX(pt2.X)}' y2 = '{ToCanvasPointY(pt2.Y)}' />");
+                Vector3 p1 = path[i];
+                Vector3 p2 = path[i + 1];
+                sb.AppendLine($"<line x1 = '{ToCanvasPointX(p1.X)}' y1 = '{ToCanvasPointY(p1.Y)}' x2 = '{ToCanvasPointX(p2.X)}' y2 = '{ToCanvasPointY(p2.Y)}' />");
             }
             return sb.ToString();
         }
@@ -178,30 +190,34 @@ namespace Core
         private readonly string first = "<br><b>First</b>";
         private readonly string last = "<br><b>Last</b>";
 
-        public string RenderPathPoints(List<Vector3> path)
+        public string RenderPathPoints(Vector3[] path)
         {
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < path.Count; i++)
+            StringBuilder sb = new();
+            for (int i = 0; i < path.Length; i++)
             {
-                var wowpoint = path[i];
-                float x = wowpoint.X;
-                float y = wowpoint.Y;
-                sb.AppendLine($"<circle onmousedown=\"pointClick(evt,{x},{y},{i});\"  onmousemove=\"showTooltip(evt,'{x},{y}{(i == 0 ? first : i == path.Count-1 ? last : string.Empty)}');\" onmouseout=\"hideTooltip();\"  cx = '{ToCanvasPointX(wowpoint.X)}' cy = '{ToCanvasPointY(wowpoint.Y)}' r = '{dSize}' />");
+                Vector3 p = path[i];
+                float x = p.X;
+                float y = p.Y;
+                sb.AppendLine($"<circle onmousedown=\"pointClick(evt,{x},{y},{i});\"  onmousemove=\"showTooltip(evt,'{x},{y}{(i == 0 ? first : i == path.Length - 1 ? last : string.Empty)}');\" onmouseout=\"hideTooltip();\"  cx = '{ToCanvasPointX(p.X)}' cy = '{ToCanvasPointY(p.Y)}' r = '{dSize}' />");
             }
             return sb.ToString();
         }
 
         public Vector3 NextPoint()
         {
-            var route = this.pathedRoutes.OrderByDescending(s => s.LastActive).FirstOrDefault();
-            if (route == null || !route.HasNext()) { return Vector3.Zero; }
+            var route = pathedRoutes.OrderByDescending(s => s.LastActive).FirstOrDefault();
+            if (route == null || !route.HasNext())
+                return Vector3.Zero;
+
             return route.NextPoint();
         }
 
         public string RenderNextPoint()
         {
-            var pt = NextPoint();
-            if (pt == Vector3.Zero) { return string.Empty; }
+            Vector3 pt = NextPoint();
+            if (pt == Vector3.Zero)
+                return string.Empty;
+                
             return $"<circle cx = '{ToCanvasPointX(pt.X)}' cy = '{ToCanvasPointY(pt.Y)}'r = '{dSize + 1}' />";
         }
 

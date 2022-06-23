@@ -121,8 +121,7 @@ namespace Core.Goals
             input.ClearTarget();
             stopMoving.Stop();
 
-            var path = key.Path.ToList();
-            navigation.SetWayPoints(path);
+            navigation.SetWayPoints(key.Path);
 
             pathState = PathState.ApproachPathStart;
 
@@ -217,9 +216,9 @@ namespace Core.Goals
                     input.ClearTarget();
                     wait.Update();
 
-                    var path = key.Path.ToList();
-                    path.Reverse();
-                    navigation.SetWayPoints(path);
+                    Vector3[] reversePath = key.Path.ToArray();
+                    Array.Reverse(reversePath);
+                    navigation.SetWayPoints(reversePath);
 
                     pathState++;
 

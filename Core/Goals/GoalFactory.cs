@@ -42,7 +42,7 @@ namespace Core
         {
             HashSet<GoapGoal> availableActions = new();
 
-            GetPath(out List<Vector3> pathPoints, classConfig);
+            GetPath(out Vector3[] route, classConfig);
 
             IBlacklist blacklist = classConfig.Mode != Mode.Grind ?
                 new NoBlacklist() :
@@ -60,7 +60,7 @@ namespace Core
             TargetFinder targetFinder = new(input, classConfig, addonReader.PlayerReader, npcNameTargeting);
 
             Navigation followNav = new(logger, playerDirection, input, addonReader, stopMoving, stuckDetector, pather, mountHandler, classConfig.Mode);
-            FollowRouteGoal followRouteAction = new(logger, input, wait, addonReader, classConfig, pathPoints, followNav, mountHandler, npcNameFinder, targetFinder, blacklist);
+            FollowRouteGoal followRouteAction = new(logger, input, wait, addonReader, classConfig, route, followNav, mountHandler, npcNameFinder, targetFinder, blacklist);
 
             Navigation corpseNav = new(logger, playerDirection, input, addonReader, stopMoving, stuckDetector, pather, mountHandler, classConfig.Mode);
             WalkToCorpseGoal walkToCorpseAction = new(logger, input, wait, addonReader, corpseNav, stopMoving);
@@ -133,8 +133,7 @@ namespace Core
                 {
                     var nav = new Navigation(logger, playerDirection, input, addonReader, stopMoving, stuckDetector, pather, mountHandler, classConfig.Mode);
                     availableActions.Add(new AdhocNPCGoal(logger, input, item, wait, addonReader, nav, stopMoving, npcNameTargeting, classConfig, mountHandler, exec));
-                    item.Path.Clear();
-                    item.Path.AddRange(ReadPath(item.Name, item.PathFilename));
+                    item.Path = ReadPath(item.Name, item.PathFilename);
                 }
             }
             else
@@ -206,20 +205,18 @@ namespace Core
                 {
                     var nav = new Navigation(logger, playerDirection, input, addonReader, stopMoving, stuckDetector, pather, mountHandler, classConfig.Mode);
                     availableActions.Add(new AdhocNPCGoal(logger, input, item, wait, addonReader, nav, stopMoving, npcNameTargeting, classConfig, mountHandler, exec));
-                    item.Path.Clear();
-                    item.Path.AddRange(ReadPath(item.Name, item.PathFilename));
+                    item.Path = ReadPath(item.Name, item.PathFilename);
                 }
             }
 
-            var pathProviders = availableActions.Where(a => a is IRouteProvider)
-                .Cast<IRouteProvider>()
-                .ToList();
+            IEnumerable<IRouteProvider> pathProviders = availableActions.Where(a => a is IRouteProvider)
+                .Cast<IRouteProvider>();
 
-            RouteInfo routeInfo = new(pathPoints, pathProviders, addonReader);
+            RouteInfo routeInfo = new(route, pathProviders, addonReader);
 
             pather.DrawLines(new()
             {
-                new LineArgs("grindpath", pathPoints, 2, addonReader.UIMapId.Value)
+                new LineArgs("grindpath", route, 2, addonReader.UIMapId.Value)
             });
 
             return (routeInfo, availableActions);
@@ -230,20 +227,20 @@ namespace Core
             return !path.Contains(dataConfig.Path) ? Path.Join(dataConfig.Path, path) : path;
         }
 
-        private void GetPath(out List<Vector3> pathPoints, ClassConfiguration classConfig)
+        private void GetPath(out Vector3[] path, ClassConfiguration classConfig)
         {
             classConfig.PathFilename = FixPathFilename(classConfig.PathFilename);
 
-            pathPoints = CreatePathPoints(classConfig);
+            path = ProcessPath(classConfig);
         }
 
-        private IEnumerable<Vector3> ReadPath(string name, string pathFilename)
+        private Vector3[] ReadPath(string name, string pathFilename)
         {
             try
             {
                 if (string.IsNullOrEmpty(pathFilename))
                 {
-                    return new List<Vector3>();
+                    return Array.Empty<Vector3>();
                 }
                 else
                 {
@@ -257,26 +254,24 @@ namespace Core
             }
         }
 
-        private static List<Vector3> CreatePathPoints(ClassConfiguration classConfig)
+        private static Vector3[] ProcessPath(ClassConfiguration classConfig)
         {
-            List<Vector3> output = new();
-
             string text = File.ReadAllText(classConfig.PathFilename);
-            var points = JsonConvert.DeserializeObject<Vector3[]>(text);
+            Vector3[] points = JsonConvert.DeserializeObject<Vector3[]>(text);
 
             int step = classConfig.PathReduceSteps ? 2 : 1;
-            for (int i = 0; i < points.Length; i += step)
+
+            int length = points.Length % step == 0 ?
+                points.Length / step :
+                (points.Length / step) + 1;
+
+            Vector3[] path = new Vector3[length];
+            for (int i = 0; i < path.Length; i++)
             {
-                output.Add(points[i]);
+                path[i] = points[i * step];
             }
 
-            // last point of the path is added
-            if (points.Length > 0 && points.Length % step != 0)
-            {
-                output.Add(points[^1]);
-            }
-
-            return output;
+            return path;
         }
     }
 }

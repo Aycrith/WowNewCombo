@@ -305,19 +305,22 @@ namespace Core.Goals
             return routeToNextWaypoint.Peek();
         }
 
-        public void SetWayPoints(List<Vector3> points)
+        public void SetWayPoints(Vector3[] points)
         {
             wayPoints.Clear();
             routeToNextWaypoint.Clear();
 
-            points.Reverse();
-            points.ForEach(x => wayPoints.Push(x));
+            Array.Reverse(points);
+            for (int i = 0; i < points.Length; i++)
+            {
+                wayPoints.Push(points[i]);
+            }
 
             if (wayPoints.Count > 1)
             {
                 float sum = 0;
                 sum = points.Zip(points.Skip(1), (a, b) => a.DistanceXYTo(b)).Sum();
-                AvgDistance = sum / points.Count;
+                AvgDistance = sum / points.Length;
             }
             else
             {
