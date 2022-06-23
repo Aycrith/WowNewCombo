@@ -22,8 +22,8 @@ namespace ReadDBC_CSV
 
         public void Run()
         {
-            var itemsearchname = Path.Join(path, FileRequirement[0]);
-            var items = ExtractItems(itemsearchname);
+            string itemsearchname = Path.Join(path, FileRequirement[0]);
+            List<Item> items = ExtractItems(itemsearchname);
 
             Console.WriteLine($"Items: {items.Count}");
             File.WriteAllText(Path.Join(path, "items.json"), JsonConvert.SerializeObject(items));
@@ -37,7 +37,7 @@ namespace ReadDBC_CSV
             int qualityIndex = -1;
             int sellPriceIndex = -1;
 
-            var extractor = new CSVExtractor();
+            CSVExtractor extractor = new();
             extractor.HeaderAction = () =>
             {
                 idIndex = extractor.FindIndex("ID");
@@ -46,22 +46,16 @@ namespace ReadDBC_CSV
                 sellPriceIndex = extractor.FindIndex("SellPrice");
             };
 
-            var items = new List<Item>();
+            List<Item> items = new();
             void extractLine(string[] values)
             {
-                if (values.Length > idIndex &&
-                    values.Length > nameIndex &&
-                    values.Length > qualityIndex &&
-                    values.Length > sellPriceIndex)
+                items.Add(new Item
                 {
-                    items.Add(new Item
-                    {
-                        Entry = int.Parse(values[idIndex]),
-                        Quality = int.Parse(values[qualityIndex]),
-                        Name = values[nameIndex],
-                        SellPrice = int.Parse(values[sellPriceIndex])
-                    });
-                }
+                    Entry = int.Parse(values[idIndex]),
+                    Quality = int.Parse(values[qualityIndex]),
+                    Name = values[nameIndex],
+                    SellPrice = int.Parse(values[sellPriceIndex])
+                });
             }
 
             extractor.ExtractTemplate(path, extractLine);

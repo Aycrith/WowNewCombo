@@ -23,11 +23,11 @@ namespace ReadDBC_CSV
 
         public void Run()
         {
-            var spellname = Path.Join(path, FileRequirement[0]);
-            var spells = ExtractNames(spellname);
+            string spellnameFile = Path.Join(path, FileRequirement[0]);
+            List<Spell> spells = ExtractNames(spellnameFile);
 
-            var spelllevels = Path.Join(path, FileRequirement[1]);
-            ExtractLevels(spelllevels, spells);
+            string spelllevelsFile = Path.Join(path, FileRequirement[1]);
+            ExtractLevels(spelllevelsFile, spells);
 
             Console.WriteLine($"Spells: {spells.Count}");
 
@@ -39,24 +39,21 @@ namespace ReadDBC_CSV
             int entryIndex = -1;
             int nameIndex = -1;
 
-            var extractor = new CSVExtractor();
+            CSVExtractor extractor = new();
             extractor.HeaderAction = () =>
             {
                 entryIndex = extractor.FindIndex("ID");
                 nameIndex = extractor.FindIndex("Name_lang");
             };
 
-            var spells = new List<Spell>();
+            List<Spell> spells = new();
             void extractLine(string[] values)
             {
-                if (values.Length > entryIndex && values.Length > nameIndex)
+                spells.Add(new Spell
                 {
-                    spells.Add(new Spell
-                    {
-                        Id = int.Parse(values[entryIndex]),
-                        Name = values[nameIndex]
-                    });
-                }
+                    Id = int.Parse(values[entryIndex]),
+                    Name = values[nameIndex]
+                });
             }
 
             extractor.ExtractTemplate(path, extractLine);
@@ -70,7 +67,7 @@ namespace ReadDBC_CSV
             int spellIdIndex = -1;
             int baseLevelIndex = -1;
 
-            var extractor = new CSVExtractor();
+            CSVExtractor extractor = new();
             extractor.HeaderAction = () =>
             {
                 entryIndex = extractor.FindIndex("ID");
@@ -80,23 +77,18 @@ namespace ReadDBC_CSV
 
             void extractLine(string[] values)
             {
-                if (values.Length > entryIndex &&
-                    values.Length > spellIdIndex &&
-                    values.Length > baseLevelIndex)
+                int level = int.Parse(values[baseLevelIndex]);
+                if (level > 0 && int.TryParse(values[spellIdIndex], out int spellId))
                 {
-                    int level = int.Parse(values[baseLevelIndex]);
-                    if (level > 0 && int.TryParse(values[spellIdIndex], out int spellId))
+                    int index = spells.FindIndex(0, x => x.Id == spellId);
+                    if (index > -1)
                     {
-                        int index = spells.FindIndex(0, x => x.Id == spellId);
-                        if (index > -1)
+                        spells[index] = new Spell
                         {
-                            spells[index] = new Spell
-                            {
-                                Id = spellId,
-                                Level = level,
-                                Name = spells[index].Name,
-                            };
-                        }
+                            Id = spellId,
+                            Level = level,
+                            Name = spells[index].Name,
+                        };
                     }
                 }
             }
