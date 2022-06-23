@@ -23,12 +23,19 @@
         }
         @if (recording || editing)
         {
-            <button class="btn btn-success"
-                disabled="@(routeInfo.PathPoints.Count == 0 ? "disabled" : null)"
-                @onclick="Save">
-                Save
-            </button>
-            <button class="btn btn-danger" @onclick="Clear">Clear</button>
+            <div>
+                <button class="btn btn-success"
+                    disabled="@(editPath.Count == 0 ? "disabled" : null)"
+                    @onclick="SaveToFile">
+                    Save to file & use path
+                </button>
+                <button class="btn btn-info"
+                    disabled="@(editPath.Count == 0 ? "disabled" : null)"
+                    @onclick="Use">
+                    Use path without save
+                </button>
+                <button class="btn btn-danger" @onclick="Clear">Clear</button>
+            </div>
         }
         <div>@message</div>
     </div>
@@ -66,12 +73,12 @@
                         @this.PreviewPoints
                     </g>
 
-                    @if (recording && routeInfo.PathPoints.Count > 0)
+                    @if (recording && editPath.Count > 0)
                     {
                         <g>
                             <circle fill="transparent" stroke="black"
-                                cx='@(routeInfo.ToCanvasPointX(routeInfo.PathPoints.Last().X))'
-                                cy='@(routeInfo.ToCanvasPointY(routeInfo.PathPoints.Last().Y))'
+                                cx='@(routeInfo.ToCanvasPointX(editPath.Last().X))'
+                                cy='@(routeInfo.ToCanvasPointY(editPath.Last().Y))'
                                 r='@(routeInfo.DistanceToGrid(Distance))' />
                         </g>
                     }
@@ -81,56 +88,61 @@
     </div>
 
     <div class="col-sm">
-        @if (editing && selectedPoint != default)
+        @if (editing)
         {
-            <table>
-                <tr>
-                    <td>
-                        <h3>&#128308; Selected</h3>
-                    </td>
-                    <td>
-                        @if (selectedPoint != previewPoint)
-                        {
-                            <h3>&#128993; Preview</h3>
-                        }
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <input type="text" id="posx" class="col-sm-6 form-control" @bind="X" />
-                        <input type="text" id="posy" class="col-sm-6 form-control" @bind="Y" />
-                    </td>
-                    <td>
-                        @if (selectedPoint != previewPoint)
-                        {
-                            <input type="text" class="col-sm-6 form-control" disabled="disabled" @bind="selectedPoint.X" />
-                            <input type="text" class="col-sm-6 form-control" disabled="disabled" @bind="selectedPoint.Y" />
-                        }
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <hr />
-                        <button class="btn btn-danger" @onclick="RemoveAllSelected">Remove</button>
-                        <hr />
-                        <button class="btn btn-primary"
+            if (selectedPoint != default)
+            {
+                <table>
+                    <tr>
+                        <td>
+                            <h3>&#128308; Selected</h3>
+                        </td>
+                        <td>
+                            @if (selectedPoint != previewPoint)
+                            {
+                                <h3>&#128993; Preview</h3>
+                            }
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <input type="text" id="posx" class="col-sm-6 form-control" @bind="X" />
+                            <input type="text" id="posy" class="col-sm-6 form-control" @bind="Y" />
+                        </td>
+                        <td>
+                            @if (selectedPoint != previewPoint)
+                            {
+                                <input type="text" class="col-sm-6 form-control" disabled="disabled" @bind="selectedPoint.X" />
+                                <input type="text" class="col-sm-6 form-control" disabled="disabled" @bind="selectedPoint.Y" />
+                            }
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <hr />
+                            <button class="btn btn-danger" @onclick="RemoveAllSelected">Remove</button>
+                            <hr />
+                            <button class="btn btn-primary"
                             disabled="@(this.selectedPoint != this.previewPoint ? null : "disabled")"
                             @onclick="UpdateSelectedWithPreview">
-                            Move to preview
-                        </button>
-                        <hr />
-                        <button class="btn btn-primary" @onclick="UpdateSelectedWithPlayer">Move to player</button>
-                        <hr />
-                        <button class="btn btn-success" @onclick="InsertPlayerLocationAfterSelected">Insert player location after selected</button>
-                    </td>
-                    <td>
-                    </td>
-                </tr>
-            </table>
+                                Move to preview
+                            </button>
+                            <hr />
+                            <button class="btn btn-primary" @onclick="UpdateSelectedWithPlayer">Move to player</button>
+                            <hr />
+                            <button class="btn btn-success" @onclick="InsertPlayerLocationAfterSelected">Insert player location after selected</button>
+                        </td>
+                        <td>
+                        </td>
+                    </tr>
+                </table>
 
-            <hr>
-            <button class="btn btn-primary" @onclick="Previous">Previous</button>
-            <button class="btn btn-primary" @onclick="Next">Next</button>
+                <hr>
+                <button class="btn btn-primary" @onclick="Previous">Previous</button>
+                <button class="btn btn-primary" @onclick="Next">Next</button>
+                <hr>
+            }
+            <button class="btn btn-danger" @onclick="HalvenPoints">Halven points</button>
 
             <div>@error</div>
             <br />
@@ -152,10 +164,10 @@
 
         @if (recording || editing)
         {
-            <h3>Available Points</h3>
-            @for (int i = 0; i < routeInfo.PathPoints.Count; i++)
+            <h3>Available Points (@editPath.Count)</h3>
+            @for (int i = 0; i < editPath.Count; i++)
             {
-                var point = routeInfo.PathPoints[i];
+                var point = editPath[i];
                 int index = i;
                 <span class="badge @DisplayBadge(point)" @onclick="() => UpdateSelectedPoint(point, index)">
                     @point.X.ToString("0.00"),@point.Y.ToString("0.00")&nbsp;
@@ -213,9 +225,13 @@
 
     private RouteInfo routeInfo = null!;
 
+    private List<Vector3> editPath = new();
+
     protected override void OnInitialized()
     {
         routeInfo = botController.RouteInfo!;
+
+        editPath = routeInfo.Route.ToList();
 
         addonReader.AddonDataChanged += OnAddonDataChanged;
     }
@@ -250,16 +266,16 @@
                 StateHasChanged();
             }
 
-            /*
-            // requires async
-            var p = addonReader.PlayerReader.PlayerLocation;
+        /*
+        // requires async
+        var p = addonReader.PlayerReader.PlayerLocation;
             var pp = new Vector3(
-                route.ToCanvasPointX(p.X),
-                route.ToCanvasPointY(p.Y),
-            0);
+            route.ToCanvasPointX(p.X),
+            route.ToCanvasPointY(p.Y),
+        0);
 
-            await JSRuntime.InvokeVoidAsync("focusAt", JsonConvert.SerializeObject(pp));
-            */
+        await JSRuntime.InvokeVoidAsync("focusAt", JsonConvert.SerializeObject(pp));
+        */
         });
     }
 
@@ -281,14 +297,14 @@
         routeInfo.SetMargin(Margin);
         routeInfo.SetCanvasSize(Size);
 
-        if (routeInfo.PathPoints.Count > 0)
+        if (editPath.Count > 0)
         {
-            this.PathLines = new MarkupString(routeInfo.RenderPathLines(routeInfo.PathPoints));
-            this.PathPoints = new MarkupString(routeInfo.RenderPathPoints(routeInfo.PathPoints.Where(p => p != this.selectedPoint).ToList()));
-            this.SelectedPoints = new MarkupString(routeInfo.RenderPathPoints(new List<Vector3> { this.selectedPoint }));
+            this.PathLines = new MarkupString(routeInfo.RenderPathLines(editPath.ToArray()));
+            this.PathPoints = new MarkupString(routeInfo.RenderPathPoints(editPath.Where(p => p != this.selectedPoint).ToArray()));
+            this.SelectedPoints = new MarkupString(routeInfo.RenderPathPoints(new Vector3[] { this.selectedPoint }));
             if (this.selectedPoint != this.previewPoint)
             {
-                this.PreviewPoints = new MarkupString(routeInfo.RenderPathPoints(new List<Vector3> { this.previewPoint }));
+                this.PreviewPoints = new MarkupString(routeInfo.RenderPathPoints(new Vector3[] { this.previewPoint }));
             }
             else
             {
@@ -314,7 +330,8 @@
     {
         recording = false;
 
-        routeInfo.PathPoints.Clear();
+        // ugh
+        editPath.Clear();
 
         cachedIndex = 0;
         selectedPoint = default;
@@ -328,23 +345,34 @@
         UpdateRouteMarkup();
     }
 
-    protected void Save()
+    protected void SaveToFile()
     {
         recording = false;
 
-        var filename = $"__Path_{DateTime.Now.ToString("yyyy_MM_dd_HH_mm_ss")}.json";
-        var filepath = Path.Join(dataConfig.Path, filename);
-        File.WriteAllText(filepath, JsonConvert.SerializeObject(routeInfo.PathPoints));
+        string filename = $"__Path_{DateTime.Now.ToString("yyyy_MM_dd_HH_mm_ss")}.json";
+        string filepath = Path.Join(dataConfig.Path, filename);
+        File.WriteAllText(filepath, JsonConvert.SerializeObject(editPath));
         message = $"Saved to: {filepath}";
+
+        routeInfo.UpdateRoute(editPath.ToArray());
     }
 
+    protected void Use()
+    {
+        recording = false;
+        editing = false;
+
+        message = "Current path in use! Not saved to file!";
+
+        routeInfo.UpdateRoute(editPath.ToArray());
+    }
 
     protected void StartRecording()
     {
         recording = true;
         editing = false;
 
-        routeInfo.PathPoints.Clear();
+        editPath.Clear();
         routeInfo.PoiList.Clear();
 
         ClearMarkup();
@@ -360,10 +388,10 @@
 
         var location = addonReader.PlayerReader.PlayerLocation;
 
-        if (routeInfo.PathPoints.Count == 0 ||
-            location.DistanceXYTo(routeInfo.PathPoints.Last()) > Distance)
+        if (editPath.Count == 0 ||
+            location.DistanceXYTo(editPath.Last()) > Distance)
         {
-            routeInfo.PathPoints.Add(location);
+            editPath.Add(location);
             UpdateRouteMarkup();
             return true;
         }
@@ -379,7 +407,6 @@
         UpdateRouteMarkup();
         editing = true;
     }
-
 
     protected void UpdatePreviewPoint()
     {
@@ -398,15 +425,15 @@
     {
         if (src == default) { return; }
 
-        for (int i = 0; i < routeInfo.PathPoints.Count; i++)
+        for (int i = 0; i < editPath.Count; i++)
         {
-            if (routeInfo.PathPoints[i] == src)
+            if (editPath[i] == src)
             {
-                var temp = routeInfo.PathPoints[i];
+                var temp = editPath[i];
                 temp.X = target.X;
                 temp.Y = target.Y;
                 temp.Z = target.Z;
-                routeInfo.PathPoints[i] = temp;
+                editPath[i] = temp;
             }
         }
 
@@ -445,20 +472,20 @@
 
     protected void RemoveAllSelected()
     {
-        int index = routeInfo.PathPoints.FindIndex(cachedIndex, p => p == selectedPoint);
-        int removed = routeInfo.PathPoints.RemoveAll(p => p == selectedPoint);
+        int index = editPath.FindIndex(cachedIndex, p => p == selectedPoint);
+        int removed = editPath.RemoveAll(p => p == selectedPoint);
         if (removed > 0)
         {
             this.previewPoint = selectedPoint;
 
-            if (index > -1 && routeInfo.PathPoints.Count > 0)
+            if (index > -1 && editPath.Count > 0)
             {
-                if (index >= routeInfo.PathPoints.Count)
+                if (index >= editPath.Count)
                 {
                     index -= removed;
                 }
 
-                this.selectedPoint = routeInfo.PathPoints[index];
+                this.selectedPoint = editPath[index];
                 cachedIndex = index;
             }
             else
@@ -476,14 +503,14 @@
     {
         if (selectedPoint == default) return;
 
-        int index = routeInfo.PathPoints.FindIndex(cachedIndex, p => p == selectedPoint);
+        int index = editPath.FindIndex(cachedIndex, p => p == selectedPoint);
         if (index > -1)
         {
             cachedIndex = index;
 
-            index = Math.Clamp(index - 1, 0, routeInfo.PathPoints.Count - 1);
+            index = Math.Clamp(index - 1, 0, editPath.Count - 1);
 
-            UpdateSelectedPoint(routeInfo.PathPoints[index], index);
+            UpdateSelectedPoint(editPath[index], index);
         }
     }
 
@@ -491,14 +518,14 @@
     {
         if (selectedPoint == default) return;
 
-        int index = routeInfo.PathPoints.FindIndex(cachedIndex, p => p == selectedPoint);
+        int index = editPath.FindIndex(cachedIndex, p => p == selectedPoint);
         if (index > -1)
         {
             cachedIndex = index;
 
-            index = Math.Clamp(index + 1, 0, routeInfo.PathPoints.Count - 1);
+            index = Math.Clamp(index + 1, 0, editPath.Count - 1);
 
-            UpdateSelectedPoint(routeInfo.PathPoints[index], index);
+            UpdateSelectedPoint(editPath[index], index);
         }
     }
 
@@ -507,16 +534,21 @@
     {
         if (selectedPoint == default) return;
 
-        int index = routeInfo.PathPoints.FindIndex(p => p == selectedPoint);
+        int index = editPath.FindIndex(p => p == selectedPoint);
         if (index == -1) return;
 
         var target = addonReader.PlayerReader.PlayerLocation;
-        routeInfo.PathPoints.Insert(index + 1, target);
+        editPath.Insert(index + 1, target);
 
         selectedPoint = target;
         UpdateRouteMarkup();
     }
 
+    protected void HalvenPoints()
+    {
+        editPath = editPath.Where((x, i) => i % 2 == 0).ToList();
+        UpdateRouteMarkup();
+    }
 
     [JSInvokable("PointClick")]
     public void PointClick(float x, float y, int i)
