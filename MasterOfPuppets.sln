@@ -29,6 +29,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PPather", "PPather\PPather.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Frontend", "Frontend\Frontend.csproj", "{A8281286-7AAA-4386-9919-6AB5BEA39BAF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeadlessServer", "HeadlessServer\HeadlessServer.csproj", "{8364AC12-DBF5-4DFF-B3A2-87472413DE01}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -79,6 +81,10 @@ Global
 		{A8281286-7AAA-4386-9919-6AB5BEA39BAF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A8281286-7AAA-4386-9919-6AB5BEA39BAF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A8281286-7AAA-4386-9919-6AB5BEA39BAF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8364AC12-DBF5-4DFF-B3A2-87472413DE01}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8364AC12-DBF5-4DFF-B3A2-87472413DE01}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8364AC12-DBF5-4DFF-B3A2-87472413DE01}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8364AC12-DBF5-4DFF-B3A2-87472413DE01}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
