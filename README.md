@@ -8,7 +8,11 @@
 
 - Addon: https://github.com/FreeHongKongMMO/Happy-Pixels to read the game state. Over the time its been heavily rewritten and optimized.
 
-- Frontend: uses [Blazor](https://docs.microsoft.com/en-us/aspnet/core/blazor) to show the state in a browser.
+- Frontend: ASP.NET Core Razor components
+
+- BlazorServer: uses [ASP.NET Core Blazor](https://docs.microsoft.com/en-us/aspnet/core/blazor) to show the state in a browser.
+
+- HeadlessServer: Run from CommandLine without UI. Requires valid configuration files present next to the executable.
 
 - Backend: written in C#. Screen capture, mouse and keyboard clicking. No memory tampering and DLL injection.
 
