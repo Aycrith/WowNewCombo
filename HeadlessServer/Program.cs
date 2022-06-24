@@ -37,7 +37,7 @@ namespace HeadlessServer
     {
         private static void Main(string[] args)
         {
-            string logfile = "out.log";
+            string logfile = "headless_out.log";
             var config = new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
