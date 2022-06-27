@@ -160,7 +160,7 @@ namespace Core
             FollowTarget.Initialise(addonReader, requirementFactory, logger, Log);
 
             PetAttack.Key = PetAttackKey;
-            Mount.Name = nameof(PetAttack);
+            PetAttack.Name = nameof(PetAttack);
             PetAttack.PressDuration = 10;
             PetAttack.Cooldown = 400;
             PetAttack.Initialise(addonReader, requirementFactory, logger, Log);
@@ -170,6 +170,7 @@ namespace Core
             Mount.Initialise(addonReader, requirementFactory, logger, Log);
 
             Hearthstone.Key = HearthstoneKey;
+            Hearthstone.Name = nameof(Hearthstone);
             Hearthstone.Initialise(addonReader, requirementFactory, logger, Log);
 
             Interact.Key = InteractKey;
