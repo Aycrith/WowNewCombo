@@ -31,6 +31,9 @@ namespace Core.Goals
             stopWatch.Stop();
         }
 
-        public override void PerformAction() { }
+        public override void PerformAction()
+        {
+            wait.Update();
+        }
     }
 }
