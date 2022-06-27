@@ -36,7 +36,7 @@
                 {
                     <tr class="@ActionClass(lastKeyClicked==this.goal.Keys[k].ConsoleKeyFormHash)">
                         <td>
-                            <b style="color:@DisplayCanRun(this.goal.Keys[k].CanRun())">@this.goal.Keys[k].Name [@this.goal.Keys[k].ConsoleKey]</b>
+                            <b style="color:@DisplayCanRun(this.goal.Keys[k].CanRun())">@this.goal.Keys[k].Name [@this.goal.Keys[k].Key]</b>
                         </td>
                         <td>
                             @for (int r = 0; r < this.goal.Keys[k].RequirementsRuntime.Length; r++)

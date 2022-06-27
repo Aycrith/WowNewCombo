@@ -31,7 +31,7 @@ namespace Core.Goals
             {
                 keys = value;
                 if (keys.Length == 1)
-                    DisplayName = $"{Keys[0].Name} [{Keys[0].ConsoleKey}]";
+                    DisplayName = $"{Keys[0].Name} [{Keys[0].Key}]";
             }
         }
 
