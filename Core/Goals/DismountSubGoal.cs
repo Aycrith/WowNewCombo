@@ -9,6 +9,7 @@ namespace Core.Goals
         private readonly MountHandler mountHandler;
 
         public DismountSubGoal(MountHandler mountHandler)
+            : base(nameof(DismountSubGoal))
         {
             this.mountHandler = mountHandler;
 

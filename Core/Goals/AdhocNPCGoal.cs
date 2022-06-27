@@ -43,7 +43,6 @@ namespace Core.Goals
 
         private bool shouldMount;
 
-        public override string Name => Keys.Length == 0 ? base.Name : $"{base.Name} ({Keys[0].Name})";
         public override float CostOfPerformingAction => key.Cost;
 
         #region IRouteProvider
@@ -67,7 +66,8 @@ namespace Core.Goals
 
         #endregion
 
-        public AdhocNPCGoal(ILogger logger, ConfigurableInput input, KeyAction key, Wait wait, AddonReader addonReader, Navigation navigation, StopMoving stopMoving, NpcNameTargeting npcNameTargeting, ClassConfiguration classConfig, MountHandler mountHandler, ExecGameCommand exec)
+        public AdhocNPCGoal(KeyAction key, ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, Navigation navigation, StopMoving stopMoving, NpcNameTargeting npcNameTargeting, ClassConfiguration classConfig, MountHandler mountHandler, ExecGameCommand exec)
+            : base(nameof(AdhocNPCGoal))
         {
             this.logger = logger;
             this.input = input;
@@ -86,13 +86,12 @@ namespace Core.Goals
             navigation.OnDestinationReached += Navigation_OnDestinationReached;
             navigation.OnWayPointReached += Navigation_OnWayPointReached;
 
-            if (key.InCombat == "false")
+            if (bool.TryParse(key.InCombat, out bool result))
             {
-                AddPrecondition(GoapKey.dangercombat, false);
-            }
-            else if (key.InCombat == "true")
-            {
-                AddPrecondition(GoapKey.incombat, true);
+                if (!result)
+                    AddPrecondition(GoapKey.dangercombat, result);
+                else
+                    AddPrecondition(GoapKey.incombat, result);
             }
 
             Keys = new KeyAction[1] { key };

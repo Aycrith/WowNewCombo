@@ -9,6 +9,7 @@
         private readonly IBlacklist blacklist;
 
         public BlacklistTargetGoal(PlayerReader playerReader, ConfigurableInput input, IBlacklist blacklist)
+            : base(nameof(BlacklistTargetGoal))
         {
             this.playerReader = playerReader;
             this.input = input;

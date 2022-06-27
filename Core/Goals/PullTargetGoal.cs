@@ -35,6 +35,7 @@ namespace Core.Goals
         private double PullDurationMs => (DateTime.UtcNow - pullStart).TotalMilliseconds;
 
         public PullTargetGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, IBlacklist blacklist, StopMoving stopMoving, CastingHandler castingHandler, MountHandler mountHandler, NpcNameTargeting npcNameTargeting, StuckDetector stuckDetector, CombatUtil combatUtil)
+            : base(nameof(PullTargetGoal))
         {
             this.logger = logger;
             this.input = input;

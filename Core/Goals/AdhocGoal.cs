@@ -13,17 +13,14 @@ namespace Core.Goals
         private readonly StopMoving stopMoving;
         private readonly AddonReader addonReader;
         private readonly PlayerReader playerReader;
-        
+
         private readonly KeyAction key;
         private readonly CastingHandler castingHandler;
         private readonly MountHandler mountHandler;
         public override float CostOfPerformingAction => key.Cost;
 
-        private readonly Func<bool> dangerCombat;
-
-        public override string Name => Keys.Length == 0 ? base.Name : Keys[0].Name;
-
-        public AdhocGoal(ILogger logger, ConfigurableInput input, Wait wait, KeyAction key, AddonReader addonReader, StopMoving stopMoving, CastingHandler castingHandler, MountHandler mountHandler)
+        public AdhocGoal(KeyAction key, ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, StopMoving stopMoving, CastingHandler castingHandler, MountHandler mountHandler)
+            : base(nameof(AdhocGoal))
         {
             this.logger = logger;
             this.input = input;
@@ -35,16 +32,9 @@ namespace Core.Goals
             this.castingHandler = castingHandler;
             this.mountHandler = mountHandler;
 
-            dangerCombat = () => addonReader.PlayerReader.Bits.PlayerInCombat() &&
-                addonReader.CombatCreatureCount > 0;
-
-            if (key.InCombat == "false")
+            if (bool.TryParse(key.InCombat, out bool result))
             {
-                AddPrecondition(GoapKey.incombat, false);
-            }
-            else if (key.InCombat == "true")
-            {
-                AddPrecondition(GoapKey.incombat, true);
+                AddPrecondition(GoapKey.incombat, result);
             }
 
             Keys = new KeyAction[1] { key };
@@ -60,13 +50,13 @@ namespace Core.Goals
                 wait.Update();
             }
 
-            castingHandler.CastIfReady(key, dangerCombat);
+            castingHandler.CastIfReady(key, DangerCombat);
 
             bool wasDrinkingOrEating = playerReader.Buffs.Drink() || playerReader.Buffs.Food();
 
             DateTime startTime = DateTime.UtcNow;
 
-            while ((playerReader.Buffs.Drink() || playerReader.Buffs.Food() || playerReader.IsCasting()) && !dangerCombat())
+            while ((playerReader.Buffs.Drink() || playerReader.Buffs.Food() || playerReader.IsCasting()) && !DangerCombat())
             {
                 wait.Update();
 
@@ -106,6 +96,12 @@ namespace Core.Goals
             }
 
             wait.Update();
+        }
+
+        public bool DangerCombat()
+        {
+            return addonReader.PlayerReader.Bits.PlayerInCombat() &&
+                addonReader.CombatCreatureCount > 0;
         }
     }
 }

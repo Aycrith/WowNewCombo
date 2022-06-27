@@ -1,11 +1,25 @@
 ﻿using Core.GOAP;
 using Microsoft.Extensions.Logging;
-using System.Collections.Generic;
 using System.Diagnostics;
+using System;
 
 namespace Core.Goals
 {
-    public partial class WaitForGathering : GoapGoal
+    public static class CastState_Extension
+    {
+        public static string ToStringF(this WaitForGatheringGoal.CastState value) => value switch
+        {
+            WaitForGatheringGoal.CastState.None => nameof(WaitForGatheringGoal.CastState.None),
+            WaitForGatheringGoal.CastState.Casting => nameof(WaitForGatheringGoal.CastState.Casting),
+            WaitForGatheringGoal.CastState.Failed => nameof(WaitForGatheringGoal.CastState.Failed),
+            WaitForGatheringGoal.CastState.Abort => nameof(WaitForGatheringGoal.CastState.Abort),
+            WaitForGatheringGoal.CastState.Success => nameof(WaitForGatheringGoal.CastState.Success),
+            WaitForGatheringGoal.CastState.WaitUserInput => nameof(WaitForGatheringGoal.CastState.WaitUserInput),
+            _ => throw new System.NotImplementedException(),
+        };
+    }
+
+    public partial class WaitForGatheringGoal : GoapGoal
     {
         public override float CostOfPerformingAction => 17;
 
@@ -17,7 +31,7 @@ namespace Core.Goals
         private readonly StopMoving stopMoving;
         private readonly Stopwatch stopWatch;
 
-        private readonly List<int> herbSpells = new()
+        private readonly int[] herbSpells = new int[]
         {
             2366,
             2368,
@@ -26,7 +40,7 @@ namespace Core.Goals
             28695,
         };
 
-        private readonly List<int> miningSpells = new()
+        private readonly int[] miningSpells = new int[]
         {
             2575,
             2576,
@@ -35,7 +49,7 @@ namespace Core.Goals
             29354
         };
 
-        private enum CastState
+        public enum CastState
         {
             None,
             Casting,
@@ -48,7 +62,8 @@ namespace Core.Goals
         private CastState state;
         private int lastKnownCast;
 
-        public WaitForGathering(ILogger logger, Wait wait, PlayerReader playerReader, StopMoving stopMoving)
+        public WaitForGatheringGoal(ILogger logger, Wait wait, PlayerReader playerReader, StopMoving stopMoving)
+            : base(nameof(WaitForGatheringGoal))
         {
             this.logger = logger;
             this.wait = wait;
@@ -77,7 +92,7 @@ namespace Core.Goals
             state = CastState.None;
             lastKnownCast = 0;
 
-            LogState(logger, state);
+            LogState(logger, state.ToStringF());
 
             stopWatch.Reset();
             stopWatch.Stop();
@@ -97,21 +112,21 @@ namespace Core.Goals
                         if (playerReader.LastUIError == UI_ERROR.ERR_SPELL_FAILED_S)
                         {
                             state = CastState.Failed;
-                            LogFailed(logger, state, Timeout);
+                            LogFailed(logger, state.ToStringF(), Timeout);
                         }
                         else
                         {
-                            if (miningSpells.Contains(lastKnownCast))
+                            if (Array.BinarySearch(miningSpells, lastKnownCast) < 0)
                             {
                                 state = CastState.WaitUserInput;
-                                LogSuccessMining(logger, CastState.Success, state, Timeout);
+                                LogSuccessMining(logger, CastState.Success.ToStringF(), state.ToStringF(), Timeout);
                                 stopWatch.Restart();
                                 wait.Update();
                             }
                             else
                             {
                                 state = CastState.Success;
-                                LogState(logger, state);
+                                LogState(logger, state.ToStringF());
                             }
                         }
                     }
@@ -119,7 +134,7 @@ namespace Core.Goals
                 case CastState.Failed:
                     stopWatch.Restart();
                     state = CastState.WaitUserInput;
-                    LogFailed(logger, state, Timeout);
+                    LogFailed(logger, state.ToStringF(), Timeout);
                     wait.Update();
                     break;
                 case CastState.Success:
@@ -142,13 +157,13 @@ namespace Core.Goals
         private void CheckCastStarted(bool restartTimer)
         {
             if (playerReader.IsCasting() &&
-                (herbSpells.Contains(playerReader.CastSpellId.Value) ||
-                miningSpells.Contains(playerReader.CastSpellId.Value)))
+                (Array.BinarySearch(herbSpells, playerReader.CastSpellId.Value) >= 0 ||
+                Array.BinarySearch(miningSpells, playerReader.CastSpellId.Value) >= 0))
             {
                 lastKnownCast = playerReader.CastSpellId.Value;
                 state = CastState.Casting;
 
-                LogState(logger, state);
+                LogState(logger, state.ToStringF());
 
                 if (restartTimer)
                 {
@@ -160,7 +175,7 @@ namespace Core.Goals
             if (playerReader.Bits.IsFalling())
             {
                 state = CastState.Abort;
-                LogState(logger, state);
+                LogState(logger, state.ToStringF());
             }
         }
 
@@ -171,7 +186,7 @@ namespace Core.Goals
             EventId = 101,
             Level = LogLevel.Information,
             Message = "{state}")]
-        static partial void LogState(ILogger logger, CastState state);
+        static partial void LogState(ILogger logger, string state);
 
         [LoggerMessage(
             EventId = 102,
@@ -183,13 +198,13 @@ namespace Core.Goals
             EventId = 103,
             Level = LogLevel.Error,
             Message = "{state} -- Waiting(max {Timeout} ms) for [Gathering cast to start] or [Press Jump to Abort]")]
-        static partial void LogFailed(ILogger logger, CastState state, int Timeout);
+        static partial void LogFailed(ILogger logger, string state, int Timeout);
 
         [LoggerMessage(
             EventId = 104,
             Level = LogLevel.Information,
             Message = "{success} -> {state} Waiting(max {Timeout} ms) for [More Mining cast] or [Press Jump to Abort]")]
-        static partial void LogSuccessMining(ILogger logger, CastState success, CastState state, int Timeout);
+        static partial void LogSuccessMining(ILogger logger, string success, string state, int Timeout);
 
         #endregion
     }

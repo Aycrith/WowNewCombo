@@ -10,6 +10,7 @@ namespace Core.Goals
         public override float CostOfPerformingAction => 0;
 
         public ItemsBrokenGoal(PlayerReader playerReader, ILogger logger)
+            : base(nameof(ItemsBrokenGoal))
         {
             this.playerReader = playerReader;
             this.logger = logger;

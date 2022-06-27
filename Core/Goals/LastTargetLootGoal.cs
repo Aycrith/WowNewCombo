@@ -3,9 +3,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Core.Goals
 {
-    public class LastTargetLoot : GoapGoal
+    public class LastTargetLootGoal : GoapGoal
     {
-        public override float CostOfPerformingAction { get => 4.3f; }
+        public override float CostOfPerformingAction => 4.3f;
 
         private readonly ILogger logger;
         private readonly ConfigurableInput input;
@@ -19,7 +19,8 @@ namespace Core.Goals
         private const bool debug = true;
         private int lastLoot;
 
-        public LastTargetLoot(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, StopMoving stopMoving, CombatUtil combatUtil)
+        public LastTargetLootGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, StopMoving stopMoving, CombatUtil combatUtil)
+            : base(nameof(LastTargetLootGoal))
         {
             this.logger = logger;
             this.input = input;
@@ -30,6 +31,8 @@ namespace Core.Goals
             this.bagReader = addonReader.BagReader;
 
             this.combatUtil = combatUtil;
+
+            AddPreconditions();
         }
 
         public virtual void AddPreconditions()
@@ -124,7 +127,7 @@ namespace Core.Goals
         {
             if (debug)
             {
-                logger.LogInformation($"{nameof(LastTargetLoot)}: {text}");
+                logger.LogInformation($"{nameof(LastTargetLootGoal)}: {text}");
             }
         }
     }

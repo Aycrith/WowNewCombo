@@ -1,4 +1,4 @@
-﻿using Core.GOAP;
+using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
@@ -8,7 +8,7 @@ namespace Core.Goals
 {
     public class CombatGoal : GoapGoal
     {
-        public override float CostOfPerformingAction { get => 4f; }
+        public override float CostOfPerformingAction => 4f;
 
         private readonly ILogger logger;
         private readonly ConfigurableInput input;
@@ -27,6 +27,7 @@ namespace Core.Goals
         private float lastKnownMaxDistance;
 
         public CombatGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, StopMoving stopMoving, ClassConfiguration classConfiguration, CastingHandler castingHandler, MountHandler mountHandler)
+            : base(nameof(CombatGoal))
         {
             this.logger = logger;
             this.input = input;

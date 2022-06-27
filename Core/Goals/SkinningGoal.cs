@@ -23,6 +23,7 @@ namespace Core.Goals
         private bool canRun;
 
         public SkinningGoal(ILogger logger, ConfigurableInput input, AddonReader addonReader, Wait wait, StopMoving stopMoving, NpcNameTargeting npcNameTargeting, CombatUtil combatUtil)
+            : base(nameof(SkinningGoal))
         {
             this.logger = logger;
             this.input = input;

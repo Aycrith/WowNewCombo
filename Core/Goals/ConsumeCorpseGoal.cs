@@ -3,19 +3,27 @@ using Core.GOAP;
 
 namespace Core.Goals
 {
-    public partial class ConsumeCorpse : GoapGoal
+    public partial class ConsumeCorpseGoal : GoapGoal
     {
         public override float CostOfPerformingAction => 4.1f;
 
         private readonly ILogger logger;
         private readonly ClassConfiguration classConfig;
 
-        public ConsumeCorpse(ILogger logger, ClassConfiguration classConfig)
+        public ConsumeCorpseGoal(ILogger logger, ClassConfiguration classConfig)
+            : base(nameof(ConsumeCorpseGoal))
         {
             this.logger = logger;
             this.classConfig = classConfig;
 
-            AddPrecondition(GoapKey.dangercombat, false);
+            if (classConfig.Mode == Mode.AssistFocus)
+            {
+                AddPrecondition(GoapKey.dangercombat, false);
+            }
+            else
+            {
+                AddPrecondition(GoapKey.incombat, false);
+            }
 
             AddPrecondition(GoapKey.producedcorpse, true);
             AddPrecondition(GoapKey.consumecorpse, false);
