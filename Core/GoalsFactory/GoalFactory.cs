@@ -254,7 +254,7 @@ namespace Core
             if (string.IsNullOrEmpty(keyAction.PathFilename))
                 return Array.Empty<Vector3>();
 
-            return DeserializeObject<Vector3[]>(RelativeFilePath(dataConfig, keyAction.PathFilename));
+            return DeserializeObject<Vector3[]>(File.ReadAllText(RelativeFilePath(dataConfig, keyAction.PathFilename)));
         }
     }
 }
