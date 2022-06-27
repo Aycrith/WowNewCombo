@@ -23,23 +23,28 @@ namespace Core.Goals
         public Dictionary<GoapKey, bool> Effects { get; } = new();
         public Dictionary<GoapKey, bool> State { get; private set; } = new();
 
-        public KeyAction[] Keys { get; protected set; } = Array.Empty<KeyAction>();
+        private KeyAction[] keys = Array.Empty<KeyAction>();
+        public KeyAction[] Keys
+        {
+            get => keys;
+            protected set
+            {
+                keys = value;
+                if (keys.Length == 1)
+                    DisplayName = $"{Keys[0].Name} [{Keys[0].ConsoleKey}]";
+            }
+        }
 
         public abstract float CostOfPerformingAction { get; }
 
-        private string name = string.Empty;
+        public string Name { get; }
 
-        public virtual string Name
+        public string DisplayName { get; protected set; }
+
+        protected GoapGoal(string name)
         {
-            get
-            {
-                if (string.IsNullOrEmpty(name))
-                {
-                    string output = Regex.Replace(this.GetType().Name.Replace("Action", ""), @"\p{Lu}", m => " " + m.Value.ToUpperInvariant());
-                    this.name = char.ToUpperInvariant(output[0]) + output.Substring(1);
-                }
-                return name;
-            }
+            string output = Regex.Replace(name.Replace("Goal", ""), @"\p{Lu}", m => " " + m.Value.ToUpperInvariant());
+            DisplayName = Name = string.Concat(output[0].ToString().ToUpper(), output.AsSpan(1));
         }
 
         public delegate void ActionEventHandler(object sender, ActionEventArgs e);
@@ -88,10 +93,5 @@ namespace Core.Goals
         }
 
         public virtual void OnActionEvent(object sender, ActionEventArgs e) { }
-
-        public virtual string Description()
-        {
-            return $"{Name} " + (Keys.Length == 1 ? $"[{Keys[0].ConsoleKey}]" : string.Empty);
-        }
     }
 }
