@@ -23,7 +23,12 @@
 
         public override void OnEnter()
         {
-            input.StopAttack();
+            if (playerReader.PetHasTarget ||
+                playerReader.IsCasting() ||
+                playerReader.Bits.SpellOn_AutoAttack() || playerReader.Bits.SpellOn_AutoShot() ||
+                playerReader.Bits.SpellOn_Shoot())
+                input.StopAttack();
+
             input.ClearTarget();
         }
 
