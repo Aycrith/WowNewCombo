@@ -41,8 +41,8 @@ namespace Core.Goals
 
             AddPrecondition(GoapKey.incombat, true);
             AddPrecondition(GoapKey.hastarget, true);
-            AddPrecondition(GoapKey.targethostile, true);
             AddPrecondition(GoapKey.targetisalive, true);
+            AddPrecondition(GoapKey.targethostile, true);
             //AddPrecondition(GoapKey.targettargetsus, true);
             AddPrecondition(GoapKey.incombatrange, true);
 

@@ -51,8 +51,8 @@ namespace Core.Goals
             this.blacklist = blacklist;
 
             AddPrecondition(GoapKey.hastarget, true);
-            AddPrecondition(GoapKey.targethostile, true);
             AddPrecondition(GoapKey.targetisalive, true);
+            AddPrecondition(GoapKey.targethostile, true);
             AddPrecondition(GoapKey.incombatrange, false);
 
             AddEffect(GoapKey.incombatrange, true);

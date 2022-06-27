@@ -15,8 +15,8 @@ namespace Core.Goals
             this.input = input;
             this.playerReader = playerReader;
 
-            AddPrecondition(GoapKey.dangercombat, true);
             AddPrecondition(GoapKey.hastarget, false);
+            AddPrecondition(GoapKey.dangercombat, true);
             AddPrecondition(GoapKey.pethastarget, true);
 
             AddEffect(GoapKey.hastarget, true);
