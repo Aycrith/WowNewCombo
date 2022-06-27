@@ -57,5 +57,11 @@
         public bool IsCorpseInRange() => v2.IsBitSet(1);
 
         public bool IsIndoors() => v2.IsBitSet(2);
+
+        public bool HasFocus() => v2.IsBitSet(3);
+
+        public bool FocusHasTarget() => v2.IsBitSet(4);
+
+        public bool FocusHasTargetInCombat() => v2.IsBitSet(5);
     }
 }

@@ -112,10 +112,10 @@ namespace Core
                 }
                 else
                 {
-                    services.AddSingleton<GoapGoal, WalkToCorpseGoal>();
                     services.AddSingleton<GoapGoal, FollowRouteGoal>();
                 }
 
+                services.AddSingleton<GoapGoal, WalkToCorpseGoal>();
                 services.AddSingleton<GoapGoal, PullTargetGoal>();
                 services.AddSingleton<GoapGoal, ApproachTargetGoal>();
                 services.AddSingleton<GoapGoal, CombatGoal>();

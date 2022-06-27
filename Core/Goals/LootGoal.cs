@@ -33,6 +33,7 @@ namespace Core.Goals
         private int lastLoot;
 
         public LootGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, StopMoving stopMoving, ClassConfiguration classConfiguration, NpcNameTargeting npcNameTargeting, CombatUtil combatUtil, PlayerDirection playerDirection)
+            : base(nameof(LootGoal))
         {
             this.logger = logger;
             this.input = input;
@@ -47,11 +48,21 @@ namespace Core.Goals
             this.npcNameTargeting = npcNameTargeting;
             this.combatUtil = combatUtil;
             this.playerDirection = playerDirection;
+
+            AddPreconditions();
         }
 
         public virtual void AddPreconditions()
         {
-            AddPrecondition(GoapKey.dangercombat, false);
+            if (classConfiguration.Mode == Mode.AssistFocus)
+            {
+                AddPrecondition(GoapKey.incombat, false);
+            }
+            else
+            {
+                AddPrecondition(GoapKey.dangercombat, false);
+            }
+
             AddPrecondition(GoapKey.shouldloot, true);
             AddEffect(GoapKey.shouldloot, false);
         }

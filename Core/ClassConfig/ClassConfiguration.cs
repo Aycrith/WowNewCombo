@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -17,7 +17,8 @@ namespace Core
         Grind = 0,
         CorpseRun = 1,
         AttendedGather = 2,
-        AttendedGrind = 3
+        AttendedGrind = 3,
+        AssistFocus = 4
     }
 
 
@@ -92,6 +93,12 @@ namespace Core
         public KeyAction PetAttack { get; } = new();
         public string PetAttackKey { get; init; } = "Subtract";
 
+        public KeyAction TargetFocus { get; } = new();
+        public string TargetFocusKey { get; init; } = "PageUp";
+
+        public KeyAction FollowTarget { get; } = new();
+        public string FollowTargetKey { get; init; } = "PageDown";
+
         public KeyAction Mount { get; } = new();
         public string MountKey { get; init; } = "O";
 
@@ -143,6 +150,14 @@ namespace Core
             TargetTargetOfTarget.Key = TargetTargetOfTargetKey;
             TargetTargetOfTarget.Name = nameof(TargetTargetOfTarget);
             TargetTargetOfTarget.Initialise(addonReader, requirementFactory, logger, Log);
+
+            TargetFocus.Key = TargetFocusKey;
+            TargetFocus.Name = nameof(TargetFocus);
+            TargetFocus.Initialise(addonReader, requirementFactory, logger, Log);
+
+            FollowTarget.Key = FollowTargetKey;
+            FollowTarget.Name = nameof(FollowTarget);
+            FollowTarget.Initialise(addonReader, requirementFactory, logger, Log);
 
             PetAttack.Key = PetAttackKey;
             Mount.Name = nameof(PetAttack);

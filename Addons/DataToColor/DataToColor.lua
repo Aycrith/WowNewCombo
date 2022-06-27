@@ -627,6 +627,11 @@ function DataToColor:CreateFrames(n)
 
             -- 76 taken by combat miss type Queue
 
+            if DataToColor:hasFocus() == 1 then
+                MakePixelSquareArrI(DataToColor:getSafeGuid(DataToColor.C.unitFocus), 77)
+                MakePixelSquareArrI(DataToColor:getSafeGuid(DataToColor.C.unitFocusTarget), 78)
+            end
+
             -- Timers
             MakePixelSquareArrI(DataToColor.lastLoot, 97)
             UpdateGlobalTime(98)

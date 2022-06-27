@@ -1,4 +1,4 @@
-using Core.GOAP;
+﻿using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
@@ -41,6 +41,7 @@ namespace Core.Goals
 
             AddPrecondition(GoapKey.incombat, true);
             AddPrecondition(GoapKey.hastarget, true);
+            AddPrecondition(GoapKey.targethostile, true);
             AddPrecondition(GoapKey.targetisalive, true);
             //AddPrecondition(GoapKey.targettargetsus, true);
             AddPrecondition(GoapKey.incombatrange, true);

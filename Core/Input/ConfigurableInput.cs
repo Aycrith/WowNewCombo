@@ -112,5 +112,17 @@ namespace Core
         {
             KeyPress(ClassConfig.Mount.ConsoleKey, defaultKeyPress);
         }
+
+        public void TargetFocus()
+        {
+            KeyPress(ClassConfig.TargetFocus.ConsoleKey, defaultKeyPress);
+            ClassConfig.TargetFocus.SetClicked();
+        }
+
+        public void FollowTarget()
+        {
+            KeyPress(ClassConfig.FollowTarget.ConsoleKey, defaultKeyPress);
+            ClassConfig.FollowTarget.SetClicked();
+        }
     }
 }
