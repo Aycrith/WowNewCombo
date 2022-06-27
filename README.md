@@ -293,7 +293,7 @@ Take a look at the class files in `/Json/class` for examples of what you can do.
 | `"NPCMaxLevels_Above"` | Maximum allowed level above difference to the player | true | `1` |
 | `"NPCMaxLevels_Below"` | Maximum allowed level below difference to the player | true | `7` |
 | `"CheckTargetGivesExp"` | Only engage the target if it yields experience | true | `false` |
-| `"Blacklist"` | List of Npc names which should be avoided | true | `[""]` |
+| `"Blacklist"` | List of names or sub names which must be avoid engaging | true | `[""]` |
 | `"ImmunityBlacklist"` | List of Npc ids which have some sort of `School` immunities | true | `""` |
 | `"IntVariables"` | List of user defined `integer` variables | true | `[]` |
 | --- | --- | --- | --- |
@@ -356,40 +356,40 @@ The path that the class follows is a `json` file in `/Json/path/` which contains
 
 Each `KeyAction` has its own properties to describe what the action is all about. 
 
-Can specify conditions with `Requirement(s)` in order to create a matching action for the situation.
+Can specify conditions with [Requirement(s)](#Requirement) in order to create a matching action for the situation.
 
 | Property Name | Description | Default value |
 | --- | --- | --- |
-| Name | Name of the command. For the `ActionBarPopulator`, lowercase means macro. | `""` |
-| HasCastBar | Does the spell have a cast bar | `false` |
-| StopBeforeCast | Should the char stop moving before casting the spell | `false` |
-| Key | Key to press (`ConsoleKey`) | `""` |
-| PressDuration | How many milliseconds to press the key | `50` |
-| Form | Shapeshift/Stance form to be in to cast this spell | `Form.None` |
-| Charge | How many times shoud this Command be used in sequence and ignore its Cooldown | `1` |
-| Cooldown | **Note this is not the in-game cooldown!**<br>The time in milliseconds until the command can be used again.<br>This property will be updated when the backend registers the `Key` keypress. It has no feedback from the game. | `0` |
-| School | Indicate what type of element. `SchoolMask.`<br>(`Physical, Holy, Fire, Nature, Frost, Shadow, Arcane`) | `SchoolMask.None` |
-| MinMana | The minimum `Mana` required to cast the spell | `0` |
-| MinRage | The minimum `Rage` required to cast the spell | `0` |
-| MinEnergy | The minimum `Energy` required to cast the spell | `0` |
-| MinComboPoints | The minimum combo points required to cast the spell | `0` |
-| WhenUsable | When not in in-game cooldown(`GCD` included) and have the min resource(mana,rage,energy) to use it. | `false` |
-| Requirement | Single [Requirement](#Requirement) | `false` |
-| Requirements | List of [Requirement](#Requirement) | `false` |
-| WaitForWithinMeleeRange | `PullGoal` only - After casting wait for the mob to be in melee range. Will be repeated until the conditions are met | `false` |
-| WaitForGCD | Indicates should wait for the GCD | `true` |
-| SkipValidation | After button press, skip awaiting in-game effect | `false` |
-| ResetOnNewTarget | Reset the cooldown if the target changes | `false` |
-| Log | Write to the log when this key is evaluated | `true` |
-| DelayBeforeCast | A delay in milliseconds before this spell is cast | `0` |
-| DelayAfterCast | The delay in milliseconds after the spell is cast | `1450` |
-| AfterCastWaitBuff | After the cast happened, should wait until __(player debuff/buff or target debuff/buff)__ changed | `false` |
-| AfterCastWaitNextSwing | After the cast wait for the next melee swing to land | `false` | 
-| Cost | For Adhoc goals the priority | `18` |
-| InCombat | Should combat matter when attempt to cast?<br>Accepted values: `"any value for doesn't matter"` or `"true"` or `"false"` | `false` |
-| StepBackAfterCast | Hero will go back for X milliseconds after casting this spell, usable for spells like `Frost Nova` | `0` |
-| PathFilename | Only `"NPC"` goals, this is a short path to get close to the NPC to avoid walls etc. | `""` |
-| UseWhenTargetIsCasting | Checks for the target casting/channeling any spell (possible values: `null` -> ignore / `false` -> when enemy not casting / `true` -> when enemy casting) | `null` |
+| `"Name"` | Name of the KeyAction. For the `ActionBarPopulator`, lowercase means macro. | `""` |
+| `"HasCastBar"` | After key press cast bar is expected?<br>By default sets `StopBeforeCast`=`true` | `false` |
+| `"StopBeforeCast"` | Should stop moving before key press | `false` |
+| `"Key"` | Key to press (`ConsoleKey`) | `""` |
+| `"PressDuration"` | How many milliseconds to hold the key press | `50` |
+| `"Form"` | Shapeshift/Stance form to be in to cast this spell<br>If setted, affects `WhenUsable` | `Form.None` |
+| `"Charge"` | How many consequent key press should happen before setting Cooldown | `1` |
+| `"Cooldown"` | **Note this is not the in-game cooldown!**<br>The time in milliseconds before KeyAction can be used again.<br>This property will be updated when the backend registers the `Key` press. It has no feedback from the game. | `0` |
+| `"School"` | Indicate what type of element the spell do. Accepted values:<br>* `SchoolMask.Physical`<br>* `SchoolMask.Holy`<br>* `SchoolMask.Fire`<br>* `SchoolMask.Nature`<br>* `SchoolMask.Frost`<br>* `SchoolMask.Shadow`<br>* `SchoolMask.Arcane` | `SchoolMask.None` |
+| `"MinMana"` | **(Obsolete)** Minimum `Mana` [Requirement](#Requirement) | `0` |
+| `"MinRage"` | **(Obsolete)** Minimum `Rage` [Requirement](#Requirement) | `0` |
+| `"MinEnergy"` | **(Obsolete)** Minimum `Energy` [Requirement](#Requirement) | `0` |
+| `"MinComboPoints"` | The minimum combo points [Requirement](#Requirement) | `0` |
+| `"WhenUsable"` | Mapped to [IsUsableAction](https://wowwiki-archive.fandom.com/wiki/API_IsUsableAction) | `false` |
+| `"Requirement"` | Single [Requirement](#Requirement) | `false` |
+| `"Requirements"` | List of [Requirement](#Requirement) | `false` |
+| `"WaitForWithinMeleeRange"` | [Pull Goal](#Pull-Goal) only<br>While the [Requirements](#Requirement) are met, keep repeating the KeyAction.<br>Interrupted either:<br>* target enters melee range<br>* target starts casting<br>* player receives damage | `false` |
+| `"WaitForGCD"` | Indicates should wait for the `GCD` | `true` |
+| `"SkipValidation"` | After key press, skip awaiting in-game effect, such as __(player debuff/buff or target debuff/buff)__ changed. | `false` |
+| `"ResetOnNewTarget"` | Reset the Cooldown if the target changes | `false` |
+| `"Log"` | KeyAction related events should appear in the log | `true` |
+| `"DelayBeforeCast"` | Delay in milliseconds before key press happens | `0` |
+| `"DelayAfterCast"` | Delay in milliseconds after the key press happened | `1450` |
+| `"AfterCastWaitBuff"` | After a successfull cast, should wait until __(player debuff/buff or target debuff/buff)__ changed. | `false` |
+| `"AfterCastWaitNextSwing"` | After cast wait for next melee swing happen. | `false` | 
+| `"Cost"` | [Adhoc Goals](#Adhoc-Goals) or [NPC Goal](#NPC-Goals) only the priority | `18` |
+| `"InCombat"` | Should combat matter when attempt to cast?<br>Accepted values:<br>* `"any value for doesn't matter"`<br>* `"true"`<br>* `"false"` | `false` |
+| `"StepBackAfterCast"` | After successfull cast, start backpedaling for milliseconds. | `0` |
+| `"PathFilename"` | [NPC Goal](#NPC-Goals) only, this is a short path to get close to the NPC to avoid walls etc. | `""` |
+| `"UseWhenTargetIsCasting"` | Checks for the target casting/channeling.<br>Accepted values:<br>* `null` -> ignore<br>* `false` -> when enemy not casting<br>* `true` -> when enemy casting | `null` |
 
 Some of these properties are optional and not required to be specified. However can create pretty complex conditions and branches to suit the situation.
 
@@ -620,26 +620,31 @@ In theory if there is a repeatable quest to collect items, you could set up a NP
 
 A requirement is something that must be evaluated to be `true` for the `KeyAction` to run. 
 
-Not all `KeyAction` needs a requirement, some just rely on a `Cooldown` or `MinMana`/`MinRage`/`MinEnergy`. 
+Not all `KeyAction` requires requirement(s), some rely on
+* `Cooldown` - populated manually
+* `ActionBarCooldownReader` - populated automatically
+* `ActionBarCostReader` - populated automatically
 
-A requirement can be put into a list if there is more than one.
+Can specify `Requirements` for complex condition.
 
 e.g.
 ```json
 {
+    "Name": "Execute",                                            //<--- Has no Requirement
+    "Key": "7",
+    "WhenUsable": true
+},
+{
     "Name": "Soul Shard",
     "Key": "9",
     "HasCastBar": true,
-    "Requirements": ["TargetHealth% < 36", "not BagItem:6265:3"],     //<--- Requirement List
-    "MinMana": 55
+    "Requirements": ["TargetHealth% < 36", "!BagItem:6265:3"]     //<--- Requirement List
 },
 {
     "Name": "Curse of Weakness",
     "Key": "6",
     "WhenUsable": true,
-    "ResetOnNewTarget": true,
-    "Requirement": "!Curse of Weakness",                           //<--- Single Requirement
-    "MinMana": 20
+    "Requirement": "!Curse of Weakness"                           //<--- Single Requirement
 }
 ```
 
@@ -721,14 +726,14 @@ Formula: `[Keyword] [Operator] [Numeric integer value]`
 
 For the `MinRange` and `MaxRange` gives an approximation range distance between the player and target.
 
-**Note:** _Every class has it own unique way to find these values by using different in game items/spells/interact ways._
+**Note:** _Every class has it own unique way to find these values by using different in game items/spells/interact._
 
 | MinRange | MaxRange | alias Description |
 | --- | --- | --- |
 | 0 | 5 | "InMeleeRange" |
 | 5 | 15 | "IsInDeadZoneRange" |
 
-Its worth mention that `CD_{KeyAction.Name}` is a dynamic binding.<br>Each `KeyAction` has its own in-game Cooldown which is not the same as `KeyAction.Cooldown`!
+Its worth mention that `CD_{KeyAction.Name}` is a dynamic value.<br>Each `KeyAction` has its own `in-game Cooldown` which is not the same as `KeyAction.Cooldown`!
 
 e.g. Single Requirement
 ```json
@@ -770,7 +775,7 @@ e.g. for `CD`: It's a good idea to put `CD` in healing spells to take considerat
     "Key": "6",
     "HasCastBar": true,
     "WhenUsable": true,
-    "Requirements": ["Health% < 60", "TargetHealth% > 20", "CD==0", "MobCount < 2", "LastMainHandMs <= 1000"],
+    "Requirements": ["Health% < 60", "TargetHealth% > 20", "CD == 0", "MobCount < 2", "LastMainHandMs <= 1000"],
     "Cooldown": 6000
 },
 ```
