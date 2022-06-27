@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
-using System.Linq;
+using System;
 
 namespace Core
 {
@@ -111,18 +111,25 @@ namespace Core
                 return true; // ignore if current level - 7
             }
 
-            if (blacklist.Length > 0)
+            if (blacklist.Length > 0 && Contains())
             {
-                string? match = blacklist.FirstOrDefault(s => addonReader.TargetNameUpper.StartsWith(s));
-                if (!string.IsNullOrEmpty(match))
+                if (lastGuid != playerReader.TargetGuid)
                 {
-                    if (lastGuid != playerReader.TargetGuid)
-                    {
-                        LogNameMatch(logger, playerReader.TargetId, playerReader.TargetGuid, addonReader.TargetName, match);
-                        lastGuid = playerReader.TargetGuid;
-                    }
-                    return true;
+                    LogNameMatch(logger, playerReader.TargetId, playerReader.TargetGuid, addonReader.TargetName);
+                    lastGuid = playerReader.TargetGuid;
                 }
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool Contains()
+        {
+            for (int i = 0; i < blacklist.Length; i++)
+            {
+                if (addonReader.TargetName.Contains(blacklist[i], StringComparison.OrdinalIgnoreCase))
+                    return true;
             }
 
             return false;
@@ -133,38 +140,38 @@ namespace Core
         [LoggerMessage(
             EventId = 60,
             Level = LogLevel.Warning,
-            Message = "Blacklisted ({id},{guid},{name}) not a normal mob!")]
+            Message = "Blacklist ({id},{guid},{name}) not a normal mob!")]
         static partial void LogNotNormal(ILogger logger, int id, int guid, string name);
 
         [LoggerMessage(
             EventId = 61,
             Level = LogLevel.Warning,
-            Message = "Blacklisted ({id},{guid},{name}) is tagged!")]
+            Message = "Blacklist ({id},{guid},{name}) is tagged!")]
         static partial void LogTagged(ILogger logger, int id, int guid, string name);
 
         [LoggerMessage(
             EventId = 62,
             Level = LogLevel.Warning,
-            Message = "Blacklisted ({id},{guid},{name}) too high level!")]
+            Message = "Blacklist ({id},{guid},{name}) too high level!")]
         static partial void LogLevelHigh(ILogger logger, int id, int guid, string name);
 
         [LoggerMessage(
             EventId = 63,
             Level = LogLevel.Warning,
-            Message = "Blacklisted ({id},{guid},{name}) too low level!")]
+            Message = "Blacklist ({id},{guid},{name}) too low level!")]
         static partial void LogLevelLow(ILogger logger, int id, int guid, string name);
 
         [LoggerMessage(
             EventId = 64,
             Level = LogLevel.Warning,
-            Message = "Blacklisted ({id},{guid},{name}) not yield experience!")]
+            Message = "Blacklist ({id},{guid},{name}) not yield experience!")]
         static partial void LogNoExperienceGain(ILogger logger, int id, int guid, string name);
 
         [LoggerMessage(
             EventId = 65,
             Level = LogLevel.Warning,
-            Message = "Blacklisted ({id},{guid},{name}) name match {match}!")]
-        static partial void LogNameMatch(ILogger logger, int id, int guid, string name, string match);
+            Message = "Blacklist ({id},{guid},{name}) name match!")]
+        static partial void LogNameMatch(ILogger logger, int id, int guid, string name);
 
         #endregion
     }
