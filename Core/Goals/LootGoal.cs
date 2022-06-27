@@ -49,11 +49,6 @@ namespace Core.Goals
             this.combatUtil = combatUtil;
             this.playerDirection = playerDirection;
 
-            AddPreconditions();
-        }
-
-        public virtual void AddPreconditions()
-        {
             if (classConfiguration.Mode == Mode.AssistFocus)
             {
                 AddPrecondition(GoapKey.incombat, false);
@@ -64,6 +59,7 @@ namespace Core.Goals
             }
 
             AddPrecondition(GoapKey.shouldloot, true);
+
             AddEffect(GoapKey.shouldloot, false);
         }
 
