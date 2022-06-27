@@ -16,20 +16,20 @@ namespace Core
 
         private int lastGuid;
 
-        public Blacklist(ILogger logger, AddonReader addonReader, int above, int below, bool checkTargetGivesExp, string[] blacklist)
+        public Blacklist(ILogger logger, AddonReader addonReader, ClassConfiguration classConfig)
         {
             this.addonReader = addonReader;
             playerReader = addonReader.PlayerReader;
             this.logger = logger;
-            this.above = above;
-            this.below = below;
+            this.above = classConfig.NPCMaxLevels_Above;
+            this.below = classConfig.NPCMaxLevels_Below;
 
-            this.checkTargetGivesExp = checkTargetGivesExp;
+            this.checkTargetGivesExp = classConfig.CheckTargetGivesExp;
 
-            this.blacklist = blacklist;
+            this.blacklist = classConfig.Blacklist;
 
             if (blacklist.Length > 0)
-                logger.LogInformation($"[{nameof(Blacklist)}] {string.Join(", ", this.blacklist)}");
+                logger.LogInformation($"[{nameof(Blacklist)}] {string.Join(", ", blacklist)}");
         }
 
         public bool IsTargetBlacklisted()

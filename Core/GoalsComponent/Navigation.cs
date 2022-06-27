@@ -106,7 +106,7 @@ namespace Core.Goals
         private int failedAttempt;
         private Vector3 lastFailedDestination;
 
-        public Navigation(ILogger logger, PlayerDirection playerDirection, ConfigurableInput input, AddonReader addonReader, StopMoving stopMoving, StuckDetector stuckDetector, IPPather pather, MountHandler mountHandler, Mode mode)
+        public Navigation(ILogger logger, PlayerDirection playerDirection, ConfigurableInput input, AddonReader addonReader, StopMoving stopMoving, StuckDetector stuckDetector, IPPather pather, MountHandler mountHandler, ClassConfiguration classConfiguration)
         {
             this.logger = logger;
             this.playerDirection = playerDirection;
@@ -127,10 +127,11 @@ namespace Core.Goals
             pathfinderThread = new(PathFinderThread);
             pathfinderThread.Start();
 
-            switch (mode)
+            switch (classConfiguration.Mode)
             {
                 case Mode.AttendedGather:
                     MaxDistance = MinDistance;
+                    SimplifyRouteToWaypoint = false;
                     break;
             }
         }
