@@ -128,6 +128,9 @@ namespace Core
 
         public int LastLootTime => reader.GetInt(97);
 
+        public int FocusGuid => reader.GetInt(77);
+        public int FocusTargetGuid => reader.GetInt(78);
+
         // https://wowpedia.fandom.com/wiki/Mob_experience
         public bool TargetYieldXP => Level.Value switch
         {

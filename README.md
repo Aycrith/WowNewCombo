@@ -239,6 +239,7 @@ To change the default movement keys to `WASD` in the ClassConfiguration file or 
 | Interact With Target | I | InteractKey | ---- |
 | Assist Target | F | TargetTargetOfTargetKey | ---- |
 | Pet attack | Subtract | PetAttackKey | Only pet based class |
+| Target Focus | PageUp | TargetFocusKey | Only for `"AssistFocus"` Mode |
 
 The `"Interact with Target"` keybind is super important as it allows the bot to turn towards and approach the target.
 The `"Target Last Target"` keybind helps with looting.
@@ -264,10 +265,11 @@ Bindpad allows keys to be easily bound to commands and macros. Type `/bindpad` t
 
 For each of the following click + to add a new key binding.
 
-|  Key |  Command |
-| ---- | ---- |
-| Delete | /stopattack<br>/stopcasting<br>/petfollow |
-| Insert | /cleartarget |
+|  Key |  Command | Note |
+| ---- | ---- | ---- |
+| Delete | /stopattack<br>/stopcasting<br>/petfollow | ---- |
+| Insert | /cleartarget | ---- |
+| PageDown | /follow | Only for `"AssistFocus"` Mode |
 
 ## 9. Class Configuration
 
@@ -321,9 +323,15 @@ Take a look at the class files in `/Json/class` for examples of what you can do.
 
 ### KeyboardOnly
 
-Normally, the bot would try to click your wows window for two reasons: target selecting and looting. To achieve this it will move your cursor. If you have multiple screens or simply do not want the bot to move your cursor, you can set `KeyboardOnly` to `true`.
+By Default, the bot attempts to use the mouse for the following reasons:
+* (during `Follow Route`) Target selection
+* (during `Consume Corpse`) `"Loot"`
+* (during `Consume Corpse`) `"Skin"`
 
-Notice that when `KeyboardOnly` is enabled, the bot will only loot by selecting last target and tap interact key, which may fail to loot every target if there are many. And it will not be able to skin, either. The target selecting will also be limited to using `TargetNearestTargetKey` key, which would significantly reduce the range of selecting target.
+You can disable this behaviour by setting `KeyboardOnly` to `true`. Which has the following effects:
+* `"Loot"` limited, only capable of looting by selecting last target. So after each combat only the **last npc** can be looted.
+* `"Skin"` unavailable.
+* Target selection limited to only `TargetNearestTargetKey`, which significantly reduce how quickly can find the next target.
 
 ### IntVariables
 
@@ -355,19 +363,19 @@ Can specify conditions with `Requirement(s)` in order to create a matching actio
 | Name | Name of the command. For the `ActionBarPopulator`, lowercase means macro. | `""` |
 | HasCastBar | Does the spell have a cast bar | `false` |
 | StopBeforeCast | Should the char stop moving before casting the spell | `false` |
-| Key | The key to click (`ConsoleKey`) | `""` |
-| PressDuration | How many milliseconds to press the key for | `50` |
+| Key | Key to press (`ConsoleKey`) | `""` |
+| PressDuration | How many milliseconds to press the key | `50` |
 | Form | Shapeshift/Stance form to be in to cast this spell | `Form.None` |
 | Charge | How many times shoud this Command be used in sequence and ignore its Cooldown | `1` |
-| Cooldown | **Note this is not the in-game cooldown!**<br>The time in milliseconds until the command can be used again.<br>This property will be updated when the backend registers the `Key` keypress. | `0` |
+| Cooldown | **Note this is not the in-game cooldown!**<br>The time in milliseconds until the command can be used again.<br>This property will be updated when the backend registers the `Key` keypress. It has no feedback from the game. | `0` |
 | School | Indicate what type of element. `SchoolMask.`<br>(`Physical, Holy, Fire, Nature, Frost, Shadow, Arcane`) | `SchoolMask.None` |
 | MinMana | The minimum `Mana` required to cast the spell | `0` |
 | MinRage | The minimum `Rage` required to cast the spell | `0` |
 | MinEnergy | The minimum `Energy` required to cast the spell | `0` |
 | MinComboPoints | The minimum combo points required to cast the spell | `0` |
 | WhenUsable | When not in in-game cooldown(`GCD` included) and have the min resource(mana,rage,energy) to use it. | `false` |
-| Requirement | A single "Requirement" (See below) which must be true | |
-| Requirements | A list of "Requirements" which must be true | |
+| Requirement | Single [Requirement](#Requirement) | `false` |
+| Requirements | List of [Requirement](#Requirement) | `false` |
 | WaitForWithinMeleeRange | `PullGoal` only - After casting wait for the mob to be in melee range. Will be repeated until the conditions are met | `false` |
 | WaitForGCD | Indicates should wait for the GCD | `true` |
 | SkipValidation | After button press, skip awaiting in-game effect | `false` |
@@ -378,9 +386,9 @@ Can specify conditions with `Requirement(s)` in order to create a matching actio
 | AfterCastWaitBuff | After the cast happened, should wait until __(player debuff/buff or target debuff/buff)__ changed | `false` |
 | AfterCastWaitNextSwing | After the cast wait for the next melee swing to land | `false` | 
 | Cost | For Adhoc goals the priority | `18` |
-| InCombat | Can it be cast in combat | `false` |
-| StepBackAfterCast | Hero will go back for X milliseconds after casting this spell , usable for spells like `Frost Nova` | `0` |
-| PathFilename | For NPC goals, this is a short path to get close to the NPC to avoid walls etc. | `""` |
+| InCombat | Should combat matter when attempt to cast?<br>Accepted values: `"any value for doesn't matter"` or `"true"` or `"false"` | `false` |
+| StepBackAfterCast | Hero will go back for X milliseconds after casting this spell, usable for spells like `Frost Nova` | `0` |
+| PathFilename | Only `"NPC"` goals, this is a short path to get close to the NPC to avoid walls etc. | `""` |
 | UseWhenTargetIsCasting | Checks for the target casting/channeling any spell (possible values: `null` -> ignore / `false` -> when enemy not casting / `true` -> when enemy casting) | `null` |
 
 Some of these properties are optional and not required to be specified. However can create pretty complex conditions and branches to suit the situation.
@@ -1220,10 +1228,11 @@ The available modes are:
 
 | Mode | Description |
 | --- | --- |
-| `"Grind"` | This is the default mode where the bot will pull mobs and follow a route |
-| `"CorpseRun"` | This mode only has 2 goals. The "Wait" goal waits while you are alive. The "CorpseRun" will run back to your corpse when you die. This can be useful if you are farming an instance and die, the bot will run you back some or all of the way to the instance entrance. |
-| `"AttendedGather"` | When this mode is active, you have to `Start Bot` under `Gather` tab and stay at `Gather` tab. It will follow the path and scan the minimap for the yellow nodes which indicate a herb or mining node. Upon found one, the player movement going to stop and alert you by playing beeping sound. Manually have to click at the herb/mine. In the `LogComponent` the necessary prompt will be shown to proceed. **Important note**: `Falling` and `Jumping` means the same thing. So if you lose the ground the bot going to take over control however if a yellow node is visible on the minimap you going to get the control back! Be patient. |
-| `"AttendedGrind"` | This is useful if you want to control the path the bot takes, but want it to pull and kill any targets you select. |
+| `"Grind"` | Default mode.<br>Follows the route. Attempts to find Non-Blacklist targets to kill.<br>(*if enabled*) Attempts to `"Loot"` and `"Skin"` nearby corpses.<br>(*if exists*) Executes `"Adhoc"`, `"NPC"`, `"Parallel"`, `"Pull"`, `"Combat"` Sequences |
+| `"AttendedGrind"` | Similair to `"Grind"`.<br>The only difference is that **you** control the route, and select what target to kill.<br>Blacklist rules still applies. |
+| `"CorpseRun"` | Runs back to the corpse after dies.<br>Can be useful if you are farming an instance and die, the bot will run you back some or all of the way to the instance entrance. |
+| `"AttendedGather"` | Have to `Start Bot` under `Gather` tab and stay at `Gather` tab.<br>Follows the route and scan the minimap for the yellow nodes which indicate a herb or mining node.<br>Once one or more present, the navigation stops and alerts you by playing beeping sound!<br>**You** have to click at the herb/mine. In the `LogComponent` the necessary prompt going be shown to proceed.<br>**Important note**: `Falling` and `Jumping` means the same thing, if you lose the ground the bot going to take over the control! Be patient.<br>(*if exists*) Executes `"Adhoc"`, `"NPC"`, `"Parallel"`, `"Pull"`, `"Combat"` Sequences |
+| `"AssistFocus"` | Navigation disabled.<br>Requires a friendly `focus` to exists. Follows the `focus` target.<br>Once a hostile `focustarget` in-combat exists, attempts to assist it (kill it).<br>After leaving combat, (*if enabled*) attempts to Loot and Skin nearby corpses.<br>Works inside Instances.<br>(*if exists*) Executes `"Adhoc"`, `"Parallel"`, `"Pull"`, `"Combat"` Sequences. |
 
 # User Interface
 

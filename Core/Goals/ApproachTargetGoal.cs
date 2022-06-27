@@ -1,4 +1,4 @@
-using Core.GOAP;
+﻿using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Numerics;
@@ -51,6 +51,7 @@ namespace Core.Goals
             this.blacklist = blacklist;
 
             AddPrecondition(GoapKey.hastarget, true);
+            AddPrecondition(GoapKey.targethostile, true);
             AddPrecondition(GoapKey.targetisalive, true);
             AddPrecondition(GoapKey.incombatrange, false);
 

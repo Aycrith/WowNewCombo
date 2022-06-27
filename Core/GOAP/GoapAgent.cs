@@ -1,4 +1,4 @@
-using Core.Goals;
+﻿using Core.Goals;
 using Game;
 using Microsoft.Extensions.Logging;
 using SharedLib.Extensions;
@@ -188,6 +188,7 @@ namespace Core.GOAP
             return new()
             {
                 { GoapKey.hastarget, playerReader.Bits.HasTarget() },
+                { GoapKey.targethostile, playerReader.Bits.TargetCanBeHostile() },
                 { GoapKey.dangercombat, playerReader.Bits.PlayerInCombat() && addonReader.CombatCreatureCount > 0 },
                 { GoapKey.pethastarget, playerReader.PetHasTarget },
                 { GoapKey.targetisalive, playerReader.Bits.HasTarget() && !playerReader.Bits.TargetIsDead() },
@@ -207,6 +208,9 @@ namespace Core.GOAP
                 { GoapKey.isswimming, playerReader.Bits.IsSwimming() },
                 { GoapKey.itemsbroken, playerReader.Bits.ItemsAreBroken() },
                 { GoapKey.producedcorpse, State.LastCombatKillCount > 0 },
+
+                { GoapKey.hasfocus, playerReader.Bits.HasFocus() },
+                { GoapKey.focustargetincombat, playerReader.Bits.FocusHasTarget() && playerReader.Bits.FocusHasTargetInCombat() },
 
                 // these hold their state
                 { GoapKey.consumecorpse, State.ShouldConsumeCorpse },

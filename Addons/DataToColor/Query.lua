@@ -52,7 +52,10 @@ function DataToColor:Base2Converter2()
     return
     DataToColor:MakeIndexBase2(DataToColor:IsPlayerDrowning(), 0) +
     DataToColor:MakeIndexBase2(DataToColor.corpseInRange, 1) +
-    DataToColor:MakeIndexBase2(DataToColor:IsIndoors(), 2)
+    DataToColor:MakeIndexBase2(DataToColor:IsIndoors(), 2) +
+    DataToColor:MakeIndexBase2(DataToColor:hasFocus(), 3) +
+    DataToColor:MakeIndexBase2(DataToColor:focusHasTarget(), 4) +
+    DataToColor:MakeIndexBase2(DataToColor:focusHasTargetInCombat(), 5)
 end
 
 function DataToColor:Base2CustomTrigger(t)
@@ -242,6 +245,13 @@ function DataToColor:getGuid(src)
     local _, _, _, _, _, npcID, spawnUID = strsplit('-', UnitGUID(src) or '')
     if npcID ~= nil then
         return DataToColor:uniqueGuid(npcID, spawnUID)
+    end
+    return 0
+end
+
+function DataToColor:getSafeGuid(src)
+    if UnitExists(src) then
+        return DataToColor:uniqueGuid(select(-2, strsplit('-', UnitGUID(src))))
     end
     return 0
 end
@@ -453,6 +463,18 @@ end
 
 function DataToColor:hasTarget()
     return UnitExists(DataToColor.C.unitTarget) and 1 or 0
+end
+
+function DataToColor:hasFocus()
+    return UnitExists(DataToColor.C.unitFocus) and 1 or 0
+end
+
+function DataToColor:focusHasTarget()
+    return UnitExists(DataToColor.C.unitFocusTarget) and 1 or 0
+end
+
+function DataToColor:focusHasTargetInCombat()
+    return UnitAffectingCombat(DataToColor.C.unitFocusTarget) and 1 or 0
 end
 
 function DataToColor:mainhandEnchantActive() 
