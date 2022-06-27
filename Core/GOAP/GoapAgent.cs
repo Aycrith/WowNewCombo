@@ -1,4 +1,4 @@
-﻿using Core.Goals;
+using Core.Goals;
 using Game;
 using Microsoft.Extensions.Logging;
 using SharedLib.Extensions;
@@ -77,7 +77,7 @@ namespace Core.GOAP
         public Stack<GoapGoal> Plan { get; private set; }
         public GoapGoal? CurrentGoal { get; private set; }
 
-        public GoapAgent(ILogger logger, ClassConfiguration classConfig, IGrindSessionDAO sessionDAO, IWowScreen wowScreen, GoapAgentState goapAgentState, AddonReader addonReader, HashSet<GoapGoal> availableGoals, RouteInfo routeInfo, ConfigurableInput input)
+        public GoapAgent(ILogger logger, ClassConfiguration classConfig, IGrindSessionDAO sessionDAO, IWowScreen wowScreen, GoapAgentState goapAgentState, AddonReader addonReader, IEnumerable<GoapGoal> availableGoals, RouteInfo routeInfo, ConfigurableInput input)
         {
             this.logger = logger;
             this.classConfig = classConfig;
@@ -131,7 +131,7 @@ namespace Core.GOAP
                 }
             }
 
-            foreach (var goal in AvailableGoals.Where(x => x is IDisposable).OfType<IDisposable>())
+            foreach (IDisposable goal in AvailableGoals.OfType<IDisposable>())
             {
                 goal.Dispose();
             }

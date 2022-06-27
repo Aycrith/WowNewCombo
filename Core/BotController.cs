@@ -251,9 +251,9 @@ namespace Core
             AddonReader.SessionReset();
 
             ConfigurableInput configInput = new(logger, wowProcess, config);
-            GoalFactory goalFactory = new(logger, AddonReader, configInput, dataConfig, npcNameFinder, npcNameTargeting, pather, execGameCommand);
             GoapAgentState goapAgentState = new();
-            (RouteInfo routeInfo, HashSet<GoapGoal> availableActions) = goalFactory.CreateGoals(config, goapAgentState, cts, wait);
+            (RouteInfo routeInfo, IEnumerable<GoapGoal> availableActions) =
+                GoalFactory.CreateGoals(logger, AddonReader, configInput, dataConfig, npcNameFinder, npcNameTargeting, pather, execGameCommand, config, goapAgentState, cts, wait);
 
             RouteInfo = routeInfo;
 
