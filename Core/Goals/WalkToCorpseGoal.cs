@@ -47,6 +47,7 @@ namespace Core.Goals
         #endregion
 
         public WalkToCorpseGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, Navigation navigation, StopMoving stopMoving)
+            : base(nameof(WalkToCorpseGoal))
         {
             this.logger = logger;
             this.wait = wait;

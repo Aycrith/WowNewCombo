@@ -24,6 +24,7 @@ namespace Core.Goals
         public DateTime LastActive { get; private set; }
 
         public WrongZoneGoal(AddonReader addonReader, ConfigurableInput input, PlayerDirection playerDirection, ILogger logger, StuckDetector stuckDetector, ClassConfiguration classConfiguration)
+            : base(nameof(WrongZoneGoal))
         {
             this.addonReader = addonReader;
             this.playerReader = addonReader.PlayerReader;

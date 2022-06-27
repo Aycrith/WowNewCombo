@@ -13,6 +13,7 @@ namespace Core.Goals
         public override float CostOfPerformingAction => 21;
 
         public WaitGoal(ILogger logger, Wait wait)
+            : base(nameof(WaitGoal))
         {
             this.logger = logger;
             this.wait = wait;

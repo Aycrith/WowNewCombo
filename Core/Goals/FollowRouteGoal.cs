@@ -71,6 +71,7 @@ namespace Core.Goals
 
 
         public FollowRouteGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, ClassConfiguration classConfig, Vector3[] route, Navigation navigation, MountHandler mountHandler, NpcNameFinder npcNameFinder, TargetFinder targetFinder, IBlacklist blacklist)
+            : base(nameof(FollowRouteGoal))
         {
             this.logger = logger;
             this.input = input;

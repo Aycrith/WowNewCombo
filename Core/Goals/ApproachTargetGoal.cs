@@ -1,4 +1,4 @@
-﻿using Core.GOAP;
+using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Numerics;
@@ -39,6 +39,7 @@ namespace Core.Goals
             !playerReader.Bits.TargetInCombat();
 
         public ApproachTargetGoal(ILogger logger, ConfigurableInput input, Wait wait, PlayerReader playerReader, StopMoving stopMoving, CombatUtil combatUtil, IBlacklist blacklist)
+            : base(nameof(ApproachTargetGoal))
         {
             this.logger = logger;
             this.input = input;

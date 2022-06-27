@@ -2,14 +2,15 @@
 
 namespace Core.Goals
 {
-    public class TargetPetTarget : GoapGoal
+    public class TargetPetTargetGoal : GoapGoal
     {
         public override float CostOfPerformingAction => 4.01f;
 
         private readonly ConfigurableInput input;
         private readonly PlayerReader playerReader;
 
-        public TargetPetTarget(ConfigurableInput input, PlayerReader playerReader)
+        public TargetPetTargetGoal(ConfigurableInput input, PlayerReader playerReader)
+            : base(nameof(TargetPetTargetGoal))
         {
             this.input = input;
             this.playerReader = playerReader;

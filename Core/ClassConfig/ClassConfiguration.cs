@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -220,9 +220,9 @@ namespace Core
             if (!File.Exists(Path.Join(dataConfig.Path, PathFilename)))
             {
                 if (!string.IsNullOrEmpty(OverridePathFilename))
-                    throw new Exception($"The `{OverridePathFilename}` path file does not exists!");
+                    throw new Exception($"[{nameof(ClassConfiguration)}] `{OverridePathFilename}` file does not exists!");
                 else
-                    throw new Exception($"The loaded class config contains not existing `{PathFilename}` path file!");
+                    throw new Exception($"[{nameof(ClassConfiguration)}] `{PathFilename}` file does not exists!");
             }
 
             CheckConfigConsistency(logger);

@@ -11,6 +11,7 @@ namespace Core.Goals
         private readonly ConfigurableInput input;
 
         public TargetLastDeadGoal(ILogger logger, ConfigurableInput input)
+            : base(nameof(TargetLastDeadGoal))
         {
             this.logger = logger;
             this.input = input;

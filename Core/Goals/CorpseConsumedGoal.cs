@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Core.Goals
 {
-    public partial class CorpseConsumed : GoapGoal
+    public partial class CorpseConsumedGoal : GoapGoal
     {
         public override float CostOfPerformingAction => 4.7f;
 
@@ -12,13 +12,22 @@ namespace Core.Goals
         private readonly GoapAgentState goapAgentState;
         private readonly Wait wait;
 
-        public CorpseConsumed(ILogger logger, GoapAgentState goapAgentState, Wait wait)
+        public CorpseConsumedGoal(ILogger logger, ClassConfiguration classConfig, GoapAgentState goapAgentState, Wait wait)
+            : base(nameof(CorpseConsumedGoal))
         {
             this.logger = logger;
             this.goapAgentState = goapAgentState;
             this.wait = wait;
 
-            AddPrecondition(GoapKey.dangercombat, false);
+            if (classConfig.Mode == Mode.AssistFocus)
+            {
+                AddPrecondition(GoapKey.incombat, false);
+            }
+            else
+            {
+                AddPrecondition(GoapKey.dangercombat, false);
+            }
+
             AddPrecondition(GoapKey.consumecorpse, true);
 
             AddEffect(GoapKey.consumecorpse, false);
