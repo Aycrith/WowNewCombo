@@ -367,7 +367,7 @@ Can specify conditions with [Requirement(s)](#Requirement) in order to create a 
 | `"PressDuration"` | How many milliseconds to hold the key press | `50` |
 | `"Form"` | Shapeshift/Stance form to be in to cast this spell<br>If setted, affects `WhenUsable` | `Form.None` |
 | `"Charge"` | How many consequent key press should happen before setting Cooldown | `1` |
-| `"Cooldown"` | **Note this is not the in-game cooldown!**<br>The time in milliseconds before KeyAction can be used again.<br>This property will be updated when the backend registers the `Key` press. It has no feedback from the game. | `0` |
+| `"Cooldown"` | **Note this is not the in-game cooldown!**<br>The time in milliseconds before KeyAction can be used again.<br>This property will be updated when the backend registers the `Key` press. It has no feedback from the game. | `400` |
 | `"School"` | Indicate what type of element the spell do. Accepted values:<br>* `SchoolMask.Physical`<br>* `SchoolMask.Holy`<br>* `SchoolMask.Fire`<br>* `SchoolMask.Nature`<br>* `SchoolMask.Frost`<br>* `SchoolMask.Shadow`<br>* `SchoolMask.Arcane` | `SchoolMask.None` |
 | `"MinMana"` | **(Obsolete)** Minimum `Mana` [Requirement](#Requirement) | `0` |
 | `"MinRage"` | **(Obsolete)** Minimum `Rage` [Requirement](#Requirement) | `0` |
