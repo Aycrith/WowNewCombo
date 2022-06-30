@@ -17,7 +17,7 @@ namespace Core
         public int PressDuration { get; set; } = 50;
         public string Form { get; set; } = string.Empty;
         public Form FormEnum { get; set; } = Core.Form.None;
-        public float Cooldown { get; set; }
+        public float Cooldown { get; set; } = Goals.CastingHandler.SpellQueueTimeMs;
 
         private int _charge;
         public int Charge { get; set; } = 1;

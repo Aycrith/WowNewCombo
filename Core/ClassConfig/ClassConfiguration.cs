@@ -120,14 +120,17 @@ namespace Core
 
             TargetLastTarget.Key = TargetLastTargetKey;
             TargetLastTarget.Name = nameof(TargetLastTarget);
+            TargetLastTarget.Cooldown = 0;
             TargetLastTarget.Initialise(addonReader, requirementFactory, logger, Log);
 
             StandUp.Key = StandUpKey;
             StandUp.Name = nameof(StandUp);
+            StandUp.Cooldown = 0;
             StandUp.Initialise(addonReader, requirementFactory, logger, Log);
 
             ClearTarget.Key = ClearTargetKey;
             ClearTarget.Name = nameof(ClearTarget);
+            ClearTarget.Cooldown = 0;
             ClearTarget.Initialise(addonReader, requirementFactory, logger, Log);
 
             StopAttack.Key = StopAttackKey;
@@ -145,18 +148,22 @@ namespace Core
 
             TargetPet.Key = TargetPetKey;
             TargetPet.Name = nameof(TargetPet);
+            TargetPet.Cooldown = 0;
             TargetPet.Initialise(addonReader, requirementFactory, logger, Log);
 
             TargetTargetOfTarget.Key = TargetTargetOfTargetKey;
             TargetTargetOfTarget.Name = nameof(TargetTargetOfTarget);
+            TargetTargetOfTarget.Cooldown = 0;
             TargetTargetOfTarget.Initialise(addonReader, requirementFactory, logger, Log);
 
             TargetFocus.Key = TargetFocusKey;
             TargetFocus.Name = nameof(TargetFocus);
+            TargetFocus.Cooldown = 0;
             TargetFocus.Initialise(addonReader, requirementFactory, logger, Log);
 
             FollowTarget.Key = FollowTargetKey;
             FollowTarget.Name = nameof(FollowTarget);
+            FollowTarget.Cooldown = 0;
             FollowTarget.Initialise(addonReader, requirementFactory, logger, Log);
 
             PetAttack.Key = PetAttackKey;
@@ -175,10 +182,12 @@ namespace Core
 
             Interact.Key = InteractKey;
             Interact.Name = nameof(Interact);
+            Interact.Cooldown = 0;
             Interact.WaitForGCD = false;
             Interact.DelayAfterCast = 0;
             Interact.PressDuration = 30;
             Interact.SkipValidation = true;
+            Interact.Cooldown = 0;
             Interact.Initialise(addonReader, requirementFactory, logger, Log);
 
             Approach.Key = InteractKey;
@@ -192,6 +201,7 @@ namespace Core
 
             AutoAttack.Key = InteractKey;
             AutoAttack.Name = nameof(AutoAttack);
+            AutoAttack.Cooldown = 0;
             AutoAttack.WaitForGCD = false;
             AutoAttack.DelayAfterCast = 0;
             AutoAttack.SkipValidation = true;
