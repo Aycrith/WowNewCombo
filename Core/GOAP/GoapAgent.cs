@@ -94,7 +94,7 @@ namespace Core.GOAP
 
             stopMoving = new StopMoving(input, playerReader, cts);
 
-            this.addonReader.CreatureHistory.KillCredit += OnKillCredit;
+            this.addonReader.CombatLog.KillCredit += OnKillCredit;
 
             this.AvailableGoals = availableGoals.OrderBy(a => a.CostOfPerformingAction);
             this.Plan = new();
@@ -136,7 +136,7 @@ namespace Core.GOAP
                 goal.Dispose();
             }
 
-            addonReader.CreatureHistory.KillCredit -= OnKillCredit;
+            addonReader.CombatLog.KillCredit -= OnKillCredit;
         }
 
         private void GoapThread()

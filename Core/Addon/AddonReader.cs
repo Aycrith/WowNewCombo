@@ -2,7 +2,6 @@ using Core.Database;
 using Microsoft.Extensions.Logging;
 using SharedLib;
 using System;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
@@ -18,7 +17,7 @@ namespace Core
 
         public PlayerReader PlayerReader { get; }
 
-        public CreatureHistory CreatureHistory { get; }
+        public CombatLog CombatLog { get; }
 
         public BagReader BagReader { get; }
         public EquipmentReader EquipmentReader { get; }
@@ -51,7 +50,7 @@ namespace Core
 
         public RecordInt GlobalTime { get; } = new(98);
 
-        public int CombatCreatureCount => CreatureHistory.DamageTaken.Count(c => c.HealthPercent > 0);
+        public int CombatCreatureCount => CombatLog.DamageTaken.Count;
 
         public string TargetName { get; private set; } = string.Empty;
 
@@ -72,7 +71,7 @@ namespace Core
             this.ItemDb = itemDB;
             this.CreatureDb = creatureDB;
 
-            this.CreatureHistory = new CreatureHistory(addonDataProvider, 64, 65, 66, 67);
+            this.CombatLog = new CombatLog(addonDataProvider, 64, 65, 66, 67);
 
             this.EquipmentReader = new EquipmentReader(addonDataProvider, ItemDb, 24, 25);
             this.BagReader = new BagReader(addonDataProvider, ItemDb, EquipmentReader, 20, 21, 22, 23);
@@ -128,7 +127,7 @@ namespace Core
         public void SessionReset()
         {
             LevelTracker.Reset();
-            CreatureHistory.Reset();
+            CombatLog.Reset();
         }
 
         public void FullReset()
@@ -189,7 +188,7 @@ namespace Core
 
             UIMapId.Update(addonDataProvider);
 
-            CreatureHistory.Update(PlayerReader.TargetGuid, PlayerReader.TargetHealthPercentage());
+            CombatLog.Update(PlayerReader.Bits.PlayerInCombat());
 
             BagReader.Read();
             EquipmentReader.Read();

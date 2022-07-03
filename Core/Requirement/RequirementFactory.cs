@@ -268,7 +268,7 @@ namespace Core
                 { "MaxRange", playerReader.MaxRange },
                 { "LastAutoShotMs", playerReader.AutoShot.ElapsedMs },
                 { "LastMainHandMs", playerReader.MainHandSwing.ElapsedMs },
-                { "LastTargetDodgeMs", () => Math.Max(0, playerReader.LastTargetDodge.ElapsedMs()) },
+                { "LastTargetDodgeMs", () => Math.Max(0, addonReader.CombatLog.TargetDodge.ElapsedMs()) },
                 //"CD_{KeyAction.Name}
                 //"Cost_{KeyAction.Name}"
                 { "MainHandSpeed", playerReader.MainHandSpeedMs },
