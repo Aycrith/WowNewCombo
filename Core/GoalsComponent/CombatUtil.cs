@@ -79,7 +79,7 @@ namespace Core
                 if (playerReader.Bits.HasTarget() &&
                     playerReader.Bits.TargetInCombat() &&
                     (playerReader.Bits.TargetOfTargetIsPlayerOrPet() ||
-                    addonReader.CreatureHistory.DamageDone.Exists(x => x.Guid == playerReader.TargetGuid)))
+                    addonReader.CombatLog.DamageTaken.Contains(playerReader.TargetGuid)))
                 {
                     Log("Found target");
                     return true;

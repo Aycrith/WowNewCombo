@@ -176,7 +176,7 @@ namespace Core.Goals
         private void CreatureTargetMeOrMyPet()
         {
             wait.Update();
-            if (playerReader.PetHasTarget && addonReader.CreatureHistory.CombatDeadGuid.Value != playerReader.PetTargetGuid)
+            if (playerReader.PetHasTarget && addonReader.CombatLog.DeadGuid.Value != playerReader.PetTargetGuid)
             {
                 logger.LogWarning("---- My pet has a target!");
                 ResetCooldowns();
@@ -211,10 +211,9 @@ namespace Core.Goals
                 else
                 {
                     // threat must be behind me
-                    var anyDamageTakens = addonReader.CreatureHistory.DamageTaken.Where(x => (DateTime.UtcNow - x.LastEvent).TotalSeconds < 10 && x.HealthPercent > 0);
-                    if (anyDamageTakens.Any())
+                    if (addonReader.CombatLog.DamageTaken.Count > 0)
                     {
-                        logger.LogWarning($"---- Possible threats found behind {anyDamageTakens.Count()}. Waiting for my target to change!");
+                        logger.LogWarning($"---- Possible threats found behind {addonReader.CombatLog.DamageTaken.Count}. Waiting for my target to change!");
                         wait.Till(2000, playerReader.Bits.HasTarget);
                     }
                 }

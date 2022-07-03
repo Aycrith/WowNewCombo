@@ -206,7 +206,7 @@ function DataToColor:OnCombatEvent(...)
         -- matches SWING_ RANGE_ SPELL_ but not SPELL_PERIODIC
         if not string.find(subEvent, "SPELL_PERIODIC") and
             (string.find(subEvent, "_DAMAGE") or string.find(subEvent, "_MISSED")) then
-            DataToColor.lastCombatDamageDoneCreature = DataToColor:getGuidFromUUID(destGUID);
+            DataToColor.CombatDamageDoneQueue:push(DataToColor:getGuidFromUUID(destGUID))
 
             if string.find(subEvent, "_MISSED") then
                 local missType = select(-2, ...)

@@ -30,8 +30,8 @@ namespace Core
             addonReader.PlayerDeath -= OnPlayerDeath;
             addonReader.PlayerDeath += OnPlayerDeath;
 
-            addonReader.CreatureHistory.KillCredit -= OnKillCredit;
-            addonReader.CreatureHistory.KillCredit += OnKillCredit;
+            addonReader.CombatLog.KillCredit -= OnKillCredit;
+            addonReader.CombatLog.KillCredit += OnKillCredit;
         }
 
         public void Dispose()
@@ -39,7 +39,7 @@ namespace Core
             playerReader.Level.Changed -= PlayerLevel_Changed;
             playerReader.PlayerXp.Changed -= PlayerExp_Changed;
             addonReader.PlayerDeath -= OnPlayerDeath;
-            addonReader.CreatureHistory.KillCredit -= OnKillCredit;
+            addonReader.CombatLog.KillCredit -= OnKillCredit;
         }
 
         public void Reset()

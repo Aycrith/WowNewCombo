@@ -39,7 +39,7 @@ namespace Core
                 lastGuid = 0;
                 return false;
             }
-            else if (addonReader.CreatureHistory.DamageTaken.Exists(x => x.HealthPercent > 0 && x.Guid == playerReader.TargetGuid))
+            else if (addonReader.CombatLog.DamageTaken.Contains(playerReader.TargetGuid))
             {
                 return false;
             }

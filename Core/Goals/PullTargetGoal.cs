@@ -290,7 +290,7 @@ namespace Core.Goals
                         TargetTargetEnum.Me or
                         TargetTargetEnum.Pet or
                         TargetTargetEnum.PartyOrPet ||
-                        addonReader.CreatureHistory.CombatDamageDoneGuid.ElapsedMs() < CastingHandler.GCD ||
+                        addonReader.CombatLog.DamageDoneGuid.ElapsedMs() < CastingHandler.GCD ||
                         playerReader.IsInMeleeRange();
         }
 

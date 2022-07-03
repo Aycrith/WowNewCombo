@@ -92,15 +92,15 @@
             }
             else if (pinfo.PropertyType.IsGenericType)
             {
-                if (value.GetType() == typeof(List<CreatureRecord>))
+                if (value.GetType() == typeof(HashSet<int>))
                 {
-                    var collection = value as IEnumerable<CreatureRecord>;
+                    var collection = value as HashSet<int>;
                     if (collection == null) continue;
 
                     int i = 0;
                     foreach (var item in collection)
                     {
-                        propList.Add(new ObjectField() { Name = "    " + objName + pinfo.Name + $"[{i.ToString()}]", Value = item.ToString() ?? "" });
+                        propList.Add(new ObjectField() { Name = "    " + objName + pinfo.Name + $"[{i}]", Value = item.ToString() ?? "" });
                         i++;
                     }
                 }
@@ -139,7 +139,7 @@
                     if (lst != null && lst.Count > 0)
                         propList.AddRange(lst);
                 }
-                else if (value is CreatureHistory creatureHistory)
+                else if (value is CombatLog creatureHistory)
                 {
                     var lst = GetPropertyValues(creatureHistory);
                     if (lst != null && lst.Count > 0)
