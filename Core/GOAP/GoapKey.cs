@@ -2,34 +2,28 @@
 {
     public enum GoapKey
     {
-        none = 0,
-        hastarget = 1,
-        dangercombat = 2,
-        targetisalive = 3,
-        targettargetsus = 4,
-        incombat = 5,
-        pethastarget = 6,
-        ismounted = 7,
-        withinpullrange = 8,
-        incombatrange = 9,
-        pulled = 10,
-        isdead = 11,
-        shouldloot = 12,
-        shouldskin = 13,
-        newtarget = 14,
-        producedcorpse = 15,
-        consumecorpse = 16,
-        abort = 17,
-        resume = 18,
-        isswimming = 19,
-        itemsbroken = 20,
-        gathering = 21,
-        targethostile = 22,
-
-        hasfocus = 23,
-        focustargetincombat = 24,
-
-        corpselocation = 999,
+        hastarget,
+        dangercombat,
+        targetisalive,
+        targettargetsus,
+        incombat,
+        pethastarget,
+        ismounted,
+        withinpullrange,
+        incombatrange,
+        pulled,
+        isdead,
+        shouldloot,
+        shouldskin,
+        newtarget,
+        producedcorpse,
+        consumecorpse,
+        isswimming,
+        itemsbroken,
+        gathering,
+        targethostile,
+        hasfocus,
+        focustargetincombat,
     }
 
     public static class GoapKey_Extension
@@ -54,15 +48,12 @@
             GoapKey.newtarget => "New target",
             GoapKey.producedcorpse => "Killing blow",
             GoapKey.consumecorpse => "Corpse nearby",
-            GoapKey.abort => "Abort",
             GoapKey.isswimming => "Swimming",
             GoapKey.itemsbroken => "Broken",
             GoapKey.gathering => "Gathering",
             GoapKey.hasfocus => "Focus",
             GoapKey.focustargetincombat => "Focus Target Combat",
             GoapKey.targethostile => "Target Hostile",
-            GoapKey.corpselocation => throw new System.NotImplementedException(),
-            GoapKey.resume => throw new System.NotImplementedException(),
             _ => unknown
         };
 
@@ -84,15 +75,12 @@
             GoapKey.newtarget => "!New target",
             GoapKey.producedcorpse => "!Killing blow",
             GoapKey.consumecorpse => "!Corpse nearby",
-            GoapKey.abort => "!Abort",
             GoapKey.isswimming => "!Swimming",
             GoapKey.itemsbroken => "!Broken",
             GoapKey.gathering => "!Gathering",
             GoapKey.hasfocus => "!Focus",
             GoapKey.focustargetincombat => "!Focus Target Combat",
             GoapKey.targethostile => "!Target Hostile",
-            GoapKey.corpselocation => throw new System.NotImplementedException(),
-            GoapKey.resume => throw new System.NotImplementedException(),
             _ => unknown
         };
 

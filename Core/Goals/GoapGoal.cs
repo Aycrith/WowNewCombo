@@ -5,18 +5,6 @@ using System.Text.RegularExpressions;
 
 namespace Core.Goals
 {
-    public class ActionEventArgs : EventArgs
-    {
-        public GoapKey Key { get; }
-        public object Value { get; }
-
-        public ActionEventArgs(GoapKey key, object value)
-        {
-            this.Key = key;
-            this.Value = value;
-        }
-    }
-
     public abstract class GoapGoal
     {
         public Dictionary<GoapKey, bool> Preconditions { get; } = new();
@@ -35,11 +23,13 @@ namespace Core.Goals
             }
         }
 
-        public abstract float CostOfPerformingAction { get; }
+        public abstract float Cost { get; }
 
         public string Name { get; }
 
         public string DisplayName { get; protected set; }
+
+        public event Action<GoapEventArgs>? GoapEvent;
 
         protected GoapGoal(string name)
         {
@@ -47,13 +37,9 @@ namespace Core.Goals
             DisplayName = Name = string.Concat(output[0].ToString().ToUpper(), output.AsSpan(1));
         }
 
-        public delegate void ActionEventHandler(object sender, ActionEventArgs e);
-
-        public event ActionEventHandler? ActionEvent;
-
-        public void SendActionEvent(ActionEventArgs e)
+        public void SendGoapEvent(GoapEventArgs e)
         {
-            ActionEvent?.Invoke(this, e);
+            GoapEvent?.Invoke(e);
         }
 
         public void SetState(Dictionary<GoapKey, bool> newState)
@@ -61,7 +47,7 @@ namespace Core.Goals
             State = newState;
         }
 
-        public virtual bool CheckIfActionCanRun()
+        public virtual bool CanRun()
         {
             return true;
         }
@@ -70,7 +56,7 @@ namespace Core.Goals
 
         public virtual void OnExit() { }
 
-        public abstract void PerformAction();
+        public virtual void Update() { }
 
         public void AddPrecondition(GoapKey key, bool value)
         {
@@ -91,7 +77,5 @@ namespace Core.Goals
         {
             Effects.Remove(key);
         }
-
-        public virtual void OnActionEvent(object sender, ActionEventArgs e) { }
     }
 }

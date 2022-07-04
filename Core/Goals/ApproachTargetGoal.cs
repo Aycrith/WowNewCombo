@@ -7,12 +7,12 @@ using System.Numerics;
 
 namespace Core.Goals
 {
-    public class ApproachTargetGoal : GoapGoal
+    public class ApproachTargetGoal : GoapGoal, IGoapEventListener
     {
         private const bool debug = true;
         private const double STUCK_INTERVAL_MS = 400; // cant be lower than Approach.Cooldown
 
-        public override float CostOfPerformingAction => 8f;
+        public override float Cost => 8f;
 
         private readonly ILogger logger;
         private readonly ConfigurableInput input;
@@ -58,9 +58,9 @@ namespace Core.Goals
             AddEffect(GoapKey.incombatrange, true);
         }
 
-        public override void OnActionEvent(object sender, ActionEventArgs e)
+        public void OnGoapEvent(GoapEventArgs e)
         {
-            if (e.Key == GoapKey.resume)
+            if (e is ResumeEvent)
             {
                 approachStart = DateTime.UtcNow;
             }
@@ -78,7 +78,7 @@ namespace Core.Goals
             SetNextStuckTimeCheck();
         }
 
-        public override void PerformAction()
+        public override void Update()
         {
             wait.Update();
             combatUtil.Update();

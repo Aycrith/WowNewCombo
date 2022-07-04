@@ -5,7 +5,7 @@ namespace Core.Goals
 {
     public class TargetLastDeadGoal : GoapGoal
     {
-        public override float CostOfPerformingAction => 4.2f;
+        public override float Cost => 4.2f;
 
         private readonly ILogger logger;
         private readonly ConfigurableInput input;
@@ -20,7 +20,7 @@ namespace Core.Goals
             AddPrecondition(GoapKey.producedcorpse, true);
         }
 
-        public override void PerformAction()
+        public override void Update()
         {
             input.LastTarget();
         }

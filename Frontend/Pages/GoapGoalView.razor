@@ -4,7 +4,7 @@
 
 <tr class="@ActionClass(this.IsSelected)">
     <td>
-        <b style="color:@DisplayCanRun(goal.CheckIfActionCanRun())">@goal.CostOfPerformingAction: @goal.DisplayName</b>
+        <b style="color:@DisplayCanRun(goal.CanRun())">@goal.Cost: @goal.DisplayName</b>
     </td>
     <td>
         @foreach (var item in this.goal.State)

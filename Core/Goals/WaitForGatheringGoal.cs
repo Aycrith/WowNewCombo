@@ -21,7 +21,7 @@ namespace Core.Goals
 
     public partial class WaitForGatheringGoal : GoapGoal
     {
-        public override float CostOfPerformingAction => 17;
+        public override float Cost => 17;
 
         private const int Timeout = 5000;
 
@@ -98,7 +98,7 @@ namespace Core.Goals
             stopWatch.Stop();
         }
 
-        public override void PerformAction()
+        public override void Update()
         {
             switch (state)
             {
@@ -139,14 +139,14 @@ namespace Core.Goals
                     break;
                 case CastState.Success:
                 case CastState.Abort:
-                    SendActionEvent(new ActionEventArgs(GoapKey.gathering, false));
+                    SendGoapEvent(new GoapStateEvent(GoapKey.gathering, false));
                     break;
                 case CastState.WaitUserInput:
                     CheckCastStarted(true);
 
                     if (stopWatch.ElapsedMilliseconds > Timeout)
                     {
-                        SendActionEvent(new ActionEventArgs(GoapKey.gathering, false));
+                        SendGoapEvent(new GoapStateEvent(GoapKey.gathering, false));
                     }
                     break;
             }

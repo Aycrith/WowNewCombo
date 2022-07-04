@@ -4,7 +4,7 @@ namespace Core.Goals
 {
     public class DismountSubGoal : GoapGoal
     {
-        public override float CostOfPerformingAction => 0.5f;
+        public override float Cost => 0.5f;
 
         private readonly MountHandler mountHandler;
 
@@ -17,7 +17,7 @@ namespace Core.Goals
             AddEffect(GoapKey.ismounted, false);
         }
 
-        public override void PerformAction()
+        public override void Update()
         {
             mountHandler.Dismount();
         }

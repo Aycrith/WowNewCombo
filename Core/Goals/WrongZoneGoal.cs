@@ -7,7 +7,7 @@ namespace Core.Goals
 {
     public class WrongZoneGoal : GoapGoal
     {
-        public override float CostOfPerformingAction => 19f;
+        public override float Cost => 19f;
 
         private const float RADIAN = MathF.PI * 2;
 
@@ -37,12 +37,12 @@ namespace Core.Goals
             AddPrecondition(GoapKey.incombat, false);
         }
 
-        public override bool CheckIfActionCanRun()
+        public override bool CanRun()
         {
             return addonReader.UIMapId.Value == classConfiguration.WrongZone.ZoneId;
         }
 
-        public override void PerformAction()
+        public override void Update()
         {
             var targetLocation = classConfiguration.WrongZone.ExitZoneLocation;
 

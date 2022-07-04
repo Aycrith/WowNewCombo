@@ -4,7 +4,7 @@ namespace Core.Goals
 {
     public class TargetPetTargetGoal : GoapGoal
     {
-        public override float CostOfPerformingAction => 4.01f;
+        public override float Cost => 4.01f;
 
         private readonly ConfigurableInput input;
         private readonly PlayerReader playerReader;
@@ -22,7 +22,7 @@ namespace Core.Goals
             AddEffect(GoapKey.hastarget, true);
         }
 
-        public override void PerformAction()
+        public override void Update()
         {
             input.TargetPet();
             input.TargetOfTarget();

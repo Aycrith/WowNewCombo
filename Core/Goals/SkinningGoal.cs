@@ -7,7 +7,7 @@ namespace Core.Goals
 {
     public class SkinningGoal : GoapGoal, IDisposable
     {
-        public override float CostOfPerformingAction => 4.6f;
+        public override float Cost => 4.6f;
 
         private readonly ILogger logger;
         private readonly ConfigurableInput input;
@@ -55,17 +55,14 @@ namespace Core.Goals
             equipmentReader.OnEquipmentChanged -= EquipmentReader_OnEquipmentChanged;
         }
 
-        public override bool CheckIfActionCanRun()
-        {
-            return canRun;
-        }
+        public override bool CanRun() => canRun;
 
         public override void OnEnter()
         {
             if (bagReader.BagsFull)
             {
                 LogWarning("Inventory is full!");
-                SendActionEvent(new ActionEventArgs(GoapKey.shouldskin, false));
+                SendGoapEvent(new GoapStateEvent(GoapKey.shouldskin, false));
             }
 
             npcNameTargeting.ChangeNpcType(NpcNames.Corpse);
@@ -145,10 +142,6 @@ namespace Core.Goals
             npcNameTargeting.ChangeNpcType(NpcNames.None);
         }
 
-        public override void PerformAction()
-        {
-        }
-
         private void GoalExit()
         {
             if (!wait.Till(1000, LootChanged))
@@ -162,7 +155,7 @@ namespace Core.Goals
 
             lastLoot = playerReader.LastLootTime;
 
-            SendActionEvent(new ActionEventArgs(GoapKey.shouldskin, false));
+            SendGoapEvent(new GoapStateEvent(GoapKey.shouldskin, false));
 
             if (playerReader.Bits.HasTarget() && playerReader.Bits.TargetIsDead())
             {
