@@ -2,12 +2,12 @@
 
 namespace Core.GOAP
 {
-    public class CorpseLocation
+    public class CorpseEvent : GoapEventArgs
     {
         public Vector3 Location { get; }
         public double Radius { get; }
 
-        public CorpseLocation(Vector3 location, double radius)
+        public CorpseEvent(Vector3 location, double radius)
         {
             Location = location;
             Radius = radius;
