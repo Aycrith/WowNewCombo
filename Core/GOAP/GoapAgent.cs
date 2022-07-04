@@ -7,6 +7,7 @@ using System.Threading;
 using System.Collections.Generic;
 using System.Linq;
 using Core.Session;
+using System.Numerics;
 
 namespace Core.GOAP
 {
@@ -41,9 +42,9 @@ namespace Core.GOAP
                 {
                     manualReset.Reset();
 
-                    foreach (GoapGoal goal in AvailableGoals)
+                    foreach (IGoapEventListener goal in AvailableGoals.OfType<IGoapEventListener>())
                     {
-                        goal.OnActionEvent(this, new ActionEventArgs(GoapKey.abort, true));
+                        goal.OnGoapEvent(new AbortEvent());
                     }
 
                     input.Reset();
@@ -60,7 +61,11 @@ namespace Core.GOAP
                 }
                 else
                 {
-                    CurrentGoal?.OnActionEvent(this, new ActionEventArgs(GoapKey.resume, true));
+                    if (CurrentGoal is IGoapEventListener listener)
+                    {
+                        listener.OnGoapEvent(new ResumeEvent());
+                    }
+
                     manualReset.Set();
 
                     if (classConfig.Mode is Mode.AttendedGrind or Mode.Grind)
@@ -96,17 +101,17 @@ namespace Core.GOAP
 
             this.addonReader.CombatLog.KillCredit += OnKillCredit;
 
-            this.AvailableGoals = availableGoals.OrderBy(a => a.CostOfPerformingAction);
+            this.AvailableGoals = availableGoals.OrderBy(a => a.Cost);
             this.Plan = new();
 
             foreach (GoapGoal a in AvailableGoals)
             {
-                a.ActionEvent += OnActionEvent;
+                a.GoapEvent += HandleGoapEvent;
 
-                foreach (GoapGoal b in AvailableGoals)
+                foreach (IGoapEventListener b in AvailableGoals.OfType<IGoapEventListener>())
                 {
                     if (b != a)
-                        a.ActionEvent += b.OnActionEvent;
+                        a.GoapEvent += b.OnGoapEvent;
                 }
             }
 
@@ -122,12 +127,12 @@ namespace Core.GOAP
 
             foreach (GoapGoal a in AvailableGoals)
             {
-                a.ActionEvent -= OnActionEvent;
+                a.GoapEvent -= HandleGoapEvent;
 
-                foreach (GoapGoal b in AvailableGoals)
+                foreach (IGoapEventListener b in AvailableGoals.OfType<IGoapEventListener>())
                 {
                     if (b != a)
-                        a.ActionEvent -= b.OnActionEvent;
+                        a.GoapEvent -= b.OnGoapEvent;
                 }
             }
 
@@ -158,7 +163,7 @@ namespace Core.GOAP
                         CurrentGoal.OnEnter();
                     }
 
-                    newGoal.PerformAction();
+                    newGoal.Update();
                 }
                 else if (!cts.IsCancellationRequested && !wasEmpty)
                 {
@@ -220,41 +225,54 @@ namespace Core.GOAP
             };
         }
 
-        private void OnActionEvent(object sender, ActionEventArgs e)
+        private void HandleGoapEvent(GoapEventArgs e)
         {
-            switch (e.Key)
+            if (e is GoapStateEvent s)
             {
-                case GoapKey.consumecorpse:
-                    State.ShouldConsumeCorpse = (bool)e.Value;
-                    break;
-                case GoapKey.shouldloot:
-                    State.NeedLoot = (bool)e.Value;
-                    break;
-                case GoapKey.shouldskin:
-                    State.NeedSkin = (bool)e.Value;
-                    break;
-                case GoapKey.gathering:
-                    State.Gathering = (bool)e.Value;
-                    break;
+                switch (s.Key)
+                {
+                    case GoapKey.consumecorpse:
+                        State.ShouldConsumeCorpse = s.Value;
+                        if (!s.Value && routeInfo.PoiList.Count > 0)
+                        {
+                            int index = -1;
+                            float minDistance = float.MaxValue;
+                            Vector3 playerLocation = addonReader.PlayerReader.PlayerLocation;
+                            for (int i = 0; i < routeInfo.PoiList.Count; i++)
+                            {
+                                RouteInfoPoi? poi = routeInfo.PoiList[i];
+                                if (poi?.Name != "Corpse")
+                                    continue;
+
+                                float min = playerLocation.DistanceXYTo(poi.Location);
+                                if (min < minDistance)
+                                {
+                                    minDistance = min;
+                                    index = i;
+                                }
+                            }
+
+                            if (index > -1)
+                            {
+                                routeInfo.PoiList.RemoveAt(index);
+                            }
+                        }
+                        break;
+                    case GoapKey.shouldloot:
+                        State.NeedLoot = s.Value;
+                        break;
+                    case GoapKey.shouldskin:
+                        State.NeedSkin = s.Value;
+                        break;
+                    case GoapKey.gathering:
+                        State.Gathering = s.Value;
+                        break;
+                }
             }
 
-            if (e.Key == GoapKey.corpselocation && e.Value is CorpseLocation corpseLocation)
+            else if (e is CorpseEvent corpseLocation)
             {
                 routeInfo.PoiList.Add(new RouteInfoPoi(corpseLocation.Location, "Corpse", "black", corpseLocation.Radius));
-            }
-            else if (e.Key == GoapKey.consumecorpse && (bool)e.Value == false)
-            {
-                if (routeInfo.PoiList.Count > 0)
-                {
-                    var closest = routeInfo.PoiList.Where(p => p.Name == "Corpse").
-                        Select(i => new { i, d = addonReader.PlayerReader.PlayerLocation.DistanceXYTo(i.Location) }).
-                        Aggregate((a, b) => a.d <= b.d ? a : b);
-
-                    if (closest.i != null)
-                    {
-                        routeInfo.PoiList.Remove(closest.i);
-                    }
-                }
             }
         }
 
@@ -263,7 +281,7 @@ namespace Core.GOAP
             if (Active)
             {
                 State.LastCombatKillCount++;
-                Broadcast(GoapKey.producedcorpse, true);
+                BroadcastGoapEvent(GoapKey.producedcorpse, true);
 
                 LogActiveKillDetected(logger, State.LastCombatKillCount, addonReader.CombatCreatureCount);
             }
@@ -273,25 +291,18 @@ namespace Core.GOAP
             }
         }
 
-        private void Broadcast(GoapKey goapKey, bool value)
+        private void BroadcastGoapEvent(GoapKey goapKey, bool value)
         {
-            if (CurrentGoal != null)
+            foreach (IGoapEventListener goal in AvailableGoals.OfType<IGoapEventListener>())
             {
-                CurrentGoal.OnActionEvent(this, new ActionEventArgs(goapKey, value));
-            }
-            else
-            {
-                foreach (GoapGoal goal in AvailableGoals)
-                {
-                    goal.OnActionEvent(this, new ActionEventArgs(goapKey, value));
-                }
+                goal.OnGoapEvent(new GoapStateEvent(goapKey, value));
             }
         }
 
         public void NodeFound()
         {
             State.Gathering = true;
-            Broadcast(GoapKey.gathering, true);
+            BroadcastGoapEvent(GoapKey.gathering, true);
         }
 
         #region Logging
