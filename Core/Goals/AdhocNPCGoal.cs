@@ -11,7 +11,7 @@ using System.Threading;
 
 namespace Core.Goals
 {
-    public class AdhocNPCGoal : GoapGoal, IRouteProvider, IDisposable
+    public class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider, IDisposable
     {
         private enum PathState
         {
@@ -20,9 +20,9 @@ namespace Core.Goals
             Finished,
         }
 
-        private PathState pathState;
-
         private const bool debug = false;
+
+        public override float Cost => key.Cost;
 
         private readonly ILogger logger;
         private readonly ConfigurableInput input;
@@ -43,7 +43,7 @@ namespace Core.Goals
 
         private bool shouldMount;
 
-        public override float CostOfPerformingAction => key.Cost;
+        private PathState pathState;
 
         #region IRouteProvider
 
@@ -94,7 +94,7 @@ namespace Core.Goals
                     AddPrecondition(GoapKey.incombat, result);
             }
 
-            Keys = new KeyAction[1] { key };
+            Keys = new KeyAction[] { key };
         }
 
         public void Dispose()
@@ -102,14 +102,11 @@ namespace Core.Goals
             navigation.Dispose();
         }
 
-        public override bool CheckIfActionCanRun()
-        {
-            return key.CanRun();
-        }
+        public override bool CanRun() => key.CanRun();
 
-        public override void OnActionEvent(object sender, ActionEventArgs e)
+        public void OnGoapEvent(GoapEventArgs e)
         {
-            if (e.Key == GoapKey.resume)
+            if (e is ResumeEvent)
             {
                 navigation.ResetStuckParameters();
             }
@@ -140,7 +137,7 @@ namespace Core.Goals
             npcNameTargeting.ChangeNpcType(NpcNames.None);
         }
 
-        public override void PerformAction()
+        public override void Update()
         {
             if (playerReader.Bits.PlayerInCombat() && classConfig.Mode != Mode.AttendedGather) { return; }
 

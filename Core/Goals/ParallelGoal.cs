@@ -8,7 +8,7 @@ namespace Core.Goals
 {
     public class ParallelGoal : GoapGoal
     {
-        public override float CostOfPerformingAction => 3f;
+        public override float Cost => 3f;
 
         private readonly ILogger logger;
         private readonly ConfigurableInput input;
@@ -34,7 +34,7 @@ namespace Core.Goals
             Keys = classConfig.Parallel.Sequence;
         }
 
-        public override bool CheckIfActionCanRun()
+        public override bool CanRun()
         {
             for (int i = 0; i < Keys.Length; i++)
             {
@@ -91,10 +91,6 @@ namespace Core.Goals
             {
                 input.StandUp();
             }
-        }
-
-        public override void PerformAction()
-        {
         }
 
         private void Execute(int i)

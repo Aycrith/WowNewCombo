@@ -9,9 +9,9 @@ using SharedLib.Extensions;
 
 namespace Core.Goals
 {
-    public class LootGoal : GoapGoal
+    public class LootGoal : GoapGoal, IGoapEventListener
     {
-        public override float CostOfPerformingAction => 4.4f;
+        public override float Cost => 4.4f;
 
         private const bool debug = true;
 
@@ -68,7 +68,7 @@ namespace Core.Goals
             if (bagReader.BagsFull)
             {
                 LogWarning("Inventory is full!");
-                SendActionEvent(new ActionEventArgs(GoapKey.shouldloot, false));
+                SendGoapEvent(new GoapStateEvent(GoapKey.shouldloot, false));
             }
 
             npcNameTargeting.ChangeNpcType(NpcNames.Corpse);
@@ -156,15 +156,11 @@ namespace Core.Goals
             }
         }
 
-        public override void PerformAction()
+        public void OnGoapEvent(GoapEventArgs e)
         {
-        }
-
-        public override void OnActionEvent(object sender, ActionEventArgs e)
-        {
-            if (e.Key == GoapKey.corpselocation && e.Value is CorpseLocation location)
+            if (e is CorpseEvent corpseEvent)
             {
-                corpseLocations.Add(location.Location);
+                corpseLocations.Add(corpseEvent.Location);
             }
         }
 
@@ -227,7 +223,8 @@ namespace Core.Goals
 
             Log($"Should skin {playerReader.TargetId} ? {targetSkinnable}");
             AddEffect(GoapKey.shouldskin, targetSkinnable);
-            SendActionEvent(new ActionEventArgs(GoapKey.shouldskin, targetSkinnable));
+
+            SendGoapEvent(new GoapStateEvent(GoapKey.shouldskin, targetSkinnable));
         }
 
         private void GoalExit()
@@ -240,10 +237,10 @@ namespace Core.Goals
             {
                 Log("Loot Failed");
 
-                SendActionEvent(new ActionEventArgs(GoapKey.shouldskin, false));
+                SendGoapEvent(new GoapStateEvent(GoapKey.shouldskin, false));
             }
 
-            SendActionEvent(new ActionEventArgs(GoapKey.shouldloot, false));
+            SendGoapEvent(new GoapStateEvent(GoapKey.shouldloot, false));
 
             if (playerReader.Bits.HasTarget() && playerReader.Bits.TargetIsDead())
             {

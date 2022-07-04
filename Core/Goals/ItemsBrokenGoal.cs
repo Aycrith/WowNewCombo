@@ -1,13 +1,14 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Core.GOAP;
+using Microsoft.Extensions.Logging;
 
 namespace Core.Goals
 {
     public class ItemsBrokenGoal : GoapGoal
     {
+        public override float Cost => 0;
+
         private readonly ILogger logger;
         private readonly PlayerReader playerReader;
-
-        public override float CostOfPerformingAction => 0;
 
         public ItemsBrokenGoal(PlayerReader playerReader, ILogger logger)
             : base(nameof(ItemsBrokenGoal))
@@ -16,15 +17,15 @@ namespace Core.Goals
             this.logger = logger;
         }
 
-        public override bool CheckIfActionCanRun()
+        public override bool CanRun()
         {
             return playerReader.Bits.ItemsAreBroken();
         }
 
-        public override void PerformAction()
+        public override void Update()
         {
             logger.LogInformation("Items are broken");
-            SendActionEvent(new ActionEventArgs(GOAP.GoapKey.abort, true));
+            SendGoapEvent(new AbortEvent());
         }
     }
 }

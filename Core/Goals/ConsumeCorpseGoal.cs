@@ -5,7 +5,7 @@ namespace Core.Goals
 {
     public partial class ConsumeCorpseGoal : GoapGoal
     {
-        public override float CostOfPerformingAction => 4.1f;
+        public override float Cost => 4.1f;
 
         private readonly ILogger logger;
         private readonly ClassConfiguration classConfig;
@@ -45,16 +45,12 @@ namespace Core.Goals
         public override void OnEnter()
         {
             LogConsume(logger);
-            SendActionEvent(new ActionEventArgs(GoapKey.consumecorpse, true));
+            SendGoapEvent(new GoapStateEvent(GoapKey.consumecorpse, true));
 
             if (classConfig.Loot)
             {
-                SendActionEvent(new ActionEventArgs(GoapKey.shouldloot, true));
+                SendGoapEvent(new GoapStateEvent(GoapKey.shouldloot, true));
             }
-        }
-
-        public override void PerformAction()
-        {
         }
 
         [LoggerMessage(

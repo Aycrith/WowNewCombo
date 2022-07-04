@@ -6,6 +6,8 @@ namespace Core.Goals
 {
     public class AdhocGoal : GoapGoal
     {
+        public override float Cost => key.Cost;
+
         private readonly ILogger logger;
         private readonly ConfigurableInput input;
 
@@ -17,7 +19,6 @@ namespace Core.Goals
         private readonly KeyAction key;
         private readonly CastingHandler castingHandler;
         private readonly MountHandler mountHandler;
-        public override float CostOfPerformingAction => key.Cost;
 
         public AdhocGoal(KeyAction key, ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, StopMoving stopMoving, CastingHandler castingHandler, MountHandler mountHandler)
             : base(nameof(AdhocGoal))
@@ -40,7 +41,7 @@ namespace Core.Goals
             Keys = new KeyAction[1] { key };
         }
 
-        public override bool CheckIfActionCanRun() => key.CanRun();
+        public override bool CanRun() => key.CanRun();
 
         public override void OnEnter()
         {
@@ -88,7 +89,7 @@ namespace Core.Goals
             wait.Update();
         }
 
-        public override void PerformAction()
+        public override void Update()
         {
             if (key.CanRun() && key.Charge > 1)
             {

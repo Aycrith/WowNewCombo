@@ -12,9 +12,9 @@ using SharedLib.Extensions;
 
 namespace Core.Goals
 {
-    public class FollowRouteGoal : GoapGoal, IRouteProvider, IEditedRouteReceiver, IDisposable
+    public class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvider, IEditedRouteReceiver, IDisposable
     {
-        public override float CostOfPerformingAction => 20f;
+        public override float Cost => 20f;
 
         private const bool debug = false;
 
@@ -169,14 +169,13 @@ namespace Core.Goals
             }
         }
 
-        public override void OnActionEvent(object sender, ActionEventArgs e)
+        public void OnGoapEvent(GoapEventArgs e)
         {
-            if (e.Key == GoapKey.abort)
+            if (e is AbortEvent)
             {
                 Abort();
             }
-
-            if (e.Key == GoapKey.resume)
+            else if (e is ResumeEvent)
             {
                 Resume();
             }
@@ -186,7 +185,7 @@ namespace Core.Goals
 
         public override void OnExit() => Abort();
 
-        public override void PerformAction()
+        public override void Update()
         {
             if (playerReader.Bits.HasTarget() && playerReader.Bits.TargetIsDead())
             {

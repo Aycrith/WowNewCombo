@@ -6,9 +6,9 @@ using System.Linq;
 
 namespace Core.Goals
 {
-    public class PullTargetGoal : GoapGoal
+    public class PullTargetGoal : GoapGoal, IGoapEventListener
     {
-        public override float CostOfPerformingAction => 7f;
+        public override float Cost => 7f;
 
         private readonly ILogger logger;
         private readonly ConfigurableInput input;
@@ -106,15 +106,15 @@ namespace Core.Goals
             }
         }
 
-        public override void OnActionEvent(object sender, ActionEventArgs e)
+        public void OnGoapEvent(GoapEventArgs e)
         {
-            if (e.Key == GoapKey.resume)
+            if (e is ResumeEvent)
             {
                 pullStart = DateTime.UtcNow;
             }
         }
 
-        public override void PerformAction()
+        public override void Update()
         {
             combatUtil.Update();
             wait.Update();
@@ -147,7 +147,7 @@ namespace Core.Goals
             }
             else
             {
-                SendActionEvent(new ActionEventArgs(GoapKey.pulled, true));
+                SendGoapEvent(new GoapStateEvent(GoapKey.pulled, true));
             }
         }
 

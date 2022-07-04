@@ -5,12 +5,12 @@ namespace Core.Goals
 {
     public class WaitGoal : GoapGoal
     {
+        public override float Cost => 21;
+        
         private readonly ILogger logger;
         private readonly Wait wait;
 
         private readonly Stopwatch stopWatch = new();
-
-        public override float CostOfPerformingAction => 21;
 
         public WaitGoal(ILogger logger, Wait wait)
             : base(nameof(WaitGoal))
@@ -31,7 +31,7 @@ namespace Core.Goals
             stopWatch.Stop();
         }
 
-        public override void PerformAction()
+        public override void Update()
         {
             wait.Update();
         }

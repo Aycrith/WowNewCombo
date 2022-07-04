@@ -4,7 +4,7 @@ namespace Core.Goals
 {
     public class TargetFocusTargetGoal : GoapGoal
     {
-        public override float CostOfPerformingAction => 10f;
+        public override float Cost => 10f;
 
         private readonly ConfigurableInput input;
         private readonly PlayerReader playerReader;
@@ -21,7 +21,7 @@ namespace Core.Goals
             AddPrecondition(GoapKey.focustargetincombat, true);
         }
 
-        public override void PerformAction()
+        public override void Update()
         {
             input.TargetFocus();
             wait.Update();

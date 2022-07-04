@@ -6,9 +6,9 @@ using System.Numerics;
 
 namespace Core.Goals
 {
-    public partial class WalkToCorpseGoal : GoapGoal, IRouteProvider, IDisposable
+    public partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRouteProvider, IDisposable
     {
-        public override float CostOfPerformingAction => 1f;
+        public override float Cost => 1f;
 
         private readonly ILogger logger;
         private readonly Wait wait;
@@ -67,9 +67,9 @@ namespace Core.Goals
             navigation.Dispose();
         }
 
-        public override void OnActionEvent(object sender, ActionEventArgs e)
+        public void OnGoapEvent(GoapEventArgs e)
         {
-            if (e.Key == GoapKey.resume)
+            if (e is ResumeEvent)
             {
                 navigation.ResetStuckParameters();
             }
@@ -99,7 +99,7 @@ namespace Core.Goals
             navigation.Stop();
         }
 
-        public override void PerformAction()
+        public override void Update()
         {
             if (!playerReader.Bits.IsCorpseInRange())
             {

@@ -1,14 +1,13 @@
 ﻿using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Linq;
 using System.Numerics;
 
 namespace Core.Goals
 {
-    public class CombatGoal : GoapGoal
+    public class CombatGoal : GoapGoal, IGoapEventListener
     {
-        public override float CostOfPerformingAction => 4f;
+        public override float Cost => 4f;
 
         private readonly ILogger logger;
         private readonly ConfigurableInput input;
@@ -83,22 +82,23 @@ namespace Core.Goals
             }
         }
 
-        public override void OnActionEvent(object sender, ActionEventArgs e)
+        public void OnGoapEvent(GoapEventArgs e)
         {
-            if (e.Key == GoapKey.newtarget)
+            if (e is GoapStateEvent s)
             {
-                logger.LogInformation("Reset cooldowns");
+                if (s.Key == GoapKey.newtarget)
+                {
+                    logger.LogInformation("Reset cooldowns");
 
-                ResetCooldowns();
-            }
-
-            if (e.Key == GoapKey.producedcorpse && (bool)e.Value)
-            {
-                // have to check range
-                // ex. target died far away have to consider the range and approximate
-                //logger.LogInformation($"--- Target is killed! Record death location.");
-                float distance = (lastKnownMaxDistance + lastKnownMinDistance) / 2f;
-                SendActionEvent(new ActionEventArgs(GoapKey.corpselocation, new CorpseLocation(GetCorpseLocation(distance), distance)));
+                    ResetCooldowns();
+                }
+                else if (s.Key == GoapKey.producedcorpse)
+                {
+                    // have to check range
+                    // ex. target died far away have to consider the range and approximate
+                    float distance = (lastKnownMaxDistance + lastKnownMinDistance) / 2f;
+                    SendGoapEvent(new CorpseEvent(GetCorpseLocation(distance), distance));
+                }
             }
         }
 
@@ -144,7 +144,7 @@ namespace Core.Goals
             }
         }
 
-        public override void PerformAction()
+        public override void Update()
         {
             if (MathF.Abs(lastDirectionForTurnAround - playerReader.Direction) > MathF.PI / 2)
             {
@@ -211,9 +211,9 @@ namespace Core.Goals
                 else
                 {
                     // threat must be behind me
-                    if (addonReader.CombatLog.DamageTaken.Count > 0)
+                    if (addonReader.CombatCreatureCount > 0)
                     {
-                        logger.LogWarning($"---- Possible threats found behind {addonReader.CombatLog.DamageTaken.Count}. Waiting for my target to change!");
+                        logger.LogWarning($"---- Possible threats found behind {addonReader.CombatCreatureCount}. Waiting for my target to change!");
                         wait.Till(2000, playerReader.Bits.HasTarget);
                     }
                 }

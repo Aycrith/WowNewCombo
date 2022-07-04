@@ -5,7 +5,7 @@ namespace Core.Goals
 {
     public class LastTargetLootGoal : GoapGoal
     {
-        public override float CostOfPerformingAction => 4.3f;
+        public override float Cost => 4.3f;
 
         private readonly ILogger logger;
         private readonly ConfigurableInput input;
@@ -46,7 +46,7 @@ namespace Core.Goals
             if (bagReader.BagsFull)
             {
                 logger.LogWarning("Inventory is full");
-                SendActionEvent(new ActionEventArgs(GoapKey.shouldloot, false));
+                SendGoapEvent(new GoapStateEvent(GoapKey.shouldloot, false));
             }
 
             lastLoot = playerReader.LastLootTime;
@@ -92,10 +92,6 @@ namespace Core.Goals
             GoalExit();
         }
 
-        public override void PerformAction()
-        {
-        }
-
         private void GoalExit()
         {
             if (!wait.Till(1000, LootChanged))
@@ -109,7 +105,7 @@ namespace Core.Goals
 
             lastLoot = playerReader.LastLootTime;
 
-            SendActionEvent(new ActionEventArgs(GoapKey.shouldloot, false));
+            SendGoapEvent(new GoapStateEvent(GoapKey.shouldloot, false));
 
             if (playerReader.Bits.HasTarget() && playerReader.Bits.TargetIsDead())
             {

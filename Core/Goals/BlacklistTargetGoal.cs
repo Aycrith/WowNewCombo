@@ -2,7 +2,7 @@
 {
     public class BlacklistTargetGoal : GoapGoal
     {
-        public override float CostOfPerformingAction => 2;
+        public override float Cost => 2;
 
         private readonly PlayerReader playerReader;
         private readonly ConfigurableInput input;
@@ -16,7 +16,7 @@
             this.blacklist = blacklist;
         }
 
-        public override bool CheckIfActionCanRun()
+        public override bool CanRun()
         {
             return playerReader.Bits.HasTarget() && blacklist.IsTargetBlacklisted();
         }
@@ -30,11 +30,6 @@
                 input.StopAttack();
 
             input.ClearTarget();
-        }
-
-        public override void PerformAction()
-        {
-
         }
     }
 }
