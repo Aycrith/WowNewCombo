@@ -36,14 +36,15 @@ namespace Core
         public void Read()
         {
             // formula
-            // MAX_ACTION_IDX * index + (cooldown / MAX_VALUE_MUL)
+            // MAX_ACTION_IDX * slot + (cooldown / MAX_VALUE_MUL)
             float durationSec = reader.GetInt(cActionbarNum);
             if (durationSec == 0) return;
 
-            int index = (int)(durationSec / MAX_ACTION_IDX);
-            durationSec -= (int)MAX_ACTION_IDX * index;
-
+            int slot = (int)(durationSec / MAX_ACTION_IDX);
+            durationSec -= (int)MAX_ACTION_IDX * slot;
             durationSec /= MAX_VALUE_MUL;
+
+            int index = slot - 1;
 
             data[index] = new((int)durationSec, DateTime.UtcNow);
         }
@@ -58,7 +59,7 @@ namespace Core
 
         public int GetRemainingCooldown(PlayerReader playerReader, KeyAction keyAction)
         {
-            int index = keyAction.Slot + Stance.RuntimeSlotToActionBar(keyAction, playerReader, keyAction.Slot);
+            int index = Stance.ToSlot(keyAction, playerReader) - 1;
             return data[index].DurationSec > 0
                 ? Math.Clamp((int)(data[index].StartTime.AddSeconds(data[index].DurationSec) - DateTime.UtcNow).TotalMilliseconds, 0, int.MaxValue)
                 : 0;
