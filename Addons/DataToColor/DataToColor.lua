@@ -46,7 +46,7 @@ local TALENT_ITERATION_FRAME_CHANGE_RATE = 5
 local COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE = 5
 
 -- Action bar configuration for which spells are tracked
-local MAX_ACTIONBAR_SLOT = 108
+local MAX_ACTIONBAR_SLOT = 120
 
 -- Timers
 DataToColor.timeUpdateSec = 0.1
@@ -495,14 +495,13 @@ function DataToColor:CreateFrames(n)
             MakePixelSquareArrI(DataToColor:isCurrentAction(25, 48), 27)
             MakePixelSquareArrI(DataToColor:isCurrentAction(49, 72), 28)
             MakePixelSquareArrI(DataToColor:isCurrentAction(73, 96), 29)
-            MakePixelSquareArrI(DataToColor:isCurrentAction(97, 108), 30)
+            MakePixelSquareArrI(DataToColor:isCurrentAction(97, 120), 30)
 
             MakePixelSquareArrI(DataToColor:isActionUseable(1, 24), 31)
             MakePixelSquareArrI(DataToColor:isActionUseable(25, 48), 32)
             MakePixelSquareArrI(DataToColor:isActionUseable(49, 72), 33)
             MakePixelSquareArrI(DataToColor:isActionUseable(73, 96), 34)
-            MakePixelSquareArrI(DataToColor:isActionUseable(97, 108), 35)
-            -- moonkin actionbar missing :(
+            MakePixelSquareArrI(DataToColor:isActionUseable(97, 120), 35)
 
             if DataToColor:Modulo(globalCounter, ACTION_BAR_ITERATION_FRAME_CHANGE_RATE) == 0 then
                 actionCostNum = DataToColor.actionBarCostQueue:shift()
