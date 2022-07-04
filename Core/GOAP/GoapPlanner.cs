@@ -29,7 +29,7 @@ namespace Core.GOAP
             HashSet<GoapGoal> usableActions = new();
             foreach (GoapGoal a in availableActions)
             {
-                if (a.CheckIfActionCanRun())
+                if (a.CanRun())
                 {
                     usableActions.Add(a);
                 }
@@ -83,7 +83,7 @@ namespace Core.GOAP
                     // apply the action's effects to the parent state
                     var currentState = PopulateState(parent.state, action.Effects);
                     //Debug.Log(GoapAgent.prettyPrint(currentState));
-                    Node node = new(parent, parent.runningCost + action.CostOfPerformingAction, currentState, action);
+                    Node node = new(parent, parent.runningCost + action.Cost, currentState, action);
 
                     result = InState(goal, currentState);
                     if (!result.ContainsValue(false))
