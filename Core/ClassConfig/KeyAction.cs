@@ -301,16 +301,6 @@ namespace Core
 
         #region Logging
 
-        public void LogInformation(string message)
-        {
-            logger.LogInformation($"[{Name}]: {message}");
-        }
-
-        public void LogWarning(string message)
-        {
-            logger.LogWarning($"[{Name}]: {message}");
-        }
-
         [LoggerMessage(
             EventId = 9,
             Level = LogLevel.Information,
