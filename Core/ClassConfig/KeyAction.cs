@@ -117,17 +117,17 @@ namespace Core
                 {
                     this.FormEnum = desiredForm;
                     this.logger.LogInformation($"[{Name}] Required Form: {FormEnum.ToStringF()}");
-
-                    if (KeyReader.ActionBarSlotMap.TryGetValue(Key, out int slot))
-                    {
-                        int offset = Stance.RuntimeSlotToActionBar(this, playerReader, slot);
-                        this.logger.LogInformation($"[{Name}] Actionbar Form key map: Key:{Key} -> Actionbar:{slot} -> Form Map:{slot + offset}");
-                    }
                 }
                 else
                 {
                     throw new Exception($"[{Name}] Unknown form: {Form}");
                 }
+            }
+
+            if (Slot > 0)
+            {
+                int index = Stance.ToSlot(this, playerReader) - 1;
+                this.logger.LogInformation($"[{Name}] Actionbar Form key map: Key:{Key} -> Actionbar:{Slot} -> Index:{index}");
             }
 
             ConsoleKeyFormHash = ((int)FormEnum * 1000) + (int)ConsoleKey;
@@ -272,8 +272,8 @@ namespace Core
 
         private void ActionBarCostReader_OnActionCostChanged(object? sender, ActionBarCostEventArgs e)
         {
-            int slot = Slot + Stance.RuntimeSlotToActionBar(this, playerReader, Slot);
-            if (slot != e.Index)
+            int slot = Stance.ToSlot(this, playerReader);
+            if (slot != e.Slot)
                 return;
 
             int oldValue = 0;

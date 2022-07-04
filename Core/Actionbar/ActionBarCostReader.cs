@@ -4,12 +4,12 @@ namespace Core
 {
     public class ActionBarCostEventArgs : EventArgs
     {
-        public int Index { get; }
+        public int Slot { get; }
         public ActionBarCost ActionBarCost { get; }
 
-        public ActionBarCostEventArgs(int index, PowerType powerType, int cost)
+        public ActionBarCostEventArgs(int slot, PowerType powerType, int cost)
         {
-            Index = index;
+            Slot = slot;
             ActionBarCost = new(powerType, cost);
         }
     }
@@ -61,17 +61,19 @@ namespace Core
             int type = (int)(cost / MAX_POWER_TYPE);
             cost -= (int)MAX_POWER_TYPE * type;
 
-            int index = (int)(cost / MAX_ACTION_IDX);
-            cost -= (int)MAX_ACTION_IDX * index;
+            int slot = (int)(cost / MAX_ACTION_IDX);
+            cost -= (int)MAX_ACTION_IDX * slot;
+
+            int index = slot - 1;
 
             ActionBarCost temp = data[index];
             data[index] = new((PowerType)type, cost);
 
             if (cost != temp.Cost)
-                OnActionCostChanged?.Invoke(this, new(index, (PowerType)type, cost));
+                OnActionCostChanged?.Invoke(this, new(slot, (PowerType)type, cost));
 
-            if (index > Count)
-                Count = index;
+            if (slot > Count)
+                Count = slot;
         }
 
         public void Reset()
@@ -85,7 +87,7 @@ namespace Core
 
         public ActionBarCost GetCostByActionBarSlot(PlayerReader playerReader, KeyAction keyAction)
         {
-            int index = keyAction.Slot + Stance.RuntimeSlotToActionBar(keyAction, playerReader, keyAction.Slot);
+            int index = Stance.ToSlot(keyAction, playerReader) - 1;
             return data[index];
         }
     }

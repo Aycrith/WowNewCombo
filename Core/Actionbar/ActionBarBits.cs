@@ -48,9 +48,9 @@
 
             if (keyAction.Slot == 0) return false;
 
-            int index = keyAction.Slot + Stance.RuntimeSlotToActionBar(keyAction, playerReader, keyAction.Slot);
+            int index = Stance.ToSlot(keyAction, playerReader) - 1;
             int array = index / ActionBar.BIT_PER_CELL;
-            return bits[array].IsBitSet((index - 1) % ActionBar.BIT_PER_CELL);
+            return bits[array].IsBitSet(index % ActionBar.BIT_PER_CELL);
         }
     }
 }

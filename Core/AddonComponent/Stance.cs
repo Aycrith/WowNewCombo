@@ -30,11 +30,11 @@
             _ => Form.None
         };
 
-        public static int RuntimeSlotToActionBar(KeyAction item, PlayerReader playerReader, int slot)
+        public static int ToSlot(KeyAction item, PlayerReader playerReader)
         {
-            return slot <= ActionBar.MAIN_ACTIONBAR_SLOT
-                ? (int)FormToActionBar(playerReader.Class, item.HasFormRequirement() ? item.FormEnum : playerReader.Form)
-                : 0;
+            return item.Slot <= ActionBar.MAIN_ACTIONBAR_SLOT
+                ? item.Slot + (int)FormToActionBar(playerReader.Class, item.HasFormRequirement() ? item.FormEnum : playerReader.Form)
+                : item.Slot;
         }
 
         private static StanceActionBar FormToActionBar(PlayerClassEnum playerClass, Form form)
