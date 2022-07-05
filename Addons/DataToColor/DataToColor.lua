@@ -574,7 +574,7 @@ function DataToColor:CreateFrames(n)
 
             if DataToColor.targetChanged then
                 MakePixelSquareArrI(DataToColor:targetNpcId(), 56) -- target id
-                MakePixelSquareArrI(DataToColor:getGuid(DataToColor.C.unitTarget),57) -- target reasonably uniqueId
+                MakePixelSquareArrI(DataToColor:getGuidFromUnit(DataToColor.C.unitTarget),57) -- target reasonably uniqueId
             end
 
             MakePixelSquareArrI(DataToColor:CastingInfoSpellId(DataToColor.C.unitTarget), 58) -- Spell being cast by target
@@ -593,8 +593,8 @@ function DataToColor:CreateFrames(n)
                 MakePixelSquareArrI(DataToColor.CombatMissTypeQueue:shift() or 0, 67) -- Last Combat Miss type
             end
 
-            MakePixelSquareArrI(DataToColor:getGuid(DataToColor.C.unitPet), 68) -- pet guid
-            MakePixelSquareArrI(DataToColor:getGuid(DataToColor.C.unitPetTarget), 69) -- pet target
+            MakePixelSquareArrI(DataToColor:getGuidFromUnit(DataToColor.C.unitPet), 68) -- pet guid
+            MakePixelSquareArrI(DataToColor:getGuidFromUnit(DataToColor.C.unitPetTarget), 69) -- pet target
             MakePixelSquareArrI(DataToColor.CastNum, 70)
 
             if DataToColor:Modulo(globalCounter, SPELLBOOK_ITERATION_FRAME_CHANGE_RATE) == 0 then
@@ -619,8 +619,8 @@ function DataToColor:CreateFrames(n)
             -- 76 unused
 
             if DataToColor:hasFocus() == 1 then
-                MakePixelSquareArrI(DataToColor:getSafeGuid(DataToColor.C.unitFocus), 77)
-                MakePixelSquareArrI(DataToColor:getSafeGuid(DataToColor.C.unitFocusTarget), 78)
+                MakePixelSquareArrI(DataToColor:getGuidFromUnit(DataToColor.C.unitFocus), 77)
+                MakePixelSquareArrI(DataToColor:getGuidFromUnit(DataToColor.C.unitFocusTarget), 78)
             end
 
             -- Timers

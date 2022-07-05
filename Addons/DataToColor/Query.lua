@@ -230,35 +230,27 @@ function DataToColor:isTradeRange()
 end
 
 function DataToColor:targetNpcId()
-    local _, _, _, _, _, npcID, guid = strsplit('-', UnitGUID(DataToColor.C.unitTarget) or '')
-    if npcID ~= nil then
-        return tonumber(npcID)
+    local guid = UnitGUID(DataToColor.C.unitTarget) or ""
+    local id = tonumber(guid:match("-(%d+)-%x+$"), 10)
+    if id and guid:match("%a+") ~= "Player" then
+        return id
     end
     return 0
 end
 
-function DataToColor:getGuid(src)
-    -- todo take
-    -- care of Player-4731-02AAD4FF
+function DataToColor:getGuidFromUnit(unit)
+    -- takes care of
+    -- Player-4731-02AAD4FF
     -- Creature-0-4488-530-222-19350-000005C0D70
     -- Pet-0-4448-530-222-22123-15004E200E
-    local _, _, _, _, _, npcID, spawnUID = strsplit('-', UnitGUID(src) or '')
-    if npcID ~= nil then
-        return DataToColor:uniqueGuid(npcID, spawnUID)
-    end
-    return 0
-end
-
-function DataToColor:getSafeGuid(src)
-    if UnitExists(src) then
-        return DataToColor:uniqueGuid(select(-2, strsplit('-', UnitGUID(src))))
+    if UnitExists(unit) then
+        return DataToColor:uniqueGuid(select(-2, strsplit('-', UnitGUID(unit))))
     end
     return 0
 end
 
 function DataToColor:getGuidFromUUID(uuid)
-    local _, _, _, _, _, npcID, spawnUID = strsplit('-', uuid or '')
-    return DataToColor:uniqueGuid(npcID, spawnUID)
+    return DataToColor:uniqueGuid(select(-2, strsplit('-', uuid)))
 end
 
 function DataToColor:uniqueGuid(npcId, spawn)

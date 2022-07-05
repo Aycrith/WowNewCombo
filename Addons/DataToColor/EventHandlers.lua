@@ -157,15 +157,8 @@ local playerDamageTakenEvents = {
 }
 
 function DataToColor:OnCombatEvent(...)
-    local _, subEvent, _, sourceGUID, sourceName, _, _, destGUID, destName, _, _, spellId, _, _ = ...
-    --print(CombatLogGetCurrentEventInfo())
-    if subEvent == "SPELL_PERIODIC_DAMAGE" then
-        DataToColor.lastCombatCreature = 0;
-    elseif string.find(sourceGUID, "Creature") then
-        DataToColor.lastCombatCreature = DataToColor:getGuidFromUUID(sourceGUID);
-    else
-        DataToColor.lastCombatCreature = 0;
-    end
+    local _, subEvent, _, sourceGUID, _, _, _, destGUID, _, _, _, spellId, _, _ = ...
+    --print(...)
 
     if playerDamageTakenEvents[subEvent] and (destGUID == DataToColor.playerGUID or destGUID == DataToColor.petGUID) then
         DataToColor.CombatDamageTakenQueue:push(DataToColor:getGuidFromUUID(sourceGUID))
