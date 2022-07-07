@@ -6,22 +6,8 @@ namespace Core
     {
         private readonly int cell;
 
-        private int v;
-        public int Value
-        {
-            private set
-            {
-                if (v != value)
-                {
-                    Changed?.Invoke();
-                    LastChanged = DateTime.UtcNow;
-                }
+        public int Value { private set; get; }
 
-                v = value;
-            }
-
-            get => v;
-        }
         public DateTime LastChanged { private set; get; }
 
         public int ElapsedMs() => (int)(DateTime.UtcNow - LastChanged).TotalMilliseconds;
@@ -35,14 +21,29 @@ namespace Core
 
         public bool Updated(AddonDataProvider reader)
         {
-            int temp = v;
+            int temp = Value;
             Value = reader.GetInt(cell);
-            return v != temp;
+
+            if (temp != Value)
+            {
+                Changed?.Invoke();
+                LastChanged = DateTime.UtcNow;
+                return true;
+            }
+
+            return false;
         }
 
         public void Update(AddonDataProvider reader)
         {
+            int temp = Value;
             Value = reader.GetInt(cell);
+
+            if (temp != Value)
+            {
+                Changed?.Invoke();
+                LastChanged = DateTime.UtcNow;
+            }
         }
 
         public void UpdateTime()
@@ -52,13 +53,13 @@ namespace Core
 
         public void Reset()
         {
-            v = 0;
+            Value = 0;
             LastChanged = default;
         }
 
         public void ForceUpdate(int value)
         {
-            v = value;
+            Value = value;
         }
     }
 }
