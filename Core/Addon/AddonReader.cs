@@ -13,8 +13,6 @@ namespace Core
         private readonly AddonDataProvider addonDataProvider;
         private readonly AutoResetEvent autoResetEvent;
 
-        public bool Initialized { get; private set; }
-
         public PlayerReader PlayerReader { get; }
 
         public CombatLog CombatLog { get; }
@@ -57,6 +55,7 @@ namespace Core
         public double AvgUpdateLatency { private set; get; }
         private readonly double[] UpdateLatencys = new double[16];
         private int LatencyIndex;
+        private DateTime lastUpdate;
 
         public AddonReader(ILogger logger, AddonDataProvider addonDataProvider, AutoResetEvent autoResetEvent,
             AreaDB areaDB, WorldMapAreaDB worldMapAreaDB, ItemDB itemDB,
@@ -71,50 +70,84 @@ namespace Core
             this.ItemDb = itemDB;
             this.CreatureDb = creatureDB;
 
-            this.CombatLog = new CombatLog(addonDataProvider, 64, 65, 66, 67);
+            this.CombatLog = new(addonDataProvider, 64, 65, 66, 67);
 
-            this.EquipmentReader = new EquipmentReader(addonDataProvider, ItemDb, 24, 25);
-            this.BagReader = new BagReader(addonDataProvider, ItemDb, EquipmentReader, 20, 21, 22, 23);
+            this.EquipmentReader = new(addonDataProvider, ItemDb, 24, 25);
+            this.BagReader = new(addonDataProvider, ItemDb, EquipmentReader, 20, 21, 22, 23);
 
-            this.ActionBarCostReader = new ActionBarCostReader(addonDataProvider, 36);
-            this.ActionBarCooldownReader = new ActionBarCooldownReader(addonDataProvider, 37);
+            this.ActionBarCostReader = new(addonDataProvider, 36);
+            this.ActionBarCooldownReader = new(addonDataProvider, 37);
 
-            this.GossipReader = new GossipReader(addonDataProvider, 73);
+            this.GossipReader = new(addonDataProvider, 73);
 
-            this.SpellBookReader = new SpellBookReader(addonDataProvider, 71, spellDB);
+            this.SpellBookReader = new(addonDataProvider, 71, spellDB);
 
-            this.PlayerReader = new PlayerReader(addonDataProvider);
-            this.LevelTracker = new LevelTracker(this);
-            this.TalentReader = new TalentReader(addonDataProvider, 72, PlayerReader, talentDB);
+            this.PlayerReader = new(addonDataProvider);
+            this.LevelTracker = new(this);
+            this.TalentReader = new(addonDataProvider, 72, PlayerReader, talentDB);
 
             this.CurrentAction = new(PlayerReader, addonDataProvider, 26, 27, 28, 29, 30);
             this.UsableAction = new(PlayerReader, addonDataProvider, 31, 32, 33, 34, 35);
-
-            for (int i = 0; i < UpdateLatencys.Length; i++)
-            {
-                UpdateLatencys[i] = 0;
-            }
-
-            UIMapId.Changed += OnUIMapIdChanged;
-            GlobalTime.Changed += GlobalTimeChanged;
         }
 
         public void Dispose()
         {
             BagReader.Dispose();
             LevelTracker.Dispose();
-
-            UIMapId.Changed -= OnUIMapIdChanged;
-            GlobalTime.Changed -= GlobalTimeChanged;
         }
 
         public void Update()
         {
             FetchData();
 
-            if (GlobalTime.Updated(addonDataProvider) && (GlobalTime.Value <= 3 || !Initialized))
+            if (GlobalTime.Updated(addonDataProvider))
             {
-                FullReset();
+                if (GlobalTime.Value <= 3)
+                {
+                    FullReset();
+                    return;
+                }
+
+                UpdateLatencys[LatencyIndex++] = (DateTime.UtcNow - lastUpdate).TotalMilliseconds;
+                lastUpdate = DateTime.UtcNow;
+                if (LatencyIndex >= UpdateLatencys.Length)
+                    LatencyIndex = 0;
+
+                AvgUpdateLatency = 0;
+                for (int i = 0; i < UpdateLatencys.Length; i++)
+                {
+                    AvgUpdateLatency += UpdateLatencys[i];
+                }
+                AvgUpdateLatency /= UpdateLatencys.Length;
+
+                CurrentAction.SetDirty();
+                UsableAction.SetDirty();
+
+                PlayerReader.Update();
+
+                TargetName = CreatureDb.Entries.TryGetValue(PlayerReader.TargetId, out Creature creature)
+                    ? creature.Name : addonDataProvider.GetString(16) + addonDataProvider.GetString(17);
+
+                CombatLog.Update(PlayerReader.Bits.PlayerInCombat());
+
+                BagReader.Read();
+                EquipmentReader.Read();
+
+                ActionBarCostReader.Read();
+                ActionBarCooldownReader.Read();
+
+                GossipReader.Read();
+
+                SpellBookReader.Read();
+                TalentReader.Read();
+
+                if (UIMapId.Updated(addonDataProvider))
+                {
+                    AreaDb.Update(WorldMapAreaDb.GetAreaId(UIMapId.Value));
+                    ZoneChanged?.Invoke();
+                }
+
+                autoResetEvent.Set();
             }
         }
 
@@ -132,8 +165,6 @@ namespace Core
 
         public void FullReset()
         {
-            Initialized = false;
-
             PlayerReader.Reset();
 
             UIMapId.Reset();
@@ -144,8 +175,6 @@ namespace Core
             TalentReader.Reset();
 
             SessionReset();
-
-            Initialized = true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -157,51 +186,6 @@ namespace Core
         public void PlayerDied()
         {
             PlayerDeath?.Invoke();
-        }
-
-        private void OnUIMapIdChanged()
-        {
-            this.AreaDb.Update(WorldMapAreaDb.GetAreaId(UIMapId.Value));
-            ZoneChanged?.Invoke();
-        }
-
-        private void GlobalTimeChanged()
-        {
-            UpdateLatencys[LatencyIndex++] = (DateTime.UtcNow - GlobalTime.LastChanged).TotalMilliseconds;
-            if (LatencyIndex >= UpdateLatencys.Length)
-                LatencyIndex = 0;
-
-            AvgUpdateLatency = 0;
-            for (int i = 0; i < UpdateLatencys.Length; i++)
-            {
-                AvgUpdateLatency += UpdateLatencys[i];
-            }
-            AvgUpdateLatency /= UpdateLatencys.Length;
-
-            CurrentAction.SetDirty();
-            UsableAction.SetDirty();
-
-            PlayerReader.Update();
-
-            TargetName = CreatureDb.Entries.TryGetValue(PlayerReader.TargetId, out Creature creature)
-                ? creature.Name : addonDataProvider.GetString(16) + addonDataProvider.GetString(17);
-
-            UIMapId.Update(addonDataProvider);
-
-            CombatLog.Update(PlayerReader.Bits.PlayerInCombat());
-
-            BagReader.Read();
-            EquipmentReader.Read();
-
-            ActionBarCostReader.Read();
-            ActionBarCooldownReader.Read();
-
-            GossipReader.Read();
-
-            SpellBookReader.Read();
-            TalentReader.Read();
-
-            autoResetEvent.Set();
         }
 
         public void UpdateUI()
