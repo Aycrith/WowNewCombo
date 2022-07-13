@@ -54,17 +54,16 @@ Create an issue with the given template.
 You are welcome to create pull requests. Some ideas of things that could be improved:
 
 * This readme
-* The route recording and editing
 * More route and class profiles
 
 # Contribution
 
-* Runtime Class Profile picker
-* Runtime Path Profile autocomplete search
+* Frontend Runtime Class Profile picker
+* Frontend Runtime Path Profile autocomplete search
 * Frontend Dark mode
 * Improved Loot Goal
 * Added Skinning Goal
-* Introduced a concept of Produce/Consume corpses. In short killing multiple enemies in a single combat, can loot and skin them all.
+* Introduced a concept of `Produce`/`Consume` corpses. Killing multiple enemies in a single combat, can consume them all.
 * `ActionbarPopulator` based on class config
 * `DataConfig`: change where the external data(DBC, MPQ, profiles) can be found
 * Edit the loaded profile from frontend
@@ -102,7 +101,7 @@ Download the navmesh files.
 1. Navigate to the build location and find `config.cfg`
 1. Edit the file last line to look as `sMmapsPath=C:\mmaps`
 
-# 3.1 System / Video Requirements
+## 3.1 System / Video Requirements
 
 Resultions which based on either 4:3 aspect ratio, tested resolutions:
 * 1024 x 768
@@ -112,7 +111,7 @@ Resultions which based on either 4:3 aspect ratio, tested resolutions:
 For Nvidia users, under Nvidia Control panel settings
 * Make sure the `Image Sharpening` under the `Manage 3D Settings`-> Global settings or Program Settings(for WoW) is set to `Sharpening Off, Scaling disabled`!
 
-# 3.2 In-game Requirements
+## 3.2 In-game Requirements
 
 Required game client settings. Press `ESC` -> `System`
   * System > Advanced > Constrast: `50`
@@ -136,7 +135,7 @@ Example - [Robot-Medium](https://fonts.google.com/specimen/Roboto?thickness=5) -
 * [.NET 6.0 SDK](https://dotnet.microsoft.com/download/dotnet/6.0)
 * **Note:** By default all builds will be **x86**.
 
-## 4.2 Build the application
+## 4.2 Build the solution
 
 One of the following IDE or command line
 * Visual Studio
@@ -151,9 +150,9 @@ dotnet build --configuration Release
 
 ![Build](https://raw.githubusercontent.com/julianperrott/WowClassicGrindBot/master/images/build.png)
 
-## 5. Configuration process
+## 5. BlazorServer Configuration process
 
-The bot reads the game state using small blocks of colour shown at the top of the screen by an Addon. This needs to be configured.
+The app reads the game state using small blocks of colour shown at the top of the screen by an Addon. This needs to be configured.
 
 1. Edit the batch script in `C:\WowClassicGrindBot\BlazorServer` called `run.bat`, change it to point at where you have put the repo BlazorServer folder
 
@@ -172,8 +171,8 @@ The bot reads the game state using small blocks of colour shown at the top of th
     * Just start the game and wait in the character selection screen.
     * Click `2. Addon Configuration`
     * Click `Find InstallPath` -> `InstallPath` should be filled otherwise, fill out manually
-    * Fill the `Author` freely
-    * Fill the `Title` freely
+    * Fill out `Author` freely
+    * Fill out `Title` freely
     * Then press `Install & Save` button -> Log should see `AddonConfigurator.Install successful`
     * Required to restart the Game 
     * Enter world with your desired character
@@ -184,13 +183,24 @@ The bot reads the game state using small blocks of colour shown at the top of th
 
 4. Under the `Addon Configuration` you can check if theres a **newer version available** for the addon. In that case just press the `install` button then have to restart the game client and the bot it self in order to use it properly. 
 
-## 5. The bot should restart and show the dashboard page.
+## 6. BlazorServer should restart and show the dashboard page.
 
-## 6. Configure the Wow Client - Interface Options
+## 7 Optional - Running HeadlessServer
 
-We need to make sure that certain interface options are set. The most important are Click to move and screen flashing on low health. See the list below.
+Similar to BlazorServer project, except without Frontend. Should consume less system resources with a compromise of lacking runtime tweaking ability.
 
-### Interface Options
+Everything has to be setup inside the Class Configuration, in prior.
+
+A successfull [Configuration process](#5.-BlazorServer-Configuration-process) has a result of a following configuration files
+* `data_config.json`
+* `addon_config.json`
+* `frame_config.json`
+
+In order to run `HeadlessServer` please look at the `HeadlessServer\run.bat`.
+
+## 8. Configure the Wow Client - Interface Options
+
+Need to make sure that certain interface options are set. The most important are `Click-to-Move` and `Do Not Flash Screen at Low Health`.
 
 From the main menu (ESC) set the following under Interface Options:
 
@@ -207,7 +217,7 @@ From the main menu (ESC) set the following under Interface Options:
 | Mouse - Click-to-Move | &#9745; |
 | Mouse - Click-to-Move Camera Style | **Always** |
 
-## 7. Configure the Wow Client - Key Bindings
+## 9. Configure the Wow Client - Key Bindings
 
 From the main menu (ESC) -> `Key Bindings` set the following:
 
@@ -244,7 +254,7 @@ To change the default movement keys to `WASD` in the ClassConfiguration file or 
 The `"Interact with Target"` keybind is super important as it allows the bot to turn towards and approach the target.
 The `"Target Last Target"` keybind helps with looting.
 
-## 7.1. Actionbar Key Bindings:
+## 10.1. Actionbar Key Bindings:
 
 The default class profiles assumes the following `Keybinds` setup and using English Keyboard layout.
 In total, `36` key supported.
@@ -259,7 +269,7 @@ Highly recommended to use the default setup, in order to get properly working th
 | Bottom Left ActionBar | - | - |
 | 61-72 | F1,F2,F3 .. F11,F12 | F means Functions |
 
-## 8. Configure the Wow Client - Bindpad addon
+## 11. Configure the Wow Client - Bindpad addon
 
 Bindpad allows keys to be easily bound to commands and macros. Type `/bindpad` to show it.
 
@@ -271,7 +281,7 @@ For each of the following click + to add a new key binding.
 | Insert | /cleartarget | ---- |
 | PageDown | /follow | Only for `"AssistFocus"` Mode |
 
-## 9. Class Configuration
+## 12. Class Configuration
 
 Each class has a configuration file in `\Json\class` e.g. the config for a Rogue it is in file `C:\WowClassicGrindBot\Json\class\Rogue.json`.
 
