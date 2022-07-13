@@ -1,26 +1,26 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/julianperrott/WowClassicGrindBot/master/images/starme.png" alt="Star this Repo"/>
+  <img src="images/starme.png" alt="Star this Repo"/>
 </p>
 
 # Master Of Puppets
 
 - The project current goal is to support `Burning Crusade Classic`
 
-- Addon: https://github.com/FreeHongKongMMO/Happy-Pixels to read the game state. Over the time its been heavily rewritten and optimized.
+- Addon: Modified [Happy-Pixels](https://github.com/FreeHongKongMMO/Happy-Pixels) to read the game state.
 
-- Frontend: ASP.NET Core Razor components
+- Frontend: [ASP.NET Core Razor components](https://docs.microsoft.com/en-us/aspnet/core/blazor/components/).
 
-- BlazorServer: uses [ASP.NET Core Blazor](https://docs.microsoft.com/en-us/aspnet/core/blazor) to show the state in a browser.
+- BlazorServer: [ASP.NET Core Blazor](https://docs.microsoft.com/en-us/aspnet/core/blazor) to show the state in a browser.
 
 - HeadlessServer: Run from CommandLine without UI. Requires valid configuration files present next to the executable.
 
-- Backend: written in C#. Screen capture, mouse and keyboard clicking. No memory tampering and DLL injection.
+- Backend(Core/Game): written in C#. Screen capture, mouse and keyboard clicking. No memory tampering and DLL injection.
 
 - Further detail about the architecture can be found in [Blog post](http://www.codesin.net/post/wowbot/).
 
 - Pathing: Indoors pathfinding only works properly if `PathFilename` is exists. For outdoor there are multiple solutions:
-    * V1 Local - In processs [PPather](https://github.com/namreeb/PPather).
-    * V1 Remote - Out of process [PPather](https://github.com/Xian55/WowClassicGrindBot/tree/main/PathingAPI).
+    * V1 Local - In processs [PPather](https://github.com/Xian55/WowClassicGrindBot/tree/dev/PPather).
+    * V1 Remote - Out of process [PathingAPI](https://github.com/Xian55/WowClassicGrindBot/tree/dev/PathingAPI).
     * V3 Remote - Out of process [AmeisenNavigation](https://github.com/Xian55/AmeisenNavigation/tree/feature/guess-z-coord-after-rewrite)
 
 # Features
@@ -38,10 +38,11 @@
 - Vendor goods
 - Repair equipments
 - Corpse run
+- Semi automated gathering [mode](#Modes)
 
 # Media
 
-![Screenshot](https://raw.githubusercontent.com/Xian55/WowClassicGrindBot/main/images/Screenshot.png)
+![Screenshot](images/Screenshot.png)
 
 [![YouTube Video](https://img.youtube.com/vi/CIMgbh5LuCc/0.jpg)](https://www.youtube.com/watch?v=CIMgbh5LuCc)
 
@@ -123,7 +124,7 @@ Required game client settings. Press `ESC` -> `System`
 
 ## 3.3 Optional - Replace default game Font
 
-Highly suggested to replace the default game font with a much **Bolder** one with [this guide](https://tbc.wowhead.com/guides/changing-wow-text-font)
+Highly suggested to replace the default game font with a much **Bolder** one with [this guide](https://classic.wowhead.com/guides/changing-wow-text-font)
 
 Should be only concerned about `Friz Quadrata: the "Everything Else" Font` which is the `FRIZQT__.ttf` named file.
 
@@ -148,7 +149,7 @@ cd C:\WowClassicGrindBot
 dotnet build --configuration Release
 ```
 
-![Build](https://raw.githubusercontent.com/julianperrott/WowClassicGrindBot/master/images/build.png)
+![Build](images/build.png)
 
 ## 5. BlazorServer Configuration process
 
@@ -177,9 +178,9 @@ The app reads the game state using small blocks of colour shown at the top of th
     * Required to restart the Game 
     * Enter world with your desired character
     * Click `5. Frame Configuration`
-    * [Guidance for good DataFrame](https://github.com/Xian55/WowClassicGrindBot/wiki/Guidance-for-good-DataFrame)
+    * [Guidance for good DataFrame](../../wiki/Guidance-for-good-DataFrame)
     * Click `Auto Configure and Restart`
-    * [Validate FrameConfiguration](https://github.com/Xian55/WowClassicGrindBot/wiki/Validating-FrameConfiguration)
+    * [Validate FrameConfiguration](../../wiki/Validating-FrameConfiguration)
 
 4. Under the `Addon Configuration` you can check if theres a **newer version available** for the addon. In that case just press the `install` button then have to restart the game client and the bot it self in order to use it properly. 
 
@@ -617,7 +618,7 @@ If you have an NPC that is easy to get to such as the repair NPC in Arathi Highl
 
 Short Path Example:
 
-![Short Path Example](https://raw.githubusercontent.com/julianperrott/WowClassicGrindBot/master/images/NPCPath.png)
+![Short Path Example](images/NPCPath.png)
 
 ### Repeatable Quests Handin
 
@@ -1280,13 +1281,13 @@ The UI has the following components:
 
 ### Screenshot
 
-![Screenshot Component](https://raw.githubusercontent.com/julianperrott/WowClassicGrindBot/master/images/screenshotComponent.png)
+![Screenshot Component](images/screenshotComponent.png)
 
 ### Player Summary
 
 Show the player state. A hyper link to wowhead appears for the mob you are fighting so you can check out what it drops.
 
-![Player Summary](https://raw.githubusercontent.com/julianperrott/WowClassicGrindBot/master/images/PlayerSummary.png)
+![Player Summary](images/PlayerSummary.png)
 
 ### Route
 
@@ -1297,11 +1298,11 @@ This component shows:
 * The location of any deaths
 * Pathed routes
 
-![Route](https://raw.githubusercontent.com/julianperrott/WowClassicGrindBot/master/images/Route.png)
+![Route](images/Route.png)
 
 Pathed routes are shown in Green.
 
-![Pathed route](https://raw.githubusercontent.com/julianperrott/WowClassicGrindBot/master/images/PathedRoute.png)
+![Pathed route](images/PathedRoute.png)
 
 ### Goals
 
@@ -1313,7 +1314,7 @@ Some goals (combat,pull target) contain a list of spells which can be cast. The 
 
 The visualisation of the pre-conditions and spell requirements makes it easier to understand what the bot is doing and determine if the class file needs to be tweaked.
 
-![Goals](https://raw.githubusercontent.com/julianperrott/WowClassicGrindBot/master/images/actionsComponent.png)
+![Goals](images/actionsComponent.png)
 
 # Recording a Path
 
@@ -1341,7 +1342,7 @@ The short path to get to the vendor/repairer when there are obstacles close to t
 
 To record a new path place your character where the start of the path should be, then click on the 'Record Path' option on the left hand side of the bot's browser window. Then click 'Record New'.
 
-![New Path](https://raw.githubusercontent.com/julianperrott/WowClassicGrindBot/master/images/Path_New.png)
+![New Path](images/Path_New.png)
 
 Now walk the path the bot should take.
 
@@ -1351,7 +1352,7 @@ For tricky parts you may want to record spots close together by using the 'Dista
 
 Once the path is complete click 'Save'. This path will be saved with a generic filename e.g. `Path_20201108112650.json`, you will need to go into your `/Json/path` and rename it to something sensible.
 
-![Recording Path](https://raw.githubusercontent.com/julianperrott/WowClassicGrindBot/master/images/Path_Recording.png)
+![Recording Path](images/Path_Recording.png)
 
 ## Types of paths
 
@@ -1363,7 +1364,7 @@ Once the path is complete click 'Save'. This path will be saved with a generic f
 
 These paths are run from one end to the other and then walked backwards back to the start. So the end does not need to be near the start.
 
-![There and back path](https://raw.githubusercontent.com/julianperrott/WowClassicGrindBot/master/images/Path_Thereandback.png)
+![There and back path](images/Path_Thereandback.png)
 
 ### Joined up
 
@@ -1373,7 +1374,7 @@ These paths are run from one end to the other and then walked backwards back to 
 
 These paths are run from one end to the other and then repeated. So the path needs to join up with itself i.e. the end needs to be near the start.
 
-![Circular path](https://raw.githubusercontent.com/julianperrott/WowClassicGrindBot/master/images/Path_Circular.png)
+![Circular path](images/Path_Circular.png)
 
 ## Tips  
 
@@ -1451,7 +1452,7 @@ dotnet run --configuration Release
 
 The bot will use the PathingAPI to work out routes, these are shown on the route map as green points.
 
-![Pathed Route](https://raw.githubusercontent.com/julianperrott/WowClassicGrindBot/master/images/PathedRoute.png)
+![Pathed Route](images/PathedRoute.png)
 
 
 # Macros
