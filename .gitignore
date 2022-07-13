@@ -249,8 +249,8 @@ _Pvt_Extensions
 .paket/paket.exe
 paket-files/
 
-# FAKE - F# Make
-.fake/
+# Addon dev
+.addon_dev/
 
 # JetBrains Rider
 .idea/
