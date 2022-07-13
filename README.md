@@ -191,7 +191,7 @@ Similar to BlazorServer project, except without Frontend. Should consume less sy
 
 Everything has to be setup inside the Class Configuration, in prior.
 
-A successfull [Configuration process](#5.-BlazorServer-Configuration-process) has a result of a following configuration files
+A successfull [Configuration process](#5-BlazorServer-Configuration-process) has a result of a following configuration files
 * `data_config.json`
 * `addon_config.json`
 * `frame_config.json`
