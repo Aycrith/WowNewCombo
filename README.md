@@ -198,6 +198,12 @@ A successfull [Configuration process](#5-BlazorServer-Configuration-process) has
 
 In order to run `HeadlessServer` please look at the `HeadlessServer\run.bat`.
 
+e.g. run from Powershell
+```ps
+cd C:\WowClassicGrindBot\HeadlessServer
+.\run.bat Hunter_1.json
+```
+
 ## 8. Configure the Wow Client - Interface Options
 
 Need to make sure that certain interface options are set. The most important are `Click-to-Move` and `Do Not Flash Screen at Low Health`.
