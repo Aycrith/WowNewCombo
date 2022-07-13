@@ -1,22 +1,21 @@
 ﻿using System.Drawing;
-using System.Threading.Tasks;
 using Game;
 
 namespace CoreTests
 {
     public class MockWoWProcess : IMouseInput
     {
-        public void RightClickMouse(Point position)
+        public void RightClickMouse(Point p)
         {
             throw new System.NotImplementedException();
         }
 
-        public void LeftClickMouse(Point position)
+        public void LeftClickMouse(Point p)
         {
             throw new System.NotImplementedException();
         }
 
-        public void SetCursorPosition(Point point)
+        public void SetCursorPosition(Point p)
         {
             throw new System.NotImplementedException();
         }

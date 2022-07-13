@@ -2,7 +2,6 @@
 using Serilog.Extensions.Logging;
 using SharedLib.NpcFinder;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace CoreTests
 {
@@ -10,7 +9,7 @@ namespace CoreTests
     {
         private static Microsoft.Extensions.Logging.ILogger logger;
 
-        private static void CreateLogger()
+        public static void Main()
         {
             var logConfig = new LoggerConfiguration()
                 .WriteTo.File("names.log")
@@ -19,18 +18,19 @@ namespace CoreTests
 
             Log.Logger = logConfig;
             logger = new SerilogLoggerProvider(Log.Logger).CreateLogger(nameof(Program));
+
+            Test_NPCNameFinder();
+            //Test_Input();
         }
 
-        public static void Main()
+        private static void Test_NPCNameFinder()
         {
-            CreateLogger();
+            //NpcNames types = NpcNames.Enemy;
+            //NpcNames types = NpcNames.Corpse;
+            NpcNames types = NpcNames.Enemy | NpcNames.Neutral;
+            //NpcNames types = NpcNames.Friendly | NpcNames.Neutral;
 
-            //var types = NpcNames.Enemy;
-            //var types = NpcNames.Corpse;
-            var types = NpcNames.Enemy | NpcNames.Neutral;
-            //var types = NpcNames.Friendly | NpcNames.Neutral;
-
-            var test = new Test_NpcNameFinder(logger, types, true);
+            Test_NpcNameFinder test = new(logger, types, true);
             int count = 100;
             int i = 0;
             while (i < count)
@@ -39,14 +39,14 @@ namespace CoreTests
                 i++;
                 Thread.Sleep(150);
             }
-
-            //MainAsync().GetAwaiter().GetResult();
         }
 
-        private static async Task MainAsync()
+        private static void Test_Input()
         {
-            var test = new Test_MouseClicks(logger);
-            await test.Execute();
+            Test_Input test = new(logger);
+            test.Mouse_Movement();
+            test.Mouse_Clicks();
+            test.Clipboard();
         }
     }
 }
