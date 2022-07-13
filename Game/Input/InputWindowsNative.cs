@@ -1,11 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
-using System.Linq;
 using System.Threading;
-using WinAPI;
 using System.Runtime.CompilerServices;
+using TextCopy;
+using static WinAPI.NativeMethods;
 
 namespace Game
 {
@@ -15,11 +14,9 @@ namespace Game
         private readonly int MAX_DELAY;
 
         private readonly Process process;
-        private readonly Random random = new();
+        private readonly Random random;
 
         private readonly CancellationTokenSource _cts;
-
-        private readonly IEnumerable<ConsoleKey> consoleKeys = (IEnumerable<ConsoleKey>)Enum.GetValues(typeof(ConsoleKey));
 
         public InputWindowsNative(Process process, int minDelay, int maxDelay)
         {
@@ -27,7 +24,9 @@ namespace Game
 
             MIN_DELAY = minDelay;
             MAX_DELAY = maxDelay;
-            _cts = new CancellationTokenSource();
+
+            random = new();
+            _cts = new();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -41,21 +40,21 @@ namespace Game
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void KeyDown(int key)
         {
-            NativeMethods.PostMessage(process.MainWindowHandle, NativeMethods.WM_KEYDOWN, key, 0);
+            PostMessage(process.MainWindowHandle, WM_KEYDOWN, key, 0);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void KeyUp(int key)
         {
-            NativeMethods.PostMessage(process.MainWindowHandle, NativeMethods.WM_KEYUP, key, 0);
+            PostMessage(process.MainWindowHandle, WM_KEYUP, key, 0);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int KeyPress(int key, int milliseconds)
         {
-            NativeMethods.PostMessage(process.MainWindowHandle, NativeMethods.WM_KEYDOWN, key, 0);
+            PostMessage(process.MainWindowHandle, WM_KEYDOWN, key, 0);
             int delay = Delay(milliseconds);
-            NativeMethods.PostMessage(process.MainWindowHandle, NativeMethods.WM_KEYUP, key, 0);
+            PostMessage(process.MainWindowHandle, WM_KEYUP, key, 0);
 
             return delay;
         }
@@ -63,64 +62,61 @@ namespace Game
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void KeyPressSleep(int key, int milliseconds, CancellationTokenSource cts)
         {
-            NativeMethods.PostMessage(process.MainWindowHandle, NativeMethods.WM_KEYDOWN, key, 0);
+            PostMessage(process.MainWindowHandle, WM_KEYDOWN, key, 0);
             cts.Token.WaitHandle.WaitOne(milliseconds);
-            NativeMethods.PostMessage(process.MainWindowHandle, NativeMethods.WM_KEYUP, key, 0);
+            PostMessage(process.MainWindowHandle, WM_KEYUP, key, 0);
         }
 
         public void LeftClickMouse(Point p)
         {
             SetCursorPosition(p);
 
-            NativeMethods.ScreenToClient(process.MainWindowHandle, ref p);
-            int lparam = NativeMethods.MakeLParam(p.X, p.Y);
+            ScreenToClient(process.MainWindowHandle, ref p);
+            int lparam = MakeLParam(p.X, p.Y);
 
-            NativeMethods.PostMessage(process.MainWindowHandle, NativeMethods.WM_LBUTTONDOWN, 0, lparam);
+            PostMessage(process.MainWindowHandle, WM_LBUTTONDOWN, 0, lparam);
 
             Delay(MIN_DELAY);
 
-            NativeMethods.GetCursorPos(out p);
-            NativeMethods.ScreenToClient(process.MainWindowHandle, ref p);
-            lparam = NativeMethods.MakeLParam(p.X, p.Y);
+            GetCursorPos(out p);
+            ScreenToClient(process.MainWindowHandle, ref p);
+            lparam = MakeLParam(p.X, p.Y);
 
-            NativeMethods.PostMessage(process.MainWindowHandle, NativeMethods.WM_LBUTTONUP, 0, lparam);
+            PostMessage(process.MainWindowHandle, WM_LBUTTONUP, 0, lparam);
         }
 
         public void RightClickMouse(Point p)
         {
             SetCursorPosition(p);
 
-            NativeMethods.ScreenToClient(process.MainWindowHandle, ref p);
-            int lparam = NativeMethods.MakeLParam(p.X, p.Y);
+            ScreenToClient(process.MainWindowHandle, ref p);
+            int lparam = MakeLParam(p.X, p.Y);
 
-            NativeMethods.PostMessage(process.MainWindowHandle, NativeMethods.WM_RBUTTONDOWN, 0, lparam);
+            PostMessage(process.MainWindowHandle, WM_RBUTTONDOWN, 0, lparam);
 
             Delay(MIN_DELAY);
 
-            NativeMethods.GetCursorPos(out p);
-            NativeMethods.ScreenToClient(process.MainWindowHandle, ref p);
-            lparam = NativeMethods.MakeLParam(p.X, p.Y);
+            GetCursorPos(out p);
+            ScreenToClient(process.MainWindowHandle, ref p);
+            lparam = MakeLParam(p.X, p.Y);
 
-            NativeMethods.PostMessage(process.MainWindowHandle, NativeMethods.WM_RBUTTONUP, 0, lparam);
+            PostMessage(process.MainWindowHandle, WM_RBUTTONUP, 0, lparam);
         }
 
         public void SetCursorPosition(Point p)
         {
-            NativeMethods.SetCursorPos(p.X, p.Y);
+            SetCursorPos(p.X, p.Y);
         }
 
         public void SendText(string text)
         {
-            // only works with ConsoleKey characters
-            var chars = text.ToCharArray();
-            for (int i = 0; i < chars.Length; i++)
-            {
-                var consoleKey = consoleKeys.FirstOrDefault(k => k.ToString() == chars[i].ToString());
-                if (consoleKey != 0)
-                { 
-                    KeyPress((int)consoleKey, 15);
-                }
-            }
+            // currently not supported
+            throw new NotImplementedException();
+        }
+
+        public void SetClipboard(string text)
+        {
+            ClipboardService.SetText(text);
         }
 
         public void PasteFromClipboard()
