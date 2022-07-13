@@ -4,10 +4,10 @@ namespace Game
 {
     public interface IMouseInput
     {
-        void SetCursorPosition(Point point);
+        void SetCursorPosition(Point p);
 
-        void RightClickMouse(Point position);
+        void RightClickMouse(Point p);
 
-        void LeftClickMouse(Point position);
+        void LeftClickMouse(Point p);
     }
 }

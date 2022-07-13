@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 
 #nullable enable
@@ -33,12 +32,17 @@ namespace Game
             }
         }
 
-        private static readonly List<string> defaultProcessNames = new()
-            { "Wow", "WowClassic", "WowClassicT", "Wow-64", "WowClassicB" };
+        private static readonly string[] defaultProcessNames = new string[] {
+            "Wow",
+            "WowClassic",
+            "WowClassicT",
+            "Wow-64",
+            "WowClassicB"
+        };
 
         public WowProcess()
         {
-            var process = Get();
+            Process? process = Get();
             if (process == null)
             {
                 throw new ArgumentOutOfRangeException("Unable to find the Wow process");
@@ -59,13 +63,14 @@ namespace Game
             for (int i = 0; i < processList.Length; i++)
             {
                 Process p = processList[i];
-                if (defaultProcessNames.Contains(p.ProcessName))
+                for (int j = 0; j < defaultProcessNames.Length; j++)
                 {
-                    return p;
+                    if (defaultProcessNames[j].Contains(p.ProcessName))
+                    {
+                        return p;
+                    }
                 }
             }
-
-            //logger.Error($"Failed to find the wow process, tried: {string.Join(", ", names)}");
 
             return null;
         }

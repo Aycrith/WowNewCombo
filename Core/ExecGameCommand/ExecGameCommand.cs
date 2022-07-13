@@ -2,7 +2,6 @@
 using System;
 using System.Threading;
 using Microsoft.Extensions.Logging;
-using TextCopy;
 
 namespace Core
 {
@@ -24,7 +23,7 @@ namespace Core
             wowProcessInput.SetForegroundWindow();
             logger.LogInformation(content);
 
-            ClipboardService.SetText(content);
+            wowProcessInput.SetClipboard(content);
             Wait(100, 250);
 
             // Open chat inputbox

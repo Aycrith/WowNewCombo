@@ -21,6 +21,8 @@ namespace Game
 
         void SendText(string text);
 
+        void SetClipboard(string text);
+
         void PasteFromClipboard();
     }
 }

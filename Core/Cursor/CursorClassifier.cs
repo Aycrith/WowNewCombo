@@ -2,7 +2,7 @@
 using System.Drawing;
 using System.Linq;
 using System.Runtime.InteropServices;
-using WinAPI;
+using static WinAPI.NativeMethods;
 
 namespace Core
 {
@@ -25,16 +25,16 @@ namespace Core
 
         public static void Classify(out CursorType classification)
         {
-            Size size = NativeMethods.GetCursorSize();
+            Size size = GetCursorSize();
             Bitmap bitmap = new(size.Width, size.Height);
 
-            NativeMethods.CURSORINFO cursorInfo = new();
+            CURSORINFO cursorInfo = new();
             cursorInfo.cbSize = Marshal.SizeOf(cursorInfo);
-            if (NativeMethods.GetCursorInfo(ref cursorInfo) &&
-                cursorInfo.flags == NativeMethods.CURSOR_SHOWING)
+            if (GetCursorInfo(ref cursorInfo) &&
+                cursorInfo.flags == CURSOR_SHOWING)
             {
                 Graphics g = Graphics.FromImage(bitmap);
-                NativeMethods.DrawIcon(g.GetHdc(), 0, 0, cursorInfo.hCursor);
+                DrawIcon(g.GetHdc(), 0, 0, cursorInfo.hCursor);
                 g.Dispose();
             }
 
