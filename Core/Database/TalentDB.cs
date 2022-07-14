@@ -21,7 +21,7 @@ namespace Core.Database
             talentTreeElements = JsonConvert.DeserializeObject<TalentTreeElement[]>(File.ReadAllText(Path.Join(dataConfig.Dbc, "talent.json")));
         }
 
-        public bool Update(ref Talent talent, PlayerClassEnum playerClassEnum)
+        public bool Update(ref Talent talent, PlayerClassEnum playerClassEnum, out int spellId)
         {
             int classMask = (int)Math.Pow(2, (int)playerClassEnum - 1);
 
@@ -36,6 +36,7 @@ namespace Core.Database
                     break;
                 }
             }
+            spellId = 1;
             if (tabId == -1) return false;
 
             int tierIndex = talent.TierNum - 1;
@@ -54,7 +55,7 @@ namespace Core.Database
                 }
             }
 
-            int spellId = talentTreeElements[index].SpellIds[rankIndex];
+            spellId = talentTreeElements[index].SpellIds[rankIndex];
             if (spellDB.Spells.TryGetValue(spellId, out Spell spell))
             {
                 talent.Name = spell.Name;
