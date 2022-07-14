@@ -21,40 +21,41 @@ namespace Core.Database
             talentTreeElements = JsonConvert.DeserializeObject<TalentTreeElement[]>(File.ReadAllText(Path.Join(dataConfig.Dbc, "talent.json")));
         }
 
-        public bool Update(ref Talent talent, PlayerClassEnum playerClassEnum)
+        public bool Update(ref Talent talent, PlayerClassEnum playerClassEnum, out int spellId)
         {
-            string playerClass = playerClassEnum.ToStringF();
+            int classMask = (int)Math.Pow(2, (int)playerClassEnum - 1);
 
+            int tabId = -1;
             int tabIndex = talent.TabNum - 1;
-            int talentTabIndex = -1;
             for (int i = 0; i < talentTabs.Length; i++)
             {
-                if (talentTabs[i].BackgroundFile.Contains(playerClass, StringComparison.OrdinalIgnoreCase) &&
+                if (talentTabs[i].ClassMask == classMask &&
                     talentTabs[i].OrderIndex == tabIndex)
                 {
-                    talentTabIndex = i;
+                    tabId = talentTabs[i].Id;
                     break;
                 }
             }
-            if (talentTabIndex == -1) return false;
+            spellId = 1;
+            if (tabId == -1) return false;
 
             int tierIndex = talent.TierNum - 1;
             int columnIndex = talent.ColumnNum - 1;
             int rankIndex = talent.CurrentRank - 1;
 
-            int talentElementIndex = -1;
+            int index = -1;
             for (int i = 0; i < talentTreeElements.Length; i++)
             {
-                if (talentTreeElements[i].TabID == talentTabs[talentTabIndex].Id &&
+                if (talentTreeElements[i].TabID == tabId &&
                     talentTreeElements[i].TierID == tierIndex &&
                     talentTreeElements[i].ColumnIndex == columnIndex)
                 {
-                    talentElementIndex = i;
+                    index = i;
                     break;
                 }
             }
 
-            int spellId = talentTreeElements[talentElementIndex].SpellIds[rankIndex];
+            spellId = talentTreeElements[index].SpellIds[rankIndex];
             if (spellDB.Spells.TryGetValue(spellId, out Spell spell))
             {
                 talent.Name = spell.Name;

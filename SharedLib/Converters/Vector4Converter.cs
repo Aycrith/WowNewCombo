@@ -7,13 +7,9 @@ namespace SharedLib.Converters
 {
     public class Vector4Converter : JsonConverter<Vector4>
     {
-        public override bool CanConvert(Type objectType)
+        public override bool CanConvert(Type typeToConvert)
         {
-            if (objectType == typeof(Vector4))
-            {
-                return true;
-            }
-            return false;
+            return typeToConvert == typeof(Vector4);
         }
 
         public override Vector4 Read(ref Utf8JsonReader reader,

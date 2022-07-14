@@ -9,6 +9,7 @@ namespace Core
 
         public const string NpcId = $"https://{Version}.wowhead.com/npc=";
         public const string ItemId = $"https://{Version}.wowhead.com/item=";
+        public const string SpellId = $"https://{Version}.wowhead.com/spell=";
         public const string TinyIconUrl = "https://wow.zamimg.com/images/wow/icons/tiny/{0}.gif";
         public const string MedIconUrl = "https://wow.zamimg.com/images/wow/icons/medium/{0}.jpg";
 

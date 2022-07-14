@@ -14,6 +14,7 @@ namespace Core
         public int Count { get; private set; }
 
         public Dictionary<int, Talent> Talents { get; } = new();
+        public Dictionary<int, int> Spells { get; } = new();
 
         public TalentReader(AddonDataProvider reader, int cTalent, PlayerReader playerReader, TalentDB talentDB)
         {
@@ -49,9 +50,10 @@ namespace Core
                 CurrentRank = data
             };
 
-            if (talentDB.Update(ref talent, playerReader.Class))
+            if (talentDB.Update(ref talent, playerReader.Class, out int id))
             {
                 Talents.Add(hash, talent);
+                Spells.Add(hash, id);
                 Count += talent.CurrentRank;
             }
         }
@@ -60,6 +62,7 @@ namespace Core
         {
             Count = 0;
             Talents.Clear();
+            Spells.Clear();
         }
 
         public bool HasTalent(string name, int rank)
