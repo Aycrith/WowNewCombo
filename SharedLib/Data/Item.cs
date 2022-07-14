@@ -13,27 +13,23 @@ namespace SharedLib
         {
             if (sellPrice == 0) { return new int[3] { 0, 0, 0 }; }
 
-            var sign = sellPrice < 0 ? -1 : 1;
+            int sign = sellPrice < 0 ? -1 : 1;
 
             int gold = 0;
             int silver = 0;
-            int copper = 0;
+            int copper = Math.Abs(sellPrice);
 
-            var value = Math.Abs(sellPrice);
-
-            if (value >= 10000)
+            if (copper >= 10000)
             {
-                gold = value / 10000;
-                value = value % 10000;
+                gold = copper / 10000;
+                copper %= 10000;
             }
 
-            if (value >= 100)
+            if (copper >= 100)
             {
-                silver = value / 100;
-                value = value % 100;
+                silver = copper / 100;
+                copper %= 100;
             }
-
-            copper = value;
 
             return new int[3] { sign * gold, sign * silver, sign * copper };
         }
