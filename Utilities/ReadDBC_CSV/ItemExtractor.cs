@@ -10,7 +10,7 @@ namespace ReadDBC_CSV
     {
         private readonly string path;
 
-        public List<string> FileRequirement { get; } = new List<string>()
+        public List<string> FileRequirement { get; } = new()
         {
             "itemsparse.csv"
         };
@@ -22,12 +22,11 @@ namespace ReadDBC_CSV
 
         public void Run()
         {
-            string itemsearchname = Path.Join(path, FileRequirement[0]);
-            List<Item> items = ExtractItems(itemsearchname);
+            string fileName = Path.Join(path, FileRequirement[0]);
+            List<Item> items = ExtractItems(fileName);
 
             Console.WriteLine($"Items: {items.Count}");
             File.WriteAllText(Path.Join(path, "items.json"), JsonConvert.SerializeObject(items));
-
         }
 
         private static List<Item> ExtractItems(string path)

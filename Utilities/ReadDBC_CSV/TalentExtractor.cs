@@ -37,17 +37,15 @@ namespace ReadDBC_CSV
         private static List<TalentTab> ExtractTalentTabs(string path)
         {
             int idIndex = -1;
-            int NameIndex = -1;
-            int BackgroundFileIndex = -1;
             int orderIndex = -1;
+            int classMaskIndex = -1;
 
             CSVExtractor extractor = new();
             extractor.HeaderAction = () =>
             {
                 idIndex = extractor.FindIndex("ID");
-                NameIndex = extractor.FindIndex("Name_lang");
-                BackgroundFileIndex = extractor.FindIndex("BackgroundFile");
                 orderIndex = extractor.FindIndex("OrderIndex");
+                classMaskIndex = extractor.FindIndex("ClassMask");
             };
 
             List<TalentTab> talenttabs = new();
@@ -56,9 +54,8 @@ namespace ReadDBC_CSV
                 talenttabs.Add(new TalentTab
                 {
                     Id = int.Parse(values[idIndex]),
-                    Name = values[NameIndex],
-                    BackgroundFile = values[BackgroundFileIndex],
-                    OrderIndex = int.Parse(values[orderIndex])
+                    OrderIndex = int.Parse(values[orderIndex]),
+                    ClassMask = int.Parse(values[classMaskIndex])
                 });
             }
 
@@ -108,7 +105,7 @@ namespace ReadDBC_CSV
                     ColumnIndex = int.Parse(values[columnIndex]),
                     TabID = int.Parse(values[tabIDIndex]),
 
-                    SpellIds = new List<int>()
+                    SpellIds = new int[]
                     {
                         int.Parse(values[spellRank0Index]),
                         int.Parse(values[spellRank1Index]),

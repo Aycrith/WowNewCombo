@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Net;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace ReadDBC_CSV
 {
@@ -20,31 +22,37 @@ namespace ReadDBC_CSV
         itIT
     }
 
-    class Program
+    public class Program
     {
-        static string userAgent = " Mozilla/5.0 (Windows NT 6.1; WOW64; rv:25.0) Gecko/20100101 Firefox/25.0";
+        private const string userAgent = " Mozilla/5.0 (Windows NT 6.1; WOW64; rv:25.0) Gecko/20100101 Firefox/25.0";
 
-        static Locale locale = Locale.enUS;
-        static string path = "../../../data/";
-        static string build = "2.5.4.44171"; // TBCC 2.5.2.40617 // TBCC latest 2.5.4.44171 // WOTLK alpha 3.4.0.44064
+        private const Locale locale = Locale.enUS;
+        private const string path = "../../../data/";
+        private const string build = "2.5.4.44171"; // TBCC 2.5.2.40617 // TBCC latest 2.5.4.44171 // WOTLK alpha 3.4.0.44064
 
-        static void Main(string[] args)
+        public static void Main()
         {
-            GenerateItems(path);
-            GenerateConsumables(path);
-            GenerateSpells(path);
-            GenerateTalents(path);
-            GenerateWorldMapArea(path);
+            MainAsync().GetAwaiter().GetResult();
+
         }
 
-        private static void GenerateItems(string path)
+        private static async Task MainAsync()
+        {
+            await GenerateItems(path);
+            await GenerateConsumables(path);
+            await GenerateSpells(path);
+            await GenerateTalents(path);
+            await GenerateWorldMapArea(path);
+        }
+
+        private static async Task GenerateItems(string path)
         {
             ItemExtractor extractor = new(path);
-            DownloadRequirements(path, extractor, build);
+            await DownloadRequirements(path, extractor, build);
             extractor.Run();
         }
 
-        private static void GenerateConsumables(string path)
+        private static async Task GenerateConsumables(string path)
         {
             string foodDesc = "Restores $o1 health over $d";
             string waterDesc = "mana over $d";
@@ -55,68 +63,66 @@ namespace ReadDBC_CSV
             }
 
             ConsumablesExtractor extractor = new(path, foodDesc, waterDesc);
-            DownloadRequirements(path, extractor, build);
+            await DownloadRequirements(path, extractor, build);
             extractor.Run();
         }
 
-        private static void GenerateSpells(string path)
+        private static async Task GenerateSpells(string path)
         {
             SpellExtractor extractor = new(path);
-            DownloadRequirements(path, extractor, build);
+            await DownloadRequirements(path, extractor, build);
             extractor.Run();
         }
 
-        private static void GenerateTalents(string path)
+        private static async Task GenerateTalents(string path)
         {
             TalentExtractor extractor = new(path);
-            DownloadRequirements(path, extractor, build);
+            await DownloadRequirements(path, extractor, build);
             extractor.Run();
         }
 
-        private static void GenerateWorldMapArea(string path)
+        private static async Task GenerateWorldMapArea(string path)
         {
             WorldMapAreaExtractor extractor = new(path);
-            DownloadRequirements(path, extractor, build);
+            await DownloadRequirements(path, extractor, build);
             extractor.Run();
         }
 
 
         #region Download files
 
-        private static void DownloadRequirements(string path, IExtractor extractor, params string[] builds)
+        private static async Task DownloadRequirements(string path, IExtractor extractor, string build)
         {
             foreach (string file in extractor.FileRequirement)
             {
-                if (File.Exists(Path.Join(path, file)))
+                string output = Path.Join(path, file);
+                if (File.Exists(output))
                 {
-                    Console.WriteLine($"{file} already exists. Skip downloading.");
+                    Console.WriteLine($"{build} - {file} already exists. Skip downloading.");
                     continue;
                 }
 
-                foreach (string build in builds)
+                try
                 {
-                    using WebClient client = new();
-                    client.Headers.Add("user-agent", userAgent);
+                    using HttpClient client = new();
+                    client.DefaultRequestHeaders.Add("user-agent", userAgent);
+                    string url = DownloadURL(build, file);
+                    byte[] bytes = await client.GetByteArrayAsync(url);
+                    File.WriteAllBytes(output, bytes);
 
-                    try
-                    {
-                        string url = DownloadURL(build, file);
-                        client.DownloadFile(url, Path.Join(path, file));
-
-                        Console.WriteLine($"{file} - {build} - Downloaded - {url}");
-
-                        break;
-                    }
-                    catch (Exception e)
-                    {
-                        if (File.Exists(Path.Join(path, file)))
-                        {
-                            File.Delete(Path.Join(path, file));
-                        }
-
-                        Console.WriteLine($"{file} - {build} - {e.Message}");
-                    }
+                    Console.WriteLine($"{build} - {file} - Downloaded - {url}");
                 }
+                catch (Exception e)
+                {
+                    if (File.Exists(output))
+                    {
+                        File.Delete(output);
+                    }
+
+                    Console.WriteLine($"{build} - {file} - {e.Message}");
+                }
+
+                await Task.Delay(Random.Shared.Next(100, 250));
             }
         }
 

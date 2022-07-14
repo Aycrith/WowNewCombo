@@ -8,7 +8,7 @@ namespace ReadDBC_CSV
 {
     public class CSVExtractor
     {
-        public readonly List<string> ColumnIndexes = new List<string>();
+        public List<string> ColumnIndexes { get; } = new();
 
         public Action HeaderAction;
 
@@ -42,7 +42,7 @@ namespace ReadDBC_CSV
         {
             for (int i = 0; i < ColumnIndexes.Count; i++)
             {
-                if (ColumnIndexes[i] == v)
+                if (ColumnIndexes[i].StartsWith(v, StringComparison.OrdinalIgnoreCase))
                 {
                     return i;
                 }

@@ -2,8 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using SharedLib;
 
 namespace ReadDBC_CSV
 {
@@ -14,7 +12,7 @@ namespace ReadDBC_CSV
         private readonly string foodDesc;
         private readonly string waterDesc;
 
-        public List<string> FileRequirement { get; } = new List<string>
+        public List<string> FileRequirement { get; } = new()
         {
             "spell.csv",
             "itemeffect.csv",
@@ -91,7 +89,7 @@ namespace ReadDBC_CSV
             void extractLine(string[] values)
             {
                 int spellId = int.Parse(values[spellIdIndex]);
-                if (spells.Any(s => s == spellId))
+                if (spells.Contains(spellId))
                 {
                     int ItemId = int.Parse(values[ParentItemIDIndex]);
                     items.Add(ItemId);
