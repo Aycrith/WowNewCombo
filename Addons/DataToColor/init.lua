@@ -31,5 +31,5 @@ do
 	end
 
 	E:AddLib('AceAddon', AceAddon, AceAddonMinor)
-    E:AddLib('RangeCheck', 'LibRangeCheck-2.0')
+	E:AddLib('RangeCheck', 'LibRangeCheck-2.0')
 end

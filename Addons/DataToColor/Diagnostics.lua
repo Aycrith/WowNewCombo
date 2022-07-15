@@ -1,10 +1,20 @@
 local Load = select(2, ...)
 local DataToColor = unpack(Load)
 
+local format = format
+
+local CreateFrame = CreateFrame
+local GetCVarBool = GetCVarBool
+local ResetCPUUsage = ResetCPUUsage
+local debugprofilestop = debugprofilestop
+local UpdateAddOnCPUUsage = UpdateAddOnCPUUsage
+local GetAddOnCPUUsage = GetAddOnCPUUsage
+
 local num_frames = 0
 local function OnUpdate()
 	num_frames = num_frames + 1
 end
+
 local fcpu = CreateFrame('Frame')
 fcpu:Hide()
 fcpu:SetScript('OnUpdate', OnUpdate)
@@ -26,8 +36,10 @@ function DataToColor:GetCPUImpact()
 		local ms_passed = debugprofilestop() - debugTimer
 		UpdateAddOnCPUUsage()
 
-		local per, passed = ((num_frames == 0 and 0) or (GetAddOnCPUUsage('DataToColor') / num_frames)), ((num_frames == 0 and 0) or (ms_passed / num_frames))
-		DataToColor:Print(format(cpuImpactMessage, per and per > 0 and format('%.3f', per) or 0, passed and passed > 0 and format('%.3f', passed) or 0))
+		local per, passed = ((num_frames == 0 and 0) or (GetAddOnCPUUsage('DataToColor') / num_frames)),
+			((num_frames == 0 and 0) or (ms_passed / num_frames))
+		DataToColor:Print(format(cpuImpactMessage, per and per > 0 and format('%.3f', per) or 0,
+			passed and passed > 0 and format('%.3f', passed) or 0))
 		toggleMode = false
 	end
 end

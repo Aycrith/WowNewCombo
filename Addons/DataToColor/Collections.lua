@@ -1,7 +1,6 @@
 local Load = select(2, ...)
 local DataToColor = unpack(Load)
 
-
 local Queue = {}
 DataToColor.Queue = Queue
 
@@ -31,12 +30,10 @@ function Queue:push(item)
     return table.insert(self.tail, item)
 end
 
-
 local MinQueue = {}
 DataToColor.MinQueue = MinQueue
 
 function MinQueue:new()
-    --local o = { t = {} }
     local o = {}
     setmetatable(o, self)
     self.__index = self
@@ -44,16 +41,13 @@ function MinQueue:new()
 end
 
 function MinQueue:push(key, value)
-    --self.t[key] = value or key
     self[key] = value or key
 end
 
 function MinQueue:pop()
     local key, value = self:minKey()
     if key ~= nil then
-        --value = self.t[key]
         value = self[key]
-        --self.t[key] = nil
         self[key] = nil
         return key, value
     end
@@ -61,15 +55,12 @@ end
 
 function MinQueue:minKey()
     local k
-    --for i, v in pairs(self.t) do
     for i, v in pairs(self) do
-      k = k or i
-      --if v < self.t[k] then k = i end
-      if v < self[k] then k = i end
+        k = k or i
+        if v < self[k] then k = i end
     end
     return k
 end
-
 
 local struct = {}
 DataToColor.struct = struct
