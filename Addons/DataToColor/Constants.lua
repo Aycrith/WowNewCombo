@@ -1,6 +1,11 @@
 local Load = select(2, ...)
 local DataToColor = unpack(Load)
 
+local UnitName = UnitName
+local UnitGUID = UnitGUID
+local UnitClass = UnitClass
+local UnitRace = UnitRace
+
 DataToColor.C.unitPlayer = "player"
 DataToColor.C.unitTarget = "target"
 DataToColor.C.unitParty = "party"
@@ -11,12 +16,6 @@ DataToColor.C.unitFocusTarget = "focustarget"
 DataToColor.C.unitPetTarget = "pettarget"
 DataToColor.C.unitTargetTarget = "targettarget"
 DataToColor.C.unitNormal = "normal"
-
--- Creature Types
-DataToColor.C.Humanoid = "Humanoid"
-DataToColor.C.Elemental = "Elemental"
-DataToColor.C.Mechanical = "Mechanical"
-DataToColor.C.Totem = "Totem"
 
 -- Character's name
 DataToColor.C.CHARACTER_NAME = UnitName(DataToColor.C.unitPlayer)
@@ -29,9 +28,9 @@ DataToColor.C.MAX_POWER_TYPE = 1000000
 DataToColor.C.MAX_ACTION_IDX = 1000
 
 -- Spells
-DataToColor.C.Spell.AutoShotId = 75 -- Auto shot
-DataToColor.C.Spell.ShootId = 5019 -- Shoot
-DataToColor.C.Spell.AttackId = 6603 -- Attack
+DataToColor.C.Spell.AutoShotId = 75
+DataToColor.C.Spell.ShootId = 5019
+DataToColor.C.Spell.AttackId = 6603
 
 -- Item / Inventory
 DataToColor.C.ItemPattern = "(m:%d+)"

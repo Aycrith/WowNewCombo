@@ -1,6 +1,38 @@
 local Load = select(2, ...)
 local DataToColor = unpack(Load)
 
+local band = bit.band
+
+local UIErrorsFrame = UIErrorsFrame
+local GetGameMessageInfo = GetGameMessageInfo
+local CombatLogGetCurrentEventInfo = CombatLogGetCurrentEventInfo
+local GetSpellInfo = GetSpellInfo
+local GetGossipOptions = GetGossipOptions
+local HasAction = HasAction
+local CanMerchantRepair = CanMerchantRepair
+local GetRepairAllCost = GetRepairAllCost
+local GetMoney = GetMoney
+local RepairAllItems = RepairAllItems
+
+local DeclineGroup = DeclineGroup
+local AcceptGroup = AcceptGroup
+local StaticPopup_Hide = StaticPopup_Hide
+
+local UnitGUID = UnitGUID
+local UnitIsDeadOrGhost = UnitIsDeadOrGhost
+local UnitIsGhost = UnitIsGhost
+local C_Map = C_Map
+local C_DeathInfo = C_DeathInfo
+local DEFAULT_CHAT_FRAME = DEFAULT_CHAT_FRAME
+local RepopMe = RepopMe
+local RetrieveCorpse = RetrieveCorpse
+local GetCorpseRecoveryDelay = GetCorpseRecoveryDelay
+
+local SPELL_FAILED_UNIT_NOT_INFRONT = SPELL_FAILED_UNIT_NOT_INFRONT
+local ERR_BADATTACKFACING = ERR_BADATTACKFACING
+local SPELL_FAILED_MOVING = SPELL_FAILED_MOVING
+local SPELL_FAILED_STUNNED = SPELL_FAILED_STUNNED
+
 local CAST_START = 999998
 local CAST_SUCCESS = 999999
 
@@ -23,27 +55,27 @@ local ignoreErrorList = {
 }
 
 local errorList = {
-    "ERR_BADATTACKFACING", --1 "You are facing the wrong way!";
-    "ERR_SPELL_FAILED_S", --2 -- like a printf 
-    "ERR_SPELL_OUT_OF_RANGE", --3 "Out of range.";
-    "ERR_BADATTACKPOS", --4 "You are too far away!";
-    "ERR_AUTOFOLLOW_TOO_FAR", --5 "Target is too far away.";
-    "SPELL_FAILED_MOVING", --6 "Can't do that while moving";
-    "ERR_SPELL_COOLDOWN",  --7 "Spell is not ready yet."
+    "ERR_BADATTACKFACING", --1 "You are facing the wrong way!"
+    "ERR_SPELL_FAILED_S", --2 -- like a printf
+    "ERR_SPELL_OUT_OF_RANGE", --3 "Out of range."
+    "ERR_BADATTACKPOS", --4 "You are too far away!"
+    "ERR_AUTOFOLLOW_TOO_FAR", --5 "Target is too far away."
+    "SPELL_FAILED_MOVING", --6 "Can't do that while moving"
+    "ERR_SPELL_COOLDOWN", --7 "Spell is not ready yet."
     "ERR_SPELL_FAILED_ANOTHER_IN_PROGRESS", --8 "Another action is in progress"
     "ERR_SPELL_FAILED_STUNNED", -- 9 "Can't do that while stunned"
     "SPELL_FAILED_INTERRUPTED", -- 10 "Interrupted"
     "SPELL_FAILED_ITEM_NOT_READY" -- 11 "Item is not ready yet"
-};
+}
 
 function DataToColor:RegisterEvents()
     DataToColor:RegisterEvent("UI_ERROR_MESSAGE", 'OnUIErrorMessage')
     DataToColor:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED", 'UnfilteredCombatEvent')
-    DataToColor:RegisterEvent('LOOT_CLOSED','OnLootClosed')
-    DataToColor:RegisterEvent('BAG_UPDATE','OnBagUpdate')
-    DataToColor:RegisterEvent('BAG_CLOSED','OnBagUpdate')
-    DataToColor:RegisterEvent('MERCHANT_SHOW','OnMerchantShow')
-    DataToColor:RegisterEvent('MERCHANT_CLOSED','OnMerchantClosed')
+    DataToColor:RegisterEvent('LOOT_CLOSED', 'OnLootClosed')
+    DataToColor:RegisterEvent('BAG_UPDATE', 'OnBagUpdate')
+    DataToColor:RegisterEvent('BAG_CLOSED', 'OnBagUpdate')
+    DataToColor:RegisterEvent('MERCHANT_SHOW', 'OnMerchantShow')
+    DataToColor:RegisterEvent('MERCHANT_CLOSED', 'OnMerchantClosed')
     DataToColor:RegisterEvent('PLAYER_TARGET_CHANGED', 'OnPlayerTargetChanged')
     DataToColor:RegisterEvent('PLAYER_EQUIPMENT_CHANGED', 'OnPlayerEquipmentChanged')
     DataToColor:RegisterEvent('GOSSIP_SHOW', 'OnGossipShow')
@@ -52,6 +84,11 @@ function DataToColor:RegisterEvents()
     DataToColor:RegisterEvent('CORPSE_IN_RANGE', 'CorpseInRangeEvent')
     DataToColor:RegisterEvent('CORPSE_OUT_OF_RANGE', 'CorpseOutOfRangeEvent')
     DataToColor:RegisterEvent('CHAT_MSG_OPENING', 'ChatMessageOpeningEvent')
+    DataToColor:RegisterEvent('UNIT_PET', 'OnPetChanged')
+
+    DataToColor:RegisterEvent('ZONE_CHANGED', 'OnZoneChanged')
+    DataToColor:RegisterEvent('ZONE_CHANGED_INDOORS', 'OnZoneChanged')
+    DataToColor:RegisterEvent('ZONE_CHANGED_NEW_AREA', 'OnZoneChanged')
 end
 
 function DataToColor:OnUIErrorMessage(event, messageType, message)
@@ -60,7 +97,7 @@ function DataToColor:OnUIErrorMessage(event, messageType, message)
     if ignored then
         UIErrorsFrame:AddMessage(message, 0.7, 0.7, 0.7) -- show as grey messasge
     elseif foundMessage and code ~= 0 then
-        DataToColor.uiErrorMessage = code;
+        DataToColor.uiErrorMessage = code
         UIErrorsFrame:AddMessage(message, 0, 1, 0) -- show as green messasge
     else
         UIErrorsFrame:AddMessage(message, 0, 0, 1) -- show as blue message (unknown message)
@@ -78,19 +115,19 @@ function DataToColor:GetErrorCode(messageType, message)
         errorName = GetGameMessageInfo(messageType)
     end
 
-    for i = 1, table.getn(ignoreErrorList), 1 do
+    for i = 1, #ignoreErrorList, 1 do
         if ignoreErrorList[i] == errorName then
-            foundMessage = true;
+            foundMessage = true
             ignored = true
         end
     end
 
     if not ignored and not foundMessage then
-        for i = 1, table.getn(errorList), 1 do
+        for i = 1, #errorList, 1 do
             if errorList[i] == errorName or
-            (_G[errorList[i]] ~= nil and string.find(_G[errorList[i]], message)) then
-                code = i;
-                foundMessage = true;
+                (_G[errorList[i]] ~= nil and string.find(_G[errorList[i]], message)) then
+                code = i
+                foundMessage = true
             end
         end
     end
@@ -101,7 +138,7 @@ function DataToColor:GetErrorCode(messageType, message)
         if string.find(message, SPELL_FAILED_UNIT_NOT_INFRONT) then
             code = 1
             foundMessage = true
-            message = message.." ("..ERR_BADATTACKFACING..")"
+            message = message .. " (" .. ERR_BADATTACKFACING .. ")"
         elseif string.find(message, SPELL_FAILED_MOVING) then
             foundMessage = true
             code = 6
@@ -115,117 +152,162 @@ function DataToColor:GetErrorCode(messageType, message)
 end
 
 local watchedSpells = {
-    [DataToColor.C.Spell.AutoShotId] = function ()
+    [DataToColor.C.Spell.AutoShotId] = function()
         --DataToColor:Print("Auto Shot detected")
         DataToColor.lastAutoShot = DataToColor.globalTime
     end
-  }
+}
 
 local swing_reset_spells = {
     --[[ Maul ]]
-    [132136]=1,
+    [132136] = true,
     --[[ Raptor Strike ]]
-    [132223]=1,
+    [132223] = true,
     --[[ Cleave ]]
-    [132338]=1,
+    [132338] = true,
     --[[ Heroic Strike ]]
-    [132282]=1,
+    [132282] = true,
     --[[ Slam ]]
-    [132340]=1
+    [132340] = true
 }
 
 local miss_type = {
-    ["ABSORB"]=0,
-    ["BLOCK"]=1,
-    ["DEFLECT"]=2,
-    ["DODGE"]=3,
-    ["EVADE"]=4,
-    ["IMMUNE"]=5,
-    ["MISS"]=6,
-    ["PARRY"]=7,
-    ["REFLECT"]=8,
-    ["RESIST"]=9,
+    ["ABSORB"] = 0,
+    ["BLOCK"] = 1,
+    ["DEFLECT"] = 2,
+    ["DODGE"] = 3,
+    ["EVADE"] = 4,
+    ["IMMUNE"] = 5,
+    ["MISS"] = 6,
+    ["PARRY"] = 7,
+    ["REFLECT"] = 8,
+    ["RESIST"] = 9,
 }
 
 function DataToColor:UnfilteredCombatEvent()
     DataToColor:OnCombatEvent(CombatLogGetCurrentEventInfo())
 end
 
+local COMBATLOG_OBJECT_TYPE_NPC = COMBATLOG_OBJECT_TYPE_NPC
+local COMBATLOG_OBJECT_TYPE_PLAYER_OR_PET = COMBATLOG_OBJECT_TYPE_PLAYER + COMBATLOG_OBJECT_TYPE_PET
+
+
 local playerDamageTakenEvents = {
     SWING_DAMAGE = true,
-    SPELL_DAMAGE = true,
+    SPELL_DAMAGE = true
+}
+
+local playerSpellCastSuccess = {
+    SPELL_CAST_SUCCESS = true
+}
+
+local playerSpellCastStarted = {
+    SPELL_CAST_START = true
+}
+
+local playerSpellCastFinished = {
+    SPELL_CAST_SUCCESS = true,
+    SPELL_CAST_FAILED = true
+}
+
+local playerSpellFailed = {
+    SPELL_CAST_FAILED = true
+}
+
+local playerDamageDone = {
+    SWING_DAMAGE = true,
+    RANGE_DAMAGE = true,
+    SPELL_DAMAGE = true
+}
+
+local playerDamageMiss = {
+    SWING_MISSED = true,
+    RANGE_MISSED = true,
+    SPELL_MISSED = true
+}
+
+local playerMeleeSwing = {
+    SWING_DAMAGE = true,
+    SWING_MISSED = true
+}
+
+local unitDied = {
+    UNIT_DIED = true
 }
 
 function DataToColor:OnCombatEvent(...)
-    local _, subEvent, _, sourceGUID, _, _, _, destGUID, _, _, _, spellId, _, _ = ...
+    local _, subEvent, _, sourceGUID, _, _, _, destGUID, _, destFlags, _, spellId, _, _ = ...
     --print(...)
 
-    if playerDamageTakenEvents[subEvent] and (destGUID == DataToColor.playerGUID or destGUID == DataToColor.petGUID) then
+    if playerDamageTakenEvents[subEvent] and
+        band(destFlags, COMBATLOG_OBJECT_TYPE_PLAYER_OR_PET) and
+        (destGUID == DataToColor.playerGUID or destGUID == DataToColor.petGUID) then
         DataToColor.CombatDamageTakenQueue:push(DataToColor:getGuidFromUUID(sourceGUID))
+        --DataToColor:Print("Damage Taken ", sourceGUID)
     end
 
     if sourceGUID == DataToColor.playerGUID then
-        if subEvent == "SPELL_CAST_SUCCESS" then
+        if playerSpellCastSuccess[subEvent] then
             if watchedSpells[spellId] then watchedSpells[spellId]() end
 
             local _, _, icon = GetSpellInfo(spellId)
             if swing_reset_spells[icon] then
-                --DataToColor:Print("Special Melee Swing detected")
+                --DataToColor:Print("Special Melee Swing detected ", spellId)
                 DataToColor.lastMainHandMeleeSwing = DataToColor.globalTime
             end
         end
 
-        if string.find(subEvent, "_CAST_START") then
+        if playerSpellCastStarted[subEvent] then
             DataToColor.lastCastEvent = CAST_START
             DataToColor.lastCastSpellId = spellId
-            --print(CombatLogGetCurrentEventInfo())
-            --print("_CAST_START "..spellId)
+            --DataToColor:Print(subEvent, " ", spellId)
         end
 
-        if string.find(subEvent, "_CAST_SUCCESS") or string.find(subEvent, "_CAST_FAILED") then
-            --print(CombatLogGetCurrentEventInfo())
+        if playerSpellCastFinished[subEvent] then
             DataToColor.lastCastSpellId = spellId
 
-            if string.find(subEvent, "_CAST_FAILED") then
+            if playerSpellFailed[subEvent] then
                 --local lastCastEvent = DataToColor.lastCastEvent
                 local failedType = select(15, ...)
                 DataToColor.lastCastEvent = DataToColor:GetErrorCode(nil, failedType)
-                --print(lastCastEvent.." -> "..DataToColor.lastCastEvent.." "..failedType.." "..spellId)
+                --DataToColor:Print(subEvent, " ", lastCastEvent, " -> ", DataToColor.lastCastEvent, " ", failedType, " ", spellId)
             else
                 DataToColor.lastCastEvent = CAST_SUCCESS
+                --DataToColor:Print(subEvent, " ", spellId)
             end
         end
 
         -- matches SWING_ RANGE_ SPELL_ but not SPELL_PERIODIC
-        if not string.find(subEvent, "SPELL_PERIODIC") and
-            (string.find(subEvent, "_DAMAGE") or string.find(subEvent, "_MISSED")) then
+        if playerDamageDone[subEvent] or playerDamageMiss[subEvent] then
             DataToColor.CombatDamageDoneQueue:push(DataToColor:getGuidFromUUID(destGUID))
+            --DataToColor:Print(subEvent, " ", destGUID)
 
-            if string.find(subEvent, "_MISSED") then
+            if playerDamageMiss[subEvent] then
                 local missType = select(-2, ...)
                 if type(missType) == "boolean" then -- some spells has 3 args like Charge Stun
                     missType = select(-3, ...)
                 end
                 DataToColor.CombatMissTypeQueue:push(miss_type[missType])
+                --DataToColor:Print(subEvent, " ", miss_type[missType])
             end
         end
 
-        if string.find(subEvent, "SWING_") then
+        if playerMeleeSwing[subEvent] then
             local _, _, _, _, _, _, _, _, _, isOffHand = select(12, ...)
             if not isOffHand then
-                --DataToColor:Print("Normal Melee Swing detected")
+                --DataToColor:Print("Normal Main Hand Melee Swing detected")
                 DataToColor.lastMainHandMeleeSwing = DataToColor.globalTime
             end
         end
     end
 
-    if subEvent == "UNIT_DIED" then
-        if string.find(destGUID, "Creature") then
-            --print(CombatLogGetCurrentEventInfo())
+    if unitDied[subEvent] then
+        --if string.find(destGUID, "Creature") then
+        if band(destFlags, COMBATLOG_OBJECT_TYPE_NPC) > 0 then
             DataToColor.CombatCreatureDiedQueue:push(DataToColor:getGuidFromUUID(destGUID))
-            --print("v_killing blow " .. destGUID .. " " .. DataToColor.CombatCreatureDiedQueue .. " " .. destName)
+            --DataToColor:Print(subEvent, " ", destGUID, " ", DataToColor:getGuidFromUUID(destGUID))
         else
-            --print("i_killing blow " .. destGUID .. " " .. destName)
+            --DataToColor:Print(subEvent, " ignored ", destGUID)
         end
     end
 end
@@ -236,7 +318,7 @@ function DataToColor:OnLootClosed(event)
 end
 
 function DataToColor:OnBagUpdate(event, containerID)
-    if containerID >= 0 and containerID <=4 then
+    if containerID >= 0 and containerID <= 4 then
         DataToColor.bagQueue:push(containerID)
         DataToColor:InitInventoryQueue(containerID)
 
@@ -277,10 +359,10 @@ function DataToColor:OnGossipShow(event)
     -- [1] localized name
     -- [2] gossip_type
     local GossipOptions = { GetGossipOptions() }
-    local count = table.getn(GossipOptions) / 2
+    local count = #GossipOptions / 2
     for k, v in pairs(GossipOptions) do
         if k % 2 == 0 then
-            DataToColor.gossipQueue:push(10000 * count + 100 * (k/2) + DataToColor.C.Gossip[v])
+            DataToColor.gossipQueue:push(10000 * count + 100 * (k / 2) + DataToColor.C.Gossip[v])
         end
     end
     DataToColor.gossipQueue:push(GOSSIP_END)
@@ -311,33 +393,22 @@ function DataToColor:ChatMessageOpeningEvent(event, ...)
     local function isempty(s)
         return s == nil or s == ''
     end
+
     if isempty(playerName) and isempty(playerName2) then
         DataToColor.lastCastEvent = CAST_SUCCESS
         DataToColor.uiErrorMessage = CAST_SUCCESS
     end
 end
 
-DataToColor.playerInteractIterator = 0
+function DataToColor:OnPetChanged(event, unit)
+    if unit == DataToColor.C.unitPlayer then
+        DataToColor.petGUID = UnitGUID(DataToColor.C.unitPet)
+    end
+end
 
--- List of talents that will be trained
-local talentList = {
-    "Improved Frostbolt",
-    "Ice Shards",
-    "Frostbite",
-    "Piercing Ice",
-    "Improved Frost Nova",
-    "Shatter",
-    "Arctic Reach",
-    "Ice Block",
-    "Ice Barrier",
-    "Winter's Chill",
-    "Frost Channeling",
-    "Frost Warding",
-    "Elemental Precision",
-    "Permafrost",
-    "Improved Fireball",
-    "Improved Fire Blast"
-}
+function DataToColor:OnZoneChanged(event)
+    DataToColor.map = C_Map.GetBestMapForUnit(DataToColor.C.unitPlayer)
+end
 
 local CORPSE_RETRIEVAL_DISTANCE = 40
 
@@ -356,156 +427,33 @@ function DataToColor:HandlePlayerInteractionEvents()
     if DataToColor.DATA_CONFIG.AUTO_REPAIR_ITEMS then
         DataToColor:RepairItems()
     end
-    -- Handles learning talents, only works after level 10
-    if DataToColor.DATA_CONFIG.AUTO_LEARN_TALENTS then
-        --DataToColor:LearnTalents()
-    end
-    -- Handles train new spells and talents
-    if DataToColor.DATA_CONFIG.AUTO_TRAIN_SPELLS then
-        --DataToColor:CheckTrainer()  
-    end
     -- Resurrect player
     if DataToColor.DATA_CONFIG.AUTO_RESURRECT then
         DataToColor:ResurrectPlayer()
     end
-
-    DataToColor:IncrementIterator();
 end
 
 -- Declines/Accepts Party Invites.
 function DataToColor:HandlePartyInvite()
-    -- Declines party invite if configured to decline
-    if DataToColor.DATA_CONFIG.DECLINE_PARTY_REQUESTS then
-        DeclineGroup()
-    else if DataToColor.DATA_CONFIG.ACCEPT_PARTY_REQUESTS then
-            AcceptGroup()
+    if DataToColor.globalTime % 50 == 1 then
+        -- Declines party invite if configured to decline
+        if DataToColor.DATA_CONFIG.DECLINE_PARTY_REQUESTS then
+            DeclineGroup()
+        else if DataToColor.DATA_CONFIG.ACCEPT_PARTY_REQUESTS then
+                AcceptGroup()
+            end
         end
+        -- Hides the party invite pop-up regardless of whether we accept it or not
+        StaticPopup_Hide("PARTY_INVITE")
     end
-    -- Hides the party invite pop-up regardless of whether we accept it or not
-    StaticPopup_Hide("PARTY_INVITE")
 end
 
 -- Repairs items if they are broken
 function DataToColor:RepairItems()
-    if CanMerchantRepair() and GetRepairAllCost() > 0 then
-        if GetMoney() >= GetRepairAllCost() then
+    if DataToColor.globalTime % 50 == 1 then
+        local cost = GetRepairAllCost()
+        if CanMerchantRepair() and cost > 0 and GetMoney() >= cost then
             RepairAllItems()
-        end
-    end
-end
-
--- Automatically learns predefined talents
-function DataToColor:LearnTalents()
-    if UnitCharacterPoints(DataToColor.C.unitPlayer) > 0 then
-        -- Grabs global list of talents we want to learn
-        for i = 0, table.getn(talentList), 1 do
-            -- Iterates through each talent tab (e.g. "Arcane, Fire, Frost")
-            for j = 0, 3, 1 do
-                -- Loops through all of the talents in each individual tab
-                for k = 1, GetNumTalents(j), 1 do
-                    -- Grabs API info of a specified talent index
-                    local name, iconPath, tier, column, currentRank, maxRank, isExceptional, meetsPrereq, previewRank, meetsPreviewPrereq = GetTalentInfo(j, k)
-                    local tabId, tabName, tabPointsSpent, tabDescription, tabIconTexture = GetTalentTabInfo(j)
-                    local _, _, isLearnable = GetTalentPrereqs(j, k)
-                    -- DEFAULT_CHAT_FRAME:AddMessage("hello" .. tier)
-                    -- Runs API call to learn specified talent. Skips over it if we already have the max rank.
-                    if name == talentList[i] and currentRank ~= maxRank and meetsPrereq then
-                        -- Checks if we have spent enough points in the prior tiers in order to purchase talent. Otherwie moves on to next possible spell
-                        if tabPointsSpent ~= nil and tabPointsSpent >= (tier * 5) - 5 then
-                            LearnTalent(j, k)
-                            return
-                        end
-                    end
-                end
-            end
-        end
-    end
-end
-
--- List desired spells and professions to be trained here.
-function ValidSpell(spell)
-    local spellList = {
-        "Conjure Food",
-        "Conjure Water",
-        "Conjure Mana Ruby",
-        "Mana Shield",
-        "Arcane Intellect",
-        "Fire Blast",
-        "Fireball",
-        "Frostbolt",
-        "Counterspell",
-        "Ice Barrier",
-        "Evocation",
-        "Frost Armor",
-        "Frost Nova",
-        "Ice Armor",
-        "Remove Lesser Curse",
-        "Blink",
-        "Apprentice Skinning",
-        "Journeyman Skinning",
-        "Expert Skinning",
-        "Artisan Skinning",
-        "Apprentice Fishing",
-        "Journeyman Fishing"
-    }
-    -- Loops through all spells to see if we have a matching spells with the one passed in
-    for i = 0, table.getn(spellList), 1 do
-        if spellList[i] == spell then
-            return true
-        end
-    end
-    return false
-end
-
-function DataToColor:IncrementIterator()
-    DataToColor.playerInteractIterator = DataToColor.playerInteractIterator + 1
-end 
-
--- Used purely for training spells and professions
-function DataToColor:CheckTrainer()
-    DataToColor.playerInteractIterator = DataToColor.playerInteractIterator + 1
-    if DataToColor:Modulo(DataToColor.playerInteractIterator, 30) == 1 then
-        -- First checks that the trainer gossip window is open
-        -- DEFAULT_CHAT_FRAME:AddMessage(GetTrainerServdiceInfo(1))
-        if GetTrainerServiceInfo(1) ~= nil and DataToColor.DATA_CONFIG.AUTO_TRAIN_SPELLS then
-            -- LPCONFIG.AUTO_TRAIN_SPELLS = false
-            local allAvailableOptions = GetNumTrainerServices()
-            local money = GetMoney()
-            local level = UnitLevel(DataToColor.C.unitPlayer)
-            
-            -- Loops through every spell on the list and checks if we
-            -- 1) Have the level to train that spell
-            -- 2) Have the money want to train that spell
-            -- 3) Want to train that spell
-            for i = 1, allAvailableOptions, 1 do
-                local spell = GetTrainerServiceInfo(i)
-                if spell ~= nil and ValidSpell(spell) then
-                    if GetTrainerServiceLevelReq(i) <= level then
-                        if GetTrainerServiceCost(i) <= money then
-                            -- DEFAULT_CHAT_FRAME:AddMessage(" buying spell" .. tostring(i) )
-                            BuyTrainerService(i)
-                            -- Closes skinning trainer, fishing trainer menu, etc.
-                            -- Closes after one profession purchase. Impossible to buy profession skills concurrently.
-                            if IsTradeskillTrainer() then
-                                CloseTrainer()
-                                -- LPCONFIG.AUTO_TRAIN_SPELLS = true
-                            end
-                            -- DEFAULT_CHAT_FRAME:AddMessage(allAvailableOptions .. tostring(i) )
-                            -- if not (allAvailableOptions == i) then
-                            -- TrainSpells()
-                            return
-                            -- end
-                            -- An error messages for the rare case where we don't have enough money for a spell but have the level for it.
-                        else if GetTrainerServiceCost(i) > money then
-                            end
-                        end
-                    end
-                end
-            end
-            -- DEFAULT_CHAT_FRAME:AddMessage('between')
-            -- Automatically closes menu after we have bought all spells we need to buy
-            --CloseTrainer()
-            -- LPCONFIG.AUTO_TRAIN_SPELLS = true
         end
     end
 end
@@ -513,24 +461,24 @@ end
 --the x and y is 0 if not dead
 --runs the RetrieveCorpse() function to ressurrect
 function DataToColor:ResurrectPlayer()
-    if DataToColor:Modulo(DataToColor.playerInteractIterator, 700) == 1 then
+    if DataToColor.globalTime % 700 == 1 then
         if UnitIsDeadOrGhost(DataToColor.C.unitPlayer) then
-            
+
             -- Accept Release Spirit immediately after dying
             if not UnitIsGhost(DataToColor.C.unitPlayer) and UnitIsGhost(DataToColor.C.unitPlayer) ~= nil then
                 RepopMe()
             end
             if UnitIsGhost(DataToColor.C.unitPlayer) then
-                local map = C_Map.GetBestMapForUnit(DataToColor.C.unitPlayer)
-                if C_DeathInfo.GetCorpseMapPosition(map) ~= nil then
-                    local cX, cY = C_DeathInfo.GetCorpseMapPosition(map):GetXY()
-                    local x, y = DataToColor:GetCurrentPlayerPosition()
-                    -- Waits so that we are in range of specified retrieval distance, and ensures there is no delay timer before attemtping to resurrect
-                    if math.abs(cX - x) < CORPSE_RETRIEVAL_DISTANCE / 1000 and math.abs(cY - y) < CORPSE_RETRIEVAL_DISTANCE / 1000 and GetCorpseRecoveryDelay() == 0 then
-                        DEFAULT_CHAT_FRAME:AddMessage('Attempting to retrieve corpse')
-                        -- Accept Retrieve Corpsse when near enough
-                        RetrieveCorpse()
-                    end
+                local cX, cY = DataToColor:GetCorpsePosition()
+                local x, y = DataToColor:GetPosition()
+                -- Waits so that we are in range of specified retrieval distance, and ensures there is no delay timer before attemtping to resurrect
+                if cX ~= 0 and cY ~= 0 and
+                    math.abs(cX - x) < CORPSE_RETRIEVAL_DISTANCE / 1000 and
+                    math.abs(cY - y) < CORPSE_RETRIEVAL_DISTANCE / 1000 and
+                    GetCorpseRecoveryDelay() == 0 then
+                    DEFAULT_CHAT_FRAME:AddMessage('Attempting to retrieve corpse')
+                    -- Accept Retrieve Corpsse when near enough
+                    RetrieveCorpse()
                 end
             end
         end
