@@ -1,4 +1,6 @@
-﻿@inject IBotController botController
+﻿@using System.Reflection
+
+@inject IBotController botController
 @inject IAddonReader addonReader
 
 @implements IDisposable
@@ -117,25 +119,25 @@
                 }
                 else if (value is AddonBits addonBits)
                 {
-                    var lst = GetPropertyValues(addonBits);
+                    var lst = GetBoolFunctionValues(addonBits);
                     if (lst != null && lst.Count > 0)
                         propList.AddRange(lst);
                 }
                 else if (value is SpellInRange spellInRange)
                 {
-                    var lst = GetPropertyValues(spellInRange);
+                    var lst = GetBoolFunctionValues(spellInRange);
                     if (lst != null && lst.Count > 0)
                         propList.AddRange(lst);
                 }
                 else if (value is BuffStatus buffStatus)
                 {
-                    var lst = GetPropertyValues(buffStatus);
+                    var lst = GetBoolFunctionValues(buffStatus);
                     if (lst != null && lst.Count > 0)
                         propList.AddRange(lst);
                 }
                 else if (value is TargetDebuffStatus targetDebuffStatus)
                 {
-                    var lst = GetPropertyValues(targetDebuffStatus);
+                    var lst = GetBoolFunctionValues(targetDebuffStatus);
                     if (lst != null && lst.Count > 0)
                         propList.AddRange(lst);
                 }
@@ -147,6 +149,27 @@
                 }
             }
         }
+        return propList;
+    }
+
+    static List<ObjectField> GetBoolFunctionValues(object obj)
+    {
+        List<ObjectField> propList = new List<ObjectField>();
+        string objName = obj.ToString() ?? "";
+        if (objName.Length > 0) objName += ".";
+
+        foreach (var minfo in obj.GetType().GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance))
+        {
+            if(minfo.ReturnType != typeof(bool))
+                continue;
+
+            ParameterInfo[] parameters = minfo.GetParameters();
+            if (parameters.Length == 0)
+            {
+                propList.Add(new ObjectField() { Name = objName + minfo.Name, Value = minfo.Invoke(obj, null)!.ToString() ?? "" });
+            }
+        }
+
         return propList;
     }
 
