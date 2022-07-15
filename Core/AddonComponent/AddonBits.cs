@@ -1,4 +1,4 @@
-namespace Core
+﻿namespace Core
 {
     public class AddonBits
     {
@@ -30,7 +30,7 @@ namespace Core
         public bool TargetIsDead() => v1.IsBitSet(1);
         public bool DeadStatus() => v1.IsBitSet(2);
         public bool TalentPoints() => v1.IsBitSet(3);
-        public bool IsInDeadZoneRange() => v1.IsBitSet(4);
+        public bool TargetInTradeRange() => v1.IsBitSet(4);
         public bool TargetCanBeHostile() => v1.IsBitSet(5);
         public bool HasPet() => v1.IsBitSet(6);
         public bool MainHandEnchant_Active() => v1.IsBitSet(7);
