@@ -302,7 +302,6 @@ function DataToColor:OnCombatEvent(...)
     end
 
     if unitDied[subEvent] then
-        --if string.find(destGUID, "Creature") then
         if band(destFlags, COMBATLOG_OBJECT_TYPE_NPC) > 0 then
             DataToColor.CombatCreatureDiedQueue:push(DataToColor:getGuidFromUUID(destGUID))
             --DataToColor:Print(subEvent, " ", destGUID, " ", DataToColor:getGuidFromUUID(destGUID))
