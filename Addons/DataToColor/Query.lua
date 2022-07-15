@@ -104,9 +104,8 @@ function DataToColor:Bits1()
         base2(UnitIsDead(DataToColor.C.unitTarget) and 1 or 0, 1) +
         base2(UnitIsDeadOrGhost(DataToColor.C.unitPlayer) and 1 or 0, 2) +
         base2(UnitCharacterPoints(DataToColor.C.unitPlayer) > 0 and 1 or 0, 3) +
-        base2(UnitExists(DataToColor.C.unitTarget) and CheckInteractDistance(DataToColor.C.unitTarget, 2) and 1 or 0, 4)
-        +
-        base2(DataToColor:targetHostile(), 5) +
+        base2(UnitExists(DataToColor.C.unitTarget) and CheckInteractDistance(DataToColor.C.unitTarget, 2) and 1 or 0, 4) +
+        base2(DataToColor:isHostile(DataToColor.C.unitTarget), 5) +
         base2(UnitIsVisible(DataToColor.C.unitPet) and not UnitIsDead(DataToColor.C.unitPet) and 1 or 0, 6) +
         base2(mainHandEnchant and 1 or 0, 7) +
         base2(offHandEnchant and 1 or 0, 8) +
@@ -128,12 +127,16 @@ function DataToColor:Bits1()
 end
 
 function DataToColor:Bits2()
-    return base2(GetMirrorTimerInfo(2) == DataToColor.C.MIRRORTIMER.BREATH and 1 or 0, 0) +
+    return
+        base2(GetMirrorTimerInfo(2) == DataToColor.C.MIRRORTIMER.BREATH and 1 or 0, 0) +
         base2(DataToColor.corpseInRange, 1) +
         base2(IsIndoors() and 1 or 0, 2) +
         base2(UnitExists(DataToColor.C.unitFocus) and 1 or 0, 3) +
-        base2(UnitExists(DataToColor.C.unitFocusTarget) and 1 or 0, 4) +
-        base2(UnitAffectingCombat(DataToColor.C.unitFocusTarget) and 1 or 0, 5)
+        base2(UnitAffectingCombat(DataToColor.C.unitFocus) and 1 or 0, 4) +
+        base2(UnitExists(DataToColor.C.unitFocusTarget) and 1 or 0, 5) +
+        base2(UnitAffectingCombat(DataToColor.C.unitFocusTarget) and 1 or 0, 6) +
+        base2(DataToColor:isHostile(DataToColor.C.unitFocusTarget), 7) +
+        base2(UnitExists(DataToColor.C.unitFocusTarget) and CheckInteractDistance(DataToColor.C.unitFocusTarget, 2) and 1 or 0, 8)
 end
 
 function DataToColor:CustomTrigger(t)
@@ -244,8 +247,8 @@ end
 
 --
 
-function DataToColor:targetHostile()
-    local hostile = UnitReaction(DataToColor.C.unitPlayer, DataToColor.C.unitTarget)
+function DataToColor:isHostile(unit)
+    local hostile = UnitReaction(DataToColor.C.unitPlayer, unit)
     if hostile ~= nil and hostile <= 4 then
         return 1
     end
