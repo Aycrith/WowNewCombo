@@ -18,17 +18,40 @@ namespace Core.Goals
             this.wait = wait;
 
             AddPrecondition(GoapKey.hasfocus, true);
-            AddPrecondition(GoapKey.focustargetincombat, true);
+            AddPrecondition(GoapKey.focushastarget, true);
+        }
+
+        public override void OnEnter()
+        {
+            input.TargetFocus();
+            wait.Update();
         }
 
         public override void Update()
         {
-            input.TargetFocus();
-            wait.Update();
-            input.TargetOfTarget();
-            wait.Update();
+            if (playerReader.Bits.FocusTargetCanBeHostile())
+            {
+                if (playerReader.Bits.FocusTargetInCombat())
+                {
+                    input.TargetFocus();
+                    input.TargetOfTarget();
+                    wait.Update();
+                }
+            }
+            else if (playerReader.Bits.FocusTargetInTradeRange())
+            {
+                input.TargetFocus();
+                input.TargetOfTarget();
+                input.Interact();
+                wait.Update();
+            }
 
-            if (!playerReader.Bits.TargetCanBeHostile())
+            wait.Update();
+        }
+
+        public override void OnExit()
+        {
+            if (!playerReader.Bits.FocusHasTarget())
             {
                 input.ClearTarget();
                 wait.Update();

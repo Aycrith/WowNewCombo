@@ -215,7 +215,7 @@ namespace Core.GOAP
                 { GoapKey.producedcorpse, State.LastCombatKillCount > 0 },
 
                 { GoapKey.hasfocus, playerReader.Bits.HasFocus() },
-                { GoapKey.focustargetincombat, playerReader.Bits.FocusHasTarget() && playerReader.Bits.FocusHasTargetInCombat() },
+                { GoapKey.focushastarget, playerReader.Bits.FocusHasTarget() },
 
                 // these hold their state
                 { GoapKey.consumecorpse, State.ShouldConsumeCorpse },
