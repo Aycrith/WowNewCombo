@@ -170,6 +170,7 @@ function CreateTargetDebuffList()
     elseif DataToColor.C.CHARACTER_CLASS == "PALADIN" then
         DataToColor.S.targetDebuffs[0] = { "Judgement of the Crusader", [135924] = 1 }
         DataToColor.S.targetDebuffs[1] = { "Hammer of Justice", [135963] = 1 }
+        DataToColor.S.targetDebuffs[2] = { "Judgement of Wisdom", [135960] = 1 }
     elseif DataToColor.C.CHARACTER_CLASS == "MAGE" then
         DataToColor.S.targetDebuffs[0] = { "Frostbite", [135842] = 1 }
         DataToColor.S.targetDebuffs[1] = { "Slow", [136091] = 1 }
