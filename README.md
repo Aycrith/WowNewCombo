@@ -1122,6 +1122,9 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | Druid | `"Moonfire"` |
 | Druid | `"Entangling Roots"` |
 | Druid | `"Rake"` |
+| Paladin | `"Judgement of the Crusader"` |
+| Paladin | `"Hammer of Justice"` |
+| Paladin | `"Judgement of Wisdom"` |
 | Mage | `"Frostbite"` |
 | Mage | `"Slow"` |
 | Priest | `"Shadow Word: Pain"` |
