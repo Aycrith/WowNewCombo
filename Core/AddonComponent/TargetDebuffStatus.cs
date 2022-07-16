@@ -35,6 +35,7 @@
         // Paladin
         public bool JudgementoftheCrusader() => IsBitSet(0);
         public bool HammerOfJustice() => IsBitSet(1);
+        public bool JudgementofWisdom() => IsBitSet(2);
 
         // Mage
         public bool Frostbite() => IsBitSet(0);

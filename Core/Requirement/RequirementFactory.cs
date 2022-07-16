@@ -223,6 +223,7 @@ namespace Core
                 // Paladin Debuff
                 { "Judgement of the Crusader", playerReader.TargetDebuffs.JudgementoftheCrusader },
                 { "Hammer of Justice", playerReader.TargetDebuffs.HammerOfJustice },
+                { "Judgement of Wisdom", playerReader.TargetDebuffs.JudgementofWisdom },
 
                 // Warrior Debuff
                 { "Rend", playerReader.TargetDebuffs.Rend },
