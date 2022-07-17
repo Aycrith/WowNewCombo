@@ -10,7 +10,7 @@ namespace Core
 {
     public sealed class FrameConfigurator : IDisposable
     {
-        private const int MAX_HEIGHT = 25;
+        private const int MAX_HEIGHT = 25; // this one just arbitrary number for sanity check
 
         private readonly ILogger logger;
         private readonly WowProcess wowProcess;
@@ -93,7 +93,7 @@ namespace Core
                             if (!size.IsEmpty &&
                                 size.Width <= screenRect.Size.Width &&
                                 size.Height <= screenRect.Size.Height &&
-                                size.Height <= MAX_HEIGHT) // this one just arbitrary number for sanity check
+                                size.Height <= MAX_HEIGHT)
                             {
                                 Bitmap bitmap = wowScreen.GetBitmap(size.Width, size.Height);
                                 UpdatePreview(bitmap);
