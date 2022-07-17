@@ -108,12 +108,12 @@ namespace Core.Goals
                     }
 
                     // wait until start casting
-                    wait.Till(500, playerReader.IsCasting);
+                    wait.Till(CastingHandler.SpellQueueTimeMs + playerReader.NetworkLatency.Value, playerReader.IsCasting);
                     Log("Started casting...");
 
                     playerReader.LastUIError = UI_ERROR.NONE;
 
-                    wait.Till(3000, CastFinishedOrInterrupted);
+                    wait.Till(CastingHandler.GatherCastTimeMs + playerReader.NetworkLatency.Value, CastFinishedOrInterrupted);
 
                     if (playerReader.LastUIError != UI_ERROR.ERR_SPELL_FAILED_S)
                     {
@@ -149,6 +149,7 @@ namespace Core.Goals
             if (!wait.Till(1000, LootChanged))
             {
                 Log("Loot Successfull");
+                wait.Till(playerReader.NetworkLatency.Value / 2, Wait.None);
             }
             else
             {

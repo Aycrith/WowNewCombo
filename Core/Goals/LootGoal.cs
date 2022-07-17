@@ -32,6 +32,7 @@ namespace Core.Goals
         private readonly List<Vector3> corpseLocations = new();
 
         private int lastLoot;
+        private bool gatherCorpse;
 
         public LootGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, StopMoving stopMoving, ClassConfiguration classConfiguration, NpcNameTargeting npcNameTargeting, CombatUtil combatUtil, PlayerDirection playerDirection)
             : base(nameof(LootGoal))
@@ -75,6 +76,7 @@ namespace Core.Goals
             npcNameTargeting.ChangeNpcType(NpcNames.Corpse);
 
             lastLoot = playerReader.LastLootTime;
+            gatherCorpse = false;
 
             stopMoving.Stop();
             combatUtil.Update();
@@ -167,6 +169,7 @@ namespace Core.Goals
 
         private bool FoundByCursor()
         {
+            wait.Till(playerReader.NetworkLatency.Value / 2, Wait.None);
             npcNameTargeting.WaitForUpdate();
             if (!npcNameTargeting.FindBy(CursorType.Loot))
             {
@@ -216,23 +219,22 @@ namespace Core.Goals
             if (!classConfiguration.GatherCorpse)
                 return;
 
-            bool targetGatherable = false;
             if (areaDb.CurrentArea != null)
             {
                 if (classConfiguration.Skin)
-                    targetGatherable = Array.BinarySearch(areaDb.CurrentArea.skinnable, playerReader.TargetId) >= 0;
-                if (!targetGatherable && classConfiguration.Herb)
-                    targetGatherable = Array.BinarySearch(areaDb.CurrentArea.gatherable, playerReader.TargetId) >= 0;
-                if (!targetGatherable && classConfiguration.Mine)
-                    targetGatherable = Array.BinarySearch(areaDb.CurrentArea.minable, playerReader.TargetId) >= 0;
-                if (!targetGatherable && classConfiguration.Salvage)
-                    targetGatherable = Array.BinarySearch(areaDb.CurrentArea.salvegable, playerReader.TargetId) >= 0;
+                    gatherCorpse = Array.BinarySearch(areaDb.CurrentArea.skinnable, playerReader.TargetId) >= 0;
+                if (!gatherCorpse && classConfiguration.Herb)
+                    gatherCorpse = Array.BinarySearch(areaDb.CurrentArea.gatherable, playerReader.TargetId) >= 0;
+                if (!gatherCorpse && classConfiguration.Mine)
+                    gatherCorpse = Array.BinarySearch(areaDb.CurrentArea.minable, playerReader.TargetId) >= 0;
+                if (!gatherCorpse && classConfiguration.Salvage)
+                    gatherCorpse = Array.BinarySearch(areaDb.CurrentArea.salvegable, playerReader.TargetId) >= 0;
             }
 
-            Log($"Should gather {playerReader.TargetId} ? {targetGatherable}");
-            AddEffect(GoapKey.shouldgather, targetGatherable);
+            Log($"Should gather {playerReader.TargetId} ? {gatherCorpse}");
+            AddEffect(GoapKey.shouldgather, gatherCorpse);
 
-            SendGoapEvent(new GoapStateEvent(GoapKey.shouldgather, targetGatherable));
+            SendGoapEvent(new GoapStateEvent(GoapKey.shouldgather, gatherCorpse));
         }
 
         private void GoalExit()
@@ -240,6 +242,10 @@ namespace Core.Goals
             if (!wait.Till(1000, LootChanged))
             {
                 Log("Loot Successfull");
+                if (gatherCorpse)
+                {
+                    wait.Till(playerReader.NetworkLatency.Value / 2, Wait.None);
+                }
             }
             else
             {
