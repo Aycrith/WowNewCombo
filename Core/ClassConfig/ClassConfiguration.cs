@@ -276,11 +276,7 @@ namespace Core
             }
             if (KeyboardOnly)
             {
-<<<<<<< HEAD
                 logger.LogWarning($"{nameof(KeyboardOnly)} mode is enabled. The bot will not try to utilize your mouse. {nameof(GatherCorpse)} will be disabled and the npc target function will be limited.");
-=======
-                logger.LogWarning("KeyboardOnly mode is enabled. The bot will not try to utilize your mouse. Gathering will be disabled and the npc target function will be limited.");
->>>>>>> e2c5b1d9d3597052cb73eb5bf301e4cf19d80672
                 Skin = false;
                 Mine = false;
                 Herb = false;
