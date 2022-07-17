@@ -27,6 +27,7 @@ namespace CoreTests
         public void Dispose()
         {
             wowScreen.Dispose();
+            wowProcess.Dispose();
         }
 
         public void Mouse_Movement()

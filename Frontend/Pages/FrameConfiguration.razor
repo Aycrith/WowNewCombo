@@ -3,6 +3,7 @@
 @inject ILogger logger
 @inject NavigationManager NavigationManager
 @inject AddonConfigurator addonConfigurator
+@inject FrameConfigurator frameConfigurator
 @inject DataConfig dataConfig
 
 @implements IDisposable
@@ -140,7 +141,6 @@
 @code {
 
     private AddonConfig addonConfig = null!;
-    private FrameConfigurator frameConfigurator = null!;
 
     private bool saved = false;
     private bool manual { get; set; } = false;
@@ -151,8 +151,6 @@
     protected override void OnInitialized()
     {
         addonConfig = addonConfigurator.Config;
-
-        frameConfigurator = new FrameConfigurator(logger, addonConfigurator);
         frameConfigurator.OnUpdate += OnUpdate;
     }
 

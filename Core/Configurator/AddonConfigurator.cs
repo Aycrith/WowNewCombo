@@ -244,9 +244,9 @@ namespace Core
 
         public void FindPathByExecutable()
         {
-            if (wowProcess.WarcraftProcess != null)
+            if (wowProcess.Process != null)
             {
-                Config.InstallPath = ExecutablePath.Get(wowProcess.WarcraftProcess);
+                Config.InstallPath = ExecutablePath.Get(wowProcess.Process);
                 if (!string.IsNullOrEmpty(Config.InstallPath))
                 {
                     logger.LogInformation($"{nameof(Config)}.{nameof(Config.InstallPath)} - found running instance: '{Config.InstallPath}'");
