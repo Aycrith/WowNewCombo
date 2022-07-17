@@ -11,28 +11,6 @@ using CommandLine;
 
 namespace HeadlessServer
 {
-    public class Options
-    {
-        [Value(0, MetaName = "ClassConfig file", Required = true, HelpText = "ClassConfiguration file example: Warrior_1.json")]
-        public string? ClassConfig { get; set; }
-
-        [Option('m', "mode", Default = nameof(StartupConfigPathing.Types.Local), Required = false,
-            HelpText = $"PPather service: {nameof(StartupConfigPathing.Types.Local)} | {nameof(StartupConfigPathing.Types.RemoteV1)} | {nameof(StartupConfigPathing.Types.RemoteV3)}")]
-        public string? Mode { get; set; }
-
-        [Option("hostv1", Default = "localhost", Required = false, HelpText = $"PPather Remote V1 host")]
-        public string? Hostv1 { get; set; }
-
-        [Option("portv1", Default = 5001, Required = false, HelpText = $"PPather Remote V1 port")]
-        public int Portv1 { get; set; }
-
-        [Option("hostv3", Default = "127.0.0.1", Required = false, HelpText = $"PPather Remote V3 host")]
-        public string? Hostv3 { get; set; }
-
-        [Option("portv3", Default = 47111, Required = false, HelpText = $"PPather Remote V3 port")]
-        public int Portv3 { get; set; }
-    }
-
     internal class Program
     {
         private static void Main(string[] args)
@@ -48,7 +26,7 @@ namespace HeadlessServer
             Log.Logger = config.CreateLogger();
             Log.Logger.Debug("Main()");
 
-            ParserResult<Options> options = Parser.Default.ParseArguments<Options>(args).WithNotParsed(a =>
+            ParserResult<RunOptions> options = Parser.Default.ParseArguments<RunOptions>(args).WithNotParsed(a =>
             {
                 Log.Logger.Error("Missing Required command line argument!");
             });
@@ -70,10 +48,10 @@ namespace HeadlessServer
                 return;
             }
 
-            while (WowProcess.Get() == null)
+            while (WowProcess.Get(options.Value.Pid) == null)
             {
-                Log.Information("Unable to find the Wow process is it running ?");
-                Thread.Sleep(2000);
+                Log.Information("Unable to find any Wow process, is it running ?");
+                Thread.Sleep(1000);
             }
 
             ServiceCollection services = new();
@@ -88,13 +66,13 @@ namespace HeadlessServer
             Console.ReadLine();
         }
 
-        private static void ConfigureServices(IServiceCollection services, ParserResult<Options> options)
+        private static void ConfigureServices(IServiceCollection services, ParserResult<RunOptions> options)
         {
             var logger = new SerilogLoggerProvider(Log.Logger).CreateLogger(nameof(Program));
             services.AddSingleton(logger);
 
             services.AddSingleton(DataConfig.Load());
-            services.AddSingleton<WowProcess>();
+            services.AddSingleton<WowProcess>(x => new(options.Value.Pid));
             services.AddSingleton<WowScreen>();
             services.AddSingleton<WowProcessInput>();
             services.AddSingleton<ExecGameCommand>();
@@ -121,7 +99,7 @@ namespace HeadlessServer
             services.AddSingleton<IBotController, BotController>();
         }
 
-        private static IPPather GetPather(Microsoft.Extensions.Logging.ILogger logger, DataConfig dataConfig, ParserResult<Options> options)
+        private static IPPather GetPather(Microsoft.Extensions.Logging.ILogger logger, DataConfig dataConfig, ParserResult<RunOptions> options)
         {
             StartupConfigPathing scp = new(options.Value.Mode!,
                 options.Value.Hostv1!, options.Value.Portv1,

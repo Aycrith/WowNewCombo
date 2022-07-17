@@ -83,12 +83,12 @@ namespace Game
 
         public void GetPosition(ref Point point)
         {
-            NativeMethods.GetPosition(wowProcess.WarcraftProcess.MainWindowHandle, ref point);
+            NativeMethods.GetPosition(wowProcess.Process.MainWindowHandle, ref point);
         }
 
         public void GetRectangle(out Rectangle rect)
         {
-            NativeMethods.GetWindowRect(wowProcess.WarcraftProcess.MainWindowHandle, out rect);
+            NativeMethods.GetWindowRect(wowProcess.Process.MainWindowHandle, out rect);
         }
 
 
@@ -96,8 +96,8 @@ namespace Game
         {
             Update();
 
-            Bitmap bitmap = new Bitmap(width, height);
-            Rectangle sourceRect = new Rectangle(0, 0, width, height);
+            Bitmap bitmap = new(width, height);
+            Rectangle sourceRect = new(0, 0, width, height);
             using (var graphics = Graphics.FromImage(bitmap))
             {
                 graphics.DrawImage(Bitmap, 0, 0, sourceRect, GraphicsUnit.Pixel);

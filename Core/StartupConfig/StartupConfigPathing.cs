@@ -11,13 +11,7 @@
             RemoteV3
         }
 
-
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        public StartupConfigPathing()
-#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        {
-
-        }
+        public StartupConfigPathing() { }
 
         public StartupConfigPathing(string Mode, string hostv1, int portv1, string hostv3, int portv3)
         {
@@ -32,12 +26,12 @@
 
         public Types Type => System.Enum.TryParse(Mode, out Types m) ? m : Types.Local;
 
-        public string Mode { get; init; }
+        public string Mode { get; set; } = string.Empty;
 
-        public string hostv1 { get; init; }
-        public int portv1 { get; init; }
+        public string hostv1 { get; set; } = string.Empty;
+        public int portv1 { get; set; }
 
-        public string hostv3 { get; init; }
-        public int portv3 { get; init; }
+        public string hostv3 { get; set; } = string.Empty;
+        public int portv3 { get; set; }
     }
 }
