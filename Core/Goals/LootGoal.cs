@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Linq;
 using SharedLib.Extensions;
+using System;
 
 namespace Core.Goals
 {
@@ -113,7 +114,7 @@ namespace Core.Goals
                 {
                     if (playerReader.Bits.TargetIsDead())
                     {
-                        CheckForSkinning();
+                        CheckForGather();
 
                         Log("Found last dead target");
                         input.Interact();
@@ -150,7 +151,7 @@ namespace Core.Goals
 
         public override void OnExit()
         {
-            if (!classConfiguration.Skin)
+            if (!classConfiguration.GatherCorpse)
             {
                 npcNameTargeting.ChangeNpcType(NpcNames.None);
             }
@@ -179,7 +180,7 @@ namespace Core.Goals
                 Log($"Found target after {elapsedMs}ms");
             }
 
-            CheckForSkinning();
+            CheckForGather();
 
             (bool foundTarget, bool moved) = combatUtil.FoundTargetWhileMoved();
             if (foundTarget)
@@ -210,21 +211,28 @@ namespace Core.Goals
             return closest.loc;
         }
 
-        private void CheckForSkinning()
+        private void CheckForGather()
         {
-            if (!classConfiguration.Skin)
+            if (!classConfiguration.GatherCorpse)
                 return;
 
-            bool targetSkinnable = false;
-            if (areaDb.CurrentArea != null && areaDb.CurrentArea.skinnable != null)
+            bool targetGatherable = false;
+            if (areaDb.CurrentArea != null)
             {
-                targetSkinnable = areaDb.CurrentArea.skinnable.Contains(playerReader.TargetId);
+                if (classConfiguration.Skin)
+                    targetGatherable = Array.BinarySearch(areaDb.CurrentArea.skinnable, playerReader.TargetId) >= 0;
+                else if (classConfiguration.Herb)
+                    targetGatherable = Array.BinarySearch(areaDb.CurrentArea.gatherable, playerReader.TargetId) >= 0;
+                else if (classConfiguration.Mine)
+                    targetGatherable = Array.BinarySearch(areaDb.CurrentArea.minable, playerReader.TargetId) >= 0;
+                else if (classConfiguration.Salvage)
+                    targetGatherable = Array.BinarySearch(areaDb.CurrentArea.salvegable, playerReader.TargetId) >= 0;
             }
 
-            Log($"Should skin {playerReader.TargetId} ? {targetSkinnable}");
-            AddEffect(GoapKey.shouldskin, targetSkinnable);
+            Log($"Should gather {playerReader.TargetId} ? {targetGatherable}");
+            AddEffect(GoapKey.shouldgather, targetGatherable);
 
-            SendGoapEvent(new GoapStateEvent(GoapKey.shouldskin, targetSkinnable));
+            SendGoapEvent(new GoapStateEvent(GoapKey.shouldgather, targetGatherable));
         }
 
         private void GoalExit()
@@ -237,7 +245,7 @@ namespace Core.Goals
             {
                 Log("Loot Failed");
 
-                SendGoapEvent(new GoapStateEvent(GoapKey.shouldskin, false));
+                SendGoapEvent(new GoapStateEvent(GoapKey.shouldgather, false));
             }
 
             SendGoapEvent(new GoapStateEvent(GoapKey.shouldloot, false));

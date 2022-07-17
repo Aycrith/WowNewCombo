@@ -35,9 +35,9 @@ namespace Core.Goals
             {
                 AddEffect(GoapKey.shouldloot, true);
 
-                if (classConfig.Skin)
+                if (classConfig.GatherCorpse)
                 {
-                    AddEffect(GoapKey.shouldskin, true);
+                    AddEffect(GoapKey.shouldgather, true);
                 }
             }
         }

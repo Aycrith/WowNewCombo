@@ -34,7 +34,7 @@
 - Pathfinding in the current zone to the grind location
 - Grind mobs in the described `PathFilename`
 - Blacklist certain NPCs
-- Loot and Skinning
+- Loot and GatherCorpse (Skin, Herb, Mine, Salvage)
 - Vendor goods
 - Repair equipments
 - Corpse run
@@ -63,7 +63,7 @@ You are welcome to create pull requests. Some ideas of things that could be impr
 * Frontend Runtime Path Profile autocomplete search
 * Frontend Dark mode
 * Improved Loot Goal
-* Added Skinning Goal
+* Added Skinning Goal -> GatherCorpse (Skin, Herb, Mine, Salvage)
 * Introduced a concept of `Produce`/`Consume` corpses. Killing multiple enemies in a single combat, can consume them all.
 * `ActionbarPopulator` based on class config
 * `DataConfig`: change where the external data(DBC, MPQ, profiles) can be found
@@ -301,6 +301,9 @@ Take a look at the class files in `/Json/class` for examples of what you can do.
 | `"Log"` | Should logging enabled for `KeyAction(s)`. Requires restart. | true | `true` |
 | `"Loot"` | Should loot the mob | true | `true` |
 | `"Skin"` | Should skin the mob | true | `false` |
+| `"Herb"` | Should herb the mob | true | `false` |
+| `"Mine"` | Should mine the mob | true | `false` |
+| `"Salvage"` | Should salvage the mob | true | `false` |
 | `"UseMount"` | Should use mount when its possible | true | `false` |
 | `"KeyboardOnly"` | Use keyboard to interact only. See [KeyboardOnly](#KeyboardOnly) | false | `true` |
 | `"PathFilename"` | [Path](#Path) to use while alive | **false** | `""` |
@@ -343,11 +346,11 @@ Take a look at the class files in `/Json/class` for examples of what you can do.
 By Default, the bot attempts to use the mouse for the following reasons:
 * (during `Follow Route`) Target selection
 * (during `Consume Corpse`) `"Loot"`
-* (during `Consume Corpse`) `"Skin"`
+* (during `Consume Corpse`) GatherCorpse(`"Skin"`, `"Herb"`, `"Mine"`, `"Salvage"`)
 
 You can disable this behaviour by setting `KeyboardOnly` to `true`. Which has the following effects:
 * `"Loot"` limited, only capable of looting by selecting last target. So after each combat only the **last npc** can be looted.
-* `"Skin"` unavailable.
+* GatherCorpse(`"Skin"`, `"Herb"`, `"Mine"`, `"Salvage"`) unavailable.
 * Target selection limited to only `TargetNearestTargetKey`, which significantly reduce how quickly can find the next target.
 
 ### IntVariables
@@ -1253,11 +1256,11 @@ The available modes are:
 
 | Mode | Description |
 | --- | --- |
-| `"Grind"` | Default mode.<br>Follows the route. Attempts to find Non-Blacklist targets to kill.<br>(*if enabled*) Attempts to `"Loot"` and `"Skin"` nearby corpses.<br>(*if exists*) Executes `"Adhoc"`, `"NPC"`, `"Parallel"`, `"Pull"`, `"Combat"` Sequences |
+| `"Grind"` | Default mode.<br>Follows the route. Attempts to find Non-Blacklist targets to kill.<br>(*if enabled*) Attempts to `"Loot"` and GatherCorpse nearby corpses.<br>(*if exists*) Executes `"Adhoc"`, `"NPC"`, `"Parallel"`, `"Pull"`, `"Combat"` Sequences |
 | `"AttendedGrind"` | Similair to `"Grind"`.<br>Navigation disabled.<br>The only difference is that **you** control the route, and select what target to kill. |
 | `"CorpseRun"` | Runs back to the corpse after dies.<br>Can be useful if you are farming an instance and die, the bot will run you back some or all of the way to the instance entrance. |
 | `"AttendedGather"` | Have to `Start Bot` under `Gather` tab and stay at `Gather` tab.<br>Follows the route and scan the minimap for the yellow nodes which indicate a herb or mining node.<br>Once one or more present, the navigation stops and alerts you by playing beeping sound!<br>**You** have to click at the herb/mine. In the `LogComponent` the necessary prompt going be shown to proceed.<br>**Important note**: `Falling` and `Jumping` means the same thing, if you lose the ground the bot going to take over the control! Be patient.<br>(*if exists*) Executes `"Adhoc"`, `"NPC"`, `"Parallel"`, `"Pull"`, `"Combat"` Sequences |
-| `"AssistFocus"` | Navigation disabled.<br>Requires a friendly `focus` to exists. Follows the `focus` target.<br>Once a hostile `focustarget` in-combat exists, attempts to assist it (kill it).<br>After leaving combat, (*if enabled*) attempts to Loot and Skin nearby corpses.<br>Works inside Instances.<br>(*if exists*) Executes `"Adhoc"`, `"Parallel"`, `"Pull"`, `"Combat"` Sequences. |
+| `"AssistFocus"` | Navigation disabled.<br>Requires a friendly `focus` to exists. Follows the `focus` target.<br>Once a hostile `focustarget` in-combat exists, attempts to assist it (kill it).<br>After leaving combat, (*if enabled*) attempts to `"Loot"` and GatherCorpse nearby corpses.<br>Works inside Instances.<br>(*if exists*) Executes `"Adhoc"`, `"Parallel"`, `"Pull"`, `"Combat"` Sequences. |
 
 # User Interface
 

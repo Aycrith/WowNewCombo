@@ -220,7 +220,7 @@ namespace Core.GOAP
                 // these hold their state
                 { GoapKey.consumecorpse, State.ShouldConsumeCorpse },
                 { GoapKey.shouldloot, State.NeedLoot },
-                { GoapKey.shouldskin, State.NeedSkin },
+                { GoapKey.shouldgather, State.NeedGather },
                 { GoapKey.gathering, State.Gathering }
             };
         }
@@ -261,8 +261,8 @@ namespace Core.GOAP
                     case GoapKey.shouldloot:
                         State.NeedLoot = s.Value;
                         break;
-                    case GoapKey.shouldskin:
-                        State.NeedSkin = s.Value;
+                    case GoapKey.shouldgather:
+                        State.NeedGather = s.Value;
                         break;
                     case GoapKey.gathering:
                         State.Gathering = s.Value;

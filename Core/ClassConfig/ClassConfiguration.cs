@@ -27,6 +27,11 @@ namespace Core
         public bool Log { get; set; } = true;
         public bool Loot { get; set; } = true;
         public bool Skin { get; set; }
+        public bool Herb { get; set; }
+        public bool Mine { get; set; }
+        public bool Salvage { get; set; }
+        public bool GatherCorpse => Skin || Herb || Mine || Salvage;
+
         public bool UseMount { get; set; } = true;
         public bool KeyboardOnly { get; set; }
 
@@ -271,8 +276,11 @@ namespace Core
             }
             if (KeyboardOnly)
             {
-                logger.LogWarning("KeyboardOnly mode is enabled. The bot will not try to utilize your mouse. Skin will be disabled and the npc target function will be limited.");
+                logger.LogWarning("KeyboardOnly mode is enabled. The bot will not try to utilize your mouse. Gathering will be disabled and the npc target function will be limited.");
                 Skin = false;
+                Mine = false;
+                Herb = false;
+                Salvage = false;
             }
         }
 
