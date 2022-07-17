@@ -13,14 +13,14 @@ namespace Game
         private readonly int MIN_DELAY;
         private readonly int MAX_DELAY;
 
-        private readonly Process process;
+        private readonly WowProcess wowProcess;
         private readonly Random random;
 
         private readonly CancellationTokenSource _cts;
 
-        public InputWindowsNative(Process process, int minDelay, int maxDelay)
+        public InputWindowsNative(WowProcess wowProcess, int minDelay, int maxDelay)
         {
-            this.process = process;
+            this.wowProcess = wowProcess;
 
             MIN_DELAY = minDelay;
             MAX_DELAY = maxDelay;
@@ -40,21 +40,21 @@ namespace Game
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void KeyDown(int key)
         {
-            PostMessage(process.MainWindowHandle, WM_KEYDOWN, key, 0);
+            PostMessage(wowProcess.Process.MainWindowHandle, WM_KEYDOWN, key, 0);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void KeyUp(int key)
         {
-            PostMessage(process.MainWindowHandle, WM_KEYUP, key, 0);
+            PostMessage(wowProcess.Process.MainWindowHandle, WM_KEYUP, key, 0);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int KeyPress(int key, int milliseconds)
         {
-            PostMessage(process.MainWindowHandle, WM_KEYDOWN, key, 0);
+            PostMessage(wowProcess.Process.MainWindowHandle, WM_KEYDOWN, key, 0);
             int delay = Delay(milliseconds);
-            PostMessage(process.MainWindowHandle, WM_KEYUP, key, 0);
+            PostMessage(wowProcess.Process.MainWindowHandle, WM_KEYUP, key, 0);
 
             return delay;
         }
@@ -62,45 +62,45 @@ namespace Game
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void KeyPressSleep(int key, int milliseconds, CancellationTokenSource cts)
         {
-            PostMessage(process.MainWindowHandle, WM_KEYDOWN, key, 0);
+            PostMessage(wowProcess.Process.MainWindowHandle, WM_KEYDOWN, key, 0);
             cts.Token.WaitHandle.WaitOne(milliseconds);
-            PostMessage(process.MainWindowHandle, WM_KEYUP, key, 0);
+            PostMessage(wowProcess.Process.MainWindowHandle, WM_KEYUP, key, 0);
         }
 
         public void LeftClickMouse(Point p)
         {
             SetCursorPosition(p);
 
-            ScreenToClient(process.MainWindowHandle, ref p);
+            ScreenToClient(wowProcess.Process.MainWindowHandle, ref p);
             int lparam = MakeLParam(p.X, p.Y);
 
-            PostMessage(process.MainWindowHandle, WM_LBUTTONDOWN, 0, lparam);
+            PostMessage(wowProcess.Process.MainWindowHandle, WM_LBUTTONDOWN, 0, lparam);
 
             Delay(MIN_DELAY);
 
             GetCursorPos(out p);
-            ScreenToClient(process.MainWindowHandle, ref p);
+            ScreenToClient(wowProcess.Process.MainWindowHandle, ref p);
             lparam = MakeLParam(p.X, p.Y);
 
-            PostMessage(process.MainWindowHandle, WM_LBUTTONUP, 0, lparam);
+            PostMessage(wowProcess.Process.MainWindowHandle, WM_LBUTTONUP, 0, lparam);
         }
 
         public void RightClickMouse(Point p)
         {
             SetCursorPosition(p);
 
-            ScreenToClient(process.MainWindowHandle, ref p);
+            ScreenToClient(wowProcess.Process.MainWindowHandle, ref p);
             int lparam = MakeLParam(p.X, p.Y);
 
-            PostMessage(process.MainWindowHandle, WM_RBUTTONDOWN, 0, lparam);
+            PostMessage(wowProcess.Process.MainWindowHandle, WM_RBUTTONDOWN, 0, lparam);
 
             Delay(MIN_DELAY);
 
             GetCursorPos(out p);
-            ScreenToClient(process.MainWindowHandle, ref p);
+            ScreenToClient(wowProcess.Process.MainWindowHandle, ref p);
             lparam = MakeLParam(p.X, p.Y);
 
-            PostMessage(process.MainWindowHandle, WM_RBUTTONUP, 0, lparam);
+            PostMessage(wowProcess.Process.MainWindowHandle, WM_RBUTTONUP, 0, lparam);
         }
 
         public void SetCursorPosition(Point p)

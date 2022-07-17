@@ -29,8 +29,8 @@ namespace Game
             this.logger = logger;
             this.wowProcess = wowProcess;
 
-            nativeInput = new InputWindowsNative(wowProcess.WarcraftProcess, MIN_DELAY, MAX_DELAY);
-            simulatorInput = new InputSimulator(wowProcess.WarcraftProcess, MIN_DELAY, MAX_DELAY);
+            nativeInput = new InputWindowsNative(wowProcess, MIN_DELAY, MAX_DELAY);
+            simulatorInput = new InputSimulator(wowProcess, MIN_DELAY, MAX_DELAY);
         }
 
         public void Reset()
@@ -96,7 +96,7 @@ namespace Game
 
         public void SetForegroundWindow()
         {
-            NativeMethods.SetForegroundWindow(wowProcess.WarcraftProcess.MainWindowHandle);
+            NativeMethods.SetForegroundWindow(wowProcess.Process.MainWindowHandle);
         }
 
         public void KeyPress(ConsoleKey key, int milliseconds)
