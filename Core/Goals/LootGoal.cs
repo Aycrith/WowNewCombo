@@ -221,11 +221,11 @@ namespace Core.Goals
             {
                 if (classConfiguration.Skin)
                     targetGatherable = Array.BinarySearch(areaDb.CurrentArea.skinnable, playerReader.TargetId) >= 0;
-                else if (classConfiguration.Herb)
+                if (!targetGatherable && classConfiguration.Herb)
                     targetGatherable = Array.BinarySearch(areaDb.CurrentArea.gatherable, playerReader.TargetId) >= 0;
-                else if (classConfiguration.Mine)
+                if (!targetGatherable && classConfiguration.Mine)
                     targetGatherable = Array.BinarySearch(areaDb.CurrentArea.minable, playerReader.TargetId) >= 0;
-                else if (classConfiguration.Salvage)
+                if (!targetGatherable && classConfiguration.Salvage)
                     targetGatherable = Array.BinarySearch(areaDb.CurrentArea.salvegable, playerReader.TargetId) >= 0;
             }
 

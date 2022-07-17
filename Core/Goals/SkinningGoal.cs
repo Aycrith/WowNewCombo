@@ -87,7 +87,7 @@ namespace Core.Goals
                     }
                 }
 
-                bool foundCursor = npcNameTargeting.FindBy(CursorType.Skin | CursorType.Mine | CursorType.Herb); // todo salvage icon
+                bool foundCursor = npcNameTargeting.FindBy(CursorType.Skin, CursorType.Mine, CursorType.Herb); // todo salvage icon
                 if (foundCursor)
                 {
                     Log("Found corpse - interacted with right click");
