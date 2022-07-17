@@ -56,7 +56,7 @@ namespace Core
             // formula
             // MAX_POWER_TYPE * type + MAX_ACTION_IDX * slot + cost
             int cost = reader.GetInt(cActionbarNum);
-            if (cost == 0) return;
+            if (cost == 0 || cost < MAX_ACTION_IDX) return;
 
             int type = (int)(cost / MAX_POWER_TYPE);
             cost -= (int)MAX_POWER_TYPE * type;

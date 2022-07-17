@@ -38,13 +38,15 @@ namespace Core
             // formula
             // MAX_ACTION_IDX * slot + (cooldown / MAX_VALUE_MUL)
             float durationSec = reader.GetInt(cActionbarNum);
-            if (durationSec == 0) return;
+            if (durationSec == 0 || durationSec < MAX_ACTION_IDX) return;
 
             int slot = (int)(durationSec / MAX_ACTION_IDX);
             durationSec -= (int)MAX_ACTION_IDX * slot;
             durationSec /= MAX_VALUE_MUL;
 
             int index = slot - 1;
+            if (index < 0)
+                return;
 
             data[index] = new((int)durationSec, DateTime.UtcNow);
         }
