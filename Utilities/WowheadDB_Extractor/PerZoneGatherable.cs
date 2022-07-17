@@ -1,31 +1,38 @@
 ﻿using System.Net.Http;
 using System.Threading.Tasks;
-using WowheadDB;
 using Newtonsoft.Json;
 using System.Linq;
-using System.Collections.Generic;
 using System;
 
 namespace WowheadDB_Extractor
 {
-    public class PerZoneSkinnable
+    public enum GatherFilter
     {
-        private Area area;
-        private string url;
+        Skinnable = 10,
+        Gatherable = 15,
+        Minable = 16,
+        Salvegable = 44,
+    }
 
-        public PerZoneSkinnable(int zoneId, Area area)
+    public class PerZoneGatherable
+    {
+        private const int LootRewardFilter = 6;
+
+        private readonly string url;
+        private readonly GatherFilter filter;
+
+        public PerZoneGatherable(int zoneId, GatherFilter filter)
         {
-            this.area = area;
-            url = $"https://tbc.wowhead.com/npcs?filter=6:10;{zoneId}:1;0:0";
+            this.filter = filter;
+
+            url = $"https://{ZoneExtractor.EXP}.wowhead.com/npcs?filter={LootRewardFilter}:{(int)filter};{zoneId}:1;0:0";
         }
 
-        public async Task Run()
+        public async Task<int[]> Run()
         {
             try
             {
-                area.skinnable = new List<int>();
-
-                var content = GetPayloadFromWebpage(await LoadPage());
+                string content = GetPayloadFromWebpage(await LoadPage());
 
                 var definition = new { data = new[] { new { id = 0 } } };
                 var skinnableNpcIds = JsonConvert.DeserializeAnonymousType(content, definition);
@@ -33,25 +40,30 @@ namespace WowheadDB_Extractor
                 var listofIds = skinnableNpcIds.data.Select(i => i.id);
                 if (listofIds != null)
                 {
-                    area.skinnable.AddRange(listofIds);
-                    area.skinnable.Sort();
+                    var ids = listofIds.ToArray();
+                    Array.Sort(ids);
+                    Console.WriteLine($"     - {nameof(PerZoneGatherable)}: Found {listofIds.Count()} {filter}");
+                    return ids;
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine($" - PerZoneSkinnable\n {e}");
+                if (e is not ArgumentOutOfRangeException)
+                    Console.WriteLine($" - {nameof(PerZoneGatherable)}\n {e}");
             }
+
+            return Array.Empty<int>();
         }
 
 
-        async Task<string> LoadPage()
+        private async Task<string> LoadPage()
         {
-            HttpClient client = new HttpClient();
+            HttpClient client = new();
             var response = await client.GetAsync(url);
             return await response.Content.ReadAsStringAsync();
         }
 
-        static string GetPayloadFromWebpage(string content)
+        private static string GetPayloadFromWebpage(string content)
         {
             string beginPat = "new Listview(";
             string endPat = "</script>";
