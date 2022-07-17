@@ -10,13 +10,16 @@ namespace Core
 {
     public sealed class FrameConfigurator : IDisposable
     {
+        private const int MAX_HEIGHT = 25;
+
         private readonly ILogger logger;
+        private readonly WowProcess wowProcess;
+        private readonly WowScreen wowScreen;
+        private readonly WowProcessInput wowProcessInput;
+        private readonly ExecGameCommand execGameCommand;
         private readonly AddonConfigurator addonConfigurator;
 
         private AddonDataProvider? addonDataProvider;
-
-        private WowProcess? wowProcess;
-        private WowScreen? wowScreen;
 
         private Thread? screenshotThread;
         private CancellationTokenSource cts = new();
@@ -33,16 +36,19 @@ namespace Core
 
         public event Action? OnUpdate;
 
-        public FrameConfigurator(ILogger logger, AddonConfigurator addonConfigurator)
+        public FrameConfigurator(ILogger logger, WowProcess wowProcess, WowScreen wowScreen, WowProcessInput wowProcessInput, ExecGameCommand execGameCommand, AddonConfigurator addonConfigurator)
         {
             this.logger = logger;
+            this.wowProcess = wowProcess;
+            this.wowScreen = wowScreen;
+            this.wowProcessInput = wowProcessInput;
+            this.execGameCommand = execGameCommand;
             this.addonConfigurator = addonConfigurator;
         }
 
         public void Dispose()
         {
             cts.Cancel();
-            wowScreen?.Dispose();
         }
 
         private void ScreenshotRefreshThread()
@@ -51,7 +57,7 @@ namespace Core
             {
                 try
                 {
-                    if (wowProcess != null && wowScreen != null)
+                    if (wowProcess.IsRunning)
                     {
                         if (DataFrameMeta == DataFrameMeta.Empty)
                         {
@@ -62,7 +68,7 @@ namespace Core
                         }
                         else
                         {
-                            var temp = GetDataFrameMeta();
+                            DataFrameMeta temp = GetDataFrameMeta();
                             if (temp != DataFrameMeta.Empty && temp.rows != DataFrameMeta.rows)
                             {
                                 AddonNotVisible = true;
@@ -82,35 +88,32 @@ namespace Core
                                 return;
                             }
 
-                            var addonRect = DataFrameMeta.EstimatedSize(screenRect);
+                            Size size = DataFrameMeta.EstimatedSize(screenRect);
 
-                            if (!addonRect.IsEmpty &&
-                                addonRect.Width <= screenRect.Size.Width &&
-                                addonRect.Height <= screenRect.Size.Height &&
-                                addonRect.Height < 50) // this one just arbitrary number for sanity check
+                            if (!size.IsEmpty &&
+                                size.Width <= screenRect.Size.Width &&
+                                size.Height <= screenRect.Size.Height &&
+                                size.Height <= MAX_HEIGHT) // this one just arbitrary number for sanity check
                             {
-                                var screenshot = wowScreen.GetBitmap(addonRect.Width, addonRect.Height);
-                                if (screenshot != null)
+                                Bitmap bitmap = wowScreen.GetBitmap(size.Width, size.Height);
+                                UpdatePreview(bitmap);
+
+                                if (DataFrameMeta == DataFrameMeta.Empty)
                                 {
-                                    UpdatePreview(screenshot);
-
-                                    if (DataFrameMeta == DataFrameMeta.Empty)
-                                    {
-                                        DataFrameMeta = FrameConfig.GetMeta(screenshot.GetPixel(0, 0));
-                                    }
-
-                                    if (DataFrames.Length != DataFrameMeta.frames)
-                                    {
-                                        DataFrames = FrameConfig.TryCreateFrames(DataFrameMeta, screenshot);
-                                    }
-                                    screenshot.Dispose();
-
-                                    if (DataFrames.Length == DataFrameMeta.frames && addonDataProvider == null)
-                                    {
-                                        addonDataProvider = new AddonDataProvider(wowScreen, DataFrames);
-                                    }
-                                    OnUpdate?.Invoke();
+                                    DataFrameMeta = FrameConfig.GetMeta(bitmap.GetPixel(0, 0));
                                 }
+
+                                if (DataFrames.Length != DataFrameMeta.frames)
+                                {
+                                    DataFrames = FrameConfig.TryCreateFrames(DataFrameMeta, bitmap);
+                                }
+                                bitmap.Dispose();
+
+                                if (DataFrames.Length == DataFrameMeta.frames && addonDataProvider == null)
+                                {
+                                    addonDataProvider = new AddonDataProvider(wowScreen, DataFrames);
+                                }
+                                OnUpdate?.Invoke();
                             }
                             else
                             {
@@ -123,8 +126,10 @@ namespace Core
                     }
                     else
                     {
-                        wowProcess = new WowProcess();
-                        wowScreen = new WowScreen(logger, wowProcess);
+                        AddonNotVisible = true;
+                        DataFrameMeta = DataFrameMeta.Empty;
+
+                        OnUpdate?.Invoke();
                     }
                 }
                 catch (Exception e)
@@ -144,16 +149,15 @@ namespace Core
         private DataFrameMeta GetDataFrameMeta()
         {
             Point location = new();
-            wowScreen?.GetPosition(ref location);
+            wowScreen.GetPosition(ref location);
             if (location.X < 0)
             {
                 logger.LogWarning($"Client window outside of the visible area of the screen by {location}");
                 return DataFrameMeta.Empty;
             }
 
-            var screenshot = wowScreen?.GetBitmap(5, 5);
-            if (screenshot == null) return DataFrameMeta.Empty;
-            return FrameConfig.GetMeta(screenshot.GetPixel(0, 0));
+            Bitmap bitmap = wowScreen.GetBitmap(5, 5);
+            return FrameConfig.GetMeta(bitmap.GetPixel(0, 0));
         }
 
         public void ToggleManualConfig()
@@ -174,14 +178,12 @@ namespace Core
         public bool FinishManualConfig()
         {
             Version? version = addonConfigurator.GetInstallVersion();
-            if (version == null) return false;
+            if (version == null)
+                return false;
 
             if (DataFrames.Length != DataFrameMeta.frames)
-            {
                 return false;
-            }
 
-            if (wowScreen == null) return false;
             wowScreen.GetRectangle(out Rectangle rect);
 
             FrameConfig.Save(rect, version, DataFrameMeta, DataFrames);
@@ -194,17 +196,15 @@ namespace Core
 
         public bool StartAutoConfig()
         {
-            if (wowProcess == null)
-                wowProcess = new WowProcess();
+            if (!wowProcess.IsRunning)
+            {
+                logger.LogInformation("Wow Process no longer running!");
+                return false;
+            }
 
-            if (wowScreen == null && wowProcess != null)
-                wowScreen = new WowScreen(logger, wowProcess);
-
-            if (wowProcess == null) return false;
             logger.LogInformation("Found WowProcess");
             OnUpdate?.Invoke();
 
-            if (wowScreen == null) return false;
             Point location = new();
             wowScreen.GetPosition(ref location);
 
@@ -218,10 +218,7 @@ namespace Core
             wowScreen.GetRectangle(out Rectangle rect);
             logger.LogInformation($"Found WowScreen Location: {location} - Size: {rect}");
 
-            WowProcessInput wowProcessInput = new(logger, wowProcess);
-            ExecGameCommand execGameCommand = new(logger, wowProcessInput);
-
-            var version = addonConfigurator.GetInstallVersion();
+            Version? version = addonConfigurator.GetInstallVersion();
             if (version == null)
             {
                 OnUpdate?.Invoke();
@@ -232,7 +229,7 @@ namespace Core
             wowProcessInput.SetForegroundWindow();
             cts.Token.WaitHandle.WaitOne(100);
 
-            var meta = GetDataFrameMeta();
+            DataFrameMeta meta = GetDataFrameMeta();
             if (meta == DataFrameMeta.Empty || meta.hash == 0)
             {
                 logger.LogInformation("Enter configuration mode.");
@@ -244,36 +241,31 @@ namespace Core
 
             if (meta == DataFrameMeta.Empty)
             {
-                logger.LogWarning("Unable to enter configuration mode! You most likely running the game with admin privileges! Please restart the game without it!");
+                logger.LogWarning("Unable to enter configuration mode! You might running the game with admin privileges! Please restart the game without it!");
                 OnUpdate?.Invoke();
                 return false;
             }
 
             logger.LogInformation($"DataFrameMeta: hash: {meta.hash} | spacing: {meta.spacing} | size: {meta.size} | rows: {meta.rows} | frames: {meta.frames}");
 
-            var size = meta.EstimatedSize(rect);
-            if (size.Height > 50 || size.IsEmpty)
+            Size size = meta.EstimatedSize(rect);
+            if (size.Height > MAX_HEIGHT || size.IsEmpty)
             {
                 logger.LogWarning($"Something is worng. esimated size: {size}.");
                 OnUpdate?.Invoke();
                 return false;
             }
 
-            var screenshot = wowScreen.GetBitmap(size.Width, size.Height);
-            if (screenshot == null)
-            {
-                OnUpdate?.Invoke();
-                return false;
-            }
+            Bitmap bitmap = wowScreen.GetBitmap(size.Width, size.Height);
 
             logger.LogInformation($"Found cells - {rect} - estimated size {size}");
 
-            UpdatePreview(screenshot);
+            UpdatePreview(bitmap);
 
             OnUpdate?.Invoke();
             cts.Token.WaitHandle.WaitOne(interval);
 
-            var dataFrames = FrameConfig.TryCreateFrames(meta, screenshot);
+            DataFrame[] dataFrames = FrameConfig.TryCreateFrames(meta, bitmap);
             if (dataFrames.Length != meta.frames)
             {
                 return false;

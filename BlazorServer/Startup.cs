@@ -88,6 +88,7 @@ namespace BlazorServer
             services.AddSingleton<WowProcessInput>();
             services.AddSingleton<ExecGameCommand>();
             services.AddSingleton<AddonConfigurator>();
+            services.AddSingleton<FrameConfigurator>();
 
             if (AddonConfig.Exists() && FrameConfig.Exists())
             {
