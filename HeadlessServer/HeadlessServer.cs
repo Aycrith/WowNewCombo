@@ -24,9 +24,14 @@ namespace HeadlessServer
             this.wait = wait;
         }
 
-        public void Run(ParserResult<Options> options)
+        public void Run(ParserResult<RunOptions> options)
         {
             logger.LogInformation($"Running {nameof(HeadlessServer)}!");
+
+            if (options.Value.Pid != -1)
+            {
+                logger.LogInformation($"Attached pid={options.Value.Pid}");
+            }
 
             InitState();
 

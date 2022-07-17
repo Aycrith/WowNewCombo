@@ -14,7 +14,6 @@ using PPather;
 using Serilog;
 using Serilog.Events;
 using Serilog.Extensions.Logging;
-using SharedLib;
 using System;
 using System.Drawing;
 using System.Threading;
@@ -25,6 +24,8 @@ namespace BlazorServer
 {
     public class Startup
     {
+        private static StartupConfigPid StartupConfigPid = new();
+
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -39,13 +40,18 @@ namespace BlazorServer
                 .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss:fff} {Level:u3}] {Message:lj}{NewLine}{Exception}");
 
             Log.Logger = config.CreateLogger();
-            Log.Logger.Debug("Startup()");
+            Log.Logger.Information("Startup()");
 
-            while (WowProcess.Get() == null)
+            Configuration.GetSection(StartupConfigPid.Position).Bind(StartupConfigPid);
+
+            while (WowProcess.Get(StartupConfigPid.Id) == null)
             {
-                Log.Information("Unable to find the Wow process is it running ?");
+                Log.Information("Unable to find any Wow process, is it running ?");
                 Thread.Sleep(1000);
             }
+
+            if (StartupConfigPid.Id > -1)
+                Log.Logger.Information($"Startup() Attached pid={StartupConfigPid.Id}");
         }
 
         public IConfiguration Configuration { get; }
@@ -57,8 +63,8 @@ namespace BlazorServer
             var logger = new SerilogLoggerProvider(Log.Logger).CreateLogger(nameof(Program));
             services.AddSingleton(logger);
 
-            WowProcess wowProcess = new();
-            NativeMethods.GetWindowRect(wowProcess.WarcraftProcess.MainWindowHandle, out Rectangle rect);
+            WowProcess wowProcess = new(StartupConfigPid.Id);
+            NativeMethods.GetWindowRect(wowProcess.Process.MainWindowHandle, out Rectangle rect);
 
             AddonConfigurator addonConfigurator = new(logger, wowProcess);
             Version? installVersion = addonConfigurator.GetInstallVersion();
@@ -77,7 +83,7 @@ namespace BlazorServer
             }
 
             services.AddSingleton(DataConfig.Load());
-            services.AddSingleton<WowProcess>();
+            services.AddSingleton<WowProcess>(x => new(StartupConfigPid.Id));
             services.AddSingleton<WowScreen>();
             services.AddSingleton<WowProcessInput>();
             services.AddSingleton<ExecGameCommand>();
@@ -119,7 +125,7 @@ namespace BlazorServer
 
         private IPPather GetPather(Microsoft.Extensions.Logging.ILogger logger, DataConfig dataConfig)
         {
-            var scp = new StartupConfigPathing();
+            StartupConfigPathing scp = new();
             Configuration.GetSection(StartupConfigPathing.Position).Bind(scp);
 
             bool failed = false;
