@@ -9,8 +9,8 @@
         | Expand <input type="checkbox" @bind="@Expand" />
         <ToggleButton Disable="@(botController.ClassConfig?.Mode == Mode.AttendedGather)" />
         <span class="float-right">
-            Cap: @botController.AvgScreenLatency.ToString("0.0")ms |
-            Npc: @botController.AvgNPCLatency.ToString("0.0")ms |
+            Net: @addonReader.PlayerReader.NetworkLatency.Value.ToString()ms |
+            Npc: @NpcLatency.ToString("0.0")ms |
             Bot: @addonReader.AvgUpdateLatency.ToString("0.0")ms
         </span>
     </div>
@@ -48,6 +48,8 @@
     public bool ShowPlan { get; set; } = true;
 
     public bool Expand { get; set; } = false;
+
+    public double NpcLatency => botController.AvgScreenLatency + botController.AvgNPCLatency;
 
     protected override void OnInitialized()
     {

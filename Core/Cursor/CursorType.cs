@@ -12,6 +12,7 @@
         Repair = 7,
         Innkeeper = 8,
         Quest = 9
+        // todo salvage icon
     }
 
     public static class CursorType_Extension

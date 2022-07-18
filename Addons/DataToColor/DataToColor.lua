@@ -21,6 +21,7 @@ local DataToColor = unpack(Load)
 local band = bit.band
 local rshift = bit.rshift
 local floor = math.floor
+local max = math.max
 
 local strjoin = strjoin
 local strfind = strfind
@@ -30,6 +31,8 @@ local ceil = ceil
 local UIParent = UIParent
 local BackdropTemplateMixin = BackdropTemplateMixin
 local C_Map = C_Map
+
+local GetNetStats = GetNetStats
 
 local CreateFrame = CreateFrame
 local SetCVar = SetCVar
@@ -102,6 +105,8 @@ local SPELLBOOK_ITERATION_FRAME_CHANGE_RATE = 5
 local TALENT_ITERATION_FRAME_CHANGE_RATE = 5
 -- How often the spellbook frames change
 local COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE = 5
+-- How often the check network latency
+local LATENCY_ITERATION_FRAME_CHANGE_RATE = 500 -- 500ms * refresh rate in ms
 
 -- Action bar configuration for which spells are tracked
 local MAX_ACTIONBAR_SLOT = 120
@@ -629,6 +634,11 @@ function DataToColor:CreateFrames(n)
             if UnitExists(DataToColor.C.unitFocus) then
                 Pixel(int, DataToColor:getGuidFromUnit(DataToColor.C.unitFocus), 77)
                 Pixel(int, DataToColor:getGuidFromUnit(DataToColor.C.unitFocusTarget), 78)
+            end
+
+            if globalCounter % LATENCY_ITERATION_FRAME_CHANGE_RATE == 0 then
+                local _, _, lagHome, lagWorld = GetNetStats()
+                Pixel(int, max(lagHome, lagWorld), 96)
             end
 
             -- Timers

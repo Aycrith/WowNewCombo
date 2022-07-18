@@ -174,7 +174,7 @@ namespace Core
                 {
                     services.AddSingleton<GoapGoal, LootGoal>();
 
-                    if (classConfig.Skin)
+                    if (classConfig.GatherCorpse)
                     {
                         services.AddSingleton<GoapGoal, SkinningGoal>();
                     }

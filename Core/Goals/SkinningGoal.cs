@@ -9,6 +9,8 @@ namespace Core.Goals
     {
         public override float Cost => 4.6f;
 
+        private const int MAX_ATTEMPTS = 5;
+
         private readonly ILogger logger;
         private readonly ConfigurableInput input;
         private readonly PlayerReader playerReader;
@@ -44,9 +46,9 @@ namespace Core.Goals
             equipmentReader.OnEquipmentChanged += EquipmentReader_OnEquipmentChanged;
 
             AddPrecondition(GoapKey.dangercombat, false);
-            AddPrecondition(GoapKey.shouldskin, true);
+            AddPrecondition(GoapKey.shouldgather, true);
 
-            AddEffect(GoapKey.shouldskin, false);
+            AddEffect(GoapKey.shouldgather, false);
         }
 
         public void Dispose()
@@ -62,7 +64,7 @@ namespace Core.Goals
             if (bagReader.BagsFull)
             {
                 LogWarning("Inventory is full!");
-                SendGoapEvent(new GoapStateEvent(GoapKey.shouldskin, false));
+                SendGoapEvent(new GoapStateEvent(GoapKey.shouldgather, false));
             }
 
             npcNameTargeting.ChangeNpcType(NpcNames.Corpse);
@@ -74,7 +76,7 @@ namespace Core.Goals
             combatUtil.Update();
 
             int attempts = 1;
-            while (attempts < 5)
+            while (attempts < MAX_ATTEMPTS)
             {
                 if (combatUtil.EnteredCombat())
                 {
@@ -85,7 +87,7 @@ namespace Core.Goals
                     }
                 }
 
-                bool foundCursor = npcNameTargeting.FindBy(CursorType.Skin);
+                bool foundCursor = npcNameTargeting.FindBy(CursorType.Skin, CursorType.Mine, CursorType.Herb); // todo salvage icon
                 if (foundCursor)
                 {
                     Log("Found corpse - interacted with right click");
@@ -106,24 +108,24 @@ namespace Core.Goals
                     }
 
                     // wait until start casting
-                    wait.Till(500, playerReader.IsCasting);
+                    wait.Till(CastingHandler.SpellQueueTimeMs + playerReader.NetworkLatency.Value, playerReader.IsCasting);
                     Log("Started casting...");
 
                     playerReader.LastUIError = UI_ERROR.NONE;
 
-                    wait.Till(3000, CastFinishedOrInterrupted);
+                    wait.Till(CastingHandler.GatherCastTimeMs + playerReader.NetworkLatency.Value, CastFinishedOrInterrupted);
 
                     if (playerReader.LastUIError != UI_ERROR.ERR_SPELL_FAILED_S)
                     {
                         playerReader.LastUIError = UI_ERROR.NONE;
-                        Log($"Skinning Successful! {playerReader.LastUIError.ToStringF()}");
+                        Log($"Gathering Successful! {playerReader.LastUIError.ToStringF()}");
 
                         GoalExit();
                         return;
                     }
                     else
                     {
-                        Log($"Skinning Failed! Retry... Attempts: {attempts}");
+                        Log($"Gathering Failed! Retry... Attempts: {attempts}");
                         attempts++;
                     }
                 }
@@ -147,6 +149,7 @@ namespace Core.Goals
             if (!wait.Till(1000, LootChanged))
             {
                 Log("Loot Successfull");
+                wait.Till(playerReader.NetworkLatency.Value, Wait.None);
             }
             else
             {
@@ -155,7 +158,7 @@ namespace Core.Goals
 
             lastLoot = playerReader.LastLootTime;
 
-            SendGoapEvent(new GoapStateEvent(GoapKey.shouldskin, false));
+            SendGoapEvent(new GoapStateEvent(GoapKey.shouldgather, false));
 
             if (playerReader.Bits.HasTarget() && playerReader.Bits.TargetIsDead())
             {
@@ -176,16 +179,38 @@ namespace Core.Goals
 
         private bool HaveItemRequirement()
         {
-            return
+            if (input.ClassConfig.Herb) return true;
+
+            if (input.ClassConfig.Skin)
+            {
+                return
                 bagReader.HasItem(7005) ||
                 bagReader.HasItem(12709) ||
                 bagReader.HasItem(19901) ||
-                bagReader.HasItem(40772) ||
+                bagReader.HasItem(40772) || // army knife
                 bagReader.HasItem(40893) ||
 
                 equipmentReader.HasItem(7005) ||
                 equipmentReader.HasItem(12709) ||
                 equipmentReader.HasItem(19901);
+            }
+
+            if (input.ClassConfig.Mine || input.ClassConfig.Salvage)
+                return
+                bagReader.HasItem(40772) || // army knife
+                                            // mining / todo salvage
+                bagReader.HasItem(40893) ||
+                bagReader.HasItem(20723) ||
+                bagReader.HasItem(1959) ||
+                bagReader.HasItem(9465) ||
+                bagReader.HasItem(1819) ||
+                bagReader.HasItem(40892) ||
+                bagReader.HasItem(778) ||
+                bagReader.HasItem(1893) ||
+                bagReader.HasItem(2901) ||
+                bagReader.HasItem(756);
+
+            return false;
         }
 
         private bool LootChanged()
