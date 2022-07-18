@@ -149,7 +149,7 @@ namespace Core.Goals
             if (!wait.Till(1000, LootChanged))
             {
                 Log("Loot Successfull");
-                wait.Till(playerReader.NetworkLatency.Value / 2, Wait.None);
+                wait.Till(playerReader.NetworkLatency.Value, Wait.None);
             }
             else
             {
