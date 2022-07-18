@@ -12,6 +12,8 @@ namespace WowheadDB_Extractor
 {
     public class ZoneExtractor
     {
+        public const string EXP = "tbc";
+
         private const string outputPath = "../../../../../Json/area/";
         private const string outputNodePath = "../path/";
         //private const string outputPath = ".";
@@ -30,6 +32,7 @@ namespace WowheadDB_Extractor
 
             // test
             //Dictionary<string, int> temp = new() { { "Elwynn Forest", 12 } };
+            //Dictionary<string, int> temp = new() { { "Zangarmarsh", 3521 } };
             //foreach (var entry in temp)
             foreach (KeyValuePair<string, int> entry in Areas.List)
             {
@@ -39,16 +42,25 @@ namespace WowheadDB_Extractor
                     var p = GetPayloadFromWebpage(await LoadPage(entry.Value));
                     var z = ZoneFromJson(p);
 
-                    PerZoneSkinnable perZoneSkinnable = new PerZoneSkinnable(entry.Value, z);
-                    await perZoneSkinnable.Run();
+                    PerZoneGatherable skin = new(entry.Value, GatherFilter.Skinnable);
+                    z.skinnable = await skin.Run();
+
+                    PerZoneGatherable g = new(entry.Value, GatherFilter.Gatherable);
+                    z.gatherable = await g.Run();
+
+                    PerZoneGatherable m = new(entry.Value, GatherFilter.Minable);
+                    z.minable = await m.Run();
+
+                    PerZoneGatherable salv = new(entry.Value, GatherFilter.Salvegable);
+                    z.salvegable = await salv.Run();
 
                     SaveZone(z, entry.Value.ToString());
-                    SaveZoneNode(entry, z.herb, nameof(z.herb), false, true);
-                    SaveZoneNode(entry, z.vein, nameof(z.vein), false, true);
+                    //SaveZoneNode(entry, z.herb, nameof(z.herb), false, true);
+                    //SaveZoneNode(entry, z.vein, nameof(z.vein), false, true);
 
                     Console.WriteLine($"Saved {entry.Value,5}={entry.Key}");
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     Console.WriteLine($"Fail  {entry.Value,5}={entry.Key} -> '{e.Message}'");
                     Console.WriteLine(e);

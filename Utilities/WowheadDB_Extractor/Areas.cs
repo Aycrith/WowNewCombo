@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace WowheadDB_Extractor
 {
@@ -9,16 +7,19 @@ namespace WowheadDB_Extractor
     {
         public static string GetUrl(string key)
         {
-            if (classic.TryGetValue(key, out int cl))
-                return "https://wow.zamimg.com/images/wow/classic/maps/enus/zoom/" + cl + ".jpg";
+            if (classic.TryGetValue(key, out int c))
+                return $"https://wow.zamimg.com/images/wow/classic/maps/enus/zoom/{c}.jpg";
 
-            if (tbc.TryGetValue(key, out int tbcl))
-                return "https://wow.zamimg.com/images/wow/tbc/maps/enus/zoom/" + tbcl + ".jpg";
+            if (tbc.TryGetValue(key, out int b))
+                return $"https://wow.zamimg.com/images/wow/tbc/maps/enus/zoom/{b}.jpg";
+
+            if (wotlk.TryGetValue(key, out int w))
+                return $"https://wow.zamimg.com/images/wow/wrath/maps/enus/zoom/{w}.jpg";
 
             return string.Empty;
         }
 
-        public static Dictionary<string, int> classic = new Dictionary<string, int>
+        public static Dictionary<string, int> classic = new()
         {
             // EK
             { "Alterac Mountains", 36 },
@@ -71,7 +72,7 @@ namespace WowheadDB_Extractor
             { "Winterspring", 618 }
         };
 
-        public static Dictionary<string, int> tbc = new Dictionary<string, int>
+        public static Dictionary<string, int> tbc = new()
         {
             { "Azuremyst Isle", 3524 },
             { "Blade's Edge Mountains", 3522 },
@@ -87,6 +88,20 @@ namespace WowheadDB_Extractor
             { "Zangarmarsh", 3521 },
         };
 
+        public static Dictionary<string, int> wotlk = new()
+        {
+            { "Borean Tundra", 3537 },
+            { "Dragonblight", 65 },
+            { "Crystalsong Forest", 2817 },
+            { "Grizzly Hills", 394 },
+            { "Howling Fjord", 495 },
+            { "Icecrown", 210 },
+            { "Sholazar Basin", 3711 },
+            { "The Storm Peaks", 67 },
+            { "Wintergrasp", 4197 },
+            { "Zul'Drak", 66 },
+        };
+
         public static Dictionary<string, int> List = classic.Union(tbc).ToDictionary(k => k.Key, v => v.Value);
 
         public static bool IsClassic(int id)
@@ -97,6 +112,11 @@ namespace WowheadDB_Extractor
         public static bool IsTbc(int id)
         {
             return tbc.ContainsValue(id);
+        }
+
+        public static bool IsWotlk(int id)
+        {
+            return wotlk.ContainsValue(id);
         }
     }
 }

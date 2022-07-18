@@ -8,6 +8,8 @@ namespace Core
     {
         private readonly AutoResetEvent globalTimeChange;
 
+        public static bool None() => false;
+
         public Wait(AutoResetEvent globalTimeChange)
         {
             this.globalTimeChange = globalTimeChange;

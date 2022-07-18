@@ -23,6 +23,7 @@ namespace Core.Goals
 
         public const int GCD = 1500;
         public const int SpellQueueTimeMs = 400;
+        public const int GatherCastTimeMs = 3000;
 
         private const int MaxWaitCastTimeMs = GCD;
         private const int MaxWaitBuffTimeMs = GCD;
