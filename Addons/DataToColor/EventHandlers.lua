@@ -2,17 +2,20 @@ local Load = select(2, ...)
 local DataToColor = unpack(Load)
 
 local band = bit.band
+local floor = math.floor
 
 local UIErrorsFrame = UIErrorsFrame
-local GetGameMessageInfo = GetGameMessageInfo
 local CombatLogGetCurrentEventInfo = CombatLogGetCurrentEventInfo
 local GetSpellInfo = GetSpellInfo
+local GetSpellBaseCooldown = GetSpellBaseCooldown
+local GetTime = GetTime
 local GetGossipOptions = GetGossipOptions
 local HasAction = HasAction
 local CanMerchantRepair = CanMerchantRepair
 local GetRepairAllCost = GetRepairAllCost
 local GetMoney = GetMoney
 local RepairAllItems = RepairAllItems
+local UnitRangedDamage = UnitRangedDamage
 
 local DeclineGroup = DeclineGroup
 local AcceptGroup = AcceptGroup
@@ -22,16 +25,10 @@ local UnitGUID = UnitGUID
 local UnitIsDeadOrGhost = UnitIsDeadOrGhost
 local UnitIsGhost = UnitIsGhost
 local C_Map = C_Map
-local C_DeathInfo = C_DeathInfo
 local DEFAULT_CHAT_FRAME = DEFAULT_CHAT_FRAME
 local RepopMe = RepopMe
 local RetrieveCorpse = RetrieveCorpse
 local GetCorpseRecoveryDelay = GetCorpseRecoveryDelay
-
-local SPELL_FAILED_UNIT_NOT_INFRONT = SPELL_FAILED_UNIT_NOT_INFRONT
-local ERR_BADATTACKFACING = ERR_BADATTACKFACING
-local SPELL_FAILED_MOVING = SPELL_FAILED_MOVING
-local SPELL_FAILED_STUNNED = SPELL_FAILED_STUNNED
 
 local CAST_START = 999998
 local CAST_SUCCESS = 999999
@@ -51,22 +48,33 @@ local ignoreErrorList = {
     "ERR_GENERIC_NO_TARGET",
     "ERR_ATTACK_PREVENTED_BY_MECHANIC_S",
     "ERR_ATTACK_STUNNED",
-    "ERR_NOEMOTEWHILERUNNING",
+    "ERR_NOEMOTEWHILERUNNING"
 }
+local ignoreErrorListMessages = {}
+
 
 local errorList = {
     "ERR_BADATTACKFACING", --1 "You are facing the wrong way!"
     "ERR_SPELL_FAILED_S", --2 -- like a printf
-    "ERR_SPELL_OUT_OF_RANGE", --3 "Out of range."
+    "SPELL_FAILED_OUT_OF_RANGE", --3 "Out of range"
     "ERR_BADATTACKPOS", --4 "You are too far away!"
     "ERR_AUTOFOLLOW_TOO_FAR", --5 "Target is too far away."
     "SPELL_FAILED_MOVING", --6 "Can't do that while moving"
     "ERR_SPELL_COOLDOWN", --7 "Spell is not ready yet."
     "ERR_SPELL_FAILED_ANOTHER_IN_PROGRESS", --8 "Another action is in progress"
-    "ERR_SPELL_FAILED_STUNNED", -- 9 "Can't do that while stunned"
+    "SPELL_FAILED_STUNNED", -- 9 "Can't do that while stunned"
     "SPELL_FAILED_INTERRUPTED", -- 10 "Interrupted"
-    "SPELL_FAILED_ITEM_NOT_READY" -- 11 "Item is not ready yet"
+    "SPELL_FAILED_ITEM_NOT_READY", -- 11 "Item is not ready yet"
+    "SPELL_FAILED_TRY_AGAIN", -- 12 "Failed attempt"
+    "SPELL_FAILED_NOT_READY", -- 13 "Not yet recovered"
 }
+local spellFailedErrors = {
+    SPELL_FAILED_UNIT_NOT_INFRONT = 1,
+    SPELL_FAILED_MOVING = 6,
+    SPELL_FAILED_STUNNED = 9
+}
+
+local errorListMessages = {}
 
 function DataToColor:RegisterEvents()
     DataToColor:RegisterEvent("UI_ERROR_MESSAGE", 'OnUIErrorMessage')
@@ -89,66 +97,37 @@ function DataToColor:RegisterEvents()
     DataToColor:RegisterEvent('ZONE_CHANGED', 'OnZoneChanged')
     DataToColor:RegisterEvent('ZONE_CHANGED_INDOORS', 'OnZoneChanged')
     DataToColor:RegisterEvent('ZONE_CHANGED_NEW_AREA', 'OnZoneChanged')
+
+    for i = 1, #ignoreErrorList do
+        local text = _G[ignoreErrorList[i]]
+        ignoreErrorListMessages[text] = i
+    end
+
+    for i = 1, #errorList do
+        local text = _G[errorList[i]]
+        errorListMessages[text] = i
+    end
+
+    for key, value in pairs(spellFailedErrors) do
+        local text = _G[key]
+        errorListMessages[text] = value
+    end
 end
 
-function DataToColor:OnUIErrorMessage(event, messageType, message)
-    local code, ignored, foundMessage, message = DataToColor:GetErrorCode(messageType, message)
-
-    if ignored then
+function DataToColor:OnUIErrorMessage(_, _, message)
+    if ignoreErrorListMessages[message] then
         UIErrorsFrame:AddMessage(message, 0.7, 0.7, 0.7) -- show as grey messasge
-    elseif foundMessage and code ~= 0 then
+        return
+    end
+
+    local code = errorListMessages[message] or 0
+    if code > 0 then
         DataToColor.uiErrorMessage = code
         UIErrorsFrame:AddMessage(message, 0, 1, 0) -- show as green messasge
-    else
-        UIErrorsFrame:AddMessage(message, 0, 0, 1) -- show as blue message (unknown message)
-    end
-end
-
-function DataToColor:GetErrorCode(messageType, message)
-
-    local errorName
-    local foundMessage = false
-    local ignored = false
-    local code = 0
-
-    if messageType ~= nil then
-        errorName = GetGameMessageInfo(messageType)
+        return
     end
 
-    for i = 1, #ignoreErrorList, 1 do
-        if ignoreErrorList[i] == errorName then
-            foundMessage = true
-            ignored = true
-        end
-    end
-
-    if not ignored and not foundMessage then
-        for i = 1, #errorList, 1 do
-            if errorList[i] == errorName or
-                (_G[errorList[i]] ~= nil and string.find(_G[errorList[i]], message)) then
-                code = i
-                foundMessage = true
-            end
-        end
-    end
-
-    -- ERR_SPELL_FAILED_S
-    -- find by message ex combatlog
-    if not ignored and (not foundMessage or errorName == errorList[2]) then
-        if string.find(message, SPELL_FAILED_UNIT_NOT_INFRONT) then
-            code = 1
-            foundMessage = true
-            message = message .. " (" .. ERR_BADATTACKFACING .. ")"
-        elseif string.find(message, SPELL_FAILED_MOVING) then
-            foundMessage = true
-            code = 6
-        elseif string.find(message, SPELL_FAILED_STUNNED) then
-            foundMessage = true
-            code = 9
-        end
-    end
-
-    return code, ignored, foundMessage, message
+    UIErrorsFrame:AddMessage(message, 0, 0, 1) -- show as blue message (unknown message)
 end
 
 local watchedSpells = {
@@ -268,12 +247,46 @@ function DataToColor:OnCombatEvent(...)
 
             if playerSpellFailed[subEvent] then
                 --local lastCastEvent = DataToColor.lastCastEvent
-                local failedType = select(15, ...)
-                DataToColor.lastCastEvent = DataToColor:GetErrorCode(nil, failedType)
-                --DataToColor:Print(subEvent, " ", lastCastEvent, " -> ", DataToColor.lastCastEvent, " ", failedType, " ", spellId)
+                local failedMessage = select(15, ...)
+                DataToColor.lastCastEvent = errorListMessages[failedMessage] or 0
+                DataToColor.uiErrorMessage = DataToColor.lastCastEvent
+                --DataToColor:Print(subEvent, " ", lastCastEvent, " -> ", DataToColor.lastCastEvent, " ", failedMessage, " ", spellId)
             else
                 DataToColor.lastCastEvent = CAST_SUCCESS
                 --DataToColor:Print(subEvent, " ", spellId)
+
+                local hasGCD = true
+
+                local _, gcdMS = GetSpellBaseCooldown(spellId)
+                if (gcdMS == 0) then
+                    hasGCD = false
+                end
+
+                local _, _, _, castTime = GetSpellInfo(spellId)
+                if castTime > 0 then
+                    hasGCD = false
+                end
+
+                if spellId == DataToColor.C.Spell.ShootId then
+                    hasGCD = true
+                end
+
+                if hasGCD then
+                    -- Rogues and Druid Cat have 1s gcd.
+                    if DataToColor.C.CHARACTER_CLASS_ID == 4 or
+                    (DataToColor.C.CHARACTER_CLASS_ID == 11 and DataToColor:shapeshiftForm() == 3) then
+                        castTime = 1000
+                    elseif spellId == DataToColor.C.Spell.ShootId then
+                        castTime = floor(UnitRangedDamage(DataToColor.C.unitPlayer) * 1000)
+                    else
+                        castTime = 1500
+                    end
+
+                    DataToColor.gcdExpirationTime = GetTime() + (castTime / 1000)
+                    --DataToColor:Print(subEvent, " ", spellId, " ", castTime)
+                else
+                    --DataToColor:Print(subEvent, " ", spellId)
+                end
             end
         end
 

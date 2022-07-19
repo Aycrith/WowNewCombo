@@ -27,6 +27,7 @@ local strjoin = strjoin
 local strfind = strfind
 local debugstack = debugstack
 local ceil = ceil
+local GetTime = GetTime
 
 local UIParent = UIParent
 local BackdropTemplateMixin = BackdropTemplateMixin
@@ -118,6 +119,7 @@ DataToColor.lastLoot = 0
 DataToColor.map = C_Map.GetBestMapForUnit(DataToColor.C.unitPlayer)
 DataToColor.uiMapId = 0
 DataToColor.uiErrorMessage = 0
+DataToColor.gcdExpirationTime = 0
 
 DataToColor.lastAutoShot = 0
 DataToColor.lastMainHandMeleeSwing = 0
@@ -227,6 +229,7 @@ function DataToColor:Reset()
     DataToColor.globalTime = 0
     DataToColor.lastLoot = 0
     DataToColor.uiErrorMessage = 0
+    DataToColor.gcdExpirationTime = 0
 
     DataToColor.lastAutoShot = 0
     DataToColor.lastMainHandMeleeSwing = 0
@@ -634,6 +637,19 @@ function DataToColor:CreateFrames(n)
             if UnitExists(DataToColor.C.unitFocus) then
                 Pixel(int, DataToColor:getGuidFromUnit(DataToColor.C.unitFocus), 77)
                 Pixel(int, DataToColor:getGuidFromUnit(DataToColor.C.unitFocusTarget), 78)
+            end
+
+            -- 95 gcd
+
+            if DataToColor.gcdExpirationTime > 0 then
+                local gcd = floor((DataToColor.gcdExpirationTime - GetTime()) * 1000)
+                if gcd <= 0 then
+                    gcd = 0
+                    DataToColor.gcdExpirationTime = 0
+                end
+                Pixel(int, gcd, 95)
+            else
+                Pixel(int, 0, 95)
             end
 
             if globalCounter % LATENCY_ITERATION_FRAME_CHANGE_RATE == 0 then

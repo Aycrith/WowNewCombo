@@ -71,6 +71,8 @@ namespace HeadlessServer
             var logger = new SerilogLoggerProvider(Log.Logger).CreateLogger(nameof(Program));
             services.AddSingleton(logger);
 
+            services.AddSingleton<CancellationTokenSource>();
+
             services.AddSingleton(DataConfig.Load());
             services.AddSingleton<WowProcess>(x => new(options.Value.Pid));
             services.AddSingleton<WowScreen>();

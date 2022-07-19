@@ -96,7 +96,7 @@ namespace Core.Goals
                 playerDirection.SetDirection(heading, closestCorpse);
                 logger.LogInformation("Look at possible closest corpse and try again");
 
-                wait.Till(playerReader.NetworkLatency.Value / 2, Wait.None);
+                wait.Fixed(playerReader.NetworkLatency.Value / 2);
 
                 npcNameTargeting.ChangeNpcType(NpcNames.Corpse);
                 if (FoundByCursor())
@@ -146,21 +146,14 @@ namespace Core.Goals
                 }
             }
 
-            if (!wait.Till(1000, LootChanged))
-            {
-                Log("Loot Successfull");
-                if (gatherCorpse)
-                {
-                    wait.Till(playerReader.NetworkLatency.Value, Wait.None);
-                }
-            }
-            else
-            {
-                Log("Loot Failed");
-                SendGoapEvent(new GoapStateEvent(GoapKey.shouldgather, false));
-            }
+            (bool lootTimeOut, double elapsedMs) = wait.Until(1000, LootChanged);
+            Log($"Loot {(!lootTimeOut ? "Successfull" : "Failed")} after {elapsedMs}ms");
+            wait.Fixed(playerReader.NetworkLatency.Value);
 
             SendGoapEvent(new GoapStateEvent(GoapKey.shouldloot, false));
+
+            AddEffect(GoapKey.shouldgather, !lootTimeOut && gatherCorpse);
+            SendGoapEvent(new GoapStateEvent(GoapKey.shouldgather, !lootTimeOut && gatherCorpse));
 
             if (playerReader.Bits.HasTarget() && playerReader.Bits.TargetIsDead())
             {
@@ -187,7 +180,7 @@ namespace Core.Goals
 
         private bool FoundByCursor()
         {
-            wait.Till(playerReader.NetworkLatency.Value / 2, Wait.None);
+            wait.Fixed(playerReader.NetworkLatency.Value / 2);
             npcNameTargeting.WaitForUpdate();
             if (!npcNameTargeting.FindBy(CursorType.Loot))
             {
@@ -196,10 +189,7 @@ namespace Core.Goals
 
             Log("Found corpse - clicked");
             (bool searchTimeOut, double elapsedMs) = wait.Until(200, playerReader.Bits.HasTarget);
-            if (!searchTimeOut)
-            {
-                Log($"Found target after {elapsedMs}ms");
-            }
+            Log($"Found target ? {!searchTimeOut} after {elapsedMs}ms");
 
             CheckForGather();
 
@@ -260,8 +250,6 @@ namespace Core.Goals
             }
 
             Log($"Should gather {targetId} ? {gatherCorpse}");
-            AddEffect(GoapKey.shouldgather, gatherCorpse);
-            SendGoapEvent(new GoapStateEvent(GoapKey.shouldgather, gatherCorpse));
         }
 
         private bool LootChanged()

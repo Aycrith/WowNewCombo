@@ -384,8 +384,8 @@ namespace Core.Goals
         private bool WaitForGCD(KeyAction item, Func<bool> interrupt)
         {
             bool before = interrupt();
-            (bool timeout, double elapsedMs) = wait.Until(GCD,
-                () => addonReader.UsableAction.Is(item) || before != interrupt());
+            (bool timeout, double elapsedMs) = wait.Until(GCD + playerReader.NetworkLatency.Value,
+                () => playerReader.GCD.Value < SpellQueueTimeMs || before != interrupt());
 
             if (item.Log)
                 LogGCD(logger, item.Name, !timeout, elapsedMs);
@@ -419,148 +419,44 @@ namespace Core.Goals
             return playerReader.Form == item.FormEnum;
         }
 
-        public void ReactToLastUIErrorMessage(string source)
-        {
-            //var lastError = playerReader.LastUIErrorMessage;
-            switch (playerReader.LastUIError)
-            {
-                case UI_ERROR.NONE:
-                    break;
-                case UI_ERROR.CAST_START:
-                    break;
-                case UI_ERROR.CAST_SUCCESS:
-                    break;
-                case UI_ERROR.ERR_SPELL_FAILED_STUNNED:
-                    int debuffCount = playerReader.AuraCount.PlayerDebuff;
-                    if (debuffCount != 0)
-                    {
-                        logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_SPELL_FAILED_STUNNED.ToStringF()} -- Wait till losing debuff!");
-                        wait.While(() => debuffCount == playerReader.AuraCount.PlayerDebuff);
-
-                        wait.Update();
-                        playerReader.LastUIError = UI_ERROR.NONE;
-                    }
-                    else
-                    {
-                        logger.LogInformation($"{source} -- Didn't know how to react {UI_ERROR.ERR_SPELL_FAILED_STUNNED.ToStringF()} when PlayerDebuffCount: {debuffCount}");
-                    }
-                    break;
-                case UI_ERROR.ERR_SPELL_OUT_OF_RANGE:
-                    if (playerReader.Class == PlayerClassEnum.Hunter && playerReader.IsInMeleeRange())
-                    {
-                        logger.LogInformation($"{source} -- As a Hunter didn't know how to react {UI_ERROR.ERR_SPELL_OUT_OF_RANGE.ToStringF()}");
-                        return;
-                    }
-
-                    logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_SPELL_OUT_OF_RANGE.ToStringF()} -- Face enemy and start moving forward");
-                    input.Interact();
-                    input.SetKeyState(input.ForwardKey, true);
-
-                    wait.Update();
-                    playerReader.LastUIError = UI_ERROR.NONE;
-                    break;
-                case UI_ERROR.ERR_BADATTACKFACING:
-
-                    if (playerReader.IsInMeleeRange())
-                    {
-                        logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_BADATTACKFACING.ToStringF()} -- Interact!");
-                        input.Interact();
-                    }
-                    else
-                    {
-                        logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_BADATTACKFACING.ToStringF()} -- Turning 180!");
-
-                        float desiredDirection = playerReader.Direction + MathF.PI;
-                        desiredDirection = desiredDirection > MathF.PI * 2 ? desiredDirection - (MathF.PI * 2) : desiredDirection;
-                        direction.SetDirection(desiredDirection, Vector3.Zero);
-                    }
-
-                    wait.Update();
-                    playerReader.LastUIError = UI_ERROR.NONE;
-                    break;
-                case UI_ERROR.SPELL_FAILED_MOVING:
-                    logger.LogInformation($"{source} -- React to {UI_ERROR.SPELL_FAILED_MOVING.ToStringF()} -- Stop moving!");
-
-                    stopMoving.Stop();
-                    wait.Update();
-                    playerReader.LastUIError = UI_ERROR.NONE;
-                    break;
-                case UI_ERROR.ERR_SPELL_FAILED_ANOTHER_IN_PROGRESS:
-                    logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_SPELL_FAILED_ANOTHER_IN_PROGRESS.ToStringF()} -- Wait till casting!");
-                    wait.While(playerReader.IsCasting);
-
-                    wait.Update();
-                    playerReader.LastUIError = UI_ERROR.NONE;
-                    break;
-                case UI_ERROR.ERR_SPELL_COOLDOWN:
-                    logger.LogInformation($"{source} -- Cant react to {UI_ERROR.ERR_SPELL_FAILED_ANOTHER_IN_PROGRESS.ToStringF()}");
-
-                    wait.Update();
-                    playerReader.LastUIError = UI_ERROR.NONE;
-                    break;
-                case UI_ERROR.ERR_BADATTACKPOS:
-                    if (playerReader.Bits.SpellOn_AutoAttack())
-                    {
-                        logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_BADATTACKPOS.ToStringF()} -- Interact!");
-                        input.Interact();
-                        stopMoving.Stop();
-                        wait.Update();
-
-                        playerReader.LastUIError = UI_ERROR.NONE;
-                    }
-                    else
-                    {
-                        logger.LogInformation($"{source} -- Didn't know how to React to {playerReader.LastUIError.ToStringF()}");
-                    }
-                    break;
-                default:
-                    logger.LogInformation($"{source} -- Didn't know how to React to {playerReader.LastUIError.ToStringF()}");
-                    break;
-                    //case UI_ERROR.ERR_SPELL_FAILED_S:
-                    //case UI_ERROR.ERR_BADATTACKPOS:
-                    //case UI_ERROR.ERR_SPELL_OUT_OF_RANGE:
-                    //case UI_ERROR.ERR_AUTOFOLLOW_TOO_FAR:
-                    //    this.playerReader.LastUIErrorMessage = UI_ERROR.NONE;
-                    //    break;
-            }
-        }
-
         private void ReactToLastCastingEvent(KeyAction item, string source)
         {
-            switch ((UI_ERROR)playerReader.CastEvent.Value)
+            UI_ERROR value = (UI_ERROR)playerReader.CastEvent.Value;
+            switch (value)
             {
                 case UI_ERROR.NONE:
+                case UI_ERROR.CAST_START:
+                case UI_ERROR.CAST_SUCCESS:
                     break;
                 case UI_ERROR.ERR_SPELL_FAILED_INTERRUPTED:
                     item.SetClicked();
                     break;
-                case UI_ERROR.CAST_START:
-                    break;
-                case UI_ERROR.CAST_SUCCESS:
+                case UI_ERROR.SPELL_FAILED_NOT_READY:
+                    logger.LogInformation($"{source} React to {value.ToStringF()} -- wait for GCD {playerReader.GCD.Value}ms");
+                    wait.While(() => playerReader.GCD.Value > SpellQueueTimeMs);
                     break;
                 case UI_ERROR.ERR_SPELL_COOLDOWN:
-                    logger.LogInformation($"{source} React to {UI_ERROR.ERR_SPELL_COOLDOWN.ToStringF()} -- wait until its ready");
+                    logger.LogInformation($"{source} React to {value.ToStringF()} -- wait until its ready");
                     bool before = addonReader.UsableAction.Is(item);
                     wait.While(() => before != addonReader.UsableAction.Is(item));
-
                     break;
                 case UI_ERROR.ERR_SPELL_FAILED_STUNNED:
                     int debuffCount = playerReader.AuraCount.PlayerDebuff;
                     if (debuffCount != 0)
                     {
-                        logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_SPELL_FAILED_STUNNED.ToStringF()} -- Wait till losing debuff!");
+                        logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Wait till losing debuff!");
                         wait.While(() => debuffCount == playerReader.AuraCount.PlayerDebuff);
                     }
                     else
                     {
-                        logger.LogInformation($"{source} -- Didn't know how to react {UI_ERROR.ERR_SPELL_FAILED_STUNNED.ToStringF()} when PlayerDebuffCount: {debuffCount}");
+                        logger.LogInformation($"{source} -- Didn't know how to react {value.ToStringF()} when PlayerDebuffCount: {debuffCount}");
                     }
 
                     break;
                 case UI_ERROR.ERR_SPELL_OUT_OF_RANGE:
                     if (playerReader.Class == PlayerClassEnum.Hunter && playerReader.IsInMeleeRange())
                     {
-                        logger.LogInformation($"{source} -- As a Hunter didn't know how to react {UI_ERROR.ERR_SPELL_OUT_OF_RANGE.ToStringF()}");
+                        logger.LogInformation($"{source} -- As a Hunter didn't know how to react {value.ToStringF()}");
                         return;
                     }
 
@@ -571,7 +467,7 @@ namespace Core.Goals
                         wait.Update();
                         if (playerReader.TargetTarget == TargetTargetEnum.Me)
                         {
-                            logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_SPELL_OUT_OF_RANGE.ToStringF()} -- Just wait for the target to get in range.");
+                            logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Just wait for the target to get in range.");
 
                             (bool timeout, double elapsedMs) = wait.Until(MaxWaitCastTimeMs,
                                 () => minRange != playerReader.MinRange() || playerReader.IsTargetCasting()
@@ -593,25 +489,24 @@ namespace Core.Goals
                             (bool timeout, double elapsedMs) = wait.Until(MaxWaitCastTimeMs,
                                 () => minRange != playerReader.MinRange());
 
-                            logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_SPELL_OUT_OF_RANGE.ToStringF()} -- Approached target {minRange}->{playerReader.MinRange()}");
+                            logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Approached target {minRange}->{playerReader.MinRange()}");
                         }
                         else
                         {
-                            logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_SPELL_OUT_OF_RANGE.ToStringF()} -- Start moving forward");
+                            logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Start moving forward");
                             input.SetKeyState(input.ForwardKey, true);
                         }
                     }
-
                     break;
                 case UI_ERROR.ERR_BADATTACKFACING:
                     if (playerReader.IsInMeleeRange())
                     {
-                        logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_BADATTACKFACING.ToStringF()} -- Interact!");
+                        logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Interact!");
                         input.Interact();
                     }
                     else
                     {
-                        logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_BADATTACKFACING.ToStringF()} -- Turning 180!");
+                        logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Turning 180!");
 
                         float desiredDirection = playerReader.Direction + MathF.PI;
                         desiredDirection = desiredDirection > MathF.PI * 2 ? desiredDirection - (MathF.PI * 2) : desiredDirection;
@@ -619,43 +514,32 @@ namespace Core.Goals
 
                         wait.Update();
                     }
-
                     break;
                 case UI_ERROR.SPELL_FAILED_MOVING:
-                    logger.LogInformation($"{source} -- React to {UI_ERROR.SPELL_FAILED_MOVING.ToStringF()} -- Stop moving!");
+                    logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Stop moving!");
                     stopMoving.Stop();
                     wait.Update();
-
                     break;
                 case UI_ERROR.ERR_SPELL_FAILED_ANOTHER_IN_PROGRESS:
-                    logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_SPELL_FAILED_ANOTHER_IN_PROGRESS.ToStringF()} -- Wait till casting!");
+                    logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Wait till casting!");
                     wait.While(playerReader.IsCasting);
-
                     break;
                 case UI_ERROR.ERR_BADATTACKPOS:
                     if (playerReader.Bits.SpellOn_AutoAttack())
                     {
-                        logger.LogInformation($"{source} -- React to {UI_ERROR.ERR_BADATTACKPOS.ToStringF()} -- Interact!");
+                        logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Interact!");
                         input.Interact();
                         stopMoving.Stop();
                         wait.Update();
                     }
                     else
                     {
-                        logger.LogInformation($"{source} -- Didn't know how to React to {((UI_ERROR)playerReader.CastEvent.Value).ToStringF()}");
+                        logger.LogInformation($"{source} -- Didn't know how to React to {value.ToStringF()}");
                     }
-
                     break;
                 default:
-                    logger.LogInformation($"{source} -- Didn't know how to React to {((UI_ERROR)playerReader.CastEvent.Value).ToStringF()}");
-
+                    logger.LogInformation($"{source} -- Didn't know how to React to {value.ToStringF()}");
                     break;
-                    //case UI_ERROR.ERR_SPELL_FAILED_S:
-                    //case UI_ERROR.ERR_BADATTACKPOS:
-                    //case UI_ERROR.ERR_SPELL_OUT_OF_RANGE:
-                    //case UI_ERROR.ERR_AUTOFOLLOW_TOO_FAR:
-                    //    this.playerReader.LastUIErrorMessage = UI_ERROR.NONE;
-                    //    break;
             }
         }
 
