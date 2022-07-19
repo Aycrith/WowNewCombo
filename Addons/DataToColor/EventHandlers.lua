@@ -265,6 +265,11 @@ function DataToColor:OnCombatEvent(...)
                 end
 
                 local _, _, _, castTime = GetSpellInfo(spellId)
+
+                if castTime == nil then
+                    castTime = 0
+                end
+
                 if castTime > 0 then
                     hasGCD = false
                 end
