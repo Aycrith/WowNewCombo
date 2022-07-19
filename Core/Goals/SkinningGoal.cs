@@ -21,6 +21,7 @@ namespace Core.Goals
         private readonly NpcNameTargeting npcNameTargeting;
         private readonly CombatUtil combatUtil;
 
+        private int lastCastEvent;
         private int lastLoot;
         private bool canRun;
 
@@ -68,7 +69,6 @@ namespace Core.Goals
             }
 
             npcNameTargeting.ChangeNpcType(NpcNames.Corpse);
-            npcNameTargeting.WaitForUpdate();
 
             lastLoot = playerReader.LastLootTime;
 
@@ -87,6 +87,7 @@ namespace Core.Goals
                     }
                 }
 
+                npcNameTargeting.WaitForUpdate();
                 bool foundCursor = npcNameTargeting.FindBy(CursorType.Skin, CursorType.Mine, CursorType.Herb); // todo salvage icon
                 if (foundCursor)
                 {
@@ -111,21 +112,19 @@ namespace Core.Goals
                     wait.Till(CastingHandler.SpellQueueTimeMs + playerReader.NetworkLatency.Value, playerReader.IsCasting);
                     Log("Started casting...");
 
-                    playerReader.LastUIError = UI_ERROR.NONE;
+                    lastCastEvent = playerReader.CastEvent.Value;
 
                     wait.Till(CastingHandler.GatherCastTimeMs + playerReader.NetworkLatency.Value, CastFinishedOrInterrupted);
 
-                    if (playerReader.LastUIError != UI_ERROR.ERR_SPELL_FAILED_S)
+                    if ((UI_ERROR)playerReader.CastEvent.Value == UI_ERROR.CAST_SUCCESS)
                     {
-                        playerReader.LastUIError = UI_ERROR.NONE;
-                        Log($"Gathering Successful! {playerReader.LastUIError.ToStringF()}");
-
+                        Log($"Gathering Successful!");
                         GoalExit();
                         return;
                     }
                     else
                     {
-                        Log($"Gathering Failed! Retry... Attempts: {attempts}");
+                        Log($"Gathering Failed! {((UI_ERROR)playerReader.CastEvent.Value).ToStringF()} attempts: {attempts}");
                         attempts++;
                     }
                 }
@@ -146,15 +145,9 @@ namespace Core.Goals
 
         private void GoalExit()
         {
-            if (!wait.Till(1000, LootChanged))
-            {
-                Log("Loot Successfull");
-                wait.Till(playerReader.NetworkLatency.Value, Wait.None);
-            }
-            else
-            {
-                Log("Loot Failed");
-            }
+            (bool lootTimeOut, double elapsedMs) = wait.Until(1000, LootChanged);
+            Log($"Loot {(!lootTimeOut ? "Successfull" : "Failed")} after {elapsedMs}ms");
+            wait.Fixed(playerReader.NetworkLatency.Value);
 
             lastLoot = playerReader.LastLootTime;
 
@@ -220,7 +213,7 @@ namespace Core.Goals
 
         private bool CastFinishedOrInterrupted()
         {
-            return !playerReader.IsCasting() || playerReader.LastUIError != UI_ERROR.NONE;
+            return lastCastEvent != playerReader.CastEvent.Value;
         }
 
         private void Log(string text)

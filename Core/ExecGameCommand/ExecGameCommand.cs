@@ -9,12 +9,14 @@ namespace Core
     {
         private readonly ILogger logger;
         private readonly WowProcessInput wowProcessInput;
-        private readonly Random random = new();
-        private readonly CancellationTokenSource cts = new();
+        private readonly CancellationTokenSource cts;
 
-        public ExecGameCommand(ILogger logger, WowProcessInput wowProcessInput)
+        private readonly Random random = new();
+
+        public ExecGameCommand(ILogger logger, CancellationTokenSource cts, WowProcessInput wowProcessInput)
         {
             this.logger = logger;
+            this.cts = cts;
             this.wowProcessInput = wowProcessInput;
         }
 

@@ -35,6 +35,7 @@ local IsUsableAction = IsUsableAction
 local GetActionTexture = GetActionTexture
 local GetTime = GetTime
 local IsCurrentAction = IsCurrentAction
+local IsAutoRepeatAction = IsAutoRepeatAction
 
 local GetNumSkillLines = GetNumSkillLines
 local GetSkillLineInfo = GetSkillLineInfo
@@ -380,7 +381,7 @@ end
 function DataToColor:isCurrentAction(min, max)
     local isUsableBits = 0
     for i = min, max do
-        if IsCurrentAction(i) then
+        if IsCurrentAction(i) or IsAutoRepeatAction(i) then
             isUsableBits = isUsableBits + (2 ^ (i - min))
         end
     end
