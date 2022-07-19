@@ -23,7 +23,7 @@
         gathering,
         targethostile,
         hasfocus,
-        focustargetincombat,
+        focushastarget,
     }
 
     public static class GoapKey_Extension
@@ -52,7 +52,7 @@
             GoapKey.itemsbroken => "Broken",
             GoapKey.gathering => "Gathering",
             GoapKey.hasfocus => "Focus",
-            GoapKey.focustargetincombat => "Focus Target Combat",
+            GoapKey.focushastarget => "Focus Target",
             GoapKey.targethostile => "Target Hostile",
             _ => unknown
         };
@@ -79,7 +79,7 @@
             GoapKey.itemsbroken => "!Broken",
             GoapKey.gathering => "!Gathering",
             GoapKey.hasfocus => "!Focus",
-            GoapKey.focustargetincombat => "!Focus Target Combat",
+            GoapKey.focushastarget => "!Focus Target",
             GoapKey.targethostile => "!Target Hostile",
             _ => unknown
         };

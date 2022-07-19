@@ -30,7 +30,7 @@
         public bool TargetIsDead() => v1.IsBitSet(1);
         public bool DeadStatus() => v1.IsBitSet(2);
         public bool TalentPoints() => v1.IsBitSet(3);
-        public bool IsInDeadZoneRange() => v1.IsBitSet(4);
+        public bool TargetInTradeRange() => v1.IsBitSet(4);
         public bool TargetCanBeHostile() => v1.IsBitSet(5);
         public bool HasPet() => v1.IsBitSet(6);
         public bool MainHandEnchant_Active() => v1.IsBitSet(7);
@@ -60,8 +60,14 @@
 
         public bool HasFocus() => v2.IsBitSet(3);
 
-        public bool FocusHasTarget() => v2.IsBitSet(4);
+        public bool FocusInCombat() => v2.IsBitSet(4);
 
-        public bool FocusHasTargetInCombat() => v2.IsBitSet(5);
+        public bool FocusHasTarget() => v2.IsBitSet(5);
+
+        public bool FocusTargetInCombat() => v2.IsBitSet(6);
+
+        public bool FocusTargetCanBeHostile() => v2.IsBitSet(7);
+
+        public bool FocusTargetInTradeRange() => v2.IsBitSet(8);
     }
 }
