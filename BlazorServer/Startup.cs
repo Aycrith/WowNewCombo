@@ -82,6 +82,8 @@ namespace BlazorServer
                 FrameConfig.Delete();
             }
 
+            wowProcess.Dispose();
+
             services.AddSingleton(DataConfig.Load());
             services.AddSingleton<WowProcess>(x => new(StartupConfigPid.Id));
             services.AddSingleton<WowScreen>();
