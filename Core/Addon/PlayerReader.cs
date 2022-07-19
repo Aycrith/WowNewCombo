@@ -123,6 +123,8 @@ namespace Core
 
         public int OffHandSpeed => (int)(reader.GetInt(75) - (MainHandSpeedMs() * 1000f));  // supposed to be 10000f - but theres a 10x
 
+        public RecordInt GCD { get; } = new(95);
+
         public RecordInt NetworkLatency { get; } = new(96);
 
         public int LastLootTime => reader.GetInt(97);
@@ -162,6 +164,7 @@ namespace Core
             CastEvent.Update(reader);
             CastSpellId.Update(reader);
 
+            GCD.Update(reader);
             NetworkLatency.Update(reader);
         }
 
@@ -178,6 +181,7 @@ namespace Core
             PlayerXp.Reset();
             Level.Reset();
 
+            GCD.Reset();
             NetworkLatency.Reset();
         }
     }

@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Numerics;
 using System.Threading;
@@ -384,8 +384,8 @@ namespace Core.Goals
         private bool WaitForGCD(KeyAction item, Func<bool> interrupt)
         {
             bool before = interrupt();
-            (bool timeout, double elapsedMs) = wait.Until(GCD,
-                () => addonReader.UsableAction.Is(item) || before != interrupt());
+            (bool timeout, double elapsedMs) = wait.Until(GCD + playerReader.NetworkLatency.Value,
+                () => playerReader.GCD.Value < SpellQueueTimeMs || before != interrupt());
 
             if (item.Log)
                 LogGCD(logger, item.Name, !timeout, elapsedMs);
@@ -534,9 +534,9 @@ namespace Core.Goals
                 case UI_ERROR.ERR_SPELL_FAILED_INTERRUPTED:
                     item.SetClicked();
                     break;
-                case UI_ERROR.CAST_START:
-                    break;
-                case UI_ERROR.CAST_SUCCESS:
+                case UI_ERROR.SPELL_FAILED_NOT_READY:
+                    logger.LogInformation($"{source} React to {value.ToStringF()} -- wait for GCD {playerReader.GCD.Value}ms");
+                    wait.While(() => playerReader.GCD.Value > SpellQueueTimeMs);
                     break;
                 case UI_ERROR.ERR_SPELL_COOLDOWN:
                     logger.LogInformation($"{source} React to {UI_ERROR.ERR_SPELL_COOLDOWN.ToStringF()} -- wait until its ready");
