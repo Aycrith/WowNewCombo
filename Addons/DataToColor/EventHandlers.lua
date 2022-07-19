@@ -274,6 +274,39 @@ function DataToColor:OnCombatEvent(...)
             else
                 DataToColor.lastCastEvent = CAST_SUCCESS
                 --DataToColor:Print(subEvent, " ", spellId)
+
+                local hasGCD = true
+
+                local _, gcdMS = GetSpellBaseCooldown(spellId)
+                if (gcdMS == 0) then
+                    hasGCD = false
+                end
+
+                local _, _, _, castTime = GetSpellInfo(spellId)
+                if castTime > 0 then
+                    hasGCD = false
+                end
+
+                if spellId == DataToColor.C.Spell.ShootId then
+                    hasGCD = true
+                end
+
+                if hasGCD then
+                    -- Rogues and Druid Cat have 1s gcd.
+                    if DataToColor.C.CHARACTER_CLASS_ID == 4 or
+                    (DataToColor.C.CHARACTER_CLASS_ID == 11 and DataToColor:shapeshiftForm() == 3) then
+                        castTime = 1000
+                    elseif spellId == DataToColor.C.Spell.ShootId then
+                        castTime = floor(UnitRangedDamage(DataToColor.C.unitPlayer) * 1000)
+                    else
+                        castTime = 1500
+                    end
+
+                    DataToColor.gcdExpirationTime = GetTime() + (castTime / 1000)
+                    --DataToColor:Print(subEvent, " ", spellId, " ", castTime)
+                else
+                    --DataToColor:Print(subEvent, " ", spellId)
+                end
             end
         end
 
