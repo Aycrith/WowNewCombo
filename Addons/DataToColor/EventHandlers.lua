@@ -247,9 +247,10 @@ function DataToColor:OnCombatEvent(...)
 
             if playerSpellFailed[subEvent] then
                 --local lastCastEvent = DataToColor.lastCastEvent
-                local failedType = select(15, ...)
-                DataToColor.lastCastEvent = DataToColor:GetErrorCode(nil, failedType)
-                --DataToColor:Print(subEvent, " ", lastCastEvent, " -> ", DataToColor.lastCastEvent, " ", failedType, " ", spellId)
+                local failedMessage = select(15, ...)
+                DataToColor.lastCastEvent = errorListMessages[failedMessage] or 0
+                DataToColor.uiErrorMessage = DataToColor.lastCastEvent
+                --DataToColor:Print(subEvent, " ", lastCastEvent, " -> ", DataToColor.lastCastEvent, " ", failedMessage, " ", spellId)
             else
                 DataToColor.lastCastEvent = CAST_SUCCESS
                 --DataToColor:Print(subEvent, " ", spellId)
