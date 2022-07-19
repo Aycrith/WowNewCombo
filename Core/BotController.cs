@@ -86,7 +86,7 @@ namespace Core
         }
         private readonly CircularBuffer<double> NPCLatencys;
 
-        public BotController(ILogger logger, IPPather pather, IGrindSessionDAO grindSessionDAO, DataConfig dataConfig, WowProcess wowProcess, WowScreen wowScreen, WowProcessInput wowProcessInput, ExecGameCommand execGameCommand, Wait wait, IAddonReader addonReader, MinimapNodeFinder minimapNodeFinder)
+        public BotController(ILogger logger, CancellationTokenSource cts, IPPather pather, IGrindSessionDAO grindSessionDAO, DataConfig dataConfig, WowProcess wowProcess, WowScreen wowScreen, WowProcessInput wowProcessInput, ExecGameCommand execGameCommand, Wait wait, IAddonReader addonReader, MinimapNodeFinder minimapNodeFinder)
         {
             this.logger = logger;
             this.pather = pather;
@@ -100,7 +100,7 @@ namespace Core
             this.wait = wait;
             this.minimapNodeFinder = minimapNodeFinder;
 
-            cts = new();
+            this.cts = cts;
             npcNameFinderEvent = new(false);
 
             ScreenLatencys = new(8);

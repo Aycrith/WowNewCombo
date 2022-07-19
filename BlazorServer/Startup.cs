@@ -84,6 +84,8 @@ namespace BlazorServer
 
             wowProcess.Dispose();
 
+            services.AddSingleton<CancellationTokenSource>();
+
             services.AddSingleton(DataConfig.Load());
             services.AddSingleton<WowProcess>(x => new(StartupConfigPid.Id));
             services.AddSingleton<WowScreen>();
