@@ -52,7 +52,7 @@ namespace SharedLib.NpcFinder
         };
     }
 
-    public class NpcNameFinder
+    public partial class NpcNameFinder
     {
         private const SearchMode searchMode = SearchMode.Simple;
         private NpcNames nameType = NpcNames.Enemy | NpcNames.Neutral;
@@ -84,7 +84,7 @@ namespace SharedLib.NpcFinder
         public bool PotentialAddsExist { get; private set; }
         public DateTime LastPotentialAddsSeen { get; private set; }
 
-        private Func<Color, bool> colorMatcher;
+        private Func<byte, byte, byte, bool> colorMatcher;
 
         #region variables
 
@@ -138,6 +138,7 @@ namespace SharedLib.NpcFinder
             this.bytesPerPixel = Bitmap.GetPixelFormatSize(pixelFormat) / 8;
 
             UpdateSearchMode();
+            logger.LogInformation($"[NpcNameFinder] searchMode = {searchMode.ToStringF()}");
 
             ScaleToRefWidth = ScaleWidth(1);
             ScaleToRefHeight = ScaleHeight(1);
@@ -186,7 +187,7 @@ namespace SharedLib.NpcFinder
 
             UpdateSearchMode();
 
-            logger.LogInformation($"{nameof(NpcNameFinder)}.{nameof(ChangeNpcType)} = {type.ToStringF()} | searchMode = {searchMode.ToStringF()}");
+            LogTypeChanged(logger, type.ToStringF());
         }
 
         private void UpdateSearchMode()
@@ -235,43 +236,43 @@ namespace SharedLib.NpcFinder
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool SimpleColorEnemy(Color p)
+        private bool SimpleColorEnemy(byte r, byte g, byte b)
         {
-            return p.R > sEnemy.R && p.G <= sEnemy.G && p.B <= sEnemy.B;
+            return r > sEnemy.R && g <= sEnemy.G && b <= sEnemy.B;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool SimpleColorFriendly(Color p)
+        private bool SimpleColorFriendly(byte r, byte g, byte b)
         {
-            return p.R == sFriendly.R && p.G > sFriendly.G && p.B == sFriendly.B;
+            return r == sFriendly.R && g > sFriendly.G && b == sFriendly.B;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool SimpleColorNeutral(Color p)
+        private bool SimpleColorNeutral(byte r, byte g, byte b)
         {
-            return p.R > sNeutrual.R && p.G > sNeutrual.G && p.B == sNeutrual.B;
+            return r > sNeutrual.R && g > sNeutrual.G && b == sNeutrual.B;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool SimpleColorCorpse(Color p)
+        private bool SimpleColorCorpse(byte r, byte g, byte b)
         {
-            return p.R == fCorpse.R && p.G == fCorpse.G && p.B == fCorpse.B;
+            return r == fCorpse.R && g == fCorpse.G && b == fCorpse.B;
         }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool CombinedFriendlyNeutrual(Color c)
+        private bool CombinedFriendlyNeutrual(byte r, byte g, byte b)
         {
-            return SimpleColorFriendly(c) || SimpleColorNeutral(c);
+            return SimpleColorFriendly(r, g, b) || SimpleColorNeutral(r, g, b);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool CombinedEnemyNeutrual(Color c)
+        private bool CombinedEnemyNeutrual(byte r, byte g, byte b)
         {
-            return SimpleColorEnemy(c) || SimpleColorNeutral(c);
+            return SimpleColorEnemy(r, g, b) || SimpleColorNeutral(r, g, b);
         }
 
-        private static bool NoMatch(Color c)
+        private static bool NoMatch(byte r, byte g, byte b)
         {
             return false;
         }
@@ -286,64 +287,58 @@ namespace SharedLib.NpcFinder
             switch (nameType)
             {
                 case NpcNames.Enemy | NpcNames.Neutral:
-                    colorMatcher = (Color c) => FuzzyColor(fEnemy, c) || FuzzyColor(fNeutrual, c);
+                    colorMatcher = (byte r, byte g, byte b) => FuzzyColor(fEnemy, r, g, b) || FuzzyColor(fNeutrual, r, g, b);
                     return;
                 case NpcNames.Friendly | NpcNames.Neutral:
-                    colorMatcher = (Color c) => FuzzyColor(fFriendly, c) || FuzzyColor(fNeutrual, c);
+                    colorMatcher = (byte r, byte g, byte b) => FuzzyColor(fFriendly, r, g, b) || FuzzyColor(fNeutrual, r, g, b);
                     return;
                 case NpcNames.Enemy:
-                    colorMatcher = (Color c) => FuzzyColor(fEnemy, c);
+                    colorMatcher = (byte r, byte g, byte b) => FuzzyColor(fEnemy, r, g, b);
                     return;
                 case NpcNames.Friendly:
-                    colorMatcher = (Color c) => FuzzyColor(fFriendly, c);
+                    colorMatcher = (byte r, byte g, byte b) => FuzzyColor(fFriendly, r, g, b);
                     return;
                 case NpcNames.Neutral:
-                    colorMatcher = (Color c) => FuzzyColor(fNeutrual, c);
+                    colorMatcher = (byte r, byte g, byte b) => FuzzyColor(fNeutrual, r, g, b);
                     return;
                 case NpcNames.Corpse:
-                    colorMatcher = (Color c) => FuzzyColor(fCorpse, c);
+                    colorMatcher = (byte r, byte g, byte b) => FuzzyColor(fCorpse, r, g, b);
                     return;
             }
         }
 
-        private bool FuzzyColor(Color target, Color c)
+        private bool FuzzyColor(Color target, byte r, byte g, byte b)
         {
             return MathF.Sqrt(
-                ((target.R - c.R) * (target.R - c.R)) +
-                ((target.G - c.G) * (target.G - c.G)) +
-                ((target.B - c.B) * (target.B - c.B)))
+                ((target.R - r) * (target.R - r)) +
+                ((target.G - g) * (target.G - g)) +
+                ((target.B - b) * (target.B - b)))
                 <= colorFuzziness;
         }
 
         #endregion
 
+        public void WaitForUpdate()
+        {
+            autoResetEvent.WaitOne();
+        }
+
         public void Update()
         {
-            var npcNameLines = PopulateLinesOfNpcNames();
+            var npcNameLines = PopulateLinesOfNpcNames(bitmapProvider.Bitmap);
             var npcs = DetermineNpcs(npcNameLines);
 
             Npcs = npcs.
-                Select(lineofNpcName =>
-                    new NpcPosition(
-                        new Point(lineofNpcName.Min(x => x.XStart), lineofNpcName.Min(x => x.Y)),
-                        new Point(lineofNpcName.Max(x => x.XEnd), lineofNpcName.Max(x => x.Y)),
-                        bitmapProvider.Rect.Width,
-                        yOffset, heightMul))
+                Select(CreateNpcPos)
+                .Where(WhereScale)
+                .Distinct(comparer)
+                .OrderBy(Order);
 
-            .Where(npcPos => npcPos.Width < ScaleWidth(npcNameMaxWidth))
-            .Distinct(comparer)
-            .OrderBy(npcPos => RectangleExt.SqrDistance(Area.BottomCentre(), npcPos.ClickPoint));
+            static bool TargetsCount(NpcPosition c) => !c.IsAdd && Math.Abs(c.ClickPoint.X - c.screenMid) < c.screenTargetBuffer;
+            TargetCount = Npcs.Count(TargetsCount);
 
-            UpdatePotentialAddsExist();
-
-            autoResetEvent.Set();
-        }
-
-
-        public void UpdatePotentialAddsExist()
-        {
-            TargetCount = Npcs.Count(c => !c.IsAdd && Math.Abs(c.ClickPoint.X - c.screenMid) < c.screenTargetBuffer);
-            AddCount = Npcs.Count(c => c.IsAdd);
+            static bool IsAdd(NpcPosition c) => c.IsAdd;
+            AddCount = Npcs.Count(IsAdd);
 
             if (AddCount > 0 && TargetCount >= 1)
             {
@@ -358,11 +353,33 @@ namespace SharedLib.NpcFinder
                     AddCount = 0;
                 }
             }
+
+            autoResetEvent.Set();
+        }
+
+        private bool WhereScale(NpcPosition npcPos) => npcPos.Width < ScaleWidth(npcNameMaxWidth);
+
+        private float Order(NpcPosition npcPos) => RectangleExt.SqrDistance(Area.BottomCentre(), npcPos.ClickPoint);
+
+        private NpcPosition CreateNpcPos(List<LineOfNpcName> lineofNpcName)
+        {
+            return new NpcPosition(
+                new Point(lineofNpcName.Min(MinX), lineofNpcName.Min(MinY)),
+                new Point(lineofNpcName.Max(MaxX), lineofNpcName.Max(MaxY)),
+                bitmapProvider.Rect.Width, yOffset, heightMul);
+
+            static int MinX(LineOfNpcName x) => x.XStart;
+            static int MinY(LineOfNpcName x) => x.Y;
+            static int MaxX(LineOfNpcName x) => x.XEnd;
+            static int MaxY(LineOfNpcName x) => x.Y;
         }
 
         private List<List<LineOfNpcName>> DetermineNpcs(List<LineOfNpcName> npcNameLine)
         {
             List<List<LineOfNpcName>> npcs = new();
+
+            float offset1 = ScaleHeight(DetermineNpcsHeightOffset1);
+            float offset2 = ScaleHeight(DetermineNpcsHeightOffset2);
 
             for (int i = 0; i < npcNameLine.Count; i++)
             {
@@ -375,8 +392,8 @@ namespace SharedLib.NpcFinder
                     for (int j = i + 1; j < npcNameLine.Count; j++)
                     {
                         var laterNpcLine = npcNameLine[j];
-                        if (laterNpcLine.Y > npcLine.Y + ScaleHeight(DetermineNpcsHeightOffset1)) { break; } // 10
-                        if (laterNpcLine.Y > lastY + ScaleHeight(DetermineNpcsHeightOffset2)) { break; } // 5
+                        if (laterNpcLine.Y > npcLine.Y + offset1) { break; } // 10
+                        if (laterNpcLine.Y > lastY + offset2) { break; } // 5
 
                         if (laterNpcLine.XStart <= npcLine.X && laterNpcLine.XEnd >= npcLine.X && laterNpcLine.Y > lastY)
                         {
@@ -393,20 +410,21 @@ namespace SharedLib.NpcFinder
             return npcs;
         }
 
-        private List<LineOfNpcName> PopulateLinesOfNpcNames()
+        private List<LineOfNpcName> PopulateLinesOfNpcNames(Bitmap bitmap)
         {
             List<LineOfNpcName> npcNameLine = new();
 
+            Func<byte, byte, byte, bool> colorMatcher = this.colorMatcher;
             float minLength = ScaleWidth(LinesOfNpcMinLength);
             float lengthDiff = ScaleWidth(LinesOfNpcLengthDiff);
             float minEndLength = minLength - lengthDiff;
 
             unsafe
             {
-                BitmapData bitmapData = bitmapProvider.Bitmap.LockBits(new Rectangle(0, 0, bitmapProvider.Rect.Width, bitmapProvider.Rect.Height), ImageLockMode.ReadOnly, pixelFormat);
+                BitmapData bitmapData = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height), ImageLockMode.ReadOnly, pixelFormat);
 
                 //for (int y = Area.Top; y < Area.Height; y += incY)
-                Parallel.For(Area.Top, Area.Height, y =>
+                void body(int y)
                 {
                     int lengthStart = -1;
                     int lengthEnd = -1;
@@ -416,7 +434,7 @@ namespace SharedLib.NpcFinder
                     {
                         int xi = x * bytesPerPixel;
 
-                        if (colorMatcher(Color.FromArgb(255, currentLine[xi + 2], currentLine[xi + 1], currentLine[xi])))
+                        if (colorMatcher(currentLine[xi + 2], currentLine[xi + 1], currentLine[xi]))
                         {
                             if (lengthStart > -1 && (x - lengthEnd) < minLength)
                             {
@@ -439,17 +457,13 @@ namespace SharedLib.NpcFinder
                     {
                         npcNameLine.Add(new LineOfNpcName(lengthStart, lengthEnd, y));
                     }
-                });
+                }
+                _ = Parallel.For(Area.Top, Area.Height, body);
 
-                bitmapProvider.Bitmap.UnlockBits(bitmapData);
+                bitmap.UnlockBits(bitmapData);
             }
 
             return npcNameLine;
-        }
-
-        public void WaitForUpdate()
-        {
-            autoResetEvent.WaitOne();
         }
 
         public void ShowNames(Graphics gr)
@@ -477,5 +491,16 @@ namespace SharedLib.NpcFinder
         {
             return new Point(bitmapProvider.Rect.X + x, bitmapProvider.Rect.Top + y);
         }
+
+
+        #region Logging
+
+        [LoggerMessage(
+            EventId = 1,
+            Level = LogLevel.Information,
+            Message = "[NpcNameFinder] type = {type}")]
+        static partial void LogTypeChanged(ILogger logger, string type);
+
+        #endregion
     }
 }

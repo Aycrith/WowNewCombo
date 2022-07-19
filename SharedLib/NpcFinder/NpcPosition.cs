@@ -9,11 +9,10 @@ namespace SharedLib.NpcFinder
         public readonly int Height => Rect.Height;
         public readonly int Width => Rect.Width;
 
-        public readonly Rectangle Rect { get; }
+        public readonly Rectangle Rect;
+        public readonly Point ClickPoint;
 
-        public readonly Point ClickPoint { get; }
-
-        public readonly bool IsAdd { get; }
+        public readonly bool IsAdd;
 
         public readonly int screenMid;
         public readonly int screenTargetBuffer;
