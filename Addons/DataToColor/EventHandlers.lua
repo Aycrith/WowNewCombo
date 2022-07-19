@@ -67,11 +67,13 @@ local errorList = {
     "SPELL_FAILED_ITEM_NOT_READY", -- 11 "Item is not ready yet"
     "SPELL_FAILED_TRY_AGAIN", -- 12 "Failed attempt"
     "SPELL_FAILED_NOT_READY", -- 13 "Not yet recovered"
+    "SPELL_FAILED_TARGETS_DEAD" -- 14 "Your target is dead"
 }
 local spellFailedErrors = {
     SPELL_FAILED_UNIT_NOT_INFRONT = 1,
     SPELL_FAILED_MOVING = 6,
-    SPELL_FAILED_STUNNED = 9
+    SPELL_FAILED_STUNNED = 9,
+    ERR_SPELL_OUT_OF_RANGE = 3
 }
 
 local errorListMessages = {}
