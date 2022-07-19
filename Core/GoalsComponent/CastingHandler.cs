@@ -427,6 +427,7 @@ namespace Core.Goals
                 case UI_ERROR.NONE:
                 case UI_ERROR.CAST_START:
                 case UI_ERROR.CAST_SUCCESS:
+                case UI_ERROR.SPELL_FAILED_TARGETS_DEAD:
                     break;
                 case UI_ERROR.ERR_SPELL_FAILED_INTERRUPTED:
                     item.SetClicked();
