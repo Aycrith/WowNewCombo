@@ -272,15 +272,14 @@ namespace Core
         {
             if (CheckTargetGivesExp)
             {
-                logger.LogWarning($"{nameof(CheckTargetGivesExp)} is enabled. { nameof(NPCMaxLevels_Above)} and {nameof(NPCMaxLevels_Below)} will be ignored.");
+                logger.LogWarning($"{nameof(CheckTargetGivesExp)} is enabled. { nameof(NPCMaxLevels_Above)} and {nameof(NPCMaxLevels_Below)} ignored!");
             }
             if (KeyboardOnly)
             {
-                logger.LogWarning($"{nameof(KeyboardOnly)} mode is enabled. The bot will not try to utilize your mouse. {nameof(GatherCorpse)} will be disabled and the npc target function will be limited.");
-                Skin = false;
-                Mine = false;
-                Herb = false;
-                Salvage = false;
+                logger.LogWarning($"{nameof(KeyboardOnly)} mode is enabled. Mouse based actions ignored.");
+
+                if (GatherCorpse)
+                    logger.LogWarning($"{nameof(GatherCorpse)} limited to the last target. Rest going to be skipped!");
             }
         }
 

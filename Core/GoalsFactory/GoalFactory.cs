@@ -163,23 +163,11 @@ namespace Core
                 services.AddSingleton<GoapGoal, ConsumeCorpseGoal>();
                 services.AddSingleton<GoapGoal, CorpseConsumedGoal>();
 
-                if (classConfig.KeyboardOnly)
-                {
-                    services.AddSingleton<GoapGoal, LastTargetLootGoal>();
+                services.AddSingleton<GoapGoal, LootGoal>();
 
-                    //if (classConfig.Skin)
-                    //{
-                    // unavailable due mouse not usable
-                    //}
-                }
-                else
+                if (classConfig.GatherCorpse)
                 {
-                    services.AddSingleton<GoapGoal, LootGoal>();
-
-                    if (classConfig.GatherCorpse)
-                    {
-                        services.AddSingleton<GoapGoal, SkinningGoal>();
-                    }
+                    services.AddSingleton<GoapGoal, SkinningGoal>();
                 }
             }
         }

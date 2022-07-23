@@ -16,14 +16,8 @@ namespace Core.Goals
             this.logger = logger;
             this.classConfig = classConfig;
 
-            if (classConfig.Mode == Mode.AssistFocus)
-            {
-                AddPrecondition(GoapKey.dangercombat, false);
-            }
-            else
-            {
-                AddPrecondition(GoapKey.incombat, false);
-            }
+            AddPrecondition(GoapKey.damagedone, false);
+            AddPrecondition(GoapKey.damagetaken, false);
 
             AddPrecondition(GoapKey.producedcorpse, true);
             AddPrecondition(GoapKey.consumecorpse, false);
