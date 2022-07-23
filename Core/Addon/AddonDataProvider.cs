@@ -1,5 +1,4 @@
 ﻿using Game;
-using SharedLib;
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -21,11 +20,9 @@ namespace Core
         private const PixelFormat pixelFormat = PixelFormat.Format32bppPArgb;
         private readonly int bytesPerPixel;
 
-        private readonly Rectangle bitmapRect;
-        private readonly Bitmap bitmap = null!;
+        private readonly Rectangle rect;
+        private readonly Bitmap bitmap;
         private readonly Graphics graphics;
-
-        private Rectangle rect;
 
         public AddonDataProvider(WowScreen wowScreen, DataFrame[] frames)
         {
@@ -47,7 +44,6 @@ namespace Core
 
             bytesPerPixel = Image.GetPixelFormatSize(pixelFormat) / 8;
             bitmap = new(rect.Width, rect.Height, pixelFormat);
-            bitmapRect = new(0, 0, bitmap.Width, bitmap.Height);
 
             graphics = Graphics.FromImage(bitmap);
         }
@@ -55,15 +51,13 @@ namespace Core
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Update()
         {
-            Point p = new();
-            wowScreen.GetPosition(ref p);
-            rect.Location = p;
-
-            graphics.CopyFromScreen(rect.Location, Point.Empty, bitmap.Size);
+            Point windowLoc = new();
+            wowScreen.GetPosition(ref windowLoc);
+            graphics.CopyFromScreen(windowLoc, Point.Empty, rect.Size);
 
             unsafe
             {
-                BitmapData bd = bitmap.LockBits(bitmapRect, ImageLockMode.ReadOnly, pixelFormat);
+                BitmapData bd = bitmap.LockBits(rect, ImageLockMode.ReadOnly, pixelFormat);
 
                 byte* fLine = (byte*)bd.Scan0 + (frames[0].Y * bd.Stride);
                 int fx = frames[0].X * bytesPerPixel;
@@ -79,10 +73,10 @@ namespace Core
 
                 for (int i = 0; i < frames.Length; i++)
                 {
-                    byte* line = (byte*)bd.Scan0 + (frames[i].Y * bd.Stride);
-                    int x = frames[i].X * bytesPerPixel;
+                    fLine = (byte*)bd.Scan0 + (frames[i].Y * bd.Stride);
+                    fx = frames[i].X * bytesPerPixel;
 
-                    data[frames[i].Index] = (line[x + 2] * 65536) + (line[x + 1] * 256) + line[x];
+                    data[frames[i].Index] = (fLine[fx + 2] * 65536) + (fLine[fx + 1] * 256) + fLine[fx];
                 }
 
             Exit:

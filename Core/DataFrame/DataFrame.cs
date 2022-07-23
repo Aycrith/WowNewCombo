@@ -2,9 +2,9 @@
 {
     public readonly struct DataFrame
     {
-        public int Index { get; }
-        public int X { get; }
-        public int Y { get; }
+        public readonly int Index;
+        public readonly int X;
+        public readonly int Y;
 
         public DataFrame(int index, int x, int y)
         {

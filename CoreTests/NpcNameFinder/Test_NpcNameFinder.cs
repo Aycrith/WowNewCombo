@@ -8,17 +8,21 @@ using System.Text;
 using System.Diagnostics;
 using System.Linq;
 
+#pragma warning disable 0162
+
 namespace CoreTests
 {
     public class Test_NpcNameFinder
     {
+        private const bool saveImage = true;
+        private const bool LogEachUpdate = true;
+
         private readonly ILogger logger;
         private readonly NpcNameFinder npcNameFinder;
         private readonly NpcNameTargeting npcNameTargeting;
         private readonly RectProvider rectProvider;
         private readonly BitmapCapturer capturer;
 
-        private readonly bool saveImage;
         private readonly Stopwatch stopwatch = new();
         private readonly StringBuilder stringBuilder = new();
 
@@ -28,10 +32,9 @@ namespace CoreTests
         private readonly SolidBrush brush = new(Color.White);
         private readonly Pen whitePen = new(Color.White, 1);
 
-        public Test_NpcNameFinder(ILogger logger, NpcNames types, bool saveImage)
+        public Test_NpcNameFinder(ILogger logger, NpcNames types)
         {
             this.logger = logger;
-            this.saveImage = saveImage;
 
             rectProvider = new();
             rectProvider.GetRectangle(out Rectangle rect);
@@ -54,36 +57,47 @@ namespace CoreTests
 
         public void Execute()
         {
-            stopwatch.Restart();
-            capturer.Capture();
-            logger.LogInformation($"Capture: {stopwatch.ElapsedMilliseconds}ms");
+            if (LogEachUpdate)
+                stopwatch.Restart();
 
-            stopwatch.Restart();
+            capturer.Capture();
+
+            if (LogEachUpdate)
+                logger.LogInformation($"Capture: {stopwatch.ElapsedMilliseconds}ms");
+
+            if (LogEachUpdate)
+                stopwatch.Restart();
+
             npcNameFinder.Update();
-            logger.LogInformation($"Update: {stopwatch.ElapsedMilliseconds}ms");
+
+            if (LogEachUpdate)
+                logger.LogInformation($"Update: {stopwatch.ElapsedMilliseconds}ms");
 
             if (saveImage)
             {
                 SaveImage();
             }
 
-            stringBuilder.Length = 0;
-
-            if (npcNameFinder.Npcs.Any())
-                stringBuilder.AppendLine();
-
-            int i = 0;
-            foreach (var n in npcNameFinder.Npcs)
+            if (LogEachUpdate)
             {
-                stringBuilder.Append($"{i,2}");
-                stringBuilder.Append(" -> rect=");
-                stringBuilder.Append(n.Rect);
-                stringBuilder.Append(" ClickPoint=");
-                stringBuilder.AppendLine($"{{{n.ClickPoint.X,4},{n.ClickPoint.Y,4}}}");
-                i++;
-            }
+                stringBuilder.Length = 0;
 
-            logger.LogInformation(stringBuilder.ToString());
+                if (npcNameFinder.Npcs.Any())
+                    stringBuilder.AppendLine();
+
+                int i = 0;
+                foreach (NpcPosition n in npcNameFinder.Npcs)
+                {
+                    stringBuilder.Append($"{i,2}");
+                    stringBuilder.Append(" -> rect=");
+                    stringBuilder.Append(n.Rect);
+                    stringBuilder.Append(" ClickPoint=");
+                    stringBuilder.AppendLine($"{{{n.ClickPoint.X,4},{n.ClickPoint.Y,4}}}");
+                    i++;
+                }
+
+                logger.LogInformation(stringBuilder.ToString());
+            }
         }
 
         private void SaveImage()
