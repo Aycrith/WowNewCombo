@@ -108,6 +108,8 @@ local TALENT_ITERATION_FRAME_CHANGE_RATE = 5
 local COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE = 5
 -- How often the check network latency
 local LATENCY_ITERATION_FRAME_CHANGE_RATE = 500 -- 500ms * refresh rate in ms
+-- How often the lastLoot return from Closed to Corpse
+local LOOT_RESET_RATE = 5
 
 -- Action bar configuration for which spells are tracked
 local MAX_ACTIONBAR_SLOT = 120
@@ -115,6 +117,7 @@ local MAX_ACTIONBAR_SLOT = 120
 -- Timers
 DataToColor.globalTime = 0
 DataToColor.lastLoot = 0
+DataToColor.lastLootResetStart = 0
 
 DataToColor.map = C_Map.GetBestMapForUnit(DataToColor.C.unitPlayer)
 DataToColor.uiMapId = 0
@@ -658,6 +661,10 @@ function DataToColor:CreateFrames(n)
             end
 
             -- Timers
+            if DataToColor.lastLoot == DataToColor.C.Loot.Closed and
+                DataToColor.globalTime - DataToColor.lastLootResetStart > LOOT_RESET_RATE then
+                DataToColor.lastLoot = DataToColor.C.Loot.Corpse
+            end
             Pixel(int, DataToColor.lastLoot, 97)
             UpdateGlobalTime(98)
             -- 99 Reserved

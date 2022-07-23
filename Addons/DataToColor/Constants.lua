@@ -35,6 +35,11 @@ DataToColor.C.Spell.AttackId = 6603
 -- Item / Inventory
 DataToColor.C.ItemPattern = "(m:%d+)"
 
+-- Loot
+DataToColor.C.Loot.Corpse = 0
+DataToColor.C.Loot.Ready = 1
+DataToColor.C.Loot.Closed = 2
+
 -- Gossips
 DataToColor.C.Gossip = {
     ["banker"] = 0,

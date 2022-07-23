@@ -67,7 +67,8 @@ local errorList = {
     "SPELL_FAILED_ITEM_NOT_READY", -- 11 "Item is not ready yet"
     "SPELL_FAILED_TRY_AGAIN", -- 12 "Failed attempt"
     "SPELL_FAILED_NOT_READY", -- 13 "Not yet recovered"
-    "SPELL_FAILED_TARGETS_DEAD" -- 14 "Your target is dead"
+    "SPELL_FAILED_TARGETS_DEAD", -- 14 "Your target is dead"
+    "ERR_LOOT_LOCKED" -- 15 "Someone is already looting that corpse."
 }
 local spellFailedErrors = {
     SPELL_FAILED_UNIT_NOT_INFRONT = 1,
@@ -81,6 +82,7 @@ local errorListMessages = {}
 function DataToColor:RegisterEvents()
     DataToColor:RegisterEvent("UI_ERROR_MESSAGE", 'OnUIErrorMessage')
     DataToColor:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED", 'UnfilteredCombatEvent')
+    DataToColor:RegisterEvent('LOOT_READY', 'OnLootReady')
     DataToColor:RegisterEvent('LOOT_CLOSED', 'OnLootClosed')
     DataToColor:RegisterEvent('BAG_UPDATE', 'OnBagUpdate')
     DataToColor:RegisterEvent('BAG_CLOSED', 'OnBagUpdate')
@@ -324,6 +326,7 @@ function DataToColor:OnCombatEvent(...)
     if unitDied[subEvent] then
         if band(destFlags, COMBATLOG_OBJECT_TYPE_NPC) > 0 then
             DataToColor.CombatCreatureDiedQueue:push(DataToColor:getGuidFromUUID(destGUID))
+            DataToColor.lastLoot = DataToColor.C.Loot.Corpse
             --DataToColor:Print(subEvent, " ", destGUID, " ", DataToColor:getGuidFromUUID(destGUID))
         else
             --DataToColor:Print(subEvent, " ignored ", destGUID)
@@ -331,8 +334,14 @@ function DataToColor:OnCombatEvent(...)
     end
 end
 
+function DataToColor:OnLootReady(autoloot)
+    DataToColor.lastLoot = DataToColor.C.Loot.Ready
+    --DataToColor:Print("OnLootReady:"..DataToColor.lastLoot)
+end
+
 function DataToColor:OnLootClosed(event)
-    DataToColor.lastLoot = DataToColor.globalTime
+    DataToColor.lastLoot = DataToColor.C.Loot.Closed
+    DataToColor.lastLootResetStart = DataToColor.globalTime
     --DataToColor:Print("OnLootClosed:"..DataToColor.lastLoot)
 end
 
