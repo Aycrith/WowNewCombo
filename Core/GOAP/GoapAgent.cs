@@ -194,8 +194,10 @@ namespace Core.GOAP
             {
                 { GoapKey.hastarget, playerReader.Bits.HasTarget() },
                 { GoapKey.targethostile, playerReader.Bits.TargetCanBeHostile() },
-                { GoapKey.dangercombat, playerReader.Bits.PlayerInCombat() && addonReader.CombatCreatureCount > 0 },
-                { GoapKey.pethastarget, playerReader.PetHasTarget },
+                { GoapKey.dangercombat, playerReader.Bits.PlayerInCombat() && addonReader.DamageTakenCount > 0 },
+                { GoapKey.damagetaken, addonReader.DamageTakenCount > 0 },
+                { GoapKey.damagedone, addonReader.DamageDoneCount > 0 },
+                { GoapKey.pethastarget, playerReader.PetHasTarget && !playerReader.Bits.PetTargetIsDead() },
                 { GoapKey.targetisalive, playerReader.Bits.HasTarget() && !playerReader.Bits.TargetIsDead() },
                 { GoapKey.targettargetsus, (playerReader.Bits.HasTarget() && playerReader.TargetHealthPercentage() < 30) || playerReader.TargetTarget is // hacky way to keep attacking fleeing humanoids
                     TargetTargetEnum.Me or

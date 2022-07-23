@@ -264,7 +264,7 @@ namespace Core
                 { "Rage", playerReader.PTCurrent },
                 { "Combo Point", () => playerReader.ComboPoints },
                 { "BagCount", () => bagReader.BagItems.Count },
-                { "MobCount", () => addonReader.CombatCreatureCount },
+                { "MobCount", () => addonReader.DamageTakenCount },
                 { "MinRange", playerReader.MinRange },
                 { "MaxRange", playerReader.MaxRange },
                 { "LastAutoShotMs", playerReader.AutoShot.ElapsedMs },
