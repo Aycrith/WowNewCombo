@@ -17,7 +17,6 @@ namespace Core
         private const bool debug = true;
 
         private bool outOfCombat;
-        private Vector3 lastPosition;
 
         public CombatUtil(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader)
         {
@@ -28,14 +27,11 @@ namespace Core
             this.playerReader = addonReader.PlayerReader;
 
             outOfCombat = !playerReader.Bits.PlayerInCombat();
-            lastPosition = playerReader.PlayerLocation;
         }
 
         public void Update()
         {
-            // TODO: have to find a better way to reset outOfCombat
             outOfCombat = !playerReader.Bits.PlayerInCombat();
-            lastPosition = playerReader.PlayerLocation;
         }
 
         public bool EnteredCombat()
@@ -85,8 +81,12 @@ namespace Core
                     return true;
                 }
 
-                if (wait.Till(maxTimeMs, PlayerOrPetHasTarget))
+                input.ClearTarget();
+                wait.Update();
+
+                if (!wait.Till(maxTimeMs, PlayerOrPetHasTarget))
                 {
+                    Log($"{nameof(AquiredTarget)}: Someone started attacking me!");
                     return true;
                 }
 
@@ -103,37 +103,9 @@ namespace Core
             return distance > MIN_DISTANCE;
         }
 
-        public (bool foundTarget, bool hadToMove) FoundTargetWhileMoved()
-        {
-            (bool movedTimeOut, double elapsedMs) = wait.Until(200, StartedMoving);
-            if (!movedTimeOut)
-            {
-                Log($"  Went for corpse {elapsedMs}ms");
-            }
-
-            while (IsPlayerMoving(lastPosition))
-            {
-                lastPosition = playerReader.PlayerLocation;
-                if (!wait.Till(100, EnteredCombat))
-                {
-                    if (AquiredTarget())
-                        return (true, !movedTimeOut);
-                }
-                // due limited precision
-                wait.Update();
-            }
-
-            return (false, !movedTimeOut);
-        }
-
         private bool PlayerOrPetHasTarget()
         {
             return playerReader.Bits.HasTarget() || playerReader.PetHasTarget;
-        }
-
-        private bool StartedMoving()
-        {
-            return lastPosition != playerReader.PlayerLocation;
         }
 
         private void Log(string text)
