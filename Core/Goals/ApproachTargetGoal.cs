@@ -1,4 +1,4 @@
-using Core.GOAP;
+﻿using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Numerics;
@@ -17,6 +17,7 @@ namespace Core.Goals
         private readonly ILogger logger;
         private readonly ConfigurableInput input;
         private readonly Wait wait;
+        private readonly AddonReader addonReader;
         private readonly PlayerReader playerReader;
         private readonly StopMoving stopMoving;
         private readonly CombatUtil combatUtil;
@@ -34,18 +35,15 @@ namespace Core.Goals
 
         private double ApproachDurationMs => (DateTime.UtcNow - approachStart).TotalMilliseconds;
 
-        private bool HasPickedUpAnAdd =>
-            playerReader.Bits.PlayerInCombat() &&
-            !playerReader.Bits.TargetInCombat();
-
-        public ApproachTargetGoal(ILogger logger, ConfigurableInput input, Wait wait, PlayerReader playerReader, StopMoving stopMoving, CombatUtil combatUtil, IBlacklist blacklist)
+        public ApproachTargetGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, StopMoving stopMoving, CombatUtil combatUtil, IBlacklist blacklist)
             : base(nameof(ApproachTargetGoal))
         {
             this.logger = logger;
             this.input = input;
 
             this.wait = wait;
-            this.playerReader = playerReader;
+            this.addonReader = addonReader;
+            this.playerReader = addonReader.PlayerReader;
             this.stopMoving = stopMoving;
             this.combatUtil = combatUtil;
             this.blacklist = blacklist;
@@ -81,16 +79,15 @@ namespace Core.Goals
         public override void Update()
         {
             wait.Update();
-            combatUtil.Update();
 
-            if (combatUtil.EnteredCombat() && HasPickedUpAnAdd)
+            if (combatUtil.EnteredCombat() && !playerReader.Bits.TargetInCombat())
             {
-                if (debug)
-                    Log($"Add on approach! PlayerCombat={playerReader.Bits.PlayerInCombat()}, Targets us={playerReader.Bits.TargetOfTargetIsPlayerOrPet()}");
-
                 stopMoving.Stop();
-                combatUtil.AquiredTarget(5000);
 
+                input.ClearTarget();
+                wait.Update();
+
+                combatUtil.AquiredTarget(5000);
                 return;
             }
 
@@ -102,9 +99,8 @@ namespace Core.Goals
             if (!playerReader.Bits.PlayerInCombat())
             {
                 NonCombatApproach();
+                RandomJump();
             }
-
-            RandomJump();
         }
 
         private void NonCombatApproach()
