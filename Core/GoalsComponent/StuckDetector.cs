@@ -78,13 +78,13 @@ namespace Core
 
                 // Turn
                 ConsoleKey turnKey = random.Next(2) == 0 ? input.Proc.TurnLeftKey : input.Proc.TurnRightKey;
-                int turnDuration = random.Next(125) + 350;
+                int turnDuration = random.Next(350);
                 logger.LogInformation($"Unstuck by turning for {turnDuration}ms");
                 input.Proc.KeyPress(turnKey, turnDuration);
 
                 // Move
                 ConsoleKey moveKey = random.Next(100) >= 25 ? input.Proc.ForwardKey : input.Proc.BackwardKey;
-                int moveDuration = random.Next(750) + 350;
+                int moveDuration = random.Next(750) + 1000;
                 logger.LogInformation($"Unstuck by moving for {moveDuration}ms");
                 input.Proc.KeyPress(moveKey, moveDuration);
 
