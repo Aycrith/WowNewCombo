@@ -74,7 +74,7 @@ namespace Core
             this.CombatLog = new(addonDataProvider, 64, 65, 66, 67);
 
             this.EquipmentReader = new(addonDataProvider, ItemDb, 24, 25);
-            this.BagReader = new(addonDataProvider, ItemDb, EquipmentReader, 20, 21, 22, 23);
+            this.BagReader = new(addonDataProvider, ItemDb, EquipmentReader, 20, 21, 22);
 
             this.ActionBarCostReader = new(addonDataProvider, 36);
             this.ActionBarCooldownReader = new(addonDataProvider, 37);

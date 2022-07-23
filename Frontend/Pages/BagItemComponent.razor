@@ -13,10 +13,6 @@
                 <img src="@imgLink" />
             }
             @BagItem.Item.Name
-            @if (BagItem.IsSoulbound)
-            {
-                <span>(S)</span>
-            }
             @if (ShowPrice && BagItem.Item.SellPrice > 0)
             {
                 <Money Value="GetItemPrice(BagItem)" />

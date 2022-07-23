@@ -474,7 +474,7 @@ function DataToColor:CreateFrames(n)
                     Pixel(int, 0, 20)
                 end
 
-                -- 21 22 23
+                -- 21 22
                 bagSlotNum = DataToColor.inventoryQueue:shift()
                 if bagSlotNum then
 
@@ -490,24 +490,17 @@ function DataToColor:CreateFrames(n)
 
                     --DataToColor:Print("inventoryQueue: "..bagNum.. " "..bagSlotNum.." -> id:"..itemID.." c:"..itemCount)
 
-                    local soulbound = 0
-                    if itemCount > 0 then
-                        soulbound = C_Item.IsBound(ItemLocation:CreateFromBagAndSlot(bagNum, bagSlotNum)) and 1 or 0
-                    end
-
                     -- 0-4 bagNum + 1-21 itenNum + 1-1000 quantity
                     Pixel(int, bagNum * 1000000 + bagSlotNum * 10000 + itemCount, 21)
 
                     -- itemId 1-999999
                     Pixel(int, itemID, 22)
-
-                    -- item bits
-                    Pixel(int, soulbound, 23)
                 else
                     Pixel(int, 0, 21)
                     Pixel(int, 0, 22)
-                    Pixel(int, 0, 23)
                 end
+
+                -- 23 Empty
 
                 -- 24 25
                 equipmentSlot = DataToColor.equipmentQueue:shift()
