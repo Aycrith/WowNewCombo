@@ -40,7 +40,7 @@ local SetCVar = SetCVar
 local GetAddOnMetadata = GetAddOnMetadata
 
 local UIErrorsFrame = UIErrorsFrame
-local DEFAULT_CHAT_FRAME = _G.DEFAULT_CHAT_FRAME
+local DEFAULT_CHAT_FRAME = DEFAULT_CHAT_FRAME
 
 local HasAction = HasAction
 local GetSpellBookItemInfo = GetSpellBookItemInfo
@@ -393,32 +393,31 @@ function DataToColor:CreateFrames(n)
     local valueCache = {}
     local frames = {}
 
+    -- This function is able to pass numbers in range 0 to 16777215
+    -- r,g,b are integers in range 0-255
+    -- then we turn them into 0-1 range
+    local function int(self, i)
+        return band(rshift(i, 16), 255) / 255, band(rshift(i, 8), 255) / 255, band(i, 255) / 255, 1
+    end
+
+    -- This function is able to pass numbers in range 0 to 9.99999 (6 digits)
+    -- converting them to a 6-digit integer.
+    local function float(self, f)
+        return int(self, floor(f * 100000))
+    end
+
+    local function Pixel(func, value, slot)
+        if valueCache[slot + 1] ~= value then
+            valueCache[slot + 1] = value
+            frames[slot + 1]:SetBackdropColor(func(self, value))
+        end
+    end
+
+    local function UpdateGlobalTime(slot)
+        Pixel(int, DataToColor.globalTime, slot)
+    end
+
     local function updateFrames()
-
-        -- This function is able to pass numbers in range 0 to 16777215
-        -- r,g,b are integers in range 0-255
-        -- then we turn them into 0-1 range
-        local function int(self, i)
-            return band(rshift(i, 16), 255) / 255, band(rshift(i, 8), 255) / 255, band(i, 255) / 255, 1
-        end
-
-        -- This function is able to pass numbers in range 0 to 9.99999 (6 digits)
-        -- converting them to a 6-digit integer.
-        local function float(self, f)
-            return int(self, floor(f * 100000))
-        end
-
-        local function Pixel(func, value, slot)
-            if valueCache[slot + 1] ~= value then
-                valueCache[slot + 1] = value
-                frames[slot + 1]:SetBackdropColor(func(self, value))
-            end
-        end
-
-        local function UpdateGlobalTime(slot)
-            Pixel(int, DataToColor.globalTime, slot)
-        end
-
         if not SETUP_SEQUENCE and globalCounter >= initPhase then
 
             Pixel(int, 0, 0)
@@ -701,13 +700,6 @@ function DataToColor:CreateFrames(n)
         globalCounter = globalCounter + 1
     end
 
-    local function setFramePixelBackdrop(f)
-        f:SetBackdrop({
-            bgFile = "Interface\\AddOns\\DataToColor\\white.tga",
-            insets = { top = 0, left = 0, bottom = 0, right = 0 },
-        })
-    end
-
     local function genFrame(name, x, y)
         local f = CreateFrame("Frame", name, UIParent, BackdropTemplateMixin and "BackdropTemplate") or CreateFrame("Frame", name, UIParent)
 
@@ -718,7 +710,10 @@ function DataToColor:CreateFrames(n)
         f:SetPoint("TOPLEFT", xx, yy)
         f:SetHeight(CELL_SIZE)
         f:SetWidth(CELL_SIZE)
-        setFramePixelBackdrop(f)
+        f:SetBackdrop({
+            bgFile = "Interface\\AddOns\\DataToColor\\white.tga",
+            insets = { top = 0, left = 0, bottom = 0, right = 0 },
+        })
         f:SetFrameStrata("TOOLTIP")
         f:SetBackdropColor(0, 0, 0, 1)
         return f
