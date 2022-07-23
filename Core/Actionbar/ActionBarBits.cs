@@ -1,14 +1,14 @@
-﻿namespace Core
+﻿using System.Collections.Specialized;
+
+namespace Core
 {
     public class ActionBarBits
     {
         private readonly AddonDataProvider reader;
         private readonly int[] cells;
 
-        private readonly BitStatus[] bits;
+        private readonly BitVector32[] bits;
         private readonly PlayerReader playerReader;
-
-        private bool isDirty;
 
         public ActionBarBits(PlayerReader playerReader, AddonDataProvider reader, params int[] cells)
         {
@@ -16,41 +16,28 @@
             this.playerReader = playerReader;
             this.cells = cells;
 
-            bits = new BitStatus[cells.Length];
+            bits = new BitVector32[cells.Length];
             for (int i = 0; i < bits.Length; i++)
             {
                 bits[i] = new(reader.GetInt(cells[i]));
             }
         }
 
-        public void SetDirty()
-        {
-            isDirty = true;
-        }
-
-        private void Update()
+        public void Update()
         {
             for (int i = 0; i < bits.Length; i++)
             {
-                bits[i].Update(reader.GetInt(cells[i]));
+                bits[i] = new(reader.GetInt(cells[i]));
             }
         }
-
 
         // https://wowwiki-archive.fandom.com/wiki/ActionSlot
         public bool Is(KeyAction keyAction)
         {
-            if (isDirty)
-            {
-                Update();
-                isDirty = false;
-            }
-
             if (keyAction.Slot == 0) return false;
 
             int index = Stance.ToSlot(keyAction, playerReader) - 1;
-            int array = index / ActionBar.BIT_PER_CELL;
-            return bits[array].IsBitSet(index % ActionBar.BIT_PER_CELL);
+            return bits[index / ActionBar.BIT_PER_CELL][Mask.M[index % ActionBar.BIT_PER_CELL]];
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 
@@ -117,7 +117,7 @@ namespace Core
 
         public int CastCount => reader.GetInt(70);
 
-        public BitStatus CustomTrigger1 { get; }
+        public BitVector32 CustomTrigger1;
 
         public int MainHandSpeedMs() => (int)(reader.GetInt(75) / 10000f) * 10;
 
@@ -144,12 +144,12 @@ namespace Core
 
         public void Update()
         {
-            Bits.SetDirty();
-            SpellInRange.SetDirty();
-            Buffs.SetDirty();
-            TargetDebuffs.SetDirty();
-            Stance.SetDirty();
-            CustomTrigger1.Update(reader.GetInt(74));
+            Bits.Update();
+            SpellInRange.Update();
+            Buffs.Update();
+            TargetDebuffs.Update();
+            Stance.Update();
+            CustomTrigger1 = new(reader.GetInt(74));
 
             if (UIError != UI_ERROR.NONE)
             {

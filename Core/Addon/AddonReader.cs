@@ -120,8 +120,8 @@ namespace Core
                 }
                 AvgUpdateLatency /= UpdateLatencys.Length;
 
-                CurrentAction.SetDirty();
-                UsableAction.SetDirty();
+                CurrentAction.Update();
+                UsableAction.Update();
 
                 PlayerReader.Update();
 
