@@ -6,6 +6,9 @@ namespace HeadlessServer
 {
     public class HeadlessServer
     {
+        // corresponding cells pops at every 5th update
+        private const int TICK_INTERVAL = 10;
+
         private readonly ILogger logger;
         private readonly IBotController botController;
         private readonly IAddonReader addonReader;
@@ -47,22 +50,25 @@ namespace HeadlessServer
 
             int actionbarCost;
             int spellBook;
+            int bagCount;
 
             do
             {
                 actionbarCost = addonReader.ActionBarCostReader.Count;
                 spellBook = addonReader.SpellBookReader.Count;
+                bagCount = addonReader.BagReader.BagItems.Count;
 
-                // corresponding cells changes at every 5th update 
-                for (int i = 0; i < 10; i++)
+                for (int i = 0; i < TICK_INTERVAL; i++)
                 {
                     wait.Update();
                 }
 
-            } while (actionbarCost != addonReader.ActionBarCostReader.Count ||
-            spellBook != addonReader.SpellBookReader.Count);
+            } while (
+                actionbarCost != addonReader.ActionBarCostReader.Count ||
+                spellBook != addonReader.SpellBookReader.Count ||
+                bagCount != addonReader.BagReader.BagItems.Count);
 
-            logger.LogInformation($"${nameof(addonReader.ActionBarCostReader)}: {actionbarCost} | ${nameof(addonReader.SpellBookReader)}: {spellBook}");
+            logger.LogInformation($"{nameof(addonReader.ActionBarCostReader)}: {actionbarCost} | {nameof(addonReader.SpellBookReader)}: {spellBook} | {nameof(addonReader.BagReader)}: {bagCount}");
         }
 
     }
