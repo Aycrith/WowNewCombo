@@ -137,7 +137,8 @@ function DataToColor:Bits2()
         base2(UnitExists(DataToColor.C.unitFocusTarget) and 1 or 0, 5) +
         base2(UnitAffectingCombat(DataToColor.C.unitFocusTarget) and 1 or 0, 6) +
         base2(DataToColor:isHostile(DataToColor.C.unitFocusTarget), 7) +
-        base2(UnitExists(DataToColor.C.unitFocusTarget) and CheckInteractDistance(DataToColor.C.unitFocusTarget, 2) and 1 or 0, 8)
+        base2(UnitExists(DataToColor.C.unitFocusTarget) and CheckInteractDistance(DataToColor.C.unitFocusTarget, 2) and 1 or 0, 8) +
+        base2(UnitIsDead(DataToColor.C.unitPetTarget) and 1 or 0, 1)
 end
 
 function DataToColor:CustomTrigger(t)
