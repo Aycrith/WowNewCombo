@@ -1,4 +1,4 @@
-using Core.Goals;
+﻿using Core.Goals;
 using Game;
 using Microsoft.Extensions.Logging;
 using SharedLib.Extensions;
@@ -283,9 +283,10 @@ namespace Core.GOAP
             if (Active)
             {
                 State.LastCombatKillCount++;
+                State.ConsumableCorpseCount++;
                 BroadcastGoapEvent(GoapKey.producedcorpse, true);
 
-                LogActiveKillDetected(logger, State.LastCombatKillCount, addonReader.CombatCreatureCount);
+                LogActiveKillDetected(logger, State.LastCombatKillCount, addonReader.DamageTakenCount);
             }
             else
             {
@@ -312,7 +313,7 @@ namespace Core.GOAP
         [LoggerMessage(
             EventId = 50,
             Level = LogLevel.Information,
-            Message = "Kill credit detected! Known kills: {count} | Remains: {remain}")]
+            Message = "Kill credit detected! Known kills: {count} | Fighting with: {remain}")]
         static partial void LogActiveKillDetected(ILogger logger, int count, int remain);
 
         [LoggerMessage(
