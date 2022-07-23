@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Numerics;
-using System.Text;
+﻿using System.Numerics;
 
 namespace Core
 {
-    public static class PointEsimator
+    public static class PointEstimator
     {
         public const float YARD_TO_COORD = 0.035921f;
 
