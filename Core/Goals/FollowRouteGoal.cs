@@ -18,6 +18,8 @@ namespace Core.Goals
 
         private const bool debug = false;
 
+        private const double DELAY_BEFORE_TARGET_SEARCH = 300;
+
         private readonly ILogger logger;
         private readonly ConfigurableInput input;
         private readonly Wait wait;
@@ -98,7 +100,14 @@ namespace Core.Goals
             }
             else
             {
-                AddPrecondition(GoapKey.incombat, false);
+                if (classConfig.Loot)
+                {
+                    AddPrecondition(GoapKey.incombat, false);
+                }
+
+                AddPrecondition(GoapKey.damagedone, false);
+                AddPrecondition(GoapKey.damagetaken, false);
+
                 AddPrecondition(GoapKey.producedcorpse, false);
                 AddPrecondition(GoapKey.consumecorpse, false);
             }
@@ -222,7 +231,9 @@ namespace Core.Goals
             {
                 wait.Update();
 
-                if (classConfig.TargetNearestTarget.MillisecondsSinceLastClick > random.Next(minMs, maxMs) &&
+                if (!input.Proc.IsKeyDown(input.Proc.TurnLeftKey) &&
+                    !input.Proc.IsKeyDown(input.Proc.TurnRightKey) &&
+                    classConfig.TargetNearestTarget.MillisecondsSinceLastClick > random.Next(minMs, maxMs) &&
                     targetFinder.Search(NpcNameToFind, validTarget, sideActivityCts))
                 {
                     sideActivityCts.Cancel();
@@ -230,6 +241,11 @@ namespace Core.Goals
                 }
 
                 sideActivityManualReset.WaitOne();
+
+                while ((DateTime.UtcNow - onEnterTime).TotalMilliseconds < DELAY_BEFORE_TARGET_SEARCH)
+                {
+                    sideActivityManualReset.WaitOne();
+                }
             }
 
             if (logger.IsEnabled(LogLevel.Debug))
