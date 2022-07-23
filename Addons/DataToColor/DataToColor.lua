@@ -500,28 +500,30 @@ function DataToColor:CreateFrames(n)
                     Pixel(int, 0, 22)
                 end
 
-                -- 23 Empty
-
-                -- 24 25
+                -- 23 24
                 equipmentSlot = DataToColor.equipmentQueue:shift()
-                Pixel(int, equipmentSlot or 0, 24)
-                Pixel(int, DataToColor:equipSlotItemId(equipmentSlot), 25)
+                Pixel(int, equipmentSlot or 0, 23)
+                Pixel(int, DataToColor:equipSlotItemId(equipmentSlot), 24)
                 --DataToColor:Print("equipmentQueue "..equipmentSlot.." -> "..itemId)
             end
 
-            Pixel(int, DataToColor:isCurrentAction(1, 24), 26)
-            Pixel(int, DataToColor:isCurrentAction(25, 48), 27)
-            Pixel(int, DataToColor:isCurrentAction(49, 72), 28)
-            Pixel(int, DataToColor:isCurrentAction(73, 96), 29)
-            Pixel(int, DataToColor:isCurrentAction(97, 120), 30)
+            Pixel(int, DataToColor:isCurrentAction(1, 24), 25)
+            Pixel(int, DataToColor:isCurrentAction(25, 48), 26)
+            Pixel(int, DataToColor:isCurrentAction(49, 72), 27)
+            Pixel(int, DataToColor:isCurrentAction(73, 96), 28)
+            Pixel(int, DataToColor:isCurrentAction(97, 120), 29)
 
-            Pixel(int, DataToColor:isActionUseable(1, 24), 31)
-            Pixel(int, DataToColor:isActionUseable(25, 48), 32)
-            Pixel(int, DataToColor:isActionUseable(49, 72), 33)
-            Pixel(int, DataToColor:isActionUseable(73, 96), 34)
-            Pixel(int, DataToColor:isActionUseable(97, 120), 35)
+            Pixel(int, DataToColor:isActionUseable(1, 24), 30)
+            Pixel(int, DataToColor:isActionUseable(25, 48), 31)
+            Pixel(int, DataToColor:isActionUseable(49, 72), 32)
+            Pixel(int, DataToColor:isActionUseable(73, 96), 33)
+            Pixel(int, DataToColor:isActionUseable(97, 120), 34)
 
             if globalCounter % ACTION_BAR_ITERATION_FRAME_CHANGE_RATE == 0 then
+
+                -- 35 Cost meta
+
+                -- 36 cost value
                 actionCostNum = DataToColor.actionBarCostQueue:shift()
                 Pixel(int, DataToColor:actionbarCost(actionCostNum), 36)
 

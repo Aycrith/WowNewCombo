@@ -73,7 +73,7 @@ namespace Core
 
             this.CombatLog = new(addonDataProvider, 64, 65, 66, 67);
 
-            this.EquipmentReader = new(addonDataProvider, ItemDb, 24, 25);
+            this.EquipmentReader = new(addonDataProvider, ItemDb, 23, 24);
             this.BagReader = new(addonDataProvider, ItemDb, EquipmentReader, 20, 21, 22);
 
             this.ActionBarCostReader = new(addonDataProvider, 36);
@@ -87,8 +87,8 @@ namespace Core
             this.LevelTracker = new(this);
             this.TalentReader = new(addonDataProvider, 72, PlayerReader, talentDB);
 
-            this.CurrentAction = new(PlayerReader, addonDataProvider, 26, 27, 28, 29, 30);
-            this.UsableAction = new(PlayerReader, addonDataProvider, 31, 32, 33, 34, 35);
+            this.CurrentAction = new(PlayerReader, addonDataProvider, 25, 26, 27, 28, 29);
+            this.UsableAction = new(PlayerReader, addonDataProvider, 30, 31, 32, 33, 34);
         }
 
         public void Dispose()
