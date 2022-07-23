@@ -69,6 +69,13 @@ namespace Core
         public bool Shaman_LightningBolt => b[Mask._0];
         public bool Shaman_EarthShock => b[Mask._1];
 
+        // Death Knight
+        public bool DeathKnight_IcyTouch => b[Mask._0];
+        public bool DeathKnight_DeathCoil => b[Mask._1];
+        public bool DeathKnight_DeathGrip => b[Mask._2];
+        public bool DeathKnight_DarkCommand => b[Mask._3];
+        public bool DeathKnight_RaiseDead => b[Mask._4];
+
         public bool WithinPullRange(PlayerReader playerReader, PlayerClassEnum playerClass) => playerClass switch
         {
             PlayerClassEnum.Warrior => (playerReader.Level.Value >= 4 && Warrior_Charge) || playerReader.IsInMeleeRange(),
@@ -81,6 +88,7 @@ namespace Core
             PlayerClassEnum.Hunter => (playerReader.Level.Value >= 4 && Hunter_SerpentSting) || Hunter_AutoShoot || playerReader.IsInMeleeRange(),
             PlayerClassEnum.Warlock => Warlock_ShadowBolt,
             PlayerClassEnum.Shaman => (playerReader.Level.Value >= 4 && Shaman_EarthShock) || Shaman_LightningBolt,
+            PlayerClassEnum.DeathKnight => DeathKnight_DeathGrip,
             _ => true
         };
 
@@ -95,6 +103,7 @@ namespace Core
             PlayerClassEnum.Hunter => (playerReader.Level.Value >= 4 && Hunter_SerpentSting) || Hunter_AutoShoot || playerReader.IsInMeleeRange(),
             PlayerClassEnum.Warlock => Warlock_ShadowBolt,
             PlayerClassEnum.Shaman => Shaman_LightningBolt,
+            PlayerClassEnum.DeathKnight => DeathKnight_IcyTouch,
             _ => true
         };
     }

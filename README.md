@@ -878,6 +878,9 @@ Formula: `Form:[form]`
 | Paladin_Fire_Resistance_Aura |
 | Paladin_Sanctity_Aura |
 | Paladin_Crusader_Aura |
+| DeathKnight_Blood_Presence |
+| DeathKnight_Frost_Presence |
+| DeathKnight_Unholy_Presence |
 
 e.g.
 ```json
@@ -1113,6 +1116,17 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | Hunter | `"Aspect of the Viper"` |
 | Hunter | `"Rapid Fire"` |
 | Hunter | `"Quick Shots"` |
+| Death Knight | `"Blood Tap"` |
+| Death Knight | `"Horn of Winter"` |
+| Death Knight | `"Icebound Fortitude"` |
+| Death Knight | `"Path of Frost"` |
+| Death Knight | `"Anti-Magic Shell"` |
+| Death Knight | `"Army of the Dead"` |
+| Death Knight | `"Vampiric Blood"` |
+| Death Knight | `"Dancing Rune Weapon"` |
+| Death Knight | `"Unbreakable Armor"` |
+| Death Knight | `"Bone Shield"` |
+| Death Knight | `"Summon Gargoyle"` |
 
 </td>
 <td valign="top">
@@ -1145,6 +1159,10 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | Warrior | `"Hamstring"` |
 | Warrior | `"Charge Stun"` |
 | Hunter | `"Serpent Sting"` |
+| Death Knight | `"Blood Plague"` |
+| Death Knight | `"Frost Fever"` |
+| Death Knight | `"Strangulate"` |
+| Death Knight | `"Chains of Ice"` |
 
 </td></tr> </table>
 
@@ -1202,6 +1220,11 @@ Formula: `SpellInRange:[Numeric integer value]`
 | Warlock | Shoot | 1 |
 | Shaman | Lightning Bolt | 0 |
 | Shaman | Earth Shock | 1 |
+| Death Knight | Icy Touch | 0 |
+| Death Knight | Death Coil | 1 |
+| Death Knight | Death Grip | 2 |
+| Death Knight | Dark Command | 3 |
+| Death Knight | Raise Dead | 4 |
 
 e.g.
 ```json

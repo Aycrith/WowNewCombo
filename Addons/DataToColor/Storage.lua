@@ -73,6 +73,14 @@ function CreateSpellInRangeList()
             403, -- "Lightning Bolt",
             8042 -- "Earth Shock"
         }
+    elseif DataToColor.C.CHARACTER_CLASS == "DEATHKNIGHT" then
+        DataToColor.S.spellInRangeList = {
+            49903, -- "Icy Touch"
+            49893, -- "Death Coil"
+            49576, -- "Death Grip"
+            56222, -- "Dark Command",
+            46584 -- "Raise Dead"
+        }
     end
 end
 
@@ -153,6 +161,18 @@ function CreatePlayerBuffList()
         DataToColor.S.playerBuffs[14] = { "Aspect of the Viper", [132160] = 1 }
         DataToColor.S.playerBuffs[15] = { "Rapid Fire", [132208] = 1 }
         DataToColor.S.playerBuffs[16] = { "Quick Shots", [132347] = 1 }
+    elseif DataToColor.C.CHARACTER_CLASS == "DEATHKNIGHT" then
+        DataToColor.S.playerBuffs[10] = { "Blood Tap", [237515] = 1 }
+        DataToColor.S.playerBuffs[11] = { "Horn of Winter", [134228] = 1 }
+        DataToColor.S.playerBuffs[12] = { "Icebound Fortitude", [237525] = 1 }
+        DataToColor.S.playerBuffs[13] = { "Path of Frost", [237528] = 1 }
+        DataToColor.S.playerBuffs[14] = { "Anti-Magic Shell", [136120] = 1 }
+        DataToColor.S.playerBuffs[15] = { "Army of the Dead", [237511] = 1 }
+        DataToColor.S.playerBuffs[16] = { "Vampiric Blood", [136168] = 1 }
+        DataToColor.S.playerBuffs[17] = { "Dancing Rune Weapon", [135277] = 1 }
+        DataToColor.S.playerBuffs[18] = { "Unbreakable Armor", [132388] = 1 }
+        DataToColor.S.playerBuffs[19] = { "Bone Shield", [132728] = 1 }
+        DataToColor.S.playerBuffs[20] = { "Summon Gargoyle", [132182] = 1 }
     end
 end
 
@@ -189,6 +209,11 @@ function CreateTargetDebuffList()
         DataToColor.S.targetDebuffs[3] = { "Siphon Life", [136188] = 1 }
     elseif DataToColor.C.CHARACTER_CLASS == "HUNTER" then
         DataToColor.S.targetDebuffs[0] = { "Serpent Sting", [132204] = 1 }
+    elseif DataToColor.C.CHARACTER_CLASS == "DEATHKNIGHT" then
+        DataToColor.S.targetDebuffs[0] = { "Blood Plague", [237514] = 1 }
+        DataToColor.S.targetDebuffs[1] = { "Frost Fever", [237522] = 1 }
+        DataToColor.S.targetDebuffs[2] = { "Strangulate", [136214] = 1 }
+        DataToColor.S.targetDebuffs[3] = { "Chains of Ice", [135834] = 1 }
     end
 end
 
@@ -245,4 +270,6 @@ function CreatePlayerAuraMap()
     DataToColor.S.playerAuraMap[20218] = 7 -- sanct
 
     DataToColor.S.playerAuraMap[32223] = 8 -- crusader
+
+    -- Death Knight
 end

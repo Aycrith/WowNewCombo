@@ -211,6 +211,19 @@ namespace Core
                 { "Rapid Fire", playerReader.Buffs.RapidFire },
                 { "Quick Shots", playerReader.Buffs.QuickShots },
 
+                //Death Knight
+                { "Blood Tap", playerReader.Buffs.BloodTap },
+                { "Horn of Winter", playerReader.Buffs.HornofWinter },
+                { "Icebound Fortitude", playerReader.Buffs.IceboundFortitude },
+                { "Path of Frost", playerReader.Buffs.PathofFrost },
+                { "Anti-Magic Shell", playerReader.Buffs.AntiMagicShell },
+                { "Army of the Dead", playerReader.Buffs.ArmyoftheDead },
+                { "Vampiric Blood", playerReader.Buffs.VampiricBlood },
+                { "Dancing Rune Weapon", playerReader.Buffs.DancingRuneWeapon },
+                { "Unbreakable Armor", playerReader.Buffs.UnbreakableArmor },
+                { "Bone Shield", playerReader.Buffs.BoneShield },
+                { "Summon Gargoyle", playerReader.Buffs.SummonGargoyle },
+
                 // Debuff Section
                 // Druid Debuff
                 { "Demoralizing Roar", playerReader.TargetDebuffs.Roar },
@@ -251,6 +264,12 @@ namespace Core
                 
                 // Hunter Debuff
                 { "Serpent Sting", playerReader.TargetDebuffs.SerpentSting },
+
+                // Death Knight Debuff
+                { "Blood Plague", playerReader.TargetDebuffs.BloodPlague },
+                { "Frost Fever", playerReader.TargetDebuffs.FrostFever },
+                { "Strangulate", playerReader.TargetDebuffs.Strangulate },
+                { "Chains of Ice", playerReader.TargetDebuffs.ChainsofIce },
             };
 
             intVariables = new Dictionary<string, Func<int>>
