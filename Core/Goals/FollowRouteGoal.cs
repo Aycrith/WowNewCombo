@@ -261,7 +261,7 @@ namespace Core.Goals
                 oldestKey?.MillisecondsSinceLastClick > CYCLE_PROFESSION_PERIOD)
             {
                 logger.LogInformation($"[{oldestKey.Key}] {oldestKey.Name} pressed for {input.defaultKeyPress}ms");
-                input.KeyPress(oldestKey.ConsoleKey, input.defaultKeyPress);
+                input.Proc.KeyPress(oldestKey.ConsoleKey, input.defaultKeyPress);
                 oldestKey.SetClicked();
             }
         }

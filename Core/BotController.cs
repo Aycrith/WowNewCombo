@@ -250,7 +250,7 @@ namespace Core
         {
             AddonReader.SessionReset();
 
-            ConfigurableInput configInput = new(logger, wowProcess, config);
+            ConfigurableInput configInput = new(wowProcessInput, config);
             GoapAgentState goapAgentState = new();
             (RouteInfo routeInfo, IEnumerable<GoapGoal> availableActions) =
                 GoalFactory.CreateGoals(logger, AddonReader, configInput, dataConfig, npcNameFinder, npcNameTargeting, pather, execGameCommand, config, goapAgentState, cts, wait);

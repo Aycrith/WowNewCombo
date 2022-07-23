@@ -1,4 +1,4 @@
-﻿using Core.Goals;
+using Core.Goals;
 using Game;
 using Microsoft.Extensions.Logging;
 using SharedLib.Extensions;
@@ -47,7 +47,7 @@ namespace Core.GOAP
                         goal.OnGoapEvent(new AbortEvent());
                     }
 
-                    input.Reset();
+                    input.Proc.Reset();
                     stopMoving.Stop();
 
                     if (classConfig.Mode is Mode.AttendedGrind or Mode.Grind)
@@ -97,7 +97,7 @@ namespace Core.GOAP
 
             sessionHandler = new GrindSessionHandler(logger, addonReader, sessionDAO, cts);
 
-            stopMoving = new StopMoving(input, playerReader, cts);
+            stopMoving = new StopMoving(input.Proc, playerReader, cts);
 
             this.addonReader.CombatLog.KillCredit += OnKillCredit;
 

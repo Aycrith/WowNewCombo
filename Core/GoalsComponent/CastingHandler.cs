@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Numerics;
 using System.Threading;
@@ -62,8 +62,7 @@ namespace Core.Goals
                 input.StopAttack();
             }
 
-            input.KeyPress(item.ConsoleKey, item.PressDuration);
-            item.SetClicked();
+            return input.Proc.KeyPress(item.ConsoleKey, item.PressDuration);
         }
 
         private static bool CastSuccessfull(UI_ERROR uiEvent)
@@ -366,7 +365,7 @@ namespace Core.Goals
                 if (item.Log)
                     LogStepBackAfterCast(logger, item.Name, item.StepBackAfterCast);
 
-                input.SetKeyState(input.BackwardKey, true);
+                input.Proc.SetKeyState(input.Proc.BackwardKey, true);
 
                 (bool stepbackTimeOut, double stepbackElapsedMs) =
                     wait.Until(item.StepBackAfterCast, () => prevState != interrupt());
@@ -374,7 +373,7 @@ namespace Core.Goals
                 if (item.Log)
                     LogStepBackAfterCastInterrupted(logger, item.Name, !stepbackTimeOut, stepbackElapsedMs);
 
-                input.SetKeyState(input.BackwardKey, false);
+                input.Proc.SetKeyState(input.Proc.BackwardKey, false);
             }
 
             item.ConsumeCharge();
@@ -495,7 +494,7 @@ namespace Core.Goals
                         else
                         {
                             logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Start moving forward");
-                            input.SetKeyState(input.ForwardKey, true);
+                            input.Proc.SetKeyState(input.Proc.ForwardKey, true);
                         }
                     }
                     break;

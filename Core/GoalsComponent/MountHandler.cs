@@ -1,4 +1,4 @@
-﻿using Core.Goals;
+using Core.Goals;
 using Microsoft.Extensions.Logging;
 using SharedLib.Extensions;
 using System.Numerics;
@@ -115,7 +115,7 @@ namespace Core
 
                 if (index > -1)
                 {
-                    input.KeyPress(classConfig.Form[index].ConsoleKey, input.defaultKeyPress);
+                    input.Proc.KeyPress(classConfig.Form[index].ConsoleKey, input.defaultKeyPress);
                     return;
                 }
             }

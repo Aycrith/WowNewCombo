@@ -1,4 +1,4 @@
-﻿using Core.GOAP;
+using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Numerics;
@@ -124,7 +124,7 @@ namespace Core.Goals
                         if (debug)
                             Log("Too far, start moving forward!");
 
-                        input.SetKeyState(input.ForwardKey, true);
+                        input.Proc.SetKeyState(input.Proc.ForwardKey, true);
                         return;
                     }
 
@@ -132,7 +132,7 @@ namespace Core.Goals
                         Log($"Seems stuck! Clear Target.");
 
                     input.ClearTarget();
-                    input.KeyPress(random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey, 250 + random.Next(250));
+                    input.Proc.KeyPress(random.Next(2) == 0 ? input.Proc.TurnLeftKey : input.Proc.TurnRightKey, 250 + random.Next(250));
 
                     return;
                 }
@@ -144,7 +144,7 @@ namespace Core.Goals
                     Log("Too long time. Clear Target. Turn away.");
 
                 input.ClearTarget();
-                input.KeyPress(random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey, 250 + random.Next(250));
+                input.Proc.KeyPress(random.Next(2) == 0 ? input.Proc.TurnLeftKey : input.Proc.TurnRightKey, 250 + random.Next(250));
 
                 return;
             }
