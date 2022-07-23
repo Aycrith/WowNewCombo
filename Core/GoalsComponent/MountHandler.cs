@@ -10,6 +10,8 @@ namespace Core
         private const int MIN_LEVEL_TO_MOUNT = 30;
         private const int DISTANCE_TO_MOUNT = 40;
 
+        private const int MIN_DISTANCE_TO_INTERRUPT_CAST = 60;
+
         private readonly ILogger logger;
         private readonly ConfigurableInput input;
         private readonly ClassConfiguration classConfig;
@@ -85,7 +87,7 @@ namespace Core
                 wait.Update();
 
                 (timeOut, elapsedMs) =
-                    wait.Until(playerReader.RemainCastMs + playerReader.NetworkLatency.Value, MountedOrNotCastingOrValidTarget);
+                    wait.Until(playerReader.RemainCastMs + playerReader.NetworkLatency.Value, MountedOrNotCastingOrValidTargetOrEnteredCombat);
                 Log($"Cast ended ? {!timeOut} {elapsedMs}ms");
 
                 if (!HasValidTarget())
@@ -94,6 +96,12 @@ namespace Core
                         wait.Until(CastingHandler.SpellQueueTimeMs + playerReader.NetworkLatency.Value, playerReader.Bits.IsMounted);
 
                     Log($"Mounted ? {playerReader.Bits.IsMounted()} {elapsedMs}ms");
+                }
+
+                if (playerReader.Bits.PlayerInCombat() && playerReader.Bits.HasTarget() && !playerReader.Bits.TargetOfTargetIsPlayerOrPet())
+                {
+                    input.ClearTarget();
+                    wait.Update();
                 }
             }
         }
@@ -138,9 +146,9 @@ namespace Core
 
         private bool CastDetected() => playerReader.Bits.IsMounted() || playerReader.IsCasting();
 
-        private bool MountedOrNotCastingOrValidTarget() => playerReader.Bits.IsMounted() || !playerReader.IsCasting() || HasValidTarget();
+        private bool MountedOrNotCastingOrValidTargetOrEnteredCombat() => playerReader.Bits.IsMounted() || !playerReader.IsCasting() || HasValidTarget() || playerReader.Bits.PlayerInCombat();
 
-        private bool HasValidTarget() => playerReader.Bits.HasTarget() && !blacklist.IsTargetBlacklisted();
+        private bool HasValidTarget() => playerReader.Bits.HasTarget() && !blacklist.IsTargetBlacklisted() && playerReader.MinRange() < MIN_DISTANCE_TO_INTERRUPT_CAST;
 
         private void Log(string text)
         {

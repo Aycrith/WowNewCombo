@@ -118,7 +118,7 @@ namespace Core.Goals
                         playerReader.LastUIError = UI_ERROR.NONE;
 
                         if (debug)
-                            Log("Too far, start moving forward!");
+                            Log($"Too far ({playerReader.MinRange()} yard), start moving forward!");
 
                         input.Proc.SetKeyState(input.Proc.ForwardKey, true);
                         return;
