@@ -19,6 +19,8 @@ namespace Core.Goals
 
             AddPrecondition(GoapKey.hasfocus, true);
             AddPrecondition(GoapKey.dangercombat, false);
+            AddPrecondition(GoapKey.damagedone, false);
+            AddPrecondition(GoapKey.damagetaken, false);
             AddPrecondition(GoapKey.producedcorpse, false);
             AddPrecondition(GoapKey.consumecorpse, false);
         }
