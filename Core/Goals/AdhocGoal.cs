@@ -20,6 +20,10 @@ namespace Core.Goals
         private readonly CastingHandler castingHandler;
         private readonly MountHandler mountHandler;
 
+        private readonly bool? combatMatters;
+
+        private bool castSuccess;
+
         public AdhocGoal(KeyAction key, ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, StopMoving stopMoving, CastingHandler castingHandler, MountHandler mountHandler)
             : base(nameof(AdhocGoal))
         {
@@ -36,6 +40,7 @@ namespace Core.Goals
             if (bool.TryParse(key.InCombat, out bool result))
             {
                 AddPrecondition(GoapKey.incombat, result);
+                combatMatters = result;
             }
 
             Keys = new KeyAction[1] { key };
@@ -50,14 +55,52 @@ namespace Core.Goals
                 mountHandler.Dismount();
                 wait.Update();
             }
+        }
 
-            castingHandler.CastIfReady(key, DangerCombat);
+        public override void OnExit()
+        {
+            castSuccess = false;
+        }
+
+        public override void Update()
+        {
+            if (castingHandler.SpellInQueue())
+            {
+                wait.Update();
+                return;
+            }
+
+            if (!castSuccess || (key.Charge > 1 && key.CanRun()))
+            {
+                Cast();
+                wait.Update();
+            }
+        }
+
+        private bool Interrupt()
+        {
+            return combatMatters.HasValue
+                ? combatMatters.Value == addonReader.PlayerReader.Bits.PlayerInCombat() && addonReader.DamageTakenCount > 0
+                : addonReader.DamageTakenCount > 0;
+        }
+
+        private void Cast()
+        {
+            if (!castingHandler.CastIfReady(key, Interrupt))
+            {
+                if (Interrupt())
+                {
+                    castSuccess = true;
+                }
+
+                return;
+            }
 
             bool wasDrinkingOrEating = playerReader.Buffs.Drink() || playerReader.Buffs.Food();
 
             DateTime startTime = DateTime.UtcNow;
 
-            while ((playerReader.Buffs.Drink() || playerReader.Buffs.Food() || playerReader.IsCasting()) && !DangerCombat())
+            while ((playerReader.Buffs.Drink() || playerReader.Buffs.Food() || playerReader.IsCasting()) && !Interrupt())
             {
                 wait.Update();
 
@@ -74,9 +117,9 @@ namespace Core.Goals
                     break;
                 }
 
-                if ((DateTime.UtcNow - startTime).TotalSeconds > 25)
+                if ((DateTime.UtcNow - startTime).TotalSeconds > 30)
                 {
-                    logger.LogInformation($"Waited (25s) long enough for {key.Name}");
+                    logger.LogInformation($"Waited (30s) long enough for {key.Name}");
                     break;
                 }
             }
@@ -86,23 +129,7 @@ namespace Core.Goals
                 input.Stop();
             }
 
-            wait.Update();
-        }
-
-        public override void Update()
-        {
-            if (key.CanRun() && key.Charge > 1)
-            {
-                castingHandler.Cast(key);
-            }
-
-            wait.Update();
-        }
-
-        public bool DangerCombat()
-        {
-            return addonReader.PlayerReader.Bits.PlayerInCombat() &&
-                addonReader.CombatCreatureCount > 0;
+            castSuccess = true;
         }
     }
 }
