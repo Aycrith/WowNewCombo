@@ -2,7 +2,6 @@ using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using SharedLib.NpcFinder;
 using System;
-using System.Linq;
 
 namespace Core.Goals
 {
@@ -23,7 +22,7 @@ namespace Core.Goals
         private readonly CombatUtil combatUtil;
         private readonly IBlacklist blacklist;
 
-        private readonly Random random = new();
+        private readonly Random random;
 
         private readonly KeyAction? approachKey;
         private readonly Action approachAction;
@@ -50,17 +49,25 @@ namespace Core.Goals
             this.combatUtil = combatUtil;
             this.blacklist = blacklist;
 
+            random = new();
+
             Keys = input.ClassConfig.Pull.Sequence;
 
-            approachKey = Keys.FirstOrDefault(x => x.Name == input.ClassConfig.Approach.Name);
-            approachAction = approachKey == null ? DefaultApproach : ConditionalApproach;
+            approachAction = DefaultApproach;
 
             for (int i = 0; i < Keys.Length; i++)
             {
-                if (Keys[i].Requirements.Contains(RequirementFactory.AddVisible))
+                KeyAction keyAction = Keys[i];
+
+                if (keyAction.Name.Equals(input.ClassConfig.Approach.Name, StringComparison.OrdinalIgnoreCase))
+                {
+                    approachAction = ConditionalApproach;
+                    approachKey = keyAction;
+                }
+
+                if (keyAction.Requirements.Contains(RequirementFactory.AddVisible))
                 {
                     requiresNpcNameFinder = true;
-                    break;
                 }
             }
 
@@ -77,6 +84,7 @@ namespace Core.Goals
         public override void OnEnter()
         {
             combatUtil.Update();
+            wait.Update();
 
             if (mountHandler.IsMounted())
             {
@@ -116,44 +124,108 @@ namespace Core.Goals
 
         public override void Update()
         {
-            combatUtil.Update();
             wait.Update();
+
+            if (addonReader.DamageDoneCount > 0)
+            {
+                SendGoapEvent(new GoapStateEvent(GoapKey.pulled, true));
+                return;
+            }
 
             if (PullDurationMs > 15_000)
             {
                 input.ClearTarget();
                 Log("Pull taking too long. Clear target and face away!");
-                input.KeyPress(random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey, 1000);
-
+                input.Proc.KeyPress(random.Next(2) == 0 ? input.Proc.TurnLeftKey : input.Proc.TurnRightKey, 1000);
                 return;
             }
 
-            if (!Pull())
+            if (playerReader.Bits.HasPet() && !playerReader.PetHasTarget)
             {
-                if (combatUtil.EnteredCombat() && HasPickedUpAnAdd)
+                if (input.ClassConfig.PetAttack.GetCooldownRemaining() == 0)
+                    input.PetAttack();
+            }
+
+            bool castAny = false;
+            bool spellInQueue = false;
+            for (int i = 0; i < Keys.Length; i++)
+            {
+                KeyAction keyAction = Keys[i];
+
+                if (keyAction.Name == input.ClassConfig.Approach.Name)
+                    continue;
+
+                if (!keyAction.CanRun())
                 {
-                    Log($"Add on pull! Combat={playerReader.Bits.PlayerInCombat()}, Targets me={playerReader.Bits.TargetOfTargetIsPlayerOrPet()}");
+                    continue;
+                }
 
-                    stopMoving.Stop();
-                    if (combatUtil.AquiredTarget(5000))
+                spellInQueue = castingHandler.SpellInQueue();
+                if (spellInQueue)
+                {
+                    break;
+                }
+
+                if (castAny = castingHandler.Cast(keyAction, PullPrevention))
+                {
+                    if (keyAction.WaitForWithinMeleeRange)
                     {
-                        pullStart = DateTime.UtcNow;
+                        WaitForWithinMeleeRange(keyAction, castAny);
                     }
-
+                }
+                else if (PullPrevention() &&
+                    (playerReader.IsCasting() ||
+                     playerReader.Bits.SpellOn_AutoAttack() ||
+                     playerReader.Bits.SpellOn_AutoShot() ||
+                     playerReader.Bits.SpellOn_Shoot()))
+                {
+                    Log("Preventing pulling possible tagged target!");
+                    input.StopAttack();
+                    input.ClearTarget();
+                    wait.Update();
                     return;
+                }
+            }
+
+            if (!castAny && !spellInQueue)
+            {
+                if (combatUtil.EnteredCombat())
+                {
+                    (bool timeout, double elapsedMs) = wait.Until(5000, CombatLogChanged);
+                    if (!timeout)
+                    {
+                        if (addonReader.DamageTakenCount > 0 && !playerReader.Bits.TargetInCombat())
+                        {
+                            stopMoving.Stop();
+
+                            input.ClearTarget();
+                            wait.Update();
+
+                            combatUtil.AquiredTarget(5000);
+                            return;
+                        }
+
+                        SendGoapEvent(new GoapStateEvent(GoapKey.pulled, true));
+                        return;
+                    }
                 }
 
                 approachAction();
             }
-            else
-            {
-                SendGoapEvent(new GoapStateEvent(GoapKey.pulled, true));
-            }
         }
 
-        protected bool HasPickedUpAnAdd =>
-            playerReader.Bits.PlayerInCombat() &&
-            !playerReader.Bits.TargetInCombat();
+        private bool CombatLogChanged()
+        {
+            return
+                playerReader.Bits.TargetInCombat() ||
+                addonReader.DamageDoneCount > 0 ||
+                addonReader.DamageTakenCount > 0 ||
+                playerReader.TargetTarget is
+                TargetTargetEnum.Me or
+                TargetTargetEnum.Pet or
+                TargetTargetEnum.PartyOrPet;
+        }
+
 
         protected void WaitForWithinMeleeRange(KeyAction item, bool lastCastSuccess)
         {
@@ -191,66 +263,6 @@ namespace Core.Goals
             }
         }
 
-        public bool Pull()
-        {
-            if (playerReader.Bits.HasPet() && !playerReader.PetHasTarget)
-            {
-                if (input.ClassConfig.PetAttack.GetCooldownRemaining() == 0)
-                    input.PetAttack();
-            }
-
-            bool castAny = false;
-            for (int i = 0; i < Keys.Length; i++)
-            {
-                if (Keys[i].Name == input.ClassConfig.Approach.Name)
-                    continue;
-
-                if (!Keys[i].CanRun())
-                {
-                    continue;
-                }
-
-                bool success = castingHandler.Cast(Keys[i], PullPrevention);
-                if (success)
-                {
-                    if (!playerReader.Bits.HasTarget())
-                    {
-                        return false;
-                    }
-
-                    castAny = true;
-
-                    if (Keys[i].WaitForWithinMeleeRange)
-                    {
-                        WaitForWithinMeleeRange(Keys[i], success);
-                    }
-                }
-                else if (PullPrevention() &&
-                    (playerReader.IsCasting() ||
-                     playerReader.Bits.SpellOn_AutoAttack() ||
-                     playerReader.Bits.SpellOn_AutoShot() ||
-                     playerReader.Bits.SpellOn_Shoot()))
-                {
-                    Log("Preventing pulling possible tagged target!");
-                    input.StopAttack();
-                    input.ClearTarget();
-                    wait.Update();
-                    return false;
-                }
-            }
-
-            if (castAny)
-            {
-                (bool timeout, double elapsedMs) = wait.Until(1000, SuccessfullPull);
-                if (!timeout)
-                {
-                    Log($"Entered combat after {elapsedMs}ms");
-                }
-            }
-
-            return playerReader.Bits.PlayerInCombat();
-        }
-
         private void DefaultApproach()
         {
             if (!stuckDetector.IsMoving())
@@ -284,7 +296,7 @@ namespace Core.Goals
             }
         }
 
-        private bool SuccessfullPull()
+        private bool SuccessfulPull()
         {
             return playerReader.TargetTarget is
                         TargetTargetEnum.Me or
