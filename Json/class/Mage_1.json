@@ -1,18 +1,24 @@
 {
   "ClassName": "Mage",
   "Loot": true,
-
   "PathFilename": "1-5_Gnome.json",
   "PathThereAndBack": true,
   "PathReduceSteps": false,
-
+  "IntVariables": {
+    "MIN_WATER%": 20,
+    "MIN_MANA_FIREBALL%": 40
+  },
   "Pull": {
     "Sequence": [
       {
         "Name": "Fireball",
         "Key": "2",
         "HasCastBar": true,
-        "MinMana": 65
+        "Requirement": "Mana% > MIN_MANA_FIREBALL%"
+      },
+      {
+        "Name": "Approach",
+        "Log": false
       }
     ]
   },
@@ -22,12 +28,15 @@
         "Name": "Fireball",
         "Key": "2",
         "HasCastBar": true,
-        "MinMana": 30,
-        "Requirement": "TargetHealth%>20"
+        "Requirements": [
+          "TargetHealth% > 20",
+          "Mana% > MIN_MANA_FIREBALL%"
+        ]
       },
       {
         "Name": "AutoAttack",
-        "Requirement": "not AutoAttacking"
+        "Requirement": "!AutoAttacking",
+        "Log": false
       },
       {
         "Name": "Approach",
@@ -40,18 +49,17 @@
       {
         "Name": "Frost Armor",
         "Key": "3",
-        "MinMana": 60,
-        "Requirement": "not Frost Armor"
+        "Requirement": "!Frost Armor"
       },
       {
         "Name": "Food",
         "Key": "=",
-        "Requirement": "Health%<30"
+        "Requirement": "Health% < MIN_WATER%"
       },
       {
         "Name": "Water",
         "Key": "-",
-        "Requirement": "Mana%<30"
+        "Requirement": "Mana% < MIN_WATER%"
       }
     ]
   },
@@ -67,7 +75,10 @@
       {
         "Name": "Sell",
         "Key": "C",
-        "Requirements": ["BagFull", "BagGreyItem"],
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ],
         "PathFilename": "1_Gnome_Vendor.json",
         "Cost": 6
       }
