@@ -130,6 +130,7 @@ DataToColor.lastCastEvent = 0
 DataToColor.lastCastSpellId = 0
 
 DataToColor.lastCastStartTime = 0
+DataToColor.lastCastEndTime = 0
 DataToColor.CastNum = 0
 
 DataToColor.targetChanged = true
@@ -635,7 +636,12 @@ function DataToColor:CreateFrames(n)
             Pixel(int, DataToColor:CustomTrigger(DataToColor.customTrigger1), 74)
             Pixel(int, DataToColor:getMeleeAttackSpeed(DataToColor.C.unitPlayer), 75)
 
-            -- 76 unused
+            if DataToColor.lastCastEndTime > 0 then
+                local remainCastTime = floor(DataToColor.lastCastEndTime - GetTime() * 1000)
+                Pixel(int, remainCastTime, 76)
+            else
+                Pixel(int, 0, 76)
+            end
 
             if UnitExists(DataToColor.C.unitFocus) then
                 Pixel(int, DataToColor:getGuidFromUnit(DataToColor.C.unitFocus), 77)
