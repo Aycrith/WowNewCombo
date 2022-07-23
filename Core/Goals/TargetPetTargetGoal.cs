@@ -8,12 +8,14 @@ namespace Core.Goals
 
         private readonly ConfigurableInput input;
         private readonly PlayerReader playerReader;
+        private readonly Wait wait;
 
-        public TargetPetTargetGoal(ConfigurableInput input, PlayerReader playerReader)
+        public TargetPetTargetGoal(ConfigurableInput input, PlayerReader playerReader, Wait wait)
             : base(nameof(TargetPetTargetGoal))
         {
             this.input = input;
             this.playerReader = playerReader;
+            this.wait = wait;
 
             AddPrecondition(GoapKey.hastarget, false);
             AddPrecondition(GoapKey.dangercombat, true);
@@ -26,9 +28,12 @@ namespace Core.Goals
         {
             input.TargetPet();
             input.TargetOfTarget();
+            wait.Update();
+
             if (playerReader.Bits.HasTarget() && (playerReader.Bits.TargetIsDead() || playerReader.TargetGuid == playerReader.PetGuid))
             {
                 input.ClearTarget();
+                wait.Update();
             }
         }
     }

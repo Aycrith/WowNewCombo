@@ -17,6 +17,7 @@ namespace Core.Goals
         private readonly ILogger logger;
         private readonly ConfigurableInput input;
         private readonly Wait wait;
+        private readonly AddonReader addonReader;
         private readonly PlayerReader playerReader;
         private readonly StopMoving stopMoving;
         private readonly CombatUtil combatUtil;
@@ -34,18 +35,15 @@ namespace Core.Goals
 
         private double ApproachDurationMs => (DateTime.UtcNow - approachStart).TotalMilliseconds;
 
-        private bool HasPickedUpAnAdd =>
-            playerReader.Bits.PlayerInCombat() &&
-            !playerReader.Bits.TargetInCombat();
-
-        public ApproachTargetGoal(ILogger logger, ConfigurableInput input, Wait wait, PlayerReader playerReader, StopMoving stopMoving, CombatUtil combatUtil, IBlacklist blacklist)
+        public ApproachTargetGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, StopMoving stopMoving, CombatUtil combatUtil, IBlacklist blacklist)
             : base(nameof(ApproachTargetGoal))
         {
             this.logger = logger;
             this.input = input;
 
             this.wait = wait;
-            this.playerReader = playerReader;
+            this.addonReader = addonReader;
+            this.playerReader = addonReader.PlayerReader;
             this.stopMoving = stopMoving;
             this.combatUtil = combatUtil;
             this.blacklist = blacklist;
@@ -81,16 +79,15 @@ namespace Core.Goals
         public override void Update()
         {
             wait.Update();
-            combatUtil.Update();
 
-            if (combatUtil.EnteredCombat() && HasPickedUpAnAdd)
+            if (combatUtil.EnteredCombat() && !playerReader.Bits.TargetInCombat())
             {
-                if (debug)
-                    Log($"Add on approach! PlayerCombat={playerReader.Bits.PlayerInCombat()}, Targets us={playerReader.Bits.TargetOfTargetIsPlayerOrPet()}");
-
                 stopMoving.Stop();
-                combatUtil.AquiredTarget(5000);
 
+                input.ClearTarget();
+                wait.Update();
+
+                combatUtil.AquiredTarget(5000);
                 return;
             }
 
@@ -102,9 +99,8 @@ namespace Core.Goals
             if (!playerReader.Bits.PlayerInCombat())
             {
                 NonCombatApproach();
+                RandomJump();
             }
-
-            RandomJump();
         }
 
         private void NonCombatApproach()
@@ -124,7 +120,7 @@ namespace Core.Goals
                         if (debug)
                             Log("Too far, start moving forward!");
 
-                        input.SetKeyState(input.ForwardKey, true);
+                        input.Proc.SetKeyState(input.Proc.ForwardKey, true);
                         return;
                     }
 
@@ -132,7 +128,7 @@ namespace Core.Goals
                         Log($"Seems stuck! Clear Target.");
 
                     input.ClearTarget();
-                    input.KeyPress(random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey, 250 + random.Next(250));
+                    input.Proc.KeyPress(random.Next(2) == 0 ? input.Proc.TurnLeftKey : input.Proc.TurnRightKey, 250 + random.Next(250));
 
                     return;
                 }
@@ -144,7 +140,7 @@ namespace Core.Goals
                     Log("Too long time. Clear Target. Turn away.");
 
                 input.ClearTarget();
-                input.KeyPress(random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey, 250 + random.Next(250));
+                input.Proc.KeyPress(random.Next(2) == 0 ? input.Proc.TurnLeftKey : input.Proc.TurnRightKey, 250 + random.Next(250));
 
                 return;
             }

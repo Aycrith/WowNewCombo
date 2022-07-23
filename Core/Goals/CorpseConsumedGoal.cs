@@ -8,6 +8,8 @@ namespace Core.Goals
     {
         public override float Cost => 4.7f;
 
+        private const int LOOTFRAME_AUTOLOOT_DELAY = 300;
+
         private readonly ILogger logger;
         private readonly GoapAgentState goapAgentState;
         private readonly Wait wait;
@@ -19,14 +21,8 @@ namespace Core.Goals
             this.goapAgentState = goapAgentState;
             this.wait = wait;
 
-            if (classConfig.Mode == Mode.AssistFocus)
-            {
-                AddPrecondition(GoapKey.incombat, false);
-            }
-            else
-            {
-                AddPrecondition(GoapKey.dangercombat, false);
-            }
+            AddPrecondition(GoapKey.damagedone, false);
+            AddPrecondition(GoapKey.damagetaken, false);
 
             AddPrecondition(GoapKey.consumecorpse, true);
 
@@ -35,16 +31,26 @@ namespace Core.Goals
 
         public override void OnEnter()
         {
-            goapAgentState.LastCombatKillCount = Math.Max(goapAgentState.LastCombatKillCount - 1, 0);
-            LogConsumed(logger, goapAgentState.LastCombatKillCount);
+            goapAgentState.ConsumableCorpseCount = Math.Max(goapAgentState.ConsumableCorpseCount - 1, 0);
+            if (goapAgentState.ConsumableCorpseCount == 0)
+            {
+                goapAgentState.LastCombatKillCount = 0;
+            }
+
+            LogConsumed(logger, goapAgentState.LastCombatKillCount, goapAgentState.ConsumableCorpseCount);
 
             SendGoapEvent(new GoapStateEvent(GoapKey.consumecorpse, false));
+
+            if (goapAgentState.LastCombatKillCount > 1)
+            {
+                wait.Fixed(LOOTFRAME_AUTOLOOT_DELAY);
+            }
         }
 
         [LoggerMessage(
             EventId = 101,
             Level = LogLevel.Information,
-            Message = "----- Corpse consumed. Remaining: {remains}")]
-        static partial void LogConsumed(ILogger logger, int remains);
+            Message = "----- Corpse consumed. Total: {total} | Remaining: {remains}")]
+        static partial void LogConsumed(ILogger logger, int total, int remains);
     }
 }

@@ -1,7 +1,6 @@
 ﻿using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Core.Goals
@@ -17,6 +16,10 @@ namespace Core.Goals
         private readonly PlayerReader playerReader;
         private readonly CastingHandler castingHandler;
         private readonly MountHandler mountHandler;
+
+        private static bool None() => false;
+
+        private bool castSuccess;
 
         public ParallelGoal(ILogger logger, ConfigurableInput input, Wait wait, PlayerReader playerReader, StopMoving stopMoving, ClassConfiguration classConfig, CastingHandler castingHandler, MountHandler mountHandler)
             : base(nameof(ParallelGoal))
@@ -52,53 +55,85 @@ namespace Core.Goals
                 wait.Update();
             }
 
-            if (Keys.Any(k => k.StopBeforeCast))
+            for (int i = 0; i < Keys.Length; i++)
             {
-                stopMoving.Stop();
-                wait.Update();
-            }
-
-            Parallel.For(0, Keys.Length, Execute);
-
-            bool wasDrinkingOrEating = playerReader.Buffs.Drink() || playerReader.Buffs.Food();
-
-            DateTime startTime = DateTime.UtcNow;
-            while ((playerReader.Buffs.Drink() || playerReader.Buffs.Food() || playerReader.IsCasting()) && !playerReader.Bits.PlayerInCombat())
-            {
-                wait.Update();
-
-                if (playerReader.Buffs.Drink() && playerReader.Buffs.Food())
+                if (Keys[i].StopBeforeCast)
                 {
-                    if (playerReader.ManaPercentage() > 98 && playerReader.HealthPercent() > 98) { break; }
-                }
-                else if (playerReader.Buffs.Drink())
-                {
-                    if (playerReader.ManaPercentage() > 98) { break; }
-                }
-                else if (playerReader.Buffs.Food())
-                {
-                    if (playerReader.HealthPercent() > 98) { break; }
-                }
-
-                if ((DateTime.UtcNow - startTime).TotalSeconds >= 25)
-                {
-                    logger.LogInformation($"Waited (25s) long enough for {Name}");
+                    stopMoving.Stop();
+                    wait.Update();
                     break;
                 }
             }
+        }
 
-            if (wasDrinkingOrEating)
+        public override void Update()
+        {
+            if (castingHandler.SpellInQueue())
             {
-                input.StandUp();
+                wait.Update();
+                return;
+            }
+
+            if (!castSuccess)
+            {
+                Cast();
+                wait.Update();
+            }
+        }
+
+        public override void OnExit()
+        {
+            castSuccess = false;
+        }
+
+        private void Cast()
+        {
+            Parallel.For(0, Keys.Length, Execute);
+
+            if (castSuccess)
+            {
+                bool wasDrinkingOrEating = playerReader.Buffs.Drink() || playerReader.Buffs.Food();
+
+                DateTime startTime = DateTime.UtcNow;
+                while ((playerReader.Buffs.Drink() || playerReader.Buffs.Food() || playerReader.IsCasting()) && !playerReader.Bits.PlayerInCombat())
+                {
+                    wait.Update();
+
+                    if (playerReader.Buffs.Drink() && playerReader.Buffs.Food())
+                    {
+                        if (playerReader.ManaPercentage() > 98 && playerReader.HealthPercent() > 98) { break; }
+                    }
+                    else if (playerReader.Buffs.Drink())
+                    {
+                        if (playerReader.ManaPercentage() > 98) { break; }
+                    }
+                    else if (playerReader.Buffs.Food())
+                    {
+                        if (playerReader.HealthPercent() > 98) { break; }
+                    }
+
+                    if ((DateTime.UtcNow - startTime).TotalSeconds > 30)
+                    {
+                        logger.LogInformation($"Waited (30s) long enough for {Name}");
+                        break;
+                    }
+                }
+
+                if (wasDrinkingOrEating)
+                {
+                    input.StandUp();
+                }
             }
         }
 
         private void Execute(int i)
         {
-            if (castingHandler.CastIfReady(Keys[i], () => false))
+            if (castingHandler.CastIfReady(Keys[i], None))
             {
                 Keys[i].ResetCooldown();
                 Keys[i].SetClicked();
+
+                castSuccess = true;
             }
         }
     }

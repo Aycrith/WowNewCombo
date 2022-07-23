@@ -165,10 +165,10 @@ namespace SharedLib.NpcFinder
             return value * (bitmapProvider.Rect.Height / refHeight);
         }
 
-        public void ChangeNpcType(NpcNames type)
+        public bool ChangeNpcType(NpcNames type)
         {
             if (nameType == type)
-                return;
+                return false;
 
             nameType = type;
 
@@ -188,6 +188,8 @@ namespace SharedLib.NpcFinder
             UpdateSearchMode();
 
             LogTypeChanged(logger, type.ToStringF());
+
+            return true;
         }
 
         private void UpdateSearchMode()

@@ -48,7 +48,8 @@ namespace Core
 
         public RecordInt GlobalTime { get; } = new(98);
 
-        public int CombatCreatureCount => CombatLog.DamageTaken.Count;
+        public int DamageTakenCount => CombatLog.DamageTaken.Count;
+        public int DamageDoneCount => CombatLog.DamageDone.Count;
 
         public string TargetName { get; private set; } = string.Empty;
 
@@ -120,8 +121,8 @@ namespace Core
                 }
                 AvgUpdateLatency /= UpdateLatencys.Length;
 
-                CurrentAction.SetDirty();
-                UsableAction.SetDirty();
+                CurrentAction.Update();
+                UsableAction.Update();
 
                 PlayerReader.Update();
 

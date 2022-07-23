@@ -11,10 +11,9 @@
         {
             this.reader = reader;
             this.cell = cell;
-            SetDirty();
         }
 
-        public void SetDirty()
+        public void Update()
         {
             value = reader.GetInt(cell);
         }

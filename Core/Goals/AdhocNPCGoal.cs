@@ -181,15 +181,15 @@ namespace Core.Goals
                 if (!foundVendor)
                 {
                     LogWarn($"No target found by cursor({nameof(CursorType.Vendor)}, {nameof(CursorType.Repair)}, {nameof(CursorType.Innkeeper)})! Attempt to use macro to aquire target");
-                    input.KeyPress(key.ConsoleKey, input.defaultKeyPress);
+                    input.Proc.KeyPress(key.ConsoleKey, input.defaultKeyPress);
                 }
 
                 (bool targetTimeout, double targetElapsedMs) = wait.Until(400, playerReader.Bits.HasTarget);
                 if (targetTimeout)
                 {
                     LogWarn("No target found! Turn left to find NPC");
-                    using var cts = new CancellationTokenSource();
-                    input.KeyPressSleep(input.TurnLeftKey, 250, cts);
+                    using CancellationTokenSource cts = new();
+                    input.Proc.KeyPressSleep(input.Proc.TurnLeftKey, 250, cts);
                     return;
                 }
 
@@ -208,7 +208,7 @@ namespace Core.Goals
                         LogWarn("There was no grey item to sell. Stuck here!");
                     }
 
-                    input.KeyPress(ConsoleKey.Escape, input.defaultKeyPress);
+                    input.Proc.KeyPress(ConsoleKey.Escape, input.defaultKeyPress);
                     input.ClearTarget();
                     wait.Update();
 

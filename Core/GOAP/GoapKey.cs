@@ -4,6 +4,8 @@
     {
         hastarget,
         dangercombat,
+        damagetaken,
+        damagedone,
         targetisalive,
         targettargetsus,
         incombat,
@@ -23,7 +25,7 @@
         gathering,
         targethostile,
         hasfocus,
-        focushastarget,
+        focushastarget
     }
 
     public static class GoapKey_Extension
@@ -34,6 +36,8 @@
         {
             GoapKey.hastarget => "Target",
             GoapKey.dangercombat => "Danger",
+            GoapKey.damagetaken => "Damage Taken",
+            GoapKey.damagedone => "Damage Done",
             GoapKey.targetisalive => "Target alive",
             GoapKey.targettargetsus => "Targets us",
             GoapKey.incombat => "Combat",
@@ -61,6 +65,8 @@
         {
             GoapKey.hastarget => "!Target",
             GoapKey.dangercombat => "!Danger",
+            GoapKey.damagetaken => "!Damage Taken",
+            GoapKey.damagedone => "!Damage Done",
             GoapKey.targetisalive => "!Target alive",
             GoapKey.targettargetsus => "!Targets us",
             GoapKey.incombat => "!Combat",

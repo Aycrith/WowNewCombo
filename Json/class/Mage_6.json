@@ -1,94 +1,125 @@
 {
-    "ClassName": "Mage",
-    "Loot": true,
-    "Skin": true,
-    "PathFilename": "5_Gnome.json",
-    "PathThereAndBack": true,
-    "PathReduceSteps": false,
-  
-    "Pull": {
-      "Sequence": [
-        {
-          "Name": "Frostbolt",
-          "HasCastBar": true,
-          "Key": "1",
-          "Requirement": "SpellInRange:3",
-          "MinMana": 25
-        }
-      ]
-    },
-    "Combat": {
-      "Sequence": [
-        {
-          "Name": "Fire Blast",
-          "Key": "5",
-          "MinMana": 40,
-          "WhenUsable": true,
-          "Requirements": ["TargetHealth%<45", "SpellInRange:4"]
-        },
-        {
-          "Name": "Fireball",
-          "Key": "2",
-          "HasCastBar": true,
-          "MinMana": 45
-        },
-        {
-          "Name": "Shoot",
-          "Key": "0",
-          "HasCastbar": true,
-          "Requirements": ["HasRangedWeapon", "not Shooting", "SpellInRange:1"]
-        },
-        {
-          "Name": "AutoAttack",
-          "Requirements": ["not HasRangedWeapon", "not AutoAttacking"]
-        }
-      ]
-    },
-    "Parallel": {
-      "Sequence": [
-        {
-          "Name": "Food",
-          "Key": "=",
-          "Requirement": "Health%<50"
-        },
-        {
-          "Name": "Water",
-          "Key": "-",
-          "Requirement": "Mana%<50"
-        }
-      ]
+  "ClassName": "Mage",
+  "Loot": true,
+  "PathFilename": "5_Gnome.json",
+  "PathThereAndBack": true,
+  "PathReduceSteps": false,
+  "IntVariables": {
+    "MIN_FOOD%": 50,
+    "MIN_WATER%": 30,
+    "MIN_MANA_SPELL%": 50
+  },
+  "Pull": {
+    "Sequence": [
+      {
+        "Name": "Frostbolt",
+        "Key": "1",
+        "HasCastBar": true,
+        "Requirements": 
+        [
+          "SpellInRange:3",
+          "Mana% > MIN_MANA_SPELL%"
+        ]
       },
-  
-    "Adhoc": {
-      "Sequence": [
-        {
-          "Name": "Frost Armor",
-          "Key": "3",
-          "MinMana": 60,
-          "Requirement": "not Frost Armor"
-        },
-        {
-          "Name": "Arcane Intellect",
-          "Key": "4",
-          "MinMana": 60,
-          "Requirement": "not Arcane Intellect",
-          "Log": false
-        },
-        {
-          "Name": "Conjure Water",
-          "Key": "9",
-          "HasCastBar": true,
-          "Requirement": "not BagItem:5350:4",
-          "Cooldown": 30000
-        },
-        {
-          "Name": "Conjure Food",
-          "Key": "8",
-          "HasCastBar": true,
-          "Requirement": "not BagItem:5349:4",
-          "Cooldown": 30000
-        }
-      ]},
+      {
+        "Name": "Shoot",
+        "Key": "0",
+        "HasCastbar": true,
+        "DelayAfterCast": 500,
+        "Requirements": [
+          "HasRangedWeapon",
+          "!Shooting",
+          "SpellInRange:1",
+          "Mana% < MIN_MANA_SPELL%"
+        ]
+      },
+      {
+        "Name": "Approach",
+        "Log": false
+      }
+    ]
+  },
+  "Combat": {
+    "Sequence": [
+      {
+        "Name": "Fire Blast",
+        "Key": "5",
+        "WhenUsable": true,
+        "Requirements": [
+          "TargetHealth% < 45",
+          "SpellInRange:4"
+        ]
+      },
+      {
+        "Name": "Fireball",
+        "Key": "2",
+        "HasCastBar": true,
+        "Requirements": [
+          "Mana% > MIN_MANA_SPELL%",
+          "TargetHealth% > 35"
+        ]
+      },
+      {
+        "Name": "Shoot",
+        "Key": "0",
+        "HasCastbar": true,
+        "DelayAfterCast": 500,
+        "Requirements": [
+          "HasRangedWeapon",
+          "!Shooting",
+          "SpellInRange:1"
+        ]
+      },
+      {
+        "Name": "AutoAttack",
+        "Requirements": [
+          "!HasRangedWeapon",
+          "!AutoAttacking"
+        ]
+      }
+    ]
+  },
+  "Parallel": {
+    "Sequence": [
+      {
+        "Name": "Food",
+        "Key": "=",
+        "Requirement": "Health% < MIN_FOOD%"
+      },
+      {
+        "Name": "Water",
+        "Key": "-",
+        "Requirement": "Mana% < MIN_WATER%"
+      }
+    ]
+  },
+  "Adhoc": {
+    "Sequence": [
+      {
+        "Name": "Frost Armor",
+        "Key": "3",
+        "Requirement": "!Frost Armor"
+      },
+      {
+        "Name": "Arcane Intellect",
+        "Key": "4",
+        "Requirement": "!Arcane Intellect",
+        "Log": false
+      },
+      {
+        "Name": "Conjure Water",
+        "Key": "9",
+        "HasCastBar": true,
+        "Requirement": "!BagItem:5350:4"
+      },
+      {
+        "Name": "Conjure Food",
+        "Key": "8",
+        "HasCastBar": true,
+        "Requirement": "!BagItem:5349:4"
+      }
+    ]
+  },
   "NPC": {
     "Sequence": [
       {
@@ -101,11 +132,13 @@
       {
         "Name": "Sell",
         "Key": "C",
-        "Requirements": ["BagFull", "BagGreyItem"],
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ],
         "PathFilename": "5_Gnome_Vendor.json",
         "Cost": 6
       }
     ]
   }
 }
-  

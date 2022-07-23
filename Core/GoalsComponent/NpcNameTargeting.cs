@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+using System;
 using System.Drawing;
 using System.Linq;
 using System.Threading;
@@ -54,8 +53,10 @@ namespace Core.Goals
 
         public void ChangeNpcType(NpcNames npcNames)
         {
-            npcNameFinder.ChangeNpcType(npcNames);
+            bool changed = npcNameFinder.ChangeNpcType(npcNames);
             wowScreen.Enabled = npcNames != NpcNames.None;
+            if (changed)
+                cts.Token.WaitHandle.WaitOne(5); // BotController ScreenshotThread 4ms delay when idle
         }
 
         public void WaitForUpdate()
@@ -63,9 +64,14 @@ namespace Core.Goals
             npcNameFinder.WaitForUpdate();
         }
 
+        public bool FoundNpcName()
+        {
+            return npcNameFinder.NpcCount > 0;
+        }
+
         public void TargetingAndClickNpc(bool leftClick, CancellationTokenSource cts)
         {
-            var npc = npcNameFinder.Npcs.First();
+            NpcPosition npc = npcNameFinder.Npcs.First();
             logger.LogInformation($"> NPCs found: {npc.Rect}");
 
             foreach (Point p in locTargetingAndClickNpc)
@@ -94,7 +100,7 @@ namespace Core.Goals
             int c = locFindByCursorType.Length;
             foreach (NpcPosition npc in npcNameFinder.Npcs)
             {
-                var attemptPoints = new Point[c + (c * 2)];
+                Point[] attemptPoints = new Point[c + (c * 2)];
                 for (int i = 0; i < c; i++)
                 {
                     Point p = locFindByCursorType[i];
@@ -134,7 +140,7 @@ namespace Core.Goals
 
         public void ShowClickPositions(Graphics gr)
         {
-            foreach (var npc in npcNameFinder.Npcs)
+            foreach (NpcPosition npc in npcNameFinder.Npcs)
             {
                 foreach (Point p in locFindByCursorType)
                 {

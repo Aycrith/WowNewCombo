@@ -174,7 +174,7 @@ namespace Core.Goals
             }
 
             LastActive = DateTime.UtcNow;
-            input.SetKeyState(input.ForwardKey, true, true);
+            input.Proc.SetKeyState(input.Proc.ForwardKey, true, true);
 
             // main loop
             var location = playerReader.PlayerLocation;
@@ -287,8 +287,8 @@ namespace Core.Goals
 
         public void StopMovement()
         {
-            if (input.IsKeyDown(input.ForwardKey))
-                input.SetKeyState(input.ForwardKey, false, true);
+            if (input.Proc.IsKeyDown(input.Proc.ForwardKey))
+                input.Proc.SetKeyState(input.Proc.ForwardKey, false, true);
         }
 
         public bool HasWaypoint()

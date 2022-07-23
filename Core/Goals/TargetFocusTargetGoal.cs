@@ -17,6 +17,11 @@ namespace Core.Goals
             this.playerReader = playerReader;
             this.wait = wait;
 
+            if (input.ClassConfig.Loot)
+            {
+                AddPrecondition(GoapKey.incombat, false);
+            }
+
             AddPrecondition(GoapKey.hasfocus, true);
             AddPrecondition(GoapKey.focushastarget, true);
         }

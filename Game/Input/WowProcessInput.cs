@@ -11,7 +11,8 @@ namespace Game
 {
     public partial class WowProcessInput : IMouseInput
     {
-        public const bool LogInput = false;
+        private const bool LogInput = false;
+        private const bool LogMove = false;
 
         private const int MIN_DELAY = 25;
         private const int MAX_DELAY = 55;
@@ -23,6 +24,11 @@ namespace Game
         private readonly IInput simulatorInput;
 
         private readonly Dictionary<ConsoleKey, bool> keyDownDict = new();
+
+        public ConsoleKey ForwardKey { get; set; }
+        public ConsoleKey BackwardKey { get; set; }
+        public ConsoleKey TurnLeftKey { get; set; }
+        public ConsoleKey TurnRightKey { get; set; }
 
         public WowProcessInput(ILogger logger, WowProcess wowProcess)
         {
@@ -44,7 +50,7 @@ namespace Game
             }
         }
 
-        private void KeyDown(ConsoleKey key, bool forced)
+        public void KeyDown(ConsoleKey key, bool forced)
         {
             if (IsKeyDown(key))
             {
@@ -53,13 +59,23 @@ namespace Game
             }
 
             if (LogInput)
-                LogKeyDown(logger, key);
+            {
+                if (key == ForwardKey || key == BackwardKey || key == TurnLeftKey || key == TurnRightKey)
+                {
+                    if (LogMove)
+                        LogKeyDown(logger, key);
+                }
+                else
+                {
+                    LogKeyDown(logger, key);
+                }
+            }
 
             keyDownDict[key] = true;
             nativeInput.KeyDown((int)key);
         }
 
-        private void KeyUp(ConsoleKey key, bool forced)
+        public void KeyUp(ConsoleKey key, bool forced)
         {
             if (!IsKeyDown(key))
             {
@@ -68,7 +84,17 @@ namespace Game
             }
 
             if (LogInput)
-                LogKeyUp(logger, key);
+            {
+                if (key == ForwardKey || key == BackwardKey || key == TurnLeftKey || key == TurnRightKey)
+                {
+                    if (LogMove)
+                        LogKeyUp(logger, key);
+                }
+                else
+                {
+                    LogKeyUp(logger, key);
+                }
+            }
 
             nativeInput.KeyUp((int)key);
             keyDownDict[key] = false;
@@ -99,15 +125,18 @@ namespace Game
             NativeMethods.SetForegroundWindow(wowProcess.Process.MainWindowHandle);
         }
 
-        public void KeyPress(ConsoleKey key, int milliseconds)
+        public int KeyPress(ConsoleKey key, int milliseconds)
         {
             keyDownDict[key] = true;
             int totalElapsedMs = nativeInput.KeyPress((int)key, milliseconds);
             keyDownDict[key] = false;
+            
             if (LogInput)
             {
                 LogKeyPress(logger, key, totalElapsedMs);
             }
+
+            return totalElapsedMs;
         }
 
         public void KeyPressSleep(ConsoleKey key, int milliseconds, CancellationTokenSource cts)
@@ -117,7 +146,15 @@ namespace Game
 
             if (LogInput)
             {
-                LogKeyPress(logger, key, milliseconds);
+                if (key == ForwardKey || key == BackwardKey || key == TurnLeftKey || key == TurnRightKey)
+                {
+                    if (LogMove)
+                        LogKeyPress(logger, key, milliseconds);
+                }
+                else
+                {
+                    LogKeyPress(logger, key, milliseconds);
+                }
             }
 
             keyDownDict[key] = true;

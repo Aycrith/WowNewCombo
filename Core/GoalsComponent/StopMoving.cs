@@ -2,12 +2,13 @@
 using System.Threading;
 using System.Numerics;
 using SharedLib.Extensions;
+using Game;
 
 namespace Core.Goals
 {
     public class StopMoving
     {
-        private readonly ConfigurableInput input;
+        private readonly WowProcessInput input;
         private readonly PlayerReader playerReader;
         private readonly CancellationTokenSource cts;
         private readonly Random random;
@@ -17,7 +18,7 @@ namespace Core.Goals
         private Vector3 last;
         private float Direction;
 
-        public StopMoving(ConfigurableInput input, PlayerReader playerReader, CancellationTokenSource cts)
+        public StopMoving(WowProcessInput input, PlayerReader playerReader, CancellationTokenSource cts)
         {
             this.input = input;
             this.playerReader = playerReader;

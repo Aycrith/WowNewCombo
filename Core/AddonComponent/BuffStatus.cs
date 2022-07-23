@@ -1,115 +1,114 @@
-﻿namespace Core
+﻿using System.Collections.Specialized;
+
+namespace Core
 {
-    public class BuffStatus : BitStatus
+    public class BuffStatus
     {
         private readonly AddonDataProvider reader;
         private readonly int cell;
 
-        public BuffStatus(AddonDataProvider reader, int cell) : base(reader.GetInt(cell))
+        private BitVector32 v;
+
+        public BuffStatus(AddonDataProvider reader, int cell)
         {
             this.reader = reader;
             this.cell = cell;
         }
 
-        public void SetDirty()
+        public void Update()
         {
-            Update(reader.GetInt(cell));
-        }
-
-        public override string ToString()
-        {
-            return string.Empty;
+            v = new(reader.GetInt(cell));
         }
 
         // All
-        public bool Food() => IsBitSet(0);
+        public bool Food() => v[Mask._0];
 
-        public bool Drink() => IsBitSet(1);
+        public bool Drink() => v[Mask._1];
 
-        public bool Well_Fed() => IsBitSet(2);
+        public bool Well_Fed() => v[Mask._2];
 
-        public bool Mana_Regeneration() => IsBitSet(3);
+        public bool Mana_Regeneration() => v[Mask._3];
 
-        public bool Clearcasting() => IsBitSet(4);
+        public bool Clearcasting() => v[Mask._4];
 
         // Priest
-        public bool Fortitude() => IsBitSet(10);
-        public bool InnerFire() => IsBitSet(11);
-        public bool Renew() => IsBitSet(12);
-        public bool Shield() => IsBitSet(13);
-        public bool DivineSpirit() => IsBitSet(14);
+        public bool Fortitude() => v[Mask._10];
+        public bool InnerFire() => v[Mask._11];
+        public bool Renew() => v[Mask._12];
+        public bool Shield() => v[Mask._13];
+        public bool DivineSpirit() => v[Mask._14];
 
         // Druid
-        public bool MarkOfTheWild() => IsBitSet(10);
-        public bool Thorns() => IsBitSet(11);
-        public bool TigersFury() => IsBitSet(12);
-        public bool Prowl() => IsBitSet(13);
-        public bool Rejuvenation() => IsBitSet(14);
-        public bool Regrowth() => IsBitSet(15);
-        public bool OmenOfClarity() => IsBitSet(16);
+        public bool MarkOfTheWild() => v[Mask._10];
+        public bool Thorns() => v[Mask._11];
+        public bool TigersFury() => v[Mask._12];
+        public bool Prowl() => v[Mask._13];
+        public bool Rejuvenation() => v[Mask._14];
+        public bool Regrowth() => v[Mask._15];
+        public bool OmenOfClarity() => v[Mask._16];
 
         // Paladin
-        public bool SealofRighteousness() => IsBitSet(5);
-        public bool SealoftheCrusader() => IsBitSet(6);
-        public bool SealofCommand() => IsBitSet(7);
-        public bool SealofWisdom() => IsBitSet(8);
-        public bool SealofLight() => IsBitSet(9);
-        public bool SealofBlood() => IsBitSet(10);
-        public bool SealofVengeance() => IsBitSet(11);
+        public bool SealofRighteousness() => v[Mask._5];
+        public bool SealoftheCrusader() => v[Mask._6];
+        public bool SealofCommand() => v[Mask._7];
+        public bool SealofWisdom() => v[Mask._8];
+        public bool SealofLight() => v[Mask._9];
+        public bool SealofBlood() => v[Mask._10];
+        public bool SealofVengeance() => v[Mask._11];
 
-        public bool BlessingofMight() => IsBitSet(12);
-        public bool BlessingofProtection() => IsBitSet(13);
-        public bool BlessingofWisdom() => IsBitSet(14);
-        public bool BlessingofKings() => IsBitSet(15);
-        public bool BlessingofSalvation() => IsBitSet(16);
-        public bool BlessingofSanctuary() => IsBitSet(17);
-        public bool BlessingofLight() => IsBitSet(18);
+        public bool BlessingofMight() => v[Mask._12];
+        public bool BlessingofProtection() => v[Mask._13];
+        public bool BlessingofWisdom() => v[Mask._14];
+        public bool BlessingofKings() => v[Mask._15];
+        public bool BlessingofSalvation() => v[Mask._16];
+        public bool BlessingofSanctuary() => v[Mask._17];
+        public bool BlessingofLight() => v[Mask._18];
 
-        public bool RighteousFury() => IsBitSet(19);
-        public bool DivineProtection() => IsBitSet(20);
-        public bool AvengingWrath() => IsBitSet(21);
-        public bool HolyShield() => IsBitSet(22);
+        public bool RighteousFury() => v[Mask._19];
+        public bool DivineProtection() => v[Mask._20];
+        public bool AvengingWrath() => v[Mask._21];
+        public bool HolyShield() => v[Mask._22];
 
         // Mage
-        public bool FrostArmor() => IsBitSet(10);
-        public bool ArcaneIntellect() => IsBitSet(11);
-        public bool IceBarrier() => IsBitSet(12);
-        public bool Ward() => IsBitSet(13);
-        public bool FirePower() => IsBitSet(14);
-        public bool ManaShield() => IsBitSet(15);
-        public bool PresenceOfMind() => IsBitSet(16);
-        public bool ArcanePower() => IsBitSet(17);
+        public bool FrostArmor() => v[Mask._10];
+        public bool ArcaneIntellect() => v[Mask._11];
+        public bool IceBarrier() => v[Mask._12];
+        public bool Ward() => v[Mask._13];
+        public bool FirePower() => v[Mask._14];
+        public bool ManaShield() => v[Mask._15];
+        public bool PresenceOfMind() => v[Mask._16];
+        public bool ArcanePower() => v[Mask._17];
 
         // Rogue
-        public bool SliceAndDice() => IsBitSet(10);
-        public bool Stealth() => IsBitSet(11);
+        public bool SliceAndDice() => v[Mask._10];
+        public bool Stealth() => v[Mask._11];
 
         // Warrior
-        public bool BattleShout() => IsBitSet(10);
-        public bool Bloodrage() => IsBitSet(11);
+        public bool BattleShout() => v[Mask._10];
+        public bool Bloodrage() => v[Mask._11];
 
         // Warlock
-        public bool Demon() => IsBitSet(10); //Skin and Armor
-        public bool SoulLink() => IsBitSet(11);
-        public bool SoulstoneResurrection() => IsBitSet(12);
-        public bool ShadowTrance() => IsBitSet(13);
-        public bool FelArmor() => IsBitSet(14);
-        public bool FelDomination() => IsBitSet(15);
-        public bool DemonicSacrifice() => IsBitSet(16);
+        public bool Demon() => v[Mask._10]; //Skin and Armor
+        public bool SoulLink() => v[Mask._11];
+        public bool SoulstoneResurrection() => v[Mask._12];
+        public bool ShadowTrance() => v[Mask._13];
+        public bool FelArmor() => v[Mask._14];
+        public bool FelDomination() => v[Mask._15];
+        public bool DemonicSacrifice() => v[Mask._16];
 
         // Shaman
-        public bool LightningShield() => IsBitSet(10);
-        public bool WaterShield() => IsBitSet(11);
-        public bool ShamanisticFocus() => IsBitSet(12);
-        public bool Stoneskin() => IsBitSet(13);
+        public bool LightningShield() => v[Mask._10];
+        public bool WaterShield() => v[Mask._11];
+        public bool ShamanisticFocus() => v[Mask._12];
+        public bool Stoneskin() => v[Mask._13];
 
         // Hunter
-        public bool AspectoftheCheetah() => IsBitSet(10);
-        public bool AspectofthePack() => IsBitSet(11);
-        public bool AspectoftheHawk() => IsBitSet(12);
-        public bool AspectoftheMonkey() => IsBitSet(13);
-        public bool AspectoftheViper() => IsBitSet(14);
-        public bool RapidFire() => IsBitSet(15);
-        public bool QuickShots() => IsBitSet(16);
+        public bool AspectoftheCheetah() => v[Mask._10];
+        public bool AspectofthePack() => v[Mask._11];
+        public bool AspectoftheHawk() => v[Mask._12];
+        public bool AspectoftheMonkey() => v[Mask._13];
+        public bool AspectoftheViper() => v[Mask._14];
+        public bool RapidFire() => v[Mask._15];
+        public bool QuickShots() => v[Mask._16];
     }
 }

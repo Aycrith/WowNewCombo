@@ -137,7 +137,8 @@ function DataToColor:Bits2()
         base2(UnitExists(DataToColor.C.unitFocusTarget) and 1 or 0, 5) +
         base2(UnitAffectingCombat(DataToColor.C.unitFocusTarget) and 1 or 0, 6) +
         base2(DataToColor:isHostile(DataToColor.C.unitFocusTarget), 7) +
-        base2(UnitExists(DataToColor.C.unitFocusTarget) and CheckInteractDistance(DataToColor.C.unitFocusTarget, 2) and 1 or 0, 8)
+        base2(UnitExists(DataToColor.C.unitFocusTarget) and CheckInteractDistance(DataToColor.C.unitFocusTarget, 2) and 1 or 0, 8) +
+        base2(UnitIsDead(DataToColor.C.unitPetTarget) and 1 or 0, 1)
 end
 
 function DataToColor:CustomTrigger(t)
@@ -221,12 +222,14 @@ end
 function DataToColor:CastingInfoSpellId(unitId)
 
     local UnitCastingInfo = { DataToColor.UnitCastingInfo(unitId) }
-    local startTime = UnitCastingInfo[5]
+    local startTime = UnitCastingInfo[4]
+    local endTime = UnitCastingInfo[5]
     local spellID = UnitCastingInfo[#UnitCastingInfo]
 
     if spellID ~= nil then
         if unitId == DataToColor.C.unitPlayer and startTime ~= DataToColor.lastCastStartTime then
             DataToColor.lastCastStartTime = startTime
+            DataToColor.lastCastEndTime = endTime
             DataToColor.CastNum = DataToColor.CastNum + 1
         end
         return spellID
@@ -234,15 +237,22 @@ function DataToColor:CastingInfoSpellId(unitId)
 
     local UnitChannelInfo = { DataToColor.UnitChannelInfo(unitId) }
     startTime = UnitChannelInfo[4]
+    endTime = UnitChannelInfo[5]
     spellID = UnitChannelInfo[#UnitChannelInfo]
 
     if spellID ~= nil then
         if unitId == DataToColor.C.unitPlayer and startTime ~= DataToColor.lastCastStartTime then
             DataToColor.lastCastStartTime = startTime
+            DataToColor.lastCastEndTime = endTime
             DataToColor.CastNum = DataToColor.CastNum + 1
         end
         return spellID
     end
+
+    if unitId == DataToColor.C.unitPlayer then
+        DataToColor.lastCastEndTime = 0
+    end
+
     return 0
 end
 

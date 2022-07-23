@@ -38,6 +38,7 @@ namespace Core.Goals
             3570,
             11993,
             28695,
+            50300,
         };
 
         private readonly int[] miningSpells = new int[]
@@ -46,7 +47,8 @@ namespace Core.Goals
             2576,
             3564,
             10248,
-            29354
+            29354,
+            50310
         };
 
         public enum CastState

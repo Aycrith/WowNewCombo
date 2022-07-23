@@ -55,7 +55,7 @@ namespace Core
             if (debug)
                 LogDebugSetDirection(logger, playerReader.Direction, desiredDirection, distance);
 
-            input.KeyPressSleep(GetDirectionKeyToPress(desiredDirection),
+            input.Proc.KeyPressSleep(GetDirectionKeyToPress(desiredDirection),
                 TurnDuration(desiredDirection),
                 cts);
         }
@@ -78,7 +78,7 @@ namespace Core
         private ConsoleKey GetDirectionKeyToPress(float desiredDirection)
         {
             return (RADIAN + desiredDirection - playerReader.Direction) % RADIAN < MathF.PI
-                ? input.TurnLeftKey : input.TurnRightKey;
+                ? input.Proc.TurnLeftKey : input.Proc.TurnRightKey;
         }
 
         #region Logging

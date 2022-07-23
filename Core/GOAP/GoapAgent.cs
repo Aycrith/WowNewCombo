@@ -47,7 +47,7 @@ namespace Core.GOAP
                         goal.OnGoapEvent(new AbortEvent());
                     }
 
-                    input.Reset();
+                    input.Proc.Reset();
                     stopMoving.Stop();
 
                     if (classConfig.Mode is Mode.AttendedGrind or Mode.Grind)
@@ -97,7 +97,7 @@ namespace Core.GOAP
 
             sessionHandler = new GrindSessionHandler(logger, addonReader, sessionDAO, cts);
 
-            stopMoving = new StopMoving(input, playerReader, cts);
+            stopMoving = new StopMoving(input.Proc, playerReader, cts);
 
             this.addonReader.CombatLog.KillCredit += OnKillCredit;
 
@@ -194,8 +194,10 @@ namespace Core.GOAP
             {
                 { GoapKey.hastarget, playerReader.Bits.HasTarget() },
                 { GoapKey.targethostile, playerReader.Bits.TargetCanBeHostile() },
-                { GoapKey.dangercombat, playerReader.Bits.PlayerInCombat() && addonReader.CombatCreatureCount > 0 },
-                { GoapKey.pethastarget, playerReader.PetHasTarget },
+                { GoapKey.dangercombat, playerReader.Bits.PlayerInCombat() && addonReader.DamageTakenCount > 0 },
+                { GoapKey.damagetaken, addonReader.DamageTakenCount > 0 },
+                { GoapKey.damagedone, addonReader.DamageDoneCount > 0 },
+                { GoapKey.pethastarget, playerReader.PetHasTarget && !playerReader.Bits.PetTargetIsDead() },
                 { GoapKey.targetisalive, playerReader.Bits.HasTarget() && !playerReader.Bits.TargetIsDead() },
                 { GoapKey.targettargetsus, (playerReader.Bits.HasTarget() && playerReader.TargetHealthPercentage() < 30) || playerReader.TargetTarget is // hacky way to keep attacking fleeing humanoids
                     TargetTargetEnum.Me or
@@ -281,9 +283,10 @@ namespace Core.GOAP
             if (Active)
             {
                 State.LastCombatKillCount++;
+                State.ConsumableCorpseCount++;
                 BroadcastGoapEvent(GoapKey.producedcorpse, true);
 
-                LogActiveKillDetected(logger, State.LastCombatKillCount, addonReader.CombatCreatureCount);
+                LogActiveKillDetected(logger, State.LastCombatKillCount, addonReader.DamageTakenCount);
             }
             else
             {
@@ -310,7 +313,7 @@ namespace Core.GOAP
         [LoggerMessage(
             EventId = 50,
             Level = LogLevel.Information,
-            Message = "Kill credit detected! Known kills: {count} | Remains: {remain}")]
+            Message = "Kill credit detected! Known kills: {count} | Fighting with: {remain}")]
         static partial void LogActiveKillDetected(ILogger logger, int count, int remain);
 
         [LoggerMessage(

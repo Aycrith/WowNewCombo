@@ -40,7 +40,7 @@ local SetCVar = SetCVar
 local GetAddOnMetadata = GetAddOnMetadata
 
 local UIErrorsFrame = UIErrorsFrame
-local DEFAULT_CHAT_FRAME = _G.DEFAULT_CHAT_FRAME
+local DEFAULT_CHAT_FRAME = DEFAULT_CHAT_FRAME
 
 local HasAction = HasAction
 local GetSpellBookItemInfo = GetSpellBookItemInfo
@@ -108,6 +108,8 @@ local TALENT_ITERATION_FRAME_CHANGE_RATE = 5
 local COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE = 5
 -- How often the check network latency
 local LATENCY_ITERATION_FRAME_CHANGE_RATE = 500 -- 500ms * refresh rate in ms
+-- How often the lastLoot return from Closed to Corpse
+local LOOT_RESET_RATE = 5
 
 -- Action bar configuration for which spells are tracked
 local MAX_ACTIONBAR_SLOT = 120
@@ -115,6 +117,7 @@ local MAX_ACTIONBAR_SLOT = 120
 -- Timers
 DataToColor.globalTime = 0
 DataToColor.lastLoot = 0
+DataToColor.lastLootResetStart = 0
 
 DataToColor.map = C_Map.GetBestMapForUnit(DataToColor.C.unitPlayer)
 DataToColor.uiMapId = 0
@@ -127,6 +130,7 @@ DataToColor.lastCastEvent = 0
 DataToColor.lastCastSpellId = 0
 
 DataToColor.lastCastStartTime = 0
+DataToColor.lastCastEndTime = 0
 DataToColor.CastNum = 0
 
 DataToColor.targetChanged = true
@@ -389,32 +393,31 @@ function DataToColor:CreateFrames(n)
     local valueCache = {}
     local frames = {}
 
+    -- This function is able to pass numbers in range 0 to 16777215
+    -- r,g,b are integers in range 0-255
+    -- then we turn them into 0-1 range
+    local function int(self, i)
+        return band(rshift(i, 16), 255) / 255, band(rshift(i, 8), 255) / 255, band(i, 255) / 255, 1
+    end
+
+    -- This function is able to pass numbers in range 0 to 9.99999 (6 digits)
+    -- converting them to a 6-digit integer.
+    local function float(self, f)
+        return int(self, floor(f * 100000))
+    end
+
+    local function Pixel(func, value, slot)
+        if valueCache[slot + 1] ~= value then
+            valueCache[slot + 1] = value
+            frames[slot + 1]:SetBackdropColor(func(self, value))
+        end
+    end
+
+    local function UpdateGlobalTime(slot)
+        Pixel(int, DataToColor.globalTime, slot)
+    end
+
     local function updateFrames()
-
-        -- This function is able to pass numbers in range 0 to 16777215
-        -- r,g,b are integers in range 0-255
-        -- then we turn them into 0-1 range
-        local function int(self, i)
-            return band(rshift(i, 16), 255) / 255, band(rshift(i, 8), 255) / 255, band(i, 255) / 255, 1
-        end
-
-        -- This function is able to pass numbers in range 0 to 9.99999 (6 digits)
-        -- converting them to a 6-digit integer.
-        local function float(self, f)
-            return int(self, floor(f * 100000))
-        end
-
-        local function Pixel(func, value, slot)
-            if valueCache[slot + 1] ~= value then
-                valueCache[slot + 1] = value
-                frames[slot + 1]:SetBackdropColor(func(self, value))
-            end
-        end
-
-        local function UpdateGlobalTime(slot)
-            Pixel(int, DataToColor.globalTime, slot)
-        end
-
         if not SETUP_SEQUENCE and globalCounter >= initPhase then
 
             Pixel(int, 0, 0)
@@ -632,7 +635,12 @@ function DataToColor:CreateFrames(n)
             Pixel(int, DataToColor:CustomTrigger(DataToColor.customTrigger1), 74)
             Pixel(int, DataToColor:getMeleeAttackSpeed(DataToColor.C.unitPlayer), 75)
 
-            -- 76 unused
+            if DataToColor.lastCastEndTime > 0 then
+                local remainCastTime = floor(DataToColor.lastCastEndTime - GetTime() * 1000)
+                Pixel(int, remainCastTime, 76)
+            else
+                Pixel(int, 0, 76)
+            end
 
             if UnitExists(DataToColor.C.unitFocus) then
                 Pixel(int, DataToColor:getGuidFromUnit(DataToColor.C.unitFocus), 77)
@@ -658,6 +666,10 @@ function DataToColor:CreateFrames(n)
             end
 
             -- Timers
+            if DataToColor.lastLoot == DataToColor.C.Loot.Closed and
+                DataToColor.globalTime - DataToColor.lastLootResetStart > LOOT_RESET_RATE then
+                DataToColor.lastLoot = DataToColor.C.Loot.Corpse
+            end
             Pixel(int, DataToColor.lastLoot, 97)
             UpdateGlobalTime(98)
             -- 99 Reserved
@@ -688,13 +700,6 @@ function DataToColor:CreateFrames(n)
         globalCounter = globalCounter + 1
     end
 
-    local function setFramePixelBackdrop(f)
-        f:SetBackdrop({
-            bgFile = "Interface\\AddOns\\DataToColor\\white.tga",
-            insets = { top = 0, left = 0, bottom = 0, right = 0 },
-        })
-    end
-
     local function genFrame(name, x, y)
         local f = CreateFrame("Frame", name, UIParent, BackdropTemplateMixin and "BackdropTemplate") or CreateFrame("Frame", name, UIParent)
 
@@ -705,7 +710,10 @@ function DataToColor:CreateFrames(n)
         f:SetPoint("TOPLEFT", xx, yy)
         f:SetHeight(CELL_SIZE)
         f:SetWidth(CELL_SIZE)
-        setFramePixelBackdrop(f)
+        f:SetBackdrop({
+            bgFile = "Interface\\AddOns\\DataToColor\\white.tga",
+            insets = { top = 0, left = 0, bottom = 0, right = 0 },
+        })
         f:SetFrameStrata("TOOLTIP")
         f:SetBackdropColor(0, 0, 0, 1)
         return f

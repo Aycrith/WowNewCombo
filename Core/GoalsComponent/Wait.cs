@@ -21,6 +21,7 @@ namespace Core
             globalTime.WaitOne();
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Fixed(int durationMs)
         {
             cts.Token.WaitHandle.WaitOne(durationMs);

@@ -19,11 +19,9 @@ namespace Core.Goals
         private readonly CastingHandler castingHandler;
         private readonly MountHandler mountHandler;
 
-        private float lastDirectionForTurnAround;
-
-        private float lastKnwonPlayerDirection;
-        private float lastKnownMinDistance;
-        private float lastKnownMaxDistance;
+        private float lastDirection;
+        private float lastMinDistance;
+        private float lastMaxDistance;
 
         public CombatGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, StopMoving stopMoving, ClassConfiguration classConfiguration, CastingHandler castingHandler, MountHandler mountHandler)
             : base(nameof(CombatGoal))
@@ -52,36 +50,6 @@ namespace Core.Goals
             Keys = classConfiguration.Combat.Sequence;
         }
 
-        protected void Fight()
-        {
-            if (playerReader.Bits.HasPet() && !playerReader.PetHasTarget)
-            {
-                if (input.ClassConfig.PetAttack.GetCooldownRemaining() == 0)
-                    input.PetAttack();
-            }
-
-            for (int i = 0; i < Keys.Length; i++)
-            {
-                if (playerReader.Bits.TargetIsDead() || !playerReader.Bits.HasTarget())
-                {
-                    logger.LogInformation("Lost Target!");
-                    stopMoving.Stop();
-                    return;
-                }
-                else
-                {
-                    lastKnwonPlayerDirection = playerReader.Direction;
-                    lastKnownMinDistance = playerReader.MinRange();
-                    lastKnownMaxDistance = playerReader.MaxRange();
-                }
-
-                if (castingHandler.CastIfReady(Keys[i]))
-                {
-                    break;
-                }
-            }
-        }
-
         public void OnGoapEvent(GoapEventArgs e)
         {
             if (e is GoapStateEvent s)
@@ -96,7 +64,7 @@ namespace Core.Goals
                 {
                     // have to check range
                     // ex. target died far away have to consider the range and approximate
-                    float distance = (lastKnownMaxDistance + lastKnownMinDistance) / 2f;
+                    float distance = (lastMaxDistance + lastMinDistance) / 2f;
                     SendGoapEvent(new CorpseEvent(GetCorpseLocation(distance), distance));
                 }
             }
@@ -106,23 +74,12 @@ namespace Core.Goals
         {
             for (int i = 0; i < Keys.Length; i++)
             {
-                var item = Keys[i];
-                if (item.ResetOnNewTarget)
+                KeyAction keyAction = Keys[i];
+                if (keyAction.ResetOnNewTarget)
                 {
-                    logger.LogInformation($"Reset cooldown on {item.Name}");
-                    item.ResetCooldown();
-                    item.ResetCharges();
+                    keyAction.ResetCooldown();
+                    keyAction.ResetCharges();
                 }
-            }
-        }
-
-        protected bool HasPickedUpAnAdd
-        {
-            get
-            {
-                return playerReader.Bits.PlayerInCombat() &&
-                    !playerReader.Bits.TargetOfTargetIsPlayerOrPet() &&
-                    playerReader.TargetHealthPercentage() == 100;
             }
         }
 
@@ -133,12 +90,12 @@ namespace Core.Goals
                 mountHandler.Dismount();
             }
 
-            lastDirectionForTurnAround = playerReader.Direction;
+            lastDirection = playerReader.Direction;
         }
 
         public override void OnExit()
         {
-            if (addonReader.CombatCreatureCount > 0 && !playerReader.Bits.HasTarget())
+            if (addonReader.DamageTakenCount > 0 && !playerReader.Bits.HasTarget())
             {
                 stopMoving.Stop();
             }
@@ -146,90 +103,109 @@ namespace Core.Goals
 
         public override void Update()
         {
-            if (MathF.Abs(lastDirectionForTurnAround - playerReader.Direction) > MathF.PI / 2)
+            wait.Update();
+
+            if (MathF.Abs(lastDirection - playerReader.Direction) > MathF.PI / 2)
             {
                 logger.LogInformation("Turning too fast!");
                 stopMoving.Stop();
 
-                lastDirectionForTurnAround = playerReader.Direction;
+                lastDirection = playerReader.Direction;
             }
+
+            lastDirection = playerReader.Direction;
+            lastMinDistance = playerReader.MinRange();
+            lastMaxDistance = playerReader.MaxRange();
 
             if (playerReader.Bits.IsDrowning())
             {
-                StopDrowning();
+                input.Jump();
                 return;
             }
 
             if (playerReader.Bits.HasTarget())
             {
-                Fight();
+                if (playerReader.Bits.HasPet() &&
+                    (!playerReader.PetHasTarget || playerReader.PetTargetGuid != playerReader.TargetGuid) &&
+                    input.ClassConfig.PetAttack.GetCooldownRemaining() == 0)
+                {
+                    input.PetAttack();
+                }
+
+                for (int i = 0; i < Keys.Length && !castingHandler.SpellInQueue(); i++)
+                {
+                    KeyAction keyAction = Keys[i];
+                    if (castingHandler.CastIfReady(keyAction))
+                    {
+                        break;
+                    }
+                }
             }
 
-            if (!playerReader.Bits.HasTarget() && addonReader.CombatCreatureCount > 0)
+            if (!playerReader.Bits.HasTarget())
             {
-                CreatureTargetMeOrMyPet();
-            }
+                stopMoving.Stop();
+                logger.LogInformation("Lost target!");
 
-            wait.Update();
+                if (addonReader.DamageTakenCount > 0)
+                {
+                    FindNewTarget();
+                }
+            }
         }
 
-        private void CreatureTargetMeOrMyPet()
+        private void FindNewTarget()
         {
-            wait.Update();
             if (playerReader.PetHasTarget && addonReader.CombatLog.DeadGuid.Value != playerReader.PetTargetGuid)
             {
-                logger.LogWarning("---- My pet has a target!");
                 ResetCooldowns();
 
                 input.TargetPet();
                 input.TargetOfTarget();
                 wait.Update();
-                return;
+
+                if (!playerReader.Bits.TargetIsDead())
+                {
+                    logger.LogWarning("---- New targe from Pet target!");
+                    return;
+                }
+
+                input.ClearTarget();
             }
 
-            if (addonReader.CombatCreatureCount > 1)
+            if (addonReader.DamageTakenCount > 1)
             {
-                logger.LogInformation("Checking target in front of me");
+                logger.LogInformation("Checking target in front...");
                 input.NearestTarget();
                 wait.Update();
-                if (playerReader.Bits.HasTarget())
+
+                if (playerReader.Bits.HasTarget() && !playerReader.Bits.TargetIsDead())
                 {
                     if (playerReader.Bits.TargetInCombat() && playerReader.Bits.TargetOfTargetIsPlayerOrPet())
                     {
+                        stopMoving.Stop();
                         ResetCooldowns();
 
-                        logger.LogWarning("Somebody is attacking me! Found new target to attack");
+                        logger.LogWarning("Found new target!");
                         input.Interact();
-                        stopMoving.Stop();
-                        wait.Update();
+
                         return;
                     }
 
                     input.ClearTarget();
                     wait.Update();
                 }
-                else
+                else if (addonReader.DamageTakenCount > 0)
                 {
-                    // threat must be behind me
-                    if (addonReader.CombatCreatureCount > 0)
-                    {
-                        logger.LogWarning($"---- Possible threats found behind {addonReader.CombatCreatureCount}. Waiting for my target to change!");
-                        wait.Till(2000, playerReader.Bits.HasTarget);
-                    }
+                    logger.LogWarning($"---- Possible threats from behind {addonReader.DamageTakenCount}. Waiting target by damage taken!");
+                    wait.Till(2500, playerReader.Bits.HasTarget);
                 }
             }
         }
 
-        private void StopDrowning()
-        {
-            logger.LogWarning("Drowning! Swim up");
-            input.Jump();
-            wait.Update();
-        }
-
         private Vector3 GetCorpseLocation(float distance)
         {
-            return PointEsimator.GetPoint(playerReader.PlayerLocation, playerReader.Direction, distance);
+            return PointEstimator.GetPoint(playerReader.PlayerLocation, playerReader.Direction, distance);
         }
     }
 }

@@ -46,7 +46,7 @@ namespace Core.Goals
         {
             var targetLocation = classConfiguration.WrongZone.ExitZoneLocation;
 
-            input.SetKeyState(input.ForwardKey, true);
+            input.Proc.SetKeyState(input.Proc.ForwardKey, true);
 
             if ((DateTime.UtcNow - LastActive).TotalMilliseconds > 10000)
             {
@@ -65,7 +65,7 @@ namespace Core.Goals
             else if (!stuckDetector.IsGettingCloser())
             {
                 // stuck so jump
-                input.SetKeyState(input.ForwardKey, true);
+                input.Proc.SetKeyState(input.Proc.ForwardKey, true);
 
                 if (HasBeenActiveRecently())
                 {

@@ -14,6 +14,7 @@ namespace Core.Goals
         private readonly Wait wait;
         private readonly AddonReader addonReader;
         private readonly PlayerReader playerReader;
+        private readonly AddonBits bits;
 
         private readonly ClassConfiguration classConfig;
         private readonly PlayerDirection direction;
@@ -22,13 +23,11 @@ namespace Core.Goals
         private readonly KeyAction defaultKeyAction = new();
 
         public const int GCD = 1500;
+        public const int MIN_GCD = 1000;
         public const int SpellQueueTimeMs = 400;
-        public const int GatherCastTimeMs = 3000;
 
-        private const int MaxWaitCastTimeMs = GCD;
-        private const int MaxWaitBuffTimeMs = GCD;
-        private const int MaxCastTimeMs = 15000;
-        private const int MaxAirTimeMs = 10000;
+        public DateTime SpellQueueOpen { get; private set; }
+        public bool SpellInQueue() => DateTime.UtcNow < SpellQueueOpen;
 
         public CastingHandler(ILogger logger, CancellationTokenSource cts, ConfigurableInput input, Wait wait, AddonReader addonReader, PlayerDirection direction, StopMoving stopMoving)
         {
@@ -39,6 +38,7 @@ namespace Core.Goals
             this.wait = wait;
             this.addonReader = addonReader;
             this.playerReader = addonReader.PlayerReader;
+            this.bits = playerReader.Bits;
 
             this.classConfig = input.ClassConfig;
             this.direction = direction;
@@ -50,7 +50,7 @@ namespace Core.Goals
             defaultKeyAction.Dispose();
         }
 
-        private void PressKeyAction(KeyAction item)
+        private int PressKeyAction(KeyAction item)
         {
             playerReader.LastUIError = UI_ERROR.NONE;
 
@@ -62,11 +62,10 @@ namespace Core.Goals
                 input.StopAttack();
             }
 
-            input.KeyPress(item.ConsoleKey, item.PressDuration);
-            item.SetClicked();
+            return input.Proc.KeyPress(item.ConsoleKey, item.PressDuration);
         }
 
-        private static bool CastSuccessfull(UI_ERROR uiEvent)
+        private static bool CastSuccessful(UI_ERROR uiEvent)
         {
             return
                 uiEvent is
@@ -88,7 +87,7 @@ namespace Core.Goals
             int beforeSpellId = playerReader.CastSpellId.Value;
             bool beforeUsable = addonReader.UsableAction.Is(item);
 
-            PressKeyAction(item);
+            int pressTime = PressKeyAction(item);
 
             if (item.SkipValidation)
             {
@@ -103,14 +102,14 @@ namespace Core.Goals
 
             if (item.AfterCastWaitNextSwing)
             {
-                (inputTimeOut, inputElapsedMs) = wait.Until(playerReader.MainHandSpeedMs(),
+                (inputTimeOut, inputElapsedMs) = wait.Until(playerReader.MainHandSpeedMs() + playerReader.NetworkLatency.Value,
                     interrupt: () => !addonReader.CurrentAction.Is(item) ||
                         playerReader.MainHandSwing.ElapsedMs() < SpellQueueTimeMs, // swing timer reset from any miss
                     repeat: RepeatStayCloseToTarget);
             }
             else
             {
-                (inputTimeOut, inputElapsedMs) = wait.Until(MaxWaitCastTimeMs,
+                (inputTimeOut, inputElapsedMs) = wait.Until(SpellQueueTimeMs + playerReader.NetworkLatency.Value,
                     interrupt: () =>
                     (beforeSpellId != playerReader.CastSpellId.Value && beforeCastEventValue != playerReader.CastEvent.Value) ||
                     beforeUsable != addonReader.UsableAction.Is(item)
@@ -118,7 +117,7 @@ namespace Core.Goals
             }
 
             if (item.Log)
-                LogInstantInput(logger, item.Name, !inputTimeOut, inputElapsedMs);
+                LogInstantInput(logger, item.Name, pressTime, !inputTimeOut, inputElapsedMs);
 
             if (inputTimeOut)
                 return false;
@@ -126,25 +125,20 @@ namespace Core.Goals
             if (item.Log)
                 LogInstantUsableChange(logger, item.Name, beforeUsable, addonReader.UsableAction.Is(item), ((UI_ERROR)beforeCastEventValue).ToStringF(), ((UI_ERROR)playerReader.CastEvent.Value).ToStringF());
 
-            if (!CastSuccessfull((UI_ERROR)playerReader.CastEvent.Value))
+            item.SetClicked();
+
+            if (!CastSuccessful((UI_ERROR)playerReader.CastEvent.Value))
             {
                 ReactToLastCastingEvent(item, $"{item.Name}-{nameof(CastingHandler)}: CastInstant");
                 return false;
             }
+
             return true;
         }
 
         private bool CastCastbar(KeyAction item, Func<bool> interrupt)
         {
-            if (playerReader.Bits.IsFalling())
-            {
-                (bool fallTimeOut, double fallElapsedMs) = wait.UntilNot(MaxAirTimeMs, playerReader.Bits.IsFalling);
-                if (!fallTimeOut)
-                {
-                    if (item.Log)
-                        LogCastbarWaitForLand(logger, item.Name, fallElapsedMs);
-                }
-            }
+            wait.While(bits.IsFalling);
 
             if (playerReader.IsCasting() && interrupt())
             {
@@ -161,7 +155,8 @@ namespace Core.Goals
             int beforeSpellId = playerReader.CastSpellId.Value;
             int beforeCastCount = playerReader.CastCount;
 
-            PressKeyAction(item);
+            int pressMs = PressKeyAction(item);
+            int remainCastMs = playerReader.RemainCastMs;
 
             if (item.SkipValidation)
             {
@@ -171,7 +166,7 @@ namespace Core.Goals
                 return true;
             }
 
-            (bool inputTimeOut, double inputElapsedMs) = wait.Until(MaxWaitCastTimeMs,
+            (bool inputTimeOut, double inputElapsedMs) = wait.Until(remainCastMs + pressMs + SpellQueueTimeMs + playerReader.NetworkLatency.Value,
                 interrupt: () =>
                 beforeCastEventValue != playerReader.CastEvent.Value ||
                 beforeSpellId != playerReader.CastSpellId.Value ||
@@ -179,7 +174,7 @@ namespace Core.Goals
                 );
 
             if (item.Log)
-                LogCastbarInput(logger, item.Name, !inputTimeOut, inputElapsedMs);
+                LogCastbarInput(logger, item.Name, pressMs, !inputTimeOut, inputElapsedMs);
 
             if (inputTimeOut)
                 return false;
@@ -187,7 +182,9 @@ namespace Core.Goals
             if (item.Log)
                 LogCastbarUsableChange(logger, item.Name, playerReader.IsCasting(), playerReader.CastCount, beforeUsable, addonReader.UsableAction.Is(item), ((UI_ERROR)beforeCastEventValue).ToStringF(), ((UI_ERROR)playerReader.CastEvent.Value).ToStringF());
 
-            if (!CastSuccessfull((UI_ERROR)playerReader.CastEvent.Value))
+            item.SetClicked();
+
+            if (!CastSuccessful((UI_ERROR)playerReader.CastEvent.Value))
             {
                 ReactToLastCastingEvent(item, $"{item.Name}-{nameof(CastingHandler)}: CastCastbar");
                 return false;
@@ -195,10 +192,17 @@ namespace Core.Goals
 
             if (playerReader.IsCasting())
             {
-                if (item.Log)
-                    LogVisibleCastbarWaitForEnd(logger, item.Name);
+                int remainMs = playerReader.RemainCastMs;
+                if (remainMs < MIN_GCD)
+                {
+                    remainMs = MIN_GCD;
+                }
+                remainMs = remainMs - SpellQueueTimeMs - playerReader.NetworkLatency.Value;
 
-                wait.Until(MaxCastTimeMs, () => !playerReader.IsCasting() || prevState != interrupt(), RepeatPetAttack);
+                if (item.Log)
+                    LogVisibleCastbarWaitForEnd(logger, item.Name, remainMs);
+
+                wait.Until(remainMs, () => !playerReader.IsCasting() || prevState != interrupt(), RepeatPetAttack);
                 if (prevState != interrupt())
                 {
                     if (item.Log)
@@ -211,10 +215,12 @@ namespace Core.Goals
             {
                 beforeCastEventValue = playerReader.CastEvent.Value;
 
-                if (item.Log)
-                    LogHiddenCastbarWaitForEnd(logger, item.Name);
+                int remain = playerReader.RemainCastMs - SpellQueueTimeMs - playerReader.NetworkLatency.Value;
 
-                wait.Until(MaxCastTimeMs, () => beforeCastEventValue != playerReader.CastEvent.Value || prevState != interrupt(), RepeatPetAttack);
+                if (item.Log)
+                    LogHiddenCastbarWaitForEnd(logger, item.Name, remain);
+
+                wait.Until(remain, () => beforeCastEventValue != playerReader.CastEvent.Value || prevState != interrupt(), RepeatPetAttack);
                 if (prevState != interrupt())
                 {
                     if (item.Log)
@@ -229,7 +235,7 @@ namespace Core.Goals
 
         public bool CastIfReady(KeyAction item)
         {
-            return item.CanRun() && Cast(item, playerReader.Bits.HasTarget);
+            return item.CanRun() && Cast(item, bits.HasTarget);
         }
 
         public bool CastIfReady(KeyAction item, Func<bool> interrupt)
@@ -239,7 +245,7 @@ namespace Core.Goals
 
         public bool Cast(KeyAction item)
         {
-            return Cast(item, playerReader.Bits.HasTarget);
+            return Cast(item, bits.HasTarget);
         }
 
         public bool Cast(KeyAction item, Func<bool> interrupt)
@@ -270,12 +276,22 @@ namespace Core.Goals
                 }
             }
 
-            if (playerReader.Bits.SpellOn_Shoot())
+            bool prevState = interrupt();
+
+            if (bits.SpellOn_Shoot())
             {
-                logger.LogInformation($"Stop {nameof(playerReader.Bits.SpellOn_Shoot)}");
                 input.StopAttack();
                 input.StopAttack();
-                wait.Update();
+
+                int waitTime = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs) + (2 * playerReader.NetworkLatency.Value);
+
+                logger.LogInformation($"Stop {nameof(bits.SpellOn_Shoot)} and GCD {waitTime}ms");
+
+                (bool gcdTimeout, double elapsedMs) = wait.Until(waitTime, () => prevState != interrupt());
+                if (!gcdTimeout)
+                {
+                    return false;
+                }
             }
 
             if (item.DelayBeforeCast > 0)
@@ -293,7 +309,6 @@ namespace Core.Goals
             }
 
             int auraHash = playerReader.AuraCount.Hash;
-            bool prevState = interrupt();
 
             if (item.WaitForGCD && !WaitForGCD(item, interrupt))
             {
@@ -325,7 +340,7 @@ namespace Core.Goals
 
             if (item.AfterCastWaitBuff)
             {
-                (bool changeTimeOut, double elapsedMs) = wait.Until(MaxWaitBuffTimeMs, () => auraHash != playerReader.AuraCount.Hash);
+                (bool changeTimeOut, double elapsedMs) = wait.Until(GCD, () => auraHash != playerReader.AuraCount.Hash);
                 if (item.Log)
                     LogAfterCastWaitBuff(logger, item.Name, !changeTimeOut, playerReader.AuraCount.ToString(), elapsedMs);
             }
@@ -337,7 +352,7 @@ namespace Core.Goals
                     if (item.Log)
                         LogDelayUntilCombat(logger, item.Name, item.DelayAfterCast);
 
-                    wait.Until(item.DelayAfterCast, playerReader.Bits.TargetOfTargetIsPlayerOrPet);
+                    wait.Until(item.DelayAfterCast, bits.TargetOfTargetIsPlayerOrPet);
                 }
                 else if (item.DelayAfterCast > 0)
                 {
@@ -354,19 +369,13 @@ namespace Core.Goals
                     }
                 }
             }
-            else if (item.RequirementsRuntime.Length > 0)
-            {
-                (bool canRun, double canRunElapsedMs) = wait.UntilNot(SpellQueueTimeMs, item.CanRun);
-                if (item.Log)
-                    LogWaitForInGameFeedback(logger, item.Name, !canRun, item.CanRun(), canRunElapsedMs);
-            }
 
             if (item.StepBackAfterCast > 0)
             {
                 if (item.Log)
                     LogStepBackAfterCast(logger, item.Name, item.StepBackAfterCast);
 
-                input.SetKeyState(input.BackwardKey, true);
+                input.Proc.SetKeyState(input.Proc.BackwardKey, true);
 
                 (bool stepbackTimeOut, double stepbackElapsedMs) =
                     wait.Until(item.StepBackAfterCast, () => prevState != interrupt());
@@ -374,8 +383,10 @@ namespace Core.Goals
                 if (item.Log)
                     LogStepBackAfterCastInterrupted(logger, item.Name, !stepbackTimeOut, stepbackElapsedMs);
 
-                input.SetKeyState(input.BackwardKey, false);
+                input.Proc.SetKeyState(input.Proc.BackwardKey, false);
             }
+
+            UpdateSpellQueue(item);
 
             item.ConsumeCharge();
             return true;
@@ -383,14 +394,18 @@ namespace Core.Goals
 
         private bool WaitForGCD(KeyAction item, Func<bool> interrupt)
         {
+            int totalTime = playerReader.GCD.Value - SpellQueueTimeMs + playerReader.NetworkLatency.Value;
+            if (totalTime < 0)
+                return true;
+
             bool before = interrupt();
-            (bool timeout, double elapsedMs) = wait.Until(GCD + playerReader.NetworkLatency.Value,
-                () => playerReader.GCD.Value < SpellQueueTimeMs || before != interrupt());
+            (bool timeout, double elapsedMs) = wait.Until(totalTime,
+                () => before != interrupt());
 
             if (item.Log)
-                LogGCD(logger, item.Name, !timeout, elapsedMs);
+                LogGCD(logger, item.Name, !timeout, addonReader.UsableAction.Is(item), totalTime, elapsedMs);
 
-            return timeout || before == interrupt();
+            return !timeout || before == interrupt();
         }
 
         public bool SwitchForm(Form beforeForm, KeyAction item)
@@ -416,7 +431,31 @@ namespace Core.Goals
             if (item.Log)
                 LogFormChanged(logger, item.Name, !changedTimeOut, beforeForm.ToStringF(), playerReader.Form.ToStringF(), elapsedMs);
 
+            classConfig.Form[index].SetClicked();
+
             return playerReader.Form == item.FormEnum;
+        }
+
+        private void UpdateSpellQueue(KeyAction item)
+        {
+            if (item.WaitForGCD)
+            {
+                int duration;
+
+                if (item.HasCastBar)
+                    duration = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs);
+                else
+                    duration = MIN_GCD - SpellQueueTimeMs - (2 * playerReader.NetworkLatency.Value);
+
+                SpellQueueOpen = DateTime.UtcNow.AddMilliseconds(duration);
+
+                if (item.Log)
+                    logger.LogInformation($"[{item.Name}] GCD: {playerReader.GCD.Value}ms | castRem: {playerReader.RemainCastMs} | Next Spell can be queued after {duration}ms");
+
+                return;
+            }
+
+            SpellQueueOpen = default;
         }
 
         private void ReactToLastCastingEvent(KeyAction item, string source)
@@ -433,9 +472,10 @@ namespace Core.Goals
                     item.SetClicked();
                     break;
                 case UI_ERROR.SPELL_FAILED_NOT_READY:
-                    logger.LogInformation($"{source} React to {value.ToStringF()} -- wait for GCD {playerReader.GCD.Value}ms");
-                    wait.While(() => playerReader.GCD.Value > SpellQueueTimeMs);
-                    break;
+                //int waitTime = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs);
+                //logger.LogInformation($"{source} React to {value.ToStringF()} -- wait for GCD {waitTime}ms");
+                //wait.Fixed(waitTime);
+                //break;
                 case UI_ERROR.ERR_SPELL_COOLDOWN:
                     logger.LogInformation($"{source} React to {value.ToStringF()} -- wait until its ready");
                     bool before = addonReader.UsableAction.Is(item);
@@ -462,7 +502,7 @@ namespace Core.Goals
                     }
 
                     float minRange = playerReader.MinRange();
-                    if (playerReader.Bits.PlayerInCombat() && playerReader.Bits.HasTarget() && !playerReader.IsTargetCasting())
+                    if (bits.PlayerInCombat() && bits.HasTarget() && !playerReader.IsTargetCasting())
                     {
                         wait.Update();
                         wait.Update();
@@ -470,7 +510,7 @@ namespace Core.Goals
                         {
                             logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Just wait for the target to get in range.");
 
-                            (bool timeout, double elapsedMs) = wait.Until(MaxWaitCastTimeMs,
+                            (bool timeout, double elapsedMs) = wait.Until(GCD,
                                 () => minRange != playerReader.MinRange() || playerReader.IsTargetCasting()
                             );
                         }
@@ -487,7 +527,7 @@ namespace Core.Goals
                         {
                             input.Interact();
 
-                            (bool timeout, double elapsedMs) = wait.Until(MaxWaitCastTimeMs,
+                            (bool timeout, double elapsedMs) = wait.Until(GCD,
                                 () => minRange != playerReader.MinRange());
 
                             logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Approached target {minRange}->{playerReader.MinRange()}");
@@ -495,7 +535,7 @@ namespace Core.Goals
                         else
                         {
                             logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Start moving forward");
-                            input.SetKeyState(input.ForwardKey, true);
+                            input.Proc.SetKeyState(input.Proc.ForwardKey, true);
                         }
                     }
                     break;
@@ -526,7 +566,7 @@ namespace Core.Goals
                     wait.While(playerReader.IsCasting);
                     break;
                 case UI_ERROR.ERR_BADATTACKPOS:
-                    if (playerReader.Bits.SpellOn_AutoAttack())
+                    if (bits.SpellOn_AutoAttack())
                     {
                         logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Interact!");
                         input.Interact();
@@ -546,8 +586,8 @@ namespace Core.Goals
 
         private void RepeatPetAttack()
         {
-            if (playerReader.Bits.PlayerInCombat() &&
-                playerReader.Bits.HasPet() &&
+            if (bits.PlayerInCombat() &&
+                bits.HasPet() &&
                 !playerReader.PetHasTarget &&
                 input.ClassConfig.PetAttack.GetCooldownRemaining() == 0)
             {
@@ -581,8 +621,8 @@ namespace Core.Goals
         [LoggerMessage(
             EventId = 72,
             Level = LogLevel.Information,
-            Message = "[{name}] instant input {register} {inputElapsedMs}ms")]
-        static partial void LogInstantInput(ILogger logger, string name, bool register, double inputElapsedMs);
+            Message = "[{name}] instant input {pressTime} {register} {inputElapsedMs}ms")]
+        static partial void LogInstantInput(ILogger logger, string name, int pressTime, bool register, double inputElapsedMs);
 
         [LoggerMessage(
             EventId = 73,
@@ -590,119 +630,112 @@ namespace Core.Goals
             Message = "[{name}] ... usable: {beforeUsable}->{afterUsable} -- {beforeCastEvent}->{afterCastEvent}")]
         static partial void LogInstantUsableChange(ILogger logger, string name, bool beforeUsable, bool afterUsable, string beforeCastEvent, string afterCastEvent);
 
-
         [LoggerMessage(
             EventId = 74,
-            Level = LogLevel.Information,
-            Message = "[{name}] ... castbar waited for landing {fallElapsedMs}ms")]
-        static partial void LogCastbarWaitForLand(ILogger logger, string name, double fallElapsedMs);
-
-        [LoggerMessage(
-            EventId = 75,
             Level = LogLevel.Information,
             Message = "[{name}] ... castbar skip validation")]
         static partial void LogCastbarSkipValidation(ILogger logger, string name);
 
         [LoggerMessage(
-            EventId = 76,
+            EventId = 75,
             Level = LogLevel.Information,
-            Message = "[{name}] ... castbar input {register} {inputElapsedMs}ms")]
-        static partial void LogCastbarInput(ILogger logger, string name, bool register, double inputElapsedMs);
+            Message = "[{name}] ... castbar input {pressTime}ms {register} {inputElapsedMs}ms")]
+        static partial void LogCastbarInput(ILogger logger, string name, int pressTime, bool register, double inputElapsedMs);
 
         [LoggerMessage(
-            EventId = 77,
+            EventId = 76,
             Level = LogLevel.Information,
             Message = "[{name}] ... casting: {casting} -- count:{castCount} -- usable: {beforeUsable}->{afterUsable} -- {beforeCastEvent}->{afterCastEvent}")]
         static partial void LogCastbarUsableChange(ILogger logger, string name, bool casting, int castCount, bool beforeUsable, bool afterUsable, string beforeCastEvent, string afterCastEvent);
 
         [LoggerMessage(
-            EventId = 78,
+            EventId = 77,
             Level = LogLevel.Information,
-            Message = "[{name}] waiting for visible cast bar finish or interrupt...")]
-        static partial void LogVisibleCastbarWaitForEnd(ILogger logger, string name);
+            Message = "[{name}] waiting for visible cast bar finish {remain}ms or interrupt...")]
+        static partial void LogVisibleCastbarWaitForEnd(ILogger logger, string name, int remain);
 
         [LoggerMessage(
-            EventId = 79,
+            EventId = 78,
             Level = LogLevel.Warning,
             Message = "[{name}] ... visible castbar interrupted!")]
         static partial void LogVisibleCastbarInterrupted(ILogger logger, string name);
 
         [LoggerMessage(
-            EventId = 80,
+            EventId = 79,
             Level = LogLevel.Information,
-            Message = "[{name}] waiting for hidden cast bar finish or interrupt...")]
-        static partial void LogHiddenCastbarWaitForEnd(ILogger logger, string name);
+            Message = "[{name}] waiting for hidden cast bar finish {remain}ms or interrupt...")]
+        static partial void LogHiddenCastbarWaitForEnd(ILogger logger, string name, int remain);
 
         [LoggerMessage(
-            EventId = 81,
+            EventId = 80,
             Level = LogLevel.Warning,
             Message = "[{name}] ... hidden castbar interrupted!")]
         static partial void LogHiddenCastbarInterrupted(ILogger logger, string name);
 
 
         [LoggerMessage(
-            EventId = 82,
+            EventId = 81,
             Level = LogLevel.Warning,
             Message = "[{name}] ... after {before}->{after} form switch still not usable!")]
         static partial void LogAfterFormSwitchNotUsable(ILogger logger, string name, string before, string after);
 
         [LoggerMessage(
-            EventId = 83,
+            EventId = 82,
             Level = LogLevel.Information,
             Message = "[{name}] DelayBeforeCast {delayBeforeCast}ms")]
         static partial void LogDelayBeforeCast(ILogger logger, string name, int delayBeforeCast);
 
         [LoggerMessage(
-            EventId = 84,
+            EventId = 83,
             Level = LogLevel.Information,
             Message = "[{name}] ... AfterCastWaitBuff | Buff: {changeTimeOut} | {auraCount} | {elapsedMs}ms")]
         static partial void LogAfterCastWaitBuff(ILogger logger, string name, bool changeTimeOut, string auraCount, double elapsedMs);
 
         [LoggerMessage(
-            EventId = 85,
+            EventId = 84,
             Level = LogLevel.Information,
             Message = "[{name}] ... DelayUntilCombat ... DelayAfterCast {delayAfterCast}ms")]
         static partial void LogDelayUntilCombat(ILogger logger, string name, int delayAfterCast);
 
 
         [LoggerMessage(
-            EventId = 86,
+            EventId = 85,
             Level = LogLevel.Information,
             Message = "[{name}] ... DelayAfterCast {delayAfterCast}ms")]
         static partial void LogDelayAfterCast(ILogger logger, string name, int delayAfterCast);
 
         [LoggerMessage(
-            EventId = 87,
+            EventId = 86,
             Level = LogLevel.Information,
             Message = "[{name}] ... DelayAfterCast interrupted {delayElaspedMs}ms")]
         static partial void LogDelayAfterCastInterrupted(ILogger logger, string name, double delayElaspedMs);
 
         [LoggerMessage(
-            EventId = 88,
+            EventId = 87,
             Level = LogLevel.Information,
             Message = "[{name}] ... instant interrupt: {interrupt} | CanRun: {canRun} | {canRunElapsedMs}ms")]
         static partial void LogWaitForInGameFeedback(ILogger logger, string name, bool interrupt, bool canRun, double canRunElapsedMs);
 
         [LoggerMessage(
-            EventId = 89,
+            EventId = 88,
             Level = LogLevel.Information,
             Message = "[{name}] StepBackAfterCast {stepBackAfterCast}ms")]
         static partial void LogStepBackAfterCast(ILogger logger, string name, int stepBackAfterCast);
 
         [LoggerMessage(
-            EventId = 90,
+            EventId = 89,
             Level = LogLevel.Information,
             Message = "[{name}] .... StepBackAfterCast interrupt: {interrupt} | {stepbackElapsedMs}ms")]
         static partial void LogStepBackAfterCastInterrupted(ILogger logger, string name, bool interrupt, double stepbackElapsedMs);
 
         [LoggerMessage(
-            EventId = 91,
+            EventId = 90,
             Level = LogLevel.Information,
-            Message = "[{name}] ... gcd interrupt: {interrupt} | {elapsedMs}ms")]
-        static partial void LogGCD(ILogger logger, string name, bool interrupt, double elapsedMs);
+            Message = "[{name}] ... gcd interrupt: {interrupt} | usable: {usable} | remain: {remain}ms | {elapsedMs}ms")]
+        static partial void LogGCD(ILogger logger, string name, bool interrupt, bool usable, int remain, double elapsedMs);
 
         [LoggerMessage(
-            EventId = 92,
+            EventId = 91,
             Level = LogLevel.Information,
             Message = "[{name}] ... form changed: {changedTimeOut} | {before}->{after} | {elapsedMs}ms")]
         static partial void LogFormChanged(ILogger logger, string name, bool changedTimeOut, string before, string after, double elapsedMs);

@@ -15,7 +15,7 @@ namespace Core.Addon
 
         public double AvgUpdateLatency => throw new NotImplementedException();
 
-        public int CombatCreatureCount => throw new NotImplementedException();
+        public int DamageTakenCount => throw new NotImplementedException();
 
         public string TargetName => throw new NotImplementedException();
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Numerics;
 
 namespace Core
@@ -117,17 +118,19 @@ namespace Core
 
         public int CastCount => reader.GetInt(70);
 
-        public BitStatus CustomTrigger1 { get; }
+        public BitVector32 CustomTrigger1;
 
         public int MainHandSpeedMs() => (int)(reader.GetInt(75) / 10000f) * 10;
 
         public int OffHandSpeed => (int)(reader.GetInt(75) - (MainHandSpeedMs() * 1000f));  // supposed to be 10000f - but theres a 10x
 
+        public int RemainCastMs => reader.GetInt(76);
+
         public RecordInt GCD { get; } = new(95);
 
         public RecordInt NetworkLatency { get; } = new(96);
 
-        public int LastLootTime => reader.GetInt(97);
+        public RecordInt LootEvent { get; } = new(97);
 
         public int FocusGuid => reader.GetInt(77);
         public int FocusTargetGuid => reader.GetInt(78);
@@ -144,12 +147,12 @@ namespace Core
 
         public void Update()
         {
-            Bits.SetDirty();
-            SpellInRange.SetDirty();
-            Buffs.SetDirty();
-            TargetDebuffs.SetDirty();
-            Stance.SetDirty();
-            CustomTrigger1.Update(reader.GetInt(74));
+            Bits.Update();
+            SpellInRange.Update();
+            Buffs.Update();
+            TargetDebuffs.Update();
+            Stance.Update();
+            CustomTrigger1 = new(reader.GetInt(74));
 
             if (UIError != UI_ERROR.NONE)
             {
@@ -163,6 +166,8 @@ namespace Core
             MainHandSwing.Update(reader);
             CastEvent.Update(reader);
             CastSpellId.Update(reader);
+
+            LootEvent.Update(reader);
 
             GCD.Update(reader);
             NetworkLatency.Update(reader);
@@ -180,6 +185,8 @@ namespace Core
 
             PlayerXp.Reset();
             Level.Reset();
+
+            LootEvent.Reset();
 
             GCD.Reset();
             NetworkLatency.Reset();

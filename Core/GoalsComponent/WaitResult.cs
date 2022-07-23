@@ -2,8 +2,8 @@
 {
     public readonly struct WaitResult
     {
-        public readonly bool timeout;
-        public readonly double elapsedMs;
+        private readonly bool timeout;
+        private readonly double elapsedMs;
 
         public WaitResult(bool timeout, double elapsedMs)
         {

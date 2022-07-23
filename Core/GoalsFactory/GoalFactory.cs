@@ -1,5 +1,6 @@
 using Core.Goals;
 using Core.GOAP;
+using Game;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PPather.Data;
@@ -27,6 +28,7 @@ namespace Core
             services.AddSingleton<AddonReader>(addonReader);
             services.AddSingleton<PlayerReader>(addonReader.PlayerReader);
             services.AddSingleton<ConfigurableInput>(input);
+            services.AddSingleton<WowProcessInput>(input.Proc);
             services.AddSingleton<NpcNameFinder>(npcNameFinder);
             services.AddSingleton<NpcNameTargeting>(npcNameTargeting);
             services.AddSingleton<IPPather>(pather);
@@ -161,23 +163,11 @@ namespace Core
                 services.AddSingleton<GoapGoal, ConsumeCorpseGoal>();
                 services.AddSingleton<GoapGoal, CorpseConsumedGoal>();
 
-                if (classConfig.KeyboardOnly)
-                {
-                    services.AddSingleton<GoapGoal, LastTargetLootGoal>();
+                services.AddSingleton<GoapGoal, LootGoal>();
 
-                    //if (classConfig.Skin)
-                    //{
-                    // unavailable due mouse not usable
-                    //}
-                }
-                else
+                if (classConfig.GatherCorpse)
                 {
-                    services.AddSingleton<GoapGoal, LootGoal>();
-
-                    if (classConfig.GatherCorpse)
-                    {
-                        services.AddSingleton<GoapGoal, SkinningGoal>();
-                    }
+                    services.AddSingleton<GoapGoal, SkinningGoal>();
                 }
             }
         }

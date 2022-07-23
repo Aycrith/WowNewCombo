@@ -1,13 +1,14 @@
 {
   "ClassName": "Mage",
+  //"Mode": "AttendedGrind", //Grind
   "Loot": true,
-  "PathFilename": "10_Gnome.json",
+  "PathFilename": "_pack\\1-20\\Dwarf.Gnome\\7-9_Dun Morogh_Tundred Hills (cl 9-11).json",
   "PathThereAndBack": true,
   "PathReduceSteps": false,
   "IntVariables": {
     "MIN_FOOD%": 50,
     "MIN_WATER%": 30,
-    "MIN_MANA_SPELL%": 50
+    "MIN_MANA_SPELL%": 60
   },
   "Pull": {
     "Sequence": [
@@ -24,6 +25,7 @@
         "Name": "Shoot",
         "Key": "0",
         "HasCastbar": true,
+        "DelayAfterCast": 500,
         "Requirements": [
           "HasRangedWeapon",
           "!Shooting",
@@ -57,8 +59,8 @@
         "DelayAfterCast": 0
       },
       {
-        "Name": "Fireball",
-        "Key": "2",
+        "Name": "Arcane Missiles",
+        "Key": "7",
         "HasCastBar": true,
         "Requirements": [
           "Mana% > MIN_MANA_SPELL%",
@@ -69,6 +71,7 @@
         "Name": "Shoot",
         "Key": "0",
         "HasCastbar": true,
+        "DelayAfterCast": 500,
         "Requirements": [
           "HasRangedWeapon",
           "!Shooting",
@@ -130,7 +133,7 @@
         "Name": "Repair",
         "Key": "C",
         "Requirement": "Items Broken",
-        "PathFilename": "10_Gnome_Vendor.json",
+        "PathFilename": "5_Gnome_Vendor.json",
         "Cost": 6
       },
       {
@@ -140,7 +143,7 @@
           "BagFull",
           "BagGreyItem"
         ],
-        "PathFilename": "10_Gnome_Vendor.json",
+        "PathFilename": "5_Gnome_Vendor.json",
         "Cost": 6
       }
     ]

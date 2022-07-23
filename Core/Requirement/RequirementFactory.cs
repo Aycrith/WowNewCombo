@@ -264,7 +264,7 @@ namespace Core
                 { "Rage", playerReader.PTCurrent },
                 { "Combo Point", () => playerReader.ComboPoints },
                 { "BagCount", () => bagReader.BagItems.Count },
-                { "MobCount", () => addonReader.CombatCreatureCount },
+                { "MobCount", () => addonReader.DamageTakenCount },
                 { "MinRange", playerReader.MinRange },
                 { "MaxRange", playerReader.MaxRange },
                 { "LastAutoShotMs", playerReader.AutoShot.ElapsedMs },
@@ -722,11 +722,13 @@ namespace Core
         private Requirement CreateTrigger(string requirement)
         {
             var parts = requirement.Split(":");
-            int bit = int.Parse(parts[1]);
+            int bitNum = int.Parse(parts[1]);
             string text = parts.Length > 2 ? parts[2] : string.Empty;
 
-            bool f() => playerReader.CustomTrigger1.IsBitSet(bit);
-            string s() => $"Trigger({bit}) {text}";
+            int bitMask = Mask.M[bitNum];
+
+            bool f() => playerReader.CustomTrigger1[bitMask];
+            string s() => $"Trigger({bitNum}) {text}";
 
             return new Requirement
             {
@@ -780,11 +782,12 @@ namespace Core
 
         private Requirement CreateSpellInRange(string requirement)
         {
-            var parts = requirement.Split(":");
-            var bitId = int.Parse(parts[1]);
+            string[] parts = requirement.Split(":");
+            int bitNum = int.Parse(parts[1]);
+            int bitMask = Mask.M[bitNum];
 
-            bool f() => playerReader.SpellInRange.IsBitSet(bitId);
-            string s() => $"SpellInRange {bitId}";
+            bool f() => playerReader.SpellInRange[bitMask];
+            string s() => $"SpellInRange {bitNum}";
 
             return new Requirement
             {
