@@ -33,16 +33,6 @@
   "Pull": {
     "Sequence": [
       {
-        "Name": "Death Coil",
-        "Key": "8",
-        "WhenUsable": true,
-        "Requirements": [
-          "MinRange > 25",
-          "SpellInRange:1",
-          "RunicPower >= MIN_RUNE_TO_DUMP"
-        ]
-      },
-      {
         "Name": "Icy Touch",
         "Key": "6",
         "WhenUsable": true,
@@ -78,6 +68,14 @@
         "WaitForGCD": false
       },
       {
+        "Name": "Bone Shield",
+        "Key": "N4",
+        "WhenUsable": true,
+        "Requirements": [
+          "!Bone Shield"
+        ]
+      },
+      {
         "Name": "Empower Rune Weapon",
         "Key": "N3",
         "WhenUsable": true,
@@ -86,25 +84,6 @@
           "TotalRune == 0",
           "RunicPower <= 105",
           "InMeleeRange"
-        ]
-      },
-      {
-        "Name": "Unbreakable Armor",
-        "Key": "N4",
-        "WhenUsable": true,
-        "WaitForGCD": false,
-        "Requirements":[
-          "InMeleeRange"
-        ],
-        "AfterCastWaitBuff": true
-      },
-      {
-        "Name": "Howling Blast",
-        "Key": "7",
-        "WhenUsable": true,
-        "Requirements": [
-          "Freezing Fog",
-          "SpellInRange:0"
         ]
       },
       {
@@ -117,26 +96,9 @@
         ]
       },
       {
-        "Name": "Rune Strike",
-        "Key": "2",
-        "WhenUsable": true,
-        "Requirements": [
-          "MainHandSwing > -400",
-          "MobCount < 2",
-          "RunicPower >= MIN_RUNE_TO_DUMP",
-          "InMeleeRange"
-        ],
-        "AfterCastWaitNextSwing": true
-      },
-      {
-        "Name": "Death Coil",
-        "Key": "8",
-        "WhenUsable": true,
-        "Requirements": [
-          "MobCount < 2",
-          "RunicPower >= 100",
-          "SpellInRange:1"
-        ]
+        "Name": "Summon Gargoyle",
+        "Key": "4",
+        "WhenUsable": true
       },
       {
         "Name": "Blood Boil",
@@ -144,29 +106,6 @@
         "WhenUsable": true,
         "Requirements": [
           "MobCount > 1",
-          "Frost Fever",
-          "Blood Plague",
-          "InMeleeRange"
-        ]
-      },
-      {
-        "Name": "Blood Strike",
-        "Key": "3",
-        "WhenUsable": true,
-        "Charge": 2,
-        "Requirements": [
-          "MobCount < 2",
-          "Frost Fever",
-          "Blood Plague",
-          "InMeleeRange"
-        ]
-      },
-      {
-        "Name": "Obliterate",
-        "Key": "4",
-        "WhenUsable": true,
-        "Requirements": [
-          "MobCount < 2",
           "Frost Fever",
           "Blood Plague",
           "InMeleeRange"
@@ -183,14 +122,58 @@
         "AfterCastWaitBuff": true
       },
       {
+        "Name": "Blood Strike",
+        "Key": "3",
+        "WhenUsable": true,
+        "Requirements": [
+          "MobCount < 2",
+          "Frost Fever",
+          "Blood Plague",
+          "InMeleeRange"
+        ]
+      },
+      {
+        "Name": "Scourge Strike",
+        "Key": "2",
+        "WhenUsable": true,
+        "Requirements": [
+          "MobCount < 2",
+          "Frost Fever",
+          "Blood Plague",
+          "InMeleeRange"
+        ]
+      },
+      {
+        "Name": "Death Coil",
+        "Key": "8",
+        "WhenUsable": true,
+        "Requirements": [
+          "RunicPower >= 60",
+          "SpellInRange:1"
+        ]
+      },
+      {
         "Name": "Plague Strike",
         "Key": "5",
         "WhenUsable": true,
         "Requirements": [
+          "MobCount < 2",
           "!Blood Plague",
           "InMeleeRange"
         ],
         "AfterCastWaitBuff": true
+      },
+      {
+        "Name": "Pestilenc",
+        "Key": "7",
+        "WhenUsable": true,
+        "Cooldown": 15000,
+        "Requirements": [
+          "MobCount > 1",
+          "Frost Fever",
+          "Blood Plague",
+          "InMeleeRange"
+        ]
       },
       {
         "Name": "AutoAttack",
@@ -217,7 +200,20 @@
           "!Mounted"
         ],
         "AfterCastWaitBuff": true
+      },
+      {
+        "Cost": 3.2,
+        "Name": "Raise Dead",
+        "Key": "F7",
+        "InCombat": "i dont care",
+        "WhenUsable": true,
+        "Requirements": [
+          "!Has Pet",
+          "!Mounted",
+          "BagItem:37201"
+        ]
       }
+      
     ]
   },
   "Parallel": {

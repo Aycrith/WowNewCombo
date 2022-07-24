@@ -206,7 +206,8 @@ namespace Core
             if (@class is
                 PlayerClassEnum.Hunter or
                 PlayerClassEnum.Warlock or
-                PlayerClassEnum.Mage)
+                PlayerClassEnum.Mage or
+                PlayerClassEnum.DeathKnight)
             {
                 services.AddSingleton<GoapGoal, TargetPetTargetGoal>();
             }
