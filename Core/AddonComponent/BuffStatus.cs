@@ -110,5 +110,19 @@ namespace Core
         public bool AspectoftheViper() => v[Mask._14];
         public bool RapidFire() => v[Mask._15];
         public bool QuickShots() => v[Mask._16];
+
+        // Death Knight
+        public bool BloodTap() => v[Mask._10];
+        public bool HornofWinter() => v[Mask._11];
+        public bool IceboundFortitude() => v[Mask._12];
+        public bool PathofFrost() => v[Mask._13];
+        public bool AntiMagicShell() => v[Mask._14];
+        public bool ArmyoftheDead() => v[Mask._15];
+        public bool VampiricBlood() => v[Mask._16];
+        public bool DancingRuneWeapon() => v[Mask._17];
+        public bool UnbreakableArmor() => v[Mask._18];
+        public bool BoneShield() => v[Mask._19];
+        public bool SummonGargoyle() => v[Mask._20];
+        public bool FreezingFog() => v[Mask._21];
     }
 }

@@ -26,6 +26,7 @@
             PlayerClassEnum.Druid => playerReader.Buffs.Prowl() ? Form.Druid_Cat_Prowl : Form.Druid_Bear + value - 1,
             PlayerClassEnum.Paladin => Form.Paladin_Devotion_Aura + value - 1,
             PlayerClassEnum.Shaman => Form.Shaman_GhostWolf + value - 1,
+            PlayerClassEnum.DeathKnight => Form.DeathKnight_Blood_Presence + value - 1,
             _ => Form.None
         };
 

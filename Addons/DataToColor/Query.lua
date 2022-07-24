@@ -316,9 +316,9 @@ function DataToColor:uniqueGuid(npcId, spawn)
 end
 
 local offsetEnumPowerType = 2
-function DataToColor:actionbarCost(slot)
+function DataToColor:populateActionbarCost(slot)
     if slot == nil then
-        return 0
+        return
     end
     local actionType, id = GetActionInfo(slot)
     if actionType == DataToColor.C.ActionType.Macro then
@@ -327,14 +327,18 @@ function DataToColor:actionbarCost(slot)
     if id and actionType == DataToColor.C.ActionType.Spell or actionType == DataToColor.C.ActionType.Macro then
         local costTable = GetSpellPowerCost(id)
         if costTable ~= nil then
-            for _, costInfo in pairs(costTable) do
-                --print(slot, actionType, costInfo.type, costInfo.cost, GetSpellLink(id))
-                return DataToColor.C.MAX_POWER_TYPE * (costInfo.type + offsetEnumPowerType) +
-                    DataToColor.C.MAX_ACTION_IDX * slot + costInfo.cost
+            for index, costInfo in ipairs(costTable) do
+                --print(slot, actionType, index, costInfo.type, costInfo.cost, GetSpellLink(id))
+
+                -- cost negative means it produces that type of powertype...
+                if(costInfo.cost > 0) then
+                    DataToColor.actionBarCostQueue:set(DataToColor.C.COST_MAX_COST_IDX * index + DataToColor.C.COST_MAX_POWER_TYPE * (costInfo.type + offsetEnumPowerType) + slot, costInfo.cost)
+                end
             end
         end
     end
-    return DataToColor.C.MAX_POWER_TYPE * offsetEnumPowerType + DataToColor.C.MAX_ACTION_IDX * slot + 0
+    -- default value mana with zero cost
+    DataToColor.actionBarCostQueue:set((offsetEnumPowerType * DataToColor.C.COST_MAX_POWER_TYPE) + slot, 0)
 end
 
 function DataToColor:equipSlotItemId(slot)

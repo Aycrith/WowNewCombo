@@ -61,5 +61,11 @@ namespace Core
 
         // Hunter
         public bool SerpentSting() => v[Mask._0];
+
+        // Death Knight
+        public bool BloodPlague() => v[Mask._0];
+        public bool FrostFever() => v[Mask._1];
+        public bool Strangulate() => v[Mask._2];
+        public bool ChainsofIce() => v[Mask._3];
     }
 }

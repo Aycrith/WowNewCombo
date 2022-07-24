@@ -16,8 +16,8 @@ namespace Core
 
     public readonly struct ActionBarCost
     {
-        public readonly PowerType PowerType { get; }
-        public readonly int Cost { get; }
+        public readonly PowerType PowerType;
+        public readonly int Cost;
 
         public ActionBarCost(PowerType powerType, int cost)
         {
@@ -29,45 +29,60 @@ namespace Core
     public class ActionBarCostReader
     {
         private readonly AddonDataProvider reader;
+        private readonly int cActionbarMeta;
         private readonly int cActionbarNum;
 
-        private const float MAX_POWER_TYPE = 1000000f;
-        private const float MAX_ACTION_IDX = 1000f;
+        private const float COST_MAX_COST_IDX = 100000f;
+        private const float COST_MAX_POWER_TYPE = 1000f;
 
         //https://wowwiki-archive.fandom.com/wiki/ActionSlot
         private readonly ActionBarCost defaultCost = new(PowerType.Mana, 0);
-        private readonly ActionBarCost[] data;
+        private readonly ActionBarCost[][] data;
 
         public int Count { get; private set; }
 
         public event EventHandler<ActionBarCostEventArgs>? OnActionCostChanged;
+        public event Action? OnActionCostReset;
 
-        public ActionBarCostReader(AddonDataProvider reader, int cActionbarNum)
+        public ActionBarCostReader(AddonDataProvider reader, int cActionbarMeta, int cActionbarNum)
         {
+            this.cActionbarMeta = cActionbarMeta;
             this.cActionbarNum = cActionbarNum;
             this.reader = reader;
 
-            data = new ActionBarCost[ActionBar.CELL_COUNT * ActionBar.BIT_PER_CELL];
+            data = new ActionBarCost[ActionBar.CELL_COUNT * ActionBar.BIT_PER_CELL][];
+            for (int i = 0; i < data.Length; i++)
+            {
+                data[i] = new ActionBarCost[ActionBar.NUM_OF_COST];
+                for (int j = 0; j < ActionBar.NUM_OF_COST; j++)
+                {
+                    data[i][j] = defaultCost;
+                }
+            }
+
             Reset();
         }
 
         public void Read()
         {
             // formula
-            // MAX_POWER_TYPE * type + MAX_ACTION_IDX * slot + cost
+            // COST_MAX_COST_IDX * costNum + COST_MAX_POWER_TYPE * (type + offsetEnumPowerType) + slot
+            int slot = reader.GetInt(cActionbarMeta);
             int cost = reader.GetInt(cActionbarNum);
-            if (cost == 0 || cost < MAX_ACTION_IDX) return;
 
-            int type = (int)(cost / MAX_POWER_TYPE);
-            cost -= (int)MAX_POWER_TYPE * type;
+            if (cost == 0 || slot == 0 || slot < COST_MAX_POWER_TYPE) return;
 
-            int slot = (int)(cost / MAX_ACTION_IDX);
-            cost -= (int)MAX_ACTION_IDX * slot;
+            int costNum = (int)(slot / COST_MAX_COST_IDX);
+            slot -= (int)COST_MAX_COST_IDX * costNum;
+
+            int type = (int)(slot / COST_MAX_POWER_TYPE);
+            slot -= (int)COST_MAX_POWER_TYPE * type;
 
             int index = slot - 1;
+            int costIndex = costNum - 1;
 
-            ActionBarCost temp = data[index];
-            data[index] = new((PowerType)type, cost);
+            ActionBarCost temp = data[index][costIndex];
+            data[index][costIndex] = new((PowerType)type, cost);
 
             if (cost != temp.Cost)
                 OnActionCostChanged?.Invoke(this, new(slot, (PowerType)type, cost));
@@ -81,14 +96,18 @@ namespace Core
             Count = 0;
             for (int i = 0; i < data.Length; i++)
             {
-                data[i] = defaultCost;
+                for (int j = 0; j < ActionBar.NUM_OF_COST; j++)
+                {
+                    data[i][j] = defaultCost;
+                }
             }
+            OnActionCostReset?.Invoke();
         }
 
-        public ActionBarCost GetCostByActionBarSlot(PlayerReader playerReader, KeyAction keyAction)
+        public ActionBarCost GetCostByActionBarSlot(PlayerReader playerReader, KeyAction keyAction, int costIndex = 0)
         {
             int index = Stance.ToSlot(keyAction, playerReader) - 1;
-            return data[index];
+            return data[index][costIndex];
         }
     }
 }

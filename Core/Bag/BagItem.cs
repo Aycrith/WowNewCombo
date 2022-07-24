@@ -12,7 +12,6 @@ namespace Core
         public Item Item { get; private set; }
         public string LastChangeDescription { get; private set; } = "New";
         public int LastChange { get; private set; }
-        public bool IsSoulbound { get; private set; }
 
         public void UpdateCount(int count)
         {
@@ -33,14 +32,13 @@ namespace Core
         public DateTime LastUpdated { get; set; }
         public bool WasRecentlyUpdated => (DateTime.UtcNow - LastUpdated).TotalSeconds < MaxLifeTime;
 
-        public BagItem(int bag, int bagIndex, int itemId, int count, Item item, bool IsSoulbound)
+        public BagItem(int bag, int bagIndex, int itemId, int count, Item item)
         {
             this.Bag = bag;
             this.BagIndex = bagIndex;
             this.ItemId = itemId;
             this.Count = count;
             this.Item = item;
-            this.IsSoulbound = IsSoulbound;
         }
     }
 }

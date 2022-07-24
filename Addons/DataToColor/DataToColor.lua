@@ -57,8 +57,8 @@ local UnitPower = UnitPower
 
 local GetContainerNumFreeSlots = GetContainerNumFreeSlots
 local GetContainerItemInfo = GetContainerItemInfo
-local C_Item = C_Item
-local ItemLocation = ItemLocation
+local GetRuneCooldown = GetRuneCooldown
+local GetRuneType = GetRuneType
 
 local UnitBuff = UnitBuff
 local UnitDebuff = UnitDebuff
@@ -150,7 +150,6 @@ local equipmentSlot = nil
 local bagNum = nil
 local bagSlotNum = nil
 local gossipNum = nil
-local actionCostNum = nil
 local actionCooldownKey = nil
 local actionCooldownValue = nil
 
@@ -160,7 +159,7 @@ DataToColor.equipmentQueue = DataToColor.Queue:new()
 DataToColor.bagQueue = DataToColor.Queue:new()
 DataToColor.inventoryQueue = DataToColor.Queue:new()
 DataToColor.gossipQueue = DataToColor.Queue:new()
-DataToColor.actionBarCostQueue = DataToColor.Queue:new()
+DataToColor.actionBarCostQueue = DataToColor.struct:new()
 DataToColor.actionBarCooldownQueue = DataToColor.struct:new()
 DataToColor.spellBookQueue = DataToColor.Queue:new()
 DataToColor.talentQueue = DataToColor.Queue:new()
@@ -349,7 +348,7 @@ end
 function DataToColor:InitActionBarCostQueue()
     for slot = 1, MAX_ACTIONBAR_SLOT do
         if HasAction(slot) then
-            DataToColor.actionBarCostQueue:push(slot)
+            DataToColor:populateActionbarCost(slot)
         end
     end
 end
@@ -446,8 +445,41 @@ function DataToColor:CreateFrames(n)
             Pixel(int, UnitPowerMax(DataToColor.C.unitPlayer, nil), 12) -- either mana, rage, energy
             Pixel(int, UnitPower(DataToColor.C.unitPlayer, nil), 13) -- either mana, rage, energy
 
-            Pixel(int, UnitPowerMax(DataToColor.C.unitPlayer, PowerType.Mana), 14)
-            Pixel(int, UnitPower(DataToColor.C.unitPlayer, PowerType.Mana), 15)
+            if(DataToColor.C.CHARACTER_CLASS_ID == 6) then -- death Knight
+
+                local bloodRunes = 0;
+                local unholyRunes = 0;
+                local frostRunes = 0;
+                local deathRunes = 0;
+                local numRunes = 0;
+
+                for index = 1, 6 do
+                  local startTime = GetRuneCooldown(index)
+                  if startTime == 0 then
+                    numRunes = numRunes + 1;
+                    local runeType = GetRuneType(index)
+                    if runeType == 1 then
+                      bloodRunes = bloodRunes + 1
+                    elseif runeType == 2 then
+                      frostRunes = frostRunes + 1
+                    elseif runeType == 3 then
+                      unholyRunes = unholyRunes + 1
+                    elseif runeType == 4 then
+                        deathRunes = deathRunes + 1
+                    end
+                  end
+                end
+
+                bloodRunes  = bloodRunes  + deathRunes
+                unholyRunes = unholyRunes + deathRunes
+                frostRunes  = frostRunes  + deathRunes
+
+                Pixel(int, numRunes, 14)
+                Pixel(int, bloodRunes * 100 + frostRunes * 10 + unholyRunes, 15)
+            else
+                Pixel(int, UnitPowerMax(DataToColor.C.unitPlayer, PowerType.Mana), 14)
+                Pixel(int, UnitPower(DataToColor.C.unitPlayer, PowerType.Mana), 15)
+            end
 
             if DataToColor.targetChanged then
                 Pixel(int, DataToColor:GetTargetName(0), 16) -- Characters 1-3 of targets name
@@ -474,7 +506,7 @@ function DataToColor:CreateFrames(n)
                     Pixel(int, 0, 20)
                 end
 
-                -- 21 22 23
+                -- 21 22
                 bagSlotNum = DataToColor.inventoryQueue:shift()
                 if bagSlotNum then
 
@@ -490,47 +522,43 @@ function DataToColor:CreateFrames(n)
 
                     --DataToColor:Print("inventoryQueue: "..bagNum.. " "..bagSlotNum.." -> id:"..itemID.." c:"..itemCount)
 
-                    local soulbound = 0
-                    if itemCount > 0 then
-                        soulbound = C_Item.IsBound(ItemLocation:CreateFromBagAndSlot(bagNum, bagSlotNum)) and 1 or 0
-                    end
-
                     -- 0-4 bagNum + 1-21 itenNum + 1-1000 quantity
                     Pixel(int, bagNum * 1000000 + bagSlotNum * 10000 + itemCount, 21)
 
                     -- itemId 1-999999
                     Pixel(int, itemID, 22)
-
-                    -- item bits
-                    Pixel(int, soulbound, 23)
                 else
                     Pixel(int, 0, 21)
                     Pixel(int, 0, 22)
-                    Pixel(int, 0, 23)
                 end
 
-                -- 24 25
+                -- 23 24
                 equipmentSlot = DataToColor.equipmentQueue:shift()
-                Pixel(int, equipmentSlot or 0, 24)
-                Pixel(int, DataToColor:equipSlotItemId(equipmentSlot), 25)
+                Pixel(int, equipmentSlot or 0, 23)
+                Pixel(int, DataToColor:equipSlotItemId(equipmentSlot), 24)
                 --DataToColor:Print("equipmentQueue "..equipmentSlot.." -> "..itemId)
             end
 
-            Pixel(int, DataToColor:isCurrentAction(1, 24), 26)
-            Pixel(int, DataToColor:isCurrentAction(25, 48), 27)
-            Pixel(int, DataToColor:isCurrentAction(49, 72), 28)
-            Pixel(int, DataToColor:isCurrentAction(73, 96), 29)
-            Pixel(int, DataToColor:isCurrentAction(97, 120), 30)
+            Pixel(int, DataToColor:isCurrentAction(1, 24), 25)
+            Pixel(int, DataToColor:isCurrentAction(25, 48), 26)
+            Pixel(int, DataToColor:isCurrentAction(49, 72), 27)
+            Pixel(int, DataToColor:isCurrentAction(73, 96), 28)
+            Pixel(int, DataToColor:isCurrentAction(97, 120), 29)
 
-            Pixel(int, DataToColor:isActionUseable(1, 24), 31)
-            Pixel(int, DataToColor:isActionUseable(25, 48), 32)
-            Pixel(int, DataToColor:isActionUseable(49, 72), 33)
-            Pixel(int, DataToColor:isActionUseable(73, 96), 34)
-            Pixel(int, DataToColor:isActionUseable(97, 120), 35)
+            Pixel(int, DataToColor:isActionUseable(1, 24), 30)
+            Pixel(int, DataToColor:isActionUseable(25, 48), 31)
+            Pixel(int, DataToColor:isActionUseable(49, 72), 32)
+            Pixel(int, DataToColor:isActionUseable(73, 96), 33)
+            Pixel(int, DataToColor:isActionUseable(97, 120), 34)
 
             if globalCounter % ACTION_BAR_ITERATION_FRAME_CHANGE_RATE == 0 then
-                actionCostNum = DataToColor.actionBarCostQueue:shift()
-                Pixel(int, DataToColor:actionbarCost(actionCostNum), 36)
+                local costMeta, costValue = DataToColor.actionBarCostQueue:get()
+                if costMeta and costValue then
+                    --DataToColor:Print("actionBarCostQueue: ", costMeta, " ", costValue)
+                    DataToColor.actionBarCostQueue:remove(costMeta)
+                end
+                Pixel(int, costMeta or 0, 35)
+                Pixel(int, costValue or 0, 36)
 
                 actionCooldownKey, actionCooldownValue = DataToColor.actionBarCooldownQueue:get()
                 if actionCooldownKey then

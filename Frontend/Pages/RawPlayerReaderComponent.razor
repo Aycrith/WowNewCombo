@@ -117,27 +117,33 @@
                 {
                     propList.Add(new ObjectField() { Name = objName + pinfo.Name, Value = recordInt.Value.ToString() });
                 }
+                else if (value is PlayerReader playerReader)
+                {
+                    var lst = GetFunctionValues(playerReader, typeof(int));
+                    if (lst != null && lst.Count > 0)
+                        propList.AddRange(lst);
+                }
                 else if (value is AddonBits addonBits)
                 {
-                    var lst = GetBoolFunctionValues(addonBits);
+                    var lst = GetFunctionValues(addonBits, typeof(bool));
                     if (lst != null && lst.Count > 0)
                         propList.AddRange(lst);
                 }
                 else if (value is SpellInRange spellInRange)
                 {
-                    var lst = GetBoolFunctionValues(spellInRange);
+                    var lst = GetFunctionValues(spellInRange, typeof(bool));
                     if (lst != null && lst.Count > 0)
                         propList.AddRange(lst);
                 }
                 else if (value is BuffStatus buffStatus)
                 {
-                    var lst = GetBoolFunctionValues(buffStatus);
+                    var lst = GetFunctionValues(buffStatus, typeof(bool));
                     if (lst != null && lst.Count > 0)
                         propList.AddRange(lst);
                 }
                 else if (value is TargetDebuffStatus targetDebuffStatus)
                 {
-                    var lst = GetBoolFunctionValues(targetDebuffStatus);
+                    var lst = GetFunctionValues(targetDebuffStatus, typeof(bool));
                     if (lst != null && lst.Count > 0)
                         propList.AddRange(lst);
                 }
@@ -152,7 +158,7 @@
         return propList;
     }
 
-    static List<ObjectField> GetBoolFunctionValues(object obj)
+    static List<ObjectField> GetFunctionValues(object obj, Type t)
     {
         List<ObjectField> propList = new List<ObjectField>();
         string objName = obj.ToString() ?? "";
@@ -160,7 +166,7 @@
 
         foreach (var minfo in obj.GetType().GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance))
         {
-            if(minfo.ReturnType != typeof(bool))
+            if(minfo.ReturnType != t)
                 continue;
 
             ParameterInfo[] parameters = minfo.GetParameters();

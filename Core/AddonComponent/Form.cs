@@ -31,6 +31,10 @@
         Paladin_Fire_Resistance_Aura = 20,
         Paladin_Sanctity_Aura = 21,
         Paladin_Crusader_Aura = 22,
+
+        DeathKnight_Blood_Presence = 23,
+        DeathKnight_Frost_Presence = 24,
+        DeathKnight_Unholy_Presence = 25,
     }
 
     public static class Form_Extension
@@ -60,6 +64,9 @@
             Form.Paladin_Fire_Resistance_Aura => nameof(Form.Paladin_Fire_Resistance_Aura),
             Form.Paladin_Sanctity_Aura => nameof(Form.Paladin_Sanctity_Aura),
             Form.Paladin_Crusader_Aura => nameof(Form.Paladin_Crusader_Aura),
+            Form.DeathKnight_Blood_Presence => nameof(Form.DeathKnight_Blood_Presence),
+            Form.DeathKnight_Frost_Presence => nameof(Form.DeathKnight_Frost_Presence),
+            Form.DeathKnight_Unholy_Presence => nameof(Form.DeathKnight_Unholy_Presence),
             _ => nameof(Form.None)
         };
     }

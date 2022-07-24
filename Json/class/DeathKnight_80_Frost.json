@@ -1,0 +1,232 @@
+{
+  "ClassName": "DeatkKnight",
+  //"Mode": "AttendedGrind", //Grind
+  "Loot": true,
+  "PathFilename": "_pack\\40-50\\The Hinterlands\\41-42 wolves.json", // todo update profile
+  "PathReduceSteps": true,
+  "PathThereAndBack": false,
+  "MountKey": "N0",
+  "IntVariables": {
+    "MIN_HP_FOOD%": 40,
+    "MIN_RUNE_TO_DUMP": 40
+  },
+  "Form": [
+    {
+      "Name": "Blood Presence",
+      "Key": "F1",
+      "Form": "DeathKnight_Blood_Presence",
+      "BloodRune": 1
+    },
+    {
+      "Name": "Frost Presence",
+      "Key": "F2",
+      "Form": "DeathKnight_Frost_Presence",
+      "FrostRune": 1
+    },
+    {
+      "Name": "Unholy Presence",
+      "Key": "F3",
+      "Form": "DeathKnight_Unholy_Presence",
+      "UnholyRune": 1
+    }
+  ],
+  "Pull": {
+    "Sequence": [
+      {
+        "Name": "Death Coil",
+        "Key": "8",
+        "WhenUsable": true,
+        "Requirements": [
+          "MinRange > 25",
+          "SpellInRange:1",
+          "RunicPower >= MIN_RUNE_TO_DUMP"
+        ]
+      },
+      {
+        "Name": "Icy Touch",
+        "Key": "6",
+        "WhenUsable": true,
+        "Requirements": [
+          "!TargetCastingSpell",
+          "!Frost Fever",
+          "SpellInRange:0"
+        ]
+      },
+      {
+        "Name": "Death Grip",
+        "Key": "0",
+        "WhenUsable": true,
+        "Requirements": [
+          "MinRange > 25",
+          "SpellInRange:2"
+        ]
+      }
+    ]
+  },
+  "Combat": {
+    "Sequence": [
+      {
+        "Name": "Trinket 1",
+        "Key": "N1",
+        "WhenUsable": true,
+        "WaitForGCD": false
+      },
+      {
+        "Name": "Trinket 2",
+        "Key": "N2",
+        "WhenUsable": true,
+        "WaitForGCD": false
+      },
+      {
+        "Name": "Empower Rune Weapon",
+        "Key": "N3",
+        "WhenUsable": true,
+        "WaitForGCD": false,
+        "Requirements": [
+          "TotalRune == 0",
+          "RunicPower <= 105",
+          "InMeleeRange"
+        ]
+      },
+      {
+        "Name": "Unbreakable Armor",
+        "Key": "N4",
+        "WhenUsable": true,
+        "WaitForGCD": false,
+        "Requirements":[
+          "InMeleeRange"
+        ],
+        "AfterCastWaitBuff": true
+      },
+      {
+        "Name": "Howling Blast",
+        "Key": "7",
+        "WhenUsable": true,
+        "Requirements": [
+          "Freezing Fog",
+          "SpellInRange:0"
+        ]
+      },
+      {
+        "Name": "Death Strike",
+        "Key": "F5",
+        "WhenUsable": true,
+        "WaitForGCD": false,
+        "Requirements": [
+          "Health% < 30"
+        ]
+      },
+      {
+        "Name": "Rune Strike",
+        "Key": "2",
+        "WhenUsable": true,
+        "Requirements": [
+          "MainHandSwing > -400",
+          "MobCount < 2",
+          "RunicPower >= MIN_RUNE_TO_DUMP",
+          "InMeleeRange"
+        ],
+        "AfterCastWaitNextSwing": true
+      },
+      {
+        "Name": "Death Coil",
+        "Key": "8",
+        "WhenUsable": true,
+        "Requirements": [
+          "MobCount < 2",
+          "RunicPower >= 100",
+          "SpellInRange:1"
+        ]
+      },
+      {
+        "Name": "Blood Boil",
+        "Key": "1",
+        "WhenUsable": true,
+        "Requirements": [
+          "MobCount > 1",
+          "Frost Fever",
+          "Blood Plague",
+          "InMeleeRange"
+        ]
+      },
+      {
+        "Name": "Blood Strike",
+        "Key": "3",
+        "WhenUsable": true,
+        "Charge": 2,
+        "Requirements": [
+          "MobCount < 2",
+          "Frost Fever",
+          "Blood Plague",
+          "InMeleeRange"
+        ]
+      },
+      {
+        "Name": "Obliterate",
+        "Key": "4",
+        "WhenUsable": true,
+        "Requirements": [
+          "MobCount < 2",
+          "Frost Fever",
+          "Blood Plague",
+          "InMeleeRange"
+        ]
+      },
+      {
+        "Name": "Icy Touch",
+        "Key": "6",
+        "WhenUsable": true,
+        "Requirements": [
+          "!Frost Fever",
+          "SpellInRange:0"
+        ],
+        "AfterCastWaitBuff": true
+      },
+      {
+        "Name": "Plague Strike",
+        "Key": "5",
+        "WhenUsable": true,
+        "Requirements": [
+          "!Blood Plague",
+          "InMeleeRange"
+        ],
+        "AfterCastWaitBuff": true
+      },
+      {
+        "Name": "AutoAttack",
+        "Requirements": [
+          "!AutoAttacking"
+        ]
+      },
+      {
+        "Name": "Approach",
+        "Log": false
+      }
+    ]
+  },
+  "Adhoc": {
+    "Sequence": [
+      {
+        "Cost": 3.1,
+        "Name": "Horn of Winter",
+        "Key": "F4",
+        "InCombat": "i dont care",
+        "WhenUsable": true,
+        "Requirements": [
+          "!Horn of Winter",
+          "!Mounted"
+        ],
+        "AfterCastWaitBuff": true
+      }
+    ]
+  },
+  "Parallel": {
+    "Sequence": [
+      {
+        "Name": "Food",
+        "Key": "=",
+        "Requirement": "Health% < MIN_HP_FOOD%"
+      }
+    ]
+  }
+}

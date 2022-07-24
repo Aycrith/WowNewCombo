@@ -89,6 +89,7 @@ namespace Core
                 // Pet
                 { "Has Pet", playerReader.Bits.HasPet },
                 { "Pet Happy", playerReader.Bits.PetHappy },
+                { "Mounted", playerReader.Bits.IsMounted },
                 
                 // Auto Spell
                 { "AutoAttacking", playerReader.Bits.SpellOn_AutoAttack },
@@ -211,6 +212,20 @@ namespace Core
                 { "Rapid Fire", playerReader.Buffs.RapidFire },
                 { "Quick Shots", playerReader.Buffs.QuickShots },
 
+                //Death Knight
+                { "Blood Tap", playerReader.Buffs.BloodTap },
+                { "Horn of Winter", playerReader.Buffs.HornofWinter },
+                { "Icebound Fortitude", playerReader.Buffs.IceboundFortitude },
+                { "Path of Frost", playerReader.Buffs.PathofFrost },
+                { "Anti-Magic Shell", playerReader.Buffs.AntiMagicShell },
+                { "Army of the Dead", playerReader.Buffs.ArmyoftheDead },
+                { "Vampiric Blood", playerReader.Buffs.VampiricBlood },
+                { "Dancing Rune Weapon", playerReader.Buffs.DancingRuneWeapon },
+                { "Unbreakable Armor", playerReader.Buffs.UnbreakableArmor },
+                { "Bone Shield", playerReader.Buffs.BoneShield },
+                { "Summon Gargoyle", playerReader.Buffs.SummonGargoyle },
+                { "Freezing Fog", playerReader.Buffs.FreezingFog },
+
                 // Debuff Section
                 // Druid Debuff
                 { "Demoralizing Roar", playerReader.TargetDebuffs.Roar },
@@ -251,6 +266,12 @@ namespace Core
                 
                 // Hunter Debuff
                 { "Serpent Sting", playerReader.TargetDebuffs.SerpentSting },
+
+                // Death Knight Debuff
+                { "Blood Plague", playerReader.TargetDebuffs.BloodPlague },
+                { "Frost Fever", playerReader.TargetDebuffs.FrostFever },
+                { "Strangulate", playerReader.TargetDebuffs.Strangulate },
+                { "Chains of Ice", playerReader.TargetDebuffs.ChainsofIce },
             };
 
             intVariables = new Dictionary<string, Func<int>>
@@ -262,6 +283,11 @@ namespace Core
                 { "Mana", playerReader.ManaCurrent },
                 { "Energy", playerReader.PTCurrent },
                 { "Rage", playerReader.PTCurrent },
+                { "RunicPower", playerReader.PTCurrent },
+                { "BloodRune", playerReader.BloodRune },
+                { "FrostRune", playerReader.FrostRune },
+                { "UnholyRune", playerReader.UnholyRune },
+                { "TotalRune", playerReader.MaxRune },
                 { "Combo Point", () => playerReader.ComboPoints },
                 { "BagCount", () => bagReader.BagItems.Count },
                 { "MobCount", () => addonReader.DamageTakenCount },
@@ -431,6 +457,13 @@ namespace Core
             AddMinPowerTypeRequirement(RequirementObjects, PowerType.Mana, item);
             AddMinPowerTypeRequirement(RequirementObjects, PowerType.Rage, item);
             AddMinPowerTypeRequirement(RequirementObjects, PowerType.Energy, item);
+            if (playerReader.Class == PlayerClassEnum.DeathKnight)
+            {
+                AddMinPowerTypeRequirement(RequirementObjects, PowerType.RunicPower, item);
+                AddMinPowerTypeRequirement(RequirementObjects, PowerType.RuneBlood, item);
+                AddMinPowerTypeRequirement(RequirementObjects, PowerType.RuneFrost, item);
+                AddMinPowerTypeRequirement(RequirementObjects, PowerType.RuneUnholy, item);
+            }
             AddMinComboPointsRequirement(RequirementObjects, item);
         }
 
@@ -466,6 +499,46 @@ namespace Core
                         HasRequirement = fenergy,
                         LogMessage = senergy,
                         VisibleIfHasRequirement = keyAction.MinEnergy > 0
+                    });
+                    break;
+                case PowerType.RunicPower:
+                    bool frunicpower() => playerReader.PTCurrent() >= keyAction.MinRunicPower;
+                    string srunicpower() => $"{type.ToStringF()} {playerReader.PTCurrent()} >= {keyAction.MinRunicPower}";
+                    RequirementObjects.Add(new Requirement
+                    {
+                        HasRequirement = frunicpower,
+                        LogMessage = srunicpower,
+                        VisibleIfHasRequirement = keyAction.MinRunicPower > 0
+                    });
+                    break;
+                case PowerType.RuneBlood:
+                    bool fbloodrune() => playerReader.BloodRune() >= keyAction.MinRuneBlood;
+                    string sbloodrune() => $"{type.ToStringF()} {playerReader.BloodRune()} >= {keyAction.MinRuneBlood}";
+                    RequirementObjects.Add(new Requirement
+                    {
+                        HasRequirement = fbloodrune,
+                        LogMessage = sbloodrune,
+                        VisibleIfHasRequirement = keyAction.MinRuneBlood > 0
+                    });
+                    break;
+                case PowerType.RuneFrost:
+                    bool ffrostrune() => playerReader.FrostRune() >= keyAction.MinRuneFrost;
+                    string sfrostrune() => $"{type.ToStringF()} {playerReader.FrostRune()} >= {keyAction.MinRuneFrost}";
+                    RequirementObjects.Add(new Requirement
+                    {
+                        HasRequirement = ffrostrune,
+                        LogMessage = sfrostrune,
+                        VisibleIfHasRequirement = keyAction.MinRuneFrost > 0
+                    });
+                    break;
+                case PowerType.RuneUnholy:
+                    bool funholyrune() => playerReader.UnholyRune() >= keyAction.MinRuneUnholy;
+                    string sunholyrune() => $"{type.ToStringF()} {playerReader.UnholyRune()} >= {keyAction.MinRuneUnholy}";
+                    RequirementObjects.Add(new Requirement
+                    {
+                        HasRequirement = funholyrune,
+                        LogMessage = sunholyrune,
+                        VisibleIfHasRequirement = keyAction.MinRuneUnholy > 0
                     });
                     break;
             }

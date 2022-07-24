@@ -10,7 +10,6 @@ namespace Core
         private readonly int cBagMeta;
         private readonly int cItemNumCount;
         private readonly int cItemId;
-        private readonly int cItemBits;
 
         private readonly AddonDataProvider reader;
         private readonly EquipmentReader equipmentReader;
@@ -27,7 +26,7 @@ namespace Core
 
         private bool changedFromEvent;
 
-        public BagReader(AddonDataProvider reader, ItemDB itemDb, EquipmentReader equipmentReader, int cbagMeta, int citemNumCount, int cItemId, int cItemBits)
+        public BagReader(AddonDataProvider reader, ItemDB itemDb, EquipmentReader equipmentReader, int cbagMeta, int citemNumCount, int cItemId)
         {
             this.reader = reader;
             this.ItemDB = itemDb;
@@ -39,7 +38,6 @@ namespace Core
             this.cBagMeta = cbagMeta;
             this.cItemNumCount = citemNumCount;
             this.cItemId = cItemId;
-            this.cItemBits = cItemBits;
 
             for (int i = 0; i < Bags.Length; i++)
             {
@@ -114,7 +112,7 @@ namespace Core
         {
             hasChanged = false;
 
-            // 20 -- 0-4 bagNum + 1-21 itenNum + 1-1000 quantity
+            // 21 -- 0-4 bagNum + 1-21 itenNum + 1-1000 quantity
             int itemCount = reader.GetInt(cItemNumCount);
             if (itemCount == 0) return;
 
@@ -124,13 +122,8 @@ namespace Core
             int slot = (int)(itemCount / 10000f);
             itemCount -= 10000 * slot;
 
-            // 21 -- 1-999999 itemId
+            // 22 -- 1-999999 itemId
             int itemId = reader.GetInt(cItemId);
-
-            // 22 -- 0-24 item bits
-            int itemBits = reader.GetInt(cItemBits);
-
-            bool isSoulbound = itemBits == 1;
 
             var existingItem = BagItems.Where(b => b.BagIndex == slot).Where(b => b.Bag == bag).FirstOrDefault();
 
@@ -161,7 +154,7 @@ namespace Core
                 {
                     if (ItemDB.Items.TryGetValue(itemId, out var item))
                     {
-                        BagItems.Add(new BagItem(bag, slot, itemId, itemCount, item, isSoulbound));
+                        BagItems.Add(new BagItem(bag, slot, itemId, itemCount, item));
                         hasChanged = true;
                     }
                 }
