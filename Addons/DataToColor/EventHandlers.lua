@@ -404,7 +404,7 @@ end
 
 function DataToColor:ActionbarSlotChanged(event, slot)
     if slot and HasAction(slot) then
-        DataToColor.actionBarCostQueue:push(slot)
+        DataToColor:populateActionbarCost(slot)
     end
 end
 

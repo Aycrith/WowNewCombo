@@ -150,7 +150,6 @@ local equipmentSlot = nil
 local bagNum = nil
 local bagSlotNum = nil
 local gossipNum = nil
-local actionCostNum = nil
 local actionCooldownKey = nil
 local actionCooldownValue = nil
 
@@ -160,7 +159,7 @@ DataToColor.equipmentQueue = DataToColor.Queue:new()
 DataToColor.bagQueue = DataToColor.Queue:new()
 DataToColor.inventoryQueue = DataToColor.Queue:new()
 DataToColor.gossipQueue = DataToColor.Queue:new()
-DataToColor.actionBarCostQueue = DataToColor.Queue:new()
+DataToColor.actionBarCostQueue = DataToColor.struct:new()
 DataToColor.actionBarCooldownQueue = DataToColor.struct:new()
 DataToColor.spellBookQueue = DataToColor.Queue:new()
 DataToColor.talentQueue = DataToColor.Queue:new()
@@ -349,7 +348,7 @@ end
 function DataToColor:InitActionBarCostQueue()
     for slot = 1, MAX_ACTIONBAR_SLOT do
         if HasAction(slot) then
-            DataToColor.actionBarCostQueue:push(slot)
+            DataToColor:populateActionbarCost(slot)
         end
     end
 end
@@ -520,12 +519,13 @@ function DataToColor:CreateFrames(n)
             Pixel(int, DataToColor:isActionUseable(97, 120), 34)
 
             if globalCounter % ACTION_BAR_ITERATION_FRAME_CHANGE_RATE == 0 then
-
-                -- 35 Cost meta
-
-                -- 36 cost value
-                actionCostNum = DataToColor.actionBarCostQueue:shift()
-                Pixel(int, DataToColor:actionbarCost(actionCostNum), 36)
+                local costMeta, costValue = DataToColor.actionBarCostQueue:get()
+                if costMeta and costValue then
+                    --DataToColor:Print("actionBarCostQueue: ", costMeta, " ", costValue)
+                    DataToColor.actionBarCostQueue:remove(costMeta)
+                end
+                Pixel(int, costMeta or 0, 35)
+                Pixel(int, costValue or 0, 36)
 
                 actionCooldownKey, actionCooldownValue = DataToColor.actionBarCooldownQueue:get()
                 if actionCooldownKey then
