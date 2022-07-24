@@ -57,8 +57,8 @@ local UnitPower = UnitPower
 
 local GetContainerNumFreeSlots = GetContainerNumFreeSlots
 local GetContainerItemInfo = GetContainerItemInfo
-local C_Item = C_Item
-local ItemLocation = ItemLocation
+local GetRuneCooldown = GetRuneCooldown
+local GetRuneType = GetRuneType
 
 local UnitBuff = UnitBuff
 local UnitDebuff = UnitDebuff
@@ -445,8 +445,41 @@ function DataToColor:CreateFrames(n)
             Pixel(int, UnitPowerMax(DataToColor.C.unitPlayer, nil), 12) -- either mana, rage, energy
             Pixel(int, UnitPower(DataToColor.C.unitPlayer, nil), 13) -- either mana, rage, energy
 
-            Pixel(int, UnitPowerMax(DataToColor.C.unitPlayer, PowerType.Mana), 14)
-            Pixel(int, UnitPower(DataToColor.C.unitPlayer, PowerType.Mana), 15)
+            if(DataToColor.C.CHARACTER_CLASS_ID == 6) then -- death Knight
+
+                local bloodRunes = 0;
+                local unholyRunes = 0;
+                local frostRunes = 0;
+                local deathRunes = 0;
+                local numRunes = 0;
+
+                for index = 1, 6 do
+                  local startTime = GetRuneCooldown(index)
+                  if startTime == 0 then
+                    numRunes = numRunes + 1;
+                    local runeType = GetRuneType(index)
+                    if runeType == 1 then
+                      bloodRunes = bloodRunes + 1
+                    elseif runeType == 2 then
+                      frostRunes = frostRunes + 1
+                    elseif runeType == 3 then
+                      unholyRunes = unholyRunes + 1
+                    elseif runeType == 4 then
+                        deathRunes = deathRunes + 1
+                    end
+                  end
+                end
+
+                bloodRunes  = bloodRunes  + deathRunes
+                unholyRunes = unholyRunes + deathRunes
+                frostRunes  = frostRunes  + deathRunes
+
+                Pixel(int, numRunes, 14)
+                Pixel(int, bloodRunes * 100 + frostRunes * 10 + unholyRunes, 15)
+            else
+                Pixel(int, UnitPowerMax(DataToColor.C.unitPlayer, PowerType.Mana), 14)
+                Pixel(int, UnitPower(DataToColor.C.unitPlayer, PowerType.Mana), 15)
+            end
 
             if DataToColor.targetChanged then
                 Pixel(int, DataToColor:GetTargetName(0), 16) -- Characters 1-3 of targets name

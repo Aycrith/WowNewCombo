@@ -151,7 +151,9 @@ local swing_reset_spells = {
     --[[ Heroic Strike ]]
     [132282] = true,
     --[[ Slam ]]
-    [132340] = true
+    [132340] = true,
+    --[[ Runic Strike]]
+    [237518] = true
 }
 
 local miss_type = {
@@ -281,8 +283,9 @@ function DataToColor:OnCombatEvent(...)
                 end
 
                 if hasGCD then
-                    -- Rogues and Druid Cat have 1s gcd.
+                    -- Rogue, Death Knight and Druid Cat have 1s gcd.
                     if DataToColor.C.CHARACTER_CLASS_ID == 4 or
+                    DataToColor.C.CHARACTER_CLASS_ID == 6 or
                     (DataToColor.C.CHARACTER_CLASS_ID == 11 and DataToColor:shapeshiftForm() == 3) then
                         castTime = 1000
                     elseif spellId == DataToColor.C.Spell.ShootId then

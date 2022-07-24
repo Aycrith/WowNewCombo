@@ -173,6 +173,7 @@ function CreatePlayerBuffList()
         DataToColor.S.playerBuffs[18] = { "Unbreakable Armor", [132388] = 1 }
         DataToColor.S.playerBuffs[19] = { "Bone Shield", [132728] = 1 }
         DataToColor.S.playerBuffs[20] = { "Summon Gargoyle", [132182] = 1 }
+        DataToColor.S.playerBuffs[21] = { "Freezing Fog", [135840] = 1 }
     end
 end
 

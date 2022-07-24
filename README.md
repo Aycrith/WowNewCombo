@@ -393,6 +393,11 @@ Can specify conditions with [Requirement(s)](#Requirement) in order to create a 
 | `"MinRage"` | **(Obsolete)** Minimum `Rage` [Requirement](#Requirement) | `0` |
 | `"MinEnergy"` | **(Obsolete)** Minimum `Energy` [Requirement](#Requirement) | `0` |
 | `"MinComboPoints"` | The minimum combo points [Requirement](#Requirement) | `0` |
+| `"MinRunicPower"` | The minimum Runic Power [Requirement](#Requirement) | `0` |
+| `"MinRuneBlood"` | The minimum Blood Rune [Requirement](#Requirement) | `0` |
+| `"MinRuneFrost"` | The minimum Frost Rune [Requirement](#Requirement) | `0` |
+| `"MinRuneUnholy"` | The minimum Unholy Rune [Requirement](#Requirement) | `0` |
+| `"TotalRune"` | Accumlated available Rune count [Requirement](#Requirement) | `0` |
 | `"WhenUsable"` | Mapped to [IsUsableAction](https://wowwiki-archive.fandom.com/wiki/API_IsUsableAction) | `false` |
 | `"Requirement"` | Single [Requirement](#Requirement) | `false` |
 | `"Requirements"` | List of [Requirement](#Requirement) | `false` |
@@ -1018,6 +1023,7 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | `"Falling"` | The player is currently falling down, not touching the ground. |
 | `"Has Pet"` | The player's pet is alive |
 | `"Pet Happy"` | Pet happienss is green |
+| `"Mounted"` | Player riding on a mount (druid form excluded) |
 | `"BagFull"` | Inventory is full |
 | `"BagGreyItem"` | Indicates that there are at least one Grey Quality level item. |
 | `"Items Broken"` | Has any broken(red) worn item |
@@ -1127,6 +1133,7 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | Death Knight | `"Unbreakable Armor"` |
 | Death Knight | `"Bone Shield"` |
 | Death Knight | `"Summon Gargoyle"` |
+| Death Knight | `"Freezing Fog"` |
 
 </td>
 <td valign="top">
