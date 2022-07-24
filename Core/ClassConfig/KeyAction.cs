@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,6 +25,10 @@ namespace Core
         public int MinMana { get; set; }
         public int MinRage { get; set; }
         public int MinEnergy { get; set; }
+        public int MinRunicPower { get; set; }
+        public int MinRuneBlood { get; set; }
+        public int MinRuneFrost { get; set; }
+        public int MinRuneUnholy { get; set; }
         public int MinComboPoints { get; set; }
 
         public string Requirement { get; set; } = string.Empty;
@@ -247,39 +251,57 @@ namespace Core
 
         private void InitMinPowerType(PlayerReader playerReader, ActionBarCostReader actionBarCostReader)
         {
-            ActionBarCost abc = actionBarCostReader.GetCostByActionBarSlot(playerReader, this);
-            if (abc.Cost != 0)
+            for (int i = 0; i < ActionBar.NUM_OF_COST; i++)
             {
-                int oldValue = 0;
-                switch (abc.PowerType)
+                ActionBarCost abc = actionBarCostReader.GetCostByActionBarSlot(playerReader, this, i);
+                if (abc.Cost != 0)
                 {
-                    case PowerType.Mana:
-                        oldValue = MinMana;
-                        MinMana = abc.Cost;
-                        break;
-                    case PowerType.Rage:
-                        oldValue = MinRage;
-                        MinRage = abc.Cost;
-                        break;
-                    case PowerType.Energy:
-                        oldValue = MinEnergy;
-                        MinEnergy = abc.Cost;
-                        break;
-                }
+                    int oldValue = 0;
+                    switch (abc.PowerType)
+                    {
+                        case PowerType.Mana:
+                            oldValue = MinMana;
+                            MinMana = abc.Cost;
+                            break;
+                        case PowerType.Rage:
+                            oldValue = MinRage;
+                            MinRage = abc.Cost;
+                            break;
+                        case PowerType.Energy:
+                            oldValue = MinEnergy;
+                            MinEnergy = abc.Cost;
+                            break;
+                        case PowerType.RunicPower:
+                            oldValue = MinRunicPower;
+                            MinRunicPower = abc.Cost;
+                            break;
+                        case PowerType.RuneBlood:
+                            oldValue = MinRuneBlood;
+                            MinRuneBlood = abc.Cost;
+                            break;
+                        case PowerType.RuneFrost:
+                            oldValue = MinRuneFrost;
+                            MinRuneFrost = abc.Cost;
+                            break;
+                        case PowerType.RuneUnholy:
+                            oldValue = MinRuneUnholy;
+                            MinRuneUnholy = abc.Cost;
+                            break;
+                    }
 
-                int formCost = 0;
-                if (HasFormRequirement() && FormEnum != Core.Form.None && playerReader.FormCost.ContainsKey(FormEnum))
-                {
-                    formCost = playerReader.FormCost[FormEnum];
-                }
+                    int formCost = 0;
+                    if (HasFormRequirement() && FormEnum != Core.Form.None && playerReader.FormCost.ContainsKey(FormEnum))
+                    {
+                        formCost = playerReader.FormCost[FormEnum];
+                    }
 
-                LogPowerCostChange(logger, Name, abc.PowerType.ToStringF(), abc.Cost, oldValue);
-                if (formCost > 0)
-                {
-                    logger.LogInformation($"[{Name}] +{formCost} Mana to change {FormEnum.ToStringF()} Form");
+                    LogPowerCostChange(logger, Name, abc.PowerType.ToStringF(), abc.Cost, oldValue);
+                    if (formCost > 0)
+                    {
+                        logger.LogInformation($"[{Name}] +{formCost} Mana to change {FormEnum.ToStringF()} Form");
+                    }
                 }
             }
-
             actionBarCostReader.OnActionCostChanged += ActionBarCostReader_OnActionCostChanged;
             actionBarCostReader.OnActionCostReset += ResetCosts;
         }
@@ -304,6 +326,22 @@ namespace Core
                 case PowerType.Energy:
                     oldValue = MinEnergy;
                     MinEnergy = e.ActionBarCost.Cost;
+                    break;
+                case PowerType.RunicPower:
+                    oldValue = MinRunicPower;
+                    MinRunicPower = e.ActionBarCost.Cost;
+                    break;
+                case PowerType.RuneBlood:
+                    oldValue = MinRuneBlood;
+                    MinRuneBlood = e.ActionBarCost.Cost;
+                    break;
+                case PowerType.RuneFrost:
+                    oldValue = MinRuneFrost;
+                    MinRuneFrost = e.ActionBarCost.Cost;
+                    break;
+                case PowerType.RuneUnholy:
+                    oldValue = MinRuneUnholy;
+                    MinRuneUnholy = e.ActionBarCost.Cost;
                     break;
             }
 

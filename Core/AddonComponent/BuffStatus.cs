@@ -123,5 +123,6 @@ namespace Core
         public bool UnbreakableArmor() => v[Mask._18];
         public bool BoneShield() => v[Mask._19];
         public bool SummonGargoyle() => v[Mask._20];
+        public bool FreezingFog() => v[Mask._21];
     }
 }

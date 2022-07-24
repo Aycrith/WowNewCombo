@@ -48,6 +48,12 @@ namespace Core
         public int ManaCurrent() => reader.GetInt(15);
         public int ManaPercentage() => ManaMax() == 0 ? 0 : ManaCurrent() * 100 / ManaMax();
 
+        public int MaxRune() => reader.GetInt(14);
+
+        public int BloodRune() => reader.GetInt(15) / 100 % 10;
+        public int FrostRune() => reader.GetInt(15) / 10 % 10;
+        public int UnholyRune() => reader.GetInt(15) % 10;
+
         public int TargetMaxHealth() => reader.GetInt(18);
         public int TargetHealth() => reader.GetInt(19);
         public int TargetHealthPercentage() => TargetMaxHealth() == 0 || TargetHealth() == 1 ? 0 : TargetHealth() * 100 / TargetMaxHealth();
