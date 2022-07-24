@@ -42,9 +42,19 @@
 
 # Media
 
-![Screenshot](images/Screenshot.png)
+<a href="./images/Screenshot.png" target="_blank">
+   <img alt="Screenshot" src="./images/Screenshot.png" width=50%">
+</a>
 
 [![YouTube Video](https://img.youtube.com/vi/CIMgbh5LuCc/0.jpg)](https://www.youtube.com/watch?v=CIMgbh5LuCc)
+
+<a href="https://mega.nz/file/vf5BhZiJ#yX77HpxremieqGPQSUgZn55bPqJPz6xRLq2n-srt8eY" target="_blank">
+   <img alt="Death Knight 1" src="https://i.imgur.com/BvEPCl6.jpg" width=50%">
+</a>
+
+<a href="https://mega.nz/file/KDRiCAzI#DamyH3QCha8vm4qfhqVYRb6ffbkhvfyZxWhz9D1OKEc" target="_blank">
+   <img alt="Death Knight 2" src="https://i.imgur.com/3nXwSoy.jpeg" width=50%">
+</a>
 
 # Issues and Ideas
 
