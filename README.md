@@ -399,14 +399,17 @@ Can specify conditions with [Requirement(s)](#Requirement) in order to create a 
 | `"Charge"` | How many consequent key press should happen before setting Cooldown | `1` |
 | `"Cooldown"` | **Note this is not the in-game cooldown!**<br>The time in milliseconds before KeyAction can be used again.<br>This property will be updated when the backend registers the `Key` press. It has no feedback from the game. | `400` |
 | `"School"` | Indicate what type of element the spell do. Accepted values:<br>* `SchoolMask.Physical`<br>* `SchoolMask.Holy`<br>* `SchoolMask.Fire`<br>* `SchoolMask.Nature`<br>* `SchoolMask.Frost`<br>* `SchoolMask.Shadow`<br>* `SchoolMask.Arcane` | `SchoolMask.None` |
-| `"MinMana"` | **(Obsolete)** Minimum `Mana` [Requirement](#Requirement) | `0` |
-| `"MinRage"` | **(Obsolete)** Minimum `Rage` [Requirement](#Requirement) | `0` |
-| `"MinEnergy"` | **(Obsolete)** Minimum `Energy` [Requirement](#Requirement) | `0` |
+| --- | --- | --- |
+| --- | The Following `Min` prefixed values used by **ActionBarCost**. Do not use them directly! | --- |
+| `"MinMana"` | Minimum `Mana` [Requirement](#Requirement) | `0` |
+| `"MinRage"` | Minimum `Rage` [Requirement](#Requirement) | `0` |
+| `"MinEnergy"` | Minimum `Energy` [Requirement](#Requirement) | `0` |
 | `"MinComboPoints"` | The minimum combo points [Requirement](#Requirement) | `0` |
 | `"MinRunicPower"` | The minimum Runic Power [Requirement](#Requirement) | `0` |
 | `"MinRuneBlood"` | The minimum Blood Rune [Requirement](#Requirement) | `0` |
 | `"MinRuneFrost"` | The minimum Frost Rune [Requirement](#Requirement) | `0` |
 | `"MinRuneUnholy"` | The minimum Unholy Rune [Requirement](#Requirement) | `0` |
+| --- | --- | --- |
 | `"TotalRune"` | Accumlated available Rune count [Requirement](#Requirement) | `0` |
 | `"WhenUsable"` | Mapped to [IsUsableAction](https://wowwiki-archive.fandom.com/wiki/API_IsUsableAction) | `false` |
 | `"Requirement"` | Single [Requirement](#Requirement) | `false` |
