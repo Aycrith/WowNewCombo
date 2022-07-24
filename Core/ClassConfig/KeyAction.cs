@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -142,6 +142,7 @@ namespace Core
         public void Dispose()
         {
             costReader.OnActionCostChanged -= ActionBarCostReader_OnActionCostChanged;
+            costReader.OnActionCostReset -= ResetCosts;
         }
 
         public void InitialiseForm(AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger, bool globalLog)
@@ -158,6 +159,18 @@ namespace Core
                 addonReader.PlayerReader.FormCost.Add(FormEnum, MinMana);
                 logger.LogInformation($"[{Name}] Added {FormEnum} to FormCost with {MinMana}");
             }
+        }
+
+        public void ResetCosts()
+        {
+            MinMana = 0;
+            MinRage = 0;
+            MinEnergy = 0;
+            MinRunicPower = 0;
+
+            MinRuneBlood = 0;
+            MinRuneFrost = 0;
+            MinRuneUnholy = 0;
         }
 
         public float GetCooldownRemaining()
@@ -268,6 +281,7 @@ namespace Core
             }
 
             actionBarCostReader.OnActionCostChanged += ActionBarCostReader_OnActionCostChanged;
+            actionBarCostReader.OnActionCostReset += ResetCosts;
         }
 
         private void ActionBarCostReader_OnActionCostChanged(object? sender, ActionBarCostEventArgs e)
