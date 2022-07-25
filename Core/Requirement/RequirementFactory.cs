@@ -5,6 +5,7 @@ using System.Linq;
 using Core.Database;
 using SharedLib;
 using SharedLib.NpcFinder;
+using Core.Goals;
 
 namespace Core
 {
@@ -662,15 +663,17 @@ namespace Core
 
         private Requirement CreateActionUsableRequirement(KeyAction item)
         {
+            string key = $"CD_{item.Name}";
+
             bool f() =>
-                    !item.HasFormRequirement() ? addonReader.UsableAction.Is(item) :
-                    (playerReader.Form == item.FormEnum && addonReader.UsableAction.Is(item)) ||
+                    !item.HasFormRequirement() ? addonReader.UsableAction.Is(item) || UsableGCD(key) :
+                    (playerReader.Form == item.FormEnum && (addonReader.UsableAction.Is(item) || UsableGCD(key))) ||
                     (playerReader.Form != item.FormEnum && item.CanDoFormChangeAndHaveMinimumMana());
 
             string s() =>
                     !item.HasFormRequirement() ? $"Usable" : // {playerReader.UsableAction.Num(item)}
                     (playerReader.Form != item.FormEnum && item.CanDoFormChangeAndHaveMinimumMana()) ? $"Usable after Form change" : // {playerReader.UsableAction.Num(item)}
-                    (playerReader.Form == item.FormEnum && addonReader.UsableAction.Is(item)) ? $"Usable current Form" : $"not Usable current Form"; // {playerReader.UsableAction.Num(item)}
+                    (playerReader.Form == item.FormEnum && (addonReader.UsableAction.Is(item) || UsableGCD(key))) ? $"Usable current Form" : $"not Usable current Form"; // {playerReader.UsableAction.Num(item)}
 
             return new Requirement
             {
@@ -682,8 +685,8 @@ namespace Core
         private Requirement CreateActionNotInGameCooldown(KeyAction item)
         {
             string key = $"CD_{item.Name}";
-            bool f() => intVariables[key]() == 0;
-            string s() => $"CD {intVariables[key]() / 1000}";
+            bool f() => UsableGCD(key);
+            string s() => $"CD {intVariables[key]()}";
 
             return new Requirement
             {
@@ -691,6 +694,11 @@ namespace Core
                 VisibleIfHasRequirement = false,
                 LogMessage = s
             };
+        }
+
+        private bool UsableGCD(string key)
+        {
+            return intVariables[key]() <= CastingHandler.SpellQueueTimeMs + playerReader.NetworkLatency.Value;
         }
 
         private Requirement CreateTargetCastingSpell(string requirement)
