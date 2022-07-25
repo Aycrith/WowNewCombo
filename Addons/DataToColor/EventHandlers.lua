@@ -216,17 +216,23 @@ local playerMeleeSwing = {
     SWING_MISSED = true
 }
 
+local playerSummon = {
+    SPELL_SUMMON = true
+}
+
 local unitDied = {
     UNIT_DIED = true
 }
 
 function DataToColor:OnCombatEvent(...)
-    local _, subEvent, _, sourceGUID, _, _, _, destGUID, _, destFlags, _, spellId, _, _ = ...
+    local _, subEvent, _, sourceGUID, _, sourceFlags, _, destGUID, _, destFlags, _, spellId, spellName, _ = ...
     --print(...)
 
     if playerDamageTakenEvents[subEvent] and
         band(destFlags, COMBATLOG_OBJECT_TYPE_PLAYER_OR_PET) and
-        (destGUID == DataToColor.playerGUID or destGUID == DataToColor.petGUID) then
+        (destGUID == DataToColor.playerGUID or
+        destGUID == DataToColor.petGUID or
+        DataToColor.playerPetSummons[destGUID]) then
         DataToColor.CombatDamageTakenQueue:push(DataToColor:getGuidFromUUID(sourceGUID))
         --DataToColor:Print("Damage Taken ", sourceGUID)
     end
@@ -324,6 +330,19 @@ function DataToColor:OnCombatEvent(...)
                 DataToColor.lastMainHandMeleeSwing = DataToColor.globalTime
             end
         end
+
+        if playerSummon[subEvent] then
+            local guid = DataToColor:getGuidFromUUID(destGUID)
+            DataToColor.playerPetSummons[guid] = true
+            DataToColor.playerPetSummons[destGUID] = true
+            --DataToColor:Print("Summoned Pet added: ", destGUID)
+        end
+    end
+
+    if DataToColor.playerPetSummons[sourceGUID] then
+        if playerDamageDone[subEvent] then
+            DataToColor.CombatDamageDoneQueue:push(DataToColor:getGuidFromUUID(destGUID))
+        end
     end
 
     if unitDied[subEvent] then
@@ -331,6 +350,11 @@ function DataToColor:OnCombatEvent(...)
             DataToColor.CombatCreatureDiedQueue:push(DataToColor:getGuidFromUUID(destGUID))
             DataToColor.lastLoot = DataToColor.C.Loot.Corpse
             --DataToColor:Print(subEvent, " ", destGUID, " ", DataToColor:getGuidFromUUID(destGUID))
+        elseif DataToColor.playerPetSummons[destGUID] then
+            local guid = DataToColor:getGuidFromUUID(destGUID)
+            DataToColor.playerPetSummons[guid] = nil
+            DataToColor.playerPetSummons[destGUID] = nil
+            --DataToColor:Print("Summoned Pet removed: ", destGUID)
         else
             --DataToColor:Print(subEvent, " ignored ", destGUID)
         end
