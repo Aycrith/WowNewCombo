@@ -51,6 +51,10 @@ namespace Core
                     {
                         Items[index] = item;
                     }
+                    else
+                    {
+                        Items[index] = new Item() { Entry = itemId, Name = "Unknown" };
+                    }
 
                     OnEquipmentChanged?.Invoke(this, (index, itemId));
                 }

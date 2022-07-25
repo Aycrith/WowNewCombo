@@ -1,4 +1,5 @@
 ﻿using Core.Database;
+using SharedLib;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -155,6 +156,11 @@ namespace Core
                     if (ItemDB.Items.TryGetValue(itemId, out var item))
                     {
                         BagItems.Add(new BagItem(bag, slot, itemId, itemCount, item));
+                        hasChanged = true;
+                    }
+                    else
+                    {
+                        BagItems.Add(new BagItem(bag, slot, itemId, itemCount, new Item() { Entry = itemId, Name = "Unknown" }));
                         hasChanged = true;
                     }
                 }
