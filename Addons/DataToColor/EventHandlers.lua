@@ -275,7 +275,6 @@ function DataToColor:OnCombatEvent(...)
                 end
 
                 local _, _, _, castTime = GetSpellInfo(spellId)
-
                 if castTime == nil then
                     castTime = 0
                 end
@@ -289,21 +288,16 @@ function DataToColor:OnCombatEvent(...)
                 end
 
                 if hasGCD then
-                    -- Rogue, Death Knight and Druid Cat have 1s gcd.
-                    if DataToColor.C.CHARACTER_CLASS_ID == 4 or
-                    DataToColor.C.CHARACTER_CLASS_ID == 6 or
-                    (DataToColor.C.CHARACTER_CLASS_ID == 11 and DataToColor:shapeshiftForm() == 3) then
-                        castTime = 1000
-                    elseif spellId == DataToColor.C.Spell.ShootId then
+                    if spellId == DataToColor.C.Spell.ShootId then
                         castTime = floor(UnitRangedDamage(DataToColor.C.unitPlayer) * 1000)
                     else
-                        castTime = 1500
+                        castTime = gcdMS
                     end
 
                     DataToColor.gcdExpirationTime = GetTime() + (castTime / 1000)
-                    --DataToColor:Print(subEvent, " ", spellId, " ", castTime)
+                    --DataToColor:Print(subEvent, " ", spellName, " ", spellId, " ", castTime)
                 else
-                    --DataToColor:Print(subEvent, " ", spellId)
+                    --DataToColor:Print(subEvent, " ", spellName, " ", spellId, " has no GCD")
                 end
             end
         end

@@ -1,4 +1,4 @@
-﻿using Core.GOAP;
+using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Numerics;
@@ -132,9 +132,15 @@ namespace Core.Goals
                     input.PetAttack();
                 }
 
-                for (int i = 0; i < Keys.Length && !castingHandler.SpellInQueue(); i++)
+                for (int i = 0; i < Keys.Length; i++)
                 {
                     KeyAction keyAction = Keys[i];
+
+                    if (castingHandler.SpellInQueue() && !keyAction.SkipValidation)
+                    {
+                        continue;
+                    }
+
                     if (castingHandler.CastIfReady(keyAction))
                     {
                         break;

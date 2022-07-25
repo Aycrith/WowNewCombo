@@ -568,8 +568,14 @@ function DataToColor:CreateFrames(n)
                 if actionCooldownKey then
                     DataToColor.actionBarCooldownQueue:setDirty(actionCooldownKey)
 
-                    --DataToColor:Print("actionBarCooldownQueue: "..actionCooldownKey.." "..floor(actionCooldownValue) * 100)
-                    Pixel(int, actionCooldownKey * 100000 + floor(actionCooldownValue) * 100, 37)
+                    -- have to add 1s because its excluded from total cooldown
+                    if actionCooldownValue > 0 then
+                        actionCooldownValue = actionCooldownValue + 1
+                    end
+                    local valueMs = (floor(actionCooldownValue) * 100)
+
+                    --DataToColor:Print("actionBarCooldownQueue: ", actionCooldownKey, " ", valueMs)
+                    Pixel(int, actionCooldownKey * 100000 + valueMs, 37)
 
                     if actionCooldownValue == 0 then
                         DataToColor.actionBarCooldownQueue:remove(actionCooldownKey)

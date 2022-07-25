@@ -9,7 +9,7 @@
     "MIN_FOOD%": 50,
     "MIN_WATER%": 30,
     "MIN_MANA_SPELL%": 60,
-    "MIN_TARGET_HP_NOVA%": 10
+    "MIN_TARGET_HP_NOVA%": 15
   },
   "Pull": {
     "Sequence": [
@@ -23,7 +23,7 @@
         "Name": "Shoot",
         "Key": "0",
         "HasCastbar": true,
-        "DelayAfterCast": 500,
+        "DelayBeforeCast": 100,
         "Requirements": [
           "HasRangedWeapon",
           "!Shooting",
@@ -36,15 +36,6 @@
   "Combat": {
     "Sequence": [
       {
-        "Name": "Fire Blast",
-        "Key": "5",
-        "WhenUsable": true,
-        "Requirements": [
-          "TargetHealth% < 45",
-          "SpellInRange:4"
-        ]
-      },
-      {
         "Name": "Frost Nova",
         "Key": "6",
         "WhenUsable": true,
@@ -52,8 +43,16 @@
           "InMeleeRange",
           "TargetHealth% > MIN_TARGET_HP_NOVA%"
         ],
-        "StepBackAfterCast": 1000,
-        "DelayAfterCast": 0
+        "StepBackAfterCast": -1 //1000
+      },
+      {
+        "Name": "Fire Blast",
+        "Key": "5",
+        "WhenUsable": true,
+        "Requirements": [
+          "TargetHealth% < 45",
+          "SpellInRange:4"
+        ]
       },
       {
         "Name": "Arcane Missiles",
@@ -69,6 +68,7 @@
         "Name": "Shoot",
         "Key": "0",
         "HasCastBar": true,
+        "DelayBeforeCast": 100,
         "Requirements": [
           "HasRangedWeapon",
           "!Shooting",
@@ -114,13 +114,15 @@
         "Name": "Conjure Water",
         "Key": "9",
         "HasCastBar": true,
-        "Requirement": "!BagItem:2288:4"
+        "Requirement": "!BagItem:2288:4",
+        "AfterCastWaitItem": true
       },
       {
         "Name": "Conjure Food",
         "Key": "8",
         "HasCastBar": true,
-        "Requirement": "!BagItem:1113:4"
+        "Requirement": "!BagItem:1113:4",
+        "AfterCastWaitItem": true
       }
     ]
   }

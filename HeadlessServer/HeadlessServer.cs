@@ -50,13 +50,11 @@ namespace HeadlessServer
 
             int actionbarCost;
             int spellBook;
-            int bagCount;
 
             do
             {
                 actionbarCost = addonReader.ActionBarCostReader.Count;
                 spellBook = addonReader.SpellBookReader.Count;
-                bagCount = addonReader.BagReader.BagItems.Count;
 
                 for (int i = 0; i < TICK_INTERVAL; i++)
                 {
@@ -65,10 +63,10 @@ namespace HeadlessServer
 
             } while (
                 actionbarCost != addonReader.ActionBarCostReader.Count ||
-                spellBook != addonReader.SpellBookReader.Count ||
-                bagCount != addonReader.BagReader.BagItems.Count);
+                spellBook != addonReader.SpellBookReader.Count);
 
-            logger.LogInformation($"{nameof(addonReader.ActionBarCostReader)}: {actionbarCost} | {nameof(addonReader.SpellBookReader)}: {spellBook} | {nameof(addonReader.BagReader)}: {bagCount}");
+            wait.Fixed(8000); // todo get a better way to figure out how to detect bag items obtained
+            logger.LogInformation($"{nameof(addonReader.ActionBarCostReader)}: {actionbarCost} | {nameof(addonReader.SpellBookReader)}: {spellBook} | {nameof(addonReader.BagReader)}: {addonReader.BagReader.BagItems.Count}");
         }
 
     }

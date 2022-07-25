@@ -1,7 +1,8 @@
 {
   "ClassName": "DeatkKnight",
-  "Mode": "AttendedGrind", //Grind
+  //"Mode": "AttendedGrind", //Grind
   "Loot": true,
+  //"KeyboardOnly": true,
   "PathFilename": "_pack\\40-50\\The Hinterlands\\41-42 wolves.json", // todo update profile
   "PathReduceSteps": true,
   "PathThereAndBack": false,
@@ -40,16 +41,19 @@
           "!TargetCastingSpell",
           "!Frost Fever",
           "SpellInRange:0"
-        ]
+        ],
+        "AfterCastWaitBuff": true,
+        "DelayUntilCombat": true
       },
       {
         "Name": "Death Grip",
         "Key": "0",
         "WhenUsable": true,
         "Requirements": [
-          "MinRange > 20",
           "SpellInRange:2"
-        ]
+        ],
+        "DelayUntilCombat": true,
+        "WaitForWithinMeleeRange": true
       }
     ]
   },
@@ -59,18 +63,25 @@
         "Name": "Trinket 1",
         "Key": "N1",
         "WhenUsable": true,
-        "WaitForGCD": false
+        "Requirements": [
+          "InMeleeRange"
+        ],
+        "DelayAfterCast": 50
       },
       {
         "Name": "Trinket 2",
         "Key": "N2",
         "WhenUsable": true,
-        "WaitForGCD": false
+        "Requirements": [
+          "InMeleeRange"
+        ],
+        "DelayAfterCast": 50
       },
       {
         "Name": "Bone Shield",
         "Key": "N4",
         "WhenUsable": true,
+        "AfterCastWaitBuff": true,
         "Requirements": [
           "!Bone Shield"
         ]
@@ -79,7 +90,6 @@
         "Name": "Empower Rune Weapon",
         "Key": "N3",
         "WhenUsable": true,
-        "WaitForGCD": false,
         "Requirements": [
           "TotalRune == 0",
           "RunicPower <= 105",
@@ -90,7 +100,6 @@
         "Name": "Death Strike",
         "Key": "F5",
         "WhenUsable": true,
-        "WaitForGCD": false,
         "Requirements": [
           "Health% < 30"
         ]
@@ -125,6 +134,7 @@
         "Name": "Blood Strike",
         "Key": "3",
         "WhenUsable": true,
+        "Cooldown": 2000,
         "Requirements": [
           "MobCount < 2",
           "Frost Fever",
@@ -136,6 +146,7 @@
         "Name": "Scourge Strike",
         "Key": "2",
         "WhenUsable": true,
+        "Cooldown": 2000,
         "Requirements": [
           "MobCount < 2",
           "Frost Fever",

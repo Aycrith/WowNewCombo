@@ -202,7 +202,7 @@ Similar to BlazorServer project, except without Frontend. Should consume less sy
 
 Everything has to be setup inside the Class Configuration, in prior.
 
-A successfull [Configuration process](#5-BlazorServer-Configuration-process) has a result of a following configuration files
+A successful [Configuration process](#5-BlazorServer-Configuration-process) has a result of a following configuration files
 * `data_config.json`
 * `addon_config.json`
 * `frame_config.json`
@@ -422,11 +422,12 @@ Can specify conditions with [Requirement(s)](#Requirement) in order to create a 
 | `"DelayBeforeCast"` | Delay in milliseconds before key press happens | `0` |
 | `"DelayAfterCast"` | Delay in milliseconds after the key press happened | `1450` |
 | `"DelayUntilCombat"` | After cast, waits until player enters combat, good for pulling. | `false` |
-| `"AfterCastWaitBuff"` | After a successfull cast, should wait until __(player debuff/buff or target debuff/buff)__ changed. | `false` |
+| `"AfterCastWaitBuff"` | After a successful cast, should wait until __(player debuff/buff or target debuff/buff)__ changed. | `false` |
+| `"AfterCastWaitItem"` | After a successful cast, should wait until __(inventory change)__ changed. | `false` |
 | `"AfterCastWaitNextSwing"` | After cast wait for next melee swing happen. | `false` | 
 | `"Cost"` | [Adhoc Goals](#Adhoc-Goals) or [NPC Goal](#NPC-Goals) only the priority | `18` |
 | `"InCombat"` | Should combat matter when attempt to cast?<br>Accepted values:<br>* `"any value for doesn't matter"`<br>* `"true"`<br>* `"false"` | `false` |
-| `"StepBackAfterCast"` | After successfull cast, start backpedaling for milliseconds. | `0` |
+| `"StepBackAfterCast"` | After successful cast, start backpedaling for milliseconds.<br> If value set to `-1` attempts to use the whole remaining GCD duration. | `0` |
 | `"PathFilename"` | [NPC Goal](#NPC-Goals) only, this is a short path to get close to the NPC to avoid walls etc. | `""` |
 | `"UseWhenTargetIsCasting"` | Checks for the target casting/channeling.<br>Accepted values:<br>* `null` -> ignore<br>* `false` -> when enemy not casting<br>* `true` -> when enemy casting | `null` |
 

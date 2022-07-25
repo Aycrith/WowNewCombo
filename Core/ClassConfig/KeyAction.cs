@@ -49,6 +49,8 @@ namespace Core
 
         public bool AfterCastWaitBuff { get; set; }
 
+        public bool AfterCastWaitItem { get; set; }
+
         public bool AfterCastWaitNextSwing { get; set; }
 
         public bool DelayUntilCombat { get; set; }

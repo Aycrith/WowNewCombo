@@ -77,7 +77,8 @@
         "Name": "Conjure Water",
         "Key": "9",
         "HasCastBar": true,
-        "Requirement": "!BagItem:5350:4"
+        "Requirement": "!BagItem:5350:4",
+        "AfterCastWaitItem": true
       }
     ]
   },

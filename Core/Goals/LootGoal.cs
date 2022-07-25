@@ -1,4 +1,4 @@
-using Core.Database;
+﻿using Core.Database;
 using Core.GOAP;
 using SharedLib.NpcFinder;
 using Microsoft.Extensions.Logging;

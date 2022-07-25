@@ -98,14 +98,14 @@
         "Key": "9",
         "HasCastBar": true,
         "Requirement": "not BagItem:8077:4",
-        "Cooldown": 30000
+        "AfterCastWaitItem": true
       },
       {
         "Name": "Conjure Food",
         "Key": "8",
         "HasCastBar": true,
         "Requirement": "not BagItem:1487:4",
-        "Cooldown": 30000
+        "AfterCastWaitItem": true
       }
     ]}
 }
