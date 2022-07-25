@@ -187,7 +187,7 @@ namespace Core.Goals
                 }
             }
 
-            if (!castAny && !spellInQueue)
+            if (!castAny && !spellInQueue && !playerReader.IsCasting())
             {
                 if (combatUtil.EnteredCombat())
                 {
