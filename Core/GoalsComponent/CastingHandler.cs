@@ -123,7 +123,7 @@ namespace Core.Goals
                 return false;
 
             if (item.Log)
-                LogInstantUsableChange(logger, item.Name, beforeUsable, addonReader.UsableAction.Is(item), ((UI_ERROR)beforeCastEventValue).ToStringF(), ((UI_ERROR)playerReader.CastEvent.Value).ToStringF());
+                LogInstantUsableChange(logger, item.Name, beforeUsable, addonReader.UsableAction.Is(item), ((UI_ERROR)beforeCastEventValue).ToStringF(), ((UI_ERROR)playerReader.CastEvent.Value).ToStringF(), playerReader.GCD.Value);
 
             item.SetClicked();
 
@@ -133,6 +133,9 @@ namespace Core.Goals
                 return false;
             }
 
+            (bool gcdTimeout, double elapsedMs) = wait.Until(playerReader.NetworkLatency.Value, () => playerReader.GCD.Value != 0);
+            logger.LogInformation($"Instant - has GCD ? {!gcdTimeout} | {playerReader.GCD.Value}ms | {elapsedMs}ms");
+
             return true;
         }
 
@@ -140,13 +143,11 @@ namespace Core.Goals
         {
             wait.While(bits.IsFalling);
 
-            if (playerReader.IsCasting() && interrupt())
+            if (!playerReader.IsCasting())
             {
-                return false;
+                stopMoving.Stop();
+                wait.Update();
             }
-
-            stopMoving.Stop();
-            wait.Update();
 
             bool prevState = interrupt();
 
@@ -170,7 +171,8 @@ namespace Core.Goals
                 interrupt: () =>
                 beforeCastEventValue != playerReader.CastEvent.Value ||
                 beforeSpellId != playerReader.CastSpellId.Value ||
-                beforeCastCount != playerReader.CastCount
+                beforeCastCount != playerReader.CastCount ||
+                prevState != interrupt()
                 );
 
             if (item.Log)
@@ -250,6 +252,8 @@ namespace Core.Goals
 
         public bool Cast(KeyAction item, Func<bool> interrupt)
         {
+            DateTime begin = DateTime.UtcNow;
+
             if (item.HasFormRequirement() && playerReader.Form != item.FormEnum)
             {
                 bool beforeUsable = addonReader.UsableAction.Is(item);
@@ -284,14 +288,17 @@ namespace Core.Goals
                 input.StopAttack();
 
                 int waitTime = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs) + (2 * playerReader.NetworkLatency.Value);
-
-                logger.LogInformation($"Stop {nameof(bits.SpellOn_Shoot)} and GCD {waitTime}ms");
-
                 (bool gcdTimeout, double elapsedMs) = wait.Until(waitTime, () => prevState != interrupt());
+                logger.LogInformation($"Stop {nameof(bits.SpellOn_Shoot)} and wait {waitTime}ms | {elapsedMs}ms");
                 if (!gcdTimeout)
                 {
                     return false;
                 }
+            }
+
+            if (item.WaitForGCD && !WaitForGCD(item, interrupt))
+            {
+                return false;
             }
 
             if (item.DelayBeforeCast > 0)
@@ -340,45 +347,67 @@ namespace Core.Goals
 
             if (item.AfterCastWaitBuff)
             {
-                (bool changeTimeOut, double elapsedMs) = wait.Until(GCD, () => auraHash != playerReader.AuraCount.Hash);
+                // GCD means projectile travel time
+                int totalTime = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs) + 2 * SpellQueueTimeMs;
+
+                (bool changeTimeOut, double elapsedMs) = wait.Until(totalTime, () => auraHash != playerReader.AuraCount.Hash);
                 if (item.Log)
                     LogAfterCastWaitBuff(logger, item.Name, !changeTimeOut, playerReader.AuraCount.ToString(), elapsedMs);
             }
 
             if (item.DelayAfterCast != defaultKeyAction.DelayAfterCast)
             {
-                if (item.DelayUntilCombat) // stop waiting if the mob is targetting me
-                {
-                    if (item.Log)
-                        LogDelayUntilCombat(logger, item.Name, item.DelayAfterCast);
 
-                    wait.Until(item.DelayAfterCast, bits.TargetOfTargetIsPlayerOrPet);
-                }
-                else if (item.DelayAfterCast > 0)
-                {
-                    if (item.Log)
-                        LogDelayAfterCast(logger, item.Name, item.DelayAfterCast);
+            if (item.DelayUntilCombat) // stop waiting if the mob is targetting me
+            {
+                stopMoving.Stop();
+                (bool timeout, double elapsedMs) = wait.Until(2 * item.DelayAfterCast, bits.TargetOfTargetIsPlayerOrPet); // possible travel speed projectile
 
-                    (bool delayTimeOut, double delayElapsedMs) = wait.Until(item.DelayAfterCast, () => prevState != interrupt());
-                    if (item.Log)
+                if (item.Log)
+                    LogDelayUntilCombat(logger, item.Name, !timeout, elapsedMs);
+            }
+
+            if (item.DelayAfterCast != defaultKeyAction.DelayAfterCast && item.DelayAfterCast > 0)
+            {
+                if (item.Log)
+                    LogDelayAfterCast(logger, item.Name, item.DelayAfterCast);
+
+                (bool delayTimeOut, double delayElapsedMs) = wait.Until(item.DelayAfterCast, () => prevState != interrupt());
+                if (item.Log)
+                {
+                    if (!delayTimeOut)
                     {
-                        if (!delayTimeOut)
-                        {
-                            LogDelayAfterCastInterrupted(logger, item.Name, delayElapsedMs);
-                        }
+                        LogDelayAfterCastInterrupted(logger, item.Name, delayElapsedMs);
                     }
                 }
             }
 
-            if (item.StepBackAfterCast > 0)
+            if (item.StepBackAfterCast != 0)
             {
                 if (item.Log)
                     LogStepBackAfterCast(logger, item.Name, item.StepBackAfterCast);
 
                 input.Proc.SetKeyState(input.Proc.BackwardKey, true);
 
-                (bool stepbackTimeOut, double stepbackElapsedMs) =
-                    wait.Until(item.StepBackAfterCast, () => prevState != interrupt());
+                bool stepbackTimeOut = false;
+                double stepbackElapsedMs = 0;
+
+                if (Random.Shared.Next(3) == 0) // 33 %
+                    input.Jump();
+
+                if (item.StepBackAfterCast == -1)
+                {
+                    int waitAmount = playerReader.GCD.Value;
+                    if (waitAmount == 0)
+                    {
+                        waitAmount = MIN_GCD - SpellQueueTimeMs;
+                    }
+                    (stepbackTimeOut, stepbackElapsedMs) = wait.Until(waitAmount, () => prevState != interrupt());
+                }
+                else
+                {
+                    (stepbackTimeOut, stepbackElapsedMs) = wait.Until(item.StepBackAfterCast, () => prevState != interrupt());
+                }
 
                 if (item.Log)
                     LogStepBackAfterCastInterrupted(logger, item.Name, !stepbackTimeOut, stepbackElapsedMs);
@@ -386,7 +415,7 @@ namespace Core.Goals
                 input.Proc.SetKeyState(input.Proc.BackwardKey, false);
             }
 
-            UpdateSpellQueue(item);
+            UpdateSpellQueue(item, begin);
 
             item.ConsumeCharge();
             return true;
@@ -427,7 +456,7 @@ namespace Core.Goals
 
             PressKeyAction(classConfig.Form[index]);
 
-            (bool changedTimeOut, double elapsedMs) = wait.Until(SpellQueueTimeMs, () => playerReader.Form == item.FormEnum);
+            (bool changedTimeOut, double elapsedMs) = wait.Until(SpellQueueTimeMs + playerReader.NetworkLatency.Value, () => playerReader.Form == item.FormEnum);
             if (item.Log)
                 LogFormChanged(logger, item.Name, !changedTimeOut, beforeForm.ToStringF(), playerReader.Form.ToStringF(), elapsedMs);
 
@@ -436,26 +465,17 @@ namespace Core.Goals
             return playerReader.Form == item.FormEnum;
         }
 
-        private void UpdateSpellQueue(KeyAction item)
+        private void UpdateSpellQueue(KeyAction item, DateTime begin)
         {
-            if (item.WaitForGCD)
-            {
-                int duration;
+            int duration = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs)
+                - SpellQueueTimeMs
+                - (int)(DateTime.UtcNow - begin).TotalMilliseconds
+                + playerReader.NetworkLatency.Value; /* - (2 * playerReader.NetworkLatency.Value)*/;
 
-                if (item.HasCastBar)
-                    duration = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs);
-                else
-                    duration = MIN_GCD - SpellQueueTimeMs - (2 * playerReader.NetworkLatency.Value);
+            SpellQueueOpen = DateTime.UtcNow.AddMilliseconds(duration);
 
-                SpellQueueOpen = DateTime.UtcNow.AddMilliseconds(duration);
-
-                if (item.Log)
-                    logger.LogInformation($"[{item.Name}] GCD: {playerReader.GCD.Value}ms | castRem: {playerReader.RemainCastMs} | Next Spell can be queued after {duration}ms");
-
-                return;
-            }
-
-            SpellQueueOpen = default;
+            if (item.Log)
+                logger.LogInformation($"[{item.Name}] GCD: {playerReader.GCD.Value}ms | castRem: {playerReader.RemainCastMs} | Next Spell can be queued after {duration}ms");
         }
 
         private void ReactToLastCastingEvent(KeyAction item, string source)
@@ -495,6 +515,10 @@ namespace Core.Goals
 
                     break;
                 case UI_ERROR.ERR_SPELL_OUT_OF_RANGE:
+
+                    if (!playerReader.Bits.HasTarget())
+                        return;
+
                     if (playerReader.Class == PlayerClassEnum.Hunter && playerReader.IsInMeleeRange())
                     {
                         logger.LogInformation($"{source} -- As a Hunter didn't know how to react {value.ToStringF()}");
@@ -544,20 +568,44 @@ namespace Core.Goals
                     {
                         logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Interact!");
                         input.Interact();
+                        stopMoving.Stop();
                     }
                     else
                     {
-                        logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Turning 180!");
-
-                        float desiredDirection = playerReader.Direction + MathF.PI;
-                        desiredDirection = desiredDirection > MathF.PI * 2 ? desiredDirection - (MathF.PI * 2) : desiredDirection;
-                        direction.SetDirection(desiredDirection, Vector3.Zero);
+                        switch (playerReader.Class)
+                        {
+                            case PlayerClassEnum.None:
+                                break;
+                            case PlayerClassEnum.Monk:
+                            case PlayerClassEnum.DemonHunter:
+                            case PlayerClassEnum.Druid:
+                            case PlayerClassEnum.DeathKnight:
+                            case PlayerClassEnum.Warrior:
+                            case PlayerClassEnum.Paladin:
+                            case PlayerClassEnum.Rogue:
+                                logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Interact!");
+                                input.Interact();
+                                stopMoving.Stop();
+                                break;
+                            case PlayerClassEnum.Hunter:
+                            case PlayerClassEnum.Priest:
+                            case PlayerClassEnum.Shaman:
+                            case PlayerClassEnum.Mage:
+                            case PlayerClassEnum.Warlock:
+                                stopMoving.Stop();
+                                logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Turning 180!");
+                                float desiredDirection = playerReader.Direction + MathF.PI;
+                                desiredDirection = desiredDirection > MathF.PI * 2 ? desiredDirection - (MathF.PI * 2) : desiredDirection;
+                                direction.SetDirection(desiredDirection, Vector3.Zero);
+                                break;
+                        }
 
                         wait.Update();
                     }
                     break;
                 case UI_ERROR.SPELL_FAILED_MOVING:
                     logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Stop moving!");
+                    wait.While(playerReader.Bits.IsFalling);
                     stopMoving.Stop();
                     wait.Update();
                     break;
@@ -627,8 +675,8 @@ namespace Core.Goals
         [LoggerMessage(
             EventId = 73,
             Level = LogLevel.Information,
-            Message = "[{name}] ... usable: {beforeUsable}->{afterUsable} -- {beforeCastEvent}->{afterCastEvent}")]
-        static partial void LogInstantUsableChange(ILogger logger, string name, bool beforeUsable, bool afterUsable, string beforeCastEvent, string afterCastEvent);
+            Message = "[{name}] ... usable: {beforeUsable}->{afterUsable} -- {beforeCastEvent}->{afterCastEvent} -- GCD: {gcd}")]
+        static partial void LogInstantUsableChange(ILogger logger, string name, bool beforeUsable, bool afterUsable, string beforeCastEvent, string afterCastEvent, int gcd);
 
         [LoggerMessage(
             EventId = 74,
@@ -694,9 +742,8 @@ namespace Core.Goals
         [LoggerMessage(
             EventId = 84,
             Level = LogLevel.Information,
-            Message = "[{name}] ... DelayUntilCombat ... DelayAfterCast {delayAfterCast}ms")]
-        static partial void LogDelayUntilCombat(ILogger logger, string name, int delayAfterCast);
-
+            Message = "[{name}] ... DelayUntilCombat ? {success} {delayAfterCast}ms")]
+        static partial void LogDelayUntilCombat(ILogger logger, string name, bool success, double delayAfterCast);
 
         [LoggerMessage(
             EventId = 85,
@@ -739,6 +786,12 @@ namespace Core.Goals
             Level = LogLevel.Information,
             Message = "[{name}] ... form changed: {changedTimeOut} | {before}->{after} | {elapsedMs}ms")]
         static partial void LogFormChanged(ILogger logger, string name, bool changedTimeOut, string before, string after, double elapsedMs);
+
+        [LoggerMessage(
+            EventId = 92,
+            Level = LogLevel.Information,
+            Message = "[{name}] ... AfterCastWaitItem ? {changeTimeOut} | {elapsedMs}ms")]
+        static partial void LogAfterCastWaitItem(ILogger logger, string name, bool changeTimeOut, double elapsedMs);
 
         #endregion
     }
