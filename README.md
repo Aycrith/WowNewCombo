@@ -421,6 +421,7 @@ Can specify conditions with [Requirement(s)](#Requirement) in order to create a 
 | `"Log"` | KeyAction related events should appear in the log | `true` |
 | `"DelayBeforeCast"` | Delay in milliseconds before key press happens | `0` |
 | `"DelayAfterCast"` | Delay in milliseconds after the key press happened | `1450` |
+| `"DelayUntilCombat"` | After cast, waits until player enters combat, good for pulling. | `false` |
 | `"AfterCastWaitBuff"` | After a successfull cast, should wait until __(player debuff/buff or target debuff/buff)__ changed. | `false` |
 | `"AfterCastWaitNextSwing"` | After cast wait for next melee swing happen. | `false` | 
 | `"Cost"` | [Adhoc Goals](#Adhoc-Goals) or [NPC Goal](#NPC-Goals) only the priority | `18` |
