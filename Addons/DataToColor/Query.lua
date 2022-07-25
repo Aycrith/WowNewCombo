@@ -383,6 +383,7 @@ function DataToColor:isActionUseable(min, max)
             if not DataToColor.actionBarCooldownQueue:exists(i) then
                 -- add
                 DataToColor.actionBarCooldownQueue:set(i, elapsed)
+                --DataToColor:Print("Added Cooldown ", i, " ", elapsed)
             end
         elseif elapsed <= 0 and DataToColor.actionBarCooldownQueue:exists(i) then
             -- update to show expired
