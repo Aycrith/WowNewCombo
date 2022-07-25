@@ -114,13 +114,15 @@
         "Name": "Conjure Water",
         "Key": "9",
         "HasCastBar": true,
-        "Requirement": "!BagItem:2288:4"
+        "Requirement": "!BagItem:2288:4",
+        "AfterCastWaitItem": true
       },
       {
         "Name": "Conjure Food",
         "Key": "8",
         "HasCastBar": true,
-        "Requirement": "!BagItem:5349:4"
+        "Requirement": "!BagItem:5349:4",
+        "AfterCastWaitItem": true
       }
     ]
   },
