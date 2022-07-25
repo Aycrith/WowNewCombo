@@ -280,6 +280,7 @@ function DataToColor:FushState()
     DataToColor:InitInventoryQueue(1)
     DataToColor:InitInventoryQueue(0)
 
+    DataToColor.actionBarCooldownQueue = DataToColor.struct:new()
     DataToColor:InitActionBarCostQueue()
     DataToColor:InitSpellBookQueue()
     DataToColor:InitTalentQueue()
