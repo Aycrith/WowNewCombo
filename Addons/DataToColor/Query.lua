@@ -387,6 +387,7 @@ function DataToColor:isActionUseable(min, max)
         elseif elapsed <= 0 and DataToColor.actionBarCooldownQueue:exists(i) then
             -- update to show expired
             DataToColor.actionBarCooldownQueue:set(i, 0)
+            --DataToColor:Print("Expired Cooldown ", i)
         end
     end
     return isUsableBits
@@ -487,6 +488,7 @@ function DataToColor:TargetOfTargetAsNumber()
     if not (UnitName(DataToColor.C.unitTargetTarget)) then return 2 end -- target has no target
     if DataToColor.C.CHARACTER_NAME == UnitName(DataToColor.C.unitTarget) then return 0 end -- targeting self
     if UnitName(DataToColor.C.unitPet) == UnitName(DataToColor.C.unitTargetTarget) then return 4 end -- targetting my pet
+    if DataToColor.playerPetSummons[UnitGUID(DataToColor.C.unitTargetTarget)] then return 4 end
     if DataToColor.C.CHARACTER_NAME == UnitName(DataToColor.C.unitTargetTarget) then return 1 end -- targetting me
     if UnitName(DataToColor.C.unitPet) == UnitName(DataToColor.C.unitTarget) and
         UnitName(DataToColor.C.unitTargetTarget) ~= nil then return 5 end

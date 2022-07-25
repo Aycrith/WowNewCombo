@@ -169,6 +169,8 @@ DataToColor.CombatDamageTakenQueue = DataToColor.Queue:new()
 DataToColor.CombatCreatureDiedQueue = DataToColor.Queue:new()
 DataToColor.CombatMissTypeQueue = DataToColor.Queue:new()
 
+DataToColor.playerPetSummons = {}
+
 DataToColor.customTrigger1 = {}
 
 function DataToColor:RegisterSlashCommands()
@@ -252,6 +254,8 @@ function DataToColor:Reset()
     globalCounter = 0
 
     bagCache = {}
+
+    DataToColor.playerPetSummons = {}
 end
 
 function DataToColor:Update()
