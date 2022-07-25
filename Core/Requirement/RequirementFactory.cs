@@ -663,17 +663,15 @@ namespace Core
 
         private Requirement CreateActionUsableRequirement(KeyAction item)
         {
-            string key = $"CD_{item.Name}";
-
             bool f() =>
-                    !item.HasFormRequirement() ? addonReader.UsableAction.Is(item) || UsableGCD(key) :
-                    (playerReader.Form == item.FormEnum && (addonReader.UsableAction.Is(item) || UsableGCD(key))) ||
+                    !item.HasFormRequirement() ? addonReader.UsableAction.Is(item) :
+                    (playerReader.Form == item.FormEnum && addonReader.UsableAction.Is(item)) ||
                     (playerReader.Form != item.FormEnum && item.CanDoFormChangeAndHaveMinimumMana());
 
             string s() =>
                     !item.HasFormRequirement() ? $"Usable" : // {playerReader.UsableAction.Num(item)}
                     (playerReader.Form != item.FormEnum && item.CanDoFormChangeAndHaveMinimumMana()) ? $"Usable after Form change" : // {playerReader.UsableAction.Num(item)}
-                    (playerReader.Form == item.FormEnum && (addonReader.UsableAction.Is(item) || UsableGCD(key))) ? $"Usable current Form" : $"not Usable current Form"; // {playerReader.UsableAction.Num(item)}
+                    (playerReader.Form == item.FormEnum && addonReader.UsableAction.Is(item)) ? $"Usable current Form" : $"not Usable current Form"; // {playerReader.UsableAction.Num(item)}
 
             return new Requirement
             {
