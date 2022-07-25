@@ -1,4 +1,4 @@
-﻿using Core.GOAP;
+using Core.GOAP;
 using SharedLib.NpcFinder;
 using Microsoft.Extensions.Logging;
 using System;
@@ -148,7 +148,7 @@ namespace Core.Goals
 
                     if (!MinRangeZero())
                     {
-                        (bool timeout, double moveElapsedMs) = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, InteractEveryOften);
+                        (bool timeout, double moveElapsedMs) = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, input.ApproachOnCooldown);
                         Log($"Reached Target ? {!timeout} {moveElapsedMs}ms");
                     }
 
@@ -255,12 +255,6 @@ namespace Core.Goals
             {
                 successfulInBackground = true;
             }
-        }
-
-        private void InteractEveryOften()
-        {
-            wait.Fixed(500);
-            input.Interact();
         }
 
         private void EquipmentReader_OnEquipmentChanged(object? sender, (int, int) e)

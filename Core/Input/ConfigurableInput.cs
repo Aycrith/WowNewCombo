@@ -38,6 +38,15 @@ namespace Core
             ClassConfig.Interact.SetClicked();
         }
 
+        public void ApproachOnCooldown()
+        {
+            if (ClassConfig.Approach.GetCooldownRemaining() == 0)
+            {
+                Proc.KeyPress(ClassConfig.Approach.ConsoleKey, fastKeyPress);
+                ClassConfig.Approach.SetClicked();
+            }
+        }
+
         public void Approach()
         {
             Proc.KeyPress(ClassConfig.Approach.ConsoleKey, ClassConfig.Approach.PressDuration);

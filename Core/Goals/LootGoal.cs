@@ -1,4 +1,4 @@
-﻿using Core.Database;
+using Core.Database;
 using Core.GOAP;
 using SharedLib.NpcFinder;
 using Microsoft.Extensions.Logging;
@@ -107,7 +107,7 @@ namespace Core.Goals
 
             if (success)
             {
-                (bool lootTimeOut, double elapsedMs) = wait.Until(MAX_TIME_TO_DETECT_LOOT, LootReadyOrClosed, input.FastInteract);
+                (bool lootTimeOut, double elapsedMs) = wait.Until(MAX_TIME_TO_DETECT_LOOT, LootReadyOrClosed, input.ApproachOnCooldown);
                 Log($"Loot {(successfulInBackground || !lootTimeOut ? "Successful" : "Failed")} after {elapsedMs}ms");
 
                 gatherCorpse &= successfulInBackground || !lootTimeOut;
@@ -144,12 +144,6 @@ namespace Core.Goals
             }
         }
 
-        private void InteractEveryOften()
-        {
-            wait.Fixed(500);
-            input.Interact();
-        }
-
         private bool FoundByCursor()
         {
             npcNameTargeting.ChangeNpcType(NpcNames.Corpse);
@@ -171,7 +165,7 @@ namespace Core.Goals
 
             if (!MinRangeZero())
             {
-                (bool timeout, elapsedMs) = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, InteractEveryOften);
+                (bool timeout, elapsedMs) = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, input.ApproachOnCooldown);
                 Log($"Reached clicked corpse ? {!timeout} {elapsedMs}ms");
             }
 
@@ -276,7 +270,7 @@ namespace Core.Goals
 
                     if (!MinRangeZero())
                     {
-                        (bool timeout, double elapsedMs) = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, InteractEveryOften);
+                        (bool timeout, double elapsedMs) = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, input.ApproachOnCooldown);
                         Log($"Reached Last Target ? {!timeout} {elapsedMs}ms");
                     }
                 }

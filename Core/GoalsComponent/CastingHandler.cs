@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Numerics;
 using System.Threading;
@@ -91,9 +91,9 @@ namespace Core.Goals
 
             if (item.SkipValidation)
             {
-                if (item.Log)
-                    LogInstantSkipValidation(logger, item.Name);
-
+                //if (item.Log)
+                //    LogInstantSkipValidation(logger, item.Name);
+                item.SetClicked();
                 return true;
             }
 
