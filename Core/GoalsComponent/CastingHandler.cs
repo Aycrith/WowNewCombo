@@ -3,14 +3,10 @@ using System;
 using System.Numerics;
 using System.Threading;
 
-#pragma warning disable 0162
-
 namespace Core.Goals
 {
     public partial class CastingHandler : IDisposable
     {
-        private const bool WAIT_CASTBAR_ENDS = false;
-
         private readonly ILogger logger;
         private readonly CancellationTokenSource cts;
         private readonly ConfigurableInput input;
@@ -168,6 +164,7 @@ namespace Core.Goals
                 if (item.Log)
                     LogCastbarSkipValidation(logger, item.Name);
 
+                item.SetClicked();
                 return true;
             }
 
@@ -196,7 +193,7 @@ namespace Core.Goals
                 return false;
             }
 
-            if (WAIT_CASTBAR_ENDS)
+            if (item.AfterCastWaitCastbar)
             {
                 if (playerReader.IsCasting())
                 {
@@ -512,7 +509,7 @@ namespace Core.Goals
                     logger.LogInformation($"{source} React to {value.ToStringF()} -- wait until its ready");
                     int waitTime = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs);
                     bool before = addonReader.UsableAction.Is(item);
-                    wait.Until(waitTime, () => before != addonReader.UsableAction.Is(item));
+                    wait.Until(waitTime, () => before != addonReader.UsableAction.Is(item) || addonReader.UsableAction.Is(item));
                     break;
                 case UI_ERROR.ERR_SPELL_FAILED_STUNNED:
                     int debuffCount = playerReader.AuraCount.PlayerDebuff;

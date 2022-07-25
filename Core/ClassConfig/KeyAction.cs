@@ -53,6 +53,8 @@ namespace Core
 
         public bool AfterCastWaitNextSwing { get; set; }
 
+        public bool AfterCastWaitCastbar { get; set; }
+
         public bool DelayUntilCombat { get; set; }
         public int DelayBeforeCast { get; set; }
         public float Cost { get; set; } = 18;
