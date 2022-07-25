@@ -25,6 +25,8 @@ namespace Core
 
         public event Action? DataChanged;
 
+        public int Hash { private set; get; }
+
         private bool changedFromEvent;
 
         public BagReader(AddonDataProvider reader, ItemDB itemDb, EquipmentReader equipmentReader, int cbagMeta, int citemNumCount, int cItemId)
@@ -66,6 +68,11 @@ namespace Core
                 changedFromEvent = false;
                 DataChanged?.Invoke();
                 lastEvent = DateTime.UtcNow;
+
+                if (metaChanged || inventoryChanged)
+                {
+                    Hash++;
+                }
             }
         }
 

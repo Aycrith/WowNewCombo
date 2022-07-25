@@ -1,12 +1,16 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Numerics;
 using System.Threading;
+
+#pragma warning disable 0162
 
 namespace Core.Goals
 {
     public partial class CastingHandler : IDisposable
     {
+        private const bool WAIT_CASTBAR_ENDS = false;
+
         private readonly ILogger logger;
         private readonly CancellationTokenSource cts;
         private readonly ConfigurableInput input;
@@ -133,7 +137,7 @@ namespace Core.Goals
                 return false;
             }
 
-            (bool gcdTimeout, double elapsedMs) = wait.Until(playerReader.NetworkLatency.Value, () => playerReader.GCD.Value != 0);
+            (bool gcdTimeout, double elapsedMs) = wait.Until(2 * playerReader.NetworkLatency.Value, () => playerReader.GCD.Value != 0);
             logger.LogInformation($"Instant - has GCD ? {!gcdTimeout} | {playerReader.GCD.Value}ms | {elapsedMs}ms");
 
             return true;
@@ -167,7 +171,7 @@ namespace Core.Goals
                 return true;
             }
 
-            (bool inputTimeOut, double inputElapsedMs) = wait.Until(remainCastMs + pressMs + SpellQueueTimeMs + playerReader.NetworkLatency.Value,
+            (bool inputTimeOut, double inputElapsedMs) = wait.Until(remainCastMs + pressMs + SpellQueueTimeMs + (2 * playerReader.NetworkLatency.Value),
                 interrupt: () =>
                 beforeCastEventValue != playerReader.CastEvent.Value ||
                 beforeSpellId != playerReader.CastSpellId.Value ||
@@ -192,43 +196,46 @@ namespace Core.Goals
                 return false;
             }
 
-            if (playerReader.IsCasting())
+            if (WAIT_CASTBAR_ENDS)
             {
-                int remainMs = playerReader.RemainCastMs;
-                if (remainMs < MIN_GCD)
+                if (playerReader.IsCasting())
                 {
-                    remainMs = MIN_GCD;
-                }
-                remainMs = remainMs - SpellQueueTimeMs - playerReader.NetworkLatency.Value;
+                    int remainMs = playerReader.RemainCastMs;
+                    if (remainMs < MIN_GCD)
+                    {
+                        remainMs = MIN_GCD;
+                    }
+                    remainMs = remainMs - SpellQueueTimeMs - playerReader.NetworkLatency.Value;
 
-                if (item.Log)
-                    LogVisibleCastbarWaitForEnd(logger, item.Name, remainMs);
-
-                wait.Until(remainMs, () => !playerReader.IsCasting() || prevState != interrupt(), RepeatPetAttack);
-                if (prevState != interrupt())
-                {
                     if (item.Log)
-                        LogVisibleCastbarInterrupted(logger, item.Name);
+                        LogVisibleCastbarWaitForEnd(logger, item.Name, remainMs);
 
-                    return false;
+                    wait.Until(remainMs, () => !playerReader.IsCasting() || prevState != interrupt(), RepeatPetAttack);
+                    if (prevState != interrupt())
+                    {
+                        if (item.Log)
+                            LogVisibleCastbarInterrupted(logger, item.Name);
+
+                        return false;
+                    }
                 }
-            }
-            else if ((UI_ERROR)playerReader.CastEvent.Value == UI_ERROR.CAST_START)
-            {
-                beforeCastEventValue = playerReader.CastEvent.Value;
-
-                int remain = playerReader.RemainCastMs - SpellQueueTimeMs - playerReader.NetworkLatency.Value;
-
-                if (item.Log)
-                    LogHiddenCastbarWaitForEnd(logger, item.Name, remain);
-
-                wait.Until(remain, () => beforeCastEventValue != playerReader.CastEvent.Value || prevState != interrupt(), RepeatPetAttack);
-                if (prevState != interrupt())
+                else if ((UI_ERROR)playerReader.CastEvent.Value == UI_ERROR.CAST_START)
                 {
-                    if (item.Log)
-                        LogHiddenCastbarInterrupted(logger, item.Name);
+                    beforeCastEventValue = playerReader.CastEvent.Value;
 
-                    return false;
+                    int remain = playerReader.RemainCastMs - SpellQueueTimeMs - playerReader.NetworkLatency.Value;
+
+                    if (item.Log)
+                        LogHiddenCastbarWaitForEnd(logger, item.Name, remain);
+
+                    wait.Until(remain, () => beforeCastEventValue != playerReader.CastEvent.Value || prevState != interrupt(), RepeatPetAttack);
+                    if (prevState != interrupt())
+                    {
+                        if (item.Log)
+                            LogHiddenCastbarInterrupted(logger, item.Name);
+
+                        return false;
+                    }
                 }
             }
 
@@ -316,11 +323,7 @@ namespace Core.Goals
             }
 
             int auraHash = playerReader.AuraCount.Hash;
-
-            if (item.WaitForGCD && !WaitForGCD(item, interrupt))
-            {
-                return false;
-            }
+            int bagHash = addonReader.BagReader.Hash;
 
             if (!item.HasCastBar)
             {
@@ -355,8 +358,14 @@ namespace Core.Goals
                     LogAfterCastWaitBuff(logger, item.Name, !changeTimeOut, playerReader.AuraCount.ToString(), elapsedMs);
             }
 
-            if (item.DelayAfterCast != defaultKeyAction.DelayAfterCast)
+            if (item.AfterCastWaitItem)
             {
+                int totalTime = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs) + SpellQueueTimeMs;
+
+                (bool changeTimeOut, double elapsedMs) = wait.Until(totalTime, () => bagHash != addonReader.BagReader.Hash);
+                if (item.Log)
+                    LogAfterCastWaitItem(logger, item.Name, !changeTimeOut, elapsedMs);
+            }
 
             if (item.DelayUntilCombat) // stop waiting if the mob is targetting me
             {
@@ -423,7 +432,7 @@ namespace Core.Goals
 
         private bool WaitForGCD(KeyAction item, Func<bool> interrupt)
         {
-            int totalTime = playerReader.GCD.Value - SpellQueueTimeMs + playerReader.NetworkLatency.Value;
+            int totalTime = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs) - (SpellQueueTimeMs - playerReader.NetworkLatency.Value); //+ playerReader.NetworkLatency.Value
             if (totalTime < 0)
                 return true;
 
@@ -492,14 +501,18 @@ namespace Core.Goals
                     item.SetClicked();
                     break;
                 case UI_ERROR.SPELL_FAILED_NOT_READY:
-                //int waitTime = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs);
-                //logger.LogInformation($"{source} React to {value.ToStringF()} -- wait for GCD {waitTime}ms");
-                //wait.Fixed(waitTime);
-                //break;
+                /*
+                int waitTime = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs);
+                logger.LogInformation($"{source} React to {value.ToStringF()} -- wait for GCD {waitTime}ms");
+                if (waitTime > 0)
+                    wait.Fixed(waitTime);
+                break;
+                */
                 case UI_ERROR.ERR_SPELL_COOLDOWN:
                     logger.LogInformation($"{source} React to {value.ToStringF()} -- wait until its ready");
+                    int waitTime = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs);
                     bool before = addonReader.UsableAction.Is(item);
-                    wait.While(() => before != addonReader.UsableAction.Is(item));
+                    wait.Until(waitTime, () => before != addonReader.UsableAction.Is(item));
                     break;
                 case UI_ERROR.ERR_SPELL_FAILED_STUNNED:
                     int debuffCount = playerReader.AuraCount.PlayerDebuff;
