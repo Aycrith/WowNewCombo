@@ -12,6 +12,8 @@ namespace Core
 
         ActionBarCostReader ActionBarCostReader { get; }
 
+        ActionBarCooldownReader ActionBarCooldownReader { get; }
+
         SpellBookReader SpellBookReader { get; }
 
         TalentReader TalentReader { get; }

@@ -243,6 +243,10 @@ app {
     background-color: #620693;
 }
 
+.bg-red {
+    background-color: #4d120e;
+}
+
 #tooltip {
     background: cornsilk;
     border: 1px solid black;

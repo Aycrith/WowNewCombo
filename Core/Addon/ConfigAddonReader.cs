@@ -9,6 +9,7 @@ namespace Core.Addon
         public EquipmentReader EquipmentReader => throw new NotImplementedException();
         public LevelTracker LevelTracker => throw new NotImplementedException();
         public ActionBarCostReader ActionBarCostReader => throw new NotImplementedException();
+        public ActionBarCooldownReader ActionBarCooldownReader => throw new NotImplementedException();
 
         public SpellBookReader SpellBookReader => throw new NotImplementedException();
         public TalentReader TalentReader => throw new NotImplementedException();

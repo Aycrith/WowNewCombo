@@ -2,7 +2,9 @@
 @using Core.GOAP
 @using System.Text.RegularExpressions
 
-<tr class="@ActionClass(this.IsSelected)">
+@inject IAddonReader addonReader
+
+<tr class="@ActionClass(this.IsSelected, 0)">
     <td>
         <b style="color:@DisplayCanRun(goal.CanRun())">@goal.Cost: @goal.DisplayName</b>
     </td>
@@ -34,7 +36,11 @@
                 }
                 @for (int k = 0; k < this.goal.Keys.Length; k++)
                 {
-                    <tr class="@ActionClass(lastKeyClicked==this.goal.Keys[k].ConsoleKeyFormHash)">
+                    int Cooldown = 0;
+                    if(this.goal.Keys[k].Slot > 0)
+                        Cooldown = addonReader.ActionBarCooldownReader.GetRemainingCooldown(addonReader.PlayerReader, this.goal.Keys[k]);
+
+                    <tr class="@ActionClass(lastKeyClicked == this.goal.Keys[k].ConsoleKeyFormHash, Cooldown)">
                         <td>
                             <b style="color:@DisplayCanRun(this.goal.Keys[k].CanRun())">@this.goal.Keys[k].Name [@this.goal.Keys[k].Key]</b>
                         </td>
@@ -97,8 +103,11 @@
         return value ? "badge-success" : "badge-danger";
     }
 
-    private static string ActionClass(bool item)
+    private static string ActionClass(bool item, int cooldown)
     {
+        if (cooldown > 0)
+            return "bg-red animate__animated animate__fadeIn";
+
         return item ? "bg-majestic animate__animated animate__fadeIn" : "table-default";
     }
 
