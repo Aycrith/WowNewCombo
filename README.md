@@ -752,6 +752,11 @@ Formula: `[Keyword] [Operator] [Numeric integer value]`
 | `Mana` | Player current mana |
 | `Rage` | Player current rage |
 | `Energy` | Player current energy |
+| `RunicPower` | Player current runic power |
+| `BloodRune` | Player current blood runes |
+| `FrostRune` | Player current frost runes |
+| `UnholyRune` | Player current unholy runes |
+| `TotalRune` | Player current runes (blood+frost+unholy+death) |
 | `Combo Point` | Player current combo points on the target |
 | `BagCount` | How many items in the player inventory |
 | `MobCount` | How many detected, alive, and currently fighting mob around the player |
