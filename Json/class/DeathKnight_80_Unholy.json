@@ -9,7 +9,8 @@
   "MountKey": "N0",
   "IntVariables": {
     "MIN_HP_FOOD%": 40,
-    "MIN_RUNE_TO_DUMP": 40
+    "MIN_RUNE_TO_DUMP": 40,
+    "ITEM_CORPSE_DUST": 37201
   },
   "Form": [
     {
@@ -247,14 +248,9 @@
         "Requirements": [
           "!Has Pet",
           "!Mounted",
-          "BagItem:37201"
+          "BagItem:ITEM_CORPSE_DUST"
         ]
-      }
-      
-    ]
-  },
-  "Parallel": {
-    "Sequence": [
+      },
       {
         "Name": "Food",
         "Key": "=",
