@@ -4,21 +4,19 @@ namespace Core
 {
     public class AddonBits
     {
-        private readonly AddonDataProvider reader;
         private readonly int cell1;
         private readonly int cell2;
 
         private BitVector32 v1;
         private BitVector32 v2;
 
-        public AddonBits(AddonDataProvider reader, int cell1, int cell2)
+        public AddonBits(int cell1, int cell2)
         {
-            this.reader = reader;
             this.cell1 = cell1;
             this.cell2 = cell2;
         }
 
-        public void Update()
+        public void Update(AddonDataProvider reader)
         {
             v1 = new(reader.GetInt(cell1));
             v2 = new(reader.GetInt(cell2));

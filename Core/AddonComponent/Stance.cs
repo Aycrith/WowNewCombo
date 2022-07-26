@@ -2,18 +2,16 @@
 {
     public class Stance
     {
-        private readonly AddonDataProvider reader;
         private readonly int cell;
 
         private int value;
 
-        public Stance(AddonDataProvider reader, int cell)
+        public Stance(int cell)
         {
-            this.reader = reader;
             this.cell = cell;
         }
 
-        public void Update()
+        public void Update(AddonDataProvider reader)
         {
             value = reader.GetInt(cell);
         }

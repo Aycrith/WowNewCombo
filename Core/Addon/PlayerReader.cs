@@ -11,11 +11,11 @@ namespace Core
         public PlayerReader(AddonDataProvider reader)
         {
             this.reader = reader;
-            Bits = new(reader, 8, 9);
-            SpellInRange = new(reader, 40);
-            Buffs = new(reader, 41);
-            TargetDebuffs = new(reader, 42);
-            Stance = new(reader, 48);
+            Bits = new(8, 9);
+            SpellInRange = new(40);
+            Buffs = new(41);
+            TargetDebuffs = new(42);
+            Stance = new(48);
             CustomTrigger1 = new(reader.GetInt(74));
         }
 
@@ -153,11 +153,13 @@ namespace Core
 
         public void Update()
         {
-            Bits.Update();
-            SpellInRange.Update();
-            Buffs.Update();
-            TargetDebuffs.Update();
-            Stance.Update();
+            AddonDataProvider reader = this.reader;
+
+            Bits.Update(reader);
+            SpellInRange.Update(reader);
+            Buffs.Update(reader);
+            TargetDebuffs.Update(reader);
+            Stance.Update(reader);
             CustomTrigger1 = new(reader.GetInt(74));
 
             if (UIError != UI_ERROR.NONE)

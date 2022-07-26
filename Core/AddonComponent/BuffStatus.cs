@@ -4,18 +4,16 @@ namespace Core
 {
     public class BuffStatus
     {
-        private readonly AddonDataProvider reader;
         private readonly int cell;
 
         private BitVector32 v;
 
-        public BuffStatus(AddonDataProvider reader, int cell)
+        public BuffStatus(int cell)
         {
-            this.reader = reader;
             this.cell = cell;
         }
 
-        public void Update()
+        public void Update(AddonDataProvider reader)
         {
             v = new(reader.GetInt(cell));
         }

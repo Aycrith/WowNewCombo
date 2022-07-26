@@ -5,8 +5,6 @@ namespace Core
 {
     public class CombatLog
     {
-        private readonly AddonDataProvider reader;
-
         private bool wasInCombat;
 
         public event Action? KillCredit;
@@ -21,10 +19,8 @@ namespace Core
         public RecordInt TargetMissType { get; }
         public RecordInt TargetDodge { get; }
 
-        public CombatLog(AddonDataProvider reader, int cDamageDone, int cDamageTaken, int cDead, int cTargetMiss)
+        public CombatLog(int cDamageDone, int cDamageTaken, int cDead, int cTargetMiss)
         {
-            this.reader = reader;
-
             DamageDoneGuid = new RecordInt(cDamageDone);
             DamageTakenGuid = new RecordInt(cDamageTaken);
             DeadGuid = new RecordInt(cDead);
@@ -48,7 +44,7 @@ namespace Core
             TargetDodge.Reset();
         }
 
-        public void Update(bool playerInCombat)
+        public void Update(AddonDataProvider reader, bool playerInCombat)
         {
             if (TargetMissType.Updated(reader) && (MissType)TargetMissType.Value == MissType.DODGE)
             {

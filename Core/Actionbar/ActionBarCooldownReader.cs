@@ -19,21 +19,19 @@ namespace Core
         private const float MAX_ACTION_IDX = 100000f;
         private const float MAX_VALUE_MUL = 100f;
 
-        private readonly AddonDataProvider reader;
         private readonly int cActionbarNum;
 
         private readonly Data[] data;
 
-        public ActionBarCooldownReader(AddonDataProvider reader, int cActionbarNum)
+        public ActionBarCooldownReader(int cActionbarNum)
         {
-            this.reader = reader;
             this.cActionbarNum = cActionbarNum;
 
             data = new Data[ActionBar.CELL_COUNT * ActionBar.BIT_PER_CELL];
             Reset();
         }
 
-        public void Read()
+        public void Read(AddonDataProvider reader)
         {
             // formula
             // MAX_ACTION_IDX * slot + (cooldown / MAX_VALUE_MUL)

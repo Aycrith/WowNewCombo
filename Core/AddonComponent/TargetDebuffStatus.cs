@@ -4,18 +4,16 @@ namespace Core
 {
     public class TargetDebuffStatus
     {
-        private readonly AddonDataProvider reader;
         private readonly int cell;
 
         private BitVector32 v;
 
-        public TargetDebuffStatus(AddonDataProvider reader, int cell)
+        public TargetDebuffStatus(int cell)
         {
-            this.reader = reader;
             this.cell = cell;
         }
 
-        public void Update()
+        public void Update(AddonDataProvider reader)
         {
             v = new(reader.GetInt(cell));
         }

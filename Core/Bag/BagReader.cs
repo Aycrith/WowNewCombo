@@ -12,7 +12,6 @@ namespace Core
         private readonly int cItemNumCount;
         private readonly int cItemId;
 
-        private readonly AddonDataProvider reader;
         private readonly EquipmentReader equipmentReader;
 
         public ItemDB ItemDB { get; private set; }
@@ -29,9 +28,8 @@ namespace Core
 
         private bool changedFromEvent;
 
-        public BagReader(AddonDataProvider reader, ItemDB itemDb, EquipmentReader equipmentReader, int cbagMeta, int citemNumCount, int cItemId)
+        public BagReader(ItemDB itemDb, EquipmentReader equipmentReader, int cbagMeta, int citemNumCount, int cItemId)
         {
-            this.reader = reader;
             this.ItemDB = itemDb;
             this.equipmentReader = equipmentReader;
 
@@ -57,11 +55,11 @@ namespace Core
             this.equipmentReader.OnEquipmentChanged -= OnEquipmentChanged;
         }
 
-        public void Read()
+        public void Read(AddonDataProvider reader)
         {
-            ReadBagMeta(out bool metaChanged);
+            ReadBagMeta(reader, out bool metaChanged);
 
-            ReadInventory(out bool inventoryChanged);
+            ReadInventory(reader, out bool inventoryChanged);
 
             if (changedFromEvent || metaChanged || inventoryChanged || (DateTime.UtcNow - this.lastEvent).TotalSeconds > 11)
             {
@@ -76,7 +74,7 @@ namespace Core
             }
         }
 
-        private void ReadBagMeta(out bool changed)
+        private void ReadBagMeta(AddonDataProvider reader, out bool changed)
         {
             changed = false;
 
@@ -116,7 +114,7 @@ namespace Core
             }
         }
 
-        private void ReadInventory(out bool hasChanged)
+        private void ReadInventory(AddonDataProvider reader, out bool hasChanged)
         {
             hasChanged = false;
 

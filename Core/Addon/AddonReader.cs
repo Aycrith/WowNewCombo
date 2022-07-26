@@ -10,7 +10,7 @@ namespace Core
     public sealed class AddonReader : IAddonReader, IDisposable
     {
         private readonly ILogger logger;
-        private readonly AddonDataProvider addonDataProvider;
+        private readonly AddonDataProvider reader;
         private readonly AutoResetEvent autoResetEvent;
 
         public PlayerReader PlayerReader { get; }
@@ -51,6 +51,7 @@ namespace Core
         public int DamageTakenCount => CombatLog.DamageTaken.Count;
         public int DamageDoneCount => CombatLog.DamageDone.Count;
 
+        private int lastTargetId = -1;
         public string TargetName { get; private set; } = string.Empty;
 
         public double AvgUpdateLatency { private set; get; }
@@ -63,7 +64,7 @@ namespace Core
             CreatureDB creatureDB, SpellDB spellDB, TalentDB talentDB)
         {
             this.logger = logger;
-            this.addonDataProvider = addonDataProvider;
+            this.reader = addonDataProvider;
             this.autoResetEvent = autoResetEvent;
 
             this.AreaDb = areaDB;
@@ -71,24 +72,24 @@ namespace Core
             this.ItemDb = itemDB;
             this.CreatureDb = creatureDB;
 
-            this.CombatLog = new(addonDataProvider, 64, 65, 66, 67);
+            this.CombatLog = new(64, 65, 66, 67);
 
-            this.EquipmentReader = new(addonDataProvider, ItemDb, 23, 24);
-            this.BagReader = new(addonDataProvider, ItemDb, EquipmentReader, 20, 21, 22);
+            this.EquipmentReader = new(ItemDb, 23, 24);
+            this.BagReader = new(ItemDb, EquipmentReader, 20, 21, 22);
 
-            this.ActionBarCostReader = new(addonDataProvider, 35, 36);
-            this.ActionBarCooldownReader = new(addonDataProvider, 37);
+            this.ActionBarCostReader = new(35, 36);
+            this.ActionBarCooldownReader = new(37);
 
-            this.GossipReader = new(addonDataProvider, 73);
+            this.GossipReader = new(73);
 
-            this.SpellBookReader = new(addonDataProvider, 71, spellDB);
+            this.SpellBookReader = new(71, spellDB);
 
             this.PlayerReader = new(addonDataProvider);
             this.LevelTracker = new(this);
-            this.TalentReader = new(addonDataProvider, 72, PlayerReader, talentDB);
+            this.TalentReader = new(72, PlayerReader, talentDB);
 
-            this.CurrentAction = new(PlayerReader, addonDataProvider, 25, 26, 27, 28, 29);
-            this.UsableAction = new(PlayerReader, addonDataProvider, 30, 31, 32, 33, 34);
+            this.CurrentAction = new(PlayerReader, 25, 26, 27, 28, 29);
+            this.UsableAction = new(PlayerReader, 30, 31, 32, 33, 34);
         }
 
         public void Dispose()
@@ -101,7 +102,7 @@ namespace Core
         {
             FetchData();
 
-            if (GlobalTime.UpdatedNoEvent(addonDataProvider))
+            if (GlobalTime.UpdatedNoEvent(reader))
             {
                 if (GlobalTime.Value <= 3)
                 {
@@ -121,28 +122,35 @@ namespace Core
                 }
                 AvgUpdateLatency /= UpdateLatencys.Length;
 
-                CurrentAction.Update();
-                UsableAction.Update();
+                AddonDataProvider reader = this.reader;
+
+                CurrentAction.Update(reader);
+                UsableAction.Update(reader);
 
                 PlayerReader.Update();
 
-                TargetName = CreatureDb.Entries.TryGetValue(PlayerReader.TargetId, out Creature creature)
-                    ? creature.Name : addonDataProvider.GetString(16) + addonDataProvider.GetString(17);
+                if (lastTargetId != PlayerReader.TargetId)
+                {
+                    lastTargetId = PlayerReader.TargetId;
 
-                CombatLog.Update(PlayerReader.Bits.PlayerInCombat());
+                    TargetName = CreatureDb.Entries.TryGetValue(PlayerReader.TargetId, out Creature creature)
+                    ? creature.Name : reader.GetString(16) + reader.GetString(17);
+                }
 
-                BagReader.Read();
-                EquipmentReader.Read();
+                CombatLog.Update(reader, PlayerReader.Bits.PlayerInCombat());
 
-                ActionBarCostReader.Read();
-                ActionBarCooldownReader.Read();
+                BagReader.Read(reader);
+                EquipmentReader.Read(reader);
 
-                GossipReader.Read();
+                ActionBarCostReader.Read(reader);
+                ActionBarCooldownReader.Read(reader);
 
-                SpellBookReader.Read();
-                TalentReader.Read();
+                GossipReader.Read(reader);
 
-                if (UIMapId.Updated(addonDataProvider))
+                SpellBookReader.Read(reader);
+                TalentReader.Read(reader);
+
+                if (UIMapId.Updated(reader))
                 {
                     AreaDb.Update(WorldMapAreaDb.GetAreaId(UIMapId.Value));
                     ZoneChanged?.Invoke();
@@ -155,7 +163,7 @@ namespace Core
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void FetchData()
         {
-            addonDataProvider.Update();
+            reader.Update();
         }
 
         public void SessionReset()
@@ -181,7 +189,7 @@ namespace Core
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetInt(int index)
         {
-            return addonDataProvider.GetInt(index);
+            return reader.GetInt(index);
         }
 
         public void PlayerDied()

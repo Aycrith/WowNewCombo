@@ -9,20 +9,18 @@ namespace Core
     {
         private readonly int cSpellId;
 
-        private readonly AddonDataProvider reader;
         private readonly HashSet<int> spells = new();
 
         public SpellDB SpellDB { get; }
         public int Count => spells.Count;
 
-        public SpellBookReader(AddonDataProvider reader, int cSpellId, SpellDB spellDB)
+        public SpellBookReader(int cSpellId, SpellDB spellDB)
         {
-            this.reader = reader;
             this.cSpellId = cSpellId;
             this.SpellDB = spellDB;
         }
 
-        public void Read()
+        public void Read(AddonDataProvider reader)
         {
             int spellId = reader.GetInt(cSpellId);
             if (spellId == 0) return;

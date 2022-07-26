@@ -28,7 +28,6 @@ namespace Core
 
     public class ActionBarCostReader
     {
-        private readonly AddonDataProvider reader;
         private readonly int cActionbarMeta;
         private readonly int cActionbarNum;
 
@@ -44,11 +43,10 @@ namespace Core
         public event EventHandler<ActionBarCostEventArgs>? OnActionCostChanged;
         public event Action? OnActionCostReset;
 
-        public ActionBarCostReader(AddonDataProvider reader, int cActionbarMeta, int cActionbarNum)
+        public ActionBarCostReader(int cActionbarMeta, int cActionbarNum)
         {
             this.cActionbarMeta = cActionbarMeta;
             this.cActionbarNum = cActionbarNum;
-            this.reader = reader;
 
             data = new ActionBarCost[ActionBar.CELL_COUNT * ActionBar.BIT_PER_CELL][];
             for (int i = 0; i < data.Length; i++)
@@ -63,7 +61,7 @@ namespace Core
             Reset();
         }
 
-        public void Read()
+        public void Read(AddonDataProvider reader)
         {
             // formula
             // COST_MAX_COST_IDX * costNum + COST_MAX_POWER_TYPE * (type + offsetEnumPowerType) + slot

@@ -4,20 +4,18 @@ namespace Core
 {
     public class SpellInRange
     {
-        private readonly AddonDataProvider reader;
         private readonly int cell;
 
         public bool this[int index] => b[index];
 
         private BitVector32 b;
 
-        public SpellInRange(AddonDataProvider reader, int cell)
+        public SpellInRange(int cell)
         {
-            this.reader = reader;
             this.cell = cell;
         }
 
-        public void Update()
+        public void Update(AddonDataProvider reader)
         {
             b = new(reader.GetInt(cell));
         }

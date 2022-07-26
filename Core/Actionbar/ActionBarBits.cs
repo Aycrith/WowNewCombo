@@ -4,26 +4,19 @@ namespace Core
 {
     public class ActionBarBits
     {
-        private readonly AddonDataProvider reader;
         private readonly int[] cells;
 
         private readonly BitVector32[] bits;
         private readonly PlayerReader playerReader;
 
-        public ActionBarBits(PlayerReader playerReader, AddonDataProvider reader, params int[] cells)
+        public ActionBarBits(PlayerReader playerReader, params int[] cells)
         {
-            this.reader = reader;
             this.playerReader = playerReader;
             this.cells = cells;
-
             bits = new BitVector32[cells.Length];
-            for (int i = 0; i < bits.Length; i++)
-            {
-                bits[i] = new(reader.GetInt(cells[i]));
-            }
         }
 
-        public void Update()
+        public void Update(AddonDataProvider reader)
         {
             for (int i = 0; i < bits.Length; i++)
             {

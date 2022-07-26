@@ -482,7 +482,7 @@ namespace Core.Goals
             SpellQueueOpen = DateTime.UtcNow.AddMilliseconds(duration);
 
             if (item.Log)
-                logger.LogInformation($"[{item.Name}] GCD: {playerReader.GCD.Value}ms | castRem: {playerReader.RemainCastMs} | Next Spell can be queued after {duration}ms");
+                LogWaitForGCD(logger, item.Name, playerReader.GCD.Value, playerReader.RemainCastMs, duration);
         }
 
         private void ReactToLastCastingEvent(KeyAction item, string source)
@@ -803,6 +803,12 @@ namespace Core.Goals
             Level = LogLevel.Information,
             Message = "[{name}] ... AfterCastWaitItem ? {changeTimeOut} | {elapsedMs}ms")]
         static partial void LogAfterCastWaitItem(ILogger logger, string name, bool changeTimeOut, double elapsedMs);
+
+        [LoggerMessage(
+            EventId = 93,
+            Level = LogLevel.Information,
+            Message = "[{name}] GCD: {gcd}ms | castRem: {remainCastMs} | Next Spell can be queued after {duration}ms")]
+        static partial void LogWaitForGCD(ILogger logger, string name, int gcd, int remainCastMs, double duration);
 
         #endregion
     }

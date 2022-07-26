@@ -8,7 +8,6 @@ namespace Core
     {
         private readonly int cTalent;
 
-        private readonly AddonDataProvider reader;
         private readonly PlayerReader playerReader;
         private readonly TalentDB talentDB;
         public int Count { get; private set; }
@@ -16,16 +15,15 @@ namespace Core
         public Dictionary<int, Talent> Talents { get; } = new();
         public Dictionary<int, int> Spells { get; } = new();
 
-        public TalentReader(AddonDataProvider reader, int cTalent, PlayerReader playerReader, TalentDB talentDB)
+        public TalentReader(int cTalent, PlayerReader playerReader, TalentDB talentDB)
         {
-            this.reader = reader;
             this.cTalent = cTalent;
 
             this.playerReader = playerReader;
             this.talentDB = talentDB;
         }
 
-        public void Read()
+        public void Read(AddonDataProvider reader)
         {
             int data = reader.GetInt(cTalent);
             if (data == 0 || Talents.ContainsKey(data)) return;

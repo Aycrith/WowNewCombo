@@ -6,8 +6,6 @@ namespace Core
     {
         private readonly int cGossip;
 
-        private readonly AddonDataProvider reader;
-
         public int Count { private set; get; }
         public Dictionary<Gossip, int> Gossips { get; } = new();
 
@@ -28,13 +26,12 @@ namespace Core
 
         public bool GossipStartOrMerchantWindowOpened() => GossipStart() || MerchantWindowOpened();
 
-        public GossipReader(AddonDataProvider reader, int cGossip)
+        public GossipReader(int cGossip)
         {
-            this.reader = reader;
             this.cGossip = cGossip;
         }
 
-        public void Read()
+        public void Read(AddonDataProvider reader)
         {
             data = reader.GetInt(cGossip);
 
