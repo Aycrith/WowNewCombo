@@ -384,7 +384,9 @@ namespace Core
         {
             foreach (var kvp in intKeyValues)
             {
-                if (!intVariables.TryAdd(kvp.Key, () => kvp.Value))
+                int v = kvp.Value;
+                int f() => v;
+                if (!intVariables.TryAdd(kvp.Key, f))
                 {
                     throw new Exception($"Unable to add user defined variable to values. [{kvp.Key} -> {kvp.Value}]");
                 }
@@ -703,9 +705,9 @@ namespace Core
         {
             if (requirement.Contains(':'))
             {
-                var parts = requirement.Split(":");
-                var spellsPart = parts[1].Split("|");
-                var spellIds = spellsPart.Select(x => int.Parse(x.Trim())).ToArray();
+                string[] parts = requirement.Split(":");
+                string[] spellsPart = parts[1].Split("|");
+                int[] spellIds = spellsPart.Select(x => int.Parse(x.Trim())).ToArray();
 
                 var spellIdsStringFormatted = string.Join(", ", spellIds);
 
@@ -730,8 +732,8 @@ namespace Core
 
         private Requirement CreateForm(string requirement)
         {
-            var parts = requirement.Split(":");
-            var form = Enum.Parse<Form>(parts[1]);
+            string[] parts = requirement.Split(":");
+            Form form = Enum.Parse<Form>(parts[1]);
 
             bool f() => playerReader.Form == form;
             string s() => $"{playerReader.Form}";
@@ -745,8 +747,8 @@ namespace Core
 
         private Requirement CreateRace(string requirement)
         {
-            var parts = requirement.Split(":");
-            var race = Enum.Parse<RaceEnum>(parts[1]);
+            string[] parts = requirement.Split(":");
+            RaceEnum race = Enum.Parse<RaceEnum>(parts[1]);
 
             bool f() => playerReader.Race == race;
             string s() => playerReader.Race.ToStringF();
@@ -760,7 +762,7 @@ namespace Core
 
         private Requirement CreateSpell(string requirement)
         {
-            var parts = requirement.Split(":");
+            string[] parts = requirement.Split(":");
             string name = parts[1].Trim();
 
             if (int.TryParse(name, out int id) && spellBookReader.TryGetValue(id, out Spell spell))
@@ -784,9 +786,9 @@ namespace Core
 
         private Requirement CreateTalent(string requirement)
         {
-            var parts = requirement.Split(":");
-            var name = parts[1].Trim();
-            var rank = parts.Length < 3 ? 1 : int.Parse(parts[2]);
+            string[] parts = requirement.Split(":");
+            string name = parts[1].Trim();
+            int rank = parts.Length < 3 ? 1 : int.Parse(parts[2]);
 
             bool f() => talentReader.HasTalent(name, rank);
             string s() => rank == 1 ? $"Talent {name}" : $"Talent {name} (Rank {rank})";
@@ -818,8 +820,13 @@ namespace Core
 
         private Requirement CreateNpcId(string requirement)
         {
-            var parts = requirement.Split(":");
-            var npcId = int.Parse(parts[1]);
+            string[] parts = requirement.Split(":");
+
+            int npcId;
+            if (intVariables.TryGetValue(parts[1], out Func<int>? value))
+                npcId = value();
+            else
+                npcId = int.Parse(parts[1]);
 
             string npcName = string.Empty;
             if (creatureDb.Entries.TryGetValue(npcId, out Creature creature))
@@ -839,11 +846,17 @@ namespace Core
 
         private Requirement CreateBagItem(string requirement)
         {
-            var parts = requirement.Split(":");
-            var itemId = int.Parse(parts[1]);
-            var count = parts.Length < 3 ? 1 : int.Parse(parts[2]);
+            string[] parts = requirement.Split(":");
 
-            var itemName = string.Empty;
+            int itemId;
+            if (intVariables.TryGetValue(parts[1], out Func<int>? value))
+                itemId = value();
+            else
+                itemId = int.Parse(parts[1]);
+
+            int count = parts.Length < 3 ? 1 : int.Parse(parts[2]);
+
+            string itemName = string.Empty;
             if (itemDb.Items.TryGetValue(itemId, out Item item))
             {
                 itemName = item.Name;

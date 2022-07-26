@@ -847,12 +847,13 @@ e.g. for `CD_{KeyAction.Name}`: Where `Hammer of Justice` referencing the `Judge
 
 If a particular npc is required then this requirement can be used.
 
-Formula: `npcID:[Numeric integer value]`
+Formula: `npcID:[intVariableKey/Numeric integer value]`
 
 e.g.
 
 * `"Requirement": "!npcID:6195"` - target is not [6195](https://tbc.wowhead.com/npc=6195)
 * `"Requirement": "npcID:6195"` - target is [6195](https://tbc.wowhead.com/npc=6195)
+* `"Requirement": "npcID:MyAwesomeIntVariable"`
 
 ---
 ### **Bag requirements**
@@ -861,7 +862,7 @@ If an `itemid` must be in your bag with given `count` quantity then can use this
 
 Useful to determine when to create warlock Healthstone or soul shards.
 
-Formula: `BagItem:[itemid]:[count]`
+Formula: `BagItem:[intVariableKey/itemid]:[count]`
 
 e.g.
 
@@ -869,6 +870,7 @@ e.g.
 * `"Requirement": "BagItem:6265:3"` - Must have atleast [3x Soulshard](https://tbc.wowhead.com/item=6265) in bag
 * `"Requirement": "not BagItem:19007:1"` - Must not have a [Lesser Healthstone](https://tbc.wowhead.com/item=19007) in bag
 * `"Requirement": "!BagItem:6265:3"` - Must not have [3x Soulshard](https://tbc.wowhead.com/item=6265) in bag
+* `"Requirement": "!BagItem:MyAwesomeIntVariable:69"`
 
 ---
 ### **Form requirements**
