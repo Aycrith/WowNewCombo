@@ -21,8 +21,15 @@ namespace Core.Goals
             this.goapAgentState = goapAgentState;
             this.wait = wait;
 
-            AddPrecondition(GoapKey.damagedone, false);
-            AddPrecondition(GoapKey.damagetaken, false);
+            if (classConfig.KeyboardOnly)
+            {
+                AddPrecondition(GoapKey.consumablecorpsenearby, true);
+            }
+            else
+            {
+                AddPrecondition(GoapKey.damagedone, false);
+                AddPrecondition(GoapKey.damagetaken, false);
+            }
 
             AddPrecondition(GoapKey.consumecorpse, true);
 

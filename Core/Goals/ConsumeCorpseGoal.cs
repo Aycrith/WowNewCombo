@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Core.GOAP;
 
 namespace Core.Goals
@@ -18,8 +18,15 @@ namespace Core.Goals
             this.classConfig = classConfig;
             this.state = state;
 
-            AddPrecondition(GoapKey.damagedone, false);
-            AddPrecondition(GoapKey.damagetaken, false);
+            if (classConfig.KeyboardOnly)
+            {
+                AddPrecondition(GoapKey.consumablecorpsenearby, true);
+            }
+            else
+            {
+                AddPrecondition(GoapKey.damagedone, false);
+                AddPrecondition(GoapKey.damagetaken, false);
+            }
 
             AddPrecondition(GoapKey.producedcorpse, true);
             AddPrecondition(GoapKey.consumecorpse, false);

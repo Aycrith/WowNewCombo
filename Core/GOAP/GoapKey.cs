@@ -6,6 +6,7 @@
         dangercombat,
         damagetaken,
         damagedone,
+        damagetakenordone,
         targetisalive,
         targettargetsus,
         incombat,
@@ -25,7 +26,8 @@
         gathering,
         targethostile,
         hasfocus,
-        focushastarget
+        focushastarget,
+        consumablecorpsenearby
     }
 
     public static class GoapKey_Extension
@@ -51,13 +53,15 @@
             GoapKey.shouldgather => "Gather",
             GoapKey.newtarget => "New target",
             GoapKey.producedcorpse => "Killing blow",
-            GoapKey.consumecorpse => "Corpse nearby",
+            GoapKey.consumecorpse => "Consume Corpse",
             GoapKey.isswimming => "Swimming",
             GoapKey.itemsbroken => "Broken",
             GoapKey.gathering => "Gathering",
             GoapKey.hasfocus => "Focus",
             GoapKey.focushastarget => "Focus Target",
             GoapKey.targethostile => "Target Hostile",
+            GoapKey.damagetakenordone => "Damage Taken or Done",
+            GoapKey.consumablecorpsenearby => "Consume Corpse nearby",
             _ => unknown
         };
 
@@ -80,13 +84,15 @@
             GoapKey.shouldgather => "!Gather",
             GoapKey.newtarget => "!New target",
             GoapKey.producedcorpse => "!Killing blow",
-            GoapKey.consumecorpse => "!Corpse nearby",
+            GoapKey.consumecorpse => "!Consume Corpse",
             GoapKey.isswimming => "!Swimming",
             GoapKey.itemsbroken => "!Broken",
             GoapKey.gathering => "!Gathering",
             GoapKey.hasfocus => "!Focus",
             GoapKey.focushastarget => "!Focus Target",
             GoapKey.targethostile => "!Target Hostile",
+            GoapKey.damagetakenordone => "!Damage Taken or Done",
+            GoapKey.consumablecorpsenearby => "!Consume Corpse nearby",
             _ => unknown
         };
 

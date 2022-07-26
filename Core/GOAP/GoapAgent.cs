@@ -1,4 +1,4 @@
-using Core.Goals;
+﻿using Core.Goals;
 using Game;
 using Microsoft.Extensions.Logging;
 using SharedLib.Extensions;
@@ -197,6 +197,7 @@ namespace Core.GOAP
                 { GoapKey.dangercombat, playerReader.Bits.PlayerInCombat() && addonReader.DamageTakenCount > 0 },
                 { GoapKey.damagetaken, addonReader.DamageTakenCount > 0 },
                 { GoapKey.damagedone, addonReader.DamageDoneCount > 0 },
+                { GoapKey.damagetakenordone, addonReader.DamageTakenCount > 0 || addonReader.DamageDoneCount > 0 },
                 { GoapKey.pethastarget, playerReader.PetHasTarget && !playerReader.Bits.PetTargetIsDead() },
                 { GoapKey.targetisalive, playerReader.Bits.HasTarget() && !playerReader.Bits.TargetIsDead() },
                 { GoapKey.targettargetsus, (playerReader.Bits.HasTarget() && playerReader.TargetHealthPercentage() < 30) || playerReader.TargetTarget is // hacky way to keep attacking fleeing humanoids
@@ -219,6 +220,7 @@ namespace Core.GOAP
                 { GoapKey.hasfocus, playerReader.Bits.HasFocus() },
                 { GoapKey.focushastarget, playerReader.Bits.FocusHasTarget() },
 
+                { GoapKey.consumablecorpsenearby, State.ConsumableCorpseCount > 0 },
                 // these hold their state
                 { GoapKey.consumecorpse, State.ShouldConsumeCorpse },
                 { GoapKey.shouldloot, State.NeedLoot },

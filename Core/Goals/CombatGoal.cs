@@ -1,4 +1,4 @@
-using Core.GOAP;
+﻿using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Numerics;
@@ -153,7 +153,7 @@ namespace Core.Goals
                 stopMoving.Stop();
                 logger.LogInformation("Lost target!");
 
-                if (addonReader.DamageTakenCount > 0)
+                if (addonReader.DamageTakenCount > 0 && !input.ClassConfig.KeyboardOnly)
                 {
                     FindNewTarget();
                 }

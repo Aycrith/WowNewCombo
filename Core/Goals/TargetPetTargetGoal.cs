@@ -18,7 +18,16 @@ namespace Core.Goals
             this.wait = wait;
 
             AddPrecondition(GoapKey.hastarget, false);
-            AddPrecondition(GoapKey.dangercombat, true);
+
+            if (input.ClassConfig.KeyboardOnly)
+            {
+                AddPrecondition(GoapKey.consumablecorpsenearby, false);
+            }
+            else
+            {
+                AddPrecondition(GoapKey.damagetakenordone, true);
+            }
+
             AddPrecondition(GoapKey.pethastarget, true);
 
             AddEffect(GoapKey.hastarget, true);
