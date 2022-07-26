@@ -2,10 +2,11 @@
 using SharedLib.NpcFinder;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 
 namespace Core.Goals
 {
-    public class SkinningGoal : GoapGoal, IDisposable
+    public class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
     {
         public override float Cost => 4.4f;
 
@@ -24,6 +25,7 @@ namespace Core.Goals
         private readonly EquipmentReader equipmentReader;
         private readonly NpcNameTargeting npcNameTargeting;
         private readonly CombatUtil combatUtil;
+        private readonly GoapAgentState state;
 
         private int lastCastEvent;
         private bool canRun;
@@ -31,7 +33,12 @@ namespace Core.Goals
         private bool listenLootWindow;
         private bool successfulInBackground;
 
-        public SkinningGoal(ILogger logger, ConfigurableInput input, AddonReader addonReader, Wait wait, StopMoving stopMoving, NpcNameTargeting npcNameTargeting, CombatUtil combatUtil)
+        private readonly List<SkinCorpseEvent> corpses = new();
+
+        public SkinningGoal(ILogger logger, ConfigurableInput input,
+            AddonReader addonReader, Wait wait, StopMoving stopMoving,
+            NpcNameTargeting npcNameTargeting, CombatUtil combatUtil,
+            GoapAgentState state)
             : base(nameof(SkinningGoal))
         {
             this.logger = logger;
@@ -45,6 +52,7 @@ namespace Core.Goals
 
             this.npcNameTargeting = npcNameTargeting;
             this.combatUtil = combatUtil;
+            this.state = state;
 
             canRun = HaveItemRequirement();
             bagReader.DataChanged -= BagReader_DataChanged;
@@ -71,6 +79,14 @@ namespace Core.Goals
         }
 
         public override bool CanRun() => canRun;
+
+        public void OnGoapEvent(GoapEventArgs e)
+        {
+            if (e is SkinCorpseEvent corpseEvent)
+            {
+                corpses.Add(corpseEvent);
+            }
+        }
 
         public override void OnEnter()
         {
@@ -235,6 +251,9 @@ namespace Core.Goals
             Log($"Loot {(castSuccess && !lootTimeOut ? "Successful" : "Failed")} after {elapsedMs}ms");
 
             SendGoapEvent(new GoapStateEvent(GoapKey.shouldgather, interrupted));
+
+            if (!interrupted)
+                state.GatherableCorpseCount = Math.Max(0, state.GatherableCorpseCount - 1);
 
             if (playerReader.Bits.HasTarget() && playerReader.Bits.TargetIsDead())
             {

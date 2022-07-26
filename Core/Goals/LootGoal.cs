@@ -34,7 +34,7 @@ namespace Core.Goals
         private readonly PlayerDirection playerDirection;
         private readonly GoapAgentState state;
 
-        private readonly List<Vector3> corpseLocations = new();
+        private readonly List<CorpseEvent> corpseLocations = new();
 
         private bool gatherCorpse;
         private bool listenLootWindow;
@@ -121,6 +121,7 @@ namespace Core.Goals
             }
 
             SendGoapEvent(new GoapStateEvent(GoapKey.shouldloot, false));
+            state.LootableCorpseCount = Math.Max(0, state.LootableCorpseCount - 1);
 
             if (!gatherCorpse && playerReader.Bits.HasTarget())
             {
@@ -128,7 +129,8 @@ namespace Core.Goals
                 wait.Update();
             }
 
-            corpseLocations.Remove(GetClosestCorpse());
+            if (corpseLocations.Count > 0)
+                corpseLocations.Remove(GetClosestCorpse()!);
         }
 
         public override void OnExit()
@@ -140,7 +142,7 @@ namespace Core.Goals
         {
             if (e is CorpseEvent corpseEvent)
             {
-                corpseLocations.Add(corpseEvent.Location);
+                corpseLocations.Add(corpseEvent);
             }
         }
 
@@ -172,17 +174,17 @@ namespace Core.Goals
             return true;
         }
 
-        private Vector3 GetClosestCorpse()
+        private CorpseEvent? GetClosestCorpse()
         {
             if (corpseLocations.Count == 0)
-                return Vector3.Zero;
+                return null;
 
             int index = -1;
             float minDistance = float.MaxValue;
             Vector3 playerLoc = playerReader.PlayerLocation;
             for (int i = 0; i < corpseLocations.Count; i++)
             {
-                float d = playerLoc.DistanceXYTo(corpseLocations[i]);
+                float d = playerLoc.DistanceXYTo(corpseLocations[i].Location);
                 if (d < minDistance)
                 {
                     minDistance = d;
@@ -209,6 +211,11 @@ namespace Core.Goals
                (classConfig.Salvage && Array.BinarySearch(area.salvegable, targetId) >= 0))
             {
                 gatherCorpse = true;
+                state.GatherableCorpseCount++;
+
+                CorpseEvent? e = GetClosestCorpse();
+                if (e != null)
+                    SendGoapEvent(new SkinCorpseEvent(e.Location, e.Radius, targetId));
             }
 
             Log($"Should gather {targetId} ? {gatherCorpse}");
@@ -234,9 +241,9 @@ namespace Core.Goals
             else if (corpseLocations.Count > 0)
             {
                 Vector3 location = playerReader.PlayerLocation;
-                Vector3 corpse = GetClosestCorpse();
-                float heading = DirectionCalculator.CalculateHeading(location, corpse);
-                playerDirection.SetDirection(heading, corpse);
+                CorpseEvent e = GetClosestCorpse()!;
+                float heading = DirectionCalculator.CalculateHeading(location, e.Location);
+                playerDirection.SetDirection(heading, e.Location);
 
                 logger.LogInformation("Look at possible closest corpse and try once again...");
 

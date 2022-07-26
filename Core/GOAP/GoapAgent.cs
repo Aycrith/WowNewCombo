@@ -1,4 +1,4 @@
-﻿using Core.Goals;
+using Core.Goals;
 using Game;
 using Microsoft.Extensions.Logging;
 using SharedLib.Extensions;
@@ -229,52 +229,35 @@ namespace Core.GOAP
 
         private void HandleGoapEvent(GoapEventArgs e)
         {
-            if (e is GoapStateEvent s)
+            if (e is GoapStateEvent g)
             {
-                switch (s.Key)
+                switch (g.Key)
                 {
                     case GoapKey.consumecorpse:
-                        State.ShouldConsumeCorpse = s.Value;
-                        if (!s.Value && routeInfo.PoiList.Count > 0)
-                        {
-                            int index = -1;
-                            float minDistance = float.MaxValue;
-                            Vector3 playerLocation = addonReader.PlayerReader.PlayerLocation;
-                            for (int i = 0; i < routeInfo.PoiList.Count; i++)
-                            {
-                                RouteInfoPoi? poi = routeInfo.PoiList[i];
-                                if (poi?.Name != "Corpse")
-                                    continue;
-
-                                float min = playerLocation.DistanceXYTo(poi.Location);
-                                if (min < minDistance)
-                                {
-                                    minDistance = min;
-                                    index = i;
-                                }
-                            }
-
-                            if (index > -1)
-                            {
-                                routeInfo.PoiList.RemoveAt(index);
-                            }
-                        }
+                        State.ShouldConsumeCorpse = g.Value;
                         break;
                     case GoapKey.shouldloot:
-                        State.NeedLoot = s.Value;
+                        State.NeedLoot = g.Value;
+                        if (!g.Value)
+                            RemoveClosestPoiByType(CorpseEvent.NAME);
                         break;
                     case GoapKey.shouldgather:
-                        State.NeedGather = s.Value;
+                        State.NeedGather = g.Value;
+                        if (!g.Value)
+                            RemoveClosestPoiByType(SkinCorpseEvent.NAME);
                         break;
                     case GoapKey.gathering:
-                        State.Gathering = s.Value;
+                        State.Gathering = g.Value;
                         break;
                 }
             }
-
-            else if (e is CorpseEvent corpseLocation)
+            else if (e is CorpseEvent c)
             {
-                routeInfo.PoiList.Add(new RouteInfoPoi(corpseLocation.Location, "Corpse", "black", corpseLocation.Radius));
+                routeInfo.PoiList.Add(new RouteInfoPoi(c.Location, CorpseEvent.NAME, CorpseEvent.COLOR, c.Radius));
+            }
+            else if (e is SkinCorpseEvent s)
+            {
+                routeInfo.PoiList.Add(new RouteInfoPoi(s.Location, SkinCorpseEvent.NAME, SkinCorpseEvent.COLOR, s.Radius));
             }
         }
 
@@ -299,6 +282,34 @@ namespace Core.GOAP
             foreach (IGoapEventListener goal in AvailableGoals.OfType<IGoapEventListener>())
             {
                 goal.OnGoapEvent(new GoapStateEvent(goapKey, value));
+            }
+        }
+
+        private void RemoveClosestPoiByType(string type)
+        {
+            if (routeInfo.PoiList.Count == 0)
+                return;
+
+            int index = -1;
+            float minDistance = float.MaxValue;
+            Vector3 playerLocation = addonReader.PlayerReader.PlayerLocation;
+            for (int i = 0; i < routeInfo.PoiList.Count; i++)
+            {
+                RouteInfoPoi? poi = routeInfo.PoiList[i];
+                if (poi?.Name != type)
+                    continue;
+
+                float min = playerLocation.DistanceXYTo(poi.Location);
+                if (min < minDistance)
+                {
+                    minDistance = min;
+                    index = i;
+                }
+            }
+
+            if (index > -1)
+            {
+                routeInfo.PoiList.RemoveAt(index);
             }
         }
 

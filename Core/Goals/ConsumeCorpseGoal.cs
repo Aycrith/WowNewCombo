@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Core.GOAP;
 
 namespace Core.Goals
@@ -9,8 +9,9 @@ namespace Core.Goals
 
         private readonly ILogger logger;
         private readonly ClassConfiguration classConfig;
+        private readonly GoapAgentState state;
 
-        public ConsumeCorpseGoal(ILogger logger, ClassConfiguration classConfig)
+        public ConsumeCorpseGoal(ILogger logger, ClassConfiguration classConfig, GoapAgentState state)
             : base(nameof(ConsumeCorpseGoal))
         {
             this.logger = logger;
@@ -27,6 +28,7 @@ namespace Core.Goals
 
             if (classConfig.Loot)
             {
+                state.LootableCorpseCount++;
                 AddEffect(GoapKey.shouldloot, true);
 
                 if (classConfig.GatherCorpse)
