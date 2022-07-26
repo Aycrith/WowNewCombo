@@ -684,7 +684,7 @@ namespace Core
         {
             string key = $"CD_{item.Name}";
             bool f() => UsableGCD(key);
-            string s() => $"CD {intVariables[key]()}";
+            string s() => $"CD {intVariables[key]() / 1000f:0.0}";
 
             return new Requirement
             {
