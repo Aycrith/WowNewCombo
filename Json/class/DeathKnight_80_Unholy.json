@@ -34,6 +34,13 @@
   "Pull": {
     "Sequence": [
       {
+        "Name": "Army of the Dead",
+        "Key": "N5",
+        "WhenUsable": true,
+        "HasCastbar": true,
+        "AfterCastWaitCastbar": true
+      },
+      {
         "Name": "Icy Touch",
         "Key": "6",
         "WhenUsable": true,
@@ -76,6 +83,25 @@
           "InMeleeRange"
         ],
         "DelayAfterCast": 50
+      },
+      {
+        "Name": "Mind Freeze",
+        "Key": "9",
+        "WhenUsable": true,
+        "Requirements": [
+          "InMeleeRange",
+          "TargetCasting"
+        ]
+      },
+      {
+        "Name": "Blood Tap",
+        "Key": "N6",
+        "WhenUsable": true,
+        "AfterCastWaitBuff": true,
+        "Requirements": [
+          "!Blood Tap",
+          "BloodRune <= 1"
+        ]
       },
       {
         "Name": "Bone Shield",
