@@ -101,7 +101,7 @@ namespace Core
         {
             FetchData();
 
-            if (GlobalTime.Updated(addonDataProvider))
+            if (GlobalTime.UpdatedNoEvent(addonDataProvider))
             {
                 if (GlobalTime.Value <= 3)
                 {

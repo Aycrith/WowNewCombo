@@ -34,6 +34,13 @@ namespace Core
             return false;
         }
 
+        public bool UpdatedNoEvent(AddonDataProvider reader)
+        {
+            int temp = Value;
+            Value = reader.GetInt(cell);
+            return temp != Value;
+        }
+
         public void Update(AddonDataProvider reader)
         {
             int temp = Value;
