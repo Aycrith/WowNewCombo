@@ -133,8 +133,9 @@ namespace Core.Goals
                 return false;
             }
 
-            (bool gcdTimeout, double elapsedMs) = wait.Until(2 * playerReader.NetworkLatency.Value, () => playerReader.GCD.Value != 0);
-            logger.LogInformation($"Instant - has GCD ? {!gcdTimeout} | {playerReader.GCD.Value}ms | {elapsedMs}ms");
+            //wait.Update();
+            //(bool gcdTimeout, double elapsedMs) = wait.Until(2 * playerReader.NetworkLatency.Value, () => playerReader.GCD.Value != 0);
+            //logger.LogInformation($"Instant - has GCD ? {!gcdTimeout} | {playerReader.GCD.Value}ms | {elapsedMs}ms");
 
             return true;
         }

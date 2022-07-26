@@ -1,4 +1,4 @@
-
+﻿
 namespace Core.GOAP
 {
     public class GoapAgentState
