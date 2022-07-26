@@ -16,6 +16,7 @@ namespace Core.Goals
         {
             this.logger = logger;
             this.classConfig = classConfig;
+            this.state = state;
 
             AddPrecondition(GoapKey.damagedone, false);
             AddPrecondition(GoapKey.damagetaken, false);
