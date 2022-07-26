@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -78,7 +77,7 @@ namespace Core.Goals
         private float lastDistance = float.MaxValue;
 
         private const float minAngleToTurn = MathF.PI / 35;          // 5.14 degree
-        private const float minAngleToStopBeforeTurn = MathF.PI / 3; // 60 degree
+        private const float minAngleToStopBeforeTurn = MathF.PI / 2; // 90 degree
 
         private readonly Stack<Vector3> wayPoints = new();
         private readonly Stack<Vector3> routeToNextWaypoint = new();
