@@ -33,6 +33,13 @@
   "Pull": {
     "Sequence": [
       {
+        "Name": "Army of the Dead",
+        "Key": "N5",
+        "WhenUsable": true,
+        "HasCastbar": true,
+        "AfterCastWaitCastbar": true
+      },
+      {
         "Name": "Death Coil",
         "Key": "8",
         "WhenUsable": true,
@@ -40,7 +47,9 @@
           "MinRange > 25",
           "SpellInRange:1",
           "RunicPower >= MIN_RUNE_TO_DUMP"
-        ]
+        ],
+        "AfterCastWaitBuff": true,
+        "DelayUntilCombat": true
       },
       {
         "Name": "Icy Touch",
@@ -50,16 +59,19 @@
           "!TargetCastingSpell",
           "!Frost Fever",
           "SpellInRange:0"
-        ]
+        ],
+        "AfterCastWaitBuff": true,
+        "DelayUntilCombat": true
       },
       {
         "Name": "Death Grip",
         "Key": "0",
         "WhenUsable": true,
         "Requirements": [
-          "MinRange > 20",
           "SpellInRange:2"
-        ]
+        ],
+        "DelayUntilCombat": true,
+        "WaitForWithinMeleeRange": true
       }
     ]
   },
@@ -69,19 +81,43 @@
         "Name": "Trinket 1",
         "Key": "N1",
         "WhenUsable": true,
-        "WaitForGCD": false
+        "Requirements": [
+          "InMeleeRange"
+        ],
+        "DelayAfterCast": 20
       },
       {
         "Name": "Trinket 2",
         "Key": "N2",
         "WhenUsable": true,
-        "WaitForGCD": false
+        "Requirements": [
+          "InMeleeRange"
+        ],
+        "DelayAfterCast": 20
+      },
+      {
+        "Name": "Mind Freeze",
+        "Key": "9",
+        "WhenUsable": true,
+        "Requirements": [
+          "InMeleeRange",
+          "TargetCasting"
+        ]
+      },
+      {
+        "Name": "Blood Tap",
+        "Key": "N6",
+        "WhenUsable": true,
+        "AfterCastWaitBuff": true,
+        "Requirements": [
+          "!Blood Tap",
+          "BloodRune <= 1"
+        ]
       },
       {
         "Name": "Empower Rune Weapon",
         "Key": "N3",
         "WhenUsable": true,
-        "WaitForGCD": false,
         "Requirements": [
           "TotalRune == 0",
           "RunicPower <= 105",
@@ -92,7 +128,6 @@
         "Name": "Unbreakable Armor",
         "Key": "N4",
         "WhenUsable": true,
-        "WaitForGCD": false,
         "Requirements":[
           "InMeleeRange"
         ],
@@ -111,7 +146,6 @@
         "Name": "Death Strike",
         "Key": "F5",
         "WhenUsable": true,
-        "WaitForGCD": false,
         "Requirements": [
           "Health% < 30"
         ]
@@ -154,6 +188,7 @@
         "Key": "3",
         "WhenUsable": true,
         "Charge": 2,
+        "Cooldown": 2000,
         "Requirements": [
           "MobCount < 2",
           "Frost Fever",
@@ -217,6 +252,18 @@
           "!Mounted"
         ],
         "AfterCastWaitBuff": true
+      },
+      {
+        "Cost": 3.2,
+        "Name": "Raise Dead",
+        "Key": "F7",
+        "InCombat": "true",
+        "WhenUsable": true,
+        "Requirements": [
+          "!Has Pet",
+          "!Mounted",
+          "BagItem:37201"
+        ]
       }
     ]
   },

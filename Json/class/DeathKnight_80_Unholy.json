@@ -73,7 +73,7 @@
         "Requirements": [
           "InMeleeRange"
         ],
-        "DelayAfterCast": 50
+        "DelayAfterCast": 20
       },
       {
         "Name": "Trinket 2",
@@ -82,7 +82,7 @@
         "Requirements": [
           "InMeleeRange"
         ],
-        "DelayAfterCast": 50
+        "DelayAfterCast": 20
       },
       {
         "Name": "Mind Freeze",
