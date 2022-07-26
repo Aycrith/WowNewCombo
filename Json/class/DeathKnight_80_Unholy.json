@@ -90,7 +90,7 @@
         "WhenUsable": true,
         "Requirements": [
           "InMeleeRange",
-          "TargetCasting"
+          "TargetCastingSpell"
         ]
       },
       {

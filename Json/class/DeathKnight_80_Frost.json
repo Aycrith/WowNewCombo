@@ -101,7 +101,7 @@
         "WhenUsable": true,
         "Requirements": [
           "InMeleeRange",
-          "TargetCasting"
+          "TargetCastingSpell"
         ]
       },
       {
@@ -124,11 +124,25 @@
           "InMeleeRange"
         ]
       },
+      /*
+      {
+        "Name": "Pestilenc",
+        "Key": "F6",
+        "WhenUsable": true,
+        "Cooldown": 15000,
+        "Requirements": [
+          "Frost Fever",
+          "Blood Plague",
+          "InMeleeRange"
+          //TODO: obtain target debuff timers
+        ]
+      },
+      */
       {
         "Name": "Unbreakable Armor",
         "Key": "N4",
         "WhenUsable": true,
-        "Requirements":[
+        "Requirements": [
           "InMeleeRange"
         ],
         "AfterCastWaitBuff": true
@@ -151,16 +165,13 @@
         ]
       },
       {
-        "Name": "Rune Strike",
+        "Name": "Frost Strike",
         "Key": "2",
         "WhenUsable": true,
         "Requirements": [
-          "MainHandSwing > -400",
           "MobCount < 2",
-          "RunicPower >= MIN_RUNE_TO_DUMP",
           "InMeleeRange"
-        ],
-        "AfterCastWaitNextSwing": true
+        ]
       },
       {
         "Name": "Death Coil",
@@ -261,8 +272,8 @@
         "WhenUsable": true,
         "Requirements": [
           "!Has Pet",
-          "!Mounted",
-          "BagItem:37201"
+          "!Mounted"
+          //"BagItem:37201" //be sure to use glyph
         ]
       }
     ]
