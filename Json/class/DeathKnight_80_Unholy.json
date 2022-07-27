@@ -1,8 +1,8 @@
 {
   "ClassName": "DeatkKnight",
-  //"Mode": "AttendedGrind", //Grind
+  "Mode": "AttendedGrind", //Grind
   "Loot": true,
-  //"KeyboardOnly": true,
+  "KeyboardOnly": true,
   "PathFilename": "_pack\\40-50\\The Hinterlands\\41-42 wolves.json", // todo update profile
   "PathReduceSteps": true,
   "PathThereAndBack": false,
