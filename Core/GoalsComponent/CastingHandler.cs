@@ -199,11 +199,7 @@ namespace Core.Goals
                 if (playerReader.IsCasting())
                 {
                     int remainMs = playerReader.RemainCastMs;
-                    if (remainMs < MIN_GCD)
-                    {
-                        remainMs = MIN_GCD;
-                    }
-                    remainMs = remainMs - SpellQueueTimeMs - playerReader.NetworkLatency.Value;
+                    remainMs -= (SpellQueueTimeMs / 2) + playerReader.NetworkLatency.Value;
 
                     if (item.Log)
                         LogVisibleCastbarWaitForEnd(logger, item.Name, remainMs);
@@ -273,6 +269,8 @@ namespace Core.Goals
                 {
                     if (!WaitForGCD(item, interrupt))
                         return false;
+
+                    wait.Update();
 
                     //TODO: upon form change and GCD - have to check Usable state
                     if (!beforeUsable && !addonReader.UsableAction.Is(item))
