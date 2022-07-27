@@ -982,6 +982,66 @@ e.g.
 "Requirement": "not Talent:Suppression"        // Must have not know the given `name` 
 ```
 ---
+### **Player Buff remaining time requirements**
+
+First in the `IntVariables` have to mention the buff icon id such as `Buff_{you fancy name}: {icon_id}`.
+
+It is important, thee addon keeps track of the **icon_id**! Not **spell_id**
+
+e.g.
+```json
+"IntVariables": {
+    "Buff_Horn of Winter": 134228
+},
+```
+
+Then in **KeyAction** you can use the following requirement:
+
+e.g.
+```json
+{
+    "Cost": 3.1,
+    "Name": "Horn of Winter",
+    "Key": "F4",
+    "InCombat": "i dont care",
+    "WhenUsable": true,
+    "Requirements": [
+        "Buff_Horn of Winter < 5000", // The remaining time is less then 5 seconds
+        "!Mounted"
+    ],
+    "AfterCastWaitBuff": true
+}     
+```
+---
+### **Target Debuff remaining time requirements**
+
+First in the `IntVariables` have to mention the buff icon id such as `Debuff_{you fancy name}: {icon_id}`
+
+It is important, thee addon keeps track of the **icon_id**! Not **spell_id**
+
+e.g.
+```json
+"IntVariables": {
+    "Debuff_Blood Plague": 237514,
+    "Debuff_Frost Fever": 237522
+},
+```
+
+Then in **KeyAction** you can use the following requirement:
+
+e.g.
+```json
+{
+    "Name": "Pestilenc",
+    "Key": "F6",
+    "WhenUsable": true,
+    "Requirements": [
+        "(Frost Fever && Debuff_Frost Fever < 2000) || (Blood Plague && Debuff_Blood Plague < 2000)",   // Frost Fever and Blood Plague is up
+        "InMeleeRange"                                                                                  // and their duration less then 2 seconds
+    ]
+}
+```
+---
 ### **Trigger requirements**
 
 If you feel the current Requirement toolset is not enough for you, you can use other addons such as **WeakAura's** Trigger to control a given bit.
