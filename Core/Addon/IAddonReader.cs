@@ -14,6 +14,10 @@ namespace Core
 
         ActionBarCooldownReader ActionBarCooldownReader { get; }
 
+        AuraTimeReader PlayerBuffTimeReader { get; }
+
+        AuraTimeReader TargetDebuffTimeReader { get; }
+
         SpellBookReader SpellBookReader { get; }
 
         TalentReader TalentReader { get; }
