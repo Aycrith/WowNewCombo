@@ -1036,8 +1036,8 @@ e.g.
     "Key": "F6",
     "WhenUsable": true,
     "Requirements": [
-        "(Frost Fever && Debuff_Frost Fever < 2000) || (Blood Plague && Debuff_Blood Plague < 2000)",   // Frost Fever and Blood Plague is up
-        "InMeleeRange"                                                                                  // and their duration less then 2 seconds
+        "Frost Fever && Blood Plague && (Debuff_Frost Fever < 2000 || Debuff_Blood Plague < 2000)",   // Frost Fever and Blood Plague is up
+        "InMeleeRange"                                                                                // and their duration less then 2 seconds
     ]
 }
 ```
