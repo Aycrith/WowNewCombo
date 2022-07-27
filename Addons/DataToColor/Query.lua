@@ -158,14 +158,25 @@ function DataToColor:Set(trigger, input)
     end
 end
 
-function DataToColor:getAuraMaskForClass(func, unitId, table)
+function DataToColor:getAuraMaskForClass(func, unitId, table, queue)
     local num = 0
     for k, v in pairs(table) do
-        for i = 1, 10 do
-            local name, texture = func(unitId, i)
+        for i = 1, 16 do
+            local name, texture, _, _, _, expirationTime = func(unitId, i)
             if name == nil then
                 break
             end
+
+            if expirationTime > 0 then
+                if not queue:exists(texture) then
+                    queue:set(texture, expirationTime)
+                    --DataToColor:Print(slot, " added ", expirationTime)
+                elseif queue:value(texture) < expirationTime then
+                    queue:set(texture, expirationTime)
+                    --DataToColor:Print(slot, " updated ", expirationTime)
+                end
+            end
+
             if v[texture] or find(name, v[1]) then
                 num = num + base2(1, k)
                 break
@@ -175,9 +186,10 @@ function DataToColor:getAuraMaskForClass(func, unitId, table)
     return num
 end
 
+-- player debuffs cant be higher than 16!
 function DataToColor:getAuraCount(func, unitId)
     local num = 0
-    for i = 1, 10 do
+    for i = 1, 16 do
         local name = func(unitId, i)
         if name == nil then
             break
@@ -373,22 +385,18 @@ function DataToColor:isActionUseable(min, max)
     for i = min, max do
         local start, duration, enabled = GetActionCooldown(i)
         local isUsable, notEnough = IsUsableAction(i)
+        local texture = GetActionTexture(i)
 
-        if start == 0 and isUsable == true and notEnough == false and GetActionTexture(i) ~= 134400 then -- red question mark texture
+        if start == 0 and isUsable == true and notEnough == false and texture ~= 134400 then -- red question mark texture
             isUsableBits = isUsableBits + (2 ^ (i - min))
         end
 
-        local elapsed = (start + duration - GetTime())
-        if enabled == 1 and start ~= 0 and duration > 1.5 then -- exclude GCD - according to internet everything counts as GCD below 1.5
+        -- exclude GCD - everything counts as GCD below 1.5
+        if enabled == 1 and start ~= 0 and duration > 1.5 then
+            local expireTime = start + duration
             if not DataToColor.actionBarCooldownQueue:exists(i) then
-                -- add
-                DataToColor.actionBarCooldownQueue:set(i, elapsed)
-                --DataToColor:Print("Added Cooldown ", i, " ", elapsed)
+                DataToColor.actionBarCooldownQueue:set(i, expireTime)
             end
-        elseif elapsed <= 0 and DataToColor.actionBarCooldownQueue:exists(i) then
-            -- update to show expired
-            DataToColor.actionBarCooldownQueue:set(i, 0)
-            --DataToColor:Print("Expired Cooldown ", i)
         end
     end
     return isUsableBits

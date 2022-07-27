@@ -1,6 +1,8 @@
 local Load = select(2, ...)
 local DataToColor = unpack(Load)
 
+local GetTime = GetTime
+
 local Queue = {}
 DataToColor.Queue = Queue
 
@@ -77,11 +79,22 @@ function struct:set(key, value)
 end
 
 function struct:get()
+    local time = GetTime()
     for k, v in pairs(self) do
-        if v.dirty == 0 then
+        if v.dirty == 0 or (v.dirty == 1 and v.value - time <= 0) then
             return k, v.value
         end
     end
+end
+
+function struct:getForced()
+    for k, v in pairs(self) do
+        return k, v.value
+    end
+end
+
+function struct:value(key)
+    return self[key].value
 end
 
 function struct:exists(key)
