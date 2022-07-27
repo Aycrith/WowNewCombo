@@ -158,22 +158,22 @@ function DataToColor:Set(trigger, input)
     end
 end
 
-function DataToColor:getAuraMaskForClass(func, unitId, table, queue)
+function DataToColor:getAuraMaskForClass(func, unitId, table, queue, personalOnly)
     local num = 0
     for k, v in pairs(table) do
         for i = 1, 16 do
-            local name, texture, _, _, _, expirationTime = func(unitId, i)
+            local name, texture, _, _, _, expirationTime, source = func(unitId, i)
             if name == nil then
                 break
             end
 
-            if expirationTime > 0 then
+            if expirationTime > 0 and not personalOnly or (personalOnly and source == DataToColor.C.CHARACTER_GUID) then
                 if not queue:exists(texture) then
                     queue:set(texture, expirationTime)
-                    --DataToColor:Print(slot, " added ", expirationTime)
+                    --DataToColor:Print(texture, " added ", expirationTime)
                 elseif queue:value(texture) < expirationTime then
                     queue:set(texture, expirationTime)
-                    --DataToColor:Print(slot, " updated ", expirationTime)
+                    --DataToColor:Print(texture, " updated ", expirationTime)
                 end
             end
 

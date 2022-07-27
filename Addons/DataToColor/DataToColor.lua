@@ -579,8 +579,8 @@ function DataToColor:CreateFrames(n)
             Pixel(int, UnitHealth(DataToColor.C.unitPet), 39)
 
             Pixel(int, DataToColor:areSpellsInRange(), 40)
-            Pixel(int, DataToColor:getAuraMaskForClass(UnitBuff, DataToColor.C.unitPlayer, DataToColor.S.playerBuffs, DataToColor.playerBuffTime), 41)
-            Pixel(int, DataToColor:getAuraMaskForClass(UnitDebuff, DataToColor.C.unitTarget, DataToColor.S.targetDebuffs, DataToColor.targetDebuffTime), 42)
+            Pixel(int, DataToColor:getAuraMaskForClass(UnitBuff, DataToColor.C.unitPlayer, DataToColor.S.playerBuffs, DataToColor.playerBuffTime, false), 41)
+            Pixel(int, DataToColor:getAuraMaskForClass(UnitDebuff, DataToColor.C.unitTarget, DataToColor.S.targetDebuffs, DataToColor.targetDebuffTime, true), 42)
             Pixel(int, UnitLevel(DataToColor.C.unitTarget), 43)
 
             -- Amount of money in coppers
