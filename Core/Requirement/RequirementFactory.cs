@@ -20,6 +20,8 @@ namespace Core
         private readonly TalentReader talentReader;
         private readonly CreatureDB creatureDb;
         private readonly ItemDB itemDb;
+        private readonly AuraTimeReader playerBuffTimeReader;
+        private readonly AuraTimeReader targetDebuffTimeReader;
 
         private KeyAction[] keyActions = Array.Empty<KeyAction>();
 
@@ -51,6 +53,8 @@ namespace Core
             this.creatureDb = addonReader.CreatureDb;
             this.itemDb = addonReader.ItemDb;
             this.immunityBlacklist = immunityBlacklist;
+            this.playerBuffTimeReader = addonReader.PlayerBuffTimeReader;
+            this.targetDebuffTimeReader = addonReader.TargetDebuffTimeReader;
 
             requirementMap = new()
             {
@@ -299,6 +303,8 @@ namespace Core
                 { "LastTargetDodgeMs", () => Math.Max(0, addonReader.CombatLog.TargetDodge.ElapsedMs()) },
                 //"CD_{KeyAction.Name}
                 //"Cost_{KeyAction.Name}"
+                //"Buff_{textureId}"
+                //"Debuff_{textureId}"
                 { "MainHandSpeed", playerReader.MainHandSpeedMs },
                 { "MainHandSwing", () => Math.Clamp(playerReader.MainHandSwing.ElapsedMs() - playerReader.MainHandSpeedMs(), -playerReader.MainHandSpeedMs(), 0) }
             };
@@ -386,12 +392,24 @@ namespace Core
             {
                 int v = kvp.Value;
                 int f() => v;
+
                 if (!intVariables.TryAdd(kvp.Key, f))
                 {
                     throw new Exception($"Unable to add user defined variable to values. [{kvp.Key} -> {kvp.Value}]");
                 }
                 else
                 {
+                    if (kvp.Key.StartsWith("Buff_"))
+                    {
+                        int l() => playerBuffTimeReader.GetRemainingTimeMs(v);
+                        intVariables.TryAdd($"{v}", l);
+                    }
+                    else if(kvp.Key.StartsWith("Debuff_"))
+                    {
+                        int l() => targetDebuffTimeReader.GetRemainingTimeMs(v);
+                        intVariables.TryAdd($"{v}", l);
+                    }
+
                     LogUserDefinedValue(logger, nameof(RequirementFactory), kvp.Key, kvp.Value);
                 }
             }
@@ -937,6 +955,15 @@ namespace Core
                 };
             }
 
+            string display = key;
+
+            Func<int> alias = intVariables[key];
+            string aliasKey = alias().ToString();
+            if (intVariables.ContainsKey(aliasKey))
+            {
+                key = aliasKey;
+            }
+
             int zero() => 0;
             Func<int> value = zero;
             if (int.TryParse(parts[1], out int v))
@@ -957,7 +984,7 @@ namespace Core
             {
                 case "==":
                     bool e() => intVariables[key]() == value();
-                    string es() => $"{key} {intVariables[key]()} {symbol} {value()}";
+                    string es() => $"{display} {intVariables[key]()} {symbol} {value()}";
                     return new Requirement
                     {
                         HasRequirement = e,
@@ -965,7 +992,7 @@ namespace Core
                     };
                 case ">":
                     bool g() => intVariables[key]() > value();
-                    string gs() => $"{key} {intVariables[key]()} {symbol} {value()}";
+                    string gs() => $"{display} {intVariables[key]()} {symbol} {value()}";
                     return new Requirement
                     {
                         HasRequirement = g,
@@ -973,7 +1000,7 @@ namespace Core
                     };
                 case "<":
                     bool l() => intVariables[key]() < value();
-                    string ls() => $"{key} {intVariables[key]()} {symbol} {value()}";
+                    string ls() => $"{display} {intVariables[key]()} {symbol} {value()}";
                     return new Requirement
                     {
                         HasRequirement = l,
@@ -981,7 +1008,7 @@ namespace Core
                     };
                 case ">=":
                     bool ge() => intVariables[key]() >= value();
-                    string ges() => $"{key} {intVariables[key]()} {symbol} {value()}";
+                    string ges() => $"{display} {intVariables[key]()} {symbol} {value()}";
                     return new Requirement
                     {
                         HasRequirement = ge,
@@ -989,7 +1016,7 @@ namespace Core
                     };
                 case "<=":
                     bool le() => intVariables[key]() <= value();
-                    string les() => $"{key} {intVariables[key]()} {symbol} {value()}";
+                    string les() => $"{display} {intVariables[key]()} {symbol} {value()}";
                     return new Requirement
                     {
                         HasRequirement = le,

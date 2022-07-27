@@ -110,6 +110,8 @@ local COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE = 5
 local LATENCY_ITERATION_FRAME_CHANGE_RATE = 500 -- 500ms * refresh rate in ms
 -- How often the lastLoot return from Closed to Corpse
 local LOOT_RESET_RATE = 5
+-- How often the Player Buff / target Debuff frames change
+local AURA_DURATION_ITERATION_FRAME_CHANGE_RATE = 5
 
 -- Action bar configuration for which spells are tracked
 local MAX_ACTIONBAR_SLOT = 120
@@ -140,19 +142,6 @@ DataToColor.petGUID = UnitGUID(DataToColor.C.unitPet)
 
 DataToColor.corpseInRange = 0
 
--- buff / debuff counters
-local playerDebuffCount = 0
-local playerBuffCount = 0
-local targetDebuffCount = 0
-local targetBuffCount = 0
-
-local equipmentSlot = nil
-local bagNum = nil
-local bagSlotNum = nil
-local gossipNum = nil
-local actionCooldownKey = nil
-local actionCooldownValue = nil
-
 local bagCache = {}
 
 DataToColor.equipmentQueue = DataToColor.Queue:new()
@@ -170,6 +159,9 @@ DataToColor.CombatCreatureDiedQueue = DataToColor.Queue:new()
 DataToColor.CombatMissTypeQueue = DataToColor.Queue:new()
 
 DataToColor.playerPetSummons = {}
+
+DataToColor.playerBuffTime = DataToColor.struct:new()
+DataToColor.targetDebuffTime = DataToColor.struct:new()
 
 DataToColor.customTrigger1 = {}
 
@@ -246,14 +238,14 @@ function DataToColor:Reset()
 
     DataToColor.corpseInRange = 0
 
-    playerDebuffCount = 0
-    playerBuffCount = 0
-    targetDebuffCount = 0
-    targetBuffCount = 0
-
     globalCounter = 0
 
     bagCache = {}
+
+    DataToColor.actionBarCooldownQueue = DataToColor.struct:new()
+
+    DataToColor.playerBuffTime = DataToColor.struct:new()
+    DataToColor.targetDebuffTime = DataToColor.struct:new()
 
     DataToColor.playerPetSummons = {}
 end
@@ -280,7 +272,6 @@ function DataToColor:FushState()
     DataToColor:InitInventoryQueue(1)
     DataToColor:InitInventoryQueue(0)
 
-    DataToColor.actionBarCooldownQueue = DataToColor.struct:new()
     DataToColor:InitActionBarCostQueue()
     DataToColor:InitSpellBookQueue()
     DataToColor:InitTalentQueue()
@@ -452,16 +443,16 @@ function DataToColor:CreateFrames(n)
 
             if(DataToColor.C.CHARACTER_CLASS_ID == 6) then -- death Knight
 
-                local bloodRunes = 0;
-                local unholyRunes = 0;
-                local frostRunes = 0;
-                local deathRunes = 0;
-                local numRunes = 0;
+                local bloodRunes = 0
+                local unholyRunes = 0
+                local frostRunes = 0
+                local deathRunes = 0
+                local numRunes = 0
 
                 for index = 1, 6 do
                   local startTime = GetRuneCooldown(index)
                   if startTime == 0 then
-                    numRunes = numRunes + 1;
+                    numRunes = numRunes + 1
                     local runeType = GetRuneType(index)
                     if runeType == 1 then
                       bloodRunes = bloodRunes + 1
@@ -497,7 +488,7 @@ function DataToColor:CreateFrames(n)
 
             if globalCounter % ITEM_ITERATION_FRAME_CHANGE_RATE == 0 then
                 -- 20
-                bagNum = DataToColor.bagQueue:shift()
+                local bagNum = DataToColor.bagQueue:shift()
                 if bagNum then
                     local freeSlots, bagType = GetContainerNumFreeSlots(bagNum)
                     if not bagType then
@@ -512,7 +503,7 @@ function DataToColor:CreateFrames(n)
                 end
 
                 -- 21 22
-                bagSlotNum = DataToColor.inventoryQueue:shift()
+                local bagSlotNum = DataToColor.inventoryQueue:shift()
                 if bagSlotNum then
 
                     bagNum = floor(bagSlotNum / 1000)
@@ -538,7 +529,7 @@ function DataToColor:CreateFrames(n)
                 end
 
                 -- 23 24
-                equipmentSlot = DataToColor.equipmentQueue:shift()
+                local equipmentSlot = DataToColor.equipmentQueue:shift()
                 Pixel(int, equipmentSlot or 0, 23)
                 Pixel(int, DataToColor:equipSlotItemId(equipmentSlot), 24)
                 --DataToColor:Print("equipmentQueue "..equipmentSlot.." -> "..itemId)
@@ -565,21 +556,19 @@ function DataToColor:CreateFrames(n)
                 Pixel(int, costMeta or 0, 35)
                 Pixel(int, costValue or 0, 36)
 
-                actionCooldownKey, actionCooldownValue = DataToColor.actionBarCooldownQueue:get()
-                if actionCooldownKey then
-                    DataToColor.actionBarCooldownQueue:setDirty(actionCooldownKey)
+                local actionCDSlot, actionCDExpireTime = DataToColor.actionBarCooldownQueue:get()
+                if actionCDSlot then
+                    DataToColor.actionBarCooldownQueue:setDirty(actionCDSlot)
 
-                    -- have to add 1s because its excluded from total cooldown
-                    if actionCooldownValue > 0 then
-                        actionCooldownValue = actionCooldownValue + 1
-                    end
-                    local valueMs = (floor(actionCooldownValue) * 100)
+                    local duration = max(0, ceil(actionCDExpireTime - GetTime()))
+                    local valueMs = duration * 100
 
-                    --DataToColor:Print("actionBarCooldownQueue: ", actionCooldownKey, " ", valueMs)
-                    Pixel(int, actionCooldownKey * 100000 + valueMs, 37)
+                    --DataToColor:Print("actionBarCooldownQueue: ", actionCDSlot, " ", valueMs)
+                    Pixel(int, actionCDSlot * 100000 + valueMs, 37)
 
-                    if actionCooldownValue == 0 then
-                        DataToColor.actionBarCooldownQueue:remove(actionCooldownKey)
+                    if duration == 0 then
+                        DataToColor.actionBarCooldownQueue:remove(actionCDSlot)
+                        --DataToColor:Print("actionBarCooldownQueue: expired ", actionCDSlot, " ", valueMs)
                     end
                 else
                     Pixel(int, 0, 37)
@@ -590,8 +579,8 @@ function DataToColor:CreateFrames(n)
             Pixel(int, UnitHealth(DataToColor.C.unitPet), 39)
 
             Pixel(int, DataToColor:areSpellsInRange(), 40)
-            Pixel(int, DataToColor:getAuraMaskForClass(UnitBuff, DataToColor.C.unitPlayer, DataToColor.S.playerBuffs), 41)
-            Pixel(int, DataToColor:getAuraMaskForClass(UnitDebuff, DataToColor.C.unitTarget, DataToColor.S.targetDebuffs), 42)
+            Pixel(int, DataToColor:getAuraMaskForClass(UnitBuff, DataToColor.C.unitPlayer, DataToColor.S.playerBuffs, DataToColor.playerBuffTime), 41)
+            Pixel(int, DataToColor:getAuraMaskForClass(UnitDebuff, DataToColor.C.unitTarget, DataToColor.S.targetDebuffs, DataToColor.targetDebuffTime), 42)
             Pixel(int, UnitLevel(DataToColor.C.unitTarget), 43)
 
             -- Amount of money in coppers
@@ -611,19 +600,15 @@ function DataToColor:CreateFrames(n)
             Pixel(int, DataToColor:CastingInfoSpellId(DataToColor.C.unitPlayer), 53) -- SpellId being cast
             Pixel(int, GetComboPoints(DataToColor.C.unitPlayer, DataToColor.C.unitTarget) or 0, 54)
 
-            playerDebuffCount = DataToColor:getAuraCount(UnitDebuff, DataToColor.C.unitPlayer)
-            playerBuffCount = DataToColor:getAuraCount(UnitBuff, DataToColor.C.unitPlayer)
+            local playerDebuffCount = DataToColor:getAuraCount(UnitDebuff, DataToColor.C.unitPlayer)
+            local playerBuffCount = DataToColor:getAuraCount(UnitBuff, DataToColor.C.unitPlayer)
+
+            local targetDebuffCount = 0
+            local targetBuffCount = 0
 
             if UnitExists(DataToColor.C.unitTarget) then
                 targetDebuffCount = DataToColor:getAuraCount(UnitDebuff, DataToColor.C.unitTarget)
                 targetBuffCount = DataToColor:getAuraCount(UnitBuff, DataToColor.C.unitTarget)
-            else
-                targetDebuffCount = 0
-                targetBuffCount = 0
-            end
-
-            if playerDebuffCount > 16 then
-                playerDebuffCount = 16
             end
 
             -- player/target buff and debuff counts
@@ -664,7 +649,7 @@ function DataToColor:CreateFrames(n)
             end
 
             if globalCounter % GOSSIP_ITERATION_FRAME_CHANGE_RATE == 0 then
-                gossipNum = DataToColor.gossipQueue:shift()
+                local gossipNum = DataToColor.gossipQueue:shift()
                 if gossipNum then
                     --DataToColor:Print("gossipQueue:" .. gossipNum)
                     Pixel(int, gossipNum, 73)
@@ -686,8 +671,51 @@ function DataToColor:CreateFrames(n)
                 Pixel(int, DataToColor:getGuidFromUnit(DataToColor.C.unitFocusTarget), 78)
             end
 
-            -- 95 gcd
+            if globalCounter % AURA_DURATION_ITERATION_FRAME_CHANGE_RATE == 0 then
+                local textureId, expireTime = DataToColor.playerBuffTime:get()
+                if textureId then
+                    DataToColor.playerBuffTime:setDirty(textureId)
 
+                    local durationSec = max(0, ceil(expireTime - GetTime()))
+                    --DataToColor:Print("player buff update ", textureId, " ", durationSec)
+                    Pixel(int, textureId, 79)
+                    Pixel(int, durationSec, 80)
+
+                    if durationSec == 0 then
+                        DataToColor.playerBuffTime:remove(textureId)
+                        --DataToColor:Print("player buff expired ", textureId, " ", durationSec)
+                    end
+                else
+                    Pixel(int, 0, 79)
+                    Pixel(int, 0, 80)
+                end
+
+                if UnitExists(DataToColor.C.unitTarget) then
+                    textureId, expireTime = DataToColor.targetDebuffTime:get()
+                else
+                    textureId, expireTime = DataToColor.targetDebuffTime:getForced()
+                    expireTime = GetTime()
+                end
+
+                if textureId then
+                    DataToColor.targetDebuffTime:setDirty(textureId)
+
+                    local durationSec = max(0, ceil(expireTime - GetTime()))
+                    --DataToColor:Print("target debuff update ", textureId, " ", durationSec)
+                    Pixel(int, textureId, 81)
+                    Pixel(int, durationSec, 82)
+
+                    if durationSec == 0 then
+                        DataToColor.targetDebuffTime:remove(textureId)
+                        --DataToColor:Print("target debuff expired ", textureId, " ", durationSec)
+                    end
+                else
+                    Pixel(int, 0, 81)
+                    Pixel(int, 0, 82)
+                end
+            end
+
+            -- 95 gcd
             if DataToColor.gcdExpirationTime > 0 then
                 local gcd = floor((DataToColor.gcdExpirationTime - GetTime()) * 1000)
                 if gcd <= 0 then

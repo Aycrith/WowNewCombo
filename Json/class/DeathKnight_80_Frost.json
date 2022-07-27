@@ -8,7 +8,9 @@
   "MountKey": "N0",
   "IntVariables": {
     "MIN_HP_FOOD%": 40,
-    "MIN_RUNE_TO_DUMP": 40
+    "MIN_RUNE_TO_DUMP": 40,
+    "Debuff_Frost Fever": 237522,
+    "Debuff_Blood Plague": 237514
   },
   "Form": [
     {
@@ -105,6 +107,16 @@
         ]
       },
       {
+        "Name": "Pestilenc",
+        "Key": "F6",
+        "WhenUsable": true,
+        "Requirements": [
+          "Frost Fever && Blood Plague && (Debuff_Frost Fever < 2000 || Debuff_Blood Plague < 2000)",
+          "InMeleeRange"
+        ],
+        "DelayAfterCast": 20
+      },
+      {
         "Name": "Blood Tap",
         "Key": "N6",
         "WhenUsable": true,
@@ -124,20 +136,6 @@
           "InMeleeRange"
         ]
       },
-      /*
-      {
-        "Name": "Pestilenc",
-        "Key": "F6",
-        "WhenUsable": true,
-        "Cooldown": 15000,
-        "Requirements": [
-          "Frost Fever",
-          "Blood Plague",
-          "InMeleeRange"
-          //TODO: obtain target debuff timers
-        ]
-      },
-      */
       {
         "Name": "Unbreakable Armor",
         "Key": "N4",

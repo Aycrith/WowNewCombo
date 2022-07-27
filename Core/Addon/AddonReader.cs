@@ -24,6 +24,10 @@ namespace Core
 
         public ActionBarCooldownReader ActionBarCooldownReader { get; }
 
+        public AuraTimeReader PlayerBuffTimeReader { get; }
+
+        public AuraTimeReader TargetDebuffTimeReader { get; }
+
         public ActionBarBits CurrentAction { get; }
         public ActionBarBits UsableAction { get; }
 
@@ -90,6 +94,9 @@ namespace Core
 
             this.CurrentAction = new(PlayerReader, 25, 26, 27, 28, 29);
             this.UsableAction = new(PlayerReader, 30, 31, 32, 33, 34);
+
+            this.PlayerBuffTimeReader = new(79, 80);
+            this.TargetDebuffTimeReader = new(81, 82);
         }
 
         public void Dispose()
@@ -156,6 +163,9 @@ namespace Core
                     ZoneChanged?.Invoke();
                 }
 
+                PlayerBuffTimeReader.Read(reader);
+                TargetDebuffTimeReader.Read(reader);
+
                 autoResetEvent.Set();
             }
         }
@@ -182,6 +192,9 @@ namespace Core
             ActionBarCooldownReader.Reset();
             SpellBookReader.Reset();
             TalentReader.Reset();
+
+            PlayerBuffTimeReader.Reset();
+            TargetDebuffTimeReader.Reset();
 
             SessionReset();
         }
