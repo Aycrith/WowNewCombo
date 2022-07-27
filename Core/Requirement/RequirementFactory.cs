@@ -303,6 +303,8 @@ namespace Core
                 { "LastTargetDodgeMs", () => Math.Max(0, addonReader.CombatLog.TargetDodge.ElapsedMs()) },
                 //"CD_{KeyAction.Name}
                 //"Cost_{KeyAction.Name}"
+                //"Buff_{textureId}"
+                //"Debuff_{textureId}"
                 { "MainHandSpeed", playerReader.MainHandSpeedMs },
                 { "MainHandSwing", () => Math.Clamp(playerReader.MainHandSwing.ElapsedMs() - playerReader.MainHandSpeedMs(), -playerReader.MainHandSpeedMs(), 0) }
             };
