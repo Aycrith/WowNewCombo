@@ -158,7 +158,7 @@ function DataToColor:Set(trigger, input)
     end
 end
 
-function DataToColor:getAuraMaskForClass(func, unitId, table, queue, personalOnly)
+function DataToColor:getAuraMaskForClass(func, unitId, table, queue)
     local num = 0
     for k, v in pairs(table) do
         for i = 1, 16 do
@@ -167,7 +167,7 @@ function DataToColor:getAuraMaskForClass(func, unitId, table, queue, personalOnl
                 break
             end
 
-            if expirationTime > 0 and not personalOnly or (personalOnly and source == DataToColor.C.CHARACTER_GUID) then
+            if expirationTime > 0 then
                 if not queue:exists(texture) then
                     queue:set(texture, expirationTime)
                     --DataToColor:Print(texture, " added ", expirationTime)
