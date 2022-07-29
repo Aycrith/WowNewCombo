@@ -201,9 +201,9 @@ namespace Core
 
         public bool HasItem(int itemId) => ItemCount(itemId) != 0;
 
-        public int HighestQuantityOfWaterId()
+        public int HighestQuantityOfDrinkId()
         {
-            return ItemDB.WaterIds.
+            return ItemDB.DrinkIds.
                 OrderByDescending(c => ItemCount(c)).
                 FirstOrDefault();
         }

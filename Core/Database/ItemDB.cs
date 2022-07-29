@@ -11,7 +11,7 @@ namespace Core.Database
 
         public Dictionary<int, Item> Items { get; } = new();
         public int[] FoodIds { get; }
-        public int[] WaterIds { get; }
+        public int[] DrinkIds { get; }
 
         public ItemDB(DataConfig dataConfig)
         {
@@ -22,7 +22,7 @@ namespace Core.Database
             }
 
             FoodIds = JsonConvert.DeserializeObject<int[]>(File.ReadAllText(Path.Join(dataConfig.Dbc, "foods.json")));
-            WaterIds = JsonConvert.DeserializeObject<int[]>(File.ReadAllText(Path.Join(dataConfig.Dbc, "waters.json")));
+            DrinkIds = JsonConvert.DeserializeObject<int[]>(File.ReadAllText(Path.Join(dataConfig.Dbc, "waters.json")));
         }
     }
 }

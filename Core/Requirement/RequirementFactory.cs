@@ -40,6 +40,8 @@ namespace Core
         private readonly Dictionary<string, Func<string, Requirement>> requirementMap;
 
         public const string AddVisible = "AddVisible";
+        public const string Drink = "Drink";
+        public const string Food = "Food";
 
         public RequirementFactory(ILogger logger, AddonReader addonReader, NpcNameFinder npcNameFinder, Dictionary<int, SchoolMask[]> immunityBlacklist)
         {
@@ -115,8 +117,8 @@ namespace Core
                 { "Casting", playerReader.IsCasting },
 
                 // General Buff Condition
-                { "Eating", playerReader.Buffs.Food },
-                { "Drinking", playerReader.Buffs.Drink },
+                { Food, playerReader.Buffs.Food },
+                { Drink, playerReader.Buffs.Drink },
                 { "Mana Regeneration", playerReader.Buffs.Mana_Regeneration },
                 { "Well Fed", playerReader.Buffs.Well_Fed },
                 { "Clearcasting", playerReader.Buffs.Clearcasting },
@@ -388,29 +390,28 @@ namespace Core
 
         public void InitUserDefinedIntVariables(Dictionary<string, int> intKeyValues)
         {
-            foreach (var kvp in intKeyValues)
+            foreach ((string key, int value) in intKeyValues)
             {
-                int v = kvp.Value;
-                int f() => v;
+                int f() => value;
 
-                if (!intVariables.TryAdd(kvp.Key, f))
+                if (!intVariables.TryAdd(key, f))
                 {
-                    throw new Exception($"Unable to add user defined variable to values. [{kvp.Key} -> {kvp.Value}]");
+                    throw new Exception($"Unable to add user defined variable to values. [{key} -> {value}]");
                 }
                 else
                 {
-                    if (kvp.Key.StartsWith("Buff_"))
+                    if (key.StartsWith("Buff_"))
                     {
-                        int l() => playerBuffTimeReader.GetRemainingTimeMs(v);
-                        intVariables.TryAdd($"{v}", l);
+                        int l() => playerBuffTimeReader.GetRemainingTimeMs(value);
+                        intVariables.TryAdd($"{value}", l);
                     }
-                    else if(kvp.Key.StartsWith("Debuff_"))
+                    else if (key.StartsWith("Debuff_"))
                     {
-                        int l() => targetDebuffTimeReader.GetRemainingTimeMs(v);
-                        intVariables.TryAdd($"{v}", l);
+                        int l() => targetDebuffTimeReader.GetRemainingTimeMs(value);
+                        intVariables.TryAdd($"{value}", l);
                     }
 
-                    LogUserDefinedValue(logger, nameof(RequirementFactory), kvp.Key, kvp.Value);
+                    LogUserDefinedValue(logger, nameof(RequirementFactory), key, value);
                 }
             }
         }
