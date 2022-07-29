@@ -6,15 +6,13 @@
       {
         "Name": "Serpent Sting",
         "Key": "2",
-        "StopBeforeCast": true,
-        "Requirements": ["HasRangedWeapon", "HasAmmo", "!InMeleeRange", "!Serpent Sting"]
-      },
-      {
-        "Name": "Raptor Strike",
-        "Key": "4",
-        "WhenUsable": true,
-        "AfterCastWaitNextSwing": true,
-        "Requirements": ["InMeleeRange", "!AutoShot"]
+        "BeforeCastStop": true,
+        "Requirements": [
+          "HasRangedWeapon",
+          "HasAmmo",
+          "!InMeleeRange",
+          "!Serpent Sting"
+        ]
       }
     ]
   },
@@ -22,20 +20,33 @@
     "Sequence": [
       {
         "Name": "Auto Shot",
-        "HasCastBar": true,
         "Key": "3",
-        "Requirements": ["HasRangedWeapon", "HasAmmo", "!InMeleeRange", "!AutoShot"]
+        "Item": true,
+        "Requirements": [
+          "HasRangedWeapon",
+          "HasAmmo",
+          "!InMeleeRange",
+          "!AutoShot"
+        ]
       },
       {
         "Name": "Raptor Strike",
         "Key": "4",
         "WhenUsable": true,
-        "AfterCastWaitNextSwing": true,
-        "Requirements": ["InMeleeRange", "!AutoShot"]
+        "AfterCastWaitSwing": true,
+        "Requirements": [
+          "MainHandSwing > -400",
+          "InMeleeRange",
+          "!AutoShot"
+        ]
       },
       {
         "Name": "AutoAttack",
-        "Requirements": ["InMeleeRange", "!AutoShot", "!AutoAttacking"]
+        "Requirements": [
+          "InMeleeRange",
+          "!AutoShot",
+          "!AutoAttacking"
+        ]
       }
     ]
   },
@@ -56,7 +67,7 @@
         "Requirement": "Health% < 30"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "7",
         "Requirement": "Mana% < 30"
       }
@@ -74,7 +85,10 @@
       {
         "Name": "Sell",
         "Key": "C",
-        "Requirements": ["BagFull", "BagGreyItem"],
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ],
         "PathFilename": "1_Gnome_Vendor.json",
         "Cost": 6
       }

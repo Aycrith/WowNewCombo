@@ -3,13 +3,33 @@
   "Loot": true,
   "NPCMaxLevels_Below": 6,
   "NPCMaxLevels_Above": 2,
-
   "PathFilename": "44_Tanaris.json",
   "PathThereAndBack": false,
   "PathReduceSteps": true,
-
-  "Blacklist": ["Kolkar","Legashi","Blood Elf","Elf Reclaim","Elf Survey","Searing Roc","Living Storm","Land Rager","BLUEGI","Tunnel","OL' SO","HAREN S","THRAGO", "Elder Razormaw","Highland Razormaw","Boulderfist","witherbark","venomhide","tar beast","toxic horror","hive","hazzali"],
-
+  "Blacklist": [
+    "Kolkar",
+    "Legashi",
+    "Blood Elf",
+    "Elf Reclaim",
+    "Elf Survey",
+    "Searing Roc",
+    "Living Storm",
+    "Land Rager",
+    "BLUEGI",
+    "Tunnel",
+    "OL' SO",
+    "HAREN S",
+    "THRAGO",
+    "Elder Razormaw",
+    "Highland Razormaw",
+    "Boulderfist",
+    "witherbark",
+    "venomhide",
+    "tar beast",
+    "toxic horror",
+    "hive",
+    "hazzali"
+  ],
   "Pull": {
     "Sequence": []
   },
@@ -30,21 +50,20 @@
         "Name": "Seal of Righteousness",
         "Key": "2",
         "Cooldown": 3000,
-        "MinMana": 82,
-        "Requirements": ["not Seal of Righteousness"]
+        "Requirements": [
+          "not Seal of Righteousness"
+        ]
       },
       {
         "Name": "Judgement",
         "Key": "3",
         "Cooldown": 12000,
-        "Requirement": "Mana%>40",
-        "MinMana": 77
+        "Requirement": "Mana%>40"
       },
       {
         "Name": "Hammer of Justice",
         "Key": "9",
-        "Cooldown": 60000,
-        "MinMana": 50
+        "Cooldown": 60000
       }
     ]
   },
@@ -56,7 +75,6 @@
         "Key": "6",
         "Requirement": "Health%<50",
         "Cooldown": 3000,
-        "MinMana": 580,
         "Cost": 2,
         "InCombat": "any"
       },
@@ -64,13 +82,14 @@
         "Name": "Devotion Aura",
         "Key": "5",
         "Requirement": "not Devotion Aura",
+        "AfterCastAuraExpected": true,
         "Log": false
       },
       {
         "Name": "Blessing of Might",
         "Key": "4",
-        "MinMana": 45,
         "Requirement": "not Blessing of Might",
+        "AfterCastAuraExpected": true,
         "Log": false
       },
       {
@@ -81,7 +100,7 @@
         "Log": false
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "8",
         "Requirement": "Mana%<80",
         "Cost": 3
@@ -102,21 +121,21 @@
     ]
   },
   "NPC": {
-      "Sequence": [
-        {
-          "Name": "Repair",
-          "Key": "C",
-          "Requirement": "Items Broken",
-          "PathFilename": "Tanaris_GadgetzanKrinkleGoodsteel.json",
-          "Cost": 6
-        },
-        {
-          "Name": "Sell",
-          "Key": "C",
-          "Requirement": "BagCount>80",
-          "PathFilename": "Tanaris_GadgetzanKrinkleGoodsteel.json",
-          "Cost": 6
-        }
-      ]
+    "Sequence": [
+      {
+        "Name": "Repair",
+        "Key": "C",
+        "Requirement": "Items Broken",
+        "PathFilename": "Tanaris_GadgetzanKrinkleGoodsteel.json",
+        "Cost": 6
+      },
+      {
+        "Name": "Sell",
+        "Key": "C",
+        "Requirement": "BagCount>80",
+        "PathFilename": "Tanaris_GadgetzanKrinkleGoodsteel.json",
+        "Cost": 6
+      }
+    ]
   }
 }

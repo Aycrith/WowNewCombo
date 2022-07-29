@@ -11,9 +11,7 @@
           "!Seal of the Crusader",
           "!Judgement of the Crusader",
           "CD_Judgement <= 1500"
-        ],
-        "WaitBuffAfterCast": true,
-        "DelayAfterCast": 0
+        ]
       },
       {
         "Name": "Judgement",
@@ -24,7 +22,6 @@
           "Seal of the Crusader",
           "!Judgement of the Crusader"
         ],
-        "DelayAfterCast": 0
       }
     ]
   },
@@ -34,7 +31,6 @@
         "Name": "Divine Protection",
         "Key": "N1",
         "WhenUsable": true,
-        "WaitBuffAfterCast": true,
         "Requirements": [
           "Health%<20"
         ]
@@ -54,20 +50,21 @@
         "WhenUsable": true,
         "Requirements": [
           "SpellInRange:0"
-        ],
-        "DelayAfterCast": 0
+        ]
       },
       {
         "Name": "Seal of Righteousness",
         "Key": "2",
-        "WaitBuffAfterCast": true,
         "Requirements": [
           "!Seal of Righteousness"
         ]
       },
       {
         "Name": "AutoAttack",
-        "Requirements": ["!AutoAttacking", "!Divine Protection"]
+        "Requirements": [
+          "!AutoAttacking",
+          "!Divine Protection"
+        ]
       },
       {
         "Name": "Approach",
@@ -80,12 +77,12 @@
       {
         "Name": "Devotion Aura",
         "Key": "5",
-        "Requirement": "!Devotion Aura"
+        "Requirement": "!Devotion Aura",
+        "AfterCastAuraExpected": true
       },
       {
         "Name": "Blessing of Might",
         "Key": "4",
-        "WaitBuffAfterCast": true,
         "Requirement": "!Blessing of Might"
       }
     ]
@@ -93,7 +90,7 @@
   "Parallel": {
     "Sequence": [
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "-",
         "Requirement": "Mana% < 50"
       },
@@ -116,7 +113,10 @@
       {
         "Name": "Sell",
         "Key": "C",
-        "Requirements": ["BagFull", "BagGreyItem"],
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ],
         "PathFilename": "5_Draenei_Vendor.json",
         "Cost": 6
       }

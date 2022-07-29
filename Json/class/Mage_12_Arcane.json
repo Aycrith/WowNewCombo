@@ -6,6 +6,8 @@
   "PathThereAndBack": true,
   "PathReduceSteps": false,
   "IntVariables": {
+    "Item_Conjure_Drink": 2288,
+    "Item_Conjure_Food": 1113,
     "MIN_FOOD%": 50,
     "MIN_WATER%": 30,
     "MIN_MANA_SPELL%": 60,
@@ -22,8 +24,7 @@
       {
         "Name": "Shoot",
         "Key": "0",
-        "HasCastbar": true,
-        "DelayBeforeCast": 100,
+        "Item": true,
         "Requirements": [
           "HasRangedWeapon",
           "!Shooting",
@@ -43,7 +44,7 @@
           "InMeleeRange",
           "TargetHealth% > MIN_TARGET_HP_NOVA%"
         ],
-        "StepBackAfterCast": -1 //1000
+        "AfterCastStepBack": -1 //1000
       },
       {
         "Name": "Fire Blast",
@@ -67,8 +68,7 @@
       {
         "Name": "Shoot",
         "Key": "0",
-        "HasCastBar": true,
-        "DelayBeforeCast": 100,
+        "Item": true,
         "Requirements": [
           "HasRangedWeapon",
           "!Shooting",
@@ -92,7 +92,7 @@
         "Requirement": "Health% < MIN_FOOD%"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "-",
         "Requirement": "Mana% < MIN_WATER%"
       }
@@ -111,18 +111,20 @@
         "Requirement": "!Arcane Intellect"
       },
       {
-        "Name": "Conjure Water",
+        "Name": "Conjure Drink",
         "Key": "9",
         "HasCastBar": true,
-        "Requirement": "!BagItem:2288:4",
-        "AfterCastWaitItem": true
+        "Requirement": "!BagItem:Item_Conjure_Drink:4",
+        "AfterCastWaitCastbar": true,
+        "AfterCastWaitBag": true
       },
       {
         "Name": "Conjure Food",
         "Key": "8",
         "HasCastBar": true,
-        "Requirement": "!BagItem:1113:4",
-        "AfterCastWaitItem": true
+        "Requirement": "!BagItem:Item_Conjure_Food:4",
+        "AfterCastWaitCastbar": true,
+        "AfterCastWaitBag": true
       }
     ]
   }

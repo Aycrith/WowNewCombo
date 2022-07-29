@@ -8,8 +8,11 @@
         "Name": "Stealth",
         "Key": "N2",
         "WhenUsable": true,
-        "WaitBuffAfterCast": true,
-        "Requirements": ["not Stealth","not InMeleeRange"]
+        "AfterCastWaitBuff": true,
+        "Requirements": [
+          "not Stealth",
+          "not InMeleeRange"
+        ]
       },
       {
         "Name": "Backstab",
@@ -25,28 +28,29 @@
         "Name": "Evasion",
         "Key": 5,
         "WhenUsable": true,
-        "WaitBuffAfterCast": true,
         "Requirement": "Health%<40"
       },
       {
         "Name": "Slice and Dice",
         "Key": "4",
-        "WaitBuffAfterCast": true,
-        "MinEnergy": 25,
-        "MinComboPoints": 1,
-        "Requirements": ["not Slice and Dice"]
+        "AfterCastAuraExpected": true,
+        "Requirements": [
+          "not Slice and Dice",
+          "Combo Point > 1"
+        ]
       },
       {
         "Name": "Eviscerate",
         "Key": "3",
-        "MinEnergy": 35,
-        "MinComboPoints": 2,
-        "Requirements": ["TargetHealth%>20", "LastMainHandMs<500"]
+        "Requirements": [
+          "TargetHealth%>20",
+          "LastMainHandMs<500",
+          "Combo Point > 1"
+        ]
       },
       {
         "Name": "Sinister Strike",
         "Key": "2",
-        "MinEnergy": 42,
         "Requirement": "LastMainHandMs<500"
       },
       {
@@ -80,7 +84,10 @@
       {
         "Name": "Sell",
         "Key": "C",
-        "Requirements": ["BagFull", "BagGreyItem"],
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ],
         "PathFilename": "5_Gnome_Vendor.json",
         "Cost": 6
       }

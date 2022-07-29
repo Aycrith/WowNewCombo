@@ -10,7 +10,6 @@
         "Name": "Smite",
         "Key": "2",
         "HasCastBar": true,
-        "MinMana": 15,
         "Requirement": "Mana%>50"
       }
     ]
@@ -22,22 +21,26 @@
         "Key": "4",
         "HasCastBar": true,
         "WhenUsable": true,
-        "Requirements": ["Race:Draenei", "Health%<50"]
+        "Requirements": [
+          "Race:Draenei",
+          "Health%<50"
+        ]
       },
       {
         "Name": "Lesser Heal",
         "Key": "3",
         "Requirement": "Health%<40",
         "Cooldown": 10000,
-        "HasCastBar": true,
-        "MinMana": 25
+        "HasCastBar": true
       },
       {
         "Name": "Smite",
         "Key": "2",
         "HasCastBar": true,
-        "MinMana": 15,
-        "Requirements": ["not InMeleeRange", "Mana%>50"]
+        "Requirements": [
+          "not InMeleeRange",
+          "Mana%>50"
+        ]
       },
       {
         "Name": "AutoAttack",
@@ -57,7 +60,7 @@
         "Requirement": "Health%<30"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "-",
         "Requirement": "Mana%<30"
       }

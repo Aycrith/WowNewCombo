@@ -15,8 +15,7 @@
       {
         "Name": "Lightning Bolt",
         "Key": "2",
-        "HasCastBar": true,
-        "MinMana": 75
+        "HasCastBar": true
       }
     ]
   },
@@ -31,24 +30,21 @@
         ],
         "Cooldown": 5000,
         "HasCastBar": true,
-        "Log": false,
-        "MinMana": 80
+        "Log": false
       },
       {
         "Name": "Stoneclaw Totem",
         "Key": "7",
         "Requirement": "MobCount>1",
         "Cooldown": 30000,
-        "Log": false,
-        "MinMana": 30
+        "Log": false
       },
       {
         "Name": "Searing Totem",
         "Key": "F7",
         "Requirement": "MobCount>1",
         "Cooldown": 15000,
-        "Log": false,
-        "MinMana": 95
+        "Log": false
       },
       {
         "Name": "War Stomp",
@@ -58,14 +54,12 @@
           "Health%<49",
           "MobCount>1"
         ],
-        "WhenUsable": true,
-        "MinMana": 10
+        "WhenUsable": true
       },
       {
         "Name": "Lightning Bolt",
         "Key": "2",
         "HasCastBar": true,
-        "MinMana": 75,
         "Requirements": [
           "not InMeleeRange",
           "Mana%>30"
@@ -79,8 +73,7 @@
           "InMeleeRange"
         ],
         "WhenUsable": true,
-        "Log": false,
-        "MinMana": 80
+        "Log": false
       },
       {
         "Name": "AutoAttack",
@@ -97,13 +90,12 @@
       {
         "Name": "Rockbiter Weapon",
         "Key": "5",
-        "MinMana": 25,
-        "Requirement": "not HasMainHandEnchant"
+        "Requirement": "not HasMainHandEnchant",
+        "AfterCastAuraExpected": true
       },
       {
         "Name": "Lightning Shield",
         "Key": "6",
-        "MinMana": 45,
         "Requirement": "not Lightning Shield"
       }
     ]
@@ -116,8 +108,7 @@
         "Requirement": "Health%<50",
         "Cooldown": 5000,
         "HasCastBar": true,
-        "Log": false,
-        "MinMana": 80
+        "Log": false
       },
       {
         "Name": "Food",
@@ -125,7 +116,7 @@
         "Requirement": "Health%<40"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "9",
         "Requirement": "Mana%<40"
       }
@@ -143,7 +134,10 @@
       {
         "Name": "Sell",
         "Key": "T",
-        "Requirements": ["BagFull", "BagGreyItem"],
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ],
         "PathFilename": "NPC_Stonetalon.json",
         "Cost": 6
       }

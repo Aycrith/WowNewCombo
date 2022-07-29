@@ -71,8 +71,7 @@
         "Requirements": [
           "SpellInRange:0",
           "!Moonfire"
-        ],
-        "MinMana": 235
+        ]
       },
       {
         "Name": "Wrath",
@@ -80,13 +79,13 @@
         "Requirement": "OutOfCombatRange",
         "Form": "None",
         "HasCastBar": true,
-        "WaitForWithinMeleeRange": true
+        "AfterCastWaitMeleeRange": true
       },
       {
         "Name": "Cat Form",
         "Key": "F2",
         "Form": "None",
-        "WaitForWithinMeleeRange": true
+        "AfterCastWaitMeleeRange": true
       },
       {
         "Name": "Healing Touch",
@@ -111,33 +110,31 @@
         "Name": "Tigers Fury",
         "Requirement": "!TigersFury",
         "Key": "3",
-        "MinEnergy": 30,
         "Cooldown": 6000,
-        "DelayAfterCast": "200",
+        "AfterCastDelay": "200",
         "Form": "Druid_Cat"
       },
       {
         "Name": "Faerie Fire",
         "Requirement": "!Faerie Fire",
         "Key": "7",
-        "MinRage": 10,
         "Cooldown": 10000,
         "Form": "Druid_Cat",
         "ResetOnNewTarget": true
       },
       {
         "Name": "Rip",
-        "Requirement": "!Rip",
         "Key": "2",
-        "MinEnergy": 30,
-        "MinComboPoints": 3,
+        "Requirements": [
+          "!Rip",
+          "Combo Point > 2"
+        ],
         "Cooldown": 10000,
         "Form": "Druid_Cat"
       },
       {
         "Name": "Rake",
         "Key": "1",
-        "MinRage": 35,
         "Cooldown": 1000,
         "Form": "Druid_Cat"
       },
@@ -179,7 +176,7 @@
         "Form": "None"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "0",
         "Requirement": "Mana% < 40",
         "Form": "None",
@@ -188,16 +185,12 @@
       {
         "Name": "Thorns",
         "Key": "3",
-        "AfterCastWaitBuff": true,
-        "DelayAfterCast": 0,
         "Requirement": "!Thorns",
         "Form": "None"
       },
       {
         "Name": "Mark of the Wild",
         "Key": "4",
-        "AfterCastWaitBuff": true,
-        "DelayAfterCast": 0,
         "Requirement": "!Mark of the Wild",
         "Form": "None"
       },

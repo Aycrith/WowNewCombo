@@ -1,21 +1,19 @@
 {
   "ClassName": "Hunter",
+  //"Mode": "AttendedGrind",
   "PathFilename": "1_Gnome.json",
   "Pull": {
     "Sequence": [
       {
         "Name": "Auto Shot",
-        "HasCastBar": true,
         "Key": "3",
-        "Requirements": ["HasRangedWeapon", "!InMeleeRange", "!AutoShot", "HasAmmo"]
-      },
-      {
-        "Name": "Raptor Strike",
-        "Key": "4",
-        "WhenUsable": true,
-        "AfterCastWaitNextSwing": true,
-        "StepBackAfterCast": 1000,
-        "Requirements": ["InMeleeRange", "!AutoShot"]
+        "Item": true,
+        "Requirements": [
+          "HasRangedWeapon",
+          "!InMeleeRange",
+          "!AutoShot",
+          "HasAmmo"
+        ]
       }
     ]
   },
@@ -23,38 +21,53 @@
     "Sequence": [
       {
         "Name": "Auto Shot",
-        "HasCastBar": true,
         "Key": "3",
-        "Requirements": ["HasRangedWeapon", "!InMeleeRange", "!AutoShot", "HasAmmo"]
+        "Item": true,
+        "Requirements": [
+          "HasRangedWeapon",
+          "!InMeleeRange",
+          "!AutoShot",
+          "HasAmmo"
+        ]
       },
       {
         "Name": "Raptor Strike",
         "Key": "4",
         "WhenUsable": true,
-        "AfterCastWaitNextSwing": true,
-        "Requirements": ["InMeleeRange", "!AutoShot"]
+        "AfterCastWaitSwing": true,
+        "Requirements": [
+          "MainHandSwing > -400",
+          "InMeleeRange",
+          "!AutoShot"
+        ]
       },
       {
         "Name": "AutoAttack",
-        "Requirements": ["InMeleeRange", "!AutoAttacking"]
+        "Requirements": [
+          "InMeleeRange",
+          "!AutoAttacking"
+        ]
       }
     ]
   },
   "NPC": {
     "Sequence": [
       {
+        "Cost": 6,
         "Name": "Repair",
         "Key": "C",
         "Requirement": "Items Broken",
-        "PathFilename": "1_Gnome_Vendor.json",
-        "Cost": 6
+        "PathFilename": "1_Gnome_Vendor.json"
       },
       {
+        "Cost": 6,
         "Name": "Sell",
         "Key": "C",
-        "Requirements": ["BagFull", "BagGreyItem"],
-        "PathFilename": "1_Gnome_Vendor.json",
-        "Cost": 6
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ],
+        "PathFilename": "1_Gnome_Vendor.json"
       }
     ]
   }

@@ -20,9 +20,7 @@
           "!Seal of the Crusader",
           "!Judgement of the Crusader",
           "CD_Judgement <= 1500"
-        ],
-        "WaitBuffAfterCast": true,
-        "DelayAfterCast": 0
+        ]
       },
       {
         "Name": "Judgement",
@@ -32,8 +30,7 @@
           "SpellInRange:0",
           "Seal of the Crusader",
           "!Judgement of the Crusader"
-        ],
-        "DelayAfterCast": 0
+        ]
       }
     ]
   },
@@ -43,7 +40,6 @@
         "Name": "Divine Protection",
         "Key": "N1",
         "WhenUsable": true,
-        "WaitBuffAfterCast": true,
         "Requirements": [
           "Health% < MIN_HP_BEFORE_HEAL%",
           "!Blessing of Protection"
@@ -53,7 +49,6 @@
         "Name": "Blessing of Protection",
         "Key": "N2",
         "WhenUsable": true,
-        "WaitBuffAfterCast": true,
         "Requirements": [
           "Health% < MIN_HP_BEFORE_HEAL%",
           "!Divine Protection"
@@ -108,8 +103,7 @@
           "!Seal of the Crusader",
           "!Judgement of the Crusader",
           "TargetHealth% > MIN_TARGET_HP%"
-        ],
-        "WaitBuffAfterCast": true
+        ]
       },
       {
         "Name": "Judgement",
@@ -120,7 +114,7 @@
           "Seal of Command || Seal of Righteousness || Seal of the Crusader",
           "Mana% >= MIN_MANA%"
         ],
-        "DelayAfterCast": 400
+        "AfterCastDelay": 400
       },
       {
         "Name": "Hammer of Justice",
@@ -139,8 +133,7 @@
           "!Seal of Command",
           "Judgement of the Crusader",
           "TargetHealth% > MIN_TARGET_HP%"
-        ],
-        "WaitBuffAfterCast": true
+        ]
       },
       {
         "Name": "Seal of Righteousness",
@@ -151,8 +144,7 @@
           "!Seal of Righteousness",
           "Judgement of the Crusader",
           "TargetHealth% > MIN_TARGET_HP%"
-        ],
-        "WaitBuffAfterCast": true
+        ]
       },
       {
         "Name": "AutoAttack",
@@ -173,11 +165,10 @@
       {
         "Name": "Blessing of Wisdom",
         "Key": "4",
-        "WaitBuffAfterCast": true,
         "Requirement": "!Blessing of Wisdom"
       },
       {
-/*
+        /*
 #showtooltip
 /use Heavy Weightstone
 /use 16
@@ -188,24 +179,32 @@
         "WhenUsable": true,
         "HasCastbar": true,
         "Requirement": "!HasMainHandEnchant",
-        "Cooldown": 1000
+        "AfterCastAuraExpected": true
       },
       {
         "Name": "Sanctity Aura",
         "Key": "5",
-        "Requirements": ["Talent:Sanctity Aura", "!Sanctity Aura"]
+        "Requirements": [
+          "Talent:Sanctity Aura",
+          "!Sanctity Aura"
+        ],
+        "AfterCastAuraExpected": true
       },
       {
         "Name": "Retribution Aura",
         "Key": "5",
-        "Requirements": ["!Talent:Sanctity Aura", "!Retribution Aura"]
+        "Requirements": [
+          "!Talent:Sanctity Aura",
+          "!Retribution Aura"
+        ],
+        "AfterCastAuraExpected": true
       }
     ]
   },
   "Parallel": {
     "Sequence": [
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "-",
         "Requirement": "Mana% < 40"
       },
@@ -228,7 +227,10 @@
       {
         "Name": "Sell",
         "Key": "C",
-        "Requirements": ["BagFull", "BagGreyItem"],
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ],
         "PathFilename": "25-30_HillsbardFoothills_Vendor.json",
         "Cost": 6
       }

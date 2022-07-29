@@ -57,7 +57,7 @@
         "Requirement": "Health% < MIN_WATER%"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "-",
         "Requirement": "Mana% < MIN_WATER%"
       }

@@ -30,7 +30,11 @@
       {
         "Name": "Devotion Aura",
         "Key": "5",
-        "Requirements": ["Spell:Devotion Aura", "!Devotion Aura"]
+        "Requirements": [
+          "Spell:Devotion Aura",
+          "!Devotion Aura"
+        ],
+        "AfterCastAuraExpected": true
       }
     ]
   }

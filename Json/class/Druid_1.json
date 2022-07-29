@@ -40,7 +40,7 @@
   "Adhoc": {
     "Sequence": [
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "-",
         "Requirement": "Mana% < 30"
       }

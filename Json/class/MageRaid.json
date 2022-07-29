@@ -3,23 +3,25 @@
   "Loot": true,
   "NPCMaxLevels_Below": 7,
   "NPCMaxLevels_Above": 2,
-
   "PathFilename": "60_Silithus_scorpid.2.json",
   "PathThereAndBack": true,
   "PathReduceSteps": false,
-
   "Mode": "AttendedGrind",
-
-  "Blacklist": ["hive","tortured"],
-  
+  "Blacklist": [
+    "hive",
+    "tortured"
+  ],
+  "IntVariables": {
+    "Item_Conjure_Drink": 8079,
+    "Item_Conjure_Food": 8076
+  },
   "Pull": {
     "Sequence": [
       {
         "Name": "Frost Bolt",
         "HasCastBar": true,
         "Key": "5",
-        "Requirement": "not npcID:8257",
-        "MinMana": 221
+        "Requirement": "not npcID:8257"
       }
     ]
   },
@@ -35,29 +37,30 @@
       {
         "Name": "Ice Barrier",
         "Key": "L",
-        "Requirements": [ "not Ice Barrier","not npcID:8257"],
+        "Requirements": [
+          "not Ice Barrier",
+          "not npcID:8257"
+        ],
         "Cooldown": 30000,
-        "MinMana": 400,
         "Log": false
       },
       {
         "Name": "Fire Ward",
         "Key": "=",
-        "Requirements": [ "not Ward"],
+        "Requirements": [
+          "not Ward"
+        ],
         "Cooldown": 30000,
-        "MinMana": 400,
         "Log": false
       },
       {
         "Name": "Frost Bolt",
         "HasCastBar": true,
         "Key": "5",
-        "Requirement": "not npcID:8257",
-        "MinMana": 221
+        "Requirement": "not npcID:8257"
       }
     ]
   },
-
   "Parallel": {
     "Sequence": [
       {
@@ -66,43 +69,42 @@
         "Requirement": "Health%<90"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "7",
         "Requirement": "Mana%<90"
       }
     ]
-    },
-
+  },
   "Adhoc": {
     "Sequence": [
       {
         "Name": "Frost Armor",
         "Key": "3",
-        "MinMana": 110,
         "Requirement": "not Frost Armor",
         "Log": false
       },
       {
         "Name": "Arcane Intellect",
         "Key": "4",
-        "MinMana": 60,
         "Requirement": "not Arcane Intellect",
         "Log": false
       },
       {
-        "Name": "Conjure Water",
+        "Name": "Conjure Drink",
         "HasCastBar": true,
         "Key": "9",
-        "Requirement": "not BagItem:8079:4",
-        "AfterCastWaitItem": true,
+        "Requirement": "not BagItem:Item_Conjure_Drink:4",
+        "AfterCastWaitCastbar": true,
+        "AfterCastWaitBag": true,
         "Log": false
       },
       {
         "Name": "Conjure Food",
         "HasCastBar": true,
         "Key": "8",
-        "Requirement": "not BagItem:8076:4",
-        "AfterCastWaitItem": true,
+        "Requirement": "not BagItem:Item_Conjure_Food:4",
+        "AfterCastWaitCastbar": true,
+        "AfterCastWaitBag": true,
         "Log": false
       }
     ]

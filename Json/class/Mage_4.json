@@ -6,7 +6,8 @@
   "PathReduceSteps": false,
   "IntVariables": {
     "MIN_WATER%": 20,
-    "MIN_MANA_FIREBALL%": 40
+    "MIN_MANA_FIREBALL%": 40,
+    "Item_Conjure_Drink": 5350
   },
   "Pull": {
     "Sequence": [
@@ -55,7 +56,7 @@
         "Requirement": "Health% < MIN_WATER%"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "-",
         "Requirement": "Mana% < MIN_WATER%"
       }
@@ -74,11 +75,12 @@
         "Requirement": "not Arcane Intellect"
       },
       {
-        "Name": "Conjure Water",
+        "Name": "Conjure Drink",
         "Key": "9",
         "HasCastBar": true,
-        "Requirement": "!BagItem:5350:4",
-        "AfterCastWaitItem": true
+        "Requirement": "!BagItem:Item_Conjure_Drink:4",
+        "AfterCastWaitCastbar": true,
+        "AfterCastWaitBag": true
       }
     ]
   },

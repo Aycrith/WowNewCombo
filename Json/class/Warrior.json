@@ -2,19 +2,16 @@
   "ClassName": "Warrior",
   "Loot": true,
   "NPCMaxLevels_Below": 8,
-
   "PathFilename": "58_Winterspring.2.json",
   "PathThereAndBack": true,
   "PathReduceSteps": false,
-
-
   "Pull": {
     "Sequence": [
       {
         "Name": "Shoot Gun",
         "Key": "9",
-        "DelayAfterCast": 1000,
-        "WaitForWithinMeleeRange": true
+        "AfterCastDelay": 1000,
+        "AfterCastWaitMeleeRange": true
       }
     ]
   },
@@ -28,27 +25,23 @@
       {
         "Name": "Battle Shout",
         "Key": "6",
-        "MinRage": 10,
         "Requirement": "not Battle Shout"
       },
       {
         "Name": "Overpower",
         "Key": "5",
-        "MinRage": 5,
         "Cooldown": 10000
       },
       {
         "Name": "Rend",
         "Key": "3",
-        "MinRage": 10,
         "Requirement": "not Rend",
         "Cooldown": 5000
       },
       {
         "Name": "Heroic Strike",
         "Key": "4",
-        "AfterCastWaitNextSwing": true,
-        "MinRage": 10
+        "AfterCastWaitSwing": true
       },
       {
         "Name": "AutoAttack",
@@ -79,7 +72,7 @@
       },
       {
         "Name": "Well Fed",
-        "StopBeforeCast": true,
+        "BeforeCastStop": true,
         "Key": "7",
         "Requirement": "not Well Fed",
         "Cooldown": 1200,

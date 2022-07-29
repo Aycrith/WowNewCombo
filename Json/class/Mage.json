@@ -1,23 +1,45 @@
 {
   "ClassName": "Mage",
   "Loot": true,
-
   "NPCMaxLevels_Below": 6,
   "NPCMaxLevels_Above": 2,
-  
   "PathFilename": "38_Arathi.json",
   "PathThereAndBack": true,
   "PathReduceSteps": true,
-
-  "Blacklist": ["Kolkar","Legashi","Blood Elf","Elf Reclaim","Elf Survey","Searing Roc","Living Storm","Land Rager","BLUEGI","Tunnel","OL' SO","HAREN S","THRAGO", "Elder Razormaw","Highland Razormaw","Boulderfist","witherbark","venomhide","tar beast","toxic horror","hive","hazzali"],
-
+  "Blacklist": [
+    "Kolkar",
+    "Legashi",
+    "Blood Elf",
+    "Elf Reclaim",
+    "Elf Survey",
+    "Searing Roc",
+    "Living Storm",
+    "Land Rager",
+    "BLUEGI",
+    "Tunnel",
+    "OL' SO",
+    "HAREN S",
+    "THRAGO",
+    "Elder Razormaw",
+    "Highland Razormaw",
+    "Boulderfist",
+    "witherbark",
+    "venomhide",
+    "tar beast",
+    "toxic horror",
+    "hive",
+    "hazzali"
+  ],
+  "IntVariables": {
+    "Item_Conjure_Drink": 8077,
+    "Item_Conjure_Food": 1487
+  },
   "Pull": {
     "Sequence": [
       {
         "Name": "Frostbolt",
         "HasCastBar": true,
-        "Key": "1",
-        "MinMana": 35
+        "Key": "1"
       }
     ]
   },
@@ -33,34 +55,40 @@
       {
         "Name": "Fire Blast",
         "Key": "5",
-        "MinMana": 40,
         "WhenUsable": true,
-        "Requirements": ["TargetHealth%<45", "SpellInRange:4"]
+        "Requirements": [
+          "TargetHealth%<45",
+          "SpellInRange:4"
+        ]
       },
       {
         "Name": "Frost Nova",
         "Key": "6",
-        "MinMana": 55,
         "WhenUsable": true,
         "Requirement": "InMeleeRange",
-        "StepBackAfterCast": 1000,
-        "DelayAfterCast": 0
+        "AfterCastStepBack": 1000
       },
       {
         "Name": "Fireball",
         "HasCastBar": true,
-        "Key": "2",
-        "MinMana": 65
+        "Key": "2"
       },
       {
         "Name": "Shoot",
         "Key": "0",
-        "HasCastbar": true,
-        "Requirements": ["HasRangedWeapon", "not Shooting", "SpellInRange:1"]
+        "Item": true,
+        "Requirements": [
+          "HasRangedWeapon",
+          "not Shooting",
+          "SpellInRange:1"
+        ]
       },
       {
         "Name": "AutoAttack",
-        "Requirements": ["not HasRangedWeapon", "not AutoAttacking"]
+        "Requirements": [
+          "not HasRangedWeapon",
+          "not AutoAttacking"
+        ]
       }
     ]
   },
@@ -72,40 +100,40 @@
         "Requirement": "Health%<90"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "-",
         "Requirement": "Mana%<70"
       }
     ]
-    },
-
+  },
   "Adhoc": {
     "Sequence": [
       {
         "Name": "Frost Armor",
         "Key": "3",
-        "MinMana": 60,
         "Requirement": "not Frost Armor"
       },
       {
         "Name": "Arcane Intellect",
         "Key": "4",
-        "MinMana": 60,
         "Requirement": "not Arcane Intellect"
       },
       {
-        "Name": "Conjure Water",
+        "Name": "Conjure Drink",
         "Key": "9",
         "HasCastBar": true,
-        "Requirement": "not BagItem:8077:4",
-        "AfterCastWaitItem": true
+        "Requirement": "not BagItem:Item_Conjure_Drink:4",
+        "AfterCastWaitCastbar": true,
+        "AfterCastWaitBag": true
       },
       {
         "Name": "Conjure Food",
         "Key": "8",
         "HasCastBar": true,
-        "Requirement": "not BagItem:1487:4",
-        "AfterCastWaitItem": true
+        "Requirement": "not BagItem:Item_Conjure_Food:4",
+        "AfterCastWaitCastbar": true,
+        "AfterCastWaitBag": true
       }
-    ]}
+    ]
+  }
 }

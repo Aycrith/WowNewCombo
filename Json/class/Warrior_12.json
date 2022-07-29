@@ -12,9 +12,10 @@
       {
         "Name": "Throw",
         "Key": "9",
-        "HasCastbar": true,
+        "Item": true,
         "WhenUsable": true,
-        "WaitForWithinMeleeRange": true,
+        "BeforeCastStop": true,
+        "AfterCastWaitMeleeRange": true,
         "Requirements": [
           "AddVisible",
           "HasRangedWeapon && !Items Broken",
@@ -27,7 +28,7 @@
         "WhenUsable": true,
         "Requirement": "SpellInRange:0",
         "Form": "Warrior_BattleStance",
-        "WaitForWithinMeleeRange": true
+        "AfterCastWaitMeleeRange": true
       }
     ]
   },
@@ -35,14 +36,14 @@
     "Sequence": [
       {
         "Name": "StopAttack",
-        "DelayBeforeCast": 25,
+        "BeforeCastDelay": 25,
         "Requirements": [
           "Battle Shout",
           "AutoAttacking",
           "TargetHealth% > 98",
           "Rage >= Cost_Heroic Strike"
         ],
-        "DelayAfterCast": 25
+        "AfterCastDelay": 25
       },
       {
         "Name": "Thunder Clap",
@@ -65,7 +66,7 @@
         "Requirements": [
           "MainHandSwing > -400"
         ],
-        "AfterCastWaitNextSwing": true
+        "AfterCastWaitSwing": true
       },
       {
         "Name": "Rend",
@@ -95,8 +96,7 @@
         "Key": "4",
         "InCombat": "i dont care",
         "WhenUsable": true,
-        "Requirement": "!Battle Shout",
-        "AfterCastWaitBuff": true
+        "Requirement": "!Battle Shout"
       },
       {
         "Name": "Food",

@@ -68,7 +68,7 @@
         "Requirement": "!Thorns"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "-",
         "Requirement": "Mana% < 30"
       }

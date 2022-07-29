@@ -17,15 +17,15 @@
     ]
   },
   "IntVariables": {
-    "DOT_MIN_HEALTH%": 35
+    "DOT_MIN_HEALTH%": 35,
+    "Item_Soul_Shard": 6265
   },
   "Pull": {
     "Sequence": [
       {
         "Name": "Immolate",
         "Key": "5",
-        "HasCastBar": true,
-        "MinMana": 90
+        "HasCastBar": true
       }
     ]
   },
@@ -38,10 +38,9 @@
         "HasCastBar": true,
         "Requirements": [
           "TargetHealth% < 40",
-          "!BagItem:6265:72",
+          "!BagItem:Item_Soul_Shard:72",
           "TargetYieldXP"
-        ],
-        "MinMana": 55
+        ]
       },
       {
         "Name": "Drain Life",
@@ -50,8 +49,7 @@
         "HasCastBar": true,
         "Requirements": [
           "Health% < 30"
-        ],
-        "MinMana": 55
+        ]
       },
       {
         "Name": "Immolate",
@@ -62,8 +60,7 @@
           "!TargetsMe"
         ],
         "HasCastBar": true,
-        "ResetOnNewTarget": true,
-        "MinMana": 90
+        "ResetOnNewTarget": true
       },
       {
         "Name": "Curse of Agony",
@@ -73,8 +70,7 @@
         "Requirements": [
           "TargetHealth% > DOT_MIN_HEALTH%",
           "!Curse of Agony"
-        ],
-        "MinMana": 50
+        ]
       },
       {
         "Name": "Corruption",
@@ -86,7 +82,6 @@
           "Talent:Improved Corruption:5"
         ],
         "ResetOnNewTarget": true,
-        "MinMana": 55,
         "Log": false
       },
       {
@@ -95,7 +90,6 @@
         "School": "Shadow",
         "HasCastBar": true,
         "ResetOnNewTarget": true,
-        "MinMana": 110,
         "Requirements": [
           "TargetHealth% > DOT_MIN_HEALTH%",
           "!TargetsMe"
@@ -116,7 +110,7 @@
       {
         "Name": "Shoot",
         "Key": "0",
-        "HasCastbar": true,
+        "Item": true,
         "Requirements": [
           "HasRangedWeapon",
           "!Shooting",
@@ -140,7 +134,7 @@
         "Requirement": "Health% < 50"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "-",
         "Requirement": "Mana% < 40"
       }
@@ -151,18 +145,17 @@
       {
         "Name": "Demon Armor",
         "Key": "3",
-        "MinMana": 50,
         "Requirement": "!Demon Armor"
       },
       {
         "Name": "Summon Voidwalker",
         "Key": "4",
         "HasCastBar": true,
-        "MinMana": 122,
         "Requirements": [
-          "BagItem:6265:1",
+          "BagItem:Item_Soul_Shard",
           "!Has Pet"
-        ]
+        ],
+        "AfterCastWaitCastbar": true
       },
       {
         "Name": "Life Tap",
@@ -187,7 +180,10 @@
       {
         "Name": "Sell",
         "Key": "C",
-        "Requirements": ["BagFull", "BagGreyItem"],
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ],
         "PathFilename": "23_Duskwood_Vendor.json",
         "Cost": 6
       }

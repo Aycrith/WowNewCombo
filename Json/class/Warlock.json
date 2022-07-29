@@ -3,13 +3,37 @@
   "Loot": true,
   "NPCMaxLevels_Below": 6,
   "NPCMaxLevels_Above": 2,
-
   "PathFilename": "47_Tanaris.json",
   "PathThereAndBack": false,
   "PathReduceSteps": true,
-
-  "Blacklist": ["Sailor","Legashi","Blood Elf","Elf Reclaim","Elf Survey","Searing Roc","Living Storm","Land Rager","BLUEGI","Tunnel","OL' SO","HAREN S","THRAGO", "Elder Razormaw","Highland Razormaw","Boulderfist","witherbark","venomhide","tar beast","toxic horror","hive","hazzali"],
-
+  "Blacklist": [
+    "Sailor",
+    "Legashi",
+    "Blood Elf",
+    "Elf Reclaim",
+    "Elf Survey",
+    "Searing Roc",
+    "Living Storm",
+    "Land Rager",
+    "BLUEGI",
+    "Tunnel",
+    "OL' SO",
+    "HAREN S",
+    "THRAGO",
+    "Elder Razormaw",
+    "Highland Razormaw",
+    "Boulderfist",
+    "witherbark",
+    "venomhide",
+    "tar beast",
+    "toxic horror",
+    "hive",
+    "hazzali"
+  ],
+  "IntVariables": {
+    "Item_Soul_Shard": 6265,
+    "Item_Healthstone": 19011
+  },
   "Pull": {
     "Sequence": [
       {
@@ -17,7 +41,6 @@
         "Key": "5",
         "HasCastBar": true,
         "ResetOnNewTarget": true,
-        "MinMana": 289,
         "School": "Fire"
       }
     ]
@@ -27,7 +50,10 @@
       {
         "Name": "heal",
         "Key": "N3",
-        "Requirements": ["Health%<50", "BagItem:19005:1"],
+        "Requirements": [
+          "Health%<50",
+          "BagItem:Item_Healthstone"
+        ],
         "Cooldown": 120000,
         "InCombat": "true"
       },
@@ -35,24 +61,30 @@
         "Name": "Drain Soul",
         "Key": "9",
         "HasCastBar": true,
-        "Requirements": ["TargetHealth%<25", "not BagItem:6265:3", "TargetYieldXP"],
-        "School": "Shadow",
-        "MinMana": 290
+        "Requirements": [
+          "TargetHealth%<25",
+          "!BagItem:Item_Soul_Shard:3",
+          "TargetYieldXP"
+        ],
+        "School": "Shadow"
       },
       {
         "Name": "Drain Life",
         "Key": "N4",
         "HasCastBar": true,
-        "Requirements": ["Health%<30"],
-        "MinMana": 240
+        "Requirements": [
+          "Health%<30"
+        ]
       },
       {
         "Name": "Immolate",
         "Key": "5",
-        "Requirements": ["TargetHealth%>35", "not Immolate"],
+        "Requirements": [
+          "TargetHealth%>35",
+          "not Immolate"
+        ],
         "HasCastBar": true,
         "ResetOnNewTarget": true,
-        "MinMana": 289,
         "School": "Fire"
       },
       {
@@ -60,15 +92,20 @@
         "Key": "1",
         "School": "Shadow",
         "ResetOnNewTarget": true,
-        "Requirements": [ "TargetHealth%>35", "not Curse of Agony"],
-        "MinMana": 50
+        "Requirements": [
+          "TargetHealth%>35",
+          "not Curse of Agony"
+        ]
       },
       {
         "Name": "Corruption",
         "Key": "7",
-        "Requirements": ["TargetHealth%>35", "not Corruption", "Talent:Improved Corruption:5"],
+        "Requirements": [
+          "TargetHealth%>35",
+          "not Corruption",
+          "Talent:Improved Corruption:5"
+        ],
         "ResetOnNewTarget": true,
-        "MinMana": 225,
         "School": "Shadow"
       },
       {
@@ -76,7 +113,6 @@
         "Key": "2",
         "HasCastBar": true,
         "ResetOnNewTarget": true,
-        "MinMana": 309,
         "Requirement": "TargetHealth%>35",
         "School": "Shadow",
         "Cooldown": 8000
@@ -85,20 +121,28 @@
         "Name": "Death Coil",
         "Key": "N5",
         "ResetOnNewTarget": true,
-        "MinMana": 495,
         "Cooldown": 120000,
         "School": "Shadow",
-        "Requirements": ["Health%<80"]
+        "Requirements": [
+          "Health%<80"
+        ]
       },
       {
         "Name": "Shoot",
         "Key": "0",
-        "HasCastbar": true,
-        "Requirements": ["HasRangedWeapon", "not Shooting", "SpellInRange:1"]
+        "Item": true,
+        "Requirements": [
+          "HasRangedWeapon",
+          "not Shooting",
+          "SpellInRange:1"
+        ]
       },
       {
         "Name": "AutoAttack",
-        "Requirements": ["not HasRangedWeapon", "not AutoAttacking"]
+        "Requirements": [
+          "not HasRangedWeapon",
+          "not AutoAttacking"
+        ]
       }
     ]
   },
@@ -110,59 +154,70 @@
         "Requirement": "Health%<50"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "-",
         "Requirement": "Mana%<50"
       }
     ]
-    },
+  },
   "Adhoc": {
     "Sequence": [
       {
         "Name": "Demon Armor",
         "Key": "3",
-        "MinMana": 800,
         "Requirement": "not Demon Armor"
       },
       {
         "Name": "Summon Voidwalker",
         "HasCastBar": true,
         "Key": "4",
-        "MinMana": 736,
-        "Requirements": ["BagItem:6265:1", "not Has Pet"],
-        "Cooldown": 60000
+        "Requirements": [
+          "BagItem:Item_Soul_Shard:1",
+          "not Has Pet"
+        ],
+        "AfterCastWaitCastbar": true
       },
       {
         "Name": "Life Tap",
         "Key": "8",
         "Chage": 2,
-        "Requirements": ["Health%>70","Mana%<60"]
+        "Requirements": [
+          "Health%>70",
+          "Mana%<60"
+        ]
       },
       {
         "Name": "heal",
         "Key": "N3",
         "HasCastBar": true,
-        "Requirements": ["BagItem:6265:1", "not BagItem:19011:1"]
+        "Requirements": [
+          "BagItem:Item_Soul_Shard:1",
+          "not BagItem:Item_Healthstone"
+        ],
+        "AfterCastWaitCastbar": true,
+        "AfterCastWaitBag": true
       }
     ]
-  }
-,
+  },
   "NPC": {
-      "Sequence": [
-        {
-          "Name": "Repair",
-          "Key": "C",
-          "Requirement": "Items Broken",
-          "PathFilename": "Tanaris_GadgetzanKrinkleGoodsteel.json",
-          "Cost": 6
-        },
-        {
-          "Name": "Sell",
-          "Key": "C",
-          "Requirements": ["BagFull", "BagGreyItem"],
-          "PathFilename": "Tanaris_GadgetzanKrinkleGoodsteel.json",
-          "Cost": 6
-        }
-      ]
+    "Sequence": [
+      {
+        "Name": "Repair",
+        "Key": "C",
+        "Requirement": "Items Broken",
+        "PathFilename": "Tanaris_GadgetzanKrinkleGoodsteel.json",
+        "Cost": 6
+      },
+      {
+        "Name": "Sell",
+        "Key": "C",
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ],
+        "PathFilename": "Tanaris_GadgetzanKrinkleGoodsteel.json",
+        "Cost": 6
+      }
+    ]
   }
 }

@@ -10,26 +10,26 @@
   "IntVariables": {
     "MIN_HP_FOOD%": 40,
     "MIN_RUNE_TO_DUMP": 40,
-    "ITEM_CORPSE_DUST": 37201
+    "ITEM_CORPSE_DUST": 37201,
+    "Debuff_Frost Fever": 237522,
+    "Debuff_Blood Plague": 237514,
+    "MIN_TIME_REFRESH": 3500
   },
   "Form": [
     {
       "Name": "Blood Presence",
       "Key": "F1",
-      "Form": "DeathKnight_Blood_Presence",
-      "BloodRune": 1
+      "Form": "DeathKnight_Blood_Presence"
     },
     {
       "Name": "Frost Presence",
       "Key": "F2",
-      "Form": "DeathKnight_Frost_Presence",
-      "FrostRune": 1
+      "Form": "DeathKnight_Frost_Presence"
     },
     {
       "Name": "Unholy Presence",
       "Key": "F3",
-      "Form": "DeathKnight_Unholy_Presence",
-      "UnholyRune": 1
+      "Form": "DeathKnight_Unholy_Presence"
     }
   ],
   "Pull": {
@@ -50,8 +50,8 @@
           "!Frost Fever",
           "SpellInRange:0"
         ],
-        "AfterCastWaitBuff": true,
-        "DelayUntilCombat": true
+        "AfterCastAuraExpected": true,
+        "AfterCastWaitCombat": true
       },
       {
         "Name": "Death Grip",
@@ -60,8 +60,8 @@
         "Requirements": [
           "SpellInRange:2"
         ],
-        "DelayUntilCombat": true,
-        "WaitForWithinMeleeRange": true
+        "AfterCastWaitCombat": true,
+        "AfterCastWaitMeleeRange": true
       }
     ]
   },
@@ -70,20 +70,20 @@
       {
         "Name": "Trinket 1",
         "Key": "N1",
+        "Item": true,
         "WhenUsable": true,
         "Requirements": [
           "InMeleeRange"
-        ],
-        "DelayAfterCast": 20
+        ]
       },
       {
         "Name": "Trinket 2",
         "Key": "N2",
+        "Item": true,
         "WhenUsable": true,
         "Requirements": [
           "InMeleeRange"
-        ],
-        "DelayAfterCast": 20
+        ]
       },
       {
         "Name": "Mind Freeze",
@@ -98,7 +98,6 @@
         "Name": "Blood Tap",
         "Key": "N6",
         "WhenUsable": true,
-        "AfterCastWaitBuff": true,
         "Requirements": [
           "!Blood Tap",
           "BloodRune <= 1"
@@ -108,7 +107,6 @@
         "Name": "Bone Shield",
         "Key": "N4",
         "WhenUsable": true,
-        "AfterCastWaitBuff": true,
         "Requirements": [
           "!Bone Shield"
         ]
@@ -155,7 +153,7 @@
           "!Frost Fever",
           "SpellInRange:0"
         ],
-        "AfterCastWaitBuff": true
+        "AfterCastAuraExpected": true
       },
       {
         "Name": "Blood Strike",
@@ -164,8 +162,7 @@
         "Cooldown": 2000,
         "Requirements": [
           "MobCount < 2",
-          "Frost Fever",
-          "Blood Plague",
+          "Debuff_Frost Fever > MIN_TIME_REFRESH && Debuff_Blood Plague > MIN_TIME_REFRESH",
           "InMeleeRange"
         ]
       },
@@ -199,17 +196,15 @@
           "!Blood Plague",
           "InMeleeRange"
         ],
-        "AfterCastWaitBuff": true
+        "AfterCastAuraExpected": true
       },
       {
         "Name": "Pestilenc",
         "Key": "7",
         "WhenUsable": true,
-        "Cooldown": 15000,
         "Requirements": [
           "MobCount > 1",
-          "Frost Fever",
-          "Blood Plague",
+          "Frost Fever && Blood Plague && (Debuff_Frost Fever < MIN_TIME_REFRESH || Debuff_Blood Plague < MIN_TIME_REFRESH)",
           "InMeleeRange"
         ]
       },
@@ -236,8 +231,7 @@
         "Requirements": [
           "!Horn of Winter",
           "!Mounted"
-        ],
-        "AfterCastWaitBuff": true
+        ]
       },
       {
         "Cost": 3.2,

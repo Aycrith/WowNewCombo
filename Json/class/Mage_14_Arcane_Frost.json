@@ -4,14 +4,16 @@
   "PathFilename": "_pack\\1-20\\Dwarf.Gnome\\10-12_Loch Modan.json",
   "PathThereAndBack": true,
   "PathReduceSteps": false,
-
+  "IntVariables": {
+    "Item_Conjure_Drink": 2288,
+    "Item_Conjure_Food": 1113
+  },
   "Pull": {
     "Sequence": [
       {
         "Name": "Frostbolt",
         "Key": "1",
         "HasCastBar": true,
-        "MinMana": 25,
         "Requirement": "SpellInRange:3"
       }
     ]
@@ -21,34 +23,40 @@
       {
         "Name": "Fire Blast",
         "Key": "5",
-        "MinMana": 40,
         "WhenUsable": true,
-        "Requirements": ["TargetHealth%<45", "SpellInRange:4"]
+        "Requirements": [
+          "TargetHealth%<45",
+          "SpellInRange:4"
+        ]
       },
       {
         "Name": "Frost Nova",
         "Key": "6",
-        "MinMana": 55,
         "WhenUsable": true,
         "Requirement": "InMeleeRange",
-        "StepBackAfterCast": 1000,
-        "DelayAfterCast": 0
+        "AfterCastStepBack": 1000
       },
       {
         "Name": "Arcane Missiles",
         "HasCastBar": true,
-        "Key": "7",
-        "MinMana": 30
+        "Key": "7"
       },
       {
         "Name": "Shoot",
         "Key": "0",
-        "HasCastbar": true,
-        "Requirements": ["HasRangedWeapon", "not Shooting", "SpellInRange:1"]
+        "Item": true,
+        "Requirements": [
+          "HasRangedWeapon",
+          "not Shooting",
+          "SpellInRange:1"
+        ]
       },
       {
         "Name": "AutoAttack",
-        "Requirements": ["not HasRangedWeapon", "not AutoAttacking"]
+        "Requirements": [
+          "not HasRangedWeapon",
+          "not AutoAttacking"
+        ]
       }
     ]
   },
@@ -60,58 +68,61 @@
         "Requirement": "Health%<60"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "-",
         "Requirement": "Mana%<60"
       }
     ]
-    },
-
+  },
   "Adhoc": {
     "Sequence": [
       {
         "Name": "Frost Armor",
         "Key": "3",
-        "MinMana": 60,
         "Requirement": "not Frost Armor"
       },
       {
         "Name": "Arcane Intellect",
         "Key": "4",
-        "MinMana": 60,
         "Requirement": "not Arcane Intellect"
       },
       {
-        "Name": "Conjure Water",
+        "Name": "Conjure Drink",
         "Key": "9",
         "HasCastBar": true,
-        "Requirement": "not BagItem:2288:4",
-        "AfterCastWaitItem": true
+        "Requirement": "not BagItem:Item_Conjure_Drink:4",
+        "AfterCastWaitCastbar": true,
+        "AfterCastWaitBag": true
       },
       {
         "Name": "Conjure Food",
         "Key": "8",
         "HasCastBar": true,
-        "Requirement": "not BagItem:1113:4",
-        "AfterCastWaitItem": true
+        "Requirement": "not BagItem:Item_Conjure_Food:4",
+        "AfterCastWaitCastbar": true,
+        "AfterCastWaitBag": true
       }
-    ]},
-    "NPC": {
-      "Sequence": [
-        {
-          "Name": "Repair",
-          "Key": "C",
-          "Requirement": "Items Broken",
-          "PathFilename": "10_Gnome_Vendor.json",
-          "Cost": 6
-        },
-        {
-          "Name": "Sell",
-          "Key": "C",
-          "Requirements": ["BagFull", "BagGreyItem"],
-          "PathFilename": "10_Gnome_Vendor.json",
-          "Cost": 6
-        }
-      ]
-    }
+    ]
+  },
+  "NPC": {
+    "Sequence": [
+      {
+        "Name": "Repair",
+        "Key": "C",
+        "Requirement": "Items Broken",
+        "PathFilename": "10_Gnome_Vendor.json",
+        "Cost": 6
+      },
+      {
+        "Name": "Sell",
+        "Key": "C",
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ],
+        "PathFilename": "10_Gnome_Vendor.json",
+        "Cost": 6
+      }
+    ]
+  }
 }

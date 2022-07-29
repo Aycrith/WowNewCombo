@@ -2,29 +2,29 @@
   "ClassName": "Priest",
   "Loot": true,
   "NPCMaxLevels_Below": 8,
-
   "PathFilename": "56_Felwood.json",
   "PathThereAndBack": true,
   "PathReduceSteps": true,
-
   "Pull": {
     "Sequence": [
       {
         "Name": "Mind Blast",
         "Key": "5",
-        "DelayBeforeCast": 500,
         "HasCastBar": true
       },
       {
         "Name": "Shadow Word Pain",
-        "Key": "6",
-        "DelayBeforeCast": 500
+        "Key": "6"
       },
       {
         "Name": "Shoot",
         "Key": "0",
-        "HasCastbar": true,
-        "Requirements": ["HasRangedWeapon", "not Shooting", "SpellInRange:1"]
+        "Item": true,
+        "Requirements": [
+          "HasRangedWeapon",
+          "not Shooting",
+          "SpellInRange:1"
+        ]
       }
     ]
   },
@@ -33,7 +33,6 @@
       {
         "Name": "Power Infusion",
         "Key": "F11",
-        "MinMana": 229,
         "Cooldown": 180000,
         "Log": false
       },
@@ -41,7 +40,6 @@
         "Name": "Heal",
         "Key": "9",
         "Requirement": "Health%<60",
-        "MinMana": 455,
         "Cooldown": 10000,
         "HasCastBar": true,
         "Log": false
@@ -49,9 +47,12 @@
       {
         "Name": "Shadow Word Pain",
         "Key": "6",
-        "Requirements": ["not Shadow Word: Pain","TargetHealth%>10","Health%>40"],
+        "Requirements": [
+          "not Shadow Word: Pain",
+          "TargetHealth%>10",
+          "Health%>40"
+        ],
         "Cooldown": 10000,
-        "MinMana": 274,
         "ResetOnNewTarget": true,
         "Log": false
       },
@@ -59,31 +60,39 @@
         "Name": "Mind Blast",
         "Key": "5",
         "Cooldown": 10000,
-        "Requirements": ["Health%>40"],
+        "Requirements": [
+          "Health%>40"
+        ],
         "HasCastBar": true,
-        "MinMana": 2500,
         "Log": false
       },
       {
         "Name": "Shield",
         "Key": "3",
-        "Requirements": ["Health%<75","not Shield","TargetHealth%>15"],
+        "Requirements": [
+          "Health%<75",
+          "not Shield",
+          "TargetHealth%>15"
+        ],
         "Cooldown": 10000,
-        "MinMana": 270,
         "Log": false
       },
       {
         "Name": "Shoot",
         "Key": "0",
-        "HasCastBar": true,
-        "Requirements": ["HasRangedWeapon", "not Shooting", "SpellInRange:1"],
+        "Item": true,
+        "Requirements": [
+          "HasRangedWeapon",
+          "not Shooting",
+          "SpellInRange:1"
+        ],
         "Log": false
       },
       {
         "Name": "Approach",
         "Cooldown": 10000,
         "Log": false,
-        "DelayAfterCast": "200"
+        "AfterCastDelay": "200"
       }
     ]
   },
@@ -108,14 +117,14 @@
       },
       {
         "Name": "Well Fed",
-        "StopBeforeCast": true,
+        "BeforeCastStop": true,
         "Key": "=",
         "Requirement": "not Well Fed",
         "Cooldown": 120000,
         "Log": false
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "8",
         "Requirement": "Mana%<40"
       },
@@ -139,12 +148,12 @@
         "Cooldown": 10000,
         "Requirement": "not Divine Spirit",
         "Log": false
-      }//,
+      } //,
       //{
-        //"Name": "Open Clam",
-        //"Key": "-",
-        //"Cooldown": 30000,
-        //"Log": false
+      //"Name": "Open Clam",
+      //"Key": "-",
+      //"Item": true,
+      //"Log": false
       //}
     ]
   }

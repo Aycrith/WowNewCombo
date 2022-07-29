@@ -11,6 +11,8 @@
     ]
   },
   "IntVariables": {
+    "Item_Soul_Shard": 6265,
+    "Item_Healthstone": 19007,
     "DOT_MIN_HEALTH%": 35,
     "DRAIN_MIN_HP%": 70,
     "TAP_MIN_MANA%": 65,
@@ -43,7 +45,7 @@
         "Key": "N3",
         "Requirements": [
           "Health% < 35",
-          "BagItem:19005:1"
+          "BagItem:Item_Healthstone"
         ],
         "Cooldown": 120000,
         "InCombat": "true"
@@ -62,7 +64,7 @@
         "HasCastBar": true,
         "Requirements": [
           "TargetHealth% < 25",
-          "!BagItem:6265:3",
+          "!BagItem:Item_Soul_Shard:3",
           "TargetYieldXP"
         ],
         "School": "Shadow"
@@ -81,7 +83,7 @@
       {
         "Name": "Curse of Agony",
         "Key": "1",
-        "StopBeforeCast": true,
+        "BeforeCastStop": true,
         "Requirements": [
           "TargetHealth% > DOT_MIN_HEALTH%",
           "!Curse of Agony"
@@ -91,7 +93,7 @@
       {
         "Name": "Corruption",
         "Key": "7",
-        "StopBeforeCast": true,
+        "BeforeCastStop": true,
         "Requirements": [
           "TargetHealth% > DOT_MIN_HEALTH%",
           "!Corruption",
@@ -132,7 +134,7 @@
       {
         "Name": "Shoot",
         "Key": "0",
-        "HasCastbar": true,
+        "Item": true,
         "Requirements": [
           "HasRangedWeapon",
           "!Shooting",
@@ -156,7 +158,7 @@
         "Requirement": "Health% < MIN_FOOD_DRINK%"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "-",
         "Requirement": "Mana% < MIN_FOOD_DRINK%"
       }
@@ -174,9 +176,10 @@
         "HasCastBar": true,
         "Key": "4",
         "Requirements": [
-          "BagItem:6265:1",
+          "BagItem:Item_Soul_Shard",
           "!Has Pet"
-        ]
+        ],
+        "AfterCastWaitCastbar": true
       },
       {
         "Name": "Life Tap",
@@ -195,9 +198,11 @@
         "Key": "N3",
         "HasCastBar": true,
         "Requirements": [
-          "BagItem:6265:1",
-          "!BagItem:19007:1"
-        ]
+          "BagItem:Item_Soul_Shard",
+          "!BagItem:Item_Healthstone"
+        ],
+        "AfterCastWaitCastbar": true,
+        "AfterCastWaitBag": true
       }
     ]
   },
@@ -213,7 +218,10 @@
       {
         "Name": "Sell",
         "Key": "C",
-        "Requirements": ["BagFull", "BagGreyItem"],
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ],
         "PathFilename": "23_Duskwood_Vendor.json",
         "Cost": 6
       }
