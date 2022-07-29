@@ -168,10 +168,7 @@ namespace Core.Goals
 
                 if (castAny = castingHandler.Cast(keyAction, PullPrevention))
                 {
-                    if (keyAction.WaitForWithinMeleeRange)
-                    {
-                        WaitForWithinMeleeRange(keyAction, castAny);
-                    }
+
                 }
                 else if (PullPrevention() &&
                     (playerReader.IsCasting() ||
@@ -191,8 +188,8 @@ namespace Core.Goals
             {
                 if (combatUtil.EnteredCombat())
                 {
-                    (bool timeout, double elapsedMs) = wait.Until(5000, CombatLogChanged);
-                    if (!timeout)
+                    (bool t, double e) = wait.Until(5000, CombatLogChanged);
+                    if (!t)
                     {
                         if (addonReader.DamageTakenCount > 0 && !playerReader.Bits.TargetInCombat())
                         {
@@ -208,6 +205,11 @@ namespace Core.Goals
                         SendGoapEvent(new GoapStateEvent(GoapKey.pulled, true));
                         return;
                     }
+                }
+                else if (playerReader.Bits.PlayerInCombat())
+                {
+                    SendGoapEvent(new GoapStateEvent(GoapKey.pulled, true));
+                    return;
                 }
 
                 approachAction();
@@ -226,52 +228,15 @@ namespace Core.Goals
                 TargetTargetEnum.PartyOrPet;
         }
 
-
-        protected void WaitForWithinMeleeRange(KeyAction item, bool lastCastSuccess)
-        {
-            stopMoving.Stop();
-            wait.Update();
-
-            var start = DateTime.UtcNow;
-            var lastKnownHealth = playerReader.HealthCurrent();
-            double maxWaitTimeMs = 10_000;
-
-            Log($"Waiting for the target to reach melee range - max {maxWaitTimeMs}ms");
-
-            while (playerReader.Bits.HasTarget() && !playerReader.IsInMeleeRange() && (DateTime.UtcNow - start).TotalMilliseconds < maxWaitTimeMs)
-            {
-                if (playerReader.HealthCurrent() < lastKnownHealth)
-                {
-                    Log("Got damage. Stop waiting for melee range.");
-                    break;
-                }
-
-                if (playerReader.IsTargetCasting())
-                {
-                    Log("Target started casting. Stop waiting for melee range.");
-                    break;
-                }
-
-                if (lastCastSuccess && addonReader.UsableAction.Is(item))
-                {
-                    Log($"While waiting, repeat current action: {item.Name}");
-                    lastCastSuccess = castingHandler.CastIfReady(item, playerReader.IsInMeleeRange);
-                    Log($"Repeat current action: {lastCastSuccess}");
-                }
-
-                wait.Update();
-            }
-        }
-
         private void DefaultApproach()
         {
-            if (!stuckDetector.IsMoving())
-            {
-                stuckDetector.Update();
-            }
-
             if (input.ClassConfig.Approach.GetCooldownRemaining() == 0)
             {
+                if (!stuckDetector.IsMoving())
+                {
+                    stuckDetector.Update();
+                }
+
                 input.Approach();
             }
         }
