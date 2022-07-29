@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -121,22 +121,22 @@ namespace Core
 
             Jump.Key = JumpKey;
             Jump.Name = nameof(Jump);
-            Jump.Initialise(addonReader, requirementFactory, logger, Log);
+            Jump.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             TargetLastTarget.Key = TargetLastTargetKey;
             TargetLastTarget.Name = nameof(TargetLastTarget);
             TargetLastTarget.Cooldown = 0;
-            TargetLastTarget.Initialise(addonReader, requirementFactory, logger, Log);
+            TargetLastTarget.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             StandUp.Key = StandUpKey;
             StandUp.Name = nameof(StandUp);
             StandUp.Cooldown = 0;
-            StandUp.Initialise(addonReader, requirementFactory, logger, Log);
+            StandUp.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             ClearTarget.Key = ClearTargetKey;
             ClearTarget.Name = nameof(ClearTarget);
             ClearTarget.Cooldown = 0;
-            ClearTarget.Initialise(addonReader, requirementFactory, logger, Log);
+            ClearTarget.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             StopAttack.Key = StopAttackKey;
             StopAttack.Name = nameof(StopAttack);
@@ -144,46 +144,46 @@ namespace Core
             StopAttack.WaitForGCD = false;
             StopAttack.PressDuration = 20;
             StopAttack.SkipValidation = true;
-            StopAttack.Initialise(addonReader, requirementFactory, logger, Log);
+            StopAttack.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             TargetNearestTarget.Key = TargetNearestTargetKey;
             TargetNearestTarget.Name = nameof(TargetNearestTarget);
             TargetNearestTarget.Cooldown = 400;
-            TargetNearestTarget.Initialise(addonReader, requirementFactory, logger, Log);
+            TargetNearestTarget.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             TargetPet.Key = TargetPetKey;
             TargetPet.Name = nameof(TargetPet);
             TargetPet.Cooldown = 0;
-            TargetPet.Initialise(addonReader, requirementFactory, logger, Log);
+            TargetPet.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             TargetTargetOfTarget.Key = TargetTargetOfTargetKey;
             TargetTargetOfTarget.Name = nameof(TargetTargetOfTarget);
             TargetTargetOfTarget.Cooldown = 0;
-            TargetTargetOfTarget.Initialise(addonReader, requirementFactory, logger, Log);
+            TargetTargetOfTarget.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             TargetFocus.Key = TargetFocusKey;
             TargetFocus.Name = nameof(TargetFocus);
             TargetFocus.Cooldown = 0;
-            TargetFocus.Initialise(addonReader, requirementFactory, logger, Log);
+            TargetFocus.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             FollowTarget.Key = FollowTargetKey;
             FollowTarget.Name = nameof(FollowTarget);
             FollowTarget.Cooldown = 0;
-            FollowTarget.Initialise(addonReader, requirementFactory, logger, Log);
+            FollowTarget.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             PetAttack.Key = PetAttackKey;
             PetAttack.Name = nameof(PetAttack);
             PetAttack.PressDuration = 10;
             PetAttack.Cooldown = 400;
-            PetAttack.Initialise(addonReader, requirementFactory, logger, Log);
+            PetAttack.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             Mount.Key = MountKey;
             Mount.Name = nameof(Mount);
-            Mount.Initialise(addonReader, requirementFactory, logger, Log);
+            Mount.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             Hearthstone.Key = HearthstoneKey;
             Hearthstone.Name = nameof(Hearthstone);
-            Hearthstone.Initialise(addonReader, requirementFactory, logger, Log);
+            Hearthstone.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             Interact.Key = InteractKey;
             Interact.Name = nameof(Interact);
@@ -191,26 +191,18 @@ namespace Core
             Interact.WaitForGCD = false;
             Interact.DelayAfterCast = 0;
             Interact.PressDuration = 30;
-            Interact.SkipValidation = true;
-            Interact.Cooldown = 0;
-            Interact.Initialise(addonReader, requirementFactory, logger, Log);
+            Interact.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             Approach.Key = InteractKey;
             Approach.Name = nameof(Approach);
             Approach.WaitForGCD = false;
             Approach.DelayAfterCast = 0;
             Approach.PressDuration = 10;
-            Approach.Cooldown = 400;
-            Approach.SkipValidation = true;
-            Approach.Initialise(addonReader, requirementFactory, logger, Log);
+            Approach.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             AutoAttack.Key = InteractKey;
             AutoAttack.Name = nameof(AutoAttack);
-            AutoAttack.Cooldown = 0;
-            AutoAttack.WaitForGCD = false;
-            AutoAttack.DelayAfterCast = 0;
-            AutoAttack.SkipValidation = true;
-            AutoAttack.Initialise(addonReader, requirementFactory, logger, Log);
+            AutoAttack.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             InitializeKeyActions(Pull, Interact, Approach, AutoAttack, StopAttack);
             InitializeKeyActions(Combat, Interact, Approach, AutoAttack, StopAttack);
@@ -218,7 +210,7 @@ namespace Core
             logger.LogInformation($"[{nameof(Form)}] Initialise KeyActions.");
             for (int i = 0; i < Form.Length; i++)
             {
-                Form[i].InitialiseForm(addonReader, requirementFactory, logger, Log);
+                Form[i].InitialiseForm(this, addonReader, requirementFactory, logger, Log);
             }
 
             Pull.PreInitialise(nameof(Pull), requirementFactory, logger);
@@ -227,18 +219,22 @@ namespace Core
             NPC.PreInitialise(nameof(NPC), requirementFactory, logger);
             Parallel.PreInitialise(nameof(Parallel), requirementFactory, logger);
 
-            Pull.Initialise(nameof(Pull), addonReader, requirementFactory, logger, Log);
-            Combat.Initialise(nameof(Combat), addonReader, requirementFactory, logger, Log);
-            Adhoc.Initialise(nameof(Adhoc), addonReader, requirementFactory, logger, Log);
-            NPC.Initialise(nameof(NPC), addonReader, requirementFactory, logger, Log);
-            Parallel.Initialise(nameof(Parallel), addonReader, requirementFactory, logger, Log);
+            Pull.Initialise(nameof(Pull), this, addonReader, requirementFactory, logger, Log);
+            Combat.Initialise(nameof(Combat), this, addonReader, requirementFactory, logger, Log);
+            Adhoc.Initialise(nameof(Adhoc), this, addonReader, requirementFactory, logger, Log);
+            NPC.Initialise(nameof(NPC), this, addonReader, requirementFactory, logger, Log);
+            Parallel.Initialise(nameof(Parallel), this, addonReader, requirementFactory, logger, Log);
 
             int index = 0;
             GatherFindKeyConfig = new KeyAction[GatherFindKeys.Length];
             for (int i = 0; i < GatherFindKeys.Length; i++)
             {
-                GatherFindKeyConfig[index] = new KeyAction { Key = GatherFindKeys[index], Name = $"Profession {index}" };
-                GatherFindKeyConfig[index].Initialise(addonReader, requirementFactory, logger, Log);
+                GatherFindKeyConfig[index] = new KeyAction
+                {
+                    Key = GatherFindKeys[index],
+                    Name = $"Profession {index}"
+                };
+                GatherFindKeyConfig[index].Initialise(this, addonReader, requirementFactory, logger, Log);
                 index++;
             }
 
@@ -272,7 +268,7 @@ namespace Core
         {
             if (CheckTargetGivesExp)
             {
-                logger.LogWarning($"{nameof(CheckTargetGivesExp)} is enabled. { nameof(NPCMaxLevels_Above)} and {nameof(NPCMaxLevels_Below)} ignored!");
+                logger.LogWarning($"{nameof(CheckTargetGivesExp)} is enabled. {nameof(NPCMaxLevels_Above)} and {nameof(NPCMaxLevels_Below)} ignored!");
             }
             if (KeyboardOnly)
             {

@@ -31,7 +31,7 @@
         public static int ToSlot(KeyAction item, PlayerReader playerReader)
         {
             return item.Slot <= ActionBar.MAIN_ACTIONBAR_SLOT
-                ? item.Slot + (int)FormToActionBar(playerReader.Class, item.HasFormRequirement() ? item.FormEnum : playerReader.Form)
+                ? item.Slot + (int)FormToActionBar(playerReader.Class, item.HasFormRequirement ? item.FormEnum : playerReader.Form)
                 : item.Slot;
         }
 

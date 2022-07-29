@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Numerics;
 
@@ -18,8 +17,6 @@ namespace Core
             Stance = new(48);
             CustomTrigger1 = new(reader.GetInt(74));
         }
-
-        public Dictionary<Form, int> FormCost { get; } = new();
 
         public Vector3 PlayerLocation => new(XCoord, YCoord, ZCoord);
 
@@ -179,8 +176,6 @@ namespace Core
 
         public void Reset()
         {
-            FormCost.Clear();
-
             // Reset all RecordInt
             AutoShot.Reset();
             MainHandSwing.Reset();

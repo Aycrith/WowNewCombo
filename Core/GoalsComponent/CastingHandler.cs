@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Numerics;
 using System.Threading;
@@ -255,7 +255,7 @@ namespace Core.Goals
         {
             DateTime begin = DateTime.UtcNow;
 
-            if (item.HasFormRequirement() && playerReader.Form != item.FormEnum)
+            if (item.HasFormRequirement && playerReader.Form != item.FormEnum)
             {
                 bool beforeUsable = addonReader.UsableAction.Is(item);
                 Form beforeForm = playerReader.Form;

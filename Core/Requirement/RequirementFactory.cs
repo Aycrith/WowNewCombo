@@ -684,14 +684,14 @@ namespace Core
         private Requirement CreateActionUsableRequirement(KeyAction item)
         {
             bool f() =>
-                    !item.HasFormRequirement() ? addonReader.UsableAction.Is(item) :
+                    !item.HasFormRequirement ? addonReader.UsableAction.Is(item) :
                     (playerReader.Form == item.FormEnum && addonReader.UsableAction.Is(item)) ||
-                    (playerReader.Form != item.FormEnum && item.CanDoFormChangeAndHaveMinimumMana());
+                    (playerReader.Form != item.FormEnum && item.CanDoFormChangeMinResource());
 
             string s() =>
-                    !item.HasFormRequirement() ? $"Usable" : // {playerReader.UsableAction.Num(item)}
-                    (playerReader.Form != item.FormEnum && item.CanDoFormChangeAndHaveMinimumMana()) ? $"Usable after Form change" : // {playerReader.UsableAction.Num(item)}
-                    (playerReader.Form == item.FormEnum && addonReader.UsableAction.Is(item)) ? $"Usable current Form" : $"not Usable current Form"; // {playerReader.UsableAction.Num(item)}
+                    !item.HasFormRequirement ? "Usable" :
+                    (playerReader.Form != item.FormEnum && item.CanDoFormChangeMinResource()) ? "Usable after Form change" :
+                    (playerReader.Form == item.FormEnum && addonReader.UsableAction.Is(item)) ? "Usable current Form" : "not Usable current Form";
 
             return new Requirement
             {

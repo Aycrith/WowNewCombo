@@ -22,7 +22,7 @@ namespace Core
             }
         }
 
-        public void Initialise(string prefix, AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger, bool globalLog)
+        public void Initialise(string prefix, ClassConfiguration config, AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger, bool globalLog)
         {
             if (Sequence.Length > 0)
             {
@@ -31,7 +31,7 @@ namespace Core
 
             for (int i = 0; i < Sequence.Length; i++)
             {
-                Sequence[i].Initialise(addonReader, requirementFactory, logger, globalLog, this);
+                Sequence[i].Initialise(config, addonReader, requirementFactory, logger, globalLog, this);
             }
         }
 
