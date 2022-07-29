@@ -1,8 +1,10 @@
-﻿namespace Core
+﻿using System.Collections.Generic;
+
+namespace Core
 {
     public class ActionBarPopulator
     {
-        private readonly struct ActionBarSlotItem
+        private class ActionBarSlotItem
         {
             public string Name { get; }
             public KeyAction KeyAction { get; }
@@ -20,8 +22,6 @@
         private readonly BagReader bagReader;
         private readonly ExecGameCommand execGameCommand;
 
-        private int count;
-
         public ActionBarPopulator(ClassConfiguration config, BagReader bagReader, ExecGameCommand execGameCommand)
         {
             this.config = config;
@@ -31,60 +31,53 @@
 
         public void Execute()
         {
-            ActionBarSlotItem[] items = new ActionBarSlotItem[
-                config.Form.Length +
-                config.Adhoc.Sequence.Length +
-                config.Parallel.Sequence.Length +
-                config.Pull.Sequence.Length +
-                config.Combat.Sequence.Length +
-                config.NPC.Sequence.Length];
+            List<ActionBarSlotItem> items = new();
 
-            foreach (var k in config.Form)
+            for (int i = 0; i < config.Form.Length; i++)
             {
-                AddUnique(ref items, k);
+                AddUnique(items, config.Form[i]);
             }
 
-            foreach (var k in config.Adhoc.Sequence)
+            for (int i = 0; i < config.Adhoc.Sequence.Length; i++)
             {
-                AddUnique(ref items, k);
+                AddUnique(items, config.Adhoc.Sequence[i]);
             }
 
-            foreach (var k in config.Parallel.Sequence)
+            for (int i = 0; i < config.Parallel.Sequence.Length; i++)
             {
-                AddUnique(ref items, k);
+                AddUnique(items, config.Parallel.Sequence[i]);
             }
 
-            foreach (var k in config.Pull.Sequence)
+            for (int i = 0; i < config.Pull.Sequence.Length; i++)
             {
-                AddUnique(ref items, k);
+                AddUnique(items, config.Pull.Sequence[i]);
             }
 
-            foreach (var k in config.Combat.Sequence)
+            for (int i = 0; i < config.Combat.Sequence.Length; i++)
             {
-                AddUnique(ref items, k);
+                AddUnique(items, config.Combat.Sequence[i]);
             }
 
-            foreach (var k in config.NPC.Sequence)
+            for (int i = 0; i < config.NPC.Sequence.Length; i++)
             {
-                AddUnique(ref items, k);
+                AddUnique(items, config.NPC.Sequence[i]);
             }
 
-            System.Array.Resize(ref items, count);
-            System.Array.Sort(items, (a, b) => a.KeyAction.Slot.CompareTo(b.KeyAction.Slot));
+            items.Sort((a, b) => a.KeyAction.Slot.CompareTo(b.KeyAction.Slot));
 
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < items.Count; i++)
             {
                 string content = ScriptBuilder(items[i]);
                 execGameCommand.Run(content);
             }
         }
 
-        private void AddUnique(ref ActionBarSlotItem[] items, KeyAction keyAction)
+        private void AddUnique(List<ActionBarSlotItem> items, KeyAction keyAction)
         {
             // not bound to actionbar slot
             if (keyAction.Slot == 0) return;
 
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < items.Count; i++)
             {
                 if (items[i].KeyAction.Slot == keyAction.Slot)
                     return;
@@ -92,21 +85,19 @@
 
             string name = keyAction.Name;
             bool isItem = false;
-            switch (name)
+
+            if (name.Equals(RequirementFactory.Drink, System.StringComparison.OrdinalIgnoreCase))
             {
-                case "water":
-                case "Water":
-                    name = bagReader.HighestQuantityOfWaterId().ToString();
-                    isItem = true;
-                    break;
-                case "food":
-                case "Food":
-                    name = bagReader.HighestQuantityOfFoodId().ToString();
-                    isItem = true;
-                    break;
+                name = bagReader.HighestQuantityOfDrinkId().ToString();
+                isItem = true;
+            }
+            else if (name.Equals(RequirementFactory.Food, System.StringComparison.OrdinalIgnoreCase))
+            {
+                name = bagReader.HighestQuantityOfFoodId().ToString();
+                isItem = true;
             }
 
-            items[count++] = (new(name, keyAction, isItem));
+            items.Add(new(name, keyAction, isItem));
         }
 
         private static string ScriptBuilder(ActionBarSlotItem abs)
