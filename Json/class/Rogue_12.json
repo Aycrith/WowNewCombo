@@ -7,9 +7,10 @@
       {
         "Name": "Throw",
         "Key": "6",
-        "HasCastbar": true,
+        "Item": true,
         "WhenUsable": true,
-        "WaitForWithinMeleeRange": true,
+        "BeforeCastStop": true,
+        "AfterCastWaitMeleeRange": true,
         "Requirements": [
           "AddVisible",
           "HasRangedWeapon",
@@ -26,33 +27,29 @@
         "Name": "Evasion",
         "Key": 5,
         "WhenUsable": true,
-        "WaitBuffAfterCast": true,
         "Requirement": "Health%<40"
       },
       {
         "Name": "Slice and Dice",
         "Key": "4",
-        "WaitBuffAfterCast": true,
-        "MinEnergy": 25,
-        "MinComboPoints": 1,
+        "AfterCastAuraExpected": true,
         "Requirements": [
-          "!Slice and Dice"
+          "!Slice and Dice",
+          "Combo Point > 0"
         ]
       },
       {
         "Name": "Eviscerate",
         "Key": "3",
-        "MinEnergy": 35,
-        "MinComboPoints": 2,
         "Requirements": [
           "TargetHealth%>20",
-          "LastMainHandMs<500"
+          "LastMainHandMs<500",
+          "Combo Point>1"
         ]
       },
       {
         "Name": "Sinister Strike",
         "Key": "2",
-        "MinEnergy": 42,
         "Requirement": "LastMainHandMs<500"
       },
       {

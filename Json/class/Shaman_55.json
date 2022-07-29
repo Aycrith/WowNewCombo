@@ -22,8 +22,7 @@
         ],
         "Cooldown": 5000,
         "HasCastBar": true,
-        "Log": false,
-        "MinMana": 200
+        "Log": false
       },
       {
         "Name": "Shaman Ferry",
@@ -36,16 +35,14 @@
         "Key": "F9",
         "Requirement": "MobCount>1",
         "Cooldown": 30000,
-        "Log": false,
-        "MinMana": 30
+        "Log": false
       },
       {
         "Name": "Searing Totem",
         "Key": "F7",
         "Requirement": "MobCount>1",
         "Cooldown": 20000,
-        "Log": false,
-        "MinMana": 95
+        "Log": false
       },
       {
         "Name": "War Stomp",
@@ -54,8 +51,7 @@
           "Race:Tauren",
           "Health%<49"
         ],
-        "WhenUsable": true,
-        "MinMana": 10
+        "WhenUsable": true
       },
       {
         "Name": "Stormstrike",
@@ -65,8 +61,7 @@
           "InMeleeRange"
         ],
         "Log": false,
-        "Cooldown": 5000,
-        "MinMana": 87
+        "Cooldown": 5000
       },
       {
         "Name": "Fire shock",
@@ -76,8 +71,7 @@
           "TargetHealth%>10"
         ],
         "Log": false,
-        "WhenUsable": true,
-        "MinMana": 80
+        "WhenUsable": true
       },
       {
         "Name": "AutoAttack",
@@ -94,20 +88,19 @@
       {
         "Name": "Windfury Weapon",
         "Key": "5",
-        "MinMana": 90,
-        "Requirement": "not HasMainHandEnchant"
+        "Requirement": "not HasMainHandEnchant",
+        "AfterCastAuraExpected": true
       },
       {
         "Name": "Windfury/Falme Weapon",
         "Key": "5",
-        "MinMana": 90,
-        "Requirement": "not HasOffHandEnchant"
+        "Requirement": "not HasOffHandEnchant",
+        "AfterCastAuraExpected": true
       },
       {
         "Name": "Lightning Shield",
         "Key": "7",
-        "MinMana": 45,
-        "Requirement": "not Lightning Shield",
+        "Requirement": "not Lightning Shield"
       }
     ]
   },
@@ -122,11 +115,10 @@
           "Mana%>65"
         ],
         "Cooldown": 3000,
-        "MinMana": 310,
         "Cost": 6
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "9",
         "Requirement": "Mana%<45"
       },

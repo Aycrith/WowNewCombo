@@ -11,9 +11,7 @@
           "!Seal of the Crusader",
           "!Judgement of the Crusader",
           "CD_Judgement <= 1500"
-        ],
-        "WaitBuffAfterCast": true,
-        "DelayAfterCast": 0
+        ]
       },
       {
         "Name": "Judgement",
@@ -23,8 +21,7 @@
           "SpellInRange:0",
           "Seal of the Crusader",
           "!Judgement of the Crusader"
-        ],
-        "DelayAfterCast": 0
+        ]
       }
     ]
   },
@@ -34,7 +31,6 @@
         "Name": "Divine Protection",
         "Key": "N1",
         "WhenUsable": true,
-        "WaitBuffAfterCast": true,
         "Requirements": [
           "Health% < 20",
           "!Blessing of Protection"
@@ -44,7 +40,6 @@
         "Name": "Blessing of Protection",
         "Key": "N2",
         "WhenUsable": true,
-        "WaitBuffAfterCast": true,
         "Requirements": [
           "Health% < 20",
           "!Divine Protection"
@@ -72,8 +67,7 @@
       {
         "Name": "Judgement",
         "Key": "1",
-        "WhenUsable": true,
-        "DelayAfterCast": 0
+        "WhenUsable": true
       },
       {
         "Name": "Hammer of Justice",
@@ -88,13 +82,11 @@
           "!Seal of the Crusader",
           "!Judgement of the Crusader",
           "TargetHealth% > 20"
-        ],
-        "WaitBuffAfterCast": true
+        ]
       },
       {
         "Name": "Seal of Righteousness",
         "Key": "2",
-        "WaitBuffAfterCast": true,
         "Requirements": [
           "Judgement of the Crusader",
           "!Seal of Righteousness",
@@ -120,12 +112,12 @@
       {
         "Name": "Retribution Aura",
         "Key": "5",
-        "Requirement": "!Retribution Aura"
+        "Requirement": "!Retribution Aura",
+        "AfterCastAuraExpected": true
       },
       {
         "Name": "Blessing of Might",
         "Key": "4",
-        "WaitBuffAfterCast": true,
         "Requirement": "!Blessing of Might"
       }
     ]
@@ -133,7 +125,7 @@
   "Parallel": {
     "Sequence": [
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "-",
         "Requirement": "Mana% < 50"
       },
@@ -156,7 +148,10 @@
       {
         "Name": "Sell",
         "Key": "C",
-        "Requirements": ["BagFull", "BagGreyItem"],
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ],
         "PathFilename": "20_Westfall_Vendor.json",
         "Cost": 6
       }

@@ -3,22 +3,33 @@
   "Loot": true,
   "PathFilename": "_pack\\1-20\\Draenei\\1-5_Azuremyst Isle.json",
   "KillIfGivesExp": true,
+  "IntVariables": {
+    "Item_Earth_Totem": 5175
+  },
   "Pull": {
     "Sequence": [
       {
         "Name": "Lightning Bolt",
         "Key": "2",
         "HasCastBar": true,
-        "Requirements": ["not InMeleeRange", "SpellInRange:0", "Stoneskin", "Mana%>50"],
-        "WaitForWithinMeleeRange": true,
-        "MinMana": 15
+        "Requirements": [
+          "not InMeleeRange",
+          "SpellInRange:0",
+          "Stoneskin",
+          "Mana%>50"
+        ],
+        "AfterCastWaitMeleeRange": true
       },
       {
         "Name": "Lightning Bolt",
         "Key": "2",
         "HasCastBar": true,
-        "Requirements": ["not InMeleeRange", "SpellInRange:0", "not Stoneskin", "Mana%>70"],
-        "MinMana": 15
+        "Requirements": [
+          "not InMeleeRange",
+          "SpellInRange:0",
+          "not Stoneskin",
+          "Mana%>70"
+        ]
       }
     ]
   },
@@ -29,7 +40,10 @@
         "Key": "4",
         "HasCastBar": true,
         "WhenUsable": true,
-        "Requirements": ["Race:Draenei", "Health%<50"]
+        "Requirements": [
+          "Race:Draenei",
+          "Health%<50"
+        ]
       },
       {
         "Name": "Healing Wave",
@@ -37,23 +51,31 @@
         "HasCastBar": true,
         "WhenUsable": true,
         "Requirement": "Health%<40",
-        "Cooldown": 5000,
-        "MinMana": 25
+        "Cooldown": 5000
       },
       {
         "Name": "Earth Shock",
         "Key": "6",
         "WhenUsable": true,
-        "Requirements": ["TargetHealth%>10", "SpellInRange:1", "Mana%>50", "TargetHealth%>20"],
-        "MinMana": 30
+        "Requirements": [
+          "TargetHealth%>10",
+          "SpellInRange:1",
+          "Mana%>50",
+          "TargetHealth%>20"
+        ]
       },
       {
         "Name": "Stoneskin Totem",
         "Key": "F2",
         "WhenUsable": true,
         "Cooldown": 30000,
-        "Requirements": ["InMeleeRange", "TargetHealth%>50", "Mana%>50", "BagItem:5175", "not Stoneskin"],
-        "MinMana": 30
+        "Requirements": [
+          "InMeleeRange",
+          "TargetHealth%>50",
+          "Mana%>50",
+          "BagItem:Item_Earth_Totem",
+          "not Stoneskin"
+        ]
       },
       {
         "Name": "AutoAttack",
@@ -70,8 +92,8 @@
       {
         "Name": "Rockbiter Weapon",
         "Key": "5",
-        "MinMana": 15,
-        "Requirement": "not HasMainHandEnchant"
+        "Requirement": "not HasMainHandEnchant",
+        "AfterCastAuraExpected": true
       }
     ]
   },
@@ -83,7 +105,7 @@
         "Requirement": "Health%<30"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "-",
         "Requirement": "Mana%<30"
       }
@@ -101,7 +123,10 @@
       {
         "Name": "Sell",
         "Key": "C",
-        "Requirements": ["BagFull", "BagGreyItem"],
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ],
         "PathFilename": "1_Draenei_Vendor.json",
         "Cost": 6
       }

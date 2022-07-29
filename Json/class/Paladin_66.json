@@ -31,14 +31,12 @@
           "Health%<35",
           "TargetHealth%>20"
         ],
-        "Cooldown": 3000,
-        "MinMana": 460
+        "Cooldown": 3000
       },
       {
         "Name": "Hammer of Justice",
         "Key": "N3",
         "Cooldown": 6000,
-        "MinMana": 300,
         "Requirements": [
           "TargetHealth%<20"
         ]
@@ -47,7 +45,6 @@
         "Name": "Seal of Wisdom",
         "Key": "N6",
         "Cooldown": 3000,
-        "MinMana": 82,
         "Requirements": [
           "Mana%<50",
           "not Seal of Wisdom"
@@ -57,7 +54,6 @@
         "Name": "Seal of Command",
         "Key": "2",
         "Cooldown": 3000,
-        "MinMana": 82,
         "Requirements": [
           "Mana%>50",
           "not Seal of Command"
@@ -70,14 +66,12 @@
         "Requirements": [
           "Mana%>60",
           "TargetHealth%>30"
-        ],
-        "MinMana": 10
+        ]
       },
       {
         "Name": "Hammer of Justice",
         "Key": "6",
         "Cooldown": 60000,
-        "MinMana": 100,
         "Requirements": [
           "Health%<50"
         ]
@@ -86,7 +80,6 @@
         "Name": "Consecreation",
         "Key": "F4",
         "Cooldown": 8000,
-        "MinMana": 100,
         "Requirements": [
           "MobCount>1",
           "Mana%>60"
@@ -96,7 +89,6 @@
         "Name": "Crusader Strike",
         "Key": "1",
         "Cooldown": 6000,
-        "MinMana": 300,
         "Requirements": [
           "Mana%>60"
         ]
@@ -117,13 +109,14 @@
         "Name": "Devotion Aura",
         "Key": "F8",
         "Requirement": "not Devotion Aura",
+        "AfterCastAuraExpected": true,
         "Log": false
       },
       {
         "Name": "Blessing of Might",
         "Key": "0",
-        "MinMana": 45,
         "Requirement": "not Blessing of Might",
+        "AfterCastAuraExpected": true,
         "Log": false
       }
     ]
@@ -139,11 +132,10 @@
           "Mana%>50"
         ],
         "Cooldown": 3000,
-        "MinMana": 710,
         "Cost": 10
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "8",
         "Requirement": "Mana%<50"
       },

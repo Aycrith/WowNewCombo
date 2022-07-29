@@ -12,9 +12,10 @@
       {
         "Name": "Throw",
         "Key": "9",
-        "HasCastbar": true,
+        "Item": true,
         "WhenUsable": true,
-        "WaitForWithinMeleeRange": true,
+        "BeforeCastStop": true,
+        "AfterCastWaitMeleeRange": true,
         "Requirements": [
           "AddVisible",
           "HasRangedWeapon",
@@ -31,11 +32,11 @@
       },
       {
         "Name": "StopAttack",
-        "DelayBeforeCast": 30,
+        "BeforeCastDelay": 30,
         "Requirements": [
           "Battle Shout && AutoAttacking && Rage >= Cost_Heroic Strike"
         ],
-        "DelayAfterCast": 50
+        "AfterCastDelay": 50
       },
       {
         "Name": "Approach",
@@ -77,7 +78,7 @@
           "MainHandSwing > -400",
           "MobCount > 1"
         ],
-        "AfterCastWaitNextSwing": true
+        "AfterCastWaitSwing": true
       },
       {
         "Name": "Heroic Strike",
@@ -87,7 +88,7 @@
           "MainHandSwing > -400",
           "MobCount < 2"
         ],
-        "AfterCastWaitNextSwing": true
+        "AfterCastWaitSwing": true
       },
       {
         "Name": "Rend",
@@ -117,8 +118,7 @@
         "Key": "4",
         "InCombat": "i dont care",
         "WhenUsable": true,
-        "Requirement": "!Battle Shout",
-        "AfterCastWaitBuff": true
+        "Requirement": "!Battle Shout"
       },
       {
         "Name": "Food",

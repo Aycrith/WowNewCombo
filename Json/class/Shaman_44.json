@@ -13,8 +13,7 @@
       {
         "Name": "Lightning Bolt",
         "Key": "2",
-        "HasCastBar": true,
-        "MinMana": 95
+        "HasCastBar": true
       }
     ]
   },
@@ -29,31 +28,27 @@
         ],
         "Cooldown": 5000,
         "HasCastBar": true,
-        "Log": false,
-        "MinMana": 200
+        "Log": false
       },
       {
         "Name": "Lightning Bolt",
         "Key": "2",
         "HasCastBar": true,
-        "Requirement": "not InMeleeRange",
-        "MinMana": 95
+        "Requirement": "not InMeleeRange"
       },
       {
         "Name": "Stoneclaw Totem",
         "Key": "F9",
         "Requirement": "MobCount>1",
         "Cooldown": 30000,
-        "Log": false,
-        "MinMana": 30
+        "Log": false
       },
       {
         "Name": "Searing Totem",
         "Key": "F7",
         "Requirement": "MobCount>1",
         "Cooldown": 15000,
-        "Log": false,
-        "MinMana": 95
+        "Log": false
       },
       {
         "Name": "War Stomp",
@@ -63,8 +58,7 @@
           "Health%<49",
           "MobCount>1"
         ],
-        "WhenUsable": true,
-        "MinMana": 10
+        "WhenUsable": true
       },
       {
         "Name": "Stormstrike",
@@ -74,8 +68,7 @@
           "InMeleeRange"
         ],
         "Log": false,
-        "Cooldown": 5000,
-        "MinMana": 87
+        "Cooldown": 5000
       },
       {
         "Name": "Fire shock",
@@ -85,8 +78,7 @@
           "TargetHealth%>30"
         ],
         "Log": false,
-        "WhenUsable": true,
-        "MinMana": 80
+        "WhenUsable": true
       },
       {
         "Name": "AutoAttack",
@@ -103,19 +95,18 @@
       {
         "Name": "Windfury Weapon",
         "Key": "5",
-        "MinMana": 90,
-        "Requirement": "not HasMainHandEnchant"
+        "Requirement": "not HasMainHandEnchant",
+        "AfterCastAuraExpected": true
       },
       {
         "Name": "Windfury/Falme Weapon",
         "Key": "5",
-        "MinMana": 90,
-        "Requirement": "not HasOffHandEnchant"
+        "Requirement": "not HasOffHandEnchant",
+        "AfterCastAuraExpected": true
       },
       {
         "Name": "Lightning Shield",
         "Key": "7",
-        "MinMana": 45,
         "Requirement": "not Lightning Shield",
         "Cost": 1
       }
@@ -124,7 +115,7 @@
   "Parallel": {
     "Sequence": [
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "9",
         "Requirement": "Mana%<35"
       },

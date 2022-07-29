@@ -14,8 +14,7 @@
     {
       "Name": "Bear Form",
       "Key": "F2",
-      "Form": "Druid_Bear",
-      "MinMana": 50
+      "Form": "Druid_Bear"
     }
   ],
   "Pull": {
@@ -34,8 +33,9 @@
       {
         "Name": "Moonfire",
         "Key": "5",
-        "StopBeforeCast": true,
+        "BeforeCastStop": true,
         "AfterCastWaitBuff": true,
+        "AfterCastWaitGCD": true,
         "Requirements": [
           "!Moonfire",
           "AddVisible",
@@ -47,7 +47,7 @@
       {
         "Name": "Bear Form",
         "Key": "F2",
-        "WaitForWithinMeleeRange": true,
+        "AfterCastWaitMeleeRange": true,
         "Requirements": [
           "Moonfire",
           "!Form:Druid_Bear"
@@ -82,7 +82,6 @@
       {
         "Name": "Demoralizing Roar",
         "Key": "3",
-        "MinRage": 10,
         "WhenUsable": true,
         "Requirements": [
           "InMeleeRange",
@@ -94,13 +93,12 @@
       {
         "Name": "Maul",
         "Key": "2",
-        "MinRage": 15,
         "Requirements": [
           "InMeleeRange",
           "LastMainHandMs > 2100",
           "Form:Druid_Bear"
         ], // bear swing speed fixed at 2.5
-        "AfterCastWaitNextSwing": true,
+        "AfterCastWaitSwing": true,
         "Form": "Druid_Bear"
       },
       {
@@ -119,7 +117,8 @@
         //macro: #showtooltip Small Barnacled Clam /use Small Barnacled Clam
         "Name": "clam",
         "Key": "F12",
-        "DelayAfterCast": 0,
+        "Item": true,
+        "WhenUsable": true,
         "Requirement": "BagItem:5523"
       },
       {
@@ -135,7 +134,7 @@
         "Form": "None"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "-",
         "Requirement": "Mana% < 40",
         "Form": "None"

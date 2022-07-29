@@ -15,8 +15,7 @@
       {
         "Name": "Lightning Bolt",
         "Key": "2",
-        "HasCastBar": true,
-        "MinMana": 30
+        "HasCastBar": true
       }
     ]
   },
@@ -28,14 +27,12 @@
         "Requirement": "Health%<45",
         "Cooldown": 5000,
         "HasCastBar": true,
-        "Log": false,
-        "MinMana": 80
+        "Log": false
       },
       {
         "Name": "Lightning Bolt",
         "Key": "2",
         "HasCastBar": true,
-        "MinMana": 30,
         "Requirements": [
           "not InMeleeRange",
           "Mana%>30"
@@ -49,8 +46,7 @@
           "Health%<49",
           "MobCount>1"
         ],
-        "WhenUsable": true,
-        "MinMana": 10
+        "WhenUsable": true
       },
       {
         "Name": "Fire shock",
@@ -60,16 +56,14 @@
           "InMeleeRange"
         ],
         "WhenUsable": true,
-        "Log": false,
-        "MinMana": 80
+        "Log": false
       },
       {
         "Name": "Stoneskin Totem",
         "Key": "7",
         "Requirement": "MobCount>1",
         "Cooldown": 30000,
-        "Log": false,
-        "MinMana": 30
+        "Log": false
       },
       {
         "Name": "AutoAttack",
@@ -86,13 +80,12 @@
       {
         "Name": "Rockbiter Weapon",
         "Key": "5",
-        "MinMana": 25,
-        "Requirement": "not HasMainHandEnchant"
+        "Requirement": "not HasMainHandEnchant",
+        "AfterCastAuraExpected": true
       },
       {
         "Name": "Lightning Shield",
         "Key": "6",
-        "MinMana": 45,
         "Requirement": "not Lightning Shield"
       }
     ]
@@ -105,7 +98,7 @@
         "Requirement": "Health%<40"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "9",
         "Requirement": "Mana%<40"
       }

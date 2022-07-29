@@ -5,6 +5,8 @@
   "PathThereAndBack": true,
   "PathReduceSteps": false,
   "IntVariables": {
+    "Item_Conjure_Drink": 5350,
+    "Item_Conjure_Food": 5349,
     "MIN_FOOD%": 50,
     "MIN_WATER%": 30,
     "MIN_MANA_SPELL%": 50
@@ -15,8 +17,7 @@
         "Name": "Frostbolt",
         "Key": "1",
         "HasCastBar": true,
-        "Requirements": 
-        [
+        "Requirements": [
           "SpellInRange:3",
           "Mana% > MIN_MANA_SPELL%"
         ]
@@ -24,8 +25,7 @@
       {
         "Name": "Shoot",
         "Key": "0",
-        "HasCastbar": true,
-        "DelayAfterCast": 500,
+        "Item": true,
         "Requirements": [
           "HasRangedWeapon",
           "!Shooting",
@@ -62,8 +62,7 @@
       {
         "Name": "Shoot",
         "Key": "0",
-        "HasCastbar": true,
-        "DelayAfterCast": 500,
+        "Item": true,
         "Requirements": [
           "HasRangedWeapon",
           "!Shooting",
@@ -87,7 +86,7 @@
         "Requirement": "Health% < MIN_FOOD%"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "-",
         "Requirement": "Mana% < MIN_WATER%"
       }
@@ -107,18 +106,20 @@
         "Log": false
       },
       {
-        "Name": "Conjure Water",
+        "Name": "Conjure Drink",
         "Key": "9",
         "HasCastBar": true,
-        "Requirement": "!BagItem:5350:4",
-        "AfterCastWaitItem": true
+        "Requirement": "!BagItem:Item_Conjure_Drink:4",
+        "AfterCastWaitCastbar": true,
+        "AfterCastWaitBag": true
       },
       {
         "Name": "Conjure Food",
         "Key": "8",
         "HasCastBar": true,
-        "Requirement": "!BagItem:5349:4",
-        "AfterCastWaitItem": true
+        "Requirement": "!BagItem:Item_Conjure_Food:4",
+        "AfterCastWaitCastbar": true,
+        "AfterCastWaitBag": true
       }
     ]
   },

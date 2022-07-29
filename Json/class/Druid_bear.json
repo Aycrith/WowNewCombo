@@ -64,8 +64,7 @@
         "Requirements": [
           "!Moonfire",
           "SpellInRange:0"
-        ],
-        "MinMana": 235
+        ]
       },
       {
         "Name": "Wrath",
@@ -73,13 +72,13 @@
         "Requirement": "OutOfCombatRange",
         "Form": "None",
         "HasCastBar": true,
-        "WaitForWithinMeleeRange": true
+        "AfterCastWaitMeleeRange": true
       },
       {
         "Name": "Bear Form",
         "Key": "F2",
         "Form": "None",
-        "WaitForWithinMeleeRange": true
+        "AfterCastWaitMeleeRange": true
       }
     ]
   },
@@ -90,7 +89,7 @@
         "Key": "6",
         "HasCastBar": true,
         "WhenUsable": true,
-        "Requirement": "Health% < 50",        
+        "Requirement": "Health% < 50",
         "Form": "None"
       },
       {
@@ -102,7 +101,6 @@
       {
         "Name": "Faerie Fire",
         "Key": "7",
-        "MinRage": 10,
         "Requirement": "!Faerie Fire",
         "Form": "Druid_Bear"
       },
@@ -113,7 +111,6 @@
           "!Demoralizing Roar"
         ],
         "Key": "5",
-        "MinRage": 6,
         "Cooldown": 10000,
         "Form": "Druid_Bear"
       },
@@ -121,13 +118,11 @@
         "Name": "Bash",
         "Key": "4",
         "WhenUsable": true,
-        "MinRage": 10,
         "Form": "Druid_Bear"
       },
       {
         "Name": "Swipe",
         "Key": "N1",
-        "MinRage": 20,
         "WhenUsable": true,
         "Requirements": [
           "InMeleeRange",
@@ -138,8 +133,7 @@
       {
         "Name": "Maul",
         "Key": "2",
-        "MinRage": 10,
-        "AfterCastWaitNextSwing": true,
+        "AfterCastWaitSwing": true,
         "Requirements": [
           "InMeleeRange",
           "MobCount < 2",
@@ -179,14 +173,14 @@
       },
       {
         "Name": "Well Fed",
-        "StopBeforeCast": false,
+        "BeforeCastStop": false,
         "Key": "9",
         "Requirement": "!Well Fed",
         "Cooldown": 120000,
         "Form": "None"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "0",
         "Requirement": "Mana% < 40",
         "Form": "None",

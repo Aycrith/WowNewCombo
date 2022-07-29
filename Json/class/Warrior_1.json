@@ -7,7 +7,7 @@
         "Name": "Heroic Strike",
         "Key": "2",
         "WhenUsable": true,
-        "AfterCastWaitNextSwing": true,
+        "AfterCastWaitSwing": true,
         "Requirement": "MainHandSwing > -400"
       },
       {

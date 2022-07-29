@@ -9,7 +9,7 @@
         "WhenUsable": true,
         "Requirement": "SpellInRange:0",
         "Form": "Warrior_BattleStance",
-        "WaitForWithinMeleeRange": true
+        "AfterCastWaitMeleeRange": true
       }
     ]
   },
@@ -19,8 +19,7 @@
         "Name": "Battle Shout",
         "Key": "4",
         "WhenUsable": true,
-        "Requirement": "!Battle Shout",
-        "AfterCastWaitBuff": true
+        "Requirement": "!Battle Shout"
       },
       {
         "Name": "Rend",
@@ -37,7 +36,7 @@
         "Key": "2",
         "WhenUsable": true,
         "Requirement": "MainHandSwing > -400",
-        "AfterCastWaitNextSwing": true
+        "AfterCastWaitSwing": true
       },
       {
         "Name": "AutoAttack",

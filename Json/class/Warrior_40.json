@@ -32,9 +32,9 @@
       {
         "Name": "Shoot",
         "Key": "9",
-        "HasCastbar": true,
+        "Item": true,
         "WhenUsable": true,
-        "WaitForWithinMeleeRange": true,
+        "AfterCastWaitMeleeRange": true,
         "Requirements": [
           "AddVisible",
           "HasRangedWeapon && !Items Broken",
@@ -47,7 +47,7 @@
         "WhenUsable": true,
         "Requirement": "SpellInRange:0 && !InMeleeRange",
         "Form": "Warrior_BattleStance",
-        "WaitForWithinMeleeRange": true
+        "AfterCastWaitMeleeRange": true
       },
       {
         "Name": "Approach",
@@ -117,7 +117,7 @@
           "MainHandSwing > -400",
           "MobCount > 1"
         ],
-        "AfterCastWaitNextSwing": true
+        "AfterCastWaitSwing": true
       },
       {
         "Name": "Mortal Strike",
@@ -139,7 +139,7 @@
           "TargetHealth% > 20",
           "Rage >= MIN_RAGE_HEROIC_STRIKE"
         ],
-        "AfterCastWaitNextSwing": true
+        "AfterCastWaitSwing": true
       },
       {
         "Name": "Rend",
@@ -190,8 +190,7 @@
         "Key": "4",
         "InCombat": "i dont care",
         "WhenUsable": true,
-        "Requirement": "!Battle Shout",
-        "AfterCastWaitBuff": true
+        "Requirement": "!Battle Shout"
       },
       {
         "Name": "Food",
@@ -205,7 +204,8 @@
         "Key": "F4",
         "WhenUsable": true,
         "HasCastbar": true,
-        "Requirement": "!HasMainHandEnchant"
+        "Requirement": "!HasMainHandEnchant",
+        "AfterCastAuraExpected": true
       }
     ]
   },

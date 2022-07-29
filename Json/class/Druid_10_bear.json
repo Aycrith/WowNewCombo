@@ -22,20 +22,21 @@
       {
         "Name": "Moonfire",
         "Key": "5",
-        "StopBeforeCast": true,
+        "Form": "None",
+        "BeforeCastStop": true,
         "AfterCastWaitBuff": true,
+        "AfterCastWaitGCD": true,
         "Requirements": [
           "!Moonfire",
           "AddVisible",
           "SpellInRange:0",
           "MinRange > 10"
-        ],
-        "Form": "None"
+        ]
       },
       {
         "Name": "Bear Form",
         "Key": "F2",
-        "WaitForWithinMeleeRange": true,
+        "AfterCastWaitMeleeRange": true,
         "Requirements": [
           "Moonfire",
           "!Form:Druid_Bear"
@@ -74,7 +75,6 @@
       {
         "Name": "Demoralizing Roar",
         "Key": "3",
-        "MinRage": 10,
         "WhenUsable": true,
         "Requirements": [
           "InMeleeRange",
@@ -86,13 +86,12 @@
       {
         "Name": "Maul",
         "Key": "2",
-        "MinRage": 15,
         "Requirements": [
           "InMeleeRange",
           "LastMainHandMs > 2100",
           "Form:Druid_Bear"
         ], // bear swing speed fixed at 2.5
-        "AfterCastWaitNextSwing": true,
+        "AfterCastWaitSwing": true,
         "Form": "Druid_Bear"
       },
       {
@@ -120,7 +119,7 @@
         "Form": "None"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "-",
         "Requirement": "Mana% < 40",
         "Form": "None"
