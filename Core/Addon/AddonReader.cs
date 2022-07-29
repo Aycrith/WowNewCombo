@@ -89,7 +89,7 @@ namespace Core
 
             this.PlayerReader = new(addonDataProvider);
             this.LevelTracker = new(this);
-            this.TalentReader = new(72, PlayerReader.Class, talentDB);
+            this.TalentReader = new(72, PlayerReader, talentDB);
 
             this.CurrentAction = new(25, 26, 27, 28, 29);
             this.UsableAction = new(30, 31, 32, 33, 34);
