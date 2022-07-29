@@ -325,8 +325,8 @@ namespace Core
                 }
             }
 
-            AddConsumableRequirement("Water", item);
-            AddConsumableRequirement("Food", item);
+            if (item.Name is Drink or Food)
+                AddConsumableRequirement(item);
 
             InitPerKeyActionRequirements(item);
 
@@ -609,17 +609,16 @@ namespace Core
             }
         }
 
-        private static void AddConsumableRequirement(string name, KeyAction item)
+        private static void AddConsumableRequirement(KeyAction item)
         {
-            if (item.Name == name)
-            {
-                item.StopBeforeCast = true;
-                item.WhenUsable = true;
-                item.AfterCastWaitBuff = true;
+            item.BeforeCastStop = true;
+            item.WhenUsable = true;
+            item.AfterCastWaitBuff = true;
+            item.Item = true;
 
-                item.Requirements.Add("!Swimming");
-                item.Requirements.Add("!Falling");
-            }
+            item.Requirements.Add($"!{item.Name}");
+            item.Requirements.Add("!Swimming");
+            item.Requirements.Add("!Falling");
         }
 
         private void AddSpellSchoolRequirement(List<Requirement> RequirementObjects, KeyAction item)
@@ -705,7 +704,7 @@ namespace Core
         {
             string key = $"CD_{item.Name}";
             bool f() => UsableGCD(key);
-            string s() => $"CD {intVariables[key]() / 1000f:0.0}";
+            string s() => $"CD {intVariables[key]() / 1000f:F1}";
 
             return new Requirement
             {
@@ -717,7 +716,7 @@ namespace Core
 
         private bool UsableGCD(string key)
         {
-            return intVariables[key]() <= CastingHandler.SpellQueueTimeMs + playerReader.NetworkLatency.Value;
+            return intVariables[key]() <= CastingHandler.SpellQueueTimeMs - playerReader.NetworkLatency.Value;
         }
 
         private Requirement CreateTargetCastingSpell(string requirement)
