@@ -68,7 +68,8 @@ local errorList = {
     "SPELL_FAILED_TRY_AGAIN", -- 12 "Failed attempt"
     "SPELL_FAILED_NOT_READY", -- 13 "Not yet recovered"
     "SPELL_FAILED_TARGETS_DEAD", -- 14 "Your target is dead"
-    "ERR_LOOT_LOCKED" -- 15 "Someone is already looting that corpse."
+    "ERR_LOOT_LOCKED", -- 15 "Someone is already looting that corpse."
+    "ERR_ATTACK_PACIFIED" -- 16 "Can't attack while pacified.";
 }
 local spellFailedErrors = {
     SPELL_FAILED_UNIT_NOT_INFRONT = 1,
@@ -157,16 +158,16 @@ local swing_reset_spells = {
 }
 
 local miss_type = {
-    ["ABSORB"] = 0,
-    ["BLOCK"] = 1,
-    ["DEFLECT"] = 2,
-    ["DODGE"] = 3,
-    ["EVADE"] = 4,
-    ["IMMUNE"] = 5,
-    ["MISS"] = 6,
-    ["PARRY"] = 7,
-    ["REFLECT"] = 8,
-    ["RESIST"] = 9,
+    ["ABSORB"] = 1,
+    ["BLOCK"] = 2,
+    ["DEFLECT"] = 3,
+    ["DODGE"] = 4,
+    ["EVADE"] = 5,
+    ["IMMUNE"] = 6,
+    ["MISS"] = 7,
+    ["PARRY"] = 8,
+    ["REFLECT"] = 9,
+    ["RESIST"] = 10
 }
 
 function DataToColor:UnfilteredCombatEvent()
@@ -251,6 +252,9 @@ function DataToColor:OnCombatEvent(...)
         if playerSpellCastStarted[subEvent] then
             DataToColor.lastCastEvent = CAST_START
             DataToColor.lastCastSpellId = spellId
+
+            local _, gcdMS = GetSpellBaseCooldown(spellId)
+            DataToColor.lastCastGCD = gcdMS
             --DataToColor:Print(subEvent, " ", spellId)
         end
 
@@ -295,9 +299,11 @@ function DataToColor:OnCombatEvent(...)
                     end
 
                     DataToColor.gcdExpirationTime = GetTime() + (castTime / 1000)
+                    DataToColor.lastCastGCD = castTime
                     --DataToColor:Print(subEvent, " ", spellName, " ", spellId, " ", castTime)
                 else
                     --DataToColor:Print(subEvent, " ", spellName, " ", spellId, " has no GCD")
+                    DataToColor.lastCastGCD = 0
                 end
             end
         end
@@ -313,7 +319,7 @@ function DataToColor:OnCombatEvent(...)
                     missType = select(-3, ...)
                 end
                 DataToColor.CombatMissTypeQueue:push(miss_type[missType])
-                --DataToColor:Print(subEvent, " ", miss_type[missType])
+                --DataToColor:Print(subEvent, " ", missType, " ", miss_type[missType])
             end
         end
 
