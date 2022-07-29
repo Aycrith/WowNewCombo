@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace Core
@@ -15,19 +14,16 @@ namespace Core
             this.cts = cts;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Update()
         {
             globalTime.WaitOne();
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Fixed(int durationMs)
         {
             cts.Token.WaitHandle.WaitOne(durationMs);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Till(int timeoutMs, Func<bool> interrupt)
         {
             DateTime start = DateTime.UtcNow;
@@ -42,7 +38,6 @@ namespace Core
             return true;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public WaitResult Until(int timeoutMs, Func<bool> interrupt)
         {
             DateTime start = DateTime.UtcNow;
@@ -58,7 +53,6 @@ namespace Core
             return new(true, elapsedMs);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public WaitResult Until(int timeoutMs, Func<bool> interrupt, Action repeat)
         {
             DateTime start = DateTime.UtcNow;
@@ -75,7 +69,6 @@ namespace Core
             return new(true, elapsedMs);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public WaitResult UntilNot(int timeoutMs, Func<bool> interrupt)
         {
             DateTime start = DateTime.UtcNow;
@@ -91,7 +84,6 @@ namespace Core
             return new(true, elapsedMs);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void While(Func<bool> condition)
         {
             while (condition())

@@ -134,7 +134,7 @@ namespace Core
                 CurrentAction.Update(reader);
                 UsableAction.Update(reader);
 
-                PlayerReader.Update();
+                PlayerReader.Update(reader);
 
                 if (lastTargetId != PlayerReader.TargetId)
                 {
@@ -170,7 +170,6 @@ namespace Core
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void FetchData()
         {
             reader.Update();
@@ -199,7 +198,6 @@ namespace Core
             SessionReset();
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetInt(int index)
         {
             return reader.GetInt(index);

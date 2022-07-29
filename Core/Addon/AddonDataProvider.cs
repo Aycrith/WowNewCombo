@@ -2,7 +2,6 @@
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Runtime.CompilerServices;
 
 namespace Core
 {
@@ -48,7 +47,6 @@ namespace Core
             graphics = Graphics.FromImage(bitmap);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Update()
         {
             Point windowLoc = new();
@@ -84,19 +82,16 @@ namespace Core
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetInt(int index)
         {
             return data[index];
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float GetFixed(int index)
         {
             return GetInt(index) / 100000f;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public string GetString(int index)
         {
             int color = GetInt(index);

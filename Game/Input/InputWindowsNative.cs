@@ -28,7 +28,6 @@ namespace Game
             _cts = new();
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int Delay(int milliseconds)
         {
             int delay = milliseconds + random.Next(1, MAX_DELAY);
@@ -36,19 +35,16 @@ namespace Game
             return delay;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void KeyDown(int key)
         {
             PostMessage(wowProcess.Process.MainWindowHandle, WM_KEYDOWN, key, 0);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void KeyUp(int key)
         {
             PostMessage(wowProcess.Process.MainWindowHandle, WM_KEYUP, key, 0);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int KeyPress(int key, int milliseconds)
         {
             PostMessage(wowProcess.Process.MainWindowHandle, WM_KEYDOWN, key, 0);
@@ -58,7 +54,6 @@ namespace Game
             return delay;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void KeyPressSleep(int key, int milliseconds, CancellationTokenSource cts)
         {
             PostMessage(wowProcess.Process.MainWindowHandle, WM_KEYDOWN, key, 0);

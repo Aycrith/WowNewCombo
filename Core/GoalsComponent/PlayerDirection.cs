@@ -34,13 +34,11 @@ namespace Core
             _cts.Cancel();
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetDirection(float desiredDirection, Vector3 point)
         {
             SetDirection(desiredDirection, point, DefaultIgnoreDistance, _cts);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetDirection(float desiredDirection, Vector3 point, int ignoreDistance, CancellationTokenSource cts)
         {
             float distance = playerReader.PlayerLocation.DistanceXYTo(point);
@@ -60,7 +58,6 @@ namespace Core
                 cts);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private float TurnAmount(float desiredDirection)
         {
             var result = (RADIAN + desiredDirection - playerReader.Direction) % RADIAN;
@@ -68,13 +65,11 @@ namespace Core
             return result;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int TurnDuration(float desiredDirection)
         {
             return (int)(TurnAmount(desiredDirection) * 1000 / MathF.PI);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ConsoleKey GetDirectionKeyToPress(float desiredDirection)
         {
             return (RADIAN + desiredDirection - playerReader.Direction) % RADIAN < MathF.PI

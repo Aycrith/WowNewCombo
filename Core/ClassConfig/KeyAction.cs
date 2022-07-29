@@ -308,8 +308,8 @@ namespace Core
 
         private void ActionBarCostReader_OnActionCostChanged(object? sender, ActionBarCostEventArgs e)
         {
-            int slot = Stance.ToSlot(this, playerReader);
-            if (slot != e.Slot)
+            if (Slot != e.Slot) return;
+
                 return;
 
             int oldValue = 0;
