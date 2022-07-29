@@ -130,6 +130,7 @@ DataToColor.lastAutoShot = 0
 DataToColor.lastMainHandMeleeSwing = 0
 DataToColor.lastCastEvent = 0
 DataToColor.lastCastSpellId = 0
+DataToColor.lastCastGCD = 0
 
 DataToColor.lastCastStartTime = 0
 DataToColor.lastCastEndTime = 0
@@ -232,6 +233,7 @@ function DataToColor:Reset()
     DataToColor.lastMainHandMeleeSwing = 0
     DataToColor.lastCastEvent = 0
     DataToColor.lastCastSpellId = 0
+    DataToColor.lastCastGCD = 0
 
     DataToColor.lastCastStartTime = 0
     DataToColor.CastNum = 0
@@ -659,12 +661,9 @@ function DataToColor:CreateFrames(n)
             Pixel(int, DataToColor:CustomTrigger(DataToColor.customTrigger1), 74)
             Pixel(int, DataToColor:getMeleeAttackSpeed(DataToColor.C.unitPlayer), 75)
 
-            if DataToColor.lastCastEndTime > 0 then
-                local remainCastTime = floor(DataToColor.lastCastEndTime - GetTime() * 1000)
-                Pixel(int, remainCastTime, 76)
-            else
-                Pixel(int, 0, 76)
-            end
+            -- 76 rem cast time
+            local remainCastTime = floor(DataToColor.lastCastEndTime - GetTime() * 1000)
+            Pixel(int, max(0, remainCastTime), 76)
 
             if UnitExists(DataToColor.C.unitFocus) then
                 Pixel(int, DataToColor:getGuidFromUnit(DataToColor.C.unitFocus), 77)
@@ -715,17 +714,12 @@ function DataToColor:CreateFrames(n)
                 end
             end
 
+            -- 94 last cast GCD
+            Pixel(int, DataToColor.lastCastGCD, 94)
+
             -- 95 gcd
-            if DataToColor.gcdExpirationTime > 0 then
-                local gcd = floor((DataToColor.gcdExpirationTime - GetTime()) * 1000)
-                if gcd <= 0 then
-                    gcd = 0
-                    DataToColor.gcdExpirationTime = 0
-                end
-                Pixel(int, gcd, 95)
-            else
-                Pixel(int, 0, 95)
-            end
+            local gcd = floor((DataToColor.gcdExpirationTime - GetTime()) * 1000)
+            Pixel(int, max(0, gcd), 95)
 
             if globalCounter % LATENCY_ITERATION_FRAME_CHANGE_RATE == 0 then
                 local _, _, lagHome, lagWorld = GetNetStats()
