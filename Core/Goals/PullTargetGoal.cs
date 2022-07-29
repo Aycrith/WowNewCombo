@@ -85,6 +85,9 @@ namespace Core.Goals
         {
             combatUtil.Update();
             wait.Update();
+            stuckDetector.Reset();
+
+            castingHandler.UpdateGCD(true);
 
             if (mountHandler.IsMounted())
             {
@@ -152,7 +155,7 @@ namespace Core.Goals
             {
                 KeyAction keyAction = Keys[i];
 
-                if (keyAction.Name == input.ClassConfig.Approach.Name)
+                if (keyAction.Name.Equals(input.ClassConfig.Approach.Name, StringComparison.OrdinalIgnoreCase))
                     continue;
 
                 if (!keyAction.CanRun())

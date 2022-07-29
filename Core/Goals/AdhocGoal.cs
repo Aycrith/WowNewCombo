@@ -55,6 +55,8 @@ namespace Core.Goals
                 mountHandler.Dismount();
                 wait.Update();
             }
+
+            castingHandler.UpdateGCD(true);
         }
 
         public override void OnExit()
