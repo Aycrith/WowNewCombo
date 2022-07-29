@@ -55,6 +55,7 @@ namespace Core
             // Goals components
             services.AddSingleton<PlayerDirection>();
             services.AddSingleton<StopMoving>();
+            services.AddSingleton<ReactCastError>();
             services.AddSingleton<CastingHandler>();
             services.AddSingleton<StuckDetector>();
             services.AddSingleton<CombatUtil>();
