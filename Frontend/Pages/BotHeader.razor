@@ -22,7 +22,7 @@
             </tr>
             <tr>
                 <td>
-                    Time to level: @levelTracker.TimeToLevel<br />
+                    Time to level: @DisplayTimeToLevel()<br />
                     at @levelTracker.PredictedLevelUpTime.ToString("HH:mm:ss")
                 </td>
                 <td>@playerReader.HealthCurrent() (@playerReader.HealthPercent() %)<br />@playerReader.PTCurrent() (@playerReader.PTPercentage() %)</td>
@@ -105,5 +105,10 @@
     private void OnAddonDataChanged()
     {
         base.InvokeAsync(StateHasChanged);
+    }
+
+    private string DisplayTimeToLevel()
+    {
+        return levelTracker.TimeToLevel == TimeSpan.Zero ? "∞" : levelTracker.TimeToLevel.ToString();
     }
 }

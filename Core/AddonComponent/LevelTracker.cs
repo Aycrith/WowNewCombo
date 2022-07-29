@@ -10,7 +10,7 @@ namespace Core
         private DateTime levelStartTime = DateTime.UtcNow;
         private int levelStartXP;
 
-        public string TimeToLevel { get; private set; } = "∞";
+        public TimeSpan TimeToLevel { get; private set; } = TimeSpan.Zero;
         public DateTime PredictedLevelUpTime { get; private set; } = DateTime.MaxValue;
 
         public int MobsKilled { get; private set; }
@@ -73,18 +73,11 @@ namespace Core
 
         public void UpdateExpPerHour()
         {
-            var runningSeconds = (DateTime.UtcNow - levelStartTime).TotalSeconds;
-            var xpPerSecond = (playerReader.PlayerXp.Value - levelStartXP) / runningSeconds;
-            var secondsLeft = (playerReader.PlayerMaxXp - playerReader.PlayerXp.Value) / xpPerSecond;
+            double runningSeconds = (DateTime.UtcNow - levelStartTime).TotalSeconds;
+            double xpPerSecond = (playerReader.PlayerXp.Value - levelStartXP) / runningSeconds;
+            double secondsLeft = (playerReader.PlayerMaxXp - playerReader.PlayerXp.Value) / xpPerSecond;
 
-            if (xpPerSecond > 0)
-            {
-                TimeToLevel = new TimeSpan(0, 0, (int)secondsLeft).ToString();
-            }
-            else
-            {
-                TimeToLevel = "∞";
-            }
+            TimeToLevel = xpPerSecond > 0 ? new TimeSpan(0, 0, (int)secondsLeft) : TimeSpan.Zero;
 
             if (secondsLeft > 0 && secondsLeft < 60 * 60 * 10)
             {
