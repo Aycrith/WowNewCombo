@@ -429,7 +429,7 @@ namespace Core
             if (!intVariables.ContainsKey(key))
             {
                 intVariables.Add(key,
-                    () => addonReader.ActionBarCooldownReader.GetRemainingCooldown(playerReader, item));
+                    () => addonReader.ActionBarCooldownReader.GetRemainingCooldown(item));
             }
         }
 
@@ -439,7 +439,7 @@ namespace Core
             if (!intVariables.ContainsKey(key))
             {
                 intVariables.Add(key,
-                    () => addonReader.ActionBarCostReader.GetCostByActionBarSlot(playerReader, item).Cost);
+                    () => addonReader.ActionBarCostReader.GetCostByActionBarSlot(item).Cost);
             }
         }
 

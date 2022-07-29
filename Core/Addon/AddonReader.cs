@@ -90,10 +90,10 @@ namespace Core
 
             this.PlayerReader = new(addonDataProvider);
             this.LevelTracker = new(this);
-            this.TalentReader = new(72, PlayerReader, talentDB);
+            this.TalentReader = new(72, PlayerReader.Class, talentDB);
 
-            this.CurrentAction = new(PlayerReader, 25, 26, 27, 28, 29);
-            this.UsableAction = new(PlayerReader, 30, 31, 32, 33, 34);
+            this.CurrentAction = new(25, 26, 27, 28, 29);
+            this.UsableAction = new(30, 31, 32, 33, 34);
 
             this.PlayerBuffTimeReader = new(79, 80);
             this.TargetDebuffTimeReader = new(81, 82);
@@ -157,14 +157,14 @@ namespace Core
                 SpellBookReader.Read(reader);
                 TalentReader.Read(reader);
 
+                PlayerBuffTimeReader.Read(reader);
+                TargetDebuffTimeReader.Read(reader);
+
                 if (UIMapId.Updated(reader))
                 {
                     AreaDb.Update(WorldMapAreaDb.GetAreaId(UIMapId.Value));
                     ZoneChanged?.Invoke();
                 }
-
-                PlayerBuffTimeReader.Read(reader);
-                TargetDebuffTimeReader.Read(reader);
 
                 autoResetEvent.Set();
             }

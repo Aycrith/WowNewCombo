@@ -43,15 +43,16 @@ namespace Core
             data.Clear();
         }
 
-        public int GetRemainingTimeMs(int id)
+        public int GetRemainingTimeMs(int textureId)
         {
-            return data.TryGetValue(id, out Data d) ? Math.Max(0, (int)(d.StartTime.AddSeconds(d.DurationSec) - DateTime.UtcNow).TotalMilliseconds) : 0;
+            return data.TryGetValue(textureId, out Data d) ?
+                Math.Max(0, (int)(d.StartTime.AddSeconds(d.DurationSec) - DateTime.UtcNow).TotalMilliseconds)
+                : 0;
         }
 
-        public int GetTotalTimeMs(PlayerReader playerReader, KeyAction keyAction)
+        public int GetTotalTimeMs(KeyAction keyAction)
         {
-            int index = Stance.ToSlot(keyAction, playerReader) - 1;
-            return data[index].DurationSec * 1000;
+            return data[keyAction.SlotIndex].DurationSec * 1000;
         }
 
     }

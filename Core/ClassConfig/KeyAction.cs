@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,6 +14,7 @@ namespace Core
         public ConsoleKey ConsoleKey { get; set; }
         public string Key { get; set; } = string.Empty;
         public int Slot { get; set; }
+        public int SlotIndex { get; private set; }
         public int PressDuration { get; set; } = 50;
         public string Form { get; set; } = string.Empty;
         public Form FormEnum { get; set; } = Core.Form.None;
@@ -134,15 +135,15 @@ namespace Core
 
             if (Slot > 0)
             {
-                int index = Stance.ToSlot(this, playerReader) - 1;
-                this.logger.LogInformation($"[{Name}] Actionbar Form key map: Key:{Key} -> Actionbar:{Slot} -> Index:{index}");
+                this.SlotIndex = Stance.ToSlot(this, playerReader) - 1;
+                this.logger.LogInformation($"[{Name}] Actionbar Form key map: Key:{Key} -> Actionbar:{Slot} -> Index:{SlotIndex}");
             }
 
             ConsoleKeyFormHash = ((int)FormEnum * 1000) + (int)ConsoleKey;
             ResetCooldown();
 
             if (Slot > 0)
-                InitMinPowerType(playerReader, addonReader.ActionBarCostReader);
+                InitMinPowerType(addonReader.ActionBarCostReader);
 
             requirementFactory.InitialiseRequirements(this, keyActions);
         }
@@ -248,12 +249,7 @@ namespace Core
             return true;
         }
 
-        public bool HasFormRequirement()
-        {
-            return !string.IsNullOrEmpty(Form);
-        }
-
-        private void InitMinPowerType(PlayerReader playerReader, ActionBarCostReader actionBarCostReader)
+        private void InitMinPowerType(ActionBarCostReader actionBarCostReader)
         {
             for (int i = 0; i < ActionBar.NUM_OF_COST; i++)
             {

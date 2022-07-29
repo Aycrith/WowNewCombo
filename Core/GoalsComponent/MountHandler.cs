@@ -44,7 +44,7 @@ namespace Core
                 !playerReader.Bits.IsFalling() &&
                 !IsMounted() &&
                 addonReader.UsableAction.Is(classConfig.Mount) &&
-                addonReader.ActionBarCooldownReader.GetRemainingCooldown(playerReader, classConfig.Mount) == 0;
+                addonReader.ActionBarCooldownReader.GetRemainingCooldown(classConfig.Mount) == 0;
         }
 
         public void MountUp()

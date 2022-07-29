@@ -7,11 +7,9 @@ namespace Core
         private readonly int[] cells;
 
         private readonly BitVector32[] bits;
-        private readonly PlayerReader playerReader;
 
-        public ActionBarBits(PlayerReader playerReader, params int[] cells)
+        public ActionBarBits(params int[] cells)
         {
-            this.playerReader = playerReader;
             this.cells = cells;
             bits = new BitVector32[cells.Length];
         }
@@ -29,7 +27,7 @@ namespace Core
         {
             if (keyAction.Slot == 0) return false;
 
-            int index = Stance.ToSlot(keyAction, playerReader) - 1;
+            int index = keyAction.SlotIndex;
             return bits[index / ActionBar.BIT_PER_CELL][Mask.M[index % ActionBar.BIT_PER_CELL]];
         }
     }

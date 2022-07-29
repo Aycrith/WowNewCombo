@@ -8,18 +8,18 @@ namespace Core
     {
         private readonly int cTalent;
 
-        private readonly PlayerReader playerReader;
+        private readonly PlayerClassEnum playerClass;
         private readonly TalentDB talentDB;
         public int Count { get; private set; }
 
         public Dictionary<int, Talent> Talents { get; } = new();
         public Dictionary<int, int> Spells { get; } = new();
 
-        public TalentReader(int cTalent, PlayerReader playerReader, TalentDB talentDB)
+        public TalentReader(int cTalent, PlayerClassEnum playerClass, TalentDB talentDB)
         {
             this.cTalent = cTalent;
 
-            this.playerReader = playerReader;
+            this.playerClass = playerClass;
             this.talentDB = talentDB;
         }
 
@@ -48,7 +48,7 @@ namespace Core
                 CurrentRank = data
             };
 
-            if (talentDB.Update(ref talent, playerReader.Class, out int id))
+            if (talentDB.Update(ref talent, playerClass, out int id))
             {
                 Talents.Add(hash, talent);
                 Spells.Add(hash, id);

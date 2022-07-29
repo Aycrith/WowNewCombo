@@ -57,9 +57,9 @@ namespace Core
             }
         }
 
-        public int GetRemainingCooldown(PlayerReader playerReader, KeyAction keyAction)
+        public int GetRemainingCooldown(KeyAction keyAction)
         {
-            int index = Stance.ToSlot(keyAction, playerReader) - 1;
+            int index = keyAction.SlotIndex;
             return data[index].DurationSec > 0
                 ? Math.Clamp((int)(data[index].StartTime.AddSeconds(data[index].DurationSec) - DateTime.UtcNow).TotalMilliseconds, 0, int.MaxValue)
                 : 0;

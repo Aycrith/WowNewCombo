@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Numerics;
@@ -151,21 +151,14 @@ namespace Core
             _ => false
         };
 
-        public void Update()
+        public void Update(AddonDataProvider reader)
         {
-            AddonDataProvider reader = this.reader;
-
             Bits.Update(reader);
             SpellInRange.Update(reader);
             Buffs.Update(reader);
             TargetDebuffs.Update(reader);
             Stance.Update(reader);
             CustomTrigger1 = new(reader.GetInt(74));
-
-            if (UIError != UI_ERROR.NONE)
-            {
-                LastUIError = UIError;
-            }
 
             PlayerXp.Update(reader);
             Level.Update(reader);
@@ -179,6 +172,9 @@ namespace Core
 
             GCD.Update(reader);
             NetworkLatency.Update(reader);
+
+            if (UIError != UI_ERROR.NONE)
+                LastUIError = UIError;
         }
 
         public void Reset()

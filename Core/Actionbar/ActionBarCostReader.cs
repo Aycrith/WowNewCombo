@@ -102,9 +102,9 @@ namespace Core
             OnActionCostReset?.Invoke();
         }
 
-        public ActionBarCost GetCostByActionBarSlot(PlayerReader playerReader, KeyAction keyAction, int costIndex = 0)
+        public ActionBarCost GetCostByActionBarSlot(KeyAction keyAction, int costIndex = 0)
         {
-            int index = Stance.ToSlot(keyAction, playerReader) - 1;
+            int index = keyAction.SlotIndex;
             return data[index][costIndex];
         }
     }
