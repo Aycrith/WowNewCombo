@@ -2,6 +2,7 @@ using BlazorTable;
 using Core;
 using Core.Addon;
 using Core.Database;
+using Core.Environment;
 using Core.Session;
 using Game;
 using MatBlazor;
@@ -93,6 +94,8 @@ namespace BlazorServer
             services.AddSingleton<ExecGameCommand>();
             services.AddSingleton<AddonConfigurator>();
             services.AddSingleton<FrameConfigurator>();
+
+            services.AddSingleton<IEnvironment, BlazorFrontend>();
 
             if (AddonConfig.Exists() && FrameConfig.Exists())
             {

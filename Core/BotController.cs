@@ -1,4 +1,4 @@
-﻿using Core.Goals;
+using Core.Goals;
 using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -14,6 +14,7 @@ using WinAPI;
 using SharedLib.NpcFinder;
 using Cyotek.Collections.Generic;
 using PPather.Data;
+using Core.Environment;
 
 namespace Core
 {
@@ -41,7 +42,7 @@ namespace Core
         private readonly Thread? remotePathing;
         private const int remotePathingTickMs = 500;
 
-        private readonly Thread frontendThread;
+        private readonly Thread? frontendThread;
         private const int frontendTickMs = 250;
 
         public bool IsBotActive => GoapAgent != null && GoapAgent.Active;
@@ -86,7 +87,7 @@ namespace Core
         }
         private readonly CircularBuffer<double> NPCLatencys;
 
-        public BotController(ILogger logger, CancellationTokenSource cts, IPPather pather, IGrindSessionDAO grindSessionDAO, DataConfig dataConfig, WowProcess wowProcess, WowScreen wowScreen, WowProcessInput wowProcessInput, ExecGameCommand execGameCommand, Wait wait, IAddonReader addonReader, MinimapNodeFinder minimapNodeFinder)
+        public BotController(ILogger logger, IEnvironment env, CancellationTokenSource cts, IPPather pather, IGrindSessionDAO grindSessionDAO, DataConfig dataConfig, WowProcess wowProcess, WowScreen wowScreen, WowProcessInput wowProcessInput, ExecGameCommand execGameCommand, Wait wait, IAddonReader addonReader, MinimapNodeFinder minimapNodeFinder)
         {
             this.logger = logger;
             this.pather = pather;
@@ -109,8 +110,11 @@ namespace Core
             addonThread = new(AddonThread);
             addonThread.Start();
 
-            frontendThread = new(FrontendThread);
-            frontendThread.Start();
+            if (env is BlazorFrontend)
+            {
+                frontendThread = new(FrontendThread);
+                frontendThread.Start();
+            }
 
             Stopwatch sw = Stopwatch.StartNew();
             do

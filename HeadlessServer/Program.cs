@@ -8,6 +8,7 @@ using Serilog;
 using Serilog.Events;
 using Serilog.Extensions.Logging;
 using CommandLine;
+using Core.Environment;
 
 namespace HeadlessServer
 {
@@ -72,6 +73,8 @@ namespace HeadlessServer
             services.AddSingleton(logger);
 
             services.AddSingleton<CancellationTokenSource>();
+
+            services.AddSingleton<IEnvironment, Headless>();
 
             services.AddSingleton(DataConfig.Load());
             services.AddSingleton<WowProcess>(x => new(options.Value.Pid));
