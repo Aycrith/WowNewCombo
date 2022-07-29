@@ -6,7 +6,7 @@ namespace Core.Goals
 {
     public partial class CastingHandler
     {
-        private const bool Log = false;
+        private const bool Log = true;
 
         private readonly ILogger logger;
         private readonly CancellationTokenSource cts;
