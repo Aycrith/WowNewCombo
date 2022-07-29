@@ -370,7 +370,9 @@ Gives the ability to the user to define global integer variables along the whole
 For example look at the Warlock profiles.
 ```json
 "IntVariables": {
-    "DOT_MIN_HEALTH%": 35
+    "DOT_MIN_HEALTH%": 35,
+    "Debuff_Frost Fever": 237522,   // iconId https://www.wowhead.com/icons
+    "Debuff_Blood Plague": 237514,  // iconId https://www.wowhead.com/icons
 }
 ```
 
@@ -391,50 +393,47 @@ Can specify conditions with [Requirement(s)](#Requirement) in order to create a 
 | Property Name | Description | Default value |
 | --- | --- | --- |
 | `"Name"` | Name of the KeyAction. For the `ActionBarPopulator`, lowercase means macro. | `""` |
-| `"HasCastBar"` | After key press cast bar is expected?<br>By default sets `StopBeforeCast`=`true` | `false` |
-| `"StopBeforeCast"` | Should stop moving before key press | `false` |
 | `"Key"` | Key to press (`ConsoleKey`) | `""` |
+| `"Cost"` | [Adhoc Goals](#Adhoc-Goals) or [NPC Goal](#NPC-Goals) only, priority | `18` |
+| `"PathFilename"` | [NPC Goal](#NPC-Goals) only, this is a short path to get close to the NPC to avoid walls etc. | `""` |
+| `"HasCastBar"` | After key press cast bar is expected?<br>By default sets `BeforeCastStop`=`true` | `false` |
+| `"InCombat"` | Should combat matter when attempt to cast?<br>Accepted values:<br>* `"any value for doesn't matter"`<br>* `"true"`<br>* `"false"` | `false` |
+| `"Item"` | Like on use Trinket, `Food`, `Drink`.<br>The following spells counts as Item, `Throw`, `Auto Shot`, `Shoot` | `false` |
 | `"PressDuration"` | How many milliseconds to hold the key press | `50` |
 | `"Form"` | Shapeshift/Stance form to be in to cast this spell<br>If setted, affects `WhenUsable` | `Form.None` |
-| `"Charge"` | How many consequent key press should happen before setting Cooldown | `1` |
 | `"Cooldown"` | **Note this is not the in-game cooldown!**<br>The time in milliseconds before KeyAction can be used again.<br>This property will be updated when the backend registers the `Key` press. It has no feedback from the game. | `400` |
+| `"Charge"` | How many consequent key press should happen before setting Cooldown | `1` |
 | `"School"` | Indicate what type of element the spell do. Accepted values:<br>* `SchoolMask.Physical`<br>* `SchoolMask.Holy`<br>* `SchoolMask.Fire`<br>* `SchoolMask.Nature`<br>* `SchoolMask.Frost`<br>* `SchoolMask.Shadow`<br>* `SchoolMask.Arcane` | `SchoolMask.None` |
 | --- | --- | --- |
-| --- | The Following `Min` prefixed values used by **ActionBarCost**. Do not use them directly! | --- |
-| `"MinMana"` | Minimum `Mana` [Requirement](#Requirement) | `0` |
-| `"MinRage"` | Minimum `Rage` [Requirement](#Requirement) | `0` |
-| `"MinEnergy"` | Minimum `Energy` [Requirement](#Requirement) | `0` |
-| `"MinComboPoints"` | The minimum combo points [Requirement](#Requirement) | `0` |
-| `"MinRunicPower"` | The minimum Runic Power [Requirement](#Requirement) | `0` |
-| `"MinRuneBlood"` | The minimum Blood Rune [Requirement](#Requirement) | `0` |
-| `"MinRuneFrost"` | The minimum Frost Rune [Requirement](#Requirement) | `0` |
-| `"MinRuneUnholy"` | The minimum Unholy Rune [Requirement](#Requirement) | `0` |
-| --- | --- | --- |
-| `"TotalRune"` | Accumlated available Rune count [Requirement](#Requirement) | `0` |
 | `"WhenUsable"` | Mapped to [IsUsableAction](https://wowwiki-archive.fandom.com/wiki/API_IsUsableAction) | `false` |
+| `"UseWhenTargetIsCasting"` | Checks for the target casting/channeling.<br>Accepted values:<br>* `null` -> ignore<br>* `false` -> when enemy not casting<br>* `true` -> when enemy casting | `null` |
 | `"Requirement"` | Single [Requirement](#Requirement) | `false` |
 | `"Requirements"` | List of [Requirement](#Requirement) | `false` |
-| `"WaitForWithinMeleeRange"` | [Pull Goal](#Pull-Goal) only<br>While the [Requirements](#Requirement) are met, keep repeating the KeyAction.<br>Interrupted either:<br>* target enters melee range<br>* target starts casting<br>* player receives damage | `false` |
-| `"WaitForGCD"` | Indicates should wait for the `GCD` | `true` |
-| `"SkipValidation"` | After key press, skip awaiting in-game effect, such as __(player debuff/buff or target debuff/buff)__ changed. | `false` |
 | `"ResetOnNewTarget"` | Reset the Cooldown if the target changes | `false` |
-| `"Log"` | KeyAction related events should appear in the log | `true` |
-| `"DelayBeforeCast"` | Delay in milliseconds before key press happens | `0` |
-| `"DelayAfterCast"` | Delay in milliseconds after the key press happened | `1450` |
-| `"DelayUntilCombat"` | After cast, waits until player enters combat, good for pulling. | `false` |
-| `"AfterCastWaitBuff"` | After a successful cast, should wait until __(player debuff/buff or target debuff/buff)__ changed. | `false` |
-| `"AfterCastWaitItem"` | After a successful cast, should wait until __(inventory change)__ changed. | `false` |
-| `"AfterCastWaitNextSwing"` | After cast wait for next melee swing happen. | `false` |
-| `"AfterCastWaitCastbar"` | After cast wait for the current castbar to finish. | `false` |
-| `"Cost"` | [Adhoc Goals](#Adhoc-Goals) or [NPC Goal](#NPC-Goals) only the priority | `18` |
-| `"InCombat"` | Should combat matter when attempt to cast?<br>Accepted values:<br>* `"any value for doesn't matter"`<br>* `"true"`<br>* `"false"` | `false` |
-| `"StepBackAfterCast"` | After successful cast, start backpedaling for milliseconds.<br> If value set to `-1` attempts to use the whole remaining GCD duration. | `0` |
-| `"PathFilename"` | [NPC Goal](#NPC-Goals) only, this is a short path to get close to the NPC to avoid walls etc. | `""` |
-| `"UseWhenTargetIsCasting"` | Checks for the target casting/channeling.<br>Accepted values:<br>* `null` -> ignore<br>* `false` -> when enemy not casting<br>* `true` -> when enemy casting | `null` |
+| `"Log"` | Related events should appear in the logs | `true` |
+| --- | Before keypress cast, ... | --- |
+| `"BeforeCastStop"` | stop moving. | `false` |
+| `"BeforeCastDelay"` | delay in milliseconds | `0` |
+| --- | After Successful cast, ... | --- |
+| `"AfterCastWaitSwing"` | wait for next melee swing to land.<br>Blocks **CastingHandler**. | `false` |
+| `"AfterCastWaitCastbar"` | wait for the castbar to finish, `SpellQueueTimeMs` excluded.<br>Blocks **CastingHandler**. | `false` |
+| `"AfterCastWaitBuff"` | wait for Aura=__(player-target debuff/buff)__ count changes.<br>Only works properly, when the Aura **count** changes.<br>Not suitable for refreshing already existing Aura<br>Blocks **CastingHandler**. | `false` |
+| `"AfterCastAuraExpected"` | refreshing Aura=__(player-target debuff/buff)__<br>Just adds an extra(`SpellQueueTimeMs`) Cooldown to the action, so it wont repeat itself.<br>Not blocking  **CastingHandler**. | `false` |
+| `"AfterCastWaitBag"` | wait for inventory, bag change.<br>Blocks **CastingHandler**. | `false` |
+| `"AfterCastWaitCombat"` | wait for player entering combat.<br>Blocks **CastingHandler**. | `false` |
+| `"AfterCastWaitMeleeRange"` | wait for interrupted either:<br>* target enters melee range<br>* target starts casting<br>* player receives damage<br>Blocks **CastingHandler**. | `false` |
+| `"AfterCastStepBack"` | start backpedaling for milliseconds.<br>If value set to `-1` attempts to use the whole remaining GCD duration.<br>Blocks **CastingHandler**. | `0` |
+| `"AfterCastWaitGCD"` | the Global cooldown fully expire.<br>Blocks **CastingHandler**. | `0` |
+| `"AfterCastDelay"` | delay in milliseconds.<br>Blocks **CastingHandler**. | `0` |
+| --- | --- | --- |
 
-Some of these properties are optional and not required to be specified. However can create pretty complex conditions and branches to suit the situation.
+Some of these properties are optional and not required to be specified.
 
-e.g. - bare minimum for a spell which has castbar. **Note:** _there are some spells which dosen't have visible castbar. like `"Throw"`, `"Shoot"`, `"Auto Shot"`_
+However you can create complex conditions and branches to suit the situation.
+
+Important, the `AfterCast` prefixed conditions order as is its shows up the the table above.
+
+e.g. - bare minimum for a spell which has castbar.
 ```json
 {
     "Name": "Frostbolt",
@@ -451,11 +450,23 @@ e.g. - bare minimum for a spell which is instant (no castbar)
 }
 ```
 
-Theres are only two specially named KeyAction `Food` and `Water` which is reserved for eating and drinking.
+e.g. for Rogue ability
+```json
+{
+    "Name": "Slice and Dice",
+    "Key": "3",
+    "Requirements": [
+        "!Slice and Dice",
+        "Combo Point > 1"
+    ]
+}
+```
+
+Theres are few specially named KeyAction such as `Food` and `Drink` which is reserved for eating and drinking.
 
 They already have some prebaked `Requirement` conditions in order to avoid mistype the definition. 
 
-The bare minimum for `Food` and `Water` is looks something like this.
+The bare minimum for `Food` and `Drink` is looks something like this.
 ```json
 {
     "Name": "Food",
@@ -463,23 +474,21 @@ The bare minimum for `Food` and `Water` is looks something like this.
     "Requirement": "Health% < 50"
 },
 {
-    "Name": "Water",
+    "Name": "Drink",
     "Key": "=",
     "Requirement": "Mana% < 50"
 }
 ```
+---
 
-e.g. for Rogue ability
-```json
-{
-    "Name": "Slice And Dice",
-    "Key": "3",
-    "MinEnergy": 25,
-    "MinComboPoints": 2,
-    "Cooldown": 3000,
-    "Requirement": "!Slice And Dice"
-}
-```
+### Casting Handler
+
+**CastingHandler** is a component which responsible for handling player spell casting, 
+let it be using an item from the inventory, casting an instant spell or casting a spell which has castbar.
+
+From Addon version **1.5.5** it has been significantly changed to the point where it no longer blocks the execution until the castbar fully finishes, but rather gives back the control to the parent Goal such as [Adhoc Goals](#Adhoc-Goals) or [Pull Goal](#Pull-Goal) or [Combat Goal](#Combat-Goal) to give more time to find the best suitable action for the given moment.
+
+As a result in order to execute the [Pull Goal](#Pull-Goal) sequence in respect, have to combine its `KeyAction(s)` with `AfterCast` prefixed conditions.
 
 ---
 ### Pull Goal
@@ -493,7 +502,7 @@ e.g.
         {
             "Name": "Concussive Shot",
             "Key": "9",
-            "StopBeforeCast": true,
+            "BeforeCastStop": true,
             "Requirements": ["HasRangedWeapon", "!InMeleeRange", "HasAmmo"]
         }
     ]
@@ -516,7 +525,6 @@ e.g.
             "Name": "Fireball",
             "Key": "2",
             "HasCastBar": true,
-            "MinMana": 30,
             "Requirement": "TargetHealth% > 20"
         },
         {
@@ -542,7 +550,6 @@ e.g.
         {
             "Name": "Frost Armor",
             "Key": "3",
-            "MinMana": 60,
             "Requirement": "!Frost Armor"
         },
         {
@@ -551,7 +558,7 @@ e.g.
             "Requirement": "Health% < 30"
         },
         {
-            "Name": "Water",
+            "Name": "Drink",
             "Key": "-",
             "Requirement": "Mana% < 30"
         }
@@ -565,7 +572,7 @@ These `Sequence` of `KeyAction(s)` are done when not in combat and are not on co
 
 The keypresses happens simultaneously on all `KeyAction(s)` which mets the `Requirement`.
 
-Suitable for `Food` and `Water`.
+Suitable for `Food` and `Drink`.
 
 e.g.
 ```json
@@ -577,7 +584,7 @@ e.g.
             "Requirement": "Health% < 50"
         },
         {
-            "Name": "Water",
+            "Name": "Drink",
             "Key": "-",
             "Requirement": "Mana% < 50"
         }
@@ -664,7 +671,7 @@ A requirement is something that must be evaluated to be `true` for the `KeyActio
 Not all `KeyAction` requires requirement(s), some rely on
 * `Cooldown` - populated manually
 * `ActionBarCooldownReader` - populated automatically
-* `ActionBarCostReader` - populated automatically
+* `ActionBarCostReader` - populated automatically including (`MinMana`, `MinRage`, `MinEnergy`, `MinRunicPower`, `MinRuneBlood`, `MinRuneFrost`, `MinRuneUnholy`)
 
 Can specify `Requirements` for complex condition.
 
@@ -703,7 +710,7 @@ Formula: `[Negate keyword][requirement]`
 e.g.
 ```json
 "Requirement": "not Curse of Weakness"
-"Requirement": "!BagItem:6265:3"
+"Requirement": "!BagItem:Item_Soul_Shard:3"
 ```
 ---
 
@@ -832,8 +839,7 @@ e.g. for `CD_{KeyAction.Name}`: Where `Hammer of Justice` referencing the `Judge
     "Name": "Judgement",
     "Key": "1",
     "WhenUsable": true,
-    "Requirements": ["Seal of the Crusader", "!Judgement of the Crusader"],
-    "DelayAfterCast": 0
+    "Requirements": ["Seal of the Crusader", "!Judgement of the Crusader"]
 },
 {
     "Name": "Hammer of Justice",
@@ -867,7 +873,7 @@ Formula: `BagItem:[intVariableKey/itemid]:[count]`
 e.g.
 
 * `"Requirement": "BagItem:5175"` - Must have a [Earth Totem](https://tbc.wowhead.com/item=5175) in bag
-* `"Requirement": "BagItem:6265:3"` - Must have atleast [3x Soulshard](https://tbc.wowhead.com/item=6265) in bag
+* `"Requirement": "BagItem:Item_Soul_Shard:3"` - Must have atleast [3x Soulshard](https://tbc.wowhead.com/item=6265) in bag
 * `"Requirement": "not BagItem:19007:1"` - Must not have a [Lesser Healthstone](https://tbc.wowhead.com/item=19007) in bag
 * `"Requirement": "!BagItem:6265:3"` - Must not have [3x Soulshard](https://tbc.wowhead.com/item=6265) in bag
 * `"Requirement": "!BagItem:MyAwesomeIntVariable:69"`
@@ -1023,7 +1029,9 @@ e.g.
 ```json
 "IntVariables": {
     "Debuff_Blood Plague": 237514,
-    "Debuff_Frost Fever": 237522
+    "Debuff_Frost Fever": 237522,
+    "Item_Soul_Shard": 6265,
+    "Item_Healthstone": 22105,
 },
 ```
 

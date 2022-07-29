@@ -1,3 +1,4 @@
+﻿using Core.Goals;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -11,7 +12,6 @@ namespace Core
         public float Cost { get; set; } = 18;
         public string Name { get; set; } = string.Empty;
         public bool HasCastBar { get; set; }
-        public bool StopBeforeCast { get; set; }
         public ConsoleKey ConsoleKey { get; set; }
         public string Key { get; set; } = string.Empty;
         public int Slot { get; set; }
@@ -20,6 +20,7 @@ namespace Core
         public string Form { get; set; } = string.Empty;
         public Form FormEnum { get; set; } = Core.Form.None;
         public bool FormAction { get; private set; }
+        public float Cooldown { get; set; } = CastingHandler.SpellQueueTimeMs;
 
         private int _charge;
         public int Charge { get; set; } = 1;
@@ -45,37 +46,34 @@ namespace Core
 
         public bool WhenUsable { get; set; }
 
-        public bool WaitForWithinMeleeRange { get; set; }
         public bool ResetOnNewTarget { get; set; }
 
         public bool Log { get; set; } = true;
-        public int DelayAfterCast { get; set; } = 1450; // GCD 1500 - but spell queue window 400 ms
 
-        public bool WaitForGCD { get; set; } = true;
+        public bool BaseAction { get; set; }
 
-        public bool SkipValidation { get; set; }
+        public bool Item { get; set; }
 
+        public int BeforeCastDelay { get; set; }
+        public bool BeforeCastStop { get; set; }
+
+        public int AfterCastDelay { get; set; }
+        public bool AfterCastWaitMeleeRange { get; set; }
         public bool AfterCastWaitBuff { get; set; }
-
-        public bool AfterCastWaitItem { get; set; }
-
-        public bool AfterCastWaitNextSwing { get; set; }
-
+        public bool AfterCastWaitBag { get; set; }
+        public bool AfterCastWaitSwing { get; set; }
         public bool AfterCastWaitCastbar { get; set; }
+        public bool AfterCastWaitCombat { get; set; }
+        public bool AfterCastWaitGCD { get; set; }
+        public bool AfterCastAuraExpected { get; set; }
+        public int AfterCastStepBack { get; set; }
 
-        public bool DelayUntilCombat { get; set; }
-        public int DelayBeforeCast { get; set; }
-        public float Cost { get; set; } = 18;
         public string InCombat { get; set; } = "false";
 
         public bool? UseWhenTargetIsCasting { get; set; }
 
         public string PathFilename { get; set; } = string.Empty;
         public Vector3[] Path { get; set; } = Array.Empty<Vector3>();
-
-        public int StepBackAfterCast { get; set; }
-
-        public Vector3 LastClickPostion { get; private set; }
 
         public int ConsoleKeyFormHash { private set; get; }
 
@@ -212,10 +210,9 @@ namespace Core
             return playerReader.ManaCurrent() >= FormCost() + MinMana;
         }
 
-        internal void SetClicked()
+        public void SetClicked(double offset = 0)
         {
-            LastClickPostion = playerReader.PlayerLocation;
-            LastClicked[ConsoleKeyFormHash] = DateTime.UtcNow;
+            LastClicked[ConsoleKeyFormHash] = DateTime.UtcNow.AddMilliseconds(offset);
         }
 
         public double MillisecondsSinceLastClick =>
