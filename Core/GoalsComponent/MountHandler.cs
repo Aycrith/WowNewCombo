@@ -51,51 +51,47 @@ namespace Core
         {
             if (playerReader.Class == PlayerClassEnum.Druid)
             {
-                int index = -1;
+                KeyAction? keyAction = null;
                 for (int i = 0; i < classConfig.Form.Length; i++)
                 {
-                    if (classConfig.Form[i].FormEnum is Form.Druid_Flight or Form.Druid_Travel)
+                    keyAction = classConfig.Form[i];
+                    if (keyAction.FormEnum is Form.Druid_Flight or Form.Druid_Travel)
                     {
-                        index = i;
                         break;
                     }
                 }
 
-                if (index > -1 &&
-                    castingHandler.SwitchForm(playerReader.Form, classConfig.Form[index]))
+                if (keyAction != null && castingHandler.SwitchForm(keyAction))
                 {
                     return;
                 }
             }
 
-            if (playerReader.Bits.IsFalling())
-            {
-                wait.While(playerReader.Bits.IsFalling);
-            }
+            wait.While(playerReader.Bits.IsFalling);
 
             stopMoving.Stop();
             wait.Update();
 
             input.Mount();
 
-            (bool timeOut, double elapsedMs) =
+            (bool t, double e) =
                 wait.Until(CastingHandler.SpellQueueTimeMs + playerReader.NetworkLatency.Value, CastDetected);
-            Log($"Cast started ? {!timeOut} {elapsedMs}ms");
+            Log($"Cast started ? {!t} {e}ms");
 
             if (!playerReader.Bits.IsMounted())
             {
                 wait.Update();
 
-                (timeOut, elapsedMs) =
+                (t, e) =
                     wait.Until(playerReader.RemainCastMs + playerReader.NetworkLatency.Value, MountedOrNotCastingOrValidTargetOrEnteredCombat);
-                Log($"Cast ended ? {!timeOut} {elapsedMs}ms");
+                Log($"Cast ended ? {!t} {e}ms");
 
                 if (!HasValidTarget())
                 {
-                    (timeOut, elapsedMs) =
+                    (t, e) =
                         wait.Until(CastingHandler.SpellQueueTimeMs + playerReader.NetworkLatency.Value, playerReader.Bits.IsMounted);
 
-                    Log($"Mounted ? {playerReader.Bits.IsMounted()} {elapsedMs}ms");
+                    Log($"Mounted ? {playerReader.Bits.IsMounted()} {e}ms");
                 }
 
                 if (playerReader.Bits.PlayerInCombat() && playerReader.Bits.HasTarget() && !playerReader.Bits.TargetOfTargetIsPlayerOrPet())
