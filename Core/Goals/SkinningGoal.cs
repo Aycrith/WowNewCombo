@@ -337,7 +337,7 @@ namespace Core.Goals
 
         private bool CastStartedOrFailed()
         {
-            return successfulInBackground || playerReader.SpellBeingCast != 0;
+            return successfulInBackground || playerReader.IsCasting();
         }
 
         private bool MinRangeZero()
