@@ -90,6 +90,8 @@ namespace Core.Goals
                 mountHandler.Dismount();
             }
 
+            castingHandler.UpdateGCD(true);
+
             lastDirection = playerReader.Direction;
         }
 
@@ -136,7 +138,7 @@ namespace Core.Goals
                 {
                     KeyAction keyAction = Keys[i];
 
-                    if (castingHandler.SpellInQueue() && !keyAction.SkipValidation)
+                    if (castingHandler.SpellInQueue() && !keyAction.BaseAction)
                     {
                         continue;
                     }

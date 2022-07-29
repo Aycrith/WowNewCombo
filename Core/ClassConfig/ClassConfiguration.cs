@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -121,87 +121,96 @@ namespace Core
 
             Jump.Key = JumpKey;
             Jump.Name = nameof(Jump);
+            Jump.BaseAction = true;
             Jump.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             TargetLastTarget.Key = TargetLastTargetKey;
             TargetLastTarget.Name = nameof(TargetLastTarget);
             TargetLastTarget.Cooldown = 0;
+            TargetLastTarget.BaseAction = true;
             TargetLastTarget.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             StandUp.Key = StandUpKey;
             StandUp.Name = nameof(StandUp);
             StandUp.Cooldown = 0;
+            StandUp.BaseAction = true;
             StandUp.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             ClearTarget.Key = ClearTargetKey;
             ClearTarget.Name = nameof(ClearTarget);
             ClearTarget.Cooldown = 0;
+            ClearTarget.BaseAction = true;
             ClearTarget.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             StopAttack.Key = StopAttackKey;
             StopAttack.Name = nameof(StopAttack);
-            StopAttack.Cooldown = 400;
-            StopAttack.WaitForGCD = false;
             StopAttack.PressDuration = 20;
-            StopAttack.SkipValidation = true;
+            StopAttack.BaseAction = true;
             StopAttack.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             TargetNearestTarget.Key = TargetNearestTargetKey;
             TargetNearestTarget.Name = nameof(TargetNearestTarget);
-            TargetNearestTarget.Cooldown = 400;
+            TargetNearestTarget.BaseAction = true;
             TargetNearestTarget.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             TargetPet.Key = TargetPetKey;
             TargetPet.Name = nameof(TargetPet);
             TargetPet.Cooldown = 0;
+            TargetPet.BaseAction = true;
             TargetPet.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             TargetTargetOfTarget.Key = TargetTargetOfTargetKey;
             TargetTargetOfTarget.Name = nameof(TargetTargetOfTarget);
             TargetTargetOfTarget.Cooldown = 0;
+            TargetTargetOfTarget.BaseAction = true;
             TargetTargetOfTarget.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             TargetFocus.Key = TargetFocusKey;
             TargetFocus.Name = nameof(TargetFocus);
             TargetFocus.Cooldown = 0;
+            TargetFocus.BaseAction = true;
             TargetFocus.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             FollowTarget.Key = FollowTargetKey;
             FollowTarget.Name = nameof(FollowTarget);
             FollowTarget.Cooldown = 0;
+            FollowTarget.BaseAction = true;
             FollowTarget.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             PetAttack.Key = PetAttackKey;
             PetAttack.Name = nameof(PetAttack);
             PetAttack.PressDuration = 10;
-            PetAttack.Cooldown = 400;
+            PetAttack.BaseAction = true;
             PetAttack.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             Mount.Key = MountKey;
             Mount.Name = nameof(Mount);
+            Mount.BaseAction = true;
             Mount.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             Hearthstone.Key = HearthstoneKey;
             Hearthstone.Name = nameof(Hearthstone);
+            Hearthstone.HasCastBar = true;
+            Hearthstone.AfterCastWaitCastbar = true;
             Hearthstone.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             Interact.Key = InteractKey;
             Interact.Name = nameof(Interact);
             Interact.Cooldown = 0;
-            Interact.WaitForGCD = false;
-            Interact.DelayAfterCast = 0;
             Interact.PressDuration = 30;
+            Interact.BaseAction = true;
             Interact.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             Approach.Key = InteractKey;
             Approach.Name = nameof(Approach);
-            Approach.WaitForGCD = false;
-            Approach.DelayAfterCast = 0;
             Approach.PressDuration = 10;
+            Approach.BaseAction = true;
             Approach.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             AutoAttack.Key = InteractKey;
             AutoAttack.Name = nameof(AutoAttack);
+            AutoAttack.BaseAction = true;
+            AutoAttack.Item = true;
             AutoAttack.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             InitializeKeyActions(Pull, Interact, Approach, AutoAttack, StopAttack);
@@ -293,23 +302,25 @@ namespace Core
                         continue;
 
                     user.Key = @default.Key;
-                    user.WaitForGCD = @default.WaitForGCD;
 
                     //if (!string.IsNullOrEmpty(@default.Requirement))
                     //    user.Requirement += " " + @default.Requirement;
                     //user.Requirements.AddRange(@default.Requirements);
 
-                    if (user.DelayAfterCast == dummyDefault.DelayAfterCast)
-                        user.DelayAfterCast = @default.DelayAfterCast;
+                    if (user.AfterCastDelay == dummyDefault.AfterCastDelay)
+                        user.AfterCastDelay = @default.AfterCastDelay;
 
-                    if (user.DelayAfterCast == dummyDefault.DelayAfterCast)
+                    if (user.PressDuration == dummyDefault.PressDuration)
                         user.PressDuration = @default.PressDuration;
 
                     if (user.Cooldown == dummyDefault.Cooldown)
                         user.Cooldown = @default.Cooldown;
 
-                    if (user.SkipValidation == dummyDefault.SkipValidation)
-                        user.SkipValidation = @default.SkipValidation;
+                    if (user.BaseAction == dummyDefault.BaseAction)
+                        user.BaseAction = @default.BaseAction;
+
+                    if (user.Item == dummyDefault.Item)
+                        user.Item = @default.Item;
                 }
             }
         }

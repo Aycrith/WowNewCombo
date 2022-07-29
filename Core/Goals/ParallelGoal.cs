@@ -55,9 +55,11 @@ namespace Core.Goals
                 wait.Update();
             }
 
+            castingHandler.UpdateGCD(true);
+
             for (int i = 0; i < Keys.Length; i++)
             {
-                if (Keys[i].StopBeforeCast)
+                if (Keys[i].BeforeCastStop)
                 {
                     stopMoving.Stop();
                     wait.Update();

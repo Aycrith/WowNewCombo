@@ -40,6 +40,8 @@ namespace Core
         private readonly Dictionary<string, Func<string, Requirement>> requirementMap;
 
         public const string AddVisible = "AddVisible";
+        public const string Drink = "Drink";
+        public const string Food = "Food";
 
         public RequirementFactory(ILogger logger, AddonReader addonReader, NpcNameFinder npcNameFinder, Dictionary<int, SchoolMask[]> immunityBlacklist)
         {
@@ -115,8 +117,8 @@ namespace Core
                 { "Casting", playerReader.IsCasting },
 
                 // General Buff Condition
-                { "Eating", playerReader.Buffs.Food },
-                { "Drinking", playerReader.Buffs.Drink },
+                { Food, playerReader.Buffs.Food },
+                { Drink, playerReader.Buffs.Drink },
                 { "Mana Regeneration", playerReader.Buffs.Mana_Regeneration },
                 { "Well Fed", playerReader.Buffs.Well_Fed },
                 { "Clearcasting", playerReader.Buffs.Clearcasting },
@@ -323,8 +325,8 @@ namespace Core
                 }
             }
 
-            AddConsumableRequirement("Water", item);
-            AddConsumableRequirement("Food", item);
+            if (item.Name is Drink or Food)
+                AddConsumableRequirement(item);
 
             InitPerKeyActionRequirements(item);
 
@@ -388,29 +390,28 @@ namespace Core
 
         public void InitUserDefinedIntVariables(Dictionary<string, int> intKeyValues)
         {
-            foreach (var kvp in intKeyValues)
+            foreach ((string key, int value) in intKeyValues)
             {
-                int v = kvp.Value;
-                int f() => v;
+                int f() => value;
 
-                if (!intVariables.TryAdd(kvp.Key, f))
+                if (!intVariables.TryAdd(key, f))
                 {
-                    throw new Exception($"Unable to add user defined variable to values. [{kvp.Key} -> {kvp.Value}]");
+                    throw new Exception($"Unable to add user defined variable to values. [{key} -> {value}]");
                 }
                 else
                 {
-                    if (kvp.Key.StartsWith("Buff_"))
+                    if (key.StartsWith("Buff_"))
                     {
-                        int l() => playerBuffTimeReader.GetRemainingTimeMs(v);
-                        intVariables.TryAdd($"{v}", l);
+                        int l() => playerBuffTimeReader.GetRemainingTimeMs(value);
+                        intVariables.TryAdd($"{value}", l);
                     }
-                    else if(kvp.Key.StartsWith("Debuff_"))
+                    else if (key.StartsWith("Debuff_"))
                     {
-                        int l() => targetDebuffTimeReader.GetRemainingTimeMs(v);
-                        intVariables.TryAdd($"{v}", l);
+                        int l() => targetDebuffTimeReader.GetRemainingTimeMs(value);
+                        intVariables.TryAdd($"{value}", l);
                     }
 
-                    LogUserDefinedValue(logger, nameof(RequirementFactory), kvp.Key, kvp.Value);
+                    LogUserDefinedValue(logger, nameof(RequirementFactory), key, value);
                 }
             }
         }
@@ -608,17 +609,16 @@ namespace Core
             }
         }
 
-        private static void AddConsumableRequirement(string name, KeyAction item)
+        private static void AddConsumableRequirement(KeyAction item)
         {
-            if (item.Name == name)
-            {
-                item.StopBeforeCast = true;
-                item.WhenUsable = true;
-                item.AfterCastWaitBuff = true;
+            item.BeforeCastStop = true;
+            item.WhenUsable = true;
+            item.AfterCastWaitBuff = true;
+            item.Item = true;
 
-                item.Requirements.Add("!Swimming");
-                item.Requirements.Add("!Falling");
-            }
+            item.Requirements.Add($"!{item.Name}");
+            item.Requirements.Add("!Swimming");
+            item.Requirements.Add("!Falling");
         }
 
         private void AddSpellSchoolRequirement(List<Requirement> RequirementObjects, KeyAction item)
@@ -704,7 +704,7 @@ namespace Core
         {
             string key = $"CD_{item.Name}";
             bool f() => UsableGCD(key);
-            string s() => $"CD {intVariables[key]() / 1000f:0.0}";
+            string s() => $"CD {intVariables[key]() / 1000f:F1}";
 
             return new Requirement
             {
@@ -716,7 +716,7 @@ namespace Core
 
         private bool UsableGCD(string key)
         {
-            return intVariables[key]() <= CastingHandler.SpellQueueTimeMs + playerReader.NetworkLatency.Value;
+            return intVariables[key]() <= CastingHandler.SpellQueueTimeMs - playerReader.NetworkLatency.Value;
         }
 
         private Requirement CreateTargetCastingSpell(string requirement)
