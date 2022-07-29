@@ -2,7 +2,6 @@ using Core.Database;
 using Microsoft.Extensions.Logging;
 using SharedLib;
 using System;
-using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace Core
@@ -59,13 +58,13 @@ namespace Core
         public string TargetName { get; private set; } = string.Empty;
 
         public double AvgUpdateLatency { private set; get; }
-        private readonly double[] UpdateLatencys = new double[16];
-        private int LatencyIndex;
+        private int updateSum;
+        private int updateIndex;
         private DateTime lastUpdate;
 
-        public AddonReader(ILogger logger, AddonDataProvider addonDataProvider, AutoResetEvent autoResetEvent,
-            AreaDB areaDB, WorldMapAreaDB worldMapAreaDB, ItemDB itemDB,
-            CreatureDB creatureDB, SpellDB spellDB, TalentDB talentDB)
+        public AddonReader(ILogger logger, AddonDataProvider addonDataProvider,
+            AutoResetEvent autoResetEvent, AreaDB areaDB, WorldMapAreaDB worldMapAreaDB,
+            ItemDB itemDB, CreatureDB creatureDB, SpellDB spellDB, TalentDB talentDB)
         {
             this.logger = logger;
             this.reader = addonDataProvider;
@@ -97,6 +96,8 @@ namespace Core
 
             this.PlayerBuffTimeReader = new(79, 80);
             this.TargetDebuffTimeReader = new(81, 82);
+
+            lastUpdate = DateTime.UtcNow;
         }
 
         public void Dispose()
@@ -113,21 +114,17 @@ namespace Core
             {
                 if (GlobalTime.Value <= 3)
                 {
+                    updateSum = 0;
+                    updateIndex = 0;
+
                     FullReset();
                     return;
                 }
 
-                UpdateLatencys[LatencyIndex++] = (DateTime.UtcNow - lastUpdate).TotalMilliseconds;
+                updateSum += (int)(DateTime.UtcNow - lastUpdate).TotalMilliseconds;
+                updateIndex++;
+                AvgUpdateLatency = updateSum / updateIndex;
                 lastUpdate = DateTime.UtcNow;
-                if (LatencyIndex >= UpdateLatencys.Length)
-                    LatencyIndex = 0;
-
-                AvgUpdateLatency = 0;
-                for (int i = 0; i < UpdateLatencys.Length; i++)
-                {
-                    AvgUpdateLatency += UpdateLatencys[i];
-                }
-                AvgUpdateLatency /= UpdateLatencys.Length;
 
                 AddonDataProvider reader = this.reader;
 
