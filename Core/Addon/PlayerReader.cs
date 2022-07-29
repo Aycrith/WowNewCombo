@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Specialized;
 using System.Numerics;
 
@@ -128,6 +128,17 @@ namespace Core
         public int OffHandSpeed => (int)(reader.GetInt(75) - (MainHandSpeedMs() * 1000f));  // supposed to be 10000f - but theres a 10x
 
         public int RemainCastMs => reader.GetInt(76);
+
+        private int lastCastGCD;
+        public int LastCastGCD
+        {
+            get => lastCastGCD;
+            set => lastCastGCD = value;
+        }
+        public void ReadLastCastGCD()
+        {
+            lastCastGCD = reader.GetInt(94);
+        }
 
         public RecordInt GCD { get; } = new(95);
 
