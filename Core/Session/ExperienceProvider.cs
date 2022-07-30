@@ -9,7 +9,7 @@ namespace Core.Session
 
         public static int[] GetExperienceList()
         {
-            DataConfig dataConfig = new();
+            DataConfig dataConfig = DataConfig.Load();
             var json = File.ReadAllText(Path.Join(dataConfig.Experience, Version));
             return JsonConvert.DeserializeObject<int[]>(json);
         }
