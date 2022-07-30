@@ -29,7 +29,7 @@ namespace Core
             }
         }
 
-        public void Read(AddonDataProvider reader)
+        public void Read(IAddonDataProvider reader)
         {
             int index = reader.GetInt(cSlotNum);
             if (index < MAX_EQUIPMENT_COUNT && index >= 0)
