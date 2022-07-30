@@ -39,6 +39,10 @@ namespace Core
         void FetchData();
         void FullReset();
 
+        void Update();
+        void UpdateUI();
+        void SessionReset();
+
         int GetInt(int index);
     }
 }
