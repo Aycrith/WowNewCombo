@@ -37,9 +37,12 @@ namespace Core
 
         public static DataFrame[] LoadFrames()
         {
-            var config = JsonConvert.DeserializeObject<DataFrameConfig>(File.ReadAllText(FrameConfigMeta.DefaultFilename));
-            if (config.Version == FrameConfigMeta.Version)
-                return config.frames;
+            if (Exists())
+            {
+                var config = JsonConvert.DeserializeObject<DataFrameConfig>(File.ReadAllText(FrameConfigMeta.DefaultFilename));
+                if (config.Version == FrameConfigMeta.Version)
+                    return config.frames;
+            }
 
             return Array.Empty<DataFrame>();
         }

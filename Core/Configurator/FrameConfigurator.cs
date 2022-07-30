@@ -19,7 +19,7 @@ namespace Core
         private readonly ExecGameCommand execGameCommand;
         private readonly AddonConfigurator addonConfigurator;
 
-        private AddonDataProvider? addonDataProvider;
+        private readonly IAddonDataProvider reader;
 
         private Thread? screenshotThread;
         private CancellationTokenSource cts = new();
@@ -36,10 +36,14 @@ namespace Core
 
         public event Action? OnUpdate;
 
-        public FrameConfigurator(ILogger logger, WowProcess wowProcess, WowScreen wowScreen, WowProcessInput wowProcessInput, ExecGameCommand execGameCommand, AddonConfigurator addonConfigurator)
+        public FrameConfigurator(ILogger logger,
+            WowProcess wowProcess, IAddonDataProvider reader,
+            WowScreen wowScreen, WowProcessInput wowProcessInput,
+            ExecGameCommand execGameCommand, AddonConfigurator addonConfigurator)
         {
             this.logger = logger;
             this.wowProcess = wowProcess;
+            this.reader = reader;
             this.wowScreen = wowScreen;
             this.wowProcessInput = wowProcessInput;
             this.execGameCommand = execGameCommand;
@@ -53,6 +57,8 @@ namespace Core
 
         private void ScreenshotRefreshThread()
         {
+            bool initFrames = false;
+
             while (!cts.Token.IsCancellationRequested)
             {
                 try
@@ -62,6 +68,7 @@ namespace Core
                         if (DataFrameMeta == DataFrameMeta.Empty)
                         {
                             AddonNotVisible = false;
+                            initFrames = false;
                             DataFrameMeta = GetDataFrameMeta();
 
                             OnUpdate?.Invoke();
@@ -72,6 +79,7 @@ namespace Core
                             if (temp != DataFrameMeta.Empty && temp.rows != DataFrameMeta.rows)
                             {
                                 AddonNotVisible = true;
+                                initFrames = false;
                                 DataFrameMeta = DataFrameMeta.Empty;
 
                                 OnUpdate?.Invoke();
@@ -109,15 +117,17 @@ namespace Core
                                 }
                                 bitmap.Dispose();
 
-                                if (DataFrames.Length == DataFrameMeta.frames && addonDataProvider == null)
+                                if (DataFrames.Length == DataFrameMeta.frames && !initFrames)
                                 {
-                                    addonDataProvider = new AddonDataProvider(wowScreen, DataFrames);
+                                    reader.InitFrames(DataFrames);
+                                    initFrames = true;
                                 }
                                 OnUpdate?.Invoke();
                             }
                             else
                             {
                                 AddonNotVisible = true;
+                                initFrames = false;
                                 DataFrameMeta = DataFrameMeta.Empty;
 
                                 OnUpdate?.Invoke();
@@ -127,6 +137,7 @@ namespace Core
                     else
                     {
                         AddonNotVisible = true;
+                        initFrames = false;
                         DataFrameMeta = DataFrameMeta.Empty;
 
                         OnUpdate?.Invoke();
@@ -136,6 +147,7 @@ namespace Core
                 {
                     logger.LogError(e, e.StackTrace);
                     AddonNotVisible = true;
+                    initFrames = false;
                     DataFrameMeta = DataFrameMeta.Empty;
 
                     OnUpdate?.Invoke();
@@ -165,7 +177,7 @@ namespace Core
             if (screenshotThread == null)
             {
                 cts.Dispose();
-                cts = new CancellationTokenSource();
+                cts = new();
                 screenshotThread = new Thread(ScreenshotRefreshThread);
                 screenshotThread.Start();
             }
@@ -196,6 +208,8 @@ namespace Core
 
         public bool StartAutoConfig()
         {
+            cts = new();
+
             if (!wowProcess.IsRunning)
             {
                 logger.LogInformation("Wow Process no longer running!");
@@ -275,8 +289,8 @@ namespace Core
             ToggleInGameConfiguration(execGameCommand);
             cts.Token.WaitHandle.WaitOne(interval);
 
-            addonDataProvider?.Dispose();
-            addonDataProvider = new AddonDataProvider(wowScreen, dataFrames);
+            reader.InitFrames(dataFrames);
+            cts.Token.WaitHandle.WaitOne(interval);
 
             if (!TryResolveRaceAndClass(out RaceEnum race, out PlayerClassEnum @class))
             {
@@ -286,15 +300,17 @@ namespace Core
 
             logger.LogInformation($"Found {race.ToStringF()} {@class.ToStringF()}!");
 
-            OnUpdate?.Invoke();
-            cts.Token.WaitHandle.WaitOne(interval);
-
             FrameConfig.Save(rect, version, meta, dataFrames);
             Saved = true;
 
             logger.LogInformation($"Frame configuration was successful! Configuration saved!");
 
             return true;
+        }
+
+        public static void DeleteConfig()
+        {
+            FrameConfig.Delete();
         }
 
         private void ToggleInGameConfiguration(ExecGameCommand execGameCommand)
@@ -312,16 +328,7 @@ namespace Core
 
         public bool TryResolveRaceAndClass(out RaceEnum raceEnum, out PlayerClassEnum playerClassEnum)
         {
-            if (addonDataProvider == null)
-            {
-                raceEnum = RaceEnum.None;
-                playerClassEnum = PlayerClassEnum.None;
-
-                return false;
-            }
-
-            addonDataProvider.Update();
-            int raceClassCombo = addonDataProvider.GetInt(46);
+            int raceClassCombo = reader.GetInt(46);
 
             raceEnum = (RaceEnum)(raceClassCombo / 100f);
             playerClassEnum = (PlayerClassEnum)(raceClassCombo - ((int)raceEnum * 100f));
