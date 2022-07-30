@@ -93,6 +93,8 @@ namespace BlazorServer
             services.AddSingleton<WowProcessInput>();
             services.AddSingleton<ExecGameCommand>();
             services.AddSingleton<AddonConfigurator>();
+
+            services.AddSingleton<DataFrame[]>(x => FrameConfig.LoadFrames());
             services.AddSingleton<FrameConfigurator>();
 
             services.AddSingleton<IEnvironment, BlazorFrontend>();
@@ -105,8 +107,21 @@ namespace BlazorServer
                 services.AddSingleton<IPPather>(x => GetPather(logger, x.GetRequiredService<DataConfig>()));
 
                 services.AddSingleton<AutoResetEvent>(x => new(false));
-                services.AddSingleton<DataFrame[]>(x => FrameConfig.LoadFrames());
-                services.AddSingleton<AddonDataProvider>();
+
+                StartupConfigReader scr = new();
+                Configuration.GetSection(StartupConfigReader.Position).Bind(scr);
+
+                if (scr.ReaderType == AddonDataProviderType.GDI)
+                {
+                    services.AddSingleton<IAddonDataProvider, AddonDataProviderDGXI>();
+                    Log.Logger.Information($"Using {nameof(AddonDataProviderDGXI)}");
+                }
+                else
+                {
+                    services.AddSingleton<IAddonDataProvider, AddonDataProviderGDI>();
+                    Log.Logger.Information($"Using {nameof(AddonDataProviderGDI)}");
+                }
+
                 services.AddSingleton<Wait>();
 
                 services.AddSingleton<AreaDB>();
@@ -121,6 +136,7 @@ namespace BlazorServer
             }
             else
             {
+                services.AddSingleton<IAddonDataProvider, AddonDataProviderGDIConfig>();
                 services.AddSingleton<IBotController, ConfigBotController>();
                 services.AddSingleton<IAddonReader, ConfigAddonReader>();
             }

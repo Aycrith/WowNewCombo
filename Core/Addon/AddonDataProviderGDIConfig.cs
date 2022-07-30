@@ -2,56 +2,68 @@
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Threading;
 
 namespace Core
 {
-    public sealed class AddonDataProvider : IDisposable
+    public sealed class AddonDataProviderGDIConfig : IAddonDataProvider, IDisposable
     {
+        private readonly CancellationTokenSource cts;
+        private readonly ManualResetEvent manualReset = new(true);
         private readonly WowScreen wowScreen;
 
-        private readonly DataFrame[] frames;
-        private readonly int[] data;
+        private int[] data = Array.Empty<int>();
+        private DataFrame[] frames = Array.Empty<DataFrame>();
+
+        private Rectangle rect;
+        private Bitmap? bitmap;
+        private Graphics? graphics;
+
+        private readonly int bytesPerPixel;
 
         //                                 B  G  R
         private readonly byte[] fColor = { 0, 0, 0 };
         private readonly byte[] lColor = { 129, 132, 30 };
 
         private const PixelFormat pixelFormat = PixelFormat.Format32bppPArgb;
-        private readonly int bytesPerPixel;
 
-        private readonly Rectangle rect;
-        private readonly Bitmap bitmap;
-        private readonly Graphics graphics;
+        private bool disposing;
 
-        public AddonDataProvider(WowScreen wowScreen, DataFrame[] frames)
+        public AddonDataProviderGDIConfig(CancellationTokenSource cts, WowScreen wowScreen, DataFrame[] frames)
         {
+            this.cts = cts;
             this.wowScreen = wowScreen;
-            this.frames = frames;
-
-            data = new int[this.frames.Length];
-
-            for (int i = 0; i < this.frames.Length; i++)
-            {
-                if (frames[i].X > rect.Width)
-                    rect.Width = frames[i].X;
-
-                if (frames[i].Y > rect.Height)
-                    rect.Height = frames[i].Y;
-            }
-            rect.Width++;
-            rect.Height++;
-
+            InitFrames(frames);
             bytesPerPixel = Image.GetPixelFormatSize(pixelFormat) / 8;
-            bitmap = new(rect.Width, rect.Height, pixelFormat);
+        }
 
-            graphics = Graphics.FromImage(bitmap);
+        public void Dispose()
+        {
+            if (disposing)
+                return;
+
+            disposing = true;
+
+            graphics?.Dispose();
+            bitmap?.Dispose();
         }
 
         public void Update()
         {
-            Point windowLoc = new();
-            wowScreen.GetPosition(ref windowLoc);
-            graphics.CopyFromScreen(windowLoc, Point.Empty, rect.Size);
+            manualReset.WaitOne();
+            cts.Token.WaitHandle.WaitOne(25);
+
+            if (cts.IsCancellationRequested ||
+                disposing ||
+                data.Length == 0 ||
+                frames.Length == 0 ||
+                bitmap == null ||
+                graphics == null)
+                return;
+
+            Point p = new();
+            wowScreen.GetPosition(ref p);
+            graphics.CopyFromScreen(p, Point.Empty, rect.Size);
 
             unsafe
             {
@@ -82,9 +94,33 @@ namespace Core
             }
         }
 
+        public void InitFrames(DataFrame[] frames)
+        {
+            manualReset.Reset();
+
+            this.frames = frames;
+            data = new int[this.frames.Length];
+
+            for (int i = 0; i < this.frames.Length; i++)
+            {
+                if (this.frames[i].X > rect.Width)
+                    rect.Width = this.frames[i].X;
+
+                if (frames[i].Y > rect.Height)
+                    rect.Height = this.frames[i].Y;
+            }
+            rect.Width++;
+            rect.Height++;
+
+            bitmap = new(rect.Width, rect.Height, pixelFormat);
+            graphics = Graphics.FromImage(bitmap);
+
+            manualReset.Set();
+        }
+
         public int GetInt(int index)
         {
-            return data[index];
+            return index > data.Length ? 0 : data[index];
         }
 
         public float GetFixed(int index)
@@ -111,12 +147,6 @@ namespace Core
         private static string ToChar(string colorText, int start)
         {
             return ((char)int.Parse(colorText.Substring(start, 2))).ToString();
-        }
-
-        public void Dispose()
-        {
-            bitmap.Dispose();
-            graphics.Dispose();
         }
     }
 }

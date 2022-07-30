@@ -19,7 +19,7 @@ namespace Core
             this.cell = cell;
         }
 
-        public bool Updated(AddonDataProvider reader)
+        public bool Updated(IAddonDataProvider reader)
         {
             int temp = Value;
             Value = reader.GetInt(cell);
@@ -34,14 +34,14 @@ namespace Core
             return false;
         }
 
-        public bool UpdatedNoEvent(AddonDataProvider reader)
+        public bool UpdatedNoEvent(IAddonDataProvider reader)
         {
             int temp = Value;
             Value = reader.GetInt(cell);
             return temp != Value;
         }
 
-        public void Update(AddonDataProvider reader)
+        public void Update(IAddonDataProvider reader)
         {
             int temp = Value;
             Value = reader.GetInt(cell);

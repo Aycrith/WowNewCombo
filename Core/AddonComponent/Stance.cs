@@ -11,7 +11,7 @@
             this.cell = cell;
         }
 
-        public void Update(AddonDataProvider reader)
+        public void Update(IAddonDataProvider reader)
         {
             value = reader.GetInt(cell);
         }

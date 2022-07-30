@@ -29,7 +29,7 @@ namespace Core
             Reset();
         }
 
-        public void Read(AddonDataProvider reader)
+        public void Read(IAddonDataProvider reader)
         {
             int textureId = reader.GetInt(cTextureId);
             if (textureId == 0) return;

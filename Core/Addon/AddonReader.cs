@@ -9,7 +9,7 @@ namespace Core
     public sealed class AddonReader : IAddonReader, IDisposable
     {
         private readonly ILogger logger;
-        private readonly AddonDataProvider reader;
+        private readonly IAddonDataProvider reader;
         private readonly AutoResetEvent autoResetEvent;
 
         public PlayerReader PlayerReader { get; }
@@ -58,16 +58,16 @@ namespace Core
         public string TargetName { get; private set; } = string.Empty;
 
         public double AvgUpdateLatency { private set; get; }
-        private int updateSum;
+        private double updateSum;
         private int updateIndex;
         private DateTime lastUpdate;
 
-        public AddonReader(ILogger logger, AddonDataProvider addonDataProvider,
+        public AddonReader(ILogger logger, IAddonDataProvider reader,
             AutoResetEvent autoResetEvent, AreaDB areaDB, WorldMapAreaDB worldMapAreaDB,
             ItemDB itemDB, CreatureDB creatureDB, SpellDB spellDB, TalentDB talentDB)
         {
             this.logger = logger;
-            this.reader = addonDataProvider;
+            this.reader = reader;
             this.autoResetEvent = autoResetEvent;
 
             this.AreaDb = areaDB;
@@ -87,7 +87,7 @@ namespace Core
 
             this.SpellBookReader = new(71, spellDB);
 
-            this.PlayerReader = new(addonDataProvider);
+            this.PlayerReader = new(reader);
             this.LevelTracker = new(this);
             this.TalentReader = new(72, PlayerReader, talentDB);
 
@@ -121,12 +121,12 @@ namespace Core
                     return;
                 }
 
-                updateSum += (int)(DateTime.UtcNow - lastUpdate).TotalMilliseconds;
+                updateSum += (DateTime.UtcNow - lastUpdate).TotalMilliseconds;
                 updateIndex++;
                 AvgUpdateLatency = updateSum / updateIndex;
                 lastUpdate = DateTime.UtcNow;
 
-                AddonDataProvider reader = this.reader;
+                IAddonDataProvider reader = this.reader;
 
                 CurrentAction.Update(reader);
                 UsableAction.Update(reader);

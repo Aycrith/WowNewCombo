@@ -31,7 +31,7 @@ namespace Core
             Reset();
         }
 
-        public void Read(AddonDataProvider reader)
+        public void Read(IAddonDataProvider reader)
         {
             // formula
             // MAX_ACTION_IDX * slot + (cooldown / MAX_VALUE_MUL)
