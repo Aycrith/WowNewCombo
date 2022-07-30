@@ -20,7 +20,7 @@ namespace Core
             this.SpellDB = spellDB;
         }
 
-        public void Read(AddonDataProvider reader)
+        public void Read(IAddonDataProvider reader)
         {
             int spellId = reader.GetInt(cSpellId);
             if (spellId == 0) return;

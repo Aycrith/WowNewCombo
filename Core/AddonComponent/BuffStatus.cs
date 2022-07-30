@@ -13,7 +13,7 @@ namespace Core
             this.cell = cell;
         }
 
-        public void Update(AddonDataProvider reader)
+        public void Update(IAddonDataProvider reader)
         {
             v = new(reader.GetInt(cell));
         }

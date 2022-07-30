@@ -55,7 +55,7 @@ namespace Core
             this.equipmentReader.OnEquipmentChanged -= OnEquipmentChanged;
         }
 
-        public void Read(AddonDataProvider reader)
+        public void Read(IAddonDataProvider reader)
         {
             ReadBagMeta(reader, out bool metaChanged);
 
@@ -74,7 +74,7 @@ namespace Core
             }
         }
 
-        private void ReadBagMeta(AddonDataProvider reader, out bool changed)
+        private void ReadBagMeta(IAddonDataProvider reader, out bool changed)
         {
             changed = false;
 
@@ -114,7 +114,7 @@ namespace Core
             }
         }
 
-        private void ReadInventory(AddonDataProvider reader, out bool hasChanged)
+        private void ReadInventory(IAddonDataProvider reader, out bool hasChanged)
         {
             hasChanged = false;
 

@@ -44,7 +44,7 @@ namespace Core
             TargetDodge.Reset();
         }
 
-        public void Update(AddonDataProvider reader, bool playerInCombat)
+        public void Update(IAddonDataProvider reader, bool playerInCombat)
         {
             if (TargetMissType.Updated(reader) && (MissType)TargetMissType.Value == MissType.DODGE)
             {

@@ -8,7 +8,7 @@
         public int TargetDebuff { get; }
         public int TargetBuff { get; }
 
-        public AuraCount(AddonDataProvider reader, int cell)
+        public AuraCount(IAddonDataProvider reader, int cell)
         {
             Hash = TargetBuff = reader.GetInt(cell);
 

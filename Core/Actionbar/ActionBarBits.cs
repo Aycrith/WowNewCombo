@@ -14,7 +14,7 @@ namespace Core
             bits = new BitVector32[cells.Length];
         }
 
-        public void Update(AddonDataProvider reader)
+        public void Update(IAddonDataProvider reader)
         {
             for (int i = 0; i < bits.Length; i++)
             {

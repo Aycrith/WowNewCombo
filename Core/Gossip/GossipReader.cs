@@ -31,7 +31,7 @@ namespace Core
             this.cGossip = cGossip;
         }
 
-        public void Read(AddonDataProvider reader)
+        public void Read(IAddonDataProvider reader)
         {
             data = reader.GetInt(cGossip);
 
