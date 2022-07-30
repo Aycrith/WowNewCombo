@@ -9,6 +9,8 @@ using Serilog.Events;
 using Serilog.Extensions.Logging;
 using CommandLine;
 using Core.Environment;
+using WinAPI;
+using System.Drawing;
 
 namespace HeadlessServer
 {
@@ -51,25 +53,30 @@ namespace HeadlessServer
 
             while (WowProcess.Get(options.Value.Pid) == null)
             {
-                Log.Information("Unable to find any Wow process, is it running ?");
+                Log.Logger.Information("Unable to find any Wow process, is it running ?");
                 Thread.Sleep(1000);
             }
 
             ServiceCollection services = new();
-            ConfigureServices(services, options);
-
-            services
-                .AddSingleton<HeadlessServer, HeadlessServer>()
-                .BuildServiceProvider()
-                .GetService<HeadlessServer>()?
-                .Run(options);
+            if (ConfigureServices(services, options))
+            {
+                services
+                    .AddSingleton<HeadlessServer, HeadlessServer>()
+                    .BuildServiceProvider()
+                    .GetService<HeadlessServer>()?
+                    .Run(options);
+            }
 
             Console.ReadLine();
         }
 
-        private static void ConfigureServices(IServiceCollection services, ParserResult<RunOptions> options)
+        private static bool ConfigureServices(IServiceCollection services, ParserResult<RunOptions> options)
         {
             var logger = new SerilogLoggerProvider(Log.Logger).CreateLogger(nameof(Program));
+
+            if (!Validate(logger, options.Value.Pid))
+                return false;
+
             services.AddSingleton(logger);
 
             services.AddSingleton<CancellationTokenSource>();
@@ -90,8 +97,18 @@ namespace HeadlessServer
 
             services.AddSingleton<AutoResetEvent>(x => new(false));
             services.AddSingleton<DataFrame[]>(x => FrameConfig.LoadFrames());
-            services.AddSingleton<AddonDataProvider>();
             services.AddSingleton<Wait>();
+
+            if (options.Value.Reader == AddonDataProviderType.DXGI)
+            {
+                services.AddSingleton<IAddonDataProvider, AddonDataProviderDGXI>();
+                Log.Logger.Information($"Using {nameof(AddonDataProviderDGXI)}");
+            }
+            else
+            {
+                services.AddSingleton<IAddonDataProvider, AddonDataProviderGDI>();
+                Log.Logger.Information($"Using {nameof(AddonDataProviderGDI)}");
+            }
 
             services.AddSingleton<AreaDB>();
             services.AddSingleton<WorldMapAreaDB>();
@@ -102,6 +119,8 @@ namespace HeadlessServer
 
             services.AddSingleton<IAddonReader, AddonReader>();
             services.AddSingleton<IBotController, BotController>();
+
+            return true;
         }
 
         private static IPPather GetPather(Microsoft.Extensions.Logging.ILogger logger, DataConfig dataConfig, ParserResult<RunOptions> options)
@@ -159,6 +178,40 @@ namespace HeadlessServer
             Log.Information($"Using {StartupConfigPathing.Types.Local}({localApi.GetType().Name}) pathing API.");
             Log.Information("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
             return localApi;
+        }
+
+        private static bool Validate(Microsoft.Extensions.Logging.ILogger logger, int pid)
+        {
+            WowProcess wowProcess = new(pid);
+            NativeMethods.GetWindowRect(wowProcess.Process.MainWindowHandle, out Rectangle rect);
+
+            AddonConfigurator addonConfigurator = new(logger, wowProcess);
+            Version? installVersion = addonConfigurator.GetInstallVersion();
+
+            bool valid = true;
+
+            if (addonConfigurator.IsDefault() || installVersion == null)
+            {
+                // At this point the webpage never loads so fallback to configuration page
+                addonConfigurator.Delete();
+                FrameConfig.Delete();
+                valid = false;
+
+                Log.Error($"{nameof(AddonConfig)} dosent exists or addon dosent installed!");
+            }
+
+            if (FrameConfig.Exists() && !FrameConfig.IsValid(rect, installVersion!))
+            {
+                // At this point the webpage never loads so fallback to configuration page
+                FrameConfig.Delete();
+                valid = false;
+
+                Log.Error($"{nameof(FrameConfig)} dosent exists or window rect is different then config!");
+            }
+
+            wowProcess.Dispose();
+
+            return valid;
         }
     }
 }
