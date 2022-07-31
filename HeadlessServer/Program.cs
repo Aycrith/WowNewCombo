@@ -125,7 +125,7 @@ namespace HeadlessServer
 
         private static IPPather GetPather(Microsoft.Extensions.Logging.ILogger logger, DataConfig dataConfig, ParserResult<RunOptions> options)
         {
-            StartupConfigPathing scp = new(options.Value.Mode!,
+            StartupConfigPathing scp = new(options.Value.Mode.ToString()!,
                 options.Value.Hostv1!, options.Value.Portv1,
                 options.Value.Hostv3!, options.Value.Portv3);
 

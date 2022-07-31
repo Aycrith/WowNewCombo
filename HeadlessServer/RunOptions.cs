@@ -14,9 +14,9 @@ namespace HeadlessServer
         [Option('m',
             "mode",
             Required = false,
-            Default = nameof(StartupConfigPathing.Types.Local),
+            Default = StartupConfigPathing.Types.Local,
             HelpText = $"Navigation services: \n{nameof(StartupConfigPathing.Types.Local)}\n{nameof(StartupConfigPathing.Types.RemoteV1)}\n{nameof(StartupConfigPathing.Types.RemoteV3)}")]
-        public string? Mode { get; set; }
+        public StartupConfigPathing.Types? Mode { get; set; }
 
         [Option('p',
             "pid",
@@ -28,7 +28,7 @@ namespace HeadlessServer
         [Option('r',
             "reader",
             Required = false,
-            Default = "GDI",
+            Default = AddonDataProviderType.GDI,
             HelpText = $"Screen reader backend.\n'{nameof(AddonDataProviderType.GDI)}': is the default, compatible from Win7.\n'{nameof(AddonDataProviderType.DXGI)}': DirectX based works from Win8.")]
         public AddonDataProviderType? Reader { get; set; }
 
