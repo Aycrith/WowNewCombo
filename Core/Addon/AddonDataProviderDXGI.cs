@@ -10,7 +10,7 @@ using Vortice.DXGI;
 
 namespace Core
 {
-    public sealed class AddonDataProviderDGXI : IAddonDataProvider, IDisposable
+    public sealed class AddonDataProviderDXGI : IAddonDataProvider, IDisposable
     {
         private readonly CancellationTokenSource cts;
 
@@ -44,7 +44,7 @@ namespace Core
         private readonly int[] data;
         private readonly DataFrame[] frames;
 
-        public AddonDataProviderDGXI(CancellationTokenSource cts, WowScreen wowScreen, DataFrame[] frames)
+        public AddonDataProviderDXGI(CancellationTokenSource cts, WowScreen wowScreen, DataFrame[] frames)
         {
             this.cts = cts;
             this.wowScreen = wowScreen;

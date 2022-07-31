@@ -113,8 +113,8 @@ namespace BlazorServer
 
                 if (scr.ReaderType == AddonDataProviderType.GDI)
                 {
-                    services.AddSingleton<IAddonDataProvider, AddonDataProviderDGXI>();
-                    Log.Logger.Information($"Using {nameof(AddonDataProviderDGXI)}");
+                    services.AddSingleton<IAddonDataProvider, AddonDataProviderDXGI>();
+                    Log.Logger.Information($"Using {nameof(AddonDataProviderDXGI)}");
                 }
                 else
                 {

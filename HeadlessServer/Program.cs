@@ -101,8 +101,8 @@ namespace HeadlessServer
 
             if (options.Value.Reader == AddonDataProviderType.DXGI)
             {
-                services.AddSingleton<IAddonDataProvider, AddonDataProviderDGXI>();
-                Log.Logger.Information($"Using {nameof(AddonDataProviderDGXI)}");
+                services.AddSingleton<IAddonDataProvider, AddonDataProviderDXGI>();
+                Log.Logger.Information($"Using {nameof(AddonDataProviderDXGI)}");
             }
             else
             {
