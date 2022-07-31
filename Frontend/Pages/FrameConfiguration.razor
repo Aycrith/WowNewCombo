@@ -215,14 +215,16 @@
 
     public void FinishManualConfigure()
     {
-        if (frameConfigurator.FinishManualConfig())
+        if (frameConfigurator.FinishConfig())
             NavigationManager.NavigateTo("/RestartServer");
     }
 
     public async void StartAutoConfigure()
     {
         await Task.Delay(1);
-        if (frameConfigurator.StartAutoConfig())
+        bool success = frameConfigurator.StartAutoConfig();
+        OnUpdate();
+        if (success)
             NavigationManager.NavigateTo("/RestartServer");
     }
 

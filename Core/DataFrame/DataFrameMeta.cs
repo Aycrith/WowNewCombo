@@ -76,5 +76,10 @@ namespace Core
         {
             return obj is DataFrameMeta && Equals((DataFrameMeta)obj);
         }
+
+        public override string ToString()
+        {
+            return $"hash: {hash} | spacing: {spacing} | size: {size} | rows: {rows} | frames: {frames}";
+        }
     }
 }
