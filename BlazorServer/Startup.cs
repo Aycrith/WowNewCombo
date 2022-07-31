@@ -86,6 +86,8 @@ namespace BlazorServer
             wowProcess.Dispose();
 
             services.AddSingleton<CancellationTokenSource>();
+            services.AddSingleton<AutoResetEvent>(x => new(false));
+            services.AddSingleton<Wait>();
 
             services.AddSingleton(DataConfig.Load());
             services.AddSingleton<WowProcess>(x => new(StartupConfigPid.Id));
@@ -106,8 +108,6 @@ namespace BlazorServer
                 services.AddSingleton<IGrindSessionDAO, LocalGrindSessionDAO>();
                 services.AddSingleton<IPPather>(x => GetPather(logger, x.GetRequiredService<DataConfig>()));
 
-                services.AddSingleton<AutoResetEvent>(x => new(false));
-
                 StartupConfigReader scr = new();
                 Configuration.GetSection(StartupConfigReader.Position).Bind(scr);
 
@@ -121,8 +121,6 @@ namespace BlazorServer
                     services.AddSingleton<IAddonDataProvider, AddonDataProviderGDI>();
                     Log.Logger.Information($"Using {nameof(AddonDataProviderGDI)}");
                 }
-
-                services.AddSingleton<Wait>();
 
                 services.AddSingleton<AreaDB>();
                 services.AddSingleton<WorldMapAreaDB>();

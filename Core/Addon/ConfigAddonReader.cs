@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 
 namespace Core.Addon
 {
@@ -33,10 +34,12 @@ namespace Core.Addon
 #pragma warning restore CS0067
 
         private readonly IAddonDataProvider reader;
+        private readonly AutoResetEvent autoResetEvent;
 
-        public ConfigAddonReader(IAddonDataProvider reader)
+        public ConfigAddonReader(IAddonDataProvider reader, AutoResetEvent autoResetEvent)
         {
             this.reader = reader;
+            this.autoResetEvent = autoResetEvent;
         }
 
         public int GetInt(int index)
@@ -57,6 +60,7 @@ namespace Core.Addon
         public void Update()
         {
             FetchData();
+            autoResetEvent.Set();
         }
 
         public void UpdateUI()
