@@ -111,7 +111,7 @@ namespace BlazorServer
                 StartupConfigReader scr = new();
                 Configuration.GetSection(StartupConfigReader.Position).Bind(scr);
 
-                if (scr.ReaderType == AddonDataProviderType.GDI)
+                if (scr.ReaderType == AddonDataProviderType.DXGI)
                 {
                     services.AddSingleton<IAddonDataProvider, AddonDataProviderDXGI>();
                     Log.Logger.Information($"Using {nameof(AddonDataProviderDXGI)}");
