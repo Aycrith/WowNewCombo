@@ -128,8 +128,9 @@ function DataToColor:Bits1()
 end
 
 function DataToColor:Bits2()
+    local type, _, _, scale = GetMirrorTimerInfo(2)
     return
-        base2(GetMirrorTimerInfo(2) == DataToColor.C.MIRRORTIMER.BREATH and 1 or 0, 0) +
+        base2(type == DataToColor.C.MIRRORTIMER.BREATH and scale < 0 and 1 or 0, 0) +
         base2(DataToColor.corpseInRange, 1) +
         base2(IsIndoors() and 1 or 0, 2) +
         base2(UnitExists(DataToColor.C.unitFocus) and 1 or 0, 3) +
