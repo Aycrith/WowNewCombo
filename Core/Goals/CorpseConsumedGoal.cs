@@ -8,8 +8,6 @@ namespace Core.Goals
     {
         public override float Cost => 4.7f;
 
-        private const int LOOTFRAME_AUTOLOOT_DELAY = 300;
-
         private readonly ILogger logger;
         private readonly GoapAgentState goapAgentState;
         private readonly Wait wait;
@@ -50,7 +48,7 @@ namespace Core.Goals
 
             if (goapAgentState.LastCombatKillCount > 1)
             {
-                wait.Fixed(LOOTFRAME_AUTOLOOT_DELAY);
+                wait.Fixed(Loot.LOOTFRAME_AUTOLOOT_DELAY);
             }
         }
 

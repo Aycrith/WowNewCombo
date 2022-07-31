@@ -181,10 +181,14 @@ namespace Core.Goals
                     }
 
                     Log($"Started casting ? {!castTimeout} {elapsedMs}ms");
-                    if (castTimeout)
+                    if (castTimeout || playerReader.LastUIError == UI_ERROR.ERR_LOOT_LOCKED)
                     {
-                        Log($"Wait {playerReader.NetworkLatency.Value}ms and try again...");
-                        wait.Fixed(playerReader.NetworkLatency.Value);
+                        int delay = playerReader.LastUIError == UI_ERROR.ERR_LOOT_LOCKED ?
+                            Loot.LOOTFRAME_AUTOLOOT_DELAY :
+                            playerReader.NetworkLatency.Value;
+
+                        Log($"Wait {delay}ms and try again...");
+                        wait.Fixed(delay);
 
                         if (!playerReader.IsCasting())
                         {
@@ -337,7 +341,9 @@ namespace Core.Goals
 
         private bool CastStartedOrFailed()
         {
-            return successfulInBackground || playerReader.IsCasting();
+            return successfulInBackground ||
+                playerReader.IsCasting() ||
+                playerReader.LastUIError == UI_ERROR.ERR_LOOT_LOCKED;
         }
 
         private bool MinRangeZero()
@@ -347,12 +353,12 @@ namespace Core.Goals
 
         private void Log(string text)
         {
-            logger.LogInformation($"{nameof(SkinningGoal)}: {text}");
+            logger.LogInformation(text);
         }
 
         private void LogWarning(string text)
         {
-            logger.LogWarning($"{nameof(SkinningGoal)}: {text}");
+            logger.LogWarning(text);
         }
     }
 }
