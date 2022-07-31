@@ -29,6 +29,8 @@ namespace Game
 
         public Bitmap MiniMapBitmap { get; private set; }
 
+        public IntPtr ProcessHwnd => wowProcess.Process.MainWindowHandle;
+
         private Rectangle rect;
         public Rectangle Rect => rect;
 

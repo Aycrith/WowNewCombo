@@ -7,6 +7,7 @@ using System.Threading;
 using Vortice.Direct3D;
 using Vortice.Direct3D11;
 using Vortice.DXGI;
+using static WinAPI.NativeMethods;
 
 namespace Core
 {
@@ -66,12 +67,23 @@ namespace Core
 
             bitmap = new(rect.Right, rect.Bottom, PixelFormat.Format32bppRgb);
 
-            int screenId = 0;
+            IntPtr hMonitor = MonitorFromWindow(wowScreen.ProcessHwnd, MONITOR_DEFAULTTONULL);
 
             IDXGIFactory1 factory = DXGI.CreateDXGIFactory1<IDXGIFactory1>();
             adapter = factory.GetAdapter(0);
-            output = adapter.GetOutput(screenId);
-            output1 = output.QueryInterface<IDXGIOutput1>();
+
+            int srcIdx = 0;
+            output = adapter.GetOutput(srcIdx);
+            do
+            {
+                if (output.Description.Monitor == hMonitor)
+                    break;
+
+                srcIdx++;
+                output = adapter.GetOutput(srcIdx);
+            } while (output != null);
+
+            output1 = output!.QueryInterface<IDXGIOutput1>();
             D3D11.D3D11CreateDevice(adapter, DriverType.Unknown, DeviceCreationFlags.None, s_featureLevels, out ID3D11Device? d);
 
             if (d == null)
