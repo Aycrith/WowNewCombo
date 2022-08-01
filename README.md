@@ -731,7 +731,7 @@ e.g.
 ```json
 "Requirements": ["Has Pet", "TargetHealth% < 70 || TargetCastingSpell"]
 "Requirement": "!Form:Druid_Bear && Health% < 50 || MobCount > 2",
-"Requirement": "(Judgement of the Crusader && CD_Judgement <= 1500 && TargetHealth% > 20) || TargetCastingSpell"
+"Requirement": "(Judgement of the Crusader && CD_Judgement <= GCD && TargetHealth% > 20) || TargetCastingSpell"
 ```
 ---
 ### **Value base requirements**
@@ -776,6 +776,12 @@ Formula: `[Keyword] [Operator] [Numeric integer value]`
 | `CD` | Returns the context KeyAction **in-game** cooldown in milliseconds |
 | `CD_{KeyAction.Name}` | Returns the given `{KeyAction.Name}` **in-game** cooldown in milliseconds |
 | `Cost_{KeyAction.Name}` | Returns the given `{KeyAction.Name}` cost value |
+| `Buff_{IntVariable_Name}` | Returns the given `{IntVariable_Name}` remaining player buff up time |
+| `Debuff_{IntVariable_Name}` | Returns the given `{IntVariable_Name}` remaining target debuff up time |
+| `CurGCD` | Returns the player current remaining GCD time |
+| `GCD` | Alias for `1500` value |
+| `SpellQueueTime` | Alias for `400` value |
+| `NextSpell` | Alias for `1900` value |
 
 For the `MinRange` and `MaxRange` gives an approximation range distance between the player and target.
 
@@ -805,7 +811,7 @@ e.g. Single Requirement
 "Requirement": "MaxRange > 35"
 "Requirement": "LastAutoShotMs <= 500"
 "Requirement": "LastMainHandMs <= 500"
-"Requirement": "CD_Judgement < 1500"                 // The remaining cooldown on Judgement is less then GCD(1500)
+"Requirement": "CD_Judgement < GCD"                 // The remaining cooldown on Judgement is less then GCD(1500)
 "Requirement": "CD_Hammer of Justice > CD_Judgement" // The remaining cooldown on Hammer of Justice is greater then 8 seconds
 "Requirement": "Rage >= Cost_Heroic Strike"          // Create a condition like if player current rage is greater then or equal the cost of Heroic Strike
 "Requirement": "MainHandSpeed > 3500"   // Main hand attack speed is greater then 3.5 seconds
@@ -845,7 +851,7 @@ e.g. for `CD_{KeyAction.Name}`: Where `Hammer of Justice` referencing the `Judge
     "Name": "Hammer of Justice",
     "Key": "7",
     "WhenUsable": true,
-    "Requirements": ["Judgement of the Crusader && CD_Judgement <= 1500 && TargetHealth% > 20 || TargetCastingSpell"]
+    "Requirements": ["Judgement of the Crusader && CD_Judgement <= GCD && TargetHealth% > 20 || TargetCastingSpell"]
 }
 ```
 ---
@@ -1159,13 +1165,6 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | Mage | `"Mana Shield"` |
 | Mage | `"Presence of Mind"` |
 | Mage | `"Arcane Power"` |
-| Paladin | `"Concentration Aura"` |
-| Paladin | `"Crusader Aura"` |
-| Paladin | `"Devotion Aura"` |
-| Paladin | `"Fire Resistance Aura"` |
-| Paladin | `"Frost Resistance Aura"` |
-| Paladin | `"Retribution Aura"` |
-| Paladin | `"Shadow Resistance Aura"` |
 | Paladin | `"Seal of Righteousness"` |
 | Paladin | `"Seal of the Crusader"` |
 | Paladin | `"Seal of Command"` |

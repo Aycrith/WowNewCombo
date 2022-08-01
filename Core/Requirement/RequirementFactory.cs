@@ -300,7 +300,11 @@ namespace Core
                 //"Buff_{textureId}"
                 //"Debuff_{textureId}"
                 { "MainHandSpeed", playerReader.MainHandSpeedMs },
-                { "MainHandSwing", () => Math.Clamp(playerReader.MainHandSwing.ElapsedMs() - playerReader.MainHandSpeedMs(), -playerReader.MainHandSpeedMs(), 0) }
+                { "MainHandSwing", () => Math.Clamp(playerReader.MainHandSwing.ElapsedMs() - playerReader.MainHandSpeedMs(), -playerReader.MainHandSpeedMs(), 0) },
+                { "CurGCD", playerReader.GCD._Value },
+                { "GCD", CastingHandler._GCD },
+                { "SpellQueueTime", CastingHandler._SpellQueueTime },
+                { "NextSpell", CastingHandler._NextSpell },
             };
         }
 
