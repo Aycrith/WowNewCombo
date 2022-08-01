@@ -145,15 +145,6 @@ namespace Core
                 { "Omen of Clarity", playerReader.Buffs.OmenOfClarity },
 
                 // Paladin
-                { "Concentration Aura", () => playerReader.Form is Form.Paladin_Concentration_Aura },
-                { "Crusader Aura", () => playerReader.Form is Form.Paladin_Crusader_Aura },
-                { "Devotion Aura", () => playerReader.Form is Form.Paladin_Devotion_Aura },
-                { "Sanctity Aura", () => playerReader.Form is Form.Paladin_Sanctity_Aura },
-                { "Fire Resistance Aura", () => playerReader.Form is Form.Paladin_Fire_Resistance_Aura },
-                { "Frost Resistance Aura", () => playerReader.Form is Form.Paladin_Frost_Resistance_Aura },
-                { "Retribution Aura", () => playerReader.Form is Form.Paladin_Retribution_Aura },
-                { "Shadow Resistance Aura", () => playerReader.Form is Form.Paladin_Shadow_Resistance_Aura },
-
                 { "Seal of Righteousness", playerReader.Buffs.SealofRighteousness },
                 { "Seal of the Crusader", playerReader.Buffs.SealoftheCrusader },
                 { "Seal of Command", playerReader.Buffs.SealofCommand },
