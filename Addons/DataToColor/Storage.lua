@@ -8,6 +8,8 @@ DataToColor.S.targetDebuffs = {}
 
 DataToColor.S.playerAuraMap = {}
 
+DataToColor.S.playerSpellBook = {}
+
 function DataToColor:InitStorage()
     CreateSpellInRangeList()
 

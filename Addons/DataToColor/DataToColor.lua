@@ -43,7 +43,7 @@ local UIErrorsFrame = UIErrorsFrame
 local DEFAULT_CHAT_FRAME = DEFAULT_CHAT_FRAME
 
 local HasAction = HasAction
-local GetSpellBookItemInfo = GetSpellBookItemInfo
+local GetSpellBookItemName = GetSpellBookItemName
 local GetNumTalentTabs = GetNumTalentTabs
 local GetNumTalents = GetNumTalents
 local GetTalentInfo = GetTalentInfo
@@ -220,6 +220,8 @@ function DataToColor:SetupRequirements()
 end
 
 function DataToColor:Reset()
+    DataToColor.S.playerSpellBook = {}
+
     DataToColor.playerGUID = UnitGUID(DataToColor.C.unitPlayer)
     DataToColor.petGUID = UnitGUID(DataToColor.C.unitPet)
     DataToColor.map = C_Map.GetBestMapForUnit(DataToColor.C.unitPlayer)
@@ -353,13 +355,16 @@ end
 
 function DataToColor:InitSpellBookQueue()
     local num, type = 1, 1
-    local contextId = nil
     while true do
-        _, contextId = GetSpellBookItemInfo(num, type)
-        if not contextId then
+        local name, _, id = GetSpellBookItemName(num, type)
+        if not name then
             break
         end
-        DataToColor.spellBookQueue:push(contextId)
+
+        local texture = GetSpellBookItemTexture(num, type)
+        DataToColor.S.playerSpellBook[texture] = name
+
+        DataToColor.spellBookQueue:push(id)
         num = num + 1
     end
 end
