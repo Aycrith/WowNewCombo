@@ -194,10 +194,10 @@ namespace Core.GOAP
             {
                 { GoapKey.hastarget, playerReader.Bits.HasTarget() },
                 { GoapKey.targethostile, playerReader.Bits.TargetCanBeHostile() },
-                { GoapKey.dangercombat, playerReader.Bits.PlayerInCombat() && addonReader.DamageTakenCount > 0 },
-                { GoapKey.damagetaken, addonReader.DamageTakenCount > 0 },
-                { GoapKey.damagedone, addonReader.DamageDoneCount > 0 },
-                { GoapKey.damagetakenordone, addonReader.DamageTakenCount > 0 || addonReader.DamageDoneCount > 0 },
+                { GoapKey.dangercombat, playerReader.Bits.PlayerInCombat() && addonReader.DamageTakenCount() > 0 },
+                { GoapKey.damagetaken, addonReader.DamageTakenCount() > 0 },
+                { GoapKey.damagedone, addonReader.DamageDoneCount() > 0 },
+                { GoapKey.damagetakenordone, addonReader.DamageTakenCount() > 0 || addonReader.DamageDoneCount() > 0 },
                 { GoapKey.pethastarget, playerReader.PetHasTarget && !playerReader.Bits.PetTargetIsDead() },
                 { GoapKey.targetisalive, playerReader.Bits.HasTarget() && !playerReader.Bits.TargetIsDead() },
                 { GoapKey.targettargetsus, (playerReader.Bits.HasTarget() && playerReader.TargetHealthPercentage() < 30) || playerReader.TargetTarget is // hacky way to keep attacking fleeing humanoids
@@ -206,7 +206,7 @@ namespace Core.GOAP
                     TargetTargetEnum.PartyOrPet },
                 { GoapKey.incombat, playerReader.Bits.PlayerInCombat() },
                 { GoapKey.ismounted,
-                    (playerReader.Class == PlayerClassEnum.Druid &&
+                    (playerReader.Class == UnitClass.Druid &&
                     playerReader.Form is Form.Druid_Travel or Form.Druid_Flight)
                     || playerReader.Bits.IsMounted() },
                 { GoapKey.withinpullrange, playerReader.WithInPullRange() },
@@ -271,7 +271,7 @@ namespace Core.GOAP
                 State.ConsumableCorpseCount++;
                 BroadcastGoapEvent(GoapKey.producedcorpse, true);
 
-                LogActiveKillDetected(logger, State.LastCombatKillCount, addonReader.DamageTakenCount);
+                LogActiveKillDetected(logger, State.LastCombatKillCount, addonReader.DamageTakenCount());
             }
             else
             {

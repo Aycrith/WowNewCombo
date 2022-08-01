@@ -43,7 +43,8 @@ namespace Core
         public const string Drink = "Drink";
         public const string Food = "Food";
 
-        public RequirementFactory(ILogger logger, AddonReader addonReader, NpcNameFinder npcNameFinder, Dictionary<int, SchoolMask[]> immunityBlacklist)
+        public RequirementFactory(ILogger logger, AddonReader addonReader,
+            NpcNameFinder npcNameFinder, Dictionary<int, SchoolMask[]> immunityBlacklist)
         {
             this.logger = logger;
             this.addonReader = addonReader;
@@ -80,17 +81,17 @@ namespace Core
             boolVariables = new()
             {
                 // Target Based
-                { "TargetYieldXP", () => playerReader.TargetYieldXP },
-                { "TargetsMe", () => playerReader.TargetTarget == TargetTargetEnum.Me },
-                { "TargetsPet", () => playerReader.TargetTarget == TargetTargetEnum.Pet },
-                { "TargetsNone", () => playerReader.TargetTarget == TargetTargetEnum.None },
+                { "TargetYieldXP", playerReader.TargetYieldXP },
+                { "TargetsMe", playerReader.TargetsMe },
+                { "TargetsPet", playerReader.TargetsPet },
+                { "TargetsNone", playerReader.TargetsNone },
 
-                { AddVisible, () => npcNameFinder.PotentialAddsExist },
+                { AddVisible, npcNameFinder._PotentialAddsExist },
 
                 // Range
                 { "InMeleeRange", playerReader.IsInMeleeRange },
                 { "InDeadZoneRange", playerReader.IsInDeadZone },
-                { "OutOfCombatRange", () => !playerReader.WithInCombatRange() },
+                { "OutOfCombatRange", playerReader.OutOfCombatRange },
                 { "InCombatRange", playerReader.WithInCombatRange },
                 
                 // Pet
@@ -109,9 +110,9 @@ namespace Core
                 
                 // Equipment - Bag
                 { "Items Broken", playerReader.Bits.ItemsAreBroken },
-                { "BagFull", () => bagReader.BagsFull },
-                { "BagGreyItem", () => bagReader.AnyGreyItem },
-                { "HasRangedWeapon", () => equipmentReader.HasRanged() },
+                { "BagFull", bagReader.BagsFull },
+                { "BagGreyItem", bagReader.AnyGreyItem },
+                { "HasRangedWeapon", equipmentReader.HasRanged },
                 { "HasAmmo", playerReader.Bits.HasAmmo },
 
                 { "Casting", playerReader.IsCasting },
@@ -144,15 +145,6 @@ namespace Core
                 { "Omen of Clarity", playerReader.Buffs.OmenOfClarity },
 
                 // Paladin
-                { "Concentration Aura", () => playerReader.Form is Form.Paladin_Concentration_Aura },
-                { "Crusader Aura", () => playerReader.Form is Form.Paladin_Crusader_Aura },
-                { "Devotion Aura", () => playerReader.Form is Form.Paladin_Devotion_Aura },
-                { "Sanctity Aura", () => playerReader.Form is Form.Paladin_Sanctity_Aura },
-                { "Fire Resistance Aura", () => playerReader.Form is Form.Paladin_Fire_Resistance_Aura },
-                { "Frost Resistance Aura", () => playerReader.Form is Form.Paladin_Frost_Resistance_Aura },
-                { "Retribution Aura", () => playerReader.Form is Form.Paladin_Retribution_Aura },
-                { "Shadow Resistance Aura", () => playerReader.Form is Form.Paladin_Shadow_Resistance_Aura },
-
                 { "Seal of Righteousness", playerReader.Buffs.SealofRighteousness },
                 { "Seal of the Crusader", playerReader.Buffs.SealoftheCrusader },
                 { "Seal of Command", playerReader.Buffs.SealofCommand },
@@ -295,9 +287,9 @@ namespace Core
                 { "FrostRune", playerReader.FrostRune },
                 { "UnholyRune", playerReader.UnholyRune },
                 { "TotalRune", playerReader.MaxRune },
-                { "Combo Point", () => playerReader.ComboPoints },
-                { "BagCount", () => bagReader.BagItems.Count },
-                { "MobCount", () => addonReader.DamageTakenCount },
+                { "Combo Point", playerReader.ComboPoints },
+                { "BagCount", bagReader.BagItemCount },
+                { "MobCount", addonReader.DamageTakenCount },
                 { "MinRange", playerReader.MinRange },
                 { "MaxRange", playerReader.MaxRange },
                 { "LastAutoShotMs", playerReader.AutoShot.ElapsedMs },
@@ -308,7 +300,11 @@ namespace Core
                 //"Buff_{textureId}"
                 //"Debuff_{textureId}"
                 { "MainHandSpeed", playerReader.MainHandSpeedMs },
-                { "MainHandSwing", () => Math.Clamp(playerReader.MainHandSwing.ElapsedMs() - playerReader.MainHandSpeedMs(), -playerReader.MainHandSpeedMs(), 0) }
+                { "MainHandSwing", () => Math.Clamp(playerReader.MainHandSwing.ElapsedMs() - playerReader.MainHandSpeedMs(), -playerReader.MainHandSpeedMs(), 0) },
+                { "CurGCD", playerReader.GCD._Value },
+                { "GCD", CastingHandler._GCD },
+                { "SpellQueueTime", CastingHandler._SpellQueueTime },
+                { "NextSpell", CastingHandler._NextSpell },
             };
         }
 
@@ -370,11 +366,11 @@ namespace Core
             }
 
             AddMinRequirement(requirements, item);
-            AddTargetIsCastingRequirement(requirements, item);
+            AddTargetIsCastingRequirement(requirements, item, playerReader);
 
             if (item.WhenUsable && !string.IsNullOrEmpty(item.Key))
             {
-                requirements.Add(CreateActionUsableRequirement(item));
+                requirements.Add(CreateActionUsableRequirement(item, playerReader, addonReader.UsableAction));
 
                 if (item.Slot > 0)
                     requirements.Add(CreateActionNotInGameCooldown(item));
@@ -383,12 +379,12 @@ namespace Core
             AddCooldownRequirement(requirements, item);
             AddChargeRequirement(requirements, item);
 
-            AddSpellSchoolRequirement(requirements, item);
+            AddSpellSchoolRequirement(requirements, item, playerReader, immunityBlacklist);
 
             item.RequirementsRuntime = requirements.ToArray();
         }
 
-        public void InitUserDefinedIntVariables(Dictionary<string, int> intKeyValues)
+        public void InitUserDefinedIntVariables(Dictionary<string, int> intKeyValues, AuraTimeReader playerBuffTimeReader, AuraTimeReader targetDebuffTimeReader)
         {
             foreach ((string key, int value) in intKeyValues)
             {
@@ -420,27 +416,26 @@ namespace Core
         {
             if (string.IsNullOrEmpty(item.Name) || item.Slot == 0) return;
 
-            BindCooldown(item);
-            BindMinCost(item);
+            BindCooldown(item, addonReader.ActionBarCooldownReader);
+            BindMinCost(item, addonReader.ActionBarCostReader);
         }
 
-        private void BindCooldown(KeyAction item)
+        private void BindCooldown(KeyAction item, ActionBarCooldownReader reader)
         {
             string key = $"CD_{item.Name}";
             if (!intVariables.ContainsKey(key))
             {
-                intVariables.Add(key,
-                    () => addonReader.ActionBarCooldownReader.GetRemainingCooldown(item));
+                intVariables.Add(key, () => reader.GetRemainingCooldown(item));
             }
         }
 
-        private void BindMinCost(KeyAction item)
+        private void BindMinCost(KeyAction item, ActionBarCostReader reader)
         {
             string key = $"Cost_{item.Name}";
             if (!intVariables.ContainsKey(key))
             {
                 intVariables.Add(key,
-                    () => addonReader.ActionBarCostReader.GetCostByActionBarSlot(item).Cost);
+                    () => reader.GetCostByActionBarSlot(item).Cost);
             }
         }
 
@@ -460,13 +455,13 @@ namespace Core
                 intVariables.Add(prefixKey, intVariables[key]);
         }
 
-        private void AddTargetIsCastingRequirement(List<Requirement> itemRequirementObjects, KeyAction item)
+        private void AddTargetIsCastingRequirement(List<Requirement> list, KeyAction item, PlayerReader playerReader)
         {
             if (item.UseWhenTargetIsCasting != null)
             {
                 bool f() => playerReader.IsTargetCasting() == item.UseWhenTargetIsCasting.Value;
                 string l() => "Target casting";
-                itemRequirementObjects.Add(new Requirement
+                list.Add(new Requirement
                 {
                     HasRequirement = f,
                     LogMessage = l
@@ -474,29 +469,29 @@ namespace Core
             }
         }
 
-        private void AddMinRequirement(List<Requirement> RequirementObjects, KeyAction item)
+        private void AddMinRequirement(List<Requirement> list, KeyAction item)
         {
-            AddMinPowerTypeRequirement(RequirementObjects, PowerType.Mana, item);
-            AddMinPowerTypeRequirement(RequirementObjects, PowerType.Rage, item);
-            AddMinPowerTypeRequirement(RequirementObjects, PowerType.Energy, item);
-            if (playerReader.Class == PlayerClassEnum.DeathKnight)
+            AddMinPowerTypeRequirement(list, PowerType.Mana, item, playerReader);
+            AddMinPowerTypeRequirement(list, PowerType.Rage, item, playerReader);
+            AddMinPowerTypeRequirement(list, PowerType.Energy, item, playerReader);
+            if (playerReader.Class == UnitClass.DeathKnight)
             {
-                AddMinPowerTypeRequirement(RequirementObjects, PowerType.RunicPower, item);
-                AddMinPowerTypeRequirement(RequirementObjects, PowerType.RuneBlood, item);
-                AddMinPowerTypeRequirement(RequirementObjects, PowerType.RuneFrost, item);
-                AddMinPowerTypeRequirement(RequirementObjects, PowerType.RuneUnholy, item);
+                AddMinPowerTypeRequirement(list, PowerType.RunicPower, item, playerReader);
+                AddMinPowerTypeRequirement(list, PowerType.RuneBlood, item, playerReader);
+                AddMinPowerTypeRequirement(list, PowerType.RuneFrost, item, playerReader);
+                AddMinPowerTypeRequirement(list, PowerType.RuneUnholy, item, playerReader);
             }
-            AddMinComboPointsRequirement(RequirementObjects, item);
+            AddMinComboPointsRequirement(list, item, playerReader);
         }
 
-        private void AddMinPowerTypeRequirement(List<Requirement> RequirementObjects, PowerType type, KeyAction keyAction)
+        private void AddMinPowerTypeRequirement(List<Requirement> list, PowerType type, KeyAction keyAction, PlayerReader playerReader)
         {
             switch (type)
             {
                 case PowerType.Mana:
                     bool fmana() => playerReader.ManaCurrent() >= keyAction.MinMana || playerReader.Buffs.Clearcasting();
                     string smana() => $"{type.ToStringF()} {playerReader.ManaCurrent()} >= {keyAction.MinMana}";
-                    RequirementObjects.Add(new Requirement
+                    list.Add(new Requirement
                     {
                         HasRequirement = fmana,
                         LogMessage = smana,
@@ -506,7 +501,7 @@ namespace Core
                 case PowerType.Rage:
                     bool frage() => playerReader.PTCurrent() >= keyAction.MinRage || playerReader.Buffs.Clearcasting();
                     string srage() => $"{type.ToStringF()} {playerReader.PTCurrent()} >= {keyAction.MinRage}";
-                    RequirementObjects.Add(new Requirement
+                    list.Add(new Requirement
                     {
                         HasRequirement = frage,
                         LogMessage = srage,
@@ -516,7 +511,7 @@ namespace Core
                 case PowerType.Energy:
                     bool fenergy() => playerReader.PTCurrent() >= keyAction.MinEnergy || playerReader.Buffs.Clearcasting();
                     string senergy() => $"{type.ToStringF()} {playerReader.PTCurrent()} >= {keyAction.MinEnergy}";
-                    RequirementObjects.Add(new Requirement
+                    list.Add(new Requirement
                     {
                         HasRequirement = fenergy,
                         LogMessage = senergy,
@@ -526,7 +521,7 @@ namespace Core
                 case PowerType.RunicPower:
                     bool frunicpower() => playerReader.PTCurrent() >= keyAction.MinRunicPower;
                     string srunicpower() => $"{type.ToStringF()} {playerReader.PTCurrent()} >= {keyAction.MinRunicPower}";
-                    RequirementObjects.Add(new Requirement
+                    list.Add(new Requirement
                     {
                         HasRequirement = frunicpower,
                         LogMessage = srunicpower,
@@ -536,7 +531,7 @@ namespace Core
                 case PowerType.RuneBlood:
                     bool fbloodrune() => playerReader.BloodRune() >= keyAction.MinRuneBlood;
                     string sbloodrune() => $"{type.ToStringF()} {playerReader.BloodRune()} >= {keyAction.MinRuneBlood}";
-                    RequirementObjects.Add(new Requirement
+                    list.Add(new Requirement
                     {
                         HasRequirement = fbloodrune,
                         LogMessage = sbloodrune,
@@ -546,7 +541,7 @@ namespace Core
                 case PowerType.RuneFrost:
                     bool ffrostrune() => playerReader.FrostRune() >= keyAction.MinRuneFrost;
                     string sfrostrune() => $"{type.ToStringF()} {playerReader.FrostRune()} >= {keyAction.MinRuneFrost}";
-                    RequirementObjects.Add(new Requirement
+                    list.Add(new Requirement
                     {
                         HasRequirement = ffrostrune,
                         LogMessage = sfrostrune,
@@ -556,7 +551,7 @@ namespace Core
                 case PowerType.RuneUnholy:
                     bool funholyrune() => playerReader.UnholyRune() >= keyAction.MinRuneUnholy;
                     string sunholyrune() => $"{type.ToStringF()} {playerReader.UnholyRune()} >= {keyAction.MinRuneUnholy}";
-                    RequirementObjects.Add(new Requirement
+                    list.Add(new Requirement
                     {
                         HasRequirement = funholyrune,
                         LogMessage = sunholyrune,
@@ -566,13 +561,13 @@ namespace Core
             }
         }
 
-        private void AddMinComboPointsRequirement(List<Requirement> RequirementObjects, KeyAction item)
+        private void AddMinComboPointsRequirement(List<Requirement> list, KeyAction item, PlayerReader playerReader)
         {
             if (item.MinComboPoints > 0)
             {
-                bool f() => playerReader.ComboPoints >= item.MinComboPoints;
-                string s() => $"Combo point {playerReader.ComboPoints} >= {item.MinComboPoints}";
-                RequirementObjects.Add(new Requirement
+                bool f() => playerReader.ComboPoints() >= item.MinComboPoints;
+                string s() => $"Combo point {playerReader.ComboPoints()} >= {item.MinComboPoints}";
+                list.Add(new Requirement
                 {
                     HasRequirement = f,
                     LogMessage = s
@@ -580,13 +575,13 @@ namespace Core
             }
         }
 
-        private static void AddCooldownRequirement(List<Requirement> RequirementObjects, KeyAction item)
+        private static void AddCooldownRequirement(List<Requirement> list, KeyAction item)
         {
             if (item.Cooldown > 0)
             {
                 bool f() => item.GetCooldownRemaining() == 0;
                 string s() => $"Cooldown {item.GetCooldownRemaining() / 1000:F1}";
-                RequirementObjects.Add(new Requirement
+                list.Add(new Requirement
                 {
                     HasRequirement = f,
                     LogMessage = s,
@@ -595,13 +590,13 @@ namespace Core
             }
         }
 
-        private static void AddChargeRequirement(List<Requirement> RequirementObjects, KeyAction item)
+        private static void AddChargeRequirement(List<Requirement> list, KeyAction item)
         {
             if (item.Charge > 1)
             {
                 bool f() => item.GetChargeRemaining() != 0;
                 string s() => $"Charge {item.GetChargeRemaining()}";
-                RequirementObjects.Add(new Requirement
+                list.Add(new Requirement
                 {
                     HasRequirement = f,
                     LogMessage = s
@@ -621,13 +616,13 @@ namespace Core
             item.Requirements.Add("!Falling");
         }
 
-        private void AddSpellSchoolRequirement(List<Requirement> RequirementObjects, KeyAction item)
+        private void AddSpellSchoolRequirement(List<Requirement> list, KeyAction item, PlayerReader playerReader, Dictionary<int, SchoolMask[]> immunityBlacklist)
         {
             if (item.School != SchoolMask.None)
             {
                 bool f() => !immunityBlacklist.TryGetValue(playerReader.TargetId, out SchoolMask[]? immuneAgaints) || !immuneAgaints.Contains(item.School);
                 string s() => item.School.ToStringF();
-                RequirementObjects.Add(new Requirement
+                list.Add(new Requirement
                 {
                     HasRequirement = f,
                     LogMessage = s,
@@ -650,18 +645,18 @@ namespace Core
             string? key = requirementMap.Keys.FirstOrDefault(x => requirement.Contains(x));
             if (!string.IsNullOrEmpty(key))
             {
-                var requirementObj = requirementMap[key](requirement);
+                Requirement req = requirementMap[key](requirement);
                 if (negated != null)
                 {
-                    requirementObj.Negate(negated);
+                    req.Negate(negated);
                 }
-                return requirementObj;
+                return req;
             }
 
             if (boolVariables.ContainsKey(requirement))
             {
                 string s() => requirement;
-                var requirementObj = new Requirement
+                Requirement req = new()
                 {
                     HasRequirement = boolVariables[requirement],
                     LogMessage = s
@@ -669,9 +664,9 @@ namespace Core
 
                 if (negated != null)
                 {
-                    requirementObj.Negate(negated);
+                    req.Negate(negated);
                 }
-                return requirementObj;
+                return req;
             }
 
             LogUnknownRequirement(logger, requirement, string.Join(", ", boolVariables.Keys));
@@ -681,17 +676,17 @@ namespace Core
             };
         }
 
-        private Requirement CreateActionUsableRequirement(KeyAction item)
+        private Requirement CreateActionUsableRequirement(KeyAction item, PlayerReader playerReader, ActionBarBits usableAction)
         {
             bool f() =>
-                    !item.HasFormRequirement ? addonReader.UsableAction.Is(item) :
-                    (playerReader.Form == item.FormEnum && addonReader.UsableAction.Is(item)) ||
+                    !item.HasFormRequirement ? usableAction.Is(item) :
+                    (playerReader.Form == item.FormEnum && usableAction.Is(item)) ||
                     (playerReader.Form != item.FormEnum && item.CanDoFormChangeMinResource());
 
             string s() =>
                     !item.HasFormRequirement ? "Usable" :
                     (playerReader.Form != item.FormEnum && item.CanDoFormChangeMinResource()) ? "Usable after Form change" :
-                    (playerReader.Form == item.FormEnum && addonReader.UsableAction.Is(item)) ? "Usable current Form" : "not Usable current Form";
+                    (playerReader.Form == item.FormEnum && usableAction.Is(item)) ? "Usable current Form" : "not Usable current Form";
 
             return new Requirement
             {
@@ -766,7 +761,7 @@ namespace Core
         private Requirement CreateRace(string requirement)
         {
             string[] parts = requirement.Split(":");
-            RaceEnum race = Enum.Parse<RaceEnum>(parts[1]);
+            UnitRace race = Enum.Parse<UnitRace>(parts[1]);
 
             bool f() => playerReader.Race == race;
             string s() => playerReader.Race.ToStringF();
@@ -908,40 +903,40 @@ namespace Core
 
         private Requirement CreateUsable(string requirement)
         {
-            var parts = requirement.Split(":");
+            string[] parts = requirement.Split(":");
             string name = parts[1].Trim();
 
-            var keyAction = keyActions.First(x => x.Name == name);
-            return CreateActionUsableRequirement(keyAction);
+            KeyAction keyAction = keyActions.First(x => x.Name == name);
+            return CreateActionUsableRequirement(keyAction, playerReader, addonReader.UsableAction);
         }
 
 
         private Requirement CreateGreaterThen(string requirement)
         {
-            return CreateArithmeticRequirement(">", requirement);
+            return CreateArithmeticRequirement(">", requirement, intVariables);
         }
 
         private Requirement CreateLesserThen(string requirement)
         {
-            return CreateArithmeticRequirement("<", requirement);
+            return CreateArithmeticRequirement("<", requirement, intVariables);
         }
 
         private Requirement CreateGreaterOrEquals(string requirement)
         {
-            return CreateArithmeticRequirement(">=", requirement);
+            return CreateArithmeticRequirement(">=", requirement, intVariables);
         }
 
         private Requirement CreateLesserOrEquals(string requirement)
         {
-            return CreateArithmeticRequirement("<=", requirement);
+            return CreateArithmeticRequirement("<=", requirement, intVariables);
         }
 
         private Requirement CreateEquals(string requirement)
         {
-            return CreateArithmeticRequirement("==", requirement);
+            return CreateArithmeticRequirement("==", requirement, intVariables);
         }
 
-        private Requirement CreateArithmeticRequirement(string symbol, string requirement)
+        private Requirement CreateArithmeticRequirement(string symbol, string requirement, Dictionary<string, Func<int>> intVariables)
         {
             var parts = requirement.Split(symbol);
             var key = parts[0].Trim();

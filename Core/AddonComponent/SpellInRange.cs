@@ -74,34 +74,34 @@ namespace Core
         public bool DeathKnight_DarkCommand => b[Mask._3];
         public bool DeathKnight_RaiseDead => b[Mask._4];
 
-        public bool WithinPullRange(PlayerReader playerReader, PlayerClassEnum playerClass) => playerClass switch
+        public bool WithinPullRange(PlayerReader playerReader, UnitClass @class) => @class switch
         {
-            PlayerClassEnum.Warrior => (playerReader.Level.Value >= 4 && Warrior_Charge) || playerReader.IsInMeleeRange(),
-            PlayerClassEnum.Rogue => Rogue_Throw,
-            PlayerClassEnum.Priest => Priest_Smite,
-            PlayerClassEnum.Druid => Druid_Wrath,
-            PlayerClassEnum.Paladin => (playerReader.Level.Value >= 4 && Paladin_Judgement) || playerReader.IsInMeleeRange() ||
+            UnitClass.Warrior => (playerReader.Level.Value >= 4 && Warrior_Charge) || playerReader.IsInMeleeRange(),
+            UnitClass.Rogue => Rogue_Throw,
+            UnitClass.Priest => Priest_Smite,
+            UnitClass.Druid => Druid_Wrath,
+            UnitClass.Paladin => (playerReader.Level.Value >= 4 && Paladin_Judgement) || playerReader.IsInMeleeRange() ||
                                        (playerReader.Level.Value >= 20 && playerReader.MinRange() <= 20 && playerReader.MaxRange() <= 25),
-            PlayerClassEnum.Mage => (playerReader.Level.Value >= 4 && Mage_Frostbolt) || Mage_Fireball,
-            PlayerClassEnum.Hunter => (playerReader.Level.Value >= 4 && Hunter_SerpentSting) || Hunter_AutoShoot || playerReader.IsInMeleeRange(),
-            PlayerClassEnum.Warlock => Warlock_ShadowBolt,
-            PlayerClassEnum.Shaman => (playerReader.Level.Value >= 4 && Shaman_EarthShock) || Shaman_LightningBolt,
-            PlayerClassEnum.DeathKnight => DeathKnight_DeathGrip,
+            UnitClass.Mage => (playerReader.Level.Value >= 4 && Mage_Frostbolt) || Mage_Fireball,
+            UnitClass.Hunter => (playerReader.Level.Value >= 4 && Hunter_SerpentSting) || Hunter_AutoShoot || playerReader.IsInMeleeRange(),
+            UnitClass.Warlock => Warlock_ShadowBolt,
+            UnitClass.Shaman => (playerReader.Level.Value >= 4 && Shaman_EarthShock) || Shaman_LightningBolt,
+            UnitClass.DeathKnight => DeathKnight_DeathGrip,
             _ => true
         };
 
-        public bool WithinCombatRange(PlayerReader playerReader, PlayerClassEnum playerClass) => playerClass switch
+        public bool WithinCombatRange(PlayerReader playerReader, UnitClass @class) => @class switch
         {
-            PlayerClassEnum.Warrior => (playerReader.Level.Value >= 4 && Warrior_Rend) || playerReader.IsInMeleeRange(),
-            PlayerClassEnum.Rogue => Rogue_SinisterStrike,
-            PlayerClassEnum.Priest => Priest_Smite,
-            PlayerClassEnum.Druid => Druid_Wrath || playerReader.IsInMeleeRange(),
-            PlayerClassEnum.Paladin => (playerReader.Level.Value >= 4 && Paladin_Judgement) || playerReader.IsInMeleeRange(),
-            PlayerClassEnum.Mage => Mage_Frostbolt || Mage_Fireball,
-            PlayerClassEnum.Hunter => (playerReader.Level.Value >= 4 && Hunter_SerpentSting) || Hunter_AutoShoot || playerReader.IsInMeleeRange(),
-            PlayerClassEnum.Warlock => Warlock_ShadowBolt,
-            PlayerClassEnum.Shaman => Shaman_LightningBolt,
-            PlayerClassEnum.DeathKnight => DeathKnight_IcyTouch,
+            UnitClass.Warrior => (playerReader.Level.Value >= 4 && Warrior_Rend) || playerReader.IsInMeleeRange(),
+            UnitClass.Rogue => Rogue_SinisterStrike,
+            UnitClass.Priest => Priest_Smite,
+            UnitClass.Druid => Druid_Wrath || playerReader.IsInMeleeRange(),
+            UnitClass.Paladin => (playerReader.Level.Value >= 4 && Paladin_Judgement) || playerReader.IsInMeleeRange(),
+            UnitClass.Mage => Mage_Frostbolt || Mage_Fireball,
+            UnitClass.Hunter => (playerReader.Level.Value >= 4 && Hunter_SerpentSting) || Hunter_AutoShoot || playerReader.IsInMeleeRange(),
+            UnitClass.Warlock => Warlock_ShadowBolt,
+            UnitClass.Shaman => Shaman_LightningBolt,
+            UnitClass.DeathKnight => DeathKnight_IcyTouch,
             _ => true
         };
     }

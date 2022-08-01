@@ -220,6 +220,7 @@
         "WhenUsable": true,
         "HasCastbar": true,
         "Requirement": "!HasMainHandEnchant",
+        "AfterCastWaitCastbar": true,
         "AfterCastAuraExpected": true
       }
     ]

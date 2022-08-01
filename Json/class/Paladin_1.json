@@ -32,7 +32,7 @@
         "Key": "5",
         "Requirements": [
           "Spell:Devotion Aura",
-          "!Devotion Aura"
+          "!Form:Paladin_Devotion_Aura"
         ],
         "AfterCastAuraExpected": true
       }

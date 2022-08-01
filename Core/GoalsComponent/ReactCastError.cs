@@ -72,7 +72,7 @@ namespace Core
                     if (!playerReader.Bits.HasTarget())
                         return;
 
-                    if (playerReader.Class == PlayerClassEnum.Hunter && playerReader.IsInMeleeRange())
+                    if (playerReader.Class == UnitClass.Hunter && playerReader.IsInMeleeRange())
                     {
                         logger.LogInformation($"{source} -- As a Hunter didn't know how to react {value.ToStringF()}");
                         return;
@@ -126,24 +126,24 @@ namespace Core
                     {
                         switch (playerReader.Class)
                         {
-                            case PlayerClassEnum.None:
+                            case UnitClass.None:
                                 break;
-                            case PlayerClassEnum.Monk:
-                            case PlayerClassEnum.DemonHunter:
-                            case PlayerClassEnum.Druid:
-                            case PlayerClassEnum.DeathKnight:
-                            case PlayerClassEnum.Warrior:
-                            case PlayerClassEnum.Paladin:
-                            case PlayerClassEnum.Rogue:
+                            case UnitClass.Monk:
+                            case UnitClass.DemonHunter:
+                            case UnitClass.Druid:
+                            case UnitClass.DeathKnight:
+                            case UnitClass.Warrior:
+                            case UnitClass.Paladin:
+                            case UnitClass.Rogue:
                                 logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Interact!");
                                 input.Interact();
                                 stopMoving.Stop();
                                 break;
-                            case PlayerClassEnum.Hunter:
-                            case PlayerClassEnum.Priest:
-                            case PlayerClassEnum.Shaman:
-                            case PlayerClassEnum.Mage:
-                            case PlayerClassEnum.Warlock:
+                            case UnitClass.Hunter:
+                            case UnitClass.Priest:
+                            case UnitClass.Shaman:
+                            case UnitClass.Mage:
+                            case UnitClass.Warlock:
                                 stopMoving.Stop();
                                 logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Turning 180!");
                                 float desiredDirection = playerReader.Direction + MathF.PI;

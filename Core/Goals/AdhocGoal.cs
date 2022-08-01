@@ -82,8 +82,8 @@ namespace Core.Goals
         private bool Interrupt()
         {
             return combatMatters.HasValue
-                ? combatMatters.Value == addonReader.PlayerReader.Bits.PlayerInCombat() && addonReader.DamageTakenCount > 0
-                : addonReader.DamageTakenCount > 0;
+                ? combatMatters.Value == addonReader.PlayerReader.Bits.PlayerInCombat() && addonReader.DamageTakenCount() > 0
+                : addonReader.DamageTakenCount() > 0;
         }
 
         private void Cast()

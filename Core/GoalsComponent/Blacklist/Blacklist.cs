@@ -91,7 +91,7 @@ namespace Core
 
             if (checkTargetGivesExp)
             {
-                if (!playerReader.TargetYieldXP)
+                if (!playerReader.TargetYieldXP())
                 {
                     if (lastGuid != playerReader.TargetGuid)
                     {

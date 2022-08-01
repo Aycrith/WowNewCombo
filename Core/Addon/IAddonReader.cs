@@ -26,7 +26,7 @@ namespace Core
 
         double AvgUpdateLatency { get; }
 
-        int DamageTakenCount { get; }
+        int DamageTakenCount();
 
         string TargetName { get; }
 

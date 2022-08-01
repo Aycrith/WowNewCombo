@@ -101,14 +101,16 @@
         "Name": "Sharpen Weapon 1",
         "HasCastBar": true,
         "Key": "F1",
-        "Cooldown": 1800,
+        "AfterCastWaitCastbar": true,
+        "AfterCastAuraExpected": true,
         "Log": false
       },
       {
         "Name": "Sharpen Weapon 2",
         "HasCastBar": true,
         "Key": "F2",
-        "Cooldown": 1800,
+        "AfterCastWaitCastbar": true,
+        "AfterCastAuraExpected": true,
         "Log": false
       },
       {

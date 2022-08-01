@@ -85,7 +85,7 @@
       {
         "Name": "Devotion Aura",
         "Key": "5",
-        "Requirement": "!Devotion Aura",
+        "Requirement": "!Form:Paladin_Devotion_Aura",
         "AfterCastAuraExpected": true
       },
       {
