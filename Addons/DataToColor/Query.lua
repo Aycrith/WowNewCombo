@@ -62,6 +62,7 @@ local UnitOnTaxi = UnitOnTaxi
 local IsSwimming = IsSwimming
 local IsFalling = IsFalling
 local IsIndoors = IsIndoors
+local IsStealthed = IsStealthed
 local GetMirrorTimerInfo = GetMirrorTimerInfo
 local IsMounted = IsMounted
 local IsInGroup = IsInGroup
@@ -140,7 +141,8 @@ function DataToColor:Bits2()
         base2(UnitAffectingCombat(DataToColor.C.unitFocusTarget) and 1 or 0, 6) +
         base2(DataToColor:isHostile(DataToColor.C.unitFocusTarget), 7) +
         base2(UnitExists(DataToColor.C.unitFocusTarget) and CheckInteractDistance(DataToColor.C.unitFocusTarget, 2) and 1 or 0, 8) +
-        base2(UnitIsDead(DataToColor.C.unitPetTarget) and 1 or 0, 1)
+        base2(UnitIsDead(DataToColor.C.unitPetTarget) and 1 or 0, 9) +
+        base2(IsStealthed() and 1 or 0, 10)
 end
 
 function DataToColor:CustomTrigger(t)
