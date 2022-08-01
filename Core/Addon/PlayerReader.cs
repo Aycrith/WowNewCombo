@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Specialized;
 using System.Numerics;
 
@@ -65,6 +65,7 @@ namespace Core
         public SpellInRange SpellInRange { get; }
         public bool WithInPullRange() => SpellInRange.WithinPullRange(this, Class);
         public bool WithInCombatRange() => SpellInRange.WithinCombatRange(this, Class);
+        public bool OutOfCombatRange() => !SpellInRange.WithinCombatRange(this, Class);
 
         public BuffStatus Buffs { get; }
         public TargetDebuffStatus TargetDebuffs { get; }
@@ -99,7 +100,7 @@ namespace Core
         public int SpellBeingCast => reader.GetInt(53);
         public bool IsCasting() => SpellBeingCast != 0;
 
-        public int ComboPoints => reader.GetInt(54);
+        public int ComboPoints() => reader.GetInt(54);
 
         public AuraCount AuraCount => new(reader, 55);
 
@@ -110,6 +111,9 @@ namespace Core
         public bool IsTargetCasting() => SpellBeingCastByTarget != 0;
 
         public TargetTargetEnum TargetTarget => (TargetTargetEnum)reader.GetInt(59);
+        public bool TargetsMe() => TargetTarget == TargetTargetEnum.Me;
+        public bool TargetsPet() => TargetTarget == TargetTargetEnum.Pet;
+        public bool TargetsNone() => TargetTarget == TargetTargetEnum.None;
 
         public RecordInt AutoShot { get; } = new(60);
         public RecordInt MainHandSwing { get; } = new(61);

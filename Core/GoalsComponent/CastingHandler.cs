@@ -31,6 +31,11 @@ namespace Core.Goals
         public DateTime SpellQueueOpen { get; private set; }
         public bool SpellInQueue() => DateTime.UtcNow < SpellQueueOpen;
 
+        public static int _GCD() => GCD;
+        public static int _SpellQueueTime() => SpellQueueTimeMs;
+
+        public static int _NextSpell() => GCD + SpellQueueTimeMs;
+
         public CastingHandler(ILogger logger, CancellationTokenSource cts,
             ConfigurableInput input, Wait wait, AddonReader addonReader,
             PlayerDirection direction, StopMoving stopMoving, ReactCastError react)

@@ -81,7 +81,7 @@ namespace Core.Goals
             successfulInBackground = false;
             listenLootWindow = true;
 
-            if (bagReader.BagsFull)
+            if (bagReader.BagsFull())
             {
                 logger.LogWarning("Inventory is full");
                 SendGoapEvent(new GoapStateEvent(GoapKey.shouldloot, false));

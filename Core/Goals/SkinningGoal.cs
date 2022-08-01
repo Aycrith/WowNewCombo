@@ -99,7 +99,7 @@ namespace Core.Goals
 
             wait.Fixed(playerReader.NetworkLatency.Value);
 
-            if (bagReader.BagsFull)
+            if (bagReader.BagsFull())
             {
                 LogWarning("Inventory is full!");
                 SendGoapEvent(new GoapStateEvent(GoapKey.shouldgather, false));

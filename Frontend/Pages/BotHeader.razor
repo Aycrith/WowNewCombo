@@ -42,13 +42,13 @@
                                 {
                                     <div>NOT NORMAL</div>
                                 }
-                                else if (playerReader.ComboPoints > 0)
+                                else if (playerReader.ComboPoints() > 0)
                                 {
-                                    <div>Combo Points: @playerReader.ComboPoints</div>
+                                    <div>Combo Points: @playerReader.ComboPoints()</div>
                                 }
-                                @if (addonReader.DamageTakenCount > 1)
+                                @if (addonReader.DamageTakenCount() > 1)
                                 {
-                                    <div>Fighting @addonReader.DamageTakenCount Mobs</div>
+                                    <div>Fighting @addonReader.DamageTakenCount() Mobs</div>
                                 }
 
                             </div>

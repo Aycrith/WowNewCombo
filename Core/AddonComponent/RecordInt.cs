@@ -8,6 +8,8 @@ namespace Core
 
         public int Value { private set; get; }
 
+        public int _Value() => Value;
+
         public DateTime LastChanged { private set; get; }
 
         public int ElapsedMs() => (int)(DateTime.UtcNow - LastChanged).TotalMilliseconds;

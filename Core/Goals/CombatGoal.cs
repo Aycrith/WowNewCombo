@@ -97,7 +97,7 @@ namespace Core.Goals
 
         public override void OnExit()
         {
-            if (addonReader.DamageTakenCount > 0 && !playerReader.Bits.HasTarget())
+            if (addonReader.DamageTakenCount() > 0 && !playerReader.Bits.HasTarget())
             {
                 stopMoving.Stop();
             }
@@ -155,7 +155,7 @@ namespace Core.Goals
                 stopMoving.Stop();
                 logger.LogInformation("Lost target!");
 
-                if (addonReader.DamageTakenCount > 0 && !input.ClassConfig.KeyboardOnly)
+                if (addonReader.DamageTakenCount() > 0 && !input.ClassConfig.KeyboardOnly)
                 {
                     FindNewTarget();
                 }
@@ -181,7 +181,7 @@ namespace Core.Goals
                 input.ClearTarget();
             }
 
-            if (addonReader.DamageTakenCount > 1)
+            if (addonReader.DamageTakenCount() > 1)
             {
                 logger.LogInformation("Checking target in front...");
                 input.NearestTarget();
@@ -203,9 +203,9 @@ namespace Core.Goals
                     input.ClearTarget();
                     wait.Update();
                 }
-                else if (addonReader.DamageTakenCount > 0)
+                else if (addonReader.DamageTakenCount() > 0)
                 {
-                    logger.LogWarning($"---- Possible threats from behind {addonReader.DamageTakenCount}. Waiting target by damage taken!");
+                    logger.LogWarning($"---- Possible threats from behind {addonReader.DamageTakenCount()}. Waiting target by damage taken!");
                     wait.Till(2500, playerReader.Bits.HasTarget);
                 }
             }

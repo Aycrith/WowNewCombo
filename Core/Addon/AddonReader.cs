@@ -51,8 +51,8 @@ namespace Core
 
         public RecordInt GlobalTime { get; } = new(98);
 
-        public int DamageTakenCount => CombatLog.DamageTaken.Count;
-        public int DamageDoneCount => CombatLog.DamageDone.Count;
+        public int DamageTakenCount() => CombatLog.DamageTaken.Count;
+        public int DamageDoneCount() => CombatLog.DamageDone.Count;
 
         private int lastTargetId = -1;
         public string TargetName { get; private set; } = string.Empty;

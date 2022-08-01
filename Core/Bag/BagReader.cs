@@ -191,11 +191,13 @@ namespace Core
                 .ToList();
         }
 
+        public int BagItemCount() => BagItems.Count;
+
         public int SlotCount => Bags.Sum((x) => x.SlotCount);
 
-        public bool BagsFull => Bags.Sum((x) => x.BagType == BagType.Unspecified ? x.FreeSlot : 0) == 0;
+        public bool BagsFull() => Bags.Sum((x) => x.BagType == BagType.Unspecified ? x.FreeSlot : 0) == 0;
 
-        public bool AnyGreyItem => BagItems.Any((x) => x.Item.Quality == 0);
+        public bool AnyGreyItem() => BagItems.Any((x) => x.Item.Quality == 0);
 
         public int ItemCount(int itemId) => BagItems.Where(bi => bi.ItemId == itemId).Sum(bi => bi.Count);
 

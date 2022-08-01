@@ -129,7 +129,7 @@ namespace Core.Goals
         {
             wait.Update();
 
-            if (addonReader.DamageDoneCount > 0)
+            if (addonReader.DamageDoneCount() > 0)
             {
                 SendGoapEvent(new GoapStateEvent(GoapKey.pulled, true));
                 return;
@@ -194,7 +194,7 @@ namespace Core.Goals
                     (bool t, double e) = wait.Until(5000, CombatLogChanged);
                     if (!t)
                     {
-                        if (addonReader.DamageTakenCount > 0 && !playerReader.Bits.TargetInCombat())
+                        if (addonReader.DamageTakenCount() > 0 && !playerReader.Bits.TargetInCombat())
                         {
                             stopMoving.Stop();
 
@@ -223,8 +223,8 @@ namespace Core.Goals
         {
             return
                 playerReader.Bits.TargetInCombat() ||
-                addonReader.DamageDoneCount > 0 ||
-                addonReader.DamageTakenCount > 0 ||
+                addonReader.DamageDoneCount() > 0 ||
+                addonReader.DamageTakenCount() > 0 ||
                 playerReader.TargetTarget is
                 TargetTargetEnum.Me or
                 TargetTargetEnum.Pet or
