@@ -82,6 +82,8 @@ namespace SharedLib.NpcFinder
         public int TargetCount { private set; get; }
         public bool MobsVisible => NpcCount > 0;
         public bool PotentialAddsExist { get; private set; }
+        public bool _PotentialAddsExist() => PotentialAddsExist;
+
         public DateTime LastPotentialAddsSeen { get; private set; }
 
         private Func<byte, byte, byte, bool> colorMatcher;
