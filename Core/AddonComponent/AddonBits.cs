@@ -68,5 +68,7 @@ namespace Core
         public bool FocusTargetInTradeRange() => v2[Mask._8];
 
         public bool PetTargetIsDead() => v2[Mask._9];
+
+        public bool IsStealthed() => v2[Mask._10];
     }
 }
