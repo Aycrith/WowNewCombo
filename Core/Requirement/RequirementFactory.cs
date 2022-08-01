@@ -766,7 +766,7 @@ namespace Core
         private Requirement CreateRace(string requirement)
         {
             string[] parts = requirement.Split(":");
-            RaceEnum race = Enum.Parse<RaceEnum>(parts[1]);
+            UnitRace race = Enum.Parse<UnitRace>(parts[1]);
 
             bool f() => playerReader.Race == race;
             string s() => playerReader.Race.ToStringF();

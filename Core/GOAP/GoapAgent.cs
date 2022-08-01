@@ -1,4 +1,4 @@
-﻿using Core.Goals;
+using Core.Goals;
 using Game;
 using Microsoft.Extensions.Logging;
 using SharedLib.Extensions;
@@ -206,7 +206,7 @@ namespace Core.GOAP
                     TargetTargetEnum.PartyOrPet },
                 { GoapKey.incombat, playerReader.Bits.PlayerInCombat() },
                 { GoapKey.ismounted,
-                    (playerReader.Class == PlayerClassEnum.Druid &&
+                    (playerReader.Class == UnitClass.Druid &&
                     playerReader.Form is Form.Druid_Travel or Form.Druid_Flight)
                     || playerReader.Bits.IsMounted() },
                 { GoapKey.withinpullrange, playerReader.WithInPullRange() },

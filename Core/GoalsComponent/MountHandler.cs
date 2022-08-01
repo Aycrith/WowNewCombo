@@ -49,7 +49,7 @@ namespace Core
 
         public void MountUp()
         {
-            if (playerReader.Class == PlayerClassEnum.Druid)
+            if (playerReader.Class == UnitClass.Druid)
             {
                 KeyAction? keyAction = null;
                 for (int i = 0; i < classConfig.Form.Length; i++)
@@ -135,7 +135,7 @@ namespace Core
 
         public bool IsMounted()
         {
-            return (playerReader.Class == PlayerClassEnum.Druid &&
+            return (playerReader.Class == UnitClass.Druid &&
                 playerReader.Form is Form.Druid_Flight or Form.Druid_Travel)
                 || playerReader.Bits.IsMounted();
         }

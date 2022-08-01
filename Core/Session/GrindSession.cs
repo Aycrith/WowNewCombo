@@ -10,7 +10,7 @@ namespace Core.Session
 
         public Guid SessionId { get; set; }
         public string PathName { get; set; } = string.Empty;
-        public PlayerClassEnum PlayerClass { get; set; }
+        public UnitClass PlayerClass { get; set; }
         public DateTime SessionStart { get; set; }
         public DateTime SessionEnd { get; set; }
         [JsonIgnore]

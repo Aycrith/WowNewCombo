@@ -202,13 +202,13 @@ namespace Core
             }
         }
 
-        private static void ResolvePetClass(ServiceCollection services, PlayerClassEnum @class)
+        private static void ResolvePetClass(ServiceCollection services, UnitClass @class)
         {
             if (@class is
-                PlayerClassEnum.Hunter or
-                PlayerClassEnum.Warlock or
-                PlayerClassEnum.Mage or
-                PlayerClassEnum.DeathKnight)
+                UnitClass.Hunter or
+                UnitClass.Warlock or
+                UnitClass.Mage or
+                UnitClass.DeathKnight)
             {
                 services.AddSingleton<GoapGoal, TargetPetTargetGoal>();
             }

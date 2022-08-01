@@ -234,8 +234,8 @@ namespace Core
                     stage++;
                     break;
                 case Stage.ValidateData:
-                    if (TryResolveRaceAndClass(out RaceEnum race, out PlayerClassEnum @class) &&
-                        race != RaceEnum.None && @class != PlayerClassEnum.None)
+                    if (TryResolveRaceAndClass(out UnitRace race, out UnitClass @class) &&
+                        race != UnitRace.None && @class != UnitClass.None)
                     {
                         if (auto)
                         {
@@ -246,7 +246,7 @@ namespace Core
                     }
                     else
                     {
-                        logger.LogError($"Unable to identify {nameof(RaceEnum)} and {nameof(PlayerClassEnum)}!");
+                        logger.LogError($"Unable to identify {nameof(UnitRace)} and {nameof(UnitClass)}!");
                         stage = Stage.Reset;
 
                         if (auto)
@@ -343,14 +343,14 @@ namespace Core
             exec.Run($"/{addonConfigurator.Config.Command}");
         }
 
-        public bool TryResolveRaceAndClass(out RaceEnum raceEnum, out PlayerClassEnum playerClassEnum)
+        public bool TryResolveRaceAndClass(out UnitRace race, out UnitClass @class)
         {
             int raceClassCombo = reader.GetInt(46);
 
-            raceEnum = (RaceEnum)(raceClassCombo / 100f);
-            playerClassEnum = (PlayerClassEnum)(raceClassCombo - ((int)raceEnum * 100f));
+            race = (UnitRace)(raceClassCombo / 100f);
+            @class = (UnitClass)(raceClassCombo - ((int)race * 100f));
 
-            return Enum.IsDefined(raceEnum) && Enum.IsDefined(playerClassEnum);
+            return Enum.IsDefined(race) && Enum.IsDefined(@class);
         }
     }
 }

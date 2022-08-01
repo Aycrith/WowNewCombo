@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Specialized;
 using System.Numerics;
 
@@ -73,14 +73,14 @@ namespace Core
 
         public int Gold => reader.GetInt(44) + (reader.GetInt(45) * 1000000);
 
-        public RaceEnum Race => (RaceEnum)(reader.GetInt(46) / 100f);
+        public UnitRace Race => (UnitRace)(reader.GetInt(46) / 100f);
 
-        public PlayerClassEnum Class => (PlayerClassEnum)(reader.GetInt(46) - ((int)Race * 100f));
+        public UnitClass Class => (UnitClass)(reader.GetInt(46) - ((int)Race * 100f));
 
         // 47 empty
 
         public Stance Stance { get; }
-        public Form Form => Stance.Get(this, Class);
+        public Form Form => Stance.Get(Class, Bits.IsStealthed());
 
         public int MinRange() => (int)(reader.GetInt(49) / 100000f);
         public int MaxRange() => (int)((reader.GetInt(49) - (MinRange() * 100000f)) / 100f);
@@ -130,15 +130,10 @@ namespace Core
 
         public int RemainCastMs => reader.GetInt(76);
 
-        private int lastCastGCD;
-        public int LastCastGCD
-        {
-            get => lastCastGCD;
-            set => lastCastGCD = value;
-        }
+        public int LastCastGCD { get; set; }
         public void ReadLastCastGCD()
         {
-            lastCastGCD = reader.GetInt(94);
+            LastCastGCD = reader.GetInt(94);
         }
 
         public RecordInt GCD { get; } = new(95);

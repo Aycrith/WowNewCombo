@@ -183,7 +183,7 @@
 
     private void OnUpdate()
     {
-        if (frameConfigurator.TryResolveRaceAndClass(out RaceEnum race, out PlayerClassEnum @class))
+        if (frameConfigurator.TryResolveRaceAndClass(out UnitRace race, out UnitClass @class))
         {
             playerClass = $"{race.ToStringF()} {@class.ToStringF()}";
         }

@@ -126,7 +126,7 @@ namespace Core
                     logger.LogWarning("There is a problem with the addon, I have been unable to read the player class. Is it running ?");
                     sw.Restart();
                 }
-            } while (!Enum.GetValues(typeof(PlayerClassEnum)).Cast<PlayerClassEnum>().Contains(AddonReader.PlayerReader.Class));
+            } while (!Enum.GetValues(typeof(UnitClass)).Cast<UnitClass>().Contains(AddonReader.PlayerReader.Class));
 
             logger.LogDebug($"Woohoo, I have read the player class. You are a {AddonReader.PlayerReader.Race.ToStringF()} {AddonReader.PlayerReader.Class.ToStringF()}.");
 

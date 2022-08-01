@@ -21,9 +21,9 @@ namespace Core.Database
             talentTreeElements = JsonConvert.DeserializeObject<TalentTreeElement[]>(File.ReadAllText(Path.Join(dataConfig.Dbc, "talent.json")));
         }
 
-        public bool Update(ref Talent talent, PlayerClassEnum playerClassEnum, out int spellId)
+        public bool Update(ref Talent talent, UnitClass @class, out int spellId)
         {
-            int classMask = (int)Math.Pow(2, (int)playerClassEnum - 1);
+            int classMask = (int)Math.Pow(2, (int)@class - 1);
 
             int tabId = -1;
             int tabIndex = talent.TabNum - 1;

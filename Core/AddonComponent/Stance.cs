@@ -16,15 +16,15 @@
             value = reader.GetInt(cell);
         }
 
-        public Form Get(PlayerReader playerReader, PlayerClassEnum playerClass) => value == 0 ? Form.None : playerClass switch
+        public Form Get(UnitClass @class, bool stealth) => value == 0 ? Form.None : @class switch
         {
-            PlayerClassEnum.Warrior => Form.Warrior_BattleStance + value - 1,
-            PlayerClassEnum.Rogue => Form.Rogue_Stealth + value - 1,
-            PlayerClassEnum.Priest => Form.Priest_Shadowform + value - 1,
-            PlayerClassEnum.Druid => playerReader.Buffs.Prowl() ? Form.Druid_Cat_Prowl : Form.Druid_Bear + value - 1,
-            PlayerClassEnum.Paladin => Form.Paladin_Devotion_Aura + value - 1,
-            PlayerClassEnum.Shaman => Form.Shaman_GhostWolf + value - 1,
-            PlayerClassEnum.DeathKnight => Form.DeathKnight_Blood_Presence + value - 1,
+            UnitClass.Warrior => Form.Warrior_BattleStance + value - 1,
+            UnitClass.Rogue => Form.Rogue_Stealth + value - 1,
+            UnitClass.Priest => Form.Priest_Shadowform + value - 1,
+            UnitClass.Druid => stealth ? Form.Druid_Cat_Prowl : Form.Druid_Bear + value - 1,
+            UnitClass.Paladin => Form.Paladin_Devotion_Aura + value - 1,
+            UnitClass.Shaman => Form.Shaman_GhostWolf + value - 1,
+            UnitClass.DeathKnight => Form.DeathKnight_Blood_Presence + value - 1,
             _ => Form.None
         };
 
@@ -35,11 +35,11 @@
                 : item.Slot;
         }
 
-        private static StanceActionBar FormToActionBar(PlayerClassEnum playerClass, Form form)
+        private static StanceActionBar FormToActionBar(UnitClass @class, Form form)
         {
-            switch (playerClass)
+            switch (@class)
             {
-                case PlayerClassEnum.Druid:
+                case UnitClass.Druid:
                     switch (form)
                     {
                         case Form.Druid_Cat:
@@ -52,7 +52,7 @@
                             return StanceActionBar.DruidMoonkin;
                     }
                     break;
-                case PlayerClassEnum.Warrior:
+                case UnitClass.Warrior:
                     switch (form)
                     {
                         case Form.Warrior_BattleStance:
@@ -63,11 +63,11 @@
                             return StanceActionBar.WarriorBerserkerStance;
                     }
                     break;
-                case PlayerClassEnum.Rogue:
+                case UnitClass.Rogue:
                     if (form == Form.Rogue_Stealth)
                         return StanceActionBar.RogueStealth;
                     break;
-                case PlayerClassEnum.Priest:
+                case UnitClass.Priest:
                     if (form == Form.Priest_Shadowform)
                         return StanceActionBar.PriestShadowform;
                     break;
@@ -75,5 +75,8 @@
 
             return StanceActionBar.None;
         }
+
+
+
     }
 }
