@@ -65,10 +65,10 @@ namespace Core
 
         public bool HasTalent(string name, int rank)
         {
-            foreach (var kvp in Talents)
+            foreach ((int _, Talent t) in Talents)
             {
-                if (kvp.Value.CurrentRank >= rank &&
-                    kvp.Value.Name.Equals(name, System.StringComparison.OrdinalIgnoreCase))
+                if (t.CurrentRank >= rank &&
+                    t.Name.Contains(name, System.StringComparison.OrdinalIgnoreCase))
                 {
                     return true;
                 }
