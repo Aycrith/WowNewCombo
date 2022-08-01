@@ -39,7 +39,7 @@ namespace Core
             SetDirection(desiredDirection, point, DefaultIgnoreDistance, _cts);
         }
 
-        public void SetDirection(float desiredDirection, Vector3 point, int ignoreDistance, CancellationTokenSource cts)
+        public void SetDirection(float desiredDirection, Vector3 point, float ignoreDistance, CancellationTokenSource cts)
         {
             float distance = playerReader.PlayerLocation.DistanceXYTo(point);
             if (distance < ignoreDistance)

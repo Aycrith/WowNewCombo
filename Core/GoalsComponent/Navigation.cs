@@ -54,8 +54,10 @@ namespace Core.Goals
 
     public partial class Navigation : IDisposable
     {
-        private const bool debug = false;
+        private const bool debug = true;
         private const float RADIAN = MathF.PI * 2;
+
+        private readonly string patherName;
 
         private readonly ILogger logger;
         private readonly PlayerDirection playerDirection;
@@ -67,17 +69,16 @@ namespace Core.Goals
         private readonly IPPather pather;
         private readonly MountHandler mountHandler;
 
-        private readonly string patherName;
+        private const float MinDistanceMount = 15;
+        private readonly float MaxDistance = 200;
+        private readonly float MinDistance = 10;
 
-        private const int MinDistance = 10;
-        private const int MinDistanceMount = 15;
-        private readonly int MaxDistance = 200;
-
+        private bool UniformPath;
         private float AvgDistance;
         private float lastDistance = float.MaxValue;
 
-        private const float minAngleToTurn = MathF.PI / 35;          // 5.14 degree
-        private const float minAngleToStopBeforeTurn = MathF.PI / 2; // 90 degree
+        private const float minAngleToTurn = MathF.PI / 35f;            // 5.14 degree
+        private const float minAngleToStopBeforeTurn = MathF.PI / 1.5f; // 120 degree
 
         private readonly Stack<Vector3> wayPoints = new();
         private readonly Stack<Vector3> routeToNextWaypoint = new();
@@ -176,31 +177,27 @@ namespace Core.Goals
             input.Proc.SetKeyState(input.Proc.ForwardKey, true, true);
 
             // main loop
-            var location = playerReader.PlayerLocation;
-            var distance = location.DistanceXYTo(routeToNextWaypoint.Peek());
-            var heading = DirectionCalculator.CalculateHeading(location, routeToNextWaypoint.Peek());
+            Vector3 player = playerReader.PlayerLocation;
+            Vector3 target = routeToNextWaypoint.Peek();
+            float distance = player.DistanceXYTo(target);
+            float heading = DirectionCalculator.CalculateHeading(player, target);
 
             if (distance < ReachedDistance(MinDistance))
             {
-                if (routeToNextWaypoint.Count > 0)
+                if (target.Z != 0 && target.Z != player.Z)
                 {
-                    if (routeToNextWaypoint.Peek().Z != 0 && routeToNextWaypoint.Peek().Z != location.Z)
-                    {
-                        playerReader.ZCoord = routeToNextWaypoint.Peek().Z;
-                        if (debug)
-                            LogDebug($"Update PlayerLocation.Z = {playerReader.ZCoord}");
-                    }
-
-                    if (SimplifyRouteToWaypoint)
-                        ReduceByDistance(MinDistance);
-                    else
-                        routeToNextWaypoint.Pop();
-
-                    OnAnyPointReached?.Invoke();
-
-                    lastDistance = float.MaxValue;
-                    UpdateTotalRoute();
+                    playerReader.ZCoord = target.Z;
                 }
+
+                if (SimplifyRouteToWaypoint)
+                    ReduceByDistance(MinDistance);
+                else
+                    routeToNextWaypoint.Pop();
+
+                OnAnyPointReached?.Invoke();
+
+                lastDistance = float.MaxValue;
+                UpdateTotalRoute();
 
                 if (routeToNextWaypoint.Count == 0)
                 {
@@ -217,11 +214,9 @@ namespace Core.Goals
                 }
                 else
                 {
-                    stuckDetector.SetTargetLocation(routeToNextWaypoint.Peek());
-
-                    heading = DirectionCalculator.CalculateHeading(location, routeToNextWaypoint.Peek());
-                    if (debug)
-                        LogDebug("Turn to next point");
+                    target = routeToNextWaypoint.Peek();
+                    stuckDetector.SetTargetLocation(target);
+                    heading = DirectionCalculator.CalculateHeading(player, target);
 
                     if (!cts.IsCancellationRequested)
                         AdjustHeading(heading, cts);
@@ -244,7 +239,7 @@ namespace Core.Goals
                     if (HasBeenActiveRecently())
                     {
                         stuckDetector.Update();
-                        distance = location.DistanceXYTo(routeToNextWaypoint.Peek());
+                        distance = player.DistanceXYTo(routeToNextWaypoint.Peek());
                     }
                 }
                 else if (!cts.IsCancellationRequested) // distance closer
@@ -265,7 +260,7 @@ namespace Core.Goals
                 V1_AttemptToKeepRouteToWaypoint();
             }
 
-            var removed = 0;
+            int removed = 0;
             while (AdjustNextWaypointPointToClosest() && removed < 5) { removed++; };
             if (removed > 0)
             {
@@ -310,25 +305,29 @@ namespace Core.Goals
             wayPoints.Clear();
             routeToNextWaypoint.Clear();
 
+            UniformPath = true;
+            float distanceXY = 0;
             Array.Reverse(points);
             for (int i = 0; i < points.Length; i++)
             {
+                if (i > 0)
+                {
+                    float d = points[i].DistanceXYTo(points[i - 1]);
+                    if (i > 1)
+                    {
+                        float cAvg = distanceXY / (i - 1);
+                        UniformPath &= d <= MinDistance || Math.Abs(cAvg - d) <= d * 0.25f; // within 25% difference allowed
+                    }
+                    distanceXY += d;
+                }
+
                 wayPoints.Push(points[i]);
             }
 
-            if (wayPoints.Count > 1)
-            {
-                float sum = 0;
-                sum = points.Zip(points.Skip(1), (a, b) => a.DistanceXYTo(b)).Sum();
-                AvgDistance = sum / points.Length;
-            }
-            else
-            {
-                AvgDistance = MinDistance;
-            }
+            AvgDistance = wayPoints.Count > 1 ? Math.Max(distanceXY / wayPoints.Count, MinDistance) : MinDistance;
 
             if (debug)
-                LogDebug($"SetWayPoints: Added {wayPoints.Count} - AvgDistance: {AvgDistance}");
+                LogDebug($"SetWayPoints: Added {wayPoints.Count} - Uniform ? {UniformPath} - AvgDistance: {AvgDistance}");
 
             UpdateTotalRoute();
         }
@@ -342,27 +341,30 @@ namespace Core.Goals
         {
             routeToNextWaypoint.Clear();
 
-            var location = playerReader.PlayerLocation;
-            var distance = location.DistanceXYTo(wayPoints.Peek());
-            if (distance > MaxDistance || distance > (AvgDistance + MinDistance))
+            Vector3 player = playerReader.PlayerLocation;
+            Vector3 target = wayPoints.Peek();
+            float distance = player.DistanceXYTo(target);
+            //if (distance > MaxDistance || distance > (AvgDistance + MinDistance))
+            if (distance > MaxDistance ||
+                (UniformPath ? distance > 2 * AvgDistance : distance > 2 * MinDistance))
             {
+                if (debug)
+                    LogDebug($"Distance: {distance} vs Avg: {AvgDistance}");
+
                 stopMoving.Stop();
-                PathRequest(new PathRequest(addonReader.UIMapId.Value, location, wayPoints.Peek(), distance, PathCalculatedCallback));
+                PathRequest(new PathRequest(addonReader.UIMapId.Value, player, target, distance, PathCalculatedCallback));
             }
             else
             {
                 if (debug)
-                    LogDebug($"non pathfinder - {distance} - {location} -> {wayPoints.Peek()}");
+                    LogDebug($"non pathfinder - {distance} - {player} -> {target}");
 
-                routeToNextWaypoint.Push(wayPoints.Peek());
+                routeToNextWaypoint.Push(target);
 
-                if (debug)
-                    LogDebug("Reached waypoint");
-
-                float heading = DirectionCalculator.CalculateHeading(location, wayPoints.Peek());
+                float heading = DirectionCalculator.CalculateHeading(player, target);
                 AdjustHeading(heading, _cts);
 
-                stuckDetector.SetTargetLocation(routeToNextWaypoint.Peek());
+                stuckDetector.SetTargetLocation(target);
                 UpdateTotalRoute();
             }
         }
@@ -400,7 +402,10 @@ namespace Core.Goals
             LogPathfinderSuccess(logger, result.Distance, result.Start, result.End, result.ElapsedMs);
 
             result.Path.Reverse();
-            result.Path.ForEach(p => routeToNextWaypoint.Push(p));
+            for (int i = 0; i < result.Path.Count; i++)
+            {
+                routeToNextWaypoint.Push(result.Path[i]);
+            }
 
             if (SimplifyRouteToWaypoint)
                 SimplyfyRouteToWaypoint();
@@ -440,31 +445,31 @@ namespace Core.Goals
                 logger.LogDebug("PathFinder thread stopped!");
         }
 
-        private int ReachedDistance(int minDistance)
+        private float ReachedDistance(float minDistance)
         {
             return mountHandler.IsMounted() ? MinDistanceMount : minDistance;
         }
 
-        private void ReduceByDistance(int minDistance)
+        private void ReduceByDistance(float minDistance)
         {
-            var location = playerReader.PlayerLocation;
-            var distance = location.DistanceXYTo(routeToNextWaypoint.Peek());
+            Vector3 player = playerReader.PlayerLocation;
+            float distance = player.DistanceXYTo(routeToNextWaypoint.Peek());
             while (distance < ReachedDistance(minDistance) && routeToNextWaypoint.Count > 0)
             {
                 routeToNextWaypoint.Pop();
                 if (routeToNextWaypoint.Count > 0)
                 {
-                    distance = location.DistanceXYTo(routeToNextWaypoint.Peek());
+                    distance = player.DistanceXYTo(routeToNextWaypoint.Peek());
                 }
             }
         }
 
         private void AdjustHeading(float heading, CancellationTokenSource cts)
         {
-            var diff1 = MathF.Abs(RADIAN + heading - playerReader.Direction) % RADIAN;
-            var diff2 = MathF.Abs(heading - playerReader.Direction - RADIAN) % RADIAN;
+            float diff1 = MathF.Abs(RADIAN + heading - playerReader.Direction) % RADIAN;
+            float diff2 = MathF.Abs(heading - playerReader.Direction - RADIAN) % RADIAN;
 
-            var diff = MathF.Min(diff1, diff2);
+            float diff = MathF.Min(diff1, diff2);
             if (diff > minAngleToTurn)
             {
                 if (diff > minAngleToStopBeforeTurn)
@@ -480,10 +485,11 @@ namespace Core.Goals
         {
             if (wayPoints.Count < 2) { return false; }
 
-            var A = wayPoints.Pop();
-            var B = wayPoints.Peek();
-            var result = VectorExt.GetClosestPointOnLineSegment(A.AsVector2(), B.AsVector2(), playerReader.PlayerLocation.AsVector2());
-            var newPoint = new Vector3(result.X, result.Y, 0);
+            Vector3 A = wayPoints.Pop();
+            Vector3 B = wayPoints.Peek();
+            Vector2 result = VectorExt.GetClosestPointOnLineSegment(A.AsVector2(), B.AsVector2(), playerReader.PlayerLocation.AsVector2());
+            Vector3 newPoint = new(result.X, result.Y, playerReader.ZCoord);
+
             if (newPoint.DistanceXYTo(wayPoints.Peek()) > MinDistance)
             {
                 wayPoints.Push(newPoint);
@@ -504,7 +510,7 @@ namespace Core.Goals
             float totalDistance = TotalRoute.Zip(TotalRoute.Skip(1), VectorExt.DistanceXY).Sum();
             if (totalDistance > MaxDistance / 2)
             {
-                var location = playerReader.PlayerLocation;
+                Vector3 location = playerReader.PlayerLocation;
                 float distance = location.DistanceXYTo(routeToNextWaypoint.Peek());
                 if (distance > 2 * MinDistanceMount)
                 {
@@ -526,11 +532,14 @@ namespace Core.Goals
 
         private void SimplyfyRouteToWaypoint()
         {
-            var simple = PathSimplify.Simplify(routeToNextWaypoint.ToArray(), pather is RemotePathingAPIV3 ? 0.05f : 0.1f);
+            List<Vector3> simple = PathSimplify.Simplify(routeToNextWaypoint.ToArray(), pather is RemotePathingAPIV3 ? 0.05f : 0.1f);
             simple.Reverse();
 
             routeToNextWaypoint.Clear();
-            simple.ForEach((x) => routeToNextWaypoint.Push(x));
+            for (int i = 0; i < simple.Count; i++)
+            {
+                routeToNextWaypoint.Push(simple[i]);
+            }
         }
 
         private void UpdateTotalRoute()
