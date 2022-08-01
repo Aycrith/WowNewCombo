@@ -112,7 +112,7 @@
       {
         "Name": "Retribution Aura",
         "Key": "5",
-        "Requirement": "!Retribution Aura",
+        "Requirement": "!Form:Paladin_Retribution_Aura",
         "AfterCastAuraExpected": true
       },
       {

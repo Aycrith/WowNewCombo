@@ -21,7 +21,7 @@
           "SpellInRange:0",
           "Seal of the Crusader",
           "!Judgement of the Crusader"
-        ],
+        ]
       }
     ]
   },
@@ -77,7 +77,7 @@
       {
         "Name": "Devotion Aura",
         "Key": "5",
-        "Requirement": "!Devotion Aura",
+        "Requirement": "!Form:Paladin_Devotion_Aura",
         "AfterCastAuraExpected": true
       },
       {
