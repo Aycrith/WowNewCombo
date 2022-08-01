@@ -146,12 +146,12 @@ namespace Core
         public int FocusTargetGuid => reader.GetInt(78);
 
         // https://wowpedia.fandom.com/wiki/Mob_experience
-        public bool TargetYieldXP => Level.Value switch
+        public bool TargetYieldXP() => Level.Value switch
         {
             int n when n < 5 => true,
             int n when n is >= 6 and <= 39 => TargetLevel > (Level.Value - MathF.Floor(Level.Value / 10f) - 5),
             int n when n is >= 40 and <= 59 => TargetLevel > (Level.Value - MathF.Floor(Level.Value / 5f) - 5),
-            int n when n is >= 60 and <= 70 => TargetLevel > Level.Value - 9,
+            int n when n is >= 60 and <= 80 => TargetLevel > Level.Value - 9,
             _ => false
         };
 
