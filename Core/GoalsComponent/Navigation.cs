@@ -54,7 +54,7 @@ namespace Core.Goals
 
     public partial class Navigation : IDisposable
     {
-        private const bool debug = true;
+        private const bool debug = false;
         private const float RADIAN = MathF.PI * 2;
 
         private readonly string patherName;
