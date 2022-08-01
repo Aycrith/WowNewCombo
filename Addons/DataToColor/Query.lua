@@ -33,9 +33,10 @@ local GetSpellInfo = GetSpellInfo
 local GetActionCooldown = GetActionCooldown
 local IsUsableAction = IsUsableAction
 local GetActionTexture = GetActionTexture
-local GetTime = GetTime
 local IsCurrentAction = IsCurrentAction
 local IsAutoRepeatAction = IsAutoRepeatAction
+
+local IsUsableSpell = IsUsableSpell
 
 local GetNumSkillLines = GetNumSkillLines
 local GetSkillLineInfo = GetSkillLineInfo
@@ -387,8 +388,9 @@ function DataToColor:isActionUseable(min, max)
         local start, duration, enabled = GetActionCooldown(i)
         local isUsable, notEnough = IsUsableAction(i)
         local texture = GetActionTexture(i)
+        local spellName = DataToColor.S.playerSpellBook[texture]
 
-        if start == 0 and isUsable == true and notEnough == false and texture ~= 134400 then -- red question mark texture
+        if start == 0 and (isUsable == true and notEnough == false or IsUsableSpell(spellName)) and texture ~= 134400 then -- red question mark texture
             isUsableBits = isUsableBits + (2 ^ (i - min))
         end
 
