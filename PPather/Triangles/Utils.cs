@@ -57,19 +57,6 @@ namespace WowTriangles
         }
     }
 
-    internal unsafe class ccode
-    {
-        // int triBoxOverlap(float boxcenter[3],float boxhalfsize[3],float triverts[3][3]);
-        [DllImport("MPQ\\ccode.dll")]
-        public static extern int triBoxOverlap(
-            float* boxcenter,
-            float* boxhalfsize,
-            float* trivert0,
-            float* trivert1,
-            float* trivert2
-            );
-    }
-
     public unsafe class Utils
     {
         public static bool SegmentTriangleIntersect(Vector3 p0, Vector3 p1,
@@ -187,48 +174,177 @@ namespace WowTriangles
             return true;
         }
 
-        public static bool TestTriangleBoxIntersect(Vector3 vertex0, Vector3 vertex1, Vector3 vertex2,
-                                                    Vector3 boxcenter, Vector3 boxhalfsize)
+        // From the book "Real-Time Collision Detection" by Christer Ericson, page 169
+        // See also the published Errata at http://realtimecollisiondetection.net/books/rtcd/errata/
+        public static bool TestTriangleBoxIntersect(in Vector3 a, in Vector3 b, in Vector3 c, in Vector3 boxCenter, in Vector3 boxExtents)
         {
-            int i = 0;
-            float* pcenter = (float*)&boxcenter;
-            float* phalf = (float*)&boxhalfsize;
-            float* ptriangle0 = (float*)&vertex0;
-            float* ptriangle1 = (float*)&vertex1;
-            float* ptriangle2 = (float*)&vertex2;
+            // Translate triangle as conceptually moving AABB to origin
+            Vector3 v0 = a - boxCenter;
+            Vector3 v1 = b - boxCenter;
+            Vector3 v2 = c - boxCenter;
 
-            //int triBoxOverlap(float boxcenter[3],float boxhalfsize[3],float triverts[3][3]);
-            try
+            // Compute edge vectors for triangle
+            Vector3 f0 = v1 - v0;
+            Vector3 f1 = v2 - v1;
+            Vector3 f2 = v0 - v2;
+
+            #region Test axes a00..a22 (category 3)
+
+            // Test axis a00
+            Vector3 a00 = new(0, -f0.Z, f0.Y);
+            float p0 = Dot(v0, a00);
+            float p1 = Dot(v1, a00);
+            float p2 = Dot(v2, a00);
+            float r = boxExtents.Y * Abs(f0.Z) + boxExtents.Z * Abs(f0.Y);
+            if (Max(-Max3(p0, p1, p2), Min3(p0, p1, p2)) > r)
             {
-                i = ccode.triBoxOverlap(pcenter, phalf, ptriangle0, ptriangle1, ptriangle2);
+                return false;
             }
-            catch (Exception e)
+
+            // Test axis a01
+            Vector3 a01 = new(0, -f1.Z, f1.Y);
+            p0 = Dot(v0, a01);
+            p1 = Dot(v1, a01);
+            p2 = Dot(v2, a01);
+            r = boxExtents.Y * Abs(f1.Z) + boxExtents.Z * Abs(f1.Y);
+            if (Max(-Max3(p0, p1, p2), Min3(p0, p1, p2)) > r)
             {
-                Console.WriteLine("WTF " + e);
+                return false;
             }
-            if (i == 1) return true;
-            return false;
-            /*
-            Vector min, max;
-            min.x = ((vertex0.x < vertex1.x && vertex0.x < vertex2.x) ? vertex0.x : ((vertex1.x < vertex2.x) ? vertex1.x : vertex2.x));
-            min.y = ((vertex0.y < vertex1.y && vertex0.y < vertex2.y) ? vertex0.y : ((vertex1.y < vertex2.y) ? vertex1.y : vertex2.y));
-            min.z = ((vertex0.z < vertex1.z && vertex0.z < vertex2.z) ? vertex0.z : ((vertex1.z < vertex2.z) ? vertex1.z : vertex2.z));
 
-            max.x = ((vertex0.x > vertex1.x && vertex0.x > vertex2.x) ? vertex0.x : ((vertex1.x > vertex2.x) ? vertex1.x : vertex2.x));
-            max.y = ((vertex0.y > vertex1.y && vertex0.y > vertex2.y) ? vertex0.y : ((vertex1.y > vertex2.y) ? vertex1.y : vertex2.y));
-            max.z = ((vertex0.z > vertex1.z && vertex0.z > vertex2.z) ? vertex0.z : ((vertex1.z > vertex2.z) ? vertex1.z : vertex2.z));
+            // Test axis a02
+            Vector3 a02 = new(0, -f2.Z, f2.Y);
+            p0 = Dot(v0, a02);
+            p1 = Dot(v1, a02);
+            p2 = Dot(v2, a02);
+            r = boxExtents.Y * Abs(f2.Z) + boxExtents.Z * Abs(f2.Y);
+            if (Max(-Max3(p0, p1, p2), Min3(p0, p1, p2)) > r)
+            {
+                return false;
+            }
 
-            bool outside = false;
-            if (min.x > boxcenter.x + boxhalfsize.x) outside = true;
-            if (max.x < boxcenter.x - boxhalfsize.x) outside = true;
+            // Test axis a10
+            Vector3 a10 = new(f0.Z, 0, -f0.X);
+            p0 = Dot(v0, a10);
+            p1 = Dot(v1, a10);
+            p2 = Dot(v2, a10);
+            r = boxExtents.X * Abs(f0.Z) + boxExtents.Z * Abs(f0.X);
+            if (Max(-Max3(p0, p1, p2), Min3(p0, p1, p2)) > r)
+            {
+                return false;
+            }
 
-            if (min.y > boxcenter.y + boxhalfsize.y) outside = true;
-            if (max.y < boxcenter.y - boxhalfsize.y) outside = true;
+            // Test axis a11
+            Vector3 a11 = new(f1.Z, 0, -f1.X);
+            p0 = Dot(v0, a11);
+            p1 = Dot(v1, a11);
+            p2 = Dot(v2, a11);
+            r = boxExtents.X * Abs(f1.Z) + boxExtents.Z * Abs(f1.X);
+            if (Max(-Max3(p0, p1, p2), Min3(p0, p1, p2)) > r)
+            {
+                return false;
+            }
 
-            if (min.z > boxcenter.z + boxhalfsize.z) outside = true;
-            if (max.z < boxcenter.z - boxhalfsize.z) outside = true;
+            // Test axis a12
+            Vector3 a12 = new(f2.Z, 0, -f2.X);
+            p0 = Dot(v0, a12);
+            p1 = Dot(v1, a12);
+            p2 = Dot(v2, a12);
+            r = boxExtents.X * Abs(f2.Z) + boxExtents.Z * Abs(f2.X);
+            if (Max(-Max3(p0, p1, p2), Min3(p0, p1, p2)) > r)
+            {
+                return false;
+            }
 
-            return !outside;*/
+            // Test axis a20
+            Vector3 a20 = new(-f0.Y, f0.X, 0);
+            p0 = Dot(v0, a20);
+            p1 = Dot(v1, a20);
+            p2 = Dot(v2, a20);
+            r = boxExtents.X * Abs(f0.Y) + boxExtents.Y * Abs(f0.X);
+            if (Max(-Max3(p0, p1, p2), Min3(p0, p1, p2)) > r)
+            {
+                return false;
+            }
+
+            // Test axis a21
+            Vector3 a21 = new(-f1.Y, f1.X, 0);
+            p0 = Dot(v0, a21);
+            p1 = Dot(v1, a21);
+            p2 = Dot(v2, a21);
+            r = boxExtents.X * Abs(f1.Y) + boxExtents.Y * Abs(f1.X);
+            if (Max(-Max3(p0, p1, p2), Min3(p0, p1, p2)) > r)
+            {
+                return false;
+            }
+
+            // Test axis a22
+            Vector3 a22 = new(-f2.Y, f2.X, 0);
+            p0 = Dot(v0, a22);
+            p1 = Dot(v1, a22);
+            p2 = Dot(v2, a22);
+            r = boxExtents.X * Abs(f2.Y) + boxExtents.Y * Abs(f2.X);
+            if (Max(-Max3(p0, p1, p2), Min3(p0, p1, p2)) > r)
+            {
+                return false;
+            }
+
+            #endregion
+
+            #region Test the three axes corresponding to the face normals of AABB b (category 1)
+
+            // Exit if...
+            // ... [-extents.X, extents.X] and [min(v0.X,v1.X,v2.X), max(v0.X,v1.X,v2.X)] do not overlap
+            if (Max3(v0.X, v1.X, v2.X) < -boxExtents.X || Min3(v0.X, v1.X, v2.X) > boxExtents.X)
+            {
+                return false;
+            }
+
+            // ... [-extents.Y, extents.Y] and [min(v0.Y,v1.Y,v2.Y), max(v0.Y,v1.Y,v2.Y)] do not overlap
+            if (Max3(v0.Y, v1.Y, v2.Y) < -boxExtents.Y || Min3(v0.Y, v1.Y, v2.Y) > boxExtents.Y)
+            {
+                return false;
+            }
+
+            // ... [-extents.Z, extents.Z] and [min(v0.Z,v1.Z,v2.Z), max(v0.Z,v1.Z,v2.Z)] do not overlap
+            if (Max3(v0.Z, v1.Z, v2.Z) < -boxExtents.Z || Min3(v0.Z, v1.Z, v2.Z) > boxExtents.Z)
+            {
+                return false;
+            }
+
+            #endregion
+
+            #region Test separating axis corresponding to triangle face normal (category 2)
+
+            Vector3 planeNormal = Cross(f0, f1);
+            float planeDistance = Dot(planeNormal, v0);
+
+            // Compute the projection interval radius of b onto L(t) = b.c + t * p.n
+            r = boxExtents.X * Abs(planeNormal.X)
+                + boxExtents.Y * Abs(planeNormal.Y)
+                + boxExtents.Z * Abs(planeNormal.Z);
+
+            // Intersection occurs when plane distance falls within [-r,+r] interval
+            if (planeDistance > r)
+            {
+                return false;
+            }
+
+            #endregion
+
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static float Min3(float a, float b, float c)
+        {
+            return Min(a, Min(b, c));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static float Max3(float a, float b, float c)
+        {
+            return Max(a, Max(b, c));
         }
     }
 
