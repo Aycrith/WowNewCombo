@@ -171,14 +171,14 @@ namespace StormDll
     public unsafe class Archive
     {
         #region "Processor check"
-        static bool is64BitProcess = (IntPtr.Size == 8);
+        private static readonly bool is64BitProcess = IntPtr.Size == 8;
         #endregion
 
         private IntPtr handle = IntPtr.Zero;
 
         public Archive(string file, uint Prio, OpenArchiveFlags Flags, ILogger logger)
         {
-            bool r = false;
+            bool r;
             if (is64BitProcess)
             {
                 //64 bit 
@@ -200,7 +200,7 @@ namespace StormDll
 
         public bool Close()
         {
-            bool r = false;
+            bool r;
             if (is64BitProcess)
             {
                 //64 bit 
@@ -218,7 +218,7 @@ namespace StormDll
 
         public bool HasFile(string name)
         {
-            bool r = false;
+            bool r;
             if (is64BitProcess)
             {
                 //64 bit 
@@ -235,7 +235,7 @@ namespace StormDll
 
         public bool ExtractFile(string from, string to, OpenFile dwSearchScope)
         {
-            bool r = false;
+            bool r;
             if (is64BitProcess)
             {
                 //64 bit 
