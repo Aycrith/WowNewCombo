@@ -27,7 +27,8 @@ namespace Core
             CAST_RAY,
             RANDOM_PATH
         }
-        public enum PathRequestFlags : int
+
+        public enum PathRequestFlags
         {
             NONE = 0,
             CHAIKIN = 1,
@@ -100,7 +101,10 @@ namespace Core
                 if (debug)
                     LogInformation($"Finding route from {fromPoint}({start}) map {uiMapId} to {toPoint}({end}) map {uiMapId}...");
 
-                Vector3[] path = Client.Send((byte)EMessageType.PATH, (area.MapID, PathRequestFlags.FIND_LOCATION | PathRequestFlags.CATMULLROM, start, end)).AsArray<Vector3>();
+                Vector3[] path = Client.Send((byte)EMessageType.PATH,
+                    (area.MapID, PathRequestFlags.FIND_LOCATION | PathRequestFlags.CATMULLROM,
+                    start.X, start.Y, start.Z, end.X, end.Y, end.Z)).AsArray<Vector3>();
+
                 if (path.Length == 1 && path[0] == Vector3.Zero)
                     return new ValueTask<List<Vector3>>();
 
