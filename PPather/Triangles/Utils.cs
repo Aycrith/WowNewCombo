@@ -57,10 +57,125 @@ namespace WowTriangles
         }
     }
 
-    internal unsafe class testIntersectsBox
+    public unsafe class Utils
     {
+        public static bool SegmentTriangleIntersect(Vector3 p0, Vector3 p1,
+                                                    Vector3 t0, Vector3 t1, Vector3 t2,
+                                                    out Vector3 I)
+        {
+            I = new();
+
+            Vector3 u = Subtract(t1, t0); // triangle vector 1
+            Vector3 v = Subtract(t2, t0); // triangle vector 2
+            Vector3 n = Cross(u, v); // triangle normal
+
+            Vector3 dir = Subtract(p1, p0); // ray direction vector
+            Vector3 w0 = Subtract(p0, t0);
+            float a = -Dot(n, w0);
+            float b = Dot(n, dir);
+            if (Abs(b) < float.Epsilon) return false; // parallel
+
+            // get intersect point of ray with triangle plane
+            float r = a / b;
+            if (r < 0.0f) return false; // "before" p0
+            if (r > 1.0f) return false; // "after" p1
+
+            Vector3 M = Multiply(dir, r);
+            I = Add(p0, M);// intersect point of line and plane
+
+            // is I inside T?
+            float uu = Dot(u, u);
+            float uv = Dot(u, v);
+            float vv = Dot(v, v);
+            Vector3 w = Subtract(I, t0);
+            float wu = Dot(w, u);
+            float wv = Dot(w, v);
+            float D = uv * uv - uu * vv;
+
+            // get and test parametric coords
+            float s = (uv * wv - vv * wu) / D;
+            if (s < 0.0f || s > 1.0f)        // I is outside T
+                return false;
+
+            float t = (uv * wu - uu * wv) / D;
+            if (t < 0.0f || (s + t) > 1.0f)  // I is outside T
+                return false;
+
+            return true;
+        }
+
+        public static float PointDistanceToSegment(Vector3 p0,
+                                           Vector3 x1, Vector3 x2)
+        {
+            Vector3 L = Subtract(x2, x1); // the segment vector
+            float l2 = Dot(L, L);   // square length of the segment
+
+            Vector3 D = Subtract(p0, x1);   // vector from point to segment start
+            float d = Dot(D, L);     // projection factor [x2-x1].[p0-x1]
+
+            if (d < 0.0f) // closest to x1
+                return D.Length();
+
+            Vector3 E = Multiply(L, d / l2); // intersect
+
+            if (Dot(E, L) > l2) // closest to x2
+            {
+                Vector3 L2 = Subtract(D, L);
+                return L2.Length();
+            }
+
+            Vector3 L3 = Subtract(D, E);
+            return L3.Length();
+        }
+
+        public static void GetTriangleNormal(Vector3 t0, Vector3 t1, Vector3 t2, out Vector3 normal)
+        {
+            Vector3 u = Subtract(t1, t0); // triangle vector 1
+            Vector3 v = Subtract(t2, t0); // triangle vector 2
+            normal = Cross(u, v); // triangle normal
+            float l = normal.Length();
+            normal = Divide(normal, l);
+        }
+
+        public static float PointDistanceToTriangle(Vector3 p0,
+                                                    Vector3 t0, Vector3 t1, Vector3 t2)
+        {
+            Vector3 u = Subtract(t1, t0); // triangle vector 1
+            Vector3 v = Subtract(t2, t0); // triangle vector 2
+            Vector3 n = Cross(u, v); // triangle normal
+            n.X *= -1E6f;
+            n.Y *= -1E6f;
+            n.Z *= -1E6f;
+
+            if (SegmentTriangleIntersect(p0, n, t0, t1, t2, out Vector3 intersect))
+            {
+                Vector3 L = Subtract(intersect, p0);
+                return L.Length();
+            }
+
+            float d0 = PointDistanceToSegment(p0, t0, t1);
+            float d1 = PointDistanceToSegment(p0, t0, t1);
+            float d2 = PointDistanceToSegment(p0, t0, t1);
+
+            return Min(Min(d0, d1), d2);
+        }
+
+        public static bool TestBoxBoxIntersect(Vector3 box0_min, Vector3 box0_max,
+                                               Vector3 box1_min, Vector3 box1_max)
+        {
+            if (box0_min.X > box1_max.X) return false;
+            if (box0_min.Y > box1_max.Y) return false;
+            if (box0_min.Z > box1_max.Z) return false;
+
+            if (box1_min.X > box0_max.X) return false;
+            if (box1_min.Y > box0_max.Y) return false;
+            if (box1_min.Z > box0_max.Z) return false;
+
+            return true;
+        }
+
         //https://gist.github.com/StagPoint/76ae48f5d7ca2f9820748d08e55c9806
-        public static bool IntersectsBox(Vector3 boxCenter, Vector3 boxExtents, Vector3 a, Vector3 b, Vector3 c)
+        public static bool TestTriangleBoxIntersect(in Vector3 a, in Vector3 b, in Vector3 c, in Vector3 boxCenter, in Vector3 boxExtents)
         {
             // From the book "Real-Time Collision Detection" by Christer Ericson, page 169
             // See also the published Errata at http://realtimecollisiondetection.net/books/rtcd/errata/
@@ -230,163 +345,6 @@ namespace WowTriangles
         private static float fmax(float a, float b, float c)
         {
             return Math.Max(a, Math.Max(b, c));
-        }
-    }
-
-    public unsafe class Utils
-    {
-        public static bool SegmentTriangleIntersect(Vector3 p0, Vector3 p1,
-                                                    Vector3 t0, Vector3 t1, Vector3 t2,
-                                                    out Vector3 I)
-        {
-            I = new();
-
-            Vector3 u = Subtract(t1, t0); // triangle vector 1
-            Vector3 v = Subtract(t2, t0); // triangle vector 2
-            Vector3 n = Cross(u, v); // triangle normal
-
-            Vector3 dir = Subtract(p1, p0); // ray direction vector
-            Vector3 w0 = Subtract(p0, t0);
-            float a = -Dot(n, w0);
-            float b = Dot(n, dir);
-            if (Abs(b) < float.Epsilon) return false; // parallel
-
-            // get intersect point of ray with triangle plane
-            float r = a / b;
-            if (r < 0.0f) return false; // "before" p0
-            if (r > 1.0f) return false; // "after" p1
-
-            Vector3 M = Multiply(dir, r);
-            I = Add(p0, M);// intersect point of line and plane
-
-            // is I inside T?
-            float uu = Dot(u, u);
-            float uv = Dot(u, v);
-            float vv = Dot(v, v);
-            Vector3 w = Subtract(I, t0);
-            float wu = Dot(w, u);
-            float wv = Dot(w, v);
-            float D = uv * uv - uu * vv;
-
-            // get and test parametric coords
-            float s = (uv * wv - vv * wu) / D;
-            if (s < 0.0f || s > 1.0f)        // I is outside T
-                return false;
-
-            float t = (uv * wu - uu * wv) / D;
-            if (t < 0.0f || (s + t) > 1.0f)  // I is outside T
-                return false;
-
-            return true;
-        }
-
-        public static float PointDistanceToSegment(Vector3 p0,
-                                           Vector3 x1, Vector3 x2)
-        {
-            Vector3 L = Subtract(x2, x1); // the segment vector
-            float l2 = Dot(L, L);   // square length of the segment
-
-            Vector3 D = Subtract(p0, x1);   // vector from point to segment start
-            float d = Dot(D, L);     // projection factor [x2-x1].[p0-x1]
-
-            if (d < 0.0f) // closest to x1
-                return D.Length();
-
-            Vector3 E = Multiply(L, d / l2); // intersect
-
-            if (Dot(E, L) > l2) // closest to x2
-            {
-                Vector3 L2 = Subtract(D, L);
-                return L2.Length();
-            }
-
-            Vector3 L3 = Subtract(D, E);
-            return L3.Length();
-        }
-
-        public static void GetTriangleNormal(Vector3 t0, Vector3 t1, Vector3 t2, out Vector3 normal)
-        {
-            Vector3 u = Subtract(t1, t0); // triangle vector 1
-            Vector3 v = Subtract(t2, t0); // triangle vector 2
-            normal = Cross(u, v); // triangle normal
-            float l = normal.Length();
-            normal = Divide(normal, l);
-        }
-
-        public static float PointDistanceToTriangle(Vector3 p0,
-                                                    Vector3 t0, Vector3 t1, Vector3 t2)
-        {
-            Vector3 u = Subtract(t1, t0); // triangle vector 1
-            Vector3 v = Subtract(t2, t0); // triangle vector 2
-            Vector3 n = Cross(u, v); // triangle normal
-            n.X *= -1E6f;
-            n.Y *= -1E6f;
-            n.Z *= -1E6f;
-
-            if (SegmentTriangleIntersect(p0, n, t0, t1, t2, out Vector3 intersect))
-            {
-                Vector3 L = Subtract(intersect, p0);
-                return L.Length();
-            }
-
-            float d0 = PointDistanceToSegment(p0, t0, t1);
-            float d1 = PointDistanceToSegment(p0, t0, t1);
-            float d2 = PointDistanceToSegment(p0, t0, t1);
-
-            return Min(Min(d0, d1), d2);
-        }
-
-        public static bool TestBoxBoxIntersect(Vector3 box0_min, Vector3 box0_max,
-                                               Vector3 box1_min, Vector3 box1_max)
-        {
-            if (box0_min.X > box1_max.X) return false;
-            if (box0_min.Y > box1_max.Y) return false;
-            if (box0_min.Z > box1_max.Z) return false;
-
-            if (box1_min.X > box0_max.X) return false;
-            if (box1_min.Y > box0_max.Y) return false;
-            if (box1_min.Z > box0_max.Z) return false;
-
-            return true;
-        }
-
-        public static bool TestTriangleBoxIntersect(Vector3 vertex0, Vector3 vertex1, Vector3 vertex2,
-                                                    Vector3 boxcenter, Vector3 boxhalfsize)
-        {
-            bool i = false;
-
-            //int triBoxOverlap(float boxcenter[3],float boxhalfsize[3],float triverts[3][3]);
-            try
-            {
-                i = testIntersectsBox.IntersectsBox(boxcenter, boxhalfsize, vertex0, vertex1, vertex2);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("WTF " + e);
-            }
-            if (i == true) return true;
-            return false;
-            /*
-            Vector min, max;
-            min.x = ((vertex0.x < vertex1.x && vertex0.x < vertex2.x) ? vertex0.x : ((vertex1.x < vertex2.x) ? vertex1.x : vertex2.x));
-            min.y = ((vertex0.y < vertex1.y && vertex0.y < vertex2.y) ? vertex0.y : ((vertex1.y < vertex2.y) ? vertex1.y : vertex2.y));
-            min.z = ((vertex0.z < vertex1.z && vertex0.z < vertex2.z) ? vertex0.z : ((vertex1.z < vertex2.z) ? vertex1.z : vertex2.z));
-
-            max.x = ((vertex0.x > vertex1.x && vertex0.x > vertex2.x) ? vertex0.x : ((vertex1.x > vertex2.x) ? vertex1.x : vertex2.x));
-            max.y = ((vertex0.y > vertex1.y && vertex0.y > vertex2.y) ? vertex0.y : ((vertex1.y > vertex2.y) ? vertex1.y : vertex2.y));
-            max.z = ((vertex0.z > vertex1.z && vertex0.z > vertex2.z) ? vertex0.z : ((vertex1.z > vertex2.z) ? vertex1.z : vertex2.z));
-
-            bool outside = false;
-            if (min.x > boxcenter.x + boxhalfsize.x) outside = true;
-            if (max.x < boxcenter.x - boxhalfsize.x) outside = true;
-
-            if (min.y > boxcenter.y + boxhalfsize.y) outside = true;
-            if (max.y < boxcenter.y - boxhalfsize.y) outside = true;
-
-            if (min.z > boxcenter.z + boxhalfsize.z) outside = true;
-            if (max.z < boxcenter.z - boxhalfsize.z) outside = true;
-
-            return !outside;*/
         }
     }
 
