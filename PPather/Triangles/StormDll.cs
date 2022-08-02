@@ -28,33 +28,64 @@ namespace StormDll
     internal unsafe class StormDll
     {
 
-        [DllImport("MPQ\\StormLib.dll")]
+        [DllImport("MPQ\\StormLib_x64.dll")]
         public static extern bool SFileOpenArchive(
             [MarshalAs(UnmanagedType.LPWStr)] string szMpqName,
             uint dwPriority,
             [MarshalAs(UnmanagedType.U4)] OpenArchiveFlags dwFlags,
             out IntPtr phMpq);
 
-        [DllImport("MPQ\\StormLib.dll")]
+        [DllImport("MPQ\\StormLib_x64.dll")]
         public static extern bool SFileCloseArchive(IntPtr hMpq);
 
-        [DllImport("MPQ\\StormLib.dll")]
+        [DllImport("MPQ\\StormLib_x64.dll")]
         public static extern bool SFileExtractFile(
             IntPtr hMpq,
             [MarshalAs(UnmanagedType.LPStr)] string szToExtract,
             [MarshalAs(UnmanagedType.LPWStr)] string szExtracted,
             [MarshalAs(UnmanagedType.U4)] OpenFile dwSearchScope);
 
-        [DllImport("MPQ\\StormLib.dll")]
+        [DllImport("MPQ\\StormLib_x64.dll")]
         public static extern bool SFileOpenPatchArchive(
             IntPtr hMpq,
             [MarshalAs(UnmanagedType.LPStr)] string szMpqName,
             [MarshalAs(UnmanagedType.LPStr)] string szPatchPathPrefix,
             uint dwFlags);
 
-        [DllImport("MPQ\\StormLib.dll")]
+        [DllImport("MPQ\\StormLib_x64.dll")]
         public static extern bool SFileHasFile(IntPtr hMpq,
             [MarshalAs(UnmanagedType.LPStr)] string szFileName);
+
+/*if _WIN32
+        [DllImport("MPQ\\StormLib_x86.dll")]
+        public static extern bool SFileOpenArchive(
+            [MarshalAs(UnmanagedType.LPStr)] string szMpqName,
+            uint dwPriority,
+            [MarshalAs(UnmanagedType.U4)] OpenArchiveFlags dwFlags,
+            out IntPtr phMpq);
+
+        [DllImport("MPQ\\StormLib_x86.dll")]
+        public static extern bool SFileCloseArchive(IntPtr hMpq);
+
+        [DllImport("MPQ\\StormLib_x86.dll")]
+        public static extern bool SFileExtractFile(
+            IntPtr hMpq,
+            [MarshalAs(UnmanagedType.LPStr)] string szToExtract,
+            [MarshalAs(UnmanagedType.LPSStr)] string szExtracted,
+            [MarshalAs(UnmanagedType.U4)] OpenFile dwSearchScope);
+
+        [DllImport("MPQ\\StormLib_x86.dll")]
+        public static extern bool SFileOpenPatchArchive(
+            IntPtr hMpq,
+            [MarshalAs(UnmanagedType.LPStr)] string szMpqName,
+            [MarshalAs(UnmanagedType.LPStr)] string szPatchPathPrefix,
+            uint dwFlags);
+
+        [DllImport("MPQ\\StormLib_x86.dll")]
+        public static extern bool SFileHasFile(IntPtr hMpq,
+            [MarshalAs(UnmanagedType.LPStr)] string szFileName);
+*/
+
 
     }
 

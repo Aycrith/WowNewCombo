@@ -29,7 +29,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="MPQ\StormLib.dll">
+    <None Update="MPQ\StormLib_x64.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="MPQ\StormLib_x86.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
