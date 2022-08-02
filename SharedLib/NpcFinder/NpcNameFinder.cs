@@ -92,6 +92,8 @@ namespace SharedLib.NpcFinder
 
         public float colorFuzziness { get; set; } = 15f;
 
+        private const float colorFuzz = 15;
+
         public int topOffset { get; set; } = 110;
 
         public int npcPosYOffset { get; set; }
@@ -115,14 +117,31 @@ namespace SharedLib.NpcFinder
 
         #region Colors
 
-        private readonly Color fEnemy = Color.FromArgb(0, 250, 5, 5);
-        private readonly Color fFriendly = Color.FromArgb(0, 5, 250, 5);
-        private readonly Color fNeutrual = Color.FromArgb(0, 250, 250, 5);
-        private readonly Color fCorpse = Color.FromArgb(0, 128, 128, 128);
+        private const byte fE_R = 250;
+        private const byte fE_G = 5;
+        private const byte fE_B = 5;
 
-        private readonly Color sEnemy = Color.FromArgb(0, 240, 35, 35);
-        private readonly Color sFriendly = Color.FromArgb(0, 0, 250, 0);
-        private readonly Color sNeutrual = Color.FromArgb(0, 250, 250, 0);
+        private const byte fF_R = 5;
+        private const byte fF_G = 250;
+        private const byte fF_B = 5;
+
+        private const byte fN_R = 250;
+        private const byte fN_G = 250;
+        private const byte fN_B = 5;
+
+        private const byte fC_RGB = 128;
+
+        private const byte sE_R = 240;
+        private const byte sE_G = 35;
+        private const byte sE_B = 35;
+
+        private const byte sF_R = 0;
+        private const byte sF_G = 250;
+        private const byte sF_B = 0;
+
+        private const byte sN_R = 250;
+        private const byte sN_G = 250;
+        private const byte sN_B = 0;
 
         #endregion
 
@@ -240,38 +259,38 @@ namespace SharedLib.NpcFinder
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool SimpleColorEnemy(byte r, byte g, byte b)
+        private static bool SimpleColorEnemy(byte r, byte g, byte b)
         {
-            return r > sEnemy.R && g <= sEnemy.G && b <= sEnemy.B;
+            return r > sE_R && g <= sE_G && b <= sE_B;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool SimpleColorFriendly(byte r, byte g, byte b)
+        private static bool SimpleColorFriendly(byte r, byte g, byte b)
         {
-            return r == sFriendly.R && g > sFriendly.G && b == sFriendly.B;
+            return r == sF_R && g > sF_G && b == sF_B;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool SimpleColorNeutral(byte r, byte g, byte b)
+        private static bool SimpleColorNeutral(byte r, byte g, byte b)
         {
-            return r > sNeutrual.R && g > sNeutrual.G && b == sNeutrual.B;
+            return r > sN_R && g > sN_G && b == sN_B;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool SimpleColorCorpse(byte r, byte g, byte b)
+        private static bool SimpleColorCorpse(byte r, byte g, byte b)
         {
-            return r == fCorpse.R && g == fCorpse.G && b == fCorpse.B;
+            return r == fC_RGB && g == fC_RGB && b == fC_RGB;
         }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool CombinedFriendlyNeutrual(byte r, byte g, byte b)
+        private static bool CombinedFriendlyNeutrual(byte r, byte g, byte b)
         {
             return SimpleColorFriendly(r, g, b) || SimpleColorNeutral(r, g, b);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool CombinedEnemyNeutrual(byte r, byte g, byte b)
+        private static bool CombinedEnemyNeutrual(byte r, byte g, byte b)
         {
             return SimpleColorEnemy(r, g, b) || SimpleColorNeutral(r, g, b);
         }
@@ -291,34 +310,52 @@ namespace SharedLib.NpcFinder
             switch (nameType)
             {
                 case NpcNames.Enemy | NpcNames.Neutral:
-                    colorMatcher = (byte r, byte g, byte b) => FuzzyColor(fEnemy, r, g, b) || FuzzyColor(fNeutrual, r, g, b);
+                    colorMatcher = FuzzyEnemyOrNeutral;
                     return;
                 case NpcNames.Friendly | NpcNames.Neutral:
-                    colorMatcher = (byte r, byte g, byte b) => FuzzyColor(fFriendly, r, g, b) || FuzzyColor(fNeutrual, r, g, b);
+                    colorMatcher = FuzzyFriendlyOrNeutral;
                     return;
                 case NpcNames.Enemy:
-                    colorMatcher = (byte r, byte g, byte b) => FuzzyColor(fEnemy, r, g, b);
+                    colorMatcher = FuzzyEnemy;
                     return;
                 case NpcNames.Friendly:
-                    colorMatcher = (byte r, byte g, byte b) => FuzzyColor(fFriendly, r, g, b);
+                    colorMatcher = FuzzyFriendly;
                     return;
                 case NpcNames.Neutral:
-                    colorMatcher = (byte r, byte g, byte b) => FuzzyColor(fNeutrual, r, g, b);
+                    colorMatcher = FuzzyNeutral;
                     return;
                 case NpcNames.Corpse:
-                    colorMatcher = (byte r, byte g, byte b) => FuzzyColor(fCorpse, r, g, b);
+                    colorMatcher = FuzzyCorpse;
                     return;
             }
         }
 
-        private bool FuzzyColor(Color target, byte r, byte g, byte b)
+        private static bool FuzzyColor(byte rr, byte gg, byte bb, byte r, byte g, byte b, float fuzzy)
         {
             return MathF.Sqrt(
-                ((target.R - r) * (target.R - r)) +
-                ((target.G - g) * (target.G - g)) +
-                ((target.B - b) * (target.B - b)))
-                <= colorFuzziness;
+                ((rr - r) * (rr - r)) +
+                ((gg - g) * (rr - g)) +
+                ((bb - b) * (bb - b)))
+                <= fuzzy;
         }
+
+        private static bool FuzzyEnemyOrNeutral(byte r, byte g, byte b)
+            => FuzzyColor(fE_R, fE_G, fE_B, r, g, b, colorFuzz) || FuzzyColor(fN_R, fN_G, fN_B, r, g, b, colorFuzz);
+
+        private static bool FuzzyFriendlyOrNeutral(byte r, byte g, byte b)
+            => FuzzyColor(fF_R, fF_G, fF_B, r, g, b, colorFuzz) || FuzzyColor(fN_R, fN_G, fN_B, r, g, b, colorFuzz);
+
+        private static bool FuzzyEnemy(byte r, byte g, byte b)
+            => FuzzyColor(fE_R, fE_G, fE_B, r, g, b, colorFuzz);
+
+        private static bool FuzzyFriendly(byte r, byte g, byte b)
+            => FuzzyColor(fF_R, fF_G, fF_B, r, g, b, colorFuzz);
+
+        private static bool FuzzyNeutral(byte r, byte g, byte b)
+            => FuzzyColor(fN_R, fN_G, fN_B, r, g, b, colorFuzz);
+
+        private static bool FuzzyCorpse(byte r, byte g, byte b)
+            => FuzzyColor(fC_RGB, fC_RGB, fC_RGB, r, g, b, colorFuzz);
 
         #endregion
 
@@ -329,7 +366,7 @@ namespace SharedLib.NpcFinder
 
         public void Update()
         {
-            var npcNameLines = PopulateLinesOfNpcNames(bitmapProvider.Bitmap);
+            var npcNameLines = PopulateLinesOfNpcNames(bitmapProvider.Bitmap, bitmapProvider.Rect);
             var npcs = DetermineNpcs(npcNameLines);
 
             Npcs = npcs.
@@ -414,7 +451,7 @@ namespace SharedLib.NpcFinder
             return npcs;
         }
 
-        private List<LineOfNpcName> PopulateLinesOfNpcNames(Bitmap bitmap)
+        private List<LineOfNpcName> PopulateLinesOfNpcNames(Bitmap bitmap, Rectangle rect)
         {
             List<LineOfNpcName> npcNameLine = new();
 
@@ -423,9 +460,13 @@ namespace SharedLib.NpcFinder
             float lengthDiff = ScaleWidth(LinesOfNpcLengthDiff);
             float minEndLength = minLength - lengthDiff;
 
+            Rectangle Area = this.Area;
+            int bytesPerPixel = this.bytesPerPixel;
+            int incX = this.incX;
+
             unsafe
             {
-                BitmapData bitmapData = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height), ImageLockMode.ReadOnly, pixelFormat);
+                BitmapData bitmapData = bitmap.LockBits(new Rectangle(0, 0, rect.Width, rect.Height), ImageLockMode.ReadOnly, pixelFormat);
 
                 //for (int y = Area.Top; y < Area.Height; y += incY)
                 void body(int y)
