@@ -425,7 +425,7 @@ namespace SharedLib.NpcFinder
 
             unsafe
             {
-                BitmapData bitmapData = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height), ImageLockMode.ReadOnly, pixelFormat);
+                BitmapData bitmapData = bitmap.LockBits(new Rectangle(0, 0, rect.Width, rect.Height), ImageLockMode.ReadOnly, pixelFormat);
 
                 //for (int y = Area.Top; y < Area.Height; y += incY)
                 void body(int y)
