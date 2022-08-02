@@ -174,119 +174,117 @@ namespace WowTriangles
             return true;
         }
 
-        //https://gist.github.com/StagPoint/76ae48f5d7ca2f9820748d08e55c9806
+        // From the book "Real-Time Collision Detection" by Christer Ericson, page 169
+        // See also the published Errata at http://realtimecollisiondetection.net/books/rtcd/errata/
         public static bool TestTriangleBoxIntersect(in Vector3 a, in Vector3 b, in Vector3 c, in Vector3 boxCenter, in Vector3 boxExtents)
         {
-            // From the book "Real-Time Collision Detection" by Christer Ericson, page 169
-            // See also the published Errata at http://realtimecollisiondetection.net/books/rtcd/errata/
-
             // Translate triangle as conceptually moving AABB to origin
-            var v0 = (a - boxCenter);
-            var v1 = (b - boxCenter);
-            var v2 = (c - boxCenter);
+            Vector3 v0 = a - boxCenter;
+            Vector3 v1 = b - boxCenter;
+            Vector3 v2 = c - boxCenter;
 
             // Compute edge vectors for triangle
-            var f0 = (v1 - v0);
-            var f1 = (v2 - v1);
-            var f2 = (v0 - v2);
+            Vector3 f0 = v1 - v0;
+            Vector3 f1 = v2 - v1;
+            Vector3 f2 = v0 - v2;
 
             #region Test axes a00..a22 (category 3)
 
             // Test axis a00
-            var a00 = new Vector3(0, -f0.Z, f0.Y);
-            var p0 = Vector3.Dot(v0, a00);
-            var p1 = Vector3.Dot(v1, a00);
-            var p2 = Vector3.Dot(v2, a00);
-            var r = boxExtents.Y * Math.Abs(f0.Z) + boxExtents.Z * Math.Abs(f0.Y);
-            if (Math.Max(-fmax(p0, p1, p2), fmin(p0, p1, p2)) > r)
+            Vector3 a00 = new(0, -f0.Z, f0.Y);
+            float p0 = Dot(v0, a00);
+            float p1 = Dot(v1, a00);
+            float p2 = Dot(v2, a00);
+            float r = boxExtents.Y * Abs(f0.Z) + boxExtents.Z * Abs(f0.Y);
+            if (Max(-Max3(p0, p1, p2), Min3(p0, p1, p2)) > r)
             {
                 return false;
             }
 
             // Test axis a01
-            var a01 = new Vector3(0, -f1.Z, f1.Y);
-            p0 = Vector3.Dot(v0, a01);
-            p1 = Vector3.Dot(v1, a01);
-            p2 = Vector3.Dot(v2, a01);
-            r = boxExtents.Y * Math.Abs(f1.Z) + boxExtents.Z * Math.Abs(f1.Y);
-            if (Math.Max(-fmax(p0, p1, p2), fmin(p0, p1, p2)) > r)
+            Vector3 a01 = new(0, -f1.Z, f1.Y);
+            p0 = Dot(v0, a01);
+            p1 = Dot(v1, a01);
+            p2 = Dot(v2, a01);
+            r = boxExtents.Y * Abs(f1.Z) + boxExtents.Z * Abs(f1.Y);
+            if (Max(-Max3(p0, p1, p2), Min3(p0, p1, p2)) > r)
             {
                 return false;
             }
 
             // Test axis a02
-            var a02 = new Vector3(0, -f2.Z, f2.Y);
-            p0 = Vector3.Dot(v0, a02);
-            p1 = Vector3.Dot(v1, a02);
-            p2 = Vector3.Dot(v2, a02);
-            r = boxExtents.Y * Math.Abs(f2.Z) + boxExtents.Z * Math.Abs(f2.Y);
-            if (Math.Max(-fmax(p0, p1, p2), fmin(p0, p1, p2)) > r)
+            Vector3 a02 = new(0, -f2.Z, f2.Y);
+            p0 = Dot(v0, a02);
+            p1 = Dot(v1, a02);
+            p2 = Dot(v2, a02);
+            r = boxExtents.Y * Abs(f2.Z) + boxExtents.Z * Abs(f2.Y);
+            if (Max(-Max3(p0, p1, p2), Min3(p0, p1, p2)) > r)
             {
                 return false;
             }
 
             // Test axis a10
-            var a10 = new Vector3(f0.Z, 0, -f0.X);
-            p0 = Vector3.Dot(v0, a10);
-            p1 = Vector3.Dot(v1, a10);
-            p2 = Vector3.Dot(v2, a10);
-            r = boxExtents.X * Math.Abs(f0.Z) + boxExtents.Z * Math.Abs(f0.X);
-            if (Math.Max(-fmax(p0, p1, p2), fmin(p0, p1, p2)) > r)
+            Vector3 a10 = new(f0.Z, 0, -f0.X);
+            p0 = Dot(v0, a10);
+            p1 = Dot(v1, a10);
+            p2 = Dot(v2, a10);
+            r = boxExtents.X * Abs(f0.Z) + boxExtents.Z * Abs(f0.X);
+            if (Max(-Max3(p0, p1, p2), Min3(p0, p1, p2)) > r)
             {
                 return false;
             }
 
             // Test axis a11
-            var a11 = new Vector3(f1.Z, 0, -f1.X);
-            p0 = Vector3.Dot(v0, a11);
-            p1 = Vector3.Dot(v1, a11);
-            p2 = Vector3.Dot(v2, a11);
-            r = boxExtents.X * Math.Abs(f1.Z) + boxExtents.Z * Math.Abs(f1.X);
-            if (Math.Max(-fmax(p0, p1, p2), fmin(p0, p1, p2)) > r)
+            Vector3 a11 = new(f1.Z, 0, -f1.X);
+            p0 = Dot(v0, a11);
+            p1 = Dot(v1, a11);
+            p2 = Dot(v2, a11);
+            r = boxExtents.X * Abs(f1.Z) + boxExtents.Z * Abs(f1.X);
+            if (Max(-Max3(p0, p1, p2), Min3(p0, p1, p2)) > r)
             {
                 return false;
             }
 
             // Test axis a12
-            var a12 = new Vector3(f2.Z, 0, -f2.X);
-            p0 = Vector3.Dot(v0, a12);
-            p1 = Vector3.Dot(v1, a12);
-            p2 = Vector3.Dot(v2, a12);
-            r = boxExtents.X * Math.Abs(f2.Z) + boxExtents.Z * Math.Abs(f2.X);
-            if (Math.Max(-fmax(p0, p1, p2), fmin(p0, p1, p2)) > r)
+            Vector3 a12 = new(f2.Z, 0, -f2.X);
+            p0 = Dot(v0, a12);
+            p1 = Dot(v1, a12);
+            p2 = Dot(v2, a12);
+            r = boxExtents.X * Abs(f2.Z) + boxExtents.Z * Abs(f2.X);
+            if (Max(-Max3(p0, p1, p2), Min3(p0, p1, p2)) > r)
             {
                 return false;
             }
 
             // Test axis a20
-            var a20 = new Vector3(-f0.Y, f0.X, 0);
-            p0 = Vector3.Dot(v0, a20);
-            p1 = Vector3.Dot(v1, a20);
-            p2 = Vector3.Dot(v2, a20);
-            r = boxExtents.X * Math.Abs(f0.Y) + boxExtents.Y * Math.Abs(f0.X);
-            if (Math.Max(-fmax(p0, p1, p2), fmin(p0, p1, p2)) > r)
+            Vector3 a20 = new(-f0.Y, f0.X, 0);
+            p0 = Dot(v0, a20);
+            p1 = Dot(v1, a20);
+            p2 = Dot(v2, a20);
+            r = boxExtents.X * Abs(f0.Y) + boxExtents.Y * Abs(f0.X);
+            if (Max(-Max3(p0, p1, p2), Min3(p0, p1, p2)) > r)
             {
                 return false;
             }
 
             // Test axis a21
-            var a21 = new Vector3(-f1.Y, f1.X, 0);
-            p0 = Vector3.Dot(v0, a21);
-            p1 = Vector3.Dot(v1, a21);
-            p2 = Vector3.Dot(v2, a21);
-            r = boxExtents.X * Math.Abs(f1.Y) + boxExtents.Y * Math.Abs(f1.X);
-            if (Math.Max(-fmax(p0, p1, p2), fmin(p0, p1, p2)) > r)
+            Vector3 a21 = new(-f1.Y, f1.X, 0);
+            p0 = Dot(v0, a21);
+            p1 = Dot(v1, a21);
+            p2 = Dot(v2, a21);
+            r = boxExtents.X * Abs(f1.Y) + boxExtents.Y * Abs(f1.X);
+            if (Max(-Max3(p0, p1, p2), Min3(p0, p1, p2)) > r)
             {
                 return false;
             }
 
             // Test axis a22
-            var a22 = new Vector3(-f2.Y, f2.X, 0);
-            p0 = Vector3.Dot(v0, a22);
-            p1 = Vector3.Dot(v1, a22);
-            p2 = Vector3.Dot(v2, a22);
-            r = boxExtents.X * Math.Abs(f2.Y) + boxExtents.Y * Math.Abs(f2.X);
-            if (Math.Max(-fmax(p0, p1, p2), fmin(p0, p1, p2)) > r)
+            Vector3 a22 = new(-f2.Y, f2.X, 0);
+            p0 = Dot(v0, a22);
+            p1 = Dot(v1, a22);
+            p2 = Dot(v2, a22);
+            r = boxExtents.X * Abs(f2.Y) + boxExtents.Y * Abs(f2.X);
+            if (Max(-Max3(p0, p1, p2), Min3(p0, p1, p2)) > r)
             {
                 return false;
             }
@@ -297,19 +295,19 @@ namespace WowTriangles
 
             // Exit if...
             // ... [-extents.X, extents.X] and [min(v0.X,v1.X,v2.X), max(v0.X,v1.X,v2.X)] do not overlap
-            if (fmax(v0.X, v1.X, v2.X) < -boxExtents.X || fmin(v0.X, v1.X, v2.X) > boxExtents.X)
+            if (Max3(v0.X, v1.X, v2.X) < -boxExtents.X || Min3(v0.X, v1.X, v2.X) > boxExtents.X)
             {
                 return false;
             }
 
             // ... [-extents.Y, extents.Y] and [min(v0.Y,v1.Y,v2.Y), max(v0.Y,v1.Y,v2.Y)] do not overlap
-            if (fmax(v0.Y, v1.Y, v2.Y) < -boxExtents.Y || fmin(v0.Y, v1.Y, v2.Y) > boxExtents.Y)
+            if (Max3(v0.Y, v1.Y, v2.Y) < -boxExtents.Y || Min3(v0.Y, v1.Y, v2.Y) > boxExtents.Y)
             {
                 return false;
             }
 
             // ... [-extents.Z, extents.Z] and [min(v0.Z,v1.Z,v2.Z), max(v0.Z,v1.Z,v2.Z)] do not overlap
-            if (fmax(v0.Z, v1.Z, v2.Z) < -boxExtents.Z || fmin(v0.Z, v1.Z, v2.Z) > boxExtents.Z)
+            if (Max3(v0.Z, v1.Z, v2.Z) < -boxExtents.Z || Min3(v0.Z, v1.Z, v2.Z) > boxExtents.Z)
             {
                 return false;
             }
@@ -318,13 +316,13 @@ namespace WowTriangles
 
             #region Test separating axis corresponding to triangle face normal (category 2)
 
-            var planeNormal = Vector3.Cross(f0, f1);
-            var planeDistance = Vector3.Dot(planeNormal, v0);
+            Vector3 planeNormal = Cross(f0, f1);
+            float planeDistance = Dot(planeNormal, v0);
 
             // Compute the projection interval radius of b onto L(t) = b.c + t * p.n
-            r = boxExtents.X * Math.Abs(planeNormal.X)
-                + boxExtents.Y * Math.Abs(planeNormal.Y)
-                + boxExtents.Z * Math.Abs(planeNormal.Z);
+            r = boxExtents.X * Abs(planeNormal.X)
+                + boxExtents.Y * Abs(planeNormal.Y)
+                + boxExtents.Z * Abs(planeNormal.Z);
 
             // Intersection occurs when plane distance falls within [-r,+r] interval
             if (planeDistance > r)
@@ -337,14 +335,16 @@ namespace WowTriangles
             return true;
         }
 
-        private static float fmin(float a, float b, float c)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static float Min3(float a, float b, float c)
         {
-            return Math.Min(a, Math.Min(b, c));
+            return Min(a, Min(b, c));
         }
 
-        private static float fmax(float a, float b, float c)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static float Max3(float a, float b, float c)
         {
-            return Math.Max(a, Math.Max(b, c));
+            return Max(a, Max(b, c));
         }
     }
 
