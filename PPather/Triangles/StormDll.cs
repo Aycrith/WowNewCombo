@@ -25,7 +25,7 @@ using System.Runtime.InteropServices;
 
 namespace StormDll
 {
-    internal unsafe class StormDll
+    internal unsafe class StormDllx64
     {
 
         [DllImport("MPQ\\StormLib_x64.dll")]
@@ -56,10 +56,14 @@ namespace StormDll
         public static extern bool SFileHasFile(IntPtr hMpq,
             [MarshalAs(UnmanagedType.LPStr)] string szFileName);
 
-/*if _WIN32
+    }
+
+    internal unsafe class StormDllx86
+    {
+
         [DllImport("MPQ\\StormLib_x86.dll")]
         public static extern bool SFileOpenArchive(
-            [MarshalAs(UnmanagedType.LPStr)] string szMpqName,
+            [MarshalAs(UnmanagedType.LPWStr)] string szMpqName,
             uint dwPriority,
             [MarshalAs(UnmanagedType.U4)] OpenArchiveFlags dwFlags,
             out IntPtr phMpq);
@@ -71,7 +75,7 @@ namespace StormDll
         public static extern bool SFileExtractFile(
             IntPtr hMpq,
             [MarshalAs(UnmanagedType.LPStr)] string szToExtract,
-            [MarshalAs(UnmanagedType.LPSStr)] string szExtracted,
+            [MarshalAs(UnmanagedType.LPWStr)] string szExtracted,
             [MarshalAs(UnmanagedType.U4)] OpenFile dwSearchScope);
 
         [DllImport("MPQ\\StormLib_x86.dll")]
@@ -84,8 +88,6 @@ namespace StormDll
         [DllImport("MPQ\\StormLib_x86.dll")]
         public static extern bool SFileHasFile(IntPtr hMpq,
             [MarshalAs(UnmanagedType.LPStr)] string szFileName);
-*/
-
 
     }
 
@@ -167,12 +169,25 @@ namespace StormDll
 
     public unsafe class Archive
     {
+        #region "Processor check"
+        static bool is64BitProcess = (IntPtr.Size == 8);
+        #endregion
+
         private IntPtr handle = IntPtr.Zero;
 
         public Archive(string file, uint Prio, OpenArchiveFlags Flags, ILogger logger)
         {
-            bool r = StormDll.SFileOpenArchive(file, Prio, Flags,out handle);
-
+            bool r = false;  
+            if (is64BitProcess)
+            {
+                //64 bit 
+                r = StormDllx64.SFileOpenArchive(file, Prio, Flags, out handle);
+            }
+            else
+            {
+                //32 bit
+                r = StormDllx86.SFileOpenArchive(file, Prio, Flags, out handle);
+            }
             if (logger.IsEnabled(LogLevel.Trace))
                 logger.LogTrace($"Archive open ? {r} -> {file}");
         }
@@ -184,7 +199,17 @@ namespace StormDll
 
         public bool Close()
         {
-            bool r = StormDll.SFileCloseArchive(handle);
+            bool r = false;
+            if (is64BitProcess)
+            {
+                //64 bit 
+                r = StormDllx64.SFileCloseArchive(handle);
+            }
+            else
+            {
+                //32 bit
+                r = StormDllx86.SFileCloseArchive(handle);
+            }
             if (r)
                 handle = IntPtr.Zero;
             return r;
@@ -192,12 +217,37 @@ namespace StormDll
 
         public bool HasFile(string name)
         {
-            return StormDll.SFileHasFile(handle, name);
+            bool r = false;
+            if (is64BitProcess)
+            {
+                //64 bit 
+                r = StormDllx64.SFileHasFile(handle, name);
+            }
+            else
+            {
+                //32 bit
+                r = StormDllx86.SFileHasFile(handle, name);
+            }
+
+            return r;
         }
 
         public bool ExtractFile(string from, string to,OpenFile dwSearchScope)
         {
-            return StormDll.SFileExtractFile(handle, from, to, dwSearchScope);
+            bool r = false;
+            if (is64BitProcess)
+            {
+                //64 bit 
+                r = StormDllx64.SFileExtractFile(handle, from, to, dwSearchScope);
+            }
+            else
+            {
+                //32 bit
+                r = StormDllx86.SFileExtractFile(handle, from, to, dwSearchScope);
+            }
+
+            return r;
+
         }
     }
 }
