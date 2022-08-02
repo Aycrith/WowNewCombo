@@ -19,98 +19,99 @@
  */
 
 using Microsoft.Extensions.Logging;
+
+using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 namespace StormDll
 {
-    internal unsafe class StormDll
+    internal unsafe class StormDllx64
     {
-        /*
-		 *
-typedef unsigned long       DWORD;
-typedef DWORD LCID;
 
-// Archive opening/closing
-LCID  WINAPI SFileSetLocale(LCID lcNewLocale);
-LCID  WINAPI SFileGetLocale();
-BOOL  WINAPI SFileOpenArchive(const char * szMpqName, DWORD dwPriority, DWORD dwFlags, HANDLE * phMpq);
-BOOL  WINAPI SFileCloseArchive(HANDLE hMpq);
+        [DllImport("MPQ\\StormLib_x64.dll")]
+        public static extern bool SFileOpenArchive(
+            [MarshalAs(UnmanagedType.LPWStr)] string szMpqName,
+            uint dwPriority,
+            [MarshalAs(UnmanagedType.U4)] OpenArchiveFlags dwFlags,
+            out IntPtr phMpq);
 
-// File opening/closing
-BOOL  WINAPI SFileOpenFileEx(HANDLE hMpq, const char * szFileName, DWORD dwSearchScope, HANDLE * phFile);
-BOOL  WINAPI SFileCloseFile(HANDLE hFile);
+        [DllImport("MPQ\\StormLib_x64.dll")]
+        public static extern bool SFileCloseArchive(IntPtr hMpq);
 
-// File I/O
-DWORD WINAPI SFileGetFilePos(HANDLE hFile, DWORD * pdwFilePosHigh = NULL);
-DWORD WINAPI SFileGetFileSize(HANDLE hFile, DWORD * pdwFileSizeHigh = NULL);
-DWORD WINAPI SFileSetFilePointer(HANDLE hFile, LONG lFilePos, LONG * pdwFilePosHigh, DWORD dwMethod);
-BOOL  WINAPI SFileReadFile(HANDLE hFile, VOID * lpBuffer, DWORD dwToRead,
-						   DWORD * pdwRead = NULL, LPOVERLAPPED lpOverlapped = NULL);
+        [DllImport("MPQ\\StormLib_x64.dll")]
+        public static extern bool SFileExtractFile(
+            IntPtr hMpq,
+            [MarshalAs(UnmanagedType.LPStr)] string szToExtract,
+            [MarshalAs(UnmanagedType.LPWStr)] string szExtracted,
+            [MarshalAs(UnmanagedType.U4)] OpenFile dwSearchScope);
 
-// Adds another listfile into MPQ. The currently added listfile(s) remain,
-// so you can use this API to combining more listfiles.
-// Note that this function is internally called by SFileFindFirstFile
-int   WINAPI SFileAddListFile(HANDLE hMpq, const char * szListFile);
+        [DllImport("MPQ\\StormLib_x64.dll")]
+        public static extern bool SFileOpenPatchArchive(
+            IntPtr hMpq,
+            [MarshalAs(UnmanagedType.LPStr)] string szMpqName,
+            [MarshalAs(UnmanagedType.LPStr)] string szPatchPathPrefix,
+            uint dwFlags);
 
-		 */
+        [DllImport("MPQ\\StormLib_x64.dll")]
+        public static extern bool SFileHasFile(IntPtr hMpq,
+            [MarshalAs(UnmanagedType.LPStr)] string szFileName);
 
-        [DllImport("MPQ\\StormLib.dll")]
-        public static extern uint SFileGetLocale();
-
-        [DllImport("MPQ\\StormLib.dll")]
-        public static extern bool SFileOpenArchive([MarshalAs(UnmanagedType.LPStr)] string szMpqName,
-                              uint dwPriority, uint dwFlags,
-                              void** phMpq);
-
-        [DllImport("MPQ\\StormLib.dll")]
-        public static extern bool SFileCloseArchive(void* hMpq);
-
-        [DllImport("MPQ\\StormLib.dll")]
-        public static extern bool SFileOpenFileEx(void* hMpq,
-                                [MarshalAs(UnmanagedType.LPStr)] string szFileName,
-                                uint dwSearchScope,
-                                void** phFile);
-
-        [DllImport("MPQ\\StormLib.dll")]
-        public static extern bool SFileCloseFile(void* hFile);
-
-        [DllImport("MPQ\\StormLib.dll")]
-        public static extern uint SFileGetFilePos(void* hFile, uint* pdwFilePosHigh);
-
-        [DllImport("MPQ\\StormLib.dll")]
-        public static extern uint SFileGetFileSize(void* hFile, uint* pdwFileSizeHigh);
-
-        [DllImport("MPQ\\StormLib.dll")]
-        public static extern uint SFileSetFilePointer(void* hFile,
-                    int lFilePos, int* pdwFilePosHigh, uint dwMethod);
-
-        [DllImport("MPQ\\StormLib.dll")]
-        public static extern bool SFileReadFile(void* hFile, void* lpBuffer, uint dwToRead,
-                           uint* pdwRead, void* lpOverlapped);
-
-        [DllImport("MPQ\\StormLib.dll")]
-        public static extern bool SFileExtractFile(void* hMpq,
-                    [MarshalAs(UnmanagedType.LPStr)] string szToExtract,
-                    [MarshalAs(UnmanagedType.LPStr)] string szExtracted);
-
-        [DllImport("MPQ\\StormLib.dll")]
-        public static extern bool SFileHasFile(void* hMpq,
-                    [MarshalAs(UnmanagedType.LPStr)] string szFileName);
-
-        /*
-		[DllImport("user32.dll")]
-		public static extern int MessageBoxA(int h,
-					[MarshalAs(UnmanagedType.LPStr)]string m,
-					[MarshalAs(UnmanagedType.LPStr)]string c,
-					int type);
-		 * */
-
-        public static uint GetLocale()
-        {
-            return SFileGetLocale();
-        }
     }
+
+    internal unsafe class StormDllx86
+    {
+
+        [DllImport("MPQ\\StormLib_x86.dll")]
+        public static extern bool SFileOpenArchive(
+            [MarshalAs(UnmanagedType.LPWStr)] string szMpqName,
+            uint dwPriority,
+            [MarshalAs(UnmanagedType.U4)] OpenArchiveFlags dwFlags,
+            out IntPtr phMpq);
+
+        [DllImport("MPQ\\StormLib_x86.dll")]
+        public static extern bool SFileCloseArchive(IntPtr hMpq);
+
+        [DllImport("MPQ\\StormLib_x86.dll")]
+        public static extern bool SFileExtractFile(
+            IntPtr hMpq,
+            [MarshalAs(UnmanagedType.LPStr)] string szToExtract,
+            [MarshalAs(UnmanagedType.LPWStr)] string szExtracted,
+            [MarshalAs(UnmanagedType.U4)] OpenFile dwSearchScope);
+
+        [DllImport("MPQ\\StormLib_x86.dll")]
+        public static extern bool SFileOpenPatchArchive(
+            IntPtr hMpq,
+            [MarshalAs(UnmanagedType.LPStr)] string szMpqName,
+            [MarshalAs(UnmanagedType.LPStr)] string szPatchPathPrefix,
+            uint dwFlags);
+
+        [DllImport("MPQ\\StormLib_x86.dll")]
+        public static extern bool SFileHasFile(IntPtr hMpq,
+            [MarshalAs(UnmanagedType.LPStr)] string szFileName);
+
+    }
+
+    // Flags for SFileOpenArchive
+    public enum OpenArchiveFlags : uint
+    {
+        NO_LISTFILE = 0x0010,   // Don't load the internal listfile
+        NO_ATTRIBUTES = 0x0020,   // Don't open the attributes
+        MFORCE_MPQ_V1 = 0x0040,   // Always open the archive as MPQ v 1.00, ignore the "wFormatVersion" variable in the header
+        MCHECK_SECTOR_CRC = 0x0080,   // On files with MPQ_FILE_SECTOR_CRC, the CRC will be checked when reading file
+        READ_ONLY = 0x0100,   // Open the archive for read-only access
+        ENCRYPTED = 0x0200,   // Opens an encrypted MPQ archive (Example: Starcraft II installation)
+    };
+
+    // Values for SFileExtractFile
+    public enum OpenFile : uint
+    {
+        FROM_MPQ = 0x00000000,   // Open the file from the MPQ archive
+        PATCHED_FILE = 0x00000001,   // Open the file from the MPQ archive
+        BY_INDEX = 0x00000002,   // The 'szFileName' parameter is actually the file index
+        ANY_LOCALE = 0xFFFFFFFE,   // Reserved for StormLib internal use
+        LOCAL_FILE = 0xFFFFFFFF,   // Open the file from the MPQ archive
+    };
 
     public unsafe class ArchiveSet
     {
@@ -139,13 +140,13 @@ int   WINAPI SFileAddListFile(HANDLE hMpq, const char * szListFile);
             }
         }
 
-        public bool ExtractFile(string from, string to)
+        public bool ExtractFile(string from, string to, OpenFile dwSearchScope = OpenFile.FROM_MPQ)
         {
             foreach (Archive a in archives)
             {
                 if (a.HasFile(from))
                 {
-                    bool ok = a.ExtractFile(from, to);
+                    bool ok = a.ExtractFile(from, to, dwSearchScope);
                     if (!ok)
                     {
                         if (logger.IsEnabled(LogLevel.Trace))
@@ -169,40 +170,85 @@ int   WINAPI SFileAddListFile(HANDLE hMpq, const char * szListFile);
 
     public unsafe class Archive
     {
-        private void* handle;
+        #region "Processor check"
+        static bool is64BitProcess = (IntPtr.Size == 8);
+        #endregion
 
-        public Archive(string file, uint Prio, uint Flags, ILogger logger)
+        private IntPtr handle = IntPtr.Zero;
+
+        public Archive(string file, uint Prio, OpenArchiveFlags Flags, ILogger logger)
         {
-            void* h;
-            void** hp = &h;
-            bool r = StormDll.SFileOpenArchive(file, Prio, Flags, hp);
-            handle = h;
-
+            bool r = false;
+            if (is64BitProcess)
+            {
+                //64 bit 
+                r = StormDllx64.SFileOpenArchive(file, Prio, Flags, out handle);
+            }
+            else
+            {
+                //32 bit
+                r = StormDllx86.SFileOpenArchive(file, Prio, Flags, out handle);
+            }
             if (logger.IsEnabled(LogLevel.Trace))
                 logger.LogTrace($"Archive open ? {r} -> {file}");
         }
 
         public bool IsOpen()
         {
-            return handle != null;
+            return handle != IntPtr.Zero;
         }
 
         public bool Close()
         {
-            bool r = StormDll.SFileCloseArchive(handle);
+            bool r = false;
+            if (is64BitProcess)
+            {
+                //64 bit 
+                r = StormDllx64.SFileCloseArchive(handle);
+            }
+            else
+            {
+                //32 bit
+                r = StormDllx86.SFileCloseArchive(handle);
+            }
             if (r)
-                handle = null;
+                handle = IntPtr.Zero;
             return r;
         }
 
         public bool HasFile(string name)
         {
-            return StormDll.SFileHasFile(handle, name);
+            bool r = false;
+            if (is64BitProcess)
+            {
+                //64 bit 
+                r = StormDllx64.SFileHasFile(handle, name);
+            }
+            else
+            {
+                //32 bit
+                r = StormDllx86.SFileHasFile(handle, name);
+            }
+
+            return r;
         }
 
-        public bool ExtractFile(string from, string to)
+        public bool ExtractFile(string from, string to, OpenFile dwSearchScope)
         {
-            return StormDll.SFileExtractFile(handle, from, to);
+            bool r = false;
+            if (is64BitProcess)
+            {
+                //64 bit 
+                r = StormDllx64.SFileExtractFile(handle, from, to, dwSearchScope);
+            }
+            else
+            {
+                //32 bit
+                r = StormDllx86.SFileExtractFile(handle, from, to, dwSearchScope);
+            }
+
+            return r;
+
         }
     }
 }

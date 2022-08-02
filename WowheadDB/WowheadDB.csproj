@@ -4,6 +4,7 @@
     <TargetFramework>net6.0</TargetFramework>
     <OutputType>Library</OutputType>
     <StartupObject></StartupObject>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>

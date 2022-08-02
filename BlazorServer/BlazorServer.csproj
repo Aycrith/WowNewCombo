@@ -5,17 +5,7 @@
     <nullable>enable</nullable>
     <UserSecretsId>84fcf2b0-dc89-4b31-b09b-fdd65679d1d2</UserSecretsId>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Platforms>AnyCPU</Platforms>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
-    <PlatformTarget>x86</PlatformTarget>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <PlatformTarget>x86</PlatformTarget>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
