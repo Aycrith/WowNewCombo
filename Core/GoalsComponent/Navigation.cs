@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
+using static System.MathF;
+
 using Microsoft.Extensions.Logging;
+
 using SharedLib.Extensions;
 
 #pragma warning disable 162
@@ -55,7 +58,11 @@ namespace Core.Goals
     public partial class Navigation : IDisposable
     {
         private const bool debug = false;
-        private const float RADIAN = MathF.PI * 2;
+
+        private const float RADIAN = PI * 2;
+
+        private const float DIFF_THRESHOLD = 1.5f;   // within 50% difference
+        private const float UNIFORM_DIST_DIV = 2;    // within 50% difference
 
         private readonly string patherName;
 
@@ -77,8 +84,8 @@ namespace Core.Goals
         private float AvgDistance;
         private float lastDistance = float.MaxValue;
 
-        private const float minAngleToTurn = MathF.PI / 35f;            // 5.14 degree
-        private const float minAngleToStopBeforeTurn = MathF.PI / 1.5f; // 120 degree
+        private const float minAngleToTurn = PI / 35f;            // 5.14 degree
+        private const float minAngleToStopBeforeTurn = PI / 1.5f; // 120 degree
 
         private readonly Stack<Vector3> wayPoints = new();
         private readonly Stack<Vector3> routeToNextWaypoint = new();
@@ -316,7 +323,7 @@ namespace Core.Goals
                     if (i > 1)
                     {
                         float cAvg = distanceXY / (i - 1);
-                        UniformPath &= d <= MinDistance || Math.Abs(cAvg - d) <= d * 0.25f; // within 25% difference allowed
+                        UniformPath &= d <= MinDistance || Abs(cAvg - d) <= d / UNIFORM_DIST_DIV;
                     }
                     distanceXY += d;
                 }
@@ -324,10 +331,10 @@ namespace Core.Goals
                 wayPoints.Push(points[i]);
             }
 
-            AvgDistance = wayPoints.Count > 1 ? Math.Max(distanceXY / wayPoints.Count, MinDistance) : MinDistance;
+            AvgDistance = wayPoints.Count > 1 ? Max(distanceXY / wayPoints.Count, MinDistance) : MinDistance;
 
             if (debug)
-                LogDebug($"SetWayPoints: Added {wayPoints.Count} - Uniform ? {UniformPath} - AvgDistance: {AvgDistance}");
+                LogDebug($"SetWayPoints: Added {wayPoints.Count} - Uniform ? {UniformPath} - AvgDistance: {AvgDistance} - TAvg: {DIFF_THRESHOLD * AvgDistance}");
 
             UpdateTotalRoute();
         }
@@ -346,10 +353,10 @@ namespace Core.Goals
             float distance = player.DistanceXYTo(target);
             //if (distance > MaxDistance || distance > (AvgDistance + MinDistance))
             if (distance > MaxDistance ||
-                (UniformPath ? distance > 2 * AvgDistance : distance > 2 * MinDistance))
+                (UniformPath ? distance > DIFF_THRESHOLD * AvgDistance : distance > DIFF_THRESHOLD * MinDistance))
             {
                 if (debug)
-                    LogDebug($"Distance: {distance} vs Avg: {AvgDistance}");
+                    LogDebug($"Distance: {distance} vs Avg: {AvgDistance} - TAVG: {DIFF_THRESHOLD * AvgDistance} ");
 
                 stopMoving.Stop();
                 PathRequest(new PathRequest(addonReader.UIMapId.Value, player, target, distance, PathCalculatedCallback));
@@ -466,10 +473,10 @@ namespace Core.Goals
 
         private void AdjustHeading(float heading, CancellationTokenSource cts)
         {
-            float diff1 = MathF.Abs(RADIAN + heading - playerReader.Direction) % RADIAN;
-            float diff2 = MathF.Abs(heading - playerReader.Direction - RADIAN) % RADIAN;
+            float diff1 = Abs(RADIAN + heading - playerReader.Direction) % RADIAN;
+            float diff2 = Abs(heading - playerReader.Direction - RADIAN) % RADIAN;
 
-            float diff = MathF.Min(diff1, diff2);
+            float diff = Min(diff1, diff2);
             if (diff > minAngleToTurn)
             {
                 if (diff > minAngleToStopBeforeTurn)
