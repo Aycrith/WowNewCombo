@@ -8,11 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Remove="C:\Users\poler\.nuget\packages\matblazor\2.8.0\contentFiles\any\netstandard2.1\Properties\launchSettings.json" />
-  </ItemGroup>
-
-
-  <ItemGroup>
     <SupportedPlatform Include="browser" />
   </ItemGroup>
 
