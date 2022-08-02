@@ -19,6 +19,7 @@
  */
 
 using Microsoft.Extensions.Logging;
+
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
@@ -177,7 +178,7 @@ namespace StormDll
 
         public Archive(string file, uint Prio, OpenArchiveFlags Flags, ILogger logger)
         {
-            bool r = false;  
+            bool r = false;
             if (is64BitProcess)
             {
                 //64 bit 
@@ -232,7 +233,7 @@ namespace StormDll
             return r;
         }
 
-        public bool ExtractFile(string from, string to,OpenFile dwSearchScope)
+        public bool ExtractFile(string from, string to, OpenFile dwSearchScope)
         {
             bool r = false;
             if (is64BitProcess)
