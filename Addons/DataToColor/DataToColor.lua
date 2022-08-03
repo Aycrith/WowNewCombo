@@ -162,6 +162,7 @@ DataToColor.CombatMissTypeQueue = DataToColor.Queue:new()
 DataToColor.playerPetSummons = {}
 
 DataToColor.playerBuffTime = DataToColor.struct:new()
+DataToColor.targetBuffTime = DataToColor.struct:new()
 DataToColor.targetDebuffTime = DataToColor.struct:new()
 
 DataToColor.customTrigger1 = {}
@@ -249,6 +250,7 @@ function DataToColor:Reset()
     DataToColor.actionBarCooldownQueue = DataToColor.struct:new()
 
     DataToColor.playerBuffTime = DataToColor.struct:new()
+    DataToColor.targetBuffTime = DataToColor.struct:new()
     DataToColor.targetDebuffTime = DataToColor.struct:new()
 
     DataToColor.playerPetSummons = {}
@@ -487,8 +489,8 @@ function DataToColor:CreateFrames(n)
             if DataToColor.targetChanged then
                 Pixel(int, DataToColor:GetTargetName(0), 16) -- Characters 1-3 of targets name
                 Pixel(int, DataToColor:GetTargetName(3), 17) -- Characters 4-6 of targets name
-
                 Pixel(int, UnitHealthMax(DataToColor.C.unitTarget), 18)
+                DataToColor.targetBuffTime:forcedReset()
             end
 
             Pixel(int, UnitHealth(DataToColor.C.unitTarget), 19)
@@ -586,8 +588,13 @@ function DataToColor:CreateFrames(n)
             Pixel(int, UnitHealth(DataToColor.C.unitPet), 39)
 
             Pixel(int, DataToColor:areSpellsInRange(), 40)
-            Pixel(int, DataToColor:getAuraMaskForClass(UnitBuff, DataToColor.C.unitPlayer, DataToColor.S.playerBuffs, DataToColor.playerBuffTime), 41)
-            Pixel(int, DataToColor:getAuraMaskForClass(UnitDebuff, DataToColor.C.unitTarget, DataToColor.S.targetDebuffs, DataToColor.targetDebuffTime), 42)
+            Pixel(int, DataToColor:getAuraMaskForClass(UnitBuff, DataToColor.C.unitPlayer, DataToColor.S.playerBuffs), 41)
+            Pixel(int, DataToColor:getAuraMaskForClass(UnitDebuff, DataToColor.C.unitTarget, DataToColor.S.targetDebuffs), 42)
+
+            DataToColor:populateAuraTimer(UnitBuff, DataToColor.C.unitPlayer, DataToColor.playerBuffTime)
+            DataToColor:populateAuraTimer(UnitDebuff, DataToColor.C.unitTarget, DataToColor.targetDebuffTime)
+            DataToColor:populateAuraTimer(UnitBuff, DataToColor.C.unitTarget, DataToColor.targetBuffTime)
+
             Pixel(int, UnitLevel(DataToColor.C.unitTarget), 43)
 
             -- Amount of money in coppers
@@ -717,6 +724,31 @@ function DataToColor:CreateFrames(n)
                     Pixel(int, 0, 81)
                     Pixel(int, 0, 82)
                 end
+
+                if UnitExists(DataToColor.C.unitTarget) then
+                    textureId, expireTime = DataToColor.targetBuffTime:get()
+                else
+                    textureId, expireTime = DataToColor.targetBuffTime:getForced()
+                    expireTime = GetTime()
+                end
+
+                if textureId then
+                    DataToColor.targetBuffTime:setDirty(textureId)
+
+                    local durationSec = max(0, ceil(expireTime - GetTime()))
+                    --DataToColor:Print("target buff update ", textureId, " ", durationSec)
+                    Pixel(int, textureId, 83)
+                    Pixel(int, durationSec, 84)
+
+                    if durationSec == 0 then
+                        DataToColor.targetBuffTime:remove(textureId)
+                        --DataToColor:Print("target buff expired ", textureId, " ", durationSec)
+                    end
+                else
+                    Pixel(int, 0, 83)
+                    Pixel(int, 0, 84)
+                end
+
             end
 
             -- 94 last cast GCD
