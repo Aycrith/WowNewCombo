@@ -169,17 +169,17 @@ namespace Wmo
         public override WMO Load(string path)
         {
             string localPath = Path.Join(dataConfig.PPather, "wmo.tmp");
-            set.ExtractFile(path, localPath);
-            WMO w = new WMO();
+            set.SFileExtractFile(path, localPath);
+            WMO w = new();
             w.fileName = path;
 
-            WmoRootFile wrf = new WmoRootFile(localPath, w, modelmanager);
+            WmoRootFile wrf = new(localPath, w, modelmanager);
 
             for (int i = 0; i < w.groups.Length; i++)
             {
                 string part = path.Substring(0, path.Length - 4);
                 string gf = String.Format("{0}_{1,3:000}.wmo", part, i);
-                set.ExtractFile(gf, localPath);
+                set.SFileExtractFile(gf, localPath);
                 _ = new WmoGroupFile(w.groups[i], localPath);
             }
             return w;
@@ -347,7 +347,7 @@ namespace Wmo
 
             //logger.WriteLine("Load model " + path);
             string localPath = Path.Join(dataConfig.PPather, "model.tmp");
-            if (set.ExtractFile(file, localPath))
+            if (set.SFileExtractFile(file, localPath))
             {
                 Model w = new Model();
                 w.fileName = file;
@@ -884,7 +884,7 @@ namespace Wmo
 
             string wdtfile = Path.Join("World", "Maps", pathName, pathName + ".wdt");
             string tempFile = Path.Join(dataConfig.PPather, "wdt.tmp");
-            if (!archive.ExtractFile(wdtfile, tempFile))
+            if (!archive.SFileExtractFile(wdtfile, tempFile))
                 return;
 
             this.wdt = wdt;
@@ -940,7 +940,7 @@ namespace Wmo
                 //string filename = "World\\Maps\\" + pathName + "\\" + pathName + "_" + x + "_" + y + ".adt";
                 string filename = Path.Join("World", "Maps", pathName, $"{pathName}_{x}_{y}.adt");
                 string tempFile = Path.Join(dataConfig.PPather, "adt.tmp");
-                if (!archive.ExtractFile(filename, tempFile))
+                if (!archive.SFileExtractFile(filename, tempFile))
                 {
                     return;
                 }

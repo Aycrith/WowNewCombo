@@ -21,7 +21,6 @@
 using Microsoft.Extensions.Logging;
 
 using System;
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 namespace StormDll
@@ -33,7 +32,7 @@ namespace StormDll
         public static extern bool SFileOpenArchive(
             [MarshalAs(UnmanagedType.LPWStr)] string szMpqName,
             uint dwPriority,
-            [MarshalAs(UnmanagedType.U4)] OpenArchiveFlags dwFlags,
+            [MarshalAs(UnmanagedType.U4)] OpenArchive dwFlags,
             out IntPtr phMpq);
 
         [DllImport("MPQ\\StormLib_x64.dll")]
@@ -66,7 +65,7 @@ namespace StormDll
         public static extern bool SFileOpenArchive(
             [MarshalAs(UnmanagedType.LPWStr)] string szMpqName,
             uint dwPriority,
-            [MarshalAs(UnmanagedType.U4)] OpenArchiveFlags dwFlags,
+            [MarshalAs(UnmanagedType.U4)] OpenArchive dwFlags,
             out IntPtr phMpq);
 
         [DllImport("MPQ\\StormLib_x86.dll")]
@@ -93,66 +92,77 @@ namespace StormDll
     }
 
     // Flags for SFileOpenArchive
-    public enum OpenArchiveFlags : uint
+    [Flags]
+    public enum OpenArchive : uint
     {
-        NO_LISTFILE = 0x0010,   // Don't load the internal listfile
-        NO_ATTRIBUTES = 0x0020,   // Don't open the attributes
-        MFORCE_MPQ_V1 = 0x0040,   // Always open the archive as MPQ v 1.00, ignore the "wFormatVersion" variable in the header
-        MCHECK_SECTOR_CRC = 0x0080,   // On files with MPQ_FILE_SECTOR_CRC, the CRC will be checked when reading file
-        READ_ONLY = 0x0100,   // Open the archive for read-only access
-        ENCRYPTED = 0x0200,   // Opens an encrypted MPQ archive (Example: Starcraft II installation)
+        BASE_PROVIDER_FILE = 0x00000000,  // Base data source is a file
+        BASE_PROVIDER_MAP = 0x00000001,  // Base data source is memory-mapped file
+        BASE_PROVIDER_HTTP = 0x00000002,  // Base data source is a file on web server
+        BASE_PROVIDER_MASK = 0x0000000F,  // Mask for base provider value
+        STREAM_PROVIDER_FLAT = 0x00000000,  // Stream is linear with no offset mapping
+        STREAM_PROVIDER_PARTIAL = 0x00000010,  // Stream is partial file (.part)
+        STREAM_PROVIDER_MPQE = 0x00000020,  // Stream is an encrypted MPQ
+        STREAM_PROVIDER_BLOCK4 = 0x00000030,  // = 0x4000 per block, text MD5 after each block, max = 0x2000 blocks per file
+        STREAM_PROVIDER_MASK = 0x000000F0,  // Mask for stream provider value
+        STREAM_FLAG_READ_ONLY = 0x00000100,  // Stream is read only
+        STREAM_FLAG_WRITE_SHARE = 0x00000200,  // Allow write sharing when open for write
+        STREAM_FLAG_USE_BITMAP = 0x00000400,  // If the file has a file bitmap, load it and use it
+        STREAM_OPTIONS_MASK = 0x0000FF00,  // Mask for stream options
+        STREAM_PROVIDERS_MASK = 0x000000FF,  // Mask to get stream providers
+        STREAM_FLAGS_MASK = 0x0000FFFF,  // Mask for all stream flags (providers+options)
+        MPQ_OPEN_NO_LISTFILE = 0x00010000,  // Don't load the internal listfile
+        MPQ_OPEN_NO_ATTRIBUTES = 0x00020000,  // Don't open the attributes
+        MPQ_OPEN_NO_HEADER_SEARCH = 0x00040000,  // Don't search for the MPQ header past the begin of the file
+        MPQ_OPEN_FORCE_MPQ_V1 = 0x00080000,  // Always open the archive as MPQ v 1.00, ignore the "wFormatVersion" variable in the header
+        MPQ_OPEN_CHECK_SECTOR_CRC = 0x00100000,  // On files with MPQ_FILE_SECTOR_CRC, the CRC will be checked when reading file
+        MPQ_OPEN_FORCE_LISTFILE = 0x00400000,  // Force add listfile even if there is none at the moment of opening
+        MPQ_OPEN_READ_ONLY = STREAM_FLAG_READ_ONLY
     };
 
     // Values for SFileExtractFile
     public enum OpenFile : uint
     {
-        FROM_MPQ = 0x00000000,   // Open the file from the MPQ archive
-        PATCHED_FILE = 0x00000001,   // Open the file from the MPQ archive
-        BY_INDEX = 0x00000002,   // The 'szFileName' parameter is actually the file index
-        ANY_LOCALE = 0xFFFFFFFE,   // Reserved for StormLib internal use
-        LOCAL_FILE = 0xFFFFFFFF,   // Open the file from the MPQ archive
+        SFILE_OPEN_FROM_MPQ = 0x00000000,  // Open the file from the MPQ archive
+        SFILE_OPEN_CHECK_EXISTS = 0xFFFFFFFC,  // Only check whether the file exists
+        SFILE_OPEN_LOCAL_FILE = 0xFFFFFFFF  // Open a local file
     };
 
     public unsafe class ArchiveSet
     {
-        private readonly ILogger logger;
-        private readonly HashSet<Archive> archives;
+        private Archive[] archives;
 
         public ArchiveSet(ILogger logger, string[] files)
         {
-            this.logger = logger;
-
-            archives = new();
+            archives = new Archive[files.Length];
 
             for (int i = 0; i < files.Length; i++)
             {
-                Archive a = new(files[i], 0, 0, logger);
-                if (a.IsOpen())
+                Archive a = new(files[i], out bool open, 0,
+                    OpenArchive.MPQ_OPEN_NO_LISTFILE |
+                    OpenArchive.MPQ_OPEN_NO_ATTRIBUTES |
+                    OpenArchive.MPQ_OPEN_NO_HEADER_SEARCH |
+                    OpenArchive.MPQ_OPEN_READ_ONLY);
+
+                if (open && a.IsOpen())
                 {
-                    archives.Add(a);
+                    archives[i] = a;
 
                     if (logger.IsEnabled(LogLevel.Trace))
-                        logger.LogTrace($"Add archive {files[i]}");
+                        logger.LogTrace($"Archive open {files[i]}");
                 }
-
-                if (logger.IsEnabled(LogLevel.Trace))
-                    logger.LogTrace($"Failed archive {files[i]}");
+                else if (logger.IsEnabled(LogLevel.Trace))
+                    logger.LogTrace($"Archive open fail {files[i]}");
             }
         }
 
-        public bool ExtractFile(string from, string to, OpenFile dwSearchScope = OpenFile.FROM_MPQ)
+        public bool SFileExtractFile(string from, string to, OpenFile dwSearchScope = OpenFile.SFILE_OPEN_FROM_MPQ)
         {
-            foreach (Archive a in archives)
+            for (int i = 0; i < archives.Length; i++)
             {
-                if (a.HasFile(from))
+                Archive a = archives[i];
+                if (a.SFileHasFile(from))
                 {
-                    bool ok = a.ExtractFile(from, to, dwSearchScope);
-                    if (!ok)
-                    {
-                        if (logger.IsEnabled(LogLevel.Trace))
-                            logger.LogTrace("  result: " + ok);
-                    }
-                    return ok;
+                    return a.SFileExtractFile(from, to, dwSearchScope);
                 }
             }
             return false;
@@ -160,37 +170,22 @@ namespace StormDll
 
         public void Close()
         {
-            foreach (Archive a in archives)
-            {
-                a.Close();
-            }
-            archives.Clear();
+            for (int i = 0; i < archives.Length; i++)
+                archives[i].SFileCloseArchive();
+
+            archives = Array.Empty<Archive>();
         }
     }
 
     public unsafe class Archive
     {
-        #region "Processor check"
-        private static readonly bool is64BitProcess = IntPtr.Size == 8;
-        #endregion
+        private readonly IntPtr handle;
 
-        private IntPtr handle = IntPtr.Zero;
-
-        public Archive(string file, uint Prio, OpenArchiveFlags Flags, ILogger logger)
+        public Archive(string file, out bool open, uint Prio, OpenArchive Flags)
         {
-            bool r;
-            if (is64BitProcess)
-            {
-                //64 bit 
-                r = StormDllx64.SFileOpenArchive(file, Prio, Flags, out handle);
-            }
-            else
-            {
-                //32 bit
-                r = StormDllx86.SFileOpenArchive(file, Prio, Flags, out handle);
-            }
-            if (logger.IsEnabled(LogLevel.Trace))
-                logger.LogTrace($"Archive open ? {r} -> {file}");
+            open = Environment.Is64BitProcess
+                ? StormDllx64.SFileOpenArchive(file, Prio, Flags, out handle)
+                : StormDllx86.SFileOpenArchive(file, Prio, Flags, out handle);
         }
 
         public bool IsOpen()
@@ -198,57 +193,25 @@ namespace StormDll
             return handle != IntPtr.Zero;
         }
 
-        public bool Close()
+        public bool SFileCloseArchive()
         {
-            bool r;
-            if (is64BitProcess)
-            {
-                //64 bit 
-                r = StormDllx64.SFileCloseArchive(handle);
-            }
-            else
-            {
-                //32 bit
-                r = StormDllx86.SFileCloseArchive(handle);
-            }
-            if (r)
-                handle = IntPtr.Zero;
-            return r;
+            return Environment.Is64BitProcess
+                ? StormDllx64.SFileCloseArchive(handle)
+                : StormDllx86.SFileCloseArchive(handle);
         }
 
-        public bool HasFile(string name)
+        public bool SFileHasFile(string name)
         {
-            bool r;
-            if (is64BitProcess)
-            {
-                //64 bit 
-                r = StormDllx64.SFileHasFile(handle, name);
-            }
-            else
-            {
-                //32 bit
-                r = StormDllx86.SFileHasFile(handle, name);
-            }
-
-            return r;
+            return Environment.Is64BitProcess
+                ? StormDllx64.SFileHasFile(handle, name)
+                : StormDllx86.SFileHasFile(handle, name);
         }
 
-        public bool ExtractFile(string from, string to, OpenFile dwSearchScope)
+        public bool SFileExtractFile(string from, string to, OpenFile dwSearchScope)
         {
-            bool r;
-            if (is64BitProcess)
-            {
-                //64 bit 
-                r = StormDllx64.SFileExtractFile(handle, from, to, dwSearchScope);
-            }
-            else
-            {
-                //32 bit
-                r = StormDllx86.SFileExtractFile(handle, from, to, dwSearchScope);
-            }
-
-            return r;
-
+            return Environment.Is64BitProcess
+                ? StormDllx64.SFileExtractFile(handle, from, to, dwSearchScope)
+                : StormDllx86.SFileExtractFile(handle, from, to, dwSearchScope);
         }
     }
 }
