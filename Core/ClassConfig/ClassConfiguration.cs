@@ -117,7 +117,7 @@ namespace Core
 
         public void Initialise(DataConfig dataConfig, AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger, string? overridePathProfileFile)
         {
-            requirementFactory.InitUserDefinedIntVariables(IntVariables, addonReader.PlayerBuffTimeReader, addonReader.TargetDebuffTimeReader);
+            requirementFactory.InitUserDefinedIntVariables(IntVariables, addonReader.PlayerBuffTimeReader, addonReader.TargetDebuffTimeReader, addonReader.TargetBuffTimeReader);
 
             Jump.Key = JumpKey;
             Jump.Name = nameof(Jump);

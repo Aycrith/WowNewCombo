@@ -162,25 +162,14 @@ function DataToColor:Set(trigger, input)
     end
 end
 
-function DataToColor:getAuraMaskForClass(func, unitId, table, queue)
+function DataToColor:getAuraMaskForClass(func, unitId, table)
     local num = 0
     for k, v in pairs(table) do
         for i = 1, 16 do
-            local name, texture, _, _, _, expirationTime, source = func(unitId, i)
+            local name, texture = func(unitId, i)
             if name == nil then
                 break
             end
-
-            if expirationTime > 0 then
-                if not queue:exists(texture) then
-                    queue:set(texture, expirationTime)
-                    --DataToColor:Print(texture, " added ", expirationTime)
-                elseif queue:value(texture) < expirationTime then
-                    queue:set(texture, expirationTime)
-                    --DataToColor:Print(texture, " updated ", expirationTime)
-                end
-            end
-
             if v[texture] or find(name, v[1]) then
                 num = num + base2(1, k)
                 break
@@ -188,6 +177,27 @@ function DataToColor:getAuraMaskForClass(func, unitId, table, queue)
         end
     end
     return num
+end
+
+function DataToColor:populateAuraTimer(func, unitId, queue)
+    for i = 1, 40 do
+        local name, texture, _, _, duration, expirationTime = func(unitId, i)
+        if name == nil then
+            break
+        end
+
+        if duration == 0 then
+            expirationTime = GetTime() + 14400 -- 4 hours - anything above considered unlimited duration
+        end
+
+        if not queue:exists(texture) then
+            queue:set(texture, expirationTime)
+            --DataToColor:Print(texture, " aura added ", expirationTime)
+        elseif not queue:isDirty(texture) and queue:value(texture) < expirationTime then
+            queue:set(texture, expirationTime)
+            --DataToColor:Print(texture, " aura updated ", expirationTime)
+        end
+    end
 end
 
 -- player debuffs cant be higher than 16!

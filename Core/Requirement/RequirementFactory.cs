@@ -299,6 +299,7 @@ namespace Core
                 //"Cost_{KeyAction.Name}"
                 //"Buff_{textureId}"
                 //"Debuff_{textureId}"
+                //"TBuff_{textureId}"
                 { "MainHandSpeed", playerReader.MainHandSpeedMs },
                 { "MainHandSwing", () => Math.Clamp(playerReader.MainHandSwing.ElapsedMs() - playerReader.MainHandSpeedMs(), -playerReader.MainHandSpeedMs(), 0) },
                 { "CurGCD", playerReader.GCD._Value },
@@ -384,7 +385,9 @@ namespace Core
             item.RequirementsRuntime = requirements.ToArray();
         }
 
-        public void InitUserDefinedIntVariables(Dictionary<string, int> intKeyValues, AuraTimeReader playerBuffTimeReader, AuraTimeReader targetDebuffTimeReader)
+        public void InitUserDefinedIntVariables(Dictionary<string, int> intKeyValues,
+            AuraTimeReader playerBuffTimeReader, AuraTimeReader targetDebuffTimeReader,
+            AuraTimeReader targetBuffTimeReader)
         {
             foreach ((string key, int value) in intKeyValues)
             {
@@ -404,6 +407,11 @@ namespace Core
                     else if (key.StartsWith("Debuff_"))
                     {
                         int l() => targetDebuffTimeReader.GetRemainingTimeMs(value);
+                        intVariables.TryAdd($"{value}", l);
+                    }
+                    else if (key.StartsWith("TBuff_"))
+                    {
+                        int l() => targetBuffTimeReader.GetRemainingTimeMs(value);
                         intVariables.TryAdd($"{value}", l);
                     }
 

@@ -17,6 +17,8 @@ namespace Core
             }
         }
 
+        private const int UNLIMITED = 14400; // 4 hours - anything above considered unlimited duration
+
         private readonly int cTextureId;
         private readonly int cDurationSec;
 
@@ -46,7 +48,7 @@ namespace Core
         public int GetRemainingTimeMs(int textureId)
         {
             return data.TryGetValue(textureId, out Data d) ?
-                Math.Max(0, (int)(d.StartTime.AddSeconds(d.DurationSec) - DateTime.UtcNow).TotalMilliseconds)
+                Math.Max(0, d.DurationSec >= UNLIMITED ? 1 : (int)(d.StartTime.AddSeconds(d.DurationSec) - DateTime.UtcNow).TotalMilliseconds)
                 : 0;
         }
 

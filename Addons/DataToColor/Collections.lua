@@ -93,6 +93,12 @@ function struct:getForced()
     end
 end
 
+function struct:forcedReset()
+    for _, v in pairs(self) do
+        v.value = GetTime()
+    end
+end
+
 function struct:value(key)
     return self[key].value
 end
