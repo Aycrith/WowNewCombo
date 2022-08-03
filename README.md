@@ -144,7 +144,7 @@ Example - [Robot-Medium](https://fonts.google.com/specimen/Roboto?thickness=5) -
 
 * Windows 7 and above
 * [.NET 6.0 SDK](https://dotnet.microsoft.com/download/dotnet/6.0)
-* **Note:** By default all builds will be **x86**.
+* AnyCPU, x86 and x64 build supported. For lower memory usage x86 suggested.
 
 ## 4.2 Build the solution
 
@@ -156,7 +156,7 @@ One of the following IDE or command line
 e.g. Build from Powershell
 ```ps
 cd C:\WowClassicGrindBot
-dotnet build --configuration Release
+dotnet build --configuration Release --arch x86
 ```
 
 ![Build](images/build.png)
