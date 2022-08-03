@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+
 using System;
 using System.Threading;
 
@@ -458,10 +459,12 @@ namespace Core.Goals
                 }
             }
 
-            int durationMs = UpdateGCD(false);
-
-            if (Log && item.Log)
-                LogWaitForGCD(logger, item.Name, playerReader.GCD.Value, playerReader.RemainCastMs, durationMs);
+            if (!item.BaseAction)
+            {
+                int durationMs = UpdateGCD(false);
+                if (Log && item.Log)
+                    LogWaitForGCD(logger, item.Name, playerReader.GCD.Value, playerReader.RemainCastMs, durationMs);
+            }
 
             item.ConsumeCharge();
             return true;
