@@ -27,6 +27,8 @@ namespace Core
 
         public AuraTimeReader TargetDebuffTimeReader { get; }
 
+        public AuraTimeReader TargetBuffTimeReader { get; }
+
         public ActionBarBits CurrentAction { get; }
         public ActionBarBits UsableAction { get; }
 
@@ -96,6 +98,7 @@ namespace Core
 
             this.PlayerBuffTimeReader = new(79, 80);
             this.TargetDebuffTimeReader = new(81, 82);
+            this.TargetBuffTimeReader = new(83, 84);
 
             lastUpdate = DateTime.UtcNow;
         }
@@ -156,6 +159,7 @@ namespace Core
 
                 PlayerBuffTimeReader.Read(reader);
                 TargetDebuffTimeReader.Read(reader);
+                TargetBuffTimeReader.Read(reader);
 
                 if (UIMapId.Updated(reader))
                 {
@@ -191,6 +195,7 @@ namespace Core
 
             PlayerBuffTimeReader.Reset();
             TargetDebuffTimeReader.Reset();
+            TargetBuffTimeReader.Reset();
 
             SessionReset();
         }

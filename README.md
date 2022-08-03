@@ -996,9 +996,9 @@ e.g.
 ---
 ### **Player Buff remaining time requirements**
 
-First in the `IntVariables` have to mention the buff icon id such as `Buff_{you fancy name}: {icon_id}`.
+First in the `IntVariables` have to mention the buff icon id such as `Buff_{your fancy name}: {icon_id}`.
 
-It is important, thee addon keeps track of the **icon_id**! Not **spell_id**
+It is important, the addon keeps track of the **icon_id**! Not **spell_id**
 
 e.g.
 ```json
@@ -1027,17 +1027,15 @@ e.g.
 ---
 ### **Target Debuff remaining time requirements**
 
-First in the `IntVariables` have to mention the buff icon id such as `Debuff_{you fancy name}: {icon_id}`
+First in the `IntVariables` have to mention the buff icon id such as `Debuff_{your fancy name}: {icon_id}`
 
-It is important, thee addon keeps track of the **icon_id**! Not **spell_id**
+It is important, the addon keeps track of the **icon_id**! Not **spell_id**
 
 e.g.
 ```json
 "IntVariables": {
     "Debuff_Blood Plague": 237514,
-    "Debuff_Frost Fever": 237522,
-    "Item_Soul_Shard": 6265,
-    "Item_Healthstone": 22105,
+    "Debuff_Frost Fever": 237522
 },
 ```
 
@@ -1054,6 +1052,19 @@ e.g.
         "InMeleeRange"                                                                                // and their duration less then 2 seconds
     ]
 }
+```
+---
+### **Target Buff remaining time requirements**
+
+First in the `IntVariables` have to mention the buff icon id such as `TBuff_{your fancy name}: {icon_id}`
+
+It is important, the addon keeps track of the **icon_id**! Not **spell_id**
+
+e.g.
+```json
+"IntVariables": {
+    "TBuff_Battle Shout": 132333,
+},
 ```
 ---
 ### **Trigger requirements**
