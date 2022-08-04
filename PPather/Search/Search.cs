@@ -74,7 +74,7 @@ namespace PPather
 
             MPQTriangleSupplier mpq = new(logger, dataConfig, mapId);
             ChunkedTriangleCollection triangleWorld = new(logger, 64, mpq);
-            PathGraph = new PathGraph(mapId, triangleWorld, null, logger, dataConfig);
+            PathGraph = new PathGraph(mapId, triangleWorld, logger, dataConfig);
         }
 
         public Path DoSearch(PathGraph.eSearchScoreSpot searchType)

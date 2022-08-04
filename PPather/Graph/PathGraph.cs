@@ -74,7 +74,6 @@ namespace PPather.Graph
         private readonly SparseMatrix2D<GraphChunk> chunks;
 
         public ChunkedTriangleCollection triangleWorld;
-        public TriangleCollection paint;
 
         private readonly List<GraphChunk> ActiveChunks = new();
         private long LRU;
@@ -126,12 +125,11 @@ namespace PPather.Graph
 
         public PathGraph(float mapId,
                          ChunkedTriangleCollection triangles,
-                         TriangleCollection paint, ILogger logger, DataConfig dataConfig)
+                         ILogger logger, DataConfig dataConfig)
         {
             this.logger = logger;
             this.MapId = mapId;
             this.triangleWorld = triangles;
-            this.paint = paint;
 
             chunkDir = System.IO.Path.Join(dataConfig.PathInfo, ContinentDB.IdToName[MapId]);
             if (!Directory.Exists(chunkDir))
@@ -296,27 +294,9 @@ namespace PPather.Graph
             return FindClosestSpot(l_d, 30.0f, null);
         }
 
-        public Spot FindClosestSpot(Vector3 l_d, HashSet<Spot> Not)
-        {
-            return FindClosestSpot(l_d, 30.0f, Not);
-        }
-
         public Spot FindClosestSpot(Vector3 l, float max_d)
         {
             return FindClosestSpot(l, max_d, null);
-        }
-
-        public Spot FindClosestSpot(string description, Vector3 l, float max_d)
-        {
-            try
-            {
-                return FindClosestSpot(l, max_d, null);
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning($"Failed to find closest spot to {description}: {l.X},{l.Y} - {ex.Message}");
-                return null;
-            }
         }
 
         // this can be slow...
@@ -919,8 +899,8 @@ namespace PPather.Graph
             fromLoc = GetBestLocations(fromLoc);
             toLoc = GetBestLocations(toLoc);
 
-            Spot from = FindClosestSpot("fromLoc", fromLoc, MinStepLength);
-            Spot to = FindClosestSpot("toLoc", toLoc, MinStepLength);
+            Spot from = FindClosestSpot(fromLoc, MinStepLength);
+            Spot to = FindClosestSpot(toLoc, MinStepLength);
 
             if (from == null)
             {
@@ -932,21 +912,6 @@ namespace PPather.Graph
             }
 
             Path rawPath = CreatePath(from, to, howClose, locationHeuristics);
-
-            if (rawPath != null && paint != null)
-            {
-                Vector3 prev = Vector3.Zero;
-                for (int i = 0; i < rawPath.Count; i++)
-                {
-                    Vector3 l = rawPath[i];
-                    paint.AddBigMarker(l.X, l.Y, l.Z);
-                    if (prev != Vector3.Zero)
-                    {
-                        paint.PaintPath(l.X, l.Y, l.Z, prev.X, prev.Y, prev.Z);
-                    }
-                    prev = l;
-                }
-            }
 
             if (logger.IsEnabled(LogLevel.Trace))
                 logger.LogTrace($"CreatePath took {sw.ElapsedMilliseconds}ms");
