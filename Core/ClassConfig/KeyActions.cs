@@ -16,7 +16,7 @@ namespace Core
 
             for (int i = 0; i < Sequence.Length; i++)
             {
-                var keyAction = Sequence[i];
+                KeyAction keyAction = Sequence[i];
                 keyAction.InitialiseSlot(logger);
                 keyAction.InitDynamicBinding(requirementFactory);
             }

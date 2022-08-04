@@ -88,12 +88,12 @@ namespace Core
 
             if (name.Equals(RequirementFactory.Drink, System.StringComparison.OrdinalIgnoreCase))
             {
-                name = bagReader.HighestQuantityOfDrinkId().ToString();
+                name = bagReader.HighestQuantityOfDrinkItemId().ToString();
                 isItem = true;
             }
             else if (name.Equals(RequirementFactory.Food, System.StringComparison.OrdinalIgnoreCase))
             {
-                name = bagReader.HighestQuantityOfFoodId().ToString();
+                name = bagReader.HighestQuantityOfFoodItemId().ToString();
                 isItem = true;
             }
 

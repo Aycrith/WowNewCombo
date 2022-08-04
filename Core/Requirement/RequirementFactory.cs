@@ -289,6 +289,8 @@ namespace Core
                 { "TotalRune", playerReader.MaxRune },
                 { "Combo Point", playerReader.ComboPoints },
                 { "BagCount", bagReader.BagItemCount },
+                { "FoodCount", addonReader.BagReader.FoodItemCount },
+                { "DrinkCount", addonReader.BagReader.DrinkItemCount },
                 { "MobCount", addonReader.DamageTakenCount },
                 { "MinRange", playerReader.MinRange },
                 { "MaxRange", playerReader.MaxRange },
@@ -686,14 +688,19 @@ namespace Core
 
         private Requirement CreateActionUsableRequirement(KeyAction item, PlayerReader playerReader, ActionBarBits usableAction)
         {
+            bool CanDoFormChangeMinMana()
+            {
+                return playerReader.ManaCurrent() >= item.FormCost() + item.MinMana;
+            }
+
             bool f() =>
                     !item.HasFormRequirement ? usableAction.Is(item) :
                     (playerReader.Form == item.FormEnum && usableAction.Is(item)) ||
-                    (playerReader.Form != item.FormEnum && item.CanDoFormChangeMinResource());
+                    (playerReader.Form != item.FormEnum && CanDoFormChangeMinMana());
 
             string s() =>
                     !item.HasFormRequirement ? "Usable" :
-                    (playerReader.Form != item.FormEnum && item.CanDoFormChangeMinResource()) ? "Usable after Form change" :
+                    (playerReader.Form != item.FormEnum && CanDoFormChangeMinMana()) ? "Usable after Form change" :
                     (playerReader.Form == item.FormEnum && usableAction.Is(item)) ? "Usable current Form" : "not Usable current Form";
 
             return new Requirement

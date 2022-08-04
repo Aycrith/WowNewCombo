@@ -88,6 +88,7 @@ namespace Core
 
                 ResolveAdhocGoals(services, classConfig);
                 ResolveAdhocNPCGoal(services, classConfig, dataConfig);
+                ResolveWaitGoal(services, classConfig);
             }
             else if (classConfig.Mode == Mode.AssistFocus)
             {
@@ -139,6 +140,7 @@ namespace Core
 
                 ResolveAdhocGoals(services, classConfig);
                 ResolveAdhocNPCGoal(services, classConfig, dataConfig);
+                ResolveWaitGoal(services, classConfig);
             }
 
             ServiceProvider provider = services.BuildServiceProvider(
@@ -199,6 +201,17 @@ namespace Core
                     x.GetRequiredService<Navigation>(), x.GetRequiredService<StopMoving>(),
                     x.GetRequiredService<NpcNameTargeting>(), x.GetRequiredService<ClassConfiguration>(),
                     x.GetRequiredService<MountHandler>(), x.GetRequiredService<ExecGameCommand>()));
+            }
+        }
+
+        private static void ResolveWaitGoal(ServiceCollection services, ClassConfiguration classConfig)
+        {
+            for (int i = 0; i < classConfig.Wait.Sequence.Length; i++)
+            {
+                KeyAction keyAction = classConfig.Wait.Sequence[i];
+
+                services.AddSingleton<GoapGoal, ConditionalWaitGoal>(x => new(keyAction,
+                    x.GetRequiredService<ILogger>(), x.GetRequiredService<Wait>()));
             }
         }
 

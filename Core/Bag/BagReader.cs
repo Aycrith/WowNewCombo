@@ -203,19 +203,29 @@ namespace Core
 
         public bool HasItem(int itemId) => ItemCount(itemId) != 0;
 
-        public int HighestQuantityOfDrinkId()
+        public int HighestQuantityOfDrinkItemId()
         {
             return ItemDB.DrinkIds.
-                OrderByDescending(c => ItemCount(c)).
+                OrderByDescending(ItemCount).
                 FirstOrDefault();
         }
 
-        public int HighestQuantityOfFoodId()
+        public int DrinkItemCount()
+        {
+            return ItemCount(HighestQuantityOfDrinkItemId());
+        }
+
+        public int HighestQuantityOfFoodItemId()
         {
             return ItemDB.FoodIds.
-                OrderByDescending(c => ItemCount(c)).
+                OrderByDescending(ItemCount).
                 FirstOrDefault();
         }
+        public int FoodItemCount()
+        {
+            return ItemCount(HighestQuantityOfFoodItemId());
+        }
+
 
         private void OnEquipmentChanged(object? s, (int, int) tuple)
         {

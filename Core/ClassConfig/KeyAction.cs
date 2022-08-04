@@ -89,16 +89,14 @@ namespace Core
             return key;
         }
 
-        private PlayerReader playerReader = null!;
         private ActionBarCostReader costReader = null!;
-
         private ILogger logger = null!;
 
         public void InitialiseSlot(ILogger logger)
         {
             if (!KeyReader.ReadKey(logger, this))
             {
-                throw new Exception($"[{Name}] has no valid Key={ConsoleKey}");
+                logger.LogWarning($"[{Name}] has no valid Key={ConsoleKey}");
             }
         }
 
@@ -111,7 +109,6 @@ namespace Core
             RequirementFactory requirementFactory, ILogger logger, bool globalLog,
             KeyActions? keyActions = null)
         {
-            this.playerReader = addonReader.PlayerReader;
             this.costReader = addonReader.ActionBarCostReader;
             this.logger = logger;
 
@@ -157,7 +154,7 @@ namespace Core
 
             if (Slot > 0)
             {
-                this.SlotIndex = Stance.ToSlot(this, playerReader) - 1;
+                this.SlotIndex = Stance.ToSlot(this, addonReader.PlayerReader) - 1;
                 this.logger.LogInformation($"[{Name}] Actionbar Form key map: Key:{Key} -> Actionbar:{Slot} -> Index:{SlotIndex}");
             }
 
@@ -203,11 +200,6 @@ namespace Core
             var remain = MillisecondsSinceLastClick;
             if (remain == double.MaxValue) return 0;
             return MathF.Max(Cooldown - (float)remain, 0);
-        }
-
-        public bool CanDoFormChangeMinResource()
-        {
-            return playerReader.ManaCurrent() >= FormCost() + MinMana;
         }
 
         public void SetClicked(double offset = 0)

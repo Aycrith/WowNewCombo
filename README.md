@@ -332,6 +332,7 @@ Take a look at the class files in `/Json/class` for examples of what you can do.
 | `"Adhoc"` | Sequence of `KeyAction(s)` to execute upon [Adhoc Goals](#Adhoc-Goals) | true | `[]` |
 | `"Parallel"` | Sequence of `KeyAction(s)` to execute upon [Parallel Goal](#Parallel-Goals) | true | `[]` |
 | `"NPC"` | Sequence of `KeyAction(s)` to execute upon [NPC Goal](#NPC-Goals) | true | `[]` |
+| `"Wait"` | Sequence of `KeyAction(s)` to execute upon [Wait Goal](#Wait-Goals) | true | `[]` |
 | --- | --- | --- | --- |
 | `"GatherFindKeys"` | List of strings for switching between gathering profiles | true | `string[]` |
 | `"JumpKey"` | `Consolekey` to be pressed on Jump | true | `"Spacebar"` |
@@ -616,7 +617,26 @@ e.g.
     ]
 }
 ```
+### Wait Goals
 
+These actions cause to wait while the Requirements are met, during this time the player going to be idle, until lowered cost action can be executed.
+
+e.g.
+```json
+"Wait": {
+    "Sequence": [
+    {
+        "Cost": 19,
+        "Name": "HP regen",
+        "Requirements": [
+            "FoodCount == 0 || !Usable:Food",
+            "Health% < 90"
+        ]
+    }
+    ]
+},
+```
+---
 The "Key" is a key that is bound to a macro. The macro needs to target the NPC, and if necessary open up the repair or vendor page. The bot will click the key and the npc will be targetted. Then it will click the interact button which will cause the bot to move to the NPC and open the NPC options, this may be enough to get the auto repair and auto sell greys to happen. But the bot will click the button again in case there are further steps (e.g. SelectGossipOption), or you have many greys or items to sell.
 
 e.g. Sell macro - bound to the `"C"` key using BindPad or Key bindings
@@ -766,6 +786,8 @@ Formula: `[Keyword] [Operator] [Numeric integer value]`
 | `TotalRune` | Player current runes (blood+frost+unholy+death) |
 | `Combo Point` | Player current combo points on the target |
 | `BagCount` | How many items in the player inventory |
+| `FoodCount` | Returns the highest amount of food type, item count |
+| `DrinkCount` | Returns the highest amount of drink type, item count |
 | `MobCount` | How many detected, alive, and currently fighting mob around the player |
 | `MinRange` | Minimum distance(yard) between the player and the target  |
 | `MaxRange` | Maximum distance(yard) between the player and the target |
@@ -1387,11 +1409,11 @@ The available modes are:
 
 | Mode | Description |
 | --- | --- |
-| `"Grind"` | Default mode.<br>Follows the route. Attempts to find Non-Blacklist targets to kill.<br>(*if enabled*) Attempts to `"Loot"` and GatherCorpse nearby corpses.<br>(*if exists*) Executes `"Adhoc"`, `"NPC"`, `"Parallel"`, `"Pull"`, `"Combat"` Sequences |
+| `"Grind"` | Default mode.<br>Follows the route. Attempts to find Non-Blacklist targets to kill.<br>(*if enabled*) Attempts to `"Loot"` and GatherCorpse nearby corpses.<br>(*if exists*) Executes `"Adhoc"`, `"NPC"`, `"Parallel"`, `"Pull"`, `"Combat"`, `"Wait"` Sequences |
 | `"AttendedGrind"` | Similair to `"Grind"`.<br>Navigation disabled.<br>The only difference is that **you** control the route, and select what target to kill. |
 | `"CorpseRun"` | Runs back to the corpse after dies.<br>Can be useful if you are farming an instance and die, the bot will run you back some or all of the way to the instance entrance. |
-| `"AttendedGather"` | Have to `Start Bot` under `Gather` tab and stay at `Gather` tab.<br>Follows the route and scan the minimap for the yellow nodes which indicate a herb or mining node.<br>Once one or more present, the navigation stops and alerts you by playing beeping sound!<br>**You** have to click at the herb/mine. In the `LogComponent` the necessary prompt going be shown to proceed.<br>**Important note**: `Falling` and `Jumping` means the same thing, if you lose the ground the bot going to take over the control! Be patient.<br>(*if exists*) Executes `"Adhoc"`, `"NPC"`, `"Parallel"`, `"Pull"`, `"Combat"` Sequences |
-| `"AssistFocus"` | Navigation disabled.<br>Requires a friendly `focus` to exists. Follows the `focus` target.<br>Once a friendly `focustarget` in 11 yard range attempts to Interact with it.<br>Once a hostile `focustarget` in-combat exists, attempts to assist it (kill it).<br>After leaving combat, (*if enabled*) attempts to Loot and GatherCorpse nearby corpses.<br>Works inside Instances.<br>(*if exists*) Executes `"Adhoc"`, `"Parallel"`, `"Pull"`, `"Combat"` Sequences. |
+| `"AttendedGather"` | Have to `Start Bot` under `Gather` tab and stay at `Gather` tab.<br>Follows the route and scan the minimap for the yellow nodes which indicate a herb or mining node.<br>Once one or more present, the navigation stops and alerts you by playing beeping sound!<br>**You** have to click at the herb/mine. In the `LogComponent` the necessary prompt going be shown to proceed.<br>**Important note**: `Falling` and `Jumping` means the same thing, if you lose the ground the bot going to take over the control! Be patient.<br>(*if exists*) Executes `"Adhoc"`, `"NPC"`, `"Parallel"`, `"Pull"`, `"Combat"`, `"Wait"` Sequences |
+| `"AssistFocus"` | Navigation disabled.<br>Requires a friendly `focus` to exists. Follows the `focus` target.<br>Once a friendly `focustarget` in 11 yard range attempts to Interact with it.<br>Once a hostile `focustarget` in-combat exists, attempts to assist it (kill it).<br>After leaving combat, (*if enabled*) attempts to Loot and GatherCorpse nearby corpses.<br>Works inside Instances.<br>(*if exists*) Executes `"Adhoc"`, `"Parallel"`, `"Pull"`, `"Combat"`, `"Wait"` Sequences. |
 
 # User Interface
 

@@ -61,6 +61,7 @@ namespace Core
         public KeyActions Adhoc { get; } = new();
         public KeyActions Parallel { get; } = new();
         public KeyActions NPC { get; } = new();
+        public KeyActions Wait { get; } = new();
 
         public KeyAction[] Form { get; init; } = Array.Empty<KeyAction>();
         public KeyAction[] GatherFindKeyConfig { get; set; } = Array.Empty<KeyAction>();
@@ -227,12 +228,14 @@ namespace Core
             Adhoc.PreInitialise(nameof(Adhoc), requirementFactory, logger);
             NPC.PreInitialise(nameof(NPC), requirementFactory, logger);
             Parallel.PreInitialise(nameof(Parallel), requirementFactory, logger);
+            Wait.PreInitialise(nameof(Wait), requirementFactory, logger);
 
             Pull.Initialise(nameof(Pull), this, addonReader, requirementFactory, logger, Log);
             Combat.Initialise(nameof(Combat), this, addonReader, requirementFactory, logger, Log);
             Adhoc.Initialise(nameof(Adhoc), this, addonReader, requirementFactory, logger, Log);
             NPC.Initialise(nameof(NPC), this, addonReader, requirementFactory, logger, Log);
             Parallel.Initialise(nameof(Parallel), this, addonReader, requirementFactory, logger, Log);
+            Wait.Initialise(nameof(Wait), this, addonReader, requirementFactory, logger, Log);
 
             int index = 0;
             GatherFindKeyConfig = new KeyAction[GatherFindKeys.Length];
@@ -271,6 +274,7 @@ namespace Core
             Parallel.Dispose();
             Adhoc.Dispose();
             NPC.Dispose();
+            Wait.Dispose();
         }
 
         private void CheckConfigConsistency(ILogger logger)
