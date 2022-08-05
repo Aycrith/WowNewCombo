@@ -23,7 +23,7 @@ namespace PPather
         private Action SearchBegin;
         private Action<Path> OnPathCreated;
         public Action OnReset { get; set; }
-        public Action<ChunkAddedEventArgs> OnChunkAdded { get; set; }
+        public Action<ChunkEventArgs> OnChunkAdded { get; set; }
         public Action<LinesEventArgs> OnLinesAdded { get; set; }
         public Action<SphereEventArgs> OnSphereAdded { get; set; }
         
@@ -43,6 +43,11 @@ namespace PPather
 
         public void Reset()
         {
+            if (search != null)
+            {
+                search.PathGraph.triangleWorld.NotifyChunkAdded = null;
+            }
+
             OnReset?.Invoke();
             this.search = null;
         }
@@ -61,7 +66,12 @@ namespace PPather
             return false;
         }
 
-        public void ChunkAdded(ChunkAddedEventArgs e)
+        public TriangleCollection GetChunkAt(int grid_x, int grid_y)
+        {
+            return search.PathGraph.triangleWorld.GetChunkAt(grid_x, grid_y);
+        }
+
+        public void ChunkAdded(ChunkEventArgs e)
         {
             OnChunkAdded?.Invoke(e);
         }
@@ -128,14 +138,9 @@ namespace PPather
             search.locationTo = to;
         }
 
-        public void SetNotifyChunkAdded(Action<ChunkAddedEventArgs> action)
+        public void SetNotifyChunkAdded(Action<ChunkEventArgs> action)
         {
             OnChunkAdded = action;
-        }
-
-        public List<TriangleCollection> GetLoadedChunks()
-        {
-            return search.PathGraph.triangleWorld.LoadedChunks ?? new();
         }
 
         public List<Spot> GetCurrentSearchPath()

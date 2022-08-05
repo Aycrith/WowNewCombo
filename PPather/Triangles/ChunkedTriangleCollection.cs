@@ -1,4 +1,4 @@
-﻿/*
+/*
  *  Part of PPather
  *  Copyright Pontus Borg 2008
  *
@@ -142,7 +142,7 @@ namespace WowTriangles
             chunks.Set(grid_x, grid_y, tc);
 
             if (logger.IsEnabled(LogLevel.Trace))
-                logger.LogTrace($"Got triangles grid [{tc.min_x}, {tc.min_y}] - [{tc.max_x}, {tc.max_y}]");
+            NotifyChunkAdded?.Invoke(new ChunkEventArgs(grid_x, grid_y));
         }
 
         public TriangleCollection GetChunkAt(float x, float y)
@@ -155,6 +155,11 @@ namespace WowTriangles
 
             //LastTriangleCollection = tc;
             return tc;
+        }
+
+        public TriangleCollection GetChunkAt(int grid_x, int grid_y)
+        {
+            return chunks.Get(grid_x, grid_y);
         }
 
         public bool IsSpotBlocked(float x, float y, float z,
