@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Part of PPather
  *  Copyright Pontus Borg 2008
  *
@@ -12,6 +12,8 @@ using Wmo;
 using Microsoft.Extensions.Logging;
 using PPather.Graph;
 using static System.MathF;
+using static WowTriangles.Utils;
+using PPather.Triangles.Data;
 
 namespace WowTriangles
 {
@@ -25,52 +27,44 @@ namespace WowTriangles
         public const int TriangleFlagModel = 4;
 
         private readonly ILogger logger;
-        private readonly List<MPQTriangleSupplier> suppliers;
+        private readonly MPQTriangleSupplier supplier;
         private readonly SparseMatrix2D<TriangleCollection> chunks;
-        private readonly int maxCached;
+        private readonly int initCapacity;
 
-        public List<TriangleCollection> LoadedChunks { get; }
-        //public TriangleCollection LastTriangleCollection;
+        private const int maxCache = 128;
 
         private int NOW;
-        public Action<ChunkAddedEventArgs> NotifyChunkAdded;
+        public Action<ChunkEventArgs> NotifyChunkAdded;
 
-        public ChunkedTriangleCollection(ILogger logger, int maxCached, MPQTriangleSupplier supplier)
+        public ChunkedTriangleCollection(ILogger logger, int initCapacity, MPQTriangleSupplier supplier)
         {
             this.logger = logger;
-            this.maxCached = maxCached;
+            this.supplier = supplier;
 
-            LoadedChunks = new();
-            suppliers = new() { supplier };
-
-            chunks = new SparseMatrix2D<TriangleCollection>(8);
+            this.initCapacity = initCapacity;
+            chunks = new SparseMatrix2D<TriangleCollection>(initCapacity);
         }
 
         public void Close()
         {
-            foreach (MPQTriangleSupplier s in suppliers)
-            {
-                s.Close();
-            }
+            supplier.Close();
         }
 
         public void EvictAll()
         {
-            while (LoadedChunks.Count > 0)
+            foreach (TriangleCollection chunk in chunks)
             {
-                TriangleCollection toEvict = LoadedChunks[0];
-                LoadedChunks.Remove(toEvict);
-                chunks.Clear(toEvict.grid_x, toEvict.grid_y);
+                chunks.Clear(chunk.grid_x, chunk.grid_y);
 
                 if (logger.IsEnabled(LogLevel.Trace))
-                    logger.LogTrace($"Evict chunk at {toEvict.base_x} {toEvict.base_y}");
+                    logger.LogTrace($"Evict chunk at {chunk.grid_x} {chunk.grid_y}");
             }
         }
 
         private void EvictIfNeeded()
         {
             TriangleCollection toEvict = null;
-            foreach (TriangleCollection tc in LoadedChunks)
+            foreach (TriangleCollection tc in chunks)
             {
                 int LRU = tc.LRU;
                 if (toEvict == null || LRU < toEvict.LRU)
@@ -78,11 +72,10 @@ namespace WowTriangles
                     toEvict = tc;
                 }
             }
-            LoadedChunks.Remove(toEvict);
             chunks.Clear(toEvict.grid_x, toEvict.grid_y);
 
             if (logger.IsEnabled(LogLevel.Trace))
-                logger.LogTrace($"Evict chunk at {toEvict.base_x} {toEvict.base_y} -- Count: {LoadedChunks.Count}");
+                logger.LogTrace($"Evict chunk at {toEvict.grid_x} {toEvict.grid_y} -- Count: {chunks.Count}");
         }
 
         public static void GetGridStartAt(float x, float y, out int grid_x, out int grid_y)
@@ -110,38 +103,31 @@ namespace WowTriangles
             if (chunks.IsSet(grid_x, grid_y))
                 return;
 
-            if (LoadedChunks.Count > maxCached)
+            if (chunks.Count > maxCache)
                 EvictIfNeeded();
 
             GetGridLimits(grid_x, grid_y, out float min_x, out float min_y, out float max_x, out float max_y);
 
             if (logger.IsEnabled(LogLevel.Trace))
-                logger.LogTrace($"Got asked for triangles at {x}, {y} grid [{grid_x}, {grid_y}]");
-
-            if (logger.IsEnabled(LogLevel.Trace))
+            {
+                logger.LogTrace($"Triangles at [{x}, {y}] grid [{grid_x}, {grid_y}]");
                 logger.LogTrace($"Need triangles grid [{min_x}, {min_y}] - [{max_x}, {max_y}]");
+            }
 
             TriangleCollection tc = new(logger);
             tc.SetLimits(min_x - 1, min_y - 1, -1E30f, max_x + 1, max_y + 1, 1E30f);
 
-            for (int i = 0; i < suppliers.Count; i++)
-            {
-                suppliers[i].GetTriangles(tc, min_x, min_y, max_x, max_y);
-            }
+            supplier.GetTriangles(tc, min_x, min_y, max_x, max_y);
             tc.CompactVertices();
-
-            tc.base_x = grid_x;
-            tc.base_y = grid_y;
-
-            LoadedChunks.Add(tc);
-            NotifyChunkAdded?.Invoke(new ChunkAddedEventArgs(tc));
-
-            if (logger.IsEnabled(LogLevel.Trace))
-                logger.LogTrace($"Got {tc.TriangleCount} triangles and {tc.VertexCount} vertices -- Count: {LoadedChunks.Count}");
 
             chunks.Set(grid_x, grid_y, tc);
 
             if (logger.IsEnabled(LogLevel.Trace))
+            {
+                logger.LogTrace($"Got {tc.TriangleCount} triangles and {tc.VertexCount} vertices -- Count: {chunks.Count}");
+                logger.LogTrace($"Got triangles grid [{tc.Min.X}, {tc.Min.Y}] - [{tc.Max.X}, {tc.Max.Y}]");
+            }
+
             NotifyChunkAdded?.Invoke(new ChunkEventArgs(grid_x, grid_y));
         }
 
@@ -153,7 +139,6 @@ namespace WowTriangles
             if (tc != null)
                 tc.LRU = NOW++;
 
-            //LastTriangleCollection = tc;
             return tc;
         }
 
@@ -183,7 +168,7 @@ namespace WowTriangles
                         out vertex1.X, out vertex1.Y, out vertex1.Z,
                         out vertex2.X, out vertex2.Y, out vertex2.Z, out _, out _);
 
-                float d = Utils.PointDistanceToTriangle(toon, vertex0, vertex1, vertex2);
+                float d = PointDistanceToTriangle(toon, vertex0, vertex1, vertex2);
                 if (d < toonSize)
                     return true;
             }
@@ -191,45 +176,9 @@ namespace WowTriangles
             return false;
         }
 
-        public void CheckAllCollides(float x, float y, float z, TriangleCollection paintI)
-        {
-            TriangleCollection tc = GetChunkAt(x, y);
-            TriangleMatrix tm = tc.GetTriangleMatrix();
-            ICollection<int> ts = tm.GetAllCloseTo(x, y, 15.0f);
-
-            Vector3 s0 = new(x, y, z);
-            Vector3 s1;
-            foreach (int t in ts)
-            {
-                Vector3 vertex0;
-                Vector3 vertex1;
-                Vector3 vertex2;
-                Vector3 intersect;
-
-                tc.GetTriangleVertices(t,
-                        out vertex0.X, out vertex0.Y, out vertex0.Z,
-                        out vertex1.X, out vertex1.Y, out vertex1.Z,
-                        out vertex2.X, out vertex2.Y, out vertex2.Z);
-
-                s1.X = (vertex0.X + vertex1.X + vertex2.X) / 3;
-                s1.Y = (vertex0.Y + vertex1.Y + vertex2.Y) / 3;
-                s1.Z = (vertex0.Z + vertex1.Z + vertex2.Z) / 3 - 0.1f;
-                //paintI.AddMarker(s1.x, s1.y, s1.z + 0.1f);
-
-                if (Utils.SegmentTriangleIntersect(s0, s1, vertex0, vertex1, vertex2, out intersect))
-                {
-                    if (paintI != null)
-                    {
-                        //    AddVisible(paintI, intersect.x, intersect.y, intersect.z);
-                    }
-                    // blocked!
-                }
-            }
-        }
-
         public bool IsStepBlocked(float x0, float y0, float z0,
                                   float x1, float y1, float z1,
-                                  float toonHeight, float toonSize, TriangleCollection paintI)
+                                  float toonHeight, float toonSize)
         {
             TriangleCollection tc = GetChunkAt(x0, y0);
 
@@ -247,12 +196,12 @@ namespace WowTriangles
             float mid_y = (y0 + y1) / 2.0f;
             float mid_z = (z0 + z1) / 2.0f;
             float mid_z_hit;
-            float mid_dz = Math.Abs(stepLength);
+            float mid_dz = Abs(stepLength);
             //if (mid_dz < 1.0f) mid_dz = 1.0f;
             if (FindStandableAt(mid_x, mid_y, mid_z - mid_dz, mid_z + mid_dz, out mid_z_hit, out _, toonHeight, toonSize))
             {
-                float dz0 = Math.Abs(z0 - mid_z_hit);
-                float dz1 = Math.Abs(z1 - mid_z_hit);
+                float dz0 = Abs(z0 - mid_z_hit);
+                float dz1 = Abs(z1 - mid_z_hit);
 
                 // Console.WriteLine("z0 " + z0 + " z1 " + z1 + " dz0 " + dz0+ " dz1 " + dz1 );
                 if (dz0 > stepLength / 2.0 && dz0 > 1.0)
@@ -326,7 +275,7 @@ namespace WowTriangles
             dx = x2 - x1;
             dy = y2 - y1;
 
-            if (Math.Abs(dx) > Math.Abs(dy))
+            if (Abs(dx) > Abs(dy))
             {
                 dy /= dx;
                 dx = 1;
@@ -354,7 +303,7 @@ namespace WowTriangles
                         out vertex1.X, out vertex1.Y, out vertex1.Z,
                         out vertex2.X, out vertex2.Y, out vertex2.Z);
 
-                if (Utils.SegmentTriangleIntersect(from, to, vertex0, vertex1, vertex2, out _))
+                if (SegmentTriangleIntersect(from, to, vertex0, vertex1, vertex2, out _))
                 {
                     return true;
                 }
@@ -388,9 +337,9 @@ namespace WowTriangles
                         out vertex1.X, out vertex1.Y, out vertex1.Z,
                         out vertex2.X, out vertex2.Y, out vertex2.Z, out int t_flags, out _);
 
-                Utils.GetTriangleNormal(vertex0, vertex1, vertex2, out _);
+                GetTriangleNormal(vertex0, vertex1, vertex2, out _);
 
-                if (Utils.SegmentTriangleIntersect(s0, s1, vertex0, vertex1, vertex2, out _))
+                if (SegmentTriangleIntersect(s0, s1, vertex0, vertex1, vertex2, out _))
                 {
                     if ((t_flags & TriangleFlagDeepWater) != 0)
                     {
@@ -458,7 +407,7 @@ namespace WowTriangles
                 //check triangle is part of a model
                 if ((t_flags & TriangleFlagObject) != 0 || (t_flags & TriangleFlagModel) != 0)
                 {
-                    float minHeight = 0.1f;
+                    float minHeight = 0.75f;
                     float height = 2;
 
                     //and the vertex is close to the char
@@ -493,7 +442,7 @@ namespace WowTriangles
                         out vertex1.X, out vertex1.Y, out vertex1.Z,
                         out vertex2.X, out vertex2.Y, out vertex2.Z, out _, out _);
 
-                if (Utils.SegmentTriangleIntersect(s0, s1, vertex0, vertex1, vertex2, out _))
+                if (SegmentTriangleIntersect(s0, s1, vertex0, vertex1, vertex2, out _))
                 {
                     return false;
                 }
@@ -530,11 +479,11 @@ namespace WowTriangles
 
                 if (allowedFlags == null || allowedFlags.Contains(t_flags))
                 {
-                    Utils.GetTriangleNormal(vertex0, vertex1, vertex2, out Vector3 normal);
-                    float angle_z = (float)Math.Sin(45.0 / 360.0 * Math.PI * 2); //
+                    GetTriangleNormal(vertex0, vertex1, vertex2, out Vector3 normal);
+                    float angle_z = Sin(45.0f / 360.0f * PI * 2f);
                     if (Abs(normal.Z) > angle_z)
                     {
-                        if (Utils.SegmentTriangleIntersect(s0, s1, vertex0, vertex1, vertex2, out Vector3 intersect))
+                        if (SegmentTriangleIntersect(s0, s1, vertex0, vertex1, vertex2, out Vector3 intersect))
                         {
                             if (intersect.Z > best_z &&
                                 !IsSpotBlocked(intersect.X, intersect.Y, intersect.Z, toonHeight, toonSize))
@@ -577,7 +526,7 @@ namespace WowTriangles
                         {
                             up.X = dn.X = x + dx[i];
                             up.Y = dn.Y = y + dy[i];
-                            if (Utils.SegmentTriangleIntersect(up, dn, vertex0, vertex1, vertex2, out _))
+                            if (SegmentTriangleIntersect(up, dn, vertex0, vertex1, vertex2, out _))
                                 nearCliff[i] = false;
                         }
                         allGood &= !nearCliff[i];

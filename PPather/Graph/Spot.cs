@@ -25,16 +25,16 @@ namespace PPather.Graph
 {
     public class Spot
     {
-        public static float Z_RESOLUTION = 2.0f; // Z spots max this close
+        public const float Z_RESOLUTION = 2.0f; // Z spots max this close
 
-        public static uint FLAG_VISITED = 0x0001;
-        public static uint FLAG_BLOCKED = 0x0002;
-        public static uint FLAG_MPQ_MAPPED = 0x0004;
-        public static uint FLAG_WATER = 0x0008;
-        public static uint FLAG_INDOORS = 0x0010;
-        public static uint FLAG_CLOSETOMODEL = 0x0020;
+        public const uint FLAG_VISITED = 0x0001;
+        public const uint FLAG_BLOCKED = 0x0002;
+        public const uint FLAG_MPQ_MAPPED = 0x0004;
+        public const uint FLAG_WATER = 0x0008;
+        public const uint FLAG_INDOORS = 0x0010;
+        public const uint FLAG_CLOSETOMODEL = 0x0020;
 
-        public Vector3 Loc { get; }
+        public Vector3 Loc;
 
         public uint flags;
 
@@ -92,12 +92,8 @@ namespace PPather.Graph
 
         public bool IsCloseZ(float z)
         {
-            float dz = z - this.Loc.Z;
-            if (dz > Z_RESOLUTION)
-                return false;
-            if (dz < -Z_RESOLUTION)
-                return false;
-            return true;
+            float dz = z - Loc.Z;
+            return dz >= -Z_RESOLUTION && dz <= Z_RESOLUTION;
         }
 
         public void SetFlag(uint flag, bool val)
