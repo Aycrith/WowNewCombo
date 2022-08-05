@@ -25,6 +25,9 @@ using WowTriangles;
 using SharedLib.Data;
 using System.Numerics;
 using System.IO;
+using PPather.Triangles.Data;
+
+using static System.MathF;
 
 #pragma warning disable 162
 
@@ -34,8 +37,6 @@ namespace PPather.Graph
     {
         public static bool SearchEnabled;
 
-        private static readonly object m_LockObject = new();
-
         public enum eSearchScoreSpot
         {
             OriginalPather,
@@ -43,7 +44,7 @@ namespace PPather.Graph
             A_Star_With_Model_Avoidance,
         }
 
-        public static int gradiantMax = 5;
+        public const int gradiantMax = 5;
 
         public eSearchScoreSpot searchScoreSpot = eSearchScoreSpot.A_Star_With_Model_Avoidance;
         public const int sleepMSBetweenSpots = 0;
@@ -69,13 +70,11 @@ namespace PPather.Graph
 
         private readonly string chunkDir;
 
-        private float MapId;
-
+        private readonly float MapId;
         private readonly SparseMatrix2D<GraphChunk> chunks;
+        public readonly ChunkedTriangleCollection triangleWorld;
 
-        public ChunkedTriangleCollection triangleWorld;
-
-        private readonly List<GraphChunk> ActiveChunks = new();
+        private const int maxCache = 512;
         private long LRU;
 
         public int GetTriangleClosenessScore(Vector3 loc)
@@ -95,14 +94,14 @@ namespace PPather.Graph
                 return 64;
             }
 
-            return 256;
+            return 128;
         }
 
         public int GetTriangleGradiantScore(Vector3 loc, int gradiantMax)
         {
             if (triangleWorld.GradiantScore(loc.X, loc.Y, loc.Z, 1) > gradiantMax)
             {
-                return 256;
+                return 128;
             }
 
             if (triangleWorld.GradiantScore(loc.X, loc.Y, loc.Z, 2) > gradiantMax)
@@ -166,13 +165,13 @@ namespace PPather.Graph
 
         private void CheckForChunkEvict()
         {
-            lock (this)
-            {
-                if (ActiveChunks.Count < 512)
-                    return;
+            if (chunks.Count < maxCache)
+                return;
 
+            lock (chunks)
+            {
                 GraphChunk evict = null;
-                foreach (GraphChunk gc in ActiveChunks)
+                foreach (GraphChunk gc in chunks)
                 {
                     if (evict == null || gc.LRU < evict.LRU)
                     {
@@ -181,7 +180,6 @@ namespace PPather.Graph
                 }
 
                 evict.Save();
-                ActiveChunks.Remove(evict);
                 chunks.Clear(evict.ix, evict.iy);
                 evict.Clear();
             }
@@ -189,9 +187,9 @@ namespace PPather.Graph
 
         public void Save()
         {
-            lock (m_LockObject)
+            Stopwatch sw = Stopwatch.StartNew();
+            lock (chunks)
             {
-                Stopwatch sw = Stopwatch.StartNew();
                 foreach (GraphChunk gc in chunks.GetAllElements())
                 {
                     if (gc.modified)
@@ -211,11 +209,8 @@ namespace PPather.Graph
             GraphChunk gc = GetChunkAt(x, y);
             if (gc == null)
             {
-                int ix, iy;
-                GetChunkCoord(x, y, out ix, out iy);
-
-                float base_x, base_y;
-                GetChunkBase(ix, iy, out base_x, out base_y);
+                GetChunkCoord(x, y, out int ix, out int iy);
+                GetChunkBase(ix, iy, out float base_x, out float base_y);
 
                 gc = new GraphChunk(base_x, base_y, ix, iy, logger, chunkDir);
                 gc.LRU = LRU++;
@@ -224,7 +219,6 @@ namespace PPather.Graph
 
                 gc.Load();
                 chunks.Set(ix, iy, gc);
-                ActiveChunks.Add(gc);
             }
         }
 
@@ -239,26 +233,29 @@ namespace PPather.Graph
         public Spot AddAndConnectSpot(Spot s)
         {
             s = AddSpot(s);
-            List<Spot> close = FindAllSpots(s.Loc, MaxStepLength);
-            if (!s.IsFlagSet(Spot.FLAG_MPQ_MAPPED))
+            if (s.IsFlagSet(Spot.FLAG_MPQ_MAPPED))
             {
-                foreach (Spot cs in close)
+                return s;
+            }
+
+            List<Spot> close = FindAllSpots(s.Loc, MaxStepLength);
+            for (int i = 0; i < close.Count; i++)
+            {
+                Spot cs = close[i];
+                if (cs.HasPathTo(this, s) && s.HasPathTo(this, cs) || cs.IsBlocked())
                 {
-                    if (cs.HasPathTo(this, s) && s.HasPathTo(this, cs) || cs.IsBlocked())
+                }
+                else if (!triangleWorld.IsStepBlocked(s.Loc.X, s.Loc.Y, s.Loc.Z, cs.Loc.X, cs.Loc.Y, cs.Loc.Z, toonHeight, toonSize))
+                {
+                    float mid_x = (s.Loc.X + cs.Loc.X) / 2;
+                    float mid_y = (s.Loc.Y + cs.Loc.Y) / 2;
+                    float mid_z = (s.Loc.Z + cs.Loc.Z) / 2;
+                    float stand_z;
+                    int flags;
+                    if (triangleWorld.FindStandableAt(mid_x, mid_y, mid_z - WantedStepLength * .75f, mid_z + WantedStepLength * .75f, out stand_z, out flags, toonHeight, toonSize))
                     {
-                    }
-                    else if (!triangleWorld.IsStepBlocked(s.Loc.X, s.Loc.Y, s.Loc.Z, cs.Loc.X, cs.Loc.Y, cs.Loc.Z, toonHeight, toonSize, null))
-                    {
-                        float mid_x = (s.Loc.X + cs.Loc.X) / 2;
-                        float mid_y = (s.Loc.Y + cs.Loc.Y) / 2;
-                        float mid_z = (s.Loc.Z + cs.Loc.Z) / 2;
-                        float stand_z;
-                        int flags;
-                        if (triangleWorld.FindStandableAt(mid_x, mid_y, mid_z - WantedStepLength * .75f, mid_z + WantedStepLength * .75f, out stand_z, out flags, toonHeight, toonSize))
-                        {
-                            s.AddPathTo(cs);
-                            cs.AddPathTo(s);
-                        }
+                        s.AddPathTo(cs);
+                        cs.AddPathTo(s);
                     }
                 }
             }
@@ -291,16 +288,18 @@ namespace PPather.Graph
 
         public Spot FindClosestSpot(Vector3 l_d)
         {
-            return FindClosestSpot(l_d, 30.0f, null);
+            return FindClosestSpot(l_d, 30.0f);
         }
 
+        /*
         public Spot FindClosestSpot(Vector3 l, float max_d)
         {
             return FindClosestSpot(l, max_d, null);
         }
+        */
 
         // this can be slow...
-        public Spot FindClosestSpot(Vector3 l, float max_d, HashSet<Spot> Not)
+        public Spot FindClosestSpot(Vector3 l, float max_d)
         {
             Spot closest = null;
             float closest_d = 1E30f;
@@ -320,8 +319,9 @@ namespace PPather.Graph
                     Spot s1 = GetSpot2D(l.X + i, y_dn);
                     Spot s3 = GetSpot2D(l.X + i, y_up);
                     Spot[] sv = { s0, s1, s2, s3 };
-                    foreach (Spot s in sv)
+                    for (int i1 = 0; i1 < sv.Length; i1++)
                     {
+                        Spot s = sv[i1];
                         Spot ss = s;
                         while (ss != null)
                         {
@@ -369,8 +369,9 @@ namespace PPather.Graph
                         GetSpot2D(l.X + i, y_up)
                     };
 
-                    foreach (Spot s in sv)
+                    for (int j = 0; j < sv.Length; j++)
                     {
+                        Spot s = sv[j];
                         Spot ss = s;
                         while (ss != null)
                         {
@@ -477,8 +478,10 @@ namespace PPather.Graph
 
         private static float TurnCost(Spot from, Spot to)
         {
+            if (from.traceBack == null)
+                return 0.0f;
+
             Spot prev = from.traceBack;
-            if (prev == null) { return 0.0f; }
             return TurnCost(prev.Loc.X, prev.Loc.Y, prev.Loc.Z, from.Loc.X, from.Loc.Y, from.Loc.Z, to.Loc.X, to.Loc.Y, to.Loc.Z);
         }
 
@@ -488,7 +491,7 @@ namespace PPather.Graph
             float v1y = y1 - y0;
             float v1z = z1 - z0;
 
-            float v1l = MathF.Sqrt(v1x * v1x + v1y * v1y + v1z * v1z);
+            float v1l = Sqrt(v1x * v1x + v1y * v1y + v1z * v1z);
             v1x /= v1l;
             v1y /= v1l;
             v1z /= v1l;
@@ -497,7 +500,7 @@ namespace PPather.Graph
             float v2y = y2 - y1;
             float v2z = z2 - z1;
 
-            float v2l = MathF.Sqrt(v2x * v2x + v2y * v2y + v2z * v2z);
+            float v2l = Sqrt(v2x * v2x + v2y * v2y + v2z * v2z);
             v2x /= v2l;
             v2y /= v2l;
             v2z /= v2l;
@@ -505,7 +508,7 @@ namespace PPather.Graph
             float ddx = v1x - v2x;
             float ddy = v1y - v2y;
             float ddz = v1z - v2z;
-            return MathF.Sqrt(ddx * ddx + ddy * ddy + ddz * ddz);
+            return Sqrt(ddx * ddx + ddy * ddy + ddz * ddz);
         }
 
         // return null if failed or the last spot in the path found
@@ -596,8 +599,10 @@ namespace PPather.Graph
                 CreateSpotsAroundSpot(currentSearchSpot);
 
                 //score each spot around the current search spot and add them to the queue
-                foreach (Spot spotLinkedToCurrent in currentSearchSpot.GetPathsToSpots(this))
+                List<Spot> list = currentSearchSpot.GetPathsToSpots(this);
+                for (int i = 0; i < list.Count; i++)
                 {
+                    Spot spotLinkedToCurrent = list[i];
                     if (spotLinkedToCurrent != null && !spotLinkedToCurrent.IsBlocked() && !spotLinkedToCurrent.SearchIsClosed(currentSearchID))
                     {
                         ScoreSpot(spotLinkedToCurrent, destinationSpot, currentSearchID, locationHeuristics, prioritySpotQueue);
@@ -613,6 +618,7 @@ namespace PPather.Graph
                 logger.LogWarning("search failed, returning the closest spot.");
                 return ClosestSpot;
             }
+
             return null;
         }
 
@@ -708,68 +714,68 @@ namespace PPather.Graph
 
         public void CreateSpotsAroundSpot(Spot currentSearchSpot, bool mapped)
         {
-            if (!mapped)
+            if (mapped)
             {
-                //mark as mapped
-                currentSearchSpot.SetFlag(Spot.FLAG_MPQ_MAPPED, true);
+                return;
+            }
 
-                float PI = (float)Math.PI;
+            //mark as mapped
+            currentSearchSpot.SetFlag(Spot.FLAG_MPQ_MAPPED, true);
 
-                //loop through the spots in a circle around the current search spot
-                for (float radianAngle = 0; radianAngle < PI * 2; radianAngle += PI / 8)
+            //loop through the spots in a circle around the current search spot
+            for (float radianAngle = 0; radianAngle < PI * 2; radianAngle += PI / 8)
+            {
+                //calculate the location of the spot at the angle
+                float nx = currentSearchSpot.Loc.X + (Sin(radianAngle) * WantedStepLength);// *0.8f;
+                float ny = currentSearchSpot.Loc.Y + (Cos(radianAngle) * WantedStepLength);// *0.8f;
+
+                PeekSpot = new Spot(nx, ny, currentSearchSpot.Loc.Z);
+
+                //find the spot at this location, stop if there is one already
+                if (GetSpot(nx, ny, currentSearchSpot.Loc.Z) != null) { continue; } //found a spot so don't create a new one
+
+                // TODO:
+                //see if there is a close spot, stop if there is
+                if (FindClosestSpot(new(nx, ny, currentSearchSpot.Loc.Z), MinStepLength) != null)
                 {
-                    //calculate the location of the spot at the angle
-                    float nx = currentSearchSpot.Loc.X + (MathF.Sin(radianAngle) * WantedStepLength);// *0.8f;
-                    float ny = currentSearchSpot.Loc.Y + (MathF.Cos(radianAngle) * WantedStepLength);// *0.8f;
+                    continue;
+                } // TODO: this is slow
 
-                    PeekSpot = new Spot(nx, ny, currentSearchSpot.Loc.Z);
+                // check we can stand at this new location
+                if (!triangleWorld.FindStandableAt(nx, ny, currentSearchSpot.Loc.Z - WantedStepLength * .75f, currentSearchSpot.Loc.Z + WantedStepLength * .75f, out float new_z, out int flags, toonHeight, toonSize))
+                {
+                    continue;
+                }
 
-                    //find the spot at this location, stop if there is one already
-                    if (GetSpot(nx, ny, currentSearchSpot.Loc.Z) != null) { continue; } //found a spot so don't create a new one
+                // TODO: 
+                //see if a spot already exists at this location
+                if (FindClosestSpot(new(nx, ny, new_z), MinStepLength) != null)
+                {
+                    continue;
+                }
 
-                    // TODO:
-                    //see if there is a close spot, stop if there is
-                    if (FindClosestSpot(new(nx, ny, currentSearchSpot.Loc.Z), MinStepLength) != null)
-                    {
-                        continue;
-                    } // TODO: this is slow
+                //if the step is blocked then stop
+                if (triangleWorld.IsStepBlocked(currentSearchSpot.Loc.X, currentSearchSpot.Loc.Y, currentSearchSpot.Loc.Z, nx, ny, new_z, toonHeight, toonSize))
+                {
+                    continue;
+                }
 
-                    // check we can stand at this new location
-                    if (!triangleWorld.FindStandableAt(nx, ny, currentSearchSpot.Loc.Z - WantedStepLength * .75f, currentSearchSpot.Loc.Z + WantedStepLength * .75f, out float new_z, out int flags, toonHeight, toonSize))
-                    {
-                        continue;
-                    }
+                //create a new spot and connect it
+                Spot newSpot = AddAndConnectSpot(new Spot(nx, ny, new_z));
+                //PeekSpot = newSpot;
 
-                    // TODO: 
-                    //see if a spot already exists at this location
-                    if (FindClosestSpot(new(nx, ny, new_z), MinStepLength) != null)
-                    {
-                        continue;
-                    }
-
-                    //if the step is blocked then stop
-                    if (triangleWorld.IsStepBlocked(currentSearchSpot.Loc.X, currentSearchSpot.Loc.Y, currentSearchSpot.Loc.Z, nx, ny, new_z, toonHeight, toonSize, null))
-                    {
-                        continue;
-                    }
-
-                    //create a new spot and connect it
-                    Spot newSpot = AddAndConnectSpot(new Spot(nx, ny, new_z));
-                    //PeekSpot = newSpot;
-
-                    //check flags return by triangleWorld.FindStandableA
-                    if ((flags & ChunkedTriangleCollection.TriangleFlagDeepWater) != 0)
-                    {
-                        newSpot.SetFlag(Spot.FLAG_WATER, true);
-                    }
-                    if (((flags & ChunkedTriangleCollection.TriangleFlagModel) != 0) || ((flags & ChunkedTriangleCollection.TriangleFlagObject) != 0))
-                    {
-                        newSpot.SetFlag(Spot.FLAG_INDOORS, true);
-                    }
-                    if (triangleWorld.IsCloseToModel(newSpot.Loc.X, newSpot.Loc.Y, newSpot.Loc.Z, IsCloseToModelRange))
-                    {
-                        newSpot.SetFlag(Spot.FLAG_CLOSETOMODEL, true);
-                    }
+                //check flags return by triangleWorld.FindStandableA
+                if ((flags & ChunkedTriangleCollection.TriangleFlagDeepWater) != 0)
+                {
+                    newSpot.SetFlag(Spot.FLAG_WATER, true);
+                }
+                if (((flags & ChunkedTriangleCollection.TriangleFlagModel) != 0) || ((flags & ChunkedTriangleCollection.TriangleFlagObject) != 0))
+                {
+                    newSpot.SetFlag(Spot.FLAG_INDOORS, true);
+                }
+                if (triangleWorld.IsCloseToModel(newSpot.Loc.X, newSpot.Loc.Y, newSpot.Loc.Z, IsCloseToModelRange))
+                {
+                    newSpot.SetFlag(Spot.FLAG_CLOSETOMODEL, true);
                 }
             }
         }
@@ -802,16 +808,13 @@ namespace PPather.Graph
 
         public bool IsUnderwaterOrInAir(Vector3 l)
         {
-            int flags;
-            float z;
-            if (triangleWorld.FindStandableAt(l.X, l.Y, l.Z - 50.0f, l.Z + 5.0f, out z, out flags, toonHeight, toonSize))
+            if (triangleWorld.FindStandableAt(l.X, l.Y, l.Z - 50.0f, l.Z + 5.0f, out _, out int flags, toonHeight, toonSize))
             {
                 if ((flags & ChunkedTriangleCollection.TriangleFlagDeepWater) != 0)
                     return true;
                 else
                     return false;
             }
-            //return true;
             return false;
         }
 
@@ -861,28 +864,22 @@ namespace PPather.Graph
         private Vector3 GetBestLocations(Vector3 location)
         {
             float newZ = 0;
-            int flags = 0;
-            bool getOut = false;
-            float[] a = new float[] { 0, -1f, -0.5f, 0.5f, 1 };
 
-            foreach (var z in a)
+            for (float z = -1; z < 1f; z += 0.5f)
             {
-                if (getOut) break;
-                foreach (var x in a)
-                {
-                    if (getOut) break;
-                    foreach (var y in a)
-                    {
-                        if (getOut) break;
+                for (float x = -1; x < 1f; x += 0.5f)
+                    for (float y = -1; y < 1f; y += 0.5f)
                         if (triangleWorld.FindStandableAt(
-                            location.X, location.Y,
-                            location.Z + 1 - WantedStepLength * .75f, location.Z + 1 + WantedStepLength * .75f,
-                            out newZ, out flags, toonHeight, toonSize))
-                            getOut = true;
-                    }
-                }
+                            location.X + x,
+                            location.Y + y,
+                            location.Z + z + 1 - WantedStepLength * .75f,
+                            location.Z + z + 1 + WantedStepLength * .75f,
+                            out newZ, out _,
+                            toonHeight, toonSize))
+                            goto end;
             }
-            if (Math.Abs(newZ - location.Z) > 5) { newZ = location.Z; }
+        end:
+            if (Abs(newZ - location.Z) > 5) { newZ = location.Z; }
 
             return new(location.X, location.Y, newZ);
         }

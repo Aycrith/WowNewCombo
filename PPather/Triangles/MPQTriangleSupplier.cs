@@ -23,6 +23,7 @@ using System.Numerics;
 using Wmo;
 using System.IO;
 using Microsoft.Extensions.Logging;
+using PPather.Triangles.Data;
 
 namespace WowTriangles
 {

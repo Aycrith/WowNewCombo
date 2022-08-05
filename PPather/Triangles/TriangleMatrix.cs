@@ -5,10 +5,14 @@
  */
 
 using Microsoft.Extensions.Logging;
+
+using PPather.Triangles.Data;
+
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using static System.MathF;
+
+using static WowTriangles.Utils;
 
 namespace WowTriangles
 {
@@ -22,14 +26,14 @@ namespace WowTriangles
         {
             DateTime pre = DateTime.UtcNow;
 
-            if (logger.IsEnabled(LogLevel.Trace))
-                logger.LogTrace($"Build hash for {tc.TriangleCount} triangles");
-
-            matrix = new SparseFloatMatrix2D<List<int>>(resolution, tc.TriangleCount);
+            int capacity = (int)(tc.TriangleCount / (resolution * 150)); // 150 - 2
+            matrix = new SparseFloatMatrix2D<List<int>>(resolution, capacity);
 
             Vector3 vertex0;
             Vector3 vertex1;
             Vector3 vertex2;
+
+            int listCount = 0;
 
             for (int i = 0; i < tc.TriangleCount; i++)
             {
@@ -38,10 +42,10 @@ namespace WowTriangles
                         out vertex1.X, out vertex1.Y, out vertex1.Z,
                         out vertex2.X, out vertex2.Y, out vertex2.Z);
 
-                float minx = Min(Min(vertex0.X, vertex1.X), vertex2.X);
-                float maxx = Max(Max(vertex0.X, vertex1.X), vertex2.X);
-                float miny = Min(Min(vertex0.Y, vertex1.Y), vertex2.Y);
-                float maxy = Max(Max(vertex0.Y, vertex1.Y), vertex2.Y);
+                float minx = Min3(vertex0.X, vertex1.X, vertex2.X);
+                float maxx = Max3(vertex0.X, vertex1.X, vertex2.X);
+                float miny = Min3(vertex0.Y, vertex1.Y, vertex2.Y);
+                float maxy = Max3(vertex0.Y, vertex1.Y, vertex2.Y);
 
                 Vector3 box_center;
                 Vector3 box_halfsize;
@@ -64,15 +68,15 @@ namespace WowTriangles
                         box_center.Y = grid_y + (resolution / 2);
                         box_center.Z = 0;
 
-                        if (Utils.TestTriangleBoxIntersect(vertex0, vertex1, vertex2, box_center, box_halfsize))
+                        if (TestTriangleBoxIntersect(vertex0, vertex1, vertex2, box_center, box_halfsize))
                         {
                             List<int> list = matrix.Get(grid_x, grid_y);
                             if (list == null)
                             {
                                 list = new();
                                 matrix.Set(grid_x, grid_y, list);
+                                listCount++;
                             }
-
                             list.Add(i);
 
                             if (list.Count > maxAtOne)
@@ -83,13 +87,12 @@ namespace WowTriangles
             }
 
             if (logger.IsEnabled(LogLevel.Trace))
-                logger.LogTrace($"Build hash done {maxAtOne} - time {DateTime.UtcNow - pre}");
+                logger.LogTrace($"Build hash for {tc.TriangleCount} triangles - {maxAtOne} -- cap: {capacity} - c: {listCount} - time {(DateTime.UtcNow - pre).TotalMilliseconds}ms");
         }
 
         public ICollection<int> GetAllCloseTo(float x, float y, float distance)
         {
             HashSet<int> all = new();
-
             (List<int>[] close, int count) = matrix.GetAllInSquare(x - distance, y - distance, x + distance, y + distance);
             for (int i = 0; i < count; i++)
             {

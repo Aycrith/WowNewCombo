@@ -184,9 +184,9 @@
             JsonSerializer.Serialize(e.Locations, options), e.Colour, e.Name);
     }
 
-    private async void OnChunkAdded(ChunkAddedEventArgs e)
+    private async void OnChunkAdded(ChunkEventArgs e)
     {
-        TriangleCollection chunks = e.Triangles;
+        TriangleCollection chunks = pPatherService.GetChunkAt(e.GridX, e.GridY);
 
         int i = 0;
         int[][] models = new int[4][];
