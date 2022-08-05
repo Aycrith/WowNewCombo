@@ -21,7 +21,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 
 namespace PPather.Graph
 {
@@ -143,7 +142,6 @@ namespace PPather.Graph
             return l;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int Index(int x, int y)
         {
             return (y * CHUNK_SIZE) + x;
