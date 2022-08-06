@@ -188,6 +188,13 @@
             }
         });
 
+
+        // Optimizer
+        let options = BABYLON.SceneOptimizerOptions.HighDegradationAllowed();
+        options.addOptimization(new BABYLON.SceneOptimizerOptions(30, 500));
+        var optimizer = new BABYLON.SceneOptimizer(scene, options);
+        optimizer.start();
+
         console.log("createScene: completed.");
     };
 
