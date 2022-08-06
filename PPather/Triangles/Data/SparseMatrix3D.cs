@@ -12,17 +12,17 @@ namespace PPather.Triangles.Data
             return r;
         }
 
-        public bool IsSet(int x, int y, int z)
+        public bool ContainsKey(int x, int y, int z)
         {
             return dict.ContainsKey((x, y, z));
         }
 
-        public void Set(int x, int y, int z, T val)
+        public void Add(int x, int y, int z, T val)
         {
             dict[(x, y, z)] = val;
         }
 
-        public void Clear(int x, int y, int z)
+        public void Remove(int x, int y, int z)
         {
             dict.Remove((x, y, z));
         }

@@ -157,10 +157,10 @@ namespace PPather.Graph
         private GraphChunk GetChunkAt(float x, float y)
         {
             GetChunkCoord(x, y, out int ix, out int iy);
-            GraphChunk c = chunks.Get(ix, iy);
-            if (c != null)
+            if (chunks.TryGetValue(ix, iy, out GraphChunk c))
                 c.LRU = LRU++;
-            return c;
+
+            return c ?? default;
         }
 
         private void CheckForChunkEvict()
@@ -180,7 +180,7 @@ namespace PPather.Graph
                 }
 
                 evict.Save();
-                chunks.Clear(evict.ix, evict.iy);
+                chunks.Remove(evict.ix, evict.iy);
                 evict.Clear();
             }
         }
@@ -218,7 +218,7 @@ namespace PPather.Graph
                 CheckForChunkEvict();
 
                 gc.Load();
-                chunks.Set(ix, iy, gc);
+                chunks.Add(ix, iy, gc);
             }
         }
 

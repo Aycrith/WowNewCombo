@@ -43,9 +43,10 @@ namespace PPather.Triangles.Data
             {
                 for (int y = sy; y <= ey; y++)
                 {
-                    if (base.IsSet(x, y))
+                    if (ContainsKey(x, y))
                     {
-                        l[i++] = base.Get(x, y);
+                        base.TryGetValue(x, y, out T t);
+                        l[i++] = t ?? default;
                     }
                 }
             }
@@ -53,14 +54,14 @@ namespace PPather.Triangles.Data
             return (l, i);
         }
 
-        public T Get(float x, float y)
+        public bool TryGetValue(float x, float y, out T t)
         {
-            return base.Get(LocalToGrid(x), LocalToGrid(y));
+            return base.TryGetValue(LocalToGrid(x), LocalToGrid(y), out t);
         }
 
-        public void Set(float x, float y, T val)
+        public void Add(float x, float y, T val)
         {
-            base.Set(LocalToGrid(x), LocalToGrid(y), val);
+            base.Add(LocalToGrid(x), LocalToGrid(y), val);
         }
     }
 

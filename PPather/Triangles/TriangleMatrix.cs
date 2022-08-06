@@ -68,20 +68,21 @@ namespace WowTriangles
                         box_center.Y = grid_y + (resolution / 2);
                         box_center.Z = 0;
 
-                        if (TestTriangleBoxIntersect(vertex0, vertex1, vertex2, box_center, box_halfsize))
+                        if (!TestTriangleBoxIntersect(vertex0, vertex1, vertex2, box_center, box_halfsize))
                         {
-                            List<int> list = matrix.Get(grid_x, grid_y);
-                            if (list == null)
-                            {
-                                list = new();
-                                matrix.Set(grid_x, grid_y, list);
-                                listCount++;
-                            }
-                            list.Add(i);
-
-                            if (list.Count > maxAtOne)
-                                maxAtOne = list.Count;
+                            continue;
                         }
+
+                        if (!matrix.TryGetValue(grid_x, grid_y, out List<int> list))
+                        {
+                            list = new();
+                            matrix.Add(grid_x, grid_y, list);
+                            listCount++;
+                        }
+                        list.Add(i);
+
+                        if (list.Count > maxAtOne)
+                            maxAtOne = list.Count;
                     }
                 }
             }

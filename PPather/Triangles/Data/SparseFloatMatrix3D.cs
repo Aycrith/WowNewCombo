@@ -20,14 +20,14 @@
             return base.Get(LocalToGrid(x), LocalToGrid(y), LocalToGrid(z));
         }
 
-        public bool IsSet(float x, float y, float z)
+        public bool ContainsKey(float x, float y, float z)
         {
-            return base.IsSet(LocalToGrid(x), LocalToGrid(y), LocalToGrid(z));
+            return base.ContainsKey(LocalToGrid(x), LocalToGrid(y), LocalToGrid(z));
         }
 
-        public void Set(float x, float y, float z, T val)
+        public void Add(float x, float y, float z, T val)
         {
-            base.Set(LocalToGrid(x), LocalToGrid(y), LocalToGrid(z), val);
+            base.Add(LocalToGrid(x), LocalToGrid(y), LocalToGrid(z), val);
         }
     }
 

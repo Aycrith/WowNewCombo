@@ -14,29 +14,22 @@ namespace PPather.Triangles.Data
             dict = new(initialCapacity);
         }
 
-        public bool HasValue(int x, int y)
+        public bool ContainsKey(int x, int y)
         {
             return dict.ContainsKey((x, y));
         }
 
-        public T Get(int x, int y)
+        public bool TryGetValue(int x, int y, out T r)
         {
-            T r = default;
-            dict.TryGetValue((x, y), out r);
-            return r;
+            return dict.TryGetValue((x, y), out r);
         }
 
-        public void Set(int x, int y, T val)
+        public void Add(int x, int y, T val)
         {
             dict[(x, y)] = val;
         }
 
-        public bool IsSet(int x, int y)
-        {
-            return HasValue(x, y);
-        }
-
-        public void Clear(int x, int y)
+        public void Remove(int x, int y)
         {
             dict.Remove((x, y));
         }
@@ -55,7 +48,6 @@ namespace PPather.Triangles.Data
         {
             return dict.GetEnumerator();
         }
-
     }
 
 }

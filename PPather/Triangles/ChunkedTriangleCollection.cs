@@ -54,7 +54,7 @@ namespace WowTriangles
         {
             foreach (TriangleCollection chunk in chunks)
             {
-                chunks.Clear(chunk.grid_x, chunk.grid_y);
+                chunks.Remove(chunk.grid_x, chunk.grid_y);
 
                 if (logger.IsEnabled(LogLevel.Trace))
                     logger.LogTrace($"Evict chunk at {chunk.grid_x} {chunk.grid_y}");
@@ -72,7 +72,7 @@ namespace WowTriangles
                     toEvict = tc;
                 }
             }
-            chunks.Clear(toEvict.grid_x, toEvict.grid_y);
+            chunks.Remove(toEvict.grid_x, toEvict.grid_y);
 
             if (logger.IsEnabled(LogLevel.Trace))
                 logger.LogTrace($"Evict chunk at {toEvict.grid_x} {toEvict.grid_y} -- Count: {chunks.Count}");
@@ -100,7 +100,7 @@ namespace WowTriangles
         {
             GetGridStartAt(x, y, out int grid_x, out int grid_y);
 
-            if (chunks.IsSet(grid_x, grid_y))
+            if (chunks.ContainsKey(grid_x, grid_y))
                 return;
 
             if (chunks.Count > maxCache)
@@ -120,7 +120,7 @@ namespace WowTriangles
             supplier.GetTriangles(tc, min_x, min_y, max_x, max_y);
             tc.CompactVertices();
 
-            chunks.Set(grid_x, grid_y, tc);
+            chunks.Add(grid_x, grid_y, tc);
 
             if (logger.IsEnabled(LogLevel.Trace))
             {
@@ -135,16 +135,17 @@ namespace WowTriangles
         {
             LoadChunkAt(x, y);
             GetGridStartAt(x, y, out int grid_x, out int grid_y);
-            TriangleCollection tc = chunks.Get(grid_x, grid_y);
-            if (tc != null)
+
+            if (chunks.TryGetValue(grid_x, grid_y, out TriangleCollection tc))
                 tc.LRU = NOW++;
 
-            return tc;
+            return tc ?? default;
         }
 
         public TriangleCollection GetChunkAt(int grid_x, int grid_y)
         {
-            return chunks.Get(grid_x, grid_y);
+            chunks.TryGetValue(grid_x, grid_y, out TriangleCollection tc);
+            return tc ?? default;
         }
 
         public bool IsSpotBlocked(float x, float y, float z,

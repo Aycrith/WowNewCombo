@@ -20,6 +20,7 @@
 
 using System;
 using System.Numerics;
+using static System.MathF;
 using Wmo;
 using System.IO;
 using Microsoft.Extensions.Logging;
@@ -99,13 +100,14 @@ namespace WowTriangles
 
                 // World objects
 
-                foreach (WMOInstance wi in t.wmois)
+                for (int i = 0; i < t.wmois.Count; i++)
                 {
+                    WMOInstance wi = t.wmois[i];
                     if (wi != null && wi.wmo != null)
                     {
                         string fn = wi.wmo.fileName;
                         int last = fn.LastIndexOf('\\');
-                        fn = fn.Substring(last + 1);
+                        fn = fn[(last + 1)..];
                         // logger.WriteLine("    wmo: " + fn + " at " + wi.pos);
 
                         if (fn != null)
@@ -117,15 +119,16 @@ namespace WowTriangles
                             }
                             else
                             {
-                                instances.Set((int)wi.pos.X, (int)wi.pos.Y, (int)wi.pos.Z, wi.wmo);
+                                instances.Add((int)wi.pos.X, (int)wi.pos.Y, (int)wi.pos.Z, wi.wmo);
                                 AddTriangles(triangles, wi);
                             }
                         }
                     }
                 }
 
-                foreach (ModelInstance mi in t.modelis)
+                for (int i = 0; i < t.modelis.Count; i++)
                 {
+                    ModelInstance mi = t.modelis[i];
                     if (/*mi != null &&*/ mi.model != null)
                     {
                         string fn = mi.model.fileName;
@@ -171,18 +174,18 @@ namespace WowTriangles
         public void GetTriangles(TriangleCollection tc, float min_x, float min_y, float max_x, float max_y)
         {
             //logger.WriteLine("TotalMemory " + System.GC.GetTotalMemory(false)/(1024*1024) + " MB");
-            foreach (WMOInstance wi in wdt.gwmois)
+            for (int i = 0; i < wdt.gwmois.Count; i++)
             {
+                WMOInstance wi = wdt.gwmois[i];
                 AddTriangles(tc, wi);
             }
 
-            SparseMatrix3D<WMO> instances = new();
             for (float x = min_x; x < max_x; x += ChunkReader.TILESIZE)
             {
                 for (float y = min_y; y < max_y; y += ChunkReader.TILESIZE)
                 {
                     GetChunkCoord(x, y, out int chunk_x, out int chunk_y);
-                    GetChunkData(tc, chunk_x, chunk_y, instances);
+                    GetChunkData(tc, chunk_x, chunk_y, new());
                 }
             }
         }
@@ -275,8 +278,9 @@ namespace WowTriangles
 
             WMO wmo = wi.wmo;
 
-            foreach (WMOGroup g in wmo.groups)
+            for (int gi = 0; gi < wmo.groups.Length; gi++)
             {
+                WMOGroup g = wmo.groups[gi];
                 sequence++;
                 int[] vertices = new int[g.nVertices];
 
@@ -560,9 +564,9 @@ namespace WowTriangles
 
         public static void Rotate(float x, float y, float angle, out float nx, out float ny)
         {
-            float rot = angle / 360.0f * MathF.PI * 2;
-            float c_y = MathF.Cos(rot);
-            float s_y = MathF.Sin(rot);
+            float rot = angle / 360.0f * PI * 2;
+            float c_y = Cos(rot);
+            float s_y = Sin(rot);
 
             nx = (c_y * x) - (s_y * y);
             ny = (s_y * x) + (c_y * y);
