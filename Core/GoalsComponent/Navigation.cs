@@ -102,6 +102,7 @@ namespace Core.Goals
         public bool SimplifyRouteToWaypoint { get; set; } = true;
 
         private bool active;
+        private Vector3 playerLoc;
 
         private readonly Queue<PathRequest> pathRequests = new(1);
         private readonly Queue<PathResult> pathResults = new(1);
@@ -184,14 +185,14 @@ namespace Core.Goals
             input.Proc.SetKeyState(input.Proc.ForwardKey, true, true);
 
             // main loop
-            Vector3 player = playerReader.PlayerLocation;
+            playerLoc = playerReader.PlayerLocation;
             Vector3 target = routeToNextWaypoint.Peek();
-            float distance = player.DistanceXYTo(target);
-            float heading = DirectionCalculator.CalculateHeading(player, target);
+            float distance = playerLoc.DistanceXYTo(target);
+            float heading = DirectionCalculator.CalculateHeading(playerLoc, target);
 
             if (distance < ReachedDistance(MinDistance))
             {
-                if (target.Z != 0 && target.Z != player.Z)
+                if (target.Z != 0 && target.Z != playerLoc.Z)
                 {
                     playerReader.ZCoord = target.Z;
                 }
@@ -223,7 +224,7 @@ namespace Core.Goals
                 {
                     target = routeToNextWaypoint.Peek();
                     stuckDetector.SetTargetLocation(target);
-                    heading = DirectionCalculator.CalculateHeading(player, target);
+                    heading = DirectionCalculator.CalculateHeading(playerLoc, target);
 
                     if (!cts.IsCancellationRequested)
                         AdjustHeading(heading, cts);
@@ -246,7 +247,7 @@ namespace Core.Goals
                     if (HasBeenActiveRecently())
                     {
                         stuckDetector.Update();
-                        distance = player.DistanceXYTo(routeToNextWaypoint.Peek());
+                        distance = playerLoc.DistanceXYTo(routeToNextWaypoint.Peek());
                     }
                 }
                 else if (!cts.IsCancellationRequested) // distance closer
@@ -518,15 +519,17 @@ namespace Core.Goals
             if (totalDistance > MaxDistance / 2)
             {
                 Vector3 location = playerReader.PlayerLocation;
-                float distance = location.DistanceXYTo(routeToNextWaypoint.Peek());
-                if (distance > 2 * MinDistanceMount)
+                float distanceToRoute = location.DistanceXYTo(routeToNextWaypoint.Peek());
+                float distanceToLastLoc = location.DistanceXYTo(playerLoc);
+                if (distanceToRoute > 2 * MinDistanceMount &&
+                    distanceToLastLoc > 2 * MinDistanceMount)
                 {
-                    LogV1ClearRouteToWaypoint(logger, patherName, distance);
+                    LogV1ClearRouteToWaypoint(logger, patherName, distanceToRoute);
                     routeToNextWaypoint.Clear();
                 }
                 else
                 {
-                    LogV1KeepRouteToWaypoint(logger, patherName, distance);
+                    LogV1KeepRouteToWaypoint(logger, patherName, distanceToRoute);
                     ResetStuckParameters();
                 }
             }
