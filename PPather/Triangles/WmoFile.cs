@@ -268,7 +268,8 @@ namespace Wmo
             int toEvictLRU = Int32.MaxValue;
             if (items.Count > maxItems)
             {
-                foreach (string path in items_LRU.Keys)
+                var collection = items_LRU.Keys;
+                foreach (string path in collection)
                 {
                     int LRU = items_LRU[path];
                     if (LRU < toEvictLRU)
@@ -300,20 +301,20 @@ namespace Wmo
             }
 
             items_LRU.Remove(path);
-            items_LRU.Add(path, NOW++);
+            items_LRU.TryAdd(path, NOW++);
             return w;
         }
 
         public void Add(string path, T wmo)
         {
-            items.Add(path, wmo);
+            items.TryAdd(path, wmo);
         }
 
         public T Get(string path)
         {
-            T r;
-            if (items.TryGetValue(path, out r))
+            if (items.TryGetValue(path, out T r))
                 return r;
+
             return default(T);
         }
     }
@@ -418,11 +419,17 @@ namespace Wmo
     {
         public ModelFile(string path, Model model)
         {
-            Stream model_stream = File.OpenRead(path);
-            BinaryReader file = new(model_stream);
-            ReadHeader(file, model);
-            file.Close();
-            model_stream.Close();
+            try
+            {
+                using Stream model_stream = File.OpenRead(path);
+                using BinaryReader file = new(model_stream);
+
+                ReadHeader(file, model);
+            }
+            catch
+            {
+
+            }
         }
 
         private static void ReadHeader(BinaryReader file, Model model)
@@ -687,8 +694,8 @@ namespace Wmo
             if (!archive.SFileExtractFile(wdtfile, tempFile))
                 return;
 
-            Stream stream = File.OpenRead(tempFile);
-            BinaryReader file = new(stream);
+            using Stream stream = File.OpenRead(tempFile);
+            using BinaryReader file = new(stream);
 
             do
             {
@@ -722,9 +729,6 @@ namespace Wmo
                 file.BaseStream.Seek(curpos + size, SeekOrigin.Begin);
 
             } while (file.BaseStream.Position < file.BaseStream.Length);
-
-            stream.Close();
-            file.Close();
 
             loaded = true;
         }
@@ -812,8 +816,8 @@ namespace Wmo
     {
         public DBCFile(string name, DBC dbc, ILogger logger)
         {
-            Stream stream = File.OpenRead(name);
-            BinaryReader file = new(stream);
+            using Stream stream = File.OpenRead(name);
+            using BinaryReader file = new(stream);
 
             do
             {
@@ -830,9 +834,6 @@ namespace Wmo
                     logger.LogWarning("DBC Unknown " + type);
                 }
             } while (file.BaseStream.Position < file.BaseStream.Length);
-
-            file.Close();
-            stream.Close();
         }
 
         private static void HandleWDBC(BinaryReader file, DBC dbc, ILogger logger)
@@ -940,8 +941,8 @@ namespace Wmo
 
         public MapTileFile(string name, MapTile tile, WMOManager wmomanager, ModelManager modelmanager)
         {
-            Stream stream = File.OpenRead(name);
-            BinaryReader file = new(stream);
+            using Stream stream = File.OpenRead(name);
+            using BinaryReader file = new(stream);
 
             do
             {
@@ -1003,9 +1004,6 @@ namespace Wmo
                     tile.chunks[y, x] = chunk;
                 }
             }
-
-            stream.Close();
-            file.Close();
         }
 
         public class LiquidData
@@ -1400,8 +1398,8 @@ namespace Wmo
     {
         public WmoRootFile(string name, WMO wmo, ModelManager modelmanager)
         {
-            Stream stream = File.OpenRead(name);
-            BinaryReader file = new(stream);
+            using Stream stream = File.OpenRead(name);
+            using BinaryReader file = new(stream);
 
             do
             {
@@ -1440,9 +1438,6 @@ namespace Wmo
 
                 file.BaseStream.Seek(curpos + size, SeekOrigin.Begin);
             } while (file.BaseStream.Position != file.BaseStream.Length);
-
-            file.Close();
-            stream.Close();
         }
 
         private static void HandleMVER(uint size)
@@ -1570,8 +1565,8 @@ namespace Wmo
     {
         public WmoGroupFile(WMOGroup g, string name)
         {
-            Stream stream = File.OpenRead(name);
-            BinaryReader file = new(stream);
+            using Stream stream = File.OpenRead(name);
+            using BinaryReader file = new(stream);
 
             file.BaseStream.Seek(0x14, SeekOrigin.Begin);
             HandleMOGP(file, g, 11);
@@ -1639,9 +1634,6 @@ namespace Wmo
                 }
                 file.BaseStream.Seek(curpos + size, SeekOrigin.Begin);
             } while (file.BaseStream.Position != file.BaseStream.Length);
-
-            file.Close();
-            stream.Close();
         }
 
         private static void HandleMVER(uint size)
