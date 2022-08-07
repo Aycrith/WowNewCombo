@@ -434,7 +434,8 @@ function DataToColor:CreateFrames(n)
 
             Pixel(float, GetPlayerFacing() or 0, 3)
             Pixel(int, DataToColor.map or 0, 4) -- MapUIId
-            Pixel(int, UnitLevel(DataToColor.C.unitPlayer), 5)
+            local playerLevel = UnitLevel(DataToColor.C.unitPlayer)
+            Pixel(int, playerLevel, 5)
 
             local cx, cy = DataToColor:GetCorpsePosition()
             Pixel(float, cx * 10, 6)
@@ -595,7 +596,11 @@ function DataToColor:CreateFrames(n)
             DataToColor:populateAuraTimer(UnitDebuff, DataToColor.C.unitTarget, DataToColor.targetDebuffTime)
             DataToColor:populateAuraTimer(UnitBuff, DataToColor.C.unitTarget, DataToColor.targetBuffTime)
 
-            Pixel(int, UnitLevel(DataToColor.C.unitTarget), 43)
+            local targetLevel = UnitLevel(DataToColor.C.unitTarget)
+            if targetLevel == -1 then
+                targetLevel = playerLevel + 10
+            end
+            Pixel(int, targetLevel * 100 + DataToColor.unitClassification[UnitClassification(DataToColor.C.unitTarget)], 43)
 
             -- Amount of money in coppers
             Pixel(int, GetMoney() % 1000000, 44) -- Represents amount of money held (in copper)

@@ -75,6 +75,16 @@ local GetPetHappiness = GetPetHappiness
 
 local ammoSlot = GetInventorySlotInfo("AmmoSlot")
 
+DataToColor.unitClassification = {
+    ["normal"] = 1,
+    ["trivial"] = 2,
+    ["minus"] = 4,
+    ["rare"] = 8,
+    ["elite"] = 16,
+    ["rareelite"] = 32,
+    ["worldboss"] = 64
+}
+
 -- Use Astrolabe function to get current player position
 function DataToColor:GetPosition()
     if DataToColor.map ~= nil then
@@ -124,7 +134,7 @@ function DataToColor:Bits1()
         base2(IsMounted() and 1 or 0, 18) +
         base2(IsAutoRepeatSpell(DataToColor.C.Spell.ShootId) and 1 or 0, 19) +
         base2(IsCurrentSpell(DataToColor.C.Spell.AttackId) and 1 or 0, 20) +
-        base2(DataToColor:targetIsNormal(), 21) +
+        base2(UnitIsPlayer(DataToColor.C.unitTarget) and 1 or 0, 21) +
         base2(UnitIsTapDenied(DataToColor.C.unitTarget) and 1 or 0, 22) +
         base2(IsFalling() and 1 or 0, 23)
 end
@@ -142,7 +152,8 @@ function DataToColor:Bits2()
         base2(DataToColor:isHostile(DataToColor.C.unitFocusTarget), 7) +
         base2(UnitExists(DataToColor.C.unitFocusTarget) and CheckInteractDistance(DataToColor.C.unitFocusTarget, 2) and 1 or 0, 8) +
         base2(UnitIsDead(DataToColor.C.unitPetTarget) and 1 or 0, 9) +
-        base2(IsStealthed() and 1 or 0, 10)
+        base2(IsStealthed() and 1 or 0, 10) +
+        base2(UnitIsTrivial(DataToColor.C.unitTarget) and 1 or 0, 11)
 end
 
 function DataToColor:CustomTrigger(t)
@@ -466,24 +477,6 @@ end
 -- Only put functions here that are part of a boolean sequence --
 -- Sew BELOW for examples ---------------------------------------
 -----------------------------------------------------------------
-
-function DataToColor:targetIsNormal()
-    local classification = UnitClassification(DataToColor.C.unitTarget)
-    if classification == DataToColor.C.unitNormal then
-        if (UnitIsPlayer(DataToColor.C.unitTarget)) then
-            return 0
-        end
-
-        if UnitName(DataToColor.C.unitPet) == UnitName(DataToColor.C.unitTarget) then
-            return 0
-        end
-
-        return 1
-        -- if target is not in combat, return 1 for bitmask
-    else
-        return 0
-    end
-end
 
 function DataToColor:shapeshiftForm()
     local index = GetShapeshiftForm(false)
