@@ -277,7 +277,7 @@ namespace Core.Goals
                 if (!SwitchForm(item))
                     return false;
 
-                if (!WaitForGCD(item, Interrupt))
+                if (!WaitForGCD(item, false, Interrupt))
                     return false;
 
                 //TODO: upon form change and GCD - have to check Usable state
@@ -304,7 +304,7 @@ namespace Core.Goals
                 }
             }
 
-            if (!WaitForGCD(item, Interrupt))
+            if (!WaitForGCD(item, true, Interrupt))
             {
                 return false;
             }
@@ -470,10 +470,14 @@ namespace Core.Goals
             return true;
         }
 
-        private bool WaitForGCD(KeyAction item, Func<bool> interrupt)
+        private bool WaitForGCD(KeyAction item, bool spellQueue, Func<bool> interrupt)
         {
-            int duration = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs) - (SpellQueueTimeMs - playerReader.NetworkLatency.Value); //+ playerReader.NetworkLatency.Value
-            if (duration < 0)
+            int duration = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs);
+
+            if (spellQueue)
+                duration -= (SpellQueueTimeMs - playerReader.NetworkLatency.Value + playerReader.NetworkLatency.Value); //+ playerReader.NetworkLatency.Value
+
+            if (duration <= 0)
                 return true;
 
             (bool t, double e) = wait.Until(duration, interrupt);
