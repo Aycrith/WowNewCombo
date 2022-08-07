@@ -485,7 +485,7 @@ namespace Core.Goals
             if (Log && item.Log)
                 LogGCD(logger, item.Name, !t, addonReader.UsableAction.Is(item), duration, e);
 
-            return !t;
+            return t;
         }
 
         public int UpdateGCD(bool forced)
