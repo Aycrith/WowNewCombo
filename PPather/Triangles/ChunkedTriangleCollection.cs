@@ -22,6 +22,7 @@ namespace WowTriangles
     /// </summary>
     public class ChunkedTriangleCollection
     {
+        public const int TriangleTerrain = 0;
         public const int TriangleFlagDeepWater = 1;
         public const int TriangleFlagObject = 2;
         public const int TriangleFlagModel = 4;

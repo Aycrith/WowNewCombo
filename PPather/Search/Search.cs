@@ -32,40 +32,43 @@ namespace PPather
 
         public Vector4 CreateWorldLocation(float x, float y, float z, int mapId)
         {
-            // find model 0 i.e. terrain
-            var z0 = GetZValueAt(x, y, new int[] { (int)z });
+            float zTerrain = GetZValueAt(x, y,
+                new int[] { ChunkedTriangleCollection.TriangleTerrain });
 
-            // if no z value found then try any model
-            if (z0 == float.MinValue) { z0 = GetZValueAt(x, y, null); }
+            float zWater = GetZValueAt(x, y,
+                new int[] { ChunkedTriangleCollection.TriangleFlagDeepWater });
 
-            if (z0 == float.MinValue) { z0 = 0; }
+            if (zWater > zTerrain)
+            {
+                return new Vector4(x, y, zWater - toonHeight, mapId);
+            }
 
-            return new Vector4(x, y, z0 - toonHeight, mapId);
+            float zModel = GetZValueAt(x, y,
+            new int[] { ChunkedTriangleCollection.TriangleFlagModel, ChunkedTriangleCollection.TriangleFlagObject });
+
+            if (zModel != float.MinValue)
+            {
+                if (MathF.Abs(zModel - zTerrain) > toonHeight)
+                {
+                    return new Vector4(x, y, zTerrain - toonHeight, mapId);
+                }
+                else
+                {
+                    return new Vector4(x, y, zModel - toonHeight, mapId);
+                }
+            }
+
+            return new Vector4(x, y, zTerrain - toonHeight, mapId);
         }
 
         private float GetZValueAt(float x, float y, int[] allowedModels)
         {
-            float z0 = float.MinValue;
-            int flags;
-
-            if (allowedModels != null &&
-                PathGraph.triangleWorld.FindStandableAt1(x, y, -1000, 2000, out float z1, out flags, toonHeight, toonSize, true, null))
+            if (PathGraph.triangleWorld.FindStandableAt1(x, y, -1000, 2000, out float z1, out int flags1, toonHeight, toonSize, true, allowedModels))
             {
-                z0 = z1;
+                return z1;
             }
 
-            if (z0 == float.MinValue &&
-                PathGraph.triangleWorld.FindStandableAt1(x, y, -1000, 2000, out float z2, out flags, toonHeight, toonSize, true, allowedModels))
-            {
-                z0 = z2;
-                // try to find a standable just under where we are just in case we are on top of a building.
-                if (PathGraph.triangleWorld.FindStandableAt1(x, y, -1000, z0 - toonHeight - 1, out float z3, out flags, toonHeight, toonSize, true, allowedModels))
-                {
-                    z0 = z3;
-                }
-            }
-
-            return z0;
+            return float.MinValue;
         }
 
         public void CreatePathGraph(float mapId)
