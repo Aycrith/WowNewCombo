@@ -38,11 +38,7 @@
                                 (@playerReader.TargetLevel) @((int)playerReader.TargetHealthPercentage()) %<br />
                                 GUID: @playerReader.TargetGuid
 
-                                @if (!playerReader.Bits.TargetIsNormal())
-                                {
-                                    <div>NOT NORMAL</div>
-                                }
-                                else if (playerReader.ComboPoints() > 0)
+                                @if (playerReader.ComboPoints() > 0)
                                 {
                                     <div>Combo Points: @playerReader.ComboPoints()</div>
                                 }

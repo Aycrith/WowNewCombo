@@ -70,7 +70,9 @@ namespace Core
         public BuffStatus Buffs { get; }
         public TargetDebuffStatus TargetDebuffs { get; }
 
-        public int TargetLevel => reader.GetInt(43);
+        public int TargetLevel => reader.GetInt(43) / 100;
+
+        public UnitClassification TargetClassification => (UnitClassification)(reader.GetInt(43) % 100);
 
         public int Gold => reader.GetInt(44) + (reader.GetInt(45) * 1000000);
 
@@ -148,16 +150,6 @@ namespace Core
 
         public int FocusGuid => reader.GetInt(77);
         public int FocusTargetGuid => reader.GetInt(78);
-
-        // https://wowpedia.fandom.com/wiki/Mob_experience
-        public bool TargetYieldXP() => Level.Value switch
-        {
-            int n when n < 5 => true,
-            int n when n is >= 6 and <= 39 => TargetLevel > (Level.Value - MathF.Floor(Level.Value / 10f) - 5),
-            int n when n is >= 40 and <= 59 => TargetLevel > (Level.Value - MathF.Floor(Level.Value / 5f) - 5),
-            int n when n is >= 60 and <= 80 => TargetLevel > Level.Value - 9,
-            _ => false
-        };
 
         public void Update(IAddonDataProvider reader)
         {

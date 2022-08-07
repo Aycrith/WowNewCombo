@@ -324,6 +324,7 @@ Take a look at the class files in `/Json/class` for examples of what you can do.
 | `"NPCMaxLevels_Below"` | Maximum allowed level below difference to the player | true | `7` |
 | `"CheckTargetGivesExp"` | Only engage the target if it yields experience | true | `false` |
 | `"Blacklist"` | List of names or sub names which must be avoid engaging | true | `[""]` |
+| `"TargetMask"` | [UnitClassification](https://wowpedia.fandom.com/wiki/API_UnitClassification) types that allowed to engage with. | true | `"Normal, Trivial, Rare"` |
 | `"ImmunityBlacklist"` | List of Npc ids which have some sort of `School` immunities | true | `""` |
 | `"IntVariables"` | List of user defined `integer` variables | true | `[]` |
 | --- | --- | --- | --- |
@@ -351,6 +352,21 @@ Take a look at the class files in `/Json/class` for examples of what you can do.
 | `"BackwardKey"` | `Consolekey` to be pressed to move backward | true | `"DownArrow"` |
 | `"TurnLeftKey"` | `Consolekey` to be pressed to turn left | true | `"LeftArrow"` |
 | `"TurnRightKey"` | `Consolekey` to be pressed to turn right | true | `"RightArrow"` |
+
+### TargetMask
+
+Based of [UnitClassification](https://wowpedia.fandom.com/wiki/API_UnitClassification) API.
+
+Valid Values: `"Normal", "Trivial", "Minus", "Rare", "Elite", "RareElite", "WorldBoss"`
+
+The mentioned values can be combined together like:
+
+e.g.
+```json
+"TargetMask": "Normal, Trivial, Rare, Elite, RareElite",
+```
+
+Where `Elite` and `RareElite` has been included compare to default.
 
 ### KeyboardOnly
 
