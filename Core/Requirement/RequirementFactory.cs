@@ -81,7 +81,7 @@ namespace Core
             boolVariables = new()
             {
                 // Target Based
-                { "TargetYieldXP", playerReader.TargetYieldXP },
+                { "TargetYieldXP", playerReader.Bits.TargetIsNotTrivial },
                 { "TargetsMe", playerReader.TargetsMe },
                 { "TargetsPet", playerReader.TargetsPet },
                 { "TargetsNone", playerReader.TargetsNone },

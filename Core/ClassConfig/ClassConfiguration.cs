@@ -48,7 +48,7 @@ namespace Core
 
         public int NPCMaxLevels_Above { get; set; } = 1;
         public int NPCMaxLevels_Below { get; set; } = 7;
-
+        public UnitClassification TargetMask { get; set; } = UnitClassification.Normal | UnitClassification.Trivial | UnitClassification.Rare;
         public bool CheckTargetGivesExp { get; set; }
         public string[] Blacklist { get; init; } = Array.Empty<string>();
 

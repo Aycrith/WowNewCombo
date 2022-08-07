@@ -1,5 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
+
 using System;
+
+using SharedLib.Extensions;
 
 namespace Core
 {
@@ -13,6 +16,7 @@ namespace Core
         private readonly int above;
         private readonly int below;
         private readonly bool checkTargetGivesExp;
+        private readonly UnitClassification targetMask;
 
         private int lastGuid;
 
@@ -25,11 +29,14 @@ namespace Core
             this.below = classConfig.NPCMaxLevels_Below;
 
             this.checkTargetGivesExp = classConfig.CheckTargetGivesExp;
+            this.targetMask = classConfig.TargetMask;
 
             this.blacklist = classConfig.Blacklist;
 
+            logger.LogInformation($"[{nameof(Blacklist)}] {nameof(classConfig.TargetMask)}: {string.Join(", ", targetMask.GetIndividualFlags())}");
+
             if (blacklist.Length > 0)
-                logger.LogInformation($"[{nameof(Blacklist)}] {string.Join(", ", blacklist)}");
+                logger.LogInformation($"[{nameof(Blacklist)}] Name: {string.Join(", ", blacklist)}");
         }
 
         public bool IsTargetBlacklisted()
@@ -55,15 +62,26 @@ namespace Core
                 return false;
             }
 
-            if (!playerReader.Bits.TargetIsNormal())
+            if (!targetMask.HasFlag(playerReader.TargetClassification))
             {
                 if (lastGuid != playerReader.TargetGuid)
                 {
-                    LogNotNormal(logger, playerReader.TargetId, playerReader.TargetGuid, addonReader.TargetName);
+                    LogClassification(logger, playerReader.TargetId, playerReader.TargetGuid, addonReader.TargetName, playerReader.TargetClassification.ToStringF());
                     lastGuid = playerReader.TargetGuid;
                 }
 
-                return true; // ignore elites
+                return true; // ignore non white listed unit classification
+            }
+
+            if (playerReader.Bits.TargetIsPlayer())
+            {
+                if (lastGuid != playerReader.TargetGuid)
+                {
+                    LogPlayer(logger, playerReader.TargetId, playerReader.TargetGuid, addonReader.TargetName);
+                    lastGuid = playerReader.TargetGuid;
+                }
+
+                return true; // ignore players
             }
 
             if (!playerReader.Bits.TargetIsDead() && playerReader.Bits.IsTagged())
@@ -91,7 +109,7 @@ namespace Core
 
             if (checkTargetGivesExp)
             {
-                if (!playerReader.TargetYieldXP())
+                if (playerReader.Bits.TargetIsTrivial())
                 {
                     if (lastGuid != playerReader.TargetGuid)
                     {
@@ -140,8 +158,8 @@ namespace Core
         [LoggerMessage(
             EventId = 60,
             Level = LogLevel.Warning,
-            Message = "Blacklist ({id},{guid},{name}) not a normal mob!")]
-        static partial void LogNotNormal(ILogger logger, int id, int guid, string name);
+            Message = "Blacklist ({id},{guid},{name}) is player!")]
+        static partial void LogPlayer(ILogger logger, int id, int guid, string name);
 
         [LoggerMessage(
             EventId = 61,
@@ -172,6 +190,12 @@ namespace Core
             Level = LogLevel.Warning,
             Message = "Blacklist ({id},{guid},{name}) name match!")]
         static partial void LogNameMatch(ILogger logger, int id, int guid, string name);
+
+        [LoggerMessage(
+            EventId = 66,
+            Level = LogLevel.Warning,
+            Message = "Blacklist ({id},{guid},{name},{classification}) not defined in the TargetMask!")]
+        static partial void LogClassification(ILogger logger, int id, int guid, string name, string classification);
 
         #endregion
     }

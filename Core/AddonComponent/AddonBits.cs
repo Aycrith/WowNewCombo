@@ -44,7 +44,7 @@ namespace Core
         public bool IsMounted() => v1[Mask._18];
         public bool SpellOn_Shoot() => v1[Mask._19];
         public bool SpellOn_AutoAttack() => v1[Mask._20];
-        public bool TargetIsNormal() => v1[Mask._21];
+        public bool TargetIsPlayer() => v1[Mask._21];
         public bool IsTagged() => v1[Mask._22];
         public bool IsFalling() => v1[Mask._23];
 
@@ -70,5 +70,9 @@ namespace Core
         public bool PetTargetIsDead() => v2[Mask._9];
 
         public bool IsStealthed() => v2[Mask._10];
+
+        public bool TargetIsTrivial() => v2[Mask._11];
+
+        public bool TargetIsNotTrivial() => !v2[Mask._11];
     }
 }
