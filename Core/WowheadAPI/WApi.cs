@@ -5,11 +5,34 @@ namespace Core
 {
     public static class WApi
     {
-        public const string Version = "tbc";
+        public static ClientVersion Version
+        {
+            set
+            {
+                switch (value)
+                {
+                    case ClientVersion.SoM:
+                        BaseUrl = "https://classic.wowhead.com";
+                        break;
+                    case ClientVersion.TBC:
+                        BaseUrl = "https://tbc.wowhead.com";
+                        break;
+                    case ClientVersion.Wrath:
+                        BaseUrl = "https://www.wowhead.com/wotlk";
+                        break;
+                    default:
+                    case ClientVersion.Retail:
+                        BaseUrl = "https://www.wowhead.com";
+                        break;
+                }
+            }
+        }
 
-        public const string NpcId = $"https://{Version}.wowhead.com/npc=";
-        public const string ItemId = $"https://{Version}.wowhead.com/item=";
-        public const string SpellId = $"https://{Version}.wowhead.com/spell=";
+        public static string BaseUrl { get; set; } = null!;
+
+        public static string NpcId = $"{BaseUrl}/npc=";
+        public static string ItemId = $"{BaseUrl}/item=";
+        public static string SpellId = $"{BaseUrl}/spell=";
         public const string TinyIconUrl = "https://wow.zamimg.com/images/wow/icons/tiny/{0}.gif";
         public const string MedIconUrl = "https://wow.zamimg.com/images/wow/icons/medium/{0}.jpg";
 

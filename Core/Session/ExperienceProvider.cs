@@ -5,12 +5,9 @@ namespace Core.Session
 {
     public static class ExperienceProvider
     {
-        private const string Version = "exp_tbc.json";
-
-        public static int[] GetExperienceList()
+        public static int[] GetExperienceList(DataConfig dataConfig)
         {
-            DataConfig dataConfig = DataConfig.Load();
-            var json = File.ReadAllText(Path.Join(dataConfig.Experience, Version));
+            var json = File.ReadAllText(Path.Join(dataConfig.ExpExperience, "exp.json"));
             return JsonConvert.DeserializeObject<int[]>(json);
         }
     }
