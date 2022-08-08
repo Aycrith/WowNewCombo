@@ -13,6 +13,10 @@ local WOW_PROJECT_CLASSIC = WOW_PROJECT_CLASSIC
 local WOW_PROJECT_BURNING_CRUSADE_CLASSIC = WOW_PROJECT_BURNING_CRUSADE_CLASSIC
 local WOW_PROJECT_MAINLINE = WOW_PROJECT_MAINLINE
 
+local LE_EXPANSION_LEVEL_CURRENT = LE_EXPANSION_LEVEL_CURRENT
+local LE_EXPANSION_NORTHREND = LE_EXPANSION_NORTHREND
+local LE_EXPANSION_BURNING_CRUSADE = LE_EXPANSION_BURNING_CRUSADE
+
 function DataToColor.IsClassic()
   return WOW_PROJECT_ID == WOW_PROJECT_CLASSIC
 end
@@ -31,6 +35,19 @@ if DataToColor.IsClassic() then
 end
 
 local TBC253 = DataToColor.IsClassic_BCC() and select(4, GetBuildInfo()) >= 20503
+local Wrath340 = DataToColor.IsClassic_BCC() and select(4, GetBuildInfo()) >= 30400
+
+if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
+	DataToColor.ClientVersion = 1
+elseif WOW_PROJECT_ID == WOW_PROJECT_BURNING_CRUSADE_CLASSIC then
+	if LE_EXPANSION_LEVEL_CURRENT == LE_EXPANSION_NORTHREND then
+		DataToColor.ClientVersion = 4
+	elseif LE_EXPANSION_LEVEL_CURRENT == LE_EXPANSION_BURNING_CRUSADE then
+		DataToColor.ClientVersion = 3
+	end
+elseif WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
+	DataToColor.ClientVersion = 2
+end
 
 if DataToColor.IsRetail() or TBC253 then
   DataToColor.UnitCastingInfo = UnitCastingInfo
