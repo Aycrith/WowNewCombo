@@ -234,19 +234,19 @@ namespace Core
                     stage++;
                     break;
                 case Stage.ValidateData:
-                    if (TryResolveRaceAndClass(out UnitRace race, out UnitClass @class) &&
-                        race != UnitRace.None && @class != UnitClass.None)
+                    if (TryResolveRaceAndClass(out UnitRace race, out UnitClass @class, out ClientVersion clientVersion) &&
+                        race != UnitRace.None && @class != UnitClass.None && clientVersion != ClientVersion.None)
                     {
                         if (auto)
                         {
-                            logger.LogInformation($"Found {race.ToStringF()} {@class.ToStringF()}!");
+                            logger.LogInformation($"Found {clientVersion.ToStringF()} {race.ToStringF()} {@class.ToStringF()}!");
                         }
 
                         stage++;
                     }
                     else
                     {
-                        logger.LogError($"Unable to identify {nameof(UnitRace)} and {nameof(UnitClass)}!");
+                        logger.LogError($"Unable to identify {nameof(ClientVersion)} {nameof(UnitRace)} and {nameof(UnitClass)}!");
                         stage = Stage.Reset;
 
                         if (auto)
@@ -343,14 +343,13 @@ namespace Core
             exec.Run($"/{addonConfigurator.Config.Command}");
         }
 
-        public bool TryResolveRaceAndClass(out UnitRace race, out UnitClass @class)
+        public bool TryResolveRaceAndClass(out UnitRace race, out UnitClass @class, out ClientVersion version)
         {
-            int raceClassCombo = reader.GetInt(46);
+            race = (UnitRace)(reader.GetInt(46) / 10_000);
+            @class = (UnitClass)(reader.GetInt(46) % 10_000 / 100);
+            version = (ClientVersion)(reader.GetInt(46) % 10);
 
-            race = (UnitRace)(raceClassCombo / 100f);
-            @class = (UnitClass)(raceClassCombo - ((int)race * 100f));
-
-            return Enum.IsDefined(race) && Enum.IsDefined(@class);
+            return Enum.IsDefined(race) && Enum.IsDefined(@class) && Enum.IsDefined(version);
         }
     }
 }

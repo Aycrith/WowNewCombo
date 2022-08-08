@@ -11,7 +11,7 @@ namespace Core.Database
 
         public CreatureDB(DataConfig dataConfig)
         {
-            var creatures = JsonConvert.DeserializeObject<List<Creature>>(File.ReadAllText(Path.Join(dataConfig.Dbc, "creatures.json")));
+            var creatures = JsonConvert.DeserializeObject<List<Creature>>(File.ReadAllText(Path.Join(dataConfig.ExpDbc, "creatures.json")));
             creatures.ForEach(i => Entries.Add(i.Entry, i));
         }
 

@@ -14,6 +14,7 @@ namespace Core.GOAP
     public sealed partial class GoapAgent : IDisposable
     {
         private readonly ILogger logger;
+        private readonly DataConfig dataConfig;
         private readonly ClassConfiguration classConfig;
         private readonly IGrindSessionDAO sessionDAO;
         private readonly AddonReader addonReader;
@@ -82,9 +83,10 @@ namespace Core.GOAP
         public Stack<GoapGoal> Plan { get; private set; }
         public GoapGoal? CurrentGoal { get; private set; }
 
-        public GoapAgent(ILogger logger, ClassConfiguration classConfig, IGrindSessionDAO sessionDAO, IWowScreen wowScreen, GoapAgentState goapAgentState, AddonReader addonReader, IEnumerable<GoapGoal> availableGoals, RouteInfo routeInfo, ConfigurableInput input)
+        public GoapAgent(ILogger logger, DataConfig dataConfig, ClassConfiguration classConfig, IGrindSessionDAO sessionDAO, IWowScreen wowScreen, GoapAgentState goapAgentState, AddonReader addonReader, IEnumerable<GoapGoal> availableGoals, RouteInfo routeInfo, ConfigurableInput input)
         {
             this.logger = logger;
+            this.dataConfig = dataConfig;
             this.classConfig = classConfig;
             this.sessionDAO = sessionDAO;
             this.cts = new();
@@ -95,7 +97,7 @@ namespace Core.GOAP
             this.routeInfo = routeInfo;
             this.input = input;
 
-            sessionHandler = new GrindSessionHandler(logger, addonReader, sessionDAO, cts);
+            sessionHandler = new GrindSessionHandler(logger, dataConfig, addonReader, sessionDAO, cts);
 
             stopMoving = new StopMoving(input.Proc, playerReader, cts);
 

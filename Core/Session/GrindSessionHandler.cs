@@ -16,7 +16,7 @@ namespace Core.Session
 
         private bool active;
 
-        public GrindSessionHandler(ILogger logger, AddonReader addonReader, IGrindSessionDAO grindSessionDAO, CancellationTokenSource cts)
+        public GrindSessionHandler(ILogger logger, DataConfig dataConfig, AddonReader addonReader, IGrindSessionDAO grindSessionDAO, CancellationTokenSource cts)
         {
             this.logger = logger;
             this.addonReader = addonReader;
@@ -25,7 +25,7 @@ namespace Core.Session
 
             session = new()
             {
-                ExpList = ExperienceProvider.GetExperienceList()
+                ExpList = ExperienceProvider.GetExperienceList(dataConfig)
             };
 
             thread = new Thread(PeriodicSave);

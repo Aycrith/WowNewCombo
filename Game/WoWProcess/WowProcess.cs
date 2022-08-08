@@ -21,6 +21,8 @@ namespace Game
 
         public Process Process { get; private set; }
 
+        public Version FileVersion { get; private set; }
+
         private int processId = -1;
         public int ProcessId
         {
@@ -43,6 +45,7 @@ namespace Game
             Process = p;
             processId = Process.Id;
             IsRunning = true;
+            FileVersion = GetFileVersion();
 
             cts = new();
             thread = new(PollProcessExited);
@@ -69,6 +72,7 @@ namespace Game
                         Process = p;
                         processId = Process.Id;
                         IsRunning = true;
+                        FileVersion = GetFileVersion();
                     }
                 }
 
@@ -97,6 +101,23 @@ namespace Game
             }
 
             return null;
+        }
+
+        private Version GetFileVersion()
+        {
+            string path = WinAPI.ExecutablePath.Get(Process);
+            if (string.IsNullOrEmpty(path))
+            {
+                throw new NullReferenceException("Unable identify World of Warcraft process path!");
+            }
+
+            FileVersionInfo fileVersion = FileVersionInfo.GetVersionInfo(System.IO.Path.Join(path, Process.ProcessName + ".exe"));
+            if (Version.TryParse(fileVersion.FileVersion, out Version? version))
+            {
+                return version;
+            }
+
+            return new Version();
         }
     }
 }

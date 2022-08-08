@@ -87,7 +87,12 @@ namespace Core
         }
         private readonly CircularBuffer<double> NPCLatencys;
 
-        public BotController(ILogger logger, IEnvironment env, CancellationTokenSource cts, IPPather pather, IGrindSessionDAO grindSessionDAO, DataConfig dataConfig, WowProcess wowProcess, WowScreen wowScreen, WowProcessInput wowProcessInput, ExecGameCommand execGameCommand, Wait wait, IAddonReader addonReader, MinimapNodeFinder minimapNodeFinder)
+        public BotController(ILogger logger, IEnvironment env, StartupClientVersion scv,
+            CancellationTokenSource cts,
+            IPPather pather, IGrindSessionDAO grindSessionDAO, DataConfig dataConfig,
+            WowProcess wowProcess, WowScreen wowScreen, WowProcessInput wowProcessInput,
+            ExecGameCommand execGameCommand, Wait wait, IAddonReader addonReader,
+            MinimapNodeFinder minimapNodeFinder)
         {
             this.logger = logger;
             this.pather = pather;
@@ -112,6 +117,8 @@ namespace Core
 
             if (env is BlazorFrontend)
             {
+                WApi.Version = scv.Version;
+
                 frontendThread = new(FrontendThread);
                 frontendThread.Start();
             }
@@ -261,7 +268,7 @@ namespace Core
             RouteInfo = routeInfo;
 
             GoapAgent?.Dispose();
-            GoapAgent = new(logger, config, GrindSessionDAO, WowScreen, goapAgentState, AddonReader, availableActions, routeInfo, configInput);
+            GoapAgent = new(logger, dataConfig, config, GrindSessionDAO, WowScreen, goapAgentState, AddonReader, availableActions, routeInfo, configInput);
         }
 
         private ClassConfiguration ReadClassConfiguration(string classFile, string? pathFile)

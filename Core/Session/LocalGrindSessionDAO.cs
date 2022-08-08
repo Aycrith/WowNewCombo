@@ -10,26 +10,26 @@ namespace Core.Session
     // the idea is we will have two session data handlers working at the same time
     public class LocalGrindSessionDAO : IGrindSessionDAO
     {
-        private readonly string path;
+        private readonly DataConfig dataConfig;
 
         public LocalGrindSessionDAO(DataConfig dataConfig)
         {
-            path = dataConfig.History;
+            this.dataConfig = dataConfig;
 
-            if (!Directory.Exists(path))
-                Directory.CreateDirectory(path);
+            if (!Directory.Exists(dataConfig.ExpHistory))
+                Directory.CreateDirectory(dataConfig.ExpHistory);
         }
 
         public IEnumerable<GrindSession> Load()
         {
-            var sessions = Directory.EnumerateFiles(path, "*.json")
+            var sessions = Directory.EnumerateFiles(dataConfig.ExpHistory, "*.json")
                 .Select(file => JsonConvert.DeserializeObject<GrindSession>(File.ReadAllText(file)))
                 .OrderByDescending(grindingSession => grindingSession.SessionStart)
                 .ToList();
 
             if (sessions.Any())
             {
-                int[] expList = ExperienceProvider.GetExperienceList();
+                int[] expList = ExperienceProvider.GetExperienceList(dataConfig);
                 foreach (var s in sessions)
                 {
                     s.ExpList = expList;
@@ -42,7 +42,7 @@ namespace Core.Session
         public void Save(GrindSession session)
         {
             string json = JsonConvert.SerializeObject(session);
-            File.WriteAllText(Path.Join(path, $"{session.SessionId}.json"), json);
+            File.WriteAllText(Path.Join(dataConfig.ExpHistory, $"{session.SessionId}.json"), json);
         }
     }
 }

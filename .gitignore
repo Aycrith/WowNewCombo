@@ -265,7 +265,8 @@ __pycache__/
 
 # Logs
 *.log
-Json/History/*.*
+Json/History/*/*.json
+Json/History/*.json
 
 # Private profiles
 Json/class/_

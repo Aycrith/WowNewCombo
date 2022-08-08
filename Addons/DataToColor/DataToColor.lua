@@ -606,7 +606,7 @@ function DataToColor:CreateFrames(n)
             Pixel(int, GetMoney() % 1000000, 44) -- Represents amount of money held (in copper)
             Pixel(int, floor(GetMoney() / 1000000), 45) -- Represents amount of money held (in gold) 
 
-            Pixel(int, DataToColor.C.CHARACTER_RACE_ID * 100 + DataToColor.C.CHARACTER_CLASS_ID, 46)
+            Pixel(int, DataToColor.C.CHARACTER_RACE_ID * 10000 + DataToColor.C.CHARACTER_CLASS_ID * 100 + DataToColor.ClientVersion, 46)
             -- 47 empty
             Pixel(int, DataToColor:shapeshiftForm(), 48) -- Shapeshift id https://wowwiki.fandom.com/wiki/API_GetShapeshiftForm
             Pixel(int, DataToColor:getRange(), 49) -- Represents minRange-maxRange ex. 0-5 5-15
