@@ -28,11 +28,12 @@ namespace Core
             }
         }
 
-        public static string BaseUrl { get; set; } = null!;
+        public static string BaseUrl { get; set; } = "https://www.wowhead.com";
 
-        public static string NpcId = $"{BaseUrl}/npc=";
-        public static string ItemId = $"{BaseUrl}/item=";
-        public static string SpellId = $"{BaseUrl}/spell=";
+        public static string NpcId => $"{BaseUrl}/npc=";
+        public static string ItemId => $"{BaseUrl}/item=";
+        public static string SpellId => $"{BaseUrl}/spell=";
+
         public const string TinyIconUrl = "https://wow.zamimg.com/images/wow/icons/tiny/{0}.gif";
         public const string MedIconUrl = "https://wow.zamimg.com/images/wow/icons/medium/{0}.jpg";
 
