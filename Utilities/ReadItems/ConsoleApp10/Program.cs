@@ -48,7 +48,7 @@ namespace ConsoleApp10
             string file = Path.Join(dataPath, "TBCDB_1.9.0_TheLastVengeance.sql");
             Creature.Extract(file, "INSERT INTO `creature_template` VALUES ");
 
-            //string file = Path.Join(dataPath, "WoTLKDB_1_5_14034.sql");
+            //string file = Path.Join(dataPath, "WoTLKDB_1_6_14060.sql");
             //Creature.Extract(file, "insert  into `creature_template`");
 
             Console.ReadLine();
