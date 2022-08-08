@@ -11,7 +11,7 @@ namespace Core.Database
 
         public SpellDB(DataConfig dataConfig)
         {
-            Spell[] temp = JsonConvert.DeserializeObject<Spell[]>(File.ReadAllText(Path.Join(dataConfig.Dbc, "spells.json")));
+            Spell[] temp = JsonConvert.DeserializeObject<Spell[]>(File.ReadAllText(Path.Join(dataConfig.ExpDbc, "spells.json")));
             for (int i = 0; i < temp.Length; i++)
             {
                 Spells.Add(temp[i].Id, temp[i]);

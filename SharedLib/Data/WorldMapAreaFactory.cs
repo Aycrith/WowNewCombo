@@ -10,7 +10,7 @@ namespace SharedLib.Data
     {
         public static WorldMapArea[] Read(DataConfig dataConfig)
         {
-            return JsonConvert.DeserializeObject<WorldMapArea[]>(File.ReadAllText(Path.Join(dataConfig.Dbc, "WorldMapArea.json")));
+            return JsonConvert.DeserializeObject<WorldMapArea[]>(File.ReadAllText(Path.Join(dataConfig.ExpDbc, "WorldMapArea.json")));
         }
 
         public static WorldMapArea GetWorldMapArea(IEnumerable<WorldMapArea> worldMapAreas, float x, float y, float mapId, int uiMap)

@@ -31,8 +31,6 @@ namespace PPather
         private Path lastPath;
         public bool HasInitialised;
 
-        public PPatherService(ILogger logger) : this(logger, DataConfig.Load()) { }
-
         public PPatherService(ILogger logger, DataConfig dataConfig)
         {
             this.dataConfig = dataConfig;

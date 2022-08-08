@@ -28,7 +28,7 @@ namespace Core.Database
             {
                 try
                 {
-                    CurrentArea = JsonConvert.DeserializeObject<Area>(File.ReadAllText(Path.Join(dataConfig.Area, $"{areaId}.json")));
+                    CurrentArea = JsonConvert.DeserializeObject<Area>(File.ReadAllText(Path.Join(dataConfig.ExpArea, $"{areaId}.json")));
                 }
                 catch (Exception e)
                 {

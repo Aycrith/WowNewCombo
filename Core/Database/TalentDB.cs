@@ -17,8 +17,8 @@ namespace Core.Database
         {
             this.spellDB = spellDB;
 
-            talentTabs = JsonConvert.DeserializeObject<TalentTab[]>(File.ReadAllText(Path.Join(dataConfig.Dbc, "talenttab.json")));
-            talentTreeElements = JsonConvert.DeserializeObject<TalentTreeElement[]>(File.ReadAllText(Path.Join(dataConfig.Dbc, "talent.json")));
+            talentTabs = JsonConvert.DeserializeObject<TalentTab[]>(File.ReadAllText(Path.Join(dataConfig.ExpDbc, "talenttab.json")));
+            talentTreeElements = JsonConvert.DeserializeObject<TalentTreeElement[]>(File.ReadAllText(Path.Join(dataConfig.ExpDbc, "talent.json")));
         }
 
         public bool Update(ref Talent talent, UnitClass @class, out int spellId)
