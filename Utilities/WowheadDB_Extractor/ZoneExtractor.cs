@@ -14,11 +14,25 @@ namespace WowheadDB_Extractor
     {
         public const string EXP = "tbc";
 
-        private const string outputPath = "../../../../../Json/area/";
+        public static string BaseUrl()
+        {
+            switch (EXP)
+            {
+                case "som":
+                    return "https://classic.wowhead.com";
+                case "tbc":
+                    return "https://tbc.wowhead.com";
+                case "wrath":
+                    return "https://www.wowhead.com/wotlk";
+                default:
+                case "retail":
+                    return "https://www.wowhead.com";
+            }
+        }
+
+        private const string outputPath = $"../../../../../Json/area/{EXP}/";
         private const string outputNodePath = "../path/";
-        //private const string outputPath = ".";
-        private const string ZONE_CLASSIC_URL = "https://classic.wowhead.com/zone=";
-        private const string ZONE_TBC_URL = "https://tbc.wowhead.com/zone=";
+        private static string ZONE_URL = $"{BaseUrl()}/zone=";
 
         public static async Task Run()
         {
@@ -72,7 +86,7 @@ namespace WowheadDB_Extractor
 
         static async Task<string> LoadPage(int zoneId)
         {
-            var url = ZONE_TBC_URL + zoneId;
+            var url = ZONE_URL + zoneId;
 
             HttpClient client = new HttpClient();
             var response = await client.GetAsync(url);

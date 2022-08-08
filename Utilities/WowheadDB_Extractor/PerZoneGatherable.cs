@@ -25,7 +25,7 @@ namespace WowheadDB_Extractor
         {
             this.filter = filter;
 
-            url = $"https://{ZoneExtractor.EXP}.wowhead.com/npcs?filter={LootRewardFilter}:{(int)filter};{zoneId}:1;0:0";
+            url = $"{ZoneExtractor.BaseUrl()}/npcs?filter={LootRewardFilter}:{(int)filter};{zoneId}:1;0:0";
         }
 
         public async Task<int[]> Run()

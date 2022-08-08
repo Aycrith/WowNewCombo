@@ -102,7 +102,7 @@ namespace WowheadDB_Extractor
             { "Zul'Drak", 66 },
         };
 
-        public static Dictionary<string, int> List = classic.Union(tbc).ToDictionary(k => k.Key, v => v.Value);
+        public static Dictionary<string, int> List = classic.Union(tbc).Union(wotlk).ToDictionary(k => k.Key, v => v.Value);
 
         public static bool IsClassic(int id)
         {
