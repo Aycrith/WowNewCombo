@@ -83,8 +83,9 @@ namespace HeadlessServer
 
             services.AddSingleton<IEnvironment, Headless>();
 
-            services.AddSingleton(DataConfig.Load());
             services.AddSingleton<WowProcess>(x => new(options.Value.Pid));
+            services.AddSingleton<StartupClientVersion>();
+            services.AddSingleton<DataConfig>(x => DataConfig.Load(x.GetRequiredService<StartupClientVersion>().Path));
             services.AddSingleton<WowScreen>();
             services.AddSingleton<WowProcessInput>();
             services.AddSingleton<ExecGameCommand>();

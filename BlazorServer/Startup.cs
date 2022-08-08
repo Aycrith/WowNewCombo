@@ -89,8 +89,9 @@ namespace BlazorServer
             services.AddSingleton<AutoResetEvent>(x => new(false));
             services.AddSingleton<Wait>();
 
-            services.AddSingleton(DataConfig.Load());
             services.AddSingleton<WowProcess>(x => new(StartupConfigPid.Id));
+            services.AddSingleton<StartupClientVersion>();
+            services.AddSingleton<DataConfig>(x => DataConfig.Load(x.GetRequiredService<StartupClientVersion>().Path));
             services.AddSingleton<WowScreen>();
             services.AddSingleton<WowProcessInput>();
             services.AddSingleton<ExecGameCommand>();

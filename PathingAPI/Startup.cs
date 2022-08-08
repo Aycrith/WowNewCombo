@@ -44,6 +44,7 @@ namespace PathingAPI
 
             services.AddRazorPages();
             services.AddServerSideBlazor();
+            services.AddSingleton<DataConfig>(x => DataConfig.Load()); // going to use the Hardcoded DataConfig.Exp
             services.AddSingleton<PPatherService>();
             services.AddControllers().AddJsonOptions(options =>
             {
