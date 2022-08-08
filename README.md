@@ -4,7 +4,7 @@
 
 # Master Of Puppets
 
-- The project current goal is to support `Burning Crusade Classic`
+- The project current goal is to support `Season of Mastery Classic`, `Burning Crusade Classic`, `Wrath of the Lich King Classic`
 
 - Addon: Modified [Happy-Pixels](https://github.com/FreeHongKongMMO/Happy-Pixels) to read the game state.
 
