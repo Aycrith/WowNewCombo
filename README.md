@@ -209,9 +209,10 @@ A successful [Configuration process](#5-BlazorServer-Configuration-process) has 
 
 In order to run `HeadlessServer` please look at the `HeadlessServer\run.bat`.
 
-`HeadlessServer` has **required** cli parameter: is the `ClassConfiguration` file relative inside the `./Json/class/` folder.
+**Required** cli parameter: relative `ClassConfiguration` file name under the `./Json/class/` folder.
 
-`HeadlessServer` has **optional** cli parameters:
+
+**Optional** cli parameters:
 
 | cli | Description | Default Value | Possible Values |
 | ---- | ---- | ---- | ---- |
