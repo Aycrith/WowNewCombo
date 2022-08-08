@@ -209,10 +209,30 @@ A successful [Configuration process](#5-BlazorServer-Configuration-process) has 
 
 In order to run `HeadlessServer` please look at the `HeadlessServer\run.bat`.
 
-e.g. run from Powershell
+`HeadlessServer` has **required** cli parameter: is the `ClassConfiguration` file relative inside the `./Json/class/` folder.
+
+`HeadlessServer` has **optional** cli parameters:
+
+| cli | Description | Default Value | Possible Values |
+| ---- | ---- | ---- | ---- |
+| `-m` or `-mode` | Pathfinder type | `RemoteV3` | `Local` or `RemoteV1` or `RemoteV3` |
+| `-p` or `-pid` | World of Warcraft process id | `-1` | open up task manager to find PID |
+| `-r` or `-reader` | Addon data screen reader backend | `GDI` | `GDI` works from Win7, `DXGI` work from Win8 |
+| `hostv1` | Navigation Remote V1 host | `localhost` | - |
+| `portv1` | Navigation Remote V1 port | `5001` | - |
+| `hostv3` | Navigation Remote V3 host | `127.0.0.1` | - |
+| `portv3` | Navigation Remote V3 port | `47111` | - |
+
+e.g. run from Powershell without any optional parameter
 ```ps
 cd C:\WowClassicGrindBot\HeadlessServer
 .\run.bat Hunter_1.json
+```
+
+e.g. run from Powershell optional parameters, using `DXGI` reader and forced `Local` pathfinder.
+```ps
+cd C:\WowClassicGrindBot\HeadlessServer
+.\run.bat Hunter_1.json -m Local -r DXGI
 ```
 
 ## 8. Configure the Wow Client - Interface Options
