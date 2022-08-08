@@ -76,9 +76,9 @@ namespace Core
 
         public int Gold => reader.GetInt(44) + (reader.GetInt(45) * 1000000);
 
-        public UnitRace Race => (UnitRace)(reader.GetInt(46) / 100f);
-
-        public UnitClass Class => (UnitClass)(reader.GetInt(46) - ((int)Race * 100f));
+        public UnitRace Race => (UnitRace)(reader.GetInt(46) / 10_000);
+        public UnitClass Class => (UnitClass)(reader.GetInt(46) % 10_000 / 100);
+        public ClientVersion Version => (ClientVersion)(reader.GetInt(46) % 10);
 
         // 47 empty
 

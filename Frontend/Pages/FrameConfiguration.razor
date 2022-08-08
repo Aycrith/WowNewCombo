@@ -183,9 +183,9 @@
 
     private void OnUpdate()
     {
-        if (frameConfigurator.TryResolveRaceAndClass(out UnitRace race, out UnitClass @class))
+        if (frameConfigurator.TryResolveRaceAndClass(out UnitRace race, out UnitClass @class, out ClientVersion version))
         {
-            playerClass = $"{race.ToStringF()} {@class.ToStringF()}";
+            playerClass = $"{version.ToStringF()} {race.ToStringF()} {@class.ToStringF()}";
         }
         else
         {
