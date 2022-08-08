@@ -28,7 +28,7 @@ namespace ReadDBC_CSV
 
         private const Locale locale = Locale.enUS;
         private const string path = "../../../data/";
-        private const string build = "2.5.4.44833"; // TBCC 2.5.4.44833 // TBCC latest 2.5.4.44171 // WOTLK alpha 3.4.0.44064
+        private const string build = "2.5.4.44833"; // SoM 1.14.3.42770 // TBCC 2.5.4.44833 // WOTLK beta 3.4.0.44996
 
         public static void Main()
         {
