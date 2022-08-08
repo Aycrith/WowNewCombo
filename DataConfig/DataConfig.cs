@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 
 public static class DataConfigMeta
 {
-    public const int Version = 11;
+    public const int Version = 12;
     public const string DefaultFileName = "data_config.json";
 }
 
@@ -18,19 +18,23 @@ public class DataConfig
     [JsonIgnore]
     public string Path => Join(Root, "path");
     [JsonIgnore]
-    public string Dbc => Join(Root, "dbc");
+    public string ExpDbc => Join(Root, "dbc", Exp);
     [JsonIgnore]
     public string PathInfo => Join(Root, "PathInfo");
     [JsonIgnore]
     public string MPQ => Join(Root, "MPQ");
     [JsonIgnore]
-    public string Area => Join(Root, "area");
+    public string ExpArea => Join(Root, "area", Exp);
     [JsonIgnore]
     public string PPather => Join(Root, "PPather");
     [JsonIgnore]
-    public string History => Join(Root, "History");
+    public string ExpHistory => Join(Root, "History", Exp);
     [JsonIgnore]
-    public string Experience => Join(Root, "experience");
+    public string ExpExperience => Join(Root, "experience", Exp);
+
+    // at runtime - determined from the running exe file version
+    [JsonIgnore]
+    public string Exp { get; set; } = "tbc"; // hardcoded default
 
     public static DataConfig Load()
     {
@@ -42,6 +46,23 @@ public class DataConfig
         }
 
         return new DataConfig().Save();
+    }
+
+    public static DataConfig Load(string client)
+    {
+        if (Exists(DataConfigMeta.DefaultFileName))
+        {
+            var loaded = JsonConvert.DeserializeObject<DataConfig>(ReadAllText(DataConfigMeta.DefaultFileName));
+            if (loaded.Version == DataConfigMeta.Version)
+            {
+                loaded.Exp = client;
+                return loaded;
+            }
+        }
+
+        DataConfig newConfig = new DataConfig().Save();
+        newConfig.Exp = client;
+        return newConfig;
     }
 
     private DataConfig Save()
