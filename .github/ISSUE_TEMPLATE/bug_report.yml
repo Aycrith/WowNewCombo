@@ -31,7 +31,6 @@ body:
     options:
       - The Burning Crusade Classic
       - Wrath of the Lich King Classic
-      - Retail
       - Season of Mastery
   validations:
     required: true
