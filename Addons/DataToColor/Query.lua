@@ -6,6 +6,8 @@ local bit = bit
 local band = bit.band
 local date = date
 
+local floor = math.floor
+
 local tonumber = tonumber
 local sub = string.sub
 local gsub = string.gsub
@@ -304,14 +306,8 @@ function DataToColor:isHostile(unit)
 end
 
 function DataToColor:getRange()
-    if UnitExists(DataToColor.C.unitTarget) then
-        local min, max = Range:GetRange(DataToColor.C.unitTarget)
-        if max == nil then
-            max = 99
-        end
-        return min * 100000 + max * 100
-    end
-    return 0
+    local min, max = Range:GetRange(DataToColor.C.unitTarget)
+    return (max or 0) * 1000 + (min or 0)
 end
 
 function DataToColor:targetNpcId()
@@ -459,15 +455,8 @@ function DataToColor:GetCorpsePosition()
 end
 
 function DataToColor:getMeleeAttackSpeed(unit)
-    local mainHand, offHand = UnitAttackSpeed(unit)
-    if not mainHand then
-        mainHand = 0
-    end
-
-    if not offHand then
-        offHand = 0
-    end
-    return 10000 * math.floor(mainHand * 100) + math.floor(offHand * 100)
+    local main, off = UnitAttackSpeed(unit)
+    return 10000 * floor((off or 0) * 100) + floor((main or 0) * 100)
 end
 
 -----------------------------------------------------------------

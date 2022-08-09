@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Specialized;
 using System.Numerics;
 
@@ -86,8 +86,8 @@ namespace Core
         public Stance Stance { get; }
         public Form Form => Stance.Get(Class, Bits.IsStealthed());
 
-        public int MinRange() => (int)(reader.GetInt(49) / 100000f);
-        public int MaxRange() => (int)((reader.GetInt(49) - (MinRange() * 100000f)) / 100f);
+        public int MinRange() => reader.GetInt(49) % 1000;
+        public int MaxRange() => reader.GetInt(49) / 1000 % 1000;
 
         public bool IsInMeleeRange() => MinRange() == 0 && MaxRange() != 0 && MaxRange() <= 5;
         public bool IsInDeadZone() => MinRange() >= 5 && Bits.TargetInTradeRange(); // between 5-8 yard - hunter and warrior
@@ -131,9 +131,9 @@ namespace Core
 
         public BitVector32 CustomTrigger1;
 
-        public int MainHandSpeedMs() => (int)(reader.GetInt(75) / 10000f) * 10;
-
-        public int OffHandSpeed => (int)(reader.GetInt(75) - (MainHandSpeedMs() * 1000f));  // supposed to be 10000f - but theres a 10x
+        // 10000 * off * 100 + main * 100
+        public int MainHandSpeedMs() => reader.GetInt(75) % 10000 * 10;
+        public int OffHandSpeed => reader.GetInt(75) / 10000 * 10;
 
         public int RemainCastMs => reader.GetInt(76);
 
