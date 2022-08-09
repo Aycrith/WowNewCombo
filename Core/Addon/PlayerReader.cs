@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Specialized;
 using System.Numerics;
 
@@ -36,15 +36,15 @@ namespace Core
 
         public int HealthMax() => reader.GetInt(10);
         public int HealthCurrent() => reader.GetInt(11);
-        public int HealthPercent() => HealthMax() == 0 || HealthCurrent() == 1 ? 0 : HealthCurrent() * 100 / HealthMax();
+        public int HealthPercent() => HealthCurrent() * 100 / HealthMax();
 
         public int PTMax() => reader.GetInt(12); // Maximum amount of Power Type (dynamic)
         public int PTCurrent() => reader.GetInt(13); // Current amount of Power Type (dynamic)
-        public int PTPercentage() => PTMax() == 0 ? 0 : PTCurrent() * 100 / PTMax(); // Power Type (dynamic) in terms of a percentage
+        public int PTPercentage() => PTCurrent() * 100 / PTMax(); // Power Type (dynamic) in terms of a percentage
 
         public int ManaMax() => reader.GetInt(14);
         public int ManaCurrent() => reader.GetInt(15);
-        public int ManaPercentage() => ManaMax() == 0 ? 0 : ManaCurrent() * 100 / ManaMax();
+        public int ManaPercentage() => (1 + ManaCurrent()) * 100 / (1 + ManaMax());
 
         public int MaxRune() => reader.GetInt(14);
 
@@ -54,12 +54,11 @@ namespace Core
 
         public int TargetMaxHealth() => reader.GetInt(18);
         public int TargetHealth() => reader.GetInt(19);
-        public int TargetHealthPercentage() => TargetMaxHealth() == 0 || TargetHealth() == 1 ? 0 : TargetHealth() * 100 / TargetMaxHealth();
-
+        public int TargetHealthPercentage() => (1 + TargetHealth()) * 100 / (1 + TargetMaxHealth());
 
         public int PetMaxHealth() => reader.GetInt(38);
         public int PetHealth() => reader.GetInt(39);
-        public int PetHealthPercentage() => PetMaxHealth() == 0 || PetHealth() == 1 ? 0 : PetHealth() * 100 / PetMaxHealth();
+        public int PetHealthPercentage() => (1 + PetHealth()) * 100 / (1 + PetMaxHealth());
 
 
         public SpellInRange SpellInRange { get; }
@@ -95,7 +94,7 @@ namespace Core
         public RecordInt PlayerXp { get; } = new(50);
 
         public int PlayerMaxXp => reader.GetInt(51);
-        public int PlayerXpPercentage => PlayerXp.Value * 100 / (PlayerMaxXp == 0 ? 1 : PlayerMaxXp);
+        public int PlayerXpPercentage => PlayerXp.Value * 100 / PlayerMaxXp;
 
         private UI_ERROR UIError => (UI_ERROR)reader.GetInt(52);
         public UI_ERROR LastUIError { get; set; }
