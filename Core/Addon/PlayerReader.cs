@@ -70,14 +70,15 @@ namespace Core
         public BuffStatus Buffs { get; }
         public TargetDebuffStatus TargetDebuffs { get; }
 
+        // TargetLevel * 100 + TargetClass
         public int TargetLevel => reader.GetInt(43) / 100;
-
         public UnitClassification TargetClassification => (UnitClassification)(reader.GetInt(43) % 100);
 
         public int Gold => reader.GetInt(44) + (reader.GetInt(45) * 1000000);
 
-        public UnitRace Race => (UnitRace)(reader.GetInt(46) / 10_000);
-        public UnitClass Class => (UnitClass)(reader.GetInt(46) % 10_000 / 100);
+        // RACE_ID * 10000 + CLASS_ID * 100 + ClientVersion
+        public UnitRace Race => (UnitRace)(reader.GetInt(46) / 10000);
+        public UnitClass Class => (UnitClass)(reader.GetInt(46) / 100 % 100);
         public ClientVersion Version => (ClientVersion)(reader.GetInt(46) % 10);
 
         // 47 empty
