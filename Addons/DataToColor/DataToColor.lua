@@ -27,6 +27,7 @@ local strjoin = strjoin
 local strfind = strfind
 local debugstack = debugstack
 local ceil = ceil
+local floor = floor
 local GetTime = GetTime
 
 local UIParent = UIParent
@@ -566,19 +567,17 @@ function DataToColor:CreateFrames(n)
                 Pixel(int, costMeta or 0, 35)
                 Pixel(int, costValue or 0, 36)
 
-                local actionCDSlot, actionCDExpireTime = DataToColor.actionBarCooldownQueue:get()
-                if actionCDSlot then
-                    DataToColor.actionBarCooldownQueue:setDirty(actionCDSlot)
+                local slot, expireTime = DataToColor.actionBarCooldownQueue:get()
+                if slot then
+                    DataToColor.actionBarCooldownQueue:setDirty(slot)
 
-                    local duration = max(0, ceil(actionCDExpireTime - GetTime()))
-                    local valueMs = duration * 100
-
-                    --DataToColor:Print("actionBarCooldownQueue: ", actionCDSlot, " ", valueMs)
-                    Pixel(int, actionCDSlot * 100000 + valueMs, 37)
+                    local duration = max(0, floor((expireTime - GetTime()) * 10))
+                    --DataToColor:Print("actionBarCooldownQueue: ", slot, " ", duration, " ", expireTime - GetTime())
+                    Pixel(int, slot * 100000 + duration, 37)
 
                     if duration == 0 then
-                        DataToColor.actionBarCooldownQueue:remove(actionCDSlot)
-                        --DataToColor:Print("actionBarCooldownQueue: expired ", actionCDSlot, " ", valueMs)
+                        DataToColor.actionBarCooldownQueue:remove(slot)
+                        --DataToColor:Print("actionBarCooldownQueue: expired ", slot)
                     end
                 else
                     Pixel(int, 0, 37)
