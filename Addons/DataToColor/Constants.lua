@@ -23,10 +23,6 @@ DataToColor.C.CHARACTER_GUID = UnitGUID(DataToColor.C.unitPlayer)
 _, DataToColor.C.CHARACTER_CLASS, DataToColor.C.CHARACTER_CLASS_ID = UnitClass(DataToColor.C.unitPlayer)
 _, _, DataToColor.C.CHARACTER_RACE_ID = UnitRace(DataToColor.C.unitPlayer)
 
--- Actionbar power cost
-DataToColor.C.COST_MAX_COST_IDX = 100000
-DataToColor.C.COST_MAX_POWER_TYPE = 1000
-
 -- Spells
 DataToColor.C.Spell.AutoShotId = 75
 DataToColor.C.Spell.ShootId = 5019
