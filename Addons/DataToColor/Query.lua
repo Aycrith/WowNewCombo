@@ -29,6 +29,7 @@ local UnitGUID = UnitGUID
 local GetActionInfo = GetActionInfo
 local GetMacroSpell = GetMacroSpell
 local GetSpellPowerCost = GetSpellPowerCost
+local GetSpellBaseCooldown = GetSpellBaseCooldown
 local GetInventoryItemLink = GetInventoryItemLink
 local IsSpellInRange = IsSpellInRange
 local GetSpellInfo = GetSpellInfo
@@ -405,18 +406,21 @@ function DataToColor:isActionUseable(min, max)
         local start, duration, enabled = GetActionCooldown(i)
         local isUsable, notEnough = IsUsableAction(i)
         local texture = GetActionTexture(i)
-        local spellName = DataToColor.S.playerSpellBook[texture]
+        local spellName = DataToColor.S.playerSpellBookName[texture]
 
         if start == 0 and (isUsable == true and notEnough == false or IsUsableSpell(spellName)) and texture ~= 134400 then -- red question mark texture
             isUsableBits = isUsableBits + (2 ^ (i - min))
         end
 
-        -- exclude GCD - everything counts as GCD below 1.5
-        if enabled == 1 and start ~= 0 and duration > 1.5 then
+        local _, spellId = GetActionInfo(i)
+        local gcd = 0
+        if DataToColor.S.playerSpellBookId[spellId] then
+            gcd = select(2, GetSpellBaseCooldown(spellId))
+        end
+
+        if enabled == 1 and start ~= 0 and (duration * 1000) > gcd and not DataToColor.actionBarCooldownQueue:exists(i) then
             local expireTime = start + duration
-            if not DataToColor.actionBarCooldownQueue:exists(i) then
-                DataToColor.actionBarCooldownQueue:set(i, expireTime)
-            end
+            DataToColor.actionBarCooldownQueue:set(i, expireTime)
         end
     end
     return isUsableBits
