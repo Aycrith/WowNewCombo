@@ -33,13 +33,13 @@ namespace Core
         public void Read(IAddonDataProvider reader)
         {
             int value = reader.GetInt(cActionbarNum);
-            if (value == 0 || value < ActionBar.ACTION_SLOT_MUL) return;
+            if (value == 0 || value < ActionBar.ACTION_SLOT_MUL)
+                return;
 
-            int slot = value / ActionBar.ACTION_SLOT_MUL;
+            int slotIdx = (value / ActionBar.ACTION_SLOT_MUL) - 1;
             float durationSec = value % ActionBar.ACTION_SLOT_MUL / FRACTION_PART;
 
-            int index = slot - 1;
-            data[index] = new(durationSec, DateTime.UtcNow);
+            data[slotIdx] = new(durationSec, DateTime.UtcNow);
         }
 
         public void Reset()

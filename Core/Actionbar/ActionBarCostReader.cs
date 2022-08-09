@@ -7,10 +7,10 @@ namespace Core
         public int Slot { get; }
         public ActionBarCost ActionBarCost { get; }
 
-        public ActionBarCostEventArgs(int slot, PowerType powerType, int cost)
+        public ActionBarCostEventArgs(int slot, ActionBarCost abc)
         {
             Slot = slot;
-            ActionBarCost = new(powerType, cost);
+            ActionBarCost = abc;
         }
     }
 
@@ -28,14 +28,13 @@ namespace Core
 
     public class ActionBarCostReader
     {
+        private const int COST_ORDER = 10000;
+        private const int POWER_TYPE_MOD = 100;
+
         private readonly int cActionbarMeta;
         private readonly int cActionbarNum;
 
-        private const float COST_MAX_COST_IDX = 100000f;
-        private const float COST_MAX_POWER_TYPE = 1000f;
-
-        //https://wowwiki-archive.fandom.com/wiki/ActionSlot
-        private readonly ActionBarCost defaultCost = new(PowerType.Mana, 0);
+        private static readonly ActionBarCost defaultCost = new(PowerType.Mana, 0);
         private readonly ActionBarCost[][] data;
 
         public int Count { get; private set; }
@@ -49,13 +48,9 @@ namespace Core
             this.cActionbarNum = cActionbarNum;
 
             data = new ActionBarCost[ActionBar.CELL_COUNT * ActionBar.BIT_PER_CELL][];
-            for (int i = 0; i < data.Length; i++)
+            for (int s = 0; s < data.Length; s++)
             {
-                data[i] = new ActionBarCost[ActionBar.NUM_OF_COST];
-                for (int j = 0; j < ActionBar.NUM_OF_COST; j++)
-                {
-                    data[i][j] = defaultCost;
-                }
+                data[s] = new ActionBarCost[ActionBar.NUM_OF_COST];
             }
 
             Reset();
@@ -63,40 +58,33 @@ namespace Core
 
         public void Read(IAddonDataProvider reader)
         {
-            // formula
-            // COST_MAX_COST_IDX * costNum + COST_MAX_POWER_TYPE * (type + offsetEnumPowerType) + slot
-            int slot = reader.GetInt(cActionbarMeta);
+            int meta = reader.GetInt(cActionbarMeta);
             int cost = reader.GetInt(cActionbarNum);
+            if ((cost == 0 && meta == 0) || meta < ActionBar.ACTION_SLOT_MUL)
+                return;
 
-            if (cost == 0 || slot == 0 || slot < COST_MAX_POWER_TYPE) return;
+            int slotIdx = (meta / ActionBar.ACTION_SLOT_MUL) - 1;
+            int costIdx = (meta / COST_ORDER % 10) - 1;
+            int type = meta % POWER_TYPE_MOD;
 
-            int costNum = (int)(slot / COST_MAX_COST_IDX);
-            slot -= (int)COST_MAX_COST_IDX * costNum;
+            ActionBarCost old = data[slotIdx][costIdx];
+            data[slotIdx][costIdx] = new((PowerType)type, cost);
 
-            int type = (int)(slot / COST_MAX_POWER_TYPE);
-            slot -= (int)COST_MAX_POWER_TYPE * type;
+            if (cost != old.Cost || (PowerType)type != old.PowerType)
+                OnActionCostChanged?.Invoke(this, new(slotIdx + 1, data[slotIdx][costIdx]));
 
-            int index = slot - 1;
-            int costIndex = costNum - 1;
-
-            ActionBarCost temp = data[index][costIndex];
-            data[index][costIndex] = new((PowerType)type, cost);
-
-            if (cost != temp.Cost)
-                OnActionCostChanged?.Invoke(this, new(slot, (PowerType)type, cost));
-
-            if (slot > Count)
-                Count = slot;
+            if (slotIdx > Count)
+                Count = slotIdx;
         }
 
         public void Reset()
         {
             Count = 0;
-            for (int i = 0; i < data.Length; i++)
+            for (int s = 0; s < data.Length; s++)
             {
-                for (int j = 0; j < ActionBar.NUM_OF_COST; j++)
+                for (int c = 0; c < ActionBar.NUM_OF_COST; c++)
                 {
-                    data[i][j] = defaultCost;
+                    data[s][c] = defaultCost;
                 }
             }
             OnActionCostReset?.Invoke();
@@ -104,8 +92,8 @@ namespace Core
 
         public ActionBarCost GetCostByActionBarSlot(KeyAction keyAction, int costIndex = 0)
         {
-            int index = keyAction.SlotIndex;
-            return data[index][costIndex];
+            int slotIdx = keyAction.SlotIndex;
+            return data[slotIdx][costIndex];
         }
     }
 }
