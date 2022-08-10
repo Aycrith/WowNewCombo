@@ -102,7 +102,9 @@ namespace Core
         public int SpellBeingCast => reader.GetInt(53);
         public bool IsCasting() => SpellBeingCast != 0;
 
-        public int ComboPoints() => reader.GetInt(54);
+        // avgEquipDurability * 100 + target combo points
+        public int ComboPoints() => reader.GetInt(54) % 100;
+        public int AvgEquipDurability() => reader.GetInt(54) / 100; // 0-99
 
         public AuraCount AuraCount => new(reader, 55);
 

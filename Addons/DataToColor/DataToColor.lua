@@ -610,7 +610,7 @@ function DataToColor:CreateFrames(n)
             DataToColor.uiErrorMessage = 0
 
             Pixel(int, DataToColor:CastingInfoSpellId(DataToColor.C.unitPlayer), 53) -- SpellId being cast
-            Pixel(int, GetComboPoints(DataToColor.C.unitPlayer, DataToColor.C.unitTarget) or 0, 54)
+            Pixel(int, DataToColor:getAvgEquipmentDurability() * 100 + (GetComboPoints(DataToColor.C.unitPlayer, DataToColor.C.unitTarget) or 0), 54)
 
             local playerDebuffCount = DataToColor:getAuraCount(UnitDebuff, DataToColor.C.unitPlayer)
             local playerBuffCount = DataToColor:getAuraCount(UnitBuff, DataToColor.C.unitPlayer)

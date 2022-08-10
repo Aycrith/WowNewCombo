@@ -61,6 +61,7 @@ local UnitCharacterPoints = UnitCharacterPoints
 local GetShapeshiftForm = GetShapeshiftForm
 local GetShapeshiftFormInfo = GetShapeshiftFormInfo
 local GetInventoryItemBroken = GetInventoryItemBroken
+local GetInventoryItemDurability = GetInventoryItemDurability
 local UnitOnTaxi = UnitOnTaxi
 local IsSwimming = IsSwimming
 local IsFalling = IsFalling
@@ -477,6 +478,17 @@ end
 function DataToColor:getMeleeAttackSpeed(unit)
     local main, off = UnitAttackSpeed(unit)
     return 10000 * floor((off or 0) * 100) + floor((main or 0) * 100)
+end
+
+function DataToColor:getAvgEquipmentDurability()
+    local c = 0
+    local m = 0
+    for i = 1, 18 do
+        local cc, mm = GetInventoryItemDurability(i)
+        c = c + (cc or 0)
+        m = m + (mm or 0)
+    end
+    return max(0, floor(c * 100 / m) - 1) -- 0-99
 end
 
 -----------------------------------------------------------------
