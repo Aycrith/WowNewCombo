@@ -117,6 +117,10 @@
                 {
                     propList.Add(new ObjectField() { Name = objName + pinfo.Name, Value = recordInt.Value.ToString() });
                 }
+                else if (value is AuraCount auraCount)
+                {
+                    propList.Add(new ObjectField() { Name = objName + pinfo.Name, Value = auraCount.ToString() });
+                }
                 else if (value is PlayerReader playerReader)
                 {
                     var lst = GetFunctionValues(playerReader, typeof(int));
