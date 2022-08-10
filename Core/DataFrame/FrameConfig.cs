@@ -74,23 +74,15 @@ namespace Core
 
         public static DataFrameMeta GetMeta(Color color)
         {
-            int data, hash;
-            data = hash = color.R * 65536 + color.G * 256 + color.B;
-
+            int hash = color.R * 65536 + color.G * 256 + color.B;
             if (hash == 0)
                 return DataFrameMeta.Empty;
 
             // CELL_SPACING * 10000000 + CELL_SIZE * 100000 + 1000 * FRAME_ROWS + NUMBER_OF_FRAMES
-            int spacing = (int)(data / 10000000f);
-            data -= (10000000 * spacing);
-
-            int size = (int)(data / 100000f);
-            data -= (100000 * size);
-
-            int rows = (int)(data / 1000f);
-            data -= (1000 * rows);
-
-            int count = data;
+            int spacing = hash / 10000000;
+            int size = hash / 100000 % 100;
+            int rows = hash / 1000 % 100;
+            int count = hash % 1000;
 
             return new DataFrameMeta(hash, spacing, size, rows, count);
         }

@@ -304,7 +304,7 @@ namespace Core.Goals
                 }
             }
 
-            if (!WaitForGCD(item, true, Interrupt))
+            if (!item.BaseAction && !WaitForGCD(item, true, Interrupt))
             {
                 return false;
             }

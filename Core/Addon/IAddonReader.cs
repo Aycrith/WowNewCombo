@@ -33,7 +33,6 @@ namespace Core
         RecordInt UIMapId { get; }
 
         event Action? AddonDataChanged;
-        event Action? ZoneChanged;
         event Action? PlayerDeath;
 
         void FetchData();

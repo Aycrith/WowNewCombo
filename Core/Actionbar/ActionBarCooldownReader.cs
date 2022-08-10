@@ -6,18 +6,17 @@ namespace Core
     {
         private readonly struct Data
         {
-            public int DurationSec { get; }
+            public float DurationSec { get; }
             public DateTime StartTime { get; }
 
-            public Data(int duration, DateTime startTime)
+            public Data(float duration, DateTime startTime)
             {
                 DurationSec = duration;
                 StartTime = startTime;
             }
         }
 
-        private const float MAX_ACTION_IDX = 100000f;
-        private const float MAX_VALUE_MUL = 100f;
+        private const float FRACTION_PART = 10f;
 
         private readonly int cActionbarNum;
 
@@ -33,20 +32,14 @@ namespace Core
 
         public void Read(IAddonDataProvider reader)
         {
-            // formula
-            // MAX_ACTION_IDX * slot + (cooldown / MAX_VALUE_MUL)
-            float durationSec = reader.GetInt(cActionbarNum);
-            if (durationSec == 0 || durationSec < MAX_ACTION_IDX) return;
-
-            int slot = (int)(durationSec / MAX_ACTION_IDX);
-            durationSec -= (int)MAX_ACTION_IDX * slot;
-            durationSec /= MAX_VALUE_MUL;
-
-            int index = slot - 1;
-            if (index < 0)
+            int value = reader.GetInt(cActionbarNum);
+            if (value == 0 || value < ActionBar.ACTION_SLOT_MUL)
                 return;
 
-            data[index] = new((int)durationSec, DateTime.UtcNow);
+            int slotIdx = (value / ActionBar.ACTION_SLOT_MUL) - 1;
+            float durationSec = value % ActionBar.ACTION_SLOT_MUL / FRACTION_PART;
+
+            data[slotIdx] = new(durationSec, DateTime.UtcNow);
         }
 
         public void Reset()
@@ -60,10 +53,7 @@ namespace Core
         public int GetRemainingCooldown(KeyAction keyAction)
         {
             int index = keyAction.SlotIndex;
-            return data[index].DurationSec > 0
-                ? Math.Clamp((int)(data[index].StartTime.AddSeconds(data[index].DurationSec) - DateTime.UtcNow).TotalMilliseconds, 0, int.MaxValue)
-                : 0;
+            return Math.Clamp((int)(data[index].StartTime.AddSeconds(data[index].DurationSec) - DateTime.UtcNow).TotalMilliseconds, 0, int.MaxValue);
         }
-
     }
 }

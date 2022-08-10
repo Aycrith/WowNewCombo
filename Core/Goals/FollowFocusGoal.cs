@@ -33,7 +33,8 @@ namespace Core.Goals
                 wait.Update();
             }
 
-            input.FollowTarget();
+            if (playerReader.SpellInRange.Focus_Inspect)
+                input.FollowTarget();
 
             wait.Update();
         }

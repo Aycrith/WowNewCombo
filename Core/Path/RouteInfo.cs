@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Text;
+
+using Core.Database;
+
 using WowheadDB;
 
 namespace Core
@@ -32,7 +35,7 @@ namespace Core
         }
     }
 
-    public class RouteInfo
+    public class RouteInfo : IDisposable
     {
         public Vector3[] Route { get; private set; }
 
@@ -49,7 +52,8 @@ namespace Core
         }
 
         private readonly IEnumerable<IRouteProvider> pathedRoutes;
-        private readonly AddonReader addonReader;
+        private readonly AreaDB areaDB;
+        private readonly PlayerReader playerReader;
 
         public List<RouteInfoPoi> PoiList { get; } = new();
 
@@ -66,18 +70,23 @@ namespace Core
 
         private const int dSize = 2;
 
-        public RouteInfo(Vector3[] route, IEnumerable<IRouteProvider> pathedRoutes, AddonReader addonReader)
+        public RouteInfo(Vector3[] route, IEnumerable<IRouteProvider> pathedRoutes, PlayerReader playerReader, AreaDB areaDB)
         {
             this.Route = route;
-
             this.pathedRoutes = pathedRoutes;
-            this.addonReader = addonReader;
 
-            //addonReader.UIMapId.Changed -= OnZoneChanged;
-            //addonReader.UIMapId.Changed += OnZoneChanged;
-            //OnZoneChanged(this, EventArgs.Empty);
+            this.playerReader = playerReader;
+            this.areaDB = areaDB;
+
+            this.areaDB.Changed += OnZoneChanged;
+            OnZoneChanged();
 
             CalculateDiffs();
+        }
+
+        public void Dispose()
+        {
+            areaDB.Changed -= OnZoneChanged;
         }
 
         public void UpdateRoute(IEnumerable<Vector3> newRoute)
@@ -124,17 +133,38 @@ namespace Core
             return value / 100f * pointToGrid;
         }
 
-        private void OnZoneChanged(object sender, EventArgs e)
+        private void OnZoneChanged()
         {
-            if (addonReader.AreaDb.CurrentArea != null)
+            if (areaDB.CurrentArea == null)
+                return;
+
+            PoiList.Clear();
+            /*
+            // Visualize the zone pois
+            for (int i = 0; i < areaDB.CurrentArea.vendor?.Count; i++)
             {
-                PoiList.Clear();
-                // Visualize the zone pois
-                addonReader.AreaDb.CurrentArea.vendor?.ForEach(x => PoiList.Add(new RouteInfoPoi(x, "green")));
-                addonReader.AreaDb.CurrentArea.repair?.ForEach(x => PoiList.Add(new RouteInfoPoi(x, "purple")));
-                addonReader.AreaDb.CurrentArea.innkeeper?.ForEach(x => PoiList.Add(new RouteInfoPoi(x, "blue")));
-                addonReader.AreaDb.CurrentArea.flightmaster?.ForEach(x => PoiList.Add(new RouteInfoPoi(x, "orange")));
+                NPC npc = areaDB.CurrentArea.vendor[i];
+                PoiList.Add(new RouteInfoPoi(npc, "green"));
             }
+
+            for (int i = 0; i < areaDB.CurrentArea.repair?.Count; i++)
+            {
+                NPC npc = areaDB.CurrentArea.repair[i];
+                PoiList.Add(new RouteInfoPoi(npc, "purple"));
+            }
+
+            for (int i = 0; i < areaDB.CurrentArea.innkeeper?.Count; i++)
+            {
+                NPC npc = areaDB.CurrentArea.innkeeper[i];
+                PoiList.Add(new RouteInfoPoi(npc, "blue"));
+            }
+
+            for (int i = 0; i < areaDB.CurrentArea.flightmaster?.Count; i++)
+            {
+                NPC npc = areaDB.CurrentArea.flightmaster[i];
+                PoiList.Add(new RouteInfoPoi(npc, "orange"));
+            }
+            */
         }
 
         private void CalculateDiffs()
@@ -148,7 +178,7 @@ namespace Core
             var pois = PoiList.Select(p => p.Location);
             allPoints.AddRange(pois);
 
-            allPoints.Add(addonReader.PlayerReader.PlayerLocation);
+            allPoints.Add(playerReader.PlayerLocation);
 
             var maxX = allPoints.Max(s => s.X);
             var minX = allPoints.Min(s => s.X);
@@ -217,7 +247,7 @@ namespace Core
             Vector3 pt = NextPoint();
             if (pt == Vector3.Zero)
                 return string.Empty;
-                
+
             return $"<circle cx = '{ToCanvasPointX(pt.X)}' cy = '{ToCanvasPointY(pt.Y)}'r = '{dSize + 1}' />";
         }
 

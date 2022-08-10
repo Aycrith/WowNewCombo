@@ -58,10 +58,12 @@ namespace Core
         public bool Hunter_RaptorStrike => b[Mask._0];
         public bool Hunter_AutoShoot => b[Mask._1];
         public bool Hunter_SerpentSting => b[Mask._2];
+        public bool Hunter_FeedPet => b[Mask._3];
 
         // Warlock
         public bool Warlock_ShadowBolt => b[Mask._0];
         public bool Warlock_Shoot => b[Mask._1];
+        public bool Warlock_HealthFunnel => b[Mask._2];
 
         // Shaman
         public bool Shaman_LightningBolt => b[Mask._0];
@@ -73,6 +75,24 @@ namespace Core
         public bool DeathKnight_DeathGrip => b[Mask._2];
         public bool DeathKnight_DarkCommand => b[Mask._3];
         public bool DeathKnight_RaiseDead => b[Mask._4];
+
+
+        // Unit based Non spell Ranges
+        public bool FocusTarget_Inspect => b[Mask._12];
+        public bool FocusTarget_Trade => b[Mask._13];
+        public bool FocusTarget_Duel => b[Mask._14];
+
+        public bool Focus_Inspect => b[Mask._15];
+        public bool Focus_Trade => b[Mask._16];
+        public bool Focus_Duel => b[Mask._17];
+
+        public bool Pet_Inspect => b[Mask._18];
+        public bool Pet_Trade => b[Mask._19];
+        public bool Pet_Duel => b[Mask._20];
+
+        public bool Target_Inspect => b[Mask._21];
+        public bool Target_Trade => b[Mask._22];
+        public bool Target_Duel => b[Mask._23];
 
         public bool WithinPullRange(PlayerReader playerReader, UnitClass @class) => @class switch
         {

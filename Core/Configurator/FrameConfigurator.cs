@@ -345,9 +345,12 @@ namespace Core
 
         public bool TryResolveRaceAndClass(out UnitRace race, out UnitClass @class, out ClientVersion version)
         {
-            race = (UnitRace)(reader.GetInt(46) / 10_000);
-            @class = (UnitClass)(reader.GetInt(46) % 10_000 / 100);
-            version = (ClientVersion)(reader.GetInt(46) % 10);
+            int value = reader.GetInt(46);
+
+            // RACE_ID * 10000 + CLASS_ID * 100 + ClientVersion
+            race = (UnitRace)(value / 10000);
+            @class = (UnitClass)(value / 100 % 100);
+            version = (ClientVersion)(value % 10);
 
             return Enum.IsDefined(race) && Enum.IsDefined(@class) && Enum.IsDefined(version);
         }

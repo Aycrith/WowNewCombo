@@ -52,19 +52,11 @@ namespace Core
 
             // formula
             // 10000 * count + 100 * index + value
-            int count = (int)(data / 10000f);
-            data -= 10000 * count;
+            Count = data / 10000;
+            int order = data / 100 % 100;
+            Gossip gossip = (Gossip)(data % 100);
 
-            int order = (int)(data / 100f);
-            data -= 100 * order;
-
-            Count = count;
-
-            if (!Gossips.ContainsKey((Gossip)data))
-            {
-                Gossips.Add((Gossip)data, order);
-            }
+            Gossips[gossip] = order;
         }
-
     }
 }

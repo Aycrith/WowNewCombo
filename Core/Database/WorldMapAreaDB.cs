@@ -22,12 +22,7 @@ namespace Core.Database
 
         public int GetAreaId(int uiMapId)
         {
-            if (areas.TryGetValue(uiMapId, out var map))
-            {
-                return map.AreaID;
-            }
-
-            return -1;
+            return areas.TryGetValue(uiMapId, out WorldMapArea map) ? map.AreaID : -1;
         }
 
         public Vector3 ToWorld(int uiMapId, Vector3 local, bool flipXY)

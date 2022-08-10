@@ -43,7 +43,7 @@ namespace Core.Goals
                     wait.Update();
                 }
             }
-            else if (playerReader.Bits.FocusTargetInTradeRange())
+            else if (playerReader.SpellInRange.FocusTarget_Trade)
             {
                 input.TargetFocus();
                 input.TargetOfTarget();

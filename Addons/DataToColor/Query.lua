@@ -6,6 +6,8 @@ local bit = bit
 local band = bit.band
 local date = date
 
+local floor = math.floor
+
 local tonumber = tonumber
 local sub = string.sub
 local gsub = string.gsub
@@ -27,6 +29,7 @@ local UnitGUID = UnitGUID
 local GetActionInfo = GetActionInfo
 local GetMacroSpell = GetMacroSpell
 local GetSpellPowerCost = GetSpellPowerCost
+local GetSpellBaseCooldown = GetSpellBaseCooldown
 local GetInventoryItemLink = GetInventoryItemLink
 local IsSpellInRange = IsSpellInRange
 local GetSpellInfo = GetSpellInfo
@@ -117,7 +120,7 @@ function DataToColor:Bits1()
         base2(UnitIsDead(DataToColor.C.unitTarget) and 1 or 0, 1) +
         base2(UnitIsDeadOrGhost(DataToColor.C.unitPlayer) and 1 or 0, 2) +
         base2(UnitCharacterPoints(DataToColor.C.unitPlayer) > 0 and 1 or 0, 3) +
-        base2(UnitExists(DataToColor.C.unitTarget) and CheckInteractDistance(DataToColor.C.unitTarget, 2) and 1 or 0, 4) +
+        -- 4 unused
         base2(DataToColor:isHostile(DataToColor.C.unitTarget), 5) +
         base2(UnitIsVisible(DataToColor.C.unitPet) and not UnitIsDead(DataToColor.C.unitPet) and 1 or 0, 6) +
         base2(mainHandEnchant and 1 or 0, 7) +
@@ -150,7 +153,7 @@ function DataToColor:Bits2()
         base2(UnitExists(DataToColor.C.unitFocusTarget) and 1 or 0, 5) +
         base2(UnitAffectingCombat(DataToColor.C.unitFocusTarget) and 1 or 0, 6) +
         base2(DataToColor:isHostile(DataToColor.C.unitFocusTarget), 7) +
-        base2(UnitExists(DataToColor.C.unitFocusTarget) and CheckInteractDistance(DataToColor.C.unitFocusTarget, 2) and 1 or 0, 8) +
+        -- 8 unused
         base2(UnitIsDead(DataToColor.C.unitPetTarget) and 1 or 0, 9) +
         base2(IsStealthed() and 1 or 0, 10) +
         base2(UnitIsTrivial(DataToColor.C.unitTarget) and 1 or 0, 11)
@@ -304,14 +307,8 @@ function DataToColor:isHostile(unit)
 end
 
 function DataToColor:getRange()
-    if UnitExists(DataToColor.C.unitTarget) then
-        local min, max = Range:GetRange(DataToColor.C.unitTarget)
-        if max == nil then
-            max = 99
-        end
-        return min * 100000 + max * 100
-    end
-    return 0
+    local min, max = Range:GetRange(DataToColor.C.unitTarget)
+    return (max or 0) * 1000 + (min or 0)
 end
 
 function DataToColor:targetNpcId()
@@ -354,28 +351,26 @@ end
 
 local offsetEnumPowerType = 2
 function DataToColor:populateActionbarCost(slot)
-    if slot == nil then
-        return
-    end
     local actionType, id = GetActionInfo(slot)
     if actionType == DataToColor.C.ActionType.Macro then
         id = GetMacroSpell(id)
     end
+
     if id and actionType == DataToColor.C.ActionType.Spell or actionType == DataToColor.C.ActionType.Macro then
         local costTable = GetSpellPowerCost(id)
         if costTable ~= nil then
-            for index, costInfo in ipairs(costTable) do
-                --print(slot, actionType, index, costInfo.type, costInfo.cost, GetSpellLink(id))
-
+            for order, costInfo in ipairs(costTable) do
                 -- cost negative means it produces that type of powertype...
-                if(costInfo.cost > 0) then
-                    DataToColor.actionBarCostQueue:set(DataToColor.C.COST_MAX_COST_IDX * index + DataToColor.C.COST_MAX_POWER_TYPE * (costInfo.type + offsetEnumPowerType) + slot, costInfo.cost)
+                if costInfo.cost > 0 then
+                    local meta = 100000 * slot + 10000 * order + costInfo.type + offsetEnumPowerType
+                    --print(slot, actionType, order, costInfo.type, costInfo.cost, GetSpellLink(id), meta)
+                    DataToColor.actionBarCostQueue:set(meta, costInfo.cost)
                 end
             end
         end
     end
     -- default value mana with zero cost
-    DataToColor.actionBarCostQueue:set((offsetEnumPowerType * DataToColor.C.COST_MAX_POWER_TYPE) + slot, 0)
+    DataToColor.actionBarCostQueue:set(100000 * slot + 10000 + offsetEnumPowerType, 0)
 end
 
 function DataToColor:equipSlotItemId(slot)
@@ -396,12 +391,28 @@ end
 
 function DataToColor:areSpellsInRange()
     local inRange = 0
-    for i = 1, #DataToColor.S.spellInRangeList, 1 do
-        local isInRange = IsSpellInRange(GetSpellInfo(DataToColor.S.spellInRangeList[i]), DataToColor.C.unitTarget)
-        if isInRange == 1 then
+    local targetCount = #DataToColor.S.spellInRangeTarget
+    for i = 1, targetCount do
+        if IsSpellInRange(GetSpellInfo(DataToColor.S.spellInRangeTarget[i]), DataToColor.C.unitTarget) == 1 then
             inRange = inRange + (2 ^ (i - 1))
         end
     end
+
+    for i = 1, #DataToColor.S.spellInRangeUnit do
+        local data = DataToColor.S.spellInRangeUnit[i]
+        if IsSpellInRange(GetSpellInfo(data[1]), data[2]) == 1 then
+            inRange = inRange + (2 ^ (targetCount + i - 1))
+        end
+    end
+
+    local c = #DataToColor.S.interactInRangeUnit
+    for i = 1, c do
+        local data = DataToColor.S.interactInRangeUnit[i]
+        if CheckInteractDistance(data[1], data[2]) then
+            inRange = inRange + (2 ^ (24 - c + i - 1))
+        end
+    end
+
     return inRange
 end
 
@@ -411,18 +422,21 @@ function DataToColor:isActionUseable(min, max)
         local start, duration, enabled = GetActionCooldown(i)
         local isUsable, notEnough = IsUsableAction(i)
         local texture = GetActionTexture(i)
-        local spellName = DataToColor.S.playerSpellBook[texture]
+        local spellName = DataToColor.S.playerSpellBookName[texture]
 
         if start == 0 and (isUsable == true and notEnough == false or IsUsableSpell(spellName)) and texture ~= 134400 then -- red question mark texture
             isUsableBits = isUsableBits + (2 ^ (i - min))
         end
 
-        -- exclude GCD - everything counts as GCD below 1.5
-        if enabled == 1 and start ~= 0 and duration > 1.5 then
+        local _, spellId = GetActionInfo(i)
+        local gcd = 0
+        if DataToColor.S.playerSpellBookId[spellId] then
+            gcd = select(2, GetSpellBaseCooldown(spellId))
+        end
+
+        if enabled == 1 and start ~= 0 and (duration * 1000) > gcd and not DataToColor.actionBarCooldownQueue:exists(i) then
             local expireTime = start + duration
-            if not DataToColor.actionBarCooldownQueue:exists(i) then
-                DataToColor.actionBarCooldownQueue:set(i, expireTime)
-            end
+            DataToColor.actionBarCooldownQueue:set(i, expireTime)
         end
     end
     return isUsableBits
@@ -461,15 +475,8 @@ function DataToColor:GetCorpsePosition()
 end
 
 function DataToColor:getMeleeAttackSpeed(unit)
-    local mainHand, offHand = UnitAttackSpeed(unit)
-    if not mainHand then
-        mainHand = 0
-    end
-
-    if not offHand then
-        offHand = 0
-    end
-    return 10000 * math.floor(mainHand * 100) + math.floor(offHand * 100)
+    local main, off = UnitAttackSpeed(unit)
+    return 10000 * floor((off or 0) * 100) + floor((main or 0) * 100)
 end
 
 -----------------------------------------------------------------

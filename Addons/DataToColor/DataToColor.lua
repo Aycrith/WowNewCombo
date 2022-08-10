@@ -27,6 +27,7 @@ local strjoin = strjoin
 local strfind = strfind
 local debugstack = debugstack
 local ceil = ceil
+local floor = floor
 local GetTime = GetTime
 
 local UIParent = UIParent
@@ -221,7 +222,8 @@ function DataToColor:SetupRequirements()
 end
 
 function DataToColor:Reset()
-    DataToColor.S.playerSpellBook = {}
+    DataToColor.S.playerSpellBookName = {}
+    DataToColor.S.playerSpellBookId = {}
 
     DataToColor.playerGUID = UnitGUID(DataToColor.C.unitPlayer)
     DataToColor.petGUID = UnitGUID(DataToColor.C.unitPet)
@@ -364,7 +366,8 @@ function DataToColor:InitSpellBookQueue()
         end
 
         local texture = GetSpellBookItemTexture(num, type)
-        DataToColor.S.playerSpellBook[texture] = name
+        DataToColor.S.playerSpellBookName[texture] = name
+        DataToColor.S.playerSpellBookId[id] = true
 
         DataToColor.spellBookQueue:push(id)
         num = num + 1
@@ -379,7 +382,7 @@ function DataToColor:InitTalentQueue()
                 --                     1-3 +         1-11 +          1-4 +         1-5
                 local hash = tab * 1000000 + tier * 10000 + column * 10 + currentRank
                 DataToColor.talentQueue:push(hash)
-                --DataToColor:Print("talentQueue tab:"..tab.." | tier: "..tier.." | column: "..column.." | rank: "..currentRank)
+                --DataToColor:Print("talentQueue tab: ", tab, " | tier: ", tier, " | column: ", column, " | rank: ", currentRank, " | hash: ", hash)
             end
         end
     end
@@ -501,13 +504,9 @@ function DataToColor:CreateFrames(n)
                 local bagNum = DataToColor.bagQueue:shift()
                 if bagNum then
                     local freeSlots, bagType = GetContainerNumFreeSlots(bagNum)
-                    if not bagType then
-                        bagType = 0
-                    end
-
                     -- BagType + Index + FreeSpace + BagSlots
-                    Pixel(int, bagType * 1000000 + bagNum * 100000 + freeSlots * 1000 + GetContainerNumSlots(bagNum), 20)
-                    --DataToColor:Print("bagQueue bagType:", bagType, " | bagNum: ", bagNum, " | freeSlots: ", freeSlots, " | BagSlots: ", GetContainerNumSlots(bagNum))
+                    Pixel(int, (bagType or 0) * 1000000 + bagNum * 100000 + freeSlots * 1000 + GetContainerNumSlots(bagNum), 20)
+                    --DataToColor:Print("bagQueue bagType:", bagType or 0, " | bagNum: ", bagNum, " | freeSlots: ", freeSlots, " | BagSlots: ", GetContainerNumSlots(bagNum))
                 else
                     Pixel(int, 0, 20)
                 end
@@ -521,18 +520,12 @@ function DataToColor:CreateFrames(n)
 
                     local _, itemCount, _, _, _, _, _, _, _, itemID = GetContainerItemInfo(bagNum, bagSlotNum)
 
-                    if itemID == nil then
-                        itemCount = 0
-                        itemID = 0
-                    end
-
-                    --DataToColor:Print("inventoryQueue: "..bagNum.. " "..bagSlotNum.." -> id:"..itemID.." c:"..itemCount)
-
+                    --DataToColor:Print("inventoryQueue: ", bagNum, " ", bagSlotNum, " -> id: ", itemID or 0, " c:", itemCount or 0)
                     -- 0-4 bagNum + 1-21 itenNum + 1-1000 quantity
-                    Pixel(int, bagNum * 1000000 + bagSlotNum * 10000 + itemCount, 21)
+                    Pixel(int, bagNum * 1000000 + bagSlotNum * 10000 + (itemCount or 0), 21)
 
                     -- itemId 1-999999
-                    Pixel(int, itemID, 22)
+                    Pixel(int, itemID or 0, 22)
                 else
                     Pixel(int, 0, 21)
                     Pixel(int, 0, 22)
@@ -542,7 +535,7 @@ function DataToColor:CreateFrames(n)
                 local equipmentSlot = DataToColor.equipmentQueue:shift()
                 Pixel(int, equipmentSlot or 0, 23)
                 Pixel(int, DataToColor:equipSlotItemId(equipmentSlot), 24)
-                --DataToColor:Print("equipmentQueue "..equipmentSlot.." -> "..itemId)
+                --DataToColor:Print("equipmentQueue ", equipmentSlot, " -> ", itemId)
             end
 
             Pixel(int, DataToColor:isCurrentAction(1, 24), 25)
@@ -566,19 +559,19 @@ function DataToColor:CreateFrames(n)
                 Pixel(int, costMeta or 0, 35)
                 Pixel(int, costValue or 0, 36)
 
-                local actionCDSlot, actionCDExpireTime = DataToColor.actionBarCooldownQueue:get()
-                if actionCDSlot then
-                    DataToColor.actionBarCooldownQueue:setDirty(actionCDSlot)
+                local slot, expireTime = DataToColor.actionBarCooldownQueue:get()
+                if slot then
+                    DataToColor.actionBarCooldownQueue:setDirty(slot)
 
-                    local duration = max(0, ceil(actionCDExpireTime - GetTime()))
-                    local valueMs = duration * 100
-
-                    --DataToColor:Print("actionBarCooldownQueue: ", actionCDSlot, " ", valueMs)
-                    Pixel(int, actionCDSlot * 100000 + valueMs, 37)
+                    local duration = max(0, floor((expireTime - GetTime()) * 10))
+                    --if duration > 0 then
+                    --    DataToColor:Print("actionBarCooldownQueue: ", slot, " ", duration, " ", expireTime - GetTime())
+                    --end
+                    Pixel(int, slot * 100000 + duration, 37)
 
                     if duration == 0 then
-                        DataToColor.actionBarCooldownQueue:remove(actionCDSlot)
-                        --DataToColor:Print("actionBarCooldownQueue: expired ", actionCDSlot, " ", valueMs)
+                        DataToColor.actionBarCooldownQueue:remove(slot)
+                        --DataToColor:Print("actionBarCooldownQueue: ", slot, " expired")
                     end
                 else
                     Pixel(int, 0, 37)
@@ -670,7 +663,7 @@ function DataToColor:CreateFrames(n)
             if globalCounter % GOSSIP_ITERATION_FRAME_CHANGE_RATE == 0 then
                 local gossipNum = DataToColor.gossipQueue:shift()
                 if gossipNum then
-                    --DataToColor:Print("gossipQueue:" .. gossipNum)
+                    --DataToColor:Print("gossipQueue: ", gossipNum)
                     Pixel(int, gossipNum, 73)
                 end
             end

@@ -36,15 +36,15 @@ namespace Core
 
         public int HealthMax() => reader.GetInt(10);
         public int HealthCurrent() => reader.GetInt(11);
-        public int HealthPercent() => HealthMax() == 0 || HealthCurrent() == 1 ? 0 : HealthCurrent() * 100 / HealthMax();
+        public int HealthPercent() => HealthCurrent() * 100 / HealthMax();
 
         public int PTMax() => reader.GetInt(12); // Maximum amount of Power Type (dynamic)
         public int PTCurrent() => reader.GetInt(13); // Current amount of Power Type (dynamic)
-        public int PTPercentage() => PTMax() == 0 ? 0 : PTCurrent() * 100 / PTMax(); // Power Type (dynamic) in terms of a percentage
+        public int PTPercentage() => PTCurrent() * 100 / PTMax(); // Power Type (dynamic) in terms of a percentage
 
         public int ManaMax() => reader.GetInt(14);
         public int ManaCurrent() => reader.GetInt(15);
-        public int ManaPercentage() => ManaMax() == 0 ? 0 : ManaCurrent() * 100 / ManaMax();
+        public int ManaPercentage() => (1 + ManaCurrent()) * 100 / (1 + ManaMax());
 
         public int MaxRune() => reader.GetInt(14);
 
@@ -54,12 +54,11 @@ namespace Core
 
         public int TargetMaxHealth() => reader.GetInt(18);
         public int TargetHealth() => reader.GetInt(19);
-        public int TargetHealthPercentage() => TargetMaxHealth() == 0 || TargetHealth() == 1 ? 0 : TargetHealth() * 100 / TargetMaxHealth();
-
+        public int TargetHealthPercentage() => (1 + TargetHealth()) * 100 / (1 + TargetMaxHealth());
 
         public int PetMaxHealth() => reader.GetInt(38);
         public int PetHealth() => reader.GetInt(39);
-        public int PetHealthPercentage() => PetMaxHealth() == 0 || PetHealth() == 1 ? 0 : PetHealth() * 100 / PetMaxHealth();
+        public int PetHealthPercentage() => (1 + PetHealth()) * 100 / (1 + PetMaxHealth());
 
 
         public SpellInRange SpellInRange { get; }
@@ -70,31 +69,32 @@ namespace Core
         public BuffStatus Buffs { get; }
         public TargetDebuffStatus TargetDebuffs { get; }
 
+        // TargetLevel * 100 + TargetClass
         public int TargetLevel => reader.GetInt(43) / 100;
-
         public UnitClassification TargetClassification => (UnitClassification)(reader.GetInt(43) % 100);
 
         public int Gold => reader.GetInt(44) + (reader.GetInt(45) * 1000000);
 
-        public UnitRace Race => (UnitRace)(reader.GetInt(46) / 10_000);
-        public UnitClass Class => (UnitClass)(reader.GetInt(46) % 10_000 / 100);
+        // RACE_ID * 10000 + CLASS_ID * 100 + ClientVersion
+        public UnitRace Race => (UnitRace)(reader.GetInt(46) / 10000);
+        public UnitClass Class => (UnitClass)(reader.GetInt(46) / 100 % 100);
         public ClientVersion Version => (ClientVersion)(reader.GetInt(46) % 10);
 
         // 47 empty
 
         public Stance Stance { get; }
-        public Form Form => Stance.Get(Class, Bits.IsStealthed());
+        public Form Form => Stance.Get(Class, Bits.IsStealthed(), Version);
 
-        public int MinRange() => (int)(reader.GetInt(49) / 100000f);
-        public int MaxRange() => (int)((reader.GetInt(49) - (MinRange() * 100000f)) / 100f);
+        public int MinRange() => reader.GetInt(49) % 1000;
+        public int MaxRange() => reader.GetInt(49) / 1000 % 1000;
 
         public bool IsInMeleeRange() => MinRange() == 0 && MaxRange() != 0 && MaxRange() <= 5;
-        public bool IsInDeadZone() => MinRange() >= 5 && Bits.TargetInTradeRange(); // between 5-8 yard - hunter and warrior
+        public bool IsInDeadZone() => MinRange() >= 5 && SpellInRange.Target_Trade; // between 5-8 yard - hunter and warrior
 
         public RecordInt PlayerXp { get; } = new(50);
 
         public int PlayerMaxXp => reader.GetInt(51);
-        public int PlayerXpPercentage => PlayerXp.Value * 100 / (PlayerMaxXp == 0 ? 1 : PlayerMaxXp);
+        public int PlayerXpPercentage => PlayerXp.Value * 100 / PlayerMaxXp;
 
         private UI_ERROR UIError => (UI_ERROR)reader.GetInt(52);
         public UI_ERROR LastUIError { get; set; }
@@ -130,9 +130,9 @@ namespace Core
 
         public BitVector32 CustomTrigger1;
 
-        public int MainHandSpeedMs() => (int)(reader.GetInt(75) / 10000f) * 10;
-
-        public int OffHandSpeed => (int)(reader.GetInt(75) - (MainHandSpeedMs() * 1000f));  // supposed to be 10000f - but theres a 10x
+        // 10000 * off * 100 + main * 100
+        public int MainHandSpeedMs() => reader.GetInt(75) % 10000 * 10;
+        public int OffHandSpeed => reader.GetInt(75) / 10000 * 10;
 
         public int RemainCastMs => reader.GetInt(76);
 

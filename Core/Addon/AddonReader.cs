@@ -40,7 +40,6 @@ namespace Core
         public LevelTracker LevelTracker { get; }
 
         public event Action? AddonDataChanged;
-        public event Action? ZoneChanged;
         public event Action? PlayerDeath;
 
         private readonly WorldMapAreaDB WorldMapAreaDb;
@@ -162,10 +161,7 @@ namespace Core
                 TargetBuffTimeReader.Read(reader);
 
                 if (UIMapId.Updated(reader))
-                {
                     AreaDb.Update(WorldMapAreaDb.GetAreaId(UIMapId.Value));
-                    ZoneChanged?.Invoke();
-                }
 
                 autoResetEvent.Set();
             }

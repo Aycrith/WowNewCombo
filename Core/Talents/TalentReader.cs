@@ -25,27 +25,23 @@ namespace Core
 
         public void Read(IAddonDataProvider reader)
         {
-            int data = reader.GetInt(cTalent);
-            if (data == 0 || Talents.ContainsKey(data)) return;
+            int hash = reader.GetInt(cTalent);
+            if (hash == 0 || Talents.ContainsKey(hash)) return;
 
-            int hash = data;
+            //           1-3 +         1-11 +         1-4 +         1-5
+            // tab * 1000000 + tier * 10000 + column * 10 + currentRank
+            int tab = hash / 1000000;
+            int tier = hash / 10000 % 100;
+            int column = hash / 10 % 10;
+            int rank = hash % 10;
 
-            int tab = (int)(data / 1000000f);
-            data -= 1000000 * tab;
-
-            int tier = (int)(data / 10000f);
-            data -= 10000 * tier;
-
-            int column = (int)(data / 10f);
-            data -= 10 * column;
-
-            var talent = new Talent
+            Talent talent = new()
             {
                 Hash = hash,
                 TabNum = tab,
                 TierNum = tier,
                 ColumnNum = column,
-                CurrentRank = data
+                CurrentRank = rank
             };
 
             if (talentDB.Update(ref talent, playerReader.Class, out int id))

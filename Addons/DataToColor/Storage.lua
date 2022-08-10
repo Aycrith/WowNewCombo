@@ -1,46 +1,52 @@
 local Load = select(2, ...)
 local DataToColor = unpack(Load)
 
-DataToColor.S.spellInRangeList = {}
+DataToColor.S.spellInRangeTarget = {}
+DataToColor.S.spellInRangeUnit = {}
+DataToColor.S.interactInRangeUnit = {}
 
 DataToColor.S.playerBuffs = {}
 DataToColor.S.targetDebuffs = {}
 
 DataToColor.S.playerAuraMap = {}
 
-DataToColor.S.playerSpellBook = {}
+DataToColor.S.playerSpellBookName = {}
+DataToColor.S.playerSpellBookId = {}
 
 function DataToColor:InitStorage()
-    CreateSpellInRangeList()
+    CreateSpellInRangeTarget()
+    CreateSpellInRangeUnit()
+
+    CreateInteractInRangeList()
 
     CreatePlayerBuffList()
     CreateTargetDebuffList()
     CreatePlayerAuraMap()
 end
 
-function CreateSpellInRangeList()
+function CreateSpellInRangeTarget()
     if DataToColor.C.CHARACTER_CLASS == "ROGUE" then
-        DataToColor.S.spellInRangeList = {
+        DataToColor.S.spellInRangeTarget = {
             1752, -- "Sinister Strike"
             2764, -- "Throw"
             3018, -- "Shoot" for classic -> 7918, -- "Shoot Gun"
         }
     elseif DataToColor.C.CHARACTER_CLASS == "DRUID" then
-        DataToColor.S.spellInRangeList = {
+        DataToColor.S.spellInRangeTarget = {
             5176, -- "Wrath"
             5211, -- "Bash"
             1079, -- "Rip"
             6807 -- "Maul"
         }
     elseif DataToColor.C.CHARACTER_CLASS == "WARRIOR" then
-        DataToColor.S.spellInRangeList = {
+        DataToColor.S.spellInRangeTarget = {
             100, -- "Charge"
             772, -- "Rend"
             3018, -- "Shoot" for classic -> 7918, -- "Shoot Gun"
             2764 -- "Throw"
         }
     elseif DataToColor.C.CHARACTER_CLASS == "PRIEST" then
-        DataToColor.S.spellInRangeList = {
+        DataToColor.S.spellInRangeTarget = {
             589, -- "Shadow Word: Pain"
             5019, -- "Shoot"
             15407, -- "Mind Flay"
@@ -48,11 +54,11 @@ function CreateSpellInRangeList()
             585 -- "Smite"
         }
     elseif DataToColor.C.CHARACTER_CLASS == "PALADIN" then
-        DataToColor.S.spellInRangeList = {
+        DataToColor.S.spellInRangeTarget = {
             20271 -- "Judgement"
         }
     elseif DataToColor.C.CHARACTER_CLASS == "MAGE" then
-        DataToColor.S.spellInRangeList = {
+        DataToColor.S.spellInRangeTarget = {
             133, -- "Fireball"
             5019, -- "Shoot"
             11366, -- "Pyroblast"
@@ -60,23 +66,23 @@ function CreateSpellInRangeList()
             2136 -- "Fire Blast"
         }
     elseif DataToColor.C.CHARACTER_CLASS == "HUNTER" then
-        DataToColor.S.spellInRangeList = {
+        DataToColor.S.spellInRangeTarget = {
             2973, -- "Raptor Strike"
             75, -- "Auto Shot"
             1978 -- "Serpent Sting"
         }
     elseif DataToColor.C.CHARACTER_CLASS == "WARLOCK" then
-        DataToColor.S.spellInRangeList = {
+        DataToColor.S.spellInRangeTarget = {
             686, -- "Shadow Bolt",
             5019 -- "Shoot"
         }
     elseif DataToColor.C.CHARACTER_CLASS == "SHAMAN" then
-        DataToColor.S.spellInRangeList = {
+        DataToColor.S.spellInRangeTarget = {
             403, -- "Lightning Bolt",
             8042 -- "Earth Shock"
         }
     elseif DataToColor.C.CHARACTER_CLASS == "DEATHKNIGHT" then
-        DataToColor.S.spellInRangeList = {
+        DataToColor.S.spellInRangeTarget = {
             49903, -- "Icy Touch"
             49893, -- "Death Coil"
             49576, -- "Death Grip"
@@ -84,6 +90,37 @@ function CreateSpellInRangeList()
             46584 -- "Raise Dead"
         }
     end
+end
+
+function CreateSpellInRangeUnit()
+    if DataToColor.C.CHARACTER_CLASS == "HUNTER" then
+        DataToColor.S.spellInRangeUnit = {
+            { 6991, DataToColor.C.unitPet } -- "Feed pet"
+        }
+    elseif DataToColor.C.CHARACTER_CLASS == "WARLOCK" then
+        DataToColor.S.spellInRangeUnit = {
+            { 27259, DataToColor.C.unitPet }, -- "Health Funnel"
+        }
+    end
+end
+
+function CreateInteractInRangeList()
+    DataToColor.S.interactInRangeUnit = {}
+    DataToColor.S.interactInRangeUnit[1] = { DataToColor.C.unitFocusTarget, 1 }
+    DataToColor.S.interactInRangeUnit[2] = { DataToColor.C.unitFocusTarget, 2 }
+    DataToColor.S.interactInRangeUnit[3] = { DataToColor.C.unitFocusTarget, 3 }
+
+    DataToColor.S.interactInRangeUnit[4] = { DataToColor.C.unitFocus, 1 }
+    DataToColor.S.interactInRangeUnit[5] = { DataToColor.C.unitFocus, 2 }
+    DataToColor.S.interactInRangeUnit[6] = { DataToColor.C.unitFocus, 3 }
+
+    DataToColor.S.interactInRangeUnit[7] = { DataToColor.C.unitPet, 1 }
+    DataToColor.S.interactInRangeUnit[8] = { DataToColor.C.unitPet, 2 }
+    DataToColor.S.interactInRangeUnit[9] = { DataToColor.C.unitPet, 3 }
+
+    DataToColor.S.interactInRangeUnit[10] = { DataToColor.C.unitTarget, 1 }
+    DataToColor.S.interactInRangeUnit[11] = { DataToColor.C.unitTarget, 2 }
+    DataToColor.S.interactInRangeUnit[12] = { DataToColor.C.unitTarget, 3 }
 end
 
 function CreatePlayerBuffList()

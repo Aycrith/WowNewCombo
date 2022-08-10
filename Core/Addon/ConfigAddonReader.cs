@@ -29,7 +29,6 @@ namespace Core.Addon
         public event Action? AddonDataChanged;
 
 #pragma warning disable CS0067 // The event is never used
-        public event Action? ZoneChanged;
         public event Action? PlayerDeath;
 #pragma warning restore CS0067
 
