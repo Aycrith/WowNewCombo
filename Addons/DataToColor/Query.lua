@@ -178,54 +178,46 @@ function DataToColor:Set(trigger, input)
 end
 
 function DataToColor:getAuraMaskForClass(func, unitId, table)
-    local num = 0
+    local mask = 0
     for k, v in pairs(table) do
-        for i = 1, 16 do
+        for i = 1, 24 do
             local name, texture = func(unitId, i)
             if name == nil then
                 break
             end
             if v[texture] or find(name, v[1]) then
-                num = num + base2(1, k)
+                mask = mask + base2(1, k)
                 break
             end
         end
     end
-    return num
+    return mask
 end
 
 function DataToColor:populateAuraTimer(func, unitId, queue)
+    local count = 0
     for i = 1, 40 do
         local name, texture, _, _, duration, expirationTime = func(unitId, i)
         if name == nil then
             break
         end
+        count = i
 
-        if duration == 0 then
-            expirationTime = GetTime() + 14400 -- 4 hours - anything above considered unlimited duration
-        end
+        if queue ~= nil then
+            if duration == 0 then
+                expirationTime = GetTime() + 14400 -- 4 hours - anything above considered unlimited duration
+            end
 
-        if not queue:exists(texture) then
-            queue:set(texture, expirationTime)
-            --DataToColor:Print(texture, " aura added ", expirationTime)
-        elseif not queue:isDirty(texture) and queue:value(texture) < expirationTime then
-            queue:set(texture, expirationTime)
-            --DataToColor:Print(texture, " aura updated ", expirationTime)
+            if not queue:exists(texture) then
+                queue:set(texture, expirationTime)
+                --DataToColor:Print(texture, " aura added ", expirationTime)
+            elseif not queue:isDirty(texture) and queue:value(texture) < expirationTime then
+                queue:set(texture, expirationTime)
+                --DataToColor:Print(texture, " aura updated ", expirationTime)
+            end
         end
     end
-end
-
--- player debuffs cant be higher than 16!
-function DataToColor:getAuraCount(func, unitId)
-    local num = 0
-    for i = 1, 16 do
-        local name = func(unitId, i)
-        if name == nil then
-            break
-        end
-        num = num + 1
-    end
-    return num
+    return count
 end
 
 -- Pass in a string to get the upper case ASCII values. Converts any special character with ASCII values below 100

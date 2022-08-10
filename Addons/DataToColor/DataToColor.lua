@@ -585,10 +585,6 @@ function DataToColor:CreateFrames(n)
             Pixel(int, DataToColor:getAuraMaskForClass(UnitBuff, DataToColor.C.unitPlayer, DataToColor.S.playerBuffs), 41)
             Pixel(int, DataToColor:getAuraMaskForClass(UnitDebuff, DataToColor.C.unitTarget, DataToColor.S.targetDebuffs), 42)
 
-            DataToColor:populateAuraTimer(UnitBuff, DataToColor.C.unitPlayer, DataToColor.playerBuffTime)
-            DataToColor:populateAuraTimer(UnitDebuff, DataToColor.C.unitTarget, DataToColor.targetDebuffTime)
-            DataToColor:populateAuraTimer(UnitBuff, DataToColor.C.unitTarget, DataToColor.targetBuffTime)
-
             local targetLevel = UnitLevel(DataToColor.C.unitTarget)
             if targetLevel == -1 then
                 targetLevel = playerLevel + 10
@@ -612,20 +608,15 @@ function DataToColor:CreateFrames(n)
             Pixel(int, DataToColor:CastingInfoSpellId(DataToColor.C.unitPlayer), 53) -- SpellId being cast
             Pixel(int, DataToColor:getAvgEquipmentDurability() * 100 + (GetComboPoints(DataToColor.C.unitPlayer, DataToColor.C.unitTarget) or 0), 54)
 
-            local playerDebuffCount = DataToColor:getAuraCount(UnitDebuff, DataToColor.C.unitPlayer)
-            local playerBuffCount = DataToColor:getAuraCount(UnitBuff, DataToColor.C.unitPlayer)
-
-            local targetDebuffCount = 0
-            local targetBuffCount = 0
-
-            if UnitExists(DataToColor.C.unitTarget) then
-                targetDebuffCount = DataToColor:getAuraCount(UnitDebuff, DataToColor.C.unitTarget)
-                targetBuffCount = DataToColor:getAuraCount(UnitBuff, DataToColor.C.unitTarget)
-            end
+            local playerBuffCount = DataToColor:populateAuraTimer(UnitBuff, DataToColor.C.unitPlayer, DataToColor.playerBuffTime)
+            local playerDebuffCount = DataToColor:populateAuraTimer(UnitDebuff, DataToColor.C.unitPlayer, nil)
+            local targetDebuffCount = DataToColor:populateAuraTimer(UnitDebuff, DataToColor.C.unitTarget, DataToColor.targetDebuffTime)
+            local targetBuffCount = DataToColor:populateAuraTimer(UnitBuff, DataToColor.C.unitTarget, DataToColor.targetBuffTime)
 
             -- player/target buff and debuff counts
+            -- playerdebuff count cannot be higher than 16
             -- formula playerDebuffCount + playerBuffCount + targetDebuffCount + targetBuffCount
-            Pixel(int, playerDebuffCount * 1000000 + playerBuffCount * 10000 + targetDebuffCount * 100 + targetBuffCount, 55)
+            Pixel(int, min(16, playerDebuffCount) * 1000000 + playerBuffCount * 10000 + targetDebuffCount * 100 + targetBuffCount, 55)
 
             if DataToColor.targetChanged then
                 Pixel(int, DataToColor:targetNpcId(), 56) -- target id
