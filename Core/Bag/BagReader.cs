@@ -1,5 +1,7 @@
 ﻿using Core.Database;
+
 using SharedLib;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -76,22 +78,18 @@ namespace Core
 
         private void ReadBagMeta(IAddonDataProvider reader, out bool changed)
         {
-            changed = false;
-
-            //bagType * 1000000 + bagNum * 100000 + freeSlots * 1000 + self:bagSlots(bagNum)
             int data = reader.GetInt(cBagMeta);
-            if (data == 0) return;
+            if (data == 0)
+            {
+                changed = false;
+                return;
+            }
 
-            int bagType = (int)(data / 1000000f);
-            data -= 1000000 * bagType;
-
-            int index = (int)(data / 100000f);
-            data -= 100000 * index;
-
-            int freeSlots = (int)(data / 1000f);
-            data -= 1000 * freeSlots;
-
-            int slotCount = data;
+            //bagType * 1000000 + bagNum * 100000 + freeSlots * 1000 + slotCount
+            int bagType = data / 1000000;
+            int index = data / 100000 % 10;
+            int freeSlots = data / 1000 % 100;
+            int slotCount = data % 1000;
 
             if (index >= 0 && index < Bags.Length)
             {
@@ -112,26 +110,27 @@ namespace Core
 
                 changed = true;
             }
+            else
+            {
+                changed = false;
+            }
         }
 
         private void ReadInventory(IAddonDataProvider reader, out bool hasChanged)
         {
             hasChanged = false;
 
-            // 21 -- 0-4 bagNum + 1-21 itenNum + 1-1000 quantity
-            int itemCount = reader.GetInt(cItemNumCount);
-            if (itemCount == 0) return;
+            int data = reader.GetInt(cItemNumCount);
+            if (data == 0) return;
 
-            int bag = (int)(itemCount / 1000000f);
-            itemCount -= 1000000 * bag;
+            // 21 -- 0-4 bagNum + 1-21 itemNum + 1-1000 quantity
+            int bag = data / 1000000;
+            int slot = data / 10000 % 100;
+            int itemCount = data % 10000;
 
-            int slot = (int)(itemCount / 10000f);
-            itemCount -= 10000 * slot;
-
-            // 22 -- 1-999999 itemId
             int itemId = reader.GetInt(cItemId);
 
-            var existingItem = BagItems.Where(b => b.BagIndex == slot).Where(b => b.Bag == bag).FirstOrDefault();
+            BagItem? existingItem = BagItems.Where(b => b.BagIndex == slot).FirstOrDefault(b => b.Bag == bag);
 
             if (itemCount > 0)
             {
@@ -158,15 +157,15 @@ namespace Core
 
                 if (addItem)
                 {
+                    hasChanged = true;
+
                     if (ItemDB.Items.TryGetValue(itemId, out var item))
                     {
                         BagItems.Add(new BagItem(bag, slot, itemId, itemCount, item));
-                        hasChanged = true;
                     }
                     else
                     {
                         BagItems.Add(new BagItem(bag, slot, itemId, itemCount, new Item() { Entry = itemId, Name = "Unknown" }));
-                        hasChanged = true;
                     }
                 }
             }
@@ -242,14 +241,7 @@ namespace Core
 
         private void UpdateBagName(int index)
         {
-            if (ItemDB.Items.TryGetValue(Bags[index].ItemId, out var item))
-            {
-                Bags[index].Name = item.Name;
-            }
-            else
-            {
-                Bags[index].Name = string.Empty;
-            }
+            Bags[index].Name = ItemDB.Items.TryGetValue(Bags[index].ItemId, out Item item) ? item.Name : string.Empty;
         }
     }
 }

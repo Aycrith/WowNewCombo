@@ -10,19 +10,14 @@
 
         public AuraCount(IAddonDataProvider reader, int cell)
         {
-            Hash = TargetBuff = reader.GetInt(cell);
+            int hash = reader.GetInt(cell);
 
-            // formula
             // playerDebuffCount * 1000000 + playerBuffCount * 10000 + targetDebuffCount * 100 + targetBuffCount
-
-            PlayerDebuff = (int)(TargetBuff / 1000000f);
-            TargetBuff -= 1000000 * PlayerDebuff;
-
-            PlayerBuff = (int)(TargetBuff / 10000f);
-            TargetBuff -= 10000 * PlayerBuff;
-
-            TargetDebuff = (int)(TargetBuff / 100f);
-            TargetBuff -= 100 * TargetDebuff;
+            Hash = hash;
+            PlayerDebuff = hash / 1000000;
+            PlayerBuff = hash / 10000 % 100;
+            TargetDebuff = hash / 100 % 100;
+            TargetBuff = hash % 100;
         }
 
         public override string ToString()
