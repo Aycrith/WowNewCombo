@@ -1393,6 +1393,23 @@ Formula: `SpellInRange:[Numeric integer value]`
 | Death Knight | Dark Command | 3 |
 | Death Knight | Raise Dead | 4 |
 
+Shared [CheckInteractDistance](https://wowwiki-archive.fandom.com/wiki/API_CheckInteractDistance) API
+
+| Unit | id |
+| --- | --- |
+| focustarget Inspect | 12 |
+| focustarget Trade | 13 |
+| focustarget Duel | 14 |
+| focus Inspect | 15 |
+| focus Trade | 16 |
+| focus Duel | 17 |
+| pet Inspect | 18 |
+| pet Trade | 19 |
+| pet Duel | 20 |
+| target Inspect | 21 |
+| target Trade | 22 |
+| target Duel | 23 |
+
 e.g.
 ```json
 "Requirement": "SpellInRange:4"
