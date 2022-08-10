@@ -120,7 +120,7 @@ function DataToColor:Bits1()
         base2(UnitIsDead(DataToColor.C.unitTarget) and 1 or 0, 1) +
         base2(UnitIsDeadOrGhost(DataToColor.C.unitPlayer) and 1 or 0, 2) +
         base2(UnitCharacterPoints(DataToColor.C.unitPlayer) > 0 and 1 or 0, 3) +
-        base2(UnitExists(DataToColor.C.unitTarget) and CheckInteractDistance(DataToColor.C.unitTarget, 2) and 1 or 0, 4) +
+        -- 4 unused
         base2(DataToColor:isHostile(DataToColor.C.unitTarget), 5) +
         base2(UnitIsVisible(DataToColor.C.unitPet) and not UnitIsDead(DataToColor.C.unitPet) and 1 or 0, 6) +
         base2(mainHandEnchant and 1 or 0, 7) +
@@ -153,7 +153,7 @@ function DataToColor:Bits2()
         base2(UnitExists(DataToColor.C.unitFocusTarget) and 1 or 0, 5) +
         base2(UnitAffectingCombat(DataToColor.C.unitFocusTarget) and 1 or 0, 6) +
         base2(DataToColor:isHostile(DataToColor.C.unitFocusTarget), 7) +
-        base2(UnitExists(DataToColor.C.unitFocusTarget) and CheckInteractDistance(DataToColor.C.unitFocusTarget, 2) and 1 or 0, 8) +
+        -- 8 unused
         base2(UnitIsDead(DataToColor.C.unitPetTarget) and 1 or 0, 9) +
         base2(IsStealthed() and 1 or 0, 10) +
         base2(UnitIsTrivial(DataToColor.C.unitTarget) and 1 or 0, 11)
@@ -397,6 +397,15 @@ function DataToColor:areSpellsInRange()
             inRange = inRange + (2 ^ (i - 1))
         end
     end
+
+    local c = #DataToColor.S.interactInRangeList
+    for i = 1, c do
+        local data = DataToColor.S.interactInRangeList[i]
+        if CheckInteractDistance(data[1], data[2]) then
+            inRange = inRange + (2 ^ (24 - c + i - 1))
+        end
+    end
+
     return inRange
 end
 

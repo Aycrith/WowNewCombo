@@ -27,7 +27,7 @@ namespace Core
         public bool TargetIsDead() => v1[Mask._1];
         public bool DeadStatus() => v1[Mask._2];
         public bool TalentPoints() => v1[Mask._3];
-        public bool TargetInTradeRange() => v1[Mask._4];
+        // 4 unused
         public bool TargetCanBeHostile() => v1[Mask._5];
         public bool HasPet() => v1[Mask._6];
         public bool MainHandEnchant_Active() => v1[Mask._7];
@@ -65,7 +65,7 @@ namespace Core
 
         public bool FocusTargetCanBeHostile() => v2[Mask._7];
 
-        public bool FocusTargetInTradeRange() => v2[Mask._8];
+        // 8 unused
 
         public bool PetTargetIsDead() => v2[Mask._9];
 

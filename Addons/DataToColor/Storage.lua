@@ -2,6 +2,7 @@ local Load = select(2, ...)
 local DataToColor = unpack(Load)
 
 DataToColor.S.spellInRangeList = {}
+DataToColor.S.interactInRangeList = {}
 
 DataToColor.S.playerBuffs = {}
 DataToColor.S.targetDebuffs = {}
@@ -13,6 +14,7 @@ DataToColor.S.playerSpellBookId = {}
 
 function DataToColor:InitStorage()
     CreateSpellInRangeList()
+    CreateInteractInRangeList()
 
     CreatePlayerBuffList()
     CreateTargetDebuffList()
@@ -85,6 +87,25 @@ function CreateSpellInRangeList()
             46584 -- "Raise Dead"
         }
     end
+end
+
+function CreateInteractInRangeList()
+    DataToColor.S.interactInRangeList = {}
+    DataToColor.S.interactInRangeList[1] = { DataToColor.C.unitFocusTarget, 1 }
+    DataToColor.S.interactInRangeList[2] = { DataToColor.C.unitFocusTarget, 2 }
+    DataToColor.S.interactInRangeList[3] = { DataToColor.C.unitFocusTarget, 3 }
+
+    DataToColor.S.interactInRangeList[4] = { DataToColor.C.unitFocus, 1 }
+    DataToColor.S.interactInRangeList[5] = { DataToColor.C.unitFocus, 2 }
+    DataToColor.S.interactInRangeList[6] = { DataToColor.C.unitFocus, 3 }
+
+    DataToColor.S.interactInRangeList[7] = { DataToColor.C.unitPet, 1 }
+    DataToColor.S.interactInRangeList[8] = { DataToColor.C.unitPet, 2 }
+    DataToColor.S.interactInRangeList[9] = { DataToColor.C.unitPet, 3 }
+
+    DataToColor.S.interactInRangeList[10] = { DataToColor.C.unitTarget, 1 }
+    DataToColor.S.interactInRangeList[11] = { DataToColor.C.unitTarget, 2 }
+    DataToColor.S.interactInRangeList[12] = { DataToColor.C.unitTarget, 3 }
 end
 
 function CreatePlayerBuffList()
