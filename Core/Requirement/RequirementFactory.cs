@@ -288,6 +288,7 @@ namespace Core
                 { "UnholyRune", playerReader.UnholyRune },
                 { "TotalRune", playerReader.MaxRune },
                 { "Combo Point", playerReader.ComboPoints },
+                { "Durability%", playerReader.AvgEquipDurability },
                 { "BagCount", bagReader.BagItemCount },
                 { "FoodCount", addonReader.BagReader.FoodItemCount },
                 { "DrinkCount", addonReader.BagReader.DrinkItemCount },
