@@ -382,7 +382,7 @@ function DataToColor:InitTalentQueue()
                 --                     1-3 +         1-11 +          1-4 +         1-5
                 local hash = tab * 1000000 + tier * 10000 + column * 10 + currentRank
                 DataToColor.talentQueue:push(hash)
-                --DataToColor:Print("talentQueue tab:"..tab.." | tier: "..tier.." | column: "..column.." | rank: "..currentRank)
+                --DataToColor:Print("talentQueue tab: ", tab, " | tier: ", tier, " | column: ", column, " | rank: ", currentRank, " | hash: ", hash)
             end
         end
     end
@@ -663,7 +663,7 @@ function DataToColor:CreateFrames(n)
             if globalCounter % GOSSIP_ITERATION_FRAME_CHANGE_RATE == 0 then
                 local gossipNum = DataToColor.gossipQueue:shift()
                 if gossipNum then
-                    --DataToColor:Print("gossipQueue:" .. gossipNum)
+                    --DataToColor:Print("gossipQueue: ", gossipNum)
                     Pixel(int, gossipNum, 73)
                 end
             end
