@@ -391,16 +391,23 @@ end
 
 function DataToColor:areSpellsInRange()
     local inRange = 0
-    for i = 1, #DataToColor.S.spellInRangeList, 1 do
-        local isInRange = IsSpellInRange(GetSpellInfo(DataToColor.S.spellInRangeList[i]), DataToColor.C.unitTarget)
-        if isInRange == 1 then
+    local targetCount = #DataToColor.S.spellInRangeTarget
+    for i = 1, targetCount do
+        if IsSpellInRange(GetSpellInfo(DataToColor.S.spellInRangeTarget[i]), DataToColor.C.unitTarget) == 1 then
             inRange = inRange + (2 ^ (i - 1))
         end
     end
 
-    local c = #DataToColor.S.interactInRangeList
+    for i = 1, #DataToColor.S.spellInRangeUnit do
+        local data = DataToColor.S.spellInRangeUnit[i]
+        if IsSpellInRange(GetSpellInfo(data[1]), data[2]) == 1 then
+            inRange = inRange + (2 ^ (targetCount + i - 1))
+        end
+    end
+
+    local c = #DataToColor.S.interactInRangeUnit
     for i = 1, c do
-        local data = DataToColor.S.interactInRangeList[i]
+        local data = DataToColor.S.interactInRangeUnit[i]
         if CheckInteractDistance(data[1], data[2]) then
             inRange = inRange + (2 ^ (24 - c + i - 1))
         end

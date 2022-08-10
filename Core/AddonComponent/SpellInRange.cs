@@ -58,10 +58,12 @@ namespace Core
         public bool Hunter_RaptorStrike => b[Mask._0];
         public bool Hunter_AutoShoot => b[Mask._1];
         public bool Hunter_SerpentSting => b[Mask._2];
+        public bool Hunter_FeedPet => b[Mask._3];
 
         // Warlock
         public bool Warlock_ShadowBolt => b[Mask._0];
         public bool Warlock_Shoot => b[Mask._1];
+        public bool Warlock_HealthFunnel => b[Mask._2];
 
         // Shaman
         public bool Shaman_LightningBolt => b[Mask._0];

@@ -1383,8 +1383,10 @@ Formula: `SpellInRange:[Numeric integer value]`
 | Hunter | Raptor Strike | 0 |
 | Hunter | Auto Shot | 1 |
 | Hunter | Serpent Sting | 2 |
+| Hunter | Feed Pet | 3 |
 | Warlock | Shadow Bolt | 0 |
 | Warlock | Shoot | 1 |
+| Warlock | Health Funnel | 2 |
 | Shaman | Lightning Bolt | 0 |
 | Shaman | Earth Shock | 1 |
 | Death Knight | Icy Touch | 0 |
