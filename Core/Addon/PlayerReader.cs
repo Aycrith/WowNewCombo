@@ -83,7 +83,7 @@ namespace Core
         // 47 empty
 
         public Stance Stance { get; }
-        public Form Form => Stance.Get(Class, Bits.IsStealthed());
+        public Form Form => Stance.Get(Class, Bits.IsStealthed(), Version);
 
         public int MinRange() => reader.GetInt(49) % 1000;
         public int MaxRange() => reader.GetInt(49) / 1000 % 1000;

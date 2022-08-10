@@ -16,12 +16,12 @@
             value = reader.GetInt(cell);
         }
 
-        public Form Get(UnitClass @class, bool stealth) => value == 0 ? Form.None : @class switch
+        public Form Get(UnitClass @class, bool stealth, ClientVersion version) => value == 0 ? Form.None : @class switch
         {
             UnitClass.Warrior => Form.Warrior_BattleStance + value - 1,
             UnitClass.Rogue => Form.Rogue_Stealth + value - 1,
             UnitClass.Priest => Form.Priest_Shadowform + value - 1,
-            UnitClass.Druid => stealth ? Form.Druid_Cat_Prowl : Form.Druid_Bear + value - 1,
+            UnitClass.Druid => version == ClientVersion.Wrath ? Form.Druid_Bear + value - 1 : (stealth ? Form.Druid_Cat_Prowl : Form.Druid_Bear + value - 1),
             UnitClass.Paladin => Form.Paladin_Devotion_Aura + value - 1,
             UnitClass.Shaman => Form.Shaman_GhostWolf + value - 1,
             UnitClass.DeathKnight => Form.DeathKnight_Blood_Presence + value - 1,
