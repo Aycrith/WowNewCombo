@@ -4,7 +4,7 @@ namespace Core
 {
     public static class Mask
     {
-        public static int[] M = new int[32]
+        public static readonly int[] M = new int[32]
         {
             CreateMask(),
             1 << 1,
