@@ -139,7 +139,7 @@ namespace Core
                 return;
 
             PoiList.Clear();
-
+            /*
             // Visualize the zone pois
             for (int i = 0; i < areaDB.CurrentArea.vendor?.Count; i++)
             {
@@ -164,6 +164,7 @@ namespace Core
                 NPC npc = areaDB.CurrentArea.flightmaster[i];
                 PoiList.Add(new RouteInfoPoi(npc, "orange"));
             }
+            */
         }
 
         private void CalculateDiffs()
