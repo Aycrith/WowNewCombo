@@ -7,7 +7,8 @@
 @inject IAddonReader addonReader
 @inject IBotController botController
 @inject IJSRuntime JSRuntime
-@inject WorldMapAreaDB worldmapAreaDB 
+@inject WorldMapAreaDB worldmapAreaDB
+@inject AreaDB areaDB
 
 @implements IDisposable
 
@@ -115,7 +116,7 @@
     {
         botController.ProfileLoaded += OnProfileLoaded;
         addonReader.AddonDataChanged += OnAddonDataChanged;
-        addonReader.ZoneChanged += OnZoneChanged;
+        areaDB.Changed += OnZoneChanged;
         addonReader.PlayerDeath += OnPlayerDeath;
 
         UpdateZoneName();
@@ -129,7 +130,7 @@
 
         botController.ProfileLoaded -= OnProfileLoaded;
         addonReader.AddonDataChanged -= OnAddonDataChanged;
-        addonReader.ZoneChanged -= OnZoneChanged;
+        areaDB.Changed -= OnZoneChanged;
         addonReader.PlayerDeath -= OnPlayerDeath;
     }
 

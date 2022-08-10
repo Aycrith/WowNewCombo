@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.IO;
 using System.Numerics;
 using Microsoft.Extensions.Logging;
@@ -8,33 +9,62 @@ using WowheadDB;
 
 namespace Core.Database
 {
-    public class AreaDB
+    public class AreaDB : IDisposable
     {
         private readonly ILogger logger;
         private readonly DataConfig dataConfig;
 
+        private readonly CancellationTokenSource cts;
+        private readonly AutoResetEvent autoResetEvent;
+        private readonly Thread thread;
+
         private int areaId = -1;
         public Area? CurrentArea { private set; get; }
 
-        public AreaDB(ILogger logger, DataConfig dataConfig)
+        public event Action? Changed;
+
+        public AreaDB(ILogger logger, DataConfig dataConfig, CancellationTokenSource cts)
         {
             this.logger = logger;
             this.dataConfig = dataConfig;
+            this.cts = cts;
+            autoResetEvent = new AutoResetEvent(false);
+
+            thread = new(ReadArea);
+            thread.Start();
+        }
+
+        public void Dispose()
+        {
+            autoResetEvent.Set();
         }
 
         public void Update(int areaId)
         {
-            if (areaId > 0 && this.areaId != areaId)
+            if (this.areaId == areaId)
+                return;
+
+            this.areaId = areaId;
+            autoResetEvent.Set();
+        }
+
+        private void ReadArea()
+        {
+            autoResetEvent.WaitOne();
+
+            while (!cts.IsCancellationRequested)
             {
                 try
                 {
                     CurrentArea = JsonConvert.DeserializeObject<Area>(File.ReadAllText(Path.Join(dataConfig.ExpArea, $"{areaId}.json")));
-                }
+                    Changed?.Invoke();
+    }
                 catch (Exception e)
                 {
                     logger.LogError(e.Message, e.StackTrace);
                 }
-                this.areaId = areaId;
+
+                autoResetEvent.WaitOne();
             }
         }
 

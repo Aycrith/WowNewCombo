@@ -265,6 +265,7 @@ namespace Core
             (RouteInfo routeInfo, IEnumerable<GoapGoal> availableActions) =
                 GoalFactory.CreateGoals(logger, AddonReader, configInput, dataConfig, npcNameFinder, npcNameTargeting, pather, execGameCommand, config, goapAgentState, cts, wait);
 
+            RouteInfo?.Dispose();
             RouteInfo = routeInfo;
 
             GoapAgent?.Dispose();
@@ -288,6 +289,7 @@ namespace Core
         {
             cts.Cancel();
             ClassConfig?.Dispose();
+            RouteInfo?.Dispose();
             GoapAgent?.Dispose();
 
             npcNameFinderEvent.Dispose();
