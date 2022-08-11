@@ -46,8 +46,6 @@ namespace Core.Goals
 
         private bool shouldMount;
 
-        private readonly Random random = new();
-
         private DateTime onEnterTime;
 
         #region IRouteProvider
@@ -228,7 +226,7 @@ namespace Core.Goals
 
                 if (!input.Proc.IsKeyDown(input.Proc.TurnLeftKey) &&
                     !input.Proc.IsKeyDown(input.Proc.TurnRightKey) &&
-                    classConfig.TargetNearestTarget.MillisecondsSinceLastClick > random.Next(minMs, maxMs) &&
+                    classConfig.TargetNearestTarget.MillisecondsSinceLastClick > Random.Shared.Next(minMs, maxMs) &&
                     targetFinder.Search(NpcNameToFind, playerReader.Bits.TargetIsNotDead, sideActivityCts.Token))
                 {
                     sideActivityCts.Cancel();
@@ -371,7 +369,7 @@ namespace Core.Goals
 
         private void RandomJump()
         {
-            if ((DateTime.UtcNow - onEnterTime).TotalSeconds > 5 && classConfig.Jump.MillisecondsSinceLastClick > random.Next(10_000, 25_000))
+            if ((DateTime.UtcNow - onEnterTime).TotalSeconds > 5 && classConfig.Jump.MillisecondsSinceLastClick > Random.Shared.Next(10_000, 25_000))
             {
                 Log("Random jump");
                 input.Jump();

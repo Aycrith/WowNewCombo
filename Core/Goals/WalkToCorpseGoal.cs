@@ -21,8 +21,6 @@ namespace Core.Goals
 
         public List<Vector3> Deaths { get; } = new();
 
-        private readonly Random random = new();
-
         private DateTime onEnterTime;
 
         #region IRouteProvider
@@ -118,7 +116,7 @@ namespace Core.Goals
 
         private void RandomJump()
         {
-            if ((DateTime.UtcNow - onEnterTime).TotalSeconds > 5 && input.ClassConfig.Jump.MillisecondsSinceLastClick > random.Next(10_000, 25_000))
+            if ((DateTime.UtcNow - onEnterTime).TotalSeconds > 5 && input.ClassConfig.Jump.MillisecondsSinceLastClick > Random.Shared.Next(10_000, 25_000))
             {
                 Log("Random jump");
                 input.Jump();

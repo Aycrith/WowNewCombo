@@ -25,8 +25,6 @@ namespace Core
         private readonly PlayerDirection playerDirection;
         private readonly StopMoving stopMoving;
 
-        private readonly Random random = new();
-
         private Vector3 target;
         private float prevDistance = MAX_RANGE;
         private DateTime startTime;
@@ -77,14 +75,14 @@ namespace Core
                 stopMoving.Stop();
 
                 // Turn
-                ConsoleKey turnKey = random.Next(2) == 0 ? input.Proc.TurnLeftKey : input.Proc.TurnRightKey;
-                int turnDuration = random.Next(350);
+                ConsoleKey turnKey = Random.Shared.Next(2) == 0 ? input.Proc.TurnLeftKey : input.Proc.TurnRightKey;
+                int turnDuration = Random.Shared.Next(350);
                 logger.LogInformation($"Unstuck by turning for {turnDuration}ms");
                 input.Proc.KeyPress(turnKey, turnDuration);
 
                 // Move
-                ConsoleKey moveKey = random.Next(100) >= 25 ? input.Proc.ForwardKey : input.Proc.BackwardKey;
-                int moveDuration = random.Next(750) + 1000;
+                ConsoleKey moveKey = Random.Shared.Next(100) >= 25 ? input.Proc.ForwardKey : input.Proc.BackwardKey;
+                int moveDuration = Random.Shared.Next(750) + 1000;
                 logger.LogInformation($"Unstuck by moving for {moveDuration}ms");
                 input.Proc.KeyPress(moveKey, moveDuration);
 

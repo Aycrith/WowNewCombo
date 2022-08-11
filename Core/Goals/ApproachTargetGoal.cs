@@ -23,8 +23,6 @@ namespace Core.Goals
         private readonly CombatUtil combatUtil;
         private readonly IBlacklist blacklist;
 
-        private readonly Random random = new();
-
         private DateTime approachStart;
 
         private double nextStuckCheckTime;
@@ -128,7 +126,7 @@ namespace Core.Goals
                         Log($"Seems stuck! Clear Target.");
 
                     input.ClearTarget();
-                    input.Proc.KeyPress(random.Next(2) == 0 ? input.Proc.TurnLeftKey : input.Proc.TurnRightKey, 250 + random.Next(250));
+                    input.Proc.KeyPress(Random.Shared.Next(2) == 0 ? input.Proc.TurnLeftKey : input.Proc.TurnRightKey, 250 + Random.Shared.Next(250));
 
                     return;
                 }
@@ -140,7 +138,7 @@ namespace Core.Goals
                     Log("Too long time. Clear Target. Turn away.");
 
                 input.ClearTarget();
-                input.Proc.KeyPress(random.Next(2) == 0 ? input.Proc.TurnLeftKey : input.Proc.TurnRightKey, 250 + random.Next(250));
+                input.Proc.KeyPress(Random.Shared.Next(2) == 0 ? input.Proc.TurnLeftKey : input.Proc.TurnRightKey, 250 + Random.Shared.Next(250));
 
                 return;
             }
@@ -200,7 +198,7 @@ namespace Core.Goals
         private void RandomJump()
         {
             if (ApproachDurationMs > 2000 &&
-                input.ClassConfig.Jump.MillisecondsSinceLastClick > random.Next(5000, 25_000))
+                input.ClassConfig.Jump.MillisecondsSinceLastClick > Random.Shared.Next(5000, 25_000))
             {
                 input.Jump();
             }

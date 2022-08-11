@@ -11,7 +11,6 @@ namespace Core.Goals
         private readonly WowProcessInput input;
         private readonly PlayerReader playerReader;
         private readonly CancellationToken ct;
-        private readonly Random random;
 
         private const float MinDist = 0.001f;
 
@@ -23,7 +22,6 @@ namespace Core.Goals
             this.input = input;
             this.playerReader = playerReader;
             ct = cts.Token;
-            random = new();
         }
 
         public void Stop()
@@ -42,7 +40,7 @@ namespace Core.Goals
                     !input.IsKeyDown(input.ForwardKey) &&
                     last.DistanceXYTo(playerReader.PlayerLocation) >= MinDist)
                 {
-                    input.KeyPressSleep(input.ForwardKey, random.Next(2, 5), ct);
+                    input.KeyPressSleep(input.ForwardKey, Random.Shared.Next(2, 5), ct);
                     pressedAny = true;
                 }
 
@@ -59,7 +57,7 @@ namespace Core.Goals
                 }
 
                 if (pressedAny)
-                    ct.WaitHandle.WaitOne(random.Next(25, 30));
+                    ct.WaitHandle.WaitOne(Random.Shared.Next(25, 30));
             }
 
             last = playerReader.PlayerLocation;

@@ -13,7 +13,6 @@ namespace Game
         private readonly int MAX_DELAY;
 
         private readonly WowProcess wowProcess;
-        private readonly Random random;
 
         private readonly CancellationToken _ct;
 
@@ -24,13 +23,11 @@ namespace Game
 
             MIN_DELAY = minDelay;
             MAX_DELAY = maxDelay;
-
-            random = new();
         }
 
         private int Delay(int milliseconds)
         {
-            int delay = milliseconds + random.Next(1, MAX_DELAY);
+            int delay = milliseconds + Random.Shared.Next(1, MAX_DELAY);
             _ct.WaitHandle.WaitOne(delay);
             return delay;
         }

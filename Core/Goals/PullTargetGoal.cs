@@ -22,8 +22,6 @@ namespace Core.Goals
         private readonly CombatUtil combatUtil;
         private readonly IBlacklist blacklist;
 
-        private readonly Random random;
-
         private readonly KeyAction? approachKey;
         private readonly Action approachAction;
 
@@ -48,8 +46,6 @@ namespace Core.Goals
             this.stuckDetector = stuckDetector;
             this.combatUtil = combatUtil;
             this.blacklist = blacklist;
-
-            random = new();
 
             Keys = input.ClassConfig.Pull.Sequence;
 
@@ -139,7 +135,7 @@ namespace Core.Goals
             {
                 input.ClearTarget();
                 Log("Pull taking too long. Clear target and face away!");
-                input.Proc.KeyPress(random.Next(2) == 0 ? input.Proc.TurnLeftKey : input.Proc.TurnRightKey, 1000);
+                input.Proc.KeyPress(Random.Shared.Next(2) == 0 ? input.Proc.TurnLeftKey : input.Proc.TurnRightKey, 1000);
                 return;
             }
 

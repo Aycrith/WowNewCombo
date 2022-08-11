@@ -12,7 +12,6 @@ namespace Game
         private readonly int MIN_DELAY;
         private readonly int MAX_DELAY;
 
-        private readonly Random random = new();
         private readonly GregsStack.InputSimulatorStandard.InputSimulator simulator;
         private readonly WowProcess wowProcess;
 
@@ -31,7 +30,7 @@ namespace Game
 
         private int Delay(int milliseconds)
         {
-            int delay = milliseconds + random.Next(1, MAX_DELAY);
+            int delay = milliseconds + Random.Shared.Next(1, MAX_DELAY);
             _ct.WaitHandle.WaitOne(delay);
             return delay;
         }
