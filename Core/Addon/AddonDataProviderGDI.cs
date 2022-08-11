@@ -8,7 +8,7 @@ namespace Core
 {
     public sealed class AddonDataProviderGDI : IAddonDataProvider, IDisposable
     {
-        private readonly CancellationTokenSource cts;
+        private readonly CancellationToken ct;
 
         private readonly int[] data;
         private readonly DataFrame[] frames;
@@ -30,7 +30,7 @@ namespace Core
 
         public AddonDataProviderGDI(CancellationTokenSource cts, WowScreen wowScreen, DataFrame[] frames)
         {
-            this.cts = cts;
+            ct = cts.Token;
             this.wowScreen = wowScreen;
             this.frames = frames;
 
@@ -66,9 +66,9 @@ namespace Core
 
         public void Update()
         {
-            cts.Token.WaitHandle.WaitOne(1);
+            ct.WaitHandle.WaitOne(1);
 
-            if (cts.IsCancellationRequested || disposing) return;
+            if (ct.IsCancellationRequested || disposing) return;
 
             Point p = new();
             wowScreen.GetPosition(ref p);

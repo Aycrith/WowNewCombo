@@ -7,7 +7,7 @@ using TextCopy;
 
 namespace Game
 {
-    public class InputSimulator : IInput, IDisposable
+    public class InputSimulator : IInput
     {
         private readonly int MIN_DELAY;
         private readonly int MAX_DELAY;
@@ -16,28 +16,23 @@ namespace Game
         private readonly GregsStack.InputSimulatorStandard.InputSimulator simulator;
         private readonly WowProcess wowProcess;
 
-        private readonly CancellationTokenSource _cts;
+        private readonly CancellationToken _ct;
 
-        public InputSimulator(WowProcess wowProcess, int minDelay, int maxDelay)
+        public InputSimulator(WowProcess wowProcess, CancellationTokenSource cts, int minDelay, int maxDelay)
         {
             this.wowProcess = wowProcess;
+            _ct = cts.Token;
 
             MIN_DELAY = minDelay;
             MAX_DELAY = maxDelay;
 
             simulator = new GregsStack.InputSimulatorStandard.InputSimulator();
-            _cts = new CancellationTokenSource();
-        }
-
-        public void Dispose()
-        {
-            _cts.Cancel();
         }
 
         private int Delay(int milliseconds)
         {
             int delay = milliseconds + random.Next(1, MAX_DELAY);
-            _cts.Token.WaitHandle.WaitOne(delay);
+            _ct.WaitHandle.WaitOne(delay);
             return delay;
         }
 
@@ -65,10 +60,10 @@ namespace Game
             return delay;
         }
 
-        public void KeyPressSleep(int key, int milliseconds, CancellationTokenSource cts)
+        public void KeyPressSleep(int key, int milliseconds, CancellationToken ct)
         {
             simulator.Keyboard.KeyDown((VirtualKeyCode)key);
-            cts.Token.WaitHandle.WaitOne(milliseconds);
+            ct.WaitHandle.WaitOne(milliseconds);
             simulator.Keyboard.KeyUp((VirtualKeyCode)key);
         }
 

@@ -15,23 +15,23 @@ namespace Game
         private readonly WowProcess wowProcess;
         private readonly Random random;
 
-        private readonly CancellationTokenSource _cts;
+        private readonly CancellationToken _ct;
 
-        public InputWindowsNative(WowProcess wowProcess, int minDelay, int maxDelay)
+        public InputWindowsNative(WowProcess wowProcess, CancellationTokenSource cts, int minDelay, int maxDelay)
         {
             this.wowProcess = wowProcess;
+            _ct = cts.Token;
 
             MIN_DELAY = minDelay;
             MAX_DELAY = maxDelay;
 
             random = new();
-            _cts = new();
         }
 
         private int Delay(int milliseconds)
         {
             int delay = milliseconds + random.Next(1, MAX_DELAY);
-            _cts.Token.WaitHandle.WaitOne(delay);
+            _ct.WaitHandle.WaitOne(delay);
             return delay;
         }
 
@@ -54,10 +54,10 @@ namespace Game
             return delay;
         }
 
-        public void KeyPressSleep(int key, int milliseconds, CancellationTokenSource cts)
+        public void KeyPressSleep(int key, int milliseconds, CancellationToken ct)
         {
             PostMessage(wowProcess.Process.MainWindowHandle, WM_KEYDOWN, key, 0);
-            cts.Token.WaitHandle.WaitOne(milliseconds);
+            ct.WaitHandle.WaitOne(milliseconds);
             PostMessage(wowProcess.Process.MainWindowHandle, WM_KEYUP, key, 0);
         }
 

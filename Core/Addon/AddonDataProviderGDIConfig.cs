@@ -8,7 +8,7 @@ namespace Core
 {
     public sealed class AddonDataProviderGDIConfig : IAddonDataProvider, IDisposable
     {
-        private readonly CancellationTokenSource cts;
+        private readonly CancellationToken ct;
         private readonly ManualResetEvent manualReset = new(true);
         private readonly WowScreen wowScreen;
 
@@ -31,7 +31,7 @@ namespace Core
 
         public AddonDataProviderGDIConfig(CancellationTokenSource cts, WowScreen wowScreen, DataFrame[] frames)
         {
-            this.cts = cts;
+            ct = cts.Token;
             this.wowScreen = wowScreen;
             InitFrames(frames);
             bytesPerPixel = Image.GetPixelFormatSize(pixelFormat) / 8;
@@ -51,9 +51,9 @@ namespace Core
         public void Update()
         {
             manualReset.WaitOne();
-            cts.Token.WaitHandle.WaitOne(25);
+            ct.WaitHandle.WaitOne(25);
 
-            if (cts.IsCancellationRequested ||
+            if (ct.IsCancellationRequested ||
                 disposing ||
                 data.Length == 0 ||
                 frames.Length == 0 ||

@@ -25,6 +25,7 @@ namespace Core
         // -- value1 based flags
         public bool TargetInCombat() => v1[Mask._0];
         public bool TargetIsDead() => v1[Mask._1];
+        public bool TargetIsNotDead() => !v1[Mask._1];
         public bool DeadStatus() => v1[Mask._2];
         public bool TalentPoints() => v1[Mask._3];
         // 4 unused

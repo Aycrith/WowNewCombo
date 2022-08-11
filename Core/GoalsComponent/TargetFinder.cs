@@ -25,24 +25,24 @@ namespace Core.Goals
             npcNameTargeting.ChangeNpcType(NpcNames.None);
         }
 
-        public bool Search(NpcNames target, Func<bool> validTarget, CancellationTokenSource cts)
+        public bool Search(NpcNames target, Func<bool> validTarget, CancellationToken ct)
         {
-            return LookForTarget(target, cts) && validTarget();
+            return LookForTarget(target, ct) && validTarget();
         }
 
-        private bool LookForTarget(NpcNames target, CancellationTokenSource cts)
+        private bool LookForTarget(NpcNames target, CancellationToken ct)
         {
-            if (!cts.IsCancellationRequested)
+            if (!ct.IsCancellationRequested)
             {
                 input.NearestTarget();
             }
 
-            if (!cts.IsCancellationRequested && !classConfig.KeyboardOnly && !playerReader.Bits.HasTarget())
+            if (!ct.IsCancellationRequested && !classConfig.KeyboardOnly && !playerReader.Bits.HasTarget())
             {
                 npcNameTargeting.ChangeNpcType(target);
-                if (!cts.IsCancellationRequested && npcNameTargeting.NpcCount > 0)
+                if (!ct.IsCancellationRequested && npcNameTargeting.NpcCount > 0)
                 {
-                    npcNameTargeting.TargetingAndClickNpc(true, cts);
+                    npcNameTargeting.TargetingAndClickNpc(true, ct);
                 }
             }
 

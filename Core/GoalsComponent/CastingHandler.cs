@@ -10,7 +10,6 @@ namespace Core.Goals
         private const bool Log = true;
 
         private readonly ILogger logger;
-        private readonly CancellationTokenSource cts;
         private readonly ConfigurableInput input;
 
         private readonly Wait wait;
@@ -37,12 +36,11 @@ namespace Core.Goals
 
         public static int _NextSpell() => GCD + SpellQueueTimeMs;
 
-        public CastingHandler(ILogger logger, CancellationTokenSource cts,
-            ConfigurableInput input, Wait wait, AddonReader addonReader,
-            PlayerDirection direction, StopMoving stopMoving, ReactCastError react)
+        public CastingHandler(ILogger logger, ConfigurableInput input,
+            Wait wait, AddonReader addonReader, PlayerDirection direction,
+            StopMoving stopMoving, ReactCastError react)
         {
             this.logger = logger;
-            this.cts = cts;
             this.input = input;
 
             this.wait = wait;

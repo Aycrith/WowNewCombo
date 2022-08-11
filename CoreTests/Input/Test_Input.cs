@@ -10,6 +10,8 @@ namespace CoreTests
     {
         private const int delay = 500;
 
+        private readonly CancellationTokenSource cts;
+
         private readonly ILogger logger;
         private readonly WowProcess wowProcess;
         private readonly WowScreen wowScreen;
@@ -18,16 +20,18 @@ namespace CoreTests
         public Test_Input(ILogger logger)
         {
             this.logger = logger;
+            this.cts = new();
 
             wowProcess = new WowProcess();
             wowScreen = new WowScreen(logger, wowProcess);
-            wowProcessInput = new WowProcessInput(logger, wowProcess);
+            wowProcessInput = new WowProcessInput(logger, cts, wowProcess);
         }
 
         public void Dispose()
         {
             wowScreen.Dispose();
             wowProcess.Dispose();
+            cts.Dispose();
         }
 
         public void Mouse_Movement()
@@ -35,10 +39,10 @@ namespace CoreTests
             wowProcessInput.SetForegroundWindow();
 
             wowProcessInput.SetCursorPosition(new Point(25, 25));
-            Thread.Sleep(delay);
+            cts.Token.WaitHandle.WaitOne(delay);
 
             wowProcessInput.SetCursorPosition(new Point(50, 50));
-            Thread.Sleep(delay);
+            cts.Token.WaitHandle.WaitOne(delay);
 
             logger.LogInformation($"{nameof(Mouse_Movement)} Finished");
         }
@@ -50,22 +54,22 @@ namespace CoreTests
             Point p = new(120, 120);
             wowProcessInput.LeftClickMouse(p);
 
-            Thread.Sleep(delay);
+            cts.Token.WaitHandle.WaitOne(delay);
 
             wowProcessInput.RightClickMouse(p);
 
-            Thread.Sleep(delay);
+            cts.Token.WaitHandle.WaitOne(delay);
 
             wowProcessInput.RightClickMouse(p);
 
             wowScreen.GetRectangle(out Rectangle rect);
             p = new Point(rect.Width / 2, rect.Height / 2);
 
-            Thread.Sleep(delay);
+            cts.Token.WaitHandle.WaitOne(delay);
 
             wowProcessInput.RightClickMouse(p);
 
-            Thread.Sleep(delay);
+            cts.Token.WaitHandle.WaitOne(delay);
 
             wowProcessInput.RightClickMouse(p);
 
@@ -80,7 +84,7 @@ namespace CoreTests
             wowProcessInput.KeyPress(ConsoleKey.Enter, delay);
 
             wowProcessInput.PasteFromClipboard();
-            Thread.Sleep(delay);
+            cts.Token.WaitHandle.WaitOne(delay);
 
             // Close chat inputbox
             wowProcessInput.KeyPress(ConsoleKey.Enter, delay);

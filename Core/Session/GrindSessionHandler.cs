@@ -9,7 +9,7 @@ namespace Core.Session
         private readonly ILogger logger;
         private readonly AddonReader addonReader;
         private readonly IGrindSessionDAO grindSessionDAO;
-        private readonly CancellationTokenSource cts;
+        private readonly CancellationToken ct;
 
         private readonly GrindSession session;
         private readonly Thread thread;
@@ -21,7 +21,7 @@ namespace Core.Session
             this.logger = logger;
             this.addonReader = addonReader;
             this.grindSessionDAO = grindSessionDAO;
-            this.cts = cts;
+            ct = cts.Token;
 
             session = new()
             {
@@ -67,12 +67,12 @@ namespace Core.Session
 
         private void PeriodicSave()
         {
-            while (!cts.IsCancellationRequested)
+            while (!ct.IsCancellationRequested)
             {
                 if (active)
                     Stop("auto save", true);
 
-                cts.Token.WaitHandle.WaitOne(TimeSpan.FromMinutes(1));
+                ct.WaitHandle.WaitOne(TimeSpan.FromMinutes(1));
             }
 
             if (logger.IsEnabled(LogLevel.Debug))

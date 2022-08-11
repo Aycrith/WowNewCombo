@@ -152,10 +152,10 @@ namespace Core.Goals
 
         public void Update()
         {
-            Update(_cts);
+            Update(_cts.Token);
         }
 
-        public void Update(CancellationTokenSource cts)
+        public void Update(CancellationToken ct)
         {
             active = true;
 
@@ -170,7 +170,7 @@ namespace Core.Goals
                 result.Callback(result);
             }
 
-            if (pathRequests.Count > 0 || cts.IsCancellationRequested)
+            if (pathRequests.Count > 0 || ct.IsCancellationRequested)
             {
                 return;
             }
@@ -226,8 +226,8 @@ namespace Core.Goals
                     stuckDetector.SetTargetLocation(target);
                     heading = DirectionCalculator.CalculateHeading(playerLoc, target);
 
-                    if (!cts.IsCancellationRequested)
-                        AdjustHeading(heading, cts);
+                    if (!ct.IsCancellationRequested)
+                        AdjustHeading(heading, ct);
                     return;
                 }
             }
@@ -250,9 +250,9 @@ namespace Core.Goals
                         distance = playerLoc.DistanceXYTo(routeToNextWaypoint.Peek());
                     }
                 }
-                else if (!cts.IsCancellationRequested) // distance closer
+                else if (!ct.IsCancellationRequested) // distance closer
                 {
-                    AdjustHeading(heading, cts);
+                    AdjustHeading(heading, ct);
                 }
             }
 
@@ -370,7 +370,7 @@ namespace Core.Goals
                 routeToNextWaypoint.Push(target);
 
                 float heading = DirectionCalculator.CalculateHeading(player, target);
-                AdjustHeading(heading, _cts);
+                AdjustHeading(heading, _cts.Token);
 
                 stuckDetector.SetTargetLocation(target);
                 UpdateTotalRoute();
@@ -472,7 +472,7 @@ namespace Core.Goals
             }
         }
 
-        private void AdjustHeading(float heading, CancellationTokenSource cts)
+        private void AdjustHeading(float heading, CancellationToken ct)
         {
             float diff1 = Abs(RADIAN + heading - playerReader.Direction) % RADIAN;
             float diff2 = Abs(heading - playerReader.Direction - RADIAN) % RADIAN;
@@ -485,7 +485,7 @@ namespace Core.Goals
                     stopMoving.Stop();
                 }
 
-                playerDirection.SetDirection(heading, routeToNextWaypoint.Peek(), MinDistance, cts);
+                playerDirection.SetDirection(heading, routeToNextWaypoint.Peek(), MinDistance, ct);
             }
         }
 

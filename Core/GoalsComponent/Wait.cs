@@ -6,12 +6,12 @@ namespace Core
     public class Wait
     {
         private readonly AutoResetEvent globalTime;
-        private readonly CancellationTokenSource cts;
+        private readonly CancellationToken ct;
 
         public Wait(AutoResetEvent globalTime, CancellationTokenSource cts)
         {
             this.globalTime = globalTime;
-            this.cts = cts;
+            this.ct = cts.Token;
         }
 
         public void Update()
@@ -21,7 +21,7 @@ namespace Core
 
         public void Fixed(int durationMs)
         {
-            cts.Token.WaitHandle.WaitOne(durationMs);
+            ct.WaitHandle.WaitOne(durationMs);
         }
 
         public bool Till(int timeoutMs, Func<bool> interrupt)

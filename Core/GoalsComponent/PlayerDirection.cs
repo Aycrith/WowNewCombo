@@ -36,10 +36,10 @@ namespace Core
 
         public void SetDirection(float desiredDirection, Vector3 point)
         {
-            SetDirection(desiredDirection, point, DefaultIgnoreDistance, _cts);
+            SetDirection(desiredDirection, point, DefaultIgnoreDistance, _cts.Token);
         }
 
-        public void SetDirection(float desiredDirection, Vector3 point, float ignoreDistance, CancellationTokenSource cts)
+        public void SetDirection(float desiredDirection, Vector3 point, float ignoreDistance, CancellationToken ct)
         {
             float distance = playerReader.PlayerLocation.DistanceXYTo(point);
             if (distance < ignoreDistance)
@@ -54,8 +54,7 @@ namespace Core
                 LogDebugSetDirection(logger, playerReader.Direction, desiredDirection, distance);
 
             input.Proc.KeyPressSleep(GetDirectionKeyToPress(desiredDirection),
-                TurnDuration(desiredDirection),
-                cts);
+                TurnDuration(desiredDirection), ct);
         }
 
         private float TurnAmount(float desiredDirection)

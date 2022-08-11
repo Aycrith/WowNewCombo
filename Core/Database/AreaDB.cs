@@ -14,7 +14,7 @@ namespace Core.Database
         private readonly ILogger logger;
         private readonly DataConfig dataConfig;
 
-        private readonly CancellationTokenSource cts;
+        private readonly CancellationToken ct;
         private readonly AutoResetEvent autoResetEvent;
         private readonly Thread thread;
 
@@ -27,7 +27,7 @@ namespace Core.Database
         {
             this.logger = logger;
             this.dataConfig = dataConfig;
-            this.cts = cts;
+            ct = cts.Token;
             autoResetEvent = new AutoResetEvent(false);
 
             thread = new(ReadArea);
@@ -52,13 +52,13 @@ namespace Core.Database
         {
             autoResetEvent.WaitOne();
 
-            while (!cts.IsCancellationRequested)
+            while (!ct.IsCancellationRequested)
             {
                 try
                 {
                     CurrentArea = JsonConvert.DeserializeObject<Area>(File.ReadAllText(Path.Join(dataConfig.ExpArea, $"{areaId}.json")));
                     Changed?.Invoke();
-    }
+                }
                 catch (Exception e)
                 {
                     logger.LogError(e.Message, e.StackTrace);

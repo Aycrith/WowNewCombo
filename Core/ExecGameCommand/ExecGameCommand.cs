@@ -9,14 +9,14 @@ namespace Core
     {
         private readonly ILogger logger;
         private readonly WowProcessInput wowProcessInput;
-        private readonly CancellationTokenSource cts;
+        private readonly CancellationToken ct;
 
         private readonly Random random = new();
 
         public ExecGameCommand(ILogger logger, CancellationTokenSource cts, WowProcessInput wowProcessInput)
         {
             this.logger = logger;
-            this.cts = cts;
+            ct = cts.Token;
             this.wowProcessInput = wowProcessInput;
         }
 
@@ -41,7 +41,7 @@ namespace Core
 
         private void Wait(int min, int max)
         {
-            cts.Token.WaitHandle.WaitOne(random.Next(min, max));
+            ct.WaitHandle.WaitOne(random.Next(min, max));
         }
     }
 }

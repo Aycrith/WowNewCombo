@@ -37,7 +37,7 @@ namespace Core.Goals
         private readonly ClassConfiguration classConfig;
         private readonly NpcNameTargeting npcNameTargeting;
         private readonly MountHandler mountHandler;
-
+        private readonly CancellationToken ct;
         private readonly ExecGameCommand execGameCommand;
         private readonly GossipReader gossipReader;
 
@@ -69,7 +69,7 @@ namespace Core.Goals
         public AdhocNPCGoal(KeyAction key, ILogger logger, ConfigurableInput input,
             Wait wait, AddonReader addonReader, Navigation navigation, StopMoving stopMoving,
             NpcNameTargeting npcNameTargeting, ClassConfiguration classConfig,
-            MountHandler mountHandler, ExecGameCommand exec)
+            MountHandler mountHandler, ExecGameCommand exec, CancellationTokenSource cts)
             : base(nameof(AdhocNPCGoal))
         {
             this.logger = logger;
@@ -82,6 +82,7 @@ namespace Core.Goals
             this.npcNameTargeting = npcNameTargeting;
             this.classConfig = classConfig;
             this.mountHandler = mountHandler;
+            ct = cts.Token;
             this.execGameCommand = exec;
             this.gossipReader = addonReader.GossipReader;
 
@@ -165,80 +166,79 @@ namespace Core.Goals
 
         private void Navigation_OnDestinationReached()
         {
-            if (pathState == PathState.ApproachPathStart)
+            if (pathState != PathState.ApproachPathStart || ct.IsCancellationRequested)
+                return;
+
+            LogDebug("Reached defined path end");
+            stopMoving.Stop();
+
+            input.ClearTarget();
+            wait.Update();
+
+            bool found = false;
+
+            if (!classConfig.KeyboardOnly)
             {
-                LogDebug("Reached defined path end");
-                stopMoving.Stop();
-
-                input.ClearTarget();
+                npcNameTargeting.ChangeNpcType(NpcNames.Friendly | NpcNames.Neutral);
+                npcNameTargeting.WaitForUpdate();
+                found = npcNameTargeting.FindBy(CursorType.Vendor, CursorType.Repair, CursorType.Innkeeper);
                 wait.Update();
-
-                bool found = false;
-
-                if (!classConfig.KeyboardOnly)
-                {
-                    npcNameTargeting.ChangeNpcType(NpcNames.Friendly | NpcNames.Neutral);
-                    npcNameTargeting.WaitForUpdate();
-                    found = npcNameTargeting.FindBy(CursorType.Vendor, CursorType.Repair, CursorType.Innkeeper);
-                    wait.Update();
-
-                    if (!found)
-                    {
-                        LogWarn($"No target found by cursor({CursorType.Vendor.ToStringF()}, {CursorType.Repair.ToStringF()}, {CursorType.Innkeeper.ToStringF()})!");
-                    }
-                }
 
                 if (!found)
                 {
-                    Log($"Use KeyAction.Key macro to aquire target");
-                    input.Proc.KeyPress(key.ConsoleKey, input.defaultKeyPress);
-                    wait.Update();
+                    LogWarn($"No target found by cursor({CursorType.Vendor.ToStringF()}, {CursorType.Repair.ToStringF()}, {CursorType.Innkeeper.ToStringF()})!");
                 }
-
-                wait.Until(400, playerReader.Bits.HasTarget);
-                if (!playerReader.Bits.HasTarget())
-                {
-                    LogWarn("No target found! Turn left to find NPC");
-                    using CancellationTokenSource cts = new();
-                    input.Proc.KeyPressSleep(input.Proc.TurnLeftKey, 250, cts);
-                    return;
-                }
-
-                Log($"Found Target!");
-                input.Interact();
-
-                if (!OpenMerchantWindow())
-                    return;
-
-                input.Proc.KeyPress(ConsoleKey.Escape, input.defaultKeyPress);
-                input.ClearTarget();
-                wait.Update();
-
-                Vector3[] reversePath = key.Path.ToArray();
-                Array.Reverse(reversePath);
-                navigation.SetWayPoints(reversePath);
-
-                pathState++;
-
-                LogDebug("Go back reverse to the start point of the path.");
-                navigation.ResetStuckParameters();
-
-                // At this point the BagsFull is false
-                // which mean it it would exit the Goal
-                // instead keep it trapped to follow the route back
-                while (navigation.HasWaypoint())
-                {
-                    navigation.Update();
-                    wait.Update();
-                }
-
-                pathState = PathState.Finished;
-
-                LogDebug("2 Reached the start point of the path.");
-                stopMoving.Stop();
-
-                navigation.SimplifyRouteToWaypoint = true;
             }
+
+            if (!found)
+            {
+                Log($"Use KeyAction.Key macro to aquire target");
+                input.Proc.KeyPress(key.ConsoleKey, input.defaultKeyPress);
+                wait.Update();
+            }
+
+            wait.Until(400, playerReader.Bits.HasTarget);
+            if (!playerReader.Bits.HasTarget())
+            {
+                LogWarn("No target found! Turn left to find NPC");
+                input.Proc.KeyPressSleep(input.Proc.TurnLeftKey, 250, ct);
+                return;
+            }
+
+            Log($"Found Target!");
+            input.Interact();
+
+            if (!OpenMerchantWindow())
+                return;
+
+            input.Proc.KeyPress(ConsoleKey.Escape, input.defaultKeyPress);
+            input.ClearTarget();
+            wait.Update();
+
+            Vector3[] reversePath = key.Path.ToArray();
+            Array.Reverse(reversePath);
+            navigation.SetWayPoints(reversePath);
+
+            pathState++;
+
+            LogDebug("Go back reverse to the start point of the path.");
+            navigation.ResetStuckParameters();
+
+            // At this point the BagsFull is false
+            // which mean it it would exit the Goal
+            // instead keep it trapped to follow the route back
+            while (navigation.HasWaypoint() && !ct.IsCancellationRequested)
+            {
+                navigation.Update();
+                wait.Update();
+            }
+
+            pathState = PathState.Finished;
+
+            LogDebug("2 Reached the start point of the path.");
+            stopMoving.Stop();
+
+            navigation.SimplifyRouteToWaypoint = true;
         }
 
 

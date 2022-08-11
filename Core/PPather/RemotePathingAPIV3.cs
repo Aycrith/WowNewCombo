@@ -129,7 +129,7 @@ namespace Core
 
         public bool PingServer()
         {
-            CancellationTokenSource cts = new();
+            using CancellationTokenSource cts = new();
             cts.CancelAfter(2 * watchdogPollMs);
 
             while (!cts.IsCancellationRequested)

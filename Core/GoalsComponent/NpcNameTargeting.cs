@@ -14,7 +14,7 @@ namespace Core.Goals
         private const int MOUSE_DELAY = 50;
 
         private readonly ILogger logger;
-        private readonly CancellationTokenSource cts;
+        private readonly CancellationToken ct;
         private readonly IWowScreen wowScreen;
         private readonly NpcNameFinder npcNameFinder;
         private readonly IMouseInput input;
@@ -29,7 +29,7 @@ namespace Core.Goals
         public NpcNameTargeting(ILogger logger, CancellationTokenSource cts, IWowScreen wowScreen, NpcNameFinder npcNameFinder, IMouseInput input)
         {
             this.logger = logger;
-            this.cts = cts;
+            ct = cts.Token;
             this.wowScreen = wowScreen;
             this.npcNameFinder = npcNameFinder;
             this.input = input;
@@ -56,7 +56,7 @@ namespace Core.Goals
             bool changed = npcNameFinder.ChangeNpcType(npcNames);
             wowScreen.Enabled = npcNames != NpcNames.None;
             if (changed)
-                cts.Token.WaitHandle.WaitOne(5); // BotController ScreenshotThread 4ms delay when idle
+                ct.WaitHandle.WaitOne(5); // BotController ScreenshotThread 4ms delay when idle
         }
 
         public void WaitForUpdate()
@@ -69,21 +69,21 @@ namespace Core.Goals
             return npcNameFinder.NpcCount > 0;
         }
 
-        public void TargetingAndClickNpc(bool leftClick, CancellationTokenSource cts)
+        public void TargetingAndClickNpc(bool leftClick, CancellationToken ct)
         {
             NpcPosition npc = npcNameFinder.Npcs.First();
             logger.LogInformation($"> NPCs found: {npc.Rect}");
 
             foreach (Point p in locTargetingAndClickNpc)
             {
-                if (cts.IsCancellationRequested)
+                if (ct.IsCancellationRequested)
                     return;
 
                 var clickPostion = npcNameFinder.ToScreenCoordinates(npc.ClickPoint.X + p.X, npc.ClickPoint.Y + p.Y);
                 input.SetCursorPosition(clickPostion);
-                cts.Token.WaitHandle.WaitOne(MOUSE_DELAY);
+                ct.WaitHandle.WaitOne(MOUSE_DELAY);
 
-                if (cts.IsCancellationRequested)
+                if (ct.IsCancellationRequested)
                     return;
 
                 CursorClassifier.Classify(out CursorType cls);
@@ -114,7 +114,7 @@ namespace Core.Goals
                     Point clickPostion = npcNameFinder.ToScreenCoordinates(npc.ClickPoint.X + p.X, npc.ClickPoint.Y + p.Y);
                     input.SetCursorPosition(clickPostion);
 
-                    cts.Token.WaitHandle.WaitOne(MOUSE_DELAY);
+                    ct.WaitHandle.WaitOne(MOUSE_DELAY);
 
                     CursorClassifier.Classify(out CursorType cls);
                     if (cursor.Contains(cls))
@@ -122,7 +122,7 @@ namespace Core.Goals
                         AquireTargetAtCursor(clickPostion, npc);
                         return true;
                     }
-                    cts.Token.WaitHandle.WaitOne(5);
+                    ct.WaitHandle.WaitOne(5);
                 }
             }
             return false;

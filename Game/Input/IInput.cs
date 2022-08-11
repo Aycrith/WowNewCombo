@@ -11,7 +11,7 @@ namespace Game
 
         int KeyPress(int key, int milliseconds);
 
-        void KeyPressSleep(int key, int milliseconds, CancellationTokenSource cts);
+        void KeyPressSleep(int key, int milliseconds, CancellationToken ct);
 
         void SetCursorPosition(Point p);
 

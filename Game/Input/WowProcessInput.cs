@@ -30,13 +30,13 @@ namespace Game
         public ConsoleKey TurnLeftKey { get; set; }
         public ConsoleKey TurnRightKey { get; set; }
 
-        public WowProcessInput(ILogger logger, WowProcess wowProcess)
+        public WowProcessInput(ILogger logger, CancellationTokenSource cts, WowProcess wowProcess)
         {
             this.logger = logger;
             this.wowProcess = wowProcess;
 
-            nativeInput = new InputWindowsNative(wowProcess, MIN_DELAY, MAX_DELAY);
-            simulatorInput = new InputSimulator(wowProcess, MIN_DELAY, MAX_DELAY);
+            nativeInput = new InputWindowsNative(wowProcess, cts, MIN_DELAY, MAX_DELAY);
+            simulatorInput = new InputSimulator(wowProcess, cts, MIN_DELAY, MAX_DELAY);
         }
 
         public void Reset()
@@ -139,7 +139,7 @@ namespace Game
             return totalElapsedMs;
         }
 
-        public void KeyPressSleep(ConsoleKey key, int milliseconds, CancellationTokenSource cts)
+        public void KeyPressSleep(ConsoleKey key, int milliseconds, CancellationToken ct)
         {
             if (milliseconds < 1)
                 return;
@@ -158,7 +158,7 @@ namespace Game
             }
 
             keyDownDict[key] = true;
-            nativeInput.KeyPressSleep((int)key, milliseconds, cts);
+            nativeInput.KeyPressSleep((int)key, milliseconds, ct);
             keyDownDict[key] = false;
         }
 

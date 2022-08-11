@@ -13,7 +13,7 @@ namespace Core
 {
     public sealed class AddonDataProviderDXGI : IAddonDataProvider, IDisposable
     {
-        private readonly CancellationTokenSource cts;
+        private readonly CancellationToken ct;
 
         private readonly WowScreen wowScreen;
 
@@ -47,7 +47,7 @@ namespace Core
 
         public AddonDataProviderDXGI(CancellationTokenSource cts, WowScreen wowScreen, DataFrame[] frames)
         {
-            this.cts = cts;
+            ct = cts.Token;
             this.wowScreen = wowScreen;
 
             this.frames = frames;
@@ -102,8 +102,6 @@ namespace Core
                 Format = Format.B8G8R8A8_UNorm,
                 Width = rect.Right,
                 Height = rect.Bottom,
-                //Width = bounds.Right - bounds.Left,
-                //Height = bounds.Bottom - bounds.Top,
                 MiscFlags = ResourceOptionFlags.None,
                 MipLevels = 1,
                 ArraySize = 1,
@@ -135,9 +133,9 @@ namespace Core
 
         public void Update()
         {
-            cts.Token.WaitHandle.WaitOne(1);
+            ct.WaitHandle.WaitOne(1);
 
-            if (cts.IsCancellationRequested || disposing) return;
+            if (ct.IsCancellationRequested || disposing) return;
 
             Point p = new();
             wowScreen.GetPosition(ref p);
