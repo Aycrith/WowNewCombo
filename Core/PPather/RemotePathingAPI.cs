@@ -9,7 +9,6 @@ using System.Diagnostics;
 using PPather.Data;
 using System.Text;
 using System.Numerics;
-using SharedLib;
 using SharedLib.Converters;
 
 namespace Core
@@ -61,7 +60,7 @@ namespace Core
             await client.PostAsync($"{api}DrawSphere", content);
         }
 
-        public async ValueTask<List<Vector3>> FindRoute(int map, Vector3 fromPoint, Vector3 toPoint)
+        public async ValueTask<Vector3[]> FindRoute(int map, Vector3 fromPoint, Vector3 toPoint)
         {
             try
             {
@@ -72,13 +71,13 @@ namespace Core
                 using var client = new HttpClient();
                 string responseString = await client.GetStringAsync(url);
                 LogInformation($"Finding route from {fromPoint} map {map} to {toPoint} took {stopwatch.ElapsedMilliseconds} ms.");
-                return JsonSerializer.Deserialize<List<Vector3>>(responseString, options) ?? new();
+                return JsonSerializer.Deserialize<Vector3[]>(responseString, options) ?? Array.Empty<Vector3>();
             }
             catch (Exception ex)
             {
                 LogError($"Finding route from {fromPoint} to {toPoint}", ex);
                 Console.WriteLine(ex);
-                return new();
+                return Array.Empty<Vector3>();
             }
         }
 

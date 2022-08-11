@@ -38,12 +38,12 @@ namespace Core.Goals
         public Vector3 Start { get; }
         public Vector3 End { get; }
         public float Distance { get; }
-        public List<Vector3> Path { get; }
+        public Vector3[] Path { get; }
         public bool Success { get; }
         public double ElapsedMs { get; }
         public Action<PathResult> Callback { get; }
 
-        public PathResult(in PathRequest request, List<Vector3> path, bool success, Action<PathResult> callback)
+        public PathResult(in PathRequest request, Vector3[] path, bool success, Action<PathResult> callback)
         {
             Start = request.Start;
             End = request.End;
@@ -388,7 +388,7 @@ namespace Core.Goals
             if (!active)
                 return;
 
-            if (!result.Success || result.Path == null || result.Path.Count == 0)
+            if (!result.Success || result.Path == null || result.Path.Length == 0)
             {
                 if (lastFailedDestination != result.End)
                 {
@@ -409,8 +409,8 @@ namespace Core.Goals
             failedAttempt = 0;
             LogPathfinderSuccess(logger, result.Distance, result.Start, result.End, result.ElapsedMs);
 
-            result.Path.Reverse();
-            for (int i = 0; i < result.Path.Count; i++)
+            Array.Reverse(result.Path);
+            for (int i = 0; i < result.Path.Length; i++)
             {
                 routeToNextWaypoint.Push(result.Path[i]);
             }

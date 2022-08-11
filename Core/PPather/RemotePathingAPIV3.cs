@@ -73,19 +73,17 @@ namespace Core
             return ValueTask.CompletedTask;
         }
 
-        public ValueTask<List<Vector3>> FindRoute(int uiMapId, Vector3 fromPoint, Vector3 toPoint)
+        public ValueTask<Vector3[]> FindRoute(int uiMapId, Vector3 fromPoint, Vector3 toPoint)
         {
             if (!Client.IsConnected)
             {
-                return new ValueTask<List<Vector3>>();
+                return new(Array.Empty<Vector3>());
             }
 
             try
             {
                 if (!worldMapAreaDB.TryGet(uiMapId, out WorldMapArea area))
-                    return new ValueTask<List<Vector3>>();
-
-                List<Vector3> result = new();
+                    return new(Array.Empty<Vector3>());
 
                 Vector3 start = worldMapAreaDB.ToWorld(uiMapId, fromPoint, true);
                 Vector3 end = worldMapAreaDB.ToWorld(uiMapId, toPoint, true);
@@ -106,23 +104,23 @@ namespace Core
                     start.X, start.Y, start.Z, end.X, end.Y, end.Z)).AsArray<Vector3>();
 
                 if (path.Length == 1 && path[0] == Vector3.Zero)
-                    return new ValueTask<List<Vector3>>();
+                    return new(Array.Empty<Vector3>());
 
                 for (int i = 0; i < path.Length; i++)
                 {
                     if (debug)
                         LogInformation($"new float[] {{ {path[i].X}f, {path[i].Y}f, {path[i].Z}f }},");
 
-                    result.Add(worldMapAreaDB.ToLocal(path[i], area.MapID, uiMapId));
+                    path[i] = worldMapAreaDB.ToLocal(path[i], area.MapID, uiMapId);
                 }
 
-                return new ValueTask<List<Vector3>>(result);
+                return new(path);
             }
             catch (Exception ex)
             {
                 LogError($"Finding route from {fromPoint} to {toPoint}", ex);
                 Console.WriteLine(ex);
-                return new ValueTask<List<Vector3>>();
+                return new(Array.Empty<Vector3>());
             }
         }
 
