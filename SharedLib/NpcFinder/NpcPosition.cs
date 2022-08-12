@@ -1,9 +1,12 @@
 ﻿using System.Drawing;
+using System;
 
 namespace SharedLib.NpcFinder
 {
-    public readonly struct NpcPosition
+    public readonly struct NpcPosition : IEquatable<NpcPosition>
     {
+        public static readonly NpcPosition Empty = new(Point.Empty, Point.Empty, 0, 0, 0);
+
         public readonly int Left => Rect.Left;
         public readonly int Top => Rect.Top;
         public readonly int Height => Rect.Height;
@@ -32,6 +35,26 @@ namespace SharedLib.NpcFinder
 
             IsAdd = (ClickPoint.X < screenMid - screenTargetBuffer && ClickPoint.X > screenMid - screenAddBuffer) ||
             (ClickPoint.X > screenMid + screenTargetBuffer && ClickPoint.X < screenMid + screenAddBuffer);
+        }
+
+        public NpcPosition(Rectangle rect, NpcPosition other, float yOffset, float heightMul)
+        {
+            Rect = rect;
+
+            screenMid = other.screenMid;
+            screenMidBuffer = other.screenMidBuffer;
+            screenTargetBuffer = other.screenTargetBuffer;
+            screenAddBuffer = other.screenAddBuffer;
+
+            ClickPoint = new(rect.Left + (rect.Width / 2), (int)(rect.Bottom + yOffset + (rect.Height * heightMul)));
+
+            IsAdd = (ClickPoint.X < screenMid - screenTargetBuffer && ClickPoint.X > screenMid - screenAddBuffer) ||
+            (ClickPoint.X > screenMid + screenTargetBuffer && ClickPoint.X < screenMid + screenAddBuffer);
+        }
+
+        public bool Equals(NpcPosition other)
+        {
+            return Rect == other.Rect;
         }
     }
 }

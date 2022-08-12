@@ -52,7 +52,7 @@ namespace SharedLib.NpcFinder
         };
     }
 
-    public partial class NpcNameFinder
+    public partial class NpcNameFinder : IDisposable
     {
         private const SearchMode searchMode = SearchMode.Simple;
         private NpcNames nameType = NpcNames.Enemy | NpcNames.Neutral;
@@ -73,7 +73,6 @@ namespace SharedLib.NpcFinder
         public float ScaleToRefWidth { get; } = 1;
         public float ScaleToRefHeight { get; } = 1;
 
-        private float yOffset;
         private float heightMul;
 
         public IEnumerable<NpcPosition> Npcs { get; private set; } = Enumerable.Empty<NpcPosition>();
@@ -96,22 +95,17 @@ namespace SharedLib.NpcFinder
 
         public int topOffset { get; set; } = 110;
 
-        public int npcPosYOffset { get; set; }
-        public int npcPosYHeightMul { get; set; } = 10;
+        public int npcPosYHeightMul { get; set; } = 1;
 
         public int npcNameMaxWidth { get; set; } = 250;
 
-        public int LinesOfNpcMinLength { get; set; } = 22;
+        public int LinesOfNpcMinLength { get; set; } = 16;
 
         public int LinesOfNpcLengthDiff { get; set; } = 4;
 
         public int DetermineNpcsHeightOffset1 { get; set; } = 10;
 
         public int DetermineNpcsHeightOffset2 { get; set; } = 2;
-
-        public int incX { get; set; } = 1;
-
-        public int incY { get; set; } = 1;
 
         #endregion
 
@@ -164,7 +158,6 @@ namespace SharedLib.NpcFinder
             ScaleToRefWidth = ScaleWidth(1);
             ScaleToRefHeight = ScaleHeight(1);
 
-            yOffset = ScaleHeight(npcPosYOffset);
             heightMul = ScaleHeight(npcPosYHeightMul);
 
             Area = new Rectangle(new Point(0, (int)ScaleHeight(topOffset)),
@@ -174,13 +167,17 @@ namespace SharedLib.NpcFinder
             greyPen = new Pen(Color.Gray, 3);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Dispose()
+        {
+            whitePen.Dispose();
+            greyPen.Dispose();
+        }
+
         private float ScaleWidth(int value)
         {
             return value * (bitmapProvider.Rect.Width / refWidth);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private float ScaleHeight(int value)
         {
             return value * (bitmapProvider.Rect.Height / refHeight);
@@ -193,18 +190,12 @@ namespace SharedLib.NpcFinder
 
             nameType = type;
 
+            npcPosYHeightMul = nameType == NpcNames.Corpse ? 15 : 1;
+            heightMul = ScaleHeight(npcPosYHeightMul);
+
             TargetCount = 0;
             AddCount = 0;
             Npcs = Enumerable.Empty<NpcPosition>();
-
-            if (nameType.HasFlag(NpcNames.Corpse))
-            {
-                npcPosYHeightMul = 15;
-            }
-            else
-            {
-                npcPosYHeightMul = 10;
-            }
 
             UpdateSearchMode();
 
@@ -364,21 +355,20 @@ namespace SharedLib.NpcFinder
             autoResetEvent.WaitOne();
         }
 
+        static bool TargetsCount(NpcPosition c) => !c.IsAdd && Math.Abs(c.ClickPoint.X - c.screenMid) < c.screenTargetBuffer;
+        static bool IsAdd(NpcPosition c) => c.IsAdd;
+
+        static double PointDistance(int x1, int y1, int x2, int y2)
+        {
+            return Math.Sqrt(Math.Pow(x2 - x1, 2) + Math.Pow(y2 - y1, 2));
+        }
+
         public void Update()
         {
-            var npcNameLines = PopulateLinesOfNpcNames(bitmapProvider.Bitmap, bitmapProvider.Rect);
-            var npcs = DetermineNpcs(npcNameLines);
+            (LineOfNpcName[] names, int count) npcNameLines = PopulateLinesOfNpcNames(bitmapProvider.Bitmap, bitmapProvider.Rect);
+            Npcs = DetermineNpcs(npcNameLines);
 
-            Npcs = npcs.
-                Select(CreateNpcPos)
-                .Where(WhereScale)
-                .Distinct(comparer)
-                .OrderBy(Order);
-
-            static bool TargetsCount(NpcPosition c) => !c.IsAdd && Math.Abs(c.ClickPoint.X - c.screenMid) < c.screenTargetBuffer;
             TargetCount = Npcs.Count(TargetsCount);
-
-            static bool IsAdd(NpcPosition c) => c.IsAdd;
             AddCount = Npcs.Count(IsAdd);
 
             if (AddCount > 0 && TargetCount >= 1)
@@ -398,57 +388,99 @@ namespace SharedLib.NpcFinder
             autoResetEvent.Set();
         }
 
-        private bool WhereScale(NpcPosition npcPos) => npcPos.Width < ScaleWidth(npcNameMaxWidth);
-
-        private float Order(NpcPosition npcPos) => RectangleExt.SqrDistance(Area.BottomCentre(), npcPos.ClickPoint);
-
-        private NpcPosition CreateNpcPos(List<LineOfNpcName> lineofNpcName)
+        private NpcPosition[] DetermineNpcs((LineOfNpcName[] names, int count) data)
         {
-            return new NpcPosition(
-                new Point(lineofNpcName.Min(MinX), lineofNpcName.Min(MinY)),
-                new Point(lineofNpcName.Max(MaxX), lineofNpcName.Max(MaxY)),
-                bitmapProvider.Rect.Width, yOffset, heightMul);
-
-            static int MinX(LineOfNpcName x) => x.XStart;
-            static int MinY(LineOfNpcName x) => x.Y;
-            static int MaxX(LineOfNpcName x) => x.XEnd;
-            static int MaxY(LineOfNpcName x) => x.Y;
-        }
-
-        private List<List<LineOfNpcName>> DetermineNpcs(List<LineOfNpcName> npcNameLine)
-        {
-            List<List<LineOfNpcName>> npcs = new();
+            NpcPosition[] npcs = new NpcPosition[data.count];
+            int c = 0;
 
             float offset1 = ScaleHeight(DetermineNpcsHeightOffset1);
             float offset2 = ScaleHeight(DetermineNpcsHeightOffset2);
 
-            for (int i = 0; i < npcNameLine.Count; i++)
+            for (int i = 0; i < data.count; i++)
             {
-                var npcLine = npcNameLine[i];
-                var group = new List<LineOfNpcName>() { npcLine };
-                var lastY = npcLine.Y;
+                LineOfNpcName npcLine = data.names[i];
+                List<LineOfNpcName> group = new() { npcLine };
 
-                if (!npcLine.IsInAgroup)
+                int lastY = npcLine.Y;
+
+                if (npcLine.IsInAgroup)
+                    continue;
+
+                for (int j = i + 1; j < data.count; j++)
                 {
-                    for (int j = i + 1; j < npcNameLine.Count; j++)
-                    {
-                        var laterNpcLine = npcNameLine[j];
-                        if (laterNpcLine.Y > npcLine.Y + offset1) { break; } // 10
-                        if (laterNpcLine.Y > lastY + offset2) { break; } // 5
+                    LineOfNpcName laterNpcLine = data.names[j];
+                    if (laterNpcLine.Y > npcLine.Y + offset1) break; // 10
+                    if (laterNpcLine.Y > lastY + offset2) break; // 5
 
-                        if (laterNpcLine.XStart <= npcLine.X && laterNpcLine.XEnd >= npcLine.X && laterNpcLine.Y > lastY)
-                        {
-                            laterNpcLine.IsInAgroup = true;
-                            group.Add(laterNpcLine);
-                            lastY = laterNpcLine.Y;
-                            npcNameLine[j] = laterNpcLine;
-                        }
+                    if (laterNpcLine.XStart <= npcLine.X && laterNpcLine.XEnd >= npcLine.X && laterNpcLine.Y > lastY)
+                    {
+                        laterNpcLine.IsInAgroup = true;
+
+                        group.Add(laterNpcLine);
+                        lastY = laterNpcLine.Y;
+
+                        data.names[j] = laterNpcLine;
                     }
-                    if (group.Count > 0) { npcs.Add(group); }
+                }
+
+                if (group.Count > 0)
+                {
+                    LineOfNpcName n = group[0];
+                    Rectangle rect = new(n.XStart, n.Y, n.XEnd - n.XStart, 1);
+                    for (int g = 1; g < group.Count; g++)
+                    {
+                        n = group[g];
+
+                        rect.X = Math.Min(rect.X, n.XStart);
+                        rect.Y = Math.Min(rect.Y, n.Y);
+
+                        if (rect.Right < n.XEnd)
+                            rect.Width = n.XEnd - n.XStart;
+
+                        if (rect.Bottom < n.Y)
+                            rect.Height = n.Y - rect.Y;
+                    }
+                    int yOffset = YOffset(Area, rect);
+                    npcs[c++] = new NpcPosition(rect.Location, rect.Max(), bitmapProvider.Rect.Width, yOffset, heightMul);
                 }
             }
 
-            return npcs;
+            int lineHeight = 2 * (int)ScaleWidth(LinesOfNpcMinLength);
+
+            for (int i = 0; i < c; i++)
+            {
+                NpcPosition ii = npcs[i];
+
+                if (ii.Equals(NpcPosition.Empty))
+                    continue;
+
+                for (int j = 0; j < c; j++)
+                {
+                    NpcPosition jj = npcs[j];
+                    if (i == j || jj.Equals(NpcPosition.Empty))
+                        continue;
+
+                    Point pi = ii.Rect.Centre();
+                    Point pj = jj.Rect.Centre();
+                    double midDistance = PointDistance(pi.X, pi.Y, pj.X, pj.Y);
+
+                    if (ii.Rect.IntersectsWith(jj.Rect) || midDistance <= lineHeight)
+                    {
+                        Rectangle unionRect = Rectangle.Union(ii.Rect, jj.Rect);
+
+                        int yOffset = YOffset(Area, unionRect);
+                        npcs[i] = new(unionRect, ii, yOffset, heightMul);
+                        npcs[j] = NpcPosition.Empty;
+                    }
+                }
+            }
+
+            return npcs.Where(x => !x.Equals(NpcPosition.Empty)).ToArray();
+        }
+
+        private int YOffset(Rectangle area, Rectangle npc)
+        {
+            return (int)((float)area.Height / npc.Top * ScaleHeight(10));
         }
 
         private (LineOfNpcName[], int) PopulateLinesOfNpcNames(Bitmap bitmap, Rectangle rect)
