@@ -619,13 +619,16 @@ function DataToColor:CreateFrames(n)
             Pixel(int, min(16, playerDebuffCount) * 1000000 + playerBuffCount * 10000 + targetDebuffCount * 100 + targetBuffCount, 55)
 
             if DataToColor.targetChanged then
-                Pixel(int, DataToColor:targetNpcId(), 56) -- target id
+                Pixel(int, DataToColor:NpcId(DataToColor.C.unitTarget), 56) -- target id
                 Pixel(int, DataToColor:getGuidFromUnit(DataToColor.C.unitTarget), 57)
             end
 
             Pixel(int, DataToColor:CastingInfoSpellId(DataToColor.C.unitTarget), 58) -- SpellId being cast by target
 
-            Pixel(int, DataToColor:TargetOfTargetAsNumber(), 59)
+            Pixel(int,
+                10 * DataToColor:UnitsTargetAsNumber(DataToColor.C.unitmouseover, DataToColor.C.unitmouseovertarget) +
+                DataToColor:UnitsTargetAsNumber(DataToColor.C.unitTarget, DataToColor.C.unitTargetTarget),
+                59)
 
             Pixel(int, DataToColor.lastAutoShot, 60)
             Pixel(int, DataToColor.lastMainHandMeleeSwing, 61)
@@ -737,8 +740,18 @@ function DataToColor:CreateFrames(n)
                     Pixel(int, 0, 83)
                     Pixel(int, 0, 84)
                 end
-
             end
+
+            local mouseoverLevel = UnitLevel(DataToColor.C.unitmouseover)
+            if mouseoverLevel == -1 then
+                mouseoverLevel = playerLevel + 10
+            end
+            Pixel(int, mouseoverLevel * 100 + DataToColor.unitClassification[UnitClassification(DataToColor.C.unitmouseover)], 85)
+
+            Pixel(int, DataToColor:NpcId(DataToColor.C.unitmouseover), 86)
+            Pixel(int, DataToColor:getGuidFromUnit(DataToColor.C.unitmouseover), 87)
+
+            -- 88
 
             -- 94 last cast GCD
             Pixel(int, DataToColor.lastCastGCD, 94)
