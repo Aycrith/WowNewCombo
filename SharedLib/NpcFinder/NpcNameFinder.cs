@@ -365,7 +365,7 @@ namespace SharedLib.NpcFinder
 
         public void Update()
         {
-            (LineOfNpcName[] names, int count) npcNameLines = PopulateLinesOfNpcNames(bitmapProvider.Bitmap, bitmapProvider.Rect);
+            Span<LineOfNpcName> npcNameLines = PopulateLinesOfNpcNames(bitmapProvider.Bitmap, bitmapProvider.Rect);
             Npcs = DetermineNpcs(npcNameLines);
 
             TargetCount = Npcs.Count(TargetsCount);
@@ -388,17 +388,17 @@ namespace SharedLib.NpcFinder
             autoResetEvent.Set();
         }
 
-        private NpcPosition[] DetermineNpcs((LineOfNpcName[] names, int count) data)
+        private NpcPosition[] DetermineNpcs(Span<LineOfNpcName> data)
         {
-            NpcPosition[] npcs = new NpcPosition[data.count];
+            NpcPosition[] npcs = new NpcPosition[data.Length];
             int c = 0;
 
             float offset1 = ScaleHeight(DetermineNpcsHeightOffset1);
             float offset2 = ScaleHeight(DetermineNpcsHeightOffset2);
 
-            for (int i = 0; i < data.count; i++)
+            for (int i = 0; i < data.Length; i++)
             {
-                LineOfNpcName npcLine = data.names[i];
+                LineOfNpcName npcLine = data[i];
                 List<LineOfNpcName> group = new() { npcLine };
 
                 int lastY = npcLine.Y;
@@ -406,9 +406,9 @@ namespace SharedLib.NpcFinder
                 if (npcLine.IsInAgroup)
                     continue;
 
-                for (int j = i + 1; j < data.count; j++)
+                for (int j = i + 1; j < data.Length; j++)
                 {
-                    LineOfNpcName laterNpcLine = data.names[j];
+                    LineOfNpcName laterNpcLine = data[j];
                     if (laterNpcLine.Y > npcLine.Y + offset1) break; // 10
                     if (laterNpcLine.Y > lastY + offset2) break; // 5
 
@@ -419,7 +419,7 @@ namespace SharedLib.NpcFinder
                         group.Add(laterNpcLine);
                         lastY = laterNpcLine.Y;
 
-                        data.names[j] = laterNpcLine;
+                        data[j] = laterNpcLine;
                     }
                 }
 
@@ -493,7 +493,7 @@ namespace SharedLib.NpcFinder
             return (int)((float)area.Height / npc.Top * ScaleHeight(10));
         }
 
-        private (LineOfNpcName[], int) PopulateLinesOfNpcNames(Bitmap bitmap, Rectangle rect)
+        private Span<LineOfNpcName> PopulateLinesOfNpcNames(Bitmap bitmap, Rectangle rect)
         {
             Rectangle Area = this.Area;
             int bytesPerPixel = this.bytesPerPixel;
@@ -551,7 +551,7 @@ namespace SharedLib.NpcFinder
                 bitmap.UnlockBits(bitmapData);
             }
 
-            return (npcNameLine, i);
+            return npcNameLine.AsSpan(0, i);
         }
 
         public void ShowNames(Graphics gr)
