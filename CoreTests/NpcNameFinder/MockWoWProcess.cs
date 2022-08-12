@@ -19,5 +19,10 @@ namespace CoreTests
         {
             throw new System.NotImplementedException();
         }
+
+        public void InteractMouseOver()
+        {
+            throw new System.NotImplementedException();
+        }
     }
 }

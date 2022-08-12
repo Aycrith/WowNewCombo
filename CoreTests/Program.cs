@@ -37,7 +37,7 @@ namespace CoreTests
             //NpcNames types = NpcNames.Friendly | NpcNames.Neutral;
 
             Test_NpcNameFinder test = new(logger, types);
-            int count = 100;
+            int count = 2;
             int i = 0;
 
             Stopwatch stopwatch = new();

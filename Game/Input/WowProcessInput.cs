@@ -1,8 +1,10 @@
 ﻿using Microsoft.Extensions.Logging;
+
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Threading;
+
 using WinAPI;
 
 #pragma warning disable 162
@@ -29,6 +31,8 @@ namespace Game
         public ConsoleKey BackwardKey { get; set; }
         public ConsoleKey TurnLeftKey { get; set; }
         public ConsoleKey TurnRightKey { get; set; }
+        public ConsoleKey InteractMouseover { get; set; }
+        public int InteractMouseoverPress { get; set; } = 10;
 
         public WowProcessInput(ILogger logger, CancellationTokenSource cts, WowProcess wowProcess)
         {
@@ -130,7 +134,7 @@ namespace Game
             keyDownDict[key] = true;
             int totalElapsedMs = nativeInput.KeyPress((int)key, milliseconds);
             keyDownDict[key] = false;
-            
+
             if (LogInput)
             {
                 LogKeyPress(logger, key, totalElapsedMs);
@@ -180,6 +184,11 @@ namespace Game
         public void LeftClickMouse(Point p)
         {
             nativeInput.LeftClickMouse(p);
+        }
+
+        public void InteractMouseOver()
+        {
+            KeyPress(InteractMouseover, InteractMouseoverPress);
         }
 
         [LoggerMessage(

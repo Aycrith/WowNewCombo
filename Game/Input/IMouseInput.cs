@@ -9,5 +9,7 @@ namespace Game
         void RightClickMouse(Point p);
 
         void LeftClickMouse(Point p);
+
+        void InteractMouseOver();
     }
 }

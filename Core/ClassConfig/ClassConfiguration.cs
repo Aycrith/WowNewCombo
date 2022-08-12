@@ -73,6 +73,9 @@ namespace Core
         public KeyAction Interact { get; } = new();
         public string InteractKey { get; init; } = "I";
 
+        public KeyAction InteractMouseOver { get; } = new();
+        public string InteractMouseOverKey { get; init; } = "J";
+
         public KeyAction Approach { get; } = new();
         public KeyAction AutoAttack { get; } = new();
 
@@ -201,6 +204,13 @@ namespace Core
             Interact.PressDuration = 30;
             Interact.BaseAction = true;
             Interact.Initialise(this, addonReader, requirementFactory, logger, Log);
+
+            InteractMouseOver.Key = InteractMouseOverKey;
+            InteractMouseOver.Name = nameof(InteractMouseOver);
+            InteractMouseOver.Cooldown = 0;
+            InteractMouseOver.PressDuration = 10;
+            InteractMouseOver.BaseAction = true;
+            InteractMouseOver.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             Approach.Key = InteractKey;
             Approach.Name = nameof(Approach);
