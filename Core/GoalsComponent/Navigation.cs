@@ -84,8 +84,8 @@ namespace Core.Goals
         private float AvgDistance;
         private float lastDistance = float.MaxValue;
 
-        private const float minAngleToTurn = PI / 35f;            // 5.14 degree
-        private const float minAngleToStopBeforeTurn = PI / 1.5f; // 120 degree
+        private const float minAngleToTurn = PI / 35f;              // 5.14 degree
+        private const float minAngleToStopBeforeTurn = PI / 2f;     // 90 degree
 
         private readonly Stack<Vector3> wayPoints = new();
         private readonly Stack<Vector3> routeToNextWaypoint = new();
