@@ -19,6 +19,9 @@ namespace Core
             wowProcessInput.BackwardKey = classConfig.BackwardKey;
             wowProcessInput.TurnLeftKey = classConfig.TurnLeftKey;
             wowProcessInput.TurnRightKey = classConfig.TurnRightKey;
+
+            wowProcessInput.InteractMouseover = classConfig.InteractMouseOver.ConsoleKey;
+            wowProcessInput.InteractMouseoverPress = classConfig.InteractMouseOver.PressDuration;
         }
 
         public void Stop()

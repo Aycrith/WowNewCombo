@@ -11,7 +11,7 @@ namespace Core.Goals
 {
     public class NpcNameTargeting
     {
-        private const int MOUSE_DELAY = 50;
+        private const int FAST_DELAY = 5;
 
         private readonly ILogger logger;
         private readonly CancellationToken ct;
@@ -23,10 +23,11 @@ namespace Core.Goals
 
         public int NpcCount => npcNameFinder.NpcCount;
 
-        public Point[] locTargetingAndClickNpc { get; }
-        public Point[] locFindByCursorType { get; }
+        public Point[] locTargeting { get; }
+        public Point[] locFindBy { get; }
 
-        public NpcNameTargeting(ILogger logger, CancellationTokenSource cts, IWowScreen wowScreen, NpcNameFinder npcNameFinder, IMouseInput input)
+        public NpcNameTargeting(ILogger logger, CancellationTokenSource cts,
+            IWowScreen wowScreen, NpcNameFinder npcNameFinder, IMouseInput input)
         {
             this.logger = logger;
             ct = cts.Token;
@@ -36,18 +37,32 @@ namespace Core.Goals
 
             whitePen = new Pen(Color.White, 3);
 
-            locTargetingAndClickNpc = new Point[]
+            locTargeting = new Point[]
             {
                 new Point(0, 0),
-                new Point(-10, 15).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
-                new Point(10, 15).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+                new Point(0, -10),
+                new Point(-15, 15).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+                new Point(15, 15).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
             };
 
-            locFindByCursorType = new Point[]
+            locFindBy = new Point[]
             {
                 new Point(0, 0),
+                new Point(0, 15).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+
                 new Point(0, 25).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+                new Point(-15, 25).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+                new Point(15, 25).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+
+                new Point(0, 50).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+                new Point(-15, 50).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+                new Point(15, 50).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+
                 new Point(0, 75).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+                new Point(-15, 75).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+                new Point(15, 75).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+
+                new Point(0, 125).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
             };
         }
 
@@ -69,80 +84,71 @@ namespace Core.Goals
             return npcNameFinder.NpcCount > 0;
         }
 
-        public void TargetingAndClickNpc(bool leftClick, CancellationToken ct)
+        public bool InteractFirst(CancellationToken ct)
         {
             NpcPosition npc = npcNameFinder.Npcs.First();
-            logger.LogInformation($"> NPCs found: {npc.Rect}");
 
-            foreach (Point p in locTargetingAndClickNpc)
+            for (int i = 0; i < locTargeting.Length; i++)
             {
                 if (ct.IsCancellationRequested)
-                    return;
+                    return false;
+
+                Point p = locTargeting[i];
 
                 var clickPostion = npcNameFinder.ToScreenCoordinates(npc.ClickPoint.X + p.X, npc.ClickPoint.Y + p.Y);
                 input.SetCursorPosition(clickPostion);
-                ct.WaitHandle.WaitOne(MOUSE_DELAY);
-
-                if (ct.IsCancellationRequested)
-                    return;
+                ct.WaitHandle.WaitOne(FAST_DELAY);
 
                 CursorClassifier.Classify(out CursorType cls);
                 if (cls is CursorType.Kill or CursorType.Vendor)
                 {
-                    AquireTargetAtCursor(clickPostion, npc, leftClick);
-                    return;
+                    input.InteractMouseOver();
+                    logger.LogInformation($"> NPCs found: {npc.Rect}");
+                    return true;
                 }
             }
+            return false;
         }
 
         public bool FindBy(params CursorType[] cursor)
         {
-            int c = locFindByCursorType.Length;
+            int c = locFindBy.Length;
+            int e = 3;
             foreach (NpcPosition npc in npcNameFinder.Npcs)
             {
-                Point[] attemptPoints = new Point[c + (c * 2)];
-                for (int i = 0; i < c; i++)
+                Point[] attemptPoints = new Point[c + (c * e)];
+                for (int i = 0; i < c; i += e)
                 {
-                    Point p = locFindByCursorType[i];
+                    Point p = locFindBy[i];
                     attemptPoints[i] = p;
                     attemptPoints[i + c] = new Point(npc.Width / 2, p.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight);
-                    attemptPoints[i + c] = new Point(-npc.Width / 2, p.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight);
+                    attemptPoints[i + c + 1] = new Point(-npc.Width / 2, p.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight);
                 }
 
                 foreach (Point p in attemptPoints)
                 {
                     Point clickPostion = npcNameFinder.ToScreenCoordinates(npc.ClickPoint.X + p.X, npc.ClickPoint.Y + p.Y);
                     input.SetCursorPosition(clickPostion);
-
-                    ct.WaitHandle.WaitOne(MOUSE_DELAY);
+                    ct.WaitHandle.WaitOne(FAST_DELAY);
 
                     CursorClassifier.Classify(out CursorType cls);
                     if (cursor.Contains(cls))
                     {
-                        AquireTargetAtCursor(clickPostion, npc);
+                        input.InteractMouseOver();
+                        ct.WaitHandle.WaitOne(FAST_DELAY);
+                        logger.LogInformation($"> NPCs found: {npc.Rect}");
                         return true;
                     }
-                    ct.WaitHandle.WaitOne(5);
                 }
             }
             return false;
-        }
-
-        private void AquireTargetAtCursor(Point clickPostion, NpcPosition npc, bool leftClick = false)
-        {
-            if (leftClick)
-                input.LeftClickMouse(clickPostion);
-            else
-                input.RightClickMouse(clickPostion);
-
-            logger.LogInformation($"{nameof(NpcNameTargeting)}: NPC found! Height={npc.Height}, width={npc.Width}, pos={clickPostion}");
         }
 
         public void ShowClickPositions(Graphics gr)
         {
             foreach (NpcPosition npc in npcNameFinder.Npcs)
             {
-                foreach (Point p in locFindByCursorType)
+                foreach (Point p in locFindBy)
                 {
                     gr.DrawEllipse(whitePen, p.X + npc.ClickPoint.X, p.Y + npc.ClickPoint.Y, 5, 5);
                 }

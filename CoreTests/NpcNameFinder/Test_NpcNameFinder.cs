@@ -7,6 +7,8 @@ using System.Threading;
 using System.Text;
 using System.Diagnostics;
 using System.Linq;
+using WowheadDB;
+using Core.Extensions;
 
 #pragma warning disable 0162
 
@@ -16,6 +18,9 @@ namespace CoreTests
     {
         private const bool saveImage = true;
         private const bool LogEachUpdate = true;
+
+        private const bool debugTargeting = false;
+        private const bool debugSkinning = false;
 
         private readonly ILogger logger;
         private readonly NpcNameFinder npcNameFinder;
@@ -106,17 +111,39 @@ namespace CoreTests
             {
                 paint.DrawRectangle(whitePen, npcNameFinder.Area);
 
-                int i = 0;
-                foreach (var n in npcNameFinder.Npcs)
+                int j = 0;
+                foreach (var npc in npcNameFinder.Npcs)
                 {
-                    foreach (var l in npcNameTargeting.locTargetingAndClickNpc)
+                    if (debugTargeting)
                     {
-                        paint.DrawEllipse(whitePen, l.X + n.ClickPoint.X, l.Y + n.ClickPoint.Y, 5, 5);
+                        foreach (var l in npcNameTargeting.locTargeting)
+                        {
+                            paint.DrawEllipse(whitePen, l.X + npc.ClickPoint.X, l.Y + npc.ClickPoint.Y, 5, 5);
+                        }
                     }
 
-                    paint.DrawRectangle(whitePen, n.Rect);
-                    paint.DrawString(i.ToString(), font, brush, new PointF(n.Left - 20f, n.Top));
-                    i++;
+                    if (debugSkinning)
+                    {
+                        int c = npcNameTargeting.locFindBy.Length;
+                        int e = 3;
+                        Point[] attemptPoints = new Point[c + (c * e)];
+                        for (int i = 0; i < c; i += e)
+                        {
+                            Point p = npcNameTargeting.locFindBy[i];
+                            attemptPoints[i] = p;
+                            attemptPoints[i + c] = new Point(npc.Width / 2, p.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight);
+                            attemptPoints[i + c + 1] = new Point(-npc.Width / 2, p.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight);
+                        }
+
+                        foreach (var l in attemptPoints)
+                        {
+                            paint.DrawEllipse(whitePen, l.X + npc.ClickPoint.X, l.Y + npc.ClickPoint.Y, 5, 5);
+                        }
+                    }
+
+                    paint.DrawRectangle(whitePen, npc.Rect);
+                    paint.DrawString(j.ToString(), font, brush, new PointF(npc.Left - 20f, npc.Top));
+                    j++;
                 }
             }
 

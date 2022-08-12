@@ -279,18 +279,17 @@ To change the default movement keys to `WASD` in the ClassConfiguration file or 
 ```
 
 `Targeting`:
+
 | In-Game | Key | ClassConfiguration KeyAction Name | Desciption |
 | ---- | ---- | ---- | ---- |
 | Target Nearest Enemy | Tab | TargetNearestTargetKey | ---- |
 | Target Pet | Multiply | TargetPetKey | Only pet based class |
-| Target Last Target | G | TargetLastTargetKey | ---- |
-| Interact With Target | I | InteractKey | ---- |
+| Target Last Target | G | TargetLastTargetKey | Loot last target |
+| Interact With Mouseover | J | InteractMouseOverKey | Mouse based actions |
+| Interact With Target | I | InteractKey | Targeting and combat |
 | Assist Target | F | TargetTargetOfTargetKey | ---- |
 | Pet attack | Subtract | PetAttackKey | Only pet based class |
 | Target Focus | PageUp | TargetFocusKey | Only for `"AssistFocus"` Mode |
-
-The `"Interact with Target"` keybind is super important as it allows the bot to turn towards and approach the target.
-The `"Target Last Target"` keybind helps with looting.
 
 ## 10.1. Actionbar Key Bindings:
 
