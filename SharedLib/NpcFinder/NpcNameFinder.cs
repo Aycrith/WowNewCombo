@@ -475,7 +475,17 @@ namespace SharedLib.NpcFinder
                 }
             }
 
-            return npcs.Where(x => !x.Equals(NpcPosition.Empty)).ToArray();
+            var array = npcs.Where(x => !x.Equals(NpcPosition.Empty)).ToArray();
+            Array.Sort(array, Order);
+            return array;
+        }
+
+        private int Order(NpcPosition x, NpcPosition y)
+        {
+            float dx = RectangleExt.SqrDistance(Area.BottomCentre(), x.ClickPoint);
+            float dy = RectangleExt.SqrDistance(Area.BottomCentre(), y.ClickPoint);
+
+            return dx > dy ? 1 : 0;
         }
 
         private int YOffset(Rectangle area, Rectangle npc)
