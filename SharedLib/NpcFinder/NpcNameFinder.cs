@@ -451,56 +451,57 @@ namespace SharedLib.NpcFinder
             return npcs;
         }
 
-        private List<LineOfNpcName> PopulateLinesOfNpcNames(Bitmap bitmap, Rectangle rect)
+        private (LineOfNpcName[], int) PopulateLinesOfNpcNames(Bitmap bitmap, Rectangle rect)
         {
-            List<LineOfNpcName> npcNameLine = new();
+            Rectangle Area = this.Area;
+            int bytesPerPixel = this.bytesPerPixel;
+
+            int widthCount = (Area.Right - Area.Left) / 64;
+            int heightCount = (Area.Bottom - Area.Top) / 64;
+            LineOfNpcName[] npcNameLine = new LineOfNpcName[widthCount * heightCount];
+            int i = 0;
 
             Func<byte, byte, byte, bool> colorMatcher = this.colorMatcher;
             float minLength = ScaleWidth(LinesOfNpcMinLength);
             float lengthDiff = ScaleWidth(LinesOfNpcLengthDiff);
             float minEndLength = minLength - lengthDiff;
 
-            Rectangle Area = this.Area;
-            int bytesPerPixel = this.bytesPerPixel;
-            int incX = this.incX;
-
             unsafe
             {
                 BitmapData bitmapData = bitmap.LockBits(new Rectangle(0, 0, rect.Width, rect.Height), ImageLockMode.ReadOnly, pixelFormat);
 
-                //for (int y = Area.Top; y < Area.Height; y += incY)
                 void body(int y)
                 {
-                    int lengthStart = -1;
-                    int lengthEnd = -1;
+                    int xStart = -1;
+                    int xEnd = -1;
 
                     byte* currentLine = (byte*)bitmapData.Scan0 + (y * bitmapData.Stride);
-                    for (int x = Area.Left; x < Area.Right; x += incX)
+                    for (int x = Area.Left; x < Area.Right; x++)
                     {
                         int xi = x * bytesPerPixel;
 
                         if (colorMatcher(currentLine[xi + 2], currentLine[xi + 1], currentLine[xi]))
                         {
-                            if (lengthStart > -1 && (x - lengthEnd) < minLength)
+                            if (xStart > -1 && (x - xEnd) < minLength)
                             {
-                                lengthEnd = x;
+                                xEnd = x;
                             }
                             else
                             {
-                                if (lengthStart > -1 && lengthEnd - lengthStart > minEndLength)
+                                if (xStart > -1 && xEnd - xStart > minEndLength)
                                 {
-                                    npcNameLine.Add(new LineOfNpcName(lengthStart, lengthEnd, y));
+                                    npcNameLine[i++] = new LineOfNpcName(xStart, xEnd, y);
                                 }
 
-                                lengthStart = x;
+                                xStart = x;
                             }
-                            lengthEnd = x;
+                            xEnd = x;
                         }
                     }
 
-                    if (lengthStart > -1 && lengthEnd - lengthStart > minEndLength)
+                    if (xStart > -1 && xEnd - xStart > minEndLength)
                     {
-                        npcNameLine.Add(new LineOfNpcName(lengthStart, lengthEnd, y));
+                        npcNameLine[i++] = new LineOfNpcName(xStart, xEnd, y);
                     }
                 }
                 _ = Parallel.For(Area.Top, Area.Height, body);
@@ -508,7 +509,7 @@ namespace SharedLib.NpcFinder
                 bitmap.UnlockBits(bitmapData);
             }
 
-            return npcNameLine;
+            return (npcNameLine, i);
         }
 
         public void ShowNames(Graphics gr)
