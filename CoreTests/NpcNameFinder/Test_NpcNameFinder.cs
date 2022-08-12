@@ -7,8 +7,7 @@ using System.Threading;
 using System.Text;
 using System.Diagnostics;
 using System.Linq;
-using WowheadDB;
-using Core.Extensions;
+using SharedLib.Extensions;
 
 #pragma warning disable 0162
 
@@ -18,6 +17,7 @@ namespace CoreTests
     {
         private const bool saveImage = true;
         private const bool LogEachUpdate = true;
+        private const bool LogShowResult = false;
 
         private const bool debugTargeting = false;
         private const bool debugSkinning = false;
@@ -83,7 +83,7 @@ namespace CoreTests
                 SaveImage();
             }
 
-            if (LogEachUpdate)
+            if (LogEachUpdate && LogShowResult)
             {
                 stringBuilder.Length = 0;
 
@@ -131,8 +131,8 @@ namespace CoreTests
                         {
                             Point p = npcNameTargeting.locFindBy[i];
                             attemptPoints[i] = p;
-                            attemptPoints[i + c] = new Point(npc.Width / 2, p.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight);
-                            attemptPoints[i + c + 1] = new Point(-npc.Width / 2, p.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight);
+                            attemptPoints[i + c] = new Point(npc.Rect.Width / 2, p.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight);
+                            attemptPoints[i + c + 1] = new Point(-npc.Rect.Width / 2, p.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight);
                         }
 
                         foreach (var l in attemptPoints)
@@ -142,7 +142,7 @@ namespace CoreTests
                     }
 
                     paint.DrawRectangle(whitePen, npc.Rect);
-                    paint.DrawString(j.ToString(), font, brush, new PointF(npc.Left - 20f, npc.Top));
+                    paint.DrawString(j.ToString(), font, brush, new PointF(npc.Rect.Left - 20f, npc.Rect.Top));
                     j++;
                 }
             }

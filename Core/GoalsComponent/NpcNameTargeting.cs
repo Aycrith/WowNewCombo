@@ -2,7 +2,7 @@ using System;
 using System.Drawing;
 using System.Linq;
 using System.Threading;
-using Core.Extensions;
+using SharedLib.Extensions;
 using SharedLib.NpcFinder;
 using Game;
 using Microsoft.Extensions.Logging;
@@ -121,8 +121,8 @@ namespace Core.Goals
                 {
                     Point p = locFindBy[i];
                     attemptPoints[i] = p;
-                    attemptPoints[i + c] = new Point(npc.Width / 2, p.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight);
-                    attemptPoints[i + c + 1] = new Point(-npc.Width / 2, p.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight);
+                    attemptPoints[i + c] = new Point(npc.Rect.Width / 2, p.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight);
+                    attemptPoints[i + c + 1] = new Point(-npc.Rect.Width / 2, p.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight);
                 }
 
                 foreach (Point p in attemptPoints)

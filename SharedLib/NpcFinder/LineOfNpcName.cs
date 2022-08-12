@@ -1,22 +1,18 @@
 ﻿namespace SharedLib.NpcFinder
 {
-    public struct LineOfNpcName
+    public readonly struct LineOfNpcName
     {
-        public int XStart;
-        public int Y;
-        public int XEnd;
+        public readonly int XStart;
+        public readonly int Y;
+        public readonly int XEnd;
 
-        public bool IsInAgroup;
-
-        public int X => XStart + ((XEnd - XStart) / 2);
+        public readonly int XCenter => XStart + ((XEnd - XStart) / 2);
 
         public LineOfNpcName(int xStart, int xend, int y)
         {
             this.XStart = xStart;
             this.Y = y;
             this.XEnd = xend;
-
-            this.IsInAgroup = false;
         }
     }
 }
