@@ -40,7 +40,7 @@ namespace PPather
 
             if (zWater > zTerrain)
             {
-                return new Vector4(x, y, zWater - toonHeight, mapId);
+                return new Vector4(x, y, zWater, mapId);
             }
 
             float zModel = GetZValueAt(x, y,
@@ -50,15 +50,15 @@ namespace PPather
             {
                 if (MathF.Abs(zModel - zTerrain) > toonHeight)
                 {
-                    return new Vector4(x, y, zTerrain - toonHeight, mapId);
+                    return new Vector4(x, y, zTerrain, mapId);
                 }
                 else
                 {
-                    return new Vector4(x, y, zModel - toonHeight, mapId);
+                    return new Vector4(x, y, zModel, mapId);
                 }
             }
 
-            return new Vector4(x, y, zTerrain - toonHeight, mapId);
+            return new Vector4(x, y, zTerrain, mapId);
         }
 
         private float GetZValueAt(float x, float y, int[] allowedModels)
