@@ -261,71 +261,29 @@ namespace Wmo
 
     public abstract class Manager<T>
     {
-        private Dictionary<string, T> items = new Dictionary<string, T>();
-        private Dictionary<string, int> items_LRU = new Dictionary<string, int>();
+        private readonly Dictionary<string, T> items;
 
-        private int NOW;
-        private int maxItems;
+        private readonly int maxItems;
 
         public Manager(int maxItems)
         {
             this.maxItems = maxItems;
+
+            items = new Dictionary<string, T>(maxItems);
         }
 
-        public abstract T Load(String path);
-
-        private void EvictIfNeeded()
-        {
-            string toEvict = null;
-            int toEvictLRU = int.MaxValue;
-            if (items.Count > maxItems)
-            {
-                var collection = items_LRU.Keys;
-                foreach (string path in collection)
-                {
-                    int LRU = items_LRU[path];
-                    if (LRU < toEvictLRU)
-                    {
-                        toEvictLRU = LRU;
-                        toEvict = path;
-                    }
-                }
-            }
-            if (toEvict != null)
-            {
-                //                logger.WriteLine("Drop item : " + toEvict);
-                items.Remove(toEvict);
-                items_LRU.Remove(toEvict);
-            }
-        }
+        public abstract T Load(string path);
 
         public T AddAndLoadIfNeeded(string path)
         {
             path = path.ToLower();
-            T w = Get(path);
-            if (w == null)
+            if (!items.TryGetValue(path, out T t))
             {
-                EvictIfNeeded();
-                w = Load(path);
-                if (w != null)
-                    Add(path, w);
+                t = Load(path);
+                if (t != null)
+                    items.Add(path, t);
             }
-
-            items_LRU[path] = NOW++;
-            return w;
-        }
-
-        public void Add(string path, T wmo)
-        {
-            items.TryAdd(path, wmo);
-        }
-
-        public T Get(string path)
-        {
-            if (items.TryGetValue(path, out T r))
-                return r;
-
-            return default;
+            return t;
         }
     }
 
