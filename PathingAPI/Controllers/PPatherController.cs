@@ -57,18 +57,22 @@ namespace PathingAPI.Controllers
             isBusy = true;
             service.SetLocations(service.ToWorld(uimap1, x1, y1), service.ToWorld(uimap2, x2, y2));
             var path = service.DoSearch(PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
-            if (path != null)
+            if (path == null)
             {
-                service.Save();
+                isBusy = false;
+                return new JsonResult(System.Array.Empty<Vector3>());
             }
 
-            var localPositions = path == null ?
-                new List<Vector3>() :
-                path.locations.Select(s => service.ToLocal(s, (int)service.SearchFrom.Value.W, uimap1));
+            service.Save();
+
+            Vector3[] array = path.locations.ToArray();
+            for (int i = 0; i < array.Length; i++)
+            {
+                array[i] = service.ToLocal(array[i], (int)service.SearchFrom.Value.W, uimap1);
+            }
 
             isBusy = false;
-
-            return new JsonResult(localPositions);
+            return new JsonResult(array);
         }
 
         /// <summary>
@@ -111,11 +115,12 @@ namespace PathingAPI.Controllers
             if (isBusy) { return false; }
             isBusy = true;
 
-            lines.ForEach(l =>
+            for (int i = 0; i < lines.Count; i++)
             {
-                var locations = CreateLocations(l);
+                LineArgs l = lines[i];
+                Vector4[] locations = CreateLocations(l);
                 service.OnLinesAdded?.Invoke(new LinesEventArgs(l.Name, locations, l.Colour));
-            });
+            }
 
             isBusy = false;
             initialised = true;
@@ -142,12 +147,13 @@ namespace PathingAPI.Controllers
             return true;
         }
 
-        private List<Vector4> CreateLocations(LineArgs lines)
+        private Vector4[] CreateLocations(LineArgs lines)
         {
-            List<Vector4> result = new();
-            foreach (var s in lines.Spots)
+            Vector4[] result = new Vector4[lines.Spots.Length];
+            for (int i = 0; i < result.Length; i++)
             {
-                result.Add(service.ToWorld(lines.MapId, s.X, s.Y, s.Z));
+                Vector3 s = lines.Spots[i];
+                result[i] = service.ToWorld(lines.MapId, s.X, s.Y, s.Z);
             }
             return result;
         }
