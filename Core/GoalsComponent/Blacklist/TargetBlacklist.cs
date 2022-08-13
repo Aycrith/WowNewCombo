@@ -6,7 +6,7 @@ using SharedLib.Extensions;
 
 namespace Core
 {
-    public partial class Blacklist : IBlacklist
+    public partial class TargetBlacklist : IBlacklist
     {
         private readonly string[] blacklist;
 
@@ -20,7 +20,7 @@ namespace Core
 
         private int lastGuid;
 
-        public Blacklist(ILogger logger, AddonReader addonReader, ClassConfiguration classConfig)
+        public TargetBlacklist(ILogger logger, AddonReader addonReader, ClassConfiguration classConfig)
         {
             this.addonReader = addonReader;
             playerReader = addonReader.PlayerReader;
@@ -33,13 +33,13 @@ namespace Core
 
             this.blacklist = classConfig.Blacklist;
 
-            logger.LogInformation($"[{nameof(Blacklist)}] {nameof(classConfig.TargetMask)}: {string.Join(", ", targetMask.GetIndividualFlags())}");
+            logger.LogInformation($"[{nameof(TargetBlacklist)}] {nameof(classConfig.TargetMask)}: {string.Join(", ", targetMask.GetIndividualFlags())}");
 
             if (blacklist.Length > 0)
-                logger.LogInformation($"[{nameof(Blacklist)}] Name: {string.Join(", ", blacklist)}");
+                logger.LogInformation($"[{nameof(TargetBlacklist)}] Name: {string.Join(", ", blacklist)}");
         }
 
-        public bool IsTargetBlacklisted()
+        public bool Is()
         {
             if (!playerReader.Bits.HasTarget())
             {
@@ -84,7 +84,7 @@ namespace Core
                 return true; // ignore players
             }
 
-            if (!playerReader.Bits.TargetIsDead() && playerReader.Bits.IsTagged())
+            if (!playerReader.Bits.TargetIsDead() && playerReader.Bits.TargetIsTagged())
             {
                 if (lastGuid != playerReader.TargetGuid)
                 {

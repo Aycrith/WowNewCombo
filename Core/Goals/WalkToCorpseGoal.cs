@@ -99,7 +99,7 @@ namespace Core.Goals
 
         public override void Update()
         {
-            if (!playerReader.Bits.IsCorpseInRange())
+            if (!playerReader.Bits.CorpseInRange())
             {
                 navigation.Update();
             }

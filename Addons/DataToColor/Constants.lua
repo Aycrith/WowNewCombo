@@ -16,6 +16,8 @@ DataToColor.C.unitFocusTarget = "focustarget"
 DataToColor.C.unitPetTarget = "pettarget"
 DataToColor.C.unitTargetTarget = "targettarget"
 DataToColor.C.unitNormal = "normal"
+DataToColor.C.unitmouseover = "mouseover"
+DataToColor.C.unitmouseovertarget = "mouseovertarget"
 
 -- Character's name
 DataToColor.C.CHARACTER_NAME = UnitName(DataToColor.C.unitPlayer)

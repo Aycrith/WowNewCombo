@@ -32,7 +32,7 @@ namespace Game
         public ConsoleKey TurnLeftKey { get; set; }
         public ConsoleKey TurnRightKey { get; set; }
         public ConsoleKey InteractMouseover { get; set; }
-        public int InteractMouseoverPress { get; set; } = 10;
+        public int InteractMouseoverPress { get; set; } = 15;
 
         public WowProcessInput(ILogger logger, CancellationTokenSource cts, WowProcess wowProcess)
         {

@@ -208,7 +208,7 @@ namespace Core
             InteractMouseOver.Key = InteractMouseOverKey;
             InteractMouseOver.Name = nameof(InteractMouseOver);
             InteractMouseOver.Cooldown = 0;
-            InteractMouseOver.PressDuration = 10;
+            InteractMouseOver.PressDuration = 15;
             InteractMouseOver.BaseAction = true;
             InteractMouseOver.Initialise(this, addonReader, requirementFactory, logger, Log);
 

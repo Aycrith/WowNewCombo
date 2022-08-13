@@ -2,6 +2,6 @@
 {
     public class NoBlacklist : IBlacklist
     {
-        public bool IsTargetBlacklisted() => false;
+        public bool Is() => false;
     }
 }

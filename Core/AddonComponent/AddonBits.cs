@@ -26,15 +26,15 @@ namespace Core
         public bool TargetInCombat() => v1[Mask._0];
         public bool TargetIsDead() => v1[Mask._1];
         public bool TargetIsNotDead() => !v1[Mask._1];
-        public bool DeadStatus() => v1[Mask._2];
-        public bool TalentPoints() => v1[Mask._3];
-        // 4 unused
+        public bool IsDead() => v1[Mask._2];
+        public bool HasTalentPoint() => v1[Mask._3];
+        public bool HasMouseOver() => v1[Mask._4];
         public bool TargetCanBeHostile() => v1[Mask._5];
         public bool HasPet() => v1[Mask._6];
-        public bool MainHandEnchant_Active() => v1[Mask._7];
-        public bool OffHandEnchant_Active() => v1[Mask._8];
+        public bool HasMainHandTempEnchant() => v1[Mask._7];
+        public bool HasOffHandTempEnchant() => v1[Mask._8];
         public bool ItemsAreBroken() => v1[Mask._9];
-        public bool IsFlying() => v1[Mask._10];
+        public bool PlayerOnTaxi() => v1[Mask._10];
         public bool IsSwimming() => v1[Mask._11];
         public bool PetHappy() => v1[Mask._12];
         public bool HasAmmo() => v1[Mask._13];
@@ -46,34 +46,28 @@ namespace Core
         public bool SpellOn_Shoot() => v1[Mask._19];
         public bool SpellOn_AutoAttack() => v1[Mask._20];
         public bool TargetIsPlayer() => v1[Mask._21];
-        public bool IsTagged() => v1[Mask._22];
+        public bool TargetIsTagged() => v1[Mask._22];
         public bool IsFalling() => v1[Mask._23];
 
         // -- value2 based flags
         public bool IsDrowning() => v2[Mask._0];
-
-        public bool IsCorpseInRange() => v2[Mask._1];
-
+        public bool CorpseInRange() => v2[Mask._1];
         public bool IsIndoors() => v2[Mask._2];
-
         public bool HasFocus() => v2[Mask._3];
-
         public bool FocusInCombat() => v2[Mask._4];
-
         public bool FocusHasTarget() => v2[Mask._5];
-
         public bool FocusTargetInCombat() => v2[Mask._6];
-
         public bool FocusTargetCanBeHostile() => v2[Mask._7];
-
-        // 8 unused
-
+        public bool MouseOverIsDead() => v2[Mask._8];
         public bool PetTargetIsDead() => v2[Mask._9];
-
         public bool IsStealthed() => v2[Mask._10];
-
         public bool TargetIsTrivial() => v2[Mask._11];
-
         public bool TargetIsNotTrivial() => !v2[Mask._11];
+        public bool MouseOverIsTrivial() => v2[Mask._12];
+        public bool MouseOverIsNotTrivial() => !v2[Mask._12];
+        public bool MouseOverIsTagged() => v2[Mask._13];
+        public bool MouseOverCanBeHostile() => v2[Mask._14];
+        public bool MouseOverIsPlayer() => v2[Mask._15];
+        public bool MouseOverTargetIsPlayerOrPet() => v2[Mask._16];
     }
 }

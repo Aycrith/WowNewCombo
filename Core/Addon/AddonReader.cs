@@ -1,6 +1,9 @@
 using Core.Database;
+
 using Microsoft.Extensions.Logging;
+
 using SharedLib;
+
 using System;
 using System.Threading;
 
@@ -57,6 +60,9 @@ namespace Core
 
         private int lastTargetId = -1;
         public string TargetName { get; private set; } = string.Empty;
+
+        private int lastMouseOverId = -1;
+        public string MouseOverName { get; private set; } = string.Empty;
 
         public double AvgUpdateLatency { private set; get; }
         private double updateSum;
@@ -141,6 +147,12 @@ namespace Core
 
                     TargetName = CreatureDb.Entries.TryGetValue(PlayerReader.TargetId, out Creature creature)
                     ? creature.Name : reader.GetString(16) + reader.GetString(17);
+                }
+
+                if (lastMouseOverId != PlayerReader.MouseOverId)
+                {
+                    MouseOverName = CreatureDb.Entries.TryGetValue(PlayerReader.MouseOverId, out Creature creature)
+                        ? creature.Name : string.Empty;
                 }
 
                 CombatLog.Update(reader, PlayerReader.Bits.PlayerInCombat());

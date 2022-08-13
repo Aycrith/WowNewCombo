@@ -20,7 +20,7 @@ namespace Core.Goals
         private readonly CastingHandler castingHandler;
         private readonly MountHandler mountHandler;
         private readonly CombatUtil combatUtil;
-        private readonly IBlacklist blacklist;
+        private readonly IBlacklist targetBlacklist;
 
         private readonly KeyAction? approachKey;
         private readonly Action approachAction;
@@ -45,7 +45,7 @@ namespace Core.Goals
             this.npcNameTargeting = npcNameTargeting;
             this.stuckDetector = stuckDetector;
             this.combatUtil = combatUtil;
-            this.blacklist = blacklist;
+            this.targetBlacklist = blacklist;
 
             Keys = input.ClassConfig.Pull.Sequence;
 
@@ -222,9 +222,9 @@ namespace Core.Goals
                 addonReader.DamageDoneCount() > 0 ||
                 addonReader.DamageTakenCount() > 0 ||
                 playerReader.TargetTarget is
-                TargetTargetEnum.Me or
-                TargetTargetEnum.Pet or
-                TargetTargetEnum.PartyOrPet;
+                UnitsTarget.Me or
+                UnitsTarget.Pet or
+                UnitsTarget.PartyOrPet;
         }
 
         private void DefaultApproach()
@@ -263,21 +263,21 @@ namespace Core.Goals
         private bool SuccessfulPull()
         {
             return playerReader.TargetTarget is
-                        TargetTargetEnum.Me or
-                        TargetTargetEnum.Pet or
-                        TargetTargetEnum.PartyOrPet ||
+                        UnitsTarget.Me or
+                        UnitsTarget.Pet or
+                        UnitsTarget.PartyOrPet ||
                         addonReader.CombatLog.DamageDoneGuid.ElapsedMs() < CastingHandler.GCD ||
                         playerReader.IsInMeleeRange();
         }
 
         private bool PullPrevention()
         {
-            return blacklist.IsTargetBlacklisted() &&
+            return targetBlacklist.Is() &&
                 playerReader.TargetTarget is not
-                TargetTargetEnum.None or
-                TargetTargetEnum.Me or
-                TargetTargetEnum.Pet or
-                TargetTargetEnum.PartyOrPet;
+                UnitsTarget.None or
+                UnitsTarget.Me or
+                UnitsTarget.Pet or
+                UnitsTarget.PartyOrPet;
         }
 
         private void Log(string text)

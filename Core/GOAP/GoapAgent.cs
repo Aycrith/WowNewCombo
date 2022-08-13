@@ -203,9 +203,9 @@ namespace Core.GOAP
                 { GoapKey.pethastarget, playerReader.PetHasTarget && !playerReader.Bits.PetTargetIsDead() },
                 { GoapKey.targetisalive, playerReader.Bits.HasTarget() && !playerReader.Bits.TargetIsDead() },
                 { GoapKey.targettargetsus, (playerReader.Bits.HasTarget() && playerReader.TargetHealthPercentage() < 30) || playerReader.TargetTarget is // hacky way to keep attacking fleeing humanoids
-                    TargetTargetEnum.Me or
-                    TargetTargetEnum.Pet or
-                    TargetTargetEnum.PartyOrPet },
+                    UnitsTarget.Me or
+                    UnitsTarget.Pet or
+                    UnitsTarget.PartyOrPet },
                 { GoapKey.incombat, playerReader.Bits.PlayerInCombat() },
                 { GoapKey.ismounted,
                     (playerReader.Class == UnitClass.Druid &&
@@ -214,7 +214,7 @@ namespace Core.GOAP
                 { GoapKey.withinpullrange, playerReader.WithInPullRange() },
                 { GoapKey.incombatrange, playerReader.WithInCombatRange() },
                 { GoapKey.pulled, false },
-                { GoapKey.isdead, playerReader.Bits.DeadStatus() },
+                { GoapKey.isdead, playerReader.Bits.IsDead() },
                 { GoapKey.isswimming, playerReader.Bits.IsSwimming() },
                 { GoapKey.itemsbroken, playerReader.Bits.ItemsAreBroken() },
                 { GoapKey.producedcorpse, State.LastCombatKillCount > 0 },

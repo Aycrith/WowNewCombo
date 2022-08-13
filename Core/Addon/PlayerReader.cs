@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections.Specialized;
+﻿using System.Collections.Specialized;
 using System.Numerics;
 
 namespace Core
 {
-    public partial class PlayerReader
+    public partial class PlayerReader : IMouseOverReader
     {
         private readonly IAddonDataProvider reader;
 
@@ -114,10 +113,12 @@ namespace Core
         public int SpellBeingCastByTarget => reader.GetInt(58);
         public bool IsTargetCasting() => SpellBeingCastByTarget != 0;
 
-        public TargetTargetEnum TargetTarget => (TargetTargetEnum)reader.GetInt(59);
-        public bool TargetsMe() => TargetTarget == TargetTargetEnum.Me;
-        public bool TargetsPet() => TargetTarget == TargetTargetEnum.Pet;
-        public bool TargetsNone() => TargetTarget == TargetTargetEnum.None;
+        // 10 * MouseOverTarget + TargetTarget
+        public UnitsTarget MouseOverTarget => (UnitsTarget)(reader.GetInt(59) / 10 % 10);
+        public UnitsTarget TargetTarget => (UnitsTarget)(reader.GetInt(59) % 10);
+        public bool TargetsMe() => TargetTarget == UnitsTarget.Me;
+        public bool TargetsPet() => TargetTarget == UnitsTarget.Pet;
+        public bool TargetsNone() => TargetTarget == UnitsTarget.None;
 
         public RecordInt AutoShot { get; } = new(60);
         public RecordInt MainHandSwing { get; } = new(61);
@@ -137,6 +138,14 @@ namespace Core
         public int OffHandSpeed => reader.GetInt(75) / 10000 * 10;
 
         public int RemainCastMs => reader.GetInt(76);
+
+
+        // MouseOverLevel * 100 + MouseOverClassification
+        public int MouseOverLevel => reader.GetInt(85) / 100;
+        public UnitClassification MouseOverClassification => (UnitClassification)(reader.GetInt(85) % 100);
+        public int MouseOverId => reader.GetInt(86);
+        public int MouseOverGuid => reader.GetInt(87);
+
 
         public int LastCastGCD { get; set; }
         public void ReadLastCastGCD()

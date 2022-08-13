@@ -30,7 +30,7 @@ namespace Core.Goals
         private readonly MountHandler mountHandler;
         private readonly Navigation navigation;
 
-        private readonly IBlacklist blacklist;
+        private readonly IBlacklist targetBlacklist;
         private readonly TargetFinder targetFinder;
         private const int minMs = 500, maxMs = 1000;
         private const NpcNames NpcNameToFind = NpcNames.Enemy | NpcNames.Neutral;
@@ -84,7 +84,7 @@ namespace Core.Goals
             this.npcNameFinder = npcNameFinder;
             this.mountHandler = mountHandler;
             this.targetFinder = targetFinder;
-            this.blacklist = blacklist;
+            this.targetBlacklist = blacklist;
 
             this.navigation = navigation;
             navigation.OnPathCalculated += Navigation_OnPathCalculated;
@@ -138,7 +138,7 @@ namespace Core.Goals
 
         private void Abort()
         {
-            if (!blacklist.IsTargetBlacklisted())
+            if (!targetBlacklist.Is())
                 navigation.StopMovement();
 
             navigation.Stop();

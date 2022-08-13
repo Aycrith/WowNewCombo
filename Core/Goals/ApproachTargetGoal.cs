@@ -21,7 +21,7 @@ namespace Core.Goals
         private readonly PlayerReader playerReader;
         private readonly StopMoving stopMoving;
         private readonly CombatUtil combatUtil;
-        private readonly IBlacklist blacklist;
+        private readonly IBlacklist targetBlacklist;
 
         private DateTime approachStart;
 
@@ -44,7 +44,7 @@ namespace Core.Goals
             this.playerReader = addonReader.PlayerReader;
             this.stopMoving = stopMoving;
             this.combatUtil = combatUtil;
-            this.blacklist = blacklist;
+            this.targetBlacklist = blacklist;
 
             AddPrecondition(GoapKey.hastarget, true);
             AddPrecondition(GoapKey.targetisalive, true);
@@ -154,7 +154,7 @@ namespace Core.Goals
 
                 if (playerReader.TargetGuid != initialTargetGuid)
                 {
-                    if (playerReader.Bits.HasTarget() && !blacklist.IsTargetBlacklisted()) // blacklist
+                    if (playerReader.Bits.HasTarget() && !targetBlacklist.Is()) // blacklist
                     {
                         if (playerReader.MinRange() < initialTargetMinRange)
                         {
