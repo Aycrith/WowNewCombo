@@ -156,8 +156,11 @@ DataToColor.spellBookQueue = DataToColor.Queue:new()
 DataToColor.talentQueue = DataToColor.Queue:new()
 
 DataToColor.CombatDamageDoneQueue = DataToColor.Queue:new()
+local lastDamageDone = 0
 DataToColor.CombatDamageTakenQueue = DataToColor.Queue:new()
+local lastDamaeTaken = 0
 DataToColor.CombatCreatureDiedQueue = DataToColor.Queue:new()
+local lastDied = 0
 DataToColor.CombatMissTypeQueue = DataToColor.Queue:new()
 
 DataToColor.playerPetSummons = {}
@@ -246,6 +249,9 @@ function DataToColor:Reset()
     DataToColor.corpseInRange = 0
 
     globalCounter = 0
+    lastDied = 0
+    lastDamageDone = 0
+    lastDamaeTaken = 0
 
     bagCache = {}
 
@@ -417,7 +423,9 @@ function DataToColor:CreateFrames(n)
         if valueCache[slot + 1] ~= value then
             valueCache[slot + 1] = value
             frames[slot + 1]:SetBackdropColor(func(self, value))
+            return true
         end
+        return false
     end
 
     local function UpdateGlobalTime(slot)
@@ -635,10 +643,28 @@ function DataToColor:CreateFrames(n)
             Pixel(int, DataToColor.lastCastEvent, 62)
             Pixel(int, DataToColor.lastCastSpellId, 63)
 
+            if globalCounter % COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE == 0 or
+                globalCounter - lastDied > COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE then
+                if Pixel(int, DataToColor.CombatCreatureDiedQueue:shift() or 0, 66) then
+                    lastDied = globalCounter
+                end
+            end
+
+            if globalCounter % COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE == 0 or
+                globalCounter - lastDamageDone > COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE then
+                if Pixel(int, DataToColor.CombatDamageDoneQueue:shift() or 0, 64) then
+                    lastDamageDone = globalCounter
+                end
+            end
+
+            if globalCounter % COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE == 0 or
+                globalCounter - lastDamaeTaken > COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE then
+                if Pixel(int, DataToColor.CombatDamageTakenQueue:shift() or 0, 65) then
+                    lastDamaeTaken = globalCounter
+                end
+            end
+
             if globalCounter % COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE == 0 then
-                Pixel(int, DataToColor.CombatDamageDoneQueue:shift() or 0, 64)
-                Pixel(int, DataToColor.CombatDamageTakenQueue:shift() or 0, 65)
-                Pixel(int, DataToColor.CombatCreatureDiedQueue:shift() or 0, 66)
                 Pixel(int, DataToColor.CombatMissTypeQueue:shift() or 0, 67)
             end
 
