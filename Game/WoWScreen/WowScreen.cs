@@ -93,6 +93,16 @@ namespace Game
             NativeMethods.GetWindowRect(wowProcess.Process.MainWindowHandle, out rect);
         }
 
+        public void ToScreen(ref Point p)
+        {
+            p.X -= rect.Location.X;
+            p.Y -= rect.Location.Y;
+        }
+
+        public void ToScreen(ref Rectangle r)
+        {
+            r.Offset(-rect.Location.X, -rect.Location.Y);
+        }
 
         public Bitmap GetBitmap(int width, int height)
         {

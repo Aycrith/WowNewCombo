@@ -14,18 +14,19 @@ using SharpDX.Direct2D1;
 using WowheadDB;
 using SharedLib.Extensions;
 using Core;
+using Game;
 
 #pragma warning disable 0162
 
 namespace CoreTests
 {
-    public class Test_NpcNameFinder
+    public class Test_NpcNameFinder : IDisposable
     {
         private const bool saveImage = true;
         private const bool LogEachUpdate = true;
         private const bool LogShowResult = false;
 
-        private const bool debugTargeting = true;
+        private const bool debugTargeting = false;
         private const bool debugSkinning = false;
 
         private readonly ILogger logger;
@@ -33,6 +34,9 @@ namespace CoreTests
         private readonly NpcNameTargeting npcNameTargeting;
         private readonly RectProvider rectProvider;
         private readonly BitmapCapturer capturer;
+
+        private readonly WowProcess wowProcess;
+        private readonly WowScreen wowScreen;
 
         private readonly Stopwatch stopwatch = new();
         private readonly StringBuilder stringBuilder = new();
@@ -49,6 +53,7 @@ namespace CoreTests
         private readonly Dictionary<string, GameOverlay.Drawing.SolidBrush> _brushes;
         private readonly Dictionary<string, GameOverlay.Drawing.Font> _fonts;
         private readonly Dictionary<string, GameOverlay.Drawing.Image> _images;
+
         public Test_NpcNameFinder(ILogger logger, NpcNames types)
         {
             this.logger = logger;
@@ -59,10 +64,12 @@ namespace CoreTests
 
             npcNameFinder = new(logger, capturer, new AutoResetEvent(false));
 
-            MockWoWProcess mockWoWProcess = new();
-            MockWoWScreen mockWoWScreen = new();
+            wowProcess = new();
+            wowScreen = new(logger, wowProcess);
+            WowProcessInput wowProcessInput = new(logger, new(), wowProcess);
+
             MockMouseOverReader mouseOverReader = new();
-            npcNameTargeting = new(logger, new(), mockWoWScreen, npcNameFinder, mockWoWProcess, mouseOverReader, new NoBlacklist(), null);
+            npcNameTargeting = new(logger, new(), wowScreen, npcNameFinder, wowProcessInput, mouseOverReader, new NoBlacklist(), null);
 
             npcNameFinder.ChangeNpcType(types);
 
@@ -87,8 +94,8 @@ namespace CoreTests
                 VSync = false,
                 WindowHandle = IntPtr.Zero
             };
-            IntPtr ip = System.Diagnostics.Process.GetProcessesByName("WoWClassicT")[0].MainWindowHandle;
-            _window = new StickyWindow(ip, _graphics)
+            
+            _window = new StickyWindow(wowProcess.Process.MainWindowHandle, _graphics)
             {
                 FPS = 60,
                 AttachToClientArea = true,
@@ -99,6 +106,12 @@ namespace CoreTests
             _window.DrawGraphics += _window_DrawGraphics;
 
             _window.Create();
+        }
+
+        public void Dispose()
+        {
+            wowScreen.Dispose();
+            wowProcess.Dispose();
         }
 
         private void _window_SetupGraphics(object sender, SetupGraphicsEventArgs e)
@@ -159,10 +172,7 @@ namespace CoreTests
                     brushOL = gfx.CreateSolidBrush(NpcNameFinder.fC_RGB, NpcNameFinder.fC_RGB, NpcNameFinder.fC_RGB);
                 }
 
-                //the original image drawing from NPCNamefinder seems off, would be cool to remove this calculator someday.
-                int topoffset = 35;
-
-                gfx.DrawRectangle(brushOL, npcNameFinder.Area.Left, npcNameFinder.Area.Top - topoffset, npcNameFinder.Area.Right, npcNameFinder.Area.Bottom - topoffset, 2.0f);
+                gfx.DrawRectangle(brushOL, npcNameFinder.Area.Left, npcNameFinder.Area.Top, npcNameFinder.Area.Right, npcNameFinder.Area.Bottom, 2.0f);
 
                 //paint.DrawRectangle(whitePen, npcNameFinder.Area);
 
@@ -175,7 +185,7 @@ namespace CoreTests
                         foreach (var l in npcNameTargeting.locTargeting)
                         {
                             //paint.DrawEllipse(whitePen, l.X + npc.ClickPoint.X, l.Y + npc.ClickPoint.Y, 5, 5);
-                            gfx.DrawCircle(brushOL, l.X + npc.ClickPoint.X, l.Y + npc.ClickPoint.Y - topoffset, 5, 2);
+                            gfx.DrawCircle(brushOL, l.X + npc.ClickPoint.X, l.Y + npc.ClickPoint.Y, 5, 2);
                         }
                     }
 
@@ -194,14 +204,18 @@ namespace CoreTests
 
                         foreach (var l in attemptPoints)
                         {
-                            gfx.DrawCircle(brushOL, l.X + npc.ClickPoint.X, l.Y + npc.ClickPoint.Y - topoffset, 5, 2);
+                            gfx.DrawCircle(brushOL, l.X + npc.ClickPoint.X, l.Y + npc.ClickPoint.Y, 5, 2);
                         }
                     }
 
                     //paint.DrawRectangle(whitePen, npc.Rect);
                     //paint.DrawString(j.ToString(), font, brushOL, new PointF(npc.Left - 20f, npc.Top));
-                    gfx.DrawRectangle(brushOL, npc.Rect.Left, npc.Rect.Top - topoffset, npc.Rect.Right, npc.Rect.Bottom - topoffset, 2);
-                    gfx.DrawText(_fonts["arial"], 10, brushOL, npc.Rect.Left - 20f, npc.Rect.Top - topoffset, j.ToString());
+
+                    Rectangle rect = npc.Rect;
+                    wowScreen.ToScreen(ref rect);
+
+                    gfx.DrawRectangle(brushOL, rect.Left, rect.Top, rect.Right, rect.Bottom, 2);
+                    gfx.DrawText(_fonts["arial"], 10, brushOL, rect.Left - 20f, rect.Top, j.ToString());
                     j++;
                 }
             }
