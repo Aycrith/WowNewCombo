@@ -93,6 +93,7 @@ namespace Game
             NativeMethods.GetWindowRect(wowProcess.Process.MainWindowHandle, out rect);
         }
 
+
         public Bitmap GetBitmap(int width, int height)
         {
             Update();
