@@ -268,6 +268,9 @@ __pycache__/
 Json/History/*/*.json
 Json/History/*.json
 
+# PPather temp files
+Json/PPather/*.tmp
+
 # Private profiles
 Json/class/_
 Json/path/_
