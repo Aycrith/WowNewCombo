@@ -482,7 +482,7 @@ namespace WowTriangles
                 if (allowedFlags == null || allowedFlags.Contains(t_flags))
                 {
                     GetTriangleNormal(vertex0, vertex1, vertex2, out Vector3 normal);
-                    float angle_z = Sin(45.0f / 360.0f * PI * 2f);
+                    float angle_z = Sin(30f / 360.0f * PI * 2f); // 45f -> 40 degree || 60f -> 50 degree || 30f -> 28.6 degree
                     if (Abs(normal.Z) > angle_z)
                     {
                         if (SegmentTriangleIntersect(s0, s1, vertex0, vertex1, vertex2, out Vector3 intersect))
