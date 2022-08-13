@@ -98,11 +98,31 @@ namespace CoreTests
             _window.Create();
         }
 
+        ~Test_NpcNameFinder()
+        {
+            Dispose(false);
+        }
+        #region IDisposable Support
+        private bool disposeValue;
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposeValue)
+            { 
+                _window.Dispose();
+                wowScreen.Dispose();
+                wowProcess.Dispose();
+
+                disposeValue = true;
+            }
+           
+        }
         public void Dispose()
         {
-            wowScreen.Dispose();
-            wowProcess.Dispose();
+            Dispose(true);
+            GC.SuppressFinalize(this);  
         }
+        #endregion
+
 
         private void _window_SetupGraphics(object sender, SetupGraphicsEventArgs e)
         {

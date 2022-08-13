@@ -36,7 +36,7 @@ namespace CoreTests
             NpcNames types = NpcNames.Enemy | NpcNames.Neutral;
             //NpcNames types = NpcNames.Friendly | NpcNames.Neutral;
 
-            Test_NpcNameFinder test = new(logger, types);
+            using Test_NpcNameFinder test = new(logger, types);
             int count = 100;
             int i = 0;
 
