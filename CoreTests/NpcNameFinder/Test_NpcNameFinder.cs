@@ -2,7 +2,6 @@
 using Core.Goals;
 using SharedLib.NpcFinder;
 using Microsoft.Extensions.Logging;
-using SharedLib;
 using System.Threading;
 using System.Text;
 using System.Diagnostics;
@@ -10,8 +9,6 @@ using System.Linq;
 using GameOverlay.Windows;
 using System.Collections.Generic;
 using System;
-using SharpDX.Direct2D1;
-using WowheadDB;
 using SharedLib.Extensions;
 using Core;
 using Game;
@@ -32,8 +29,6 @@ namespace CoreTests
         private readonly ILogger logger;
         private readonly NpcNameFinder npcNameFinder;
         private readonly NpcNameTargeting npcNameTargeting;
-        private readonly RectProvider rectProvider;
-        private readonly BitmapCapturer capturer;
 
         private readonly WowProcess wowProcess;
         private readonly WowScreen wowScreen;
@@ -58,15 +53,11 @@ namespace CoreTests
         {
             this.logger = logger;
 
-            rectProvider = new();
-            rectProvider.GetRectangle(out Rectangle rect);
-            capturer = new(rect);
-
-            npcNameFinder = new(logger, capturer, new AutoResetEvent(false));
-
             wowProcess = new();
             wowScreen = new(logger, wowProcess);
             WowProcessInput wowProcessInput = new(logger, new(), wowProcess);
+
+            npcNameFinder = new(logger, wowScreen, new AutoResetEvent(false));
 
             MockMouseOverReader mouseOverReader = new();
             npcNameTargeting = new(logger, new(), wowScreen, npcNameFinder, wowProcessInput, mouseOverReader, new NoBlacklist(), null);
@@ -75,10 +66,9 @@ namespace CoreTests
 
             if (saveImage)
             {
-                paintBitmap = capturer.Bitmap;
+                paintBitmap = wowScreen.Bitmap;
                 paint = Graphics.FromImage(paintBitmap);
             }
-
 
             //game overlay
             _brushes = new Dictionary<string, GameOverlay.Drawing.SolidBrush>();
@@ -94,7 +84,7 @@ namespace CoreTests
                 VSync = false,
                 WindowHandle = IntPtr.Zero
             };
-            
+
             _window = new StickyWindow(wowProcess.Process.MainWindowHandle, _graphics)
             {
                 FPS = 60,
@@ -211,11 +201,8 @@ namespace CoreTests
                     //paint.DrawRectangle(whitePen, npc.Rect);
                     //paint.DrawString(j.ToString(), font, brushOL, new PointF(npc.Left - 20f, npc.Top));
 
-                    Rectangle rect = npc.Rect;
-                    wowScreen.ToScreen(ref rect);
-
-                    gfx.DrawRectangle(brushOL, rect.Left, rect.Top, rect.Right, rect.Bottom, 2);
-                    gfx.DrawText(_fonts["arial"], 10, brushOL, rect.Left - 20f, rect.Top, j.ToString());
+                    gfx.DrawRectangle(brushOL, npc.Rect.Left, npc.Rect.Top, npc.Rect.Right, npc.Rect.Bottom, 2);
+                    gfx.DrawText(_fonts["arial"], 10, brushOL, npc.Rect.Left - 20f, npc.Rect.Top, j.ToString());
                     j++;
                 }
             }
@@ -226,7 +213,7 @@ namespace CoreTests
             if (LogEachUpdate)
                 stopwatch.Restart();
 
-            capturer.Capture();
+            wowScreen.Update();
 
             if (LogEachUpdate)
                 logger.LogInformation($"Capture: {stopwatch.ElapsedMilliseconds}ms");
