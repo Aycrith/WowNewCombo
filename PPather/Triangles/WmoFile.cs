@@ -123,6 +123,11 @@ namespace Wmo
         public static uint MCSE = ToBin(nameof(MCSE));
     }
 
+    public static class Unique
+    {
+        public static int Index;
+    }
+
     public class DBC
     {
         public uint recordCount;
@@ -168,19 +173,26 @@ namespace Wmo
 
         public override WMO Load(string path)
         {
-            string localPath = Path.Join(dataConfig.PPather, "wmo.tmp");
-            set.SFileExtractFile(path, localPath);
-            WMO w = new();
-            w.fileName = path;
+            string tempFile = Path.Join(dataConfig.PPather, $"{Unique.Index++}.tmp"); //wmo
+            if (!set.SFileExtractFile(path, tempFile))
+                return null;
 
-            WmoRootFile wrf = new(localPath, w, modelmanager);
+            WMO w = new()
+            {
+                fileName = path
+            };
+
+            _ = new WmoRootFile(tempFile, w, modelmanager);
 
             for (int i = 0; i < w.groups.Length; i++)
             {
-                string part = path.Substring(0, path.Length - 4);
-                string gf = String.Format("{0}_{1,3:000}.wmo", part, i);
-                set.SFileExtractFile(gf, localPath);
-                _ = new WmoGroupFile(w.groups[i], localPath);
+                ReadOnlySpan<char> part = path[..^4].AsSpan();
+                string gf = string.Format("{0}_{1,3:000}.wmo", part.ToString(), i);
+
+                if (!set.SFileExtractFile(gf, tempFile))
+                    continue;
+
+                _ = new WmoGroupFile(w.groups[i], tempFile);
             }
             return w;
         }
@@ -265,7 +277,7 @@ namespace Wmo
         private void EvictIfNeeded()
         {
             string toEvict = null;
-            int toEvictLRU = Int32.MaxValue;
+            int toEvictLRU = int.MaxValue;
             if (items.Count > maxItems)
             {
                 var collection = items_LRU.Keys;
@@ -295,13 +307,11 @@ namespace Wmo
             {
                 EvictIfNeeded();
                 w = Load(path);
-                //Dbg.LogLine("need " + path);
                 if (w != null)
                     Add(path, w);
             }
 
-            items_LRU.Remove(path);
-            items_LRU.TryAdd(path, NOW++);
+            items_LRU[path] = NOW++;
             return w;
         }
 
@@ -315,7 +325,7 @@ namespace Wmo
             if (items.TryGetValue(path, out T r))
                 return r;
 
-            return default(T);
+            return default;
         }
     }
 
@@ -337,25 +347,23 @@ namespace Wmo
             //string file=path.Substring(0, path.Length-4)+".m2";
 
             string file = path;
-            if (Path.GetExtension(path).Equals(".mdx"))
-            {
-                file = Path.ChangeExtension(path, ".m2");
-            }
-            else if (Path.GetExtension(path).Equals(".mdl"))
+            if (Path.GetExtension(path).Equals(".mdx") || Path.GetExtension(path).Equals(".mdl"))
             {
                 file = Path.ChangeExtension(path, ".m2");
             }
 
-            //logger.WriteLine("Load model " + path);
-            string localPath = Path.Join(dataConfig.PPather, "model.tmp");
-            if (set.SFileExtractFile(file, localPath))
+            //Console.Out.WriteLine("Load model " + path);
+            string tempFile = Path.Join(dataConfig.PPather, $"{Unique.Index++}.tmp"); //model
+            if (!set.SFileExtractFile(file, tempFile))
+                return null;
+
+            Model w = new()
             {
-                Model w = new Model();
-                w.fileName = file;
-                ModelFile wrf = new ModelFile(localPath, w);
-                return w;
-            }
-            return null;
+                fileName = file
+            };
+            _ = new ModelFile(tempFile, w);
+
+            return w;
         }
     }
 
@@ -690,7 +698,7 @@ namespace Wmo
             this.archive = archive;
 
             string wdtfile = Path.Join("World", "Maps", pathName, pathName + ".wdt");
-            string tempFile = Path.Join(dataConfig.PPather, "wdt.tmp");
+            string tempFile = Path.Join(dataConfig.PPather, $"{Unique.Index++}.tmp"); //wdt
             if (!archive.SFileExtractFile(wdtfile, tempFile))
                 return;
 
@@ -736,24 +744,18 @@ namespace Wmo
         public void LoadMapTile(int x, int y)
         {
             if (!wdt.maps[x, y])
-            {
                 return;
-            }
 
-            MapTile t = new();
-
-            //string filename = "World\\Maps\\" + pathName + "\\" + pathName + "_" + x + "_" + y + ".adt";
             string filename = Path.Join("World", "Maps", pathName, $"{pathName}_{x}_{y}.adt");
-            string tempFile = Path.Join(dataConfig.PPather, "adt.tmp");
+            string tempFile = Path.Join(dataConfig.PPather, $"{Unique.Index++}.tmp"); //adt
             if (!archive.SFileExtractFile(filename, tempFile))
-            {
                 return;
-            }
 
             if (logger.IsEnabled(LogLevel.Trace))
                 logger.LogTrace($"Reading adt: {filename}");
 
-            MapTileFile f = new(tempFile, t, wmomanager, modelmanager);
+            MapTile t = new();
+            _ = new MapTileFile(tempFile, t, wmomanager, modelmanager);
             wdt.maptiles[x, y] = t;
         }
 
@@ -1153,8 +1155,9 @@ namespace Wmo
             for (int i = 0; i < nMDX; i++)
             {
                 int id = file.ReadInt32();
-                Model model = modelmanager.AddAndLoadIfNeeded(tile.models[id]);
 
+                string path = tile.models[id];
+                Model model = modelmanager.AddAndLoadIfNeeded(path);
                 tile.modelis.Add(new ModelInstance(model, file));
             }
         }

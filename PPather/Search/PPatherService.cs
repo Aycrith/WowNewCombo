@@ -26,7 +26,7 @@ namespace PPather
         public Action<ChunkEventArgs> OnChunkAdded { get; set; }
         public Action<LinesEventArgs> OnLinesAdded { get; set; }
         public Action<SphereEventArgs> OnSphereAdded { get; set; }
-        
+
 
         private Path lastPath;
         public bool HasInitialised;
@@ -37,6 +37,19 @@ namespace PPather
             this.logger = logger;
             this.worldMapAreas = WorldMapAreaFactory.Read(dataConfig);
             ContinentDB.Init(worldMapAreas);
+
+            ClearTemporaryFiles();
+        }
+
+        private void ClearTemporaryFiles()
+        {
+            System.IO.DirectoryInfo di = new(dataConfig.PPather);
+            System.IO.FileInfo[] array = di.GetFiles("*.tmp");
+            for (int i = 0; i < array.Length; i++)
+            {
+                System.IO.FileInfo file = array[i];
+                file.Delete();
+            }
         }
 
         public void Reset()
