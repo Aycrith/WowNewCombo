@@ -2,19 +2,21 @@
 using Core.Goals;
 using SharedLib.NpcFinder;
 using Microsoft.Extensions.Logging;
-using SharedLib;
 using System.Threading;
 using System.Text;
 using System.Diagnostics;
 using System.Linq;
+using System;
 using SharedLib.Extensions;
 using Core;
+using Game;
 
 #pragma warning disable 0162
+#nullable enable
 
 namespace CoreTests
 {
-    public class Test_NpcNameFinder
+    public class Test_NpcNameFinder : IDisposable
     {
         private const bool saveImage = true;
         private const bool LogEachUpdate = true;
@@ -26,40 +28,57 @@ namespace CoreTests
         private readonly ILogger logger;
         private readonly NpcNameFinder npcNameFinder;
         private readonly NpcNameTargeting npcNameTargeting;
-        private readonly RectProvider rectProvider;
-        private readonly BitmapCapturer capturer;
+
+        private readonly WowProcess wowProcess;
+        private readonly WowScreen wowScreen;
 
         private readonly Stopwatch stopwatch = new();
         private readonly StringBuilder stringBuilder = new();
 
         private readonly Graphics paint;
-        private readonly Bitmap paintBitmap;
+        private readonly System.Drawing.Bitmap paintBitmap;
         private readonly Font font = new("Arial", 10);
         private readonly SolidBrush brush = new(Color.White);
         private readonly Pen whitePen = new(Color.White, 1);
 
-        public Test_NpcNameFinder(ILogger logger, NpcNames types)
+        private readonly NpcNameOverlay? npcNameOverlay;
+
+        public Test_NpcNameFinder(ILogger logger, NpcNames types, bool useOverlay)
         {
             this.logger = logger;
 
-            rectProvider = new();
-            rectProvider.GetRectangle(out Rectangle rect);
-            capturer = new(rect);
+            wowProcess = new();
+            wowScreen = new(logger, wowProcess);
+            WowProcessInput wowProcessInput = new(logger, new(), wowProcess);
 
-            npcNameFinder = new(logger, capturer, new AutoResetEvent(false));
+            npcNameFinder = new(logger, wowScreen, new AutoResetEvent(false));
 
-            MockWoWProcess mockWoWProcess = new();
-            MockWoWScreen mockWoWScreen = new();
             MockMouseOverReader mouseOverReader = new();
-            npcNameTargeting = new(logger, new(), mockWoWScreen, npcNameFinder, mockWoWProcess, mouseOverReader, new NoBlacklist(), null);
+            npcNameTargeting = new(logger, new(), wowScreen, npcNameFinder, wowProcessInput, mouseOverReader, new NoBlacklist(), null!);
 
             npcNameFinder.ChangeNpcType(types);
 
             if (saveImage)
             {
-                paintBitmap = capturer.Bitmap;
+                paintBitmap = wowScreen.Bitmap;
                 paint = Graphics.FromImage(paintBitmap);
             }
+
+            if (useOverlay)
+                npcNameOverlay = new(wowProcess.Process.MainWindowHandle, npcNameFinder, npcNameTargeting, debugTargeting, debugSkinning);
+        }
+
+        ~Test_NpcNameFinder()
+        {
+            Dispose();
+        }
+
+        public void Dispose()
+        {
+            npcNameOverlay?.Dispose();
+
+            wowScreen.Dispose();
+            wowProcess.Dispose();
         }
 
         public void Execute()
@@ -67,7 +86,7 @@ namespace CoreTests
             if (LogEachUpdate)
                 stopwatch.Restart();
 
-            capturer.Capture();
+            wowScreen.Update();
 
             if (LogEachUpdate)
                 logger.LogInformation($"Capture: {stopwatch.ElapsedMilliseconds}ms");
