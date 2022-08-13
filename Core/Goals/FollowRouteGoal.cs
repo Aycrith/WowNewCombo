@@ -18,8 +18,6 @@ namespace Core.Goals
 
         private const bool debug = false;
 
-        private const double DELAY_BEFORE_TARGET_SEARCH = 300;
-
         private readonly ILogger logger;
         private readonly ConfigurableInput input;
         private readonly Wait wait;
@@ -234,11 +232,6 @@ namespace Core.Goals
                 }
 
                 sideActivityManualReset.WaitOne();
-
-                while ((DateTime.UtcNow - onEnterTime).TotalMilliseconds < DELAY_BEFORE_TARGET_SEARCH)
-                {
-                    sideActivityManualReset.WaitOne();
-                }
             }
 
             if (logger.IsEnabled(LogLevel.Debug))
