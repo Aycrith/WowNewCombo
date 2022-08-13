@@ -8,6 +8,7 @@ using System.Text;
 using System.Diagnostics;
 using System.Linq;
 using SharedLib.Extensions;
+using Core;
 
 #pragma warning disable 0162
 
@@ -49,7 +50,8 @@ namespace CoreTests
 
             MockWoWProcess mockWoWProcess = new();
             MockWoWScreen mockWoWScreen = new();
-            npcNameTargeting = new(logger, new(), mockWoWScreen, npcNameFinder, mockWoWProcess);
+            MockMouseOverReader mouseOverReader = new();
+            npcNameTargeting = new(logger, new(), mockWoWScreen, npcNameFinder, mockWoWProcess, mouseOverReader, new NoBlacklist(), null);
 
             npcNameFinder.ChangeNpcType(types);
 

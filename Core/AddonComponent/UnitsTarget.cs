@@ -1,6 +1,6 @@
 ﻿namespace Core
 {
-    public enum TargetTargetEnum
+    public enum UnitsTarget
     {
         Self = 0,
         Me = 1,

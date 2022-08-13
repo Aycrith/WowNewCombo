@@ -83,7 +83,7 @@ namespace Core
                     {
                         wait.Update();
                         wait.Update();
-                        if (playerReader.TargetTarget == TargetTargetEnum.Me)
+                        if (playerReader.TargetTarget == UnitsTarget.Me)
                         {
                             logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Just wait for the target to get in range.");
 

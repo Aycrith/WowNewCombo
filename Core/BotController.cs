@@ -138,7 +138,7 @@ namespace Core
             logger.LogDebug($"Woohoo, I have read the player class. You are a {AddonReader.PlayerReader.Race.ToStringF()} {AddonReader.PlayerReader.Class.ToStringF()}.");
 
             npcNameFinder = new(logger, WowScreen, npcNameFinderEvent);
-            npcNameTargeting = new(logger, cts, WowScreen, npcNameFinder, wowProcessInput);
+            npcNameTargeting = new(logger, cts, WowScreen, npcNameFinder, wowProcessInput, addonReader.PlayerReader, new NoBlacklist(), wait);
             WowScreen.AddDrawAction(npcNameFinder.ShowNames);
             WowScreen.AddDrawAction(npcNameTargeting.ShowClickPositions);
 

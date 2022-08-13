@@ -6,19 +6,19 @@
 
         private readonly PlayerReader playerReader;
         private readonly ConfigurableInput input;
-        private readonly IBlacklist blacklist;
+        private readonly IBlacklist targetBlacklist;
 
         public BlacklistTargetGoal(PlayerReader playerReader, ConfigurableInput input, IBlacklist blacklist)
             : base(nameof(BlacklistTargetGoal))
         {
             this.playerReader = playerReader;
             this.input = input;
-            this.blacklist = blacklist;
+            this.targetBlacklist = blacklist;
         }
 
         public override bool CanRun()
         {
-            return playerReader.Bits.HasTarget() && blacklist.IsTargetBlacklisted();
+            return playerReader.Bits.HasTarget() && targetBlacklist.Is();
         }
 
         public override void OnEnter()

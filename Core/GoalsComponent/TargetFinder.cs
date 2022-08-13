@@ -9,14 +9,12 @@ namespace Core.Goals
         private readonly ConfigurableInput input;
         private readonly ClassConfiguration classConfig;
         private readonly PlayerReader playerReader;
-        private readonly Wait wait;
         private readonly NpcNameTargeting npcNameTargeting;
 
-        public TargetFinder(ConfigurableInput input, ClassConfiguration classConfig, Wait wait, PlayerReader playerReader, NpcNameTargeting npcNameTargeting)
+        public TargetFinder(ConfigurableInput input, ClassConfiguration classConfig, PlayerReader playerReader, NpcNameTargeting npcNameTargeting)
         {
             this.classConfig = classConfig;
             this.input = input;
-            this.wait = wait;
             this.playerReader = playerReader;
             this.npcNameTargeting = npcNameTargeting;
         }
@@ -24,6 +22,7 @@ namespace Core.Goals
         public void Reset()
         {
             npcNameTargeting.ChangeNpcType(NpcNames.None);
+            npcNameTargeting.Reset();
         }
 
         public bool Search(NpcNames target, Func<bool> validTarget, CancellationToken ct)
@@ -43,8 +42,7 @@ namespace Core.Goals
                 npcNameTargeting.ChangeNpcType(target);
                 if (!ct.IsCancellationRequested && npcNameTargeting.NpcCount > 0)
                 {
-                    if (npcNameTargeting.InteractFirst(ct))
-                        wait.Update();
+                    npcNameTargeting.AquireNonBlacklisted(ct);
                 }
             }
 

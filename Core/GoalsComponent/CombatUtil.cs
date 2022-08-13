@@ -61,7 +61,7 @@ namespace Core
                 {
                     input.TargetPet();
                     Log($"Pets target {playerReader.TargetTarget}");
-                    if (playerReader.TargetTarget == TargetTargetEnum.PetHasATarget)
+                    if (playerReader.TargetTarget == UnitsTarget.PetHasATarget)
                     {
                         Log($"{nameof(AquiredTarget)}: Found target by pet");
                         input.TargetOfTarget();

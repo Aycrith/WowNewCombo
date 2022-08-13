@@ -48,7 +48,8 @@ namespace Core
             }
             else
             {
-                services.AddSingleton<IBlacklist, Blacklist>();
+                services.AddSingleton<MouseOverBlacklist, MouseOverBlacklist>();
+                services.AddSingleton<IBlacklist, TargetBlacklist>();
                 services.AddSingleton<GoapGoal, BlacklistTargetGoal>();
             }
 
@@ -145,6 +146,8 @@ namespace Core
 
             ServiceProvider provider = services.BuildServiceProvider(
                 new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
+
+            npcNameTargeting.UpdateBlacklist(provider.GetService<MouseOverBlacklist>() ?? provider.GetService<IBlacklist>()!);
 
             IEnumerable<GoapGoal> goals = provider.GetServices<GoapGoal>();
             IEnumerable<IRouteProvider> pathProviders = goals.OfType<IRouteProvider>();
