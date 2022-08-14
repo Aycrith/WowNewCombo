@@ -20,7 +20,7 @@ namespace Core
 
         public RouteInfoPoi(NPC npc, string color)
         {
-            Location = npc.points.First();
+            Location = npc.MapCoords[0];
             Name = npc.name;
             Color = color;
             Radius = 1;

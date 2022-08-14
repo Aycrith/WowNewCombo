@@ -6,10 +6,13 @@ namespace SharedLib.Extensions
 {
     public static class VectorExt
     {
-        public static List<Vector3> FromList(List<List<float>> points)
+        public static Vector3[] FromList(List<List<float>> points)
         {
-            List<Vector3> output = new();
-            points.ForEach(p => output.Add(new Vector3(p[0], p[1], 0)));
+            Vector3[] output = new Vector3[points.Count];
+            for (int i = 0; i < output.Length; i++)
+            {
+                output[i] = new(points[i][0], points[i][1], 0);
+            }
             return output;
         }
 
