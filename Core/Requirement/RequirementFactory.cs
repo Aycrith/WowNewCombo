@@ -90,6 +90,7 @@ namespace Core
 
                 // Range
                 { "InMeleeRange", playerReader.IsInMeleeRange },
+                { "InCloseMeleeRange", playerReader.InCloseMeleeRange },
                 { "InDeadZoneRange", playerReader.IsInDeadZone },
                 { "OutOfCombatRange", playerReader.OutOfCombatRange },
                 { "InCombatRange", playerReader.WithInCombatRange },

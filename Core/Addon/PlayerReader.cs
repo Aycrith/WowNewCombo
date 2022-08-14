@@ -88,6 +88,8 @@ namespace Core
         public int MaxRange() => reader.GetInt(49) / 1000 % 1000;
 
         public bool IsInMeleeRange() => MinRange() == 0 && MaxRange() != 0 && MaxRange() <= 5;
+        public bool InCloseMeleeRange() => MinRange() == 0 && MaxRange() <= 2;
+
         public bool IsInDeadZone() => MinRange() >= 5 && SpellInRange.Target_Trade; // between 5-8 yard - hunter and warrior
 
         public RecordInt PlayerXp { get; } = new(50);

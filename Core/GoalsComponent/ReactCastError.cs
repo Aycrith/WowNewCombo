@@ -1,5 +1,7 @@
 ﻿using Core.Goals;
+
 using Microsoft.Extensions.Logging;
+
 using System;
 using System.Numerics;
 
@@ -78,18 +80,29 @@ namespace Core
                         return;
                     }
 
-                    float minRange = playerReader.MinRange();
+                    int minRange = playerReader.MinRange();
                     if (playerReader.Bits.PlayerInCombat() && playerReader.Bits.HasTarget() && !playerReader.IsTargetCasting())
                     {
-                        wait.Update();
-                        wait.Update();
                         if (playerReader.TargetTarget == UnitsTarget.Me)
                         {
-                            logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Just wait for the target to get in range.");
+                            if (playerReader.InCloseMeleeRange())
+                            {
+                                logger.LogInformation($"{source} -- React to {value.ToStringF()} -- ({minRange}) wait for close melee range.");
+                                wait.Fixed(30);
+                                wait.Update();
+                                return;
+                            }
 
-                            (bool t, double e) = wait.Until(CastingHandler.GCD,
+                            logger.LogInformation($"{source} -- React to {value.ToStringF()} -- ({minRange}) Just wait for the target to get in range.");
+
+                            int duration = CastingHandler.GCD;
+                            if (playerReader.MinRange() <= 5)
+                                duration = CastingHandler.SpellQueueTimeMs;
+
+                            (bool t, double e) = wait.Until(duration,
                                 () => minRange != playerReader.MinRange() || playerReader.IsTargetCasting()
                             );
+                            wait.Update();
                         }
                     }
                     else
@@ -108,10 +121,14 @@ namespace Core
 
                             logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Approached target {minRange}->{playerReader.MinRange()}");
                         }
+                        else if (!playerReader.WithInPullRange())
+                        {
+                            logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Start moving forward as outside of pull range.");
+                            input.Proc.SetKeyState(input.Proc.ForwardKey, true);
+                        }
                         else
                         {
-                            logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Start moving forward");
-                            input.Proc.SetKeyState(input.Proc.ForwardKey, true);
+                            input.Interact();
                         }
                     }
                     break;
