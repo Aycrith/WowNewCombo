@@ -30,8 +30,6 @@ namespace Core
 
         string TargetName { get; }
 
-        RecordInt UIMapId { get; }
-
         event Action? AddonDataChanged;
         event Action? PlayerDeath;
 

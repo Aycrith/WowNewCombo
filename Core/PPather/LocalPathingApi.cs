@@ -61,7 +61,7 @@ namespace Core
             return ValueTask.CompletedTask;
         }
 
-        public ValueTask<Vector3[]> FindRoute(int uimap, Vector3 fromPoint, Vector3 toPoint)
+        public ValueTask<Vector3[]> FindRoute(int uiMap, Vector3 mapFrom, Vector3 mapTo)
         {
             if (!Enabled)
             {
@@ -71,22 +71,19 @@ namespace Core
 
             stopwatch.Restart();
 
-            service.SetLocations(service.ToWorld(uimap, fromPoint.X, fromPoint.Y, fromPoint.Z), service.ToWorld(uimap, toPoint.X, toPoint.Y));
+            service.SetLocations(service.ToWorld(uiMap, mapFrom.X, mapFrom.Y, mapFrom.Z), service.ToWorld(uiMap, mapTo.X, mapTo.Y));
             var path = service.DoSearch(PPather.Graph.PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
-
-            stopwatch.Stop();
-
             if (path == null)
             {
                 if (debug)
-                    LogWarning($"Failed to find a path from {fromPoint} to {toPoint}");
+                    LogWarning($"Failed to find a path from {mapFrom} to {mapTo}");
 
                 return new(Array.Empty<Vector3>());
             }
             else
             {
                 if (debug)
-                    LogDebug($"Finding route from {fromPoint} map {uimap} to {toPoint} took {stopwatch.ElapsedMilliseconds} ms.");
+                    LogDebug($"Finding route from {mapFrom} map {uiMap} to {mapTo} took {stopwatch.ElapsedMilliseconds} ms.");
 
                 if ((DateTime.UtcNow - lastSave).TotalMinutes >= 1)
                 {
@@ -98,7 +95,7 @@ namespace Core
             Vector3[] array = new Vector3[path.locations.Count];
             for (int i = 0; i < array.Length; i++)
             {
-                array[i] = service.ToLocal(path.locations[i], (int)service.SearchFrom!.Value.W, uimap);
+                array[i] = service.ToLocal(path.locations[i], (int)service.SearchFrom!.Value.W, uiMap);
             }
             return new(array);
         }

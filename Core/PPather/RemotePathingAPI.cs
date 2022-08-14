@@ -60,22 +60,22 @@ namespace Core
             await client.PostAsync($"{api}DrawSphere", content);
         }
 
-        public async ValueTask<Vector3[]> FindRoute(int map, Vector3 fromPoint, Vector3 toPoint)
+        public async ValueTask<Vector3[]> FindRoute(int uiMap, Vector3 mapFrom, Vector3 mapTo)
         {
             try
             {
-                LogInformation($"Finding route from {fromPoint} map {map} to {toPoint} map {map}...");
-                var url = $"{api}MapRoute?uimap1={map}&x1={fromPoint.X}&y1={fromPoint.Y}&uimap2={map}&x2={toPoint.X}&y2={toPoint.Y}";
+                LogInformation($"Finding route from {mapFrom} map {uiMap} to {mapTo} map {uiMap}...");
+                var url = $"{api}MapRoute?uimap1={uiMap}&x1={mapFrom.X}&y1={mapFrom.Y}&uimap2={uiMap}&x2={mapTo.X}&y2={mapTo.Y}";
 
                 stopwatch.Restart();
                 using var client = new HttpClient();
                 string responseString = await client.GetStringAsync(url);
-                LogInformation($"Finding route from {fromPoint} map {map} to {toPoint} took {stopwatch.ElapsedMilliseconds} ms.");
+                LogInformation($"Finding route from {mapFrom} map {uiMap} to {mapTo} took {stopwatch.ElapsedMilliseconds} ms.");
                 return JsonSerializer.Deserialize<Vector3[]>(responseString, options) ?? Array.Empty<Vector3>();
             }
             catch (Exception ex)
             {
-                LogError($"Finding route from {fromPoint} to {toPoint}", ex);
+                LogError($"Finding route from {mapFrom} to {mapTo}", ex);
                 Console.WriteLine(ex);
                 return Array.Empty<Vector3>();
             }

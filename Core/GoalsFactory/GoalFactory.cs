@@ -156,7 +156,7 @@ namespace Core
 
             pather.DrawLines(new()
             {
-                new LineArgs("grindpath", route, 2, addonReader.UIMapId.Value)
+                new LineArgs("grindpath", route, 2, addonReader.PlayerReader.UIMapId.Value)
             });
 
             return (routeInfo, goals);

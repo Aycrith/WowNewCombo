@@ -296,17 +296,17 @@ namespace Core.GOAP
 
             int index = -1;
             float minDistance = float.MaxValue;
-            Vector3 playerLocation = addonReader.PlayerReader.PlayerLocation;
+            Vector3 playerMap = addonReader.PlayerReader.MapPos;
             for (int i = 0; i < routeInfo.PoiList.Count; i++)
             {
                 RouteInfoPoi? poi = routeInfo.PoiList[i];
                 if (poi?.Name != type)
                     continue;
 
-                float min = playerLocation.DistanceXYTo(poi.Location);
-                if (min < minDistance)
+                float mapMin = playerMap.MapDistanceXYTo(poi.Location);
+                if (mapMin < minDistance)
                 {
-                    minDistance = min;
+                    minDistance = mapMin;
                     index = i;
                 }
             }

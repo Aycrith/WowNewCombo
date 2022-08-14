@@ -88,7 +88,7 @@ namespace Core
 
                 input.Jump();
 
-                float heading = DirectionCalculator.CalculateHeading(playerReader.PlayerLocation, target);
+                float heading = DirectionCalculator.CalculateHeading(playerReader.MapPos, target);
                 playerDirection.SetDirection(heading, target);
 
                 attemptTime = DateTime.UtcNow;
@@ -101,11 +101,11 @@ namespace Core
 
         public bool IsGettingCloser()
         {
-            float distance = playerReader.PlayerLocation.DistanceXYTo(target);
-            if (distance < prevDistance - MIN_RANGE_DIFF)
+            float mapDistance = playerReader.MapPos.MapDistanceXYTo(target);
+            if (mapDistance < prevDistance - MIN_RANGE_DIFF)
             {
                 Reset();
-                prevDistance = distance;
+                prevDistance = mapDistance;
                 return true;
             }
 
@@ -114,11 +114,11 @@ namespace Core
 
         public bool IsMoving()
         {
-            float distance = playerReader.PlayerLocation.DistanceXYTo(target);
-            if (MathF.Abs(distance - prevDistance) > MIN_DISTANCE)
+            float mapDistance = playerReader.MapPos.MapDistanceXYTo(target);
+            if (MathF.Abs(mapDistance - prevDistance) > MIN_DISTANCE)
             {
                 Reset();
-                prevDistance = distance;
+                prevDistance = mapDistance;
                 return true;
             }
 

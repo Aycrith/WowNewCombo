@@ -14,8 +14,8 @@ namespace Core.Goals
 
         private const float MinDist = 0.001f;
 
-        private Vector3 last;
-        private float Direction;
+        private Vector3 mapPos;
+        private float direction;
 
         public StopMoving(WowProcessInput input, PlayerReader playerReader, CancellationTokenSource cts)
         {
@@ -32,13 +32,13 @@ namespace Core.Goals
 
         public void StopForward()
         {
-            if (last != playerReader.PlayerLocation)
+            if (mapPos != playerReader.MapPos)
             {
                 bool pressedAny = false;
 
                 if (!input.IsKeyDown(input.BackwardKey) &&
                     !input.IsKeyDown(input.ForwardKey) &&
-                    last.DistanceXYTo(playerReader.PlayerLocation) >= MinDist)
+                    mapPos.MapDistanceXYTo(playerReader.MapPos) >= MinDist)
                 {
                     input.KeyPressSleep(input.ForwardKey, Random.Shared.Next(2, 5), ct);
                     pressedAny = true;
@@ -60,12 +60,12 @@ namespace Core.Goals
                     ct.WaitHandle.WaitOne(Random.Shared.Next(25, 30));
             }
 
-            last = playerReader.PlayerLocation;
+            mapPos = playerReader.MapPos;
         }
 
         public void StopTurn()
         {
-            if (Direction != playerReader.Direction)
+            if (direction != playerReader.Direction)
             {
                 bool pressedAny = false;
 
@@ -85,7 +85,7 @@ namespace Core.Goals
                     ct.WaitHandle.WaitOne(1);
             }
 
-            Direction = playerReader.Direction;
+            direction = playerReader.Direction;
         }
     }
 }

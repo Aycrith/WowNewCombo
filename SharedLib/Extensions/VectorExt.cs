@@ -13,12 +13,12 @@ namespace SharedLib.Extensions
             return output;
         }
 
-        public static float DistanceXYTo(this Vector3 l1, in Vector3 l2)
+        public static float MapDistanceXYTo(this Vector3 l1, in Vector3 l2)
         {
-            return DistanceXY(l1, l2);
+            return MapDistanceXY(l1, l2);
         }
 
-        public static float DistanceXY(Vector3 l1, Vector3 l2)
+        public static float MapDistanceXY(Vector3 l1, Vector3 l2)
         {
             return Vector2.Distance(l1.AsVector2() * 100, l2.AsVector2() * 100); // would be nice to remove that 100 multiplier :sweat:
         }
@@ -27,7 +27,7 @@ namespace SharedLib.Extensions
         {
             var result = new List<Vector3>();
 
-            var closestDistance = pointsList.Select(p => (point: p, distance: DistanceXYTo(location, p)))
+            var closestDistance = pointsList.Select(p => (point: p, distance: MapDistanceXYTo(location, p)))
                 .OrderBy(s => s.distance);
 
             var closestPoint = closestDistance.First();

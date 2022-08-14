@@ -1,14 +1,19 @@
 ﻿using System.Collections.Specialized;
 using System.Numerics;
 
+using Core.Database;
+
 namespace Core
 {
     public partial class PlayerReader : IMouseOverReader
     {
         private readonly IAddonDataProvider reader;
+        private readonly WorldMapAreaDB mapAreaDB;
 
-        public PlayerReader(IAddonDataProvider reader)
+        public PlayerReader(IAddonDataProvider reader, WorldMapAreaDB mapAreaDB)
         {
+            this.mapAreaDB = mapAreaDB;
+
             this.reader = reader;
             Bits = new(8, 9);
             SpellInRange = new(40);
@@ -18,18 +23,21 @@ namespace Core
             CustomTrigger1 = new(reader.GetInt(74));
         }
 
-        public Vector3 PlayerLocation => new(XCoord, YCoord, ZCoord);
+        public Vector3 MapPos => new(MapX, MapY, MapZ);
+        public Vector3 WorldPos => mapAreaDB.ToWorld(UIMapId.Value, MapPos);
 
-        public float XCoord => reader.GetFixed(1) * 10;
-        public float YCoord => reader.GetFixed(2) * 10;
-        public float ZCoord { get; set; }
+        public float MapX => reader.GetFixed(1) * 10;
+        public float MapY => reader.GetFixed(2) * 10;
+        public float MapZ { get; set; } // MapZ not exists. Alias for WorldLoc.Z
         public float Direction => reader.GetFixed(3);
+
+        public RecordInt UIMapId { get; } = new(4);
 
         public RecordInt Level { get; } = new(5);
 
-        public Vector3 CorpseLocation => new(CorpseX, CorpseY, 0);
-        public float CorpseX => reader.GetFixed(6) * 10;
-        public float CorpseY => reader.GetFixed(7) * 10;
+        public Vector3 CorpseMapPos => new(CorpseMapX, CorpseMapY, 0);
+        public float CorpseMapX => reader.GetFixed(6) * 10;
+        public float CorpseMapY => reader.GetFixed(7) * 10;
 
         public AddonBits Bits { get; }
 
@@ -166,6 +174,8 @@ namespace Core
 
         public void Update(IAddonDataProvider reader)
         {
+            UIMapId.Update(reader);
+
             Bits.Update(reader);
             SpellInRange.Update(reader);
             Buffs.Update(reader);
@@ -192,6 +202,8 @@ namespace Core
 
         public void Reset()
         {
+            UIMapId.Reset();
+
             // Reset all RecordInt
             AutoShot.Reset();
             MainHandSwing.Reset();

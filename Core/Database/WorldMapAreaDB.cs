@@ -20,40 +20,32 @@ namespace Core.Database
             }
         }
 
-        public int GetAreaId(int uiMapId)
+        public int GetAreaId(int uiMap)
         {
-            return areas.TryGetValue(uiMapId, out WorldMapArea map) ? map.AreaID : -1;
+            return areas.TryGetValue(uiMap, out WorldMapArea map) ? map.AreaID : -1;
         }
 
-        public Vector3 ToWorld(int uiMapId, Vector3 local, bool flipXY)
+        public Vector3 ToWorld_FlipXY(int uiMap, Vector3 map)
         {
-            var worldMapArea = areas[uiMapId];
-            if (flipXY)
-            {
-                return new Vector3(worldMapArea.ToWorldX(local.Y), worldMapArea.ToWorldY(local.X), local.Z);
-            }
-            else
-            {
-                return new Vector3(worldMapArea.ToWorldX(local.X), worldMapArea.ToWorldY(local.Y), local.Z);
-            }
+            WorldMapArea wma = areas[uiMap];
+            return new Vector3(wma.ToWorldX(map.Y), wma.ToWorldY(map.X), map.Z);
         }
 
-        public Vector3 ToLocal(Vector3 world, float mapId, int uiMap)
+        public Vector3 ToWorld(int uiMap, Vector3 map)
         {
-            var area = WorldMapAreaFactory.GetWorldMapArea(areas.Values, world.X, world.Y, mapId, uiMap);
-            return new Vector3(area.ToMapY(world.Y), area.ToMapX(world.X), world.Z);
+            WorldMapArea wma = areas[uiMap];
+            return new Vector3(wma.ToWorldX(map.X), wma.ToWorldY(map.Y), map.Z);
         }
 
-        public bool TryGet(int uiMapId, out WorldMapArea area)
+        public Vector3 ToMap(Vector3 world, float mapId, int uiMap)
         {
-            if (areas.TryGetValue(uiMapId, out var map))
-            {
-                area = map;
-                return true;
-            }
+            var wma = WorldMapAreaFactory.GetWorldMapArea(areas.Values, world.X, world.Y, mapId, uiMap);
+            return new Vector3(wma.ToMapY(world.Y), wma.ToMapX(world.X), world.Z);
+        }
 
-            area = default;
-            return false;
+        public bool TryGet(int uiMap, out WorldMapArea wma)
+        {
+            return areas.TryGetValue(uiMap, out wma);
         }
     }
 }

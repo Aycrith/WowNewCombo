@@ -19,7 +19,7 @@
                 <td>Route @routeSymbol</td>
                 <td>
                     <div class="float-right">
-                        [@addonReader.PlayerReader.XCoord.ToString("00.0000"),@addonReader.PlayerReader.YCoord.ToString("00.0000")] @(AreaName) (@addonReader.UIMapId.Value)
+                        [@addonReader.PlayerReader.MapX.ToString("00.0000"),@addonReader.PlayerReader.MapY.ToString("00.0000")] @(AreaName) (@addonReader.PlayerReader.UIMapId.Value)
                     </div>
                 </td>
             </tr>
@@ -40,7 +40,7 @@
 
                         @if (botController.RouteInfo != null)
                         {
-                            <g id="playerloc" transform='translate(@(botController.RouteInfo.ToCanvasPointX(addonReader.PlayerReader.XCoord)-5), @(botController.RouteInfo.ToCanvasPointY(addonReader.PlayerReader.YCoord)-5)) rotate(@PlayerDir 5 5)'>
+                            <g id="playerloc" transform='translate(@(botController.RouteInfo.ToCanvasPointX(addonReader.PlayerReader.MapX)-5), @(botController.RouteInfo.ToCanvasPointY(addonReader.PlayerReader.MapY)-5)) rotate(@PlayerDir 5 5)'>
                                 <svg width="10" height="10">
                                     <polygon points="5,0 8.5,8.5 1.5,8.5 5,0" fill="@colour" />
                                 </svg>
@@ -240,7 +240,7 @@
 
     private void UpdateZoneName()
     {
-        if (worldmapAreaDB.TryGet(addonReader.UIMapId.Value, out WorldMapArea wma))
+        if (worldmapAreaDB.TryGet(addonReader.PlayerReader.UIMapId.Value, out WorldMapArea wma))
         {
             AreaName = wma.AreaName;
         }

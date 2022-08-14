@@ -41,17 +41,17 @@ namespace Core
 
         public void SetDirection(float desiredDirection, Vector3 point, float ignoreDistance, CancellationToken ct)
         {
-            float distance = playerReader.PlayerLocation.DistanceXYTo(point);
-            if (distance < ignoreDistance)
+            float mapDistance = playerReader.MapPos.MapDistanceXYTo(point);
+            if (mapDistance < ignoreDistance)
             {
                 if (debug)
-                    LogDebugClose(logger, distance, ignoreDistance);
+                    LogDebugClose(logger, mapDistance, ignoreDistance);
 
                 return;
             }
 
             if (debug)
-                LogDebugSetDirection(logger, playerReader.Direction, desiredDirection, distance);
+                LogDebugSetDirection(logger, playerReader.Direction, desiredDirection, mapDistance);
 
             input.Proc.KeyPressSleep(GetDirectionKeyToPress(desiredDirection),
                 TurnDuration(desiredDirection), ct);

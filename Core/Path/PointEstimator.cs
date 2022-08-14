@@ -6,7 +6,7 @@ namespace Core
     {
         public const float YARD_TO_COORD = 0.035921f;
 
-        public static Vector3 GetPoint(Vector3 origo, float wowRad, float rangeYard)
+        public static Vector3 GetPoint(Vector3 map, float wowRad, float rangeYard)
         {
             //player direction
             //0.00061
@@ -26,7 +26,7 @@ namespace Core
             float range = rangeYard * YARD_TO_COORD;
             (float dirX, float dirY) = DirectionCalculator.ToNormalRadian(wowRad);
 
-            return new Vector3(origo.X + (range * dirX), origo.Y + (range * dirY), origo.Z);
+            return new Vector3(map.X + (range * dirX), map.Y + (range * dirY), map.Z);
         }
     }
 }

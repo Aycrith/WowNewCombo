@@ -104,9 +104,9 @@ namespace Core
 
         public bool ShouldMount(Vector3 target)
         {
-            var location = playerReader.PlayerLocation;
-            var distance = location.DistanceXYTo(target);
-            return distance > DISTANCE_TO_MOUNT;
+            Vector3 playerMap = playerReader.MapPos;
+            float mapDistance = playerMap.MapDistanceXYTo(target);
+            return mapDistance > DISTANCE_TO_MOUNT;
         }
 
         public void Dismount()

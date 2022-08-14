@@ -75,13 +75,13 @@ namespace Core.Goals
 
         public override void OnEnter()
         {
-            playerReader.ZCoord = 0;
+            playerReader.MapZ = 0;
             addonReader.PlayerDied();
 
             wait.While(AliveOrLoadingScreen);
             Log($"Player teleported to the graveyard!");
 
-            var corpseLocation = playerReader.CorpseLocation;
+            var corpseLocation = playerReader.CorpseMapPos;
             Log($"Corpse location is {corpseLocation}");
 
             Deaths.Add(corpseLocation);
@@ -125,7 +125,7 @@ namespace Core.Goals
 
         private bool AliveOrLoadingScreen()
         {
-            return playerReader.CorpseLocation == Vector3.Zero;
+            return playerReader.CorpseMapPos == Vector3.Zero;
         }
 
         private void Log(string text)

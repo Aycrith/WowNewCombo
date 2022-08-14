@@ -73,7 +73,7 @@ namespace Core
             return ValueTask.CompletedTask;
         }
 
-        public ValueTask<Vector3[]> FindRoute(int uiMapId, Vector3 fromPoint, Vector3 toPoint)
+        public ValueTask<Vector3[]> FindRoute(int uiMap, Vector3 mapFrom, Vector3 mapTo)
         {
             if (!Client.IsConnected)
             {
@@ -82,26 +82,26 @@ namespace Core
 
             try
             {
-                if (!worldMapAreaDB.TryGet(uiMapId, out WorldMapArea area))
+                if (!worldMapAreaDB.TryGet(uiMap, out WorldMapArea area))
                     return new(Array.Empty<Vector3>());
 
-                Vector3 start = worldMapAreaDB.ToWorld(uiMapId, fromPoint, true);
-                Vector3 end = worldMapAreaDB.ToWorld(uiMapId, toPoint, true);
+                Vector3 worldFrom = worldMapAreaDB.ToWorld_FlipXY(uiMap, mapFrom);
+                Vector3 worldTo = worldMapAreaDB.ToWorld_FlipXY(uiMap, mapTo);
 
                 // incase haven't asked a pathfinder for a route this value will be 0
                 // that case use the highest location
-                if (start.Z == 0)
+                if (worldFrom.Z == 0)
                 {
-                    start.Z = area.LocTop / 2;
-                    end.Z = area.LocTop / 2;
+                    worldFrom.Z = area.LocTop / 2;
+                    worldTo.Z = area.LocTop / 2;
                 }
 
                 if (debug)
-                    LogInformation($"Finding route from {fromPoint}({start}) map {uiMapId} to {toPoint}({end}) map {uiMapId}...");
+                    LogInformation($"Finding route from {mapFrom}({worldFrom}) map {uiMap} to {mapTo}({worldTo}) map {uiMap}...");
 
                 Vector3[] path = Client.Send((byte)EMessageType.PATH,
                     (area.MapID, PathRequestFlags.FIND_LOCATION | PathRequestFlags.CATMULLROM,
-                    start.X, start.Y, start.Z, end.X, end.Y, end.Z)).AsArray<Vector3>();
+                    worldFrom.X, worldFrom.Y, worldFrom.Z, worldTo.X, worldTo.Y, worldTo.Z)).AsArray<Vector3>();
 
                 if (path.Length == 1 && path[0] == Vector3.Zero)
                     return new(Array.Empty<Vector3>());
@@ -111,14 +111,14 @@ namespace Core
                     if (debug)
                         LogInformation($"new float[] {{ {path[i].X}f, {path[i].Y}f, {path[i].Z}f }},");
 
-                    path[i] = worldMapAreaDB.ToLocal(path[i], area.MapID, uiMapId);
+                    path[i] = worldMapAreaDB.ToMap(path[i], area.MapID, uiMap);
                 }
 
                 return new(path);
             }
             catch (Exception ex)
             {
-                LogError($"Finding route from {fromPoint} to {toPoint}", ex);
+                LogError($"Finding route from {mapFrom} to {mapTo}", ex);
                 Console.WriteLine(ex);
                 return new(Array.Empty<Vector3>());
             }

@@ -1,7 +1,13 @@
 ﻿using Core.GOAP;
+
 using Microsoft.Extensions.Logging;
+
 using SharedLib.Extensions;
+
 using System;
+using System.Numerics;
+
+using static System.MathF;
 
 namespace Core.Goals
 {
@@ -13,7 +19,6 @@ namespace Core.Goals
 
         private readonly ILogger logger;
         private readonly ConfigurableInput input;
-        private readonly AddonReader addonReader;
         private readonly PlayerReader playerReader;
         private readonly PlayerDirection playerDirection;
         private readonly StuckDetector stuckDetector;
@@ -23,11 +28,10 @@ namespace Core.Goals
 
         public DateTime LastActive { get; private set; }
 
-        public WrongZoneGoal(AddonReader addonReader, ConfigurableInput input, PlayerDirection playerDirection, ILogger logger, StuckDetector stuckDetector, ClassConfiguration classConfiguration)
+        public WrongZoneGoal(PlayerReader playerReader, ConfigurableInput input, PlayerDirection playerDirection, ILogger logger, StuckDetector stuckDetector, ClassConfiguration classConfiguration)
             : base(nameof(WrongZoneGoal))
         {
-            this.addonReader = addonReader;
-            this.playerReader = addonReader.PlayerReader;
+            this.playerReader = playerReader;
             this.input = input;
             this.playerDirection = playerDirection;
             this.logger = logger;
@@ -39,28 +43,28 @@ namespace Core.Goals
 
         public override bool CanRun()
         {
-            return addonReader.UIMapId.Value == classConfiguration.WrongZone.ZoneId;
+            return playerReader.UIMapId.Value == classConfiguration.WrongZone.ZoneId;
         }
 
         public override void Update()
         {
-            var targetLocation = classConfiguration.WrongZone.ExitZoneLocation;
+            Vector3 exitMap = classConfiguration.WrongZone.ExitZoneLocation;
 
             input.Proc.SetKeyState(input.Proc.ForwardKey, true);
 
             if ((DateTime.UtcNow - LastActive).TotalMilliseconds > 10000)
             {
-                this.stuckDetector.SetTargetLocation(targetLocation);
+                stuckDetector.SetTargetLocation(exitMap);
             }
 
-            var location = playerReader.PlayerLocation;
-            var distance = location.DistanceXYTo(targetLocation);
-            var heading = DirectionCalculator.CalculateHeading(location, targetLocation);
+            Vector3 playerMap = playerReader.MapPos;
+            float mapDistance = playerMap.MapDistanceXYTo(exitMap);
+            float heading = DirectionCalculator.CalculateHeading(playerMap, exitMap);
 
-            if (lastDistance < distance)
+            if (lastDistance < mapDistance)
             {
                 logger.LogInformation("Further away");
-                playerDirection.SetDirection(heading, targetLocation);
+                playerDirection.SetDirection(heading, exitMap);
             }
             else if (!stuckDetector.IsGettingCloser())
             {
@@ -78,17 +82,17 @@ namespace Core.Goals
             }
             else // distance closer
             {
-                var diff1 = MathF.Abs(RADIAN + heading - playerReader.Direction) % RADIAN;
-                var diff2 = MathF.Abs(heading - playerReader.Direction - RADIAN) % RADIAN;
+                float diff1 = Abs(RADIAN + heading - playerReader.Direction) % RADIAN;
+                float diff2 = Abs(heading - playerReader.Direction - RADIAN) % RADIAN;
 
-                if (MathF.Min(diff1, diff2) > 0.3)
+                if (Min(diff1, diff2) > 0.3)
                 {
                     logger.LogInformation("Correcting direction");
-                    playerDirection.SetDirection(heading, targetLocation);
+                    playerDirection.SetDirection(heading, exitMap);
                 }
             }
 
-            lastDistance = distance;
+            lastDistance = mapDistance;
 
             LastActive = DateTime.UtcNow;
         }

@@ -68,20 +68,20 @@ namespace Core.Database
             }
         }
 
-        public Vector3? GetNearestVendor(Vector3 playerLocation)
+        public Vector3? GetNearestVendor(Vector3 map)
         {
             if (CurrentArea == null || CurrentArea.vendor.Count == 0)
                 return null;
 
             NPC nearest = CurrentArea.vendor[0];
-            float dist = playerLocation.DistanceXYTo(nearest.points[0]);
+            float mapDistance = map.MapDistanceXYTo(nearest.points[0]);
 
             CurrentArea.vendor.ForEach(npc =>
             {
-                var d = playerLocation.DistanceXYTo(npc.points[0]);
-                if (d < dist)
+                var mapDist = map.MapDistanceXYTo(npc.points[0]);
+                if (mapDist < mapDistance)
                 {
-                    dist = d;
+                    mapDistance = mapDist;
                     nearest = npc;
                 }
             });

@@ -308,45 +308,45 @@ namespace Core.Goals
         {
             Log($"RefillWaypoints - findClosest:{onlyClosest} - ThereAndBack:{input.ClassConfig.PathThereAndBack}");
 
-            Vector3 player = playerReader.PlayerLocation;
-            Vector3[] path = route.ToArray();
+            Vector3 playerMap = playerReader.MapPos;
+            Vector3[] pathMap = route.ToArray();
 
-            float distanceToFirst = player.DistanceXYTo(path[0]);
-            float distanceToLast = player.DistanceXYTo(path[^1]);
+            float mapDistanceToFirst = playerMap.MapDistanceXYTo(pathMap[0]);
+            float mapDistanceToLast = playerMap.MapDistanceXYTo(pathMap[^1]);
 
-            if (distanceToLast < distanceToFirst)
+            if (mapDistanceToLast < mapDistanceToFirst)
             {
-                Array.Reverse(path);
+                Array.Reverse(pathMap);
             }
 
-            var closestPoint = path.OrderBy(p => player.DistanceXYTo(p)).First();
+            Vector3 mapClosestPoint = pathMap.OrderBy(p => playerMap.MapDistanceXYTo(p)).First();
             if (onlyClosest)
             {
-                var closestPath = new Vector3[] { closestPoint };
+                var closestPath = new Vector3[] { mapClosestPoint };
 
                 if (debug)
-                    LogDebug($"RefillWaypoints: Closest wayPoint: {closestPoint}");
+                    LogDebug($"RefillWaypoints: Closest wayPoint: {mapClosestPoint}");
                 navigation.SetWayPoints(closestPath);
 
                 return;
             }
 
-            int closestIndex = Array.IndexOf(path, closestPoint);
-            if (closestPoint == path[0] || closestPoint == path[^1])
+            int closestIndex = Array.IndexOf(pathMap, mapClosestPoint);
+            if (mapClosestPoint == pathMap[0] || mapClosestPoint == pathMap[^1])
             {
                 if (input.ClassConfig.PathThereAndBack)
                 {
-                    navigation.SetWayPoints(path);
+                    navigation.SetWayPoints(pathMap);
                 }
                 else
                 {
-                    Array.Reverse(path);
-                    navigation.SetWayPoints(path);
+                    Array.Reverse(pathMap);
+                    navigation.SetWayPoints(pathMap);
                 }
             }
             else
             {
-                Vector3[] points = path.Take(closestIndex).ToArray();
+                Vector3[] points = pathMap.Take(closestIndex).ToArray();
                 Array.Reverse(points);
                 Log($"RefillWaypoints - Set destination from closest to nearest endpoint - with {points.Length} waypoints");
                 navigation.SetWayPoints(points);

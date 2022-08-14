@@ -178,7 +178,7 @@ namespace Core
             var pois = PoiList.Select(p => p.Location);
             allPoints.AddRange(pois);
 
-            allPoints.Add(playerReader.PlayerLocation);
+            allPoints.Add(playerReader.MapPos);
 
             var maxX = allPoints.Max(s => s.X);
             var minX = allPoints.Min(s => s.X);

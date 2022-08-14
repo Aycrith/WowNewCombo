@@ -76,13 +76,13 @@ namespace Core.Goals
         private readonly IPPather pather;
         private readonly MountHandler mountHandler;
 
-        private const float MinDistanceMount = 15;
-        private readonly float MaxDistance = 200;
-        private readonly float MinDistance = 10;
+        private const float MinMapDistanceMount = 15;
+        private readonly float MaxMapDistance = 200;
+        private readonly float MinMapDistance = 10;
 
         private bool UniformPath;
-        private float AvgDistance;
-        private float lastDistance = float.MaxValue;
+        private float AvgMapDistance;
+        private float lastMapDistance = float.MaxValue;
 
         private const float minAngleToTurn = PI / 35f;              // 5.14 degree
         private const float minAngleToStopBeforeTurn = PI / 2f;     // 90 degree
@@ -102,7 +102,7 @@ namespace Core.Goals
         public bool SimplifyRouteToWaypoint { get; set; } = true;
 
         private bool active;
-        private Vector3 playerLoc;
+        private Vector3 lastPlayerMap;
 
         private readonly Queue<PathRequest> pathRequests = new(1);
         private readonly Queue<PathResult> pathResults = new(1);
@@ -128,7 +128,7 @@ namespace Core.Goals
 
             patherName = pather.GetType().Name;
 
-            AvgDistance = MinDistance;
+            AvgMapDistance = MinMapDistance;
 
             manualReset = new(false);
             _cts = new();
@@ -138,7 +138,7 @@ namespace Core.Goals
             switch (classConfiguration.Mode)
             {
                 case Mode.AttendedGather:
-                    MaxDistance = MinDistance;
+                    MaxMapDistance = MinMapDistance;
                     SimplifyRouteToWaypoint = false;
                     break;
             }
@@ -185,26 +185,26 @@ namespace Core.Goals
             input.Proc.SetKeyState(input.Proc.ForwardKey, true, true);
 
             // main loop
-            playerLoc = playerReader.PlayerLocation;
-            Vector3 target = routeToNextWaypoint.Peek();
-            float distance = playerLoc.DistanceXYTo(target);
-            float heading = DirectionCalculator.CalculateHeading(playerLoc, target);
+            lastPlayerMap = playerReader.MapPos;
+            Vector3 targetMap = routeToNextWaypoint.Peek();
+            float mapDistance = lastPlayerMap.MapDistanceXYTo(targetMap);
+            float heading = DirectionCalculator.CalculateHeading(lastPlayerMap, targetMap);
 
-            if (distance < ReachedDistance(MinDistance))
+            if (mapDistance < ReachedDistance(MinMapDistance))
             {
-                if (target.Z != 0 && target.Z != playerLoc.Z)
+                if (targetMap.Z != 0 && targetMap.Z != lastPlayerMap.Z)
                 {
-                    playerReader.ZCoord = target.Z;
+                    playerReader.MapZ = targetMap.Z;
                 }
 
                 if (SimplifyRouteToWaypoint)
-                    ReduceByDistance(MinDistance);
+                    ReduceByDistance(MinMapDistance);
                 else
                     routeToNextWaypoint.Pop();
 
                 OnAnyPointReached?.Invoke();
 
-                lastDistance = float.MaxValue;
+                lastMapDistance = float.MaxValue;
                 UpdateTotalRoute();
 
                 if (routeToNextWaypoint.Count == 0)
@@ -215,16 +215,16 @@ namespace Core.Goals
                         UpdateTotalRoute();
 
                         if (debug)
-                            LogDebug($"Reached wayPoint! Distance: {distance} -- Remains: {wayPoints.Count}");
+                            LogDebug($"Reached wayPoint! Distance: {mapDistance} -- Remains: {wayPoints.Count}");
 
                         OnWayPointReached?.Invoke();
                     }
                 }
                 else
                 {
-                    target = routeToNextWaypoint.Peek();
-                    stuckDetector.SetTargetLocation(target);
-                    heading = DirectionCalculator.CalculateHeading(playerLoc, target);
+                    targetMap = routeToNextWaypoint.Peek();
+                    stuckDetector.SetTargetLocation(targetMap);
+                    heading = DirectionCalculator.CalculateHeading(lastPlayerMap, targetMap);
 
                     if (!ct.IsCancellationRequested)
                         AdjustHeading(heading, ct);
@@ -247,7 +247,7 @@ namespace Core.Goals
                     if (HasBeenActiveRecently())
                     {
                         stuckDetector.Update();
-                        distance = playerLoc.DistanceXYTo(routeToNextWaypoint.Peek());
+                        mapDistance = lastPlayerMap.MapDistanceXYTo(routeToNextWaypoint.Peek());
                     }
                 }
                 else if (!ct.IsCancellationRequested) // distance closer
@@ -256,7 +256,7 @@ namespace Core.Goals
                 }
             }
 
-            lastDistance = distance;
+            lastMapDistance = mapDistance;
         }
 
         public void Resume()
@@ -320,22 +320,22 @@ namespace Core.Goals
             {
                 if (i > 0)
                 {
-                    float d = points[i].DistanceXYTo(points[i - 1]);
+                    float mapD = points[i].MapDistanceXYTo(points[i - 1]);
                     if (i > 1)
                     {
                         float cAvg = distanceXY / (i - 1);
-                        UniformPath &= d <= MinDistance || Abs(cAvg - d) <= d / UNIFORM_DIST_DIV;
+                        UniformPath &= mapD <= MinMapDistance || Abs(cAvg - mapD) <= mapD / UNIFORM_DIST_DIV;
                     }
-                    distanceXY += d;
+                    distanceXY += mapD;
                 }
 
                 wayPoints.Push(points[i]);
             }
 
-            AvgDistance = wayPoints.Count > 1 ? Max(distanceXY / wayPoints.Count, MinDistance) : MinDistance;
+            AvgMapDistance = wayPoints.Count > 1 ? Max(distanceXY / wayPoints.Count, MinMapDistance) : MinMapDistance;
 
             if (debug)
-                LogDebug($"SetWayPoints: Added {wayPoints.Count} - Uniform ? {UniformPath} - AvgDistance: {AvgDistance} - TAvg: {DIFF_THRESHOLD * AvgDistance}");
+                LogDebug($"SetWayPoints: Added {wayPoints.Count} - Uniform ? {UniformPath} - AvgDistance: {AvgMapDistance} - TAvg: {DIFF_THRESHOLD * AvgMapDistance}");
 
             UpdateTotalRoute();
         }
@@ -349,30 +349,30 @@ namespace Core.Goals
         {
             routeToNextWaypoint.Clear();
 
-            Vector3 player = playerReader.PlayerLocation;
-            Vector3 target = wayPoints.Peek();
-            float distance = player.DistanceXYTo(target);
+            Vector3 playerMap = playerReader.MapPos;
+            Vector3 targetMap = wayPoints.Peek();
+            float mapDistance = playerMap.MapDistanceXYTo(targetMap);
             //if (distance > MaxDistance || distance > (AvgDistance + MinDistance))
-            if (distance > MaxDistance ||
-                (UniformPath ? distance > DIFF_THRESHOLD * AvgDistance : distance > DIFF_THRESHOLD * MinDistance))
+            if (mapDistance > MaxMapDistance ||
+                (UniformPath ? mapDistance > DIFF_THRESHOLD * AvgMapDistance : mapDistance > DIFF_THRESHOLD * MinMapDistance))
             {
                 if (debug)
-                    LogDebug($"Distance: {distance} vs Avg: {AvgDistance} - TAVG: {DIFF_THRESHOLD * AvgDistance} ");
+                    LogDebug($"Distance: {mapDistance} vs Avg: {AvgMapDistance} - TAVG: {DIFF_THRESHOLD * AvgMapDistance} ");
 
                 stopMoving.Stop();
-                PathRequest(new PathRequest(addonReader.UIMapId.Value, player, target, distance, PathCalculatedCallback));
+                PathRequest(new PathRequest(playerReader.UIMapId.Value, playerMap, targetMap, mapDistance, PathCalculatedCallback));
             }
             else
             {
                 if (debug)
-                    LogDebug($"non pathfinder - {distance} - {player} -> {target}");
+                    LogDebug($"non pathfinder - {mapDistance} - {playerMap} -> {targetMap}");
 
-                routeToNextWaypoint.Push(target);
+                routeToNextWaypoint.Push(targetMap);
 
-                float heading = DirectionCalculator.CalculateHeading(player, target);
+                float heading = DirectionCalculator.CalculateHeading(playerMap, targetMap);
                 AdjustHeading(heading, _cts.Token);
 
-                stuckDetector.SetTargetLocation(target);
+                stuckDetector.SetTargetLocation(targetMap);
                 UpdateTotalRoute();
             }
         }
@@ -455,19 +455,19 @@ namespace Core.Goals
 
         private float ReachedDistance(float minDistance)
         {
-            return mountHandler.IsMounted() ? MinDistanceMount : minDistance;
+            return mountHandler.IsMounted() ? MinMapDistanceMount : minDistance;
         }
 
         private void ReduceByDistance(float minDistance)
         {
-            Vector3 player = playerReader.PlayerLocation;
-            float distance = player.DistanceXYTo(routeToNextWaypoint.Peek());
-            while (distance < ReachedDistance(minDistance) && routeToNextWaypoint.Count > 0)
+            Vector3 playerMap = playerReader.MapPos;
+            float mapDistance = playerMap.MapDistanceXYTo(routeToNextWaypoint.Peek());
+            while (mapDistance < ReachedDistance(minDistance) && routeToNextWaypoint.Count > 0)
             {
                 routeToNextWaypoint.Pop();
                 if (routeToNextWaypoint.Count > 0)
                 {
-                    distance = player.DistanceXYTo(routeToNextWaypoint.Peek());
+                    mapDistance = playerMap.MapDistanceXYTo(routeToNextWaypoint.Peek());
                 }
             }
         }
@@ -485,7 +485,7 @@ namespace Core.Goals
                     stopMoving.Stop();
                 }
 
-                playerDirection.SetDirection(heading, routeToNextWaypoint.Peek(), MinDistance, ct);
+                playerDirection.SetDirection(heading, routeToNextWaypoint.Peek(), MinMapDistance, ct);
             }
         }
 
@@ -493,14 +493,14 @@ namespace Core.Goals
         {
             if (wayPoints.Count < 2) { return false; }
 
-            Vector3 A = wayPoints.Pop();
-            Vector3 B = wayPoints.Peek();
-            Vector2 result = VectorExt.GetClosestPointOnLineSegment(A.AsVector2(), B.AsVector2(), playerReader.PlayerLocation.AsVector2());
-            Vector3 newPoint = new(result.X, result.Y, playerReader.ZCoord);
+            Vector3 mapA = wayPoints.Pop();
+            Vector3 mapB = wayPoints.Peek();
+            Vector2 mapResult = VectorExt.GetClosestPointOnLineSegment(mapA.AsVector2(), mapB.AsVector2(), playerReader.MapPos.AsVector2());
+            Vector3 mapPoint = new(mapResult.X, mapResult.Y, playerReader.MapZ);
 
-            if (newPoint.DistanceXYTo(wayPoints.Peek()) > MinDistance)
+            if (mapPoint.MapDistanceXYTo(wayPoints.Peek()) > MinMapDistance)
             {
-                wayPoints.Push(newPoint);
+                wayPoints.Push(mapPoint);
                 if (debug)
                     LogDebug("Adjusted resume point");
 
@@ -515,27 +515,27 @@ namespace Core.Goals
 
         private void V1_AttemptToKeepRouteToWaypoint()
         {
-            float totalDistance = TotalRoute.Zip(TotalRoute.Skip(1), VectorExt.DistanceXY).Sum();
-            if (totalDistance > MaxDistance / 2)
+            float totalDistance = TotalRoute.Zip(TotalRoute.Skip(1), VectorExt.MapDistanceXY).Sum();
+            if (totalDistance > MaxMapDistance / 2)
             {
-                Vector3 location = playerReader.PlayerLocation;
-                float distanceToRoute = location.DistanceXYTo(routeToNextWaypoint.Peek());
-                float distanceToLastLoc = location.DistanceXYTo(playerLoc);
-                if (distanceToRoute > 2 * MinDistanceMount &&
-                    distanceToLastLoc > 2 * MinDistanceMount)
+                Vector3 playerMap = playerReader.MapPos;
+                float mapDistanceToRoute = playerMap.MapDistanceXYTo(routeToNextWaypoint.Peek());
+                float mapDistanceToPrevLoc = playerMap.MapDistanceXYTo(lastPlayerMap);
+                if (mapDistanceToRoute > 2 * MinMapDistanceMount &&
+                    mapDistanceToPrevLoc > 2 * MinMapDistanceMount)
                 {
-                    LogV1ClearRouteToWaypoint(logger, patherName, distanceToRoute);
+                    LogV1ClearRouteToWaypoint(logger, patherName, mapDistanceToRoute);
                     routeToNextWaypoint.Clear();
                 }
                 else
                 {
-                    LogV1KeepRouteToWaypoint(logger, patherName, distanceToRoute);
+                    LogV1KeepRouteToWaypoint(logger, patherName, mapDistanceToRoute);
                     ResetStuckParameters();
                 }
             }
             else
             {
-                LogV1ClearRouteToWaypointTooFar(logger, patherName, totalDistance, MaxDistance / 2);
+                LogV1ClearRouteToWaypointTooFar(logger, patherName, totalDistance, MaxMapDistance / 2);
                 routeToNextWaypoint.Clear();
             }
         }
