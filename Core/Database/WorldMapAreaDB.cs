@@ -37,7 +37,7 @@ namespace Core.Database
             return new Vector3(wma.ToWorldX(map.X), wma.ToWorldY(map.Y), map.Z);
         }
 
-        public Vector3 ToMap(Vector3 world, float mapId, int uiMap)
+        public Vector3 ToMap_FlipXY(Vector3 world, float mapId, int uiMap)
         {
             var wma = WorldMapAreaFactory.GetWorldMapArea(areas.Values, world.X, world.Y, mapId, uiMap);
             return new Vector3(wma.ToMapY(world.Y), wma.ToMapX(world.X), world.Z);

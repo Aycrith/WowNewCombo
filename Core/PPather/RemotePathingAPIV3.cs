@@ -73,17 +73,17 @@ namespace Core
             return ValueTask.CompletedTask;
         }
 
-        public ValueTask<Vector3[]> FindRoute(int uiMap, Vector3 mapFrom, Vector3 mapTo)
+        public Vector3[] FindMapRoute(int uiMap, Vector3 mapFrom, Vector3 mapTo)
         {
             if (!Client.IsConnected)
             {
-                return new(Array.Empty<Vector3>());
+                return Array.Empty<Vector3>();
             }
 
             try
             {
                 if (!worldMapAreaDB.TryGet(uiMap, out WorldMapArea area))
-                    return new(Array.Empty<Vector3>());
+                    return Array.Empty<Vector3>();
 
                 Vector3 worldFrom = worldMapAreaDB.ToWorld_FlipXY(uiMap, mapFrom);
                 Vector3 worldTo = worldMapAreaDB.ToWorld_FlipXY(uiMap, mapTo);
@@ -104,23 +104,23 @@ namespace Core
                     worldFrom.X, worldFrom.Y, worldFrom.Z, worldTo.X, worldTo.Y, worldTo.Z)).AsArray<Vector3>();
 
                 if (path.Length == 1 && path[0] == Vector3.Zero)
-                    return new(Array.Empty<Vector3>());
+                    return Array.Empty<Vector3>();
 
                 for (int i = 0; i < path.Length; i++)
                 {
                     if (debug)
                         LogInformation($"new float[] {{ {path[i].X}f, {path[i].Y}f, {path[i].Z}f }},");
 
-                    path[i] = worldMapAreaDB.ToMap(path[i], area.MapID, uiMap);
+                    path[i] = worldMapAreaDB.ToMap_FlipXY(path[i], area.MapID, uiMap);
                 }
 
-                return new(path);
+                return path;
             }
             catch (Exception ex)
             {
                 LogError($"Finding route from {mapFrom} to {mapTo}", ex);
                 Console.WriteLine(ex);
-                return new(Array.Empty<Vector3>());
+                return Array.Empty<Vector3>();
             }
         }
 

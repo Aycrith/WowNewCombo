@@ -61,12 +61,12 @@ namespace Core
             return ValueTask.CompletedTask;
         }
 
-        public ValueTask<Vector3[]> FindRoute(int uiMap, Vector3 mapFrom, Vector3 mapTo)
+        public Vector3[] FindMapRoute(int uiMap, Vector3 mapFrom, Vector3 mapTo)
         {
             if (!Enabled)
             {
                 LogWarning($"Pathing is disabled, please check the messages when the bot started.");
-                return new(Array.Empty<Vector3>());
+                return Array.Empty<Vector3>();
             }
 
             stopwatch.Restart();
@@ -78,7 +78,7 @@ namespace Core
                 if (debug)
                     LogWarning($"Failed to find a path from {mapFrom} to {mapTo}");
 
-                return new(Array.Empty<Vector3>());
+                return Array.Empty<Vector3>();
             }
             else
             {
@@ -97,7 +97,7 @@ namespace Core
             {
                 array[i] = service.ToLocal(path.locations[i], (int)service.SearchFrom!.Value.W, uiMap);
             }
-            return new(array);
+            return array;
         }
 
         #region Logging

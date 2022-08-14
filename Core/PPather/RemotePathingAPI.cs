@@ -47,20 +47,20 @@ namespace Core
 
         public async ValueTask DrawLines(List<LineArgs> lineArgs)
         {
-            using var client = new HttpClient();
-            using var content = new StringContent(JsonSerializer.Serialize(lineArgs, options), Encoding.UTF8, "application/json");
+            using HttpClient client = new();
+            using StringContent content = new(JsonSerializer.Serialize(lineArgs, options), Encoding.UTF8, "application/json");
             LogInformation($"Drawing lines '{string.Join(", ", lineArgs.Select(l => l.MapId))}'...");
             await client.PostAsync($"{api}Drawlines", content);
         }
 
         public async ValueTask DrawSphere(SphereArgs args)
         {
-            using var client = new HttpClient();
-            using var content = new StringContent(JsonSerializer.Serialize(args, options), Encoding.UTF8, "application/json");
+            using HttpClient client = new();
+            using StringContent content = new(JsonSerializer.Serialize(args, options), Encoding.UTF8, "application/json");
             await client.PostAsync($"{api}DrawSphere", content);
         }
 
-        public async ValueTask<Vector3[]> FindRoute(int uiMap, Vector3 mapFrom, Vector3 mapTo)
+        public Vector3[] FindMapRoute(int uiMap, Vector3 mapFrom, Vector3 mapTo)
         {
             try
             {
@@ -68,10 +68,11 @@ namespace Core
                 var url = $"{api}MapRoute?uimap1={uiMap}&x1={mapFrom.X}&y1={mapFrom.Y}&uimap2={uiMap}&x2={mapTo.X}&y2={mapTo.Y}";
 
                 stopwatch.Restart();
-                using var client = new HttpClient();
-                string responseString = await client.GetStringAsync(url);
+                using HttpClient client = new();
+                var task = client.GetStringAsync(url);
+                string response = task.GetAwaiter().GetResult();
                 LogInformation($"Finding route from {mapFrom} map {uiMap} to {mapTo} took {stopwatch.ElapsedMilliseconds} ms.");
-                return JsonSerializer.Deserialize<Vector3[]>(responseString, options) ?? Array.Empty<Vector3>();
+                return JsonSerializer.Deserialize<Vector3[]>(response, options) ?? Array.Empty<Vector3>();
             }
             catch (Exception ex)
             {
@@ -87,10 +88,9 @@ namespace Core
             {
                 var url = $"{api}SelfTest";
 
-                using var client = new HttpClient();
-                var responseString = await client.GetStringAsync(url);
-                var result = JsonSerializer.Deserialize<bool>(responseString);
-                return result;
+                using HttpClient client = new();
+                string response = await client.GetStringAsync(url);
+                return JsonSerializer.Deserialize<bool>(response);
             }
             catch (Exception ex)
             {

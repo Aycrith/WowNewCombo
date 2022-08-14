@@ -308,31 +308,31 @@ namespace Core.Goals
             return routeToNextWaypoint.Peek();
         }
 
-        public void SetWayPoints(Vector3[] points)
+        public void SetWayPoints(Vector3[] mapPoints)
         {
             wayPoints.Clear();
             routeToNextWaypoint.Clear();
 
             UniformPath = true;
-            float distanceXY = 0;
-            Array.Reverse(points);
-            for (int i = 0; i < points.Length; i++)
+            float mapDistanceXY = 0;
+            Array.Reverse(mapPoints);
+            for (int i = 0; i < mapPoints.Length; i++)
             {
                 if (i > 0)
                 {
-                    float mapD = points[i].MapDistanceXYTo(points[i - 1]);
+                    float mapD = mapPoints[i].MapDistanceXYTo(mapPoints[i - 1]);
                     if (i > 1)
                     {
-                        float cAvg = distanceXY / (i - 1);
+                        float cAvg = mapDistanceXY / (i - 1);
                         UniformPath &= mapD <= MinMapDistance || Abs(cAvg - mapD) <= mapD / UNIFORM_DIST_DIV;
                     }
-                    distanceXY += mapD;
+                    mapDistanceXY += mapD;
                 }
 
-                wayPoints.Push(points[i]);
+                wayPoints.Push(mapPoints[i]);
             }
 
-            AvgMapDistance = wayPoints.Count > 1 ? Max(distanceXY / wayPoints.Count, MinMapDistance) : MinMapDistance;
+            AvgMapDistance = wayPoints.Count > 1 ? Max(mapDistanceXY / wayPoints.Count, MinMapDistance) : MinMapDistance;
 
             if (debug)
                 LogDebug($"SetWayPoints: Added {wayPoints.Count} - Uniform ? {UniformPath} - AvgDistance: {AvgMapDistance} - TAvg: {DIFF_THRESHOLD * AvgMapDistance}");
@@ -432,14 +432,14 @@ namespace Core.Goals
             OnPathCalculated?.Invoke();
         }
 
-        private async void PathFinderThread()
+        private void PathFinderThread()
         {
             while (!_cts.IsCancellationRequested)
             {
                 manualReset.Reset();
                 if (pathRequests.TryPeek(out PathRequest pathRequest))
                 {
-                    var path = await pather.FindRoute(pathRequest.MapId, pathRequest.Start, pathRequest.End);
+                    Vector3[] path = pather.FindMapRoute(pathRequest.MapId, pathRequest.Start, pathRequest.End);
                     if (active)
                     {
                         pathResults.Enqueue(new PathResult(pathRequest, path, true, pathRequest.Callback));
