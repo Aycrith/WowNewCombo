@@ -97,10 +97,10 @@ namespace Core
             return false;
         }
 
-        public bool IsPlayerMoving(Vector3 lastPos)
+        public bool IsPlayerMoving(Vector3 map)
         {
-            float distance = playerReader.PlayerLocation.DistanceXYTo(lastPos);
-            return distance > MIN_DISTANCE;
+            float mapDistance = playerReader.MapPos.MapDistanceXYTo(map);
+            return mapDistance > MIN_DISTANCE;
         }
 
         private bool PlayerOrPetHasTarget()

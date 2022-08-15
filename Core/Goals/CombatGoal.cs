@@ -213,7 +213,7 @@ namespace Core.Goals
 
         private Vector3 GetCorpseLocation(float distance)
         {
-            return PointEstimator.GetPoint(playerReader.PlayerLocation, playerReader.Direction, distance);
+            return PointEstimator.GetPoint(playerReader.MapPos, playerReader.Direction, distance);
         }
     }
 }

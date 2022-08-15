@@ -41,8 +41,8 @@
     </div>
     <div class="col-sm">
         <h3><span style="color:orange">&#9650;</span> Player</h3>
-        <input type="text" class="col-sm-2 form-control" disabled="disabled" value="@addonReader.PlayerReader.XCoord" />
-        <input type="text" class="col-sm-2 form-control" disabled="disabled" value="@addonReader.PlayerReader.YCoord" />
+        <input type="text" class="col-sm-2 form-control" disabled="disabled" value="@addonReader.PlayerReader.MapX" />
+        <input type="text" class="col-sm-2 form-control" disabled="disabled" value="@addonReader.PlayerReader.MapY" />
         <hr>
     </div>
 </div>
@@ -53,7 +53,7 @@
             <svg width="@(Size)px" height="@(Size)px">
                 <g class="background"></g>
 
-                <g id="playerloc" transform='translate(@(routeInfo.ToCanvasPointX(addonReader.PlayerReader.XCoord)-5), @(routeInfo.ToCanvasPointY(addonReader.PlayerReader.YCoord)-5)) rotate(@PlayerDir 5 5)'>
+                <g id="playerloc" transform='translate(@(routeInfo.ToCanvasPointX(addonReader.PlayerReader.MapX)-5), @(routeInfo.ToCanvasPointY(addonReader.PlayerReader.MapY)-5)) rotate(@PlayerDir 5 5)'>
                     <svg width="10" height="10">
                         <polygon points="5,0 8.5,8.5 1.5,8.5 5,0" fill="orange" />
                     </svg>
@@ -255,16 +255,15 @@
         await JSRuntime.InvokeVoidAsync("dispose");
     }
 
-    private void OnAddonDataChanged()
+
+    private void OnAddonDataChangedAction()
     {
-        base.InvokeAsync(() =>
+        if (!UpdateRecording() && lastPlayerPoint != addonReader.PlayerReader.MapPos)
         {
-            if (!UpdateRecording() && lastPlayerPoint != addonReader.PlayerReader.PlayerLocation)
-            {
-                lastPlayerPoint = addonReader.PlayerReader.PlayerLocation;
-                UpdateRouteMarkup();
-                StateHasChanged();
-            }
+            lastPlayerPoint = addonReader.PlayerReader.MapPos;
+            UpdateRouteMarkup();
+            StateHasChanged();
+        }
 
         /*
         // requires async
@@ -276,7 +275,11 @@
 
         await JSRuntime.InvokeVoidAsync("focusAt", JsonConvert.SerializeObject(pp));
         */
-        });
+    }
+
+    private void OnAddonDataChanged()
+    {
+        base.InvokeAsync(OnAddonDataChangedAction);
     }
 
 
@@ -386,12 +389,12 @@
     {
         if (!recording) { return false; }
 
-        var location = addonReader.PlayerReader.PlayerLocation;
+        Vector3 map = addonReader.PlayerReader.MapPos;
 
         if (editPath.Count == 0 ||
-            location.DistanceXYTo(editPath.Last()) > Distance)
+            map.MapDistanceXYTo(editPath.Last()) > Distance)
         {
-            editPath.Add(location);
+            editPath.Add(map);
             UpdateRouteMarkup();
             return true;
         }
@@ -443,7 +446,7 @@
 
     protected void UpdateSelectedWithPlayer()
     {
-        UpdateSourcePoint(ref selectedPoint, addonReader.PlayerReader.PlayerLocation);
+        UpdateSourcePoint(ref selectedPoint, addonReader.PlayerReader.MapPos);
     }
 
     protected void UpdateSelectedWithPreview()
@@ -537,7 +540,7 @@
         int index = editPath.FindIndex(p => p == selectedPoint);
         if (index == -1) return;
 
-        var target = addonReader.PlayerReader.PlayerLocation;
+        var target = addonReader.PlayerReader.MapPos;
         editPath.Insert(index + 1, target);
 
         selectedPoint = target;

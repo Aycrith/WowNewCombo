@@ -6,28 +6,41 @@ namespace SharedLib.Extensions
 {
     public static class VectorExt
     {
-        public static List<Vector3> FromList(List<List<float>> points)
+        public static Vector3[] FromList(List<List<float>> points)
         {
-            List<Vector3> output = new();
-            points.ForEach(p => output.Add(new Vector3(p[0], p[1], 0)));
+            Vector3[] output = new Vector3[points.Count];
+            for (int i = 0; i < output.Length; i++)
+            {
+                output[i] = new(points[i][0], points[i][1], 0);
+            }
             return output;
         }
 
-        public static float DistanceXYTo(this Vector3 l1, in Vector3 l2)
+        public static float MapDistanceXYTo(this Vector3 l1, in Vector3 l2)
         {
-            return DistanceXY(l1, l2);
+            return MapDistanceXY(l1, l2);
         }
 
-        public static float DistanceXY(Vector3 l1, Vector3 l2)
+        public static float MapDistanceXY(Vector3 l1, Vector3 l2)
         {
             return Vector2.Distance(l1.AsVector2() * 100, l2.AsVector2() * 100); // would be nice to remove that 100 multiplier :sweat:
+        }
+
+        public static float WorldDistanceXYTo(this Vector3 l1, in Vector3 l2)
+        {
+            return WorldDistanceXY(l1, l2);
+        }
+
+        public static float WorldDistanceXY(Vector3 l1, Vector3 l2)
+        {
+            return Vector2.Distance(l1.AsVector2(), l2.AsVector2());
         }
 
         public static List<Vector3> ShortenRouteFromLocation(Vector3 location, List<Vector3> pointsList)
         {
             var result = new List<Vector3>();
 
-            var closestDistance = pointsList.Select(p => (point: p, distance: DistanceXYTo(location, p)))
+            var closestDistance = pointsList.Select(p => (point: p, distance: MapDistanceXYTo(location, p)))
                 .OrderBy(s => s.distance);
 
             var closestPoint = closestDistance.First();

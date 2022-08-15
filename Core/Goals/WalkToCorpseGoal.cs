@@ -27,7 +27,7 @@ namespace Core.Goals
 
         public DateTime LastActive => navigation.LastActive;
 
-        public List<Vector3> PathingRoute()
+        public Vector3[] PathingRoute()
         {
             return navigation.TotalRoute;
         }
@@ -37,9 +37,9 @@ namespace Core.Goals
             return navigation.HasNext();
         }
 
-        public Vector3 NextPoint()
+        public Vector3 NextMapPoint()
         {
-            return navigation.NextPoint();
+            return navigation.NextMapPoint();
         }
 
         #endregion
@@ -75,13 +75,13 @@ namespace Core.Goals
 
         public override void OnEnter()
         {
-            playerReader.ZCoord = 0;
+            playerReader.WorldPosZ = 0;
             addonReader.PlayerDied();
 
             wait.While(AliveOrLoadingScreen);
             Log($"Player teleported to the graveyard!");
 
-            var corpseLocation = playerReader.CorpseLocation;
+            var corpseLocation = playerReader.CorpseMapPos;
             Log($"Corpse location is {corpseLocation}");
 
             Deaths.Add(corpseLocation);
@@ -125,7 +125,7 @@ namespace Core.Goals
 
         private bool AliveOrLoadingScreen()
         {
-            return playerReader.CorpseLocation == Vector3.Zero;
+            return playerReader.CorpseMapPos == Vector3.Zero;
         }
 
         private void Log(string text)

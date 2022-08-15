@@ -19,7 +19,7 @@
                 <td>Route @routeSymbol</td>
                 <td>
                     <div class="float-right">
-                        [@addonReader.PlayerReader.XCoord.ToString("00.0000"),@addonReader.PlayerReader.YCoord.ToString("00.0000")] @(AreaName) (@addonReader.UIMapId.Value)
+                        [@addonReader.PlayerReader.MapX.ToString("00.0000"),@addonReader.PlayerReader.MapY.ToString("00.0000")] @(AreaName) (@addonReader.PlayerReader.UIMapId.Value)
                     </div>
                 </td>
             </tr>
@@ -40,7 +40,7 @@
 
                         @if (botController.RouteInfo != null)
                         {
-                            <g id="playerloc" transform='translate(@(botController.RouteInfo.ToCanvasPointX(addonReader.PlayerReader.XCoord)-5), @(botController.RouteInfo.ToCanvasPointY(addonReader.PlayerReader.YCoord)-5)) rotate(@PlayerDir 5 5)'>
+                            <g id="playerloc" transform='translate(@(botController.RouteInfo.ToCanvasPointX(addonReader.PlayerReader.MapX)-5), @(botController.RouteInfo.ToCanvasPointY(addonReader.PlayerReader.MapY)-5)) rotate(@PlayerDir 5 5)'>
                                 <svg width="10" height="10">
                                     <polygon points="5,0 8.5,8.5 1.5,8.5 5,0" fill="@colour" />
                                 </svg>
@@ -95,22 +95,21 @@
 
     public int margin = 10;
 
-    private MarkupString routeSymbol = new MarkupString();
+    private MarkupString routeSymbol = new();
 
-    private MarkupString RouteToWaypointLines = new MarkupString();
-    private MarkupString RouteToWaypointPoints = new MarkupString();
+    private MarkupString RouteToWaypointLines = new();
+    private MarkupString RouteToWaypointPoints = new();
 
-    private MarkupString PathLines = new MarkupString();
-    private MarkupString PathPoints = new MarkupString();
+    private MarkupString PathLines = new();
+    private MarkupString PathPoints = new();
 
     private Timer refreshTimer = new Timer();
 
     private float PlayerDir => -addonReader.PlayerReader.Direction * (180f / MathF.PI);
 
-    private List<Vector3> deaths = new List<Vector3>();
+    private List<Vector3> deaths = new();
 
     private string AreaName { get; set; } = string.Empty;
-
 
     protected override void OnInitialized()
     {
@@ -161,31 +160,37 @@
         RefreshPathMarkup();
     }
 
+    private void OnAddonDataChangedAction()
+    {
+        Update();
+        StateHasChanged();
+    }
+
     private void OnAddonDataChanged()
     {
-        base.InvokeAsync(() =>
-        {
-            Update();
-            StateHasChanged();
-        });
+        base.InvokeAsync(OnAddonDataChangedAction);
+    }
+
+    private void ActionZoneChangedAction()
+    {
+        UpdateZoneName();
+        StateHasChanged();
     }
 
     private void OnZoneChanged()
     {
-        base.InvokeAsync(() =>
-        {
-            UpdateZoneName();
-            StateHasChanged();
-        });
+        base.InvokeAsync(ActionZoneChangedAction);
+    }
+
+    private void OnPlayerDeathAction()
+    {
+        UpdateDeaths();
+        StateHasChanged();
     }
 
     private void OnPlayerDeath()
     {
-        base.InvokeAsync(() =>
-        {
-            UpdateDeaths();
-            StateHasChanged();
-        });
+        base.InvokeAsync(OnPlayerDeathAction);
     }
 
 
@@ -199,10 +204,11 @@
         this.PathLines = new MarkupString(routeinfo.RenderPathLines(paths));
         this.PathPoints = new MarkupString(routeinfo.RenderPathPoints(paths));
 
-        var waypoints = routeinfo.RouteToWaypoint;
-        if (waypoints != null)
+        if (routeinfo.RouteToWaypoint.Length > 0)
         {
-            var waylist = waypoints.ToArray();
+            var waylist = routeinfo.RouteToWaypoint.ToArray();
+            worldmapAreaDB.ToMap_FlipXY(addonReader.PlayerReader.UIMapId.Value, ref waylist);
+
             this.RouteToWaypointLines = new MarkupString(routeinfo.RenderPathLines(waylist));
             this.RouteToWaypointPoints = new MarkupString(routeinfo.RenderPathPoints(waylist));
         }
@@ -240,10 +246,7 @@
 
     private void UpdateZoneName()
     {
-        if (worldmapAreaDB.TryGet(addonReader.UIMapId.Value, out WorldMapArea wma))
-        {
-            AreaName = wma.AreaName;
-        }
+        AreaName = addonReader.PlayerReader.WorldMapArea.AreaName;
     }
 
     private void UpdateDeaths()

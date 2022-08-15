@@ -47,35 +47,58 @@ namespace Core
 
         public async ValueTask DrawLines(List<LineArgs> lineArgs)
         {
-            using var client = new HttpClient();
-            using var content = new StringContent(JsonSerializer.Serialize(lineArgs, options), Encoding.UTF8, "application/json");
+            using HttpClient client = new();
+            using StringContent content = new(JsonSerializer.Serialize(lineArgs, options), Encoding.UTF8, "application/json");
             LogInformation($"Drawing lines '{string.Join(", ", lineArgs.Select(l => l.MapId))}'...");
             await client.PostAsync($"{api}Drawlines", content);
         }
 
         public async ValueTask DrawSphere(SphereArgs args)
         {
-            using var client = new HttpClient();
-            using var content = new StringContent(JsonSerializer.Serialize(args, options), Encoding.UTF8, "application/json");
+            using HttpClient client = new();
+            using StringContent content = new(JsonSerializer.Serialize(args, options), Encoding.UTF8, "application/json");
             await client.PostAsync($"{api}DrawSphere", content);
         }
 
-        public async ValueTask<Vector3[]> FindRoute(int map, Vector3 fromPoint, Vector3 toPoint)
+        public Vector3[] FindMapRoute(int uiMap, Vector3 mapFrom, Vector3 mapTo)
         {
             try
             {
-                LogInformation($"Finding route from {fromPoint} map {map} to {toPoint} map {map}...");
-                var url = $"{api}MapRoute?uimap1={map}&x1={fromPoint.X}&y1={fromPoint.Y}&uimap2={map}&x2={toPoint.X}&y2={toPoint.Y}";
+                LogInformation($"Finding route from {mapFrom} map {uiMap} to {mapTo} map {uiMap}...");
+                var url = $"{api}MapRoute?uimap1={uiMap}&x1={mapFrom.X}&y1={mapFrom.Y}&uimap2={uiMap}&x2={mapTo.X}&y2={mapTo.Y}";
 
                 stopwatch.Restart();
-                using var client = new HttpClient();
-                string responseString = await client.GetStringAsync(url);
-                LogInformation($"Finding route from {fromPoint} map {map} to {toPoint} took {stopwatch.ElapsedMilliseconds} ms.");
-                return JsonSerializer.Deserialize<Vector3[]>(responseString, options) ?? Array.Empty<Vector3>();
+                using HttpClient client = new();
+                var task = client.GetStringAsync(url);
+                string response = task.GetAwaiter().GetResult();
+                LogInformation($"Finding route from {mapFrom} map {uiMap} to {mapTo} took {stopwatch.ElapsedMilliseconds} ms.");
+                return JsonSerializer.Deserialize<Vector3[]>(response, options) ?? Array.Empty<Vector3>();
             }
             catch (Exception ex)
             {
-                LogError($"Finding route from {fromPoint} to {toPoint}", ex);
+                LogError($"Finding route from {mapFrom} to {mapTo}", ex);
+                Console.WriteLine(ex);
+                return Array.Empty<Vector3>();
+            }
+        }
+
+        public Vector3[] FindWorldRoute(int uiMap, Vector3 worldFrom, Vector3 worldTo)
+        {
+            try
+            {
+                LogInformation($"Finding route from {worldFrom} map {uiMap} to {worldTo} map {uiMap}...");
+                var url =
+                    $"{api}WorldRoute2?x1={worldFrom.X}&y1={worldFrom.Y}&z1={worldFrom.Z}&x2={worldTo.X}&y2={worldTo.Y}&z2={worldTo.Z}&uimap={uiMap}";
+
+                stopwatch.Restart();
+                using HttpClient client = new();
+                string response = client.GetStringAsync(url).GetAwaiter().GetResult();
+                LogInformation($"Finding route from {worldFrom} map {uiMap} to {worldTo} took {stopwatch.ElapsedMilliseconds} ms.");
+                return JsonSerializer.Deserialize<Vector3[]>(response, options) ?? Array.Empty<Vector3>();
+            }
+            catch (Exception ex)
+            {
+                LogError($"Finding route from {worldFrom} to {worldTo}", ex);
                 Console.WriteLine(ex);
                 return Array.Empty<Vector3>();
             }
@@ -85,12 +108,11 @@ namespace Core
         {
             try
             {
-                var url = $"{api}SelfTest";
+                string url = $"{api}SelfTest";
 
-                using var client = new HttpClient();
-                var responseString = await client.GetStringAsync(url);
-                var result = JsonSerializer.Deserialize<bool>(responseString);
-                return result;
+                using HttpClient client = new();
+                string response = await client.GetStringAsync(url);
+                return JsonSerializer.Deserialize<bool>(response);
             }
             catch (Exception ex)
             {

@@ -26,7 +26,7 @@ namespace Core.Goals
         private DateTime approachStart;
 
         private double nextStuckCheckTime;
-        private Vector3 lastPlayerLocation;
+        private Vector3 playerMap;
 
         private int initialTargetGuid;
         private float initialMinRange;
@@ -66,7 +66,7 @@ namespace Core.Goals
         {
             initialTargetGuid = playerReader.TargetGuid;
             initialMinRange = playerReader.MinRange();
-            lastPlayerLocation = playerReader.PlayerLocation;
+            playerMap = playerReader.MapPos;
 
             combatUtil.Update();
 
@@ -107,8 +107,8 @@ namespace Core.Goals
             {
                 SetNextStuckTimeCheck();
 
-                Vector3 last = lastPlayerLocation;
-                lastPlayerLocation = playerReader.PlayerLocation;
+                Vector3 last = playerMap;
+                playerMap = playerReader.MapPos;
                 if (!combatUtil.IsPlayerMoving(last))
                 {
                     if (playerReader.LastUIError == UI_ERROR.ERR_AUTOFOLLOW_TOO_FAR)

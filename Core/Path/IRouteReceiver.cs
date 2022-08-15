@@ -4,6 +4,6 @@ namespace Core
 {
     public interface IEditedRouteReceiver
     {
-        void ReceivePath(Vector3[] newRoute);
+        void ReceivePath(Vector3[] newMapRoute);
     }
 }

@@ -7,7 +7,8 @@ namespace Core
 {
     public interface IPPather
     {
-        ValueTask<Vector3[]> FindRoute(int map, Vector3 fromPoint, Vector3 toPoint);
+        Vector3[] FindMapRoute(int uiMap, Vector3 mapFrom, Vector3 mapTo);
+        Vector3[] FindWorldRoute(int uiMap, Vector3 worldFrom, Vector3 worldTo);
         ValueTask DrawLines(List<LineArgs> lineArgs);
         ValueTask DrawSphere(SphereArgs args);
     }

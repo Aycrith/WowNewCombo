@@ -18,6 +18,6 @@ namespace WowheadDB
         public string description;
 
         [JsonIgnore]
-        public List<Vector3> points => VectorExt.FromList(coords);
+        public Vector3[] MapCoords => VectorExt.FromList(coords);
     }
 }

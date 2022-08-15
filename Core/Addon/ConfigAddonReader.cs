@@ -24,8 +24,6 @@ namespace Core.Addon
 
         public string TargetName => throw new NotImplementedException();
 
-        public RecordInt UIMapId => throw new NotImplementedException();
-
         public event Action? AddonDataChanged;
 
 #pragma warning disable CS0067 // The event is never used

@@ -42,6 +42,20 @@
             <param name="mapid">from ["Azeroth=0", "Kalimdor=1", "Northrend=??", "Expansion01=530"] e.g. Kalimdor</param>
             <returns>A list of x,y,z</returns>
         </member>
+        <member name="M:PathingAPI.Controllers.PPatherController.WorldRoute2(System.Single,System.Single,System.Single,System.Single,System.Single,System.Single,System.Int32)">
+            <summary>
+            Allows a route to be calculated from one point to another using world coords.
+            e.g. -896, -3770, 11, (Barrens,Rachet) to -441, -2596, 96, (Barrens,Crossroads,Barrens)
+            </summary>
+            <param name="x1">from X e.g. -896</param>
+            <param name="y1">from Y e.g. -3770</param>
+            <param name="z1">from Y e.g. 11</param>
+            <param name="x2">to X e.g. -441</param>
+            <param name="y2">to Y e.g. -2596</param>
+            <param name="z2">from Y e.g. 96</param>
+            <param name="uimap">todo</param>
+            <returns>A list of x,y,z</returns>
+        </member>
         <member name="M:PathingAPI.Controllers.PPatherController.Drawlines(System.Collections.Generic.List{PPather.Data.LineArgs})">
             <summary>
             Draws lines on the landscape

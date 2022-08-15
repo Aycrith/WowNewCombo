@@ -1,6 +1,10 @@
 ﻿using Core.Goals;
+
 using Microsoft.Extensions.Logging;
+
+using SharedLib;
 using SharedLib.Extensions;
+
 using System;
 using System.Numerics;
 
@@ -12,8 +16,8 @@ namespace Core
     {
         private const bool debug = false;
 
-        private const float MIN_RANGE_DIFF = 5;
-        private const float MIN_DISTANCE = 1;
+        private const float MIN_RANGE_DIFF = 2f;
+        private const float MIN_DISTANCE = 0.2f;
         private const float MAX_RANGE = 999999;
         private const double UNSTUCK_AFTER_MS = 2000;
         private const double ACTION_STUCK_TIME = 3000;
@@ -25,7 +29,8 @@ namespace Core
         private readonly PlayerDirection playerDirection;
         private readonly StopMoving stopMoving;
 
-        private Vector3 target;
+        private Vector3 worldTarget;
+
         private float prevDistance = MAX_RANGE;
         private DateTime startTime;
         private DateTime attemptTime;
@@ -45,11 +50,11 @@ namespace Core
             Reset();
         }
 
-        public void SetTargetLocation(Vector3 target)
+        public void SetTargetLocation(Vector3 worldTarget)
         {
-            if (this.target != target)
+            if (this.worldTarget != worldTarget)
             {
-                this.target = target;
+                this.worldTarget = worldTarget;
                 Reset();
             }
         }
@@ -88,8 +93,9 @@ namespace Core
 
                 input.Jump();
 
-                float heading = DirectionCalculator.CalculateHeading(playerReader.PlayerLocation, target);
-                playerDirection.SetDirection(heading, target);
+                Vector3 targetM = WorldMapAreaDB.ToMap_FlipXY(worldTarget, playerReader.WorldMapArea);
+                float heading = DirectionCalculator.CalculateMapHeading(playerReader.MapPos, targetM);
+                playerDirection.SetDirection(heading, targetM);
 
                 attemptTime = DateTime.UtcNow;
             }
@@ -101,8 +107,8 @@ namespace Core
 
         public bool IsGettingCloser()
         {
-            float distance = playerReader.PlayerLocation.DistanceXYTo(target);
-            if (distance < prevDistance - MIN_RANGE_DIFF)
+            float distance = playerReader.WorldPos.WorldDistanceXYTo(worldTarget);
+            if (distance <= prevDistance - MIN_RANGE_DIFF)
             {
                 Reset();
                 prevDistance = distance;
@@ -114,7 +120,7 @@ namespace Core
 
         public bool IsMoving()
         {
-            float distance = playerReader.PlayerLocation.DistanceXYTo(target);
+            float distance = playerReader.WorldPos.WorldDistanceXYTo(worldTarget);
             if (MathF.Abs(distance - prevDistance) > MIN_DISTANCE)
             {
                 Reset();

@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using PPather;
 using PPather.Data;
 using PPather.Graph;
-using SharedLib;
 using System.Collections.Generic;
 using System.Linq;
 using WowTriangles;
@@ -68,7 +67,7 @@ namespace PathingAPI.Controllers
             Vector3[] array = path.locations.ToArray();
             for (int i = 0; i < array.Length; i++)
             {
-                array[i] = service.ToLocal(array[i], (int)service.SearchFrom.Value.W, uimap1);
+                array[i] = service.ToLocal(array[i], (int)service.SearchFrom.W, uimap1);
             }
 
             isBusy = false;
@@ -94,12 +93,46 @@ namespace PathingAPI.Controllers
             isBusy = true;
             service.SetLocations(new(x1, y1, z1, mapid), new(x2, y2, z2, mapid));
             var path = service.DoSearch(PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
-            if (path != null)
+            if (path == null)
             {
-                service.Save();
+                isBusy = false;
+                return new JsonResult(System.Array.Empty<Vector3>());
             }
+
+            service.Save();
             isBusy = false;
-            return new JsonResult(path);
+
+            return new JsonResult(path.locations);
+        }
+
+        /// <summary>
+        /// Allows a route to be calculated from one point to another using world coords.
+        /// e.g. -896, -3770, 11, (Barrens,Rachet) to -441, -2596, 96, (Barrens,Crossroads,Barrens)
+        /// </summary>
+        /// <param name="x1">from X e.g. -896</param>
+        /// <param name="y1">from Y e.g. -3770</param>
+        /// <param name="z1">from Y e.g. 11</param>
+        /// <param name="x2">to X e.g. -441</param>
+        /// <param name="y2">to Y e.g. -2596</param>
+        /// <param name="z2">from Y e.g. 96</param>
+        /// <param name="uimap">todo</param>
+        /// <returns>A list of x,y,z</returns>
+        [HttpGet("WorldRoute2")]
+        [Produces("application/json")]
+        public JsonResult WorldRoute2(float x1, float y1, float z1, float x2, float y2, float z2, int uimap)
+        {
+            isBusy = true;
+            service.SetLocations(service.ToWorldZ(uimap, x1, y1, z1), service.ToWorldZ(uimap, x2, y2, z2));
+            var path = service.DoSearch(PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
+            if (path == null)
+            {
+                isBusy = false;
+                return new JsonResult(System.Array.Empty<Vector3>());
+            }
+            service.Save();
+            isBusy = false;
+
+            return new JsonResult(path.locations);
         }
 
         /// <summary>

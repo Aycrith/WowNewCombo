@@ -9,6 +9,8 @@ using System.Numerics;
 using System.Threading.Tasks;
 using WowTriangles;
 using System;
+using Core.Database;
+using SharedLib;
 
 #pragma warning disable 162
 
@@ -61,47 +63,76 @@ namespace Core
             return ValueTask.CompletedTask;
         }
 
-        public ValueTask<Vector3[]> FindRoute(int uimap, Vector3 fromPoint, Vector3 toPoint)
+        public Vector3[] FindMapRoute(int uiMap, Vector3 mapFrom, Vector3 mapTo)
         {
             if (!Enabled)
             {
                 LogWarning($"Pathing is disabled, please check the messages when the bot started.");
-                return new(Array.Empty<Vector3>());
+                return Array.Empty<Vector3>();
             }
 
             stopwatch.Restart();
 
-            service.SetLocations(service.ToWorld(uimap, fromPoint.X, fromPoint.Y, fromPoint.Z), service.ToWorld(uimap, toPoint.X, toPoint.Y));
-            var path = service.DoSearch(PPather.Graph.PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
-
-            stopwatch.Stop();
-
+            service.SetLocations(service.ToWorld(uiMap, mapFrom.X, mapFrom.Y, mapFrom.Z), service.ToWorld(uiMap, mapTo.X, mapTo.Y));
+            PPather.Graph.Path path = service.DoSearch(PPather.Graph.PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
             if (path == null)
             {
                 if (debug)
-                    LogWarning($"Failed to find a path from {fromPoint} to {toPoint}");
+                    LogWarning($"Failed to find a path from {mapFrom} to {mapTo}");
 
-                return new(Array.Empty<Vector3>());
+                return Array.Empty<Vector3>();
             }
-            else
-            {
-                if (debug)
-                    LogDebug($"Finding route from {fromPoint} map {uimap} to {toPoint} took {stopwatch.ElapsedMilliseconds} ms.");
 
-                if ((DateTime.UtcNow - lastSave).TotalMinutes >= 1)
-                {
-                    service.Save();
-                    lastSave = DateTime.UtcNow;
-                }
+            if (debug)
+                LogDebug($"Finding route from {mapFrom} map {uiMap} to {mapTo} took {stopwatch.ElapsedMilliseconds} ms.");
+
+            if ((DateTime.UtcNow - lastSave).TotalMinutes >= 1)
+            {
+                service.Save();
+                lastSave = DateTime.UtcNow;
             }
 
             Vector3[] array = new Vector3[path.locations.Count];
             for (int i = 0; i < array.Length; i++)
             {
-                array[i] = service.ToLocal(path.locations[i], (int)service.SearchFrom!.Value.W, uimap);
+                array[i] = service.ToLocal(path.locations[i], (int)service.SearchFrom.W, uiMap);
             }
-            return new(array);
+            return array;
         }
+
+        public Vector3[] FindWorldRoute(int uiMap, Vector3 worldFrom, Vector3 worldTo)
+        {
+            if (!Enabled)
+            {
+                LogWarning($"Pathing is disabled, please check the messages when the bot started.");
+                return Array.Empty<Vector3>();
+            }
+
+            stopwatch.Restart();
+
+            service.SetLocations(service.ToWorldZ(uiMap, worldFrom.X, worldFrom.Y, worldFrom.Z), service.ToWorldZ(uiMap, worldTo.X, worldTo.Y, worldTo.Z));
+
+            PPather.Graph.Path path = service.DoSearch(PPather.Graph.PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
+            if (path == null)
+            {
+                if (debug)
+                    LogWarning($"Failed to find a path from {worldFrom} to {worldTo}");
+
+                return Array.Empty<Vector3>();
+            }
+
+            if (debug)
+                LogDebug($"Finding route from {worldFrom} map {uiMap} to {worldTo} took {stopwatch.ElapsedMilliseconds} ms.");
+
+            if ((DateTime.UtcNow - lastSave).TotalMinutes >= 1)
+            {
+                service.Save();
+                lastSave = DateTime.UtcNow;
+            }
+
+            return path.locations.ToArray();
+        }
+
 
         #region Logging
 

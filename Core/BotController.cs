@@ -201,9 +201,9 @@ namespace Core
             {
                 _ = pather.DrawSphere(
                     new SphereArgs("Player",
-                    AddonReader.PlayerReader.PlayerLocation,
+                    AddonReader.PlayerReader.MapPos,
                     AddonReader.PlayerReader.Bits.PlayerInCombat() ? 1 : AddonReader.PlayerReader.Bits.HasTarget() ? 6 : 2,
-                    AddonReader.UIMapId.Value
+                    AddonReader.PlayerReader.UIMapId.Value
                 ));
 
                 cts.Token.WaitHandle.WaitOne(remotePathingTickMs);

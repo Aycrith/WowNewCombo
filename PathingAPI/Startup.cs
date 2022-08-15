@@ -11,6 +11,7 @@ using Serilog;
 using Serilog.Extensions.Logging;
 using PPather;
 using SharedLib.Converters;
+using SharedLib;
 
 namespace PathingAPI
 {
@@ -45,6 +46,7 @@ namespace PathingAPI
             services.AddRazorPages();
             services.AddServerSideBlazor();
             services.AddSingleton<DataConfig>(x => DataConfig.Load()); // going to use the Hardcoded DataConfig.Exp
+            services.AddSingleton<WorldMapAreaDB>();
             services.AddSingleton<PPatherService>();
             services.AddControllers().AddJsonOptions(options =>
             {

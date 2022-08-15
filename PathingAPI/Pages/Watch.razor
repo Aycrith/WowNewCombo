@@ -38,8 +38,8 @@
     private CancellationTokenSource cts;
     private JsonSerializerOptions options;
 
-    private Vector3 lastFrom;
-    private Vector3 lastTo;
+    private Vector4 lastFrom;
+    private Vector4 lastTo;
     private Vector3 lastClosest;
     private Vector3 lastPeek;
 
@@ -110,31 +110,33 @@
                 }
             }
 
-            if (pPatherService.SearchFrom.HasValue && pPatherService.SearchTo.HasValue &&
-                lastFrom.X != pPatherService.SearchFrom.Value.X)
+            if (lastFrom != pPatherService.SearchFrom)
             {
-                lastFrom = pPatherService.SearchFrom.Value.AsVector3();
-                lastTo = pPatherService.SearchTo.Value.AsVector3();
-
+                lastFrom = pPatherService.SearchFrom;
                 await jsRuntime.InvokeVoidAsync("drawLine",
-                    JsonSerializer.Serialize(lastFrom, options), 2, "start2");
-                await jsRuntime.InvokeVoidAsync("drawLine",
-                    JsonSerializer.Serialize(lastTo, options), 3, "end");
+                    JsonSerializer.Serialize(lastFrom.AsVector3(), options), 2, "start2");
             }
 
-            if (pPatherService.ClosestLocation.HasValue &&
-                lastClosest.X != pPatherService.ClosestLocation.Value.X)
+            if (lastTo != pPatherService.SearchTo)
             {
+                lastTo = pPatherService.SearchTo;
                 await jsRuntime.InvokeVoidAsync("drawLine",
-                    JsonSerializer.Serialize(pPatherService.ClosestLocation.Value, options), 5, "closest");
-                lastClosest = pPatherService.ClosestLocation.Value;
+                    JsonSerializer.Serialize(lastTo.AsVector3(), options), 3, "endd");
             }
 
-            if (pPatherService.PeekLocation.HasValue && lastPeek.X != pPatherService.PeekLocation.Value.X)
+            if (lastClosest != pPatherService.ClosestLocation)
             {
+                lastClosest = pPatherService.ClosestLocation;
                 await jsRuntime.InvokeVoidAsync("drawLine",
-                    JsonSerializer.Serialize(pPatherService.PeekLocation.Value, options), 6, "peek");
-                lastPeek = pPatherService.PeekLocation.Value;
+                    JsonSerializer.Serialize(pPatherService.ClosestLocation, options), 5, "closest");
+            }
+
+            if (lastPeek != pPatherService.PeekLocation)
+            {
+                lastPeek = pPatherService.PeekLocation;
+
+                await jsRuntime.InvokeVoidAsync("drawLine",
+                    JsonSerializer.Serialize(pPatherService.PeekLocation, options), 6, "peek");
             }
 
             cts.Token.WaitHandle.WaitOne(100);
@@ -159,9 +161,6 @@
                 JsonSerializer.Serialize(spotPath.locations, options), PathColour, Name);
 
             await jsRuntime.InvokeVoidAsync("removeMeshes", "search");
-            await jsRuntime.InvokeVoidAsync("removeMeshes", "closest");
-            await jsRuntime.InvokeVoidAsync("removeMeshes", "end");
-
             cts?.Cancel();
         }
         else

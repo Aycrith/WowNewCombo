@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PPather.Data;
-using Core.Database;
 using System.Threading;
 using AnTCP.Client;
 using SharedLib;
@@ -39,9 +38,8 @@ namespace Core
         private readonly ILogger logger;
         private readonly WorldMapAreaDB worldMapAreaDB;
 
-        private AnTcpClient Client { get; }
-        private Thread ConnectionWatchdog { get; }
-
+        private readonly AnTcpClient Client;
+        private readonly Thread ConnectionWatchdog;
         private readonly CancellationTokenSource cts;
 
         public RemotePathingAPIV3(ILogger logger, string ip, int port, WorldMapAreaDB worldMapAreaDB)
@@ -73,54 +71,90 @@ namespace Core
             return ValueTask.CompletedTask;
         }
 
-        public ValueTask<Vector3[]> FindRoute(int uiMapId, Vector3 fromPoint, Vector3 toPoint)
+        public Vector3[] FindMapRoute(int uiMap, Vector3 mapFrom, Vector3 mapTo)
         {
             if (!Client.IsConnected)
-            {
-                return new(Array.Empty<Vector3>());
-            }
+                return Array.Empty<Vector3>();
+
+            if (!worldMapAreaDB.TryGet(uiMap, out WorldMapArea area))
+                return Array.Empty<Vector3>();
 
             try
             {
-                if (!worldMapAreaDB.TryGet(uiMapId, out WorldMapArea area))
-                    return new(Array.Empty<Vector3>());
-
-                Vector3 start = worldMapAreaDB.ToWorld(uiMapId, fromPoint, true);
-                Vector3 end = worldMapAreaDB.ToWorld(uiMapId, toPoint, true);
+                Vector3 worldFrom = worldMapAreaDB.ToWorld_FlipXY(uiMap, mapFrom);
+                Vector3 worldTo = worldMapAreaDB.ToWorld_FlipXY(uiMap, mapTo);
 
                 // incase haven't asked a pathfinder for a route this value will be 0
                 // that case use the highest location
-                if (start.Z == 0)
+                if (worldFrom.Z == 0)
                 {
-                    start.Z = area.LocTop / 2;
-                    end.Z = area.LocTop / 2;
+                    worldFrom.Z = area.LocTop / 2;
+                    worldTo.Z = area.LocTop / 2;
                 }
 
                 if (debug)
-                    LogInformation($"Finding route from {fromPoint}({start}) map {uiMapId} to {toPoint}({end}) map {uiMapId}...");
+                    LogInformation($"Finding map route from {mapFrom}({worldFrom}) map {uiMap} to {mapTo}({worldTo}) map {uiMap}...");
 
                 Vector3[] path = Client.Send((byte)EMessageType.PATH,
                     (area.MapID, PathRequestFlags.FIND_LOCATION | PathRequestFlags.CATMULLROM,
-                    start.X, start.Y, start.Z, end.X, end.Y, end.Z)).AsArray<Vector3>();
+                    worldFrom.X, worldFrom.Y, worldFrom.Z, worldTo.X, worldTo.Y, worldTo.Z)).AsArray<Vector3>();
 
                 if (path.Length == 1 && path[0] == Vector3.Zero)
-                    return new(Array.Empty<Vector3>());
+                    return Array.Empty<Vector3>();
 
                 for (int i = 0; i < path.Length; i++)
                 {
                     if (debug)
                         LogInformation($"new float[] {{ {path[i].X}f, {path[i].Y}f, {path[i].Z}f }},");
 
-                    path[i] = worldMapAreaDB.ToLocal(path[i], area.MapID, uiMapId);
+                    path[i] = worldMapAreaDB.ToMap_FlipXY(path[i], area.MapID, uiMap);
                 }
 
-                return new(path);
+                return path;
             }
             catch (Exception ex)
             {
-                LogError($"Finding route from {fromPoint} to {toPoint}", ex);
+                LogError($"Finding map route from {mapFrom} to {mapTo}", ex);
                 Console.WriteLine(ex);
-                return new(Array.Empty<Vector3>());
+                return Array.Empty<Vector3>();
+            }
+        }
+
+        public Vector3[] FindWorldRoute(int uiMap, Vector3 worldFrom, Vector3 worldTo)
+        {
+            if (!Client.IsConnected)
+                return Array.Empty<Vector3>();
+
+            if (!worldMapAreaDB.TryGet(uiMap, out WorldMapArea area))
+                return Array.Empty<Vector3>();
+
+            try
+            {
+                // incase haven't asked a pathfinder for a route this value will be 0
+                // that case use the highest location
+                if (worldFrom.Z == 0)
+                {
+                    worldFrom.Z = area.LocTop / 2;
+                    worldTo.Z = area.LocTop / 2;
+                }
+
+                if (debug)
+                    LogInformation($"Finding world route from {worldFrom}({worldFrom}) map {uiMap} to {worldTo}({worldTo}) map {uiMap}...");
+
+                Vector3[] path = Client.Send((byte)EMessageType.PATH,
+                    (area.MapID, PathRequestFlags.FIND_LOCATION | PathRequestFlags.CATMULLROM,
+                    worldFrom.X, worldFrom.Y, worldFrom.Z, worldTo.X, worldTo.Y, worldTo.Z)).AsArray<Vector3>();
+
+                if (path.Length == 1 && path[0] == Vector3.Zero)
+                    return Array.Empty<Vector3>();
+
+                return path;
+            }
+            catch (Exception ex)
+            {
+                LogError($"Finding world route from {worldFrom} to {worldTo}", ex);
+                Console.WriteLine(ex);
+                return Array.Empty<Vector3>();
             }
         }
 

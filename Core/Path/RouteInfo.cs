@@ -6,29 +6,30 @@ using System.Text;
 
 using Core.Database;
 
+using SharedLib;
+
 using WowheadDB;
 
 namespace Core
 {
-    public class RouteInfoPoi
+    public readonly struct RouteInfoPoi
     {
-        public Vector3 Location { get; }
-        public string Name { get; }
-        public string Color { get; }
-
-        public double Radius { get; }
+        public readonly Vector3 MapLoc;
+        public readonly string Name;
+        public readonly string Color;
+        public readonly float Radius;
 
         public RouteInfoPoi(NPC npc, string color)
         {
-            Location = npc.points.First();
+            MapLoc = npc.MapCoords[0];
             Name = npc.name;
             Color = color;
             Radius = 1;
         }
 
-        public RouteInfoPoi(Vector3 wowPoint, string name, string color, double radius)
+        public RouteInfoPoi(Vector3 mapLoc, string name, string color, float radius)
         {
-            Location = wowPoint;
+            MapLoc = mapLoc;
             Name = name;
             Color = color;
             Radius = radius;
@@ -39,44 +40,37 @@ namespace Core
     {
         public Vector3[] Route { get; private set; }
 
-        public List<Vector3>? RouteToWaypoint
-        {
-            get
-            {
-                if (pathedRoutes.Any())
-                {
-                    return pathedRoutes.OrderByDescending(x => x.LastActive).First().PathingRoute();
-                }
-                return default;
-            }
-        }
+        public Vector3[] RouteToWaypoint => pathedRoutes.Any()
+                    ? pathedRoutes.OrderByDescending(x => x.LastActive).First().PathingRoute()
+                    : Array.Empty<Vector3>();
 
         private readonly IEnumerable<IRouteProvider> pathedRoutes;
         private readonly AreaDB areaDB;
         private readonly PlayerReader playerReader;
+        private readonly WorldMapAreaDB worldmapAreaDB;
 
         public List<RouteInfoPoi> PoiList { get; } = new();
 
-        private double min;
-        private double diff;
+        private float min;
+        private float diff;
 
-        private double addY;
-        private double addX;
+        private float addY;
+        private float addX;
 
         private int margin;
         private int canvasSize;
 
-        private double pointToGrid;
+        private float pointToGrid;
 
         private const int dSize = 2;
 
-        public RouteInfo(Vector3[] route, IEnumerable<IRouteProvider> pathedRoutes, PlayerReader playerReader, AreaDB areaDB)
+        public RouteInfo(Vector3[] route, IEnumerable<IRouteProvider> pathedRoutes, PlayerReader playerReader, AreaDB areaDB, WorldMapAreaDB worldmapAreaDB)
         {
             this.Route = route;
             this.pathedRoutes = pathedRoutes;
-
             this.playerReader = playerReader;
             this.areaDB = areaDB;
+            this.worldmapAreaDB = worldmapAreaDB;
 
             this.areaDB.Changed += OnZoneChanged;
             OnZoneChanged();
@@ -89,12 +83,11 @@ namespace Core
             areaDB.Changed -= OnZoneChanged;
         }
 
-        public void UpdateRoute(IEnumerable<Vector3> newRoute)
+        public void UpdateRoute(Vector3[] newMapRoute)
         {
-            Route = newRoute.ToArray();
+            Route = newMapRoute;
 
-            IEnumerable<IEditedRouteReceiver> routeReceivers = pathedRoutes.Where(a => a is IEditedRouteReceiver).Cast<IEditedRouteReceiver>();
-            foreach (IEditedRouteReceiver receiver in routeReceivers)
+            foreach (IEditedRouteReceiver receiver in pathedRoutes.OfType<IEditedRouteReceiver>())
             {
                 receiver.ReceivePath(Route);
             }
@@ -114,21 +107,21 @@ namespace Core
 
         public void CalculatePointToGrid()
         {
-            pointToGrid = ((double)canvasSize - (margin * 2)) / diff;
+            pointToGrid = ((float)canvasSize - (margin * 2)) / diff;
             CalculateDiffs();
         }
 
-        public int ToCanvasPointX(double value)
+        public int ToCanvasPointX(float value)
         {
             return (int)(margin + ((value + addX - min) * pointToGrid));
         }
 
-        public int ToCanvasPointY(double value)
+        public int ToCanvasPointY(float value)
         {
             return (int)(margin + ((value + addY - min) * pointToGrid));
         }
 
-        public double DistanceToGrid(int value)
+        public float DistanceToGrid(int value)
         {
             return value / 100f * pointToGrid;
         }
@@ -169,24 +162,38 @@ namespace Core
 
         private void CalculateDiffs()
         {
+            /*
+            TODO> route disappears after time?
+            Vector3[] pois = PoiList.Select(p => p.MapLoc).ToArray();
+            Vector3[] route = Route.ToArray();
+            Vector3[] navigation = RouteToWaypoint.ToArray();
+            worldmapAreaDB.ToMap_FlipXY(playerReader.UIMapId.Value, ref navigation);
+
+            Vector3[] allPoints = new Vector3[route.Length + navigation.Length + pois.Length];
+            Array.Copy(Route, allPoints, route.Length);
+            Array.ConstrainedCopy(navigation, 0, allPoints, route.Length, navigation.Length);
+            Array.ConstrainedCopy(pois, 0, allPoints, route.Length + navigation.Length, pois.Length);
+            allPoints[^1] = playerReader.MapPos;
+            */
+
             var allPoints = Route.ToList();
 
-            var wayPoints = RouteToWaypoint;
-            if (wayPoints != null)
-                allPoints.AddRange(wayPoints);
+            Vector3[] navigation = RouteToWaypoint.ToArray();
+            worldmapAreaDB.ToMap_FlipXY(playerReader.UIMapId.Value, ref navigation);
+            allPoints.AddRange(navigation);
 
-            var pois = PoiList.Select(p => p.Location);
+            var pois = PoiList.Select(p => p.MapLoc);
             allPoints.AddRange(pois);
 
-            allPoints.Add(playerReader.PlayerLocation);
+            allPoints.Add(playerReader.MapPos);
 
-            var maxX = allPoints.Max(s => s.X);
-            var minX = allPoints.Min(s => s.X);
-            var diffX = maxX - minX;
+            float maxX = allPoints.Max(s => s.X);
+            float minX = allPoints.Min(s => s.X);
+            float diffX = maxX - minX;
 
-            var maxY = allPoints.Max(s => s.Y);
-            var minY = allPoints.Min(s => s.Y);
-            var diffY = maxY - minY;
+            float maxY = allPoints.Max(s => s.Y);
+            float minY = allPoints.Min(s => s.Y);
+            float diffY = maxY - minY;
 
             this.addY = 0;
             this.addX = 0;
@@ -217,8 +224,8 @@ namespace Core
             return sb.ToString();
         }
 
-        private readonly string first = "<br><b>First</b>";
-        private readonly string last = "<br><b>Last</b>";
+        private const string first = "<br><b>First</b>";
+        private const string last = "<br><b>Last</b>";
 
         public string RenderPathPoints(Vector3[] path)
         {
@@ -239,7 +246,7 @@ namespace Core
             if (route == null || !route.HasNext())
                 return Vector3.Zero;
 
-            return route.NextPoint();
+            return route.NextMapPoint();
         }
 
         public string RenderNextPoint()
@@ -259,7 +266,7 @@ namespace Core
 
         public string DrawPoi(RouteInfoPoi poi)
         {
-            return $"<circle onmousemove=\"showTooltip(evt, '{poi.Name}<br/>{poi.Location.X},{poi.Location.Y}');\" onmouseout=\"hideTooltip();\" cx='{ToCanvasPointX(poi.Location.X)}' cy='{ToCanvasPointY(poi.Location.Y)}' r='{(poi.Radius == 1 ? dSize : DistanceToGrid((int)poi.Radius))}' " + (poi.Radius == 1 ? $"fill='{poi.Color}'" : $"stroke='{poi.Color}' stroke-width='1' fill='none'") + " />";
+            return $"<circle onmousemove=\"showTooltip(evt, '{poi.Name}<br/>{poi.MapLoc.X},{poi.MapLoc.Y}');\" onmouseout=\"hideTooltip();\" cx='{ToCanvasPointX(poi.MapLoc.X)}' cy='{ToCanvasPointY(poi.MapLoc.Y)}' r='{(poi.Radius == 1 ? dSize : DistanceToGrid((int)poi.Radius))}' " + (poi.Radius == 1 ? $"fill='{poi.Color}'" : $"stroke='{poi.Color}' stroke-width='1' fill='none'") + " />";
         }
     }
 }
