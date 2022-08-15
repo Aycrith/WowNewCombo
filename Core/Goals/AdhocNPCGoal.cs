@@ -1,4 +1,4 @@
-using Core.GOAP;
+﻿using Core.GOAP;
 using SharedLib.NpcFinder;
 using Microsoft.Extensions.Logging;
 using System;
@@ -47,7 +47,7 @@ namespace Core.Goals
 
         #region IRouteProvider
 
-        public List<Vector3> PathingRoute()
+        public Vector3[] PathingRoute()
         {
             return navigation.TotalRoute;
         }
@@ -57,9 +57,9 @@ namespace Core.Goals
             return navigation.HasNext();
         }
 
-        public Vector3 NextPoint()
+        public Vector3 NextMapPoint()
         {
-            return navigation.NextPoint();
+            return navigation.NextMapPoint();
         }
 
         public DateTime LastActive => navigation.LastActive;
