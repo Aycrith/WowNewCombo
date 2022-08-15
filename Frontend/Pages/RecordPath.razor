@@ -255,16 +255,15 @@
         await JSRuntime.InvokeVoidAsync("dispose");
     }
 
-    private void OnAddonDataChanged()
+
+    private void OnAddonDataChangedAction()
     {
-        base.InvokeAsync(() =>
+        if (!UpdateRecording() && lastPlayerPoint != addonReader.PlayerReader.MapPos)
         {
-            if (!UpdateRecording() && lastPlayerPoint != addonReader.PlayerReader.MapPos)
-            {
-                lastPlayerPoint = addonReader.PlayerReader.MapPos;
-                UpdateRouteMarkup();
-                StateHasChanged();
-            }
+            lastPlayerPoint = addonReader.PlayerReader.MapPos;
+            UpdateRouteMarkup();
+            StateHasChanged();
+        }
 
         /*
         // requires async
@@ -276,7 +275,11 @@
 
         await JSRuntime.InvokeVoidAsync("focusAt", JsonConvert.SerializeObject(pp));
         */
-        });
+    }
+
+    private void OnAddonDataChanged()
+    {
+        base.InvokeAsync(OnAddonDataChangedAction);
     }
 
 
