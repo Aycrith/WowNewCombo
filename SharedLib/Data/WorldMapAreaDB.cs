@@ -19,9 +19,6 @@ namespace SharedLib
             WorldMapArea[] wmas = JsonConvert.DeserializeObject<WorldMapArea[]>(File.ReadAllText(Path.Join(dataConfig.ExpDbc, "WorldMapArea.json")));
             for (int i = 0; i < wmas.Length; i++)
                 this.wmas.Add(wmas[i].UIMapId, wmas[i]);
-
-            // this is invalid can happen when /reload
-            //this.wmas.Add(0, wmas[0]);
         }
 
         public int GetAreaId(int uiMap)
@@ -35,6 +32,11 @@ namespace SharedLib
         }
 
         //
+
+        public static Vector3 ToWorld_FlipXY(Vector3 map, WorldMapArea wma)
+        {
+            return new Vector3(wma.ToWorldX(map.Y), wma.ToWorldY(map.X), map.Z);
+        }
 
         public Vector3 ToWorld_FlipXY(int uiMap, Vector3 map)
         {
