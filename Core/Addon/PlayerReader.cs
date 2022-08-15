@@ -1,18 +1,18 @@
 ﻿using System.Collections.Specialized;
 using System.Numerics;
 
-using Core.Database;
+using SharedLib;
 
 namespace Core
 {
     public partial class PlayerReader : IMouseOverReader
     {
         private readonly IAddonDataProvider reader;
-        private readonly WorldMapAreaDB mapAreaDB;
+        private readonly WorldMapAreaDB worldMapAreaDB;
 
         public PlayerReader(IAddonDataProvider reader, WorldMapAreaDB mapAreaDB)
         {
-            this.mapAreaDB = mapAreaDB;
+            this.worldMapAreaDB = mapAreaDB;
 
             this.reader = reader;
             Bits = new(8, 9);
@@ -23,15 +23,21 @@ namespace Core
             CustomTrigger1 = new(reader.GetInt(74));
         }
 
-        public Vector3 MapPos => new(MapX, MapY, MapZ);
-        public Vector3 WorldPos => mapAreaDB.ToWorld(UIMapId.Value, MapPos);
+        public WorldMapArea WorldMapArea { get; private set; }
+
+        public Vector3 MapPos => new(MapX, MapY, WorldPosZ);
+        public Vector3 WorldPos => worldMapAreaDB.ToWorld_FlipXY(UIMapId.Value, MapPos);
+
+        public float WorldPosZ { get; set; } // MapZ not exists. Alias for WorldLoc.Z
 
         public float MapX => reader.GetFixed(1) * 10;
         public float MapY => reader.GetFixed(2) * 10;
-        public float MapZ { get; set; } // MapZ not exists. Alias for WorldLoc.Z
+        
         public float Direction => reader.GetFixed(3);
 
         public RecordInt UIMapId { get; } = new(4);
+
+        public int MapId { get; private set; }
 
         public RecordInt Level { get; } = new(5);
 
@@ -174,7 +180,14 @@ namespace Core
 
         public void Update(IAddonDataProvider reader)
         {
-            UIMapId.Update(reader);
+            if (UIMapId.Updated(reader) && UIMapId.Value != 0)
+            {
+                if (worldMapAreaDB.TryGet(UIMapId.Value, out var wma))
+                {
+                    WorldMapArea = wma;
+                    MapId = wma.MapID;
+                }
+            }
 
             Bits.Update(reader);
             SpellInRange.Update(reader);

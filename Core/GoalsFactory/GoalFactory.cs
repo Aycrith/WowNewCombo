@@ -1,3 +1,4 @@
+using SharedLib;
 using Core.Goals;
 using Core.GOAP;
 using Game;
@@ -34,8 +35,10 @@ namespace Core
             services.AddSingleton<IPPather>(pather);
             services.AddSingleton<ExecGameCommand>(execGameCommand);
 
-            Vector3[] route = GetPath(classConfig, dataConfig);
-            services.AddSingleton<Vector3[]>(route);
+            services.AddSingleton<WorldMapAreaDB>(addonReader.WorldMapAreaDb);
+
+            Vector3[] mapRoute = GetPath(classConfig, dataConfig);
+            services.AddSingleton<Vector3[]>(mapRoute);
 
             services.AddSingleton<ClassConfiguration>(classConfig);
             services.AddSingleton<GoapAgentState>(goapAgentState);
@@ -152,11 +155,11 @@ namespace Core
             IEnumerable<GoapGoal> goals = provider.GetServices<GoapGoal>();
             IEnumerable<IRouteProvider> pathProviders = goals.OfType<IRouteProvider>();
 
-            RouteInfo routeInfo = new(route, pathProviders, addonReader.PlayerReader, addonReader.AreaDb);
+            RouteInfo routeInfo = new(mapRoute, pathProviders, addonReader.PlayerReader, addonReader.AreaDb, addonReader.WorldMapAreaDb);
 
             pather.DrawLines(new()
             {
-                new LineArgs("grindpath", route, 2, addonReader.PlayerReader.UIMapId.Value)
+                new LineArgs("grindpath", mapRoute, 2, addonReader.PlayerReader.UIMapId.Value)
             });
 
             return (routeInfo, goals);

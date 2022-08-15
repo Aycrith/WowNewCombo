@@ -11,6 +11,7 @@ using CommandLine;
 using Core.Environment;
 using WinAPI;
 using System.Drawing;
+using SharedLib;
 
 namespace HeadlessServer
 {
@@ -94,7 +95,8 @@ namespace HeadlessServer
             services.AddSingleton<MinimapNodeFinder>();
 
             services.AddSingleton<IGrindSessionDAO, LocalGrindSessionDAO>();
-            services.AddSingleton<IPPather>(x => GetPather(logger, x.GetRequiredService<DataConfig>(), options));
+            services.AddSingleton<WorldMapAreaDB>();
+            services.AddSingleton<IPPather>(x => GetPather(logger, x.GetRequiredService<DataConfig>(), x.GetRequiredService<WorldMapAreaDB>(), options));
 
             services.AddSingleton<AutoResetEvent>(x => new(false));
             services.AddSingleton<DataFrame[]>(x => FrameConfig.LoadFrames());
@@ -112,7 +114,6 @@ namespace HeadlessServer
             }
 
             services.AddSingleton<AreaDB>();
-            services.AddSingleton<WorldMapAreaDB>();
             services.AddSingleton<ItemDB>();
             services.AddSingleton<CreatureDB>();
             services.AddSingleton<SpellDB>();
@@ -124,7 +125,7 @@ namespace HeadlessServer
             return true;
         }
 
-        private static IPPather GetPather(Microsoft.Extensions.Logging.ILogger logger, DataConfig dataConfig, ParserResult<RunOptions> options)
+        private static IPPather GetPather(Microsoft.Extensions.Logging.ILogger logger, DataConfig dataConfig, WorldMapAreaDB worldMapAreaDB, ParserResult<RunOptions> options)
         {
             StartupConfigPathing scp = new(options.Value.Mode.ToString()!,
                 options.Value.Hostv1!, options.Value.Portv1,
@@ -134,7 +135,7 @@ namespace HeadlessServer
 
             if (scp.Type == StartupConfigPathing.Types.RemoteV3)
             {
-                RemotePathingAPIV3 api = new(logger, scp.hostv3, scp.portv3, new WorldMapAreaDB(dataConfig));
+                RemotePathingAPIV3 api = new(logger, scp.hostv3, scp.portv3, worldMapAreaDB);
                 if (api.PingServer())
                 {
                     Log.Information("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
@@ -175,7 +176,7 @@ namespace HeadlessServer
             }
             Log.Information("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
 
-            LocalPathingApi localApi = new(logger, new PPatherService(logger, dataConfig), dataConfig);
+            LocalPathingApi localApi = new(logger, new PPatherService(logger, dataConfig, worldMapAreaDB), dataConfig);
             Log.Information($"Using {StartupConfigPathing.Types.Local}({localApi.GetType().Name}) pathing API.");
             Log.Information("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
             return localApi;

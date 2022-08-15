@@ -45,7 +45,7 @@ namespace Core
         public event Action? AddonDataChanged;
         public event Action? PlayerDeath;
 
-        private readonly WorldMapAreaDB WorldMapAreaDb;
+        public WorldMapAreaDB WorldMapAreaDb { get; }
 
         public ItemDB ItemDb { get; }
         public CreatureDB CreatureDb { get; }
