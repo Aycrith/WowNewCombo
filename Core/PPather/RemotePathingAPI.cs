@@ -82,11 +82,33 @@ namespace Core
             }
         }
 
+        public Vector3[] FindWorldRoute(int uiMap, Vector3 worldFrom, Vector3 worldTo)
+        {
+            try
+            {
+                LogInformation($"Finding route from {worldFrom} map {uiMap} to {worldTo} map {uiMap}...");
+                var url =
+                    $"{api}WorldRoute2?x1={worldFrom.X}&y1={worldFrom.Y}&z1={worldFrom.Z}&x2={worldTo.X}&y2={worldTo.Y}&z2={worldTo.Z}&uimap={uiMap}";
+
+                stopwatch.Restart();
+                using HttpClient client = new();
+                string response = client.GetStringAsync(url).GetAwaiter().GetResult();
+                LogInformation($"Finding route from {worldFrom} map {uiMap} to {worldTo} took {stopwatch.ElapsedMilliseconds} ms.");
+                return JsonSerializer.Deserialize<Vector3[]>(response, options) ?? Array.Empty<Vector3>();
+            }
+            catch (Exception ex)
+            {
+                LogError($"Finding route from {worldFrom} to {worldTo}", ex);
+                Console.WriteLine(ex);
+                return Array.Empty<Vector3>();
+            }
+        }
+
         public async Task<bool> PingServer()
         {
             try
             {
-                var url = $"{api}SelfTest";
+                string url = $"{api}SelfTest";
 
                 using HttpClient client = new();
                 string response = await client.GetStringAsync(url);

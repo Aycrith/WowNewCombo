@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PPather.Data;
-using Core.Database;
 using System.Threading;
 using AnTCP.Client;
 using SharedLib;
@@ -39,9 +38,8 @@ namespace Core
         private readonly ILogger logger;
         private readonly WorldMapAreaDB worldMapAreaDB;
 
-        private AnTcpClient Client { get; }
-        private Thread ConnectionWatchdog { get; }
-
+        private readonly AnTcpClient Client;
+        private readonly Thread ConnectionWatchdog;
         private readonly CancellationTokenSource cts;
 
         public RemotePathingAPIV3(ILogger logger, string ip, int port, WorldMapAreaDB worldMapAreaDB)
@@ -76,15 +74,13 @@ namespace Core
         public Vector3[] FindMapRoute(int uiMap, Vector3 mapFrom, Vector3 mapTo)
         {
             if (!Client.IsConnected)
-            {
                 return Array.Empty<Vector3>();
-            }
+
+            if (!worldMapAreaDB.TryGet(uiMap, out WorldMapArea area))
+                return Array.Empty<Vector3>();
 
             try
             {
-                if (!worldMapAreaDB.TryGet(uiMap, out WorldMapArea area))
-                    return Array.Empty<Vector3>();
-
                 Vector3 worldFrom = worldMapAreaDB.ToWorld_FlipXY(uiMap, mapFrom);
                 Vector3 worldTo = worldMapAreaDB.ToWorld_FlipXY(uiMap, mapTo);
 
@@ -97,7 +93,7 @@ namespace Core
                 }
 
                 if (debug)
-                    LogInformation($"Finding route from {mapFrom}({worldFrom}) map {uiMap} to {mapTo}({worldTo}) map {uiMap}...");
+                    LogInformation($"Finding map route from {mapFrom}({worldFrom}) map {uiMap} to {mapTo}({worldTo}) map {uiMap}...");
 
                 Vector3[] path = Client.Send((byte)EMessageType.PATH,
                     (area.MapID, PathRequestFlags.FIND_LOCATION | PathRequestFlags.CATMULLROM,
@@ -118,7 +114,45 @@ namespace Core
             }
             catch (Exception ex)
             {
-                LogError($"Finding route from {mapFrom} to {mapTo}", ex);
+                LogError($"Finding map route from {mapFrom} to {mapTo}", ex);
+                Console.WriteLine(ex);
+                return Array.Empty<Vector3>();
+            }
+        }
+
+        public Vector3[] FindWorldRoute(int uiMap, Vector3 worldFrom, Vector3 worldTo)
+        {
+            if (!Client.IsConnected)
+                return Array.Empty<Vector3>();
+
+            if (!worldMapAreaDB.TryGet(uiMap, out WorldMapArea area))
+                return Array.Empty<Vector3>();
+
+            try
+            {
+                // incase haven't asked a pathfinder for a route this value will be 0
+                // that case use the highest location
+                if (worldFrom.Z == 0)
+                {
+                    worldFrom.Z = area.LocTop / 2;
+                    worldTo.Z = area.LocTop / 2;
+                }
+
+                if (debug)
+                    LogInformation($"Finding world route from {worldFrom}({worldFrom}) map {uiMap} to {worldTo}({worldTo}) map {uiMap}...");
+
+                Vector3[] path = Client.Send((byte)EMessageType.PATH,
+                    (area.MapID, PathRequestFlags.FIND_LOCATION | PathRequestFlags.CATMULLROM,
+                    worldFrom.X, worldFrom.Y, worldFrom.Z, worldTo.X, worldTo.Y, worldTo.Z)).AsArray<Vector3>();
+
+                if (path.Length == 1 && path[0] == Vector3.Zero)
+                    return Array.Empty<Vector3>();
+
+                return path;
+            }
+            catch (Exception ex)
+            {
+                LogError($"Finding world route from {worldFrom} to {worldTo}", ex);
                 Console.WriteLine(ex);
                 return Array.Empty<Vector3>();
             }
