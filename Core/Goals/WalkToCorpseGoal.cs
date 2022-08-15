@@ -1,4 +1,4 @@
-﻿using Core.GOAP;
+using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -75,7 +75,7 @@ namespace Core.Goals
 
         public override void OnEnter()
         {
-            playerReader.MapZ = 0;
+            playerReader.WorldPosZ = 0;
             addonReader.PlayerDied();
 
             wait.While(AliveOrLoadingScreen);

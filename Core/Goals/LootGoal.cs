@@ -184,7 +184,7 @@ namespace Core.Goals
             Vector3 playerMap = playerReader.MapPos;
             for (int i = 0; i < corpseLocations.Count; i++)
             {
-                float mapDist = playerMap.MapDistanceXYTo(corpseLocations[i].Location);
+                float mapDist = playerMap.MapDistanceXYTo(corpseLocations[i].MapLoc);
                 if (mapDist < minDistance)
                 {
                     minDistance = mapDist;
@@ -215,7 +215,7 @@ namespace Core.Goals
 
                 CorpseEvent? e = GetClosestCorpse();
                 if (e != null)
-                    SendGoapEvent(new SkinCorpseEvent(e.Location, e.Radius, targetId));
+                    SendGoapEvent(new SkinCorpseEvent(e.MapLoc, e.Radius, targetId));
             }
 
             Log($"Should gather {targetId} ? {gatherCorpse}");
@@ -242,8 +242,8 @@ namespace Core.Goals
             {
                 Vector3 playerMap = playerReader.MapPos;
                 CorpseEvent e = GetClosestCorpse()!;
-                float heading = DirectionCalculator.CalculateHeading(playerMap, e.Location);
-                playerDirection.SetDirection(heading, e.Location);
+                float heading = DirectionCalculator.CalculateMapHeading(playerMap, e.MapLoc);
+                playerDirection.SetDirection(heading, e.MapLoc);
 
                 logger.LogInformation("Look at possible closest corpse and try once again...");
 

@@ -24,9 +24,9 @@ namespace Core
             //0.1796 / 5 = 0.03592
 
             float range = rangeYard * YARD_TO_COORD;
-            (float dirX, float dirY) = DirectionCalculator.ToNormalRadian(wowRad);
+            Vector2 dir = DirectionCalculator.ToNormalRadian(wowRad);
 
-            return new Vector3(map.X + (range * dirX), map.Y + (range * dirY), map.Z);
+            return new Vector3(map.X + (range * dir.X), map.Y + (range * dir.Y), map.Z);
         }
     }
 }

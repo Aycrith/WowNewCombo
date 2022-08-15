@@ -8,13 +8,13 @@ namespace Core.GOAP
         public const string NAME = "Corpse";
         public const string COLOR = "black";
 
-        public Vector3 Location { get; }
-        public double Radius { get; }
+        public Vector3 MapLoc { get; }
+        public float Radius { get; }
 
-        public CorpseEvent(Vector3 location, double radius)
+        public CorpseEvent(Vector3 location, float radius)
         {
-            Location = location;
-            Radius = Math.Max(1, radius);
+            MapLoc = location;
+            Radius = MathF.Max(1, radius);
         }
     }
 }

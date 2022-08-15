@@ -40,7 +40,7 @@ namespace Core.Goals
         private readonly Thread? sideActivityThread;
         private CancellationTokenSource sideActivityCts;
 
-        private Vector3[] route;
+        private Vector3[] mapRoute;
 
         private bool shouldMount;
 
@@ -78,7 +78,7 @@ namespace Core.Goals
             this.addonReader = addonReader;
             this.classConfig = classConfig;
             this.playerReader = addonReader.PlayerReader;
-            this.route = route;
+            this.mapRoute = route;
             this.npcNameFinder = npcNameFinder;
             this.mountHandler = mountHandler;
             this.targetFinder = targetFinder;
@@ -309,7 +309,7 @@ namespace Core.Goals
             Log($"RefillWaypoints - findClosest:{onlyClosest} - ThereAndBack:{input.ClassConfig.PathThereAndBack}");
 
             Vector3 playerMap = playerReader.MapPos;
-            Vector3[] pathMap = route.ToArray();
+            Vector3[] pathMap = mapRoute.ToArray();
 
             float mapDistanceToFirst = playerMap.MapDistanceXYTo(pathMap[0]);
             float mapDistanceToLast = playerMap.MapDistanceXYTo(pathMap[^1]);

@@ -3,7 +3,7 @@ using System;
 using System.Numerics;
 using System.Threading;
 using SharedLib.Extensions;
-using System.Runtime.CompilerServices;
+using static System.MathF;
 
 #pragma warning disable 162
 
@@ -13,7 +13,7 @@ namespace Core
     {
         private const bool debug = false;
 
-        private const float RADIAN = MathF.PI * 2;
+        private const float RADIAN = PI * 2;
         private const int DefaultIgnoreDistance = 10;
 
         private readonly ILogger logger;
@@ -34,45 +34,49 @@ namespace Core
             _cts.Cancel();
         }
 
-        public void SetDirection(float desiredDirection, Vector3 point)
+        public void SetDirection(float targetDir, Vector3 map)
         {
-            SetDirection(desiredDirection, point, DefaultIgnoreDistance, _cts.Token);
+            SetDirection(targetDir, map, DefaultIgnoreDistance, _cts.Token);
         }
 
-        public void SetDirection(float desiredDirection, Vector3 point, float ignoreDistance, CancellationToken ct)
+        public void SetDirection(float targetDir, Vector3 world, float ignoreDistance, CancellationToken ct)
         {
-            float mapDistance = playerReader.MapPos.MapDistanceXYTo(point);
-            if (mapDistance < ignoreDistance)
+            float distance = playerReader.WorldPos.WorldDistanceXYTo(world);
+            if (distance < ignoreDistance)
             {
                 if (debug)
-                    LogDebugClose(logger, mapDistance, ignoreDistance);
+                    LogDebugClose(logger, distance, ignoreDistance);
 
                 return;
             }
 
             if (debug)
-                LogDebugSetDirection(logger, playerReader.Direction, desiredDirection, mapDistance);
+                LogDebugSetDirection(logger, playerReader.Direction, targetDir, distance);
 
-            input.Proc.KeyPressSleep(GetDirectionKeyToPress(desiredDirection),
-                TurnDuration(desiredDirection), ct);
+            input.Proc.KeyPressSleep(GetDirectionKeyToPress(targetDir),
+                TurnDuration(targetDir), ct);
         }
 
-        private float TurnAmount(float desiredDirection)
+        private float TurnAmount(float targetDir)
         {
-            var result = (RADIAN + desiredDirection - playerReader.Direction) % RADIAN;
-            if (result > MathF.PI) { result = RADIAN - result; }
+            float result = (RADIAN + targetDir - playerReader.Direction) % RADIAN;
+
+            if (result > PI)
+                result = RADIAN - result;
+
             return result;
         }
 
-        private int TurnDuration(float desiredDirection)
+        private int TurnDuration(float targetDir)
         {
-            return (int)(TurnAmount(desiredDirection) * 1000 / MathF.PI);
+            return (int)(TurnAmount(targetDir) * 1000 / PI);
         }
 
         private ConsoleKey GetDirectionKeyToPress(float desiredDirection)
         {
-            return (RADIAN + desiredDirection - playerReader.Direction) % RADIAN < MathF.PI
-                ? input.Proc.TurnLeftKey : input.Proc.TurnRightKey;
+            return (RADIAN + desiredDirection - playerReader.Direction) % RADIAN < PI
+                ? input.Proc.TurnLeftKey
+                : input.Proc.TurnRightKey;
         }
 
         #region Logging

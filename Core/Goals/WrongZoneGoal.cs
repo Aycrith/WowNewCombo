@@ -1,4 +1,4 @@
-﻿using Core.GOAP;
+using Core.GOAP;
 
 using Microsoft.Extensions.Logging;
 
@@ -59,7 +59,7 @@ namespace Core.Goals
 
             Vector3 playerMap = playerReader.MapPos;
             float mapDistance = playerMap.MapDistanceXYTo(exitMap);
-            float heading = DirectionCalculator.CalculateHeading(playerMap, exitMap);
+            float heading = DirectionCalculator.CalculateMapHeading(playerMap, exitMap);
 
             if (lastDistance < mapDistance)
             {

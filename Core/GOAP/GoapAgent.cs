@@ -257,11 +257,11 @@ namespace Core.GOAP
             }
             else if (e is CorpseEvent c)
             {
-                routeInfo.PoiList.Add(new RouteInfoPoi(c.Location, CorpseEvent.NAME, CorpseEvent.COLOR, c.Radius));
+                routeInfo.PoiList.Add(new RouteInfoPoi(c.MapLoc, CorpseEvent.NAME, CorpseEvent.COLOR, c.Radius));
             }
             else if (e is SkinCorpseEvent s)
             {
-                routeInfo.PoiList.Add(new RouteInfoPoi(s.Location, SkinCorpseEvent.NAME, SkinCorpseEvent.COLOR, s.Radius));
+                routeInfo.PoiList.Add(new RouteInfoPoi(s.MapLoc, SkinCorpseEvent.NAME, SkinCorpseEvent.COLOR, s.Radius));
             }
         }
 
@@ -299,11 +299,11 @@ namespace Core.GOAP
             Vector3 playerMap = addonReader.PlayerReader.MapPos;
             for (int i = 0; i < routeInfo.PoiList.Count; i++)
             {
-                RouteInfoPoi? poi = routeInfo.PoiList[i];
-                if (poi?.Name != type)
+                RouteInfoPoi poi = routeInfo.PoiList[i];
+                if (poi.Name != type)
                     continue;
 
-                float mapMin = playerMap.MapDistanceXYTo(poi.Location);
+                float mapMin = playerMap.MapDistanceXYTo(poi.MapLoc);
                 if (mapMin < minDistance)
                 {
                     minDistance = mapMin;

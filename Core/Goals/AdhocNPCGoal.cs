@@ -1,4 +1,4 @@
-﻿using Core.GOAP;
+using Core.GOAP;
 using SharedLib.NpcFinder;
 using Microsoft.Extensions.Logging;
 using System;
@@ -215,9 +215,9 @@ namespace Core.Goals
             input.ClearTarget();
             wait.Update();
 
-            Vector3[] reversePath = key.Path.ToArray();
-            Array.Reverse(reversePath);
-            navigation.SetWayPoints(reversePath);
+            Vector3[] reverseMapPath = key.Path.ToArray();
+            Array.Reverse(reverseMapPath);
+            navigation.SetWayPoints(reverseMapPath);
 
             pathState++;
 

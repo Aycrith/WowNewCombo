@@ -1,24 +1,26 @@
 ﻿using System;
 using System.Numerics;
 
+using static System.MathF;
+
 namespace Core
 {
     public static class DirectionCalculator
     {
-        public static float CalculateHeading(Vector3 from, Vector3 to)
+        public static float CalculateMapHeading(Vector3 mapFrom, Vector3 mapTo)
         {
             //logger.LogInformation($"from: ({from.X},{from.Y}) to: ({to.X},{to.Y})");
 
-            var target = MathF.Atan2(to.X - from.X, to.Y - from.Y);
-            return MathF.PI + target;
+            float target = Atan2(mapTo.X - mapFrom.X, mapTo.Y - mapFrom.Y);
+            return PI + target;
         }
 
-        public static (float, float) ToNormalRadian(float wowRadian)
+        public static Vector2 ToNormalRadian(float wowRadian)
         {
             // wow origo is north side - shifted 90 degree
-            return (
-                MathF.Cos(wowRadian + (MathF.PI / 2)),
-                MathF.Sin(wowRadian - (MathF.PI / 2)));
+            return new(
+                Cos(wowRadian + (PI / 2)),
+                Sin(wowRadian - (PI / 2)));
         }
     }
 }
