@@ -20,6 +20,7 @@ using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
 using WinAPI;
+using SharedLib;
 
 namespace BlazorServer
 {
@@ -107,7 +108,8 @@ namespace BlazorServer
                 services.AddSingleton<MinimapNodeFinder>();
 
                 services.AddSingleton<IGrindSessionDAO, LocalGrindSessionDAO>();
-                services.AddSingleton<IPPather>(x => GetPather(logger, x.GetRequiredService<DataConfig>()));
+                services.AddSingleton<WorldMapAreaDB>();
+                services.AddSingleton<IPPather>(x => GetPather(logger, x.GetRequiredService<DataConfig>(), x.GetRequiredService<WorldMapAreaDB>()));
 
                 StartupConfigReader scr = new();
                 Configuration.GetSection(StartupConfigReader.Position).Bind(scr);
@@ -146,7 +148,7 @@ namespace BlazorServer
             services.AddBlazorTable();
         }
 
-        private IPPather GetPather(Microsoft.Extensions.Logging.ILogger logger, DataConfig dataConfig)
+        private IPPather GetPather(Microsoft.Extensions.Logging.ILogger logger, DataConfig dataConfig, WorldMapAreaDB worldMapAreaDB)
         {
             StartupConfigPathing scp = new();
             Configuration.GetSection(StartupConfigPathing.Position).Bind(scp);
@@ -155,7 +157,7 @@ namespace BlazorServer
 
             if (scp.Type == StartupConfigPathing.Types.RemoteV3)
             {
-                var api = new RemotePathingAPIV3(logger, scp.hostv3, scp.portv3, new WorldMapAreaDB(dataConfig));
+                RemotePathingAPIV3 api = new(logger, scp.hostv3, scp.portv3, worldMapAreaDB);
                 if (api.PingServer())
                 {
                     Log.Information("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
@@ -169,7 +171,7 @@ namespace BlazorServer
 
             if (scp.Type == StartupConfigPathing.Types.RemoteV1 || failed)
             {
-                var api = new RemotePathingAPI(logger, scp.hostv1, scp.portv1);
+                RemotePathingAPI api = new(logger, scp.hostv1, scp.portv1);
                 var pingTask = Task.Run(api.PingServer);
                 pingTask.Wait();
                 if (pingTask.Result)
@@ -196,7 +198,7 @@ namespace BlazorServer
             }
             Log.Information("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
 
-            var localApi = new LocalPathingApi(logger, new PPatherService(logger, dataConfig), dataConfig);
+            LocalPathingApi localApi = new(logger, new PPatherService(logger, dataConfig, worldMapAreaDB), dataConfig);
             Log.Information($"Using {StartupConfigPathing.Types.Local}({localApi.GetType().Name}) pathing API.");
             Log.Information("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
             return localApi;
