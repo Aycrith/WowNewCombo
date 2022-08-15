@@ -66,7 +66,7 @@ namespace PPather.Graph
 		*/
 
         public const float CHUNK_BASE = 100000.0f; // Always keep positive
-        public const float MaximumAllowedRangeFromTarget = 100;
+        public const float MaximumAllowedRangeFromTarget = 40;
 
         private readonly string chunkDir;
 
@@ -572,7 +572,7 @@ namespace PPather.Graph
                 // are we there?
 
                 //float distance = currentSearchSpot.location.GetDistanceTo(destinationSpot.location);
-                float distance = Vector3.DistanceSquared(currentSearchSpot.Loc, destinationSpot.Loc);
+                float distance = Vector3.Distance(currentSearchSpot.Loc, destinationSpot.Loc);
 
                 if (distance <= minHowClose)
                 {
