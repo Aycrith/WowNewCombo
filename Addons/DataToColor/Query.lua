@@ -485,7 +485,7 @@ function DataToColor:getAvgEquipmentDurability()
         c = c + (cc or 0)
         m = m + (mm or 0)
     end
-    return max(0, floor(c * 100 / m) - 1) -- 0-99
+    return max(0, floor((c + 1)* 100 / (m + 1)) - 1) -- 0-99
 end
 
 -----------------------------------------------------------------
