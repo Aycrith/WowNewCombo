@@ -73,15 +73,15 @@ namespace Core
                 return true; // ignore non white listed unit classification
             }
 
-            if (playerReader.Bits.TargetIsPlayer())
+            if (playerReader.Bits.TargetIsPlayer() || playerReader.Bits.TargetIsPlayerControlled())
             {
                 if (lastGuid != playerReader.TargetGuid)
                 {
-                    LogPlayer(logger, playerReader.TargetId, playerReader.TargetGuid, addonReader.TargetName);
+                    LogPlayerOrPet(logger, playerReader.TargetId, playerReader.TargetGuid, addonReader.TargetName);
                     lastGuid = playerReader.TargetGuid;
                 }
 
-                return true; // ignore players
+                return true; // ignore players and pets
             }
 
             if (!playerReader.Bits.TargetIsDead() && playerReader.Bits.TargetIsTagged())
@@ -158,8 +158,8 @@ namespace Core
         [LoggerMessage(
             EventId = 60,
             Level = LogLevel.Warning,
-            Message = "Blacklist ({id},{guid},{name}) is player!")]
-        static partial void LogPlayer(ILogger logger, int id, int guid, string name);
+            Message = "Blacklist ({id},{guid},{name}) is player or pet!")]
+        static partial void LogPlayerOrPet(ILogger logger, int id, int guid, string name);
 
         [LoggerMessage(
             EventId = 61,

@@ -67,6 +67,7 @@ local UnitXP = UnitXP
 local UnitXPMax = UnitXPMax
 local UnitExists = UnitExists
 local UnitGUID = UnitGUID
+local UnitClassification = UnitClassification
 
 local PowerType = Enum.PowerType
 
@@ -277,18 +278,7 @@ function DataToColor:FushState()
 
     DataToColor:Reset()
 
-    DataToColor:InitEquipmentQueue()
-    DataToColor:InitBagQueue()
-
-    DataToColor:InitInventoryQueue(4)
-    DataToColor:InitInventoryQueue(3)
-    DataToColor:InitInventoryQueue(2)
-    DataToColor:InitInventoryQueue(1)
-    DataToColor:InitInventoryQueue(0)
-
-    DataToColor:InitActionBarCostQueue()
-    DataToColor:InitSpellBookQueue()
-    DataToColor:InitTalentQueue()
+    DataToColor:InitUpdateQueues()
 
     DataToColor:Print('Flush State')
 end
@@ -462,7 +452,7 @@ function DataToColor:CreateFrames(n)
             Pixel(int, UnitPowerMax(DataToColor.C.unitPlayer, nil), 12) -- either mana, rage, energy
             Pixel(int, UnitPower(DataToColor.C.unitPlayer, nil), 13) -- either mana, rage, energy
 
-            if(DataToColor.C.CHARACTER_CLASS_ID == 6) then -- death Knight
+            if DataToColor.C.CHARACTER_CLASS_ID == 6 then -- death Knight
 
                 local bloodRunes = 0
                 local unholyRunes = 0

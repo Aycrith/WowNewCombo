@@ -73,15 +73,15 @@ namespace Core
                 return true; // ignore non white listed unit classification
             }
 
-            if (playerReader.Bits.MouseOverIsPlayer())
+            if (playerReader.Bits.MouseOverIsPlayer() || playerReader.Bits.MouseOverPlayerControlled())
             {
                 if (lastGuid != playerReader.MouseOverGuid)
                 {
-                    LogPlayer(logger, playerReader.MouseOverId, playerReader.MouseOverGuid, addonReader.MouseOverName);
+                    LogPlayerOrPet(logger, playerReader.MouseOverId, playerReader.MouseOverGuid, addonReader.MouseOverName);
                     lastGuid = playerReader.MouseOverGuid;
                 }
 
-                return true; // ignore players
+                return true; // ignore players and pets
             }
 
             if (!playerReader.Bits.MouseOverIsDead() && playerReader.Bits.MouseOverIsTagged())
@@ -159,7 +159,7 @@ namespace Core
             EventId = 60,
             Level = LogLevel.Warning,
             Message = "MouseOverBlacklist ({id},{guid},{name}) is player!")]
-        static partial void LogPlayer(ILogger logger, int id, int guid, string name);
+        static partial void LogPlayerOrPet(ILogger logger, int id, int guid, string name);
 
         [LoggerMessage(
             EventId = 61,

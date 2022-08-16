@@ -69,5 +69,7 @@ namespace Core
         public bool MouseOverCanBeHostile() => v2[Mask._14];
         public bool MouseOverIsPlayer() => v2[Mask._15];
         public bool MouseOverTargetIsPlayerOrPet() => v2[Mask._16];
+        public bool MouseOverPlayerControlled() => v2[Mask._17];
+        public bool TargetIsPlayerControlled() => v2[Mask._18];
     }
 }

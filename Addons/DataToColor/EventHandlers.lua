@@ -490,7 +490,7 @@ end
 
 -- Declines/Accepts Party Invites.
 function DataToColor:HandlePartyInvite()
-    if DataToColor.globalTime % 50 == 1 then
+    if DataToColor.globalTime % 500 == 1 then
         -- Declines party invite if configured to decline
         if DataToColor.DATA_CONFIG.DECLINE_PARTY_REQUESTS then
             DeclineGroup()
@@ -505,7 +505,7 @@ end
 
 -- Repairs items if they are broken
 function DataToColor:RepairItems()
-    if DataToColor.globalTime % 50 == 1 then
+    if DataToColor.globalTime % 25 == 1 then
         local cost = GetRepairAllCost()
         if CanMerchantRepair() and cost > 0 and GetMoney() >= cost then
             RepairAllItems()
