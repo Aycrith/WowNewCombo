@@ -53,37 +53,31 @@ namespace Core.Goals
 
             locTargeting = new Point[]
             {
-                new Point(0, 15),
                 new Point(0, 0),
-                new Point(0, -10),
-                new Point(0, -35),
-
-                new Point(-15, 15).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
-                new Point(15, 15).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+                new Point(-5, 15).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+                new Point(5, 15).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
             };
 
             locFindBy = new Point[]
             {
-                new Point(0, -45).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
-                new Point(0, -35).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
-                new Point(0, -15).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
-
                 new Point(0, 0),
                 new Point(0, 15).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
-
-                new Point(0, 25).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
-                new Point(-15, 25).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
-                new Point(15, 25).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
 
                 new Point(0, 50).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
                 new Point(-15, 50).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
                 new Point(15, 50).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
 
-                new Point(0, 75).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
-                new Point(-15, 75).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
-                new Point(15, 75).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+                new Point(0, 100).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+                new Point(-15, 100).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+                new Point(15, 100).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
 
-                new Point(0, 125).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+                new Point(0, 150).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+                new Point(-15, 150).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+                new Point(15, 150).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+
+                new Point(0,   200).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+                new Point(-15, 200).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+                new Point(-15, 200).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
             };
         }
 
