@@ -231,11 +231,12 @@ function DataToColor:OnCombatEvent(...)
 
     if playerDamageTakenEvents[subEvent] and
         band(destFlags, COMBATLOG_OBJECT_TYPE_PLAYER_OR_PET) and
+        strlen(sourceGUID) > 0 and
         (destGUID == DataToColor.playerGUID or
         destGUID == DataToColor.petGUID or
         DataToColor.playerPetSummons[destGUID]) then
-        DataToColor.CombatDamageTakenQueue:push(DataToColor:getGuidFromUUID(sourceGUID))
         --DataToColor:Print("Damage Taken ", sourceGUID)
+        DataToColor.CombatDamageTakenQueue:push(DataToColor:getGuidFromUUID(sourceGUID))
     end
 
     if sourceGUID == DataToColor.playerGUID then
