@@ -63,26 +63,11 @@ namespace Core
 
             if (DeadGuid.Updated(reader) && DeadGuid.Value > 0)
             {
-                bool killCredit = false;
                 int deadGuid = DeadGuid.Value;
-
-                if (DamageTaken.Contains(deadGuid))
-                {
-                    killCredit = true;
-                }
-
-                if (DamageDone.Contains(deadGuid))
-                {
-                    killCredit = true;
-                }
-
                 DamageDone.Remove(deadGuid);
                 DamageTaken.Remove(deadGuid);
 
-                if (killCredit)
-                {
-                    KillCredit?.Invoke();
-                }
+                KillCredit?.Invoke();
             }
 
             if (wasInCombat && !playerInCombat)

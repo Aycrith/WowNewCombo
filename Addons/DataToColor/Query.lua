@@ -137,7 +137,7 @@ function DataToColor:Bits2()
     local type, _, _, scale = GetMirrorTimerInfo(2)
     return
         (type == DataToColor.C.MIRRORTIMER.BREATH and scale < 0 and 1 or 0) +
-        (DataToColor.corpseInRange and 2 or 0) ^ 1 +
+        DataToColor.corpseInRange ^ 1 +
         (IsIndoors() and 2 or 0) ^ 2 +
         (UnitExists(DataToColor.C.unitFocus) and 2 or 0) ^ 3 +
         (UnitAffectingCombat(DataToColor.C.unitFocus) and 2 or 0) ^ 4 +
