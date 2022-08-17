@@ -1226,6 +1226,7 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | Druid | `"Prowl"` |
 | Druid | `"Rejuvenation"` |
 | Druid | `"Regrowth"` |
+| Druid | `"Omen of Clarity"` |
 | Mage | `"Frost Armor"` |
 | Mage | `"Ice Armor"` |
 | Mage | `"Molten Armor"` |
