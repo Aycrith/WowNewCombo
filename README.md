@@ -628,6 +628,26 @@ e.g.
     ]
 }
 ```
+### Wait Goals
+
+These actions cause to wait while the Requirements are met, during this time the player going to be idle, until lowered cost action can be executed.
+
+e.g.
+```json
+"Wait": {
+    "Sequence": [
+    {
+        "Cost": 19,
+        "Name": "HP regen",
+        "Requirements": [
+            "FoodCount == 0 || !Usable:Food",
+            "Health% < 90"
+        ]
+    }
+    ]
+},
+```
+---
 ### NPC Goals
 
 These command are for vendoring and repair.
@@ -653,26 +673,7 @@ e.g.
     ]
 }
 ```
-### Wait Goals
 
-These actions cause to wait while the Requirements are met, during this time the player going to be idle, until lowered cost action can be executed.
-
-e.g.
-```json
-"Wait": {
-    "Sequence": [
-    {
-        "Cost": 19,
-        "Name": "HP regen",
-        "Requirements": [
-            "FoodCount == 0 || !Usable:Food",
-            "Health% < 90"
-        ]
-    }
-    ]
-},
-```
----
 The "Key" is a key that is bound to a macro. The macro needs to target the NPC, and if necessary open up the repair or vendor page. The bot will click the key and the npc will be targetted. Then it will click the interact button which will cause the bot to move to the NPC and open the NPC options, this may be enough to get the auto repair and auto sell greys to happen. But the bot will click the button again in case there are further steps (e.g. SelectGossipOption), or you have many greys or items to sell.
 
 e.g. Sell macro - bound to the `"C"` key using BindPad or Key bindings
