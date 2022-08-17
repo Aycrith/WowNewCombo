@@ -156,6 +156,8 @@ DataToColor.actionBarCooldownQueue = DataToColor.struct:new()
 DataToColor.spellBookQueue = DataToColor.Queue:new()
 DataToColor.talentQueue = DataToColor.Queue:new()
 
+DataToColor.eligibleKillCredit = {}
+
 DataToColor.CombatDamageDoneQueue = DataToColor.Queue:new()
 local lastDamageDone = 0
 DataToColor.CombatDamageTakenQueue = DataToColor.Queue:new()
@@ -232,6 +234,8 @@ function DataToColor:Reset()
     DataToColor.playerGUID = UnitGUID(DataToColor.C.unitPlayer)
     DataToColor.petGUID = UnitGUID(DataToColor.C.unitPet)
     DataToColor.map = C_Map.GetBestMapForUnit(DataToColor.C.unitPlayer)
+
+    DataToColor.eligibleKillCredit = {}
 
     DataToColor.globalTime = 0
     DataToColor.lastLoot = 0
