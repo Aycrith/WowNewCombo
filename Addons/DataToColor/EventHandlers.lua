@@ -441,7 +441,7 @@ function DataToColor:ActionbarSlotChanged(event, slot)
 end
 
 function DataToColor:CorpseInRangeEvent(event)
-    DataToColor.corpseInRange = 1
+    DataToColor.corpseInRange = 2
 end
 
 function DataToColor:CorpseOutOfRangeEvent(event)
