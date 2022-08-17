@@ -1,5 +1,7 @@
 ﻿using Game;
+
 using Microsoft.Extensions.Logging;
+
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -234,8 +236,7 @@ namespace Core
                     stage++;
                     break;
                 case Stage.ValidateData:
-                    if (TryResolveRaceAndClass(out UnitRace race, out UnitClass @class, out ClientVersion clientVersion) &&
-                        race != UnitRace.None && @class != UnitClass.None && clientVersion != ClientVersion.None)
+                    if (TryResolveRaceAndClass(out UnitRace race, out UnitClass @class, out ClientVersion clientVersion))
                     {
                         if (auto)
                         {
@@ -308,9 +309,10 @@ namespace Core
             if (version == null ||
                 DataFrames.Length == 0 ||
                 DataFrameMeta.frames == 0 ||
-                DataFrames.Length != DataFrameMeta.frames)
+                DataFrames.Length != DataFrameMeta.frames ||
+                !TryResolveRaceAndClass(out _, out _, out _))
             {
-                logger.LogInformation($"Frame configuration was incomplete! Please try again, after resolving the previusly mentioned issue...");
+                logger.LogInformation($"Frame configuration was incomplete! Please try again, after resolving the previusly mentioned issues...");
                 ResetConfigState();
                 return false;
             }
@@ -352,7 +354,8 @@ namespace Core
             @class = (UnitClass)(value / 100 % 100);
             version = (ClientVersion)(value % 10);
 
-            return Enum.IsDefined(race) && Enum.IsDefined(@class) && Enum.IsDefined(version);
+            return Enum.IsDefined(race) && Enum.IsDefined(@class) && Enum.IsDefined(version) &&
+                race != UnitRace.None && @class != UnitClass.None && version != ClientVersion.None;
         }
     }
 }
