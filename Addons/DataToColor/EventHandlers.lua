@@ -103,6 +103,8 @@ function DataToColor:RegisterEvents()
     DataToColor:RegisterEvent('ZONE_CHANGED_INDOORS', 'OnZoneChanged')
     DataToColor:RegisterEvent('ZONE_CHANGED_NEW_AREA', 'OnZoneChanged')
 
+    DataToColor:RegisterEvent('PLAYER_REGEN_ENABLED', 'OnLeftCombat')
+
     for i = 1, #ignoreErrorList do
         local text = _G[ignoreErrorList[i]]
         ignoreErrorListMessages[text] = i
@@ -236,6 +238,7 @@ function DataToColor:OnCombatEvent(...)
         destGUID == DataToColor.petGUID or
         DataToColor.playerPetSummons[destGUID]) then
         --DataToColor:Print("Damage Taken ", sourceGUID)
+        DataToColor.eligibleKillCredit[sourceGUID] = true
         DataToColor.CombatDamageTakenQueue:push(DataToColor:getGuidFromUUID(sourceGUID))
     end
 
@@ -311,8 +314,9 @@ function DataToColor:OnCombatEvent(...)
 
         -- matches SWING_ RANGE_ SPELL_ but not SPELL_PERIODIC
         if playerDamageDone[subEvent] or playerDamageMiss[subEvent] then
-            DataToColor.CombatDamageDoneQueue:push(DataToColor:getGuidFromUUID(destGUID))
             --DataToColor:Print(subEvent, " ", destGUID)
+            DataToColor.eligibleKillCredit[destGUID] = true
+            DataToColor.CombatDamageDoneQueue:push(DataToColor:getGuidFromUUID(destGUID))
 
             if playerDamageMiss[subEvent] then
                 local missType = select(-2, ...)
@@ -346,7 +350,7 @@ function DataToColor:OnCombatEvent(...)
         end
     end
 
-    if unitDied[subEvent] then
+    if unitDied[subEvent] and DataToColor.eligibleKillCredit[destGUID] then
         if band(destFlags, COMBATLOG_OBJECT_TYPE_NPC) > 0 then
             DataToColor.CombatCreatureDiedQueue:push(DataToColor:getGuidFromUUID(destGUID))
             DataToColor.lastLoot = DataToColor.C.Loot.Corpse
@@ -464,6 +468,10 @@ end
 
 function DataToColor:OnZoneChanged(event)
     DataToColor.map = C_Map.GetBestMapForUnit(DataToColor.C.unitPlayer)
+end
+
+function DataToColor:OnLeftCombat()
+    DataToColor.eligibleKillCredit = {}
 end
 
 local CORPSE_RETRIEVAL_DISTANCE = 40
