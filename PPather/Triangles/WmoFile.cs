@@ -281,7 +281,9 @@ namespace Wmo
             {
                 t = Load(path);
                 if (t != null)
-                    items.Add(path, t);
+                {
+                    items[path] = t;
+                }
             }
             return t;
         }
