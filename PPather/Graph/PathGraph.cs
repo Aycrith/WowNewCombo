@@ -863,24 +863,31 @@ namespace PPather.Graph
 
         private Vector3 GetBestLocations(Vector3 location)
         {
-            float newZ = 0;
+            const float zExtend = 1;
 
-            for (float z = -1; z < 1f; z += 0.5f)
+            float newZ = 0;
+            float[] a = new float[] { 0, 1f, 0.5f, -0.5f, -1f };
+
+            for (int z = 0; z < a.Length; z++)
             {
-                for (float x = -1; x < 1f; x += 0.5f)
-                    for (float y = -1; y < 1f; y += 0.5f)
+                for (int x = 0; x < a.Length; x++)
+                {
+                    for (int y = 0; y < a.Length; y++)
+                    {
                         if (triangleWorld.FindStandableAt(
-                            location.X + x,
-                            location.Y + y,
-                            location.Z + z + 1 - WantedStepLength * .75f,
-                            location.Z + z + 1 + WantedStepLength * .75f,
+                            location.X + a[x],
+                            location.Y + a[y],
+                            location.Z + a[z] - zExtend - WantedStepLength * .75f,
+                            location.Z + a[z] + zExtend + WantedStepLength * .75f,
                             out newZ, out _,
                             toonHeight, toonSize))
+                        {
                             goto end;
+                        }
+                    }
+                }
             }
         end:
-            if (Abs(newZ - location.Z) > 5) { newZ = location.Z; }
-
             return new(location.X, location.Y, newZ);
         }
 
