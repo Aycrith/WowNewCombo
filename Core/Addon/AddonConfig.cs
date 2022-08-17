@@ -1,4 +1,5 @@
 ﻿using System.IO;
+
 using Newtonsoft.Json;
 
 namespace Core
@@ -15,6 +16,7 @@ namespace Core
 
         public string InstallPath { get; set; } = string.Empty;
         public string Author { get; set; } = string.Empty;
+        public string CellSize { get; set; } = "1";
         public string Title { get; set; } = string.Empty;
         public string Command { get; set; } = string.Empty;
 

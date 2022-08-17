@@ -5,6 +5,7 @@ using System;
 using System.Text.RegularExpressions;
 using Game;
 using WinAPI;
+using Core.Extensions;
 
 namespace Core
 {
@@ -92,6 +93,17 @@ namespace Core
             else
             {
                 logger.LogError($"{nameof(Config)}.{nameof(Config.Title)} - error - cannot be empty: '{Config.Title}'");
+                return false;
+            }
+
+            if (!int.TryParse(Config.CellSize, out int size))
+            {
+                logger.LogError($"{nameof(Config)}.{nameof(Config.CellSize)} - error - be a number: '{Config.CellSize}'");
+                return false;
+            }
+            else if (size < 1 || size > 9)
+            {
+                logger.LogError($"{nameof(Config)}.{nameof(Config.CellSize)} - error - must be, including between 1 and 9: '{Config.CellSize}'");
                 return false;
             }
 
@@ -204,6 +216,9 @@ namespace Core
                 .Replace(DefaultAddonName, Config.Title)
                 .Replace("dc", Config.Command)
                 .Replace("DC", Config.Command);
+
+            Regex cellSizeRegex = new(@"^local CELL_SIZE = (?<SIZE>[0-9]+)", RegexOptions.Multiline);
+            text = text.Replace(cellSizeRegex, "SIZE", Config.CellSize);
 
             File.WriteAllText(mainLuaPath, text);
         }
