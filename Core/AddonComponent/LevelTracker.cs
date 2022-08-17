@@ -21,16 +21,10 @@ namespace Core
             this.addonReader = addonReader;
             this.playerReader = addonReader.PlayerReader;
 
-            playerReader.Level.Changed -= PlayerLevel_Changed;
             playerReader.Level.Changed += PlayerLevel_Changed;
-
-            playerReader.PlayerXp.Changed -= PlayerExp_Changed;
             playerReader.PlayerXp.Changed += PlayerExp_Changed;
 
-            addonReader.PlayerDeath -= OnPlayerDeath;
             addonReader.PlayerDeath += OnPlayerDeath;
-
-            addonReader.CombatLog.KillCredit -= OnKillCredit;
             addonReader.CombatLog.KillCredit += OnKillCredit;
         }
 
