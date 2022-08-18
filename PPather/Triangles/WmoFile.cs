@@ -174,7 +174,8 @@ namespace Wmo
         public override WMO Load(string path)
         {
             string tempFile = Path.Join(dataConfig.PPather, $"{Unique.Index++}.tmp"); //wmo
-            if (!set.SFileExtractFile(path, tempFile))
+            set.SFileExtractFile(path, tempFile);
+            if (!File.Exists(tempFile))
                 return null;
 
             WMO w = new()
@@ -189,7 +190,8 @@ namespace Wmo
                 ReadOnlySpan<char> part = path[..^4].AsSpan();
                 string gf = string.Format("{0}_{1,3:000}.wmo", part.ToString(), i);
 
-                if (!set.SFileExtractFile(gf, tempFile))
+                set.SFileExtractFile(gf, tempFile);
+                if (!File.Exists(tempFile))
                     continue;
 
                 _ = new WmoGroupFile(w.groups[i], tempFile);
@@ -314,7 +316,8 @@ namespace Wmo
 
             //Console.Out.WriteLine("Load model " + path);
             string tempFile = Path.Join(dataConfig.PPather, $"{Unique.Index++}.tmp"); //model
-            if (!set.SFileExtractFile(file, tempFile))
+            set.SFileExtractFile(file, tempFile);
+            if (!File.Exists(tempFile))
                 return null;
 
             Model w = new()
@@ -659,7 +662,8 @@ namespace Wmo
 
             string wdtfile = Path.Join("World", "Maps", pathName, pathName + ".wdt");
             string tempFile = Path.Join(dataConfig.PPather, $"{Unique.Index++}.tmp"); //wdt
-            if (!archive.SFileExtractFile(wdtfile, tempFile))
+            archive.SFileExtractFile(wdtfile, tempFile);
+            if (!File.Exists(tempFile))
                 return;
 
             using Stream stream = File.OpenRead(tempFile);
@@ -708,7 +712,8 @@ namespace Wmo
 
             string filename = Path.Join("World", "Maps", pathName, $"{pathName}_{x}_{y}.adt");
             string tempFile = Path.Join(dataConfig.PPather, $"{Unique.Index++}.tmp"); //adt
-            if (!archive.SFileExtractFile(filename, tempFile))
+            archive.SFileExtractFile(filename, tempFile);
+            if (!File.Exists(tempFile))
                 return;
 
             if (logger.IsEnabled(LogLevel.Trace))

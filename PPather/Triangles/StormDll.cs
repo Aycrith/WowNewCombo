@@ -148,24 +148,19 @@ namespace StormDll
                     archives[i] = a;
 
                     if (logger.IsEnabled(LogLevel.Trace))
-                        logger.LogTrace($"Archive open {files[i]}");
+                        logger.LogTrace($"Archive[{i}] open {files[i]}");
                 }
                 else if (logger.IsEnabled(LogLevel.Trace))
-                    logger.LogTrace($"Archive open fail {files[i]}");
+                    logger.LogTrace($"Archive[{i}] openfail {files[i]}");
             }
         }
 
-        public bool SFileExtractFile(string from, string to, OpenFile dwSearchScope = OpenFile.SFILE_OPEN_FROM_MPQ)
+        public void SFileExtractFile(string from, string to, OpenFile dwSearchScope = OpenFile.SFILE_OPEN_FROM_MPQ)
         {
             for (int i = 0; i < archives.Length; i++)
             {
-                Archive a = archives[i];
-                if (a.SFileHasFile(from))
-                {
-                    return a.SFileExtractFile(from, to, dwSearchScope);
-                }
+                archives[i].SFileExtractFile(from, to, dwSearchScope);
             }
-            return false;
         }
 
         public void Close()
