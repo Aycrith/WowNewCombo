@@ -210,11 +210,10 @@ namespace Core.Goals
                     wait.Till(remainMs + playerReader.NetworkLatency.Value, CastStatusChanged);
 
                     if ((UI_ERROR)playerReader.CastEvent.Value is
-                        UI_ERROR.CAST_SUCCESS or
-                        UI_ERROR.ERR_SPELL_FAILED_ANOTHER_IN_PROGRESS ||
+                        UI_ERROR.CAST_SUCCESS ||
                         successfulInBackground)
                     {
-                        Log($"Gathering Successful!");
+                        Log($"Gathering Successful! {((UI_ERROR)playerReader.CastEvent.Value).ToStringF()} | background: {successfulInBackground}");
                         GoalExit(true, false);
                         return;
                     }
