@@ -21,13 +21,13 @@
 using Microsoft.Extensions.Logging;
 
 using System;
+using System.IO;
 using System.Runtime.InteropServices;
 
 namespace StormDll
 {
-    internal unsafe class StormDllx64
+    internal class StormDllx64
     {
-
         [DllImport("MPQ\\StormLib_x64.dll")]
         public static extern bool SFileOpenArchive(
             [MarshalAs(UnmanagedType.LPWStr)] string szMpqName,
@@ -44,23 +44,10 @@ namespace StormDll
             [MarshalAs(UnmanagedType.LPStr)] string szToExtract,
             [MarshalAs(UnmanagedType.LPWStr)] string szExtracted,
             [MarshalAs(UnmanagedType.U4)] OpenFile dwSearchScope);
-
-        [DllImport("MPQ\\StormLib_x64.dll")]
-        public static extern bool SFileOpenPatchArchive(
-            IntPtr hMpq,
-            [MarshalAs(UnmanagedType.LPStr)] string szMpqName,
-            [MarshalAs(UnmanagedType.LPStr)] string szPatchPathPrefix,
-            uint dwFlags);
-
-        [DllImport("MPQ\\StormLib_x64.dll")]
-        public static extern bool SFileHasFile(IntPtr hMpq,
-            [MarshalAs(UnmanagedType.LPStr)] string szFileName);
-
     }
 
-    internal unsafe class StormDllx86
+    internal class StormDllx86
     {
-
         [DllImport("MPQ\\StormLib_x86.dll")]
         public static extern bool SFileOpenArchive(
             [MarshalAs(UnmanagedType.LPWStr)] string szMpqName,
@@ -77,18 +64,6 @@ namespace StormDll
             [MarshalAs(UnmanagedType.LPStr)] string szToExtract,
             [MarshalAs(UnmanagedType.LPWStr)] string szExtracted,
             [MarshalAs(UnmanagedType.U4)] OpenFile dwSearchScope);
-
-        [DllImport("MPQ\\StormLib_x86.dll")]
-        public static extern bool SFileOpenPatchArchive(
-            IntPtr hMpq,
-            [MarshalAs(UnmanagedType.LPStr)] string szMpqName,
-            [MarshalAs(UnmanagedType.LPStr)] string szPatchPathPrefix,
-            uint dwFlags);
-
-        [DllImport("MPQ\\StormLib_x86.dll")]
-        public static extern bool SFileHasFile(IntPtr hMpq,
-            [MarshalAs(UnmanagedType.LPStr)] string szFileName);
-
     }
 
     // Flags for SFileOpenArchive
@@ -127,7 +102,7 @@ namespace StormDll
         SFILE_OPEN_LOCAL_FILE = 0xFFFFFFFF  // Open a local file
     };
 
-    public unsafe class ArchiveSet
+    public class ArchiveSet
     {
         private Archive[] archives;
 
@@ -155,12 +130,18 @@ namespace StormDll
             }
         }
 
-        public void SFileExtractFile(string from, string to, OpenFile dwSearchScope = OpenFile.SFILE_OPEN_FROM_MPQ)
+        public bool SFileExtractFile(string from, string to, OpenFile dwSearchScope = OpenFile.SFILE_OPEN_FROM_MPQ)
         {
             for (int i = 0; i < archives.Length; i++)
             {
-                archives[i].SFileExtractFile(from, to, dwSearchScope);
+                Archive a = archives[i];
+                if (a.HasFile(from))
+                {
+                    return a.SFileExtractFile(from, to, dwSearchScope);
+                }
             }
+
+            return false;
         }
 
         public void Close()
@@ -172,15 +153,34 @@ namespace StormDll
         }
     }
 
-    public unsafe class Archive
+    internal class Archive
     {
         private readonly IntPtr handle;
+
+        private readonly System.Collections.Generic.HashSet<string> fileList = new(StringComparer.InvariantCultureIgnoreCase);
 
         public Archive(string file, out bool open, uint Prio, OpenArchive Flags)
         {
             open = Environment.Is64BitProcess
                 ? StormDllx64.SFileOpenArchive(file, Prio, Flags, out handle)
                 : StormDllx86.SFileOpenArchive(file, Prio, Flags, out handle);
+
+            if (open)
+            {
+                string temp = Path.GetTempFileName();
+
+                bool extracted = Environment.Is64BitProcess
+                ? StormDllx64.SFileExtractFile(handle, "(listfile)", temp, OpenFile.SFILE_OPEN_FROM_MPQ)
+                : StormDllx86.SFileExtractFile(handle, "(listfile)", temp, OpenFile.SFILE_OPEN_FROM_MPQ);
+
+                if (extracted && File.Exists(temp))
+                {
+                    foreach (string line in File.ReadLines(temp))
+                    {
+                        fileList.Add(line);
+                    }
+                }
+            }
         }
 
         public bool IsOpen()
@@ -188,18 +188,17 @@ namespace StormDll
             return handle != IntPtr.Zero;
         }
 
+        public bool HasFile(string name)
+        {
+            return fileList.Contains(name);
+        }
+
         public bool SFileCloseArchive()
         {
+            fileList.Clear();
             return Environment.Is64BitProcess
                 ? StormDllx64.SFileCloseArchive(handle)
                 : StormDllx86.SFileCloseArchive(handle);
-        }
-
-        public bool SFileHasFile(string name)
-        {
-            return Environment.Is64BitProcess
-                ? StormDllx64.SFileHasFile(handle, name)
-                : StormDllx86.SFileHasFile(handle, name);
         }
 
         public bool SFileExtractFile(string from, string to, OpenFile dwSearchScope)

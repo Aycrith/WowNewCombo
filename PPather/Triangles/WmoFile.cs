@@ -39,7 +39,7 @@ namespace Wmo
             return (uint)s[3] | ((uint)s[2] << 8) | ((uint)s[1] << 16) | ((uint)s[0] << 24);
         }
 
-        public static string ExtractString(byte[] buff, int off)
+        public static unsafe string ExtractString(byte[] buff, int off)
         {
             fixed (byte* bp = buff)
             {
@@ -71,30 +71,24 @@ namespace Wmo
         public static readonly uint MH2O = ToBin(nameof(MH2O));
     }
 
-    public static class Unique
-    {
-        public static int Index;
-    }
-
     public class WMOManager : Manager<WMO>
     {
-        private readonly StormDll.ArchiveSet set;
+        private readonly StormDll.ArchiveSet archive;
         private readonly ModelManager modelmanager;
         private readonly DataConfig dataConfig;
 
-        public WMOManager(StormDll.ArchiveSet set, ModelManager modelmanager, int maxItems, DataConfig dataConfig)
+        public WMOManager(StormDll.ArchiveSet archive, ModelManager modelmanager, int maxItems, DataConfig dataConfig)
             : base(maxItems)
         {
-            this.set = set;
+            this.archive = archive;
             this.modelmanager = modelmanager;
             this.dataConfig = dataConfig;
         }
 
         public override bool Load(string path, out WMO t)
         {
-            string tempFile = Path.Join(dataConfig.PPather, $"{Unique.Index++}.tmp"); //wmo
-            set.SFileExtractFile(path, tempFile);
-            if (!File.Exists(tempFile))
+            string tempFile = Path.Join(dataConfig.PPather, "wmo.tmp"); //wmo
+            if (!archive.SFileExtractFile(path, tempFile))
             {
                 t = default;
                 return false;
@@ -112,8 +106,7 @@ namespace Wmo
                 ReadOnlySpan<char> part = path[..^4].AsSpan();
                 string gf = string.Format("{0}_{1,3:000}.wmo", part.ToString(), i);
 
-                set.SFileExtractFile(gf, tempFile);
-                if (!File.Exists(tempFile))
+                if (!archive.SFileExtractFile(gf, tempFile))
                     continue;
 
                 _ = new WmoGroupFile(t.groups[i], tempFile);
@@ -181,14 +174,13 @@ namespace Wmo
         {
             this.maxItems = maxItems;
 
-            items = new Dictionary<string, T>(maxItems);
+            items = new Dictionary<string, T>(maxItems, StringComparer.OrdinalIgnoreCase);
         }
 
         public abstract bool Load(string path, out T t);
 
         public T AddAndLoadIfNeeded(string path)
         {
-            path = path.ToLower();
             if (!items.TryGetValue(path, out T t))
             {
                 if (Load(path, out t))
@@ -202,13 +194,13 @@ namespace Wmo
 
     public class ModelManager : Manager<Model>
     {
-        private readonly StormDll.ArchiveSet set;
+        private readonly StormDll.ArchiveSet archive;
         private readonly DataConfig dataConfig;
 
-        public ModelManager(StormDll.ArchiveSet set, int maxModels, DataConfig dataConfig)
+        public ModelManager(StormDll.ArchiveSet archive, int maxModels, DataConfig dataConfig)
             : base(maxModels)
         {
-            this.set = set;
+            this.archive = archive;
             this.dataConfig = dataConfig;
         }
 
@@ -216,22 +208,19 @@ namespace Wmo
         {
             // change .mdx to .m2
             //string file=path.Substring(0, path.Length-4)+".m2";
-
-            string file = path;
             if (Path.GetExtension(path).Equals(".mdx") || Path.GetExtension(path).Equals(".mdl"))
             {
-                file = Path.ChangeExtension(path, ".m2");
+                path = Path.ChangeExtension(path, ".m2");
             }
 
-            string tempFile = Path.Join(dataConfig.PPather, $"{Unique.Index++}.tmp"); //model
-            set.SFileExtractFile(file, tempFile);
-            if (!File.Exists(tempFile))
+            string tempFile = Path.Join(dataConfig.PPather, "model.tmp"); //model
+            if (!archive.SFileExtractFile(path, tempFile))
             {
                 t = default;
                 return false;
             }
 
-            t = ModelFile.Read(tempFile, file);
+            t = ModelFile.Read(tempFile, path);
             return true;
         }
     }
@@ -499,9 +488,8 @@ namespace Wmo
             this.archive = archive;
 
             string wdtfile = Path.Join("World", "Maps", pathName, pathName + ".wdt");
-            string tempFile = Path.Join(dataConfig.PPather, $"{Unique.Index++}.tmp"); //wdt
-            archive.SFileExtractFile(wdtfile, tempFile);
-            if (!File.Exists(tempFile))
+            string tempFile = Path.Join(dataConfig.PPather, "wdt.tmp"); //wdt
+            if (!archive.SFileExtractFile(wdtfile, tempFile))
                 return;
 
             using Stream stream = File.OpenRead(tempFile);
@@ -550,9 +538,8 @@ namespace Wmo
                 return;
 
             string filename = Path.Join("World", "Maps", pathName, $"{pathName}_{x}_{y}.adt");
-            string tempFile = Path.Join(dataConfig.PPather, $"{Unique.Index++}.tmp"); //adt
-            archive.SFileExtractFile(filename, tempFile);
-            if (!File.Exists(tempFile))
+            string tempFile = Path.Join(dataConfig.PPather, "adt.tmp"); //adt
+            if (!archive.SFileExtractFile(filename, tempFile))
                 return;
 
             if (logger.IsEnabled(LogLevel.Trace))
@@ -705,14 +692,14 @@ namespace Wmo
             List<string> models = new();
             List<string> wmos = new();
 
-            using Stream stream = File.OpenRead(name);
-            using BinaryReader file = new(stream);
-
             WMOInstance[] wmois = Array.Empty<WMOInstance>();
             ModelInstance[] modelis = Array.Empty<ModelInstance>();
 
             MapChunk[] chunks = new MapChunk[MapTile.SIZE * MapTile.SIZE];
             bool[] hasChunk = new bool[chunks.Length];
+
+            using Stream stream = File.OpenRead(name);
+            using BinaryReader file = new(stream);
 
             do
             {
