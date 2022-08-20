@@ -19,6 +19,7 @@
         SPELL_FAILED_TARGETS_DEAD = 14,
         ERR_LOOT_LOCKED = 15,
         ERR_ATTACK_PACIFIED = 16,
+        ERR_REQUIRES_S = 17,
 
         MAX_ERROR_RANGE = 2000,
 
@@ -46,11 +47,12 @@
             UI_ERROR.SPELL_FAILED_TARGETS_DEAD => nameof(UI_ERROR.SPELL_FAILED_TARGETS_DEAD),
             UI_ERROR.ERR_LOOT_LOCKED => nameof(UI_ERROR.ERR_LOOT_LOCKED),
             UI_ERROR.ERR_ATTACK_PACIFIED => nameof(UI_ERROR.ERR_ATTACK_PACIFIED),
+            UI_ERROR.ERR_REQUIRES_S => nameof(UI_ERROR.ERR_REQUIRES_S),
             UI_ERROR.MAX_ERROR_RANGE => nameof(UI_ERROR.MAX_ERROR_RANGE),
             UI_ERROR.CAST_START => nameof(UI_ERROR.CAST_START),
             UI_ERROR.CAST_SUCCESS => nameof(UI_ERROR.CAST_SUCCESS),
             UI_ERROR.NONE => nameof(UI_ERROR.NONE),
-            _ => nameof(UI_ERROR.NONE)
+            _ => throw new System.ArgumentOutOfRangeException()
         };
     }
 }

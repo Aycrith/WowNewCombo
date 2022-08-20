@@ -180,7 +180,13 @@ namespace Core.Goals
                         (castTimeout, elapsedMs) = wait.Until(MAX_TIME_TO_DETECT_CAST, CastStartedOrFailed);
                     }
 
-                    Log($"Started casting ? {!castTimeout} {elapsedMs}ms");
+                    if (successfulInBackground)
+                    {
+                        ExitSuccess();
+                        return;
+                    }
+
+                    Log($"Started casting or interrupted ? {!castTimeout} - LastError: {playerReader.LastUIError.ToStringF()} - background: {successfulInBackground} - casting: {playerReader.IsCasting()} {elapsedMs}ms");
                     if (castTimeout || playerReader.LastUIError == UI_ERROR.ERR_LOOT_LOCKED)
                     {
                         int delay = playerReader.LastUIError == UI_ERROR.ERR_LOOT_LOCKED ?
@@ -197,10 +203,10 @@ namespace Core.Goals
                             continue;
                         }
                     }
-
-                    if (successfulInBackground)
+                    else if (playerReader.LastUIError == UI_ERROR.ERR_REQUIRES_S)
                     {
-                        GoalExit(true, false);
+                        LogWarning("Missing Spell/Item/Skill Requirement!");
+                        ExitInterruptOrFailed(false);
                         return;
                     }
 
@@ -214,7 +220,7 @@ namespace Core.Goals
                         successfulInBackground)
                     {
                         Log($"Gathering Successful! {((UI_ERROR)playerReader.CastEvent.Value).ToStringF()} | background: {successfulInBackground}");
-                        GoalExit(true, false);
+                        ExitSuccess();
                         return;
                     }
                     else
@@ -222,7 +228,7 @@ namespace Core.Goals
                         if (combatUtil.EnteredCombat())
                         {
                             Log("Interrupted due combat!");
-                            GoalExit(false, true);
+                            ExitInterruptOrFailed(true);
                             return;
                         }
 
@@ -233,36 +239,41 @@ namespace Core.Goals
                 else
                 {
                     LogWarning($"Unable to gather Target({playerReader.TargetId})!");
-
-                    GoalExit(false, false);
+                    ExitInterruptOrFailed(false);
                     return;
                 }
             }
 
-            GoalExit(false, false);
+            LogWarning($"Ran out of {attempts} maximum attempts...");
+            ExitInterruptOrFailed(false);
         }
 
         public override void OnExit()
         {
-            npcNameTargeting.ChangeNpcType(NpcNames.None);
-            listenLootWindow = false;
-        }
-
-        private void GoalExit(bool castSuccess, bool interrupted)
-        {
-            (bool lootTimeOut, double elapsedMs) = wait.Until(MAX_TIME_TO_DETECT_LOOT, LootReadyOrClosed);
-            Log($"Loot {(castSuccess && !lootTimeOut ? "Successful" : "Failed")} after {elapsedMs}ms");
-
-            SendGoapEvent(new GoapStateEvent(GoapKey.shouldgather, interrupted));
-
-            if (!interrupted)
-                state.GatherableCorpseCount = Math.Max(0, state.GatherableCorpseCount - 1);
-
             if (playerReader.Bits.HasTarget() && playerReader.Bits.TargetIsDead())
             {
                 input.ClearTarget();
                 wait.Update();
             }
+
+            npcNameTargeting.ChangeNpcType(NpcNames.None);
+            listenLootWindow = false;
+        }
+
+        private void ExitSuccess()
+        {
+            (bool lootTimeOut, double elapsedMs) = wait.Until(MAX_TIME_TO_DETECT_LOOT, LootReadyOrClosed);
+            Log($"Loot {(!lootTimeOut ? "Successful" : "Failed")} after {elapsedMs}ms");
+            SendGoapEvent(new GoapStateEvent(GoapKey.shouldgather, false));
+
+            state.GatherableCorpseCount = Math.Max(0, state.GatherableCorpseCount - 1);
+        }
+
+        private void ExitInterruptOrFailed(bool interrupted)
+        {
+            SendGoapEvent(new GoapStateEvent(GoapKey.shouldgather, interrupted));
+            if (!interrupted)
+                state.GatherableCorpseCount = Math.Max(0, state.GatherableCorpseCount - 1);
         }
 
         private bool LootReset()
@@ -342,7 +353,9 @@ namespace Core.Goals
         {
             return successfulInBackground ||
                 playerReader.IsCasting() ||
-                playerReader.LastUIError == UI_ERROR.ERR_LOOT_LOCKED;
+                playerReader.LastUIError is
+                UI_ERROR.ERR_LOOT_LOCKED or
+                UI_ERROR.ERR_REQUIRES_S;
         }
 
         private bool MinRangeZero()
