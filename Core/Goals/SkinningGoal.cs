@@ -27,7 +27,7 @@ namespace Core.Goals
         private readonly CombatUtil combatUtil;
         private readonly GoapAgentState state;
 
-        private int lastCastEvent;
+        private UI_ERROR lastCastEvent;
         private bool canRun;
 
         private bool listenLootWindow;
@@ -186,12 +186,6 @@ namespace Core.Goals
                         (castTimeout, elapsedMs) = wait.Until(MAX_TIME_TO_DETECT_CAST, CastStartedOrFailed);
                     }
 
-                    if (lootWindowClosedInBackground)
-                    {
-                        ExitSuccess();
-                        return;
-                    }
-
                     Log($"Started casting or interrupted ? {!castTimeout} - LastError: {playerReader.LastUIError.ToStringF()} {elapsedMs}ms");
                     if (castTimeout || playerReader.LastUIError == UI_ERROR.ERR_LOOT_LOCKED)
                     {
@@ -204,7 +198,7 @@ namespace Core.Goals
 
                         if (!playerReader.IsCasting())
                         {
-                            Log($"Try again: {((UI_ERROR)playerReader.CastEvent.Value).ToStringF()} | {playerReader.LastUIError.ToStringF()} | {playerReader.IsCasting()}");
+                            Log($"Try again: {playerReader.CastState.ToStringF()} | {playerReader.LastUIError.ToStringF()} | {playerReader.IsCasting()}");
                             attempts++;
                             continue;
                         }
@@ -216,16 +210,15 @@ namespace Core.Goals
                         return;
                     }
 
-                    lastCastEvent = playerReader.CastEvent.Value;
+                    lastCastEvent = playerReader.CastState;
                     int remainMs = playerReader.RemainCastMs;
 
-                    wait.Till(remainMs + playerReader.NetworkLatency.Value, CastStatusChanged);
+                    wait.Till(remainMs + 2 * playerReader.NetworkLatency.Value, CastStatusChangedOrBackgroundSuccess);
 
-                    if ((UI_ERROR)playerReader.CastEvent.Value is
-                        UI_ERROR.CAST_SUCCESS ||
+                    if (playerReader.CastState == UI_ERROR.CAST_SUCCESS ||
                         lootWindowClosedInBackground)
                     {
-                        Log($"Gathering Successful! {((UI_ERROR)playerReader.CastEvent.Value).ToStringF()} | background: {lootWindowClosedInBackground}");
+                        Log($"Gathering Successful! {playerReader.CastState.ToStringF()} | background: {lootWindowClosedInBackground}");
                         ExitSuccess();
                         return;
                     }
@@ -238,7 +231,7 @@ namespace Core.Goals
                             return;
                         }
 
-                        LogWarning($"Gathering Failed! {((UI_ERROR)playerReader.CastEvent.Value).ToStringF()} attempts: {attempts}");
+                        LogWarning($"Gathering Failed! {playerReader.CastState.ToStringF()} attempts: {attempts}");
                         attempts++;
                     }
                 }
@@ -350,9 +343,10 @@ namespace Core.Goals
                 LootStatus.CLOSED;
         }
 
-        private bool CastStatusChanged()
+        private bool CastStatusChangedOrBackgroundSuccess()
         {
-            return lastCastEvent != playerReader.CastEvent.Value;
+            return lastCastEvent != playerReader.CastState ||
+                lootWindowClosedInBackground;
         }
 
         private bool CastStartedOrFailed()
