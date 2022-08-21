@@ -38,7 +38,7 @@ namespace Core.Goals
 
         private bool gatherCorpse;
         private bool listenLootWindow;
-        private bool successfulInBackground;
+        private bool lootWindowClosedInBackground;
 
         public LootGoal(ILogger logger, ConfigurableInput input, Wait wait,
             AddonReader addonReader, StopMoving stopMoving, ClassConfiguration classConfig,
@@ -61,7 +61,7 @@ namespace Core.Goals
             this.playerDirection = playerDirection;
             this.state = state;
 
-            playerReader.LootEvent.Changed += ListenLootEvent;
+            playerReader.LootEvent.Changed += LootEventChanged;
 
             AddPrecondition(GoapKey.shouldloot, true);
             AddEffect(GoapKey.shouldloot, false);
@@ -69,7 +69,7 @@ namespace Core.Goals
 
         public void Dispose()
         {
-            playerReader.LootEvent.Changed -= ListenLootEvent;
+            playerReader.LootEvent.Changed -= LootEventChanged;
         }
 
         public override void OnEnter()
@@ -78,7 +78,7 @@ namespace Core.Goals
 
             wait.While(LootReset);
 
-            successfulInBackground = false;
+            lootWindowClosedInBackground = false;
             listenLootWindow = true;
 
             if (bagReader.BagsFull())
@@ -108,9 +108,10 @@ namespace Core.Goals
             if (success)
             {
                 (bool lootTimeOut, double elapsedMs) = wait.Until(MAX_TIME_TO_DETECT_LOOT, LootReadyOrClosed, input.ApproachOnCooldown);
-                Log($"Loot {(successfulInBackground || !lootTimeOut ? "Successful" : "Failed")} after {elapsedMs}ms");
+                success = lootWindowClosedInBackground || !lootTimeOut;
+                Log($"Loot {((success && !bagReader.BagsFull()) ? "Successful" : "Failed")} after {elapsedMs}ms");
 
-                gatherCorpse &= successfulInBackground || !lootTimeOut;
+                gatherCorpse &= success;
 
                 AddEffect(GoapKey.shouldgather, gatherCorpse);
                 SendGoapEvent(new GoapStateEvent(GoapKey.shouldgather, gatherCorpse));
@@ -223,7 +224,7 @@ namespace Core.Goals
 
         private bool LootReadyOrClosed()
         {
-            return successfulInBackground ||
+            return lootWindowClosedInBackground ||
                 (LootStatus)playerReader.LootEvent.Value is
                 LootStatus.READY or
                 LootStatus.CLOSED;
@@ -299,12 +300,12 @@ namespace Core.Goals
             return (LootStatus)playerReader.LootEvent.Value != LootStatus.CORPSE;
         }
 
-        private void ListenLootEvent()
+        private void LootEventChanged()
         {
             if (listenLootWindow &&
-                (LootStatus)playerReader.LootEvent.Value is LootStatus.READY or LootStatus.CLOSED)
+                (LootStatus)playerReader.LootEvent.Value is LootStatus.CLOSED)
             {
-                successfulInBackground = true;
+                lootWindowClosedInBackground = true;
             }
         }
 

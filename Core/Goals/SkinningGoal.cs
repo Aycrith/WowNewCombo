@@ -31,7 +31,7 @@ namespace Core.Goals
         private bool canRun;
 
         private bool listenLootWindow;
-        private bool successfulInBackground;
+        private bool lootWindowClosedInBackground;
 
         private readonly List<SkinCorpseEvent> corpses = new();
 
@@ -60,7 +60,7 @@ namespace Core.Goals
             equipmentReader.OnEquipmentChanged -= EquipmentReader_OnEquipmentChanged;
             equipmentReader.OnEquipmentChanged += EquipmentReader_OnEquipmentChanged;
 
-            playerReader.LootEvent.Changed += ListenLootEvent;
+            playerReader.LootEvent.Changed += LootEventChanged;
 
             //AddPrecondition(GoapKey.dangercombat, false);
 
@@ -75,7 +75,7 @@ namespace Core.Goals
             bagReader.DataChanged -= BagReader_DataChanged;
             equipmentReader.OnEquipmentChanged -= EquipmentReader_OnEquipmentChanged;
 
-            playerReader.LootEvent.Changed -= ListenLootEvent;
+            playerReader.LootEvent.Changed -= LootEventChanged;
         }
 
         public override bool CanRun() => canRun;
@@ -92,9 +92,15 @@ namespace Core.Goals
         {
             combatUtil.Update();
 
-            wait.While(LootReset);
+            (bool rTimeOut, double rElapsedMs) = wait.Until(CastingHandler.GCD, LootReset);
+            if (rTimeOut)
+            {
+                LogWarning($"Loot window still open! {rElapsedMs}ms");
+                ExitInterruptOrFailed(false);
+                return;
+            }
 
-            successfulInBackground = false;
+            lootWindowClosedInBackground = false;
             listenLootWindow = true;
 
             wait.Fixed(playerReader.NetworkLatency.Value);
@@ -180,13 +186,13 @@ namespace Core.Goals
                         (castTimeout, elapsedMs) = wait.Until(MAX_TIME_TO_DETECT_CAST, CastStartedOrFailed);
                     }
 
-                    if (successfulInBackground)
+                    if (lootWindowClosedInBackground)
                     {
                         ExitSuccess();
                         return;
                     }
 
-                    Log($"Started casting or interrupted ? {!castTimeout} - LastError: {playerReader.LastUIError.ToStringF()} - background: {successfulInBackground} - casting: {playerReader.IsCasting()} {elapsedMs}ms");
+                    Log($"Started casting or interrupted ? {!castTimeout} - LastError: {playerReader.LastUIError.ToStringF()} {elapsedMs}ms");
                     if (castTimeout || playerReader.LastUIError == UI_ERROR.ERR_LOOT_LOCKED)
                     {
                         int delay = playerReader.LastUIError == UI_ERROR.ERR_LOOT_LOCKED ?
@@ -217,9 +223,9 @@ namespace Core.Goals
 
                     if ((UI_ERROR)playerReader.CastEvent.Value is
                         UI_ERROR.CAST_SUCCESS ||
-                        successfulInBackground)
+                        lootWindowClosedInBackground)
                     {
-                        Log($"Gathering Successful! {((UI_ERROR)playerReader.CastEvent.Value).ToStringF()} | background: {successfulInBackground}");
+                        Log($"Gathering Successful! {((UI_ERROR)playerReader.CastEvent.Value).ToStringF()} | background: {lootWindowClosedInBackground}");
                         ExitSuccess();
                         return;
                     }
@@ -263,7 +269,7 @@ namespace Core.Goals
         private void ExitSuccess()
         {
             (bool lootTimeOut, double elapsedMs) = wait.Until(MAX_TIME_TO_DETECT_LOOT, LootReadyOrClosed);
-            Log($"Loot {(!lootTimeOut ? "Successful" : "Failed")} after {elapsedMs}ms");
+            Log($"Loot {((!lootTimeOut && !bagReader.BagsFull()) ? "Successful" : "Failed")} after {elapsedMs}ms");
             SendGoapEvent(new GoapStateEvent(GoapKey.shouldgather, false));
 
             state.GatherableCorpseCount = Math.Max(0, state.GatherableCorpseCount - 1);
@@ -278,15 +284,15 @@ namespace Core.Goals
 
         private bool LootReset()
         {
-            return (LootStatus)playerReader.LootEvent.Value != LootStatus.CORPSE;
+            return (LootStatus)playerReader.LootEvent.Value == LootStatus.CORPSE;
         }
 
-        private void ListenLootEvent()
+        private void LootEventChanged()
         {
             if (listenLootWindow &&
-                (LootStatus)playerReader.LootEvent.Value is LootStatus.READY or LootStatus.CLOSED)
+                (LootStatus)playerReader.LootEvent.Value is LootStatus.CLOSED)
             {
-                successfulInBackground = true;
+                lootWindowClosedInBackground = true;
             }
         }
 
@@ -338,7 +344,7 @@ namespace Core.Goals
 
         private bool LootReadyOrClosed()
         {
-            return successfulInBackground ||
+            return lootWindowClosedInBackground ||
                 (LootStatus)playerReader.LootEvent.Value is
                 LootStatus.READY or
                 LootStatus.CLOSED;
@@ -351,7 +357,7 @@ namespace Core.Goals
 
         private bool CastStartedOrFailed()
         {
-            return successfulInBackground ||
+            return lootWindowClosedInBackground ||
                 playerReader.IsCasting() ||
                 playerReader.LastUIError is
                 UI_ERROR.ERR_LOOT_LOCKED or
