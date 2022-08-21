@@ -137,13 +137,13 @@ function DataToColor:OnUIErrorMessage(_, _, message)
         DataToColor.uiErrorMessage = code
         UIErrorsFrame:AddMessage(message, 0, 1, 0) -- show as green messasge
         return
-    end
-
-    for i, v in pairs(specialErrorS) do
-        if string.find(message, i) then
-            DataToColor.uiErrorMessage = v
-            UIErrorsFrame:AddMessage(message, 1, 0, 0) -- show as green messasge
-            return
+    else
+        for i, v in pairs(specialErrorS) do
+            if string.find(message, i) then
+                DataToColor.uiErrorMessage = v
+                UIErrorsFrame:AddMessage(message, 0, 1, 0) -- show as green messasge
+                return
+            end
         end
     end
 
