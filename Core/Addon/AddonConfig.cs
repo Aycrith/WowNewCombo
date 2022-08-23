@@ -14,7 +14,6 @@ namespace Core
     {
         public int Version { get; init; } = AddonConfigMeta.Version;
 
-        public string InstallPath { get; set; } = string.Empty;
         public string Author { get; set; } = string.Empty;
         public string CellSize { get; set; } = "1";
         public string Title { get; set; } = string.Empty;
@@ -25,7 +24,7 @@ namespace Core
 
         public bool IsDefault()
         {
-            return string.IsNullOrEmpty(InstallPath) ||
+            return
                 string.IsNullOrEmpty(Author) ||
                 string.IsNullOrEmpty(Title) ||
                 string.IsNullOrEmpty(Command);

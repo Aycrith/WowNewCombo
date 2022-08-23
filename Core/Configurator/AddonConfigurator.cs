@@ -4,7 +4,6 @@ using System.Linq;
 using System;
 using System.Text.RegularExpressions;
 using Game;
-using WinAPI;
 using Core.Extensions;
 
 namespace Core
@@ -19,10 +18,10 @@ namespace Core
         private const string DefaultAddonName = "DataToColor";
         private const string AddonSourcePath = @".\Addons\";
 
-        private string AddonBasePath => Path.Join(Config.InstallPath, "Interface", "AddOns");
+        private string AddonBasePath => Path.Join(wowProcess.Path, "Interface", "AddOns");
 
         private string DefaultAddonPath => Path.Join(AddonBasePath, DefaultAddonName);
-        private string FinalAddonPath => Path.Join(AddonBasePath, Config.Title);
+        public string FinalAddonPath => Path.Join(AddonBasePath, Config.Title);
 
         public event Action? OnChange;
 
@@ -46,25 +45,6 @@ namespace Core
 
         public bool Validate()
         {
-            if (!Directory.Exists(Config.InstallPath))
-            {
-                logger.LogError($"{nameof(Config)}.{nameof(Config.InstallPath)} - error - does not exists: '{Config.InstallPath}'");
-                return false;
-            }
-            else
-            {
-                logger.LogInformation($"{nameof(Config)}.{nameof(Config.InstallPath)} - correct: '{Config.InstallPath}'");
-                if (!Directory.Exists(AddonBasePath))
-                {
-                    logger.LogError($"{nameof(Config)}.{nameof(Config.InstallPath)} - error - unable to locate Interface\\Addons folder: '{Config.InstallPath}'");
-                    return false;
-                }
-                else
-                {
-                    logger.LogInformation($"{nameof(Config)}.{nameof(Config.InstallPath)} - correct - Interface\\Addons : '{Config.InstallPath}'");
-                }
-            }
-
             if (string.IsNullOrEmpty(Config.Author))
             {
                 logger.LogError($"{nameof(Config)}.{nameof(Config.Author)} - error - cannot be empty: '{Config.Author}'");
@@ -123,7 +103,7 @@ namespace Core
             }
             catch (Exception e)
             {
-                logger.LogInformation($"{nameof(AddonConfigurator)}.{nameof(Install)} - Failed\n" + e.Message);
+                logger.LogInformation($"{nameof(AddonConfigurator)}.{nameof(Install)} - Failed\n{e.Message}");
             }
         }
 
@@ -253,26 +233,6 @@ namespace Core
 
             OnChange?.Invoke();
         }
-
-
-        #region InstallPath
-
-        public void FindPathByExecutable()
-        {
-            if (wowProcess.Process != null)
-            {
-                Config.InstallPath = ExecutablePath.Get(wowProcess.Process);
-                if (!string.IsNullOrEmpty(Config.InstallPath))
-                {
-                    logger.LogInformation($"{nameof(Config)}.{nameof(Config.InstallPath)} - found running instance: '{Config.InstallPath}'");
-                    return;
-                }
-            }
-
-            logger.LogError($"{nameof(Config)}.{nameof(Config.InstallPath)} - game not running");
-        }
-
-        #endregion
 
         private static void DirectoryCopy(string sourceDirName, string destDirName, bool copySubDirs)
         {
