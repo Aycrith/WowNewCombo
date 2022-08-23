@@ -189,7 +189,12 @@ The app reads the game state using small blocks of colour shown at the top of th
     * Navigate to `5. Frame Configuration` [Guidance for good DataFrame](../../wiki/Guidance-for-good-DataFrame)
     * Click on `Auto` -> `Start` [Validate FrameConfiguration](../../wiki/Validating-FrameConfiguration)
 
-4. Under the `Addon Configuration` you can check if theres a **newer version available** for the addon. In that case just press the `install` button then have to restart the game client and the bot it self in order to use it properly. 
+4. Addon Control panel `Status` is `Update Available`
+    * Press `Save` button
+    * Should see a loading screen
+    * Restart the BlazorServer
+    * Complete `5. Frame Configuration` steps again
+    * Click on `Auto` -> `Start` [Validate FrameConfiguration](../../wiki/Validating-FrameConfiguration)
 
 ## 6. BlazorServer should restart and show the dashboard page.
 
