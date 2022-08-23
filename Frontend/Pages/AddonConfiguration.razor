@@ -4,63 +4,14 @@
 @inject NavigationManager NavigationManager
 @inject AddonConfigurator addonConfigurator
 @inject ExecGameCommand exec
+@inject WowProcess wowProcess
 
 @implements IDisposable
-
-<style>
-    h5 {
-        margin-top: 20px
-    }
-</style>
-
-<div class="container mt-3">
-    <div class="row">
-        <div class="col-10">
-            <h3>
-                Addon configuration(@(AddonConfigMeta.DefaultFileName)) file @(AddonConfig.Exists()? "exists" : "not exists") and @(!addonConfig.IsDefault() ? "valid" : "not valid")
-            </h3>
-        </div>
-        <div class="w-100"></div>
-        <div class="col-1">
-            <h6>0.</h6>
-        </div>
-        <div class="col">
-            <h5>Addon Status</h5>
-        </div>
-        <div class="col">
-            @(AddonStatus())
-        </div>
-        <div class="w-100"></div>
-        <div class="col-1">
-            <h6>1.</h6>
-        </div>
-        <div class="col">
-            <h5>Find the <b>InstallPath</b> by running game instance:</h5>
-        </div>
-        <div class="col">
-            <button class="btn btn-sm btn-primary" @onclick="FindPathByExe">
-                <span>Find InstallPath by running client</span>
-            </button>
-        </div>
-        <div class="w-100"></div>
-        <div class="col-1">
-            <h6>2.</h6>
-        </div>
-        <div class="col">
-            <h5>Delete previous <b>AddonConfig</b> and installed addon</h5>
-        </div>
-        <div class="col">
-            <button class="btn btn-sm btn-danger" @onclick="Delete">
-                <span>Delete current configuration</span>
-            </button>
-        </div>
-    </div>
-</div>
 
 <div class="container mt-3">
     <div class="card">
         <div class="card-header">
-            Addon Configuration
+            Addon Configuration - (@(AddonConfigMeta.DefaultFileName)) file @(AddonConfig.Exists() ? "exists" : "not exists") and @(!addonConfig.IsDefault() ? "valid" : "not valid")
         </div>
         <div class="card-body" style="padding-bottom: 0">
             <table class="table table-bordered">
@@ -87,22 +38,52 @@
 </div>
 
 <div class="container mt-3">
-    <div class="row">
-        <div class="col-1">
-            <h6>3.</h6>
+    <div class="card">
+        <div class="card-header">
+            Addon Control panel
         </div>
-        <div class="col">
-            <h5>Finalize AddonConfig setup, addon will be installed:</h5>
-        </div>
-        <div class="col">
-            <button class="btn btn-sm btn-success" @onclick="Install">
-                <span>Install & Save</span>
-            </button>
+        <div class="card-body" style="padding-bottom: 0">
+            <table class="table table-bordered">
+                <tr>
+                    <td style="width:25%">Status</td>
+                    <td>
+                        <label class="form-control" disabled>
+                            @AddonStatus()
+                        </label>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Install path</td>
+                    <td>
+                        <input value="@addonConfigurator.FinalAddonPath" class="form-control" disabled="true" />
+                    </td>
+                </tr>
+                <tr>
+                    <td>Install / Update addon and config</td>
+                    <td>
+                        <button class="btn btn-sm btn-success" @onclick="Install">
+                            <span>Save</span>
+                        </button>
+                    </td>
+                </tr>
+                @if (AddonConfig.Exists())
+                {
+                    <tr>
+                        <td>Delete current addon and config</td>
+                        <td>
+                            <button class="btn btn-sm btn-danger" @onclick="Delete">
+                                <span>Delete</span>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </table>
         </div>
     </div>
     <hr />
     <LogComponent />
 </div>
+
 
 @code {
 
@@ -139,11 +120,6 @@
         }
     }
 
-    private void FindPathByExe()
-    {
-        addonConfigurator.FindPathByExecutable();
-    }
-
     private void Install()
     {
         if (addonConfigurator.Validate())
@@ -161,7 +137,7 @@
         {
             if (addonConfigurator.UpdateAvailable())
             {
-                return new("<p class=\"text-warning\">Update available - press <b>Install & Save</b></p>");
+                return new("<p class=\"text-warning\">Update available</p>");
             }
             else
             {

@@ -23,6 +23,8 @@ namespace Game
 
         public Version FileVersion { get; private set; }
 
+        public string Path { get; private set; }
+
         private int processId = -1;
         public int ProcessId
         {
@@ -45,7 +47,7 @@ namespace Game
             Process = p;
             processId = Process.Id;
             IsRunning = true;
-            FileVersion = GetFileVersion();
+            (Path, FileVersion) = GetProcessInfo();
 
             cts = new();
             thread = new(PollProcessExited);
@@ -72,7 +74,7 @@ namespace Game
                         Process = p;
                         processId = Process.Id;
                         IsRunning = true;
-                        FileVersion = GetFileVersion();
+                        (Path, FileVersion) = GetProcessInfo();
                     }
                 }
 
@@ -103,7 +105,7 @@ namespace Game
             return null;
         }
 
-        private Version GetFileVersion()
+        private (string path, Version version) GetProcessInfo()
         {
             string path = WinAPI.ExecutablePath.Get(Process);
             if (string.IsNullOrEmpty(path))
@@ -112,12 +114,12 @@ namespace Game
             }
 
             FileVersionInfo fileVersion = FileVersionInfo.GetVersionInfo(System.IO.Path.Join(path, Process.ProcessName + ".exe"));
-            if (Version.TryParse(fileVersion.FileVersion, out Version? version))
+            if (Version.TryParse(fileVersion.FileVersion, out Version? v))
             {
-                return version;
+                return (path, v);
             }
 
-            return new Version();
+            return (path, new());
         }
     }
 }
