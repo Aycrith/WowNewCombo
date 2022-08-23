@@ -92,10 +92,10 @@ namespace Core.Goals
         {
             combatUtil.Update();
 
-            (bool rTimeOut, double rElapsedMs) = wait.Until(CastingHandler.GCD, LootReset);
-            if (rTimeOut)
+            (bool t, double e) = wait.Until(CastingHandler.GCD, LootReset);
+            if (t)
             {
-                LogWarning($"Loot window still open! {rElapsedMs}ms");
+                LogWarning($"Loot window still open! {e}ms");
                 ExitInterruptOrFailed(false);
                 return;
             }
@@ -111,24 +111,11 @@ namespace Core.Goals
                 SendGoapEvent(new GoapStateEvent(GoapKey.shouldgather, false));
             }
 
-            int attempts = 1;
+            int attempts = 0;
             while (attempts < MAX_ATTEMPTS)
             {
-                bool foundTarget = false;
-
-                if (playerReader.Bits.HasTarget())
-                {
-                    if (playerReader.Bits.TargetIsDead())
-                    {
-                        foundTarget = true;
-                        input.FastInteract();
-                    }
-                    else
-                    {
-                        LogWarning("Last target is alive!");
-                    }
-                }
-                else
+                bool foundTarget = playerReader.Bits.HasTarget() && playerReader.Bits.TargetIsDead();
+                if (!foundTarget)
                 {
                     input.FastLastTarget();
                     wait.Update();
@@ -138,16 +125,14 @@ namespace Core.Goals
                         if (playerReader.Bits.TargetIsDead())
                         {
                             foundTarget = true;
-                            input.FastInteract();
+                            Log("Last Target found!");
                         }
                         else
                         {
-                            LogWarning("Last Target is alive! 2");
+                            Log("Last Target is alive!");
+                            input.ClearTarget();
+                            wait.Update();
                         }
-                    }
-                    else
-                    {
-                        LogWarning("Last Target not found!");
                     }
                 }
 
@@ -157,89 +142,74 @@ namespace Core.Goals
                     combatUtil.Update();
 
                     npcNameTargeting.ChangeNpcType(NpcNames.Corpse);
-                    (bool timeOut, double elapsedMs) = wait.Until(MAX_TIME_TO_WAIT_NPC_NAME, npcNameTargeting.FoundNpcName);
-                    Log($"Found Npc Name ? {!timeOut} | Count: {npcNameTargeting.NpcCount} {elapsedMs}ms");
+                    (t, e) = wait.Until(MAX_TIME_TO_WAIT_NPC_NAME, npcNameTargeting.FoundNpcName);
+                    Log($"Found Npc Name ? {!t} | Count: {npcNameTargeting.NpcCount} {e}ms");
 
                     foundTarget = npcNameTargeting.FindBy(CursorType.Skin, CursorType.Mine, CursorType.Herb); // todo salvage icon
-                    wait.Update();
                 }
 
-                if (foundTarget)
-                {
-                    Log("Found corpse");
-
-                    if (!MinRangeZero())
-                    {
-                        (bool timeout, double moveElapsedMs) = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, input.ApproachOnCooldown);
-                        Log($"Reached Target ? {!timeout} {moveElapsedMs}ms");
-                    }
-
-                    bool castTimeout = false;
-                    double elapsedMs = 0;
-
-                    if (playerReader.IsCasting())
-                    {
-                        castTimeout = false;
-                    }
-                    else
-                    {
-                        (castTimeout, elapsedMs) = wait.Until(MAX_TIME_TO_DETECT_CAST, CastStartedOrFailed);
-                    }
-
-                    Log($"Started casting or interrupted ? {!castTimeout} - LastError: {playerReader.LastUIError.ToStringF()} {elapsedMs}ms");
-                    if (castTimeout || playerReader.LastUIError == UI_ERROR.ERR_LOOT_LOCKED)
-                    {
-                        int delay = playerReader.LastUIError == UI_ERROR.ERR_LOOT_LOCKED ?
-                            Loot.LOOTFRAME_AUTOLOOT_DELAY :
-                            playerReader.NetworkLatency.Value;
-
-                        Log($"Wait {delay}ms and try again...");
-                        wait.Fixed(delay);
-
-                        if (!playerReader.IsCasting())
-                        {
-                            Log($"Try again: {playerReader.CastState.ToStringF()} | {playerReader.LastUIError.ToStringF()} | {playerReader.IsCasting()}");
-                            attempts++;
-                            continue;
-                        }
-                    }
-                    else if (playerReader.LastUIError == UI_ERROR.ERR_REQUIRES_S)
-                    {
-                        LogWarning("Missing Spell/Item/Skill Requirement!");
-                        ExitInterruptOrFailed(false);
-                        return;
-                    }
-
-                    lastCastEvent = playerReader.CastState;
-                    int remainMs = playerReader.RemainCastMs;
-
-                    wait.Till(remainMs + 2 * playerReader.NetworkLatency.Value, CastStatusChangedOrBackgroundSuccess);
-
-                    if (playerReader.CastState == UI_ERROR.CAST_SUCCESS ||
-                        lootWindowClosedInBackground)
-                    {
-                        Log($"Gathering Successful! {playerReader.CastState.ToStringF()} | background: {lootWindowClosedInBackground}");
-                        ExitSuccess();
-                        return;
-                    }
-                    else
-                    {
-                        if (combatUtil.EnteredCombat())
-                        {
-                            Log("Interrupted due combat!");
-                            ExitInterruptOrFailed(true);
-                            return;
-                        }
-
-                        LogWarning($"Gathering Failed! {playerReader.CastState.ToStringF()} attempts: {attempts}");
-                        attempts++;
-                    }
-                }
-                else
+                if (!foundTarget)
                 {
                     LogWarning($"Unable to gather Target({playerReader.TargetId})!");
                     ExitInterruptOrFailed(false);
                     return;
+                }
+
+                if (!MinRangeZero())
+                {
+                    (t, e) = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, input.ApproachOnCooldown);
+                    Log($"Reached Target ? {!t} {e}ms");
+                }
+
+                playerReader.LastUIError = 0;
+                playerReader.CastEvent.ForceUpdate(0);
+
+                (t, e) = wait.Until(MAX_TIME_TO_DETECT_CAST, CastStartedOrFailed, input.ApproachOnCooldown);
+
+                Log($"Started casting or interrupted ? {!t} {e}ms");
+                if (playerReader.LastUIError == UI_ERROR.ERR_REQUIRES_S)
+                {
+                    LogWarning("Missing Spell/Item/Skill Requirement!");
+                    ExitInterruptOrFailed(false);
+                    return;
+                }
+                else if (t || playerReader.LastUIError == UI_ERROR.ERR_LOOT_LOCKED)
+                {
+                    int delay = playerReader.LastUIError == UI_ERROR.ERR_LOOT_LOCKED
+                        ? Loot.LOOTFRAME_AUTOLOOT_DELAY
+                        : playerReader.NetworkLatency.Value;
+
+                    Log($"Wait {delay}ms and try again...");
+                    wait.Fixed(delay);
+
+                    Log($"Try again: {playerReader.CastState.ToStringF()} | {playerReader.LastUIError.ToStringF()} | {playerReader.IsCasting()}");
+                    attempts++;
+                    continue;
+                }
+
+                lastCastEvent = playerReader.CastState;
+                int remainMs = playerReader.RemainCastMs;
+
+                wait.Till(remainMs + CastingHandler.SpellQueueTimeMs + playerReader.NetworkLatency.Value, CastStatusChangedOrBackgroundSuccess);
+
+                if (playerReader.CastState == UI_ERROR.CAST_SUCCESS ||
+                    lootWindowClosedInBackground)
+                {
+                    Log($"Gathering Successful! {playerReader.CastState.ToStringF()} | background: {lootWindowClosedInBackground}");
+                    ExitSuccess();
+                    return;
+                }
+                else
+                {
+                    if (combatUtil.EnteredCombat())
+                    {
+                        Log("Interrupted due combat!");
+                        ExitInterruptOrFailed(true);
+                        return;
+                    }
+
+                    LogWarning($"Gathering Failed! {playerReader.CastState.ToStringF()} attempts: {attempts}");
+                    attempts++;
                 }
             }
 
@@ -249,12 +219,6 @@ namespace Core.Goals
 
         public override void OnExit()
         {
-            if (playerReader.Bits.HasTarget() && playerReader.Bits.TargetIsDead())
-            {
-                input.ClearTarget();
-                wait.Update();
-            }
-
             npcNameTargeting.ChangeNpcType(NpcNames.None);
             listenLootWindow = false;
         }
@@ -266,6 +230,12 @@ namespace Core.Goals
             SendGoapEvent(new GoapStateEvent(GoapKey.shouldgather, false));
 
             state.GatherableCorpseCount = Math.Max(0, state.GatherableCorpseCount - 1);
+
+            if (playerReader.Bits.HasTarget() && playerReader.Bits.TargetIsDead())
+            {
+                input.ClearTarget();
+                wait.Update();
+            }
         }
 
         private void ExitInterruptOrFailed(bool interrupted)
@@ -273,6 +243,12 @@ namespace Core.Goals
             SendGoapEvent(new GoapStateEvent(GoapKey.shouldgather, interrupted));
             if (!interrupted)
                 state.GatherableCorpseCount = Math.Max(0, state.GatherableCorpseCount - 1);
+
+            if (playerReader.Bits.HasTarget() && playerReader.Bits.TargetIsDead())
+            {
+                input.ClearTarget();
+                wait.Update();
+            }
         }
 
         private bool LootReset()
@@ -345,7 +321,7 @@ namespace Core.Goals
 
         private bool CastStatusChangedOrBackgroundSuccess()
         {
-            return lastCastEvent != playerReader.CastState ||
+            return (lastCastEvent != playerReader.CastState && !playerReader.IsCasting()) ||
                 lootWindowClosedInBackground;
         }
 
