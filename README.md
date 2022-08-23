@@ -179,18 +179,15 @@ The app reads the game state using small blocks of colour shown at the top of th
 2. Execute the `run.bat`. This will start the bot and Chrome, Wow must be already running. If you get `"Unable to find the Wow process is it running ?"` in the console window then it can't find exe.
 
 3. When running the BlazorServer for the first time you will have to follow a setup process:
-    * Just start the game and wait in the character selection screen.
-    * Click `2. Addon Configuration`
-    * Click `Find InstallPath` -> `InstallPath` should be filled otherwise, fill out manually
-    * Fill out `Author` freely
-    * Fill out `Title` freely
-    * Then press `Install & Save` button -> Log should see `AddonConfigurator.Install successful`
-    * Required to restart the Game 
-    * Enter world with your desired character
-    * Click `5. Frame Configuration`
-    * [Guidance for good DataFrame](../../wiki/Guidance-for-good-DataFrame)
-    * Click `Auto Configure and Restart`
-    * [Validate FrameConfiguration](../../wiki/Validating-FrameConfiguration)
+    * Start the game and login with a character
+    * Navigate to `2. Addon Configuration`
+    * Fill the `Author` input form
+    * Fill the `Title` input form
+    * Then press `Save` button -> Log should see `AddonConfigurator.Install successful`
+    * Should see a loading screen
+    * At the top left corner of the game window should see flashing pixels / cells
+    * Navigate to `5. Frame Configuration` [Guidance for good DataFrame](../../wiki/Guidance-for-good-DataFrame)
+    * Click on `Auto` -> `Start` [Validate FrameConfiguration](../../wiki/Validating-FrameConfiguration)
 
 4. Under the `Addon Configuration` you can check if theres a **newer version available** for the addon. In that case just press the `install` button then have to restart the game client and the bot it self in order to use it properly. 
 
