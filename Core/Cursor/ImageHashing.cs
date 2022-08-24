@@ -1,6 +1,5 @@
-﻿using System;
+﻿using System.Buffers;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 
 namespace Core
@@ -50,31 +49,36 @@ namespace Core
         /// </summary>
         /// <param name="image">The image to hash.</param>
         /// <returns>The hash of the image.</returns>
-        public static ulong AverageHash(Image image)
+        public unsafe static ulong AverageHash(Bitmap image, Bitmap squeezed, Graphics canvas)
         {
-            // Squeeze the image into an 8x8 canvas
-            Bitmap squeezed = new Bitmap(8, 8, PixelFormat.Format32bppRgb);
-            Graphics canvas = Graphics.FromImage(squeezed);
-            canvas.CompositingQuality = CompositingQuality.HighQuality;
-            canvas.InterpolationMode = InterpolationMode.HighQualityBilinear;
-            canvas.SmoothingMode = SmoothingMode.HighQuality;
-            canvas.DrawImage(image, 0, 0, 8, 8);
+            Rectangle rect = new(0, 0, 8, 8);
+            canvas.DrawImage(image, rect);
 
             // Reduce colors to 6-bit grayscale and calculate average color value
-            byte[] grayscale = new byte[64];
+            var pool = ArrayPool<byte>.Shared;
+            byte[] grayscale = pool.Rent(64);
+
+            int bytesPerPixel = Image.GetPixelFormatSize(squeezed.PixelFormat) / 8;
+            BitmapData data = squeezed.LockBits(rect, ImageLockMode.ReadOnly, squeezed.PixelFormat);
+
             uint averageValue = 0;
             for (int y = 0; y < 8; y++)
+            {
                 for (int x = 0; x < 8; x++)
                 {
-                    uint pixel = (uint)squeezed.GetPixel(x, y).ToArgb();
-                    uint gray = (pixel & 0x00ff0000) >> 16;
-                    gray += (pixel & 0x0000ff00) >> 8;
-                    gray += (pixel & 0x000000ff);
+                    byte* pixel = (byte*)data.Scan0 + (data.Stride * y) + (bytesPerPixel * x);
+                    uint argb = (uint)(pixel[0] | (pixel[1] << 8) | (pixel[2] << 16) | (pixel[3] << 24));
+                    uint gray = (argb & 0x00ff0000) >> 16;
+                    gray += (argb & 0x0000ff00) >> 8;
+                    gray += (argb & 0x000000ff);
                     gray /= 12;
 
                     grayscale[x + (y * 8)] = (byte)gray;
                     averageValue += gray;
                 }
+            }
+            squeezed.UnlockBits(data);
+
             averageValue /= 64;
 
             // Compute the hash: each bit is a pixel
@@ -88,22 +92,8 @@ namespace Core
                 }
             }
 
-            squeezed.Dispose();
-
+            pool.Return(grayscale);
             return hash;
-        }
-
-        /// <summary>
-        /// Computes the average hash of the image content in the given file.
-        /// </summary>
-        /// <param name="path">Path to the input file.</param>
-        /// <returns>The hash of the input file's image content.</returns>
-        public static ulong AverageHash(String path)
-        {
-            Bitmap bmp = new Bitmap(path);
-            var result = AverageHash(bmp);
-            bmp.Dispose();
-            return result;
         }
 
         /// <summary>
@@ -116,34 +106,6 @@ namespace Core
         public static double Similarity(ulong hash1, ulong hash2)
         {
             return ((64 - BitCount(hash1 ^ hash2)) * 100) / 64.0;
-        }
-
-        /// <summary>
-        /// Returns a percentage-based similarity value between the two given images. The higher
-        /// the percentage, the closer the images are to being identical.
-        /// </summary>
-        /// <param name="image1">The first image.</param>
-        /// <param name="image2">The second image.</param>
-        /// <returns>The similarity percentage.</returns>
-        public static double Similarity(Image image1, Image image2)
-        {
-            ulong hash1 = AverageHash(image1);
-            ulong hash2 = AverageHash(image2);
-            return Similarity(hash1, hash2);
-        }
-
-        /// <summary>
-        /// Returns a percentage-based similarity value between the image content of the two given
-        /// files. The higher the percentage, the closer the image contents are to being identical.
-        /// </summary>
-        /// <param name="image1">The first image file.</param>
-        /// <param name="image2">The second image file.</param>
-        /// <returns>The similarity percentage.</returns>
-        public static double Similarity(String path1, String path2)
-        {
-            ulong hash1 = AverageHash(path1);
-            ulong hash2 = AverageHash(path2);
-            return Similarity(hash1, hash2);
         }
     }
 }
