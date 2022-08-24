@@ -28,9 +28,7 @@ namespace Core.Goals
         private readonly GoapAgentState state;
 
         private bool canRun;
-
-        private bool listenLootWindow;
-        private bool lootWindowClosedInBackground;
+        private int bagHash;
 
         private readonly List<SkinCorpseEvent> corpses = new();
 
@@ -59,22 +57,16 @@ namespace Core.Goals
             equipmentReader.OnEquipmentChanged -= EquipmentReader_OnEquipmentChanged;
             equipmentReader.OnEquipmentChanged += EquipmentReader_OnEquipmentChanged;
 
-            playerReader.LootEvent.Changed += LootEventChanged;
-
             //AddPrecondition(GoapKey.dangercombat, false);
 
             AddPrecondition(GoapKey.shouldgather, true);
             AddEffect(GoapKey.shouldgather, false);
-
-
         }
 
         public void Dispose()
         {
             bagReader.DataChanged -= BagReader_DataChanged;
             equipmentReader.OnEquipmentChanged -= EquipmentReader_OnEquipmentChanged;
-
-            playerReader.LootEvent.Changed -= LootEventChanged;
         }
 
         public override bool CanRun() => canRun;
@@ -99,7 +91,7 @@ namespace Core.Goals
                 return;
             }
 
-            lootWindowClosedInBackground = false;
+            bagHash = bagReader.Hash;
 
             wait.Fixed(playerReader.NetworkLatency.Value);
 
@@ -113,7 +105,8 @@ namespace Core.Goals
             while (attempts < MAX_ATTEMPTS)
             {
                 bool foundTarget = playerReader.Bits.HasTarget() && playerReader.Bits.TargetIsDead();
-                if (!foundTarget)
+
+                if (!foundTarget && state.LastCombatKillCount == 1)
                 {
                     input.FastLastTarget();
                     wait.Update();
@@ -167,7 +160,7 @@ namespace Core.Goals
 
                 (t, e) = wait.Until(MAX_TIME_TO_DETECT_CAST, CastStartedOrFailed, interact ? Empty : WhileNotCastingInteract);
 
-                Log($"Started casting or interrupted ? {!t} {e}ms");
+                Log($"Started casting or interrupted ? {!t} - casting: {playerReader.IsCasting()} {e}ms");
                 if (playerReader.LastUIError == UI_ERROR.ERR_REQUIRES_S)
                 {
                     LogWarning("Missing Spell/Item/Skill Requirement!");
@@ -185,17 +178,26 @@ namespace Core.Goals
 
                     Log($"Try again: {playerReader.CastState.ToStringF()} | {playerReader.LastUIError.ToStringF()} | {playerReader.IsCasting()}");
                     attempts++;
+
+                    ClearTargetIfExists();
                     continue;
                 }
 
+                bool herbalism = Array.BinarySearch(GatherSpells.Herbalism, playerReader.SpellBeingCast) > -1;
+
                 int remainMs = playerReader.RemainCastMs;
+                playerReader.LastUIError = 0;
 
-                (t, e) = wait.Until(remainMs + CastingHandler.SpellQueueTimeMs + playerReader.NetworkLatency.Value, CastEnded);
+                int waitTime = remainMs + CastingHandler.SpellQueueHalfMs + playerReader.NetworkLatency.Value;
+                Log($"Waiting for {(herbalism ? "Herb Gathering" : "Skinning")} castbar to end! {waitTime}ms");
 
-                if (playerReader.CastState == UI_ERROR.CAST_SUCCESS)
+                (t, e) = wait.Until(waitTime, herbalism ? HerbalismCastEnded : SkinningCastEnded);
+
+                if (herbalism
+                    ? t || playerReader.LastUIError != UI_ERROR.SPELL_FAILED_TRY_AGAIN
+                    : playerReader.CastState == UI_ERROR.CAST_SUCCESS)
                 {
-                    listenLootWindow = true;
-                    Log($"Gathering Successful! {playerReader.CastState.ToStringF()}");
+                    Log($"Gathering Successful!");
                     ExitSuccess();
                     return;
                 }
@@ -211,6 +213,8 @@ namespace Core.Goals
                     wait.Fixed(Loot.LOOTFRAME_AUTOLOOT_DELAY);
                     LogWarning($"Gathering Failed! {playerReader.CastState.ToStringF()} attempts: {attempts}");
                     attempts++;
+
+                    ClearTargetIfExists();
                 }
             }
 
@@ -221,22 +225,17 @@ namespace Core.Goals
         public override void OnExit()
         {
             npcNameTargeting.ChangeNpcType(NpcNames.None);
-            listenLootWindow = false;
         }
 
         private void ExitSuccess()
         {
-            (bool lootTimeOut, double elapsedMs) = wait.Until(MAX_TIME_TO_DETECT_LOOT, LootReadyOrClosed);
+            (bool lootTimeOut, double elapsedMs) = wait.Until(MAX_TIME_TO_DETECT_LOOT, LootWindowClosedOrBagChanged);
             Log($"Loot {((!lootTimeOut && !bagReader.BagsFull()) ? "Successful" : "Failed")} after {elapsedMs}ms");
             SendGoapEvent(new GoapStateEvent(GoapKey.shouldgather, false));
 
             state.GatherableCorpseCount = Math.Max(0, state.GatherableCorpseCount - 1);
 
-            if (playerReader.Bits.HasTarget() && playerReader.Bits.TargetIsDead())
-            {
-                input.ClearTarget();
-                wait.Update();
-            }
+            ClearTargetIfExists();
         }
 
         private void ExitInterruptOrFailed(bool interrupted)
@@ -245,6 +244,11 @@ namespace Core.Goals
             if (!interrupted)
                 state.GatherableCorpseCount = Math.Max(0, state.GatherableCorpseCount - 1);
 
+            ClearTargetIfExists();
+        }
+
+        private void ClearTargetIfExists()
+        {
             if (playerReader.Bits.HasTarget() && playerReader.Bits.TargetIsDead())
             {
                 input.ClearTarget();
@@ -263,15 +267,6 @@ namespace Core.Goals
         private bool LootReset()
         {
             return (LootStatus)playerReader.LootEvent.Value == LootStatus.CORPSE;
-        }
-
-        private void LootEventChanged()
-        {
-            if (listenLootWindow &&
-                (LootStatus)playerReader.LootEvent.Value is LootStatus.CLOSED)
-            {
-                lootWindowClosedInBackground = true;
-            }
         }
 
         private void EquipmentReader_OnEquipmentChanged(object? sender, (int, int) e)
@@ -320,20 +315,26 @@ namespace Core.Goals
             return false;
         }
 
-        private bool LootReadyOrClosed()
+        private bool LootWindowClosedOrBagChanged()
         {
-            return lootWindowClosedInBackground ||
+            return bagHash != bagReader.Hash ||
                 (LootStatus)playerReader.LootEvent.Value is
-                LootStatus.READY or
                 LootStatus.CLOSED;
         }
 
-        private bool CastEnded()
+        private bool SkinningCastEnded()
         {
-            return playerReader.CastState is
+            return
+                playerReader.CastState is
                 UI_ERROR.CAST_SUCCESS or
-                UI_ERROR.SPELL_FAILED_TRY_AGAIN or
-                UI_ERROR.ERR_SPELL_FAILED_S;
+                UI_ERROR.SPELL_FAILED_TRY_AGAIN;
+        }
+
+        private bool HerbalismCastEnded()
+        {
+            return
+                playerReader.LastUIError is
+                UI_ERROR.SPELL_FAILED_TRY_AGAIN;
         }
 
         private bool CastStartedOrFailed()

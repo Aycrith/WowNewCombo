@@ -31,26 +31,6 @@ namespace Core.Goals
         private readonly StopMoving stopMoving;
         private readonly Stopwatch stopWatch;
 
-        private readonly int[] herbSpells = new int[]
-        {
-            2366,
-            2368,
-            3570,
-            11993,
-            28695,
-            50300,
-        };
-
-        private readonly int[] miningSpells = new int[]
-        {
-            2575,
-            2576,
-            3564,
-            10248,
-            29354,
-            50310
-        };
-
         public enum CastState
         {
             None,
@@ -118,7 +98,7 @@ namespace Core.Goals
                         }
                         else
                         {
-                            if (Array.BinarySearch(miningSpells, lastKnownCast) < 0)
+                            if (Array.BinarySearch(GatherSpells.Mining, lastKnownCast) < 0)
                             {
                                 state = CastState.WaitUserInput;
                                 LogSuccessMining(logger, CastState.Success.ToStringF(), state.ToStringF(), Timeout);
@@ -159,8 +139,8 @@ namespace Core.Goals
         private void CheckCastStarted(bool restartTimer)
         {
             if (playerReader.IsCasting() &&
-                (Array.BinarySearch(herbSpells, playerReader.CastSpellId.Value) >= 0 ||
-                Array.BinarySearch(miningSpells, playerReader.CastSpellId.Value) >= 0))
+                (Array.BinarySearch(GatherSpells.Herbalism, playerReader.CastSpellId.Value) >= 0 ||
+                Array.BinarySearch(GatherSpells.Mining, playerReader.CastSpellId.Value) >= 0))
             {
                 lastKnownCast = playerReader.CastSpellId.Value;
                 state = CastState.Casting;
