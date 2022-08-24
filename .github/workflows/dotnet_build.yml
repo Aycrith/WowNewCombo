@@ -2,6 +2,16 @@ name: .NET build
 
 on:
   pull_request:
+    paths-ignore:
+      - '.github/*'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '*.yml'
+      - 'README.md'
+      - '*.lua'
+      - '*.toc'
+      - '*.json'
+      - '*.bmp'
+      
 
 jobs:
   build:
