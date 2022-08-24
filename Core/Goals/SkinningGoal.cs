@@ -100,7 +100,6 @@ namespace Core.Goals
             }
 
             lootWindowClosedInBackground = false;
-            listenLootWindow = true;
 
             wait.Fixed(playerReader.NetworkLatency.Value);
 
@@ -135,6 +134,7 @@ namespace Core.Goals
                     }
                 }
 
+                bool interact = false;
                 if (!foundTarget && !input.ClassConfig.KeyboardOnly)
                 {
                     stopMoving.Stop();
@@ -145,6 +145,7 @@ namespace Core.Goals
                     Log($"Found Npc Name ? {!t} | Count: {npcNameTargeting.NpcCount} {e}ms");
 
                     foundTarget = npcNameTargeting.FindBy(CursorType.Skin, CursorType.Mine, CursorType.Herb); // todo salvage icon
+                    interact = true;
                 }
 
                 if (!foundTarget)
@@ -158,12 +159,13 @@ namespace Core.Goals
                 {
                     (t, e) = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, input.ApproachOnCooldown);
                     Log($"Reached Target ? {!t} {e}ms");
+                    interact = true;
                 }
 
                 playerReader.LastUIError = 0;
                 playerReader.CastEvent.ForceUpdate(0);
 
-                (t, e) = wait.Until(MAX_TIME_TO_DETECT_CAST, CastStartedOrFailed, input.ApproachOnCooldown);
+                (t, e) = wait.Until(MAX_TIME_TO_DETECT_CAST, CastStartedOrFailed, interact ? Empty : WhileNotCastingInteract);
 
                 Log($"Started casting or interrupted ? {!t} {e}ms");
                 if (playerReader.LastUIError == UI_ERROR.ERR_REQUIRES_S)
@@ -172,7 +174,7 @@ namespace Core.Goals
                     ExitInterruptOrFailed(false);
                     return;
                 }
-                else if (t || playerReader.LastUIError == UI_ERROR.ERR_LOOT_LOCKED)
+                else if ((t || playerReader.LastUIError == UI_ERROR.ERR_LOOT_LOCKED) && !playerReader.IsCasting())
                 {
                     int delay = playerReader.LastUIError == UI_ERROR.ERR_LOOT_LOCKED
                         ? Loot.LOOTFRAME_AUTOLOOT_DELAY
@@ -188,11 +190,12 @@ namespace Core.Goals
 
                 int remainMs = playerReader.RemainCastMs;
 
-                (t, e) = wait.Until(remainMs + CastingHandler.SpellQueueTimeMs + playerReader.NetworkLatency.Value, CastStatusChangedOrBackgroundSuccess);
+                (t, e) = wait.Until(remainMs + CastingHandler.SpellQueueTimeMs + playerReader.NetworkLatency.Value, CastEnded);
 
-                if (!t && (playerReader.CastState == UI_ERROR.CAST_SUCCESS || lootWindowClosedInBackground))
+                if (playerReader.CastState == UI_ERROR.CAST_SUCCESS)
                 {
-                    Log($"Gathering Successful! {playerReader.CastState.ToStringF()} | background: {lootWindowClosedInBackground}");
+                    listenLootWindow = true;
+                    Log($"Gathering Successful! {playerReader.CastState.ToStringF()}");
                     ExitSuccess();
                     return;
                 }
@@ -248,6 +251,14 @@ namespace Core.Goals
                 wait.Update();
             }
         }
+
+        private void WhileNotCastingInteract()
+        {
+            if (!playerReader.IsCasting())
+                input.ApproachOnCooldown();
+        }
+
+        private static void Empty() { }
 
         private bool LootReset()
         {
@@ -317,16 +328,17 @@ namespace Core.Goals
                 LootStatus.CLOSED;
         }
 
-        private bool CastStatusChangedOrBackgroundSuccess()
+        private bool CastEnded()
         {
-            return (playerReader.CastState is UI_ERROR.CAST_SUCCESS or UI_ERROR.SPELL_FAILED_TRY_AGAIN) ||
-                 lootWindowClosedInBackground;
+            return playerReader.CastState is
+                UI_ERROR.CAST_SUCCESS or
+                UI_ERROR.SPELL_FAILED_TRY_AGAIN or
+                UI_ERROR.ERR_SPELL_FAILED_S;
         }
 
         private bool CastStartedOrFailed()
         {
-            return lootWindowClosedInBackground ||
-                playerReader.IsCasting() ||
+            return playerReader.IsCasting() ||
                 playerReader.LastUIError is
                 UI_ERROR.ERR_LOOT_LOCKED or
                 UI_ERROR.ERR_REQUIRES_S;
