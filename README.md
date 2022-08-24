@@ -256,6 +256,7 @@ From the main menu (ESC) set the following under Interface Options:
 | Camera - Camera Following Style | **Always** |
 | Mouse - Click-to-Move | &#9745; |
 | Mouse - Click-to-Move Camera Style | **Always** |
+| Accessibility - Cursor Size | **32x32** |
 
 ## 9. Configure the Wow Client - Key Bindings
 
