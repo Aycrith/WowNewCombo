@@ -292,6 +292,8 @@ namespace Core
             RouteInfo?.Dispose();
             GoapAgent?.Dispose();
 
+            npcNameTargeting.Dispose();
+
             npcNameFinderEvent.Dispose();
         }
 

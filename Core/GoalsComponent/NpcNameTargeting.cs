@@ -10,7 +10,7 @@ using System.Collections.Generic;
 
 namespace Core.Goals
 {
-    public class NpcNameTargeting
+    public class NpcNameTargeting : IDisposable
     {
         private const int FAST_DELAY = 5;
 
@@ -21,6 +21,8 @@ namespace Core.Goals
         private readonly IMouseInput input;
         private readonly IMouseOverReader mouseOverReader;
         private readonly Wait wait;
+
+        private readonly CursorClassifier classifier;
 
         private IBlacklist mouseOverBlacklist;
 
@@ -46,6 +48,8 @@ namespace Core.Goals
             this.mouseOverReader = mouseOverReader;
             this.mouseOverBlacklist = blacklist;
             this.wait = wait;
+
+            classifier = new();
 
             whitePen = new Pen(Color.White, 3);
 
@@ -79,6 +83,11 @@ namespace Core.Goals
                 new Point(-15, 200).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
                 new Point(-15, 200).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
             };
+        }
+
+        public void Dispose()
+        {
+            classifier.Dispose();
         }
 
         public void UpdateBlacklist(IBlacklist blacklist)
@@ -136,7 +145,7 @@ namespace Core.Goals
                 input.SetCursorPosition(clickPostion);
                 ct.WaitHandle.WaitOne(FAST_DELAY);
 
-                CursorClassifier.Classify(out CursorType cls);
+                classifier.Classify(out CursorType cls);
                 if (cls is CursorType.Kill or CursorType.Vendor)
                 {
                     wait.Update();
@@ -181,7 +190,7 @@ namespace Core.Goals
                     input.SetCursorPosition(clickPostion);
                     ct.WaitHandle.WaitOne(FAST_DELAY);
 
-                    CursorClassifier.Classify(out CursorType cls);
+                    classifier.Classify(out CursorType cls);
                     if (cursor.Contains(cls))
                     {
                         ct.WaitHandle.WaitOne(FAST_DELAY);
