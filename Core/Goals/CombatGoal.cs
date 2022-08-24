@@ -83,6 +83,12 @@ namespace Core.Goals
             }
         }
 
+        private bool ValidTarget()
+        {
+            return playerReader.Bits.HasTarget() &&
+                playerReader.Bits.TargetIsNotDead();
+        }
+
         public override void OnEnter()
         {
             if (mountHandler.IsMounted())
@@ -143,7 +149,7 @@ namespace Core.Goals
                         continue;
                     }
 
-                    if (castingHandler.CastIfReady(keyAction))
+                    if (ValidTarget() && castingHandler.CastIfReady(keyAction, ValidTarget))
                     {
                         break;
                     }
