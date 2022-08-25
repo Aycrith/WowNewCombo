@@ -603,9 +603,9 @@ namespace SharedLib.NpcFinder
             }
         }
 
-        public Point ToScreenCoordinates(int x, int y)
+        public Point ToScreenCoordinates()
         {
-            return new Point(bitmapProvider.Rect.X + x, bitmapProvider.Rect.Top + y);
+            return bitmapProvider.Rect.Location;
         }
 
 

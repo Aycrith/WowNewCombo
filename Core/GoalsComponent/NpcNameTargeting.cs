@@ -59,8 +59,8 @@ namespace Core.Goals
             locTargeting = new Point[]
             {
                 new Point(0, 0),
-                new Point(-5, 15).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
-                new Point(5, 15).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+                new Point(-10, 5).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+                new Point(10, 5).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
             };
 
             locFindBy = new Point[]
@@ -131,7 +131,7 @@ namespace Core.Goals
             }
 
             int index = blacklistIndexes.Count;
-            if (index >= npcCount)
+            if (index > npcCount)
                 return false;
             NpcPosition npc = npcNameFinder.Npcs.ElementAt(index);
 
@@ -141,13 +141,13 @@ namespace Core.Goals
                     return false;
 
                 Point p = locTargeting[i];
+                p.Offset(npc.ClickPoint);
+                p.Offset(npcNameFinder.ToScreenCoordinates());
 
-                var clickPostion = npcNameFinder.ToScreenCoordinates(npc.ClickPoint.X + p.X, npc.ClickPoint.Y + p.Y);
-                input.SetCursorPosition(clickPostion);
-                ct.WaitHandle.WaitOne(FAST_DELAY);
-
+                input.SetCursorPosition(p);
                 classifier.Classify(out CursorType cls);
-                if (cls is CursorType.Kill or CursorType.Vendor)
+
+                if (cls is CursorType.Kill)
                 {
                     wait.Update();
                     bool blacklisted = false;
@@ -166,6 +166,7 @@ namespace Core.Goals
                     input.InteractMouseOver(ct);
                     return true;
                 }
+                ct.WaitHandle.WaitOne(FAST_DELAY);
             }
             return false;
         }
@@ -187,8 +188,10 @@ namespace Core.Goals
 
                 foreach (Point p in attemptPoints)
                 {
-                    Point clickPostion = npcNameFinder.ToScreenCoordinates(npc.ClickPoint.X + p.X, npc.ClickPoint.Y + p.Y);
-                    input.SetCursorPosition(clickPostion);
+                    p.Offset(npc.ClickPoint);
+                    p.Offset(npcNameFinder.ToScreenCoordinates());
+                    input.SetCursorPosition(p);
+
                     ct.WaitHandle.WaitOne(INTERACT_DELAY);
 
                     classifier.Classify(out CursorType cls);
@@ -209,7 +212,8 @@ namespace Core.Goals
             {
                 foreach (Point p in locFindBy)
                 {
-                    gr.DrawEllipse(whitePen, p.X + npc.ClickPoint.X, p.Y + npc.ClickPoint.Y, 5, 5);
+                    p.Offset(npc.ClickPoint);
+                    gr.DrawEllipse(whitePen, p.X, p.Y, 5, 5);
                 }
             }
         }
