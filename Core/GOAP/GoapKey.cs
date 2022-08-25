@@ -18,7 +18,6 @@
         isdead,
         shouldloot,
         shouldgather,
-        newtarget,
         producedcorpse,
         consumecorpse,
         isswimming,
@@ -27,7 +26,8 @@
         targethostile,
         hasfocus,
         focushastarget,
-        consumablecorpsenearby
+        consumablecorpsenearby,
+        LENGTH
     }
 
     public static class GoapKey_Extension
@@ -51,7 +51,6 @@
             GoapKey.isdead => "Dead",
             GoapKey.shouldloot => "Loot",
             GoapKey.shouldgather => "Gather",
-            GoapKey.newtarget => "New target",
             GoapKey.producedcorpse => "Killing blow",
             GoapKey.consumecorpse => "Consume Corpse",
             GoapKey.isswimming => "Swimming",
@@ -82,7 +81,6 @@
             GoapKey.isdead => "!Dead",
             GoapKey.shouldloot => "!Loot",
             GoapKey.shouldgather => "!Gather",
-            GoapKey.newtarget => "!New target",
             GoapKey.producedcorpse => "!Killing blow",
             GoapKey.consumecorpse => "!Consume Corpse",
             GoapKey.isswimming => "!Swimming",

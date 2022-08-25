@@ -190,44 +190,41 @@ namespace Core.GOAP
             return Plan.Count > 0 ? Plan.Pop() : null;
         }
 
-        private Dictionary<GoapKey, bool> GetWorldState()
+        private bool[] GetWorldState()
         {
-            return new()
+            // index matches GoapKey
+            return new bool[]
             {
-                { GoapKey.hastarget, playerReader.Bits.HasTarget() },
-                { GoapKey.targethostile, playerReader.Bits.TargetCanBeHostile() },
-                { GoapKey.dangercombat, playerReader.Bits.PlayerInCombat() && addonReader.DamageTakenCount() > 0 },
-                { GoapKey.damagetaken, addonReader.DamageTakenCount() > 0 },
-                { GoapKey.damagedone, addonReader.DamageDoneCount() > 0 },
-                { GoapKey.damagetakenordone, addonReader.DamageTakenCount() > 0 || addonReader.DamageDoneCount() > 0 },
-                { GoapKey.pethastarget, playerReader.PetHasTarget && !playerReader.Bits.PetTargetIsDead() },
-                { GoapKey.targetisalive, playerReader.Bits.HasTarget() && !playerReader.Bits.TargetIsDead() },
-                { GoapKey.targettargetsus, (playerReader.Bits.HasTarget() && playerReader.TargetHealthPercentage() < 30) || playerReader.TargetTarget is // hacky way to keep attacking fleeing humanoids
+                playerReader.Bits.HasTarget(), // GoapKey.hastarget
+                playerReader.Bits.PlayerInCombat() && addonReader.DamageTakenCount() > 0, // GoapKey.dangercombat
+                addonReader.DamageTakenCount() > 0, // GoapKey.damagetaken
+                addonReader.DamageDoneCount() > 0, // GoapKey.damagedone
+                addonReader.DamageTakenCount() > 0 || addonReader.DamageDoneCount() > 0, // GoapKey.damagetakenordone
+                playerReader.Bits.HasTarget() && !playerReader.Bits.TargetIsDead(), // GoapKey.targetisalive
+                (playerReader.Bits.HasTarget() && playerReader.TargetHealthPercentage() < 30) || playerReader.TargetTarget is
                     UnitsTarget.Me or
                     UnitsTarget.Pet or
-                    UnitsTarget.PartyOrPet },
-                { GoapKey.incombat, playerReader.Bits.PlayerInCombat() },
-                { GoapKey.ismounted,
-                    (playerReader.Class == UnitClass.Druid &&
+                    UnitsTarget.PartyOrPet, // GoapKey.targettargetsus -- hacky way to keep attacking fleeing humanoids
+                playerReader.Bits.PlayerInCombat(), // GoapKey.incombat
+                playerReader.PetHasTarget && !playerReader.Bits.PetTargetIsDead(), // GoapKey.pethastarget
+                (playerReader.Class == UnitClass.Druid &&
                     playerReader.Form is Form.Druid_Travel or Form.Druid_Flight)
-                    || playerReader.Bits.IsMounted() },
-                { GoapKey.withinpullrange, playerReader.WithInPullRange() },
-                { GoapKey.incombatrange, playerReader.WithInCombatRange() },
-                { GoapKey.pulled, false },
-                { GoapKey.isdead, playerReader.Bits.IsDead() },
-                { GoapKey.isswimming, playerReader.Bits.IsSwimming() },
-                { GoapKey.itemsbroken, playerReader.Bits.ItemsAreBroken() },
-                { GoapKey.producedcorpse, State.LastCombatKillCount > 0 },
-
-                { GoapKey.hasfocus, playerReader.Bits.HasFocus() },
-                { GoapKey.focushastarget, playerReader.Bits.FocusHasTarget() },
-
-                { GoapKey.consumablecorpsenearby, State.ConsumableCorpseCount > 0 },
-                // these hold their state
-                { GoapKey.consumecorpse, State.ShouldConsumeCorpse },
-                { GoapKey.shouldloot, State.NeedLoot },
-                { GoapKey.shouldgather, State.NeedGather },
-                { GoapKey.gathering, State.Gathering }
+                    || playerReader.Bits.IsMounted(), // GoapKey.ismounted
+                playerReader.WithInPullRange(), // GoapKey.withinpullrange
+                playerReader.WithInCombatRange(), // GoapKey.incombatrange
+                false, // GoapKey.pulled
+                playerReader.Bits.IsDead(), // GoapKey.isdead
+                State.NeedLoot, // GoapKey.shouldloot
+                State.NeedGather, // GoapKey.shouldgather
+                State.LastCombatKillCount > 0, // GoapKey.producedcorpse
+                State.ShouldConsumeCorpse, // GoapKey.consumecorpse
+                playerReader.Bits.IsSwimming(), // GoapKey.isswimming
+                playerReader.Bits.ItemsAreBroken(), // GoapKey.itemsbroken
+                State.Gathering, // GoapKey.gathering
+                playerReader.Bits.TargetCanBeHostile(), // GoapKey.targethostile
+                playerReader.Bits.HasFocus(), // GoapKey.hasfocus
+                playerReader.Bits.FocusHasTarget(), // GoapKey.focushastarget
+                State.ConsumableCorpseCount > 0, // GoapKey.consumablecorpsenearby
             };
         }
 

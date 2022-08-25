@@ -9,16 +9,16 @@
         <b style="color:@DisplayCanRun(goal.CanRun())">@goal.Cost: @goal.DisplayName</b>
     </td>
     <td>
-        @foreach (var item in this.goal.State)
+        @foreach((GoapKey key, bool value) in this.goal.Preconditions)
         {
-            <span class="badge @Badge(item.Value)">@item.Key.ToStringF(this.goal.Preconditions.GetValueOrDefault(item.Key))</span>
+            <span class="badge @Badge(this.goal.State[(int)key])">@(key.ToStringF(value))</span>
         }
         @if (this.goal.Keys.Length == 1)
         {
             @for (int r = 0; r < this.goal.Keys[0].RequirementsRuntime.Length; r++)
             {
                 if (this.goal.Keys[0].RequirementsRuntime[r].VisibleIfHasRequirement ||
-                    !this.goal.Keys[0].RequirementsRuntime[r].HasRequirement())
+                !this.goal.Keys[0].RequirementsRuntime[r].HasRequirement())
                 {
                     @(DisplayRequirementBadges(this.goal.Keys[0].RequirementsRuntime[r]))
                 }
@@ -37,7 +37,7 @@
                 @for (int k = 0; k < this.goal.Keys.Length; k++)
                 {
                     int Cooldown = 0;
-                    if(this.goal.Keys[k].Slot > 0)
+                    if (this.goal.Keys[k].Slot > 0)
                         Cooldown = addonReader.ActionBarCooldownReader.GetRemainingCooldown(this.goal.Keys[k]);
 
                     <tr class="@ActionClass(lastKeyClicked == this.goal.Keys[k].ConsoleKeyFormHash, Cooldown)">
@@ -48,7 +48,7 @@
                             @for (int r = 0; r < this.goal.Keys[k].RequirementsRuntime.Length; r++)
                             {
                                 if (this.goal.Keys[k].RequirementsRuntime[r].VisibleIfHasRequirement ||
-                                    !this.goal.Keys[k].RequirementsRuntime[r].HasRequirement())
+                                !this.goal.Keys[k].RequirementsRuntime[r].HasRequirement())
                                 {
                                     @(DisplayRequirementBadges(this.goal.Keys[k].RequirementsRuntime[r]))
                                 }
