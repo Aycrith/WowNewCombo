@@ -52,6 +52,7 @@ namespace Core
         public unsafe static ulong AverageHash(Bitmap image, Bitmap squeezed, Graphics canvas)
         {
             Rectangle rect = new(0, 0, 8, 8);
+            canvas.Clear(Color.Transparent);
             canvas.DrawImage(image, rect);
 
             // Reduce colors to 6-bit grayscale and calculate average color value
