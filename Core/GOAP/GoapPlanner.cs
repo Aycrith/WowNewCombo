@@ -1,6 +1,7 @@
 ﻿using Core.Goals;
 using System.Collections.Generic;
 using System.Linq;
+using System;
 
 namespace Core.GOAP
 {
@@ -10,7 +11,7 @@ namespace Core.GOAP
 
     public static class GoapPlanner
     {
-        public static readonly Dictionary<GoapKey, bool> EmptyGoalState = new();
+        public static readonly bool[] EmptyGoalState = Array.Empty<bool>();
         public static readonly Stack<GoapGoal> EmptyGoal = new();
 
         /**
@@ -19,9 +20,10 @@ namespace Core.GOAP
 		 * that must be performed, in order, to fulfill the goal.
 		 */
 
-        public static Stack<GoapGoal> Plan(IEnumerable<GoapGoal> availableActions,
-            Dictionary<GoapKey, bool> worldState,
-            Dictionary<GoapKey, bool> goal)
+        public static Stack<GoapGoal> Plan(
+            IEnumerable<GoapGoal> availableActions,
+            bool[] worldState,
+            bool[] goal)
         {
             Node root = new(null, 0, worldState, null);
 
@@ -60,6 +62,17 @@ namespace Core.GOAP
             return result;
         }
 
+        private static bool ContainsValue(in PartialState[] state, bool value)
+        {
+            for (int i = 0; i < state.Length; i++)
+            {
+                if (state[i].Value == value)
+                    return true;
+            }
+
+            return false;
+        }
+
         /**
 		 * Returns true if at least one solution was found.
 		 * The possible paths are stored in the leaves list. Each leaf has a
@@ -67,7 +80,7 @@ namespace Core.GOAP
 		 * sequence.
 		 */
 
-        private static bool BuildGraph(Node parent, List<Node> leaves, HashSet<GoapGoal> usableActions, Dictionary<GoapKey, bool> goal)
+        private static bool BuildGraph(Node parent, List<Node> leaves, HashSet<GoapGoal> usableActions, bool[] goal)
         {
             bool foundOne = false;
 
@@ -75,18 +88,18 @@ namespace Core.GOAP
             foreach (GoapGoal action in usableActions)
             {
                 // if the parent state has the conditions for this action's preconditions, we can use it here
-                var result = InState(action.Preconditions, parent.state);
+                PartialState[] result = InState(action.Preconditions, parent.state);
                 action.SetState(result);
 
-                if (!result.ContainsValue(false))
+                if (!ContainsValue(result, false))
                 {
                     // apply the action's effects to the parent state
-                    var currentState = PopulateState(parent.state, action.Effects);
+                    bool[] currentState = PopulateState(parent.state, action.Effects);
                     //Debug.Log(GoapAgent.prettyPrint(currentState));
                     Node node = new(parent, parent.runningCost + action.Cost, currentState, action);
 
                     result = InState(goal, currentState);
-                    if (!result.ContainsValue(false))
+                    if (!ContainsValue(result, false))
                     {
                         // we found a solution!
                         leaves.Add(node);
@@ -95,7 +108,9 @@ namespace Core.GOAP
                     else
                     {
                         // not at a solution yet, so test all the remaining actions and branch out the tree
-                        HashSet<GoapGoal> subset = ActionSubset(usableActions, action);
+                        HashSet<GoapGoal> subset = new(usableActions);
+                        subset.Remove(action);
+
                         bool found = BuildGraph(node, leaves, subset, goal);
                         if (found)
                         {
@@ -109,28 +124,28 @@ namespace Core.GOAP
         }
 
         /**
-		 * Create a subset of the actions excluding the removeMe one. Creates a new set.
-		 */
-
-        private static HashSet<GoapGoal> ActionSubset(HashSet<GoapGoal> actions, GoapGoal removeMe)
-        {
-            HashSet<GoapGoal> subset = new(actions);
-            subset.Remove(removeMe);
-            return subset;
-        }
-
-        /**
 		 * Check that all items in 'test' are in 'state'. If just one does not match or is not there
 		 * then this returns false.
 		 */
 
-        private static Dictionary<GoapKey, bool> InState(Dictionary<GoapKey, bool> test, Dictionary<GoapKey, bool> state)
+        private static PartialState[] InState(Dictionary<GoapKey, bool> test, bool[] state)
         {
-            Dictionary<GoapKey, bool> resultState = new();
-            foreach (var t in test)
+            PartialState[] resultState = new PartialState[test.Count];
+            int i = 0;
+            foreach ((GoapKey key, bool value) in test)
             {
-                bool exists = state.TryGetValue(t.Key, out bool current);
-                resultState[t.Key] = exists && test[t.Key].Equals(current);
+                bool exists = (int)key < state.Length;
+                resultState[i++] = new(key, exists && test[key].Equals(state[(int)key]));
+            }
+            return resultState;
+        }
+
+        private static PartialState[] InState(bool[] test, bool[] state)
+        {
+            PartialState[] resultState = new PartialState[test.Length];
+            for (int i = 0; i < test.Length; i++)
+            {
+                resultState[i] = new((GoapKey)i, test[i].Equals(state[i]));
             }
             return resultState;
         }
@@ -139,12 +154,14 @@ namespace Core.GOAP
 		 * Apply the stateChange to the currentState
 		 */
 
-        private static Dictionary<GoapKey, bool> PopulateState(Dictionary<GoapKey, bool> currentState, Dictionary<GoapKey, bool> futureState)
+        private static bool[] PopulateState(bool[] currentState, Dictionary<GoapKey, bool> futureState)
         {
-            Dictionary<GoapKey, bool> state = new(currentState);
-            foreach (var kv in futureState)
+            bool[] state = new bool[currentState.Length];
+            currentState.CopyTo(state, 0);
+
+            foreach ((GoapKey key, bool value) in futureState)
             {
-                state[kv.Key] = kv.Value;
+                state[(int)key] = value;
             }
             return state;
         }
@@ -157,10 +174,10 @@ namespace Core.GOAP
         {
             public readonly Node? parent;
             public readonly float runningCost;
-            public readonly Dictionary<GoapKey, bool> state;
+            public readonly bool[] state;
             public readonly GoapGoal? action;
 
-            public Node(Node? parent, float runningCost, Dictionary<GoapKey, bool> state, GoapGoal? action)
+            public Node(Node? parent, float runningCost, bool[] state, GoapGoal? action)
             {
                 this.parent = parent;
                 this.runningCost = runningCost;

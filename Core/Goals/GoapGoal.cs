@@ -1,4 +1,5 @@
 ﻿using Core.GOAP;
+
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
@@ -9,7 +10,7 @@ namespace Core.Goals
     {
         public Dictionary<GoapKey, bool> Preconditions { get; } = new();
         public Dictionary<GoapKey, bool> Effects { get; } = new();
-        public Dictionary<GoapKey, bool> State { get; private set; } = new();
+        public bool[] State { get; private set; } = new bool[(int)GoapKey.LENGTH];
 
         private KeyAction[] keys = Array.Empty<KeyAction>();
         public KeyAction[] Keys
@@ -42,9 +43,12 @@ namespace Core.Goals
             GoapEvent?.Invoke(e);
         }
 
-        public void SetState(Dictionary<GoapKey, bool> newState)
+        public void SetState(PartialState[] newState)
         {
-            State = newState;
+            for (int i = 0; i < newState.Length; i++)
+            {
+                State[(int)newState[i].Key] = newState[i].Value;
+            }
         }
 
         public virtual bool CanRun()
