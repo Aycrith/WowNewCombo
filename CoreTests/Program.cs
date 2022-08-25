@@ -4,6 +4,7 @@ using SharedLib.NpcFinder;
 using System.Diagnostics;
 using System.Threading;
 using System.Linq;
+using Core;
 
 #pragma warning disable 0162
 
@@ -27,6 +28,7 @@ namespace CoreTests
 
             Test_NPCNameFinder();
             //Test_Input();
+            //Test_CursorGrabber();
         }
 
         private static void Test_NPCNameFinder()
@@ -70,5 +72,21 @@ namespace CoreTests
             test.Mouse_Clicks();
             test.Clipboard();
         }
+
+        private static void Test_CursorGrabber()
+        {
+            CursorClassifier classifier = new();
+            int i = 5;
+            while (i > 0)
+            {
+                Thread.Sleep(1000);
+
+                classifier.Classify(out CursorType cursorType);
+                Log.Logger.Information($"{cursorType.ToStringF()}");
+
+                i--;
+            }
+        }
+
     }
 }
