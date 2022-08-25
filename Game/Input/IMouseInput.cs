@@ -1,4 +1,5 @@
 ﻿using System.Drawing;
+using System.Threading;
 
 namespace Game
 {
@@ -10,6 +11,6 @@ namespace Game
 
         void LeftClickMouse(Point p);
 
-        void InteractMouseOver();
+        void InteractMouseOver(CancellationToken ct);
     }
 }

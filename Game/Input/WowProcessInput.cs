@@ -32,7 +32,7 @@ namespace Game
         public ConsoleKey TurnLeftKey { get; set; }
         public ConsoleKey TurnRightKey { get; set; }
         public ConsoleKey InteractMouseover { get; set; }
-        public int InteractMouseoverPress { get; set; } = 15;
+        public int InteractMouseoverPress { get; set; } = 10;
 
         public WowProcessInput(ILogger logger, CancellationTokenSource cts, WowProcess wowProcess)
         {
@@ -186,9 +186,9 @@ namespace Game
             nativeInput.LeftClickMouse(p);
         }
 
-        public void InteractMouseOver()
+        public void InteractMouseOver(CancellationToken ct)
         {
-            KeyPress(InteractMouseover, InteractMouseoverPress);
+            KeyPressSleep(InteractMouseover, InteractMouseoverPress, ct);
         }
 
         [LoggerMessage(

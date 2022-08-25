@@ -163,7 +163,7 @@ namespace Core.Goals
                     }
 
                     logger.LogInformation($"> mouseover NPC found: {mouseOverReader.MouseOverId} - {npc.Rect}");
-                    input.InteractMouseOver();
+                    input.InteractMouseOver(ct);
                     return true;
                 }
             }
@@ -194,7 +194,7 @@ namespace Core.Goals
                     classifier.Classify(out CursorType cls);
                     if (cursor.Contains(cls))
                     {
-                        input.InteractMouseOver();
+                        input.InteractMouseOver(ct);
                         logger.LogInformation($"> NPCs found: {npc.Rect}");
                         return true;
                     }

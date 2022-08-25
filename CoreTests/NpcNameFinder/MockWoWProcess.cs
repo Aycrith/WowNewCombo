@@ -1,4 +1,6 @@
 ﻿using System.Drawing;
+using System.Threading;
+
 using Game;
 
 namespace CoreTests
@@ -20,7 +22,7 @@ namespace CoreTests
             throw new System.NotImplementedException();
         }
 
-        public void InteractMouseOver()
+        public void InteractMouseOver(CancellationToken ct)
         {
             throw new System.NotImplementedException();
         }
