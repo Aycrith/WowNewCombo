@@ -10,7 +10,7 @@ using System;
 
 namespace Core.Goals
 {
-    public class LootGoal : GoapGoal, IGoapEventListener, IDisposable
+    public class LootGoal : GoapGoal, IGoapEventListener
     {
         public override float Cost => 4.6f;
 
@@ -37,8 +37,8 @@ namespace Core.Goals
         private readonly List<CorpseEvent> corpseLocations = new();
 
         private bool gatherCorpse;
-        private bool listenLootWindow;
-        private bool successfulInBackground;
+        private int bagHash;
+        private int money;
 
         public LootGoal(ILogger logger, ConfigurableInput input, Wait wait,
             AddonReader addonReader, StopMoving stopMoving, ClassConfiguration classConfig,
@@ -61,15 +61,8 @@ namespace Core.Goals
             this.playerDirection = playerDirection;
             this.state = state;
 
-            playerReader.LootEvent.Changed += ListenLootEvent;
-
             AddPrecondition(GoapKey.shouldloot, true);
             AddEffect(GoapKey.shouldloot, false);
-        }
-
-        public void Dispose()
-        {
-            playerReader.LootEvent.Changed -= ListenLootEvent;
         }
 
         public override void OnEnter()
@@ -78,8 +71,8 @@ namespace Core.Goals
 
             wait.While(LootReset);
 
-            successfulInBackground = false;
-            listenLootWindow = true;
+            bagHash = bagReader.Hash;
+            money = playerReader.Money;
 
             if (bagReader.BagsFull())
             {
@@ -107,10 +100,11 @@ namespace Core.Goals
 
             if (success)
             {
-                (bool lootTimeOut, double elapsedMs) = wait.Until(MAX_TIME_TO_DETECT_LOOT, LootReadyOrClosed, input.ApproachOnCooldown);
-                Log($"Loot {(successfulInBackground || !lootTimeOut ? "Successful" : "Failed")} after {elapsedMs}ms");
+                (bool lootTimeOut, double elapsedMs) = wait.Until(MAX_TIME_TO_DETECT_LOOT, LootWindowClosedOrBagOrMoneyChanged, input.ApproachOnCooldown);
+                success = !lootTimeOut;
+                Log($"Loot {((success && !bagReader.BagsFull()) ? "Successful" : "Failed")} after {elapsedMs}ms");
 
-                gatherCorpse &= successfulInBackground || !lootTimeOut;
+                gatherCorpse &= success;
 
                 AddEffect(GoapKey.shouldgather, gatherCorpse);
                 SendGoapEvent(new GoapStateEvent(GoapKey.shouldgather, gatherCorpse));
@@ -131,11 +125,6 @@ namespace Core.Goals
 
             if (corpseLocations.Count > 0)
                 corpseLocations.Remove(GetClosestCorpse()!);
-        }
-
-        public override void OnExit()
-        {
-            listenLootWindow = false;
         }
 
         public void OnGoapEvent(GoapEventArgs e)
@@ -221,11 +210,11 @@ namespace Core.Goals
             Log($"Should gather {targetId} ? {gatherCorpse}");
         }
 
-        private bool LootReadyOrClosed()
+        private bool LootWindowClosedOrBagOrMoneyChanged()
         {
-            return successfulInBackground ||
+            return bagHash != bagReader.Hash ||
+                money != playerReader.Money ||
                 (LootStatus)playerReader.LootEvent.Value is
-                LootStatus.READY or
                 LootStatus.CLOSED;
         }
 
@@ -297,15 +286,6 @@ namespace Core.Goals
         private bool LootReset()
         {
             return (LootStatus)playerReader.LootEvent.Value != LootStatus.CORPSE;
-        }
-
-        private void ListenLootEvent()
-        {
-            if (listenLootWindow &&
-                (LootStatus)playerReader.LootEvent.Value is LootStatus.READY or LootStatus.CLOSED)
-            {
-                successfulInBackground = true;
-            }
         }
 
         private bool MinRangeZero()

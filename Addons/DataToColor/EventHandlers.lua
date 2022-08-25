@@ -69,7 +69,8 @@ local errorList = {
     "SPELL_FAILED_NOT_READY", -- 13 "Not yet recovered"
     "SPELL_FAILED_TARGETS_DEAD", -- 14 "Your target is dead"
     "ERR_LOOT_LOCKED", -- 15 "Someone is already looting that corpse."
-    "ERR_ATTACK_PACIFIED" -- 16 "Can't attack while pacified.";
+    "ERR_ATTACK_PACIFIED" -- 16 "Can't attack while pacified."
+    -- "ERR_USE_LOCKED_WITH_SPELL_S" -- 17 "Requires %s"
 }
 local spellFailedErrors = {
     SPELL_FAILED_UNIT_NOT_INFRONT = 1,
@@ -77,6 +78,8 @@ local spellFailedErrors = {
     SPELL_FAILED_STUNNED = 9,
     ERR_SPELL_OUT_OF_RANGE = 3
 }
+
+local specialErrorS = {}
 
 local errorListMessages = {}
 
@@ -119,6 +122,8 @@ function DataToColor:RegisterEvents()
         local text = _G[key]
         errorListMessages[text] = value
     end
+
+    specialErrorS[strsplit('%s', ERR_USE_LOCKED_WITH_SPELL_S, 2)] = 17
 end
 
 function DataToColor:OnUIErrorMessage(_, _, message)
@@ -132,6 +137,14 @@ function DataToColor:OnUIErrorMessage(_, _, message)
         DataToColor.uiErrorMessage = code
         UIErrorsFrame:AddMessage(message, 0, 1, 0) -- show as green messasge
         return
+    else
+        for i, v in pairs(specialErrorS) do
+            if string.find(message, i) then
+                DataToColor.uiErrorMessage = v
+                UIErrorsFrame:AddMessage(message, 0, 1, 0) -- show as green messasge
+                return
+            end
+        end
     end
 
     UIErrorsFrame:AddMessage(message, 0, 0, 1) -- show as blue message (unknown message)

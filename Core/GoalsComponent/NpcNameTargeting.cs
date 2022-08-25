@@ -13,6 +13,7 @@ namespace Core.Goals
     public class NpcNameTargeting : IDisposable
     {
         private const int FAST_DELAY = 5;
+        private const int INTERACT_DELAY = 25;
 
         private readonly ILogger logger;
         private readonly CancellationToken ct;
@@ -188,12 +189,11 @@ namespace Core.Goals
                 {
                     Point clickPostion = npcNameFinder.ToScreenCoordinates(npc.ClickPoint.X + p.X, npc.ClickPoint.Y + p.Y);
                     input.SetCursorPosition(clickPostion);
-                    ct.WaitHandle.WaitOne(FAST_DELAY);
+                    ct.WaitHandle.WaitOne(INTERACT_DELAY);
 
                     classifier.Classify(out CursorType cls);
                     if (cursor.Contains(cls))
                     {
-                        ct.WaitHandle.WaitOne(FAST_DELAY);
                         input.InteractMouseOver();
                         logger.LogInformation($"> NPCs found: {npc.Rect}");
                         return true;

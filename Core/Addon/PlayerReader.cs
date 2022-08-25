@@ -32,7 +32,7 @@ namespace Core
 
         public float MapX => reader.GetFixed(1) * 10;
         public float MapY => reader.GetFixed(2) * 10;
-        
+
         public float Direction => reader.GetFixed(3);
 
         public RecordInt UIMapId { get; } = new(4);
@@ -86,7 +86,7 @@ namespace Core
         public int TargetLevel => reader.GetInt(43) / 100;
         public UnitClassification TargetClassification => (UnitClassification)(reader.GetInt(43) % 100);
 
-        public int Gold => reader.GetInt(44) + (reader.GetInt(45) * 1000000);
+        public int Money => reader.GetInt(44) + (reader.GetInt(45) * 1000000);
 
         // RACE_ID * 10000 + CLASS_ID * 100 + ClientVersion
         public UnitRace Race => (UnitRace)(reader.GetInt(46) / 10000);
@@ -139,6 +139,7 @@ namespace Core
         public RecordInt AutoShot { get; } = new(60);
         public RecordInt MainHandSwing { get; } = new(61);
         public RecordInt CastEvent { get; } = new(62);
+        public UI_ERROR CastState => (UI_ERROR)CastEvent.Value;
         public RecordInt CastSpellId { get; } = new(63);
 
         public int PetGuid => reader.GetInt(68);

@@ -25,6 +25,7 @@ namespace Core.Goals
         public const int GCD = 1500;
         public const int MIN_GCD = 1000;
         public const int SpellQueueTimeMs = 400;
+        public const int SpellQueueHalfMs = SpellQueueTimeMs / 2;
 
         private const int MAX_WAIT_MELEE_RANGE = 10_000;
 
