@@ -131,7 +131,7 @@ namespace Core.Goals
             }
 
             int index = blacklistIndexes.Count;
-            if (index > npcCount)
+            if (index > NpcCount)
                 return false;
             NpcPosition npc = npcNameFinder.Npcs.ElementAt(index);
 
