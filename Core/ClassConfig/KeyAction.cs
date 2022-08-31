@@ -17,6 +17,7 @@ namespace Core
         public int Slot { get; set; }
         public int SlotIndex { get; private set; }
         public int PressDuration { get; set; } = 50;
+        public bool AllowMounted { get; set; } = false;
         public string Form { get; set; } = string.Empty;
         public Form FormEnum { get; set; } = Core.Form.None;
         public bool FormAction { get; private set; }
