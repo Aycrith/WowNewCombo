@@ -454,6 +454,7 @@ Can specify conditions with [Requirement(s)](#Requirement) in order to create a 
 | --- | Before keypress cast, ... | --- |
 | `"BeforeCastStop"` | stop moving. | `false` |
 | `"BeforeCastDelay"` | delay in milliseconds | `0` |
+| `"BeforeCastDismount"` | should dismount. [Adhoc Goals](#Adhoc-Goals) only. | `true` |
 | --- | After Successful cast, ... | --- |
 | `"AfterCastWaitSwing"` | wait for next melee swing to land.<br>Blocks **CastingHandler**. | `false` |
 | `"AfterCastWaitCastbar"` | wait for the castbar to finish, `SpellQueueTimeMs` excluded.<br>Blocks **CastingHandler**. | `false` |

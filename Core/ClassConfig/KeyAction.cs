@@ -56,6 +56,7 @@ namespace Core
 
         public int BeforeCastDelay { get; set; }
         public bool BeforeCastStop { get; set; }
+        public bool BeforeCastDismount { get; set; } = true;
 
         public int AfterCastDelay { get; set; }
         public bool AfterCastWaitMeleeRange { get; set; }

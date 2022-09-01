@@ -50,7 +50,7 @@ namespace Core.Goals
 
         public override void OnEnter()
         {
-            if (mountHandler.IsMounted())
+            if (key.BeforeCastDismount && mountHandler.IsMounted())
             {
                 mountHandler.Dismount();
                 wait.Update();
