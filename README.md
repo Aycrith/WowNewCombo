@@ -435,7 +435,6 @@ Can specify conditions with [Requirement(s)](#Requirement) in order to create a 
 | `"Name"` | Name of the KeyAction. For the `ActionBarPopulator`, lowercase means macro. | `""` |
 | `"Key"` | Key to press (`ConsoleKey`) | `""` |
 | `"Cost"` | [Adhoc Goals](#Adhoc-Goals) or [NPC Goal](#NPC-Goals) only, priority | `18` |
-| `"AllowMounted"` | [Adhoc Goals](#Adhoc-Goals) only, indicate whether the action could be used while mounted (like Paladin Crusader Aura) | `false` |
 | `"PathFilename"` | [NPC Goal](#NPC-Goals) only, this is a short path to get close to the NPC to avoid walls etc. | `""` |
 | `"HasCastBar"` | After key press cast bar is expected?<br>By default sets `BeforeCastStop`=`true` | `false` |
 | `"InCombat"` | Should combat matter when attempt to cast?<br>Accepted values:<br>* `"any value for doesn't matter"`<br>* `"true"`<br>* `"false"` | `false` |
@@ -455,6 +454,7 @@ Can specify conditions with [Requirement(s)](#Requirement) in order to create a 
 | --- | Before keypress cast, ... | --- |
 | `"BeforeCastStop"` | stop moving. | `false` |
 | `"BeforeCastDelay"` | delay in milliseconds | `0` |
+| `"BeforeCastDismount"` | should dismount. [Adhoc Goals](#Adhoc-Goals) only. | `true` |
 | --- | After Successful cast, ... | --- |
 | `"AfterCastWaitSwing"` | wait for next melee swing to land.<br>Blocks **CastingHandler**. | `false` |
 | `"AfterCastWaitCastbar"` | wait for the castbar to finish, `SpellQueueTimeMs` excluded.<br>Blocks **CastingHandler**. | `false` |
