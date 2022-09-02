@@ -57,9 +57,9 @@ elseif WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
 	DataToColor.ClientVersion = 2
 end
 
-if DataToColor.IsRetail() or TBC253 then
+if DataToColor.IsRetail() or TBC253 or DataToColor.IsClassic_Wrath() then
   DataToColor.UnitCastingInfo = UnitCastingInfo
-elseif DataToColor.IsClassic_BCC() or DataToColor.IsClassic_Wrath() then
+elseif DataToColor.IsClassic_BCC() then
   DataToColor.UnitCastingInfo = function(unit)
     local name, text, texture, startTimeMS, endTimeMS, isTradeSkill, castID, spellId = UnitCastingInfo(unit)
     return name, text, texture, startTimeMS, endTimeMS, isTradeSkill, castID, nil, spellId
@@ -74,9 +74,9 @@ else
   end
 end
 
-if DataToColor.IsRetail() or TBC253 then
+if DataToColor.IsRetail() or TBC253 or DataToColor.IsClassic_Wrath() then
   DataToColor.UnitChannelInfo = UnitChannelInfo
-elseif DataToColor.IsClassic_BCC() or DataToColor.IsClassic_Wrath() then
+elseif DataToColor.IsClassic_BCC() then
   DataToColor.UnitChannelInfo = function(unit)
     local name, text, texture, startTimeMS, endTimeMS, isTradeSkill, spellId = UnitChannelInfo(unit)
     return name, text, texture, startTimeMS, endTimeMS, isTradeSkill, nil, spellId
