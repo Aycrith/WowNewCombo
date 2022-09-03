@@ -80,8 +80,8 @@ namespace SharedLib.NpcFinder
         public float ScaleToRefWidth = 1;
         public float ScaleToRefHeight = 1;
 
-        public IEnumerable<NpcPosition> Npcs { get; private set; } = Enumerable.Empty<NpcPosition>();
-        public int NpcCount => Npcs.Count();
+        public NpcPosition[] Npcs { get; private set; } = Array.Empty<NpcPosition>();
+        public int NpcCount => Npcs.Length;
         public int AddCount { private set; get; }
         public int TargetCount { private set; get; }
         public bool MobsVisible => NpcCount > 0;
@@ -207,7 +207,7 @@ namespace SharedLib.NpcFinder
 
             TargetCount = 0;
             AddCount = 0;
-            Npcs = Enumerable.Empty<NpcPosition>();
+            Npcs = Array.Empty<NpcPosition>();
 
             UpdateSearchMode();
 
