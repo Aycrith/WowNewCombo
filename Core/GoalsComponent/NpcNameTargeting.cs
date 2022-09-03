@@ -29,7 +29,7 @@ namespace Core.Goals
 
         private readonly Pen whitePen;
 
-        private readonly HashSet<int> blacklistIndexes;
+        private int index;
         private int npcCount = -1;
 
         public int NpcCount => npcNameFinder.NpcCount;
@@ -53,8 +53,6 @@ namespace Core.Goals
             classifier = new();
 
             whitePen = new Pen(Color.White, 3);
-
-            blacklistIndexes = new();
 
             locTargeting = new Point[]
             {
@@ -109,7 +107,7 @@ namespace Core.Goals
         public void Reset()
         {
             npcCount = -1;
-            blacklistIndexes.Clear();
+            index = 0;
         }
 
         public void WaitForUpdate()
@@ -127,13 +125,12 @@ namespace Core.Goals
             if (npcCount != NpcCount)
             {
                 npcCount = NpcCount;
-                blacklistIndexes.Clear();
+                index = 0;
             }
 
-            int index = blacklistIndexes.Count;
-            if (index > NpcCount)
+            if (index > NpcCount - 1)
                 return false;
-            NpcPosition npc = npcNameFinder.Npcs.ElementAt(index);
+            NpcPosition npc = npcNameFinder.Npcs[index];
 
             for (int i = 0; i < locTargeting.Length; i++)
             {
@@ -156,7 +153,7 @@ namespace Core.Goals
                         if (blacklisted)
                         {
                             //logger.LogInformation($"> NPCs {index} added to blacklist {mouseOverReader.MouseOverId} - {npc.Rect}");
-                            blacklistIndexes.Add(index);
+                            index++;
                         }
 
                         return false;
