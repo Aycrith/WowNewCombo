@@ -2,7 +2,7 @@
 
 namespace Core
 {
-    public class ActionBarPopulator
+    public sealed class ActionBarPopulator
     {
         private class ActionBarSlotItem
         {

@@ -16,7 +16,7 @@ using Game;
 
 namespace CoreTests
 {
-    public class Test_NpcNameFinder : IDisposable
+    public sealed class Test_NpcNameFinder : IDisposable
     {
         private const bool saveImage = true;
         private const bool LogEachUpdate = true;

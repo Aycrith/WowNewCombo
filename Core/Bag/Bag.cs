@@ -2,7 +2,7 @@
 
 namespace Core
 {
-    public class Bag
+    public sealed class Bag
     {
         public int ItemId { get; set; }
         public BagType BagType { get; set; }

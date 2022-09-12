@@ -6,7 +6,7 @@
 
 namespace WowTriangles
 {
-    public class ChunkEventArgs
+    public sealed class ChunkEventArgs
     {
         public int GridX { get; }
         public int GridY { get; }

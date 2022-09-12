@@ -2,7 +2,7 @@
 
 namespace WowheadDB
 {
-    public class Area
+    public sealed class Area
     {
         public List<NPC> flightmaster;
         public List<NPC> innkeeper;

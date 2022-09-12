@@ -10,7 +10,7 @@ using System;
 
 namespace Core.Goals
 {
-    public class LootGoal : GoapGoal, IGoapEventListener
+    public sealed class LootGoal : GoapGoal, IGoapEventListener
     {
         public override float Cost => 4.6f;
 

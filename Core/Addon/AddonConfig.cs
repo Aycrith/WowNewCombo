@@ -10,7 +10,7 @@ namespace Core
         public const string DefaultFileName = "addon_config.json";
     }
 
-    public class AddonConfig
+    public sealed class AddonConfig
     {
         public int Version { get; init; } = AddonConfigMeta.Version;
 

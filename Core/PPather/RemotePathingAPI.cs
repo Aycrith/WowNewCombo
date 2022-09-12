@@ -13,7 +13,7 @@ using SharedLib.Converters;
 
 namespace Core
 {
-    public class RemotePathingAPI : IPPather
+    public sealed class RemotePathingAPI : IPPather
     {
         private readonly ILogger logger;
 

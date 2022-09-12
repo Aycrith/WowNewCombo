@@ -1,4 +1,4 @@
 ﻿namespace Core.GOAP
 {
-    public class AbortEvent : GoapEventArgs { }
+    public sealed class AbortEvent : GoapEventArgs { }
 }

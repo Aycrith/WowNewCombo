@@ -6,7 +6,7 @@ using SharedLib;
 
 namespace Core.Database
 {
-    public class TalentDB
+    public sealed class TalentDB
     {
         private readonly SpellDB spellDB;
 

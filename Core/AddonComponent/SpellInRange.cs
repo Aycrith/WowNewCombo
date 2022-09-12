@@ -2,7 +2,7 @@
 
 namespace Core
 {
-    public class SpellInRange
+    public sealed class SpellInRange
     {
         private readonly int cell;
 

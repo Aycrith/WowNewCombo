@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 
 namespace Core.Session
 {
-    public class GrindSession
+    public sealed class GrindSession
     {
         [JsonIgnore]
         public int[] ExpList { get; set; } = Array.Empty<int>();

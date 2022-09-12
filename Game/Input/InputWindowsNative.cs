@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Drawing;
 using System.Threading;
-using System.Runtime.CompilerServices;
 using TextCopy;
 using static WinAPI.NativeMethods;
 
 namespace Game
 {
-    public class InputWindowsNative : IInput
+    public sealed class InputWindowsNative : IInput
     {
         private readonly int MIN_DELAY;
         private readonly int MAX_DELAY;

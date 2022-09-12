@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace Core
 {
-    public class BagReader : IDisposable
+    public sealed class BagReader : IDisposable
     {
         private readonly int cBagMeta;
         private readonly int cItemNumCount;

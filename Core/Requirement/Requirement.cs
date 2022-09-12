@@ -32,7 +32,7 @@ namespace Core
         }
     }
 
-    public class Requirement
+    public sealed class Requirement
     {
         public const string And = " and ";
         public const string Or = " or ";

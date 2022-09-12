@@ -5,7 +5,7 @@ using System.Numerics;
 
 namespace SharedLib.Converters
 {
-    public class Vector3Converter : JsonConverter<Vector3>
+    public sealed class Vector3Converter : JsonConverter<Vector3>
     {
         public override bool CanConvert(Type typeToConvert)
         {

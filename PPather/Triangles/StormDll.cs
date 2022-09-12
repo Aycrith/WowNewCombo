@@ -26,7 +26,7 @@ using System.Runtime.InteropServices;
 
 namespace StormDll
 {
-    internal class StormDllx64
+    internal sealed class StormDllx64
     {
         [DllImport("MPQ\\StormLib_x64.dll")]
         public static extern bool SFileOpenArchive(
@@ -46,7 +46,7 @@ namespace StormDll
             [MarshalAs(UnmanagedType.U4)] OpenFile dwSearchScope);
     }
 
-    internal class StormDllx86
+    internal sealed class StormDllx86
     {
         [DllImport("MPQ\\StormLib_x86.dll")]
         public static extern bool SFileOpenArchive(
@@ -102,7 +102,7 @@ namespace StormDll
         SFILE_OPEN_LOCAL_FILE = 0xFFFFFFFF  // Open a local file
     };
 
-    public class ArchiveSet
+    public sealed class ArchiveSet
     {
         private Archive[] archives;
 
@@ -153,7 +153,7 @@ namespace StormDll
         }
     }
 
-    internal class Archive
+    internal sealed class Archive
     {
         private readonly IntPtr handle;
 

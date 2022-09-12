@@ -7,7 +7,7 @@ using TextCopy;
 
 namespace Game
 {
-    public class InputSimulator : IInput
+    public sealed class InputSimulator : IInput
     {
         private readonly int MIN_DELAY;
         private readonly int MAX_DELAY;

@@ -8,7 +8,7 @@ using Core.Extensions;
 
 namespace Core
 {
-    public class AddonConfigurator
+    public sealed class AddonConfigurator
     {
         private readonly ILogger logger;
         private readonly WowProcess wowProcess;

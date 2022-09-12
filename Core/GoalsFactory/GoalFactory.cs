@@ -16,7 +16,7 @@ using static Newtonsoft.Json.JsonConvert;
 
 namespace Core
 {
-    public class GoalFactory
+    public static class GoalFactory
     {
         public static (RouteInfo, IEnumerable<GoapGoal>) CreateGoals(ILogger logger, AddonReader addonReader,
             ConfigurableInput input, DataConfig dataConfig, NpcNameFinder npcNameFinder,

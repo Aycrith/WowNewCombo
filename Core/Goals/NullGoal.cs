@@ -1,6 +1,6 @@
 ﻿namespace Core.Goals
 {
-    public class NullGoal : GoapGoal
+    public sealed class NullGoal : GoapGoal
     {
         public override float Cost => 0;
 

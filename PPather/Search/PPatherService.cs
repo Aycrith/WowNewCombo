@@ -10,7 +10,7 @@ using System.Numerics;
 
 namespace PPather
 {
-    public class PPatherService
+    public sealed class PPatherService
     {
         private Search search { get; set; }
         public bool SearchExists => search != null;

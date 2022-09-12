@@ -4,7 +4,7 @@ using System.Threading;
 
 namespace Core.Session
 {
-    public class GrindSessionHandler : IGrindSessionHandler
+    public sealed class GrindSessionHandler : IGrindSessionHandler
     {
         private readonly ILogger logger;
         private readonly AddonReader addonReader;

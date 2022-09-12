@@ -1,6 +1,6 @@
 ﻿namespace Core
 {
-    public class StartupConfigReader
+    public sealed class StartupConfigReader
     {
         public const string Position = "Reader";
 

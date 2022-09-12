@@ -21,7 +21,7 @@ using System.Numerics;
 
 namespace PPather.Graph
 {
-    public class Path
+    public sealed class Path
     {
         public List<Vector3> locations { get; set; } = new();
 

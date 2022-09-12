@@ -3,7 +3,7 @@ using System.Threading;
 
 namespace Core.Addon
 {
-    public class ConfigAddonReader : IAddonReader
+    public sealed class ConfigAddonReader : IAddonReader
     {
         public PlayerReader PlayerReader => throw new NotImplementedException();
         public BagReader BagReader => throw new NotImplementedException();

@@ -36,7 +36,7 @@ namespace Core
         }
     }
 
-    public class RouteInfo : IDisposable
+    public sealed class RouteInfo : IDisposable
     {
         public Vector3[] Route { get; private set; }
 

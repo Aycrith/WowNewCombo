@@ -3,7 +3,7 @@ using Core.GOAP;
 
 namespace Core.Goals
 {
-    public partial class ConsumeCorpseGoal : GoapGoal
+    public sealed partial class ConsumeCorpseGoal : GoapGoal
     {
         public override float Cost => 4.1f;
 

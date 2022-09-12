@@ -11,7 +11,7 @@ using WinAPI;
 
 namespace Game
 {
-    public partial class WowProcessInput : IMouseInput
+    public sealed partial class WowProcessInput : IMouseInput
     {
         private const bool LogInput = false;
         private const bool LogMove = false;
@@ -19,7 +19,7 @@ namespace Game
         private const int MIN_DELAY = 25;
         private const int MAX_DELAY = 55;
 
-        protected readonly ILogger logger;
+        private readonly ILogger logger;
 
         private readonly WowProcess wowProcess;
         private readonly InputWindowsNative nativeInput;

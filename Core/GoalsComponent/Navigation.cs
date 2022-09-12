@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -54,7 +54,7 @@ namespace Core.Goals
         }
     }
 
-    public partial class Navigation : IDisposable
+    public sealed partial class Navigation : IDisposable
     {
         private const bool debug = false;
 

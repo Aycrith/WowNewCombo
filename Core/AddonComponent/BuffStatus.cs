@@ -2,7 +2,7 @@
 
 namespace Core
 {
-    public class BuffStatus
+    public sealed class BuffStatus
     {
         private readonly int cell;
 

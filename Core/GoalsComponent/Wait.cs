@@ -3,7 +3,7 @@ using System.Threading;
 
 namespace Core
 {
-    public class Wait
+    public sealed class Wait
     {
         private readonly AutoResetEvent globalTime;
         private readonly CancellationToken ct;

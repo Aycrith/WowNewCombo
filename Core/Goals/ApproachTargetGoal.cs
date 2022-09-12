@@ -7,7 +7,7 @@ using System.Numerics;
 
 namespace Core.Goals
 {
-    public class ApproachTargetGoal : GoapGoal, IGoapEventListener
+    public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
     {
         private const bool debug = true;
         private const double STUCK_INTERVAL_MS = 400; // cant be lower than Approach.Cooldown

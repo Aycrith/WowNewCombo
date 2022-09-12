@@ -1,6 +1,6 @@
 ﻿namespace Core.GOAP
 {
-    public class GoapStateEvent : GoapEventArgs
+    public sealed class GoapStateEvent : GoapEventArgs
     {
         public GoapKey Key { get; }
         public bool Value { get; }

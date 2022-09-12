@@ -6,7 +6,7 @@ using SharedLib.Extensions;
 
 namespace Core
 {
-    public partial class TargetBlacklist : IBlacklist
+    public sealed partial class TargetBlacklist : IBlacklist
     {
         private readonly string[] blacklist;
 

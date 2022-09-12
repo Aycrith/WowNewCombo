@@ -27,7 +27,7 @@ using SharedLib.Data;
 
 namespace Wmo
 {
-    internal unsafe class ChunkReader
+    internal sealed unsafe class ChunkReader
     {
         public const float TILESIZE = 533.33333f;
         public const float ZEROPOINT = 32.0f * TILESIZE;
@@ -71,7 +71,7 @@ namespace Wmo
         public static readonly uint MH2O = ToBin(nameof(MH2O));
     }
 
-    public class WMOManager : Manager<WMO>
+    public sealed class WMOManager : Manager<WMO>
     {
         private readonly StormDll.ArchiveSet archive;
         private readonly ModelManager modelmanager;
@@ -147,7 +147,7 @@ namespace Wmo
         public uint nInstances;
     }
 
-    public class WMO
+    public sealed class WMO
     {
         public string fileName;
         public WMOGroup[] groups;
@@ -192,7 +192,7 @@ namespace Wmo
         }
     }
 
-    public class ModelManager : Manager<Model>
+    public sealed class ModelManager : Manager<Model>
     {
         private readonly StormDll.ArchiveSet archive;
         private readonly DataConfig dataConfig;
@@ -424,7 +424,7 @@ namespace Wmo
         }
     }
 
-    public class WMOGroup
+    public sealed class WMOGroup
     {
         public uint nameStart, nameStart2;
         public uint flags;
@@ -453,7 +453,7 @@ namespace Wmo
         public const UInt16 MAT_FLAG_COLLIDE_HIT = 0x020;
     }
 
-    internal class WDT
+    internal sealed class WDT
     {
         public const int SIZE = 64;
 
@@ -463,7 +463,7 @@ namespace Wmo
         public WMOInstance[] gwmois = Array.Empty<WMOInstance>();
     }
 
-    internal class WDTFile
+    internal sealed class WDTFile
     {
         private readonly ILogger logger;
         private readonly DataConfig dataConfig;
@@ -1098,7 +1098,7 @@ namespace Wmo
         }
     }
 
-    internal class WmoRootFile
+    internal sealed class WmoRootFile
     {
         public WmoRootFile(string name, WMO wmo, ModelManager modelmanager)
         {
@@ -1243,7 +1243,7 @@ namespace Wmo
         }
     }
 
-    internal class WmoGroupFile
+    internal sealed class WmoGroupFile
     {
         public WmoGroupFile(WMOGroup g, string name)
         {

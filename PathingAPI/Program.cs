@@ -5,7 +5,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace PathingAPI
 {
-    public class Program
+    public sealed class Program
     {
         public static string hostUrl = "http://127.0.0.1:5001";
 

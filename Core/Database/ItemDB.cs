@@ -5,7 +5,7 @@ using SharedLib;
 
 namespace Core.Database
 {
-    public class ItemDB
+    public sealed class ItemDB
     {
         public static readonly Item EmptyItem = new() { Entry = 0, Name = string.Empty, Quality = 0, SellPrice = 0 };
 

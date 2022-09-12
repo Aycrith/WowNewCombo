@@ -12,7 +12,7 @@ using SharedLib.Extensions;
 
 namespace Core.Goals
 {
-    public class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvider, IEditedRouteReceiver, IDisposable
+    public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvider, IEditedRouteReceiver, IDisposable
     {
         public override float Cost => 20f;
 

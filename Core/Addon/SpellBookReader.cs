@@ -5,7 +5,7 @@ using SharedLib;
 
 namespace Core
 {
-    public class SpellBookReader
+    public sealed class SpellBookReader
     {
         private readonly int cSpellId;
 

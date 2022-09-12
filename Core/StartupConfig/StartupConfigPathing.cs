@@ -1,6 +1,6 @@
 ﻿namespace Core
 {
-    public class StartupConfigPathing
+    public sealed class StartupConfigPathing
     {
         public const string Position = "Pathing";
 

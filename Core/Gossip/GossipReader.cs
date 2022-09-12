@@ -2,7 +2,7 @@
 
 namespace Core
 {
-    public class GossipReader
+    public sealed class GossipReader
     {
         private readonly int cGossip;
 

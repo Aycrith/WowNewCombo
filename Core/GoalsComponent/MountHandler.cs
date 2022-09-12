@@ -5,7 +5,7 @@ using System.Numerics;
 
 namespace Core
 {
-    public class MountHandler
+    public sealed class MountHandler
     {
         private const int MIN_LEVEL_TO_MOUNT = 30;
         private const int DISTANCE_TO_MOUNT = 40;

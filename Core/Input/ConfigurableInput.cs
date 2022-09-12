@@ -2,7 +2,7 @@
 
 namespace Core
 {
-    public class ConfigurableInput
+    public sealed class ConfigurableInput
     {
         public readonly WowProcessInput Proc;
         public readonly ClassConfiguration ClassConfig;

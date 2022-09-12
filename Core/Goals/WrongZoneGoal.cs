@@ -11,7 +11,7 @@ using static System.MathF;
 
 namespace Core.Goals
 {
-    public class WrongZoneGoal : GoapGoal
+    public sealed class WrongZoneGoal : GoapGoal
     {
         public override float Cost => 19f;
 

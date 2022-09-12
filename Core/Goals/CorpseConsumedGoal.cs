@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Core.Goals
 {
-    public partial class CorpseConsumedGoal : GoapGoal
+    public sealed partial class CorpseConsumedGoal : GoapGoal
     {
         public override float Cost => 4.7f;
 

@@ -2,7 +2,7 @@
 
 namespace Core
 {
-    public class StartupClientVersion
+    public sealed class StartupClientVersion
     {
         public ClientVersion Version { get; }
 

@@ -3,7 +3,7 @@ using Core;
 
 namespace HeadlessServer
 {
-    public class RunOptions
+    public sealed class RunOptions
     {
         [Value(0,
             MetaName = "ClassConfig file",

@@ -4,7 +4,7 @@ using System.Numerics;
 
 namespace PPather
 {
-    public class MeshFactory
+    public static class MeshFactory
     {
         public static Vector3[] CreatePoints(TriangleCollection collection)
         {

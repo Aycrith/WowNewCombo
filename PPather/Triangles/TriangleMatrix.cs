@@ -16,7 +16,7 @@ using static WowTriangles.Utils;
 
 namespace WowTriangles
 {
-    public class TriangleMatrix
+    public sealed class TriangleMatrix
     {
         private const float resolution = 2.0f;
         private readonly SparseFloatMatrix2D<List<int>> matrix;

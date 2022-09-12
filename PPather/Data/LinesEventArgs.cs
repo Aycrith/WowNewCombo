@@ -2,7 +2,7 @@
 
 namespace PPather.Data
 {
-    public class LinesEventArgs
+    public sealed class LinesEventArgs
     {
         public Vector4[] Locations { get; set; }
         public int Colour { get; set; }

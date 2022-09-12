@@ -2,7 +2,7 @@
 
 namespace PPather.Triangles.Data
 {
-    public class SparseFloatMatrix2D<T> : SparseMatrix2D<T>
+    public sealed class SparseFloatMatrix2D<T> : SparseMatrix2D<T>
     {
         private const float offset = 100000f;
         private readonly float gridSize;

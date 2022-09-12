@@ -7,7 +7,7 @@ using SharedLib.Extensions;
 
 namespace PPather
 {
-    public class Search
+    public sealed class Search
     {
         public PathGraph PathGraph { get; set; }
         public float MapId { get; set; }

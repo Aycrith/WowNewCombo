@@ -2,7 +2,7 @@
 
 namespace PPather
 {
-    public class SearchParam
+    public sealed class SearchParam
     {
         public string Continent { get; set; }
         public PathGraph.eSearchScoreSpot SearchType { get; set; }

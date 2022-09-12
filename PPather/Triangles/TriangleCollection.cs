@@ -15,7 +15,7 @@ namespace WowTriangles
     /// <summary>
     ///
     /// </summary>
-    public class TriangleCollection
+    public sealed class TriangleCollection
     {
         private readonly ILogger logger;
         private readonly TrioArray<float> vertices;

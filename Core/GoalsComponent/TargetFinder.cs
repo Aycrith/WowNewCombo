@@ -4,7 +4,7 @@ using System;
 
 namespace Core.Goals
 {
-    public class TargetFinder
+    public sealed class TargetFinder
     {
         private readonly ConfigurableInput input;
         private readonly ClassConfiguration classConfig;

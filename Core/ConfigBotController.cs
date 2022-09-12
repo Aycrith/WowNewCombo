@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Core
 {
-    public class ConfigBotController : IBotController, IDisposable
+    public sealed class ConfigBotController : IBotController, IDisposable
     {
         public IAddonReader AddonReader { get; }
         public GoapAgent? GoapAgent => throw new NotImplementedException();

@@ -2,7 +2,7 @@
 
 namespace Core
 {
-    public class MinimapNodeEventArgs : EventArgs
+    public sealed class MinimapNodeEventArgs : EventArgs
     {
         public int X { get; }
         public int Y { get; }

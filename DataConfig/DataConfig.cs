@@ -8,7 +8,7 @@ public static class DataConfigMeta
     public const string DefaultFileName = "data_config.json";
 }
 
-public class DataConfig
+public sealed class DataConfig
 {
     public int Version = DataConfigMeta.Version;
     public string Root { get; set; } = Join("..", "json");

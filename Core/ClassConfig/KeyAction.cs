@@ -7,7 +7,7 @@ using System.Numerics;
 
 namespace Core
 {
-    public partial class KeyAction : IDisposable
+    public sealed partial class KeyAction : IDisposable
     {
         public float Cost { get; set; } = 18;
         public string Name { get; set; } = string.Empty;
@@ -78,7 +78,7 @@ namespace Core
 
         public int ConsoleKeyFormHash { private set; get; }
 
-        protected static Dictionary<int, DateTime> LastClicked { get; } = new();
+        public static Dictionary<int, DateTime> LastClicked { get; } = new();
 
         public static int LastKeyClicked()
         {

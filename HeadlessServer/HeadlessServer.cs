@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace HeadlessServer
 {
-    public class HeadlessServer
+    public sealed class HeadlessServer
     {
         private readonly ILogger logger;
         private readonly IBotController botController;

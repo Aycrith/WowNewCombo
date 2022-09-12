@@ -1,7 +1,7 @@
 ﻿
 namespace Core.GOAP
 {
-    public class GoapAgentState
+    public sealed class GoapAgentState
     {
         public bool ShouldConsumeCorpse { get; set; }
         public bool NeedLoot { get; set; }

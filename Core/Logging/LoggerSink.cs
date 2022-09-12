@@ -15,7 +15,7 @@ namespace Core
         }
     }
 
-    public class LoggerSink : ILogEventSink
+    public sealed class LoggerSink : ILogEventSink
     {
         public static event Action? OnLogChanged;
         public static CircularBuffer<LogEvent> Log { get; private set; } = new(250);
