@@ -48,7 +48,7 @@ namespace Core
             foreach (int id in spells)
             {
                 if (TryGetValue(id, out Spell spell) &&
-                    name.Equals(spell.Name, StringComparison.OrdinalIgnoreCase))
+                    name.Contains(spell.Name, StringComparison.OrdinalIgnoreCase))
                 {
                     return spell.Id;
                 }
