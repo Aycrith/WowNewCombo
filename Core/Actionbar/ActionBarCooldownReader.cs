@@ -2,7 +2,7 @@
 
 namespace Core
 {
-    public class ActionBarCooldownReader
+    public sealed class ActionBarCooldownReader
     {
         private readonly struct Data
         {

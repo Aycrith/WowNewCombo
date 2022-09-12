@@ -2,7 +2,7 @@
 
 namespace PPather.Data
 {
-    public class SphereArgs
+    public sealed class SphereArgs
     {
         public string Name { get; set; }
         public Vector3 Spot { get; set; }

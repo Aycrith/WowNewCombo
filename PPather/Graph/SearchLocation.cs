@@ -2,7 +2,7 @@
 
 namespace PPather.Graph
 {
-    public class SearchLocation
+    public sealed class SearchLocation
     {
         public Vector4 Location { get; }
 

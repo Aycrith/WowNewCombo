@@ -1,6 +1,6 @@
 ﻿namespace Core
 {
-    public class StartupConfigPid
+    public sealed class StartupConfigPid
     {
         public const string Position = "Process";
 

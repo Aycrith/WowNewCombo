@@ -4,7 +4,7 @@ using System;
 
 namespace Core.Goals
 {
-    public class AdhocGoal : GoapGoal
+    public sealed class AdhocGoal : GoapGoal
     {
         public override float Cost => key.Cost;
 

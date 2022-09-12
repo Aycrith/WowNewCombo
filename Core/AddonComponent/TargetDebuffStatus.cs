@@ -2,7 +2,7 @@
 
 namespace Core
 {
-    public class TargetDebuffStatus
+    public sealed class TargetDebuffStatus
     {
         private readonly int cell;
 

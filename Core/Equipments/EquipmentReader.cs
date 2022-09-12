@@ -4,7 +4,7 @@ using SharedLib;
 
 namespace Core
 {
-    public class EquipmentReader
+    public sealed class EquipmentReader
     {
         private const int MAX_EQUIPMENT_COUNT = 24;
 

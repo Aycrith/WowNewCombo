@@ -5,7 +5,7 @@ using SharedLib;
 
 namespace Core
 {
-    public partial class PlayerReader : IMouseOverReader
+    public sealed partial class PlayerReader : IMouseOverReader
     {
         private readonly IAddonDataProvider reader;
         private readonly WorldMapAreaDB worldMapAreaDB;

@@ -1,6 +1,6 @@
 ﻿namespace Core
 {
-    public class Stance
+    public sealed class Stance
     {
         private readonly int cell;
 

@@ -5,7 +5,7 @@ using System.Threading;
 
 namespace Core.Goals
 {
-    public partial class CastingHandler
+    public sealed partial class CastingHandler
     {
         private const bool Log = true;
 

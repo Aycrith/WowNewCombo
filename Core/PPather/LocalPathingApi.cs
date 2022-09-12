@@ -16,7 +16,7 @@ using SharedLib;
 
 namespace Core
 {
-    public class LocalPathingApi : IPPather
+    public sealed class LocalPathingApi : IPPather
     {
         private const bool debug = false;
 

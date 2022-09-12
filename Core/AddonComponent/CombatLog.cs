@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Core
 {
-    public class CombatLog
+    public sealed class CombatLog
     {
         private bool wasInCombat;
 

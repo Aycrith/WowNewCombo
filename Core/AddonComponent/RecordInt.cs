@@ -2,7 +2,7 @@
 
 namespace Core
 {
-    public class RecordInt
+    public sealed class RecordInt
     {
         private readonly int cell;
 

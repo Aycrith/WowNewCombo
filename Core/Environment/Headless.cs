@@ -1,6 +1,6 @@
 ﻿namespace Core.Environment
 {
-    public class Headless : IEnvironment
+    public sealed class Headless : IEnvironment
     {
     }
 }

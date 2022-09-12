@@ -5,7 +5,7 @@ using SharedLib.Extensions;
 
 namespace WowheadDB
 {
-    public class Node
+    public sealed class Node
     {
         public List<List<float>> coords;
         public int level;

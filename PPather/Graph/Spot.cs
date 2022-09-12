@@ -23,7 +23,7 @@ using SharedLib.Extensions;
 
 namespace PPather.Graph
 {
-    public class Spot
+    public sealed class Spot
     {
         public const float Z_RESOLUTION = 2.0f; // Z spots max this close
 

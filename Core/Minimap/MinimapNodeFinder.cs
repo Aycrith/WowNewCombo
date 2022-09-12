@@ -12,7 +12,7 @@ using SharedLib.Extensions;
 
 namespace Core
 {
-    public class MinimapNodeFinder
+    public sealed class MinimapNodeFinder
     {
         private struct Score
         {

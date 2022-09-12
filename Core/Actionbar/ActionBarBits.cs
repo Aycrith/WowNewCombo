@@ -2,7 +2,7 @@
 
 namespace Core
 {
-    public class ActionBarBits
+    public sealed class ActionBarBits
     {
         private readonly int[] cells;
 

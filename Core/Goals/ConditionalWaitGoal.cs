@@ -2,7 +2,7 @@
 
 namespace Core.Goals
 {
-    public class ConditionalWaitGoal : GoapGoal
+    public sealed class ConditionalWaitGoal : GoapGoal
     {
         public override float Cost => Keys[0].Cost;
 

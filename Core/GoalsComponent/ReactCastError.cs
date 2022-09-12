@@ -7,7 +7,7 @@ using System.Numerics;
 
 namespace Core
 {
-    public class ReactCastError
+    public sealed class ReactCastError
     {
         private readonly ILogger logger;
         private readonly AddonReader addonReader;

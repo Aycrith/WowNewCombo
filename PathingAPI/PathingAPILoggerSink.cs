@@ -14,7 +14,7 @@ namespace PathingAPI
         }
     }
 
-    public class PathingAPILoggerSink : ILogEventSink
+    public sealed class PathingAPILoggerSink : ILogEventSink
     {
         public static event Action<LogEvent> OnLog;
 

@@ -9,7 +9,7 @@ using Core.Goals;
 
 namespace Core
 {
-    public partial class RequirementFactory
+    public sealed partial class RequirementFactory
     {
         private readonly ILogger logger;
         private readonly AddonReader addonReader;

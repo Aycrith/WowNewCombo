@@ -13,7 +13,7 @@ using static WinAPI.NativeMethods;
 
 namespace Core
 {
-    public class CursorClassifier
+    public sealed class CursorClassifier
     {
         private const bool saveImage = false;
 

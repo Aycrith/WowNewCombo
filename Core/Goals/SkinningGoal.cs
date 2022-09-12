@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 namespace Core.Goals
 {
-    public class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
+    public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
     {
         public override float Cost => 4.4f;
 

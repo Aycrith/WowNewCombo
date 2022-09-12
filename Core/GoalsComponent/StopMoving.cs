@@ -6,7 +6,7 @@ using Game;
 
 namespace Core.Goals
 {
-    public class StopMoving
+    public sealed class StopMoving
     {
         private readonly WowProcessInput input;
         private readonly PlayerReader playerReader;

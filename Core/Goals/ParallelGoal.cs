@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Core.Goals
 {
-    public class ParallelGoal : GoapGoal
+    public sealed class ParallelGoal : GoapGoal
     {
         public override float Cost => 3f;
 

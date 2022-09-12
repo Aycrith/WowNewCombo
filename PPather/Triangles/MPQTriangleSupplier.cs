@@ -29,7 +29,7 @@ using static Wmo.MapTileFile;
 
 namespace WowTriangles
 {
-    public class MPQTriangleSupplier
+    public sealed class MPQTriangleSupplier
     {
         private readonly ILogger logger;
         private readonly StormDll.ArchiveSet archive;

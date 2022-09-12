@@ -2,7 +2,7 @@
 
 namespace PPather.Data
 {
-    public class LineArgs
+    public sealed class LineArgs
     {
         public string Name { get; set; }
         public Vector3[] Spots { get; set; }

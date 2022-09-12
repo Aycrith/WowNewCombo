@@ -2,7 +2,7 @@
 
 namespace Core.Goals
 {
-    public class TargetFocusTargetGoal : GoapGoal
+    public sealed class TargetFocusTargetGoal : GoapGoal
     {
         public override float Cost => 10f;
 

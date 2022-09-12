@@ -2,7 +2,7 @@
 
 namespace Core
 {
-    public class LevelTracker : IDisposable
+    public sealed class LevelTracker : IDisposable
     {
         private readonly AddonReader addonReader;
         private readonly PlayerReader playerReader;

@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace AnTCP.Client
 {
-    public unsafe class AnTcpClient
+    public sealed unsafe class AnTcpClient
     {
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         public AnTcpClient(string ip, int port)

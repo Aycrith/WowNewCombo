@@ -6,7 +6,7 @@ using System.Numerics;
 
 namespace Core.Goals
 {
-    public partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRouteProvider, IDisposable
+    public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRouteProvider, IDisposable
     {
         public override float Cost => 1f;
 

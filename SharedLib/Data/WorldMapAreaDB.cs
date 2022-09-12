@@ -8,7 +8,7 @@ using Newtonsoft.Json;
 
 namespace SharedLib
 {
-    public class WorldMapAreaDB
+    public sealed class WorldMapAreaDB
     {
         private readonly Dictionary<int, WorldMapArea> wmas = new();
 

@@ -4,7 +4,7 @@ using System.Numerics;
 
 namespace Core
 {
-    public class CombatUtil
+    public sealed class CombatUtil
     {
         private const float MIN_DISTANCE = 0.01f;
 

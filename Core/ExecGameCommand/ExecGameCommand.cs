@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Core
 {
-    public class ExecGameCommand
+    public sealed class ExecGameCommand
     {
         private readonly ILogger logger;
         private readonly WowProcessInput wowProcessInput;

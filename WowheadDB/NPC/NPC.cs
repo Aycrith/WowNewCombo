@@ -5,7 +5,7 @@ using SharedLib.Extensions;
 
 namespace WowheadDB
 {
-    public class NPC
+    public sealed class NPC
     {
         public List<List<float>> coords;
 

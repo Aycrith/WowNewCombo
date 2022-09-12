@@ -4,7 +4,7 @@ using Core.Database;
 
 namespace Core
 {
-    public class TalentReader
+    public sealed class TalentReader
     {
         private readonly int cTalent;
 

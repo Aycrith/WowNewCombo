@@ -24,7 +24,7 @@ using SharedLib;
 
 namespace BlazorServer
 {
-    public class Startup
+    public sealed class Startup
     {
         private static StartupConfigPid StartupConfigPid = new();
 

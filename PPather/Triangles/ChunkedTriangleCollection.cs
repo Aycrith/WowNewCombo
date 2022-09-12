@@ -20,7 +20,7 @@ namespace WowTriangles
     /// <summary>
     /// A chunked collection of triangles
     /// </summary>
-    public class ChunkedTriangleCollection
+    public sealed class ChunkedTriangleCollection
     {
         public const int TriangleTerrain = 0;
         public const int TriangleFlagDeepWater = 1;

@@ -2,7 +2,7 @@
 
 namespace PPather.Data
 {
-    public class SphereEventArgs
+    public sealed class SphereEventArgs
     {
         public Vector4 Location { get; set; }
         public int Colour { get; set; }

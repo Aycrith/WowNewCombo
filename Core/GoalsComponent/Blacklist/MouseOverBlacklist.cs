@@ -6,7 +6,7 @@ using SharedLib.Extensions;
 
 namespace Core
 {
-    public partial class MouseOverBlacklist : IBlacklist
+    public sealed partial class MouseOverBlacklist : IBlacklist
     {
         private readonly string[] blacklist;
 

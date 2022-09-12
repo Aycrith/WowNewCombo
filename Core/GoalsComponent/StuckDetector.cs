@@ -12,7 +12,7 @@ using System.Numerics;
 
 namespace Core
 {
-    public class StuckDetector
+    public sealed class StuckDetector
     {
         private const bool debug = false;
 

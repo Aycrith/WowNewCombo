@@ -24,7 +24,7 @@ using System.Diagnostics;
 
 namespace PPather.Graph
 {
-    public class GraphChunk
+    public sealed class GraphChunk
     {
         public const int CHUNK_SIZE = 512;
         public const int SIZE = CHUNK_SIZE * CHUNK_SIZE;

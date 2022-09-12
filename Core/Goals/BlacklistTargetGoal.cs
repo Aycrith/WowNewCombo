@@ -1,6 +1,6 @@
 ﻿namespace Core.Goals
 {
-    public class BlacklistTargetGoal : GoapGoal
+    public sealed class BlacklistTargetGoal : GoapGoal
     {
         public override float Cost => 2;
 

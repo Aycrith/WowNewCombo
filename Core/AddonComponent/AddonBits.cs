@@ -2,7 +2,7 @@
 
 namespace Core
 {
-    public class AddonBits
+    public sealed class AddonBits
     {
         private readonly int cell1;
         private readonly int cell2;

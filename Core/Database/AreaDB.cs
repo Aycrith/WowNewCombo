@@ -9,7 +9,7 @@ using WowheadDB;
 
 namespace Core.Database
 {
-    public class AreaDB : IDisposable
+    public sealed class AreaDB : IDisposable
     {
         private readonly ILogger logger;
         private readonly DataConfig dataConfig;

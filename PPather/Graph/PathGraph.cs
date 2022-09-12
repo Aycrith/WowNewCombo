@@ -33,7 +33,7 @@ using static System.MathF;
 
 namespace PPather.Graph
 {
-    public class PathGraph
+    public sealed class PathGraph
     {
         public static bool SearchEnabled;
 

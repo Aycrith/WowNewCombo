@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Core
 {
-    public class AuraTimeReader
+    public sealed class AuraTimeReader
     {
         public readonly struct Data
         {

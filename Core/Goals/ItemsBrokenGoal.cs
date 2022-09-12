@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Core.Goals
 {
-    public class ItemsBrokenGoal : GoapGoal
+    public sealed class ItemsBrokenGoal : GoapGoal
     {
         public override float Cost => 0;
 

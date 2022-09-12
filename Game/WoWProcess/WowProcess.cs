@@ -6,7 +6,7 @@ using System.Threading;
 
 namespace Game
 {
-    public class WowProcess : IDisposable
+    public sealed class WowProcess : IDisposable
     {
         private static readonly string[] defaultProcessNames = new string[] {
             "Wow",

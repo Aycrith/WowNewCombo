@@ -1,6 +1,6 @@
 ﻿namespace PPather.Triangles.Data
 {
-    public class SparseFloatMatrix3D<T> : SparseMatrix3D<T>
+    public sealed class SparseFloatMatrix3D<T> : SparseMatrix3D<T>
     {
         private const float offset = 100000f;
         private readonly float gridSize;

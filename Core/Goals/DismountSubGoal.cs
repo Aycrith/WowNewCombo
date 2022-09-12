@@ -2,7 +2,7 @@
 
 namespace Core.Goals
 {
-    public class DismountSubGoal : GoapGoal
+    public sealed class DismountSubGoal : GoapGoal
     {
         public override float Cost => 0.5f;
 

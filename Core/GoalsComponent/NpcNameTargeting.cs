@@ -10,7 +10,7 @@ using System.Collections.Generic;
 
 namespace Core.Goals
 {
-    public class NpcNameTargeting : IDisposable
+    public sealed class NpcNameTargeting : IDisposable
     {
         private const int FAST_DELAY = 5;
         private const int INTERACT_DELAY = 25;

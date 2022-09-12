@@ -1,4 +1,4 @@
 ﻿namespace Core.GOAP
 {
-    public class ResumeEvent : GoapEventArgs { }
+    public sealed class ResumeEvent : GoapEventArgs { }
 }

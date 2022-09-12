@@ -2,7 +2,7 @@
 
 namespace Core
 {
-    public class ActionBarCostEventArgs : EventArgs
+    public sealed class ActionBarCostEventArgs : EventArgs
     {
         public int Slot { get; }
         public ActionBarCost ActionBarCost { get; }

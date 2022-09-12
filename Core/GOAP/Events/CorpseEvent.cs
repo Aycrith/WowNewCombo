@@ -3,7 +3,7 @@ using System.Numerics;
 
 namespace Core.GOAP
 {
-    public class CorpseEvent : GoapEventArgs
+    public sealed class CorpseEvent : GoapEventArgs
     {
         public const string NAME = "Corpse";
         public const string COLOR = "black";

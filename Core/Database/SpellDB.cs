@@ -5,7 +5,7 @@ using SharedLib;
 
 namespace Core.Database
 {
-    public class SpellDB
+    public sealed class SpellDB
     {
         public Dictionary<int, Spell> Spells { get; } = new();
 

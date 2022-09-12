@@ -3,7 +3,7 @@ using SharedLib;
 
 namespace Core
 {
-    public class BagItem
+    public sealed class BagItem
     {
         public int Bag { get; private set; }
         public int ItemId { get; private set; }

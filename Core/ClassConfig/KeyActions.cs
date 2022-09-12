@@ -3,7 +3,7 @@ using System;
 
 namespace Core
 {
-    public partial class KeyActions : IDisposable
+    public sealed partial class KeyActions : IDisposable
     {
         public KeyAction[] Sequence { get; init; } = Array.Empty<KeyAction>();
 

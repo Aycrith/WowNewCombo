@@ -18,7 +18,7 @@ namespace Core
         /// David Oftedal of the University of Oslo, Norway for this.
         /// http://folk.uio.no/davidjo/computing.php
         /// </summary>
-        private static byte[] bitCounts = {
+        private static readonly byte[] bitCounts = {
             0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,1,2,2,3,2,3,3,4,
             2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,
             2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,
@@ -49,7 +49,7 @@ namespace Core
         /// </summary>
         /// <param name="image">The image to hash.</param>
         /// <returns>The hash of the image.</returns>
-        public unsafe static ulong AverageHash(Bitmap image, Bitmap squeezed, Graphics canvas)
+        public static unsafe ulong AverageHash(Bitmap image, Bitmap squeezed, Graphics canvas)
         {
             Rectangle rect = new(0, 0, 8, 8);
             canvas.Clear(Color.Transparent);

@@ -11,7 +11,7 @@ using System.Threading;
 
 namespace Core.Goals
 {
-    public class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider, IDisposable
+    public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider, IDisposable
     {
         private enum PathState
         {

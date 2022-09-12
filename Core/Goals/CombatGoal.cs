@@ -7,7 +7,7 @@ using System.Numerics;
 
 namespace Core.Goals
 {
-    public class CombatGoal : GoapGoal, IGoapEventListener
+    public sealed class CombatGoal : GoapGoal, IGoapEventListener
     {
         public override float Cost => 4f;
 

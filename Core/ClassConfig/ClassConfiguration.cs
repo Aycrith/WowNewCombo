@@ -22,7 +22,7 @@ namespace Core
     }
 
 
-    public class ClassConfiguration : IDisposable
+    public sealed class ClassConfiguration : IDisposable
     {
         public bool Log { get; set; } = true;
         public bool Loot { get; set; } = true;

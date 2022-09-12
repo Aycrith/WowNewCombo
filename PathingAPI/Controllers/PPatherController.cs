@@ -13,7 +13,7 @@ namespace PathingAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class PPatherController : ControllerBase
+    public sealed class PPatherController : ControllerBase
     {
         private readonly PPatherService service;
         private readonly ILogger logger;

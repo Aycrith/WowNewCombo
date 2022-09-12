@@ -5,7 +5,7 @@ using System;
 
 namespace Core.Goals
 {
-    public class PullTargetGoal : GoapGoal, IGoapEventListener
+    public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
     {
         public override float Cost => 7f;
 

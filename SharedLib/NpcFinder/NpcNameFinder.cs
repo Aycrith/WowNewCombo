@@ -52,7 +52,7 @@ namespace SharedLib.NpcFinder
         };
     }
 
-    public partial class NpcNameFinder : IDisposable
+    public sealed partial class NpcNameFinder : IDisposable
     {
         private const SearchMode searchMode = SearchMode.Simple;
         public NpcNames nameType { get; private set; } = NpcNames.Enemy | NpcNames.Neutral;
