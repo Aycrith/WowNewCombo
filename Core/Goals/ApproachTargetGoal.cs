@@ -126,6 +126,7 @@ namespace Core.Goals
                         Log($"Seems stuck! Clear Target.");
 
                     input.ClearTarget();
+                    wait.Update();
                     input.Proc.KeyPress(Random.Shared.Next(2) == 0 ? input.Proc.TurnLeftKey : input.Proc.TurnRightKey, 250 + Random.Shared.Next(250));
 
                     return;
@@ -138,6 +139,7 @@ namespace Core.Goals
                     Log("Too long time. Clear Target. Turn away.");
 
                 input.ClearTarget();
+                wait.Update();
                 input.Proc.KeyPress(Random.Shared.Next(2) == 0 ? input.Proc.TurnLeftKey : input.Proc.TurnRightKey, 250 + Random.Shared.Next(250));
 
                 return;
@@ -187,6 +189,7 @@ namespace Core.Goals
                     Log($"Going away from the target! {initialMinRange} < {playerReader.MinRange()}");
 
                 input.ClearTarget();
+                wait.Update();
             }
         }
 
