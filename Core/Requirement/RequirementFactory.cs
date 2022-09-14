@@ -87,6 +87,7 @@ namespace Core
                 { "TargetsNone", playerReader.TargetsNone },
 
                 { AddVisible, npcNameFinder._PotentialAddsExist },
+                { "InCombat", playerReader.Bits.PlayerInCombat },
 
                 // Range
                 { "InMeleeRange", playerReader.IsInMeleeRange },
@@ -164,6 +165,7 @@ namespace Core
                 { "Divine Protection", playerReader.Buffs.DivineProtection },
                 { "Avenging Wrath", playerReader.Buffs.AvengingWrath },
                 { "Holy Shield", playerReader.Buffs.HolyShield },
+                { "Divine Shield", playerReader.Buffs.DivineShield },
 
                 // Mage
                 { "Frost Armor", playerReader.Buffs.FrostArmor },
@@ -239,6 +241,9 @@ namespace Core
                 { "Judgement of the Crusader", playerReader.TargetDebuffs.JudgementoftheCrusader },
                 { "Hammer of Justice", playerReader.TargetDebuffs.HammerOfJustice },
                 { "Judgement of Wisdom", playerReader.TargetDebuffs.JudgementofWisdom },
+                { "Judgement of Light", playerReader.TargetDebuffs.JudgementofLight },
+                { "Judgement of Justice", playerReader.TargetDebuffs.JudgementofJustice },
+                { "Judgement of Any", playerReader.TargetDebuffs.JudgementAny },
 
                 // Warrior Debuff
                 { "Rend", playerReader.TargetDebuffs.Rend },

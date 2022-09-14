@@ -37,7 +37,10 @@ namespace Core
         // Paladin
         public bool JudgementoftheCrusader() => v[Mask._0];
         public bool HammerOfJustice() => v[Mask._1];
+        public bool JudgementAny() => JudgementofWisdom() || JudgementofLight() || JudgementofJustice();
         public bool JudgementofWisdom() => v[Mask._2];
+        public bool JudgementofLight() => v[Mask._3];
+        public bool JudgementofJustice() => v[Mask._4];
 
         // Mage
         public bool Frostbite() => v[Mask._0];
