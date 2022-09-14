@@ -66,6 +66,7 @@ namespace Core
         public bool DivineProtection() => v[Mask._20];
         public bool AvengingWrath() => v[Mask._21];
         public bool HolyShield() => v[Mask._22];
+        public bool DivineShield() => v[Mask._23];
 
         // Mage
         public bool FrostArmor() => v[Mask._10];

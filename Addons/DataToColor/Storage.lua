@@ -55,7 +55,7 @@ function CreateSpellInRangeTarget()
         }
     elseif DataToColor.C.CHARACTER_CLASS == "PALADIN" then
         DataToColor.S.spellInRangeTarget = {
-            20271 -- "Judgement"
+            20271 -- "Judgement" / "Judgement of Light"
         }
     elseif DataToColor.C.CHARACTER_CLASS == "MAGE" then
         DataToColor.S.spellInRangeTarget = {
@@ -164,6 +164,7 @@ function CreatePlayerBuffList()
         DataToColor.S.playerBuffs[20] = { "Divine Protection", [135954] = 1 }
         DataToColor.S.playerBuffs[21] = { "Avenging Wrath", [135875] = 1 }
         DataToColor.S.playerBuffs[22] = { "Holy Shield", [135880] = 1 }
+        DataToColor.S.playerBuffs[23] = { "Divine Shield", [135896] = 1 }
     elseif DataToColor.C.CHARACTER_CLASS == "MAGE" then
         DataToColor.S.playerBuffs[10] = { "Armor", [135843] = 1, [135991] = 1, [132221] = 1 }
         DataToColor.S.playerBuffs[11] = { "Arcane Intellect", [135932] = 1 }
@@ -230,7 +231,9 @@ function CreateTargetDebuffList()
     elseif DataToColor.C.CHARACTER_CLASS == "PALADIN" then
         DataToColor.S.targetDebuffs[0] = { "Judgement of the Crusader", [135924] = 1 }
         DataToColor.S.targetDebuffs[1] = { "Hammer of Justice", [135963] = 1 }
-        DataToColor.S.targetDebuffs[2] = { "Judgement of Wisdom", [135960] = 1 }
+        DataToColor.S.targetDebuffs[2] = { "Judgement of Wisdom", [135960] = 1, [236255] = 1 }
+        DataToColor.S.targetDebuffs[3] = { "Judgement of Light", [135959] = 1 }
+        DataToColor.S.targetDebuffs[4] = { "Judgement of Justice", [236258] = 1 }
     elseif DataToColor.C.CHARACTER_CLASS == "MAGE" then
         DataToColor.S.targetDebuffs[0] = { "Frostbite", [135842] = 1 }
         DataToColor.S.targetDebuffs[1] = { "Slow", [136091] = 1 }

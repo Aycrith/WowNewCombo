@@ -1191,6 +1191,7 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | `"TargetsPet"` | The target currently targets the player's pet |
 | `"TargetsNone"` | The target currently has not target |
 | `"AddVisible"` | Around the target there are possible additional NPCs |
+| `"InCombat"` | Player in combat. |
 | `"TargetCastingSpell"` | Target casts any spell |
 | `"Swimming"` | The player is currently swimming. |
 | `"Falling"` | The player is currently falling down, not touching the ground. |
@@ -1261,6 +1262,7 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | Paladin | `"Divine Protection"` |
 | Paladin | `"Avenging Wrath"` |
 | Paladin | `"Holy Shield"` |
+| Paladin | `"Divine Shield"` |
 | Priest | `"Fortitude"` |
 | Priest | `"InnerFire"` |
 | Priest | `"Divine Spirit"` |
@@ -1317,6 +1319,9 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | Paladin | `"Judgement of the Crusader"` |
 | Paladin | `"Hammer of Justice"` |
 | Paladin | `"Judgement of Wisdom"` |
+| Paladin | `"Judgement of Light"` |
+| Paladin | `"Judgement of Justice"` |
+| Paladin | `"Judgement of Any"` |
 | Mage | `"Frostbite"` |
 | Mage | `"Slow"` |
 | Priest | `"Shadow Word: Pain"` |
