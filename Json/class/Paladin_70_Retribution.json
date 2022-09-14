@@ -12,8 +12,7 @@
     "MIN_HP_BEFORE_HEAL%": 20,
     "MIN_MANA%": 40,
     "MIN_HP%": 40,
-    "Buff_Art of War": 236246,
-    "Buff_Mount": 294467 // update the icon to reflect the mount icon
+    "Buff_Art of War": 236246
   },
   "Pull": {
     "Sequence": [
