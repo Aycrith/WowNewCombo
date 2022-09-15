@@ -10,7 +10,9 @@ using PPather.Triangles.Data;
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
+using System.Runtime.InteropServices;
 
 using static WowTriangles.Utils;
 
@@ -91,34 +93,37 @@ namespace WowTriangles
                 logger.LogTrace($"Build hash for {tc.TriangleCount} triangles - {maxAtOne} -- cap: {capacity} - c: {listCount} - time {(DateTime.UtcNow - pre).TotalMilliseconds}ms");
         }
 
-        public ICollection<int> GetAllCloseTo(float x, float y, float distance)
+        public int[] GetAllCloseTo(float x, float y, float distance)
         {
             HashSet<int> all = new();
             (List<int>[] close, int count) = matrix.GetAllInSquare(x - distance, y - distance, x + distance, y + distance);
+
             for (int i = 0; i < count; i++)
             {
-                for (int j = 0; j < close[i].Count; j++)
+                Span<int> span = CollectionsMarshal.AsSpan(close[i]);
+                for (int j = 0; j < span.Length; j++)
                 {
-                    all.Add(close[i][j]);
+                    all.Add(span[j]);
                 }
             }
 
-            return all;
+            return all.ToArray();
         }
 
-        public ICollection<int> GetAllInSquare(float x0, float y0, float x1, float y1)
+        public int[] GetAllInSquare(float x0, float y0, float x1, float y1)
         {
             HashSet<int> all = new();
             (List<int>[] close, int count) = matrix.GetAllInSquare(x0, y0, x1, y1);
 
             for (int i = 0; i < count; i++)
             {
-                for (int j = 0; j < close[i].Count; j++)
+                Span<int> span = CollectionsMarshal.AsSpan(close[i]);
+                for (int j = 0; j < span.Length; j++)
                 {
-                    all.Add(close[i][j]);
+                    all.Add(span[j]);
                 }
             }
-            return all;
+            return all.ToArray();
         }
     }
 }
