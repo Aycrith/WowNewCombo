@@ -1,18 +1,19 @@
 ﻿namespace PPather.Triangles.Data
 {
-    public struct QuadArray<T>
+    public readonly struct QuadArray
     {
-        private const int SIZE = 512 * 5; // Max size if SIZE*SIZE = 16M
+        private const int Q = 5;
+        private const int SIZE = 512 * Q; // Max size if SIZE*SIZE = 16M
 
         // Jagged array
         // pointer chasing FTL
 
         // SIZE*(SIZE*4)
-        private T[][] arrays;
+        private readonly int[][] arrays;
 
         public QuadArray()
         {
-            arrays = new T[SIZE][];
+            arrays = new int[SIZE][];
         }
 
         private static void getIndices(int index, out int i0, out int i1)
@@ -23,8 +24,8 @@
 
         private void allocateAt(int i0, int i1)
         {
-            T[] a1 = arrays[i0];
-            if (a1 == null) { a1 = new T[SIZE * 5]; arrays[i0] = a1; }
+            int[] a1 = arrays[i0];
+            if (a1 == null) { a1 = new int[SIZE * Q]; arrays[i0] = a1; }
         }
 
         public void SetSize(int new_size)
@@ -34,12 +35,12 @@
                 arrays[i] = null;
         }
 
-        public void Set(int index, T x, T y, T z, T w, T sequence)
+        public void Set(int index, int x, int y, int z, int w, int sequence)
         {
             getIndices(index, out int i0, out int i1);
             allocateAt(i0, i1);
-            T[] innermost = arrays[i0];
-            i1 *= 5;
+            int[] innermost = arrays[i0];
+            i1 *= Q;
             innermost[i1 + 0] = x;
             innermost[i1 + 1] = y;
             innermost[i1 + 2] = z;
@@ -47,7 +48,7 @@
             innermost[i1 + 4] = sequence;
         }
 
-        public void Get(int index, out T x, out T y, out T z, out T w, out T sequence)
+        public void Get(int index, out int x, out int y, out int z, out int w, out int sequence)
         {
             getIndices(index, out int i0, out int i1);
 
@@ -57,11 +58,11 @@
             w = default;
             sequence = default;
 
-            T[] a1 = arrays[i0];
+            int[] a1 = arrays[i0];
             if (a1 == null) return;
 
-            T[] innermost = arrays[i0];
-            i1 *= 5;
+            int[] innermost = arrays[i0];
+            i1 *= Q;
             x = innermost[i1 + 0];
             y = innermost[i1 + 1];
             z = innermost[i1 + 2];
