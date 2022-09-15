@@ -1,19 +1,20 @@
 ﻿
 namespace PPather.Triangles.Data
 {
-    public struct TrioArray<T>
+    public readonly struct TrioArray
     {
+        private const int VERTEX = 3;
         private const int SIZE = 1024; // Max size if SIZE*SIZE = 16M
 
         // Jagged array
         // pointer chasing FTL
 
-        // SIZE*(SIZE*3)
-        private T[][] arrays;
+        // SIZE*(SIZE*VERTEX)
+        private readonly float[][] arrays;
 
         public TrioArray()
         {
-            arrays = new T[SIZE][];
+            arrays = new float[SIZE][];
         }
 
         private static void getIndices(int index, out int i0, out int i1)
@@ -25,10 +26,10 @@ namespace PPather.Triangles.Data
 
         private void allocateAt(int i0)
         {
-            T[] a1 = arrays[i0];
+            float[] a1 = arrays[i0];
             if (a1 == null)
             {
-                arrays[i0] = new T[SIZE * 3];
+                arrays[i0] = new float[SIZE * VERTEX];
             }
         }
 
@@ -39,22 +40,22 @@ namespace PPather.Triangles.Data
                 arrays[i] = null;
         }
 
-        public void Set(int index, T x, T y, T z)
+        public void Set(int index, float x, float y, float z)
         {
             getIndices(index, out int i0, out int i1);
             allocateAt(i0);
-            T[] innermost = arrays[i0];
-            i1 *= 3;
+            float[] innermost = arrays[i0];
+            i1 *= VERTEX;
             innermost[i1 + 0] = x;
             innermost[i1 + 1] = y;
             innermost[i1 + 2] = z;
         }
 
-        public void Get(int index, out T x, out T y, out T z)
+        public void Get(int index, out float x, out float y, out float z)
         {
             getIndices(index, out int i0, out int i1);
 
-            T[] a1 = arrays[i0];
+            float[] a1 = arrays[i0];
             if (a1 == null)
             {
                 x = default;
@@ -63,8 +64,8 @@ namespace PPather.Triangles.Data
                 return;
             }
 
-            T[] innermost = arrays[i0];
-            i1 *= 3;
+            float[] innermost = arrays[i0];
+            i1 *= VERTEX;
             x = innermost[i1 + 0];
             y = innermost[i1 + 1];
             z = innermost[i1 + 2];

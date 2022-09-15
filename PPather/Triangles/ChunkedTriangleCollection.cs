@@ -14,6 +14,7 @@ using PPather.Graph;
 using static System.MathF;
 using static WowTriangles.Utils;
 using PPather.Triangles.Data;
+using System.Runtime.InteropServices;
 
 namespace WowTriangles
 {
@@ -155,12 +156,14 @@ namespace WowTriangles
             TriangleCollection tc = GetChunkAt(x, y);
 
             TriangleMatrix tm = tc.GetTriangleMatrix();
-            ICollection<int> ts = tm.GetAllCloseTo(x, y, toonSize);
+            int[] ts = tm.GetAllCloseTo(x, y, toonSize);
 
             Vector3 toon = new(x, y, z + toonHeight - toonSize);
 
-            foreach (int t in ts)
+            for (int i = 0; i < ts.Length; i++)
             {
+                int t = ts[i];
+
                 Vector3 vertex0;
                 Vector3 vertex1;
                 Vector3 vertex2;
@@ -219,7 +222,7 @@ namespace WowTriangles
             }
 
             TriangleMatrix tm = tc.GetTriangleMatrix();
-            ICollection<int> ts = tm.GetAllInSquare(Min(x0, x1), Min(y0, y1), Max(x0, x1), Max(y0, y1));
+            int[] ts = tm.GetAllInSquare(Min(x0, x1), Min(y0, y1), Max(x0, x1), Max(y0, y1));
 
             // 3: check collision with objects
 
@@ -292,10 +295,12 @@ namespace WowTriangles
             dy *= factor;
         }
 
-        private static bool CheckForCollision(TriangleCollection tc, ICollection<int> ts, in Vector3 from, in Vector3 to)
+        private static bool CheckForCollision(TriangleCollection tc, int[] ts, in Vector3 from, in Vector3 to)
         {
-            foreach (int t in ts)
+            for (int i = 0; i < ts.Length; i++)
             {
+                int t = ts[i];
+
                 Vector3 vertex0;
                 Vector3 vertex1;
                 Vector3 vertex2;
@@ -323,13 +328,15 @@ namespace WowTriangles
         {
             TriangleCollection tc = GetChunkAt(x, y);
             TriangleMatrix tm = tc.GetTriangleMatrix();
-            ICollection<int> ts = tm.GetAllCloseTo(x, y, 1.0f);
+            int[] ts = tm.GetAllCloseTo(x, y, 1.0f);
 
             Vector3 s0 = new(x, y, min_z);
             Vector3 s1 = new(x, y, max_z);
 
-            foreach (int t in ts)
+            for (int i = 0; i < ts.Length; i++)
             {
+                int t = ts[i];
+
                 Vector3 vertex0;
                 Vector3 vertex1;
                 Vector3 vertex2;
@@ -360,8 +367,11 @@ namespace WowTriangles
             float maxZ = float.MinValue;
             float minZ = float.MaxValue;
 
-            foreach (int t in tm.GetAllCloseTo(x, y, range))
+            int[] array = tm.GetAllCloseTo(x, y, range);
+            for (int i = 0; i < array.Length; i++)
             {
+                int t = array[i];
+
                 Vector3 vertex0;
                 Vector3 vertex1;
                 Vector3 vertex2;
@@ -395,8 +405,11 @@ namespace WowTriangles
             TriangleCollection tc = GetChunkAt(x, y);
             TriangleMatrix tm = tc.GetTriangleMatrix();
 
-            foreach (int t in tm.GetAllCloseTo(x, y, range))
+            int[] array = tm.GetAllCloseTo(x, y, range);
+            for (int i = 0; i < array.Length; i++)
             {
+                int t = array[i];
+
                 Vector3 vertex0;
                 Vector3 vertex1;
                 Vector3 vertex2;
@@ -459,7 +472,7 @@ namespace WowTriangles
 
             TriangleCollection tc = GetChunkAt(x, y);
             TriangleMatrix tm = tc.GetTriangleMatrix();
-            ICollection<int> ts = tm.GetAllCloseTo(x, y, 1.0f);
+            int[] ts = tm.GetAllCloseTo(x, y, 1.0f);
 
             Vector3 s0 = new(x, y, min_z);
             Vector3 s1 = new(x, y, max_z);
@@ -468,8 +481,10 @@ namespace WowTriangles
             int best_flags = 0;
             bool found = false;
 
-            foreach (int t in ts)
+            for (int i = 0; i < ts.Length; i++)
             {
+                int t = ts[i];
+
                 Vector3 vertex0;
                 Vector3 vertex1;
                 Vector3 vertex2;
