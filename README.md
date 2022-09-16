@@ -342,11 +342,11 @@ For each of the following click + to add a new key binding.
 
 ## 12. Class Configuration
 
-Each class has a configuration file in `\Json\class` e.g. the config for a Rogue it is in file `C:\WowClassicGrindBot\Json\class\Rogue.json`.
+Each class has a configuration file in `\Json\class` e.g. the config for a `Warrior` it is in file `Warrior_1.json`.
 
 The configuration file determines what spells you cast when pulling and in combat, where to vendor and repair and what buffs you give yourself.
 
-Take a look at the class files in `/Json/class` for examples of what you can do. Your class file probably exists and just needs to be edited to set the pathing file name, but note they may be set up for level 60.
+Take a look at the class files in `/Json/class` for examples of what you can do. Your class file probably exists and just needs to be edited to set the pathing file name.
 
 | Property Name | Description | Optional | Default value |
 | --- | --- | --- | --- |
@@ -563,7 +563,11 @@ e.g.
             "Name": "Concussive Shot",
             "Key": "9",
             "BeforeCastStop": true,
-            "Requirements": ["HasRangedWeapon", "!InMeleeRange", "HasAmmo"]
+            "Requirements": [
+                "HasRangedWeapon",
+                "!InMeleeRange",
+                "HasAmmo"
+            ]
         }
     ]
 }
