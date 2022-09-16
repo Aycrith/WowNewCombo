@@ -51,12 +51,12 @@ namespace Core
                 TargetDodge.UpdateTime();
             }
 
-            if (DamageTakenGuid.Updated(reader) && DamageTakenGuid.Value > 0)
+            if (playerInCombat && DamageTakenGuid.Updated(reader) && DamageTakenGuid.Value > 0)
             {
                 DamageTaken.Add(DamageTakenGuid.Value);
             }
 
-            if (DamageDoneGuid.Updated(reader) && DamageDoneGuid.Value > 0)
+            if (playerInCombat && DamageDoneGuid.Updated(reader) && DamageDoneGuid.Value > 0)
             {
                 DamageDone.Add(DamageDoneGuid.Value);
             }
