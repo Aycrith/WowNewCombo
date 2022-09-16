@@ -79,7 +79,7 @@ namespace Core
 
             for (int i = 0; i < items.Count; i++)
             {
-                if (items[i].KeyAction.Slot == keyAction.Slot)
+                if (items[i].KeyAction.SlotIndex == keyAction.SlotIndex)
                     return;
             }
 
@@ -109,7 +109,7 @@ namespace Core
             }
 
             string func = GetFunction(abs);
-            int slot = abs.KeyAction.Slot;
+            int slot = abs.KeyAction.SlotIndex + 1;
             return $"/run {func}({nameOrId})PlaceAction({slot})ClearCursor()--";
         }
 
