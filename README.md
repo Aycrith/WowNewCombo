@@ -43,17 +43,17 @@
 # Media
 
 <a href="./images/Screenshot.png" target="_blank">
-   <img alt="Screenshot" src="./images/Screenshot.png" width=50%">
+   <img alt="Screenshot" src="./images/Screenshot.png" width="50%">
 </a>
 
 [![YouTube Video](https://img.youtube.com/vi/CIMgbh5LuCc/0.jpg)](https://www.youtube.com/watch?v=CIMgbh5LuCc)
 
 <a href="https://mega.nz/file/vf5BhZiJ#yX77HpxremieqGPQSUgZn55bPqJPz6xRLq2n-srt8eY" target="_blank">
-   <img alt="Death Knight 1" src="https://i.imgur.com/BvEPCl6.jpg" width=50%">
+   <img alt="Death Knight 1" src="https://i.imgur.com/BvEPCl6.jpg" width="50%">
 </a>
 
 <a href="https://mega.nz/file/KDRiCAzI#DamyH3QCha8vm4qfhqVYRb6ffbkhvfyZxWhz9D1OKEc" target="_blank">
-   <img alt="Death Knight 2" src="https://i.imgur.com/3nXwSoy.jpeg" width=50%">
+   <img alt="Death Knight 2" src="https://i.imgur.com/3nXwSoy.jpeg" width="50%">
 </a>
 
 # Issues and Ideas
@@ -297,7 +297,7 @@ To change the default movement keys to `WASD` in the ClassConfiguration file or 
 ## 10.1. Actionbar Key Bindings:
 
 The default class profiles assumes the following `Keybinds` setup and using English Keyboard layout.
-In total, `36` key supported.
+In total, `34` key supported.
 
 Highly recommended to use the default setup, in order to get properly working the `ActionBarSlotCost` and `ActionBarSlotUsable`!
 
@@ -308,6 +308,10 @@ Highly recommended to use the default setup, in order to get properly working th
 | 49-58 | N1,N2,N3 .. N9,N0 | N means Numpad - 0 is the 10th key |
 | Bottom Left ActionBar | - | - |
 | 61-72 | F1,F2,F3 .. F11,F12 | F means Functions |
+
+<a href="./images/keybindings.png" target="_blank">
+   <img alt="Screenshot" src="./images/keybindings.png" width="75%">
+</a>
 
 ## 11. Configure the Wow Client - Bindpad addon
 
@@ -320,6 +324,21 @@ For each of the following click + to add a new key binding.
 | Delete | /stopattack<br>/stopcasting<br>/petfollow | ---- |
 | Insert | /cleartarget | ---- |
 | PageDown | /follow | Only for `"AssistFocus"` Mode |
+
+<table>
+    <tr>
+        <td>
+            <a href="./images/bindpad_stopattack.png" target="_blank">
+                <img alt="bindpad_stopattack" src="./images/bindpad_stopattack.png" width="100%">
+            </a>
+        </td>
+        <td>
+            <a href="./images/bindpad_cleartarget.png" target="_blank">
+                <img alt="bindpad_cleartarget" src="./images/bindpad_cleartarget.png" width="100%">
+            </a>
+        </td>
+    </tr>
+</table>
 
 ## 12. Class Configuration
 
