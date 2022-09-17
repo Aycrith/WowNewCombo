@@ -6,6 +6,7 @@ using Core.Database;
 using SharedLib;
 using SharedLib.NpcFinder;
 using Core.Goals;
+using System.Runtime.InteropServices;
 
 namespace Core
 {
@@ -338,11 +339,11 @@ namespace Core
 
             List<Requirement> requirements = new();
 
-            foreach (string requirement in item.Requirements)
+            foreach (string requirement in CollectionsMarshal.AsSpan(item.Requirements))
             {
                 List<string> expressions = InfixToPostfix.Convert(requirement);
                 Stack<Requirement> stack = new();
-                foreach (string expr in expressions)
+                foreach (string expr in CollectionsMarshal.AsSpan(expressions))
                 {
                     if (expr.Contains(Requirement.SymbolAnd))
                     {
