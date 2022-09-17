@@ -12,6 +12,8 @@
     "MIN_HP_BEFORE_HEAL%": 20,
     "MIN_MANA%": 40,
     "MIN_HP%": 40,
+    "CD_MIN_TARGET_HP%": 70,
+    "USE_TRINKET_1": 1,
     "Buff_Art of War": 236246
   },
   "Pull": {
@@ -93,6 +95,18 @@
         "AfterCastAuraExpected": true
       },
 
+      {
+        "Name": "Trinket 1",
+        "Key": "F10",
+        "Item": true,
+        "WhenUsable": true,
+        "Requirements": [
+          "USE_TRINKET_1 == 1",
+          "TargetHealth% > CD_MIN_TARGET_HP%",
+          "TargetHealth% < 99"
+        ],
+        "AfterCastDelay": 20
+      },
       {
         "Name": "Hammer of Justice",
         "Key": "4",
