@@ -1,25 +1,28 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Core
 {
     public static class InfixToPostfix
     {
-        public static List<string> Convert(string input)
+        public static List<string> Convert(ReadOnlySpan<char> span)
         {
             List<string> output = new();
             Stack<string> stack = new();
 
             int i = 0;
-            while (i < input.Length)
+            while (i < span.Length)
             {
-                if (IsSpecialChar(input[i]))
+                ReadOnlySpan<char> c = span.Slice(i, 1);
+
+                if (IsSpecial(c))
                 {
-                    if (input[i] == '(')
+                    if (c.SequenceEqual("("))
                     {
-                        stack.Push(input[i].ToString());
+                        stack.Push(c.ToString());
                         i++;
                     }
-                    else if (input[i] == ')')
+                    else if (c.SequenceEqual(")"))
                     {
                         while (stack.Count != 0 && stack.Peek() != "(")
                         {
@@ -28,27 +31,27 @@ namespace Core
                         stack.Pop();
                         i++;
                     }
-                    else if (IsOperator(input, i, out string @operator))
+                    else if (IsOperator(span, i, out ReadOnlySpan<char> op))
                     {
-                        i += @operator.Length;
+                        i += op.Length;
 
-                        while (stack.Count != 0 && OperatorPriority(stack.Peek()) >= OperatorPriority(@operator))
+                        while (stack.Count != 0 && OperatorPriority(stack.Peek()) >= OperatorPriority(op))
                         {
                             output.Add(stack.Pop());
                         }
 
-                        stack.Push(@operator);
+                        stack.Push(op.ToString());
                     }
                 }
                 else
                 {
                     int start = i;
-                    while (i < input.Length && !IsSpecialChar(input[i]))
+                    while (i < span.Length && !IsSpecial(span.Slice(i, 1)))
                     {
                         i++;
                     }
 
-                    output.Add(input[start..i]); // operand
+                    output.Add(span[start..i].ToString()); // operand
                 }
             }
 
@@ -58,27 +61,36 @@ namespace Core
             }
 
             return output;
-        }
 
-        private static bool IsSpecialChar(char c)
-        {
-            // where 
-            // '|' means "||"
-            // '&' means "&&"
-            return c is '(' or ')' or '&' or '|';
-        }
+            static bool IsSpecial(ReadOnlySpan<char> c)
+            {
+                // where 
+                // '|' means "||"
+                // '&' means "&&"
+                return
+                    c.SequenceEqual("(") ||
+                    c.SequenceEqual(")") ||
+                    c.SequenceEqual("&") ||
+                    c.SequenceEqual("|");
+            }
 
-        private static bool IsOperator(string s, int index, out string @operator)
-        {
-            @operator = s.Substring(index, 2);
-            return @operator is Requirement.SymbolAnd or Requirement.SymbolOr;
-        }
+            static bool IsOperator(ReadOnlySpan<char> span, int index, out ReadOnlySpan<char> @operator)
+            {
+                @operator = span.Slice(index, 2);
+                return
+                    @operator.SequenceEqual(Requirement.SymbolAnd) ||
+                    @operator.SequenceEqual(Requirement.SymbolOr);
+            }
 
-        private static int OperatorPriority(string o) => o switch
-        {
-            Requirement.SymbolAnd => 2,
-            Requirement.SymbolOr => 1,
-            _ => 0, // "(" or ")"
-        };
+            static int OperatorPriority(ReadOnlySpan<char> o)
+            {
+                if (o.SequenceEqual(Requirement.SymbolAnd))
+                    return 2;
+                else if (o.SequenceEqual(Requirement.SymbolOr))
+                    return 1;
+
+                return 0; // "(" or ")"
+            }
+        }
     }
 }
