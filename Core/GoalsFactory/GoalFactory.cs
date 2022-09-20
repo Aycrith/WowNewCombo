@@ -167,11 +167,11 @@ namespace Core
 
         private static void ResolveLootAndSkin(ServiceCollection services, ClassConfiguration classConfig)
         {
+            services.AddSingleton<GoapGoal, ConsumeCorpseGoal>();
+            services.AddSingleton<GoapGoal, CorpseConsumedGoal>();
+
             if (classConfig.Loot)
             {
-                services.AddSingleton<GoapGoal, ConsumeCorpseGoal>();
-                services.AddSingleton<GoapGoal, CorpseConsumedGoal>();
-
                 services.AddSingleton<GoapGoal, LootGoal>();
 
                 if (classConfig.GatherCorpse)
