@@ -18,6 +18,8 @@ namespace Core
         private readonly bool checkMouseOverGivesExp;
         private readonly UnitClassification mask;
 
+        private readonly bool allowPvP;
+
         private int lastGuid;
 
         public MouseOverBlacklist(ILogger logger, AddonReader addonReader, ClassConfiguration classConfig)
@@ -32,6 +34,8 @@ namespace Core
             this.mask = classConfig.TargetMask;
 
             this.blacklist = classConfig.Blacklist;
+
+            this.allowPvP = classConfig.AllowPvP;
 
             logger.LogInformation($"[{nameof(MouseOverBlacklist)}] {nameof(classConfig.TargetMask)}: {string.Join(", ", mask.GetIndividualFlags())}");
 
@@ -73,7 +77,7 @@ namespace Core
                 return true; // ignore non white listed unit classification
             }
 
-            if (playerReader.Bits.MouseOverIsPlayer() || playerReader.Bits.MouseOverPlayerControlled())
+            if (!allowPvP && (playerReader.Bits.MouseOverIsPlayer() || playerReader.Bits.MouseOverPlayerControlled()))
             {
                 if (lastGuid != playerReader.MouseOverGuid)
                 {

@@ -18,6 +18,8 @@ namespace Core
         private readonly bool checkTargetGivesExp;
         private readonly UnitClassification targetMask;
 
+        private readonly bool allowPvP;
+
         private int lastGuid;
 
         public TargetBlacklist(ILogger logger, AddonReader addonReader, ClassConfiguration classConfig)
@@ -32,6 +34,8 @@ namespace Core
             this.targetMask = classConfig.TargetMask;
 
             this.blacklist = classConfig.Blacklist;
+
+            this.allowPvP = classConfig.AllowPvP;
 
             logger.LogInformation($"[{nameof(TargetBlacklist)}] {nameof(classConfig.TargetMask)}: {string.Join(", ", targetMask.GetIndividualFlags())}");
 
@@ -73,7 +77,7 @@ namespace Core
                 return true; // ignore non white listed unit classification
             }
 
-            if (playerReader.Bits.TargetIsPlayer() || playerReader.Bits.TargetIsPlayerControlled())
+            if (!allowPvP && (playerReader.Bits.TargetIsPlayer() || playerReader.Bits.TargetIsPlayerControlled()))
             {
                 if (lastGuid != playerReader.TargetGuid)
                 {
