@@ -122,6 +122,9 @@ Resultions which based on either 4:3 aspect ratio, tested resolutions:
 For Nvidia users, under Nvidia Control panel settings
 * Make sure the `Image Sharpening` under the `Manage 3D Settings`-> Global settings or Program Settings(for WoW) is set to `Sharpening Off, Scaling disabled`!
 
+Known issues with other applications:
+* `f.lux` can affect final image color on the screen thus prevents NpcNameFinder to work properly.
+
 ## 3.2 In-game Requirements
 
 Required game client settings. Press `ESC` -> `System`
