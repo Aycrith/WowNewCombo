@@ -357,6 +357,7 @@ Take a look at the class files in `/Json/class` for examples of what you can do.
 | `"Mine"` | Should mine the mob | true | `false` |
 | `"Salvage"` | Should salvage the mob | true | `false` |
 | `"UseMount"` | Should use mount when its possible | true | `false` |
+| `"AllowPvP"` | Should engage combat with the opposite faction | true | `false` |
 | `"KeyboardOnly"` | Use keyboard to interact only. See [KeyboardOnly](#KeyboardOnly) | false | `true` |
 | `"PathFilename"` | [Path](#Path) to use while alive | **false** | `""` |
 | `"PathThereAndBack"` | While using the path, [should go start to and reverse](#There-and-back) | true | `true` |
