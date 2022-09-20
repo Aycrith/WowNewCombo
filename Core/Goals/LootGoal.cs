@@ -37,6 +37,7 @@ namespace Core.Goals
         private readonly List<CorpseEvent> corpseLocations = new();
 
         private bool gatherCorpse;
+        private int targetId;
         private int bagHash;
         private int money;
 
@@ -77,7 +78,6 @@ namespace Core.Goals
             if (bagReader.BagsFull())
             {
                 logger.LogWarning("Inventory is full");
-                SendGoapEvent(new GoapStateEvent(GoapKey.shouldloot, false));
             }
 
             bool success = false;
@@ -100,21 +100,27 @@ namespace Core.Goals
 
             if (success)
             {
-                (bool lootTimeOut, double elapsedMs) = wait.Until(MAX_TIME_TO_DETECT_LOOT, LootWindowClosedOrBagOrMoneyChanged, input.ApproachOnCooldown);
-                success = !lootTimeOut;
-                Log($"Loot {((success && !bagReader.BagsFull()) ? "Successful" : "Failed")} after {elapsedMs}ms");
+                (bool t, double e) = wait.Until(MAX_TIME_TO_DETECT_LOOT, LootWindowClosedOrBagOrMoneyChanged, input.ApproachOnCooldown);
+                success = !t;
+                Log($"Loot {((success && !bagReader.BagsFull()) ? "Successful" : "Failed")} after {e}ms");
 
                 gatherCorpse &= success;
 
-                AddEffect(GoapKey.shouldgather, gatherCorpse);
-                SendGoapEvent(new GoapStateEvent(GoapKey.shouldgather, gatherCorpse));
+                if (gatherCorpse)
+                {
+                    state.GatherableCorpseCount++;
+
+                    CorpseEvent? ce = GetClosestCorpse();
+                    if (ce != null)
+                        SendGoapEvent(new SkinCorpseEvent(ce.MapLoc, ce.Radius, targetId));
+                }
             }
             else
             {
-                Log($"Loot Failed!");
+                Log("Loot Failed, target not found!");
             }
 
-            SendGoapEvent(new GoapStateEvent(GoapKey.shouldloot, false));
+            SendGoapEvent(new RemoveClosestPoi(CorpseEvent.NAME));
             state.LootableCorpseCount = Math.Max(0, state.LootableCorpseCount - 1);
 
             if (!gatherCorpse && playerReader.Bits.HasTarget())
@@ -191,7 +197,7 @@ namespace Core.Goals
                 return;
 
             gatherCorpse = false;
-            int targetId = playerReader.TargetId;
+            targetId = playerReader.TargetId;
             Area area = areaDb.CurrentArea;
 
             if ((classConfig.Skin && Array.BinarySearch(area.skinnable, targetId) >= 0) ||
@@ -200,11 +206,6 @@ namespace Core.Goals
                (classConfig.Salvage && Array.BinarySearch(area.salvegable, targetId) >= 0))
             {
                 gatherCorpse = true;
-                state.GatherableCorpseCount++;
-
-                CorpseEvent? e = GetClosestCorpse();
-                if (e != null)
-                    SendGoapEvent(new SkinCorpseEvent(e.MapLoc, e.Radius, targetId));
             }
 
             Log($"Should gather {targetId} ? {gatherCorpse}");

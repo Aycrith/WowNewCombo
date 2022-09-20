@@ -214,8 +214,8 @@ namespace Core.GOAP
                 playerReader.WithInCombatRange(), // GoapKey.incombatrange
                 false, // GoapKey.pulled
                 playerReader.Bits.IsDead(), // GoapKey.isdead
-                State.NeedLoot, // GoapKey.shouldloot
-                State.NeedGather, // GoapKey.shouldgather
+                State.LootableCorpseCount > 0, // GoapKey.shouldloot
+                State.GatherableCorpseCount > 0, // GoapKey.shouldgather
                 State.LastCombatKillCount > 0, // GoapKey.producedcorpse
                 State.ShouldConsumeCorpse, // GoapKey.consumecorpse
                 playerReader.Bits.IsSwimming(), // GoapKey.isswimming
@@ -237,16 +237,6 @@ namespace Core.GOAP
                     case GoapKey.consumecorpse:
                         State.ShouldConsumeCorpse = g.Value;
                         break;
-                    case GoapKey.shouldloot:
-                        State.NeedLoot = g.Value;
-                        if (!g.Value)
-                            RemoveClosestPoiByType(CorpseEvent.NAME);
-                        break;
-                    case GoapKey.shouldgather:
-                        State.NeedGather = g.Value;
-                        if (!g.Value)
-                            RemoveClosestPoiByType(SkinCorpseEvent.NAME);
-                        break;
                     case GoapKey.gathering:
                         State.Gathering = g.Value;
                         break;
@@ -259,6 +249,10 @@ namespace Core.GOAP
             else if (e is SkinCorpseEvent s)
             {
                 routeInfo.PoiList.Add(new RouteInfoPoi(s.MapLoc, SkinCorpseEvent.NAME, SkinCorpseEvent.COLOR, s.Radius));
+            }
+            else if (e is RemoveClosestPoi r)
+            {
+                RemoveClosestPoiByType(r.Name);
             }
         }
 

@@ -98,7 +98,6 @@ namespace Core.Goals
             if (bagReader.BagsFull())
             {
                 LogWarning("Inventory is full!");
-                SendGoapEvent(new GoapStateEvent(GoapKey.shouldgather, false));
             }
 
             int attempts = 0;
@@ -229,10 +228,10 @@ namespace Core.Goals
 
         private void ExitSuccess()
         {
-            (bool lootTimeOut, double elapsedMs) = wait.Until(MAX_TIME_TO_DETECT_LOOT, LootWindowClosedOrBagChanged);
-            Log($"Loot {((!lootTimeOut && !bagReader.BagsFull()) ? "Successful" : "Failed")} after {elapsedMs}ms");
-            SendGoapEvent(new GoapStateEvent(GoapKey.shouldgather, false));
+            (bool t, double e) = wait.Until(MAX_TIME_TO_DETECT_LOOT, LootWindowClosedOrBagChanged);
+            Log($"Loot {((!t && !bagReader.BagsFull()) ? "Successful" : "Failed")} after {e}ms");
 
+            SendGoapEvent(new RemoveClosestPoi(SkinCorpseEvent.NAME));
             state.GatherableCorpseCount = Math.Max(0, state.GatherableCorpseCount - 1);
 
             ClearTargetIfExists();
@@ -240,7 +239,6 @@ namespace Core.Goals
 
         private void ExitInterruptOrFailed(bool interrupted)
         {
-            SendGoapEvent(new GoapStateEvent(GoapKey.shouldgather, interrupted));
             if (!interrupted)
                 state.GatherableCorpseCount = Math.Max(0, state.GatherableCorpseCount - 1);
 

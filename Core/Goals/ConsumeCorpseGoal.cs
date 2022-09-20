@@ -53,7 +53,6 @@ namespace Core.Goals
             if (classConfig.Loot)
             {
                 state.LootableCorpseCount++;
-                SendGoapEvent(new GoapStateEvent(GoapKey.shouldloot, true));
             }
         }
 
