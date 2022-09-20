@@ -1,5 +1,7 @@
 ﻿using System;
+
 using Core.GOAP;
+
 using Microsoft.Extensions.Logging;
 
 namespace Core.Goals
@@ -12,12 +14,16 @@ namespace Core.Goals
         private readonly GoapAgentState goapAgentState;
         private readonly Wait wait;
 
+        private readonly bool lootEnabled;
+
         public CorpseConsumedGoal(ILogger logger, ClassConfiguration classConfig, GoapAgentState goapAgentState, Wait wait)
             : base(nameof(CorpseConsumedGoal))
         {
             this.logger = logger;
             this.goapAgentState = goapAgentState;
             this.wait = wait;
+
+            this.lootEnabled = classConfig.Loot;
 
             if (classConfig.KeyboardOnly)
             {
@@ -49,6 +55,12 @@ namespace Core.Goals
             if (goapAgentState.LastCombatKillCount > 1)
             {
                 wait.Fixed(Loot.LOOTFRAME_AUTOLOOT_DELAY);
+            }
+
+            if (!lootEnabled)
+            {
+                SendGoapEvent(new RemoveClosestPoi(CorpseEvent.NAME));
+                wait.Fixed(Loot.LOOTFRAME_AUTOLOOT_DELAY / 2);
             }
         }
 
