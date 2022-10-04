@@ -100,6 +100,7 @@ namespace Core
                 // Pet
                 { "Has Pet", playerReader.Bits.HasPet },
                 { "Pet Happy", playerReader.Bits.PetHappy },
+                { "Pet HasTarget", playerReader.PetHasTarget },
                 { "Mounted", playerReader.Bits.IsMounted },
                 
                 // Auto Spell

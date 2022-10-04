@@ -55,7 +55,7 @@ namespace Core
                 return false;
             }
 
-            if (playerReader.PetHasTarget && playerReader.MouseOverGuid == playerReader.PetGuid)
+            if (playerReader.PetHasTarget() && playerReader.MouseOverGuid == playerReader.PetGuid)
             {
                 return true;
             }

@@ -206,7 +206,7 @@ namespace Core.GOAP
                     UnitsTarget.Pet or
                     UnitsTarget.PartyOrPet, // GoapKey.targettargetsus -- hacky way to keep attacking fleeing humanoids
                 playerReader.Bits.PlayerInCombat(), // GoapKey.incombat
-                playerReader.PetHasTarget && !playerReader.Bits.PetTargetIsDead(), // GoapKey.pethastarget
+                playerReader.PetHasTarget() && !playerReader.Bits.PetTargetIsDead(), // GoapKey.pethastarget
                 (playerReader.Class == UnitClass.Druid &&
                     playerReader.Form is Form.Druid_Travel or Form.Druid_Flight)
                     || playerReader.Bits.IsMounted(), // GoapKey.ismounted

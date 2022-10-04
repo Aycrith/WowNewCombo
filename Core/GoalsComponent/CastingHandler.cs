@@ -534,7 +534,7 @@ namespace Core.Goals
         {
             if (playerReader.Bits.PlayerInCombat() &&
                 playerReader.Bits.HasPet() &&
-                !playerReader.PetHasTarget &&
+                !playerReader.PetHasTarget() &&
                 input.ClassConfig.PetAttack.GetCooldownRemaining() == 0)
             {
                 input.PetAttack();
