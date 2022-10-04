@@ -361,6 +361,7 @@ Take a look at the class files in `/Json/class` for examples of what you can do.
 | `"Salvage"` | Should salvage the mob | true | `false` |
 | `"UseMount"` | Should use mount when its possible | true | `false` |
 | `"AllowPvP"` | Should engage combat with the opposite faction | true | `false` |
+| `"AutoPetAttack"` | Should the pet start attacking as soon as possible | true | `true` |
 | `"KeyboardOnly"` | Use keyboard to interact only. See [KeyboardOnly](#KeyboardOnly) | false | `true` |
 | `"PathFilename"` | [Path](#Path) to use while alive | **false** | `""` |
 | `"PathThereAndBack"` | While using the path, [should go start to and reverse](#There-and-back) | true | `true` |
@@ -1223,6 +1224,7 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | `"Swimming"` | The player is currently swimming. |
 | `"Falling"` | The player is currently falling down, not touching the ground. |
 | `"Has Pet"` | The player's pet is alive |
+| `"Pet HasTarget"` | Players pet has target |
 | `"Pet Happy"` | Pet happienss is green |
 | `"Mounted"` | Player riding on a mount (druid form excluded) |
 | `"BagFull"` | Inventory is full |

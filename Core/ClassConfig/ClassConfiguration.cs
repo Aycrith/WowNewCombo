@@ -35,6 +35,8 @@ namespace Core
         public bool UseMount { get; set; } = true;
         public bool KeyboardOnly { get; set; }
         public bool AllowPvP { get; set; }
+        public bool AutoPetAttack { get; set; } = true;
+
         public string PathFilename { get; set; } = string.Empty;
 
         public string? OverridePathFilename { get; set; } = string.Empty;

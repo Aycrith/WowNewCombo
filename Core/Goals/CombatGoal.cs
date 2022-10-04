@@ -126,8 +126,9 @@ namespace Core.Goals
 
             if (playerReader.Bits.HasTarget())
             {
-                if (playerReader.Bits.HasPet() &&
-                    (!playerReader.PetHasTarget || playerReader.PetTargetGuid != playerReader.TargetGuid) &&
+                if (input.ClassConfig.AutoPetAttack &&
+                    playerReader.Bits.HasPet() &&
+                    (!playerReader.PetHasTarget() || playerReader.PetTargetGuid != playerReader.TargetGuid) &&
                     input.ClassConfig.PetAttack.GetCooldownRemaining() == 0)
                 {
                     input.PetAttack();
@@ -163,7 +164,7 @@ namespace Core.Goals
 
         private void FindNewTarget()
         {
-            if (playerReader.PetHasTarget && addonReader.CombatLog.DeadGuid.Value != playerReader.PetTargetGuid)
+            if (playerReader.PetHasTarget() && addonReader.CombatLog.DeadGuid.Value != playerReader.PetTargetGuid)
             {
                 ResetCooldowns();
 

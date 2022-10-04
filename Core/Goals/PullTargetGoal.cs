@@ -139,7 +139,8 @@ namespace Core.Goals
                 return;
             }
 
-            if (playerReader.Bits.HasPet() && !playerReader.PetHasTarget)
+            if (input.ClassConfig.AutoPetAttack &&
+                playerReader.Bits.HasPet() && !playerReader.PetHasTarget())
             {
                 if (input.ClassConfig.PetAttack.GetCooldownRemaining() == 0)
                     input.PetAttack();

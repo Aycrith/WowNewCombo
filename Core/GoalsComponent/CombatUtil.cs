@@ -57,7 +57,7 @@ namespace Core
         {
             if (this.playerReader.Bits.PlayerInCombat())
             {
-                if (this.playerReader.PetHasTarget)
+                if (this.playerReader.PetHasTarget())
                 {
                     input.TargetPet();
                     Log($"Pets target {playerReader.TargetTarget}");
@@ -105,7 +105,7 @@ namespace Core
 
         private bool PlayerOrPetHasTarget()
         {
-            return playerReader.Bits.HasTarget() || playerReader.PetHasTarget;
+            return playerReader.Bits.HasTarget() || playerReader.PetHasTarget();
         }
 
         private void Log(string text)

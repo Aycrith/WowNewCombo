@@ -144,7 +144,7 @@ namespace Core
 
         public int PetGuid => reader.GetInt(68);
         public int PetTargetGuid => reader.GetInt(69);
-        public bool PetHasTarget => PetTargetGuid != 0;
+        public bool PetHasTarget() => PetTargetGuid != 0;
 
         public int CastCount => reader.GetInt(70);
 
