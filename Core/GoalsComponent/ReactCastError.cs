@@ -195,6 +195,19 @@ namespace Core
                         logger.LogInformation($"{source} -- Didn't know how to React to {value.ToStringF()}");
                     }
                     break;
+                case UI_ERROR.SPELL_FAILED_LINE_OF_SIGHT:
+                    if (!playerReader.Bits.PlayerInCombat())
+                    {
+                        logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Stop attack and clear target!");
+                        input.StopAttack();
+                        input.ClearTarget();
+                        wait.Update();
+                    }
+                    else
+                    {
+                        logger.LogInformation($"{source} -- Didn't know how to React to {value.ToStringF()}");
+                    }
+                    break;
                 default:
                     logger.LogInformation($"{source} -- Didn't know how to React to {value.ToStringF()}");
                     break;
