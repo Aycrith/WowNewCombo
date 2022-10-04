@@ -69,8 +69,9 @@ local errorList = {
     "SPELL_FAILED_NOT_READY", -- 13 "Not yet recovered"
     "SPELL_FAILED_TARGETS_DEAD", -- 14 "Your target is dead"
     "ERR_LOOT_LOCKED", -- 15 "Someone is already looting that corpse."
-    "ERR_ATTACK_PACIFIED" -- 16 "Can't attack while pacified."
+    "ERR_ATTACK_PACIFIED", -- 16 "Can't attack while pacified."
     -- "ERR_USE_LOCKED_WITH_SPELL_S" -- 17 "Requires %s"
+    "SPELL_FAILED_LINE_OF_SIGHT" -- 18
 }
 local spellFailedErrors = {
     SPELL_FAILED_UNIT_NOT_INFRONT = 1,
