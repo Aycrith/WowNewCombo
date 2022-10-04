@@ -226,8 +226,8 @@ namespace Core
             AutoAttack.Item = true;
             AutoAttack.Initialise(this, addonReader, requirementFactory, logger, Log);
 
-            InitializeKeyActions(Pull, Interact, Approach, AutoAttack, StopAttack);
-            InitializeKeyActions(Combat, Interact, Approach, AutoAttack, StopAttack);
+            InitializeKeyActions(Pull, Interact, Approach, AutoAttack, StopAttack, PetAttack);
+            InitializeKeyActions(Combat, Interact, Approach, AutoAttack, StopAttack, PetAttack);
 
             logger.LogInformation($"[{nameof(Form)}] Initialise KeyActions.");
             for (int i = 0; i < Form.Length; i++)
