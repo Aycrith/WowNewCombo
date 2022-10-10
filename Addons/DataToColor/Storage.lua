@@ -201,6 +201,7 @@ function CreatePlayerBuffList()
         DataToColor.S.playerBuffs[14] = { "Aspect of the Viper", [132160] = 1 }
         DataToColor.S.playerBuffs[15] = { "Rapid Fire", [132208] = 1 }
         DataToColor.S.playerBuffs[16] = { "Quick Shots", [132347] = 1 }
+        DataToColor.S.playerBuffs[17] = { "Trueshot Aura", [132329] = 1 }
     elseif DataToColor.C.CHARACTER_CLASS == "DEATHKNIGHT" then
         DataToColor.S.playerBuffs[10] = { "Blood Tap", [237515] = 1 }
         DataToColor.S.playerBuffs[11] = { "Horn of Winter", [134228] = 1 }
@@ -252,6 +253,9 @@ function CreateTargetDebuffList()
         DataToColor.S.targetDebuffs[3] = { "Siphon Life", [136188] = 1 }
     elseif DataToColor.C.CHARACTER_CLASS == "HUNTER" then
         DataToColor.S.targetDebuffs[0] = { "Serpent Sting", [132204] = 1 }
+        DataToColor.S.targetDebuffs[1] = { "Hunter's Mark", [132212] = 1 }
+        DataToColor.S.targetDebuffs[2] = { "Viper Sting", [132157] = 1 }
+        DataToColor.S.targetDebuffs[3] = { "Explosive Shot", [236178] = 1 }
     elseif DataToColor.C.CHARACTER_CLASS == "DEATHKNIGHT" then
         DataToColor.S.targetDebuffs[0] = { "Blood Plague", [237514] = 1 }
         DataToColor.S.targetDebuffs[1] = { "Frost Fever", [237522] = 1 }
