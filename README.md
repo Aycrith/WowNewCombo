@@ -128,6 +128,7 @@ Known issues with other applications:
 ## 3.2 In-game Requirements
 
 Required game client settings. Press `ESC` -> `System`
+  * System > Graphics > Anti-Aliasing: `None`
   * System > Advanced > Constrast: `50`
   * System > Advanced > Brightness: `50`
   * System > Advanced > Gamma from: `1.0`
