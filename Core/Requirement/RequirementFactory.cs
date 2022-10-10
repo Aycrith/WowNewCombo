@@ -215,6 +215,7 @@ namespace Core
                 { "Aspect of the Viper", playerReader.Buffs.AspectoftheViper },
                 { "Rapid Fire", playerReader.Buffs.RapidFire },
                 { "Quick Shots", playerReader.Buffs.QuickShots },
+                { "Trueshot Aura", playerReader.Buffs.TrueshotAura },
 
                 //Death Knight
                 { "Blood Tap", playerReader.Buffs.BloodTap },
@@ -273,6 +274,9 @@ namespace Core
                 
                 // Hunter Debuff
                 { "Serpent Sting", playerReader.TargetDebuffs.SerpentSting },
+                { "Hunter's Mark", playerReader.TargetDebuffs.HuntersMark },
+                { "Viper Sting", playerReader.TargetDebuffs.ViperSting },
+                { "Explosive Shot", playerReader.TargetDebuffs.ExplosiveShot },
 
                 // Death Knight Debuff
                 { "Blood Plague", playerReader.TargetDebuffs.BloodPlague },

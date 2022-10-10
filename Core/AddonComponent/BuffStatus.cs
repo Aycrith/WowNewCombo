@@ -109,6 +109,7 @@ namespace Core
         public bool AspectoftheViper() => v[Mask._14];
         public bool RapidFire() => v[Mask._15];
         public bool QuickShots() => v[Mask._16];
+        public bool TrueshotAura() => v[Mask._17];
 
         // Death Knight
         public bool BloodTap() => v[Mask._10];

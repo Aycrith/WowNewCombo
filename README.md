@@ -1322,6 +1322,7 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | Hunter | `"Aspect of the Viper"` |
 | Hunter | `"Rapid Fire"` |
 | Hunter | `"Quick Shots"` |
+| Hunter | `"Trueshot Aura"` |
 | Death Knight | `"Blood Tap"` |
 | Death Knight | `"Horn of Winter"` |
 | Death Knight | `"Icebound Fortitude"` |
@@ -1369,6 +1370,9 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | Warrior | `"Hamstring"` |
 | Warrior | `"Charge Stun"` |
 | Hunter | `"Serpent Sting"` |
+| Hunter | `"Hunter's Mark"` |
+| Hunter | `"Viper Sting"` |
+| Hunter | `"Explosive Shot"` |
 | Death Knight | `"Blood Plague"` |
 | Death Knight | `"Frost Fever"` |
 | Death Knight | `"Strangulate"` |
