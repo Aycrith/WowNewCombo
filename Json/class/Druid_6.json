@@ -80,7 +80,7 @@
         "Cost": 19,
         "Name": "Repair",
         "Key": "C",
-        "Requirement": "Items Broken",
+        "Requirement": "Durability% < 35",
         "PathFilename": "5_NightElf_Vendor.json"
       },
       {

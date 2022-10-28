@@ -114,7 +114,7 @@
       {
         "Name": "Repair",
         "Key": "C",
-        "Requirement": "Items Broken",
+        "Requirement": "Durability% < 35",
         "PathFilename": "5_Draenei_Vendor.json",
         "Cost": 6
       },
