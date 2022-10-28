@@ -134,7 +134,7 @@
       {
         "Name": "Repair",
         "Key": "C",
-        "Requirement": "Items Broken",
+        "Requirement": "Durability% < 35",
         "PathFilename": "10_Gnome_Vendor.json",
         "Cost": 6
       },

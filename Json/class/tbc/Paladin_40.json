@@ -237,7 +237,7 @@
         "Cost": 6,
         "Name": "Repair",
         "Key": "C",
-        "Requirement": "Items Broken",
+        "Requirement": "Durability% < 35",
         "PathFilename": "25-30_HillsbardFoothills_Vendor.json"
       },
       {

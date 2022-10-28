@@ -111,7 +111,7 @@
       {
         "Name": "Repair",
         "Key": "C",
-        "Requirement": "Items Broken",
+        "Requirement": "Durability% < 35",
         "PathFilename": "10_Loch_Modan_Vendor.json",
         "Cost": 6
       },
