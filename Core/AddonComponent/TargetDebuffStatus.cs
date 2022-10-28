@@ -65,6 +65,7 @@ namespace Core
         public bool HuntersMark() => v[Mask._1];
         public bool ViperSting() => v[Mask._2];
         public bool ExplosiveShot() => v[Mask._3];
+        public bool BlackArrow() => v[Mask._4];
 
         // Death Knight
         public bool BloodPlague() => v[Mask._0];
