@@ -1320,6 +1320,8 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | Hunter | `"Aspect of the Hawk"` |
 | Hunter | `"Aspect of the Monkey"` |
 | Hunter | `"Aspect of the Viper"` |
+| Hunter | `"Aspect of the Dragonhawk"` |
+| Hunter | `"Lock and Load"` |
 | Hunter | `"Rapid Fire"` |
 | Hunter | `"Quick Shots"` |
 | Hunter | `"Trueshot Aura"` |
@@ -1373,6 +1375,7 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | Hunter | `"Hunter's Mark"` |
 | Hunter | `"Viper Sting"` |
 | Hunter | `"Explosive Shot"` |
+| Hunter | `"Black Arrow"` |
 | Death Knight | `"Blood Plague"` |
 | Death Knight | `"Frost Fever"` |
 | Death Knight | `"Strangulate"` |

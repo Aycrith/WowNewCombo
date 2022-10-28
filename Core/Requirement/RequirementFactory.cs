@@ -216,6 +216,8 @@ namespace Core
                 { "Rapid Fire", playerReader.Buffs.RapidFire },
                 { "Quick Shots", playerReader.Buffs.QuickShots },
                 { "Trueshot Aura", playerReader.Buffs.TrueshotAura },
+                { "Aspect of the Dragonhawk", playerReader.Buffs.AspectoftheDragonhawk },
+                { "Lock and Load", playerReader.Buffs.LockandLoad },
 
                 //Death Knight
                 { "Blood Tap", playerReader.Buffs.BloodTap },
@@ -277,6 +279,7 @@ namespace Core
                 { "Hunter's Mark", playerReader.TargetDebuffs.HuntersMark },
                 { "Viper Sting", playerReader.TargetDebuffs.ViperSting },
                 { "Explosive Shot", playerReader.TargetDebuffs.ExplosiveShot },
+                { "Black Arrow", playerReader.TargetDebuffs.BlackArrow },
 
                 // Death Knight Debuff
                 { "Blood Plague", playerReader.TargetDebuffs.BloodPlague },
