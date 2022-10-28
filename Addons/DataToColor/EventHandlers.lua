@@ -77,7 +77,8 @@ local spellFailedErrors = {
     SPELL_FAILED_UNIT_NOT_INFRONT = 1,
     SPELL_FAILED_MOVING = 6,
     SPELL_FAILED_STUNNED = 9,
-    ERR_SPELL_OUT_OF_RANGE = 3
+    ERR_SPELL_OUT_OF_RANGE = 3,
+    SPELL_FAILED_LINE_OF_SIGHT = 18
 }
 
 local specialErrorS = {}
