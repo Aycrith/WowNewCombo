@@ -17,7 +17,7 @@ namespace Core.Goals
             this.playerReader = playerReader;
             this.wait = wait;
 
-            AddPrecondition(GoapKey.hastarget, false);
+            AddPrecondition(GoapKey.targetisalive, false);
 
             if (input.ClassConfig.KeyboardOnly)
             {
