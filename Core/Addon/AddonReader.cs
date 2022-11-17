@@ -56,7 +56,7 @@ namespace Core
         public int DamageTakenCount() => CombatLog.DamageTaken.Count;
         public int DamageDoneCount() => CombatLog.DamageDone.Count;
 
-        private int lastTargetId = -1;
+        private int lastTargetGuid = -1;
         public string TargetName { get; private set; } = string.Empty;
 
         private int lastMouseOverId = -1;
@@ -139,9 +139,9 @@ namespace Core
 
                 PlayerReader.Update(reader);
 
-                if (lastTargetId != PlayerReader.TargetId)
+                if (lastTargetGuid != PlayerReader.TargetGuid)
                 {
-                    lastTargetId = PlayerReader.TargetId;
+                    lastTargetGuid = PlayerReader.TargetGuid;
 
                     TargetName = CreatureDb.Entries.TryGetValue(PlayerReader.TargetId, out Creature creature)
                     ? creature.Name : reader.GetString(16) + reader.GetString(17);
