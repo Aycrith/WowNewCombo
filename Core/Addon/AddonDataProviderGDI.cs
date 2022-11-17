@@ -1,15 +1,13 @@
 ﻿using Game;
+
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Threading;
 
 namespace Core
 {
     public sealed class AddonDataProviderGDI : IAddonDataProvider, IDisposable
     {
-        private readonly CancellationToken ct;
-
         private readonly int[] data;
         private readonly DataFrame[] frames;
 
@@ -26,11 +24,8 @@ namespace Core
 
         private const PixelFormat pixelFormat = PixelFormat.Format32bppPArgb;
 
-        private bool disposing;
-
-        public AddonDataProviderGDI(CancellationTokenSource cts, WowScreen wowScreen, DataFrame[] frames)
+        public AddonDataProviderGDI(WowScreen wowScreen, DataFrame[] frames)
         {
-            ct = cts.Token;
             this.wowScreen = wowScreen;
             this.frames = frames;
 
@@ -55,21 +50,12 @@ namespace Core
 
         public void Dispose()
         {
-            if (disposing)
-                return;
-
-            disposing = true;
-
             graphics.Dispose();
             bitmap.Dispose();
         }
 
         public void Update()
         {
-            ct.WaitHandle.WaitOne(1);
-
-            if (ct.IsCancellationRequested || disposing) return;
-
             Point p = new();
             wowScreen.GetPosition(ref p);
             graphics.CopyFromScreen(p, Point.Empty, rect.Size);

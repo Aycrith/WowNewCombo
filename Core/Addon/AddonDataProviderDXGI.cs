@@ -1,23 +1,22 @@
 ﻿using Game;
+
 using SharpGen.Runtime;
+
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Threading;
+
 using Vortice.Direct3D;
 using Vortice.Direct3D11;
 using Vortice.DXGI;
+
 using static WinAPI.NativeMethods;
 
 namespace Core
 {
     public sealed class AddonDataProviderDXGI : IAddonDataProvider, IDisposable
     {
-        private readonly CancellationToken ct;
-
         private readonly WowScreen wowScreen;
-
-        private bool disposing;
 
         //                                 B  G  R
         private readonly byte[] fColor = { 0, 0, 0 };
@@ -45,9 +44,8 @@ namespace Core
         private readonly int[] data;
         private readonly DataFrame[] frames;
 
-        public AddonDataProviderDXGI(CancellationTokenSource cts, WowScreen wowScreen, DataFrame[] frames)
+        public AddonDataProviderDXGI(WowScreen wowScreen, DataFrame[] frames)
         {
-            ct = cts.Token;
             this.wowScreen = wowScreen;
 
             this.frames = frames;
@@ -114,11 +112,6 @@ namespace Core
 
         public void Dispose()
         {
-            if (disposing)
-                return;
-
-            disposing = true;
-
             duplication.ReleaseFrame();
             duplication.Dispose();
 
@@ -133,16 +126,15 @@ namespace Core
 
         public void Update()
         {
-            ct.WaitHandle.WaitOne(1);
-
-            if (ct.IsCancellationRequested || disposing) return;
-
             Point p = new();
             wowScreen.GetPosition(ref p);
 
             duplication.ReleaseFrame();
-            Result result = duplication.AcquireNextFrame(50, out OutduplFrameInfo frameInfo, out IDXGIResource? desktopResource);
-            if (!result.Success || disposing)
+            Result result = duplication.AcquireNextFrame(50,
+                out OutduplFrameInfo frameInfo,
+                out IDXGIResource? desktopResource);
+
+            if (!result.Success)
                 return;
 
             const int bytesPerPixel = 4;
