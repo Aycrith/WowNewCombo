@@ -28,7 +28,7 @@ namespace Core
 
         private readonly Dictionary<int, SchoolMask[]> immunityBlacklist;
 
-        private readonly List<string> negateKeywords = new()
+        private readonly string[] negateKeywords = new string[2]
         {
             "not ",
             "!"

@@ -170,7 +170,7 @@ namespace Core.GOAP
 		 * Used for building up the graph and holding the running costs of actions.
 		 */
 
-        private class Node
+        private sealed class Node
         {
             public readonly Node? parent;
             public readonly float runningCost;
