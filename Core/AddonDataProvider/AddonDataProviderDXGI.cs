@@ -5,6 +5,7 @@ using SharpGen.Runtime;
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Text;
 
 using Vortice.Direct3D;
 using Vortice.Direct3D11;
@@ -17,13 +18,10 @@ namespace Core
     public sealed class AddonDataProviderDXGI : IAddonDataProvider, IDisposable
     {
         private readonly WowScreen wowScreen;
+        private readonly DataFrame[] frames;
 
-        //                                 B  G  R
-        private readonly byte[] fColor = { 0, 0, 0 };
-        private readonly byte[] lColor = { 129, 132, 30 };
-
-        private static readonly FeatureLevel[] s_featureLevels = new[]
-{
+        private static readonly FeatureLevel[] s_featureLevels =
+        {
             FeatureLevel.Level_12_1,
             FeatureLevel.Level_12_0,
             FeatureLevel.Level_11_0,
@@ -42,7 +40,8 @@ namespace Core
         private readonly Bitmap bitmap;
         private readonly Rectangle rect;
         private readonly int[] data;
-        private readonly DataFrame[] frames;
+
+        private readonly StringBuilder sb = new(3);
 
         public AddonDataProviderDXGI(WowScreen wowScreen, DataFrame[] frames)
         {
@@ -54,11 +53,8 @@ namespace Core
 
             for (int i = 0; i < this.frames.Length; i++)
             {
-                if (frames[i].X > rect.Width)
-                    rect.Width = frames[i].X;
-
-                if (frames[i].Y > rect.Height)
-                    rect.Height = frames[i].Y;
+                rect.Width = Math.Max(rect.Width, frames[i].X);
+                rect.Height = Math.Max(rect.Height, frames[i].Y);
             }
             rect.Width++;
             rect.Height++;
@@ -130,26 +126,22 @@ namespace Core
             wowScreen.GetPosition(ref p);
 
             duplication.ReleaseFrame();
-            Result result = duplication.AcquireNextFrame(50,
-                out OutduplFrameInfo frameInfo,
-                out IDXGIResource? desktopResource);
 
+            Result result = duplication.AcquireNextFrame(50, out OutduplFrameInfo frameInfo, out IDXGIResource? desktopResource);
             if (!result.Success)
                 return;
-
-            const int bytesPerPixel = 4;
 
             ID3D11Texture2D texture = desktopResource.QueryInterface<ID3D11Texture2D>();
             device.ImmediateContext.CopySubresourceRegion(addonTexture, 0, 0, 0, 0, texture, 0,
                 new Vortice.Mathematics.Box(p.X, p.Y, 0, p.X + rect.Right, p.Y + rect.Bottom, 1));
             MappedSubresource dataBox = device.ImmediateContext.Map(addonTexture, 0, MapMode.Read, Vortice.Direct3D11.MapFlags.None);
 
-            int sizeInBytesToCopy = rect.Right * bytesPerPixel;
+            int sizeInBytesToCopy = rect.Right * AddonDataProviderConfig.BYTES_PER_PIXEL;
 
             BitmapData bd = bitmap.LockBits(rect, ImageLockMode.ReadWrite, bitmap.PixelFormat);
             for (int y = 0; y < rect.Bottom; y++)
             {
-                MemoryHelpers.CopyMemory(bd.Scan0 + y * bd.Stride, (dataBox.DataPointer + y * dataBox.RowPitch), sizeInBytesToCopy);
+                MemoryHelpers.CopyMemory(bd.Scan0 + y * bd.Stride, dataBox.DataPointer + y * dataBox.RowPitch, sizeInBytesToCopy);
             }
             device.ImmediateContext.Unmap(addonTexture, 0);
             texture.Dispose();
@@ -160,21 +152,22 @@ namespace Core
             unsafe
             {
                 byte* fLine = (byte*)bd.Scan0 + (frames[0].Y * bd.Stride);
-                int fx = frames[0].X * bytesPerPixel;
+                int fx = frames[0].X * AddonDataProviderConfig.BYTES_PER_PIXEL;
 
                 byte* lLine = (byte*)bd.Scan0 + (frames[^1].Y * bd.Stride);
-                int lx = frames[^1].X * bytesPerPixel;
+                int lx = frames[^1].X * AddonDataProviderConfig.BYTES_PER_PIXEL;
 
                 for (int i = 0; i < 3; i++)
                 {
-                    if (fLine[fx + i] != fColor[i] || lLine[lx + i] != lColor[i])
+                    if (fLine[fx + i] != AddonDataProviderConfig.fColor[i] ||
+                        lLine[lx + i] != AddonDataProviderConfig.lColor[i])
                         goto Unlock;
                 }
 
                 for (int i = 0; i < frames.Length; i++)
                 {
                     fLine = (byte*)bd.Scan0 + (frames[i].Y * bd.Stride);
-                    fx = frames[i].X * bytesPerPixel;
+                    fx = frames[i].X * AddonDataProviderConfig.BYTES_PER_PIXEL;
 
                     data[frames[i].Index] = (fLine[fx + 2] * 65536) + (fLine[fx + 1] * 256) + fLine[fx];
                 }
@@ -193,28 +186,27 @@ namespace Core
 
         public float GetFixed(int index)
         {
-            return GetInt(index) / 100000f;
+            return data[index] / 100000f;
         }
 
         public string GetString(int index)
         {
             int color = GetInt(index);
-            if (color != 0)
-            {
-                string colorString = color.ToString();
-                if (colorString.Length > 6) { return string.Empty; }
-                string colorText = "000000"[..(6 - colorString.Length)] + colorString;
-                return ToChar(colorText, 0) + ToChar(colorText, 2) + ToChar(colorText, 4);
-            }
-            else
-            {
+            if (color == 0 || color > 999999)
                 return string.Empty;
-            }
-        }
 
-        private static string ToChar(string colorText, int start)
-        {
-            return ((char)int.Parse(colorText.Substring(start, 2))).ToString();
+            sb.Clear();
+
+            int n = color / 10000;
+            if (n > 0) sb.Append((char)n);
+
+            n = color / 100 % 100;
+            if (n > 0) sb.Append((char)n);
+
+            n = color % 100;
+            if (n > 0) sb.Append((char)n);
+
+            return sb.ToString().Trim();
         }
     }
 }
