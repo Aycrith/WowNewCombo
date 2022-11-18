@@ -1,4 +1,4 @@
-﻿using Core.Database;
+using Core.Database;
 
 using SharedLib;
 
@@ -27,6 +27,7 @@ namespace Core
         public event Action? DataChanged;
 
         public int Hash { private set; get; }
+        public int HashNewOrStackGain { private set; get; }
 
         private bool changedFromEvent;
 
@@ -149,6 +150,9 @@ namespace Core
 
                         if (existingItem.Count != itemCount)
                         {
+                            if (existingItem.Count < itemCount)
+                                HashNewOrStackGain++;
+
                             existingItem.UpdateCount(itemCount);
                             hasChanged = true;
                         }
@@ -162,10 +166,12 @@ namespace Core
                     if (ItemDB.Items.TryGetValue(itemId, out var item))
                     {
                         BagItems.Add(new BagItem(bag, slot, itemId, itemCount, item));
+                        HashNewOrStackGain++;
                     }
                     else
                     {
                         BagItems.Add(new BagItem(bag, slot, itemId, itemCount, new Item() { Entry = itemId, Name = "Unknown" }));
+                        HashNewOrStackGain++;
                     }
                 }
             }
