@@ -1,4 +1,4 @@
-@page "/Swag"
+﻿@page "/Swag"
 
 @inject IAddonReader addonReader
 @inject IBotController botController
@@ -69,8 +69,7 @@
 <div id="tooltip" display="none" style="position: absolute; display: none;"></div>
 
 @code {
-
-    private int[] TotalVendorMoney { get; set; } = new int[3] { 0, 0, 0 };
+    private Currency TotalVendorMoney { get; set; } = Currency.Empty;
 
     private BagReader bagReader = null!;
     private EquipmentReader equipmentReader = null!;
@@ -92,7 +91,7 @@
 
     public void OnBagReaderDataChanged()
     {
-        TotalVendorMoney = Item.ToSellPrice(bagReader.BagItems.Sum(s => s.Item.SellPrice * s.Count));
+        TotalVendorMoney = ItemPrice.ToSellPrice(bagReader.BagItems.Sum(s => s.Item.SellPrice * s.Count));
         base.InvokeAsync(StateHasChanged);
     }
 

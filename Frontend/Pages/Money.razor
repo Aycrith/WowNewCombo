@@ -1,16 +1,25 @@
 ﻿<span class="float-right" style="font-size:small">
-    @for (int i = 0; i < 2; i++)
+    @if (Value.Gold > 0)
     {
-        @if (Value[i] > 0)
-        {
-            @Value[i] <img height="12px" src="@images[i]" />
-        }
+        @Value.Gold <img height="12px" src="@GOLD" />
+    }
+
+    @if (Value.Silver > 0)
+    {
+        @Value.Silver <img height="12px" src="@SILVER" />
+    }
+
+    @if (Value.Copper > 0)
+    {
+        @Value.Copper <img height="12px" src="@COPPER" />
     }
 </span>
 
 @code {
     [Parameter]
-    public int[] Value { get; set; } = new int[3] { 0, 0, 0 };
+    public Currency Value { get; set; }
 
-    private static readonly List<string> images = new() { "_content/Frontend/money-gold.png", "_content/Frontend/money-silver.png", "_content/Frontend/money-copper.png" };
+    private const string GOLD = "_content/Frontend/money-gold.png";
+    private const string SILVER = "_content/Frontend/money-silver.png";
+    private const string COPPER = "_content/Frontend/money-copper.png";
 }
