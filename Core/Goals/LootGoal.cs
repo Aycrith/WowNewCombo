@@ -38,7 +38,7 @@ namespace Core.Goals
 
         private bool gatherCorpse;
         private int targetId;
-        private int bagHash;
+        private int bagHashNewOrStackGain;
         private int money;
 
         public LootGoal(ILogger logger, ConfigurableInput input, Wait wait,
@@ -72,7 +72,7 @@ namespace Core.Goals
 
             wait.While(LootReset);
 
-            bagHash = bagReader.Hash;
+            bagHashNewOrStackGain = bagReader.HashNewOrStackGain;
             money = playerReader.Money;
 
             if (bagReader.BagsFull())
@@ -213,7 +213,7 @@ namespace Core.Goals
 
         private bool LootWindowClosedOrBagOrMoneyChanged()
         {
-            return bagHash != bagReader.Hash ||
+            return bagHashNewOrStackGain != bagReader.HashNewOrStackGain ||
                 money != playerReader.Money ||
                 (LootStatus)playerReader.LootEvent.Value is
                 LootStatus.CLOSED;
