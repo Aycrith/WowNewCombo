@@ -1,4 +1,4 @@
-﻿@page "/Swag"
+@page "/Swag"
 
 @inject IAddonReader addonReader
 @inject IBotController botController
@@ -14,7 +14,7 @@
     </div>
     <div class="card-body">
         <div class="row p-0 m-0">
-            @for (int index = 0; index < (int)InventorySlotId.Bag_0; index++)
+            @for (int index = 0; index <= (int)InventorySlotId.Bag_3; index++)
             {
                 <div class="col">
                     <EquipmentComponent Slot="index" Item="equipmentReader.Items[index]" ShowIcon="!botController.IsBotActive" />
@@ -43,7 +43,7 @@
                     }
                 </tr>
             </thead>
-            @for (int bagIndex = 0; bagIndex < MaxSlot; bagIndex++)
+            @for (int bagIndex = 0; bagIndex < bagReader.MaxBagSlot(); bagIndex++)
             {
                 <tr>
                     @for (int bag = 4; bag >= 0; bag--)
@@ -74,8 +74,6 @@
 
     private BagReader bagReader = null!;
     private EquipmentReader equipmentReader = null!;
-
-    private int MaxSlot => bagReader.Bags.Max(b => b.SlotCount);
 
     protected override void OnInitialized()
     {
