@@ -19,8 +19,6 @@ namespace Core
 
         public ItemDB ItemDB { get; private set; }
 
-        private DateTime lastEvent;
-
         public List<BagItem> BagItems { get; } = new();
 
         public Bag[] Bags { get; } = new Bag[5];
@@ -29,8 +27,6 @@ namespace Core
 
         public int Hash { private set; get; }
         public int HashNewOrStackGain { private set; get; }
-
-        private bool changedFromEvent;
 
         public BagReader(ItemDB itemDb, EquipmentReader equipmentReader, int cbagMeta, int citemNumCount, int cItemId)
         {
@@ -65,11 +61,9 @@ namespace Core
 
             ReadInventory(reader, out bool inventoryChanged);
 
-            if (changedFromEvent || metaChanged || inventoryChanged || (DateTime.UtcNow - this.lastEvent).TotalSeconds > 11)
+            if (metaChanged || inventoryChanged)
             {
-                changedFromEvent = false;
                 DataChanged?.Invoke();
-                lastEvent = DateTime.UtcNow;
 
                 if (metaChanged || inventoryChanged)
                 {
@@ -167,13 +161,13 @@ namespace Core
                     if (ItemDB.Items.TryGetValue(itemId, out var item))
                     {
                         BagItems.Add(new BagItem(bag, slot, itemId, itemCount, item));
-                        HashNewOrStackGain++;
                     }
                     else
                     {
                         BagItems.Add(new BagItem(bag, slot, itemId, itemCount, new Item() { Entry = itemId, Name = "Unknown" }));
-                        HashNewOrStackGain++;
                     }
+
+                    HashNewOrStackGain++;
                 }
             }
             else
@@ -237,15 +231,16 @@ namespace Core
 
         private void OnEquipmentChanged(object? s, (int, int) tuple)
         {
-            if (tuple.Item1 is >= ((int)InventorySlotId.Bag_0) and <= ((int)InventorySlotId.Bag_3))
+            if (tuple.Item1 is
+                not >= ((int)InventorySlotId.Bag_0) or
+                not <= ((int)InventorySlotId.Bag_3))
             {
-                int index = tuple.Item1 - (int)InventorySlotId.Tabard;
-                Bags[index].ItemId = tuple.Item2;
-
-                UpdateBagName(index);
-
-                changedFromEvent = true;
+                return;
             }
+            int index = tuple.Item1 - (int)InventorySlotId.Tabard;
+            Bags[index].ItemId = tuple.Item2;
+
+            UpdateBagName(index);
         }
 
         private void UpdateBagName(int index)
@@ -265,7 +260,7 @@ namespace Core
 
         private static bool BagItemCommonQuality(BagItem bi) => bi.Item.Quality == 0;
 
-        private static int BagItemCount(BagItem bi) => bi.Count;
+        public int MaxBagSlot() => Bags.Max(BagSlotCount);
 
         #endregion
     }

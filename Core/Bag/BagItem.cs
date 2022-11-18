@@ -1,4 +1,5 @@
 ﻿using System;
+
 using SharedLib;
 
 namespace Core
@@ -9,28 +10,11 @@ namespace Core
         public int ItemId { get; private set; }
         public int BagIndex { get; private set; }
         public int Count { get; private set; }
+        public int LastCount { get; private set; }
         public Item Item { get; private set; }
-        public string LastChangeDescription { get; private set; } = "New";
-        public int LastChange { get; private set; }
+        public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
 
-        public void UpdateCount(int count)
-        {
-            if (Count == count)
-            {
-                return;
-            }
-
-            LastUpdated = DateTime.UtcNow;
-            LastChange = count - Count;
-            LastChangeDescription = LastChange.ToString();
-            if (!LastChangeDescription.StartsWith("-")) { LastChangeDescription = $"+{LastChangeDescription}"; }
-            this.Count = count;
-        }
-
-        public static readonly int MaxLifeTime = 30;
-
-        public DateTime LastUpdated { get; set; }
-        public bool WasRecentlyUpdated => (DateTime.UtcNow - LastUpdated).TotalSeconds < MaxLifeTime;
+        public int LastChange => Count - LastCount;
 
         public BagItem(int bag, int bagIndex, int itemId, int count, Item item)
         {
@@ -38,7 +22,16 @@ namespace Core
             this.BagIndex = bagIndex;
             this.ItemId = itemId;
             this.Count = count;
+            this.LastCount = count;
             this.Item = item;
+        }
+
+        public void UpdateCount(int count)
+        {
+            LastCount = Count;
+            Count = count;
+
+            LastUpdated = DateTime.UtcNow;
         }
     }
 }

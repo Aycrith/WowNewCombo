@@ -25,40 +25,57 @@
 }
 @code {
 
-    private const int maxItemToShow = 14;
+    private const int MaxItemToShow = 14;
+    private const int MaxLifeTimeSec = 15;
+
+    private Timer timer = null!;
 
     private IEnumerable<BagItem> NewItems { get; set; } = null!;
 
-    public int[] TotalMoneyChange { get; set; } = new int[3] { 0, 0, 0 };
+    private Currency TotalMoneyChange { get; set; } = Currency.Empty;
 
     protected override void OnInitialized()
     {
-        NewItems = addonReader.BagReader.BagItems.Where(x => x.WasRecentlyUpdated);
+        NewItems = addonReader.BagReader.BagItems.Where(WasRecentlyUpdated);
 
         addonReader.BagReader.DataChanged += OnBagReaderDataChanged;
+
+        timer = new Timer(TimerTick);
     }
 
     public void Dispose()
     {
         addonReader.BagReader.DataChanged -= OnBagReaderDataChanged;
+        timer.Dispose();
+    }
+
+    private void TimerTick(object? sender)
+    {
+        base.InvokeAsync(StateHasChanged);
+
+        CalculateNextTimerTick();
     }
 
     protected int ItemValue(BagItem item)
     {
         if (item.LastChange == 0)
         {
-            return item.Item.SellPrice;
+            return item.Item.SellPrice * item.Count;
         }
         return item.LastChange * item.Item.SellPrice;
     }
 
+    private bool WasRecentlyUpdated(BagItem item) => (DateTime.UtcNow - item.LastUpdated).TotalSeconds < MaxLifeTimeSec;
+
+    private DateTime ExpireTime(BagItem item) => item.LastUpdated.AddSeconds(MaxLifeTimeSec);
+
     public void OnBagReaderDataChanged()
     {
-        NewItems = addonReader.BagReader.BagItems.Where(i => i.WasRecentlyUpdated);
+        NewItems = addonReader.BagReader.BagItems.Where(WasRecentlyUpdated);
 
-        if (NewItems.Count() > maxItemToShow)
+        if (NewItems.Count() > MaxItemToShow)
         {
-            NewItems = NewItems.Take(maxItemToShow);
+            NewItems = NewItems.Take(MaxItemToShow);
             int i = 0;
             foreach (var item in NewItems)
             {
@@ -67,7 +84,26 @@
             }
         }
 
-        TotalMoneyChange = Item.ToSellPrice(NewItems.Sum(ItemValue));
+        CalculateNextTimerTick();
+
+        TotalMoneyChange = ItemPrice.ToSellPrice(NewItems.Sum(ItemValue));
         base.InvokeAsync(StateHasChanged);
+    }
+
+    private void CalculateNextTimerTick()
+    {
+        DateTime nextCall = DateTime.MaxValue;
+
+        foreach (var item in NewItems)
+        {
+            DateTime expire = ExpireTime(item);
+            if (expire < nextCall)
+            {
+                nextCall = expire;
+            }
+        }
+
+        if (nextCall != DateTime.MaxValue)
+            timer.Change(nextCall - DateTime.UtcNow, Timeout.InfiniteTimeSpan);
     }
 }

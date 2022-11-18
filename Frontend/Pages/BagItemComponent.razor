@@ -17,15 +17,17 @@
             {
                 <Money Value="GetItemPrice(BagItem)" />
             }
-            @if (BagItem.WasRecentlyUpdated)
+            @if (WasRecentlyUpdated(BagItem))
             {
-                <span class="float-right badge badge-info">@BagItem.LastChangeDescription</span>
+                <span class="float-right badge badge-info">@ChangeDescription(BagItem)</span>
             }
         </span>
     </b>
 </a>
 
 @code {
+    private const int MaxLifeTime = 30;
+
     [Parameter]
     public BagItem BagItem { get; set; } = null!;
 
@@ -41,10 +43,10 @@
     private string iconName { get; set; } = string.Empty;
     private string imgLink => string.Format(WApi.TinyIconUrl, iconName);
 
-    private static readonly List<string> colors = new() { "#9d9d9d", "#fff", "#1eff00", "#0070dd", "#9345ff", "#ff8000", "#e5cc80", "#e5cc80" };
-    private static readonly List<string> itemBadge = new() { "badge-secondary", "badge-dark", "badge-success", "badge-primary", "badge-warning", "badge-warning", "badge-warning", "badge-warning" };
+    private static readonly string[] colors = { "#9d9d9d", "#fff", "#1eff00", "#0070dd", "#9345ff", "#ff8000", "#e5cc80", "#e5cc80" };
+    private static readonly string[] itemBadge = { "badge-secondary", "badge-dark", "badge-success", "badge-primary", "badge-warning", "badge-warning", "badge-warning", "badge-warning" };
 
-    private static Dictionary<int, string> icons = new();
+    private static readonly Dictionary<int, string> icons = new();
 
     protected override async Task OnParametersSetAsync()
     {
@@ -72,14 +74,28 @@
         return itemBadge[item.Quality];
     }
 
-    private int[] GetItemPrice(BagItem item)
+    private Currency GetItemPrice(BagItem item)
     {
-        var value = item.Count * item.Item.SellPrice;
+        int value = item.Count * item.Item.SellPrice;
         if (ShowChangesPrice)
         {
             value = (item.LastChange == 0 ? item.Count : item.LastChange) * item.Item.SellPrice;
         }
 
-        return Item.ToSellPrice(value);
+        return ItemPrice.ToSellPrice(value);
+    }
+
+    private bool WasRecentlyUpdated(BagItem item) => (DateTime.UtcNow - item.LastUpdated).TotalSeconds < MaxLifeTime;
+
+    private string ChangeDescription(BagItem item)
+    {
+        if (item.Count == item.LastCount)
+            return "New";
+
+        int change = item.Count - item.LastCount;
+
+        return change < 0
+        ? change.ToString()
+        : $"+{change}";
     }
 }
