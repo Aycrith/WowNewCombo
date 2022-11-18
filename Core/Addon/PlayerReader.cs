@@ -49,7 +49,7 @@ namespace Core
 
         public int HealthMax() => reader.GetInt(10);
         public int HealthCurrent() => reader.GetInt(11);
-        public int HealthPercent() => HealthCurrent() * 100 / HealthMax();
+        public int HealthPercent() => (1 + HealthCurrent()) * 100 / (1 + HealthMax());
 
         public int PTMax() => reader.GetInt(12); // Maximum amount of Power Type (dynamic)
         public int PTCurrent() => reader.GetInt(13); // Current amount of Power Type (dynamic)
@@ -109,7 +109,7 @@ namespace Core
         public RecordInt PlayerXp { get; } = new(50);
 
         public int PlayerMaxXp => reader.GetInt(51);
-        public int PlayerXpPercentage => PlayerXp.Value * 100 / PlayerMaxXp;
+        public int PlayerXpPercentage => (1 + PlayerXp.Value) * 100 / (1 + PlayerMaxXp);
 
         private UI_ERROR UIError => (UI_ERROR)reader.GetInt(52);
         public UI_ERROR LastUIError { get; set; }
