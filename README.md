@@ -485,7 +485,7 @@ Can specify conditions with [Requirement(s)](#Requirement) in order to create a 
 | `"AfterCastWaitCastbar"` | wait for the castbar to finish, `SpellQueueTimeMs` excluded.<br>Blocks **CastingHandler**. | `false` |
 | `"AfterCastWaitBuff"` | wait for Aura=__(player-target debuff/buff)__ count changes.<br>Only works properly, when the Aura **count** changes.<br>Not suitable for refreshing already existing Aura<br>Blocks **CastingHandler**. | `false` |
 | `"AfterCastAuraExpected"` | refreshing Aura=__(player-target debuff/buff)__<br>Just adds an extra(`SpellQueueTimeMs`) Cooldown to the action, so it wont repeat itself.<br>Not blocking  **CastingHandler**. | `false` |
-| `"AfterCastWaitBag"` | wait for inventory, bag change.<br>Blocks **CastingHandler**. | `false` |
+| `"AfterCastWaitBag"` | wait for any inventory, bag change.<br>Blocks **CastingHandler**. | `false` |
 | `"AfterCastWaitCombat"` | wait for player entering combat.<br>Blocks **CastingHandler**. | `false` |
 | `"AfterCastWaitMeleeRange"` | wait for interrupted either:<br>* target enters melee range<br>* target starts casting<br>* player receives damage<br>Blocks **CastingHandler**. | `false` |
 | `"AfterCastStepBack"` | start backpedaling for milliseconds.<br>If value set to `-1` attempts to use the whole remaining GCD duration.<br>Blocks **CastingHandler**. | `0` |
