@@ -161,13 +161,13 @@ namespace Core
                     if (ItemDB.Items.TryGetValue(itemId, out var item))
                     {
                         BagItems.Add(new BagItem(bag, slot, itemId, itemCount, item));
-                        HashNewOrStackGain++;
                     }
                     else
                     {
                         BagItems.Add(new BagItem(bag, slot, itemId, itemCount, new Item() { Entry = itemId, Name = "Unknown" }));
-                        HashNewOrStackGain++;
                     }
+
+                    HashNewOrStackGain++;
                 }
             }
             else
