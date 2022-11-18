@@ -65,10 +65,7 @@ namespace Core
             {
                 DataChanged?.Invoke();
 
-                if (metaChanged || inventoryChanged)
-                {
-                    Hash++;
-                }
+                Hash++;
             }
         }
 
