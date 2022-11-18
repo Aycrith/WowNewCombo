@@ -5,6 +5,7 @@ using SharedLib;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace Core
 {
@@ -185,28 +186,31 @@ namespace Core
             }
         }
 
-        public List<string> ToBagString()
-        {
-            return Enumerable.Range(0, 5).Select(i =>
-                $"Bag {i}: " + string.Join(", ",
-                 BagItems.Where(b => b.Bag == i)
-                     .OrderBy(b => b.BagIndex)
-                     .Select(b => $"{b.ItemId}({b.Count})")
-                 ))
-                .ToList();
-        }
-
         public int BagItemCount() => BagItems.Count;
 
-        public int SlotCount => Bags.Sum((x) => x.SlotCount);
+        public int SlotCount => Bags.Sum(BagSlotCount);
 
-        public bool BagsFull() => Bags.Sum((x) => x.BagType == BagType.Unspecified ? x.FreeSlot : 0) == 0;
+        public bool BagsFull() => Bags.Sum(BagFreeSlotCount) == 0;
 
-        public bool AnyGreyItem() => BagItems.Any((x) => x.Item.Quality == 0);
+        public bool AnyGreyItem() => BagItems.Any(BagItemCommonQuality);
 
-        public int ItemCount(int itemId) => BagItems.Where(bi => bi.ItemId == itemId).Sum(bi => bi.Count);
+        public int ItemCount(int itemId)
+        {
+            int count = 0;
 
-        public bool HasItem(int itemId) => ItemCount(itemId) != 0;
+            var span = CollectionsMarshal.AsSpan(BagItems);
+            for (int i = 0; i < span.Length; i++)
+            {
+                if (span[i].ItemId == itemId)
+                {
+                    count += span[i].Count;
+                }
+            }
+
+            return count;
+        }
+
+        public bool HasItem(int itemId) => BagItems.Any(x => x.ItemId == itemId);
 
         public int HighestQuantityOfDrinkItemId()
         {
@@ -231,7 +235,6 @@ namespace Core
             return ItemCount(HighestQuantityOfFoodItemId());
         }
 
-
         private void OnEquipmentChanged(object? s, (int, int) tuple)
         {
             if (tuple.Item1 is >= ((int)InventorySlotId.Bag_0) and <= ((int)InventorySlotId.Bag_3))
@@ -247,7 +250,23 @@ namespace Core
 
         private void UpdateBagName(int index)
         {
-            Bags[index].Name = ItemDB.Items.TryGetValue(Bags[index].ItemId, out Item item) ? item.Name : string.Empty;
+            Bags[index].Name =
+                ItemDB.Items.TryGetValue(Bags[index].ItemId, out Item item)
+                ? item.Name
+                : string.Empty;
         }
+
+
+        #region Helpers
+
+        private static int BagSlotCount(Bag b) => b.SlotCount;
+
+        private static int BagFreeSlotCount(Bag b) => b.BagType == BagType.Unspecified ? b.FreeSlot : 0;
+
+        private static bool BagItemCommonQuality(BagItem bi) => bi.Item.Quality == 0;
+
+        private static int BagItemCount(BagItem bi) => bi.Count;
+
+        #endregion
     }
 }
