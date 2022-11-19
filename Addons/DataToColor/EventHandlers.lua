@@ -305,13 +305,13 @@ function DataToColor:OnCombatEvent(...)
 
                 if spellId == nil then
                     -- Fix Som
-                    spellId = 0
+                    spellId = DataToColor.lastCastSpellId
                 end
 
                 local hasGCD = true
 
                 local _, gcdMS = GetSpellBaseCooldown(spellId)
-                if gcdMS == nil or gcdMS == 0 then
+                if gcdMS == 0 then
                     hasGCD = false
                 end
 
@@ -335,8 +335,8 @@ function DataToColor:OnCombatEvent(...)
                         castTime = gcdMS
                     end
 
-                    DataToColor.gcdExpirationTime = GetTime() + (castTime / 1000)
-                    DataToColor.lastCastGCD = castTime
+                    DataToColor.gcdExpirationTime = GetTime() + ((castTime or 0) / 1000)
+                    DataToColor.lastCastGCD = castTime or 0
                     --DataToColor:Print(subEvent, " ", spellName, " ", spellId, " ", castTime)
                 else
                     --DataToColor:Print(subEvent, " ", spellName, " ", spellId, " has no GCD")
