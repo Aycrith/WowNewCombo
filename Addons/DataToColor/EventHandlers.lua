@@ -270,7 +270,15 @@ function DataToColor:OnCombatEvent(...)
 
         if playerSpellCastStarted[subEvent] then
             DataToColor.lastCastEvent = CAST_START
-            DataToColor.lastCastSpellId = spellId
+
+            if spellId == 0 or spellId == nil then
+                -- Fix Som
+                local _, _, _, _, _, _, _, _, tempSpellId = DataToColor.UnitCastingInfo(DataToColor.C.unitPlayer)
+                spellId = tempSpellId
+                DataToColor.lastCastSpellId = spellId
+            else
+                DataToColor.lastCastSpellId = spellId
+            end
 
             local _, gcdMS = GetSpellBaseCooldown(spellId)
             DataToColor.lastCastGCD = gcdMS
@@ -278,7 +286,12 @@ function DataToColor:OnCombatEvent(...)
         end
 
         if playerSpellCastFinished[subEvent] then
-            DataToColor.lastCastSpellId = spellId
+            if spellId == 0 or spellId == nil then
+                -- Fix Som
+                spellId = DataToColor.lastCastSpellId
+            else
+                DataToColor.lastCastSpellId = spellId
+            end
 
             if playerSpellFailed[subEvent] then
                 --local lastCastEvent = DataToColor.lastCastEvent
@@ -290,10 +303,15 @@ function DataToColor:OnCombatEvent(...)
                 DataToColor.lastCastEvent = CAST_SUCCESS
                 --DataToColor:Print(subEvent, " ", spellId)
 
+                if spellId == nil then
+                    -- Fix Som
+                    spellId = 0
+                end
+
                 local hasGCD = true
 
                 local _, gcdMS = GetSpellBaseCooldown(spellId)
-                if (gcdMS == 0) then
+                if gcdMS == nil or gcdMS == 0 then
                     hasGCD = false
                 end
 
