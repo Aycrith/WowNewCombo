@@ -98,6 +98,10 @@ namespace Core.Goals
             if (item.BaseAction)
             {
                 item.SetClicked();
+
+                if (Log && item.Log)
+                    LogInstantInput(logger, item.Name, pressMs, true, pressMs);
+
                 return true;
             }
 

@@ -39,6 +39,8 @@ local MERCHANT_CLOSED_V = 9999998
 local GOSSIP_START = 69
 local GOSSIP_END = 9999994
 
+local som_spellId = 0
+
 local ignoreErrorList = {
     "ERR_ABILITY_COOLDOWN",
     "ERR_OUT_OF_RAGE",
@@ -109,6 +111,13 @@ function DataToColor:RegisterEvents()
     DataToColor:RegisterEvent('ZONE_CHANGED_NEW_AREA', 'OnZoneChanged')
 
     DataToColor:RegisterEvent('PLAYER_REGEN_ENABLED', 'OnLeftCombat')
+
+    -- Season of mastery / vanilla
+    if WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
+        DataToColor:RegisterEvent('UNIT_SPELLCAST_START', 'SoM_OnCastStart')
+        DataToColor:RegisterEvent('UNIT_SPELLCAST_SUCCEEDED', 'SoM_OnCastSuccess')
+        DataToColor:RegisterEvent('UNIT_SPELLCAST_FAILED', 'SoM_OnCastFailed')
+    end
 
     for i = 1, #ignoreErrorList do
         local text = _G[ignoreErrorList[i]]
@@ -259,6 +268,12 @@ function DataToColor:OnCombatEvent(...)
 
     if sourceGUID == DataToColor.playerGUID then
         if playerSpellCastSuccess[subEvent] then
+
+            -- Fix SoM
+            if spellId == 0 or spellId == nil then
+                spellId = som_spellId
+            end
+
             if watchedSpells[spellId] then watchedSpells[spellId]() end
 
             local _, _, icon = GetSpellInfo(spellId)
@@ -271,27 +286,26 @@ function DataToColor:OnCombatEvent(...)
         if playerSpellCastStarted[subEvent] then
             DataToColor.lastCastEvent = CAST_START
 
+            -- Fix SoM
             if spellId == 0 or spellId == nil then
-                -- Fix Som
-                local _, _, _, _, _, _, _, _, tempSpellId = DataToColor.UnitCastingInfo(DataToColor.C.unitPlayer)
-                spellId = tempSpellId
-                DataToColor.lastCastSpellId = spellId
-            else
-                DataToColor.lastCastSpellId = spellId
+                spellId = som_spellId
             end
+
+            DataToColor.lastCastSpellId = spellId
 
             local _, gcdMS = GetSpellBaseCooldown(spellId)
             DataToColor.lastCastGCD = gcdMS
-            --DataToColor:Print(subEvent, " ", spellId)
+            --DataToColor:Print(subEvent, " ", spellId, " ", gcdMS)
         end
 
         if playerSpellCastFinished[subEvent] then
+
+            -- Fix Som
             if spellId == 0 or spellId == nil then
-                -- Fix Som
-                spellId = DataToColor.lastCastSpellId
-            else
-                DataToColor.lastCastSpellId = spellId
+                spellId = som_spellId
             end
+
+            DataToColor.lastCastSpellId = spellId
 
             if playerSpellFailed[subEvent] then
                 --local lastCastEvent = DataToColor.lastCastEvent
@@ -303,11 +317,6 @@ function DataToColor:OnCombatEvent(...)
                 DataToColor.lastCastEvent = CAST_SUCCESS
                 --DataToColor:Print(subEvent, " ", spellId)
 
-                if spellId == nil then
-                    -- Fix Som
-                    spellId = DataToColor.lastCastSpellId
-                end
-
                 local hasGCD = true
 
                 local _, gcdMS = GetSpellBaseCooldown(spellId)
@@ -316,9 +325,7 @@ function DataToColor:OnCombatEvent(...)
                 end
 
                 local _, _, _, castTime = GetSpellInfo(spellId)
-                if castTime == nil then
-                    castTime = 0
-                end
+                castTime = castTime or 0
 
                 if castTime > 0 then
                     hasGCD = false
@@ -335,8 +342,8 @@ function DataToColor:OnCombatEvent(...)
                         castTime = gcdMS
                     end
 
-                    DataToColor.gcdExpirationTime = GetTime() + ((castTime or 0) / 1000)
-                    DataToColor.lastCastGCD = castTime or 0
+                    DataToColor.gcdExpirationTime = GetTime() + (castTime / 1000)
+                    DataToColor.lastCastGCD = castTime
                     --DataToColor:Print(subEvent, " ", spellName, " ", spellId, " ", castTime)
                 else
                     --DataToColor:Print(subEvent, " ", spellName, " ", spellId, " has no GCD")
@@ -397,6 +404,21 @@ function DataToColor:OnCombatEvent(...)
             --DataToColor:Print(subEvent, " ignored ", destGUID)
         end
     end
+end
+
+function DataToColor:SoM_OnCastSuccess(event, unitTarget, castGuid, spellId)
+    if unitTarget ~= DataToColor.C.unitPlayer then return end
+    som_spellId = spellId or 0
+end
+
+function DataToColor:SoM_OnCastStart(event, unitTarget, castGuid, spellId)
+    if unitTarget ~= DataToColor.C.unitPlayer then return end
+    som_spellId = spellId or 0
+end
+
+function DataToColor:SoM_OnCastFailed(event, unitTarget, castGuid, spellId)
+    if unitTarget ~= DataToColor.C.unitPlayer then return end
+    som_spellId = spellId or 0
 end
 
 function DataToColor:OnLootReady(autoloot)

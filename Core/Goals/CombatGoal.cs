@@ -110,8 +110,6 @@ namespace Core.Goals
             {
                 logger.LogInformation("Turning too fast!");
                 stopMoving.Stop();
-
-                lastDirection = playerReader.Direction;
             }
 
             lastDirection = playerReader.Direction;
