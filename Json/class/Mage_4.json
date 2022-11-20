@@ -19,10 +19,6 @@
           "SpellInRange:3",
           "Mana% > MIN_MANA_FIREBALL%"
         ]
-      },
-      {
-        "Name": "Approach",
-        "Log": false
       }
     ]
   },
@@ -39,12 +35,18 @@
       },
       {
         "Name": "AutoAttack",
-        "Requirement": "!AutoAttacking",
-        "Log": false
+        "Requirements": [
+          "!HasRangedWeapon",
+          "!Casting",
+          "!AutoAttacking"
+        ]
       },
       {
         "Name": "Approach",
-        "Log": false
+        "Requirements": [
+          "!Casting",
+          "AutoAttacking"
+        ]
       }
     ]
   },
@@ -87,21 +89,21 @@
   "NPC": {
     "Sequence": [
       {
+        "Cost": 6,
         "Name": "Repair",
         "Key": "C",
         "Requirement": "Durability% < 35",
-        "PathFilename": "1_Gnome_Vendor.json",
-        "Cost": 6
+        "PathFilename": "1_Gnome_Vendor.json"
       },
       {
+        "Cost": 6,
         "Name": "Sell",
         "Key": "C",
         "Requirements": [
           "BagFull",
           "BagGreyItem"
         ],
-        "PathFilename": "1_Gnome_Vendor.json",
-        "Cost": 6
+        "PathFilename": "1_Gnome_Vendor.json"
       }
     ]
   }

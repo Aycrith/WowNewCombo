@@ -8,7 +8,7 @@
     "Item_Conjure_Drink": 5350,
     "Item_Conjure_Food": 5349,
     "MIN_FOOD%": 50,
-    "MIN_WATER%": 30,
+    "MIN_WATER%": 50,
     "MIN_MANA_SPELL%": 50
   },
   "Pull": {
@@ -35,7 +35,10 @@
       },
       {
         "Name": "Approach",
-        "Log": false
+        "Requirements": [
+          "!Casting",
+          "!Shooting"
+        ]
       }
     ]
   },
@@ -74,6 +77,13 @@
         "Requirements": [
           "!HasRangedWeapon",
           "!AutoAttacking"
+        ]
+      },
+      {
+        "Name": "Approach",
+        "Requirements": [
+          "!Casting",
+          "AutoAttacking"
         ]
       }
     ]
@@ -126,21 +136,21 @@
   "NPC": {
     "Sequence": [
       {
+        "Cost": 6,
         "Name": "Repair",
         "Key": "C",
         "Requirement": "Durability% < 35",
-        "PathFilename": "5_Gnome_Vendor.json",
-        "Cost": 6
+        "PathFilename": "5_Gnome_Vendor.json"
       },
       {
+        "Cost": 6,
         "Name": "Sell",
         "Key": "C",
         "Requirements": [
           "BagFull",
           "BagGreyItem"
         ],
-        "PathFilename": "5_Gnome_Vendor.json",
-        "Cost": 6
+        "PathFilename": "5_Gnome_Vendor.json"
       }
     ]
   }

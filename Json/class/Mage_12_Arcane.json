@@ -19,7 +19,10 @@
         "Name": "Frostbolt",
         "Key": "1",
         "HasCastBar": true,
-        "Requirement": "SpellInRange:3"
+        "Requirements": [
+          "SpellInRange:3",
+          "Mana% > MIN_MANA_SPELL%"
+        ]
       },
       {
         "Name": "Shoot",
@@ -30,6 +33,13 @@
           "!Shooting",
           "SpellInRange:1",
           "Mana% < MIN_MANA_SPELL%"
+        ]
+      },
+      {
+        "Name": "Approach",
+        "Requirements": [
+          "!Casting",
+          "!Shooting"
         ]
       }
     ]
@@ -72,7 +82,8 @@
         "Requirements": [
           "HasRangedWeapon",
           "!Shooting",
-          "SpellInRange:1"
+          "SpellInRange:1",
+          "Mana% < MIN_MANA_SPELL%"
         ]
       },
       {
@@ -80,6 +91,13 @@
         "Requirements": [
           "!HasRangedWeapon",
           "!AutoAttacking"
+        ]
+      },
+      {
+        "Name": "Approach",
+        "Requirements": [
+          "!Casting",
+          "!Shooting"
         ]
       }
     ]
