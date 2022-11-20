@@ -6,7 +6,10 @@
   "PathReduceSteps": false,
   "IntVariables": {
     "Item_Conjure_Drink": 2288,
-    "Item_Conjure_Food": 1113
+    "Item_Conjure_Food": 1113,
+    "MIN_FOOD%": 50,
+    "MIN_WATER%": 30,
+    "MIN_MANA_SPELL%": 60
   },
   "Pull": {
     "Sequence": [
@@ -14,7 +17,28 @@
         "Name": "Frostbolt",
         "Key": "1",
         "HasCastBar": true,
-        "Requirement": "SpellInRange:3"
+        "Requirements": [
+          "SpellInRange:3",
+          "Mana% > MIN_MANA_SPELL%"
+        ]
+      },
+      {
+        "Name": "Shoot",
+        "Key": "0",
+        "Item": true,
+        "Requirements": [
+          "HasRangedWeapon",
+          "!Shooting",
+          "SpellInRange:1",
+          "Mana% < MIN_MANA_SPELL%"
+        ]
+      },
+      {
+        "Name": "Approach",
+        "Requirements": [
+          "!Casting",
+          "!Shooting"
+        ]
       }
     ]
   },
@@ -25,7 +49,7 @@
         "Key": "5",
         "WhenUsable": true,
         "Requirements": [
-          "TargetHealth%<45",
+          "TargetHealth% < 45",
           "SpellInRange:4"
         ]
       },
@@ -41,7 +65,8 @@
         "HasCastBar": true,
         "Key": "2",
         "Requirements": [
-          "TargetHealth%>35"
+          "TargetHealth% > 35",
+          "Mana% > MIN_MANA_SPELL%"
         ]
       },
       {
@@ -50,15 +75,23 @@
         "Item": true,
         "Requirements": [
           "HasRangedWeapon",
-          "not Shooting",
-          "SpellInRange:1"
+          "!Shooting",
+          "SpellInRange:1",
+          "Mana% < MIN_MANA_SPELL%"
         ]
       },
       {
         "Name": "AutoAttack",
         "Requirements": [
-          "not HasRangedWeapon",
-          "not AutoAttacking"
+          "!HasRangedWeapon",
+          "!AutoAttacking"
+        ]
+      },
+      {
+        "Name": "Approach",
+        "Requirements": [
+          "!Casting",
+          "!Shooting"
         ]
       }
     ]
@@ -68,12 +101,12 @@
       {
         "Name": "Food",
         "Key": "=",
-        "Requirement": "Health%<60"
+        "Requirement": "Health% < MIN_FOOD%"
       },
       {
         "Name": "Drink",
         "Key": "-",
-        "Requirement": "Mana%<60"
+        "Requirement": "Mana% < MIN_WATER%"
       }
     ]
   },
@@ -82,18 +115,18 @@
       {
         "Name": "Frost Armor",
         "Key": "3",
-        "Requirement": "not Frost Armor"
+        "Requirement": "!Frost Armor"
       },
       {
         "Name": "Arcane Intellect",
         "Key": "4",
-        "Requirement": "not Arcane Intellect"
+        "Requirement": "!Arcane Intellect"
       },
       {
         "Name": "Conjure Drink",
         "Key": "9",
         "HasCastBar": true,
-        "Requirement": "not BagItem:Item_Conjure_Drink:4",
+        "Requirement": "!BagItem:Item_Conjure_Drink:4",
         "AfterCastWaitCastbar": true,
         "AfterCastWaitBag": true
       },
@@ -101,7 +134,7 @@
         "Name": "Conjure Food",
         "Key": "8",
         "HasCastBar": true,
-        "Requirement": "not BagItem:Item_Conjure_Food:4",
+        "Requirement": "!BagItem:Item_Conjure_Food:4",
         "AfterCastWaitCastbar": true,
         "AfterCastWaitBag": true
       }
@@ -110,21 +143,21 @@
   "NPC": {
     "Sequence": [
       {
+        "Cost": 6,
         "Name": "Repair",
         "Key": "C",
         "Requirement": "Durability% < 35",
-        "PathFilename": "10_Gnome_Vendor.json",
-        "Cost": 6
+        "PathFilename": "10_Gnome_Vendor.json"
       },
       {
+        "Cost": 6,
         "Name": "Sell",
         "Key": "C",
         "Requirements": [
           "BagFull",
           "BagGreyItem"
         ],
-        "PathFilename": "10_Gnome_Vendor.json",
-        "Cost": 6
+        "PathFilename": "10_Gnome_Vendor.json"
       }
     ]
   }

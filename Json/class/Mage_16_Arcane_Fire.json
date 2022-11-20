@@ -6,15 +6,39 @@
   "PathReduceSteps": false,
   "IntVariables": {
     "Item_Conjure_Drink": 2288,
-    "Item_Conjure_Food": 1113
+    "Item_Conjure_Food": 1113,
+    "MIN_FOOD%": 50,
+    "MIN_WATER%": 30,
+    "MIN_MANA_SPELL%": 60
   },
   "Pull": {
     "Sequence": [
       {
         "Name": "Frostbolt",
-        "HasCastBar": true,
         "Key": "1",
-        "Requirement": "SpellInRange:3"
+        "HasCastBar": true,
+        "Requirements": [
+          "SpellInRange:3",
+          "Mana% > MIN_MANA_SPELL%"
+        ]
+      },
+      {
+        "Name": "Shoot",
+        "Key": "0",
+        "Item": true,
+        "Requirements": [
+          "HasRangedWeapon",
+          "!Shooting",
+          "SpellInRange:1",
+          "Mana% < MIN_MANA_SPELL%"
+        ]
+      },
+      {
+        "Name": "Approach",
+        "Requirements": [
+          "!Casting",
+          "!Shooting"
+        ]
       }
     ]
   },
@@ -38,9 +62,12 @@
       },
       {
         "Name": "Fireball",
-        "Key": "2",
         "HasCastBar": true,
-        "Requirement": "not InMeleeRange"
+        "Key": "2",
+        "Requirements": [
+          "TargetHealth% > 35",
+          "Mana% > MIN_MANA_SPELL%"
+        ]
       },
       {
         "Name": "Arcane Missiles",
@@ -48,7 +75,8 @@
         "HasCastBar": true,
         "Requirements": [
           "SpellInRange:3",
-          "InMeleeRange"
+          "InMeleeRange",
+          "Mana% > MIN_MANA_SPELL%"
         ]
       },
       {
@@ -57,15 +85,23 @@
         "Item": true,
         "Requirements": [
           "HasRangedWeapon",
-          "not Shooting",
-          "SpellInRange:1"
+          "!Shooting",
+          "SpellInRange:1",
+          "Mana% < MIN_MANA_SPELL%"
         ]
       },
       {
         "Name": "AutoAttack",
         "Requirements": [
-          "not HasRangedWeapon",
-          "not AutoAttacking"
+          "!HasRangedWeapon",
+          "!AutoAttacking"
+        ]
+      },
+      {
+        "Name": "Approach",
+        "Requirements": [
+          "!Casting",
+          "!Shooting"
         ]
       }
     ]
@@ -75,12 +111,12 @@
       {
         "Name": "Food",
         "Key": "=",
-        "Requirement": "Health%<90"
+        "Requirement": "Health% < MIN_FOOD%"
       },
       {
         "Name": "Drink",
         "Key": "-",
-        "Requirement": "Mana%<90"
+        "Requirement": "Mana% < MIN_WATER%"
       }
     ]
   },
@@ -89,18 +125,18 @@
       {
         "Name": "Frost Armor",
         "Key": "3",
-        "Requirement": "not Frost Armor"
+        "Requirement": "!Frost Armor"
       },
       {
         "Name": "Arcane Intellect",
         "Key": "4",
-        "Requirement": "not Arcane Intellect"
+        "Requirement": "!Arcane Intellect"
       },
       {
         "Name": "Conjure Drink",
         "Key": "9",
         "HasCastBar": true,
-        "Requirement": "not BagItem:Item_Conjure_Drink:4",
+        "Requirement": "!BagItem:Item_Conjure_Drink:4",
         "AfterCastWaitCastbar": true,
         "AfterCastWaitBag": true
       },
@@ -108,7 +144,7 @@
         "Name": "Conjure Food",
         "Key": "8",
         "HasCastBar": true,
-        "Requirement": "not BagItem:Item_Conjure_Food:4",
+        "Requirement": "!BagItem:Item_Conjure_Food:4",
         "AfterCastWaitCastbar": true,
         "AfterCastWaitBag": true
       }

@@ -35,7 +35,10 @@
       },
       {
         "Name": "Approach",
-        "Log": false
+        "Requirements": [
+          "!Casting",
+          "!Shooting"
+        ]
       }
     ]
   },
@@ -73,7 +76,8 @@
         "Requirements": [
           "HasRangedWeapon",
           "!Shooting",
-          "SpellInRange:1"
+          "SpellInRange:1",
+          "Mana% < MIN_MANA_SPELL%"
         ]
       },
       {
@@ -81,6 +85,13 @@
         "Requirements": [
           "!HasRangedWeapon",
           "!AutoAttacking"
+        ]
+      },
+      {
+        "Name": "Approach",
+        "Requirements": [
+          "!Casting",
+          "!Shooting"
         ]
       }
     ]
@@ -132,21 +143,21 @@
   "NPC": {
     "Sequence": [
       {
+        "Cost": 6,
         "Name": "Repair",
         "Key": "C",
         "Requirement": "Durability% < 35",
-        "PathFilename": "10_Gnome_Vendor.json",
-        "Cost": 6
+        "PathFilename": "10_Gnome_Vendor.json"
       },
       {
+        "Cost": 6,
         "Name": "Sell",
         "Key": "C",
         "Requirements": [
           "BagFull",
           "BagGreyItem"
         ],
-        "PathFilename": "10_Gnome_Vendor.json",
-        "Cost": 6
+        "PathFilename": "10_Gnome_Vendor.json"
       }
     ]
   }

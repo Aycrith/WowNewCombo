@@ -9,7 +9,10 @@
   "PathReduceSteps": true,
   "IntVariables": {
     "Item_Conjure_Drink": 8078,
-    "Item_Conjure_Food": 8076
+    "Item_Conjure_Food": 8076,
+    "MIN_FOOD%": 50,
+    "MIN_WATER%": 50,
+    "MIN_MANA_SPELL%": 60
   },
   "Pull": {
     "Sequence": [
@@ -17,13 +20,16 @@
         "Name": "Ice Barrier",
         "Key": "7",
         "WhenUsable": true,
-        "Requirement": "not Ice Barrier"
+        "Requirement": "!Ice Barrier"
       },
       {
         "Name": "Frostbolt",
-        "HasCastBar": true,
         "Key": "1",
-        "Requirement": "MaxRange<36"
+        "HasCastBar": true,
+        "Requirements": [
+          "SpellInRange:3",
+          "Mana% > MIN_MANA_SPELL%"
+        ]
       }
     ]
   },
@@ -34,15 +40,15 @@
         "Key": "7",
         "Cooldown": 30000,
         "WhenUsable": true,
-        "Requirement": "not Ice Barrier"
+        "Requirement": "!Ice Barrier"
       },
       {
         "Name": "Cone of Cold",
         "Key": "N8",
         "Cooldown": 10000,
         "Requirements": [
-          "TargetHealth%>2",
-          "TargetHealth%<20",
+          "TargetHealth% > 2",
+          "TargetHealth% < 20",
           "InMeleeRange"
         ]
       },
@@ -51,8 +57,8 @@
         "Key": "5",
         "Cooldown": 8000,
         "Requirements": [
-          "TargetHealth%>2",
-          "TargetHealth%<20",
+          "TargetHealth% > 2",
+          "TargetHealth% < 20",
           "SpellInRange:4"
         ]
       },
@@ -69,21 +75,20 @@
       },
       {
         "Name": "Frostbolt",
-        "HasCastBar": true,
         "Key": "1",
+        "HasCastBar": true,
         "Requirements": [
-          "MaxRange>31",
-          "MaxRange<36"
+          "SpellInRange:3"
         ]
       },
       {
         "Name": "Arcane Missiles",
+        "Key": "2",
         "HasCastBar": true,
         "Requirements": [
-          "MaxRange<30",
+          "SpellInRange:3",
           "TargetHealth%>30"
-        ],
-        "Key": "2"
+        ]
       },
       {
         "Name": "Shoot",
@@ -91,8 +96,23 @@
         "Item": true,
         "Requirements": [
           "HasRangedWeapon",
-          "not Shooting",
-          "SpellInRange:1"
+          "!Shooting",
+          "SpellInRange:1",
+          "Mana% < MIN_MANA_SPELL%"
+        ]
+      },
+      {
+        "Name": "AutoAttack",
+        "Requirements": [
+          "!HasRangedWeapon",
+          "!AutoAttacking"
+        ]
+      },
+      {
+        "Name": "Approach",
+        "Requirements": [
+          "!Casting",
+          "!Shooting"
         ]
       }
     ]
@@ -102,12 +122,12 @@
       {
         "Name": "Food",
         "Key": "N1",
-        "Requirement": "Health%<50"
+        "Requirement": "Health% < MIN_FOOD%"
       },
       {
         "Name": "Drink",
         "Key": "N2",
-        "Requirement": "Mana%<50"
+        "Requirement": "Mana% < MIN_WATER%"
       }
     ]
   },
@@ -126,19 +146,19 @@
       {
         "Name": "Ice Armor",
         "Key": "3",
-        "Requirement": "not Frost Armor"
+        "Requirement": "!Frost Armor"
       },
       {
         "Name": "Arcane Intellect",
         "Key": "4",
-        "Requirement": "not Arcane Intellect",
+        "Requirement": "!Arcane Intellect",
         "Log": false
       },
       {
         "Name": "Conjure Drink",
         "HasCastBar": true,
         "Key": "9",
-        "Requirement": "not BagItem:Item_Conjure_Drink:4",
+        "Requirement": "!BagItem:Item_Conjure_Drink:4",
         "AfterCastWaitCastbar": true,
         "AfterCastWaitBag": true
       },
@@ -146,7 +166,7 @@
         "Name": "Conjure Food",
         "HasCastBar": true,
         "Key": "8",
-        "Requirement": "not BagItem:Item_Conjure_Food:4",
+        "Requirement": "!BagItem:Item_Conjure_Food:4",
         "AfterCastWaitCastbar": true,
         "AfterCastWaitBag": true
       }
