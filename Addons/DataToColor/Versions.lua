@@ -40,6 +40,7 @@ if DataToColor.IsClassic() then
   LibClassicCasterino = _G.LibStub("LibClassicCasterino")
 end
 
+local Som140 = DataToColor.IsClassic() and select(4, GetBuildInfo()) == 11400
 local TBC253 = DataToColor.IsClassic_BCC() and select(4, GetBuildInfo()) >= 20503
 local Wrath340 = DataToColor.IsClassic_BCC() and select(4, GetBuildInfo()) >= 30400
 
@@ -59,9 +60,14 @@ end
 
 if DataToColor.IsRetail() or TBC253 or DataToColor.IsClassic_Wrath() then
   DataToColor.UnitCastingInfo = UnitCastingInfo
-elseif DataToColor.IsClassic_BCC() then
+elseif Som140 then
   DataToColor.UnitCastingInfo = function(unit)
     local name, text, texture, startTimeMS, endTimeMS, isTradeSkill, castID, spellId = UnitCastingInfo(unit)
+    return name, text, texture, startTimeMS, endTimeMS, isTradeSkill, castID, nil, spellId
+  end
+elseif DataToColor.IsClassic_BCC() or DataToColor.IsClassic() then
+  DataToColor.UnitCastingInfo = function(unit)
+    local name, text, texture, startTimeMS, endTimeMS, isTradeSkill, castID, interrupt, spellId = UnitCastingInfo(unit)
     return name, text, texture, startTimeMS, endTimeMS, isTradeSkill, castID, nil, spellId
   end
 else
@@ -76,9 +82,14 @@ end
 
 if DataToColor.IsRetail() or TBC253 or DataToColor.IsClassic_Wrath() then
   DataToColor.UnitChannelInfo = UnitChannelInfo
-elseif DataToColor.IsClassic_BCC() then
+elseif Som140 then
   DataToColor.UnitChannelInfo = function(unit)
     local name, text, texture, startTimeMS, endTimeMS, isTradeSkill, spellId = UnitChannelInfo(unit)
+    return name, text, texture, startTimeMS, endTimeMS, isTradeSkill, nil, spellId
+  end
+elseif DataToColor.IsClassic_BCC() or DataToColor.IsClassic() then
+  DataToColor.UnitChannelInfo = function(unit)
+    local name, text, texture, startTimeMS, endTimeMS, isTradeSkill, interrupt, spellId = UnitChannelInfo(unit)
     return name, text, texture, startTimeMS, endTimeMS, isTradeSkill, nil, spellId
   end
 else
