@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+
 using Newtonsoft.Json;
+
 using SharedLib;
 
 namespace Core.Database
@@ -11,8 +13,12 @@ namespace Core.Database
 
         public CreatureDB(DataConfig dataConfig)
         {
-            var creatures = JsonConvert.DeserializeObject<List<Creature>>(File.ReadAllText(Path.Join(dataConfig.ExpDbc, "creatures.json")));
-            creatures.ForEach(i => Entries.Add(i.Entry, i));
+            var creatures = JsonConvert.DeserializeObject<Creature[]>(File.ReadAllText(Path.Join(dataConfig.ExpDbc, "creatures.json")));
+
+            for (int i = 0; i < creatures.Length; i++)
+            {
+                Entries.Add(creatures[i].Entry, creatures[i]);
+            }
         }
 
     }
