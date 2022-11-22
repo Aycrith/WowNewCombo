@@ -75,7 +75,7 @@ namespace Core
             input.Mount();
 
             (bool t, double e) =
-                wait.Until(CastingHandler.SpellQueueTimeMs + playerReader.NetworkLatency.Value, CastDetected);
+                wait.Until(CastingHandler.SPELL_QUEUE + playerReader.NetworkLatency.Value, CastDetected);
             Log($"Cast started ? {!t} {e}ms");
 
             if (!playerReader.Bits.IsMounted())
@@ -89,7 +89,7 @@ namespace Core
                 if (!HasValidTarget())
                 {
                     (t, e) =
-                        wait.Until(CastingHandler.SpellQueueTimeMs + playerReader.NetworkLatency.Value, playerReader.Bits.IsMounted);
+                        wait.Until(CastingHandler.SPELL_QUEUE + playerReader.NetworkLatency.Value, playerReader.Bits.IsMounted);
 
                     Log($"Mounted ? {playerReader.Bits.IsMounted()} {e}ms");
                 }

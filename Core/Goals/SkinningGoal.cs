@@ -187,7 +187,7 @@ namespace Core.Goals
                 int remainMs = playerReader.RemainCastMs;
                 playerReader.LastUIError = 0;
 
-                int waitTime = remainMs + CastingHandler.SpellQueueHalfMs + playerReader.NetworkLatency.Value;
+                int waitTime = remainMs + playerReader.SpellQueueTimeMs + playerReader.NetworkLatency.Value;
                 Log($"Waiting for {(herbalism ? "Herb Gathering" : "Skinning")} castbar to end! {waitTime}ms");
 
                 (t, e) = wait.Until(waitTime, herbalism ? HerbalismCastEnded : SkinningCastEnded);

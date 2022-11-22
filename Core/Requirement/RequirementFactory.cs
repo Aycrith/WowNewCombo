@@ -321,9 +321,7 @@ namespace Core
                 { "MainHandSpeed", playerReader.MainHandSpeedMs },
                 { "MainHandSwing", () => Math.Clamp(playerReader.MainHandSwing.ElapsedMs() - playerReader.MainHandSpeedMs(), -playerReader.MainHandSpeedMs(), 0) },
                 { "CurGCD", playerReader.GCD._Value },
-                { "GCD", CastingHandler._GCD },
-                { "SpellQueueTime", CastingHandler._SpellQueueTime },
-                { "NextSpell", CastingHandler._NextSpell },
+                { "GCD", CastingHandler._GCD }
             };
         }
 
@@ -742,7 +740,7 @@ namespace Core
 
         private bool UsableGCD(string key)
         {
-            return intVariables[key]() <= CastingHandler.SpellQueueTimeMs - playerReader.NetworkLatency.Value;
+            return intVariables[key]() <= CastingHandler.SPELL_QUEUE - playerReader.NetworkLatency.Value;
         }
 
         private Requirement CreateTargetCastingSpell(string requirement)

@@ -10,6 +10,8 @@ namespace Core
         private readonly IAddonDataProvider reader;
         private readonly WorldMapAreaDB worldMapAreaDB;
 
+        public int SpellQueueTimeMs { get; set; } = 400;
+
         public PlayerReader(IAddonDataProvider reader, WorldMapAreaDB mapAreaDB)
         {
             this.worldMapAreaDB = mapAreaDB;

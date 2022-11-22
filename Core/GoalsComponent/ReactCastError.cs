@@ -97,7 +97,7 @@ namespace Core
 
                             int duration = CastingHandler.GCD;
                             if (playerReader.MinRange() <= 5)
-                                duration = CastingHandler.SpellQueueTimeMs;
+                                duration = CastingHandler.SPELL_QUEUE;
 
                             (bool t, double e) = wait.Until(duration,
                                 () => minRange != playerReader.MinRange() || playerReader.IsTargetCasting()

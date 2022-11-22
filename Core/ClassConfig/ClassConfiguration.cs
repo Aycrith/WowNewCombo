@@ -37,6 +37,8 @@ namespace Core
         public bool AllowPvP { get; set; }
         public bool AutoPetAttack { get; set; } = true;
 
+        public bool SpellQueue { get; set; } = true;
+
         public string PathFilename { get; set; } = string.Empty;
 
         public string? OverridePathFilename { get; set; } = string.Empty;
@@ -123,6 +125,9 @@ namespace Core
 
         public void Initialise(DataConfig dataConfig, AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger, string? overridePathProfileFile)
         {
+            if (!SpellQueue)
+                logger.LogWarning($"[{nameof(ClassConfiguration)}] {nameof(SpellQueue)} is disabled!");
+
             requirementFactory.InitUserDefinedIntVariables(IntVariables, addonReader.PlayerBuffTimeReader, addonReader.TargetDebuffTimeReader, addonReader.TargetBuffTimeReader);
 
             Jump.Key = JumpKey;
