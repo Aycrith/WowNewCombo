@@ -1,5 +1,7 @@
 ﻿using System;
+
 using Core.Database;
+
 using SharedLib;
 
 namespace Core
@@ -32,31 +34,24 @@ namespace Core
         public void Read(IAddonDataProvider reader)
         {
             int index = reader.GetInt(cSlotNum);
-            if (index < MAX_EQUIPMENT_COUNT && index >= 0)
-            {
-                int itemId = reader.GetInt(cItemId);
-                bool changed = equipmentIds[index] != itemId;
+            if (index >= MAX_EQUIPMENT_COUNT)
+                return;
 
-                equipmentIds[index] = itemId;
+            int itemId = reader.GetInt(cItemId);
+            bool changed = equipmentIds[index] != itemId;
 
-                if (changed)
-                {
-                    if (itemId == 0)
-                    {
-                        Items[index] = ItemDB.EmptyItem;
-                    }
-                    else if (itemDB.Items.TryGetValue(itemId, out Item item))
-                    {
-                        Items[index] = item;
-                    }
-                    else
-                    {
-                        Items[index] = new Item() { Entry = itemId, Name = "Unknown" };
-                    }
+            if (!changed)
+                return;
 
-                    OnEquipmentChanged?.Invoke(this, (index, itemId));
-                }
-            }
+            equipmentIds[index] = itemId;
+
+            Items[index] = itemId == 0
+                ? ItemDB.EmptyItem
+                : itemDB.Items.TryGetValue(itemId, out Item item)
+                    ? item
+                    : new Item() { Entry = itemId, Name = "Unknown" };
+
+            OnEquipmentChanged?.Invoke(this, (index, itemId));
         }
 
         public string ToStringList()
