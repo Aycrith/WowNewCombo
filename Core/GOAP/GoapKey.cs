@@ -32,7 +32,7 @@
 
     public static class GoapKey_Extension
     {
-        private static readonly string unknown = "Unknown";
+        private const string unknown = "Unknown";
 
         private static string ToStringTrue(GoapKey value) => value switch
         {
