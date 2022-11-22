@@ -309,7 +309,7 @@ function DataToColor:InitUpdateQueues()
 end
 
 function DataToColor:InitEquipmentQueue()
-    for eqNum = 1, 23 do
+    for eqNum = 0, 23 do
         DataToColor.equipmentQueue:push(eqNum)
     end
 end
@@ -534,8 +534,8 @@ function DataToColor:CreateFrames(n)
                 end
 
                 -- 23 24
-                local equipmentSlot = DataToColor.equipmentQueue:shift()
-                Pixel(int, equipmentSlot or 0, 23)
+                local equipmentSlot = DataToColor.equipmentQueue:shift() or 0
+                Pixel(int, equipmentSlot, 23)
                 Pixel(int, DataToColor:equipSlotItemId(equipmentSlot), 24)
                 --DataToColor:Print("equipmentQueue ", equipmentSlot, " -> ", itemId)
             end
