@@ -367,6 +367,7 @@ Take a look at the class files in `/Json/class` for examples of what you can do.
 | `"PathFilename"` | [Path](#Path) to use while alive | **false** | `""` |
 | `"PathThereAndBack"` | While using the path, [should go start to and reverse](#There-and-back) | true | `true` |
 | `"PathReduceSteps"` | Reduce the number of path points | true | `false` |
+| `"SpellQueue"` | Should anticipate the next possible cast action within the [SpellQueue Window](http://thedefiantguild.com/forums/discussion/15431.html) | true | `false` |
 | `"Mode"` | What kind of [behaviour](#Modes) should the bot operate | true | `Mode.Grind` |
 | `"NPCMaxLevels_Above"` | Maximum allowed level above difference to the player | true | `1` |
 | `"NPCMaxLevels_Below"` | Maximum allowed level below difference to the player | true | `7` |
@@ -873,8 +874,6 @@ Formula: `[Keyword] [Operator] [Numeric integer value]`
 | `Debuff_{IntVariable_Name}` | Returns the given `{IntVariable_Name}` remaining target debuff up time |
 | `CurGCD` | Returns the player current remaining GCD time |
 | `GCD` | Alias for `1500` value |
-| `SpellQueueTime` | Alias for `400` value |
-| `NextSpell` | Alias for `1900` value |
 
 For the `MinRange` and `MaxRange` gives an approximation range distance between the player and target.
 

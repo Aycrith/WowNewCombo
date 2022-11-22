@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 
 using System;
-using System.Threading;
 
 namespace Core.Goals
 {
@@ -24,8 +23,7 @@ namespace Core.Goals
 
         public const int GCD = 1500;
         public const int MIN_GCD = 1000;
-        public const int SpellQueueTimeMs = 400;
-        public const int SpellQueueHalfMs = SpellQueueTimeMs / 2;
+        public const int SPELL_QUEUE = 400;
 
         private const int MAX_WAIT_MELEE_RANGE = 10_000;
 
@@ -33,11 +31,9 @@ namespace Core.Goals
         public bool SpellInQueue() => DateTime.UtcNow < SpellQueueOpen;
 
         public static int _GCD() => GCD;
-        public static int _SpellQueueTime() => SpellQueueTimeMs;
-
-        public static int _NextSpell() => GCD + SpellQueueTimeMs;
 
         public CastingHandler(ILogger logger, ConfigurableInput input,
+            ClassConfiguration classConfiguration,
             Wait wait, AddonReader addonReader, PlayerDirection direction,
             StopMoving stopMoving, ReactCastError react)
         {
@@ -53,6 +49,9 @@ namespace Core.Goals
             this.stopMoving = stopMoving;
 
             this.react = react;
+
+            if (!classConfiguration.SpellQueue)
+                playerReader.SpellQueueTimeMs = 0;
         }
 
         private int PressKeyAction(KeyAction item)
@@ -112,19 +111,19 @@ namespace Core.Goals
             {
                 (t, e) = wait.Until(playerReader.MainHandSpeedMs() + playerReader.NetworkLatency.Value,
                     interrupt: () => !addonReader.CurrentAction.Is(item) ||
-                        playerReader.MainHandSwing.ElapsedMs() < SpellQueueTimeMs, // swing timer reset from any miss
+                        playerReader.MainHandSwing.ElapsedMs() < playerReader.SpellQueueTimeMs, // swing timer reset from any miss
                     repeat: input.ApproachOnCooldown);
             }
             else if (item.Item)
             {
-                (t, e) = wait.Until(SpellQueueTimeMs + playerReader.NetworkLatency.Value,
+                (t, e) = wait.Until(SPELL_QUEUE + playerReader.NetworkLatency.Value,
                     interrupt: () =>
                         beforeUsable != addonReader.UsableAction.Is(item) ||
                         addonReader.CurrentAction.Is(item));
             }
             else
             {
-                (t, e) = wait.Until(SpellQueueTimeMs + playerReader.NetworkLatency.Value,
+                (t, e) = wait.Until(SPELL_QUEUE + playerReader.NetworkLatency.Value,
                     interrupt: () =>
                     (beforeSpellId != playerReader.CastSpellId.Value &&
                     beforeCastEventValue != playerReader.CastEvent.Value) ||
@@ -184,7 +183,7 @@ namespace Core.Goals
                 return true;
             }
 
-            (bool t, double e) = wait.Until(SpellQueueTimeMs + playerReader.NetworkLatency.Value,
+            (bool t, double e) = wait.Until(SPELL_QUEUE + playerReader.NetworkLatency.Value,
                 interrupt: () =>
                 beforeCastEventValue != playerReader.CastEvent.Value ||
                 beforeSpellId != playerReader.CastSpellId.Value ||
@@ -214,7 +213,7 @@ namespace Core.Goals
             {
                 if (playerReader.IsCasting())
                 {
-                    int remainMs = playerReader.RemainCastMs - SpellQueueTimeMs;
+                    int remainMs = playerReader.RemainCastMs - playerReader.SpellQueueTimeMs;
                     if (Log && item.Log)
                         LogVisibleAfterCastWaitCastbar(logger, item.Name, remainMs);
 
@@ -231,11 +230,11 @@ namespace Core.Goals
                 {
                     beforeCastEventValue = playerReader.CastEvent.Value;
 
-                    int remain = playerReader.RemainCastMs - SpellQueueTimeMs;
+                    int remainMs = playerReader.RemainCastMs - playerReader.SpellQueueTimeMs;
                     if (Log && item.Log)
-                        LogHiddenAfterCastWaitCastbar(logger, item.Name, remain);
+                        LogHiddenAfterCastWaitCastbar(logger, item.Name, remainMs);
 
-                    wait.Until(remain, () => beforeCastEventValue != playerReader.CastEvent.Value || interrupt(), RepeatPetAttack);
+                    wait.Until(remainMs, () => beforeCastEventValue != playerReader.CastEvent.Value || interrupt(), RepeatPetAttack);
                     if (interrupt())
                     {
                         if (Log && item.Log)
@@ -354,7 +353,7 @@ namespace Core.Goals
 
             if (item.AfterCastWaitBuff)
             {
-                int totalTime = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs) + SpellQueueTimeMs;
+                int totalTime = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs) + playerReader.SpellQueueTimeMs;
 
                 (t, e) = wait.Until(totalTime, () =>
                     auraHash != playerReader.AuraCount.Hash ||
@@ -370,7 +369,7 @@ namespace Core.Goals
             {
                 wait.Update();
 
-                int delay = Math.Max(playerReader.RemainCastMs, item.Item ? 0 : playerReader.LastCastGCD) + SpellQueueTimeMs;
+                int delay = Math.Max(playerReader.RemainCastMs, item.Item ? 0 : playerReader.LastCastGCD) + playerReader.SpellQueueTimeMs;
 
                 if (Log && item.Log)
                     LogAfterCastAuraExpected(logger, item.Name, delay);
@@ -380,7 +379,7 @@ namespace Core.Goals
 
             if (item.AfterCastWaitBag)
             {
-                int totalTime = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs) + SpellQueueTimeMs;
+                int totalTime = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs) + playerReader.SpellQueueTimeMs;
 
                 (t, e) = wait.Until(totalTime, () => bagHash != addonReader.BagReader.Hash || Interrupt());
                 if (Log && item.Log)
@@ -427,7 +426,7 @@ namespace Core.Goals
                     int waitAmount = playerReader.GCD.Value;
                     if (waitAmount == 0)
                     {
-                        waitAmount = MIN_GCD - SpellQueueTimeMs;
+                        waitAmount = MIN_GCD - playerReader.SpellQueueTimeMs;
                     }
                     (t, e) = wait.Until(waitAmount, Interrupt);
                 }
@@ -478,7 +477,7 @@ namespace Core.Goals
             int duration = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs);
 
             if (spellQueue)
-                duration -= (SpellQueueTimeMs - playerReader.NetworkLatency.Value + playerReader.NetworkLatency.Value); //+ playerReader.NetworkLatency.Value
+                duration -= (playerReader.SpellQueueTimeMs - playerReader.NetworkLatency.Value + playerReader.NetworkLatency.Value); //+ playerReader.NetworkLatency.Value
 
             if (duration <= 0)
                 return true;
@@ -498,13 +497,13 @@ namespace Core.Goals
             if (SpellInQueue() && !forced)
             {
                 durationMs = Math.Max(playerReader.LastCastGCD, playerReader.RemainCastMs)
-                    - SpellQueueTimeMs
+                    - playerReader.SpellQueueTimeMs
                     + playerReader.NetworkLatency.Value;
             }
             else
             {
                 durationMs = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs)
-                    - SpellQueueTimeMs
+                    - playerReader.SpellQueueTimeMs
                     + playerReader.NetworkLatency.Value;
             }
 

@@ -20,7 +20,7 @@ namespace Core
         public string Form { get; set; } = string.Empty;
         public Form FormEnum { get; set; } = Core.Form.None;
         public bool FormAction { get; private set; }
-        public float Cooldown { get; set; } = CastingHandler.SpellQueueTimeMs;
+        public float Cooldown { get; set; } = CastingHandler.SPELL_QUEUE;
 
         private int _charge;
         public int Charge { get; set; } = 1;
