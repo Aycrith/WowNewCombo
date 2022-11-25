@@ -331,6 +331,8 @@ function DataToColor:populateActionbarCost(slot)
         id = GetMacroSpell(id)
     end
 
+    local found = false
+
     if id and actionType == DataToColor.C.ActionType.Spell or actionType == DataToColor.C.ActionType.Macro then
         local costTable = GetSpellPowerCost(id)
         if costTable ~= nil then
@@ -340,12 +342,15 @@ function DataToColor:populateActionbarCost(slot)
                     local meta = 100000 * slot + 10000 * order + costInfo.type + offsetEnumPowerType
                     --print(slot, actionType, order, costInfo.type, costInfo.cost, GetSpellLink(id), meta)
                     DataToColor.actionBarCostQueue:set(meta, costInfo.cost)
+                    found = true
                 end
             end
         end
     end
     -- default value mana with zero cost
-    DataToColor.actionBarCostQueue:set(100000 * slot + 10000 + offsetEnumPowerType, 0)
+    if found == false then
+        DataToColor.actionBarCostQueue:set(100000 * slot + 10000 + offsetEnumPowerType, 0)
+    end
 end
 
 function DataToColor:equipSlotItemId(slot)
