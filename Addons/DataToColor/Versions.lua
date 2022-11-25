@@ -101,3 +101,20 @@ else
     end
   end
 end
+
+-- bag changes from 10.0
+
+DataToColor.GetContainerNumSlots = GetContainerNumSlots
+if DataToColor.GetContainerNumSlots == nil then
+  DataToColor.GetContainerNumSlots = C_Container.GetContainerNumSlots
+end
+
+DataToColor.GetContainerItemInfo = GetContainerItemInfo
+if DataToColor.GetContainerItemInfo == nil then
+  DataToColor.GetContainerItemInfo = C_Container.GetContainerItemInfo
+end
+
+DataToColor.GetContainerNumFreeSlots = GetContainerNumFreeSlots
+if DataToColor.GetContainerNumFreeSlots == nil then
+  DataToColor.GetContainerNumFreeSlots = C_Container.GetContainerNumFreeSlots
+end

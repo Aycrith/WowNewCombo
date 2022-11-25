@@ -56,8 +56,8 @@ local UnitHealth = UnitHealth
 local UnitPowerMax = UnitPowerMax
 local UnitPower = UnitPower
 
-local GetContainerNumFreeSlots = GetContainerNumFreeSlots
-local GetContainerItemInfo = GetContainerItemInfo
+local GetContainerNumFreeSlots = DataToColor.GetContainerNumFreeSlots
+local GetContainerItemInfo = DataToColor.GetContainerItemInfo
 local GetRuneCooldown = GetRuneCooldown
 local GetRuneType = GetRuneType
 
@@ -73,7 +73,7 @@ local PowerType = Enum.PowerType
 
 local GetMoney = GetMoney
 
-local GetContainerNumSlots = GetContainerNumSlots
+local GetContainerNumSlots = DataToColor.GetContainerNumSlots
 local GetComboPoints = GetComboPoints
 
 local GetContainerItemLink = GetContainerItemLink
