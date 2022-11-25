@@ -118,3 +118,18 @@ DataToColor.GetContainerNumFreeSlots = GetContainerNumFreeSlots
 if DataToColor.GetContainerNumFreeSlots == nil then
   DataToColor.GetContainerNumFreeSlots = C_Container.GetContainerNumFreeSlots
 end
+
+DataToColor.GetContainerItemLink = GetContainerItemLink
+if DataToColor.GetContainerItemLink == nil then
+  DataToColor.GetContainerItemLink = C_Container.GetContainerItemLink
+end
+
+DataToColor.PickupContainerItem = PickupContainerItem
+if DataToColor.PickupContainerItem == nil then
+  DataToColor.PickupContainerItem = C_Container.PickupContainerItem
+end
+
+DataToColor.UseContainerItem = UseContainerItem
+if DataToColor.UseContainerItem == nil then
+  DataToColor.UseContainerItem = C_Container.UseContainerItem
+end

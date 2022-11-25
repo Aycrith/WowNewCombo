@@ -10,11 +10,11 @@ local UIParent = UIParent
 local C_Timer = C_Timer
 
 local MerchantFrame = MerchantFrame
-local UseContainerItem = UseContainerItem
+local UseContainerItem = DataToColor.UseContainerItem
 
-local GetContainerItemInfo = GetContainerItemInfo
-local GetContainerNumSlots = GetContainerNumSlots
-local GetContainerItemLink = GetContainerItemLink
+local GetContainerItemInfo = DataToColor.GetContainerItemInfo
+local GetContainerNumSlots = DataToColor.GetContainerNumSlots
+local GetContainerItemLink = DataToColor.GetContainerItemLink
 local GetItemInfo = GetItemInfo
 local GetCoinTextureString = GetCoinTextureString
 

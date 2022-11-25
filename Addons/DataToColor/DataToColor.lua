@@ -76,13 +76,13 @@ local GetMoney = GetMoney
 local GetContainerNumSlots = DataToColor.GetContainerNumSlots
 local GetComboPoints = GetComboPoints
 
-local GetContainerItemLink = GetContainerItemLink
-local PickupContainerItem = PickupContainerItem
+local GetContainerItemLink = DataToColor.GetContainerItemLink
+local PickupContainerItem = DataToColor.PickupContainerItem
 local DeleteCursorItem = DeleteCursorItem
 local GetMerchantItemLink = GetMerchantItemLink
 local GetItemInfo = GetItemInfo
 local GetCoinTextureString = GetCoinTextureString
-local UseContainerItem = UseContainerItem
+local UseContainerItem = DataToColor.UseContainerItem
 
 -- initialization
 local globalCounter = 0
