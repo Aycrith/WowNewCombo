@@ -63,27 +63,29 @@ namespace Core
 
             IntPtr hMonitor = MonitorFromWindow(wowScreen.ProcessHwnd, MONITOR_DEFAULTTONULL);
 
+            Result result;
+
             IDXGIFactory1 factory = DXGI.CreateDXGIFactory1<IDXGIFactory1>();
-            adapter = factory.GetAdapter(0);
+            result = factory.EnumAdapters(0, out adapter);
+            if (result == Result.Fail)
+                throw new Exception($"Unable to enumerate adapter! {result.Description}");
 
             int srcIdx = 0;
-            output = adapter.GetOutput(srcIdx);
             do
             {
-                if (output.Description.Monitor == hMonitor)
+                result = adapter.EnumOutputs(srcIdx, out output);
+                if (result == Result.Ok &&
+                    output.Description.Monitor == hMonitor)
+                {
                     break;
+                }
+            } while (result != Result.Fail);
 
-                srcIdx++;
-                output = adapter.GetOutput(srcIdx);
-            } while (output != null);
+            output1 = output.QueryInterface<IDXGIOutput1>();
+            result = D3D11.D3D11CreateDevice(adapter, DriverType.Unknown, DeviceCreationFlags.None, s_featureLevels, out device!);
 
-            output1 = output!.QueryInterface<IDXGIOutput1>();
-            D3D11.D3D11CreateDevice(adapter, DriverType.Unknown, DeviceCreationFlags.None, s_featureLevels, out ID3D11Device? d);
-
-            if (d == null)
-                throw new Exception("device is null");
-
-            device = d;
+            if (result == Result.Fail)
+                throw new Exception($"device is null {result.Description}");
 
             bounds = output1.Description.DesktopCoordinates;
 
