@@ -1,7 +1,7 @@
 using Core.Goals;
 using Core.GOAP;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
+using static Newtonsoft.Json.JsonConvert;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -276,7 +276,7 @@ namespace Core
         {
             string filePath = Path.Join(dataConfig.Class, classFile);
 
-            ClassConfiguration classConfig = JsonConvert.DeserializeObject<ClassConfiguration>(File.ReadAllText(filePath));
+            ClassConfiguration classConfig = DeserializeObject<ClassConfiguration>(File.ReadAllText(filePath))!;
             RequirementFactory requirementFactory = new(logger, AddonReader, npcNameFinder, classConfig.ImmunityBlacklist);
             classConfig.Initialise(dataConfig, AddonReader, requirementFactory, logger, pathFile);
 

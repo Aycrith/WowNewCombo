@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
-using System.IO;
-
-using Newtonsoft.Json;
+using static System.IO.File;
+using static System.IO.Path;
+using static Newtonsoft.Json.JsonConvert;
 
 using SharedLib;
 
@@ -13,7 +13,7 @@ namespace Core.Database
 
         public CreatureDB(DataConfig dataConfig)
         {
-            var creatures = JsonConvert.DeserializeObject<Creature[]>(File.ReadAllText(Path.Join(dataConfig.ExpDbc, "creatures.json")));
+            var creatures = DeserializeObject<Creature[]>(ReadAllText(Join(dataConfig.ExpDbc, "creatures.json")))!;
 
             for (int i = 0; i < creatures.Length; i++)
             {

@@ -1,7 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Newtonsoft.Json;
+
+using static Newtonsoft.Json.JsonConvert;
 
 namespace Core.Session
 {
@@ -23,7 +24,7 @@ namespace Core.Session
         public IEnumerable<GrindSession> Load()
         {
             var sessions = Directory.EnumerateFiles(dataConfig.ExpHistory, "*.json")
-                .Select(file => JsonConvert.DeserializeObject<GrindSession>(File.ReadAllText(file)))
+                .Select(file => DeserializeObject<GrindSession>(File.ReadAllText(file))!)
                 .OrderByDescending(grindingSession => grindingSession.SessionStart)
                 .ToList();
 
@@ -41,7 +42,7 @@ namespace Core.Session
 
         public void Save(GrindSession session)
         {
-            string json = JsonConvert.SerializeObject(session);
+            string json = SerializeObject(session);
             File.WriteAllText(Path.Join(dataConfig.ExpHistory, $"{session.SessionId}.json"), json);
         }
     }

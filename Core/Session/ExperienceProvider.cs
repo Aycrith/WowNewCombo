@@ -1,5 +1,6 @@
-﻿using System.IO;
-using Newtonsoft.Json;
+﻿using static System.IO.Path;
+using static System.IO.File;
+using static Newtonsoft.Json.JsonConvert;
 
 namespace Core.Session
 {
@@ -7,8 +8,8 @@ namespace Core.Session
     {
         public static int[] GetExperienceList(DataConfig dataConfig)
         {
-            var json = File.ReadAllText(Path.Join(dataConfig.ExpExperience, "exp.json"));
-            return JsonConvert.DeserializeObject<int[]>(json);
+            string json = ReadAllText(Join(dataConfig.ExpExperience, "exp.json"));
+            return DeserializeObject<int[]>(json)!;
         }
     }
 }

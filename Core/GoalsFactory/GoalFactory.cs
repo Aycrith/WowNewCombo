@@ -8,7 +8,8 @@ using PPather.Data;
 using SharedLib.NpcFinder;
 using System;
 using System.Collections.Generic;
-using System.IO;
+using static System.IO.Path;
+using static System.IO.File;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
@@ -237,14 +238,14 @@ namespace Core
 
         private static string RelativeFilePath(DataConfig dataConfig, string path)
         {
-            return !path.Contains(dataConfig.Path) ? Path.Join(dataConfig.Path, path) : path;
+            return !path.Contains(dataConfig.Path) ? Join(dataConfig.Path, path) : path;
         }
 
         private static Vector3[] GetPath(ClassConfiguration classConfig, DataConfig dataConfig)
         {
             classConfig.PathFilename = RelativeFilePath(dataConfig, classConfig.PathFilename);
 
-            Vector3[] rawPath = DeserializeObject<Vector3[]>(File.ReadAllText(classConfig.PathFilename));
+            Vector3[] rawPath = DeserializeObject<Vector3[]>(ReadAllText(classConfig.PathFilename))!;
             if (!classConfig.PathReduceSteps)
                 return rawPath;
 
@@ -266,7 +267,7 @@ namespace Core
             if (string.IsNullOrEmpty(keyAction.PathFilename))
                 return Array.Empty<Vector3>();
 
-            return DeserializeObject<Vector3[]>(File.ReadAllText(RelativeFilePath(dataConfig, keyAction.PathFilename)));
+            return DeserializeObject<Vector3[]>(ReadAllText(RelativeFilePath(dataConfig, keyAction.PathFilename)))!;
         }
     }
 }

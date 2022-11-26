@@ -1,5 +1,5 @@
 ﻿using System.IO;
-
+using static Newtonsoft.Json.JsonConvert;
 using Newtonsoft.Json;
 
 namespace Core
@@ -34,7 +34,7 @@ namespace Core
         {
             if (Exists())
             {
-                var loaded = JsonConvert.DeserializeObject<AddonConfig>(File.ReadAllText(AddonConfigMeta.DefaultFileName));
+                var loaded = DeserializeObject<AddonConfig>(File.ReadAllText(AddonConfigMeta.DefaultFileName))!;
                 if (loaded.Version == AddonConfigMeta.Version)
                     return loaded;
             }
@@ -57,7 +57,7 @@ namespace Core
 
         public void Save()
         {
-            File.WriteAllText(AddonConfigMeta.DefaultFileName, JsonConvert.SerializeObject(this));
+            File.WriteAllText(AddonConfigMeta.DefaultFileName, SerializeObject(this));
         }
     }
 }
