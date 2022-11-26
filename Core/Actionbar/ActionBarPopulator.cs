@@ -4,7 +4,7 @@ namespace Core
 {
     public sealed class ActionBarPopulator
     {
-        private class ActionBarSlotItem
+        internal sealed class ActionBarSlotItem
         {
             public string Name { get; }
             public KeyAction KeyAction { get; }

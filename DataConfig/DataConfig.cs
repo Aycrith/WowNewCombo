@@ -1,6 +1,9 @@
-﻿using static System.IO.Path;
+﻿using System.IO;
+
+using static System.IO.Path;
 using static System.IO.File;
 using Newtonsoft.Json;
+using static Newtonsoft.Json.JsonConvert;
 
 public static class DataConfigMeta
 {
@@ -38,9 +41,9 @@ public sealed class DataConfig
 
     public static DataConfig Load()
     {
-        if (Exists(DataConfigMeta.DefaultFileName))
+        if (File.Exists(DataConfigMeta.DefaultFileName))
         {
-            var loaded = JsonConvert.DeserializeObject<DataConfig>(ReadAllText(DataConfigMeta.DefaultFileName));
+            var loaded = DeserializeObject<DataConfig>(ReadAllText(DataConfigMeta.DefaultFileName));
             if (loaded.Version == DataConfigMeta.Version)
                 return loaded;
         }
@@ -50,9 +53,9 @@ public sealed class DataConfig
 
     public static DataConfig Load(string client)
     {
-        if (Exists(DataConfigMeta.DefaultFileName))
+        if (File.Exists(DataConfigMeta.DefaultFileName))
         {
-            var loaded = JsonConvert.DeserializeObject<DataConfig>(ReadAllText(DataConfigMeta.DefaultFileName));
+            var loaded = DeserializeObject<DataConfig>(ReadAllText(DataConfigMeta.DefaultFileName));
             if (loaded.Version == DataConfigMeta.Version)
             {
                 loaded.Exp = client;
@@ -67,7 +70,7 @@ public sealed class DataConfig
 
     private DataConfig Save()
     {
-        WriteAllText(DataConfigMeta.DefaultFileName, JsonConvert.SerializeObject(this));
+        WriteAllText(DataConfigMeta.DefaultFileName, SerializeObject(this));
 
         return this;
     }

@@ -472,11 +472,10 @@ namespace Core
         private void InitPerKeyActionRequirementByKey(KeyAction item, string prefixKey)
         {
             string key = $"{prefixKey}_{item.Name}";
-            if (intVariables.ContainsKey(prefixKey))
-                intVariables.Remove(prefixKey);
+            intVariables.Remove(prefixKey);
 
-            if (intVariables.ContainsKey(key))
-                intVariables.Add(prefixKey, intVariables[key]);
+            if (intVariables.TryGetValue(key, out Func<int>? func))
+                intVariables.Add(prefixKey, func);
         }
 
         private void AddTargetIsCastingRequirement(List<Requirement> list, KeyAction item, PlayerReader playerReader)
