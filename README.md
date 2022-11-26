@@ -147,7 +147,7 @@ Example - [Robot-Medium](https://fonts.google.com/specimen/Roboto?thickness=5) -
 ## 4.1 Build Requirements
 
 * Windows 7 and above
-* [.NET 6.0 SDK](https://dotnet.microsoft.com/download/dotnet/6.0)
+* [.NET 7.0 SDK](https://dotnet.microsoft.com/download/dotnet/7.0)
 * AnyCPU, x86 and x64 build supported. For lower memory usage x86 suggested.
 
 ## 4.2 Build the solution

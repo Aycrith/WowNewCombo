@@ -10,7 +10,7 @@ using Core;
 
 namespace CoreTests
 {
-    class Program
+    sealed class Program
     {
         private static Microsoft.Extensions.Logging.ILogger logger;
 

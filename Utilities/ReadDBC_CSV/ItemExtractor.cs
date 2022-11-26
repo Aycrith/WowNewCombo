@@ -6,7 +6,7 @@ using SharedLib;
 
 namespace ReadDBC_CSV
 {
-    public class ItemExtractor : IExtractor
+    internal sealed class ItemExtractor : IExtractor
     {
         private readonly string path;
 

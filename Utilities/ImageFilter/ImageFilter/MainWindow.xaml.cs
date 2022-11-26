@@ -84,7 +84,7 @@ namespace ImageFilter
 
             graphics.DrawImage(capturer.Bitmap, PointF.Empty);
 
-            if (npcNameFinder.Npcs.Count > 0)
+            if (npcNameFinder.Npcs.Length > 0)
             {
                 graphics.DrawRectangle(whitePen, npcNameFinder.Area);
 

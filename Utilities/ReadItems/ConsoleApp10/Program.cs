@@ -6,9 +6,9 @@ using System.Text.RegularExpressions;
 
 namespace ConsoleApp10
 {
-    internal class Program
+    internal sealed class Program
     {
-        public class Creature
+        internal sealed class Creature
         {
             public int Entry { get; set; }
             public string Name { get; set; }

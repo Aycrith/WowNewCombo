@@ -7,6 +7,7 @@ using System.Net.Http;
 using WowheadDB;
 using System.Numerics;
 using System.Diagnostics;
+using System.Linq;
 
 namespace WowheadDB_Extractor
 {
@@ -125,7 +126,7 @@ namespace WowheadDB_Extractor
             List<Vector2> points = new();
             foreach (var kvp in nodes)
             {
-                points.AddRange(Array.ConvertAll(kvp.Value[0].points.ToArray(), (Vector3 v3) => new Vector2(v3.X, v3.Y)));
+                points.AddRange(Array.ConvertAll(kvp.Value[0].MapCoords.ToArray(), (Vector3 v3) => new Vector2(v3.X, v3.Y)));
             }
 
             GeneticTSPSolver solver = new(points);

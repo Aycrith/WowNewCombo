@@ -5,7 +5,7 @@ using Newtonsoft.Json;
 
 namespace PathMaker
 {
-    class Program
+    internal sealed class Program
     {
         public static string DataPath = "../../../../data/";
 

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
-using System.IO;
-using Newtonsoft.Json;
+using static System.IO.File;
+using static System.IO.Path;
+using static Newtonsoft.Json.JsonConvert;
 using SharedLib;
 
 namespace Core.Database
@@ -11,7 +12,7 @@ namespace Core.Database
 
         public SpellDB(DataConfig dataConfig)
         {
-            Spell[] temp = JsonConvert.DeserializeObject<Spell[]>(File.ReadAllText(Path.Join(dataConfig.ExpDbc, "spells.json")));
+            Spell[] temp = DeserializeObject<Spell[]>(ReadAllText(Join(dataConfig.ExpDbc, "spells.json")))!;
             for (int i = 0; i < temp.Length; i++)
             {
                 Spells.Add(temp[i].Id, temp[i]);
