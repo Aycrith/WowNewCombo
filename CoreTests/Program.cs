@@ -15,6 +15,8 @@ namespace CoreTests
         private static Microsoft.Extensions.Logging.ILogger logger;
 
         private const bool LogSelf = false;
+        private const bool ShowOverlay = false;
+        private const int delay = 150;
 
         public static void Main()
         {
@@ -38,7 +40,7 @@ namespace CoreTests
             NpcNames types = NpcNames.Enemy | NpcNames.Neutral;
             //NpcNames types = NpcNames.Friendly | NpcNames.Neutral;
 
-            using Test_NpcNameFinder test = new(logger, types, true);
+            using Test_NpcNameFinder test = new(logger, types, ShowOverlay);
             int count = 100;
             int i = 0;
 
@@ -58,7 +60,7 @@ namespace CoreTests
                     sample[i] = stopwatch.ElapsedMilliseconds;
 
                 i++;
-                Thread.Sleep(150);
+                Thread.Sleep(delay);
             }
 
             if (LogSelf)
