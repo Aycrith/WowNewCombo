@@ -6,7 +6,7 @@ using SharedLib;
 
 namespace ReadDBC_CSV
 {
-    public class WorldMapAreaExtractor : IExtractor
+    internal sealed class WorldMapAreaExtractor : IExtractor
     {
         private readonly string path;
 

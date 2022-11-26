@@ -3,10 +3,8 @@ using System.Threading.Tasks;
 
 namespace WowheadDB_Extractor
 {
-    class Program
+    sealed class Program
     {
-        private static ZoneExtractor ZoneExtractor;
-
         static void Main(string[] args)
         {
             MainAsync(args).ConfigureAwait(false).GetAwaiter().GetResult();
@@ -15,7 +13,6 @@ namespace WowheadDB_Extractor
 
         async static Task MainAsync(string[] args)
         {
-            ZoneExtractor = new ZoneExtractor();
             await ZoneExtractor.Run();
         }
 

@@ -6,7 +6,7 @@ using CsvHelper;
 
 namespace ReadDBC_CSV
 {
-    public class CSVExtractor
+    internal sealed class CSVExtractor
     {
         public List<string> ColumnIndexes { get; } = new();
 

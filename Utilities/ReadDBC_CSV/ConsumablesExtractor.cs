@@ -5,7 +5,7 @@ using System.IO;
 
 namespace ReadDBC_CSV
 {
-    public class ConsumablesExtractor : IExtractor
+    internal sealed class ConsumablesExtractor : IExtractor
     {
         private readonly string path;
 
