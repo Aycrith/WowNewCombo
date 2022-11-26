@@ -138,7 +138,7 @@ Required game client settings. Press `ESC` -> `System`
 
 ## 3.3 Optional - Replace default game Font
 
-Highly suggested to replace the default game font with a much **Bolder** one with [this guide](https://classic.wowhead.com/guides/changing-wow-text-font)
+Highly recommended to replace the default in-game font with a much **Bolder** one with [this guide](https://classic.wowhead.com/guides/changing-wow-text-font)
 
 Should be only concerned about `Friz Quadrata: the "Everything Else" Font` which is the `FRIZQT__.ttf` named file.
 
@@ -148,7 +148,7 @@ Example - [Robot-Medium](https://fonts.google.com/specimen/Roboto?thickness=5) -
 
 * Windows 7 and above
 * [.NET 7.0 SDK](https://dotnet.microsoft.com/download/dotnet/7.0)
-* AnyCPU, x86 and x64 build supported. For lower memory usage x86 suggested.
+* `AnyCPU`, `x86` and `x64` build supported.
 
 ## 4.2 Build the solution
 
