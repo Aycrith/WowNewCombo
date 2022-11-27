@@ -10,6 +10,8 @@ Author: Tageshi
 
 local _, addon = ...
 
+local GetContainerItemID = GetContainerItemID or C_Container.GetContainerItemID
+
 local function concat(arg1, arg2)
     if arg1 and arg2 then
         return arg1..arg2;
