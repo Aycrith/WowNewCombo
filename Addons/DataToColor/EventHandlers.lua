@@ -294,6 +294,7 @@ function DataToColor:OnCombatEvent(...)
             DataToColor.lastCastSpellId = spellId
 
             local _, gcdMS = GetSpellBaseCooldown(spellId)
+            gcdMS = gcdMS or 0
             DataToColor.lastCastGCD = gcdMS
             --DataToColor:Print(subEvent, " ", spellId, " ", gcdMS)
         end
