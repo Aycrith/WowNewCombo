@@ -144,8 +144,8 @@ namespace Core.Goals
 
         public void Dispose()
         {
-            manualReset.Set();
             _cts.Cancel();
+            manualReset.Set();
         }
 
         public void Update()
