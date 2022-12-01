@@ -108,7 +108,7 @@ Download the navmesh files.
 * [**Classic + TBC**](https://mega.nz/file/7HgkHIyA#c_gzUeTadecWY0JDY3KT39ktfPGLs2vzt_90bMvhszk)
 
 1. Extract and copy anywhere you want. like `C:\mmaps`
-1. Create a build of [AmeisenNavigation](https://github.com/Xian55/AmeisenNavigation/tree/feature/guess-z-coord-after-rewrite)
+1. Create a [build](https://github.com/Xian55/WowClassicGrindBot/issues/449) of [AmeisenNavigation](https://github.com/Xian55/AmeisenNavigation/tree/feature/guess-z-coord-after-rewrite)
 1. Navigate to the build location and find `config.cfg`
 1. Edit the file last line to look as `sMmapsPath=C:\mmaps`
 
