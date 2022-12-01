@@ -3,10 +3,11 @@
 using System;
 
 using SharedLib.Extensions;
+using System.Collections.Generic;
 
 namespace Core
 {
-    public sealed partial class TargetBlacklist : IBlacklist
+    public sealed partial class TargetBlacklist : IBlacklist, IDisposable
     {
         private readonly string[] blacklist;
 
@@ -21,6 +22,7 @@ namespace Core
         private readonly bool allowPvP;
 
         private int lastGuid;
+        private readonly HashSet<int> evadeMobs;
 
         public TargetBlacklist(ILogger logger, AddonReader addonReader, ClassConfiguration classConfig)
         {
@@ -37,10 +39,19 @@ namespace Core
 
             this.allowPvP = classConfig.AllowPvP;
 
+            evadeMobs = new HashSet<int>();
+
+            addonReader.CombatLog.TargetEvade += CombatLog_TargetEvade;
+
             logger.LogInformation($"[{nameof(TargetBlacklist)}] {nameof(classConfig.TargetMask)}: {string.Join(", ", targetMask.GetIndividualFlags())}");
 
             if (blacklist.Length > 0)
                 logger.LogInformation($"[{nameof(TargetBlacklist)}] Name: {string.Join(", ", blacklist)}");
+        }
+
+        public void Dispose()
+        {
+            addonReader.CombatLog.TargetEvade -= CombatLog_TargetEvade;
         }
 
         public bool Is()
@@ -57,6 +68,16 @@ namespace Core
 
             if (playerReader.PetHasTarget() && playerReader.TargetGuid == playerReader.PetGuid)
             {
+                return true;
+            }
+
+            if (evadeMobs.Contains(playerReader.TargetGuid))
+            {
+                if (lastGuid != playerReader.TargetGuid)
+                {
+                    LogEvade(logger, playerReader.TargetId, playerReader.TargetGuid, addonReader.TargetName, playerReader.TargetClassification.ToStringF());
+                    lastGuid = playerReader.TargetGuid;
+                }
                 return true;
             }
 
@@ -157,6 +178,12 @@ namespace Core
             return false;
         }
 
+        private void CombatLog_TargetEvade()
+        {
+            if (playerReader.TargetGuid != 0)
+                evadeMobs.Add(playerReader.TargetGuid);
+        }
+
         #region logging
 
         [LoggerMessage(
@@ -200,6 +227,12 @@ namespace Core
             Level = LogLevel.Warning,
             Message = "Blacklist ({id},{guid},{name},{classification}) not defined in the TargetMask!")]
         static partial void LogClassification(ILogger logger, int id, int guid, string name, string classification);
+
+        [LoggerMessage(
+            EventId = 67,
+            Level = LogLevel.Warning,
+            Message = "Blacklist ({id},{guid},{name},{classification}) evade on attack!")]
+        static partial void LogEvade(ILogger logger, int id, int guid, string name, string classification);
 
         #endregion
     }
