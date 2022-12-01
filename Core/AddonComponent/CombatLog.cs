@@ -8,6 +8,7 @@ namespace Core
         private bool wasInCombat;
 
         public event Action? KillCredit;
+        public event Action? TargetEvade;
 
         public HashSet<int> DamageDone { get; } = new();
         public HashSet<int> DamageTaken { get; } = new();
@@ -46,9 +47,17 @@ namespace Core
 
         public void Update(IAddonDataProvider reader, bool playerInCombat)
         {
-            if (TargetMissType.Updated(reader) && (MissType)TargetMissType.Value == MissType.DODGE)
+            if (TargetMissType.Updated(reader))
             {
-                TargetDodge.UpdateTime();
+                switch ((MissType)TargetMissType.Value)
+                {
+                    case MissType.DODGE:
+                        TargetDodge.UpdateTime();
+                        break;
+                    case MissType.EVADE:
+                        TargetEvade?.Invoke();
+                        break;
+                }
             }
 
             if (playerInCombat && DamageTakenGuid.Updated(reader) && DamageTakenGuid.Value > 0)
