@@ -1,12 +1,19 @@
 ﻿using Microsoft.Extensions.Logging;
 
 using System;
+using System.Threading;
 
 namespace Core.Goals
 {
     public sealed partial class CastingHandler
     {
         private const bool Log = true;
+
+        public const int GCD = 1500;
+        public const int MIN_GCD = 1000;
+        public const int SPELL_QUEUE = 400;
+
+        private const int MAX_WAIT_MELEE_RANGE = 10_000;
 
         private readonly ILogger logger;
         private readonly ConfigurableInput input;
@@ -21,11 +28,7 @@ namespace Core.Goals
 
         private readonly ReactCastError react;
 
-        public const int GCD = 1500;
-        public const int MIN_GCD = 1000;
-        public const int SPELL_QUEUE = 400;
-
-        private const int MAX_WAIT_MELEE_RANGE = 10_000;
+        private readonly CastingHandlerInterruptWatchdog interruptWatchdog;
 
         public DateTime SpellQueueOpen { get; private set; }
         public bool SpellInQueue() => DateTime.UtcNow < SpellQueueOpen;
@@ -35,7 +38,8 @@ namespace Core.Goals
         public CastingHandler(ILogger logger, ConfigurableInput input,
             ClassConfiguration classConfiguration,
             Wait wait, AddonReader addonReader, PlayerDirection direction,
-            StopMoving stopMoving, ReactCastError react)
+            StopMoving stopMoving, ReactCastError react,
+            CastingHandlerInterruptWatchdog interruptWatchdog)
         {
             this.logger = logger;
             this.input = input;
@@ -52,9 +56,11 @@ namespace Core.Goals
 
             if (!classConfiguration.SpellQueue)
                 playerReader.SpellQueueTimeMs = 0;
+
+            this.interruptWatchdog = interruptWatchdog;
         }
 
-        private int PressKeyAction(KeyAction item)
+        private int PressKeyAction(KeyAction item, CancellationToken token)
         {
             playerReader.LastUIError = UI_ERROR.NONE;
 
@@ -66,8 +72,9 @@ namespace Core.Goals
                 input.StopAttack();
             }
 
-            //item.SetClicked();
-            return input.Proc.KeyPress(item.ConsoleKey, item.PressDuration);
+            DateTime start = DateTime.UtcNow;
+            input.Proc.KeyPressSleep(item.ConsoleKey, item.PressDuration, token);
+            return (int)(DateTime.UtcNow - start).TotalMilliseconds;
         }
 
         private static bool CastSuccessful(int uiEvent)
@@ -79,7 +86,7 @@ namespace Core.Goals
                 UI_ERROR.NONE;
         }
 
-        private bool CastInstant(KeyAction item)
+        private bool CastInstant(KeyAction item, CancellationToken token)
         {
             if (!playerReader.IsCasting() && item.BeforeCastStop)
             {
@@ -93,7 +100,7 @@ namespace Core.Goals
             bool beforeUsable = addonReader.UsableAction.Is(item);
             int beforePT = playerReader.PTCurrent();
 
-            int pressMs = PressKeyAction(item);
+            int pressMs = PressKeyAction(item, token);
             if (item.BaseAction)
             {
                 item.SetClicked();
@@ -157,7 +164,7 @@ namespace Core.Goals
             return true;
         }
 
-        private bool CastCastbar(KeyAction item, Func<bool> interrupt)
+        private bool CastCastbar(KeyAction item, CancellationToken token)
         {
             wait.While(playerReader.Bits.IsFalling);
 
@@ -172,7 +179,7 @@ namespace Core.Goals
             int beforeSpellId = playerReader.CastSpellId.Value;
             int beforeCastCount = playerReader.CastCount;
 
-            int pressMs = PressKeyAction(item);
+            int pressMs = PressKeyAction(item, token);
 
             if (item.BaseAction)
             {
@@ -188,7 +195,7 @@ namespace Core.Goals
                 beforeCastEventValue != playerReader.CastEvent.Value ||
                 beforeSpellId != playerReader.CastSpellId.Value ||
                 beforeCastCount != playerReader.CastCount ||
-                interrupt()
+                token.IsCancellationRequested
                 );
 
             if (Log && item.Log)
@@ -217,8 +224,8 @@ namespace Core.Goals
                     if (Log && item.Log)
                         LogVisibleAfterCastWaitCastbar(logger, item.Name, remainMs);
 
-                    wait.Until(remainMs, () => !playerReader.IsCasting() || interrupt(), RepeatPetAttack);
-                    if (interrupt())
+                    wait.Until(remainMs, () => !playerReader.IsCasting() || token.IsCancellationRequested, RepeatPetAttack);
+                    if (token.IsCancellationRequested)
                     {
                         if (Log && item.Log)
                             LogVisibleAfterCastWaitCastbarInterrupted(logger, item.Name);
@@ -234,8 +241,8 @@ namespace Core.Goals
                     if (Log && item.Log)
                         LogHiddenAfterCastWaitCastbar(logger, item.Name, remainMs);
 
-                    wait.Until(remainMs, () => beforeCastEventValue != playerReader.CastEvent.Value || interrupt(), RepeatPetAttack);
-                    if (interrupt())
+                    wait.Until(remainMs, () => beforeCastEventValue != playerReader.CastEvent.Value || token.IsCancellationRequested, RepeatPetAttack);
+                    if (token.IsCancellationRequested)
                     {
                         if (Log && item.Log)
                             LogHiddenAfterCastWaitCastbarInterrupted(logger, item.Name);
@@ -265,8 +272,8 @@ namespace Core.Goals
 
         public bool Cast(KeyAction item, Func<bool> interrupt)
         {
-            bool prevState = interrupt();
-            bool Interrupt() => prevState != interrupt();
+            using CancellationTokenSource cts = new();
+            interruptWatchdog.Set(interrupt, cts);
 
             bool t = false;
             double e = 0;
@@ -277,10 +284,16 @@ namespace Core.Goals
                 Form beforeForm = playerReader.Form;
 
                 if (!SwitchForm(item))
+                {
+                    interruptWatchdog.Reset();
                     return false;
+                }
 
-                if (!WaitForGCD(item, false, Interrupt))
+                if (!WaitForGCD(item, false, cts.Token))
+                {
+                    interruptWatchdog.Reset();
                     return false;
+                }
 
                 //TODO: upon form change and GCD - have to check Usable state
                 if (!beforeUsable && !addonReader.UsableAction.Is(item))
@@ -288,6 +301,7 @@ namespace Core.Goals
                     if (Log && item.Log)
                         LogAfterFormSwitchNotUsable(logger, item.Name, beforeForm.ToStringF(), playerReader.Form.ToStringF());
 
+                    interruptWatchdog.Reset();
                     return false;
                 }
             }
@@ -298,16 +312,18 @@ namespace Core.Goals
                 input.StopAttack();
 
                 int waitTime = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs) + (2 * playerReader.NetworkLatency.Value);
-                (t, e) = wait.Until(waitTime, Interrupt);
+                (t, e) = wait.Until(waitTime, cts.Token);
                 logger.LogInformation($"Stop {nameof(playerReader.Bits.SpellOn_Shoot)} and wait {waitTime}ms | {e}ms");
                 if (!t)
                 {
+                    interruptWatchdog.Reset();
                     return false;
                 }
             }
 
-            if (!item.BaseAction && !WaitForGCD(item, true, Interrupt))
+            if (!item.BaseAction && !WaitForGCD(item, true, cts.Token))
             {
+                interruptWatchdog.Reset();
                 return false;
             }
 
@@ -322,7 +338,7 @@ namespace Core.Goals
                 if (Log && item.Log)
                     LogBeforeCastDelay(logger, item.Name, item.BeforeCastDelay);
 
-                wait.Until(item.BeforeCastDelay, Interrupt);
+                wait.Until(item.BeforeCastDelay, cts.Token);
             }
 
             int auraHash = playerReader.AuraCount.Hash;
@@ -330,22 +346,24 @@ namespace Core.Goals
 
             if (!item.HasCastBar)
             {
-                if (!CastInstant(item))
+                if (!CastInstant(item, cts.Token))
                 {
                     // try again after reacted to UI_ERROR
-                    if (!CastInstant(item))
+                    if (cts.Token.IsCancellationRequested || !CastInstant(item, cts.Token))
                     {
+                        interruptWatchdog.Reset();
                         return false;
                     }
                 }
             }
             else
             {
-                if (!CastCastbar(item, Interrupt))
+                if (!CastCastbar(item, cts.Token))
                 {
                     // try again after reacted to UI_ERROR
-                    if (!CastCastbar(item, Interrupt))
+                    if (cts.Token.IsCancellationRequested || !CastCastbar(item, cts.Token))
                     {
+                        interruptWatchdog.Reset();
                         return false;
                     }
                 }
@@ -358,7 +376,7 @@ namespace Core.Goals
                 (t, e) = wait.Until(totalTime, () =>
                     auraHash != playerReader.AuraCount.Hash ||
                     (MissType)addonReader.CombatLog.TargetMissType.Value != MissType.NONE ||
-                    Interrupt()
+                    cts.Token.IsCancellationRequested
                     );
 
                 if (Log && item.Log)
@@ -381,14 +399,16 @@ namespace Core.Goals
             {
                 int totalTime = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs) + playerReader.SpellQueueTimeMs;
 
-                (t, e) = wait.Until(totalTime, () => bagHash != addonReader.BagReader.Hash || Interrupt());
+                (t, e) = wait.Until(totalTime,
+                    () => bagHash != addonReader.BagReader.Hash || cts.Token.IsCancellationRequested);
                 if (Log && item.Log)
                     LogAfterCastWaitBag(logger, item.Name, !t, e);
             }
 
             if (item.AfterCastWaitCombat)
             {
-                (t, e) = wait.Until(2 * GCD, () => playerReader.Bits.PlayerInCombat() || Interrupt());
+                (t, e) = wait.Until(2 * GCD,
+                    () => playerReader.Bits.PlayerInCombat() || cts.Token.IsCancellationRequested);
 
                 if (Log && item.Log)
                     LogAfterCastWaitCombat(logger, item.Name, !t, e);
@@ -407,7 +427,7 @@ namespace Core.Goals
                     playerReader.IsTargetCasting() ||
                     playerReader.HealthCurrent() < lastKnownHealth ||
                     !playerReader.WithInPullRange() ||
-                    Interrupt()
+                    cts.Token.IsCancellationRequested
                     );
             }
 
@@ -428,11 +448,11 @@ namespace Core.Goals
                     {
                         waitAmount = MIN_GCD - playerReader.SpellQueueTimeMs;
                     }
-                    (t, e) = wait.Until(waitAmount, Interrupt);
+                    (t, e) = wait.Until(waitAmount, cts.Token);
                 }
                 else
                 {
-                    (t, e) = wait.Until(item.AfterCastStepBack, Interrupt);
+                    (t, e) = wait.Until(item.AfterCastStepBack, cts.Token);
                 }
 
                 if (Log && item.Log)
@@ -446,7 +466,7 @@ namespace Core.Goals
                 if (Log && item.Log)
                     LogAfterCastWaitGCD(logger, item.Name, playerReader.GCD.Value);
 
-                wait.Until(playerReader.GCD.Value, Interrupt);
+                wait.Until(playerReader.GCD.Value, cts.Token);
             }
 
             if (item.AfterCastDelay > 0)
@@ -454,7 +474,7 @@ namespace Core.Goals
                 if (Log && item.Log)
                     LogAfterCastDelay(logger, item.Name, item.AfterCastDelay);
 
-                (t, e) = wait.Until(item.AfterCastDelay, Interrupt);
+                (t, e) = wait.Until(item.AfterCastDelay, cts.Token);
                 if (Log && item.Log && !t)
                 {
                     LogAfterCastDelayInterrupted(logger, item.Name, e);
@@ -469,10 +489,12 @@ namespace Core.Goals
             }
 
             item.ConsumeCharge();
+
+            interruptWatchdog.Reset();
             return true;
         }
 
-        private bool WaitForGCD(KeyAction item, bool spellQueue, Func<bool> interrupt)
+        private bool WaitForGCD(KeyAction item, bool spellQueue, CancellationToken token) //Func<bool> interrupt
         {
             int duration = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs);
 
@@ -482,7 +504,7 @@ namespace Core.Goals
             if (duration <= 0)
                 return true;
 
-            (bool t, double e) = wait.Until(duration, interrupt);
+            (bool t, double e) = wait.Until(duration, token);
 
             if (Log && item.Log)
                 LogGCD(logger, item.Name, !t, addonReader.UsableAction.Is(item), duration, e);
@@ -530,7 +552,7 @@ namespace Core.Goals
                 return false;
             }
 
-            return CastInstant(formAction);
+            return CastInstant(formAction, CancellationToken.None);
         }
 
         private void RepeatPetAttack()

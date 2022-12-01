@@ -53,6 +53,21 @@ namespace Core
             return new(true, elapsedMs);
         }
 
+        public WaitResult Until(int timeoutMs, CancellationToken token)
+        {
+            DateTime start = DateTime.UtcNow;
+            double elapsedMs;
+            while ((elapsedMs = (DateTime.UtcNow - start).TotalMilliseconds) < timeoutMs)
+            {
+                if (token.IsCancellationRequested)
+                    return new(false, elapsedMs);
+
+                Update();
+            }
+
+            return new(true, elapsedMs);
+        }
+
         public WaitResult Until(int timeoutMs, Func<bool> interrupt, Action repeat)
         {
             DateTime start = DateTime.UtcNow;
