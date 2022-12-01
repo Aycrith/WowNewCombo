@@ -4,13 +4,10 @@ using Core.GOAP;
 using Game;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using PPather.Data;
 using SharedLib.NpcFinder;
 using System;
-using System.Collections.Generic;
 using static System.IO.Path;
 using static System.IO.File;
-using System.Linq;
 using System.Numerics;
 using System.Threading;
 using static Newtonsoft.Json.JsonConvert;
@@ -19,7 +16,7 @@ namespace Core
 {
     public static class GoalFactory
     {
-        public static (RouteInfo, IEnumerable<GoapGoal>) CreateGoals(ILogger logger, AddonReader addonReader,
+        public static IServiceScope CreateGoals(ILogger logger, AddonReader addonReader,
             ConfigurableInput input, DataConfig dataConfig, NpcNameFinder npcNameFinder,
             NpcNameTargeting npcNameTargeting, IPPather pather, ExecGameCommand execGameCommand,
             ClassConfiguration classConfig, GoapAgentState goapAgentState, CancellationTokenSource cts, Wait wait)
@@ -35,52 +32,53 @@ namespace Core
             services.AddSingleton<NpcNameTargeting>(npcNameTargeting);
             services.AddSingleton<IPPather>(pather);
             services.AddSingleton<ExecGameCommand>(execGameCommand);
-
             services.AddSingleton<WorldMapAreaDB>(addonReader.WorldMapAreaDb);
-
-            Vector3[] mapRoute = GetPath(classConfig, dataConfig);
-            services.AddSingleton<Vector3[]>(mapRoute);
-
             services.AddSingleton<ClassConfiguration>(classConfig);
             services.AddSingleton<GoapAgentState>(goapAgentState);
             services.AddSingleton<CancellationTokenSource>(cts);
             services.AddSingleton<Wait>(wait);
 
+            // TODO: Should be scoped as it comes from ClassConfig
+            // 432 issue
+            Vector3[] mapRoute = GetPath(classConfig, dataConfig);
+            services.AddSingleton<Vector3[]>(mapRoute);
+
             if (classConfig.Mode != Mode.Grind)
             {
-                services.AddSingleton<IBlacklist, NoBlacklist>();
+                services.AddScoped<IBlacklist, NoBlacklist>();
             }
             else
             {
-                services.AddSingleton<MouseOverBlacklist, MouseOverBlacklist>();
-                services.AddSingleton<IBlacklist, TargetBlacklist>();
-                services.AddSingleton<GoapGoal, BlacklistTargetGoal>();
+                services.AddScoped<MouseOverBlacklist, MouseOverBlacklist>();
+                services.AddScoped<IBlacklist, TargetBlacklist>();
+                services.AddScoped<GoapGoal, BlacklistTargetGoal>();
             }
 
             // Goals components
-            services.AddSingleton<PlayerDirection>();
-            services.AddSingleton<StopMoving>();
-            services.AddSingleton<ReactCastError>();
-            services.AddSingleton<CastingHandler>();
-            services.AddSingleton<StuckDetector>();
-            services.AddSingleton<CombatUtil>();
-            services.AddSingleton<MountHandler>();
-            services.AddSingleton<TargetFinder>();
+            services.AddScoped<PlayerDirection>();
+            services.AddScoped<StopMoving>();
+            services.AddScoped<ReactCastError>();
+            services.AddScoped<CastingHandlerInterruptWatchdog>();
+            services.AddScoped<CastingHandler>();
+            services.AddScoped<StuckDetector>();
+            services.AddScoped<CombatUtil>();
+            services.AddScoped<MountHandler>();
+            services.AddScoped<TargetFinder>();
 
             // each GoapGoal gets an individual instance
             services.AddTransient<Navigation>();
 
             if (classConfig.Mode == Mode.CorpseRun)
             {
-                services.AddSingleton<GoapGoal, WalkToCorpseGoal>();
+                services.AddScoped<GoapGoal, WalkToCorpseGoal>();
             }
             else if (classConfig.Mode == Mode.AttendedGather)
             {
-                services.AddSingleton<GoapGoal, WalkToCorpseGoal>();
-                services.AddSingleton<GoapGoal, CombatGoal>();
-                services.AddSingleton<GoapGoal, ApproachTargetGoal>();
-                services.AddSingleton<GoapGoal, WaitForGatheringGoal>();
-                services.AddSingleton<GoapGoal, FollowRouteGoal>();
+                services.AddScoped<GoapGoal, WalkToCorpseGoal>();
+                services.AddScoped<GoapGoal, CombatGoal>();
+                services.AddScoped<GoapGoal, ApproachTargetGoal>();
+                services.AddScoped<GoapGoal, WaitForGatheringGoal>();
+                services.AddScoped<GoapGoal, FollowRouteGoal>();
 
                 ResolveLootAndSkin(services, classConfig);
 
@@ -88,7 +86,7 @@ namespace Core
 
                 if (classConfig.Parallel.Sequence.Length > 0)
                 {
-                    services.AddSingleton<GoapGoal, ParallelGoal>();
+                    services.AddScoped<GoapGoal, ParallelGoal>();
                 }
 
                 ResolveAdhocGoals(services, classConfig);
@@ -97,18 +95,18 @@ namespace Core
             }
             else if (classConfig.Mode == Mode.AssistFocus)
             {
-                services.AddSingleton<GoapGoal, PullTargetGoal>();
-                services.AddSingleton<GoapGoal, ApproachTargetGoal>();
-                services.AddSingleton<GoapGoal, CombatGoal>();
+                services.AddScoped<GoapGoal, PullTargetGoal>();
+                services.AddScoped<GoapGoal, ApproachTargetGoal>();
+                services.AddScoped<GoapGoal, CombatGoal>();
 
                 ResolveLootAndSkin(services, classConfig);
 
-                services.AddSingleton<GoapGoal, TargetFocusTargetGoal>();
-                services.AddSingleton<GoapGoal, FollowFocusGoal>();
+                services.AddScoped<GoapGoal, TargetFocusTargetGoal>();
+                services.AddScoped<GoapGoal, FollowFocusGoal>();
 
                 if (classConfig.Parallel.Sequence.Length > 0)
                 {
-                    services.AddSingleton<GoapGoal, ParallelGoal>();
+                    services.AddScoped<GoapGoal, ParallelGoal>();
                 }
 
                 ResolveAdhocGoals(services, classConfig);
@@ -117,21 +115,21 @@ namespace Core
             {
                 if (classConfig.Mode == Mode.AttendedGrind)
                 {
-                    services.AddSingleton<GoapGoal, WaitGoal>();
+                    services.AddScoped<GoapGoal, WaitGoal>();
                 }
                 else
                 {
-                    services.AddSingleton<GoapGoal, FollowRouteGoal>();
+                    services.AddScoped<GoapGoal, FollowRouteGoal>();
                 }
 
-                services.AddSingleton<GoapGoal, WalkToCorpseGoal>();
-                services.AddSingleton<GoapGoal, PullTargetGoal>();
-                services.AddSingleton<GoapGoal, ApproachTargetGoal>();
-                services.AddSingleton<GoapGoal, CombatGoal>();
+                services.AddScoped<GoapGoal, WalkToCorpseGoal>();
+                services.AddScoped<GoapGoal, PullTargetGoal>();
+                services.AddScoped<GoapGoal, ApproachTargetGoal>();
+                services.AddScoped<GoapGoal, CombatGoal>();
 
                 if (classConfig.WrongZone.ZoneId > 0)
                 {
-                    services.AddSingleton<GoapGoal, WrongZoneGoal>();
+                    services.AddScoped<GoapGoal, WrongZoneGoal>();
                 }
 
                 ResolveLootAndSkin(services, classConfig);
@@ -140,7 +138,7 @@ namespace Core
 
                 if (classConfig.Parallel.Sequence.Length > 0)
                 {
-                    services.AddSingleton<GoapGoal, ParallelGoal>();
+                    services.AddScoped<GoapGoal, ParallelGoal>();
                 }
 
                 ResolveAdhocGoals(services, classConfig);
@@ -151,33 +149,22 @@ namespace Core
             ServiceProvider provider = services.BuildServiceProvider(
                 new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
 
-            npcNameTargeting.UpdateBlacklist(provider.GetService<MouseOverBlacklist>() ?? provider.GetService<IBlacklist>()!);
-
-            IEnumerable<GoapGoal> goals = provider.GetServices<GoapGoal>();
-            IEnumerable<IRouteProvider> pathProviders = goals.OfType<IRouteProvider>();
-
-            RouteInfo routeInfo = new(mapRoute, pathProviders, addonReader.PlayerReader, addonReader.AreaDb, addonReader.WorldMapAreaDb);
-
-            pather.DrawLines(new()
-            {
-                new LineArgs("grindpath", mapRoute, 2, addonReader.PlayerReader.UIMapId.Value)
-            });
-
-            return (routeInfo, goals);
+            IServiceScope scope = provider.CreateScope();
+            return scope;
         }
 
         private static void ResolveLootAndSkin(ServiceCollection services, ClassConfiguration classConfig)
         {
-            services.AddSingleton<GoapGoal, ConsumeCorpseGoal>();
-            services.AddSingleton<GoapGoal, CorpseConsumedGoal>();
+            services.AddScoped<GoapGoal, ConsumeCorpseGoal>();
+            services.AddScoped<GoapGoal, CorpseConsumedGoal>();
 
             if (classConfig.Loot)
             {
-                services.AddSingleton<GoapGoal, LootGoal>();
+                services.AddScoped<GoapGoal, LootGoal>();
 
                 if (classConfig.GatherCorpse)
                 {
-                    services.AddSingleton<GoapGoal, SkinningGoal>();
+                    services.AddScoped<GoapGoal, SkinningGoal>();
                 }
             }
         }
@@ -187,7 +174,7 @@ namespace Core
             for (int i = 0; i < classConfig.Adhoc.Sequence.Length; i++)
             {
                 KeyAction keyAction = classConfig.Adhoc.Sequence[i];
-                services.AddSingleton<GoapGoal, AdhocGoal>(x => new(keyAction,
+                services.AddScoped<GoapGoal, AdhocGoal>(x => new(keyAction,
                     x.GetRequiredService<ILogger>(),
                     x.GetRequiredService<ConfigurableInput>(), x.GetRequiredService<Wait>(),
                     x.GetRequiredService<AddonReader>(), x.GetRequiredService<StopMoving>(),
@@ -202,7 +189,7 @@ namespace Core
                 KeyAction keyAction = classConfig.NPC.Sequence[i];
                 keyAction.Path = GetPath(keyAction, dataConfig);
 
-                services.AddSingleton<GoapGoal, AdhocNPCGoal>(x => new(keyAction,
+                services.AddScoped<GoapGoal, AdhocNPCGoal>(x => new(keyAction,
                     x.GetRequiredService<ILogger>(), x.GetRequiredService<ConfigurableInput>(),
                     x.GetRequiredService<Wait>(), x.GetRequiredService<AddonReader>(),
                     x.GetRequiredService<Navigation>(), x.GetRequiredService<StopMoving>(),
@@ -218,7 +205,7 @@ namespace Core
             {
                 KeyAction keyAction = classConfig.Wait.Sequence[i];
 
-                services.AddSingleton<GoapGoal, ConditionalWaitGoal>(x => new(keyAction,
+                services.AddScoped<GoapGoal, ConditionalWaitGoal>(x => new(keyAction,
                     x.GetRequiredService<ILogger>(), x.GetRequiredService<Wait>()));
             }
         }
@@ -231,7 +218,7 @@ namespace Core
                 UnitClass.Mage or
                 UnitClass.DeathKnight)
             {
-                services.AddSingleton<GoapGoal, TargetPetTargetGoal>();
+                services.AddScoped<GoapGoal, TargetPetTargetGoal>();
             }
         }
 

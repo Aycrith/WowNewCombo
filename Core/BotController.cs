@@ -15,6 +15,8 @@ using SharedLib.NpcFinder;
 using Cyotek.Collections.Generic;
 using PPather.Data;
 using Core.Environment;
+using Microsoft.Extensions.DependencyInjection;
+using System.Numerics;
 
 namespace Core
 {
@@ -262,14 +264,34 @@ namespace Core
 
             ConfigurableInput configInput = new(wowProcessInput, config);
             GoapAgentState goapAgentState = new();
-            (RouteInfo routeInfo, IEnumerable<GoapGoal> availableActions) =
-                GoalFactory.CreateGoals(logger, AddonReader, configInput, dataConfig, npcNameFinder, npcNameTargeting, pather, execGameCommand, config, goapAgentState, cts, wait);
+
+            IServiceScope profileLoadedScope =
+                GoalFactory.CreateGoals(logger, AddonReader, configInput, dataConfig, npcNameFinder,
+                    npcNameTargeting, pather, execGameCommand, config, goapAgentState, cts, wait);
+
+            npcNameTargeting.UpdateBlacklist(
+                profileLoadedScope.ServiceProvider.GetService<MouseOverBlacklist>()
+                ?? profileLoadedScope.ServiceProvider.GetService<IBlacklist>()!);
+
+            IEnumerable<GoapGoal> availableActions = profileLoadedScope.ServiceProvider.GetServices<GoapGoal>();
+            IEnumerable<IRouteProvider> pathProviders = availableActions.OfType<IRouteProvider>();
+
+            Vector3[] mapRoute = profileLoadedScope.ServiceProvider.GetRequiredService<Vector3[]>();
+            RouteInfo routeInfo = new(mapRoute, pathProviders, AddonReader.PlayerReader, AddonReader.AreaDb, AddonReader.WorldMapAreaDb);
+
+            if (pather is RemotePathingAPI)
+            {
+                pather.DrawLines(new()
+                {
+                    new LineArgs("grindpath", mapRoute, 2, AddonReader.PlayerReader.UIMapId.Value)
+                }).AsTask().Wait();
+            }
 
             RouteInfo?.Dispose();
             RouteInfo = routeInfo;
 
             GoapAgent?.Dispose();
-            GoapAgent = new(logger, dataConfig, config, GrindSessionDAO, WowScreen, goapAgentState, AddonReader, availableActions, routeInfo, configInput);
+            GoapAgent = new(profileLoadedScope, dataConfig, GrindSessionDAO, WowScreen, routeInfo);
         }
 
         private ClassConfiguration ReadClassConfiguration(string classFile, string? pathFile)

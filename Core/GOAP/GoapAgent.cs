@@ -8,15 +8,16 @@ using System.Collections.Generic;
 using System.Linq;
 using Core.Session;
 using System.Numerics;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Core.GOAP
 {
     public sealed partial class GoapAgent : IDisposable
     {
+        private readonly IServiceScope scope;
+
         private readonly ILogger logger;
-        private readonly DataConfig dataConfig;
         private readonly ClassConfiguration classConfig;
-        private readonly IGrindSessionDAO sessionDAO;
         private readonly AddonReader addonReader;
         private readonly PlayerReader playerReader;
         private readonly IWowScreen wowScreen;
@@ -29,8 +30,6 @@ namespace Core.GOAP
         private readonly Thread goapThread;
         private readonly CancellationTokenSource cts;
         private readonly ManualResetEvent manualReset;
-
-        private bool wasEmpty;
 
         private bool active;
         public bool Active
@@ -83,27 +82,27 @@ namespace Core.GOAP
         public Stack<GoapGoal> Plan { get; private set; }
         public GoapGoal? CurrentGoal { get; private set; }
 
-        public GoapAgent(ILogger logger, DataConfig dataConfig, ClassConfiguration classConfig, IGrindSessionDAO sessionDAO, IWowScreen wowScreen, GoapAgentState goapAgentState, AddonReader addonReader, IEnumerable<GoapGoal> availableGoals, RouteInfo routeInfo, ConfigurableInput input)
+        public GoapAgent(IServiceScope scope, DataConfig dataConfig,
+            IGrindSessionDAO sessionDAO, IWowScreen wowScreen, RouteInfo routeInfo)
         {
-            this.logger = logger;
-            this.dataConfig = dataConfig;
-            this.classConfig = classConfig;
-            this.sessionDAO = sessionDAO;
+            this.scope = scope;
+
+            this.logger = scope.ServiceProvider.GetRequiredService<ILogger>();
+            this.classConfig = scope.ServiceProvider.GetRequiredService<ClassConfiguration>();
             this.cts = new();
             this.wowScreen = wowScreen;
-            this.State = goapAgentState;
-            this.addonReader = addonReader;
+            this.State = scope.ServiceProvider.GetRequiredService<GoapAgentState>();
+            this.addonReader = scope.ServiceProvider.GetRequiredService<AddonReader>();
             this.playerReader = addonReader.PlayerReader;
             this.routeInfo = routeInfo;
-            this.input = input;
-
-            sessionHandler = new GrindSessionHandler(logger, dataConfig, addonReader, sessionDAO, cts);
-
-            stopMoving = new StopMoving(input.Proc, playerReader, cts);
+            this.input = scope.ServiceProvider.GetRequiredService<ConfigurableInput>();
 
             this.addonReader.CombatLog.KillCredit += OnKillCredit;
 
-            this.AvailableGoals = availableGoals.OrderBy(a => a.Cost);
+            sessionHandler = new GrindSessionHandler(logger, dataConfig, addonReader, sessionDAO, cts);
+            stopMoving = new StopMoving(input.Proc, playerReader, cts);
+
+            this.AvailableGoals = scope.ServiceProvider.GetServices<GoapGoal>().OrderBy(a => a.Cost);
             this.Plan = new();
 
             foreach (GoapGoal a in AvailableGoals)
@@ -138,16 +137,15 @@ namespace Core.GOAP
                 }
             }
 
-            foreach (IDisposable goal in AvailableGoals.OfType<IDisposable>())
-            {
-                goal.Dispose();
-            }
+            scope.Dispose();
 
             addonReader.CombatLog.KillCredit -= OnKillCredit;
         }
 
         private void GoapThread()
         {
+            bool wasEmpty = false;
+
             while (!cts.IsCancellationRequested)
             {
                 manualReset.WaitOne();
