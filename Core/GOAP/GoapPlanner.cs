@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System;
+using System.Buffers;
 
 namespace Core.GOAP
 {
@@ -50,7 +51,8 @@ namespace Core.GOAP
 
             // get the cheapest leaf
             Stack<GoapGoal> result = new();
-            Node? node = leaves.MinBy(a => a.runningCost);
+            static float Min(Node n) => n.runningCost;
+            Node? node = leaves.MinBy(Min);
             while (node != null)
             {
                 if (node.action != null)
@@ -156,13 +158,17 @@ namespace Core.GOAP
 
         private static bool[] PopulateState(bool[] currentState, Dictionary<GoapKey, bool> futureState)
         {
-            bool[] state = new bool[currentState.Length];
+            var pooler = ArrayPool<bool>.Shared;
+            bool[] state = pooler.Rent(currentState.Length);
+
             currentState.CopyTo(state, 0);
 
             foreach ((GoapKey key, bool value) in futureState)
             {
                 state[(int)key] = value;
             }
+
+            pooler.Return(state);
             return state;
         }
 
