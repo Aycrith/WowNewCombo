@@ -83,7 +83,8 @@ namespace Core.Goals
                 (UI_ERROR)uiEvent is
                 UI_ERROR.CAST_START or
                 UI_ERROR.CAST_SUCCESS or
-                UI_ERROR.NONE;
+                UI_ERROR.NONE or
+                UI_ERROR.SPELL_FAILED_TARGETS_DEAD;
         }
 
         private bool CastInstant(KeyAction item, CancellationToken token)
