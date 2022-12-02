@@ -1,8 +1,9 @@
 ﻿using Core.Goals;
+
 using Microsoft.Extensions.Logging;
+
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
 
 namespace Core
@@ -78,16 +79,16 @@ namespace Core
 
         public int ConsoleKeyFormHash { private set; get; }
 
-        public static Dictionary<int, DateTime> LastClicked { get; } = new();
+        private DateTime LastClicked;
+
+        private static int LastKey;
+        private static DateTime LastKeyTime;
 
         public static int LastKeyClicked()
         {
-            var (key, lastTime) = LastClicked.OrderByDescending(s => s.Value).First();
-            if ((DateTime.UtcNow - lastTime).TotalSeconds > 2)
-            {
-                return (int)ConsoleKey.NoName;
-            }
-            return key;
+            return (DateTime.UtcNow - LastKeyTime).TotalSeconds > 2
+                ? (int)ConsoleKey.NoName
+                : LastKey;
         }
 
         private ActionBarCostReader costReader = null!;
@@ -205,17 +206,16 @@ namespace Core
 
         public void SetClicked(double offset = 0)
         {
-            LastClicked[ConsoleKeyFormHash] = DateTime.UtcNow.AddMilliseconds(offset);
+            LastKey = ConsoleKeyFormHash;
+            LastKeyTime = LastClicked = DateTime.UtcNow.AddMilliseconds(offset);
         }
 
         public double MillisecondsSinceLastClick =>
-            LastClicked.TryGetValue(ConsoleKeyFormHash, out DateTime lastTime) ?
-            (DateTime.UtcNow - lastTime).TotalMilliseconds :
-            double.MaxValue;
+            (DateTime.UtcNow - LastClicked).TotalMilliseconds;
 
         public void ResetCooldown()
         {
-            LastClicked[ConsoleKeyFormHash] = DateTime.Now.AddDays(-1);
+            LastClicked = DateTime.UtcNow.AddDays(-1);
         }
 
         public int GetChargeRemaining()
