@@ -90,7 +90,7 @@ namespace Core.Goals
                 mountHandler.Dismount();
             }
 
-            if (Keys.Length != 0 && input.ClassConfig.StopAttack.GetCooldownRemaining() == 0)
+            if (Keys.Length != 0 && input.ClassConfig.StopAttack.GetRemainingCooldown() == 0)
             {
                 Log("Stop auto interact!");
                 input.StopAttack();
@@ -142,7 +142,7 @@ namespace Core.Goals
             if (input.ClassConfig.AutoPetAttack &&
                 playerReader.Bits.HasPet() && !playerReader.PetHasTarget())
             {
-                if (input.ClassConfig.PetAttack.GetCooldownRemaining() == 0)
+                if (input.ClassConfig.PetAttack.GetRemainingCooldown() == 0)
                     input.PetAttack();
             }
 
@@ -230,7 +230,7 @@ namespace Core.Goals
 
         private void DefaultApproach()
         {
-            if (input.ClassConfig.Approach.GetCooldownRemaining() == 0)
+            if (input.ClassConfig.Approach.GetRemainingCooldown() == 0)
             {
                 if (!stuckDetector.IsMoving())
                 {
@@ -243,9 +243,9 @@ namespace Core.Goals
 
         private void ConditionalApproach()
         {
-            if (approachKey != null && (approachKey.CanRun() || approachKey.GetCooldownRemaining() > 0))
+            if (approachKey != null && (approachKey.CanRun() || approachKey.GetRemainingCooldown() > 0))
             {
-                if (approachKey.GetCooldownRemaining() == 0)
+                if (approachKey.GetRemainingCooldown() == 0)
                 {
                     input.Approach();
                 }

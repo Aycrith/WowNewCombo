@@ -560,7 +560,7 @@ namespace Core.Goals
             if (playerReader.Bits.PlayerInCombat() &&
                 playerReader.Bits.HasPet() &&
                 !playerReader.PetHasTarget() &&
-                input.ClassConfig.PetAttack.GetCooldownRemaining() == 0)
+                input.ClassConfig.PetAttack.GetRemainingCooldown() == 0)
             {
                 input.PetAttack();
             }

@@ -89,7 +89,7 @@ namespace Core.Goals
                 return;
             }
 
-            if (input.ClassConfig.Approach.GetCooldownRemaining() == 0)
+            if (input.ClassConfig.Approach.GetRemainingCooldown() == 0)
             {
                 input.Approach();
             }
@@ -148,7 +148,7 @@ namespace Core.Goals
             if (playerReader.TargetGuid == initialTargetGuid)
             {
                 int initialTargetMinRange = playerReader.MinRange();
-                if (input.ClassConfig.TargetNearestTarget.GetCooldownRemaining() == 0)
+                if (input.ClassConfig.TargetNearestTarget.GetRemainingCooldown() == 0)
                 {
                     input.NearestTarget();
                     wait.Update();
@@ -201,7 +201,7 @@ namespace Core.Goals
         private void RandomJump()
         {
             if (ApproachDurationMs > 2000 &&
-                input.ClassConfig.Jump.MillisecondsSinceLastClick > Random.Shared.Next(5000, 25_000))
+                input.ClassConfig.Jump.SinceLastClickMs > Random.Shared.Next(5000, 25_000))
             {
                 input.Jump();
             }

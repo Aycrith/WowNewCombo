@@ -116,7 +116,7 @@ namespace Core.Goals
 
         private void RandomJump()
         {
-            if ((DateTime.UtcNow - onEnterTime).TotalSeconds > 5 && input.ClassConfig.Jump.MillisecondsSinceLastClick > Random.Shared.Next(10_000, 25_000))
+            if ((DateTime.UtcNow - onEnterTime).TotalSeconds > 5 && input.ClassConfig.Jump.SinceLastClickMs > Random.Shared.Next(10_000, 25_000))
             {
                 Log("Random jump");
                 input.Jump();

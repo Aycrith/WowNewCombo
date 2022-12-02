@@ -79,7 +79,7 @@ namespace Core
 
         public int ConsoleKeyFormHash { private set; get; }
 
-        private DateTime LastClicked;
+        private DateTime LastClicked = DateTime.UtcNow.AddDays(-1);
 
         private static int LastKey;
         private static DateTime LastKeyTime;
@@ -197,11 +197,9 @@ namespace Core
             MinRuneUnholy = 0;
         }
 
-        public float GetCooldownRemaining()
+        public float GetRemainingCooldown()
         {
-            var remain = MillisecondsSinceLastClick;
-            if (remain == double.MaxValue) return 0;
-            return MathF.Max(Cooldown - (float)remain, 0);
+            return MathF.Max(Cooldown - SinceLastClickMs, 0);
         }
 
         public void SetClicked(double offset = 0)
@@ -210,8 +208,8 @@ namespace Core
             LastKeyTime = LastClicked = DateTime.UtcNow.AddMilliseconds(offset);
         }
 
-        public double MillisecondsSinceLastClick =>
-            (DateTime.UtcNow - LastClicked).TotalMilliseconds;
+        public float SinceLastClickMs =>
+            (float)(DateTime.UtcNow - LastClicked).TotalMilliseconds;
 
         public void ResetCooldown()
         {

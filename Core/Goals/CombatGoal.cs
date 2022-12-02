@@ -127,7 +127,7 @@ namespace Core.Goals
                 if (input.ClassConfig.AutoPetAttack &&
                     playerReader.Bits.HasPet() &&
                     (!playerReader.PetHasTarget() || playerReader.PetTargetGuid != playerReader.TargetGuid) &&
-                    input.ClassConfig.PetAttack.GetCooldownRemaining() == 0)
+                    input.ClassConfig.PetAttack.GetRemainingCooldown() == 0)
                 {
                     input.PetAttack();
                 }

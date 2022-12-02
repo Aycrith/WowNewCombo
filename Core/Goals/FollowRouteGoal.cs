@@ -224,7 +224,7 @@ namespace Core.Goals
 
                 if (!input.Proc.IsKeyDown(input.Proc.TurnLeftKey) &&
                     !input.Proc.IsKeyDown(input.Proc.TurnRightKey) &&
-                    classConfig.TargetNearestTarget.MillisecondsSinceLastClick > Random.Shared.Next(minMs, maxMs) &&
+                    classConfig.TargetNearestTarget.SinceLastClickMs > Random.Shared.Next(minMs, maxMs) &&
                     targetFinder.Search(NpcNameToFind, playerReader.Bits.TargetIsNotDead, sideActivityCts.Token))
                 {
                     sideActivityCts.Cancel();
@@ -258,9 +258,9 @@ namespace Core.Goals
 
         private void AlternateGatherTypes()
         {
-            var oldestKey = classConfig.GatherFindKeyConfig.MaxBy(x => x.MillisecondsSinceLastClick);
+            var oldestKey = classConfig.GatherFindKeyConfig.MaxBy(x => x.SinceLastClickMs);
             if (!playerReader.IsCasting() &&
-                oldestKey?.MillisecondsSinceLastClick > CYCLE_PROFESSION_PERIOD)
+                oldestKey?.SinceLastClickMs > CYCLE_PROFESSION_PERIOD)
             {
                 logger.LogInformation($"[{oldestKey.Key}] {oldestKey.Name} pressed for {input.defaultKeyPress}ms");
                 input.Proc.KeyPress(oldestKey.ConsoleKey, input.defaultKeyPress);
@@ -362,7 +362,7 @@ namespace Core.Goals
 
         private void RandomJump()
         {
-            if ((DateTime.UtcNow - onEnterTime).TotalSeconds > 5 && classConfig.Jump.MillisecondsSinceLastClick > Random.Shared.Next(10_000, 25_000))
+            if ((DateTime.UtcNow - onEnterTime).TotalSeconds > 5 && classConfig.Jump.SinceLastClickMs > Random.Shared.Next(10_000, 25_000))
             {
                 Log("Random jump");
                 input.Jump();

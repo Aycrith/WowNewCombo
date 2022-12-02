@@ -43,7 +43,7 @@ namespace Core
 
         public void ApproachOnCooldown()
         {
-            if (ClassConfig.Approach.GetCooldownRemaining() == 0)
+            if (ClassConfig.Approach.GetRemainingCooldown() == 0)
             {
                 Proc.KeyPress(ClassConfig.Approach.ConsoleKey, fastKeyPress);
                 ClassConfig.Approach.SetClicked();

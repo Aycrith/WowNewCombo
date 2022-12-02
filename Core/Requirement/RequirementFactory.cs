@@ -602,8 +602,8 @@ namespace Core
         {
             if (item.Cooldown > 0)
             {
-                bool f() => item.GetCooldownRemaining() == 0;
-                string s() => $"Cooldown {item.GetCooldownRemaining() / 1000:F1}";
+                bool f() => item.GetRemainingCooldown() == 0;
+                string s() => $"Cooldown {item.GetRemainingCooldown() / 1000:F1}";
                 list.Add(new Requirement
                 {
                     HasRequirement = f,
