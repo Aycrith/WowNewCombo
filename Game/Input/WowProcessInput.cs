@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 
 using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Threading;
 
@@ -25,7 +24,7 @@ namespace Game
         private readonly InputWindowsNative nativeInput;
         private readonly IInput simulatorInput;
 
-        private readonly Dictionary<ConsoleKey, bool> keyDownDict = new();
+        private readonly bool[] keysDown = new bool[(int)ConsoleKey.OemClear];
 
         public ConsoleKey ForwardKey { get; set; }
         public ConsoleKey BackwardKey { get; set; }
@@ -45,11 +44,11 @@ namespace Game
 
         public void Reset()
         {
-            lock (keyDownDict)
+            lock (keysDown)
             {
-                foreach (KeyValuePair<ConsoleKey, bool> kvp in keyDownDict)
+                for (int i = 0; i < keysDown.Length; i++)
                 {
-                    keyDownDict[kvp.Key] = false;
+                    keysDown[i] = false;
                 }
             }
         }
@@ -75,7 +74,7 @@ namespace Game
                 }
             }
 
-            keyDownDict[key] = true;
+            keysDown[(int)key] = true;
             nativeInput.KeyDown((int)key);
         }
 
@@ -101,12 +100,12 @@ namespace Game
             }
 
             nativeInput.KeyUp((int)key);
-            keyDownDict[key] = false;
+            keysDown[(int)key] = false;
         }
 
         public bool IsKeyDown(ConsoleKey key)
         {
-            return keyDownDict.TryGetValue(key, out bool down) && down;
+            return keysDown[(int)key];
         }
 
         public void SendText(string payload)
@@ -131,9 +130,9 @@ namespace Game
 
         public int KeyPress(ConsoleKey key, int milliseconds)
         {
-            keyDownDict[key] = true;
+            keysDown[(int)key] = true;
             int totalElapsedMs = nativeInput.KeyPress((int)key, milliseconds);
-            keyDownDict[key] = false;
+            keysDown[(int)key] = false;
 
             if (LogInput)
             {
@@ -161,9 +160,9 @@ namespace Game
                 }
             }
 
-            keyDownDict[key] = true;
+            keysDown[(int)key] = true;
             nativeInput.KeyPressSleep((int)key, milliseconds, ct);
-            keyDownDict[key] = false;
+            keysDown[(int)key] = false;
         }
 
         public void SetKeyState(ConsoleKey key, bool pressDown, bool forced = false)
