@@ -75,13 +75,13 @@ namespace WinAPI
         [DllImport("user32.dll")]
         static extern int GetSystemMetrics(int nIndexn);
 
-        private static int SM_CXCURSOR = 13;
-        private static int SM_CYCURSOR = 14;
+        private const int SM_CXCURSOR = 13;
+        private const int SM_CYCURSOR = 14;
 
         [DllImport("gdi32.dll")]
         static extern int GetDeviceCaps(IntPtr hDC, int nIndex);
 
-        private static int LOGPIXELSX = 88;
+        private const int LOGPIXELSX = 88;
 
         private static bool IsWindowedMode(Point point)
         {
