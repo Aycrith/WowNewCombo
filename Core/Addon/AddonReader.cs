@@ -154,6 +154,8 @@ namespace Core
 
                 if (lastMouseOverId != PlayerReader.MouseOverId)
                 {
+                    lastMouseOverId = PlayerReader.MouseOverId;
+
                     MouseOverName = CreatureDb.Entries.TryGetValue(PlayerReader.MouseOverId, out Creature creature)
                         ? creature.Name : string.Empty;
                 }
