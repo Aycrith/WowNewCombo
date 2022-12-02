@@ -126,6 +126,11 @@ namespace Core
                     FullReset();
                     return;
                 }
+                else if (updateIndex >= 512)
+                {
+                    updateSum = 0;
+                    updateIndex = 0;
+                }
 
                 updateSum += (DateTime.UtcNow - lastUpdate).TotalMilliseconds;
                 updateIndex++;

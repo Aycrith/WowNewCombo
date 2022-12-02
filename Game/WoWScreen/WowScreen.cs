@@ -37,6 +37,8 @@ namespace Game
         private readonly Graphics graphics;
         private readonly Graphics graphicsMinimap;
 
+        private readonly SolidBrush blackPen;
+
         public WowScreen(ILogger logger, WowProcess wowProcess)
         {
             this.logger = logger;
@@ -52,6 +54,8 @@ namespace Game
 
             MiniMapBitmap = new Bitmap(MinimapSize, MinimapSize, PixelFormat.Format32bppPArgb);
             graphicsMinimap = Graphics.FromImage(MiniMapBitmap);
+
+            blackPen = new SolidBrush(Color.Black);
         }
 
         public void Update()
@@ -70,14 +74,16 @@ namespace Game
 
         public void PostProcess()
         {
-            using (var gr = Graphics.FromImage(Bitmap))
+            using (Graphics gr = Graphics.FromImage(Bitmap))
             {
-                using (var blackPen = new SolidBrush(Color.Black))
-                {
-                    gr.FillRectangle(blackPen, new Rectangle(new Point(Bitmap.Width / 15, Bitmap.Height / 40), new Size(Bitmap.Width / 15, Bitmap.Height / 40)));
-                }
+                gr.FillRectangle(blackPen,
+                    new Rectangle(new Point(Bitmap.Width / 15, Bitmap.Height / 40),
+                    new Size(Bitmap.Width / 15, Bitmap.Height / 40)));
 
-                drawActions.ForEach(x => x(gr));
+                for (int i = 0; i < drawActions.Count; i++)
+                {
+                    drawActions[i](gr);
+                }
             }
 
             OnScreenChanged?.Invoke();
@@ -123,6 +129,8 @@ namespace Game
             Bitmap.Dispose();
             graphics.Dispose();
             graphicsMinimap.Dispose();
+
+            blackPen.Dispose();
         }
 
         private static Bitmap CropImage(Bitmap img, bool highlight)

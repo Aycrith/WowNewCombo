@@ -3,7 +3,6 @@ using Serilog.Configuration;
 using Serilog.Core;
 using Serilog.Events;
 using System;
-using Cyotek.Collections.Generic;
 
 namespace Core
 {
@@ -18,11 +17,14 @@ namespace Core
     public sealed class LoggerSink : ILogEventSink
     {
         public static event Action? OnLogChanged;
-        public static CircularBuffer<LogEvent> Log { get; private set; } = new(250);
+
+        private const int SIZE = 256;
+        private static int callCount;
+        public static LogEvent[] Log { get; private set; } = new LogEvent[SIZE];
 
         public void Emit(LogEvent logEvent)
         {
-            Log.Put(logEvent);
+            Log[callCount++ % SIZE] = logEvent;
             OnLogChanged?.Invoke();
         }
 

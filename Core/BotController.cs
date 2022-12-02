@@ -12,7 +12,6 @@ using Core.Session;
 using Game;
 using WinAPI;
 using SharedLib.NpcFinder;
-using Cyotek.Collections.Generic;
 using PPather.Data;
 using Core.Environment;
 using Microsoft.Extensions.DependencyInjection;
@@ -61,33 +60,12 @@ namespace Core
         public event Action? ProfileLoaded;
         public event Action? StatusChanged;
 
-        public double AvgScreenLatency
-        {
-            get
-            {
-                double sum = 0;
-                for (int i = 0; i < ScreenLatencys.Size; i++)
-                {
-                    sum += ScreenLatencys.PeekAt(i);
-                }
-                return sum /= ScreenLatencys.Size;
-            }
-        }
-        private readonly CircularBuffer<double> ScreenLatencys;
+        private const int SIZE = 32;
+        private readonly double[] ScreenLatencys = new double[SIZE];
+        private readonly double[] NPCLatencys = new double[SIZE];
 
-        public double AvgNPCLatency
-        {
-            get
-            {
-                double sum = 0;
-                for (int i = 0; i < NPCLatencys.Size; i++)
-                {
-                    sum += NPCLatencys.PeekAt(i);
-                }
-                return sum /= NPCLatencys.Size;
-            }
-        }
-        private readonly CircularBuffer<double> NPCLatencys;
+        public double AvgScreenLatency => ScreenLatencys.Average();
+        public double AvgNPCLatency => NPCLatencys.Average();
 
         public BotController(ILogger logger, IEnvironment env, StartupClientVersion scv,
             CancellationTokenSource cts,
@@ -110,9 +88,6 @@ namespace Core
 
             this.cts = cts;
             npcNameFinderEvent = new(false);
-
-            ScreenLatencys = new(8);
-            NPCLatencys = new(8);
 
             addonThread = new(AddonThread);
             addonThread.Start();
@@ -166,17 +141,19 @@ namespace Core
         private void ScreenshotThread()
         {
             Stopwatch stopWatch = new();
+            int tickCount = 0;
+
             while (!cts.IsCancellationRequested)
             {
                 if (WowScreen.Enabled)
                 {
                     stopWatch.Restart();
                     WowScreen.Update();
-                    ScreenLatencys.Put(stopWatch.ElapsedMilliseconds);
+                    ScreenLatencys[tickCount % SIZE] = stopWatch.ElapsedMilliseconds;
 
                     stopWatch.Restart();
                     npcNameFinder.Update();
-                    NPCLatencys.Put(stopWatch.ElapsedMilliseconds);
+                    NPCLatencys[tickCount % SIZE] = stopWatch.ElapsedMilliseconds;
 
                     if (WowScreen.EnablePostProcess)
                         WowScreen.PostProcess();
@@ -186,8 +163,10 @@ namespace Core
                 {
                     stopWatch.Restart();
                     minimapNodeFinder.TryFind();
-                    ScreenLatencys.Put(stopWatch.ElapsedMilliseconds);
+                    ScreenLatencys[tickCount % SIZE] = stopWatch.ElapsedMilliseconds;
                 }
+
+                tickCount++;
 
                 cts.Token.WaitHandle.WaitOne(WowScreen.Enabled ||
                     ClassConfig?.Mode == Mode.AttendedGather ? screenshotTickMs : 4);
