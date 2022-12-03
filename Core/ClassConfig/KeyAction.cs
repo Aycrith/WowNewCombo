@@ -94,6 +94,10 @@ namespace Core
         private ActionBarCostReader costReader = null!;
         private ILogger logger = null!;
 
+        private RecordInt globalTime = null!;
+        private int canRunMemoTime;
+        private bool canRun;
+
         public void InitialiseSlot(ILogger logger)
         {
             if (!KeyReader.ReadKey(logger, this))
@@ -113,6 +117,9 @@ namespace Core
         {
             this.costReader = addonReader.ActionBarCostReader;
             this.logger = logger;
+
+            globalTime = addonReader.GlobalTime;
+            this.canRunMemoTime = globalTime.Value;
 
             FormCost = GetMinCost;
 
@@ -245,13 +252,19 @@ namespace Core
 
         public bool CanRun()
         {
-            for (int i = 0; i < RequirementsRuntime.Length; i++)
+            if (canRunMemoTime == globalTime.Value)
+                return canRun;
+
+            canRunMemoTime = globalTime.Value;
+
+            var array = RequirementsRuntime;
+            for (int i = 0; i < array.Length; i++)
             {
-                if (!RequirementsRuntime[i].HasRequirement())
-                    return false;
+                if (!array[i].HasRequirement())
+                    return canRun = false;
             }
 
-            return true;
+            return canRun = true;
         }
 
         private void InitMinPowerType(ActionBarCostReader actionBarCostReader)
