@@ -546,6 +546,29 @@ The bare minimum for `Food` and `Drink` is looks something like this.
     "Requirement": "Mana% < 50"
 }
 ```
+
+When any of these KeyActions detected, by default, it going to be awaited with a predefined [Wait Goal](#wait-goals) logic.
+
+Should see something like this, you can override any of the following values.
+
+```json
+"Wait": {
+    "AutoGenerateWaitForFoodAndDrink": true,    // should generate 'Eating' and 'Drinking' KeyActions
+    "FoodDrinkCost": 5,                         // can override the Cost of awaiting Eating and Drinking
+    "Sequence": {
+    {
+        "Name": "Eating",
+        "Cost": "FoodDrinkCost",
+        "Requirement": "Food && Health% < 99"
+    },
+    {
+        "Name": "Drinking",
+        "Cost": "FoodDrinkCost",
+        "Requirement": "Drink && Mana% < 99"
+    },
+    }
+},
+```
 ---
 
 ### Casting Handler

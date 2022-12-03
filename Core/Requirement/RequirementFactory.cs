@@ -44,6 +44,9 @@ namespace Core
         public const string Drink = "Drink";
         public const string Food = "Food";
 
+        public const string HealthP = "Health%";
+        public const string ManaP = "Mana%";
+
         public RequirementFactory(ILogger logger, AddonReader addonReader,
             NpcNameFinder npcNameFinder, Dictionary<int, SchoolMask[]> immunityBlacklist)
         {
@@ -290,10 +293,10 @@ namespace Core
 
             intVariables = new Dictionary<string, Func<int>>
             {
-                { "Health%", playerReader.HealthPercent },
+                { HealthP, playerReader.HealthPercent },
                 { "TargetHealth%", playerReader.TargetHealthPercentage },
                 { "PetHealth%", playerReader.PetHealthPercentage },
-                { "Mana%", playerReader.ManaPercentage },
+                { ManaP, playerReader.ManaPercentage },
                 { "Mana", playerReader.ManaCurrent },
                 { "Energy", playerReader.PTCurrent },
                 { "Rage", playerReader.PTCurrent },

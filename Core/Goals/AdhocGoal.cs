@@ -22,8 +22,6 @@ namespace Core.Goals
 
         private readonly bool? combatMatters;
 
-        private bool castSuccess;
-
         public AdhocGoal(KeyAction key, ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, StopMoving stopMoving, CastingHandler castingHandler, MountHandler mountHandler)
             : base(nameof(AdhocGoal))
         {
@@ -59,11 +57,6 @@ namespace Core.Goals
             castingHandler.UpdateGCD(true);
         }
 
-        public override void OnExit()
-        {
-            castSuccess = false;
-        }
-
         public override void Update()
         {
             if (castingHandler.SpellInQueue())
@@ -72,7 +65,7 @@ namespace Core.Goals
                 return;
             }
 
-            if (!castSuccess || (key.Charge > 1 && key.CanRun()))
+            if ((key.Charge >= 1 && key.CanRun()))
             {
                 Cast();
                 wait.Update();
@@ -88,50 +81,7 @@ namespace Core.Goals
 
         private void Cast()
         {
-            if (!castingHandler.CastIfReady(key, Interrupt))
-            {
-                if (Interrupt())
-                {
-                    castSuccess = true;
-                }
-
-                return;
-            }
-
-            bool wasDrinkingOrEating = playerReader.Buffs.Drink() || playerReader.Buffs.Food();
-
-            DateTime startTime = DateTime.UtcNow;
-
-            while ((playerReader.Buffs.Drink() || playerReader.Buffs.Food() || playerReader.IsCasting()) && !Interrupt())
-            {
-                wait.Update();
-
-                if (playerReader.Buffs.Drink())
-                {
-                    if (playerReader.ManaPercentage() > 98) { break; }
-                }
-                else if (playerReader.Buffs.Food() && !key.Requirements.Contains("Well Fed"))
-                {
-                    if (playerReader.HealthPercent() > 98) { break; }
-                }
-                else if (!key.CanRun())
-                {
-                    break;
-                }
-
-                if ((DateTime.UtcNow - startTime).TotalSeconds > 30)
-                {
-                    logger.LogInformation($"Waited (30s) long enough for {key.Name}");
-                    break;
-                }
-            }
-
-            if (wasDrinkingOrEating)
-            {
-                input.Stop();
-            }
-
-            castSuccess = true;
+            castingHandler.CastIfReady(key, Interrupt);
         }
     }
 }
