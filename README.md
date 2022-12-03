@@ -450,7 +450,7 @@ The path that the class follows is a `json` file in `/Json/path/` which contains
 "PathThereAndBack": true,                   // if true walks the path and the walks it backwards.
 "PathReduceSteps": true,                    // uses every other coordinate.
 ```
-### **KeyAction** - Commands
+### KeyAction
 
 Each `KeyAction` has its own properties to describe what the action is all about. 
 
@@ -475,6 +475,8 @@ Can specify conditions with [Requirement(s)](#Requirement) in order to create a 
 | `"UseWhenTargetIsCasting"` | Checks for the target casting/channeling.<br>Accepted values:<br>* `null` -> ignore<br>* `false` -> when enemy not casting<br>* `true` -> when enemy casting | `null` |
 | `"Requirement"` | Single [Requirement](#Requirement) | `false` |
 | `"Requirements"` | List of [Requirement](#Requirement) | `false` |
+| `"Interrupt"` | Single [Requirement](#Requirement) | `false` |
+| `"Interrupts"` | List of [Requirement](#Requirement) | `false` |
 | `"ResetOnNewTarget"` | Reset the Cooldown if the target changes | `false` |
 | `"Log"` | Related events should appear in the logs | `true` |
 | --- | Before keypress cast, ... | --- |
@@ -529,7 +531,7 @@ e.g. for Rogue ability
 }
 ```
 
-Theres are few specially named KeyAction such as `Food` and `Drink` which is reserved for eating and drinking.
+Theres are few specially named [KeyAction](#KeyAction) such as `Food` and `Drink` which is reserved for eating and drinking.
 
 They already have some prebaked `Requirement` conditions in order to avoid mistype the definition. 
 
@@ -547,7 +549,7 @@ The bare minimum for `Food` and `Drink` is looks something like this.
 }
 ```
 
-When any of these KeyActions detected, by default, it going to be awaited with a predefined [Wait Goal](#wait-goals) logic.
+When any of these [KeyAction(s)](#KeyAction) detected, by default, it going to be awaited with a predefined [Wait Goal](#wait-goals) logic.
 
 Should see something like this, you can override any of the following values.
 
@@ -578,12 +580,15 @@ let it be using an item from the inventory, casting an instant spell or casting 
 
 From Addon version **1.6.0** it has been significantly changed to the point where it no longer blocks the execution until the castbar fully finishes, but rather gives back the control to the parent Goal such as [Adhoc Goals](#Adhoc-Goals) or [Pull Goal](#Pull-Goal) or [Combat Goal](#Combat-Goal) to give more time to find the best suitable action for the given moment.
 
-As a result in order to execute the [Pull Goal](#Pull-Goal) sequence in respect, have to combine its `KeyAction(s)` with `AfterCast` prefixed conditions.
+As a result in order to execute the [Pull Goal](#Pull-Goal) sequence in respect, have to combine its [KeyAction(s)](#KeyAction) with `AfterCast` prefixed conditions.
 
 ---
+
+## Goal Groups
+
 ### Pull Goal
 
-This is the `Sequence` of `KeyAction(s)` that are used when pulling a mob.
+This is the `Sequence` of [KeyAction(s)](#KeyAction) that are used when pulling a mob.
 
 e.g.
 ```json
@@ -605,7 +610,7 @@ e.g.
 
 ### Combat Goal
 
-The `Sequence` of `KeyAction(s)` that are used when in combat and trying to kill a mob. 
+The `Sequence` of [KeyAction(s)](#KeyAction) that are used when in combat and trying to kill a mob. 
 
 The combat goal does the first available command on the list. 
 
@@ -635,7 +640,7 @@ e.g.
 
 ### Adhoc Goals
 
-These `Sequence` of `KeyAction(s)` are done when not in combat and are not on cooldown. Suitable for personal buffs.
+These `Sequence` of [KeyAction(s)](#KeyAction) are done when not in combat and are not on cooldown. Suitable for personal buffs.
 
 e.g.
 ```json
@@ -662,9 +667,9 @@ e.g.
 
 ### Parallel Goals
 
-These `Sequence` of `KeyAction(s)` are done when not in combat and are not on cooldown. 
+These `Sequence` of [KeyAction(s)](#KeyAction) are done when not in combat and are not on cooldown. 
 
-The keypresses happens simultaneously on all `KeyAction(s)` which mets the `Requirement`.
+The keypresses happens simultaneously on all [KeyAction(s)](#KeyAction) which mets the `Requirement`.
 
 Suitable for `Food` and `Drink`.
 
@@ -780,9 +785,9 @@ In theory if there is a repeatable quest to collect items, you could set up a NP
 
 # Requirement
 
-A requirement is something that must be evaluated to be `true` for the `KeyAction` to run. 
+A requirement is something that must be evaluated to be `true` for the [KeyAction](#KeyAction) to run. 
 
-Not all `KeyAction` requires requirement(s), some rely on
+Not all [KeyAction](#KeyAction) requires requirement(s), some rely on
 * `Cooldown` - populated manually
 * `ActionBarCooldownReader` - populated automatically
 * `ActionBarCostReader` - populated automatically including (`MinMana`, `MinRage`, `MinEnergy`, `MinRunicPower`, `MinRuneBlood`, `MinRuneFrost`, `MinRuneUnholy`)
@@ -832,7 +837,7 @@ e.g.
 
 Two or more Requirement can be merged into a single Requirement object. 
 
-By default every Requirement is concataneted with `[and]` operator which means in order to execute the `KeyAction`, every member in the `RequirementsObject` must be evaluated to `true`. However this consctruct allows to concatanete with `[or]`. Nesting parenthesis are also supported.
+By default every Requirement is concataneted with `[and]` operator which means in order to execute the [KeyAction](#KeyAction), every member in the `RequirementsObject` must be evaluated to `true`. However this consctruct allows to concatanete with `[or]`. Nesting parenthesis are also supported.
 
 Formula: `[Requirement1] [Operator] [RequirementN]`
 
@@ -890,7 +895,9 @@ Formula: `[Keyword] [Operator] [Numeric integer value]`
 | `LastMainHandMs` | Time since last detected Main Hand Melee swing happened in milliseconds |
 | `MainHandSpeed` | Returns the player Main hand attack speed in milliseconds |
 | `MainHandSwing` | Returns the player predicted next main hand swing time |
-| `CD` | Returns the context KeyAction **in-game** cooldown in milliseconds |
+| `RangedSpeed` | Returns the player ranged weapon attack speed in milliseconds |
+| `RangedSwing` | Returns the player predicted next ranged weapon swing time |
+| `CD` | Returns the context [KeyAction](#KeyAction) **in-game** cooldown in milliseconds |
 | `CD_{KeyAction.Name}` | Returns the given `{KeyAction.Name}` **in-game** cooldown in milliseconds |
 | `Cost_{KeyAction.Name}` | Returns the given `{KeyAction.Name}` cost value |
 | `Buff_{IntVariable_Name}` | Returns the given `{IntVariable_Name}` remaining player buff up time |
@@ -908,7 +915,7 @@ For the `MinRange` and `MaxRange` gives an approximation range distance between 
 | 0 | 5 | "InMeleeRange" |
 | 5 | 15 | "IsInDeadZoneRange" |
 
-Its worth mention that `CD_{KeyAction.Name}` is a dynamic value.<br>Each `KeyAction` has its own `in-game Cooldown` which is not the same as `KeyAction.Cooldown`!
+Its worth mention that `CD_{KeyAction.Name}` is a dynamic value.<br>Each [KeyAction](#KeyAction) has its own `in-game Cooldown` which is not the same as `KeyAction.Cooldown`!
 
 e.g. Single Requirement
 ```json
@@ -1123,7 +1130,7 @@ e.g.
 },
 ```
 
-Then in **KeyAction** you can use the following requirement:
+Then in [KeyAction](#KeyAction) you can use the following requirement:
 
 e.g.
 ```json
@@ -1155,7 +1162,7 @@ e.g.
 },
 ```
 
-Then in **KeyAction** you can use the following requirement:
+Then in [KeyAction](#KeyAction) you can use the following requirement:
 
 e.g.
 ```json
@@ -1255,7 +1262,9 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | `"Items Broken"` | Has any broken(red) worn item |
 | `"HasRangedWeapon"` | Has equipped ranged weapon (wand/crossbow/bow/gun) |
 | `"HasAmmo"` | AmmoSlot has equipped ammo and count is greater than zero |
-| `"IsCasting"` | The player is currently casting any spell. |
+| `"Casting"` | The player is currently casting any spell. |
+| `"HasTarget"` | The player currently has a target. |
+| `"TargetAlive"` | The player currently has an alive target. |
 | `"InMeleeRange"` | Target is approximately 0-5 yard range |
 | `"InCloseMeleeRange"` | Target is approximately 0-2 yard range |
 | `"InDeadZoneRange"` | Target is approximately 5-11 yard range |
@@ -1520,6 +1529,44 @@ e.g. Rogue_20.json
 }
 ```
 
+# Interrupt Requirement
+
+Every [KeyAction](#KeyAction) has individual Interrupt(s) condition(s) which are [Requirement(s)](#Requirement) to stop execution before fully finishing it.
+
+As of now every [Goal groups](#Goal-groups) has a default Interrupt.
+* [Combat Goal](#Combat-Goal) based [KeyAction(s)](#KeyAction) interrupted once the target dies and the player loses the target.
+* [Parallel Goal](#Parallel-Goals) based [KeyAction(s)](#KeyAction) has **No** interrupt conditions.
+* [Adhoc Goals](#Adhoc-Goals) based [KeyAction(s)](#KeyAction) depends on `KeyAction.InCombat` flag.
+
+Here's and example for low level Hunters, while playing without a pet companion take advantage of interrupt.
+
+It attempts to step back for a maximum **3000**ms duration however this can be interrupted either
+* losing the current target
+* the next Auto Shot coming in **500**ms
+
+This **500**ms duration is the reload animation time, while the player has to stay still.
+
+```json
+"Combat": {
+    "Sequence": [
+        //...
+        {
+        "Name": "Stepback",
+        "Key": "S",
+        "PressDuration": 3000,
+        "BaseAction": true,
+        "Requirements": [
+            "LastAutoShotMs < 400",
+            "!InMeleeRange",
+            "AutoShot"
+        ],
+        "Interrupt": "RangedSwing < -500 && TargetAlive"
+        },
+        //...
+    ]
+}
+```
+---
 # Modes
 
 The default mode for the bot is to grind, but there are other modes. The mode is set in the root of the class file.
@@ -1591,7 +1638,7 @@ Pathed routes are shown in Green.
 
 ![Pathed route](images/PathedRoute.png)
 
-### Goals
+### Goal
 
 This component contains a button to allow the bot to be enabled and disabled.
 
