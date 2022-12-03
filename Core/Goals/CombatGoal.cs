@@ -76,12 +76,6 @@ namespace Core.Goals
             }
         }
 
-        private bool ValidTarget()
-        {
-            return playerReader.Bits.HasTarget() &&
-                playerReader.Bits.TargetIsNotDead();
-        }
-
         public override void OnEnter()
         {
             if (mountHandler.IsMounted())
@@ -141,7 +135,10 @@ namespace Core.Goals
                         continue;
                     }
 
-                    if (ValidTarget() && castingHandler.CastIfReady(keyAction, ValidTarget))
+                    if (playerReader.Bits.TargetAlive() && castingHandler.CastIfReady(keyAction,
+                        keyAction.Interrupts.Count > 0
+                        ? keyAction.CanBeInterrupted
+                        : playerReader.Bits.TargetAlive))
                     {
                         break;
                     }

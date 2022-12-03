@@ -771,7 +771,9 @@ function DataToColor:CreateFrames(n)
             Pixel(int, DataToColor:NpcId(DataToColor.C.unitmouseover), 86)
             Pixel(int, DataToColor:getGuidFromUnit(DataToColor.C.unitmouseover), 87)
 
-            -- 88
+            Pixel(int, DataToColor:getUnitRangedDamage(DataToColor.C.unitPlayer), 88)
+
+            -- 89 empty
 
             -- 94 last cast GCD
             Pixel(int, DataToColor.lastCastGCD, 94)

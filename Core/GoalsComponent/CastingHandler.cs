@@ -256,19 +256,9 @@ namespace Core.Goals
             return true;
         }
 
-        public bool CastIfReady(KeyAction item)
-        {
-            return item.CanRun() && Cast(item, playerReader.Bits.HasTarget);
-        }
-
         public bool CastIfReady(KeyAction item, Func<bool> interrupt)
         {
             return item.CanRun() && Cast(item, interrupt);
-        }
-
-        public bool Cast(KeyAction item)
-        {
-            return Cast(item, playerReader.Bits.HasTarget);
         }
 
         public bool Cast(KeyAction item, Func<bool> interrupt)

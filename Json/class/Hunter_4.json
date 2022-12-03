@@ -7,6 +7,7 @@
         "Name": "Serpent Sting",
         "Key": "2",
         "BeforeCastStop": true,
+        "AfterCastAuraExpected": true,
         "Requirements": [
           "HasRangedWeapon",
           "HasAmmo",
@@ -18,6 +19,7 @@
         "Name": "Auto Shot",
         "Key": "3",
         "Item": true,
+        "AfterCastWaitCombat": true,
         "Requirements": [
           "HasRangedWeapon",
           "HasAmmo",
@@ -33,12 +35,25 @@
         "Name": "Auto Shot",
         "Key": "3",
         "Item": true,
+        "BeforeCastStop": true,
         "Requirements": [
           "HasRangedWeapon",
           "HasAmmo",
           "!InMeleeRange",
           "!AutoShot"
         ]
+      },
+      {
+        "Name": "Stepback",
+        "Key": "S",
+        "PressDuration": 3000,
+        "BaseAction": true,
+        "Requirements": [
+          "LastAutoShotMs < 400",
+          "!InMeleeRange",
+          "AutoShot"
+        ],
+        "Interrupt": "RangedSwing < -500 && TargetAlive"
       },
       {
         "Name": "Raptor Strike",
@@ -55,8 +70,13 @@
         "Name": "AutoAttack",
         "Requirements": [
           "InMeleeRange",
-          "!AutoShot",
           "!AutoAttacking"
+        ]
+      },
+      {
+        "Name": "Approach",
+        "Requirements": [
+          "InMeleeRange"
         ]
       }
     ]

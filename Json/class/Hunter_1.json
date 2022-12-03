@@ -7,6 +7,8 @@
       {
         "Name": "Auto Shot",
         "Key": "3",
+        "BeforeCastStop": true,
+        "AfterCastWaitCombat": true,
         "Item": true,
         "Requirements": [
           "HasRangedWeapon",
@@ -23,12 +25,25 @@
         "Name": "Auto Shot",
         "Key": "3",
         "Item": true,
+        "BeforeCastStop": true,
         "Requirements": [
           "HasRangedWeapon",
           "!InMeleeRange",
           "!AutoShot",
           "HasAmmo"
         ]
+      },
+      {
+        "Name": "Stepback",
+        "Key": "S",
+        "PressDuration": 3000,
+        "BaseAction": true,
+        "Requirements": [
+          "LastAutoShotMs < 400",
+          "!InMeleeRange",
+          "AutoShot"
+        ],
+        "Interrupt": "RangedSwing < -500 && TargetAlive"
       },
       {
         "Name": "Raptor Strike",
@@ -46,6 +61,12 @@
         "Requirements": [
           "InMeleeRange",
           "!AutoAttacking"
+        ]
+      },
+      {
+        "Name": "Approach",
+        "Requirements": [
+          "InMeleeRange"
         ]
       }
     ]

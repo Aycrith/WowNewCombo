@@ -26,6 +26,7 @@ namespace Core
         public bool TargetInCombat() => v1[Mask._0];
         public bool TargetIsDead() => v1[Mask._1];
         public bool TargetIsNotDead() => !v1[Mask._1];
+        public bool TargetAlive() => HasTarget() && TargetIsNotDead();
         public bool IsDead() => v1[Mask._2];
         public bool HasTalentPoint() => v1[Mask._3];
         public bool HasMouseOver() => v1[Mask._4];
