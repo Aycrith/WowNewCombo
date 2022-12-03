@@ -11,7 +11,7 @@
   "PathFilename": "_pack\\60-70\\Terokkar Forest\\62-64.json",
   "IntVariables": {
     "Item_Soul_Shard": 6265,
-    "Item_Healthstone": 22105,
+    "Item_Healthstone": 22103, //22105
     "DOT_MIN_HEALTH%": 35,
     "DRAIN_MIN_HP%": 70,
     "TAP_MIN_MANA%": 65,
@@ -240,7 +240,8 @@
           "!Has Pet",
           "Fel Domination",
           "BagItem:Item_Soul_Shard"
-        ]
+        ],
+        "AfterCastAuraExpected": true
       },
       {
         "Name": "Summon Felguard",
@@ -250,7 +251,8 @@
           "!Has Pet",
           "BagItem:Item_Soul_Shard"
         ],
-        "AfterCastWaitCastbar": true
+        "AfterCastWaitCastbar": true,
+        "AfterCastAuraExpected": true
       },
       {
         "Name": "Soul Link",

@@ -65,7 +65,8 @@
         "Key": "4",
         "HasCastBar": true,
         "Requirement": "!Has Pet",
-        "AfterCastWaitCastbar": true
+        "AfterCastWaitCastbar": true,
+        "AfterCastAuraExpected": true
       },
       {
         "Name": "Food",

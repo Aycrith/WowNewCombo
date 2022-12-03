@@ -114,7 +114,8 @@
           "BagItem:Item_Soul_Shard",
           "!Has Pet"
         ],
-        "AfterCastWaitCastbar": true
+        "AfterCastWaitCastbar": true,
+        "AfterCastAuraExpected": true
       },
       {
         "Name": "Life Tap",
