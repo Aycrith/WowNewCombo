@@ -193,8 +193,6 @@ namespace Core.Goals
                         ResetCooldowns();
 
                         logger.LogWarning("Found new target!");
-                        input.Interact();
-
                         return;
                     }
 
