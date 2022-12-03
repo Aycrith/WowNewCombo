@@ -618,14 +618,15 @@ namespace Core
 
         private static void AddChargeRequirement(List<Requirement> list, KeyAction item)
         {
-            if (item.Charge > 1)
+            if (!item.BaseAction && item.Charge >= 1)
             {
                 bool f() => item.GetChargeRemaining() != 0;
                 string s() => $"Charge {item.GetChargeRemaining()}";
                 list.Add(new Requirement
                 {
                     HasRequirement = f,
-                    LogMessage = s
+                    LogMessage = s,
+                    VisibleIfHasRequirement = false
                 });
             }
         }
