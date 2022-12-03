@@ -18,9 +18,10 @@ namespace Core
     {
         public static event Action? OnLogChanged;
 
-        private const int SIZE = 256;
+        public const int SIZE = 256;
         private static int callCount;
         public static LogEvent[] Log { get; private set; } = new LogEvent[SIZE];
+        public static int Head => callCount % SIZE;
 
         public void Emit(LogEvent logEvent)
         {

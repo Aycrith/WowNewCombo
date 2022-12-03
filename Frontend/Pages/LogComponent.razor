@@ -34,9 +34,12 @@
 
 <div class="col-sm" style="@(MaxHeight > 0 ? $"overflow: auto; max-height: {MaxHeight}px;" : string.Empty)">
     <table class="table table-borderless table-dark" cellspacing="20">
-        @for(int i=LoggerSink.Log.Count()-1; i >= 0; i--)
+        @{
+            int head = LoggerSink.Head;
+        }
+        @for (int i = LoggerSink.SIZE; i >= 0; i--)
         {
-            var evt = LoggerSink.Log[i];
+            var evt = LoggerSink.Log[(head + i) % LoggerSink.SIZE];
             if (evt == null) continue;
             <tr class="@logLevelColor[evt.Level]">
                 <td class="log">@evt.Timestamp.ToString("HH:mm:ss")</td>
