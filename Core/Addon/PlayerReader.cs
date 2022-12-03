@@ -181,6 +181,8 @@ namespace Core
         public int FocusGuid => reader.GetInt(77);
         public int FocusTargetGuid => reader.GetInt(78);
 
+        public int RangedSpeedMs() => reader.GetInt(88) * 10;
+
         public void Update(IAddonDataProvider reader)
         {
             if (UIMapId.Updated(reader) && UIMapId.Value != 0)

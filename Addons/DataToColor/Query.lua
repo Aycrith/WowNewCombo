@@ -47,6 +47,7 @@ local GetSkillLineInfo = GetSkillLineInfo
 local UnitIsGhost = UnitIsGhost
 local C_DeathInfo = C_DeathInfo
 local UnitAttackSpeed = UnitAttackSpeed
+local UnitRangedDamage = UnitRangedDamage
 
 -- bits
 
@@ -448,6 +449,11 @@ end
 function DataToColor:getMeleeAttackSpeed(unit)
     local main, off = UnitAttackSpeed(unit)
     return 10000 * floor((off or 0) * 100) + floor((main or 0) * 100)
+end
+
+function DataToColor:getUnitRangedDamage(unit)
+    local speed = UnitRangedDamage(unit)
+    return floor((speed or 0) * 100)
 end
 
 function DataToColor:getAvgEquipmentDurability()
