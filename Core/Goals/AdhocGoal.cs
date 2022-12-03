@@ -22,8 +22,6 @@ namespace Core.Goals
 
         private readonly bool? combatMatters;
 
-        //private bool castSuccess;
-
         public AdhocGoal(KeyAction key, ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, StopMoving stopMoving, CastingHandler castingHandler, MountHandler mountHandler)
             : base(nameof(AdhocGoal))
         {

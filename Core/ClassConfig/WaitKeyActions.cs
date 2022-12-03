@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+
 using System;
 
 namespace Core
@@ -7,6 +8,8 @@ namespace Core
     {
         public float FoodDrinkCost { get; set; } = 5f;
 
+        public bool AutoGenerateWaitForFoodAndDrink { get; set; } = true;
+
         public override void PreInitialise(string prefix, RequirementFactory requirementFactory, ILogger logger)
         {
             base.PreInitialise(prefix, requirementFactory, logger);
@@ -14,7 +17,8 @@ namespace Core
 
         public override void Initialise(string prefix, ClassConfiguration config, AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger, bool globalLog)
         {
-            AddWaitKeyActionsForFoodOrDrink(logger, config);
+            if (AutoGenerateWaitForFoodAndDrink)
+                AddWaitKeyActionsForFoodOrDrink(logger, config);
 
             base.Initialise(prefix, config, addonReader, requirementFactory, logger, globalLog);
         }
