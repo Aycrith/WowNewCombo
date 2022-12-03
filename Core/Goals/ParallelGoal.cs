@@ -91,41 +91,6 @@ namespace Core.Goals
         private void Cast()
         {
             Parallel.For(0, Keys.Length, Execute);
-
-            if (castSuccess)
-            {
-                bool wasDrinkingOrEating = playerReader.Buffs.Drink() || playerReader.Buffs.Food();
-
-                DateTime startTime = DateTime.UtcNow;
-                while ((playerReader.Buffs.Drink() || playerReader.Buffs.Food() || playerReader.IsCasting()) && !playerReader.Bits.PlayerInCombat())
-                {
-                    wait.Update();
-
-                    if (playerReader.Buffs.Drink() && playerReader.Buffs.Food())
-                    {
-                        if (playerReader.ManaPercentage() > 98 && playerReader.HealthPercent() > 98) { break; }
-                    }
-                    else if (playerReader.Buffs.Drink())
-                    {
-                        if (playerReader.ManaPercentage() > 98) { break; }
-                    }
-                    else if (playerReader.Buffs.Food())
-                    {
-                        if (playerReader.HealthPercent() > 98) { break; }
-                    }
-
-                    if ((DateTime.UtcNow - startTime).TotalSeconds > 30)
-                    {
-                        logger.LogInformation($"Waited (30s) long enough for {Name}");
-                        break;
-                    }
-                }
-
-                if (wasDrinkingOrEating)
-                {
-                    input.StandUp();
-                }
-            }
         }
 
         private void Execute(int i)
