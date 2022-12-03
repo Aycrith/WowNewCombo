@@ -104,9 +104,13 @@ namespace Core
 
         public void InitialiseSlot(ILogger logger)
         {
-            if (!KeyReader.ReadKey(logger, this))
+            if (!KeyReader.ReadKey(logger, this) && !BaseAction)
             {
-                logger.LogWarning($"[{Name}] has no valid Key={ConsoleKey}");
+                logger.LogWarning($"[{Name}] has no valid {nameof(Key)}=\"{Key}\" or {nameof(ConsoleKey)}=\"{ConsoleKey}\"");
+            }
+            else if (Slot == 0)
+            {
+                logger.LogInformation($"[{Name}] Non Actionbar \"{Key}\" -> {ConsoleKey}");
             }
         }
 
@@ -173,7 +177,7 @@ namespace Core
             if (Slot > 0)
             {
                 this.SlotIndex = Stance.ToSlot(this, addonReader.PlayerReader) - 1;
-                this.logger.LogInformation($"[{Name}] Actionbar Form key map: Key:{Key} -> Actionbar:{Slot} -> Index:{SlotIndex}");
+                this.logger.LogInformation($"[{Name}] Actionbar Key:{Key} -> Actionbar:{Slot} -> Index:{SlotIndex}");
             }
 
             ConsoleKeyFormHash = ((int)FormEnum * 1000) + (int)ConsoleKey;

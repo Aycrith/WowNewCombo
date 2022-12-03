@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Core
 {
@@ -111,37 +110,31 @@ namespace Core
         {
             if (string.IsNullOrEmpty(key.Key))
             {
-                logger.LogError($"[{key.Name}] Must specify '{nameof(key.Key)}'");
                 return false;
             }
 
-            if (KeyMapping.ContainsKey(key.Key))
+            if (KeyMapping.TryGetValue(key.Key, out ConsoleKey consoleKey))
             {
-                key.ConsoleKey = KeyMapping[key.Key];
+                key.ConsoleKey = consoleKey;
             }
             else
             {
-                var consoleKeys = (IEnumerable<ConsoleKey>)Enum.GetValues(typeof(ConsoleKey));
-                ConsoleKey consoleKey = consoleKeys.FirstOrDefault(k => k.ToString() == key.Key);
-                if (consoleKey == 0)
+                if (!Enum.TryParse(key.Key, true, out consoleKey))
                 {
-                    logger.LogError($"[{key.Name}] Must specify a valid '{nameof(key.Key)}' (ConsoleKey enum)");
                     return false;
                 }
 
                 key.ConsoleKey = consoleKey;
             }
 
-            if (ActionBarSlotMap.TryGetValue(key.Key, out int s))
+            if (ActionBarSlotMap.TryGetValue(key.Key, out int slot))
             {
-                key.Slot = s;
+                key.Slot = slot;
             }
-            else
+            else if (!key.BaseAction)
             {
                 logger.LogWarning($"[{key.Name}] Unable to assign Actionbar {nameof(KeyAction.Slot)}!");
             }
-
-            logger.LogInformation($"[{key.Name}] Uses \"{key.Key}\" -> {key.ConsoleKey} - Slot: {key.Slot}");
 
             return true;
         }
