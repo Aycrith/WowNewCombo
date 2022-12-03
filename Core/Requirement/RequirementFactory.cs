@@ -123,6 +123,8 @@ namespace Core
                 { "HasAmmo", playerReader.Bits.HasAmmo },
 
                 { "Casting", playerReader.IsCasting },
+                { "HasTarget", playerReader.Bits.HasTarget },
+                { "TargetAlive", playerReader.Bits.TargetAlive },
 
                 // General Buff Condition
                 { Food, playerReader.Buffs.Food },
@@ -323,6 +325,8 @@ namespace Core
                 //"TBuff_{textureId}"
                 { "MainHandSpeed", playerReader.MainHandSpeedMs },
                 { "MainHandSwing", () => Math.Clamp(playerReader.MainHandSwing.ElapsedMs() - playerReader.MainHandSpeedMs(), -playerReader.MainHandSpeedMs(), 0) },
+                { "RangedSpeed", playerReader.RangedSpeedMs },
+                { "RangedSwing", () => Math.Clamp(playerReader.AutoShot.ElapsedMs() - playerReader.RangedSpeedMs(), -playerReader.RangedSpeedMs(), 0) },
                 { "CurGCD", playerReader.GCD._Value },
                 { "GCD", CastingHandler._GCD }
             };
@@ -402,6 +406,53 @@ namespace Core
             AddSpellSchoolRequirement(requirements, item, playerReader, immunityBlacklist);
 
             item.RequirementsRuntime = requirements.ToArray();
+
+            if (item.Interrupts.Count > 0)
+                InitializeInitialiseInterrupts(item);
+        }
+
+        private void InitializeInitialiseInterrupts(KeyAction item)
+        {
+            List<Requirement> requirements = new();
+
+            foreach (string requirement in CollectionsMarshal.AsSpan(item.Interrupts))
+            {
+                List<string> expressions = InfixToPostfix.Convert(requirement);
+                Stack<Requirement> stack = new();
+                foreach (string expr in CollectionsMarshal.AsSpan(expressions))
+                {
+                    if (expr.Contains(Requirement.SymbolAnd))
+                    {
+                        Requirement a = stack.Pop();
+                        Requirement b = stack.Pop();
+                        b.And(a);
+
+                        stack.Push(b);
+                    }
+                    else if (expr.Contains(Requirement.SymbolOr))
+                    {
+                        Requirement a = stack.Pop();
+                        Requirement b = stack.Pop();
+                        b.Or(a);
+
+                        stack.Push(b);
+                    }
+                    else
+                    {
+                        string trim = expr.Trim();
+                        if (string.IsNullOrEmpty(trim))
+                        {
+                            continue;
+                        }
+
+                        stack.Push(CreateRequirement(item.Name, trim));
+                    }
+                }
+
+                requirements.Add(stack.Pop());
+            }
+
+            item.InterruptsRuntime = requirements.ToArray();
         }
 
         public void InitUserDefinedIntVariables(Dictionary<string, int> intKeyValues,

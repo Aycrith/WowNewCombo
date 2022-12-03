@@ -45,6 +45,10 @@ namespace Core
         public List<string> Requirements { get; } = new();
         public Requirement[] RequirementsRuntime { get; set; } = Array.Empty<Requirement>();
 
+        public string Interrupt { get; set; } = string.Empty;
+        public List<string> Interrupts { get; } = new();
+        public Requirement[] InterruptsRuntime { get; set; } = Array.Empty<Requirement>();
+
         public bool WhenUsable { get; set; }
 
         public bool ResetOnNewTarget { get; set; }
@@ -133,6 +137,11 @@ namespace Core
             if (!string.IsNullOrEmpty(Requirement))
             {
                 Requirements.Add(Requirement);
+            }
+
+            if (!string.IsNullOrEmpty(Interrupt))
+            {
+                Interrupts.Add(Interrupt);
             }
 
             HasFormRequirement = !string.IsNullOrEmpty(Form);
@@ -265,6 +274,18 @@ namespace Core
             }
 
             return canRun = true;
+        }
+
+        public bool CanBeInterrupted()
+        {
+            var array = InterruptsRuntime;
+            for (int i = 0; i < array.Length; i++)
+            {
+                if (!array[i].HasRequirement())
+                    return false;
+            }
+
+            return true;
         }
 
         private void InitMinPowerType(ActionBarCostReader actionBarCostReader)
