@@ -67,7 +67,7 @@ namespace Core.Goals
 
             if ((key.Charge >= 1 && key.CanRun()))
             {
-                Cast();
+                castingHandler.CastIfReady(key, Interrupt);
                 wait.Update();
             }
         }
@@ -77,11 +77,6 @@ namespace Core.Goals
             return combatMatters.HasValue
                 ? combatMatters.Value == addonReader.PlayerReader.Bits.PlayerInCombat() && addonReader.DamageTakenCount() > 0
                 : addonReader.DamageTakenCount() > 0;
-        }
-
-        private void Cast()
-        {
-            castingHandler.CastIfReady(key, Interrupt);
         }
     }
 }
