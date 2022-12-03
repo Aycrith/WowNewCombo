@@ -97,7 +97,7 @@ namespace Core
         public bool WithinPullRange(PlayerReader playerReader, UnitClass @class) => @class switch
         {
             UnitClass.Warrior => (playerReader.Level.Value >= 4 && Warrior_Charge) || playerReader.IsInMeleeRange(),
-            UnitClass.Rogue => Rogue_Throw,
+            UnitClass.Rogue => Rogue_Throw || Rogue_SinisterStrike,
             UnitClass.Priest => Priest_Smite,
             UnitClass.Druid => Druid_Wrath,
             UnitClass.Paladin => (playerReader.Level.Value >= 4 && Paladin_Judgement) || playerReader.IsInMeleeRange() ||
