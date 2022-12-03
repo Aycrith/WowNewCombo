@@ -5,10 +5,10 @@
 
 <style>
     .log {
-        font-family: "Courier New", Courier, monospace;
+        font-family: Consolas, monaco, monospace;
         font-size: small;
         padding: 0 0 5px 0 !important;
-        padding-right: 10px !important;
+        padding-right: 5px !important;
     }
 
     .success {
@@ -41,7 +41,7 @@
         {
             var evt = LoggerSink.Log[(head + i) % LoggerSink.SIZE];
             if (evt == null) continue;
-            <tr class="@logLevelColor[evt.Level]">
+            <tr class="@logLevelColor[(int)evt.Level]">
                 <td class="log">@evt.Timestamp.ToString("HH:mm:ss")</td>
                 <td class="log">@evt.RenderMessage()</td>
             </tr>
@@ -53,14 +53,13 @@
     [Parameter]
     public int MaxHeight { get; set; } = 400;
 
-    private readonly Dictionary<LogEventLevel, string> logLevelColor = new()
-    {
-        { LogEventLevel.Verbose, string.Empty },
-        { LogEventLevel.Debug, "success" },
-        { LogEventLevel.Information, string.Empty },
-        { LogEventLevel.Warning, "warning" },
-        { LogEventLevel.Error, "danger" },
-        { LogEventLevel.Fatal, "danger" },
+    private static readonly string[] logLevelColor = {
+        string.Empty,   // LogEventLevel.Verbose
+        "success",      // LogEventLevel.Debug
+        string.Empty,   // LogEventLevel.Information
+        "warning",      // LogEventLevel.Warning
+        "danger",       // LogEventLevel.Error
+        "danger"        // LogEventLevel.Fatal
     };
 
     protected override void OnInitialized()
@@ -77,5 +76,4 @@
     {
         base.InvokeAsync(StateHasChanged);
     }
-
 }
