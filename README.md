@@ -558,12 +558,12 @@ Should see something like this, you can override any of the following values.
     "Sequence": {
     {
         "Name": "Eating",
-        "Cost": "FoodDrinkCost",
+        "Cost": 5,                              // FoodDrinkCost
         "Requirement": "Food && Health% < 99"
     },
     {
         "Name": "Drinking",
-        "Cost": "FoodDrinkCost",
+        "Cost": 5,                              // FoodDrinkCost
         "Requirement": "Drink && Mana% < 99"
     },
     }
