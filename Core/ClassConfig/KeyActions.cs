@@ -3,11 +3,11 @@ using System;
 
 namespace Core
 {
-    public sealed partial class KeyActions : IDisposable
+    public partial class KeyActions : IDisposable
     {
-        public KeyAction[] Sequence { get; init; } = Array.Empty<KeyAction>();
+        public KeyAction[] Sequence { get; set; } = Array.Empty<KeyAction>();
 
-        public void PreInitialise(string prefix, RequirementFactory requirementFactory, ILogger logger)
+        public virtual void PreInitialise(string prefix, RequirementFactory requirementFactory, ILogger logger)
         {
             if (Sequence.Length > 0)
             {
@@ -22,7 +22,7 @@ namespace Core
             }
         }
 
-        public void Initialise(string prefix, ClassConfiguration config, AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger, bool globalLog)
+        public virtual void Initialise(string prefix, ClassConfiguration config, AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger, bool globalLog)
         {
             if (Sequence.Length > 0)
             {
@@ -47,13 +47,13 @@ namespace Core
             EventId = 10,
             Level = LogLevel.Information,
             Message = "[{prefix}] CreateDynamicBindings.")]
-        static partial void LogDynamicBinding(ILogger logger, string prefix);
+        protected static partial void LogDynamicBinding(ILogger logger, string prefix);
 
         [LoggerMessage(
             EventId = 11,
             Level = LogLevel.Information,
             Message = "[{prefix}] Initialise KeyActions.")]
-        static partial void LogInitKeyActions(ILogger logger, string prefix);
+        protected static partial void LogInitKeyActions(ILogger logger, string prefix);
 
     }
 }

@@ -65,7 +65,7 @@ namespace Core
         public KeyActions Adhoc { get; } = new();
         public KeyActions Parallel { get; } = new();
         public KeyActions NPC { get; } = new();
-        public KeyActions Wait { get; } = new();
+        public WaitKeyActions Wait { get; } = new();
 
         public KeyAction[] Form { get; init; } = Array.Empty<KeyAction>();
         public KeyAction[] GatherFindKeyConfig { get; set; } = Array.Empty<KeyAction>();
