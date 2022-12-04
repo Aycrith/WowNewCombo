@@ -35,7 +35,7 @@
 <div class="col-sm" style="@(MaxHeight > 0 ? $"overflow: auto; max-height: {MaxHeight}px;" : string.Empty)">
     <table class="table table-borderless table-dark" cellspacing="20">
         @{
-            int head = LoggerSink.Head;
+            int head = Math.Max(LoggerSink.Head - 1, 0);
         }
         @for (int i = LoggerSink.SIZE; i >= 0; i--)
         {
