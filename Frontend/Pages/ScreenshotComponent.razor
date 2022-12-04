@@ -1,16 +1,17 @@
 ﻿@inject WowScreen wowScreen
 
-<div class="@(Stretch ? "w-100 h-auto m-0 p-0" : string.Empty)">
-    <div class="row" @onclick="Toggle">
-        @if (wowScreen.EnablePostProcess)
-        {
-            <img class="@(Stretch ? "img-fluid w-100" : string.Empty)" src="data:image/png;base64, @WowScreen.ToBase64(wowScreen.Bitmap, Size)" alt="Toggle preview!" />
-        }
-        else
-        {
-            <label class="oi oi-fullscreen-enter">  Toggle preview! </label>
-        }
-    </div>
+@using System.Drawing
+@using System.Drawing.Drawing2D;
+
+<div class="card" @onclick="Toggle">
+    @if (inited && wowScreen.EnablePostProcess)
+    {
+        <img class="@(Stretch ? "img-filled" : "img-filled-half")" src="data:image/png;base64, @WowScreen.ToBase64(wowScreen.Bitmap, bitmap, graphics)" alt="Toggle preview!" />
+    }
+    else
+    {
+        <label class="oi oi-fullscreen-enter">  Toggle preview!</label>
+    }
 </div>
 
 @code {
@@ -20,6 +21,11 @@
 
     [Parameter]
     public bool Stretch { get; set; } = false;
+
+    private Bitmap? bitmap;
+    private Graphics? graphics;
+
+    private bool inited = false;
 
     protected override void OnAfterRender(bool firstRender)
     {
@@ -32,15 +38,46 @@
     public void Dispose()
     {
         wowScreen.OnScreenChanged -= this.ImageChanged;
+
+        graphics?.Dispose();
+        bitmap?.Dispose();
     }
 
     protected void Toggle()
     {
+        if (!inited)
+        {
+            int width;
+            int height;
+
+            int size = Size;
+            if (wowScreen.MiniMapBitmap.Width > wowScreen.MiniMapBitmap.Height)
+            {
+                width = size;
+                height = Convert.ToInt32(wowScreen.MiniMapBitmap.Height * size / (float)wowScreen.MiniMapBitmap.Width);
+            }
+            else
+            {
+                width = Convert.ToInt32(wowScreen.MiniMapBitmap.Width * size / (float)wowScreen.MiniMapBitmap.Height);
+                height = size;
+            }
+
+            bitmap = new Bitmap(width, height);
+
+            graphics = Graphics.FromImage(bitmap);
+            graphics.CompositingQuality = CompositingQuality.HighSpeed;
+            graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            graphics.CompositingMode = CompositingMode.SourceCopy;
+
+            inited = true;
+        }
+
         wowScreen.EnablePostProcess = !wowScreen.EnablePostProcess;
     }
 
     private async void ImageChanged()
     {
-        await base.InvokeAsync(StateHasChanged);
+        if (inited)
+            await base.InvokeAsync(StateHasChanged);
     }
 }

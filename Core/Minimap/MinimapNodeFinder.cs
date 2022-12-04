@@ -1,24 +1,29 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+using System.Buffers;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+
 using Game;
+
 using Microsoft.Extensions.Logging;
+
 using SharedLib.Extensions;
 
 namespace Core
 {
     public sealed class MinimapNodeFinder
     {
-        private struct Score
+        private readonly struct Point
         {
-            public int X;
-            public int Y;
-            public int count;
+            public readonly int X;
+            public readonly int Y;
+
+            public Point(int x, int y)
+            {
+                X = x;
+                Y = y;
+            }
         }
 
         private readonly ILogger logger;
@@ -39,14 +44,17 @@ namespace Core
         {
             wowScreen.UpdateMinimapBitmap();
 
-            var list = FindYellowPoints();
-            ScorePoints(list, out Score best);
-            NodeEvent?.Invoke(this, new MinimapNodeEventArgs(best.X, best.Y, list.Count(x => x.count > MinScore)));
+            var span = FindYellowPoints();
+            ScorePoints(span, out Point best, out int amountAboveMin);
+            NodeEvent?.Invoke(this, new MinimapNodeEventArgs(best.X, best.Y, amountAboveMin));
         }
 
-        private List<Score> FindYellowPoints()
+        private Span<Point> FindYellowPoints()
         {
-            List<Score> points = new(100);
+            const int SIZE = 100;
+            var pooler = ArrayPool<Point>.Shared;
+            Point[] points = pooler.Rent(SIZE);
+
             Bitmap bitmap = wowScreen.MiniMapBitmap;
 
             // TODO: adjust these values based on resolution
@@ -57,15 +65,17 @@ namespace Core
             int maxY = bitmap.Height - 6;
 
             Rectangle rect = new(minX, minY, maxX - minX, maxY - minY);
-            Point center = rect.Centre();
+            System.Drawing.Point center = rect.Centre();
             float radius = (maxX - minX) / 2f;
+
+            int count = 0;
 
             unsafe
             {
-                BitmapData data = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height), ImageLockMode.ReadWrite, bitmap.PixelFormat);
-                int bytesPerPixel = Bitmap.GetPixelFormatSize(bitmap.PixelFormat) / 8;
+                BitmapData data = bitmap.LockBits(new Rectangle(System.Drawing.Point.Empty, bitmap.Size),
+                    ImageLockMode.ReadWrite, bitmap.PixelFormat);
+                const int bytesPerPixel = 4; //Bitmap.GetPixelFormatSize(bitmap.PixelFormat) / 8;
 
-                //for (int y = minY; y < maxY; y++)
                 Parallel.For(minY, maxY, y =>
                 {
                     byte* currentLine = (byte*)data.Scan0 + (y * data.Stride);
@@ -77,10 +87,11 @@ namespace Core
                         int xi = x * bytesPerPixel;
                         if (IsMatch(currentLine[xi + 2], currentLine[xi + 1], currentLine[xi]))
                         {
-                            if (points.Capacity == points.Count)
+                            if (count >= SIZE)
                                 return;
 
-                            points.Add(new Score { X = x, Y = y, count = 0 });
+                            points[count++] = new Point(x, y);
+
                             currentLine[xi + 2] = 255;
                             currentLine[xi + 1] = 0;
                             currentLine[xi + 0] = 0;
@@ -91,51 +102,64 @@ namespace Core
                 bitmap.UnlockBits(data);
             }
 
-            if (points.Count == points.Capacity)
+            if (count >= SIZE)
             {
                 logger.LogWarning("Too much yellow in this image!");
-                points.Clear();
             }
 
-            return points;
+            return points.AsSpan(0, count);
+
+            static bool IsValidSquareLocation(int x, int y, System.Drawing.Point center, float width)
+            {
+                return Math.Sqrt(((x - center.X) * (x - center.X)) + ((y - center.Y) * (y - center.Y))) < width;
+            }
+
+            static bool IsMatch(byte red, byte green, byte blue)
+            {
+                return blue < MaxBlue && red > MinRedGreen && green > MinRedGreen;
+            }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsMatch(byte red, byte green, byte blue)
+        private static void ScorePoints(Span<Point> points, out Point best, out int amountAboveMin)
         {
-            return blue < MaxBlue && red > MinRedGreen && green > MinRedGreen;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool IsValidSquareLocation(int x, int y, Point center, float width)
-        {
-            return Math.Sqrt(((x - center.X) * (x - center.X)) + ((y - center.Y) * (y - center.Y))) < width;
-        }
-
-        private static bool ScorePoints(List<Score> points, out Score best)
-        {
-            best = new Score();
             const int size = 5;
 
-            for (int i = 0; i < points.Count; i++)
-            {
-                Score p = points[i];
-                p.count =
-                    points.Where(s => Math.Abs(s.X - p.X) < size) // + or - n pixels horizontally
-                    .Count(s => Math.Abs(s.Y - p.Y) < size);
+            best = new Point();
+            amountAboveMin = 0;
 
-                points[i] = p;
+            int maxIndex = -1;
+            int maxScore = 0;
+
+            for (int i = 0; i < points.Length; i++)
+            {
+                Point pi = points[i];
+
+                int score = 0;
+                for (int j = 0; j < points.Length; j++)
+                {
+                    Point pj = points[j];
+
+                    if (Math.Abs(pi.X - pj.X) < size ||
+                        Math.Abs(pi.Y - pj.Y) < size)
+                    {
+                        score++;
+                    }
+                }
+
+                if (score > MinScore)
+                    amountAboveMin++;
+
+                if (maxScore < score)
+                {
+                    maxIndex = i;
+                    maxScore = score;
+                }
             }
 
-            points.Sort((a, b) => a.count.CompareTo(b.count));
-
-            if (points.Count > 0 && points[^1].count > MinScore)
+            if (maxIndex >= 0 && maxScore > MinScore)
             {
-                best = points[^1];
-                return true;
+                best = points[maxIndex];
             }
-
-            return false;
         }
     }
 }

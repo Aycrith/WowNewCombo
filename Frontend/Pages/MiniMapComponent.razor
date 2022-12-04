@@ -4,6 +4,9 @@
 @inject IAddonReader addonReader
 @inject MinimapNodeFinder minimapNodeFinder
 
+@using System.Drawing
+@using System.Drawing.Drawing2D;
+
 <div class="card">
     <div class="card-header">
         <table width="100%">
@@ -19,9 +22,9 @@
         </table>
     </div>
     <div class="card-body" style="padding: 0 0 0 0; width:@(Size)px; height:@(Size)px">
-        @if (previewEnabled)
+        @if (inited && previewEnabled)
         {
-            <img style="width:@(Size)px; height:@(Size)px" src="data:image/png;base64, @WowScreen.ToBase64(wowScreen.MiniMapBitmap, (int)(Size * DownScale))" alt="Red dot" />
+            <img style="width:@(Size)px; height:@(Size)px" src="data:image/png;base64, @WowScreen.ToBase64(wowScreen.MiniMapBitmap, bitmap, graphics)" alt="Red dot" />
         }
     </div>
 </div>
@@ -39,7 +42,25 @@
     private bool lastNodeFound = false;
     private int lastNodeCount = 0;
 
-    private bool previewEnabled = true;
+    private bool inited = false;
+    private bool preview = false;
+    private bool previewEnabled
+    {
+        get => preview;
+        set
+        {
+            if (!inited)
+            {
+                inited = true;
+                InitBitmap();
+            }
+
+            preview = value;
+        }
+    }
+
+    private Graphics? graphics;
+    private Bitmap? bitmap;
 
     protected override void OnInitialized()
     {
@@ -55,6 +76,34 @@
         {
             minimapNodeFinder.NodeEvent -= NodeFound;
         }
+
+        graphics?.Dispose();
+        bitmap?.Dispose();
+    }
+
+    private void InitBitmap()
+    {
+        int width;
+        int height;
+
+        int size = (int)(Size * DownScale);
+        if (wowScreen.MiniMapBitmap.Width > wowScreen.MiniMapBitmap.Height)
+        {
+            width = size;
+            height = Convert.ToInt32(wowScreen.MiniMapBitmap.Height * size / (float)wowScreen.MiniMapBitmap.Width);
+        }
+        else
+        {
+            width = Convert.ToInt32(wowScreen.MiniMapBitmap.Width * size / (float)wowScreen.MiniMapBitmap.Height);
+            height = size;
+        }
+
+        bitmap = new Bitmap(width, height);
+
+        graphics = Graphics.FromImage(bitmap);
+        graphics.CompositingQuality = CompositingQuality.HighSpeed;
+        graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+        graphics.CompositingMode = CompositingMode.SourceCopy;
     }
 
     private void NodeFound(object? source, MinimapNodeEventArgs e)

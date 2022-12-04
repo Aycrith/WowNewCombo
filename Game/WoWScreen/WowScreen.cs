@@ -169,35 +169,15 @@ namespace Game
             return tmp;
         }
 
-        public static string ToBase64(Bitmap bitmap, int size)
+        public static string ToBase64(Bitmap bitmap, Bitmap resized, Graphics graphics)
         {
-            int width, height;
-            if (bitmap.Width > bitmap.Height)
-            {
-                width = size;
-                height = Convert.ToInt32(bitmap.Height * size / (float)bitmap.Width);
-            }
-            else
-            {
-                width = Convert.ToInt32(bitmap.Width * size / (float)bitmap.Height);
-                height = size;
-            }
-            var resized = new Bitmap(width, height);
-            using (var graphics = Graphics.FromImage(resized))
-            {
-                graphics.CompositingQuality = CompositingQuality.HighSpeed;
-                graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                graphics.CompositingMode = CompositingMode.SourceCopy;
-                graphics.DrawImage(bitmap, 0, 0, width, height);
-            }
+            graphics.DrawImage(bitmap, 0, 0, resized.Width, resized.Height);
 
-            using (MemoryStream ms = new MemoryStream())
-            {
-                resized.Save(ms, ImageFormat.Png);
-                resized.Dispose();
-                byte[] byteImage = ms.ToArray();
-                return Convert.ToBase64String(byteImage); // Get Base64
-            }
+            using MemoryStream ms = new();
+            resized.Save(ms, ImageFormat.Png);
+
+            byte[] byteImage = ms.ToArray();
+            return Convert.ToBase64String(byteImage);
         }
 
     }

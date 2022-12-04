@@ -254,3 +254,13 @@ app {
     padding: 5px;
     color: black;
 }
+
+.img-filled {
+    width: 100%;
+    aspect-ratio: 2.5/1;
+}
+
+.img-filled-half {
+    width: 100%;
+    aspect-ratio: 1.5/1;
+}
