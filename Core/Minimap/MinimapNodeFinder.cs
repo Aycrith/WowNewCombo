@@ -10,6 +10,8 @@ using Microsoft.Extensions.Logging;
 
 using SharedLib.Extensions;
 
+#pragma warning disable 162
+
 namespace Core
 {
     public sealed class MinimapNodeFinder
@@ -25,6 +27,8 @@ namespace Core
                 Y = y;
             }
         }
+
+        private const bool DEBUG_MASK = false;
 
         private readonly ILogger logger;
         private readonly WowScreen wowScreen;
@@ -73,7 +77,7 @@ namespace Core
             unsafe
             {
                 BitmapData data = bitmap.LockBits(new Rectangle(System.Drawing.Point.Empty, bitmap.Size),
-                    ImageLockMode.ReadWrite, bitmap.PixelFormat);
+                    DEBUG_MASK ? ImageLockMode.ReadWrite : ImageLockMode.ReadOnly, bitmap.PixelFormat);
                 const int bytesPerPixel = 4; //Bitmap.GetPixelFormatSize(bitmap.PixelFormat) / 8;
 
                 Parallel.For(minY, maxY, y =>
@@ -82,7 +86,16 @@ namespace Core
                     for (int x = minX; x < maxX; x++)
                     {
                         if (!IsValidSquareLocation(x, y, center, radius))
+                        {
+                            if (DEBUG_MASK)
+                            {
+                                int xii = x * bytesPerPixel;
+                                currentLine[xii + 2] = 0;
+                                currentLine[xii + 1] = 0;
+                                currentLine[xii + 0] = 0;
+                            }
                             continue;
+                        }
 
                         int xi = x * bytesPerPixel;
                         if (IsMatch(currentLine[xi + 2], currentLine[xi + 1], currentLine[xi]))
@@ -92,9 +105,12 @@ namespace Core
 
                             points[count++] = new Point(x, y);
 
-                            currentLine[xi + 2] = 255;
-                            currentLine[xi + 1] = 0;
-                            currentLine[xi + 0] = 0;
+                            if (DEBUG_MASK)
+                            {
+                                currentLine[xi + 2] = 255;
+                                currentLine[xi + 1] = 0;
+                                currentLine[xi + 0] = 0;
+                            }
                         }
                     }
                 });
