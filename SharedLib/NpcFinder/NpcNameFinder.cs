@@ -8,6 +8,7 @@ using System.Drawing.Imaging;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
+using System.Buffers;
 
 #pragma warning disable 162
 
@@ -396,13 +397,16 @@ namespace SharedLib.NpcFinder
         {
             int c = 0;
             NpcPosition[] npcs = new NpcPosition[data.Length];
-            bool[] inGroup = new bool[data.Length];
+
+            var poolerInGroup = ArrayPool<bool>.Shared;
+            bool[] inGroup = poolerInGroup.Rent(data.Length);
 
             float offset1 = ScaleHeight(HeightOffset1);
             float offset2 = ScaleHeight(HeightOffset2);
 
             const int MAX_GROUP = 32;
-            LineSegment[] group = new LineSegment[MAX_GROUP];
+            var poolerGroup = ArrayPool<LineSegment>.Shared;
+            LineSegment[] group = poolerGroup.Rent(MAX_GROUP);
 
             for (int i = 0; i < data.Length; i++)
             {
@@ -485,6 +489,9 @@ namespace SharedLib.NpcFinder
                 }
             }
 
+            poolerInGroup.Return(inGroup);
+            poolerGroup.Return(group);
+
             npcs = npcs.Where(NonEmpty).ToArray();
             Array.Sort(npcs, OrderBy);
             return npcs;
@@ -528,7 +535,8 @@ namespace SharedLib.NpcFinder
             int width = (area.Right - area.Left) / 64;
             int height = (area.Bottom - area.Top) / 64;
             int size = width * height;
-            LineSegment[] segments = new LineSegment[size];
+            var pooler = ArrayPool<LineSegment>.Shared;
+            LineSegment[] segments = pooler.Rent(size);
             int i = 0;
 
             Func<byte, byte, byte, bool> colorMatcher = this.colorMatcher;
@@ -579,6 +587,7 @@ namespace SharedLib.NpcFinder
 
             bitmap.UnlockBits(bitmapData);
 
+            pooler.Return(segments);
             return segments.AsSpan(0, i);
         }
 
