@@ -228,8 +228,8 @@ namespace Core
             LastKeyTime = LastClicked = DateTime.UtcNow.AddMilliseconds(offset);
         }
 
-        public float SinceLastClickMs =>
-            (float)(DateTime.UtcNow - LastClicked).TotalMilliseconds;
+        public int SinceLastClickMs =>
+            (int)(DateTime.UtcNow - LastClicked).TotalMilliseconds;
 
         public void ResetCooldown()
         {
