@@ -87,7 +87,7 @@ namespace Core
                 return false;
             }
 
-            if (!targetMask.HasFlag(playerReader.TargetClassification))
+            if (!targetMask.HasFlagF(playerReader.TargetClassification))
             {
                 if (lastGuid != playerReader.TargetGuid)
                 {

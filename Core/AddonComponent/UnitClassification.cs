@@ -32,5 +32,10 @@ namespace Core
             UnitClassification.WorldBoss => nameof(UnitClassification.WorldBoss),
             _ => throw new ArgumentOutOfRangeException()
         };
+
+        public static bool HasFlagF(this UnitClassification value, UnitClassification flag)
+        {
+            return (value & flag) != 0;
+        }
     }
 }

@@ -66,7 +66,7 @@ namespace Core
                 return false;
             }
 
-            if (!mask.HasFlag(playerReader.MouseOverClassification))
+            if (!mask.HasFlagF(playerReader.MouseOverClassification))
             {
                 if (lastGuid != playerReader.MouseOverGuid)
                 {

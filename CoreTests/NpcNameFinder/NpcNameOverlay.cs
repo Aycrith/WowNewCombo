@@ -89,16 +89,16 @@ namespace CoreTests
             font = graphics.CreateFont("Arial", 16);
             brushBackground = graphics.CreateSolidBrush(0, 0x27, 0x31, 0);
 
-            if (npcNameFinder.nameType.HasFlag(NpcNames.Enemy))
+            if (npcNameFinder.nameType.HasFlagF(NpcNames.Enemy))
                 brush = graphics.CreateSolidBrush(
                     NpcNameFinder.sE_R,NpcNameFinder.sE_G, NpcNameFinder.sE_B);
-            else if (npcNameFinder.nameType.HasFlag(NpcNames.Friendly))
+            else if (npcNameFinder.nameType.HasFlagF(NpcNames.Friendly))
                 brush = graphics.CreateSolidBrush(
                     NpcNameFinder.sF_R, NpcNameFinder.sF_G, NpcNameFinder.sF_B);
-            else if (npcNameFinder.nameType.HasFlag(NpcNames.Neutral))
+            else if (npcNameFinder.nameType.HasFlagF(NpcNames.Neutral))
                 brush = graphics.CreateSolidBrush(
                     NpcNameFinder.sN_R, NpcNameFinder.sN_G, NpcNameFinder.sN_B);
-            else if (npcNameFinder.nameType.HasFlag(NpcNames.Corpse))
+            else if (npcNameFinder.nameType.HasFlagF(NpcNames.Corpse))
                 brush = graphics.CreateSolidBrush(
                     NpcNameFinder.fC_RGB, NpcNameFinder.fC_RGB, NpcNameFinder.fC_RGB);
         }

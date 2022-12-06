@@ -35,6 +35,11 @@ namespace SharedLib.NpcFinder
             NpcNames.Corpse => nameof(NpcNames.Corpse),
             _ => nameof(NpcNames.None),
         };
+
+        public static bool HasFlagF(this NpcNames value, NpcNames flag)
+        {
+            return (value & flag) != 0;
+        }
     }
 
     public enum SearchMode
