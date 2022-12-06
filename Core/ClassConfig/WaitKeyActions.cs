@@ -6,7 +6,7 @@ namespace Core
 {
     public sealed partial class WaitKeyActions : KeyActions
     {
-        public float FoodDrinkCost { get; set; } = 5f;
+        public float FoodDrinkCost { get; set; } = 4.09f;
 
         public bool AutoGenerateWaitForFoodAndDrink { get; set; } = true;
 
