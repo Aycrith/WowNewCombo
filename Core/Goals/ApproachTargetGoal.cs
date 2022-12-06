@@ -1,5 +1,7 @@
 ﻿using Core.GOAP;
+
 using Microsoft.Extensions.Logging;
+
 using System;
 using System.Numerics;
 
@@ -72,6 +74,12 @@ namespace Core.Goals
 
             approachStart = DateTime.UtcNow;
             SetNextStuckTimeCheck();
+        }
+
+        public override void OnExit()
+        {
+            if (input.Proc.IsKeyDown(input.Proc.ForwardKey))
+                input.Proc.SetKeyState(input.Proc.ForwardKey, false);
         }
 
         public override void Update()
