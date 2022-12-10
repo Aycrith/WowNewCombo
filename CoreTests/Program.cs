@@ -78,7 +78,7 @@ namespace CoreTests
 
         private static void Test_CursorGrabber()
         {
-            CursorClassifier classifier = new();
+            using CursorClassifier classifier = new();
             int i = 5;
             while (i > 0)
             {

@@ -4,7 +4,6 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 
 using static WinAPI.NativeMethods;
@@ -13,7 +12,7 @@ using static WinAPI.NativeMethods;
 
 namespace Core
 {
-    public sealed class CursorClassifier
+    public sealed class CursorClassifier : IDisposable
     {
         private const bool saveImage = false;
 
