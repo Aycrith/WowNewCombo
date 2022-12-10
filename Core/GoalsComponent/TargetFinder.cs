@@ -6,17 +6,28 @@ namespace Core.Goals
 {
     public sealed class TargetFinder
     {
+        private const int minMs = 400, maxMs = 1000;
+
         private readonly ConfigurableInput input;
         private readonly ClassConfiguration classConfig;
         private readonly PlayerReader playerReader;
         private readonly NpcNameTargeting npcNameTargeting;
+        private readonly Wait wait;
 
-        public TargetFinder(ConfigurableInput input, ClassConfiguration classConfig, PlayerReader playerReader, NpcNameTargeting npcNameTargeting)
+        private DateTime lastActive;
+
+        public int ElapsedMs => (int)(DateTime.UtcNow - lastActive).TotalMilliseconds;
+
+        public TargetFinder(ConfigurableInput input, ClassConfiguration classConfig,
+            PlayerReader playerReader, NpcNameTargeting npcNameTargeting, Wait wait)
         {
             this.classConfig = classConfig;
             this.input = input;
             this.playerReader = playerReader;
             this.npcNameTargeting = npcNameTargeting;
+            this.wait = wait;
+
+            lastActive = DateTime.UtcNow;
         }
 
         public void Reset()
@@ -32,19 +43,31 @@ namespace Core.Goals
 
         private bool LookForTarget(NpcNames target, CancellationToken ct)
         {
-            if (!ct.IsCancellationRequested)
+            if (ElapsedMs < Random.Shared.Next(minMs, maxMs))
+                return playerReader.Bits.HasTarget();
+
+            if (!ct.IsCancellationRequested &&
+                classConfig.TargetNearestTarget.GetRemainingCooldown() == 0)
             {
                 input.NearestTarget();
+                wait.Update();
             }
 
             if (!ct.IsCancellationRequested && !classConfig.KeyboardOnly && !playerReader.Bits.HasTarget())
             {
                 npcNameTargeting.ChangeNpcType(target);
-                if (!ct.IsCancellationRequested && npcNameTargeting.NpcCount > 0)
+                npcNameTargeting.WaitForUpdate();
+
+                if (!ct.IsCancellationRequested &&
+                    npcNameTargeting.NpcCount > 0 &&
+                    !input.Proc.IsKeyDown(input.Proc.TurnLeftKey) &&
+                    !input.Proc.IsKeyDown(input.Proc.TurnRightKey))
                 {
                     npcNameTargeting.AquireNonBlacklisted(ct);
                 }
             }
+
+            lastActive = DateTime.UtcNow;
 
             return playerReader.Bits.HasTarget();
         }

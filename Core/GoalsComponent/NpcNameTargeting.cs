@@ -6,13 +6,11 @@ using SharedLib.Extensions;
 using SharedLib.NpcFinder;
 using Game;
 using Microsoft.Extensions.Logging;
-using System.Collections.Generic;
 
 namespace Core.Goals
 {
     public sealed class NpcNameTargeting : IDisposable
     {
-        private const int FAST_DELAY = 5;
         private const int INTERACT_DELAY = 25;
 
         private readonly ILogger logger;
@@ -98,10 +96,8 @@ namespace Core.Goals
 
         public void ChangeNpcType(NpcNames npcNames)
         {
-            bool changed = npcNameFinder.ChangeNpcType(npcNames);
+            npcNameFinder.ChangeNpcType(npcNames);
             wowScreen.Enabled = npcNames != NpcNames.None;
-            if (changed)
-                ct.WaitHandle.WaitOne(5); // BotController ScreenshotThread 4ms delay when idle
         }
 
         public void Reset()
@@ -146,16 +142,16 @@ namespace Core.Goals
 
                 if (cls is CursorType.Kill)
                 {
-                    wait.Update();
-                    bool blacklisted = false;
-                    if (mouseOverReader.MouseOverId == 0 || (blacklisted = mouseOverBlacklist.Is()))
-                    {
-                        if (blacklisted)
-                        {
-                            //logger.LogInformation($"> NPCs {index} added to blacklist {mouseOverReader.MouseOverId} - {npc.Rect}");
-                            index++;
-                        }
+                    if (mouseOverReader.MouseOverId == 0)
+                        wait.Update();
 
+                    if (mouseOverReader.MouseOverId == 0)
+                        continue;
+
+                    if (mouseOverBlacklist.Is())
+                    {
+                        logger.LogInformation($"> NPCs {index} added to blacklist {mouseOverReader.MouseOverId} - {npc.Rect}");
+                        index++;
                         return false;
                     }
 
@@ -163,7 +159,7 @@ namespace Core.Goals
                     input.InteractMouseOver(ct);
                     return true;
                 }
-                ct.WaitHandle.WaitOne(FAST_DELAY);
+                ct.WaitHandle.WaitOne(1);
             }
             return false;
         }
@@ -205,10 +201,12 @@ namespace Core.Goals
 
         public void ShowClickPositions(Graphics gr)
         {
-            foreach (NpcPosition npc in npcNameFinder.Npcs)
+            for (int i = 0; i < npcNameFinder.Npcs.Length; i++)
             {
-                foreach (Point p in locFindBy)
+                NpcPosition npc = npcNameFinder.Npcs[i];
+                for (int j = 0; j < locFindBy.Length; j++)
                 {
+                    Point p = locFindBy[j];
                     p.Offset(npc.ClickPoint);
                     gr.DrawEllipse(whitePen, p.X, p.Y, 5, 5);
                 }

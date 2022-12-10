@@ -2,7 +2,6 @@ using Core.GOAP;
 using SharedLib.NpcFinder;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
@@ -30,7 +29,6 @@ namespace Core.Goals
 
         private readonly IBlacklist targetBlacklist;
         private readonly TargetFinder targetFinder;
-        private const int minMs = 500, maxMs = 1000;
         private const NpcNames NpcNameToFind = NpcNames.Enemy | NpcNames.Neutral;
 
         private const int MIN_TIME_TO_START_CYCLE_PROFESSION = 5000;
@@ -220,16 +218,13 @@ namespace Core.Goals
 
             while (!sideActivityCts.IsCancellationRequested)
             {
-                wait.Update();
-
-                if (!input.Proc.IsKeyDown(input.Proc.TurnLeftKey) &&
-                    !input.Proc.IsKeyDown(input.Proc.TurnRightKey) &&
-                    classConfig.TargetNearestTarget.SinceLastClickMs > Random.Shared.Next(minMs, maxMs) &&
-                    targetFinder.Search(NpcNameToFind, playerReader.Bits.TargetIsNotDead, sideActivityCts.Token))
+                if (targetFinder.Search(NpcNameToFind, playerReader.Bits.TargetIsNotDead, sideActivityCts.Token))
                 {
                     sideActivityCts.Cancel();
                     sideActivityManualReset.Reset();
                 }
+                else
+                    sideActivityCts.Token.WaitHandle.WaitOne(1);
 
                 sideActivityManualReset.WaitOne();
             }
