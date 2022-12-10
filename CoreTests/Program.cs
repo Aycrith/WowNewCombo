@@ -14,7 +14,7 @@ namespace CoreTests
     {
         private static Microsoft.Extensions.Logging.ILogger logger;
 
-        private const bool LogSelf = false;
+        private const bool LogOverall = false;
         private const bool ShowOverlay = false;
         private const int delay = 150;
 
@@ -31,6 +31,7 @@ namespace CoreTests
             Test_NPCNameFinder();
             //Test_Input();
             //Test_CursorGrabber();
+            //Test_MinimapNodeFinder();
         }
 
         private static void Test_NPCNameFinder()
@@ -51,19 +52,19 @@ namespace CoreTests
 
             while (i < count)
             {
-                if (LogSelf)
+                if (LogOverall)
                     timestamp = Stopwatch.GetTimestamp();
 
                 test.Execute();
 
-                if (LogSelf)
+                if (LogOverall)
                     sample[i] = Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds;
 
                 i++;
                 Thread.Sleep(delay);
             }
 
-            if (LogSelf)
+            if (LogOverall)
                 Log.Logger.Information($"sample: {count} | avg: {sample.Average(),0:0.00} | min: {sample.Min(),0:0.00} | max: {sample.Max(),0:0.00} | total: {sample.Sum()}");
         }
 
@@ -88,6 +89,36 @@ namespace CoreTests
 
                 i--;
             }
+        }
+
+        private static void Test_MinimapNodeFinder()
+        {
+            using Test_MinimapNodeFinder test = new(logger);
+
+            int count = 100;
+            int i = 0;
+
+            long timestamp = Stopwatch.GetTimestamp();
+            double[] sample = new double[count];
+
+            Log.Logger.Information($"running {count} samples...");
+
+            while (i < count)
+            {
+                if (LogOverall)
+                    timestamp = Stopwatch.GetTimestamp();
+
+                test.Execute();
+
+                if (LogOverall)
+                    sample[i] = Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds;
+
+                i++;
+                Thread.Sleep(delay);
+            }
+
+            if (LogOverall)
+                Log.Logger.Information($"sample: {count} | avg: {sample.Average(),0:0.00} | min: {sample.Min(),0:0.00} | max: {sample.Max(),0:0.00} | total: {sample.Sum()}");
         }
 
     }

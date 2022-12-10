@@ -16,12 +16,12 @@ namespace Core
 {
     public sealed class MinimapNodeFinder
     {
-        private readonly struct Point
+        private readonly struct PixelPoint
         {
             public readonly int X;
             public readonly int Y;
 
-            public Point(int x, int y)
+            public PixelPoint(int x, int y)
             {
                 X = x;
                 Y = y;
@@ -44,20 +44,18 @@ namespace Core
             this.wowScreen = wowScreen;
         }
 
-        public void TryFind()
+        public void Update()
         {
-            wowScreen.UpdateMinimapBitmap();
-
             var span = FindYellowPoints();
-            ScorePoints(span, out Point best, out int amountAboveMin);
+            ScorePoints(span, out PixelPoint best, out int amountAboveMin);
             NodeEvent?.Invoke(this, new MinimapNodeEventArgs(best.X, best.Y, amountAboveMin));
         }
 
-        private Span<Point> FindYellowPoints()
+        private Span<PixelPoint> FindYellowPoints()
         {
             const int SIZE = 100;
-            var pooler = ArrayPool<Point>.Shared;
-            Point[] points = pooler.Rent(SIZE);
+            var pooler = ArrayPool<PixelPoint>.Shared;
+            PixelPoint[] points = pooler.Rent(SIZE);
 
             Bitmap bitmap = wowScreen.MiniMapBitmap;
 
@@ -69,14 +67,14 @@ namespace Core
             int maxY = bitmap.Height - 6;
 
             Rectangle rect = new(minX, minY, maxX - minX, maxY - minY);
-            System.Drawing.Point center = rect.Centre();
+            Point center = rect.Centre();
             float radius = (maxX - minX) / 2f;
 
             int count = 0;
 
             unsafe
             {
-                BitmapData data = bitmap.LockBits(new Rectangle(System.Drawing.Point.Empty, bitmap.Size),
+                BitmapData data = bitmap.LockBits(new Rectangle(Point.Empty, bitmap.Size),
                     DEBUG_MASK ? ImageLockMode.ReadWrite : ImageLockMode.ReadOnly, bitmap.PixelFormat);
                 const int bytesPerPixel = 4; //Bitmap.GetPixelFormatSize(bitmap.PixelFormat) / 8;
 
@@ -103,7 +101,7 @@ namespace Core
                             if (count >= SIZE)
                                 return;
 
-                            points[count++] = new Point(x, y);
+                            points[count++] = new PixelPoint(x, y);
 
                             if (DEBUG_MASK)
                             {
@@ -120,14 +118,14 @@ namespace Core
 
             if (count >= SIZE)
             {
-                logger.LogWarning("Too much yellow in this image!");
+                //logger.LogWarning("Too much yellow in this image!");
             }
 
             return points.AsSpan(0, count);
 
-            static bool IsValidSquareLocation(int x, int y, System.Drawing.Point center, float width)
+            static bool IsValidSquareLocation(int x, int y, Point center, float width)
             {
-                return Math.Sqrt(((x - center.X) * (x - center.X)) + ((y - center.Y) * (y - center.Y))) < width;
+                return MathF.Sqrt(((x - center.X) * (x - center.X)) + ((y - center.Y) * (y - center.Y))) < width;
             }
 
             static bool IsMatch(byte red, byte green, byte blue)
@@ -136,11 +134,11 @@ namespace Core
             }
         }
 
-        private static void ScorePoints(Span<Point> points, out Point best, out int amountAboveMin)
+        private static void ScorePoints(Span<PixelPoint> points, out PixelPoint best, out int amountAboveMin)
         {
             const int size = 5;
 
-            best = new Point();
+            best = new PixelPoint();
             amountAboveMin = 0;
 
             int maxIndex = -1;
@@ -148,15 +146,16 @@ namespace Core
 
             for (int i = 0; i < points.Length; i++)
             {
-                Point pi = points[i];
+                PixelPoint pi = points[i];
 
                 int score = 0;
                 for (int j = 0; j < points.Length; j++)
                 {
-                    Point pj = points[j];
+                    PixelPoint pj = points[j];
 
-                    if (Math.Abs(pi.X - pj.X) < size ||
-                        Math.Abs(pi.Y - pj.Y) < size)
+                    if (i != j &&
+                        (Math.Abs(pi.X - pj.X) < size ||
+                        Math.Abs(pi.Y - pj.Y) < size))
                     {
                         score++;
                     }

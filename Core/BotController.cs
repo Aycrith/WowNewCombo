@@ -162,7 +162,8 @@ namespace Core
                 if (ClassConfig?.Mode == Mode.AttendedGather)
                 {
                     timestamp = Stopwatch.GetTimestamp();
-                    minimapNodeFinder.TryFind();
+                    WowScreen.UpdateMinimapBitmap();
+                    minimapNodeFinder.Update();
                     ScreenLatencys[tickCount % SIZE] = Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds;
                 }
 

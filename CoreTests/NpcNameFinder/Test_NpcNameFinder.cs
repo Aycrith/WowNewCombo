@@ -36,7 +36,7 @@ namespace CoreTests
         private readonly StringBuilder stringBuilder = new();
 
         private readonly Graphics paint;
-        private readonly System.Drawing.Bitmap paintBitmap;
+        private readonly Bitmap paintBitmap;
         private readonly Font font = new("Arial", 10);
         private readonly SolidBrush brush = new(Color.White);
         private readonly Pen whitePen = new(Color.White, 1);
