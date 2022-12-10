@@ -104,7 +104,7 @@ namespace StormDll
 
     public sealed class ArchiveSet
     {
-        private Archive[] archives;
+        private readonly Archive[] archives;
 
         public ArchiveSet(ILogger logger, string[] files)
         {
@@ -148,8 +148,6 @@ namespace StormDll
         {
             for (int i = 0; i < archives.Length; i++)
                 archives[i].SFileCloseArchive();
-
-            archives = Array.Empty<Archive>();
         }
     }
 
@@ -159,9 +157,11 @@ namespace StormDll
 
         private readonly System.Collections.Generic.HashSet<string> fileList = new(StringComparer.InvariantCultureIgnoreCase);
 
+        private static readonly bool Is64Bit = Environment.Is64BitProcess;
+
         public Archive(string file, out bool open, uint Prio, OpenArchive Flags)
         {
-            open = Environment.Is64BitProcess
+            open = Is64Bit
                 ? StormDllx64.SFileOpenArchive(file, Prio, Flags, out handle)
                 : StormDllx86.SFileOpenArchive(file, Prio, Flags, out handle);
 
@@ -169,7 +169,7 @@ namespace StormDll
             {
                 string temp = Path.GetTempFileName();
 
-                bool extracted = Environment.Is64BitProcess
+                bool extracted = Is64Bit
                 ? StormDllx64.SFileExtractFile(handle, "(listfile)", temp, OpenFile.SFILE_OPEN_FROM_MPQ)
                 : StormDllx86.SFileExtractFile(handle, "(listfile)", temp, OpenFile.SFILE_OPEN_FROM_MPQ);
 
@@ -196,14 +196,14 @@ namespace StormDll
         public bool SFileCloseArchive()
         {
             fileList.Clear();
-            return Environment.Is64BitProcess
+            return Is64Bit
                 ? StormDllx64.SFileCloseArchive(handle)
                 : StormDllx86.SFileCloseArchive(handle);
         }
 
         public bool SFileExtractFile(string from, string to, OpenFile dwSearchScope)
         {
-            return Environment.Is64BitProcess
+            return Is64Bit
                 ? StormDllx64.SFileExtractFile(handle, from, to, dwSearchScope)
                 : StormDllx86.SFileExtractFile(handle, from, to, dwSearchScope);
         }
