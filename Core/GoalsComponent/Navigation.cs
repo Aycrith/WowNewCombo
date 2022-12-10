@@ -268,7 +268,7 @@ namespace Core.Goals
         {
             ResetStuckParameters();
 
-            if (pather is not RemotePathingAPIV3 && routeToNextWaypoint.Count > 0)
+            if (pather.GetType() != typeof(RemotePathingAPIV3) && routeToNextWaypoint.Count > 0)
             {
                 V1_AttemptToKeepRouteToWaypoint();
             }
@@ -286,7 +286,7 @@ namespace Core.Goals
         {
             active = false;
 
-            if (pather is RemotePathingAPIV3)
+            if (pather.GetType() == typeof(RemotePathingAPIV3))
                 routeToNextWaypoint.Clear();
 
             ResetStuckParameters();

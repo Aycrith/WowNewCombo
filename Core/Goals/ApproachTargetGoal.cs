@@ -58,7 +58,7 @@ namespace Core.Goals
 
         public void OnGoapEvent(GoapEventArgs e)
         {
-            if (e is ResumeEvent)
+            if (e.GetType() == typeof(ResumeEvent))
             {
                 approachStart = DateTime.UtcNow;
             }

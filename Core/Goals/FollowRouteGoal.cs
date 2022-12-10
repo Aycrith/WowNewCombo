@@ -176,11 +176,11 @@ namespace Core.Goals
 
         public void OnGoapEvent(GoapEventArgs e)
         {
-            if (e is AbortEvent)
+            if (e.GetType() == typeof(AbortEvent))
             {
                 Abort();
             }
-            else if (e is ResumeEvent)
+            else if (e.GetType() == typeof(ResumeEvent))
             {
                 Resume();
             }

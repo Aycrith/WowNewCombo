@@ -1,4 +1,4 @@
-﻿using Core.GOAP;
+using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -67,7 +67,7 @@ namespace Core.Goals
 
         public void OnGoapEvent(GoapEventArgs e)
         {
-            if (e is ResumeEvent)
+            if (e.GetType() == typeof(ResumeEvent))
             {
                 navigation.ResetStuckParameters();
             }

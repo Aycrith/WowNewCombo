@@ -170,7 +170,7 @@
         addonConfig = addonConfigurator.Config;
         frameConfigurator.OnUpdate += OnUpdate;
 
-        if (reader is AddonDataProviderGDIConfig)
+        if (reader.GetType() == typeof(AddonDataProviderGDIConfig))
             disabled = false;
     }
 

@@ -32,7 +32,7 @@
             <table class="table table-sm table-striped">
                 @foreach (var goal in botController.GoapAgent.AvailableGoals)
                 {
-                    <GoapGoalView goal="goal" IsSelected="(goal == botController.GoapAgent.CurrentGoal)" Expand="@(Expand || goal is Core.Goals.ParallelGoal)" />
+                    <GoapGoalView goal="goal" IsSelected="(goal == botController.GoapAgent.CurrentGoal)" Expand="@(Expand || goal.GetType() == typeof(Core.Goals.ParallelGoal))" />
                 }
             </table>
         </div>
