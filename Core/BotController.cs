@@ -100,15 +100,15 @@ namespace Core
                 frontendThread.Start();
             }
 
-            Stopwatch sw = Stopwatch.StartNew();
+            long timestamp = Stopwatch.GetTimestamp();
             do
             {
                 wait.Update();
 
-                if (sw.ElapsedMilliseconds > 5000)
+                if (Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds > 5000)
                 {
                     logger.LogWarning("There is a problem with the addon, I have been unable to read the player class. Is it running ?");
-                    sw.Restart();
+                    timestamp = Stopwatch.GetTimestamp();
                 }
             } while (!Enum.GetValues(typeof(UnitClass)).Cast<UnitClass>().Contains(AddonReader.PlayerReader.Class));
 
@@ -140,20 +140,20 @@ namespace Core
 
         private void ScreenshotThread()
         {
-            Stopwatch stopWatch = new();
+            long timestamp;
             int tickCount = 0;
 
             while (!cts.IsCancellationRequested)
             {
                 if (WowScreen.Enabled)
                 {
-                    stopWatch.Restart();
+                    timestamp = Stopwatch.GetTimestamp();
                     WowScreen.Update();
-                    ScreenLatencys[tickCount % SIZE] = stopWatch.ElapsedMilliseconds;
+                    ScreenLatencys[tickCount % SIZE] = Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds;
 
-                    stopWatch.Restart();
+                    timestamp = Stopwatch.GetTimestamp();
                     npcNameFinder.Update();
-                    NPCLatencys[tickCount % SIZE] = stopWatch.ElapsedMilliseconds;
+                    NPCLatencys[tickCount % SIZE] = Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds;
 
                     if (WowScreen.EnablePostProcess)
                         WowScreen.PostProcess();
@@ -161,9 +161,9 @@ namespace Core
 
                 if (ClassConfig?.Mode == Mode.AttendedGather)
                 {
-                    stopWatch.Restart();
+                    timestamp = Stopwatch.GetTimestamp();
                     minimapNodeFinder.TryFind();
-                    ScreenLatencys[tickCount % SIZE] = stopWatch.ElapsedMilliseconds;
+                    ScreenLatencys[tickCount % SIZE] = Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds;
                 }
 
                 tickCount++;
@@ -218,7 +218,7 @@ namespace Core
 
         private bool InitialiseFromFile(string classFile, string? pathFile)
         {
-            Stopwatch stopwatch = Stopwatch.StartNew();
+            long timestamp = Stopwatch.GetTimestamp();
             try
             {
                 ClassConfig?.Dispose();
@@ -232,7 +232,7 @@ namespace Core
 
             Initialize(ClassConfig);
 
-            logger.LogInformation($"[{nameof(BotController)}] Elapsed time: {stopwatch.ElapsedMilliseconds}ms");
+            logger.LogInformation($"[{nameof(BotController)}] Elapsed time: {Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds}ms");
 
             return true;
         }

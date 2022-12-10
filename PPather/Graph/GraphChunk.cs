@@ -156,7 +156,7 @@ namespace PPather.Graph
 
             try
             {
-                Stopwatch sw = Stopwatch.StartNew();
+                long timestamp = Stopwatch.GetTimestamp();
 
                 using Stream stream = File.OpenRead(filePath);
                 using BinaryReader br = new(stream);
@@ -200,7 +200,7 @@ namespace PPather.Graph
                 }
 
                 if (logger.IsEnabled(LogLevel.Trace))
-                    logger.LogTrace($"Loaded {filePath} {n_spots} spots {n_steps} steps {sw.ElapsedMilliseconds} ms");
+                    logger.LogTrace($"Loaded {filePath} {n_spots} spots {n_steps} steps {Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds} ms");
 
                 return true;
             }

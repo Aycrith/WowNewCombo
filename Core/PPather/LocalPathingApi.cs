@@ -26,15 +26,12 @@ namespace Core
 
         private readonly bool Enabled;
 
-        private readonly Stopwatch stopwatch;
-
         private DateTime lastSave;
 
         public LocalPathingApi(ILogger logger, PPatherService service, DataConfig dataConfig)
         {
             this.logger = logger;
             this.service = service;
-            stopwatch = new();
 
             var mpqFiles = MPQTriangleSupplier.GetArchiveNames(dataConfig);
             int countOfMPQFiles = mpqFiles.Count(f => File.Exists(f));
@@ -71,7 +68,7 @@ namespace Core
                 return Array.Empty<Vector3>();
             }
 
-            stopwatch.Restart();
+            long timestamp = Stopwatch.GetTimestamp();
 
             service.SetLocations(service.ToWorld(uiMap, mapFrom.X, mapFrom.Y, mapFrom.Z), service.ToWorld(uiMap, mapTo.X, mapTo.Y));
             PPather.Graph.Path path = service.DoSearch(PPather.Graph.PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
@@ -84,7 +81,7 @@ namespace Core
             }
 
             if (debug)
-                LogDebug($"Finding route from {mapFrom} map {uiMap} to {mapTo} took {stopwatch.ElapsedMilliseconds} ms.");
+                LogDebug($"Finding route from {mapFrom} map {uiMap} to {mapTo} took {Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds} ms.");
 
             if ((DateTime.UtcNow - lastSave).TotalMinutes >= 1)
             {
@@ -108,7 +105,7 @@ namespace Core
                 return Array.Empty<Vector3>();
             }
 
-            stopwatch.Restart();
+            long timestamp = Stopwatch.GetTimestamp();
 
             service.SetLocations(service.ToWorldZ(uiMap, worldFrom.X, worldFrom.Y, worldFrom.Z), service.ToWorldZ(uiMap, worldTo.X, worldTo.Y, worldTo.Z));
 
@@ -122,7 +119,7 @@ namespace Core
             }
 
             if (debug)
-                LogDebug($"Finding route from {worldFrom} map {uiMap} to {worldTo} took {stopwatch.ElapsedMilliseconds} ms.");
+                LogDebug($"Finding route from {worldFrom} map {uiMap} to {worldTo} took {Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds} ms.");
 
             if ((DateTime.UtcNow - lastSave).TotalMinutes >= 1)
             {

@@ -23,8 +23,6 @@ namespace Core
 
         private readonly string api;
 
-        private readonly Stopwatch stopwatch;
-
         private readonly JsonSerializerOptions options;
 
         public RemotePathingAPI(ILogger logger, string host = "", int port = 0)
@@ -32,8 +30,6 @@ namespace Core
             this.logger = logger;
             this.host = host;
             this.port = port;
-
-            stopwatch = new();
 
             options = new()
             {
@@ -67,11 +63,11 @@ namespace Core
                 LogInformation($"Finding route from {mapFrom} map {uiMap} to {mapTo} map {uiMap}...");
                 var url = $"{api}MapRoute?uimap1={uiMap}&x1={mapFrom.X}&y1={mapFrom.Y}&uimap2={uiMap}&x2={mapTo.X}&y2={mapTo.Y}";
 
-                stopwatch.Restart();
+                long timestamp = Stopwatch.GetTimestamp();
                 using HttpClient client = new();
                 var task = client.GetStringAsync(url);
                 string response = task.GetAwaiter().GetResult();
-                LogInformation($"Finding route from {mapFrom} map {uiMap} to {mapTo} took {stopwatch.ElapsedMilliseconds} ms.");
+                LogInformation($"Finding route from {mapFrom} map {uiMap} to {mapTo} took {Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds} ms.");
                 return JsonSerializer.Deserialize<Vector3[]>(response, options) ?? Array.Empty<Vector3>();
             }
             catch (Exception ex)
@@ -90,10 +86,10 @@ namespace Core
                 var url =
                     $"{api}WorldRoute2?x1={worldFrom.X}&y1={worldFrom.Y}&z1={worldFrom.Z}&x2={worldTo.X}&y2={worldTo.Y}&z2={worldTo.Z}&uimap={uiMap}";
 
-                stopwatch.Restart();
+                long timestamp = Stopwatch.GetTimestamp();
                 using HttpClient client = new();
                 string response = client.GetStringAsync(url).GetAwaiter().GetResult();
-                LogInformation($"Finding route from {worldFrom} map {uiMap} to {worldTo} took {stopwatch.ElapsedMilliseconds} ms.");
+                LogInformation($"Finding route from {worldFrom} map {uiMap} to {worldTo} took {Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds} ms.");
                 return JsonSerializer.Deserialize<Vector3[]>(response, options) ?? Array.Empty<Vector3>();
             }
             catch (Exception ex)

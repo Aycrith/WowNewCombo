@@ -44,7 +44,7 @@ namespace CoreTests
             int count = 100;
             int i = 0;
 
-            Stopwatch stopwatch = new();
+            long timestamp = Stopwatch.GetTimestamp();
             double[] sample = new double[count];
 
             Log.Logger.Information($"running {count} samples...");
@@ -52,12 +52,12 @@ namespace CoreTests
             while (i < count)
             {
                 if (LogSelf)
-                    stopwatch.Restart();
+                    timestamp = Stopwatch.GetTimestamp();
 
                 test.Execute();
 
                 if (LogSelf)
-                    sample[i] = stopwatch.ElapsedMilliseconds;
+                    sample[i] = Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds;
 
                 i++;
                 Thread.Sleep(delay);

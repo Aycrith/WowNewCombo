@@ -187,9 +187,9 @@ namespace PPather.Graph
 
         public void Save()
         {
-            Stopwatch sw = Stopwatch.StartNew();
             lock (chunks)
             {
+                long timestamp = Stopwatch.GetTimestamp();
                 foreach (GraphChunk gc in chunks.GetAllElements())
                 {
                     if (gc.modified)
@@ -199,7 +199,7 @@ namespace PPather.Graph
                 }
 
                 if (logger.IsEnabled(LogLevel.Trace))
-                    logger.LogTrace($"Saved GraphChunks {sw.ElapsedMilliseconds} ms");
+                    logger.LogTrace($"Saved GraphChunks {Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds} ms");
             }
         }
 
@@ -528,13 +528,10 @@ namespace PPather.Graph
         public Spot ClosestSpot;
         public Spot PeekSpot;
 
-        private readonly Stopwatch searchDuration = new();
-        private readonly Stopwatch timeSinceProgress = new();
-
         private Spot Search(Spot fromSpot, Spot destinationSpot, float minHowClose, ILocationHeuristics locationHeuristics)
         {
-            searchDuration.Restart();
-            timeSinceProgress.Restart();
+            long searchDuration = Stopwatch.GetTimestamp();
+            long timeSinceProgress = Stopwatch.GetTimestamp();
 
             float closest = 99999f;
             ClosestSpot = null;
@@ -586,10 +583,11 @@ namespace PPather.Graph
                     closest = distance;
                     ClosestSpot = currentSearchSpot;
                     PeekSpot = ClosestSpot;
-                    timeSinceProgress.Restart();
+                    timeSinceProgress = Stopwatch.GetTimestamp();
                 }
 
-                if (timeSinceProgress.Elapsed.TotalSeconds > ProgressTimeoutSeconds || searchDuration.Elapsed.TotalSeconds > TimeoutSeconds)
+                if (Stopwatch.GetElapsedTime(timeSinceProgress).TotalSeconds > ProgressTimeoutSeconds ||
+                    Stopwatch.GetElapsedTime(searchDuration).TotalSeconds > TimeoutSeconds)
                 {
                     logger.LogWarning("search failed, 10 seconds since last progress, returning the closest spot.");
                     return ClosestSpot;
@@ -891,14 +889,12 @@ namespace PPather.Graph
             return new(location.X, location.Y, newZ);
         }
 
-        private readonly Stopwatch sw = new();
-
         public Path CreatePath(Vector3 fromLoc, Vector3 toLoc, float howClose, ILocationHeuristics locationHeuristics)
         {
             if (logger.IsEnabled(LogLevel.Trace))
                 logger.LogTrace($"Creating Path from {fromLoc} to {toLoc}");
 
-            sw.Restart();
+            long timestamp = Stopwatch.GetTimestamp();
 
             fromLoc = GetBestLocations(fromLoc);
             toLoc = GetBestLocations(toLoc);
@@ -918,7 +914,7 @@ namespace PPather.Graph
             Path rawPath = CreatePath(from, to, howClose, locationHeuristics);
 
             if (logger.IsEnabled(LogLevel.Trace))
-                logger.LogTrace($"CreatePath took {sw.ElapsedMilliseconds}ms");
+                logger.LogTrace($"CreatePath took {Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds}ms");
 
             if (rawPath == null)
             {
