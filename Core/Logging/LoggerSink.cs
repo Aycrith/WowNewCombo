@@ -2,6 +2,7 @@
 using Serilog.Configuration;
 using Serilog.Core;
 using Serilog.Events;
+
 using System;
 
 namespace Core
@@ -27,16 +28,6 @@ namespace Core
         {
             Log[callCount++ % SIZE] = logEvent;
             OnLogChanged?.Invoke();
-        }
-
-        public override bool Equals(object? obj)
-        {
-            return obj is LoggerSink;
-        }
-
-        public override int GetHashCode()
-        {
-            return 0;
         }
     }
 }

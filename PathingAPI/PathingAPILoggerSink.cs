@@ -22,15 +22,5 @@ namespace PathingAPI
         {
             OnLog?.Invoke(logEvent);
         }
-
-        public override bool Equals(object obj)
-        {
-            return obj is PathingAPILoggerSink;
-        }
-
-        public override int GetHashCode()
-        {
-            return 0;
-        }
     }
 }
