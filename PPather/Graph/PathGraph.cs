@@ -28,6 +28,7 @@ using System.IO;
 using PPather.Triangles.Data;
 
 using static System.MathF;
+using System.Buffers;
 
 #pragma warning disable 162
 
@@ -55,6 +56,8 @@ namespace PPather.Graph
         public const float MinStepLength = 2f;
         public const float WantedStepLength = 3f;
         public const float MaxStepLength = 5f;
+
+        public const float STEP_D = 0.1f;
 
         public Path lastReducedPath;
 
@@ -238,8 +241,8 @@ namespace PPather.Graph
                 return s;
             }
 
-            List<Spot> close = FindAllSpots(s.Loc, MaxStepLength);
-            for (int i = 0; i < close.Count; i++)
+            Span<Spot> close = FindAllSpots(s.Loc, MaxStepLength);
+            for (int i = 0; i < close.Length; i++)
             {
                 Spot cs = close[i];
                 if (cs.HasPathTo(this, s) && s.HasPathTo(this, cs) || cs.IsBlocked())
@@ -304,7 +307,12 @@ namespace PPather.Graph
             Spot closest = null;
             float closest_d = 1E30f;
             int d = 0;
-            while (d <= max_d + 0.1f)
+
+            const int SV_LENGTH = 4;
+            var pooler = ArrayPool<Spot>.Shared;
+            var sv = pooler.Rent(SV_LENGTH);
+
+            while (d <= max_d + STEP_D)
             {
                 for (int i = -d; i <= d; i++)
                 {
@@ -313,13 +321,12 @@ namespace PPather.Graph
                     float y_up = l.Y + d;
                     float y_dn = l.Y - d;
 
-                    Spot s0 = GetSpot2D(x_up, l.Y + i);
-                    Spot s2 = GetSpot2D(x_dn, l.Y + i);
+                    sv[0] = GetSpot2D(x_up, l.Y + i);
+                    sv[1] = GetSpot2D(x_dn, l.Y + i);
+                    sv[2] = GetSpot2D(l.X + i, y_dn);
+                    sv[3] = GetSpot2D(l.X + i, y_up);
 
-                    Spot s1 = GetSpot2D(l.X + i, y_dn);
-                    Spot s3 = GetSpot2D(l.X + i, y_up);
-                    Spot[] sv = { s0, s1, s2, s3 };
-                    for (int i1 = 0; i1 < sv.Length; i1++)
+                    for (int i1 = 0; i1 < SV_LENGTH; i1++)
                     {
                         Spot s = sv[i1];
                         Spot ss = s;
@@ -339,21 +346,29 @@ namespace PPather.Graph
 
                 if (closest_d < d) // can't get better
                 {
+                    pooler.Return(sv);
                     //Log("Closest2 spot to " + l + " is " + closest);
                     return closest;
                 }
                 d++;
             }
+            pooler.Return(sv);
             //Log("Closest1 spot to " + l + " is " + closest);
             return closest;
         }
 
-        public List<Spot> FindAllSpots(Vector3 l, float max_d)
+        public Span<Spot> FindAllSpots(Vector3 l, float max_d)
         {
-            List<Spot> sl = new();
+            const int SV_LENGTH = 4;
+            var pooler = ArrayPool<Spot>.Shared;
+            var sv = pooler.Rent(SV_LENGTH);
+
+            int size = (int)Ceiling(2 * (max_d / STEP_D));
+            var sl = pooler.Rent(size);
+            int c = 0;
 
             int d = 0;
-            while (d <= max_d + 0.1f)
+            while (d <= max_d + STEP_D)
             {
                 for (int i = -d; i <= d; i++)
                 {
@@ -362,14 +377,12 @@ namespace PPather.Graph
                     float y_up = l.Y + d;
                     float y_dn = l.Y - d;
 
-                    Spot[] sv = {
-                        GetSpot2D(x_up, l.Y + i),
-                        GetSpot2D(x_dn, l.Y + i),
-                        GetSpot2D(l.X + i, y_dn),
-                        GetSpot2D(l.X + i, y_up)
-                    };
+                    sv[0] = GetSpot2D(x_up, l.Y + i);
+                    sv[1] = GetSpot2D(x_dn, l.Y + i);
+                    sv[2] = GetSpot2D(l.X + i, y_dn);
+                    sv[3] = GetSpot2D(l.X + i, y_up);
 
-                    for (int j = 0; j < sv.Length; j++)
+                    for (int j = 0; j < SV_LENGTH; j++)
                     {
                         Spot s = sv[j];
                         Spot ss = s;
@@ -378,7 +391,7 @@ namespace PPather.Graph
                             float di = ss.GetDistanceTo(l);
                             if (di < max_d)
                             {
-                                sl.Add(ss);
+                                sl[c++] = ss;
                             }
                             ss = ss.next;
                         }
@@ -386,7 +399,11 @@ namespace PPather.Graph
                 }
                 d++;
             }
-            return sl;
+
+            pooler.Return(sv);
+            pooler.Return(sl);
+
+            return sl.AsSpan(0, c);
         }
 
 
@@ -415,10 +432,11 @@ namespace PPather.Graph
                     isAtSpot.AddPathTo(wasAt);
                 }
 
-                List<Spot> sl = FindAllSpots(isAtSpot.Loc, MaxStepLength);
+                Span<Spot> sl = FindAllSpots(isAtSpot.Loc, MaxStepLength);
                 int connected = 0;
-                foreach (Spot other in sl)
+                for (int i = 0; i < sl.Length; i++)
                 {
+                    Spot other = sl[i];
                     if (other != isAtSpot)
                     {
                         other.AddPathTo(isAtSpot);
@@ -597,8 +615,8 @@ namespace PPather.Graph
                 CreateSpotsAroundSpot(currentSearchSpot);
 
                 //score each spot around the current search spot and add them to the queue
-                List<Spot> list = currentSearchSpot.GetPathsToSpots(this);
-                for (int i = 0; i < list.Count; i++)
+                Span<Spot> list = currentSearchSpot.GetPathsToSpots(this);
+                for (int i = 0; i < list.Length; i++)
                 {
                     Spot spotLinkedToCurrent = list[i];
                     if (spotLinkedToCurrent != null && !spotLinkedToCurrent.IsBlocked() && !spotLinkedToCurrent.SearchIsClosed(currentSearchID))

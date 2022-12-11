@@ -9,8 +9,8 @@ using Microsoft.Extensions.Logging;
 using PPather.Triangles.Data;
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
 using System.Runtime.InteropServices;
 
@@ -22,7 +22,6 @@ namespace WowTriangles
     {
         private const float resolution = 2.0f;
         private readonly SparseFloatMatrix2D<List<int>> matrix;
-        private readonly int maxAtOne;
 
         public TriangleMatrix(TriangleCollection tc, ILogger logger)
         {
@@ -36,6 +35,7 @@ namespace WowTriangles
             Vector3 vertex2;
 
             int listCount = 0;
+            int maxAtOne = 0;
 
             for (int i = 0; i < tc.TriangleCount; i++)
             {
@@ -93,37 +93,57 @@ namespace WowTriangles
                 logger.LogTrace($"Build hash for {tc.TriangleCount} triangles - {maxAtOne} -- cap: {capacity} - c: {listCount} - time {(DateTime.UtcNow - pre).TotalMilliseconds}ms");
         }
 
-        public int[] GetAllCloseTo(float x, float y, float distance)
+        public ArraySegment<int> GetAllCloseTo(float x, float y, float distance)
         {
-            HashSet<int> all = new();
             (List<int>[] close, int count) = matrix.GetAllInSquare(x - distance, y - distance, x + distance, y + distance);
 
+            int totalSize = 0;
+            for (int i = 0; i < count; i++)
+            {
+                totalSize += close[i].Count;
+            }
+
+            var pooler = ArrayPool<int>.Shared;
+            var all = pooler.Rent(totalSize);
+
+            int index = 0;
             for (int i = 0; i < count; i++)
             {
                 Span<int> span = CollectionsMarshal.AsSpan(close[i]);
                 for (int j = 0; j < span.Length; j++)
                 {
-                    all.Add(span[j]);
+                    all[index++] = span[j];
                 }
             }
 
-            return all.ToArray();
+            pooler.Return(all);
+            return new ArraySegment<int>(all, 0, index);
         }
 
-        public int[] GetAllInSquare(float x0, float y0, float x1, float y1)
+        public ArraySegment<int> GetAllInSquare(float x0, float y0, float x1, float y1)
         {
-            HashSet<int> all = new();
             (List<int>[] close, int count) = matrix.GetAllInSquare(x0, y0, x1, y1);
 
+            int totalSize = 0;
+            for (int i = 0; i < count; i++)
+            {
+                totalSize += close[i].Count;
+            }
+
+            var pooler = ArrayPool<int>.Shared;
+            var all = pooler.Rent(totalSize);
+
+            int index = 0;
             for (int i = 0; i < count; i++)
             {
                 Span<int> span = CollectionsMarshal.AsSpan(close[i]);
                 for (int j = 0; j < span.Length; j++)
                 {
-                    all.Add(span[j]);
+                    all[index++] = span[j];
                 }
             }
-            return all.ToArray();
+            pooler.Return(all);
+            return new ArraySegment<int>(all, 0, index);
         }
     }
 }

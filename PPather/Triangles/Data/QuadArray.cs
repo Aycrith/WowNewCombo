@@ -52,14 +52,16 @@
         {
             getIndices(index, out int i0, out int i1);
 
-            x = default;
-            y = default;
-            z = default;
-            w = default;
-            sequence = default;
-
             int[] a1 = arrays[i0];
-            if (a1 == null) return;
+            if (a1 == null)
+            {
+                x = default;
+                y = default;
+                z = default;
+                w = default;
+                sequence = default;
+                return;
+            }
 
             int[] innermost = arrays[i0];
             i1 *= Q;
