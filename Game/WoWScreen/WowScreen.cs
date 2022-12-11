@@ -56,6 +56,8 @@ namespace Game
             graphicsMinimap = Graphics.FromImage(MiniMapBitmap);
 
             blackPen = new SolidBrush(Color.Black);
+
+            logger.LogInformation($"[{nameof(WowScreen)}] {rect} - Windowed Mode: {NativeMethods.IsWindowedMode(p)}");
         }
 
         public void Update()

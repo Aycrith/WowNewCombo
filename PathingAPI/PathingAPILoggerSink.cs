@@ -1,22 +1,13 @@
-﻿using Serilog;
-using Serilog.Configuration;
-using Serilog.Core;
+﻿using Serilog.Core;
 using Serilog.Events;
+
 using System;
 
 namespace PathingAPI
 {
-    public static class PathingAPILoggerSinkExtensions
-    {
-        public static LoggerConfiguration PathingAPILoggerSink(this LoggerSinkConfiguration loggerConfiguration)
-        {
-            return loggerConfiguration.Sink(new PathingAPILoggerSink());
-        }
-    }
-
     public sealed class PathingAPILoggerSink : ILogEventSink
     {
-        public static event Action<LogEvent> OnLog;
+        public event Action<LogEvent> OnLog;
 
         public void Emit(LogEvent logEvent)
         {

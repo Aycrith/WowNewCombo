@@ -12,36 +12,46 @@ using Serilog.Extensions.Logging;
 using PPather;
 using SharedLib.Converters;
 using SharedLib;
+using System.Net.Http;
+using Microsoft.Extensions.Logging;
+using Serilog.Debugging;
+using Serilog.Core;
 
 namespace PathingAPI
 {
     public sealed class Startup
     {
-        public Startup(IConfiguration configuration)
-        {
-            Configuration = configuration;
-
-            var logfile = "out.log";
-            var config = new LoggerConfiguration()
-                //.MinimumLevel.Debug()
-                //.MinimumLevel.Verbose()
-                .WriteTo.PathingAPILoggerSink()
-                .WriteTo.File(logfile, rollingInterval: RollingInterval.Day)
-                .WriteTo.Debug(outputTemplate: "[{Timestamp:HH:mm:ss:fff} {Level:u3}] {Message:lj}{NewLine}{Exception}")
-                .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss:fff} {Level:u3}] {Message:lj}{NewLine}{Exception}");
-
-            Log.Logger = config.CreateLogger();
-            Log.Logger.Debug("Startup()");
-        }
-
-        public IConfiguration Configuration { get; }
-
         // This method gets called by the runtime. Use this method to add services to the container.
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
-            var logger = new SerilogLoggerProvider(Log.Logger).CreateLogger(nameof(Program));
-            services.AddSingleton(logger);
+            services.AddLogging(builder =>
+            {
+                PathingAPILoggerSink sink = new();
+                builder.Services.AddSingleton(sink);
+
+                const string outputTemplate = "[{Timestamp:HH:mm:ss:fff} {Level:u3}] {Message:lj}{NewLine}{Exception}";
+
+                Log.Logger = new LoggerConfiguration()
+                    //.MinimumLevel.Debug()
+                    //.MinimumLevel.Verbose()
+                    .WriteTo.Sink(sink)
+                    .WriteTo.File("out.log",
+                        rollingInterval: RollingInterval.Day,
+                        outputTemplate: outputTemplate)
+                    .WriteTo.Debug(outputTemplate: outputTemplate)
+                    .WriteTo.Console(outputTemplate: outputTemplate)
+                    .CreateLogger();
+
+                ILoggerFactory logFactory = LoggerFactory.Create(builder =>
+                {
+                    builder.ClearProviders().AddSerilog();
+                });
+
+                builder.Services.AddSingleton<Microsoft.Extensions.Logging.ILogger>(logFactory.CreateLogger(nameof(Program)));
+            });
+
+            Log.Information(DateTimeOffset.Now.ToString());
 
             services.AddRazorPages();
             services.AddServerSideBlazor();
@@ -68,6 +78,8 @@ namespace PathingAPI
                     c.IncludeXmlComments(xmlDocumentPath);
                 }
             });
+
+            services.BuildServiceProvider(new ServiceProviderOptions() { ValidateOnBuild = true });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

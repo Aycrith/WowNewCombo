@@ -21,39 +21,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using WinAPI;
 using SharedLib;
+using Microsoft.Extensions.Logging;
 
 namespace BlazorServer
 {
     public sealed class Startup
     {
-        private static StartupConfigPid StartupConfigPid = new();
-
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
-
-            var logfile = "out.log";
-            var config = new LoggerConfiguration()
-                .MinimumLevel.Debug()
-                .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
-                .WriteTo.LoggerSink()
-                .WriteTo.File(logfile, rollingInterval: RollingInterval.Day)
-                .WriteTo.Debug(outputTemplate: "[{Timestamp:HH:mm:ss:fff} {Level:u3}] {Message:lj}{NewLine}{Exception}")
-                .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss:fff} {Level:u3}] {Message:lj}{NewLine}{Exception}");
-
-            Log.Logger = config.CreateLogger();
-            Log.Logger.Information("Startup()");
-
-            Configuration.GetSection(StartupConfigPid.Position).Bind(StartupConfigPid);
-
-            while (WowProcess.Get(StartupConfigPid.Id) == null)
-            {
-                Log.Information("Unable to find any Wow process, is it running ?");
-                Thread.Sleep(1000);
-            }
-
-            if (StartupConfigPid.Id > -1)
-                Log.Logger.Information($"Startup() Attached pid={StartupConfigPid.Id}");
         }
 
         public IConfiguration Configuration { get; }
@@ -62,26 +38,67 @@ namespace BlazorServer
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
-            var logger = new SerilogLoggerProvider(Log.Logger).CreateLogger(nameof(Program));
-            services.AddSingleton(logger);
+            services.AddLogging(builder =>
+            {
+                LoggerSink sink = new();
+                builder.Services.AddSingleton(sink);
+
+                const string outputTemplate = "[{Timestamp:HH:mm:ss:fff} {Level:u3}] {Message:lj}{NewLine}{Exception}";
+
+                Log.Logger = new LoggerConfiguration()
+                    .MinimumLevel.Debug()
+                    .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+                    .WriteTo.Sink(sink)
+                    .WriteTo.File("out.log",
+                        rollingInterval: RollingInterval.Day,
+                        outputTemplate: outputTemplate)
+                    .WriteTo.Debug(outputTemplate: outputTemplate)
+                    .WriteTo.Console(outputTemplate: outputTemplate)
+                    .CreateLogger();
+
+                ILoggerFactory logFactory = LoggerFactory.Create(builder =>
+                {
+                    builder.ClearProviders().AddSerilog();
+                });
+
+                builder.Services.AddSingleton<Microsoft.Extensions.Logging.ILogger>(logFactory.CreateLogger(nameof(Program)));
+            });
+
+            Log.Information($"[{nameof(Startup)}] {Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName} {DateTimeOffset.Now}");
+
+            StartupConfigPid StartupConfigPid = new();
+            Configuration.GetSection(StartupConfigPid.Position).Bind(StartupConfigPid);
+            while (WowProcess.Get(StartupConfigPid.Id) == null)
+            {
+                Log.Warning($"[{nameof(Startup)}] Unable to find any Wow process, is it running ?");
+                Thread.Sleep(1000);
+            }
 
             WowProcess wowProcess = new(StartupConfigPid.Id);
+            Log.Information($"[{nameof(Startup)}] Pid: {wowProcess.ProcessId}");
+            Log.Information($"[{nameof(Startup)}] Version: {wowProcess.FileVersion}");
+
             NativeMethods.GetWindowRect(wowProcess.Process.MainWindowHandle, out Rectangle rect);
 
+            var logger = new SerilogLoggerProvider(Log.Logger, true).CreateLogger(nameof(AddonConfigurator));
             AddonConfigurator addonConfigurator = new(logger, wowProcess);
             Version? installVersion = addonConfigurator.GetInstallVersion();
+            Log.Information($"[{nameof(Program)}] Addon version: {installVersion}");
 
             if (addonConfigurator.IsDefault() || installVersion == null)
             {
                 // At this point the webpage never loads so fallback to configuration page
                 addonConfigurator.Delete();
                 FrameConfig.Delete();
+
+                Log.Error($"[{nameof(Startup)}] {nameof(AddonConfig)} doesn't exists or addon not installed yet!");
             }
 
             if (FrameConfig.Exists() && !FrameConfig.IsValid(rect, installVersion!))
             {
                 // At this point the webpage never loads so fallback to configuration page
                 FrameConfig.Delete();
+                Log.Error($"[{nameof(Startup)}] {nameof(FrameConfig)} doesn't exists or window rect is different then config!");
             }
 
             wowProcess.Dispose();
@@ -109,7 +126,9 @@ namespace BlazorServer
 
                 services.AddSingleton<IGrindSessionDAO, LocalGrindSessionDAO>();
                 services.AddSingleton<WorldMapAreaDB>();
-                services.AddSingleton<IPPather>(x => GetPather(logger, x.GetRequiredService<DataConfig>(), x.GetRequiredService<WorldMapAreaDB>()));
+                services.AddSingleton<IPPather>(x =>
+                    GetPather(x.GetRequiredService<Microsoft.Extensions.Logging.ILogger>(),
+                    x.GetRequiredService<DataConfig>(), x.GetRequiredService<WorldMapAreaDB>()));
 
                 StartupConfigReader scr = new();
                 Configuration.GetSection(StartupConfigReader.Position).Bind(scr);
@@ -117,12 +136,12 @@ namespace BlazorServer
                 if (scr.ReaderType == AddonDataProviderType.DXGI)
                 {
                     services.AddSingleton<IAddonDataProvider, AddonDataProviderDXGI>();
-                    Log.Logger.Information($"Using {nameof(AddonDataProviderDXGI)}");
+                    Log.Information($"[{nameof(Startup)}] {nameof(AddonDataProviderDXGI)}");
                 }
                 else
                 {
                     services.AddSingleton<IAddonDataProvider, AddonDataProviderGDI>();
-                    Log.Logger.Information($"Using {nameof(AddonDataProviderGDI)}");
+                    Log.Information($"[{nameof(Startup)}] {nameof(AddonDataProviderGDI)}");
                 }
 
                 services.AddSingleton<AreaDB>();
@@ -146,6 +165,8 @@ namespace BlazorServer
             services.AddRazorPages();
             services.AddServerSideBlazor();
             services.AddBlazorTable();
+
+            services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true });
         }
 
         private IPPather GetPather(Microsoft.Extensions.Logging.ILogger logger, DataConfig dataConfig, WorldMapAreaDB worldMapAreaDB)
@@ -160,9 +181,7 @@ namespace BlazorServer
                 RemotePathingAPIV3 api = new(logger, scp.hostv3, scp.portv3, worldMapAreaDB);
                 if (api.PingServer())
                 {
-                    Log.Information("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-                    Log.Debug($"Using {StartupConfigPathing.Types.RemoteV3}({api.GetType().Name}) {scp.hostv3}:{scp.portv3}");
-                    Log.Information("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+                    Log.Information($"[{nameof(Startup)}] Using {StartupConfigPathing.Types.RemoteV3}({api.GetType().Name}) {scp.hostv3}:{scp.portv3}");
                     return api;
                 }
                 api.Dispose();
@@ -172,35 +191,30 @@ namespace BlazorServer
             if (scp.Type == StartupConfigPathing.Types.RemoteV1 || failed)
             {
                 RemotePathingAPI api = new(logger, scp.hostv1, scp.portv1);
-                var pingTask = Task.Run(api.PingServer);
+                Task<bool> pingTask = Task.Run(api.PingServer);
                 pingTask.Wait();
                 if (pingTask.Result)
                 {
-                    Log.Information("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-
                     if (scp.Type == StartupConfigPathing.Types.RemoteV3)
                     {
-                        Log.Debug($"Unavailable {StartupConfigPathing.Types.RemoteV3} {scp.hostv3}:{scp.portv3} - Fallback to {StartupConfigPathing.Types.RemoteV1}");
+                        Log.Warning($"[{nameof(Startup)}] Unavailable {StartupConfigPathing.Types.RemoteV3} {scp.hostv3}:{scp.portv3} - Fallback to {StartupConfigPathing.Types.RemoteV1}");
                     }
 
-                    Log.Debug($"Using {StartupConfigPathing.Types.RemoteV1}({api.GetType().Name}) {scp.hostv1}:{scp.portv1}");
-                    Log.Information("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+                    Log.Information($"[{nameof(Startup)}] Using {StartupConfigPathing.Types.RemoteV1}({api.GetType().Name}) {scp.hostv1}:{scp.portv1}");
                     return api;
                 }
 
                 failed = true;
             }
 
-            Log.Information("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
             if (scp.Type != StartupConfigPathing.Types.Local)
             {
-                Log.Debug($"{scp.Type} not available!");
+                Log.Warning($"[{nameof(Startup)}] {scp.Type} not available!");
             }
-            Log.Information("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
 
             LocalPathingApi localApi = new(logger, new PPatherService(logger, dataConfig, worldMapAreaDB), dataConfig);
-            Log.Information($"Using {StartupConfigPathing.Types.Local}({localApi.GetType().Name}) pathing API.");
-            Log.Information("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+            Log.Information($"[{nameof(Startup)}] Using {StartupConfigPathing.Types.Local}({localApi.GetType().Name})");
+
             return localApi;
         }
 

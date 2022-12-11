@@ -83,7 +83,7 @@ namespace WinAPI
 
         private const int LOGPIXELSX = 88;
 
-        private static bool IsWindowedMode(Point point)
+        public static bool IsWindowedMode(Point point)
         {
             return point.X != 0 || point.Y != 0;
         }

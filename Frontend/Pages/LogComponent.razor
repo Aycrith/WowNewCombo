@@ -1,7 +1,7 @@
 ﻿@using System.Linq
 @using Serilog.Events
 
-@inject ILogger logger
+@inject LoggerSink sink
 
 <style>
     .log {
@@ -35,11 +35,11 @@
 <div class="col-sm" style="@(MaxHeight > 0 ? $"overflow: auto; max-height: {MaxHeight}px;" : string.Empty)">
     <table class="table table-borderless table-dark" cellspacing="20">
         @{
-            int head = Math.Max(LoggerSink.Head - 1, 0);
+            int head = Math.Max(sink.Head - 1, 0);
         }
         @for (int i = LoggerSink.SIZE; i >= 0; i--)
         {
-            var evt = LoggerSink.Log[(head + i) % LoggerSink.SIZE];
+            var evt = sink.Log[(head + i) % LoggerSink.SIZE];
             if (evt == null) continue;
             <tr class="@logLevelColor[(int)evt.Level]">
                 <td class="log">@evt.Timestamp.ToString("HH:mm:ss")</td>
@@ -64,12 +64,12 @@
 
     protected override void OnInitialized()
     {
-        LoggerSink.OnLogChanged += LogChanged;
+        sink.OnLogChanged += LogChanged;
     }
 
     public void Dispose()
     {
-        LoggerSink.OnLogChanged -= LogChanged;
+        sink.OnLogChanged -= LogChanged;
     }
 
     private void LogChanged()
