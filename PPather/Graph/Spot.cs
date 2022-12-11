@@ -17,7 +17,7 @@
 */
 
 using System;
-using System.Collections.Generic;
+using System.Buffers;
 using System.Numerics;
 using SharedLib.Extensions;
 
@@ -131,29 +131,21 @@ namespace PPather.Graph
             return pg.GetSpot(x, y, z);
         }
 
-        public List<Spot> GetPathsToSpots(PathGraph pg)
+        public Span<Spot> GetPathsToSpots(PathGraph pg)
         {
-            List<Spot> list = new(n_paths);
+            var pooler = ArrayPool<Spot>.Shared;
+            Spot[] array = pooler.Rent(n_paths);
+
+            int j = 0;
             for (int i = 0; i < n_paths; i++)
             {
                 Spot spot = GetToSpot(pg, i);
-                if (spot != null) { list.Add(spot); }
+                if (spot != null)
+                    array[j++] = spot;
             }
-            return list;
-        }
 
-        public Vector3[] GetPaths()
-        {
-            Vector3[] array = new Vector3[n_paths];
-            if (n_paths == 0)
-                return array;
-
-            for (int i = 0; i < n_paths; i++)
-            {
-                int off = i * 3;
-                array[off] = (new(paths[off], paths[off + 1], paths[off + 2]));
-            }
-            return array;
+            pooler.Return(array);
+            return array.AsSpan(0, j);
         }
 
         public bool HasPathTo(PathGraph pg, Spot s)
@@ -165,11 +157,6 @@ namespace PPather.Graph
                     return true;
             }
             return false;
-        }
-
-        public bool HasPathTo(Vector3 l)
-        {
-            return HasPathTo(l.X, l.Y, l.Z);
         }
 
         public bool HasPathTo(float x, float y, float z)
@@ -273,9 +260,7 @@ namespace PPather.Graph
 
         public bool SearchIsClosed(int id)
         {
-            if (id == searchID)
-                return closed;
-            return false;
+            return id == searchID && closed;
         }
 
         public void SearchClose(int id)
@@ -286,20 +271,12 @@ namespace PPather.Graph
 
         public bool SearchScoreIsSet(int id)
         {
-            if (id == searchID)
-            {
-                return scoreSet;
-            }
-            return false;
+            return id == searchID && scoreSet;
         }
 
         public float SearchScoreGet(int id)
         {
-            if (id == searchID)
-            {
-                return score;
-            }
-            return float.MaxValue;
+            return id == searchID ? score : float.MaxValue;
         }
 
         public void SearchScoreSet(int id, float score)

@@ -4,7 +4,7 @@ namespace PPather.Triangles.Data
     public readonly struct TrioArray
     {
         private const int VERTEX = 3;
-        private const int SIZE = 1024; // Max size if SIZE*SIZE = 16M
+        private const int SIZE = 768; // Max size if SIZE*SIZE = 16M
 
         // Jagged array
         // pointer chasing FTL

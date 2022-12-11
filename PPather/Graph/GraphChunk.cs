@@ -79,8 +79,6 @@ namespace PPather.Graph
                     spots[i].traceBack = null;
                 }
             }
-
-            //spots = null;
         }
 
         private void LocalCoords(float x, float y, out int ix, out int iy)

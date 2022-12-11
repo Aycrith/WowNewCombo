@@ -156,11 +156,11 @@ namespace WowTriangles
             TriangleCollection tc = GetChunkAt(x, y);
 
             TriangleMatrix tm = tc.GetTriangleMatrix();
-            int[] ts = tm.GetAllCloseTo(x, y, toonSize);
+            ArraySegment<int> ts = tm.GetAllCloseTo(x, y, toonSize);
 
             Vector3 toon = new(x, y, z + toonHeight - toonSize);
 
-            for (int i = 0; i < ts.Length; i++)
+            for (int i = 0; i < ts.Count; i++)
             {
                 int t = ts[i];
 
@@ -222,7 +222,7 @@ namespace WowTriangles
             }
 
             TriangleMatrix tm = tc.GetTriangleMatrix();
-            int[] ts = tm.GetAllInSquare(Min(x0, x1), Min(y0, y1), Max(x0, x1), Max(y0, y1));
+            ArraySegment<int> ts = tm.GetAllInSquare(Min(x0, x1), Min(y0, y1), Max(x0, x1), Max(y0, y1));
 
             // 3: check collision with objects
 
@@ -295,9 +295,9 @@ namespace WowTriangles
             dy *= factor;
         }
 
-        private static bool CheckForCollision(TriangleCollection tc, int[] ts, in Vector3 from, in Vector3 to)
+        private static bool CheckForCollision(TriangleCollection tc, ArraySegment<int> ts, in Vector3 from, in Vector3 to)
         {
-            for (int i = 0; i < ts.Length; i++)
+            for (int i = 0; i < ts.Count; i++)
             {
                 int t = ts[i];
 
@@ -328,12 +328,12 @@ namespace WowTriangles
         {
             TriangleCollection tc = GetChunkAt(x, y);
             TriangleMatrix tm = tc.GetTriangleMatrix();
-            int[] ts = tm.GetAllCloseTo(x, y, 1.0f);
+            ArraySegment<int> ts = tm.GetAllCloseTo(x, y, 1.0f);
 
             Vector3 s0 = new(x, y, min_z);
             Vector3 s1 = new(x, y, max_z);
 
-            for (int i = 0; i < ts.Length; i++)
+            for (int i = 0; i < ts.Count; i++)
             {
                 int t = ts[i];
 
@@ -367,8 +367,8 @@ namespace WowTriangles
             float maxZ = float.MinValue;
             float minZ = float.MaxValue;
 
-            int[] array = tm.GetAllCloseTo(x, y, range);
-            for (int i = 0; i < array.Length; i++)
+            ArraySegment<int> array = tm.GetAllCloseTo(x, y, range);
+            for (int i = 0; i < array.Count; i++)
             {
                 int t = array[i];
 
@@ -405,8 +405,8 @@ namespace WowTriangles
             TriangleCollection tc = GetChunkAt(x, y);
             TriangleMatrix tm = tc.GetTriangleMatrix();
 
-            int[] array = tm.GetAllCloseTo(x, y, range);
-            for (int i = 0; i < array.Length; i++)
+            ArraySegment<int> array = tm.GetAllCloseTo(x, y, range);
+            for (int i = 0; i < array.Count; i++)
             {
                 int t = array[i];
 
@@ -472,7 +472,7 @@ namespace WowTriangles
 
             TriangleCollection tc = GetChunkAt(x, y);
             TriangleMatrix tm = tc.GetTriangleMatrix();
-            int[] ts = tm.GetAllCloseTo(x, y, 1.0f);
+            ArraySegment<int> ts = tm.GetAllCloseTo(x, y, 1.0f);
 
             Vector3 s0 = new(x, y, min_z);
             Vector3 s1 = new(x, y, max_z);
@@ -481,7 +481,7 @@ namespace WowTriangles
             int best_flags = 0;
             bool found = false;
 
-            for (int i = 0; i < ts.Length; i++)
+            for (int i = 0; i < ts.Count; i++)
             {
                 int t = ts[i];
 

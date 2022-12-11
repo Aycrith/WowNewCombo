@@ -1,4 +1,6 @@
-﻿using static System.MathF;
+﻿using System.Buffers;
+
+using static System.MathF;
 
 namespace PPather.Triangles.Data
 {
@@ -37,7 +39,9 @@ namespace PPather.Triangles.Data
             int sy = LocalToGrid(min_y);
             int ey = LocalToGrid(max_y);
 
-            T[] l = new T[(int)Ceiling(((ex - sx + 1) * gridSize) + ((ey - sy + 1) * gridSize))];
+            var pooler = ArrayPool<T>.Shared;
+            var l = pooler.Rent((int)Ceiling(((ex - sx + 1) * gridSize) + ((ey - sy + 1) * gridSize)));
+
             int i = 0;
             for (int x = sx; x <= ex; x++)
             {
@@ -50,6 +54,7 @@ namespace PPather.Triangles.Data
                 }
             }
 
+            pooler.Return(l);
             return (l, i);
         }
 
