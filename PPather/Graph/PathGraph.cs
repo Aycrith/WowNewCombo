@@ -61,7 +61,7 @@ namespace PPather.Graph
 
         public Path lastReducedPath;
 
-        public static float IsCloseToModelRange = 2;
+        public const float IsCloseToModelRange = 2;
 
         /*
 		public const float IndoorsWantedStepLength = 1.5f;
@@ -253,9 +253,10 @@ namespace PPather.Graph
                     float mid_x = (s.Loc.X + cs.Loc.X) / 2;
                     float mid_y = (s.Loc.Y + cs.Loc.Y) / 2;
                     float mid_z = (s.Loc.Z + cs.Loc.Z) / 2;
-                    float stand_z;
-                    int flags;
-                    if (triangleWorld.FindStandableAt(mid_x, mid_y, mid_z - WantedStepLength * .75f, mid_z + WantedStepLength * .75f, out stand_z, out flags, toonHeight, toonSize))
+
+                    if (triangleWorld.FindStandableAt(mid_x, mid_y,
+                        mid_z - WantedStepLength * .75f, mid_z + WantedStepLength * .75f,
+                        out _, out _, toonHeight, toonSize))
                     {
                         s.AddPathTo(cs);
                         cs.AddPathTo(s);
@@ -664,7 +665,7 @@ namespace PPather.Graph
             float H_Score = spotLinkedToCurrent.GetDistanceTo2D(destinationSpot) * heuristicsFactor;// the estimated movement cost to move from that given square on the grid to the final destination, point B. This is often referred to as the heuristic, which can be a bit confusing. The reason why it is called that is because it is a guess. We really don�t know the actual distance until we find the path, because all sorts of things can be in the way (walls, water, etc.). You are given one way to calculate H in this tutorial, but there are many others that you can find in other articles on the web.
             float F_Score = G_Score + H_Score;
 
-            if (spotLinkedToCurrent.IsFlagSet(Spot.FLAG_WATER)) { F_Score += 30; }
+            if (spotLinkedToCurrent.IsFlagSet(Spot.FLAG_WATER)) { F_Score += 50; }
 
             if (!spotLinkedToCurrent.SearchScoreIsSet(currentSearchID) || F_Score < spotLinkedToCurrent.SearchScoreGet(currentSearchID))
             {
@@ -683,7 +684,7 @@ namespace PPather.Graph
             float H_Score = spotLinkedToCurrent.GetDistanceTo2D(destinationSpot) * heuristicsFactor;// the estimated movement cost to move from that given square on the grid to the final destination, point B. This is often referred to as the heuristic, which can be a bit confusing. The reason why it is called that is because it is a guess. We really don�t know the actual distance until we find the path, because all sorts of things can be in the way (walls, water, etc.). You are given one way to calculate H in this tutorial, but there are many others that you can find in other articles on the web.
             float F_Score = G_Score + H_Score;
 
-            if (spotLinkedToCurrent.IsFlagSet(Spot.FLAG_WATER)) { F_Score += 30; }
+            if (spotLinkedToCurrent.IsFlagSet(Spot.FLAG_WATER)) { F_Score += 50; }
 
             int score = GetTriangleClosenessScore(spotLinkedToCurrent.Loc);
             score += GetTriangleGradiantScore(spotLinkedToCurrent.Loc, gradiantMax);
@@ -707,7 +708,7 @@ namespace PPather.Graph
             float new_score = currentSearchSpotScore + currentSearchSpot.GetDistanceTo(spotLinkedToCurrent) + TurnCost(currentSearchSpot, spotLinkedToCurrent);
 
             if (locationHeuristics != null) { new_score += locationHeuristics.Score(currentSearchSpot.Loc.X, currentSearchSpot.Loc.Y, currentSearchSpot.Loc.Z); }
-            if (spotLinkedToCurrent.IsFlagSet(Spot.FLAG_WATER)) { new_score += 30; }
+            if (spotLinkedToCurrent.IsFlagSet(Spot.FLAG_WATER)) { new_score += 50; }
 
             if (spotLinkedToCurrent.SearchScoreIsSet(currentSearchID))
             {
@@ -758,7 +759,8 @@ namespace PPather.Graph
                 } // TODO: this is slow
 
                 // check we can stand at this new location
-                if (!triangleWorld.FindStandableAt(nx, ny, currentSearchSpot.Loc.Z - WantedStepLength * .75f, currentSearchSpot.Loc.Z + WantedStepLength * .75f, out float new_z, out int flags, toonHeight, toonSize))
+                if (!triangleWorld.FindStandableAt(nx, ny, currentSearchSpot.Loc.Z - WantedStepLength * .75f,
+                    currentSearchSpot.Loc.Z + WantedStepLength * .75f, out float new_z, out TriangleType flags, toonHeight, toonSize))
                 {
                     continue;
                 }
@@ -781,11 +783,11 @@ namespace PPather.Graph
                 //PeekSpot = newSpot;
 
                 //check flags return by triangleWorld.FindStandableA
-                if ((flags & ChunkedTriangleCollection.TriangleFlagDeepWater) != 0)
+                if ((flags & TriangleType.Water) != 0)
                 {
                     newSpot.SetFlag(Spot.FLAG_WATER, true);
                 }
-                if (((flags & ChunkedTriangleCollection.TriangleFlagModel) != 0) || ((flags & ChunkedTriangleCollection.TriangleFlagObject) != 0))
+                if (((flags & TriangleType.Model) != 0) || ((flags & TriangleType.Object) != 0))
                 {
                     newSpot.SetFlag(Spot.FLAG_INDOORS, true);
                 }
@@ -824,9 +826,9 @@ namespace PPather.Graph
 
         public bool IsUnderwaterOrInAir(Vector3 l)
         {
-            if (triangleWorld.FindStandableAt(l.X, l.Y, l.Z - 50.0f, l.Z + 5.0f, out _, out int flags, toonHeight, toonSize))
+            if (triangleWorld.FindStandableAt(l.X, l.Y, l.Z - 50.0f, l.Z + 5.0f, out _, out TriangleType flags, toonHeight, toonSize))
             {
-                if ((flags & ChunkedTriangleCollection.TriangleFlagDeepWater) != 0)
+                if ((flags & TriangleType.Water) != 0)
                     return true;
                 else
                     return false;

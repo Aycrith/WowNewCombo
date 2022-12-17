@@ -34,10 +34,26 @@ namespace Wmo
         public const float CHUNKSIZE = TILESIZE / 16.0f;
         public const float UNITSIZE = CHUNKSIZE / 8.0f;
 
-        public static uint ToBin(ReadOnlySpan<char> s)
-        {
-            return (uint)s[3] | ((uint)s[2] << 8) | ((uint)s[1] << 16) | ((uint)s[0] << 24);
-        }
+        public const uint MWMO = 0b_01001101_01010111_01001101_01001111;
+        public const uint MODF = 0b_01001101_01001111_01000100_01000110;
+        public const uint MAIN = 0b_01001101_01000001_01001001_01001110;
+        public const uint MPHD = 0b_01001101_01010000_01001000_01000100;
+        public const uint MVER = 0b_01001101_01010110_01000101_01010010;
+        public const uint MOGI = 0b_01001101_01001111_01000111_01001001;
+        public const uint MOHD = 0b_01001101_01001111_01001000_01000100;
+        public const uint MODN = 0b_01001101_01001111_01000100_01001110;
+        public const uint MODS = 0b_01001101_01001111_01000100_01010011;
+        public const uint MODD = 0b_01001101_01001111_01000100_01000100;
+        public const uint MOPY = 0b_01001101_01001111_01010000_01011001;
+        public const uint MOVI = 0b_01001101_01001111_01010110_01001001;
+        public const uint MOVT = 0b_01001101_01001111_01010110_01010100;
+        public const uint MCIN = 0b_01001101_01000011_01001001_01001110;
+        public const uint MMDX = 0b_01001101_01001101_01000100_01011000;
+        public const uint MDDF = 0b_01001101_01000100_01000100_01000110;
+        public const uint MCNR = 0b_01001101_01000011_01001110_01010010;
+        public const uint MCVT = 0b_01001101_01000011_01010110_01010100;
+        public const uint MCLQ = 0b_01001101_01000011_01001100_01010001;
+        public const uint MH2O = 0b_01001101_01001000_00110010_01001111;
 
         public static unsafe string ExtractString(byte[] buff, int off)
         {
@@ -48,27 +64,6 @@ namespace Wmo
                 return new string(sp);
             }
         }
-
-        public static readonly uint MWMO = ToBin(nameof(MWMO));
-        public static readonly uint MODF = ToBin(nameof(MODF));
-        public static readonly uint MAIN = ToBin(nameof(MAIN));
-        public static readonly uint MPHD = ToBin(nameof(MPHD));
-        public static readonly uint MVER = ToBin(nameof(MVER));
-        public static readonly uint MOGI = ToBin(nameof(MOGI));
-        public static readonly uint MOHD = ToBin(nameof(MOHD));
-        public static readonly uint MODN = ToBin(nameof(MODN));
-        public static readonly uint MODS = ToBin(nameof(MODS));
-        public static readonly uint MODD = ToBin(nameof(MODD));
-        public static readonly uint MOPY = ToBin(nameof(MOPY));
-        public static readonly uint MOVI = ToBin(nameof(MOVI));
-        public static readonly uint MOVT = ToBin(nameof(MOVT));
-        public static readonly uint MCIN = ToBin(nameof(MCIN));
-        public static readonly uint MMDX = ToBin(nameof(MMDX));
-        public static readonly uint MDDF = ToBin(nameof(MDDF));
-        public static readonly uint MCNR = ToBin(nameof(MCNR));
-        public static readonly uint MCVT = ToBin(nameof(MCVT));
-        public static readonly uint MCLQ = ToBin(nameof(MCLQ));
-        public static readonly uint MH2O = ToBin(nameof(MH2O));
     }
 
     public sealed class WMOManager : Manager<WMO>
@@ -258,9 +253,9 @@ namespace Wmo
         public readonly string fileName;
         public readonly float[] vertices;           // 3 per vertex
         public readonly float[] boundingVertices;   // 3 per vertex
-        public readonly UInt16[] boundingTriangles;
+        public readonly ushort[] boundingTriangles;
 
-        public Model(string fileName, float[] vertices, UInt16[] boundingTriangles, float[] boundingVertices)
+        public Model(string fileName, float[] vertices, ushort[] boundingTriangles, float[] boundingVertices)
         {
             this.fileName = fileName;
             this.vertices = vertices;
@@ -331,9 +326,9 @@ namespace Wmo
             _ = file.ReadUInt32(); //  - number of texture animation lookup table entries;
             _ = file.ReadUInt32(); //  - offset to texture animation lookup table;
 
-            float[] theFloats = new float[14]; // Noone knows. Meeh, they are here.
+            //float[] theFloats = new float[14]; // Noone knows. Meeh, they are here.
             for (int i = 0; i < 14; i++)
-                theFloats[i] = file.ReadSingle();
+                file.ReadSingle();
 
             uint nBoundingTriangles = file.ReadUInt32();
             uint ofsBoundingTriangles = file.ReadUInt32();
@@ -381,13 +376,13 @@ namespace Wmo
             return vertices;
         }
 
-        private static UInt16[] ReadBoundingTriangles(BinaryReader file, uint nTriangles, uint ofsTriangles)
+        private static ushort[] ReadBoundingTriangles(BinaryReader file, uint nTriangles, uint ofsTriangles)
         {
             if (nTriangles == 0)
-                return Array.Empty<UInt16>();
+                return Array.Empty<ushort>();
 
             file.BaseStream.Seek(ofsTriangles, SeekOrigin.Begin);
-            UInt16[] triangles = new UInt16[nTriangles];
+            ushort[] triangles = new ushort[nTriangles];
 
             for (int i = 0; i < triangles.Length; i++)
             {
@@ -583,17 +578,10 @@ namespace Wmo
         private void HandleMAIN(BinaryReader file, uint size)
         {
             // global map objects
-            for (int y = 0; y < WDT.SIZE; y++)
+            for (int index = 0; index < WDT.SIZE * WDT.SIZE; index++)
             {
-                for (int x = 0; x < WDT.SIZE; x++)
-                {
-                    int index = y * WDT.SIZE + x;
-
-                    int d = file.ReadInt32();
-                    wdt.maps[index] = d != 0;
-
-                    file.ReadInt32(); // kasta
-                }
+                wdt.maps[index] = file.ReadInt32() != 0;
+                file.ReadInt32(); // kasta
             }
         }
     }
@@ -629,10 +617,8 @@ namespace Wmo
                 return false;
             i /= 2;
             j /= 2;
-            if (i > 3 || j > 3)
-                return false;
 
-            return (holes & holetab_h[i] & holetab_v[j]) != 0;
+            return i <= 3 && j <= 3 && (holes & holetab_h[i] & holetab_v[j]) != 0;
         }
 
 
@@ -723,17 +709,13 @@ namespace Wmo
                 file.BaseStream.Seek(curpos + size, SeekOrigin.Begin);
             } while (file.BaseStream.Position < file.BaseStream.Length);
 
-            for (int y = 0; y < MapTile.SIZE; y++)
+            for (int index = 0; index < MapTile.SIZE * MapTile.SIZE; index++)
             {
-                for (int x = 0; x < MapTile.SIZE; x++)
-                {
-                    int index = y * MapTile.SIZE + x;
-                    int off = mcnk_offsets[index];
-                    file.BaseStream.Seek(off, SeekOrigin.Begin);
+                int off = mcnk_offsets[index];
+                file.BaseStream.Seek(off, SeekOrigin.Begin);
 
-                    chunks[index] = ReadMapChunk(file, LiquidDataChunk.Length > 0 ? LiquidDataChunk[index] : EmptyLiquidData);
-                    hasChunk[index] = true;
-                }
+                chunks[index] = ReadMapChunk(file, LiquidDataChunk.Length > 0 ? LiquidDataChunk[index] : EmptyLiquidData);
+                hasChunk[index] = true;
             }
 
             return new(modelis, wmois, chunks, hasChunk);
@@ -1077,23 +1059,15 @@ namespace Wmo
             water_height1 = file.ReadSingle();
             water_height2 = file.ReadSingle();
 
-            for (int y = 0; y < LiquidData.HEIGHT_SIZE; y++)
+            for (int i = 0; i < LiquidData.HEIGHT_SIZE * LiquidData.HEIGHT_SIZE; i++)
             {
-                for (int x = 0; x < LiquidData.HEIGHT_SIZE; x++)
-                {
-                    int index = y * LiquidData.HEIGHT_SIZE + x;
-                    _ = file.ReadUInt32();
-                    water_height[index] = file.ReadSingle();
-                }
+                _ = file.ReadUInt32();
+                water_height[i] = file.ReadSingle();
             }
 
-            for (int y = 0; y < LiquidData.FLAG_SIZE; y++)
+            for (int i = 0; i < LiquidData.FLAG_SIZE * LiquidData.FLAG_SIZE; i++)
             {
-                for (int x = 0; x < LiquidData.FLAG_SIZE; x++)
-                {
-                    int index = y * LiquidData.FLAG_SIZE + x;
-                    water_flags[index] = file.ReadByte();
-                }
+                water_flags[i] = file.ReadByte();
             }
         }
     }
@@ -1207,7 +1181,7 @@ namespace Wmo
                 Model m = modelmanager.AddAndLoadIfNeeded(name);
 
                 Vector3 pos = new(posx, posy, posz);
-                Vector3 dir = new(quatz, quaty, quatz);
+                Vector3 dir = new(quatx, quaty, quatz);
 
                 ModelInstance mi = new(m, pos, dir, scale, quatw);
                 wmo.doodadInstances[i] = mi;

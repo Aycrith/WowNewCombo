@@ -32,19 +32,15 @@ namespace PPather
 
         public Vector4 CreateWorldLocation(float x, float y, float z, int mapId)
         {
-            float zTerrain = GetZValueAt(x, y, z,
-                new int[] { ChunkedTriangleCollection.TriangleTerrain });
-
-            float zWater = GetZValueAt(x, y, z,
-                new int[] { ChunkedTriangleCollection.TriangleFlagDeepWater });
+            float zTerrain = GetZValueAt(x, y, z, TriangleType.Terrain);
+            float zWater = GetZValueAt(x, y, z, TriangleType.Water);
 
             if (zWater > zTerrain)
             {
                 return new Vector4(x, y, zWater, mapId);
             }
 
-            float zModel = GetZValueAt(x, y, z,
-            new int[] { ChunkedTriangleCollection.TriangleFlagModel, ChunkedTriangleCollection.TriangleFlagObject });
+            float zModel = GetZValueAt(x, y, z, TriangleType.Model | TriangleType.Object);
 
             if (zModel != float.MinValue)
             {
@@ -61,7 +57,7 @@ namespace PPather
             return new Vector4(x, y, zTerrain, mapId);
         }
 
-        private float GetZValueAt(float x, float y, float z, int[] allowedModels)
+        private float GetZValueAt(float x, float y, float z, TriangleType allowedFlags)
         {
             float min = -1000;
             float max = 2000;
@@ -72,7 +68,7 @@ namespace PPather
                 max = z + 2000;
             }
 
-            if (PathGraph.triangleWorld.FindStandableAt1(x, y, min, max, out float z1, out int flags1, toonHeight, toonSize, true, allowedModels))
+            if (PathGraph.triangleWorld.FindStandableAt1(x, y, min, max, out float z1, out _, toonHeight, toonSize, true, allowedFlags))
             {
                 return z1;
             }
@@ -104,6 +100,10 @@ namespace PPather
             {
                 logger.LogError(ex.Message);
                 return null;
+            }
+            finally
+            {
+                PathGraph.SearchEnabled = false;
             }
         }
     }
