@@ -22,7 +22,7 @@
     <span>Reset</span>
 </button>
 *@
-<div id="canvasText" style="position: relative; z-index: 2; left: 0px;padding-left:10px; top: 20px; height:30px; background-color: black;color:white">
+<div id="canvasText" style="position: relative; z-index: 2; left: 0px;padding-left:10px; height:30px; background-color: black;color:white">
     ...
 </div>
 <canvas id="renderCanvas" style="background:black">
@@ -37,6 +37,8 @@
     private Thread thread;
     private CancellationTokenSource cts;
     private JsonSerializerOptions options;
+
+    private Queue<ChunkEventArgs> chunkEventArgs = new();
 
     private Vector4 lastFrom;
     private Vector4 lastTo;
@@ -155,6 +157,11 @@
     {
         if (spotPath != null)
         {
+            while (chunkEventArgs.TryDequeue(out var e))
+            {
+                await DequeueChunkEvent(e);
+            }
+
             await jsRuntime.InvokeVoidAsync("removeMeshes", Name);
             await jsRuntime.InvokeVoidAsync("drawPath",
                 JsonSerializer.Serialize(spotPath.locations, options), PathColour, Name);
@@ -182,16 +189,22 @@
             JsonSerializer.Serialize(e.Locations, options), e.Colour, e.Name);
     }
 
-    private async void OnChunkAdded(ChunkEventArgs e)
+    private /*async*/ void OnChunkAdded(ChunkEventArgs e)
+    {
+        chunkEventArgs.Enqueue(e);
+        //_ = DequeueChunkEvent(e);
+    }
+
+    private async ValueTask DequeueChunkEvent(ChunkEventArgs e)
     {
         TriangleCollection chunks = pPatherService.GetChunkAt(e.GridX, e.GridY);
 
         int i = 0;
-        int[][] models = new int[4][];
-        models[i++] = MeshFactory.CreateTriangles(0, chunks);
-        models[i++] = MeshFactory.CreateTriangles(1, chunks);
-        models[i++] = MeshFactory.CreateTriangles(2, chunks);
-        models[i++] = MeshFactory.CreateTriangles(4, chunks);
+        IEnumerable<int>[] models = new IEnumerable<int>[4];
+        models[i++] = MeshFactory.CreateTriangles(TriangleType.Terrain, chunks);
+        models[i++] = MeshFactory.CreateTriangles(TriangleType.Water, chunks);
+        models[i++] = MeshFactory.CreateTriangles(TriangleType.Object, chunks);
+        models[i++] = MeshFactory.CreateTriangles(TriangleType.Model, chunks);
 
         Vector3[] positions = MeshFactory.CreatePoints(chunks);
 

@@ -26,6 +26,9 @@ using System.IO;
 using Microsoft.Extensions.Logging;
 using PPather.Triangles.Data;
 using static Wmo.MapTileFile;
+using System.Buffers;
+using PPather.Triangles;
+using PPather;
 
 namespace WowTriangles
 {
@@ -39,8 +42,6 @@ namespace WowTriangles
         private readonly WDTFile wdtf;
 
         private readonly float mapId;
-
-        private int sequence;
 
         public MPQTriangleSupplier(ILogger logger, DataConfig dataConfig, float mapId)
         {
@@ -122,7 +123,7 @@ namespace WowTriangles
             wdt.loaded[index] = false;
         }
 
-        private void GetChunkCoord(float x, float y, out int chunk_x, out int chunk_y)
+        private static void GetChunkCoord(float x, float y, out int chunk_x, out int chunk_y)
         {
             // yeah, this is ugly. But safe
             for (chunk_x = 0; chunk_x < 64; chunk_x++)
@@ -138,12 +139,6 @@ namespace WowTriangles
                 float min_x = max_x - ChunkReader.TILESIZE;
                 if (x >= min_x - 0.1f && x < max_x + 0.1f)
                     break;
-            }
-
-            if (chunk_y == 64 || chunk_x == 64)
-            {
-                if (logger.IsEnabled(LogLevel.Debug))
-                    logger.LogDebug($"{x} {y} is at {chunk_x} {chunk_y}");
             }
         }
 
@@ -201,10 +196,10 @@ namespace WowTriangles
                         int v3 = vertices[row, col + 1];
                         int vMid = verticesMid[row, col];
 
-                        tc.AddTriangle(v0, v1, vMid);
-                        tc.AddTriangle(v1, v2, vMid);
-                        tc.AddTriangle(v2, v3, vMid);
-                        tc.AddTriangle(v3, v0, vMid);
+                        tc.AddTriangle(v0, v1, vMid, TriangleType.Terrain);
+                        tc.AddTriangle(v1, v2, vMid, TriangleType.Terrain);
+                        tc.AddTriangle(v2, v3, vMid, TriangleType.Terrain);
+                        tc.AddTriangle(v3, v0, vMid, TriangleType.Terrain);
                     }
                 }
             }
@@ -239,14 +234,14 @@ namespace WowTriangles
                         int v2 = vertices[row + 1, col + 1];
                         int v3 = vertices[row, col + 1];
 
-                        tc.AddTriangle(v0, v1, v3, ChunkedTriangleCollection.TriangleFlagDeepWater, 1);
-                        tc.AddTriangle(v1, v2, v3, ChunkedTriangleCollection.TriangleFlagDeepWater, 1);
+                        tc.AddTriangle(v0, v1, v3, TriangleType.Water);
+                        tc.AddTriangle(v1, v2, v3, TriangleType.Water);
                     }
                 }
             }
         }
 
-        private void AddTriangles(TriangleCollection tc, WMOInstance wi)
+        private static void AddTriangles(TriangleCollection tc, WMOInstance wi)
         {
             float dx = wi.pos.X;
             float dy = wi.pos.Y;
@@ -256,12 +251,12 @@ namespace WowTriangles
             float dir_y = wi.dir.Y - 90;
             float dir_z = -wi.dir.X;
 
+            var pooler = ArrayPool<int>.Shared;
             WMO wmo = wi.wmo;
             for (int gi = 0; gi < wmo.groups.Length; gi++)
             {
                 WMOGroup g = wmo.groups[gi];
-                sequence++;
-                int[] vertices = new int[g.nVertices];
+                int[] vertices = pooler.Rent((int)g.nVertices);
 
                 float minx = float.MaxValue;
                 float miny = float.MaxValue;
@@ -311,10 +306,11 @@ namespace WowTriangles
                         int i1 = vertices[g.triangles[off + 1]];
                         int i2 = vertices[g.triangles[off + 2]];
 
-                        tc.AddTriangle(i0, i1, i2, ChunkedTriangleCollection.TriangleFlagObject, sequence);
+                        tc.AddTriangle(i0, i1, i2, TriangleType.Object);
                         //if(t != -1) s.SetTriangleExtra(t, g.materials[0], 0, 0);
                     }
                 }
+                pooler.Return(vertices);
             }
 
             /*
@@ -338,9 +334,8 @@ namespace WowTriangles
             */
         }
 
-        private void AddTrianglesGroupDoodads(TriangleCollection s, ModelInstance mi, Vector3 world_dir, Vector3 world_off, float rot)
+        private static void AddTrianglesGroupDoodads(TriangleCollection s, ModelInstance mi, Vector3 world_dir, Vector3 world_off, float rot)
         {
-            sequence++;
             float dx = mi.pos.X;
             float dy = mi.pos.Y;
             float dz = mi.pos.Z;
@@ -356,7 +351,7 @@ namespace WowTriangles
             q.Y = mi.dir.X;
             q.Z = mi.dir.Y;
             q.W = mi.w;
-            Matrix4 rotMatrix = new Matrix4();
+            Matrix4 rotMatrix = new();
             rotMatrix.makeQuaternionRotate(q);
 
             Model m = mi.model;
@@ -368,7 +363,9 @@ namespace WowTriangles
             {
                 // We got boiuding stuff, that is better
                 int nBoundingVertices = m.boundingVertices.Length / 3;
-                int[] vertices = new int[nBoundingVertices];
+
+                var pooler = ArrayPool<int>.Shared;
+                int[] vertices = pooler.Rent(nBoundingVertices);
 
                 for (uint i = 0; i < nBoundingVertices; i++)
                 {
@@ -411,14 +408,15 @@ namespace WowTriangles
                     int v0 = vertices[m.boundingTriangles[off]];
                     int v1 = vertices[m.boundingTriangles[off + 1]];
                     int v2 = vertices[m.boundingTriangles[off + 2]];
-                    s.AddTriangle(v0, v2, v1, ChunkedTriangleCollection.TriangleFlagModel, sequence);
+                    s.AddTriangle(v0, v2, v1, TriangleType.Model);
                 }
+
+                pooler.Return(vertices);
             }
         }
 
-        private void AddTriangles(TriangleCollection s, ModelInstance mi)
+        private static void AddTriangles(TriangleCollection s, ModelInstance mi)
         {
-            sequence++;
             float dx = mi.pos.X;
             float dy = mi.pos.Y;
             float dz = mi.pos.Z;
@@ -482,7 +480,10 @@ namespace WowTriangles
             {
                 // We got boiuding stuff, that is better
                 int nBoundingVertices = m.boundingVertices.Length / 3;
-                int[] vertices = new int[nBoundingVertices];
+
+                var pooler = ArrayPool<int>.Shared;
+                int[] vertices = pooler.Rent(nBoundingVertices);
+
                 for (uint i = 0; i < nBoundingVertices; i++)
                 {
                     uint off = i * 3;
@@ -516,8 +517,10 @@ namespace WowTriangles
                     int v0 = vertices[m.boundingTriangles[off]];
                     int v1 = vertices[m.boundingTriangles[off + 1]];
                     int v2 = vertices[m.boundingTriangles[off + 2]];
-                    s.AddTriangle(v0, v1, v2, ChunkedTriangleCollection.TriangleFlagModel, sequence);
+                    s.AddTriangle(v0, v1, v2, TriangleType.Model);
                 }
+
+                pooler.Return(vertices);
             }
         }
 

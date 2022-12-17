@@ -14,7 +14,7 @@ using PPather.Graph;
 using static System.MathF;
 using static WowTriangles.Utils;
 using PPather.Triangles.Data;
-using System.Runtime.InteropServices;
+using PPather;
 
 namespace WowTriangles
 {
@@ -23,27 +23,17 @@ namespace WowTriangles
     /// </summary>
     public sealed class ChunkedTriangleCollection
     {
-        public const int TriangleTerrain = 0;
-        public const int TriangleFlagDeepWater = 1;
-        public const int TriangleFlagObject = 2;
-        public const int TriangleFlagModel = 4;
-
         private readonly ILogger logger;
         private readonly MPQTriangleSupplier supplier;
         private readonly SparseMatrix2D<TriangleCollection> chunks;
-        private readonly int initCapacity;
 
         private const int maxCache = 128;
-
-        private int NOW;
         public Action<ChunkEventArgs> NotifyChunkAdded;
 
         public ChunkedTriangleCollection(ILogger logger, int initCapacity, MPQTriangleSupplier supplier)
         {
             this.logger = logger;
             this.supplier = supplier;
-
-            this.initCapacity = initCapacity;
             chunks = new SparseMatrix2D<TriangleCollection>(initCapacity);
         }
 
@@ -120,7 +110,6 @@ namespace WowTriangles
             tc.SetLimits(min_x - 1, min_y - 1, -1E30f, max_x + 1, max_y + 1, 1E30f);
 
             supplier.GetTriangles(tc, min_x, min_y, max_x, max_y);
-            tc.CompactVertices();
 
             chunks.Add(grid_x, grid_y, tc);
 
@@ -138,16 +127,14 @@ namespace WowTriangles
             LoadChunkAt(x, y);
             GetGridStartAt(x, y, out int grid_x, out int grid_y);
 
-            if (chunks.TryGetValue(grid_x, grid_y, out TriangleCollection tc))
-                tc.LRU = NOW++;
-
-            return tc ?? default;
+            return GetChunkAt(grid_x, grid_y);
         }
 
         public TriangleCollection GetChunkAt(int grid_x, int grid_y)
         {
-            chunks.TryGetValue(grid_x, grid_y, out TriangleCollection tc);
-            return tc ?? default;
+            return chunks.TryGetValue(grid_x, grid_y, out TriangleCollection tc)
+                ? tc
+                : default;
         }
 
         public bool IsSpotBlocked(float x, float y, float z,
@@ -171,7 +158,7 @@ namespace WowTriangles
                 tc.GetTriangleVertices(t,
                         out vertex0.X, out vertex0.Y, out vertex0.Z,
                         out vertex1.X, out vertex1.Y, out vertex1.Z,
-                        out vertex2.X, out vertex2.Y, out vertex2.Z, out _, out _);
+                        out vertex2.X, out vertex2.Y, out vertex2.Z, out _);
 
                 float d = PointDistanceToTriangle(toon, vertex0, vertex1, vertex2);
                 if (d < toonSize)
@@ -319,9 +306,9 @@ namespace WowTriangles
         }
 
         public bool FindStandableAt(float x, float y, float min_z, float max_z,
-                                   out float z0, out int flags, float toonHeight, float toonSize)
+                                   out float z0, out TriangleType flags, float toonHeight, float toonSize)
         {
-            return FindStandableAt1(x, y, min_z, max_z, out z0, out flags, toonHeight, toonSize, false, null);
+            return FindStandableAt1(x, y, min_z, max_z, out z0, out flags, toonHeight, toonSize, false, TriangleType.Terrain);
         }
 
         public bool IsInWater(float x, float y, float min_z, float max_z)
@@ -344,13 +331,13 @@ namespace WowTriangles
                 tc.GetTriangleVertices(t,
                         out vertex0.X, out vertex0.Y, out vertex0.Z,
                         out vertex1.X, out vertex1.Y, out vertex1.Z,
-                        out vertex2.X, out vertex2.Y, out vertex2.Z, out int t_flags, out _);
+                        out vertex2.X, out vertex2.Y, out vertex2.Z, out TriangleType t_flags);
 
                 GetTriangleNormal(vertex0, vertex1, vertex2, out _);
 
                 if (SegmentTriangleIntersect(s0, s1, vertex0, vertex1, vertex2, out _))
                 {
-                    if ((t_flags & TriangleFlagDeepWater) != 0)
+                    if ((t_flags & TriangleType.Water) != 0)
                     {
                         return true;
                     }
@@ -379,9 +366,9 @@ namespace WowTriangles
                 tc.GetTriangleVertices(t,
                         out vertex0.X, out vertex0.Y, out vertex0.Z,
                         out vertex1.X, out vertex1.Y, out vertex1.Z,
-                        out vertex2.X, out vertex2.Y, out vertex2.Z, out int t_flags, out _);
+                        out vertex2.X, out vertex2.Y, out vertex2.Z, out TriangleType flags);
 
-                if (t_flags == 0)
+                if (flags == TriangleType.Terrain)
                 {
                     if (vertex0.Z > maxZ) { maxZ = vertex0.Z; }
                     if (vertex2.Z > maxZ) { maxZ = vertex1.Z; }
@@ -417,10 +404,10 @@ namespace WowTriangles
                 tc.GetTriangleVertices(t,
                         out vertex0.X, out vertex0.Y, out vertex0.Z,
                         out vertex1.X, out vertex1.Y, out vertex1.Z,
-                        out vertex2.X, out vertex2.Y, out vertex2.Z, out int t_flags, out _);
+                        out vertex2.X, out vertex2.Y, out vertex2.Z, out TriangleType flags);
 
                 //check triangle is part of a model
-                if ((t_flags & TriangleFlagObject) != 0 || (t_flags & TriangleFlagModel) != 0)
+                if ((flags & TriangleType.Object) != 0 || (flags & TriangleType.Model) != 0)
                 {
                     float minHeight = 0.75f;
                     float height = 2;
@@ -455,7 +442,7 @@ namespace WowTriangles
                 tc.GetTriangleVertices(t,
                         out vertex0.X, out vertex0.Y, out vertex0.Z,
                         out vertex1.X, out vertex1.Y, out vertex1.Z,
-                        out vertex2.X, out vertex2.Y, out vertex2.Z, out _, out _);
+                        out vertex2.X, out vertex2.Y, out vertex2.Z, out _);
 
                 if (SegmentTriangleIntersect(s0, s1, vertex0, vertex1, vertex2, out _))
                 {
@@ -466,9 +453,11 @@ namespace WowTriangles
         }
 
         public bool FindStandableAt1(float x, float y, float min_z, float max_z,
-                                   out float z0, out int flags, float toonHeight, float toonSize, bool IgnoreGradient, int[] allowedFlags)
+                                   out float z0, out TriangleType flags,
+                                   float toonHeight, float toonSize,
+                                   bool IgnoreGradient, TriangleType allowedFlags)
         {
-            float minCliffD = 0.5f;
+            const float minCliffD = 0.5f;
 
             TriangleCollection tc = GetChunkAt(x, y);
             TriangleMatrix tm = tc.GetTriangleMatrix();
@@ -478,7 +467,7 @@ namespace WowTriangles
             Vector3 s1 = new(x, y, max_z);
 
             float best_z = -1E30f;
-            int best_flags = 0;
+            TriangleType best_flags = TriangleType.Terrain;
             bool found = false;
 
             for (int i = 0; i < ts.Count; i++)
@@ -492,9 +481,9 @@ namespace WowTriangles
                 tc.GetTriangleVertices(t,
                         out vertex0.X, out vertex0.Y, out vertex0.Z,
                         out vertex1.X, out vertex1.Y, out vertex1.Z,
-                        out vertex2.X, out vertex2.Y, out vertex2.Z, out int t_flags, out _);
+                        out vertex2.X, out vertex2.Y, out vertex2.Z, out TriangleType t_flags);
 
-                if (allowedFlags == null || allowedFlags.Contains(t_flags))
+                if (allowedFlags == TriangleType.Terrain || allowedFlags.Has(t_flags))
                 {
                     GetTriangleNormal(vertex0, vertex1, vertex2, out Vector3 normal);
                     float angle_z = Sin(30f / 360.0f * PI * 2f); // 45f -> 40 degree || 60f -> 50 degree || 30f -> 28.6 degree
@@ -518,7 +507,11 @@ namespace WowTriangles
                 Vector3 up, dn;
                 up.Z = best_z + 2;
                 dn.Z = best_z - 5;
-                bool[] nearCliff = { true, true, true, true };
+
+                const int size = 4;
+                Span<bool> nearCliff = stackalloc bool[size] { true, true, true, true };
+                Span<float> dx = stackalloc float[size] { minCliffD, -minCliffD, 0, 0 };
+                Span<float> dy = stackalloc float[size] { 0, 0, minCliffD, -minCliffD };
 
                 bool allGood;
                 foreach (int t in ts)
@@ -532,12 +525,8 @@ namespace WowTriangles
                             out vertex1.X, out vertex1.Y, out vertex1.Z,
                             out vertex2.X, out vertex2.Y, out vertex2.Z);
 
-                    float[] dx = { minCliffD, -minCliffD, 0, 0 };
-                    float[] dy = { 0, 0, minCliffD, -minCliffD };
-                    // Check if it is close to a "cliff"
-
                     allGood = true;
-                    for (int i = 0; i < 4; i++)
+                    for (int i = 0; i < size; i++)
                     {
                         if (nearCliff[i])
                         {
@@ -553,7 +542,7 @@ namespace WowTriangles
                 }
 
                 allGood = true;
-                for (int i = 0; i < 4; i++)
+                for (int i = 0; i < size; i++)
                     allGood &= !nearCliff[i];
                 if (!allGood)
                 {

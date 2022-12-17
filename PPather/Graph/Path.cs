@@ -23,13 +23,11 @@ namespace PPather.Graph
 {
     public sealed class Path
     {
-        public List<Vector3> locations { get; set; } = new();
+        public List<Vector3> locations { get; } = new();
 
         public int Count => locations.Count;
 
         public Vector3 GetLast => locations[^1];
-
-        public Vector3 this[int index] => locations[index];
 
         public Path(List<Spot> steps)
         {
