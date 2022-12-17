@@ -20,15 +20,14 @@ namespace WowTriangles
 {
     public sealed class TriangleMatrix
     {
-        private const float resolution = 2.0f;
+        private const float resolution = 6.0f;
         private readonly SparseFloatMatrix2D<List<int>> matrix;
 
         public TriangleMatrix(TriangleCollection tc, ILogger logger)
         {
             DateTime pre = DateTime.UtcNow;
 
-            int capacity = (int)(tc.TriangleCount / (resolution * 150)); // 150 - 2
-            matrix = new SparseFloatMatrix2D<List<int>>(resolution, capacity);
+            matrix = new SparseFloatMatrix2D<List<int>>(resolution);
 
             Vector3 vertex0;
             Vector3 vertex1;
@@ -90,7 +89,7 @@ namespace WowTriangles
             }
 
             if (logger.IsEnabled(LogLevel.Trace))
-                logger.LogTrace($"Build hash for {tc.TriangleCount} triangles - {maxAtOne} -- cap: {capacity} - c: {listCount} - time {(DateTime.UtcNow - pre).TotalMilliseconds}ms");
+                logger.LogTrace($"Build hash for {tc.TriangleCount} triangles - {maxAtOne} - c: {listCount} - time {(DateTime.UtcNow - pre).TotalMilliseconds}ms");
         }
 
         public ArraySegment<int> GetAllCloseTo(float x, float y, float distance)
