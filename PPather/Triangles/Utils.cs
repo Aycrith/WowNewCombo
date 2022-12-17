@@ -27,12 +27,11 @@ namespace WowTriangles
 {
     public static class Utils
     {
+        [System.Runtime.CompilerServices.SkipLocalsInit]
         public static bool SegmentTriangleIntersect(in Vector3 p0, in Vector3 p1,
                                                     in Vector3 t0, in Vector3 t1, in Vector3 t2,
                                                     out Vector3 I)
         {
-            I = new();
-
             Vector3 u = Subtract(t1, t0); // triangle vector 1
             Vector3 v = Subtract(t2, t0); // triangle vector 2
             Vector3 n = Cross(u, v); // triangle normal
@@ -41,12 +40,24 @@ namespace WowTriangles
             Vector3 w0 = Subtract(p0, t0);
             float a = -Dot(n, w0);
             float b = Dot(n, dir);
-            if (Abs(b) < float.Epsilon) return false; // parallel
+            if (Abs(b) < float.Epsilon)
+            {
+                I = new();
+                return false; // parallel
+            }
 
             // get intersect point of ray with triangle plane
             float r = a / b;
-            if (r < 0.0f) return false; // "before" p0
-            if (r > 1.0f) return false; // "after" p1
+            if (r < 0.0f)
+            {
+                I = new();
+                return false; // "before" p0
+            }
+            if (r > 1.0f)
+            {
+                I = new();
+                return false; // "after" p1
+            }
 
             Vector3 M = Multiply(dir, r);
             I = Add(p0, M);// intersect point of line and plane
@@ -144,6 +155,7 @@ namespace WowTriangles
 
         // From the book "Real-Time Collision Detection" by Christer Ericson, page 169
         // See also the published Errata at http://realtimecollisiondetection.net/books/rtcd/errata/
+        [System.Runtime.CompilerServices.SkipLocalsInit]
         public static bool TestTriangleBoxIntersect(in Vector3 a, in Vector3 b, in Vector3 c, in Vector3 boxCenter, in Vector3 boxExtents)
         {
             // Translate triangle as conceptually moving AABB to origin
