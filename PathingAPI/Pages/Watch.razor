@@ -17,13 +17,31 @@
 
 @implements IDisposable
 
-@*
-<button @onclick="Reset">
-    <span>Reset</span>
-</button>
-*@
-<div id="canvasText" style="position: relative; z-index: 2; left: 0px;padding-left:10px; height:30px; background-color: black;color:white">
-    ...
+
+<div style="position: relative; z-index: 2; left: 0px; padding-left:10px; height:30px; background-color: black;color:white">
+    <div id="canvasText" style="display:inline-block; float: left">
+        ...
+    </div>
+    <div style="display:inline-block; float: right">
+        <button @onclick="() => ToggleLayer(TriangleType.Model)">
+            <span>Model</span>
+        </button>
+        <button @onclick="() => ToggleLayer(TriangleType.Object)">
+            <span>Object</span>
+        </button>
+        <button @onclick="() => ToggleLayer(TriangleType.Water)">
+            <span>Water</span>
+        </button>
+        <button @onclick="() => ToggleLayer(TriangleType.Terrain)">
+            <span>Terrain</span>
+        </button>
+        <button @onclick="ToggleWireFrame">
+            <span>Wire</span>
+        </button>
+        <button @onclick="Reset">
+            <span>Reset</span>
+        </button>
+    </div>
 </div>
 <canvas id="renderCanvas" style="background:black">
 </canvas>
@@ -79,6 +97,15 @@
         cts?.Cancel();
     }
 
+    private async void ToggleLayer(TriangleType layer)
+    {
+        await jsRuntime.InvokeVoidAsync("toggleLayer", layer);
+    }
+
+    private async void ToggleWireFrame()
+    {
+        await jsRuntime.InvokeVoidAsync("toggleWireFrame");
+    }
 
     private async void Reset()
     {
@@ -95,7 +122,6 @@
     {
         await jsRuntime.InvokeVoidAsync("log", message);
     }
-
 
     private async void SearchPath_Thread()
     {

@@ -1,6 +1,15 @@
 ﻿window.addEventListener('DOMContentLoaded', function () {
 
     const div = 10.0;
+    const textures = ["grass.png", "waterbump.png", "floor.png", "ground.jpg"];
+
+    var cameraPositionSet = false;
+    var startedRendering = false;
+    var modelId = 0;
+
+    const layers = 4;
+    var materials = new Array(layers);
+    var rootNodes = new Array(layers);
 
     showAlert = (message) => {
         alert(message);
@@ -13,32 +22,42 @@
 
     removeMeshes = function (name) {
         for (i = scene.meshes.length - 1; i >= 0; i--) {
-            var mesh = scene.meshes[i];
-            if (mesh.name === name) { mesh.dispose(); }
+            const mesh = scene.meshes[i];
+            if (mesh.name === name)
+                mesh.dispose();
         }
     }
 
     clear = function () {
         for (i = scene.meshes.length - 1; i >= 0; i--) {
-            var mesh = scene.meshes[i];
-            if (mesh.name !== "skyBox") {
-                //console.log("deleting mesh:" + mesh.name);
+            const mesh = scene.meshes[i];
+            if (mesh.name !== "skyBox")
                 mesh.dispose();
-            }
         }
         cameraPositionSet = false;
+    }
+
+    toggleWireFrame = function () {
+        for (let i = 0; i < materials.length; i++) {
+            materials[i].wireframe = !materials[i].wireframe;
+        }
+    }
+
+    toggleLayer = function (layer) {
+        if (layer >= layers) layer = layers - 1;
+        rootNodes[layer].setEnabled(!rootNodes[layer].isEnabled());
     }
 
     drawSphere = function (vector, color, name) {
         vector = JSON.parse(vector);
 
         removeMeshes(name);
-        var sphere = BABYLON.Mesh.CreateSphere(name, 10.0, 0.5, scene, false, BABYLON.Mesh.DEFAULTSIDE);
-        var material = new BABYLON.StandardMaterial(scene);
+        const sphere = BABYLON.Mesh.CreateSphere(name, 10.0, 0.5, scene, false, BABYLON.Mesh.DEFAULTSIDE);
+        const material = new BABYLON.StandardMaterial(scene);
         material.alpha = 1;
         material.diffuseColor = getColour(color);
         sphere.material = material;
-        sphere.position = new BABYLON.Vector3(vector.x / div, (vector.z /div) + getHeight(color), vector.y / div);
+        sphere.position = new BABYLON.Vector3(vector.x / div, (vector.z / div) + getHeight(color), vector.y / div);
 
         //console.log("drawSphere: " + name + " completed.");
     }
@@ -49,30 +68,23 @@
         //log("drawLine: " + name);
 
         removeMeshes(name);
-        var line1 = [
+        const line1 = [
             new BABYLON.Vector3(vector.x / div, vector.z / div, vector.y / div),
             new BABYLON.Vector3(vector.x / div, (vector.z / div) + 10, vector.y / div)];
 
-        var lines1 = BABYLON.MeshBuilder.CreateLines(name, { points: line1 }, scene);
+        const lines1 = BABYLON.MeshBuilder.CreateLines(name, { points: line1 }, scene);
         lines1.color = getColour(color);
 
         if (/*!cameraPositionSet || */name === "start") {
             cameraPositionSet = false;
-
             setCamera(vector, vector, 10);
         }
 
         //console.log("drawLine: " + name + " completed.");
     }
 
-    cameraPositionSet = false;
-    startedRendering = false;
-    modelId = 0;
-
-    getColour = function(color)
-    {
-        switch (color)
-        {
+    getColour = function (color) {
+        switch (color) {
             case 1: return BABYLON.Color3.Red();
             case 2: return BABYLON.Color3.Green();
             case 3: return BABYLON.Color3.Blue();
@@ -99,7 +111,7 @@
         const path = [];
         for (i = 0; i < points.length; i++) {
             const p = points[i];
-            const height = getHeight(color);// === 4 ? 0.1 : 0.11;
+            const height = getHeight(color);
             path.push(new BABYLON.Vector3(p.x / div, (p.z / div) + height, p.y / div));
         }
 
@@ -112,10 +124,11 @@
     }
 
     createScene = function () {
-        log("createScene");
+        log("createScene: started");
 
         canvas = document.getElementById('renderCanvas');// get the canvas DOM element
         engine = new BABYLON.Engine(canvas, true); // load the 3D engine
+        engine.setHardwareScalingLevel(0.5);
 
         scene = new BABYLON.Scene(engine);// create a basic BJS Scene object
 
@@ -132,9 +145,19 @@
         camera.keysRight.push(68);  // "d"
         camera.attachControl(canvas, false); // attach the camera to the canvas
 
-        var cameraMinSpeed = 0.1;
-        var cameraMaxSpeed = 1;
+        const cameraMinSpeed = 0.1;
+        const cameraMaxSpeed = 1;
         camera.speed = cameraMinSpeed;
+
+        // create layers
+        for (let i = 0; i < layers; i++) {
+            rootNodes[i] = new BABYLON.TransformNode();
+
+            const mat = new BABYLON.StandardMaterial("mat" + i, scene);
+            mat.diffuseTexture = new BABYLON.Texture("https://www.babylonjs-playground.com/textures/" + textures[i])
+            mat.backFaceCulling = false;
+            materials[i] = mat;
+        }
 
         // Skybox
         const skybox = BABYLON.MeshBuilder.CreateBox("skyBox", { size: 4000.0 }, scene);
@@ -188,14 +211,12 @@
             }
         });
 
-
         // Optimizer
-        let options = BABYLON.SceneOptimizerOptions.HighDegradationAllowed();
-        options.addOptimization(new BABYLON.SceneOptimizerOptions(30, 500));
-        var optimizer = new BABYLON.SceneOptimizer(scene, options);
+        const options = BABYLON.SceneOptimizerOptions.HighDegradationAllowed(30);
+        const optimizer = new BABYLON.SceneOptimizer(scene, options);
         optimizer.start();
 
-        console.log("createScene: completed.");
+        log("createScene: completed");
     };
 
     addModels = function (loadedIndices, loadedPositions) {
@@ -211,30 +232,29 @@
         setCamera(loadedPositions[0], loadedPositions[loadedPositions.length - 1], 20);
         //cameraPositionSet = false;
 
-        var positions = [];
-        for (i = 0; i < loadedPositions.length; i++) {
+        const positions = [];
+        for (let i = 0; i < loadedPositions.length; i++) {
             positions.push(loadedPositions[i].x / div);
             positions.push(loadedPositions[i].z / div);
             positions.push(loadedPositions[i].y / div);
         }
 
         //take uv value relative to bottom left corner of roof (-4, -4) noting length and width of roof is 8. base uv value on the x, z coordinates only
-        var uvs = [];
-        for (var p = 0; p < positions.length / 3; p++) {
+        const uvs = [];
+        for (let p = 0; p < positions.length / 3; p++) {
             uvs.push((positions[3 * p] - (-4)) / 4, (positions[3 * p + 2] - (-4)) / 4);
         }
 
-        var textures = ["grass.png", "waterbump.png", "floor.png", "ground.jpg"];
-
         // add the models
-        for (var p = 0; p < loadedIndices.length; p++) {
-            var indices = loadedIndices[p];
+        for (let p = 0; p < loadedIndices.length; p++) {
+            const indices = loadedIndices[p];
 
             modelId++;
-            var customMesh = new BABYLON.Mesh("custom" + modelId, scene);
-            var normals = [];
+            const customMesh = new BABYLON.Mesh("custom" + modelId, scene);
+            const normals = [];
             BABYLON.VertexData.ComputeNormals(positions, indices, normals);
-            var vertexData = new BABYLON.VertexData();
+
+            const vertexData = new BABYLON.VertexData();
             vertexData.positions = positions;
             vertexData.indices = indices;
             vertexData.normals = normals;
@@ -242,12 +262,8 @@
             vertexData.applyToMesh(customMesh);
             //customMesh.convertToFlatShadedMesh();
 
-            var mat1 = new BABYLON.StandardMaterial("mat" + modelId, scene);
-
-            mat1.diffuseTexture = new BABYLON.Texture("https://www.babylonjs-playground.com/textures/" + textures[p])
-            //mat.wireframe = true;
-            mat1.backFaceCulling = false;
-            customMesh.material = mat1;
+            customMesh.material = materials[p];
+            customMesh.parent = rootNodes[p];
         }
 
         if (!startedRendering) {
@@ -262,14 +278,13 @@
     }
 
     setCamera = function (pos, look, height) {
-        if (height === undefined) {
-            height = 0;
-        }
+        if (cameraPositionSet) return;
+
+        if (height === undefined) height = 0;
+
         const camera = scene.activeCamera;
-        if (!cameraPositionSet) {
-            cameraPositionSet = true;
-            camera.position = new BABYLON.Vector3(pos.x / div, (pos.z / div) + height, pos.y / div);
-            camera.setTarget(new BABYLON.Vector3(look.x / div, look.z / div, look.y / div));
-        }
+        cameraPositionSet = true;
+        camera.position = new BABYLON.Vector3(pos.x / div, (pos.z / div) + height, pos.y / div);
+        camera.setTarget(new BABYLON.Vector3(look.x / div, look.z / div, look.y / div));
     }
 });
