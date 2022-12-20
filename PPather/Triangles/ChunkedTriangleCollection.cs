@@ -1,4 +1,4 @@
-﻿/*
+/*
  *  Part of PPather
  *  Copyright Pontus Borg 2008
  *
@@ -95,16 +95,7 @@ namespace WowTriangles
             if (chunks.ContainsKey(grid_x, grid_y))
                 return;
 
-            if (chunks.Count > maxCache)
-                EvictIfNeeded();
-
             GetGridLimits(grid_x, grid_y, out float min_x, out float min_y, out float max_x, out float max_y);
-
-            if (logger.IsEnabled(LogLevel.Trace))
-            {
-                logger.LogTrace($"Triangles at [{x}, {y}] grid [{grid_x}, {grid_y}]");
-                logger.LogTrace($"Need triangles grid [{min_x}, {min_y}] - [{max_x}, {max_y}]");
-            }
 
             TriangleCollection tc = new(logger);
             tc.SetLimits(min_x - 1, min_y - 1, -1E30f, max_x + 1, max_y + 1, 1E30f);
@@ -115,8 +106,7 @@ namespace WowTriangles
 
             if (logger.IsEnabled(LogLevel.Trace))
             {
-                logger.LogTrace($"Got {tc.TriangleCount} triangles and {tc.VertexCount} vertices -- Count: {chunks.Count}");
-                logger.LogTrace($"Got triangles grid [{tc.Min.X}, {tc.Min.Y}] - [{tc.Max.X}, {tc.Max.Y}]");
+                logger.LogTrace($"Grid [{grid_x},{grid_y}] Bounds: [{min_x:F4}, {min_y:F4}] [{max_x:F4}, {max_y:F4}] [{x}, {y}] - Count: {chunks.Count}");
             }
 
             NotifyChunkAdded?.Invoke(new ChunkEventArgs(grid_x, grid_y));
