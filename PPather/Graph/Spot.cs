@@ -60,6 +60,13 @@ namespace PPather.Graph
             Loc = l;
         }
 
+        public void Clear()
+        {
+            next = null;
+            chunk = null;
+            traceBack = null;
+        }
+
         public bool IsCloseToModel()
         {
             return IsFlagSet(FLAG_CLOSETOMODEL);
@@ -114,9 +121,11 @@ namespace PPather.Graph
 
         public bool GetPath(int i, out float x, out float y, out float z)
         {
-            x = y = z = 0;
             if (i > n_paths)
+            {
+                x = y = z = 0;
                 return false;
+            }
 
             int off = i * 3;
             x = paths[off];

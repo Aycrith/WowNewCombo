@@ -177,10 +177,10 @@ namespace PPather.Graph
             if (chunks.Count < maxCache)
                 return;
 
-            lock (chunks)
+            //lock (chunks)
             {
                 GraphChunk evict = null;
-                foreach (GraphChunk gc in chunks)
+                foreach (GraphChunk gc in chunks.GetAllElements())
                 {
                     if (evict == null || gc.LRU < evict.LRU)
                     {
@@ -216,19 +216,18 @@ namespace PPather.Graph
         private void LoadChunk(float x, float y)
         {
             GraphChunk gc = GetChunkAt(x, y);
-            if (gc == null)
-            {
-                GetChunkCoord(x, y, out int ix, out int iy);
-                GetChunkBase(ix, iy, out float base_x, out float base_y);
+            if (gc != null)
+                return;
 
-                gc = new GraphChunk(base_x, base_y, ix, iy, logger, chunkDir);
-                gc.LRU = LRU++;
+            GetChunkCoord(x, y, out int ix, out int iy);
+            GetChunkBase(ix, iy, out float base_x, out float base_y);
 
-                CheckForChunkEvict();
+            gc = new GraphChunk(base_x, base_y, ix, iy, logger, chunkDir, LRU++);
 
-                gc.Load();
-                chunks.Add(ix, iy, gc);
-            }
+            //CheckForChunkEvict();
+
+            gc.Load();
+            chunks.Add(ix, iy, gc);
         }
 
         public Spot AddSpot(Spot s)
@@ -553,7 +552,7 @@ namespace PPather.Graph
         public Spot ClosestSpot;
         public Spot PeekSpot;
 
-        private Spot Search(Spot fromSpot, Spot destinationSpot, float minHowClose, ILocationHeuristics locationHeuristics)
+        private Spot Search(Spot fromSpot, Spot destinationSpot, float minHowClose)
         {
             long searchDuration = Stopwatch.GetTimestamp();
             long timeSinceProgress = Stopwatch.GetTimestamp();
@@ -628,7 +627,7 @@ namespace PPather.Graph
                     Spot spotLinkedToCurrent = list[i];
                     if (spotLinkedToCurrent != null && !spotLinkedToCurrent.IsBlocked() && !spotLinkedToCurrent.SearchIsClosed(currentSearchID))
                     {
-                        ScoreSpot(spotLinkedToCurrent, destinationSpot, currentSearchID, locationHeuristics, prioritySpotQueue);
+                        ScoreSpot(spotLinkedToCurrent, destinationSpot, currentSearchID, prioritySpotQueue);
                     }
                 }
             }
@@ -645,26 +644,26 @@ namespace PPather.Graph
             return null;
         }
 
-        private void ScoreSpot(Spot spotLinkedToCurrent, Spot destinationSpot, int currentSearchID, ILocationHeuristics locationHeuristics, PriorityQueue<Spot, float> prioritySpotQueue)
+        private void ScoreSpot(Spot spotLinkedToCurrent, Spot destinationSpot, int currentSearchID, PriorityQueue<Spot, float> prioritySpotQueue)
         {
             switch (searchScoreSpot)
             {
                 case eSearchScoreSpot.A_Star:
-                    ScoreSpot_A_Star(spotLinkedToCurrent, destinationSpot, currentSearchID, locationHeuristics, prioritySpotQueue);
+                    ScoreSpot_A_Star(spotLinkedToCurrent, destinationSpot, currentSearchID, prioritySpotQueue);
                     break;
 
                 case eSearchScoreSpot.A_Star_With_Model_Avoidance:
-                    ScoreSpot_A_Star_With_Model_And_Gradient_Avoidance(spotLinkedToCurrent, destinationSpot, currentSearchID, locationHeuristics, prioritySpotQueue);
+                    ScoreSpot_A_Star_With_Model_And_Gradient_Avoidance(spotLinkedToCurrent, destinationSpot, currentSearchID, prioritySpotQueue);
                     break;
 
                 case eSearchScoreSpot.OriginalPather:
                 default:
-                    ScoreSpot_Pather(spotLinkedToCurrent, destinationSpot, currentSearchID, locationHeuristics, prioritySpotQueue);
+                    ScoreSpot_Pather(spotLinkedToCurrent, destinationSpot, currentSearchID, prioritySpotQueue);
                     break;
             }
         }
 
-        public void ScoreSpot_A_Star(Spot spotLinkedToCurrent, Spot destinationSpot, int currentSearchID, ILocationHeuristics locationHeuristics, PriorityQueue<Spot, float> prioritySpotQueue)
+        public void ScoreSpot_A_Star(Spot spotLinkedToCurrent, Spot destinationSpot, int currentSearchID, PriorityQueue<Spot, float> prioritySpotQueue)
         {
             //score spot
             float G_Score = currentSearchSpot.traceBackDistance + currentSearchSpot.GetDistanceTo(spotLinkedToCurrent);//  the movement cost to move from the starting point A to a given square on the grid, following the path generated to get there.
@@ -683,7 +682,7 @@ namespace PPather.Graph
             }
         }
 
-        public void ScoreSpot_A_Star_With_Model_And_Gradient_Avoidance(Spot spotLinkedToCurrent, Spot destinationSpot, int currentSearchID, ILocationHeuristics locationHeuristics, PriorityQueue<Spot, float> prioritySpotQueue)
+        public void ScoreSpot_A_Star_With_Model_And_Gradient_Avoidance(Spot spotLinkedToCurrent, Spot destinationSpot, int currentSearchID, PriorityQueue<Spot, float> prioritySpotQueue)
         {
             //score spot
             float G_Score = currentSearchSpot.traceBackDistance + currentSearchSpot.GetDistanceTo(spotLinkedToCurrent);//  the movement cost to move from the starting point A to a given square on the grid, following the path generated to get there.
@@ -706,14 +705,13 @@ namespace PPather.Graph
             }
         }
 
-        public void ScoreSpot_Pather(Spot spotLinkedToCurrent, Spot destinationSpot, int currentSearchID, ILocationHeuristics locationHeuristics, PriorityQueue<Spot, float> prioritySpotQueue)
+        public void ScoreSpot_Pather(Spot spotLinkedToCurrent, Spot destinationSpot, int currentSearchID, PriorityQueue<Spot, float> prioritySpotQueue)
         {
             //score spots
             float currentSearchSpotScore = currentSearchSpot.SearchScoreGet(currentSearchID);
             float linkedSpotScore = 1E30f;
             float new_score = currentSearchSpotScore + currentSearchSpot.GetDistanceTo(spotLinkedToCurrent) + TurnCost(currentSearchSpot, spotLinkedToCurrent);
 
-            if (locationHeuristics != null) { new_score += locationHeuristics.Score(currentSearchSpot.Loc.X, currentSearchSpot.Loc.Y, currentSearchSpot.Loc.Z); }
             if (spotLinkedToCurrent.IsFlagSet(Spot.FLAG_WATER)) { new_score += 50; }
 
             if (spotLinkedToCurrent.SearchScoreIsSet(currentSearchID))
@@ -865,23 +863,21 @@ namespace PPather.Graph
 
         public Path LastPath;
 
-        private Path CreatePath(Spot from, Spot to, float minHowClose, ILocationHeuristics locationHeuristics)
+        private Path CreatePath(Spot from, Spot to, float minHowClose)
         {
-            Spot newTo = Search(from, to, minHowClose, locationHeuristics);
-            if (newTo != null)
+            Spot newTo = Search(from, to, minHowClose);
+            if (newTo == null)
+                return null;
+
+            float distance = newTo.GetDistanceTo(to);
+            if (distance <= MaximumAllowedRangeFromTarget)
             {
-                if (newTo.GetDistanceTo(to) <= MaximumAllowedRangeFromTarget)
-                {
-                    List<Spot> path = FollowTraceBack(from, newTo);
-                    LastPath = new Path(path);
-                    return LastPath;
-                }
-                else
-                {
-                    logger.LogWarning($"Closest spot is too far from target. {newTo.GetDistanceTo(to)}>{MaximumAllowedRangeFromTarget}");
-                    return null;
-                }
+                List<Spot> path = FollowTraceBack(from, newTo);
+                LastPath = new Path(path);
+                return LastPath;
             }
+
+            logger.LogWarning($"Closest spot is too far from target. {distance}>{MaximumAllowedRangeFromTarget}");
             return null;
         }
 
@@ -890,7 +886,7 @@ namespace PPather.Graph
             const float zExtend = 1;
 
             float newZ = 0;
-            float[] a = new float[] { 0, 1f, 0.5f, -0.5f, -1f };
+            Span<float> a = stackalloc float[] { 0, 1f, 0.5f, -0.5f, -1f };
 
             for (int z = 0; z < a.Length; z++)
             {
@@ -915,7 +911,7 @@ namespace PPather.Graph
             return new(location.X, location.Y, newZ);
         }
 
-        public Path CreatePath(Vector3 fromLoc, Vector3 toLoc, float howClose, ILocationHeuristics locationHeuristics)
+        public Path CreatePath(Vector3 fromLoc, Vector3 toLoc, float howClose)
         {
             if (logger.IsEnabled(LogLevel.Trace))
                 logger.LogTrace($"Creating Path from {fromLoc} to {toLoc}");
@@ -937,7 +933,7 @@ namespace PPather.Graph
                 to = AddAndConnectSpot(new Spot(toLoc));
             }
 
-            Path rawPath = CreatePath(from, to, howClose, locationHeuristics);
+            Path rawPath = CreatePath(from, to, howClose);
 
             if (logger.IsEnabled(LogLevel.Trace))
                 logger.LogTrace($"CreatePath took {Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds}ms");

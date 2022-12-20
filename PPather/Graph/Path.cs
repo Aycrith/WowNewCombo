@@ -25,8 +25,6 @@ namespace PPather.Graph
     {
         public List<Vector3> locations { get; } = new();
 
-        public int Count => locations.Count;
-
         public Vector3 GetLast => locations[^1];
 
         public Path(List<Spot> steps)

@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using PPather.Graph;
 using System;
 using WowTriangles;
@@ -20,6 +20,7 @@ namespace PPather
 
         private const float toonHeight = 2.0f;
         private const float toonSize = 0.5f;
+        private const float howClose = 5f;
 
         public Search(float mapId, ILogger logger, DataConfig dataConfig)
         {
@@ -49,19 +50,11 @@ namespace PPather
 
             float zModel = GetZValueAt(x, y, z, TriangleType.Model | TriangleType.Object);
 
-            if (zModel != float.MinValue)
-            {
-                if (MathF.Abs(zModel - zTerrain) > toonHeight / 2)
-                {
-                    return new Vector4(x, y, zTerrain, mapId);
-                }
-                else
-                {
-                    return new Vector4(x, y, zModel, mapId);
-                }
-            }
-
-            return new Vector4(x, y, zTerrain, mapId);
+            return zModel != float.MinValue
+                ? MathF.Abs(zModel - zTerrain) > toonHeight / 2
+                    ? new Vector4(x, y, zTerrain, mapId)
+                    : new Vector4(x, y, zModel, mapId)
+                : new Vector4(x, y, zTerrain, mapId);
         }
 
         private float GetZValueAt(float x, float y, float z, TriangleType allowedFlags)
@@ -101,7 +94,7 @@ namespace PPather
 
             try
             {
-                return PathGraph.CreatePath(locationFrom.AsVector3(), locationTo.AsVector3(), 5, null);
+                return PathGraph.CreatePath(locationFrom.AsVector3(), locationTo.AsVector3(), howClose);
             }
             catch (Exception ex)
             {
