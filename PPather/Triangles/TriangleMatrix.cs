@@ -33,9 +33,6 @@ namespace WowTriangles
             Vector3 vertex1;
             Vector3 vertex2;
 
-            int listCount = 0;
-            int maxAtOne = 0;
-
             for (int i = 0; i < tc.TriangleCount; i++)
             {
                 tc.GetTriangleVertices(i,
@@ -78,18 +75,24 @@ namespace WowTriangles
                         {
                             list = new();
                             matrix.Add(grid_x, grid_y, list);
-                            listCount++;
                         }
                         list.Add(i);
-
-                        if (list.Count > maxAtOne)
-                            maxAtOne = list.Count;
                     }
                 }
             }
 
             if (logger.IsEnabled(LogLevel.Trace))
-                logger.LogTrace($"Build hash for {tc.TriangleCount} triangles - {maxAtOne} - c: {listCount} - time {(DateTime.UtcNow - pre).TotalMilliseconds}ms");
+                logger.LogTrace($"Mesh [||,||] Bounds: [{tc.Min.X:F4}, {tc.Min.Y:F4}] [{tc.Max.X:F4}, {tc.Max.Y:F4}] - {tc.TriangleCount} tri - {tc.VertexCount} ver - c {matrix.Count} - {(DateTime.UtcNow - pre).TotalMilliseconds}ms");
+        }
+
+        public void Clear()
+        {
+            foreach (List<int> list in matrix.GetAllElements())
+            {
+                list.Clear();
+            }
+
+            matrix.Clear();
         }
 
         public ArraySegment<int> GetAllCloseTo(float x, float y, float distance)

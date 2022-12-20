@@ -174,6 +174,11 @@ namespace Wmo
 
         public abstract bool Load(string path, out T t);
 
+        public void Clear()
+        {
+            items.Clear();
+        }
+
         public T AddAndLoadIfNeeded(string path)
         {
             if (!items.TryGetValue(path, out T t))

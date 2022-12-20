@@ -26,8 +26,6 @@ namespace WowTriangles
         private TriangleMatrix matrix;
 
         public int LRU;
-        public int grid_x;
-        public int grid_y;
 
         private Vector3 max = new(-1E30f, -1E30f, -1E30f);
         public Vector3 Max => max;
@@ -46,8 +44,18 @@ namespace WowTriangles
         public TriangleCollection(ILogger logger)
         {
             this.logger = logger;
-            Vertecies = new(65536); // terrain mesh
+            Vertecies = new(2 ^ 16); // terrain mesh
             Triangles = new(128);
+        }
+
+        public void Clear()
+        {
+            triangleCount = 0;
+            VertexCount = 0;
+
+            Triangles.Clear();
+            Vertecies.Clear();
+            matrix.Clear();
         }
 
         public bool HasTriangleMatrix => matrix != null;
@@ -113,12 +121,9 @@ namespace WowTriangles
         {
             GetVertex(v, out float x, out float y, out float z);
 
-            if (x < limit_min.X || x > limit_max.X ||
-               y < limit_min.Y || y > limit_max.Y ||
-               z < limit_min.Z || z > limit_max.Z)
-                return false;
-
-            return true;
+            return x >= limit_min.X && x <= limit_max.X &&
+               y >= limit_min.Y && y <= limit_max.Y &&
+               z >= limit_min.Z && z <= limit_max.Z;
         }
 
 

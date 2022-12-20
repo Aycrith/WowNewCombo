@@ -27,7 +27,6 @@ using Microsoft.Extensions.Logging;
 using PPather.Triangles.Data;
 using static Wmo.MapTileFile;
 using System.Buffers;
-using PPather.Triangles;
 using PPather;
 
 namespace WowTriangles
@@ -63,9 +62,11 @@ namespace WowTriangles
             }
         }
 
-        public void Close()
+        public void Clear()
         {
             archive.Close();
+            modelmanager.Clear();
+            wmomanager.Clear();
         }
 
         public static string[] GetArchiveNames(DataConfig dataConfig)
@@ -89,27 +90,23 @@ namespace WowTriangles
             if (!wdt.loaded[index])
                 return;
 
-            SparseMatrix3D<WMO> instances = new();
-
             // Map tiles
-            for (int y = 0; y < MapTile.SIZE; y++)
+            for (int i = 0; i < MapTile.SIZE * MapTile.SIZE; i++)
             {
-                for (int x = 0; x < MapTile.SIZE; x++)
-                {
-                    int i = y * MapTile.SIZE + x;
-
-                    if (mapTile.hasChunk[i])
-                        AddTriangles(triangles, mapTile.chunks[i]);
-                }
+                if (mapTile.hasChunk[i])
+                    AddTriangles(triangles, mapTile.chunks[i]);
             }
 
-            // World objects
-
+            // Map Tile - World objects
+            SparseMatrix3D<WMO> instances = new();
             for (int i = 0; i < mapTile.wmois.Length; i++)
             {
                 WMOInstance wi = mapTile.wmois[i];
+                // TODO: check if this ever get hit
                 if (instances.ContainsKey((int)wi.pos.X, (int)wi.pos.Y, (int)wi.pos.Z))
+                {
                     continue;
+                }
 
                 instances.Add((int)wi.pos.X, (int)wi.pos.Y, (int)wi.pos.Z, wi.wmo);
                 AddTriangles(triangles, wi);

@@ -37,7 +37,7 @@ public sealed class DataConfig
 
     // at runtime - determined from the running exe file version
     [JsonIgnore]
-    public string Exp { get; set; } = "tbc"; // hardcoded default
+    public string Exp { get; set; } = "wrath"; // hardcoded default
 
     public static DataConfig Load()
     {

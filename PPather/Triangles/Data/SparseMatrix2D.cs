@@ -1,11 +1,10 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace PPather.Triangles.Data
 {
-    public class SparseMatrix2D<T> : IEnumerable<T>
+    public class SparseMatrix2D<T>
     {
-        private readonly Dictionary<(int, int), T> dict;
+        private readonly Dictionary<int, T> dict;
 
         public int Count => dict.Count;
 
@@ -16,37 +15,32 @@ namespace PPather.Triangles.Data
 
         public bool ContainsKey(int x, int y)
         {
-            return dict.ContainsKey((x, y));
+            return dict.ContainsKey((y << 16) ^ x);
         }
 
         public bool TryGetValue(int x, int y, out T r)
         {
-            return dict.TryGetValue((x, y), out r);
+            return dict.TryGetValue((y << 16) ^ x, out r);
         }
 
         public void Add(int x, int y, T val)
         {
-            dict[(x, y)] = val;
+            dict[(y << 16) ^ x] = val;
         }
 
         public void Remove(int x, int y)
         {
-            dict.Remove((x, y));
+            dict.Remove((y << 16) ^ x);
+        }
+
+        public void Clear()
+        {
+            dict.Clear();
         }
 
         public ICollection<T> GetAllElements()
         {
             return dict.Values;
-        }
-
-        public IEnumerator<T> GetEnumerator()
-        {
-            return GetEnumerator();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return dict.GetEnumerator();
         }
     }
 

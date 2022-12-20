@@ -75,24 +75,25 @@
             options.Converters.Add(new Vector4Converter());
 
             loggerSink.OnLog += OnLog;
-            pPatherService.OnReset = Reset;
-            pPatherService.SetNotifyChunkAdded(OnChunkAdded);
-            pPatherService.SetOnPathCreated(OnDrawFinalPath);
-            pPatherService.OnLinesAdded = OnDrawlines;
-            pPatherService.OnSphereAdded = OnDrawSphere;
-            pPatherService.SetOnSearchBegin(OnSearchBegin);
+
+            pPatherService.OnChunkAdded += OnChunkAdded;
+            pPatherService.OnPathCreated += OnDrawFinalPath;
+
+            pPatherService.OnLinesAdded += OnDrawlines;
+            pPatherService.OnSphereAdded += OnDrawSphere;
+            pPatherService.SearchBegin += OnSearchBegin;
         }
     }
 
     public void Dispose()
     {
         loggerSink.OnLog -= OnLog;
-        pPatherService.OnReset = null;
-        pPatherService.SetOnSearchBegin(null);
-        pPatherService.SetNotifyChunkAdded(null);
-        pPatherService.SetOnPathCreated(null);
-        pPatherService.OnLinesAdded = null;
-        pPatherService.OnSphereAdded = null;
+
+        pPatherService.SearchBegin -= OnSearchBegin;
+        pPatherService.OnChunkAdded -= OnChunkAdded;
+        pPatherService.OnPathCreated -= OnDrawFinalPath;
+        pPatherService.OnLinesAdded -= OnDrawlines;
+        pPatherService.OnSphereAdded -= OnDrawSphere;
 
         cts?.Cancel();
     }
@@ -109,8 +110,8 @@
 
     private async void Reset()
     {
-        //pPatherService.Reset();
         await jsRuntime.InvokeVoidAsync("clear");
+        pPatherService.Reset();
     }
 
     public void OnLog(LogEvent logEvent)

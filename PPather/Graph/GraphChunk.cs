@@ -21,17 +21,18 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace PPather.Graph
 {
     public sealed class GraphChunk
     {
-        public const int CHUNK_SIZE = 512;
+        public const int CHUNK_SIZE = 256;
         public const int SIZE = CHUNK_SIZE * CHUNK_SIZE;
         private const bool saveEnabled = true;
 
-        private const uint FILE_MAGIC = 0x12341234;
-        private const uint FILE_ENDMAGIC = 0x43214321;
+        private const uint FILE_MAGIC = 0x23452345;
+        private const uint FILE_ENDMAGIC = 0x54325432;
         private const uint SPOT_MAGIC = 0x53504f54;
 
         private readonly ILogger logger;
@@ -56,7 +57,7 @@ namespace PPather.Graph
         //     float y;
         //     float z;
 
-        public GraphChunk(float base_x, float base_y, int ix, int iy, ILogger logger, string baseDir)
+        public GraphChunk(float base_x, float base_y, int ix, int iy, ILogger logger, string baseDir, long lru)
         {
             this.logger = logger;
             this.base_x = base_x;
@@ -64,6 +65,8 @@ namespace PPather.Graph
 
             this.ix = ix;
             this.iy = iy;
+
+            LRU = lru;
 
             spots = new Spot[SIZE];
 
@@ -74,10 +77,7 @@ namespace PPather.Graph
         {
             for (int i = 0; i < SIZE; i++)
             {
-                if (spots[i] != null)
-                {
-                    spots[i].traceBack = null;
-                }
+                spots[i]?.Clear();
             }
         }
 
@@ -161,6 +161,12 @@ namespace PPather.Graph
 
                 if (br.ReadUInt32() != FILE_MAGIC)
                 {
+                    br.Close();
+                    stream.Close();
+
+                    File.Delete(filePath);
+                    logger.LogWarning($"[{nameof(GraphChunk)}] {nameof(FILE_MAGIC)} mismatch! Delete '{filePath}'!");
+
                     return false;
                 }
 
@@ -198,7 +204,7 @@ namespace PPather.Graph
                 }
 
                 if (logger.IsEnabled(LogLevel.Trace))
-                    logger.LogTrace($"Loaded {filePath} {n_spots} spots {n_steps} steps {Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds} ms");
+                    logger.LogTrace($"[{nameof(GraphChunk)}] Loaded {filePath} {n_spots} spots {n_steps} steps {Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds} ms");
 
                 return true;
             }
@@ -224,8 +230,11 @@ namespace PPather.Graph
 
                 int n_spots = 0;
                 int n_steps = 0;
-                foreach (Spot s in GetAllSpots())
+                var span = CollectionsMarshal.AsSpan(GetAllSpots());
+                for (int j = 0; j < span.Length; j++)
                 {
+                    Spot s = span[j];
+
                     bw.Write(SPOT_MAGIC);
                     bw.Write((uint)0); // reserved
                     bw.Write(s.flags);
@@ -251,11 +260,11 @@ namespace PPather.Graph
                 modified = false;
 
                 if (logger.IsEnabled(LogLevel.Trace))
-                    logger.LogTrace($"Saved {filePath} {n_spots} spots {n_steps} steps");
+                    logger.LogTrace($"[{nameof(GraphChunk)}] Saved {filePath} {n_spots} spots {n_steps} steps");
             }
             catch (Exception e)
             {
-                logger.LogError("Save failed " + e);
+                logger.LogError($"[{nameof(GraphChunk)}] Save failed " + e);
             }
         }
     }
