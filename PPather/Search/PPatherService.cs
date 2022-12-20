@@ -1,4 +1,4 @@
-﻿using PPather.Graph;
+using PPather.Graph;
 using System;
 using System.Collections.Generic;
 using WowTriangles;
@@ -12,23 +12,23 @@ namespace PPather
 {
     public sealed class PPatherService
     {
-        private Search search { get; set; }
-        public bool SearchExists => search != null;
-
         private readonly ILogger logger;
         private readonly DataConfig dataConfig;
         private readonly WorldMapAreaDB worldMapAreaDB;
 
-        private Action SearchBegin;
-        private Action<Path> OnPathCreated;
-        public Action OnReset { get; set; }
-        public Action<ChunkEventArgs> OnChunkAdded { get; set; }
-        public Action<LinesEventArgs> OnLinesAdded { get; set; }
-        public Action<SphereEventArgs> OnSphereAdded { get; set; }
+        public event Action SearchBegin;
+        public event Action<Path> OnPathCreated;
+        public event Action<ChunkEventArgs> OnChunkAdded;
 
+        public Action<LinesEventArgs> OnLinesAdded;
+        public Action<SphereEventArgs> OnSphereAdded;
 
-        private Path lastPath;
-        public bool HasInitialised;
+        private Search search { get; set; }
+
+        public Vector4 SearchFrom => search.locationFrom;
+        public Vector4 SearchTo => search.locationTo;
+        public Vector3 ClosestLocation => search?.PathGraph?.ClosestSpot?.Loc ?? Vector3.Zero;
+        public Vector3 PeekLocation => search?.PathGraph?.PeekSpot?.Loc ?? Vector3.Zero;
 
         public PPatherService(ILogger logger, DataConfig dataConfig, WorldMapAreaDB worldMapAreaDB)
         {
@@ -61,18 +61,14 @@ namespace PPather
             this.search = null;
         }
 
-        private bool Initialise(float mapId)
+        private void Initialise(float mapId)
         {
-            if (search == null || mapId != search.MapId)
-            {
-                HasInitialised = true;
-                PathGraph.SearchEnabled = false;
-                search = new Search(mapId, logger, dataConfig);
-                search.PathGraph.triangleWorld.NotifyChunkAdded = ChunkAdded;
-                OnReset?.Invoke();
-                return true;
-            }
-            return false;
+            if (search != null && mapId == search.MapId)
+                return;
+
+            PathGraph.SearchEnabled = false;
+            search = new Search(mapId, logger, dataConfig);
+            search.PathGraph.triangleWorld.NotifyChunkAdded = ChunkAdded;
         }
 
         public TriangleCollection GetChunkAt(int grid_x, int grid_y)
@@ -119,7 +115,6 @@ namespace PPather
             SearchBegin?.Invoke();
             var path = search.DoSearch(searchType);
             OnPathCreated?.Invoke(path);
-            lastPath = path;
             return path;
         }
 
@@ -128,40 +123,12 @@ namespace PPather
             search.PathGraph.Save();
         }
 
-        public void SetOnSearchBegin(Action action)
-        {
-            SearchBegin = action;
-        }
-
-        public void SetOnPathCreated(Action<Path> action)
-        {
-            OnPathCreated = action;
-            if (lastPath != null)
-            {
-                OnPathCreated?.Invoke(lastPath);
-            }
-        }
-
-        public void SetOnLinesAdded(Action<Path> action)
-        {
-            OnPathCreated = action;
-            if (lastPath != null)
-            {
-                OnPathCreated?.Invoke(lastPath);
-            }
-        }
-
         public void SetLocations(Vector4 from, Vector4 to)
         {
             Initialise(from.W);
 
             search.locationFrom = from;
             search.locationTo = to;
-        }
-
-        public void SetNotifyChunkAdded(Action<ChunkEventArgs> action)
-        {
-            OnChunkAdded = action;
         }
 
         public List<Spot> GetCurrentSearchPath()
@@ -173,14 +140,6 @@ namespace PPather
 
             return search.PathGraph.CurrentSearchPath();
         }
-
-        public Vector4 SearchFrom => search.locationFrom;
-
-        public Vector4 SearchTo => search.locationTo;
-
-        public Vector3 ClosestLocation => search?.PathGraph?.ClosestSpot?.Loc ?? Vector3.Zero;
-
-        public Vector3 PeekLocation => search?.PathGraph?.PeekSpot?.Loc ?? Vector3.Zero;
 
         public void DrawPath(float mapId, List<float[]> coords)
         {
