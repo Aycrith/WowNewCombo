@@ -1,4 +1,4 @@
-using PPather.Graph;
+﻿using PPather.Graph;
 using System;
 using System.Collections.Generic;
 using WowTriangles;
@@ -55,10 +55,10 @@ namespace PPather
             if (search != null)
             {
                 search.PathGraph.triangleWorld.NotifyChunkAdded = null;
+                search.Clear();
+                GC.Collect();
             }
-
-            OnReset?.Invoke();
-            this.search = null;
+            search = null;
         }
 
         private void Initialise(float mapId)

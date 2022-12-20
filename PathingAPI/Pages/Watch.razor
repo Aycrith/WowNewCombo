@@ -1,4 +1,4 @@
-@page "/Watch"
+﻿@page "/Watch"
 
 @using System.Collections.Generic
 @using PPather.Data
@@ -110,8 +110,8 @@
 
     private async void Reset()
     {
-        //pPatherService.Reset();
         await jsRuntime.InvokeVoidAsync("clear");
+        pPatherService.Reset();
     }
 
     public void OnLog(LogEvent logEvent)

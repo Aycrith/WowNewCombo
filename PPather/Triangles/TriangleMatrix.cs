@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Part of PPather
  *  Copyright Pontus Borg 2008
  *
@@ -84,6 +84,15 @@ namespace WowTriangles
             if (logger.IsEnabled(LogLevel.Trace))
                 logger.LogTrace($"Mesh [||,||] Bounds: [{tc.Min.X:F4}, {tc.Min.Y:F4}] [{tc.Max.X:F4}, {tc.Max.Y:F4}] - {tc.TriangleCount} tri - {tc.VertexCount} ver - c {matrix.Count} - {(DateTime.UtcNow - pre).TotalMilliseconds}ms");
         }
+
+        public void Clear()
+        {
+            foreach (List<int> list in matrix.GetAllElements())
+            {
+                list.Clear();
+            }
+
+            matrix.Clear();
         }
 
         public ArraySegment<int> GetAllCloseTo(float x, float y, float distance)

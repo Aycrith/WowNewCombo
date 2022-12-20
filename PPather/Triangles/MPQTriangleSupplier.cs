@@ -63,9 +63,11 @@ namespace WowTriangles
             }
         }
 
-        public void Close()
+        public void Clear()
         {
             archive.Close();
+            modelmanager.Clear();
+            wmomanager.Clear();
         }
 
         public static string[] GetArchiveNames(DataConfig dataConfig)

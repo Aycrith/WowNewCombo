@@ -1,11 +1,10 @@
-/*
+﻿/*
  *  Part of PPather
  *  Copyright Pontus Borg 2008
  *
  */
 
 using System;
-using System.Linq;
 using System.Numerics;
 using System.Collections.Generic;
 using Wmo;
@@ -39,35 +38,18 @@ namespace WowTriangles
 
         public void Close()
         {
-            supplier.Close();
+            supplier.Clear();
+            EvictAll();
         }
 
         public void EvictAll()
         {
-            foreach (TriangleCollection chunk in chunks)
+            foreach (TriangleCollection chunk in chunks.GetAllElements())
             {
-                chunks.Remove(chunk.grid_x, chunk.grid_y);
-
-                if (logger.IsEnabled(LogLevel.Trace))
-                    logger.LogTrace($"Evict chunk at {chunk.grid_x} {chunk.grid_y}");
+                chunk.Clear();
             }
-        }
 
-        private void EvictIfNeeded()
-        {
-            TriangleCollection toEvict = null;
-            foreach (TriangleCollection tc in chunks)
-            {
-                int LRU = tc.LRU;
-                if (toEvict == null || LRU < toEvict.LRU)
-                {
-                    toEvict = tc;
-                }
-            }
-            chunks.Remove(toEvict.grid_x, toEvict.grid_y);
-
-            if (logger.IsEnabled(LogLevel.Trace))
-                logger.LogTrace($"Evict chunk at {toEvict.grid_x} {toEvict.grid_y} -- Count: {chunks.Count}");
+            chunks.Clear();
         }
 
         public static void GetGridStartAt(float x, float y, out int grid_x, out int grid_y)

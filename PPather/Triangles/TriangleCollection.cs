@@ -1,4 +1,4 @@
-﻿/*
+/*
  *  Part of PPather
  *  Copyright Pontus Borg 2008
  *
@@ -48,6 +48,16 @@ namespace WowTriangles
             this.logger = logger;
             Vertecies = new(65536); // terrain mesh
             Triangles = new(128);
+        }
+
+        public void Clear()
+        {
+            triangleCount = 0;
+            VertexCount = 0;
+
+            Triangles.Clear();
+            Vertecies.Clear();
+            matrix.Clear();
         }
 
         public bool HasTriangleMatrix => matrix != null;

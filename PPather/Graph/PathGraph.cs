@@ -140,9 +140,15 @@ namespace PPather.Graph
             chunks = new SparseMatrix2D<GraphChunk>(8);
         }
 
-        public void Close()
+        public void Clear()
         {
             triangleWorld.Close();
+
+            foreach (GraphChunk chunk in chunks.GetAllElements())
+            {
+                chunk.Clear();
+            }
+            chunks.Clear();
         }
 
         private static void GetChunkCoord(float x, float y, out int ix, out int iy)

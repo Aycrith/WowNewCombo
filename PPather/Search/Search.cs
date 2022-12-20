@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using PPather.Graph;
 using System;
 using WowTriangles;
@@ -28,6 +28,13 @@ namespace PPather
             this.dataConfig = dataConfig;
 
             CreatePathGraph(mapId);
+        }
+
+        public void Clear()
+        {
+            MapId = 0;
+            PathGraph.Clear();
+            PathGraph = null;
         }
 
         public Vector4 CreateWorldLocation(float x, float y, float z, int mapId)
