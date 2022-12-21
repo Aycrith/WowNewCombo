@@ -56,7 +56,7 @@ namespace Core.Goals
 
                         interrupt = null;
 
-                        cts.Cancel();
+                        cts?.Cancel();
                         cts = null;
 
                         break;
