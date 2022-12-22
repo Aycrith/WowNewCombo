@@ -22,6 +22,8 @@ using System.Threading.Tasks;
 using WinAPI;
 using SharedLib;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.FileProviders;
+using System.IO;
 
 namespace BlazorServer
 {
@@ -231,6 +233,13 @@ namespace BlazorServer
             }
 
             app.UseStaticFiles();
+
+            var dataConfig = DataConfig.Load();
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new PhysicalFileProvider(Path.Combine(env.ContentRootPath, dataConfig.Path)),
+                RequestPath = "/path"
+            });
 
             app.UseRouting();
 

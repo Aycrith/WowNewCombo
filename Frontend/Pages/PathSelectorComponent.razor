@@ -7,6 +7,41 @@
 
 @implements IDisposable
 
+<style>
+    .thumbnail {
+        position: relative;
+        z-index: 0;
+        text-decoration: none;
+    }
+
+        .thumbnail:hover {
+            background-color: transparent;
+            z-index: 50;
+        }
+
+        .thumbnail .thumbnail-img {
+            /*CSS for enlarged image*/
+            position: absolute;
+            padding: 5px;
+            visibility: hidden;
+            text-decoration: none;
+        }
+
+            .thumbnail .thumbnail-img img {
+                padding: 2px;
+            }
+
+        .thumbnail:hover .thumbnail-img {
+            /*CSS for enlarged image on hover*/
+            visibility: visible;
+            transform: scale(2);
+            transform-origin: top left;
+            position: fixed;
+            top: 5px;
+            left: 5px;
+        }
+</style>
+
 <div class="card @(Hide ? "hide" : "")" style="margin-top: 10px">
     <div class="card-header d-flex justify-content-between align-items-center">
         <label>Path Profile</label>
@@ -14,7 +49,19 @@
         <MatAutocompleteList Items="@Files" TItem="string" Label="Path" ValueChanged="OnSelectedPathChanged"
                              ShowClearButton="true" NumberOfElementsInPopup="@VisibleNum" OnTextChanged="OnTextChanged">
             <ItemTemplate>
-                <div class="mat-autocomplete-list-popup-element" style="display: flex; width: 100%;">
+                <div class="mat-autocomplete-list-popup-element" style="display: flex; width: 100%; font-size: 0.75vw">
+                    @{
+                        string imgFile = @context.Replace("json", "jpg");
+                    }
+                    @if (File.Exists(Path.Combine(dataConfig.Path, imgFile)))
+                    {
+                        <a class="thumbnail">
+                            <span class="oi oi-image" aria-hidden="true"> </span>
+                            <span class="thumbnail-img">
+                                <img src="./path/@imgFile" />
+                            </span>
+                        </a>
+                    }
                     @context
                 </div>
             </ItemTemplate>
