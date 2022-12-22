@@ -486,8 +486,9 @@ namespace WowTriangles
                 Span<float> dy = stackalloc float[size] { 0, 0, minCliffD, -minCliffD };
 
                 bool allGood;
-                foreach (int t in ts)
+                for (int j = 0; j < ts.Count; j++)
                 {
+                    int t = ts[j];
                     Vector3 vertex0;
                     Vector3 vertex1;
                     Vector3 vertex2;

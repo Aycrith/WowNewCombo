@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace Core
@@ -24,6 +25,7 @@ namespace Core
             ct.WaitHandle.WaitOne(durationMs);
         }
 
+        [SkipLocalsInit]
         public bool Till(int timeoutMs, Func<bool> interrupt)
         {
             DateTime start = DateTime.UtcNow;
@@ -38,6 +40,7 @@ namespace Core
             return true;
         }
 
+        [SkipLocalsInit]
         public WaitResult Until(int timeoutMs, Func<bool> interrupt)
         {
             DateTime start = DateTime.UtcNow;
@@ -53,6 +56,7 @@ namespace Core
             return new(true, elapsedMs);
         }
 
+        [SkipLocalsInit]
         public WaitResult Until(int timeoutMs, CancellationToken token)
         {
             DateTime start = DateTime.UtcNow;
@@ -68,6 +72,7 @@ namespace Core
             return new(true, elapsedMs);
         }
 
+        [SkipLocalsInit]
         public WaitResult Until(int timeoutMs, Func<bool> interrupt, Action repeat)
         {
             DateTime start = DateTime.UtcNow;

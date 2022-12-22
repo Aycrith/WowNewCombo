@@ -19,6 +19,7 @@
  */
 
 using System.Numerics;
+using System.Runtime.CompilerServices;
 
 using static System.MathF;
 using static System.Numerics.Vector3;
@@ -27,7 +28,7 @@ namespace WowTriangles
 {
     public static class Utils
     {
-        [System.Runtime.CompilerServices.SkipLocalsInit]
+        [SkipLocalsInit]
         public static bool SegmentTriangleIntersect(in Vector3 p0, in Vector3 p1,
                                                     in Vector3 t0, in Vector3 t1, in Vector3 t2,
                                                     out Vector3 I)
@@ -42,7 +43,7 @@ namespace WowTriangles
             float b = Dot(n, dir);
             if (Abs(b) < float.Epsilon)
             {
-                I = new();
+                I = default;
                 return false; // parallel
             }
 
@@ -50,12 +51,12 @@ namespace WowTriangles
             float r = a / b;
             if (r < 0.0f)
             {
-                I = new();
+                I = default;
                 return false; // "before" p0
             }
             if (r > 1.0f)
             {
-                I = new();
+                I = default;
                 return false; // "after" p1
             }
 
@@ -83,6 +84,7 @@ namespace WowTriangles
             return true;
         }
 
+        [SkipLocalsInit]
         public static float PointDistanceToSegment(in Vector3 p0,
                                            in Vector3 x1, in Vector3 x2)
         {
@@ -107,6 +109,7 @@ namespace WowTriangles
             return L3.Length();
         }
 
+        [SkipLocalsInit]
         public static void GetTriangleNormal(in Vector3 t0, in Vector3 t1, in Vector3 t2, out Vector3 normal)
         {
             Vector3 u = Subtract(t1, t0); // triangle vector 1
@@ -116,6 +119,7 @@ namespace WowTriangles
             normal = Divide(normal, l);
         }
 
+        [SkipLocalsInit]
         public static float PointDistanceToTriangle(in Vector3 p0,
                                                     in Vector3 t0, in Vector3 t1, in Vector3 t2)
         {
@@ -155,7 +159,7 @@ namespace WowTriangles
 
         // From the book "Real-Time Collision Detection" by Christer Ericson, page 169
         // See also the published Errata at http://realtimecollisiondetection.net/books/rtcd/errata/
-        [System.Runtime.CompilerServices.SkipLocalsInit]
+        [SkipLocalsInit]
         public static bool TestTriangleBoxIntersect(in Vector3 a, in Vector3 b, in Vector3 c, in Vector3 boxCenter, in Vector3 boxExtents)
         {
             // Translate triangle as conceptually moving AABB to origin
