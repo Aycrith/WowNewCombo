@@ -4,11 +4,13 @@
 @using System.IO
 @using System.Numerics
 @using SharedLib.Extensions
+@using Core.Database
 
 @inject IAddonReader addonReader
 @inject IBotController botController
 @inject IJSRuntime JSRuntime
 @inject DataConfig dataConfig
+@inject AreaDB areaDB
 
 <div class="row">
     <div class="col-sm">
@@ -227,9 +229,15 @@
 
     private List<Vector3> editPath = new();
 
+    private string areaName = string.Empty;
+
     protected override void OnInitialized()
     {
         routeInfo = botController.RouteInfo!;
+
+        areaDB.Changed += OnZoneChanged;
+
+        UpdateZoneName();
 
         editPath = routeInfo.Route.ToList();
 
@@ -251,6 +259,8 @@
     protected async ValueTask DisposeAsync()
     {
         addonReader.AddonDataChanged -= OnAddonDataChanged;
+
+        areaDB.Changed -= OnZoneChanged;
 
         await JSRuntime.InvokeVoidAsync("dispose");
     }
@@ -275,6 +285,22 @@
 
         await JSRuntime.InvokeVoidAsync("focusAt", JsonConvert.SerializeObject(pp));
         */
+    }
+
+    private void UpdateZoneName()
+    {
+        areaName = addonReader.PlayerReader.WorldMapArea.AreaName;
+    }
+
+    private void ActionZoneChangedAction()
+    {
+        UpdateZoneName();
+        StateHasChanged();
+    }
+
+    private void OnZoneChanged()
+    {
+        base.InvokeAsync(ActionZoneChangedAction);
     }
 
     private void OnAddonDataChanged()
@@ -352,7 +378,7 @@
     {
         recording = false;
 
-        string filename = $"__Path_{DateTime.Now.ToString("yyyy_MM_dd_HH_mm_ss")}.json";
+        string filename = $"__Path_{areaName}_{DateTime.Now.ToString("yyyy_MM_dd_HH_mm_ss")}.json";
         string filepath = Path.Join(dataConfig.Path, filename);
         File.WriteAllText(filepath, JsonConvert.SerializeObject(editPath));
         message = $"Saved to: {filepath}";
