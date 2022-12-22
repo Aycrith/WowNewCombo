@@ -49,7 +49,7 @@ namespace Core.Goals
                 while (interrupt != null &&
                     cts != null && !cts.IsCancellationRequested)
                 {
-                    if (initial != interrupt())
+                    if (initial != interrupt?.Invoke())
                     {
                         if (Log)
                             logger.LogWarning($"[{nameof(CastingHandlerInterruptWatchdog)}] Interrupted!");
