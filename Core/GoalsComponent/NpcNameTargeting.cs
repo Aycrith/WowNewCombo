@@ -11,7 +11,7 @@ namespace Core.Goals
 {
     public sealed class NpcNameTargeting : IDisposable
     {
-        private const int INTERACT_DELAY = 25;
+        private const int INTERACT_DELAY = 5;
 
         private readonly ILogger logger;
         private readonly CancellationToken ct;
@@ -167,10 +167,12 @@ namespace Core.Goals
         public bool FindBy(params CursorType[] cursor)
         {
             int c = locFindBy.Length;
-            int e = 3;
-            foreach (NpcPosition npc in npcNameFinder.Npcs)
+            const int e = 3;
+            Span<Point> attemptPoints = stackalloc Point[c + (c * e)];
+
+            for (int ni = 0; ni < npcNameFinder.Npcs.Length; ni++)
             {
-                Point[] attemptPoints = new Point[c + (c * e)];
+                NpcPosition npc = npcNameFinder.Npcs[ni];
                 for (int i = 0; i < c; i += e)
                 {
                     Point p = locFindBy[i];
@@ -179,8 +181,9 @@ namespace Core.Goals
                     attemptPoints[i + c + 1] = new Point(-npc.Rect.Width / 2, p.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight);
                 }
 
-                foreach (Point p in attemptPoints)
+                for (int pi = 0; pi < attemptPoints.Length; pi++)
                 {
+                    Point p = attemptPoints[pi];
                     p.Offset(npc.ClickPoint);
                     p.Offset(npcNameFinder.ToScreenCoordinates());
                     input.SetCursorPosition(p);

@@ -403,15 +403,12 @@ namespace SharedLib.NpcFinder
             int c = 0;
             NpcPosition[] npcs = new NpcPosition[data.Length];
 
-            var poolerInGroup = ArrayPool<bool>.Shared;
-            bool[] inGroup = poolerInGroup.Rent(data.Length);
-
             float offset1 = ScaleHeight(HeightOffset1);
             float offset2 = ScaleHeight(HeightOffset2);
 
+            Span<bool> inGroup = stackalloc bool[data.Length];
             const int MAX_GROUP = 32;
-            var poolerGroup = ArrayPool<LineSegment>.Shared;
-            LineSegment[] group = poolerGroup.Rent(MAX_GROUP);
+            Span<LineSegment> group = stackalloc LineSegment[MAX_GROUP];
 
             for (int i = 0; i < data.Length; i++)
             {
@@ -493,9 +490,6 @@ namespace SharedLib.NpcFinder
                     }
                 }
             }
-
-            poolerInGroup.Return(inGroup);
-            poolerGroup.Return(group);
 
             npcs = npcs.Where(NonEmpty).ToArray();
             Array.Sort(npcs, OrderBy);
