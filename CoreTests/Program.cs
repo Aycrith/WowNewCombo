@@ -32,6 +32,7 @@ namespace CoreTests
             //Test_Input();
             //Test_CursorGrabber();
             //Test_MinimapNodeFinder();
+            //Test_FindTargetByCursor();
         }
 
         private static void Test_NPCNameFinder()
@@ -121,5 +122,32 @@ namespace CoreTests
                 Log.Logger.Information($"sample: {count} | avg: {sample.Average(),0:0.00} | min: {sample.Min(),0:0.00} | max: {sample.Max(),0:0.00} | total: {sample.Sum()}");
         }
 
+        private static void Test_FindTargetByCursor()
+        {
+            //CursorType cursorType = CursorType.Kill;
+            CursorType cursorType = CursorType.Vendor;
+
+            //NpcNames types = NpcNames.Enemy;
+            //NpcNames types = NpcNames.Corpse;
+            //NpcNames types = NpcNames.Enemy | NpcNames.Neutral;
+            NpcNames types = NpcNames.Friendly | NpcNames.Neutral;
+
+            using Test_NpcNameFinder test = new(logger, types, ShowOverlay);
+
+            int count = 2;
+            int i = 0;
+
+            while (i < count)
+            {
+                test.Execute();
+                if (test.Execute_FindTargetBy(cursorType))
+                {
+                    break;
+                }
+
+                i++;
+                Thread.Sleep(delay);
+            }
+        }
     }
 }

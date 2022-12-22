@@ -126,6 +126,11 @@ namespace CoreTests
             }
         }
 
+        public bool Execute_FindTargetBy(CursorType cursorType)
+        {
+            return npcNameTargeting.FindBy(cursorType);
+        }
+
         private void SaveImage()
         {
             if (npcNameFinder.Npcs.Any())
