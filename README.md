@@ -105,7 +105,8 @@ Copy the previusly mentioned files to **\Json\MPQ** folder (e.g. `C:\WowClassicG
 
 Download the navmesh files.
 
-* [**Classic + TBC**](https://mega.nz/file/7HgkHIyA#c_gzUeTadecWY0JDY3KT39ktfPGLs2vzt_90bMvhszk)
+* [**Vanilla + TBC**](https://mega.nz/file/7HgkHIyA#c_gzUeTadecWY0JDY3KT39ktfPGLs2vzt_90bMvhszk)
+* [**Vanilla + TBC + Wrath**](https://mega.nz/file/zWQ2XIKI#9EKWOPyyTMfY1LACkcP_wioZ0poVIuaGh2xcRh4V9dw)
 
 1. Extract and copy anywhere you want. like `C:\mmaps`
 1. Create a [build](https://github.com/Xian55/WowClassicGrindBot/issues/449) of [AmeisenNavigation](https://github.com/Xian55/AmeisenNavigation/tree/feature/guess-z-coord-after-rewrite)

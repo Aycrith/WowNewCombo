@@ -4,7 +4,7 @@ using System.Buffers;
 namespace AnTCP.Client.Objects
 {
 #pragma warning disable CA1815 // Override equals and operator equals on value types
-    public unsafe struct AnTcpResponse
+    public readonly unsafe struct AnTcpResponse
 #pragma warning restore CA1815 // Override equals and operator equals on value types
     {
         public AnTcpResponse(byte type, byte[] data)
