@@ -6,7 +6,8 @@ namespace SharedLib.NpcFinder
 {
     public readonly struct NpcPosition : IEquatable<NpcPosition>
     {
-        public static readonly NpcPosition Empty = new(Point.Empty, Point.Empty, 0, 0);
+        private static readonly NpcPosition empty = new(Point.Empty, Point.Empty, 0, 0);
+        public static ref readonly NpcPosition Empty => ref empty;
 
         public readonly Rectangle Rect;
         public readonly Point ClickPoint;
