@@ -21,7 +21,7 @@ namespace Core
         public string Form { get; set; } = string.Empty;
         public Form FormEnum { get; set; } = Core.Form.None;
         public bool FormAction { get; private set; }
-        public float Cooldown { get; set; } = CastingHandler.SPELL_QUEUE;
+        public int Cooldown { get; set; } = CastingHandler.SPELL_QUEUE;
 
         private int _charge;
         public int Charge { get; set; } = 1;
@@ -217,9 +217,9 @@ namespace Core
             MinRuneUnholy = 0;
         }
 
-        public float GetRemainingCooldown()
+        public int GetRemainingCooldown()
         {
-            return MathF.Max(Cooldown - SinceLastClickMs, 0);
+            return Math.Max(Cooldown - SinceLastClickMs, 0);
         }
 
         public void SetClicked(double offset = 0)
@@ -270,10 +270,10 @@ namespace Core
 
             canRunMemoTime = globalTime.Value;
 
-            var array = RequirementsRuntime;
-            for (int i = 0; i < array.Length; i++)
+            Span<Requirement> span = RequirementsRuntime;
+            for (int i = 0; i < span.Length; i++)
             {
-                if (!array[i].HasRequirement())
+                if (!span[i].HasRequirement())
                     return canRun = false;
             }
 
@@ -282,10 +282,10 @@ namespace Core
 
         public bool CanBeInterrupted()
         {
-            var array = InterruptsRuntime;
-            for (int i = 0; i < array.Length; i++)
+            Span<Requirement> span = InterruptsRuntime;
+            for (int i = 0; i < span.Length; i++)
             {
-                if (!array[i].HasRequirement())
+                if (!span[i].HasRequirement())
                     return false;
             }
 

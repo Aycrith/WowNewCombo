@@ -73,7 +73,7 @@ namespace Core
                     fLine = (byte*)bd.Scan0 + (frames[i].Y * bd.Stride);
                     fx = frames[i].X * AddonDataProviderConfig.BYTES_PER_PIXEL;
 
-                    data[frames[i].Index] = (fLine[fx + 2] * 65536) + (fLine[fx + 1] * 256) + fLine[fx];
+                    data[frames[i].Index] = fLine[fx] | (fLine[fx + 1] << 8) | (fLine[fx + 2] << 16);
                 }
 
             Exit:

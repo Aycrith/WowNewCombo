@@ -668,10 +668,10 @@ namespace Wmo
 
     internal static class MapTileFile // adt file
     {
-        public static readonly MH2OData1 eMH2OData1 = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        private static readonly MH2OData1 eMH2OData1 = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         public static ref readonly MH2OData1 EmptyMH2OData1 => ref eMH2OData1;
 
-        public static readonly LiquidData eLiquidData = new(0, 0, 0, EmptyMH2OData1, Array.Empty<float>(), Array.Empty<byte>());
+        private static readonly LiquidData eLiquidData = new(0, 0, 0, EmptyMH2OData1, Array.Empty<float>(), Array.Empty<byte>());
         public static ref readonly LiquidData EmptyLiquidData => ref eLiquidData;
 
         public static MapTile Read(string name, WMOManager wmomanager, ModelManager modelmanager)

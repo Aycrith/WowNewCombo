@@ -338,11 +338,7 @@ namespace Core
             {
                 int sizeBefore = this.keyActions.Length;
                 Array.Resize(ref this.keyActions, this.keyActions.Length + keyActions.Sequence.Length);
-
-                for (int i = 0; i < keyActions.Sequence.Length; i++)
-                {
-                    this.keyActions[sizeBefore + i] = keyActions.Sequence[i];
-                }
+                Array.ConstrainedCopy(keyActions.Sequence, 0, this.keyActions, sizeBefore, keyActions.Sequence.Length);
             }
 
             if (item.Name is Drink or Food)
@@ -408,10 +404,10 @@ namespace Core
             item.RequirementsRuntime = requirements.ToArray();
 
             if (item.Interrupts.Count > 0)
-                InitializeInitialiseInterrupts(item);
+                InitialiseInterrupts(item);
         }
 
-        private void InitializeInitialiseInterrupts(KeyAction item)
+        private void InitialiseInterrupts(KeyAction item)
         {
             List<Requirement> requirements = new();
 
@@ -714,13 +710,13 @@ namespace Core
         {
             LogProcessingRequirement(logger, name, requirement);
 
-            string? negated = negateKeywords.FirstOrDefault(x => requirement.StartsWith(x));
+            string? negated = negateKeywords.FirstOrDefault(requirement.StartsWith);
             if (!string.IsNullOrEmpty(negated))
             {
                 requirement = requirement[negated.Length..];
             }
 
-            string? key = requirementMap.Keys.FirstOrDefault(x => requirement.Contains(x));
+            string? key = requirementMap.Keys.FirstOrDefault(requirement.Contains);
             if (!string.IsNullOrEmpty(key))
             {
                 Requirement req = requirementMap[key](requirement);
