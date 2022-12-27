@@ -59,8 +59,6 @@ namespace PPather.Graph
 
         public const float STEP_D = 0.1f;
 
-        public Path lastReducedPath;
-
         public const float IsCloseToModelRange = 2;
 
         /*

@@ -37,6 +37,8 @@ namespace PPather
             this.worldMapAreaDB = worldMapAreaDB;
             ContinentDB.Init(worldMapAreaDB.Values);
 
+            MPQSelfTest();
+
             ClearTemporaryFiles();
         }
 
@@ -69,6 +71,19 @@ namespace PPather
             PathGraph.SearchEnabled = false;
             search = new Search(mapId, logger, dataConfig);
             search.PathGraph.triangleWorld.NotifyChunkAdded = ChunkAdded;
+        }
+
+        public bool MPQSelfTest()
+        {
+            string[] mpqFiles = MPQTriangleSupplier.GetArchiveNames(dataConfig);
+            if (mpqFiles.Length == 0)
+            {
+                logger.LogInformation("No MPQ files found, refer to the Readme to download them!");
+                return false;
+            }
+
+            logger.LogInformation("MPQ files exist.");
+            return true;
         }
 
         public TriangleCollection GetChunkAt(int grid_x, int grid_y)

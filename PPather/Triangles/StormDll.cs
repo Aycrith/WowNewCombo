@@ -23,6 +23,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Collections.Generic;
 
 namespace StormDll
 {
@@ -155,7 +156,7 @@ namespace StormDll
     {
         private readonly IntPtr handle;
 
-        private readonly System.Collections.Generic.HashSet<string> fileList = new(StringComparer.InvariantCultureIgnoreCase);
+        private readonly HashSet<string> fileList = new(StringComparer.InvariantCultureIgnoreCase);
 
         private static readonly bool Is64Bit = Environment.Is64BitProcess;
 
@@ -165,20 +166,20 @@ namespace StormDll
                 ? StormDllx64.SFileOpenArchive(file, Prio, Flags, out handle)
                 : StormDllx86.SFileOpenArchive(file, Prio, Flags, out handle);
 
-            if (open)
-            {
-                string temp = Path.GetTempFileName();
+            if (!open)
+                return;
 
-                bool extracted = Is64Bit
+            string temp = Path.GetTempFileName();
+
+            bool extracted = Is64Bit
                 ? StormDllx64.SFileExtractFile(handle, "(listfile)", temp, OpenFile.SFILE_OPEN_FROM_MPQ)
                 : StormDllx86.SFileExtractFile(handle, "(listfile)", temp, OpenFile.SFILE_OPEN_FROM_MPQ);
 
-                if (extracted && File.Exists(temp))
+            if (extracted && File.Exists(temp))
+            {
+                foreach (string line in File.ReadLines(temp))
                 {
-                    foreach (string line in File.ReadLines(temp))
-                    {
-                        fileList.Add(line);
-                    }
+                    fileList.Add(line);
                 }
             }
         }

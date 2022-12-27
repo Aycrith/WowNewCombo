@@ -3,14 +3,12 @@ using Microsoft.Extensions.Logging;
 using PPather;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
 using WowTriangles;
 using System;
-using Core.Database;
-using SharedLib;
+using PPather.Graph;
 
 #pragma warning disable 162
 
@@ -24,30 +22,12 @@ namespace Core
 
         private readonly PPatherService service;
 
-        private readonly bool Enabled;
-
         private DateTime lastSave;
 
         public LocalPathingApi(ILogger logger, PPatherService service, DataConfig dataConfig)
         {
             this.logger = logger;
             this.service = service;
-
-            var mpqFiles = MPQTriangleSupplier.GetArchiveNames(dataConfig);
-            int countOfMPQFiles = mpqFiles.Count(f => File.Exists(f));
-            if (countOfMPQFiles == 0)
-            {
-                LogWarning("Some of these MPQ files should exist!");
-                mpqFiles.ToList().ForEach(LogInformation);
-                LogError("No MPQ files found, refer to the Readme to download them.");
-                Enabled = false;
-            }
-            else
-            {
-                LogDebug("Hooray, MPQ files exist.");
-            }
-
-            Enabled = countOfMPQFiles > 0;
         }
 
         public ValueTask DrawLines(List<LineArgs> lineArgs)
@@ -62,20 +42,17 @@ namespace Core
 
         public Vector3[] FindMapRoute(int uiMap, Vector3 mapFrom, Vector3 mapTo)
         {
-            if (!Enabled)
-            {
-                LogWarning($"Pathing is disabled, please check the messages when the bot started.");
-                return Array.Empty<Vector3>();
-            }
-
             long timestamp = Stopwatch.GetTimestamp();
 
-            service.SetLocations(service.ToWorld(uiMap, mapFrom.X, mapFrom.Y, mapFrom.Z), service.ToWorld(uiMap, mapTo.X, mapTo.Y));
-            PPather.Graph.Path path = service.DoSearch(PPather.Graph.PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
+            service.SetLocations(
+                service.ToWorld(uiMap, mapFrom.X, mapFrom.Y, mapFrom.Z),
+                service.ToWorld(uiMap, mapTo.X, mapTo.Y));
+
+            Path path = service.DoSearch(PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
             if (path == null)
             {
                 if (debug)
-                    LogWarning($"Failed to find a path from {mapFrom} to {mapTo}");
+                    LogWarning($"Failed to find a path from {mapFrom} to {mapTo} took {Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds} ms.");
 
                 return Array.Empty<Vector3>();
             }
@@ -99,21 +76,17 @@ namespace Core
 
         public Vector3[] FindWorldRoute(int uiMap, Vector3 worldFrom, Vector3 worldTo)
         {
-            if (!Enabled)
-            {
-                LogWarning($"Pathing is disabled, please check the messages when the bot started.");
-                return Array.Empty<Vector3>();
-            }
-
             long timestamp = Stopwatch.GetTimestamp();
 
-            service.SetLocations(service.ToWorldZ(uiMap, worldFrom.X, worldFrom.Y, worldFrom.Z), service.ToWorldZ(uiMap, worldTo.X, worldTo.Y, worldTo.Z));
+            service.SetLocations(
+                service.ToWorldZ(uiMap, worldFrom.X, worldFrom.Y, worldFrom.Z),
+                service.ToWorldZ(uiMap, worldTo.X, worldTo.Y, worldTo.Z));
 
-            PPather.Graph.Path path = service.DoSearch(PPather.Graph.PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
+            Path path = service.DoSearch(PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
             if (path == null)
             {
                 if (debug)
-                    LogWarning($"Failed to find a path from {worldFrom} to {worldTo}");
+                    LogWarning($"Failed to find a path from {worldFrom} to {worldTo} took {Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds} ms.");
 
                 return Array.Empty<Vector3>();
             }
@@ -132,16 +105,6 @@ namespace Core
 
 
         #region Logging
-
-        private void LogError(string text)
-        {
-            logger.LogError($"{nameof(LocalPathingApi)}: {text}");
-        }
-
-        private void LogInformation(string text)
-        {
-            logger.LogInformation($"{nameof(LocalPathingApi)}: {text}");
-        }
 
         private void LogDebug(string text)
         {

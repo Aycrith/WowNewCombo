@@ -14,51 +14,9 @@ using SharedLib;
 
 namespace Core.Goals
 {
-    internal readonly struct PathRequest
-    {
-        public readonly int MapId;
-        public readonly Vector3 StartW;
-        public readonly Vector3 EndW;
-        public readonly float Distance;
-        public readonly Action<PathResult> Callback;
-        public readonly DateTime Time;
-
-        public PathRequest(int mapId, Vector3 startW, Vector3 endW, float distance, Action<PathResult> callback)
-        {
-            MapId = mapId;
-            StartW = startW;
-            EndW = endW;
-            Distance = distance;
-            Callback = callback;
-            Time = DateTime.UtcNow;
-        }
-    }
-
-    internal readonly struct PathResult
-    {
-        public readonly Vector3 StartW;
-        public readonly Vector3 EndW;
-        public readonly float Distance;
-        public readonly Vector3[] Path;
-        public readonly double ElapsedMs;
-        public readonly Action<PathResult> Callback;
-
-        public PathResult(in PathRequest request, Vector3[] path, Action<PathResult> callback)
-        {
-            StartW = request.StartW;
-            EndW = request.EndW;
-            Distance = request.Distance;
-            Path = path;
-            Callback = callback;
-            ElapsedMs = (DateTime.UtcNow - request.Time).TotalMilliseconds;
-        }
-    }
-
     public sealed partial class Navigation : IDisposable
     {
         private const bool debug = false;
-
-        private const float RADIAN = PI * 2;
 
         private const float DIFF_THRESHOLD = 1.5f;   // within 50% difference
         private const float UNIFORM_DIST_DIV = 2;    // within 50% difference
@@ -168,8 +126,7 @@ namespace Core.Goals
                 result.Callback(result);
             }
 
-            if (pathRequests.Count > 0 || pathRequests.Count > 0 ||
-                ct.IsCancellationRequested)
+            if (ct.IsCancellationRequested || pathRequests.Count > 0)
             {
                 return;
             }
@@ -184,17 +141,18 @@ namespace Core.Goals
             input.Proc.SetKeyState(input.Proc.ForwardKey, true, true);
 
             // main loop
-            playerWorldPos = playerReader.WorldPos;
+            Vector3 playerW = playerReader.WorldPos;
+            playerWorldPos = playerW;
             Vector3 targetW = routeToNextWaypoint.Peek();
-            float worldDistance = playerWorldPos.WorldDistanceXYTo(targetW);
+            float worldDistance = playerW.WorldDistanceXYTo(targetW);
 
-            Vector3 playerM = WorldMapAreaDB.ToMap_FlipXY(playerWorldPos, playerReader.WorldMapArea);
+            Vector3 playerM = WorldMapAreaDB.ToMap_FlipXY(playerW, playerReader.WorldMapArea);
             Vector3 targetM = WorldMapAreaDB.ToMap_FlipXY(targetW, playerReader.WorldMapArea);
             float heading = DirectionCalculator.CalculateMapHeading(playerM, targetM);
 
             if (worldDistance < ReachedDistance(MinDistance))
             {
-                if (targetW.Z != 0 && targetW.Z != playerWorldPos.Z)
+                if (targetW.Z != 0 && targetW.Z != playerW.Z)
                 {
                     playerReader.WorldPosZ = targetW.Z;
                 }
@@ -227,12 +185,13 @@ namespace Core.Goals
                     targetW = routeToNextWaypoint.Peek();
                     stuckDetector.SetTargetLocation(targetW);
 
-                    playerM = WorldMapAreaDB.ToMap_FlipXY(playerWorldPos, playerReader.WorldMapArea);
+                    playerM = WorldMapAreaDB.ToMap_FlipXY(playerW, playerReader.WorldMapArea);
                     targetM = WorldMapAreaDB.ToMap_FlipXY(targetW, playerReader.WorldMapArea);
                     heading = DirectionCalculator.CalculateMapHeading(playerM, targetM);
 
                     if (!ct.IsCancellationRequested)
                         AdjustHeading(heading, ct);
+
                     return;
                 }
             }
@@ -252,7 +211,7 @@ namespace Core.Goals
                     if (HasBeenActiveRecently())
                     {
                         stuckDetector.Update();
-                        worldDistance = playerWorldPos.WorldDistanceXYTo(routeToNextWaypoint.Peek());
+                        worldDistance = playerW.WorldDistanceXYTo(routeToNextWaypoint.Peek());
                     }
                 }
                 else if (!ct.IsCancellationRequested)
@@ -472,6 +431,8 @@ namespace Core.Goals
 
         private void AdjustHeading(float heading, CancellationToken ct)
         {
+            const float RADIAN = PI * 2;
+
             float diff1 = Abs(RADIAN + heading - playerReader.Direction) % RADIAN;
             float diff2 = Abs(heading - playerReader.Direction - RADIAN) % RADIAN;
 

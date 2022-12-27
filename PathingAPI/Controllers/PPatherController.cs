@@ -16,15 +16,13 @@ namespace PathingAPI.Controllers
     public sealed class PPatherController : ControllerBase
     {
         private readonly PPatherService service;
-        private readonly ILogger logger;
 
         private static bool isBusy;
         private static bool initialised;
 
-        public PPatherController(PPatherService service, ILogger logger)
+        public PPatherController(PPatherService service)
         {
             this.service = service;
-            this.logger = logger;
         }
 
         /// <summary>
@@ -199,21 +197,7 @@ namespace PathingAPI.Controllers
         [Produces("application/json")]
         public JsonResult SelfTest()
         {
-            var mpqFiles = MPQTriangleSupplier.GetArchiveNames(DataConfig.Load());
-
-            int countOfMPQFiles = mpqFiles.Count(f => System.IO.File.Exists(f));
-            if (countOfMPQFiles == 0)
-            {
-                logger.LogInformation("Some of these MPQ files should exist!");
-                mpqFiles.ToList().ForEach(l => logger.LogInformation(l));
-                logger.LogInformation("No MPQ files found, refer to the Readme to download them.");
-            }
-            else
-            {
-                logger.LogInformation("MPQ files exist.");
-            }
-
-            return new JsonResult(countOfMPQFiles > 0);
+            return new JsonResult(service.MPQSelfTest());
         }
 
         [HttpPost("DrawPathTest")]

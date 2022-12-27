@@ -15,22 +15,22 @@
 
         public float ToWorldX(float value)
         {
-            return ((LocBottom - LocTop) * value / 100) + LocTop;
+            return ((LocBottom - LocTop) * value / 100f) + LocTop;
         }
 
         public float ToWorldY(float value)
         {
-            return ((LocRight - LocLeft) * value / 100) + LocLeft;
+            return ((LocRight - LocLeft) * value / 100f) + LocLeft;
         }
 
         public float ToMapX(float value)
         {
-            return 100 - (((value - LocBottom) * 100) / (LocTop - LocBottom));
+            return 100f - (((value - LocBottom) * 100f) / (LocTop - LocBottom));
         }
 
         public float ToMapY(float value)
         {
-            return 100 - (((value - LocRight) * 100) / (LocLeft - LocRight));
+            return 100f - (((value - LocRight) * 100f) / (LocLeft - LocRight));
         }
 
     }
