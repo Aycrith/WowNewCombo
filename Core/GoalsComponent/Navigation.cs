@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
 using System.Threading;
 using static System.MathF;
@@ -133,7 +132,7 @@ namespace Core.Goals
 
             if (routeToNextWaypoint.Count == 0)
             {
-                RefillRouteToNextWaypoint();
+                RefillRouteToNextWaypoint(ct);
                 return;
             }
 
@@ -158,7 +157,7 @@ namespace Core.Goals
                 }
 
                 if (SimplifyRouteToWaypoint)
-                    ReduceByDistance(MinDistance);
+                    ReduceByDistance(playerW, MinDistance);
                 else
                     routeToNextWaypoint.Pop();
 
@@ -189,8 +188,7 @@ namespace Core.Goals
                     targetM = WorldMapAreaDB.ToMap_FlipXY(targetW, playerReader.WorldMapArea);
                     heading = DirectionCalculator.CalculateMapHeading(playerM, targetM);
 
-                    if (!ct.IsCancellationRequested)
-                        AdjustHeading(heading, ct);
+                    AdjustHeading(heading, ct);
 
                     return;
                 }
@@ -198,7 +196,11 @@ namespace Core.Goals
 
             if (routeToNextWaypoint.Count > 0)
             {
-                if (!stuckDetector.IsGettingCloser())
+                if (stuckDetector.IsGettingCloser())
+                {
+                    AdjustHeading(heading, ct);
+                }
+                else
                 {
                     if (stuckDetector.ActionDurationMs > 10_000)
                     {
@@ -213,10 +215,6 @@ namespace Core.Goals
                         stuckDetector.Update();
                         worldDistance = playerW.WorldDistanceXYTo(routeToNextWaypoint.Peek());
                     }
-                }
-                else if (!ct.IsCancellationRequested)
-                {
-                    AdjustHeading(heading, ct);
                 }
             }
 
@@ -300,7 +298,7 @@ namespace Core.Goals
             stuckDetector.Reset();
         }
 
-        private void RefillRouteToNextWaypoint()
+        private void RefillRouteToNextWaypoint(CancellationToken ct)
         {
             routeToNextWaypoint.Clear();
 
@@ -326,7 +324,7 @@ namespace Core.Goals
                 Vector3 playerM = WorldMapAreaDB.ToMap_FlipXY(playerW, playerReader.WorldMapArea);
                 Vector3 targetM = WorldMapAreaDB.ToMap_FlipXY(targetW, playerReader.WorldMapArea);
                 float heading = DirectionCalculator.CalculateMapHeading(playerM, targetM);
-                AdjustHeading(heading, _cts.Token);
+                AdjustHeading(heading, ct);
 
                 stuckDetector.SetTargetLocation(targetW);
                 UpdateTotalRoute();
@@ -408,15 +406,13 @@ namespace Core.Goals
                 logger.LogDebug("PathFinder thread stopped!");
         }
 
-        private static float ReachedDistance(float minDistance)
+        private float ReachedDistance(float minDistance)
         {
-            //return mountHandler.IsMounted() ? MinDistanceMount : minDistance;
-            return minDistance;
+            return mountHandler.IsMounted() ? MinDistanceMount : minDistance;
         }
 
-        private void ReduceByDistance(float minDistance)
+        private void ReduceByDistance(Vector3 playerW, float minDistance)
         {
-            Vector3 playerW = playerReader.WorldPos;
             float worldDistance = playerW.WorldDistanceXYTo(routeToNextWaypoint.Peek());
             while (worldDistance < ReachedDistance(minDistance) && routeToNextWaypoint.Count > 0)
             {
