@@ -1,4 +1,4 @@
-using Core.GOAP;
+﻿using Core.GOAP;
 using SharedLib.NpcFinder;
 using Microsoft.Extensions.Logging;
 using System;
@@ -172,6 +172,7 @@ namespace Core.Goals
             if (!classConfig.KeyboardOnly)
             {
                 npcNameTargeting.ChangeNpcType(NpcNames.Friendly | NpcNames.Neutral);
+                npcNameTargeting.WaitForUpdate();
                 npcNameTargeting.WaitForUpdate();
                 found = npcNameTargeting.FindBy(CursorType.Vendor, CursorType.Repair, CursorType.Innkeeper);
                 wait.Update();
