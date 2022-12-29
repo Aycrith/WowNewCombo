@@ -73,6 +73,16 @@
   "Combat": {
     "Sequence": [
       {
+        "Name": "Ghoul Frenzy",
+        "Key": "F8",
+        "WhenUsable": true,
+        "Cooldown": 30000,
+        "Requirements": [
+          "Has Pet",
+          "Talent:Ghoul Frenzy"
+        ]
+      },
+      {
         "Name": "Trinket 1",
         "Key": "N1",
         "Item": true,
