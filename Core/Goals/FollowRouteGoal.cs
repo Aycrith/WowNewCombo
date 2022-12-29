@@ -22,7 +22,6 @@ namespace Core.Goals
         private readonly Wait wait;
         private readonly AddonReader addonReader;
         private readonly PlayerReader playerReader;
-        private readonly NpcNameFinder npcNameFinder;
         private readonly ClassConfiguration classConfig;
         private readonly MountHandler mountHandler;
         private readonly Navigation navigation;
@@ -39,8 +38,6 @@ namespace Core.Goals
         private CancellationTokenSource sideActivityCts;
 
         private Vector3[] mapRoute;
-
-        private bool shouldMount;
 
         private DateTime onEnterTime;
 
@@ -66,7 +63,10 @@ namespace Core.Goals
         #endregion
 
 
-        public FollowRouteGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, ClassConfiguration classConfig, Vector3[] route, Navigation navigation, MountHandler mountHandler, NpcNameFinder npcNameFinder, TargetFinder targetFinder, IBlacklist blacklist)
+        public FollowRouteGoal(ILogger logger, ConfigurableInput input, Wait wait,
+            AddonReader addonReader, ClassConfiguration classConfig, Vector3[] route,
+            Navigation navigation, IMountHandler mountHandler, TargetFinder targetFinder,
+            IBlacklist blacklist)
             : base(nameof(FollowRouteGoal))
         {
             this.logger = logger;
@@ -77,7 +77,6 @@ namespace Core.Goals
             this.classConfig = classConfig;
             this.playerReader = addonReader.PlayerReader;
             this.mapRoute = route;
-            this.npcNameFinder = npcNameFinder;
             this.mountHandler = mountHandler;
             this.targetFinder = targetFinder;
             this.targetBlacklist = blacklist;
@@ -162,14 +161,7 @@ namespace Core.Goals
                 navigation.Resume();
             }
 
-            if (!shouldMount &&
-                classConfig.UseMount &&
-                mountHandler.CanMount() &&
-                mountHandler.ShouldMount(navigation.TotalRoute.Last()))
-            {
-                shouldMount = true;
-                Log("Mount up since desination far away");
-            }
+            MountIfPossible();
         }
 
         public void OnGoapEvent(GoapEventArgs e)
@@ -263,12 +255,16 @@ namespace Core.Goals
             }
         }
 
-        private void MountIfRequired()
+        private void MountIfPossible()
         {
-            if (shouldMount && classConfig.UseMount && !npcNameFinder.MobsVisible &&
-                mountHandler.CanMount())
+            float totalDistance = VectorExt.TotalDistance<Vector3>(navigation.TotalRoute, VectorExt.WorldDistanceXY);
+
+            if (classConfig.UseMount && mountHandler.CanMount() &&
+                (MountHandler.ShouldMount(totalDistance) ||
+                (navigation.TotalRoute.Length > 0 &&
+                mountHandler.ShouldMount(navigation.TotalRoute[^1]))
+                ))
             {
-                shouldMount = false;
                 Log("Mount up");
                 mountHandler.MountUp();
                 navigation.ResetStuckParameters();
@@ -279,24 +275,21 @@ namespace Core.Goals
 
         private void Navigation_OnPathCalculated()
         {
-            MountIfRequired();
+            MountIfPossible();
         }
 
         private void Navigation_OnDestinationReached()
         {
             if (debug)
                 LogDebug("Navigation_OnDestinationReached");
+
             RefillWaypoints(false);
+            MountIfPossible();
         }
 
         private void Navigation_OnWayPointReached()
         {
-            if (classConfig.Mode == Mode.AttendedGather)
-            {
-                shouldMount = true;
-            }
-
-            MountIfRequired();
+            MountIfPossible();
         }
 
         public void RefillWaypoints(bool onlyClosest)
@@ -371,7 +364,8 @@ namespace Core.Goals
 
         private void RandomJump()
         {
-            if ((DateTime.UtcNow - onEnterTime).TotalSeconds > 5 && classConfig.Jump.SinceLastClickMs > Random.Shared.Next(10_000, 25_000))
+            if ((DateTime.UtcNow - onEnterTime).TotalSeconds > 5 &&
+                classConfig.Jump.SinceLastClickMs > Random.Shared.Next(10_000, 25_000))
             {
                 Log("Random jump");
                 input.Jump();

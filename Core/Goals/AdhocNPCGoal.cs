@@ -41,8 +41,6 @@ namespace Core.Goals
         private readonly ExecGameCommand execGameCommand;
         private readonly GossipReader gossipReader;
 
-        private bool shouldMount;
-
         private PathState pathState;
 
         #region IRouteProvider
@@ -113,6 +111,7 @@ namespace Core.Goals
             if (e.GetType() == typeof(ResumeEvent))
             {
                 navigation.ResetStuckParameters();
+                MountIfPossible();
             }
         }
 
@@ -125,13 +124,7 @@ namespace Core.Goals
 
             pathState = PathState.ApproachPathStart;
 
-            if (classConfig.UseMount &&
-                mountHandler.CanMount() && !shouldMount &&
-                mountHandler.ShouldMount(navigation.TotalRoute.Last()))
-            {
-                shouldMount = true;
-                Log("Mount up since desination far away");
-            }
+            MountIfPossible();
         }
 
         public override void OnExit()
@@ -148,8 +141,6 @@ namespace Core.Goals
 
             if (pathState != PathState.Finished)
                 navigation.Update();
-
-            MountIfRequired();
 
             wait.Update();
         }
@@ -240,15 +231,22 @@ namespace Core.Goals
             stopMoving.Stop();
 
             navigation.SimplifyRouteToWaypoint = true;
+            MountIfPossible();
         }
 
-
-        private void MountIfRequired()
+        private void MountIfPossible()
         {
-            if (shouldMount && mountHandler.CanMount())
+            float totalDistance = VectorExt.TotalDistance<Vector3>(navigation.TotalRoute, VectorExt.WorldDistanceXY);
+
+            if (classConfig.UseMount && mountHandler.CanMount() &&
+                (MountHandler.ShouldMount(totalDistance) ||
+                (navigation.TotalRoute.Length > 0 &&
+                mountHandler.ShouldMount(navigation.TotalRoute[^1]))
+                ))
             {
-                shouldMount = false;
+                Log("Mount up");
                 mountHandler.MountUp();
+                navigation.ResetStuckParameters();
             }
         }
 
