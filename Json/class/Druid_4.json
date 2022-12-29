@@ -27,8 +27,18 @@
         "HasCastBar": true
       },
       {
+        "Name": "AutoAttack",
+        "Requirements": [
+          "!Casting",
+          "!AutoAttacking"
+        ]
+      },
+      {
         "Name": "Approach",
-        "Log": false
+        "Requirements": [
+          "!Casting",
+          "AutoAttacking"
+        ]
       }
     ]
   },
