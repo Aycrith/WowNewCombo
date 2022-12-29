@@ -102,11 +102,11 @@ namespace Core
             }
         }
 
-        public bool ShouldMount(Vector3 target)
+        public bool ShouldMount(Vector3 targetW)
         {
-            Vector3 playerMap = playerReader.MapPos;
-            float mapDistance = playerMap.MapDistanceXYTo(target);
-            return mapDistance > DISTANCE_TO_MOUNT;
+            Vector3 playerW = playerReader.WorldPos;
+            float distance = playerW.WorldDistanceXYTo(targetW);
+            return distance > DISTANCE_TO_MOUNT;
         }
 
         public void Dismount()
