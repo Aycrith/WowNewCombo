@@ -234,6 +234,8 @@ namespace Core.Goals
             while (AdjustNextWaypointPointToClosest() && removed < 5) { removed++; };
             if (removed > 0)
             {
+                UpdateTotalRoute();
+
                 if (debug)
                     LogDebug($"Resume: removed {removed} waypoint!");
             }
