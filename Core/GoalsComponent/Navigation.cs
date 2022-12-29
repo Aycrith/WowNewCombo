@@ -32,7 +32,7 @@ namespace Core.Goals
         private readonly IPPather pather;
         private readonly MountHandler mountHandler;
 
-        private const float MinDistanceMount = 25;
+        private const float MinDistanceMount = 10;
         private readonly float MaxDistance = 200;
         private readonly float MinDistance = 5;
 
