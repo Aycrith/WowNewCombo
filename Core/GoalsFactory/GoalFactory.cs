@@ -62,7 +62,20 @@ namespace Core
             services.AddScoped<CastingHandler>();
             services.AddScoped<StuckDetector>();
             services.AddScoped<CombatUtil>();
-            services.AddScoped<MountHandler>();
+
+            if (addonReader.PlayerReader.Class is UnitClass.Druid)
+            {
+                logger.LogInformation($"[{nameof(GoalFactory)}] {nameof(IMountHandler)} is {nameof(DruidMountHandler)}");
+
+                services.AddScoped<MountHandler>();
+                services.AddScoped<IMountHandler, DruidMountHandler>();
+            }
+            else
+            {
+                logger.LogInformation($"[{nameof(GoalFactory)}] {nameof(IMountHandler)} is {nameof(MountHandler)}");
+                services.AddScoped<IMountHandler, MountHandler>();
+            }
+
             services.AddScoped<TargetFinder>();
 
             // each GoapGoal gets an individual instance
@@ -178,7 +191,7 @@ namespace Core
                     x.GetRequiredService<ILogger>(),
                     x.GetRequiredService<ConfigurableInput>(), x.GetRequiredService<Wait>(),
                     x.GetRequiredService<AddonReader>(), x.GetRequiredService<StopMoving>(),
-                    x.GetRequiredService<CastingHandler>(), x.GetRequiredService<MountHandler>()));
+                    x.GetRequiredService<CastingHandler>(), x.GetRequiredService<IMountHandler>()));
             }
         }
 
@@ -194,7 +207,7 @@ namespace Core
                     x.GetRequiredService<Wait>(), x.GetRequiredService<AddonReader>(),
                     x.GetRequiredService<Navigation>(), x.GetRequiredService<StopMoving>(),
                     x.GetRequiredService<NpcNameTargeting>(), x.GetRequiredService<ClassConfiguration>(),
-                    x.GetRequiredService<MountHandler>(), x.GetRequiredService<ExecGameCommand>(),
+                    x.GetRequiredService<IMountHandler>(), x.GetRequiredService<ExecGameCommand>(),
                     x.GetRequiredService<CancellationTokenSource>()));
             }
         }

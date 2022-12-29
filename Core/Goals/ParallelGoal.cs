@@ -15,13 +15,15 @@ namespace Core.Goals
         private readonly Wait wait;
         private readonly PlayerReader playerReader;
         private readonly CastingHandler castingHandler;
-        private readonly MountHandler mountHandler;
+        private readonly IMountHandler mountHandler;
 
         private static bool None() => false;
 
         private bool castSuccess;
 
-        public ParallelGoal(ILogger logger, ConfigurableInput input, Wait wait, PlayerReader playerReader, StopMoving stopMoving, ClassConfiguration classConfig, CastingHandler castingHandler, MountHandler mountHandler)
+        public ParallelGoal(ILogger logger, ConfigurableInput input, Wait wait,
+            PlayerReader playerReader, StopMoving stopMoving, ClassConfiguration classConfig,
+            CastingHandler castingHandler, IMountHandler mountHandler)
             : base(nameof(ParallelGoal))
         {
             this.logger = logger;

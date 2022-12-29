@@ -18,7 +18,7 @@ namespace Core.Goals
         private readonly StuckDetector stuckDetector;
         private readonly NpcNameTargeting npcNameTargeting;
         private readonly CastingHandler castingHandler;
-        private readonly MountHandler mountHandler;
+        private readonly IMountHandler mountHandler;
         private readonly CombatUtil combatUtil;
         private readonly IBlacklist targetBlacklist;
 
@@ -31,7 +31,11 @@ namespace Core.Goals
 
         private double PullDurationMs => (DateTime.UtcNow - pullStart).TotalMilliseconds;
 
-        public PullTargetGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, IBlacklist blacklist, StopMoving stopMoving, CastingHandler castingHandler, MountHandler mountHandler, NpcNameTargeting npcNameTargeting, StuckDetector stuckDetector, CombatUtil combatUtil)
+        public PullTargetGoal(ILogger logger, ConfigurableInput input, Wait wait,
+            AddonReader addonReader, IBlacklist blacklist, StopMoving stopMoving,
+            CastingHandler castingHandler, IMountHandler mountHandler,
+            NpcNameTargeting npcNameTargeting, StuckDetector stuckDetector,
+            CombatUtil combatUtil)
             : base(nameof(PullTargetGoal))
         {
             this.logger = logger;

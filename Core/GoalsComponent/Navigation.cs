@@ -30,7 +30,7 @@ namespace Core.Goals
         private readonly StopMoving stopMoving;
         private readonly StuckDetector stuckDetector;
         private readonly IPPather pather;
-        private readonly MountHandler mountHandler;
+        private readonly IMountHandler mountHandler;
 
         private const float MinDistanceMount = 10;
         private readonly float MaxDistance = 200;
@@ -69,7 +69,10 @@ namespace Core.Goals
         private int failedAttempt;
         private Vector3 lastFailedDestination;
 
-        public Navigation(ILogger logger, PlayerDirection playerDirection, ConfigurableInput input, AddonReader addonReader, StopMoving stopMoving, StuckDetector stuckDetector, IPPather pather, MountHandler mountHandler, ClassConfiguration classConfiguration)
+        public Navigation(ILogger logger, PlayerDirection playerDirection,
+            ConfigurableInput input, AddonReader addonReader, StopMoving stopMoving,
+            StuckDetector stuckDetector, IPPather pather, IMountHandler mountHandler,
+            ClassConfiguration classConfiguration)
         {
             this.logger = logger;
             this.playerDirection = playerDirection;

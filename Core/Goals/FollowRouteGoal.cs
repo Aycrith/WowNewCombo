@@ -23,7 +23,7 @@ namespace Core.Goals
         private readonly AddonReader addonReader;
         private readonly PlayerReader playerReader;
         private readonly ClassConfiguration classConfig;
-        private readonly MountHandler mountHandler;
+        private readonly IMountHandler mountHandler;
         private readonly Navigation navigation;
 
         private readonly IBlacklist targetBlacklist;

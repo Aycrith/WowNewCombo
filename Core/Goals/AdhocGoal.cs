@@ -18,11 +18,11 @@ namespace Core.Goals
 
         private readonly KeyAction key;
         private readonly CastingHandler castingHandler;
-        private readonly MountHandler mountHandler;
+        private readonly IMountHandler mountHandler;
 
         private readonly bool? combatMatters;
 
-        public AdhocGoal(KeyAction key, ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, StopMoving stopMoving, CastingHandler castingHandler, MountHandler mountHandler)
+        public AdhocGoal(KeyAction key, ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, StopMoving stopMoving, CastingHandler castingHandler, IMountHandler mountHandler)
             : base(nameof(AdhocGoal))
         {
             this.logger = logger;

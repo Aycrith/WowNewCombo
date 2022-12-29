@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Linq;
 using System.Threading;
+using SharedLib.Extensions;
 
 #pragma warning disable 162
 
@@ -36,7 +37,7 @@ namespace Core.Goals
         private readonly StopMoving stopMoving;
         private readonly ClassConfiguration classConfig;
         private readonly NpcNameTargeting npcNameTargeting;
-        private readonly MountHandler mountHandler;
+        private readonly IMountHandler mountHandler;
         private readonly CancellationToken ct;
         private readonly ExecGameCommand execGameCommand;
         private readonly GossipReader gossipReader;
@@ -67,7 +68,7 @@ namespace Core.Goals
         public AdhocNPCGoal(KeyAction key, ILogger logger, ConfigurableInput input,
             Wait wait, AddonReader addonReader, Navigation navigation, StopMoving stopMoving,
             NpcNameTargeting npcNameTargeting, ClassConfiguration classConfig,
-            MountHandler mountHandler, ExecGameCommand exec, CancellationTokenSource cts)
+            IMountHandler mountHandler, ExecGameCommand exec, CancellationTokenSource cts)
             : base(nameof(AdhocNPCGoal))
         {
             this.logger = logger;
