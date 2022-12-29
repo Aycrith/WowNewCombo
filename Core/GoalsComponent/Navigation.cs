@@ -272,20 +272,20 @@ namespace Core.Goals
             return WorldMapAreaDB.ToMap_FlipXY(routeToNextWaypoint.Peek(), playerReader.WorldMapArea);
         }
 
-        public void SetWayPoints(Vector3[] mapPoints)
+        public void SetWayPoints(Span<Vector3> mapPoints)
         {
             wayPoints.Clear();
             routeToNextWaypoint.Clear();
 
             float mapDistanceXY = 0;
-            Array.Reverse(mapPoints);
-            for (int i = 0; i < mapPoints.Length; i++)
+            WorldMapArea wma = playerReader.WorldMapArea;
+            for (int i = mapPoints.Length - 1; i >= 0; i--)
             {
-                Vector3 worldPos = WorldMapAreaDB.ToWorld_FlipXY(mapPoints[i], playerReader.WorldMapArea);
-                if (i > 0)
+                Vector3 worldPos = WorldMapAreaDB.ToWorld_FlipXY(mapPoints[i], wma);
+                if (i != mapPoints.Length - 1)
                 {
-                    Vector3 last = wayPoints.Peek();
-                    mapDistanceXY += worldPos.WorldDistanceXYTo(last);
+                    Vector3 prev = wayPoints.Peek();
+                    mapDistanceXY += worldPos.WorldDistanceXYTo(prev);
                 }
                 wayPoints.Push(worldPos);
             }
@@ -365,8 +365,7 @@ namespace Core.Goals
             failedAttempt = 0;
             LogPathfinderSuccess(logger, result.Distance, result.StartW, result.EndW, result.ElapsedMs);
 
-            Array.Reverse(result.Path);
-            for (int i = 0; i < result.Path.Length; i++)
+            for (int i = result.Path.Length - 1; i >= 0; i--)
             {
                 routeToNextWaypoint.Push(result.Path[i]);
             }
@@ -501,11 +500,13 @@ namespace Core.Goals
 
         private void SimplyfyRouteToWaypoint()
         {
-            Vector3[] reduced = PathSimplify.Simplify(routeToNextWaypoint.ToArray(), MinDistance / 4);
-            Array.Reverse(reduced);
+            const bool HighQuality = false;
+            Span<Vector3> reduced = PathSimplify.Simplify(routeToNextWaypoint.ToArray(), MinDistance / 2, HighQuality);
+            if (debug)
+                LogDebug($"{nameof(SimplyfyRouteToWaypoint)} {routeToNextWaypoint.Count} -> {reduced.Length} | HQ: {HighQuality}");
 
             routeToNextWaypoint.Clear();
-            for (int i = 0; i < reduced.Length; i++)
+            for (int i = reduced.Length - 1; i >= 0; i--)
             {
                 routeToNextWaypoint.Push(reduced[i]);
             }
