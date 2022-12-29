@@ -499,7 +499,7 @@ namespace Core
             string key = $"CD_{item.Name}";
             if (!intVariables.ContainsKey(key))
             {
-                intVariables.Add(key, () => reader.GetRemainingCooldown(item));
+                intVariables.Add(key, () => reader.Get(item));
             }
         }
 
