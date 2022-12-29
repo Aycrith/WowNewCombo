@@ -38,7 +38,7 @@
                 {
                     int Cooldown = 0;
                     if (this.goal.Keys[k].Slot > 0)
-                        Cooldown = addonReader.ActionBarCooldownReader.GetRemainingCooldown(this.goal.Keys[k]);
+                        Cooldown = addonReader.ActionBarCooldownReader.Get(this.goal.Keys[k]);
 
                     <tr class="@ActionClass(lastKeyClicked == this.goal.Keys[k].ConsoleKeyFormHash, Cooldown)">
                         <td>

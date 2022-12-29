@@ -22,9 +22,8 @@ namespace Core.Goals
         private readonly Wait wait;
         private readonly AddonReader addonReader;
         private readonly PlayerReader playerReader;
-        private readonly NpcNameFinder npcNameFinder;
         private readonly ClassConfiguration classConfig;
-        private readonly MountHandler mountHandler;
+        private readonly IMountHandler mountHandler;
         private readonly Navigation navigation;
 
         private readonly IBlacklist targetBlacklist;
@@ -39,8 +38,6 @@ namespace Core.Goals
         private CancellationTokenSource sideActivityCts;
 
         private Vector3[] mapRoute;
-
-        private bool shouldMount;
 
         private DateTime onEnterTime;
 
@@ -66,7 +63,10 @@ namespace Core.Goals
         #endregion
 
 
-        public FollowRouteGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, ClassConfiguration classConfig, Vector3[] route, Navigation navigation, MountHandler mountHandler, NpcNameFinder npcNameFinder, TargetFinder targetFinder, IBlacklist blacklist)
+        public FollowRouteGoal(ILogger logger, ConfigurableInput input, Wait wait,
+            AddonReader addonReader, ClassConfiguration classConfig, Vector3[] route,
+            Navigation navigation, IMountHandler mountHandler, TargetFinder targetFinder,
+            IBlacklist blacklist)
             : base(nameof(FollowRouteGoal))
         {
             this.logger = logger;
@@ -77,7 +77,6 @@ namespace Core.Goals
             this.classConfig = classConfig;
             this.playerReader = addonReader.PlayerReader;
             this.mapRoute = route;
-            this.npcNameFinder = npcNameFinder;
             this.mountHandler = mountHandler;
             this.targetFinder = targetFinder;
             this.targetBlacklist = blacklist;
@@ -162,14 +161,7 @@ namespace Core.Goals
                 navigation.Resume();
             }
 
-            if (!shouldMount &&
-                classConfig.UseMount &&
-                mountHandler.CanMount() &&
-                mountHandler.ShouldMount(navigation.TotalRoute.Last()))
-            {
-                shouldMount = true;
-                Log("Mount up since desination far away");
-            }
+            MountIfPossible();
         }
 
         public void OnGoapEvent(GoapEventArgs e)
@@ -263,12 +255,16 @@ namespace Core.Goals
             }
         }
 
-        private void MountIfRequired()
+        private void MountIfPossible()
         {
-            if (shouldMount && classConfig.UseMount && !npcNameFinder.MobsVisible &&
-                mountHandler.CanMount())
+            float totalDistance = VectorExt.TotalDistance<Vector3>(navigation.TotalRoute, VectorExt.WorldDistanceXY);
+
+            if (classConfig.UseMount && mountHandler.CanMount() &&
+                (MountHandler.ShouldMount(totalDistance) ||
+                (navigation.TotalRoute.Length > 0 &&
+                mountHandler.ShouldMount(navigation.TotalRoute[^1]))
+                ))
             {
-                shouldMount = false;
                 Log("Mount up");
                 mountHandler.MountUp();
                 navigation.ResetStuckParameters();
@@ -279,54 +275,66 @@ namespace Core.Goals
 
         private void Navigation_OnPathCalculated()
         {
-            MountIfRequired();
+            MountIfPossible();
         }
 
         private void Navigation_OnDestinationReached()
         {
             if (debug)
                 LogDebug("Navigation_OnDestinationReached");
+
             RefillWaypoints(false);
+            MountIfPossible();
         }
 
         private void Navigation_OnWayPointReached()
         {
-            if (classConfig.Mode == Mode.AttendedGather)
-            {
-                shouldMount = true;
-            }
-
-            MountIfRequired();
+            MountIfPossible();
         }
 
         public void RefillWaypoints(bool onlyClosest)
         {
-            Log($"RefillWaypoints - findClosest:{onlyClosest} - ThereAndBack:{input.ClassConfig.PathThereAndBack}");
+            Log($"{nameof(RefillWaypoints)} - findClosest:{onlyClosest} - ThereAndBack:{input.ClassConfig.PathThereAndBack}");
 
             Vector3 playerMap = playerReader.MapPos;
-            Vector3[] pathMap = mapRoute.ToArray();
+
+            Span<Vector3> pathMap = stackalloc Vector3[mapRoute.Length];
+            mapRoute.CopyTo(pathMap);
 
             float mapDistanceToFirst = playerMap.MapDistanceXYTo(pathMap[0]);
             float mapDistanceToLast = playerMap.MapDistanceXYTo(pathMap[^1]);
 
             if (mapDistanceToLast < mapDistanceToFirst)
             {
-                Array.Reverse(pathMap);
+                pathMap.Reverse();
             }
 
-            Vector3 mapClosestPoint = pathMap.OrderBy(p => playerMap.MapDistanceXYTo(p)).First();
+            int closestIndex = 0;
+            Vector3 mapClosestPoint = Vector3.Zero;
+            float distance = float.MaxValue;
+
+            for (int i = 0; i < pathMap.Length; i++)
+            {
+                Vector3 p = pathMap[i];
+                float d = playerMap.MapDistanceXYTo(p);
+                if (d < distance)
+                {
+                    distance = d;
+                    closestIndex = i;
+                    mapClosestPoint = p;
+                }
+            }
+
             if (onlyClosest)
             {
-                var closestPath = new Vector3[] { mapClosestPoint };
-
                 if (debug)
-                    LogDebug($"RefillWaypoints: Closest wayPoint: {mapClosestPoint}");
-                navigation.SetWayPoints(closestPath);
+                    LogDebug($"{nameof(RefillWaypoints)}: Closest wayPoint: {mapClosestPoint}");
+
+                navigation.SetWayPoints(stackalloc Vector3[1] { mapClosestPoint });
 
                 return;
             }
 
-            int closestIndex = Array.IndexOf(pathMap, mapClosestPoint);
             if (mapClosestPoint == pathMap[0] || mapClosestPoint == pathMap[^1])
             {
                 if (input.ClassConfig.PathThereAndBack)
@@ -335,29 +343,29 @@ namespace Core.Goals
                 }
                 else
                 {
-                    Array.Reverse(pathMap);
+                    pathMap.Reverse();
                     navigation.SetWayPoints(pathMap);
                 }
             }
             else
             {
-                Vector3[] points = pathMap.Take(closestIndex).ToArray();
-                Array.Reverse(points);
-                Log($"RefillWaypoints - Set destination from closest to nearest endpoint - with {points.Length} waypoints");
+                Span<Vector3> points = pathMap[closestIndex..];
+                Log($"{nameof(RefillWaypoints)} - Set destination from closest to nearest endpoint - with {points.Length} waypoints");
                 navigation.SetWayPoints(points);
             }
         }
 
         #endregion
 
-        public void ReceivePath(Vector3[] newMapRoute)
+        public void ReceivePath(Vector3[] mapRoute)
         {
-            mapRoute = newMapRoute;
+            this.mapRoute = mapRoute;
         }
 
         private void RandomJump()
         {
-            if ((DateTime.UtcNow - onEnterTime).TotalSeconds > 5 && classConfig.Jump.SinceLastClickMs > Random.Shared.Next(10_000, 25_000))
+            if ((DateTime.UtcNow - onEnterTime).TotalSeconds > 5 &&
+                classConfig.Jump.SinceLastClickMs > Random.Shared.Next(10_000, 25_000))
             {
                 Log("Random jump");
                 input.Jump();

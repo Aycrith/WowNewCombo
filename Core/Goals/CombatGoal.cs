@@ -19,13 +19,16 @@ namespace Core.Goals
         private readonly PlayerReader playerReader;
         private readonly StopMoving stopMoving;
         private readonly CastingHandler castingHandler;
-        private readonly MountHandler mountHandler;
+        private readonly IMountHandler mountHandler;
 
         private float lastDirection;
         private float lastMinDistance;
         private float lastMaxDistance;
 
-        public CombatGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, StopMoving stopMoving, ClassConfiguration classConfiguration, CastingHandler castingHandler, MountHandler mountHandler)
+        public CombatGoal(ILogger logger, ConfigurableInput input, Wait wait,
+            AddonReader addonReader, StopMoving stopMoving,
+            ClassConfiguration classConfiguration, CastingHandler castingHandler,
+            IMountHandler mountHandler)
             : base(nameof(CombatGoal))
         {
             this.logger = logger;

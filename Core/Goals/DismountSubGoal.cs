@@ -6,9 +6,9 @@ namespace Core.Goals
     {
         public override float Cost => 0.5f;
 
-        private readonly MountHandler mountHandler;
+        private readonly IMountHandler mountHandler;
 
-        public DismountSubGoal(MountHandler mountHandler)
+        public DismountSubGoal(IMountHandler mountHandler)
             : base(nameof(DismountSubGoal))
         {
             this.mountHandler = mountHandler;

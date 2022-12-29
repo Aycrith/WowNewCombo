@@ -197,6 +197,7 @@ namespace Core
             Mount.Key = MountKey;
             Mount.Name = nameof(Mount);
             Mount.BaseAction = true;
+            Mount.Cooldown = 6000;
             Mount.Initialise(this, addonReader, requirementFactory, logger, Log);
 
             Hearthstone.Key = HearthstoneKey;

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Linq;
 using System.Threading;
+using SharedLib.Extensions;
 
 #pragma warning disable 162
 
@@ -36,12 +37,10 @@ namespace Core.Goals
         private readonly StopMoving stopMoving;
         private readonly ClassConfiguration classConfig;
         private readonly NpcNameTargeting npcNameTargeting;
-        private readonly MountHandler mountHandler;
+        private readonly IMountHandler mountHandler;
         private readonly CancellationToken ct;
         private readonly ExecGameCommand execGameCommand;
         private readonly GossipReader gossipReader;
-
-        private bool shouldMount;
 
         private PathState pathState;
 
@@ -69,7 +68,7 @@ namespace Core.Goals
         public AdhocNPCGoal(KeyAction key, ILogger logger, ConfigurableInput input,
             Wait wait, AddonReader addonReader, Navigation navigation, StopMoving stopMoving,
             NpcNameTargeting npcNameTargeting, ClassConfiguration classConfig,
-            MountHandler mountHandler, ExecGameCommand exec, CancellationTokenSource cts)
+            IMountHandler mountHandler, ExecGameCommand exec, CancellationTokenSource cts)
             : base(nameof(AdhocNPCGoal))
         {
             this.logger = logger;
@@ -113,6 +112,7 @@ namespace Core.Goals
             if (e.GetType() == typeof(ResumeEvent))
             {
                 navigation.ResetStuckParameters();
+                MountIfPossible();
             }
         }
 
@@ -121,17 +121,11 @@ namespace Core.Goals
             input.ClearTarget();
             stopMoving.Stop();
 
-            navigation.SetWayPoints(key.Path.ToArray());
+            navigation.SetWayPoints(key.Path);
 
             pathState = PathState.ApproachPathStart;
 
-            if (classConfig.UseMount &&
-                mountHandler.CanMount() && !shouldMount &&
-                mountHandler.ShouldMount(navigation.TotalRoute.Last()))
-            {
-                shouldMount = true;
-                Log("Mount up since desination far away");
-            }
+            MountIfPossible();
         }
 
         public override void OnExit()
@@ -148,8 +142,6 @@ namespace Core.Goals
 
             if (pathState != PathState.Finished)
                 navigation.Update();
-
-            MountIfRequired();
 
             wait.Update();
         }
@@ -180,6 +172,7 @@ namespace Core.Goals
             if (!classConfig.KeyboardOnly)
             {
                 npcNameTargeting.ChangeNpcType(NpcNames.Friendly | NpcNames.Neutral);
+                npcNameTargeting.WaitForUpdate();
                 npcNameTargeting.WaitForUpdate();
                 found = npcNameTargeting.FindBy(CursorType.Vendor, CursorType.Repair, CursorType.Innkeeper);
                 wait.Update();
@@ -215,8 +208,9 @@ namespace Core.Goals
             input.ClearTarget();
             wait.Update();
 
-            Vector3[] reverseMapPath = key.Path.ToArray();
-            Array.Reverse(reverseMapPath);
+            Span<Vector3> reverseMapPath = stackalloc Vector3[key.Path.Length];
+            key.Path.CopyTo(reverseMapPath);
+            reverseMapPath.Reverse();
             navigation.SetWayPoints(reverseMapPath);
 
             pathState++;
@@ -239,15 +233,22 @@ namespace Core.Goals
             stopMoving.Stop();
 
             navigation.SimplifyRouteToWaypoint = true;
+            MountIfPossible();
         }
 
-
-        private void MountIfRequired()
+        private void MountIfPossible()
         {
-            if (shouldMount && mountHandler.CanMount())
+            float totalDistance = VectorExt.TotalDistance<Vector3>(navigation.TotalRoute, VectorExt.WorldDistanceXY);
+
+            if (classConfig.UseMount && mountHandler.CanMount() &&
+                (MountHandler.ShouldMount(totalDistance) ||
+                (navigation.TotalRoute.Length > 0 &&
+                mountHandler.ShouldMount(navigation.TotalRoute[^1]))
+                ))
             {
-                shouldMount = false;
+                Log("Mount up");
                 mountHandler.MountUp();
+                navigation.ResetStuckParameters();
             }
         }
 

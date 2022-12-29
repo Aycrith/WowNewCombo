@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
@@ -86,6 +87,18 @@ namespace SharedLib.Extensions
             }
         }
 
+        public static float TotalDistance<T>(Span<T> points, Func<T, T, float> accumulator)
+        {
+            if (points.Length <= 1)
+                return 0f;
+
+            float totalDistance = 0f;
+            for (int i = 1; i < points.Length; i++)
+            {
+                totalDistance += accumulator(points[i - 1], points[i]);
+            }
+            return totalDistance;
+        }
 
         public static Vector2 AsVector2(this Vector3 v3)
         {

@@ -50,7 +50,7 @@ namespace Core
             }
         }
 
-        public int GetRemainingCooldown(KeyAction keyAction)
+        public int Get(KeyAction keyAction)
         {
             int index = keyAction.SlotIndex;
             return Math.Clamp((int)(data[index].StartTime.AddSeconds(data[index].DurationSec) - DateTime.UtcNow).TotalMilliseconds, 0, int.MaxValue);

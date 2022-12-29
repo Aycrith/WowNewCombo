@@ -81,12 +81,12 @@ namespace Core.Goals
             wait.While(AliveOrLoadingScreen);
             Log($"Player teleported to the graveyard!");
 
-            var corpseLocation = playerReader.CorpseMapPos;
+            Vector3 corpseLocation = playerReader.CorpseMapPos;
             Log($"Corpse location is {corpseLocation}");
 
             Deaths.Add(corpseLocation);
 
-            navigation.SetWayPoints(new Vector3[] { corpseLocation });
+            navigation.SetWayPoints(stackalloc Vector3[] { corpseLocation });
 
             onEnterTime = DateTime.UtcNow;
         }
