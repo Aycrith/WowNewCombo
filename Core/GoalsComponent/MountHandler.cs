@@ -1,13 +1,15 @@
 using Core.Goals;
+
 using Microsoft.Extensions.Logging;
+
 using SharedLib.Extensions;
+
 using System.Numerics;
 
 namespace Core
 {
-    public sealed class MountHandler
+    public sealed class MountHandler : IMountHandler
     {
-        private const int MIN_LEVEL_TO_MOUNT = 30;
         private const int DISTANCE_TO_MOUNT = 40;
 
         private const int MIN_DISTANCE_TO_INTERRUPT_CAST = 60;
@@ -16,58 +18,44 @@ namespace Core
         private readonly ConfigurableInput input;
         private readonly ClassConfiguration classConfig;
         private readonly Wait wait;
-        private readonly AddonReader addonReader;
+        private readonly ActionBarBits usableAction;
+        private readonly ActionBarCooldownReader cooldownReader;
         private readonly PlayerReader playerReader;
-        private readonly CastingHandler castingHandler;
+        private readonly AddonBits bits;
         private readonly StopMoving stopMoving;
         private readonly IBlacklist targetBlacklist;
 
-        public MountHandler(ILogger logger, ConfigurableInput input, ClassConfiguration classConfig, Wait wait, AddonReader addonReader, CastingHandler castingHandler, StopMoving stopMoving, IBlacklist blacklist)
+        public MountHandler(ILogger logger, ConfigurableInput input,
+            ClassConfiguration classConfig, Wait wait, AddonReader addonReader,
+            StopMoving stopMoving, IBlacklist blacklist)
         {
             this.logger = logger;
             this.classConfig = classConfig;
             this.input = input;
             this.wait = wait;
-            this.addonReader = addonReader;
+            this.usableAction = addonReader.UsableAction;
+            this.cooldownReader = addonReader.ActionBarCooldownReader;
             this.playerReader = addonReader.PlayerReader;
-            this.castingHandler = castingHandler;
+            this.bits = playerReader.Bits;
             this.stopMoving = stopMoving;
             this.targetBlacklist = blacklist;
         }
 
         public bool CanMount()
         {
-            return playerReader.Level.Value >= MIN_LEVEL_TO_MOUNT &&
-                !playerReader.Bits.IsIndoors() &&
-                !playerReader.Bits.PlayerInCombat() &&
-                !playerReader.Bits.IsSwimming() &&
-                !playerReader.Bits.IsFalling() &&
+            return
                 !IsMounted() &&
-                addonReader.UsableAction.Is(classConfig.Mount) &&
-                addonReader.ActionBarCooldownReader.GetRemainingCooldown(classConfig.Mount) == 0;
+                !bits.IsIndoors() &&
+                !bits.PlayerInCombat() &&
+                !bits.IsSwimming() &&
+                !bits.IsFalling() &&
+                usableAction.Is(classConfig.Mount) &&
+                cooldownReader.Get(classConfig.Mount) == 0;
         }
 
         public void MountUp()
         {
-            if (playerReader.Class == UnitClass.Druid)
-            {
-                KeyAction? keyAction = null;
-                for (int i = 0; i < classConfig.Form.Length; i++)
-                {
-                    keyAction = classConfig.Form[i];
-                    if (keyAction.FormEnum is Form.Druid_Flight or Form.Druid_Travel)
-                    {
-                        break;
-                    }
-                }
-
-                if (keyAction != null && castingHandler.SwitchForm(keyAction))
-                {
-                    return;
-                }
-            }
-
-            wait.While(playerReader.Bits.IsFalling);
+            wait.While(bits.IsFalling);
 
             stopMoving.Stop();
             wait.Update();
@@ -78,7 +66,7 @@ namespace Core
                 wait.Until(CastingHandler.SPELL_QUEUE + playerReader.NetworkLatency.Value, CastDetected);
             Log($"Cast started ? {!t} {e}ms");
 
-            if (!playerReader.Bits.IsMounted())
+            if (!bits.IsMounted())
             {
                 wait.Update();
 
@@ -89,12 +77,12 @@ namespace Core
                 if (!HasValidTarget())
                 {
                     (t, e) =
-                        wait.Until(CastingHandler.SPELL_QUEUE + playerReader.NetworkLatency.Value, playerReader.Bits.IsMounted);
+                        wait.Until(CastingHandler.SPELL_QUEUE + playerReader.NetworkLatency.Value, bits.IsMounted);
 
-                    Log($"Mounted ? {playerReader.Bits.IsMounted()} {e}ms");
+                    Log($"Mounted ? {bits.IsMounted()} {e}ms");
                 }
 
-                if (playerReader.Bits.PlayerInCombat() && playerReader.Bits.HasTarget() && !playerReader.Bits.TargetOfTargetIsPlayerOrPet())
+                if (bits.PlayerInCombat() && bits.HasTarget() && !bits.TargetOfTargetIsPlayerOrPet())
                 {
                     input.ClearTarget();
                     wait.Update();
@@ -109,42 +97,33 @@ namespace Core
             return distance > DISTANCE_TO_MOUNT;
         }
 
+        public static bool ShouldMount(float totalDistance)
+        {
+            return totalDistance > DISTANCE_TO_MOUNT;
+        }
+
         public void Dismount()
         {
-            if (playerReader.Form is Form.Druid_Flight or Form.Druid_Travel)
-            {
-                int index = -1;
-                for (int i = 0; i < classConfig.Form.Length; i++)
-                {
-                    if (classConfig.Form[i].FormEnum == playerReader.Form)
-                    {
-                        index = i;
-                        break;
-                    }
-                }
-
-                if (index > -1)
-                {
-                    input.Proc.KeyPress(classConfig.Form[index].ConsoleKey, input.defaultKeyPress);
-                    return;
-                }
-            }
-
             input.Dismount();
         }
 
         public bool IsMounted()
         {
-            return (playerReader.Class == UnitClass.Druid &&
-                playerReader.Form is Form.Druid_Flight or Form.Druid_Travel)
-                || playerReader.Bits.IsMounted();
+            return bits.IsMounted();
         }
 
-        private bool CastDetected() => playerReader.Bits.IsMounted() || playerReader.IsCasting();
+        private bool CastDetected() =>
+            bits.IsMounted() || playerReader.IsCasting();
 
-        private bool MountedOrNotCastingOrValidTargetOrEnteredCombat() => playerReader.Bits.IsMounted() || !playerReader.IsCasting() || HasValidTarget() || playerReader.Bits.PlayerInCombat();
+        private bool MountedOrNotCastingOrValidTargetOrEnteredCombat() =>
+            bits.IsMounted() ||
+            !playerReader.IsCasting() ||
+            HasValidTarget() ||
+            bits.PlayerInCombat();
 
-        private bool HasValidTarget() => playerReader.Bits.HasTarget() && !targetBlacklist.Is() && playerReader.MinRange() < MIN_DISTANCE_TO_INTERRUPT_CAST;
+        private bool HasValidTarget() =>
+            bits.HasTarget() && !targetBlacklist.Is() &&
+            playerReader.MinRange() < MIN_DISTANCE_TO_INTERRUPT_CAST;
 
         private void Log(string text)
         {
