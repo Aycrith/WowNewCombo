@@ -350,9 +350,9 @@ namespace Core.Goals
 
         #endregion
 
-        public void ReceivePath(Vector3[] newMapRoute)
+        public void ReceivePath(Vector3[] mapRoute)
         {
-            mapRoute = newMapRoute;
+            this.mapRoute = mapRoute;
         }
 
         private void RandomJump()

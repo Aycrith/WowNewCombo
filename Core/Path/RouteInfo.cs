@@ -83,9 +83,9 @@ namespace Core
             areaDB.Changed -= OnZoneChanged;
         }
 
-        public void UpdateRoute(Vector3[] newMapRoute)
+        public void UpdateRoute(Vector3[] mapRoute)
         {
-            Route = newMapRoute;
+            Route = mapRoute;
 
             foreach (IEditedRouteReceiver receiver in pathedRoutes.OfType<IEditedRouteReceiver>())
             {
