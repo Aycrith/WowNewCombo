@@ -471,7 +471,7 @@ namespace Core.Goals
 
         private void V1_AttemptToKeepRouteToWaypoint()
         {
-            float totalDistance = TotalRoute.Zip(TotalRoute.Skip(1), VectorExt.WorldDistanceXY).Sum();
+            float totalDistance = VectorExt.TotalDistance<Vector3>(TotalRoute, VectorExt.WorldDistanceXY);
             if (totalDistance > MaxDistance / 2)
             {
                 Vector3 playerW = playerReader.WorldPos;
