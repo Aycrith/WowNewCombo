@@ -72,7 +72,7 @@ namespace Core
 
                 Sequence = keyActions;
 
-                logger.LogInformation($"[{nameof(WaitKeyActions)}] Added awaiting action for {RequirementFactory.Food}");
+                LogAddedWait(logger, nameof(WaitKeyActions), RequirementFactory.Food);
             }
 
             if (drinkExists)
@@ -93,9 +93,19 @@ namespace Core
 
                 Sequence = keyActions;
 
-                logger.LogInformation($"[{nameof(WaitKeyActions)}] Added awaiting action for {RequirementFactory.Drink}");
+                LogAddedWait(logger, nameof(WaitKeyActions), RequirementFactory.Drink);
             }
         }
+
+        #region logging
+
+        [LoggerMessage(
+            EventId = 12,
+            Level = LogLevel.Information,
+            Message = "[{typeName}] Added awaiting action for {keyActionName}")]
+        static partial void LogAddedWait(ILogger logger, string typeName, string keyActionName);
+
+        #endregion
 
     }
 }

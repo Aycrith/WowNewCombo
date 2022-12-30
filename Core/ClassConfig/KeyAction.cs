@@ -106,11 +106,11 @@ namespace Core
         {
             if (!KeyReader.ReadKey(logger, this) && !BaseAction)
             {
-                logger.LogWarning($"[{Name}] has no valid {nameof(Key)}=\"{Key}\" or {nameof(ConsoleKey)}=\"{ConsoleKey}\"");
+                LogInputNoValidKey(logger, Name, Key, ConsoleKey);
             }
             else if (Slot == 0)
             {
-                logger.LogInformation($"[{Name}] Non Actionbar \"{Key}\" -> {ConsoleKey}");
+                LogInputNonActionbar(logger, Name, Key, ConsoleKey);
             }
         }
 
@@ -154,7 +154,7 @@ namespace Core
                 if (Enum.TryParse(Form, out Form desiredForm))
                 {
                     this.FormEnum = desiredForm;
-                    this.logger.LogInformation($"[{Name}] Required Form: {FormEnum.ToStringF()}");
+                    LogFormRequired(logger, Name, FormEnum.ToStringF());
 
                     if (!FormAction)
                     {
@@ -176,7 +176,7 @@ namespace Core
             if (Slot > 0)
             {
                 this.SlotIndex = Stance.ToSlot(this, addonReader.PlayerReader) - 1;
-                this.logger.LogInformation($"[{Name}] Actionbar Key:{Key} -> Actionbar:{Slot} -> Index:{SlotIndex}");
+                LogInputActionbar(logger, Name, Key, Slot, SlotIndex);
             }
 
             ConsoleKeyFormHash = ((int)FormEnum * 1000) + (int)ConsoleKey;
@@ -187,6 +187,10 @@ namespace Core
 
             requirementFactory.InitialiseRequirements(this);
 
+            if (!string.IsNullOrEmpty(PathFilename))
+            {
+                LogPath(logger, Name, PathFilename);
+            }
         }
 
         public void Dispose()
@@ -400,6 +404,36 @@ namespace Core
         }
 
         #region Logging
+
+        [LoggerMessage(
+            EventId = 4,
+            Level = LogLevel.Information,
+            Message = "[{name}] Path: {path}")]
+        static partial void LogPath(ILogger logger, string name, string path);
+
+        [LoggerMessage(
+            EventId = 5,
+            Level = LogLevel.Information,
+            Message = "[{name}] Required Form: {form}")]
+        static partial void LogFormRequired(ILogger logger, string name, string form);
+
+        [LoggerMessage(
+            EventId = 6,
+            Level = LogLevel.Information,
+            Message = "[{name}] Actionbar Key:{key} -> Actionbar:{slot} -> Index:{slotIndex}")]
+        static partial void LogInputActionbar(ILogger logger, string name, string key, int slot, int slotIndex);
+
+        [LoggerMessage(
+            EventId = 7,
+            Level = LogLevel.Information,
+            Message = "[{name}] Non Actionbar {key} -> {consoleKey}")]
+        static partial void LogInputNonActionbar(ILogger logger, string name, string key, ConsoleKey consoleKey);
+
+        [LoggerMessage(
+            EventId = 8,
+            Level = LogLevel.Warning,
+            Message = "[{name}] has no valid Key={key} or ConsoleKey={consoleKey}")]
+        static partial void LogInputNoValidKey(ILogger logger, string name, string key, ConsoleKey consoleKey);
 
         [LoggerMessage(
             EventId = 9,

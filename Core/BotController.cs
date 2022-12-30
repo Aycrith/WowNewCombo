@@ -19,7 +19,7 @@ using System.Numerics;
 
 namespace Core
 {
-    public sealed class BotController : IBotController, IDisposable
+    public sealed partial class BotController : IBotController, IDisposable
     {
         private readonly WowProcess wowProcess;
         private readonly WowProcessInput wowProcessInput;
@@ -233,7 +233,7 @@ namespace Core
 
             Initialize(ClassConfig);
 
-            logger.LogInformation($"[{nameof(BotController)}] Elapsed time: {Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds}ms");
+            LogProfileLoadedTime(logger, nameof(BotController), Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds);
 
             return true;
         }
@@ -282,7 +282,7 @@ namespace Core
             RequirementFactory requirementFactory = new(logger, AddonReader, npcNameFinder, classConfig.ImmunityBlacklist);
             classConfig.Initialise(dataConfig, AddonReader, requirementFactory, logger, pathFile);
 
-            logger.LogInformation($"[{nameof(BotController)}] Profile Loaded `{classFile}` with `{classConfig.PathFilename}`.");
+            LogProfileLoaded(logger, nameof(BotController), classFile, classConfig.PathFilename);
 
             return classConfig;
         }
@@ -358,5 +358,21 @@ namespace Core
             this.ClassConfig = classConfig;
             Initialize(this.ClassConfig);
         }
+
+        #region logging
+
+        [LoggerMessage(
+            EventId = 200,
+            Level = LogLevel.Information,
+            Message = "[{typeName}] Elapsed time: {time} ms")]
+        static partial void LogProfileLoadedTime(ILogger logger, string typeName, double time);
+
+        [LoggerMessage(
+            EventId = 201,
+            Level = LogLevel.Information,
+            Message = "[{typeName}] ClassConfig: {profile} with Path: {path}")]
+        static partial void LogProfileLoaded(ILogger logger, string typeName, string profile, string path);
+
+        #endregion
     }
 }
