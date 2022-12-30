@@ -530,16 +530,16 @@ namespace Core
 
         private void AddTargetIsCastingRequirement(List<Requirement> list, KeyAction item, PlayerReader playerReader)
         {
-            if (item.UseWhenTargetIsCasting != null)
+            if (item.UseWhenTargetIsCasting == null)
+                return;
+
+            bool f() => playerReader.IsTargetCasting() == item.UseWhenTargetIsCasting.Value;
+            string l() => "Target casting";
+            list.Add(new Requirement
             {
-                bool f() => playerReader.IsTargetCasting() == item.UseWhenTargetIsCasting.Value;
-                string l() => "Target casting";
-                list.Add(new Requirement
-                {
-                    HasRequirement = f,
-                    LogMessage = l
-                });
-            }
+                HasRequirement = f,
+                LogMessage = l
+            });
         }
 
         private void AddMinRequirement(List<Requirement> list, KeyAction item)
@@ -690,19 +690,23 @@ namespace Core
             item.Requirements.Add("!Falling");
         }
 
-        private void AddSpellSchoolRequirement(List<Requirement> list, KeyAction item, PlayerReader playerReader, Dictionary<int, SchoolMask[]> immunityBlacklist)
+        private void AddSpellSchoolRequirement(List<Requirement> list, KeyAction item,
+            PlayerReader playerReader, Dictionary<int, SchoolMask[]> immunityBlacklist)
         {
-            if (item.School != SchoolMask.None)
+            if (item.School == SchoolMask.None)
+                return;
+
+            bool f() =>
+                !immunityBlacklist.TryGetValue(playerReader.TargetId, out SchoolMask[]? immuneAgaints) ||
+                !immuneAgaints.Contains(item.School);
+
+            string s() => item.School.ToStringF();
+            list.Add(new Requirement
             {
-                bool f() => !immunityBlacklist.TryGetValue(playerReader.TargetId, out SchoolMask[]? immuneAgaints) || !immuneAgaints.Contains(item.School);
-                string s() => item.School.ToStringF();
-                list.Add(new Requirement
-                {
-                    HasRequirement = f,
-                    LogMessage = s,
-                    VisibleIfHasRequirement = false
-                });
-            }
+                HasRequirement = f,
+                LogMessage = s,
+                VisibleIfHasRequirement = false
+            });
         }
 
 

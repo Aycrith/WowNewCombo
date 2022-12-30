@@ -116,71 +116,75 @@ namespace Core
         {
             FetchData();
 
-            if (GlobalTime.UpdatedNoEvent(reader))
+            if (!GlobalTime.UpdatedNoEvent(this.reader))
+                return;
+
+            if (GlobalTime.Value <= 3)
             {
-                if (GlobalTime.Value <= 3)
-                {
-                    updateSum = 0;
-                    updateIndex = 0;
+                updateSum = 0;
+                updateIndex = 0;
 
-                    FullReset();
-                    return;
-                }
-                else if (updateIndex >= 512)
-                {
-                    updateSum = 0;
-                    updateIndex = 0;
-                }
-
-                updateSum += (DateTime.UtcNow - lastUpdate).TotalMilliseconds;
-                updateIndex++;
-                AvgUpdateLatency = updateSum / updateIndex;
-                lastUpdate = DateTime.UtcNow;
-
-                IAddonDataProvider reader = this.reader;
-
-                CurrentAction.Update(reader);
-                UsableAction.Update(reader);
-
-                PlayerReader.Update(reader);
-
-                if (lastTargetGuid != PlayerReader.TargetGuid)
-                {
-                    lastTargetGuid = PlayerReader.TargetGuid;
-
-                    TargetName = CreatureDb.Entries.TryGetValue(PlayerReader.TargetId, out Creature creature)
-                    ? creature.Name : reader.GetString(16) + reader.GetString(17);
-                }
-
-                if (lastMouseOverId != PlayerReader.MouseOverId)
-                {
-                    lastMouseOverId = PlayerReader.MouseOverId;
-
-                    MouseOverName = CreatureDb.Entries.TryGetValue(PlayerReader.MouseOverId, out Creature creature)
-                        ? creature.Name : string.Empty;
-                }
-
-                CombatLog.Update(reader, PlayerReader.Bits.PlayerInCombat());
-
-                BagReader.Read(reader);
-                EquipmentReader.Read(reader);
-
-                ActionBarCostReader.Read(reader);
-                ActionBarCooldownReader.Read(reader);
-
-                GossipReader.Read(reader);
-
-                SpellBookReader.Read(reader);
-                TalentReader.Read(reader);
-
-                PlayerBuffTimeReader.Read(reader);
-                TargetDebuffTimeReader.Read(reader);
-                TargetBuffTimeReader.Read(reader);
-
-                AreaDb.Update(WorldMapAreaDb.GetAreaId(PlayerReader.UIMapId.Value));
-
-                autoResetEvent.Set();
+                FullReset();
+                return;
             }
+            else if (updateIndex >= 512)
+            {
+                updateSum = 0;
+                updateIndex = 0;
+            }
+
+            updateSum += (DateTime.UtcNow - lastUpdate).TotalMilliseconds;
+            updateIndex++;
+            AvgUpdateLatency = updateSum / updateIndex;
+            lastUpdate = DateTime.UtcNow;
+
+            IAddonDataProvider reader = this.reader;
+
+            CurrentAction.Update(reader);
+            UsableAction.Update(reader);
+
+            PlayerReader.Update(reader);
+
+            if (lastTargetGuid != PlayerReader.TargetGuid)
+            {
+                lastTargetGuid = PlayerReader.TargetGuid;
+
+                TargetName =
+                    CreatureDb.Entries.TryGetValue(PlayerReader.TargetId, out Creature creature)
+                    ? creature.Name
+                    : reader.GetString(16) + reader.GetString(17);
+            }
+
+            if (lastMouseOverId != PlayerReader.MouseOverId)
+            {
+                lastMouseOverId = PlayerReader.MouseOverId;
+
+                MouseOverName =
+                    CreatureDb.Entries.TryGetValue(PlayerReader.MouseOverId, out Creature creature)
+                    ? creature.Name
+                    : string.Empty;
+            }
+
+            CombatLog.Update(reader, PlayerReader.Bits.PlayerInCombat());
+
+            BagReader.Read(reader);
+            EquipmentReader.Read(reader);
+
+            ActionBarCostReader.Read(reader);
+            ActionBarCooldownReader.Read(reader);
+
+            GossipReader.Read(reader);
+
+            SpellBookReader.Read(reader);
+            TalentReader.Read(reader);
+
+            PlayerBuffTimeReader.Read(reader);
+            TargetDebuffTimeReader.Read(reader);
+            TargetBuffTimeReader.Read(reader);
+
+            AreaDb.Update(WorldMapAreaDb.GetAreaId(PlayerReader.UIMapId.Value));
+
+            autoResetEvent.Set();
         }
 
         public void FetchData()
