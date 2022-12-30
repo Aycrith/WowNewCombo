@@ -12,6 +12,7 @@ namespace Core
             if (Sequence.Length > 0)
             {
                 LogDynamicBinding(logger, prefix);
+                requirementFactory.AddSequenceRange(this);
             }
 
             for (int i = 0; i < Sequence.Length; i++)
@@ -31,7 +32,7 @@ namespace Core
 
             for (int i = 0; i < Sequence.Length; i++)
             {
-                Sequence[i].Initialise(config, addonReader, requirementFactory, logger, globalLog, this);
+                Sequence[i].Initialise(config, addonReader, requirementFactory, logger, globalLog);
             }
         }
 

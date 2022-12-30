@@ -332,15 +332,15 @@ namespace Core
             };
         }
 
-        public void InitialiseRequirements(KeyAction item, KeyActions? keyActions)
+        public void AddSequenceRange(KeyActions keyActions)
         {
-            if (keyActions != null)
-            {
-                int sizeBefore = this.keyActions.Length;
-                Array.Resize(ref this.keyActions, this.keyActions.Length + keyActions.Sequence.Length);
-                Array.ConstrainedCopy(keyActions.Sequence, 0, this.keyActions, sizeBefore, keyActions.Sequence.Length);
-            }
+            int sizeBefore = this.keyActions.Length;
+            Array.Resize(ref this.keyActions, this.keyActions.Length + keyActions.Sequence.Length);
+            Array.ConstrainedCopy(keyActions.Sequence, 0, this.keyActions, sizeBefore, keyActions.Sequence.Length);
+        }
 
+        public void InitialiseRequirements(KeyAction item)
+        {
             if (item.Name is Drink or Food)
                 AddConsumableRequirement(item);
 

@@ -1,4 +1,4 @@
-﻿using Core.Goals;
+using Core.Goals;
 
 using Microsoft.Extensions.Logging;
 
@@ -120,8 +120,7 @@ namespace Core
         }
 
         public void Initialise(ClassConfiguration config, AddonReader addonReader,
-            RequirementFactory requirementFactory, ILogger logger, bool globalLog,
-            KeyActions? keyActions = null)
+            RequirementFactory requirementFactory, ILogger logger, bool globalLog)
         {
             this.costReader = addonReader.ActionBarCostReader;
             this.logger = logger;
@@ -186,7 +185,8 @@ namespace Core
             if (Slot > 0)
                 InitMinPowerType(addonReader.ActionBarCostReader);
 
-            requirementFactory.InitialiseRequirements(this, keyActions);
+            requirementFactory.InitialiseRequirements(this);
+
         }
 
         public void Dispose()
