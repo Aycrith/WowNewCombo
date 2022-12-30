@@ -1,4 +1,4 @@
-﻿using System.Buffers;
+﻿using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 
@@ -39,7 +39,7 @@ namespace Core
         {
             uint count = 0;
             for (; num > 0; num >>= 8)
-                count += bitCounts[(num & 0xff)];
+                count += bitCounts[num & 0xff];
             return count;
         }
 
@@ -56,10 +56,9 @@ namespace Core
             canvas.DrawImage(image, rect);
 
             // Reduce colors to 6-bit grayscale and calculate average color value
-            var pool = ArrayPool<byte>.Shared;
-            byte[] grayscale = pool.Rent(64);
+            Span<byte> grayscale = stackalloc byte[64];
 
-            int bytesPerPixel = Image.GetPixelFormatSize(squeezed.PixelFormat) / 8;
+            const int bytesPerPixel = 4; //Image.GetPixelFormatSize(squeezed.PixelFormat) / 8;
             BitmapData data = squeezed.LockBits(rect, ImageLockMode.ReadOnly, squeezed.PixelFormat);
 
             uint averageValue = 0;
@@ -89,11 +88,10 @@ namespace Core
             {
                 if (grayscale[i] >= averageValue)
                 {
-                    hash |= (1UL << (63 - i));
+                    hash |= 1UL << (63 - i);
                 }
             }
 
-            pool.Return(grayscale);
             return hash;
         }
 
@@ -106,7 +104,7 @@ namespace Core
         /// <returns>The similarity percentage.</returns>
         public static double Similarity(ulong hash1, ulong hash2)
         {
-            return ((64 - BitCount(hash1 ^ hash2)) * 100) / 64.0;
+            return ((64.0 - BitCount(hash1 ^ hash2)) * 100.0) / 64.0;
         }
     }
 }
