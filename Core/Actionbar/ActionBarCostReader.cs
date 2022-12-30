@@ -90,7 +90,7 @@ namespace Core
             OnActionCostReset?.Invoke();
         }
 
-        public ActionBarCost GetCostByActionBarSlot(KeyAction keyAction, int costIndex = 0)
+        public ActionBarCost Get(KeyAction keyAction, int costIndex = 0)
         {
             int slotIdx = keyAction.SlotIndex;
             return data[slotIdx][costIndex];

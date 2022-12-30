@@ -1,4 +1,4 @@
-using Core.Goals;
+﻿using Core.Goals;
 
 using Microsoft.Extensions.Logging;
 
@@ -300,7 +300,7 @@ namespace Core
         {
             for (int i = 0; i < ActionBar.NUM_OF_COST; i++)
             {
-                ActionBarCost abc = actionBarCostReader.GetCostByActionBarSlot(this, i);
+                ActionBarCost abc = actionBarCostReader.Get(this, i);
                 if (abc.Cost == 0)
                     continue;
 
