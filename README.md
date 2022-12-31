@@ -1507,7 +1507,7 @@ Combined with the `KeyAction.UseWhenTargetIsCasting` property, this requirement 
 
 Firstly `"TargetCastingSpell"` as it is without mentioning any spellID. Simply tells if the target is doing any cast at all.
 
-Secondly can specify the following Format `"TargetCastingSpell:spellID1|spellID2|..."` which translates to "if Target is casting spellID1 OR spellID2 OR ...".
+Secondly can specify the following Format `"TargetCastingSpell:spellID1,spellID2,..."` which translates to "if Target is casting spellID1 OR spellID2 OR ...".
 
 e.g. Rogue_20.json
 ```json
@@ -1522,7 +1522,7 @@ e.g. Rogue_20.json
 {
     "Name": "Kick",
     "UseWhenTargetIsCasting": true,
-    "Requirement": "TargetCastingSpell:9053|11443"
+    "Requirement": "TargetCastingSpell:9053,11443"
 },
 {
     "Name": "Kick",

@@ -40,6 +40,12 @@ namespace Core
 
         private readonly Dictionary<string, Func<string, Requirement>> requirementMap;
 
+        private const char SEP1 = ':';
+        private const char SEP2 = ',';
+
+        private const string Swimming = "Swimming";
+        private const string Falling = "Falling";
+
         public const string AddVisible = "AddVisible";
         public const string Drink = "Drink";
         public const string Food = "Food";
@@ -134,8 +140,8 @@ namespace Core
                 { "Clearcasting", playerReader.Buffs.Clearcasting },
 
                 // Player Affected
-                { "Swimming", playerReader.Bits.IsSwimming },
-                { "Falling", playerReader.Bits.IsFalling },
+                { Swimming, playerReader.Bits.IsSwimming },
+                { Falling, playerReader.Bits.IsFalling },
 
                 //Priest
                 { "Fortitude", playerReader.Buffs.Fortitude },
@@ -509,7 +515,7 @@ namespace Core
             if (!intVariables.ContainsKey(key))
             {
                 intVariables.Add(key,
-                    () => reader.GetCostByActionBarSlot(item).Cost);
+                    () => reader.Get(item).Cost);
             }
         }
 
@@ -686,8 +692,8 @@ namespace Core
             item.Item = true;
 
             item.Requirements.Add($"!{item.Name}");
-            item.Requirements.Add("!Swimming");
-            item.Requirements.Add("!Falling");
+            item.Requirements.Add($"!{Swimming}");
+            item.Requirements.Add($"!{Falling}");
         }
 
         private void AddSpellSchoolRequirement(List<Requirement> list, KeyAction item,
@@ -799,40 +805,40 @@ namespace Core
 
         private Requirement CreateTargetCastingSpell(string requirement)
         {
-            if (requirement.Contains(':'))
+            ReadOnlySpan<char> span = requirement;
+            int sep1 = span.IndexOf(SEP1);
+            // 'TargetCastingSpell'
+            if (sep1 == -1)
             {
-                string[] parts = requirement.Split(":");
-                string[] spellsPart = parts[1].Split("|");
-                int[] spellIds = spellsPart.Select(x => int.Parse(x.Trim())).ToArray();
-
-                var spellIdsStringFormatted = string.Join(", ", spellIds);
-
-                bool f() => spellIds.Contains(playerReader.SpellBeingCastByTarget);
-                string s() => $"Target casting {playerReader.SpellBeingCastByTarget} ∈ [{spellIdsStringFormatted}]";
-                return new Requirement
-                {
-                    HasRequirement = f,
-                    LogMessage = s
-                };
-            }
-            else
-            {
-                string s() => "Target casting";
                 return new Requirement
                 {
                     HasRequirement = playerReader.IsTargetCasting,
-                    LogMessage = s
+                    LogMessage = () => "Target casting"
                 };
             }
+
+            // 'TargetCastingSpell:_1_?,_n_'
+            string[] spellsPart = span[(sep1 + 1)..].ToString().Split(SEP2);
+            int[] spellIds = spellsPart.Select(int.Parse).ToArray();
+
+            bool f() => spellIds.Contains(playerReader.SpellBeingCastByTarget);
+            string s() => $"Target casts {playerReader.SpellBeingCastByTarget} ∈ [{string.Join(SEP2, spellIds)}]";
+            return new Requirement
+            {
+                HasRequirement = f,
+                LogMessage = s
+            };
         }
 
         private Requirement CreateForm(string requirement)
         {
-            string[] parts = requirement.Split(":");
-            Form form = Enum.Parse<Form>(parts[1]);
+            // 'Form:_FORM_'
+            ReadOnlySpan<char> span = requirement;
+            int sep = span.IndexOf(SEP1);
+            Form form = Enum.Parse<Form>(span[(sep + 1)..]);
 
             bool f() => playerReader.Form == form;
-            string s() => $"{playerReader.Form}";
+            string s() => playerReader.Form.ToStringF();
 
             return new Requirement
             {
@@ -843,8 +849,10 @@ namespace Core
 
         private Requirement CreateRace(string requirement)
         {
-            string[] parts = requirement.Split(":");
-            UnitRace race = Enum.Parse<UnitRace>(parts[1]);
+            // 'Race:_RACE_'
+            ReadOnlySpan<char> span = requirement;
+            int sep = span.IndexOf(SEP1);
+            UnitRace race = Enum.Parse<UnitRace>(span[(sep + 1)..]);
 
             bool f() => playerReader.Race == race;
             string s() => playerReader.Race.ToStringF();
@@ -858,10 +866,14 @@ namespace Core
 
         private Requirement CreateSpell(string requirement)
         {
-            string[] parts = requirement.Split(":");
-            string name = parts[1].Trim();
+            // 'Spell:_NAME_OR_ID_'
+            ReadOnlySpan<char> span = requirement;
+            int sep = span.IndexOf(SEP1);
+            string name = span[(sep + 1)..].Trim().ToString();
 
-            if (int.TryParse(name, out int id) && spellBookReader.TryGetValue(id, out Spell spell))
+            int id;
+            if (int.TryParse(name, out id) &&
+                spellBookReader.TryGetValue(id, out Spell spell))
             {
                 name = $"{spell.Name}({id})";
             }
@@ -882,9 +894,23 @@ namespace Core
 
         private Requirement CreateTalent(string requirement)
         {
-            string[] parts = requirement.Split(":");
-            string name = parts[1].Trim();
-            int rank = parts.Length < 3 ? 1 : int.Parse(parts[2]);
+            // 'Talent:_NAME_?:_RANK_'
+            ReadOnlySpan<char> span = requirement;
+
+            int firstSep = span.IndexOf(SEP1);
+            int lastSep = span.LastIndexOf(SEP1);
+
+            int rank = 1;
+            if (firstSep != lastSep)
+            {
+                rank = int.Parse(span[(lastSep + 1)..]);
+            }
+            else
+            {
+                lastSep = span.Length;
+            }
+
+            string name = span[(firstSep + 1)..lastSep].ToString();
 
             bool f() => talentReader.HasTalent(name, rank);
             string s() => rank == 1 ? $"Talent {name}" : $"Talent {name} (Rank {rank})";
@@ -898,10 +924,22 @@ namespace Core
 
         private Requirement CreateTrigger(string requirement)
         {
-            var parts = requirement.Split(":");
-            int bitNum = int.Parse(parts[1]);
-            string text = parts.Length > 2 ? parts[2] : string.Empty;
+            // 'Trigger:_BIT_NUM_?:_TEXT_'
+            ReadOnlySpan<char> span = requirement;
+            int firstSep = span.IndexOf(SEP1);
+            int lastSep = span.LastIndexOf(SEP1);
 
+            string text = string.Empty;
+            if (firstSep != lastSep)
+            {
+                text = span[(lastSep + 1)..].ToString();
+            }
+            else
+            {
+                lastSep = span.Length;
+            }
+
+            int bitNum = int.Parse(span[(firstSep + 1)..lastSep]);
             int bitMask = Mask.M[bitNum];
 
             bool f() => playerReader.CustomTrigger1[bitMask];
@@ -916,13 +954,16 @@ namespace Core
 
         private Requirement CreateNpcId(string requirement)
         {
-            string[] parts = requirement.Split(":");
+            // 'npcID:_INTVARIABLE_OR_ID_'
+            ReadOnlySpan<char> span = requirement;
+            int sep = span.IndexOf(SEP1);
+            ReadOnlySpan<char> name_or_id = span[(sep + 1)..];
 
             int npcId;
-            if (intVariables.TryGetValue(parts[1], out Func<int>? value))
+            if (intVariables.TryGetValue(name_or_id.ToString(), out Func<int>? value))
                 npcId = value();
             else
-                npcId = int.Parse(parts[1]);
+                npcId = int.Parse(name_or_id);
 
             string npcName = string.Empty;
             if (creatureDb.Entries.TryGetValue(npcId, out Creature creature))
@@ -942,15 +983,29 @@ namespace Core
 
         private Requirement CreateBagItem(string requirement)
         {
-            string[] parts = requirement.Split(":");
+            // 'BagItem:_INTVARIABLE_OR_ID_?:_COUNT_'
+            ReadOnlySpan<char> span = requirement;
+
+            int firstSep = span.IndexOf(SEP1);
+            int lastSep = span.LastIndexOf(SEP1);
+
+            int count = 1;
+            if (firstSep != lastSep)
+            {
+                count = int.Parse(span[(lastSep + 1)..]);
+            }
+            else
+            {
+                lastSep = span.Length;
+            }
+
+            ReadOnlySpan<char> name_or_id = span[(firstSep + 1)..lastSep];
 
             int itemId;
-            if (intVariables.TryGetValue(parts[1], out Func<int>? value))
+            if (intVariables.TryGetValue(name_or_id.ToString(), out Func<int>? value))
                 itemId = value();
             else
-                itemId = int.Parse(parts[1]);
-
-            int count = parts.Length < 3 ? 1 : int.Parse(parts[2]);
+                itemId = int.Parse(name_or_id);
 
             string itemName = string.Empty;
             if (itemDb.Items.TryGetValue(itemId, out Item item))
@@ -970,8 +1025,10 @@ namespace Core
 
         private Requirement CreateSpellInRange(string requirement)
         {
-            string[] parts = requirement.Split(":");
-            int bitNum = int.Parse(parts[1]);
+            // 'SpellInRange:_BIT_NUM_'
+            ReadOnlySpan<char> span = requirement;
+            int sep = span.IndexOf(SEP1);
+            int bitNum = int.Parse(span[(sep + 1)..]);
             int bitMask = Mask.M[bitNum];
 
             bool f() => playerReader.SpellInRange[bitMask];
@@ -986,10 +1043,25 @@ namespace Core
 
         private Requirement CreateUsable(string requirement)
         {
-            string[] parts = requirement.Split(":");
-            string name = parts[1].Trim();
+            // 'Usable:_KeyAction_Name_'
+            ReadOnlySpan<char> span = requirement;
+            int sep = span.IndexOf(SEP1);
+            ReadOnlySpan<char> name = span[(sep + 1)..].Trim();
 
-            KeyAction keyAction = keyActions.First(x => x.Name == name);
+            KeyAction? keyAction = null;
+            for (int i = 0; i < keyActions.Length; i++)
+            {
+                KeyAction test = keyActions[i];
+                if (name.SequenceEqual(test.Name))
+                {
+                    keyAction = test;
+                    break;
+                }
+            }
+
+            if (keyAction == null)
+                throw new InvalidOperationException($"'{requirement}' related named '{name}' {nameof(KeyAction)} not found!");
+
             return CreateActionUsableRequirement(keyAction, playerReader, addonReader.UsableAction);
         }
 
@@ -1021,8 +1093,11 @@ namespace Core
 
         private Requirement CreateArithmeticRequirement(string symbol, string requirement, Dictionary<string, Func<int>> intVariables)
         {
-            var parts = requirement.Split(symbol);
-            var key = parts[0].Trim();
+            ReadOnlySpan<char> span = requirement;
+            int sep1 = span.IndexOf(symbol);
+
+            string key = span[..sep1].Trim().ToString();
+            ReadOnlySpan<char> name_or_value = span[(sep1 + 1)..];
 
             if (!intVariables.ContainsKey(key))
             {
@@ -1044,14 +1119,14 @@ namespace Core
 
             int zero() => 0;
             Func<int> value = zero;
-            if (int.TryParse(parts[1], out int v))
+            if (int.TryParse(name_or_value, out int v))
             {
                 int c() => v;
                 value = c;
             }
             else
             {
-                string variable = parts[1].Trim();
+                string variable = name_or_value.Trim().ToString();
                 if (intVariables.ContainsKey(variable))
                 {
                     value = intVariables[variable];
