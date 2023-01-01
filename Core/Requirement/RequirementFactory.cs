@@ -399,7 +399,7 @@ namespace Core
                 requirements.Add(CreateActionUsableRequirement(item, playerReader, addonReader.UsableAction));
 
                 if (item.Slot > 0)
-                    requirements.Add(CreateActionNotInGameCooldown(item));
+                    requirements.Add(CreateActionNotInGameCooldown(item, playerReader, intVariables));
             }
 
             AddCooldownRequirement(requirements, item);
@@ -642,46 +642,46 @@ namespace Core
 
         private void AddMinComboPointsRequirement(List<Requirement> list, KeyAction item, PlayerReader playerReader)
         {
-            if (item.MinComboPoints > 0)
+            if (item.MinComboPoints <= 0)
+                return;
+
+            bool f() => playerReader.ComboPoints() >= item.MinComboPoints;
+            string s() => $"Combo point {playerReader.ComboPoints()} >= {item.MinComboPoints}";
+            list.Add(new Requirement
             {
-                bool f() => playerReader.ComboPoints() >= item.MinComboPoints;
-                string s() => $"Combo point {playerReader.ComboPoints()} >= {item.MinComboPoints}";
-                list.Add(new Requirement
-                {
-                    HasRequirement = f,
-                    LogMessage = s
-                });
-            }
+                HasRequirement = f,
+                LogMessage = s
+            });
         }
 
         private static void AddCooldownRequirement(List<Requirement> list, KeyAction item)
         {
-            if (item.Cooldown > 0)
+            if (item.Cooldown <= 0)
+                return;
+
+            bool f() => item.GetRemainingCooldown() == 0;
+            string s() => $"Cooldown {item.GetRemainingCooldown() / 1000:F1}";
+            list.Add(new Requirement
             {
-                bool f() => item.GetRemainingCooldown() == 0;
-                string s() => $"Cooldown {item.GetRemainingCooldown() / 1000:F1}";
-                list.Add(new Requirement
-                {
-                    HasRequirement = f,
-                    LogMessage = s,
-                    VisibleIfHasRequirement = false
-                });
-            }
+                HasRequirement = f,
+                LogMessage = s,
+                VisibleIfHasRequirement = false
+            });
         }
 
         private static void AddChargeRequirement(List<Requirement> list, KeyAction item)
         {
-            if (!item.BaseAction && item.Charge >= 1)
+            if (item.BaseAction || item.Charge < 1)
+                return;
+
+            bool f() => item.GetChargeRemaining() != 0;
+            string s() => $"Charge {item.GetChargeRemaining()}";
+            list.Add(new Requirement
             {
-                bool f() => item.GetChargeRemaining() != 0;
-                string s() => $"Charge {item.GetChargeRemaining()}";
-                list.Add(new Requirement
-                {
-                    HasRequirement = f,
-                    LogMessage = s,
-                    VisibleIfHasRequirement = false
-                });
-            }
+                HasRequirement = f,
+                LogMessage = s,
+                VisibleIfHasRequirement = false
+            });
         }
 
         private static void AddConsumableRequirement(KeyAction item)
@@ -768,14 +768,16 @@ namespace Core
             }
 
             bool f() =>
-                    !item.HasFormRequirement ? usableAction.Is(item) :
-                    (playerReader.Form == item.FormEnum && usableAction.Is(item)) ||
-                    (playerReader.Form != item.FormEnum && CanDoFormChangeMinMana());
+                !item.HasFormRequirement
+                ? usableAction.Is(item)
+                : (playerReader.Form == item.FormEnum && usableAction.Is(item)) ||
+                (playerReader.Form != item.FormEnum && CanDoFormChangeMinMana());
 
             string s() =>
-                    !item.HasFormRequirement ? "Usable" :
-                    (playerReader.Form != item.FormEnum && CanDoFormChangeMinMana()) ? "Usable after Form change" :
-                    (playerReader.Form == item.FormEnum && usableAction.Is(item)) ? "Usable current Form" : "not Usable current Form";
+                !item.HasFormRequirement
+                ? "Usable"
+                : (playerReader.Form != item.FormEnum && CanDoFormChangeMinMana()) ? "Usable after Form change" :
+                (playerReader.Form == item.FormEnum && usableAction.Is(item)) ? "Usable current Form" : "not Usable current Form";
 
             return new Requirement
             {
@@ -784,10 +786,10 @@ namespace Core
             };
         }
 
-        private Requirement CreateActionNotInGameCooldown(KeyAction item)
+        private Requirement CreateActionNotInGameCooldown(KeyAction item, PlayerReader playerReader, Dictionary<string, Func<int>> intVariables)
         {
             string key = $"CD_{item.Name}";
-            bool f() => UsableGCD(key);
+            bool f() => UsableGCD(key, playerReader, intVariables);
             string s() => $"CD {intVariables[key]() / 1000f:F1}";
 
             return new Requirement
@@ -798,247 +800,285 @@ namespace Core
             };
         }
 
-        private bool UsableGCD(string key)
+        private static bool UsableGCD(string key, PlayerReader playerReader, Dictionary<string, Func<int>> intVariables)
         {
             return intVariables[key]() <= CastingHandler.SPELL_QUEUE - playerReader.NetworkLatency.Value;
         }
 
         private Requirement CreateTargetCastingSpell(string requirement)
         {
-            ReadOnlySpan<char> span = requirement;
-            int sep1 = span.IndexOf(SEP1);
-            // 'TargetCastingSpell'
-            if (sep1 == -1)
+            return create(requirement, playerReader);
+            static Requirement create(string requirement, PlayerReader playerReader)
             {
+                ReadOnlySpan<char> span = requirement;
+                int sep1 = span.IndexOf(SEP1);
+                // 'TargetCastingSpell'
+                if (sep1 == -1)
+                {
+                    return new Requirement
+                    {
+                        HasRequirement = playerReader.IsTargetCasting,
+                        LogMessage = () => "Target casting"
+                    };
+                }
+
+                // 'TargetCastingSpell:_1_?,_n_'
+                string[] spellsPart = span[(sep1 + 1)..].ToString().Split(SEP2);
+                int[] spellIds = spellsPart.Select(int.Parse).ToArray();
+
+                bool f() => spellIds.Contains(playerReader.SpellBeingCastByTarget);
+                string s() => $"Target casts {playerReader.SpellBeingCastByTarget} ∈ [{string.Join(SEP2, spellIds)}]";
                 return new Requirement
                 {
-                    HasRequirement = playerReader.IsTargetCasting,
-                    LogMessage = () => "Target casting"
+                    HasRequirement = f,
+                    LogMessage = s
                 };
             }
-
-            // 'TargetCastingSpell:_1_?,_n_'
-            string[] spellsPart = span[(sep1 + 1)..].ToString().Split(SEP2);
-            int[] spellIds = spellsPart.Select(int.Parse).ToArray();
-
-            bool f() => spellIds.Contains(playerReader.SpellBeingCastByTarget);
-            string s() => $"Target casts {playerReader.SpellBeingCastByTarget} ∈ [{string.Join(SEP2, spellIds)}]";
-            return new Requirement
-            {
-                HasRequirement = f,
-                LogMessage = s
-            };
         }
 
         private Requirement CreateForm(string requirement)
         {
-            // 'Form:_FORM_'
-            ReadOnlySpan<char> span = requirement;
-            int sep = span.IndexOf(SEP1);
-            Form form = Enum.Parse<Form>(span[(sep + 1)..]);
-
-            bool f() => playerReader.Form == form;
-            string s() => playerReader.Form.ToStringF();
-
-            return new Requirement
+            return create(requirement, playerReader);
+            static Requirement create(string requirement, PlayerReader playerReader)
             {
-                HasRequirement = f,
-                LogMessage = s
-            };
+                // 'Form:_FORM_'
+                ReadOnlySpan<char> span = requirement;
+                int sep = span.IndexOf(SEP1);
+                Form form = Enum.Parse<Form>(span[(sep + 1)..]);
+
+                bool f() => playerReader.Form == form;
+                string s() => playerReader.Form.ToStringF();
+
+                return new Requirement
+                {
+                    HasRequirement = f,
+                    LogMessage = s
+                };
+            }
         }
 
         private Requirement CreateRace(string requirement)
         {
-            // 'Race:_RACE_'
-            ReadOnlySpan<char> span = requirement;
-            int sep = span.IndexOf(SEP1);
-            UnitRace race = Enum.Parse<UnitRace>(span[(sep + 1)..]);
-
-            bool f() => playerReader.Race == race;
-            string s() => playerReader.Race.ToStringF();
-
-            return new Requirement
+            return create(requirement, playerReader);
+            static Requirement create(string requirement, PlayerReader playerReader)
             {
-                HasRequirement = f,
-                LogMessage = s
-            };
+                // 'Race:_RACE_'
+                ReadOnlySpan<char> span = requirement;
+                int sep = span.IndexOf(SEP1);
+                UnitRace race = Enum.Parse<UnitRace>(span[(sep + 1)..]);
+
+                bool f() => playerReader.Race == race;
+                string s() => playerReader.Race.ToStringF();
+
+                return new Requirement
+                {
+                    HasRequirement = f,
+                    LogMessage = s
+                };
+            }
         }
 
         private Requirement CreateSpell(string requirement)
         {
-            // 'Spell:_NAME_OR_ID_'
-            ReadOnlySpan<char> span = requirement;
-            int sep = span.IndexOf(SEP1);
-            string name = span[(sep + 1)..].Trim().ToString();
-
-            int id;
-            if (int.TryParse(name, out id) &&
-                spellBookReader.TryGetValue(id, out Spell spell))
+            return create(requirement, spellBookReader);
+            static Requirement create(string requirement, SpellBookReader spellBookReader)
             {
-                name = $"{spell.Name}({id})";
+                // 'Spell:_NAME_OR_ID_'
+                ReadOnlySpan<char> span = requirement;
+                int sep = span.IndexOf(SEP1);
+                string name = span[(sep + 1)..].Trim().ToString();
+
+                int id;
+                if (int.TryParse(name, out id) &&
+                    spellBookReader.TryGetValue(id, out Spell spell))
+                {
+                    name = $"{spell.Name}({id})";
+                }
+                else
+                {
+                    id = spellBookReader.GetId(name);
+                }
+
+                bool f() => spellBookReader.Has(id);
+                string s() => $"Spell {name}";
+
+                return new Requirement
+                {
+                    HasRequirement = f,
+                    LogMessage = s
+                };
             }
-            else
-            {
-                id = spellBookReader.GetId(name);
-            }
-
-            bool f() => spellBookReader.Has(id);
-            string s() => $"Spell {name}";
-
-            return new Requirement
-            {
-                HasRequirement = f,
-                LogMessage = s
-            };
         }
 
         private Requirement CreateTalent(string requirement)
         {
-            // 'Talent:_NAME_?:_RANK_'
-            ReadOnlySpan<char> span = requirement;
-
-            int firstSep = span.IndexOf(SEP1);
-            int lastSep = span.LastIndexOf(SEP1);
-
-            int rank = 1;
-            if (firstSep != lastSep)
+            return create(requirement, talentReader);
+            static Requirement create(string requirement, TalentReader talentReader)
             {
-                rank = int.Parse(span[(lastSep + 1)..]);
+                // 'Talent:_NAME_?:_RANK_'
+                ReadOnlySpan<char> span = requirement;
+
+                int firstSep = span.IndexOf(SEP1);
+                int lastSep = span.LastIndexOf(SEP1);
+
+                int rank = 1;
+                if (firstSep != lastSep)
+                {
+                    rank = int.Parse(span[(lastSep + 1)..]);
+                }
+                else
+                {
+                    lastSep = span.Length;
+                }
+
+                string name = span[(firstSep + 1)..lastSep].ToString();
+
+                bool f() => talentReader.HasTalent(name, rank);
+                string s() => rank == 1 ? $"Talent {name}" : $"Talent {name} (Rank {rank})";
+
+                return new Requirement
+                {
+                    HasRequirement = f,
+                    LogMessage = s
+                };
             }
-            else
-            {
-                lastSep = span.Length;
-            }
-
-            string name = span[(firstSep + 1)..lastSep].ToString();
-
-            bool f() => talentReader.HasTalent(name, rank);
-            string s() => rank == 1 ? $"Talent {name}" : $"Talent {name} (Rank {rank})";
-
-            return new Requirement
-            {
-                HasRequirement = f,
-                LogMessage = s
-            };
         }
 
         private Requirement CreateTrigger(string requirement)
         {
-            // 'Trigger:_BIT_NUM_?:_TEXT_'
-            ReadOnlySpan<char> span = requirement;
-            int firstSep = span.IndexOf(SEP1);
-            int lastSep = span.LastIndexOf(SEP1);
-
-            string text = string.Empty;
-            if (firstSep != lastSep)
+            return create(requirement, playerReader);
+            static Requirement create(string requirement, PlayerReader playerReader)
             {
-                text = span[(lastSep + 1)..].ToString();
+                // 'Trigger:_BIT_NUM_?:_TEXT_'
+                ReadOnlySpan<char> span = requirement;
+                int firstSep = span.IndexOf(SEP1);
+                int lastSep = span.LastIndexOf(SEP1);
+
+                string text = string.Empty;
+                if (firstSep != lastSep)
+                {
+                    text = span[(lastSep + 1)..].ToString();
+                }
+                else
+                {
+                    lastSep = span.Length;
+                }
+
+                int bitNum = int.Parse(span[(firstSep + 1)..lastSep]);
+                int bitMask = Mask.M[bitNum];
+
+                bool f() => playerReader.CustomTrigger1[bitMask];
+                string s() => $"Trigger({bitNum}) {text}";
+
+                return new Requirement
+                {
+                    HasRequirement = f,
+                    LogMessage = s
+                };
             }
-            else
-            {
-                lastSep = span.Length;
-            }
-
-            int bitNum = int.Parse(span[(firstSep + 1)..lastSep]);
-            int bitMask = Mask.M[bitNum];
-
-            bool f() => playerReader.CustomTrigger1[bitMask];
-            string s() => $"Trigger({bitNum}) {text}";
-
-            return new Requirement
-            {
-                HasRequirement = f,
-                LogMessage = s
-            };
         }
 
         private Requirement CreateNpcId(string requirement)
         {
-            // 'npcID:_INTVARIABLE_OR_ID_'
-            ReadOnlySpan<char> span = requirement;
-            int sep = span.IndexOf(SEP1);
-            ReadOnlySpan<char> name_or_id = span[(sep + 1)..];
-
-            int npcId;
-            if (intVariables.TryGetValue(name_or_id.ToString(), out Func<int>? value))
-                npcId = value();
-            else
-                npcId = int.Parse(name_or_id);
-
-            string npcName = string.Empty;
-            if (creatureDb.Entries.TryGetValue(npcId, out Creature creature))
+            return create(requirement, playerReader, intVariables, creatureDb);
+            static Requirement create(string requirement, PlayerReader playerReader,
+                Dictionary<string, Func<int>> intVariables, CreatureDB creatureDb)
             {
-                npcName = creature.Name;
+                // 'npcID:_INTVARIABLE_OR_ID_'
+                ReadOnlySpan<char> span = requirement;
+                int sep = span.IndexOf(SEP1);
+                ReadOnlySpan<char> name_or_id = span[(sep + 1)..];
+
+                int npcId;
+                if (intVariables.TryGetValue(name_or_id.ToString(), out Func<int>? value))
+                    npcId = value();
+                else
+                    npcId = int.Parse(name_or_id);
+
+                string npcName = string.Empty;
+                if (creatureDb.Entries.TryGetValue(npcId, out Creature creature))
+                {
+                    npcName = creature.Name;
+                }
+
+                bool f() => playerReader.TargetId == npcId;
+                string s() => $"TargetID {npcName}({npcId})";
+
+                return new Requirement
+                {
+                    HasRequirement = f,
+                    LogMessage = s
+                };
             }
-
-            bool f() => playerReader.TargetId == npcId;
-            string s() => $"TargetID {npcName}({npcId})";
-
-            return new Requirement
-            {
-                HasRequirement = f,
-                LogMessage = s
-            };
         }
 
         private Requirement CreateBagItem(string requirement)
         {
-            // 'BagItem:_INTVARIABLE_OR_ID_?:_COUNT_'
-            ReadOnlySpan<char> span = requirement;
-
-            int firstSep = span.IndexOf(SEP1);
-            int lastSep = span.LastIndexOf(SEP1);
-
-            int count = 1;
-            if (firstSep != lastSep)
+            return create(requirement, bagReader, intVariables, itemDb);
+            static Requirement create(string requirement, BagReader bagReader,
+                Dictionary<string, Func<int>> intVariables, ItemDB itemDb)
             {
-                count = int.Parse(span[(lastSep + 1)..]);
+                // 'BagItem:_INTVARIABLE_OR_ID_?:_COUNT_'
+                ReadOnlySpan<char> span = requirement;
+
+                int firstSep = span.IndexOf(SEP1);
+                int lastSep = span.LastIndexOf(SEP1);
+
+                int count = 1;
+                if (firstSep != lastSep)
+                {
+                    count = int.Parse(span[(lastSep + 1)..]);
+                }
+                else
+                {
+                    lastSep = span.Length;
+                }
+
+                ReadOnlySpan<char> name_or_id = span[(firstSep + 1)..lastSep];
+
+                int itemId;
+                if (intVariables.TryGetValue(name_or_id.ToString(), out Func<int>? value))
+                    itemId = value();
+                else
+                    itemId = int.Parse(name_or_id);
+
+                string itemName = string.Empty;
+                if (itemDb.Items.TryGetValue(itemId, out Item item))
+                {
+                    itemName = item.Name;
+                }
+
+                bool f() => bagReader.ItemCount(itemId) >= count;
+                string s() => count == 1 ? $"in bag {itemName}({itemId})" : $"{itemName}({itemId}) count >= {count}";
+
+                return new Requirement
+                {
+                    HasRequirement = f,
+                    LogMessage = s
+                };
             }
-            else
-            {
-                lastSep = span.Length;
-            }
-
-            ReadOnlySpan<char> name_or_id = span[(firstSep + 1)..lastSep];
-
-            int itemId;
-            if (intVariables.TryGetValue(name_or_id.ToString(), out Func<int>? value))
-                itemId = value();
-            else
-                itemId = int.Parse(name_or_id);
-
-            string itemName = string.Empty;
-            if (itemDb.Items.TryGetValue(itemId, out Item item))
-            {
-                itemName = item.Name;
-            }
-
-            bool f() => bagReader.ItemCount(itemId) >= count;
-            string s() => count == 1 ? $"in bag {itemName}({itemId})" : $"{itemName}({itemId}) count >= {count}";
-
-            return new Requirement
-            {
-                HasRequirement = f,
-                LogMessage = s
-            };
         }
 
         private Requirement CreateSpellInRange(string requirement)
         {
-            // 'SpellInRange:_BIT_NUM_'
-            ReadOnlySpan<char> span = requirement;
-            int sep = span.IndexOf(SEP1);
-            int bitNum = int.Parse(span[(sep + 1)..]);
-            int bitMask = Mask.M[bitNum];
-
-            bool f() => playerReader.SpellInRange[bitMask];
-            string s() => $"SpellInRange {bitNum}";
-
-            return new Requirement
+            return create(requirement, playerReader.SpellInRange);
+            static Requirement create(string requirement, SpellInRange range)
             {
-                HasRequirement = f,
-                LogMessage = s
-            };
+                // 'SpellInRange:_BIT_NUM_'
+                ReadOnlySpan<char> span = requirement;
+                int sep = span.IndexOf(SEP1);
+                int bitNum = int.Parse(span[(sep + 1)..]);
+                int bitMask = Mask.M[bitNum];
+
+                bool f() => range[bitMask];
+                string s() => $"SpellInRange {bitNum}";
+
+                return new Requirement
+                {
+                    HasRequirement = f,
+                    LogMessage = s
+                };
+            }
         }
 
         private Requirement CreateUsable(string requirement)
