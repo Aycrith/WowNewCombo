@@ -4,10 +4,10 @@
   "Pull": {
     "Sequence": [
       {
-        "Name": "Concussive Shot",
-        "Key": "9",
+        "Name": "Serpent Sting",
+        "Key": "2",
         "BeforeCastStop": true,
-        "Cooldown": 12000,
+        "AfterCastWaitCombat": true,
         "Requirements": [
           "HasRangedWeapon",
           "HasAmmo",
@@ -41,7 +41,7 @@
       {
         "Name": "Serpent Sting",
         "Key": "2",
-        "Cooldown": 4000,
+        "BeforeCastStop": true,
         "Requirements": [
           "HasRangedWeapon",
           "HasAmmo",
@@ -53,6 +53,7 @@
         "Name": "Auto Shot",
         "Key": "3",
         "Item": true,
+        "BeforeCastStop": true,
         "Requirements": [
           "HasRangedWeapon",
           "HasAmmo",
@@ -118,7 +119,10 @@
         "Key": "N6",
         "HasCastBar": true,
         "Cooldown": 4000,
-        "Requirement": "!Has Pet"
+        "Requirements": [
+          "Spell:Call Pet",
+          "!Has Pet"
+        ]
       }
     ]
   },

@@ -39,6 +39,7 @@
         "PressDuration": 3000,
         "BaseAction": true,
         "Requirements": [
+          "TargetsMe",
           "LastAutoShotMs < 400",
           "!InMeleeRange",
           "AutoShot"
