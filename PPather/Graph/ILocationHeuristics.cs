@@ -16,10 +16,9 @@
 
 */
 
-namespace PPather.Graph
+namespace PPather.Graph;
+
+public interface ILocationHeuristics
 {
-    public interface ILocationHeuristics
-    {
-        float Score(float x, float y, float z);
-    }
+    float Score(float x, float y, float z);
 }

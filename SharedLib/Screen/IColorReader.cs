@@ -1,11 +1,10 @@
 ﻿using System.Drawing;
 
-namespace SharedLib
-{
-    public interface IColorReader
-    {
-        Color GetColorAt(Point point);
+namespace SharedLib;
 
-        Bitmap GetBitmap(int width, int height);
-    }
+public interface IColorReader
+{
+    Color GetColorAt(Point point);
+
+    Bitmap GetBitmap(int width, int height);
 }

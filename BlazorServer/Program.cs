@@ -1,47 +1,48 @@
+using System;
+
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+
 using Serilog;
-using System;
 
-namespace BlazorServer
+namespace BlazorServer;
+
+public static class Program
 {
-    public static class Program
-    {
-        private static string hostUrl = "http://0.0.0.0:5000";
+    private const string hostUrl = "http://0.0.0.0:5000";
 
-        public static void Main(string[] args)
+    public static void Main(string[] args)
+    {
+        while (true)
         {
-            while (true)
+            Log.Information("Program.Main(): Starting blazor server");
+            try
             {
-                Log.Information("Program.Main(): Starting blazor server");
-                try
-                {
-                    CreateHostBuilder(args)
-                        .Build()
-                        .Run();
-                }
-                catch (Exception ex)
-                {
-                    Log.Information($"Program.Main(): {ex.Message}");
-                    Log.Information("");
-                    System.Threading.Thread.Sleep(3000);
-                }
+                CreateHostBuilder(args)
+                    .Build()
+                    .Run();
+            }
+            catch (Exception ex)
+            {
+                Log.Information($"Program.Main(): {ex.Message}");
+                Log.Information("");
+                System.Threading.Thread.Sleep(3000);
             }
         }
-
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-
-            Host.CreateDefaultBuilder(args)
-                .ConfigureWebHostDefaults(webBuilder =>
-                {
-                    webBuilder.UseUrls(hostUrl);
-                    webBuilder.UseStartup<Startup>();
-                })
-            .ConfigureLogging((hostingContext, logging) =>
-            {
-                logging.AddConsole();
-                logging.AddEventSourceLogger();
-            });
     }
+
+    public static IHostBuilder CreateHostBuilder(string[] args) =>
+
+        Host.CreateDefaultBuilder(args)
+            .ConfigureWebHostDefaults(webBuilder =>
+            {
+                webBuilder.UseUrls(hostUrl);
+                webBuilder.UseStartup<Startup>();
+            })
+        .ConfigureLogging((hostingContext, logging) =>
+        {
+            logging.AddConsole();
+            logging.AddEventSourceLogger();
+        });
 }

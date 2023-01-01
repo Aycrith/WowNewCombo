@@ -9,7 +9,7 @@
         <b style="color:@DisplayCanRun(goal.CanRun())">@goal.Cost: @goal.DisplayName</b>
     </td>
     <td>
-        @foreach((GoapKey key, bool value) in this.goal.Preconditions)
+        @foreach ((GoapKey key, bool value) in this.goal.Preconditions)
         {
             <span class="badge @Badge(this.goal.State[(int)key])">@(key.ToStringF(value))</span>
         }

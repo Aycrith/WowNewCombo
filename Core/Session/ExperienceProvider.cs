@@ -2,14 +2,13 @@
 using static System.IO.File;
 using static Newtonsoft.Json.JsonConvert;
 
-namespace Core.Session
+namespace Core.Session;
+
+public static class ExperienceProvider
 {
-    public static class ExperienceProvider
+    public static int[] GetExperienceList(DataConfig dataConfig)
     {
-        public static int[] GetExperienceList(DataConfig dataConfig)
-        {
-            string json = ReadAllText(Join(dataConfig.ExpExperience, "exp.json"));
-            return DeserializeObject<int[]>(json)!;
-        }
+        string json = ReadAllText(Join(dataConfig.ExpExperience, "exp.json"));
+        return DeserializeObject<int[]>(json)!;
     }
 }

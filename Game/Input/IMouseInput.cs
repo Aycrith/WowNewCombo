@@ -1,16 +1,15 @@
 ﻿using System.Drawing;
 using System.Threading;
 
-namespace Game
+namespace Game;
+
+public interface IMouseInput
 {
-    public interface IMouseInput
-    {
-        void SetCursorPosition(Point p);
+    void SetCursorPosition(Point p);
 
-        void RightClickMouse(Point p);
+    void RightClickMouse(Point p);
 
-        void LeftClickMouse(Point p);
+    void LeftClickMouse(Point p);
 
-        void InteractMouseOver(CancellationToken ct);
-    }
+    void InteractMouseOver(CancellationToken ct);
 }

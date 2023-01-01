@@ -8,146 +8,145 @@ using Core;
 
 #pragma warning disable 0162
 
-namespace CoreTests
+namespace CoreTests;
+
+sealed class Program
 {
-    sealed class Program
+    private static Microsoft.Extensions.Logging.ILogger logger;
+
+    private const bool LogOverall = false;
+    private const bool ShowOverlay = false;
+    private const int delay = 150;
+
+    public static void Main()
     {
-        private static Microsoft.Extensions.Logging.ILogger logger;
+        var logConfig = new LoggerConfiguration()
+            .WriteTo.File("names.log")
+            .WriteTo.Debug()
+            .CreateLogger();
 
-        private const bool LogOverall = false;
-        private const bool ShowOverlay = false;
-        private const int delay = 150;
+        Log.Logger = logConfig;
+        logger = new SerilogLoggerProvider(Log.Logger).CreateLogger(nameof(Program));
 
-        public static void Main()
+        Test_NPCNameFinder();
+        //Test_Input();
+        //Test_CursorGrabber();
+        //Test_MinimapNodeFinder();
+        //Test_FindTargetByCursor();
+    }
+
+    private static void Test_NPCNameFinder()
+    {
+        //NpcNames types = NpcNames.Enemy;
+        //NpcNames types = NpcNames.Corpse;
+        NpcNames types = NpcNames.Enemy | NpcNames.Neutral;
+        //NpcNames types = NpcNames.Friendly | NpcNames.Neutral;
+
+        using Test_NpcNameFinder test = new(logger, types, ShowOverlay);
+        int count = 100;
+        int i = 0;
+
+        long timestamp = Stopwatch.GetTimestamp();
+        double[] sample = new double[count];
+
+        Log.Logger.Information($"running {count} samples...");
+
+        while (i < count)
         {
-            var logConfig = new LoggerConfiguration()
-                .WriteTo.File("names.log")
-                .WriteTo.Debug()
-                .CreateLogger();
+            if (LogOverall)
+                timestamp = Stopwatch.GetTimestamp();
 
-            Log.Logger = logConfig;
-            logger = new SerilogLoggerProvider(Log.Logger).CreateLogger(nameof(Program));
-
-            Test_NPCNameFinder();
-            //Test_Input();
-            //Test_CursorGrabber();
-            //Test_MinimapNodeFinder();
-            //Test_FindTargetByCursor();
-        }
-
-        private static void Test_NPCNameFinder()
-        {
-            //NpcNames types = NpcNames.Enemy;
-            //NpcNames types = NpcNames.Corpse;
-            NpcNames types = NpcNames.Enemy | NpcNames.Neutral;
-            //NpcNames types = NpcNames.Friendly | NpcNames.Neutral;
-
-            using Test_NpcNameFinder test = new(logger, types, ShowOverlay);
-            int count = 100;
-            int i = 0;
-
-            long timestamp = Stopwatch.GetTimestamp();
-            double[] sample = new double[count];
-
-            Log.Logger.Information($"running {count} samples...");
-
-            while (i < count)
-            {
-                if (LogOverall)
-                    timestamp = Stopwatch.GetTimestamp();
-
-                test.Execute();
-
-                if (LogOverall)
-                    sample[i] = Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds;
-
-                i++;
-                Thread.Sleep(delay);
-            }
+            test.Execute();
 
             if (LogOverall)
-                Log.Logger.Information($"sample: {count} | avg: {sample.Average(),0:0.00} | min: {sample.Min(),0:0.00} | max: {sample.Max(),0:0.00} | total: {sample.Sum()}");
+                sample[i] = Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds;
+
+            i++;
+            Thread.Sleep(delay);
         }
 
-        private static void Test_Input()
+        if (LogOverall)
+            Log.Logger.Information($"sample: {count} | avg: {sample.Average(),0:0.00} | min: {sample.Min(),0:0.00} | max: {sample.Max(),0:0.00} | total: {sample.Sum()}");
+    }
+
+    private static void Test_Input()
+    {
+        Test_Input test = new(logger);
+        test.Mouse_Movement();
+        test.Mouse_Clicks();
+        test.Clipboard();
+    }
+
+    private static void Test_CursorGrabber()
+    {
+        using CursorClassifier classifier = new();
+        int i = 5;
+        while (i > 0)
         {
-            Test_Input test = new(logger);
-            test.Mouse_Movement();
-            test.Mouse_Clicks();
-            test.Clipboard();
+            Thread.Sleep(1000);
+
+            classifier.Classify(out CursorType cursorType);
+            Log.Logger.Information($"{cursorType.ToStringF()}");
+
+            i--;
         }
+    }
 
-        private static void Test_CursorGrabber()
+    private static void Test_MinimapNodeFinder()
+    {
+        using Test_MinimapNodeFinder test = new(logger);
+
+        int count = 100;
+        int i = 0;
+
+        long timestamp = Stopwatch.GetTimestamp();
+        double[] sample = new double[count];
+
+        Log.Logger.Information($"running {count} samples...");
+
+        while (i < count)
         {
-            using CursorClassifier classifier = new();
-            int i = 5;
-            while (i > 0)
-            {
-                Thread.Sleep(1000);
+            if (LogOverall)
+                timestamp = Stopwatch.GetTimestamp();
 
-                classifier.Classify(out CursorType cursorType);
-                Log.Logger.Information($"{cursorType.ToStringF()}");
-
-                i--;
-            }
-        }
-
-        private static void Test_MinimapNodeFinder()
-        {
-            using Test_MinimapNodeFinder test = new(logger);
-
-            int count = 100;
-            int i = 0;
-
-            long timestamp = Stopwatch.GetTimestamp();
-            double[] sample = new double[count];
-
-            Log.Logger.Information($"running {count} samples...");
-
-            while (i < count)
-            {
-                if (LogOverall)
-                    timestamp = Stopwatch.GetTimestamp();
-
-                test.Execute();
-
-                if (LogOverall)
-                    sample[i] = Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds;
-
-                i++;
-                Thread.Sleep(delay);
-            }
+            test.Execute();
 
             if (LogOverall)
-                Log.Logger.Information($"sample: {count} | avg: {sample.Average(),0:0.00} | min: {sample.Min(),0:0.00} | max: {sample.Max(),0:0.00} | total: {sample.Sum()}");
+                sample[i] = Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds;
+
+            i++;
+            Thread.Sleep(delay);
         }
 
-        private static void Test_FindTargetByCursor()
+        if (LogOverall)
+            Log.Logger.Information($"sample: {count} | avg: {sample.Average(),0:0.00} | min: {sample.Min(),0:0.00} | max: {sample.Max(),0:0.00} | total: {sample.Sum()}");
+    }
+
+    private static void Test_FindTargetByCursor()
+    {
+        //CursorType cursorType = CursorType.Kill;
+        CursorType cursorType = CursorType.Vendor;
+
+        //NpcNames types = NpcNames.Enemy;
+        //NpcNames types = NpcNames.Corpse;
+        //NpcNames types = NpcNames.Enemy | NpcNames.Neutral;
+        NpcNames types = NpcNames.Friendly | NpcNames.Neutral;
+
+        using Test_NpcNameFinder test = new(logger, types, ShowOverlay);
+
+        int count = 2;
+        int i = 0;
+
+        while (i < count)
         {
-            //CursorType cursorType = CursorType.Kill;
-            CursorType cursorType = CursorType.Vendor;
-
-            //NpcNames types = NpcNames.Enemy;
-            //NpcNames types = NpcNames.Corpse;
-            //NpcNames types = NpcNames.Enemy | NpcNames.Neutral;
-            NpcNames types = NpcNames.Friendly | NpcNames.Neutral;
-
-            using Test_NpcNameFinder test = new(logger, types, ShowOverlay);
-
-            int count = 2;
-            int i = 0;
-
-            while (i < count)
+            test.Execute();
+            if (test.Execute_FindTargetBy(cursorType))
             {
-                test.Execute();
-                if (test.Execute_FindTargetBy(cursorType))
-                {
-                    break;
-                }
-
-                i++;
-                Thread.Sleep(delay);
+                break;
             }
+
+            i++;
+            Thread.Sleep(delay);
         }
     }
 }

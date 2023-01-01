@@ -1,11 +1,10 @@
 ﻿using System.Drawing;
 
-namespace SharedLib
-{
-    public interface IBitmapProvider
-    {
-        Bitmap Bitmap { get; }
+namespace SharedLib;
 
-        Rectangle Rect { get; }
-    }
+public interface IBitmapProvider
+{
+    Bitmap Bitmap { get; }
+
+    Rectangle Rect { get; }
 }

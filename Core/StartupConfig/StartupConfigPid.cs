@@ -1,11 +1,10 @@
-﻿namespace Core
+﻿namespace Core;
+
+public sealed class StartupConfigPid
 {
-    public sealed class StartupConfigPid
-    {
-        public const string Position = "Process";
+    public const string Position = "Process";
 
-        public StartupConfigPid() { }
+    public StartupConfigPid() { }
 
-        public int Id { get; set; }
-    }
+    public int Id { get; set; }
 }

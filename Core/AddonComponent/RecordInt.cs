@@ -1,74 +1,73 @@
 ﻿using System;
 
-namespace Core
+namespace Core;
+
+public sealed class RecordInt
 {
-    public sealed class RecordInt
+    private readonly int cell;
+
+    public int Value { private set; get; }
+
+    public int _Value() => Value;
+
+    public DateTime LastChanged { private set; get; }
+
+    public int ElapsedMs() => (int)(DateTime.UtcNow - LastChanged).TotalMilliseconds;
+
+    public event Action? Changed;
+
+    public RecordInt(int cell)
     {
-        private readonly int cell;
+        this.cell = cell;
+    }
 
-        public int Value { private set; get; }
+    public bool Updated(IAddonDataProvider reader)
+    {
+        int temp = Value;
+        Value = reader.GetInt(cell);
 
-        public int _Value() => Value;
-
-        public DateTime LastChanged { private set; get; }
-
-        public int ElapsedMs() => (int)(DateTime.UtcNow - LastChanged).TotalMilliseconds;
-
-        public event Action? Changed;
-
-        public RecordInt(int cell)
+        if (temp != Value)
         {
-            this.cell = cell;
+            Changed?.Invoke();
+            LastChanged = DateTime.UtcNow;
+            return true;
         }
 
-        public bool Updated(IAddonDataProvider reader)
+        return false;
+    }
+
+    public bool UpdatedNoEvent(IAddonDataProvider reader)
+    {
+        int temp = Value;
+        Value = reader.GetInt(cell);
+        return temp != Value;
+    }
+
+    public void Update(IAddonDataProvider reader)
+    {
+        int temp = Value;
+        Value = reader.GetInt(cell);
+
+        if (temp != Value)
         {
-            int temp = Value;
-            Value = reader.GetInt(cell);
-
-            if (temp != Value)
-            {
-                Changed?.Invoke();
-                LastChanged = DateTime.UtcNow;
-                return true;
-            }
-
-            return false;
-        }
-
-        public bool UpdatedNoEvent(IAddonDataProvider reader)
-        {
-            int temp = Value;
-            Value = reader.GetInt(cell);
-            return temp != Value;
-        }
-
-        public void Update(IAddonDataProvider reader)
-        {
-            int temp = Value;
-            Value = reader.GetInt(cell);
-
-            if (temp != Value)
-            {
-                Changed?.Invoke();
-                LastChanged = DateTime.UtcNow;
-            }
-        }
-
-        public void UpdateTime()
-        {
+            Changed?.Invoke();
             LastChanged = DateTime.UtcNow;
         }
+    }
 
-        public void Reset()
-        {
-            Value = 0;
-            LastChanged = default;
-        }
+    public void UpdateTime()
+    {
+        LastChanged = DateTime.UtcNow;
+    }
 
-        public void ForceUpdate(int value)
-        {
-            Value = value;
-        }
+    public void Reset()
+    {
+        Value = 0;
+        LastChanged = default;
+    }
+
+    public void ForceUpdate(int value)
+    {
+        Value = value;
     }
 }

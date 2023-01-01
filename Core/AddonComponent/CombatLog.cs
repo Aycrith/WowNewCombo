@@ -1,92 +1,91 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Core
+namespace Core;
+
+public sealed class CombatLog
 {
-    public sealed class CombatLog
+    private bool wasInCombat;
+
+    public event Action? KillCredit;
+    public event Action? TargetEvade;
+
+    public HashSet<int> DamageDone { get; } = new();
+    public HashSet<int> DamageTaken { get; } = new();
+
+    public RecordInt DamageDoneGuid { get; }
+    public RecordInt DamageTakenGuid { get; }
+    public RecordInt DeadGuid { get; }
+
+    public RecordInt TargetMissType { get; }
+    public RecordInt TargetDodge { get; }
+
+    public CombatLog(int cDamageDone, int cDamageTaken, int cDead, int cTargetMiss)
     {
-        private bool wasInCombat;
+        DamageDoneGuid = new RecordInt(cDamageDone);
+        DamageTakenGuid = new RecordInt(cDamageTaken);
+        DeadGuid = new RecordInt(cDead);
 
-        public event Action? KillCredit;
-        public event Action? TargetEvade;
+        TargetMissType = new(cTargetMiss);
+        TargetDodge = new(cTargetMiss);
+    }
 
-        public HashSet<int> DamageDone { get; } = new();
-        public HashSet<int> DamageTaken { get; } = new();
+    public void Reset()
+    {
+        wasInCombat = false;
 
-        public RecordInt DamageDoneGuid { get; }
-        public RecordInt DamageTakenGuid { get; }
-        public RecordInt DeadGuid { get; }
+        DamageDone.Clear();
+        DamageTaken.Clear();
 
-        public RecordInt TargetMissType { get; }
-        public RecordInt TargetDodge { get; }
+        DamageDoneGuid.Reset();
+        DamageTakenGuid.Reset();
+        DeadGuid.Reset();
 
-        public CombatLog(int cDamageDone, int cDamageTaken, int cDead, int cTargetMiss)
+        TargetMissType.Reset();
+        TargetDodge.Reset();
+    }
+
+    public void Update(IAddonDataProvider reader, bool playerInCombat)
+    {
+        if (TargetMissType.Updated(reader))
         {
-            DamageDoneGuid = new RecordInt(cDamageDone);
-            DamageTakenGuid = new RecordInt(cDamageTaken);
-            DeadGuid = new RecordInt(cDead);
-
-            TargetMissType = new(cTargetMiss);
-            TargetDodge = new(cTargetMiss);
+            switch ((MissType)TargetMissType.Value)
+            {
+                case MissType.DODGE:
+                    TargetDodge.UpdateTime();
+                    break;
+                case MissType.EVADE:
+                    TargetEvade?.Invoke();
+                    break;
+            }
         }
 
-        public void Reset()
+        if (playerInCombat && DamageTakenGuid.Updated(reader) && DamageTakenGuid.Value > 0)
         {
-            wasInCombat = false;
+            DamageTaken.Add(DamageTakenGuid.Value);
+        }
 
-            DamageDone.Clear();
+        if (playerInCombat && DamageDoneGuid.Updated(reader) && DamageDoneGuid.Value > 0)
+        {
+            DamageDone.Add(DamageDoneGuid.Value);
+        }
+
+        if (DeadGuid.Updated(reader) && DeadGuid.Value > 0)
+        {
+            int deadGuid = DeadGuid.Value;
+            DamageDone.Remove(deadGuid);
+            DamageTaken.Remove(deadGuid);
+
+            KillCredit?.Invoke();
+        }
+
+        if (wasInCombat && !playerInCombat)
+        {
+            // left combat
             DamageTaken.Clear();
-
-            DamageDoneGuid.Reset();
-            DamageTakenGuid.Reset();
-            DeadGuid.Reset();
-
-            TargetMissType.Reset();
-            TargetDodge.Reset();
+            DamageDone.Clear();
         }
 
-        public void Update(IAddonDataProvider reader, bool playerInCombat)
-        {
-            if (TargetMissType.Updated(reader))
-            {
-                switch ((MissType)TargetMissType.Value)
-                {
-                    case MissType.DODGE:
-                        TargetDodge.UpdateTime();
-                        break;
-                    case MissType.EVADE:
-                        TargetEvade?.Invoke();
-                        break;
-                }
-            }
-
-            if (playerInCombat && DamageTakenGuid.Updated(reader) && DamageTakenGuid.Value > 0)
-            {
-                DamageTaken.Add(DamageTakenGuid.Value);
-            }
-
-            if (playerInCombat && DamageDoneGuid.Updated(reader) && DamageDoneGuid.Value > 0)
-            {
-                DamageDone.Add(DamageDoneGuid.Value);
-            }
-
-            if (DeadGuid.Updated(reader) && DeadGuid.Value > 0)
-            {
-                int deadGuid = DeadGuid.Value;
-                DamageDone.Remove(deadGuid);
-                DamageTaken.Remove(deadGuid);
-
-                KillCredit?.Invoke();
-            }
-
-            if (wasInCombat && !playerInCombat)
-            {
-                // left combat
-                DamageTaken.Clear();
-                DamageDone.Clear();
-            }
-
-            wasInCombat = playerInCombat;
-        }
+        wasInCombat = playerInCombat;
     }
 }

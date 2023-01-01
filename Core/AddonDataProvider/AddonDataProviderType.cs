@@ -1,9 +1,8 @@
-﻿namespace Core
+﻿namespace Core;
+
+public enum AddonDataProviderType
 {
-    public enum AddonDataProviderType
-    {
-        GDI,
-        DXGI,
-        GDIConfig
-    }
+    GDI,
+    DXGI,
+    GDIConfig
 }

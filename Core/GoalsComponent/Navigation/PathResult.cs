@@ -1,25 +1,24 @@
 ﻿using System;
 using System.Numerics;
 
-namespace Core.Goals
-{
-    internal readonly struct PathResult
-    {
-        public readonly Vector3 StartW;
-        public readonly Vector3 EndW;
-        public readonly float Distance;
-        public readonly Vector3[] Path;
-        public readonly double ElapsedMs;
-        public readonly Action<PathResult> Callback;
+namespace Core.Goals;
 
-        public PathResult(in PathRequest request, Vector3[] path, Action<PathResult> callback)
-        {
-            StartW = request.StartW;
-            EndW = request.EndW;
-            Distance = request.Distance;
-            Path = path;
-            Callback = callback;
-            ElapsedMs = (DateTime.UtcNow - request.Time).TotalMilliseconds;
-        }
+internal readonly struct PathResult
+{
+    public readonly Vector3 StartW;
+    public readonly Vector3 EndW;
+    public readonly float Distance;
+    public readonly Vector3[] Path;
+    public readonly double ElapsedMs;
+    public readonly Action<PathResult> Callback;
+
+    public PathResult(in PathRequest request, Vector3[] path, Action<PathResult> callback)
+    {
+        StartW = request.StartW;
+        EndW = request.EndW;
+        Distance = request.Distance;
+        Path = path;
+        Callback = callback;
+        ElapsedMs = (DateTime.UtcNow - request.Time).TotalMilliseconds;
     }
 }

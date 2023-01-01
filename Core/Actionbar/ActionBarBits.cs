@@ -1,34 +1,33 @@
 ﻿using System.Collections.Specialized;
 
-namespace Core
+namespace Core;
+
+public sealed class ActionBarBits
 {
-    public sealed class ActionBarBits
+    private readonly int[] cells;
+
+    private readonly BitVector32[] bits;
+
+    public ActionBarBits(params int[] cells)
     {
-        private readonly int[] cells;
+        this.cells = cells;
+        bits = new BitVector32[cells.Length];
+    }
 
-        private readonly BitVector32[] bits;
-
-        public ActionBarBits(params int[] cells)
+    public void Update(IAddonDataProvider reader)
+    {
+        for (int i = 0; i < bits.Length; i++)
         {
-            this.cells = cells;
-            bits = new BitVector32[cells.Length];
+            bits[i] = new(reader.GetInt(cells[i]));
         }
+    }
 
-        public void Update(IAddonDataProvider reader)
-        {
-            for (int i = 0; i < bits.Length; i++)
-            {
-                bits[i] = new(reader.GetInt(cells[i]));
-            }
-        }
+    // https://wowwiki-archive.fandom.com/wiki/ActionSlot
+    public bool Is(KeyAction keyAction)
+    {
+        if (keyAction.Slot == 0) return false;
 
-        // https://wowwiki-archive.fandom.com/wiki/ActionSlot
-        public bool Is(KeyAction keyAction)
-        {
-            if (keyAction.Slot == 0) return false;
-
-            int index = keyAction.SlotIndex;
-            return bits[index / ActionBar.BIT_PER_CELL][Mask.M[index % ActionBar.BIT_PER_CELL]];
-        }
+        int index = keyAction.SlotIndex;
+        return bits[index / ActionBar.BIT_PER_CELL][Mask.M[index % ActionBar.BIT_PER_CELL]];
     }
 }

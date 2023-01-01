@@ -1,7 +1,6 @@
-﻿namespace Core.GOAP
+﻿namespace Core.GOAP;
+
+public interface IGoapEventListener
 {
-    public interface IGoapEventListener
-    {
-        void OnGoapEvent(GoapEventArgs e);
-    }
+    void OnGoapEvent(GoapEventArgs e);
 }

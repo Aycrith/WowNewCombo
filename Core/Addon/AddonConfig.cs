@@ -2,62 +2,61 @@
 using static Newtonsoft.Json.JsonConvert;
 using Newtonsoft.Json;
 
-namespace Core
+namespace Core;
+
+public static class AddonConfigMeta
 {
-    public static class AddonConfigMeta
+    public const int Version = 1;
+    public const string DefaultFileName = "addon_config.json";
+}
+
+public sealed class AddonConfig
+{
+    public int Version { get; init; } = AddonConfigMeta.Version;
+
+    public string Author { get; set; } = string.Empty;
+    public string CellSize { get; set; } = "1";
+    public string Title { get; set; } = string.Empty;
+    public string Command { get; set; } = string.Empty;
+
+    [JsonIgnore]
+    public string CommandFlush => Command + "flush";
+
+    public bool IsDefault()
     {
-        public const int Version = 1;
-        public const string DefaultFileName = "addon_config.json";
+        return
+            string.IsNullOrEmpty(Author) ||
+            string.IsNullOrEmpty(Title) ||
+            string.IsNullOrEmpty(Command);
     }
 
-    public sealed class AddonConfig
+    public static AddonConfig Load()
     {
-        public int Version { get; init; } = AddonConfigMeta.Version;
-
-        public string Author { get; set; } = string.Empty;
-        public string CellSize { get; set; } = "1";
-        public string Title { get; set; } = string.Empty;
-        public string Command { get; set; } = string.Empty;
-
-        [JsonIgnore]
-        public string CommandFlush => Command + "flush";
-
-        public bool IsDefault()
+        if (Exists())
         {
-            return
-                string.IsNullOrEmpty(Author) ||
-                string.IsNullOrEmpty(Title) ||
-                string.IsNullOrEmpty(Command);
+            var loaded = DeserializeObject<AddonConfig>(File.ReadAllText(AddonConfigMeta.DefaultFileName))!;
+            if (loaded.Version == AddonConfigMeta.Version)
+                return loaded;
         }
 
-        public static AddonConfig Load()
-        {
-            if (Exists())
-            {
-                var loaded = DeserializeObject<AddonConfig>(File.ReadAllText(AddonConfigMeta.DefaultFileName))!;
-                if (loaded.Version == AddonConfigMeta.Version)
-                    return loaded;
-            }
+        return new AddonConfig();
+    }
 
-            return new AddonConfig();
-        }
+    public static bool Exists()
+    {
+        return File.Exists(AddonConfigMeta.DefaultFileName);
+    }
 
-        public static bool Exists()
+    public static void Delete()
+    {
+        if (Exists())
         {
-            return File.Exists(AddonConfigMeta.DefaultFileName);
+            File.Delete(AddonConfigMeta.DefaultFileName);
         }
+    }
 
-        public static void Delete()
-        {
-            if (Exists())
-            {
-                File.Delete(AddonConfigMeta.DefaultFileName);
-            }
-        }
-
-        public void Save()
-        {
-            File.WriteAllText(AddonConfigMeta.DefaultFileName, SerializeObject(this));
-        }
+    public void Save()
+    {
+        File.WriteAllText(AddonConfigMeta.DefaultFileName, SerializeObject(this));
     }
 }

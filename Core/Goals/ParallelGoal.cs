@@ -3,107 +3,106 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 
-namespace Core.Goals
+namespace Core.Goals;
+
+public sealed class ParallelGoal : GoapGoal
 {
-    public sealed class ParallelGoal : GoapGoal
+    public override float Cost => 3f;
+
+    private readonly ILogger logger;
+    private readonly ConfigurableInput input;
+    private readonly StopMoving stopMoving;
+    private readonly Wait wait;
+    private readonly PlayerReader playerReader;
+    private readonly CastingHandler castingHandler;
+    private readonly IMountHandler mountHandler;
+
+    private static bool None() => false;
+
+    private bool castSuccess;
+
+    public ParallelGoal(ILogger logger, ConfigurableInput input, Wait wait,
+        PlayerReader playerReader, StopMoving stopMoving, ClassConfiguration classConfig,
+        CastingHandler castingHandler, IMountHandler mountHandler)
+        : base(nameof(ParallelGoal))
     {
-        public override float Cost => 3f;
+        this.logger = logger;
+        this.input = input;
+        this.stopMoving = stopMoving;
+        this.wait = wait;
+        this.playerReader = playerReader;
+        this.castingHandler = castingHandler;
+        this.mountHandler = mountHandler;
 
-        private readonly ILogger logger;
-        private readonly ConfigurableInput input;
-        private readonly StopMoving stopMoving;
-        private readonly Wait wait;
-        private readonly PlayerReader playerReader;
-        private readonly CastingHandler castingHandler;
-        private readonly IMountHandler mountHandler;
+        AddPrecondition(GoapKey.incombat, false);
 
-        private static bool None() => false;
+        Keys = classConfig.Parallel.Sequence;
+    }
 
-        private bool castSuccess;
-
-        public ParallelGoal(ILogger logger, ConfigurableInput input, Wait wait,
-            PlayerReader playerReader, StopMoving stopMoving, ClassConfiguration classConfig,
-            CastingHandler castingHandler, IMountHandler mountHandler)
-            : base(nameof(ParallelGoal))
+    public override bool CanRun()
+    {
+        for (int i = 0; i < Keys.Length; i++)
         {
-            this.logger = logger;
-            this.input = input;
-            this.stopMoving = stopMoving;
-            this.wait = wait;
-            this.playerReader = playerReader;
-            this.castingHandler = castingHandler;
-            this.mountHandler = mountHandler;
+            if (Keys[i].CanRun())
+                return true;
+        }
+        return false;
+    }
 
-            AddPrecondition(GoapKey.incombat, false);
-
-            Keys = classConfig.Parallel.Sequence;
+    public override void OnEnter()
+    {
+        if (mountHandler.IsMounted())
+        {
+            mountHandler.Dismount();
+            wait.Update();
         }
 
-        public override bool CanRun()
-        {
-            for (int i = 0; i < Keys.Length; i++)
-            {
-                if (Keys[i].CanRun())
-                    return true;
-            }
-            return false;
-        }
+        castingHandler.UpdateGCD(true);
 
-        public override void OnEnter()
+        for (int i = 0; i < Keys.Length; i++)
         {
-            if (mountHandler.IsMounted())
+            if (Keys[i].BeforeCastStop)
             {
-                mountHandler.Dismount();
+                stopMoving.Stop();
                 wait.Update();
-            }
-
-            castingHandler.UpdateGCD(true);
-
-            for (int i = 0; i < Keys.Length; i++)
-            {
-                if (Keys[i].BeforeCastStop)
-                {
-                    stopMoving.Stop();
-                    wait.Update();
-                    break;
-                }
+                break;
             }
         }
+    }
 
-        public override void Update()
+    public override void Update()
+    {
+        if (castingHandler.SpellInQueue())
         {
-            if (castingHandler.SpellInQueue())
-            {
-                wait.Update();
-                return;
-            }
-
-            if (!castSuccess)
-            {
-                Cast();
-                wait.Update();
-            }
+            wait.Update();
+            return;
         }
 
-        public override void OnExit()
+        if (!castSuccess)
         {
-            castSuccess = false;
+            Cast();
+            wait.Update();
         }
+    }
 
-        private void Cast()
+    public override void OnExit()
+    {
+        castSuccess = false;
+    }
+
+    private void Cast()
+    {
+        Parallel.For(0, Keys.Length, Execute);
+    }
+
+    private void Execute(int i)
+    {
+        if (castingHandler.CastIfReady(Keys[i], None))
         {
-            Parallel.For(0, Keys.Length, Execute);
-        }
+            Keys[i].ResetCooldown();
+            Keys[i].SetClicked();
 
-        private void Execute(int i)
-        {
-            if (castingHandler.CastIfReady(Keys[i], None))
-            {
-                Keys[i].ResetCooldown();
-                Keys[i].SetClicked();
-
-                castSuccess = true;
-            }
+            castSuccess = true;
         }
     }
 }

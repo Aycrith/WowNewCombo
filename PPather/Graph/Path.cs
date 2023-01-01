@@ -19,25 +19,24 @@
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace PPather.Graph
+namespace PPather.Graph;
+
+public sealed class Path
 {
-    public sealed class Path
+    public List<Vector3> locations { get; } = new();
+
+    public Vector3 GetLast => locations[^1];
+
+    public Path(List<Spot> steps)
     {
-        public List<Vector3> locations { get; } = new();
-
-        public Vector3 GetLast => locations[^1];
-
-        public Path(List<Spot> steps)
+        foreach (Spot s in steps)
         {
-            foreach (Spot s in steps)
-            {
-                Add(s.Loc);
-            }
+            Add(s.Loc);
         }
+    }
 
-        public void Add(Vector3 l)
-        {
-            locations.Add(l);
-        }
+    public void Add(Vector3 l)
+    {
+        locations.Add(l);
     }
 }

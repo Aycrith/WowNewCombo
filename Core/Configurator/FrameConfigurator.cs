@@ -8,354 +8,353 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Threading;
 
-namespace Core
+namespace Core;
+
+public sealed class FrameConfigurator : IDisposable
 {
-    public sealed class FrameConfigurator : IDisposable
+    private enum Stage
     {
-        private enum Stage
+        Reset,
+        DetectRunningGame,
+        CheckGameWindowLocation,
+        EnterConfigMode,
+        ValidateMetaSize,
+        CreateDataFrames,
+        ReturnNormalMode,
+        UpdateReader,
+        ValidateData,
+        Done
+    }
+
+    private Stage stage = Stage.Reset;
+
+    private const int MAX_HEIGHT = 25; // this one just arbitrary number for sanity check
+    private const int INTERVAL = 500;
+
+    private readonly ILogger logger;
+    private readonly WowProcess wowProcess;
+    private readonly WowScreen wowScreen;
+    private readonly WowProcessInput wowProcessInput;
+    private readonly ExecGameCommand execGameCommand;
+    private readonly AddonConfigurator addonConfigurator;
+    private readonly Wait wait;
+    private readonly IAddonDataProvider reader;
+
+    private Thread? screenshotThread;
+    private CancellationTokenSource cts = new();
+
+    public DataFrameMeta DataFrameMeta { get; private set; } = DataFrameMeta.Empty;
+
+    public DataFrame[] DataFrames { get; private set; } = Array.Empty<DataFrame>();
+
+    public bool Saved { get; private set; }
+    public bool AddonNotVisible { get; private set; }
+
+    public string ImageBase64 { private set; get; } = "iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==";
+
+    private Rectangle screenRect = Rectangle.Empty;
+    private Size size = Size.Empty;
+
+    public event Action? OnUpdate;
+
+    public FrameConfigurator(ILogger logger, Wait wait,
+        WowProcess wowProcess, IAddonDataProvider reader,
+        WowScreen wowScreen, WowProcessInput wowProcessInput,
+        ExecGameCommand execGameCommand, AddonConfigurator addonConfigurator)
+    {
+        this.logger = logger;
+        this.wait = wait;
+        this.wowProcess = wowProcess;
+        this.reader = reader;
+        this.wowScreen = wowScreen;
+        this.wowProcessInput = wowProcessInput;
+        this.execGameCommand = execGameCommand;
+        this.addonConfigurator = addonConfigurator;
+    }
+
+    public void Dispose()
+    {
+        cts.Cancel();
+    }
+
+    private void ManualConfigThread()
+    {
+        while (!cts.Token.IsCancellationRequested)
         {
-            Reset,
-            DetectRunningGame,
-            CheckGameWindowLocation,
-            EnterConfigMode,
-            ValidateMetaSize,
-            CreateDataFrames,
-            ReturnNormalMode,
-            UpdateReader,
-            ValidateData,
-            Done
+            DoConfig(false);
+
+            OnUpdate?.Invoke();
+            cts.Token.WaitHandle.WaitOne(INTERVAL);
+            wait.Update();
+        }
+        screenshotThread = null;
+    }
+
+    private bool DoConfig(bool auto)
+    {
+        switch (stage)
+        {
+            case Stage.Reset:
+                screenRect = Rectangle.Empty;
+                size = Size.Empty;
+                ResetConfigState();
+
+                stage++;
+                break;
+            case Stage.DetectRunningGame:
+                if (wowProcess.IsRunning)
+                {
+                    if (auto)
+                    {
+                        logger.LogInformation($"Found {nameof(WowProcess)}");
+                    }
+                    stage++;
+                }
+                else
+                {
+                    if (auto)
+                    {
+                        logger.LogWarning($"{nameof(WowProcess)} no longer running!");
+                        return false;
+                    }
+                    stage--;
+                }
+                break;
+            case Stage.CheckGameWindowLocation:
+                wowScreen.GetRectangle(out screenRect);
+                if (screenRect.Location.X < 0 || screenRect.Location.Y < 0)
+                {
+                    logger.LogWarning($"Client window outside of the visible area of the screen {screenRect.Location}");
+                    stage = Stage.Reset;
+
+                    if (auto)
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    AddonNotVisible = false;
+                    stage++;
+
+                    if (auto)
+                    {
+                        logger.LogInformation($"Client window: {screenRect}");
+                    }
+                }
+                break;
+            case Stage.EnterConfigMode:
+                if (auto)
+                {
+                    Version? version = addonConfigurator.GetInstallVersion();
+                    if (version == null)
+                    {
+                        stage = Stage.Reset;
+                        logger.LogError($"Addon is not installed!");
+                        return false;
+                    }
+                    logger.LogInformation($"Addon installed! Version: {version}");
+
+                    logger.LogInformation("Enter configuration mode.");
+                    wowProcessInput.SetForegroundWindow();
+                    wait.Fixed(INTERVAL);
+                    ToggleInGameConfiguration(execGameCommand);
+                    wait.Update();
+                }
+
+                DataFrameMeta temp = GetDataFrameMeta();
+                if (DataFrameMeta == DataFrameMeta.Empty && temp != DataFrameMeta.Empty)
+                {
+                    DataFrameMeta = temp;
+                    stage++;
+
+                    if (auto)
+                    {
+                        logger.LogInformation($"DataFrameMeta: {DataFrameMeta}");
+                    }
+                }
+                break;
+            case Stage.ValidateMetaSize:
+                size = DataFrameMeta.EstimatedSize(screenRect);
+                if (!size.IsEmpty &&
+                    size.Width <= screenRect.Size.Width &&
+                    size.Height <= screenRect.Size.Height &&
+                    size.Height <= MAX_HEIGHT)
+                {
+                    stage++;
+                }
+                else
+                {
+                    logger.LogWarning($"Addon Rect({size}) size issue. Either too small or too big!");
+                    stage = Stage.Reset;
+
+                    if (auto)
+                        return false;
+                }
+                break;
+            case Stage.CreateDataFrames:
+                Bitmap bitmap = wowScreen.GetBitmap(size.Width, size.Height);
+                if (!auto)
+                {
+                    using MemoryStream ms = new();
+                    bitmap.Save(ms, ImageFormat.Png);
+                    this.ImageBase64 = Convert.ToBase64String(ms.ToArray());
+                }
+
+                DataFrames = FrameConfig.TryCreateFrames(DataFrameMeta, bitmap);
+                if (DataFrames.Length == DataFrameMeta.frames)
+                {
+                    stage++;
+                }
+                else
+                {
+                    logger.LogWarning($"DataFrameMeta and FrameConfig dosen't match Frames: ({DataFrames.Length}) != Meta: ({DataFrameMeta.frames})");
+                    stage = Stage.Reset;
+
+                    if (auto)
+                        return false;
+                }
+
+                bitmap.Dispose();
+                break;
+            case Stage.ReturnNormalMode:
+                if (auto)
+                {
+                    logger.LogInformation($"Exit configuration mode.");
+                    wowProcessInput.SetForegroundWindow();
+                    ToggleInGameConfiguration(execGameCommand);
+                    wait.Fixed(INTERVAL);
+                }
+
+                if (GetDataFrameMeta() == DataFrameMeta.Empty)
+                    stage++;
+                break;
+            case Stage.UpdateReader:
+                reader.InitFrames(DataFrames);
+                wait.Update();
+                wait.Update();
+                stage++;
+                break;
+            case Stage.ValidateData:
+                if (TryResolveRaceAndClass(out UnitRace race, out UnitClass @class, out ClientVersion clientVersion))
+                {
+                    if (auto)
+                    {
+                        logger.LogInformation($"Found {clientVersion.ToStringF()} {race.ToStringF()} {@class.ToStringF()}!");
+                    }
+
+                    stage++;
+                }
+                else
+                {
+                    logger.LogError($"Unable to identify {nameof(ClientVersion)} {nameof(UnitRace)} and {nameof(UnitClass)}!");
+                    stage = Stage.Reset;
+
+                    if (auto)
+                        return false;
+                }
+                break;
+            case Stage.Done:
+                return false;
+            default:
+                break;
         }
 
-        private Stage stage = Stage.Reset;
+        return true;
+    }
 
-        private const int MAX_HEIGHT = 25; // this one just arbitrary number for sanity check
-        private const int INTERVAL = 500;
 
-        private readonly ILogger logger;
-        private readonly WowProcess wowProcess;
-        private readonly WowScreen wowScreen;
-        private readonly WowProcessInput wowProcessInput;
-        private readonly ExecGameCommand execGameCommand;
-        private readonly AddonConfigurator addonConfigurator;
-        private readonly Wait wait;
-        private readonly IAddonDataProvider reader;
+    private void ResetConfigState()
+    {
+        screenRect = Rectangle.Empty;
+        size = Size.Empty;
 
-        private Thread? screenshotThread;
-        private CancellationTokenSource cts = new();
+        AddonNotVisible = true;
+        stage = Stage.Reset;
+        Saved = false;
 
-        public DataFrameMeta DataFrameMeta { get; private set; } = DataFrameMeta.Empty;
+        DataFrameMeta = DataFrameMeta.Empty;
+        DataFrames = Array.Empty<DataFrame>();
 
-        public DataFrame[] DataFrames { get; private set; } = Array.Empty<DataFrame>();
+        reader.InitFrames(DataFrames);
+        wait.Update();
+    }
 
-        public bool Saved { get; private set; }
-        public bool AddonNotVisible { get; private set; }
+    private DataFrameMeta GetDataFrameMeta()
+    {
+        using Bitmap bitmap = wowScreen.GetBitmap(5, 5);
+        return FrameConfig.GetMeta(bitmap.GetPixel(0, 0));
+    }
 
-        public string ImageBase64 { private set; get; } = "iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==";
-
-        private Rectangle screenRect = Rectangle.Empty;
-        private Size size = Size.Empty;
-
-        public event Action? OnUpdate;
-
-        public FrameConfigurator(ILogger logger, Wait wait,
-            WowProcess wowProcess, IAddonDataProvider reader,
-            WowScreen wowScreen, WowProcessInput wowProcessInput,
-            ExecGameCommand execGameCommand, AddonConfigurator addonConfigurator)
+    public void ToggleManualConfig()
+    {
+        if (screenshotThread == null)
         {
-            this.logger = logger;
-            this.wait = wait;
-            this.wowProcess = wowProcess;
-            this.reader = reader;
-            this.wowScreen = wowScreen;
-            this.wowProcessInput = wowProcessInput;
-            this.execGameCommand = execGameCommand;
-            this.addonConfigurator = addonConfigurator;
-        }
+            ResetConfigState();
 
-        public void Dispose()
+            cts.Dispose();
+            cts = new();
+            screenshotThread = new Thread(ManualConfigThread);
+            screenshotThread.Start();
+        }
+        else
         {
             cts.Cancel();
         }
+    }
 
-        private void ManualConfigThread()
+    public bool FinishConfig()
+    {
+        Version? version = addonConfigurator.GetInstallVersion();
+        if (version == null ||
+            DataFrames.Length == 0 ||
+            DataFrameMeta.frames == 0 ||
+            DataFrames.Length != DataFrameMeta.frames ||
+            !TryResolveRaceAndClass(out _, out _, out _))
         {
-            while (!cts.Token.IsCancellationRequested)
-            {
-                DoConfig(false);
-
-                OnUpdate?.Invoke();
-                cts.Token.WaitHandle.WaitOne(INTERVAL);
-                wait.Update();
-            }
-            screenshotThread = null;
+            logger.LogInformation($"Frame configuration was incomplete! Please try again, after resolving the previusly mentioned issues...");
+            ResetConfigState();
+            return false;
         }
 
-        private bool DoConfig(bool auto)
+        wowScreen.GetRectangle(out Rectangle rect);
+        FrameConfig.Save(rect, version, DataFrameMeta, DataFrames);
+        logger.LogInformation($"Frame configuration was successful! Configuration saved!");
+        Saved = true;
+
+        return true;
+    }
+
+    public bool StartAutoConfig()
+    {
+        while (DoConfig(true))
         {
-            switch (stage)
-            {
-                case Stage.Reset:
-                    screenRect = Rectangle.Empty;
-                    size = Size.Empty;
-                    ResetConfigState();
-
-                    stage++;
-                    break;
-                case Stage.DetectRunningGame:
-                    if (wowProcess.IsRunning)
-                    {
-                        if (auto)
-                        {
-                            logger.LogInformation($"Found {nameof(WowProcess)}");
-                        }
-                        stage++;
-                    }
-                    else
-                    {
-                        if (auto)
-                        {
-                            logger.LogWarning($"{nameof(WowProcess)} no longer running!");
-                            return false;
-                        }
-                        stage--;
-                    }
-                    break;
-                case Stage.CheckGameWindowLocation:
-                    wowScreen.GetRectangle(out screenRect);
-                    if (screenRect.Location.X < 0 || screenRect.Location.Y < 0)
-                    {
-                        logger.LogWarning($"Client window outside of the visible area of the screen {screenRect.Location}");
-                        stage = Stage.Reset;
-
-                        if (auto)
-                        {
-                            return false;
-                        }
-                    }
-                    else
-                    {
-                        AddonNotVisible = false;
-                        stage++;
-
-                        if (auto)
-                        {
-                            logger.LogInformation($"Client window: {screenRect}");
-                        }
-                    }
-                    break;
-                case Stage.EnterConfigMode:
-                    if (auto)
-                    {
-                        Version? version = addonConfigurator.GetInstallVersion();
-                        if (version == null)
-                        {
-                            stage = Stage.Reset;
-                            logger.LogError($"Addon is not installed!");
-                            return false;
-                        }
-                        logger.LogInformation($"Addon installed! Version: {version}");
-
-                        logger.LogInformation("Enter configuration mode.");
-                        wowProcessInput.SetForegroundWindow();
-                        wait.Fixed(INTERVAL);
-                        ToggleInGameConfiguration(execGameCommand);
-                        wait.Update();
-                    }
-
-                    DataFrameMeta temp = GetDataFrameMeta();
-                    if (DataFrameMeta == DataFrameMeta.Empty && temp != DataFrameMeta.Empty)
-                    {
-                        DataFrameMeta = temp;
-                        stage++;
-
-                        if (auto)
-                        {
-                            logger.LogInformation($"DataFrameMeta: {DataFrameMeta}");
-                        }
-                    }
-                    break;
-                case Stage.ValidateMetaSize:
-                    size = DataFrameMeta.EstimatedSize(screenRect);
-                    if (!size.IsEmpty &&
-                        size.Width <= screenRect.Size.Width &&
-                        size.Height <= screenRect.Size.Height &&
-                        size.Height <= MAX_HEIGHT)
-                    {
-                        stage++;
-                    }
-                    else
-                    {
-                        logger.LogWarning($"Addon Rect({size}) size issue. Either too small or too big!");
-                        stage = Stage.Reset;
-
-                        if (auto)
-                            return false;
-                    }
-                    break;
-                case Stage.CreateDataFrames:
-                    Bitmap bitmap = wowScreen.GetBitmap(size.Width, size.Height);
-                    if (!auto)
-                    {
-                        using MemoryStream ms = new();
-                        bitmap.Save(ms, ImageFormat.Png);
-                        this.ImageBase64 = Convert.ToBase64String(ms.ToArray());
-                    }
-
-                    DataFrames = FrameConfig.TryCreateFrames(DataFrameMeta, bitmap);
-                    if (DataFrames.Length == DataFrameMeta.frames)
-                    {
-                        stage++;
-                    }
-                    else
-                    {
-                        logger.LogWarning($"DataFrameMeta and FrameConfig dosen't match Frames: ({DataFrames.Length}) != Meta: ({DataFrameMeta.frames})");
-                        stage = Stage.Reset;
-
-                        if (auto)
-                            return false;
-                    }
-
-                    bitmap.Dispose();
-                    break;
-                case Stage.ReturnNormalMode:
-                    if (auto)
-                    {
-                        logger.LogInformation($"Exit configuration mode.");
-                        wowProcessInput.SetForegroundWindow();
-                        ToggleInGameConfiguration(execGameCommand);
-                        wait.Fixed(INTERVAL);
-                    }
-
-                    if (GetDataFrameMeta() == DataFrameMeta.Empty)
-                        stage++;
-                    break;
-                case Stage.UpdateReader:
-                    reader.InitFrames(DataFrames);
-                    wait.Update();
-                    wait.Update();
-                    stage++;
-                    break;
-                case Stage.ValidateData:
-                    if (TryResolveRaceAndClass(out UnitRace race, out UnitClass @class, out ClientVersion clientVersion))
-                    {
-                        if (auto)
-                        {
-                            logger.LogInformation($"Found {clientVersion.ToStringF()} {race.ToStringF()} {@class.ToStringF()}!");
-                        }
-
-                        stage++;
-                    }
-                    else
-                    {
-                        logger.LogError($"Unable to identify {nameof(ClientVersion)} {nameof(UnitRace)} and {nameof(UnitClass)}!");
-                        stage = Stage.Reset;
-
-                        if (auto)
-                            return false;
-                    }
-                    break;
-                case Stage.Done:
-                    return false;
-                default:
-                    break;
-            }
-
-            return true;
-        }
-
-
-        private void ResetConfigState()
-        {
-            screenRect = Rectangle.Empty;
-            size = Size.Empty;
-
-            AddonNotVisible = true;
-            stage = Stage.Reset;
-            Saved = false;
-
-            DataFrameMeta = DataFrameMeta.Empty;
-            DataFrames = Array.Empty<DataFrame>();
-
-            reader.InitFrames(DataFrames);
             wait.Update();
         }
 
-        private DataFrameMeta GetDataFrameMeta()
-        {
-            using Bitmap bitmap = wowScreen.GetBitmap(5, 5);
-            return FrameConfig.GetMeta(bitmap.GetPixel(0, 0));
-        }
+        return FinishConfig();
+    }
 
-        public void ToggleManualConfig()
-        {
-            if (screenshotThread == null)
-            {
-                ResetConfigState();
+    public static void DeleteConfig()
+    {
+        FrameConfig.Delete();
+    }
 
-                cts.Dispose();
-                cts = new();
-                screenshotThread = new Thread(ManualConfigThread);
-                screenshotThread.Start();
-            }
-            else
-            {
-                cts.Cancel();
-            }
-        }
+    private void ToggleInGameConfiguration(ExecGameCommand exec)
+    {
+        exec.Run($"/{addonConfigurator.Config.Command}");
+    }
 
-        public bool FinishConfig()
-        {
-            Version? version = addonConfigurator.GetInstallVersion();
-            if (version == null ||
-                DataFrames.Length == 0 ||
-                DataFrameMeta.frames == 0 ||
-                DataFrames.Length != DataFrameMeta.frames ||
-                !TryResolveRaceAndClass(out _, out _, out _))
-            {
-                logger.LogInformation($"Frame configuration was incomplete! Please try again, after resolving the previusly mentioned issues...");
-                ResetConfigState();
-                return false;
-            }
+    public bool TryResolveRaceAndClass(out UnitRace race, out UnitClass @class, out ClientVersion version)
+    {
+        int value = reader.GetInt(46);
 
-            wowScreen.GetRectangle(out Rectangle rect);
-            FrameConfig.Save(rect, version, DataFrameMeta, DataFrames);
-            logger.LogInformation($"Frame configuration was successful! Configuration saved!");
-            Saved = true;
+        // RACE_ID * 10000 + CLASS_ID * 100 + ClientVersion
+        race = (UnitRace)(value / 10000);
+        @class = (UnitClass)(value / 100 % 100);
+        version = (ClientVersion)(value % 10);
 
-            return true;
-        }
-
-        public bool StartAutoConfig()
-        {
-            while (DoConfig(true))
-            {
-                wait.Update();
-            }
-
-            return FinishConfig();
-        }
-
-        public static void DeleteConfig()
-        {
-            FrameConfig.Delete();
-        }
-
-        private void ToggleInGameConfiguration(ExecGameCommand exec)
-        {
-            exec.Run($"/{addonConfigurator.Config.Command}");
-        }
-
-        public bool TryResolveRaceAndClass(out UnitRace race, out UnitClass @class, out ClientVersion version)
-        {
-            int value = reader.GetInt(46);
-
-            // RACE_ID * 10000 + CLASS_ID * 100 + ClientVersion
-            race = (UnitRace)(value / 10000);
-            @class = (UnitClass)(value / 100 % 100);
-            version = (ClientVersion)(value % 10);
-
-            return Enum.IsDefined(race) && Enum.IsDefined(@class) && Enum.IsDefined(version) &&
-                race != UnitRace.None && @class != UnitClass.None && version != ClientVersion.None;
-        }
+        return Enum.IsDefined(race) && Enum.IsDefined(@class) && Enum.IsDefined(version) &&
+            race != UnitRace.None && @class != UnitClass.None && version != ClientVersion.None;
     }
 }
