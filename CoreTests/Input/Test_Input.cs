@@ -4,92 +4,91 @@ using Game;
 using Microsoft.Extensions.Logging;
 using System.Threading;
 
-namespace CoreTests
+namespace CoreTests;
+
+public class Test_Input : IDisposable
 {
-    public class Test_Input : IDisposable
+    private const int delay = 500;
+
+    private readonly CancellationTokenSource cts;
+
+    private readonly ILogger logger;
+    private readonly WowProcess wowProcess;
+    private readonly WowScreen wowScreen;
+    private readonly WowProcessInput wowProcessInput;
+
+    public Test_Input(ILogger logger)
     {
-        private const int delay = 500;
+        this.logger = logger;
+        this.cts = new();
 
-        private readonly CancellationTokenSource cts;
+        wowProcess = new WowProcess();
+        wowScreen = new WowScreen(logger, wowProcess);
+        wowProcessInput = new WowProcessInput(logger, cts, wowProcess);
+    }
 
-        private readonly ILogger logger;
-        private readonly WowProcess wowProcess;
-        private readonly WowScreen wowScreen;
-        private readonly WowProcessInput wowProcessInput;
+    public void Dispose()
+    {
+        wowScreen.Dispose();
+        wowProcess.Dispose();
+        cts.Dispose();
+    }
 
-        public Test_Input(ILogger logger)
-        {
-            this.logger = logger;
-            this.cts = new();
+    public void Mouse_Movement()
+    {
+        wowProcessInput.SetForegroundWindow();
 
-            wowProcess = new WowProcess();
-            wowScreen = new WowScreen(logger, wowProcess);
-            wowProcessInput = new WowProcessInput(logger, cts, wowProcess);
-        }
+        wowProcessInput.SetCursorPosition(new Point(25, 25));
+        cts.Token.WaitHandle.WaitOne(delay);
 
-        public void Dispose()
-        {
-            wowScreen.Dispose();
-            wowProcess.Dispose();
-            cts.Dispose();
-        }
+        wowProcessInput.SetCursorPosition(new Point(50, 50));
+        cts.Token.WaitHandle.WaitOne(delay);
 
-        public void Mouse_Movement()
-        {
-            wowProcessInput.SetForegroundWindow();
+        logger.LogInformation($"{nameof(Mouse_Movement)} Finished");
+    }
 
-            wowProcessInput.SetCursorPosition(new Point(25, 25));
-            cts.Token.WaitHandle.WaitOne(delay);
+    public void Mouse_Clicks()
+    {
+        wowProcessInput.SetForegroundWindow();
 
-            wowProcessInput.SetCursorPosition(new Point(50, 50));
-            cts.Token.WaitHandle.WaitOne(delay);
+        Point p = new(120, 120);
+        wowProcessInput.LeftClickMouse(p);
 
-            logger.LogInformation($"{nameof(Mouse_Movement)} Finished");
-        }
+        cts.Token.WaitHandle.WaitOne(delay);
 
-        public void Mouse_Clicks()
-        {
-            wowProcessInput.SetForegroundWindow();
+        wowProcessInput.RightClickMouse(p);
 
-            Point p = new(120, 120);
-            wowProcessInput.LeftClickMouse(p);
+        cts.Token.WaitHandle.WaitOne(delay);
 
-            cts.Token.WaitHandle.WaitOne(delay);
+        wowProcessInput.RightClickMouse(p);
 
-            wowProcessInput.RightClickMouse(p);
+        wowScreen.GetRectangle(out Rectangle rect);
+        p = new Point(rect.Width / 2, rect.Height / 2);
 
-            cts.Token.WaitHandle.WaitOne(delay);
+        cts.Token.WaitHandle.WaitOne(delay);
 
-            wowProcessInput.RightClickMouse(p);
+        wowProcessInput.RightClickMouse(p);
 
-            wowScreen.GetRectangle(out Rectangle rect);
-            p = new Point(rect.Width / 2, rect.Height / 2);
+        cts.Token.WaitHandle.WaitOne(delay);
 
-            cts.Token.WaitHandle.WaitOne(delay);
+        wowProcessInput.RightClickMouse(p);
 
-            wowProcessInput.RightClickMouse(p);
+        logger.LogInformation($"{nameof(Mouse_Clicks)} Finished");
+    }
 
-            cts.Token.WaitHandle.WaitOne(delay);
+    public void Clipboard()
+    {
+        wowProcessInput.SetClipboard("/help");
 
-            wowProcessInput.RightClickMouse(p);
+        // Open chat inputbox
+        wowProcessInput.KeyPress(ConsoleKey.Enter, delay);
 
-            logger.LogInformation($"{nameof(Mouse_Clicks)} Finished");
-        }
+        wowProcessInput.PasteFromClipboard();
+        cts.Token.WaitHandle.WaitOne(delay);
 
-        public void Clipboard()
-        {
-            wowProcessInput.SetClipboard("/help");
+        // Close chat inputbox
+        wowProcessInput.KeyPress(ConsoleKey.Enter, delay);
 
-            // Open chat inputbox
-            wowProcessInput.KeyPress(ConsoleKey.Enter, delay);
-
-            wowProcessInput.PasteFromClipboard();
-            cts.Token.WaitHandle.WaitOne(delay);
-
-            // Close chat inputbox
-            wowProcessInput.KeyPress(ConsoleKey.Enter, delay);
-
-            logger.LogInformation($"{nameof(Clipboard)} Finished");
-        }
+        logger.LogInformation($"{nameof(Clipboard)} Finished");
     }
 }

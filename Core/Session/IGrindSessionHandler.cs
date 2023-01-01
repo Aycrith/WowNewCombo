@@ -1,8 +1,7 @@
-﻿namespace Core.Session
+﻿namespace Core.Session;
+
+public interface IGrindSessionHandler
 {
-    public interface IGrindSessionHandler
-    {
-        void Start(string path);
-        void Stop(string reason, bool active);
-    }
+    void Start(string path);
+    void Stop(string reason, bool active);
 }

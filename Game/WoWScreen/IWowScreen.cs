@@ -1,9 +1,8 @@
 ﻿using SharedLib;
 
-namespace Game
+namespace Game;
+
+public interface IWowScreen : IColorReader, IRectProvider
 {
-    public interface IWowScreen : IColorReader, IRectProvider
-    {
-        bool Enabled { get; set; }
-    }
+    bool Enabled { get; set; }
 }

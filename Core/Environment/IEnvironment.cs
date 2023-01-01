@@ -1,6 +1,5 @@
-﻿namespace Core.Environment
+﻿namespace Core.Environment;
+
+public interface IEnvironment
 {
-    public interface IEnvironment
-    {
-    }
 }

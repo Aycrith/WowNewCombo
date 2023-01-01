@@ -170,7 +170,7 @@
 
         foreach (var minfo in obj.GetType().GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance))
         {
-            if(minfo.ReturnType != t)
+            if (minfo.ReturnType != t)
                 continue;
 
             ParameterInfo[] parameters = minfo.GetParameters();

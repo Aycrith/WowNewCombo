@@ -1,16 +1,15 @@
 ﻿using System;
 using System.Numerics;
 
-namespace Core
+namespace Core;
+
+public interface IRouteProvider
 {
-    public interface IRouteProvider
-    {
-        Vector3[] PathingRoute();
+    Vector3[] PathingRoute();
 
-        DateTime LastActive { get; }
+    DateTime LastActive { get; }
 
-        bool HasNext();
+    bool HasNext();
 
-        Vector3 NextMapPoint();
-    }
+    Vector3 NextMapPoint();
 }

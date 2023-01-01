@@ -4,39 +4,38 @@ using System.Collections.Generic;
 using Core.Session;
 using Game;
 
-namespace Core
+namespace Core;
+
+public interface IBotController
 {
-    public interface IBotController
-    {
-        bool IsBotActive { get; }
-        AddonReader AddonReader { get; }
-        WowScreen WowScreen { get; }
-        string SelectedClassFilename { get; }
-        string? SelectedPathFilename { get; }
-        ClassConfiguration? ClassConfig { get; }
-        GoapAgent? GoapAgent { get; }
-        RouteInfo? RouteInfo { get; }
-        IGrindSessionDAO GrindSessionDAO { get; }
-        double AvgScreenLatency { get; }
-        double AvgNPCLatency { get; }
+    bool IsBotActive { get; }
+    AddonReader AddonReader { get; }
+    WowScreen WowScreen { get; }
+    string SelectedClassFilename { get; }
+    string? SelectedPathFilename { get; }
+    ClassConfiguration? ClassConfig { get; }
+    GoapAgent? GoapAgent { get; }
+    RouteInfo? RouteInfo { get; }
+    IGrindSessionDAO GrindSessionDAO { get; }
+    double AvgScreenLatency { get; }
+    double AvgNPCLatency { get; }
 
-        event Action? ProfileLoaded;
-        event Action? StatusChanged;
+    event Action? ProfileLoaded;
+    event Action? StatusChanged;
 
-        void ToggleBotStatus();
+    void ToggleBotStatus();
 
-        void MinimapNodeFound();
+    void MinimapNodeFound();
 
-        void Shutdown();
+    void Shutdown();
 
-        IEnumerable<string> ClassFiles();
+    IEnumerable<string> ClassFiles();
 
-        IEnumerable<string> PathFiles();
+    IEnumerable<string> PathFiles();
 
-        void LoadClassProfile(string classFilename);
+    void LoadClassProfile(string classFilename);
 
-        void LoadPathProfile(string pathFilename);
+    void LoadPathProfile(string pathFilename);
 
-        void OverrideClassConfig(ClassConfiguration classConfig);
-    }
+    void OverrideClassConfig(ClassConfiguration classConfig);
 }

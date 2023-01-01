@@ -1,7 +1,6 @@
-﻿namespace Core
+﻿namespace Core;
+
+public sealed class NoBlacklist : IBlacklist
 {
-    public sealed class NoBlacklist : IBlacklist
-    {
-        public bool Is() => false;
-    }
+    public bool Is() => false;
 }

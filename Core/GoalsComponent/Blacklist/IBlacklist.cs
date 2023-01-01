@@ -1,7 +1,6 @@
-﻿namespace Core
+﻿namespace Core;
+
+public interface IBlacklist
 {
-    public interface IBlacklist
-    {
-        bool Is();
-    }
+    bool Is();
 }

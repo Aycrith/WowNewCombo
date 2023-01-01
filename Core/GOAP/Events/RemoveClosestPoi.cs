@@ -1,12 +1,11 @@
-﻿namespace Core.GOAP
-{
-    public sealed class RemoveClosestPoi : GoapEventArgs
-    {
-        public string Name { get; }
+﻿namespace Core.GOAP;
 
-        public RemoveClosestPoi(string name)
-        {
-            Name = name;
-        }
+public sealed class RemoveClosestPoi : GoapEventArgs
+{
+    public string Name { get; }
+
+    public RemoveClosestPoi(string name)
+    {
+        Name = name;
     }
 }

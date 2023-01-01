@@ -1,10 +1,9 @@
 ﻿using System.Collections.Generic;
 
-namespace Core.Session
+namespace Core.Session;
+
+public interface IGrindSessionDAO
 {
-    public interface IGrindSessionDAO
-    {
-        IEnumerable<GrindSession> Load();
-        void Save(GrindSession session);
-    }
+    IEnumerable<GrindSession> Load();
+    void Save(GrindSession session);
 }

@@ -1,66 +1,65 @@
 ﻿using Core.GOAP;
 
-namespace Core.Goals
+namespace Core.Goals;
+
+public sealed class TargetFocusTargetGoal : GoapGoal
 {
-    public sealed class TargetFocusTargetGoal : GoapGoal
+    public override float Cost => 10f;
+
+    private readonly ConfigurableInput input;
+    private readonly PlayerReader playerReader;
+    private readonly Wait wait;
+
+    public TargetFocusTargetGoal(ConfigurableInput input, PlayerReader playerReader, Wait wait)
+        : base(nameof(TargetFocusTargetGoal))
     {
-        public override float Cost => 10f;
+        this.input = input;
+        this.playerReader = playerReader;
+        this.wait = wait;
 
-        private readonly ConfigurableInput input;
-        private readonly PlayerReader playerReader;
-        private readonly Wait wait;
-
-        public TargetFocusTargetGoal(ConfigurableInput input, PlayerReader playerReader, Wait wait)
-            : base(nameof(TargetFocusTargetGoal))
+        if (input.ClassConfig.Loot)
         {
-            this.input = input;
-            this.playerReader = playerReader;
-            this.wait = wait;
-
-            if (input.ClassConfig.Loot)
-            {
-                AddPrecondition(GoapKey.incombat, false);
-            }
-
-            AddPrecondition(GoapKey.hasfocus, true);
-            AddPrecondition(GoapKey.focushastarget, true);
+            AddPrecondition(GoapKey.incombat, false);
         }
 
-        public override void OnEnter()
-        {
-            input.TargetFocus();
-            wait.Update();
-        }
+        AddPrecondition(GoapKey.hasfocus, true);
+        AddPrecondition(GoapKey.focushastarget, true);
+    }
 
-        public override void Update()
+    public override void OnEnter()
+    {
+        input.TargetFocus();
+        wait.Update();
+    }
+
+    public override void Update()
+    {
+        if (playerReader.Bits.FocusTargetCanBeHostile())
         {
-            if (playerReader.Bits.FocusTargetCanBeHostile())
-            {
-                if (playerReader.Bits.FocusTargetInCombat())
-                {
-                    input.TargetFocus();
-                    input.TargetOfTarget();
-                    wait.Update();
-                }
-            }
-            else if (playerReader.SpellInRange.FocusTarget_Trade)
+            if (playerReader.Bits.FocusTargetInCombat())
             {
                 input.TargetFocus();
                 input.TargetOfTarget();
-                input.Interact();
                 wait.Update();
             }
-
+        }
+        else if (playerReader.SpellInRange.FocusTarget_Trade)
+        {
+            input.TargetFocus();
+            input.TargetOfTarget();
+            input.Interact();
             wait.Update();
         }
 
-        public override void OnExit()
+        wait.Update();
+    }
+
+    public override void OnExit()
+    {
+        if (!playerReader.Bits.FocusHasTarget())
         {
-            if (!playerReader.Bits.FocusHasTarget())
-            {
-                input.ClearTarget();
-                wait.Update();
-            }
+            input.ClearTarget();
+            wait.Update();
         }
     }
 }

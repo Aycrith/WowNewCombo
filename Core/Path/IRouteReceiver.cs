@@ -1,9 +1,8 @@
 ﻿using System.Numerics;
 
-namespace Core
+namespace Core;
+
+public interface IEditedRouteReceiver
 {
-    public interface IEditedRouteReceiver
-    {
-        void ReceivePath(Vector3[] mapRoute);
-    }
+    void ReceivePath(Vector3[] mapRoute);
 }

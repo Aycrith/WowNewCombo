@@ -4,17 +4,16 @@
  *
  */
 
-namespace WowTriangles
-{
-    public sealed class ChunkEventArgs
-    {
-        public int GridX { get; }
-        public int GridY { get; }
+namespace WowTriangles;
 
-        public ChunkEventArgs(int gridX, int gridY)
-        {
-            GridX = gridX;
-            GridY = gridY;
-        }
+public sealed class ChunkEventArgs
+{
+    public int GridX { get; }
+    public int GridY { get; }
+
+    public ChunkEventArgs(int gridX, int gridY)
+    {
+        GridX = gridX;
+        GridY = gridY;
     }
 }

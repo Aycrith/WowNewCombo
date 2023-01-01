@@ -1,10 +1,9 @@
 ﻿using System.Drawing;
 
-namespace SharedLib
+namespace SharedLib;
+
+public interface IRectProvider
 {
-    public interface IRectProvider
-    {
-        void GetPosition(ref Point point);
-        void GetRectangle(out Rectangle rect);
-    }
+    void GetPosition(ref Point point);
+    void GetRectangle(out Rectangle rect);
 }

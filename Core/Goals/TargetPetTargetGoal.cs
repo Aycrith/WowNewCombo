@@ -1,49 +1,48 @@
 ﻿using Core.GOAP;
 
-namespace Core.Goals
+namespace Core.Goals;
+
+public sealed class TargetPetTargetGoal : GoapGoal
 {
-    public sealed class TargetPetTargetGoal : GoapGoal
+    public override float Cost => 4.01f;
+
+    private readonly ConfigurableInput input;
+    private readonly PlayerReader playerReader;
+    private readonly Wait wait;
+
+    public TargetPetTargetGoal(ConfigurableInput input, PlayerReader playerReader, Wait wait)
+        : base(nameof(TargetPetTargetGoal))
     {
-        public override float Cost => 4.01f;
+        this.input = input;
+        this.playerReader = playerReader;
+        this.wait = wait;
 
-        private readonly ConfigurableInput input;
-        private readonly PlayerReader playerReader;
-        private readonly Wait wait;
+        AddPrecondition(GoapKey.targetisalive, false);
 
-        public TargetPetTargetGoal(ConfigurableInput input, PlayerReader playerReader, Wait wait)
-            : base(nameof(TargetPetTargetGoal))
+        if (input.ClassConfig.KeyboardOnly)
         {
-            this.input = input;
-            this.playerReader = playerReader;
-            this.wait = wait;
-
-            AddPrecondition(GoapKey.targetisalive, false);
-
-            if (input.ClassConfig.KeyboardOnly)
-            {
-                AddPrecondition(GoapKey.consumablecorpsenearby, false);
-            }
-            else
-            {
-                AddPrecondition(GoapKey.damagetakenordone, true);
-            }
-
-            AddPrecondition(GoapKey.pethastarget, true);
-
-            AddEffect(GoapKey.hastarget, true);
+            AddPrecondition(GoapKey.consumablecorpsenearby, false);
+        }
+        else
+        {
+            AddPrecondition(GoapKey.damagetakenordone, true);
         }
 
-        public override void Update()
-        {
-            input.TargetPet();
-            input.TargetOfTarget();
-            wait.Update();
+        AddPrecondition(GoapKey.pethastarget, true);
 
-            if (playerReader.Bits.HasTarget() && (playerReader.Bits.TargetIsDead() || playerReader.TargetGuid == playerReader.PetGuid))
-            {
-                input.ClearTarget();
-                wait.Update();
-            }
+        AddEffect(GoapKey.hastarget, true);
+    }
+
+    public override void Update()
+    {
+        input.TargetPet();
+        input.TargetOfTarget();
+        wait.Update();
+
+        if (playerReader.Bits.HasTarget() && (playerReader.Bits.TargetIsDead() || playerReader.TargetGuid == playerReader.PetGuid))
+        {
+            input.ClearTarget();
+            wait.Update();
         }
     }
 }

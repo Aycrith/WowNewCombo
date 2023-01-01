@@ -5,106 +5,105 @@ using WowTriangles;
 using System.Numerics;
 using SharedLib.Extensions;
 
-namespace PPather
+namespace PPather;
+
+public sealed class Search
 {
-    public sealed class Search
+    public PathGraph PathGraph { get; set; }
+    public float MapId { get; set; }
+
+    private readonly DataConfig dataConfig;
+    private readonly ILogger logger;
+
+    public Vector4 locationFrom { get; set; }
+    public Vector4 locationTo { get; set; }
+
+    private const float toonHeight = 2.0f;
+    private const float toonSize = 0.5f;
+    private const float howClose = 5f;
+
+    public Search(float mapId, ILogger logger, DataConfig dataConfig)
     {
-        public PathGraph PathGraph { get; set; }
-        public float MapId { get; set; }
+        this.logger = logger;
+        this.MapId = mapId;
+        this.dataConfig = dataConfig;
 
-        private readonly DataConfig dataConfig;
-        private readonly ILogger logger;
+        CreatePathGraph(mapId);
+    }
 
-        public Vector4 locationFrom { get; set; }
-        public Vector4 locationTo { get; set; }
+    public void Clear()
+    {
+        MapId = 0;
+        PathGraph.Clear();
+        PathGraph = null;
+    }
 
-        private const float toonHeight = 2.0f;
-        private const float toonSize = 0.5f;
-        private const float howClose = 5f;
+    public Vector4 CreateWorldLocation(float x, float y, float z, int mapId)
+    {
+        float zTerrain = GetZValueAt(x, y, z, TriangleType.Terrain);
+        float zWater = GetZValueAt(x, y, z, TriangleType.Water);
 
-        public Search(float mapId, ILogger logger, DataConfig dataConfig)
+        if (zWater > zTerrain)
         {
-            this.logger = logger;
-            this.MapId = mapId;
-            this.dataConfig = dataConfig;
-
-            CreatePathGraph(mapId);
+            return new Vector4(x, y, zWater, mapId);
         }
 
-        public void Clear()
+        float zModel = GetZValueAt(x, y, z, TriangleType.Model | TriangleType.Object);
+
+        return zModel != float.MinValue
+            ? MathF.Abs(zModel - zTerrain) > toonHeight / 2
+                ? new Vector4(x, y, zTerrain, mapId)
+                : new Vector4(x, y, zModel, mapId)
+            : new Vector4(x, y, zTerrain, mapId);
+    }
+
+    private float GetZValueAt(float x, float y, float z, TriangleType allowedFlags)
+    {
+        float min = -1000;
+        float max = 2000;
+
+        if (z != 0)
         {
-            MapId = 0;
-            PathGraph.Clear();
-            PathGraph = null;
+            min = z - 1000;
+            max = z + 2000;
         }
 
-        public Vector4 CreateWorldLocation(float x, float y, float z, int mapId)
+        if (PathGraph.triangleWorld.FindStandableAt1(x, y, min, max, out float z1, out _, toonHeight, toonSize, true, allowedFlags))
         {
-            float zTerrain = GetZValueAt(x, y, z, TriangleType.Terrain);
-            float zWater = GetZValueAt(x, y, z, TriangleType.Water);
-
-            if (zWater > zTerrain)
-            {
-                return new Vector4(x, y, zWater, mapId);
-            }
-
-            float zModel = GetZValueAt(x, y, z, TriangleType.Model | TriangleType.Object);
-
-            return zModel != float.MinValue
-                ? MathF.Abs(zModel - zTerrain) > toonHeight / 2
-                    ? new Vector4(x, y, zTerrain, mapId)
-                    : new Vector4(x, y, zModel, mapId)
-                : new Vector4(x, y, zTerrain, mapId);
+            return z1;
         }
 
-        private float GetZValueAt(float x, float y, float z, TriangleType allowedFlags)
+        return float.MinValue;
+    }
+
+    public void CreatePathGraph(float mapId)
+    {
+        this.MapId = mapId;
+
+        MPQTriangleSupplier mpq = new(logger, dataConfig, mapId);
+        ChunkedTriangleCollection triangleWorld = new(logger, 64, mpq);
+        PathGraph = new(mapId, triangleWorld, logger, dataConfig);
+    }
+
+    public Path DoSearch(PathGraph.eSearchScoreSpot searchType)
+    {
+        PathGraph.SearchEnabled = true;
+
+        // tell the pathgraph which type of search to do
+        PathGraph.searchScoreSpot = searchType;
+
+        try
         {
-            float min = -1000;
-            float max = 2000;
-
-            if (z != 0)
-            {
-                min = z - 1000;
-                max = z + 2000;
-            }
-
-            if (PathGraph.triangleWorld.FindStandableAt1(x, y, min, max, out float z1, out _, toonHeight, toonSize, true, allowedFlags))
-            {
-                return z1;
-            }
-
-            return float.MinValue;
+            return PathGraph.CreatePath(locationFrom.AsVector3(), locationTo.AsVector3(), howClose);
         }
-
-        public void CreatePathGraph(float mapId)
+        catch (Exception ex)
         {
-            this.MapId = mapId;
-
-            MPQTriangleSupplier mpq = new(logger, dataConfig, mapId);
-            ChunkedTriangleCollection triangleWorld = new(logger, 64, mpq);
-            PathGraph = new(mapId, triangleWorld, logger, dataConfig);
+            logger.LogError(ex.Message);
+            return null;
         }
-
-        public Path DoSearch(PathGraph.eSearchScoreSpot searchType)
+        finally
         {
-            PathGraph.SearchEnabled = true;
-
-            // tell the pathgraph which type of search to do
-            PathGraph.searchScoreSpot = searchType;
-
-            try
-            {
-                return PathGraph.CreatePath(locationFrom.AsVector3(), locationTo.AsVector3(), howClose);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex.Message);
-                return null;
-            }
-            finally
-            {
-                PathGraph.SearchEnabled = false;
-            }
+            PathGraph.SearchEnabled = false;
         }
     }
 }

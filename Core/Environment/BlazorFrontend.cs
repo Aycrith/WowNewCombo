@@ -1,6 +1,5 @@
-﻿namespace Core.Environment
+﻿namespace Core.Environment;
+
+public sealed class BlazorFrontend : IEnvironment
 {
-    public sealed class BlazorFrontend : IEnvironment
-    {
-    }
 }

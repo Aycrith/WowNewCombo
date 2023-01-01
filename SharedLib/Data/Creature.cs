@@ -1,8 +1,7 @@
-﻿namespace SharedLib
+﻿namespace SharedLib;
+
+public readonly struct Creature
 {
-    public readonly struct Creature
-    {
-        public int Entry { get; init; }
-        public string Name { get; init; }
-    }
+    public int Entry { get; init; }
+    public string Name { get; init; }
 }

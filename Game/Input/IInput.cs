@@ -1,28 +1,27 @@
 ﻿using System.Drawing;
 using System.Threading;
 
-namespace Game
+namespace Game;
+
+public interface IInput
 {
-    public interface IInput
-    {
-        void KeyDown(int key);
+    void KeyDown(int key);
 
-        void KeyUp(int key);
+    void KeyUp(int key);
 
-        int KeyPress(int key, int milliseconds);
+    int KeyPress(int key, int milliseconds);
 
-        void KeyPressSleep(int key, int milliseconds, CancellationToken ct);
+    void KeyPressSleep(int key, int milliseconds, CancellationToken ct);
 
-        void SetCursorPosition(Point p);
+    void SetCursorPosition(Point p);
 
-        void RightClickMouse(Point p);
+    void RightClickMouse(Point p);
 
-        void LeftClickMouse(Point p);
+    void LeftClickMouse(Point p);
 
-        void SendText(string text);
+    void SendText(string text);
 
-        void SetClipboard(string text);
+    void SetClipboard(string text);
 
-        void PasteFromClipboard();
-    }
+    void PasteFromClipboard();
 }

@@ -6,320 +6,319 @@ using System.Text.RegularExpressions;
 using Game;
 using Core.Extensions;
 
-namespace Core
+namespace Core;
+
+public sealed class AddonConfigurator
 {
-    public sealed class AddonConfigurator
+    private readonly ILogger logger;
+    private readonly WowProcess wowProcess;
+
+    public AddonConfig Config { get; init; }
+
+    private const string DefaultAddonName = "DataToColor";
+    private const string AddonSourcePath = @".\Addons\";
+
+    private string AddonBasePath => Path.Join(wowProcess.Path, "Interface", "AddOns");
+
+    private string DefaultAddonPath => Path.Join(AddonBasePath, DefaultAddonName);
+    public string FinalAddonPath => Path.Join(AddonBasePath, Config.Title);
+
+    public event Action? OnChange;
+
+    public AddonConfigurator(ILogger logger, WowProcess wowProcess)
     {
-        private readonly ILogger logger;
-        private readonly WowProcess wowProcess;
+        this.logger = logger;
+        this.wowProcess = wowProcess;
 
-        public AddonConfig Config { get; init; }
+        Config = AddonConfig.Load();
+    }
 
-        private const string DefaultAddonName = "DataToColor";
-        private const string AddonSourcePath = @".\Addons\";
+    public bool Installed()
+    {
+        return GetInstallVersion() != null;
+    }
 
-        private string AddonBasePath => Path.Join(wowProcess.Path, "Interface", "AddOns");
+    public bool IsDefault()
+    {
+        return Config.IsDefault();
+    }
 
-        private string DefaultAddonPath => Path.Join(AddonBasePath, DefaultAddonName);
-        public string FinalAddonPath => Path.Join(AddonBasePath, Config.Title);
-
-        public event Action? OnChange;
-
-        public AddonConfigurator(ILogger logger, WowProcess wowProcess)
+    public bool Validate()
+    {
+        if (string.IsNullOrEmpty(Config.Author))
         {
-            this.logger = logger;
-            this.wowProcess = wowProcess;
-
-            Config = AddonConfig.Load();
+            logger.LogError($"{nameof(Config)}.{nameof(Config.Author)} - error - cannot be empty: '{Config.Author}'");
+            return false;
         }
 
-        public bool Installed()
+        if (!string.IsNullOrEmpty(Config.Title))
         {
-            return GetInstallVersion() != null;
-        }
+            // this will appear in the lua code so
+            // special character not allowed
+            // also numbers not allowed
+            Config.Title = Regex.Replace(Config.Title, @"[^\u0000-\u007F]+", string.Empty);
+            Config.Title = new string(Config.Title.Where(char.IsLetter).ToArray());
+            Config.Title =
+                Config.Title.Trim()
+                .Replace(" ", "");
 
-        public bool IsDefault()
-        {
-            return Config.IsDefault();
-        }
-
-        public bool Validate()
-        {
-            if (string.IsNullOrEmpty(Config.Author))
+            if (Config.Title.Length == 0)
             {
-                logger.LogError($"{nameof(Config)}.{nameof(Config.Author)} - error - cannot be empty: '{Config.Author}'");
+                logger.LogError($"{nameof(Config)}.{nameof(Config.Title)} - error - use letters only: '{Config.Title}'");
                 return false;
             }
 
-            if (!string.IsNullOrEmpty(Config.Title))
-            {
-                // this will appear in the lua code so
-                // special character not allowed
-                // also numbers not allowed
-                Config.Title = Regex.Replace(Config.Title, @"[^\u0000-\u007F]+", string.Empty);
-                Config.Title = new string(Config.Title.Where(char.IsLetter).ToArray());
-                Config.Title =
-                    Config.Title.Trim()
-                    .Replace(" ", "");
-
-                if (Config.Title.Length == 0)
-                {
-                    logger.LogError($"{nameof(Config)}.{nameof(Config.Title)} - error - use letters only: '{Config.Title}'");
-                    return false;
-                }
-
-                Config.Command = Config.Title.Trim().ToLower();
-            }
-            else
-            {
-                logger.LogError($"{nameof(Config)}.{nameof(Config.Title)} - error - cannot be empty: '{Config.Title}'");
-                return false;
-            }
-
-            if (!int.TryParse(Config.CellSize, out int size))
-            {
-                logger.LogError($"{nameof(Config)}.{nameof(Config.CellSize)} - error - be a number: '{Config.CellSize}'");
-                return false;
-            }
-            else if (size < 1 || size > 9)
-            {
-                logger.LogError($"{nameof(Config)}.{nameof(Config.CellSize)} - error - must be, including between 1 and 9: '{Config.CellSize}'");
-                return false;
-            }
-
-            return true;
+            Config.Command = Config.Title.Trim().ToLower();
         }
-
-        public void Install()
+        else
         {
-            try
-            {
-                DeleteAddon();
-                CopyAddonFiles();
-                RenameAddon();
-                MakeUnique();
-
-                logger.LogInformation($"{nameof(AddonConfigurator)}.{nameof(Install)} - Success");
-            }
-            catch (Exception e)
-            {
-                logger.LogInformation($"{nameof(AddonConfigurator)}.{nameof(Install)} - Failed\n{e.Message}");
-            }
+            logger.LogError($"{nameof(Config)}.{nameof(Config.Title)} - error - cannot be empty: '{Config.Title}'");
+            return false;
         }
 
-        private void DeleteAddon()
+        if (!int.TryParse(Config.CellSize, out int size))
         {
-            if (Directory.Exists(DefaultAddonPath))
-            {
-                logger.LogInformation($"{nameof(AddonConfigurator)}.{nameof(DeleteAddon)} -> Default Addon Exists");
-                Directory.Delete(DefaultAddonPath, true);
-            }
-
-            if (!string.IsNullOrEmpty(Config.Title) && Directory.Exists(FinalAddonPath))
-            {
-                logger.LogInformation($"{nameof(AddonConfigurator)}.{nameof(DeleteAddon)} -> Unique Addon Exists");
-                Directory.Delete(FinalAddonPath, true);
-            }
+            logger.LogError($"{nameof(Config)}.{nameof(Config.CellSize)} - error - be a number: '{Config.CellSize}'");
+            return false;
         }
-
-        private void CopyAddonFiles()
+        else if (size < 1 || size > 9)
         {
-            try
-            {
-                CopyFolder("");
-                logger.LogInformation($"{nameof(AddonConfigurator)}.{nameof(CopyAddonFiles)} - Success");
-            }
-            catch (Exception e)
-            {
-                logger.LogError(e.Message);
-
-                // This only should be happen when running from IDE
-                CopyFolder(".");
-                logger.LogInformation($"{nameof(AddonConfigurator)}.{nameof(CopyAddonFiles)} - Success");
-            }
+            logger.LogError($"{nameof(Config)}.{nameof(Config.CellSize)} - error - must be, including between 1 and 9: '{Config.CellSize}'");
+            return false;
         }
 
-        private void CopyFolder(string parentFolder)
-        {
-            DirectoryCopy(Path.Join(parentFolder + AddonSourcePath), AddonBasePath, true);
-        }
+        return true;
+    }
 
-        private void RenameAddon()
-        {
-            string src = Path.Join(AddonBasePath, DefaultAddonName);
-            if (src != FinalAddonPath)
-                Directory.Move(src, FinalAddonPath);
-        }
-
-        private void MakeUnique()
-        {
-            BulkRename(FinalAddonPath, DefaultAddonName, Config.Title);
-            EditToc();
-            EditMainLua();
-            EditModulesLua();
-        }
-
-        private static void BulkRename(string fPath, string match, string fNewName)
-        {
-            foreach (FileInfo f in new DirectoryInfo(fPath).GetFiles())
-            {
-                string fromName = Path.GetFileNameWithoutExtension(f.Name);
-
-                if (!fromName.Contains(match))
-                    continue;
-
-                string ext = Path.GetExtension(f.Name);
-
-                fromName = Path.Join(fPath, f.Name);
-                string toName = Path.Join(fPath, fNewName) + ext;
-
-                File.Move(fromName, toName);
-            }
-        }
-
-        private void EditToc()
-        {
-            string tocPath = Path.Join(FinalAddonPath, Config.Title + ".toc");
-            string text =
-                File.ReadAllText(tocPath)
-                .Replace(DefaultAddonName, Config.Title)
-                .Replace("## Author: FreeHongKongMMO", "## Author: " + Config.Author);
-
-            File.WriteAllText(tocPath, text);
-        }
-
-        private void EditMainLua()
-        {
-            string mainLuaPath = Path.Join(FinalAddonPath, Config.Title + ".lua");
-            string text =
-                File.ReadAllText(mainLuaPath)
-                .Replace(DefaultAddonName, Config.Title)
-                .Replace("dc", Config.Command)
-                .Replace("DC", Config.Command);
-
-            Regex cellSizeRegex = new(@"^local CELL_SIZE = (?<SIZE>[0-9]+)", RegexOptions.Multiline);
-            text = text.Replace(cellSizeRegex, "SIZE", Config.CellSize);
-
-            File.WriteAllText(mainLuaPath, text);
-        }
-
-        private void EditModulesLua()
-        {
-            FileInfo[] files = new DirectoryInfo(FinalAddonPath).GetFiles();
-            foreach (var f in files)
-            {
-                if (f.Extension.Contains("lua"))
-                {
-                    string path = f.FullName;
-                    string text = File.ReadAllText(path);
-                    text = text.Replace(DefaultAddonName, Config.Title);
-
-                    File.WriteAllText(path, text);
-                }
-            }
-        }
-
-        public void Delete()
+    public void Install()
+    {
+        try
         {
             DeleteAddon();
-            AddonConfig.Delete();
+            CopyAddonFiles();
+            RenameAddon();
+            MakeUnique();
 
-            OnChange?.Invoke();
+            logger.LogInformation($"{nameof(AddonConfigurator)}.{nameof(Install)} - Success");
+        }
+        catch (Exception e)
+        {
+            logger.LogInformation($"{nameof(AddonConfigurator)}.{nameof(Install)} - Failed\n{e.Message}");
+        }
+    }
+
+    private void DeleteAddon()
+    {
+        if (Directory.Exists(DefaultAddonPath))
+        {
+            logger.LogInformation($"{nameof(AddonConfigurator)}.{nameof(DeleteAddon)} -> Default Addon Exists");
+            Directory.Delete(DefaultAddonPath, true);
         }
 
-        public void Save()
+        if (!string.IsNullOrEmpty(Config.Title) && Directory.Exists(FinalAddonPath))
         {
-            Config.Save();
-
-            OnChange?.Invoke();
+            logger.LogInformation($"{nameof(AddonConfigurator)}.{nameof(DeleteAddon)} -> Unique Addon Exists");
+            Directory.Delete(FinalAddonPath, true);
         }
+    }
 
-        private static void DirectoryCopy(string sourceDirName, string destDirName, bool copySubDirs)
+    private void CopyAddonFiles()
+    {
+        try
         {
-            // Get the subdirectories for the specified directory.
-            DirectoryInfo dir = new DirectoryInfo(sourceDirName);
+            CopyFolder("");
+            logger.LogInformation($"{nameof(AddonConfigurator)}.{nameof(CopyAddonFiles)} - Success");
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e.Message);
 
-            if (!dir.Exists)
+            // This only should be happen when running from IDE
+            CopyFolder(".");
+            logger.LogInformation($"{nameof(AddonConfigurator)}.{nameof(CopyAddonFiles)} - Success");
+        }
+    }
+
+    private void CopyFolder(string parentFolder)
+    {
+        DirectoryCopy(Path.Join(parentFolder + AddonSourcePath), AddonBasePath, true);
+    }
+
+    private void RenameAddon()
+    {
+        string src = Path.Join(AddonBasePath, DefaultAddonName);
+        if (src != FinalAddonPath)
+            Directory.Move(src, FinalAddonPath);
+    }
+
+    private void MakeUnique()
+    {
+        BulkRename(FinalAddonPath, DefaultAddonName, Config.Title);
+        EditToc();
+        EditMainLua();
+        EditModulesLua();
+    }
+
+    private static void BulkRename(string fPath, string match, string fNewName)
+    {
+        foreach (FileInfo f in new DirectoryInfo(fPath).GetFiles())
+        {
+            string fromName = Path.GetFileNameWithoutExtension(f.Name);
+
+            if (!fromName.Contains(match))
+                continue;
+
+            string ext = Path.GetExtension(f.Name);
+
+            fromName = Path.Join(fPath, f.Name);
+            string toName = Path.Join(fPath, fNewName) + ext;
+
+            File.Move(fromName, toName);
+        }
+    }
+
+    private void EditToc()
+    {
+        string tocPath = Path.Join(FinalAddonPath, Config.Title + ".toc");
+        string text =
+            File.ReadAllText(tocPath)
+            .Replace(DefaultAddonName, Config.Title)
+            .Replace("## Author: FreeHongKongMMO", "## Author: " + Config.Author);
+
+        File.WriteAllText(tocPath, text);
+    }
+
+    private void EditMainLua()
+    {
+        string mainLuaPath = Path.Join(FinalAddonPath, Config.Title + ".lua");
+        string text =
+            File.ReadAllText(mainLuaPath)
+            .Replace(DefaultAddonName, Config.Title)
+            .Replace("dc", Config.Command)
+            .Replace("DC", Config.Command);
+
+        Regex cellSizeRegex = new(@"^local CELL_SIZE = (?<SIZE>[0-9]+)", RegexOptions.Multiline);
+        text = text.Replace(cellSizeRegex, "SIZE", Config.CellSize);
+
+        File.WriteAllText(mainLuaPath, text);
+    }
+
+    private void EditModulesLua()
+    {
+        FileInfo[] files = new DirectoryInfo(FinalAddonPath).GetFiles();
+        foreach (var f in files)
+        {
+            if (f.Extension.Contains("lua"))
             {
-                throw new DirectoryNotFoundException(
-                    "Source directory does not exist or could not be found: "
-                    + sourceDirName);
-            }
+                string path = f.FullName;
+                string text = File.ReadAllText(path);
+                text = text.Replace(DefaultAddonName, Config.Title);
 
-            DirectoryInfo[] dirs = dir.GetDirectories();
-
-            // If the destination directory doesn't exist, create it.       
-            Directory.CreateDirectory(destDirName);
-
-            // Get the files in the directory and copy them to the new location.
-            FileInfo[] files = dir.GetFiles();
-            foreach (FileInfo file in files)
-            {
-                string tempPath = Path.Combine(destDirName, file.Name);
-                file.CopyTo(tempPath, true);
-            }
-
-            // If copying subdirectories, copy them and their contents to new location.
-            if (copySubDirs)
-            {
-                foreach (DirectoryInfo subdir in dirs)
-                {
-                    string tempPath = Path.Combine(destDirName, subdir.Name);
-                    DirectoryCopy(subdir.FullName, tempPath, copySubDirs);
-                }
+                File.WriteAllText(path, text);
             }
         }
+    }
 
-        public bool UpdateAvailable()
+    public void Delete()
+    {
+        DeleteAddon();
+        AddonConfig.Delete();
+
+        OnChange?.Invoke();
+    }
+
+    public void Save()
+    {
+        Config.Save();
+
+        OnChange?.Invoke();
+    }
+
+    private static void DirectoryCopy(string sourceDirName, string destDirName, bool copySubDirs)
+    {
+        // Get the subdirectories for the specified directory.
+        DirectoryInfo dir = new DirectoryInfo(sourceDirName);
+
+        if (!dir.Exists)
         {
-            if (Config.IsDefault())
-                return false;
-
-            Version? repo = GetRepoVerion();
-            Version? installed = GetInstallVersion();
-
-            return installed != null && repo != null && repo > installed;
+            throw new DirectoryNotFoundException(
+                "Source directory does not exist or could not be found: "
+                + sourceDirName);
         }
 
-        public Version? GetRepoVerion()
+        DirectoryInfo[] dirs = dir.GetDirectories();
+
+        // If the destination directory doesn't exist, create it.       
+        Directory.CreateDirectory(destDirName);
+
+        // Get the files in the directory and copy them to the new location.
+        FileInfo[] files = dir.GetFiles();
+        foreach (FileInfo file in files)
         {
-            Version? repo = null;
-            try
+            string tempPath = Path.Combine(destDirName, file.Name);
+            file.CopyTo(tempPath, true);
+        }
+
+        // If copying subdirectories, copy them and their contents to new location.
+        if (copySubDirs)
+        {
+            foreach (DirectoryInfo subdir in dirs)
             {
-                repo = GetVersion(Path.Join(AddonSourcePath, DefaultAddonName), DefaultAddonName);
-
-                if (repo == null)
-                {
-                    repo = GetVersion(Path.Join("." + AddonSourcePath, DefaultAddonName), DefaultAddonName);
-                }
+                string tempPath = Path.Combine(destDirName, subdir.Name);
+                DirectoryCopy(subdir.FullName, tempPath, copySubDirs);
             }
-            catch (Exception e)
+        }
+    }
+
+    public bool UpdateAvailable()
+    {
+        if (Config.IsDefault())
+            return false;
+
+        Version? repo = GetRepoVerion();
+        Version? installed = GetInstallVersion();
+
+        return installed != null && repo != null && repo > installed;
+    }
+
+    public Version? GetRepoVerion()
+    {
+        Version? repo = null;
+        try
+        {
+            repo = GetVersion(Path.Join(AddonSourcePath, DefaultAddonName), DefaultAddonName);
+
+            if (repo == null)
             {
-                logger.LogError(e.Message);
+                repo = GetVersion(Path.Join("." + AddonSourcePath, DefaultAddonName), DefaultAddonName);
             }
-            return repo;
         }
-
-        public Version? GetInstallVersion()
+        catch (Exception e)
         {
-            return GetVersion(FinalAddonPath, Config.Title);
+            logger.LogError(e.Message);
         }
+        return repo;
+    }
 
-        private static Version? GetVersion(string path, string fileName)
-        {
-            string tocPath = Path.Join(path, fileName + ".toc");
+    public Version? GetInstallVersion()
+    {
+        return GetVersion(FinalAddonPath, Config.Title);
+    }
 
-            if (!File.Exists(tocPath))
-                return null;
+    private static Version? GetVersion(string path, string fileName)
+    {
+        string tocPath = Path.Join(path, fileName + ".toc");
 
-            string begin = "## Version: ";
-            var line = File
-                .ReadLines(tocPath)
-                .SkipWhile(line => !line.StartsWith(begin))
-                .FirstOrDefault();
+        if (!File.Exists(tocPath))
+            return null;
 
-            string? versionStr = line?.Split(begin)[1];
-            return Version.TryParse(versionStr, out Version? version) ? version : null;
-        }
+        string begin = "## Version: ";
+        var line = File
+            .ReadLines(tocPath)
+            .SkipWhile(line => !line.StartsWith(begin))
+            .FirstOrDefault();
+
+        string? versionStr = line?.Split(begin)[1];
+        return Version.TryParse(versionStr, out Version? version) ? version : null;
     }
 }

@@ -2,118 +2,117 @@
 using SharedLib.Extensions;
 using System.Numerics;
 
-namespace Core
+namespace Core;
+
+public sealed class CombatUtil
 {
-    public sealed class CombatUtil
+    private const float MIN_DISTANCE = 0.01f;
+
+    private readonly ILogger logger;
+    private readonly AddonReader addonReader;
+    private readonly PlayerReader playerReader;
+    private readonly ConfigurableInput input;
+    private readonly Wait wait;
+
+    private const bool debug = true;
+
+    private bool outOfCombat;
+
+    public CombatUtil(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader)
     {
-        private const float MIN_DISTANCE = 0.01f;
+        this.logger = logger;
+        this.input = input;
+        this.wait = wait;
+        this.addonReader = addonReader;
+        this.playerReader = addonReader.PlayerReader;
 
-        private readonly ILogger logger;
-        private readonly AddonReader addonReader;
-        private readonly PlayerReader playerReader;
-        private readonly ConfigurableInput input;
-        private readonly Wait wait;
+        outOfCombat = !playerReader.Bits.PlayerInCombat();
+    }
 
-        private const bool debug = true;
+    public void Update()
+    {
+        outOfCombat = !playerReader.Bits.PlayerInCombat();
+    }
 
-        private bool outOfCombat;
-
-        public CombatUtil(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader)
+    public bool EnteredCombat()
+    {
+        if (!outOfCombat && !playerReader.Bits.PlayerInCombat())
         {
-            this.logger = logger;
-            this.input = input;
-            this.wait = wait;
-            this.addonReader = addonReader;
-            this.playerReader = addonReader.PlayerReader;
-
-            outOfCombat = !playerReader.Bits.PlayerInCombat();
+            Log("Combat Leave");
+            outOfCombat = true;
+            return false;
         }
 
-        public void Update()
+        if (outOfCombat && playerReader.Bits.PlayerInCombat())
         {
-            outOfCombat = !playerReader.Bits.PlayerInCombat();
+            Log("Combat Enter");
+            outOfCombat = false;
+            return true;
         }
 
-        public bool EnteredCombat()
+        return false;
+    }
+
+    public bool AquiredTarget(int maxTimeMs = 400)
+    {
+        if (this.playerReader.Bits.PlayerInCombat())
         {
-            if (!outOfCombat && !playerReader.Bits.PlayerInCombat())
+            if (this.playerReader.PetHasTarget())
             {
-                Log("Combat Leave");
-                outOfCombat = true;
-                return false;
+                input.TargetPet();
+                Log($"Pets target {playerReader.TargetTarget}");
+                if (playerReader.TargetTarget == UnitsTarget.PetHasATarget)
+                {
+                    Log($"{nameof(AquiredTarget)}: Found target by pet");
+                    input.TargetOfTarget();
+                    return true;
+                }
             }
 
-            if (outOfCombat && playerReader.Bits.PlayerInCombat())
+            input.NearestTarget();
+            wait.Update();
+
+            if (playerReader.Bits.HasTarget() &&
+                playerReader.Bits.TargetInCombat() &&
+                (playerReader.Bits.TargetOfTargetIsPlayerOrPet() ||
+                addonReader.CombatLog.DamageTaken.Contains(playerReader.TargetGuid)))
             {
-                Log("Combat Enter");
-                outOfCombat = false;
+                Log("Found target");
                 return true;
             }
 
-            return false;
-        }
+            input.ClearTarget();
+            wait.Update();
 
-        public bool AquiredTarget(int maxTimeMs = 400)
-        {
-            if (this.playerReader.Bits.PlayerInCombat())
+            if (!wait.Till(maxTimeMs, PlayerOrPetHasTarget))
             {
-                if (this.playerReader.PetHasTarget())
-                {
-                    input.TargetPet();
-                    Log($"Pets target {playerReader.TargetTarget}");
-                    if (playerReader.TargetTarget == UnitsTarget.PetHasATarget)
-                    {
-                        Log($"{nameof(AquiredTarget)}: Found target by pet");
-                        input.TargetOfTarget();
-                        return true;
-                    }
-                }
-
-                input.NearestTarget();
-                wait.Update();
-
-                if (playerReader.Bits.HasTarget() &&
-                    playerReader.Bits.TargetInCombat() &&
-                    (playerReader.Bits.TargetOfTargetIsPlayerOrPet() ||
-                    addonReader.CombatLog.DamageTaken.Contains(playerReader.TargetGuid)))
-                {
-                    Log("Found target");
-                    return true;
-                }
-
-                input.ClearTarget();
-                wait.Update();
-
-                if (!wait.Till(maxTimeMs, PlayerOrPetHasTarget))
-                {
-                    Log($"{nameof(AquiredTarget)}: Someone started attacking me!");
-                    return true;
-                }
-
-                Log($"{nameof(AquiredTarget)}: No target found after {maxTimeMs}ms");
-                input.ClearTarget();
-                wait.Update();
+                Log($"{nameof(AquiredTarget)}: Someone started attacking me!");
+                return true;
             }
-            return false;
-        }
 
-        public bool IsPlayerMoving(Vector3 map)
-        {
-            float mapDistance = playerReader.MapPos.MapDistanceXYTo(map);
-            return mapDistance > MIN_DISTANCE;
+            Log($"{nameof(AquiredTarget)}: No target found after {maxTimeMs}ms");
+            input.ClearTarget();
+            wait.Update();
         }
+        return false;
+    }
 
-        private bool PlayerOrPetHasTarget()
-        {
-            return playerReader.Bits.HasTarget() || playerReader.PetHasTarget();
-        }
+    public bool IsPlayerMoving(Vector3 map)
+    {
+        float mapDistance = playerReader.MapPos.MapDistanceXYTo(map);
+        return mapDistance > MIN_DISTANCE;
+    }
 
-        private void Log(string text)
+    private bool PlayerOrPetHasTarget()
+    {
+        return playerReader.Bits.HasTarget() || playerReader.PetHasTarget();
+    }
+
+    private void Log(string text)
+    {
+        if (debug)
         {
-            if (debug)
-            {
-                logger.LogDebug($"{nameof(CombatUtil)}: {text}");
-            }
+            logger.LogDebug($"{nameof(CombatUtil)}: {text}");
         }
     }
 }

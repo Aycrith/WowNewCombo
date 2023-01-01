@@ -1,4 +1,3 @@
-﻿namespace Core.GOAP
-{
-    public sealed class AbortEvent : GoapEventArgs { }
-}
+﻿namespace Core.GOAP;
+
+public sealed class AbortEvent : GoapEventArgs { }
