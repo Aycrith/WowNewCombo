@@ -1094,18 +1094,15 @@ namespace Core
         private Requirement CreateArithmeticRequirement(string symbol, string requirement, Dictionary<string, Func<int>> intVariables)
         {
             ReadOnlySpan<char> span = requirement;
-            int sep1 = span.IndexOf(symbol);
+            int sep = span.IndexOf(symbol);
 
-            string key = span[..sep1].Trim().ToString();
-            ReadOnlySpan<char> name_or_value = span[(sep1 + 1)..];
+            string key = span[..sep].Trim().ToString();
+            ReadOnlySpan<char> variable_or_constValue = span[(sep + symbol.Length)..];
 
             if (!intVariables.ContainsKey(key))
             {
                 LogUnknownRequirement(logger, requirement, string.Join(", ", intVariables.Keys));
-                return new Requirement
-                {
-                    LogMessage = () => $"UNKNOWN REQUIREMENT! {requirement}"
-                };
+                throw new ArgumentOutOfRangeException(requirement);
             }
 
             string display = key;
@@ -1117,70 +1114,39 @@ namespace Core
                 key = aliasKey;
             }
 
-            int zero() => 0;
-            Func<int> value = zero;
-            if (int.TryParse(name_or_value, out int v))
+            Func<int> value;
+            if (int.TryParse(variable_or_constValue, out int constValue))
             {
-                int c() => v;
-                value = c;
+                int _constValue() => constValue;
+                value = _constValue;
             }
             else
             {
-                string variable = name_or_value.Trim().ToString();
-                if (intVariables.ContainsKey(variable))
-                {
-                    value = intVariables[variable];
-                }
+                value = intVariables.TryGetValue(variable_or_constValue.Trim().ToString(), out Func<int>? variable)
+                    ? variable
+                    : throw new ArgumentOutOfRangeException(requirement);
             }
 
+            string msg() => $"{display} {intVariables[key]()} {symbol} {value()}";
             switch (symbol)
             {
                 case "==":
                     bool e() => intVariables[key]() == value();
-                    string es() => $"{display} {intVariables[key]()} {symbol} {value()}";
-                    return new Requirement
-                    {
-                        HasRequirement = e,
-                        LogMessage = es
-                    };
+                    return new Requirement { HasRequirement = e, LogMessage = msg };
                 case ">":
                     bool g() => intVariables[key]() > value();
-                    string gs() => $"{display} {intVariables[key]()} {symbol} {value()}";
-                    return new Requirement
-                    {
-                        HasRequirement = g,
-                        LogMessage = gs
-                    };
+                    return new Requirement { HasRequirement = g, LogMessage = msg };
                 case "<":
                     bool l() => intVariables[key]() < value();
-                    string ls() => $"{display} {intVariables[key]()} {symbol} {value()}";
-                    return new Requirement
-                    {
-                        HasRequirement = l,
-                        LogMessage = ls
-                    };
+                    return new Requirement { HasRequirement = l, LogMessage = msg };
                 case ">=":
                     bool ge() => intVariables[key]() >= value();
-                    string ges() => $"{display} {intVariables[key]()} {symbol} {value()}";
-                    return new Requirement
-                    {
-                        HasRequirement = ge,
-                        LogMessage = ges
-                    };
+                    return new Requirement { HasRequirement = ge, LogMessage = msg };
                 case "<=":
                     bool le() => intVariables[key]() <= value();
-                    string les() => $"{display} {intVariables[key]()} {symbol} {value()}";
-                    return new Requirement
-                    {
-                        HasRequirement = le,
-                        LogMessage = les
-                    };
-
+                    return new Requirement { HasRequirement = le, LogMessage = msg };
                 default:
-                    return new Requirement
-                    {
-                        LogMessage = () => $"UNKNOWN ARITHMETIC REQUIREMENT! {key} {intVariables[key]()} ? {value()}"
-                    };
+                    throw new ArgumentOutOfRangeException(requirement);
             };
         }
 
