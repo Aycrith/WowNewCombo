@@ -9,7 +9,7 @@ using System.Linq;
 using Core.Session;
 using System.Numerics;
 using Microsoft.Extensions.DependencyInjection;
-using System.Buffers;
+using System.Collections.Specialized;
 
 namespace Core.GOAP;
 
@@ -24,6 +24,7 @@ public sealed partial class GoapAgent : IDisposable
     private readonly IWowScreen wowScreen;
     private readonly RouteInfo routeInfo;
     private readonly ConfigurableInput input;
+    private readonly IMountHandler mountHandler;
 
     private readonly IGrindSessionHandler sessionHandler;
     private readonly StopMoving stopMoving;
@@ -77,8 +78,10 @@ public sealed partial class GoapAgent : IDisposable
         }
     }
 
+    public BitVector32 WorldState { get; private set; }
+
     public GoapAgentState State { get; }
-    public IEnumerable<GoapGoal> AvailableGoals { get; }
+    public GoapGoal[] AvailableGoals { get; }
 
     public Stack<GoapGoal> Plan { get; private set; }
     public GoapGoal? CurrentGoal { get; private set; }
@@ -97,13 +100,14 @@ public sealed partial class GoapAgent : IDisposable
         this.playerReader = addonReader.PlayerReader;
         this.routeInfo = routeInfo;
         this.input = scope.ServiceProvider.GetRequiredService<ConfigurableInput>();
+        this.mountHandler = scope.ServiceProvider.GetRequiredService<IMountHandler>();
 
         this.addonReader.CombatLog.KillCredit += OnKillCredit;
 
         sessionHandler = new GrindSessionHandler(logger, dataConfig, addonReader, sessionDAO, cts);
         stopMoving = new StopMoving(input.Proc, playerReader, cts);
 
-        this.AvailableGoals = scope.ServiceProvider.GetServices<GoapGoal>().OrderBy(a => a.Cost);
+        this.AvailableGoals = scope.ServiceProvider.GetServices<GoapGoal>().OrderBy(a => a.Cost).ToArray();
         this.Plan = new();
 
         foreach (GoapGoal a in AvailableGoals)
@@ -181,62 +185,79 @@ public sealed partial class GoapAgent : IDisposable
 
     private GoapGoal? NextGoal()
     {
+        UpdateWorldState();
+
         if (Plan.Count == 0)
         {
-            Plan = GoapPlanner.Plan(AvailableGoals, GetWorldState(), GoapPlanner.EmptyGoalState);
+            Plan = GoapPlanner.Plan(AvailableGoals, WorldState, GoapPlanner.EmptyGoalState);
         }
 
         return Plan.Count > 0 ? Plan.Pop() : null;
     }
 
-    private bool[] GetWorldState()
+    private void UpdateWorldState()
     {
-        var pooler = ArrayPool<bool>.Shared;
-        bool[] a = pooler.Rent((int)GoapKey.LENGTH);
+        AddonBits bits = playerReader.Bits;
 
-        a[(int)GoapKey.hastarget] = playerReader.Bits.HasTarget();
-        a[(int)GoapKey.dangercombat] = playerReader.Bits.PlayerInCombat() && addonReader.DamageTakenCount() > 0;
+        int data = 0;
 
-        a[(int)GoapKey.damagetaken] = addonReader.DamageTakenCount() > 0;
-        a[(int)GoapKey.damagedone] = addonReader.DamageDoneCount() > 0;
-        a[(int)GoapKey.damagetakenordone] = addonReader.DamageTakenCount() > 0 || addonReader.DamageDoneCount() > 0;
+        if (bits.HasTarget())
+            data |= 1 << (int)GoapKey.hastarget;
+        if (bits.PlayerInCombat() && addonReader.DamageTakenCount() > 0)
+            data |= 1 << (int)GoapKey.dangercombat;
+        if (addonReader.DamageTakenCount() > 0)
+            data |= 1 << (int)GoapKey.damagetaken;
+        if (addonReader.DamageDoneCount() > 0)
+            data |= 1 << (int)GoapKey.damagedone;
+        if (addonReader.DamageTakenCount() > 0 ||
+            addonReader.DamageDoneCount() > 0)
+            data |= 1 << (int)GoapKey.damagetakenordone;
+        if (bits.HasTarget() && !bits.TargetIsDead())
+            data |= 1 << (int)GoapKey.targetisalive;
+        if ((bits.HasTarget() &&
+            playerReader.TargetHealthPercentage() < 30) ||
+            playerReader.TargetTarget is UnitsTarget.Me or
+                UnitsTarget.Pet or UnitsTarget.PartyOrPet)
+            data |= 1 << (int)GoapKey.targettargetsus;
+        if (bits.PlayerInCombat())
+            data |= 1 << (int)GoapKey.incombat;
+        if (playerReader.PetHasTarget() && !bits.PetTargetIsDead())
+            data |= 1 << (int)GoapKey.pethastarget;
+        if (mountHandler.IsMounted())
+            data |= 1 << (int)GoapKey.ismounted;
+        if (playerReader.WithInPullRange())
+            data |= 1 << (int)GoapKey.withinpullrange;
+        if (playerReader.WithInCombatRange())
+            data |= 1 << (int)GoapKey.incombatrange;
 
-        a[(int)GoapKey.targetisalive] = playerReader.Bits.HasTarget() && !playerReader.Bits.TargetIsDead();
-        a[(int)GoapKey.targettargetsus] = (playerReader.Bits.HasTarget() && playerReader.TargetHealthPercentage() < 30) || playerReader.TargetTarget is
-                UnitsTarget.Me or
-                UnitsTarget.Pet or
-                UnitsTarget.PartyOrPet;
+        //data |= 0 << (int)GoapKey.pulled;
 
-        a[(int)GoapKey.incombat] = playerReader.Bits.PlayerInCombat();
-        a[(int)GoapKey.pethastarget] = playerReader.PetHasTarget() && !playerReader.Bits.PetTargetIsDead();
-        a[(int)GoapKey.ismounted] = (playerReader.Class == UnitClass.Druid &&
-                playerReader.Form is Form.Druid_Travel or Form.Druid_Flight)
-                || playerReader.Bits.IsMounted();
+        if (bits.IsDead())
+            data |= 1 << (int)GoapKey.isdead;
+        if (State.LootableCorpseCount > 0)
+            data |= 1 << (int)GoapKey.shouldloot;
+        if (State.GatherableCorpseCount > 0)
+            data |= 1 << (int)GoapKey.shouldgather;
+        if (State.LastCombatKillCount > 0)
+            data |= 1 << (int)GoapKey.producedcorpse;
+        if (State.ShouldConsumeCorpse)
+            data |= 1 << (int)GoapKey.consumecorpse;
+        if (bits.IsSwimming())
+            data |= 1 << (int)GoapKey.isswimming;
+        if (bits.ItemsAreBroken())
+            data |= 1 << (int)GoapKey.itemsbroken;
+        if (State.Gathering)
+            data |= 1 << (int)GoapKey.gathering;
+        if (bits.TargetCanBeHostile())
+            data |= 1 << (int)GoapKey.targethostile;
+        if (bits.HasFocus())
+            data |= 1 << (int)GoapKey.hasfocus;
+        if (bits.FocusHasTarget())
+            data |= 1 << (int)GoapKey.focushastarget;
+        if (State.ConsumableCorpseCount > 0)
+            data |= 1 << (int)GoapKey.consumablecorpsenearby;
 
-        a[(int)GoapKey.withinpullrange] = playerReader.WithInPullRange();
-        a[(int)GoapKey.incombatrange] = playerReader.WithInCombatRange();
-
-        a[(int)GoapKey.pulled] = false;
-        a[(int)GoapKey.isdead] = playerReader.Bits.IsDead();
-
-        a[(int)GoapKey.shouldloot] = State.LootableCorpseCount > 0;
-        a[(int)GoapKey.shouldgather] = State.GatherableCorpseCount > 0;
-        a[(int)GoapKey.producedcorpse] = State.LastCombatKillCount > 0;
-        a[(int)GoapKey.consumecorpse] = State.ShouldConsumeCorpse;
-
-        a[(int)GoapKey.isswimming] = playerReader.Bits.IsSwimming();
-        a[(int)GoapKey.itemsbroken] = playerReader.Bits.ItemsAreBroken();
-
-        a[(int)GoapKey.gathering] = State.Gathering;
-
-        a[(int)GoapKey.targethostile] = playerReader.Bits.TargetCanBeHostile();
-        a[(int)GoapKey.hasfocus] = playerReader.Bits.HasFocus();
-        a[(int)GoapKey.focushastarget] = playerReader.Bits.FocusHasTarget();
-
-        a[(int)GoapKey.consumablecorpsenearby] = State.ConsumableCorpseCount > 0;
-
-        pooler.Return(a);
-        return a;
+        WorldState = new(data);
     }
 
     private void HandleGoapEvent(GoapEventArgs e)
@@ -318,6 +339,8 @@ public sealed partial class GoapAgent : IDisposable
             routeInfo.PoiList.RemoveAt(index);
         }
     }
+
+    public bool HasState(GoapKey key) => WorldState[1 << (int)key];
 
     public void NodeFound()
     {

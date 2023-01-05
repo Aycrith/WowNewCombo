@@ -10,7 +10,6 @@ public abstract class GoapGoal
 {
     public Dictionary<GoapKey, bool> Preconditions { get; } = new();
     public Dictionary<GoapKey, bool> Effects { get; } = new();
-    public bool[] State { get; private set; } = new bool[(int)GoapKey.LENGTH];
 
     private KeyAction[] keys = Array.Empty<KeyAction>();
     public KeyAction[] Keys
@@ -43,18 +42,7 @@ public abstract class GoapGoal
         GoapEvent?.Invoke(e);
     }
 
-    public void SetState(PartialState[] newState)
-    {
-        for (int i = 0; i < newState.Length; i++)
-        {
-            State[(int)newState[i].Key] = newState[i].Value;
-        }
-    }
-
-    public virtual bool CanRun()
-    {
-        return true;
-    }
+    public virtual bool CanRun() => true;
 
     public virtual void OnEnter() { }
 
@@ -62,23 +50,12 @@ public abstract class GoapGoal
 
     public virtual void Update() { }
 
-    public void AddPrecondition(GoapKey key, bool value)
+    protected void AddPrecondition(GoapKey key, bool value)
     {
         Preconditions[key] = value;
     }
-
-    public void RemovePrecondition(GoapKey key)
-    {
-        Preconditions.Remove(key);
-    }
-
-    public void AddEffect(GoapKey key, bool value)
+    protected void AddEffect(GoapKey key, bool value)
     {
         Effects[key] = value;
-    }
-
-    public void RemoveEffect(GoapKey key)
-    {
-        Effects.Remove(key);
     }
 }
