@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 
 using System;
+using System.Collections;
 using System.Drawing;
 using System.Threading;
 
@@ -24,7 +25,7 @@ public sealed partial class WowProcessInput : IMouseInput
     private readonly InputWindowsNative nativeInput;
     private readonly IInput simulatorInput;
 
-    private readonly bool[] keysDown = new bool[(int)ConsoleKey.OemClear];
+    private readonly BitArray keysDown = new((int)ConsoleKey.OemClear);
 
     public ConsoleKey ForwardKey { get; set; }
     public ConsoleKey BackwardKey { get; set; }
@@ -46,10 +47,7 @@ public sealed partial class WowProcessInput : IMouseInput
     {
         lock (keysDown)
         {
-            for (int i = 0; i < keysDown.Length; i++)
-            {
-                keysDown[i] = false;
-            }
+            keysDown.SetAll(false);
         }
     }
 

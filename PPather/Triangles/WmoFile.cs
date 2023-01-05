@@ -24,6 +24,7 @@ using System.Collections.Generic;
 using System.IO;
 using Microsoft.Extensions.Logging;
 using SharedLib.Data;
+using System.Collections;
 
 namespace Wmo;
 
@@ -457,9 +458,9 @@ internal sealed class WDT
 {
     public const int SIZE = 64;
 
-    public readonly bool[] maps = new bool[SIZE * SIZE];
+    public readonly BitArray maps = new(SIZE * SIZE);
     public readonly MapTile[] maptiles = new MapTile[SIZE * SIZE];
-    public readonly bool[] loaded = new bool[SIZE * SIZE];
+    public readonly BitArray loaded = new(SIZE * SIZE);
     public WMOInstance[] gwmois = Array.Empty<WMOInstance>();
 }
 
@@ -655,9 +656,9 @@ internal readonly struct MapTile
     public readonly WMOInstance[] wmois;
 
     public readonly MapChunk[] chunks;
-    public readonly bool[] hasChunk;
+    public readonly BitArray hasChunk;
 
-    public MapTile(ModelInstance[] modelis, WMOInstance[] wmois, MapChunk[] chunks, bool[] hasChunk)
+    public MapTile(ModelInstance[] modelis, WMOInstance[] wmois, MapChunk[] chunks, BitArray hasChunk)
     {
         this.modelis = modelis;
         this.wmois = wmois;
@@ -687,7 +688,7 @@ internal static class MapTileFile // adt file
         ModelInstance[] modelis = Array.Empty<ModelInstance>();
 
         MapChunk[] chunks = new MapChunk[MapTile.SIZE * MapTile.SIZE];
-        bool[] hasChunk = new bool[chunks.Length];
+        BitArray hasChunk = new(chunks.Length);
 
         using Stream stream = File.OpenRead(name);
         using BinaryReader file = new(stream);
