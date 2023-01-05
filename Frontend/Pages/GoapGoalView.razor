@@ -1,56 +1,62 @@
 ﻿@using System.Text
+@using Core
 @using Core.GOAP
+@using Core.Goals
 @using System.Text.RegularExpressions
 
 @inject IAddonReader addonReader
+@inject IBotController botController
 
-<tr class="@ActionClass(this.IsSelected, 0)">
+<tr class="@ActionClass(IsSelected, 0)">
     <td>
         <b style="color:@DisplayCanRun(goal.CanRun())">@goal.Cost: @goal.DisplayName</b>
     </td>
     <td>
-        @foreach ((GoapKey key, bool value) in this.goal.Preconditions)
+        @foreach ((GoapKey key, bool value) in goal.Preconditions)
         {
-            <span class="badge @Badge(this.goal.State[(int)key])">@(key.ToStringF(value))</span>
+            <span class="badge @Badge(botController.GoapAgent!.HasState(key) == value)">@(key.ToStringF(value))</span>
         }
-        @if (this.goal.Keys.Length == 1)
+        @if (goal.Keys.Length == 1)
         {
-            @for (int r = 0; r < this.goal.Keys[0].RequirementsRuntime.Length; r++)
+            KeyAction key = goal.Keys[0];
+            @for (int i = 0; i < key.RequirementsRuntime.Length; i++)
             {
-                if (this.goal.Keys[0].RequirementsRuntime[r].VisibleIfHasRequirement ||
-                !this.goal.Keys[0].RequirementsRuntime[r].HasRequirement())
+                Requirement rq = key.RequirementsRuntime[i];
+                if (rq.VisibleIfHasRequirement || !rq.HasRequirement())
                 {
-                    @(DisplayRequirementBadges(this.goal.Keys[0].RequirementsRuntime[r]))
+                    @(DisplayRequirementBadges(rq))
                 }
             }
         }
     </td>
 </tr>
-@if (this.goal.Keys.Length > 1 && (this.IsSelected || this.Expand))
+@if (goal.Keys.Length > 1 && (IsSelected || Expand))
 {
     <tr>
         <td colspan="2" style="padding-top: 0 !important; padding-bottom: 0 !important; border-top: 0 !important;">
             <table style="margin-left: 15px;">
                 @{
-                    int lastKeyClicked = Core.KeyAction.LastKeyClicked();
+                    int lastKey = KeyAction.LastKeyClicked();
                 }
-                @for (int k = 0; k < this.goal.Keys.Length; k++)
+                @for (int k = 0; k < goal.Keys.Length; k++)
                 {
-                    int Cooldown = 0;
-                    if (this.goal.Keys[k].Slot > 0)
-                        Cooldown = addonReader.ActionBarCooldownReader.Get(this.goal.Keys[k]);
+                    KeyAction key = goal.Keys[k];
 
-                    <tr class="@ActionClass(lastKeyClicked == this.goal.Keys[k].ConsoleKeyFormHash, Cooldown)">
+                    int cooldown = 0;
+                    if (key.Slot > 0)
+                        cooldown = addonReader.ActionBarCooldownReader.Get(key);
+
+                    <tr class="@ActionClass(lastKey == key.ConsoleKeyFormHash, cooldown)">
                         <td>
-                            <b style="color:@DisplayCanRun(this.goal.Keys[k].CanRun())">@this.goal.Keys[k].Name [@this.goal.Keys[k].Key]</b>
+                            <b style="color:@DisplayCanRun(key.CanRun())">@key.Name [@key.Key]</b>
                         </td>
                         <td>
-                            @for (int r = 0; r < this.goal.Keys[k].RequirementsRuntime.Length; r++)
+                            @for (int r = 0; r < key.RequirementsRuntime.Length; r++)
                             {
-                                if (this.goal.Keys[k].RequirementsRuntime[r].VisibleIfHasRequirement ||
-                                !this.goal.Keys[k].RequirementsRuntime[r].HasRequirement())
+                                Requirement rq = key.RequirementsRuntime[r];
+                                if (rq.VisibleIfHasRequirement || !rq.HasRequirement())
                                 {
-                                    @(DisplayRequirementBadges(this.goal.Keys[k].RequirementsRuntime[r]))
+                                    @(DisplayRequirementBadges(rq))
                                 }
                             }
                         </td>
@@ -70,12 +76,12 @@
     public bool Expand { get; set; } = false;
 
     [Parameter]
-    public Core.Goals.GoapGoal goal { get; set; } = new Core.Goals.NullGoal();
+    public GoapGoal goal { get; set; } = new NullGoal();
 
     private static readonly Regex regex = new($"({Requirement.And})|({Requirement.Or})", RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private static readonly StringBuilder stringBuilder = new();
 
-    private static MarkupString DisplayRequirementBadges(Core.Requirement requirement)
+    private static MarkupString DisplayRequirementBadges(Requirement requirement)
     {
         stringBuilder.Clear();
         foreach (string match in regex.Split(requirement.LogMessage()))
