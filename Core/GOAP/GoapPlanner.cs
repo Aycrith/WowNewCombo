@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System;
-using System.Buffers;
+using System.Collections.Specialized;
 
 namespace Core.GOAP;
 
 /**
-	 * Plans what actions can be completed in order to fulfill a goal state.
-	 */
+* Plans what actions can be completed in order to fulfill a goal state.
+*/
 
 public static class GoapPlanner
 {
@@ -16,174 +16,149 @@ public static class GoapPlanner
     public static readonly Stack<GoapGoal> EmptyGoal = new();
 
     /**
-		 * Plan what sequence of actions can fulfill the goal.
-		 * Returns null if a plan could not be found, or a list of the actions
-		 * that must be performed, in order, to fulfill the goal.
-		 */
+    * Plan what sequence of actions can fulfill the goal.
+    * Returns null if a plan could not be found, or a list of the actions
+    * that must be performed, in order, to fulfill the goal.
+    */
 
     public static Stack<GoapGoal> Plan(
-        IEnumerable<GoapGoal> availableActions,
-        bool[] worldState,
+        GoapGoal[] available,
+        BitVector32 worldState,
         bool[] goal)
     {
         Node root = new(null, 0, worldState, null);
 
         // check what actions can run using their checkProceduralPrecondition
-        HashSet<GoapGoal> usableActions = new();
-        foreach (GoapGoal a in availableActions)
+        HashSet<GoapGoal> usable = new(available.Length);
+        for (int i = 0; i < available.Length; i++)
         {
+            GoapGoal a = available[i];
             if (a.CanRun())
             {
-                usableActions.Add(a);
-            }
-            else
-            {
-                a.SetState(InState(a.Preconditions, root.state));
+                usable.Add(a);
             }
         }
 
         // build up the tree and record the leaf nodes that provide a solution to the goal.
-        List<Node> leaves = new();
-        if (!BuildGraph(root, leaves, usableActions, goal))
+        PriorityQueue<Node, float> leaves = new();
+        if (BuildGraph(root, leaves, usable, goal) == 0)
         {
             return EmptyGoal;
         }
 
         // get the cheapest leaf
-        Stack<GoapGoal> result = new();
-        static float Min(Node n) => n.runningCost;
-        Node? node = leaves.MinBy(Min);
-        while (node != null)
+        if (leaves.TryDequeue(out Node? node, out _))
         {
-            if (node.action != null)
+            Stack<GoapGoal> result = new();
+            while (node != null)
             {
-                result.Push(node.action);
+                if (node.action != null)
+                {
+                    result.Push(node.action);
+                }
+                node = node.parent;
             }
-            node = node.parent;
-        }
-        return result;
-    }
-
-    private static bool ContainsValue(in PartialState[] state, bool value)
-    {
-        for (int i = 0; i < state.Length; i++)
-        {
-            if (state[i].Value == value)
-                return true;
+            return result;
         }
 
-        return false;
+        return EmptyGoal;
     }
+
 
     /**
-		 * Returns true if at least one solution was found.
-		 * The possible paths are stored in the leaves list. Each leaf has a
-		 * 'runningCost' value where the lowest cost will be the best action
-		 * sequence.
-		 */
+	* Returns true if at least one solution was found.
+	* The possible paths are stored in the leaves list. Each leaf has a
+	* 'runningCost' value where the lowest cost will be the best action
+	* sequence.
+	*/
 
-    private static bool BuildGraph(Node parent, List<Node> leaves, HashSet<GoapGoal> usableActions, bool[] goal)
+    private static int BuildGraph(Node parent, PriorityQueue<Node, float> leaves, HashSet<GoapGoal> usable, bool[] goal)
     {
-        bool foundOne = false;
-
         // go through each action available at this node and see if we can use it here
-        foreach (GoapGoal action in usableActions)
+        foreach (GoapGoal action in usable)
         {
             // if the parent state has the conditions for this action's preconditions, we can use it here
-            PartialState[] result = InState(action.Preconditions, parent.state);
-            action.SetState(result);
-
-            if (!ContainsValue(result, false))
+            if (InState(action.Preconditions, parent.state))
             {
                 // apply the action's effects to the parent state
-                bool[] currentState = PopulateState(parent.state, action.Effects);
-                //Debug.Log(GoapAgent.prettyPrint(currentState));
-                Node node = new(parent, parent.runningCost + action.Cost, currentState, action);
+                BitVector32 effectedState = PopulateState(parent.state, action.Effects);
+                Node node = new(parent, parent.runningCost + action.Cost, effectedState, action);
 
-                result = InState(goal, currentState);
-                if (!ContainsValue(result, false))
+                if (InState(goal, effectedState))
                 {
                     // we found a solution!
-                    leaves.Add(node);
-                    foundOne = true;
+                    leaves.Enqueue(node, node.runningCost);
                 }
                 else
                 {
                     // not at a solution yet, so test all the remaining actions and branch out the tree
-                    HashSet<GoapGoal> subset = new(usableActions);
+                    HashSet<GoapGoal> subset = new(usable);
                     subset.Remove(action);
 
-                    bool found = BuildGraph(node, leaves, subset, goal);
-                    if (found)
-                    {
-                        foundOne = true;
-                    }
+                    BuildGraph(node, leaves, subset, goal);
                 }
             }
         }
 
-        return foundOne;
+        return leaves.Count;
     }
 
     /**
-		 * Check that all items in 'test' are in 'state'. If just one does not match or is not there
-		 * then this returns false.
-		 */
+	* Check that all items in 'test' are in 'state'. If just one does not match or is not there
+	* then this returns false.
+	*/
 
-    private static PartialState[] InState(Dictionary<GoapKey, bool> test, bool[] state)
+    private static bool InState(Dictionary<GoapKey, bool> test, BitVector32 state)
     {
-        PartialState[] resultState = new PartialState[test.Count];
-        int i = 0;
         foreach ((GoapKey key, bool value) in test)
         {
-            bool exists = (int)key < state.Length;
-            resultState[i++] = new(key, exists && test[key].Equals(state[(int)key]));
+            if (state[1 << (int)key] != value)
+            {
+                return false;
+            }
         }
-        return resultState;
+
+        return true;
     }
 
-    private static PartialState[] InState(bool[] test, bool[] state)
+    private static bool InState(bool[] test, BitVector32 state)
     {
-        PartialState[] resultState = new PartialState[test.Length];
         for (int i = 0; i < test.Length; i++)
         {
-            resultState[i] = new((GoapKey)i, test[i].Equals(state[i]));
+            if (!test[i].Equals(state[1 << i]))
+            {
+                return false;
+            }
         }
-        return resultState;
+        return true;
     }
 
     /**
-		 * Apply the stateChange to the currentState
-		 */
+	* Apply the stateChange to the currentState
+	*/
 
-    private static bool[] PopulateState(bool[] currentState, Dictionary<GoapKey, bool> futureState)
+    private static BitVector32 PopulateState(BitVector32 state, Dictionary<GoapKey, bool> effects)
     {
-        var pooler = ArrayPool<bool>.Shared;
-        bool[] state = pooler.Rent(currentState.Length);
-
-        currentState.CopyTo(state, 0);
-
-        foreach ((GoapKey key, bool value) in futureState)
+        BitVector32 future = new(state);
+        foreach ((GoapKey key, bool value) in effects)
         {
-            state[(int)key] = value;
+            future[1 << (int)key] = value;
         }
-
-        pooler.Return(state);
-        return state;
+        return future;
     }
 
     /**
-		 * Used for building up the graph and holding the running costs of actions.
-		 */
+	* Used for building up the graph and holding the running costs of actions.
+	*/
 
     private sealed class Node
     {
         public readonly Node? parent;
         public readonly float runningCost;
-        public readonly bool[] state;
+        public readonly BitVector32 state;
         public readonly GoapGoal? action;
 
-        public Node(Node? parent, float runningCost, bool[] state, GoapGoal? action)
+        public Node(Node? parent, float runningCost, BitVector32 state, GoapGoal? action)
         {
             this.parent = parent;
             this.runningCost = runningCost;
