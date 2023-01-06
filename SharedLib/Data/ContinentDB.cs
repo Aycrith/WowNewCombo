@@ -11,6 +11,7 @@ public static class ContinentDB
     {
         foreach (WorldMapArea area in list)
         {
+            if (area.Continent == null) continue;
             IdToName.TryAdd(area.MapID, area.Continent);
             NameToId.TryAdd(area.Continent, area.MapID);
         }

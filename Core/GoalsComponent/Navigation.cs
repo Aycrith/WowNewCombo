@@ -33,10 +33,10 @@ public sealed partial class Navigation : IDisposable
     private readonly IMountHandler mountHandler;
 
     private const float MinDistanceMount = 10;
-    private readonly float MaxDistance = 200;
+    private readonly float MaxDistance = 200_0000;
     private readonly float MinDistance = 5;
 
-    private float AvgDistance;
+    private float AvgDistance = 200_0000;
     private float lastWorldDistance = float.MaxValue;
 
     private const float minAngleToTurn = PI / 35f;              // 5.14 degree
@@ -86,7 +86,7 @@ public sealed partial class Navigation : IDisposable
 
         patherName = pather.GetType().Name;
 
-        AvgDistance = MinDistance;
+        //AvgDistance = MinDistance;
 
         manualReset = new(false);
         _cts = new();
@@ -293,7 +293,7 @@ public sealed partial class Navigation : IDisposable
             wayPoints.Push(worldPos);
         }
 
-        AvgDistance = wayPoints.Count > 1 ? Max(mapDistanceXY / wayPoints.Count, MinDistance) : MinDistance;
+        //AvgDistance = wayPoints.Count > 1 ? Max(mapDistanceXY / wayPoints.Count, MinDistance) : MinDistance;
 
         UpdateTotalRoute();
     }
