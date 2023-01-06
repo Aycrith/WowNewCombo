@@ -57,7 +57,7 @@ local UnitIsDead = UnitIsDead
 local UnitIsPlayer = UnitIsPlayer
 local UnitName = UnitName
 local UnitIsDeadOrGhost = UnitIsDeadOrGhost
-local UnitCharacterPoints = UnitCharacterPoints
+local UnitCharacterPoints = UnitCharacterPoints or function(unit) return 0 end
 local UnitPlayerControlled = UnitPlayerControlled
 local GetShapeshiftForm = GetShapeshiftForm
 local GetShapeshiftFormInfo = GetShapeshiftFormInfo
@@ -77,7 +77,7 @@ local UnitIsTapDenied = UnitIsTapDenied
 local IsAutoRepeatSpell = IsAutoRepeatSpell
 local IsCurrentSpell = IsCurrentSpell
 local UnitIsVisible = UnitIsVisible
-local GetPetHappiness = GetPetHappiness
+local GetPetHappiness = GetPetHappiness or function() return 3 end
 
 local ammoSlot = GetInventorySlotInfo("AmmoSlot")
 
@@ -107,6 +107,7 @@ function DataToColor:Bits1()
     -- 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384
 
     local mainHandEnchant, _, _, _, offHandEnchant = GetWeaponEnchantInfo()
+    local ammoSlotCount = GetInventoryItemCount(DataToColor.C.unitPlayer, ammoSlot) or 0
 
     return
         (UnitAffectingCombat(DataToColor.C.unitTarget) and 1 or 0) +
@@ -122,7 +123,7 @@ function DataToColor:Bits1()
         (UnitOnTaxi(DataToColor.C.unitPlayer) and 2 or 0) ^ 10 +
         (IsSwimming() and 2 or 0) ^ 11 +
         (GetPetHappiness() == 3 and 2 or 0) ^ 12 +
-        (GetInventoryItemCount(DataToColor.C.unitPlayer, ammoSlot) > 0 and 2 or 0) ^ 13 +
+        (ammoSlotCount > 0 and 2 or 0) ^ 13 +
         (UnitAffectingCombat(DataToColor.C.unitPlayer) and 2 or 0) ^ 14 +
         (DataToColor:IsUnitsTargetIsPlayerOrPet(DataToColor.C.unitTarget, DataToColor.C.unitTargetTarget) and 2 or 0) ^ 15 +
         (IsAutoRepeatSpell(DataToColor.C.Spell.AutoShotId) and 2 or 0) ^ 16 +
@@ -365,7 +366,9 @@ function DataToColor:areSpellsInRange()
     local inRange = 0
     local targetCount = #DataToColor.S.spellInRangeTarget
     for i = 1, targetCount do
-        if IsSpellInRange(GetSpellInfo(DataToColor.S.spellInRangeTarget[i]), DataToColor.C.unitTarget) == 1 then
+        if UnitExists(DataToColor.C.unitTarget) and
+            UnitIsVisible(DataToColor.C.unitTarget) and
+            IsSpellInRange(GetSpellInfo(DataToColor.S.spellInRangeTarget[i]), DataToColor.C.unitTarget) == 1 then
             inRange = inRange + (2 ^ (i - 1))
         end
     end

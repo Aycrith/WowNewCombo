@@ -361,7 +361,7 @@ function DataToColor:InitSpellBookQueue()
     local num, type = 1, 1
     while true do
         local name, _, id = GetSpellBookItemName(num, type)
-        if not name then
+        if not name or not id then
             break
         end
 
@@ -375,6 +375,9 @@ function DataToColor:InitSpellBookQueue()
 end
 
 function DataToColor:InitTalentQueue()
+
+    if GetNumTalentTabs == nil then return end
+
     for tab = 1, GetNumTalentTabs(false, false) do
         for i = 1, GetNumTalents(tab) do
             local _, _, tier, column, currentRank = GetTalentInfo(tab, i)
