@@ -49,7 +49,7 @@ public static class GoapPlanner
         // get the cheapest leaf
         if (leaves.TryDequeue(out Node? node, out _))
         {
-            Stack<GoapGoal> result = new();
+            Stack<GoapGoal> result = new(leaves.Count);
             while (node != null)
             {
                 if (node.action != null)
