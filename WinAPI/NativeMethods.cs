@@ -122,7 +122,7 @@ public static class NativeMethods
     public static Size GetCursorSize()
     {
         int dpi = GetDpi();
-        var size = new SizeF(GetSystemMetrics(SM_CXCURSOR), GetSystemMetrics(SM_CYCURSOR));
+        SizeF size = new(GetSystemMetrics(SM_CXCURSOR), GetSystemMetrics(SM_CYCURSOR));
         size *= DPI2PPI(dpi);
         return size.ToSize();
     }

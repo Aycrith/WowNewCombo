@@ -141,7 +141,7 @@ public sealed class WowScreen : IWowScreen, IBitmapProvider, IDisposable
         int y = img.Height / 2;
         int r = Math.Min(x, y);
 
-        var tmp = new Bitmap(2 * r, 2 * r);
+        Bitmap tmp = new(2 * r, 2 * r);
         using (Graphics g = Graphics.FromImage(tmp))
         {
             if (highlight)
