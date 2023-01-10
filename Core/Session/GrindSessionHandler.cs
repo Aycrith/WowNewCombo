@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+
 using System;
 using System.Threading;
 
@@ -16,7 +17,9 @@ public sealed class GrindSessionHandler : IGrindSessionHandler
 
     private bool active;
 
-    public GrindSessionHandler(ILogger logger, DataConfig dataConfig, AddonReader addonReader, IGrindSessionDAO grindSessionDAO, CancellationTokenSource cts)
+    public GrindSessionHandler(ILogger logger, DataConfig dataConfig,
+        AddonReader addonReader, IGrindSessionDAO grindSessionDAO,
+        CancellationTokenSource cts)
     {
         this.logger = logger;
         this.addonReader = addonReader;
@@ -25,7 +28,7 @@ public sealed class GrindSessionHandler : IGrindSessionHandler
 
         session = new()
         {
-            ExpList = ExperienceProvider.GetExperienceList(dataConfig)
+            ExpList = ExperienceProvider.Get(dataConfig)
         };
 
         thread = new Thread(PeriodicSave);

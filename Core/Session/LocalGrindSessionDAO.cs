@@ -23,15 +23,15 @@ public sealed class LocalGrindSessionDAO : IGrindSessionDAO
 
     public IEnumerable<GrindSession> Load()
     {
-        var sessions = Directory.EnumerateFiles(dataConfig.ExpHistory, "*.json")
+        List<GrindSession> sessions = Directory.EnumerateFiles(dataConfig.ExpHistory, "*.json")
             .Select(file => DeserializeObject<GrindSession>(File.ReadAllText(file))!)
             .OrderByDescending(grindingSession => grindingSession.SessionStart)
             .ToList();
 
         if (sessions.Any())
         {
-            int[] expList = ExperienceProvider.GetExperienceList(dataConfig);
-            foreach (var s in sessions)
+            int[] expList = ExperienceProvider.Get(dataConfig);
+            foreach (GrindSession? s in sessions)
             {
                 s.ExpList = expList;
             }

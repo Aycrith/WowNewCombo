@@ -6,7 +6,7 @@ namespace Core.Session;
 
 public static class ExperienceProvider
 {
-    public static int[] GetExperienceList(DataConfig dataConfig)
+    public static int[] Get(DataConfig dataConfig)
     {
         string json = ReadAllText(Join(dataConfig.ExpExperience, "exp.json"));
         return DeserializeObject<int[]>(json)!;
