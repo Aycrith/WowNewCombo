@@ -3,9 +3,7 @@ using System.Buffers;
 
 namespace AnTCP.Client.Objects;
 
-#pragma warning disable CA1815 // Override equals and operator equals on value types
 public readonly unsafe struct AnTcpResponse
-#pragma warning restore CA1815 // Override equals and operator equals on value types
 {
     public AnTcpResponse(byte type, byte[] data)
     {
@@ -16,9 +14,7 @@ public readonly unsafe struct AnTcpResponse
     /// <summary>
     /// Raw data received by the TCP client.
     /// </summary>
-#pragma warning disable CA1819 // Properties should not return arrays
     public byte[] Data { get; }
-#pragma warning restore CA1819 // Properties should not return arrays
 
     /// <summary>
     /// Lenght of the data array.
