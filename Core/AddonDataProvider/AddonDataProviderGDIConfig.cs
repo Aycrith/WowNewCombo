@@ -64,28 +64,33 @@ public sealed class AddonDataProviderGDIConfig : IAddonDataProvider, IDisposable
         {
             BitmapData bd = bitmap.LockBits(rect, ImageLockMode.ReadOnly, AddonDataProviderConfig.PIXEL_FORMAT);
 
-            byte* fLine = (byte*)bd.Scan0 + (frames[0].Y * bd.Stride);
-            int fx = frames[0].X * AddonDataProviderConfig.BYTES_PER_PIXEL;
+            ReadOnlySpan<DataFrame> frames = this.frames;
 
-            byte* lLine = (byte*)bd.Scan0 + (frames[^1].Y * bd.Stride);
-            int lx = frames[^1].X * AddonDataProviderConfig.BYTES_PER_PIXEL;
+            ReadOnlySpan<byte> first = new(
+                (byte*)bd.Scan0 + (frames[0].Y * bd.Stride) +
+                (frames[0].X * AddonDataProviderConfig.BYTES_PER_PIXEL),
+                AddonDataProviderConfig.BYTES_PER_PIXEL);
 
-            for (int i = 0; i < 3; i++)
+            ReadOnlySpan<byte> last = new(
+                (byte*)bd.Scan0 + (frames[^1].Y * bd.Stride) +
+                (frames[^1].X * AddonDataProviderConfig.BYTES_PER_PIXEL),
+                AddonDataProviderConfig.BYTES_PER_PIXEL);
+
+            if (!first.SequenceEqual(AddonDataProviderConfig.fColor) ||
+                !last.SequenceEqual(AddonDataProviderConfig.lColor))
             {
-                if (fLine[fx + i] != AddonDataProviderConfig.fColor[i] ||
-                    lLine[lx + i] != AddonDataProviderConfig.lColor[i])
-                    goto Exit;
+                goto Unlock;
             }
 
             for (int i = 0; i < frames.Length; i++)
             {
-                fLine = (byte*)bd.Scan0 + (frames[i].Y * bd.Stride);
-                fx = frames[i].X * AddonDataProviderConfig.BYTES_PER_PIXEL;
+                byte* y = (byte*)bd.Scan0 + (frames[i].Y * bd.Stride);
+                int x = frames[i].X * AddonDataProviderConfig.BYTES_PER_PIXEL;
 
-                data[frames[i].Index] = (fLine[fx + 2] * 65536) + (fLine[fx + 1] * 256) + fLine[fx];
+                data[frames[i].Index] = y[x] | (y[x + 1] << 8) | (y[x + 2] << 16);
             }
 
-        Exit:
+        Unlock:
             bitmap.UnlockBits(bd);
         }
     }
@@ -95,9 +100,9 @@ public sealed class AddonDataProviderGDIConfig : IAddonDataProvider, IDisposable
         manualReset.Reset();
 
         this.frames = frames;
-        data = new int[this.frames.Length];
+        data = new int[frames.Length];
 
-        for (int i = 0; i < this.frames.Length; i++)
+        for (int i = 0; i < frames.Length; i++)
         {
             rect.Width = Math.Max(rect.Width, frames[i].X);
             rect.Height = Math.Max(rect.Height, frames[i].Y);

@@ -10,6 +10,7 @@ using System.Text;
 using Vortice.Direct3D;
 using Vortice.Direct3D11;
 using Vortice.DXGI;
+using Vortice.Mathematics;
 
 using static WinAPI.NativeMethods;
 
@@ -49,9 +50,9 @@ public sealed class AddonDataProviderDXGI : IAddonDataProvider, IDisposable
 
         this.frames = frames;
 
-        data = new int[this.frames.Length];
+        data = new int[frames.Length];
 
-        for (int i = 0; i < this.frames.Length; i++)
+        for (int i = 0; i < frames.Length; i++)
         {
             rect.Width = Math.Max(rect.Width, frames[i].X);
             rect.Height = Math.Max(rect.Height, frames[i].Y);
@@ -134,10 +135,11 @@ public sealed class AddonDataProviderDXGI : IAddonDataProvider, IDisposable
             return;
 
         ID3D11Texture2D texture = desktopResource.QueryInterface<ID3D11Texture2D>();
-        device.ImmediateContext.CopySubresourceRegion(addonTexture, 0, 0, 0, 0, texture, 0,
-            new Vortice.Mathematics.Box(p.X, p.Y, 0, p.X + rect.Right, p.Y + rect.Bottom, 1));
-        MappedSubresource dataBox = device.ImmediateContext.Map(addonTexture, 0, MapMode.Read, Vortice.Direct3D11.MapFlags.None);
 
+        Box box = new(p.X, p.Y, 0, p.X + rect.Right, p.Y + rect.Bottom, 1);
+        device.ImmediateContext.CopySubresourceRegion(addonTexture, 0, 0, 0, 0, texture, 0, box);
+
+        MappedSubresource dataBox = device.ImmediateContext.Map(addonTexture, 0, MapMode.Read, Vortice.Direct3D11.MapFlags.None);
         int sizeInBytesToCopy = rect.Right * AddonDataProviderConfig.BYTES_PER_PIXEL;
 
         BitmapData bd = bitmap.LockBits(rect, ImageLockMode.ReadWrite, bitmap.PixelFormat);
@@ -153,25 +155,30 @@ public sealed class AddonDataProviderDXGI : IAddonDataProvider, IDisposable
 
         unsafe
         {
-            byte* fLine = (byte*)bd.Scan0 + (frames[0].Y * bd.Stride);
-            int fx = frames[0].X * AddonDataProviderConfig.BYTES_PER_PIXEL;
+            ReadOnlySpan<DataFrame> frames = this.frames;
 
-            byte* lLine = (byte*)bd.Scan0 + (frames[^1].Y * bd.Stride);
-            int lx = frames[^1].X * AddonDataProviderConfig.BYTES_PER_PIXEL;
+            ReadOnlySpan<byte> first = new(
+                (byte*)bd.Scan0 + (frames[0].Y * bd.Stride) +
+                (frames[0].X * AddonDataProviderConfig.BYTES_PER_PIXEL),
+                AddonDataProviderConfig.BYTES_PER_PIXEL);
 
-            for (int i = 0; i < 3; i++)
+            ReadOnlySpan<byte> last = new(
+                (byte*)bd.Scan0 + (frames[^1].Y * bd.Stride) +
+                (frames[^1].X * AddonDataProviderConfig.BYTES_PER_PIXEL),
+                AddonDataProviderConfig.BYTES_PER_PIXEL);
+
+            if (!first.SequenceEqual(AddonDataProviderConfig.fColor) ||
+                !last.SequenceEqual(AddonDataProviderConfig.lColor))
             {
-                if (fLine[fx + i] != AddonDataProviderConfig.fColor[i] ||
-                    lLine[lx + i] != AddonDataProviderConfig.lColor[i])
-                    goto Unlock;
+                goto Unlock;
             }
 
             for (int i = 0; i < frames.Length; i++)
             {
-                fLine = (byte*)bd.Scan0 + (frames[i].Y * bd.Stride);
-                fx = frames[i].X * AddonDataProviderConfig.BYTES_PER_PIXEL;
+                byte* y = (byte*)bd.Scan0 + (frames[i].Y * bd.Stride);
+                int x = frames[i].X * AddonDataProviderConfig.BYTES_PER_PIXEL;
 
-                data[frames[i].Index] = (fLine[fx + 2] * 65536) + (fLine[fx + 1] * 256) + fLine[fx];
+                data[frames[i].Index] = y[x] | (y[x + 1] << 8) | (y[x + 2] << 16);
             }
 
         Unlock:
