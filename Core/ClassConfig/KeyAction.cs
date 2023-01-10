@@ -274,7 +274,7 @@ public sealed partial class KeyAction : IDisposable
 
         canRunMemoTime = globalTime.Value;
 
-        Span<Requirement> span = RequirementsRuntime;
+        ReadOnlySpan<Requirement> span = RequirementsRuntime;
         for (int i = 0; i < span.Length; i++)
         {
             if (!span[i].HasRequirement())
@@ -286,7 +286,7 @@ public sealed partial class KeyAction : IDisposable
 
     public bool CanBeInterrupted()
     {
-        Span<Requirement> span = InterruptsRuntime;
+        ReadOnlySpan<Requirement> span = InterruptsRuntime;
         for (int i = 0; i < span.Length; i++)
         {
             if (!span[i].HasRequirement())

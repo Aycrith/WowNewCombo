@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Text;
 
 using Core.Database;
@@ -182,17 +183,22 @@ public sealed class RouteInfo : IDisposable
         worldmapAreaDB.ToMap_FlipXY(playerReader.UIMapId.Value, ref navigation);
         allPoints.AddRange(navigation);
 
-        var pois = PoiList.Select(p => p.MapLoc);
-        allPoints.AddRange(pois);
+        Span<RouteInfoPoi> span = CollectionsMarshal.AsSpan(PoiList);
+        for (int i = 0; i < span.Length; i++)
+        {
+            allPoints.Add(span[i].MapLoc);
+        }
 
         allPoints.Add(playerReader.MapPos);
 
-        float maxX = allPoints.Max(s => s.X);
-        float minX = allPoints.Min(s => s.X);
+        static float X(Vector3 s) => s.X;
+        float maxX = allPoints.Max(X);
+        float minX = allPoints.Min(X);
         float diffX = maxX - minX;
 
-        float maxY = allPoints.Max(s => s.Y);
-        float minY = allPoints.Min(s => s.Y);
+        static float Y(Vector3 s) => s.Y;
+        float maxY = allPoints.Max(Y);
+        float minY = allPoints.Min(Y);
         float diffY = maxY - minY;
 
         this.addY = 0;
