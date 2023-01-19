@@ -99,11 +99,11 @@ public sealed class Search
         catch (Exception ex)
         {
             logger.LogError(ex.Message);
-            return null;
         }
         finally
         {
             PathGraph.SearchEnabled = false;
         }
+        return null;
     }
 }

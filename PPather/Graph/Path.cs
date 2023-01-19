@@ -18,6 +18,7 @@
 
 using System.Collections.Generic;
 using System.Numerics;
+using System.Runtime.InteropServices;
 
 namespace PPather.Graph;
 
@@ -29,9 +30,10 @@ public sealed class Path
 
     public Path(List<Spot> steps)
     {
-        foreach (Spot s in steps)
+        var span = CollectionsMarshal.AsSpan(steps);
+        for (int i = 0; i < span.Length; i++)
         {
-            Add(s.Loc);
+            Add(span[i].Loc);
         }
     }
 

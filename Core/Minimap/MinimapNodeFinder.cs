@@ -34,9 +34,9 @@ public sealed class MinimapNodeFinder
     private readonly WowScreen wowScreen;
     public event EventHandler<MinimapNodeEventArgs>? NodeEvent;
 
-    private const int MinScore = 2;
-    private const int MaxBlue = 34;
-    private const int MinRedGreen = 176;
+    private const int minScore = 2;
+    private const byte maxBlue = 34;
+    private const byte minRedGreen = 176;
 
     public MinimapNodeFinder(ILogger logger, WowScreen wowScreen)
     {
@@ -51,7 +51,7 @@ public sealed class MinimapNodeFinder
         NodeEvent?.Invoke(this, new MinimapNodeEventArgs(best.X, best.Y, amountAboveMin));
     }
 
-    private Span<PixelPoint> FindYellowPoints()
+    private ReadOnlySpan<PixelPoint> FindYellowPoints()
     {
         const int SIZE = 100;
         var pooler = ArrayPool<PixelPoint>.Shared;
@@ -130,11 +130,11 @@ public sealed class MinimapNodeFinder
 
         static bool IsMatch(byte red, byte green, byte blue)
         {
-            return blue < MaxBlue && red > MinRedGreen && green > MinRedGreen;
+            return blue < maxBlue && red > minRedGreen && green > minRedGreen;
         }
     }
 
-    private static void ScorePoints(Span<PixelPoint> points, out PixelPoint best, out int amountAboveMin)
+    private static void ScorePoints(ReadOnlySpan<PixelPoint> points, out PixelPoint best, out int amountAboveMin)
     {
         const int size = 5;
 
@@ -161,7 +161,7 @@ public sealed class MinimapNodeFinder
                 }
             }
 
-            if (score > MinScore)
+            if (score > minScore)
                 amountAboveMin++;
 
             if (maxScore < score)
@@ -171,7 +171,7 @@ public sealed class MinimapNodeFinder
             }
         }
 
-        if (maxIndex >= 0 && maxScore > MinScore)
+        if (maxIndex >= 0 && maxScore > minScore)
         {
             best = points[maxIndex];
         }

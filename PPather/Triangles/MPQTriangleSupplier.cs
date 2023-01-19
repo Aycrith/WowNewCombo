@@ -348,8 +348,8 @@ public sealed class MPQTriangleSupplier
         q.Y = mi.dir.X;
         q.Z = mi.dir.Y;
         q.W = mi.w;
-        Matrix4 rotMatrix = new();
-        rotMatrix.makeQuaternionRotate(q);
+
+        Matrix4x4 rotMatrix = Matrix4x4.CreateFromQuaternion(q);
 
         Model m = mi.model;
 
@@ -375,7 +375,7 @@ public sealed class MPQTriangleSupplier
                 z *= -mi.scale;
 
                 Vector3 pos = new(x, y, z);
-                Vector3 new_pos = rotMatrix.mutiply(pos);
+                Vector3 new_pos = Vector3.Transform(pos, rotMatrix);
                 x = pos.X;
                 y = pos.Y;
                 z = pos.Z;
