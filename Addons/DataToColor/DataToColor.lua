@@ -116,7 +116,7 @@ local LOOT_RESET_RATE = 5
 local AURA_DURATION_ITERATION_FRAME_CHANGE_RATE = 5
 
 -- Action bar configuration for which spells are tracked
-local MAX_ACTIONBAR_SLOT = 120
+local MAX_ACTIONBAR_SLOT = 144
 
 -- Timers
 DataToColor.globalTime = 0
