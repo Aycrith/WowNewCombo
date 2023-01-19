@@ -113,7 +113,7 @@ public static class NativeMethods
         }
     }
 
-    private static int GetDpi()
+    public static int GetDpi()
     {
         using Graphics g = Graphics.FromHwnd(IntPtr.Zero);
         return GetDeviceCaps(g.GetHdc(), LOGPIXELSX);
@@ -127,7 +127,7 @@ public static class NativeMethods
         return size.ToSize();
     }
 
-    private static float DPI2PPI(int dpi)
+    public static float DPI2PPI(int dpi)
     {
         return dpi / 96f;
     }

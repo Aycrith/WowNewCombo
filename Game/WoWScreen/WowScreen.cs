@@ -57,7 +57,9 @@ public sealed class WowScreen : IWowScreen, IBitmapProvider, IDisposable
 
         blackPen = new SolidBrush(Color.Black);
 
-        logger.LogInformation($"[{nameof(WowScreen)}] {rect} - Windowed Mode: {NativeMethods.IsWindowedMode(p)}");
+        logger.LogInformation($"[{nameof(WowScreen)}] {rect} - " +
+            $"Windowed Mode: {NativeMethods.IsWindowedMode(p)} - " +
+            $"Scale: {NativeMethods.DPI2PPI(NativeMethods.GetDpi()):F2}");
     }
 
     public void Update()
