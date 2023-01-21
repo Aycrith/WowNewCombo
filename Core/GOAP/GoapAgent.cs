@@ -199,65 +199,47 @@ public sealed partial class GoapAgent : IDisposable
     {
         AddonBits bits = playerReader.Bits;
 
-        int data = 0;
+        bool dmgTaken = addonReader.DamageTakenCount() > 0;
+        bool dmgDone = addonReader.DamageDoneCount() > 0;
+        bool hasTarget = bits.HasTarget();
+        bool playerCombat = bits.PlayerInCombat();
 
-        if (bits.HasTarget())
-            data |= 1 << (int)GoapKey.hastarget;
-        if (bits.PlayerInCombat() && addonReader.DamageTakenCount() > 0)
-            data |= 1 << (int)GoapKey.dangercombat;
-        if (addonReader.DamageTakenCount() > 0)
-            data |= 1 << (int)GoapKey.damagetaken;
-        if (addonReader.DamageDoneCount() > 0)
-            data |= 1 << (int)GoapKey.damagedone;
-        if (addonReader.DamageTakenCount() > 0 ||
-            addonReader.DamageDoneCount() > 0)
-            data |= 1 << (int)GoapKey.damagetakenordone;
-        if (bits.HasTarget() && !bits.TargetIsDead())
-            data |= 1 << (int)GoapKey.targetisalive;
-        if ((bits.HasTarget() &&
+        int data =
+            (B(hasTarget) << (int)GoapKey.hastarget) |
+            (B(playerCombat && dmgTaken) << (int)GoapKey.dangercombat) |
+            (B(dmgTaken) << (int)GoapKey.damagetaken) |
+            (B(dmgDone) << (int)GoapKey.damagedone) |
+            (B(dmgTaken || dmgDone) << (int)GoapKey.damagetakenordone) |
+            (B(hasTarget && !bits.TargetIsDead()) << (int)GoapKey.targetisalive) |
+
+            (B((hasTarget &&
             playerReader.TargetHealthPercentage() < 30) ||
             playerReader.TargetTarget is UnitsTarget.Me or
-                UnitsTarget.Pet or UnitsTarget.PartyOrPet)
-            data |= 1 << (int)GoapKey.targettargetsus;
-        if (bits.PlayerInCombat())
-            data |= 1 << (int)GoapKey.incombat;
-        if (playerReader.PetHasTarget() && !bits.PetTargetIsDead())
-            data |= 1 << (int)GoapKey.pethastarget;
-        if (mountHandler.IsMounted())
-            data |= 1 << (int)GoapKey.ismounted;
-        if (playerReader.WithInPullRange())
-            data |= 1 << (int)GoapKey.withinpullrange;
-        if (playerReader.WithInCombatRange())
-            data |= 1 << (int)GoapKey.incombatrange;
+                UnitsTarget.Pet or UnitsTarget.PartyOrPet) << (int)GoapKey.targettargetsus) |
 
-        //data |= 0 << (int)GoapKey.pulled;
-
-        if (bits.IsDead())
-            data |= 1 << (int)GoapKey.isdead;
-        if (State.LootableCorpseCount > 0)
-            data |= 1 << (int)GoapKey.shouldloot;
-        if (State.GatherableCorpseCount > 0)
-            data |= 1 << (int)GoapKey.shouldgather;
-        if (State.LastCombatKillCount > 0)
-            data |= 1 << (int)GoapKey.producedcorpse;
-        if (State.ShouldConsumeCorpse)
-            data |= 1 << (int)GoapKey.consumecorpse;
-        if (bits.IsSwimming())
-            data |= 1 << (int)GoapKey.isswimming;
-        if (bits.ItemsAreBroken())
-            data |= 1 << (int)GoapKey.itemsbroken;
-        if (State.Gathering)
-            data |= 1 << (int)GoapKey.gathering;
-        if (bits.TargetCanBeHostile())
-            data |= 1 << (int)GoapKey.targethostile;
-        if (bits.HasFocus())
-            data |= 1 << (int)GoapKey.hasfocus;
-        if (bits.FocusHasTarget())
-            data |= 1 << (int)GoapKey.focushastarget;
-        if (State.ConsumableCorpseCount > 0)
-            data |= 1 << (int)GoapKey.consumablecorpsenearby;
+            (B(playerCombat) << (int)GoapKey.incombat) |
+            (B(playerReader.PetHasTarget() && !bits.PetTargetIsDead()) << (int)GoapKey.pethastarget) |
+            (B(mountHandler.IsMounted()) << (int)GoapKey.ismounted) |
+            (B(playerReader.WithInPullRange()) << (int)GoapKey.withinpullrange) |
+            (B(playerReader.WithInCombatRange()) << (int)GoapKey.incombatrange) |
+            // pulled always false
+            (B(bits.IsDead()) << (int)GoapKey.isdead) |
+            (B(State.LootableCorpseCount > 0) << (int)GoapKey.shouldloot) |
+            (B(State.GatherableCorpseCount > 0) << (int)GoapKey.shouldgather) |
+            (B(State.LastCombatKillCount > 0) << (int)GoapKey.producedcorpse) |
+            (B(State.ShouldConsumeCorpse) << (int)GoapKey.consumecorpse) |
+            (B(bits.IsSwimming()) << (int)GoapKey.isswimming) |
+            (B(bits.ItemsAreBroken()) << (int)GoapKey.itemsbroken) |
+            (B(State.Gathering) << (int)GoapKey.gathering) |
+            (B(bits.TargetCanBeHostile()) << (int)GoapKey.targethostile) |
+            (B(bits.HasFocus()) << (int)GoapKey.hasfocus) |
+            (B(bits.FocusHasTarget()) << (int)GoapKey.focushastarget) |
+            (B(State.ConsumableCorpseCount > 0) << (int)GoapKey.consumablecorpsenearby)
+            ;
 
         WorldState = new(data);
+
+        static int B(bool b) => b ? 1 : 0;
     }
 
     private void HandleGoapEvent(GoapEventArgs e)
