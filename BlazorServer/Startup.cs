@@ -9,7 +9,6 @@ using BlazorTable;
 using Core;
 using Core.Addon;
 using Core.Database;
-using Core.Environment;
 using Core.Session;
 
 using Game;
@@ -20,6 +19,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -129,8 +129,6 @@ public sealed class Startup
         services.AddSingleton<DataFrame[]>(x => FrameConfig.LoadFrames());
         services.AddSingleton<FrameConfigurator>();
 
-        services.AddSingleton<IEnvironment, BlazorFrontend>();
-
         if (AddonConfig.Exists() && FrameConfig.Exists())
         {
             services.AddSingleton<MinimapNodeFinder>();
@@ -171,6 +169,9 @@ public sealed class Startup
             services.AddSingleton<IBotController, ConfigBotController>();
             services.AddSingleton<IAddonReader, ConfigAddonReader>();
         }
+
+        services.AddSingleton<WApi>();
+        services.AddSingleton<FrontendUpdate>();
 
         services.AddMatBlazor();
         services.AddRazorPages();
