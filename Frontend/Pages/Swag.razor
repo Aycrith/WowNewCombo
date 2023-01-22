@@ -3,6 +3,7 @@
 @inject IAddonReader addonReader
 @inject IBotController botController
 @inject IJSRuntime JSRuntime
+@inject WApi api
 
 @implements IDisposable
 
@@ -38,7 +39,7 @@
                     @foreach (var bag in bagReader.Bags.Reverse())
                     {
                         <th>
-                            <a href="@($"{WApi.ItemId}{bag.ItemId}")" target="_blank">@bag.Name</a>
+                            <a href="@($"{api.ItemId}{bag.ItemId}")" target="_blank">@bag.Name</a>
                         </th>
                     }
                 </tr>
