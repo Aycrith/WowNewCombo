@@ -1,4 +1,6 @@
-﻿<a href="@($"{WApi.ItemId}{BagItem.ItemId}")" target="_blank" data-wowhead="item=@BagItem.ItemId" class="small" style="text-decoration:none">
+﻿@inject WApi api
+
+<a href="@($"{api.ItemId}{BagItem.ItemId}")" target="_blank" data-wowhead="item=@BagItem.ItemId" class="small" style="text-decoration:none">
     <b>
         <span style="color:@BagItemColour(BagItem.Item);font-weight:normal">
             @if (BagItem.Count > 1)
@@ -58,7 +60,7 @@
             return;
         }
 
-        iconName = await WApi.FetchItemIconName(BagItem.ItemId);
+        iconName = await api.FetchItemIconName(BagItem.ItemId);
         icons.TryAdd(BagItem.ItemId, iconName);
     }
 

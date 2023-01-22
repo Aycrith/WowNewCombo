@@ -46,17 +46,18 @@ local TBC252 = DataToColor.IsClassic_BCC() and select(4, GetBuildInfo()) >= 2050
 local Wrath340 = DataToColor.IsClassic_BCC() and select(4, GetBuildInfo()) >= 30400
 
 if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
-	DataToColor.ClientVersion = 1
+  DataToColor.ClientVersion = 1
 elseif WOW_PROJECT_ID == WOW_PROJECT_WRATH_CLASSIC then
   DataToColor.ClientVersion = 4
 elseif WOW_PROJECT_ID == WOW_PROJECT_BURNING_CRUSADE_CLASSIC then
-	if LE_EXPANSION_LEVEL_CURRENT == LE_EXPANSION_NORTHREND or LE_EXPANSION_LEVEL_CURRENT == LE_EXPANSION_WRATH_OF_THE_LICH_KING then
-		DataToColor.ClientVersion = 4
-	elseif LE_EXPANSION_LEVEL_CURRENT == LE_EXPANSION_BURNING_CRUSADE then
-		DataToColor.ClientVersion = 3
-	end
+  if LE_EXPANSION_LEVEL_CURRENT == LE_EXPANSION_NORTHREND or
+      LE_EXPANSION_LEVEL_CURRENT == LE_EXPANSION_WRATH_OF_THE_LICH_KING then
+    DataToColor.ClientVersion = 4
+  elseif LE_EXPANSION_LEVEL_CURRENT == LE_EXPANSION_BURNING_CRUSADE then
+    DataToColor.ClientVersion = 3
+  end
 elseif WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
-	DataToColor.ClientVersion = 2
+  DataToColor.ClientVersion = 2
 end
 
 if DataToColor.IsRetail() or TBC253 or DataToColor.IsClassic_Wrath() then
@@ -106,8 +107,15 @@ end
 -- bag changes from 10.0
 
 DataToColor.GetContainerNumSlots = GetContainerNumSlots or C_Container.GetContainerNumSlots
-DataToColor.GetContainerItemInfo = GetContainerItemInfo or C_Container.GetContainerItemInfo
+DataToColor.GetContainerItemInfo = GetContainerItemInfo or
+    function(bagID, slot)
+      local o = C_Container.GetContainerItemInfo(bagID, slot)
+      if o == nil then return nil end
+      return o.iconFileID, o.stackCount, o.isLocked, o.quality, o.isReadable, o.hasLoot, o.hyperlink, o.isFiltered, o.hasNoValue, o.itemID, o.isBound
+    end
+
 DataToColor.GetContainerNumFreeSlots = GetContainerNumFreeSlots or C_Container.GetContainerNumFreeSlots
 DataToColor.GetContainerItemLink = GetContainerItemLink or C_Container.GetContainerItemLink
 DataToColor.PickupContainerItem = PickupContainerItem or C_Container.PickupContainerItem
 DataToColor.UseContainerItem = UseContainerItem or C_Container.UseContainerItem
+DataToColor.ContainerIDToInventoryID = ContainerIDToInventoryID or C_Container.ContainerIDToInventoryID

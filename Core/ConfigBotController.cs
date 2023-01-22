@@ -35,10 +35,7 @@ public sealed class ConfigBotController : IBotController, IDisposable
 
     private readonly Thread addonThread;
 
-    private readonly Thread? frontendThread;
-    private const int frontendTickMs = 250;
-
-    public ConfigBotController(ILogger logger, CancellationTokenSource cts, IAddonReader addonReader)
+    public ConfigBotController(ILogger logger, IAddonReader addonReader, CancellationTokenSource cts)
     {
         this.logger = logger;
         this.cts = cts;
@@ -46,26 +43,11 @@ public sealed class ConfigBotController : IBotController, IDisposable
 
         addonThread = new(AddonThread);
         addonThread.Start();
-
-        frontendThread = new(FrontendThread);
-        frontendThread.Start();
     }
 
     public void Dispose()
     {
         cts.Cancel();
-    }
-
-    private void FrontendThread()
-    {
-        while (!cts.IsCancellationRequested)
-        {
-            AddonReader.UpdateUI();
-            cts.Token.WaitHandle.WaitOne(frontendTickMs);
-        }
-
-        if (logger.IsEnabled(LogLevel.Debug))
-            logger.LogDebug("Frontend thread stopped!");
     }
 
     private void AddonThread()

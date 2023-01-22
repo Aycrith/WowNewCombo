@@ -76,8 +76,12 @@ local GetMoney = GetMoney
 local GetContainerNumSlots = DataToColor.GetContainerNumSlots
 local GetComboPoints = GetComboPoints
 
+local NUM_BAG_SLOTS = NUM_BAG_SLOTS
+
+local ContainerIDToInventoryID = DataToColor.ContainerIDToInventoryID
 local GetContainerItemLink = DataToColor.GetContainerItemLink
 local PickupContainerItem = DataToColor.PickupContainerItem
+local GetInventoryItemLink = GetInventoryItemLink
 local DeleteCursorItem = DeleteCursorItem
 local GetMerchantItemLink = GetMerchantItemLink
 local GetItemInfo = GetItemInfo
@@ -309,8 +313,15 @@ function DataToColor:InitUpdateQueues()
 end
 
 function DataToColor:InitEquipmentQueue()
-    for eqNum = 0, 23 do
+    -- ammo slot till tabard
+    for eqNum = 0, 19 do
         DataToColor.equipmentQueue:push(eqNum)
+    end
+
+    -- backpacks
+    for i = 1, NUM_BAG_SLOTS do
+        local invID = ContainerIDToInventoryID(i)
+        DataToColor.equipmentQueue:push(invID)
     end
 end
 
@@ -535,9 +546,17 @@ function DataToColor:CreateFrames(n)
 
                 -- 23 24
                 local equipmentSlot = DataToColor.equipmentQueue:shift() or 0
-                Pixel(int, equipmentSlot, 23)
-                Pixel(int, DataToColor:equipSlotItemId(equipmentSlot), 24)
-                --DataToColor:Print("equipmentQueue ", equipmentSlot, " -> ", itemId)
+
+                -- TODO map new slot to old
+                -- should be calculated
+                local slot = equipmentSlot
+                if slot >= 30 then
+                    slot = slot - 11
+                end
+                Pixel(int, slot, 23)
+                local itemId = DataToColor:equipSlotItemId(equipmentSlot)
+                Pixel(int, itemId, 24)
+                --DataToColor:Print("equipmentQueue ", equipmentSlot, " slot -> ", slot, " -> ", itemId)
             end
 
             Pixel(int, DataToColor:isCurrentAction(1, 24), 25)

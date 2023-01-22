@@ -1,6 +1,7 @@
 ﻿@using Core.Talents
 
 @inject IAddonReader addonReader
+@inject WApi api
 
 <div class="card mt-1">
     <div class="card-header">
@@ -40,7 +41,7 @@
                                         <td>
                                             @if (talentReader.Spells.TryGetValue(talent.Key, out int spellId))
                                             {
-                                                <a href="@($"{WApi.SpellId}{@spellId}")" target="_blank" data-wowhead="item=@spellId" class="small" style="text-decoration:none">
+                                                <a href="@($"{api.SpellId}{@spellId}")" target="_blank" data-wowhead="item=@spellId" class="small" style="text-decoration:none">
                                                     @DisplayName(talent.Value)
                                                 </a>
                                             }

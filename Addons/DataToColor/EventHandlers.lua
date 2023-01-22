@@ -30,6 +30,9 @@ local RepopMe = RepopMe
 local RetrieveCorpse = RetrieveCorpse
 local GetCorpseRecoveryDelay = GetCorpseRecoveryDelay
 
+local ContainerIDToInventoryID = DataToColor.ContainerIDToInventoryID
+local NUM_BAG_SLOTS = NUM_BAG_SLOTS
+
 local CAST_START = 999998
 local CAST_SUCCESS = 999999
 
@@ -434,12 +437,14 @@ function DataToColor:OnLootClosed(event)
 end
 
 function DataToColor:OnBagUpdate(event, containerID)
-    if containerID >= 0 and containerID <= 4 then
+    if containerID >= 0 and containerID <= NUM_BAG_SLOTS then
         DataToColor.bagQueue:push(containerID)
         DataToColor:InitInventoryQueue(containerID)
 
         if containerID >= 1 then
-            DataToColor.equipmentQueue:push(19 + containerID) -- from tabard
+            local invID = ContainerIDToInventoryID(containerID)
+            --DataToColor:Print("OnBagUpdate "..containerID.." invID "..invID)
+            DataToColor.equipmentQueue:push(invID)
         end
     end
     --DataToColor:Print("OnBagUpdate "..containerID)

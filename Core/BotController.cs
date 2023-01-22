@@ -13,7 +13,6 @@ using Game;
 using WinAPI;
 using SharedLib.NpcFinder;
 using PPather.Data;
-using Core.Environment;
 using Microsoft.Extensions.DependencyInjection;
 using System.Numerics;
 
@@ -43,9 +42,6 @@ public sealed partial class BotController : IBotController, IDisposable
     private readonly Thread? remotePathing;
     private const int remotePathingTickMs = 500;
 
-    private readonly Thread? frontendThread;
-    private const int frontendTickMs = 250;
-
     public bool IsBotActive => GoapAgent != null && GoapAgent.Active;
     public AddonReader AddonReader { get; }
     public WowScreen WowScreen { get; }
@@ -67,8 +63,7 @@ public sealed partial class BotController : IBotController, IDisposable
     public double AvgScreenLatency => ScreenLatencys.Average();
     public double AvgNPCLatency => NPCLatencys.Average();
 
-    public BotController(ILogger logger, IEnvironment env, StartupClientVersion scv,
-        CancellationTokenSource cts,
+    public BotController(ILogger logger, CancellationTokenSource cts,
         IPPather pather, IGrindSessionDAO grindSessionDAO, DataConfig dataConfig,
         WowProcess wowProcess, WowScreen wowScreen, WowProcessInput wowProcessInput,
         ExecGameCommand execGameCommand, Wait wait, IAddonReader addonReader,
@@ -91,14 +86,6 @@ public sealed partial class BotController : IBotController, IDisposable
 
         addonThread = new(AddonThread);
         addonThread.Start();
-
-        if (env is BlazorFrontend)
-        {
-            WApi.Version = scv.Version;
-
-            frontendThread = new(FrontendThread);
-            frontendThread.Start();
-        }
 
         long timestamp = Stopwatch.GetTimestamp();
         do
@@ -193,18 +180,6 @@ public sealed partial class BotController : IBotController, IDisposable
 
         if (logger.IsEnabled(LogLevel.Debug))
             logger.LogDebug("RemotePathing thread stopped!");
-    }
-
-    private void FrontendThread()
-    {
-        while (!cts.IsCancellationRequested)
-        {
-            AddonReader.UpdateUI();
-            cts.Token.WaitHandle.WaitOne(frontendTickMs);
-        }
-
-        if (logger.IsEnabled(LogLevel.Debug))
-            logger.LogDebug("Frontend thread stopped!");
     }
 
     public void ToggleBotStatus()

@@ -1,4 +1,6 @@
-﻿<a href="@($"{WApi.ItemId}{Item.Entry}")" target="_blank" data-wowhead="item=@Item.Entry" class="small" style="text-decoration:none">
+﻿@inject WApi api
+
+<a href="@($"{api.ItemId}{Item.Entry}")" target="_blank" data-wowhead="item=@Item.Entry" class="small" style="text-decoration:none">
     <img src="@imgLink" />
 </a>
 
@@ -32,7 +34,7 @@
             return;
         }
 
-        iconName = await WApi.FetchItemIconName(Item.Entry);
+        iconName = await api.FetchItemIconName(Item.Entry);
         icons.TryAdd(Item.Entry, iconName);
     }
 
