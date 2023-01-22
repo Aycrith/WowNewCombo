@@ -8,7 +8,6 @@ using Serilog;
 using Serilog.Events;
 using Serilog.Extensions.Logging;
 using CommandLine;
-using Core.Environment;
 using WinAPI;
 using System.Drawing;
 using SharedLib;
@@ -93,8 +92,6 @@ internal sealed class Program
             return false;
 
         services.AddSingleton<CancellationTokenSource>();
-
-        services.AddSingleton<IEnvironment, Headless>();
 
         services.AddSingleton<WowProcess>(x => new(options.Value.Pid));
         services.AddSingleton<StartupClientVersion>();
