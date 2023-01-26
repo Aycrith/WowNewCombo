@@ -119,3 +119,5 @@ DataToColor.GetContainerItemLink = GetContainerItemLink or C_Container.GetContai
 DataToColor.PickupContainerItem = PickupContainerItem or C_Container.PickupContainerItem
 DataToColor.UseContainerItem = UseContainerItem or C_Container.UseContainerItem
 DataToColor.ContainerIDToInventoryID = ContainerIDToInventoryID or C_Container.ContainerIDToInventoryID
+
+DataToColor.GetGossipOptions = GetGossipOptions or C_GossipInfo.GetOptions
