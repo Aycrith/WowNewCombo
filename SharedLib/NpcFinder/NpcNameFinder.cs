@@ -375,7 +375,7 @@ public sealed partial class NpcNameFinder : IDisposable
 
     public void Update()
     {
-        Span<LineSegment> lineSegments = PopulateLines(bitmapProvider.Bitmap, bitmapProvider.Rect);
+        ReadOnlySpan<LineSegment> lineSegments = PopulateLines(bitmapProvider.Bitmap, bitmapProvider.Rect);
         Npcs = DetermineNpcs(lineSegments);
 
         TargetCount = Npcs.Count(TargetsCount);
