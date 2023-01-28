@@ -53,6 +53,12 @@ public sealed partial class RequirementFactory
     public const string HealthP = "Health%";
     public const string ManaP = "Mana%";
 
+    private const string greaterThenOrEqual = ">=";
+    private const string lessThenOrEqual = "<=";
+    private const string greaterThen = ">";
+    private const string lessThen = "<";
+    private const string equals = "==";
+
     public RequirementFactory(ILogger logger, AddonReader addonReader,
         NpcNameFinder npcNameFinder, Dictionary<int, SchoolMask[]> immunityBlacklist)
     {
@@ -71,11 +77,11 @@ public sealed partial class RequirementFactory
 
         requirementMap = new()
         {
-            { ">=", CreateGreaterOrEquals },
-            { "<=", CreateLesserOrEquals },
-            { ">", CreateGreaterThen },
-            { "<", CreateLesserThen },
-            { "==", CreateEquals },
+            { greaterThenOrEqual, CreateGreaterOrEquals },
+            { lessThenOrEqual, CreateLesserOrEquals },
+            { greaterThen, CreateGreaterThen },
+            { lessThen, CreateLesserThen },
+            { equals, CreateEquals },
             { "npcID:", CreateNpcId },
             { "BagItem:", CreateBagItem },
             { "SpellInRange:", CreateSpellInRange },
@@ -995,10 +1001,9 @@ public sealed partial class RequirementFactory
             else
                 npcId = int.Parse(name_or_id);
 
-            string npcName = string.Empty;
-            if (creatureDb.Entries.TryGetValue(npcId, out Creature creature))
+            if (!creatureDb.Entries.TryGetValue(npcId, out string? npcName))
             {
-                npcName = creature.Name;
+                npcName = string.Empty;
             }
 
             bool f() => playerReader.TargetId == npcId;
@@ -1108,27 +1113,27 @@ public sealed partial class RequirementFactory
 
     private Requirement CreateGreaterThen(string requirement)
     {
-        return CreateArithmeticRequirement(">", requirement, intVariables);
+        return CreateArithmeticRequirement(greaterThen, requirement, intVariables);
     }
 
     private Requirement CreateLesserThen(string requirement)
     {
-        return CreateArithmeticRequirement("<", requirement, intVariables);
+        return CreateArithmeticRequirement(lessThen, requirement, intVariables);
     }
 
     private Requirement CreateGreaterOrEquals(string requirement)
     {
-        return CreateArithmeticRequirement(">=", requirement, intVariables);
+        return CreateArithmeticRequirement(greaterThenOrEqual, requirement, intVariables);
     }
 
     private Requirement CreateLesserOrEquals(string requirement)
     {
-        return CreateArithmeticRequirement("<=", requirement, intVariables);
+        return CreateArithmeticRequirement(lessThenOrEqual, requirement, intVariables);
     }
 
     private Requirement CreateEquals(string requirement)
     {
-        return CreateArithmeticRequirement("==", requirement, intVariables);
+        return CreateArithmeticRequirement(equals, requirement, intVariables);
     }
 
     private Requirement CreateArithmeticRequirement(string symbol, string requirement, Dictionary<string, Func<int>> intVariables)
@@ -1137,9 +1142,9 @@ public sealed partial class RequirementFactory
         int sep = span.IndexOf(symbol);
 
         string key = span[..sep].Trim().ToString();
-        ReadOnlySpan<char> variable_or_constValue = span[(sep + symbol.Length)..];
+        ReadOnlySpan<char> varOrConst = span[(sep + symbol.Length)..];
 
-        if (!intVariables.ContainsKey(key))
+        if (!intVariables.TryGetValue(key, out Func<int>? aliasOrKey))
         {
             LogUnknownRequirement(logger, requirement, string.Join(", ", intVariables.Keys));
             throw new ArgumentOutOfRangeException(requirement);
@@ -1147,43 +1152,44 @@ public sealed partial class RequirementFactory
 
         string display = key;
 
-        Func<int> alias = intVariables[key];
-        string aliasKey = alias().ToString();
+        string aliasKey = aliasOrKey().ToString();
         if (intVariables.ContainsKey(aliasKey))
         {
             key = aliasKey;
         }
 
-        Func<int> value;
-        if (int.TryParse(variable_or_constValue, out int constValue))
+        Func<int> lValue = intVariables[key];
+
+        Func<int> rValue;
+        if (int.TryParse(varOrConst, out int constValue))
         {
             int _constValue() => constValue;
-            value = _constValue;
+            rValue = _constValue;
         }
         else
         {
-            value = intVariables.TryGetValue(variable_or_constValue.Trim().ToString(), out Func<int>? variable)
-                ? variable
+            rValue = intVariables.TryGetValue(varOrConst.Trim().ToString(), out Func<int>? v)
+                ? v
                 : throw new ArgumentOutOfRangeException(requirement);
         }
 
-        string msg() => $"{display} {intVariables[key]()} {symbol} {value()}";
+        string msg() => $"{display} {lValue()} {symbol} {rValue()}";
         switch (symbol)
         {
-            case "==":
-                bool e() => intVariables[key]() == value();
+            case equals:
+                bool e() => lValue() == rValue();
                 return new Requirement { HasRequirement = e, LogMessage = msg };
-            case ">":
-                bool g() => intVariables[key]() > value();
+            case greaterThen:
+                bool g() => lValue() > rValue();
                 return new Requirement { HasRequirement = g, LogMessage = msg };
-            case "<":
-                bool l() => intVariables[key]() < value();
+            case lessThen:
+                bool l() => lValue() < rValue();
                 return new Requirement { HasRequirement = l, LogMessage = msg };
-            case ">=":
-                bool ge() => intVariables[key]() >= value();
+            case greaterThenOrEqual:
+                bool ge() => lValue() >= rValue();
                 return new Requirement { HasRequirement = ge, LogMessage = msg };
-            case "<=":
-                bool le() => intVariables[key]() <= value();
+            case lessThenOrEqual:
+                bool le() => lValue() <= rValue();
                 return new Requirement { HasRequirement = le, LogMessage = msg };
             default:
                 throw new ArgumentOutOfRangeException(requirement);

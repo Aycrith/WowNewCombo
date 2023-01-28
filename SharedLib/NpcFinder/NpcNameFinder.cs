@@ -398,7 +398,7 @@ public sealed partial class NpcNameFinder : IDisposable
         autoResetEvent.Set();
     }
 
-    private NpcPosition[] DetermineNpcs(Span<LineSegment> data)
+    private NpcPosition[] DetermineNpcs(ReadOnlySpan<LineSegment> data)
     {
         int c = 0;
         NpcPosition[] npcs = new NpcPosition[data.Length];

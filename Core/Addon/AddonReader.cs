@@ -150,18 +150,17 @@ public sealed class AddonReader : IAddonReader, IDisposable
             lastTargetGuid = PlayerReader.TargetGuid;
 
             TargetName =
-                CreatureDb.Entries.TryGetValue(PlayerReader.TargetId, out Creature creature)
-                ? creature.Name
+                CreatureDb.Entries.TryGetValue(PlayerReader.TargetId, out string? name)
+                ? name
                 : reader.GetString(16) + reader.GetString(17);
         }
 
         if (lastMouseOverId != PlayerReader.MouseOverId)
         {
             lastMouseOverId = PlayerReader.MouseOverId;
-
             MouseOverName =
-                CreatureDb.Entries.TryGetValue(PlayerReader.MouseOverId, out Creature creature)
-                ? creature.Name
+                CreatureDb.Entries.TryGetValue(PlayerReader.MouseOverId, out string? name)
+                ? name
                 : string.Empty;
         }
 

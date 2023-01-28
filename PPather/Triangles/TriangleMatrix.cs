@@ -111,7 +111,7 @@ public sealed class TriangleMatrix
         int index = 0;
         for (int i = 0; i < count; i++)
         {
-            Span<int> span = CollectionsMarshal.AsSpan(close[i]);
+            ReadOnlySpan<int> span = CollectionsMarshal.AsSpan(close[i]);
             for (int j = 0; j < span.Length; j++)
             {
                 all[index++] = span[j];
@@ -138,7 +138,7 @@ public sealed class TriangleMatrix
         int index = 0;
         for (int i = 0; i < count; i++)
         {
-            Span<int> span = CollectionsMarshal.AsSpan(close[i]);
+            ReadOnlySpan<int> span = CollectionsMarshal.AsSpan(close[i]);
             for (int j = 0; j < span.Length; j++)
             {
                 all[index++] = span[j];

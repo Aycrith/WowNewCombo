@@ -87,7 +87,7 @@ public static class VectorExt
         }
     }
 
-    public static float TotalDistance<T>(Span<T> points, Func<T, T, float> accumulator)
+    public static float TotalDistance<T>(ReadOnlySpan<T> points, Func<T, T, float> accumulator)
     {
         if (points.Length <= 1)
             return 0f;

@@ -183,7 +183,7 @@ public sealed class RouteInfo : IDisposable
         worldmapAreaDB.ToMap_FlipXY(playerReader.UIMapId.Value, ref navigation);
         allPoints.AddRange(navigation);
 
-        Span<RouteInfoPoi> span = CollectionsMarshal.AsSpan(PoiList);
+        ReadOnlySpan<RouteInfoPoi> span = CollectionsMarshal.AsSpan(PoiList);
         for (int i = 0; i < span.Length; i++)
         {
             allPoints.Add(span[i].MapLoc);

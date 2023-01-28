@@ -365,10 +365,10 @@ public sealed class PathGraph
     {
         const int SV_LENGTH = 4;
         var pooler = ArrayPool<Spot>.Shared;
-        var sv = pooler.Rent(SV_LENGTH);
+        Spot[] sv = pooler.Rent(SV_LENGTH);
 
         int size = (int)Ceiling(2 * (max_d / STEP_D));
-        var sl = pooler.Rent(size);
+        Spot[] sl = pooler.Rent(size);
         int c = 0;
 
         int d = 0;
