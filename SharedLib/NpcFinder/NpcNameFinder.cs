@@ -207,14 +207,13 @@ public sealed partial class NpcNameFinder : IDisposable
         if (nameType == type)
             return false;
 
-        nameType = type;
-
-        CalculateHeightMultipiler();
-
         TargetCount = 0;
         AddCount = 0;
         Npcs = Array.Empty<NpcPosition>();
 
+        nameType = type;
+
+        CalculateHeightMultipiler();
         UpdateSearchMode();
 
         LogTypeChanged(logger, type.ToStringF());
@@ -407,7 +406,7 @@ public sealed partial class NpcNameFinder : IDisposable
         float offset2 = ScaleHeight(HeightOffset2);
 
         Span<bool> inGroup = stackalloc bool[data.Length];
-        const int MAX_GROUP = 32;
+        const int MAX_GROUP = 64;
         Span<LineSegment> group = stackalloc LineSegment[MAX_GROUP];
 
         for (int i = 0; i < data.Length; i++)
@@ -531,8 +530,8 @@ public sealed partial class NpcNameFinder : IDisposable
         Rectangle area = this.Area;
         int bytesPerPixel = this.bytesPerPixel;
 
-        int width = (area.Right - area.Left) / 64;
-        int height = (area.Bottom - area.Top) / 64;
+        int width = (area.Right - area.Left) / 32;
+        int height = (area.Bottom - area.Top) / 32;
         int size = width * height;
         var pooler = ArrayPool<LineSegment>.Shared;
         LineSegment[] segments = pooler.Rent(size);
@@ -605,8 +604,9 @@ public sealed partial class NpcNameFinder : IDisposable
         }
         */
 
-        foreach (var n in Npcs)
+        for (int i = 0; i < Npcs.Length; i++)
         {
+            NpcPosition n = Npcs[i];
             gr.DrawRectangle(IsAdd(n) ? greyPen : whitePen, n.Rect);
         }
     }
