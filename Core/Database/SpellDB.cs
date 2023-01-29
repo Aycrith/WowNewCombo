@@ -3,6 +3,7 @@ using static System.IO.File;
 using static System.IO.Path;
 using static Newtonsoft.Json.JsonConvert;
 using SharedLib;
+using System;
 
 namespace Core.Database;
 
@@ -12,7 +13,7 @@ public sealed class SpellDB
 
     public SpellDB(DataConfig dataConfig)
     {
-        Spell[] temp = DeserializeObject<Spell[]>(ReadAllText(Join(dataConfig.ExpDbc, "spells.json")))!;
+        ReadOnlySpan<Spell> temp = DeserializeObject<Spell[]>(ReadAllText(Join(dataConfig.ExpDbc, "spells.json")))!;
         for (int i = 0; i < temp.Length; i++)
         {
             Spells.Add(temp[i].Id, temp[i]);

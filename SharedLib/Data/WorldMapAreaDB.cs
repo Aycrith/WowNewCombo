@@ -16,7 +16,7 @@ public sealed class WorldMapAreaDB
 
     public WorldMapAreaDB(DataConfig dataConfig)
     {
-        WorldMapArea[] wmas = JsonConvert.DeserializeObject<WorldMapArea[]>(File.ReadAllText(Path.Join(dataConfig.ExpDbc, "WorldMapArea.json")));
+        ReadOnlySpan<WorldMapArea> wmas = JsonConvert.DeserializeObject<WorldMapArea[]>(File.ReadAllText(Path.Join(dataConfig.ExpDbc, "WorldMapArea.json")));
         for (int i = 0; i < wmas.Length; i++)
             this.wmas.Add(wmas[i].UIMapId, wmas[i]);
     }
