@@ -86,6 +86,11 @@ public sealed class MountHandler : IMountHandler
             {
                 input.ClearTarget();
                 wait.Update();
+
+                if (bits.HasTarget())
+                {
+                    LogWarning("Unable to clear target!");
+                }
             }
         }
     }
@@ -128,5 +133,10 @@ public sealed class MountHandler : IMountHandler
     private void Log(string text)
     {
         logger.LogInformation($"{nameof(MountHandler)}: {text}");
+    }
+
+    private void LogWarning(string text)
+    {
+        logger.LogWarning($"{nameof(MountHandler)}: {text}");
     }
 }
