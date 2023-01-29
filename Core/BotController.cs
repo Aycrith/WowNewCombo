@@ -156,8 +156,10 @@ public sealed partial class BotController : IBotController, IDisposable
 
             tickCount++;
 
-            cts.Token.WaitHandle.WaitOne(WowScreen.Enabled ||
-                ClassConfig?.Mode == Mode.AttendedGather ? screenshotTickMs : 4);
+            cts.Token.WaitHandle.WaitOne(
+                WowScreen.Enabled || ClassConfig?.Mode == Mode.AttendedGather
+                ? screenshotTickMs
+                : 4);
         }
 
         if (logger.IsEnabled(LogLevel.Debug))

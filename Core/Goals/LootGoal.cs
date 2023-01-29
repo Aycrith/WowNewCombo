@@ -127,6 +127,9 @@ public sealed class LootGoal : GoapGoal, IGoapEventListener
         {
             input.ClearTarget();
             wait.Update();
+
+            if (playerReader.Bits.HasTarget())
+                LogWarning("Unable to clear target! Check Bindpad settings!");
         }
 
         if (corpseLocations.Count > 0)

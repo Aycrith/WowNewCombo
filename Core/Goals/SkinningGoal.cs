@@ -251,6 +251,9 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
         {
             input.ClearTarget();
             wait.Update();
+
+            if (playerReader.Bits.HasTarget())
+                LogWarning("Unable to clear target! Check Bindpad settings!");
         }
     }
 

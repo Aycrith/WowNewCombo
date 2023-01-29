@@ -187,6 +187,9 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
             Log("Has target but its dead.");
             input.ClearTarget();
             wait.Update();
+
+            if (playerReader.Bits.HasTarget())
+                LogWarning("Unable to clear target! Check Bindpad settings!");
         }
 
         if (playerReader.Bits.IsDrowning())
@@ -375,6 +378,11 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
     private void LogDebug(string text)
     {
         logger.LogDebug($"{nameof(FollowRouteGoal)}: {text}");
+    }
+
+    private void LogWarning(string text)
+    {
+        logger.LogWarning($"{nameof(FollowRouteGoal)}: {text}");
     }
 
     private void Log(string text)
