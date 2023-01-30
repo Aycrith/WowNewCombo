@@ -6,6 +6,8 @@ local UnitGUID = UnitGUID
 local UnitClass = UnitClass
 local UnitRace = UnitRace
 
+DataToColor.C.MAX_ACTIONBAR_SLOT = 120 -- up to moonkin form
+
 DataToColor.C.unitPlayer = "player"
 DataToColor.C.unitTarget = "target"
 DataToColor.C.unitParty = "party"

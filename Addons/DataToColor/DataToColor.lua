@@ -119,9 +119,6 @@ local LOOT_RESET_RATE = 5
 -- How often the Player Buff / target Debuff frames change
 local AURA_DURATION_ITERATION_FRAME_CHANGE_RATE = 5
 
--- Action bar configuration for which spells are tracked
-local MAX_ACTIONBAR_SLOT = 144
-
 -- Timers
 DataToColor.globalTime = 0
 DataToColor.lastLoot = 0
@@ -361,7 +358,7 @@ function DataToColor:InitBagQueue(min, max)
 end
 
 function DataToColor:InitActionBarCostQueue()
-    for slot = 1, MAX_ACTIONBAR_SLOT do
+    for slot = 1, DataToColor.C.MAX_ACTIONBAR_SLOT do
         if HasAction(slot) then
             DataToColor:populateActionbarCost(slot)
         end
