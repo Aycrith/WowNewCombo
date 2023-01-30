@@ -496,7 +496,7 @@ function DataToColor:OnSpellsChanged(event)
 end
 
 function DataToColor:ActionbarSlotChanged(event, slot)
-    if slot and HasAction(slot) then
+    if slot and slot <= DataToColor.C.MAX_ACTIONBAR_SLOT and HasAction(slot) then
         DataToColor:populateActionbarCost(slot)
     end
 end
