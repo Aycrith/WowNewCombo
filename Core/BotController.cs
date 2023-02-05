@@ -33,6 +33,7 @@ public sealed partial class BotController : IBotController, IDisposable
     private readonly AutoResetEvent npcNameFinderEvent;
     private readonly NpcNameFinder npcNameFinder;
     private readonly NpcNameTargeting npcNameTargeting;
+    private readonly IScreenCapture screenCapture;
 
     private readonly Thread addonThread;
 
@@ -67,7 +68,7 @@ public sealed partial class BotController : IBotController, IDisposable
         IPPather pather, IGrindSessionDAO grindSessionDAO, DataConfig dataConfig,
         WowProcess wowProcess, WowScreen wowScreen, WowProcessInput wowProcessInput,
         ExecGameCommand execGameCommand, Wait wait, IAddonReader addonReader,
-        MinimapNodeFinder minimapNodeFinder)
+        MinimapNodeFinder minimapNodeFinder, IScreenCapture screenCapture)
     {
         this.logger = logger;
         this.pather = pather;
@@ -80,6 +81,7 @@ public sealed partial class BotController : IBotController, IDisposable
         this.AddonReader = (addonReader as AddonReader)!;
         this.wait = wait;
         this.minimapNodeFinder = minimapNodeFinder;
+        this.screenCapture = screenCapture;
 
         this.cts = cts;
         npcNameFinderEvent = new(false);
@@ -248,7 +250,7 @@ public sealed partial class BotController : IBotController, IDisposable
         RouteInfo = routeInfo;
 
         GoapAgent?.Dispose();
-        GoapAgent = new(profileLoadedScope, dataConfig, GrindSessionDAO, WowScreen, routeInfo);
+        GoapAgent = new(profileLoadedScope, dataConfig, GrindSessionDAO, WowScreen, screenCapture, routeInfo);
     }
 
     private ClassConfiguration ReadClassConfiguration(string classFile, string? pathFile)

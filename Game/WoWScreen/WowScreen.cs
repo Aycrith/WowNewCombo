@@ -117,6 +117,12 @@ public sealed class WowScreen : IWowScreen, IBitmapProvider, IDisposable
         return bitmap;
     }
 
+    public void DrawBitmapTo(Graphics graphics)
+    {
+        Update();
+        graphics.DrawImage(Bitmap, 0, 0, rect, GraphicsUnit.Pixel);
+    }
+
     public Color GetColorAt(Point point)
     {
         return Bitmap.GetPixel(point.X, point.Y);

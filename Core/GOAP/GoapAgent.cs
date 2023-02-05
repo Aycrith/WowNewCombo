@@ -31,7 +31,9 @@ public sealed partial class GoapAgent : IDisposable
 
     private readonly Thread goapThread;
     private readonly CancellationTokenSource cts;
-    private readonly ManualResetEvent manualReset;
+    private readonly ManualResetEventSlim manualReset;
+
+    private readonly IScreenCapture screenCapture;
 
     private bool active;
     public bool Active
@@ -87,11 +89,13 @@ public sealed partial class GoapAgent : IDisposable
     public GoapGoal? CurrentGoal { get; private set; }
 
     public GoapAgent(IServiceScope scope, DataConfig dataConfig,
-        IGrindSessionDAO sessionDAO, IWowScreen wowScreen, RouteInfo routeInfo)
+        IGrindSessionDAO sessionDAO, IWowScreen wowScreen, IScreenCapture screenCapture,
+        RouteInfo routeInfo)
     {
         this.scope = scope;
 
         this.logger = scope.ServiceProvider.GetRequiredService<ILogger>();
+        this.screenCapture = screenCapture;
         this.classConfig = scope.ServiceProvider.GetRequiredService<ClassConfiguration>();
         this.cts = new();
         this.wowScreen = wowScreen;
@@ -153,7 +157,7 @@ public sealed partial class GoapAgent : IDisposable
 
         while (!cts.IsCancellationRequested)
         {
-            manualReset.WaitOne();
+            manualReset.Wait();
 
             GoapGoal? newGoal = NextGoal();
             if (!cts.IsCancellationRequested && newGoal != null)
@@ -267,6 +271,10 @@ public sealed partial class GoapAgent : IDisposable
         else if (e is RemoveClosestPoi r)
         {
             RemoveClosestPoiByType(r.Name);
+        }
+        else if (e is ScreenCaptureEvent)
+        {
+            screenCapture.Request();
         }
     }
 

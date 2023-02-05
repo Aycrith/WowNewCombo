@@ -230,6 +230,7 @@ In order to run `HeadlessServer` please look at the `HeadlessServer\run.bat`.
 | `portv1` | Navigation Remote V1 port | `5001` | - |
 | `hostv3` | Navigation Remote V3 host | `127.0.0.1` | - |
 | `portv3` | Navigation Remote V3 port | `47111` | - |
+| `-d` or `-diag` | Diagnostics, when set, takes screen captures under `Json\cap\*.json` | - | - |
 
 e.g. run from Powershell without any optional parameter
 ```ps

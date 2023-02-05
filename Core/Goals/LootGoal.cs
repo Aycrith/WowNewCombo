@@ -102,7 +102,15 @@ public sealed class LootGoal : GoapGoal, IGoapEventListener
         {
             (bool t, double e) = wait.Until(MAX_TIME_TO_DETECT_LOOT, LootWindowClosedOrBagOrMoneyChanged, input.ApproachOnCooldown);
             success = !t;
-            Log($"Loot {((success && !bagReader.BagsFull()) ? "Successful" : "Failed")} after {e}ms");
+            if (success && !bagReader.BagsFull())
+            {
+                Log($"Loot Successful after {e}ms");
+            }
+            else
+            {
+                SendGoapEvent(ScreenCaptureEvent.Default);
+                Log($"Loot Failed {e}ms");
+            }
 
             gatherCorpse &= success;
 
@@ -117,7 +125,8 @@ public sealed class LootGoal : GoapGoal, IGoapEventListener
         }
         else
         {
-            Log("Loot Failed, target not found!");
+            SendGoapEvent(ScreenCaptureEvent.Default);
+            Log($"Loot Failed, target not found!");
         }
 
         SendGoapEvent(new RemoveClosestPoi(CorpseEvent.NAME));
@@ -129,7 +138,10 @@ public sealed class LootGoal : GoapGoal, IGoapEventListener
             wait.Update();
 
             if (playerReader.Bits.HasTarget())
-                LogWarning("Unable to clear target! Check Bindpad settings!");
+            {
+                SendGoapEvent(ScreenCaptureEvent.Default);
+                LogWarning($"Unable to clear target! Check Bindpad settings!");
+            }
         }
 
         if (corpseLocations.Count > 0)

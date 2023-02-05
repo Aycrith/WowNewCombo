@@ -46,7 +46,7 @@ public sealed class PPatherService
     {
         System.IO.DirectoryInfo di = new(dataConfig.PPather);
         System.IO.FileInfo[] files = di.GetFiles("*.tmp");
-        for (int i = 0; i < files.Length; i++)
+        for (int i = files.Length - 1; i >= 0; i--)
         {
             files[i].Delete();
         }
