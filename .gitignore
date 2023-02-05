@@ -275,6 +275,9 @@ Json/PPather/*.tmp
 Json/class/_
 Json/path/_
 
+# ScreenCaptures
+Json/cap/*.jpg
+
 # Configs
 **/frame_config.json
 **/addon_config.json

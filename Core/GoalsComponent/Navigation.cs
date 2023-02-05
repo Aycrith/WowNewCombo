@@ -64,7 +64,7 @@ public sealed partial class Navigation : IDisposable
 
     private readonly CancellationTokenSource _cts;
     private readonly Thread pathfinderThread;
-    private readonly ManualResetEvent manualReset;
+    private readonly ManualResetEventSlim manualReset;
 
     private int failedAttempt;
     private Vector3 lastFailedDestination;
@@ -404,7 +404,7 @@ public sealed partial class Navigation : IDisposable
                 }
                 pathRequests.Dequeue();
             }
-            manualReset.WaitOne();
+            manualReset.Wait();
         }
 
         if (logger.IsEnabled(LogLevel.Debug))

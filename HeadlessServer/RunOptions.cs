@@ -55,4 +55,10 @@ public sealed class RunOptions
         Default = 47111,
         HelpText = $"Navigation Remote V3 port")]
     public int Portv3 { get; set; }
+
+    [Option('d', "diag",
+        Required = false,
+        Default = false,
+        HelpText = $"Capture Screenshot for Diagnostics")]
+    public bool Diagnostics { get; set; }
 }

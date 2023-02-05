@@ -16,7 +16,7 @@ public sealed class CastingHandlerInterruptWatchdog : IDisposable
 
     private readonly Thread thread;
     private readonly CancellationTokenSource threadCts;
-    private readonly ManualResetEvent resetEvent;
+    private readonly ManualResetEventSlim resetEvent;
 
     private bool? initial;
     private Func<bool>? interrupt;
@@ -69,7 +69,7 @@ public sealed class CastingHandlerInterruptWatchdog : IDisposable
                 logger.LogWarning($"[{nameof(CastingHandlerInterruptWatchdog)}] waiting...");
 
             resetEvent.Reset();
-            resetEvent.WaitOne();
+            resetEvent.Wait();
         }
 
         if (logger.IsEnabled(LogLevel.Debug))

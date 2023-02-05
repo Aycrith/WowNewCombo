@@ -33,7 +33,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
     private const int MIN_TIME_TO_START_CYCLE_PROFESSION = 5000;
     private const int CYCLE_PROFESSION_PERIOD = 8000;
 
-    private readonly ManualResetEvent sideActivityManualReset;
+    private readonly ManualResetEventSlim sideActivityManualReset;
     private readonly Thread? sideActivityThread;
     private CancellationTokenSource sideActivityCts;
 
@@ -189,7 +189,10 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
             wait.Update();
 
             if (playerReader.Bits.HasTarget())
-                LogWarning("Unable to clear target! Check Bindpad settings!");
+            {
+                SendGoapEvent(ScreenCaptureEvent.Default);
+                LogWarning($"Unable to clear target! Check Bindpad settings!");
+            }
         }
 
         if (playerReader.Bits.IsDrowning())
@@ -209,7 +212,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
     private void Thread_LookingForTarget()
     {
-        sideActivityManualReset.WaitOne();
+        sideActivityManualReset.Wait();
 
         while (!sideActivityCts.IsCancellationRequested)
         {
@@ -221,7 +224,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
             else
                 sideActivityCts.Token.WaitHandle.WaitOne(1);
 
-            sideActivityManualReset.WaitOne();
+            sideActivityManualReset.Wait();
         }
 
         if (logger.IsEnabled(LogLevel.Debug))
@@ -230,7 +233,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
     private void Thread_AttendedGather()
     {
-        sideActivityManualReset.WaitOne();
+        sideActivityManualReset.Wait();
 
         while (!sideActivityCts.IsCancellationRequested)
         {
@@ -239,7 +242,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
                 AlternateGatherTypes();
             }
             sideActivityCts.Token.WaitHandle.WaitOne(CYCLE_PROFESSION_PERIOD);
-            sideActivityManualReset.WaitOne();
+            sideActivityManualReset.Wait();
         }
 
         if (logger.IsEnabled(LogLevel.Debug))

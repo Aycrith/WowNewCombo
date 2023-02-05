@@ -133,6 +133,20 @@ public sealed class Startup
         {
             services.AddSingleton<MinimapNodeFinder>();
 
+            StartupConfigDiagnostics StartupDiagnostics = new();
+            Configuration.GetSection(StartupConfigDiagnostics.Position).Bind(StartupDiagnostics);
+
+            if (StartupDiagnostics.Enabled)
+            {
+                services.AddSingleton<IScreenCapture, ScreenCapture>();
+                Log.Information($"[{nameof(Startup)}] {nameof(ScreenCapture)}");
+            }
+            else
+            {
+                services.AddSingleton<IScreenCapture, NoScreenCapture>();
+                Log.Information($"[{nameof(Startup)}] {nameof(NoScreenCapture)}");
+            }
+
             services.AddSingleton<IGrindSessionDAO, LocalGrindSessionDAO>();
             services.AddSingleton<WorldMapAreaDB>();
             services.AddSingleton<IPPather>(x =>

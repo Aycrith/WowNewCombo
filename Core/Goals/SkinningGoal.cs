@@ -142,6 +142,7 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
 
             if (!foundTarget)
             {
+                SendGoapEvent(ScreenCaptureEvent.Default);
                 LogWarning($"Unable to gather Target({playerReader.TargetId})!");
                 ExitInterruptOrFailed(false);
                 return;
@@ -229,7 +230,17 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
     private void ExitSuccess()
     {
         (bool t, double e) = wait.Until(MAX_TIME_TO_DETECT_LOOT, LootWindowClosedOrBagChanged);
-        Log($"Loot {((!t && !bagReader.BagsFull()) ? "Successful" : "Failed")} after {e}ms");
+
+        bool success = !t && !bagReader.BagsFull();
+        if (success)
+        {
+            Log($"Loot Successful after {e}ms");
+        }
+        else
+        {
+            SendGoapEvent(ScreenCaptureEvent.Default);
+            Log($"Loot Failed after {e}ms");
+        }
 
         SendGoapEvent(new RemoveClosestPoi(SkinCorpseEvent.NAME));
         state.GatherableCorpseCount = Math.Max(0, state.GatherableCorpseCount - 1);
@@ -253,7 +264,10 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
             wait.Update();
 
             if (playerReader.Bits.HasTarget())
-                LogWarning("Unable to clear target! Check Bindpad settings!");
+            {
+                SendGoapEvent(ScreenCaptureEvent.Default);
+                LogWarning($"Unable to clear target! Check Bindpad settings!");
+            }
         }
     }
 

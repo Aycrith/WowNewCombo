@@ -103,6 +103,17 @@ internal sealed class Program
 
         services.AddSingleton<MinimapNodeFinder>();
 
+        if (options.Value.Diagnostics)
+        {
+            services.AddSingleton<IScreenCapture, ScreenCapture>();
+            Log.Information($"[{nameof(Program)}] {nameof(ScreenCapture)}");
+        }
+        else
+        {
+            services.AddSingleton<IScreenCapture, NoScreenCapture>();
+            Log.Information($"[{nameof(Program)}] {nameof(NoScreenCapture)}");
+        }
+
         services.AddSingleton<IGrindSessionDAO, LocalGrindSessionDAO>();
         services.AddSingleton<WorldMapAreaDB>();
         services.AddSingleton<IPPather>(x =>

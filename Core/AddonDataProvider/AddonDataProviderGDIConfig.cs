@@ -11,7 +11,7 @@ namespace Core;
 public sealed class AddonDataProviderGDIConfig : IAddonDataProvider, IDisposable
 {
     private readonly CancellationToken ct;
-    private readonly ManualResetEvent manualReset = new(true);
+    private readonly ManualResetEventSlim manualReset = new(true);
     private readonly WowScreen wowScreen;
 
     private readonly StringBuilder sb = new(3);
@@ -45,7 +45,7 @@ public sealed class AddonDataProviderGDIConfig : IAddonDataProvider, IDisposable
 
     public void Update()
     {
-        manualReset.WaitOne();
+        manualReset.Wait();
         ct.WaitHandle.WaitOne(25);
 
         if (ct.IsCancellationRequested ||
