@@ -1,6 +1,7 @@
 using System;
 
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -19,9 +20,16 @@ public static class Program
             Log.Information("Program.Main(): Starting blazor server");
             try
             {
-                CreateHostBuilder(args)
-                    .Build()
-                    .Run();
+                IHost host = CreateHostBuilder(args).Build();
+                var logger = host.Services.GetRequiredService<Microsoft.Extensions.Logging.ILogger>();
+
+                AppDomain.CurrentDomain.UnhandledException += (object sender, UnhandledExceptionEventArgs args) =>
+                {
+                    Exception e = (Exception)args.ExceptionObject;
+                    logger.LogError(e, e.Message);
+                };
+
+                host.Run();
             }
             catch (Exception ex)
             {

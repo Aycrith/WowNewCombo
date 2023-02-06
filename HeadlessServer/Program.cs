@@ -76,9 +76,20 @@ internal sealed class Program
 
         if (ConfigureServices(services, options))
         {
-            services
+            ServiceProvider provider = services
                 .AddSingleton<HeadlessServer>()
-                .BuildServiceProvider(new ServiceProviderOptions() { ValidateOnBuild = true })
+                .BuildServiceProvider(new ServiceProviderOptions() { ValidateOnBuild = true });
+
+            Microsoft.Extensions.Logging.ILogger logger =
+                provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger>();
+
+            AppDomain.CurrentDomain.UnhandledException += (object sender, UnhandledExceptionEventArgs args) =>
+            {
+                Exception e = (Exception)args.ExceptionObject;
+                logger.LogError(e, e.Message);
+            };
+
+            provider
                 .GetRequiredService<HeadlessServer>()
                 .Run(options);
         }
