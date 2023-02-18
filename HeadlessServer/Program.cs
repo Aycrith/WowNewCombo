@@ -140,7 +140,12 @@ internal sealed class Program
             services.AddSingleton<IAddonDataProvider, AddonDataProviderDXGI>();
             Log.Information($"[{nameof(Program)}] {nameof(AddonDataProviderDXGI)}");
         }
-        else
+        if (options.Value.Reader == AddonDataProviderType.DXGISwapChain)
+        {
+            services.AddSingleton<IAddonDataProvider, AddonDataProviderDXGISwapChain>();
+            Log.Information($"[{nameof(Program)}] {nameof(AddonDataProviderDXGISwapChain)}");
+        }
+        else if (options.Value.Reader is AddonDataProviderType.GDI)
         {
             services.AddSingleton<IAddonDataProvider, AddonDataProviderGDI>();
             Log.Information($"[{nameof(Program)}] {nameof(AddonDataProviderGDI)}");

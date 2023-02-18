@@ -16,7 +16,7 @@ using static WinAPI.NativeMethods;
 
 namespace Core;
 
-public sealed class AddonDataProviderDXGI : IAddonDataProvider, IDisposable
+public sealed class AddonDataProviderDXGISwapChain : IAddonDataProvider, IDisposable
 {
     private readonly WowScreen wowScreen;
     private readonly DataFrame[] frames;
@@ -44,7 +44,7 @@ public sealed class AddonDataProviderDXGI : IAddonDataProvider, IDisposable
 
     private readonly StringBuilder sb = new(3);
 
-    public AddonDataProviderDXGI(WowScreen wowScreen, DataFrame[] frames)
+    public AddonDataProviderDXGISwapChain(WowScreen wowScreen, DataFrame[] frames)
     {
         this.wowScreen = wowScreen;
 
@@ -65,7 +65,7 @@ public sealed class AddonDataProviderDXGI : IAddonDataProvider, IDisposable
         IntPtr hMonitor = MonitorFromWindow(wowScreen.ProcessHwnd, MONITOR_DEFAULT_TO_NULL);
 
         Result result;
-
+        
         IDXGIFactory1 factory = DXGI.CreateDXGIFactory1<IDXGIFactory1>();
         result = factory.EnumAdapters(0, out adapter);
         if (result == Result.Fail)

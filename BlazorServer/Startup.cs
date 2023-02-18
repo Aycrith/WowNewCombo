@@ -161,7 +161,12 @@ public sealed class Startup
                 services.AddSingleton<IAddonDataProvider, AddonDataProviderDXGI>();
                 Log.Information($"[{nameof(Startup)}] {nameof(AddonDataProviderDXGI)}");
             }
-            else
+            if (scr.ReaderType == AddonDataProviderType.DXGISwapChain)
+            {
+                services.AddSingleton<IAddonDataProvider, AddonDataProviderDXGISwapChain>();
+                Log.Information($"[{nameof(Startup)}] {nameof(AddonDataProviderDXGISwapChain)}");
+            }
+            else if (scr.ReaderType is AddonDataProviderType.GDI)
             {
                 services.AddSingleton<IAddonDataProvider, AddonDataProviderGDI>();
                 Log.Information($"[{nameof(Startup)}] {nameof(AddonDataProviderGDI)}");

@@ -29,7 +29,10 @@ public sealed class RunOptions
         "reader",
         Required = false,
         Default = AddonDataProviderType.GDI,
-        HelpText = $"Screen reader backend.\n'{nameof(AddonDataProviderType.GDI)}': is the default, compatible from Win7.\n'{nameof(AddonDataProviderType.DXGI)}': DirectX based works from Win8.")]
+        HelpText = $"Screen reader backend." +
+        $"'{nameof(AddonDataProviderType.GDI)}': is the default, compatible from Win7.\n" +
+        $"'{nameof(AddonDataProviderType.DXGI)}': DirectX based works from Win8." +
+        $"'{nameof(AddonDataProviderType.DXGISwapChain)}': DirectX based works from Win8 allows background")]
     public AddonDataProviderType Reader { get; set; }
 
     [Option("hostv1",
