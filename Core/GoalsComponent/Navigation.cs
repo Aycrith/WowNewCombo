@@ -207,6 +207,9 @@ public sealed partial class Navigation : IDisposable
             {
                 if (stuckDetector.ActionDurationMs > 10_000)
                 {
+                    if (mountHandler.IsMounted())
+                        mountHandler.Dismount();
+
                     LogClearRouteToWaypointStuck(logger, stuckDetector.ActionDurationMs);
                     stuckDetector.Reset();
                     routeToNextWaypoint.Clear();
