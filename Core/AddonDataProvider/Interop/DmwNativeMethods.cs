@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace Core.AddonDataProvider.Interop;
 
-internal class DmwNativeMethods
+internal sealed class DmwNativeMethods
 {
     public delegate bool DwmGetDxSharedSurfaceDelegate(IntPtr hWnd, out IntPtr phSurface, out long pAdapterLuid, out long pFmtWindow, out long pPresentFlags, out long pWin32KUpdateId);
 
@@ -11,7 +11,7 @@ internal class DmwNativeMethods
 
     static DmwNativeMethods()
     {
-        var ptr = GetProcAddress(GetModuleHandle("user32"), "DwmGetDxSharedSurface");
+        IntPtr ptr = GetProcAddress(GetModuleHandle("user32"), nameof(DwmGetDxSharedSurface));
         DwmGetDxSharedSurface = Marshal.GetDelegateForFunctionPointer<DwmGetDxSharedSurfaceDelegate>(ptr);
     }
 
