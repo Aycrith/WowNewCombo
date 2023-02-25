@@ -203,7 +203,18 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         if (playerReader.Bits.PlayerInCombat() && classConfig.Mode != Mode.AttendedGather) { return; }
 
         if (!sideActivityCts.IsCancellationRequested)
+        {
             navigation.Update(sideActivityCts.Token);
+        }
+        else
+        {
+            if (!playerReader.Bits.HasTarget())
+            {
+                LogWarning($"{nameof(sideActivityCts)} is cancelled but needs to be restarted!");
+                sideActivityCts = new();
+                sideActivityManualReset.Set();
+            }
+        }
 
         RandomJump();
 
@@ -218,6 +229,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         {
             if (targetFinder.Search(NpcNameToFind, playerReader.Bits.TargetIsNotDead, sideActivityCts.Token))
             {
+                Log("Found target!");
                 sideActivityCts.Cancel();
                 sideActivityManualReset.Reset();
             }

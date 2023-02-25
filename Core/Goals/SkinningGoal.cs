@@ -203,7 +203,8 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
             }
             else
             {
-                if (combatUtil.EnteredCombat())
+                if (combatUtil.EnteredCombat() ||
+                playerReader.LastUIError == UI_ERROR.ERR_SPELL_FAILED_INTERRUPTED)
                 {
                     Log("Interrupted due combat!");
                     ExitInterruptOrFailed(true);
@@ -235,17 +236,20 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
         if (success)
         {
             Log($"Loot Successful after {e}ms");
+            (t, e) = wait.Until(MAX_TIME_TO_WAIT_NPC_NAME, WaitForLosingTarget);
+            if (!t)
+                ClearTargetIfExists();
         }
         else
         {
             SendGoapEvent(ScreenCaptureEvent.Default);
             Log($"Loot Failed after {e}ms");
+
+            ClearTargetIfExists();
         }
 
         SendGoapEvent(new RemoveClosestPoi(SkinCorpseEvent.NAME));
         state.GatherableCorpseCount = Math.Max(0, state.GatherableCorpseCount - 1);
-
-        ClearTargetIfExists();
     }
 
     private void ExitInterruptOrFailed(bool interrupted)
@@ -342,14 +346,16 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
         return
             playerReader.CastState is
             UI_ERROR.CAST_SUCCESS or
-            UI_ERROR.SPELL_FAILED_TRY_AGAIN;
+            UI_ERROR.SPELL_FAILED_TRY_AGAIN or
+            UI_ERROR.ERR_SPELL_FAILED_INTERRUPTED;
     }
 
     private bool HerbalismCastEnded()
     {
         return
             playerReader.LastUIError is
-            UI_ERROR.SPELL_FAILED_TRY_AGAIN;
+            UI_ERROR.SPELL_FAILED_TRY_AGAIN or
+            UI_ERROR.ERR_SPELL_FAILED_INTERRUPTED;
     }
 
     private bool CastStartedOrFailed()
@@ -363,6 +369,13 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
     private bool MinRangeZero()
     {
         return playerReader.MinRange() == 0;
+    }
+
+    private bool WaitForLosingTarget()
+    {
+        return
+            playerReader.Bits.HasTarget() &&
+            playerReader.Bits.TargetIsDead();
     }
 
     private void Log(string text)
