@@ -66,31 +66,29 @@ public sealed class MountHandler : IMountHandler
             wait.Until(CastingHandler.SPELL_QUEUE + playerReader.NetworkLatency.Value, CastDetected);
         Log($"Cast started ? {!t} {e}ms");
 
-        if (!bits.IsMounted())
+        if (bits.IsMounted())
+            return;
+
+        wait.Update();
+
+        (t, e) =
+            wait.Until(playerReader.RemainCastMs + playerReader.NetworkLatency.Value, MountedOrNotCastingOrValidTargetOrEnteredCombat);
+        Log($"Cast ended ? {!t} {e}ms");
+
+        if (bits.IsMounted())
+            return;
+
+        if (bits.HasTarget())
         {
-            wait.Update();
-
-            (t, e) =
-                wait.Until(playerReader.RemainCastMs + playerReader.NetworkLatency.Value, MountedOrNotCastingOrValidTargetOrEnteredCombat);
-            Log($"Cast ended ? {!t} {e}ms");
-
-            if (!HasValidTarget())
+            if (HasValidTarget())
             {
-                (t, e) =
-                    wait.Until(CastingHandler.SPELL_QUEUE + playerReader.NetworkLatency.Value, bits.IsMounted);
-
-                Log($"Mounted ? {bits.IsMounted()} {e}ms");
+                return;
             }
-
-            if (bits.PlayerInCombat() && bits.HasTarget() && !bits.TargetOfTargetIsPlayerOrPet())
+            else if (!bits.IsMounted())
             {
-                input.ClearTarget();
+                (t, e) = wait.Until(CastingHandler.SPELL_QUEUE + playerReader.NetworkLatency.Value, bits.IsMounted);
+                Log($"Mounted ? {bits.IsMounted()} {e}ms");
                 wait.Update();
-
-                if (bits.HasTarget())
-                {
-                    LogWarning("Unable to clear target!");
-                }
             }
         }
     }
@@ -127,7 +125,7 @@ public sealed class MountHandler : IMountHandler
         bits.PlayerInCombat();
 
     private bool HasValidTarget() =>
-        bits.HasTarget() && !targetBlacklist.Is() &&
+        bits.HasTarget() && bits.TargetAlive() && !targetBlacklist.Is() &&
         playerReader.MinRange() < MIN_DISTANCE_TO_INTERRUPT_CAST;
 
     private void Log(string text)
