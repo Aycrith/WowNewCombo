@@ -1,7 +1,6 @@
 using SharedLib.Extensions;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Drawing.Imaging;
@@ -78,7 +77,7 @@ public sealed partial class NpcNameFinder : IDisposable
     public readonly int screenMidBuffer;
     public readonly int screenAddBuffer;
 
-    public Rectangle Area;
+    public readonly Rectangle Area;
 
     private const float refWidth = 1920;
     private const float refHeight = 1080;
@@ -414,7 +413,7 @@ public sealed partial class NpcNameFinder : IDisposable
             if (inGroup[i])
                 continue;
 
-            LineSegment npcLine = data[i];
+            ref readonly LineSegment npcLine = ref data[i];
 
             int gc = 0;
             group[gc++] = npcLine;
@@ -424,7 +423,7 @@ public sealed partial class NpcNameFinder : IDisposable
             {
                 if (gc + 1 >= MAX_GROUP) break;
 
-                LineSegment laterNpcLine = data[j];
+                ref readonly LineSegment laterNpcLine = ref data[j];
                 if (laterNpcLine.Y > npcLine.Y + offset1) break;
                 if (laterNpcLine.Y > lastY + offset2) break;
 
@@ -517,7 +516,7 @@ public sealed partial class NpcNameFinder : IDisposable
         float dx = PointExt.SqrDistance(origin, x.ClickPoint);
         float dy = PointExt.SqrDistance(origin, y.ClickPoint);
 
-        return dx > dy ? 1 : 0;
+        return dx.CompareTo(dy);
     }
 
     private int YOffset(Rectangle area, Rectangle npc)
