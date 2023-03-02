@@ -10,6 +10,8 @@ namespace Core;
 
 public sealed partial class KeyAction : IDisposable
 {
+    public const int DefaultPressDuration = 50;
+
     public float Cost { get; set; } = 18;
     public string Name { get; set; } = string.Empty;
     public bool HasCastBar { get; set; }
@@ -17,7 +19,7 @@ public sealed partial class KeyAction : IDisposable
     public string Key { get; set; } = string.Empty;
     public int Slot { get; set; }
     public int SlotIndex { get; private set; }
-    public int PressDuration { get; set; } = 50;
+    public int PressDuration { get; set; } = DefaultPressDuration;
     public string Form { get; set; } = string.Empty;
     public Form FormEnum { get; set; } = Core.Form.None;
     public bool FormAction { get; private set; }

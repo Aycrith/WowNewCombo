@@ -186,7 +186,7 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
         if (!found)
         {
             Log($"Use KeyAction.Key macro to aquire target");
-            input.Proc.KeyPress(key.ConsoleKey, input.defaultKeyPress);
+            input.Proc.KeyPress(key.ConsoleKey, KeyAction.DefaultPressDuration);
             wait.Update();
         }
 
@@ -204,7 +204,7 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
         if (!OpenMerchantWindow())
             return;
 
-        input.Proc.KeyPress(ConsoleKey.Escape, input.defaultKeyPress);
+        input.Proc.KeyPress(ConsoleKey.Escape, KeyAction.DefaultPressDuration);
         input.ClearTarget();
         wait.Update();
 

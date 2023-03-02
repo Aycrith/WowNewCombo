@@ -267,8 +267,8 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         if (!playerReader.IsCasting() &&
             oldestKey?.SinceLastClickMs > CYCLE_PROFESSION_PERIOD)
         {
-            logger.LogInformation($"[{oldestKey.Key}] {oldestKey.Name} pressed for {input.defaultKeyPress}ms");
-            input.Proc.KeyPress(oldestKey.ConsoleKey, input.defaultKeyPress);
+            logger.LogInformation($"[{oldestKey.Key}] {oldestKey.Name} pressed for {KeyAction.DefaultPressDuration}ms");
+            input.Proc.KeyPress(oldestKey.ConsoleKey, KeyAction.DefaultPressDuration);
             oldestKey.SetClicked();
         }
     }

@@ -264,7 +264,9 @@ public sealed partial class CastingHandler
     public bool Cast(KeyAction item, Func<bool> interrupt)
     {
         using CancellationTokenSource cts = new();
-        interruptWatchdog.Set(interrupt, cts);
+        if (item.PressDuration > KeyAction.DefaultPressDuration ||
+            item.HasCastBar)
+            interruptWatchdog.Set(interrupt, cts);
 
         bool t = false;
         double e = 0;

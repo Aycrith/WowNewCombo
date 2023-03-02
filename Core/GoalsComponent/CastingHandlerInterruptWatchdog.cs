@@ -54,6 +54,7 @@ public sealed class CastingHandlerInterruptWatchdog : IDisposable
                     if (Log)
                         logger.LogWarning($"[{nameof(CastingHandlerInterruptWatchdog)}] Interrupted!");
 
+                    initial = null;
                     interrupt = null;
 
                     cts?.Cancel();
@@ -79,7 +80,7 @@ public sealed class CastingHandlerInterruptWatchdog : IDisposable
     public void Set(Func<bool> interrupt, CancellationTokenSource cts)
     {
         if (Log)
-            logger.LogWarning($"Set interrupt!");
+            logger.LogWarning($"[{nameof(CastingHandlerInterruptWatchdog)}] Set interrupt");
 
         this.initial = interrupt();
         this.interrupt = interrupt;
@@ -90,7 +91,10 @@ public sealed class CastingHandlerInterruptWatchdog : IDisposable
 
     public void Reset()
     {
+        initial = null;
         interrupt = null;
-        cts?.Cancel();
+
+        if (cts != null && !cts.IsCancellationRequested)
+            cts?.Cancel();
     }
 }

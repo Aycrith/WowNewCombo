@@ -36,7 +36,7 @@ public sealed class DruidMountHandler : IMountHandler
                 KeyAction form = classConfig.Form[i];
                 if (form.FormEnum == playerReader.Form)
                 {
-                    input.Proc.KeyPress(form.ConsoleKey, input.defaultKeyPress);
+                    input.Proc.KeyPress(form.ConsoleKey, form.PressDuration);
                     return;
                 }
             }
