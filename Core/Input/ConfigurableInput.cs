@@ -4,8 +4,6 @@ namespace Core;
 
 public sealed class ConfigurableInput
 {
-    private const int fastKeyPressMs = 30;
-
     public readonly WowProcessInput Proc;
     public readonly ClassConfiguration ClassConfig;
 
@@ -25,18 +23,23 @@ public sealed class ConfigurableInput
 
     public void Stop()
     {
-        Proc.KeyPress(Proc.ForwardKey, KeyAction.DefaultPressDuration);
+        Proc.KeyPress(Proc.ForwardKey, InputDuration.DefaultPress);
+    }
+
+    private void KeyPress(KeyAction keyAction)
+    {
+        Proc.KeyPress(keyAction.ConsoleKey, keyAction.PressDuration);
+        keyAction.SetClicked();
     }
 
     public void Interact()
     {
-        Proc.KeyPress(ClassConfig.Interact.ConsoleKey, KeyAction.DefaultPressDuration);
-        ClassConfig.Interact.SetClicked();
+        KeyPress(ClassConfig.Interact);
     }
 
     public void FastInteract()
     {
-        Proc.KeyPress(ClassConfig.Interact.ConsoleKey, fastKeyPressMs);
+        Proc.KeyPress(ClassConfig.Interact.ConsoleKey, InputDuration.FastPress);
         ClassConfig.Interact.SetClicked();
     }
 
@@ -44,103 +47,89 @@ public sealed class ConfigurableInput
     {
         if (ClassConfig.Approach.GetRemainingCooldown() == 0)
         {
-            Proc.KeyPress(ClassConfig.Approach.ConsoleKey, fastKeyPressMs);
+            Proc.KeyPress(ClassConfig.Approach.ConsoleKey, InputDuration.FastPress);
             ClassConfig.Approach.SetClicked();
         }
     }
 
     public void Approach()
     {
-        Proc.KeyPress(ClassConfig.Approach.ConsoleKey, ClassConfig.Approach.PressDuration);
-        ClassConfig.Approach.SetClicked();
+        KeyPress(ClassConfig.Approach);
     }
 
     public void LastTarget()
     {
-        Proc.KeyPress(ClassConfig.TargetLastTarget.ConsoleKey, KeyAction.DefaultPressDuration);
-        ClassConfig.TargetLastTarget.SetClicked();
+        KeyPress(ClassConfig.TargetLastTarget);
     }
 
     public void FastLastTarget()
     {
-        Proc.KeyPress(ClassConfig.TargetLastTarget.ConsoleKey, fastKeyPressMs);
+        Proc.KeyPress(ClassConfig.TargetLastTarget.ConsoleKey, InputDuration.FastPress);
         ClassConfig.TargetLastTarget.SetClicked();
     }
 
     public void StandUp()
     {
-        Proc.KeyPress(ClassConfig.StandUp.ConsoleKey, KeyAction.DefaultPressDuration);
-        ClassConfig.StandUp.SetClicked();
+        KeyPress(ClassConfig.StandUp);
     }
 
     public void ClearTarget()
     {
-        Proc.KeyPress(ClassConfig.ClearTarget.ConsoleKey, KeyAction.DefaultPressDuration);
-        ClassConfig.ClearTarget.SetClicked();
+        KeyPress(ClassConfig.ClearTarget);
     }
 
     public void StopAttack()
     {
-        Proc.KeyPress(ClassConfig.StopAttack.ConsoleKey, ClassConfig.StopAttack.PressDuration);
-        ClassConfig.StopAttack.SetClicked();
+        KeyPress(ClassConfig.StopAttack);
     }
 
     public void NearestTarget()
     {
-        Proc.KeyPress(ClassConfig.TargetNearestTarget.ConsoleKey, KeyAction.DefaultPressDuration);
-        ClassConfig.TargetNearestTarget.SetClicked();
+        KeyPress(ClassConfig.TargetNearestTarget);
     }
 
     public void TargetPet()
     {
-        Proc.KeyPress(ClassConfig.TargetPet.ConsoleKey, KeyAction.DefaultPressDuration);
-        ClassConfig.TargetPet.SetClicked();
+        KeyPress(ClassConfig.TargetPet);
     }
 
     public void TargetOfTarget()
     {
-        Proc.KeyPress(ClassConfig.TargetTargetOfTarget.ConsoleKey, KeyAction.DefaultPressDuration);
-        ClassConfig.TargetTargetOfTarget.SetClicked();
+        KeyPress(ClassConfig.TargetTargetOfTarget);
     }
 
     public void Jump()
     {
-        Proc.KeyPress(ClassConfig.Jump.ConsoleKey, KeyAction.DefaultPressDuration);
-        ClassConfig.Jump.SetClicked();
+        KeyPress(ClassConfig.Jump);
     }
 
     public void PetAttack()
     {
-        Proc.KeyPress(ClassConfig.PetAttack.ConsoleKey, ClassConfig.PetAttack.PressDuration);
-        ClassConfig.PetAttack.SetClicked();
+        KeyPress(ClassConfig.PetAttack);
     }
 
     public void Hearthstone()
     {
-        Proc.KeyPress(ClassConfig.Hearthstone.ConsoleKey, KeyAction.DefaultPressDuration);
-        ClassConfig.Hearthstone.SetClicked();
+        KeyPress(ClassConfig.Hearthstone);
     }
 
     public void Mount()
     {
-        Proc.KeyPress(ClassConfig.Mount.ConsoleKey, KeyAction.DefaultPressDuration);
-        ClassConfig.Mount.SetClicked();
+        KeyPress(ClassConfig.Mount);
     }
 
     public void Dismount()
     {
-        Proc.KeyPress(ClassConfig.Mount.ConsoleKey, KeyAction.DefaultPressDuration);
+        Proc.KeyPress(ClassConfig.Mount.ConsoleKey, ClassConfig.Mount.PressDuration);
     }
 
     public void TargetFocus()
     {
-        Proc.KeyPress(ClassConfig.TargetFocus.ConsoleKey, KeyAction.DefaultPressDuration);
-        ClassConfig.TargetFocus.SetClicked();
+        KeyPress(ClassConfig.TargetFocus);
     }
 
     public void FollowTarget()
     {
-        Proc.KeyPress(ClassConfig.FollowTarget.ConsoleKey, KeyAction.DefaultPressDuration);
-        ClassConfig.FollowTarget.SetClicked();
+        KeyPress(ClassConfig.FollowTarget);
     }
 }

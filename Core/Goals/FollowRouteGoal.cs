@@ -6,6 +6,7 @@ using System.Linq;
 using System.Numerics;
 using System.Threading;
 using SharedLib.Extensions;
+using Game;
 
 #pragma warning disable 162
 
@@ -267,8 +268,8 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         if (!playerReader.IsCasting() &&
             oldestKey?.SinceLastClickMs > CYCLE_PROFESSION_PERIOD)
         {
-            logger.LogInformation($"[{oldestKey.Key}] {oldestKey.Name} pressed for {KeyAction.DefaultPressDuration}ms");
-            input.Proc.KeyPress(oldestKey.ConsoleKey, KeyAction.DefaultPressDuration);
+            logger.LogInformation($"[{oldestKey.Key}] {oldestKey.Name} pressed for {InputDuration.DefaultPress}ms");
+            input.Proc.KeyPress(oldestKey.ConsoleKey, InputDuration.DefaultPress);
             oldestKey.SetClicked();
         }
     }

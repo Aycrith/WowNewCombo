@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Game;
+
+using Microsoft.Extensions.Logging;
 
 using System;
 using System.Threading;
@@ -264,7 +266,7 @@ public sealed partial class CastingHandler
     public bool Cast(KeyAction item, Func<bool> interrupt)
     {
         using CancellationTokenSource cts = new();
-        if (item.PressDuration > KeyAction.DefaultPressDuration ||
+        if (item.PressDuration > InputDuration.DefaultPress ||
             item.HasCastBar)
             interruptWatchdog.Set(interrupt, cts);
 

@@ -7,6 +7,7 @@ using System.Numerics;
 using System.Linq;
 using System.Threading;
 using SharedLib.Extensions;
+using Game;
 
 #pragma warning disable 162
 
@@ -186,7 +187,7 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
         if (!found)
         {
             Log($"Use KeyAction.Key macro to aquire target");
-            input.Proc.KeyPress(key.ConsoleKey, KeyAction.DefaultPressDuration);
+            input.Proc.KeyPress(key.ConsoleKey, InputDuration.DefaultPress);
             wait.Update();
         }
 
@@ -204,7 +205,7 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
         if (!OpenMerchantWindow())
             return;
 
-        input.Proc.KeyPress(ConsoleKey.Escape, KeyAction.DefaultPressDuration);
+        input.Proc.KeyPress(ConsoleKey.Escape, InputDuration.DefaultPress);
         input.ClearTarget();
         wait.Update();
 

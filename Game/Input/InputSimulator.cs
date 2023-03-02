@@ -9,8 +9,8 @@ namespace Game;
 
 public sealed class InputSimulator : IInput
 {
-    private readonly int MIN_DELAY;
-    private readonly int MAX_DELAY;
+    private readonly int minDelay;
+    private readonly int maxDelay;
 
     private readonly GregsStack.InputSimulatorStandard.InputSimulator simulator;
     private readonly WowProcess wowProcess;
@@ -22,15 +22,15 @@ public sealed class InputSimulator : IInput
         this.wowProcess = wowProcess;
         _ct = cts.Token;
 
-        MIN_DELAY = minDelay;
-        MAX_DELAY = maxDelay;
+        this.minDelay = minDelay;
+        this.maxDelay = maxDelay;
 
         simulator = new GregsStack.InputSimulatorStandard.InputSimulator();
     }
 
     private int Delay(int milliseconds)
     {
-        int delay = milliseconds + Random.Shared.Next(1, MAX_DELAY);
+        int delay = milliseconds + Random.Shared.Next(1, maxDelay);
         _ct.WaitHandle.WaitOne(delay);
         return delay;
     }
@@ -70,7 +70,7 @@ public sealed class InputSimulator : IInput
     {
         SetCursorPosition(p);
         simulator.Mouse.LeftButtonDown();
-        Delay(MIN_DELAY);
+        Delay(minDelay);
         simulator.Mouse.LeftButtonUp();
     }
 
@@ -78,7 +78,7 @@ public sealed class InputSimulator : IInput
     {
         SetCursorPosition(p);
         simulator.Mouse.RightButtonDown();
-        Delay(MIN_DELAY);
+        Delay(minDelay);
         simulator.Mouse.RightButtonUp();
     }
 

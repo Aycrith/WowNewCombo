@@ -8,8 +8,8 @@ namespace Game;
 
 public sealed class InputWindowsNative : IInput
 {
-    private readonly int MIN_DELAY;
-    private readonly int MAX_DELAY;
+    private readonly int minDelay;
+    private readonly int maxDelay;
 
     private readonly WowProcess wowProcess;
 
@@ -20,13 +20,13 @@ public sealed class InputWindowsNative : IInput
         this.wowProcess = wowProcess;
         _ct = cts.Token;
 
-        MIN_DELAY = minDelay;
-        MAX_DELAY = maxDelay;
+        this.minDelay = minDelay;
+        this.maxDelay = maxDelay;
     }
 
     private int Delay(int milliseconds)
     {
-        int delay = milliseconds + Random.Shared.Next(1, MAX_DELAY);
+        int delay = milliseconds + Random.Shared.Next(1, maxDelay);
         _ct.WaitHandle.WaitOne(delay);
         return delay;
     }
@@ -66,7 +66,7 @@ public sealed class InputWindowsNative : IInput
 
         PostMessage(wowProcess.Process.MainWindowHandle, WM_LBUTTONDOWN, 0, lparam);
 
-        Delay(MIN_DELAY);
+        Delay(minDelay);
 
         GetCursorPos(out p);
         ScreenToClient(wowProcess.Process.MainWindowHandle, ref p);
@@ -84,7 +84,7 @@ public sealed class InputWindowsNative : IInput
 
         PostMessage(wowProcess.Process.MainWindowHandle, WM_RBUTTONDOWN, 0, lparam);
 
-        Delay(MIN_DELAY);
+        Delay(minDelay);
 
         GetCursorPos(out p);
         ScreenToClient(wowProcess.Process.MainWindowHandle, ref p);

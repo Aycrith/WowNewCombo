@@ -16,9 +16,6 @@ public sealed partial class WowProcessInput : IMouseInput
     private const bool LogInput = false;
     private const bool LogMove = false;
 
-    private const int MIN_DELAY = 25;
-    private const int MAX_DELAY = 55;
-
     private readonly ILogger logger;
 
     private readonly WowProcess wowProcess;
@@ -39,8 +36,8 @@ public sealed partial class WowProcessInput : IMouseInput
         this.logger = logger;
         this.wowProcess = wowProcess;
 
-        nativeInput = new InputWindowsNative(wowProcess, cts, MIN_DELAY, MAX_DELAY);
-        simulatorInput = new InputSimulator(wowProcess, cts, MIN_DELAY, MAX_DELAY);
+        nativeInput = new InputWindowsNative(wowProcess, cts, InputDuration.FastPress, InputDuration.DefaultPress);
+        simulatorInput = new InputSimulator(wowProcess, cts, InputDuration.FastPress, InputDuration.DefaultPress);
     }
 
     public void Reset()
