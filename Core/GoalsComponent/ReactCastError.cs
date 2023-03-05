@@ -108,14 +108,14 @@ public sealed class ReactCastError
                 else
                 {
                     double beforeDirection = playerReader.Direction;
-                    input.Interact();
-                    input.StopAttack();
+                    input.PressInteract();
+                    input.PressStopAttack();
                     stopMoving.Stop();
                     wait.Update();
 
                     if (beforeDirection != playerReader.Direction)
                     {
-                        input.Interact();
+                        input.PressInteract();
 
                         (bool t, double e) = wait.Until(CastingHandler.GCD, () => minRange != playerReader.MinRange());
 
@@ -124,11 +124,11 @@ public sealed class ReactCastError
                     else if (!playerReader.WithInPullRange())
                     {
                         logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Start moving forward as outside of pull range.");
-                        input.Proc.SetKeyState(input.Proc.ForwardKey, true);
+                        input.StartForward(true);
                     }
                     else
                     {
-                        input.Interact();
+                        input.PressInteract();
                     }
                 }
                 break;
@@ -136,7 +136,7 @@ public sealed class ReactCastError
                 if (playerReader.IsInMeleeRange())
                 {
                     logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Interact!");
-                    input.Interact();
+                    input.PressInteract();
                     stopMoving.Stop();
                 }
                 else
@@ -153,7 +153,7 @@ public sealed class ReactCastError
                         case UnitClass.Paladin:
                         case UnitClass.Rogue:
                             logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Interact!");
-                            input.Interact();
+                            input.PressInteract();
                             stopMoving.Stop();
                             break;
                         case UnitClass.Hunter:
@@ -186,7 +186,7 @@ public sealed class ReactCastError
                 if (playerReader.Bits.SpellOn_AutoAttack())
                 {
                     logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Interact!");
-                    input.Interact();
+                    input.PressInteract();
                     stopMoving.Stop();
                     wait.Update();
                 }
@@ -199,8 +199,8 @@ public sealed class ReactCastError
                 if (!playerReader.Bits.PlayerInCombat())
                 {
                     logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Stop attack and clear target!");
-                    input.StopAttack();
-                    input.ClearTarget();
+                    input.PressStopAttack();
+                    input.PressClearTarget();
                     wait.Update();
                 }
                 else

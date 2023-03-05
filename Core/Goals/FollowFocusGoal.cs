@@ -29,12 +29,12 @@ public sealed class FollowFocusGoal : GoapGoal
     {
         if (playerReader.TargetGuid != playerReader.FocusGuid)
         {
-            input.TargetFocus();
+            input.PressTargetFocus();
             wait.Update();
         }
 
         if (playerReader.SpellInRange.Focus_Inspect)
-            input.FollowTarget();
+            input.PressFollowTarget();
 
         wait.Update();
     }

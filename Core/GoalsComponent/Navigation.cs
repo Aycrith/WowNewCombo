@@ -140,7 +140,7 @@ public sealed partial class Navigation : IDisposable
         }
 
         LastActive = DateTime.UtcNow;
-        input.Proc.SetKeyState(input.Proc.ForwardKey, true, true);
+        input.StartForward(true);
 
         // main loop
         Vector3 playerW = playerReader.WorldPos;
@@ -259,8 +259,7 @@ public sealed partial class Navigation : IDisposable
 
     public void StopMovement()
     {
-        if (input.Proc.IsKeyDown(input.Proc.ForwardKey))
-            input.Proc.SetKeyState(input.Proc.ForwardKey, false, true);
+        input.StopForward(true);
     }
 
     public bool HasWaypoint()

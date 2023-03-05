@@ -40,7 +40,7 @@ public sealed class StopMoving
                 !input.IsKeyDown(input.ForwardKey) &&
                 mapPos.MapDistanceXYTo(playerReader.MapPos) >= MinDist)
             {
-                input.KeyPressSleep(input.ForwardKey, Random.Shared.Next(2, 5), ct);
+                input.PressFixed(input.ForwardKey, Random.Shared.Next(2, 5), ct);
                 pressedAny = true;
             }
 

@@ -137,7 +137,7 @@ public sealed class NpcNameTargeting : IDisposable
             p.Offset(npc.ClickPoint);
             p.Offset(npcNameFinder.ToScreenCoordinates());
 
-            input.SetCursorPosition(p);
+            input.SetCursorPos(p);
             classifier.Classify(out CursorType cls);
 
             if (cls is CursorType.Kill)
@@ -186,7 +186,7 @@ public sealed class NpcNameTargeting : IDisposable
                 Point p = attemptPoints[pi];
                 p.Offset(npc.ClickPoint);
                 p.Offset(npcNameFinder.ToScreenCoordinates());
-                input.SetCursorPosition(p);
+                input.SetCursorPos(p);
 
                 ct.WaitHandle.WaitOne(INTERACT_DELAY);
 

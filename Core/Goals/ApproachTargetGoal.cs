@@ -35,7 +35,9 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
 
     private double ApproachDurationMs => (DateTime.UtcNow - approachStart).TotalMilliseconds;
 
-    public ApproachTargetGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, StopMoving stopMoving, CombatUtil combatUtil, IBlacklist blacklist)
+    public ApproachTargetGoal(ILogger logger, ConfigurableInput input, Wait wait,
+        AddonReader addonReader, StopMoving stopMoving, CombatUtil combatUtil,
+        IBlacklist blacklist)
         : base(nameof(ApproachTargetGoal))
     {
         this.logger = logger;
@@ -78,8 +80,7 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
 
     public override void OnExit()
     {
-        if (input.Proc.IsKeyDown(input.Proc.ForwardKey))
-            input.Proc.SetKeyState(input.Proc.ForwardKey, false);
+        input.StopForward(false);
     }
 
     public override void Update()
@@ -90,16 +91,16 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
         {
             stopMoving.Stop();
 
-            input.ClearTarget();
+            input.PressClearTarget();
             wait.Update();
 
             combatUtil.AquiredTarget(5000);
             return;
         }
 
-        if (input.ClassConfig.Approach.GetRemainingCooldown() == 0)
+        if (input.Approach.GetRemainingCooldown() == 0)
         {
-            input.Approach();
+            input.PressApproach();
         }
 
         if (!playerReader.Bits.PlayerInCombat())
@@ -126,16 +127,16 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
                     if (debug)
                         Log($"Too far ({playerReader.MinRange()} yard), start moving forward!");
 
-                    input.Proc.SetKeyState(input.Proc.ForwardKey, true);
+                    input.StartForward(false);
                     return;
                 }
 
                 if (debug)
                     Log($"Seems stuck! Clear Target.");
 
-                input.ClearTarget();
+                input.PressClearTarget();
                 wait.Update();
-                input.Proc.KeyPress(Random.Shared.Next(2) == 0 ? input.Proc.TurnLeftKey : input.Proc.TurnRightKey, 250 + Random.Shared.Next(250));
+                input.TurnRandomDir(250 + Random.Shared.Next(250));
 
                 return;
             }
@@ -146,9 +147,9 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
             if (debug)
                 Log("Too long time. Clear Target. Turn away.");
 
-            input.ClearTarget();
+            input.PressClearTarget();
             wait.Update();
-            input.Proc.KeyPress(Random.Shared.Next(2) == 0 ? input.Proc.TurnLeftKey : input.Proc.TurnRightKey, 250 + Random.Shared.Next(250));
+            input.TurnRandomDir(250 + Random.Shared.Next(250));
 
             return;
         }
@@ -156,9 +157,9 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
         if (playerReader.TargetGuid == initialTargetGuid)
         {
             int initialTargetMinRange = playerReader.MinRange();
-            if (input.ClassConfig.TargetNearestTarget.GetRemainingCooldown() == 0)
+            if (input.TargetNearestTarget.GetRemainingCooldown() == 0)
             {
-                input.NearestTarget();
+                input.PressNearestTarget();
                 wait.Update();
             }
 
@@ -179,7 +180,7 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
                         if (debug)
                             Log("Stick to initial target!");
 
-                        input.LastTarget();
+                        input.PressLastTarget();
                         wait.Update();
                     }
                 }
@@ -196,7 +197,7 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
             if (debug)
                 Log($"Going away from the target! {initialMinRange} < {playerReader.MinRange()}");
 
-            input.ClearTarget();
+            input.PressClearTarget();
             wait.Update();
         }
     }
@@ -209,9 +210,9 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
     private void RandomJump()
     {
         if (ApproachDurationMs > 2000 &&
-            input.ClassConfig.Jump.SinceLastClickMs > Random.Shared.Next(5000, 25_000))
+            input.Jump.SinceLastClickMs > Random.Shared.Next(5000, 25_000))
         {
-            input.Jump();
+            input.PressJump();
         }
     }
 

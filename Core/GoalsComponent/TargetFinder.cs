@@ -49,19 +49,19 @@ public sealed class TargetFinder
         if (!ct.IsCancellationRequested &&
             classConfig.TargetNearestTarget.GetRemainingCooldown() == 0)
         {
-            input.NearestTarget();
+            input.PressNearestTarget();
             wait.Update();
         }
 
-        if (!ct.IsCancellationRequested && !classConfig.KeyboardOnly && !playerReader.Bits.HasTarget())
+        if (!ct.IsCancellationRequested && !input.KeyboardOnly && !playerReader.Bits.HasTarget())
         {
             npcNameTargeting.ChangeNpcType(target);
             npcNameTargeting.WaitForUpdate();
 
             if (!ct.IsCancellationRequested &&
                 npcNameTargeting.NpcCount > 0 &&
-                !input.Proc.IsKeyDown(input.Proc.TurnLeftKey) &&
-                !input.Proc.IsKeyDown(input.Proc.TurnRightKey))
+                !input.IsKeyDown(input.TurnLeftKey) &&
+                !input.IsKeyDown(input.TurnRightKey))
             {
                 npcNameTargeting.AquireNonBlacklisted(ct);
             }

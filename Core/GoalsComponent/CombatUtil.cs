@@ -59,17 +59,17 @@ public sealed class CombatUtil
         {
             if (this.playerReader.PetHasTarget())
             {
-                input.TargetPet();
+                input.PressTargetPet();
                 Log($"Pets target {playerReader.TargetTarget}");
                 if (playerReader.TargetTarget == UnitsTarget.PetHasATarget)
                 {
                     Log($"{nameof(AquiredTarget)}: Found target by pet");
-                    input.TargetOfTarget();
+                    input.PressTargetOfTarget();
                     return true;
                 }
             }
 
-            input.NearestTarget();
+            input.PressNearestTarget();
             wait.Update();
 
             if (playerReader.Bits.HasTarget() &&
@@ -81,7 +81,7 @@ public sealed class CombatUtil
                 return true;
             }
 
-            input.ClearTarget();
+            input.PressClearTarget();
             wait.Update();
 
             if (!wait.Till(maxTimeMs, PlayerOrPetHasTarget))
@@ -91,7 +91,7 @@ public sealed class CombatUtil
             }
 
             Log($"{nameof(AquiredTarget)}: No target found after {maxTimeMs}ms");
-            input.ClearTarget();
+            input.PressClearTarget();
             wait.Update();
         }
         return false;

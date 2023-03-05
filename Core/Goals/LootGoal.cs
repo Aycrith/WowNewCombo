@@ -81,7 +81,7 @@ public sealed class LootGoal : GoapGoal, IGoapEventListener
         }
 
         bool success = false;
-        if (classConfig.KeyboardOnly)
+        if (input.KeyboardOnly)
         {
             success = LootKeyboard();
         }
@@ -100,7 +100,7 @@ public sealed class LootGoal : GoapGoal, IGoapEventListener
 
         if (success)
         {
-            (bool t, double e) = wait.Until(MAX_TIME_TO_DETECT_LOOT, LootWindowClosedOrBagOrMoneyChanged, input.ApproachOnCooldown);
+            (bool t, double e) = wait.Until(MAX_TIME_TO_DETECT_LOOT, LootWindowClosedOrBagOrMoneyChanged, input.PressApproachOnCooldown);
             success = !t;
             if (success && !bagReader.BagsFull())
             {
@@ -134,7 +134,7 @@ public sealed class LootGoal : GoapGoal, IGoapEventListener
 
         if (!gatherCorpse && playerReader.Bits.HasTarget())
         {
-            input.ClearTarget();
+            input.PressClearTarget();
             wait.Update();
 
             if (playerReader.Bits.HasTarget())
@@ -177,7 +177,7 @@ public sealed class LootGoal : GoapGoal, IGoapEventListener
 
         if (!MinRangeZero())
         {
-            (bool timeout, elapsedMs) = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, input.ApproachOnCooldown);
+            (bool timeout, elapsedMs) = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, input.PressApproachOnCooldown);
             Log($"Reached clicked corpse ? {!timeout} {elapsedMs}ms");
         }
 
@@ -267,7 +267,7 @@ public sealed class LootGoal : GoapGoal, IGoapEventListener
     {
         if (!playerReader.Bits.HasTarget())
         {
-            input.FastLastTarget();
+            input.PressFastLastTarget();
             wait.Update();
         }
 
@@ -278,18 +278,18 @@ public sealed class LootGoal : GoapGoal, IGoapEventListener
                 CheckForGather();
 
                 Log("Target Last Target Found!");
-                input.FastInteract();
+                input.PressFastInteract();
 
                 if (!MinRangeZero())
                 {
-                    (bool timeout, double elapsedMs) = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, input.ApproachOnCooldown);
+                    (bool timeout, double elapsedMs) = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, input.PressApproachOnCooldown);
                     Log($"Reached Last Target ? {!timeout} {elapsedMs}ms");
                 }
             }
             else
             {
                 LogWarning("Don't attack alive target!");
-                input.ClearTarget();
+                input.PressClearTarget();
                 wait.Update();
 
                 return false;

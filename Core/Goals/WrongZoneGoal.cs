@@ -50,7 +50,7 @@ public sealed class WrongZoneGoal : GoapGoal
     {
         Vector3 exitMap = classConfiguration.WrongZone.ExitZoneLocation;
 
-        input.Proc.SetKeyState(input.Proc.ForwardKey, true);
+        input.StartForward(true);
 
         if ((DateTime.UtcNow - LastActive).TotalMilliseconds > 10000)
         {
@@ -68,8 +68,7 @@ public sealed class WrongZoneGoal : GoapGoal
         }
         else if (!stuckDetector.IsGettingCloser())
         {
-            // stuck so jump
-            input.Proc.SetKeyState(input.Proc.ForwardKey, true);
+            input.StartForward(true);
 
             if (HasBeenActiveRecently())
             {
@@ -80,7 +79,7 @@ public sealed class WrongZoneGoal : GoapGoal
                 logger.LogInformation("Resuming movement");
             }
         }
-        else // distance closer
+        else
         {
             float diff1 = Abs(RADIAN + heading - playerReader.Direction) % RADIAN;
             float diff2 = Abs(heading - playerReader.Direction - RADIAN) % RADIAN;

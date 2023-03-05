@@ -10,7 +10,8 @@ public sealed class TargetPetTargetGoal : GoapGoal
     private readonly PlayerReader playerReader;
     private readonly Wait wait;
 
-    public TargetPetTargetGoal(ConfigurableInput input, PlayerReader playerReader, Wait wait)
+    public TargetPetTargetGoal(ConfigurableInput input,
+        PlayerReader playerReader, Wait wait)
         : base(nameof(TargetPetTargetGoal))
     {
         this.input = input;
@@ -19,7 +20,7 @@ public sealed class TargetPetTargetGoal : GoapGoal
 
         AddPrecondition(GoapKey.targetisalive, false);
 
-        if (input.ClassConfig.KeyboardOnly)
+        if (input.KeyboardOnly)
         {
             AddPrecondition(GoapKey.consumablecorpsenearby, false);
         }
@@ -35,13 +36,13 @@ public sealed class TargetPetTargetGoal : GoapGoal
 
     public override void Update()
     {
-        input.TargetPet();
-        input.TargetOfTarget();
+        input.PressTargetPet();
+        input.PressTargetOfTarget();
         wait.Update();
 
         if (playerReader.Bits.HasTarget() && (playerReader.Bits.TargetIsDead() || playerReader.TargetGuid == playerReader.PetGuid))
         {
-            input.ClearTarget();
+            input.PressClearTarget();
             wait.Update();
         }
     }

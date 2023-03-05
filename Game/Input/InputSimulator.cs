@@ -9,7 +9,6 @@ namespace Game;
 
 public sealed class InputSimulator : IInput
 {
-    private readonly int minDelay;
     private readonly int maxDelay;
 
     private readonly GregsStack.InputSimulatorStandard.InputSimulator simulator;
@@ -17,22 +16,19 @@ public sealed class InputSimulator : IInput
 
     private readonly CancellationToken _ct;
 
-    public InputSimulator(WowProcess wowProcess, CancellationTokenSource cts, int minDelay, int maxDelay)
+    public InputSimulator(WowProcess wowProcess, CancellationTokenSource cts, int maxDelay)
     {
         this.wowProcess = wowProcess;
         _ct = cts.Token;
 
-        this.minDelay = minDelay;
         this.maxDelay = maxDelay;
 
         simulator = new GregsStack.InputSimulatorStandard.InputSimulator();
     }
 
-    private int Delay(int milliseconds)
+    private int DelayTime(int milliseconds)
     {
-        int delay = milliseconds + Random.Shared.Next(1, maxDelay);
-        _ct.WaitHandle.WaitOne(delay);
-        return delay;
+        return milliseconds + Random.Shared.Next(maxDelay);
     }
 
     public void KeyDown(int key)
@@ -51,38 +47,52 @@ public sealed class InputSimulator : IInput
         simulator.Keyboard.KeyUp((VirtualKeyCode)key);
     }
 
-    public int KeyPress(int key, int milliseconds)
+    public int PressRandom(int key, int milliseconds)
     {
         simulator.Keyboard.KeyDown((VirtualKeyCode)key);
-        int delay = Delay(milliseconds);
+        int delay = DelayTime(milliseconds);
         simulator.Keyboard.KeyUp((VirtualKeyCode)key);
         return delay;
     }
 
-    public void KeyPressSleep(int key, int milliseconds, CancellationToken ct)
+    public int PressRandom(int key, int milliseconds, CancellationToken ct)
+    {
+        simulator.Keyboard.KeyDown((VirtualKeyCode)key);
+
+        int delay = milliseconds + Random.Shared.Next(1, maxDelay);
+        ct.WaitHandle.WaitOne(delay);
+
+        simulator.Keyboard.KeyUp((VirtualKeyCode)key);
+
+        return delay;
+    }
+
+    public void PressFixed(int key, int milliseconds, CancellationToken ct)
     {
         simulator.Keyboard.KeyDown((VirtualKeyCode)key);
         ct.WaitHandle.WaitOne(milliseconds);
         simulator.Keyboard.KeyUp((VirtualKeyCode)key);
     }
 
-    public void LeftClickMouse(Point p)
+    public void LeftClick(Point p)
     {
-        SetCursorPosition(p);
+        SetCursorPos(p);
+
         simulator.Mouse.LeftButtonDown();
-        Delay(minDelay);
+        _ct.WaitHandle.WaitOne(DelayTime(maxDelay));
         simulator.Mouse.LeftButtonUp();
     }
 
-    public void RightClickMouse(Point p)
+    public void RightClick(Point p)
     {
-        SetCursorPosition(p);
+        SetCursorPos(p);
+
         simulator.Mouse.RightButtonDown();
-        Delay(minDelay);
+        _ct.WaitHandle.WaitOne(DelayTime(maxDelay));
         simulator.Mouse.RightButtonUp();
     }
 
-    public void SetCursorPosition(Point p)
+    public void SetCursorPos(Point p)
     {
         GetWindowRect(wowProcess.Process.MainWindowHandle, out Rectangle rect);
         p.X = p.X * 65535 / rect.Width;
@@ -96,7 +106,8 @@ public sealed class InputSimulator : IInput
             SetForegroundWindow(wowProcess.Process.MainWindowHandle);
 
         simulator.Keyboard.TextEntry(text);
-        Delay(25);
+
+        _ct.WaitHandle.WaitOne(DelayTime(maxDelay));
     }
 
     public void SetClipboard(string text)

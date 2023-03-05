@@ -7,17 +7,17 @@ namespace CoreTests;
 
 public class MockWoWProcess : IMouseInput
 {
-    public void RightClickMouse(Point p)
+    public void RightClick(Point p)
     {
         throw new System.NotImplementedException();
     }
 
-    public void LeftClickMouse(Point p)
+    public void LeftClick(Point p)
     {
         throw new System.NotImplementedException();
     }
 
-    public void SetCursorPosition(Point p)
+    public void SetCursorPos(Point p)
     {
         throw new System.NotImplementedException();
     }

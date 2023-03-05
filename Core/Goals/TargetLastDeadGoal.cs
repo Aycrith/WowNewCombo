@@ -22,6 +22,6 @@ public sealed class TargetLastDeadGoal : GoapGoal
 
     public override void Update()
     {
-        input.LastTarget();
+        input.PressLastTarget();
     }
 }

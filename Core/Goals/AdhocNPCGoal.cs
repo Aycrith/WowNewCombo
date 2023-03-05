@@ -119,7 +119,7 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
 
     public override void OnEnter()
     {
-        input.ClearTarget();
+        input.PressClearTarget();
         stopMoving.Stop();
 
         navigation.SetWayPoints(key.Path);
@@ -139,7 +139,7 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
     public override void Update()
     {
         if (playerReader.Bits.IsDrowning())
-            input.Jump();
+            input.PressJump();
 
         if (pathState != PathState.Finished)
             navigation.Update();
@@ -165,12 +165,12 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
         LogDebug("Reached defined path end");
         stopMoving.Stop();
 
-        input.ClearTarget();
+        input.PressClearTarget();
         wait.Update();
 
         bool found = false;
 
-        if (!classConfig.KeyboardOnly)
+        if (!input.KeyboardOnly)
         {
             npcNameTargeting.ChangeNpcType(NpcNames.Friendly | NpcNames.Neutral);
             npcNameTargeting.WaitForUpdate();
@@ -186,7 +186,7 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
         if (!found)
         {
             Log($"Use KeyAction.Key macro to aquire target");
-            input.Proc.KeyPress(key.ConsoleKey, InputDuration.DefaultPress);
+            input.PressRandom(key);
             wait.Update();
         }
 
@@ -194,18 +194,18 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
         if (!playerReader.Bits.HasTarget())
         {
             LogWarn("No target found! Turn left to find NPC");
-            input.Proc.KeyPressSleep(input.Proc.TurnLeftKey, 250, ct);
+            input.PressFixed(input.TurnLeftKey, 250, ct);
             return;
         }
 
         Log($"Found Target!");
-        input.Interact();
+        input.PressInteract();
 
         if (!OpenMerchantWindow())
             return;
 
-        input.Proc.KeyPress(ConsoleKey.Escape, InputDuration.DefaultPress);
-        input.ClearTarget();
+        input.PressRandom(ConsoleKey.Escape, InputDuration.DefaultPress);
+        input.PressClearTarget();
         wait.Update();
 
         Span<Vector3> reverseMapPath = stackalloc Vector3[key.Path.Length];

@@ -13,7 +13,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
 
     private readonly ILogger logger;
     private readonly ConfigurableInput input;
-
+    private readonly ClassConfiguration classConfig;
     private readonly Wait wait;
     private readonly AddonReader addonReader;
     private readonly PlayerReader playerReader;
@@ -27,7 +27,8 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
 
     public CombatGoal(ILogger logger, ConfigurableInput input, Wait wait,
         AddonReader addonReader, StopMoving stopMoving,
-        ClassConfiguration classConfiguration, CastingHandler castingHandler,
+        ClassConfiguration classConfiguration, ClassConfiguration classConfig,
+        CastingHandler castingHandler,
         IMountHandler mountHandler)
         : base(nameof(CombatGoal))
     {
@@ -40,6 +41,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
         this.stopMoving = stopMoving;
         this.castingHandler = castingHandler;
         this.mountHandler = mountHandler;
+        this.classConfig = classConfig;
 
         AddPrecondition(GoapKey.incombat, true);
         AddPrecondition(GoapKey.hastarget, true);
@@ -115,18 +117,18 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
 
         if (playerReader.Bits.IsDrowning())
         {
-            input.Jump();
+            input.PressJump();
             return;
         }
 
         if (playerReader.Bits.HasTarget())
         {
-            if (input.ClassConfig.AutoPetAttack &&
+            if (classConfig.AutoPetAttack &&
                 playerReader.Bits.HasPet() &&
                 (!playerReader.PetHasTarget() || playerReader.PetTargetGuid != playerReader.TargetGuid) &&
-                input.ClassConfig.PetAttack.GetRemainingCooldown() == 0)
+                input.PetAttack.GetRemainingCooldown() == 0)
             {
-                input.PetAttack();
+                input.PressPetAttack();
             }
 
             for (int i = 0; i < Keys.Length; i++)
@@ -153,7 +155,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
             stopMoving.Stop();
             logger.LogInformation("Lost target!");
 
-            if (addonReader.DamageTakenCount() > 0 && !input.ClassConfig.KeyboardOnly)
+            if (addonReader.DamageTakenCount() > 0 && !input.KeyboardOnly)
             {
                 FindNewTarget();
             }
@@ -166,8 +168,8 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
         {
             ResetCooldowns();
 
-            input.TargetPet();
-            input.TargetOfTarget();
+            input.PressTargetPet();
+            input.PressTargetOfTarget();
             wait.Update();
 
             if (!playerReader.Bits.TargetIsDead())
@@ -176,13 +178,13 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
                 return;
             }
 
-            input.ClearTarget();
+            input.PressClearTarget();
         }
 
         if (addonReader.DamageTakenCount() > 1)
         {
             logger.LogInformation("Checking target in front...");
-            input.NearestTarget();
+            input.PressNearestTarget();
             wait.Update();
 
             if (playerReader.Bits.HasTarget() && !playerReader.Bits.TargetIsDead())
@@ -196,7 +198,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
                     return;
                 }
 
-                input.ClearTarget();
+                input.PressClearTarget();
                 wait.Update();
             }
             else if (addonReader.DamageTakenCount() > 0)

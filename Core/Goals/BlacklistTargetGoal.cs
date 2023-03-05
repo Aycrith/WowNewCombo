@@ -27,8 +27,8 @@ public sealed class BlacklistTargetGoal : GoapGoal
             playerReader.IsCasting() ||
             playerReader.Bits.SpellOn_AutoAttack() || playerReader.Bits.SpellOn_AutoShot() ||
             playerReader.Bits.SpellOn_Shoot())
-            input.StopAttack();
+            input.PressStopAttack();
 
-        input.ClearTarget();
+        input.PressClearTarget();
     }
 }
