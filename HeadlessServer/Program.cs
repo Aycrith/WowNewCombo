@@ -131,7 +131,7 @@ internal sealed class Program
             GetPather(x.GetRequiredService<Microsoft.Extensions.Logging.ILogger>(),
                 x.GetRequiredService<DataConfig>(), x.GetRequiredService<WorldMapAreaDB>(), options));
 
-        services.AddSingleton<AutoResetEvent>(x => new(false));
+        services.AddSingleton<ManualResetEventSlim>(x => new(false));
         services.AddSingleton<DataFrame[]>(x => FrameConfig.LoadFrames());
         services.AddSingleton<Wait>();
 

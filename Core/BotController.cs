@@ -30,7 +30,7 @@ public sealed partial class BotController : IBotController, IDisposable
     private readonly DataConfig dataConfig;
 
     private readonly CancellationTokenSource cts;
-    private readonly AutoResetEvent npcNameFinderEvent;
+    private readonly ManualResetEventSlim npcNameFinderEvent;
     private readonly NpcNameFinder npcNameFinder;
     private readonly NpcNameTargeting npcNameTargeting;
     private readonly IScreenCapture screenCapture;

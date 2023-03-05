@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using Core.Goals;
 using SharedLib.NpcFinder;
 using Microsoft.Extensions.Logging;
@@ -51,7 +51,7 @@ public sealed class Test_NpcNameFinder : IDisposable
         wowScreen = new(logger, wowProcess);
         WowProcessInput wowProcessInput = new(logger, new(), wowProcess);
 
-        npcNameFinder = new(logger, wowScreen, new AutoResetEvent(false));
+        npcNameFinder = new(logger, wowScreen, new ManualResetEventSlim(false));
 
         MockMouseOverReader mouseOverReader = new();
         npcNameTargeting = new(logger, new(), wowScreen, npcNameFinder, wowProcessInput, mouseOverReader, new NoBlacklist(), null!);

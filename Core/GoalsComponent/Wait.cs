@@ -6,10 +6,10 @@ namespace Core;
 
 public sealed class Wait
 {
-    private readonly AutoResetEvent globalTime;
+    private readonly ManualResetEventSlim globalTime;
     private readonly CancellationToken ct;
 
-    public Wait(AutoResetEvent globalTime, CancellationTokenSource cts)
+    public Wait(ManualResetEventSlim globalTime, CancellationTokenSource cts)
     {
         this.globalTime = globalTime;
         this.ct = cts.Token;
@@ -17,7 +17,7 @@ public sealed class Wait
 
     public void Update()
     {
-        globalTime.WaitOne();
+        globalTime.Wait();
     }
 
     public void Fixed(int durationMs)
@@ -81,21 +81,6 @@ public sealed class Wait
         {
             repeat.Invoke();
             if (interrupt())
-                return new(false, elapsedMs);
-
-            Update();
-        }
-
-        return new(true, elapsedMs);
-    }
-
-    public WaitResult UntilNot(int timeoutMs, Func<bool> interrupt)
-    {
-        DateTime start = DateTime.UtcNow;
-        double elapsedMs;
-        while ((elapsedMs = (DateTime.UtcNow - start).TotalMilliseconds) < timeoutMs)
-        {
-            if (!interrupt())
                 return new(false, elapsedMs);
 
             Update();

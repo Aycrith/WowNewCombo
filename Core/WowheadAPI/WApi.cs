@@ -5,7 +5,7 @@ namespace Core;
 
 public sealed class WApi
 {
-    private readonly string BaseUrl;
+    private string BaseUrl { get; }
 
     public WApi(StartupClientVersion scv)
     {

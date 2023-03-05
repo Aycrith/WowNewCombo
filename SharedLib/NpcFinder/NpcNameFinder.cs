@@ -65,7 +65,7 @@ public sealed partial class NpcNameFinder : IDisposable
     private readonly ILogger logger;
     private readonly IBitmapProvider bitmapProvider;
     private readonly PixelFormat pixelFormat;
-    private readonly AutoResetEvent autoResetEvent;
+    private readonly ManualResetEventSlim resetEvent;
 
     private readonly int bytesPerPixel;
 
@@ -150,12 +150,12 @@ public sealed partial class NpcNameFinder : IDisposable
 
     #endregion
 
-    public NpcNameFinder(ILogger logger, IBitmapProvider bitmapProvider, AutoResetEvent autoResetEvent)
+    public NpcNameFinder(ILogger logger, IBitmapProvider bitmapProvider, ManualResetEventSlim resetEvent)
     {
         this.logger = logger;
         this.bitmapProvider = bitmapProvider;
         this.pixelFormat = bitmapProvider.Bitmap.PixelFormat;
-        this.autoResetEvent = autoResetEvent;
+        this.resetEvent = resetEvent;
         this.bytesPerPixel = Bitmap.GetPixelFormatSize(pixelFormat) / 8;
 
         UpdateSearchMode();
@@ -205,6 +205,8 @@ public sealed partial class NpcNameFinder : IDisposable
     {
         if (nameType == type)
             return false;
+
+        resetEvent.Reset();
 
         TargetCount = 0;
         AddCount = 0;
@@ -368,11 +370,13 @@ public sealed partial class NpcNameFinder : IDisposable
 
     public void WaitForUpdate()
     {
-        autoResetEvent.WaitOne();
+        resetEvent.Wait();
     }
 
     public void Update()
     {
+        resetEvent.Reset();
+
         ReadOnlySpan<LineSegment> lineSegments = PopulateLines(bitmapProvider.Bitmap, bitmapProvider.Rect);
         Npcs = DetermineNpcs(lineSegments);
 
@@ -393,7 +397,7 @@ public sealed partial class NpcNameFinder : IDisposable
             }
         }
 
-        autoResetEvent.Set();
+        resetEvent.Set();
     }
 
     private NpcPosition[] DetermineNpcs(ReadOnlySpan<LineSegment> data)

@@ -13,7 +13,7 @@ public sealed class AddonReader : IAddonReader, IDisposable
 {
     private readonly ILogger logger;
     private readonly IAddonDataProvider reader;
-    private readonly AutoResetEvent autoResetEvent;
+    private readonly ManualResetEventSlim resetEvent;
 
     public PlayerReader PlayerReader { get; }
 
@@ -68,12 +68,12 @@ public sealed class AddonReader : IAddonReader, IDisposable
     private DateTime lastUpdate;
 
     public AddonReader(ILogger logger, IAddonDataProvider reader,
-        AutoResetEvent autoResetEvent, AreaDB areaDB, WorldMapAreaDB worldMapAreaDB,
+        ManualResetEventSlim resetEvent, AreaDB areaDB, WorldMapAreaDB worldMapAreaDB,
         ItemDB itemDB, CreatureDB creatureDB, SpellDB spellDB, TalentDB talentDB)
     {
         this.logger = logger;
         this.reader = reader;
-        this.autoResetEvent = autoResetEvent;
+        this.resetEvent = resetEvent;
 
         this.AreaDb = areaDB;
         this.WorldMapAreaDb = worldMapAreaDB;
@@ -133,6 +133,8 @@ public sealed class AddonReader : IAddonReader, IDisposable
             updateIndex = 0;
         }
 
+        resetEvent.Reset();
+
         updateSum += (DateTime.UtcNow - lastUpdate).TotalMilliseconds;
         updateIndex++;
         AvgUpdateLatency = updateSum / updateIndex;
@@ -183,7 +185,7 @@ public sealed class AddonReader : IAddonReader, IDisposable
 
         AreaDb.Update(WorldMapAreaDb.GetAreaId(PlayerReader.UIMapId.Value));
 
-        autoResetEvent.Set();
+        resetEvent.Set();
     }
 
     public void FetchData()
