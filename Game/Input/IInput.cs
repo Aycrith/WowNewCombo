@@ -9,15 +9,17 @@ public interface IInput
 
     void KeyUp(int key);
 
-    int KeyPress(int key, int milliseconds);
+    int PressRandom(int key, int milliseconds);
 
-    void KeyPressSleep(int key, int milliseconds, CancellationToken ct);
+    int PressRandom(int key, int milliseconds, CancellationToken ct);
 
-    void SetCursorPosition(Point p);
+    void PressFixed(int key, int milliseconds, CancellationToken ct);
 
-    void RightClickMouse(Point p);
+    void SetCursorPos(Point p);
 
-    void LeftClickMouse(Point p);
+    void RightClick(Point p);
+
+    void LeftClick(Point p);
 
     void SendText(string text);
 

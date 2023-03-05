@@ -221,12 +221,9 @@ public sealed partial class BotController : IBotController, IDisposable
     {
         AddonReader.SessionReset();
 
-        ConfigurableInput configInput = new(wowProcessInput, config);
-        GoapAgentState goapAgentState = new();
-
         IServiceScope profileLoadedScope =
-            GoalFactory.CreateGoals(logger, AddonReader, configInput, dataConfig, npcNameFinder,
-                npcNameTargeting, pather, execGameCommand, config, goapAgentState, cts, wait);
+            GoalFactory.CreateGoals(logger, AddonReader, dataConfig, npcNameFinder,
+                npcNameTargeting, pather, execGameCommand, wowProcessInput, config, cts, wait);
 
         npcNameTargeting.UpdateBlacklist(
             profileLoadedScope.ServiceProvider.GetService<MouseOverBlacklist>()

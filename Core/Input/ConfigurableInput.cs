@@ -1,16 +1,19 @@
-﻿using Game;
+﻿using System.Threading;
+using System;
+
+using Game;
 
 namespace Core;
 
-public sealed class ConfigurableInput
+public sealed partial class ConfigurableInput
 {
-    public readonly WowProcessInput Proc;
-    public readonly ClassConfiguration ClassConfig;
+    private readonly WowProcessInput proc;
+    private readonly ClassConfiguration classConfig;
 
     public ConfigurableInput(WowProcessInput wowProcessInput, ClassConfiguration classConfig)
     {
-        this.Proc = wowProcessInput;
-        ClassConfig = classConfig;
+        this.proc = wowProcessInput;
+        this.classConfig = classConfig;
 
         wowProcessInput.ForwardKey = classConfig.ForwardKey;
         wowProcessInput.BackwardKey = classConfig.BackwardKey;
@@ -21,115 +24,166 @@ public sealed class ConfigurableInput
         wowProcessInput.InteractMouseoverPress = classConfig.InteractMouseOver.PressDuration;
     }
 
-    public void Stop()
+    public void Reset()
     {
-        Proc.KeyPress(Proc.ForwardKey, InputDuration.DefaultPress);
+        proc.Reset();
     }
 
-    private void KeyPress(KeyAction keyAction)
+    public void StartForward(bool forced)
     {
-        Proc.KeyPress(keyAction.ConsoleKey, keyAction.PressDuration);
+        proc.SetKeyState(ForwardKey, true, forced);
+    }
+
+    public void StopForward(bool forced)
+    {
+        if (proc.IsKeyDown(ForwardKey))
+            proc.SetKeyState(ForwardKey, false, forced);
+    }
+
+    public void StartBackward(bool forced)
+    {
+        proc.SetKeyState(BackwardKey, true, forced);
+    }
+
+    public void StopBackward(bool forced)
+    {
+        if (proc.IsKeyDown(BackwardKey))
+            proc.SetKeyState(BackwardKey, false, forced);
+    }
+
+    public void TurnRandomDir(int milliseconds)
+    {
+        proc.PressRandom(
+            Random.Shared.Next(2) == 0
+            ? proc.TurnLeftKey
+            : proc.TurnRightKey, milliseconds);
+    }
+
+    public void PressRandom(KeyAction keyAction)
+    {
+        proc.PressRandom(keyAction.ConsoleKey, keyAction.PressDuration);
         keyAction.SetClicked();
     }
 
-    public void Interact()
+    public void PressRandom(KeyAction keyAction, CancellationToken ct)
     {
-        KeyPress(ClassConfig.Interact);
+        proc.PressRandom(keyAction.ConsoleKey, keyAction.PressDuration, ct);
+        keyAction.SetClicked();
     }
 
-    public void FastInteract()
+    public void PressFixed(ConsoleKey key, int milliseconds, CancellationToken ct)
     {
-        Proc.KeyPress(ClassConfig.Interact.ConsoleKey, InputDuration.FastPress);
-        ClassConfig.Interact.SetClicked();
+        proc.PressFixed(key, milliseconds, ct);
     }
 
-    public void ApproachOnCooldown()
+    public void PressRandom(ConsoleKey key, int milliseconds)
     {
-        if (ClassConfig.Approach.GetRemainingCooldown() == 0)
+        proc.PressRandom(key, milliseconds);
+    }
+
+    public bool IsKeyDown(ConsoleKey key)
+    {
+        return proc.IsKeyDown(key);
+    }
+
+    public void PressInteract()
+    {
+        PressRandom(Interact);
+    }
+
+    public void PressFastInteract()
+    {
+        proc.PressRandom(Interact.ConsoleKey, InputDuration.FastPress);
+        Interact.SetClicked();
+    }
+
+    public void PressApproachOnCooldown()
+    {
+        if (Approach.GetRemainingCooldown() == 0)
         {
-            Proc.KeyPress(ClassConfig.Approach.ConsoleKey, InputDuration.FastPress);
-            ClassConfig.Approach.SetClicked();
+            proc.PressRandom(Approach.ConsoleKey, InputDuration.FastPress);
+            Approach.SetClicked();
         }
     }
 
-    public void Approach()
+    public void PressApproach()
     {
-        KeyPress(ClassConfig.Approach);
+        PressRandom(Approach);
     }
 
-    public void LastTarget()
+    public void PressLastTarget()
     {
-        KeyPress(ClassConfig.TargetLastTarget);
+        PressRandom(TargetLastTarget);
     }
 
-    public void FastLastTarget()
+    public void PressFastLastTarget()
     {
-        Proc.KeyPress(ClassConfig.TargetLastTarget.ConsoleKey, InputDuration.FastPress);
-        ClassConfig.TargetLastTarget.SetClicked();
+        proc.PressRandom(TargetLastTarget.ConsoleKey, InputDuration.FastPress);
+        TargetLastTarget.SetClicked();
     }
 
-    public void StandUp()
+    public void PressStandUp()
     {
-        KeyPress(ClassConfig.StandUp);
+        PressRandom(StandUp);
     }
 
-    public void ClearTarget()
+    public void PressClearTarget()
     {
-        KeyPress(ClassConfig.ClearTarget);
+        PressRandom(ClearTarget);
     }
 
-    public void StopAttack()
+    public void PressStopAttack()
     {
-        KeyPress(ClassConfig.StopAttack);
+        PressRandom(StopAttack);
     }
 
-    public void NearestTarget()
+    public void PressNearestTarget()
     {
-        KeyPress(ClassConfig.TargetNearestTarget);
+        PressRandom(TargetNearestTarget);
     }
 
-    public void TargetPet()
+    public void PressTargetPet()
     {
-        KeyPress(ClassConfig.TargetPet);
+        PressRandom(TargetPet);
     }
 
-    public void TargetOfTarget()
+    public void PressTargetOfTarget()
     {
-        KeyPress(ClassConfig.TargetTargetOfTarget);
+        PressRandom(TargetTargetOfTarget);
     }
 
-    public void Jump()
+    public void PressJump()
     {
-        KeyPress(ClassConfig.Jump);
+        PressRandom(Jump);
     }
 
-    public void PetAttack()
+    public void PressPetAttack()
     {
-        KeyPress(ClassConfig.PetAttack);
+        PressRandom(PetAttack);
     }
 
-    public void Hearthstone()
+    public void PressHearthstone()
     {
-        KeyPress(ClassConfig.Hearthstone);
+        PressRandom(Hearthstone);
     }
 
-    public void Mount()
+    public void PressMount()
     {
-        KeyPress(ClassConfig.Mount);
+        PressRandom(Mount);
     }
 
-    public void Dismount()
+    public void PressDismount()
     {
-        Proc.KeyPress(ClassConfig.Mount.ConsoleKey, ClassConfig.Mount.PressDuration);
+        proc.PressRandom(Mount.ConsoleKey, Mount.PressDuration);
     }
 
-    public void TargetFocus()
+    public void PressTargetFocus()
     {
-        KeyPress(ClassConfig.TargetFocus);
+        PressRandom(TargetFocus);
     }
 
-    public void FollowTarget()
+    public void PressFollowTarget()
     {
-        KeyPress(ClassConfig.FollowTarget);
+        PressRandom(FollowTarget);
     }
 }

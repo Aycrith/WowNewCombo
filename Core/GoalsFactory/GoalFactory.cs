@@ -17,25 +17,27 @@ namespace Core;
 public static class GoalFactory
 {
     public static IServiceScope CreateGoals(ILogger logger, AddonReader addonReader,
-        ConfigurableInput input, DataConfig dataConfig, NpcNameFinder npcNameFinder,
-        NpcNameTargeting npcNameTargeting, IPPather pather, ExecGameCommand execGameCommand,
-        ClassConfiguration classConfig, GoapAgentState goapAgentState, CancellationTokenSource cts, Wait wait)
+        DataConfig dataConfig, NpcNameFinder npcNameFinder,
+        NpcNameTargeting npcNameTargeting, IPPather pather,
+        ExecGameCommand execGameCommand, WowProcessInput wowProcessInput,
+        ClassConfiguration classConfig,
+        CancellationTokenSource cts, Wait wait)
     {
         ServiceCollection services = new();
 
         services.AddSingleton<ILogger>(logger);
+        services.AddSingleton<CancellationTokenSource>(cts);
+        services.AddSingleton<ClassConfiguration>(classConfig);
         services.AddSingleton<AddonReader>(addonReader);
         services.AddSingleton<PlayerReader>(addonReader.PlayerReader);
-        services.AddSingleton<ConfigurableInput>(input);
-        services.AddSingleton<WowProcessInput>(input.Proc);
+        services.AddSingleton<WowProcessInput>(wowProcessInput);
+        services.AddSingleton<ConfigurableInput>();
         services.AddSingleton<NpcNameFinder>(npcNameFinder);
         services.AddSingleton<NpcNameTargeting>(npcNameTargeting);
         services.AddSingleton<IPPather>(pather);
         services.AddSingleton<ExecGameCommand>(execGameCommand);
         services.AddSingleton<WorldMapAreaDB>(addonReader.WorldMapAreaDb);
-        services.AddSingleton<ClassConfiguration>(classConfig);
-        services.AddSingleton<GoapAgentState>(goapAgentState);
-        services.AddSingleton<CancellationTokenSource>(cts);
+        services.AddSingleton<GoapAgentState>();
         services.AddSingleton<Wait>(wait);
 
         // TODO: Should be scoped as it comes from ClassConfig

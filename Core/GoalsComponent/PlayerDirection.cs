@@ -53,7 +53,7 @@ public sealed partial class PlayerDirection : IDisposable
         if (debug)
             LogDebugSetDirection(logger, playerReader.Direction, targetDir, distance);
 
-        input.Proc.KeyPressSleep(GetDirectionKeyToPress(targetDir),
+        input.PressFixed(GetDirectionKeyToPress(targetDir),
             TurnDuration(targetDir), ct);
     }
 
@@ -75,8 +75,8 @@ public sealed partial class PlayerDirection : IDisposable
     private ConsoleKey GetDirectionKeyToPress(float desiredDirection)
     {
         return (RADIAN + desiredDirection - playerReader.Direction) % RADIAN < PI
-            ? input.Proc.TurnLeftKey
-            : input.Proc.TurnRightKey;
+            ? input.TurnLeftKey
+            : input.TurnRightKey;
     }
 
     #region Logging

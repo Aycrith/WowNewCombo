@@ -60,7 +60,7 @@ public sealed class MountHandler : IMountHandler
         stopMoving.Stop();
         wait.Update();
 
-        input.Mount();
+        input.PressMount();
 
         (bool t, double e) =
             wait.Until(CastingHandler.SPELL_QUEUE + playerReader.NetworkLatency.Value, CastDetected);
@@ -107,7 +107,7 @@ public sealed class MountHandler : IMountHandler
 
     public void Dismount()
     {
-        input.Dismount();
+        input.PressDismount();
     }
 
     public bool IsMounted()

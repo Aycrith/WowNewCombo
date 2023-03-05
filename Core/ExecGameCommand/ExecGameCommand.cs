@@ -24,21 +24,16 @@ public sealed class ExecGameCommand
         logger.LogInformation(content);
 
         wowProcessInput.SetClipboard(content);
-        Wait(100, 250);
+        ct.WaitHandle.WaitOne(Random.Shared.Next(100, 250));
 
         // Open chat inputbox
-        wowProcessInput.KeyPress(ConsoleKey.Enter, Random.Shared.Next(50, 100));
+        wowProcessInput.PressRandom(ConsoleKey.Enter, 100, ct);
 
         wowProcessInput.PasteFromClipboard();
-        Wait(100, 250);
+        ct.WaitHandle.WaitOne(Random.Shared.Next(100, 250));
 
         // Close chat inputbox
-        wowProcessInput.KeyPress(ConsoleKey.Enter, Random.Shared.Next(50, 100));
-        Wait(100, 250);
-    }
-
-    private void Wait(int min, int max)
-    {
-        ct.WaitHandle.WaitOne(Random.Shared.Next(min, max));
+        wowProcessInput.PressRandom(ConsoleKey.Enter, 100, ct);
+        ct.WaitHandle.WaitOne(Random.Shared.Next(100, 250));
     }
 }

@@ -51,7 +51,7 @@ public sealed partial class GoapAgent : IDisposable
                     goal.OnGoapEvent(new AbortEvent());
                 }
 
-                input.Proc.Reset();
+                input.Reset();
                 stopMoving.Stop();
 
                 if (classConfig.Mode is Mode.AttendedGrind or Mode.Grind)
@@ -109,7 +109,9 @@ public sealed partial class GoapAgent : IDisposable
         this.addonReader.CombatLog.KillCredit += OnKillCredit;
 
         sessionHandler = new GrindSessionHandler(logger, dataConfig, addonReader, sessionDAO, cts);
-        stopMoving = new StopMoving(input.Proc, playerReader, cts);
+
+        WowProcessInput baseInput = scope.ServiceProvider.GetRequiredService<WowProcessInput>();
+        stopMoving = new StopMoving(baseInput, playerReader, cts);
 
         this.AvailableGoals = scope.ServiceProvider.GetServices<GoapGoal>().OrderBy(a => a.Cost).ToArray();
         this.Plan = new();

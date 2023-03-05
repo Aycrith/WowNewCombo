@@ -8,27 +8,23 @@ namespace Game;
 
 public sealed class InputWindowsNative : IInput
 {
-    private readonly int minDelay;
     private readonly int maxDelay;
 
     private readonly WowProcess wowProcess;
 
     private readonly CancellationToken _ct;
 
-    public InputWindowsNative(WowProcess wowProcess, CancellationTokenSource cts, int minDelay, int maxDelay)
+    public InputWindowsNative(WowProcess wowProcess, CancellationTokenSource cts, int maxDelay)
     {
         this.wowProcess = wowProcess;
         _ct = cts.Token;
 
-        this.minDelay = minDelay;
         this.maxDelay = maxDelay;
     }
 
-    private int Delay(int milliseconds)
+    private int DelayTime(int milliseconds)
     {
-        int delay = milliseconds + Random.Shared.Next(1, maxDelay);
-        _ct.WaitHandle.WaitOne(delay);
-        return delay;
+        return milliseconds + Random.Shared.Next(maxDelay);
     }
 
     public void KeyDown(int key)
@@ -41,32 +37,40 @@ public sealed class InputWindowsNative : IInput
         PostMessage(wowProcess.Process.MainWindowHandle, WM_KEYUP, key, 0);
     }
 
-    public int KeyPress(int key, int milliseconds)
+    public int PressRandom(int key, int milliseconds)
+    {
+        return PressRandom(key, milliseconds, _ct);
+    }
+
+    public int PressRandom(int key, int milliseconds, CancellationToken ct)
     {
         PostMessage(wowProcess.Process.MainWindowHandle, WM_KEYDOWN, key, 0);
-        int delay = Delay(milliseconds);
+
+        int delay = DelayTime(milliseconds);
+        ct.WaitHandle.WaitOne(delay);
+
         PostMessage(wowProcess.Process.MainWindowHandle, WM_KEYUP, key, 0);
 
         return delay;
     }
 
-    public void KeyPressSleep(int key, int milliseconds, CancellationToken ct)
+    public void PressFixed(int key, int milliseconds, CancellationToken ct)
     {
         PostMessage(wowProcess.Process.MainWindowHandle, WM_KEYDOWN, key, 0);
         ct.WaitHandle.WaitOne(milliseconds);
         PostMessage(wowProcess.Process.MainWindowHandle, WM_KEYUP, key, 0);
     }
 
-    public void LeftClickMouse(Point p)
+    public void LeftClick(Point p)
     {
-        SetCursorPosition(p);
+        SetCursorPos(p);
 
         ScreenToClient(wowProcess.Process.MainWindowHandle, ref p);
         int lparam = MakeLParam(p.X, p.Y);
 
         PostMessage(wowProcess.Process.MainWindowHandle, WM_LBUTTONDOWN, 0, lparam);
 
-        Delay(minDelay);
+        _ct.WaitHandle.WaitOne(DelayTime(maxDelay));
 
         GetCursorPos(out p);
         ScreenToClient(wowProcess.Process.MainWindowHandle, ref p);
@@ -75,16 +79,16 @@ public sealed class InputWindowsNative : IInput
         PostMessage(wowProcess.Process.MainWindowHandle, WM_LBUTTONUP, 0, lparam);
     }
 
-    public void RightClickMouse(Point p)
+    public void RightClick(Point p)
     {
-        SetCursorPosition(p);
+        SetCursorPos(p);
 
         ScreenToClient(wowProcess.Process.MainWindowHandle, ref p);
         int lparam = MakeLParam(p.X, p.Y);
 
         PostMessage(wowProcess.Process.MainWindowHandle, WM_RBUTTONDOWN, 0, lparam);
 
-        Delay(minDelay);
+        _ct.WaitHandle.WaitOne(DelayTime(maxDelay));
 
         GetCursorPos(out p);
         ScreenToClient(wowProcess.Process.MainWindowHandle, ref p);
@@ -93,9 +97,9 @@ public sealed class InputWindowsNative : IInput
         PostMessage(wowProcess.Process.MainWindowHandle, WM_RBUTTONUP, 0, lparam);
     }
 
-    public void SetCursorPosition(Point p)
+    public void SetCursorPos(Point p)
     {
-        SetCursorPos(p.X, p.Y);
+        WinAPI.NativeMethods.SetCursorPos(p.X, p.Y);
     }
 
     public void SendText(string text)

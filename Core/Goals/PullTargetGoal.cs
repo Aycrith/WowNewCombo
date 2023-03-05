@@ -11,6 +11,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
 
     private readonly ILogger logger;
     private readonly ConfigurableInput input;
+    private readonly ClassConfiguration classConfig;
     private readonly Wait wait;
     private readonly AddonReader addonReader;
     private readonly PlayerReader playerReader;
@@ -35,7 +36,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         AddonReader addonReader, IBlacklist blacklist, StopMoving stopMoving,
         CastingHandler castingHandler, IMountHandler mountHandler,
         NpcNameTargeting npcNameTargeting, StuckDetector stuckDetector,
-        CombatUtil combatUtil)
+        CombatUtil combatUtil, ClassConfiguration classConfig)
         : base(nameof(PullTargetGoal))
     {
         this.logger = logger;
@@ -50,8 +51,9 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         this.stuckDetector = stuckDetector;
         this.combatUtil = combatUtil;
         this.targetBlacklist = blacklist;
+        this.classConfig = classConfig;
 
-        Keys = input.ClassConfig.Pull.Sequence;
+        Keys = classConfig.Pull.Sequence;
 
         approachAction = DefaultApproach;
 
@@ -59,7 +61,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         {
             KeyAction keyAction = Keys[i];
 
-            if (keyAction.Name.Equals(input.ClassConfig.Approach.Name, StringComparison.OrdinalIgnoreCase))
+            if (keyAction.Name.Equals(input.Approach.Name, StringComparison.OrdinalIgnoreCase))
             {
                 approachAction = ConditionalApproach;
                 approachKey = keyAction;
@@ -94,10 +96,10 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
             mountHandler.Dismount();
         }
 
-        if (Keys.Length != 0 && input.ClassConfig.StopAttack.GetRemainingCooldown() == 0)
+        if (Keys.Length != 0 && input.StopAttack.GetRemainingCooldown() == 0)
         {
             Log("Stop auto interact!");
-            input.StopAttack();
+            input.PressStopAttack();
             wait.Update();
         }
 
@@ -137,17 +139,17 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
 
         if (PullDurationMs > 15_000)
         {
-            input.ClearTarget();
+            input.PressClearTarget();
             Log("Pull taking too long. Clear target and face away!");
-            input.Proc.KeyPress(Random.Shared.Next(2) == 0 ? input.Proc.TurnLeftKey : input.Proc.TurnRightKey, 1000);
+            input.TurnRandomDir(1000);
             return;
         }
 
-        if (input.ClassConfig.AutoPetAttack &&
+        if (classConfig.AutoPetAttack &&
             playerReader.Bits.HasPet() && !playerReader.PetHasTarget())
         {
-            if (input.ClassConfig.PetAttack.GetRemainingCooldown() == 0)
-                input.PetAttack();
+            if (input.PetAttack.GetRemainingCooldown() == 0)
+                input.PressPetAttack();
         }
 
         bool castAny = false;
@@ -156,7 +158,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         {
             KeyAction keyAction = Keys[i];
 
-            if (keyAction.Name.Equals(input.ClassConfig.Approach.Name, StringComparison.OrdinalIgnoreCase))
+            if (keyAction.Name.Equals(input.Approach.Name, StringComparison.OrdinalIgnoreCase))
                 continue;
 
             if (!keyAction.CanRun())
@@ -181,8 +183,8 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
                  playerReader.Bits.SpellOn_Shoot()))
             {
                 Log("Preventing pulling possible tagged target!");
-                input.StopAttack();
-                input.ClearTarget();
+                input.PressStopAttack();
+                input.PressClearTarget();
                 wait.Update();
                 return;
             }
@@ -199,7 +201,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
                     {
                         stopMoving.Stop();
 
-                        input.ClearTarget();
+                        input.PressClearTarget();
                         wait.Update();
 
                         combatUtil.AquiredTarget(5000);
@@ -234,14 +236,14 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
 
     private void DefaultApproach()
     {
-        if (input.ClassConfig.Approach.GetRemainingCooldown() == 0)
+        if (input.Approach.GetRemainingCooldown() == 0)
         {
             if (!stuckDetector.IsMoving())
             {
                 stuckDetector.Update();
             }
 
-            input.Approach();
+            input.PressApproach();
         }
     }
 
@@ -251,7 +253,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         {
             if (approachKey.GetRemainingCooldown() == 0)
             {
-                input.Approach();
+                input.PressApproach();
             }
 
             if (!stuckDetector.IsMoving())

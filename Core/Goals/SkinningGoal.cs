@@ -18,6 +18,7 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
 
     private readonly ILogger logger;
     private readonly ConfigurableInput input;
+    private readonly ClassConfiguration classConfig;
     private readonly PlayerReader playerReader;
     private readonly Wait wait;
     private readonly StopMoving stopMoving;
@@ -35,12 +36,12 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
     public SkinningGoal(ILogger logger, ConfigurableInput input,
         AddonReader addonReader, Wait wait, StopMoving stopMoving,
         NpcNameTargeting npcNameTargeting, CombatUtil combatUtil,
-        GoapAgentState state)
+        GoapAgentState state, ClassConfiguration classConfig)
         : base(nameof(SkinningGoal))
     {
         this.logger = logger;
         this.input = input;
-
+        this.classConfig = classConfig;
         this.playerReader = addonReader.PlayerReader;
         this.wait = wait;
         this.stopMoving = stopMoving;
@@ -107,7 +108,7 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
 
             if (!foundTarget && state.LastCombatKillCount == 1)
             {
-                input.FastLastTarget();
+                input.PressFastLastTarget();
                 wait.Update();
 
                 if (playerReader.Bits.HasTarget())
@@ -120,14 +121,14 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
                     else
                     {
                         Log("Last Target is alive!");
-                        input.ClearTarget();
+                        input.PressClearTarget();
                         wait.Update();
                     }
                 }
             }
 
             bool interact = false;
-            if (!foundTarget && !input.ClassConfig.KeyboardOnly)
+            if (!foundTarget && !input.KeyboardOnly)
             {
                 stopMoving.Stop();
                 combatUtil.Update();
@@ -150,7 +151,7 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
 
             if (!MinRangeZero())
             {
-                (t, e) = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, input.ApproachOnCooldown);
+                (t, e) = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, input.PressApproachOnCooldown);
                 Log($"Reached Target ? {!t} {e}ms");
                 interact = true;
             }
@@ -264,7 +265,7 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
     {
         if (playerReader.Bits.HasTarget() && playerReader.Bits.TargetIsDead())
         {
-            input.ClearTarget();
+            input.PressClearTarget();
             wait.Update();
 
             if (playerReader.Bits.HasTarget())
@@ -278,7 +279,7 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
     private void WhileNotCastingInteract()
     {
         if (!playerReader.IsCasting())
-            input.ApproachOnCooldown();
+            input.PressApproachOnCooldown();
     }
 
     private static void Empty() { }
@@ -300,9 +301,9 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
 
     private bool HaveItemRequirement()
     {
-        if (input.ClassConfig.Herb) return true;
+        if (classConfig.Herb) return true;
 
-        if (input.ClassConfig.Skin)
+        if (classConfig.Skin)
         {
             return
             bagReader.HasItem(7005) ||
@@ -316,7 +317,7 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
             equipmentReader.HasItem(19901);
         }
 
-        if (input.ClassConfig.Mine || input.ClassConfig.Salvage)
+        if (classConfig.Mine || classConfig.Salvage)
             return
             bagReader.HasItem(40772) || // army knife
                                         // mining / todo salvage

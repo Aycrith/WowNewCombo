@@ -38,10 +38,10 @@ public class Test_Input : IDisposable
     {
         wowProcessInput.SetForegroundWindow();
 
-        wowProcessInput.SetCursorPosition(new Point(25, 25));
+        wowProcessInput.SetCursorPos(new Point(25, 25));
         cts.Token.WaitHandle.WaitOne(delay);
 
-        wowProcessInput.SetCursorPosition(new Point(50, 50));
+        wowProcessInput.SetCursorPos(new Point(50, 50));
         cts.Token.WaitHandle.WaitOne(delay);
 
         logger.LogInformation($"{nameof(Mouse_Movement)} Finished");
@@ -52,26 +52,26 @@ public class Test_Input : IDisposable
         wowProcessInput.SetForegroundWindow();
 
         Point p = new(120, 120);
-        wowProcessInput.LeftClickMouse(p);
+        wowProcessInput.LeftClick(p);
 
         cts.Token.WaitHandle.WaitOne(delay);
 
-        wowProcessInput.RightClickMouse(p);
+        wowProcessInput.RightClick(p);
 
         cts.Token.WaitHandle.WaitOne(delay);
 
-        wowProcessInput.RightClickMouse(p);
+        wowProcessInput.RightClick(p);
 
         wowScreen.GetRectangle(out Rectangle rect);
         p = new Point(rect.Width / 2, rect.Height / 2);
 
         cts.Token.WaitHandle.WaitOne(delay);
 
-        wowProcessInput.RightClickMouse(p);
+        wowProcessInput.RightClick(p);
 
         cts.Token.WaitHandle.WaitOne(delay);
 
-        wowProcessInput.RightClickMouse(p);
+        wowProcessInput.RightClick(p);
 
         logger.LogInformation($"{nameof(Mouse_Clicks)} Finished");
     }
@@ -81,13 +81,13 @@ public class Test_Input : IDisposable
         wowProcessInput.SetClipboard("/help");
 
         // Open chat inputbox
-        wowProcessInput.KeyPress(ConsoleKey.Enter, delay);
+        wowProcessInput.PressRandom(ConsoleKey.Enter, delay);
 
         wowProcessInput.PasteFromClipboard();
         cts.Token.WaitHandle.WaitOne(delay);
 
         // Close chat inputbox
-        wowProcessInput.KeyPress(ConsoleKey.Enter, delay);
+        wowProcessInput.PressRandom(ConsoleKey.Enter, delay);
 
         logger.LogInformation($"{nameof(Clipboard)} Finished");
     }

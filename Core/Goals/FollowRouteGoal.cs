@@ -186,7 +186,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         if (playerReader.Bits.HasTarget() && playerReader.Bits.TargetIsDead())
         {
             Log("Has target but its dead.");
-            input.ClearTarget();
+            input.PressClearTarget();
             wait.Update();
 
             if (playerReader.Bits.HasTarget())
@@ -198,7 +198,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
         if (playerReader.Bits.IsDrowning())
         {
-            input.Jump();
+            input.PressJump();
         }
 
         if (playerReader.Bits.PlayerInCombat() && classConfig.Mode != Mode.AttendedGather) { return; }
@@ -269,7 +269,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
             oldestKey?.SinceLastClickMs > CYCLE_PROFESSION_PERIOD)
         {
             logger.LogInformation($"[{oldestKey.Key}] {oldestKey.Name} pressed for {InputDuration.DefaultPress}ms");
-            input.Proc.KeyPress(oldestKey.ConsoleKey, InputDuration.DefaultPress);
+            input.PressRandom(oldestKey);
             oldestKey.SetClicked();
         }
     }
@@ -313,7 +313,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
     public void RefillWaypoints(bool onlyClosest)
     {
-        Log($"{nameof(RefillWaypoints)} - findClosest:{onlyClosest} - ThereAndBack:{input.ClassConfig.PathThereAndBack}");
+        Log($"{nameof(RefillWaypoints)} - findClosest:{onlyClosest} - ThereAndBack:{classConfig.PathThereAndBack}");
 
         Vector3 playerMap = playerReader.MapPos;
 
@@ -356,7 +356,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
         if (mapClosestPoint == pathMap[0] || mapClosestPoint == pathMap[^1])
         {
-            if (input.ClassConfig.PathThereAndBack)
+            if (classConfig.PathThereAndBack)
             {
                 navigation.SetWayPoints(pathMap);
             }
@@ -387,7 +387,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
             classConfig.Jump.SinceLastClickMs > Random.Shared.Next(10_000, 25_000))
         {
             Log("Random jump");
-            input.Jump();
+            input.PressJump();
         }
     }
 

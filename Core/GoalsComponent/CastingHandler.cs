@@ -38,7 +38,7 @@ public sealed partial class CastingHandler
     public static int _GCD() => GCD;
 
     public CastingHandler(ILogger logger, ConfigurableInput input,
-        ClassConfiguration classConfiguration,
+        ClassConfiguration classConfig,
         Wait wait, AddonReader addonReader, PlayerDirection direction,
         StopMoving stopMoving, ReactCastError react,
         CastingHandlerInterruptWatchdog interruptWatchdog)
@@ -50,13 +50,13 @@ public sealed partial class CastingHandler
         this.addonReader = addonReader;
         this.playerReader = addonReader.PlayerReader;
 
-        this.classConfig = input.ClassConfig;
+        this.classConfig = classConfig;
         this.direction = direction;
         this.stopMoving = stopMoving;
 
         this.react = react;
 
-        if (!classConfiguration.SpellQueue)
+        if (!classConfig.SpellQueue)
             playerReader.SpellQueueTimeMs = 0;
 
         this.interruptWatchdog = interruptWatchdog;
@@ -71,11 +71,11 @@ public sealed partial class CastingHandler
             if (Log && item.Log)
                 LogAfterCastWaitSwing(logger, item.Name);
 
-            input.StopAttack();
+            input.PressStopAttack();
         }
 
         DateTime start = DateTime.UtcNow;
-        input.Proc.KeyPressSleep(item.ConsoleKey, item.PressDuration, token);
+        input.PressRandom(item, token);
         return (int)(DateTime.UtcNow - start).TotalMilliseconds;
     }
 
@@ -122,7 +122,7 @@ public sealed partial class CastingHandler
             (t, e) = wait.Until(playerReader.MainHandSpeedMs() + playerReader.NetworkLatency.Value,
                 interrupt: () => !addonReader.CurrentAction.Is(item) ||
                     playerReader.MainHandSwing.ElapsedMs() < playerReader.SpellQueueTimeMs, // swing timer reset from any miss
-                repeat: input.ApproachOnCooldown);
+                repeat: input.PressApproachOnCooldown);
         }
         else if (item.Item)
         {
@@ -303,8 +303,8 @@ public sealed partial class CastingHandler
 
         if (playerReader.Bits.SpellOn_Shoot())
         {
-            input.StopAttack();
-            input.StopAttack();
+            input.PressStopAttack();
+            input.PressStopAttack();
 
             int waitTime = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs) + (2 * playerReader.NetworkLatency.Value);
             (t, e) = wait.Until(waitTime, cts.Token);
@@ -431,10 +431,10 @@ public sealed partial class CastingHandler
             if (Log && item.Log)
                 LogAfterCastStepBack(logger, item.Name, item.AfterCastStepBack);
 
-            input.Proc.SetKeyState(input.Proc.BackwardKey, true);
+            input.StartBackward(true);
 
-            if (Random.Shared.Next(3) == 0) // 33 %
-                input.Jump();
+            if (Random.Shared.Next(3) == 0)
+                input.PressJump();
 
             if (item.AfterCastStepBack == -1)
             {
@@ -453,7 +453,7 @@ public sealed partial class CastingHandler
             if (Log && item.Log)
                 LogAfterCastStepBackInterrupted(logger, item.Name, !t, e);
 
-            input.Proc.SetKeyState(input.Proc.BackwardKey, false);
+            input.StopBackward(false);
         }
 
         if (item.AfterCastWaitGCD)
@@ -555,9 +555,9 @@ public sealed partial class CastingHandler
         if (playerReader.Bits.PlayerInCombat() &&
             playerReader.Bits.HasPet() &&
             !playerReader.PetHasTarget() &&
-            input.ClassConfig.PetAttack.GetRemainingCooldown() == 0)
+            input.PetAttack.GetRemainingCooldown() == 0)
         {
-            input.PetAttack();
+            input.PressPetAttack();
         }
     }
 

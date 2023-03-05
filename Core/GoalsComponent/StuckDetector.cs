@@ -80,18 +80,17 @@ public sealed class StuckDetector
             stopMoving.Stop();
 
             // Turn
-            ConsoleKey turnKey = Random.Shared.Next(2) == 0 ? input.Proc.TurnLeftKey : input.Proc.TurnRightKey;
             int turnDuration = Random.Shared.Next(350);
             logger.LogInformation($"Unstuck by turning for {turnDuration}ms");
-            input.Proc.KeyPress(turnKey, turnDuration);
+            input.TurnRandomDir(turnDuration);
 
             // Move
-            ConsoleKey moveKey = Random.Shared.Next(100) >= 25 ? input.Proc.ForwardKey : input.Proc.BackwardKey;
+            ConsoleKey moveKey = Random.Shared.Next(100) >= 25 ? input.ForwardKey : input.BackwardKey;
             int moveDuration = Random.Shared.Next(750) + 1000;
             logger.LogInformation($"Unstuck by moving for {moveDuration}ms");
-            input.Proc.KeyPress(moveKey, moveDuration);
+            input.PressRandom(moveKey, moveDuration);
 
-            input.Jump();
+            input.PressJump();
 
             Vector3 targetM = WorldMapAreaDB.ToMap_FlipXY(worldTarget, playerReader.WorldMapArea);
             float heading = DirectionCalculator.CalculateMapHeading(playerReader.MapPos, targetM);
@@ -101,7 +100,7 @@ public sealed class StuckDetector
         }
         else
         {
-            input.Jump();
+            input.PressJump();
         }
     }
 
