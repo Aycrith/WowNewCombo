@@ -188,7 +188,7 @@ public sealed class NpcNameTargeting : IDisposable
                 p.Offset(npcNameFinder.ToScreenCoordinates());
                 input.SetCursorPos(p);
 
-                ct.WaitHandle.WaitOne(INTERACT_DELAY);
+                ct.WaitHandle.WaitOne(Random.Shared.Next(2, INTERACT_DELAY));
 
                 classifier.Classify(out CursorType cls);
                 if (cursor.Contains(cls))
