@@ -201,7 +201,7 @@ public sealed class BagReader : IDisposable
         return count;
     }
 
-    public bool HasItem(int itemId) => BagItems.Any(x => x.ItemId == itemId);
+    public bool HasItem(int itemId) => BagItems.Exists(x => x.ItemId == itemId);
 
     public int HighestQuantityOfDrinkItemId()
     {
