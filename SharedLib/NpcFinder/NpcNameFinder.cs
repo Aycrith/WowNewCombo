@@ -101,7 +101,7 @@ public sealed partial class NpcNameFinder : IDisposable
 
     public float colorFuzziness { get; set; } = 15f;
 
-    private const float colorFuzz = 15;
+    private const float colorFuzz = 5;
 
     public int topOffset { get; set; } = 110;
 
@@ -122,17 +122,17 @@ public sealed partial class NpcNameFinder : IDisposable
 
     #region Colors
 
-    public const byte fE_R = 250;
-    public const byte fE_G = 5;
-    public const byte fE_B = 5;
+    public const byte fE_R = 255;
+    public const byte fE_G = 0;
+    public const byte fE_B = 0;
 
-    public const byte fF_R = 5;
-    public const byte fF_G = 250;
-    public const byte fF_B = 5;
+    public const byte fF_R = 0;
+    public const byte fF_G = 255;
+    public const byte fF_B = 0;
 
-    public const byte fN_R = 250;
-    public const byte fN_G = 250;
-    public const byte fN_B = 5;
+    public const byte fN_R = 255;
+    public const byte fN_G = 255;
+    public const byte fN_B = 0;
 
     public const byte fC_RGB = 128;
 
