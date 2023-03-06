@@ -136,6 +136,7 @@ public sealed partial class RequirementFactory
 
             { "Casting", playerReader.IsCasting },
             { "HasTarget", playerReader.Bits.HasTarget },
+            { "TargetHostile", playerReader.Bits.TargetCanBeHostile },
             { "TargetAlive", playerReader.Bits.TargetAlive },
 
             // General Buff Condition

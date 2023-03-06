@@ -1267,6 +1267,7 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | `"Casting"` | The player is currently casting any spell. |
 | `"HasTarget"` | The player currently has a target. |
 | `"TargetAlive"` | The player currently has an alive target. |
+| `"TargetHostile"` | The player currently target is hostile. |
 | `"InMeleeRange"` | Target is approximately 0-5 yard range |
 | `"InCloseMeleeRange"` | Target is approximately 0-2 yard range |
 | `"InDeadZoneRange"` | Target is approximately 5-11 yard range |

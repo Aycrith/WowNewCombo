@@ -58,7 +58,8 @@
         "Key": "0",
         "WhenUsable": true,
         "Requirements": [
-          "SpellInRange:2"
+          "SpellInRange:2",
+          "!Falling"
         ],
         "AfterCastWaitCombat": true,
         "AfterCastWaitMeleeRange": true
@@ -239,7 +240,7 @@
         "InCombat": "i dont care",
         "WhenUsable": true,
         "Requirements": [
-          "!Horn of Winter",
+          "!Horn of Winter || (CD_Horn of Winter <= GCD && TargetAlive && TargetHostile)",
           "!Mounted"
         ]
       },
