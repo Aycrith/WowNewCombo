@@ -21,6 +21,7 @@ local C_Map = C_Map
 local UnitExists = UnitExists
 local GetUnitName = GetUnitName
 local UnitReaction = UnitReaction
+local UnitIsFriend = UnitIsFriend
 local GetInventorySlotInfo = GetInventorySlotInfo
 local GetInventoryItemCount = GetInventoryItemCount
 local CheckInteractDistance = CheckInteractDistance
@@ -114,7 +115,7 @@ function DataToColor:Bits1()
         (UnitIsDeadOrGhost(DataToColor.C.unitPlayer) and 2 or 0) ^ 2 +
         (UnitCharacterPoints(DataToColor.C.unitPlayer) > 0 and 2 or 0) ^ 3 +
         (UnitExists(DataToColor.C.unitmouseover) and 2 or 0) ^ 4 +
-        ((UnitReaction(DataToColor.C.unitPlayer, DataToColor.C.unitTarget) or 0) <= 4 and 2 or 0) ^ 5 + -- isHostile
+        (DataToColor:IsUnitHostile(DataToColor.C.unitPlayer, DataToColor.C.unitTarget) and 2 or 0) ^ 5 +
         (UnitIsVisible(DataToColor.C.unitPet) and not UnitIsDead(DataToColor.C.unitPet) and 2 or 0) ^ 6 +
         (mainHandEnchant and 2 or 0) ^ 7 +
         (offHandEnchant and 2 or 0) ^ 8 +
@@ -145,14 +146,14 @@ function DataToColor:Bits2()
         (UnitAffectingCombat(DataToColor.C.unitFocus) and 2 or 0) ^ 4 +
         (UnitExists(DataToColor.C.unitFocusTarget) and 2 or 0) ^ 5 +
         (UnitAffectingCombat(DataToColor.C.unitFocusTarget) and 2 or 0) ^ 6 +
-        ((UnitReaction(DataToColor.C.unitPlayer, DataToColor.C.unitFocusTarget) or 0) <= 4 and 2 or 0) ^ 7 + -- isHostile
+        (DataToColor:IsUnitHostile(DataToColor.C.unitPlayer, DataToColor.C.unitFocusTarget) and 2 or 0) ^ 7 +
         (UnitIsDead(DataToColor.C.unitmouseover) and 2 or 0) ^ 8 +
         (UnitIsDead(DataToColor.C.unitPetTarget) and 2 or 0) ^ 9 +
         (IsStealthed() and 2 or 0) ^ 10 +
         (UnitIsTrivial(DataToColor.C.unitTarget) and 2 or 0) ^ 11 +
         (UnitIsTrivial(DataToColor.C.unitmouseover) and 2 or 0) ^ 12 +
         (UnitIsTapDenied(DataToColor.C.unitmouseover) and 2 or 0) ^ 13 +
-        ((UnitReaction(DataToColor.C.unitPlayer, DataToColor.C.unitmouseover) or 0) <= 4 and 2 or 0) ^ 14 + -- isHostile
+        (DataToColor:IsUnitHostile(DataToColor.C.unitPlayer, DataToColor.C.unitmouseover) and 2 or 0) ^ 14 +
         (UnitIsPlayer(DataToColor.C.unitmouseover) and 2 or 0) ^ 15 +
         (DataToColor:IsUnitsTargetIsPlayerOrPet(DataToColor.C.unitmouseover, DataToColor.C.unitmouseovertarget) and 2 or 0) ^ 16 +
         (UnitPlayerControlled(DataToColor.C.unitmouseover) and 2 or 0) ^ 17 +
@@ -531,4 +532,11 @@ end
 function DataToColor:IsUnitsTargetIsPlayerOrPet(unit, unittarget)
     local x = DataToColor:UnitsTargetAsNumber(unit, unittarget)
     return x == 1 or x == 4
+end
+
+function DataToColor:IsUnitHostile(unit, unittarget)
+    return
+        UnitExists(unittarget) and
+        (UnitReaction(unit, unittarget) or 0) <= 4 and
+        not UnitIsFriend(unit, unittarget)
 end
