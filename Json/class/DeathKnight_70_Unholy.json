@@ -154,6 +154,15 @@
         "WhenUsable": true
       },
       {
+        "Name": "dnd", // macro /cast [@player] Death and Decay
+        "Key": "F9",
+        "WhenUsable": true,
+        "Requirements": [
+          "MobCount > 1",
+          "InMeleeRange"
+        ]
+      },
+      {
         "Name": "Blood Boil",
         "Key": "1",
         "WhenUsable": true,
@@ -198,6 +207,16 @@
         ]
       },
       {
+        "Name": "Pestilence",
+        "Key": "7",
+        "WhenUsable": true,
+        "Requirements": [
+          "MobCount > 1",
+          "TargetHealth% <= 50 && (Frost Fever || Blood Plague)",
+          "InMeleeRange"
+        ]
+      },
+      {
         "Name": "Death Coil",
         "Key": "8",
         "WhenUsable": true,
@@ -211,7 +230,6 @@
         "Key": "5",
         "WhenUsable": true,
         "Requirements": [
-          "MobCount < 2",
           "!Blood Plague",
           "InMeleeRange"
         ],
@@ -222,7 +240,7 @@
         "Key": "7",
         "WhenUsable": true,
         "Requirements": [
-          "MobCount > 1",
+          "MobCount == 1",
           "Frost Fever && Blood Plague && (Debuff_Frost Fever < MIN_TIME_REFRESH || Debuff_Blood Plague < MIN_TIME_REFRESH)",
           "InMeleeRange"
         ]
