@@ -13,7 +13,7 @@ public sealed class AddonReader : IAddonReader, IDisposable
 {
     private readonly ILogger logger;
     private readonly IAddonDataProvider reader;
-    private readonly ManualResetEventSlim resetEvent;
+    private readonly AutoResetEvent resetEvent;
 
     public PlayerReader PlayerReader { get; }
 
@@ -68,7 +68,7 @@ public sealed class AddonReader : IAddonReader, IDisposable
     private DateTime lastUpdate;
 
     public AddonReader(ILogger logger, IAddonDataProvider reader,
-        ManualResetEventSlim resetEvent, AreaDB areaDB, WorldMapAreaDB worldMapAreaDB,
+        AutoResetEvent resetEvent, AreaDB areaDB, WorldMapAreaDB worldMapAreaDB,
         ItemDB itemDB, CreatureDB creatureDB, SpellDB spellDB, TalentDB talentDB)
     {
         this.logger = logger;

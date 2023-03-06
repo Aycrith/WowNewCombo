@@ -115,7 +115,7 @@ public sealed class Startup
         wowProcess.Dispose();
 
         services.AddSingleton<CancellationTokenSource>();
-        services.AddSingleton<ManualResetEventSlim>(x => new(false));
+        services.AddSingleton<AutoResetEvent>(x => new(false));
         services.AddSingleton<Wait>();
 
         services.AddSingleton<WowProcess>(x => new(StartupConfigPid.Id));
