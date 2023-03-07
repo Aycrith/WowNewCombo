@@ -123,7 +123,7 @@ public sealed class BagReader : IDisposable
 
         int itemId = reader.GetInt(cItemId);
 
-        BagItem? existingItem = BagItems.Where(b => b.BagIndex == slot).FirstOrDefault(b => b.Bag == bag);
+        BagItem? existingItem = BagItems.FirstOrDefault(b => b.Bag == bag && b.BagIndex == slot);
 
         if (itemCount > 0)
         {

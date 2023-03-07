@@ -51,7 +51,7 @@
                     {
                         <td width="20%">
                             @{
-                                var bagItem = bagReader.BagItems.Where(i => i.Bag == bag).Where(i => i.BagIndex == bagIndex).FirstOrDefault();
+                                var bagItem = bagReader.BagItems.FirstOrDefault(i => i.Bag == bag && i.BagIndex == bagIndex);
                             }
                             @if (bagItem != null)
                             {
