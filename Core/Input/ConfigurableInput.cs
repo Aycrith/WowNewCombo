@@ -24,10 +24,7 @@ public sealed partial class ConfigurableInput
         wowProcessInput.InteractMouseoverPress = classConfig.InteractMouseOver.PressDuration;
     }
 
-    public void Reset()
-    {
-        proc.Reset();
-    }
+    public void Reset() => proc.Reset();
 
     public void StartForward(bool forced)
     {
@@ -81,15 +78,9 @@ public sealed partial class ConfigurableInput
         proc.PressRandom(key, milliseconds);
     }
 
-    public bool IsKeyDown(ConsoleKey key)
-    {
-        return proc.IsKeyDown(key);
-    }
+    public bool IsKeyDown(ConsoleKey key) => proc.IsKeyDown(key);
 
-    public void PressInteract()
-    {
-        PressRandom(Interact);
-    }
+    public void PressInteract() => PressRandom(Interact);
 
     public void PressFastInteract()
     {
@@ -106,15 +97,9 @@ public sealed partial class ConfigurableInput
         }
     }
 
-    public void PressApproach()
-    {
-        PressRandom(Approach);
-    }
+    public void PressApproach() => PressRandom(Approach);
 
-    public void PressLastTarget()
-    {
-        PressRandom(TargetLastTarget);
-    }
+    public void PressLastTarget() => PressRandom(TargetLastTarget);
 
     public void PressFastLastTarget()
     {
@@ -122,68 +107,32 @@ public sealed partial class ConfigurableInput
         TargetLastTarget.SetClicked();
     }
 
-    public void PressStandUp()
-    {
-        PressRandom(StandUp);
-    }
+    public void PressStandUp() => PressRandom(StandUp);
 
-    public void PressClearTarget()
-    {
-        PressRandom(ClearTarget);
-    }
+    public void PressClearTarget() => PressRandom(ClearTarget);
 
-    public void PressStopAttack()
-    {
-        PressRandom(StopAttack);
-    }
+    public void PressStopAttack() => PressRandom(StopAttack);
 
-    public void PressNearestTarget()
-    {
-        PressRandom(TargetNearestTarget);
-    }
+    public void PressNearestTarget() => PressRandom(TargetNearestTarget);
 
-    public void PressTargetPet()
-    {
-        PressRandom(TargetPet);
-    }
+    public void PressTargetPet() => PressRandom(TargetPet);
 
-    public void PressTargetOfTarget()
-    {
-        PressRandom(TargetTargetOfTarget);
-    }
+    public void PressTargetOfTarget() => PressRandom(TargetTargetOfTarget);
 
-    public void PressJump()
-    {
-        PressRandom(Jump);
-    }
+    public void PressJump() => PressRandom(Jump);
 
-    public void PressPetAttack()
-    {
-        PressRandom(PetAttack);
-    }
+    public void PressPetAttack() => PressRandom(PetAttack);
 
-    public void PressHearthstone()
-    {
-        PressRandom(Hearthstone);
-    }
+    public void PressHearthstone() => PressRandom(Hearthstone);
 
-    public void PressMount()
-    {
-        PressRandom(Mount);
-    }
+    public void PressMount() => PressRandom(Mount);
 
     public void PressDismount()
     {
         proc.PressRandom(Mount.ConsoleKey, Mount.PressDuration);
     }
 
-    public void PressTargetFocus()
-    {
-        PressRandom(TargetFocus);
-    }
+    public void PressTargetFocus() => PressRandom(TargetFocus);
 
-    public void PressFollowTarget()
-    {
-        PressRandom(FollowTarget);
-    }
+    public void PressFollowTarget() => PressRandom(FollowTarget);
 }
