@@ -870,6 +870,7 @@ Formula: `[Keyword] [Operator] [Numeric integer value]`
 | `>=` | Greater then or Equals |
 | `<` | Less then |
 | `>` | Greater then |
+| `%` | Modulo, `true` when the expression is Equals to `0` |
 
 | Keyword | Description |
 | --- | --- |
@@ -944,6 +945,7 @@ e.g. Single Requirement
 "Requirement": "MainHandSpeed > 3500"   // Main hand attack speed is greater then 3.5 seconds
 "Requirement": "MainHandSwing > -400"   // 400 milliseconds before next predicted main swing happen
 "Requirement": "MainHandSwing > -400"   // 400 milliseconds before next predicted main swing happen
+"Requirement": "Dead && Deaths % 2"   // Player is currently dead and died for the second time in the current session
 ```
 
 e.g. List of Requirements
