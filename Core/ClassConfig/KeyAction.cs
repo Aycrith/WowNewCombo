@@ -196,6 +196,8 @@ public sealed partial class KeyAction : IDisposable
 
     public void Dispose()
     {
+        if (costReader == null) return;
+
         costReader.OnActionCostChanged -= ActionBarCostReader_OnActionCostChanged;
         costReader.OnActionCostReset -= ResetCosts;
     }
