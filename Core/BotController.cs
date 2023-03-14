@@ -48,6 +48,8 @@ public sealed partial class BotController : IBotController, IDisposable
     public WowScreen WowScreen { get; }
     public IGrindSessionDAO GrindSessionDAO { get; }
 
+    public SessionStat SessionStat { get; }
+
     public string SelectedClassFilename { get; private set; } = string.Empty;
     public string? SelectedPathFilename { get; private set; }
     public ClassConfiguration? ClassConfig { get; private set; }
@@ -65,7 +67,7 @@ public sealed partial class BotController : IBotController, IDisposable
     public double AvgNPCLatency => NPCLatencys.Average();
 
     public BotController(ILogger logger, CancellationTokenSource cts,
-        IPPather pather, IGrindSessionDAO grindSessionDAO, DataConfig dataConfig,
+        IPPather pather, SessionStat sessionStat, IGrindSessionDAO grindSessionDAO, DataConfig dataConfig,
         WowProcess wowProcess, WowScreen wowScreen, WowProcessInput wowProcessInput,
         ExecGameCommand execGameCommand, Wait wait, IAddonReader addonReader,
         MinimapNodeFinder minimapNodeFinder, IScreenCapture screenCapture)
@@ -74,6 +76,7 @@ public sealed partial class BotController : IBotController, IDisposable
         this.pather = pather;
         this.dataConfig = dataConfig;
         GrindSessionDAO = grindSessionDAO;
+        this.SessionStat = sessionStat;
         this.wowProcess = wowProcess;
         this.WowScreen = wowScreen;
         this.wowProcessInput = wowProcessInput;
@@ -202,7 +205,13 @@ public sealed partial class BotController : IBotController, IDisposable
         try
         {
             ClassConfig?.Dispose();
-            ClassConfig = ReadClassConfiguration(classFile, pathFile);
+            ClassConfig = ReadClassConfiguration(classFile);
+
+            RequirementFactory requirementFactory = new(logger, AddonReader, SessionStat, npcNameFinder, ClassConfig.ImmunityBlacklist);
+            ClassConfig.Initialise(dataConfig, AddonReader, requirementFactory, logger, pathFile);
+
+            LogProfileLoaded(logger, nameof(BotController), classFile, ClassConfig.PathFilename);
+
         }
         catch (Exception e)
         {
@@ -220,6 +229,7 @@ public sealed partial class BotController : IBotController, IDisposable
     private void Initialize(ClassConfiguration config)
     {
         AddonReader.SessionReset();
+        SessionStat.Reset();
 
         IServiceScope profileLoadedScope =
             GoalFactory.CreateGoals(logger, AddonReader, dataConfig, npcNameFinder,
@@ -247,20 +257,13 @@ public sealed partial class BotController : IBotController, IDisposable
         RouteInfo = routeInfo;
 
         GoapAgent?.Dispose();
-        GoapAgent = new(profileLoadedScope, dataConfig, GrindSessionDAO, WowScreen, screenCapture, routeInfo);
+        GoapAgent = new(profileLoadedScope, dataConfig, GrindSessionDAO, SessionStat, WowScreen, screenCapture, routeInfo);
     }
 
-    private ClassConfiguration ReadClassConfiguration(string classFile, string? pathFile)
+    private ClassConfiguration ReadClassConfiguration(string classFile)
     {
         string filePath = Path.Join(dataConfig.Class, classFile);
-
-        ClassConfiguration classConfig = DeserializeObject<ClassConfiguration>(File.ReadAllText(filePath))!;
-        RequirementFactory requirementFactory = new(logger, AddonReader, npcNameFinder, classConfig.ImmunityBlacklist);
-        classConfig.Initialise(dataConfig, AddonReader, requirementFactory, logger, pathFile);
-
-        LogProfileLoaded(logger, nameof(BotController), classFile, classConfig.PathFilename);
-
-        return classConfig;
+        return DeserializeObject<ClassConfiguration>(File.ReadAllText(filePath))!;
     }
 
     public void Dispose()

@@ -147,6 +147,7 @@ public sealed class Startup
                 Log.Information($"[{nameof(Startup)}] {nameof(NoScreenCapture)}");
             }
 
+            services.AddSingleton<SessionStat>();
             services.AddSingleton<IGrindSessionDAO, LocalGrindSessionDAO>();
             services.AddSingleton<WorldMapAreaDB>();
             services.AddSingleton<IPPather>(x =>
@@ -179,7 +180,11 @@ public sealed class Startup
             services.AddSingleton<SpellDB>();
             services.AddSingleton<TalentDB>();
 
+            services.AddSingleton<PlayerReader>();
             services.AddSingleton<IAddonReader, AddonReader>();
+
+            services.AddSingleton<LevelTracker>();
+
             services.AddSingleton<IBotController, BotController>();
         }
         else

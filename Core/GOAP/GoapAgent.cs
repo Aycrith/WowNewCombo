@@ -60,6 +60,7 @@ public sealed partial class GoapAgent : IDisposable
                 }
 
                 addonReader.SessionReset();
+                SessionStat.Reset();
 
                 wowScreen.Enabled = false;
             }
@@ -82,6 +83,8 @@ public sealed partial class GoapAgent : IDisposable
 
     public BitVector32 WorldState { get; private set; }
 
+    public SessionStat SessionStat { get; }
+
     public GoapAgentState State { get; }
     public GoapGoal[] AvailableGoals { get; }
 
@@ -89,8 +92,8 @@ public sealed partial class GoapAgent : IDisposable
     public GoapGoal? CurrentGoal { get; private set; }
 
     public GoapAgent(IServiceScope scope, DataConfig dataConfig,
-        IGrindSessionDAO sessionDAO, IWowScreen wowScreen, IScreenCapture screenCapture,
-        RouteInfo routeInfo)
+        IGrindSessionDAO sessionDAO, SessionStat sessionStat, IWowScreen wowScreen,
+        IScreenCapture screenCapture, RouteInfo routeInfo)
     {
         this.scope = scope;
 
@@ -106,9 +109,12 @@ public sealed partial class GoapAgent : IDisposable
         this.input = scope.ServiceProvider.GetRequiredService<ConfigurableInput>();
         this.mountHandler = scope.ServiceProvider.GetRequiredService<IMountHandler>();
 
-        this.addonReader.CombatLog.KillCredit += OnKillCredit;
+        addonReader.CombatLog.KillCredit += OnKillCredit;
+        addonReader.CombatLog.PlayerDeath += PlayerDied;
 
-        sessionHandler = new GrindSessionHandler(logger, dataConfig, addonReader, sessionDAO, cts);
+        SessionStat = sessionStat;
+
+        sessionHandler = new GrindSessionHandler(logger, dataConfig, playerReader, SessionStat, sessionDAO, cts);
 
         WowProcessInput baseInput = scope.ServiceProvider.GetRequiredService<WowProcessInput>();
         stopMoving = new StopMoving(baseInput, playerReader, cts);
@@ -151,6 +157,7 @@ public sealed partial class GoapAgent : IDisposable
         scope.Dispose();
 
         addonReader.CombatLog.KillCredit -= OnKillCredit;
+        addonReader.CombatLog.PlayerDeath -= PlayerDied;
     }
 
     private void GoapThread()
@@ -284,8 +291,11 @@ public sealed partial class GoapAgent : IDisposable
     {
         if (Active)
         {
+            SessionStat.Kills++;
+
             State.LastCombatKillCount++;
             State.ConsumableCorpseCount++;
+
             BroadcastGoapEvent(GoapKey.producedcorpse, true);
 
             LogActiveKillDetected(logger, State.LastCombatKillCount, addonReader.DamageTakenCount());
@@ -294,6 +304,11 @@ public sealed partial class GoapAgent : IDisposable
         {
             LogInactiveKillDetected(logger);
         }
+    }
+
+    public void PlayerDied()
+    {
+        SessionStat.Deaths++;
     }
 
     private void BroadcastGoapEvent(GoapKey goapKey, bool value)

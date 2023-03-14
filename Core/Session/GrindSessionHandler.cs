@@ -8,7 +8,8 @@ namespace Core.Session;
 public sealed class GrindSessionHandler : IGrindSessionHandler
 {
     private readonly ILogger logger;
-    private readonly AddonReader addonReader;
+    private readonly PlayerReader playerReader;
+    private readonly SessionStat stats;
     private readonly IGrindSessionDAO grindSessionDAO;
     private readonly CancellationToken ct;
 
@@ -18,11 +19,12 @@ public sealed class GrindSessionHandler : IGrindSessionHandler
     private bool active;
 
     public GrindSessionHandler(ILogger logger, DataConfig dataConfig,
-        AddonReader addonReader, IGrindSessionDAO grindSessionDAO,
+        PlayerReader playerReader, SessionStat stats, IGrindSessionDAO grindSessionDAO,
         CancellationTokenSource cts)
     {
         this.logger = logger;
-        this.addonReader = addonReader;
+        this.playerReader = playerReader;
+        this.stats = stats;
         this.grindSessionDAO = grindSessionDAO;
         ct = cts.Token;
 
@@ -41,11 +43,11 @@ public sealed class GrindSessionHandler : IGrindSessionHandler
 
         session.SessionId = Guid.NewGuid();
         session.PathName = path;
-        session.PlayerClass = addonReader.PlayerReader.Class;
+        session.PlayerClass = playerReader.Class;
         session.SessionStart = DateTime.Now;
-        session.LevelFrom = addonReader.PlayerReader.Level.Value;
-        session.XpFrom = addonReader.PlayerReader.PlayerXp.Value;
-        session.MobsKilled = addonReader.LevelTracker.MobsKilled;
+        session.LevelFrom = playerReader.Level.Value;
+        session.XpFrom = playerReader.PlayerXp.Value;
+        session.MobsKilled = stats.Kills;
     }
 
     public void Stop(string reason, bool active)
@@ -53,11 +55,11 @@ public sealed class GrindSessionHandler : IGrindSessionHandler
         this.active = active;
 
         session.SessionEnd = DateTime.Now;
-        session.LevelTo = addonReader.PlayerReader.Level.Value;
-        session.XpTo = addonReader.PlayerReader.PlayerXp.Value;
+        session.LevelTo = playerReader.Level.Value;
+        session.XpTo = playerReader.PlayerXp.Value;
         session.Reason = reason;
-        session.Death = addonReader.LevelTracker.Death;
-        session.MobsKilled = addonReader.LevelTracker.MobsKilled;
+        session.Death = stats.Deaths;
+        session.MobsKilled = stats.Kills;
 
         if (session.MobsKilled > 0 && session.TotalTimeInMinutes > 0)
             Save();

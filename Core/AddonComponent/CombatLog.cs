@@ -5,9 +5,12 @@ namespace Core;
 
 public sealed class CombatLog
 {
+    private const int PLAYER_DEATH_EVENT = 16777215;
+
     private bool wasInCombat;
 
     public event Action? KillCredit;
+    public event Action? PlayerDeath;
     public event Action? TargetEvade;
 
     public HashSet<int> DamageDone { get; } = new();
@@ -76,7 +79,14 @@ public sealed class CombatLog
             DamageDone.Remove(deadGuid);
             DamageTaken.Remove(deadGuid);
 
-            KillCredit?.Invoke();
+            if (deadGuid == PLAYER_DEATH_EVENT)
+            {
+                PlayerDeath?.Invoke();
+            }
+            else
+            {
+                KillCredit?.Invoke();
+            }
         }
 
         if (wasInCombat && !playerInCombat)

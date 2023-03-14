@@ -58,8 +58,9 @@ public sealed partial class RequirementFactory
     private const string greaterThen = ">";
     private const string lessThen = "<";
     private const string equals = "==";
+    private const string modulo = "%";
 
-    public RequirementFactory(ILogger logger, AddonReader addonReader,
+    public RequirementFactory(ILogger logger, AddonReader addonReader, SessionStat sessionStat,
         NpcNameFinder npcNameFinder, Dictionary<int, SchoolMask[]> immunityBlacklist)
     {
         this.logger = logger;
@@ -82,6 +83,7 @@ public sealed partial class RequirementFactory
             { greaterThen, CreateGreaterThen },
             { lessThen, CreateLesserThen },
             { equals, CreateEquals },
+            { modulo, CreateModulo },
             { "npcID:", CreateNpcId },
             { "BagItem:", CreateBagItem },
             { "SpellInRange:", CreateSpellInRange },
@@ -149,6 +151,7 @@ public sealed partial class RequirementFactory
             // Player Affected
             { Swimming, playerReader.Bits.IsSwimming },
             { Falling, playerReader.Bits.IsFalling },
+            { "Dead", playerReader.Bits.IsDead },
 
             //Priest
             { "Fortitude", playerReader.Buffs.Fortitude },
@@ -341,7 +344,11 @@ public sealed partial class RequirementFactory
             { "RangedSpeed", playerReader.RangedSpeedMs },
             { "RangedSwing", () => Math.Clamp(playerReader.AutoShot.ElapsedMs() - playerReader.RangedSpeedMs(), -playerReader.RangedSpeedMs(), 0) },
             { "CurGCD", playerReader.GCD._Value },
-            { "GCD", CastingHandler._GCD }
+            { "GCD", CastingHandler._GCD },
+
+            // Session Stat
+            { "Deaths", sessionStat._Deaths },
+            { "Kills", sessionStat._Kills },
         };
     }
 
@@ -1137,6 +1144,11 @@ public sealed partial class RequirementFactory
         return CreateArithmeticRequirement(equals, requirement, intVariables);
     }
 
+    private Requirement CreateModulo(string requirement)
+    {
+        return CreateArithmeticRequirement(modulo, requirement, intVariables);
+    }
+
     private Requirement CreateArithmeticRequirement(string symbol, string requirement, Dictionary<string, Func<int>> intVariables)
     {
         ReadOnlySpan<char> span = requirement;
@@ -1177,6 +1189,9 @@ public sealed partial class RequirementFactory
         string msg() => $"{display} {lValue()} {symbol} {rValue()}";
         switch (symbol)
         {
+            case modulo:
+                bool m() => lValue() % rValue() == 0;
+                return new Requirement { HasRequirement = m, LogMessage = msg };
             case equals:
                 bool e() => lValue() == rValue();
                 return new Requirement { HasRequirement = e, LogMessage = msg };

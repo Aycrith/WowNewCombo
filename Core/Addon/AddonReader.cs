@@ -40,10 +40,7 @@ public sealed class AddonReader : IAddonReader, IDisposable
     public SpellBookReader SpellBookReader { get; }
     public TalentReader TalentReader { get; }
 
-    public LevelTracker LevelTracker { get; }
-
     public event Action? AddonDataChanged;
-    public event Action? PlayerDeath;
 
     public WorldMapAreaDB WorldMapAreaDb { get; }
 
@@ -67,7 +64,7 @@ public sealed class AddonReader : IAddonReader, IDisposable
     private int updateIndex;
     private DateTime lastUpdate;
 
-    public AddonReader(ILogger logger, IAddonDataProvider reader,
+    public AddonReader(ILogger logger, IAddonDataProvider reader, PlayerReader playerReader,
         AutoResetEvent resetEvent, AreaDB areaDB, WorldMapAreaDB worldMapAreaDB,
         ItemDB itemDB, CreatureDB creatureDB, SpellDB spellDB, TalentDB talentDB)
     {
@@ -92,8 +89,7 @@ public sealed class AddonReader : IAddonReader, IDisposable
 
         this.SpellBookReader = new(71, spellDB);
 
-        this.PlayerReader = new(reader, worldMapAreaDB);
-        this.LevelTracker = new(this);
+        this.PlayerReader = playerReader;
         this.TalentReader = new(72, PlayerReader, talentDB);
 
         this.CurrentAction = new(25, 26, 27, 28, 29);
@@ -109,7 +105,6 @@ public sealed class AddonReader : IAddonReader, IDisposable
     public void Dispose()
     {
         BagReader.Dispose();
-        LevelTracker.Dispose();
     }
 
     public void Update()
@@ -195,7 +190,6 @@ public sealed class AddonReader : IAddonReader, IDisposable
 
     public void SessionReset()
     {
-        LevelTracker.Reset();
         CombatLog.Reset();
     }
 
@@ -218,11 +212,6 @@ public sealed class AddonReader : IAddonReader, IDisposable
     public int GetInt(int index)
     {
         return reader.GetInt(index);
-    }
-
-    public void PlayerDied()
-    {
-        PlayerDeath?.Invoke();
     }
 
     public void UpdateUI()

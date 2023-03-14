@@ -22,7 +22,7 @@ public interface IAddonReader
 
     TalentReader TalentReader { get; }
 
-    LevelTracker LevelTracker { get; }
+    CombatLog CombatLog { get; }
 
     double AvgUpdateLatency { get; }
 
@@ -31,7 +31,6 @@ public interface IAddonReader
     string TargetName { get; }
 
     event Action? AddonDataChanged;
-    event Action? PlayerDeath;
 
     void FetchData();
     void FullReset();
