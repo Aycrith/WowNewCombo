@@ -1,7 +1,6 @@
 using Core.GOAP;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
 using System.Numerics;
 
 namespace Core.Goals;
@@ -18,8 +17,6 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
     private readonly PlayerReader playerReader;
     private readonly Navigation navigation;
     private readonly StopMoving stopMoving;
-
-    public List<Vector3> Deaths { get; } = new();
 
     private DateTime onEnterTime;
 
@@ -76,15 +73,12 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
     public override void OnEnter()
     {
         playerReader.WorldPosZ = 0;
-        addonReader.PlayerDied();
 
         wait.While(AliveOrLoadingScreen);
         Log($"Player teleported to the graveyard!");
 
         Vector3 corpseLocation = playerReader.CorpseMapPos;
         Log($"Corpse location is {corpseLocation}");
-
-        Deaths.Add(corpseLocation);
 
         navigation.SetWayPoints(stackalloc Vector3[] { corpseLocation });
 

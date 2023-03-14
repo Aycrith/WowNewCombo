@@ -116,7 +116,7 @@
         botController.ProfileLoaded += OnProfileLoaded;
         addonReader.AddonDataChanged += OnAddonDataChanged;
         areaDB.Changed += OnZoneChanged;
-        addonReader.PlayerDeath += OnPlayerDeath;
+        addonReader.CombatLog.PlayerDeath += OnPlayerDeath;
 
         UpdateZoneName();
         UpdateDeaths();
@@ -130,7 +130,7 @@
         botController.ProfileLoaded -= OnProfileLoaded;
         addonReader.AddonDataChanged -= OnAddonDataChanged;
         areaDB.Changed -= OnZoneChanged;
-        addonReader.PlayerDeath -= OnPlayerDeath;
+        addonReader.CombatLog.PlayerDeath -= OnPlayerDeath;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -182,8 +182,14 @@
         base.InvokeAsync(ActionZoneChangedAction);
     }
 
-    private void OnPlayerDeathAction()
+    private async Task OnPlayerDeathAction()
     {
+        // have to wait for pressing Release Spirit
+        while (addonReader.PlayerReader.CorpseMapPos == Vector3.Zero)
+        {
+            await Task.Delay(200);
+        }
+
         UpdateDeaths();
         StateHasChanged();
     }
@@ -253,11 +259,6 @@
     {
         if (botController.GoapAgent == null) return;
 
-        var walkToCorpseGoal = botController.GoapAgent.AvailableGoals
-            .FirstOrDefault(a => a.GetType() == typeof(WalkToCorpseGoal)) as WalkToCorpseGoal;
-        if (walkToCorpseGoal != null)
-        {
-            deaths = walkToCorpseGoal.Deaths;
-        }
+        deaths.Add(botController.AddonReader.PlayerReader.CorpseMapPos);
     }
 }

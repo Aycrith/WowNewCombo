@@ -4,7 +4,6 @@ namespace Core;
 
 public sealed class LevelTracker : IDisposable
 {
-    private readonly AddonReader addonReader;
     private readonly PlayerReader playerReader;
 
     private DateTime levelStartTime = DateTime.UtcNow;
@@ -13,35 +12,18 @@ public sealed class LevelTracker : IDisposable
     public TimeSpan TimeToLevel { get; private set; } = TimeSpan.Zero;
     public DateTime PredictedLevelUpTime { get; private set; } = DateTime.MaxValue;
 
-    public int MobsKilled { get; private set; }
-    public int Death { get; private set; }
-
-    public LevelTracker(AddonReader addonReader)
+    public LevelTracker(PlayerReader playerReader)
     {
-        this.addonReader = addonReader;
-        this.playerReader = addonReader.PlayerReader;
+        this.playerReader = playerReader;
 
         playerReader.Level.Changed += PlayerLevel_Changed;
         playerReader.PlayerXp.Changed += PlayerExp_Changed;
-
-        addonReader.PlayerDeath += OnPlayerDeath;
-        addonReader.CombatLog.KillCredit += OnKillCredit;
     }
 
     public void Dispose()
     {
         playerReader.Level.Changed -= PlayerLevel_Changed;
         playerReader.PlayerXp.Changed -= PlayerExp_Changed;
-        addonReader.PlayerDeath -= OnPlayerDeath;
-        addonReader.CombatLog.KillCredit -= OnKillCredit;
-    }
-
-    public void Reset()
-    {
-        MobsKilled = 0;
-        Death = 0;
-
-        UpdateExpPerHour();
     }
 
     private void PlayerExp_Changed()
@@ -53,16 +35,6 @@ public sealed class LevelTracker : IDisposable
     {
         levelStartTime = DateTime.UtcNow;
         levelStartXP = playerReader.PlayerXp.Value;
-    }
-
-    private void OnPlayerDeath()
-    {
-        Death++;
-    }
-
-    private void OnKillCredit()
-    {
-        MobsKilled++;
     }
 
     public void UpdateExpPerHour()

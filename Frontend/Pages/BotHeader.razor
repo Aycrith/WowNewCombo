@@ -2,6 +2,7 @@
 
 @inject IAddonReader addonReader
 @inject IBotController botController
+@inject LevelTracker levelTracker
 @inject WApi api
 
 @implements IDisposable
@@ -24,7 +25,7 @@
             <tr>
                 <td>
                     Time to level: @DisplayTimeToLevel()<br />
-                    at @levelTracker.PredictedLevelUpTime.ToString("HH:mm:ss")
+                    at @levelTracker?.PredictedLevelUpTime.ToString("HH:mm:ss")
                 </td>
                 <td>@playerReader.HealthCurrent() (@playerReader.HealthPercent() %)<br />@playerReader.PTCurrent() (@playerReader.PTPercentage() %)</td>
 
@@ -53,7 +54,7 @@
                     }
                     else
                     {
-                        <div>Kills: @levelTracker.MobsKilled</div>
+                        <div>Kills: @botController.GoapAgent?.SessionStat.Kills</div>
                     }
                 </td>
             </tr>
@@ -80,7 +81,6 @@
     public bool ShowActiveGoal { get; set; } = true;
 
     private PlayerReader playerReader => addonReader.PlayerReader;
-    private LevelTracker levelTracker => addonReader.LevelTracker;
 
     private bool PlayerInCombat => this.playerReader.Bits.PlayerInCombat();
 
@@ -106,6 +106,6 @@
 
     private string DisplayTimeToLevel()
     {
-        return levelTracker.TimeToLevel == TimeSpan.Zero ? "∞" : levelTracker.TimeToLevel.ToString();
+        return levelTracker?.TimeToLevel == TimeSpan.Zero ? "∞" : levelTracker?.TimeToLevel.ToString() ?? string.Empty;
     }
 }

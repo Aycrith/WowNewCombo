@@ -157,7 +157,9 @@ internal sealed class Program
         services.AddSingleton<SpellDB>();
         services.AddSingleton<TalentDB>();
 
+        services.AddSingleton<PlayerReader>();
         services.AddSingleton<IAddonReader, AddonReader>();
+
         services.AddSingleton<IBotController, BotController>();
 
         return true;

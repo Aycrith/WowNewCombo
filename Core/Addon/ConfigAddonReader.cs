@@ -8,7 +8,6 @@ public sealed class ConfigAddonReader : IAddonReader
     public PlayerReader PlayerReader => throw new NotImplementedException();
     public BagReader BagReader => throw new NotImplementedException();
     public EquipmentReader EquipmentReader => throw new NotImplementedException();
-    public LevelTracker LevelTracker => throw new NotImplementedException();
     public ActionBarCostReader ActionBarCostReader => throw new NotImplementedException();
     public ActionBarCooldownReader ActionBarCooldownReader => throw new NotImplementedException();
 
@@ -18,6 +17,8 @@ public sealed class ConfigAddonReader : IAddonReader
     public SpellBookReader SpellBookReader => throw new NotImplementedException();
     public TalentReader TalentReader => throw new NotImplementedException();
 
+    public CombatLog CombatLog => throw new NotImplementedException();
+
     public double AvgUpdateLatency => throw new NotImplementedException();
 
     public int DamageTakenCount() => throw new NotImplementedException();
@@ -25,10 +26,6 @@ public sealed class ConfigAddonReader : IAddonReader
     public string TargetName => throw new NotImplementedException();
 
     public event Action? AddonDataChanged;
-
-#pragma warning disable CS0067 // The event is never used
-    public event Action? PlayerDeath;
-#pragma warning restore CS0067
 
     private readonly IAddonDataProvider reader;
     private readonly AutoResetEvent autoResetEvent;

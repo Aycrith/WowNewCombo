@@ -870,6 +870,7 @@ Formula: `[Keyword] [Operator] [Numeric integer value]`
 | `>=` | Greater then or Equals |
 | `<` | Less then |
 | `>` | Greater then |
+| `%` | Modulo, `true` when the expression is Equals to `0` |
 
 | Keyword | Description |
 | --- | --- |
@@ -906,6 +907,8 @@ Formula: `[Keyword] [Operator] [Numeric integer value]`
 | `Debuff_{IntVariable_Name}` | Returns the given `{IntVariable_Name}` remaining target debuff up time |
 | `CurGCD` | Returns the player current remaining GCD time |
 | `GCD` | Alias for `1500` value |
+| `Kills` | In the current session how many mobs have been killed by the player. |
+| `Deaths` | In the current session how many times the player have died. |
 
 For the `MinRange` and `MaxRange` gives an approximation range distance between the player and target.
 
@@ -942,6 +945,7 @@ e.g. Single Requirement
 "Requirement": "MainHandSpeed > 3500"   // Main hand attack speed is greater then 3.5 seconds
 "Requirement": "MainHandSwing > -400"   // 400 milliseconds before next predicted main swing happen
 "Requirement": "MainHandSwing > -400"   // 400 milliseconds before next predicted main swing happen
+"Requirement": "Dead && Deaths % 2"   // Player is currently dead and died for the second time in the current session
 ```
 
 e.g. List of Requirements
@@ -1255,6 +1259,7 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | `"TargetCastingSpell"` | Target casts any spell |
 | `"Swimming"` | The player is currently swimming. |
 | `"Falling"` | The player is currently falling down, not touching the ground. |
+| `"Dead"` | The player is currently dead. |
 | `"Has Pet"` | The player's pet is alive |
 | `"Pet HasTarget"` | Players pet has target |
 | `"Pet Happy"` | Pet happienss is green |
