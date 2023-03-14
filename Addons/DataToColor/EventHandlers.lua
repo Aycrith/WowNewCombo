@@ -394,11 +394,14 @@ function DataToColor:OnCombatEvent(...)
         end
     end
 
-    if unitDied[subEvent] and DataToColor.eligibleKillCredit[destGUID] then
-        if band(destFlags, COMBATLOG_OBJECT_TYPE_NPC) > 0 then
+    if unitDied[subEvent] then
+        if band(destFlags, COMBATLOG_OBJECT_TYPE_NPC) > 0 and DataToColor.eligibleKillCredit[destGUID] then
             DataToColor.CombatCreatureDiedQueue:push(DataToColor:getGuidFromUUID(destGUID))
             DataToColor.lastLoot = DataToColor.C.Loot.Corpse
             --DataToColor:Print(subEvent, " ", destGUID, " ", DataToColor:getGuidFromUUID(destGUID))
+        elseif destGUID == DataToColor.playerGUID then
+            DataToColor.CombatCreatureDiedQueue:push(16777215)
+            --DataToColor:Print(subEvent, " player Death ", destGUID, " 16777215")
         elseif DataToColor.playerPetSummons[destGUID] then
             local guid = DataToColor:getGuidFromUUID(destGUID)
             DataToColor.playerPetSummons[guid] = nil
