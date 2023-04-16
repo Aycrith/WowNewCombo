@@ -125,6 +125,7 @@ internal sealed class Program
             Log.Information($"[{nameof(Program)}] {nameof(NoScreenCapture)}");
         }
 
+        services.AddSingleton<SessionStat>();
         services.AddSingleton<IGrindSessionDAO, LocalGrindSessionDAO>();
         services.AddSingleton<WorldMapAreaDB>();
         services.AddSingleton<IPPather>(x =>
