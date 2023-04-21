@@ -115,6 +115,10 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
             navigation.ResetStuckParameters();
             MountIfPossible();
         }
+        else if (e.GetType() == typeof(AbortEvent))
+        {
+            pathState = PathState.Finished;
+        }
     }
 
     public override void OnEnter()
@@ -122,7 +126,7 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
         input.PressClearTarget();
         stopMoving.Stop();
 
-        navigation.SetWayPoints(key.Path);
+        SetClosestWaypoint();
 
         pathState = PathState.ApproachPathStart;
 
@@ -147,6 +151,42 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
         wait.Update();
     }
 
+    private void SetClosestWaypoint()
+    {
+        Vector3 playerMap = playerReader.MapPos;
+
+        Span<Vector3> pathMap = stackalloc Vector3[key.Path.Length];
+        key.Path.CopyTo(pathMap);
+
+        float mapDistanceToFirst = playerMap.MapDistanceXYTo(pathMap[0]);
+        float mapDistanceToLast = playerMap.MapDistanceXYTo(pathMap[^1]);
+
+        int closestIndex = 0;
+        Vector3 mapClosestPoint = Vector3.Zero;
+        float distance = float.MaxValue;
+
+        for (int i = 0; i < pathMap.Length; i++)
+        {
+            Vector3 p = pathMap[i];
+            float d = playerMap.MapDistanceXYTo(p);
+            if (d < distance)
+            {
+                distance = d;
+                closestIndex = i;
+                mapClosestPoint = p;
+            }
+        }
+
+        if (mapClosestPoint == pathMap[0] || mapClosestPoint == pathMap[^1])
+        {
+            navigation.SetWayPoints(pathMap);
+        }
+        else
+        {
+            Span<Vector3> points = pathMap[closestIndex..];
+            navigation.SetWayPoints(points);
+        }
+    }
 
     private void Navigation_OnWayPointReached()
     {
@@ -221,7 +261,9 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
         // At this point the BagsFull is false
         // which mean it it would exit the Goal
         // instead keep it trapped to follow the route back
-        while (navigation.HasWaypoint() && !ct.IsCancellationRequested)
+        while (navigation.HasWaypoint() &&
+            !ct.IsCancellationRequested &&
+            pathState == PathState.FollowPath)
         {
             navigation.Update();
             wait.Update();

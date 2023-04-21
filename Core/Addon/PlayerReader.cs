@@ -28,6 +28,7 @@ public sealed partial class PlayerReader : IMouseOverReader
     public WorldMapArea WorldMapArea { get; private set; }
 
     public Vector3 MapPos => new(MapX, MapY, WorldPosZ);
+    public Vector3 MapPosNoZ => new(MapX, MapY, 0);
     public Vector3 WorldPos => worldMapAreaDB.ToWorld_FlipXY(UIMapId.Value, MapPos);
 
     public float WorldPosZ { get; set; } // MapZ not exists. Alias for WorldLoc.Z

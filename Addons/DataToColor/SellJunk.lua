@@ -84,6 +84,11 @@ function SellJunkFunc()
                     soldCount = soldCount + 1
                     UseContainerItem(bagID, bagSlot)
 
+                    if not mSelling then
+                        mSelling = true
+                        DataToColor.gossipQueue:push(MERCHANT_SELLING)
+                    end
+
                     if mSellJunkTicker._remainingIterations == mIterationCount then
                         mTotalPrice = mTotalPrice + (itemPrice * itemCount)
                         -- Store first sold bag slot for analysis

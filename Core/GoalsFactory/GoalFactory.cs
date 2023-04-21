@@ -260,6 +260,11 @@ public static class GoalFactory
         for (int i = 0; i < path.Length; i++)
         {
             path[i] = rawPath[i * step];
+
+            // TODO: there could be saved user routes where
+            //       the Z component not 0
+            if (path[i].Z != 0)
+                path[i].Z = 0;
         }
         return path;
     }
