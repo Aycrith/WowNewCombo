@@ -268,9 +268,9 @@
 
     private void OnAddonDataChangedAction()
     {
-        if (!UpdateRecording() && lastPlayerPoint != addonReader.PlayerReader.MapPos)
+        if (!UpdateRecording() && lastPlayerPoint != addonReader.PlayerReader.MapPosNoZ)
         {
-            lastPlayerPoint = addonReader.PlayerReader.MapPos;
+            lastPlayerPoint = addonReader.PlayerReader.MapPosNoZ;
             UpdateRouteMarkup();
             StateHasChanged();
         }
@@ -415,7 +415,7 @@
     {
         if (!recording) { return false; }
 
-        Vector3 map = addonReader.PlayerReader.MapPos;
+        Vector3 map = addonReader.PlayerReader.MapPosNoZ;
 
         if (editPath.Count == 0 ||
             map.MapDistanceXYTo(editPath.Last()) > Distance)
@@ -472,7 +472,7 @@
 
     protected void UpdateSelectedWithPlayer()
     {
-        UpdateSourcePoint(ref selectedPoint, addonReader.PlayerReader.MapPos);
+        UpdateSourcePoint(ref selectedPoint, addonReader.PlayerReader.MapPosNoZ);
     }
 
     protected void UpdateSelectedWithPreview()
@@ -566,7 +566,9 @@
         int index = editPath.FindIndex(p => p == selectedPoint);
         if (index == -1) return;
 
-        var target = addonReader.PlayerReader.MapPos;
+        var target = addonReader.PlayerReader.MapPosNoZ;
+        target.Z = 0;
+
         editPath.Insert(index + 1, target);
 
         selectedPoint = target;
