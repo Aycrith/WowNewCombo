@@ -2,7 +2,7 @@
 
 namespace PPather.Triangles.Data;
 
-public class SparseMatrix3D<T>
+public sealed class SparseMatrix3D<T>
 {
     private readonly Dictionary<(int, int, int), T> dict = new();
 
