@@ -83,21 +83,25 @@ public sealed class Test_NpcNameFinder : IDisposable
 
     public void Execute()
     {
-        if (LogEachUpdate)
-            stopwatch.Restart();
-
+        long captureTime = Stopwatch.GetTimestamp();
         wowScreen.Update();
 
         if (LogEachUpdate)
-            logger.LogInformation($"Capture: {stopwatch.ElapsedMilliseconds}ms");
+        {
+            stringBuilder.Length = 0;
+            stringBuilder.Append($"Capture: {Stopwatch.GetElapsedTime(captureTime).TotalMilliseconds:F6}ms");
+        }
 
-        if (LogEachUpdate)
-            stopwatch.Restart();
-
+        long updateTime = Stopwatch.GetTimestamp();
         npcNameFinder.Update();
 
         if (LogEachUpdate)
-            logger.LogInformation($"Update: {stopwatch.ElapsedMilliseconds}ms");
+        {
+            stringBuilder.Append(" | ");
+            stringBuilder.Append($"Update: {Stopwatch.GetElapsedTime(updateTime).TotalMilliseconds:F6}ms");
+
+            logger.LogInformation(stringBuilder.ToString());
+        }
 
         if (saveImage)
         {

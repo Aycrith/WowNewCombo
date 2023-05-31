@@ -27,7 +27,7 @@ public class NpcNameOverlay : IDisposable
     private readonly bool debugTargeting;
     private readonly bool debugSkinning;
 
-    private const int padding = 4;
+    private const int padding = 6;
     private const float NumberLeftPadding = 20f;
     private const int FontSize = 10;
 
@@ -115,7 +115,7 @@ public class NpcNameOverlay : IDisposable
 
         g.DrawRectangle(brush, npcNameFinder.Area.Left, npcNameFinder.Area.Top, npcNameFinder.Area.Right, npcNameFinder.Area.Bottom, 1);
 
-        for (int i = 0; i < npcNameFinder.Npcs.Length; i++)
+        for (int i = 0; i < npcNameFinder.Npcs.Count; i++)
         {
             NpcPosition npc = npcNameFinder.Npcs[i];
 
