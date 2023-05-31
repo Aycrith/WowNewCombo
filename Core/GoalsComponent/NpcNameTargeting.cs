@@ -170,7 +170,7 @@ public sealed class NpcNameTargeting : IDisposable
         const int e = 3;
         Span<Point> attemptPoints = stackalloc Point[c + (c * e)];
 
-        for (int ni = 0; ni < npcNameFinder.Npcs.Length; ni++)
+        for (int ni = 0; ni < npcNameFinder.Npcs.Count; ni++)
         {
             NpcPosition npc = npcNameFinder.Npcs[ni];
             for (int i = 0; i < c; i += e)
@@ -204,7 +204,7 @@ public sealed class NpcNameTargeting : IDisposable
 
     public void ShowClickPositions(Graphics gr)
     {
-        for (int i = 0; i < npcNameFinder.Npcs.Length; i++)
+        for (int i = 0; i < npcNameFinder.Npcs.Count; i++)
         {
             NpcPosition npc = npcNameFinder.Npcs[i];
             for (int j = 0; j < locFindBy.Length; j++)
