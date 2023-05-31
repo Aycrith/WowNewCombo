@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
 using System.Buffers;
+using System.Collections.Generic;
 
 #pragma warning disable 162
 
@@ -59,9 +60,6 @@ public static class SearchMode_Extension
 
 public sealed partial class NpcNameFinder : IDisposable
 {
-    private const SearchMode searchMode = SearchMode.Simple;
-    public NpcNames nameType { get; private set; } = NpcNames.Enemy | NpcNames.Neutral;
-
     private readonly ILogger logger;
     private readonly IBitmapProvider bitmapProvider;
     private readonly PixelFormat pixelFormat;
@@ -82,11 +80,14 @@ public sealed partial class NpcNameFinder : IDisposable
     private const float refWidth = 1920;
     private const float refHeight = 1080;
 
-    public float ScaleToRefWidth = 1;
-    public float ScaleToRefHeight = 1;
+    public readonly float ScaleToRefWidth = 1;
+    public readonly float ScaleToRefHeight = 1;
 
-    public NpcPosition[] Npcs { get; private set; } = Array.Empty<NpcPosition>();
-    public int NpcCount => Npcs.Length;
+    private SearchMode searchMode = SearchMode.Fuzzy;
+    private NpcNames nameType = NpcNames.Enemy | NpcNames.Neutral;
+
+    public ArraySegment<NpcPosition> Npcs { get; private set; } = Array.Empty<NpcPosition>();
+    public int NpcCount => Npcs.Count;
     public int AddCount { private set; get; }
     public int TargetCount { private set; get; }
     public bool MobsVisible => NpcCount > 0;
@@ -97,13 +98,15 @@ public sealed partial class NpcNameFinder : IDisposable
 
     private Func<byte, byte, byte, bool> colorMatcher;
 
+    private readonly NpcPositionComparer npcPosComparer;
+
     #region variables
 
     public float colorFuzziness { get; set; } = 15f;
 
-    private const float colorFuzz = 5;
+    private const int colorFuzz = 40;
 
-    public int topOffset { get; set; } = 110;
+    public int topOffset { get; set; } = 117;
 
     private float heightMul;
     public int HeightMulti { get; set; }
@@ -122,18 +125,21 @@ public sealed partial class NpcNameFinder : IDisposable
 
     #region Colors
 
-    public const byte fE_R = 255;
+    public const byte fBase = 230;
+
+    public const byte fE_R = fBase;
     public const byte fE_G = 0;
     public const byte fE_B = 0;
 
     public const byte fF_R = 0;
-    public const byte fF_G = 255;
+    public const byte fF_G = fBase;
     public const byte fF_B = 0;
 
-    public const byte fN_R = 255;
-    public const byte fN_G = 255;
+    public const byte fN_R = fBase;
+    public const byte fN_G = fBase;
     public const byte fN_B = 0;
 
+    public const byte fuzzCorpse = 18;
     public const byte fC_RGB = 128;
 
     public const byte sE_R = 240;
@@ -159,7 +165,8 @@ public sealed partial class NpcNameFinder : IDisposable
         this.bytesPerPixel = Bitmap.GetPixelFormatSize(pixelFormat) / 8;
 
         UpdateSearchMode();
-        logger.LogInformation($"[NpcNameFinder] searchMode = {searchMode.ToStringF()}");
+
+        npcPosComparer = new(bitmapProvider);
 
         ScaleToRefWidth = ScaleWidth(1);
         ScaleToRefHeight = ScaleHeight(1);
@@ -214,10 +221,20 @@ public sealed partial class NpcNameFinder : IDisposable
 
         nameType = type;
 
+        switch (type)
+        {
+            case NpcNames.Corpse:
+                searchMode = SearchMode.Simple;
+                break;
+            default:
+                searchMode = SearchMode.Fuzzy;
+                break;
+        }
+
         CalculateHeightMultipiler();
         UpdateSearchMode();
 
-        LogTypeChanged(logger, type.ToStringF());
+        LogTypeChanged(logger, type.ToStringF(), searchMode.ToStringF());
 
         return true;
     }
@@ -339,13 +356,20 @@ public sealed partial class NpcNameFinder : IDisposable
         }
     }
 
-    private static bool FuzzyColor(byte rr, byte gg, byte bb, byte r, byte g, byte b, float fuzzy)
+    [SkipLocalsInit]
+    private static bool FuzzyColor(
+        byte rr, byte gg, byte bb,
+        byte r, byte g, byte b,
+        int fuzzy)
     {
-        return MathF.Sqrt(
-            ((rr - r) * (rr - r)) +
-            ((gg - g) * (rr - g)) +
-            ((bb - b) * (bb - b)))
-            <= fuzzy;
+        unchecked
+        {
+            int sqrDistance = 
+                ((rr - r) * (rr - r)) +
+                ((gg - g) * (gg - g)) +
+                ((bb - b) * (bb - b));
+            return sqrDistance <= fuzzy * fuzzy;
+        }
     }
 
     private static bool FuzzyEnemyOrNeutral(byte r, byte g, byte b)
@@ -364,7 +388,7 @@ public sealed partial class NpcNameFinder : IDisposable
         => FuzzyColor(fN_R, fN_G, fN_B, r, g, b, colorFuzz);
 
     private static bool FuzzyCorpse(byte r, byte g, byte b)
-        => FuzzyColor(fC_RGB, fC_RGB, fC_RGB, r, g, b, colorFuzz);
+        => FuzzyColor(fC_RGB, fC_RGB, fC_RGB, r, g, b, fuzzCorpse);
 
     #endregion
 
@@ -377,7 +401,7 @@ public sealed partial class NpcNameFinder : IDisposable
     {
         resetEvent.Reset();
 
-        ReadOnlySpan<LineSegment> lineSegments = PopulateLines(bitmapProvider.Bitmap, bitmapProvider.Rect);
+        ReadOnlySpan<LineSegment> lineSegments = PopulateLines(bitmapProvider.Bitmap, Area);
         Npcs = DetermineNpcs(lineSegments);
 
         TargetCount = Npcs.Count(TargetsCount);
@@ -400,16 +424,18 @@ public sealed partial class NpcNameFinder : IDisposable
         resetEvent.Set();
     }
 
-    private NpcPosition[] DetermineNpcs(ReadOnlySpan<LineSegment> data)
+    private ArraySegment<NpcPosition> DetermineNpcs(ReadOnlySpan<LineSegment> data)
     {
         int c = 0;
-        NpcPosition[] npcs = new NpcPosition[data.Length];
+
+        var pool = ArrayPool<NpcPosition>.Shared;
+        NpcPosition[] npcs = pool.Rent(data.Length);
 
         float offset1 = ScaleHeight(HeightOffset1);
         float offset2 = ScaleHeight(HeightOffset2);
 
-        Span<bool> inGroup = stackalloc bool[data.Length];
         const int MAX_GROUP = 64;
+        Span<bool> inGroup = stackalloc bool[data.Length];
         Span<LineSegment> group = stackalloc LineSegment[MAX_GROUP];
 
         for (int i = 0; i < data.Length; i++)
@@ -442,7 +468,7 @@ public sealed partial class NpcNameFinder : IDisposable
 
             if (gc > 0)
             {
-                LineSegment n = group[0];
+                ref LineSegment n = ref group[0];
                 Rectangle rect = new(n.XStart, n.Y, n.XEnd - n.XStart, 1);
 
                 for (int g = 1; g < gc; g++)
@@ -467,14 +493,13 @@ public sealed partial class NpcNameFinder : IDisposable
 
         for (int i = 0; i < c; i++)
         {
-            NpcPosition ii = npcs[i];
-
+            ref readonly NpcPosition ii = ref npcs[i];
             if (ii.Equals(NpcPosition.Empty))
                 continue;
 
             for (int j = 0; j < c; j++)
             {
-                NpcPosition jj = npcs[j];
+                ref readonly NpcPosition jj = ref npcs[j];
                 if (i == j || jj.Equals(NpcPosition.Empty))
                     continue;
 
@@ -482,7 +507,7 @@ public sealed partial class NpcNameFinder : IDisposable
                 Point pj = jj.Rect.Centre();
                 float midDistance = PointExt.SqrDistance(pi, pj);
 
-                if (ii.Rect.IntersectsWith(jj.Rect) || midDistance <= lineHeight)
+                if (ii.Rect.IntersectsWith(jj.Rect) || midDistance <= lineHeight * lineHeight)
                 {
                     Rectangle unionRect = Rectangle.Union(ii.Rect, jj.Rect);
 
@@ -493,9 +518,37 @@ public sealed partial class NpcNameFinder : IDisposable
             }
         }
 
-        npcs = npcs.Where(NonEmpty).ToArray();
-        Array.Sort(npcs, OrderBy);
-        return npcs;
+        int length = MoveEmptyToEnd(npcs, NpcPosition.Empty);
+        Array.Sort(npcs, 0, length, npcPosComparer);
+
+        pool.Return(npcs);
+
+        return new ArraySegment<NpcPosition>(npcs, 0, length);
+    }
+
+    private static int MoveEmptyToEnd<T>(Span<T> span, in T empty)
+    {
+        int emptyIndex = -span.Length;
+        for (int i = 0; i < span.Length; i++)
+        {
+            if (EqualityComparer<T>.Default.Equals(span[i], empty))
+            {
+                if (emptyIndex == -span.Length)
+                    emptyIndex = i;
+            }
+            else if (emptyIndex != -span.Length)
+            {
+                Swap(span, emptyIndex, i);
+                emptyIndex++;
+            }
+        }
+
+        return emptyIndex;
+
+        static void Swap(Span<T> span, int i, int j)
+        {
+            (span[j], span[i]) = (span[i], span[j]);
+        }
     }
 
     private bool TargetsCount(NpcPosition c)
@@ -509,26 +562,13 @@ public sealed partial class NpcNameFinder : IDisposable
             (c.ClickPoint.X > screenMid + screenTargetBuffer && c.ClickPoint.X < screenMid + screenAddBuffer);
     }
 
-    private static bool NonEmpty(NpcPosition x)
-    {
-        return !x.Equals(NpcPosition.Empty);
-    }
-
-    private int OrderBy(NpcPosition x, NpcPosition y)
-    {
-        Point origin = bitmapProvider.Rect.Centre();
-        float dx = PointExt.SqrDistance(origin, x.ClickPoint);
-        float dy = PointExt.SqrDistance(origin, y.ClickPoint);
-
-        return dx.CompareTo(dy);
-    }
-
     private int YOffset(Rectangle area, Rectangle npc)
     {
         return npc.Top / area.Top * MinHeight / 4;
     }
 
-    private Span<LineSegment> PopulateLines(Bitmap bitmap, Rectangle rect)
+    [SkipLocalsInit]
+    private ReadOnlySpan<LineSegment> PopulateLines(Bitmap bitmap, Rectangle rect)
     {
         Rectangle area = this.Area;
         int bytesPerPixel = this.bytesPerPixel;
@@ -547,13 +587,15 @@ public sealed partial class NpcNameFinder : IDisposable
 
         BitmapData bitmapData = bitmap.LockBits(new Rectangle(Point.Empty, rect.Size), ImageLockMode.ReadOnly, pixelFormat);
 
+        [SkipLocalsInit]
         unsafe void body(int y)
         {
             int xStart = -1;
             int xEnd = -1;
+            int end = area.Right;
 
             byte* currentLine = (byte*)bitmapData.Scan0 + (y * bitmapData.Stride);
-            for (int x = area.Left; x < area.Right; x++)
+            for (int x = area.Left; x < end; x++)
             {
                 int xi = x * bytesPerPixel;
 
@@ -607,7 +649,7 @@ public sealed partial class NpcNameFinder : IDisposable
         }
         */
 
-        for (int i = 0; i < Npcs.Length; i++)
+        for (int i = 0; i < Npcs.Count; i++)
         {
             NpcPosition n = Npcs[i];
             gr.DrawRectangle(IsAdd(n) ? greyPen : whitePen, n.Rect);
@@ -625,8 +667,8 @@ public sealed partial class NpcNameFinder : IDisposable
     [LoggerMessage(
         EventId = 1,
         Level = LogLevel.Information,
-        Message = "[NpcNameFinder] type = {type}")]
-    static partial void LogTypeChanged(ILogger logger, string type);
+        Message = "[NpcNameFinder] type = {type} | mode = {mode}")]
+    static partial void LogTypeChanged(ILogger logger, string type, string mode);
 
     #endregion
 }
