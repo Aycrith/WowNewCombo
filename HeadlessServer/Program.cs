@@ -136,20 +136,21 @@ internal sealed class Program
         services.AddSingleton<DataFrame[]>(x => FrameConfig.LoadFrames());
         services.AddSingleton<Wait>();
 
-        if (options.Value.Reader == AddonDataProviderType.DXGI)
+
+        switch (options.Value.Reader)
         {
-            services.AddSingleton<IAddonDataProvider, AddonDataProviderDXGI>();
-            Log.Information($"[{nameof(Program)}] {nameof(AddonDataProviderDXGI)}");
-        }
-        if (options.Value.Reader == AddonDataProviderType.DXGISwapChain)
-        {
-            services.AddSingleton<IAddonDataProvider, AddonDataProviderDXGISwapChain>();
-            Log.Information($"[{nameof(Program)}] {nameof(AddonDataProviderDXGISwapChain)}");
-        }
-        else if (options.Value.Reader is AddonDataProviderType.GDI)
-        {
-            services.AddSingleton<IAddonDataProvider, AddonDataProviderGDI>();
-            Log.Information($"[{nameof(Program)}] {nameof(AddonDataProviderGDI)}");
+            case AddonDataProviderType.GDI:
+                services.AddSingleton<IAddonDataProvider, AddonDataProviderGDI>();
+                Log.Information($"[{nameof(Program)}] {nameof(AddonDataProviderGDI)}");
+                break;
+            case AddonDataProviderType.GDIBlit:
+                services.AddSingleton<IAddonDataProvider, AddonDataProviderBitBlt>();
+                Log.Information($"[{nameof(Program)}] {nameof(AddonDataProviderBitBlt)}");
+                break;
+            case AddonDataProviderType.DXGI:
+                services.AddSingleton<IAddonDataProvider, AddonDataProviderDXGI>();
+                Log.Information($"[{nameof(Program)}] {nameof(AddonDataProviderDXGI)}");
+                break;
         }
 
         services.AddSingleton<AreaDB>();
