@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Runtime.CompilerServices;
 
 namespace Core;
 
@@ -48,7 +49,8 @@ public static class ImageHashing
     /// on his blog: http://www.hackerfactor.com/blog/index.php?/archives/432-Looks-Like-It.html.
     /// </summary>
     /// <param name="image">The image to hash.</param>
-    /// <returns>The hash of the image.</returns>
+    /// <returns>The hash of the image.</returns> 
+    [SkipLocalsInit]
     public static unsafe ulong AverageHash(Bitmap image, Bitmap squeezed, Graphics canvas)
     {
         Rectangle rect = new(0, 0, 8, 8);
@@ -62,20 +64,17 @@ public static class ImageHashing
         BitmapData data = squeezed.LockBits(rect, ImageLockMode.ReadOnly, squeezed.PixelFormat);
 
         uint averageValue = 0;
-        for (int y = 0; y < 8; y++)
+        for (int i = 0; i < 64; i++)
         {
-            for (int x = 0; x < 8; x++)
-            {
-                byte* pixel = (byte*)data.Scan0 + (data.Stride * y) + (bytesPerPixel * x);
-                uint argb = (uint)(pixel[0] | (pixel[1] << 8) | (pixel[2] << 16) | (pixel[3] << 24));
-                uint gray = (argb & 0x00ff0000) >> 16;
-                gray += (argb & 0x0000ff00) >> 8;
-                gray += (argb & 0x000000ff);
-                gray /= 12;
+            byte* pixel = (byte*)data.Scan0 + (data.Stride * i / 8) + (bytesPerPixel * i % 8);
+            uint argb = (uint)(pixel[0] | (pixel[1] << 8) | (pixel[2] << 16) | (pixel[3] << 24));
+            uint gray = (argb & 0x00ff0000) >> 16;
+            gray += (argb & 0x0000ff00) >> 8;
+            gray += (argb & 0x000000ff);
+            gray >>= 2; // divide by 12
 
-                grayscale[x + (y * 8)] = (byte)gray;
-                averageValue += gray;
-            }
+            grayscale[i] = (byte)gray;
+            averageValue += gray;
         }
         squeezed.UnlockBits(data);
 
