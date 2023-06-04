@@ -1,4 +1,4 @@
-using Serilog;
+﻿using Serilog;
 using Serilog.Extensions.Logging;
 using SharedLib.NpcFinder;
 using System.Diagnostics;
@@ -16,7 +16,6 @@ sealed class Program
     private static Microsoft.Extensions.Logging.ILogger logger;
 
     private const bool LogOverall = false;
-    private const bool ShowOverlay = false;
     private const int delay = 150;
 
     public static void Main()
@@ -44,7 +43,7 @@ sealed class Program
         NpcNames types = NpcNames.Enemy | NpcNames.Neutral;
         //NpcNames types = NpcNames.Friendly | NpcNames.Neutral;
 
-        using Test_NpcNameFinder test = new(logger, types, ShowOverlay);
+        using Test_NpcNameFinder test = new(logger, types);
         int count = 100;
         int i = 0;
 
@@ -170,7 +169,7 @@ sealed class Program
         //NpcNames types = NpcNames.Enemy | NpcNames.Neutral;
         NpcNames types = NpcNames.Friendly | NpcNames.Neutral;
 
-        using Test_NpcNameFinder test = new(logger, types, ShowOverlay);
+        using Test_NpcNameFinder test = new(logger, types);
 
         int count = 2;
         int i = 0;

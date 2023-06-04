@@ -19,6 +19,8 @@ namespace CoreTests;
 public sealed class Test_NpcNameFinder : IDisposable
 {
     private const bool saveImage = true;
+    private const bool showOverlay = false;
+
     private const bool LogEachUpdate = true;
     private const bool LogShowResult = false;
 
@@ -43,7 +45,7 @@ public sealed class Test_NpcNameFinder : IDisposable
 
     private readonly NpcNameOverlay? npcNameOverlay;
 
-    public Test_NpcNameFinder(ILogger logger, NpcNames types, bool useOverlay)
+    public Test_NpcNameFinder(ILogger logger, NpcNames types)
     {
         this.logger = logger;
 
@@ -64,7 +66,7 @@ public sealed class Test_NpcNameFinder : IDisposable
             paint = Graphics.FromImage(paintBitmap);
         }
 
-        if (useOverlay)
+        if (showOverlay)
             npcNameOverlay = new(wowProcess.Process.MainWindowHandle, npcNameFinder, npcNameTargeting, debugTargeting, debugSkinning);
     }
 
@@ -137,7 +139,7 @@ public sealed class Test_NpcNameFinder : IDisposable
 
     private void SaveImage()
     {
-        if (npcNameFinder.Npcs.Any())
+        if (npcNameFinder.Npcs.Count > 0)
         {
             paint.DrawRectangle(whitePen, npcNameFinder.Area);
 
