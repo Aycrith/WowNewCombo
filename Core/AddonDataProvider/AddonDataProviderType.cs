@@ -3,7 +3,7 @@
 public enum AddonDataProviderType
 {
     GDI,
+    GDIBlit,
     DXGI,
-    DXGISwapChain,
     GDIConfig
 }

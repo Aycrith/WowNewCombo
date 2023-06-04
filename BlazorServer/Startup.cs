@@ -19,7 +19,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -157,20 +156,20 @@ public sealed class Startup
             StartupConfigReader scr = new();
             Configuration.GetSection(StartupConfigReader.Position).Bind(scr);
 
-            if (scr.ReaderType == AddonDataProviderType.DXGI)
+            switch (scr.ReaderType)
             {
-                services.AddSingleton<IAddonDataProvider, AddonDataProviderDXGI>();
-                Log.Information($"[{nameof(Startup)}] {nameof(AddonDataProviderDXGI)}");
-            }
-            if (scr.ReaderType == AddonDataProviderType.DXGISwapChain)
-            {
-                services.AddSingleton<IAddonDataProvider, AddonDataProviderDXGISwapChain>();
-                Log.Information($"[{nameof(Startup)}] {nameof(AddonDataProviderDXGISwapChain)}");
-            }
-            else if (scr.ReaderType is AddonDataProviderType.GDI)
-            {
-                services.AddSingleton<IAddonDataProvider, AddonDataProviderGDI>();
-                Log.Information($"[{nameof(Startup)}] {nameof(AddonDataProviderGDI)}");
+                case AddonDataProviderType.GDI:
+                    services.AddSingleton<IAddonDataProvider, AddonDataProviderGDI>();
+                    Log.Information($"[{nameof(Startup)}] {nameof(AddonDataProviderGDI)}");
+                    break;
+                case AddonDataProviderType.GDIBlit:
+                    services.AddSingleton<IAddonDataProvider, AddonDataProviderBitBlt>();
+                    Log.Information($"[{nameof(Program)}] {nameof(AddonDataProviderBitBlt)}");
+                    break;
+                case AddonDataProviderType.DXGI:
+                    services.AddSingleton<IAddonDataProvider, AddonDataProviderDXGI>();
+                    Log.Information($"[{nameof(Startup)}] {nameof(AddonDataProviderDXGI)}");
+                    break;
             }
 
             services.AddSingleton<AreaDB>();

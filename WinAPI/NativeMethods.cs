@@ -1,11 +1,14 @@
-using PInvoke;
 using System;
+
 using System.Drawing;
 using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
+
+[assembly: DisableRuntimeMarshalling]
 
 namespace WinAPI;
 
-public static class NativeMethods
+public static partial class NativeMethods
 {
     [StructLayout(LayoutKind.Sequential)]
     public struct CURSORINFO
@@ -16,33 +19,45 @@ public static class NativeMethods
         public Point ptScreenPos;
     }
 
-    [DllImport("user32.dll")]
-    public static extern bool GetCursorInfo(ref CURSORINFO pci);
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RECT
+    {
+        public int left, top, right, bottom;
+    }
 
-    [DllImport("user32.dll", SetLastError = true)]
-    public static extern bool DrawIconEx(IntPtr hdc, int xLeft, int yTop, IntPtr hIcon, int cxWidth, int cyHeight, int istepIfAniCur, IntPtr hbrFlickerFreeDraw, int diFlags);
-
-    [DllImport("user32.dll")]
-    public static extern bool DrawIcon(IntPtr hDC, int x, int y, IntPtr hIcon);
-
-    public const Int32 CURSOR_SHOWING = 0x0001;
-    public const Int32 DI_NORMAL = 0x0003;
-
-    [DllImport("user32.dll")]
-    public static extern IntPtr GetForegroundWindow();
-
-    [DllImport("user32.dll")]
-    public static extern bool SetForegroundWindow(IntPtr hWnd);
-
-    [DllImport("user32.dll")]
-    public static extern bool PostMessage(IntPtr hWnd, UInt32 Msg, int wParam, int lParam);
-
-    [DllImport("user32.dll")]
+    [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool SetCursorPos(int x, int y);
+    public static partial bool GetCursorInfo(ref CURSORINFO pci);
 
-    [DllImport("user32.dll")]
-    public static extern bool GetCursorPos(out Point p);
+    [LibraryImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool DrawIconEx(IntPtr hdc, int xLeft, int yTop, IntPtr hIcon, int cxWidth, int cyHeight, int istepIfAniCur, IntPtr hbrFlickerFreeDraw, int diFlags);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool DrawIcon(IntPtr hDC, int x, int y, IntPtr hIcon);
+
+    public const int CURSOR_SHOWING = 0x0001;
+    public const int DI_NORMAL = 0x0003;
+
+    [LibraryImport("user32.dll")]
+    public static partial IntPtr GetForegroundWindow();
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool SetForegroundWindow(IntPtr hWnd);
+
+    [LibraryImport("user32.dll", EntryPoint = "PostMessageA")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool PostMessage(IntPtr hWnd, UInt32 Msg, int wParam, int lParam);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool SetCursorPos(int x, int y);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool GetCursorPos(out Point p);
 
     public const UInt32 WM_KEYDOWN = 0x0100;
     public const UInt32 WM_KEYUP = 0x0101;
@@ -56,30 +71,30 @@ public static class NativeMethods
 
     public static int MakeLParam(int x, int y) => (y << 16) | (x & 0xFFFF);
 
-    [DllImport("user32.dll", SetLastError = true)]
+    [LibraryImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+    private static partial bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
-    [DllImport("user32.dll", SetLastError = true)]
+    [LibraryImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
+    private static partial bool GetClientRect(IntPtr hWnd, out RECT lpRect);
 
-    [DllImport("user32.dll", SetLastError = true)]
+    [LibraryImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool ClientToScreen(IntPtr hWnd, ref Point lpPoint);
+    private static partial bool ClientToScreen(IntPtr hWnd, ref Point lpPoint);
 
-    [DllImport("user32.dll", SetLastError = true)]
+    [LibraryImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool ScreenToClient(IntPtr hWnd, ref Point lpPoint);
+    public static partial bool ScreenToClient(IntPtr hWnd, ref Point lpPoint);
 
-    [DllImport("user32.dll")]
-    static extern int GetSystemMetrics(int nIndexn);
+    [LibraryImport("user32.dll")]
+    private static partial int GetSystemMetrics(int nIndexn);
 
     private const int SM_CXCURSOR = 13;
     private const int SM_CYCURSOR = 14;
 
-    [DllImport("gdi32.dll")]
-    static extern int GetDeviceCaps(IntPtr hDC, int nIndex);
+    [LibraryImport("gdi32.dll")]
+    private static partial int GetDeviceCaps(IntPtr hDC, int nIndex);
 
     private const int LOGPIXELSX = 88;
 
@@ -136,6 +151,17 @@ public static class NativeMethods
     public const int MONITOR_DEFAULT_TO_PRIMARY = 1;
     public const int MONITOR_DEFAULT_TO_NEAREST = 2;
 
-    [DllImport("user32.dll")]
-    public static extern IntPtr MonitorFromWindow(IntPtr hWnd, uint dwFlags);
+    [LibraryImport("user32.dll")]
+    public static partial IntPtr MonitorFromWindow(IntPtr hWnd, uint dwFlags);
+
+    [LibraryImport("user32.dll")]
+    public static partial IntPtr GetWindowDC(IntPtr hWnd);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool ReleaseDC(IntPtr hWnd, IntPtr hDC);
+
+    [LibraryImport("gdi32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool BitBlt(IntPtr hdc, int nXDest, int nYDest, int nWidth, int nHeight, IntPtr hdcSrc, int nXSrc, int nYSrc, TernaryRasterOperations dwRop);
 }

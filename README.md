@@ -225,7 +225,7 @@ In order to run `HeadlessServer` please look at the `HeadlessServer\run.bat`.
 | ---- | ---- | ---- | ---- |
 | `-m` or `-mode` | Pathfinder type | `RemoteV3` | `Local` or `RemoteV1` or `RemoteV3` |
 | `-p` or `-pid` | World of Warcraft process id | `-1` | open up task manager to find PID |
-| `-r` or `-reader` | Addon data screen reader backend | `GDI` | `GDI` works from Win7, `DXGI` work from Win8 |
+| `-r` or `-reader` | Addon data screen reader backend | `GDI` | `GDI` works from Win7.<br>`GDIBlit` allows background mode with a bit higher CPU usage.<br>`DXGI` work from Win8 |
 | `hostv1` | Navigation Remote V1 host | `localhost` | - |
 | `portv1` | Navigation Remote V1 port | `5001` | - |
 | `hostv3` | Navigation Remote V3 host | `127.0.0.1` | - |
