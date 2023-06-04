@@ -1,10 +1,11 @@
-﻿using Serilog;
+using Serilog;
 using Serilog.Extensions.Logging;
 using SharedLib.NpcFinder;
 using System.Diagnostics;
 using System.Threading;
 using System.Linq;
 using Core;
+using System;
 
 #pragma warning disable 0162
 
@@ -31,6 +32,7 @@ sealed class Program
         Test_NPCNameFinder();
         //Test_Input();
         //Test_CursorGrabber();
+        //Test_CursorCompare();
         //Test_MinimapNodeFinder();
         //Test_FindTargetByCursor();
     }
@@ -90,6 +92,42 @@ sealed class Program
 
             i--;
         }
+    }
+
+    private static void Test_CursorCompare()
+    {
+        using CursorClassifier classifier = new();
+        const int count = 50;
+        int i = 0;
+
+        Span<double> times = stackalloc double[count];
+
+        while (i < count)
+        {
+            Thread.Sleep(100);
+
+            long startTime = Stopwatch.GetTimestamp();
+
+            classifier.Classify(out CursorType cursorType);
+
+            times[i] = Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
+            //Log.Logger.Information($"{cursorType.ToStringF()} {times[i]:F6}ms");
+            i++;
+        }
+
+        double sum = 0;
+        double max = double.MinValue;
+        double min = double.MaxValue;
+
+        for (i = 0; i < times.Length - 1; i++)
+        {
+            double val = times[i];
+            sum += val;
+            if (val > max) max = val;
+            else if (val < min) min = val;
+        }
+
+        Log.Logger.Information($"min:{min:F6} | max: {max:F5} | avg:{(sum / count):F6}");
     }
 
     private static void Test_MinimapNodeFinder()
