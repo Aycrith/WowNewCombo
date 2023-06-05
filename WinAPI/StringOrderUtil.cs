@@ -5,16 +5,16 @@ using System.Security;
 namespace WinAPI;
 
 [SuppressUnmanagedCodeSecurity]
-internal static class SafeNativeMethods
+internal static partial class SafeNativeMethods
 {
-    [DllImport("shlwapi.dll", CharSet = CharSet.Unicode)]
-    public static extern int StrCmpLogicalW(string psz1, string psz2);
+    [LibraryImport("shlwapi.dll", StringMarshalling = StringMarshalling.Utf16)]
+    public static partial int StrCmpLogicalW(string psz1, string psz2);
 }
 
 public sealed class NaturalStringComparer : IComparer<string>
 {
-    public int Compare(string a, string b)
+    public int Compare(string x, string y)
     {
-        return SafeNativeMethods.StrCmpLogicalW(a, b);
+        return SafeNativeMethods.StrCmpLogicalW(x, y);
     }
 }
