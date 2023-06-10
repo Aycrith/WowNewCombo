@@ -1,12 +1,18 @@
 ﻿using Microsoft.Extensions.Logging;
+
 using SharedLib;
+
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Runtime.InteropServices;
+
 using WinAPI;
+
+using static WinAPI.NativeMethods;
 
 namespace Game;
 
@@ -58,8 +64,8 @@ public sealed class WowScreen : IWowScreen, IBitmapProvider, IDisposable
         blackPen = new SolidBrush(Color.Black);
 
         logger.LogInformation($"[{nameof(WowScreen)}] {rect} - " +
-            $"Windowed Mode: {NativeMethods.IsWindowedMode(p)} - " +
-            $"Scale: {NativeMethods.DPI2PPI(NativeMethods.GetDpi()):F2}");
+            $"Windowed Mode: {IsWindowedMode(p)} - " +
+            $"Scale: {DPI2PPI(GetDpi()):F2}");
     }
 
     public void Update()
@@ -121,6 +127,23 @@ public sealed class WowScreen : IWowScreen, IBitmapProvider, IDisposable
     {
         Update();
         graphics.DrawImage(Bitmap, 0, 0, rect, GraphicsUnit.Pixel);
+
+        GetCursorPos(out Point cursorPoint);
+        GetRectangle(out Rectangle windowRect);
+
+        if (!windowRect.Contains(cursorPoint))
+            return;
+
+        CURSORINFO cursorInfo = new();
+        cursorInfo.cbSize = Marshal.SizeOf(cursorInfo);
+        if (GetCursorInfo(ref cursorInfo) &&
+            cursorInfo.flags == CURSOR_SHOWING)
+        {
+            DrawIcon(graphics.GetHdc(),
+                cursorPoint.X, cursorPoint.Y, cursorInfo.hCursor);
+
+            graphics.ReleaseHdc();
+        }
     }
 
     public Color GetColorAt(Point point)
