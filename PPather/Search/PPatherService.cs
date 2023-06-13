@@ -30,6 +30,8 @@ public sealed class PPatherService
     public Vector3 ClosestLocation => search?.PathGraph?.ClosestSpot?.Loc ?? Vector3.Zero;
     public Vector3 PeekLocation => search?.PathGraph?.PeekSpot?.Loc ?? Vector3.Zero;
 
+    public Vector3[] TestPoints => search?.PathGraph?.TestPoints ?? Array.Empty<Vector3>();
+
     public PPatherService(ILogger logger, DataConfig dataConfig, WorldMapAreaDB worldMapAreaDB)
     {
         this.dataConfig = dataConfig;
