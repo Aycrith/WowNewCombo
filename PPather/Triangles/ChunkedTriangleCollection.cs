@@ -203,20 +203,33 @@ public sealed class ChunkedTriangleCollection
         to_up.Z = z1 + toonHeight - toonSize;
 
         //diagonal
-        if (CheckForCollision(tc, ts, from, to_up)) { return true; }
+        if (CheckForCollision(tc, ts, from, to_up))
+        {
+            return true;
+        }
 
         //diagonal
-        if (CheckForCollision(tc, ts, from_up, to)) { return true; }
+        if (CheckForCollision(tc, ts, from_up, to))
+        {
+            return true;
+        }
 
         //head height
         // if (CheckForCollision(tc, ts, ref from_up, ref to_up)) { return true; }
 
         //close to the ground
+        const float stepDistance = 0.3f;
+
         from_low = new Vector3(from.X, from.Y, from.Z);
-        from_low.Z = z0 + 0.2f;
+        from_low.Z = z0 + stepDistance;
+
         to_low = new Vector3(to.X, to.Y, to.Z);
-        to_low.Z = z1 + 0.2f;
-        if (CheckForCollision(tc, ts, from_low, to_low)) { return true; }
+        to_low.Z = z1 + stepDistance;
+
+        if (CheckForCollision(tc, ts, from_low, to_low))
+        {
+            return true;
+        }
 
         GetNormal(x0, y0, x1, y1, out float ddx, out float ddy, 0.2f);
 
@@ -224,7 +237,11 @@ public sealed class ChunkedTriangleCollection
         from_low.Y += ddx;
         to_low.X += ddy;
         to_low.Y += ddx;
-        if (CheckForCollision(tc, ts, from_low, to_low)) { return true; }
+
+        if (CheckForCollision(tc, ts, from_low, to_low))
+        {
+            return true;
+        }
 
         from_low.X -= 2 * ddy;
         from_low.Y -= 2 * ddx;
