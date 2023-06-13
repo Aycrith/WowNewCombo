@@ -83,6 +83,19 @@
         //console.log("drawLine: " + name + " completed.");
     }
 
+    var debugLineCount = 0;
+
+    drawLineDebug = function (vector, color, name, count) {
+        if (debugLineCount != count) {
+            for (let i = debugLineCount; i >= 0; i--) {
+                removeMeshes(name + i)
+            }
+            debugLineCount = count;
+        }
+
+        drawLine(vector, color, name);
+    }
+
     getColour = function (color) {
         switch (color) {
             case 1: return BABYLON.Color3.Red();
@@ -90,6 +103,7 @@
             case 3: return BABYLON.Color3.Blue();
             case 5: return BABYLON.Color3.Teal();
             case 6: return new BABYLON.Color3(1, 0.6, 0);
+            case 7: return BABYLON.Color3.Yellow();
             case 4:
             default: return BABYLON.Color3.White();
         }
@@ -99,6 +113,7 @@
         switch (color) {
             case 2: return 0.5;
             case 4: return 0.1;
+            case 7: return 0.1;
             default: return 0.11;
         }
     }

@@ -46,8 +46,20 @@
 <canvas id="renderCanvas" style="background:black">
 </canvas>
 @code {
+
+    public enum Color
+    {
+        Red = 1,
+        Green,
+        Blue,
+        Teal,
+        White,
+        Orange,
+        Yellow
+    }
+
     [Parameter]
-    public int PathColour { get; set; } = 1;
+    public int PathColour { get; set; } = (int)Color.Red;
 
     [Parameter]
     public string Name { get; set; } = "path";
@@ -62,6 +74,8 @@
     private Vector4 lastTo;
     private Vector3 lastClosest;
     private Vector3 lastPeek;
+
+    private Vector3[] testPoints;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -135,7 +149,7 @@
                 if (path.Count() > 0)
                 {
                     await jsRuntime.InvokeVoidAsync("drawPath",
-                        JsonSerializer.Serialize(path, options), 4, "search");
+                        JsonSerializer.Serialize(path, options), Color.White, "search");
                 }
             }
 
@@ -143,21 +157,33 @@
             {
                 lastFrom = pPatherService.SearchFrom;
                 await jsRuntime.InvokeVoidAsync("drawLine",
-                    JsonSerializer.Serialize(lastFrom.AsVector3(), options), 2, "start2");
+                    JsonSerializer.Serialize(lastFrom.AsVector3(), options), Color.Green, "start2");
             }
 
             if (lastTo != pPatherService.SearchTo)
             {
                 lastTo = pPatherService.SearchTo;
                 await jsRuntime.InvokeVoidAsync("drawLine",
-                    JsonSerializer.Serialize(lastTo.AsVector3(), options), 3, "endd");
+                    JsonSerializer.Serialize(lastTo.AsVector3(), options), Color.Blue, "endd");
             }
 
             if (lastClosest != pPatherService.ClosestLocation)
             {
                 lastClosest = pPatherService.ClosestLocation;
                 await jsRuntime.InvokeVoidAsync("drawLine",
-                    JsonSerializer.Serialize(pPatherService.ClosestLocation, options), 5, "closest");
+                    JsonSerializer.Serialize(pPatherService.ClosestLocation, options), Color.Teal, "closest");
+            }
+
+            if (testPoints != pPatherService.TestPoints)
+            {
+                testPoints = pPatherService.TestPoints;
+
+                for (int i = 0; i < testPoints.Length; i++)
+                {
+                    Vector3 p = testPoints[i];
+                    await jsRuntime.InvokeVoidAsync("drawLineDebug",
+                        JsonSerializer.Serialize(p, options), Color.Yellow, "debug" + i, testPoints.Length);
+                }
             }
 
             if (lastPeek != pPatherService.PeekLocation)
@@ -165,7 +191,7 @@
                 lastPeek = pPatherService.PeekLocation;
 
                 await jsRuntime.InvokeVoidAsync("drawLine",
-                    JsonSerializer.Serialize(pPatherService.PeekLocation, options), 6, "peek");
+                    JsonSerializer.Serialize(pPatherService.PeekLocation, options), Color.Orange, "peek");
             }
 
             cts.Token.WaitHandle.WaitOne(100);
