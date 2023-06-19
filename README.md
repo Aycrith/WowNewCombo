@@ -6,32 +6,36 @@
 
 - The project current goal is to support `Season of Mastery Classic`, `Burning Crusade Classic`, `Wrath of the Lich King Classic`
 
-- Addon: Modified [Happy-Pixels](https://github.com/FreeHongKongMMO/Happy-Pixels) to read the game state.
+- **Addon**: Modified [Happy-Pixels](https://github.com/FreeHongKongMMO/Happy-Pixels) to read the game state.
 
-- Frontend: [ASP.NET Core Razor components](https://docs.microsoft.com/en-us/aspnet/core/blazor/components/).
+- **Frontend**: [ASP.NET Core Razor components](https://docs.microsoft.com/en-us/aspnet/core/blazor/components/).
 
-- BlazorServer: [ASP.NET Core Blazor](https://docs.microsoft.com/en-us/aspnet/core/blazor) to show the state in a browser.
+- **BlazorServer**: [ASP.NET Core Blazor](https://docs.microsoft.com/en-us/aspnet/core/blazor) to show the state in a browser.
 
-- HeadlessServer: Run from CommandLine without UI. Requires valid configuration files present next to the executable.
+- **HeadlessServer**: Run from CommandLine without Frontend. Requires valid configuration files present next to the executable.
 
-- Backend(Core/Game): written in C#. Screen capture, mouse and keyboard clicking. No memory tampering and DLL injection.
+- Backend(**Core/Game**): written in C#. Screen capture, mouse and keyboard clicking. No memory tampering and DLL injection.
 
 - Further detail about the architecture can be found in [Blog post](http://www.codesin.net/post/wowbot/).
 
-- Pathing: Indoors pathfinding only works properly if `PathFilename` is exists. For outdoor there are multiple solutions:
-    * V1 Local - In processs [PPather](https://github.com/Xian55/WowClassicGrindBot/tree/dev/PPather).
-    * V1 Remote - Out of process [PathingAPI](https://github.com/Xian55/WowClassicGrindBot/tree/dev/PathingAPI).
-    * V3 Remote - Out of process [AmeisenNavigation](https://github.com/Xian55/AmeisenNavigation/tree/feature/guess-z-coord-after-rewrite)
+- Pathing: 
+    * World map / Outdoor there are multiple solutions - *by default the app attempts to discover the available pathing in the following order*:
+        * V3 Remote - Out of process [AmeisenNavigation](https://github.com/Xian55/AmeisenNavigation/tree/feature/guess-z-coord-after-rewrite)
+        * V1 Remote - Out of process [PathingAPI](https://github.com/Xian55/WowClassicGrindBot/tree/dev/PathingAPI).
+        * V1 Local - In process [PPather](https://github.com/Xian55/WowClassicGrindBot/tree/dev/PPather).
+    * Indoors pathfinder only works properly if `PathFilename` is exists.
+    * Dungeons / instances not yet supported.
 
 # Features
 
 - Game fullscreen or windowed mode
+- Limited Background mode support with `GDIBlit` reader.
 - Addon supports all available client languages
 - Most of the classes should work. Some classes have more support than others.
-- Highly configurable Combat rotation described in `ClassConfiguration`
-- Utilizing the Actionbar related APIs to retrive ActionbarSlot(usable, cost)
-- Based on the `ClassConfiguration` file populate Actionbar
-- Pathfinding in the current zone to the grind location
+- Highly configurable Combat rotation described in [Class Configuration](#12-class-configuration)
+- Utilizing the Actionbar related APIs to retrieve ActionbarSlot(usable, cost)
+- One click to populate Actionbar based on [Class Configuration](#12-class-configuration)
+- Pathfinder in the current zone to the grind location
 - Grind mobs in the described `PathFilename`
 - Blacklist certain NPCs
 - Loot and GatherCorpse (Skin, Herb, Mine, Salvage)
@@ -75,14 +79,14 @@ You are welcome to create pull requests. Some ideas of things that could be impr
 * Improved Loot Goal
 * Added Skinning Goal -> GatherCorpse (Skin, Herb, Mine, Salvage)
 * Introduced a concept of `Produce`/`Consume` corpses. Killing multiple enemies in a single combat, can consume them all.
-* `ActionbarPopulator` based on class config
+* `ActionbarPopulator` based on [Class Configuration](#12-class-configuration)
 * `DataConfig`: change where the external data(DBC, MPQ, profiles) can be found
 * Edit the loaded profile from frontend
 * `NPCNameFinder`: extended to friendly/neutral units
 * Remap essential keybindings and support more Actionbar slots up to `34`
 * Added a new input system to handle modifier keys
 * Support more 4:3 aspect ratio based resolution
-* Addon is rewritten/reorganized with performance in mind(caching and reduce cell paint) to achive game refresh rate speed
+* Addon is rewritten/reorganized with performance in mind(caching and reduce cell paint) to achieve game refresh rate speed
 
 # Getting it working
 
@@ -93,15 +97,16 @@ Put the contents of the repo into a folder. e.g `C:\WowClassicGrindBot`. I am go
 ## 2.1 Using V1 Local/Remote Pathhing
 
 Download the MPQ route files.
-This files are required for to find paths from where you are to the grind area, vendor and repair.
+
+These files are required in order to start the application!
 
 * Classic: [**common-2.MPQ**](https://mega.nz/file/vXQCBCha#m7COhB9HQd86a5iNAT0-fMLsc-BtoTRO1eIBJNrdTH8) (1.7Gb)
 * TBC: [**expansion.MPQ**](https://mega.nz/file/Of4i2YQS#egDGj-SXi9RigG-_8kPITihFsLom2L1IFF-ltnB3wmU) (1.8Gb)
 * WOTLK: [**lichking.MPQ**](https://mega.nz/file/vDYWSTrK#fvaiuHpd-FTVsQT4ghGLK6QJLZyA87c1rlBEeu1_Btk) (2.5Gb)
 
-Copy the previusly mentioned files to **\Json\MPQ** folder (e.g. `C:\WowClassicGrindBot\Json\MPQ`)
+Copy the previously mentioned files under **\Json\MPQ** folder (e.g. `C:\WowClassicGrindBot\Json\MPQ`)
 
-## 2.2 Using V3 Remote Pathing
+## 2.2 Optional - Using V3 Remote Pathing
 
 Download the navmesh files.
 
@@ -115,7 +120,7 @@ Download the navmesh files.
 
 ## 3.1 System / Video Requirements
 
-Resultions which based on either 4:3 aspect ratio, tested resolutions:
+Resolutions which based on either 4:3 aspect ratio, tested resolutions:
 * 1024 x 768
 * 1920 x 1080
 * 3840 x 2160
@@ -130,7 +135,7 @@ Known issues with other applications:
 
 Required game client settings. Press `ESC` -> `System`
   * System > Graphics > Anti-Aliasing: `None`
-  * System > Advanced > Constrast: `50`
+  * System > Advanced > Contrast: `50`
   * System > Advanced > Brightness: `50`
   * System > Advanced > Gamma from: `1.0`
   * System > Render Scale: `100%`
@@ -143,7 +148,7 @@ Highly recommended to replace the default in-game font with a much **Bolder** on
 
 Should be only concerned about `Friz Quadrata: the "Everything Else" Font` which is the `FRIZQT__.ttf` named file.
 
-Example - [Robot-Medium](https://fonts.google.com/specimen/Roboto?thickness=5) - Shows big improvement to the `NpcNameFinder` compontent which is responsible to find - friendly, enemy, corpse - names above NPCs head.
+Example - [Robot-Medium](https://fonts.google.com/specimen/Roboto?thickness=5) - Shows big improvement to the `NpcNameFinder` component which is responsible to find - friendly, enemy, corpse - names above NPCs head.
 
 ## 4.1 Build Requirements
 
@@ -168,7 +173,7 @@ dotnet build --configuration Release --arch x86
 
 ## 5. BlazorServer Configuration process
 
-The app reads the game state using small blocks of colour shown at the top of the screen by an Addon. This needs to be configured.
+The app reads the game state using small blocks of color shown at the top of the screen by an Addon. This needs to be configured.
 
 1. Edit the batch script in `C:\WowClassicGrindBot\BlazorServer` called `run.bat`, change it to point at where you have put the repo BlazorServer folder
 
@@ -205,9 +210,11 @@ The app reads the game state using small blocks of colour shown at the top of th
 
 ## 7 Optional - Running HeadlessServer
 
-Similar to BlazorServer project, except without Frontend. Should consume less system resources with a compromise of lacking runtime tweaking ability.
+Similar to BlazorServer project, except without Frontend. Should consume less system resources in general.
 
-Everything has to be setup inside the Class Configuration, in prior.
+While the bot is running there's no way to adjust / tweak the values. In order to take effect, have to restart.
+
+Everything has to be setup inside the [Class Configuration](#12-class-configuration) file, in prior.
 
 A successful [Configuration process](#5-BlazorServer-Configuration-process) has a result of a following configuration files
 * `data_config.json`
@@ -216,7 +223,7 @@ A successful [Configuration process](#5-BlazorServer-Configuration-process) has 
 
 In order to run `HeadlessServer` please look at the `HeadlessServer\run.bat`.
 
-**Required** cli parameter: relative `ClassConfiguration` file name under the `./Json/class/` folder.
+**Required** cli parameter: relative [Class Configuration](#12-class-configuration) file name under the `./Json/class/` folder.
 
 
 **Optional** cli parameters:
@@ -263,6 +270,7 @@ From the main menu (ESC) set the following under Interface Options:
 | Mouse - Click-to-Move | &#9745; |
 | Mouse - Click-to-Move Camera Style | **Always** |
 | Accessibility - Cursor Size | **32x32** |
+| Accessibility - Minimum Character Name Size | Recommended value is **6**. |
 
 ## 9. Configure the Wow Client - Key Bindings
 
@@ -270,16 +278,16 @@ From the main menu (ESC) -> `Key Bindings` set the following:
 
 `Movement Keys`:
 
-| In-Game | ClassConfiguration Name | Default ConsoleKey | Desciption |
+| In-Game | ClassConfiguration Name | Default ConsoleKey | Description |
 | ---- | ---- | ---- | ---- |
 | Move Forward | ForwardKey | UpArrow | Change this to `87` for pressing `W` |
 | Move Backward | BackwardKey | DownArrow | Change this to `83` for pressing `S` |
 | Turn Left | TurnLeftKey | LeftArrow | Change this to `65` for pressing `A` |
 | Turn Right | TurnRightKey | RightArrow | Change this to `68` for pressing `D` |
 | Jump | JumpKey | Spacebar | ---- |
-| Sit/Move down | StandUpKey | X |  Used after drinking or eatin |
+| Sit/Move down | StandUpKey | X |  Used after drinking or eating |
 
-To change the default movement keys to `WASD` in the ClassConfiguration file or look at the example `Json\class\Warrior_1_MovementKeys.json`
+To change the default movement keys to `WASD` in the [Class Configuration](#12-class-configuration) file or look at the example `Json\class\Warrior_1_MovementKeys.json`
 ```json
 "ForwardKey": 87,   // W
 "BackwardKey": 83,  // S
@@ -289,7 +297,7 @@ To change the default movement keys to `WASD` in the ClassConfiguration file or 
 
 `Targeting`:
 
-| In-Game | Key | ClassConfiguration KeyAction Name | Desciption |
+| In-Game | Key | ClassConfiguration KeyAction Name | Description |
 | ---- | ---- | ---- | ---- |
 | Target Nearest Enemy | Tab | TargetNearestTargetKey | ---- |
 | Target Pet | Multiply | TargetPetKey | Only pet based class |
@@ -302,10 +310,10 @@ To change the default movement keys to `WASD` in the ClassConfiguration file or 
 
 ## 10.1. Actionbar Key Bindings:
 
-The default class profiles assumes the following `Keybinds` setup and using English Keyboard layout.
-In total, `34` key supported.
+The default class profiles assumes the following `Keybinds` setup while using English Keyboard layout.
+In total, `34` customizable key can be configured.
 
-Highly recommended to use the default setup, in order to get properly working the `ActionBarSlotCost` and `ActionBarSlotUsable`!
+Highly recommended to use the default setup, in order to get properly working the `ActionBarSlotCost` and `ActionBarSlotUsable` features!
 
 | ActionSlot | Key | Description |
 | --- | --- | --- |
@@ -350,7 +358,7 @@ For each of the following click + to add a new key binding.
 
 Each class has a configuration file in `\Json\class` e.g. the config for a `Warrior` it is in file `Warrior_1.json`.
 
-The configuration file determines what spells you cast when pulling and in combat, where to vendor and repair and what buffs you give yourself.
+The configuration file determines what spells the character casts, when pulling and in combat, where to vendor and repair and what buffs consider.
 
 Take a look at the class files in `/Json/class` for examples of what you can do. Your class file probably exists and just needs to be edited to set the pathing file name.
 
@@ -433,7 +441,7 @@ You can disable this behaviour by setting `KeyboardOnly` to `true`. Which has th
 
 ### IntVariables
 
-Gives the ability to the user to define global integer variables along the whole ClassConfiguration scope. 
+Gives the ability to the user to define global integer variables along the whole [Class Configuration](#12-class-configuration) scope. 
 
 For example look at the Warlock profiles.
 ```json
@@ -535,7 +543,7 @@ e.g. for Rogue ability
 
 Theres are few specially named [KeyAction](#KeyAction) such as `Food` and `Drink` which is reserved for eating and drinking.
 
-They already have some prebaked `Requirement` conditions in order to avoid mistype the definition. 
+They already have some pre baked `Requirement` conditions in order to avoid mistype the definition. 
 
 The bare minimum for `Food` and `Drink` is looks something like this.
 ```json
@@ -671,7 +679,7 @@ e.g.
 
 These `Sequence` of [KeyAction(s)](#KeyAction) are done when not in combat and are not on cooldown. 
 
-The keypresses happens simultaneously on all [KeyAction(s)](#KeyAction) which mets the `Requirement`.
+The key presses happens simultaneously on all [KeyAction(s)](#KeyAction) which meets the `Requirement`.
 
 Suitable for `Food` and `Drink`.
 
@@ -1231,7 +1239,7 @@ If you feel the current Requirement toolset is not enough for you, you can use o
     !WA:2!1rvWUTTrq0O6dPGOiXXT1afTaLWT1ibTiW2fnfOO9GOmvScKTuiPJtApqUK7qXnMC3f7Uu2khf6HCwFc6CpXpH8fqi0Va)j4VGUlPQHBrIoioZUZS78EZ82o93Qyl8w43(DcwPkNqbXOtdgo4exXLJstLGQtfMi55OzbWLQpALmdHzx8Q29(Q7uHOjzmXygHQI75EsGRh3(wjeMYefivipurkG1ED4BMukvScteNYXif4btbQ6kuPEvKIKCgbRYC6QDfOefHrLpXtQqc1UlWSW2SJIB)Y)SdrkuaRhlNj(fFq9W9(H9FKdHsuBxF)S4uTLmB367hvV57l29E0CLGmzciK3BxXAZ3(1ZjkO4eub05kzzCt9nwaPKl98h7oC41LsiSaKs0eiyghIENzH)nNi(dmUtanHss8ZyxmIgT6)4ELS5tpglxZO05M4l11CKJ5)d4GYtGOtGD2FVQMJMovxHqwtGzikoAHKd55nLOJsxc12x1KriJdcKM625x)TLyiUmn1uHIJChoU)Pdx0Gftc8pF8WUVY1l0Z9PUNeE4a)UodDpCL5gsB59bhgDd891he5YQWED9dc9d66f0e5nhxuScLRTTCm9zRARkpt5y3ldsoVHEIHm0uctKTsaOC)Bk)MZ5g0enVXCawATWSrdOIQUfHN5r1XTEBLEe58OQB1l4B27OUbHh7)0WZoAGUD5TOKUUXAXFGbztHGw)Jzy4VUd)lFVdTTgEMzx816rCqqr5Vq3g0mZFSqc5PTt(oJccgDSg2ufFZ(cYBSFEjcR7bi7GGLA(ZdMygITCYzi8lAk7KCKugvV32EfL5kILJg0jBxpWYRzNDJLe6KCi(OtnQk96osYBataZn3JV25lwlhFzRCCJLIMRXqboknqwMWOysJ8XI)nFyzjxajedM2yLwbQ1ZJ4TjjMT(raXR1sns6m94r)GLkwY0ws4JhV9oem)BZknKJTEO1MqT3FVz2nnnB99yNca2SZbLeCL354H)0lF4Zrf)EvQq3e9vgAAJRBFiPVzjt9h73ZZ19eVeJq9zBO)fRbtkzI18lyc8zceF(zRn4F)hgA4z6jfssOktaAbxoEwvlN18cWZ60PZgl1d1aU5fN)8tQi02dqdoRfikP18j13RF9UougfEhGKMQgOtuz3DfUu0erOrbO1Ngkxo3eJbg1eNceHQZTMu)67wFEDEDH28t))RSL07hF8p)4d2A6F)Y)5
     ```
 
-1. **Then outside of the game, you can specify the following in the ClassConfiguration file ex. `class/Hunter_62.json`**
+1. **Then outside of the game, you can specify the following in the [Class Configuration](#12-class-configuration) file ex. `class/Hunter_62.json`**
 
     Formula: `Trigger:[bit]:[name]`
 
