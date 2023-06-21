@@ -100,7 +100,7 @@ public sealed class LootGoal : GoapGoal, IGoapEventListener
 
         if (success)
         {
-            (bool t, double e) = wait.Until(MAX_TIME_TO_DETECT_LOOT, LootWindowClosedOrBagOrMoneyChanged, input.PressApproachOnCooldown);
+            (bool t, float e) = wait.Until(MAX_TIME_TO_DETECT_LOOT, LootWindowClosedOrBagOrMoneyChanged, input.PressApproachOnCooldown);
             success = !t;
             if (success && !bagReader.BagsFull())
             {
@@ -170,7 +170,7 @@ public sealed class LootGoal : GoapGoal, IGoapEventListener
         npcNameTargeting.ChangeNpcType(NpcNames.None);
 
         Log("Corpse clicked...");
-        (bool searchTimeOut, double elapsedMs) = wait.Until(playerReader.NetworkLatency.Value, playerReader.Bits.HasTarget);
+        (bool searchTimeOut, float elapsedMs) = wait.Until(playerReader.NetworkLatency.Value, playerReader.Bits.HasTarget);
         Log($"Found Npc Name ? {!searchTimeOut} | Count: {npcNameTargeting.NpcCount} {elapsedMs}ms");
 
         CheckForGather();
@@ -282,7 +282,7 @@ public sealed class LootGoal : GoapGoal, IGoapEventListener
 
                 if (!MinRangeZero())
                 {
-                    (bool timeout, double elapsedMs) = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, input.PressApproachOnCooldown);
+                    (bool timeout, float elapsedMs) = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, input.PressApproachOnCooldown);
                     Log($"Reached Last Target ? {!timeout} {elapsedMs}ms");
                 }
             }

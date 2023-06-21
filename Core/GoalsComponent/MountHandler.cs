@@ -62,7 +62,7 @@ public sealed class MountHandler : IMountHandler
 
         input.PressMount();
 
-        (bool t, double e) =
+        (bool t, float e) =
             wait.Until(CastingHandler.SPELL_QUEUE + playerReader.NetworkLatency.Value, CastDetected);
         Log($"Cast started ? {!t} {e}ms");
 

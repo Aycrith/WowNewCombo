@@ -44,8 +44,8 @@ public sealed class Wait
     public WaitResult Until(int timeoutMs, Func<bool> interrupt)
     {
         DateTime start = DateTime.UtcNow;
-        double elapsedMs;
-        while ((elapsedMs = (DateTime.UtcNow - start).TotalMilliseconds) < timeoutMs)
+        float elapsedMs;
+        while ((elapsedMs = (float)(DateTime.UtcNow - start).TotalMilliseconds) < timeoutMs)
         {
             if (interrupt())
                 return new(false, elapsedMs);
@@ -60,8 +60,8 @@ public sealed class Wait
     public WaitResult Until(int timeoutMs, CancellationToken token)
     {
         DateTime start = DateTime.UtcNow;
-        double elapsedMs;
-        while ((elapsedMs = (DateTime.UtcNow - start).TotalMilliseconds) < timeoutMs)
+        float elapsedMs;
+        while ((elapsedMs = (float)(DateTime.UtcNow - start).TotalMilliseconds) < timeoutMs)
         {
             if (token.IsCancellationRequested)
                 return new(false, elapsedMs);
@@ -76,8 +76,8 @@ public sealed class Wait
     public WaitResult Until(int timeoutMs, Func<bool> interrupt, Action repeat)
     {
         DateTime start = DateTime.UtcNow;
-        double elapsedMs;
-        while ((elapsedMs = (DateTime.UtcNow - start).TotalMilliseconds) < timeoutMs)
+        float elapsedMs;
+        while ((elapsedMs = (float)(DateTime.UtcNow - start).TotalMilliseconds) < timeoutMs)
         {
             repeat.Invoke();
             if (interrupt())

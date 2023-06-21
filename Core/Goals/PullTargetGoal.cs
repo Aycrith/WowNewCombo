@@ -194,7 +194,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         {
             if (combatUtil.EnteredCombat())
             {
-                (bool t, double e) = wait.Until(5000, CombatLogChanged);
+                (bool t, float e) = wait.Until(5000, CombatLogChanged);
                 if (!t)
                 {
                     if (addonReader.DamageTakenCount() > 0 && !playerReader.Bits.TargetInCombat())

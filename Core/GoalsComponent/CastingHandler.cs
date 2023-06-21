@@ -115,7 +115,7 @@ public sealed partial class CastingHandler
         }
 
         bool t;
-        double e;
+        float e;
 
         if (item.AfterCastWaitSwing)
         {
@@ -193,7 +193,7 @@ public sealed partial class CastingHandler
             return true;
         }
 
-        (bool t, double e) = wait.Until(SPELL_QUEUE + playerReader.NetworkLatency.Value,
+        (bool t, float e) = wait.Until(SPELL_QUEUE + playerReader.NetworkLatency.Value,
             interrupt: () =>
             beforeCastEventValue != playerReader.CastEvent.Value ||
             beforeSpellId != playerReader.CastSpellId.Value ||
@@ -271,7 +271,7 @@ public sealed partial class CastingHandler
             interruptWatchdog.Set(interrupt, cts);
 
         bool t = false;
-        double e = 0;
+        float e = 0;
 
         if (item.HasFormRequirement && playerReader.Form != item.FormEnum)
         {
@@ -499,7 +499,7 @@ public sealed partial class CastingHandler
         if (duration <= 0)
             return true;
 
-        (bool t, double e) = wait.Until(duration, token);
+        (bool t, float e) = wait.Until(duration, token);
 
         if (Log && item.Log)
             LogGCD(logger, item.Name, !t, addonReader.UsableAction.Is(item), duration, e);

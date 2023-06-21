@@ -296,7 +296,7 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
 
     private bool OpenMerchantWindow()
     {
-        (bool t, double e) = wait.Until(TIMEOUT, gossipReader.GossipStartOrMerchantWindowOpened);
+        (bool t, float e) = wait.Until(TIMEOUT, gossipReader.GossipStartOrMerchantWindowOpened);
         if (gossipReader.MerchantWindowOpened())
         {
             LogWarn($"Gossip no options! {e}ms");

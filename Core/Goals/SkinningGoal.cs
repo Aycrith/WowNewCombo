@@ -84,7 +84,7 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
     {
         combatUtil.Update();
 
-        (bool t, double e) = wait.Until(CastingHandler.GCD, LootReset);
+        (bool t, float e) = wait.Until(CastingHandler.GCD, LootReset);
         if (t)
         {
             LogWarning($"Loot window still open! {e}ms");
@@ -231,7 +231,7 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
 
     private void ExitSuccess()
     {
-        (bool t, double e) = wait.Until(MAX_TIME_TO_DETECT_LOOT, LootWindowClosedOrBagChanged);
+        (bool t, float e) = wait.Until(MAX_TIME_TO_DETECT_LOOT, LootWindowClosedOrBagChanged);
 
         bool success = !t && !bagReader.BagsFull();
         if (success)
