@@ -1,9 +1,9 @@
 {
   "ClassName": "DeatkKnight",
-  "Mode": "AttendedGrind", //Grind
+  //"Mode": "AttendedGrind", //Grind
   "Loot": true,
-  "KeyboardOnly": true,
-  "PathFilename": "_pack\\40-50\\The Hinterlands\\41-42 wolves.json", // todo update profile
+  //"KeyboardOnly": true,
+  "PathFilename": "_pack\\70-80\\Zul'Drak\\76-80_Zul'Drak_Heb'Valok_spiders.json",
   "PathReduceSteps": true,
   "PathThereAndBack": false,
   "MountKey": "N0",
@@ -260,6 +260,29 @@
         "Name": "Food",
         "Key": "=",
         "Requirement": "Health% < MIN_HP_FOOD%"
+      }
+    ]
+  },
+  "NPC": {
+    "Sequence": [
+      {
+        "Cost": 19,
+        "Name": "Repair",
+        "Key": "C",
+        "Form": "None",
+        "Requirement": "Durability% < 35",
+        "PathFilename": "_pack\\70-80\\Zul'Drak\\Argent_Stand_vendor.json"
+      },
+      {
+        "Cost": 19,
+        "Name": "Sell",
+        "Key": "C",
+        "Form": "None",
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ],
+        "PathFilename": "_pack\\70-80\\Zul'Drak\\Argent_Stand_vendor.json"
       }
     ]
   }
