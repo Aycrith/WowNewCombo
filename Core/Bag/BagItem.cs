@@ -6,12 +6,12 @@ namespace Core;
 
 public sealed class BagItem
 {
-    public int Bag { get; private set; }
-    public int ItemId { get; private set; }
-    public int BagIndex { get; private set; }
+    public int Bag { get; }
+    public int ItemId { get; }
+    public int BagIndex { get; }
     public int Count { get; private set; }
     public int LastCount { get; private set; }
-    public Item Item { get; private set; }
+    public Item Item { get; }
     public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
 
     public int LastChange => Count - LastCount;

@@ -17,7 +17,7 @@ public sealed class BagReader : IDisposable
 
     private readonly EquipmentReader equipmentReader;
 
-    public ItemDB ItemDB { get; private set; }
+    private readonly ItemDB ItemDB;
 
     public List<BagItem> BagItems { get; } = new();
 
