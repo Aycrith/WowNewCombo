@@ -29,7 +29,6 @@
         if (firstRender)
         {
             await jsRuntime.InvokeVoidAsync("createScene");
-            PathGraph.SearchEnabled = true;
             pPatherService.Reset();
 
             IsDisabled = false;
@@ -56,7 +55,6 @@
         this.pathColour = colour;
         this.name = name;
 
-        PathGraph.SearchEnabled = true;
         PathGraph.ProgressTimeoutSeconds = 60;
         PathGraph.TimeoutSeconds = 600;
 

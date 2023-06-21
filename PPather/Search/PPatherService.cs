@@ -70,7 +70,6 @@ public sealed class PPatherService
         if (search != null && mapId == search.MapId)
             return;
 
-        PathGraph.SearchEnabled = false;
         search = new Search(mapId, logger, dataConfig);
         search.PathGraph.triangleWorld.NotifyChunkAdded = ChunkAdded;
     }

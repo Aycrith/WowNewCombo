@@ -140,7 +140,7 @@ public sealed class Spot
         return pg.GetSpot(x, y, z);
     }
 
-    public Span<Spot> GetPathsToSpots(PathGraph pg)
+    public ReadOnlySpan<Spot> GetPathsToSpots(PathGraph pg)
     {
         var pooler = ArrayPool<Spot>.Shared;
         Spot[] array = pooler.Rent(n_paths);

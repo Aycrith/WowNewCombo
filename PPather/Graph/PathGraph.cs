@@ -36,8 +36,6 @@ namespace PPather.Graph;
 
 public sealed class PathGraph
 {
-    public static bool SearchEnabled;
-
     public enum eSearchScoreSpot
     {
         OriginalPather,
@@ -47,7 +45,6 @@ public sealed class PathGraph
 
     public const int gradiantMax = 5;
 
-    public eSearchScoreSpot searchScoreSpot = eSearchScoreSpot.A_Star_With_Model_Avoidance;
     public const int sleepMSBetweenSpots = 0;
 
     public const float toonHeight = 2.0f;
@@ -547,13 +544,13 @@ public sealed class PathGraph
     //}
     private int searchID;
 
-    private float heuristicsFactor = 5f;
+    private const float heuristicsFactor = 5f;
 
     public Spot ClosestSpot;
     public Spot PeekSpot;
     public Vector3[] TestPoints = Array.Empty<Vector3>();
 
-    private Spot Search(Spot fromSpot, Spot destinationSpot, float minHowClose)
+    private Spot Search(Spot fromSpot, Spot destinationSpot, eSearchScoreSpot searchScoreSpot, float minHowClose)
     {
         long searchDuration = Stopwatch.GetTimestamp();
         long timeSinceProgress = Stopwatch.GetTimestamp();
@@ -622,7 +619,7 @@ public sealed class PathGraph
             CreateSpotsAroundSpot(currentSearchSpot);
 
             //score each spot around the current search spot and add them to the queue
-            Span<Spot> list = currentSearchSpot.GetPathsToSpots(this);
+            ReadOnlySpan<Spot> list = currentSearchSpot.GetPathsToSpots(this);
             //TestPoints = list.ToArray().Select(s => new Vector3(s.Loc.X, s.Loc.Y, s.Loc.Z)).ToArray();
 
             for (int i = 0; i < list.Length; i++)
@@ -630,7 +627,7 @@ public sealed class PathGraph
                 Spot spotLinkedToCurrent = list[i];
                 if (spotLinkedToCurrent != null && !spotLinkedToCurrent.IsBlocked() && !spotLinkedToCurrent.SearchIsClosed(currentSearchID))
                 {
-                    ScoreSpot(spotLinkedToCurrent, destinationSpot, currentSearchID, prioritySpotQueue);
+                    ScoreSpot(spotLinkedToCurrent, destinationSpot, searchScoreSpot, currentSearchID, prioritySpotQueue);
                 }
             }
         }
@@ -647,7 +644,7 @@ public sealed class PathGraph
         return null;
     }
 
-    private void ScoreSpot(Spot spotLinkedToCurrent, Spot destinationSpot, int currentSearchID, PriorityQueue<Spot, float> prioritySpotQueue)
+    private void ScoreSpot(Spot spotLinkedToCurrent, Spot destinationSpot, eSearchScoreSpot searchScoreSpot, int currentSearchID, PriorityQueue<Spot, float> prioritySpotQueue)
     {
         switch (searchScoreSpot)
         {
@@ -873,11 +870,9 @@ public sealed class PathGraph
         return false;
     }
 
-    public Path LastPath;
-
-    private Path CreatePath(Spot from, Spot to, float minHowClose)
+    private Path CreatePath(Spot from, Spot to, eSearchScoreSpot searchScoreSpot, float minHowClose)
     {
-        Spot newTo = Search(from, to, minHowClose);
+        Spot newTo = Search(from, to, searchScoreSpot, minHowClose);
         if (newTo == null)
             return null;
 
@@ -885,8 +880,7 @@ public sealed class PathGraph
         if (distance <= MaximumAllowedRangeFromTarget)
         {
             List<Spot> path = FollowTraceBack(from, newTo);
-            LastPath = new Path(path);
-            return LastPath;
+            return new Path(path);
         }
 
         logger.LogWarning($"Closest spot is too far from target. {distance}>{MaximumAllowedRangeFromTarget}");
@@ -923,10 +917,10 @@ public sealed class PathGraph
         return new(location.X, location.Y, newZ);
     }
 
-    public Path CreatePath(Vector3 fromLoc, Vector3 toLoc, float howClose)
+    public Path CreatePath(Vector3 fromLoc, Vector3 toLoc, eSearchScoreSpot searchScoreSpot, float howClose)
     {
         if (logger.IsEnabled(LogLevel.Trace))
-            logger.LogTrace($"Creating Path from {fromLoc} to {toLoc}");
+            logger.LogTrace($"CreatePath from {fromLoc} to {toLoc}");
 
         long timestamp = Stopwatch.GetTimestamp();
 
@@ -936,16 +930,10 @@ public sealed class PathGraph
         Spot from = FindClosestSpot(fromLoc, MinStepLength);
         Spot to = FindClosestSpot(toLoc, MinStepLength);
 
-        if (from == null)
-        {
-            from = AddAndConnectSpot(new Spot(fromLoc));
-        }
-        if (to == null)
-        {
-            to = AddAndConnectSpot(new Spot(toLoc));
-        }
+        from ??= AddAndConnectSpot(new Spot(fromLoc));
+        to ??= AddAndConnectSpot(new Spot(toLoc));
 
-        Path rawPath = CreatePath(from, to, howClose);
+        Path rawPath = CreatePath(from, to, searchScoreSpot, howClose);
 
         if (logger.IsEnabled(LogLevel.Trace))
             logger.LogTrace($"CreatePath took {Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds}ms");
@@ -963,7 +951,6 @@ public sealed class PathGraph
                 rawPath.Add(toLoc);
             }
         }
-        LastPath = rawPath;
         return rawPath;
     }
 }

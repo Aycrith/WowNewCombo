@@ -85,24 +85,15 @@ public sealed class Search
         PathGraph = new(mapId, triangleWorld, logger, dataConfig);
     }
 
-    public Path DoSearch(PathGraph.eSearchScoreSpot searchType)
+    public Path DoSearch(PathGraph.eSearchScoreSpot searchScoreSpot)
     {
-        PathGraph.SearchEnabled = true;
-
-        // tell the pathgraph which type of search to do
-        PathGraph.searchScoreSpot = searchType;
-
         try
         {
-            return PathGraph.CreatePath(locationFrom.AsVector3(), locationTo.AsVector3(), howClose);
+            return PathGraph.CreatePath(locationFrom.AsVector3(), locationTo.AsVector3(), searchScoreSpot, howClose);
         }
         catch (Exception ex)
         {
             logger.LogError(ex.Message);
-        }
-        finally
-        {
-            PathGraph.SearchEnabled = false;
         }
         return null;
     }
