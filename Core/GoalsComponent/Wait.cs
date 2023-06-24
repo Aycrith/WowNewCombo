@@ -41,39 +41,39 @@ public sealed class Wait
     }
 
     [SkipLocalsInit]
-    public WaitResult Until(int timeoutMs, Func<bool> interrupt)
+    public float Until(int timeoutMs, Func<bool> interrupt)
     {
         DateTime start = DateTime.UtcNow;
         float elapsedMs;
         while ((elapsedMs = (float)(DateTime.UtcNow - start).TotalMilliseconds) < timeoutMs)
         {
             if (interrupt())
-                return new(false, elapsedMs);
+                return elapsedMs;
 
             Update();
         }
 
-        return new(true, elapsedMs);
+        return -elapsedMs;
     }
 
     [SkipLocalsInit]
-    public WaitResult Until(int timeoutMs, CancellationToken token)
+    public float Until(int timeoutMs, CancellationToken token)
     {
         DateTime start = DateTime.UtcNow;
         float elapsedMs;
         while ((elapsedMs = (float)(DateTime.UtcNow - start).TotalMilliseconds) < timeoutMs)
         {
             if (token.IsCancellationRequested)
-                return new(false, elapsedMs);
+                return elapsedMs;
 
             Update();
         }
 
-        return new(true, elapsedMs);
+        return -elapsedMs;
     }
 
     [SkipLocalsInit]
-    public WaitResult Until(int timeoutMs, Func<bool> interrupt, Action repeat)
+    public float Until(int timeoutMs, Func<bool> interrupt, Action repeat)
     {
         DateTime start = DateTime.UtcNow;
         float elapsedMs;
@@ -81,12 +81,12 @@ public sealed class Wait
         {
             repeat.Invoke();
             if (interrupt())
-                return new(false, elapsedMs);
+                return elapsedMs;
 
             Update();
         }
 
-        return new(true, elapsedMs);
+        return -elapsedMs;
     }
 
     public void While(Func<bool> condition)
