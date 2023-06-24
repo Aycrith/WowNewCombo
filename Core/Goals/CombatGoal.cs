@@ -88,7 +88,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
             mountHandler.Dismount();
         }
 
-        castingHandler.UpdateGCD(true);
+        castingHandler.UpdateGCD();
 
         lastDirection = playerReader.Direction;
     }

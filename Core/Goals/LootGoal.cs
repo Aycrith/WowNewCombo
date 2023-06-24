@@ -100,8 +100,8 @@ public sealed class LootGoal : GoapGoal, IGoapEventListener
 
         if (success)
         {
-            (bool t, double e) = wait.Until(MAX_TIME_TO_DETECT_LOOT, LootWindowClosedOrBagOrMoneyChanged, input.PressApproachOnCooldown);
-            success = !t;
+            float e = wait.Until(MAX_TIME_TO_DETECT_LOOT, LootWindowClosedOrBagOrMoneyChanged, input.PressApproachOnCooldown);
+            success = e >= 0;
             if (success && !bagReader.BagsFull())
             {
                 Log($"Loot Successful after {e}ms");
@@ -169,16 +169,16 @@ public sealed class LootGoal : GoapGoal, IGoapEventListener
         }
         npcNameTargeting.ChangeNpcType(NpcNames.None);
 
-        Log("Corpse clicked...");
-        (bool searchTimeOut, double elapsedMs) = wait.Until(playerReader.NetworkLatency.Value, playerReader.Bits.HasTarget);
-        Log($"Found Npc Name ? {!searchTimeOut} | Count: {npcNameTargeting.NpcCount} {elapsedMs}ms");
+        Log("Nearest Corpse clicked...");
+        float elapsedMs = wait.Until(playerReader.NetworkLatency.Value, playerReader.Bits.HasTarget);
+        Log($"Found Npc Name Count: {npcNameTargeting.NpcCount} {elapsedMs}ms");
 
         CheckForGather();
 
         if (!MinRangeZero())
         {
-            (bool timeout, elapsedMs) = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, input.PressApproachOnCooldown);
-            Log($"Reached clicked corpse ? {!timeout} {elapsedMs}ms");
+            elapsedMs = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, input.PressApproachOnCooldown);
+            Log($"Reached clicked corpse ? {elapsedMs}ms");
         }
 
         return true;
@@ -282,8 +282,8 @@ public sealed class LootGoal : GoapGoal, IGoapEventListener
 
                 if (!MinRangeZero())
                 {
-                    (bool timeout, double elapsedMs) = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, input.PressApproachOnCooldown);
-                    Log($"Reached Last Target ? {!timeout} {elapsedMs}ms");
+                    float elapsedMs = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, input.PressApproachOnCooldown);
+                    Log($"Reached Last Target ? {elapsedMs}ms");
                 }
             }
             else

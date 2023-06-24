@@ -8,7 +8,7 @@ using System.Numerics;
 
 namespace Core;
 
-public sealed class MountHandler : IMountHandler
+public sealed partial class MountHandler : IMountHandler
 {
     private const int DISTANCE_TO_MOUNT = 40;
 
@@ -62,18 +62,18 @@ public sealed class MountHandler : IMountHandler
 
         input.PressMount();
 
-        (bool t, double e) =
+        float e =
             wait.Until(CastingHandler.SPELL_QUEUE + playerReader.NetworkLatency.Value, CastDetected);
-        Log($"Cast started ? {!t} {e}ms");
+        LogCastStarted(logger, nameof(MountHandler), e);
 
         if (bits.IsMounted())
             return;
 
         wait.Update();
 
-        (t, e) =
+        e =
             wait.Until(playerReader.RemainCastMs + playerReader.NetworkLatency.Value, MountedOrNotCastingOrValidTargetOrEnteredCombat);
-        Log($"Cast ended ? {!t} {e}ms");
+        LogCastEnded(logger, nameof(MountHandler), bits.IsMounted(), e);
 
         if (bits.IsMounted())
             return;
@@ -86,8 +86,8 @@ public sealed class MountHandler : IMountHandler
             }
             else if (!bits.IsMounted())
             {
-                (t, e) = wait.Until(CastingHandler.SPELL_QUEUE + playerReader.NetworkLatency.Value, bits.IsMounted);
-                Log($"Mounted ? {bits.IsMounted()} {e}ms");
+                e = wait.Until(CastingHandler.SPELL_QUEUE + playerReader.NetworkLatency.Value, bits.IsMounted);
+                LogIsMounted(logger, nameof(MountHandler), bits.IsMounted(), e);
                 wait.Update();
             }
         }
@@ -128,13 +128,21 @@ public sealed class MountHandler : IMountHandler
         bits.HasTarget() && bits.TargetAlive() && !targetBlacklist.Is() &&
         playerReader.MinRange() < MIN_DISTANCE_TO_INTERRUPT_CAST;
 
-    private void Log(string text)
-    {
-        logger.LogInformation($"{nameof(MountHandler)}: {text}");
-    }
+    [LoggerMessage(
+        EventId = 110,
+        Level = LogLevel.Information,
+        Message = "{className}: Cast started {elapsed}ms")]
+    static partial void LogCastStarted(ILogger logger, string className, float elapsed);
 
-    private void LogWarning(string text)
-    {
-        logger.LogWarning($"{nameof(MountHandler)}: {text}");
-    }
+    [LoggerMessage(
+        EventId = 111,
+        Level = LogLevel.Information,
+        Message = "{className}: Cast ended | mounted? {mounted} {elapsed}ms")]
+    static partial void LogCastEnded(ILogger logger, string className, bool mounted, float elapsed);
+
+    [LoggerMessage(
+        EventId = 112,
+        Level = LogLevel.Information,
+        Message = "{className}: Mounted? {mounted} {elapsed}ms")]
+    static partial void LogIsMounted(ILogger logger, string className, bool mounted, float elapsed);
 }
