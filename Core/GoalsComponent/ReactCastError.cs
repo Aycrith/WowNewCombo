@@ -99,7 +99,7 @@ public sealed class ReactCastError
                         if (playerReader.MinRange() <= 5)
                             duration = CastingHandler.SPELL_QUEUE;
 
-                        (bool t, float e) = wait.Until(duration,
+                        float e = wait.Until(duration,
                             () => minRange != playerReader.MinRange() || playerReader.IsTargetCasting()
                         );
                         wait.Update();
@@ -117,7 +117,7 @@ public sealed class ReactCastError
                     {
                         input.PressInteract();
 
-                        (bool t, float e) = wait.Until(CastingHandler.GCD, () => minRange != playerReader.MinRange());
+                        float e = wait.Until(CastingHandler.GCD, () => minRange != playerReader.MinRange());
 
                         logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Approached target {minRange}->{playerReader.MinRange()}");
                     }

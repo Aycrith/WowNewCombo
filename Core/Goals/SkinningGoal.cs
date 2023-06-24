@@ -84,8 +84,8 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
     {
         combatUtil.Update();
 
-        (bool t, float e) = wait.Until(CastingHandler.GCD, LootReset);
-        if (t)
+        float e = wait.Until(CastingHandler.GCD, LootReset);
+        if (e < 0)
         {
             LogWarning($"Loot window still open! {e}ms");
             ExitInterruptOrFailed(false);
@@ -134,8 +134,8 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
                 combatUtil.Update();
 
                 npcNameTargeting.ChangeNpcType(NpcNames.Corpse);
-                (t, e) = wait.Until(MAX_TIME_TO_WAIT_NPC_NAME, npcNameTargeting.FoundNpcName);
-                Log($"Found Npc Name ? {!t} | Count: {npcNameTargeting.NpcCount} {e}ms");
+                e = wait.Until(MAX_TIME_TO_WAIT_NPC_NAME, npcNameTargeting.FoundNpcName);
+                Log($"Found Npc Name ? {e >= 0} | Count: {npcNameTargeting.NpcCount} {e}ms");
 
                 foundTarget = npcNameTargeting.FindBy(CursorType.Skin, CursorType.Mine, CursorType.Herb); // todo salvage icon
                 interact = true;
@@ -151,24 +151,24 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
 
             if (!MinRangeZero())
             {
-                (t, e) = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, input.PressApproachOnCooldown);
-                Log($"Reached Target ? {!t} {e}ms");
+                e = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, input.PressApproachOnCooldown);
+                Log($"Reached Target ? {e >= 0} {e}ms");
                 interact = true;
             }
 
             playerReader.LastUIError = 0;
             playerReader.CastEvent.ForceUpdate(0);
 
-            (t, e) = wait.Until(MAX_TIME_TO_DETECT_CAST, CastStartedOrFailed, interact ? Empty : WhileNotCastingInteract);
+            e = wait.Until(MAX_TIME_TO_DETECT_CAST, CastStartedOrFailed, interact ? Empty : WhileNotCastingInteract);
 
-            Log($"Started casting or interrupted ? {!t} - casting: {playerReader.IsCasting()} {e}ms");
+            Log($"Started casting or interrupted ? {e >= 0} - casting: {playerReader.IsCasting()} {e}ms");
             if (playerReader.LastUIError == UI_ERROR.ERR_REQUIRES_S)
             {
                 LogWarning("Missing Spell/Item/Skill Requirement!");
                 ExitInterruptOrFailed(false);
                 return;
             }
-            else if ((t || playerReader.LastUIError == UI_ERROR.ERR_LOOT_LOCKED) && !playerReader.IsCasting())
+            else if ((e < 0 || playerReader.LastUIError == UI_ERROR.ERR_LOOT_LOCKED) && !playerReader.IsCasting())
             {
                 int delay = playerReader.LastUIError == UI_ERROR.ERR_LOOT_LOCKED
                     ? Loot.LOOTFRAME_AUTOLOOT_DELAY
@@ -192,10 +192,10 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
             int waitTime = remainMs + playerReader.SpellQueueTimeMs + playerReader.NetworkLatency.Value;
             Log($"Waiting for {(herbalism ? "Herb Gathering" : "Skinning")} castbar to end! {waitTime}ms");
 
-            (t, e) = wait.Until(waitTime, herbalism ? HerbalismCastEnded : SkinningCastEnded);
+            e = wait.Until(waitTime, herbalism ? HerbalismCastEnded : SkinningCastEnded);
 
             if (herbalism
-                ? t || playerReader.LastUIError != UI_ERROR.SPELL_FAILED_TRY_AGAIN
+                ? e < 0 || playerReader.LastUIError != UI_ERROR.SPELL_FAILED_TRY_AGAIN
                 : playerReader.CastState == UI_ERROR.CAST_SUCCESS)
             {
                 Log($"Gathering Successful!");
@@ -231,14 +231,14 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
 
     private void ExitSuccess()
     {
-        (bool t, float e) = wait.Until(MAX_TIME_TO_DETECT_LOOT, LootWindowClosedOrBagChanged);
+        float e = wait.Until(MAX_TIME_TO_DETECT_LOOT, LootWindowClosedOrBagChanged);
 
-        bool success = !t && !bagReader.BagsFull();
+        bool success = e >= 0 && !bagReader.BagsFull();
         if (success)
         {
             Log($"Loot Successful after {e}ms");
-            (t, e) = wait.Until(MAX_TIME_TO_WAIT_NPC_NAME, WaitForLosingTarget);
-            if (!t)
+            e = wait.Until(MAX_TIME_TO_WAIT_NPC_NAME, WaitForLosingTarget);
+            if (e >= 0)
                 ClearTargetIfExists();
         }
         else

@@ -54,7 +54,7 @@ public sealed class AdhocGoal : GoapGoal
             wait.Update();
         }
 
-        castingHandler.UpdateGCD(true);
+        castingHandler.UpdateGCD();
     }
 
     public override void Update()

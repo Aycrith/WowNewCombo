@@ -9,6 +9,8 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
 {
     public override float Cost => 7f;
 
+    private const int AcquireTargetTimeMs = 5000;
+
     private readonly ILogger logger;
     private readonly ConfigurableInput input;
     private readonly ClassConfiguration classConfig;
@@ -89,7 +91,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         wait.Update();
         stuckDetector.Reset();
 
-        castingHandler.UpdateGCD(true);
+        castingHandler.UpdateGCD();
 
         if (mountHandler.IsMounted())
         {
@@ -194,8 +196,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         {
             if (combatUtil.EnteredCombat())
             {
-                (bool t, float e) = wait.Until(5000, CombatLogChanged);
-                if (!t)
+                if (wait.Until(AcquireTargetTimeMs, CombatLogChanged) >= 0)
                 {
                     if (addonReader.DamageTakenCount() > 0 && !playerReader.Bits.TargetInCombat())
                     {
@@ -204,7 +205,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
                         input.PressClearTarget();
                         wait.Update();
 
-                        combatUtil.AquiredTarget(5000);
+                        combatUtil.AquiredTarget(AcquireTargetTimeMs);
                         return;
                     }
 
@@ -270,11 +271,11 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
     private bool SuccessfulPull()
     {
         return playerReader.TargetTarget is
-                    UnitsTarget.Me or
-                    UnitsTarget.Pet or
-                    UnitsTarget.PartyOrPet ||
-                    addonReader.CombatLog.DamageDoneGuid.ElapsedMs() < CastingHandler.GCD ||
-                    playerReader.IsInMeleeRange();
+            UnitsTarget.Me or
+            UnitsTarget.Pet or
+            UnitsTarget.PartyOrPet ||
+            addonReader.CombatLog.DamageDoneGuid.ElapsedMs() < CastingHandler.GCD ||
+            playerReader.IsInMeleeRange();
     }
 
     private bool PullPrevention()

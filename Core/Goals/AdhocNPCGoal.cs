@@ -225,7 +225,7 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
 
         if (!found)
         {
-            Log($"Use KeyAction.Key macro to aquire target");
+            Log($"Use KeyAction.Key macro to acquire target");
             input.PressRandom(key);
             wait.Update();
         }
@@ -296,15 +296,15 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
 
     private bool OpenMerchantWindow()
     {
-        (bool t, float e) = wait.Until(TIMEOUT, gossipReader.GossipStartOrMerchantWindowOpened);
+        float e = wait.Until(TIMEOUT, gossipReader.GossipStartOrMerchantWindowOpened);
         if (gossipReader.MerchantWindowOpened())
         {
             LogWarn($"Gossip no options! {e}ms");
         }
         else
         {
-            (t, e) = wait.Until(TIMEOUT, gossipReader.GossipEnd);
-            if (t)
+            e = wait.Until(TIMEOUT, gossipReader.GossipEnd);
+            if (e < 0)
             {
                 LogWarn($"Gossip - {nameof(gossipReader.GossipEnd)} not fired after {e}ms");
                 return false;
@@ -326,13 +326,13 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
 
         Log($"Merchant window opened after {e}ms");
 
-        (t, e) = wait.Until(TIMEOUT, gossipReader.MerchantWindowSelling);
-        if (!t)
+        e = wait.Until(TIMEOUT, gossipReader.MerchantWindowSelling);
+        if (e >= 0)
         {
             Log($"Merchant sell grey items started after {e}ms");
 
-            (t, e) = wait.Until(TIMEOUT, gossipReader.MerchantWindowSellingFinished);
-            if (!t)
+            e = wait.Until(TIMEOUT, gossipReader.MerchantWindowSellingFinished);
+            if (e >= 0)
             {
                 Log($"Merchant sell grey items finished, took {e}ms");
                 return true;
