@@ -187,49 +187,49 @@ public sealed partial class TargetBlacklist : IBlacklist, IDisposable
     #region logging
 
     [LoggerMessage(
-        EventId = 60,
+        EventId = 0060,
         Level = LogLevel.Warning,
         Message = "Blacklist ({id},{guid},{name}) is player or pet!")]
     static partial void LogPlayerOrPet(ILogger logger, int id, int guid, string name);
 
     [LoggerMessage(
-        EventId = 61,
+        EventId = 0061,
         Level = LogLevel.Warning,
         Message = "Blacklist ({id},{guid},{name}) is tagged!")]
     static partial void LogTagged(ILogger logger, int id, int guid, string name);
 
     [LoggerMessage(
-        EventId = 62,
+        EventId = 0062,
         Level = LogLevel.Warning,
         Message = "Blacklist ({id},{guid},{name}) too high level!")]
     static partial void LogLevelHigh(ILogger logger, int id, int guid, string name);
 
     [LoggerMessage(
-        EventId = 63,
+        EventId = 0063,
         Level = LogLevel.Warning,
         Message = "Blacklist ({id},{guid},{name}) too low level!")]
     static partial void LogLevelLow(ILogger logger, int id, int guid, string name);
 
     [LoggerMessage(
-        EventId = 64,
+        EventId = 0064,
         Level = LogLevel.Warning,
         Message = "Blacklist ({id},{guid},{name}) not yield experience!")]
     static partial void LogNoExperienceGain(ILogger logger, int id, int guid, string name);
 
     [LoggerMessage(
-        EventId = 65,
+        EventId = 0065,
         Level = LogLevel.Warning,
         Message = "Blacklist ({id},{guid},{name}) name match!")]
     static partial void LogNameMatch(ILogger logger, int id, int guid, string name);
 
     [LoggerMessage(
-        EventId = 66,
+        EventId = 0066,
         Level = LogLevel.Warning,
         Message = "Blacklist ({id},{guid},{name},{classification}) not defined in the TargetMask!")]
     static partial void LogClassification(ILogger logger, int id, int guid, string name, string classification);
 
     [LoggerMessage(
-        EventId = 67,
+        EventId = 0067,
         Level = LogLevel.Warning,
         Message = "Blacklist ({id},{guid},{name},{classification}) evade on attack!")]
     static partial void LogEvade(ILogger logger, int id, int guid, string name, string classification);

@@ -16,7 +16,7 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
 
     public override float Cost => 8f;
 
-    private readonly ILogger logger;
+    private readonly ILogger<ApproachTargetGoal> logger;
     private readonly ConfigurableInput input;
     private readonly Wait wait;
     private readonly AddonReader addonReader;
@@ -33,11 +33,12 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
     private int initialTargetGuid;
     private float initialMinRange;
 
-    private double ApproachDurationMs => (DateTime.UtcNow - approachStart).TotalMilliseconds;
+    private double ApproachDurationMs =>
+        (DateTime.UtcNow - approachStart).TotalMilliseconds;
 
-    public ApproachTargetGoal(ILogger logger, ConfigurableInput input, Wait wait,
-        AddonReader addonReader, StopMoving stopMoving, CombatUtil combatUtil,
-        IBlacklist blacklist)
+    public ApproachTargetGoal(ILogger<ApproachTargetGoal> logger, 
+        ConfigurableInput input, Wait wait, AddonReader addonReader,
+        StopMoving stopMoving, CombatUtil combatUtil, IBlacklist blacklist)
         : base(nameof(ApproachTargetGoal))
     {
         this.logger = logger;

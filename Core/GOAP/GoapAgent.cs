@@ -18,6 +18,8 @@ public sealed partial class GoapAgent : IDisposable
     private readonly IServiceScope scope;
 
     private readonly ILogger logger;
+    private readonly ILogger globalLogger;
+
     private readonly ClassConfiguration classConfig;
     private readonly AddonReader addonReader;
     private readonly PlayerReader playerReader;
@@ -97,7 +99,9 @@ public sealed partial class GoapAgent : IDisposable
     {
         this.scope = scope;
 
-        this.logger = scope.ServiceProvider.GetRequiredService<ILogger>();
+        this.logger = scope.ServiceProvider.GetRequiredService<ILogger<GoapAgent>>();
+        this.globalLogger = scope.ServiceProvider.GetRequiredService<ILogger>();
+
         this.screenCapture = screenCapture;
         this.classConfig = scope.ServiceProvider.GetRequiredService<ClassConfiguration>();
         this.cts = new();
@@ -114,7 +118,7 @@ public sealed partial class GoapAgent : IDisposable
 
         SessionStat = sessionStat;
 
-        sessionHandler = new GrindSessionHandler(logger, dataConfig, playerReader, SessionStat, sessionDAO, cts);
+        sessionHandler = new GrindSessionHandler(globalLogger, dataConfig, playerReader, SessionStat, sessionDAO, cts);
 
         WowProcessInput baseInput = scope.ServiceProvider.GetRequiredService<WowProcessInput>();
         stopMoving = new StopMoving(baseInput, playerReader, cts);
@@ -358,25 +362,25 @@ public sealed partial class GoapAgent : IDisposable
     #region Logging
 
     [LoggerMessage(
-        EventId = 50,
+        EventId = 0050,
         Level = LogLevel.Information,
         Message = "Kill credit detected! Known kills: {count} | Fighting with: {remain}")]
     static partial void LogActiveKillDetected(ILogger logger, int count, int remain);
 
     [LoggerMessage(
-        EventId = 51,
+        EventId = 0051,
         Level = LogLevel.Information,
         Message = "Inactive, kill credit detected!")]
     static partial void LogInactiveKillDetected(ILogger logger);
 
     [LoggerMessage(
-        EventId = 52,
+        EventId = 0052,
         Level = LogLevel.Information,
         Message = "New Plan= {name}")]
     static partial void LogNewGoal(ILogger logger, string name);
 
     [LoggerMessage(
-        EventId = 53,
+        EventId = 0053,
         Level = LogLevel.Warning,
         Message = "New Plan= NO PLAN")]
     static partial void LogNewEmptyGoal(ILogger logger);

@@ -11,7 +11,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
 {
     public override float Cost => 4f;
 
-    private readonly ILogger logger;
+    private readonly ILogger<CombatGoal> logger;
     private readonly ConfigurableInput input;
     private readonly ClassConfiguration classConfig;
     private readonly Wait wait;
@@ -25,8 +25,8 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
     private float lastMinDistance;
     private float lastMaxDistance;
 
-    public CombatGoal(ILogger logger, ConfigurableInput input, Wait wait,
-        AddonReader addonReader, StopMoving stopMoving,
+    public CombatGoal(ILogger<CombatGoal> logger, ConfigurableInput input,
+        Wait wait, AddonReader addonReader, StopMoving stopMoving,
         ClassConfiguration classConfiguration, ClassConfiguration classConfig,
         CastingHandler castingHandler,
         IMountHandler mountHandler)

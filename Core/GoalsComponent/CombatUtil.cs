@@ -8,7 +8,7 @@ public sealed class CombatUtil
 {
     private const float MIN_DISTANCE = 0.01f;
 
-    private readonly ILogger logger;
+    private readonly ILogger<CombatUtil> logger;
     private readonly AddonReader addonReader;
     private readonly PlayerReader playerReader;
     private readonly ConfigurableInput input;
@@ -18,7 +18,8 @@ public sealed class CombatUtil
 
     private bool outOfCombat;
 
-    public CombatUtil(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader)
+    public CombatUtil(ILogger<CombatUtil> logger, ConfigurableInput input,
+        Wait wait, AddonReader addonReader)
     {
         this.logger = logger;
         this.input = input;
@@ -112,7 +113,7 @@ public sealed class CombatUtil
     {
         if (debug)
         {
-            logger.LogDebug($"{nameof(CombatUtil)}: {text}");
+            logger.LogDebug($"{text}");
         }
     }
 }

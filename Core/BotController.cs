@@ -22,7 +22,8 @@ public sealed partial class BotController : IBotController, IDisposable
 {
     private readonly WowProcess wowProcess;
     private readonly WowProcessInput wowProcessInput;
-    private readonly ILogger logger;
+    private readonly ILogger<BotController> logger;
+    private readonly ILogger globalLogger;
     private readonly IPPather pather;
     private readonly MinimapNodeFinder minimapNodeFinder;
     private readonly Wait wait;
@@ -66,12 +67,13 @@ public sealed partial class BotController : IBotController, IDisposable
     public double AvgScreenLatency => ScreenLatencys.Average();
     public double AvgNPCLatency => NPCLatencys.Average();
 
-    public BotController(ILogger logger, CancellationTokenSource cts,
+    public BotController(ILogger<BotController> logger, ILogger globalLogger, CancellationTokenSource cts,
         IPPather pather, SessionStat sessionStat, IGrindSessionDAO grindSessionDAO, DataConfig dataConfig,
         WowProcess wowProcess, WowScreen wowScreen, WowProcessInput wowProcessInput,
         ExecGameCommand execGameCommand, Wait wait, IAddonReader addonReader,
         MinimapNodeFinder minimapNodeFinder, IScreenCapture screenCapture)
     {
+        this.globalLogger = globalLogger;
         this.logger = logger;
         this.pather = pather;
         this.dataConfig = dataConfig;
@@ -106,8 +108,8 @@ public sealed partial class BotController : IBotController, IDisposable
 
         logger.LogDebug($"Woohoo, I have read the player class. You are a {AddonReader.PlayerReader.Race.ToStringF()} {AddonReader.PlayerReader.Class.ToStringF()}.");
 
-        npcNameFinder = new(logger, WowScreen, npcNameFinderEvent);
-        npcNameTargeting = new(logger, cts, WowScreen, npcNameFinder, wowProcessInput, addonReader.PlayerReader, new NoBlacklist(), wait);
+        npcNameFinder = new(globalLogger, WowScreen, npcNameFinderEvent);
+        npcNameTargeting = new(globalLogger, cts, WowScreen, npcNameFinder, wowProcessInput, addonReader.PlayerReader, new NoBlacklist(), wait);
         WowScreen.AddDrawAction(npcNameFinder.ShowNames);
         WowScreen.AddDrawAction(npcNameTargeting.ShowClickPositions);
 
@@ -207,10 +209,10 @@ public sealed partial class BotController : IBotController, IDisposable
             ClassConfig?.Dispose();
             ClassConfig = ReadClassConfiguration(classFile);
 
-            RequirementFactory requirementFactory = new(logger, AddonReader, SessionStat, npcNameFinder, ClassConfig.ImmunityBlacklist);
-            ClassConfig.Initialise(dataConfig, AddonReader, requirementFactory, logger, pathFile);
+            RequirementFactory requirementFactory = new(globalLogger, AddonReader, SessionStat, npcNameFinder, ClassConfig.ImmunityBlacklist);
+            ClassConfig.Initialise(dataConfig, AddonReader, requirementFactory, globalLogger, pathFile);
 
-            LogProfileLoaded(logger, nameof(BotController), classFile, ClassConfig.PathFilename);
+            LogProfileLoaded(logger, classFile, ClassConfig.PathFilename);
 
         }
         catch (Exception e)
@@ -221,7 +223,7 @@ public sealed partial class BotController : IBotController, IDisposable
 
         Initialize(ClassConfig);
 
-        LogProfileLoadedTime(logger, nameof(BotController), Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds);
+        LogProfileLoadedTime(logger, Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds);
 
         return true;
     }
@@ -232,7 +234,7 @@ public sealed partial class BotController : IBotController, IDisposable
         SessionStat.Reset();
 
         IServiceScope profileLoadedScope =
-            GoalFactory.CreateGoals(logger, AddonReader, dataConfig, npcNameFinder,
+            GoalFactory.CreateGoals(globalLogger, AddonReader, dataConfig, npcNameFinder,
                 npcNameTargeting, pather, execGameCommand, wowProcessInput, config, cts, wait);
 
         npcNameTargeting.UpdateBlacklist(
@@ -341,16 +343,16 @@ public sealed partial class BotController : IBotController, IDisposable
     #region logging
 
     [LoggerMessage(
-        EventId = 200,
+        EventId = 1000,
         Level = LogLevel.Information,
-        Message = "[{typeName}] Elapsed time: {time} ms")]
-    static partial void LogProfileLoadedTime(ILogger logger, string typeName, double time);
+        Message = "Elapsed time: {time} ms")]
+    static partial void LogProfileLoadedTime(ILogger logger, double time);
 
     [LoggerMessage(
-        EventId = 201,
+        EventId = 1001,
         Level = LogLevel.Information,
-        Message = "[{typeName}] ClassConfig: {profile} with Path: {path}")]
-    static partial void LogProfileLoaded(ILogger logger, string typeName, string profile, string path);
+        Message = "ClassConfig: {profile} with Path: {path}")]
+    static partial void LogProfileLoaded(ILogger logger, string profile, string path);
 
     #endregion
 }

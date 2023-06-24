@@ -18,7 +18,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
     private const bool debug = false;
 
-    private readonly ILogger logger;
+    private readonly ILogger<FollowRouteGoal> logger;
     private readonly ConfigurableInput input;
     private readonly Wait wait;
     private readonly AddonReader addonReader;
@@ -64,9 +64,10 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
     #endregion
 
 
-    public FollowRouteGoal(ILogger logger, ConfigurableInput input, Wait wait,
-        AddonReader addonReader, ClassConfiguration classConfig, Vector3[] route,
-        Navigation navigation, IMountHandler mountHandler, TargetFinder targetFinder,
+    public FollowRouteGoal(ILogger<FollowRouteGoal> logger, 
+        ConfigurableInput input, Wait wait, AddonReader addonReader,
+        ClassConfiguration classConfig, Vector3[] route, Navigation navigation,
+        IMountHandler mountHandler, TargetFinder targetFinder,
         IBlacklist blacklist)
         : base(nameof(FollowRouteGoal))
     {
@@ -393,16 +394,16 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
     private void LogDebug(string text)
     {
-        logger.LogDebug($"{nameof(FollowRouteGoal)}: {text}");
+        logger.LogDebug(text);
     }
 
     private void LogWarning(string text)
     {
-        logger.LogWarning($"{nameof(FollowRouteGoal)}: {text}");
+        logger.LogWarning(text);
     }
 
     private void Log(string text)
     {
-        logger.LogInformation($"{nameof(FollowRouteGoal)}: {text}");
+        logger.LogInformation(text);
     }
 }

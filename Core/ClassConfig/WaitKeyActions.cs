@@ -100,7 +100,7 @@ public sealed partial class WaitKeyActions : KeyActions
     #region logging
 
     [LoggerMessage(
-        EventId = 12,
+        EventId = 0016,
         Level = LogLevel.Information,
         Message = "[{typeName}] Added awaiting action for {keyActionName}")]
     static partial void LogAddedWait(ILogger logger, string typeName, string keyActionName);

@@ -7,11 +7,12 @@ namespace Core;
 
 public sealed class ExecGameCommand
 {
-    private readonly ILogger logger;
+    private readonly ILogger<ExecGameCommand> logger;
     private readonly WowProcessInput wowProcessInput;
     private readonly CancellationToken ct;
 
-    public ExecGameCommand(ILogger logger, CancellationTokenSource cts, WowProcessInput wowProcessInput)
+    public ExecGameCommand(ILogger<ExecGameCommand> logger,
+        CancellationTokenSource cts, WowProcessInput wowProcessInput)
     {
         this.logger = logger;
         ct = cts.Token;

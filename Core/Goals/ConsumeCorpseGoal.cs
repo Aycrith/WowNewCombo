@@ -7,11 +7,12 @@ public sealed partial class ConsumeCorpseGoal : GoapGoal
 {
     public override float Cost => 4.1f;
 
-    private readonly ILogger logger;
+    private readonly ILogger<ConsumeCorpseGoal> logger;
     private readonly ClassConfiguration classConfig;
     private readonly GoapAgentState state;
 
-    public ConsumeCorpseGoal(ILogger logger, ClassConfiguration classConfig, GoapAgentState state)
+    public ConsumeCorpseGoal(ILogger<ConsumeCorpseGoal> logger,
+        ClassConfiguration classConfig, GoapAgentState state)
         : base(nameof(ConsumeCorpseGoal))
     {
         this.logger = logger;
@@ -57,8 +58,8 @@ public sealed partial class ConsumeCorpseGoal : GoapGoal
     }
 
     [LoggerMessage(
-        EventId = 100,
+        EventId = 0100,
         Level = LogLevel.Information,
-        Message = "----- Safe to consume a corpse.")]
+        Message = "Safe to consume a corpse.")]
     static partial void LogConsume(ILogger logger);
 }

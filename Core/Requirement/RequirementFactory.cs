@@ -1215,19 +1215,19 @@ public sealed partial class RequirementFactory
     #region Logging
 
     [LoggerMessage(
-        EventId = 11,
+        EventId = 0017,
         Level = LogLevel.Information,
         Message = "[{typeName}] Defined int variable [{key} -> {value}]")]
     static partial void LogUserDefinedValue(ILogger logger, string typeName, string key, int value);
 
     [LoggerMessage(
-        EventId = 12,
+        EventId = 0018,
         Level = LogLevel.Information,
-        Message = "[{name}] Requirement: \"{requirement}\"")]
+        Message = "[{name,-15}] Requirement: \"{requirement}\"")]
     static partial void LogProcessingRequirement(ILogger logger, string name, string requirement);
 
     [LoggerMessage(
-        EventId = 13,
+        EventId = 0019,
         Level = LogLevel.Error,
         Message = "UNKNOWN REQUIREMENT! {requirement}: try one of: {available}")]
     static partial void LogUnknownRequirement(ILogger logger, string requirement, string available);

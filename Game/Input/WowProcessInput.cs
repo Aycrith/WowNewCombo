@@ -203,25 +203,25 @@ public sealed partial class WowProcessInput : IMouseInput
     }
 
     [LoggerMessage(
-        EventId = 25,
+        EventId = 3000,
         Level = LogLevel.Debug,
         Message = @"Input: KeyDown {key}")]
     static partial void LogKeyDown(ILogger logger, ConsoleKey key);
 
     [LoggerMessage(
-        EventId = 26,
+        EventId = 3001,
         Level = LogLevel.Debug,
         Message = @"Input: KeyUp {key}")]
     static partial void LogKeyUp(ILogger logger, ConsoleKey key);
 
     [LoggerMessage(
-        EventId = 27,
+        EventId = 3002,
         Level = LogLevel.Debug,
         Message = @"Input: [{key}] pressed for {milliseconds}ms")]
     static partial void LogKeyPress(ILogger logger, ConsoleKey key, int milliseconds);
 
     [LoggerMessage(
-        EventId = 28,
+        EventId = 3003,
         Level = LogLevel.Debug,
         Message = @"Input: [{key}] pressing for {milliseconds}ms")]
     static partial void LogKeyPressNoDelay(ILogger logger, ConsoleKey key, int milliseconds);

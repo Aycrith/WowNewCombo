@@ -45,13 +45,13 @@ public partial class KeyActions : IDisposable
     }
 
     [LoggerMessage(
-        EventId = 10,
+        EventId = 0010,
         Level = LogLevel.Information,
         Message = "[{prefix}] CreateDynamicBindings.")]
     protected static partial void LogDynamicBinding(ILogger logger, string prefix);
 
     [LoggerMessage(
-        EventId = 11,
+        EventId = 0011,
         Level = LogLevel.Information,
         Message = "[{prefix}] Initialise KeyActions.")]
     protected static partial void LogInitKeyActions(ILogger logger, string prefix);

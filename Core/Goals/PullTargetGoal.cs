@@ -11,7 +11,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
 
     private const int AcquireTargetTimeMs = 5000;
 
-    private readonly ILogger logger;
+    private readonly ILogger<PullTargetGoal> logger;
     private readonly ConfigurableInput input;
     private readonly ClassConfiguration classConfig;
     private readonly Wait wait;
@@ -34,11 +34,12 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
 
     private double PullDurationMs => (DateTime.UtcNow - pullStart).TotalMilliseconds;
 
-    public PullTargetGoal(ILogger logger, ConfigurableInput input, Wait wait,
-        AddonReader addonReader, IBlacklist blacklist, StopMoving stopMoving,
-        CastingHandler castingHandler, IMountHandler mountHandler,
-        NpcNameTargeting npcNameTargeting, StuckDetector stuckDetector,
-        CombatUtil combatUtil, ClassConfiguration classConfig)
+    public PullTargetGoal(ILogger<PullTargetGoal> logger, ConfigurableInput input,
+        Wait wait, AddonReader addonReader, IBlacklist blacklist,
+        StopMoving stopMoving, CastingHandler castingHandler,
+        IMountHandler mountHandler, NpcNameTargeting npcNameTargeting,
+        StuckDetector stuckDetector, CombatUtil combatUtil,
+        ClassConfiguration classConfig)
         : base(nameof(PullTargetGoal))
     {
         this.logger = logger;

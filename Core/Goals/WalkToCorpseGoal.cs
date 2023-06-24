@@ -9,7 +9,7 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
 {
     public override float Cost => 1f;
 
-    private readonly ILogger logger;
+    private readonly ILogger<WalkToCorpseGoal> logger;
     private readonly Wait wait;
     private readonly ConfigurableInput input;
 
@@ -41,7 +41,9 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
 
     #endregion
 
-    public WalkToCorpseGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, Navigation navigation, StopMoving stopMoving)
+    public WalkToCorpseGoal(ILogger<WalkToCorpseGoal> logger,
+        ConfigurableInput input, Wait wait, AddonReader addonReader,
+        Navigation navigation, StopMoving stopMoving)
         : base(nameof(WalkToCorpseGoal))
     {
         this.logger = logger;
@@ -125,6 +127,6 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
 
     private void Log(string text)
     {
-        logger.LogInformation($"[{nameof(WalkToCorpseGoal)}]: {text}");
+        logger.LogInformation(text);
     }
 }

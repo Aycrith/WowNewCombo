@@ -207,7 +207,7 @@ public sealed partial class KeyAction : IDisposable
         FormAction = true;
         Initialise(config, addonReader, requirementFactory, logger, globalLog);
 
-        logger.LogInformation($"[{Name}] Added {FormEnum} to FormCost with {MinCost}");
+        logger.LogInformation($"[{Name,-15}] Added {FormEnum} to FormCost with {MinCost}");
     }
 
     public void ResetCosts()
@@ -348,7 +348,7 @@ public sealed partial class KeyAction : IDisposable
                 int formCost = FormCost();
                 if (formCost > 0)
                 {
-                    logger.LogInformation($"[{Name}] +{formCost} Mana to change into {FormEnum.ToStringF()}");
+                    logger.LogInformation($"[{Name,-15}] +{formCost} Mana to change into {FormEnum.ToStringF()}");
                 }
             }
         }
@@ -409,39 +409,39 @@ public sealed partial class KeyAction : IDisposable
     #region Logging
 
     [LoggerMessage(
-        EventId = 4,
+        EventId = 0001,
         Level = LogLevel.Information,
-        Message = "[{name}] Path: {path}")]
+        Message = "[{name,-15}] Path: {path}")]
     static partial void LogPath(ILogger logger, string name, string path);
 
     [LoggerMessage(
-        EventId = 5,
+        EventId = 0002,
         Level = LogLevel.Information,
-        Message = "[{name}] Required Form: {form}")]
+        Message = "[{name,-15}] Required Form: {form}")]
     static partial void LogFormRequired(ILogger logger, string name, string form);
 
     [LoggerMessage(
-        EventId = 6,
+        EventId = 0003,
         Level = LogLevel.Information,
-        Message = "[{name}] Actionbar Key:{key} -> Actionbar:{slot} -> Index:{slotIndex}")]
+        Message = "[{name,-15}] Actionbar Key:{key} -> Actionbar:{slot} -> Index:{slotIndex}")]
     static partial void LogInputActionbar(ILogger logger, string name, string key, int slot, int slotIndex);
 
     [LoggerMessage(
-        EventId = 7,
+        EventId = 0004,
         Level = LogLevel.Information,
-        Message = "[{name}] Non Actionbar {key} -> {consoleKey}")]
+        Message = "[{name,-15}] Non Actionbar {key} -> {consoleKey}")]
     static partial void LogInputNonActionbar(ILogger logger, string name, string key, ConsoleKey consoleKey);
 
     [LoggerMessage(
-        EventId = 8,
+        EventId = 0005,
         Level = LogLevel.Warning,
-        Message = "[{name}] has no valid Key={key} or ConsoleKey={consoleKey}")]
+        Message = "[{name,-15}] has no valid Key={key} or ConsoleKey={consoleKey}")]
     static partial void LogInputNoValidKey(ILogger logger, string name, string key, ConsoleKey consoleKey);
 
     [LoggerMessage(
-        EventId = 9,
+        EventId = 0006,
         Level = LogLevel.Information,
-        Message = "[{name}] Update {type} cost to {newCost} from {oldCost}")]
+        Message = "[{name,-15}] Update {type} cost to {newCost} from {oldCost}")]
     static partial void LogPowerCostChange(ILogger logger, string name, string type, int newCost, int oldCost);
 
     #endregion

@@ -12,7 +12,7 @@ namespace Core;
 
 public sealed partial class ScreenCapture : ScreenCaptureCleaner, IDisposable
 {
-    private readonly ILogger logger;
+    private readonly ILogger<ScreenCapture> logger;
     private readonly DataConfig dataConfig;
     private readonly WowScreen wowScreen;
     private readonly CancellationToken token;
@@ -23,7 +23,7 @@ public sealed partial class ScreenCapture : ScreenCaptureCleaner, IDisposable
     private readonly Bitmap bitmap;
     private readonly Graphics graphics;
 
-    public ScreenCapture(ILogger logger, DataConfig dataConfig,
+    public ScreenCapture(ILogger<ScreenCapture> logger, DataConfig dataConfig,
         CancellationTokenSource cts, WowScreen wowScreen)
         : base(logger, dataConfig)
     {
@@ -71,7 +71,7 @@ public sealed partial class ScreenCapture : ScreenCaptureCleaner, IDisposable
         }
 
         if (logger.IsEnabled(LogLevel.Debug))
-            logger.LogDebug($"{nameof(ScreenCapture)} thread stopped!");
+            logger.LogDebug($"Thread stopped!");
     }
 
     public override void Request()
@@ -83,9 +83,9 @@ public sealed partial class ScreenCapture : ScreenCaptureCleaner, IDisposable
     #region Logging 
 
     [LoggerMessage(
-        EventId = 111,
+        EventId = 0111,
         Level = LogLevel.Information,
-        Message = "[ScreenCapture] {fileName}")]
+        Message = "{fileName}")]
     static partial void LogScreenCapture(ILogger logger, string fileName);
 
     #endregion

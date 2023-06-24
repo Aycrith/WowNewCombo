@@ -22,7 +22,7 @@ public sealed class StuckDetector
     private const double UNSTUCK_AFTER_MS = 2000;
     private const double ACTION_STUCK_TIME = 3000;
 
-    private readonly ILogger logger;
+    private readonly ILogger<StuckDetector> logger;
     private readonly ConfigurableInput input;
 
     private readonly PlayerReader playerReader;
@@ -38,7 +38,9 @@ public sealed class StuckDetector
     public double ActionDurationMs => (DateTime.UtcNow - startTime).TotalMilliseconds;
     private double UnstuckMs => (DateTime.UtcNow - attemptTime).TotalMilliseconds;
 
-    public StuckDetector(ILogger logger, ConfigurableInput input, PlayerReader playerReader, PlayerDirection playerDirection, StopMoving stopMoving)
+    public StuckDetector(ILogger<StuckDetector> logger, ConfigurableInput input, 
+        PlayerReader playerReader, PlayerDirection playerDirection,
+        StopMoving stopMoving)
     {
         this.logger = logger;
         this.input = input;

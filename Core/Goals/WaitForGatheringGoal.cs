@@ -165,25 +165,25 @@ public partial class WaitForGatheringGoal : GoapGoal
     #region Logging
 
     [LoggerMessage(
-        EventId = 101,
+        EventId = 0101,
         Level = LogLevel.Information,
         Message = "{state}")]
     static partial void LogState(ILogger logger, string state);
 
     [LoggerMessage(
-        EventId = 102,
+        EventId = 0102,
         Level = LogLevel.Warning,
         Message = "Waiting indefinitely for [Gathering cast to start] or [Press Jump to Abort]")]
     static partial void LogOnEnter(ILogger logger);
 
     [LoggerMessage(
-        EventId = 103,
+        EventId = 0103,
         Level = LogLevel.Error,
         Message = "{state} -- Waiting(max {Timeout} ms) for [Gathering cast to start] or [Press Jump to Abort]")]
     static partial void LogFailed(ILogger logger, string state, int Timeout);
 
     [LoggerMessage(
-        EventId = 104,
+        EventId = 0104,
         Level = LogLevel.Information,
         Message = "{success} -> {state} Waiting(max {Timeout} ms) for [More Mining cast] or [Press Jump to Abort]")]
     static partial void LogSuccessMining(ILogger logger, string success, string state, int Timeout);

@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 namespace Core.Goals;
 
-public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
+public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
 {
     public override float Cost => 4.4f;
 
@@ -16,7 +16,7 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
     private const int MAX_TIME_TO_DETECT_CAST = 2 * CastingHandler.GCD;
     private const int MAX_TIME_TO_WAIT_NPC_NAME = 1000;
 
-    private readonly ILogger logger;
+    private readonly ILogger<SkinningGoal> logger;
     private readonly ConfigurableInput input;
     private readonly ClassConfiguration classConfig;
     private readonly PlayerReader playerReader;
@@ -33,7 +33,7 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
 
     private readonly List<SkinCorpseEvent> corpses = new();
 
-    public SkinningGoal(ILogger logger, ConfigurableInput input,
+    public SkinningGoal(ILogger<SkinningGoal> logger, ConfigurableInput input,
         AddonReader addonReader, Wait wait, StopMoving stopMoving,
         NpcNameTargeting npcNameTargeting, CombatUtil combatUtil,
         GoapAgentState state, ClassConfiguration classConfig)
@@ -87,7 +87,7 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
         float e = wait.Until(CastingHandler.GCD, LootReset);
         if (e < 0)
         {
-            LogWarning($"Loot window still open! {e}ms");
+            LogWarnWindowStillOpen(logger, e);
             ExitInterruptOrFailed(false);
             return;
         }
@@ -135,7 +135,7 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
 
                 npcNameTargeting.ChangeNpcType(NpcNames.Corpse);
                 e = wait.Until(MAX_TIME_TO_WAIT_NPC_NAME, npcNameTargeting.FoundNpcName);
-                Log($"Found Npc Name ? {e >= 0} | Count: {npcNameTargeting.NpcCount} {e}ms");
+                LogFoundNpcNameCount(logger, npcNameTargeting.NpcCount, e);
 
                 foundTarget = npcNameTargeting.FindBy(CursorType.Skin, CursorType.Mine, CursorType.Herb); // todo salvage icon
                 interact = true;
@@ -144,7 +144,7 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
             if (!foundTarget)
             {
                 SendGoapEvent(ScreenCaptureEvent.Default);
-                LogWarning($"Unable to gather Target({playerReader.TargetId})!");
+                LogWarnUnableToTarget(logger, playerReader.TargetId);
                 ExitInterruptOrFailed(false);
                 return;
             }
@@ -152,7 +152,7 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
             if (!MinRangeZero())
             {
                 e = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, input.PressApproachOnCooldown);
-                Log($"Reached Target ? {e >= 0} {e}ms");
+                LogReachedCorpse(logger, e);
                 interact = true;
             }
 
@@ -161,7 +161,7 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
 
             e = wait.Until(MAX_TIME_TO_DETECT_CAST, CastStartedOrFailed, interact ? Empty : WhileNotCastingInteract);
 
-            Log($"Started casting or interrupted ? {e >= 0} - casting: {playerReader.IsCasting()} {e}ms");
+            LogCastStartedOrInterrupted(logger, e >= 0, playerReader.IsCasting(), e);
             if (playerReader.LastUIError == UI_ERROR.ERR_REQUIRES_S)
             {
                 LogWarning("Missing Spell/Item/Skill Requirement!");
@@ -174,10 +174,8 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
                     ? Loot.LOOTFRAME_AUTOLOOT_DELAY
                     : playerReader.NetworkLatency.Value;
 
-                Log($"Wait {delay}ms and try again...");
                 wait.Fixed(delay);
-
-                Log($"Try again: {playerReader.CastState.ToStringF()} | {playerReader.LastUIError.ToStringF()} | {playerReader.IsCasting()}");
+                LogCastingState(logger, delay, playerReader.CastState.ToStringF(), playerReader.LastUIError.ToStringF(), playerReader.IsCasting());
                 attempts++;
 
                 ClearTargetIfExists();
@@ -190,7 +188,7 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
             playerReader.LastUIError = 0;
 
             int waitTime = remainMs + playerReader.SpellQueueTimeMs + playerReader.NetworkLatency.Value;
-            Log($"Waiting for {(herbalism ? "Herb Gathering" : "Skinning")} castbar to end! {waitTime}ms");
+            LogAwaitCastbarFinish(logger, herbalism ? "Herb Gathering" : "Skinning", waitTime);
 
             e = wait.Until(waitTime, herbalism ? HerbalismCastEnded : SkinningCastEnded);
 
@@ -198,7 +196,7 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
                 ? e < 0 || playerReader.LastUIError != UI_ERROR.SPELL_FAILED_TRY_AGAIN
                 : playerReader.CastState == UI_ERROR.CAST_SUCCESS)
             {
-                Log($"Gathering Successful!");
+                Log("Gathering Successful!");
                 ExitSuccess();
                 return;
             }
@@ -212,15 +210,16 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
                     return;
                 }
 
+                LogWarnGatherFailed(logger, playerReader.CastState.ToStringF(), attempts);
                 wait.Fixed(Loot.LOOTFRAME_AUTOLOOT_DELAY);
-                LogWarning($"Gathering Failed! {playerReader.CastState.ToStringF()} attempts: {attempts}");
+
                 attempts++;
 
                 ClearTargetIfExists();
             }
         }
 
-        LogWarning($"Ran out of {attempts} maximum attempts...");
+        LogWarnOutOfAttempts(logger, attempts);
         ExitInterruptOrFailed(false);
     }
 
@@ -236,7 +235,7 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
         bool success = e >= 0 && !bagReader.BagsFull();
         if (success)
         {
-            Log($"Loot Successful after {e}ms");
+            LogLootSuccess(logger, e);
             e = wait.Until(MAX_TIME_TO_WAIT_NPC_NAME, WaitForLosingTarget);
             if (e >= 0)
                 ClearTargetIfExists();
@@ -244,7 +243,7 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
         else
         {
             SendGoapEvent(ScreenCaptureEvent.Default);
-            Log($"Loot Failed after {e}ms");
+            LogLootFailed(logger, e);
 
             ClearTargetIfExists();
         }
@@ -388,4 +387,77 @@ public sealed class SkinningGoal : GoapGoal, IGoapEventListener, IDisposable
     {
         logger.LogWarning(text);
     }
+
+    #region Logging
+
+    [LoggerMessage(
+        EventId = 0140,
+        Level = LogLevel.Warning,
+        Message = "Loot window still open! {elapsedMs}ms")]
+    static partial void LogWarnWindowStillOpen(ILogger logger, float elapsedMs);
+
+    [LoggerMessage(
+        EventId = 0141,
+        Level = LogLevel.Information,
+        Message = "Found NpcName Count: {npcCount} {elapsedMs}ms")]
+    static partial void LogFoundNpcNameCount(ILogger logger, int npcCount, float elapsedMs);
+
+
+    [LoggerMessage(
+        EventId = 0142,
+        Level = LogLevel.Warning,
+        Message = "Unable to gather Target({targetId})!")]
+    static partial void LogWarnUnableToTarget(ILogger logger, int targetId);
+
+    [LoggerMessage(
+        EventId = 0143,
+        Level = LogLevel.Information,
+        Message = "Reached corpse ? {elapsedMs}ms")]
+    static partial void LogReachedCorpse(ILogger logger, float elapsedMs);
+
+    [LoggerMessage(
+        EventId = 0144,
+        Level = LogLevel.Information,
+        Message = "Started casting or interrupted ? {interrupt} - casting: {casting} {elapsedMs}ms")]
+    static partial void LogCastStartedOrInterrupted(ILogger logger, bool interrupt, bool casting, float elapsedMs);
+
+    [LoggerMessage(
+        EventId = 0145,
+        Level = LogLevel.Information,
+        Message = "Wait {delay}ms and try again: {castState} | {uiError} | casting: {casting}")]
+    static partial void LogCastingState(ILogger logger, int delay, string castState, string uiError, bool casting);
+
+    [LoggerMessage(
+        EventId = 0146,
+        Level = LogLevel.Information,
+        Message = "Waiting for {castName} castbar to end! {waitTime}ms")]
+    static partial void LogAwaitCastbarFinish(ILogger logger, string castName, int waitTime);
+
+    [LoggerMessage(
+        EventId = 0147,
+        Level = LogLevel.Warning,
+        Message = "Gathering Failed! {castState} attempts: {attempts}")]
+    static partial void LogWarnGatherFailed(ILogger logger, string castState, int attempts);
+
+    [LoggerMessage(
+        EventId = 0148,
+        Level = LogLevel.Warning,
+        Message = "Ran out of {attempts} maximum attempts...")]
+    static partial void LogWarnOutOfAttempts(ILogger logger, int attempts);
+
+    [LoggerMessage(
+        EventId = 0149,
+        Level = LogLevel.Information,
+        Message = "Loot Successful {elapsedMs}ms")]
+    static partial void LogLootSuccess(ILogger logger, float elapsedMs);
+
+    [LoggerMessage(
+        EventId = 0150,
+        Level = LogLevel.Information,
+        Message = "Loot Failed {elapsedMs}ms")]
+    static partial void LogLootFailed(ILogger logger, float elapsedMs);
+
+
+
+    #endregion
 }
