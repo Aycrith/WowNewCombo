@@ -76,26 +76,30 @@ public sealed class Startup
             builder.Services.AddSingleton<Microsoft.Extensions.Logging.ILogger>(logFactory.CreateLogger(string.Empty));
         });
 
-        Log.Information($"[{nameof(Startup)}] {Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName} {DateTimeOffset.Now}");
+        var log = Log.Logger.ForContext<Startup>();
+
+        log.Information($"{Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName} {DateTimeOffset.Now}");
 
         StartupConfigPid StartupConfigPid = new();
         Configuration.GetSection(StartupConfigPid.Position).Bind(StartupConfigPid);
         while (WowProcess.Get(StartupConfigPid.Id) == null)
         {
-            Log.Warning($"[{nameof(Startup)}] Unable to find any Wow process, is it running ?");
+            log.Warning($"Unable to find any Wow process, is it running ?");
             Thread.Sleep(1000);
         }
 
         WowProcess wowProcess = new(StartupConfigPid.Id);
-        Log.Information($"[{nameof(Startup)}] Pid: {wowProcess.ProcessId}");
-        Log.Information($"[{nameof(Startup)}] Version: {wowProcess.FileVersion}");
+        log.Information($"Pid: {wowProcess.ProcessId}");
+        log.Information($"Version: {wowProcess.FileVersion}");
 
         NativeMethods.GetWindowRect(wowProcess.Process.MainWindowHandle, out Rectangle rect);
 
-        var logger = new SerilogLoggerProvider(Log.Logger, true).CreateLogger(nameof(AddonConfigurator));
+        ILoggerFactory factory = new LoggerFactory().AddSerilog(Log.Logger);
+        var logger = factory.CreateLogger<AddonConfigurator>();
+
         AddonConfigurator addonConfigurator = new(logger, wowProcess);
         Version? installVersion = addonConfigurator.GetInstallVersion();
-        Log.Information($"[{nameof(Program)}] Addon version: {installVersion}");
+        log.Information($"Addon version: {installVersion}");
 
         if (addonConfigurator.IsDefault() || installVersion == null)
         {
@@ -103,14 +107,14 @@ public sealed class Startup
             addonConfigurator.Delete();
             FrameConfig.Delete();
 
-            Log.Error($"[{nameof(Startup)}] {nameof(AddonConfig)} doesn't exists or addon not installed yet!");
+            log.Error($"{nameof(AddonConfig)} doesn't exists or addon not installed yet!");
         }
 
         if (FrameConfig.Exists() && !FrameConfig.IsValid(rect, installVersion!))
         {
             // At this point the webpage never loads so fallback to configuration page
             FrameConfig.Delete();
-            Log.Error($"[{nameof(Startup)}] {nameof(FrameConfig)} doesn't exists or window rect is different then config!");
+            log.Error($"{nameof(FrameConfig)} doesn't exists or window rect is different then config!");
         }
 
         wowProcess.Dispose();
@@ -140,19 +144,19 @@ public sealed class Startup
             if (StartupDiagnostics.Enabled)
             {
                 services.AddSingleton<IScreenCapture, ScreenCapture>();
-                Log.Information($"[{nameof(Startup)}] {nameof(ScreenCapture)}");
+                log.Information(nameof(ScreenCapture));
             }
             else
             {
                 services.AddSingleton<IScreenCapture, NoScreenCapture>();
-                Log.Information($"[{nameof(Startup)}] {nameof(NoScreenCapture)}");
+                log.Information(nameof(NoScreenCapture));
             }
 
             services.AddSingleton<SessionStat>();
             services.AddSingleton<IGrindSessionDAO, LocalGrindSessionDAO>();
             services.AddSingleton<WorldMapAreaDB>();
             services.AddSingleton<IPPather>(x =>
-                GetPather(x.GetRequiredService<Microsoft.Extensions.Logging.ILogger>(),
+                GetPather(log, x.GetRequiredService<Microsoft.Extensions.Logging.ILogger>(),
                 x.GetRequiredService<DataConfig>(), x.GetRequiredService<WorldMapAreaDB>()));
 
             StartupConfigReader scr = new();
@@ -162,15 +166,15 @@ public sealed class Startup
             {
                 case AddonDataProviderType.GDI:
                     services.AddSingleton<IAddonDataProvider, AddonDataProviderGDI>();
-                    Log.Information($"[{nameof(Startup)}] {nameof(AddonDataProviderGDI)}");
+                    log.Information(nameof(AddonDataProviderGDI));
                     break;
                 case AddonDataProviderType.GDIBlit:
                     services.AddSingleton<IAddonDataProvider, AddonDataProviderBitBlt>();
-                    Log.Information($"[{nameof(Program)}] {nameof(AddonDataProviderBitBlt)}");
+                    log.Information(nameof(AddonDataProviderBitBlt));
                     break;
                 case AddonDataProviderType.DXGI:
                     services.AddSingleton<IAddonDataProvider, AddonDataProviderDXGI>();
-                    Log.Information($"[{nameof(Startup)}] {nameof(AddonDataProviderDXGI)}");
+                    log.Information(nameof(AddonDataProviderDXGI));
                     break;
             }
 
@@ -206,7 +210,7 @@ public sealed class Startup
         services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true });
     }
 
-    private IPPather GetPather(Microsoft.Extensions.Logging.ILogger logger, DataConfig dataConfig, WorldMapAreaDB worldMapAreaDB)
+    private IPPather GetPather(Serilog.ILogger log, Microsoft.Extensions.Logging.ILogger logger, DataConfig dataConfig, WorldMapAreaDB worldMapAreaDB)
     {
         StartupConfigPathing scp = new();
         Configuration.GetSection(StartupConfigPathing.Position).Bind(scp);
@@ -218,7 +222,7 @@ public sealed class Startup
             RemotePathingAPIV3 api = new(logger, scp.hostv3, scp.portv3, worldMapAreaDB);
             if (api.PingServer())
             {
-                Log.Information($"[{nameof(Startup)}] Using {StartupConfigPathing.Types.RemoteV3}({api.GetType().Name}) {scp.hostv3}:{scp.portv3}");
+                log.Information($"Using {StartupConfigPathing.Types.RemoteV3}({api.GetType().Name}) {scp.hostv3}:{scp.portv3}");
                 return api;
             }
             api.Dispose();
@@ -234,10 +238,10 @@ public sealed class Startup
             {
                 if (scp.Type == StartupConfigPathing.Types.RemoteV3)
                 {
-                    Log.Warning($"[{nameof(Startup)}] Unavailable {StartupConfigPathing.Types.RemoteV3} {scp.hostv3}:{scp.portv3} - Fallback to {StartupConfigPathing.Types.RemoteV1}");
+                    log.Warning($"Unavailable {StartupConfigPathing.Types.RemoteV3} {scp.hostv3}:{scp.portv3} - Fallback to {StartupConfigPathing.Types.RemoteV1}");
                 }
 
-                Log.Information($"[{nameof(Startup)}] Using {StartupConfigPathing.Types.RemoteV1}({api.GetType().Name}) {scp.hostv1}:{scp.portv1}");
+                log.Information($"Using {StartupConfigPathing.Types.RemoteV1}({api.GetType().Name}) {scp.hostv1}:{scp.portv1}");
                 return api;
             }
 
@@ -246,11 +250,11 @@ public sealed class Startup
 
         if (scp.Type != StartupConfigPathing.Types.Local)
         {
-            Log.Warning($"[{nameof(Startup)}] {scp.Type} not available!");
+            log.Warning($"{scp.Type} not available!");
         }
 
         LocalPathingApi localApi = new(logger, new PPatherService(logger, dataConfig, worldMapAreaDB), dataConfig);
-        Log.Information($"[{nameof(Startup)}] Using {StartupConfigPathing.Types.Local}({localApi.GetType().Name})");
+        log.Information($"Using {StartupConfigPathing.Types.Local}({localApi.GetType().Name})");
 
         return localApi;
     }
