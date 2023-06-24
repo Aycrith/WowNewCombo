@@ -6,15 +6,17 @@ namespace HeadlessServer;
 
 public sealed class HeadlessServer
 {
-    private readonly ILogger logger;
+    private readonly ILogger<HeadlessServer> logger;
     private readonly IBotController botController;
     private readonly IAddonReader addonReader;
     private readonly ExecGameCommand exec;
     private readonly AddonConfigurator addonConfigurator;
     private readonly Wait wait;
 
-    public HeadlessServer(ILogger logger, IBotController botController,
-        IAddonReader addonReader, ExecGameCommand exec, AddonConfigurator addonConfigurator, Wait wait)
+    public HeadlessServer(ILogger<HeadlessServer> logger,
+        IBotController botController,
+        IAddonReader addonReader, ExecGameCommand exec,
+        AddonConfigurator addonConfigurator, Wait wait)
     {
         this.logger = logger;
         this.botController = botController;
@@ -26,7 +28,7 @@ public sealed class HeadlessServer
 
     public void Run(ParserResult<RunOptions> options)
     {
-        logger.LogInformation($"Running {nameof(HeadlessServer)}!");
+        logger.LogInformation($"Running!");
 
         if (options.Value.Pid != -1)
         {
