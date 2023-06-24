@@ -27,7 +27,8 @@ using PPather;
 
 using Serilog;
 using Serilog.Events;
-using Serilog.Extensions.Logging;
+using Serilog.Templates.Themes;
+using Serilog.Templates;
 
 using SharedLib;
 
@@ -53,17 +54,18 @@ public sealed class Startup
             LoggerSink sink = new();
             builder.Services.AddSingleton(sink);
 
-            const string outputTemplate = "[{Timestamp:HH:mm:ss:fff} {Level:u3}] {Message:lj}{NewLine}{Exception}";
+            const string outputTemplate = "[{@t:HH:mm:ss:fff} {@l:u1}] {#if Length(SourceContext) > 0}[{Substring(SourceContext, LastIndexOf(SourceContext, '.') + 1),-15}] {#end}{@m}\n{@x}";
 
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+                .Enrich.FromLogContext()
                 .WriteTo.Sink(sink)
-                .WriteTo.File("out.log",
-                    rollingInterval: RollingInterval.Day,
-                    outputTemplate: outputTemplate)
-                .WriteTo.Debug(outputTemplate: outputTemplate)
-                .WriteTo.Console(outputTemplate: outputTemplate)
+                .WriteTo.File(new ExpressionTemplate(outputTemplate),
+                    "out.log",
+                    rollingInterval: RollingInterval.Day)
+                .WriteTo.Debug(new ExpressionTemplate(outputTemplate))
+                .WriteTo.Console(new ExpressionTemplate(outputTemplate, theme: TemplateTheme.Literate))
                 .CreateLogger();
 
             ILoggerFactory logFactory = LoggerFactory.Create(builder =>
@@ -71,7 +73,7 @@ public sealed class Startup
                 builder.ClearProviders().AddSerilog();
             });
 
-            builder.Services.AddSingleton<Microsoft.Extensions.Logging.ILogger>(logFactory.CreateLogger(nameof(Program)));
+            builder.Services.AddSingleton<Microsoft.Extensions.Logging.ILogger>(logFactory.CreateLogger(string.Empty));
         });
 
         Log.Information($"[{nameof(Startup)}] {Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName} {DateTimeOffset.Now}");

@@ -1,4 +1,4 @@
-﻿using Core;
+using Core;
 using Core.Database;
 using Core.Session;
 using Game;
@@ -6,7 +6,8 @@ using Microsoft.Extensions.DependencyInjection;
 using PPather;
 using Serilog;
 using Serilog.Events;
-using Serilog.Extensions.Logging;
+using Serilog.Templates;
+using Serilog.Templates.Themes;
 using CommandLine;
 using WinAPI;
 using System.Drawing;
@@ -23,16 +24,17 @@ internal sealed class Program
 
         services.AddLogging(builder =>
         {
-            const string outputTemplate = "[{Timestamp:HH:mm:ss:fff} {Level:u3}] {Message:lj}{NewLine}{Exception}";
+            const string outputTemplate = "[{@t:HH:mm:ss:fff} {@l:u1}] {#if Length(SourceContext) > 0}[{Substring(SourceContext, LastIndexOf(SourceContext, '.') + 1),-15}] {#end}{@m}\n{@x}";
 
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
-                .WriteTo.File("headless_out.log",
-                    rollingInterval: RollingInterval.Day,
-                    outputTemplate: outputTemplate)
-                .WriteTo.Debug(outputTemplate: outputTemplate)
-                .WriteTo.Console(outputTemplate: outputTemplate)
+                .Enrich.FromLogContext()
+                .WriteTo.File(new ExpressionTemplate(outputTemplate),
+                    path: "headless_out.log",
+                    rollingInterval: RollingInterval.Day)
+                .WriteTo.Debug(new ExpressionTemplate(outputTemplate))
+                .WriteTo.Console(new ExpressionTemplate(outputTemplate, theme: TemplateTheme.Literate))
                 .CreateLogger();
 
             ILoggerFactory logFactory = LoggerFactory.Create(builder =>
@@ -40,7 +42,8 @@ internal sealed class Program
                 builder.ClearProviders().AddSerilog();
             });
 
-            builder.Services.AddSingleton<Microsoft.Extensions.Logging.ILogger>(logFactory.CreateLogger(nameof(Program)));
+            builder.Services.AddSingleton<Microsoft.Extensions.Logging.ILogger>(logFactory.CreateLogger(string.Empty));
+            builder.AddSerilog();
         });
 
         Log.Information($"[{nameof(Program)}] {Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName} {DateTimeOffset.Now}");
