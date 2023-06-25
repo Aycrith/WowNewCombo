@@ -10,17 +10,15 @@ using System;
 
 namespace Core.Goals;
 
-public sealed class LootGoal : GoapGoal, IGoapEventListener
+public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 {
     public override float Cost => 4.6f;
-
-    private const bool debug = true;
 
     private const int MAX_TIME_TO_REACH_MELEE = 10000;
     private const int MAX_TIME_TO_DETECT_LOOT = 2 * CastingHandler.GCD;
     private const int MAX_TIME_TO_WAIT_NPC_NAME = 1000;
 
-    private readonly ILogger logger;
+    private readonly ILogger<LootGoal> logger;
     private readonly ConfigurableInput input;
 
     private readonly PlayerReader playerReader;
@@ -41,9 +39,10 @@ public sealed class LootGoal : GoapGoal, IGoapEventListener
     private int bagHashNewOrStackGain;
     private int money;
 
-    public LootGoal(ILogger logger, ConfigurableInput input, Wait wait,
-        AddonReader addonReader, StopMoving stopMoving, ClassConfiguration classConfig,
-        NpcNameTargeting npcNameTargeting, CombatUtil combatUtil, PlayerDirection playerDirection,
+    public LootGoal(ILogger<LootGoal> logger, ConfigurableInput input, Wait wait,
+        AddonReader addonReader, StopMoving stopMoving, 
+        ClassConfiguration classConfig, NpcNameTargeting npcNameTargeting,
+        CombatUtil combatUtil, PlayerDirection playerDirection,
         GoapAgentState state)
         : base(nameof(LootGoal))
     {
@@ -104,12 +103,12 @@ public sealed class LootGoal : GoapGoal, IGoapEventListener
             success = e >= 0;
             if (success && !bagReader.BagsFull())
             {
-                Log($"Loot Successful after {e}ms");
+                LogLootSuccess(logger, e);
             }
             else
             {
                 SendGoapEvent(ScreenCaptureEvent.Default);
-                Log($"Loot Failed {e}ms");
+                LogLootFailed(logger, e);
             }
 
             gatherCorpse &= success;
@@ -140,7 +139,7 @@ public sealed class LootGoal : GoapGoal, IGoapEventListener
             if (playerReader.Bits.HasTarget())
             {
                 SendGoapEvent(ScreenCaptureEvent.Default);
-                LogWarning($"Unable to clear target! Check Bindpad settings!");
+                LogWarning("Unable to clear target! Check Bindpad settings!");
             }
         }
 
@@ -171,14 +170,14 @@ public sealed class LootGoal : GoapGoal, IGoapEventListener
 
         Log("Nearest Corpse clicked...");
         float elapsedMs = wait.Until(playerReader.NetworkLatency.Value, playerReader.Bits.HasTarget);
-        Log($"Found Npc Name Count: {npcNameTargeting.NpcCount} {elapsedMs}ms");
+        LogFoundNpcNameCount(logger, npcNameTargeting.NpcCount, elapsedMs);
 
         CheckForGather();
 
         if (!MinRangeZero())
         {
             elapsedMs = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, input.PressApproachOnCooldown);
-            Log($"Reached clicked corpse ? {elapsedMs}ms");
+            LogReachedCorpse(logger, elapsedMs);
         }
 
         return true;
@@ -223,7 +222,7 @@ public sealed class LootGoal : GoapGoal, IGoapEventListener
             gatherCorpse = true;
         }
 
-        Log($"Should gather {targetId} ? {gatherCorpse}");
+        LogShouldGather(logger, targetId, gatherCorpse);
     }
 
     private bool LootWindowClosedOrBagOrMoneyChanged()
@@ -283,7 +282,7 @@ public sealed class LootGoal : GoapGoal, IGoapEventListener
                 if (!MinRangeZero())
                 {
                     float elapsedMs = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, input.PressApproachOnCooldown);
-                    Log($"Reached Last Target ? {elapsedMs}ms");
+                    LogReachedCorpse(logger, elapsedMs);
                 }
             }
             else
@@ -313,16 +312,43 @@ public sealed class LootGoal : GoapGoal, IGoapEventListener
 
     private void Log(string text)
     {
-        if (debug)
-        {
-            logger.LogInformation($"{nameof(LootGoal)}: {text}");
-        }
+        logger.LogInformation(text);
     }
 
     private void LogWarning(string text)
     {
-        logger.LogWarning($"{nameof(LootGoal)}: {text}");
+        logger.LogWarning(text);
     }
+
+    [LoggerMessage(
+        EventId = 0130,
+        Level = LogLevel.Information,
+        Message = "Loot Successful {elapsedMs}ms")]
+    static partial void LogLootSuccess(ILogger logger, float elapsedMs);
+
+    [LoggerMessage(
+        EventId = 0131,
+        Level = LogLevel.Information,
+        Message = "Loot Failed {elapsedMs}ms")]
+    static partial void LogLootFailed(ILogger logger, float elapsedMs);
+
+    [LoggerMessage(
+        EventId = 0132,
+        Level = LogLevel.Information,
+        Message = "Found NpcName Count: {npcCount} {elapsedMs}ms")]
+    static partial void LogFoundNpcNameCount(ILogger logger, int npcCount, float elapsedMs);
+
+    [LoggerMessage(
+        EventId = 0133,
+        Level = LogLevel.Information,
+        Message = "Reached corpse ? {elapsedMs}ms")]
+    static partial void LogReachedCorpse(ILogger logger, float elapsedMs);
+
+    [LoggerMessage(
+        EventId = 0134,
+        Level = LogLevel.Information,
+        Message = "Should gather {targetId} ? {gatherCorpse}")]
+    static partial void LogShouldGather(ILogger logger, int targetId, bool gatherCorpse);
 
     #endregion
 }

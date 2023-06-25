@@ -10,13 +10,14 @@ public sealed partial class CorpseConsumedGoal : GoapGoal
 {
     public override float Cost => 4.7f;
 
-    private readonly ILogger logger;
+    private readonly ILogger<CorpseConsumedGoal> logger;
     private readonly GoapAgentState goapAgentState;
     private readonly Wait wait;
 
     private readonly bool lootEnabled;
 
-    public CorpseConsumedGoal(ILogger logger, ClassConfiguration classConfig, GoapAgentState goapAgentState, Wait wait)
+    public CorpseConsumedGoal(ILogger<CorpseConsumedGoal> logger,
+        ClassConfiguration classConfig, GoapAgentState goapAgentState, Wait wait)
         : base(nameof(CorpseConsumedGoal))
     {
         this.logger = logger;
@@ -65,8 +66,8 @@ public sealed partial class CorpseConsumedGoal : GoapGoal
     }
 
     [LoggerMessage(
-        EventId = 101,
+        EventId = 0120,
         Level = LogLevel.Information,
-        Message = "----- Corpse consumed. Total: {total} | Remaining: {remains}")]
+        Message = "Total: {total} | Remaining: {remains}")]
     static partial void LogConsumed(ILogger logger, int total, int remains);
 }

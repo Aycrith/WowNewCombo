@@ -11,7 +11,7 @@ public sealed class CastingHandlerInterruptWatchdog : IDisposable
 {
     private const bool Log = false;
 
-    private readonly ILogger logger;
+    private readonly ILogger<CastingHandlerInterruptWatchdog> logger;
     private readonly Wait wait;
 
     private readonly Thread thread;
@@ -22,7 +22,8 @@ public sealed class CastingHandlerInterruptWatchdog : IDisposable
     private Func<bool>? interrupt;
     private CancellationTokenSource? cts;
 
-    public CastingHandlerInterruptWatchdog(ILogger logger, Wait wait)
+    public CastingHandlerInterruptWatchdog(
+        ILogger<CastingHandlerInterruptWatchdog> logger, Wait wait)
     {
         this.logger = logger;
         this.wait = wait;
@@ -52,7 +53,7 @@ public sealed class CastingHandlerInterruptWatchdog : IDisposable
                 if (initial != interrupt?.Invoke())
                 {
                     if (Log)
-                        logger.LogWarning($"[{nameof(CastingHandlerInterruptWatchdog)}] Interrupted!");
+                        logger.LogWarning("Interrupted!");
 
                     initial = null;
                     interrupt = null;
@@ -67,20 +68,20 @@ public sealed class CastingHandlerInterruptWatchdog : IDisposable
             }
 
             if (Log)
-                logger.LogWarning($"[{nameof(CastingHandlerInterruptWatchdog)}] waiting...");
+                logger.LogWarning("Waiting...");
 
             resetEvent.Reset();
             resetEvent.Wait();
         }
 
         if (logger.IsEnabled(LogLevel.Debug))
-            logger.LogDebug($"{nameof(CastingHandlerInterruptWatchdog)} thread stopped!");
+            logger.LogDebug("Thread stopped!");
     }
 
     public void Set(Func<bool> interrupt, CancellationTokenSource cts)
     {
         if (Log)
-            logger.LogWarning($"[{nameof(CastingHandlerInterruptWatchdog)}] Set interrupt");
+            logger.LogWarning("Set interrupt");
 
         this.initial = interrupt();
         this.interrupt = interrupt;

@@ -152,7 +152,7 @@ public sealed partial class CastingHandler
 
         if (!CastSuccessful(playerReader.CastEvent.Value))
         {
-            react.Do(item, $"{item.Name}-{nameof(CastingHandler)}: {nameof(CastInstant)}");
+            react.Do(item);
             return false;
         }
 
@@ -213,7 +213,7 @@ public sealed partial class CastingHandler
 
         if (!CastSuccessful(playerReader.CastEvent.Value))
         {
-            react.Do(item, $"{item.Name}-{nameof(CastingHandler)}: {nameof(CastCastbar)}");
+            react.Do(item);
             return false;
         }
 
@@ -553,160 +553,160 @@ public sealed partial class CastingHandler
     #region Logging
 
     [LoggerMessage(
-        EventId = 70,
+        EventId = 0070,
         Level = LogLevel.Information,
-        Message = "[{name}] ... AfterCastWaitSwing")]
+        Message = "[{name,-15}] ... AfterCastWaitSwing")]
     static partial void LogAfterCastWaitSwing(ILogger logger, string name);
 
     [LoggerMessage(
-        EventId = 71,
+        EventId = 0071,
         Level = LogLevel.Information,
-        Message = "[{name}] instant skip validation")]
+        Message = "[{name,-15}] instant skip validation")]
     static partial void LogInstantSkipValidation(ILogger logger, string name);
 
     [LoggerMessage(
-        EventId = 72,
+        EventId = 0072,
         Level = LogLevel.Information,
-        Message = "[{name}] instant input {pressTime}ms {inputElapsedMs}ms")]
+        Message = "[{name,-15}] instant input {pressTime}ms {inputElapsedMs}ms")]
     static partial void LogInstantInput(ILogger logger, string name, int pressTime, float inputElapsedMs);
 
     [LoggerMessage(
-        EventId = 73,
+        EventId = 0073,
         Level = LogLevel.Information,
-        Message = "[{name}] instant usable: {beforeUsable}->{afterUsable} | {beforeCastEvent}->{afterCastEvent}")]
+        Message = "[{name,-15}] instant usable: {beforeUsable}->{afterUsable} | {beforeCastEvent}->{afterCastEvent}")]
     static partial void LogInstantUsableChange(ILogger logger, string name, bool beforeUsable, bool afterUsable, string beforeCastEvent, string afterCastEvent);
 
     [LoggerMessage(
-        EventId = 74,
+        EventId = 0074,
         Level = LogLevel.Information,
-        Message = "[{name}] ... castbar skip validation")]
+        Message = "[{name,-15}] ... castbar skip validation")]
     static partial void LogCastbarSkipValidation(ILogger logger, string name);
 
     [LoggerMessage(
-        EventId = 75,
+        EventId = 0075,
         Level = LogLevel.Information,
-        Message = "[{name}] castbar input {pressTime}ms {inputElapsedMs}ms")]
+        Message = "[{name,-15}] castbar input {pressTime}ms {inputElapsedMs}ms")]
     static partial void LogCastbarInput(ILogger logger, string name, int pressTime, float inputElapsedMs);
 
     [LoggerMessage(
-        EventId = 76,
+        EventId = 0076,
         Level = LogLevel.Information,
-        Message = "[{name}] ... casting: {casting} | count:{castCount} | usable: {beforeUsable}->{afterUsable} | {beforeCastEvent}->{afterCastEvent}")]
+        Message = "[{name,-15}] ... casting: {casting} | count:{castCount} | usable: {beforeUsable}->{afterUsable} | {beforeCastEvent}->{afterCastEvent}")]
     static partial void LogCastbarUsableChange(ILogger logger, string name, bool casting, int castCount, bool beforeUsable, bool afterUsable, string beforeCastEvent, string afterCastEvent);
 
     [LoggerMessage(
-        EventId = 77,
+        EventId = 0077,
         Level = LogLevel.Information,
-        Message = "[{name}] ... AfterCastWaitCastbar(V) {remain}ms or interrupt...")]
+        Message = "[{name,-15}] ... AfterCastWaitCastbar(V) {remain}ms or interrupt...")]
     static partial void LogVisibleAfterCastWaitCastbar(ILogger logger, string name, int remain);
 
     [LoggerMessage(
-        EventId = 78,
+        EventId = 0078,
         Level = LogLevel.Warning,
-        Message = "[{name}] ... AfterCastWaitCastbar(v) interrupted!")]
+        Message = "[{name,-15}] ... AfterCastWaitCastbar(v) interrupted!")]
     static partial void LogVisibleAfterCastWaitCastbarInterrupted(ILogger logger, string name);
 
     [LoggerMessage(
-        EventId = 79,
+        EventId = 0079,
         Level = LogLevel.Information,
-        Message = "[{name}] ... AfterCastWaitCastbar(h) {remain}ms or interrupt...")]
+        Message = "[{name,-15}] ... AfterCastWaitCastbar(h) {remain}ms or interrupt...")]
     static partial void LogHiddenAfterCastWaitCastbar(ILogger logger, string name, int remain);
 
     [LoggerMessage(
-        EventId = 80,
+        EventId = 0080,
         Level = LogLevel.Warning,
-        Message = "[{name}] ... AfterCastWaitCastbar(h) interrupted!")]
+        Message = "[{name,-15}] ... AfterCastWaitCastbar(h) interrupted!")]
     static partial void LogHiddenAfterCastWaitCastbarInterrupted(ILogger logger, string name);
 
 
     [LoggerMessage(
-        EventId = 81,
+        EventId = 0081,
         Level = LogLevel.Warning,
-        Message = "[{name}] ... after {before}->{after} form switch still not usable!")]
+        Message = "[{name,-15}] ... after {before}->{after} form switch still not usable!")]
     static partial void LogAfterFormSwitchNotUsable(ILogger logger, string name, string before, string after);
 
     [LoggerMessage(
-        EventId = 82,
+        EventId = 0082,
         Level = LogLevel.Information,
-        Message = "[{name}] ... BeforeCastDelay {delayBeforeCast}ms")]
+        Message = "[{name,-15}] ... BeforeCastDelay {delayBeforeCast}ms")]
     static partial void LogBeforeCastDelay(ILogger logger, string name, int delayBeforeCast);
 
     [LoggerMessage(
-        EventId = 83,
+        EventId = 0083,
         Level = LogLevel.Information,
-        Message = "[{name}] ... AfterCastWaitBuff count: {auraCount} | miss: {missType} | {elapsedMs}ms")]
+        Message = "[{name,-15}] ... AfterCastWaitBuff count: {auraCount} | miss: {missType} | {elapsedMs}ms")]
     static partial void LogAfterCastWaitBuff(ILogger logger, string name, string auraCount, string missType, float elapsedMs);
 
     [LoggerMessage(
-        EventId = 84,
+        EventId = 0084,
         Level = LogLevel.Information,
-        Message = "[{name}] ... AfterCastWaitCombat {delayAfterCast}ms")]
+        Message = "[{name,-15}] ... AfterCastWaitCombat {delayAfterCast}ms")]
     static partial void LogAfterCastWaitCombat(ILogger logger, string name, float delayAfterCast);
 
     [LoggerMessage(
-        EventId = 85,
+        EventId = 0085,
         Level = LogLevel.Information,
-        Message = "[{name}] ... AfterCastDelay {delayAfterCast}ms")]
+        Message = "[{name,-15}] ... AfterCastDelay {delayAfterCast}ms")]
     static partial void LogAfterCastDelay(ILogger logger, string name, int delayAfterCast);
 
     [LoggerMessage(
-        EventId = 86,
+        EventId = 0086,
         Level = LogLevel.Information,
-        Message = "[{name}] ... AfterCastDelay interrupted {delayElaspedMs}ms")]
+        Message = "[{name,-15}] ... AfterCastDelay interrupted {delayElaspedMs}ms")]
     static partial void LogAfterCastDelayInterrupted(ILogger logger, string name, float delayElaspedMs);
 
     [LoggerMessage(
-        EventId = 88,
+        EventId = 0088,
         Level = LogLevel.Information,
-        Message = "[{name}] ... AfterCastStepBack {stepBackAfterCast}ms")]
+        Message = "[{name,-15}] ... AfterCastStepBack {stepBackAfterCast}ms")]
     static partial void LogAfterCastStepBack(ILogger logger, string name, int stepBackAfterCast);
 
     [LoggerMessage(
-        EventId = 89,
+        EventId = 0089,
         Level = LogLevel.Information,
-        Message = "[{name}] .... AfterCastStepBack {stepbackElapsedMs}ms")]
+        Message = "[{name,-15}] .... AfterCastStepBack {stepbackElapsedMs}ms")]
     static partial void LogAfterCastStepBackInterrupted(ILogger logger, string name, float stepbackElapsedMs);
 
     [LoggerMessage(
-        EventId = 90,
+        EventId = 0090,
         Level = LogLevel.Information,
-        Message = "[{name}] ... GCD usable: {usable} | remain: {remain}ms | {elapsedMs}ms")]
+        Message = "[{name,-15}] ... GCD usable: {usable} | remain: {remain}ms | {elapsedMs}ms")]
     static partial void LogGCD(ILogger logger, string name, bool usable, int remain, float elapsedMs);
 
     [LoggerMessage(
-        EventId = 91,
+        EventId = 0091,
         Level = LogLevel.Information,
-        Message = "[{name}] ... form {before}->{after} | {elapsedMs}ms")]
+        Message = "[{name,-15}] ... form {before}->{after} | {elapsedMs}ms")]
     static partial void LogFormChanged(ILogger logger, string name, string before, string after, float elapsedMs);
 
     [LoggerMessage(
-        EventId = 92,
+        EventId = 0092,
         Level = LogLevel.Information,
-        Message = "[{name}] ... AfterCastWaitBag {elapsedMs}ms")]
+        Message = "[{name,-15}] ... AfterCastWaitBag {elapsedMs}ms")]
     static partial void LogAfterCastWaitBag(ILogger logger, string name, float elapsedMs);
 
     [LoggerMessage(
-        EventId = 93,
+        EventId = 0093,
         Level = LogLevel.Information,
-        Message = "[{name}] PrevGCD: {prevGCD}ms | GCD: {gcd}ms | Cast: {remainCastMs}ms | Next spell {duration}ms")]
+        Message = "[{name,-15}] PrevGCD: {prevGCD}ms | GCD: {gcd}ms | Cast: {remainCastMs}ms | Next spell {duration}ms")]
     static partial void LogWaitForGCD(ILogger logger, string name, int prevGCD, int gcd, int remainCastMs, float duration);
 
     [LoggerMessage(
-        EventId = 94,
+        EventId = 0094,
         Level = LogLevel.Information,
-        Message = "[{name}] ... AfterCastAuraExpected {delay}ms")]
+        Message = "[{name,-15}] ... AfterCastAuraExpected {delay}ms")]
     static partial void LogAfterCastAuraExpected(ILogger logger, string name, int delay);
 
     [LoggerMessage(
-        EventId = 95,
+        EventId = 0095,
         Level = LogLevel.Information,
-        Message = "[{name}] ... AfterCastWaitGCD {gcd}ms")]
+        Message = "[{name,-15}] ... AfterCastWaitGCD {gcd}ms")]
     static partial void LogAfterCastWaitGCD(ILogger logger, string name, int gcd);
 
     [LoggerMessage(
-        EventId = 96,
+        EventId = 0096,
         Level = LogLevel.Information,
-        Message = "[{name}] ... AfterCastWaitMeleeRange")]
+        Message = "[{name,-15}] ... AfterCastWaitMeleeRange")]
     static partial void LogAfterCastWaitMeleeRange(ILogger logger, string name);
 
     #endregion

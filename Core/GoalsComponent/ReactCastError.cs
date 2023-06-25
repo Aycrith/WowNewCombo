@@ -9,7 +9,7 @@ namespace Core;
 
 public sealed class ReactCastError
 {
-    private readonly ILogger logger;
+    private readonly ILogger<ReactCastError> logger;
     private readonly AddonReader addonReader;
     private readonly PlayerReader playerReader;
     private readonly Wait wait;
@@ -17,7 +17,9 @@ public sealed class ReactCastError
     private readonly StopMoving stopMoving;
     private readonly PlayerDirection direction;
 
-    public ReactCastError(ILogger logger, AddonReader addonReader, Wait wait, ConfigurableInput input, StopMoving stopMoving, PlayerDirection direction)
+    public ReactCastError(ILogger<ReactCastError> logger, AddonReader addonReader,
+        Wait wait, ConfigurableInput input, StopMoving stopMoving,
+        PlayerDirection direction)
     {
         this.logger = logger;
         this.addonReader = addonReader;
@@ -28,7 +30,7 @@ public sealed class ReactCastError
         this.direction = direction;
     }
 
-    public void Do(KeyAction item, string source)
+    public void Do(KeyAction item)
     {
         UI_ERROR value = (UI_ERROR)playerReader.CastEvent.Value;
         switch (value)
@@ -44,13 +46,13 @@ public sealed class ReactCastError
             case UI_ERROR.SPELL_FAILED_NOT_READY:
             /*
             int waitTime = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs);
-            logger.LogInformation($"{source} React to {value.ToStringF()} -- wait for GCD {waitTime}ms");
+            logger.LogInformation($"React to {value.ToStringF()} -- wait for GCD {waitTime}ms");
             if (waitTime > 0)
                 wait.Fixed(waitTime);
             break;
             */
             case UI_ERROR.ERR_SPELL_COOLDOWN:
-                logger.LogInformation($"{source} React to {value.ToStringF()} -- wait until its ready");
+                logger.LogInformation($"React to {value.ToStringF()} -- wait until its ready");
                 int waitTime = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs);
                 bool before = addonReader.UsableAction.Is(item);
                 wait.Until(waitTime, () => before != addonReader.UsableAction.Is(item) || addonReader.UsableAction.Is(item));
@@ -60,12 +62,12 @@ public sealed class ReactCastError
                 int debuffCount = playerReader.AuraCount.PlayerDebuff;
                 if (debuffCount != 0)
                 {
-                    logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Wait till losing debuff!");
+                    logger.LogInformation($"React to {value.ToStringF()} -- Wait till losing debuff!");
                     wait.While(() => debuffCount == playerReader.AuraCount.PlayerDebuff);
                 }
                 else
                 {
-                    logger.LogInformation($"{source} -- Didn't know how to react {value.ToStringF()} when PlayerDebuffCount: {debuffCount}");
+                    logger.LogInformation($"Didn't know how to react {value.ToStringF()} when PlayerDebuffCount: {debuffCount}");
                 }
 
                 break;
@@ -76,7 +78,7 @@ public sealed class ReactCastError
 
                 if (playerReader.Class == UnitClass.Hunter && playerReader.IsInMeleeRange())
                 {
-                    logger.LogInformation($"{source} -- As a Hunter didn't know how to react {value.ToStringF()}");
+                    logger.LogInformation($"As a {UnitClass.Hunter.ToStringF()} didn't know how to react {value.ToStringF()}");
                     return;
                 }
 
@@ -87,13 +89,13 @@ public sealed class ReactCastError
                     {
                         if (playerReader.InCloseMeleeRange())
                         {
-                            logger.LogInformation($"{source} -- React to {value.ToStringF()} -- ({minRange}) wait for close melee range.");
+                            logger.LogInformation($"React to {value.ToStringF()} -- ({minRange}) wait for close melee range.");
                             wait.Fixed(30);
                             wait.Update();
                             return;
                         }
 
-                        logger.LogInformation($"{source} -- React to {value.ToStringF()} -- ({minRange}) Just wait for the target to get in range.");
+                        logger.LogInformation($"React to {value.ToStringF()} -- ({minRange}) Just wait for the target to get in range.");
 
                         int duration = CastingHandler.GCD;
                         if (playerReader.MinRange() <= 5)
@@ -119,11 +121,11 @@ public sealed class ReactCastError
 
                         float e = wait.Until(CastingHandler.GCD, () => minRange != playerReader.MinRange());
 
-                        logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Approached target {minRange}->{playerReader.MinRange()}");
+                        logger.LogInformation($"React to {value.ToStringF()} -- Approached target {minRange}->{playerReader.MinRange()}");
                     }
                     else if (!playerReader.WithInPullRange())
                     {
-                        logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Start moving forward as outside of pull range.");
+                        logger.LogInformation($"React to {value.ToStringF()} -- Start moving forward as outside of pull range.");
                         input.StartForward(true);
                     }
                     else
@@ -135,7 +137,7 @@ public sealed class ReactCastError
             case UI_ERROR.ERR_BADATTACKFACING:
                 if (playerReader.IsInMeleeRange())
                 {
-                    logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Interact!");
+                    logger.LogInformation($"React to {value.ToStringF()} -- Interact!");
                     input.PressInteract();
                     stopMoving.Stop();
                 }
@@ -152,7 +154,7 @@ public sealed class ReactCastError
                         case UnitClass.Warrior:
                         case UnitClass.Paladin:
                         case UnitClass.Rogue:
-                            logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Interact!");
+                            logger.LogInformation($"React to {value.ToStringF()} -- Interact!");
                             input.PressInteract();
                             stopMoving.Stop();
                             break;
@@ -162,7 +164,7 @@ public sealed class ReactCastError
                         case UnitClass.Mage:
                         case UnitClass.Warlock:
                             stopMoving.Stop();
-                            logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Turning 180!");
+                            logger.LogInformation($"React to {value.ToStringF()} -- Turning 180!");
                             float desiredDirection = playerReader.Direction + MathF.PI;
                             desiredDirection = desiredDirection > MathF.PI * 2 ? desiredDirection - (MathF.PI * 2) : desiredDirection;
                             direction.SetDirection(desiredDirection, Vector3.Zero);
@@ -173,43 +175,43 @@ public sealed class ReactCastError
                 }
                 break;
             case UI_ERROR.SPELL_FAILED_MOVING:
-                logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Stop moving!");
+                logger.LogInformation($"React to {value.ToStringF()} -- Stop moving!");
                 wait.While(playerReader.Bits.IsFalling);
                 stopMoving.Stop();
                 wait.Update();
                 break;
             case UI_ERROR.ERR_SPELL_FAILED_ANOTHER_IN_PROGRESS:
-                logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Wait till casting!");
+                logger.LogInformation($"React to {value.ToStringF()} -- Wait till casting!");
                 wait.While(playerReader.IsCasting);
                 break;
             case UI_ERROR.ERR_BADATTACKPOS:
                 if (playerReader.Bits.SpellOn_AutoAttack())
                 {
-                    logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Interact!");
+                    logger.LogInformation($"React to {value.ToStringF()} -- Interact!");
                     input.PressInteract();
                     stopMoving.Stop();
                     wait.Update();
                 }
                 else
                 {
-                    logger.LogInformation($"{source} -- Didn't know how to React to {value.ToStringF()}");
+                    goto default;
                 }
                 break;
             case UI_ERROR.SPELL_FAILED_LINE_OF_SIGHT:
                 if (!playerReader.Bits.PlayerInCombat())
                 {
-                    logger.LogInformation($"{source} -- React to {value.ToStringF()} -- Stop attack and clear target!");
+                    logger.LogInformation($"React to {value.ToStringF()} -- Stop attack and clear target!");
                     input.PressStopAttack();
                     input.PressClearTarget();
                     wait.Update();
                 }
                 else
                 {
-                    logger.LogInformation($"{source} -- Didn't know how to React to {value.ToStringF()}");
+                    goto default;
                 }
                 break;
             default:
-                logger.LogInformation($"{source} -- Didn't know how to React to {value.ToStringF()}");
+                logger.LogInformation($"Didn't know how to React to {value.ToStringF()}");
                 break;
         }
     }

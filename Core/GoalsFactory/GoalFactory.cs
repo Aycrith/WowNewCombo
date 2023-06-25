@@ -11,21 +11,32 @@ using static System.IO.File;
 using System.Numerics;
 using System.Threading;
 using static Newtonsoft.Json.JsonConvert;
+using Serilog;
 
 namespace Core;
 
 public static class GoalFactory
 {
-    public static IServiceScope CreateGoals(ILogger logger, AddonReader addonReader,
-        DataConfig dataConfig, NpcNameFinder npcNameFinder,
+    public static IServiceScope CreateGoals(
+        Microsoft.Extensions.Logging.ILogger globalLogger,
+        AddonReader addonReader, DataConfig dataConfig, NpcNameFinder npcNameFinder,
         NpcNameTargeting npcNameTargeting, IPPather pather,
         ExecGameCommand execGameCommand, WowProcessInput wowProcessInput,
         ClassConfiguration classConfig,
         CancellationTokenSource cts, Wait wait)
     {
+        var logger = Log.Logger.ForContext(typeof(GoalFactory));
+
         ServiceCollection services = new();
 
-        services.AddSingleton<ILogger>(logger);
+        services.AddSingleton<Microsoft.Extensions.Logging.ILogger>(globalLogger);
+
+        services.AddLogging(builder =>
+        {
+            builder.ClearProviders();
+            builder.AddSerilog();
+        });
+
         services.AddSingleton<CancellationTokenSource>(cts);
         services.AddSingleton<ClassConfiguration>(classConfig);
         services.AddSingleton<AddonReader>(addonReader);
@@ -67,14 +78,14 @@ public static class GoalFactory
 
         if (addonReader.PlayerReader.Class is UnitClass.Druid)
         {
-            logger.LogInformation($"[{nameof(GoalFactory)}] {nameof(IMountHandler)} is {nameof(DruidMountHandler)}");
+            logger.Information($"{nameof(IMountHandler)} is {nameof(DruidMountHandler)}");
 
             services.AddScoped<MountHandler>();
             services.AddScoped<IMountHandler, DruidMountHandler>();
         }
         else
         {
-            logger.LogInformation($"[{nameof(GoalFactory)}] {nameof(IMountHandler)} is {nameof(MountHandler)}");
+            logger.Information($"{nameof(IMountHandler)} is {nameof(MountHandler)}");
             services.AddScoped<IMountHandler, MountHandler>();
         }
 
@@ -190,7 +201,7 @@ public static class GoalFactory
         {
             KeyAction keyAction = classConfig.Adhoc.Sequence[i];
             services.AddScoped<GoapGoal, AdhocGoal>(x => new(keyAction,
-                x.GetRequiredService<ILogger>(),
+                x.GetRequiredService<Microsoft.Extensions.Logging.ILogger>(),
                 x.GetRequiredService<ConfigurableInput>(), x.GetRequiredService<Wait>(),
                 x.GetRequiredService<AddonReader>(), x.GetRequiredService<StopMoving>(),
                 x.GetRequiredService<CastingHandler>(), x.GetRequiredService<IMountHandler>()));
@@ -205,7 +216,7 @@ public static class GoalFactory
             keyAction.Path = GetPath(keyAction, dataConfig);
 
             services.AddScoped<GoapGoal, AdhocNPCGoal>(x => new(keyAction,
-                x.GetRequiredService<ILogger>(), x.GetRequiredService<ConfigurableInput>(),
+                x.GetRequiredService<Microsoft.Extensions.Logging.ILogger<AdhocNPCGoal>>(), x.GetRequiredService<ConfigurableInput>(),
                 x.GetRequiredService<Wait>(), x.GetRequiredService<AddonReader>(),
                 x.GetRequiredService<Navigation>(), x.GetRequiredService<StopMoving>(),
                 x.GetRequiredService<NpcNameTargeting>(), x.GetRequiredService<ClassConfiguration>(),
@@ -221,7 +232,7 @@ public static class GoalFactory
             KeyAction keyAction = classConfig.Wait.Sequence[i];
 
             services.AddScoped<GoapGoal, ConditionalWaitGoal>(x => new(keyAction,
-                x.GetRequiredService<ILogger>(), x.GetRequiredService<Wait>()));
+                x.GetRequiredService<Microsoft.Extensions.Logging.ILogger>(), x.GetRequiredService<Wait>()));
         }
     }
 

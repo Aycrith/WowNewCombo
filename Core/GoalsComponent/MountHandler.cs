@@ -14,7 +14,7 @@ public sealed partial class MountHandler : IMountHandler
 
     private const int MIN_DISTANCE_TO_INTERRUPT_CAST = 60;
 
-    private readonly ILogger logger;
+    private readonly ILogger<MountHandler> logger;
     private readonly ConfigurableInput input;
     private readonly ClassConfiguration classConfig;
     private readonly Wait wait;
@@ -25,7 +25,7 @@ public sealed partial class MountHandler : IMountHandler
     private readonly StopMoving stopMoving;
     private readonly IBlacklist targetBlacklist;
 
-    public MountHandler(ILogger logger, ConfigurableInput input,
+    public MountHandler(ILogger<MountHandler> logger, ConfigurableInput input,
         ClassConfiguration classConfig, Wait wait, AddonReader addonReader,
         StopMoving stopMoving, IBlacklist blacklist)
     {
@@ -64,7 +64,7 @@ public sealed partial class MountHandler : IMountHandler
 
         float e =
             wait.Until(CastingHandler.SPELL_QUEUE + playerReader.NetworkLatency.Value, CastDetected);
-        LogCastStarted(logger, nameof(MountHandler), e);
+        LogCastStarted(logger, e);
 
         if (bits.IsMounted())
             return;
@@ -73,7 +73,7 @@ public sealed partial class MountHandler : IMountHandler
 
         e =
             wait.Until(playerReader.RemainCastMs + playerReader.NetworkLatency.Value, MountedOrNotCastingOrValidTargetOrEnteredCombat);
-        LogCastEnded(logger, nameof(MountHandler), bits.IsMounted(), e);
+        LogCastEnded(logger, bits.IsMounted(), e);
 
         if (bits.IsMounted())
             return;
@@ -87,7 +87,7 @@ public sealed partial class MountHandler : IMountHandler
             else if (!bits.IsMounted())
             {
                 e = wait.Until(CastingHandler.SPELL_QUEUE + playerReader.NetworkLatency.Value, bits.IsMounted);
-                LogIsMounted(logger, nameof(MountHandler), bits.IsMounted(), e);
+                LogIsMounted(logger, bits.IsMounted(), e);
                 wait.Update();
             }
         }
@@ -129,20 +129,20 @@ public sealed partial class MountHandler : IMountHandler
         playerReader.MinRange() < MIN_DISTANCE_TO_INTERRUPT_CAST;
 
     [LoggerMessage(
-        EventId = 110,
+        EventId = 0110,
         Level = LogLevel.Information,
-        Message = "{className}: Cast started {elapsed}ms")]
-    static partial void LogCastStarted(ILogger logger, string className, float elapsed);
+        Message = "Cast started {elapsed}ms")]
+    static partial void LogCastStarted(ILogger logger, float elapsed);
 
     [LoggerMessage(
-        EventId = 111,
+        EventId = 0111,
         Level = LogLevel.Information,
-        Message = "{className}: Cast ended | mounted? {mounted} {elapsed}ms")]
-    static partial void LogCastEnded(ILogger logger, string className, bool mounted, float elapsed);
+        Message = "Cast ended | mounted? {mounted} {elapsed}ms")]
+    static partial void LogCastEnded(ILogger logger, bool mounted, float elapsed);
 
     [LoggerMessage(
-        EventId = 112,
+        EventId = 0112,
         Level = LogLevel.Information,
-        Message = "{className}: Mounted? {mounted} {elapsed}ms")]
-    static partial void LogIsMounted(ILogger logger, string className, bool mounted, float elapsed);
+        Message = "Mounted? {mounted} {elapsed}ms")]
+    static partial void LogIsMounted(ILogger logger, bool mounted, float elapsed);
 }

@@ -665,7 +665,7 @@ public sealed partial class NpcNameFinder : IDisposable
     #region Logging
 
     [LoggerMessage(
-        EventId = 1,
+        EventId = 2000,
         Level = LogLevel.Information,
         Message = "[NpcNameFinder] type = {type} | mode = {mode}")]
     static partial void LogTypeChanged(ILogger logger, string type, string mode);

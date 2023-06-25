@@ -31,7 +31,7 @@ public sealed class FrameConfigurator : IDisposable
     private const int MAX_HEIGHT = 25; // this one just arbitrary number for sanity check
     private const int INTERVAL = 500;
 
-    private readonly ILogger logger;
+    private readonly ILogger<FrameConfigurator> logger;
     private readonly WowProcess wowProcess;
     private readonly WowScreen wowScreen;
     private readonly WowProcessInput wowProcessInput;
@@ -57,7 +57,7 @@ public sealed class FrameConfigurator : IDisposable
 
     public event Action? OnUpdate;
 
-    public FrameConfigurator(ILogger logger, Wait wait,
+    public FrameConfigurator(ILogger<FrameConfigurator> logger, Wait wait,
         WowProcess wowProcess, IAddonDataProvider reader,
         WowScreen wowScreen, WowProcessInput wowProcessInput,
         ExecGameCommand execGameCommand, AddonConfigurator addonConfigurator)
@@ -106,7 +106,7 @@ public sealed class FrameConfigurator : IDisposable
                 {
                     if (auto)
                     {
-                        logger.LogInformation($"Found {nameof(WowProcess)}");
+                        logger.LogInformation($"Found {nameof(WowProcess)} with pid={wowProcess.Process}");
                     }
                     stage++;
                 }
@@ -150,7 +150,7 @@ public sealed class FrameConfigurator : IDisposable
                     if (version == null)
                     {
                         stage = Stage.Reset;
-                        logger.LogError($"Addon is not installed!");
+                        logger.LogError("Addon is not installed!");
                         return false;
                     }
                     logger.LogInformation($"Addon installed! Version: {version}");
@@ -170,7 +170,7 @@ public sealed class FrameConfigurator : IDisposable
 
                     if (auto)
                     {
-                        logger.LogInformation($"DataFrameMeta: {DataFrameMeta}");
+                        logger.LogInformation($"{nameof(DataFrameMeta)}: {DataFrameMeta}");
                     }
                 }
                 break;
@@ -220,7 +220,7 @@ public sealed class FrameConfigurator : IDisposable
             case Stage.ReturnNormalMode:
                 if (auto)
                 {
-                    logger.LogInformation($"Exit configuration mode.");
+                    logger.LogInformation("Exit configuration mode.");
                     wowProcessInput.SetForegroundWindow();
                     ToggleInGameConfiguration(execGameCommand);
                     wait.Fixed(INTERVAL);
@@ -312,14 +312,14 @@ public sealed class FrameConfigurator : IDisposable
             DataFrames.Length != DataFrameMeta.frames ||
             !TryResolveRaceAndClass(out _, out _, out _))
         {
-            logger.LogInformation($"Frame configuration was incomplete! Please try again, after resolving the previusly mentioned issues...");
+            logger.LogInformation("Frame configuration was incomplete! Please try again, after resolving the previusly mentioned issues...");
             ResetConfigState();
             return false;
         }
 
         wowScreen.GetRectangle(out Rectangle rect);
         FrameConfig.Save(rect, version, DataFrameMeta, DataFrames);
-        logger.LogInformation($"Frame configuration was successful! Configuration saved!");
+        logger.LogInformation("Frame configuration was successful! Configuration saved!");
         Saved = true;
 
         return true;

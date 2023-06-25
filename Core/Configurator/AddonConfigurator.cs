@@ -10,7 +10,7 @@ namespace Core;
 
 public sealed class AddonConfigurator
 {
-    private readonly ILogger logger;
+    private readonly ILogger<AddonConfigurator> logger;
     private readonly WowProcess wowProcess;
 
     public AddonConfig Config { get; init; }
@@ -25,7 +25,7 @@ public sealed class AddonConfigurator
 
     public event Action? OnChange;
 
-    public AddonConfigurator(ILogger logger, WowProcess wowProcess)
+    public AddonConfigurator(ILogger<AddonConfigurator> logger, WowProcess wowProcess)
     {
         this.logger = logger;
         this.wowProcess = wowProcess;
@@ -99,11 +99,11 @@ public sealed class AddonConfigurator
             RenameAddon();
             MakeUnique();
 
-            logger.LogInformation($"{nameof(AddonConfigurator)}.{nameof(Install)} - Success");
+            logger.LogInformation($"{nameof(Install)} - Success");
         }
         catch (Exception e)
         {
-            logger.LogInformation($"{nameof(AddonConfigurator)}.{nameof(Install)} - Failed\n{e.Message}");
+            logger.LogInformation($"{nameof(Install)} - Failed\n{e.Message}");
         }
     }
 
@@ -111,13 +111,13 @@ public sealed class AddonConfigurator
     {
         if (Directory.Exists(DefaultAddonPath))
         {
-            logger.LogInformation($"{nameof(AddonConfigurator)}.{nameof(DeleteAddon)} -> Default Addon Exists");
+            logger.LogInformation($"{nameof(DeleteAddon)} -> Default Addon Exists");
             Directory.Delete(DefaultAddonPath, true);
         }
 
         if (!string.IsNullOrEmpty(Config.Title) && Directory.Exists(FinalAddonPath))
         {
-            logger.LogInformation($"{nameof(AddonConfigurator)}.{nameof(DeleteAddon)} -> Unique Addon Exists");
+            logger.LogInformation($"{nameof(DeleteAddon)} -> Unique Addon Exists");
             Directory.Delete(FinalAddonPath, true);
         }
     }
@@ -127,7 +127,7 @@ public sealed class AddonConfigurator
         try
         {
             CopyFolder("");
-            logger.LogInformation($"{nameof(AddonConfigurator)}.{nameof(CopyAddonFiles)} - Success");
+            logger.LogInformation($"{nameof(CopyAddonFiles)} - Success");
         }
         catch (Exception e)
         {
@@ -135,7 +135,7 @@ public sealed class AddonConfigurator
 
             // This only should be happen when running from IDE
             CopyFolder(".");
-            logger.LogInformation($"{nameof(AddonConfigurator)}.{nameof(CopyAddonFiles)} - Success");
+            logger.LogInformation($"{nameof(CopyAddonFiles)} - Success");
         }
     }
 

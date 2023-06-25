@@ -16,12 +16,13 @@ public sealed partial class PlayerDirection : IDisposable
     private const float RADIAN = PI * 2;
     private const int DefaultIgnoreDistance = 10;
 
-    private readonly ILogger logger;
+    private readonly ILogger<PlayerDirection> logger;
     private readonly ConfigurableInput input;
     private readonly PlayerReader playerReader;
     private readonly CancellationTokenSource _cts;
 
-    public PlayerDirection(ILogger logger, ConfigurableInput input, PlayerReader playerReader)
+    public PlayerDirection(ILogger<PlayerDirection> logger,
+        ConfigurableInput input, PlayerReader playerReader)
     {
         this.logger = logger;
         this.input = input;
@@ -82,13 +83,13 @@ public sealed partial class PlayerDirection : IDisposable
     #region Logging
 
     [LoggerMessage(
-        EventId = 30,
+        EventId = 0030,
         Level = LogLevel.Debug,
         Message = "SetDirection: Too close, ignored direction change. {distance} < {ignoreDistance}")]
     static partial void LogDebugClose(ILogger logger, float distance, float ignoreDistance);
 
     [LoggerMessage(
-        EventId = 31,
+        EventId = 0031,
         Level = LogLevel.Debug,
         Message = "SetDirection: {direction:0.000} -> {desiredDirection:0.000} - {distance:0.000}")]
     static partial void LogDebugSetDirection(ILogger logger, float direction, float desiredDirection, float distance);

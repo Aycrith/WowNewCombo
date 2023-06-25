@@ -28,7 +28,7 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
 
     public override float Cost => key.Cost;
 
-    private readonly ILogger logger;
+    private readonly ILogger<AdhocNPCGoal> logger;
     private readonly ConfigurableInput input;
     private readonly KeyAction key;
     private readonly Wait wait;
@@ -66,7 +66,7 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
 
     #endregion
 
-    public AdhocNPCGoal(KeyAction key, ILogger logger, ConfigurableInput input,
+    public AdhocNPCGoal(KeyAction key, ILogger<AdhocNPCGoal> logger, ConfigurableInput input,
         Wait wait, AddonReader addonReader, Navigation navigation, StopMoving stopMoving,
         NpcNameTargeting npcNameTargeting, ClassConfiguration classConfig,
         IMountHandler mountHandler, ExecGameCommand exec, CancellationTokenSource cts)

@@ -6,7 +6,8 @@ using Microsoft.Extensions.DependencyInjection;
 using PPather;
 using Serilog;
 using Serilog.Events;
-using Serilog.Extensions.Logging;
+using Serilog.Templates;
+using Serilog.Templates.Themes;
 using CommandLine;
 using WinAPI;
 using System.Drawing;
@@ -23,16 +24,17 @@ internal sealed class Program
 
         services.AddLogging(builder =>
         {
-            const string outputTemplate = "[{Timestamp:HH:mm:ss:fff} {Level:u3}] {Message:lj}{NewLine}{Exception}";
+            const string outputTemplate = "[{@t:HH:mm:ss:fff} {@l:u1}] {#if Length(SourceContext) > 0}[{Substring(SourceContext, LastIndexOf(SourceContext, '.') + 1),-15}] {#end}{@m}\n{@x}";
 
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
-                .WriteTo.File("headless_out.log",
-                    rollingInterval: RollingInterval.Day,
-                    outputTemplate: outputTemplate)
-                .WriteTo.Debug(outputTemplate: outputTemplate)
-                .WriteTo.Console(outputTemplate: outputTemplate)
+                .Enrich.FromLogContext()
+                .WriteTo.File(new ExpressionTemplate(outputTemplate),
+                    path: "headless_out.log",
+                    rollingInterval: RollingInterval.Day)
+                .WriteTo.Debug(new ExpressionTemplate(outputTemplate))
+                .WriteTo.Console(new ExpressionTemplate(outputTemplate, theme: TemplateTheme.Literate))
                 .CreateLogger();
 
             ILoggerFactory logFactory = LoggerFactory.Create(builder =>
@@ -40,14 +42,17 @@ internal sealed class Program
                 builder.ClearProviders().AddSerilog();
             });
 
-            builder.Services.AddSingleton<Microsoft.Extensions.Logging.ILogger>(logFactory.CreateLogger(nameof(Program)));
+            builder.Services.AddSingleton<Microsoft.Extensions.Logging.ILogger>(logFactory.CreateLogger(string.Empty));
+            builder.AddSerilog();
         });
 
-        Log.Information($"[{nameof(Program)}] {Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName} {DateTimeOffset.Now}");
+        var log = Log.Logger.ForContext<Program>();
+
+        log.Information($"{Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName} {DateTimeOffset.Now}");
 
         ParserResult<RunOptions> options = Parser.Default.ParseArguments<RunOptions>(args).WithNotParsed(a =>
         {
-            Log.Error("Missing Required command line argument!");
+            log.Error("Missing Required command line argument!");
         });
 
         if (options.Tag == ParserResultType.NotParsed)
@@ -58,23 +63,23 @@ internal sealed class Program
 
         if (!FrameConfig.Exists() || !AddonConfig.Exists())
         {
-            Log.Error("Unable to run headless server as crucial configuration files missing!");
-            Log.Warning($"Please be sure, the following validated configuration files present next to the executable:");
-            Log.Warning($"{System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)}");
-            Log.Warning($"* {DataConfigMeta.DefaultFileName}");
-            Log.Warning($"* {FrameConfigMeta.DefaultFilename}");
-            Log.Warning($"* {AddonConfigMeta.DefaultFileName}");
+            log.Error("Unable to run headless server as crucial configuration files missing!");
+            log.Warning($"Please be sure, the following validated configuration files present next to the executable:");
+            log.Warning($"{System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)}");
+            log.Warning($"* {DataConfigMeta.DefaultFileName}");
+            log.Warning($"* {FrameConfigMeta.DefaultFilename}");
+            log.Warning($"* {AddonConfigMeta.DefaultFileName}");
             Console.ReadLine();
             return;
         }
 
         while (WowProcess.Get(options.Value.Pid) == null)
         {
-            Log.Warning($"[{nameof(Program)}] Unable to find any Wow process, is it running ?");
+            log.Warning($"Unable to find any Wow process, is it running ?");
             Thread.Sleep(1000);
         }
 
-        if (ConfigureServices(services, options))
+        if (ConfigureServices(log, services, options))
         {
             ServiceProvider provider = services
                 .AddSingleton<HeadlessServer>()
@@ -97,9 +102,9 @@ internal sealed class Program
         Console.ReadLine();
     }
 
-    private static bool ConfigureServices(IServiceCollection services, ParserResult<RunOptions> options)
+    private static bool ConfigureServices(Serilog.ILogger log, IServiceCollection services, ParserResult<RunOptions> options)
     {
-        if (!Validate(options.Value.Pid))
+        if (!Validate(log, options.Value.Pid))
             return false;
 
         services.AddSingleton<CancellationTokenSource>();
@@ -117,19 +122,19 @@ internal sealed class Program
         if (options.Value.Diagnostics)
         {
             services.AddSingleton<IScreenCapture, ScreenCapture>();
-            Log.Information($"[{nameof(Program)}] {nameof(ScreenCapture)}");
+            log.Information(nameof(ScreenCapture));
         }
         else
         {
             services.AddSingleton<IScreenCapture, NoScreenCapture>();
-            Log.Information($"[{nameof(Program)}] {nameof(NoScreenCapture)}");
+            log.Information(nameof(NoScreenCapture));
         }
 
         services.AddSingleton<SessionStat>();
         services.AddSingleton<IGrindSessionDAO, LocalGrindSessionDAO>();
         services.AddSingleton<WorldMapAreaDB>();
         services.AddSingleton<IPPather>(x =>
-            GetPather(x.GetRequiredService<Microsoft.Extensions.Logging.ILogger>(),
+            GetPather(log, x.GetRequiredService<Microsoft.Extensions.Logging.ILogger>(),
                 x.GetRequiredService<DataConfig>(), x.GetRequiredService<WorldMapAreaDB>(), options));
 
         services.AddSingleton<AutoResetEvent>(x => new(false));
@@ -141,15 +146,15 @@ internal sealed class Program
         {
             case AddonDataProviderType.GDI:
                 services.AddSingleton<IAddonDataProvider, AddonDataProviderGDI>();
-                Log.Information($"[{nameof(Program)}] {nameof(AddonDataProviderGDI)}");
+                log.Information(nameof(AddonDataProviderGDI));
                 break;
             case AddonDataProviderType.GDIBlit:
                 services.AddSingleton<IAddonDataProvider, AddonDataProviderBitBlt>();
-                Log.Information($"[{nameof(Program)}] {nameof(AddonDataProviderBitBlt)}");
+                log.Information(nameof(AddonDataProviderBitBlt));
                 break;
             case AddonDataProviderType.DXGI:
                 services.AddSingleton<IAddonDataProvider, AddonDataProviderDXGI>();
-                Log.Information($"[{nameof(Program)}] {nameof(AddonDataProviderDXGI)}");
+                log.Information(nameof(AddonDataProviderDXGI));
                 break;
         }
 
@@ -167,7 +172,7 @@ internal sealed class Program
         return true;
     }
 
-    private static IPPather GetPather(Microsoft.Extensions.Logging.ILogger logger, DataConfig dataConfig, WorldMapAreaDB worldMapAreaDB, ParserResult<RunOptions> options)
+    private static IPPather GetPather(Serilog.ILogger log, Microsoft.Extensions.Logging.ILogger logger, DataConfig dataConfig, WorldMapAreaDB worldMapAreaDB, ParserResult<RunOptions> options)
     {
         StartupConfigPathing scp = new(options.Value.Mode.ToString()!,
             options.Value.Hostv1!, options.Value.Portv1,
@@ -180,7 +185,7 @@ internal sealed class Program
             RemotePathingAPIV3 api = new(logger, scp.hostv3, scp.portv3, worldMapAreaDB);
             if (api.PingServer())
             {
-                Log.Information($"[{nameof(Program)}] Using {StartupConfigPathing.Types.RemoteV3}({api.GetType().Name}) {scp.hostv3}:{scp.portv3}");
+                log.Information($"Using {StartupConfigPathing.Types.RemoteV3}({api.GetType().Name}) {scp.hostv3}:{scp.portv3}");
                 return api;
             }
             api.Dispose();
@@ -196,10 +201,10 @@ internal sealed class Program
             {
                 if (scp.Type == StartupConfigPathing.Types.RemoteV3)
                 {
-                    Log.Warning($"[{nameof(Program)}] Unavailable {StartupConfigPathing.Types.RemoteV3} {scp.hostv3}:{scp.portv3} - Fallback to {StartupConfigPathing.Types.RemoteV1}");
+                    log.Warning($"Unavailable {StartupConfigPathing.Types.RemoteV3} {scp.hostv3}:{scp.portv3} - Fallback to {StartupConfigPathing.Types.RemoteV1}");
                 }
 
-                Log.Information($"[{nameof(Program)}] Using {StartupConfigPathing.Types.RemoteV1}({api.GetType().Name}) {scp.hostv1}:{scp.portv1}");
+                log.Information($"Using {StartupConfigPathing.Types.RemoteV1}({api.GetType().Name}) {scp.hostv1}:{scp.portv1}");
                 return api;
             }
 
@@ -208,25 +213,27 @@ internal sealed class Program
 
         if (scp.Type != StartupConfigPathing.Types.Local)
         {
-            Log.Warning($"[{nameof(Program)}] {scp.Type} not available!");
+            log.Warning($"{scp.Type} not available!");
         }
 
         LocalPathingApi localApi = new(logger, new PPatherService(logger, dataConfig, worldMapAreaDB), dataConfig);
-        Log.Information($"[{nameof(Program)}] Using {StartupConfigPathing.Types.Local}({localApi.GetType().Name})");
+        log.Information($"Using {StartupConfigPathing.Types.Local}({localApi.GetType().Name})");
         return localApi;
     }
 
-    private static bool Validate(int pid)
+    private static bool Validate(Serilog.ILogger log, int pid)
     {
         WowProcess wowProcess = new(pid);
-        Log.Information($"[{nameof(Program)}] Pid: {wowProcess.ProcessId}");
-        Log.Information($"[{nameof(Program)}] Version: {wowProcess.FileVersion}");
+        log.Information($"Pid: {wowProcess.ProcessId}");
+        log.Information($"Version: {wowProcess.FileVersion}");
         NativeMethods.GetWindowRect(wowProcess.Process.MainWindowHandle, out Rectangle rect);
 
-        var logger = new SerilogLoggerProvider(Log.Logger, true).CreateLogger(nameof(AddonConfigurator));
+        ILoggerFactory factory = new LoggerFactory().AddSerilog(Log.Logger);
+        var logger = factory.CreateLogger<AddonConfigurator>();
+
         AddonConfigurator addonConfigurator = new(logger, wowProcess);
         Version? installVersion = addonConfigurator.GetInstallVersion();
-        Log.Information($"[{nameof(Program)}] Addon version: {installVersion}");
+        log.Information($"Addon version: {installVersion}");
 
         bool valid = true;
 
@@ -237,7 +244,7 @@ internal sealed class Program
             FrameConfig.Delete();
             valid = false;
 
-            Log.Error($"[{nameof(Program)}] {nameof(AddonConfig)} doesn't exists or addon not installed yet!");
+            log.Error($"{nameof(AddonConfig)} doesn't exists or addon not installed yet!");
         }
 
         if (FrameConfig.Exists() && !FrameConfig.IsValid(rect, installVersion!))
@@ -246,7 +253,7 @@ internal sealed class Program
             FrameConfig.Delete();
             valid = false;
 
-            Log.Error($"[{nameof(Program)}] {nameof(FrameConfig)} doesn't exists or window rect is different then config!");
+            log.Error($"{nameof(FrameConfig)} doesn't exists or window rect is different then config!");
         }
 
         wowProcess.Dispose();
