@@ -12,7 +12,7 @@ namespace PPather;
 
 public sealed class PPatherService
 {
-    private readonly ILogger logger;
+    private readonly ILogger<PPatherService> logger;
     private readonly DataConfig dataConfig;
     private readonly WorldMapAreaDB worldMapAreaDB;
 
@@ -32,7 +32,7 @@ public sealed class PPatherService
 
     public Vector3[] TestPoints => search?.PathGraph?.TestPoints ?? Array.Empty<Vector3>();
 
-    public PPatherService(ILogger logger, DataConfig dataConfig, WorldMapAreaDB worldMapAreaDB)
+    public PPatherService(ILogger<PPatherService> logger, DataConfig dataConfig, WorldMapAreaDB worldMapAreaDB)
     {
         this.dataConfig = dataConfig;
         this.logger = logger;
