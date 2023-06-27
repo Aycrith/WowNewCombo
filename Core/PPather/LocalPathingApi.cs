@@ -18,13 +18,14 @@ public sealed class LocalPathingApi : IPPather
 {
     private const bool debug = false;
 
-    private readonly ILogger logger;
+    private readonly ILogger<LocalPathingApi> logger;
 
     private readonly PPatherService service;
 
     private DateTime lastSave;
 
-    public LocalPathingApi(ILogger logger, PPatherService service, DataConfig dataConfig)
+    public LocalPathingApi(ILogger<LocalPathingApi> logger,
+        PPatherService service, DataConfig dataConfig)
     {
         this.logger = logger;
         this.service = service;
@@ -108,12 +109,12 @@ public sealed class LocalPathingApi : IPPather
 
     private void LogDebug(string text)
     {
-        logger.LogDebug($"{nameof(LocalPathingApi)}: {text}");
+        logger.LogDebug(text);
     }
 
     private void LogWarning(string text)
     {
-        logger.LogWarning($"{nameof(LocalPathingApi)}: {text}");
+        logger.LogWarning(text);
     }
 
     #endregion
