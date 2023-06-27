@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace HeadlessServer;
 
-public sealed class HeadlessServer
+public sealed partial class HeadlessServer
 {
     private readonly ILogger<HeadlessServer> logger;
     private readonly IBotController botController;
@@ -57,13 +57,23 @@ public sealed class HeadlessServer
             spellBook = addonReader.SpellBookReader.Count;
             bag = addonReader.BagReader.BagItems.Count;
 
-            wait.Fixed(3000);
+            wait.Fixed(1000);
 
-            logger.LogInformation($"{nameof(addonReader.ActionBarCostReader)}: {actionbarCost} | {nameof(addonReader.SpellBookReader)}: {spellBook} | {nameof(addonReader.BagReader)}: {addonReader.BagReader.BagItems.Count}");
+            LogInitStateStatus(logger, actionbarCost, spellBook, bag);
         } while (
             actionbarCost != addonReader.ActionBarCostReader.Count ||
             spellBook != addonReader.SpellBookReader.Count ||
             bag != addonReader.BagReader.BagItems.Count);
     }
+
+    #region Logging
+
+    [LoggerMessage(
+        EventId = 4000,
+        Level = LogLevel.Information,
+        Message = "Actionbar: {actionbar,3} | SpellBook: {spellBook,3} | Bag: {bag,3}")]
+    static partial void LogInitStateStatus(ILogger logger, int actionbar, int spellbook, int bag);
+
+    #endregion
 
 }
