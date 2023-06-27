@@ -41,16 +41,12 @@ public static class Program
     }
 
     public static IHostBuilder CreateHostBuilder(string[] args) =>
-
         Host.CreateDefaultBuilder(args)
             .ConfigureWebHostDefaults(webBuilder =>
             {
                 webBuilder.UseUrls(hostUrl);
+                webBuilder.ConfigureLogging(logging =>
+                    logging.ClearProviders().AddSerilog());
                 webBuilder.UseStartup<Startup>();
-            })
-        .ConfigureLogging((hostingContext, logging) =>
-        {
-            logging.AddConsole();
-            logging.AddEventSourceLogger();
-        });
+            });
 }
