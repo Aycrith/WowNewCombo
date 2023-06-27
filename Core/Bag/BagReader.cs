@@ -9,6 +9,13 @@ using System.Runtime.InteropServices;
 
 namespace Core;
 
+public enum BagItemChange
+{
+    New,
+    Remove,
+    Update
+}
+
 public sealed class BagReader : IDisposable
 {
     private readonly int cBagMeta;
@@ -24,6 +31,7 @@ public sealed class BagReader : IDisposable
     public Bag[] Bags { get; } = new Bag[5];
 
     public event Action? DataChanged;
+    public event Action<BagItem, BagItemChange>? BagItemChange;
 
     public int Hash { private set; get; }
     public int HashNewOrStackGain { private set; get; }
@@ -133,6 +141,7 @@ public sealed class BagReader : IDisposable
             {
                 if (existingItem.ItemId != itemId)
                 {
+                    BagItemChange?.Invoke(existingItem, Core.BagItemChange.Remove);
                     BagItems.Remove(existingItem);
                     addItem = true;
                 }
@@ -146,6 +155,7 @@ public sealed class BagReader : IDisposable
                             HashNewOrStackGain++;
 
                         existingItem.UpdateCount(itemCount);
+                        BagItemChange?.Invoke(existingItem, Core.BagItemChange.Update);
                         hasChanged = true;
                     }
                 }
@@ -155,13 +165,18 @@ public sealed class BagReader : IDisposable
             {
                 hasChanged = true;
 
-                if (ItemDB.Items.TryGetValue(itemId, out var item))
+                if (ItemDB.Items.TryGetValue(itemId, out Item item))
                 {
-                    BagItems.Add(new BagItem(bag, slot, itemId, itemCount, item));
+                    BagItem newItem = new(bag, slot, itemId, itemCount, item);
+                    BagItems.Add(newItem);
+                    BagItemChange?.Invoke(newItem, Core.BagItemChange.New);
                 }
                 else
                 {
-                    BagItems.Add(new BagItem(bag, slot, itemId, itemCount, new Item() { Entry = itemId, Name = "Unknown" }));
+                    BagItem unknownItem =
+                        new(bag, slot, itemId, itemCount, new Item() { Entry = itemId, Name = "Unknown" });
+                    BagItems.Add(unknownItem);
+                    BagItemChange?.Invoke(unknownItem, Core.BagItemChange.New);
                 }
 
                 HashNewOrStackGain++;
@@ -171,6 +186,7 @@ public sealed class BagReader : IDisposable
         {
             if (existingItem != null)
             {
+                BagItemChange?.Invoke(existingItem, Core.BagItemChange.Remove);
                 BagItems.Remove(existingItem);
                 hasChanged = true;
             }

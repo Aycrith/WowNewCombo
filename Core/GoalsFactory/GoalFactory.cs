@@ -18,6 +18,7 @@ namespace Core;
 public static class GoalFactory
 {
     public static IServiceScope CreateGoals(
+        ILoggerFactory loggerFactory,
         Microsoft.Extensions.Logging.ILogger globalLogger,
         AddonReader addonReader, DataConfig dataConfig, NpcNameFinder npcNameFinder,
         NpcNameTargeting npcNameTargeting, IPPather pather,
@@ -25,7 +26,7 @@ public static class GoalFactory
         ClassConfiguration classConfig,
         CancellationTokenSource cts, Wait wait)
     {
-        var logger = Log.Logger.ForContext(typeof(GoalFactory));
+        var logger = loggerFactory.CreateLogger(typeof(GoalFactory));
 
         ServiceCollection services = new();
 
@@ -78,14 +79,14 @@ public static class GoalFactory
 
         if (addonReader.PlayerReader.Class is UnitClass.Druid)
         {
-            logger.Information($"{nameof(IMountHandler)} is {nameof(DruidMountHandler)}");
+            logger.LogInformation($"{nameof(IMountHandler)} is {nameof(DruidMountHandler)}");
 
             services.AddScoped<MountHandler>();
             services.AddScoped<IMountHandler, DruidMountHandler>();
         }
         else
         {
-            logger.Information($"{nameof(IMountHandler)} is {nameof(MountHandler)}");
+            logger.LogInformation($"{nameof(IMountHandler)} is {nameof(MountHandler)}");
             services.AddScoped<IMountHandler, MountHandler>();
         }
 

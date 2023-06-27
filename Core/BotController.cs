@@ -22,6 +22,7 @@ public sealed partial class BotController : IBotController, IDisposable
 {
     private readonly WowProcess wowProcess;
     private readonly WowProcessInput wowProcessInput;
+    private readonly ILoggerFactory loggerFactory;
     private readonly ILogger<BotController> logger;
     private readonly ILogger globalLogger;
     private readonly IPPather pather;
@@ -35,6 +36,8 @@ public sealed partial class BotController : IBotController, IDisposable
     private readonly NpcNameFinder npcNameFinder;
     private readonly NpcNameTargeting npcNameTargeting;
     private readonly IScreenCapture screenCapture;
+
+    private readonly BagChangeTracker? bagChangeTracker;
 
     private readonly Thread addonThread;
 
@@ -67,12 +70,14 @@ public sealed partial class BotController : IBotController, IDisposable
     public double AvgScreenLatency => ScreenLatencys.Average();
     public double AvgNPCLatency => NPCLatencys.Average();
 
-    public BotController(ILogger<BotController> logger, ILogger globalLogger, CancellationTokenSource cts,
+    public BotController(ILogger<BotController> logger, ILogger globalLogger,
+        ILoggerFactory loggerFactory, CancellationTokenSource cts,
         IPPather pather, SessionStat sessionStat, IGrindSessionDAO grindSessionDAO, DataConfig dataConfig,
         WowProcess wowProcess, WowScreen wowScreen, WowProcessInput wowProcessInput,
         ExecGameCommand execGameCommand, Wait wait, IAddonReader addonReader,
         MinimapNodeFinder minimapNodeFinder, IScreenCapture screenCapture)
     {
+        this.loggerFactory = loggerFactory;
         this.globalLogger = globalLogger;
         this.logger = logger;
         this.pather = pather;
@@ -87,6 +92,9 @@ public sealed partial class BotController : IBotController, IDisposable
         this.wait = wait;
         this.minimapNodeFinder = minimapNodeFinder;
         this.screenCapture = screenCapture;
+
+        var bagChangeTrackerLogger = loggerFactory.CreateLogger<BagChangeTracker>();
+        bagChangeTracker = new(bagChangeTrackerLogger, AddonReader.BagReader);
 
         this.cts = cts;
         npcNameFinderEvent = new(false);
@@ -234,7 +242,7 @@ public sealed partial class BotController : IBotController, IDisposable
         SessionStat.Reset();
 
         IServiceScope profileLoadedScope =
-            GoalFactory.CreateGoals(globalLogger, AddonReader, dataConfig, npcNameFinder,
+            GoalFactory.CreateGoals(loggerFactory, globalLogger, AddonReader, dataConfig, npcNameFinder,
                 npcNameTargeting, pather, execGameCommand, wowProcessInput, config, cts, wait);
 
         npcNameTargeting.UpdateBlacklist(
