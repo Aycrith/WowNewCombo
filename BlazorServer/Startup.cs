@@ -49,6 +49,11 @@ public sealed class Startup
     // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
     public void ConfigureServices(IServiceCollection services)
     {
+        ILoggerFactory logFactory = LoggerFactory.Create(builder =>
+        {
+            builder.ClearProviders().AddSerilog();
+        });
+
         services.AddLogging(builder =>
         {
             LoggerSink sink = new();
@@ -57,8 +62,9 @@ public sealed class Startup
             const string outputTemplate = "[{@t:HH:mm:ss:fff} {@l:u1}] {#if Length(SourceContext) > 0}[{Substring(SourceContext, LastIndexOf(SourceContext, '.') + 1),-15}] {#end}{@m}\n{@x}";
 
             Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Debug()
-                .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+                //.MinimumLevel.Debug()
+                .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+                .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
                 .Enrich.FromLogContext()
                 .WriteTo.Sink(sink)
                 .WriteTo.File(new ExpressionTemplate(outputTemplate),
@@ -67,11 +73,6 @@ public sealed class Startup
                 .WriteTo.Debug(new ExpressionTemplate(outputTemplate))
                 .WriteTo.Console(new ExpressionTemplate(outputTemplate, theme: TemplateTheme.Literate))
                 .CreateLogger();
-
-            ILoggerFactory logFactory = LoggerFactory.Create(builder =>
-            {
-                builder.ClearProviders().AddSerilog();
-            });
 
             builder.Services.AddSingleton<Microsoft.Extensions.Logging.ILogger>(logFactory.CreateLogger(string.Empty));
         });
@@ -94,8 +95,7 @@ public sealed class Startup
 
         NativeMethods.GetWindowRect(wowProcess.Process.MainWindowHandle, out Rectangle rect);
 
-        ILoggerFactory factory = new LoggerFactory().AddSerilog(Log.Logger);
-        var logger = factory.CreateLogger<AddonConfigurator>();
+        var logger = logFactory.CreateLogger<AddonConfigurator>();
 
         AddonConfigurator addonConfigurator = new(logger, wowProcess);
         Version? installVersion = addonConfigurator.GetInstallVersion();
@@ -156,7 +156,7 @@ public sealed class Startup
             services.AddSingleton<IGrindSessionDAO, LocalGrindSessionDAO>();
             services.AddSingleton<WorldMapAreaDB>();
             services.AddSingleton<IPPather>(x =>
-                GetPather(log, x.GetRequiredService<Microsoft.Extensions.Logging.ILogger>(),
+                GetPather(logFactory, x.GetRequiredService<Microsoft.Extensions.Logging.ILogger>(),
                 x.GetRequiredService<DataConfig>(), x.GetRequiredService<WorldMapAreaDB>()));
 
             StartupConfigReader scr = new();
@@ -210,7 +210,8 @@ public sealed class Startup
         services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true });
     }
 
-    private IPPather GetPather(Serilog.ILogger log, Microsoft.Extensions.Logging.ILogger logger, DataConfig dataConfig, WorldMapAreaDB worldMapAreaDB)
+    private IPPather GetPather(ILoggerFactory loggerFactory, Microsoft.Extensions.Logging.ILogger logger,
+        DataConfig dataConfig, WorldMapAreaDB worldMapAreaDB)
     {
         StartupConfigPathing scp = new();
         Configuration.GetSection(StartupConfigPathing.Position).Bind(scp);
@@ -219,10 +220,11 @@ public sealed class Startup
 
         if (scp.Type == StartupConfigPathing.Types.RemoteV3)
         {
-            RemotePathingAPIV3 api = new(logger, scp.hostv3, scp.portv3, worldMapAreaDB);
+            var remoteLogger = loggerFactory.CreateLogger<RemotePathingAPIV3>();
+            RemotePathingAPIV3 api = new(remoteLogger, scp.hostv3, scp.portv3, worldMapAreaDB);
             if (api.PingServer())
             {
-                log.Information($"Using {StartupConfigPathing.Types.RemoteV3}({api.GetType().Name}) {scp.hostv3}:{scp.portv3}");
+                logger.LogInformation($"Using {StartupConfigPathing.Types.RemoteV3}({api.GetType().Name}) {scp.hostv3}:{scp.portv3}");
                 return api;
             }
             api.Dispose();
@@ -231,17 +233,18 @@ public sealed class Startup
 
         if (scp.Type == StartupConfigPathing.Types.RemoteV1 || failed)
         {
-            RemotePathingAPI api = new(logger, scp.hostv1, scp.portv1);
+            var remoteLogger = loggerFactory.CreateLogger<RemotePathingAPI>();
+            RemotePathingAPI api = new(remoteLogger, scp.hostv1, scp.portv1);
             Task<bool> pingTask = Task.Run(api.PingServer);
             pingTask.Wait();
             if (pingTask.Result)
             {
                 if (scp.Type == StartupConfigPathing.Types.RemoteV3)
                 {
-                    log.Warning($"Unavailable {StartupConfigPathing.Types.RemoteV3} {scp.hostv3}:{scp.portv3} - Fallback to {StartupConfigPathing.Types.RemoteV1}");
+                    logger.LogWarning($"Unavailable {StartupConfigPathing.Types.RemoteV3} {scp.hostv3}:{scp.portv3} - Fallback to {StartupConfigPathing.Types.RemoteV1}");
                 }
 
-                log.Information($"Using {StartupConfigPathing.Types.RemoteV1}({api.GetType().Name}) {scp.hostv1}:{scp.portv1}");
+                logger.LogInformation($"Using {StartupConfigPathing.Types.RemoteV1}({api.GetType().Name}) {scp.hostv1}:{scp.portv1}");
                 return api;
             }
 
@@ -250,11 +253,13 @@ public sealed class Startup
 
         if (scp.Type != StartupConfigPathing.Types.Local)
         {
-            log.Warning($"{scp.Type} not available!");
+            logger.LogWarning($"{scp.Type} not available!");
         }
 
-        LocalPathingApi localApi = new(logger, new PPatherService(logger, dataConfig, worldMapAreaDB), dataConfig);
-        log.Information($"Using {StartupConfigPathing.Types.Local}({localApi.GetType().Name})");
+        var pathingLogger = loggerFactory.CreateLogger<LocalPathingApi>();
+        var serviceLogger = loggerFactory.CreateLogger<PPatherService>();
+        LocalPathingApi localApi = new(pathingLogger, new(serviceLogger, dataConfig, worldMapAreaDB), dataConfig);
+        logger.LogInformation($"Using {StartupConfigPathing.Types.Local}({localApi.GetType().Name})");
 
         return localApi;
     }

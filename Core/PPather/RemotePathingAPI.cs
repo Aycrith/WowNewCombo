@@ -10,12 +10,13 @@ using PPather.Data;
 using System.Text;
 using System.Numerics;
 using SharedLib.Converters;
+using System.Threading;
 
 namespace Core;
 
 public sealed class RemotePathingAPI : IPPather
 {
-    private readonly ILogger logger;
+    private readonly ILogger<RemotePathingAPI> logger;
 
     private readonly string host = "localhost";
 
@@ -25,7 +26,10 @@ public sealed class RemotePathingAPI : IPPather
 
     private readonly JsonSerializerOptions options;
 
-    public RemotePathingAPI(ILogger logger, string host = "", int port = 0)
+    private const int watchdogPollMs = 500;
+
+    public RemotePathingAPI(ILogger<RemotePathingAPI> logger,
+        string host, int port)
     {
         this.logger = logger;
         this.host = host;
@@ -102,12 +106,15 @@ public sealed class RemotePathingAPI : IPPather
 
     public async Task<bool> PingServer()
     {
+        using CancellationTokenSource cts = new();
+        cts.CancelAfter(watchdogPollMs);
+
         try
         {
             string url = $"{api}SelfTest";
 
             using HttpClient client = new();
-            string response = await client.GetStringAsync(url);
+            string response = await client.GetStringAsync(url, cts.Token);
             return JsonSerializer.Deserialize<bool>(response);
         }
         catch (Exception ex)
@@ -121,12 +128,12 @@ public sealed class RemotePathingAPI : IPPather
 
     private void LogError(string text, Exception? ex = null)
     {
-        logger.LogError(ex, $"{nameof(RemotePathingAPI)}: {text}");
+        logger.LogError(ex, text);
     }
 
     private void LogInformation(string text)
     {
-        logger.LogInformation($"{nameof(RemotePathingAPI)}: {text}");
+        logger.LogInformation(text);
     }
 
     #endregion

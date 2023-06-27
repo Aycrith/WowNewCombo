@@ -15,7 +15,7 @@ namespace Core;
 public sealed class RemotePathingAPIV3 : IPPather, IDisposable
 {
     private const bool debug = false;
-    private const int watchdogPollMs = 1000;
+    private const int watchdogPollMs = 500;
 
     public enum EMessageType
     {
@@ -35,14 +35,15 @@ public sealed class RemotePathingAPIV3 : IPPather, IDisposable
         FIND_LOCATION = 4
     };
 
-    private readonly ILogger logger;
+    private readonly ILogger<RemotePathingAPIV3> logger;
     private readonly WorldMapAreaDB worldMapAreaDB;
 
     private readonly AnTcpClient Client;
     private readonly Thread ConnectionWatchdog;
     private readonly CancellationTokenSource cts;
 
-    public RemotePathingAPIV3(ILogger logger, string ip, int port, WorldMapAreaDB worldMapAreaDB)
+    public RemotePathingAPIV3(ILogger<RemotePathingAPIV3> logger,
+        string ip, int port, WorldMapAreaDB worldMapAreaDB)
     {
         this.logger = logger;
         this.worldMapAreaDB = worldMapAreaDB;
@@ -162,7 +163,7 @@ public sealed class RemotePathingAPIV3 : IPPather, IDisposable
     public bool PingServer()
     {
         using CancellationTokenSource cts = new();
-        cts.CancelAfter(2 * watchdogPollMs);
+        cts.CancelAfter(watchdogPollMs);
 
         while (!cts.IsCancellationRequested)
         {
@@ -170,7 +171,7 @@ public sealed class RemotePathingAPIV3 : IPPather, IDisposable
             {
                 break;
             }
-            cts.Token.WaitHandle.WaitOne(1);
+            cts.Token.WaitHandle.WaitOne(watchdogPollMs / 10);
         }
 
         return Client.IsConnected;
@@ -212,12 +213,12 @@ public sealed class RemotePathingAPIV3 : IPPather, IDisposable
 
     private void LogError(string text, Exception? ex = null)
     {
-        logger.LogError($"{nameof(RemotePathingAPIV3)}: {text}", ex);
+        logger.LogError(text, ex);
     }
 
     private void LogInformation(string text)
     {
-        logger.LogInformation($"{nameof(RemotePathingAPIV3)}: {text}");
+        logger.LogInformation(text);
     }
 
     #endregion
