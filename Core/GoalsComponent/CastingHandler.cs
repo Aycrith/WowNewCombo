@@ -235,7 +235,7 @@ public sealed partial class CastingHandler
             return false;
         }
 
-        playerReader.ReadLastCastGCD();
+        playerReader.LastCastGCD = 0;
         item.SetClicked();
 
         if (item.AfterCastWaitCastbar)
@@ -499,7 +499,8 @@ public sealed partial class CastingHandler
         {
             int durationMs = UpdateGCD();
             if (Log && item.Log)
-                LogWaitForGCD(logger, item.Name, playerReader.LastCastGCD, playerReader.GCD.Value, playerReader.RemainCastMs, durationMs);
+                LogWaitForGCD(logger, item.Name, playerReader.LastCastGCD,
+                    playerReader.GCD.Value, playerReader.RemainCastMs, SpellQueueOpen, durationMs);
         }
 
         item.ConsumeCharge();
@@ -533,7 +534,7 @@ public sealed partial class CastingHandler
             - playerReader.SpellQueueTimeMs;
 
         SpellQueueOpen = DateTime.UtcNow.AddMilliseconds(durationMs);
-        //logger.LogInformation($"Spell Queue window upens after {durationMs}");
+        //logger.LogInformation($"Spell Queue window opens after {durationMs}");
         return durationMs;
     }
 
@@ -707,8 +708,8 @@ public sealed partial class CastingHandler
     [LoggerMessage(
         EventId = 0093,
         Level = LogLevel.Information,
-        Message = "[{name,-15}] PrevGCD: {prevGCD}ms | GCD: {gcd}ms | Cast: {remainCastMs}ms | Next spell {duration}ms")]
-    static partial void LogWaitForGCD(ILogger logger, string name, int prevGCD, int gcd, int remainCastMs, float duration);
+        Message = "[{name,-15}] PrevGCD: {prevGCD}ms | GCD: {gcd}ms | Cast: {remainCastMs}ms | {queueOpen:HH:mm:ss:fff} | Next spell {duration}ms")]
+    static partial void LogWaitForGCD(ILogger logger, string name, int prevGCD, int gcd, int remainCastMs, DateTime queueOpen, float duration);
 
     [LoggerMessage(
         EventId = 0094,

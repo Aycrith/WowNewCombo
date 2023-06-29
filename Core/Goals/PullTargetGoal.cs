@@ -95,8 +95,6 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         wait.Update();
         stuckDetector.Reset();
 
-        castingHandler.UpdateGCD();
-
         if (mountHandler.IsMounted())
         {
             mountHandler.Dismount();

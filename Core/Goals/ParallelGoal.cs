@@ -57,8 +57,6 @@ public sealed class ParallelGoal : GoapGoal
             wait.Update();
         }
 
-        castingHandler.UpdateGCD();
-
         for (int i = 0; i < Keys.Length; i++)
         {
             if (Keys[i].BeforeCastStop)

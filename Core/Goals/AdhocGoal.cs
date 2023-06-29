@@ -58,8 +58,6 @@ public sealed class AdhocGoal : GoapGoal
             mountHandler.Dismount();
             wait.Update();
         }
-
-        castingHandler.UpdateGCD();
     }
 
     public override void Update()
