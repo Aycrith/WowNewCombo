@@ -1,7 +1,11 @@
 using Core.GOAP;
+
 using Microsoft.Extensions.Logging;
+
 using SharedLib.NpcFinder;
+
 using System;
+using System.Diagnostics;
 
 namespace Core.Goals;
 
@@ -150,11 +154,9 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         }
 
         if (classConfig.AutoPetAttack &&
-            bits.HasPet() && !playerReader.PetHasTarget())
-        {
-            if (input.PetAttack.GetRemainingCooldown() == 0)
-                input.PressPetAttack();
-        }
+            bits.HasPet() && !playerReader.PetHasTarget() &&
+            input.PetAttack.GetRemainingCooldown() == 0)
+            input.PressPetAttack();
 
         bool castAny = false;
         bool spellInQueue = false;
@@ -162,13 +164,12 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         {
             KeyAction keyAction = Keys[i];
 
-            if (keyAction.Name.Equals(input.Approach.Name, StringComparison.OrdinalIgnoreCase))
+            if (keyAction.Name.Equals(input.Approach.Name,
+                StringComparison.OrdinalIgnoreCase))
                 continue;
 
             if (!keyAction.CanRun())
-            {
                 continue;
-            }
 
             spellInQueue = castingHandler.SpellInQueue();
             if (spellInQueue)
@@ -194,35 +195,35 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
             }
         }
 
-        if (!castAny && !spellInQueue && !playerReader.IsCasting())
+        if (castAny || spellInQueue || playerReader.IsCasting())
+            return;
+
+        if (combatUtil.EnteredCombat())
         {
-            if (combatUtil.EnteredCombat())
+            if (wait.Until(AcquireTargetTimeMs, CombatLogChanged) >= 0)
             {
-                if (wait.Until(AcquireTargetTimeMs, CombatLogChanged) >= 0)
+                if (combatLog.DamageTakenCount() > 0 && !bits.TargetInCombat())
                 {
-                    if (combatLog.DamageTakenCount() > 0 && !bits.TargetInCombat())
-                    {
-                        stopMoving.Stop();
+                    stopMoving.Stop();
 
-                        input.PressClearTarget();
-                        wait.Update();
+                    input.PressClearTarget();
+                    wait.Update();
 
-                        combatUtil.AquiredTarget(AcquireTargetTimeMs);
-                        return;
-                    }
-
-                    SendGoapEvent(new GoapStateEvent(GoapKey.pulled, true));
+                    combatUtil.AquiredTarget(AcquireTargetTimeMs);
                     return;
                 }
-            }
-            else if (bits.PlayerInCombat())
-            {
+
                 SendGoapEvent(new GoapStateEvent(GoapKey.pulled, true));
                 return;
             }
-
-            approachAction();
         }
+        else if (bits.PlayerInCombat())
+        {
+            SendGoapEvent(new GoapStateEvent(GoapKey.pulled, true));
+            return;
+        }
+
+        approachAction();
     }
 
     private bool CombatLogChanged()
@@ -239,35 +240,25 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
 
     private void DefaultApproach()
     {
-        if (input.Approach.GetRemainingCooldown() == 0)
-        {
-            if (!stuckDetector.IsMoving())
-            {
-                stuckDetector.Update();
-            }
+        if (input.Approach.GetRemainingCooldown() != 0)
+            return;
 
-            input.PressApproach();
-        }
+        if (!stuckDetector.IsMoving())
+            stuckDetector.Update();
+
+        input.PressApproach();
     }
 
     private void ConditionalApproach()
     {
-        if (approachKey != null && (approachKey.CanRun() || approachKey.GetRemainingCooldown() > 0))
-        {
-            if (approachKey.GetRemainingCooldown() == 0)
-            {
-                input.PressApproach();
-            }
-
-            if (!stuckDetector.IsMoving())
-            {
-                stuckDetector.Update();
-            }
-        }
-        else
+        if (approachKey == null ||
+            (!approachKey.CanRun() && approachKey.GetRemainingCooldown() <= 0))
         {
             stopMoving.Stop();
+            return;
         }
+
+        DefaultApproach();
     }
 
     private bool SuccessfulPull()
