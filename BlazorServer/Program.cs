@@ -17,7 +17,7 @@ public static class Program
     {
         while (true)
         {
-            Log.Information("Program.Main(): Starting blazor server");
+            Log.Information($"[{nameof(Program),-15}] Starting blazor server");
             try
             {
                 IHost host = CreateHostBuilder(args).Build();
@@ -33,7 +33,7 @@ public static class Program
             }
             catch (Exception ex)
             {
-                Log.Information($"Program.Main(): {ex.Message}");
+                Log.Information($"[{nameof(Program),-15}] {ex.Message}");
                 Log.Information("");
                 System.Threading.Thread.Sleep(3000);
             }

@@ -1,6 +1,5 @@
 ﻿using Core.GOAP;
 using Microsoft.Extensions.Logging;
-using System;
 
 namespace Core.Goals;
 
@@ -13,27 +12,33 @@ public sealed class AdhocGoal : GoapGoal
 
     private readonly Wait wait;
     private readonly StopMoving stopMoving;
-    private readonly AddonReader addonReader;
     private readonly PlayerReader playerReader;
 
     private readonly KeyAction key;
     private readonly CastingHandler castingHandler;
     private readonly IMountHandler mountHandler;
+    private readonly AddonBits bits;
+    private readonly CombatLog combatLog;
 
     private readonly bool? combatMatters;
 
-    public AdhocGoal(KeyAction key, ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, StopMoving stopMoving, CastingHandler castingHandler, IMountHandler mountHandler)
+    public AdhocGoal(KeyAction key, ILogger logger,
+        ConfigurableInput input, Wait wait,
+        PlayerReader playerReader, StopMoving stopMoving,
+        CastingHandler castingHandler, IMountHandler mountHandler,
+        AddonBits bits, CombatLog combatLog)
         : base(nameof(AdhocGoal))
     {
         this.logger = logger;
         this.input = input;
         this.wait = wait;
         this.stopMoving = stopMoving;
-        this.addonReader = addonReader;
-        this.playerReader = addonReader.PlayerReader;
+        this.playerReader = playerReader;
         this.key = key;
         this.castingHandler = castingHandler;
         this.mountHandler = mountHandler;
+        this.bits = bits;
+        this.combatLog = combatLog;
 
         if (bool.TryParse(key.InCombat, out bool result))
         {
@@ -75,7 +80,7 @@ public sealed class AdhocGoal : GoapGoal
     private bool Interrupt()
     {
         return combatMatters.HasValue
-            ? combatMatters.Value == addonReader.PlayerReader.Bits.PlayerInCombat() && addonReader.DamageTakenCount() > 0
-            : addonReader.DamageTakenCount() > 0;
+            ? combatMatters.Value == bits.PlayerInCombat() && combatLog.DamageTakenCount() > 0
+            : combatLog.DamageTakenCount() > 0;
     }
 }

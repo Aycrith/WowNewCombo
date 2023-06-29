@@ -19,7 +19,7 @@
                                 <td>@(property.Name)</td>
                                 <td>
                                     <input value="@property.GetValue(classConfig)" class="form-control" disabled="@(!editables.Contains(property.Name))"
-                               @onchange="c => { property.SetValue(classConfig, c.Value); Update(); }" />
+                                    @onchange="c => { property.SetValue(classConfig, c.Value); Update(); }" />
                                 </td>
                                 break;
 
@@ -27,15 +27,15 @@
                                 <td>@(property.Name)</td>
                                 <td>
                                     <input value="@property.GetValue(classConfig)" class="form-control" disabled="@(!editables.Contains(property.Name))"
-                               @onchange="c => { if(int.TryParse(c.Value?.ToString(), out int n)) { property.SetValue(classConfig, n); Update(); } }" />
+                                    @onchange="c => { if(int.TryParse(c.Value?.ToString(), out int n)) { property.SetValue(classConfig, n); Update(); } }" />
                                 </td>
                                 break;
                             case TypeCode.Boolean:
                                 <td>@(property.Name)</td>
                                 <td>
                                     <input type="checkbox" class="form-control" disabled="@(!editables.Contains(property.Name))"
-                               checked="@(CBool(property.GetValue(classConfig)))"
-                               @onchange="c => { property.SetValue(classConfig, c.Value); Update(); }" />
+                                           checked="@(CBool(property.GetValue(classConfig)))"
+                                    @onchange="c => { property.SetValue(classConfig, c.Value); Update(); }" />
                                 </td>
                                 break;
                             default:
@@ -53,31 +53,30 @@
 
     private ClassConfiguration classConfig = null!;
 
-    private HashSet<string> editables = null!;
+    private HashSet<string> editables = new()
+    {
+        // Int
+        nameof(ClassConfiguration.NPCMaxLevels_Above),
+        nameof(ClassConfiguration.NPCMaxLevels_Below),
+        // booleans
+        nameof(ClassConfiguration.Skin),
+        nameof(ClassConfiguration.Mine),
+        nameof(ClassConfiguration.Herb),
+        nameof(ClassConfiguration.Salvage),
+        nameof(ClassConfiguration.Loot),
+        nameof(ClassConfiguration.LogBagChanges),
+        nameof(ClassConfiguration.UseMount),
+        nameof(ClassConfiguration.KeyboardOnly),
+        nameof(ClassConfiguration.AllowPvP),
+        nameof(ClassConfiguration.AutoPetAttack),
+        nameof(ClassConfiguration.PathThereAndBack),
+        nameof(ClassConfiguration.PathReduceSteps),
+        nameof(ClassConfiguration.CheckTargetGivesExp),
+    };
 
     protected override void OnInitialized()
     {
         RefreshData();
-
-        editables = new()
-        {
-            // Int
-            nameof(classConfig.NPCMaxLevels_Above),
-            nameof(classConfig.NPCMaxLevels_Below),
-            // booleans
-            nameof(classConfig.Skin),
-            nameof(classConfig.Mine),
-            nameof(classConfig.Herb),
-            nameof(classConfig.Salvage),
-            nameof(classConfig.Loot),
-            nameof(classConfig.UseMount),
-            nameof(classConfig.KeyboardOnly),
-            nameof(classConfig.AllowPvP),
-            nameof(classConfig.AutoPetAttack),
-            nameof(classConfig.PathThereAndBack),
-            nameof(classConfig.PathReduceSteps),
-            nameof(classConfig.CheckTargetGivesExp),
-        };
 
         botController.ProfileLoaded += OnProfileLoaded;
         addonReader.AddonDataChanged += OnAddonDataChanged;

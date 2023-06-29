@@ -18,9 +18,9 @@ public enum BagItemChange
 
 public sealed class BagReader : IDisposable
 {
-    private readonly int cBagMeta;
-    private readonly int cItemNumCount;
-    private readonly int cItemId;
+    private const int cBagMeta = 20;
+    private const int cItemNumCount = 21;
+    private const int cItemId = 22;
 
     private readonly EquipmentReader equipmentReader;
 
@@ -36,17 +36,13 @@ public sealed class BagReader : IDisposable
     public int Hash { private set; get; }
     public int HashNewOrStackGain { private set; get; }
 
-    public BagReader(ItemDB itemDb, EquipmentReader equipmentReader, int cbagMeta, int citemNumCount, int cItemId)
+    public BagReader(ItemDB itemDb, EquipmentReader equipmentReader)
     {
         this.ItemDB = itemDb;
         this.equipmentReader = equipmentReader;
 
         this.equipmentReader.OnEquipmentChanged -= OnEquipmentChanged;
         this.equipmentReader.OnEquipmentChanged += OnEquipmentChanged;
-
-        this.cBagMeta = cbagMeta;
-        this.cItemNumCount = citemNumCount;
-        this.cItemId = cItemId;
 
         for (int i = 0; i < Bags.Length; i++)
         {

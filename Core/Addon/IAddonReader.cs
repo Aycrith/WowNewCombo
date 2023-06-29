@@ -4,29 +4,7 @@ namespace Core;
 
 public interface IAddonReader
 {
-    PlayerReader PlayerReader { get; }
-
-    BagReader BagReader { get; }
-
-    EquipmentReader EquipmentReader { get; }
-
-    ActionBarCostReader ActionBarCostReader { get; }
-
-    ActionBarCooldownReader ActionBarCooldownReader { get; }
-
-    AuraTimeReader PlayerBuffTimeReader { get; }
-
-    AuraTimeReader TargetDebuffTimeReader { get; }
-
-    SpellBookReader SpellBookReader { get; }
-
-    TalentReader TalentReader { get; }
-
-    CombatLog CombatLog { get; }
-
     double AvgUpdateLatency { get; }
-
-    int DamageTakenCount();
 
     string TargetName { get; }
 

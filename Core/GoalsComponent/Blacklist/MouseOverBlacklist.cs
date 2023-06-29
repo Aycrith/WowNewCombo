@@ -10,9 +10,13 @@ public sealed partial class MouseOverBlacklist : IBlacklist
 {
     private readonly string[] blacklist;
 
+    private readonly ILogger<MouseOverBlacklist> logger;
+
     private readonly AddonReader addonReader;
     private readonly PlayerReader playerReader;
-    private readonly ILogger logger;
+    private readonly AddonBits bits;
+    private readonly CombatLog combatLog;
+
     private readonly int above;
     private readonly int below;
     private readonly bool checkMouseOverGivesExp;
@@ -22,11 +26,17 @@ public sealed partial class MouseOverBlacklist : IBlacklist
 
     private int lastGuid;
 
-    public MouseOverBlacklist(ILogger logger, AddonReader addonReader, ClassConfiguration classConfig)
+    public MouseOverBlacklist(ILogger<MouseOverBlacklist> logger,
+        AddonReader addonReader, PlayerReader playerReader,
+        AddonBits bits, ClassConfiguration classConfig, CombatLog combatLog)
     {
-        this.addonReader = addonReader;
-        playerReader = addonReader.PlayerReader;
         this.logger = logger;
+
+        this.addonReader = addonReader;
+        this.playerReader = playerReader;
+        this.bits = bits;
+        this.combatLog = combatLog;
+
         this.above = classConfig.NPCMaxLevels_Above;
         this.below = classConfig.NPCMaxLevels_Below;
 
@@ -37,20 +47,20 @@ public sealed partial class MouseOverBlacklist : IBlacklist
 
         this.allowPvP = classConfig.AllowPvP;
 
-        logger.LogInformation($"[{nameof(MouseOverBlacklist)}] {nameof(classConfig.TargetMask)}: {string.Join(", ", mask.GetIndividualFlags())}");
+        logger.LogInformation($"{nameof(classConfig.TargetMask)}: {string.Join(", ", mask.GetIndividualFlags())}");
 
         if (blacklist.Length > 0)
-            logger.LogInformation($"[{nameof(MouseOverBlacklist)}] Name: {string.Join(", ", blacklist)}");
+            logger.LogInformation($"Name: {string.Join(", ", blacklist)}");
     }
 
     public bool Is()
     {
-        if (!playerReader.Bits.HasMouseOver())
+        if (!bits.HasMouseOver())
         {
             lastGuid = 0;
             return false;
         }
-        else if (addonReader.CombatLog.DamageTaken.Contains(playerReader.MouseOverGuid))
+        else if (combatLog.DamageTaken.Contains(playerReader.MouseOverGuid))
         {
             return false;
         }
@@ -61,7 +71,7 @@ public sealed partial class MouseOverBlacklist : IBlacklist
         }
 
         // it is trying to kill me
-        if (playerReader.Bits.MouseOverTargetIsPlayerOrPet())
+        if (bits.MouseOverTargetIsPlayerOrPet())
         {
             return false;
         }
@@ -77,7 +87,7 @@ public sealed partial class MouseOverBlacklist : IBlacklist
             return true; // ignore non white listed unit classification
         }
 
-        if (!allowPvP && (playerReader.Bits.MouseOverIsPlayer() || playerReader.Bits.MouseOverPlayerControlled()))
+        if (!allowPvP && (bits.MouseOverIsPlayer() || bits.MouseOverPlayerControlled()))
         {
             if (lastGuid != playerReader.MouseOverGuid)
             {
@@ -88,7 +98,7 @@ public sealed partial class MouseOverBlacklist : IBlacklist
             return true; // ignore players and pets
         }
 
-        if (!playerReader.Bits.MouseOverIsDead() && playerReader.Bits.MouseOverIsTagged())
+        if (!bits.MouseOverIsDead() && bits.MouseOverIsTagged())
         {
             if (lastGuid != playerReader.MouseOverGuid)
             {
@@ -100,7 +110,7 @@ public sealed partial class MouseOverBlacklist : IBlacklist
         }
 
 
-        if (playerReader.Bits.MouseOverCanBeHostile() && playerReader.MouseOverLevel > playerReader.Level.Value + above)
+        if (bits.MouseOverCanBeHostile() && playerReader.MouseOverLevel > playerReader.Level.Value + above)
         {
             if (lastGuid != playerReader.MouseOverGuid)
             {
@@ -113,7 +123,7 @@ public sealed partial class MouseOverBlacklist : IBlacklist
 
         if (checkMouseOverGivesExp)
         {
-            if (playerReader.Bits.MouseOverIsTrivial())
+            if (bits.MouseOverIsTrivial())
             {
                 if (lastGuid != playerReader.MouseOverGuid)
                 {
@@ -123,7 +133,7 @@ public sealed partial class MouseOverBlacklist : IBlacklist
                 return true;
             }
         }
-        else if (playerReader.Bits.MouseOverCanBeHostile() && playerReader.MouseOverLevel < playerReader.Level.Value - below)
+        else if (bits.MouseOverCanBeHostile() && playerReader.MouseOverLevel < playerReader.Level.Value - below)
         {
             if (lastGuid != playerReader.MouseOverGuid)
             {
@@ -162,43 +172,43 @@ public sealed partial class MouseOverBlacklist : IBlacklist
     [LoggerMessage(
         EventId = 0060,
         Level = LogLevel.Warning,
-        Message = "MouseOverBlacklist ({id},{guid},{name}) is player!")]
+        Message = "({id},{guid},{name}) is player!")]
     static partial void LogPlayerOrPet(ILogger logger, int id, int guid, string name);
 
     [LoggerMessage(
         EventId = 0061,
         Level = LogLevel.Warning,
-        Message = "MouseOverBlacklist ({id},{guid},{name}) is tagged!")]
+        Message = "({id},{guid},{name}) is tagged!")]
     static partial void LogTagged(ILogger logger, int id, int guid, string name);
 
     [LoggerMessage(
         EventId = 0062,
         Level = LogLevel.Warning,
-        Message = "MouseOverBlacklist ({id},{guid},{name}) too high level!")]
+        Message = "({id},{guid},{name}) too high level!")]
     static partial void LogLevelHigh(ILogger logger, int id, int guid, string name);
 
     [LoggerMessage(
         EventId = 0063,
         Level = LogLevel.Warning,
-        Message = "MouseOverBlacklist ({id},{guid},{name}) too low level!")]
+        Message = "({id},{guid},{name}) too low level!")]
     static partial void LogLevelLow(ILogger logger, int id, int guid, string name);
 
     [LoggerMessage(
         EventId = 0064,
         Level = LogLevel.Warning,
-        Message = "MouseOverBlacklist ({id},{guid},{name}) not yield experience!")]
+        Message = "({id},{guid},{name}) not yield experience!")]
     static partial void LogNoExperienceGain(ILogger logger, int id, int guid, string name);
 
     [LoggerMessage(
         EventId = 0065,
         Level = LogLevel.Warning,
-        Message = "MouseOverBlacklist ({id},{guid},{name}) name match!")]
+        Message = "({id},{guid},{name}) name match!")]
     static partial void LogNameMatch(ILogger logger, int id, int guid, string name);
 
     [LoggerMessage(
         EventId = 0066,
         Level = LogLevel.Warning,
-        Message = "MouseOverBlacklist ({id},{guid},{name},{classification}) not defined in the TargetMask!")]
+        Message = "({id},{guid},{name},{classification}) not defined in the TargetMask!")]
     static partial void LogClassification(ILogger logger, int id, int guid, string name, string classification);
 
     #endregion

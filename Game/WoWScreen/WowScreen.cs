@@ -18,7 +18,7 @@ namespace Game;
 
 public sealed class WowScreen : IWowScreen, IBitmapProvider, IDisposable
 {
-    private readonly ILogger logger;
+    private readonly ILogger<WowScreen> logger;
     private readonly WowProcess wowProcess;
 
     public event Action OnScreenChanged;
@@ -45,7 +45,7 @@ public sealed class WowScreen : IWowScreen, IBitmapProvider, IDisposable
 
     private readonly SolidBrush blackPen;
 
-    public WowScreen(ILogger logger, WowProcess wowProcess)
+    public WowScreen(ILogger<WowScreen> logger, WowProcess wowProcess)
     {
         this.logger = logger;
         this.wowProcess = wowProcess;
@@ -63,7 +63,7 @@ public sealed class WowScreen : IWowScreen, IBitmapProvider, IDisposable
 
         blackPen = new SolidBrush(Color.Black);
 
-        logger.LogInformation($"[{nameof(WowScreen)}] {rect} - " +
+        logger.LogInformation($"{rect} - " +
             $"Windowed Mode: {IsWindowedMode(p)} - " +
             $"Scale: {DPI2PPI(GetDpi()):F2}");
     }

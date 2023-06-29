@@ -15,20 +15,21 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
     private readonly ConfigurableInput input;
     private readonly ClassConfiguration classConfig;
     private readonly Wait wait;
-    private readonly AddonReader addonReader;
     private readonly PlayerReader playerReader;
+    private readonly AddonBits bits;
     private readonly StopMoving stopMoving;
     private readonly CastingHandler castingHandler;
     private readonly IMountHandler mountHandler;
+    private readonly CombatLog combatLog;
 
     private float lastDirection;
     private float lastMinDistance;
     private float lastMaxDistance;
 
     public CombatGoal(ILogger<CombatGoal> logger, ConfigurableInput input,
-        Wait wait, AddonReader addonReader, StopMoving stopMoving,
+        Wait wait, PlayerReader playerReader, StopMoving stopMoving, AddonBits bits,
         ClassConfiguration classConfiguration, ClassConfiguration classConfig,
-        CastingHandler castingHandler,
+        CastingHandler castingHandler, CombatLog combatLog,
         IMountHandler mountHandler)
         : base(nameof(CombatGoal))
     {
@@ -36,8 +37,10 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
         this.input = input;
 
         this.wait = wait;
-        this.addonReader = addonReader;
-        this.playerReader = addonReader.PlayerReader;
+        this.playerReader = playerReader;
+        this.bits = bits;
+        this.combatLog = combatLog;
+
         this.stopMoving = stopMoving;
         this.castingHandler = castingHandler;
         this.mountHandler = mountHandler;
@@ -95,7 +98,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
 
     public override void OnExit()
     {
-        if (addonReader.DamageTakenCount() > 0 && !playerReader.Bits.HasTarget())
+        if (combatLog.DamageTakenCount() > 0 && !bits.HasTarget())
         {
             stopMoving.Stop();
         }
@@ -115,16 +118,16 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
         lastMinDistance = playerReader.MinRange();
         lastMaxDistance = playerReader.MaxRange();
 
-        if (playerReader.Bits.IsDrowning())
+        if (bits.IsDrowning())
         {
             input.PressJump();
             return;
         }
 
-        if (playerReader.Bits.HasTarget())
+        if (bits.HasTarget())
         {
             if (classConfig.AutoPetAttack &&
-                playerReader.Bits.HasPet() &&
+                bits.HasPet() &&
                 (!playerReader.PetHasTarget() || playerReader.PetTargetGuid != playerReader.TargetGuid) &&
                 input.PetAttack.GetRemainingCooldown() == 0)
             {
@@ -140,22 +143,22 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
                     continue;
                 }
 
-                if (playerReader.Bits.TargetAlive() && castingHandler.CastIfReady(keyAction,
+                if (bits.TargetAlive() && castingHandler.CastIfReady(keyAction,
                     keyAction.Interrupts.Count > 0
                     ? keyAction.CanBeInterrupted
-                    : playerReader.Bits.TargetAlive))
+                    : bits.TargetAlive))
                 {
                     break;
                 }
             }
         }
 
-        if (!playerReader.Bits.HasTarget())
+        if (!bits.HasTarget())
         {
             stopMoving.Stop();
             logger.LogInformation("Lost target!");
 
-            if (addonReader.DamageTakenCount() > 0 && !input.KeyboardOnly)
+            if (combatLog.DamageTakenCount() > 0 && !input.KeyboardOnly)
             {
                 FindNewTarget();
             }
@@ -164,7 +167,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
 
     private void FindNewTarget()
     {
-        if (playerReader.PetHasTarget() && addonReader.CombatLog.DeadGuid.Value != playerReader.PetTargetGuid)
+        if (playerReader.PetHasTarget() && combatLog.DeadGuid.Value != playerReader.PetTargetGuid)
         {
             ResetCooldowns();
 
@@ -172,7 +175,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
             input.PressTargetOfTarget();
             wait.Update();
 
-            if (!playerReader.Bits.TargetIsDead())
+            if (!bits.TargetIsDead())
             {
                 logger.LogWarning("---- New targe from Pet target!");
                 return;
@@ -181,15 +184,15 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
             input.PressClearTarget();
         }
 
-        if (addonReader.DamageTakenCount() > 1)
+        if (combatLog.DamageTakenCount() > 1)
         {
             logger.LogInformation("Checking target in front...");
             input.PressNearestTarget();
             wait.Update();
 
-            if (playerReader.Bits.HasTarget() && !playerReader.Bits.TargetIsDead())
+            if (bits.HasTarget() && !bits.TargetIsDead())
             {
-                if (playerReader.Bits.TargetInCombat() && playerReader.Bits.TargetOfTargetIsPlayerOrPet())
+                if (bits.TargetInCombat() && bits.TargetOfTargetIsPlayerOrPet())
                 {
                     stopMoving.Stop();
                     ResetCooldowns();
@@ -201,10 +204,10 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
                 input.PressClearTarget();
                 wait.Update();
             }
-            else if (addonReader.DamageTakenCount() > 0)
+            else if (combatLog.DamageTakenCount() > 0)
             {
-                logger.LogWarning($"---- Possible threats from behind {addonReader.DamageTakenCount()}. Waiting target by damage taken!");
-                wait.Till(2500, playerReader.Bits.HasTarget);
+                logger.LogWarning($"---- Possible threats from behind {combatLog.DamageTakenCount()}. Waiting target by damage taken!");
+                wait.Till(2500, bits.HasTarget);
             }
         }
     }

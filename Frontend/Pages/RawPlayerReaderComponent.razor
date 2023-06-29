@@ -1,7 +1,8 @@
 ﻿@using System.Reflection
 
-@inject IBotController botController
 @inject IAddonReader addonReader
+
+@inject PlayerReader PlayerReader
 
 @implements IDisposable
 
@@ -12,7 +13,7 @@
         </div>
         <div class="card-body" style="padding-bottom: 0">
             <table class="table table-bordered">
-                @foreach (var property in GetPropertyValues(addonReader.PlayerReader))
+                @foreach (var property in GetPropertyValues(PlayerReader))
                 {
                     <tr>
                         <td>@(property.Name)</td>

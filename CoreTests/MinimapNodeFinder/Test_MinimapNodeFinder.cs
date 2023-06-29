@@ -28,12 +28,12 @@ internal sealed class Test_MinimapNodeFinder : IDisposable
 
     private readonly Stopwatch stopwatch = new();
 
-    public Test_MinimapNodeFinder(ILogger logger)
+    public Test_MinimapNodeFinder(ILogger logger, ILoggerFactory loggerFactory)
     {
         this.logger = logger;
 
         wowProcess = new();
-        wowScreen = new(logger, wowProcess);
+        wowScreen = new(loggerFactory.CreateLogger<WowScreen>(), wowProcess);
 
         minimapNodeFinder = new(logger, wowScreen);
     }

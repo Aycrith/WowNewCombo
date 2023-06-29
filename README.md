@@ -365,6 +365,7 @@ Take a look at the class files in `/Json/class` for examples of what you can do.
 | Property Name | Description | Optional | Default value |
 | --- | --- | --- | --- |
 | `"Log"` | Should logging enabled for `KeyAction(s)`. Requires restart. | true | `true` |
+| `"LogBagChanges"` | Should bag changes logs enabled for. | true | `true` |
 | `"Loot"` | Should loot the mob | true | `true` |
 | `"Skin"` | Should skin the mob | true | `false` |
 | `"Herb"` | Should herb the mob | true | `false` |

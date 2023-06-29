@@ -1,6 +1,16 @@
 ﻿@using Core.GOAP
 
 @inject IAddonReader addonReader
+@inject PlayerReader playerReader
+@inject CombatLog combatLog
+
+@inject BagReader BagReader
+@inject SpellBookReader SpellBookReader
+@inject TalentReader TalentReader
+@inject ActionBarCostReader ActionBarCostReader
+
+@inject AddonBits Bits
+
 @inject IBotController botController
 @inject LevelTracker levelTracker
 @inject WApi api
@@ -29,10 +39,10 @@
                 </td>
                 <td>@playerReader.HealthCurrent() (@playerReader.HealthPercent() %)<br />@playerReader.PTCurrent() (@playerReader.PTPercentage() %)</td>
 
-                <td>@addonReader.BagReader.BagItems.Count / @addonReader.BagReader.SlotCount</td>
-                <td>@addonReader.ActionBarCostReader.Count / @addonReader.SpellBookReader.Count / @addonReader.TalentReader.Count</td>
+                <td>@BagReader.BagItems.Count / @BagReader.SlotCount</td>
+                <td>@ActionBarCostReader.Count / @SpellBookReader.Count / @TalentReader.Count</td>
                 <td>
-                    @if (addonReader.PlayerReader.Bits.HasTarget())
+                    @if (Bits.HasTarget())
                     {
                         <a href="@($"{api.NpcId}{playerReader.TargetId}")" target="_blank">
                             <div>
@@ -44,9 +54,9 @@
                                 {
                                     <div>Combo Points: @playerReader.ComboPoints()</div>
                                 }
-                                @if (addonReader.DamageTakenCount() > 1)
+                                @if (combatLog.DamageTakenCount() > 1)
                                 {
-                                    <div>Fighting @addonReader.DamageTakenCount() Mobs</div>
+                                    <div>Fighting @combatLog.DamageTakenCount() Mobs</div>
                                 }
 
                             </div>
@@ -80,9 +90,7 @@
     [Parameter]
     public bool ShowActiveGoal { get; set; } = true;
 
-    private PlayerReader playerReader => addonReader.PlayerReader;
-
-    private bool PlayerInCombat => this.playerReader.Bits.PlayerInCombat();
+    private bool PlayerInCombat => Bits.PlayerInCombat();
 
     private string CombatBadge()
     {

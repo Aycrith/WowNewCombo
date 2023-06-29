@@ -6,14 +6,15 @@ namespace Core;
 
 public sealed class FrontendUpdate
 {
-    private readonly ILogger logger;
+    private readonly ILogger<FrontendUpdate> logger;
     private readonly IAddonReader addonReader;
     private readonly CancellationToken ct;
 
     private readonly Thread thread;
     private const int tickMs = 250;
 
-    public FrontendUpdate(ILogger logger, IAddonReader addonReader, CancellationTokenSource cts)
+    public FrontendUpdate(ILogger<FrontendUpdate> logger,
+        IAddonReader addonReader, CancellationTokenSource cts)
     {
         this.logger = logger;
         this.addonReader = addonReader;
@@ -32,6 +33,6 @@ public sealed class FrontendUpdate
         }
 
         if (logger.IsEnabled(LogLevel.Debug))
-            logger.LogDebug("Frontend thread stopped!");
+            logger.LogDebug("Thread stopped!");
     }
 }

@@ -25,7 +25,6 @@ public sealed partial class Navigation : IDisposable
     private readonly ILogger<Navigation> logger;
     private readonly PlayerDirection playerDirection;
     private readonly ConfigurableInput input;
-    private readonly AddonReader addonReader;
     private readonly PlayerReader playerReader;
     private readonly StopMoving stopMoving;
     private readonly StuckDetector stuckDetector;
@@ -70,15 +69,14 @@ public sealed partial class Navigation : IDisposable
     private Vector3 lastFailedDestination;
 
     public Navigation(ILogger<Navigation> logger, PlayerDirection playerDirection,
-        ConfigurableInput input, AddonReader addonReader, StopMoving stopMoving,
+        ConfigurableInput input, PlayerReader playerReader, StopMoving stopMoving,
         StuckDetector stuckDetector, IPPather pather, IMountHandler mountHandler,
         ClassConfiguration classConfiguration)
     {
         this.logger = logger;
         this.playerDirection = playerDirection;
         this.input = input;
-        this.addonReader = addonReader;
-        playerReader = addonReader.PlayerReader;
+        this.playerReader = playerReader;
         this.stopMoving = stopMoving;
         this.stuckDetector = stuckDetector;
         this.pather = pather;
@@ -410,7 +408,7 @@ public sealed partial class Navigation : IDisposable
         }
 
         if (logger.IsEnabled(LogLevel.Debug))
-            logger.LogDebug("PathFinder thread stopped!");
+            logger.LogDebug("Thread stopped!");
     }
 
     private float ReachedDistance(float minDistance)

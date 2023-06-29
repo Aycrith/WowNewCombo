@@ -25,7 +25,7 @@ public sealed class CursorClassifier : IDisposable
         new ulong[] { 13901748381153107456, 16207591392111181312, 9798142283158525952 },
         new ulong[] { 4669700909741929478, 4669700909674820614 },
         new ulong[] { 4683320813727784960, 4669700909741929478, 4683461550142398464 },
-        new ulong[] { 17940331276560775168, 17940331276594329600, 17940331276594460672 },
+        new ulong[] { 17940331276560775168, 17940331276594329600, 17940331276594460672, 18012595827828094976 },
         new ulong[] { 16207573517913036808, 4669140166357294088, 14185844589096599552, 16491828335798648832 },
         new ulong[] { 4667452417086599168, 4676529985085517824 },
         new ulong[] { 4682718988357606424, 4682718988358655000 }
@@ -98,6 +98,6 @@ public sealed class CursorClassifier : IDisposable
         }
 
         classification = (CursorType)index;
-        Debug.WriteLine($"[CursorClassifier.Classify] {classification.ToStringF()} - {similarity}");
+        Debug.WriteLine($"[CursorClassifier.Classify] {cursorHash} - {classification.ToStringF()} - {similarity}");
     }
 }

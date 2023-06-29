@@ -1,4 +1,6 @@
-﻿namespace Core;
+﻿using SharedLib;
+
+namespace Core;
 
 public sealed class Stance
 {

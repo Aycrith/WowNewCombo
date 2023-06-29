@@ -1,4 +1,4 @@
-﻿namespace Core;
+﻿namespace SharedLib;
 
 public sealed class StartupConfigReader
 {
@@ -9,5 +9,7 @@ public sealed class StartupConfigReader
     public string Type { get; set; } = string.Empty;
 
     public AddonDataProviderType ReaderType =>
-        System.Enum.TryParse(Type, out AddonDataProviderType m) ? m : AddonDataProviderType.GDI;
+        System.Enum.TryParse(Type, out AddonDataProviderType m)
+        ? m
+        : AddonDataProviderType.GDI;
 }

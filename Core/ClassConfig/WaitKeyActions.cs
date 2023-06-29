@@ -15,12 +15,15 @@ public sealed partial class WaitKeyActions : KeyActions
         base.PreInitialise(prefix, requirementFactory, logger);
     }
 
-    public override void Initialise(string prefix, ClassConfiguration config, AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger, bool globalLog)
+    public override void Initialise(string prefix,
+        ClassConfiguration config, AddonReader addonReader, PlayerReader playerReader,
+        RecordInt globalTime, ActionBarCostReader actionBarCostReader,
+        RequirementFactory requirementFactory, ILogger logger, bool globalLog)
     {
         if (AutoGenerateWaitForFoodAndDrink)
             AddWaitKeyActionsForFoodOrDrink(logger, config);
 
-        base.Initialise(prefix, config, addonReader, requirementFactory, logger, globalLog);
+        base.Initialise(prefix, config, addonReader, playerReader, globalTime, actionBarCostReader, requirementFactory, logger, globalLog);
     }
 
     private void AddWaitKeyActionsForFoodOrDrink(ILogger logger, ClassConfiguration classConfig)

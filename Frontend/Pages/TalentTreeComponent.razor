@@ -2,6 +2,7 @@
 
 @inject IAddonReader addonReader
 @inject WApi api
+@inject TalentReader talentReader
 
 <div class="card mt-1">
     <div class="card-header">
@@ -62,14 +63,6 @@
 </div>
 
 @code {
-
-    private TalentReader talentReader = null!;
-
-    protected override void OnInitialized()
-    {
-        talentReader = addonReader.TalentReader;
-    }
-
     private string DisplayName(Talent t)
     {
         if (t.CurrentRank > 1)

@@ -1,8 +1,6 @@
 ﻿using Core.GOAP;
 using System;
 using System.Collections.Generic;
-using Core.Session;
-using Game;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 
@@ -10,11 +8,14 @@ namespace Core;
 
 public sealed class ConfigBotController : IBotController, IDisposable
 {
-    public IAddonReader AddonReader { get; }
+    private readonly ILogger logger;
+    private readonly CancellationTokenSource cts;
+
+    private readonly Thread addonThread;
+    private readonly IAddonReader addonReader;
+
     public GoapAgent? GoapAgent => throw new NotImplementedException();
     public RouteInfo? RouteInfo => throw new NotImplementedException();
-    public WowScreen WowScreen => throw new NotImplementedException();
-    public IGrindSessionDAO GrindSessionDAO => throw new NotImplementedException();
     public string SelectedClassFilename => throw new NotImplementedException();
     public string? SelectedPathFilename => throw new NotImplementedException();
 
@@ -25,21 +26,14 @@ public sealed class ConfigBotController : IBotController, IDisposable
     public double AvgScreenLatency => throw new NotImplementedException();
     public double AvgNPCLatency => throw new NotImplementedException();
 
-    AddonReader IBotController.AddonReader => throw new NotImplementedException();
-
     public event Action? ProfileLoaded;
     public event Action? StatusChanged;
-
-    private readonly ILogger logger;
-    private readonly CancellationTokenSource cts;
-
-    private readonly Thread addonThread;
 
     public ConfigBotController(ILogger logger, IAddonReader addonReader, CancellationTokenSource cts)
     {
         this.logger = logger;
         this.cts = cts;
-        this.AddonReader = addonReader;
+        this.addonReader = addonReader;
 
         addonThread = new(AddonThread);
         addonThread.Start();
@@ -54,9 +48,9 @@ public sealed class ConfigBotController : IBotController, IDisposable
     {
         while (!cts.IsCancellationRequested)
         {
-            AddonReader.Update();
+            addonReader.Update();
         }
-        logger.LogWarning("Addon thread stoppped!");
+        logger.LogWarning("Thread stopped!");
     }
 
 

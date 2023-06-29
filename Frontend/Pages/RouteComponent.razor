@@ -6,6 +6,10 @@
 
 @inject IAddonReader addonReader
 @inject IBotController botController
+
+@inject CombatLog combatLog
+@inject PlayerReader PlayerReader
+@inject AddonBits Bits
 @inject IJSRuntime JSRuntime
 @inject WorldMapAreaDB worldmapAreaDB
 @inject AreaDB areaDB
@@ -19,7 +23,7 @@
                 <td>Route @routeSymbol</td>
                 <td>
                     <div class="float-right">
-                        [@addonReader.PlayerReader.MapX.ToString("00.0000"),@addonReader.PlayerReader.MapY.ToString("00.0000")] @(AreaName) (@addonReader.PlayerReader.UIMapId.Value)
+                        [@PlayerReader.MapX.ToString("00.0000"),@PlayerReader.MapY.ToString("00.0000")] @(AreaName) (@PlayerReader.UIMapId.Value)
                     </div>
                 </td>
             </tr>
@@ -32,7 +36,7 @@
                 </g>
                 <g class="group2">
                     @{
-                        var colour = addonReader.PlayerReader.Bits.PlayerInCombat() ? "red" : "orange";
+                        var colour = Bits.PlayerInCombat() ? "red" : "orange";
                         if (botController.GoapAgent?.CurrentGoal is FollowRouteGoal)
                         {
                             colour = "blue";
@@ -40,7 +44,7 @@
 
                         @if (botController.RouteInfo != null)
                         {
-                            <g id="playerloc" transform='translate(@(botController.RouteInfo.ToCanvasPointX(addonReader.PlayerReader.MapX)-5), @(botController.RouteInfo.ToCanvasPointY(addonReader.PlayerReader.MapY)-5)) rotate(@PlayerDir 5 5)'>
+                            <g id="playerloc" transform='translate(@(botController.RouteInfo.ToCanvasPointX(PlayerReader.MapX)-5), @(botController.RouteInfo.ToCanvasPointY(PlayerReader.MapY)-5)) rotate(@PlayerDir 5 5)'>
                                 <svg width="10" height="10">
                                     <polygon points="5,0 8.5,8.5 1.5,8.5 5,0" fill="@colour" />
                                 </svg>
@@ -105,7 +109,7 @@
 
     private Timer refreshTimer = new Timer();
 
-    private float PlayerDir => -addonReader.PlayerReader.Direction * (180f / MathF.PI);
+    private float PlayerDir => -PlayerReader.Direction * (180f / MathF.PI);
 
     private List<Vector3> deaths = new();
 
@@ -116,7 +120,7 @@
         botController.ProfileLoaded += OnProfileLoaded;
         addonReader.AddonDataChanged += OnAddonDataChanged;
         areaDB.Changed += OnZoneChanged;
-        addonReader.CombatLog.PlayerDeath += OnPlayerDeath;
+        combatLog.PlayerDeath += OnPlayerDeath;
 
         UpdateZoneName();
         UpdateDeaths();
@@ -130,7 +134,7 @@
         botController.ProfileLoaded -= OnProfileLoaded;
         addonReader.AddonDataChanged -= OnAddonDataChanged;
         areaDB.Changed -= OnZoneChanged;
-        addonReader.CombatLog.PlayerDeath -= OnPlayerDeath;
+        combatLog.PlayerDeath -= OnPlayerDeath;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -185,7 +189,7 @@
     private async Task OnPlayerDeathAction()
     {
         // have to wait for pressing Release Spirit
-        while (addonReader.PlayerReader.CorpseMapPos == Vector3.Zero)
+        while (PlayerReader.CorpseMapPos == Vector3.Zero)
         {
             await Task.Delay(200);
         }
@@ -213,7 +217,7 @@
         if (routeinfo.RouteToWaypoint.Length > 0)
         {
             var waylist = routeinfo.RouteToWaypoint.ToArray();
-            worldmapAreaDB.ToMap_FlipXY(addonReader.PlayerReader.UIMapId.Value, ref waylist);
+            worldmapAreaDB.ToMap_FlipXY(PlayerReader.UIMapId.Value, ref waylist);
 
             this.RouteToWaypointLines = new MarkupString(routeinfo.RenderPathLines(waylist));
             this.RouteToWaypointPoints = new MarkupString(routeinfo.RenderPathPoints(waylist));
@@ -252,13 +256,13 @@
 
     private void UpdateZoneName()
     {
-        AreaName = addonReader.PlayerReader.WorldMapArea.AreaName;
+        AreaName = PlayerReader.WorldMapArea.AreaName;
     }
 
     private void UpdateDeaths()
     {
         if (botController.GoapAgent == null) return;
 
-        deaths.Add(botController.AddonReader.PlayerReader.CorpseMapPos);
+        deaths.Add(PlayerReader.CorpseMapPos);
     }
 }

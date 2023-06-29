@@ -7,16 +7,23 @@ namespace Core.Goals;
 
 public static class CastState_Extension
 {
-    public static string ToStringF(this WaitForGatheringGoal.CastState value) => value switch
-    {
-        WaitForGatheringGoal.CastState.None => nameof(WaitForGatheringGoal.CastState.None),
-        WaitForGatheringGoal.CastState.Casting => nameof(WaitForGatheringGoal.CastState.Casting),
-        WaitForGatheringGoal.CastState.Failed => nameof(WaitForGatheringGoal.CastState.Failed),
-        WaitForGatheringGoal.CastState.Abort => nameof(WaitForGatheringGoal.CastState.Abort),
-        WaitForGatheringGoal.CastState.Success => nameof(WaitForGatheringGoal.CastState.Success),
-        WaitForGatheringGoal.CastState.WaitUserInput => nameof(WaitForGatheringGoal.CastState.WaitUserInput),
-        _ => throw new System.NotImplementedException(),
-    };
+    public static string ToStringF(this WaitForGatheringGoal.CastState value)
+        => value switch
+        {
+            WaitForGatheringGoal.CastState.None =>
+                nameof(WaitForGatheringGoal.CastState.None),
+            WaitForGatheringGoal.CastState.Casting =>
+                nameof(WaitForGatheringGoal.CastState.Casting),
+            WaitForGatheringGoal.CastState.Failed =>
+                nameof(WaitForGatheringGoal.CastState.Failed),
+            WaitForGatheringGoal.CastState.Abort =>
+                nameof(WaitForGatheringGoal.CastState.Abort),
+            WaitForGatheringGoal.CastState.Success =>
+                nameof(WaitForGatheringGoal.CastState.Success),
+            WaitForGatheringGoal.CastState.WaitUserInput =>
+                nameof(WaitForGatheringGoal.CastState.WaitUserInput),
+            _ => throw new System.NotImplementedException(),
+        };
 }
 
 public partial class WaitForGatheringGoal : GoapGoal
@@ -28,6 +35,7 @@ public partial class WaitForGatheringGoal : GoapGoal
     private readonly ILogger logger;
     private readonly Wait wait;
     private readonly PlayerReader playerReader;
+    private readonly AddonBits bits;
     private readonly StopMoving stopMoving;
     private readonly Stopwatch stopWatch;
 
@@ -44,12 +52,15 @@ public partial class WaitForGatheringGoal : GoapGoal
     private CastState state;
     private int lastKnownCast;
 
-    public WaitForGatheringGoal(ILogger logger, Wait wait, PlayerReader playerReader, StopMoving stopMoving)
+    public WaitForGatheringGoal(ILogger logger, Wait wait,
+        PlayerReader playerReader, AddonBits bits,
+        StopMoving stopMoving)
         : base(nameof(WaitForGatheringGoal))
     {
         this.logger = logger;
         this.wait = wait;
         this.playerReader = playerReader;
+        this.bits = bits;
         this.stopMoving = stopMoving;
         this.stopWatch = new();
 
@@ -61,10 +72,7 @@ public partial class WaitForGatheringGoal : GoapGoal
         stopMoving.Stop();
         wait.Update();
 
-        while (playerReader.Bits.IsFalling())
-        {
-            wait.Update();
-        }
+        wait.While(bits.IsFalling);
 
         LogOnEnter(logger);
     }
@@ -154,7 +162,7 @@ public partial class WaitForGatheringGoal : GoapGoal
             }
         }
 
-        if (playerReader.Bits.IsFalling())
+        if (bits.IsFalling())
         {
             state = CastState.Abort;
             LogState(logger, state.ToStringF());

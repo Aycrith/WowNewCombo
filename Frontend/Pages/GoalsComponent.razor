@@ -1,15 +1,17 @@
 ﻿@inject IBotController botController
 @inject IAddonReader addonReader
 
+@inject PlayerReader PlayerReader
+
 @implements IDisposable
 
 <div class="card" style="margin-top: 10px">
     <div class="card-header">
-        Goals -> @addonReader.PlayerReader.MinRange() - @addonReader.PlayerReader.MaxRange()
+        Goals -> @PlayerReader.MinRange() - @PlayerReader.MaxRange()
         | Expand <input type="checkbox" @bind="@Expand" />
         <ToggleButton Disable="@(botController.ClassConfig?.Mode == Mode.AttendedGather)" />
         <span class="float-right">
-            Net: @addonReader.PlayerReader.NetworkLatency.Value.ToString()ms |
+            Net: @PlayerReader.NetworkLatency.Value.ToString()ms |
             Npc: @NpcLatency.ToString("0.0")ms |
             Bot: @addonReader.AvgUpdateLatency.ToString("0.0")ms
         </span>

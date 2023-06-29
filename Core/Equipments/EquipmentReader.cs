@@ -11,19 +11,17 @@ public sealed class EquipmentReader
     private const int MAX_EQUIPMENT_COUNT = 24;
 
     private readonly ItemDB itemDB;
-    private readonly int cItemId;
-    private readonly int cSlotNum;
+    private readonly int cSlotNum = 23;
+    private readonly int cItemId = 24;
 
     private readonly int[] equipmentIds = new int[MAX_EQUIPMENT_COUNT];
     public Item[] Items { get; private set; } = new Item[MAX_EQUIPMENT_COUNT];
 
     public event EventHandler<(int, int)>? OnEquipmentChanged;
 
-    public EquipmentReader(ItemDB itemDB, int cSlotNum, int cItemId)
+    public EquipmentReader(ItemDB itemDB)
     {
         this.itemDB = itemDB;
-        this.cSlotNum = cSlotNum;
-        this.cItemId = cItemId;
 
         for (int i = 0; i < MAX_EQUIPMENT_COUNT; i++)
         {

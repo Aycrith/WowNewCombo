@@ -7,16 +7,15 @@ namespace Core;
 
 public sealed class SpellBookReader
 {
-    private readonly int cSpellId;
+    private const int cSpellId = 71;
 
     private readonly HashSet<int> spells = new();
 
     public SpellDB SpellDB { get; }
     public int Count => spells.Count;
 
-    public SpellBookReader(int cSpellId, SpellDB spellDB)
+    public SpellBookReader(SpellDB spellDB)
     {
-        this.cSpellId = cSpellId;
         this.SpellDB = spellDB;
     }
 

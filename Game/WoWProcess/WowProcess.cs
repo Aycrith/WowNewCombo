@@ -2,6 +2,8 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 
+using SharedLib;
+
 #nullable enable
 
 namespace Game;
@@ -42,7 +44,8 @@ public sealed class WowProcess : IDisposable
     {
         Process? p = Get(pid);
         if (p == null)
-            throw new NullReferenceException("Unable to find running World of Warcraft process!");
+            throw new NullReferenceException(
+                $"Unable to find {(pid == -1 ? "any" : $"pid={pid}")} running World of Warcraft process!");
 
         Process = p;
         processId = Process.Id;
@@ -53,6 +56,8 @@ public sealed class WowProcess : IDisposable
         thread = new(PollProcessExited);
         thread.Start();
     }
+
+    public WowProcess(StartupConfigPid pid) : this(pid.Id) { }
 
     public void Dispose()
     {

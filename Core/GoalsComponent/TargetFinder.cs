@@ -10,7 +10,7 @@ public sealed class TargetFinder
 
     private readonly ConfigurableInput input;
     private readonly ClassConfiguration classConfig;
-    private readonly PlayerReader playerReader;
+    private readonly AddonBits bits;
     private readonly NpcNameTargeting npcNameTargeting;
     private readonly Wait wait;
 
@@ -19,11 +19,11 @@ public sealed class TargetFinder
     public int ElapsedMs => (int)(DateTime.UtcNow - lastActive).TotalMilliseconds;
 
     public TargetFinder(ConfigurableInput input, ClassConfiguration classConfig,
-        PlayerReader playerReader, NpcNameTargeting npcNameTargeting, Wait wait)
+        AddonBits bits, NpcNameTargeting npcNameTargeting, Wait wait)
     {
         this.classConfig = classConfig;
         this.input = input;
-        this.playerReader = playerReader;
+        this.bits = bits;
         this.npcNameTargeting = npcNameTargeting;
         this.wait = wait;
 
@@ -44,7 +44,7 @@ public sealed class TargetFinder
     private bool LookForTarget(NpcNames target, CancellationToken ct)
     {
         if (ElapsedMs < Random.Shared.Next(minMs, maxMs))
-            return playerReader.Bits.HasTarget();
+            return bits.HasTarget();
 
         if (!ct.IsCancellationRequested &&
             classConfig.TargetNearestTarget.GetRemainingCooldown() == 0)
@@ -53,7 +53,7 @@ public sealed class TargetFinder
             wait.Update();
         }
 
-        if (!ct.IsCancellationRequested && !input.KeyboardOnly && !playerReader.Bits.HasTarget())
+        if (!ct.IsCancellationRequested && !input.KeyboardOnly && !bits.HasTarget())
         {
             npcNameTargeting.ChangeNpcType(target);
             npcNameTargeting.WaitForUpdate();
@@ -69,7 +69,7 @@ public sealed class TargetFinder
 
         lastActive = DateTime.UtcNow;
 
-        return playerReader.Bits.HasTarget();
+        return bits.HasTarget();
     }
 
 }

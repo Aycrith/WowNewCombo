@@ -1,6 +1,8 @@
 ﻿using System.Threading.Tasks;
 using System.Xml;
 
+using SharedLib;
+
 namespace Core;
 
 public sealed class WApi

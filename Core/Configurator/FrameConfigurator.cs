@@ -2,6 +2,8 @@
 
 using Microsoft.Extensions.Logging;
 
+using SharedLib;
+
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -106,7 +108,9 @@ public sealed class FrameConfigurator : IDisposable
                 {
                     if (auto)
                     {
-                        logger.LogInformation($"Found {nameof(WowProcess)} with pid={wowProcess.Process}");
+                        logger.LogInformation(
+                            $"Found {nameof(WowProcess)} with pid={wowProcess.Process.Id} " +
+                            $"{wowProcess.Process.ProcessName}");
                     }
                     stage++;
                 }

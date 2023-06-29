@@ -1,6 +1,6 @@
-﻿using Game;
+﻿using System;
 
-namespace Core;
+namespace SharedLib;
 
 public sealed class StartupClientVersion
 {
@@ -8,9 +8,9 @@ public sealed class StartupClientVersion
 
     public string Path { get; }
 
-    public StartupClientVersion(WowProcess process)
+    public StartupClientVersion(Version version)
     {
-        switch (process.FileVersion.Major)
+        switch (version.Major)
         {
             case 1:
                 Version = ClientVersion.SoM;

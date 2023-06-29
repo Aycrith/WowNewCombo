@@ -2,7 +2,6 @@
 using SharedLib.NpcFinder;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
 using System.Numerics;
 using System.Linq;
 using System.Threading;
@@ -32,9 +31,9 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
     private readonly ConfigurableInput input;
     private readonly KeyAction key;
     private readonly Wait wait;
-    private readonly AddonReader addonReader;
     private readonly Navigation navigation;
     private readonly PlayerReader playerReader;
+    private readonly AddonBits bits;
     private readonly StopMoving stopMoving;
     private readonly ClassConfiguration classConfig;
     private readonly NpcNameTargeting npcNameTargeting;
@@ -67,7 +66,8 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
     #endregion
 
     public AdhocNPCGoal(KeyAction key, ILogger<AdhocNPCGoal> logger, ConfigurableInput input,
-        Wait wait, AddonReader addonReader, Navigation navigation, StopMoving stopMoving,
+        Wait wait, PlayerReader playerReader, GossipReader gossipReader, AddonBits bits,
+        Navigation navigation, StopMoving stopMoving,
         NpcNameTargeting npcNameTargeting, ClassConfiguration classConfig,
         IMountHandler mountHandler, ExecGameCommand exec, CancellationTokenSource cts)
         : base(nameof(AdhocNPCGoal))
@@ -76,15 +76,15 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
         this.input = input;
         this.key = key;
         this.wait = wait;
-        this.addonReader = addonReader;
-        this.playerReader = addonReader.PlayerReader;
+        this.playerReader = playerReader;
+        this.bits = bits;
         this.stopMoving = stopMoving;
         this.npcNameTargeting = npcNameTargeting;
         this.classConfig = classConfig;
         this.mountHandler = mountHandler;
         ct = cts.Token;
         this.execGameCommand = exec;
-        this.gossipReader = addonReader.GossipReader;
+        this.gossipReader = gossipReader;
 
         this.navigation = navigation;
         navigation.OnDestinationReached += Navigation_OnDestinationReached;
@@ -142,7 +142,7 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
 
     public override void Update()
     {
-        if (playerReader.Bits.IsDrowning())
+        if (bits.IsDrowning())
             input.PressJump();
 
         if (pathState != PathState.Finished)
@@ -230,8 +230,8 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
             wait.Update();
         }
 
-        wait.Until(400, playerReader.Bits.HasTarget);
-        if (!playerReader.Bits.HasTarget())
+        wait.Until(400, bits.HasTarget);
+        if (!bits.HasTarget())
         {
             LogWarn("No target found! Turn left to find NPC");
             input.PressFixed(input.TurnLeftKey, 250, ct);

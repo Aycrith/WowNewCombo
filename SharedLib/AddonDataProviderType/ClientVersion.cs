@@ -1,4 +1,4 @@
-﻿namespace Core;
+﻿namespace SharedLib;
 
 public enum ClientVersion
 {

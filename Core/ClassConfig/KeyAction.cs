@@ -120,13 +120,17 @@ public sealed partial class KeyAction : IDisposable
         requirementFactory.InitDynamicBindings(this);
     }
 
-    public void Initialise(ClassConfiguration config, AddonReader addonReader,
+    public void Initialise(ClassConfiguration config,
+        AddonReader addonReader,
+        PlayerReader playerReader,
+        RecordInt globalTime,
+        ActionBarCostReader costReader,
         RequirementFactory requirementFactory, ILogger logger, bool globalLog)
     {
-        this.costReader = addonReader.ActionBarCostReader;
+        this.costReader = costReader;
         this.logger = logger;
 
-        globalTime = addonReader.GlobalTime;
+        this.globalTime = addonReader.GlobalTime;
         this.canRunMemoTime = globalTime.Value;
 
         FormCost = GetMinCost;
@@ -176,7 +180,7 @@ public sealed partial class KeyAction : IDisposable
 
         if (Slot > 0)
         {
-            this.SlotIndex = Stance.ToSlot(this, addonReader.PlayerReader) - 1;
+            this.SlotIndex = Stance.ToSlot(this, playerReader) - 1;
             LogInputActionbar(logger, Name, Key, Slot, SlotIndex);
         }
 
@@ -184,7 +188,7 @@ public sealed partial class KeyAction : IDisposable
         ResetCooldown();
 
         if (Slot > 0)
-            InitMinPowerType(addonReader.ActionBarCostReader);
+            InitMinPowerType(costReader);
 
         requirementFactory.InitialiseRequirements(this);
 
@@ -196,16 +200,21 @@ public sealed partial class KeyAction : IDisposable
 
     public void Dispose()
     {
-        if (costReader == null) return;
+        if (costReader == null)
+            return;
 
         costReader.OnActionCostChanged -= ActionBarCostReader_OnActionCostChanged;
         costReader.OnActionCostReset -= ResetCosts;
     }
 
-    public void InitialiseForm(ClassConfiguration config, AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger, bool globalLog)
+    public void InitialiseForm(ClassConfiguration config,
+        AddonReader addonReader, PlayerReader playerReader,
+        RecordInt globalTime,
+        ActionBarCostReader actionBarCostReader,
+        RequirementFactory requirementFactory, ILogger logger, bool globalLog)
     {
         FormAction = true;
-        Initialise(config, addonReader, requirementFactory, logger, globalLog);
+        Initialise(config, addonReader, playerReader, globalTime, actionBarCostReader, requirementFactory, logger, globalLog);
 
         logger.LogInformation($"[{Name,-15}] Added {FormEnum} to FormCost with {MinCost}");
     }

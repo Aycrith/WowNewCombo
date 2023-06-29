@@ -3,7 +3,20 @@ using System.Collections.Generic;
 
 namespace Core;
 
-public sealed class AuraTimeReader
+public interface IAuraTimeReader
+{
+    void Read(IAddonDataProvider reader);
+    void Reset();
+    int GetRemainingTimeMs(int textureId);
+}
+
+public interface IPlayerBuffTimeReader : IAuraTimeReader { }
+
+public interface ITargetDebuffTimeReader : IAuraTimeReader { }
+
+public interface ITargetBuffTimeReader : IAuraTimeReader { }
+
+public sealed class AuraTimeReader<T> : IAuraTimeReader
 {
     public readonly struct Data
     {

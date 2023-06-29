@@ -10,20 +10,24 @@ namespace Core;
 public sealed class ReactCastError
 {
     private readonly ILogger<ReactCastError> logger;
-    private readonly AddonReader addonReader;
     private readonly PlayerReader playerReader;
+    private readonly ActionBarBits<IUsableAction> usableAction;
+    private readonly AddonBits bits;
     private readonly Wait wait;
     private readonly ConfigurableInput input;
     private readonly StopMoving stopMoving;
     private readonly PlayerDirection direction;
 
-    public ReactCastError(ILogger<ReactCastError> logger, AddonReader addonReader,
-        Wait wait, ConfigurableInput input, StopMoving stopMoving,
+    public ReactCastError(ILogger<ReactCastError> logger,
+        PlayerReader playerReader,
+        ActionBarBits<IUsableAction> usableAction,
+        AddonBits bits, Wait wait, ConfigurableInput input, StopMoving stopMoving,
         PlayerDirection direction)
     {
         this.logger = logger;
-        this.addonReader = addonReader;
-        this.playerReader = addonReader.PlayerReader;
+        this.playerReader = playerReader;
+        this.usableAction = usableAction;
+        this.bits = bits;
         this.wait = wait;
         this.input = input;
         this.stopMoving = stopMoving;
@@ -54,8 +58,8 @@ public sealed class ReactCastError
             case UI_ERROR.ERR_SPELL_COOLDOWN:
                 logger.LogInformation($"React to {value.ToStringF()} -- wait until its ready");
                 int waitTime = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs);
-                bool before = addonReader.UsableAction.Is(item);
-                wait.Until(waitTime, () => before != addonReader.UsableAction.Is(item) || addonReader.UsableAction.Is(item));
+                bool before = usableAction.Is(item);
+                wait.Until(waitTime, () => before != usableAction.Is(item) || usableAction.Is(item));
                 break;
             case UI_ERROR.ERR_ATTACK_PACIFIED:
             case UI_ERROR.ERR_SPELL_FAILED_STUNNED:
@@ -73,7 +77,7 @@ public sealed class ReactCastError
                 break;
             case UI_ERROR.ERR_SPELL_OUT_OF_RANGE:
 
-                if (!playerReader.Bits.HasTarget())
+                if (!bits.HasTarget())
                     return;
 
                 if (playerReader.Class == UnitClass.Hunter && playerReader.IsInMeleeRange())
@@ -83,7 +87,7 @@ public sealed class ReactCastError
                 }
 
                 int minRange = playerReader.MinRange();
-                if (playerReader.Bits.PlayerInCombat() && playerReader.Bits.HasTarget() && !playerReader.IsTargetCasting())
+                if (bits.PlayerInCombat() && bits.HasTarget() && !playerReader.IsTargetCasting())
                 {
                     if (playerReader.TargetTarget == UnitsTarget.Me)
                     {
@@ -176,7 +180,7 @@ public sealed class ReactCastError
                 break;
             case UI_ERROR.SPELL_FAILED_MOVING:
                 logger.LogInformation($"React to {value.ToStringF()} -- Stop moving!");
-                wait.While(playerReader.Bits.IsFalling);
+                wait.While(bits.IsFalling);
                 stopMoving.Stop();
                 wait.Update();
                 break;
@@ -185,7 +189,7 @@ public sealed class ReactCastError
                 wait.While(playerReader.IsCasting);
                 break;
             case UI_ERROR.ERR_BADATTACKPOS:
-                if (playerReader.Bits.SpellOn_AutoAttack())
+                if (bits.SpellOn_AutoAttack())
                 {
                     logger.LogInformation($"React to {value.ToStringF()} -- Interact!");
                     input.PressInteract();
@@ -198,7 +202,7 @@ public sealed class ReactCastError
                 }
                 break;
             case UI_ERROR.SPELL_FAILED_LINE_OF_SIGHT:
-                if (!playerReader.Bits.PlayerInCombat())
+                if (!bits.PlayerInCombat())
                 {
                     logger.LogInformation($"React to {value.ToStringF()} -- Stop attack and clear target!");
                     input.PressStopAttack();

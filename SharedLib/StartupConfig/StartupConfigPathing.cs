@@ -1,4 +1,4 @@
-﻿namespace Core;
+﻿namespace SharedLib;
 
 public sealed class StartupConfigPathing
 {
@@ -13,7 +13,9 @@ public sealed class StartupConfigPathing
 
     public StartupConfigPathing() { }
 
-    public StartupConfigPathing(string Mode, string hostv1, int portv1, string hostv3, int portv3)
+    public StartupConfigPathing(string Mode,
+        string hostv1, int portv1,
+        string hostv3, int portv3)
     {
         this.Mode = Mode;
 
@@ -24,7 +26,8 @@ public sealed class StartupConfigPathing
         this.portv3 = portv3;
     }
 
-    public Types Type => System.Enum.TryParse(Mode, out Types m) ? m : Types.Local;
+    public Types Type =>
+        System.Enum.TryParse(Mode, out Types m) ? m : Types.Local;
 
     public string Mode { get; set; } = string.Empty;
 

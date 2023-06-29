@@ -8,14 +8,16 @@ public sealed class TargetFocusTargetGoal : GoapGoal
 
     private readonly ConfigurableInput input;
     private readonly PlayerReader playerReader;
+    private readonly AddonBits bits;
     private readonly Wait wait;
 
     public TargetFocusTargetGoal(ConfigurableInput input, PlayerReader playerReader,
-        ClassConfiguration classConfig, Wait wait)
+        AddonBits bits, ClassConfiguration classConfig, Wait wait)
         : base(nameof(TargetFocusTargetGoal))
     {
         this.input = input;
         this.playerReader = playerReader;
+        this.bits = bits;
         this.wait = wait;
 
         if (classConfig.Loot)
@@ -35,9 +37,9 @@ public sealed class TargetFocusTargetGoal : GoapGoal
 
     public override void Update()
     {
-        if (playerReader.Bits.FocusTargetCanBeHostile())
+        if (bits.FocusTargetCanBeHostile())
         {
-            if (playerReader.Bits.FocusTargetInCombat())
+            if (bits.FocusTargetInCombat())
             {
                 input.PressTargetFocus();
                 input.PressTargetOfTarget();
@@ -57,7 +59,7 @@ public sealed class TargetFocusTargetGoal : GoapGoal
 
     public override void OnExit()
     {
-        if (!playerReader.Bits.FocusHasTarget())
+        if (!bits.FocusHasTarget())
         {
             input.PressClearTarget();
             wait.Update();
