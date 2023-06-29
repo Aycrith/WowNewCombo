@@ -3,6 +3,8 @@ using System.Threading;
 using System.Numerics;
 using SharedLib.Extensions;
 using Game;
+using Core.GOAP;
+using SharedLib;
 
 namespace Core.Goals;
 
@@ -17,7 +19,9 @@ public sealed class StopMoving
     private Vector3 mapPos;
     private float direction;
 
-    public StopMoving(WowProcessInput input, PlayerReader playerReader, CancellationTokenSource cts)
+    public StopMoving(WowProcessInput input,
+        PlayerReader playerReader,
+        CancellationTokenSource<GoapAgent> cts)
     {
         this.input = input;
         this.playerReader = playerReader;

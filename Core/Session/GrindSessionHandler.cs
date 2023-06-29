@@ -1,4 +1,8 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Core.GOAP;
+
+using Microsoft.Extensions.Logging;
+
+using SharedLib;
 
 using System;
 using System.Threading;
@@ -7,7 +11,7 @@ namespace Core.Session;
 
 public sealed class GrindSessionHandler : IGrindSessionHandler
 {
-    private readonly ILogger logger;
+    private readonly ILogger<GrindSessionHandler> logger;
     private readonly PlayerReader playerReader;
     private readonly SessionStat stats;
     private readonly IGrindSessionDAO grindSessionDAO;
@@ -18,9 +22,9 @@ public sealed class GrindSessionHandler : IGrindSessionHandler
 
     private bool active;
 
-    public GrindSessionHandler(ILogger logger, DataConfig dataConfig,
-        PlayerReader playerReader, SessionStat stats, IGrindSessionDAO grindSessionDAO,
-        CancellationTokenSource cts)
+    public GrindSessionHandler(ILogger<GrindSessionHandler> logger,
+        DataConfig dataConfig, PlayerReader playerReader, SessionStat stats,
+        IGrindSessionDAO grindSessionDAO, CancellationTokenSource<GoapAgent> cts)
     {
         this.logger = logger;
         this.playerReader = playerReader;
@@ -81,6 +85,6 @@ public sealed class GrindSessionHandler : IGrindSessionHandler
         }
 
         if (logger.IsEnabled(LogLevel.Debug))
-            logger.LogDebug("SessionHandler thread stopped!");
+            logger.LogDebug("Thread stopped!");
     }
 }

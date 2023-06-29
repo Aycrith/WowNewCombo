@@ -2,7 +2,9 @@
 
 @inject ILogger logger
 @inject IBotController botController
-@inject IAddonReader addonReader
+
+@inject BagReader bagReader
+
 @inject DataConfig dataConfig
 @inject ExecGameCommand exec
 
@@ -121,6 +123,6 @@
     private void CreateNewActionBarPopulator()
     {
         if (botController.ClassConfig != null)
-            ActionBarPopulator = new(botController.ClassConfig!, ((addonReader as AddonReader)!).BagReader, exec);
+            ActionBarPopulator = new(botController.ClassConfig!, bagReader, exec);
     }
 }

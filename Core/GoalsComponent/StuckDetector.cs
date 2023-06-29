@@ -26,6 +26,7 @@ public sealed class StuckDetector
     private readonly ConfigurableInput input;
 
     private readonly PlayerReader playerReader;
+    private readonly AddonBits bits;
     private readonly PlayerDirection playerDirection;
     private readonly StopMoving stopMoving;
 
@@ -38,13 +39,14 @@ public sealed class StuckDetector
     public double ActionDurationMs => (DateTime.UtcNow - startTime).TotalMilliseconds;
     private double UnstuckMs => (DateTime.UtcNow - attemptTime).TotalMilliseconds;
 
-    public StuckDetector(ILogger<StuckDetector> logger, ConfigurableInput input, 
-        PlayerReader playerReader, PlayerDirection playerDirection,
+    public StuckDetector(ILogger<StuckDetector> logger, ConfigurableInput input,
+        AddonBits bits, PlayerReader playerReader, PlayerDirection playerDirection,
         StopMoving stopMoving)
     {
         this.logger = logger;
         this.input = input;
 
+        this.bits = bits;
         this.playerReader = playerReader;
         this.playerDirection = playerDirection;
         this.stopMoving = stopMoving;
@@ -71,7 +73,7 @@ public sealed class StuckDetector
 
     public void Update()
     {
-        if (playerReader.Bits.IsFalling())
+        if (bits.IsFalling())
             return;
 
         if (debug)

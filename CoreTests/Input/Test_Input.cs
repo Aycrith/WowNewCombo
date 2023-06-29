@@ -17,13 +17,13 @@ public class Test_Input : IDisposable
     private readonly WowScreen wowScreen;
     private readonly WowProcessInput wowProcessInput;
 
-    public Test_Input(ILogger logger)
+    public Test_Input(ILogger logger, ILoggerFactory loggerFactory)
     {
         this.logger = logger;
         this.cts = new();
 
         wowProcess = new WowProcess();
-        wowScreen = new WowScreen(logger, wowProcess);
+        wowScreen = new WowScreen(loggerFactory.CreateLogger<WowScreen>(), wowProcess);
         wowProcessInput = new WowProcessInput(logger, cts, wowProcess);
     }
 

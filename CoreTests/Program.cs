@@ -6,6 +6,7 @@ using System.Threading;
 using System.Linq;
 using Core;
 using System;
+using Microsoft.Extensions.Logging;
 
 #pragma warning disable 0162
 
@@ -14,6 +15,7 @@ namespace CoreTests;
 sealed class Program
 {
     private static Microsoft.Extensions.Logging.ILogger logger;
+    private static ILoggerFactory loggerFactory;
 
     private const bool LogOverall = false;
     private const int delay = 150;
@@ -27,6 +29,11 @@ sealed class Program
 
         Log.Logger = logConfig;
         logger = new SerilogLoggerProvider(Log.Logger).CreateLogger(nameof(Program));
+
+        loggerFactory = LoggerFactory.Create(builder =>
+        {
+            builder.ClearProviders().AddSerilog();
+        });
 
         Test_NPCNameFinder();
         //Test_Input();
@@ -43,7 +50,7 @@ sealed class Program
         NpcNames types = NpcNames.Enemy | NpcNames.Neutral;
         //NpcNames types = NpcNames.Friendly | NpcNames.Neutral;
 
-        using Test_NpcNameFinder test = new(logger, types);
+        using Test_NpcNameFinder test = new(logger, loggerFactory, types);
         int count = 100;
         int i = 0;
 
@@ -72,7 +79,7 @@ sealed class Program
 
     private static void Test_Input()
     {
-        Test_Input test = new(logger);
+        Test_Input test = new(logger, loggerFactory);
         test.Mouse_Movement();
         test.Mouse_Clicks();
         test.Clipboard();
@@ -131,7 +138,7 @@ sealed class Program
 
     private static void Test_MinimapNodeFinder()
     {
-        using Test_MinimapNodeFinder test = new(logger);
+        using Test_MinimapNodeFinder test = new(logger, loggerFactory);
 
         int count = 100;
         int i = 0;
@@ -169,7 +176,7 @@ sealed class Program
         //NpcNames types = NpcNames.Enemy | NpcNames.Neutral;
         NpcNames types = NpcNames.Friendly | NpcNames.Neutral;
 
-        using Test_NpcNameFinder test = new(logger, types);
+        using Test_NpcNameFinder test = new(logger, loggerFactory, types);
 
         int count = 2;
         int i = 0;

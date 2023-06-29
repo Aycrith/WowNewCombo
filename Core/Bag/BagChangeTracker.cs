@@ -4,7 +4,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Core;
 
-public sealed partial class BagChangeTracker : IDisposable
+public interface IBagChangeTracker { }
+
+public class NoBagChangeTracker : IBagChangeTracker { }
+
+public sealed partial class BagChangeTracker : IDisposable, IBagChangeTracker
 {
     private readonly ILogger<BagChangeTracker> logger;
     private readonly BagReader reader;
@@ -27,13 +31,16 @@ public sealed partial class BagChangeTracker : IDisposable
         switch (change)
         {
             case BagItemChange.New:
-                LogItemNew(logger, bagItem.Count, bagItem.Item.Name);
+                LogItemNew(logger,
+                    bagItem.Count, bagItem.Item.Name);
                 break;
             case BagItemChange.Remove:
-                LogItemRemove(logger, bagItem.Count, bagItem.Item.Name);
+                LogItemRemove(logger,
+                    bagItem.Count, bagItem.Item.Name);
                 break;
             case BagItemChange.Update:
-                LogItemUpdate(logger, bagItem.LastCount, bagItem.Count, bagItem.Item.Name);
+                LogItemUpdate(logger,
+                    bagItem.LastCount, bagItem.Count, bagItem.Item.Name);
                 break;
         }
     }
@@ -44,19 +51,20 @@ public sealed partial class BagChangeTracker : IDisposable
     [LoggerMessage(
         EventId = 1997,
         Level = LogLevel.Information,
-        Message = "{oldCount} -> {newCount} {name}")]
-    static partial void LogItemUpdate(ILogger logger, int oldCount, int newCount, string name);
+        Message = "{oldCount,2} -> {newCount,2} {name}")]
+    static partial void LogItemUpdate(ILogger logger,
+        int oldCount, int newCount, string name);
 
     [LoggerMessage(
         EventId = 1998,
         Level = LogLevel.Information,
-        Message = "-{count} {name}")]
+        Message = "-{count,2} {name}")]
     static partial void LogItemRemove(ILogger logger, int count, string name);
 
     [LoggerMessage(
         EventId = 1999,
         Level = LogLevel.Information,
-        Message = "+{count} {name}")]
+        Message = "+{count,2} {name}")]
     static partial void LogItemNew(ILogger logger, int count, string name);
 
     #endregion

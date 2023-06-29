@@ -18,14 +18,12 @@ public sealed class ActionBarCooldownReader
 
     private const float FRACTION_PART = 10f;
 
-    private readonly int cActionbarNum;
+    private const int cActionbarNum = 37;
 
     private readonly Data[] data;
 
-    public ActionBarCooldownReader(int cActionbarNum)
+    public ActionBarCooldownReader()
     {
-        this.cActionbarNum = cActionbarNum;
-
         data = new Data[ActionBar.CELL_COUNT * ActionBar.BIT_PER_CELL];
         Reset();
     }

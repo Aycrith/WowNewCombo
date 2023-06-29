@@ -4,7 +4,7 @@ namespace Core;
 
 public sealed class GossipReader
 {
-    private readonly int cGossip;
+    private const int cGossip = 73;
 
     public int Count { private set; get; }
     public Dictionary<Gossip, int> Gossips { get; } = new();
@@ -26,9 +26,8 @@ public sealed class GossipReader
 
     public bool GossipStartOrMerchantWindowOpened() => GossipStart() || MerchantWindowOpened();
 
-    public GossipReader(int cGossip)
+    public GossipReader()
     {
-        this.cGossip = cGossip;
     }
 
     public void Read(IAddonDataProvider reader)

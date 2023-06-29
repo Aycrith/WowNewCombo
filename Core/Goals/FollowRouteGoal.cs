@@ -21,8 +21,8 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
     private readonly ILogger<FollowRouteGoal> logger;
     private readonly ConfigurableInput input;
     private readonly Wait wait;
-    private readonly AddonReader addonReader;
     private readonly PlayerReader playerReader;
+    private readonly AddonBits bits;
     private readonly ClassConfiguration classConfig;
     private readonly IMountHandler mountHandler;
     private readonly Navigation navigation;
@@ -64,8 +64,9 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
     #endregion
 
 
-    public FollowRouteGoal(ILogger<FollowRouteGoal> logger, 
-        ConfigurableInput input, Wait wait, AddonReader addonReader,
+    public FollowRouteGoal(ILogger<FollowRouteGoal> logger,
+        ConfigurableInput input, Wait wait, PlayerReader playerReader,
+        AddonBits bits,
         ClassConfiguration classConfig, Vector3[] route, Navigation navigation,
         IMountHandler mountHandler, TargetFinder targetFinder,
         IBlacklist blacklist)
@@ -75,9 +76,9 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         this.input = input;
 
         this.wait = wait;
-        this.addonReader = addonReader;
         this.classConfig = classConfig;
-        this.playerReader = addonReader.PlayerReader;
+        this.playerReader = playerReader;
+        this.bits = bits;
         this.mapRoute = route;
         this.mountHandler = mountHandler;
         this.targetFinder = targetFinder;
@@ -184,25 +185,25 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
     public override void Update()
     {
-        if (playerReader.Bits.HasTarget() && playerReader.Bits.TargetIsDead())
+        if (bits.HasTarget() && bits.TargetIsDead())
         {
             Log("Has target but its dead.");
             input.PressClearTarget();
             wait.Update();
 
-            if (playerReader.Bits.HasTarget())
+            if (bits.HasTarget())
             {
                 SendGoapEvent(ScreenCaptureEvent.Default);
                 LogWarning($"Unable to clear target! Check Bindpad settings!");
             }
         }
 
-        if (playerReader.Bits.IsDrowning())
+        if (bits.IsDrowning())
         {
             input.PressJump();
         }
 
-        if (playerReader.Bits.PlayerInCombat() && classConfig.Mode != Mode.AttendedGather) { return; }
+        if (bits.PlayerInCombat() && classConfig.Mode != Mode.AttendedGather) { return; }
 
         if (!sideActivityCts.IsCancellationRequested)
         {
@@ -210,7 +211,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         }
         else
         {
-            if (!playerReader.Bits.HasTarget())
+            if (!bits.HasTarget())
             {
                 LogWarning($"{nameof(sideActivityCts)} is cancelled but needs to be restarted!");
                 sideActivityCts = new();
@@ -229,7 +230,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
         while (!sideActivityCts.IsCancellationRequested)
         {
-            if (targetFinder.Search(NpcNameToFind, playerReader.Bits.TargetIsNotDead, sideActivityCts.Token))
+            if (targetFinder.Search(NpcNameToFind, bits.TargetIsNotDead, sideActivityCts.Token))
             {
                 Log("Found target!");
                 sideActivityCts.Cancel();
@@ -242,7 +243,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         }
 
         if (logger.IsEnabled(LogLevel.Debug))
-            logger.LogDebug("LookingForTarget thread stopped!");
+            logger.LogDebug("LookingForTarget Thread stopped!");
     }
 
     private void Thread_AttendedGather()
@@ -260,7 +261,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         }
 
         if (logger.IsEnabled(LogLevel.Debug))
-            logger.LogDebug("AttendedGather thread stopped!");
+            logger.LogDebug("AttendedGather Thread stopped!");
     }
 
     private void AlternateGatherTypes()

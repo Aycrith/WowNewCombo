@@ -10,6 +10,7 @@ using System;
 using SharedLib.Extensions;
 using Core;
 using Game;
+using SharedLib;
 
 #pragma warning disable 0162
 #nullable enable
@@ -45,18 +46,21 @@ public sealed class Test_NpcNameFinder : IDisposable
 
     private readonly NpcNameOverlay? npcNameOverlay;
 
-    public Test_NpcNameFinder(ILogger logger, NpcNames types)
+    public Test_NpcNameFinder(ILogger logger, ILoggerFactory loggerFactory, NpcNames types)
     {
         this.logger = logger;
 
         wowProcess = new();
-        wowScreen = new(logger, wowProcess);
+        wowScreen = new(loggerFactory.CreateLogger<WowScreen>(), wowProcess);
         WowProcessInput wowProcessInput = new(logger, new(), wowProcess);
 
-        npcNameFinder = new(logger, wowScreen, new ManualResetEventSlim(false));
+        INpcResetEvent npcResetEvent = new NpcResetEvent();
+        npcNameFinder = new(logger, wowScreen, npcResetEvent);
 
         MockMouseOverReader mouseOverReader = new();
-        npcNameTargeting = new(logger, new(), wowScreen, npcNameFinder, wowProcessInput, mouseOverReader, new NoBlacklist(), null!);
+        npcNameTargeting = new(loggerFactory.CreateLogger<NpcNameTargeting>(),
+            new(), wowScreen, npcNameFinder, wowProcessInput,
+            mouseOverReader, new NoBlacklist(), null!);
 
         npcNameFinder.ChangeNpcType(types);
 

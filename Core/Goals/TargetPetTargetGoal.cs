@@ -8,14 +8,17 @@ public sealed class TargetPetTargetGoal : GoapGoal
 
     private readonly ConfigurableInput input;
     private readonly PlayerReader playerReader;
+    private readonly AddonBits bits;
     private readonly Wait wait;
 
     public TargetPetTargetGoal(ConfigurableInput input,
-        PlayerReader playerReader, Wait wait)
+        PlayerReader playerReader, AddonBits bits,
+        Wait wait)
         : base(nameof(TargetPetTargetGoal))
     {
         this.input = input;
         this.playerReader = playerReader;
+        this.bits = bits;
         this.wait = wait;
 
         AddPrecondition(GoapKey.targetisalive, false);
@@ -40,7 +43,8 @@ public sealed class TargetPetTargetGoal : GoapGoal
         input.PressTargetOfTarget();
         wait.Update();
 
-        if (playerReader.Bits.HasTarget() && (playerReader.Bits.TargetIsDead() || playerReader.TargetGuid == playerReader.PetGuid))
+        if (bits.HasTarget() &&
+            (bits.TargetIsDead() || playerReader.TargetGuid == playerReader.PetGuid))
         {
             input.PressClearTarget();
             wait.Update();

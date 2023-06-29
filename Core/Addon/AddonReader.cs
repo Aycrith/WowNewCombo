@@ -15,43 +15,33 @@ public sealed class AddonReader : IAddonReader, IDisposable
     private readonly IAddonDataProvider reader;
     private readonly AutoResetEvent resetEvent;
 
-    public PlayerReader PlayerReader { get; }
+    private readonly PlayerReader PlayerReader;
+    private readonly CombatLog combatLog;
+    private readonly BagReader bagReader;
+    private readonly EquipmentReader equipmentReader;
 
-    public CombatLog CombatLog { get; }
+    private readonly ActionBarCostReader actionBarCostReader;
+    private readonly ActionBarCooldownReader actionBarCooldownReader;
 
-    public BagReader BagReader { get; }
-    public EquipmentReader EquipmentReader { get; }
+    private readonly ActionBarBits<ICurrentAction> currentAction;
+    private readonly ActionBarBits<IUsableAction> usableAction;
 
-    public ActionBarCostReader ActionBarCostReader { get; }
+    private readonly GossipReader gossipReader;
 
-    public ActionBarCooldownReader ActionBarCooldownReader { get; }
+    private readonly SpellBookReader spellBookReader;
+    private readonly TalentReader talentReader;
 
-    public AuraTimeReader PlayerBuffTimeReader { get; }
+    private readonly WorldMapAreaDB worldMapAreaDb;
+    private readonly CreatureDB creatureDb;
+    private readonly AreaDB areaDb;
 
-    public AuraTimeReader TargetDebuffTimeReader { get; }
-
-    public AuraTimeReader TargetBuffTimeReader { get; }
-
-    public ActionBarBits CurrentAction { get; }
-    public ActionBarBits UsableAction { get; }
-
-    public GossipReader GossipReader { get; }
-
-    public SpellBookReader SpellBookReader { get; }
-    public TalentReader TalentReader { get; }
+    public AuraTimeReader<IPlayerBuffTimeReader> PlayerBuffTimeReader { get; }
+    public AuraTimeReader<ITargetDebuffTimeReader> TargetDebuffTimeReader { get; }
+    public AuraTimeReader<ITargetBuffTimeReader> TargetBuffTimeReader { get; }
 
     public event Action? AddonDataChanged;
 
-    public WorldMapAreaDB WorldMapAreaDb { get; }
-
-    public ItemDB ItemDb { get; }
-    public CreatureDB CreatureDb { get; }
-    public AreaDB AreaDb { get; }
-
     public RecordInt GlobalTime { get; } = new(98);
-
-    public int DamageTakenCount() => CombatLog.DamageTaken.Count;
-    public int DamageDoneCount() => CombatLog.DamageDone.Count;
 
     private int lastTargetGuid = -1;
     public string TargetName { get; private set; } = string.Empty;
@@ -64,47 +54,58 @@ public sealed class AddonReader : IAddonReader, IDisposable
     private int updateIndex;
     private DateTime lastUpdate;
 
-    public AddonReader(ILogger logger, IAddonDataProvider reader, PlayerReader playerReader,
-        AutoResetEvent resetEvent, AreaDB areaDB, WorldMapAreaDB worldMapAreaDB,
-        ItemDB itemDB, CreatureDB creatureDB, SpellDB spellDB, TalentDB talentDB)
+    public AddonReader(ILogger logger, IAddonDataProvider reader, 
+        PlayerReader playerReader, AutoResetEvent resetEvent,
+        AreaDB areaDB, WorldMapAreaDB worldMapAreaDB, CreatureDB creatureDB,
+        CombatLog combatLog,
+        EquipmentReader equipmentReader, BagReader bagReader,
+        GossipReader gossipReader, SpellBookReader spellBookReader,
+        TalentReader talentReader,
+        ActionBarCostReader actionBarCostReader,
+        ActionBarCooldownReader actionBarCooldownReader,
+        ActionBarBits<ICurrentAction> currentAction,
+        ActionBarBits<IUsableAction> usableAction,
+        AuraTimeReader<IPlayerBuffTimeReader> playerBuffTimeReader,
+        AuraTimeReader<ITargetDebuffTimeReader> targetDebuffTimeReader,
+        AuraTimeReader<ITargetBuffTimeReader> targetBuffTimeReader
+        )
     {
         this.logger = logger;
         this.reader = reader;
         this.resetEvent = resetEvent;
 
-        this.AreaDb = areaDB;
-        this.WorldMapAreaDb = worldMapAreaDB;
-        this.ItemDb = itemDB;
-        this.CreatureDb = creatureDB;
+        this.areaDb = areaDB;
+        this.worldMapAreaDb = worldMapAreaDB;
+        this.creatureDb = creatureDB;
 
-        this.CombatLog = new(64, 65, 66, 67);
+        this.combatLog = combatLog;
 
-        this.EquipmentReader = new(ItemDb, 23, 24);
-        this.BagReader = new(ItemDb, EquipmentReader, 20, 21, 22);
+        this.equipmentReader = equipmentReader;
+        this.bagReader = bagReader;
 
-        this.ActionBarCostReader = new(35, 36);
-        this.ActionBarCooldownReader = new(37);
+        this.actionBarCostReader = actionBarCostReader;
+        this.actionBarCooldownReader = actionBarCooldownReader;
 
-        this.GossipReader = new(73);
+        this.gossipReader = gossipReader;
 
-        this.SpellBookReader = new(71, spellDB);
+        this.spellBookReader = spellBookReader;
 
         this.PlayerReader = playerReader;
-        this.TalentReader = new(72, PlayerReader, talentDB);
+        this.talentReader = talentReader;
 
-        this.CurrentAction = new(25, 26, 27, 28, 29);
-        this.UsableAction = new(30, 31, 32, 33, 34);
+        this.currentAction = currentAction;
+        this.usableAction = usableAction;
 
-        this.PlayerBuffTimeReader = new(79, 80);
-        this.TargetDebuffTimeReader = new(81, 82);
-        this.TargetBuffTimeReader = new(83, 84);
+        this.PlayerBuffTimeReader = playerBuffTimeReader;
+        this.TargetDebuffTimeReader = targetDebuffTimeReader;
+        this.TargetBuffTimeReader = targetBuffTimeReader;
 
         lastUpdate = DateTime.UtcNow;
     }
 
     public void Dispose()
     {
-        BagReader.Dispose();
+        bagReader.Dispose();
     }
 
     public void Update()
@@ -137,8 +138,8 @@ public sealed class AddonReader : IAddonReader, IDisposable
 
         IAddonDataProvider reader = this.reader;
 
-        CurrentAction.Update(reader);
-        UsableAction.Update(reader);
+        currentAction.Update(reader);
+        usableAction.Update(reader);
 
         PlayerReader.Update(reader);
 
@@ -147,7 +148,7 @@ public sealed class AddonReader : IAddonReader, IDisposable
             lastTargetGuid = PlayerReader.TargetGuid;
 
             TargetName =
-                CreatureDb.Entries.TryGetValue(PlayerReader.TargetId, out string? name)
+                creatureDb.Entries.TryGetValue(PlayerReader.TargetId, out string? name)
                 ? name
                 : reader.GetString(16) + reader.GetString(17);
         }
@@ -156,29 +157,29 @@ public sealed class AddonReader : IAddonReader, IDisposable
         {
             lastMouseOverId = PlayerReader.MouseOverId;
             MouseOverName =
-                CreatureDb.Entries.TryGetValue(PlayerReader.MouseOverId, out string? name)
+                creatureDb.Entries.TryGetValue(PlayerReader.MouseOverId, out string? name)
                 ? name
                 : string.Empty;
         }
 
-        CombatLog.Update(reader, PlayerReader.Bits.PlayerInCombat());
+        combatLog.Update(reader, PlayerReader.Bits.PlayerInCombat());
 
-        BagReader.Read(reader);
-        EquipmentReader.Read(reader);
+        bagReader.Read(reader);
+        equipmentReader.Read(reader);
 
-        ActionBarCostReader.Read(reader);
-        ActionBarCooldownReader.Read(reader);
+        actionBarCostReader.Read(reader);
+        actionBarCooldownReader.Read(reader);
 
-        GossipReader.Read(reader);
+        gossipReader.Read(reader);
 
-        SpellBookReader.Read(reader);
-        TalentReader.Read(reader);
+        spellBookReader.Read(reader);
+        talentReader.Read(reader);
 
         PlayerBuffTimeReader.Read(reader);
         TargetDebuffTimeReader.Read(reader);
         TargetBuffTimeReader.Read(reader);
 
-        AreaDb.Update(WorldMapAreaDb.GetAreaId(PlayerReader.UIMapId.Value));
+        areaDb.Update(worldMapAreaDb.GetAreaId(PlayerReader.UIMapId.Value));
 
         resetEvent.Set();
     }
@@ -190,17 +191,17 @@ public sealed class AddonReader : IAddonReader, IDisposable
 
     public void SessionReset()
     {
-        CombatLog.Reset();
+        combatLog.Reset();
     }
 
     public void FullReset()
     {
         PlayerReader.Reset();
 
-        ActionBarCostReader.Reset();
-        ActionBarCooldownReader.Reset();
-        SpellBookReader.Reset();
-        TalentReader.Reset();
+        actionBarCostReader.Reset();
+        actionBarCooldownReader.Reset();
+        spellBookReader.Reset();
+        talentReader.Reset();
 
         PlayerBuffTimeReader.Reset();
         TargetDebuffTimeReader.Reset();

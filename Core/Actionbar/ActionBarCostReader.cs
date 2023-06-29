@@ -31,8 +31,8 @@ public class ActionBarCostReader
     private const int COST_ORDER = 10000;
     private const int POWER_TYPE_MOD = 100;
 
-    private readonly int cActionbarMeta;
-    private readonly int cActionbarNum;
+    private const int cActionbarMeta = 35;
+    private const int cActionbarNum = 36;
 
     private static readonly ActionBarCost defaultCost = new(PowerType.Mana, 0);
     private readonly ActionBarCost[][] data;
@@ -42,11 +42,8 @@ public class ActionBarCostReader
     public event EventHandler<ActionBarCostEventArgs>? OnActionCostChanged;
     public event Action? OnActionCostReset;
 
-    public ActionBarCostReader(int cActionbarMeta, int cActionbarNum)
+    public ActionBarCostReader()
     {
-        this.cActionbarMeta = cActionbarMeta;
-        this.cActionbarNum = cActionbarNum;
-
         data = new ActionBarCost[ActionBar.CELL_COUNT * ActionBar.BIT_PER_CELL][];
         for (int s = 0; s < data.Length; s++)
         {

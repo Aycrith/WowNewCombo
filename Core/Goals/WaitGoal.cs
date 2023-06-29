@@ -6,10 +6,10 @@ public sealed class WaitGoal : GoapGoal
 {
     public override float Cost => 21;
 
-    private readonly ILogger logger;
+    private readonly ILogger<WaitGoal> logger;
     private readonly Wait wait;
 
-    public WaitGoal(ILogger logger, Wait wait)
+    public WaitGoal(ILogger<WaitGoal> logger, Wait wait)
         : base(nameof(WaitGoal))
     {
         this.logger = logger;
@@ -18,7 +18,7 @@ public sealed class WaitGoal : GoapGoal
 
     public override void OnEnter()
     {
-        logger.LogInformation("Waiting");
+        logger.LogInformation("...");
     }
 
     public override void Update()

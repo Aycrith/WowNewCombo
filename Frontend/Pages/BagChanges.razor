@@ -1,5 +1,6 @@
 ﻿@inject IJSRuntime JSRuntime
-@inject IAddonReader addonReader
+
+@inject BagReader bagReader
 
 @implements IDisposable
 
@@ -25,7 +26,7 @@
 }
 @code {
 
-    private const int MaxItemToShow = 14;
+    private const int MaxItemToShow = 12;
     private const int MaxLifeTimeSec = 15;
 
     private Timer timer = null!;
@@ -36,16 +37,16 @@
 
     protected override void OnInitialized()
     {
-        NewItems = addonReader.BagReader.BagItems.Where(WasRecentlyUpdated);
+        NewItems = bagReader.BagItems.Where(WasRecentlyUpdated);
 
-        addonReader.BagReader.DataChanged += OnBagReaderDataChanged;
+        bagReader.DataChanged += OnBagReaderDataChanged;
 
         timer = new Timer(TimerTick);
     }
 
     public void Dispose()
     {
-        addonReader.BagReader.DataChanged -= OnBagReaderDataChanged;
+        bagReader.DataChanged -= OnBagReaderDataChanged;
         timer.Dispose();
     }
 
@@ -71,7 +72,7 @@
 
     public void OnBagReaderDataChanged()
     {
-        NewItems = addonReader.BagReader.BagItems.Where(WasRecentlyUpdated);
+        NewItems = bagReader.BagItems.Where(WasRecentlyUpdated);
 
         if (NewItems.Count() > MaxItemToShow)
         {

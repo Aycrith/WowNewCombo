@@ -1,9 +1,11 @@
 ﻿@page "/Swag"
 
-@inject IAddonReader addonReader
 @inject IBotController botController
 @inject IJSRuntime JSRuntime
 @inject WApi api
+
+@inject BagReader bagReader
+@inject EquipmentReader equipmentReader
 
 @implements IDisposable
 
@@ -72,15 +74,9 @@
 @code {
     private Currency TotalVendorMoney { get; set; } = Currency.Empty;
 
-    private BagReader bagReader = null!;
-    private EquipmentReader equipmentReader = null!;
-
     protected override void OnInitialized()
     {
-        bagReader = addonReader.BagReader;
         bagReader.DataChanged += OnBagReaderDataChanged;
-
-        equipmentReader = addonReader.EquipmentReader;
         equipmentReader.OnEquipmentChanged += OnEquipmentChanged;
     }
 

@@ -19,8 +19,8 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
     private readonly ILogger<ApproachTargetGoal> logger;
     private readonly ConfigurableInput input;
     private readonly Wait wait;
-    private readonly AddonReader addonReader;
     private readonly PlayerReader playerReader;
+    private readonly AddonBits bits;
     private readonly StopMoving stopMoving;
     private readonly CombatUtil combatUtil;
     private readonly IBlacklist targetBlacklist;
@@ -36,8 +36,9 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
     private double ApproachDurationMs =>
         (DateTime.UtcNow - approachStart).TotalMilliseconds;
 
-    public ApproachTargetGoal(ILogger<ApproachTargetGoal> logger, 
-        ConfigurableInput input, Wait wait, AddonReader addonReader,
+    public ApproachTargetGoal(ILogger<ApproachTargetGoal> logger,
+        ConfigurableInput input, Wait wait,
+        PlayerReader playerReader, AddonBits addonBits,
         StopMoving stopMoving, CombatUtil combatUtil, IBlacklist blacklist)
         : base(nameof(ApproachTargetGoal))
     {
@@ -45,8 +46,9 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
         this.input = input;
 
         this.wait = wait;
-        this.addonReader = addonReader;
-        this.playerReader = addonReader.PlayerReader;
+        this.playerReader = playerReader;
+        this.bits = addonBits;
+
         this.stopMoving = stopMoving;
         this.combatUtil = combatUtil;
         this.targetBlacklist = blacklist;
@@ -88,7 +90,7 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
     {
         wait.Update();
 
-        if (combatUtil.EnteredCombat() && !playerReader.Bits.TargetInCombat())
+        if (combatUtil.EnteredCombat() && !bits.TargetInCombat())
         {
             stopMoving.Stop();
 
@@ -104,7 +106,7 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
             input.PressApproach();
         }
 
-        if (!playerReader.Bits.PlayerInCombat())
+        if (!bits.PlayerInCombat())
         {
             NonCombatApproach();
             RandomJump();
@@ -166,7 +168,7 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
 
             if (playerReader.TargetGuid != initialTargetGuid)
             {
-                if (playerReader.Bits.HasTarget() && !targetBlacklist.Is()) // blacklist
+                if (bits.HasTarget() && !targetBlacklist.Is())
                 {
                     if (playerReader.MinRange() < initialTargetMinRange)
                     {

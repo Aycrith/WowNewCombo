@@ -23,8 +23,14 @@ public sealed partial class CastingHandler
     private readonly ConfigurableInput input;
 
     private readonly Wait wait;
-    private readonly AddonReader addonReader;
     private readonly PlayerReader playerReader;
+    private readonly AddonBits bits;
+    private readonly BagReader bagReader;
+
+    private readonly CombatLog combatLog;
+
+    private readonly ActionBarBits<IUsableAction> usableAction;
+    private readonly ActionBarBits<ICurrentAction> currentAction;
 
     private readonly ClassConfiguration classConfig;
     private readonly PlayerDirection direction;
@@ -40,8 +46,14 @@ public sealed partial class CastingHandler
     public static int _GCD() => GCD;
 
     public CastingHandler(ILogger logger, ConfigurableInput input,
-        ClassConfiguration classConfig,
-        Wait wait, AddonReader addonReader, PlayerDirection direction,
+        ClassConfiguration classConfig, AddonBits bits,
+        ActionBarBits<IUsableAction> usableAction,
+        ActionBarBits<ICurrentAction> currentAction,
+        Wait wait,
+        PlayerReader playerReader,
+        BagReader bagReader,
+        CombatLog combatLog,
+        PlayerDirection direction,
         StopMoving stopMoving, ReactCastError react,
         CastingHandlerInterruptWatchdog interruptWatchdog)
     {
@@ -49,8 +61,14 @@ public sealed partial class CastingHandler
         this.input = input;
 
         this.wait = wait;
-        this.addonReader = addonReader;
-        this.playerReader = addonReader.PlayerReader;
+        this.bits = bits;
+        this.playerReader = playerReader;
+        this.bagReader = bagReader;
+
+        this.combatLog = combatLog;
+
+        this.usableAction = usableAction;
+        this.currentAction = currentAction;
 
         this.classConfig = classConfig;
         this.direction = direction;
@@ -102,7 +120,7 @@ public sealed partial class CastingHandler
         playerReader.CastEvent.ForceUpdate(0);
         int beforeCastEventValue = playerReader.CastEvent.Value;
         int beforeSpellId = playerReader.CastSpellId.Value;
-        bool beforeUsable = addonReader.UsableAction.Is(item);
+        bool beforeUsable = usableAction.Is(item);
         int beforePT = playerReader.PTCurrent();
 
         int pressMs = PressKeyAction(item, token);
@@ -121,7 +139,7 @@ public sealed partial class CastingHandler
         if (item.AfterCastWaitSwing)
         {
             elapsedMs = wait.Until(playerReader.MainHandSpeedMs() + playerReader.NetworkLatency.Value,
-                interrupt: () => !addonReader.CurrentAction.Is(item) ||
+                interrupt: () => !currentAction.Is(item) ||
                     playerReader.MainHandSwing.ElapsedMs() < playerReader.SpellQueueTimeMs, // swing timer reset from any miss
                 repeat: input.PressApproachOnCooldown);
         }
@@ -129,8 +147,8 @@ public sealed partial class CastingHandler
         {
             elapsedMs = wait.Until(SPELL_QUEUE + playerReader.NetworkLatency.Value,
                 interrupt: () =>
-                    beforeUsable != addonReader.UsableAction.Is(item) ||
-                    addonReader.CurrentAction.Is(item));
+                    beforeUsable != usableAction.Is(item) ||
+                    currentAction.Is(item));
         }
         else
         {
@@ -148,7 +166,7 @@ public sealed partial class CastingHandler
             return false;
 
         if (Log && item.Log)
-            LogInstantUsableChange(logger, item.Name, beforeUsable, addonReader.UsableAction.Is(item), ((UI_ERROR)beforeCastEventValue).ToStringF(), ((UI_ERROR)playerReader.CastEvent.Value).ToStringF());
+            LogInstantUsableChange(logger, item.Name, beforeUsable, usableAction.Is(item), ((UI_ERROR)beforeCastEventValue).ToStringF(), ((UI_ERROR)playerReader.CastEvent.Value).ToStringF());
 
         if (!CastSuccessful(playerReader.CastEvent.Value))
         {
@@ -170,7 +188,7 @@ public sealed partial class CastingHandler
 
     private bool CastCastbar(KeyAction item, CancellationToken token)
     {
-        wait.While(playerReader.Bits.IsFalling);
+        wait.While(bits.IsFalling);
 
         if (!playerReader.IsCasting())
         {
@@ -178,7 +196,7 @@ public sealed partial class CastingHandler
             wait.Update();
         }
 
-        bool beforeUsable = addonReader.UsableAction.Is(item);
+        bool beforeUsable = usableAction.Is(item);
         int beforeCastEventValue = playerReader.CastEvent.Value;
         int beforeSpellId = playerReader.CastSpellId.Value;
         int beforeCastCount = playerReader.CastCount;
@@ -209,7 +227,7 @@ public sealed partial class CastingHandler
             return false;
 
         if (Log && item.Log)
-            LogCastbarUsableChange(logger, item.Name, playerReader.IsCasting(), playerReader.CastCount, beforeUsable, addonReader.UsableAction.Is(item), ((UI_ERROR)beforeCastEventValue).ToStringF(), ((UI_ERROR)playerReader.CastEvent.Value).ToStringF());
+            LogCastbarUsableChange(logger, item.Name, playerReader.IsCasting(), playerReader.CastCount, beforeUsable, usableAction.Is(item), ((UI_ERROR)beforeCastEventValue).ToStringF(), ((UI_ERROR)playerReader.CastEvent.Value).ToStringF());
 
         if (!CastSuccessful(playerReader.CastEvent.Value))
         {
@@ -267,6 +285,7 @@ public sealed partial class CastingHandler
     public bool Cast(KeyAction item, Func<bool> interrupt)
     {
         using CancellationTokenSource cts = new();
+
         if (item.PressDuration > InputDuration.DefaultPress ||
             item.HasCastBar)
             interruptWatchdog.Set(interrupt, cts);
@@ -275,7 +294,7 @@ public sealed partial class CastingHandler
 
         if (item.HasFormRequirement && playerReader.Form != item.FormEnum)
         {
-            bool beforeUsable = addonReader.UsableAction.Is(item);
+            bool beforeUsable = usableAction.Is(item);
             Form beforeForm = playerReader.Form;
 
             if (!SwitchForm(item))
@@ -291,7 +310,7 @@ public sealed partial class CastingHandler
             }
 
             //TODO: upon form change and GCD - have to check Usable state
-            if (!beforeUsable && !addonReader.UsableAction.Is(item))
+            if (!beforeUsable && !usableAction.Is(item))
             {
                 if (Log && item.Log)
                     LogAfterFormSwitchNotUsable(logger, item.Name, beforeForm.ToStringF(), playerReader.Form.ToStringF());
@@ -301,14 +320,14 @@ public sealed partial class CastingHandler
             }
         }
 
-        if (playerReader.Bits.SpellOn_Shoot())
+        if (bits.SpellOn_Shoot())
         {
             input.PressStopAttack();
             input.PressStopAttack();
 
             int waitTime = Max(playerReader.GCD.Value, playerReader.RemainCastMs) + (2 * playerReader.NetworkLatency.Value);
             elapsedMs = wait.Until(waitTime, cts.Token);
-            logger.LogInformation($"Stop {nameof(playerReader.Bits.SpellOn_Shoot)} and wait {waitTime}ms | {elapsedMs}ms");
+            logger.LogInformation($"Stop {nameof(bits.SpellOn_Shoot)} and wait {waitTime}ms | {elapsedMs}ms");
             if (elapsedMs >= 0)
             {
                 interruptWatchdog.Reset();
@@ -337,7 +356,7 @@ public sealed partial class CastingHandler
         }
 
         int auraHash = playerReader.AuraCount.Hash;
-        int bagHash = addonReader.BagReader.Hash;
+        int bagHash = bagReader.Hash;
 
         if (!item.HasCastBar)
         {
@@ -370,12 +389,12 @@ public sealed partial class CastingHandler
 
             elapsedMs = wait.Until(totalTime, () =>
                 auraHash != playerReader.AuraCount.Hash ||
-                (MissType)addonReader.CombatLog.TargetMissType.Value != MissType.NONE ||
+                (MissType)combatLog.TargetMissType.Value != MissType.NONE ||
                 cts.Token.IsCancellationRequested
                 );
 
             if (Log && item.Log)
-                LogAfterCastWaitBuff(logger, item.Name, playerReader.AuraCount.ToString(), ((MissType)addonReader.CombatLog.TargetMissType.Value).ToStringF(), elapsedMs);
+                LogAfterCastWaitBuff(logger, item.Name, playerReader.AuraCount.ToString(), ((MissType)combatLog.TargetMissType.Value).ToStringF(), elapsedMs);
         }
 
         if (item.AfterCastAuraExpected)
@@ -395,7 +414,7 @@ public sealed partial class CastingHandler
             int totalTime = Max(playerReader.GCD.Value, playerReader.RemainCastMs) + playerReader.SpellQueueTimeMs;
 
             elapsedMs = wait.Until(totalTime,
-                () => bagHash != addonReader.BagReader.Hash || cts.Token.IsCancellationRequested);
+                () => bagHash != bagReader.Hash || cts.Token.IsCancellationRequested);
             if (Log && item.Log)
                 LogAfterCastWaitBag(logger, item.Name, elapsedMs);
         }
@@ -403,7 +422,7 @@ public sealed partial class CastingHandler
         if (item.AfterCastWaitCombat)
         {
             elapsedMs = wait.Until(2 * GCD,
-                () => playerReader.Bits.PlayerInCombat() || cts.Token.IsCancellationRequested);
+                () => bits.PlayerInCombat() || cts.Token.IsCancellationRequested);
 
             if (Log && item.Log)
                 LogAfterCastWaitCombat(logger, item.Name, elapsedMs);
@@ -502,7 +521,7 @@ public sealed partial class CastingHandler
         float elapsedMs = wait.Until(duration, token);
 
         if (Log && item.Log)
-            LogGCD(logger, item.Name, addonReader.UsableAction.Is(item), duration, elapsedMs);
+            LogGCD(logger, item.Name, usableAction.Is(item), duration, elapsedMs);
 
         return elapsedMs < 0;
     }
@@ -541,8 +560,8 @@ public sealed partial class CastingHandler
 
     private void RepeatPetAttack()
     {
-        if (playerReader.Bits.PlayerInCombat() &&
-            playerReader.Bits.HasPet() &&
+        if (bits.PlayerInCombat() &&
+            bits.HasPet() &&
             !playerReader.PetHasTarget() &&
             input.PetAttack.GetRemainingCooldown() == 0)
         {

@@ -1,4 +1,4 @@
-using SharedLib.Extensions;
+﻿using SharedLib.Extensions;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Drawing;
@@ -63,7 +63,7 @@ public sealed partial class NpcNameFinder : IDisposable
     private readonly ILogger logger;
     private readonly IBitmapProvider bitmapProvider;
     private readonly PixelFormat pixelFormat;
-    private readonly ManualResetEventSlim resetEvent;
+    private readonly INpcResetEvent resetEvent;
 
     private readonly int bytesPerPixel;
 
@@ -156,7 +156,8 @@ public sealed partial class NpcNameFinder : IDisposable
 
     #endregion
 
-    public NpcNameFinder(ILogger logger, IBitmapProvider bitmapProvider, ManualResetEventSlim resetEvent)
+    public NpcNameFinder(ILogger logger, IBitmapProvider bitmapProvider,
+        INpcResetEvent resetEvent)
     {
         this.logger = logger;
         this.bitmapProvider = bitmapProvider;
@@ -174,7 +175,9 @@ public sealed partial class NpcNameFinder : IDisposable
         CalculateHeightMultipiler();
 
         Area = new Rectangle(new Point(0, (int)ScaleHeight(topOffset)),
-            new Size((int)(bitmapProvider.Bitmap.Width * 0.87f), (int)(bitmapProvider.Bitmap.Height * 0.6f)));
+            new Size(
+                (int)(bitmapProvider.Bitmap.Width * 0.87f),
+                (int)(bitmapProvider.Bitmap.Height * 0.6f)));
 
         int screenWidth = bitmapProvider.Rect.Width;
         screenMid = screenWidth / 2;
@@ -364,7 +367,7 @@ public sealed partial class NpcNameFinder : IDisposable
     {
         unchecked
         {
-            int sqrDistance = 
+            int sqrDistance =
                 ((rr - r) * (rr - r)) +
                 ((gg - g) * (gg - g)) +
                 ((bb - b) * (bb - b));
@@ -373,10 +376,12 @@ public sealed partial class NpcNameFinder : IDisposable
     }
 
     private static bool FuzzyEnemyOrNeutral(byte r, byte g, byte b)
-        => FuzzyColor(fE_R, fE_G, fE_B, r, g, b, colorFuzz) || FuzzyColor(fN_R, fN_G, fN_B, r, g, b, colorFuzz);
+        => FuzzyColor(fE_R, fE_G, fE_B, r, g, b, colorFuzz) ||
+            FuzzyColor(fN_R, fN_G, fN_B, r, g, b, colorFuzz);
 
     private static bool FuzzyFriendlyOrNeutral(byte r, byte g, byte b)
-        => FuzzyColor(fF_R, fF_G, fF_B, r, g, b, colorFuzz) || FuzzyColor(fN_R, fN_G, fN_B, r, g, b, colorFuzz);
+        => FuzzyColor(fF_R, fF_G, fF_B, r, g, b, colorFuzz) ||
+            FuzzyColor(fN_R, fN_G, fN_B, r, g, b, colorFuzz);
 
     private static bool FuzzyEnemy(byte r, byte g, byte b)
         => FuzzyColor(fE_R, fE_G, fE_B, r, g, b, colorFuzz);
@@ -649,6 +654,12 @@ public sealed partial class NpcNameFinder : IDisposable
         }
         */
 
+        // TODO: Overflow error. ''\_(o.o)_/''
+        /*
+        System.OverflowException: Overflow error.
+        at System.Drawing.Graphics.CheckErrorStatus(Int32 status)
+        at System.Drawing.Graphics.DrawRectangle(Pen pen, Int32 x, Int32 y, Int32 width, Int32 height)
+        */
         for (int i = 0; i < Npcs.Count; i++)
         {
             NpcPosition n = Npcs[i];

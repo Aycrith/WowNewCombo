@@ -4,8 +4,9 @@
 @using Core.Goals
 @using System.Text.RegularExpressions
 
-@inject IAddonReader addonReader
 @inject IBotController botController
+
+@inject ActionBarCooldownReader ActionBarCooldownReader
 
 <tr class="@ActionClass(IsSelected, 0)">
     <td>
@@ -44,7 +45,7 @@
 
                     int cooldown = 0;
                     if (key.Slot > 0)
-                        cooldown = addonReader.ActionBarCooldownReader.Get(key);
+                        cooldown = ActionBarCooldownReader.Get(key);
 
                     <tr class="@ActionClass(lastKey == key.ConsoleKeyFormHash, cooldown)">
                         <td>

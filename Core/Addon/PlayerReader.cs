@@ -12,16 +12,26 @@ public sealed partial class PlayerReader : IMouseOverReader
 
     public int SpellQueueTimeMs { get; set; } = 400;
 
-    public PlayerReader(IAddonDataProvider reader, WorldMapAreaDB mapAreaDB)
+    public PlayerReader(
+        IAddonDataProvider reader,
+        WorldMapAreaDB mapAreaDB,
+        AddonBits addonBits,
+        SpellInRange spellInRange,
+        BuffStatus buffStatus,
+        TargetDebuffStatus targetDebuffStatus,
+        Stance stance)
     {
         this.worldMapAreaDB = mapAreaDB;
 
         this.reader = reader;
-        Bits = new(8, 9);
-        SpellInRange = new(40);
-        Buffs = new(41);
-        TargetDebuffs = new(42);
-        Stance = new(48);
+
+        Bits = addonBits;
+        SpellInRange = spellInRange;
+        Buffs = buffStatus;
+        TargetDebuffs = targetDebuffStatus;
+        Stance = stance;
+
+        // TODO: inject! value type tho
         CustomTrigger1 = new(reader.GetInt(74));
     }
 
@@ -186,13 +196,11 @@ public sealed partial class PlayerReader : IMouseOverReader
 
     public void Update(IAddonDataProvider reader)
     {
-        if (UIMapId.Updated(reader) && UIMapId.Value != 0)
+        if (UIMapId.Updated(reader) && UIMapId.Value != 0 &&
+            worldMapAreaDB.TryGet(UIMapId.Value, out var wma))
         {
-            if (worldMapAreaDB.TryGet(UIMapId.Value, out var wma))
-            {
-                WorldMapArea = wma;
-                MapId = wma.MapID;
-            }
+            WorldMapArea = wma;
+            MapId = wma.MapID;
         }
 
         Bits.Update(reader);

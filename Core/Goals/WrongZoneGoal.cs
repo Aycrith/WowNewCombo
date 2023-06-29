@@ -15,20 +15,23 @@ public sealed class WrongZoneGoal : GoapGoal
 {
     public override float Cost => 19f;
 
-    private const float RADIAN = MathF.PI * 2;
+    private const float RADIAN = PI * 2;
 
-    private readonly ILogger logger;
+    private readonly ILogger<WrongZoneGoal> logger;
     private readonly ConfigurableInput input;
     private readonly PlayerReader playerReader;
     private readonly PlayerDirection playerDirection;
     private readonly StuckDetector stuckDetector;
-    private readonly ClassConfiguration classConfiguration;
+    private readonly ClassConfiguration classConfig;
 
     private float lastDistance = 999;
 
     public DateTime LastActive { get; private set; }
 
-    public WrongZoneGoal(PlayerReader playerReader, ConfigurableInput input, PlayerDirection playerDirection, ILogger logger, StuckDetector stuckDetector, ClassConfiguration classConfiguration)
+    public WrongZoneGoal(ILogger<WrongZoneGoal> logger,
+        PlayerReader playerReader, ConfigurableInput input,
+        PlayerDirection playerDirection,
+        StuckDetector stuckDetector, ClassConfiguration classConfig)
         : base(nameof(WrongZoneGoal))
     {
         this.playerReader = playerReader;
@@ -36,19 +39,19 @@ public sealed class WrongZoneGoal : GoapGoal
         this.playerDirection = playerDirection;
         this.logger = logger;
         this.stuckDetector = stuckDetector;
-        this.classConfiguration = classConfiguration;
+        this.classConfig = classConfig;
 
         AddPrecondition(GoapKey.incombat, false);
     }
 
     public override bool CanRun()
     {
-        return playerReader.UIMapId.Value == classConfiguration.WrongZone.ZoneId;
+        return playerReader.UIMapId.Value == classConfig.WrongZone.ZoneId;
     }
 
     public override void Update()
     {
-        Vector3 exitMap = classConfiguration.WrongZone.ExitZoneLocation;
+        Vector3 exitMap = classConfig.WrongZone.ExitZoneLocation;
 
         input.StartForward(true);
 

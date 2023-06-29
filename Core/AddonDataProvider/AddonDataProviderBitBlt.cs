@@ -73,7 +73,7 @@ public sealed class AddonDataProviderBitBlt : IAddonDataProvider, IDisposable
         IntPtr memoryDC = graphics.GetHdc();
 
         BitBlt(memoryDC,
-            0, 0, 
+            0, 0,
             rect.Width, rect.Height,
             windowDC, 0, 0,
             TernaryRasterOperations.SRCCOPY);
@@ -83,6 +83,12 @@ public sealed class AddonDataProviderBitBlt : IAddonDataProvider, IDisposable
         unsafe
         {
             BitmapData bd = bitmap.LockBits(rect, ImageLockMode.ReadOnly, AddonDataProviderConfig.PIXEL_FORMAT);
+
+            // TODO: problem the  
+            // int nXSrc, int nYSrc
+            // 0 0 coordinates dosent point to the top left corner in the window
+            // instead there are (68,28) area offset ?!
+            //bitmap.Save("helpme.bmp");
 
             ReadOnlySpan<DataFrame> frames = this.frames;
 

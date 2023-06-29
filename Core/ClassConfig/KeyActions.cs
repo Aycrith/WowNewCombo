@@ -5,9 +5,11 @@ namespace Core;
 
 public partial class KeyActions : IDisposable
 {
-    public KeyAction[] Sequence { get; set; } = Array.Empty<KeyAction>();
+    public KeyAction[] Sequence { get; set; } =
+        Array.Empty<KeyAction>();
 
-    public virtual void PreInitialise(string prefix, RequirementFactory requirementFactory, ILogger logger)
+    public virtual void PreInitialise(string prefix,
+        RequirementFactory requirementFactory, ILogger logger)
     {
         if (Sequence.Length > 0)
         {
@@ -23,7 +25,12 @@ public partial class KeyActions : IDisposable
         }
     }
 
-    public virtual void Initialise(string prefix, ClassConfiguration config, AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger, bool globalLog)
+    public virtual void Initialise(string prefix,
+        ClassConfiguration config, AddonReader addonReader,
+        PlayerReader playerReader, RecordInt globalTime,
+        ActionBarCostReader costReader,
+        RequirementFactory requirementFactory, ILogger logger,
+        bool globalLog)
     {
         if (Sequence.Length > 0)
         {
@@ -32,7 +39,9 @@ public partial class KeyActions : IDisposable
 
         for (int i = 0; i < Sequence.Length; i++)
         {
-            Sequence[i].Initialise(config, addonReader, requirementFactory, logger, globalLog);
+            Sequence[i].Initialise(config, addonReader, playerReader,
+                globalTime, costReader, requirementFactory,
+                logger, globalLog);
         }
     }
 

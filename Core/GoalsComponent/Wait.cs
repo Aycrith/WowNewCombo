@@ -20,6 +20,11 @@ public sealed class Wait
         globalTime.WaitOne();
     }
 
+    public bool Update(int timeout)
+    {
+        return globalTime.WaitOne(timeout);
+    }
+
     public void Fixed(int durationMs)
     {
         ct.WaitHandle.WaitOne(durationMs);

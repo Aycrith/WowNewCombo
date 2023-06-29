@@ -10,6 +10,7 @@ using Core.Session;
 using System.Numerics;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Specialized;
+using SharedLib;
 
 namespace Core.GOAP;
 
@@ -27,15 +28,17 @@ public sealed partial class GoapAgent : IDisposable
     private readonly RouteInfo routeInfo;
     private readonly ConfigurableInput input;
     private readonly IMountHandler mountHandler;
+    private readonly CombatLog combatLog;
 
     private readonly IGrindSessionHandler sessionHandler;
     private readonly StopMoving stopMoving;
 
     private readonly Thread goapThread;
-    private readonly CancellationTokenSource cts;
+    private readonly CancellationTokenSource<GoapAgent> cts;
     private readonly ManualResetEventSlim manualReset;
 
     private readonly IScreenCapture screenCapture;
+    private readonly IBagChangeTracker bagChangeTracker;
 
     private bool active;
     public bool Active
@@ -93,35 +96,41 @@ public sealed partial class GoapAgent : IDisposable
     public Stack<GoapGoal> Plan { get; private set; }
     public GoapGoal? CurrentGoal { get; private set; }
 
-    public GoapAgent(IServiceScope scope, DataConfig dataConfig,
-        IGrindSessionDAO sessionDAO, SessionStat sessionStat, IWowScreen wowScreen,
-        IScreenCapture screenCapture, RouteInfo routeInfo)
+    public GoapAgent(IServiceScope scope, RouteInfo routeInfo)
     {
+        this.cts = scope.ServiceProvider.GetRequiredService<CancellationTokenSource<GoapAgent>>();
+
         this.scope = scope;
+        this.routeInfo = routeInfo;
 
         this.logger = scope.ServiceProvider.GetRequiredService<ILogger<GoapAgent>>();
         this.globalLogger = scope.ServiceProvider.GetRequiredService<ILogger>();
 
-        this.screenCapture = screenCapture;
+        this.screenCapture = scope.ServiceProvider.GetRequiredService<IScreenCapture>();
         this.classConfig = scope.ServiceProvider.GetRequiredService<ClassConfiguration>();
-        this.cts = new();
-        this.wowScreen = wowScreen;
+
+        this.wowScreen = scope.ServiceProvider.GetRequiredService<IWowScreen>();
         this.State = scope.ServiceProvider.GetRequiredService<GoapAgentState>();
         this.addonReader = scope.ServiceProvider.GetRequiredService<AddonReader>();
-        this.playerReader = addonReader.PlayerReader;
-        this.routeInfo = routeInfo;
+        this.playerReader = scope.ServiceProvider.GetRequiredService<PlayerReader>();
+
         this.input = scope.ServiceProvider.GetRequiredService<ConfigurableInput>();
         this.mountHandler = scope.ServiceProvider.GetRequiredService<IMountHandler>();
+        this.combatLog = scope.ServiceProvider.GetRequiredService<CombatLog>();
 
-        addonReader.CombatLog.KillCredit += OnKillCredit;
-        addonReader.CombatLog.PlayerDeath += PlayerDied;
+        this.bagChangeTracker = scope.ServiceProvider.GetRequiredService<IBagChangeTracker>();
 
-        SessionStat = sessionStat;
+        combatLog.KillCredit += OnKillCredit;
+        combatLog.PlayerDeath += PlayerDied;
 
-        sessionHandler = new GrindSessionHandler(globalLogger, dataConfig, playerReader, SessionStat, sessionDAO, cts);
+        SessionStat = scope.ServiceProvider.GetRequiredService<SessionStat>();
 
-        WowProcessInput baseInput = scope.ServiceProvider.GetRequiredService<WowProcessInput>();
-        stopMoving = new StopMoving(baseInput, playerReader, cts);
+        var dataConfig = scope.ServiceProvider.GetRequiredService<DataConfig>();
+        var sessionDAO = scope.ServiceProvider.GetRequiredService<IGrindSessionDAO>();
+
+        this.sessionHandler = scope.ServiceProvider.GetRequiredService<IGrindSessionHandler>();
+
+        stopMoving = scope.ServiceProvider.GetRequiredService<StopMoving>();
 
         this.AvailableGoals = scope.ServiceProvider.GetServices<GoapGoal>().OrderBy(a => a.Cost).ToArray();
         this.Plan = new();
@@ -160,8 +169,8 @@ public sealed partial class GoapAgent : IDisposable
 
         scope.Dispose();
 
-        addonReader.CombatLog.KillCredit -= OnKillCredit;
-        addonReader.CombatLog.PlayerDeath -= PlayerDied;
+        combatLog.KillCredit -= OnKillCredit;
+        combatLog.PlayerDeath -= PlayerDied;
     }
 
     private void GoapThread()
@@ -193,11 +202,11 @@ public sealed partial class GoapAgent : IDisposable
                 wasEmpty = true;
             }
 
-            cts.Token.WaitHandle.WaitOne(1);
+            Thread.Sleep(1);
         }
 
         if (logger.IsEnabled(LogLevel.Debug))
-            logger.LogDebug("Goap thread stopped!");
+            logger.LogDebug("Thread stopped!");
     }
 
     private GoapGoal? NextGoal()
@@ -216,8 +225,8 @@ public sealed partial class GoapAgent : IDisposable
     {
         AddonBits bits = playerReader.Bits;
 
-        bool dmgTaken = addonReader.DamageTakenCount() > 0;
-        bool dmgDone = addonReader.DamageDoneCount() > 0;
+        bool dmgTaken = combatLog.DamageTakenCount() > 0;
+        bool dmgDone = combatLog.DamageDoneCount() > 0;
         bool hasTarget = bits.HasTarget();
         bool playerCombat = bits.PlayerInCombat();
 
@@ -302,7 +311,7 @@ public sealed partial class GoapAgent : IDisposable
 
             BroadcastGoapEvent(GoapKey.producedcorpse, true);
 
-            LogActiveKillDetected(logger, State.LastCombatKillCount, addonReader.DamageTakenCount());
+            LogActiveKillDetected(logger, State.LastCombatKillCount, combatLog.DamageTakenCount());
         }
         else
         {
@@ -330,7 +339,7 @@ public sealed partial class GoapAgent : IDisposable
 
         int index = -1;
         float minDistance = float.MaxValue;
-        Vector3 playerMap = addonReader.PlayerReader.MapPos;
+        Vector3 playerMap = playerReader.MapPos;
         for (int i = 0; i < routeInfo.PoiList.Count; i++)
         {
             RouteInfoPoi poi = routeInfo.PoiList[i];

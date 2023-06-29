@@ -6,7 +6,7 @@ namespace Core;
 
 public sealed class TalentReader
 {
-    private readonly int cTalent;
+    private const int cTalent = 72;
 
     private readonly PlayerReader playerReader;
     private readonly TalentDB talentDB;
@@ -15,10 +15,8 @@ public sealed class TalentReader
     public Dictionary<int, Talent> Talents { get; } = new();
     public Dictionary<int, int> Spells { get; } = new();
 
-    public TalentReader(int cTalent, PlayerReader playerReader, TalentDB talentDB)
+    public TalentReader(PlayerReader playerReader, TalentDB talentDB)
     {
-        this.cTalent = cTalent;
-
         this.playerReader = playerReader;
         this.talentDB = talentDB;
     }

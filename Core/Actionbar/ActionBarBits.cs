@@ -2,7 +2,17 @@
 
 namespace Core;
 
-public sealed class ActionBarBits
+public interface IActionBarBits
+{
+    void Update(IAddonDataProvider reader);
+    bool Is(KeyAction keyAction);
+}
+
+public interface ICurrentAction : IActionBarBits { }
+
+public interface IUsableAction : IActionBarBits { }
+
+public sealed class ActionBarBits<T> : IActionBarBits
 {
     private readonly int[] cells;
 

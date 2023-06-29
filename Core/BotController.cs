@@ -8,36 +8,30 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using Core.Session;
 using Game;
 using WinAPI;
 using SharedLib.NpcFinder;
 using PPather.Data;
 using Microsoft.Extensions.DependencyInjection;
 using System.Numerics;
+using SharedLib;
+using Core.Database;
 
 namespace Core;
 
 public sealed partial class BotController : IBotController, IDisposable
 {
-    private readonly WowProcess wowProcess;
-    private readonly WowProcessInput wowProcessInput;
-    private readonly ILoggerFactory loggerFactory;
+    private readonly IServiceProvider serviceProvider;
+
     private readonly ILogger<BotController> logger;
     private readonly ILogger globalLogger;
     private readonly IPPather pather;
     private readonly MinimapNodeFinder minimapNodeFinder;
-    private readonly Wait wait;
-    private readonly ExecGameCommand execGameCommand;
     private readonly DataConfig dataConfig;
 
     private readonly CancellationTokenSource cts;
-    private readonly ManualResetEventSlim npcNameFinderEvent;
+    private readonly INpcResetEvent npcNameFinderEvent;
     private readonly NpcNameFinder npcNameFinder;
-    private readonly NpcNameTargeting npcNameTargeting;
-    private readonly IScreenCapture screenCapture;
-
-    private readonly BagChangeTracker? bagChangeTracker;
 
     private readonly Thread addonThread;
 
@@ -48,11 +42,16 @@ public sealed partial class BotController : IBotController, IDisposable
     private const int remotePathingTickMs = 500;
 
     public bool IsBotActive => GoapAgent != null && GoapAgent.Active;
-    public AddonReader AddonReader { get; }
-    public WowScreen WowScreen { get; }
-    public IGrindSessionDAO GrindSessionDAO { get; }
 
-    public SessionStat SessionStat { get; }
+    private readonly AddonReader addonReader;
+    private readonly AddonBits bits;
+    private readonly PlayerReader playerReader;
+    private readonly WowScreen wowScreen;
+    private readonly SessionStat sessionStat;
+    private readonly ActionBarCostReader actionBarCostReader;
+
+    private readonly WorldMapAreaDB worldMapAreaDb;
+    private readonly AreaDB areaDb;
 
     public string SelectedClassFilename { get; private set; } = string.Empty;
     public string? SelectedPathFilename { get; private set; }
@@ -64,62 +63,62 @@ public sealed partial class BotController : IBotController, IDisposable
     public event Action? StatusChanged;
 
     private const int SIZE = 32;
+    private const int MOD = 5;
     private readonly double[] ScreenLatencys = new double[SIZE];
     private readonly double[] NPCLatencys = new double[SIZE];
 
     public double AvgScreenLatency => ScreenLatencys.Average();
     public double AvgNPCLatency => NPCLatencys.Average();
 
-    public BotController(ILogger<BotController> logger, ILogger globalLogger,
-        ILoggerFactory loggerFactory, CancellationTokenSource cts,
-        IPPather pather, SessionStat sessionStat, IGrindSessionDAO grindSessionDAO, DataConfig dataConfig,
-        WowProcess wowProcess, WowScreen wowScreen, WowProcessInput wowProcessInput,
-        ExecGameCommand execGameCommand, Wait wait, IAddonReader addonReader,
-        MinimapNodeFinder minimapNodeFinder, IScreenCapture screenCapture)
+    public BotController(
+        ILogger<BotController> logger, ILogger globalLogger,
+        CancellationTokenSource cts,
+        IPPather pather, SessionStat sessionStat, DataConfig dataConfig,
+        WowScreen wowScreen,
+        NpcNameFinder npcNameFinder, INpcResetEvent npcResetEvent,
+        PlayerReader playerReader, AddonReader addonReader,
+        AddonBits bits, Wait wait,
+        WorldMapAreaDB worldMapAreaDb, AreaDB areaDb,
+        ActionBarCostReader actionBarCostReader,
+        MinimapNodeFinder minimapNodeFinder, IScreenCapture screenCapture,
+        IServiceProvider serviceProvider)
     {
-        this.loggerFactory = loggerFactory;
+        this.serviceProvider = serviceProvider;
+
         this.globalLogger = globalLogger;
         this.logger = logger;
         this.pather = pather;
         this.dataConfig = dataConfig;
-        GrindSessionDAO = grindSessionDAO;
-        this.SessionStat = sessionStat;
-        this.wowProcess = wowProcess;
-        this.WowScreen = wowScreen;
-        this.wowProcessInput = wowProcessInput;
-        this.execGameCommand = execGameCommand;
-        this.AddonReader = (addonReader as AddonReader)!;
-        this.wait = wait;
-        this.minimapNodeFinder = minimapNodeFinder;
-        this.screenCapture = screenCapture;
+        this.sessionStat = sessionStat;
+        this.worldMapAreaDb = worldMapAreaDb;
+        this.areaDb = areaDb;
 
-        var bagChangeTrackerLogger = loggerFactory.CreateLogger<BagChangeTracker>();
-        bagChangeTracker = new(bagChangeTrackerLogger, AddonReader.BagReader);
+        this.actionBarCostReader = actionBarCostReader;
+
+        this.wowScreen = wowScreen;
+
+        this.addonReader = addonReader;
+        this.playerReader = playerReader;
+        this.bits = bits;
+
+        this.minimapNodeFinder = minimapNodeFinder;
 
         this.cts = cts;
-        npcNameFinderEvent = new(false);
+        npcNameFinderEvent = npcResetEvent;
+        this.npcNameFinder = npcNameFinder;
 
         addonThread = new(AddonThread);
         addonThread.Start();
 
-        long timestamp = Stopwatch.GetTimestamp();
         do
         {
-            wait.Update();
+            if (!wait.Update(5000))
+                logger.LogError("There is a problem, unable to read the players UnitClass and UnitRace!");
+        } while (
+            !Enum.IsDefined<UnitClass>(playerReader.Class) ||
+            playerReader.Class == UnitClass.None);
 
-            if (Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds > 5000)
-            {
-                logger.LogWarning("There is a problem with the addon, I have been unable to read the player class. Is it running ?");
-                timestamp = Stopwatch.GetTimestamp();
-            }
-        } while (!Enum.GetValues(typeof(UnitClass)).Cast<UnitClass>().Contains(AddonReader.PlayerReader.Class));
-
-        logger.LogDebug($"Woohoo, I have read the player class. You are a {AddonReader.PlayerReader.Race.ToStringF()} {AddonReader.PlayerReader.Class.ToStringF()}.");
-
-        npcNameFinder = new(globalLogger, WowScreen, npcNameFinderEvent);
-        npcNameTargeting = new(globalLogger, cts, WowScreen, npcNameFinder, wowProcessInput, addonReader.PlayerReader, new NoBlacklist(), wait);
-        WowScreen.AddDrawAction(npcNameFinder.ShowNames);
-        WowScreen.AddDrawAction(npcNameTargeting.ShowClickPositions);
+        logger.LogInformation($"{playerReader.Race.ToStringF()} {playerReader.Class.ToStringF()}!");
 
         screenshotThread = new(ScreenshotThread);
         screenshotThread.Start();
@@ -135,7 +134,7 @@ public sealed partial class BotController : IBotController, IDisposable
     {
         while (!cts.IsCancellationRequested)
         {
-            AddonReader.Update();
+            addonReader.Update();
         }
         logger.LogWarning("Addon thread stoppped!");
     }
@@ -147,38 +146,38 @@ public sealed partial class BotController : IBotController, IDisposable
 
         while (!cts.IsCancellationRequested)
         {
-            if (WowScreen.Enabled)
+            if (wowScreen.Enabled)
             {
                 timestamp = Stopwatch.GetTimestamp();
-                WowScreen.Update();
-                ScreenLatencys[tickCount % SIZE] = Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds;
+                wowScreen.Update();
+                ScreenLatencys[tickCount & MOD] = Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds;
 
                 timestamp = Stopwatch.GetTimestamp();
                 npcNameFinder.Update();
-                NPCLatencys[tickCount % SIZE] = Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds;
+                NPCLatencys[tickCount & MOD] = Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds;
 
-                if (WowScreen.EnablePostProcess)
-                    WowScreen.PostProcess();
+                if (wowScreen.EnablePostProcess)
+                    wowScreen.PostProcess();
             }
 
             if (ClassConfig?.Mode == Mode.AttendedGather)
             {
                 timestamp = Stopwatch.GetTimestamp();
-                WowScreen.UpdateMinimapBitmap();
+                wowScreen.UpdateMinimapBitmap();
                 minimapNodeFinder.Update();
-                ScreenLatencys[tickCount % SIZE] = Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds;
+                ScreenLatencys[tickCount & MOD] = Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds;
             }
 
             tickCount++;
 
             cts.Token.WaitHandle.WaitOne(
-                WowScreen.Enabled || ClassConfig?.Mode == Mode.AttendedGather
+                wowScreen.Enabled || ClassConfig?.Mode == Mode.AttendedGather
                 ? screenshotTickMs
                 : 4);
         }
 
         if (logger.IsEnabled(LogLevel.Debug))
-            logger.LogDebug("Screenshot thread stopped!");
+            logger.LogDebug("Screenshot Thread stopped!");
     }
 
     private void RemotePathingThread()
@@ -187,10 +186,10 @@ public sealed partial class BotController : IBotController, IDisposable
         {
             _ = pather.DrawSphere(
                 new SphereArgs("Player",
-                AddonReader.PlayerReader.MapPos,
-                AddonReader.PlayerReader.Bits.PlayerInCombat() ? 1 : AddonReader.PlayerReader.Bits.HasTarget() ? 6 : 2,
-                AddonReader.PlayerReader.UIMapId.Value
-            ));
+                    playerReader.MapPos,
+                    bits.PlayerInCombat() ? 1 : bits.HasTarget() ? 6 : 2,
+                    playerReader.UIMapId.Value)
+                );
 
             cts.Token.WaitHandle.WaitOne(remotePathingTickMs);
         }
@@ -217,8 +216,10 @@ public sealed partial class BotController : IBotController, IDisposable
             ClassConfig?.Dispose();
             ClassConfig = ReadClassConfiguration(classFile);
 
-            RequirementFactory requirementFactory = new(globalLogger, AddonReader, SessionStat, npcNameFinder, ClassConfig.ImmunityBlacklist);
-            ClassConfig.Initialise(dataConfig, AddonReader, requirementFactory, globalLogger, pathFile);
+            RequirementFactory requirementFactory = new(serviceProvider, ClassConfig);
+
+            ClassConfig.Initialise(dataConfig, addonReader, playerReader,
+                addonReader.GlobalTime, actionBarCostReader, requirementFactory, globalLogger, pathFile);
 
             LogProfileLoaded(logger, classFile, ClassConfig.PathFilename);
 
@@ -238,28 +239,23 @@ public sealed partial class BotController : IBotController, IDisposable
 
     private void Initialize(ClassConfiguration config)
     {
-        AddonReader.SessionReset();
-        SessionStat.Reset();
+        addonReader.SessionReset();
+        sessionStat.Reset();
 
         IServiceScope profileLoadedScope =
-            GoalFactory.CreateGoals(loggerFactory, globalLogger, AddonReader, dataConfig, npcNameFinder,
-                npcNameTargeting, pather, execGameCommand, wowProcessInput, config, cts, wait);
-
-        npcNameTargeting.UpdateBlacklist(
-            profileLoadedScope.ServiceProvider.GetService<MouseOverBlacklist>()
-            ?? profileLoadedScope.ServiceProvider.GetService<IBlacklist>()!);
+            GoalFactory.CreateGoals(serviceProvider, config);
 
         IEnumerable<GoapGoal> availableActions = profileLoadedScope.ServiceProvider.GetServices<GoapGoal>();
         IEnumerable<IRouteProvider> pathProviders = availableActions.OfType<IRouteProvider>();
 
         Vector3[] mapRoute = profileLoadedScope.ServiceProvider.GetRequiredService<Vector3[]>();
-        RouteInfo routeInfo = new(mapRoute, pathProviders, AddonReader.PlayerReader, AddonReader.AreaDb, AddonReader.WorldMapAreaDb);
+        RouteInfo routeInfo = new(mapRoute, pathProviders, playerReader, areaDb, worldMapAreaDb);
 
         if (pather is RemotePathingAPI)
         {
             pather.DrawLines(new()
             {
-                new LineArgs("grindpath", mapRoute, 2, AddonReader.PlayerReader.UIMapId.Value)
+                new LineArgs("grindpath", mapRoute, 2, playerReader.UIMapId.Value)
             }).AsTask().Wait();
         }
 
@@ -267,7 +263,7 @@ public sealed partial class BotController : IBotController, IDisposable
         RouteInfo = routeInfo;
 
         GoapAgent?.Dispose();
-        GoapAgent = new(profileLoadedScope, dataConfig, GrindSessionDAO, SessionStat, WowScreen, screenCapture, routeInfo);
+        GoapAgent = new(profileLoadedScope, routeInfo);
     }
 
     private ClassConfiguration ReadClassConfiguration(string classFile)
@@ -282,8 +278,6 @@ public sealed partial class BotController : IBotController, IDisposable
         ClassConfig?.Dispose();
         RouteInfo?.Dispose();
         GoapAgent?.Dispose();
-
-        npcNameTargeting.Dispose();
 
         npcNameFinderEvent.Dispose();
     }

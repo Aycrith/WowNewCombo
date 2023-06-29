@@ -13,8 +13,8 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
     private readonly Wait wait;
     private readonly ConfigurableInput input;
 
-    private readonly AddonReader addonReader;
     private readonly PlayerReader playerReader;
+    private readonly AddonBits bits;
     private readonly Navigation navigation;
     private readonly StopMoving stopMoving;
 
@@ -42,7 +42,8 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
     #endregion
 
     public WalkToCorpseGoal(ILogger<WalkToCorpseGoal> logger,
-        ConfigurableInput input, Wait wait, AddonReader addonReader,
+        ConfigurableInput input, Wait wait,
+        PlayerReader playerReader, AddonBits bits,
         Navigation navigation, StopMoving stopMoving)
         : base(nameof(WalkToCorpseGoal))
     {
@@ -50,8 +51,9 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
         this.wait = wait;
         this.input = input;
 
-        this.addonReader = addonReader;
-        this.playerReader = addonReader.PlayerReader;
+        this.playerReader = playerReader;
+        this.bits = bits;
+
         this.stopMoving = stopMoving;
 
         this.navigation = navigation;
@@ -95,7 +97,7 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
 
     public override void Update()
     {
-        if (!playerReader.Bits.CorpseInRange())
+        if (!bits.CorpseInRange())
         {
             navigation.Update();
         }

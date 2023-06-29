@@ -100,24 +100,26 @@ DataToColor.DATA_CONFIG = {
     AUTO_SELL_GREY_ITEMS = true
 }
 
+local FRAME_CHANGE_RATE = 5
+
 -- How often item frames change
-local ITEM_ITERATION_FRAME_CHANGE_RATE = 5
+local ITEM_ITERATION_FRAME_CHANGE_RATE = FRAME_CHANGE_RATE
 -- How often the actionbar frames change
-local ACTION_BAR_ITERATION_FRAME_CHANGE_RATE = 5
+local ACTION_BAR_ITERATION_FRAME_CHANGE_RATE = FRAME_CHANGE_RATE
 -- How often the gossip frames change
-local GOSSIP_ITERATION_FRAME_CHANGE_RATE = 5
+local GOSSIP_ITERATION_FRAME_CHANGE_RATE = FRAME_CHANGE_RATE
 -- How often the spellbook frames change
-local SPELLBOOK_ITERATION_FRAME_CHANGE_RATE = 5
+local SPELLBOOK_ITERATION_FRAME_CHANGE_RATE = FRAME_CHANGE_RATE
 -- How often the spellbook frames change
-local TALENT_ITERATION_FRAME_CHANGE_RATE = 5
+local TALENT_ITERATION_FRAME_CHANGE_RATE = FRAME_CHANGE_RATE
 -- How often the spellbook frames change
-local COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE = 5
+local COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE = FRAME_CHANGE_RATE
 -- How often the check network latency
 local LATENCY_ITERATION_FRAME_CHANGE_RATE = 500 -- 500ms * refresh rate in ms
 -- How often the lastLoot return from Closed to Corpse
-local LOOT_RESET_RATE = 5
+local LOOT_RESET_RATE = FRAME_CHANGE_RATE
 -- How often the Player Buff / target Debuff frames change
-local AURA_DURATION_ITERATION_FRAME_CHANGE_RATE = 5
+local AURA_DURATION_ITERATION_FRAME_CHANGE_RATE = FRAME_CHANGE_RATE
 
 -- Timers
 DataToColor.globalTime = 0

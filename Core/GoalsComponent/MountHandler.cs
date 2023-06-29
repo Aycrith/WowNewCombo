@@ -1,10 +1,10 @@
+using System.Numerics;
+
 using Core.Goals;
 
 using Microsoft.Extensions.Logging;
 
 using SharedLib.Extensions;
-
-using System.Numerics;
 
 namespace Core;
 
@@ -18,7 +18,7 @@ public sealed partial class MountHandler : IMountHandler
     private readonly ConfigurableInput input;
     private readonly ClassConfiguration classConfig;
     private readonly Wait wait;
-    private readonly ActionBarBits usableAction;
+    private readonly ActionBarBits<IUsableAction> usableAction;
     private readonly ActionBarCooldownReader cooldownReader;
     private readonly PlayerReader playerReader;
     private readonly AddonBits bits;
@@ -26,17 +26,19 @@ public sealed partial class MountHandler : IMountHandler
     private readonly IBlacklist targetBlacklist;
 
     public MountHandler(ILogger<MountHandler> logger, ConfigurableInput input,
-        ClassConfiguration classConfig, Wait wait, AddonReader addonReader,
+        ClassConfiguration classConfig, AddonBits bits, Wait wait,
+        PlayerReader playerReader, ActionBarBits<IUsableAction> usableAction,
+        ActionBarCooldownReader cooldownReader,
         StopMoving stopMoving, IBlacklist blacklist)
     {
         this.logger = logger;
         this.classConfig = classConfig;
         this.input = input;
         this.wait = wait;
-        this.usableAction = addonReader.UsableAction;
-        this.cooldownReader = addonReader.ActionBarCooldownReader;
-        this.playerReader = addonReader.PlayerReader;
-        this.bits = playerReader.Bits;
+        this.usableAction = usableAction;
+        this.cooldownReader = cooldownReader;
+        this.playerReader = playerReader;
+        this.bits = bits;
         this.stopMoving = stopMoving;
         this.targetBlacklist = blacklist;
     }
@@ -62,35 +64,26 @@ public sealed partial class MountHandler : IMountHandler
 
         input.PressMount();
 
-        float e =
-            wait.Until(CastingHandler.SPELL_QUEUE + playerReader.NetworkLatency.Value, CastDetected);
+        float e = wait.Until(
+            CastingHandler.SPELL_QUEUE + playerReader.NetworkLatency.Value,
+            CastDetected);
+
         LogCastStarted(logger, e);
 
-        if (bits.IsMounted())
-            return;
+        e = wait.Until(
+            playerReader.RemainCastMs + playerReader.NetworkLatency.Value,
+            MountedOrNotCastingOrValidTargetOrEnteredCombat);
 
-        wait.Update();
+        LogCastEnded(logger, e);
 
-        e =
-            wait.Until(playerReader.RemainCastMs + playerReader.NetworkLatency.Value, MountedOrNotCastingOrValidTargetOrEnteredCombat);
-        LogCastEnded(logger, bits.IsMounted(), e);
-
-        if (bits.IsMounted())
-            return;
-
-        if (bits.HasTarget())
+        if (HasValidTarget())
         {
-            if (HasValidTarget())
-            {
-                return;
-            }
-            else if (!bits.IsMounted())
-            {
-                e = wait.Until(CastingHandler.SPELL_QUEUE + playerReader.NetworkLatency.Value, bits.IsMounted);
-                LogIsMounted(logger, bits.IsMounted(), e);
-                wait.Update();
-            }
+            LogIsMounted(logger, bits.IsMounted());
+            return;
         }
+
+        wait.Fixed(playerReader.NetworkLatency.Value);
+        LogIsMounted(logger, bits.IsMounted());
     }
 
     public bool ShouldMount(Vector3 targetW)
@@ -128,6 +121,9 @@ public sealed partial class MountHandler : IMountHandler
         bits.HasTarget() && bits.TargetAlive() && !targetBlacklist.Is() &&
         playerReader.MinRange() < MIN_DISTANCE_TO_INTERRUPT_CAST;
 
+
+    #region Logging
+
     [LoggerMessage(
         EventId = 0110,
         Level = LogLevel.Information,
@@ -137,12 +133,14 @@ public sealed partial class MountHandler : IMountHandler
     [LoggerMessage(
         EventId = 0111,
         Level = LogLevel.Information,
-        Message = "Cast ended | mounted? {mounted} {elapsed}ms")]
-    static partial void LogCastEnded(ILogger logger, bool mounted, float elapsed);
+        Message = "Cast ended {elapsed}ms")]
+    static partial void LogCastEnded(ILogger logger, float elapsed);
 
     [LoggerMessage(
         EventId = 0112,
         Level = LogLevel.Information,
-        Message = "Mounted? {mounted} {elapsed}ms")]
-    static partial void LogIsMounted(ILogger logger, bool mounted, float elapsed);
+        Message = "Mounted ? {mounted}")]
+    static partial void LogIsMounted(ILogger logger, bool mounted);
+
+    #endregion
 }

@@ -15,8 +15,9 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
     private readonly ConfigurableInput input;
     private readonly ClassConfiguration classConfig;
     private readonly Wait wait;
-    private readonly AddonReader addonReader;
+    private readonly CombatLog combatLog;
     private readonly PlayerReader playerReader;
+    private readonly AddonBits bits;
     private readonly StopMoving stopMoving;
     private readonly StuckDetector stuckDetector;
     private readonly NpcNameTargeting npcNameTargeting;
@@ -35,7 +36,8 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
     private double PullDurationMs => (DateTime.UtcNow - pullStart).TotalMilliseconds;
 
     public PullTargetGoal(ILogger<PullTargetGoal> logger, ConfigurableInput input,
-        Wait wait, AddonReader addonReader, IBlacklist blacklist,
+        Wait wait, CombatLog combatlog, PlayerReader playerReader,
+        AddonBits bits, IBlacklist blacklist,
         StopMoving stopMoving, CastingHandler castingHandler,
         IMountHandler mountHandler, NpcNameTargeting npcNameTargeting,
         StuckDetector stuckDetector, CombatUtil combatUtil,
@@ -45,8 +47,9 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         this.logger = logger;
         this.input = input;
         this.wait = wait;
-        this.addonReader = addonReader;
-        this.playerReader = addonReader.PlayerReader;
+        this.combatLog = combatlog;
+        this.playerReader = playerReader;
+        this.bits = bits;
         this.stopMoving = stopMoving;
         this.castingHandler = castingHandler;
         this.mountHandler = mountHandler;
@@ -134,7 +137,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
     {
         wait.Update();
 
-        if (addonReader.DamageDoneCount() > 0)
+        if (combatLog.DamageDoneCount() > 0)
         {
             SendGoapEvent(new GoapStateEvent(GoapKey.pulled, true));
             return;
@@ -149,7 +152,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         }
 
         if (classConfig.AutoPetAttack &&
-            playerReader.Bits.HasPet() && !playerReader.PetHasTarget())
+            bits.HasPet() && !playerReader.PetHasTarget())
         {
             if (input.PetAttack.GetRemainingCooldown() == 0)
                 input.PressPetAttack();
@@ -181,9 +184,9 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
             }
             else if (PullPrevention() &&
                 (playerReader.IsCasting() ||
-                 playerReader.Bits.SpellOn_AutoAttack() ||
-                 playerReader.Bits.SpellOn_AutoShot() ||
-                 playerReader.Bits.SpellOn_Shoot()))
+                 bits.SpellOn_AutoAttack() ||
+                 bits.SpellOn_AutoShot() ||
+                 bits.SpellOn_Shoot()))
             {
                 Log("Preventing pulling possible tagged target!");
                 input.PressStopAttack();
@@ -199,7 +202,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
             {
                 if (wait.Until(AcquireTargetTimeMs, CombatLogChanged) >= 0)
                 {
-                    if (addonReader.DamageTakenCount() > 0 && !playerReader.Bits.TargetInCombat())
+                    if (combatLog.DamageTakenCount() > 0 && !bits.TargetInCombat())
                     {
                         stopMoving.Stop();
 
@@ -214,7 +217,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
                     return;
                 }
             }
-            else if (playerReader.Bits.PlayerInCombat())
+            else if (bits.PlayerInCombat())
             {
                 SendGoapEvent(new GoapStateEvent(GoapKey.pulled, true));
                 return;
@@ -227,9 +230,9 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
     private bool CombatLogChanged()
     {
         return
-            playerReader.Bits.TargetInCombat() ||
-            addonReader.DamageDoneCount() > 0 ||
-            addonReader.DamageTakenCount() > 0 ||
+            bits.TargetInCombat() ||
+            combatLog.DamageDoneCount() > 0 ||
+            combatLog.DamageTakenCount() > 0 ||
             playerReader.TargetTarget is
             UnitsTarget.Me or
             UnitsTarget.Pet or
@@ -275,7 +278,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
             UnitsTarget.Me or
             UnitsTarget.Pet or
             UnitsTarget.PartyOrPet ||
-            addonReader.CombatLog.DamageDoneGuid.ElapsedMs() < CastingHandler.GCD ||
+            combatLog.DamageDoneGuid.ElapsedMs() < CastingHandler.GCD ||
             playerReader.IsInMeleeRange();
     }
 

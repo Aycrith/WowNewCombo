@@ -20,6 +20,7 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
     private readonly ConfigurableInput input;
     private readonly ClassConfiguration classConfig;
     private readonly PlayerReader playerReader;
+    private readonly AddonBits bits;
     private readonly Wait wait;
     private readonly StopMoving stopMoving;
     private readonly BagReader bagReader;
@@ -34,7 +35,9 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
     private readonly List<SkinCorpseEvent> corpses = new();
 
     public SkinningGoal(ILogger<SkinningGoal> logger, ConfigurableInput input,
-        AddonReader addonReader, Wait wait, StopMoving stopMoving,
+        PlayerReader playerReader,
+        BagReader bagReader, EquipmentReader equipmentReader,
+        AddonBits bits, Wait wait, StopMoving stopMoving,
         NpcNameTargeting npcNameTargeting, CombatUtil combatUtil,
         GoapAgentState state, ClassConfiguration classConfig)
         : base(nameof(SkinningGoal))
@@ -42,11 +45,12 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
         this.logger = logger;
         this.input = input;
         this.classConfig = classConfig;
-        this.playerReader = addonReader.PlayerReader;
+        this.playerReader = playerReader;
+        this.bits = bits;
         this.wait = wait;
         this.stopMoving = stopMoving;
-        this.bagReader = addonReader.BagReader;
-        this.equipmentReader = addonReader.EquipmentReader;
+        this.bagReader = bagReader;
+        this.equipmentReader = equipmentReader;
 
         this.npcNameTargeting = npcNameTargeting;
         this.combatUtil = combatUtil;
@@ -104,16 +108,16 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
         int attempts = 0;
         while (attempts < MAX_ATTEMPTS)
         {
-            bool foundTarget = playerReader.Bits.HasTarget() && playerReader.Bits.TargetIsDead();
+            bool foundTarget = bits.HasTarget() && bits.TargetIsDead();
 
             if (!foundTarget && state.LastCombatKillCount == 1)
             {
                 input.PressFastLastTarget();
                 wait.Update();
 
-                if (playerReader.Bits.HasTarget())
+                if (bits.HasTarget())
                 {
-                    if (playerReader.Bits.TargetIsDead())
+                    if (bits.TargetIsDead())
                     {
                         foundTarget = true;
                         Log("Last Target found!");
@@ -262,12 +266,12 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
 
     private void ClearTargetIfExists()
     {
-        if (playerReader.Bits.HasTarget() && playerReader.Bits.TargetIsDead())
+        if (bits.HasTarget() && bits.TargetIsDead())
         {
             input.PressClearTarget();
             wait.Update();
 
-            if (playerReader.Bits.HasTarget())
+            if (bits.HasTarget())
             {
                 SendGoapEvent(ScreenCaptureEvent.Default);
                 LogWarning($"Unable to clear target! Check Bindpad settings!");
@@ -374,8 +378,8 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
     private bool WaitForLosingTarget()
     {
         return
-            playerReader.Bits.HasTarget() &&
-            playerReader.Bits.TargetIsDead();
+            bits.HasTarget() &&
+            bits.TargetIsDead();
     }
 
     private void Log(string text)

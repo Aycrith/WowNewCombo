@@ -16,6 +16,9 @@ public sealed class CombatLog
     public HashSet<int> DamageDone { get; } = new();
     public HashSet<int> DamageTaken { get; } = new();
 
+    public int DamageTakenCount() => DamageTaken.Count;
+    public int DamageDoneCount() => DamageDone.Count;
+
     public RecordInt DamageDoneGuid { get; }
     public RecordInt DamageTakenGuid { get; }
     public RecordInt DeadGuid { get; }
@@ -23,14 +26,14 @@ public sealed class CombatLog
     public RecordInt TargetMissType { get; }
     public RecordInt TargetDodge { get; }
 
-    public CombatLog(int cDamageDone, int cDamageTaken, int cDead, int cTargetMiss)
+    public CombatLog()
     {
-        DamageDoneGuid = new RecordInt(cDamageDone);
-        DamageTakenGuid = new RecordInt(cDamageTaken);
-        DeadGuid = new RecordInt(cDead);
+        DamageDoneGuid = new RecordInt(64);
+        DamageTakenGuid = new RecordInt(65);
+        DeadGuid = new RecordInt(66);
 
-        TargetMissType = new(cTargetMiss);
-        TargetDodge = new(cTargetMiss);
+        TargetMissType = new(67);
+        TargetDodge = new(67);
     }
 
     public void Reset()
