@@ -43,7 +43,7 @@ public sealed class LevelTracker : IDisposable
         double xpPerSecond = (playerReader.PlayerXp.Value - levelStartXP) / runningSeconds;
         double secondsLeft = (playerReader.PlayerMaxXp - playerReader.PlayerXp.Value) / xpPerSecond;
 
-        TimeToLevel = xpPerSecond > 0 ? new TimeSpan(0, 0, (int)secondsLeft) : TimeSpan.Zero;
+        TimeToLevel = xpPerSecond > 0 ? TimeSpan.FromSeconds(secondsLeft) : TimeSpan.Zero;
 
         if (secondsLeft > 0 && secondsLeft < 60 * 60 * 10)
         {
