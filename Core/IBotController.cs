@@ -18,6 +18,8 @@ public interface IBotController
     event Action? ProfileLoaded;
     event Action? StatusChanged;
 
+    ClassConfiguration ResolveLoadedProfile();
+
     void ToggleBotStatus();
 
     void MinimapNodeFound();

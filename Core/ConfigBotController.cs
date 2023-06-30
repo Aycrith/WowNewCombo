@@ -96,4 +96,9 @@ public sealed class ConfigBotController : IBotController, IDisposable
     {
         throw new NotImplementedException();
     }
+
+    public ClassConfiguration ResolveLoadedProfile()
+    {
+        throw new NotImplementedException();
+    }
 }

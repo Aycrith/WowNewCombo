@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -125,15 +125,16 @@ public sealed class ClassConfiguration : IDisposable
     public void Initialise(DataConfig dataConfig,
         AddonReader addonReader, PlayerReader playerReader, RecordInt globalTime,
         ActionBarCostReader costReader, RequirementFactory requirementFactory,
-        ILogger logger, string? overridePathProfileFile)
+        ILogger logger,
+        AuraTimeReader<IPlayerBuffTimeReader> playerBuff,
+        AuraTimeReader<ITargetDebuffTimeReader> targetDebuff,
+        AuraTimeReader<ITargetBuffTimeReader> targetBuff,
+        string? overridePathProfileFile)
     {
-        if (!SpellQueue)
-            logger.LogWarning($"[{nameof(ClassConfiguration)}] {nameof(SpellQueue)} is disabled!");
-
         requirementFactory.InitUserDefinedIntVariables(IntVariables,
-            addonReader.PlayerBuffTimeReader,
-            addonReader.TargetDebuffTimeReader,
-            addonReader.TargetBuffTimeReader);
+            playerBuff,
+            targetDebuff,
+            targetBuff);
 
         Jump.Key = JumpKey;
         Jump.Name = nameof(Jump);

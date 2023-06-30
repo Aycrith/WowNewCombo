@@ -16,11 +16,10 @@ namespace Core;
 
 public static class GoalFactory
 {
-    public static IServiceScope CreateGoals(
+    public static IServiceProvider Create(
+        IServiceCollection services,
         IServiceProvider sp, ClassConfiguration classConfig)
     {
-        ServiceCollection services = new();
-
         services.AddSingleton(
             sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger>());
 
@@ -30,12 +29,11 @@ public static class GoalFactory
             builder.AddSerilog();
         });
 
-        services.AddSingleton<ClassConfiguration>(classConfig);
-
         services.AddStartupIoC(sp);
 
         // session scoped services
 
+        services.AddScoped<ConfigurableInput>();
         services.AddScoped<GoapAgentState>();
 
         services.AddScoped<CancellationTokenSource<GoapAgent>>();
@@ -174,18 +172,15 @@ public static class GoalFactory
             ResolveWaitGoal(services, classConfig);
         }
 
-        ServiceProvider provider = services.BuildServiceProvider(
+        return services.BuildServiceProvider(
             new ServiceProviderOptions
             {
                 ValidateOnBuild = true,
                 ValidateScopes = true
             });
-
-        IServiceScope scope = provider.CreateScope();
-        return scope;
     }
 
-    private static void ResolveLootAndSkin(ServiceCollection services,
+    private static void ResolveLootAndSkin(IServiceCollection services,
         ClassConfiguration classConfig)
     {
         services.AddScoped<GoapGoal, ConsumeCorpseGoal>();
@@ -202,7 +197,7 @@ public static class GoalFactory
         }
     }
 
-    private static void ResolveAdhocGoals(ServiceCollection services,
+    private static void ResolveAdhocGoals(IServiceCollection services,
         ClassConfiguration classConfig)
     {
         for (int i = 0; i < classConfig.Adhoc.Sequence.Length; i++)
@@ -221,7 +216,7 @@ public static class GoalFactory
         }
     }
 
-    private static void ResolveAdhocNPCGoal(ServiceCollection services,
+    private static void ResolveAdhocNPCGoal(IServiceCollection services,
         ClassConfiguration classConfig, DataConfig dataConfig)
     {
         for (int i = 0; i < classConfig.NPC.Sequence.Length; i++)
@@ -246,7 +241,7 @@ public static class GoalFactory
         }
     }
 
-    private static void ResolveWaitGoal(ServiceCollection services,
+    private static void ResolveWaitGoal(IServiceCollection services,
         ClassConfiguration classConfig)
     {
         for (int i = 0; i < classConfig.Wait.Sequence.Length; i++)
@@ -260,7 +255,7 @@ public static class GoalFactory
         }
     }
 
-    private static void ResolvePetClass(ServiceCollection services,
+    private static void ResolvePetClass(IServiceCollection services,
         UnitClass @class)
     {
         if (@class is
