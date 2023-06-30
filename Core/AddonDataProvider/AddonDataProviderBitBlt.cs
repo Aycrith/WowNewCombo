@@ -55,8 +55,6 @@ public sealed class AddonDataProviderBitBlt : IAddonDataProvider, IDisposable
         bitmap.Dispose();
     }
 
-    public void InitFrames(DataFrame[] frames) { }
-
     public void Update()
     {
         Point p = new();
