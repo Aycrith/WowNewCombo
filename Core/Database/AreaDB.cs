@@ -1,11 +1,17 @@
 ﻿using System;
-using System.Threading;
-using System.IO;
 using System.Numerics;
+using System.Threading;
+
 using Microsoft.Extensions.Logging;
+
 using Newtonsoft.Json;
+
 using SharedLib.Extensions;
+
 using WowheadDB;
+
+using static System.IO.File;
+using static System.IO.Path;
 
 namespace Core.Database;
 
@@ -15,7 +21,7 @@ public sealed class AreaDB : IDisposable
     private readonly DataConfig dataConfig;
 
     private readonly CancellationToken ct;
-    private readonly AutoResetEvent autoResetEvent;
+    private readonly ManualResetEventSlim resetEvent;
     private readonly Thread thread;
 
     private int areaId = -1;
@@ -23,12 +29,13 @@ public sealed class AreaDB : IDisposable
 
     public event Action? Changed;
 
-    public AreaDB(ILogger logger, DataConfig dataConfig, CancellationTokenSource cts)
+    public AreaDB(ILogger logger, DataConfig dataConfig,
+        CancellationTokenSource cts)
     {
         this.logger = logger;
         this.dataConfig = dataConfig;
         ct = cts.Token;
-        autoResetEvent = new AutoResetEvent(false);
+        resetEvent = new();
 
         thread = new(ReadArea);
         thread.Start();
@@ -36,7 +43,7 @@ public sealed class AreaDB : IDisposable
 
     public void Dispose()
     {
-        autoResetEvent.Set();
+        resetEvent.Set();
     }
 
     public void Update(int areaId)
@@ -45,18 +52,20 @@ public sealed class AreaDB : IDisposable
             return;
 
         this.areaId = areaId;
-        autoResetEvent.Set();
+        resetEvent.Set();
     }
 
     private void ReadArea()
     {
-        autoResetEvent.WaitOne();
+        resetEvent.Wait();
 
         while (!ct.IsCancellationRequested)
         {
             try
             {
-                CurrentArea = JsonConvert.DeserializeObject<Area>(File.ReadAllText(Path.Join(dataConfig.ExpArea, $"{areaId}.json")));
+                CurrentArea = JsonConvert.DeserializeObject<Area>(
+                    ReadAllText(Join(dataConfig.ExpArea, $"{areaId}.json")));
+
                 Changed?.Invoke();
             }
             catch (Exception e)
@@ -64,7 +73,8 @@ public sealed class AreaDB : IDisposable
                 logger.LogError(e.Message, e.StackTrace);
             }
 
-            autoResetEvent.WaitOne();
+            resetEvent.Reset();
+            resetEvent.Wait();
         }
     }
 

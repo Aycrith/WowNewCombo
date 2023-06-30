@@ -3,10 +3,8 @@ using Microsoft.Extensions.Logging;
 using PPather;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
-using WowTriangles;
 using System;
 using PPather.Graph;
 
@@ -25,7 +23,7 @@ public sealed class LocalPathingApi : IPPather
     private DateTime lastSave;
 
     public LocalPathingApi(ILogger<LocalPathingApi> logger,
-        PPatherService service, DataConfig dataConfig)
+        PPatherService service)
     {
         this.logger = logger;
         this.service = service;

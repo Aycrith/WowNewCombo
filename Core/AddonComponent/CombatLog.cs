@@ -3,9 +3,11 @@ using System.Collections.Generic;
 
 namespace Core;
 
-public sealed class CombatLog
+public sealed class CombatLog : IReader
 {
     private const int PLAYER_DEATH_EVENT = 16777215;
+
+    private readonly AddonBits bits;
 
     private bool wasInCombat;
 
@@ -26,8 +28,10 @@ public sealed class CombatLog
     public RecordInt TargetMissType { get; }
     public RecordInt TargetDodge { get; }
 
-    public CombatLog()
+    public CombatLog(AddonBits bits)
     {
+        this.bits = bits;
+
         DamageDoneGuid = new RecordInt(64);
         DamageTakenGuid = new RecordInt(65);
         DeadGuid = new RecordInt(66);
@@ -51,8 +55,10 @@ public sealed class CombatLog
         TargetDodge.Reset();
     }
 
-    public void Update(IAddonDataProvider reader, bool playerInCombat)
+    public void Update(IAddonDataProvider reader)
     {
+        bool combat = bits.PlayerInCombat();
+
         if (TargetMissType.Updated(reader))
         {
             switch ((MissType)TargetMissType.Value)
@@ -66,12 +72,12 @@ public sealed class CombatLog
             }
         }
 
-        if (playerInCombat && DamageTakenGuid.Updated(reader) && DamageTakenGuid.Value > 0)
+        if (combat && DamageTakenGuid.Updated(reader) && DamageTakenGuid.Value > 0)
         {
             DamageTaken.Add(DamageTakenGuid.Value);
         }
 
-        if (playerInCombat && DamageDoneGuid.Updated(reader) && DamageDoneGuid.Value > 0)
+        if (combat && DamageDoneGuid.Updated(reader) && DamageDoneGuid.Value > 0)
         {
             DamageDone.Add(DamageDoneGuid.Value);
         }
@@ -92,13 +98,13 @@ public sealed class CombatLog
             }
         }
 
-        if (wasInCombat && !playerInCombat)
+        if (wasInCombat && !combat)
         {
             // left combat
             DamageTaken.Clear();
             DamageDone.Clear();
         }
 
-        wasInCombat = playerInCombat;
+        wasInCombat = combat;
     }
 }

@@ -1,0 +1,40 @@
+﻿using System;
+using System.Diagnostics.CodeAnalysis;
+
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Core.Extensions;
+public static class ServiceCollectionExtension
+{
+    public static IServiceCollection ForwardSingleton<
+        TService,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TInterface>
+        (this IServiceCollection services)
+    where TService : class, TInterface
+    {
+        services.AddSingleton(typeof(TService));
+        services.AddSingleton(typeof(TInterface), x => x.GetRequiredService<TService>());
+
+        return services;
+    }
+
+    public static IServiceCollection ForwardSingleton<TService>(
+        this IServiceCollection services,
+        IServiceProvider sp)
+        where TService : class
+    {
+        return services.AddSingleton(sp.GetRequiredService<TService>());
+    }
+
+    public static IServiceCollection ForwardSingleton<TService,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TInterface>(
+        this IServiceCollection services,
+        Func<IServiceProvider, TService> implementationFactory)
+        where TService : class, TInterface
+    {
+        services.AddSingleton(typeof(TService), implementationFactory);
+        services.AddSingleton(typeof(TInterface), x => x.GetRequiredService<TService>());
+
+        return services;
+    }
+}

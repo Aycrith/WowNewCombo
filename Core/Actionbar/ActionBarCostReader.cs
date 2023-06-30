@@ -26,7 +26,7 @@ public readonly struct ActionBarCost
     }
 }
 
-public class ActionBarCostReader
+public sealed class ActionBarCostReader : IReader
 {
     private const int COST_ORDER = 10000;
     private const int POWER_TYPE_MOD = 100;
@@ -53,7 +53,7 @@ public class ActionBarCostReader
         Reset();
     }
 
-    public void Read(IAddonDataProvider reader)
+    public void Update(IAddonDataProvider reader)
     {
         int meta = reader.GetInt(cActionbarMeta);
         int cost = reader.GetInt(cActionbarNum);

@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Core.Session;
 using System.Numerics;
-using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Specialized;
 using SharedLib;
 
@@ -16,14 +15,13 @@ namespace Core.GOAP;
 
 public sealed partial class GoapAgent : IDisposable
 {
-    private readonly IServiceScope scope;
-
     private readonly ILogger logger;
     private readonly ILogger globalLogger;
 
     private readonly ClassConfiguration classConfig;
     private readonly AddonReader addonReader;
     private readonly PlayerReader playerReader;
+    private readonly AddonBits bits;
     private readonly IWowScreen wowScreen;
     private readonly RouteInfo routeInfo;
     private readonly ConfigurableInput input;
@@ -64,13 +62,13 @@ public sealed partial class GoapAgent : IDisposable
                     sessionHandler.Stop("Stopped", false);
                 }
 
-                addonReader.SessionReset();
-                SessionStat.Reset();
-
                 wowScreen.Enabled = false;
             }
             else
             {
+                addonReader.SessionReset();
+                SessionStat.Reset();
+
                 if (CurrentGoal is IGoapEventListener listener)
                 {
                     listener.OnGoapEvent(new ResumeEvent());
@@ -96,43 +94,64 @@ public sealed partial class GoapAgent : IDisposable
     public Stack<GoapGoal> Plan { get; private set; }
     public GoapGoal? CurrentGoal { get; private set; }
 
-    public GoapAgent(IServiceScope scope, RouteInfo routeInfo)
+    public GoapAgent(
+        ILogger<GoapAgent> logger,
+        ILogger globalLogger,
+        CancellationTokenSource<GoapAgent> cts,
+        RouteInfo routeInfo,
+        IScreenCapture screenCapture,
+        ClassConfiguration classConfiguration,
+        IWowScreen wowScreen,
+        GoapAgentState state,
+        AddonReader addonReader,
+        PlayerReader playerReader,
+        AddonBits bits,
+        ConfigurableInput input,
+        IMountHandler mountHandler,
+        CombatLog combatLog,
+        IBagChangeTracker bagChangeTracker,
+        SessionStat sessionStat,
+        StopMoving stopMoving,
+        IGrindSessionHandler sessionHandler,
+        IEnumerable<GoapGoal> availableGoals
+        )
     {
-        this.cts = scope.ServiceProvider.GetRequiredService<CancellationTokenSource<GoapAgent>>();
-
-        this.scope = scope;
         this.routeInfo = routeInfo;
 
-        this.logger = scope.ServiceProvider.GetRequiredService<ILogger<GoapAgent>>();
-        this.globalLogger = scope.ServiceProvider.GetRequiredService<ILogger>();
+        this.cts = cts;
 
-        this.screenCapture = scope.ServiceProvider.GetRequiredService<IScreenCapture>();
-        this.classConfig = scope.ServiceProvider.GetRequiredService<ClassConfiguration>();
+        this.logger = logger;
+        this.globalLogger = globalLogger;
 
-        this.wowScreen = scope.ServiceProvider.GetRequiredService<IWowScreen>();
-        this.State = scope.ServiceProvider.GetRequiredService<GoapAgentState>();
-        this.addonReader = scope.ServiceProvider.GetRequiredService<AddonReader>();
-        this.playerReader = scope.ServiceProvider.GetRequiredService<PlayerReader>();
+        this.screenCapture = screenCapture;
+        this.classConfig = classConfiguration;
 
-        this.input = scope.ServiceProvider.GetRequiredService<ConfigurableInput>();
-        this.mountHandler = scope.ServiceProvider.GetRequiredService<IMountHandler>();
-        this.combatLog = scope.ServiceProvider.GetRequiredService<CombatLog>();
+        this.wowScreen = wowScreen;
+        this.State = state;
+        this.addonReader = addonReader;
+        this.playerReader = playerReader;
+        this.bits = bits;
 
-        this.bagChangeTracker = scope.ServiceProvider.GetRequiredService<IBagChangeTracker>();
+        this.input = input;
+        this.mountHandler = mountHandler;
+
+        this.combatLog = combatLog;
+        this.bagChangeTracker = bagChangeTracker;
+
+        SessionStat = sessionStat;
+
+        this.stopMoving = stopMoving;
+
+        this.sessionHandler = sessionHandler;
+
+        this.AvailableGoals = availableGoals.OrderBy(a => a.Cost).ToArray();
 
         combatLog.KillCredit += OnKillCredit;
         combatLog.PlayerDeath += PlayerDied;
 
-        SessionStat = scope.ServiceProvider.GetRequiredService<SessionStat>();
+        addonReader.SessionReset();
+        sessionStat.Reset();
 
-        var dataConfig = scope.ServiceProvider.GetRequiredService<DataConfig>();
-        var sessionDAO = scope.ServiceProvider.GetRequiredService<IGrindSessionDAO>();
-
-        this.sessionHandler = scope.ServiceProvider.GetRequiredService<IGrindSessionHandler>();
-
-        stopMoving = scope.ServiceProvider.GetRequiredService<StopMoving>();
-
-        this.AvailableGoals = scope.ServiceProvider.GetServices<GoapGoal>().OrderBy(a => a.Cost).ToArray();
         this.Plan = new();
 
         foreach (GoapGoal a in AvailableGoals)
@@ -167,8 +186,6 @@ public sealed partial class GoapAgent : IDisposable
             }
         }
 
-        scope.Dispose();
-
         combatLog.KillCredit -= OnKillCredit;
         combatLog.PlayerDeath -= PlayerDied;
     }
@@ -177,12 +194,12 @@ public sealed partial class GoapAgent : IDisposable
     {
         bool wasEmpty = false;
 
+        manualReset.Wait();
+
         while (!cts.IsCancellationRequested)
         {
-            manualReset.Wait();
-
             GoapGoal? newGoal = NextGoal();
-            if (!cts.IsCancellationRequested && newGoal != null)
+            if (newGoal != null)
             {
                 if (newGoal != CurrentGoal)
                 {
@@ -196,13 +213,14 @@ public sealed partial class GoapAgent : IDisposable
 
                 newGoal.Update();
             }
-            else if (!cts.IsCancellationRequested && !wasEmpty)
+            else if (!wasEmpty)
             {
                 LogNewEmptyGoal(logger);
                 wasEmpty = true;
             }
 
-            Thread.Sleep(1);
+            Thread.Sleep(0);
+            manualReset.Wait();
         }
 
         if (logger.IsEnabled(LogLevel.Debug))
@@ -223,12 +241,12 @@ public sealed partial class GoapAgent : IDisposable
 
     private void UpdateWorldState()
     {
-        AddonBits bits = playerReader.Bits;
+        AddonBits b = bits;
 
         bool dmgTaken = combatLog.DamageTakenCount() > 0;
         bool dmgDone = combatLog.DamageDoneCount() > 0;
-        bool hasTarget = bits.HasTarget();
-        bool playerCombat = bits.PlayerInCombat();
+        bool hasTarget = b.HasTarget();
+        bool playerCombat = b.PlayerInCombat();
 
         int data =
             (B(hasTarget) << (int)GoapKey.hastarget) |
@@ -236,7 +254,7 @@ public sealed partial class GoapAgent : IDisposable
             (B(dmgTaken) << (int)GoapKey.damagetaken) |
             (B(dmgDone) << (int)GoapKey.damagedone) |
             (B(dmgTaken || dmgDone) << (int)GoapKey.damagetakenordone) |
-            (B(hasTarget && !bits.TargetIsDead()) << (int)GoapKey.targetisalive) |
+            (B(hasTarget && !b.TargetIsDead()) << (int)GoapKey.targetisalive) |
 
             (B((hasTarget &&
             playerReader.TargetHealthPercentage() < 30) ||
@@ -244,22 +262,22 @@ public sealed partial class GoapAgent : IDisposable
                 UnitsTarget.Pet or UnitsTarget.PartyOrPet) << (int)GoapKey.targettargetsus) |
 
             (B(playerCombat) << (int)GoapKey.incombat) |
-            (B(playerReader.PetHasTarget() && !bits.PetTargetIsDead()) << (int)GoapKey.pethastarget) |
+            (B(playerReader.PetHasTarget() && !b.PetTargetIsDead()) << (int)GoapKey.pethastarget) |
             (B(mountHandler.IsMounted()) << (int)GoapKey.ismounted) |
             (B(playerReader.WithInPullRange()) << (int)GoapKey.withinpullrange) |
             (B(playerReader.WithInCombatRange()) << (int)GoapKey.incombatrange) |
             // pulled always false
-            (B(bits.IsDead()) << (int)GoapKey.isdead) |
+            (B(b.IsDead()) << (int)GoapKey.isdead) |
             (B(State.LootableCorpseCount > 0) << (int)GoapKey.shouldloot) |
             (B(State.GatherableCorpseCount > 0) << (int)GoapKey.shouldgather) |
             (B(State.LastCombatKillCount > 0) << (int)GoapKey.producedcorpse) |
             (B(State.ShouldConsumeCorpse) << (int)GoapKey.consumecorpse) |
-            (B(bits.IsSwimming()) << (int)GoapKey.isswimming) |
-            (B(bits.ItemsAreBroken()) << (int)GoapKey.itemsbroken) |
+            (B(b.IsSwimming()) << (int)GoapKey.isswimming) |
+            (B(b.ItemsAreBroken()) << (int)GoapKey.itemsbroken) |
             (B(State.Gathering) << (int)GoapKey.gathering) |
-            (B(bits.TargetCanBeHostile()) << (int)GoapKey.targethostile) |
-            (B(bits.HasFocus()) << (int)GoapKey.hasfocus) |
-            (B(bits.FocusHasTarget()) << (int)GoapKey.focushastarget) |
+            (B(b.TargetCanBeHostile()) << (int)GoapKey.targethostile) |
+            (B(b.HasFocus()) << (int)GoapKey.hasfocus) |
+            (B(b.FocusHasTarget()) << (int)GoapKey.focushastarget) |
             (B(State.ConsumableCorpseCount > 0) << (int)GoapKey.consumablecorpsenearby)
             ;
 

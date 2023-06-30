@@ -186,8 +186,6 @@ public sealed class AddonDataProviderDXGI : IAddonDataProvider, IDisposable
         }
     }
 
-    public void InitFrames(DataFrame[] frames) { }
-
     public int GetInt(int index)
     {
         return data[index];

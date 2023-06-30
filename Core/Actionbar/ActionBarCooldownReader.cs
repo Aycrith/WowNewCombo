@@ -2,7 +2,7 @@
 
 namespace Core;
 
-public sealed class ActionBarCooldownReader
+public sealed class ActionBarCooldownReader : IReader
 {
     private readonly struct Data
     {
@@ -28,7 +28,7 @@ public sealed class ActionBarCooldownReader
         Reset();
     }
 
-    public void Read(IAddonDataProvider reader)
+    public void Update(IAddonDataProvider reader)
     {
         int value = reader.GetInt(cActionbarNum);
         if (value == 0 || value < ActionBar.ACTION_SLOT_MUL)

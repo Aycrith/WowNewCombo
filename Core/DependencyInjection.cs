@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 
 using Core.Addon;
 using Core.Database;
+using Core.Extensions;
 using Core.Session;
 
 using Game;
@@ -27,29 +28,38 @@ public static class DependencyInjection
     public static IServiceCollection AddAddonComponents(
         this IServiceCollection s)
     {
-        s.AddSingleton<CombatLog>();
-        s.AddSingleton<EquipmentReader>();
-        s.AddSingleton<BagReader>();
-        s.AddSingleton<GossipReader>();
-        s.AddSingleton<SpellBookReader>();
-        s.AddSingleton<TalentReader>();
+        s.ForwardSingleton<PlayerReader, IReader>();
+        s.ForwardSingleton<PlayerReader, IMouseOverReader>();
 
-        s.AddSingleton<ActionBarCostReader>();
-        s.AddSingleton<ActionBarCooldownReader>();
+        s.ForwardSingleton<AddonReader, IAddonReader>();
 
-        s.AddSingleton<ActionBarBits<ICurrentAction>>(x => new(25, 26, 27, 28, 29));
-        s.AddSingleton<ActionBarBits<IUsableAction>>(x => new(30, 31, 32, 33, 34));
+        s.ForwardSingleton<AddonBits, IReader>();
+        s.ForwardSingleton<SpellInRange, IReader>();
+        s.ForwardSingleton<BuffStatus, IReader>();
+        s.ForwardSingleton<TargetDebuffStatus, IReader>();
+        s.ForwardSingleton<Stance, IReader>();
 
-        s.AddSingleton<AuraTimeReader<IPlayerBuffTimeReader>>(x => new(79, 80));
-        s.AddSingleton<AuraTimeReader<ITargetDebuffTimeReader>>(x => new(81, 82));
-        s.AddSingleton<AuraTimeReader<ITargetBuffTimeReader>>(x => new(83, 84));
+        s.ForwardSingleton<CombatLog, IReader>();
+        s.ForwardSingleton<EquipmentReader, IReader>();
+        s.ForwardSingleton<BagReader, IReader>();
+        s.ForwardSingleton<GossipReader, IReader>();
+        s.ForwardSingleton<SpellBookReader, IReader>();
+        s.ForwardSingleton<TalentReader, IReader>();
 
-        // Player Reader components
-        s.AddSingleton<AddonBits>(x => new(8, 9));
-        s.AddSingleton<SpellInRange>(x => new(40));
-        s.AddSingleton<BuffStatus>(x => new(41));
-        s.AddSingleton<TargetDebuffStatus>(x => new(42));
-        s.AddSingleton<Stance>(x => new(48));
+        s.ForwardSingleton<ActionBarCostReader, IReader>();
+        s.ForwardSingleton<ActionBarCooldownReader, IReader>();
+
+        s.ForwardSingleton<ActionBarBits<ICurrentAction>, IReader>(
+            x => new(25, 26, 27, 28, 29));
+        s.ForwardSingleton<ActionBarBits<IUsableAction>, IReader>(
+            x => new(30, 31, 32, 33, 34));
+
+        s.ForwardSingleton<AuraTimeReader<IPlayerBuffTimeReader>, IReader>(
+            x => new(79, 80));
+        s.ForwardSingleton<AuraTimeReader<ITargetDebuffTimeReader>, IReader>(
+            x => new(81, 82));
+        s.ForwardSingleton<AuraTimeReader<ITargetBuffTimeReader>, IReader>(
+            x => new(83, 84));
 
         return s;
     }
@@ -58,63 +68,60 @@ public static class DependencyInjection
         this IServiceCollection s, IServiceProvider sp)
     {
         // StartUp Container
-        s.AddSingleton(sp.GetRequiredService<CancellationTokenSource>());
+        s.ForwardSingleton<CancellationTokenSource>(sp);
 
-        s.AddSingleton(sp.GetRequiredService<WowProcessInput>());
-        s.AddSingleton(sp.GetRequiredService<IMouseInput>());
-        s.AddSingleton(sp.GetRequiredService<IMouseOverReader>());
+        s.ForwardSingleton<WowProcessInput>(sp);
+        s.ForwardSingleton<IMouseInput>(sp);
+        s.ForwardSingleton<IMouseOverReader>(sp);
 
-        s.AddSingleton(sp.GetRequiredService<NpcNameFinder>());
-        s.AddSingleton(sp.GetRequiredService<IWowScreen>());
-        s.AddSingleton(sp.GetRequiredService<WowScreen>());
+        s.ForwardSingleton<NpcNameFinder>(sp);
+        s.ForwardSingleton<IWowScreen>(sp);
+        s.ForwardSingleton<WowScreen>(sp);
 
-        s.AddSingleton(sp.GetRequiredService<IPPather>());
-        s.AddSingleton(sp.GetRequiredService<ExecGameCommand>());
+        s.ForwardSingleton<IPPather>(sp);
+        s.ForwardSingleton<ExecGameCommand>(sp);
 
-        s.AddSingleton(sp.GetRequiredService<Wait>());
+        s.ForwardSingleton<Wait>(sp);
 
-        s.AddSingleton(sp.GetRequiredService<DataConfig>());
+        s.ForwardSingleton<DataConfig>(sp);
 
-        s.AddSingleton(sp.GetRequiredService<AreaDB>());
-        s.AddSingleton(sp.GetRequiredService<WorldMapAreaDB>());
-        s.AddSingleton(sp.GetRequiredService<ItemDB>());
-        s.AddSingleton(sp.GetRequiredService<CreatureDB>());
-        s.AddSingleton(sp.GetRequiredService<SpellDB>());
-        s.AddSingleton(sp.GetRequiredService<TalentDB>());
+        s.ForwardSingleton<AreaDB>(sp);
+        s.ForwardSingleton<WorldMapAreaDB>(sp);
+        s.ForwardSingleton<ItemDB>(sp);
+        s.ForwardSingleton<CreatureDB>(sp);
+        s.ForwardSingleton<SpellDB>(sp);
+        s.ForwardSingleton<TalentDB>(sp);
 
-        s.AddSingleton(sp.GetRequiredService<AddonReader>());
-        s.AddSingleton(sp.GetRequiredService<PlayerReader>());
+        s.ForwardSingleton<AddonReader>(sp);
+        s.ForwardSingleton<PlayerReader>(sp);
 
-        s.AddSingleton<ConfigurableInput>();
+        s.ForwardSingleton<AddonBits>(sp);
+        s.ForwardSingleton<SpellInRange>(sp);
+        s.ForwardSingleton<BuffStatus>(sp);
+        s.ForwardSingleton<TargetDebuffStatus>(sp);
+        s.ForwardSingleton<Stance>(sp);
 
-        s.AddSingleton<IScreenCapture>(sp.GetRequiredService<IScreenCapture>());
-        s.AddSingleton<SessionStat>(sp.GetRequiredService<SessionStat>());
-        s.AddSingleton<IGrindSessionDAO>(sp.GetRequiredService<IGrindSessionDAO>());
+        s.ForwardSingleton<IScreenCapture>(sp);
+        s.ForwardSingleton<SessionStat>(sp);
+        s.ForwardSingleton<IGrindSessionDAO>(sp);
 
         // Addon Components
-        s.AddSingleton(sp.GetRequiredService<CombatLog>());
-        s.AddSingleton(sp.GetRequiredService<EquipmentReader>());
-        s.AddSingleton(sp.GetRequiredService<BagReader>());
-        s.AddSingleton(sp.GetRequiredService<GossipReader>());
-        s.AddSingleton(sp.GetRequiredService<SpellBookReader>());
-        s.AddSingleton(sp.GetRequiredService<TalentReader>());
+        s.ForwardSingleton<CombatLog>(sp);
+        s.ForwardSingleton<EquipmentReader>(sp);
+        s.ForwardSingleton<BagReader>(sp);
+        s.ForwardSingleton<GossipReader>(sp);
+        s.ForwardSingleton<SpellBookReader>(sp);
+        s.ForwardSingleton<TalentReader>(sp);
 
-        s.AddSingleton(sp.GetRequiredService<ActionBarCostReader>());
-        s.AddSingleton(sp.GetRequiredService<ActionBarCooldownReader>());
+        s.ForwardSingleton<ActionBarCostReader>(sp);
+        s.ForwardSingleton<ActionBarCooldownReader>(sp);
 
-        s.AddSingleton(sp.GetRequiredService<ActionBarBits<ICurrentAction>>());
-        s.AddSingleton(sp.GetRequiredService<ActionBarBits<IUsableAction>>());
+        s.ForwardSingleton<ActionBarBits<ICurrentAction>>(sp);
+        s.ForwardSingleton<ActionBarBits<IUsableAction>>(sp);
 
-        s.AddSingleton(sp.GetRequiredService<AuraTimeReader<IPlayerBuffTimeReader>>());
-        s.AddSingleton(sp.GetRequiredService<AuraTimeReader<ITargetDebuffTimeReader>>());
-        s.AddSingleton(sp.GetRequiredService<AuraTimeReader<ITargetBuffTimeReader>>());
-
-        // Player Reader components
-        s.AddSingleton(sp.GetRequiredService<AddonBits>());
-        s.AddSingleton(sp.GetRequiredService<SpellInRange>());
-        s.AddSingleton(sp.GetRequiredService<BuffStatus>());
-        s.AddSingleton(sp.GetRequiredService<TargetDebuffStatus>());
-        s.AddSingleton(sp.GetRequiredService<Stance>());
+        s.ForwardSingleton<AuraTimeReader<IPlayerBuffTimeReader>>(sp);
+        s.ForwardSingleton<AuraTimeReader<ITargetDebuffTimeReader>>(sp);
+        s.ForwardSingleton<AuraTimeReader<ITargetBuffTimeReader>>(sp);
 
         return s;
     }
@@ -123,6 +130,9 @@ public static class DependencyInjection
     {
         services.AddSingleton<WApi>();
         services.AddSingleton<FrontendUpdate>();
+
+        services.AddSingleton<LevelTracker>();
+
         return services;
     }
 
@@ -159,16 +169,6 @@ public static class DependencyInjection
         services.AddSingleton<TalentDB>();
 
         services.AddAddonComponents();
-
-        services.AddSingleton<PlayerReader>();
-        services.AddSingleton<IMouseOverReader>(
-            x => x.GetRequiredService<PlayerReader>());
-
-        services.AddSingleton<AddonReader>();
-        services.AddSingleton<IAddonReader>(
-            x => x.GetRequiredService<AddonReader>());
-
-        services.AddSingleton<LevelTracker>();
 
         services.AddSingleton<IBotController, BotController>();
 
@@ -291,12 +291,9 @@ public static class DependencyInjection
     private static IPPather GetPather(IServiceProvider sp, ILogger logger)
     {
         var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
-        //var logger = sp.GetRequiredService<ILogger<Startup>>();
-        var oscp = sp.GetRequiredService<IOptions<StartupConfigPathing>>();
+        var scp = sp.GetRequiredService<IOptions<StartupConfigPathing>>().Value;
         var dataConfig = sp.GetRequiredService<DataConfig>();
         var worldMapAreaDB = sp.GetRequiredService<WorldMapAreaDB>();
-
-        StartupConfigPathing scp = oscp.Value;
 
         bool failed = false;
         if (scp.Type == StartupConfigPathing.Types.RemoteV3)
@@ -316,9 +313,7 @@ public static class DependencyInjection
         {
             var remoteLogger = loggerFactory.CreateLogger<RemotePathingAPI>();
             RemotePathingAPI api = new(remoteLogger, scp.hostv1, scp.portv1);
-            Task<bool> pingTask = Task.Run(api.PingServer);
-            pingTask.Wait();
-            if (pingTask.Result)
+            if (api.PingServer())
             {
                 if (scp.Type == StartupConfigPathing.Types.RemoteV3)
                 {
@@ -339,7 +334,7 @@ public static class DependencyInjection
 
         var pathingLogger = loggerFactory.CreateLogger<LocalPathingApi>();
         var serviceLogger = loggerFactory.CreateLogger<PPatherService>();
-        LocalPathingApi localApi = new(pathingLogger, new(serviceLogger, dataConfig, worldMapAreaDB), dataConfig);
+        LocalPathingApi localApi = new(pathingLogger, new(serviceLogger, dataConfig, worldMapAreaDB));
         logger.LogInformation($"Using {StartupConfigPathing.Types.Local}({localApi.GetType().Name})");
 
         return localApi;

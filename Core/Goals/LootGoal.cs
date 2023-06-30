@@ -162,7 +162,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
     {
         npcNameTargeting.ChangeNpcType(NpcNames.Corpse);
 
-        wait.Fixed(playerReader.NetworkLatency.Value);
+        wait.Fixed(playerReader.NetworkLatency);
         npcNameTargeting.WaitForUpdate();
 
         if (!npcNameTargeting.FindBy(CursorType.Loot))
@@ -172,7 +172,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         npcNameTargeting.ChangeNpcType(NpcNames.None);
 
         Log("Nearest Corpse clicked...");
-        float elapsedMs = wait.Until(playerReader.NetworkLatency.Value, bits.HasTarget);
+        float elapsedMs = wait.Until(playerReader.NetworkLatency, bits.HasTarget);
         LogFoundNpcNameCount(logger, npcNameTargeting.NpcCount, elapsedMs);
 
         CheckForGather();
@@ -254,7 +254,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
             logger.LogInformation("Look at possible closest corpse and try once again...");
 
-            wait.Fixed(playerReader.NetworkLatency.Value);
+            wait.Fixed(playerReader.NetworkLatency);
 
             if (FoundByCursor())
             {

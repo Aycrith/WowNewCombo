@@ -2,16 +2,13 @@
 
 namespace Core;
 
-public sealed class TargetDebuffStatus
+public sealed class TargetDebuffStatus : IReader
 {
-    private readonly int cell;
+    private const int cell = 42;
 
     private BitVector32 v;
 
-    public TargetDebuffStatus(int cell)
-    {
-        this.cell = cell;
-    }
+    public TargetDebuffStatus() { }
 
     public void Update(IAddonDataProvider reader)
     {

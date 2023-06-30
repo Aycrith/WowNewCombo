@@ -5,7 +5,7 @@ using SharedLib;
 
 namespace Core;
 
-public sealed class SpellBookReader
+public sealed class SpellBookReader : IReader
 {
     private const int cSpellId = 71;
 
@@ -19,7 +19,7 @@ public sealed class SpellBookReader
         this.SpellDB = spellDB;
     }
 
-    public void Read(IAddonDataProvider reader)
+    public void Update(IAddonDataProvider reader)
     {
         int spellId = reader.GetInt(cSpellId);
         if (spellId == 0) return;

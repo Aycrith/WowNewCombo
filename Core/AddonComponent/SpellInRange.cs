@@ -2,18 +2,15 @@
 
 namespace Core;
 
-public sealed class SpellInRange
+public sealed class SpellInRange : IReader
 {
-    private readonly int cell;
+    private const int cell = 40;
 
     public bool this[int index] => b[index];
 
     private BitVector32 b;
 
-    public SpellInRange(int cell)
-    {
-        this.cell = cell;
-    }
+    public SpellInRange() { }
 
     public void Update(IAddonDataProvider reader)
     {

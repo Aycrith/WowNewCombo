@@ -843,7 +843,7 @@ public sealed partial class RequirementFactory
 
     private static bool UsableGCD(string key, PlayerReader playerReader, Dictionary<string, Func<int>> intVariables)
     {
-        return intVariables[key]() <= CastingHandler.SPELL_QUEUE - playerReader.NetworkLatency.Value;
+        return intVariables[key]() <= CastingHandler.SPELL_QUEUE - playerReader.NetworkLatency;
     }
 
     private Requirement CreateTargetCastingSpell(string requirement)

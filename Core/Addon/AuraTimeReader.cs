@@ -5,7 +5,7 @@ namespace Core;
 
 public interface IAuraTimeReader
 {
-    void Read(IAddonDataProvider reader);
+    void Update(IAddonDataProvider reader);
     void Reset();
     int GetRemainingTimeMs(int textureId);
 }
@@ -16,7 +16,7 @@ public interface ITargetDebuffTimeReader : IAuraTimeReader { }
 
 public interface ITargetBuffTimeReader : IAuraTimeReader { }
 
-public sealed class AuraTimeReader<T> : IAuraTimeReader
+public sealed class AuraTimeReader<T> : IAuraTimeReader, IReader
 {
     public readonly struct Data
     {
@@ -44,7 +44,7 @@ public sealed class AuraTimeReader<T> : IAuraTimeReader
         Reset();
     }
 
-    public void Read(IAddonDataProvider reader)
+    public void Update(IAddonDataProvider reader)
     {
         int textureId = reader.GetInt(cTextureId);
         if (textureId == 0) return;

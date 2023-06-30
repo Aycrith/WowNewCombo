@@ -98,7 +98,7 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
 
         bagHashNewOrStackGain = bagReader.HashNewOrStackGain;
 
-        wait.Fixed(playerReader.NetworkLatency.Value);
+        wait.Fixed(playerReader.NetworkLatency);
 
         if (bagReader.BagsFull())
         {
@@ -176,7 +176,7 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
             {
                 int delay = playerReader.LastUIError == UI_ERROR.ERR_LOOT_LOCKED
                     ? Loot.LOOTFRAME_AUTOLOOT_DELAY
-                    : playerReader.NetworkLatency.Value;
+                    : playerReader.NetworkLatency;
 
                 wait.Fixed(delay);
                 LogCastingState(logger, delay, playerReader.CastState.ToStringF(), playerReader.LastUIError.ToStringF(), playerReader.IsCasting());
@@ -191,7 +191,7 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
             int remainMs = playerReader.RemainCastMs;
             playerReader.LastUIError = 0;
 
-            int waitTime = remainMs + playerReader.SpellQueueTimeMs + playerReader.NetworkLatency.Value;
+            int waitTime = remainMs + playerReader.SpellQueueTimeMs + playerReader.NetworkLatency;
             LogAwaitCastbarFinish(logger, herbalism ? "Herb Gathering" : "Skinning", waitTime);
 
             e = wait.Until(waitTime, herbalism ? HerbalismCastEnded : SkinningCastEnded);

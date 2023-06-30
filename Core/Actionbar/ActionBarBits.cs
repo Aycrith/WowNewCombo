@@ -12,7 +12,7 @@ public interface ICurrentAction : IActionBarBits { }
 
 public interface IUsableAction : IActionBarBits { }
 
-public sealed class ActionBarBits<T> : IActionBarBits
+public sealed class ActionBarBits<T> : IActionBarBits, IReader
 {
     private readonly int[] cells;
 

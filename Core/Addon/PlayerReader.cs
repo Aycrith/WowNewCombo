@@ -1,34 +1,33 @@
 ﻿using System.Collections.Specialized;
 using System.Numerics;
 
+using Core.Database;
+
 using SharedLib;
 
 namespace Core;
 
-public sealed partial class PlayerReader : IMouseOverReader
+public sealed partial class PlayerReader : IMouseOverReader, IReader
 {
     private readonly IAddonDataProvider reader;
     private readonly WorldMapAreaDB worldMapAreaDB;
-
-    public int SpellQueueTimeMs { get; set; } = 400;
+    private readonly AreaDB areaDb;
+    private readonly AddonBits bits;
 
     public PlayerReader(
         IAddonDataProvider reader,
         WorldMapAreaDB mapAreaDB,
+        AreaDB areaDb,
         AddonBits addonBits,
         SpellInRange spellInRange,
-        BuffStatus buffStatus,
-        TargetDebuffStatus targetDebuffStatus,
         Stance stance)
     {
         this.worldMapAreaDB = mapAreaDB;
-
+        this.areaDb = areaDb;
         this.reader = reader;
 
-        Bits = addonBits;
+        bits = addonBits;
         SpellInRange = spellInRange;
-        Buffs = buffStatus;
-        TargetDebuffs = targetDebuffStatus;
         Stance = stance;
 
         // TODO: inject! value type tho
@@ -57,8 +56,6 @@ public sealed partial class PlayerReader : IMouseOverReader
     public Vector3 CorpseMapPos => new(CorpseMapX, CorpseMapY, 0);
     public float CorpseMapX => reader.GetFixed(6) * 10;
     public float CorpseMapY => reader.GetFixed(7) * 10;
-
-    public AddonBits Bits { get; }
 
     public int HealthMax() => reader.GetInt(10);
     public int HealthCurrent() => reader.GetInt(11);
@@ -92,9 +89,6 @@ public sealed partial class PlayerReader : IMouseOverReader
     public bool WithInCombatRange() => SpellInRange.WithinCombatRange(this, Class);
     public bool OutOfCombatRange() => !SpellInRange.WithinCombatRange(this, Class);
 
-    public BuffStatus Buffs { get; }
-    public TargetDebuffStatus TargetDebuffs { get; }
-
     // TargetLevel * 100 + TargetClass
     public int TargetLevel => reader.GetInt(43) / 100;
     public UnitClassification TargetClassification => (UnitClassification)(reader.GetInt(43) % 100);
@@ -109,7 +103,7 @@ public sealed partial class PlayerReader : IMouseOverReader
     // 47 empty
 
     public Stance Stance { get; }
-    public Form Form => Stance.Get(Class, Bits.IsStealthed(), Version);
+    public Form Form => Stance.Get(Class, bits.IsStealthed(), Version);
 
     public int MinRange() => reader.GetInt(49) % 1000;
     public int MaxRange() => reader.GetInt(49) / 1000 % 1000;
@@ -185,7 +179,8 @@ public sealed partial class PlayerReader : IMouseOverReader
 
     public RecordInt GCD { get; } = new(95);
 
-    public RecordInt NetworkLatency { get; } = new(96);
+    public int NetworkLatency => reader.GetInt(96) % 10000;
+    public int SpellQueueTimeMs => reader.GetInt(96) / 10000 % 10000;
 
     public RecordInt LootEvent { get; } = new(97);
 
@@ -197,17 +192,14 @@ public sealed partial class PlayerReader : IMouseOverReader
     public void Update(IAddonDataProvider reader)
     {
         if (UIMapId.Updated(reader) && UIMapId.Value != 0 &&
-            worldMapAreaDB.TryGet(UIMapId.Value, out var wma))
+            worldMapAreaDB.TryGet(UIMapId.Value, out WorldMapArea wma))
         {
             WorldMapArea = wma;
             MapId = wma.MapID;
+
+            areaDb.Update(wma.AreaID);
         }
 
-        Bits.Update(reader);
-        SpellInRange.Update(reader);
-        Buffs.Update(reader);
-        TargetDebuffs.Update(reader);
-        Stance.Update(reader);
         CustomTrigger1 = new(reader.GetInt(74));
 
         PlayerXp.Update(reader);
@@ -221,7 +213,6 @@ public sealed partial class PlayerReader : IMouseOverReader
         LootEvent.Update(reader);
 
         GCD.Update(reader);
-        NetworkLatency.Update(reader);
 
         if (UIError != UI_ERROR.NONE)
             LastUIError = UIError;
@@ -243,6 +234,5 @@ public sealed partial class PlayerReader : IMouseOverReader
         LootEvent.Reset();
 
         GCD.Reset();
-        NetworkLatency.Reset();
     }
 }

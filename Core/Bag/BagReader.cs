@@ -16,7 +16,7 @@ public enum BagItemChange
     Update
 }
 
-public sealed class BagReader : IDisposable
+public sealed class BagReader : IDisposable, IReader
 {
     private const int cBagMeta = 20;
     private const int cItemNumCount = 21;
@@ -59,7 +59,7 @@ public sealed class BagReader : IDisposable
         this.equipmentReader.OnEquipmentChanged -= OnEquipmentChanged;
     }
 
-    public void Read(IAddonDataProvider reader)
+    public void Update(IAddonDataProvider reader)
     {
         ReadBagMeta(reader, out bool metaChanged);
 

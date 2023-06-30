@@ -65,13 +65,13 @@ public sealed partial class MountHandler : IMountHandler
         input.PressMount();
 
         float e = wait.Until(
-            CastingHandler.SPELL_QUEUE + playerReader.NetworkLatency.Value,
+            CastingHandler.SPELL_QUEUE + playerReader.NetworkLatency,
             CastDetected);
 
         LogCastStarted(logger, e);
 
         e = wait.Until(
-            playerReader.RemainCastMs + playerReader.NetworkLatency.Value,
+            playerReader.RemainCastMs + playerReader.NetworkLatency,
             MountedOrNotCastingOrValidTargetOrEnteredCombat);
 
         LogCastEnded(logger, e);
@@ -82,7 +82,7 @@ public sealed partial class MountHandler : IMountHandler
             return;
         }
 
-        wait.Fixed(playerReader.NetworkLatency.Value);
+        wait.Fixed(playerReader.NetworkLatency);
         LogIsMounted(logger, bits.IsMounted());
     }
 
