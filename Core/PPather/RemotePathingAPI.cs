@@ -10,15 +10,15 @@ using PPather.Data;
 using System.Text;
 using System.Numerics;
 using SharedLib.Converters;
-using System.Threading;
+using System.Net.Sockets;
 
 namespace Core;
 
-public sealed class RemotePathingAPI : IPPather
+public sealed class RemotePathingAPI : IPPather, IDisposable
 {
     private readonly ILogger<RemotePathingAPI> logger;
 
-    private readonly string host = "localhost";
+    private readonly string host = "127.0.0.1";
 
     private readonly int port = 5001;
 
@@ -26,7 +26,7 @@ public sealed class RemotePathingAPI : IPPather
 
     private readonly JsonSerializerOptions options;
 
-    private const int watchdogPollMs = 500;
+    private readonly HttpClient client;
 
     public RemotePathingAPI(ILogger<RemotePathingAPI> logger,
         string host, int port)
@@ -34,6 +34,8 @@ public sealed class RemotePathingAPI : IPPather
         this.logger = logger;
         this.host = host;
         this.port = port;
+
+        client = new();
 
         options = new()
         {
@@ -45,9 +47,13 @@ public sealed class RemotePathingAPI : IPPather
         api = $"http://{host}:{port}/api/PPather/";
     }
 
+    public void Dispose()
+    {
+        client.Dispose();
+    }
+
     public async ValueTask DrawLines(List<LineArgs> lineArgs)
     {
-        using HttpClient client = new();
         using StringContent content = new(JsonSerializer.Serialize(lineArgs, options), Encoding.UTF8, "application/json");
         LogInformation($"Drawing lines '{string.Join(", ", lineArgs.Select(l => l.MapId))}'...");
         await client.PostAsync($"{api}Drawlines", content);
@@ -55,7 +61,6 @@ public sealed class RemotePathingAPI : IPPather
 
     public async ValueTask DrawSphere(SphereArgs args)
     {
-        using HttpClient client = new();
         using StringContent content = new(JsonSerializer.Serialize(args, options), Encoding.UTF8, "application/json");
         await client.PostAsync($"{api}DrawSphere", content);
     }
@@ -64,19 +69,20 @@ public sealed class RemotePathingAPI : IPPather
     {
         try
         {
-            LogInformation($"Finding route from {mapFrom} map {uiMap} to {mapTo} map {uiMap}...");
+            //LogInformation($"map {uiMap} | {mapFrom} to {mapTo}");
             var url = $"{api}MapRoute?uimap1={uiMap}&x1={mapFrom.X}&y1={mapFrom.Y}&uimap2={uiMap}&x2={mapTo.X}&y2={mapTo.Y}";
 
-            long timestamp = Stopwatch.GetTimestamp();
-            using HttpClient client = new();
+            //long timestamp = Stopwatch.GetTimestamp();
+
             var task = client.GetStringAsync(url);
             string response = task.GetAwaiter().GetResult();
-            LogInformation($"Finding route from {mapFrom} map {uiMap} to {mapTo} took {Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds} ms.");
+
+            //LogInformation($"map {uiMap} | {mapFrom} to {mapTo} took {Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds}ms");
             return JsonSerializer.Deserialize<Vector3[]>(response, options) ?? Array.Empty<Vector3>();
         }
         catch (Exception ex)
         {
-            LogError($"Finding route from {mapFrom} to {mapTo}", ex);
+            LogError($"{mapFrom} to {mapTo}", ex);
             Console.WriteLine(ex);
             return Array.Empty<Vector3>();
         }
@@ -86,38 +92,32 @@ public sealed class RemotePathingAPI : IPPather
     {
         try
         {
-            LogInformation($"Finding route from {worldFrom} map {uiMap} to {worldTo} map {uiMap}...");
+            //LogInformation($"map {uiMap} | {worldFrom} map {uiMap} to {worldTo}");
             var url =
                 $"{api}WorldRoute2?x1={worldFrom.X}&y1={worldFrom.Y}&z1={worldFrom.Z}&x2={worldTo.X}&y2={worldTo.Y}&z2={worldTo.Z}&uimap={uiMap}";
 
-            long timestamp = Stopwatch.GetTimestamp();
-            using HttpClient client = new();
+            //long timestamp = Stopwatch.GetTimestamp();
+
             string response = client.GetStringAsync(url).GetAwaiter().GetResult();
-            LogInformation($"Finding route from {worldFrom} map {uiMap} to {worldTo} took {Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds} ms.");
+            //LogInformation($"map {uiMap} | {worldFrom} to {worldTo} took {Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds}ms");
             return JsonSerializer.Deserialize<Vector3[]>(response, options) ?? Array.Empty<Vector3>();
         }
         catch (Exception ex)
         {
-            LogError($"Finding route from {worldFrom} to {worldTo}", ex);
+            LogError($"{worldFrom} to {worldTo}", ex);
             Console.WriteLine(ex);
             return Array.Empty<Vector3>();
         }
     }
 
-    public async Task<bool> PingServer()
+    public bool PingServer()
     {
-        using CancellationTokenSource cts = new();
-        cts.CancelAfter(watchdogPollMs);
-
         try
         {
-            string url = $"{api}SelfTest";
-
-            using HttpClient client = new();
-            string response = await client.GetStringAsync(url, cts.Token);
-            return JsonSerializer.Deserialize<bool>(response);
+            using TcpClient client = new(host, port);
+            return true;
         }
-        catch (Exception ex)
+        catch (SocketException ex)
         {
             LogError($"{nameof(PingServer)} - Connected: false - {api} Gave({ex.Message})");
             return false;

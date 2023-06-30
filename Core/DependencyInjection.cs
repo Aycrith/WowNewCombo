@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
@@ -291,12 +291,9 @@ public static class DependencyInjection
     private static IPPather GetPather(IServiceProvider sp, ILogger logger)
     {
         var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
-        //var logger = sp.GetRequiredService<ILogger<Startup>>();
-        var oscp = sp.GetRequiredService<IOptions<StartupConfigPathing>>();
+        var scp = sp.GetRequiredService<IOptions<StartupConfigPathing>>().Value;
         var dataConfig = sp.GetRequiredService<DataConfig>();
         var worldMapAreaDB = sp.GetRequiredService<WorldMapAreaDB>();
-
-        StartupConfigPathing scp = oscp.Value;
 
         bool failed = false;
         if (scp.Type == StartupConfigPathing.Types.RemoteV3)
@@ -316,9 +313,7 @@ public static class DependencyInjection
         {
             var remoteLogger = loggerFactory.CreateLogger<RemotePathingAPI>();
             RemotePathingAPI api = new(remoteLogger, scp.hostv1, scp.portv1);
-            Task<bool> pingTask = Task.Run(api.PingServer);
-            pingTask.Wait();
-            if (pingTask.Result)
+            if (api.PingServer())
             {
                 if (scp.Type == StartupConfigPathing.Types.RemoteV3)
                 {
@@ -339,7 +334,7 @@ public static class DependencyInjection
 
         var pathingLogger = loggerFactory.CreateLogger<LocalPathingApi>();
         var serviceLogger = loggerFactory.CreateLogger<PPatherService>();
-        LocalPathingApi localApi = new(pathingLogger, new(serviceLogger, dataConfig, worldMapAreaDB), dataConfig);
+        LocalPathingApi localApi = new(pathingLogger, new(serviceLogger, dataConfig, worldMapAreaDB));
         logger.LogInformation($"Using {StartupConfigPathing.Types.Local}({localApi.GetType().Name})");
 
         return localApi;
