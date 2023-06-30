@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -37,8 +37,6 @@ public sealed class ClassConfiguration : IDisposable
     public bool KeyboardOnly { get; set; }
     public bool AllowPvP { get; set; }
     public bool AutoPetAttack { get; set; } = true;
-
-    public bool SpellQueue { get; set; } = true;
 
     public string PathFilename { get; set; } = string.Empty;
 

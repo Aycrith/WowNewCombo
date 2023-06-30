@@ -378,7 +378,6 @@ Take a look at the class files in `/Json/class` for examples of what you can do.
 | `"PathFilename"` | [Path](#Path) to use while alive | **false** | `""` |
 | `"PathThereAndBack"` | While using the path, [should go start to and reverse](#There-and-back) | true | `true` |
 | `"PathReduceSteps"` | Reduce the number of path points | true | `false` |
-| `"SpellQueue"` | Should anticipate the next possible cast action within the [SpellQueue Window](http://thedefiantguild.com/forums/discussion/15431.html) | true | `false` |
 | `"Mode"` | What kind of [behaviour](#Modes) should the bot operate | true | `Mode.Grind` |
 | `"NPCMaxLevels_Above"` | Maximum allowed level above difference to the player | true | `1` |
 | `"NPCMaxLevels_Below"` | Maximum allowed level below difference to the player | true | `7` |

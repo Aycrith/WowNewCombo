@@ -1,4 +1,4 @@
-﻿using Game;
+using Game;
 
 using Microsoft.Extensions.Logging;
 
@@ -76,8 +76,6 @@ public sealed partial class CastingHandler
 
         this.react = react;
 
-        if (!classConfig.SpellQueue)
-            playerReader.SpellQueueTimeMs = 0;
 
         this.interruptWatchdog = interruptWatchdog;
     }
