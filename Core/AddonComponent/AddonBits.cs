@@ -2,19 +2,15 @@
 
 namespace Core;
 
-public sealed class AddonBits
+public sealed class AddonBits : IReader
 {
-    private readonly int cell1;
-    private readonly int cell2;
+    private const int cell1 = 8;
+    private const int cell2 = 9;
 
     private BitVector32 v1;
     private BitVector32 v2;
 
-    public AddonBits(int cell1, int cell2)
-    {
-        this.cell1 = cell1;
-        this.cell2 = cell2;
-    }
+    public AddonBits() { }
 
     public void Update(IAddonDataProvider reader)
     {

@@ -16,6 +16,4 @@ public interface IAddonReader
     void Update();
     void UpdateUI();
     void SessionReset();
-
-    int GetInt(int index);
 }

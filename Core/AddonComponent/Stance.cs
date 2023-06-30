@@ -2,16 +2,13 @@
 
 namespace Core;
 
-public sealed class Stance
+public sealed class Stance : IReader
 {
-    private readonly int cell;
+    private const int cell = 48;
 
     private int value;
 
-    public Stance(int cell)
-    {
-        this.cell = cell;
-    }
+    public Stance() { }
 
     public void Update(IAddonDataProvider reader)
     {

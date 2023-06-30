@@ -2,16 +2,13 @@
 
 namespace Core;
 
-public sealed class BuffStatus
+public sealed class BuffStatus : IReader
 {
-    private readonly int cell;
+    private const int cell = 41;
 
     private BitVector32 v;
 
-    public BuffStatus(int cell)
-    {
-        this.cell = cell;
-    }
+    public BuffStatus() { }
 
     public void Update(IAddonDataProvider reader)
     {

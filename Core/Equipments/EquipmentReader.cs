@@ -6,7 +6,7 @@ using SharedLib;
 
 namespace Core;
 
-public sealed class EquipmentReader
+public sealed class EquipmentReader : IReader
 {
     private const int MAX_EQUIPMENT_COUNT = 24;
 
@@ -29,7 +29,7 @@ public sealed class EquipmentReader
         }
     }
 
-    public void Read(IAddonDataProvider reader)
+    public void Update(IAddonDataProvider reader)
     {
         int index = reader.GetInt(cSlotNum);
         if (index >= MAX_EQUIPMENT_COUNT)

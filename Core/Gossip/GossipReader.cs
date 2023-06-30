@@ -2,7 +2,7 @@
 
 namespace Core;
 
-public sealed class GossipReader
+public sealed class GossipReader : IReader
 {
     private const int cGossip = 73;
 
@@ -30,7 +30,7 @@ public sealed class GossipReader
     {
     }
 
-    public void Read(IAddonDataProvider reader)
+    public void Update(IAddonDataProvider reader)
     {
         data = reader.GetInt(cGossip);
 

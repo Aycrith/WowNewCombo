@@ -4,7 +4,7 @@ using Core.Database;
 
 namespace Core;
 
-public sealed class TalentReader
+public sealed class TalentReader : IReader
 {
     private const int cTalent = 72;
 
@@ -21,7 +21,7 @@ public sealed class TalentReader
         this.talentDB = talentDB;
     }
 
-    public void Read(IAddonDataProvider reader)
+    public void Update(IAddonDataProvider reader)
     {
         int hash = reader.GetInt(cTalent);
         if (hash == 0 || Talents.ContainsKey(hash)) return;

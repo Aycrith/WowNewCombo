@@ -1,43 +1,27 @@
 using Core.Database;
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using SharedLib;
 
 using System;
+using System.Collections.Immutable;
 using System.Threading;
 
 namespace Core;
 
-public sealed class AddonReader : IAddonReader, IDisposable
+public sealed class AddonReader : IAddonReader
 {
-    private readonly ILogger logger;
     private readonly IAddonDataProvider reader;
     private readonly AutoResetEvent resetEvent;
 
-    private readonly PlayerReader PlayerReader;
-    private readonly CombatLog combatLog;
-    private readonly BagReader bagReader;
-    private readonly EquipmentReader equipmentReader;
-
-    private readonly ActionBarCostReader actionBarCostReader;
-    private readonly ActionBarCooldownReader actionBarCooldownReader;
-
-    private readonly ActionBarBits<ICurrentAction> currentAction;
-    private readonly ActionBarBits<IUsableAction> usableAction;
-
-    private readonly GossipReader gossipReader;
-
-    private readonly SpellBookReader spellBookReader;
-    private readonly TalentReader talentReader;
-
-    private readonly WorldMapAreaDB worldMapAreaDb;
+    private readonly PlayerReader playerReader;
     private readonly CreatureDB creatureDb;
-    private readonly AreaDB areaDb;
 
-    public AuraTimeReader<IPlayerBuffTimeReader> PlayerBuffTimeReader { get; }
-    public AuraTimeReader<ITargetDebuffTimeReader> TargetDebuffTimeReader { get; }
-    public AuraTimeReader<ITargetBuffTimeReader> TargetBuffTimeReader { get; }
+    private readonly CombatLog combatLog;
+
+    private readonly ImmutableArray<IReader> readers;
 
     public event Action? AddonDataChanged;
 
@@ -54,58 +38,21 @@ public sealed class AddonReader : IAddonReader, IDisposable
     private int updateIndex;
     private DateTime lastUpdate;
 
-    public AddonReader(ILogger logger, IAddonDataProvider reader, 
+    public AddonReader(IAddonDataProvider reader,
         PlayerReader playerReader, AutoResetEvent resetEvent,
-        AreaDB areaDB, WorldMapAreaDB worldMapAreaDB, CreatureDB creatureDB,
+        CreatureDB creatureDb,
         CombatLog combatLog,
-        EquipmentReader equipmentReader, BagReader bagReader,
-        GossipReader gossipReader, SpellBookReader spellBookReader,
-        TalentReader talentReader,
-        ActionBarCostReader actionBarCostReader,
-        ActionBarCooldownReader actionBarCooldownReader,
-        ActionBarBits<ICurrentAction> currentAction,
-        ActionBarBits<IUsableAction> usableAction,
-        AuraTimeReader<IPlayerBuffTimeReader> playerBuffTimeReader,
-        AuraTimeReader<ITargetDebuffTimeReader> targetDebuffTimeReader,
-        AuraTimeReader<ITargetBuffTimeReader> targetBuffTimeReader
-        )
+        IServiceProvider sp)
     {
-        this.logger = logger;
         this.reader = reader;
         this.resetEvent = resetEvent;
-
-        this.areaDb = areaDB;
-        this.worldMapAreaDb = worldMapAreaDB;
-        this.creatureDb = creatureDB;
-
+        this.creatureDb = creatureDb;
         this.combatLog = combatLog;
+        this.playerReader = playerReader;
 
-        this.equipmentReader = equipmentReader;
-        this.bagReader = bagReader;
-
-        this.actionBarCostReader = actionBarCostReader;
-        this.actionBarCooldownReader = actionBarCooldownReader;
-
-        this.gossipReader = gossipReader;
-
-        this.spellBookReader = spellBookReader;
-
-        this.PlayerReader = playerReader;
-        this.talentReader = talentReader;
-
-        this.currentAction = currentAction;
-        this.usableAction = usableAction;
-
-        this.PlayerBuffTimeReader = playerBuffTimeReader;
-        this.TargetDebuffTimeReader = targetDebuffTimeReader;
-        this.TargetBuffTimeReader = targetBuffTimeReader;
+        readers = sp.GetServices<IReader>().ToImmutableArray();
 
         lastUpdate = DateTime.UtcNow;
-    }
-
-    public void Dispose()
-    {
-        bagReader.Dispose();
     }
 
     public void Update()
@@ -138,48 +85,30 @@ public sealed class AddonReader : IAddonReader, IDisposable
 
         IAddonDataProvider reader = this.reader;
 
-        currentAction.Update(reader);
-        usableAction.Update(reader);
-
-        PlayerReader.Update(reader);
-
-        if (lastTargetGuid != PlayerReader.TargetGuid)
+        ReadOnlySpan<IReader> span = readers.AsSpan();
+        for (int i = 0; i < span.Length; i++)
         {
-            lastTargetGuid = PlayerReader.TargetGuid;
+            span[i].Update(reader);
+        }
+
+        if (lastTargetGuid != playerReader.TargetGuid)
+        {
+            lastTargetGuid = playerReader.TargetGuid;
 
             TargetName =
-                creatureDb.Entries.TryGetValue(PlayerReader.TargetId, out string? name)
+                creatureDb.Entries.TryGetValue(playerReader.TargetId, out string? name)
                 ? name
                 : reader.GetString(16) + reader.GetString(17);
         }
 
-        if (lastMouseOverId != PlayerReader.MouseOverId)
+        if (lastMouseOverId != playerReader.MouseOverId)
         {
-            lastMouseOverId = PlayerReader.MouseOverId;
+            lastMouseOverId = playerReader.MouseOverId;
             MouseOverName =
-                creatureDb.Entries.TryGetValue(PlayerReader.MouseOverId, out string? name)
+                creatureDb.Entries.TryGetValue(playerReader.MouseOverId, out string? name)
                 ? name
                 : string.Empty;
         }
-
-        combatLog.Update(reader, PlayerReader.Bits.PlayerInCombat());
-
-        bagReader.Read(reader);
-        equipmentReader.Read(reader);
-
-        actionBarCostReader.Read(reader);
-        actionBarCooldownReader.Read(reader);
-
-        gossipReader.Read(reader);
-
-        spellBookReader.Read(reader);
-        talentReader.Read(reader);
-
-        PlayerBuffTimeReader.Read(reader);
-        TargetDebuffTimeReader.Read(reader);
-        TargetBuffTimeReader.Read(reader);
-
-        areaDb.Update(worldMapAreaDb.GetAreaId(PlayerReader.UIMapId.Value));
 
         resetEvent.Set();
     }
@@ -196,16 +125,11 @@ public sealed class AddonReader : IAddonReader, IDisposable
 
     public void FullReset()
     {
-        PlayerReader.Reset();
-
-        actionBarCostReader.Reset();
-        actionBarCooldownReader.Reset();
-        spellBookReader.Reset();
-        talentReader.Reset();
-
-        PlayerBuffTimeReader.Reset();
-        TargetDebuffTimeReader.Reset();
-        TargetBuffTimeReader.Reset();
+        ReadOnlySpan<IReader> span = readers.AsSpan();
+        for (int i = 0; i < span.Length; i++)
+        {
+            span[i].Reset();
+        }
 
         SessionReset();
     }

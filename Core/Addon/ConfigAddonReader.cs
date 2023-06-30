@@ -19,11 +19,6 @@ public sealed class ConfigAddonReader : IAddonReader
         this.autoResetEvent = autoResetEvent;
     }
 
-    public int GetInt(int index)
-    {
-        return reader.GetInt(index);
-    }
-
     public void FetchData()
     {
         reader.Update();
