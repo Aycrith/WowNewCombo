@@ -802,7 +802,11 @@ function DataToColor:CreateFrames(n)
 
             if globalCounter % LATENCY_ITERATION_FRAME_CHANGE_RATE == 0 then
                 local _, _, lagHome, lagWorld = GetNetStats()
-                Pixel(int, max(lagHome, lagWorld), 96)
+
+                local spellQueue = min(tonumber(GetCVar(DataToColor.C.SpellQueueWindow)) or 0, 999)
+                local lag = min(max(lagHome, lagWorld), 9999)
+
+                Pixel(int, 10000 * spellQueue + lag, 96)
             end
 
             -- Timers

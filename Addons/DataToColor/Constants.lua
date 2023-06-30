@@ -21,6 +21,8 @@ DataToColor.C.unitNormal = "normal"
 DataToColor.C.unitmouseover = "mouseover"
 DataToColor.C.unitmouseovertarget = "mouseovertarget"
 
+DataToColor.C.SpellQueueWindow = "SpellQueueWindow"
+
 -- Character's name
 DataToColor.C.CHARACTER_NAME = UnitName(DataToColor.C.unitPlayer)
 DataToColor.C.CHARACTER_GUID = UnitGUID(DataToColor.C.unitPlayer)
