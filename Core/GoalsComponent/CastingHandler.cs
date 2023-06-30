@@ -1,4 +1,4 @@
-using Game;
+﻿using Game;
 
 using Microsoft.Extensions.Logging;
 
@@ -136,21 +136,21 @@ public sealed partial class CastingHandler
 
         if (item.AfterCastWaitSwing)
         {
-            elapsedMs = wait.Until(playerReader.MainHandSpeedMs() + playerReader.NetworkLatency.Value,
+            elapsedMs = wait.Until(playerReader.MainHandSpeedMs() + playerReader.NetworkLatency,
                 interrupt: () => !currentAction.Is(item) ||
                     playerReader.MainHandSwing.ElapsedMs() < playerReader.SpellQueueTimeMs, // swing timer reset from any miss
                 repeat: input.PressApproachOnCooldown);
         }
         else if (item.Item)
         {
-            elapsedMs = wait.Until(SPELL_QUEUE + playerReader.NetworkLatency.Value,
+            elapsedMs = wait.Until(SPELL_QUEUE + playerReader.NetworkLatency,
                 interrupt: () =>
                     beforeUsable != usableAction.Is(item) ||
                     currentAction.Is(item));
         }
         else
         {
-            elapsedMs = wait.Until(SPELL_QUEUE + playerReader.NetworkLatency.Value,
+            elapsedMs = wait.Until(SPELL_QUEUE + playerReader.NetworkLatency,
                 interrupt: () =>
                 (beforeSpellId != playerReader.CastSpellId.Value &&
                 beforeCastEventValue != playerReader.CastEvent.Value) ||
@@ -210,7 +210,7 @@ public sealed partial class CastingHandler
             return true;
         }
 
-        float elapsedMs = wait.Until(SPELL_QUEUE + playerReader.NetworkLatency.Value,
+        float elapsedMs = wait.Until(SPELL_QUEUE + playerReader.NetworkLatency,
             interrupt: () =>
             beforeCastEventValue != playerReader.CastEvent.Value ||
             beforeSpellId != playerReader.CastSpellId.Value ||
@@ -323,7 +323,7 @@ public sealed partial class CastingHandler
             input.PressStopAttack();
             input.PressStopAttack();
 
-            int waitTime = Max(playerReader.GCD.Value, playerReader.RemainCastMs) + (2 * playerReader.NetworkLatency.Value);
+            int waitTime = Max(playerReader.GCD.Value, playerReader.RemainCastMs) + (2 * playerReader.NetworkLatency);
             elapsedMs = wait.Until(waitTime, cts.Token);
             logger.LogInformation($"Stop {nameof(bits.SpellOn_Shoot)} and wait {waitTime}ms | {elapsedMs}ms");
             if (elapsedMs >= 0)
