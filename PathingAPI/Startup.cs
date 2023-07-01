@@ -2,9 +2,12 @@ using System;
 using System.IO;
 using System.Reflection;
 
+using MatBlazor;
+
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
@@ -52,6 +55,7 @@ public sealed class Startup
 
         Log.Information(DateTimeOffset.Now.ToString());
 
+        services.AddMatBlazor();
         services.AddRazorPages();
         services.AddServerSideBlazor();
         services.AddSingleton<DataConfig>(x => DataConfig.Load()); // going to use the Hardcoded DataConfig.Exp
@@ -107,6 +111,13 @@ public sealed class Startup
 
         app.UseHttpsRedirection();
         app.UseStaticFiles();
+
+        DataConfig dataConfig = app.ApplicationServices.GetRequiredService<DataConfig>();
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            FileProvider = new PhysicalFileProvider(Path.Combine(env.ContentRootPath, dataConfig.Path)),
+            RequestPath = "/path"
+        });
 
         app.UseRouting();
 

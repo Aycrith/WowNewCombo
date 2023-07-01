@@ -64,6 +64,9 @@
     [Parameter]
     public string Name { get; set; } = "path";
 
+    [Parameter]
+    public bool ClearPath { get; set; } = true;
+
     private Thread thread;
     private CancellationTokenSource cts;
     private JsonSerializerOptions options;
@@ -215,7 +218,9 @@
                 await DequeueChunkEvent(e);
             }
 
-            await jsRuntime.InvokeVoidAsync("removeMeshes", Name);
+            if (ClearPath)
+                await jsRuntime.InvokeVoidAsync("removeMeshes", Name);
+
             await jsRuntime.InvokeVoidAsync("drawPath",
                 JsonSerializer.Serialize(spotPath.locations, options), PathColour, Name);
 

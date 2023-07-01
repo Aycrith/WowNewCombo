@@ -1,0 +1,350 @@
+﻿@page "/Route"
+
+@using PPather
+@using PPather.Data
+@using PPather.Graph
+@using System.Numerics
+@using System.Threading
+@using Newtonsoft
+
+@using MatBlazor
+@using System.IO
+@using PathingAPI.Controllers
+@using SharedLib.Data
+@using SharedLib
+@using WinAPI
+
+@inject IJSRuntime jsRuntime
+@inject PPatherService pPatherService
+@inject DataConfig dataConfig
+@inject WorldMapAreaDB worldMapAreaDb
+
+<Watch PathColour="@pathColour" Name="@name" ClearPath=@clearPath />
+
+<style>
+    .mat-autocomplete-list {
+        width: 40%;
+    }
+
+    .mat-autocomplete-list-popup {
+    }
+
+        .mat-autocomplete-list-popup > .mdc-list {
+            position: absolute;
+            bottom: 60px;
+        }
+
+    .thumbnail {
+        position: relative;
+        z-index: 0;
+        text-decoration: none;
+    }
+
+        .thumbnail:hover {
+            background-color: transparent;
+            z-index: 50;
+        }
+
+        .thumbnail .thumbnail-img {
+            /*CSS for enlarged image*/
+            position: absolute;
+            padding: 5px;
+            visibility: hidden;
+            text-decoration: none;
+        }
+
+            .thumbnail .thumbnail-img img {
+                padding: 2px;
+            }
+
+        .thumbnail:hover .thumbnail-img {
+            /*CSS for enlarged image on hover*/
+            visibility: visible;
+            transform: scale(2);
+            transform-origin: top left;
+            position: fixed;
+            top: 5px;
+            left: 5px;
+            pointer-events: none;
+        }
+
+</style>
+
+<span class="form-inline px-4">
+    <label>Zone:</label>
+    <select disabled="@IsDisabled" class="form-control" @bind="UIMapId">
+        @foreach (var wma in wmas)
+        {
+            <option value="@wma.UIMapId">@wma.AreaName</option>
+        }
+    </select>
+
+    <MatAutocompleteList Items="@Files" TItem="string" Label="Path" ValueChanged="OnSelectedPathChanged"
+                         ShowClearButton="true" NumberOfElementsInPopup="@VisibleNum" OnTextChanged="OnTextChanged">
+        <ItemTemplate>
+            <div class="mat-autocomplete-list-popup-element" style="display: flex; width: 100%; font-size: 0.75vw">
+                @{
+                    string imgFile = @context.Replace("json", "jpg");
+                }
+                @if (File.Exists(System.IO.Path.Combine(dataConfig.Path, imgFile)))
+                {
+                    <a class="thumbnail">
+                        <span class="oi oi-image" aria-hidden="true"> </span>
+                        <span class="thumbnail-img">
+                            <img src="./path/@imgFile" />
+                        </span>
+                    </a>
+                }
+                @context
+            </div>
+        </ItemTemplate>
+    </MatAutocompleteList>
+
+    <button style="margin-left: 10px" type="button" disabled="@IsDisabled" class="form-control btn btn-primary" @onclick="StartDraw">
+        @if (IsDisabled)
+        {
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        }
+        Draw Path
+    </button>
+
+    <label>Start:</label>
+    <InputNumber @bind-Value="StartIndex" style="width: 60px"></InputNumber>
+    <label>End:</label>
+    <InputNumber @bind-Value="EndIndex" style="width: 60px"></InputNumber>
+
+    <button style="margin-left: 10px" type="button" disabled="@IsDisabled" class="form-control btn btn-primary" @onclick="DoPrev">
+        --
+    </button>
+    <button style="margin-left: 10px" type="button" disabled="@IsDisabled" class="form-control btn btn-primary" @onclick="DoNext">
+        ++
+    </button>
+    <button style="margin-left: 10px" type="button" disabled="@IsDisabled" class="form-control btn btn-primary" @onclick="DoSearch">
+        @if (IsDisabled)
+        {
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        }
+        Search
+    </button>
+
+    <!-- Search Type Combo -->
+    <label style="margin-left: 10px">Search:</label>
+    <select disabled="@IsDisabled" class="form-control" @bind="SearchType">
+        <option value="0">Original</option>
+        <option value="1">A*</option>
+        <option value="2">A* avoid models</option>
+    </select>
+
+</span>
+
+@code {
+    private bool IsDisabled { get; set; } = true;
+
+    private int VisibleNum { get; set; } = 10;
+    private string Selected { get; set; } = string.Empty;
+
+    private Vector3[] path { get; set; } = Array.Empty<Vector3>();
+
+    private int UIMapId { get; set; }
+
+    private IEnumerable<WorldMapArea> wmas { get; set; }
+    private IEnumerable<string> Files { get; set; }
+
+    private int startIndex = 0;
+    private int StartIndex
+    {
+        get => startIndex;
+        set
+        {
+            startIndex = Math.Min(Math.Max(value, 0), path.Length - 1);
+        }
+    }
+
+    private int endIndex = 1;
+    private int EndIndex
+    {
+        get => endIndex;
+        set
+        {
+            endIndex = Math.Min(Math.Max(value, 0), path.Length - 1);
+        }
+    }
+
+    System.Threading.Thread searchPathThread;
+
+    private int SearchType { get; set; } =
+        (int)PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance;
+
+    private int pathColour { get; set; } = (int)Watch.Color.Red;
+    private string name { get; set; } = "test";
+    private bool clearPath { get; set; } = false;
+
+    protected override void OnInitialized()
+    {
+        wmas = worldMapAreaDb.Values.OrderBy(x => x.AreaName);
+        Files = PathFiles();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await jsRuntime.InvokeVoidAsync("createScene");
+            pPatherService.Reset();
+
+            IsDisabled = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task DoSearch()
+    {
+        IsDisabled = true;
+
+        PathGraph.ProgressTimeoutSeconds = 60;
+        PathGraph.TimeoutSeconds = 600;
+
+        await InvokeAsync(StateHasChanged);
+
+        searchPathThread = new Thread(SearchPathThread);
+        searchPathThread.Start();
+    }
+
+    public async void SearchPathThread()
+    {
+        try
+        {
+            worldMapAreaDb.TryGet(UIMapId, out var wma);
+            float mapId = ContinentDB.NameToId[wma.Continent];
+
+            Vector3 s = path[StartIndex];
+            Vector4 start = new Vector4(s.X, s.Y, s.Z, mapId);
+
+            Vector3 e = path[EndIndex];
+            Vector4 end = new Vector4(e.X, e.Y, e.Z, mapId);
+
+            pathColour = (int)Watch.Color.Red;
+            name = "test";
+            clearPath = true;
+            await InvokeAsync(StateHasChanged);
+
+            pPatherService.SetLocations(start, end);
+
+            var patherPath = pPatherService.DoSearch((PathGraph.eSearchScoreSpot)SearchType);
+
+            IsDisabled = false;
+        }
+        catch (Exception ex)
+        {
+            await jsRuntime.InvokeVoidAsync("log", ex.Message);
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void DoNext()
+    {
+        StartIndex++;
+        EndIndex++;
+    }
+
+    public void DoPrev()
+    {
+        StartIndex--;
+        EndIndex--;
+    }
+
+
+    private void OnSelectedPathChanged(string pick)
+    {
+        Selected = pick;
+        if (string.IsNullOrEmpty(Selected) || Selected == Files.First())
+        {
+            Selected = string.Empty;
+        }
+
+        //ValidateLoadButton();
+        base.InvokeAsync(StateHasChanged);
+    }
+
+    private void OnTextChanged(string text)
+    {
+        VisibleNum = string.IsNullOrEmpty(text) ? 10 : 20;
+    }
+
+    private void OnChanged(object sender, FileSystemEventArgs e)
+    {
+        base.InvokeAsync(StateHasChanged);
+    }
+
+    private void StartDraw()
+    {
+        path = GetPath(Selected);
+        List<float[]> coords = new List<float[]>();
+        bool? allzero = null;
+
+        for (int i = 0; i < path.Length; i++)
+        {
+            Vector3 p = path[i];
+            coords.Add(new float[] { p.X, p.Y, p.Z });
+
+            if (allzero == null && p.Z == 0)
+            {
+                allzero = true;
+            }
+        }
+        if (allzero == null)
+            allzero = false;
+
+        worldMapAreaDb.TryGet(UIMapId, out var wma);
+
+        float mapId = ContinentDB.NameToId[wma.Continent];
+
+        if (allzero.Value)
+        {
+            for (int i = 0; i < coords.Count; i++)
+            {
+                var row = coords[i];
+
+                Vector4 world = pPatherService.ToWorld(UIMapId, row[0], row[1], row[2]);
+
+                path[i].X = row[0] = world.X;
+                path[i].Y = row[1] = world.Y;
+                path[i].Z = row[2] = world.Z;
+            }
+        }
+
+        pathColour = (int)Watch.Color.Orange;
+        name = "route";
+        clearPath = false;
+        StateHasChanged();
+
+        pPatherService.DrawPath(mapId, coords);
+    }
+
+    public Vector3[] GetPath(string path)
+    {
+        return Newtonsoft.Json.JsonConvert
+            .DeserializeObject<Vector3[]>(
+            System.IO.File.ReadAllText(RelativeFilePath(dataConfig, path)))!;
+    }
+
+    private string RelativeFilePath(DataConfig dataConfig, string path)
+    {
+        return !path.Contains(dataConfig.Path)
+            ? System.IO.Path.Join(dataConfig.Path, path)
+            : path;
+    }
+
+    public IEnumerable<string> PathFiles()
+    {
+        var root = System.IO.Path.Join(
+            dataConfig.Path, System.IO.Path.DirectorySeparatorChar.ToString());
+
+        return Directory.EnumerateFiles(root, "*.json*", SearchOption.AllDirectories)
+            .Select(path => path.Replace(root, string.Empty))
+            .OrderBy(x => x, new NaturalStringComparer())
+            .ToList();
+    }
+
+}

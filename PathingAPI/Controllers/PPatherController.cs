@@ -230,4 +230,32 @@ public sealed class PPatherController : ControllerBase
         isBusy = false;
         return true;
     }
+
+    [HttpPost("DrawPath")]
+    [Produces("application/json")]
+    public bool DrawPath(int uiMapId, List<float[]> coords)
+    {
+        float mapId = -1;
+        for (int i = 0; i < coords.Count; i++)
+        {
+            var row = coords[i];
+
+            Vector4 world = service.ToWorld(uiMapId, row[0], row[1], row[2]);
+
+            row[0] = world.X;
+            row[1] = world.Y;
+            row[2] = world.Z;
+
+            if (mapId == -1)
+                mapId = world.W;
+        }
+
+        if (isBusy) { return false; }
+        isBusy = true;
+
+        service.DrawPath(mapId, coords);
+
+        isBusy = false;
+        return true;
+    }
 }
