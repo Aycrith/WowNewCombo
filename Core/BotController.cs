@@ -58,7 +58,6 @@ public sealed partial class BotController : IBotController, IDisposable
     public event Action? StatusChanged;
 
     private const int SIZE = 32;
-    private const int MOD = 5;
     private readonly double[] ScreenLatencys = new double[SIZE];
     private readonly double[] NPCLatencys = new double[SIZE];
 
@@ -155,12 +154,12 @@ public sealed partial class BotController : IBotController, IDisposable
             {
                 time = Stopwatch.GetTimestamp();
                 wowScreen.Update();
-                ScreenLatencys[tickCount & MOD] =
+                ScreenLatencys[tickCount % SIZE] =
                     Stopwatch.GetElapsedTime(time).TotalMilliseconds;
 
                 time = Stopwatch.GetTimestamp();
                 npcNameFinder.Update();
-                NPCLatencys[tickCount & MOD] =
+                NPCLatencys[tickCount % SIZE] =
                     Stopwatch.GetElapsedTime(time).TotalMilliseconds;
 
                 if (wowScreen.EnablePostProcess)
@@ -172,7 +171,7 @@ public sealed partial class BotController : IBotController, IDisposable
                 time = Stopwatch.GetTimestamp();
                 wowScreen.UpdateMinimapBitmap();
                 minimapNodeFinder.Update();
-                ScreenLatencys[tickCount & MOD] =
+                ScreenLatencys[tickCount % SIZE] =
                     Stopwatch.GetElapsedTime(time).TotalMilliseconds;
             }
 
@@ -265,9 +264,9 @@ public sealed partial class BotController : IBotController, IDisposable
 
             Initialize(ClassConfig);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            logger.LogError(e.Message);
+            logger.LogError(ex, ex.Message);
             return false;
         }
 
