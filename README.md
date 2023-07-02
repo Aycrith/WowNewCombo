@@ -259,6 +259,7 @@ From the main menu (ESC) set the following under Interface Options:
 
 | Interface Option | Value |
 | ---- | ---- |
+| Controls - Enable Interact Key | **true** |
 | Controls - Auto Loot | &#9745; |
 | Controls - Interact on Left click | &#9744; |
 | Combat - Do Not Flash Screen at Low Health | &#9745; |
