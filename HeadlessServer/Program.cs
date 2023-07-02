@@ -49,15 +49,17 @@ internal sealed class Program
             $"{DateTimeOffset.Now}");
 
         ParserResult<RunOptions> options =
-            Parser.Default.ParseArguments<RunOptions>(args).WithNotParsed(a =>
+            Parser.Default.ParseArguments<RunOptions>(args).WithNotParsed(errors =>
         {
-            log.LogError("Missing Required command line argument!");
+            foreach (Error? e in errors)
+            {
+                log.LogError($"{e}");
+            }
         });
 
         if (options.Tag == ParserResultType.NotParsed)
         {
-            Console.ReadLine();
-            return;
+            goto Exit;
         }
 
         services.AddSingleton<RunOptions>(options.Value);
@@ -66,37 +68,39 @@ internal sealed class Program
 
         if (!FrameConfig.Exists() || !AddonConfig.Exists())
         {
-            log.LogError("Unable to run headless server as crucial configuration files missing!");
+            log.LogError($"Unable to run {nameof(HeadlessServer)} as crucial configuration files were missing!");
             log.LogWarning($"Please be sure, the following validated configuration files present next to the executable:");
             log.LogWarning($"{Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)}");
             log.LogWarning($"* {DataConfigMeta.DefaultFileName}");
             log.LogWarning($"* {FrameConfigMeta.DefaultFilename}");
             log.LogWarning($"* {AddonConfigMeta.DefaultFileName}");
-            Console.ReadLine();
-            return;
+            goto Exit;
         }
 
-        if (ConfigureServices(log, services))
+        if (!ConfigureServices(log, services))
         {
-            ServiceProvider provider = services
-                .AddSingleton<HeadlessServer>()
-                .BuildServiceProvider(new ServiceProviderOptions() { ValidateOnBuild = true });
-
-            Microsoft.Extensions.Logging.ILogger logger =
-                provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger>();
-
-            AppDomain.CurrentDomain.UnhandledException += (object sender, UnhandledExceptionEventArgs args) =>
-            {
-                Exception e = (Exception)args.ExceptionObject;
-                logger.LogError(e, e.Message);
-            };
-
-            provider
-                .GetRequiredService<HeadlessServer>()
-                .Run(options);
+            goto Exit;
         }
 
-        Console.ReadLine();
+        ServiceProvider provider = services
+            .AddSingleton<HeadlessServer>()
+            .BuildServiceProvider(new ServiceProviderOptions() { ValidateOnBuild = true });
+
+        var logger =
+            provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger>();
+
+        AppDomain.CurrentDomain.UnhandledException += (object sender, UnhandledExceptionEventArgs args) =>
+        {
+            Exception e = (Exception)args.ExceptionObject;
+            logger.LogError(e, e.Message);
+        };
+
+        provider
+            .GetRequiredService<HeadlessServer>()
+            .Run(options);
+
+    Exit:
+        Console.ReadKey();
     }
 
     private static bool ConfigureServices(

@@ -38,13 +38,6 @@ public sealed partial class HeadlessServer
 
     public void Run(ParserResult<RunOptions> options)
     {
-        logger.LogInformation($"Running!");
-
-        if (options.Value.Pid != -1)
-        {
-            logger.LogInformation($"Attached pid={options.Value.Pid}");
-        }
-
         InitState();
 
         botController.LoadClassProfile(options.Value.ClassConfig!);

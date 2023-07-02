@@ -6,10 +6,11 @@ public sealed class ConditionalWaitGoal : GoapGoal
 {
     public override float Cost => Keys[0].Cost;
 
-    private readonly ILogger logger;
+    private readonly ILogger<ConditionalWaitGoal> logger;
     private readonly Wait wait;
 
-    public ConditionalWaitGoal(KeyAction keyAction, ILogger logger, Wait wait)
+    public ConditionalWaitGoal(KeyAction keyAction,
+        ILogger<ConditionalWaitGoal> logger, Wait wait)
         : base(nameof(ConditionalWaitGoal))
     {
         this.logger = logger;

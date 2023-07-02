@@ -8,7 +8,6 @@ using static System.IO.File;
 using System.Numerics;
 using System.Threading;
 using static Newtonsoft.Json.JsonConvert;
-using Serilog;
 using Core.Session;
 using SharedLib;
 
@@ -20,15 +19,6 @@ public static class GoalFactory
         IServiceCollection services,
         IServiceProvider sp, ClassConfiguration classConfig)
     {
-        services.AddSingleton(
-            sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger>());
-
-        services.AddLogging(builder =>
-        {
-            builder.ClearProviders();
-            builder.AddSerilog();
-        });
-
         services.AddStartupIoC(sp);
 
         // session scoped services
@@ -250,7 +240,7 @@ public static class GoalFactory
 
             services.AddScoped<GoapGoal, ConditionalWaitGoal>(x => new(
                 keyAction,
-                x.GetRequiredService<Microsoft.Extensions.Logging.ILogger>(),
+                x.GetRequiredService<ILogger<ConditionalWaitGoal>>(),
                 x.GetRequiredService<Wait>()));
         }
     }
@@ -285,23 +275,26 @@ public static class GoalFactory
         Vector3[] rawPath = DeserializeObject<Vector3[]>(
             ReadAllText(classConfig.PathFilename))!;
 
+        // TODO: there could be saved user routes where
+        //       the Z component not 0
+        for (int i = 0; i < rawPath.Length; i++)
+        {
+            if (rawPath[i].Z != 0)
+                rawPath[i].Z = 0;
+        }
+
         if (!classConfig.PathReduceSteps)
             return rawPath;
 
         int step = 2;
-        int reducedLength = rawPath.Length % step == 0 ?
-            rawPath.Length / step :
-            (rawPath.Length / step) + 1;
+        int reducedLength = rawPath.Length % step == 0
+            ? rawPath.Length / step
+            : (rawPath.Length / step) + 1;
 
         Vector3[] path = new Vector3[reducedLength];
         for (int i = 0; i < path.Length; i++)
         {
             path[i] = rawPath[i * step];
-
-            // TODO: there could be saved user routes where
-            //       the Z component not 0
-            if (path[i].Z != 0)
-                path[i].Z = 0;
         }
         return path;
     }

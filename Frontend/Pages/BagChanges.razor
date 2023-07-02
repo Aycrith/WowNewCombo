@@ -16,7 +16,7 @@
         <div class="card-body">
             @foreach (var bagItem in NewItems)
             {
-                <div class="animate__animated animate__backInUp">
+                <div class="animate__animated animate__slideInDown">
                     <BagItemComponent BagItem="bagItem" ShowChangesPrice="true" />
                     <hr style="margin:2px" />
                 </div>
@@ -37,7 +37,8 @@
 
     protected override void OnInitialized()
     {
-        NewItems = bagReader.BagItems.Where(WasRecentlyUpdated);
+        NewItems = bagReader.BagItems
+            .Where(WasRecentlyUpdated).Take(MaxItemToShow);
 
         bagReader.DataChanged += OnBagReaderDataChanged;
 

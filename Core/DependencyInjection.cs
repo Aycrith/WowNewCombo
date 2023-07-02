@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Drawing;
 using System.Threading;
-using System.Threading.Tasks;
 
 using Core.Addon;
 using Core.Database;
@@ -67,7 +66,11 @@ public static class DependencyInjection
     public static IServiceCollection AddStartupIoC(
         this IServiceCollection s, IServiceProvider sp)
     {
-        // StartUp Container
+        s.ForwardSingleton<ILoggerFactory>(sp);
+        s.ForwardSingleton<ILogger>(sp);
+
+        s.AddLogging();
+
         s.ForwardSingleton<CancellationTokenSource>(sp);
 
         s.ForwardSingleton<WowProcessInput>(sp);
@@ -126,90 +129,93 @@ public static class DependencyInjection
         return s;
     }
 
-    public static IServiceCollection AddCoreFrontend(this IServiceCollection services)
+    public static IServiceCollection AddCoreFrontend(
+        this IServiceCollection s)
     {
-        services.AddSingleton<WApi>();
-        services.AddSingleton<FrontendUpdate>();
+        s.AddSingleton<WApi>();
+        s.AddSingleton<FrontendUpdate>();
 
-        services.AddSingleton<LevelTracker>();
+        s.AddSingleton<LevelTracker>();
 
-        return services;
+        return s;
     }
 
-    public static IServiceCollection AddCoreConfiguration(this IServiceCollection services)
+    public static IServiceCollection AddCoreConfiguration(
+        this IServiceCollection s)
     {
-        services.AddSingleton<IAddonDataProvider, AddonDataProviderGDIConfig>();
-        services.AddSingleton<IBotController, ConfigBotController>();
-        services.AddSingleton<IAddonReader, ConfigAddonReader>();
+        s.AddSingleton<IAddonDataProvider, AddonDataProviderGDIConfig>();
+        s.AddSingleton<IBotController, ConfigBotController>();
+        s.AddSingleton<IAddonReader, ConfigAddonReader>();
 
-        return services;
+        return s;
     }
 
-    public static IServiceCollection AddCoreNormal(this IServiceCollection services, ILogger logger)
+    public static IServiceCollection AddCoreNormal(
+        this IServiceCollection s, ILogger log)
     {
-        services.AddSingleton<IScreenCapture>(x =>
-            GetScreenCapture(x.GetRequiredService<IServiceProvider>(), logger));
+        s.AddSingleton<IScreenCapture>(x =>
+            GetScreenCapture(x.GetRequiredService<IServiceProvider>(), log));
 
-        services.AddSingleton<IPPather>(x =>
-            GetPather(x.GetRequiredService<IServiceProvider>(), logger));
+        s.AddSingleton<IPPather>(x =>
+            GetPather(x.GetRequiredService<IServiceProvider>(), log));
 
-        services.AddSingleton<IAddonDataProvider>(x =>
-            GetAddonDataProvider(x.GetRequiredService<IServiceProvider>(), logger));
+        s.AddSingleton<IAddonDataProvider>(x =>
+            GetAddonDataProvider(x.GetRequiredService<IServiceProvider>(), log));
 
-        services.AddSingleton<MinimapNodeFinder>();
+        s.AddSingleton<MinimapNodeFinder>();
 
-        services.AddSingleton<SessionStat>();
-        services.AddSingleton<IGrindSessionDAO, LocalGrindSessionDAO>();
+        s.AddSingleton<SessionStat>();
+        s.AddSingleton<IGrindSessionDAO, LocalGrindSessionDAO>();
 
-        services.AddSingleton<AreaDB>();
-        services.AddSingleton<WorldMapAreaDB>();
-        services.AddSingleton<ItemDB>();
-        services.AddSingleton<CreatureDB>();
-        services.AddSingleton<SpellDB>();
-        services.AddSingleton<TalentDB>();
+        s.AddSingleton<AreaDB>();
+        s.AddSingleton<WorldMapAreaDB>();
+        s.AddSingleton<ItemDB>();
+        s.AddSingleton<CreatureDB>();
+        s.AddSingleton<SpellDB>();
+        s.AddSingleton<TalentDB>();
 
-        services.AddAddonComponents();
+        s.AddAddonComponents();
 
-        services.AddSingleton<IBotController, BotController>();
+        s.AddSingleton<IBotController, BotController>();
 
-        return services;
+        return s;
     }
 
-    public static IServiceCollection AddCoreBase(this IServiceCollection services)
+    public static IServiceCollection AddCoreBase(this IServiceCollection s)
     {
-        services.AddSingleton<CancellationTokenSource>();
-        services.AddSingleton<AutoResetEvent>(x => new(false));
-        services.AddSingleton<Wait>();
+        s.AddSingleton<CancellationTokenSource>();
+        s.AddSingleton<AutoResetEvent>(x => new(false));
+        s.AddSingleton<Wait>();
 
-        services.AddSingleton<StartupClientVersion>();
-        services.AddSingleton<DataConfig>(x => DataConfig.Load(
+        s.AddSingleton<StartupClientVersion>();
+        s.AddSingleton<DataConfig>(x => DataConfig.Load(
             x.GetRequiredService<StartupClientVersion>().Path));
 
-        services.AddSingleton<WowScreen>();
-        services.AddSingleton<IBitmapProvider>(x => x.GetRequiredService<WowScreen>());
-        services.AddSingleton<IWowScreen>(x => x.GetRequiredService<WowScreen>());
+        s.ForwardSingleton<WowScreen, IBitmapProvider>();
+        s.ForwardSingleton<WowScreen, IWowScreen>();
 
-        services.AddSingleton<WowProcessInput>();
-        services.AddSingleton<IMouseInput>(x => x.GetRequiredService<WowProcessInput>());
+        s.ForwardSingleton<WowProcessInput, IMouseInput>();
 
-        services.AddSingleton<ExecGameCommand>();
+        s.AddSingleton<ExecGameCommand>();
 
-        services.AddSingleton<DataFrame[]>(x => FrameConfig.LoadFrames());
-        services.AddSingleton<FrameConfigurator>();
+        s.AddSingleton<DataFrame[]>(x => FrameConfig.LoadFrames());
+        s.AddSingleton<FrameConfigurator>();
 
-        services.AddSingleton<INpcResetEvent, NpcResetEvent>();
-        services.AddSingleton<NpcNameFinder>();
+        s.AddSingleton<INpcResetEvent, NpcResetEvent>();
+        s.AddSingleton<NpcNameFinder>();
 
-        return services;
+        return s;
     }
 
 
-    public static bool AddWoWProcess(this IServiceCollection services, ILogger log)
+    public static bool AddWoWProcess(
+        this IServiceCollection services, ILogger log)
     {
         services.AddSingleton<WowProcess>();
         services.AddSingleton<AddonConfigurator>();
 
-        var sp = services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true });
+        var sp = services.BuildServiceProvider(
+            new ServiceProviderOptions { ValidateOnBuild = true });
 
         WowProcess wowProcess = sp.GetRequiredService<WowProcess>();
         log.LogInformation($"Pid: {wowProcess.ProcessId}");
@@ -246,11 +252,11 @@ public static class DependencyInjection
     }
 
 
-    private static IScreenCapture GetScreenCapture(IServiceProvider sp, ILogger log)
+    private static IScreenCapture GetScreenCapture(
+        IServiceProvider sp, ILogger log)
     {
-        //var log = sp.GetRequiredService<ILogger<Startup>>();
         var spd = sp.GetRequiredService<IOptions<StartupConfigDiagnostics>>();
-        var globalLogger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger>();
+        var globalLogger = sp.GetRequiredService<ILogger>();
         var logger = sp.GetRequiredService<ILogger<ScreenCapture>>();
         var dataConfig = sp.GetRequiredService<DataConfig>();
         var cts = sp.GetRequiredService<CancellationTokenSource>();
@@ -265,9 +271,9 @@ public static class DependencyInjection
         return value;
     }
 
-    private static IAddonDataProvider GetAddonDataProvider(IServiceProvider sp, ILogger log)
+    private static IAddonDataProvider GetAddonDataProvider(
+        IServiceProvider sp, ILogger log)
     {
-        //var log = sp.GetRequiredService<ILogger<Startup>>();
         var scr = sp.GetRequiredService<IOptions<StartupConfigReader>>();
         var wowScreen = sp.GetRequiredService<WowScreen>();
         var frames = sp.GetRequiredService<DataFrame[]>();
@@ -299,10 +305,13 @@ public static class DependencyInjection
         if (scp.Type == StartupConfigPathing.Types.RemoteV3)
         {
             var remoteLogger = loggerFactory.CreateLogger<RemotePathingAPIV3>();
-            RemotePathingAPIV3 api = new(remoteLogger, scp.hostv3, scp.portv3, worldMapAreaDB);
+            RemotePathingAPIV3 api = new(
+                remoteLogger, scp.hostv3, scp.portv3, worldMapAreaDB);
             if (api.PingServer())
             {
-                logger.LogInformation($"Using {StartupConfigPathing.Types.RemoteV3}({api.GetType().Name}) {scp.hostv3}:{scp.portv3}");
+                logger.LogInformation(
+                    $"Using {StartupConfigPathing.Types.RemoteV3}({api.GetType().Name}) " +
+                    $"{scp.hostv3}:{scp.portv3}");
                 return api;
             }
             api.Dispose();
@@ -317,10 +326,15 @@ public static class DependencyInjection
             {
                 if (scp.Type == StartupConfigPathing.Types.RemoteV3)
                 {
-                    logger.LogWarning($"Unavailable {StartupConfigPathing.Types.RemoteV3} {scp.hostv3}:{scp.portv3} - Fallback to {StartupConfigPathing.Types.RemoteV1}");
+                    logger.LogWarning(
+                        $"Unavailable {StartupConfigPathing.Types.RemoteV3} " +
+                        $"{scp.hostv3}:{scp.portv3} - Fallback to " +
+                        $"{StartupConfigPathing.Types.RemoteV1}");
                 }
 
-                logger.LogInformation($"Using {StartupConfigPathing.Types.RemoteV1}({api.GetType().Name}) {scp.hostv1}:{scp.portv1}");
+                logger.LogInformation(
+                    $"Using {StartupConfigPathing.Types.RemoteV1}({api.GetType().Name}) " +
+                    $"{scp.hostv1}:{scp.portv1}");
                 return api;
             }
 
@@ -334,8 +348,10 @@ public static class DependencyInjection
 
         var pathingLogger = loggerFactory.CreateLogger<LocalPathingApi>();
         var serviceLogger = loggerFactory.CreateLogger<PPatherService>();
-        LocalPathingApi localApi = new(pathingLogger, new(serviceLogger, dataConfig, worldMapAreaDB));
-        logger.LogInformation($"Using {StartupConfigPathing.Types.Local}({localApi.GetType().Name})");
+        LocalPathingApi localApi = new(pathingLogger, new(
+            serviceLogger, dataConfig, worldMapAreaDB));
+        logger.LogInformation(
+            $"Using {StartupConfigPathing.Types.Local}({localApi.GetType().Name})");
 
         return localApi;
     }
