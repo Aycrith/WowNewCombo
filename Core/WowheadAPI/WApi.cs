@@ -9,6 +9,8 @@ public sealed class WApi
 {
     private string BaseUrl { get; }
 
+    private string BaseUIMapUrl { get; }
+
     public WApi(StartupClientVersion scv)
     {
         BaseUrl = scv.Version switch
@@ -18,6 +20,15 @@ public sealed class WApi
             ClientVersion.Wrath => "https://www.wowhead.com/wotlk",
             _ => "https://www.wowhead.com",
         };
+
+        BaseUIMapUrl = scv.Version switch
+        {
+            ClientVersion.SoM => "https://wow.zamimg.com/images/wow/classic/maps/enus/zoom/",
+            ClientVersion.TBC => "https://wow.zamimg.com/images/wow/tbc/maps/enus/zoom/",
+            ClientVersion.Wrath => "https://wow.zamimg.com/images/wow/wrath/maps/enus/zoom/",
+            _ => "https://wow.zamimg.com/images/wow/maps/enus/zoom/",
+        };
+
     }
 
     public string NpcId => $"{BaseUrl}/npc=";
@@ -46,5 +57,10 @@ public sealed class WApi
         catch { }
 
         return string.Empty;
+    }
+
+    public string GetMapImage(int areaId)
+    {
+        return $"{BaseUIMapUrl}{areaId}.jpg";
     }
 }

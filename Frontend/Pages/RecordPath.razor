@@ -12,6 +12,7 @@
 @inject IJSRuntime JSRuntime
 @inject DataConfig dataConfig
 @inject AreaDB areaDB
+@inject WApi wapi
 
 <div class="row">
     <div class="col-sm">
@@ -285,7 +286,7 @@
         0);
 
         await JSRuntime.InvokeVoidAsync("focusAt", JsonConvert.SerializeObject(pp));
-        */
+    */
     }
 
     private void UpdateZoneName()
@@ -379,10 +380,19 @@
     {
         recording = false;
 
-        string filename = $"__Path_{areaName}_{DateTime.Now.ToString("yyyy_MM_dd_HH_mm_ss")}.json";
-        string filepath = Path.Join(dataConfig.Path, filename);
+        string filename = $"__Path_{areaName}_{DateTime.Now.ToString("yyyy_MM_dd_HH_mm_ss")}";
+        string filepath = Path.Join(dataConfig.Path, $"{filename}.json");
         File.WriteAllText(filepath, JsonConvert.SerializeObject(editPath));
         message = $"Saved to: {filepath}";
+
+        try
+        {
+            string imgFilepath = Path.Join(dataConfig.Path, $"{filename}.jpg");
+            string mapUrl = wapi.GetMapImage(PlayerReader.WorldMapArea.AreaID);
+
+            PathDrawer.Execute(editPath, mapUrl, imgFilepath);
+        }
+        catch { }
 
         routeInfo.UpdateRoute(editPath.ToArray());
     }
