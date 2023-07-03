@@ -222,7 +222,7 @@
         "Name": "Repair",
         "Key": "C",
         "Requirement": "Durability% < 35",
-        "PathFilename": "25-30_HillsbardFoothills_Vendor.json",
+        "PathFilename": "25-30_Hillsbrad Foothills_Vendor.json",
         "Cost": 6
       },
       {
@@ -232,7 +232,7 @@
           "BagFull",
           "BagGreyItem"
         ],
-        "PathFilename": "25-30_HillsbardFoothills_Vendor.json",
+        "PathFilename": "25-30_Hillsbrad Foothills_Vendor.json",
         "Cost": 6
       }
     ]

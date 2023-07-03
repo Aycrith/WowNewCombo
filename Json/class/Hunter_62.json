@@ -6,7 +6,7 @@
   "PathReduceSteps": true,
   "NPCMaxLevels_Above": 3,
   "MountKey": "N0",
-  "PathFilename": "60_Hellfire_Ravager.json",
+  "PathFilename": "60_Hellfire Peninsula_Ravager.json",
   "Pull": {
     "Sequence": [
       {

@@ -2,7 +2,7 @@
   "ClassName": "Warlock",
   "Loot": true,
   "NPCMaxLevels_Above": 2,
-  "PathFilename": "17_Redridge.json",
+  "PathFilename": "17_Redridge Mountains.json",
   "PathThereAndBack": true,
   "PathReduceSteps": true,
   "Blacklist": [
