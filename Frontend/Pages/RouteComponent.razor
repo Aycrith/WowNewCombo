@@ -3,6 +3,7 @@
 @using System.Linq
 @using System.Numerics
 @using System.Timers
+@using System.Buffers
 
 @inject IAddonReader addonReader
 @inject IBotController botController
@@ -218,11 +219,19 @@
 
         if (routeinfo.RouteToWaypoint.Length > 0)
         {
-            var waylist = routeinfo.RouteToWaypoint.ToArray();
-            worldmapAreaDB.ToMap_FlipXY(PlayerReader.UIMapId.Value, ref waylist);
+            var pooler = ArrayPool<Vector3>.Shared;
+            int length = routeinfo.RouteToWaypoint.Length;
+            var waylist = pooler.Rent(length);
+            routeinfo.RouteToWaypoint.CopyTo(waylist, 0);
 
-            this.RouteToWaypointLines = new MarkupString(routeinfo.RenderPathLines(waylist));
-            this.RouteToWaypointPoints = new MarkupString(routeinfo.RenderPathPoints(waylist));
+            ArraySegment<Vector3> segment = new ArraySegment<Vector3>(waylist, 0, length);
+
+            worldmapAreaDB.ToMap_FlipXY(PlayerReader.UIMapId.Value, segment);
+
+            this.RouteToWaypointLines = new MarkupString(routeinfo.RenderPathLines(segment));
+            this.RouteToWaypointPoints = new MarkupString(routeinfo.RenderPathPoints(segment));
+
+            pooler.Return(waylist);
         }
         else
         {

@@ -67,7 +67,7 @@ public sealed class WorldMapAreaDB
         return new Vector3(wma.ToMapY(world.Y), wma.ToMapX(world.X), world.Z);
     }
 
-    public void ToMap_FlipXY(int uiMap, ref Vector3[] worlds)
+    public void ToMap_FlipXY(int uiMap, Span<Vector3> worlds)
     {
         if (!TryGet(uiMap, out WorldMapArea wma))
             return;

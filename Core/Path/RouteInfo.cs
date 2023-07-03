@@ -181,48 +181,37 @@ public sealed class RouteInfo : IDisposable
 
     private void CalculateDiffs()
     {
-        var pooler = ArrayPool<Vector3>.Shared;
-
+        int routeLength = RouteSrc.Count();
         int navLength = RouteToWaypoint.Length;
-        Vector3[] nav = pooler.Rent(navLength);
-        RouteToWaypoint.CopyTo(nav, 0);
-        worldmapAreaDB.ToMap_FlipXY(playerReader.UIMapId.Value, ref nav);
-
         int poiCount = PoiList.Count;
-        Vector3[] pois = pooler.Rent(poiCount);
+
+        int length = routeLength + navLength + poiCount + 1;
+        Span<Vector3> total = stackalloc Vector3[length];
+
+        RouteToWaypoint.AsSpan().CopyTo(total);
+        worldmapAreaDB.ToMap_FlipXY(playerReader.UIMapId.Value, total[..navLength]);
+
         for (int i = 0; i < poiCount; i++)
         {
-            pois[i] = PoiList[i].MapLoc;
+            total[navLength + i] = PoiList[i].MapLoc;
         }
 
-        int routeLength = RouteSrc.Count();
-        Vector3[] route = pooler.Rent(routeLength);
         int idx = 0;
         foreach (Vector3 p in RouteSrc)
         {
-            route[idx] = p;
-            idx++;
+            total[navLength + poiCount + idx++] = p;
         }
 
-        int length = routeLength + navLength + poiCount + 1;
-        Vector3[] alloc = pooler.Rent(length);
-
-        Array.Copy(route, alloc, routeLength);
-        Array.ConstrainedCopy(nav, 0, alloc, routeLength, navLength);
-        Array.ConstrainedCopy(pois, 0, alloc, routeLength + navLength, poiCount);
-
-        alloc[length - 1] = playerReader.MapPos;
-
-        ArraySegment<Vector3> total = new(alloc, 0, length);
+        total[^1] = playerReader.MapPos;
 
         static float X(Vector3 s) => s.X;
-        float maxX = total.Max(X);
-        float minX = total.Min(X);
+        float maxX = Max(total, X);
+        float minX = Min(total, X);
         float diffX = maxX - minX;
 
         static float Y(Vector3 s) => s.Y;
-        float maxY = total.Max(Y);
-        float minY = total.Min(Y);
+        float maxY = Max(total, Y);
+        float minY = Min(total, Y);
         float diffY = maxY - minY;
 
         this.addY = 0;
@@ -241,9 +230,33 @@ public sealed class RouteInfo : IDisposable
             this.diff = diffY;
         }
 
-        pooler.Return(pois);
-        pooler.Return(nav);
-        pooler.Return(alloc);
+        static float Max(ReadOnlySpan<Vector3> span, Func<Vector3, float> selector)
+        {
+            float max = float.MinValue;
+
+            for (int i = 0; i < span.Length; i++)
+            {
+                float v = selector(span[i]);
+                if (v > max)
+                    max = v;
+            }
+
+            return max;
+        }
+
+        static float Min(ReadOnlySpan<Vector3> span, Func<Vector3, float> selector)
+        {
+            float max = float.MaxValue;
+
+            for (int i = 0; i < span.Length; i++)
+            {
+                float v = selector(span[i]);
+                if (v < max)
+                    max = v;
+            }
+
+            return max;
+        }
     }
 
 
