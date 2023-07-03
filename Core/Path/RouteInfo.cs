@@ -260,36 +260,34 @@ public sealed class RouteInfo : IDisposable
     }
 
 
-    private readonly StringBuilder sb_path = new();
     public string RenderPathLines(IEnumerable<Vector3> path)
     {
-        sb_path.Clear();
+        StringBuilder sb = new();
         foreach ((Vector3 p1, Vector3 p2) in path.Pairwise())
         {
-            sb_path.AppendLine(
+            sb.AppendLine(
                 $"<line " +
                 $"x1='{ToCanvasPointX(p1.X)}' " +
                 $"y1='{ToCanvasPointY(p1.Y)}' " +
                 $"x2='{ToCanvasPointX(p2.X)}' " +
                 $"y2='{ToCanvasPointY(p2.Y)}' />");
         }
-        return sb_path.ToString();
+        return sb.ToString();
     }
 
     private const string first = "<br><b>First</b>";
     private const string last = "<br><b>Last</b>";
 
-    private readonly StringBuilder sb_points = new();
     public string RenderPathPoints(IEnumerable<Vector3> path)
     {
-        sb_points.Clear();
+        StringBuilder sb = new();
         int count = path.Count();
         int i = 0;
         foreach (Vector3 p in path)
         {
             float x = p.X;
             float y = p.Y;
-            sb_points.AppendLine(
+            sb.AppendLine(
                 $"<circle onmousedown=\"pointClick(evt,{x},{y},{i});\" " +
                 $"onmousemove=\"showTooltip(evt,'{x},{y}{(i == 0 ? first : i == count - 1 ? last : string.Empty)}');\" " +
                 $"onmouseout=\"hideTooltip();\" " +
@@ -297,7 +295,7 @@ public sealed class RouteInfo : IDisposable
                 $"cy='{ToCanvasPointY(p.Y)}' r='{dSize}' />");
             i++;
         }
-        return sb_points.ToString();
+        return sb.ToString();
     }
 
     public Vector3 NextPoint()
