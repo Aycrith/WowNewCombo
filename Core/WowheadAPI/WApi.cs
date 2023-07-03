@@ -23,10 +23,10 @@ public sealed class WApi
 
         BaseUIMapUrl = scv.Version switch
         {
-            ClientVersion.SoM => "https://wow.zamimg.com/images/wow/classic/maps/enus/zoom/",
-            ClientVersion.TBC => "https://wow.zamimg.com/images/wow/tbc/maps/enus/zoom/",
-            ClientVersion.Wrath => "https://wow.zamimg.com/images/wow/wrath/maps/enus/zoom/",
-            _ => "https://wow.zamimg.com/images/wow/maps/enus/zoom/",
+            ClientVersion.SoM => "https://wow.zamimg.com/images/wow/classic/maps/enus/original/",
+            ClientVersion.TBC => "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/",
+            ClientVersion.Wrath => "https://wow.zamimg.com/images/wow/wrath/maps/enus/original/",
+            _ => "https://wow.zamimg.com/images/wow/maps/enus/original/",
         };
 
     }
