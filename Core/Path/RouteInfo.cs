@@ -1,11 +1,15 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Data;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
 
 using Core.Database;
+using Core.Extensions;
 
 using SharedLib;
 
@@ -39,13 +43,19 @@ public readonly struct RouteInfoPoi
 
 public sealed class RouteInfo : IDisposable
 {
+    public IEnumerable<Vector3> RouteSrc { get; private set; }
+
     public Vector3[] Route { get; private set; }
 
-    public Vector3[] RouteToWaypoint => pathedRoutes.Any()
-                ? pathedRoutes.OrderByDescending(x => x.LastActive).First().PathingRoute()
-                : Array.Empty<Vector3>();
+    public Vector3[] RouteToWaypoint =>
+        pathedRoutes.Length > 0 ? pathedRoutes
+            .OrderByDescending(MostRecent)
+            .First().PathingRoute()
+        : Array.Empty<Vector3>();
 
-    private readonly IEnumerable<IRouteProvider> pathedRoutes;
+    private static DateTime MostRecent(IRouteProvider x) => x.LastActive;
+
+    private readonly ImmutableArray<IRouteProvider> pathedRoutes;
     private readonly AreaDB areaDB;
     private readonly PlayerReader playerReader;
     private readonly WorldMapAreaDB worldmapAreaDB;
@@ -65,10 +75,13 @@ public sealed class RouteInfo : IDisposable
 
     private const int dSize = 2;
 
-    public RouteInfo(Vector3[] route, IEnumerable<IRouteProvider> pathedRoutes, PlayerReader playerReader, AreaDB areaDB, WorldMapAreaDB worldmapAreaDB)
+    public RouteInfo(Vector3[] route,
+        IEnumerable<IRouteProvider> pathedRoutes,
+        PlayerReader playerReader, AreaDB areaDB,
+        WorldMapAreaDB worldmapAreaDB)
     {
-        this.Route = route;
-        this.pathedRoutes = pathedRoutes;
+        RouteSrc = this.Route = route;
+        this.pathedRoutes = pathedRoutes.ToImmutableArray();
         this.playerReader = playerReader;
         this.areaDB = areaDB;
         this.worldmapAreaDB = worldmapAreaDB;
@@ -84,13 +97,18 @@ public sealed class RouteInfo : IDisposable
         areaDB.Changed -= OnZoneChanged;
     }
 
+    public void SetRouteSource(IEnumerable<Vector3>? src = null)
+    {
+        RouteSrc = src ?? Route;
+    }
+
     public void UpdateRoute(Vector3[] mapRoute)
     {
         Route = mapRoute;
 
-        foreach (IEditedRouteReceiver receiver in pathedRoutes.OfType<IEditedRouteReceiver>())
+        foreach (var r in pathedRoutes.OfType<IEditedRouteReceiver>())
         {
-            receiver.ReceivePath(Route);
+            r.ReceivePath(Route);
         }
     }
 
@@ -163,42 +181,48 @@ public sealed class RouteInfo : IDisposable
 
     private void CalculateDiffs()
     {
-        /*
-        TODO> route disappears after time?
-        Vector3[] pois = PoiList.Select(p => p.MapLoc).ToArray();
-        Vector3[] route = Route.ToArray();
-        Vector3[] navigation = RouteToWaypoint.ToArray();
-        worldmapAreaDB.ToMap_FlipXY(playerReader.UIMapId.Value, ref navigation);
+        var pooler = ArrayPool<Vector3>.Shared;
 
-        Vector3[] allPoints = new Vector3[route.Length + navigation.Length + pois.Length];
-        Array.Copy(Route, allPoints, route.Length);
-        Array.ConstrainedCopy(navigation, 0, allPoints, route.Length, navigation.Length);
-        Array.ConstrainedCopy(pois, 0, allPoints, route.Length + navigation.Length, pois.Length);
-        allPoints[^1] = playerReader.MapPos;
-        */
+        int navLength = RouteToWaypoint.Length;
+        Vector3[] nav = pooler.Rent(navLength);
+        RouteToWaypoint.CopyTo(nav, 0);
+        worldmapAreaDB.ToMap_FlipXY(playerReader.UIMapId.Value, ref nav);
 
-        var allPoints = Route.ToList();
-
-        Vector3[] navigation = RouteToWaypoint.ToArray();
-        worldmapAreaDB.ToMap_FlipXY(playerReader.UIMapId.Value, ref navigation);
-        allPoints.AddRange(navigation);
-
-        ReadOnlySpan<RouteInfoPoi> span = CollectionsMarshal.AsSpan(PoiList);
-        for (int i = 0; i < span.Length; i++)
+        int poiCount = PoiList.Count;
+        Vector3[] pois = pooler.Rent(poiCount);
+        for (int i = 0; i < poiCount; i++)
         {
-            allPoints.Add(span[i].MapLoc);
+            pois[i] = PoiList[i].MapLoc;
         }
 
-        allPoints.Add(playerReader.MapPos);
+        int routeLength = RouteSrc.Count();
+        Vector3[] route = pooler.Rent(routeLength);
+        int idx = 0;
+        foreach (Vector3 p in RouteSrc)
+        {
+            route[idx] = p;
+            idx++;
+        }
+
+        int length = routeLength + navLength + poiCount + 1;
+        Vector3[] alloc = pooler.Rent(length);
+
+        Array.Copy(route, alloc, routeLength);
+        Array.ConstrainedCopy(nav, 0, alloc, routeLength, navLength);
+        Array.ConstrainedCopy(pois, 0, alloc, routeLength + navLength, poiCount);
+
+        alloc[length - 1] = playerReader.MapPos;
+
+        ArraySegment<Vector3> total = new(alloc, 0, length);
 
         static float X(Vector3 s) => s.X;
-        float maxX = allPoints.Max(X);
-        float minX = allPoints.Min(X);
+        float maxX = total.Max(X);
+        float minX = total.Min(X);
         float diffX = maxX - minX;
 
         static float Y(Vector3 s) => s.Y;
-        float maxY = allPoints.Max(Y);
-        float minY = allPoints.Min(Y);
+        float maxY = total.Max(Y);
+        float minY = total.Min(Y);
         float diffY = maxY - minY;
 
         this.addY = 0;
@@ -216,39 +240,59 @@ public sealed class RouteInfo : IDisposable
             this.min = minY;
             this.diff = diffY;
         }
+
+        pooler.Return(pois);
+        pooler.Return(nav);
+        pooler.Return(alloc);
     }
 
-    public string RenderPathLines(Vector3[] path)
+
+    private readonly StringBuilder sb_path = new();
+    public string RenderPathLines(IEnumerable<Vector3> path)
     {
-        StringBuilder sb = new();
-        for (int i = 0; i < path.Length - 1; i++)
+        sb_path.Clear();
+        foreach ((Vector3 p1, Vector3 p2) in path.Pairwise())
         {
-            Vector3 p1 = path[i];
-            Vector3 p2 = path[i + 1];
-            sb.AppendLine($"<line x1 = '{ToCanvasPointX(p1.X)}' y1 = '{ToCanvasPointY(p1.Y)}' x2 = '{ToCanvasPointX(p2.X)}' y2 = '{ToCanvasPointY(p2.Y)}' />");
+            sb_path.AppendLine(
+                $"<line " +
+                $"x1='{ToCanvasPointX(p1.X)}' " +
+                $"y1='{ToCanvasPointY(p1.Y)}' " +
+                $"x2='{ToCanvasPointX(p2.X)}' " +
+                $"y2='{ToCanvasPointY(p2.Y)}' />");
         }
-        return sb.ToString();
+        return sb_path.ToString();
     }
 
     private const string first = "<br><b>First</b>";
     private const string last = "<br><b>Last</b>";
 
-    public string RenderPathPoints(Vector3[] path)
+    private readonly StringBuilder sb_points = new();
+    public string RenderPathPoints(IEnumerable<Vector3> path)
     {
-        StringBuilder sb = new();
-        for (int i = 0; i < path.Length; i++)
+        sb_points.Clear();
+        int count = path.Count();
+        int i = 0;
+        foreach (Vector3 p in path)
         {
-            Vector3 p = path[i];
             float x = p.X;
             float y = p.Y;
-            sb.AppendLine($"<circle onmousedown=\"pointClick(evt,{x},{y},{i});\"  onmousemove=\"showTooltip(evt,'{x},{y}{(i == 0 ? first : i == path.Length - 1 ? last : string.Empty)}');\" onmouseout=\"hideTooltip();\"  cx = '{ToCanvasPointX(p.X)}' cy = '{ToCanvasPointY(p.Y)}' r = '{dSize}' />");
+            sb_points.AppendLine(
+                $"<circle onmousedown=\"pointClick(evt,{x},{y},{i});\" " +
+                $"onmousemove=\"showTooltip(evt,'{x},{y}{(i == 0 ? first : i == count - 1 ? last : string.Empty)}');\" " +
+                $"onmouseout=\"hideTooltip();\" " +
+                $"cx='{ToCanvasPointX(p.X)}' " +
+                $"cy='{ToCanvasPointY(p.Y)}' r='{dSize}' />");
+            i++;
         }
-        return sb.ToString();
+        return sb_points.ToString();
     }
 
     public Vector3 NextPoint()
     {
-        var route = pathedRoutes.OrderByDescending(s => s.LastActive).FirstOrDefault();
+        var route = pathedRoutes
+            .OrderByDescending(MostRecent)
+            .FirstOrDefault();
+
         if (route == null || !route.HasNext())
             return Vector3.Zero;
 
@@ -261,17 +305,35 @@ public sealed class RouteInfo : IDisposable
         if (pt == Vector3.Zero)
             return string.Empty;
 
-        return $"<circle cx = '{ToCanvasPointX(pt.X)}' cy = '{ToCanvasPointY(pt.Y)}'r = '{dSize + 1}' />";
+        return $"<circle " +
+            $"cx='{ToCanvasPointX(pt.X)}' " +
+            $"cy='{ToCanvasPointY(pt.Y)}'" +
+            $"r='{dSize + 1}' />";
     }
 
     public string DeathImage(Vector3 pt)
     {
         var size = this.canvasSize / 25;
-        return pt == Vector3.Zero ? string.Empty : $"<image href = '_content/Frontend/death.svg' x = '{ToCanvasPointX(pt.X) - size / 2}' y = '{ToCanvasPointY(pt.Y) - size / 2}' height='{size}' width='{size}' />";
+        return pt == Vector3.Zero
+            ? string.Empty
+            : $"<image href='_content/Frontend/death.svg' " +
+            $"x='{ToCanvasPointX(pt.X) - size / 2}' " +
+            $"y='{ToCanvasPointY(pt.Y) - size / 2}' " +
+            $"height='{size}' " +
+            $"width='{size}' />";
     }
 
     public string DrawPoi(RouteInfoPoi poi)
     {
-        return $"<circle onmousemove=\"showTooltip(evt, '{poi.Name}<br/>{poi.MapLoc.X},{poi.MapLoc.Y}');\" onmouseout=\"hideTooltip();\" cx='{ToCanvasPointX(poi.MapLoc.X)}' cy='{ToCanvasPointY(poi.MapLoc.Y)}' r='{(poi.Radius == 1 ? dSize : DistanceToGrid((int)poi.Radius))}' " + (poi.Radius == 1 ? $"fill='{poi.Color}'" : $"stroke='{poi.Color}' stroke-width='1' fill='none'") + " />";
+        return $"<circle " +
+            $"onmousemove=\"showTooltip(evt, '{poi.Name}<br/>{poi.MapLoc.X},{poi.MapLoc.Y}');\" " +
+            $"onmouseout=\"hideTooltip();\" " +
+            $"cx='{ToCanvasPointX(poi.MapLoc.X)}' " +
+            $"cy='{ToCanvasPointY(poi.MapLoc.Y)}' " +
+            $"r='{(poi.Radius == 1 ? dSize : DistanceToGrid((int)poi.Radius))}' " + (
+            poi.Radius == 1
+            ? $"fill='{poi.Color}'"
+            : $"stroke='{poi.Color}' " +
+            $"stroke-width='1' fill='none'") + " />";
     }
 }

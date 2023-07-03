@@ -5,6 +5,7 @@
 @using System.Numerics
 @using SharedLib.Extensions
 @using Core.Database
+@using static Core.Extensions.IEnumerableExtensions
 
 @inject IAddonReader addonReader
 @inject PlayerReader PlayerReader
@@ -19,7 +20,11 @@
         <h3>Path Editor/Recorder</h3>
         @if (!recording)
         {
-            <button class="btn btn-primary" @onclick="StartRecording">Record New</button>
+            <button class="btn btn-danger" @onclick="() => StartRecording(true)">Record New</button>
+            @if (editPath.Count > 0)
+            {
+                <button class="btn btn-primary" @onclick="() => StartRecording(false)">Continue Recording</button>
+            }
         }
         @if (!editing)
         {
@@ -29,16 +34,26 @@
         {
             <div>
                 <button class="btn btn-success"
-                    disabled="@(editPath.Count == 0 ? "disabled" : null)"
-                    @onclick="SaveToFile">
-                    Save to file & use path
+                        disabled=@(editPath.Count == 0)
+                @onclick="() => SaveToFile(false)">
+                    Save to new file & use path
                 </button>
-                <button class="btn btn-info"
-                    disabled="@(editPath.Count == 0 ? "disabled" : null)"
-                    @onclick="Use">
-                    Use path without save
+                <button class="btn btn-primary"
+                        disabled=@(editPath.Count == 0)
+                @onclick="Use">
+                    Use new path without save
                 </button>
-                <button class="btn btn-danger" @onclick="Clear">Clear</button>
+                @if (editPath.Count > 0)
+                {
+                    <button class="btn btn-danger" @onclick="Clear">Clear</button>
+                }
+            </div>
+            <div>
+                <button class="btn btn-warning"
+                        disabled=@(editPath.Count == 0)
+                @onclick="() => SaveToFile(true)">
+                    Save to <b>@(loadedPathFile)</b>
+                </button>
             </div>
         }
         <div>@message</div>
@@ -81,9 +96,9 @@
                     {
                         <g>
                             <circle fill="transparent" stroke="black"
-                                cx='@(routeInfo.ToCanvasPointX(editPath.Last().X))'
-                                cy='@(routeInfo.ToCanvasPointY(editPath.Last().Y))'
-                                r='@(routeInfo.DistanceToGrid(Distance))' />
+                                    cx='@(routeInfo.ToCanvasPointX(editPath.Last().X))'
+                                    cy='@(routeInfo.ToCanvasPointY(editPath.Last().Y))'
+                                    r='@(routeInfo.DistanceToGrid(Distance))' />
                         </g>
                     }
                 </g>
@@ -126,8 +141,8 @@
                             <hr />
                             <button class="btn btn-danger" @onclick="RemoveAllSelected">Remove</button>
                             <hr />
-                            <button class="btn btn-primary"
-                            disabled="@(this.selectedPoint != this.previewPoint ? null : "disabled")"
+                            <button class="btn btn-warning"
+                                    disabled="@(this.selectedPoint != this.previewPoint ? null : "disabled")"
                             @onclick="UpdateSelectedWithPreview">
                                 Move to preview
                             </button>
@@ -229,7 +244,9 @@
 
     private RouteInfo routeInfo = null!;
 
-    private List<Vector3> editPath = new();
+    private List<Vector3> editPath { get; set; } = new();
+
+    private string loadedPathFile => botController.ClassConfig!.PathFilename.Replace(dataConfig.Path, "");
 
     private string areaName = string.Empty;
 
@@ -330,12 +347,20 @@
 
         if (editPath.Count > 0)
         {
-            this.PathLines = new MarkupString(routeInfo.RenderPathLines(editPath.ToArray()));
-            this.PathPoints = new MarkupString(routeInfo.RenderPathPoints(editPath.Where(p => p != this.selectedPoint).ToArray()));
-            this.SelectedPoints = new MarkupString(routeInfo.RenderPathPoints(new Vector3[] { this.selectedPoint }));
+            this.PathLines =
+                new MarkupString(routeInfo.RenderPathLines(editPath));
+            this.PathPoints =
+                new MarkupString(routeInfo.RenderPathPoints(editPath));
+
+            this.SelectedPoints =
+                new MarkupString(routeInfo.RenderPathPoints(
+                    new SingleSequence<Vector3>(this.selectedPoint)));
+
             if (this.selectedPoint != this.previewPoint)
             {
-                this.PreviewPoints = new MarkupString(routeInfo.RenderPathPoints(new Vector3[] { this.previewPoint }));
+                this.PreviewPoints = new MarkupString(
+                    routeInfo.RenderPathPoints(
+                        new SingleSequence<Vector3>(this.previewPoint)));
             }
             else
             {
@@ -361,7 +386,6 @@
     {
         recording = false;
 
-        // ugh
         editPath.Clear();
 
         cachedIndex = 0;
@@ -376,11 +400,15 @@
         UpdateRouteMarkup();
     }
 
-    protected void SaveToFile()
+    protected void SaveToFile(bool overwriteClassConfigFile)
     {
         recording = false;
 
-        string filename = $"{areaName}_{DateTime.Now.ToString("yyyy_MM_dd_HH_mm_ss")}";
+        string filename =
+            overwriteClassConfigFile
+            ? Path.ChangeExtension(loadedPathFile, "").TrimEnd('.')
+            : $"{areaName}_{DateTime.Now.ToString("yyyy_MM_dd_HH_mm_ss")}";
+
         string filepath = Path.Join(dataConfig.Path, $"{filename}.json");
         File.WriteAllText(filepath, JsonConvert.SerializeObject(editPath));
         message = $"Saved to: {filepath}";
@@ -407,13 +435,18 @@
         routeInfo.UpdateRoute(editPath.ToArray());
     }
 
-    protected void StartRecording()
+    protected void StartRecording(bool clear)
     {
         recording = true;
         editing = false;
 
-        editPath.Clear();
-        routeInfo.PoiList.Clear();
+        if (clear)
+        {
+            editPath.Clear();
+            routeInfo.PoiList.Clear();
+        }
+
+        botController.RouteInfo?.SetRouteSource(editPath);
 
         ClearMarkup();
 
