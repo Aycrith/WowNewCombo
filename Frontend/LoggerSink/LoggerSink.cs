@@ -8,10 +8,11 @@ public sealed class LoggerSink : ILogEventSink
     public event Action? OnLogChanged;
 
     public const int SIZE = 256;
+    private const int MOD = SIZE - 1;
 
     private int callCount;
     public LogEvent[] Log { get; }
-    public int Head => callCount % SIZE;
+    public int Head => callCount & MOD;
 
     public LoggerSink()
     {
@@ -20,7 +21,7 @@ public sealed class LoggerSink : ILogEventSink
 
     public void Emit(LogEvent logEvent)
     {
-        Log[callCount++ % SIZE] = logEvent;
+        Log[callCount++ & MOD] = logEvent;
         OnLogChanged?.Invoke();
     }
 }

@@ -57,12 +57,8 @@ public sealed partial class BotController : IBotController, IDisposable
     public event Action? ProfileLoaded;
     public event Action? StatusChanged;
 
-    private const int SIZE = 32;
-    private readonly double[] ScreenLatencys = new double[SIZE];
-    private readonly double[] NPCLatencys = new double[SIZE];
-
-    public double AvgScreenLatency => ScreenLatencys.Average();
-    public double AvgNPCLatency => NPCLatencys.Average();
+    public double AvgScreenLatency { get; private set; }
+    public double AvgNPCLatency { get; private set; }
 
     public BotController(
         ILogger<BotController> logger, ILogger globalLogger,
@@ -148,22 +144,32 @@ public sealed partial class BotController : IBotController, IDisposable
         long time;
         int tickCount = 0;
 
+        const int SIZE = 8;
+        const int MOD = SIZE - 1;
+        Span<double> screen = stackalloc double[SIZE];
+        Span<double> npc = stackalloc double[SIZE];
+
+        double avg = Average(screen);
+
         while (!cts.IsCancellationRequested)
         {
             if (wowScreen.Enabled)
             {
                 time = Stopwatch.GetTimestamp();
                 wowScreen.Update();
-                ScreenLatencys[tickCount % SIZE] =
+                screen[tickCount & MOD] =
                     Stopwatch.GetElapsedTime(time).TotalMilliseconds;
 
                 time = Stopwatch.GetTimestamp();
                 npcNameFinder.Update();
-                NPCLatencys[tickCount % SIZE] =
+                npc[tickCount & MOD] =
                     Stopwatch.GetElapsedTime(time).TotalMilliseconds;
 
                 if (wowScreen.EnablePostProcess)
                     wowScreen.PostProcess();
+
+                AvgScreenLatency = Average(screen);
+                AvgNPCLatency = Average(npc);
             }
 
             if (ClassConfig?.Mode == Mode.AttendedGather)
@@ -171,8 +177,10 @@ public sealed partial class BotController : IBotController, IDisposable
                 time = Stopwatch.GetTimestamp();
                 wowScreen.UpdateMinimapBitmap();
                 minimapNodeFinder.Update();
-                ScreenLatencys[tickCount % SIZE] =
+                screen[tickCount & MOD] =
                     Stopwatch.GetElapsedTime(time).TotalMilliseconds;
+                    
+                AvgScreenLatency = Average(screen);
             }
 
             tickCount++;
@@ -185,6 +193,16 @@ public sealed partial class BotController : IBotController, IDisposable
 
         if (logger.IsEnabled(LogLevel.Debug))
             logger.LogDebug("Screenshot Thread stopped!");
+
+        static double Average(Span<double> span)
+        {
+            double sum = 0;
+            for (int i = 0; i < span.Length; i++)
+            {
+                sum += span[i];
+            }
+            return sum / SIZE;
+        }
     }
 
     private void RemotePathingThread()
