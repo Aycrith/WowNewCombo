@@ -70,7 +70,7 @@ public sealed class AddonReader : IAddonReader
             FullReset();
             return;
         }
-        else if (updateIndex >= 512)
+        else if (updateIndex >= 8)
         {
             updateSum = 0;
             updateIndex = 0;
@@ -81,7 +81,6 @@ public sealed class AddonReader : IAddonReader
         updateSum += (DateTime.UtcNow - lastUpdate).TotalMilliseconds;
         updateIndex++;
         AvgUpdateLatency = updateSum / updateIndex;
-        lastUpdate = DateTime.UtcNow;
 
         IAddonDataProvider reader = this.reader;
 
@@ -109,6 +108,8 @@ public sealed class AddonReader : IAddonReader
                 ? name
                 : string.Empty;
         }
+
+        lastUpdate = DateTime.UtcNow;
 
         resetEvent.Set();
     }
