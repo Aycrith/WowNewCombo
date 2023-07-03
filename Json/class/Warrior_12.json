@@ -112,7 +112,7 @@
         "Name": "Repair",
         "Key": "C",
         "Requirement": "Durability% < 35",
-        "PathFilename": "10_Loch_Modan_Vendor.json",
+        "PathFilename": "10_Loch Modan_Vendor.json.json",
         "Cost": 6
       },
       {
@@ -122,7 +122,7 @@
           "BagFull",
           "BagGreyItem"
         ],
-        "PathFilename": "10_Loch_Modan_Vendor.json",
+        "PathFilename": "10_Loch Modan_Vendor.json.json",
         "Cost": 6
       }
     ]

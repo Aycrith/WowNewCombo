@@ -295,7 +295,7 @@
         "Name": "Repair",
         "Key": "C",
         "Requirement": "Durability% < 35",
-        "PathFilename": "60_Hellfire_Honor_Hold_Vendor.json",
+        "PathFilename": "60_Hellfire Peninsula_Honor Hold_Vendor.json",
         "Cost": 6
       },
       {
@@ -305,7 +305,7 @@
           "BagFull",
           "BagGreyItem"
         ],
-        "PathFilename": "60_Hellfire_Honor_Hold_Vendor.json",
+        "PathFilename": "60_Hellfire Peninsula_Honor Hold_Vendor.json",
         "Cost": 6
       }
     ]
