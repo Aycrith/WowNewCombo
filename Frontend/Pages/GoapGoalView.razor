@@ -38,10 +38,11 @@
             <table style="margin-left: 15px;">
                 @{
                     int lastKey = KeyAction.LastKeyClicked();
+                    ReadOnlySpan<KeyAction> span = goal.Keys.AsSpan();
                 }
-                @for (int k = 0; k < goal.Keys.Length; k++)
+                @for (int k = 0; k < span.Length; k++)
                 {
-                    KeyAction key = goal.Keys[k];
+                    KeyAction key = span[k];
 
                     int cooldown = 0;
                     if (key.Slot > 0)
@@ -52,9 +53,12 @@
                             <b style="color:@DisplayCanRun(key.CanRun())">@key.Name [@key.Key]</b>
                         </td>
                         <td>
-                            @for (int r = 0; r < key.RequirementsRuntime.Length; r++)
+                            @{
+                                ReadOnlySpan<Requirement> reqSpan = key.RequirementsRuntime.AsSpan();
+                            }
+                            @for (int r = 0; r < reqSpan.Length; r++)
                             {
-                                Requirement rq = key.RequirementsRuntime[r];
+                                Requirement rq = reqSpan[r];
                                 if (rq.VisibleIfHasRequirement || !rq.HasRequirement())
                                 {
                                     @(DisplayRequirementBadges(rq))
@@ -85,7 +89,7 @@
     private static MarkupString DisplayRequirementBadges(Requirement requirement)
     {
         stringBuilder.Clear();
-        foreach (string match in regex.Split(requirement.LogMessage()))
+        foreach (ReadOnlySpan<char> match in regex.Split(requirement.LogMessage()))
         {
             if (match.StartsWith(Requirement.And) || match.StartsWith(Requirement.Or))
             {
