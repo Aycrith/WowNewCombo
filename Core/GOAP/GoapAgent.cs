@@ -219,7 +219,7 @@ public sealed partial class GoapAgent : IDisposable
                 wasEmpty = true;
             }
 
-            Thread.Sleep(0);
+            Thread.Sleep(1);
             manualReset.Wait();
         }
 
