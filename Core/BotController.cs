@@ -149,8 +149,6 @@ public sealed partial class BotController : IBotController, IDisposable
         Span<double> screen = stackalloc double[SIZE];
         Span<double> npc = stackalloc double[SIZE];
 
-        double avg = Average(screen);
-
         while (!cts.IsCancellationRequested)
         {
             if (wowScreen.Enabled)
@@ -179,7 +177,7 @@ public sealed partial class BotController : IBotController, IDisposable
                 minimapNodeFinder.Update();
                 screen[tickCount & MOD] =
                     Stopwatch.GetElapsedTime(time).TotalMilliseconds;
-                    
+
                 AvgScreenLatency = Average(screen);
             }
 
@@ -197,7 +195,7 @@ public sealed partial class BotController : IBotController, IDisposable
         static double Average(Span<double> span)
         {
             double sum = 0;
-            for (int i = 0; i < span.Length; i++)
+            for (int i = 0; i < SIZE; i++)
             {
                 sum += span[i];
             }
