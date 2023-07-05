@@ -248,6 +248,7 @@ public sealed partial class RequirementFactory
             { "Fel Armor", playerBuffs.FelArmor },
             { "Fel Domination", playerBuffs.FelDomination },
             { "Demonic Sacrifice", playerBuffs.DemonicSacrifice },
+            { "Sacrifice", playerBuffs.Sacrifice },
             
             // Shaman
             { "Lightning Shield", playerBuffs.LightningShield },

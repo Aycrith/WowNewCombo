@@ -91,6 +91,7 @@ public sealed class BuffStatus : IReader
     public bool FelArmor() => v[Mask._14];
     public bool FelDomination() => v[Mask._15];
     public bool DemonicSacrifice() => v[Mask._16];
+    public bool Sacrifice() => v[Mask._17];
 
     // Shaman
     public bool LightningShield() => v[Mask._10];

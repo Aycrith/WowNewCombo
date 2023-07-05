@@ -89,7 +89,8 @@
         "WhenUsable": true,
         "Requirements": [
           "TargetsMe",
-          "InMeleeRange"
+          "InMeleeRange",
+          "Health% < 80"
         ]
       },
       {
@@ -101,7 +102,7 @@
         "Requirements": [
           "TargetHealth% > DOT_MIN_HEALTH%",
           "!Immolate",
-          "!TargetsMe"
+          "!TargetsMe || Sacrifice"
         ]
       },
       {
@@ -138,9 +139,9 @@
         "Name": "Incinerate",
         "Key": "F4",
         "HasCastBar": true,
-        "Cooldown": 6000,
+        //"Cooldown": 6000,
         "Requirements": [
-          "!TargetsMe",
+          "!TargetsMe || Sacrifice",
           "Immolate",
           "Health% > DRAIN_MIN_HP%",
           "TargetHealth% > 40"
@@ -151,8 +152,9 @@
         "Key": "2",
         "HasCastBar": true,
         "Cooldown": 6000,
+        "WhenUsable": true,
         "Requirements": [
-          "!TargetsMe",
+          "!TargetsMe || Sacrifice",
           "!Immolate",
           "Health% > DRAIN_MIN_HP%",
           "TargetHealth% > 40"
@@ -182,6 +184,8 @@
         "Name": "Shoot",
         "Key": "3",
         "Item": true,
+        "PressDuration": 51,
+        "WhenUsable": true,
         "Requirements": [
           "HasRangedWeapon",
           "!Shooting",
@@ -238,6 +242,7 @@
         "InCombat": "true",
         "Requirements": [
           "!Has Pet",
+          "!Mounted",
           "Fel Domination",
           "BagItem:Item_Soul_Shard"
         ],
@@ -249,6 +254,7 @@
         "HasCastBar": true,
         "Requirements": [
           "!Has Pet",
+          "!Mounted",
           "BagItem:Item_Soul_Shard"
         ],
         "AfterCastWaitCastbar": true,
@@ -259,6 +265,7 @@
         "Key": "9",
         "Requirements": [
           "Has Pet",
+          "!Mounted",
           "!Soul Link"
         ]
       },
@@ -278,6 +285,7 @@
         "Name": "heal",
         "Key": "7",
         "HasCastBar": true,
+        "AfterCastWaitCastbar": true,
         "AfterCastWaitBag": true,
         "Requirements": [
           "BagItem:Item_Soul_Shard",
