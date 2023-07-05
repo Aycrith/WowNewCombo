@@ -476,7 +476,7 @@ public sealed partial class RequirementFactory
                         continue;
                     }
 
-                    LogProcessingRequirement(logger, name, requirement);
+                    LogProcessingRequirement(logger, name, trim);
                     stack.Push(CreateRequirement(trim));
                 }
             }
