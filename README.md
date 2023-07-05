@@ -1356,6 +1356,7 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | Warlock | `"Fel Armor"` |
 | Warlock | `"Fel Domination"` |
 | Warlock | `"Demonic Sacrifice"` |
+| Warlock | `"Sacrifice"` |
 | Warrior | `"Battle Shout"` |
 | Warrior | `"Bloodrage"` |
 | Shaman | `"Lightning Shield"` |
