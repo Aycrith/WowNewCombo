@@ -20,7 +20,8 @@ public sealed class CastingHandlerInterruptWatchdog : IDisposable
 
     private bool? initial;
     private Func<bool>? interrupt;
-    private CancellationTokenSource? cts;
+
+    private CancellationTokenSource cts;
 
     public CastingHandlerInterruptWatchdog(
         ILogger<CastingHandlerInterruptWatchdog> logger, Wait wait)
@@ -30,6 +31,8 @@ public sealed class CastingHandlerInterruptWatchdog : IDisposable
 
         threadCts = new();
         resetEvent = new(false);
+
+        cts = new();
 
         thread = new(Watchdog);
         thread.Start();
@@ -47,28 +50,18 @@ public sealed class CastingHandlerInterruptWatchdog : IDisposable
     {
         while (!threadCts.IsCancellationRequested)
         {
-            while (interrupt != null &&
-                cts != null && !cts.IsCancellationRequested)
+            while (initial == interrupt?.Invoke())
             {
-                if (initial != interrupt?.Invoke())
-                {
-                    if (Log)
-                        logger.LogWarning("Interrupted!");
-
-                    initial = null;
-                    interrupt = null;
-
-                    cts?.Cancel();
-                    cts = null;
-
-                    break;
-                }
-
                 wait.Update();
+                resetEvent.Wait();
             }
 
+            cts.Cancel();
+
             if (Log)
-                logger.LogWarning("Waiting...");
+            {
+                logger.LogWarning("Interrupted! Waiting...");
+            }
 
             resetEvent.Reset();
             resetEvent.Wait();
@@ -78,24 +71,26 @@ public sealed class CastingHandlerInterruptWatchdog : IDisposable
             logger.LogDebug("Thread stopped!");
     }
 
-    public void Set(Func<bool> interrupt, CancellationTokenSource cts)
+    public CancellationToken Set(Func<bool> interrupt)
     {
-        if (Log)
-            logger.LogWarning("Set interrupt");
+        resetEvent.Reset();
 
         this.initial = interrupt();
         this.interrupt = interrupt;
-        this.cts = cts;
+
+        if (!cts.TryReset())
+        {
+            cts.Dispose();
+            cts = new();
+
+            if (Log)
+                logger.LogInformation("New cts");
+        }
+        else if (Log)
+            logger.LogInformation("Reuse cts");
 
         resetEvent.Set();
-    }
 
-    public void Reset()
-    {
-        initial = null;
-        interrupt = null;
-
-        if (cts != null && !cts.IsCancellationRequested)
-            cts?.Cancel();
+        return cts.Token;
     }
 }
