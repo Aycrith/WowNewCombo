@@ -5,12 +5,15 @@ on:
     paths-ignore:
       - '.github/*'
       - '.github/ISSUE_TEMPLATE/**'
-      - '*.yml'
       - 'README.md'
-      - '*.lua'
-      - '*.toc'
-      - '*.json'
-      - '*.bmp'
+      - '**.yml'
+      - '**.lua'
+      - '**.toc'
+      - '**.json'
+      - '**.bmp'
+      - '**.js'
+      - '**.jpg'
+      - '**.png'
       
 
 jobs:
