@@ -135,8 +135,6 @@ public static class DependencyInjection
         s.AddSingleton<WApi>();
         s.AddSingleton<FrontendUpdate>();
 
-        s.AddSingleton<LevelTracker>();
-
         return s;
     }
 
@@ -166,6 +164,7 @@ public static class DependencyInjection
 
         s.AddSingleton<SessionStat>();
         s.AddSingleton<IGrindSessionDAO, LocalGrindSessionDAO>();
+        s.AddSingleton<LevelTracker>();
 
         s.AddSingleton<AreaDB>();
         s.AddSingleton<WorldMapAreaDB>();
