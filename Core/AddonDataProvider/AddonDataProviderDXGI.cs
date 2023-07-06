@@ -44,6 +44,9 @@ public sealed class AddonDataProviderDXGI : IAddonDataProvider, IDisposable
 
     private readonly StringBuilder sb = new(3);
 
+    private readonly bool windowedMode;
+    private Point p;
+
     public AddonDataProviderDXGI(WowScreen wowScreen, DataFrame[] frames)
     {
         this.wowScreen = wowScreen;
@@ -107,6 +110,10 @@ public sealed class AddonDataProviderDXGI : IAddonDataProvider, IDisposable
         };
 
         addonTexture = device.CreateTexture2D(textureDesc);
+
+        wowScreen.GetRectangle(out Rectangle pRect);
+        p = pRect.Location;
+        windowedMode = IsWindowedMode(p);
     }
 
     public void Dispose()
@@ -125,14 +132,24 @@ public sealed class AddonDataProviderDXGI : IAddonDataProvider, IDisposable
 
     public void Update()
     {
-        Point p = new();
-        wowScreen.GetPosition(ref p);
+        if (windowedMode)
+        {
+            wowScreen.GetRectangle(out Rectangle pRect);
+            p = pRect.Location;
+        }
 
         duplication.ReleaseFrame();
 
-        Result result = duplication.AcquireNextFrame(50, out OutduplFrameInfo frameInfo, out IDXGIResource? desktopResource);
-        if (!result.Success)
+        Result result = duplication.AcquireNextFrame(999,
+            out OutduplFrameInfo frameInfo,
+            out IDXGIResource? desktopResource);
+
+        if (!result.Success ||
+            frameInfo.AccumulatedFrames != 1 ||
+            frameInfo.LastPresentTime == 0)
+        {
             return;
+        }
 
         ID3D11Texture2D texture = desktopResource.QueryInterface<ID3D11Texture2D>();
 
@@ -140,7 +157,7 @@ public sealed class AddonDataProviderDXGI : IAddonDataProvider, IDisposable
         device.ImmediateContext.CopySubresourceRegion(addonTexture, 0, 0, 0, 0, texture, 0, box);
 
         MappedSubresource dataBox = device.ImmediateContext.Map(addonTexture, 0, MapMode.Read, Vortice.Direct3D11.MapFlags.None);
-        int sizeInBytesToCopy = rect.Right * AddonDataProviderConfig.BYTES_PER_PIXEL;
+        int sizeInBytesToCopy = (rect.Right - rect.Left) * AddonDataProviderConfig.BYTES_PER_PIXEL;
 
         BitmapData bd = bitmap.LockBits(rect, ImageLockMode.ReadWrite, bitmap.PixelFormat);
         for (int y = 0; y < rect.Bottom; y++)
@@ -151,39 +168,11 @@ public sealed class AddonDataProviderDXGI : IAddonDataProvider, IDisposable
         texture.Dispose();
 
         //bitmap.Save($"bitmap.bmp", ImageFormat.Bmp);
-        //Thread.Sleep(1000);
+        //System.Threading.Thread.Sleep(1000);
 
-        unsafe
-        {
-            ReadOnlySpan<DataFrame> frames = this.frames;
+        IAddonDataProvider.InternalUpdate(bd, frames, data);
 
-            ReadOnlySpan<byte> first = new(
-                (byte*)bd.Scan0 + (frames[0].Y * bd.Stride) +
-                (frames[0].X * AddonDataProviderConfig.BYTES_PER_PIXEL),
-                AddonDataProviderConfig.BYTES_PER_PIXEL);
-
-            ReadOnlySpan<byte> last = new(
-                (byte*)bd.Scan0 + (frames[^1].Y * bd.Stride) +
-                (frames[^1].X * AddonDataProviderConfig.BYTES_PER_PIXEL),
-                AddonDataProviderConfig.BYTES_PER_PIXEL);
-
-            if (!first.SequenceEqual(AddonDataProviderConfig.fColor) ||
-                !last.SequenceEqual(AddonDataProviderConfig.lColor))
-            {
-                goto Unlock;
-            }
-
-            for (int i = 0; i < frames.Length; i++)
-            {
-                byte* y = (byte*)bd.Scan0 + (frames[i].Y * bd.Stride);
-                int x = frames[i].X * AddonDataProviderConfig.BYTES_PER_PIXEL;
-
-                data[frames[i].Index] = y[x] | (y[x + 1] << 8) | (y[x + 2] << 16);
-            }
-
-        Unlock:
-            bitmap.UnlockBits(bd);
-        }
+        bitmap.UnlockBits(bd);
     }
 
     public int GetInt(int index)

@@ -57,42 +57,15 @@ public sealed class AddonDataProviderGDIConfig : IAddonDataProvider, IDisposable
             return;
 
         Point p = new();
-        wowScreen.GetPosition(ref p);
+        wowScreen.GetRectangle(out Rectangle pRect);
+        p = pRect.Location;
         graphics.CopyFromScreen(p, Point.Empty, rect.Size);
 
-        unsafe
-        {
-            BitmapData bd = bitmap.LockBits(rect, ImageLockMode.ReadOnly, AddonDataProviderConfig.PIXEL_FORMAT);
+        BitmapData bd = bitmap.LockBits(rect, ImageLockMode.ReadOnly, AddonDataProviderConfig.PIXEL_FORMAT);
 
-            ReadOnlySpan<DataFrame> frames = this.frames;
+        IAddonDataProvider.InternalUpdate(bd, frames, data);
 
-            ReadOnlySpan<byte> first = new(
-                (byte*)bd.Scan0 + (frames[0].Y * bd.Stride) +
-                (frames[0].X * AddonDataProviderConfig.BYTES_PER_PIXEL),
-                AddonDataProviderConfig.BYTES_PER_PIXEL);
-
-            ReadOnlySpan<byte> last = new(
-                (byte*)bd.Scan0 + (frames[^1].Y * bd.Stride) +
-                (frames[^1].X * AddonDataProviderConfig.BYTES_PER_PIXEL),
-                AddonDataProviderConfig.BYTES_PER_PIXEL);
-
-            if (!first.SequenceEqual(AddonDataProviderConfig.fColor) ||
-                !last.SequenceEqual(AddonDataProviderConfig.lColor))
-            {
-                goto Unlock;
-            }
-
-            for (int i = 0; i < frames.Length; i++)
-            {
-                byte* y = (byte*)bd.Scan0 + (frames[i].Y * bd.Stride);
-                int x = frames[i].X * AddonDataProviderConfig.BYTES_PER_PIXEL;
-
-                data[frames[i].Index] = y[x] | (y[x + 1] << 8) | (y[x + 2] << 16);
-            }
-
-        Unlock:
-            bitmap.UnlockBits(bd);
-        }
+        bitmap.UnlockBits(bd);
     }
 
     public void InitFrames(DataFrame[] frames)
