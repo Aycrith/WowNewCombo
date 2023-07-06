@@ -170,7 +170,10 @@ public sealed class ReactCastError
                             stopMoving.Stop();
                             logger.LogInformation($"React to {value.ToStringF()} -- Turning 180!");
                             float desiredDirection = playerReader.Direction + MathF.PI;
-                            desiredDirection = desiredDirection > MathF.PI * 2 ? desiredDirection - (MathF.PI * 2) : desiredDirection;
+                            desiredDirection =
+                                desiredDirection > MathF.Tau
+                                ? desiredDirection - MathF.Tau
+                                : desiredDirection;
                             direction.SetDirection(desiredDirection, Vector3.Zero);
                             break;
                     }

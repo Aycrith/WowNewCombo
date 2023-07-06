@@ -13,7 +13,6 @@ public sealed partial class PlayerDirection : IDisposable
 {
     private const bool debug = false;
 
-    private const float RADIAN = PI * 2;
     private const int DefaultIgnoreDistance = 10;
 
     private readonly ILogger<PlayerDirection> logger;
@@ -60,12 +59,10 @@ public sealed partial class PlayerDirection : IDisposable
 
     private float TurnAmount(float targetDir)
     {
-        float result = (RADIAN + targetDir - playerReader.Direction) % RADIAN;
-
-        if (result > PI)
-            result = RADIAN - result;
-
-        return result;
+        float result = (Tau + targetDir - playerReader.Direction) % Tau;
+        return result > PI
+            ? Tau - result
+            : result;
     }
 
     private int TurnDuration(float targetDir)
@@ -75,7 +72,7 @@ public sealed partial class PlayerDirection : IDisposable
 
     private ConsoleKey GetDirectionKeyToPress(float desiredDirection)
     {
-        return (RADIAN + desiredDirection - playerReader.Direction) % RADIAN < PI
+        return (Tau + desiredDirection - playerReader.Direction) % Tau < PI
             ? input.TurnLeftKey
             : input.TurnRightKey;
     }

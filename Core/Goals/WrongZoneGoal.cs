@@ -15,8 +15,6 @@ public sealed class WrongZoneGoal : GoapGoal
 {
     public override float Cost => 19f;
 
-    private const float RADIAN = PI * 2;
-
     private readonly ILogger<WrongZoneGoal> logger;
     private readonly ConfigurableInput input;
     private readonly PlayerReader playerReader;
@@ -84,8 +82,8 @@ public sealed class WrongZoneGoal : GoapGoal
         }
         else
         {
-            float diff1 = Abs(RADIAN + heading - playerReader.Direction) % RADIAN;
-            float diff2 = Abs(heading - playerReader.Direction - RADIAN) % RADIAN;
+            float diff1 = Abs(Tau + heading - playerReader.Direction) % Tau;
+            float diff2 = Abs(heading - playerReader.Direction - Tau) % Tau;
 
             if (Min(diff1, diff2) > 0.3)
             {

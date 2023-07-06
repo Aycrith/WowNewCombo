@@ -431,10 +431,8 @@ public sealed partial class Navigation : IDisposable
 
     private void AdjustHeading(float heading, CancellationToken ct)
     {
-        const float RADIAN = PI * 2;
-
-        float diff1 = Abs(RADIAN + heading - playerReader.Direction) % RADIAN;
-        float diff2 = Abs(heading - playerReader.Direction - RADIAN) % RADIAN;
+        float diff1 = Abs(Tau + heading - playerReader.Direction) % Tau;
+        float diff2 = Abs(heading - playerReader.Direction - Tau) % Tau;
 
         float diff = Min(diff1, diff2);
         if (diff > minAngleToTurn)

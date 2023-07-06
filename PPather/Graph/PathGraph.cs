@@ -744,7 +744,7 @@ public sealed class PathGraph
         currentSearchSpot.SetFlag(Spot.FLAG_MPQ_MAPPED, true);
 
         //loop through the spots in a circle around the current search spot
-        for (float radianAngle = 0; radianAngle < PI * 2; radianAngle += PI / 8)
+        for (float radianAngle = 0; radianAngle < Tau; radianAngle += PI / 8)
         {
             //calculate the location of the spot at the angle
             float nx = currentSearchSpot.Loc.X + (Sin(radianAngle) * WantedStepLength);// *0.8f;

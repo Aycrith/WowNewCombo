@@ -541,7 +541,7 @@ public sealed class MPQTriangleSupplier
 
     public static void Rotate(float x, float y, float angle, out float nx, out float ny)
     {
-        float rot = angle / 360.0f * PI * 2;
+        float rot = angle / 360.0f * Tau;
         float c_y = Cos(rot);
         float s_y = Sin(rot);
 
