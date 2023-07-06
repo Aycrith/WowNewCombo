@@ -56,47 +56,47 @@ public sealed class CombatUtil
         return false;
     }
 
-    public bool AquiredTarget(int maxTimeMs = 400)
+    public bool AcquiredTarget(int maxTimeMs = 400)
     {
-        if (bits.PlayerInCombat())
+        if (!bits.PlayerInCombat())
+            return false;
+
+        if (playerReader.PetHasTarget())
         {
-            if (playerReader.PetHasTarget())
+            input.PressTargetPet();
+            Log($"Pets target {playerReader.TargetTarget}");
+            if (playerReader.TargetTarget == UnitsTarget.PetHasATarget)
             {
-                input.PressTargetPet();
-                Log($"Pets target {playerReader.TargetTarget}");
-                if (playerReader.TargetTarget == UnitsTarget.PetHasATarget)
-                {
-                    Log($"{nameof(AquiredTarget)}: Found target by pet");
-                    input.PressTargetOfTarget();
-                    return true;
-                }
-            }
-
-            input.PressNearestTarget();
-            wait.Update();
-
-            if (bits.HasTarget() &&
-                bits.TargetInCombat() &&
-                (bits.TargetOfTargetIsPlayerOrPet() ||
-                combatLog.DamageTaken.Contains(playerReader.TargetGuid)))
-            {
-                Log("Found target");
+                Log($"{nameof(AcquiredTarget)}: Found target by pet");
+                input.PressTargetOfTarget();
                 return true;
             }
-
-            input.PressClearTarget();
-            wait.Update();
-
-            if (!wait.Till(maxTimeMs, PlayerOrPetHasTarget))
-            {
-                Log($"{nameof(AquiredTarget)}: Someone started attacking me!");
-                return true;
-            }
-
-            Log($"{nameof(AquiredTarget)}: No target found after {maxTimeMs}ms");
-            input.PressClearTarget();
-            wait.Update();
         }
+
+        input.PressNearestTarget();
+        wait.Update();
+
+        if (bits.HasTarget() &&
+            bits.TargetInCombat() &&
+            (bits.TargetOfTargetIsPlayerOrPet() ||
+            combatLog.DamageTaken.Contains(playerReader.TargetGuid)))
+        {
+            Log("Found target");
+            return true;
+        }
+
+        input.PressClearTarget();
+        wait.Update();
+
+        if (!wait.Till(maxTimeMs, PlayerOrPetHasTarget))
+        {
+            Log($"{nameof(AcquiredTarget)}: Someone started attacking me!");
+            return true;
+        }
+
+        Log($"{nameof(AcquiredTarget)}: No target found after {maxTimeMs}ms");
+        input.PressClearTarget();
+        wait.Update();
         return false;
     }
 

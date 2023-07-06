@@ -97,7 +97,7 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
             input.PressClearTarget();
             wait.Update();
 
-            combatUtil.AquiredTarget(5000);
+            combatUtil.AcquiredTarget(5000);
             return;
         }
 

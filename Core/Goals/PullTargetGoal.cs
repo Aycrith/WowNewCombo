@@ -209,7 +209,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
                     input.PressClearTarget();
                     wait.Update();
 
-                    combatUtil.AquiredTarget(AcquireTargetTimeMs);
+                    combatUtil.AcquiredTarget(AcquireTargetTimeMs);
                     return;
                 }
 
