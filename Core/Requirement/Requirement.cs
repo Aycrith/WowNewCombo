@@ -9,8 +9,15 @@ public static class RequirementExt
         Func<bool> HasRequirement = f1.HasRequirement;
         Func<string> LogMessage = f1.LogMessage;
 
-        f1.HasRequirement = () => HasRequirement() || f2.HasRequirement();
-        f1.LogMessage = () => string.Join(Requirement.Or, LogMessage(), f2.LogMessage());
+        f1.HasRequirement = CombinedReq;
+        f1.LogMessage = Message;
+
+        bool CombinedReq() =>
+            HasRequirement() || f2.HasRequirement();
+
+        string Message() =>
+            string.Join(Requirement.Or,
+            LogMessage(), f2.LogMessage());
     }
 
     public static void And(this Requirement f1, Requirement f2)
@@ -18,8 +25,15 @@ public static class RequirementExt
         Func<bool> HasRequirement = f1.HasRequirement;
         Func<string> LogMessage = f1.LogMessage;
 
-        f1.HasRequirement = () => HasRequirement() && f2.HasRequirement();
-        f1.LogMessage = () => string.Join(Requirement.And, LogMessage(), f2.LogMessage());
+        f1.HasRequirement = CombinedReq;
+        f1.LogMessage = Message;
+
+        bool CombinedReq()
+            => HasRequirement() && f2.HasRequirement();
+
+        string Message()
+            => string.Join(Requirement.And,
+            LogMessage(), f2.LogMessage());
     }
 
     public static void Negate(this Requirement f, string keyword)
@@ -27,8 +41,11 @@ public static class RequirementExt
         Func<bool> HasRequirement = f.HasRequirement;
         Func<string> LogMessage = f.LogMessage;
 
-        f.HasRequirement = () => !HasRequirement();
-        f.LogMessage = () => $"{keyword}{LogMessage()}";
+        f.HasRequirement = Negated;
+        f.LogMessage = Message;
+
+        bool Negated() => !HasRequirement();
+        string Message() => $"{keyword}{LogMessage()}";
     }
 }
 
@@ -40,8 +57,8 @@ public sealed class Requirement
     public const string SymbolAnd = "&&";
     public const string SymbolOr = "||";
 
-    public static bool False() => false;
-    public static string Default() => "Unknown requirement";
+    private static bool False() => false;
+    private static string Default() => "Unknown requirement";
 
     public Func<bool> HasRequirement { get; set; } = False;
     public Func<string> LogMessage { get; set; } = Default;

@@ -13,9 +13,12 @@ public static class ServiceCollectionExtension
     where TService : class, TInterface
     {
         services.AddSingleton(typeof(TService));
-        services.AddSingleton(typeof(TInterface), x => x.GetRequiredService<TService>());
+        services.AddSingleton(typeof(TInterface), GetRequired);
 
         return services;
+
+        static TService GetRequired(IServiceProvider x)
+            => x.GetRequiredService<TService>();
     }
 
     public static IServiceCollection ForwardSingleton<TService>(
@@ -33,8 +36,11 @@ public static class ServiceCollectionExtension
         where TService : class, TInterface
     {
         services.AddSingleton(typeof(TService), implementationFactory);
-        services.AddSingleton(typeof(TInterface), x => x.GetRequiredService<TService>());
+        services.AddSingleton(typeof(TInterface), GetRequired);
 
         return services;
+
+        static TService GetRequired(IServiceProvider x)
+            => x.GetRequiredService<TService>();
     }
 }
