@@ -103,7 +103,9 @@ public sealed class BagReader : IDisposable, IReader
             bag.SlotCount = slotCount;
             bag.FreeSlot = freeSlots;
 
-            BagItems.RemoveAll(b => b.Bag == index && b.BagIndex > bag.SlotCount);
+            BagItems.RemoveAll(RemoveByIndex);
+            bool RemoveByIndex(BagItem b)
+                => b.Bag == index && b.BagIndex > bag.SlotCount;
 
             changed = true;
         }
@@ -127,7 +129,9 @@ public sealed class BagReader : IDisposable, IReader
 
         int itemId = reader.GetInt(cItemId);
 
-        BagItem? existingItem = BagItems.FirstOrDefault(b => b.Bag == bag && b.BagIndex == slot);
+        BagItem? existingItem = BagItems.FirstOrDefault(Exists);
+        bool Exists(BagItem b) =>
+            b.Bag == bag && b.BagIndex == slot;
 
         if (itemCount > 0)
         {
@@ -213,7 +217,11 @@ public sealed class BagReader : IDisposable, IReader
         return count;
     }
 
-    public bool HasItem(int itemId) => BagItems.Exists(x => x.ItemId == itemId);
+    public bool HasItem(int itemId)
+    {
+        return BagItems.Exists(ById);
+        bool ById(BagItem x) => x.ItemId == itemId;
+    }
 
     public int HighestQuantityOfDrinkItemId()
     {

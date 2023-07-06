@@ -206,10 +206,8 @@ public sealed partial class BotController : IBotController, IDisposable
     private void RemotePathingThread()
     {
         bool newLoaded = false;
-        ProfileLoaded += () =>
-        {
-            newLoaded = true;
-        };
+        ProfileLoaded += OnProfileLoaded;
+        void OnProfileLoaded() => newLoaded = true;
 
         Vector3 oldPos = Vector3.Zero;
 
@@ -294,19 +292,20 @@ public sealed partial class BotController : IBotController, IDisposable
 
     private void Initialize(ClassConfiguration config)
     {
-        IServiceCollection sessionServices = new ServiceCollection();
+        IServiceCollection s = new ServiceCollection();
 
-        sessionServices.AddScoped<ClassConfiguration>(x =>
-            serviceProvider.GetRequiredService<IBotController>()
-            .ResolveLoadedProfile());
+        s.AddSingleton<IBotController>(this);
+        s.AddScoped<ClassConfiguration>(GetConfig);
+        static ClassConfiguration GetConfig(IServiceProvider sp) =>
+            sp.GetRequiredService<IBotController>().ResolveLoadedProfile();
 
-        GoalFactory.Create(sessionServices, serviceProvider, config);
+        GoalFactory.Create(s, serviceProvider, config);
 
-        sessionServices.AddScoped<IEnumerable<IRouteProvider>>(GetPathProviders);
-        sessionServices.AddScoped<RouteInfo>();
-        sessionServices.AddScoped<GoapAgent>();
+        s.AddScoped<IEnumerable<IRouteProvider>>(GetPathProviders);
+        s.AddScoped<RouteInfo>();
+        s.AddScoped<GoapAgent>();
 
-        ServiceProvider provider = sessionServices.BuildServiceProvider(
+        ServiceProvider provider = s.BuildServiceProvider(
             new ServiceProviderOptions
             {
                 ValidateOnBuild = true,

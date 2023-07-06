@@ -59,7 +59,13 @@ public sealed class ReactCastError
                 logger.LogInformation($"React to {value.ToStringF()} -- wait until its ready");
                 int waitTime = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs);
                 bool before = usableAction.Is(item);
-                wait.Until(waitTime, () => before != usableAction.Is(item) || usableAction.Is(item));
+
+                WaitCooldown(waitTime, before, wait, usableAction, item);
+                static void WaitCooldown(int duration, bool before, Wait wait,
+                    ActionBarBits<IUsableAction> usableAction, KeyAction item) =>
+                    wait.Until(duration, () =>
+                    before != usableAction.Is(item) || usableAction.Is(item));
+
                 break;
             case UI_ERROR.ERR_ATTACK_PACIFIED:
             case UI_ERROR.ERR_SPELL_FAILED_STUNNED:
@@ -67,7 +73,12 @@ public sealed class ReactCastError
                 if (debuffCount != 0)
                 {
                     logger.LogInformation($"React to {value.ToStringF()} -- Wait till losing debuff!");
-                    wait.While(() => debuffCount == playerReader.AuraCount.PlayerDebuff);
+
+                    WaitDebuffChange(wait, debuffCount, playerReader);
+                    static void WaitDebuffChange(Wait wait,
+                        int debuffCount, PlayerReader playerReader) =>
+                        wait.While(() =>
+                        debuffCount == playerReader.AuraCount.PlayerDebuff);
                 }
                 else
                 {
@@ -105,9 +116,12 @@ public sealed class ReactCastError
                         if (playerReader.MinRange() <= 5)
                             duration = CastingHandler.SPELL_QUEUE;
 
-                        float e = wait.Until(duration,
-                            () => minRange != playerReader.MinRange() || playerReader.IsTargetCasting()
-                        );
+                        OutOfRange(duration, wait, minRange, playerReader);
+                        static void OutOfRange(int duration, Wait wait,
+                            int minRange, PlayerReader playerReader) =>
+                            wait.Until(duration, () =>
+                            minRange != playerReader.MinRange() || playerReader.IsTargetCasting());
+
                         wait.Update();
                     }
                 }
@@ -123,7 +137,11 @@ public sealed class ReactCastError
                     {
                         input.PressInteract();
 
-                        float e = wait.Until(CastingHandler.GCD, () => minRange != playerReader.MinRange());
+                        MinRangeChanges(CastingHandler.GCD, wait, minRange, playerReader);
+                        static void MinRangeChanges(int duration, Wait wait,
+                            int minRange, PlayerReader playerReader) =>
+                            wait.Until(duration, () =>
+                            minRange != playerReader.MinRange());
 
                         logger.LogInformation($"React to {value.ToStringF()} -- Approached target {minRange}->{playerReader.MinRange()}");
                     }
@@ -143,6 +161,8 @@ public sealed class ReactCastError
                 {
                     logger.LogInformation($"React to {value.ToStringF()} -- Interact!");
                     input.PressInteract();
+                    // wait for the player turn interpolation -- unknown amount of time
+                    wait.Fixed(100);
                     stopMoving.Stop();
                 }
                 else
