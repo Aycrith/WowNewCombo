@@ -379,7 +379,7 @@ public sealed partial class CastingHandler
             input.PressStopAttack();
             input.PressStopAttack();
 
-            int waitTime = 
+            int waitTime =
                 Max(playerReader.GCD.Value, playerReader.RemainCastMs) + (2 * playerReader.NetworkLatency);
             elapsedMs = wait.Until(waitTime, token);
             logger.LogInformation($"Stop {nameof(bits.SpellOn_Shoot)} and wait {waitTime}ms | {elapsedMs}ms");
@@ -637,9 +637,11 @@ public sealed partial class CastingHandler
 
     private void RepeatPetAttack()
     {
-        if (bits.PlayerInCombat() &&
+        if (classConfig.AutoPetAttack &&
+            bits.PlayerInCombat() &&
             bits.HasPet() &&
-            !playerReader.PetHasTarget() &&
+            (!playerReader.PetHasTarget() ||
+            playerReader.TargetGuid != playerReader.PetTargetGuid) &&
             input.PetAttack.GetRemainingCooldown() == 0)
         {
             input.PressPetAttack();
