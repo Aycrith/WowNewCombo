@@ -230,7 +230,8 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
     private bool LootWindowClosedOrBagOrMoneyChanged()
     {
-        return bagHashNewOrStackGain != bagReader.HashNewOrStackGain ||
+        // hack: warlock soul shard mechanic marks loot success prematurely
+        return //bagHashNewOrStackGain != bagReader.HashNewOrStackGain ||
             money != playerReader.Money ||
             (LootStatus)playerReader.LootEvent.Value is
             LootStatus.CLOSED;
