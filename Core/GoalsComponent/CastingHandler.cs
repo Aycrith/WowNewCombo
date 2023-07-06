@@ -644,6 +644,7 @@ public sealed partial class CastingHandler
             playerReader.TargetGuid != playerReader.PetTargetGuid) &&
             input.PetAttack.GetRemainingCooldown() == 0)
         {
+            input.PressStopAttack();
             input.PressPetAttack();
         }
     }

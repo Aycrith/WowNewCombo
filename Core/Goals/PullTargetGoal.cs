@@ -154,9 +154,14 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         }
 
         if (classConfig.AutoPetAttack &&
-            bits.HasPet() && !playerReader.PetHasTarget() &&
+            bits.HasPet() &&
+            (!playerReader.PetHasTarget() ||
+            playerReader.TargetGuid != playerReader.PetTargetGuid) &&
             input.PetAttack.GetRemainingCooldown() == 0)
+        {
+            input.PressStopAttack();
             input.PressPetAttack();
+        }
 
         bool castAny = false;
         bool spellInQueue = false;
