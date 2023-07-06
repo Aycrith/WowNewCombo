@@ -28,6 +28,9 @@ public sealed class AddonDataProviderBitBlt : IAddonDataProvider, IDisposable
     private IntPtr hWnd = IntPtr.Zero;
     private IntPtr windowDC = IntPtr.Zero;
 
+    private readonly bool windowedMode;
+    private Point p;
+
     public AddonDataProviderBitBlt(WowScreen wowScreen, DataFrame[] frames)
     {
         this.wowScreen = wowScreen;
@@ -45,6 +48,10 @@ public sealed class AddonDataProviderBitBlt : IAddonDataProvider, IDisposable
 
         bitmap = new(rect.Width, rect.Height, AddonDataProviderConfig.PIXEL_FORMAT);
         graphics = Graphics.FromImage(bitmap);
+
+        wowScreen.GetRectangle(out Rectangle pRect);
+        p = pRect.Location;
+        windowedMode = IsWindowedMode(p);
     }
 
     public void Dispose()
@@ -57,8 +64,11 @@ public sealed class AddonDataProviderBitBlt : IAddonDataProvider, IDisposable
 
     public void Update()
     {
-        Point p = new();
-        wowScreen.GetPosition(ref p);
+        if (windowedMode)
+        {
+            wowScreen.GetRectangle(out Rectangle pRect);
+            p = pRect.Location;
+        }
 
         if (hWnd != wowScreen.ProcessHwnd)
         {
@@ -78,45 +88,17 @@ public sealed class AddonDataProviderBitBlt : IAddonDataProvider, IDisposable
 
         graphics.ReleaseHdc(memoryDC);
 
-        unsafe
-        {
-            BitmapData bd = bitmap.LockBits(rect, ImageLockMode.ReadOnly, AddonDataProviderConfig.PIXEL_FORMAT);
+        BitmapData bd = bitmap.LockBits(rect, ImageLockMode.ReadOnly, AddonDataProviderConfig.PIXEL_FORMAT);
 
-            // TODO: problem the  
-            // int nXSrc, int nYSrc
-            // 0 0 coordinates dosent point to the top left corner in the window
-            // instead there are (68,28) area offset ?!
-            //bitmap.Save("helpme.bmp");
+        // TODO: problem the  
+        // int nXSrc, int nYSrc
+        // 0 0 coordinates dosent point to the top left corner in the window
+        // instead there are (68,28) area offset ?!
+        //bitmap.Save("helpme.bmp");
 
-            ReadOnlySpan<DataFrame> frames = this.frames;
+        IAddonDataProvider.InternalUpdate(bd, frames, data);
 
-            ReadOnlySpan<byte> first = new(
-                (byte*)bd.Scan0 + (frames[0].Y * bd.Stride) +
-                (frames[0].X * AddonDataProviderConfig.BYTES_PER_PIXEL),
-                AddonDataProviderConfig.BYTES_PER_PIXEL);
-
-            ReadOnlySpan<byte> last = new(
-                (byte*)bd.Scan0 + (frames[^1].Y * bd.Stride) +
-                (frames[^1].X * AddonDataProviderConfig.BYTES_PER_PIXEL),
-                AddonDataProviderConfig.BYTES_PER_PIXEL);
-
-            if (!first.SequenceEqual(AddonDataProviderConfig.fColor) ||
-                !last.SequenceEqual(AddonDataProviderConfig.lColor))
-            {
-                goto Unlock;
-            }
-
-            for (int i = 0; i < frames.Length; i++)
-            {
-                byte* y = (byte*)bd.Scan0 + (frames[i].Y * bd.Stride);
-                int x = frames[i].X * AddonDataProviderConfig.BYTES_PER_PIXEL;
-
-                data[frames[i].Index] = y[x] | (y[x + 1] << 8) | (y[x + 2] << 16);
-            }
-
-        Unlock:
-            bitmap.UnlockBits(bd);
-        }
+        bitmap.UnlockBits(bd);
     }
 
     public int GetInt(int index)

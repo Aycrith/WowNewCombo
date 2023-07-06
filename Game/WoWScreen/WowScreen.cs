@@ -45,15 +45,15 @@ public sealed class WowScreen : IWowScreen, IBitmapProvider, IDisposable
 
     private readonly SolidBrush blackPen;
 
+    private readonly bool windowedMode;
+
     public WowScreen(ILogger<WowScreen> logger, WowProcess wowProcess)
     {
         this.logger = logger;
         this.wowProcess = wowProcess;
 
-        Point p = new();
-        GetPosition(ref p);
         GetRectangle(out rect);
-        rect.Location = p;
+        windowedMode = IsWindowedMode(rect.Location);
 
         Bitmap = new Bitmap(rect.Width, rect.Height, PixelFormat.Format32bppPArgb);
         graphics = Graphics.FromImage(Bitmap);
@@ -64,15 +64,14 @@ public sealed class WowScreen : IWowScreen, IBitmapProvider, IDisposable
         blackPen = new SolidBrush(Color.Black);
 
         logger.LogInformation($"{rect} - " +
-            $"Windowed Mode: {IsWindowedMode(p)} - " +
+            $"Windowed Mode: {windowedMode} - " +
             $"Scale: {DPI2PPI(GetDpi()):F2}");
     }
 
     public void Update()
     {
-        Point p = new();
-        GetPosition(ref p);
-        rect.Location = p;
+        if (windowedMode)
+            GetRectangle(out rect);
 
         graphics.CopyFromScreen(rect.Location, Point.Empty, Bitmap.Size);
     }
