@@ -132,7 +132,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
                 input.PressPetAttack();
             }
 
-            for (int i = 0; i < Keys.Length; i++)
+            for (int i = 0; bits.TargetAlive() && i < Keys.Length; i++)
             {
                 KeyAction keyAction = Keys[i];
 
@@ -141,7 +141,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
                     continue;
                 }
 
-                if (bits.TargetAlive() && castingHandler.CastIfReady(keyAction,
+                if (castingHandler.CastIfReady(keyAction,
                     keyAction.Interrupts.Count > 0
                     ? keyAction.CanBeInterrupted
                     : bits.TargetAlive))
@@ -153,11 +153,11 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
 
         if (!bits.HasTarget())
         {
-            stopMoving.Stop();
             logger.LogInformation("Lost target!");
 
             if (combatLog.DamageTakenCount() > 0 && !input.KeyboardOnly)
             {
+                stopMoving.Stop();
                 FindNewTarget();
             }
         }
