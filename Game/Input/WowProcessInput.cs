@@ -16,7 +16,7 @@ public sealed partial class WowProcessInput : IMouseInput
     private const bool LogInput = false;
     private const bool LogMove = false;
 
-    private readonly ILogger logger;
+    private readonly ILogger<WowProcessInput> logger;
 
     private readonly WowProcess wowProcess;
     private readonly InputWindowsNative nativeInput;
@@ -31,7 +31,7 @@ public sealed partial class WowProcessInput : IMouseInput
     public ConsoleKey InteractMouseover { get; set; }
     public int InteractMouseoverPress { get; set; }
 
-    public WowProcessInput(ILogger logger, CancellationTokenSource cts, WowProcess wowProcess)
+    public WowProcessInput(ILogger<WowProcessInput> logger, CancellationTokenSource cts, WowProcess wowProcess)
     {
         this.logger = logger;
         this.wowProcess = wowProcess;
@@ -205,24 +205,24 @@ public sealed partial class WowProcessInput : IMouseInput
     [LoggerMessage(
         EventId = 3000,
         Level = LogLevel.Debug,
-        Message = @"Input: KeyDown {key}")]
+        Message = @"[{key}] KeyDown")]
     static partial void LogKeyDown(ILogger logger, ConsoleKey key);
 
     [LoggerMessage(
         EventId = 3001,
         Level = LogLevel.Debug,
-        Message = @"Input: KeyUp {key}")]
+        Message = @"[{key}] KeyUp")]
     static partial void LogKeyUp(ILogger logger, ConsoleKey key);
 
     [LoggerMessage(
         EventId = 3002,
         Level = LogLevel.Debug,
-        Message = @"Input: [{key}] pressed for {milliseconds}ms")]
+        Message = @"[{key}] pressed {milliseconds}ms")]
     static partial void LogKeyPress(ILogger logger, ConsoleKey key, int milliseconds);
 
     [LoggerMessage(
         EventId = 3003,
         Level = LogLevel.Debug,
-        Message = @"Input: [{key}] pressing for {milliseconds}ms")]
+        Message = @"[{key}] pressing {milliseconds}ms")]
     static partial void LogKeyPressNoDelay(ILogger logger, ConsoleKey key, int milliseconds);
 }

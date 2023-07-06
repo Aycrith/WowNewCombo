@@ -23,8 +23,8 @@ public class Test_Input : IDisposable
         this.cts = new();
 
         wowProcess = new WowProcess();
-        wowScreen = new WowScreen(loggerFactory.CreateLogger<WowScreen>(), wowProcess);
-        wowProcessInput = new WowProcessInput(logger, cts, wowProcess);
+        wowScreen = new(loggerFactory.CreateLogger<WowScreen>(), wowProcess);
+        wowProcessInput = new(loggerFactory.CreateLogger<WowProcessInput>(), cts, wowProcess);
     }
 
     public void Dispose()

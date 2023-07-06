@@ -52,7 +52,7 @@ public sealed class Test_NpcNameFinder : IDisposable
 
         wowProcess = new();
         wowScreen = new(loggerFactory.CreateLogger<WowScreen>(), wowProcess);
-        WowProcessInput wowProcessInput = new(logger, new(), wowProcess);
+        WowProcessInput wowProcessInput = new(loggerFactory.CreateLogger<WowProcessInput>(), new(), wowProcess);
 
         INpcResetEvent npcResetEvent = new NpcResetEvent();
         npcNameFinder = new(logger, wowScreen, npcResetEvent);
