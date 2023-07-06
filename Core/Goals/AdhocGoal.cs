@@ -56,23 +56,18 @@ public sealed class AdhocGoal : GoapGoal
         if (key.BeforeCastDismount && mountHandler.IsMounted())
         {
             mountHandler.Dismount();
-            wait.Update();
         }
     }
 
     public override void Update()
     {
-        if (castingHandler.SpellInQueue())
-        {
-            wait.Update();
-            return;
-        }
+        wait.Update();
 
-        if ((key.Charge >= 1 && key.CanRun()))
-        {
+        if (!CanRun() || castingHandler.SpellInQueue())
+            return;
+
+        if (key.Charge >= 1 && key.CanRun())
             castingHandler.CastIfReady(key, Interrupt);
-            wait.Update();
-        }
     }
 
     private bool Interrupt()
