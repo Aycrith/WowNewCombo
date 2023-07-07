@@ -47,11 +47,8 @@ public sealed class BagReader : IDisposable, IReader
         for (int i = 0; i < Bags.Length; i++)
         {
             Bags[i] = new Bag();
-            if (i == 0)
-            {
-                Bags[i].Name = "Backpack";
-            }
         }
+        Bags[0].Item = ItemDB.Backpack;
     }
 
     public void Dispose()
@@ -95,8 +92,8 @@ public sealed class BagReader : IDisposable, IReader
             // default bag, the first has no equipment slot
             if (index != 0)
             {
-                bag.ItemId = equipmentReader.GetId((int)InventorySlotId.Bag_0 + index - 1);
-                UpdateBagName(index);
+                int itemId = equipmentReader.GetId((int)InventorySlotId.Bag_0 + index - 1);
+                UpdateBagItem(index, itemId);
             }
 
             bag.BagType = (BagType)bagType;
@@ -105,7 +102,7 @@ public sealed class BagReader : IDisposable, IReader
 
             BagItems.RemoveAll(RemoveByIndex);
             bool RemoveByIndex(BagItem b)
-                => b.Bag == index && b.BagIndex > bag.SlotCount;
+                => b.Bag == index && b.Slot > bag.SlotCount;
 
             changed = true;
         }
@@ -131,7 +128,7 @@ public sealed class BagReader : IDisposable, IReader
 
         BagItem? existingItem = BagItems.FirstOrDefault(Exists);
         bool Exists(BagItem b) =>
-            b.Bag == bag && b.BagIndex == slot;
+            b.Bag == bag && b.Slot == slot;
 
         if (itemCount > 0)
         {
@@ -139,7 +136,7 @@ public sealed class BagReader : IDisposable, IReader
 
             if (existingItem != null)
             {
-                if (existingItem.ItemId != itemId)
+                if (existingItem.Item.Entry != itemId)
                 {
                     BagItemChange?.Invoke(existingItem, Core.BagItemChange.Remove);
                     BagItems.Remove(existingItem);
@@ -167,14 +164,14 @@ public sealed class BagReader : IDisposable, IReader
 
                 if (ItemDB.Items.TryGetValue(itemId, out Item item))
                 {
-                    BagItem newItem = new(bag, slot, itemId, itemCount, item);
+                    BagItem newItem = new(bag, slot, itemCount, item);
                     BagItems.Add(newItem);
                     BagItemChange?.Invoke(newItem, Core.BagItemChange.New);
                 }
                 else
                 {
                     BagItem unknownItem =
-                        new(bag, slot, itemId, itemCount, new Item() { Entry = itemId, Name = "Unknown" });
+                        new(bag, slot, itemCount, new Item() { Entry = itemId, Name = "Unknown" });
                     BagItems.Add(unknownItem);
                     BagItemChange?.Invoke(unknownItem, Core.BagItemChange.New);
                 }
@@ -208,7 +205,7 @@ public sealed class BagReader : IDisposable, IReader
         var span = CollectionsMarshal.AsSpan(BagItems);
         for (int i = 0; i < span.Length; i++)
         {
-            if (span[i].ItemId == itemId)
+            if (span[i].Item.Entry == itemId)
             {
                 count += span[i].Count;
             }
@@ -220,7 +217,7 @@ public sealed class BagReader : IDisposable, IReader
     public bool HasItem(int itemId)
     {
         return BagItems.Exists(ById);
-        bool ById(BagItem x) => x.ItemId == itemId;
+        bool ById(BagItem x) => x.Item.Entry == itemId;
     }
 
     public int HighestQuantityOfDrinkItemId()
@@ -255,17 +252,15 @@ public sealed class BagReader : IDisposable, IReader
             return;
         }
         int index = tuple.Item1 - (int)InventorySlotId.Tabard;
-        Bags[index].ItemId = tuple.Item2;
-
-        UpdateBagName(index);
+        UpdateBagItem(index, tuple.Item2);
     }
 
-    private void UpdateBagName(int index)
+    private void UpdateBagItem(int index, int itemId)
     {
-        Bags[index].Name =
-            ItemDB.Items.TryGetValue(Bags[index].ItemId, out Item item)
-            ? item.Name
-            : string.Empty;
+        if (ItemDB.Items.TryGetValue(itemId, out Item item))
+            Bags[index].Item = item;
+        else
+            Bags[index].Item = ItemDB.EmptyItem;
     }
 
 
@@ -277,7 +272,7 @@ public sealed class BagReader : IDisposable, IReader
 
     private static bool BagItemCommonQuality(BagItem bi) => bi.Item.Quality == 0;
 
-    public int MaxBagSlot() => Bags.Max(BagSlotCount);
+    public int BagMaxSlot() => Bags.Max(BagSlotCount);
 
     #endregion
 }

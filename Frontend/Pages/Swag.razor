@@ -20,7 +20,9 @@
             @for (int index = 0; index <= (int)InventorySlotId.Bag_3; index++)
             {
                 <div class="col">
-                    <EquipmentComponent Slot="index" Item="equipmentReader.Items[index]" ShowIcon="!botController.IsBotActive" />
+                    <EquipmentComponent Slot="index"
+                                        Item="equipmentReader.Items[index]"
+                                        ShowIcon="!botController.IsBotActive" />
                 </div>
             }
         </div>
@@ -38,26 +40,32 @@
         <table class="table table-sm table-striped table-no-border">
             <thead class="thead-dark">
                 <tr>
-                    @foreach (var bag in bagReader.Bags.Reverse())
+                    @for (int i = bagReader.Bags.Length - 1; i >= 0; i--)
                     {
+                        var bag = bagReader.Bags[i];
                         <th>
-                            <a href="@($"{api.ItemId}{bag.ItemId}")" target="_blank">@bag.Name</a>
+                            <ItemComponent Item="bag.Item" />
                         </th>
                     }
                 </tr>
             </thead>
-            @for (int bagIndex = 0; bagIndex < bagReader.MaxBagSlot(); bagIndex++)
+            @for (int slot = 0; slot <= bagReader.BagMaxSlot(); slot++)
             {
                 <tr>
-                    @for (int bag = 4; bag >= 0; bag--)
+                    @for (int bag = bagReader.Bags.Length - 1; bag >= 0; bag--)
                     {
                         <td width="20%">
                             @{
-                                var bagItem = bagReader.BagItems.FirstOrDefault(i => i.Bag == bag && i.BagIndex == bagIndex);
+                                var bagItem = bagReader.BagItems.FirstOrDefault(Exists);
+                                bool Exists(BagItem b) => b.Bag == bag && b.Slot == slot;
                             }
                             @if (bagItem != null)
                             {
-                                <BagItemComponent BagItem="bagItem" ShowIcon="!botController.IsBotActive" />
+                                <ItemComponent Item="bagItem.Item"
+                                               Count="bagItem.Count"
+                                               LastCount="bagItem.LastCount"
+                                               LastChange="bagItem.LastChange"
+                                               LastUpdated="bagItem.LastUpdated" />
                             }
                         </td>
                     }

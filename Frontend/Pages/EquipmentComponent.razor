@@ -34,7 +34,7 @@
             return;
         }
 
-        iconName = await api.FetchItemIconName(Item.Entry);
+        iconName = await api.RequesItemtIconName(Item.Entry);
         icons.TryAdd(Item.Entry, iconName);
     }
 

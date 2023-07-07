@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Concurrent;
+using System.Threading.Tasks;
 using System.Xml;
 
 using SharedLib;
@@ -41,7 +42,27 @@ public sealed class WApi
     private static readonly XmlReaderSettings iconSettings = new() { Async = true, LineNumberOffset = 14 };
     private const string ICON = "icon";
 
-    public async Task<string> FetchItemIconName(int itemId)
+    private static readonly ConcurrentDictionary<int, Task<string>> requests = new();
+
+    public async Task<string> RequesItemtIconName(int itemId)
+    {
+        if (requests.TryGetValue(itemId, out Task<string>? inProgress))
+        {
+            return await inProgress;
+        }
+
+        Task<string> task = FetchItemIconName(itemId);
+        if (requests.TryAdd(itemId, task))
+        {
+            await task;
+            requests.TryRemove(itemId, out _);
+            return task.Result;
+        }
+
+        return string.Empty;
+    }
+
+    private async Task<string> FetchItemIconName(int itemId)
     {
         try
         {

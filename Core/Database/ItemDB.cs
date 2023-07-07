@@ -12,6 +12,8 @@ public sealed class ItemDB
     private static readonly Item _emptyItem = new() { Entry = 0, Name = string.Empty, Quality = 0, SellPrice = 0 };
     public static ref readonly Item EmptyItem => ref _emptyItem;
 
+    public static readonly Item Backpack = new() { Entry = -1, Name = "Backpack", Quality = 1, SellPrice = 0 };
+
     public Dictionary<int, Item> Items { get; } = new();
     public int[] FoodIds { get; }
     public int[] DrinkIds { get; }
@@ -23,6 +25,8 @@ public sealed class ItemDB
         {
             Items.Add(items[i].Entry, items[i]);
         }
+
+        Items.Add(Backpack.Entry, Backpack);
 
         FoodIds = DeserializeObject<int[]>(ReadAllText(Join(dataConfig.ExpDbc, "foods.json")))!;
         DrinkIds = DeserializeObject<int[]>(ReadAllText(Join(dataConfig.ExpDbc, "waters.json")))!;

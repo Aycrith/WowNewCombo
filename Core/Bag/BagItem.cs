@@ -7,8 +7,7 @@ namespace Core;
 public sealed class BagItem
 {
     public int Bag { get; }
-    public int ItemId { get; }
-    public int BagIndex { get; }
+    public int Slot { get; }
     public int Count { get; private set; }
     public int LastCount { get; private set; }
     public Item Item { get; }
@@ -16,11 +15,10 @@ public sealed class BagItem
 
     public int LastChange => Count - LastCount;
 
-    public BagItem(int bag, int bagIndex, int itemId, int count, Item item)
+    public BagItem(int bag, int slot, int count, Item item)
     {
         this.Bag = bag;
-        this.BagIndex = bagIndex;
-        this.ItemId = itemId;
+        this.Slot = slot;
         this.Count = count;
         this.LastCount = count;
         this.Item = item;
