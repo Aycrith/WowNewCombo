@@ -162,6 +162,7 @@
                 <hr>
             }
             <button class="btn btn-danger" @onclick="HalvenPoints">Halven points</button>
+            <button class="btn btn-success" @onclick="DoublePoints">Double points</button>
 
             <div>@error</div>
             <br />
@@ -621,7 +622,27 @@
 
     protected void HalvenPoints()
     {
-        editPath = editPath.Where((x, i) => i % 2 == 0).ToList();
+        editPath = editPath.Where(EverySecondOne).ToList();
+        static bool EverySecondOne(Vector3 v, int i) => i % 2 == 0;
+
+        UpdateRouteMarkup();
+    }
+
+    protected void DoublePoints()
+    {
+        for (int i = 1; i < editPath.Count; i += 2)
+        {
+            Vector3 c = editPath[i];
+            Vector3 p = editPath[i - 1];
+
+            Vector3 newP = new(
+                (c.X + p.X) / 2f,
+                (c.Y + p.Y) / 2f,
+                0);
+
+            editPath.Insert(i, newP);
+        }
+
         UpdateRouteMarkup();
     }
 
