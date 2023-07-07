@@ -75,7 +75,7 @@
             return;
         }
 
-        iconName = await api.RequesItemtIconName(Item.Entry);
+        iconName = await api.RequestItemIconName(Item.Entry);
         icons.TryAdd(Item.Entry, iconName);
     }
 
@@ -110,9 +110,6 @@
             return "New";
 
         int change = Count - LastCount;
-
-        return change < 0
-        ? change.ToString()
-        : $"+{change}";
+        return change.ToString("+#;-#");
     }
 }

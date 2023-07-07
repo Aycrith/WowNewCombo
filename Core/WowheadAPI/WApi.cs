@@ -44,7 +44,7 @@ public sealed class WApi
 
     private static readonly ConcurrentDictionary<int, Task<string>> requests = new();
 
-    public async Task<string> RequesItemtIconName(int itemId)
+    public async Task<string> RequestItemIconName(int itemId)
     {
         if (requests.TryGetValue(itemId, out Task<string>? inProgress))
         {
