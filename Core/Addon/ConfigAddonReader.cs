@@ -19,11 +19,6 @@ public sealed class ConfigAddonReader : IAddonReader
         this.autoResetEvent = autoResetEvent;
     }
 
-    public void FetchData()
-    {
-        reader.Update();
-    }
-
     public void FullReset()
     {
         throw new NotImplementedException();
@@ -31,7 +26,7 @@ public sealed class ConfigAddonReader : IAddonReader
 
     public void Update()
     {
-        FetchData();
+        reader.Update();
         autoResetEvent.Set();
     }
 

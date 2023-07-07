@@ -10,7 +10,6 @@ public interface IAddonReader
 
     event Action? AddonDataChanged;
 
-    void FetchData();
     void FullReset();
 
     void Update();

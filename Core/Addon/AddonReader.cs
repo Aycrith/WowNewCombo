@@ -1,9 +1,6 @@
 using Core.Database;
 
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-
-using SharedLib;
 
 using System;
 using System.Collections.Immutable;
@@ -34,9 +31,6 @@ public sealed class AddonReader : IAddonReader
     public string MouseOverName { get; private set; } = string.Empty;
 
     public double AvgUpdateLatency { private set; get; }
-    private double updateSum;
-    private int updateIndex;
-    private DateTime lastUpdate;
 
     public AddonReader(IAddonDataProvider reader,
         PlayerReader playerReader, AutoResetEvent resetEvent,
@@ -51,38 +45,27 @@ public sealed class AddonReader : IAddonReader
         this.playerReader = playerReader;
 
         readers = sp.GetServices<IReader>().ToImmutableArray();
-
-        lastUpdate = DateTime.UtcNow;
     }
 
     public void Update()
     {
-        FetchData();
+        IAddonDataProvider reader = this.reader;
+        reader.Update();
 
-        if (!GlobalTime.UpdatedNoEvent(this.reader))
+        if (!GlobalTime.UpdatedNoEvent(reader))
             return;
+
+        AvgUpdateLatency = (DateTime.UtcNow - GlobalTime.LastChanged).TotalMilliseconds;
+        GlobalTime.UpdateTime();
 
         if (GlobalTime.Value <= 3)
         {
-            updateSum = 0;
-            updateIndex = 0;
-
             FullReset();
             return;
         }
-        else if (updateIndex >= 8)
-        {
-            updateSum = 0;
-            updateIndex = 0;
-        }
 
-        resetEvent.Reset();
-
-        updateSum += (DateTime.UtcNow - lastUpdate).TotalMilliseconds;
-        updateIndex++;
-        AvgUpdateLatency = updateSum / updateIndex;
-
-        IAddonDataProvider reader = this.reader;
+        if (!resetEvent.Reset())
+            return;
 
         ReadOnlySpan<IReader> span = readers.AsSpan();
         for (int i = 0; i < span.Length; i++)
@@ -109,14 +92,7 @@ public sealed class AddonReader : IAddonReader
                 : string.Empty;
         }
 
-        lastUpdate = DateTime.UtcNow;
-
         resetEvent.Set();
-    }
-
-    public void FetchData()
-    {
-        reader.Update();
     }
 
     public void SessionReset()
