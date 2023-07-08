@@ -101,6 +101,7 @@ public sealed partial class BotController : IBotController, IDisposable
         this.npcNameFinder = npcNameFinder;
 
         addonThread = new(AddonThread);
+        addonThread.Priority = ThreadPriority.AboveNormal;
         addonThread.Start();
 
         do
@@ -244,6 +245,8 @@ public sealed partial class BotController : IBotController, IDisposable
                     .AsTask().Wait(cts.Token);
             }
         }
+
+        ProfileLoaded -= OnProfileLoaded;
 
         if (logger.IsEnabled(LogLevel.Debug))
             logger.LogDebug($"{nameof(RemotePathingThread)} stopped!");
