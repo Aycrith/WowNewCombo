@@ -64,9 +64,6 @@ public sealed class AddonReader : IAddonReader
             return;
         }
 
-        if (!resetEvent.Reset())
-            return;
-
         ReadOnlySpan<IReader> span = readers.AsSpan();
         for (int i = 0; i < span.Length; i++)
         {
