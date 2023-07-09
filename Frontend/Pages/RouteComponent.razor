@@ -219,19 +219,16 @@
 
         if (routeinfo.RouteToWaypoint.Length > 0)
         {
-            var pooler = ArrayPool<Vector3>.Shared;
             int length = routeinfo.RouteToWaypoint.Length;
-            var waylist = pooler.Rent(length);
-            routeinfo.RouteToWaypoint.CopyTo(waylist, 0);
+            Span<Vector3> waylist = stackalloc Vector3[length];
+            routeinfo.RouteToWaypoint.CopyTo(waylist);
 
-            ArraySegment<Vector3> segment = new ArraySegment<Vector3>(waylist, 0, length);
+            worldmapAreaDB.ToMap_FlipXY(PlayerReader.UIMapId.Value, waylist);
 
-            worldmapAreaDB.ToMap_FlipXY(PlayerReader.UIMapId.Value, segment);
-
-            this.RouteToWaypointLines = new MarkupString(routeinfo.RenderPathLines(segment));
-            this.RouteToWaypointPoints = new MarkupString(routeinfo.RenderPathPoints(segment));
-
-            pooler.Return(waylist);
+            this.RouteToWaypointLines =
+                new MarkupString(routeinfo.RenderPathLines(waylist));
+            this.RouteToWaypointPoints =
+                new MarkupString(routeinfo.RenderPathPoints(waylist));
         }
         else
         {

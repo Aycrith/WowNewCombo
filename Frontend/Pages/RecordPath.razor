@@ -5,7 +5,7 @@
 @using System.Numerics
 @using SharedLib.Extensions
 @using Core.Database
-@using static Core.Extensions.IEnumerableExtensions
+@using System.Runtime.InteropServices
 
 @inject IAddonReader addonReader
 @inject PlayerReader PlayerReader
@@ -348,20 +348,23 @@
 
         if (editPath.Count > 0)
         {
+            var span = CollectionsMarshal.AsSpan(editPath);
+            Span<Vector3> span1 = stackalloc Vector3[1];
+            span1[0] = this.selectedPoint;
+
             this.PathLines =
-                new MarkupString(routeInfo.RenderPathLines(editPath));
+                new MarkupString(routeInfo.RenderPathLines(span));
             this.PathPoints =
-                new MarkupString(routeInfo.RenderPathPoints(editPath));
+                new MarkupString(routeInfo.RenderPathPoints(span));
 
             this.SelectedPoints =
-                new MarkupString(routeInfo.RenderPathPoints(
-                    new SingleSequence<Vector3>(this.selectedPoint)));
+                new MarkupString(routeInfo.RenderPathPoints(span1));
 
             if (this.selectedPoint != this.previewPoint)
             {
-                this.PreviewPoints = new MarkupString(
-                    routeInfo.RenderPathPoints(
-                        new SingleSequence<Vector3>(this.previewPoint)));
+                span1[0] = this.previewPoint;
+                this.PreviewPoints =
+                new MarkupString(routeInfo.RenderPathPoints(span1));
             }
             else
             {

@@ -1,11 +1,9 @@
 ﻿using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Data;
 using System.Linq;
 using System.Numerics;
-using System.Runtime.InteropServices;
 using System.Text;
 
 using Core.Database;
@@ -260,11 +258,17 @@ public sealed class RouteInfo : IDisposable
     }
 
 
-    public string RenderPathLines(IEnumerable<Vector3> path)
+    public string RenderPathLines(ReadOnlySpan<Vector3> path)
     {
+        if (path.Length <= 1)
+            return string.Empty;
+
         StringBuilder sb = new();
-        foreach ((Vector3 p1, Vector3 p2) in path.Pairwise())
+        for (int i = 1; i < path.Length; i++)
         {
+            Vector3 p1 = path[i];
+            Vector3 p2 = path[i - 1];
+
             sb.AppendLine(
                 $"<line " +
                 $"x1='{ToCanvasPointX(p1.X)}' " +
@@ -278,21 +282,21 @@ public sealed class RouteInfo : IDisposable
     private const string first = "<br><b>First</b>";
     private const string last = "<br><b>Last</b>";
 
-    public string RenderPathPoints(IEnumerable<Vector3> path)
+    public string RenderPathPoints(ReadOnlySpan<Vector3> path)
     {
         StringBuilder sb = new();
-        int count = path.Count();
-        int i = 0;
-        foreach (Vector3 p in path)
+        int count = path.Length;
+        for (int i = 0; i < path.Length; i++)
         {
+            Vector3 p = path[i];
             float x = p.X;
             float y = p.Y;
             sb.AppendLine(
                 $"<circle onmousedown=\"pointClick(evt,{x},{y},{i});\" " +
                 $"onmousemove=\"showTooltip(evt,'{x},{y}{(i == 0 ? first : i == count - 1 ? last : string.Empty)}');\" " +
                 $"onmouseout=\"hideTooltip();\" " +
-                $"cx='{ToCanvasPointX(p.X)}' " +
-                $"cy='{ToCanvasPointY(p.Y)}' r='{dSize}' />");
+                $"cx='{ToCanvasPointX(x)}' " +
+                $"cy='{ToCanvasPointY(y)}' r='{dSize}' />");
             i++;
         }
         return sb.ToString();
