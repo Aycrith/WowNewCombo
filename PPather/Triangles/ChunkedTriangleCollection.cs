@@ -1,4 +1,4 @@
-﻿/*
+/*
  *  Part of PPather
  *  Copyright Pontus Borg 2008
  *
@@ -38,6 +38,7 @@ public sealed class ChunkedTriangleCollection
 
     public void Close()
     {
+        NotifyChunkAdded = null;
         supplier.Clear();
         EvictAll();
     }

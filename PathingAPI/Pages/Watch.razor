@@ -15,7 +15,7 @@
 @inject PPatherService pPatherService
 @inject PathingAPILoggerSink loggerSink
 
-@implements IDisposable
+@implements IAsyncDisposable
 
 
 <div style="position: relative; z-index: 2; left: 0px; padding-left:10px; height:30px; background-color: black;color:white">
@@ -38,7 +38,7 @@
         <button @onclick="ToggleWireFrame">
             <span>Wire</span>
         </button>
-        <button @onclick="Reset">
+        <button @onclick="async () => await Reset()">
             <span>Reset</span>
         </button>
     </div>
@@ -69,7 +69,7 @@
 
     private Thread thread;
     private CancellationTokenSource cts;
-    private JsonSerializerOptions options;
+    private JsonSerializerOptions options = null;
 
     private Queue<ChunkEventArgs> chunkEventArgs = new();
 
@@ -102,8 +102,10 @@
         }
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
+        if (options == null) return;
+
         loggerSink.OnLog -= OnLog;
 
         pPatherService.SearchBegin -= OnSearchBegin;
@@ -112,7 +114,7 @@
         pPatherService.OnLinesAdded -= OnDrawlines;
         pPatherService.OnSphereAdded -= OnDrawSphere;
 
-        cts?.Cancel();
+        await Reset();
     }
 
     private async void ToggleLayer(TriangleType layer)
@@ -125,10 +127,13 @@
         await jsRuntime.InvokeVoidAsync("toggleWireFrame");
     }
 
-    private async void Reset()
+    private async ValueTask Reset()
     {
+        cts?.Cancel();
+
         await jsRuntime.InvokeVoidAsync("clear");
         pPatherService.Reset();
+        GC.Collect();
     }
 
     public void OnLog(LogEvent logEvent)
@@ -225,7 +230,6 @@
                 JsonSerializer.Serialize(spotPath.locations, options), PathColour, Name);
 
             await jsRuntime.InvokeVoidAsync("removeMeshes", "search");
-            cts?.Cancel();
         }
         else
         {
@@ -258,16 +262,16 @@
         TriangleCollection chunks = pPatherService.GetChunkAt(e.GridX, e.GridY);
 
         int i = 0;
-        IEnumerable<int>[] models = new IEnumerable<int>[4];
+        int[][] models = new int[4][];
         models[i++] = MeshFactory.CreateTriangles(TriangleType.Terrain, chunks);
         models[i++] = MeshFactory.CreateTriangles(TriangleType.Water, chunks);
         models[i++] = MeshFactory.CreateTriangles(TriangleType.Object, chunks);
         models[i++] = MeshFactory.CreateTriangles(TriangleType.Model, chunks);
 
-        Vector3[] positions = MeshFactory.CreatePoints(chunks);
+        var positions = MeshFactory.CreatePoints(chunks);
 
         await jsRuntime.InvokeVoidAsync("addModels",
-            JsonSerializer.Serialize(models),
+            JsonSerializer.Serialize(models, options),
             JsonSerializer.Serialize(positions, options));
     }
 }

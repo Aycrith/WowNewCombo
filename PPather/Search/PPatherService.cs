@@ -56,12 +56,10 @@ public sealed class PPatherService
 
     public void Reset()
     {
-        if (search != null)
-        {
-            search.PathGraph.triangleWorld.NotifyChunkAdded = null;
-            search.Clear();
-            GC.Collect();
-        }
+        if (search == null)
+            return;
+
+        search.Clear();
         search = null;
     }
 
