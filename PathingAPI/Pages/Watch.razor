@@ -233,6 +233,10 @@
         }
         else
         {
+            while (chunkEventArgs.TryDequeue(out var e))
+            {
+                await DequeueChunkEvent(e);
+            }
             Log("No path found");
         }
 
