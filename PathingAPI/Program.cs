@@ -1,5 +1,11 @@
+using System;
+
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+
+using Serilog;
 
 namespace PathingAPI;
 
@@ -17,6 +23,8 @@ public sealed class Program
             .ConfigureWebHostDefaults(webBuilder =>
             {
                 webBuilder.UseUrls(hostUrl);
+                webBuilder.ConfigureLogging(logging =>
+                    logging.ClearProviders().AddSerilog());
                 webBuilder.UseStartup<Startup>();
             });
 }

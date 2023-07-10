@@ -15,6 +15,7 @@ using Microsoft.OpenApi.Models;
 using PPather;
 
 using Serilog;
+using Serilog.Events;
 
 using SharedLib;
 using SharedLib.Converters;
@@ -32,7 +33,7 @@ public sealed class Startup
             PathingAPILoggerSink sink = new();
             builder.Services.AddSingleton(sink);
 
-            const string outputTemplate = "[{Timestamp:HH:mm:ss:fff} {Level:u3}] {Message:lj}{NewLine}{Exception}";
+            const string outputTemplate = "[{Timestamp:HH:mm:ss:fff} {Level:u1}] {Message:lj}{NewLine}{Exception}";
 
             Log.Logger = new LoggerConfiguration()
                 //.MinimumLevel.Debug()
