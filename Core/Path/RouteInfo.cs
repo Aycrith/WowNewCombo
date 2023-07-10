@@ -279,13 +279,13 @@ public sealed class RouteInfo : IDisposable
         return sb.ToString();
     }
 
-    private const string first = "<br><b>First</b>";
-    private const string last = "<br><b>Last</b>";
+    private const string FIRST = "<br><b>First</b>";
+    private const string LAST = "<br><b>Last</b>";
 
     public string RenderPathPoints(ReadOnlySpan<Vector3> path)
     {
         StringBuilder sb = new();
-        int count = path.Length;
+        int last = path.Length - 1;
         for (int i = 0; i < path.Length; i++)
         {
             Vector3 p = path[i];
@@ -293,11 +293,15 @@ public sealed class RouteInfo : IDisposable
             float y = p.Y;
             sb.AppendLine(
                 $"<circle onmousedown=\"pointClick(evt,{x},{y},{i});\" " +
-                $"onmousemove=\"showTooltip(evt,'{x},{y}{(i == 0 ? first : i == count - 1 ? last : string.Empty)}');\" " +
+                $"onmousemove=\"showTooltip(evt,'{x},{y}{(
+                    i == 0
+                    ? FIRST
+                    : i == last
+                    ? LAST
+                    : string.Empty)}');\" " +
                 $"onmouseout=\"hideTooltip();\" " +
                 $"cx='{ToCanvasPointX(x)}' " +
                 $"cy='{ToCanvasPointY(y)}' r='{dSize}' />");
-            i++;
         }
         return sb.ToString();
     }
