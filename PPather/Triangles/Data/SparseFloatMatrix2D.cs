@@ -1,4 +1,5 @@
-﻿using System.Buffers;
+﻿using System;
+using System.Buffers;
 
 using static System.MathF;
 
@@ -30,7 +31,7 @@ public sealed class SparseFloatMatrix2D<T> : SparseMatrix2D<T>
         return (int)((f + offset) / gridSize);
     }
 
-    public (T[], int) GetAllInSquare(float min_x, float min_y,
+    public (ReadOnlyMemory<T>, int) GetAllInSquare(float min_x, float min_y,
                                   float max_x, float max_y)
     {
         int sx = LocalToGrid(min_x);
@@ -40,7 +41,9 @@ public sealed class SparseFloatMatrix2D<T> : SparseMatrix2D<T>
         int ey = LocalToGrid(max_y);
 
         var pooler = ArrayPool<T>.Shared;
-        var l = pooler.Rent((int)Ceiling(((ex - sx + 1) * gridSize) + ((ey - sy + 1) * gridSize)));
+        var l = pooler.Rent((int)Ceiling(
+            ((ex - sx + 1) * gridSize) +
+            ((ey - sy + 1) * gridSize)));
 
         int i = 0;
         for (int x = sx; x <= ex; x++)

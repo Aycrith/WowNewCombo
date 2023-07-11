@@ -38,42 +38,57 @@ public sealed class Search
         PathGraph = null;
     }
 
+    private const float bigExtend = 2000;
+    private const float smallExtend = 2 * toonHeight;
+
     public Vector4 CreateWorldLocation(float x, float y, float z, int mapId)
     {
-        float zTerrain = GetZValueAt(x, y, z, TriangleType.Terrain);
-        float zWater = GetZValueAt(x, y, z, TriangleType.Water);
+        float min_z = z == 0 ? z - bigExtend : z - smallExtend;
+        float max_z = z == 0 ? z + bigExtend : z + smallExtend;
+
+        float zTerrain = GetZValueAt(x, y, min_z, max_z, TriangleType.Terrain);
+        float zWater = GetZValueAt(x, y, min_z, max_z, TriangleType.Water);
 
         if (zWater > zTerrain)
         {
             return new Vector4(x, y, zWater, mapId);
         }
 
-        float zModel = GetZValueAt(x, y, z, TriangleType.Model | TriangleType.Object);
+        float zModel = GetZValueAt(x, y, min_z, max_z, TriangleType.Model | TriangleType.Object);
 
-        return zModel != float.MinValue
-            ? MathF.Abs(zModel - zTerrain) > toonHeight / 2
-                ? new Vector4(x, y, zTerrain, mapId)
-                : new Vector4(x, y, zModel, mapId)
-            : new Vector4(x, y, zTerrain, mapId);
+        if (zModel != float.MinValue)
+        {
+            if (zTerrain != float.MinValue &&
+                MathF.Abs(zModel - zTerrain) > toonHeight / 2)
+            {
+                return new(x, y, zTerrain, mapId);
+            }
+            else
+            {
+                return new(x, y, zModel, mapId);
+            }
+        }
+        else
+        {
+            // incase the smallExtend results none
+            if (zTerrain == float.MinValue)
+            {
+                min_z = z - bigExtend;
+                max_z = z + bigExtend;
+
+                zTerrain = GetZValueAt(x, y, min_z, max_z, TriangleType.Terrain);
+            }
+
+            return new(x, y, zTerrain, mapId);
+        }
     }
 
-    private float GetZValueAt(float x, float y, float z, TriangleType allowedFlags)
+    private float GetZValueAt(float x, float y, float min_z, float max_z, TriangleType allowedFlags)
     {
-        float min = -1000;
-        float max = 2000;
-
-        if (z != 0)
-        {
-            min = z - 1000;
-            max = z + 2000;
-        }
-
-        if (PathGraph.triangleWorld.FindStandableAt1(x, y, min, max, out float z1, out _, toonHeight, toonSize, true, allowedFlags))
-        {
-            return z1;
-        }
-
-        return float.MinValue;
+        return PathGraph.triangleWorld.FindStandableAt1
+            (x, y, min_z, max_z, out float z1, out _, toonHeight, toonSize, true, allowedFlags)
+            ? z1
+            : float.MinValue;
     }
 
     public void CreatePathGraph(float mapId)

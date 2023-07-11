@@ -155,15 +155,12 @@ public sealed class PPatherService
         return search.PathGraph.CurrentSearchPath();
     }
 
-    public void DrawPath(float mapId, List<float[]> coords)
+    public void DrawPath(float mapId, ReadOnlySpan<Vector3> path)
     {
-        var first = coords[0];
-        var last = coords[^1];
+        Vector4 from = new(path[0], mapId);
+        Vector4 to = new(path[^1], mapId);
 
-        var fromLoc = new Vector4(first[0], first[1], first[2], mapId);
-        var toLoc = new Vector4(last[0], last[1], last[2], mapId);
-
-        SetLocations(fromLoc, toLoc);
+        SetLocations(from, to);
 
         if (search.PathGraph == null)
         {
@@ -171,14 +168,13 @@ public sealed class PPatherService
         }
 
         List<Spot> spots = new();
-        for (int i = 0; i < coords.Count; i++)
+        for (int i = 0; i < path.Length; i++)
         {
-            Spot spot = new(new(coords[i][0], coords[i][1], coords[i][2]));
+            Spot spot = new(path[i]);
             spots.Add(spot);
             search.PathGraph.CreateSpotsAroundSpot(spot, false);
         }
 
-        var path = new Path(spots);
-        OnPathCreated?.Invoke(path);
+        OnPathCreated?.Invoke(new(spots));
     }
 }

@@ -242,7 +242,7 @@ public sealed class PathGraph
             return s;
         }
 
-        Span<Spot> close = FindAllSpots(s.Loc, MaxStepLength);
+        ReadOnlySpan<Spot> close = FindAllSpots(s.Loc, MaxStepLength);
         for (int i = 0; i < close.Length; i++)
         {
             Spot cs = close[i];
@@ -360,7 +360,7 @@ public sealed class PathGraph
         return closest;
     }
 
-    public Span<Spot> FindAllSpots(Vector3 l, float max_d)
+    public ReadOnlySpan<Spot> FindAllSpots(Vector3 l, float max_d)
     {
         const int SV_LENGTH = 4;
         var pooler = ArrayPool<Spot>.Shared;
@@ -406,7 +406,7 @@ public sealed class PathGraph
         pooler.Return(sv);
         pooler.Return(sl);
 
-        return sl.AsSpan(0, c);
+        return new(sl, 0, c);
     }
 
 
@@ -435,7 +435,7 @@ public sealed class PathGraph
                 isAtSpot.AddPathTo(wasAt);
             }
 
-            Span<Spot> sl = FindAllSpots(isAtSpot.Loc, MaxStepLength);
+            ReadOnlySpan<Spot> sl = FindAllSpots(isAtSpot.Loc, MaxStepLength);
             int connected = 0;
             for (int i = 0; i < sl.Length; i++)
             {
@@ -619,15 +619,15 @@ public sealed class PathGraph
             CreateSpotsAroundSpot(currentSearchSpot);
 
             //score each spot around the current search spot and add them to the queue
-            ReadOnlySpan<Spot> list = currentSearchSpot.GetPathsToSpots(this);
-            //TestPoints = list.ToArray().Select(s => new Vector3(s.Loc.X, s.Loc.Y, s.Loc.Z)).ToArray();
+            ReadOnlySpan<Spot> spots = currentSearchSpot.GetPathsToSpots(this);
+            //TestPoints = spots.ToVecArray();
 
-            for (int i = 0; i < list.Length; i++)
+            for (int i = 0; i < spots.Length; i++)
             {
-                Spot spotLinkedToCurrent = list[i];
-                if (spotLinkedToCurrent != null && !spotLinkedToCurrent.IsBlocked() && !spotLinkedToCurrent.SearchIsClosed(currentSearchID))
+                Spot linked = spots[i];
+                if (linked != null && !linked.IsBlocked() && !linked.SearchIsClosed(currentSearchID))
                 {
-                    ScoreSpot(spotLinkedToCurrent, destinationSpot, searchScoreSpot, currentSearchID, prioritySpotQueue);
+                    ScoreSpot(linked, destinationSpot, searchScoreSpot, currentSearchID, prioritySpotQueue);
                 }
             }
         }

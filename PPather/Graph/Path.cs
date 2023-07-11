@@ -30,6 +30,8 @@ public sealed class Path
 
     public Path(List<Spot> steps)
     {
+        locations.Capacity = steps.Count;
+
         var span = CollectionsMarshal.AsSpan(steps);
         for (int i = 0; i < span.Length; i++)
         {

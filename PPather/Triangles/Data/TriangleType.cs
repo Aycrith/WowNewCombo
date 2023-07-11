@@ -3,10 +3,11 @@
 [System.Flags]
 public enum TriangleType : byte
 {
-    Terrain = 0,
-    Water = 1,
-    Object = 2,
-    Model = 4,
+    None = 0,
+    Terrain = 1,
+    Water = 2,
+    Object = 4,
+    Model = 8
 }
 
 public static class TriangleType_Ext

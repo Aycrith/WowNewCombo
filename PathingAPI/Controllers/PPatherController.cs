@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Numerics;
+using System.Text.Json;
 
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,6 +10,7 @@ using PPather.Data;
 using PPather.Graph;
 
 using SharedLib.Data;
+using SharedLib.Extensions;
 
 namespace PathingAPI.Controllers;
 
@@ -16,13 +19,15 @@ namespace PathingAPI.Controllers;
 public sealed class PPatherController : ControllerBase
 {
     private readonly PPatherService service;
+    private readonly JsonSerializerOptions options;
 
     private static bool isBusy;
     private static bool initialised;
 
-    public PPatherController(PPatherService service)
+    public PPatherController(PPatherService service, JsonSerializerOptions options)
     {
         this.service = service;
+        this.options = options;
     }
 
     /// <summary>
@@ -57,7 +62,7 @@ public sealed class PPatherController : ControllerBase
         if (path == null)
         {
             isBusy = false;
-            return new JsonResult(System.Array.Empty<Vector3>());
+            return new JsonResult(System.Array.Empty<Vector3>(), options);
         }
 
         service.Save();
@@ -69,7 +74,7 @@ public sealed class PPatherController : ControllerBase
         }
 
         isBusy = false;
-        return new JsonResult(array);
+        return new JsonResult(array, options);
     }
 
     /// <summary>
@@ -94,13 +99,13 @@ public sealed class PPatherController : ControllerBase
         if (path == null)
         {
             isBusy = false;
-            return new JsonResult(System.Array.Empty<Vector3>());
+            return new JsonResult(System.Array.Empty<Vector3>(), options);
         }
 
         service.Save();
         isBusy = false;
 
-        return new JsonResult(path.locations);
+        return new JsonResult(path.locations, options);
     }
 
     /// <summary>
@@ -125,12 +130,12 @@ public sealed class PPatherController : ControllerBase
         if (path == null)
         {
             isBusy = false;
-            return new JsonResult(System.Array.Empty<Vector3>());
+            return new JsonResult(System.Array.Empty<Vector3>(), options);
         }
         service.Save();
         isBusy = false;
 
-        return new JsonResult(path.locations);
+        return new JsonResult(path.locations, options);
     }
 
     /// <summary>
@@ -205,21 +210,21 @@ public sealed class PPatherController : ControllerBase
     public bool DrawPathTest()
     {
         float mapId = ContinentDB.NameToId["Azeroth"]; // Azeroth
-        List<float[]> coords = new()
+        Span<Vector3> coords = stackalloc Vector3[]
         {
-            new float[] { -5609.00f,-479.00f,397.49f },
-            new float[] { -5609.33f,-444.00f,405.22f },
-            new float[] { -5609.33f,-438.40f,406.02f },
-            new float[] { -5608.80f,-427.73f,404.69f },
-            new float[] { -5608.80f,-426.67f,404.69f },
-            new float[] { -5610.67f,-405.33f,402.02f },
-            new float[] { -5635.20f,-368.00f,392.15f },
-            new float[] { -5645.07f,-362.67f,385.49f },
-            new float[] { -5646.40f,-362.13f,384.69f },
-            new float[] { -5664.27f,-355.73f,378.29f },
-            new float[] { -5696.00f,-362.67f,366.02f },
-            new float[] { -5758.93f,-385.87f,366.82f },
-            new float[] { -5782.00f,-394.00f,366.09f }
+            new Vector3(-5609.00f, -479.00f, 397.49f),
+            new Vector3(-5609.33f, -444.00f, 405.22f),
+            new Vector3(-5609.33f, -438.40f, 406.02f),
+            new Vector3(-5608.80f, -427.73f, 404.69f),
+            new Vector3(-5608.80f, -426.67f, 404.69f),
+            new Vector3(-5610.67f, -405.33f, 402.02f),
+            new Vector3(-5635.20f, -368.00f, 392.15f),
+            new Vector3(-5645.07f, -362.67f, 385.49f),
+            new Vector3(-5646.40f, -362.13f, 384.69f),
+            new Vector3(-5664.27f, -355.73f, 378.29f),
+            new Vector3(-5696.00f, -362.67f, 366.02f),
+            new Vector3(-5758.93f, -385.87f, 366.82f),
+            new Vector3(-5782.00f, -394.00f, 366.09f)
         };
 
         if (isBusy) { return false; }
@@ -233,27 +238,22 @@ public sealed class PPatherController : ControllerBase
 
     [HttpPost("DrawPath")]
     [Produces("application/json")]
-    public bool DrawPath(int uiMapId, List<float[]> coords)
+    public bool DrawPath(int uiMapId, Vector3[] path)
     {
         float mapId = -1;
-        for (int i = 0; i < coords.Count; i++)
+        for (int i = 0; i < path.Length; i++)
         {
-            var row = coords[i];
+            Vector3 p = path[i];
+            Vector4 world = service.ToWorld(uiMapId, p.X, p.Y, p.Z);
 
-            Vector4 world = service.ToWorld(uiMapId, row[0], row[1], row[2]);
-
-            row[0] = world.X;
-            row[1] = world.Y;
-            row[2] = world.Z;
-
-            if (mapId == -1)
-                mapId = world.W;
+            path[i] = world.AsVector3();
+            mapId = world.W;
         }
 
         if (isBusy) { return false; }
         isBusy = true;
 
-        service.DrawPath(mapId, coords);
+        service.DrawPath(mapId, path);
 
         isBusy = false;
         return true;

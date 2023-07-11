@@ -44,7 +44,14 @@
     }
 
     toggleLayer = function (layer) {
-        if (layer >= layers) layer = layers - 1;
+        // TriangleType 2^x => array index
+        // Where TriangleType.None is excluded
+        switch (layer) {
+            case 1: layer = 0; break;
+            case 2: layer = 1; break;
+            case 4: layer = 2; break;
+            case 8: layer = 3; break;
+        }
         rootNodes[layer].setEnabled(!rootNodes[layer].isEnabled());
     }
 
@@ -185,7 +192,7 @@
         skybox.material = skyboxMaterial;
 
         engine.runRenderLoop(function () {
-            if (!startedRendering) {
+            if (!scene.paused) {
                 scene.render();
             }
         });
@@ -281,15 +288,6 @@
             customMesh.parent = rootNodes[p];
         }
 
-        if (!startedRendering) {
-            startedRendering = true;
-            // run the render loop
-            engine.runRenderLoop(function () {
-                scene.render();
-            });
-        }
-
-        //console.log("addModels completed");
     }
 
     setCamera = function (pos, look, height) {

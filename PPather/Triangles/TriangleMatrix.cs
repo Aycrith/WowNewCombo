@@ -11,7 +11,9 @@ using PPather.Triangles.Data;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 using static WowTriangles.Utils;
@@ -23,27 +25,28 @@ public sealed class TriangleMatrix
     private const float resolution = 6.0f;
     private readonly SparseFloatMatrix2D<List<int>> matrix;
 
+    [SkipLocalsInit]
     public TriangleMatrix(TriangleCollection tc, ILogger logger)
     {
-        DateTime pre = DateTime.UtcNow;
+        long pre = Stopwatch.GetTimestamp();
 
         matrix = new SparseFloatMatrix2D<List<int>>(resolution);
 
-        Vector3 vertex0;
-        Vector3 vertex1;
-        Vector3 vertex2;
+        Vector3 v0;
+        Vector3 v1;
+        Vector3 v2;
 
         for (int i = 0; i < tc.TriangleCount; i++)
         {
             tc.GetTriangleVertices(i,
-                    out vertex0.X, out vertex0.Y, out vertex0.Z,
-                    out vertex1.X, out vertex1.Y, out vertex1.Z,
-                    out vertex2.X, out vertex2.Y, out vertex2.Z);
+                    out v0.X, out v0.Y, out v0.Z,
+                    out v1.X, out v1.Y, out v1.Z,
+                    out v2.X, out v2.Y, out v2.Z);
 
-            float minx = Min3(vertex0.X, vertex1.X, vertex2.X);
-            float maxx = Max3(vertex0.X, vertex1.X, vertex2.X);
-            float miny = Min3(vertex0.Y, vertex1.Y, vertex2.Y);
-            float maxy = Max3(vertex0.Y, vertex1.Y, vertex2.Y);
+            float minx = Min3(v0.X, v1.X, v2.X);
+            float maxx = Max3(v0.X, v1.X, v2.X);
+            float miny = Min3(v0.Y, v1.Y, v2.Y);
+            float maxy = Max3(v0.Y, v1.Y, v2.Y);
 
             Vector3 box_center;
             Vector3 box_halfsize;
@@ -66,7 +69,7 @@ public sealed class TriangleMatrix
                     box_center.Y = grid_y + (resolution / 2);
                     box_center.Z = 0;
 
-                    if (!TestTriangleBoxIntersect(vertex0, vertex1, vertex2, box_center, box_halfsize))
+                    if (!TestTriangleBoxIntersect(v0, v1, v2, box_center, box_halfsize))
                     {
                         continue;
                     }
@@ -82,7 +85,13 @@ public sealed class TriangleMatrix
         }
 
         if (logger.IsEnabled(LogLevel.Trace))
-            logger.LogTrace($"Mesh [||,||] Bounds: [{tc.Min.X:F4}, {tc.Min.Y:F4}] [{tc.Max.X:F4}, {tc.Max.Y:F4}] - {tc.TriangleCount} tri - {tc.VertexCount} ver - c {matrix.Count} - {(DateTime.UtcNow - pre).TotalMilliseconds}ms");
+            logger.LogTrace($"Mesh [||,||] Bounds: " +
+                $"[{tc.Min.X:F4}, {tc.Min.Y:F4}] " +
+                $"[{tc.Max.X:F4}, {tc.Max.Y:F4}] - " +
+                $"{tc.TriangleCount} tri - " +
+                $"{tc.VertexCount} ver - " +
+                $"{matrix.Count} c - " +
+                $"{(Stopwatch.GetElapsedTime(pre)).TotalMilliseconds}ms");
     }
 
     public void Clear()
@@ -95,56 +104,42 @@ public sealed class TriangleMatrix
         matrix.Clear();
     }
 
-    public ArraySegment<int> GetAllCloseTo(float x, float y, float distance)
+    public ReadOnlySpan<int> GetAllCloseTo(float x, float y, float distance)
     {
-        (List<int>[] close, int count) = matrix.GetAllInSquare(x - distance, y - distance, x + distance, y + distance);
+        (ReadOnlyMemory<List<int>> close, int count) =
+            matrix.GetAllInSquare(x - distance, y - distance, x + distance, y + distance);
 
-        int totalSize = 0;
-        for (int i = 0; i < count; i++)
-        {
-            totalSize += close[i].Count;
-        }
-
-        var pooler = ArrayPool<int>.Shared;
-        var all = pooler.Rent(totalSize);
-
-        int index = 0;
-        for (int i = 0; i < count; i++)
-        {
-            ReadOnlySpan<int> span = CollectionsMarshal.AsSpan(close[i]);
-            for (int j = 0; j < span.Length; j++)
-            {
-                all[index++] = span[j];
-            }
-        }
-
-        pooler.Return(all);
-        return new ArraySegment<int>(all, 0, index);
+        return GetAsSpan(close, count);
     }
 
-    public ArraySegment<int> GetAllInSquare(float x0, float y0, float x1, float y1)
+    public ReadOnlySpan<int> GetAllInSquare(float x0, float y0, float x1, float y1)
     {
-        (List<int>[] close, int count) = matrix.GetAllInSquare(x0, y0, x1, y1);
+        (ReadOnlyMemory<List<int>> close, int count) =
+            matrix.GetAllInSquare(x0, y0, x1, y1);
 
+        return GetAsSpan(close, count);
+    }
+
+    private static ReadOnlySpan<int> GetAsSpan(ReadOnlyMemory<List<int>> close, int count)
+    {
         int totalSize = 0;
         for (int i = 0; i < count; i++)
         {
-            totalSize += close[i].Count;
+            totalSize += close.Span[i].Count;
         }
 
         var pooler = ArrayPool<int>.Shared;
-        var all = pooler.Rent(totalSize);
+        int[] output = pooler.Rent(totalSize);
 
-        int index = 0;
+        int c = 0;
         for (int i = 0; i < count; i++)
         {
-            ReadOnlySpan<int> span = CollectionsMarshal.AsSpan(close[i]);
-            for (int j = 0; j < span.Length; j++)
-            {
-                all[index++] = span[j];
-            }
+            ReadOnlySpan<int> span = CollectionsMarshal.AsSpan(close.Span[i]);
+            span.CopyTo(new Span<int>(output, c, span.Length));
+            c += span.Length;
         }
-        pooler.Return(all);
-        return new ArraySegment<int>(all, 0, index);
+
+        pooler.Return(output);
+        return new(output, 0, c);
     }
 }
