@@ -50,10 +50,7 @@ public sealed class Spot
     public float score; // Used by search
     public bool closed, scoreSet;
 
-    public Spot(float x, float y, float z)
-    {
-        Loc = new(x, y, z);
-    }
+    public Spot(float x, float y, float z) : this(new(x, y, z)) { }
 
     public Spot(Vector3 l)
     {
@@ -154,7 +151,7 @@ public sealed class Spot
         }
 
         pooler.Return(array);
-        return array.AsSpan(0, j);
+        return new(array, 0, j);
     }
 
     public bool HasPathTo(PathGraph pg, Spot s)
