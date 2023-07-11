@@ -6,6 +6,7 @@
 
 using System.Collections.Generic;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 
 using Microsoft.Extensions.Logging;
 
@@ -20,8 +21,10 @@ namespace WowTriangles;
 public sealed class TriangleCollection
 {
     private readonly ILogger logger;
-    public List<Vector3> Vertecies { get; }
-    public List<Triangle<int>> Triangles { get; }
+    private readonly List<Vector3> vertecies;
+    private readonly List<Triangle<int>> triangles;
+
+    public List<Vector3> Vertecies => vertecies;
 
     private TriangleMatrix matrix;
 
@@ -37,15 +40,15 @@ public sealed class TriangleCollection
     private Vector3 limit_min = new(-1E30f, -1E30f, -1E30f);
 
     private int triangleCount;
-    public int TriangleCount => Triangles.Count;
+    public int TriangleCount => triangles.Count;
 
     public int VertexCount { get; private set; }
 
     public TriangleCollection(ILogger logger)
     {
         this.logger = logger;
-        Vertecies = new(2 ^ 16); // terrain mesh
-        Triangles = new(128);
+        vertecies = new(2 ^ 16); // terrain mesh
+        triangles = new(128);
     }
 
     public void Clear()
@@ -53,18 +56,14 @@ public sealed class TriangleCollection
         triangleCount = 0;
         VertexCount = 0;
 
-        Triangles.Clear();
-        Vertecies.Clear();
+        triangles.Clear();
+        vertecies.Clear();
         matrix.Clear();
     }
 
-    public bool HasTriangleMatrix => matrix != null;
-
     public TriangleMatrix GetTriangleMatrix()
     {
-        if (matrix == null)
-            matrix = new TriangleMatrix(this, logger);
-
+        matrix ??= new TriangleMatrix(this, logger);
         return matrix;
     }
 
@@ -150,7 +149,7 @@ public sealed class TriangleCollection
         VerticesGet(v2, out x2, out y2, out z2);
     }
 
-    [System.Runtime.CompilerServices.SkipLocalsInit]
+    [SkipLocalsInit]
     public void GetTriangleVertices(int i,
                                     out float x0, out float y0, out float z0,
                                     out float x1, out float y1, out float z1,
@@ -163,10 +162,10 @@ public sealed class TriangleCollection
         VerticesGet(v2, out x2, out y2, out z2);
     }
 
-    [System.Runtime.CompilerServices.SkipLocalsInit]
+    [SkipLocalsInit]
     private void VerticesGet(int index, out float x, out float y, out float z)
     {
-        var local = Vertecies;
+        var local = vertecies;
         Vector3 v = local[index];
         x = v.X;
         y = v.Y;
@@ -175,20 +174,20 @@ public sealed class TriangleCollection
 
     private void VerticesSet(int index, float x, float y, float z)
     {
-        Vertecies.Insert(index, new(x, y, z));
+        vertecies.Insert(index, new(x, y, z));
     }
 
 
-    [System.Runtime.CompilerServices.SkipLocalsInit]
+    [SkipLocalsInit]
     private void TrianglesGet(int index, out int v0, out int v1, out int v2, out TriangleType flags)
     {
-        var local = Triangles;
+        var local = triangles;
         Triangle<int> t = local[index];
         (v0, v1, v2, flags) = t;
     }
 
     private void TrianglesSet(int index, int v0, int v1, int v2, TriangleType flags)
     {
-        Triangles.Insert(index, new(v0, v1, v2, flags));
+        triangles.Insert(index, new(v0, v1, v2, flags));
     }
 }
