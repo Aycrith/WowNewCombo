@@ -636,7 +636,7 @@ public sealed partial class NpcNameFinder : IDisposable
         bitmap.UnlockBits(bitmapData);
 
         pooler.Return(segments);
-        return segments.AsSpan(0, i);
+        return new(segments, 0, i);
     }
 
     public void ShowNames(Graphics gr)
