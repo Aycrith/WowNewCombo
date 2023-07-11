@@ -1,19 +1,5 @@
 ﻿@page "/Route"
 
-@using PPather
-@using PPather.Data
-@using PPather.Graph
-@using System.Numerics
-@using System.Threading
-@using Newtonsoft
-
-@using MatBlazor
-@using System.IO
-@using PathingAPI.Controllers
-@using SharedLib.Data
-@using SharedLib
-@using WinAPI
-
 @inject IJSRuntime jsRuntime
 @inject PPatherService pPatherService
 @inject DataConfig dataConfig
@@ -86,7 +72,7 @@
                 @{
                     string imgFile = @context.Replace("json", "jpg");
                 }
-                @if (File.Exists(System.IO.Path.Combine(dataConfig.Path, imgFile)))
+                @if (System.IO.Path.Exists(System.IO.Path.Combine(dataConfig.Path, imgFile)))
                 {
                     <a class="thumbnail">
                         <span class="oi oi-image" aria-hidden="true"> </span>
@@ -272,45 +258,33 @@
         VisibleNum = string.IsNullOrEmpty(text) ? 10 : 20;
     }
 
-    private void OnChanged(object sender, FileSystemEventArgs e)
+    private void OnChanged(object sender, System.IO.FileSystemEventArgs e)
     {
         base.InvokeAsync(StateHasChanged);
     }
 
     private void StartDraw()
     {
-        path = GetPath(Selected);
-        List<float[]> coords = new List<float[]>();
-        bool? allzero = null;
-
-        for (int i = 0; i < path.Length; i++)
-        {
-            Vector3 p = path[i];
-            coords.Add(new float[] { p.X, p.Y, p.Z });
-
-            if (allzero == null && p.Z == 0)
-            {
-                allzero = true;
-            }
-        }
-        if (allzero == null)
-            allzero = false;
-
         worldMapAreaDb.TryGet(UIMapId, out var wma);
-
         float mapId = ContinentDB.NameToId[wma.Continent];
 
-        if (allzero.Value)
+        path = GetPath(Selected);
+
+        static bool Z_Zero(Vector3 v) => v.Z == 0;
+        if (path.All(Z_Zero))
         {
-            for (int i = 0; i < coords.Count; i++)
+            for (int i = 0; i < path.Length; i++)
             {
-                var row = coords[i];
+                var row = path[i];
 
-                Vector4 world = pPatherService.ToWorld(UIMapId, row[0], row[1], row[2]);
+                // try to guess Z component by looking at the previous path point
+                float lastZ = 0;
+                if (i > 0)
+                    lastZ = path[i - 1].Z;
 
-                path[i].X = row[0] = world.X;
-                path[i].Y = row[1] = world.Y;
-                path[i].Z = row[2] = world.Z;
+                Vector4 world = pPatherService.ToWorld(UIMapId, row.X, row.Y, lastZ);
+
+                path[i] = world.AsVector3();
             }
         }
 
@@ -319,7 +293,7 @@
         clearPath = false;
         StateHasChanged();
 
-        pPatherService.DrawPath(mapId, coords);
+        pPatherService.DrawPath(mapId, path);
     }
 
     public Vector3[] GetPath(string path)
@@ -332,19 +306,18 @@
     private string RelativeFilePath(DataConfig dataConfig, string path)
     {
         return !path.Contains(dataConfig.Path)
-            ? System.IO.Path.Join(dataConfig.Path, path)
+            ? Join(dataConfig.Path, path)
             : path;
     }
 
     public IEnumerable<string> PathFiles()
     {
-        var root = System.IO.Path.Join(
-            dataConfig.Path, System.IO.Path.DirectorySeparatorChar.ToString());
+        var root = Join(
+            dataConfig.Path, DirectorySeparatorChar.ToString());
 
-        return Directory.EnumerateFiles(root, "*.json*", SearchOption.AllDirectories)
+        return EnumerateFiles(root, "*.json*", System.IO.SearchOption.AllDirectories)
             .Select(path => path.Replace(root, string.Empty))
-            .OrderBy(x => x, new NaturalStringComparer())
-            .ToList();
+            .OrderBy(x => x, new NaturalStringComparer());
     }
 
 }

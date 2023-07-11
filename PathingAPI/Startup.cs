@@ -1,15 +1,20 @@
 using System;
 using System.IO;
 using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 using MatBlazor;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Microsoft.JSInterop;
 using Microsoft.OpenApi.Models;
 
 using PPather;
@@ -38,6 +43,8 @@ public sealed class Startup
             Log.Logger = new LoggerConfiguration()
                 //.MinimumLevel.Debug()
                 //.MinimumLevel.Verbose()
+                .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+                .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
                 .WriteTo.Sink(sink)
                 .WriteTo.File("out.log",
                     rollingInterval: RollingInterval.Day,
@@ -62,12 +69,18 @@ public sealed class Startup
         services.AddSingleton<DataConfig>(x => DataConfig.Load()); // going to use the Hardcoded DataConfig.Exp
         services.AddSingleton<WorldMapAreaDB>();
         services.AddSingleton<PPatherService>();
-        services.AddControllers().AddJsonOptions(options =>
+
+        services.AddSingleton(provider =>
+            provider.GetRequiredService<IOptions<JsonOptions>>().Value.SerializerOptions);
+
+        services.Configure<JsonOptions>(options =>
         {
-            options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
-            options.JsonSerializerOptions.Converters.Add(new Vector3Converter());
-            options.JsonSerializerOptions.Converters.Add(new Vector4Converter());
+            options.SerializerOptions.PropertyNameCaseInsensitive = true;
+            options.SerializerOptions.Converters.Add(new Vector3Converter());
+            options.SerializerOptions.Converters.Add(new Vector4Converter());
         });
+
+        services.AddControllers();
 
         // Register the Swagger generator, defining 1 or more Swagger documents
         services.AddSwaggerGen(c =>
