@@ -16,7 +16,11 @@ public sealed class WorldMapAreaDB
 
     public WorldMapAreaDB(DataConfig dataConfig)
     {
-        ReadOnlySpan<WorldMapArea> wmas = JsonConvert.DeserializeObject<WorldMapArea[]>(File.ReadAllText(Path.Join(dataConfig.ExpDbc, "WorldMapArea.json")));
+        ReadOnlySpan<WorldMapArea> wmas =
+            JsonConvert.DeserializeObject<WorldMapArea[]>(
+                File.ReadAllText(
+                    Path.Join(dataConfig.ExpDbc, "WorldMapArea.json")));
+
         for (int i = 0; i < wmas.Length; i++)
             this.wmas.Add(wmas[i].UIMapId, wmas[i]);
     }
@@ -44,7 +48,7 @@ public sealed class WorldMapAreaDB
         return new Vector3(wma.ToWorldX(map.Y), wma.ToWorldY(map.X), map.Z);
     }
 
-    public void ToWorldXY_FlipXY(int uiMap, ref Vector3[] map)
+    public void ToWorldXY_FlipXY(int uiMap, Vector3[] map)
     {
         WorldMapArea wma = wmas[uiMap];
         for (int i = 0; i < map.Length; i++)
@@ -84,12 +88,14 @@ public sealed class WorldMapAreaDB
     public WorldMapArea GetWorldMapArea(float worldX, float worldY, int mapId, int uiMap)
     {
         IEnumerable<WorldMapArea> maps =
-            wmas.Values.Where(i =>
+            wmas.Values.Where(ContainsWorldPosAndMapId);
+
+        bool ContainsWorldPosAndMapId(WorldMapArea i) =>
                 worldX <= i.LocTop &&
                 worldX >= i.LocBottom &&
                 worldY <= i.LocLeft &&
                 worldY >= i.LocRight &&
-                i.MapID == mapId);
+                i.MapID == mapId;
 
         if (!maps.Any())
         {
@@ -104,7 +110,8 @@ public sealed class WorldMapAreaDB
 
             if (uiMap > 0)
             {
-                return maps.First(m => m.UIMapId == uiMap);
+                return maps.First(ByUIMapId);
+                bool ByUIMapId(WorldMapArea m) => m.UIMapId == uiMap;
             }
             throw new ArgumentOutOfRangeException(nameof(wmas), $"Found many map areas for spot {worldX}, {worldY}, {mapId} : {string.Join(", ", maps.Select(s => s.AreaName))}");
         }

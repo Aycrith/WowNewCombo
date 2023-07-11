@@ -7,6 +7,11 @@ namespace SharedLib.Converters;
 
 public sealed class Vector4Converter : JsonConverter<Vector4>
 {
+    private const string X = "x";
+    private const string Y = "y";
+    private const string Z = "z";
+    private const string W = "w";
+
     public override bool CanConvert(Type typeToConvert)
     {
         return typeToConvert == typeof(Vector4);
@@ -15,61 +20,25 @@ public sealed class Vector4Converter : JsonConverter<Vector4>
     public override Vector4 Read(ref Utf8JsonReader reader,
         Type typeToConvert, JsonSerializerOptions options)
     {
-        if (reader.TokenType != JsonTokenType.StartObject)
-        {
-            throw new JsonException();
-        }
+        JsonDocument doc = JsonDocument.ParseValue(ref reader);
+        JsonElement root = doc.RootElement;
 
-        Vector4 result = new();
+        float x = root.GetProperty(X).GetSingle();
+        float y = root.GetProperty(Y).GetSingle();
+        float z = root.GetProperty(Z).GetSingle();
+        float w = root.GetProperty(W).GetSingle();
 
-        while (reader.Read())
-        {
-            if (reader.TokenType == JsonTokenType.EndObject)
-            {
-                return result;
-            }
-
-            if (reader.TokenType != JsonTokenType.PropertyName)
-            {
-                throw new JsonException();
-            }
-
-            switch (reader.GetString())
-            {
-                case "x":
-                case "X":
-                    reader.Read();
-                    result.X = reader.GetSingle();
-                    break;
-                case "y":
-                case "Y":
-                    reader.Read();
-                    result.Y = reader.GetSingle();
-                    break;
-                case "z":
-                case "Z":
-                    reader.Read();
-                    result.Z = reader.GetSingle();
-                    break;
-                case "w":
-                case "W":
-                    reader.Read();
-                    result.Z = reader.GetSingle();
-                    break;
-            }
-        }
-
-        throw new JsonException();
+        return new Vector4(x, y, z, w);
     }
 
     public override void Write(Utf8JsonWriter writer,
         Vector4 value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
-        writer.WriteNumber("x", value.X);
-        writer.WriteNumber("y", value.Y);
-        writer.WriteNumber("z", value.Z);
-        writer.WriteNumber("w", value.W);
+        writer.WriteNumber(X, value.X);
+        writer.WriteNumber(Y, value.Y);
+        writer.WriteNumber(Z, value.Z);
+        writer.WriteNumber(W, value.W);
         writer.WriteEndObject();
     }
 }
