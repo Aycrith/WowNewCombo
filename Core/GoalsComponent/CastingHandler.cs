@@ -115,7 +115,7 @@ public sealed partial class CastingHandler
             UI_ERROR.SPELL_FAILED_TARGETS_DEAD;
     }
 
-    private bool CastInstant(KeyAction item, CancellationToken token)
+    private bool CastInstant(KeyAction item, CancellationToken token, bool retry)
     {
         if (!playerReader.IsCasting() && item.BeforeCastStop)
         {
@@ -143,6 +143,7 @@ public sealed partial class CastingHandler
 
         float elapsedMs;
 
+        // Melee Swing
         if (item.AfterCastWaitSwing)
         {
             elapsedMs = AfterCastWaitSwing(playerReader.MainHandSpeedMs() + playerReader.NetworkLatency,
@@ -158,6 +159,7 @@ public sealed partial class CastingHandler
                     playerReader.MainHandSwing.ElapsedMs() < playerReader.SpellQueueTimeMs, // swing timer reset from any miss
                 repeat: repeat);
         }
+        // Trinkets / Consumables
         else if (item.Item)
         {
             elapsedMs = Item(SPELL_QUEUE + playerReader.NetworkLatency,
@@ -172,6 +174,7 @@ public sealed partial class CastingHandler
                     beforeUsable != usableAction.Is(item) ||
                     beforeAction != currentAction.Is(item));
         }
+        // Spells appears in CombatLog
         else
         {
             elapsedMs = General(SPELL_QUEUE + playerReader.NetworkLatency,
@@ -206,11 +209,21 @@ public sealed partial class CastingHandler
                 ((UI_ERROR)beforeCastEventValue).ToStringF(),
                 ((UI_ERROR)playerReader.CastEvent.Value).ToStringF());
 
-        if (!CastSuccessful(playerReader.CastEvent.Value) &&
-            !beforeAction && !currentAction.Is(item))
+        if (item.Item || item.AfterCastWaitSwing)
         {
-            react.Do(item);
-            return false;
+            if (!beforeAction && !currentAction.Is(item) && !retry)
+            {
+                react.Do(item);
+                return false;
+            }
+        }
+        else
+        {
+            if (!CastSuccessful(playerReader.CastEvent.Value) && !retry)
+            {
+                react.Do(item);
+                return false;
+            }
         }
 
         item.SetClicked();
@@ -225,7 +238,7 @@ public sealed partial class CastingHandler
         return true;
     }
 
-    private bool CastCastbar(KeyAction item, CancellationToken token)
+    private bool CastCastbar(KeyAction item, CancellationToken token, bool retry)
     {
         wait.While(bits.IsFalling);
 
@@ -273,7 +286,7 @@ public sealed partial class CastingHandler
         if (Log && item.Log)
             LogCastbarUsableChange(logger, item.Name, playerReader.IsCasting(), playerReader.CastCount, beforeUsable, usableAction.Is(item), ((UI_ERROR)beforeCastEventValue).ToStringF(), ((UI_ERROR)playerReader.CastEvent.Value).ToStringF());
 
-        if (!CastSuccessful(playerReader.CastEvent.Value))
+        if (!CastSuccessful(playerReader.CastEvent.Value) && !retry)
         {
             react.Do(item);
             return false;
@@ -412,10 +425,10 @@ public sealed partial class CastingHandler
 
         if (!item.HasCastBar)
         {
-            if (!CastInstant(item, token))
+            if (!CastInstant(item, token, false))
             {
                 // try again after reacted to UI_ERROR
-                if (token.IsCancellationRequested || !CastInstant(item, token))
+                if (token.IsCancellationRequested || !CastInstant(item, token, true))
                 {
                     return false;
                 }
@@ -423,10 +436,10 @@ public sealed partial class CastingHandler
         }
         else
         {
-            if (!CastCastbar(item, token))
+            if (!CastCastbar(item, token, false))
             {
                 // try again after reacted to UI_ERROR
-                if (token.IsCancellationRequested || !CastCastbar(item, token))
+                if (token.IsCancellationRequested || !CastCastbar(item, token, true))
                 {
                     return false;
                 }
@@ -632,7 +645,7 @@ public sealed partial class CastingHandler
             return false;
         }
 
-        return CastInstant(formAction, CancellationToken.None);
+        return CastInstant(formAction, CancellationToken.None, false);
     }
 
     private void RepeatPetAttack()

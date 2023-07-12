@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
@@ -89,6 +90,25 @@ public sealed class Wait
                 return elapsedMs;
 
             Update();
+        }
+
+        return -elapsedMs;
+    }
+
+    [SkipLocalsInit]
+    public float AfterEquals<T>(int timeoutMs, int updateCount, Func<T> func)
+    {
+        DateTime start = DateTime.UtcNow;
+        float elapsedMs;
+        while ((elapsedMs = (float)(DateTime.UtcNow - start).TotalMilliseconds) < timeoutMs)
+        {
+            T initial = func();
+
+            for (int i = 0; i < updateCount; i++)
+                Update();
+
+            if (Comparer<T>.Default.Compare(initial, func()) == 0)
+                return elapsedMs;
         }
 
         return -elapsedMs;
