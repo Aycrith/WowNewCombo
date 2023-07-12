@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 
+using static System.Math;
+
 using Core.Database;
 using Core.Goals;
 
@@ -383,19 +385,19 @@ public sealed partial class RequirementFactory
 
     private int LastTargetDodgeMs()
     {
-        return Math.Max(0, combatLog.TargetDodge.ElapsedMs());
+        return Max(0, combatLog.TargetDodge.ElapsedMs());
     }
 
     private int MainHandSwing()
     {
-        return Math.Clamp(
+        return Clamp(
             playerReader.MainHandSwing.ElapsedMs() - playerReader.MainHandSpeedMs(),
             -playerReader.MainHandSpeedMs(), 0);
     }
 
     private int RangedSwing()
     {
-        return Math.Clamp(
+        return Clamp(
             playerReader.AutoShot.ElapsedMs() - playerReader.RangedSpeedMs(),
             -playerReader.RangedSpeedMs(),
             0);
@@ -871,8 +873,7 @@ public sealed partial class RequirementFactory
         Dictionary<string, Func<int>> intVariables)
     {
         return intVariables[key]() <=
-            //CastingHandler.SPELL_QUEUE - playerReader.NetworkLatency;
-            playerReader.SpellQueueTimeMs - playerReader.NetworkLatency;
+            Max(0, playerReader.SpellQueueTimeMs - playerReader.NetworkLatency);
     }
 
     private Requirement CreateTargetCastingSpell(string requirement)

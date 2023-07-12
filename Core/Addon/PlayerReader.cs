@@ -47,6 +47,8 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
 
     public float Direction => reader.GetFixed(3);
 
+    public float _Direction() => Direction;
+
     public RecordInt UIMapId { get; } = new(4);
 
     public int MapId { get; private set; }

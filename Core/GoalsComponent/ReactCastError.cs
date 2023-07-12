@@ -3,6 +3,7 @@
 using Microsoft.Extensions.Logging;
 
 using System;
+using static System.MathF;
 using System.Numerics;
 
 namespace Core;
@@ -17,15 +18,18 @@ public sealed class ReactCastError
     private readonly ConfigurableInput input;
     private readonly StopMoving stopMoving;
     private readonly PlayerDirection direction;
+    private readonly AddonReader addonReader;
 
     public ReactCastError(ILogger<ReactCastError> logger,
         PlayerReader playerReader,
+        AddonReader addonReader,
         ActionBarBits<IUsableAction> usableAction,
         AddonBits bits, Wait wait, ConfigurableInput input, StopMoving stopMoving,
         PlayerDirection direction)
     {
         this.logger = logger;
         this.playerReader = playerReader;
+        this.addonReader = addonReader;
         this.usableAction = usableAction;
         this.bits = bits;
         this.wait = wait;
@@ -157,48 +161,49 @@ public sealed class ReactCastError
                 }
                 break;
             case UI_ERROR.ERR_BADATTACKFACING:
-                if (playerReader.IsInMeleeRange())
+
+                bool wasAnyAuto =
+                    bits.SpellOn_AutoShot() ||
+                    bits.SpellOn_AutoAttack() ||
+                    bits.SpellOn_Shoot();
+
+                float beforeDir = playerReader.Direction;
+
+                input.PressFastInteract();
+
+                const int updateCount = 2;
+                float e = wait.AfterEquals(playerReader.SpellQueueTimeMs,
+                    updateCount, playerReader._Direction);
+
+                float sampleTimeMs =
+                    updateCount * (float)addonReader.AvgUpdateLatency;
+
+                if (e > sampleTimeMs)
                 {
-                    logger.LogInformation($"React to {value.ToStringF()} -- Interact!");
-                    input.PressInteract();
-                    // wait for the player turn interpolation -- unknown amount of time
-                    wait.Fixed(100);
                     stopMoving.Stop();
+                    logger.LogInformation(
+                        $"React to {value.ToStringF()} - " +
+                        $"Fast turn with Interact {e}ms");
                 }
                 else
                 {
-                    switch (playerReader.Class)
-                    {
-                        case UnitClass.None:
-                            break;
-                        case UnitClass.Monk:
-                        case UnitClass.DemonHunter:
-                        case UnitClass.Druid:
-                        case UnitClass.DeathKnight:
-                        case UnitClass.Warrior:
-                        case UnitClass.Paladin:
-                        case UnitClass.Rogue:
-                            logger.LogInformation($"React to {value.ToStringF()} -- Interact!");
-                            input.PressInteract();
-                            stopMoving.Stop();
-                            break;
-                        case UnitClass.Hunter:
-                        case UnitClass.Priest:
-                        case UnitClass.Shaman:
-                        case UnitClass.Mage:
-                        case UnitClass.Warlock:
-                            stopMoving.Stop();
-                            logger.LogInformation($"React to {value.ToStringF()} -- Turning 180!");
-                            float desiredDirection = playerReader.Direction + MathF.PI;
-                            desiredDirection =
-                                desiredDirection > MathF.Tau
-                                ? desiredDirection - MathF.Tau
-                                : desiredDirection;
-                            direction.SetDirection(desiredDirection, Vector3.Zero);
-                            break;
-                    }
+                    logger.LogWarning(
+                        $"Unable to react to {value.ToStringF()} - " +
+                        $"Fast turn with Interact {e}ms");
+                }
 
-                    wait.Update();
+                if (!wasAnyAuto)
+                    input.PressStopAttack();
+
+                if (e <= sampleTimeMs && beforeDir == playerReader.Direction)
+                {
+                    stopMoving.Stop();
+                    logger.LogInformation($"React to {value.ToStringF()} - " +
+                        $"Slow turn 180deg");
+                    float targetDir = playerReader.Direction + PI;
+                    if (targetDir > Tau)
+                        targetDir = -Tau;
+                    direction.SetDirection(targetDir, Vector3.Zero);
                 }
                 break;
             case UI_ERROR.SPELL_FAILED_MOVING:
