@@ -155,9 +155,11 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
 
             if (!MinRangeZero())
             {
-                e = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, input.PressApproachOnCooldown);
+                e = wait.AfterEquals(MAX_TIME_TO_REACH_MELEE, 2, playerReader._MapPosNoZ,
+                    input.PressApproachOnCooldown);
+
                 LogReachedCorpse(logger, e);
-                interact = true;
+                interact = !MinRangeZero();
             }
 
             playerReader.LastUIError = 0;

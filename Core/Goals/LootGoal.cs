@@ -179,8 +179,12 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
         if (!MinRangeZero())
         {
-            elapsedMs = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, input.PressApproachOnCooldown);
+            elapsedMs =
+                wait.AfterEquals(MAX_TIME_TO_REACH_MELEE, 2, playerReader._MapPosNoZ,
+                input.PressApproachOnCooldown);
             LogReachedCorpse(logger, elapsedMs);
+
+            return MinRangeZero();
         }
 
         return true;
@@ -285,8 +289,12 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
                 if (!MinRangeZero())
                 {
-                    float elapsedMs = wait.Until(MAX_TIME_TO_REACH_MELEE, MinRangeZero, input.PressApproachOnCooldown);
+                    float elapsedMs =
+                        wait.AfterEquals(MAX_TIME_TO_REACH_MELEE, 2, playerReader._MapPosNoZ,
+                        input.PressApproachOnCooldown);
                     LogReachedCorpse(logger, elapsedMs);
+
+                    return MinRangeZero();
                 }
             }
             else

@@ -1,4 +1,4 @@
-using System.Collections.Specialized;
+﻿using System.Collections.Specialized;
 using System.Numerics;
 
 using Core.Database;
@@ -38,6 +38,7 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
 
     public Vector3 MapPos => new(MapX, MapY, WorldPosZ);
     public Vector3 MapPosNoZ => new(MapX, MapY, 0);
+    public Vector3 _MapPosNoZ() => MapPosNoZ;
     public Vector3 WorldPos => worldMapAreaDB.ToWorld_FlipXY(UIMapId.Value, MapPos);
 
     public float WorldPosZ { get; set; } // MapZ not exists. Alias for WorldLoc.Z
