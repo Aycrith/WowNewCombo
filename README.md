@@ -42,7 +42,7 @@
 - Vendor goods
 - Repair equipments
 - Corpse run
-- Semi automated gathering [mode](#Modes)
+- Semi automated gathering [mode](#modes)
 
 # Media
 
@@ -216,7 +216,7 @@ While the bot is running there's no way to adjust / tweak the values. In order t
 
 Everything has to be setup inside the [Class Configuration](#12-class-configuration) file, in prior.
 
-A successful [Configuration process](#5-BlazorServer-Configuration-process) has a result of a following configuration files
+A successful [Configuration process](#5-blazorserver-configuration-process) has a result of a following configuration files
 * `data_config.json`
 * `addon_config.json`
 * `frame_config.json`
@@ -376,11 +376,11 @@ Take a look at the class files in `/Json/class` for examples of what you can do.
 | `"UseMount"` | Should use mount when its possible | true | `false` |
 | `"AllowPvP"` | Should engage combat with the opposite faction | true | `false` |
 | `"AutoPetAttack"` | Should the pet start attacking as soon as possible | true | `true` |
-| `"KeyboardOnly"` | Use keyboard to interact only. See [KeyboardOnly](#KeyboardOnly) | false | `true` |
-| `"PathFilename"` | [Path](#Path) to use while alive | **false** | `""` |
-| `"PathThereAndBack"` | While using the path, [should go start to and reverse](#There-and-back) | true | `true` |
+| `"KeyboardOnly"` | Use keyboard to interact only. See [KeyboardOnly](#keyboardonly) | false | `true` |
+| `"PathFilename"` | [Path](#path) to use while alive | **false** | `""` |
+| `"PathThereAndBack"` | While using the path, [should go start to and reverse](#there-and-back) | true | `true` |
 | `"PathReduceSteps"` | Reduce the number of path points | true | `false` |
-| `"Mode"` | What kind of [behaviour](#Modes) should the bot operate | true | `Mode.Grind` |
+| `"Mode"` | What kind of [behaviour](#modes) should the bot operate | true | `Mode.Grind` |
 | `"NPCMaxLevels_Above"` | Maximum allowed level above difference to the player | true | `1` |
 | `"NPCMaxLevels_Below"` | Maximum allowed level below difference to the player | true | `7` |
 | `"CheckTargetGivesExp"` | Only engage the target if it yields experience | true | `false` |
@@ -389,13 +389,13 @@ Take a look at the class files in `/Json/class` for examples of what you can do.
 | `"ImmunityBlacklist"` | List of Npc ids which have some sort of `School` immunities | true | `""` |
 | `"IntVariables"` | List of user defined `integer` variables | true | `[]` |
 | --- | --- | --- | --- |
-| `"Pull"` | Sequence of `KeyAction(s)` to execute upon [Pull Goal](#Pull-Goal) | true | `[]` |
-| `"Combat"` | Sequence of `KeyAction(s)` to execute upon [Combat Goal](#Combat-Goal) | **false** | `[]` |
-| `"AssistFocus"` | Sequence of `KeyAction(s)` to execute upon [Assist Focus Goal](#Assist-Focus-Goal) | **false** | `[]` |
-| `"Adhoc"` | Sequence of `KeyAction(s)` to execute upon [Adhoc Goals](#Adhoc-Goals) | true | `[]` |
-| `"Parallel"` | Sequence of `KeyAction(s)` to execute upon [Parallel Goal](#Parallel-Goals) | true | `[]` |
-| `"NPC"` | Sequence of `KeyAction(s)` to execute upon [NPC Goal](#NPC-Goals) | true | `[]` |
-| `"Wait"` | Sequence of `KeyAction(s)` to execute upon [Wait Goal](#Wait-Goals) | true | `[]` |
+| `"Pull"` | Sequence of `KeyAction(s)` to execute upon [Pull Goal](#pull-goal) | true | `[]` |
+| `"Combat"` | Sequence of `KeyAction(s)` to execute upon [Combat Goal](#combat-goal) | **false** | `[]` |
+| `"AssistFocus"` | Sequence of `KeyAction(s)` to execute upon [Assist Focus Goal](#assist-focus-goal) | **false** | `[]` |
+| `"Adhoc"` | Sequence of `KeyAction(s)` to execute upon [Adhoc Goals](#adhoc-goals) | true | `[]` |
+| `"Parallel"` | Sequence of `KeyAction(s)` to execute upon [Parallel Goal](#parallel-goals) | true | `[]` |
+| `"NPC"` | Sequence of `KeyAction(s)` to execute upon [NPC Goal](#npc-goals) | true | `[]` |
+| `"Wait"` | Sequence of `KeyAction(s)` to execute upon [Wait Goal](#wait-goals) | true | `[]` |
 | --- | --- | --- | --- |
 | `"GatherFindKeys"` | List of strings for switching between gathering profiles | true | `string[]` |
 | `"JumpKey"` | `Consolekey` to be pressed on Jump | true | `"Spacebar"` |
@@ -467,14 +467,14 @@ The path that the class follows is a `json` file in `/Json/path/` which contains
 
 Each `KeyAction` has its own properties to describe what the action is all about. 
 
-Can specify conditions with [Requirement(s)](#Requirement) in order to create a matching action for the situation.
+Can specify conditions with [Requirement(s)](#requirement) in order to create a matching action for the situation.
 
 | Property Name | Description | Default value |
 | --- | --- | --- |
 | `"Name"` | Name of the KeyAction. For the `ActionBarPopulator`, lowercase means macro. | `""` |
 | `"Key"` | Key to press (`ConsoleKey`) | `""` |
-| `"Cost"` | [Adhoc Goals](#Adhoc-Goals) or [NPC Goal](#NPC-Goals) only, priority | `18` |
-| `"PathFilename"` | [NPC Goal](#NPC-Goals) only, this is a short path to get close to the NPC to avoid walls etc. | `""` |
+| `"Cost"` | [Adhoc Goals](#adhoc-goals) or [NPC Goal](#npc-goals) only, priority | `18` |
+| `"PathFilename"` | [NPC Goal](#npc-goals) only, this is a short path to get close to the NPC to avoid walls etc. | `""` |
 | `"HasCastBar"` | After key press cast bar is expected?<br>By default sets `BeforeCastStop`=`true` | `false` |
 | `"InCombat"` | Should combat matter when attempt to cast?<br>Accepted values:<br>* `"any value for doesn't matter"`<br>* `"true"`<br>* `"false"` | `false` |
 | `"Item"` | Like on use Trinket, `Food`, `Drink`.<br>The following spells counts as Item, `Throw`, `Auto Shot`, `Shoot` | `false` |
@@ -486,16 +486,16 @@ Can specify conditions with [Requirement(s)](#Requirement) in order to create a 
 | --- | --- | --- |
 | `"WhenUsable"` | Mapped to [IsUsableAction](https://wowwiki-archive.fandom.com/wiki/API_IsUsableAction) | `false` |
 | `"UseWhenTargetIsCasting"` | Checks for the target casting/channeling.<br>Accepted values:<br>* `null` -> ignore<br>* `false` -> when enemy not casting<br>* `true` -> when enemy casting | `null` |
-| `"Requirement"` | Single [Requirement](#Requirement) | `false` |
-| `"Requirements"` | List of [Requirement](#Requirement) | `false` |
-| `"Interrupt"` | Single [Requirement](#Requirement) | `false` |
-| `"Interrupts"` | List of [Requirement](#Requirement) | `false` |
+| `"Requirement"` | Single [Requirement](#requirement) | `false` |
+| `"Requirements"` | List of [Requirement](#requirement) | `false` |
+| `"Interrupt"` | Single [Requirement](#requirement) | `false` |
+| `"Interrupts"` | List of [Requirement](#requirement) | `false` |
 | `"ResetOnNewTarget"` | Reset the Cooldown if the target changes | `false` |
 | `"Log"` | Related events should appear in the logs | `true` |
 | --- | Before keypress cast, ... | --- |
 | `"BeforeCastStop"` | stop moving. | `false` |
 | `"BeforeCastDelay"` | delay in milliseconds | `0` |
-| `"BeforeCastDismount"` | should dismount. [Adhoc Goals](#Adhoc-Goals) only. | `true` |
+| `"BeforeCastDismount"` | should dismount. [Adhoc Goals](#adhoc-goals) only. | `true` |
 | --- | After Successful cast, ... | --- |
 | `"AfterCastWaitSwing"` | wait for next melee swing to land.<br>Blocks **CastingHandler**. | `false` |
 | `"AfterCastWaitCastbar"` | wait for the castbar to finish, `SpellQueueTimeMs` excluded.<br>Blocks **CastingHandler**. | `false` |
@@ -544,9 +544,9 @@ e.g. for Rogue ability
 }
 ```
 
-Theres are few specially named [KeyAction](#KeyAction) such as `Food` and `Drink` which is reserved for eating and drinking.
+Theres are few specially named [KeyAction](#keyaction) such as `Food` and `Drink` which is reserved for eating and drinking.
 
-They already have some pre baked [Requirement(s)](#Requirement) conditions in order to avoid mistype the definition. 
+They already have some pre baked [Requirement(s)](#requirement) conditions in order to avoid mistype the definition. 
 
 The bare minimum for `Food` and `Drink` is looks something like this.
 ```json
@@ -562,7 +562,7 @@ The bare minimum for `Food` and `Drink` is looks something like this.
 }
 ```
 
-When any of these [KeyAction(s)](#KeyAction) detected, by default, it going to be awaited with a predefined [Wait Goal](#wait-goals) logic.
+When any of these [KeyAction(s)](#keyaction) detected, by default, it going to be awaited with a predefined [Wait Goal](#wait-goals) logic.
 
 Should see something like this, you can override any of the following values.
 
@@ -591,9 +591,9 @@ Should see something like this, you can override any of the following values.
 **CastingHandler** is a component which responsible for handling player spell casting, 
 let it be using an item from the inventory, casting an instant spell or casting a spell which has castbar.
 
-From Addon version **1.6.0** it has been significantly changed to the point where it no longer blocks the execution until the castbar fully finishes, but rather gives back the control to the parent Goal such as [Adhoc Goals](#Adhoc-Goals) or [Pull Goal](#Pull-Goal) or [Combat Goal](#Combat-Goal) to give more time to find the best suitable action for the given moment.
+From Addon version **1.6.0** it has been significantly changed to the point where it no longer blocks the execution until the castbar fully finishes, but rather gives back the control to the parent Goal such as [Adhoc Goals](#adhoc-goals) or [Pull Goal](#pull-goal) or [Combat Goal](#combat-goal) to give more time to find the best suitable action for the given moment.
 
-As a result in order to execute the [Pull Goal](#Pull-Goal) sequence in respect, have to combine its [KeyAction(s)](#KeyAction) with `AfterCast` prefixed conditions.
+As a result in order to execute the [Pull Goal](#pull-goal) sequence in respect, have to combine its [KeyAction(s)](#keyaction) with `AfterCast` prefixed conditions.
 
 ---
 
@@ -601,7 +601,7 @@ As a result in order to execute the [Pull Goal](#Pull-Goal) sequence in respect,
 
 ### Pull Goal
 
-This is the `Sequence` of [KeyAction(s)](#KeyAction) that are used when pulling a mob.
+This is the `Sequence` of [KeyAction(s)](#keyaction) that are used when pulling a mob.
 
 e.g.
 ```json
@@ -623,13 +623,13 @@ e.g.
 
 ### Assist Focus Goal
 
-The `Sequence` of [KeyAction(s)](#KeyAction) that are used while the `AssistFocus` Mode is active. 
+The `Sequence` of [KeyAction(s)](#keyaction) that are used while the `AssistFocus` Mode is active. 
 
-Upon any [KeyAction](#KeyAction) [Requirement(s)](#Requirement) are met, the **Assist Focus Goal** is become active.
+Upon any [KeyAction](#keyaction) [Requirement(s)](#requirement) are met, the **Assist Focus Goal** is become active.
 
 Upon entering **Assist Focus Goal**, the bot attempts to target the `focus`/`party1` as Target.
 
-Then as defined, in-order, executes those [KeyAction(s)](#KeyAction) which fulfills its given [Requirement(s)](#Requirement).
+Then as defined, in-order, executes those [KeyAction(s)](#keyaction) which fulfills its given [Requirement(s)](#requirement).
 
 Upon exiting **Assist Focus Goal**, going to Clear the current target.
 
@@ -694,7 +694,7 @@ e.g. of a Balance Druid
 
 ### Combat Goal
 
-The `Sequence` of [KeyAction(s)](#KeyAction) that are used when in combat and trying to kill a mob. 
+The `Sequence` of [KeyAction(s)](#keyaction) that are used when in combat and trying to kill a mob. 
 
 The combat goal does the first available command on the list. 
 
@@ -724,7 +724,7 @@ e.g.
 
 ### Adhoc Goals
 
-These `Sequence` of [KeyAction(s)](#KeyAction) are done when not in combat and are not on cooldown. Suitable for personal buffs.
+These `Sequence` of [KeyAction(s)](#keyaction) are done when not in combat and are not on cooldown. Suitable for personal buffs.
 
 e.g.
 ```json
@@ -751,9 +751,9 @@ e.g.
 
 ### Parallel Goals
 
-These `Sequence` of [KeyAction(s)](#KeyAction) are done when not in combat and are not on cooldown. 
+These `Sequence` of [KeyAction(s)](#keyaction) are done when not in combat and are not on cooldown. 
 
-The key presses happens simultaneously on all [KeyAction(s)](#KeyAction) which meets the [Requirement(s)](#Requirement).
+The key presses happens simultaneously on all [KeyAction(s)](#keyaction) which meets the [Requirement(s)](#requirement).
 
 Suitable for `Food` and `Drink`.
 
@@ -776,7 +776,7 @@ e.g.
 ```
 ### Wait Goals
 
-These actions cause to wait while the [Requirement(s)](#Requirement) are met, during this time the player going to be idle, until lowered cost action can be executed.
+These actions cause to wait while the [Requirement(s)](#requirement) are met, during this time the player going to be idle, until lowered cost action can be executed.
 
 e.g.
 ```json
@@ -856,7 +856,7 @@ Short Path Example:
 
 ### Repeatable Quests Handin
 
-In theory if there is a repeatable quest to collect items, you could set up a NPC task as follows. See 'Bag requirements' for [Requirement(s)](#Requirement) format.
+In theory if there is a repeatable quest to collect items, you could set up a NPC task as follows. See 'Bag requirements' for [Requirement(s)](#requirement) format.
 ```json
 {
     "Name": "Handin",
@@ -869,9 +869,9 @@ In theory if there is a repeatable quest to collect items, you could set up a NP
 
 # Requirement
 
-A requirement is something that must be evaluated to be `true` for the [KeyAction](#KeyAction) to run. 
+A requirement is something that must be evaluated to be `true` for the [KeyAction](#keyaction) to run. 
 
-Not all [KeyAction](#KeyAction) requires requirement(s), some rely on
+Not all [KeyAction](#keyaction) requires requirement(s), some rely on
 * `Cooldown` - populated manually
 * `ActionBarCooldownReader` - populated automatically
 * `ActionBarCostReader` - populated automatically including (`MinMana`, `MinRage`, `MinEnergy`, `MinRunicPower`, `MinRuneBlood`, `MinRuneFrost`, `MinRuneUnholy`)
@@ -921,7 +921,7 @@ e.g.
 
 Two or more Requirement can be merged into a single Requirement object. 
 
-By default every Requirement is concataneted with `[and]` operator which means in order to execute the [KeyAction](#KeyAction), every member in the `RequirementsObject` must be evaluated to `true`. However this consctruct allows to concatanete with `[or]`. Nesting parenthesis are also supported.
+By default every Requirement is concataneted with `[and]` operator which means in order to execute the [KeyAction](#keyaction), every member in the `RequirementsObject` must be evaluated to `true`. However this consctruct allows to concatanete with `[or]`. Nesting parenthesis are also supported.
 
 Formula: `[Requirement1] [Operator] [RequirementN]`
 
@@ -983,7 +983,7 @@ Formula: `[Keyword] [Operator] [Numeric integer value]`
 | `MainHandSwing` | Returns the player predicted next main hand swing time |
 | `RangedSpeed` | Returns the player ranged weapon attack speed in milliseconds |
 | `RangedSwing` | Returns the player predicted next ranged weapon swing time |
-| `CD` | Returns the context [KeyAction](#KeyAction) **in-game** cooldown in milliseconds |
+| `CD` | Returns the context [KeyAction](#keyaction) **in-game** cooldown in milliseconds |
 | `CD_{KeyAction.Name}` | Returns the given `{KeyAction.Name}` **in-game** cooldown in milliseconds |
 | `Cost_{KeyAction.Name}` | Returns the given `{KeyAction.Name}` cost value |
 | `Buff_{IntVariable_Name}` | Returns the given `{IntVariable_Name}` remaining player buff up time |
@@ -1003,7 +1003,7 @@ For the `MinRange` and `MaxRange` gives an approximation range distance between 
 | 0 | 5 | "InMeleeRange" |
 | 5 | 15 | "IsInDeadZoneRange" |
 
-Its worth mention that `CD_{KeyAction.Name}` is a dynamic value.<br>Each [KeyAction](#KeyAction) has its own `in-game Cooldown` which is not the same as `KeyAction.Cooldown`!
+Its worth mention that `CD_{KeyAction.Name}` is a dynamic value.<br>Each [KeyAction](#keyaction) has its own `in-game Cooldown` which is not the same as `KeyAction.Cooldown`!
 
 e.g. Single Requirement
 ```json
@@ -1219,7 +1219,7 @@ e.g.
 },
 ```
 
-Then in [KeyAction](#KeyAction) you can use the following requirement:
+Then in [KeyAction](#keyaction) you can use the following requirement:
 
 e.g.
 ```json
@@ -1251,7 +1251,7 @@ e.g.
 },
 ```
 
-Then in [KeyAction](#KeyAction) you can use the following requirement:
+Then in [KeyAction](#keyaction) you can use the following requirement:
 
 e.g.
 ```json
@@ -1661,13 +1661,13 @@ e.g. Rogue_20.json
 
 # Interrupt Requirement
 
-Every [KeyAction](#KeyAction) has individual Interrupt(s) condition(s) which are [Requirement(s)](#Requirement) to stop execution before fully finishing it.
+Every [KeyAction](#keyaction) has individual Interrupt(s) condition(s) which are [Requirement(s)](#requirement) to stop execution before fully finishing it.
 
-As of now every [Goal groups](#Goal-groups) has a default Interrupt.
-* [Combat Goal](#Combat-Goal) based [KeyAction(s)](#KeyAction) interrupted once the target dies and the player loses the target.
-* [Parallel Goal](#Parallel-Goals) based [KeyAction(s)](#KeyAction) has **No** interrupt conditions.
-* [Adhoc Goals](#Adhoc-Goals) based [KeyAction(s)](#KeyAction) depends on `KeyAction.InCombat` flag.
-* [Assist Focus Goal](#Assist-Focus-Goal) based [KeyAction(s)](#KeyAction) interrupted once the target dies and the player loses the target.
+As of now every [Goal groups](#goal-groups) has a default Interrupt.
+* [Combat Goal](#combat-goal) based [KeyAction(s)](#keyaction) interrupted once the target dies and the player loses the target.
+* [Parallel Goal](#parallel-goals) based [KeyAction(s)](#keyaction) has **No** interrupt conditions.
+* [Adhoc Goals](#adhoc-goals) based [KeyAction(s)](#keyaction) depends on `KeyAction.InCombat` flag.
+* [Assist Focus Goal](#assist-focus-goal) based [KeyAction(s)](#keyaction) interrupted once the target dies and the player loses the target.
 
 Here's and example for low level Hunters, while playing without a pet companion take advantage of interrupt.
 
@@ -1777,7 +1777,7 @@ This displays the finite state machine. The state is goal which can run and has 
 
 Some goals (combat,pull target) contain a list of spells which can be cast. The combat task evaluates its spells in order with the first available being cast. The goal then gives up control so that a higher priority task can take over (e.g. Healing potion).
 
-The visualisation of the pre-conditions and spell [requirement(s)](#Requirement) makes it easier to understand what the bot is doing and determine if the class file needs to be tweaked.
+The visualisation of the pre-conditions and spell [requirement(s)](#requirement) makes it easier to understand what the bot is doing and determine if the class file needs to be tweaked.
 
 ![Goals](images/actionsComponent.png)
 
