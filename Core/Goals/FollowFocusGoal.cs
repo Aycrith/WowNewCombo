@@ -8,13 +8,18 @@ public sealed class FollowFocusGoal : GoapGoal
 
     private readonly ConfigurableInput input;
     private readonly PlayerReader playerReader;
+    private readonly AddonBits bits;
     private readonly Wait wait;
 
-    public FollowFocusGoal(ConfigurableInput input, PlayerReader playerReader, Wait wait)
+    public FollowFocusGoal(ConfigurableInput input,
+        PlayerReader playerReader,
+        AddonBits bits,
+        Wait wait)
         : base(nameof(FollowFocusGoal))
     {
         this.input = input;
         this.playerReader = playerReader;
+        this.bits = bits;
         this.wait = wait;
 
         AddPrecondition(GoapKey.hasfocus, true);
@@ -25,6 +30,23 @@ public sealed class FollowFocusGoal : GoapGoal
         AddPrecondition(GoapKey.consumecorpse, false);
     }
 
+    public override void OnEnter()
+    {
+        if (input.IsKeyDown(input.ForwardKey))
+        {
+            input.StopForward(true);
+        }
+    }
+
+    public override void OnExit()
+    {
+        if (playerReader.TargetGuid == playerReader.FocusGuid)
+        {
+            input.PressClearTarget();
+            wait.Update();
+        }
+    }
+
     public override void Update()
     {
         if (playerReader.TargetGuid != playerReader.FocusGuid)
@@ -33,8 +55,13 @@ public sealed class FollowFocusGoal : GoapGoal
             wait.Update();
         }
 
-        if (playerReader.SpellInRange.Focus_Inspect)
+        if (playerReader.TargetGuid == playerReader.FocusGuid &&
+            playerReader.SpellInRange.Focus_Inspect &&
+            !bits.AutoFollow() &&
+            input.FollowTarget.GetRemainingCooldown() == 0)
+        {
             input.PressFollowTarget();
+        }
 
         wait.Update();
     }

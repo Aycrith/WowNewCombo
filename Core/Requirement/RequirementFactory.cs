@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Reflection;
 
 using static System.Math;
 
@@ -23,7 +24,7 @@ public sealed partial class RequirementFactory
     private readonly ILogger logger;
     private readonly AddonReader addonReader;
     private readonly PlayerReader playerReader;
-    private readonly BuffStatus buffs;
+    private readonly BuffStatus<IPlayer> buffs;
     private readonly BagReader bagReader;
     private readonly EquipmentReader equipmentReader;
     private readonly SpellBookReader spellBookReader;
@@ -31,9 +32,6 @@ public sealed partial class RequirementFactory
     private readonly CreatureDB creatureDb;
     private readonly ItemDB itemDb;
     private readonly CombatLog combatLog;
-
-    private readonly AuraTimeReader<IPlayerBuffTimeReader> playerBuffTimeReader;
-    private readonly AuraTimeReader<ITargetDebuffTimeReader> targetDebuffTimeReader;
 
     private readonly ActionBarBits<ICurrentAction> currentAction;
     private readonly ActionBarBits<IUsableAction> usableAction;
@@ -81,16 +79,13 @@ public sealed partial class RequirementFactory
         this.logger = sp.GetRequiredService<ILogger>();
         this.addonReader = sp.GetRequiredService<AddonReader>();
         this.playerReader = sp.GetRequiredService<PlayerReader>();
-        this.buffs = sp.GetRequiredService<BuffStatus>();
+        this.buffs = sp.GetRequiredService<BuffStatus<IPlayer>>();
         this.bagReader = sp.GetRequiredService<BagReader>();
         this.equipmentReader = sp.GetRequiredService<EquipmentReader>();
         this.spellBookReader = sp.GetRequiredService<SpellBookReader>();
         this.talentReader = sp.GetRequiredService<TalentReader>();
         this.creatureDb = sp.GetRequiredService<CreatureDB>();
         this.itemDb = sp.GetRequiredService<ItemDB>();
-
-        this.playerBuffTimeReader = sp.GetRequiredService<AuraTimeReader<IPlayerBuffTimeReader>>();
-        this.targetDebuffTimeReader = sp.GetRequiredService<AuraTimeReader<ITargetDebuffTimeReader>>();
 
         this.currentAction = sp.GetRequiredService<ActionBarBits<ICurrentAction>>();
         this.usableAction = sp.GetRequiredService<ActionBarBits<IUsableAction>>();
@@ -101,7 +96,8 @@ public sealed partial class RequirementFactory
 
         NpcNameFinder npcNameFinder = sp.GetRequiredService<NpcNameFinder>();
         AddonBits bits = sp.GetRequiredService<AddonBits>();
-        BuffStatus playerBuffs = sp.GetRequiredService<BuffStatus>();
+        BuffStatus<IPlayer> playerBuffs = sp.GetRequiredService<BuffStatus<IPlayer>>();
+        BuffStatus<IFocus> focusBuffs = sp.GetRequiredService<BuffStatus<IFocus>>();
         TargetDebuffStatus targetDebuffs = sp.GetRequiredService<TargetDebuffStatus>();
         SessionStat sessionStat = sp.GetRequiredService<SessionStat>();
         combatLog = sp.GetRequiredService<CombatLog>();
@@ -126,7 +122,7 @@ public sealed partial class RequirementFactory
             { "Usable:", CreateUsable }
         };
 
-        boolVariables = new()
+        boolVariables = new(StringComparer.InvariantCultureIgnoreCase)
         {
             // Target Based
             { "TargetYieldXP", bits.TargetIsNotTrivial },
@@ -171,181 +167,23 @@ public sealed partial class RequirementFactory
             { "TargetHostile", bits.TargetCanBeHostile },
             { "TargetAlive", bits.TargetAlive },
 
-            // General Buff Condition
-            { Food, playerBuffs.Food },
-            { Drink, playerBuffs.Drink },
-            { "Mana Regeneration", playerBuffs.Mana_Regeneration },
-            { "Well Fed", playerBuffs.Well_Fed },
-            { "Clearcasting", playerBuffs.Clearcasting },
-
             // Player Affected
             { Swimming, bits.IsSwimming },
             { Falling, bits.IsFalling },
             { "Dead", bits.IsDead },
-
-            //Priest
-            { "Fortitude", playerBuffs.Fortitude },
-            { "InnerFire", playerBuffs.InnerFire },
-            { "Divine Spirit", playerBuffs.DivineSpirit },
-            { "Renew", playerBuffs.Renew },
-            { "Shield", playerBuffs.Shield },
-
-            // Druid
-            { "Mark of the Wild", playerBuffs.MarkOfTheWild },
-            { "Thorns", playerBuffs.Thorns },
-            { "TigersFury", playerBuffs.TigersFury },
-            { "Prowl", playerBuffs.Prowl },
-            { "Rejuvenation", playerBuffs.Rejuvenation },
-            { "Regrowth", playerBuffs.Regrowth },
-            { "Omen of Clarity", playerBuffs.OmenOfClarity },
-
-            // Paladin
-            { "Seal of Righteousness", playerBuffs.SealofRighteousness },
-            { "Seal of the Crusader", playerBuffs.SealoftheCrusader },
-            { "Seal of Command", playerBuffs.SealofCommand },
-            { "Seal of Wisdom", playerBuffs.SealofWisdom },
-            { "Seal of Light", playerBuffs.SealofLight },
-            { "Seal of Blood", playerBuffs.SealofBlood },
-            { "Seal of Vengeance", playerBuffs.SealofVengeance },
-            { "Blessing of Might", playerBuffs.BlessingofMight },
-            { "Blessing of Protection", playerBuffs.BlessingofProtection },
-            { "Blessing of Wisdom", playerBuffs.BlessingofWisdom },
-            { "Blessing of Kings", playerBuffs.BlessingofKings },
-            { "Blessing of Salvation", playerBuffs.BlessingofSalvation },
-            { "Blessing of Sanctuary", playerBuffs.BlessingofSanctuary },
-            { "Blessing of Light", playerBuffs.BlessingofLight },
-            { "Righteous Fury", playerBuffs.RighteousFury },
-            { "Divine Protection", playerBuffs.DivineProtection },
-            { "Avenging Wrath", playerBuffs.AvengingWrath },
-            { "Holy Shield", playerBuffs.HolyShield },
-            { "Divine Shield", playerBuffs.DivineShield },
-
-            // Mage
-            { "Frost Armor", playerBuffs.FrostArmor },
-            { "Ice Armor", playerBuffs.FrostArmor },
-            { "Molten Armor", playerBuffs.FrostArmor },
-            { "Mage Armor", playerBuffs.FrostArmor },
-            { "Arcane Intellect", playerBuffs.ArcaneIntellect },
-            { "Ice Barrier", playerBuffs.IceBarrier },
-            { "Ward", playerBuffs.Ward },
-            { "Fire Power", playerBuffs.FirePower },
-            { "Mana Shield", playerBuffs.ManaShield },
-            { "Presence of Mind", playerBuffs.PresenceOfMind },
-            { "Arcane Power", playerBuffs.ArcanePower },
-            
-            // Rogue
-            { "Slice and Dice", playerBuffs.SliceAndDice },
-            { "Stealth", playerBuffs.Stealth },
-            
-            // Warrior
-            { "Battle Shout", playerBuffs.BattleShout },
-            { "Bloodrage", playerBuffs.Bloodrage },
-            
-            // Warlock
-            { "Demon Skin", playerBuffs.Demon },
-            { "Demon Armor", playerBuffs.Demon },
-            { "Soul Link", playerBuffs.SoulLink },
-            { "Soulstone Resurrection", playerBuffs.SoulstoneResurrection },
-            { "Shadow Trance", playerBuffs.ShadowTrance },
-            { "Fel Armor", playerBuffs.FelArmor },
-            { "Fel Domination", playerBuffs.FelDomination },
-            { "Demonic Sacrifice", playerBuffs.DemonicSacrifice },
-            { "Sacrifice", playerBuffs.Sacrifice },
-            
-            // Shaman
-            { "Lightning Shield", playerBuffs.LightningShield },
-            { "Water Shield", playerBuffs.WaterShield },
-            { "Shamanistic Focus", playerBuffs.ShamanisticFocus },
-            { "Focused", playerBuffs.ShamanisticFocus },
-            { "Stoneskin", playerBuffs.Stoneskin },
-            
-            //Hunter
-            { "Aspect of the Cheetah", playerBuffs.AspectoftheCheetah },
-            { "Aspect of the Pack", playerBuffs.AspectofthePack },
-            { "Aspect of the Hawk", playerBuffs.AspectoftheHawk },
-            { "Aspect of the Monkey", playerBuffs.AspectoftheMonkey },
-            { "Aspect of the Viper", playerBuffs.AspectoftheViper },
-            { "Rapid Fire", playerBuffs.RapidFire },
-            { "Quick Shots", playerBuffs.QuickShots },
-            { "Trueshot Aura", playerBuffs.TrueshotAura },
-            { "Aspect of the Dragonhawk", playerBuffs.AspectoftheDragonhawk },
-            { "Lock and Load", playerBuffs.LockandLoad },
-
-            //Death Knight
-            { "Blood Tap", playerBuffs.BloodTap },
-            { "Horn of Winter", playerBuffs.HornofWinter },
-            { "Icebound Fortitude", playerBuffs.IceboundFortitude },
-            { "Path of Frost", playerBuffs.PathofFrost },
-            { "Anti-Magic Shell", playerBuffs.AntiMagicShell },
-            { "Army of the Dead", playerBuffs.ArmyoftheDead },
-            { "Vampiric Blood", playerBuffs.VampiricBlood },
-            { "Dancing Rune Weapon", playerBuffs.DancingRuneWeapon },
-            { "Unbreakable Armor", playerBuffs.UnbreakableArmor },
-            { "Bone Shield", playerBuffs.BoneShield },
-            { "Summon Gargoyle", playerBuffs.SummonGargoyle },
-            { "Freezing Fog", playerBuffs.FreezingFog },
-
-            // Debuff Section
-            // Druid Debuff
-            { "Demoralizing Roar", targetDebuffs.Roar },
-            { "Faerie Fire", targetDebuffs.FaerieFire },
-            { "Rip", targetDebuffs.Rip },
-            { "Moonfire", targetDebuffs.Moonfire },
-            { "Entangling Roots", targetDebuffs.EntanglingRoots },
-            { "Rake", targetDebuffs.Rake },
-            
-            // Paladin Debuff
-            { "Judgement of the Crusader", targetDebuffs.JudgementoftheCrusader },
-            { "Hammer of Justice", targetDebuffs.HammerOfJustice },
-            { "Judgement of Wisdom", targetDebuffs.JudgementofWisdom },
-            { "Judgement of Light", targetDebuffs.JudgementofLight },
-            { "Judgement of Justice", targetDebuffs.JudgementofJustice },
-            { "Judgement of Any", targetDebuffs.JudgementAny },
-
-            // Warrior Debuff
-            { "Rend", targetDebuffs.Rend },
-            { "Thunder Clap", targetDebuffs.ThunderClap },
-            { "Hamstring", targetDebuffs.Hamstring },
-            { "Charge Stun", targetDebuffs.ChargeStun },
-            
-            // Priest Debuff
-            { "Shadow Word: Pain", targetDebuffs.ShadowWordPain },
-            
-            // Mage Debuff
-            { "Frostbite", targetDebuffs.Frostbite },
-            { "Slow", targetDebuffs.Slow },
-            
-            // Warlock Debuff
-            { "Curse of Weakness", targetDebuffs.Curseof },
-            { "Curse of Elements", targetDebuffs.Curseof },
-            { "Curse of Recklessness", targetDebuffs.Curseof },
-            { "Curse of Shadow", targetDebuffs.Curseof },
-            { "Curse of Agony", targetDebuffs.Curseof },
-            { "Curse of", targetDebuffs.Curseof },
-            { "Corruption", targetDebuffs.Corruption },
-            { "Immolate", targetDebuffs.Immolate },
-            { "Siphon Life", targetDebuffs.SiphonLife },
-            
-            // Hunter Debuff
-            { "Serpent Sting", targetDebuffs.SerpentSting },
-            { "Hunter's Mark", targetDebuffs.HuntersMark },
-            { "Viper Sting", targetDebuffs.ViperSting },
-            { "Explosive Shot", targetDebuffs.ExplosiveShot },
-            { "Black Arrow", targetDebuffs.BlackArrow },
-
-            // Death Knight Debuff
-            { "Blood Plague", targetDebuffs.BloodPlague },
-            { "Frost Fever", targetDebuffs.FrostFever },
-            { "Strangulate", targetDebuffs.Strangulate },
-            { "Chains of Ice", targetDebuffs.ChainsofIce },
         };
+
+        AddBuffs("", boolVariables, playerBuffs);
+        AddBuffs("F_", boolVariables, focusBuffs);
+        AddDebuffs("", boolVariables, targetDebuffs);
 
         intVariables = new Dictionary<string, Func<int>>
         {
             { HealthP, playerReader.HealthPercent },
-            { "TargetHealth%", playerReader.TargetHealthPercentage },
-            { "PetHealth%", playerReader.PetHealthPercentage },
-            { ManaP, playerReader.ManaPercentage },
+            { "TargetHealth%", playerReader.TargetHealthPercent },
+            { "FocusHealth%", playerReader.FocusHealthPercent },
+            { "PetHealth%", playerReader.PetHealthPercent },
+            { ManaP, playerReader.ManaPercent },
             { "Mana", playerReader.ManaCurrent },
             { "Energy", playerReader.PTCurrent },
             { "Rage", playerReader.PTCurrent },
@@ -382,6 +220,57 @@ public sealed partial class RequirementFactory
             { "Kills", sessionStat._Kills },
         };
     }
+
+    private static void AddBuffs<T>(string prefix, Dictionary<string, Func<bool>> boolVariables, BuffStatus<T> b)
+    {
+        foreach (MethodInfo minfo in b.GetType().GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance))
+        {
+            if (minfo.ReturnType != typeof(bool))
+                continue;
+
+            NamesAttribute? names =
+                (NamesAttribute?)Attribute.GetCustomAttribute(minfo, typeof(NamesAttribute));
+
+            if (names != null)
+            {
+                foreach (string name in names.Values)
+                {
+                    boolVariables.Add($"{prefix}{name}", minfo.CreateDelegate<Func<bool>>(b));
+                }
+            }
+            else
+            {
+                string name = $"{prefix}{minfo.Name.Replace("_", " ")}";
+                boolVariables.Add(name, minfo.CreateDelegate<Func<bool>>(b));
+            }
+        }
+    }
+
+    private static void AddDebuffs(string prefix, Dictionary<string, Func<bool>> boolVariables, TargetDebuffStatus b)
+    {
+        foreach (MethodInfo minfo in b.GetType().GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance))
+        {
+            if (minfo.ReturnType != typeof(bool))
+                continue;
+
+            NamesAttribute? names =
+                (NamesAttribute?)Attribute.GetCustomAttribute(minfo, typeof(NamesAttribute));
+
+            if (names != null)
+            {
+                foreach (string name in names.Values)
+                {
+                    boolVariables.Add($"{prefix}{name}", minfo.CreateDelegate<Func<bool>>(b));
+                }
+            }
+            else
+            {
+                string name = $"{prefix}{minfo.Name.Replace("_", " ")}";
+                boolVariables.Add(name, minfo.CreateDelegate<Func<bool>>(b));
+            }
+        }
+    }
+
 
     private int LastTargetDodgeMs()
     {
@@ -498,7 +387,8 @@ public sealed partial class RequirementFactory
     public void InitUserDefinedIntVariables(Dictionary<string, int> intKeyValues,
         AuraTimeReader<IPlayerBuffTimeReader> playerBuffTimeReader,
         AuraTimeReader<ITargetDebuffTimeReader> targetDebuffTimeReader,
-        AuraTimeReader<ITargetBuffTimeReader> targetBuffTimeReader)
+        AuraTimeReader<ITargetBuffTimeReader> targetBuffTimeReader,
+        AuraTimeReader<IFocusBuffTimeReader> focusBuffTimeReader)
     {
         foreach ((string key, int value) in intKeyValues)
         {
@@ -523,6 +413,11 @@ public sealed partial class RequirementFactory
                 else if (key.StartsWith("TBuff_"))
                 {
                     int l() => targetBuffTimeReader.GetRemainingTimeMs(value);
+                    intVariables.TryAdd($"{value}", l);
+                }
+                else if (key.StartsWith("FBuff_"))
+                {
+                    int l() => focusBuffTimeReader.GetRemainingTimeMs(value);
                     intVariables.TryAdd($"{value}", l);
                 }
 
@@ -588,7 +483,7 @@ public sealed partial class RequirementFactory
         });
     }
 
-    private void AddMinRequirement(List<Requirement> list, KeyAction item, BuffStatus buffs)
+    private void AddMinRequirement(List<Requirement> list, KeyAction item, BuffStatus<IPlayer> buffs)
     {
         AddMinPower(list, PowerType.Mana, item, playerReader, buffs);
         AddMinPower(list, PowerType.Rage, item, playerReader, buffs);
@@ -604,7 +499,7 @@ public sealed partial class RequirementFactory
     }
 
     private void AddMinPower(List<Requirement> list, PowerType type,
-        KeyAction keyAction, PlayerReader playerReader, BuffStatus buffs)
+        KeyAction keyAction, PlayerReader playerReader, BuffStatus<IPlayer> buffs)
     {
         switch (type)
         {

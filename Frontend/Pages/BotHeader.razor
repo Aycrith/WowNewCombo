@@ -26,7 +26,7 @@
     <div class="card-body p-0">
         <table class="table">
             <tr>
-                <th>Level @playerReader.Level.Value<br>(XP: @((int)playerReader.PlayerXpPercentage)%)</th>
+                <th>Level @playerReader.Level.Value<br>(XP: @((int)playerReader.PlayerXpPercent)%)</th>
                 <th>Health / Resource:</th>
                 <th>Bag Items:</th>
                 <th>Actionbar / Spell / Talent:</th>
@@ -47,7 +47,7 @@
                         <a href="@($"{api.NpcId}{playerReader.TargetId}")" target="_blank">
                             <div>
                                 @addonReader.TargetName<br />
-                                (@playerReader.TargetLevel) @((int)playerReader.TargetHealthPercentage()) %<br />
+                                (@playerReader.TargetLevel) @((int)playerReader.TargetHealthPercent()) %<br />
                                 GUID: @playerReader.TargetGuid
 
                                 @if (playerReader.ComboPoints() > 0)

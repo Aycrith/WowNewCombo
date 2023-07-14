@@ -391,6 +391,7 @@ Take a look at the class files in `/Json/class` for examples of what you can do.
 | --- | --- | --- | --- |
 | `"Pull"` | Sequence of `KeyAction(s)` to execute upon [Pull Goal](#Pull-Goal) | true | `[]` |
 | `"Combat"` | Sequence of `KeyAction(s)` to execute upon [Combat Goal](#Combat-Goal) | **false** | `[]` |
+| `"AssistFocus"` | Sequence of `KeyAction(s)` to execute upon [Assist Focus Goal](#Assist-Focus-Goal) | **false** | `[]` |
 | `"Adhoc"` | Sequence of `KeyAction(s)` to execute upon [Adhoc Goals](#Adhoc-Goals) | true | `[]` |
 | `"Parallel"` | Sequence of `KeyAction(s)` to execute upon [Parallel Goal](#Parallel-Goals) | true | `[]` |
 | `"NPC"` | Sequence of `KeyAction(s)` to execute upon [NPC Goal](#NPC-Goals) | true | `[]` |
@@ -545,7 +546,7 @@ e.g. for Rogue ability
 
 Theres are few specially named [KeyAction](#KeyAction) such as `Food` and `Drink` which is reserved for eating and drinking.
 
-They already have some pre baked `Requirement` conditions in order to avoid mistype the definition. 
+They already have some pre baked [Requirement(s)](#Requirement) conditions in order to avoid mistype the definition. 
 
 The bare minimum for `Food` and `Drink` is looks something like this.
 ```json
@@ -620,6 +621,77 @@ e.g.
 }
 ```
 
+### Assist Focus Goal
+
+The `Sequence` of [KeyAction(s)](#KeyAction) that are used while the `AssistFocus` Mode is active. 
+
+Upon any [KeyAction](#KeyAction) [Requirement(s)](#Requirement) are met, the **Assist Focus Goal** is become active.
+
+Upon entering **Assist Focus Goal**, the bot attempts to target the `focus`/`party1` as Target.
+
+Then as defined, in-order, executes those [KeyAction(s)](#KeyAction) which fulfills its given [Requirement(s)](#Requirement).
+
+Upon exiting **Assist Focus Goal**, going to Clear the current target.
+
+Note: You can use every `Buff` and `Debuff` names on the `focus` without being targeted.
+
+Just have to prefix it with `F_` example: `F_Mark of the Wild` which means `focus` has `Mark of the Wild` buff active.
+
+e.g. of a Balance Druid
+```json
+"AssistFocus": {
+    "Sequence": [
+        {
+            "Name": "Mark of the Wild",
+            "Key": "4",
+            "Form": "None",
+            "Requirements": [
+                "!Mounted",
+                "!F_Mark of the Wild",
+                "SpellInRange:5"
+            ]
+        },
+        {
+            "Name": "Thorns",
+            "Key": "7",
+            "Form": "None",
+            "Requirements": [
+                "!Mounted",
+                "!F_Thorns",
+                "SpellInRange:8"
+            ]
+        },
+        {
+            "Name": "Regrowth",
+            "Key": "0",
+            "HasCastBar": true,
+            "WhenUsable": true,
+            "AfterCastAuraExpected": true,
+            "Requirements": [
+                "!Mounted",
+                "!F_Regrowth",
+                "FocusHealth% < 65",
+                "SpellInRange:6"
+            ],
+            "Form": "None"
+        },
+        {
+            "Name": "Rejuvenation",
+            "Key": "6",
+            "BeforeCastStop": true,
+            "AfterCastWaitBuff": true,
+            "Requirements": [
+                "!Mounted",
+                "!F_Rejuvenation",
+                "FocusHealth% < 75",
+                "SpellInRange:7"
+            ],
+            "Form": "None"
+        }
+    ]
+},
+```
+
 ### Combat Goal
 
 The `Sequence` of [KeyAction(s)](#KeyAction) that are used when in combat and trying to kill a mob. 
@@ -681,7 +753,7 @@ e.g.
 
 These `Sequence` of [KeyAction(s)](#KeyAction) are done when not in combat and are not on cooldown. 
 
-The key presses happens simultaneously on all [KeyAction(s)](#KeyAction) which meets the `Requirement`.
+The key presses happens simultaneously on all [KeyAction(s)](#KeyAction) which meets the [Requirement(s)](#Requirement).
 
 Suitable for `Food` and `Drink`.
 
@@ -704,7 +776,7 @@ e.g.
 ```
 ### Wait Goals
 
-These actions cause to wait while the Requirements are met, during this time the player going to be idle, until lowered cost action can be executed.
+These actions cause to wait while the [Requirement(s)](#Requirement) are met, during this time the player going to be idle, until lowered cost action can be executed.
 
 e.g.
 ```json
@@ -784,7 +856,7 @@ Short Path Example:
 
 ### Repeatable Quests Handin
 
-In theory if there is a repeatable quest to collect items, you could set up a NPC task as follows. See 'Bag requirements' for Requirements format.
+In theory if there is a repeatable quest to collect items, you could set up a NPC task as follows. See 'Bag requirements' for [Requirement(s)](#Requirement) format.
 ```json
 {
     "Name": "Handin",
@@ -886,6 +958,7 @@ Formula: `[Keyword] [Operator] [Numeric integer value]`
 | --- | --- |
 | `Health%` | Player health in percentage |
 | `TargetHealth%` | Target health in percentage |
+| `FocusHealth%` | Focus health in percentage |
 | `PetHealth%` | Pet health in percentage |
 | `Mana%` | Player mana in percentage |
 | `Mana` | Player current mana |
@@ -1206,6 +1279,20 @@ e.g.
 },
 ```
 ---
+### **Focus Buff remaining time requirements**
+
+First in the `IntVariables` have to mention the buff icon id such as `FBuff_{your fancy name}: {icon_id}`
+
+It is important, the addon keeps track of the **icon_id**! Not **spell_id**
+
+e.g.
+```json
+"IntVariables": {
+    "FBuff_Battle Shout": 132333,
+    "FBuff_Mount": 132239
+},
+```
+---
 ### **Trigger requirements**
 
 If you feel the current Requirement toolset is not enough for you, you can use other addons such as **WeakAura's** Trigger to control a given bit.
@@ -1307,7 +1394,7 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | All | `"Clearcasting"` |
 | Druid | `"Mark of the Wild"` |
 | Druid | `"Thorns"` |
-| Druid | `"TigersFury"` |
+| Druid | `"Tiger's Fury"` |
 | Druid | `"Prowl"` |
 | Druid | `"Rejuvenation"` |
 | Druid | `"Regrowth"` |
@@ -1343,7 +1430,7 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | Paladin | `"Holy Shield"` |
 | Paladin | `"Divine Shield"` |
 | Priest | `"Fortitude"` |
-| Priest | `"InnerFire"` |
+| Priest | `"Inner Fire"` |
 | Priest | `"Divine Spirit"` |
 | Priest | `"Renew"` |
 | Priest | `"Shield"` |
@@ -1443,6 +1530,8 @@ e.g.
 "Requirement": "BagFull"           // Inventory is full.
 "Requirement": "HasRangedWeapon"   // Has an item equipped at the ranged slot.
 "Requirement": "InMeleeRange"      // Determines if the target is in melee range (0-5 yard)
+"Requirement": "!F_Thorns"         // Focus don't have the thorns buff.
+"Requirement": "F_Rejuvenation"    // Focus Has Rejuvenation buff active.
 ```
 
 ---
@@ -1465,6 +1554,11 @@ Formula: `SpellInRange:[Numeric integer value]`
 | Druid | Bash | 1 |
 | Druid | Rip | 2 |
 | Druid | Maul | 3 |
+| Druid | Healing Touch | 4 |
+| Druid | Mark of the Wild | 5 |
+| Druid | Regrowth | 6 |
+| Druid | Rejuvenation | 7 |
+| Druid | Thorns | 8 |
 | Warrior | Charge | 0 |
 | Warrior | Rend | 1 |
 | Warrior | Shoot Gun | 2 |
@@ -1474,7 +1568,19 @@ Formula: `SpellInRange:[Numeric integer value]`
 | Priest | Mind Flay | 2 |
 | Priest | Mind Blast | 3 |
 | Priest | Smite | 4 |
+| Priest | Divine Spirit | 5 |
+| Priest | Power World: Fortitude | 6 |
+| Priest | Power Word: Shield | 7 |
+| Priest | Lesser Heal | 8 |
+| Priest | Prayer of Mending | 9 |
+| Priest | Renew | 10 |
+| Priest | Shadow Protection | 11 |
 | Paladin | Judgement | 0 |
+| Paladin | Exorcism | 1 |
+| Paladin | Flash Heal | 2 |
+| Paladin | Holy Light | 3 |
+| Paladin | Blessing of * | 4 |
+| Paladin | Greater Blessing of * | 5 |
 | Mage | Fireball | 0 |
 | Mage | Shoot| 1 |
 | Mage | Pyroblast | 2 |
@@ -1489,6 +1595,11 @@ Formula: `SpellInRange:[Numeric integer value]`
 | Warlock | Health Funnel | 2 |
 | Shaman | Lightning Bolt | 0 |
 | Shaman | Earth Shock | 1 |
+| Shaman | Healing Wave | 2 |
+| Shaman | Lesser Healing Wave | 3 |
+| Shaman | Water Breathing | 4 |
+| Shaman | Chain Heal | 5 |
+| Shaman | Earth Shield | 6 |
 | Death Knight | Icy Touch | 0 |
 | Death Knight | Death Coil | 1 |
 | Death Knight | Death Grip | 2 |
@@ -1556,6 +1667,7 @@ As of now every [Goal groups](#Goal-groups) has a default Interrupt.
 * [Combat Goal](#Combat-Goal) based [KeyAction(s)](#KeyAction) interrupted once the target dies and the player loses the target.
 * [Parallel Goal](#Parallel-Goals) based [KeyAction(s)](#KeyAction) has **No** interrupt conditions.
 * [Adhoc Goals](#Adhoc-Goals) based [KeyAction(s)](#KeyAction) depends on `KeyAction.InCombat` flag.
+* [Assist Focus Goal](#Assist-Focus-Goal) based [KeyAction(s)](#KeyAction) interrupted once the target dies and the player loses the target.
 
 Here's and example for low level Hunters, while playing without a pet companion take advantage of interrupt.
 
@@ -1607,7 +1719,7 @@ The available modes are:
 | `"AttendedGrind"` | Similair to `"Grind"`.<br>Navigation disabled.<br>The only difference is that **you** control the route, and select what target to kill. |
 | `"CorpseRun"` | Runs back to the corpse after dies.<br>Can be useful if you are farming an instance and die, the bot will run you back some or all of the way to the instance entrance. |
 | `"AttendedGather"` | Have to `Start Bot` under `Gather` tab and stay at `Gather` tab.<br>Follows the route and scan the minimap for the yellow nodes which indicate a herb or mining node.<br>Once one or more present, the navigation stops and alerts you by playing beeping sound!<br>**You** have to click at the herb/mine. In the `LogComponent` the necessary prompt going be shown to proceed.<br>**Important note**: `Falling` and `Jumping` means the same thing, if you lose the ground the bot going to take over the control! Be patient.<br>(*if exists*) Executes `"Adhoc"`, `"NPC"`, `"Parallel"`, `"Pull"`, `"Combat"`, `"Wait"` Sequences |
-| `"AssistFocus"` | Navigation disabled.<br>Requires a friendly `focus` to exists. Follows the `focus` target.<br>Once a friendly `focustarget` in 11 yard range attempts to Interact with it.<br>Once a hostile `focustarget` in-combat exists, attempts to assist it (kill it).<br>After leaving combat, (*if enabled*) attempts to Loot and GatherCorpse nearby corpses.<br>Works inside Instances.<br>(*if exists*) Executes `"Adhoc"`, `"Parallel"`, `"Pull"`, `"Combat"`, `"Wait"` Sequences.<br>**Note**: In Vanilla `focus` dosen't exists, so instead using `party1`. Party is **required**. |
+| `"AssistFocus"` | Navigation disabled.<br>Requires a friendly `focus` to exists. Follows the `focus` target.<br>Once a friendly `focustarget` in 11 yard range attempts to Interact with it.<br>Once a hostile `focustarget` in-combat exists, attempts to assist it (kill it).<br>After leaving combat, (*if enabled*) attempts to Loot and GatherCorpse nearby corpses.<br>Works inside Instances.<br>(*if exists*) Executes `"Adhoc"`, `"Parallel"`, `"Pull"`, `"AssistFocus"`, `"Combat"`, `"Wait"` Sequences.<br>**Note**: In Vanilla `focus` dosen't exists, so instead using `party1`. Party is **required**. |
 
 # User Interface
 
@@ -1665,7 +1777,7 @@ This displays the finite state machine. The state is goal which can run and has 
 
 Some goals (combat,pull target) contain a list of spells which can be cast. The combat task evaluates its spells in order with the first available being cast. The goal then gives up control so that a higher priority task can take over (e.g. Healing potion).
 
-The visualisation of the pre-conditions and spell requirements makes it easier to understand what the bot is doing and determine if the class file needs to be tweaked.
+The visualisation of the pre-conditions and spell [requirement(s)](#Requirement) makes it easier to understand what the bot is doing and determine if the class file needs to be tweaked.
 
 ![Goals](images/actionsComponent.png)
 

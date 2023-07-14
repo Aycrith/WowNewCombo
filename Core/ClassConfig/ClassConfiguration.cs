@@ -64,6 +64,7 @@ public sealed class ClassConfiguration : IDisposable
     public KeyActions Adhoc { get; } = new();
     public KeyActions Parallel { get; } = new();
     public KeyActions NPC { get; } = new();
+    public KeyActions AssistFocus { get; } = new();
     public WaitKeyActions Wait { get; } = new();
 
     public KeyAction[] Form { get; init; } = Array.Empty<KeyAction>();
@@ -129,12 +130,14 @@ public sealed class ClassConfiguration : IDisposable
         AuraTimeReader<IPlayerBuffTimeReader> playerBuff,
         AuraTimeReader<ITargetDebuffTimeReader> targetDebuff,
         AuraTimeReader<ITargetBuffTimeReader> targetBuff,
+        AuraTimeReader<IFocusBuffTimeReader> focusBuff,
         string? overridePathProfileFile)
     {
         requirementFactory.InitUserDefinedIntVariables(IntVariables,
             playerBuff,
             targetDebuff,
-            targetBuff);
+            targetBuff,
+            focusBuff);
 
         Jump.Key = JumpKey;
         Jump.Name = nameof(Jump);
@@ -251,6 +254,7 @@ public sealed class ClassConfiguration : IDisposable
         Combat.PreInitialise(nameof(Combat), requirementFactory, logger);
         Adhoc.PreInitialise(nameof(Adhoc), requirementFactory, logger);
         NPC.PreInitialise(nameof(NPC), requirementFactory, logger);
+        AssistFocus.PreInitialise(nameof(AssistFocus), requirementFactory, logger);
         Parallel.PreInitialise(nameof(Parallel), requirementFactory, logger);
         Wait.PreInitialise(nameof(Wait), requirementFactory, logger);
 
@@ -258,6 +262,7 @@ public sealed class ClassConfiguration : IDisposable
         Combat.Initialise(nameof(Combat), this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
         Adhoc.Initialise(nameof(Adhoc), this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
         NPC.Initialise(nameof(NPC), this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
+        AssistFocus.Initialise(nameof(NPC), this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
         Parallel.Initialise(nameof(Parallel), this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
         Wait.Initialise(nameof(Wait), this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
 
@@ -298,6 +303,7 @@ public sealed class ClassConfiguration : IDisposable
         Parallel.Dispose();
         Adhoc.Dispose();
         NPC.Dispose();
+        AssistFocus.Dispose();
         Wait.Dispose();
     }
 

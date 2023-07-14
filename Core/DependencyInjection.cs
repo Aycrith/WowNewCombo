@@ -34,8 +34,9 @@ public static class DependencyInjection
 
         s.ForwardSingleton<AddonBits, IReader>();
         s.ForwardSingleton<SpellInRange, IReader>();
-        s.ForwardSingleton<BuffStatus, IReader>();
+        s.ForwardSingleton<BuffStatus<IPlayer>, IReader>(x => new(41));
         s.ForwardSingleton<TargetDebuffStatus, IReader>();
+        s.ForwardSingleton<BuffStatus<IFocus>, IReader>(x => new(91));
         s.ForwardSingleton<Stance, IReader>();
 
         s.ForwardSingleton<CombatLog, IReader>();
@@ -59,6 +60,8 @@ public static class DependencyInjection
             x => new(81, 82));
         s.ForwardSingleton<AuraTimeReader<ITargetBuffTimeReader>, IReader>(
             x => new(83, 84));
+        s.ForwardSingleton<AuraTimeReader<IFocusBuffTimeReader>, IReader>(
+            x => new(92, 93));
 
         return s;
     }
@@ -100,8 +103,9 @@ public static class DependencyInjection
 
         s.ForwardSingleton<AddonBits>(sp);
         s.ForwardSingleton<SpellInRange>(sp);
-        s.ForwardSingleton<BuffStatus>(sp);
+        s.ForwardSingleton<BuffStatus<IPlayer>>(sp);
         s.ForwardSingleton<TargetDebuffStatus>(sp);
+        s.ForwardSingleton<BuffStatus<IFocus>>(sp);
         s.ForwardSingleton<Stance>(sp);
 
         s.ForwardSingleton<IScreenCapture>(sp);
@@ -125,6 +129,7 @@ public static class DependencyInjection
         s.ForwardSingleton<AuraTimeReader<IPlayerBuffTimeReader>>(sp);
         s.ForwardSingleton<AuraTimeReader<ITargetDebuffTimeReader>>(sp);
         s.ForwardSingleton<AuraTimeReader<ITargetBuffTimeReader>>(sp);
+        s.ForwardSingleton<AuraTimeReader<IFocusBuffTimeReader>>(sp);
 
         return s;
     }

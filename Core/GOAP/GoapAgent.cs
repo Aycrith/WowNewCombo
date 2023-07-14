@@ -257,7 +257,7 @@ public sealed partial class GoapAgent : IDisposable
             (B(hasTarget && !b.TargetIsDead()) << (int)GoapKey.targetisalive) |
 
             (B((hasTarget &&
-            playerReader.TargetHealthPercentage() < 30) ||
+            playerReader.TargetHealthPercent() < 30) ||
             playerReader.TargetTarget is UnitsTarget.Me or
                 UnitsTarget.Pet or UnitsTarget.PartyOrPet) << (int)GoapKey.targettargetsus) |
 

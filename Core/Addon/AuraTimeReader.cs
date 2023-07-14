@@ -16,6 +16,8 @@ public interface ITargetDebuffTimeReader : IAuraTimeReader { }
 
 public interface ITargetBuffTimeReader : IAuraTimeReader { }
 
+public interface IFocusBuffTimeReader : IAuraTimeReader { }
+
 public sealed class AuraTimeReader<T> : IAuraTimeReader, IReader
 {
     public readonly struct Data
