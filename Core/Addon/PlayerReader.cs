@@ -38,6 +38,7 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
 
     public Vector3 MapPos => new(MapX, MapY, WorldPosZ);
     public Vector3 MapPosNoZ => new(MapX, MapY, 0);
+    public Vector3 _MapPosNoZ() => MapPosNoZ;
     public Vector3 WorldPos => worldMapAreaDB.ToWorld_FlipXY(UIMapId.Value, MapPos);
 
     public float WorldPosZ { get; set; } // MapZ not exists. Alias for WorldLoc.Z
@@ -69,7 +70,7 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
 
     public int ManaMax() => reader.GetInt(14);
     public int ManaCurrent() => reader.GetInt(15);
-    public int ManaPercentage() => (1 + ManaCurrent()) * 100 / (1 + ManaMax());
+    public int ManaPercent() => (1 + ManaCurrent()) * 100 / (1 + ManaMax());
 
     public int MaxRune() => reader.GetInt(14);
 
@@ -79,11 +80,11 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
 
     public int TargetMaxHealth() => reader.GetInt(18);
     public int TargetHealth() => reader.GetInt(19);
-    public int TargetHealthPercentage() => (1 + TargetHealth()) * 100 / (1 + TargetMaxHealth());
+    public int TargetHealthPercent() => (1 + TargetHealth()) * 100 / (1 + TargetMaxHealth());
 
     public int PetMaxHealth() => reader.GetInt(38);
     public int PetHealth() => reader.GetInt(39);
-    public int PetHealthPercentage() => (1 + PetHealth()) * 100 / (1 + PetMaxHealth());
+    public int PetHealthPercent() => (1 + PetHealth()) * 100 / (1 + PetMaxHealth());
 
 
     public SpellInRange SpellInRange { get; }
@@ -118,7 +119,7 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
     public RecordInt PlayerXp { get; } = new(50);
 
     public int PlayerMaxXp => reader.GetInt(51);
-    public int PlayerXpPercentage => (1 + PlayerXp.Value) * 100 / (1 + PlayerMaxXp);
+    public int PlayerXpPercent => (1 + PlayerXp.Value) * 100 / (1 + PlayerMaxXp);
 
     private UI_ERROR UIError => (UI_ERROR)reader.GetInt(52);
     public UI_ERROR LastUIError { get; set; }
@@ -172,6 +173,9 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
     public int MouseOverId => reader.GetInt(86);
     public int MouseOverGuid => reader.GetInt(87);
 
+    public int FocusHealthMax() => reader.GetInt(89);
+    public int FocusHealthCurrent() => reader.GetInt(90);
+    public int FocusHealthPercent() => (1 + FocusHealthCurrent()) * 100 / (1 + FocusHealthMax());
 
     public int LastCastGCD { get; set; }
     public void ReadLastCastGCD()

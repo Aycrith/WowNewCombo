@@ -24,6 +24,9 @@ public sealed class DruidMountHandler : IMountHandler
     }
 
     public bool CanMount() =>
+        playerReader.Form is not
+        Form.Druid_Flight or
+        Form.Druid_Travel &&
         mountHandler.CanMount();
 
 

@@ -43,6 +43,11 @@ public sealed class ActionBarPopulator
             AddUnique(items, config.Adhoc.Sequence[i]);
         }
 
+        for (int i = 0; i < config.AssistFocus.Sequence.Length; i++)
+        {
+            AddUnique(items, config.AssistFocus.Sequence[i]);
+        }
+
         for (int i = 0; i < config.Parallel.Sequence.Length; i++)
         {
             AddUnique(items, config.Parallel.Sequence[i]);

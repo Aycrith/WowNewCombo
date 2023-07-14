@@ -65,8 +65,8 @@ public static class GoalFactory
 
         if (playerReader.Class is UnitClass.Druid)
         {
-            services.AddScoped<MountHandler>();
             services.AddScoped<IMountHandler, DruidMountHandler>();
+            services.AddScoped<MountHandler>();
         }
         else
         {
@@ -110,6 +110,7 @@ public static class GoalFactory
         {
             services.AddScoped<GoapGoal, PullTargetGoal>();
             services.AddScoped<GoapGoal, ApproachTargetGoal>();
+            services.AddScoped<GoapGoal, AssistFocusGoal>();
             services.AddScoped<GoapGoal, CombatGoal>();
 
             ResolveLootAndSkin(services, classConfig);

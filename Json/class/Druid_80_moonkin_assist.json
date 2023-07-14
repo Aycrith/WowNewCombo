@@ -1,0 +1,258 @@
+{
+  "ClassName": "Druid",
+  //"Mode": "AttendedGrind", //Grind
+  "Mode": "AssistFocus",
+  "Loot": true,
+  "Skin": true,
+  "MountKey": "N0",
+  "PathFilename": "_pack\\60-70\\Terokkar Forest\\62-64.json",
+  "PathThereAndBack": false,
+  "PathReduceSteps": true,
+  "NPCMaxLevels_Above": 3,
+  "NPCMaxLevels_Below": 20,
+  "IntVariables": {
+    "MIN_TARGET_HP_DOT%": 20,
+    "MIN_TARGET_HP_CD%": 75,
+    "Debuff_Faerie Fire": 136033,
+    "Debuff_Mangle": 132135,
+    "FBuff_Mount": 132239
+  },
+  "Form": [
+    {
+      "Name": "Flight Form",
+      "Key": "N0",
+      "Form": "Druid_Flight"
+    },
+    {
+      //macro: /cancelform
+      "Name": "cancelform",
+      "Key": "F1",
+      "Form": "None"
+    },
+    {
+      "Name": "Bear Form",
+      "Key": "F2",
+      "Form": "Druid_Bear"
+    },
+    {
+      "Name": "Cat Form",
+      "Key": "F3",
+      "Form": "Druid_Cat"
+    },
+    {
+      "Name": "Travel Form",
+      "Key": "F4",
+      "Form": "Druid_Travel"
+    },
+    {
+      "Name": "Moonkin Form",
+      "Key": "F5",
+      "Form": "Druid_Moonkin"
+    }
+  ],
+  "Pull": {
+    "Sequence": [
+      {
+        "Name": "Regrowth",
+        "Key": "0",
+        "Form": "None",
+        "HasCastBar": true,
+        "WhenUsable": true,
+        "AfterCastWaitBuff": true,
+        "Requirements": [
+          "Health% < 65",
+          "!Regrowth"
+        ]
+      },
+      {
+        "Name": "Rejuvenation",
+        "Key": "6",
+        "Form": "None",
+        "BeforeCastStop": true,
+        "AfterCastWaitBuff": true,
+        "Requirements": [
+          "Health% < 75",
+          "!Rejuvenation"
+        ]
+      },
+      {
+        "Name": "Moonkin Form",
+        "Key": "F5",
+        "BeforeCastStop": true,
+        "Requirements": [
+          "SpellInRange:0",
+          "!Form:Druid_Moonkin"
+        ]
+      },
+      {
+        "Name": "Faerie Fire (Feral)",
+        "Key": "F6",
+        "AfterCastAuraExpected": true,
+        "AfterCastWaitCombat": true,
+        "Requirements": [
+          "!Moonfire",
+          "Form:Druid_Moonkin",
+          "Debuff_Faerie Fire < 2",
+          "Spell:Faerie Fire"
+        ]
+      },
+      {
+        "Name": "Approach",
+        "Requirements": [
+          "MinRange > 36"
+        ]
+      }
+    ]
+  },
+  "AssistFocus": {
+    "Sequence": [
+      {
+        "Name": "Mark of the Wild",
+        "Key": "4",
+        "Form": "None",
+        "Requirements": [
+          "!Mounted",
+          "!F_Mark of the Wild",
+          "SpellInRange:5"
+        ]
+      },
+      {
+        "Name": "Thorns",
+        "Key": "7",
+        "Form": "None",
+        "Requirements": [
+          "!Mounted",
+          "!F_Thorns",
+          "SpellInRange:8"
+        ]
+      },
+      {
+        "Name": "Regrowth",
+        "Key": "0",
+        "Form": "None",
+        "HasCastBar": true,
+        "WhenUsable": true,
+        "AfterCastAuraExpected": true,
+        "Requirements": [
+          "!Mounted",
+          "!F_Regrowth",
+          "FocusHealth% < 65",
+          "SpellInRange:6"
+        ]
+      },
+      {
+        "Name": "Rejuvenation",
+        "Key": "6",
+        "Form": "None",
+        "BeforeCastStop": true,
+        "AfterCastWaitBuff": true,
+        "Requirements": [
+          "!Mounted",
+          "!F_Rejuvenation",
+          "FocusHealth% < 75",
+          "SpellInRange:7"
+        ]
+      }
+    ]
+  },
+  "Combat": {
+    "Sequence": [
+      {
+        "Name": "Regrowth",
+        "Key": "0",
+        "HasCastBar": true,
+        "WhenUsable": true,
+        "AfterCastAuraExpected": true,
+        "AfterCastWaitCastbar": true,
+        "Requirements": [
+          "Health% < 30"
+        ],
+        "Form": "None"
+      },
+      {
+        "Name": "Trinket 1",
+        "Key": "F11",
+        "Item": true,
+        "WhenUsable": true,
+        "Requirements": [
+          "InMeleeRange",
+          "TargetHealth% > MIN_TARGET_HP_CD%"
+        ]
+      },
+      {
+        "Name": "Moonfire",
+        "Key": "5",
+        "Requirements": [
+          "!Moonfire",
+          "TargetHealth% > 25"
+        ]
+      },
+      {
+        "Name": "Wrath",
+        "Key": "2",
+        "HasCastBar": true
+      },
+      {
+        "Name": "Approach",
+        "Requirements": [
+          "MinRange > 36",
+          "!Casting"
+        ]
+      }
+    ]
+  },
+  "Adhoc": {
+    "Sequence": [
+      {
+        "Name": "Mark of the Wild",
+        "Key": "4",
+        "Form": "None",
+        "Requirement": "!Mark of the Wild"
+      },
+      {
+        "Name": "Thorns",
+        "Key": "7",
+        "Form": "None",
+        "Requirement": "!Thorns"
+      },
+      {
+        "Name": "Innervate",
+        "Cost": 3,
+        "InCombat": "idc",
+        "Key": "N1",
+        "Form": "None",
+        "WhenUsable": true,
+        "Requirement": "Mana% < 15"
+      },
+      {
+        "Name": "MountUp",
+        "Key": "N0",
+        "InCombat": false,
+        "WhenUsable": true,
+        "HasCastbar": true,
+        "AfterCastWaitCastbar": true,
+        "AfterCastWaitGCD": true,
+        "Requirements": [
+          "!Mounted",
+          "FBuff_Mount > 0"
+        ]
+      }
+    ]
+  },
+  "Parallel": {
+    "Sequence": [
+      {
+        "Name": "Food",
+        "Key": "=",
+        "Form": "None",
+        "Requirement": "Health% < 40"
+      },
+      {
+        "Name": "Drink",
+        "Key": "-",
+        "Form": "None",
+        "Requirement": "Mana% < 40 && DrinkCount > 0"
+      }
+    ]
+  }
+}

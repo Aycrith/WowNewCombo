@@ -13,6 +13,8 @@ local CELL_SIZE = 1 -- 1-9
 -- Spacing in px between data squares.
 local CELL_SPACING = 1 -- 0 or 1
 
+local GLOBAL_TIME_CELL = 98
+
 -- Dont modify values below
 
 local Load = select(2, ...)
@@ -143,6 +145,8 @@ DataToColor.CastNum = 0
 
 DataToColor.targetChanged = true
 
+DataToColor.autoFollow = false
+
 DataToColor.playerGUID = UnitGUID(DataToColor.C.unitPlayer)
 DataToColor.petGUID = UnitGUID(DataToColor.C.unitPet)
 
@@ -174,6 +178,7 @@ DataToColor.playerPetSummons = {}
 DataToColor.playerBuffTime = DataToColor.struct:new()
 DataToColor.targetBuffTime = DataToColor.struct:new()
 DataToColor.targetDebuffTime = DataToColor.struct:new()
+DataToColor.focusBuffTime = DataToColor.struct:new()
 
 DataToColor.customTrigger1 = {}
 
@@ -268,6 +273,7 @@ function DataToColor:Reset()
     DataToColor.playerBuffTime = DataToColor.struct:new()
     DataToColor.targetBuffTime = DataToColor.struct:new()
     DataToColor.targetDebuffTime = DataToColor.struct:new()
+    DataToColor.focusBuffTime = DataToColor.struct:new()
 
     DataToColor.playerPetSummons = {}
 end
@@ -632,6 +638,7 @@ function DataToColor:CreateFrames(n)
             local playerDebuffCount = DataToColor:populateAuraTimer(UnitDebuff, DataToColor.C.unitPlayer, nil)
             local targetDebuffCount = DataToColor:populateAuraTimer(UnitDebuff, DataToColor.C.unitTarget, DataToColor.targetDebuffTime)
             local targetBuffCount = DataToColor:populateAuraTimer(UnitBuff, DataToColor.C.unitTarget, DataToColor.targetBuffTime)
+            local focusBuffCount = DataToColor:populateAuraTimer(UnitBuff, DataToColor.C.unitFocus, DataToColor.focusBuffTime)
 
             -- player/target buff and debuff counts
             -- playerdebuff count cannot be higher than 16
@@ -778,6 +785,30 @@ function DataToColor:CreateFrames(n)
                     Pixel(int, 0, 83)
                     Pixel(int, 0, 84)
                 end
+
+                if UnitExists(DataToColor.C.unitFocus) then
+                    textureId, expireTime = DataToColor.focusBuffTime:get()
+                else
+                    textureId, expireTime = DataToColor.focusBuffTime:getForced()
+                    expireTime = GetTime()
+                end
+
+                if textureId then
+                    DataToColor.focusBuffTime:setDirty(textureId)
+
+                    local durationSec = max(0, ceil(expireTime - GetTime()))
+                    --DataToColor:Print("focus buff update ", textureId, " ", durationSec)
+                    Pixel(int, textureId, 92)
+                    Pixel(int, durationSec, 93)
+
+                    if durationSec == 0 then
+                        DataToColor.focusBuffTime:remove(textureId)
+                        --DataToColor:Print("focus buff expired ", textureId, " ", durationSec)
+                    end
+                else
+                    Pixel(int, 0, 92)
+                    Pixel(int, 0, 93)
+                end
             end
 
             local mouseoverLevel = UnitLevel(DataToColor.C.unitmouseover)
@@ -791,7 +822,11 @@ function DataToColor:CreateFrames(n)
 
             Pixel(int, DataToColor:getUnitRangedDamage(DataToColor.C.unitPlayer), 88)
 
-            -- 89 empty
+            Pixel(int, UnitHealthMax(DataToColor.C.unitFocus), 89)
+            Pixel(int, UnitHealth(DataToColor.C.unitFocus), 90)
+            Pixel(int, DataToColor:getAuraMaskForClass(UnitBuff, DataToColor.C.unitFocus, DataToColor.S.playerBuffs), 91)
+            -- 92 used
+            -- 93 used
 
             -- 94 last cast GCD
             Pixel(int, DataToColor.lastCastGCD, 94)
@@ -815,7 +850,7 @@ function DataToColor:CreateFrames(n)
                 DataToColor.lastLoot = DataToColor.C.Loot.Corpse
             end
             Pixel(int, DataToColor.lastLoot, 97)
-            UpdateGlobalTime(98)
+            UpdateGlobalTime(GLOBAL_TIME_CELL)
             -- 99 Reserved
 
             DataToColor:ConsumeChanges()
@@ -829,7 +864,7 @@ function DataToColor:CreateFrames(n)
                     Pixel(int, 0, i)
                 end
             end
-            UpdateGlobalTime(98)
+            UpdateGlobalTime(GLOBAL_TIME_CELL)
         end
 
         if SETUP_SEQUENCE then

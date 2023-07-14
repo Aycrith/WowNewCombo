@@ -29,6 +29,16 @@ public sealed class TargetFocusTargetGoal : GoapGoal
         AddPrecondition(GoapKey.focushastarget, true);
     }
 
+    public override bool CanRun()
+    {
+        if (bits.TargetOfTargetIsPlayerOrPet())
+            return false;
+
+        return
+            (bits.FocusTargetCanBeHostile() && bits.FocusTargetInCombat()) ||
+            !bits.FocusTargetCanBeHostile();
+    }
+
     public override void OnEnter()
     {
         input.PressTargetFocus();
@@ -43,7 +53,6 @@ public sealed class TargetFocusTargetGoal : GoapGoal
             {
                 input.PressTargetFocus();
                 input.PressTargetOfTarget();
-                wait.Update();
             }
         }
         else if (playerReader.SpellInRange.FocusTarget_Trade)
@@ -51,7 +60,6 @@ public sealed class TargetFocusTargetGoal : GoapGoal
             input.PressTargetFocus();
             input.PressTargetOfTarget();
             input.PressInteract();
-            wait.Update();
         }
 
         wait.Update();

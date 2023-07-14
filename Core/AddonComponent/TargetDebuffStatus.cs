@@ -21,23 +21,24 @@ public sealed class TargetDebuffStatus : IReader
     }
 
     // Priest
-    public bool ShadowWordPain() => v[Mask._0];
+    [Names(new[] { "Shadow Word: Pain" })]
+    public bool Shadow_Word_Pain() => v[Mask._0];
 
     // Druid
-    public bool Roar() => v[Mask._0];
-    public bool FaerieFire() => v[Mask._1];
+    public bool Demoralizing_Roar() => v[Mask._0];
+    public bool Faerie_Fire() => v[Mask._1];
     public bool Rip() => v[Mask._2];
     public bool Moonfire() => v[Mask._3];
-    public bool EntanglingRoots() => v[Mask._4];
+    public bool Entangling_Roots() => v[Mask._4];
     public bool Rake() => v[Mask._5];
 
     // Paladin
-    public bool JudgementoftheCrusader() => v[Mask._0];
-    public bool HammerOfJustice() => v[Mask._1];
-    public bool JudgementAny() => JudgementofWisdom() || JudgementofLight() || JudgementofJustice();
-    public bool JudgementofWisdom() => v[Mask._2];
-    public bool JudgementofLight() => v[Mask._3];
-    public bool JudgementofJustice() => v[Mask._4];
+    public bool Judgement_of_the_Crusader() => v[Mask._0];
+    public bool Hammer_of_Justice() => v[Mask._1];
+    public bool Judgement_of_Any() => Judgement_of_Wisdom() || Judgement_of_Light() || Judgement_of_Justice();
+    public bool Judgement_of_Wisdom() => v[Mask._2];
+    public bool Judgement_of_Light() => v[Mask._3];
+    public bool Judgement_of_Justice() => v[Mask._4];
 
     // Mage
     public bool Frostbite() => v[Mask._0];
@@ -47,26 +48,34 @@ public sealed class TargetDebuffStatus : IReader
 
     // Warrior
     public bool Rend() => v[Mask._0];
-    public bool ThunderClap() => v[Mask._1];
+    public bool Thunder_Clap() => v[Mask._1];
     public bool Hamstring() => v[Mask._2];
-    public bool ChargeStun() => v[Mask._3];
+    public bool Charge_Stun() => v[Mask._3];
 
     // Warlock
-    public bool Curseof() => v[Mask._0];
+    [Names(new[] {
+        "Curse of Weakness",
+        "Curse of Elements",
+        "Curse of Recklessness",
+        "Curse of Shadow",
+        "Curse of Agony",
+        "Curse of" })]
+    public bool Curse_of() => v[Mask._0];
     public bool Corruption() => v[Mask._1];
     public bool Immolate() => v[Mask._2];
-    public bool SiphonLife() => v[Mask._3];
+    public bool Siphon_Life() => v[Mask._3];
 
     // Hunter
-    public bool SerpentSting() => v[Mask._0];
-    public bool HuntersMark() => v[Mask._1];
-    public bool ViperSting() => v[Mask._2];
-    public bool ExplosiveShot() => v[Mask._3];
-    public bool BlackArrow() => v[Mask._4];
+    public bool Serpent_Sting() => v[Mask._0];
+    [Names(new[] { "Hunter's Mark" })]
+    public bool Hunters_Mark() => v[Mask._1];
+    public bool Viper_Sting() => v[Mask._2];
+    public bool Explosive_Shot() => v[Mask._3];
+    public bool Black_Arrow() => v[Mask._4];
 
     // Death Knight
-    public bool BloodPlague() => v[Mask._0];
-    public bool FrostFever() => v[Mask._1];
+    public bool Blood_Plague() => v[Mask._0];
+    public bool Frost_Fever() => v[Mask._1];
     public bool Strangulate() => v[Mask._2];
-    public bool ChainsofIce() => v[Mask._3];
+    public bool Chains_of_Ice() => v[Mask._3];
 }

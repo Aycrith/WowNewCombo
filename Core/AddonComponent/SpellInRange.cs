@@ -34,15 +34,32 @@ public sealed class SpellInRange : IReader
     public bool Priest_MindFlay => b[Mask._2];
     public bool Priest_MindBlast => b[Mask._3];
     public bool Priest_Smite => b[Mask._4];
+    public bool Priest_Divine_Spirit => b[Mask._5];
+    public bool Priest_Power_World_Fortitude => b[Mask._6];
+    public bool Priest_Power_Word_Shield => b[Mask._7];
+    public bool Priest_Lesser_Heal => b[Mask._8];
+    public bool Priest_Prayer_of_Mending => b[Mask._9];
+    public bool Priest_Renew => b[Mask._10];
+    public bool Priest_Shadow_Protection => b[Mask._11];
 
     // Druid
     public bool Druid_Wrath => b[Mask._0];
     public bool Druid_Bash => b[Mask._1];
     public bool Druid_Rip => b[Mask._2];
     public bool Druid_Maul => b[Mask._3];
+    public bool Druid_Healing_Touch => b[Mask._4];
+    public bool Druid_Mark_of_the_Wild => b[Mask._5];
+    public bool Druid_Regrowth => b[Mask._6];
+    public bool Druid_Rejuvenation => b[Mask._7];
+    public bool Druid_Thorns => b[Mask._8];
 
     //Paladin
     public bool Paladin_Judgement => b[Mask._0];
+    public bool Paladin_Exorcism => b[Mask._1];
+    public bool Paladin_Flash_Heal => b[Mask._2];
+    public bool Paladin_Holy_Light => b[Mask._3];
+    public bool Paladin_Blessing_of => b[Mask._4];
+    public bool Paladin_Greater_Blessing_of => b[Mask._5];
 
     //Mage
     public bool Mage_Fireball => b[Mask._0];
@@ -65,6 +82,11 @@ public sealed class SpellInRange : IReader
     // Shaman
     public bool Shaman_LightningBolt => b[Mask._0];
     public bool Shaman_EarthShock => b[Mask._1];
+    public bool Shaman_Healing_Wave => b[Mask._2];
+    public bool Shaman_Lesser_Healing_Wave => b[Mask._3];
+    public bool Shaman_Water_Breathing => b[Mask._4];
+    public bool Shaman_Chain_Heal => b[Mask._5];
+    public bool Shaman_Earth_Shield => b[Mask._6];
 
     // Death Knight
     public bool DeathKnight_IcyTouch => b[Mask._0];

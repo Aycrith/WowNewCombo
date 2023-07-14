@@ -96,7 +96,7 @@ public sealed class Wait
     }
 
     [SkipLocalsInit]
-    public float AfterEquals<T>(int timeoutMs, int updateCount, Func<T> func)
+    public float AfterEquals<T>(int timeoutMs, int updateCount, Func<T> func, Action? repeat = null)
     {
         DateTime start = DateTime.UtcNow;
         float elapsedMs;
@@ -104,10 +104,12 @@ public sealed class Wait
         {
             T initial = func();
 
+            repeat?.Invoke();
+
             for (int i = 0; i < updateCount; i++)
                 Update();
 
-            if (Comparer<T>.Default.Compare(initial, func()) == 0)
+            if (EqualityComparer<T>.Default.Equals(initial, func()))
                 return elapsedMs;
         }
 

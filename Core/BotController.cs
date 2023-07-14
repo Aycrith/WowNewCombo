@@ -35,6 +35,7 @@ public sealed partial class BotController : IBotController, IDisposable
     private readonly AuraTimeReader<IPlayerBuffTimeReader> playerBuff;
     private readonly AuraTimeReader<ITargetDebuffTimeReader> targetDebuff;
     private readonly AuraTimeReader<ITargetBuffTimeReader> targetBuff;
+    private readonly AuraTimeReader<IFocusBuffTimeReader> focusBuff;
 
     public bool IsBotActive => GoapAgent != null && GoapAgent.Active;
 
@@ -74,7 +75,8 @@ public sealed partial class BotController : IBotController, IDisposable
         IServiceProvider serviceProvider,
         AuraTimeReader<IPlayerBuffTimeReader> playerBuff,
         AuraTimeReader<ITargetDebuffTimeReader> targetDebuff,
-        AuraTimeReader<ITargetBuffTimeReader> targetBuff)
+        AuraTimeReader<ITargetBuffTimeReader> targetBuff,
+        AuraTimeReader<IFocusBuffTimeReader> focusBuff)
     {
         this.serviceProvider = serviceProvider;
 
@@ -88,6 +90,7 @@ public sealed partial class BotController : IBotController, IDisposable
         this.playerBuff = playerBuff;
         this.targetDebuff = targetDebuff;
         this.targetBuff = targetBuff;
+        this.focusBuff = focusBuff;
 
         this.wowScreen = wowScreen;
 
@@ -274,7 +277,7 @@ public sealed partial class BotController : IBotController, IDisposable
             ClassConfig.Initialise(dataConfig, addonReader, playerReader,
                 addonReader.GlobalTime, costReader,
                 requirementFactory, globalLogger,
-                playerBuff, targetDebuff, targetBuff,
+                playerBuff, targetDebuff, targetBuff, focusBuff,
                 pathFile);
 
             LogProfileLoaded(logger, classFile, ClassConfig.PathFilename);

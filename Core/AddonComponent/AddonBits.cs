@@ -68,4 +68,5 @@ public sealed class AddonBits : IReader
     public bool MouseOverTargetIsPlayerOrPet() => v2[Mask._16];
     public bool MouseOverPlayerControlled() => v2[Mask._17];
     public bool TargetIsPlayerControlled() => v2[Mask._18];
+    public bool AutoFollow() => v2[Mask._19];
 }
