@@ -65,8 +65,8 @@ public static class GoalFactory
 
         if (playerReader.Class is UnitClass.Druid)
         {
-            services.AddScoped<MountHandler>();
             services.AddScoped<IMountHandler, DruidMountHandler>();
+            services.AddScoped<MountHandler>();
         }
         else
         {
