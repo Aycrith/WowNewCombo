@@ -157,7 +157,8 @@ function DataToColor:Bits2()
         (UnitIsPlayer(DataToColor.C.unitmouseover) and 2 or 0) ^ 15 +
         (DataToColor:IsUnitsTargetIsPlayerOrPet(DataToColor.C.unitmouseover, DataToColor.C.unitmouseovertarget) and 2 or 0) ^ 16 +
         (UnitPlayerControlled(DataToColor.C.unitmouseover) and 2 or 0) ^ 17 +
-        (UnitPlayerControlled(DataToColor.C.unitTarget) and 2 or 0) ^ 18
+        (UnitPlayerControlled(DataToColor.C.unitTarget) and 2 or 0) ^ 18 +
+        ((DataToColor.autoFollow) and 2 or 0) ^ 19
 end
 
 function DataToColor:CustomTrigger(t)
@@ -196,6 +197,7 @@ end
 
 function DataToColor:populateAuraTimer(func, unitId, queue)
     local count = 0
+    local existingAuras = {}
     for i = 1, 40 do
         local name, texture, _, _, duration, expirationTime = func(unitId, i)
         if name == nil then
@@ -204,8 +206,11 @@ function DataToColor:populateAuraTimer(func, unitId, queue)
         count = i
 
         if queue ~= nil then
+            existingAuras[texture] = true
+
             if duration == 0 then
                 expirationTime = GetTime() + 14400 -- 4 hours - anything above considered unlimited duration
+                --DataToColor:Print(texture, " unlimited aura added ", expirationTime)
             end
 
             if not queue:exists(texture) then
@@ -217,6 +222,18 @@ function DataToColor:populateAuraTimer(func, unitId, queue)
             end
         end
     end
+
+    -- Remove unlimited duration Auras.
+    -- Such as clickable Mounts and Buffs 
+    if queue ~= nil then
+        for k in queue:iterator() do
+            if existingAuras[k] == nil then
+                --DataToColor:Print(k, " remove unlimited")
+                queue:set(k, GetTime())
+            end
+        end
+    end
+
     return count
 end
 
@@ -366,8 +383,14 @@ function DataToColor:areSpellsInRange()
     local inRange = 0
     local targetCount = #DataToColor.S.spellInRangeTarget
     for i = 1, targetCount do
-        if IsSpellInRange(GetSpellInfo(DataToColor.S.spellInRangeTarget[i]), DataToColor.C.unitTarget) == 1 then
-            inRange = inRange + (2 ^ (i - 1))
+        local spellId = DataToColor.S.spellInRangeTarget[i]
+        local spellName = GetSpellInfo(spellId)
+        if spellName ~= nil then
+            if IsSpellInRange(spellName, DataToColor.C.unitTarget) == 1 then
+                inRange = inRange + (2 ^ (i - 1))
+            end
+        else
+            --print(spellId .. " is null")
         end
     end
 

@@ -30,6 +30,8 @@ local RepopMe = RepopMe
 local RetrieveCorpse = RetrieveCorpse
 local GetCorpseRecoveryDelay = GetCorpseRecoveryDelay
 
+local UnitIsTapDenied = UnitIsTapDenied
+
 local ContainerIDToInventoryID = DataToColor.ContainerIDToInventoryID
 local NUM_BAG_SLOTS = NUM_BAG_SLOTS
 
@@ -114,6 +116,9 @@ function DataToColor:RegisterEvents()
     DataToColor:RegisterEvent('ZONE_CHANGED_NEW_AREA', 'OnZoneChanged')
 
     DataToColor:RegisterEvent('PLAYER_REGEN_ENABLED', 'OnLeftCombat')
+
+    DataToColor:RegisterEvent('AUTOFOLLOW_BEGIN', 'AutoFollowBegin')
+    DataToColor:RegisterEvent('AUTOFOLLOW_END', 'AutoFollowEnd')
 
     -- Season of mastery / vanilla
     if WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
@@ -265,7 +270,12 @@ function DataToColor:OnCombatEvent(...)
         destGUID == DataToColor.petGUID or
         DataToColor.playerPetSummons[destGUID]) then
         --DataToColor:Print("Damage Taken ", sourceGUID)
-        DataToColor.eligibleKillCredit[sourceGUID] = true
+
+        local targetGuid = UnitGUID(DataToColor.C.unitTarget)
+        if targetGuid == sourceGUID and not UnitIsTapDenied(DataToColor.C.unitTarget) then
+            DataToColor.eligibleKillCredit[sourceGUID] = true
+        end
+
         DataToColor.CombatDamageTakenQueue:push(DataToColor:getGuidFromUUID(sourceGUID))
     end
 
@@ -359,7 +369,12 @@ function DataToColor:OnCombatEvent(...)
         -- matches SWING_ RANGE_ SPELL_ but not SPELL_PERIODIC
         if playerDamageDone[subEvent] or playerDamageMiss[subEvent] then
             --DataToColor:Print(subEvent, " ", destGUID)
-            DataToColor.eligibleKillCredit[destGUID] = true
+
+            local targetGuid = UnitGUID(DataToColor.C.unitTarget)
+            if targetGuid == destGUID and not UnitIsTapDenied(DataToColor.C.unitTarget) then
+                DataToColor.eligibleKillCredit[destGUID] = true
+            end
+
             DataToColor.CombatDamageDoneQueue:push(DataToColor:getGuidFromUUID(destGUID))
 
             if playerDamageMiss[subEvent] then
@@ -536,6 +551,14 @@ end
 
 function DataToColor:OnLeftCombat()
     DataToColor.eligibleKillCredit = {}
+end
+
+function DataToColor:AutoFollowBegin()
+    DataToColor.autoFollow = true
+end
+
+function DataToColor:AutoFollowEnd()
+    DataToColor.autoFollow = false
 end
 
 local CORPSE_RETRIEVAL_DISTANCE = 40

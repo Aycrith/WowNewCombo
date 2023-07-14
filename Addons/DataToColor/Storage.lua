@@ -36,14 +36,19 @@ function CreateSpellInRangeTarget()
             5176, -- "Wrath"
             5211, -- "Bash"
             1079, -- "Rip"
-            6807 -- "Maul"
+            6807, -- "Maul"
+            5185, -- "Healing Touch"
+            1126, -- "Mark of the Wild"
+            8936, -- "Regrowth"
+            774, -- "Rejuvenation",
+            467, -- "Thorns"
         }
     elseif DataToColor.C.CHARACTER_CLASS == "WARRIOR" then
         DataToColor.S.spellInRangeTarget = {
             100, -- "Charge"
             772, -- "Rend"
             3018, -- "Shoot" for classic -> 7918, -- "Shoot Gun"
-            2764 -- "Throw"
+            2764, -- "Throw"
         }
     elseif DataToColor.C.CHARACTER_CLASS == "PRIEST" then
         DataToColor.S.spellInRangeTarget = {
@@ -51,11 +56,23 @@ function CreateSpellInRangeTarget()
             5019, -- "Shoot"
             15407, -- "Mind Flay"
             8092, -- "Mind Blast"
-            585 -- "Smite"
+            585, -- "Smite"
+            14752, -- "Divine Spirit"
+            1243, -- "Power World: Fortitude"
+            17, -- Power Word: Shield
+            2050, -- "Lesser Heal"
+            33076, -- "Prayer of Mending"
+            139, -- "Renew"
+            976, -- "Shadow Protection"
         }
     elseif DataToColor.C.CHARACTER_CLASS == "PALADIN" then
         DataToColor.S.spellInRangeTarget = {
-            20271 -- "Judgement" / "Judgement of Light"
+            20271, -- "Judgement" / "Judgement of Light"
+            879, -- "Exorcism"
+            19750, -- "Flash Heal"
+            635, -- "Holy Light"
+            19740, -- "Blessing of Might"
+            25782, -- "Greater Blessing of Might"
         }
     elseif DataToColor.C.CHARACTER_CLASS == "MAGE" then
         DataToColor.S.spellInRangeTarget = {
@@ -63,23 +80,28 @@ function CreateSpellInRangeTarget()
             5019, -- "Shoot"
             11366, -- "Pyroblast"
             116, -- "Frostbolt"
-            2136 -- "Fire Blast"
+            2136, -- "Fire Blast"
         }
     elseif DataToColor.C.CHARACTER_CLASS == "HUNTER" then
         DataToColor.S.spellInRangeTarget = {
             2973, -- "Raptor Strike"
             75, -- "Auto Shot"
-            1978 -- "Serpent Sting"
+            1978, -- "Serpent Sting"
         }
     elseif DataToColor.C.CHARACTER_CLASS == "WARLOCK" then
         DataToColor.S.spellInRangeTarget = {
             686, -- "Shadow Bolt",
-            5019 -- "Shoot"
+            5019, -- "Shoot"
         }
     elseif DataToColor.C.CHARACTER_CLASS == "SHAMAN" then
         DataToColor.S.spellInRangeTarget = {
             403, -- "Lightning Bolt",
-            8042 -- "Earth Shock"
+            8042, -- "Earth Shock"
+            331, -- "Healing Wave"
+            8004, -- "Lesser Healing Wave"
+            131, -- "Water Breathing"
+            1064, -- "Chain Heal"
+            974, -- "Earth Shield"
         }
     elseif DataToColor.C.CHARACTER_CLASS == "DEATHKNIGHT" then
         DataToColor.S.spellInRangeTarget = {
@@ -99,7 +121,7 @@ function CreateSpellInRangeUnit()
         }
     elseif DataToColor.C.CHARACTER_CLASS == "WARLOCK" then
         DataToColor.S.spellInRangeUnit = {
-            { 27259, DataToColor.C.unitPet }, -- "Health Funnel"
+            { 755, DataToColor.C.unitPet }, -- "Health Funnel"
         }
     end
 end

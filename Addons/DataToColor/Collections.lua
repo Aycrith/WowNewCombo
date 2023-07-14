@@ -118,3 +118,7 @@ end
 function struct:remove(key)
     self[key] = nil
 end
+
+function struct:iterator()
+    return pairs(self)
+end
