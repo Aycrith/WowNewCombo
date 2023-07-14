@@ -625,17 +625,17 @@ e.g.
 
 The `Sequence` of [KeyAction(s)](#keyaction) that are used while the `AssistFocus` Mode is active. 
 
-Upon any [KeyAction](#keyaction) [Requirement(s)](#requirement) are met, the **Assist Focus Goal** is become active.
+Upon any [keyAction's](#keyaction) [requirement](#requirement) are met, the **Assist Focus Goal** is become active.
 
-Upon entering **Assist Focus Goal**, the bot attempts to target the `focus`/`party1` as Target.
+Upon entering **Assist Focus Goal**, the player attempts to target the `focus`/`party1`.
 
-Then as defined, in-order, executes those [KeyAction(s)](#keyaction) which fulfills its given [Requirement(s)](#requirement).
+Then as defined, in-order, executes those [KeyAction(s)](#keyaction) which fulfills its given [requirement(s)](#requirement).
 
-Upon exiting **Assist Focus Goal**, going to Clear the current target.
+Upon exiting **Assist Focus Goal**, the current target will be deselected / cleared.
 
-Note: You can use every `Buff` and `Debuff` names on the `focus` without being targeted.
+**Note**: You can use every `Buff` and `Debuff` names on the `focus`/`party1` without being targeted.
 
-Just have to prefix it with `F_` example: `F_Mark of the Wild` which means `focus` has `Mark of the Wild` buff active.
+Just have to prefix it with `F_` example: `F_Mark of the Wild` which means `focus`/`party1` has `Mark of the Wild` buff active.
 
 e.g. of a Balance Druid
 ```json
