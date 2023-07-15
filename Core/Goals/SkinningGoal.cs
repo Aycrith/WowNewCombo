@@ -108,16 +108,16 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
         int attempts = 0;
         while (attempts < MAX_ATTEMPTS)
         {
-            bool foundTarget = bits.HasTarget() && bits.TargetIsDead();
+            bool foundTarget = bits.Target() && bits.Target_Dead();
 
             if (!foundTarget && state.LastCombatKillCount == 1)
             {
                 input.PressFastLastTarget();
                 wait.Update();
 
-                if (bits.HasTarget())
+                if (bits.Target())
                 {
-                    if (bits.TargetIsDead())
+                    if (bits.Target_Dead())
                     {
                         foundTarget = true;
                         Log("Last Target found!");
@@ -268,12 +268,12 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
 
     private void ClearTargetIfExists()
     {
-        if (bits.HasTarget() && bits.TargetIsDead())
+        if (bits.Target() && bits.Target_Dead())
         {
             input.PressClearTarget();
             wait.Update();
 
-            if (bits.HasTarget())
+            if (bits.Target())
             {
                 SendGoapEvent(ScreenCaptureEvent.Default);
                 LogWarning($"Unable to clear target! Check Bindpad settings!");
@@ -380,8 +380,8 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
     private bool WaitForLosingTarget()
     {
         return
-            bits.HasTarget() &&
-            bits.TargetIsDead();
+            bits.Target() &&
+            bits.Target_Dead();
     }
 
     private void Log(string text)

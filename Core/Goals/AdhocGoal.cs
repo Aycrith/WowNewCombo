@@ -73,7 +73,7 @@ public sealed class AdhocGoal : GoapGoal
     private bool Interrupt()
     {
         return combatMatters.HasValue
-            ? combatMatters.Value == bits.PlayerInCombat() && combatLog.DamageTakenCount() > 0
+            ? combatMatters.Value == bits.Combat() && combatLog.DamageTakenCount() > 0
             : combatLog.DamageTakenCount() > 0;
     }
 }

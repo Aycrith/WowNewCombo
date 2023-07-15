@@ -90,7 +90,7 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
     {
         wait.Update();
 
-        if (combatUtil.EnteredCombat() && !bits.TargetInCombat())
+        if (combatUtil.EnteredCombat() && !bits.Target_Combat())
         {
             stopMoving.Stop();
 
@@ -106,7 +106,7 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
             input.PressApproach();
         }
 
-        if (!bits.PlayerInCombat())
+        if (!bits.Combat())
         {
             NonCombatApproach();
             RandomJump();
@@ -168,7 +168,7 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
 
             if (playerReader.TargetGuid != initialTargetGuid)
             {
-                if (bits.HasTarget() && !targetBlacklist.Is())
+                if (bits.Target() && !targetBlacklist.Is())
                 {
                     if (playerReader.MinRange() < initialTargetMinRange)
                     {

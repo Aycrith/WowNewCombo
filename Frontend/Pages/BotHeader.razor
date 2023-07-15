@@ -42,7 +42,7 @@
                 <td>@BagReader.BagItems.Count / @BagReader.SlotCount</td>
                 <td>@ActionBarCostReader.Count / @SpellBookReader.Count / @TalentReader.Count</td>
                 <td>
-                    @if (Bits.HasTarget())
+                    @if (Bits.Target())
                     {
                         <a href="@($"{api.NpcId}{playerReader.TargetId}")" target="_blank">
                             <div>
@@ -90,7 +90,7 @@
     [Parameter]
     public bool ShowActiveGoal { get; set; } = true;
 
-    private bool PlayerInCombat => Bits.PlayerInCombat();
+    private bool PlayerInCombat => Bits.Combat();
 
     private string CombatBadge()
     {

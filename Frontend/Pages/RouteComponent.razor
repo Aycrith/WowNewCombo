@@ -37,7 +37,7 @@
                 </g>
                 <g class="group2">
                     @{
-                        var colour = Bits.PlayerInCombat() ? "red" : "orange";
+                        var colour = Bits.Combat() ? "red" : "orange";
                         if (botController.GoapAgent?.CurrentGoal is FollowRouteGoal)
                         {
                             colour = "blue";

@@ -55,7 +55,7 @@ public sealed partial class MouseOverBlacklist : IBlacklist
 
     public bool Is()
     {
-        if (!bits.HasMouseOver())
+        if (!bits.MouseOver())
         {
             lastGuid = 0;
             return false;
@@ -65,13 +65,13 @@ public sealed partial class MouseOverBlacklist : IBlacklist
             return false;
         }
 
-        if (playerReader.PetHasTarget() && playerReader.MouseOverGuid == playerReader.PetGuid)
+        if (playerReader.PetTarget() && playerReader.MouseOverGuid == playerReader.PetGuid)
         {
             return true;
         }
 
         // it is trying to kill me
-        if (bits.MouseOverTargetIsPlayerOrPet())
+        if (bits.MouseOverTarget_PlayerOrPet())
         {
             return false;
         }
@@ -87,7 +87,7 @@ public sealed partial class MouseOverBlacklist : IBlacklist
             return true; // ignore non white listed unit classification
         }
 
-        if (!allowPvP && (bits.MouseOverIsPlayer() || bits.MouseOverPlayerControlled()))
+        if (!allowPvP && (bits.MouseOver_Player() || bits.MouseOver_PlayerControlled()))
         {
             if (lastGuid != playerReader.MouseOverGuid)
             {
@@ -98,7 +98,7 @@ public sealed partial class MouseOverBlacklist : IBlacklist
             return true; // ignore players and pets
         }
 
-        if (!bits.MouseOverIsDead() && bits.MouseOverIsTagged())
+        if (!bits.MouseOver_Dead() && bits.MouseOver_Tagged())
         {
             if (lastGuid != playerReader.MouseOverGuid)
             {
@@ -110,7 +110,7 @@ public sealed partial class MouseOverBlacklist : IBlacklist
         }
 
 
-        if (bits.MouseOverCanBeHostile() && playerReader.MouseOverLevel > playerReader.Level.Value + above)
+        if (bits.MouseOver_Hostile() && playerReader.MouseOverLevel > playerReader.Level.Value + above)
         {
             if (lastGuid != playerReader.MouseOverGuid)
             {
@@ -123,7 +123,7 @@ public sealed partial class MouseOverBlacklist : IBlacklist
 
         if (checkMouseOverGivesExp)
         {
-            if (bits.MouseOverIsTrivial())
+            if (bits.MouseOver_Trivial())
             {
                 if (lastGuid != playerReader.MouseOverGuid)
                 {
@@ -133,7 +133,7 @@ public sealed partial class MouseOverBlacklist : IBlacklist
                 return true;
             }
         }
-        else if (bits.MouseOverCanBeHostile() && playerReader.MouseOverLevel < playerReader.Level.Value - below)
+        else if (bits.MouseOver_Hostile() && playerReader.MouseOverLevel < playerReader.Level.Value - below)
         {
             if (lastGuid != playerReader.MouseOverGuid)
             {

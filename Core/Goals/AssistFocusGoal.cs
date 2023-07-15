@@ -78,7 +78,7 @@ public sealed class AssistFocusGoal : GoapGoal
     {
         wait.Update();
 
-        for (int i = 0; bits.TargetAlive() && i < Keys.Length; i++)
+        for (int i = 0; bits.Target_Alive() && i < Keys.Length; i++)
         {
             KeyAction keyAction = Keys[i];
 
@@ -96,7 +96,7 @@ public sealed class AssistFocusGoal : GoapGoal
             if (castingHandler.CastIfReady(keyAction,
                 keyAction.Interrupts.Count > 0
                 ? keyAction.CanBeInterrupted
-                : bits.TargetAlive))
+                : bits.Target_Alive))
             {
                 break;
             }

@@ -185,25 +185,25 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
     public override void Update()
     {
-        if (bits.HasTarget() && bits.TargetIsDead())
+        if (bits.Target() && bits.Target_Dead())
         {
             Log("Has target but its dead.");
             input.PressClearTarget();
             wait.Update();
 
-            if (bits.HasTarget())
+            if (bits.Target())
             {
                 SendGoapEvent(ScreenCaptureEvent.Default);
                 LogWarning($"Unable to clear target! Check Bindpad settings!");
             }
         }
 
-        if (bits.IsDrowning())
+        if (bits.Drowning())
         {
             input.PressJump();
         }
 
-        if (bits.PlayerInCombat() && classConfig.Mode != Mode.AttendedGather) { return; }
+        if (bits.Combat() && classConfig.Mode != Mode.AttendedGather) { return; }
 
         if (!sideActivityCts.IsCancellationRequested)
         {
@@ -211,7 +211,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         }
         else
         {
-            if (!bits.HasTarget())
+            if (!bits.Target())
             {
                 LogWarning($"{nameof(sideActivityCts)} is cancelled but needs to be restarted!");
                 sideActivityCts = new();
@@ -230,7 +230,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
         while (!sideActivityCts.IsCancellationRequested)
         {
-            if (targetFinder.Search(NpcNameToFind, bits.TargetIsNotDead, sideActivityCts.Token))
+            if (targetFinder.Search(NpcNameToFind, bits.Target_NotDead, sideActivityCts.Token))
             {
                 Log("Found target!");
                 sideActivityCts.Cancel();

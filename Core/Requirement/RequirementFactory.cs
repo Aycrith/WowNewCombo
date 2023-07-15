@@ -125,13 +125,13 @@ public sealed partial class RequirementFactory
         boolVariables = new(StringComparer.InvariantCultureIgnoreCase)
         {
             // Target Based
-            { "TargetYieldXP", bits.TargetIsNotTrivial },
+            { "TargetYieldXP", bits.Target_NotTrivial },
             { "TargetsMe", playerReader.TargetsMe },
             { "TargetsPet", playerReader.TargetsPet },
             { "TargetsNone", playerReader.TargetsNone },
 
             { AddVisible, npcNameFinder._PotentialAddsExist },
-            { "InCombat", bits.PlayerInCombat },
+            { "InCombat", bits.Combat },
 
             // Range
             { "InMeleeRange", playerReader.IsInMeleeRange },
@@ -141,36 +141,36 @@ public sealed partial class RequirementFactory
             { "InCombatRange", playerReader.WithInCombatRange },
             
             // Pet
-            { "Has Pet", bits.HasPet },
-            { "Pet Happy", bits.PetHappy },
-            { "Pet HasTarget", playerReader.PetHasTarget },
-            { "Mounted", bits.IsMounted },
+            { "Has Pet", bits.Pet },
+            { "Pet Happy", bits.Pet_Happy },
+            { "Pet HasTarget", playerReader.PetTarget },
+            { "Mounted", bits.Mounted },
             
             // Auto Spell
-            { "AutoAttacking", bits.SpellOn_AutoAttack },
-            { "Shooting", bits.SpellOn_Shoot },
-            { "AutoShot", bits.SpellOn_AutoShot },
+            { "AutoAttacking", bits.Auto_Attack },
+            { "Shooting", bits.Shoot },
+            { "AutoShot", bits.AutoShot },
             
             // Temporary Enchants
-            { "HasMainHandEnchant", bits.HasMainHandTempEnchant },
-            { "HasOffHandEnchant", bits.HasOffHandTempEnchant },
+            { "HasMainHandEnchant", bits.MainHandTempEnchant },
+            { "HasOffHandEnchant", bits.OffHandTempEnchant },
             
             // Equipment - Bag
-            { "Items Broken", bits.ItemsAreBroken },
+            { "Items Broken", bits.Items_Broken },
             { "BagFull", bagReader.BagsFull },
             { "BagGreyItem", bagReader.AnyGreyItem },
-            { "HasRangedWeapon", equipmentReader.HasRanged },
-            { "HasAmmo", bits.HasAmmo },
+            { "HasRangedWeapon", equipmentReader.RangedWeapon },
+            { "HasAmmo", bits.Ammo },
 
             { "Casting", playerReader.IsCasting },
-            { "HasTarget", bits.HasTarget },
-            { "TargetHostile", bits.TargetCanBeHostile },
-            { "TargetAlive", bits.TargetAlive },
+            { "HasTarget", bits.Target },
+            { "TargetHostile", bits.Target_Hostile },
+            { "TargetAlive", bits.Target_Alive },
 
             // Player Affected
-            { Swimming, bits.IsSwimming },
-            { Falling, bits.IsFalling },
-            { "Dead", bits.IsDead },
+            { Swimming, bits.Swimming },
+            { Falling, bits.Falling },
+            { "Dead", bits.Dead },
         };
 
         AddBuffs("", boolVariables, playerBuffs);
@@ -208,6 +208,7 @@ public sealed partial class RequirementFactory
             //"Buff_{textureId}"
             //"Debuff_{textureId}"
             //"TBuff_{textureId}"
+            //"FBuff_{textureId}"
             { "MainHandSpeed", playerReader.MainHandSpeedMs },
             { "MainHandSwing", MainHandSwing },
             { "RangedSpeed", playerReader.RangedSpeedMs },

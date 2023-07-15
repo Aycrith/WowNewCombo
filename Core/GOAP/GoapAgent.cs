@@ -245,8 +245,8 @@ public sealed partial class GoapAgent : IDisposable
 
         bool dmgTaken = combatLog.DamageTakenCount() > 0;
         bool dmgDone = combatLog.DamageDoneCount() > 0;
-        bool hasTarget = b.HasTarget();
-        bool playerCombat = b.PlayerInCombat();
+        bool hasTarget = b.Target();
+        bool playerCombat = b.Combat();
 
         int data =
             (B(hasTarget) << (int)GoapKey.hastarget) |
@@ -254,7 +254,7 @@ public sealed partial class GoapAgent : IDisposable
             (B(dmgTaken) << (int)GoapKey.damagetaken) |
             (B(dmgDone) << (int)GoapKey.damagedone) |
             (B(dmgTaken || dmgDone) << (int)GoapKey.damagetakenordone) |
-            (B(hasTarget && !b.TargetIsDead()) << (int)GoapKey.targetisalive) |
+            (B(hasTarget && !b.Target_Dead()) << (int)GoapKey.targetisalive) |
 
             (B((hasTarget &&
             playerReader.TargetHealthPercent() < 30) ||
@@ -262,22 +262,22 @@ public sealed partial class GoapAgent : IDisposable
                 UnitsTarget.Pet or UnitsTarget.PartyOrPet) << (int)GoapKey.targettargetsus) |
 
             (B(playerCombat) << (int)GoapKey.incombat) |
-            (B(playerReader.PetHasTarget() && !b.PetTargetIsDead()) << (int)GoapKey.pethastarget) |
+            (B(playerReader.PetTarget() && !b.PetTarget_Dead()) << (int)GoapKey.pethastarget) |
             (B(mountHandler.IsMounted()) << (int)GoapKey.ismounted) |
             (B(playerReader.WithInPullRange()) << (int)GoapKey.withinpullrange) |
             (B(playerReader.WithInCombatRange()) << (int)GoapKey.incombatrange) |
             // pulled always false
-            (B(b.IsDead()) << (int)GoapKey.isdead) |
+            (B(b.Dead()) << (int)GoapKey.isdead) |
             (B(State.LootableCorpseCount > 0) << (int)GoapKey.shouldloot) |
             (B(State.GatherableCorpseCount > 0) << (int)GoapKey.shouldgather) |
             (B(State.LastCombatKillCount > 0) << (int)GoapKey.producedcorpse) |
             (B(State.ShouldConsumeCorpse) << (int)GoapKey.consumecorpse) |
-            (B(b.IsSwimming()) << (int)GoapKey.isswimming) |
-            (B(b.ItemsAreBroken()) << (int)GoapKey.itemsbroken) |
+            (B(b.Swimming()) << (int)GoapKey.isswimming) |
+            (B(b.Items_Broken()) << (int)GoapKey.itemsbroken) |
             (B(State.Gathering) << (int)GoapKey.gathering) |
-            (B(b.TargetCanBeHostile()) << (int)GoapKey.targethostile) |
-            (B(b.HasFocus()) << (int)GoapKey.hasfocus) |
-            (B(b.FocusHasTarget()) << (int)GoapKey.focushastarget) |
+            (B(b.Target_Hostile()) << (int)GoapKey.targethostile) |
+            (B(b.Focus()) << (int)GoapKey.hasfocus) |
+            (B(b.FocusTarget()) << (int)GoapKey.focushastarget) |
             (B(State.ConsumableCorpseCount > 0) << (int)GoapKey.consumablecorpsenearby)
             ;
 

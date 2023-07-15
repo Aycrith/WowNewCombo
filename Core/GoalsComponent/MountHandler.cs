@@ -47,17 +47,17 @@ public sealed partial class MountHandler : IMountHandler
     {
         return
             !IsMounted() &&
-            !bits.IsIndoors() &&
-            !bits.PlayerInCombat() &&
-            !bits.IsSwimming() &&
-            !bits.IsFalling() &&
+            !bits.Indoors() &&
+            !bits.Combat() &&
+            !bits.Swimming() &&
+            !bits.Falling() &&
             usableAction.Is(classConfig.Mount) &&
             cooldownReader.Get(classConfig.Mount) == 0;
     }
 
     public void MountUp()
     {
-        wait.While(bits.IsFalling);
+        wait.While(bits.Falling);
 
         stopMoving.Stop();
         wait.Update();
@@ -78,12 +78,12 @@ public sealed partial class MountHandler : IMountHandler
 
         if (HasValidTarget())
         {
-            LogIsMounted(logger, bits.IsMounted());
+            LogIsMounted(logger, bits.Mounted());
             return;
         }
 
         wait.Fixed(playerReader.NetworkLatency);
-        LogIsMounted(logger, bits.IsMounted());
+        LogIsMounted(logger, bits.Mounted());
     }
 
     public bool ShouldMount(Vector3 targetW)
@@ -105,20 +105,20 @@ public sealed partial class MountHandler : IMountHandler
 
     public bool IsMounted()
     {
-        return bits.IsMounted();
+        return bits.Mounted();
     }
 
     private bool CastDetected() =>
-        bits.IsMounted() || playerReader.IsCasting();
+        bits.Mounted() || playerReader.IsCasting();
 
     private bool MountedOrNotCastingOrValidTargetOrEnteredCombat() =>
-        bits.IsMounted() ||
+        bits.Mounted() ||
         !playerReader.IsCasting() ||
         HasValidTarget() ||
-        bits.PlayerInCombat();
+        bits.Combat();
 
     private bool HasValidTarget() =>
-        bits.HasTarget() && bits.TargetAlive() && !targetBlacklist.Is() &&
+        bits.Target() && bits.Target_Alive() && !targetBlacklist.Is() &&
         playerReader.MinRange() < MIN_DISTANCE_TO_INTERRUPT_CAST;
 
 

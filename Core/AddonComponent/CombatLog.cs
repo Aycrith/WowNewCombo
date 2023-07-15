@@ -57,7 +57,7 @@ public sealed class CombatLog : IReader
 
     public void Update(IAddonDataProvider reader)
     {
-        bool combat = bits.PlayerInCombat();
+        bool combat = bits.Combat();
 
         if (TargetMissType.Updated(reader))
         {

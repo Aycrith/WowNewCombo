@@ -44,7 +44,7 @@ public sealed class TargetFinder
     private bool LookForTarget(NpcNames target, CancellationToken ct)
     {
         if (ElapsedMs < Random.Shared.Next(minMs, maxMs))
-            return bits.HasTarget();
+            return bits.Target();
 
         if (!ct.IsCancellationRequested &&
             classConfig.TargetNearestTarget.GetRemainingCooldown() == 0)
@@ -53,7 +53,7 @@ public sealed class TargetFinder
             wait.Update();
         }
 
-        if (!ct.IsCancellationRequested && !input.KeyboardOnly && !bits.HasTarget())
+        if (!ct.IsCancellationRequested && !input.KeyboardOnly && !bits.Target())
         {
             npcNameTargeting.ChangeNpcType(target);
             npcNameTargeting.WaitForUpdate();
@@ -69,7 +69,7 @@ public sealed class TargetFinder
 
         lastActive = DateTime.UtcNow;
 
-        return bits.HasTarget();
+        return bits.Target();
     }
 
 }

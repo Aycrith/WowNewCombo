@@ -106,7 +106,7 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
     // 47 empty
 
     public Stance Stance { get; }
-    public Form Form => Stance.Get(Class, bits.IsStealthed(), Version);
+    public Form Form => Stance.Get(Class, bits.Stealthed(), Version);
 
     public int MinRange() => reader.GetInt(49) % 1000;
     public int MaxRange() => reader.GetInt(49) / 1000 % 1000;
@@ -154,7 +154,7 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
 
     public int PetGuid => reader.GetInt(68);
     public int PetTargetGuid => reader.GetInt(69);
-    public bool PetHasTarget() => PetTargetGuid != 0;
+    public bool PetTarget() => PetTargetGuid != 0;
 
     public int CastCount => reader.GetInt(70);
 

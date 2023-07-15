@@ -134,12 +134,12 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         SendGoapEvent(new RemoveClosestPoi(CorpseEvent.NAME));
         state.LootableCorpseCount = Math.Max(0, state.LootableCorpseCount - 1);
 
-        if (!gatherCorpse && bits.HasTarget())
+        if (!gatherCorpse && bits.Target())
         {
             input.PressClearTarget();
             wait.Update();
 
-            if (bits.HasTarget())
+            if (bits.Target())
             {
                 SendGoapEvent(ScreenCaptureEvent.Default);
                 LogWarning("Unable to clear target! Check Bindpad settings!");
@@ -172,7 +172,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         npcNameTargeting.ChangeNpcType(NpcNames.None);
 
         Log("Nearest Corpse clicked...");
-        float elapsedMs = wait.Until(playerReader.NetworkLatency, bits.HasTarget);
+        float elapsedMs = wait.Until(playerReader.NetworkLatency, bits.Target);
         LogFoundNpcNameCount(logger, npcNameTargeting.NpcCount, elapsedMs);
 
         CheckForGather();
@@ -272,15 +272,15 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
     private bool LootKeyboard()
     {
-        if (!bits.HasTarget())
+        if (!bits.Target())
         {
             input.PressFastLastTarget();
             wait.Update();
         }
 
-        if (bits.HasTarget())
+        if (bits.Target())
         {
-            if (bits.TargetIsDead())
+            if (bits.Target_Dead())
             {
                 CheckForGather();
 
@@ -307,7 +307,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
             }
         }
 
-        return bits.HasTarget();
+        return bits.Target();
     }
 
     private bool LootReset()

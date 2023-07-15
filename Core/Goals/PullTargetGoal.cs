@@ -154,8 +154,8 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         }
 
         if (classConfig.AutoPetAttack &&
-            bits.HasPet() &&
-            (!playerReader.PetHasTarget() ||
+            bits.Pet() &&
+            (!playerReader.PetTarget() ||
             playerReader.TargetGuid != playerReader.PetTargetGuid) &&
             input.PetAttack.GetRemainingCooldown() == 0)
         {
@@ -188,9 +188,9 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
             }
             else if (PullPrevention() &&
                 (playerReader.IsCasting() ||
-                 bits.SpellOn_AutoAttack() ||
-                 bits.SpellOn_AutoShot() ||
-                 bits.SpellOn_Shoot()))
+                 bits.Auto_Attack() ||
+                 bits.AutoShot() ||
+                 bits.Shoot()))
             {
                 Log("Preventing pulling possible tagged target!");
                 input.PressStopAttack();
@@ -207,7 +207,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         {
             if (wait.Until(AcquireTargetTimeMs, CombatLogChanged) >= 0)
             {
-                if (combatLog.DamageTakenCount() > 0 && !bits.TargetInCombat())
+                if (combatLog.DamageTakenCount() > 0 && !bits.Target_Combat())
                 {
                     stopMoving.Stop();
 
@@ -222,7 +222,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
                 return;
             }
         }
-        else if (bits.PlayerInCombat())
+        else if (bits.Combat())
         {
             SendGoapEvent(new GoapStateEvent(GoapKey.pulled, true));
             return;
@@ -234,7 +234,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
     private bool CombatLogChanged()
     {
         return
-            bits.TargetInCombat() ||
+            bits.Target_Combat() ||
             combatLog.DamageDoneCount() > 0 ||
             combatLog.DamageTakenCount() > 0 ||
             playerReader.TargetTarget is

@@ -66,7 +66,7 @@ public sealed partial class TargetBlacklist : IBlacklist, IDisposable
 
     public bool Is()
     {
-        if (!bits.HasTarget())
+        if (!bits.Target())
         {
             lastGuid = 0;
             return false;
@@ -76,7 +76,7 @@ public sealed partial class TargetBlacklist : IBlacklist, IDisposable
             return false;
         }
 
-        if (playerReader.PetHasTarget() && playerReader.TargetGuid == playerReader.PetGuid)
+        if (playerReader.PetTarget() && playerReader.TargetGuid == playerReader.PetGuid)
         {
             return true;
         }
@@ -95,7 +95,7 @@ public sealed partial class TargetBlacklist : IBlacklist, IDisposable
         }
 
         // it is trying to kill me
-        if (bits.TargetOfTargetIsPlayerOrPet())
+        if (bits.TargetTarget_PlayerOrPet())
         {
             return false;
         }
@@ -113,7 +113,7 @@ public sealed partial class TargetBlacklist : IBlacklist, IDisposable
             return true; // ignore non white listed unit classification
         }
 
-        if (!allowPvP && (bits.TargetIsPlayer() || bits.TargetIsPlayerControlled()))
+        if (!allowPvP && (bits.Target_Player() || bits.Target_PlayerControlled()))
         {
             if (lastGuid != playerReader.TargetGuid)
             {
@@ -126,7 +126,7 @@ public sealed partial class TargetBlacklist : IBlacklist, IDisposable
             return true; // ignore players and pets
         }
 
-        if (!bits.TargetIsDead() && bits.TargetIsTagged())
+        if (!bits.Target_Dead() && bits.Target_Tagged())
         {
             if (lastGuid != playerReader.TargetGuid)
             {
@@ -139,7 +139,7 @@ public sealed partial class TargetBlacklist : IBlacklist, IDisposable
         }
 
 
-        if (bits.TargetCanBeHostile() && playerReader.TargetLevel > playerReader.Level.Value + above)
+        if (bits.Target_Hostile() && playerReader.TargetLevel > playerReader.Level.Value + above)
         {
             if (lastGuid != playerReader.TargetGuid)
             {
@@ -153,7 +153,7 @@ public sealed partial class TargetBlacklist : IBlacklist, IDisposable
 
         if (checkTargetGivesExp)
         {
-            if (bits.TargetIsTrivial())
+            if (bits.Target_Trivial())
             {
                 if (lastGuid != playerReader.TargetGuid)
                 {
@@ -164,7 +164,7 @@ public sealed partial class TargetBlacklist : IBlacklist, IDisposable
                 return true;
             }
         }
-        else if (bits.TargetCanBeHostile() && playerReader.TargetLevel < playerReader.Level.Value - below)
+        else if (bits.Target_Hostile() && playerReader.TargetLevel < playerReader.Level.Value - below)
         {
             if (lastGuid != playerReader.TargetGuid)
             {

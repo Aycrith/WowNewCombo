@@ -72,7 +72,7 @@ public partial class WaitForGatheringGoal : GoapGoal
         stopMoving.Stop();
         wait.Update();
 
-        wait.While(bits.IsFalling);
+        wait.While(bits.Falling);
 
         LogOnEnter(logger);
     }
@@ -162,7 +162,7 @@ public partial class WaitForGatheringGoal : GoapGoal
             }
         }
 
-        if (bits.IsFalling())
+        if (bits.Falling())
         {
             state = CastState.Abort;
             LogState(logger, state.ToStringF());

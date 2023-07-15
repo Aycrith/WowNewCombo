@@ -240,7 +240,7 @@ public sealed partial class CastingHandler
 
     private bool CastCastbar(KeyAction item, CancellationToken token, bool retry)
     {
-        wait.While(bits.IsFalling);
+        wait.While(bits.Falling);
 
         if (!playerReader.IsCasting())
         {
@@ -387,7 +387,7 @@ public sealed partial class CastingHandler
             }
         }
 
-        if (bits.SpellOn_Shoot())
+        if (bits.Shoot())
         {
             input.PressStopAttack();
             input.PressStopAttack();
@@ -395,7 +395,7 @@ public sealed partial class CastingHandler
             int waitTime =
                 Max(playerReader.GCD.Value, playerReader.RemainCastMs) + (2 * playerReader.NetworkLatency);
             elapsedMs = wait.Until(waitTime, token);
-            logger.LogInformation($"Stop {nameof(bits.SpellOn_Shoot)} and wait {waitTime}ms | {elapsedMs}ms");
+            logger.LogInformation($"Stop {nameof(bits.Shoot)} and wait {waitTime}ms | {elapsedMs}ms");
             if (elapsedMs >= 0)
             {
                 return false;
@@ -520,7 +520,7 @@ public sealed partial class CastingHandler
             static float AfterCastWaitCombat(int timeMs, Wait wait, AddonBits bits,
                 CancellationToken token)
                 => wait.Until(timeMs,
-                () => bits.PlayerInCombat() || token.IsCancellationRequested);
+                () => bits.Combat() || token.IsCancellationRequested);
         }
 
         if (item.AfterCastWaitMeleeRange)
@@ -651,9 +651,9 @@ public sealed partial class CastingHandler
     private void RepeatPetAttack()
     {
         if (classConfig.AutoPetAttack &&
-            bits.PlayerInCombat() &&
-            bits.HasPet() &&
-            (!playerReader.PetHasTarget() ||
+            bits.Combat() &&
+            bits.Pet() &&
+            (!playerReader.PetTarget() ||
             playerReader.TargetGuid != playerReader.PetTargetGuid) &&
             input.PetAttack.GetRemainingCooldown() == 0)
         {

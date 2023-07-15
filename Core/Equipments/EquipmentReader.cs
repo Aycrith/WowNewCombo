@@ -57,7 +57,7 @@ public sealed class EquipmentReader : IReader
         return string.Join(", ", equipmentIds);
     }
 
-    public bool HasRanged()
+    public bool RangedWeapon()
     {
         return equipmentIds[(int)InventorySlotId.Ranged] != 0;
     }

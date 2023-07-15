@@ -43,8 +43,8 @@ public sealed class TargetPetTargetGoal : GoapGoal
         input.PressTargetOfTarget();
         wait.Update();
 
-        if (bits.HasTarget() &&
-            (bits.TargetIsDead() || playerReader.TargetGuid == playerReader.PetGuid))
+        if (bits.Target() &&
+            (bits.Target_Dead() || playerReader.TargetGuid == playerReader.PetGuid))
         {
             input.PressClearTarget();
             wait.Update();

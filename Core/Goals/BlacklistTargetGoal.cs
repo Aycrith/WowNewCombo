@@ -23,15 +23,15 @@ public sealed class BlacklistTargetGoal : GoapGoal
 
     public override bool CanRun()
     {
-        return bits.HasTarget() && targetBlacklist.Is();
+        return bits.Target() && targetBlacklist.Is();
     }
 
     public override void OnEnter()
     {
-        if (playerReader.PetHasTarget() ||
+        if (playerReader.PetTarget() ||
             playerReader.IsCasting() ||
-            bits.SpellOn_AutoAttack() || bits.SpellOn_AutoShot() ||
-            bits.SpellOn_Shoot())
+            bits.Auto_Attack() || bits.AutoShot() ||
+            bits.Shoot())
             input.PressStopAttack();
 
         input.PressClearTarget();

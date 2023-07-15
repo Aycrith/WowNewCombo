@@ -73,7 +73,7 @@ public sealed class StuckDetector
 
     public void Update()
     {
-        if (bits.IsFalling())
+        if (bits.Falling())
             return;
 
         if (debug)

@@ -92,7 +92,7 @@ public sealed class ReactCastError
                 break;
             case UI_ERROR.ERR_SPELL_OUT_OF_RANGE:
 
-                if (!bits.HasTarget())
+                if (!bits.Target())
                     return;
 
                 if (playerReader.Class == UnitClass.Hunter && playerReader.IsInMeleeRange())
@@ -102,7 +102,7 @@ public sealed class ReactCastError
                 }
 
                 int minRange = playerReader.MinRange();
-                if (bits.PlayerInCombat() && bits.HasTarget() && !playerReader.IsTargetCasting())
+                if (bits.Combat() && bits.Target() && !playerReader.IsTargetCasting())
                 {
                     if (playerReader.TargetTarget == UnitsTarget.Me)
                     {
@@ -163,9 +163,9 @@ public sealed class ReactCastError
             case UI_ERROR.ERR_BADATTACKFACING:
 
                 bool wasAnyAuto =
-                    bits.SpellOn_AutoShot() ||
-                    bits.SpellOn_AutoAttack() ||
-                    bits.SpellOn_Shoot();
+                    bits.AutoShot() ||
+                    bits.Auto_Attack() ||
+                    bits.Shoot();
 
                 float beforeDir = playerReader.Direction;
 
@@ -208,7 +208,7 @@ public sealed class ReactCastError
                 break;
             case UI_ERROR.SPELL_FAILED_MOVING:
                 logger.LogInformation($"React to {value.ToStringF()} -- Stop moving!");
-                wait.While(bits.IsFalling);
+                wait.While(bits.Falling);
                 stopMoving.Stop();
                 wait.Update();
                 break;
@@ -217,7 +217,7 @@ public sealed class ReactCastError
                 wait.While(playerReader.IsCasting);
                 break;
             case UI_ERROR.ERR_BADATTACKPOS:
-                if (bits.SpellOn_AutoAttack())
+                if (bits.Auto_Attack())
                 {
                     logger.LogInformation($"React to {value.ToStringF()} -- Interact!");
                     input.PressInteract();
@@ -230,7 +230,7 @@ public sealed class ReactCastError
                 }
                 break;
             case UI_ERROR.SPELL_FAILED_LINE_OF_SIGHT:
-                if (!bits.PlayerInCombat())
+                if (!bits.Combat())
                 {
                     logger.LogInformation($"React to {value.ToStringF()} -- Stop attack and clear target!");
                     input.PressStopAttack();

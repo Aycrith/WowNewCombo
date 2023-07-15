@@ -96,7 +96,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
 
     public override void OnExit()
     {
-        if (combatLog.DamageTakenCount() > 0 && !bits.HasTarget())
+        if (combatLog.DamageTakenCount() > 0 && !bits.Target())
         {
             stopMoving.Stop();
         }
@@ -116,23 +116,23 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
         lastMinDistance = playerReader.MinRange();
         lastMaxDistance = playerReader.MaxRange();
 
-        if (bits.IsDrowning())
+        if (bits.Drowning())
         {
             input.PressJump();
             return;
         }
 
-        if (bits.HasTarget())
+        if (bits.Target())
         {
             if (classConfig.AutoPetAttack &&
-                bits.HasPet() &&
-                (!playerReader.PetHasTarget() || playerReader.PetTargetGuid != playerReader.TargetGuid) &&
+                bits.Pet() &&
+                (!playerReader.PetTarget() || playerReader.PetTargetGuid != playerReader.TargetGuid) &&
                 input.PetAttack.GetRemainingCooldown() == 0)
             {
                 input.PressPetAttack();
             }
 
-            for (int i = 0; bits.TargetAlive() && i < Keys.Length; i++)
+            for (int i = 0; bits.Target_Alive() && i < Keys.Length; i++)
             {
                 KeyAction keyAction = Keys[i];
 
@@ -144,14 +144,14 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
                 if (castingHandler.CastIfReady(keyAction,
                     keyAction.Interrupts.Count > 0
                     ? keyAction.CanBeInterrupted
-                    : bits.TargetAlive))
+                    : bits.Target_Alive))
                 {
                     break;
                 }
             }
         }
 
-        if (!bits.HasTarget())
+        if (!bits.Target())
         {
             logger.LogInformation("Lost target!");
 
@@ -165,7 +165,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
 
     private void FindNewTarget()
     {
-        if (playerReader.PetHasTarget() && combatLog.DeadGuid.Value != playerReader.PetTargetGuid)
+        if (playerReader.PetTarget() && combatLog.DeadGuid.Value != playerReader.PetTargetGuid)
         {
             ResetCooldowns();
 
@@ -173,7 +173,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
             input.PressTargetOfTarget();
             wait.Update();
 
-            if (!bits.TargetIsDead())
+            if (!bits.Target_Dead())
             {
                 logger.LogWarning("---- New targe from Pet target!");
                 return;
@@ -188,9 +188,9 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
             input.PressNearestTarget();
             wait.Update();
 
-            if (bits.HasTarget() && !bits.TargetIsDead())
+            if (bits.Target() && !bits.Target_Dead())
             {
-                if (bits.TargetInCombat() && bits.TargetOfTargetIsPlayerOrPet())
+                if (bits.Target_Combat() && bits.TargetTarget_PlayerOrPet())
                 {
                     stopMoving.Stop();
                     ResetCooldowns();
@@ -205,7 +205,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
             else if (combatLog.DamageTakenCount() > 0)
             {
                 logger.LogWarning($"---- Possible threats from behind {combatLog.DamageTakenCount()}. Waiting target by damage taken!");
-                wait.Till(2500, bits.HasTarget);
+                wait.Till(2500, bits.Target);
             }
         }
     }

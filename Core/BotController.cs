@@ -243,7 +243,7 @@ public sealed partial class BotController : IBotController, IDisposable
 
                 pather.DrawSphere(
                     new SphereArgs("Player", playerReader.MapPos,
-                    bits.PlayerInCombat() ? 1 : bits.HasTarget() ? 6 : 2,
+                    bits.Combat() ? 1 : bits.Target() ? 6 : 2,
                     playerReader.UIMapId.Value))
                     .AsTask().Wait(cts.Token);
             }

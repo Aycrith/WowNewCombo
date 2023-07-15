@@ -29,24 +29,24 @@ public sealed class CombatUtil
         this.bits = bits;
         this.combatLog = combatLog;
 
-        outOfCombat = !bits.PlayerInCombat();
+        outOfCombat = !bits.Combat();
     }
 
     public void Update()
     {
-        outOfCombat = !bits.PlayerInCombat();
+        outOfCombat = !bits.Combat();
     }
 
     public bool EnteredCombat()
     {
-        if (!outOfCombat && !bits.PlayerInCombat())
+        if (!outOfCombat && !bits.Combat())
         {
             Log("Combat Leave");
             outOfCombat = true;
             return false;
         }
 
-        if (outOfCombat && bits.PlayerInCombat())
+        if (outOfCombat && bits.Combat())
         {
             Log("Combat Enter");
             outOfCombat = false;
@@ -58,10 +58,10 @@ public sealed class CombatUtil
 
     public bool AcquiredTarget(int maxTimeMs = 400)
     {
-        if (!bits.PlayerInCombat())
+        if (!bits.Combat())
             return false;
 
-        if (playerReader.PetHasTarget())
+        if (playerReader.PetTarget())
         {
             input.PressTargetPet();
             Log($"Pets target {playerReader.TargetTarget}");
@@ -76,9 +76,9 @@ public sealed class CombatUtil
         input.PressNearestTarget();
         wait.Update();
 
-        if (bits.HasTarget() &&
-            bits.TargetInCombat() &&
-            (bits.TargetOfTargetIsPlayerOrPet() ||
+        if (bits.Target() &&
+            bits.Target_Combat() &&
+            (bits.TargetTarget_PlayerOrPet() ||
             combatLog.DamageTaken.Contains(playerReader.TargetGuid)))
         {
             Log("Found target");
@@ -108,7 +108,7 @@ public sealed class CombatUtil
 
     private bool PlayerOrPetHasTarget()
     {
-        return bits.HasTarget() || playerReader.PetHasTarget();
+        return bits.Target() || playerReader.PetTarget();
     }
 
     private void Log(string text)

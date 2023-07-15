@@ -142,7 +142,7 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
 
     public override void Update()
     {
-        if (bits.IsDrowning())
+        if (bits.Drowning())
             input.PressJump();
 
         if (pathState != PathState.Finished)
@@ -230,8 +230,8 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
             wait.Update();
         }
 
-        wait.Until(400, bits.HasTarget);
-        if (!bits.HasTarget())
+        wait.Until(400, bits.Target);
+        if (!bits.Target())
         {
             LogWarn("No target found! Turn left to find NPC");
             input.PressFixed(input.TurnLeftKey, 250, ct);
