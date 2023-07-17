@@ -166,7 +166,7 @@ One of the following IDE or command line
 e.g. Build from Powershell
 ```ps
 cd C:\WowClassicGrindBot
-dotnet build --configuration Release --arch x86
+dotnet build -c Release
 ```
 
 ![Build](images/build.png)
