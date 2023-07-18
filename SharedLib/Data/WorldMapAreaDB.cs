@@ -44,8 +44,9 @@ public sealed class WorldMapAreaDB
 
     public Vector3 ToWorld_FlipXY(int uiMap, Vector3 map)
     {
-        WorldMapArea wma = wmas[uiMap];
-        return new Vector3(wma.ToWorldX(map.Y), wma.ToWorldY(map.X), map.Z);
+        return wmas.TryGetValue(uiMap, out WorldMapArea wma)
+            ? new Vector3(wma.ToWorldX(map.Y), wma.ToWorldY(map.X), map.Z)
+            : Vector3.Zero;
     }
 
     public void ToWorldXY_FlipXY(int uiMap, Vector3[] map)
