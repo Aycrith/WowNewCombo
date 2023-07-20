@@ -54,6 +54,7 @@ public sealed class Requirement
     public const string And = " and ";
     public const string Or = " or ";
 
+    public const string SymbolNegate = "!";
     public const string SymbolAnd = "&&";
     public const string SymbolOr = "||";
 
@@ -62,5 +63,5 @@ public sealed class Requirement
 
     public Func<bool> HasRequirement { get; set; } = False;
     public Func<string> LogMessage { get; set; } = Default;
-    public bool VisibleIfHasRequirement { get; init; } = true;
+    public bool VisibleIfHasRequirement { get; init; }
 }

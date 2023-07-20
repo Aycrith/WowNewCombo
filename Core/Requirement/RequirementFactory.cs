@@ -15,12 +15,12 @@ using Microsoft.Extensions.Logging;
 using SharedLib;
 using SharedLib.NpcFinder;
 
+using static Core.Requirement;
+
 namespace Core;
 
 public sealed partial class RequirementFactory
 {
-    private const bool DEBUG = false;
-
     private readonly ILogger logger;
     private readonly AddonReader addonReader;
     private readonly PlayerReader playerReader;
@@ -33,19 +33,19 @@ public sealed partial class RequirementFactory
     private readonly ItemDB itemDb;
     private readonly CombatLog combatLog;
 
+    private readonly ClassConfiguration classConfig;
+
     private readonly ActionBarBits<ICurrentAction> currentAction;
     private readonly ActionBarBits<IUsableAction> usableAction;
     private readonly ActionBarCooldownReader cooldownReader;
     private readonly ActionBarCostReader costReader;
-
-    private KeyAction[] keyActions = Array.Empty<KeyAction>();
 
     private readonly Dictionary<int, SchoolMask[]> immunityBlacklist;
 
     private readonly string[] negateKeywords = new string[2]
     {
         "not ",
-        "!"
+        SymbolNegate
     };
 
     private readonly Dictionary<string, Func<int>> intVariables;
@@ -92,6 +92,8 @@ public sealed partial class RequirementFactory
         this.cooldownReader = sp.GetRequiredService<ActionBarCooldownReader>();
         this.costReader = sp.GetRequiredService<ActionBarCostReader>();
 
+        this.classConfig = classConfig;
+
         this.immunityBlacklist = classConfig.ImmunityBlacklist;
 
         NpcNameFinder npcNameFinder = sp.GetRequiredService<NpcNameFinder>();
@@ -101,6 +103,11 @@ public sealed partial class RequirementFactory
         TargetDebuffStatus targetDebuffs = sp.GetRequiredService<TargetDebuffStatus>();
         SessionStat sessionStat = sp.GetRequiredService<SessionStat>();
         combatLog = sp.GetRequiredService<CombatLog>();
+
+        var playerBuff = sp.GetRequiredService<AuraTimeReader<IPlayerBuffTimeReader>>();
+        var targetDebuff = sp.GetRequiredService<AuraTimeReader<ITargetDebuffTimeReader>>();
+        var targetBuff = sp.GetRequiredService<AuraTimeReader<ITargetBuffTimeReader>>();
+        var focusBuff = sp.GetRequiredService<AuraTimeReader<IFocusBuffTimeReader>>();
 
         requirementMap = new()
         {
@@ -173,9 +180,9 @@ public sealed partial class RequirementFactory
             { "Dead", bits.Dead },
         };
 
-        AddBuffs("", boolVariables, playerBuffs);
-        AddBuffs("F_", boolVariables, focusBuffs);
-        AddDebuffs("", boolVariables, targetDebuffs);
+        AddAura("", boolVariables, playerBuffs);
+        AddAura("F_", boolVariables, focusBuffs);
+        AddAura("", boolVariables, targetDebuffs);
 
         intVariables = new Dictionary<string, Func<int>>
         {
@@ -203,8 +210,11 @@ public sealed partial class RequirementFactory
             { "LastAutoShotMs", playerReader.AutoShot.ElapsedMs },
             { "LastMainHandMs", playerReader.MainHandSwing.ElapsedMs },
             { "LastTargetDodgeMs", LastTargetDodgeMs },
+            //"CD"
             //"CD_{KeyAction.Name}
+            //"Cost"
             //"Cost_{KeyAction.Name}"
+            //"Cost_{KeyAction.Name}_{0..4}"
             //"Buff_{textureId}"
             //"Debuff_{textureId}"
             //"TBuff_{textureId}"
@@ -220,58 +230,41 @@ public sealed partial class RequirementFactory
             { "Deaths", sessionStat._Deaths },
             { "Kills", sessionStat._Kills },
         };
+
+        InitUserDefinedIntVariables(classConfig.IntVariables,
+            playerBuff, targetDebuff,
+            targetBuff, focusBuff);
     }
 
-    private static void AddBuffs<T>(string prefix, Dictionary<string, Func<bool>> boolVariables, BuffStatus<T> b)
+    private static void AddAura<T>(string prefix,
+        Dictionary<string, Func<bool>> boolVariables, T t) where T : notnull
     {
-        foreach (MethodInfo minfo in b.GetType().GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance))
+        foreach (MethodInfo mInfo in t.GetType().GetMethods(
+            BindingFlags.DeclaredOnly |
+            BindingFlags.Public | BindingFlags.Instance))
         {
-            if (minfo.ReturnType != typeof(bool))
+            if (mInfo.ReturnType != typeof(bool))
                 continue;
 
             NamesAttribute? names =
-                (NamesAttribute?)Attribute.GetCustomAttribute(minfo, typeof(NamesAttribute));
+                (NamesAttribute?)Attribute.GetCustomAttribute(
+                    mInfo, typeof(NamesAttribute));
 
-            if (names != null)
+            if (names is not null)
             {
                 foreach (string name in names.Values)
                 {
-                    boolVariables.Add($"{prefix}{name}", minfo.CreateDelegate<Func<bool>>(b));
+                    boolVariables.Add($"{prefix}{name}",
+                        mInfo.CreateDelegate<Func<bool>>(t));
                 }
             }
             else
             {
-                string name = $"{prefix}{minfo.Name.Replace("_", " ")}";
-                boolVariables.Add(name, minfo.CreateDelegate<Func<bool>>(b));
+                string name = $"{prefix}{mInfo.Name.Replace("_", " ")}";
+                boolVariables.Add(name, mInfo.CreateDelegate<Func<bool>>(t));
             }
         }
     }
-
-    private static void AddDebuffs(string prefix, Dictionary<string, Func<bool>> boolVariables, TargetDebuffStatus b)
-    {
-        foreach (MethodInfo minfo in b.GetType().GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance))
-        {
-            if (minfo.ReturnType != typeof(bool))
-                continue;
-
-            NamesAttribute? names =
-                (NamesAttribute?)Attribute.GetCustomAttribute(minfo, typeof(NamesAttribute));
-
-            if (names != null)
-            {
-                foreach (string name in names.Values)
-                {
-                    boolVariables.Add($"{prefix}{name}", minfo.CreateDelegate<Func<bool>>(b));
-                }
-            }
-            else
-            {
-                string name = $"{prefix}{minfo.Name.Replace("_", " ")}";
-                boolVariables.Add(name, minfo.CreateDelegate<Func<bool>>(b));
-            }
-        }
-    }
-
 
     private int LastTargetDodgeMs()
     {
@@ -281,71 +274,69 @@ public sealed partial class RequirementFactory
     private int MainHandSwing()
     {
         return Clamp(
-            playerReader.MainHandSwing.ElapsedMs() - playerReader.MainHandSpeedMs(),
+            playerReader.MainHandSwing.ElapsedMs() -
+            playerReader.MainHandSpeedMs(),
             -playerReader.MainHandSpeedMs(), 0);
     }
 
     private int RangedSwing()
     {
         return Clamp(
-            playerReader.AutoShot.ElapsedMs() - playerReader.RangedSpeedMs(),
-            -playerReader.RangedSpeedMs(),
-            0);
+            playerReader.AutoShot.ElapsedMs() -
+            playerReader.RangedSpeedMs(),
+            -playerReader.RangedSpeedMs(), 0);
     }
 
-    public void AddSequenceRange(KeyActions keyActions)
-    {
-        int sizeBefore = this.keyActions.Length;
-        Array.Resize(ref this.keyActions, this.keyActions.Length + keyActions.Sequence.Length);
-        Array.ConstrainedCopy(keyActions.Sequence, 0, this.keyActions, sizeBefore, keyActions.Sequence.Length);
-    }
-
-    public void InitialiseRequirements(KeyAction item)
+    public void Init(KeyAction item)
     {
         if (item.Name is Drink or Food)
-            AddConsumableRequirement(item);
+            AddConsumable(item);
 
-        InitPerKeyActionRequirements(item);
-
-        List<Requirement> requirements =
-            ProcessRequirements(item.Name, item.Requirements);
+        List<Requirement> list = new();
 
         if (item.Slot > 0)
-            AddMinRequirement(requirements, item, buffs);
-
-        AddTargetIsCastingRequirement(requirements, item, playerReader);
-
-        if (item.WhenUsable && !string.IsNullOrEmpty(item.Key))
         {
-            requirements.Add(CreateActionUsable(item, playerReader, usableAction));
-            requirements.Add(CreateActionCurrent(item, currentAction));
+            InitPerKeyAction(item);
 
-            if (item.Slot > 0)
-                requirements.Add(CreateActionNotInGameCooldown(item, playerReader, intVariables));
+            AddMinPower(list, item, costReader, buffs);
+            AddGameCooldown(list, item, playerReader, intVariables);
+
+            if (item.WhenUsable)
+            {
+                list.Add(
+                    CreateActionUsable(item, playerReader,
+                    classConfig.Form, costReader, usableAction));
+
+                list.Add(CreateActionCurrent(item, currentAction));
+            }
         }
 
-        AddCooldownRequirement(requirements, item);
-        AddChargeRequirement(requirements, item);
+        Process(list, item.Name, item.Requirements);
 
-        AddSpellSchool(requirements, item, playerReader, immunityBlacklist);
+        AddTargetIsCasting(list, item, playerReader);
 
-        item.RequirementsRuntime = requirements.ToArray();
+        AddKeyActionCooldown(list, item);
+        AddCharge(list, item);
 
-        if (item.Interrupts.Count > 0)
-            InitialiseInterrupts(item);
+        AddSpellSchool(list, item, playerReader, immunityBlacklist);
+
+        item.RequirementsRuntime = list.ToArray();
+
+        list.Clear();
+        Process(list, item.Name, item.Interrupts);
+        item.InterruptsRuntime = list.ToArray();
     }
 
-    private List<Requirement> ProcessRequirements(string name, List<string> requirements)
+    private void Process(List<Requirement> output, string name,
+        List<string> requirements)
     {
-        List<Requirement> output = new();
-
         foreach (string requirement in CollectionsMarshal.AsSpan(requirements))
         {
             List<string> expressions = InfixToPostfix.Convert(requirement);
             Stack<Requirement> stack = new();
             foreach (string expr in CollectionsMarshal.AsSpan(expressions))
             {
-                if (expr.Contains(Requirement.SymbolAnd))
+                if (expr.Contains(SymbolAnd))
                 {
                     Requirement a = stack.Pop();
                     Requirement b = stack.Pop();
@@ -353,7 +344,7 @@ public sealed partial class RequirementFactory
 
                     stack.Push(b);
                 }
-                else if (expr.Contains(Requirement.SymbolOr))
+                else if (expr.Contains(SymbolOr))
                 {
                     Requirement a = stack.Pop();
                     Requirement b = stack.Pop();
@@ -369,20 +360,12 @@ public sealed partial class RequirementFactory
                         continue;
                     }
 
-                    LogProcessingRequirement(logger, name, trim);
+                    LogProcessing(logger, name, trim);
                     stack.Push(CreateRequirement(trim));
                 }
             }
             output.Add(stack.Pop());
         }
-
-        return output;
-    }
-
-    private void InitialiseInterrupts(KeyAction item)
-    {
-        item.InterruptsRuntime =
-            ProcessRequirements(item.Name, item.Interrupts).ToArray();
     }
 
     public void InitUserDefinedIntVariables(Dictionary<string, int> intKeyValues,
@@ -399,37 +382,36 @@ public sealed partial class RequirementFactory
             {
                 throw new Exception($"Unable to add user defined variable to values. [{key} -> {value}]");
             }
-            else
-            {
-                if (key.StartsWith("Buff_"))
-                {
-                    int l() => playerBuffTimeReader.GetRemainingTimeMs(value);
-                    intVariables.TryAdd($"{value}", l);
-                }
-                else if (key.StartsWith("Debuff_"))
-                {
-                    int l() => targetDebuffTimeReader.GetRemainingTimeMs(value);
-                    intVariables.TryAdd($"{value}", l);
-                }
-                else if (key.StartsWith("TBuff_"))
-                {
-                    int l() => targetBuffTimeReader.GetRemainingTimeMs(value);
-                    intVariables.TryAdd($"{value}", l);
-                }
-                else if (key.StartsWith("FBuff_"))
-                {
-                    int l() => focusBuffTimeReader.GetRemainingTimeMs(value);
-                    intVariables.TryAdd($"{value}", l);
-                }
 
-                LogUserDefinedValue(logger, nameof(RequirementFactory), key, value);
+            if (key.StartsWith("Buff_"))
+            {
+                int l() => playerBuffTimeReader.GetRemainingTimeMs(value);
+                intVariables.TryAdd($"{value}", l);
             }
+            else if (key.StartsWith("Debuff_"))
+            {
+                int l() => targetDebuffTimeReader.GetRemainingTimeMs(value);
+                intVariables.TryAdd($"{value}", l);
+            }
+            else if (key.StartsWith("TBuff_"))
+            {
+                int l() => targetBuffTimeReader.GetRemainingTimeMs(value);
+                intVariables.TryAdd($"{value}", l);
+            }
+            else if (key.StartsWith("FBuff_"))
+            {
+                int l() => focusBuffTimeReader.GetRemainingTimeMs(value);
+                intVariables.TryAdd($"{value}", l);
+            }
+
+            LogUserDefinedValue(logger, nameof(RequirementFactory), key, value);
         }
     }
 
-    public void InitDynamicBindings(KeyAction item)
+    public void InitAutoBinds(KeyAction item)
     {
-        if (string.IsNullOrEmpty(item.Name) || item.Slot == 0) return;
+        if (item.Slot == 0)
+            return;
 
         BindCooldown(item, cooldownReader);
         BindMinCost(item, costReader);
@@ -453,9 +435,19 @@ public sealed partial class RequirementFactory
 
         intVariables.Add(key, get);
         int get() => reader.Get(item).Cost;
+
+        for (int i = 0; i < ActionBar.NUM_OF_COST; i++)
+        {
+            key = $"Cost_{item.Name}_{i}";
+            if (intVariables.ContainsKey(key))
+                return;
+
+            intVariables.Add(key, get_i);
+            int get_i() => reader.Get(item, i).Cost;
+        }
     }
 
-    private void InitPerKeyActionRequirements(KeyAction item)
+    private void InitPerKeyAction(KeyAction item)
     {
         InitPerKeyAction(item, "CD");
         InitPerKeyAction(item, "Cost");
@@ -470,12 +462,14 @@ public sealed partial class RequirementFactory
             intVariables.Add(prefixKey, func);
     }
 
-    private void AddTargetIsCastingRequirement(List<Requirement> list, KeyAction item, PlayerReader playerReader)
+    private void AddTargetIsCasting(List<Requirement> list,
+        KeyAction item, PlayerReader playerReader)
     {
         if (item.UseWhenTargetIsCasting == null)
             return;
 
-        bool f() => playerReader.IsTargetCasting() == item.UseWhenTargetIsCasting.Value;
+        bool f() =>
+            playerReader.IsTargetCasting() == item.UseWhenTargetIsCasting.Value;
         string l() => "Target casting";
         list.Add(new Requirement
         {
@@ -484,120 +478,124 @@ public sealed partial class RequirementFactory
         });
     }
 
-    private void AddMinRequirement(List<Requirement> list, KeyAction item, BuffStatus<IPlayer> buffs)
+    private void AddMinPower(List<Requirement> list, KeyAction item,
+        ActionBarCostReader costReader, BuffStatus<IPlayer> buffs)
     {
-        AddMinPower(list, PowerType.Mana, item, playerReader, buffs);
-        AddMinPower(list, PowerType.Rage, item, playerReader, buffs);
-        AddMinPower(list, PowerType.Energy, item, playerReader, buffs);
-        if (playerReader.Class == UnitClass.DeathKnight)
-        {
-            AddMinPower(list, PowerType.RunicPower, item, playerReader, buffs);
-            AddMinPower(list, PowerType.RuneBlood, item, playerReader, buffs);
-            AddMinPower(list, PowerType.RuneFrost, item, playerReader, buffs);
-            AddMinPower(list, PowerType.RuneUnholy, item, playerReader, buffs);
-        }
+        AddMinPower(list, item, playerReader, costReader, buffs);
+
         AddMinComboPoints(list, item, playerReader);
     }
 
-    private void AddMinPower(List<Requirement> list, PowerType type,
-        KeyAction keyAction, PlayerReader playerReader, BuffStatus<IPlayer> buffs)
+    private void AddMinPower(List<Requirement> list, KeyAction keyAction,
+        PlayerReader playerReader, ActionBarCostReader costReader,
+        BuffStatus<IPlayer> buffs)
     {
-        switch (type)
+        static int Empty() => 0;
+
+        Func<int> formCost = Empty;
+        PowerType formPowerType = PowerType.None;
+
+        if (keyAction.HasForm)
         {
-            case PowerType.Mana:
-                bool fmana()
-                    => playerReader.ManaCurrent() >= keyAction.MinMana || buffs.Clearcasting();
-                string smana()
-                    => $"{type.ToStringF()} {playerReader.ManaCurrent()} >= {keyAction.MinMana}";
-                list.Add(new Requirement
+            if (!classConfig.Form.Get(keyAction.FormValue, out KeyAction? form))
+                throw new ArgumentNullException(
+                    keyAction.FormValue.ToStringF(),
+                    $"Requires a {nameof(KeyAction)} " +
+                    $"to be defined under {nameof(ClassConfiguration)}." +
+                    $"{nameof(classConfig.Form)}.{nameof(KeyActions.Sequence)} with");
+
+            formPowerType = costReader.Get(form!).PowerType;
+            formCost = formChangeCost;
+
+            int formChangeCost() =>
+                playerReader.Form != keyAction.FormValue
+                ? costReader.Get(form!).Cost
+                : 0;
+        }
+
+        for (int i = 0; i < ActionBar.NUM_OF_COST; i++)
+        {
+            ActionBarCost abc = costReader.Get(keyAction, i);
+            if (abc.Equals(ActionBarCostReader.DefaultCost))
+                continue;
+
+            PowerType type = abc.PowerType;
+
+            Func<bool> fCost;
+            Func<string> sCost;
+
+            int index = i;
+
+            if (formPowerType == type)
+            {
+                fCost = fCostWithForm;
+                bool fCostWithForm()
                 {
-                    HasRequirement = fmana,
-                    LogMessage = smana,
-                    VisibleIfHasRequirement = DEBUG || keyAction.MinMana > 0
-                });
-                break;
-            case PowerType.Rage:
-                bool frage()
-                    => playerReader.PTCurrent() >= keyAction.MinRage || buffs.Clearcasting();
-                string srage()
-                    => $"{type.ToStringF()} {playerReader.PTCurrent()} >= {keyAction.MinRage}";
-                list.Add(new Requirement
+                    ActionBarCost abc = costReader.Get(keyAction, index);
+                    Func<int> func = PowerTypeDelegate(playerReader, abc.PowerType);
+                    return buffs.Clearcasting() || func() >= abc.Cost + formCost();
+                }
+
+                sCost = sCostWithForm;
+                string sCostWithForm()
                 {
-                    HasRequirement = frage,
-                    LogMessage = srage,
-                    VisibleIfHasRequirement = DEBUG || keyAction.MinRage > 0
-                });
-                break;
-            case PowerType.Energy:
-                bool fenergy()
-                    => playerReader.PTCurrent() >= keyAction.MinEnergy || buffs.Clearcasting();
-                string senergy()
-                    => $"{type.ToStringF()} {playerReader.PTCurrent()} >= {keyAction.MinEnergy}";
-                list.Add(new Requirement
+                    ActionBarCost abc = costReader.Get(keyAction, index);
+                    Func<int> func = PowerTypeDelegate(playerReader, abc.PowerType);
+                    return $"{abc.PowerType.ToStringF()} " +
+                        $"{func()} >= {abc.Cost}{(formCost() > 0 ? $"+{formCost()}" : "")}";
+                }
+            }
+            else
+            {
+                fCost = fCostWithoutForm;
+                bool fCostWithoutForm()
                 {
-                    HasRequirement = fenergy,
-                    LogMessage = senergy,
-                    VisibleIfHasRequirement = DEBUG || keyAction.MinEnergy > 0
-                });
-                break;
-            case PowerType.RunicPower:
-                bool frunicpower()
-                    => playerReader.PTCurrent() >= keyAction.MinRunicPower;
-                string srunicpower()
-                    => $"{type.ToStringF()} {playerReader.PTCurrent()} >= {keyAction.MinRunicPower}";
-                list.Add(new Requirement
+                    ActionBarCost abc = costReader.Get(keyAction, index);
+                    Func<int> func = PowerTypeDelegate(playerReader, abc.PowerType);
+                    return buffs.Clearcasting() || func() >= abc.Cost;
+                }
+
+                sCost = sCostWithoutForm;
+                string sCostWithoutForm()
                 {
-                    HasRequirement = frunicpower,
-                    LogMessage = srunicpower,
-                    VisibleIfHasRequirement = DEBUG || keyAction.MinRunicPower > 0
-                });
-                break;
-            case PowerType.RuneBlood:
-                bool fbloodrune()
-                    => playerReader.BloodRune() >= keyAction.MinRuneBlood;
-                string sbloodrune()
-                    => $"{type.ToStringF()} {playerReader.BloodRune()} >= {keyAction.MinRuneBlood}";
-                list.Add(new Requirement
-                {
-                    HasRequirement = fbloodrune,
-                    LogMessage = sbloodrune,
-                    VisibleIfHasRequirement = DEBUG || keyAction.MinRuneBlood > 0
-                });
-                break;
-            case PowerType.RuneFrost:
-                bool ffrostrune()
-                    => playerReader.FrostRune() >= keyAction.MinRuneFrost;
-                string sfrostrune()
-                    => $"{type.ToStringF()} {playerReader.FrostRune()} >= {keyAction.MinRuneFrost}";
-                list.Add(new Requirement
-                {
-                    HasRequirement = ffrostrune,
-                    LogMessage = sfrostrune,
-                    VisibleIfHasRequirement = DEBUG || keyAction.MinRuneFrost > 0
-                });
-                break;
-            case PowerType.RuneUnholy:
-                bool funholyrune()
-                    => playerReader.UnholyRune() >= keyAction.MinRuneUnholy;
-                string sunholyrune()
-                    => $"{type.ToStringF()} {playerReader.UnholyRune()} >= {keyAction.MinRuneUnholy}";
-                list.Add(new Requirement
-                {
-                    HasRequirement = funholyrune,
-                    LogMessage = sunholyrune,
-                    VisibleIfHasRequirement = DEBUG || keyAction.MinRuneUnholy > 0
-                });
-                break;
+                    ActionBarCost abc = costReader.Get(keyAction, index);
+                    Func<int> func = PowerTypeDelegate(playerReader, abc.PowerType);
+                    return $"{abc.PowerType.ToStringF()} {func()} >= {abc.Cost}";
+                }
+            }
+
+            list.Add(new Requirement
+            {
+                HasRequirement = fCost,
+                LogMessage = sCost
+            });
         }
     }
 
-    private void AddMinComboPoints(List<Requirement> list, KeyAction item, PlayerReader playerReader)
+    private static Func<int> PowerTypeDelegate(PlayerReader playerReader, PowerType type)
+    => type switch
+    {
+        PowerType.Mana => playerReader.ManaCurrent,
+        PowerType.Rage or
+        PowerType.Energy or
+        PowerType.RunicPower => playerReader.PTCurrent,
+        PowerType.RuneBlood => playerReader.BloodRune,
+        PowerType.RuneFrost => playerReader.FrostRune,
+        PowerType.RuneUnholy => playerReader.UnholyRune,
+        PowerType.HealthCost => playerReader.HealthCurrent,
+        //PowerType.ComboPoints => playerReader.ComboPoints,
+        _ => throw new NotImplementedException($"{type.ToStringF()}"),
+    };
+
+    private void AddMinComboPoints(List<Requirement> list, KeyAction item,
+        PlayerReader playerReader)
     {
         if (item.MinComboPoints <= 0)
             return;
 
         bool f() => playerReader.ComboPoints() >= item.MinComboPoints;
-        string s() => $"Combo point {playerReader.ComboPoints()} >= {item.MinComboPoints}";
+        string s()
+            => $"Combo point {playerReader.ComboPoints()} >= {item.MinComboPoints}";
         list.Add(new Requirement
         {
             HasRequirement = f,
@@ -605,7 +603,7 @@ public sealed partial class RequirementFactory
         });
     }
 
-    private static void AddCooldownRequirement(List<Requirement> list, KeyAction item)
+    private static void AddKeyActionCooldown(List<Requirement> list, KeyAction item)
     {
         if (item.Cooldown <= 0)
             return;
@@ -615,12 +613,11 @@ public sealed partial class RequirementFactory
         list.Add(new Requirement
         {
             HasRequirement = f,
-            LogMessage = s,
-            VisibleIfHasRequirement = DEBUG || false
+            LogMessage = s
         });
     }
 
-    private static void AddChargeRequirement(List<Requirement> list, KeyAction item)
+    private static void AddCharge(List<Requirement> list, KeyAction item)
     {
         if (item.BaseAction || item.Charge < 1)
             return;
@@ -630,21 +627,18 @@ public sealed partial class RequirementFactory
         list.Add(new Requirement
         {
             HasRequirement = f,
-            LogMessage = s,
-            VisibleIfHasRequirement = DEBUG || false
+            LogMessage = s
         });
     }
 
-    private static void AddConsumableRequirement(KeyAction item)
+    private static void AddConsumable(KeyAction item)
     {
         item.BeforeCastStop = true;
         item.WhenUsable = true;
-        item.AfterCastWaitBuff = true;
-        item.Item = true;
 
-        item.Requirements.Add($"!{item.Name}");
-        item.Requirements.Add($"!{Swimming}");
-        item.Requirements.Add($"!{Falling}");
+        item.Requirements.Add($"{SymbolNegate}{item.Name}");
+        item.Requirements.Add($"{SymbolNegate}{Swimming}");
+        item.Requirements.Add($"{SymbolNegate}{Falling}");
     }
 
     private void AddSpellSchool(List<Requirement> list, KeyAction item,
@@ -654,15 +648,15 @@ public sealed partial class RequirementFactory
             return;
 
         bool f() =>
-            !immunityBlacklist.TryGetValue(playerReader.TargetId, out SchoolMask[]? immuneAgaints) ||
-            !immuneAgaints.Contains(item.School);
+            !immunityBlacklist.TryGetValue(playerReader.TargetId,
+                out SchoolMask[]? immuneAgaints) ||
+                !immuneAgaints.Contains(item.School);
 
         string s() => item.School.ToStringF();
         list.Add(new Requirement
         {
             HasRequirement = f,
-            LogMessage = s,
-            VisibleIfHasRequirement = DEBUG || false
+            LogMessage = s
         });
     }
 
@@ -688,7 +682,7 @@ public sealed partial class RequirementFactory
 
         if (!boolVariables.ContainsKey(requirement))
         {
-            LogUnknownRequirement(logger, requirement, string.Join(", ", boolVariables.Keys));
+            LogUnknown(logger, requirement, string.Join(", ", boolVariables.Keys));
             return new Requirement
             {
                 LogMessage = () => $"UNKNOWN REQUIREMENT! {requirement}"
@@ -710,24 +704,34 @@ public sealed partial class RequirementFactory
     }
 
     private Requirement CreateActionUsable(KeyAction item,
-        PlayerReader playerReader, ActionBarBits<IUsableAction> usableAction)
+        PlayerReader playerReader, FormKeyActions forms,
+        ActionBarCostReader costReader,
+        ActionBarBits<IUsableAction> usableAction)
     {
-        bool CanDoFormChangeMinMana()
-            => playerReader.ManaCurrent() >= item.FormCost() + item.MinMana;
+        bool CanDoFormChange()
+        {
+            if (!forms.Get(item.FormValue, out KeyAction? formKeyAction))
+                return true;
+
+            ActionBarCost abc = costReader.Get(formKeyAction!);
+            Func<int> powerTypeCurrent = PowerTypeDelegate(playerReader, abc.PowerType);
+
+            return powerTypeCurrent() >= abc.Cost;
+        }
 
         bool f() =>
-            !item.HasFormRequirement
+            !item.HasForm
             ? usableAction.Is(item)
-            : (playerReader.Form == item.FormEnum && usableAction.Is(item)) ||
-            (playerReader.Form != item.FormEnum && CanDoFormChangeMinMana());
+            : (playerReader.Form == item.FormValue && usableAction.Is(item)) ||
+            (playerReader.Form != item.FormValue && CanDoFormChange());
 
         string s() =>
-            !item.HasFormRequirement
+            !item.HasForm
             ? "Usable"
-            : (playerReader.Form != item.FormEnum && CanDoFormChangeMinMana())
-            ? "Usable after Form change"
-            : (playerReader.Form == item.FormEnum && usableAction.Is(item))
-            ? "Usable current Form" : "not Usable current Form";
+            : (playerReader.Form != item.FormValue && CanDoFormChange())
+            ? $"May Usable {item.FormValue.ToStringF()}"
+            : (playerReader.Form == item.FormValue && usableAction.Is(item))
+            ? $"Usable in Form" : "Unusable";
 
         return new Requirement
         {
@@ -740,29 +744,28 @@ public sealed partial class RequirementFactory
         ActionBarBits<ICurrentAction> currentAction)
     {
         bool f() => !currentAction.Is(item);
-        string s() => "!Current";
+        static string s() => $"{SymbolNegate}Current";
 
         return new Requirement
         {
             HasRequirement = f,
-            VisibleIfHasRequirement = DEBUG || false,
             LogMessage = s
         };
     }
 
-    private Requirement CreateActionNotInGameCooldown(KeyAction item,
-        PlayerReader playerReader, Dictionary<string, Func<int>> intVariables)
+    private void AddGameCooldown(List<Requirement> list,
+        KeyAction item, PlayerReader playerReader,
+        Dictionary<string, Func<int>> intVariables)
     {
         string key = $"CD_{item.Name}";
         bool f() => UsableGCD(key, playerReader, intVariables);
         string s() => $"CD {intVariables[key]() / 1000f:F1}";
 
-        return new Requirement
+        list.Add(new Requirement
         {
             HasRequirement = f,
-            VisibleIfHasRequirement = DEBUG || false,
             LogMessage = s
-        };
+        });
     }
 
     private static bool UsableGCD(string key, PlayerReader playerReader,
@@ -1054,55 +1057,56 @@ public sealed partial class RequirementFactory
         int sep = span.IndexOf(SEP1);
         ReadOnlySpan<char> name = span[(sep + 1)..].Trim();
 
-        KeyAction? keyAction = null;
-        for (int i = 0; i < keyActions.Length; i++)
+        List<(string _, KeyActions)> groups = classConfig.GetByType<KeyActions>();
+
+        foreach ((string _, KeyActions keyActions) in groups)
         {
-            KeyAction test = keyActions[i];
-            if (name.SequenceEqual(test.Name))
+            foreach (KeyAction keyAction in keyActions.Sequence)
             {
-                keyAction = test;
-                break;
+                if (name.SequenceEqual(keyAction.Name))
+                {
+                    return CreateActionUsable(keyAction, playerReader,
+                        classConfig.Form, costReader, usableAction);
+                }
             }
         }
 
-        if (keyAction == null)
-            throw new InvalidOperationException($"'{requirement}' related named '{name}' {nameof(KeyAction)} not found!");
-
-        return CreateActionUsable(keyAction, playerReader, usableAction);
+        throw new InvalidOperationException($"'{requirement}' " +
+            $"related named '{name}' {nameof(KeyAction)} not found!");
     }
-
 
     private Requirement CreateGreaterThen(string requirement)
     {
-        return CreateArithmeticRequirement(greaterThen, requirement, intVariables);
+        return CreateArithmetic(greaterThen, requirement, intVariables);
     }
 
     private Requirement CreateLesserThen(string requirement)
     {
-        return CreateArithmeticRequirement(lessThen, requirement, intVariables);
+        return CreateArithmetic(lessThen, requirement, intVariables);
     }
 
     private Requirement CreateGreaterOrEquals(string requirement)
     {
-        return CreateArithmeticRequirement(greaterThenOrEqual, requirement, intVariables);
+        return CreateArithmetic(greaterThenOrEqual, requirement, intVariables);
     }
 
     private Requirement CreateLesserOrEquals(string requirement)
     {
-        return CreateArithmeticRequirement(lessThenOrEqual, requirement, intVariables);
+        return CreateArithmetic(lessThenOrEqual, requirement, intVariables);
     }
 
     private Requirement CreateEquals(string requirement)
     {
-        return CreateArithmeticRequirement(equals, requirement, intVariables);
+        return CreateArithmetic(equals, requirement, intVariables);
     }
 
     private Requirement CreateModulo(string requirement)
     {
-        return CreateArithmeticRequirement(modulo, requirement, intVariables);
+        return CreateArithmetic(modulo, requirement, intVariables);
     }
 
-    private Requirement CreateArithmeticRequirement(string symbol, string requirement, Dictionary<string, Func<int>> intVariables)
+    private Requirement CreateArithmetic(string symbol, string requirement,
+        Dictionary<string, Func<int>> intVariables)
     {
         ReadOnlySpan<char> span = requirement;
         int sep = span.IndexOf(symbol);
@@ -1112,7 +1116,7 @@ public sealed partial class RequirementFactory
 
         if (!intVariables.TryGetValue(key, out Func<int>? aliasOrKey))
         {
-            LogUnknownRequirement(logger, requirement, string.Join(", ", intVariables.Keys));
+            LogUnknown(logger, requirement, string.Join(", ", intVariables.Keys));
             throw new ArgumentOutOfRangeException(requirement);
         }
 
@@ -1126,6 +1130,7 @@ public sealed partial class RequirementFactory
 
         Func<int> lValue = intVariables[key];
 
+        string varOrConstName = "";
         Func<int> rValue;
         if (int.TryParse(varOrConst, out int constValue))
         {
@@ -1134,12 +1139,16 @@ public sealed partial class RequirementFactory
         }
         else
         {
-            rValue = intVariables.TryGetValue(varOrConst.Trim().ToString(), out Func<int>? v)
+            varOrConstName = varOrConst.Trim().ToString();
+            rValue = intVariables.TryGetValue(varOrConstName, out Func<int>? v)
                 ? v
-                : throw new ArgumentOutOfRangeException(requirement);
+                : throw new ArgumentOutOfRangeException(varOrConstName);
         }
 
-        string msg() => $"{display} {lValue()} {symbol} {rValue()}";
+        if (!string.IsNullOrEmpty(varOrConstName))
+            varOrConstName += " ";
+
+        string msg() => $"{display} {lValue()} {symbol} {varOrConstName}{rValue()}";
         switch (symbol)
         {
             case modulo:
@@ -1177,13 +1186,13 @@ public sealed partial class RequirementFactory
         EventId = 0018,
         Level = LogLevel.Information,
         Message = "[{name,-15}] Requirement: \"{requirement}\"")]
-    static partial void LogProcessingRequirement(ILogger logger, string name, string requirement);
+    static partial void LogProcessing(ILogger logger, string name, string requirement);
 
     [LoggerMessage(
         EventId = 0019,
         Level = LogLevel.Error,
         Message = "UNKNOWN REQUIREMENT! {requirement}: try one of: {available}")]
-    static partial void LogUnknownRequirement(ILogger logger, string requirement, string available);
+    static partial void LogUnknown(ILogger logger, string requirement, string available);
 
     #endregion
 }
