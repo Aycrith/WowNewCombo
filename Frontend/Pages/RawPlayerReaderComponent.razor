@@ -7,6 +7,7 @@
 @inject BuffStatus<IPlayer> playerbuffs
 @inject BuffStatus<IFocus> focusbuffs
 @inject CombatLog combatLog
+@inject ActionBarCostReader costReader
 
 @implements IDisposable
 
@@ -71,6 +72,15 @@
         </div>
         <div class="card-body" style="padding-bottom: 0">
             <TableOfComponent Obj="@focusbuffs" />
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            Actionbar Cost Reader
+        </div>
+        <div class="card-body" style="padding-bottom: 0">
+            <TableOfComponent Obj="@costReader" />
         </div>
     </div>
 </div>
