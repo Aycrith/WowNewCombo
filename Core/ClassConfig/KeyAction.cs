@@ -9,7 +9,7 @@ using Game;
 
 namespace Core;
 
-public sealed partial class KeyAction : IDisposable
+public sealed partial class KeyAction
 {
     public float Cost { get; set; } = 18;
     public string Name { get; set; } = string.Empty;
@@ -18,29 +18,20 @@ public sealed partial class KeyAction : IDisposable
     public string Key { get; set; } = string.Empty;
     public int Slot { get; set; }
     public int SlotIndex { get; private set; }
+    public int SpellId { get; set; }
+
     public int PressDuration { get; set; } = InputDuration.DefaultPress;
-    public string Form { get; set; } = string.Empty;
-    public Form FormEnum { get; set; } = Core.Form.None;
-    public bool FormAction { get; private set; }
+
+    public Form? Form { get; init; }
+    public Form FormValue => HasForm ? Form!.Value : Core.Form.None;
+    public bool HasForm => Form.HasValue;
+
     public int Cooldown { get; set; } = CastingHandler.SPELL_QUEUE;
 
     private int _charge;
     public int Charge { get; set; } = 1;
     public SchoolMask School { get; set; } = SchoolMask.None;
-    public int MinMana { get; set; }
-    public int MinRage { get; set; }
-    public int MinEnergy { get; set; }
-    public int MinRunicPower { get; set; }
-    public int MinRuneBlood { get; set; }
-    public int MinRuneFrost { get; set; }
-    public int MinRuneUnholy { get; set; }
     public int MinComboPoints { get; set; }
-
-    public int MinCost { get; set; }
-
-    public Func<int> FormCost = null!;
-
-    public bool HasFormRequirement { get; private set; }
 
     public string Requirement { get; set; } = string.Empty;
     public List<string> Requirements { get; } = new();
@@ -96,14 +87,14 @@ public sealed partial class KeyAction : IDisposable
             : LastKey;
     }
 
-    private ActionBarCostReader costReader = null!;
-    private ILogger logger = null!;
-
     private RecordInt globalTime = null!;
-    private int canRunMemoTime;
+    private int canRunTime;
     private bool canRun;
 
-    public void InitialiseSlot(ILogger logger)
+    private int canBeInterruptedTime;
+    private bool canBeInterrupted;
+
+    public void InitSlot(ILogger logger)
     {
         if (!KeyReader.ReadKey(logger, this) && !BaseAction)
         {
@@ -115,32 +106,33 @@ public sealed partial class KeyAction : IDisposable
         }
     }
 
-    public void InitDynamicBinding(RequirementFactory requirementFactory)
-    {
-        requirementFactory.InitDynamicBindings(this);
-    }
-
-    public void Initialise(ClassConfiguration config,
-        AddonReader addonReader,
+    public void Init(
+        ILogger logger, bool globalLog,
         PlayerReader playerReader,
-        RecordInt globalTime,
-        ActionBarCostReader costReader,
-        RequirementFactory requirementFactory, ILogger logger, bool globalLog)
+        RecordInt globalTime)
     {
-        this.costReader = costReader;
-        this.logger = logger;
-
-        this.globalTime = addonReader.GlobalTime;
-        this.canRunMemoTime = globalTime.Value;
-
-        FormCost = GetMinCost;
+        this.globalTime = globalTime;
+        this.canRunTime = globalTime.Value;
+        this.canBeInterruptedTime = globalTime.Value;
 
         if (!globalLog)
             Log = false;
 
         ResetCharges();
 
-        InitialiseSlot(logger);
+        InitSlot(logger);
+        if (Slot > 0)
+        {
+            this.SlotIndex = Stance.ToSlot(this, playerReader) - 1;
+            LogInputActionbar(logger, Name, Key, Slot, SlotIndex);
+        }
+
+        if (HasForm)
+        {
+            LogFormRequired(logger, Name, FormValue.ToStringF());
+        }
+
+        ConsoleKeyFormHash = ((int)FormValue * 1000) + (int)ConsoleKey;
 
         if (!string.IsNullOrEmpty(Requirement))
         {
@@ -152,85 +144,10 @@ public sealed partial class KeyAction : IDisposable
             Interrupts.Add(Interrupt);
         }
 
-        HasFormRequirement = !string.IsNullOrEmpty(Form);
-
-        if (HasFormRequirement)
-        {
-            if (Enum.TryParse(Form, out Form desiredForm))
-            {
-                this.FormEnum = desiredForm;
-                LogFormRequired(logger, Name, FormEnum.ToStringF());
-
-                if (!FormAction)
-                {
-                    for (int i = 0; i < config.Form.Length; i++)
-                    {
-                        if (config.Form[i].FormEnum == FormEnum)
-                        {
-                            FormCost = config.Form[i].FormCost;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                throw new Exception($"[{Name}] Unknown form: {Form}");
-            }
-        }
-
-        if (Slot > 0)
-        {
-            this.SlotIndex = Stance.ToSlot(this, playerReader) - 1;
-            LogInputActionbar(logger, Name, Key, Slot, SlotIndex);
-        }
-
-        ConsoleKeyFormHash = ((int)FormEnum * 1000) + (int)ConsoleKey;
-        ResetCooldown();
-
-        if (Slot > 0)
-            InitMinPowerType(costReader);
-
-        requirementFactory.InitialiseRequirements(this);
-
         if (!string.IsNullOrEmpty(PathFilename))
         {
             LogPath(logger, Name, PathFilename);
         }
-    }
-
-    public void Dispose()
-    {
-        if (costReader == null)
-            return;
-
-        costReader.OnActionCostChanged -= ActionBarCostReader_OnActionCostChanged;
-        costReader.OnActionCostReset -= ResetCosts;
-    }
-
-    public void InitialiseForm(ClassConfiguration config,
-        AddonReader addonReader, PlayerReader playerReader,
-        RecordInt globalTime,
-        ActionBarCostReader actionBarCostReader,
-        RequirementFactory requirementFactory, ILogger logger, bool globalLog)
-    {
-        FormAction = true;
-        Initialise(config, addonReader, playerReader, globalTime, actionBarCostReader, requirementFactory, logger, globalLog);
-
-        logger.LogInformation($"[{Name,-15}] Added {FormEnum} to FormCost with {MinCost}");
-    }
-
-    public void ResetCosts()
-    {
-        MinCost = 0;
-
-        MinMana = 0;
-        MinRage = 0;
-        MinEnergy = 0;
-        MinRunicPower = 0;
-
-        MinRuneBlood = 0;
-        MinRuneFrost = 0;
-        MinRuneUnholy = 0;
     }
 
     public int GetRemainingCooldown()
@@ -259,18 +176,18 @@ public sealed partial class KeyAction : IDisposable
 
     public void ConsumeCharge()
     {
-        if (Charge > 1)
+        if (Charge <= 1)
+            return;
+
+        _charge--;
+        if (_charge > 0)
         {
-            _charge--;
-            if (_charge > 0)
-            {
-                ResetCooldown();
-            }
-            else
-            {
-                ResetCharges();
-                SetClicked();
-            }
+            ResetCooldown();
+        }
+        else
+        {
+            ResetCharges();
+            SetClicked();
         }
     }
 
@@ -281,10 +198,10 @@ public sealed partial class KeyAction : IDisposable
 
     public bool CanRun()
     {
-        if (canRunMemoTime == globalTime.Value)
+        if (canRunTime == globalTime.Value)
             return canRun;
 
-        canRunMemoTime = globalTime.Value;
+        canRunTime = globalTime.Value;
 
         ReadOnlySpan<Requirement> span = RequirementsRuntime;
         for (int i = 0; i < span.Length; i++)
@@ -298,121 +215,19 @@ public sealed partial class KeyAction : IDisposable
 
     public bool CanBeInterrupted()
     {
+        if (canBeInterruptedTime == globalTime.Value)
+            return canBeInterrupted;
+
+        canBeInterruptedTime = globalTime.Value;
+
         ReadOnlySpan<Requirement> span = InterruptsRuntime;
         for (int i = 0; i < span.Length; i++)
         {
             if (!span[i].HasRequirement())
-                return false;
+                return canBeInterrupted = false;
         }
 
-        return true;
-    }
-
-    private void InitMinPowerType(ActionBarCostReader actionBarCostReader)
-    {
-        for (int i = 0; i < ActionBar.NUM_OF_COST; i++)
-        {
-            ActionBarCost abc = actionBarCostReader.Get(this, i);
-            if (abc.Cost == 0)
-                continue;
-
-            int oldValue = 0;
-            switch (abc.PowerType)
-            {
-                case PowerType.Mana:
-                    oldValue = MinMana;
-                    MinMana = abc.Cost;
-                    break;
-                case PowerType.Rage:
-                    oldValue = MinRage;
-                    MinRage = abc.Cost;
-                    break;
-                case PowerType.Energy:
-                    oldValue = MinEnergy;
-                    MinEnergy = abc.Cost;
-                    break;
-                case PowerType.RunicPower:
-                    oldValue = MinRunicPower;
-                    MinRunicPower = abc.Cost;
-                    break;
-                case PowerType.RuneBlood:
-                    oldValue = MinRuneBlood;
-                    MinRuneBlood = abc.Cost;
-                    break;
-                case PowerType.RuneFrost:
-                    oldValue = MinRuneFrost;
-                    MinRuneFrost = abc.Cost;
-                    break;
-                case PowerType.RuneUnholy:
-                    oldValue = MinRuneUnholy;
-                    MinRuneUnholy = abc.Cost;
-                    break;
-            }
-
-            MinCost = abc.Cost;
-
-            LogPowerCostChange(logger, Name, abc.PowerType.ToStringF(), abc.Cost, oldValue);
-            if (HasFormRequirement && FormEnum != Core.Form.None)
-            {
-                int formCost = FormCost();
-                if (formCost > 0)
-                {
-                    logger.LogInformation($"[{Name,-15}] +{formCost} Mana to change into {FormEnum.ToStringF()}");
-                }
-            }
-        }
-        actionBarCostReader.OnActionCostChanged += ActionBarCostReader_OnActionCostChanged;
-        actionBarCostReader.OnActionCostReset += ResetCosts;
-    }
-
-    private void ActionBarCostReader_OnActionCostChanged(object? sender, ActionBarCostEventArgs e)
-    {
-        if (Slot != e.Slot) return;
-
-        MinCost = e.ActionBarCost.Cost;
-
-        int oldValue = 0;
-        switch (e.ActionBarCost.PowerType)
-        {
-            case PowerType.Mana:
-                oldValue = MinMana;
-                MinMana = e.ActionBarCost.Cost;
-                break;
-            case PowerType.Rage:
-                oldValue = MinRage;
-                MinRage = e.ActionBarCost.Cost;
-                break;
-            case PowerType.Energy:
-                oldValue = MinEnergy;
-                MinEnergy = e.ActionBarCost.Cost;
-                break;
-            case PowerType.RunicPower:
-                oldValue = MinRunicPower;
-                MinRunicPower = e.ActionBarCost.Cost;
-                break;
-            case PowerType.RuneBlood:
-                oldValue = MinRuneBlood;
-                MinRuneBlood = e.ActionBarCost.Cost;
-                break;
-            case PowerType.RuneFrost:
-                oldValue = MinRuneFrost;
-                MinRuneFrost = e.ActionBarCost.Cost;
-                break;
-            case PowerType.RuneUnholy:
-                oldValue = MinRuneUnholy;
-                MinRuneUnholy = e.ActionBarCost.Cost;
-                break;
-        }
-
-        if (e.ActionBarCost.Cost != oldValue)
-        {
-            LogPowerCostChange(logger, Name, e.ActionBarCost.PowerType.ToStringF(), e.ActionBarCost.Cost, oldValue);
-        }
-    }
-
-    private int GetMinCost()
-    {
-        return MinCost;
+        return canBeInterrupted = true;
     }
 
     #region Logging
