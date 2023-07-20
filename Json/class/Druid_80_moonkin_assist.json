@@ -15,7 +15,9 @@
     "MIN_TARGET_HP_CD%": 75,
     "Debuff_Faerie Fire": 136033,
     "Debuff_Mangle": 132135,
-    "FBuff_Mount": 132239
+    "FBuff_Mount": 132239,
+    "USE_TRINKET_1": 1,
+    "USE_TRINKET_2": 1
   },
   "Form": {
     "Sequence": [
@@ -80,24 +82,13 @@
         ]
       },
       {
-        "Name": "Moonkin Form",
-        "Key": "F5",
+        "Name": "Moonfire",
+        "Key": "5",
+        "Form": "Druid_Moonkin",
         "BeforeCastStop": true,
-        "Requirements": [
-          "SpellInRange:0",
-          "!Form:Druid_Moonkin"
-        ]
-      },
-      {
-        "Name": "Faerie Fire (Feral)",
-        "Key": "F6",
-        "AfterCastAuraExpected": true,
         "AfterCastWaitCombat": true,
         "Requirements": [
-          "!Moonfire",
-          "Form:Druid_Moonkin",
-          "Debuff_Faerie Fire < 2",
-          "Spell:Faerie Fire"
+          "!Moonfire"
         ]
       },
       {
@@ -164,28 +155,43 @@
       {
         "Name": "Regrowth",
         "Key": "0",
+        "Form": "None",
         "HasCastBar": true,
         "WhenUsable": true,
         "AfterCastAuraExpected": true,
         "AfterCastWaitCastbar": true,
         "Requirements": [
           "Health% < 30"
-        ],
-        "Form": "None"
+        ]
       },
       {
         "Name": "Trinket 1",
         "Key": "F11",
         "Item": true,
         "WhenUsable": true,
+        "BaseAction": true,
         "Requirements": [
-          "InMeleeRange",
+          "USE_TRINKET_1 == 1",
+          "TargetAlive",
+          "TargetHealth% > MIN_TARGET_HP_CD%"
+        ]
+      },
+      {
+        "Name": "Trinket 2",
+        "Key": "F12",
+        "Item": true,
+        "WhenUsable": true,
+        "BaseAction": true,
+        "Requirements": [
+          "USE_TRINKET_2 == 1",
+          "TargetAlive",
           "TargetHealth% > MIN_TARGET_HP_CD%"
         ]
       },
       {
         "Name": "Moonfire",
         "Key": "5",
+        "Form": "Druid_Moonkin",
         "Requirements": [
           "!Moonfire",
           "TargetHealth% > 25"
@@ -194,12 +200,13 @@
       {
         "Name": "Wrath",
         "Key": "2",
+        "Form": "Druid_Moonkin",
         "HasCastBar": true
       },
       {
         "Name": "Approach",
         "Requirements": [
-          "MinRange > 36",
+          "Mana < Cost_Wrath",
           "!Casting"
         ]
       }
@@ -224,7 +231,6 @@
         "Cost": 3,
         "InCombat": "idc",
         "Key": "N1",
-        "Form": "None",
         "WhenUsable": true,
         "Requirement": "Mana% < 15"
       },
