@@ -1,4 +1,5 @@
 ﻿using System.Numerics;
+using System.Threading;
 
 using Core.Goals;
 
@@ -32,17 +33,11 @@ public sealed class DruidMountHandler : IMountHandler
 
     public void Dismount()
     {
-        if (playerReader.Form is Form.Druid_Flight or Form.Druid_Travel)
+        if (playerReader.Form is Form.Druid_Flight or Form.Druid_Travel &&
+            classConfig.Form.Get(playerReader.Form, out KeyAction? formAction))
         {
-            for (int i = 0; i < classConfig.Form.Length; i++)
-            {
-                KeyAction form = classConfig.Form[i];
-                if (form.FormEnum == playerReader.Form)
-                {
-                    input.PressRandom(form);
-                    return;
-                }
-            }
+            input.PressRandom(formAction!);
+            return;
         }
 
         mountHandler.Dismount();
@@ -57,11 +52,13 @@ public sealed class DruidMountHandler : IMountHandler
 
     public void MountUp()
     {
-        for (int i = 0; i < classConfig.Form.Length; i++)
+        for (int i = 0; i < classConfig.Form.Sequence.Length; i++)
         {
-            KeyAction keyAction = classConfig.Form[i];
-            if (keyAction.FormEnum is Form.Druid_Flight or Form.Druid_Travel &&
-                castingHandler.SwitchForm(keyAction))
+            KeyAction keyAction = classConfig.Form.Sequence[i];
+            if (keyAction.FormValue is Form.Druid_Flight or Form.Druid_Travel &&
+                keyAction.CanRun() &&
+                castingHandler.WaitForGCD(keyAction, false, CancellationToken.None) &&
+                castingHandler.SwitchForm(keyAction, CancellationToken.None))
             {
                 return;
             }

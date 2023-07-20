@@ -65,7 +65,7 @@ public sealed partial class MountHandler : IMountHandler
         input.PressMount();
 
         float e = wait.Until(
-            CastingHandler.SPELL_QUEUE + playerReader.NetworkLatency,
+            playerReader.DoubleNetworkLatency,
             CastDetected);
 
         LogCastStarted(logger, e);
