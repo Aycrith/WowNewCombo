@@ -10,23 +10,25 @@
     "CD_MIN_TARGET_HP%": 70,
     "MIN_RAGE_HEROIC_STRIKE": 42
   },
-  "Form": [
-    {
-      "Name": "Battle Stance",
-      "Key": "F1",
-      "Form": "Warrior_BattleStance"
-    },
-    {
-      "Name": "Defensive Stance",
-      "Key": "F2",
-      "Form": "Warrior_DefensiveStance"
-    },
-    {
-      "Name": "Berserker Stance",
-      "Key": "F3",
-      "Form": "Warrior_BerserkerStance"
-    }
-  ],
+  "Form": {
+    "Sequence": [
+      {
+        "Name": "Battle Stance",
+        "Key": "F1",
+        "Form": "Warrior_BattleStance"
+      },
+      {
+        "Name": "Defensive Stance",
+        "Key": "F2",
+        "Form": "Warrior_DefensiveStance"
+      },
+      {
+        "Name": "Berserker Stance",
+        "Key": "F3",
+        "Form": "Warrior_BerserkerStance"
+      }
+    ]
+  },
   "Pull": {
     "Sequence": [
       {

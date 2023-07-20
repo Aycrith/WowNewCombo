@@ -4,24 +4,26 @@
   "PathFilename": "\\_pack\\1-20\\Human\\15-18_Westfall_The Dagger Hills (defias).json",
   "PathReduceSteps": true,
   "CheckTargetGivesExp": true,
-  "Form": [
-    {
-      //macro: /cancelform
-      "Name": "cancelform",
-      "Key": "F1",
-      "Form": "None"
-    },
-    {
-      "Name": "Bear Form",
-      "Key": "F2",
-      "Form": "Druid_Bear"
-    },
-    {
-      "Name": "Cat form",
-      "Key": "F3",
-      "Form": "Druid_Cat"
-    }
-  ],
+  "Form": {
+    "Sequence": [
+      {
+        //macro: /cancelform
+        "Name": "cancelform",
+        "Key": "F1",
+        "Form": "None"
+      },
+      {
+        "Name": "Bear Form",
+        "Key": "F2",
+        "Form": "Druid_Bear"
+      },
+      {
+        "Name": "Cat form",
+        "Key": "F3",
+        "Form": "Druid_Cat"
+      }
+    ]
+  },
   "Pull": {
     "Sequence": [
       {
@@ -84,7 +86,7 @@
         "Requirements": [
           "MobCount < 2",
           "SpellInRange:2",
-          "Combo Point > 0"
+          "Combo Point > 0",
           "!Rip",
           "Form:Druid_Cat"
         ],

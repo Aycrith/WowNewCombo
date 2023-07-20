@@ -4,24 +4,26 @@
   "PathFilename": "_pack\\20-30\\Duskwood\\21-22.json",
   "PathReduceSteps": true,
   "CheckTargetGivesExp": true,
-  "Form": [
-    {
-      //macro: /cancelform
-      "Name": "cancelform",
-      "Key": "F1",
-      "Form": "None"
-    },
-    {
-      "Name": "Bear Form",
-      "Key": "F2",
-      "Form": "Druid_Bear"
-    },
-    {
-      "Name": "Cat form",
-      "Key": "F3",
-      "Form": "Druid_Cat"
-    }
-  ],
+  "Form": {
+    "Sequence": [
+      {
+        //macro: /cancelform
+        "Name": "cancelform",
+        "Key": "F1",
+        "Form": "None"
+      },
+      {
+        "Name": "Bear Form",
+        "Key": "F2",
+        "Form": "Druid_Bear"
+      },
+      {
+        "Name": "Cat form",
+        "Key": "F3",
+        "Form": "Druid_Cat"
+      }
+    ]
+  },
   "Pull": {
     "Sequence": [
       {

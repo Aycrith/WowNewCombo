@@ -17,39 +17,43 @@
     "Debuff_Mangle": 132135,
     "FBuff_Mount": 132239
   },
-  "Form": [
-    {
-      "Name": "Flight Form",
-      "Key": "N0",
-      "Form": "Druid_Flight"
-    },
-    {
-      //macro: /cancelform
-      "Name": "cancelform",
-      "Key": "F1",
-      "Form": "None"
-    },
-    {
-      "Name": "Bear Form",
-      "Key": "F2",
-      "Form": "Druid_Bear"
-    },
-    {
-      "Name": "Cat Form",
-      "Key": "F3",
-      "Form": "Druid_Cat"
-    },
-    {
-      "Name": "Travel Form",
-      "Key": "F4",
-      "Form": "Druid_Travel"
-    },
-    {
-      "Name": "Moonkin Form",
-      "Key": "F5",
-      "Form": "Druid_Moonkin"
-    }
-  ],
+  "Form": {
+    "Sequence": [
+      {
+        //macro: /cancelform
+        "Name": "cancelform",
+        "Key": "F1",
+        "Form": "None"
+      },
+      {
+        "Name": "Bear Form",
+        "Key": "F2",
+        "Form": "Druid_Bear"
+      },
+      {
+        "Name": "Cat Form",
+        "Key": "F3",
+        "Form": "Druid_Cat"
+      },
+      {
+        "Name": "Swift Flight Form",
+        "Key": "F4",
+        "Form": "Druid_Flight",
+        "Requirement": "Mana% > 50 && !AddVisible"
+      },
+      {
+        "Name": "Moonkin Form",
+        "Key": "F5",
+        "Form": "Druid_Moonkin"
+      },
+      {
+        "Name": "Travel Form",
+        "Key": "F6",
+        "Form": "Druid_Travel",
+        "Requirement": "Mana% > 50 && !AddVisible"
+      }
+    ]
+  },
   "Pull": {
     "Sequence": [
       {

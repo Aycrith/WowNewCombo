@@ -8,29 +8,31 @@
   "IntVariables": {
     "MIN_TARGET_HP_DOT%": 20
   },
-  "Form": [
-    {
-      //macro: /cancelform
-      "Name": "cancelform",
-      "Key": "F1",
-      "Form": "None"
-    },
-    {
-      "Name": "Bear Form",
-      "Key": "F2",
-      "Form": "Druid_Bear"
-    },
-    {
-      "Name": "Cat form",
-      "Key": "F3",
-      "Form": "Druid_Cat"
-    },
-    {
-      "Name": "Travel form",
-      "Key": "F4",
-      "Form": "Druid_Travel"
-    }
-  ],
+  "Form": {
+    "Sequence": [
+      {
+        //macro: /cancelform
+        "Name": "cancelform",
+        "Key": "F1",
+        "Form": "None"
+      },
+      {
+        "Name": "Bear Form",
+        "Key": "F2",
+        "Form": "Druid_Bear"
+      },
+      {
+        "Name": "Cat form",
+        "Key": "F3",
+        "Form": "Druid_Cat"
+      },
+      {
+        "Name": "Travel form",
+        "Key": "F4",
+        "Form": "Druid_Travel"
+      }
+    ]
+  },
   "Pull": {
     "Sequence": [
       {
