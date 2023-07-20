@@ -60,21 +60,10 @@
         ]
       },
       {
-        "Name": "Cat Form",
-        "Key": "F3",
-        "Requirements": [
-          "SpellInRange:0",
-          "!Form:Druid_Cat"
-        ]
-      },
-      {
         "Name": "Faerie Fire (Feral)",
         "Key": "F6",
-        "AfterCastAuraExpected": true,
+        "Form": "Druid_Cat",
         "Requirements": [
-          "!Moonfire",
-          "Form:Druid_Cat || Form:Druid_Bear",
-          "Debuff_Faerie Fire < 2",
           "Spell:Faerie Fire"
         ]
       }
@@ -110,7 +99,7 @@
         "WhenUsable": true,
         "Requirements": [
           "Form:Druid_Cat",
-          "!TigersFury",
+          "!Tiger's Fury",
           "Rip",
           "Rake",
           "InMeleeRange",
@@ -122,13 +111,12 @@
         "Name": "Mangle",
         "Key": "0",
         "WhenUsable": true,
-        "AfterCastAuraExpected": true,
         "Requirements": [
           "SpellInRange:2",
           "MobCount < 2",
           "Form:Druid_Cat",
           "Talent:Mangle",
-          "Debuff_Mangle <= 0"
+          "Debuff_Mangle <= 0 || Energy >= 95"
         ],
         "Form": "Druid_Cat"
       },
@@ -136,7 +124,6 @@
         "Name": "Rip",
         "Key": "3",
         "WhenUsable": true,
-        "AfterCastAuraExpected": true,
         "Requirements": [
           "MobCount < 2",
           "SpellInRange:2",
@@ -151,7 +138,6 @@
         "Name": "Rake",
         "Key": "4",
         "WhenUsable": true,
-        "AfterCastAuraExpected": true,
         "Requirements": [
           "SpellInRange:2",
           "!Rake",
@@ -210,13 +196,12 @@
         "Name": "Enrage",
         "Key": "4",
         "WhenUsable": true,
-        "Requirement": "Form:Druid_Bear",
+        "Requirement": "Form:Druid_Bear && !TargetCastingSpell",
         "Form": "Druid_Bear"
       },
       {
         "Name": "Demoralizing Roar",
         "Key": "3",
-        "AfterCastAuraExpected": true,
         "WhenUsable": true,
         "Requirements": [
           "InMeleeRange",
@@ -224,6 +209,18 @@
           "MobCount > 1",
           "Form:Druid_Bear"
         ],
+        "Form": "Druid_Bear"
+      },
+      {
+        "Name": "Maul",
+        "Key": "2",
+        "Requirements": [
+          "InMeleeRange",
+          "MobCount < 2 || Rage >= 50",
+          "LastMainHandMs > 2100",
+          "Form:Druid_Bear"
+        ], // bear swing speed fixed at 2.5
+        "AfterCastWaitSwing": true,
         "Form": "Druid_Bear"
       },
       {
@@ -235,18 +232,6 @@
           "MobCount > 1",
           "Form:Druid_Bear"
         ],
-        "Form": "Druid_Bear"
-      },
-      {
-        "Name": "Maul",
-        "Key": "2",
-        "Requirements": [
-          "InMeleeRange",
-          "MobCount < 2",
-          "LastMainHandMs > 2100",
-          "Form:Druid_Bear"
-        ], // bear swing speed fixed at 2.5
-        "AfterCastWaitSwing": true,
         "Form": "Druid_Bear"
       },
       {
@@ -263,7 +248,6 @@
         "Name": "Faerie Fire (Feral)",
         "Key": "F6",
         "Usable": true,
-        "AfterCastAuraExpected": true,
         "Requirements": [
           "Form:Druid_Cat || Form:Druid_Bear",
           "Debuff_Faerie Fire < 2000",
@@ -297,14 +281,14 @@
         "Form": "None",
         "Requirement": "!Thorns"
       },
-/*
       {
-        "Name": "Omen of Clarity",
-        "Key": "F10",
+        "Name": "Inntervate",
+        "Cost": 3,
+        "InCombat": "idc",
+        "Key": "N1",
         "Form": "None",
-        "Requirement": "!Omen of Clarity"
+        "Requirement": "Mana% < 20"
       },
-*/
       {
         "Name": "Clam",
         "Key": "F9",
@@ -326,7 +310,7 @@
         "Name": "Drink",
         "Key": "-",
         "Form": "None",
-        "Requirement": "Mana% < 40"
+        "Requirement": "Mana% < 5 && DrinkCount > 0"
       }
     ]
   }
