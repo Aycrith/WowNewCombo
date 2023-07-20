@@ -23,6 +23,7 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
     private readonly AddonBits bits;
     private readonly StopMoving stopMoving;
     private readonly CombatUtil combatUtil;
+    private readonly IMountHandler mountHandler;
     private readonly IBlacklist targetBlacklist;
 
     private DateTime approachStart;
@@ -39,7 +40,8 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
     public ApproachTargetGoal(ILogger<ApproachTargetGoal> logger,
         ConfigurableInput input, Wait wait,
         PlayerReader playerReader, AddonBits addonBits,
-        StopMoving stopMoving, CombatUtil combatUtil, IBlacklist blacklist)
+        StopMoving stopMoving, CombatUtil combatUtil, IBlacklist blacklist,
+        IMountHandler mountHandler)
         : base(nameof(ApproachTargetGoal))
     {
         this.logger = logger;
@@ -51,6 +53,7 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
 
         this.stopMoving = stopMoving;
         this.combatUtil = combatUtil;
+        this.mountHandler = mountHandler;
         this.targetBlacklist = blacklist;
 
         AddPrecondition(GoapKey.hastarget, true);
@@ -132,6 +135,24 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
 
                     input.StartForward(false);
                     return;
+                }
+                else if (playerReader.LastUIError == UI_ERROR.ERR_ATTACK_PACIFIED)
+                {
+                    playerReader.LastUIError = UI_ERROR.NONE;
+
+                    if (mountHandler.IsMounted())
+                    {
+                        mountHandler.Dismount();
+                        wait.Fixed(playerReader.DoubleNetworkLatency);
+
+                        wait.While(bits.Falling);
+
+                        input.PressInteract();
+
+                        SetNextStuckTimeCheck();
+
+                        return;
+                    }
                 }
 
                 if (debug)
