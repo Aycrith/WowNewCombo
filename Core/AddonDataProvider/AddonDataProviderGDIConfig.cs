@@ -10,13 +10,13 @@ namespace Core;
 
 public sealed class AddonDataProviderGDIConfig : IAddonDataProvider, IDisposable
 {
+    public int[] Data { get; private set; } = Array.Empty<int>();
+    public StringBuilder TextBuilder { get; } = new(3);
+
     private readonly CancellationToken ct;
     private readonly ManualResetEventSlim manualReset = new(true);
     private readonly WowScreen wowScreen;
 
-    private readonly StringBuilder sb = new(3);
-
-    private int[] data = Array.Empty<int>();
     private DataFrame[] frames = Array.Empty<DataFrame>();
 
     private Rectangle rect;
@@ -50,7 +50,7 @@ public sealed class AddonDataProviderGDIConfig : IAddonDataProvider, IDisposable
 
         if (ct.IsCancellationRequested ||
             disposing ||
-            data.Length == 0 ||
+            Data.Length == 0 ||
             frames.Length == 0 ||
             bitmap == null ||
             graphics == null)
@@ -63,7 +63,7 @@ public sealed class AddonDataProviderGDIConfig : IAddonDataProvider, IDisposable
 
         BitmapData bd = bitmap.LockBits(rect, ImageLockMode.ReadOnly, AddonDataProviderConfig.PIXEL_FORMAT);
 
-        IAddonDataProvider.InternalUpdate(bd, frames, data);
+        IAddonDataProvider.InternalUpdate(bd, frames, Data);
 
         bitmap.UnlockBits(bd);
     }
@@ -73,7 +73,7 @@ public sealed class AddonDataProviderGDIConfig : IAddonDataProvider, IDisposable
         manualReset.Reset();
 
         this.frames = frames;
-        data = new int[frames.Length];
+        Data = new int[frames.Length];
 
         for (int i = 0; i < frames.Length; i++)
         {
@@ -91,32 +91,7 @@ public sealed class AddonDataProviderGDIConfig : IAddonDataProvider, IDisposable
 
     public int GetInt(int index)
     {
-        return index > data.Length ? 0 : data[index];
-    }
-
-    public float GetFixed(int index)
-    {
-        return GetInt(index) / 100000f;
-    }
-
-    public string GetString(int index)
-    {
-        int color = GetInt(index);
-        if (color == 0 || color > 999999)
-            return string.Empty;
-
-        sb.Clear();
-
-        int n = color / 10000;
-        if (n > 0) sb.Append((char)n);
-
-        n = color / 100 % 100;
-        if (n > 0) sb.Append((char)n);
-
-        n = color % 100;
-        if (n > 0) sb.Append((char)n);
-
-        return sb.ToString().Trim();
+        return index > Data.Length ? 0 : Data[index];
     }
 }
 

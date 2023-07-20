@@ -13,7 +13,9 @@ namespace Core;
 
 public sealed class AddonDataProviderBitBlt : IAddonDataProvider, IDisposable
 {
-    private readonly int[] data;
+    public int[] Data { get; private init; }
+    public StringBuilder TextBuilder { get; } = new(3);
+
     private readonly DataFrame[] frames;
 
     private readonly Rectangle rect;
@@ -22,8 +24,6 @@ public sealed class AddonDataProviderBitBlt : IAddonDataProvider, IDisposable
     private readonly Graphics graphics;
 
     private readonly WowScreen wowScreen;
-
-    private readonly StringBuilder sb = new(3);
 
     private IntPtr hWnd = IntPtr.Zero;
     private IntPtr windowDC = IntPtr.Zero;
@@ -36,7 +36,7 @@ public sealed class AddonDataProviderBitBlt : IAddonDataProvider, IDisposable
         this.wowScreen = wowScreen;
         this.frames = frames;
 
-        data = new int[frames.Length];
+        Data = new int[frames.Length];
 
         for (int i = 0; i < frames.Length; i++)
         {
@@ -96,39 +96,8 @@ public sealed class AddonDataProviderBitBlt : IAddonDataProvider, IDisposable
         // instead there are (68,28) area offset ?!
         //bitmap.Save("helpme.bmp");
 
-        IAddonDataProvider.InternalUpdate(bd, frames, data);
+        IAddonDataProvider.InternalUpdate(bd, frames, Data);
 
         bitmap.UnlockBits(bd);
     }
-
-    public int GetInt(int index)
-    {
-        return data[index];
-    }
-
-    public float GetFixed(int index)
-    {
-        return data[index] / 100000f;
-    }
-
-    public string GetString(int index)
-    {
-        int color = GetInt(index);
-        if (color == 0 || color > 999999)
-            return string.Empty;
-
-        sb.Clear();
-
-        int n = color / 10000;
-        if (n > 0) sb.Append((char)n);
-
-        n = color / 100 % 100;
-        if (n > 0) sb.Append((char)n);
-
-        n = color % 100;
-        if (n > 0) sb.Append((char)n);
-
-        return sb.ToString().Trim();
-    }
-
 }

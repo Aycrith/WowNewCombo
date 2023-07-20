@@ -18,6 +18,9 @@ namespace Core;
 
 public sealed class AddonDataProviderDXGI : IAddonDataProvider, IDisposable
 {
+    public int[] Data { get; private init; }
+    public StringBuilder TextBuilder { get; } = new(3);
+
     private readonly WowScreen wowScreen;
     private readonly DataFrame[] frames;
 
@@ -40,9 +43,6 @@ public sealed class AddonDataProviderDXGI : IAddonDataProvider, IDisposable
 
     private readonly Bitmap bitmap;
     private readonly Rectangle rect;
-    private readonly int[] data;
-
-    private readonly StringBuilder sb = new(3);
 
     private readonly bool windowedMode;
     private Point p;
@@ -53,7 +53,7 @@ public sealed class AddonDataProviderDXGI : IAddonDataProvider, IDisposable
 
         this.frames = frames;
 
-        data = new int[frames.Length];
+        Data = new int[frames.Length];
 
         for (int i = 0; i < frames.Length; i++)
         {
@@ -170,39 +170,9 @@ public sealed class AddonDataProviderDXGI : IAddonDataProvider, IDisposable
         //bitmap.Save($"bitmap.bmp", ImageFormat.Bmp);
         //System.Threading.Thread.Sleep(1000);
 
-        IAddonDataProvider.InternalUpdate(bd, frames, data);
+        IAddonDataProvider.InternalUpdate(bd, frames, Data);
 
         bitmap.UnlockBits(bd);
-    }
-
-    public int GetInt(int index)
-    {
-        return data[index];
-    }
-
-    public float GetFixed(int index)
-    {
-        return data[index] / 100000f;
-    }
-
-    public string GetString(int index)
-    {
-        int color = GetInt(index);
-        if (color == 0 || color > 999999)
-            return string.Empty;
-
-        sb.Clear();
-
-        int n = color / 10000;
-        if (n > 0) sb.Append((char)n);
-
-        n = color / 100 % 100;
-        if (n > 0) sb.Append((char)n);
-
-        n = color % 100;
-        if (n > 0) sb.Append((char)n);
-
-        return sb.ToString().Trim();
     }
 }
 

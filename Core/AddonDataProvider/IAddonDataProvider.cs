@@ -2,6 +2,7 @@
 using System;
 
 using static Core.AddonDataProviderConfig;
+using System.Text;
 
 namespace Core;
 
@@ -10,9 +11,8 @@ public interface IAddonDataProvider
     void Update();
     void InitFrames(DataFrame[] frames) { }
 
-    int GetInt(int index);
-    float GetFixed(int index);
-    string GetString(int index);
+    int[] Data { get; }
+    StringBuilder TextBuilder { get; }
 
     void Dispose();
 
@@ -44,5 +44,35 @@ public interface IAddonDataProvider
 
             output[frame.Index] = y[x] | (y[x + 1] << 8) | (y[x + 2] << 16);
         }
+    }
+
+    int GetInt(int index)
+    {
+        return Data[index];
+    }
+
+    float GetFixed(int index)
+    {
+        return Data[index] / 100000f;
+    }
+
+    string GetString(int index)
+    {
+        int color = GetInt(index);
+        if (color == 0 || color > 999999)
+            return string.Empty;
+
+        TextBuilder.Clear();
+
+        int n = color / 10000;
+        if (n > 0) TextBuilder.Append((char)n);
+
+        n = color / 100 % 100;
+        if (n > 0) TextBuilder.Append((char)n);
+
+        n = color % 100;
+        if (n > 0) TextBuilder.Append((char)n);
+
+        return TextBuilder.ToString().Trim();
     }
 }
