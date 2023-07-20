@@ -1,18 +1,24 @@
 ﻿using System;
 
+using static Core.ActionBar;
+using static System.Math;
+using static System.DateTime;
+
 namespace Core;
 
 public sealed class ActionBarCooldownReader : IReader
 {
     private readonly struct Data
     {
-        public float DurationSec { get; }
-        public DateTime StartTime { get; }
+        private readonly float durationSec;
+        private readonly DateTime start;
 
-        public Data(float duration, DateTime startTime)
+        public DateTime End => start.AddSeconds(durationSec);
+
+        public Data(float durationSec, DateTime start)
         {
-            DurationSec = duration;
-            StartTime = startTime;
+            this.durationSec = durationSec;
+            this.start = start;
         }
     }
 
@@ -24,33 +30,34 @@ public sealed class ActionBarCooldownReader : IReader
 
     public ActionBarCooldownReader()
     {
-        data = new Data[ActionBar.CELL_COUNT * ActionBar.BIT_PER_CELL];
+        data = new Data[CELL_COUNT * BIT_PER_CELL];
         Reset();
     }
 
     public void Update(IAddonDataProvider reader)
     {
         int value = reader.GetInt(cActionbarNum);
-        if (value == 0 || value < ActionBar.ACTION_SLOT_MUL)
+        if (value == 0 || value < ACTION_SLOT_MUL)
             return;
 
-        int slotIdx = (value / ActionBar.ACTION_SLOT_MUL) - 1;
-        float durationSec = value % ActionBar.ACTION_SLOT_MUL / FRACTION_PART;
+        int slotIdx = (value / ACTION_SLOT_MUL) - 1;
+        float durationSec = value % ACTION_SLOT_MUL / FRACTION_PART;
 
-        data[slotIdx] = new(durationSec, DateTime.UtcNow);
+        data[slotIdx] = new(durationSec, UtcNow);
     }
 
     public void Reset()
     {
-        for (int i = 0; i < data.Length; i++)
-        {
-            data[i] = new(0, DateTime.UtcNow);
-        }
+        var span = data.AsSpan();
+        span.Fill(new(0, UtcNow));
     }
 
     public int Get(KeyAction keyAction)
     {
         int index = keyAction.SlotIndex;
-        return Math.Clamp((int)(data[index].StartTime.AddSeconds(data[index].DurationSec) - DateTime.UtcNow).TotalMilliseconds, 0, int.MaxValue);
+
+        ref Data d = ref data[index];
+
+        return Max((int)(d.End - UtcNow).TotalMilliseconds, 0);
     }
 }

@@ -1,5 +1,7 @@
 ﻿using System.Collections.Specialized;
 
+using static Core.ActionBar;
+
 namespace Core;
 
 public interface IActionBarBits
@@ -38,6 +40,8 @@ public sealed class ActionBarBits<T> : IActionBarBits, IReader
         if (keyAction.Slot == 0) return false;
 
         int index = keyAction.SlotIndex;
-        return bits[index / ActionBar.BIT_PER_CELL][Mask.M[index % ActionBar.BIT_PER_CELL]];
+        return bits
+            [index / BIT_PER_CELL]
+            [Mask.M[index % BIT_PER_CELL]];
     }
 }

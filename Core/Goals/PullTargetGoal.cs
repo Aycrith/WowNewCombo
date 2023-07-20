@@ -5,7 +5,6 @@ using Microsoft.Extensions.Logging;
 using SharedLib.NpcFinder;
 
 using System;
-using System.Diagnostics;
 
 namespace Core.Goals;
 

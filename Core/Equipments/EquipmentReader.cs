@@ -23,10 +23,8 @@ public sealed class EquipmentReader : IReader
     {
         this.itemDB = itemDB;
 
-        for (int i = 0; i < MAX_EQUIPMENT_COUNT; i++)
-        {
-            Items[i] = ItemDB.EmptyItem;
-        }
+        var span = Items.AsSpan();
+        span.Fill(ItemDB.EmptyItem);
     }
 
     public void Update(IAddonDataProvider reader)
