@@ -39,26 +39,22 @@
       {
         "Name": "Army of the Dead",
         "Key": "N5",
-        "WhenUsable": true,
         "HasCastbar": true,
         "AfterCastWaitCastbar": true
       },
       {
         "Name": "Icy Touch",
         "Key": "6",
-        "WhenUsable": true,
         "Requirements": [
           "!TargetCastingSpell",
           "!Frost Fever",
           "SpellInRange:0"
         ],
-        "AfterCastAuraExpected": true,
         "AfterCastWaitCombat": true
       },
       {
         "Name": "Death Grip",
         "Key": "0",
-        "WhenUsable": true,
         "Requirements": [
           "SpellInRange:2",
           "!Falling"
@@ -73,7 +69,6 @@
       {
         "Name": "Ghoul Frenzy",
         "Key": "F8",
-        "WhenUsable": true,
         "Cooldown": 30000,
         "Requirements": [
           "Has Pet",
@@ -101,7 +96,6 @@
       {
         "Name": "Mind Freeze",
         "Key": "9",
-        "WhenUsable": true,
         "Requirements": [
           "InMeleeRange",
           "TargetCastingSpell"
@@ -110,7 +104,6 @@
       {
         "Name": "Blood Tap",
         "Key": "N6",
-        "WhenUsable": true,
         "Requirements": [
           "!Blood Tap",
           "BloodRune <= 1"
@@ -119,7 +112,6 @@
       {
         "Name": "Bone Shield",
         "Key": "N4",
-        "WhenUsable": true,
         "Requirements": [
           "!Bone Shield"
         ]
@@ -127,7 +119,6 @@
       {
         "Name": "Empower Rune Weapon",
         "Key": "N3",
-        "WhenUsable": true,
         "Requirements": [
           "TotalRune == 0",
           "RunicPower <= 105",
@@ -137,20 +128,17 @@
       {
         "Name": "Death Strike",
         "Key": "F5",
-        "WhenUsable": true,
         "Requirements": [
           "Health% < 30"
         ]
       },
       {
         "Name": "Summon Gargoyle",
-        "Key": "4",
-        "WhenUsable": true
+        "Key": "4"
       },
       {
         "Name": "Blood Boil",
         "Key": "1",
-        "WhenUsable": true,
         "Requirements": [
           "MobCount > 1",
           "Frost Fever",
@@ -161,17 +149,14 @@
       {
         "Name": "Icy Touch",
         "Key": "6",
-        "WhenUsable": true,
         "Requirements": [
           "!Frost Fever",
           "SpellInRange:0"
-        ],
-        "AfterCastAuraExpected": true
+        ]
       },
       {
         "Name": "Blood Strike",
         "Key": "3",
-        "WhenUsable": true,
         "Cooldown": 2000,
         "Requirements": [
           "MobCount < 2",
@@ -182,7 +167,6 @@
       {
         "Name": "Scourge Strike",
         "Key": "2",
-        "WhenUsable": true,
         "Cooldown": 2000,
         "Requirements": [
           "MobCount < 2",
@@ -194,7 +178,6 @@
       {
         "Name": "Death Coil",
         "Key": "8",
-        "WhenUsable": true,
         "Requirements": [
           "RunicPower >= 60",
           "SpellInRange:1"
@@ -203,18 +186,15 @@
       {
         "Name": "Plague Strike",
         "Key": "5",
-        "WhenUsable": true,
         "Requirements": [
           "MobCount < 2",
           "!Blood Plague",
           "InMeleeRange"
-        ],
-        "AfterCastAuraExpected": true
+        ]
       },
       {
         "Name": "Pestilenc",
         "Key": "7",
-        "WhenUsable": true,
         "Requirements": [
           "MobCount > 1",
           "Frost Fever && Blood Plague && (Debuff_Frost Fever < MIN_TIME_REFRESH || Debuff_Blood Plague < MIN_TIME_REFRESH)",
@@ -240,9 +220,8 @@
         "Name": "Horn of Winter",
         "Key": "F4",
         "InCombat": "i dont care",
-        "WhenUsable": true,
         "Requirements": [
-          "!Horn of Winter || (CD_Horn of Winter <= GCD && TargetAlive && TargetHostile)",
+          "!Horn of Winter || (CD <= GCD && TargetAlive && TargetHostile)",
           "!Mounted"
         ]
       },
@@ -251,7 +230,6 @@
         "Name": "Raise Dead",
         "Key": "F7",
         "InCombat": "i dont care",
-        "WhenUsable": true,
         "Requirements": [
           "!Has Pet",
           "!Mounted",
@@ -271,7 +249,6 @@
         "Cost": 19,
         "Name": "Repair",
         "Key": "C",
-        "Form": "None",
         "Requirement": "Durability% < 35",
         "PathFilename": "_pack\\70-80\\Zul'Drak\\Argent_Stand_vendor.json"
       },
@@ -279,7 +256,6 @@
         "Cost": 19,
         "Name": "Sell",
         "Key": "C",
-        "Form": "None",
         "Requirements": [
           "BagFull",
           "BagGreyItem"
