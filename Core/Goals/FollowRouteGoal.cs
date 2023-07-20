@@ -164,7 +164,8 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
             navigation.Resume();
         }
 
-        MountIfPossible();
+        if (playerReader.Class != UnitClass.Druid)
+            MountIfPossible();
     }
 
     public void OnGoapEvent(GoapEventArgs e)
