@@ -2,14 +2,35 @@
 @inject IAddonReader addonReader
 
 @inject PlayerReader PlayerReader
+@inject TimeToKill ttk
 
 @implements IDisposable
 
 <div class="card" style="margin-top: 10px">
     <div class="card-header">
-        Goals -> @PlayerReader.MinRange() - @PlayerReader.MaxRange()
-        | Expand <input type="checkbox" @bind="@Expand" />
+        Goals
+        <button style="margin-right:4px" class="btn btn-sm btn-secondary" @onclick="() => {
+            CurrentOnly = !CurrentOnly;
+            if (CurrentOnly)
+                Expand = true;
+            }">
+            <span>@(LabelCurrent(CurrentOnly))</span>
+        </button>
+        @if (!CurrentOnly)
+        {
+            <button style="margin-right:4px" class="btn btn-sm btn-secondary" @onclick="() => Expand = !Expand">
+                <span>@(LabelExpand(Expand))</span>
+            </button>
+        }
+        <button class="btn btn-sm btn-secondary" @onclick="() => Requirements = !Requirements">
+            <span>@(LabelRequirements(Requirements))</span>
+        </button>
         <ToggleButton Disable="@(botController.ClassConfig?.Mode == Mode.AttendedGather)" />
+
+        @PlayerReader.MinRange() - @PlayerReader.MaxRange()
+
+        @ttk.Time.ToString("F1")
+
         <span class="float-right">
             Net: @PlayerReader.NetworkLatency.ToString()ms |
             Npc: @NpcLatency.ToString("0.0")ms |
@@ -34,7 +55,13 @@
             <table class="table table-sm table-striped">
                 @foreach (var goal in botController.GoapAgent.AvailableGoals)
                 {
-                    <GoapGoalView goal="goal" IsSelected="(goal == botController.GoapAgent.CurrentGoal)" Expand="@(Expand || goal.GetType() == typeof(Core.Goals.ParallelGoal))" />
+                    if (CurrentOnly && goal != botController.GoapAgent.CurrentGoal)
+                        continue;
+
+                    <GoapGoalView goal="goal"
+                                  IsSelected="(!CurrentOnly && goal == botController.GoapAgent.CurrentGoal)"
+                                  Expand="@(Expand || goal.GetType() == typeof(Core.Goals.ParallelGoal))"
+                                  ShowAll="@Requirements" />
                 }
             </table>
         </div>
@@ -50,6 +77,10 @@
     public bool ShowPlan { get; set; } = true;
 
     public bool Expand { get; set; } = false;
+
+    public bool Requirements { get; set; } = false;
+
+    public bool CurrentOnly { get; set; } = false;
 
     public double NpcLatency => botController.AvgScreenLatency + botController.AvgNPCLatency;
 
@@ -67,4 +98,20 @@
     {
         base.InvokeAsync(StateHasChanged);
     }
+
+    private string LabelCurrent(bool val)
+    {
+        return val ? "Current" : "All";
+    }
+
+    private string LabelExpand(bool val)
+    {
+        return val ? "Unfold" : "Fold";
+    }
+
+    private string LabelRequirements(bool val)
+    {
+        return val ? "Every" : "Missing";
+    }
+
 }
