@@ -13,7 +13,7 @@ local CELL_SIZE = 1 -- 1-9
 -- Spacing in px between data squares.
 local CELL_SPACING = 1 -- 0 or 1
 
-local GLOBAL_TIME_CELL = 98
+local GLOBAL_TIME_CELL = NUMBER_OF_FRAMES - 2
 
 -- Dont modify values below
 
@@ -117,7 +117,7 @@ local TALENT_ITERATION_FRAME_CHANGE_RATE = FRAME_CHANGE_RATE
 -- How often the spellbook frames change
 local COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE = FRAME_CHANGE_RATE
 -- How often the check network latency
-local LATENCY_ITERATION_FRAME_CHANGE_RATE = 500 -- 500ms * refresh rate in ms
+local LATENCY_ITERATION_FRAME_CHANGE_RATE = 200 -- 500ms * refresh rate in ms
 -- How often the lastLoot return from Closed to Corpse
 local LOOT_RESET_RATE = FRAME_CHANGE_RATE
 -- How often the Player Buff / target Debuff frames change
@@ -131,6 +131,7 @@ DataToColor.lastLootResetStart = 0
 DataToColor.map = C_Map.GetBestMapForUnit(DataToColor.C.unitPlayer)
 DataToColor.uiMapId = 0
 DataToColor.uiErrorMessage = 0
+DataToColor.uiErrorMessageTime = 0
 DataToColor.gcdExpirationTime = 0
 
 DataToColor.lastAutoShot = 0
@@ -248,6 +249,7 @@ function DataToColor:Reset()
     DataToColor.globalTime = 0
     DataToColor.lastLoot = 0
     DataToColor.uiErrorMessage = 0
+    DataToColor.uiErrorMessageTime = 0
     DataToColor.gcdExpirationTime = 0
 
     DataToColor.lastAutoShot = 0
@@ -415,6 +417,7 @@ function DataToColor:CreateFrames(n)
 
     local valueCache = {}
     local frames = {}
+    local updateCount = {}
 
     -- This function is able to pass numbers in range 0 to 16777215
     -- r,g,b are integers in range 0-255
@@ -430,9 +433,13 @@ function DataToColor:CreateFrames(n)
     end
 
     local function Pixel(func, value, slot)
-        if valueCache[slot + 1] ~= value then
-            valueCache[slot + 1] = value
-            frames[slot + 1]:SetBackdropColor(func(self, value))
+        if valueCache[slot] ~= value then
+
+            valueCache[slot] = value
+            local frame = frames[slot]
+            frame:SetBackdropColor(func(self, value))
+
+            updateCount[slot] = updateCount[slot] + 1
             return true
         end
         return false
@@ -511,10 +518,10 @@ function DataToColor:CreateFrames(n)
             if DataToColor.targetChanged then
                 Pixel(int, DataToColor:GetTargetName(0), 16) -- Characters 1-3 of targets name
                 Pixel(int, DataToColor:GetTargetName(3), 17) -- Characters 4-6 of targets name
-                Pixel(int, UnitHealthMax(DataToColor.C.unitTarget), 18)
                 DataToColor.targetBuffTime:forcedReset()
             end
 
+            Pixel(int, UnitHealthMax(DataToColor.C.unitTarget), 18)
             Pixel(int, UnitHealth(DataToColor.C.unitTarget), 19)
 
             if globalCounter % ITEM_ITERATION_FRAME_CHANGE_RATE == 0 then
@@ -622,7 +629,7 @@ function DataToColor:CreateFrames(n)
             Pixel(int, floor(GetMoney() / 1000000), 45) -- Represents amount of money held (in gold) 
 
             Pixel(int, DataToColor.C.CHARACTER_RACE_ID * 10000 + DataToColor.C.CHARACTER_CLASS_ID * 100 + DataToColor.ClientVersion, 46)
-            -- 47 empty
+            Pixel(int, DataToColor.uiErrorMessageTime, 47)
             Pixel(int, DataToColor:shapeshiftForm(), 48) -- Shapeshift id https://wowwiki.fandom.com/wiki/API_GetShapeshiftForm
             Pixel(int, DataToColor:getRange(), 49) -- Represents minRange-maxRange ex. 0-5 5-15
 
@@ -850,8 +857,9 @@ function DataToColor:CreateFrames(n)
                 DataToColor.lastLoot = DataToColor.C.Loot.Corpse
             end
             Pixel(int, DataToColor.lastLoot, 97)
+            -- n - 2 reserved for global time
             UpdateGlobalTime(GLOBAL_TIME_CELL)
-            -- 99 Reserved
+            -- n - 1 reserved for validation
 
             DataToColor:ConsumeChanges()
 
@@ -862,6 +870,7 @@ function DataToColor:CreateFrames(n)
             if globalCounter < initPhase then
                 for i = 1, n - 1 do
                     Pixel(int, 0, i)
+                    updateCount[i] = 0
                 end
             end
             UpdateGlobalTime(GLOBAL_TIME_CELL)
@@ -873,6 +882,7 @@ function DataToColor:CreateFrames(n)
             -- Assign pixel squares a value equivalent to their respective indices.
             for i = 1, n - 1 do
                 Pixel(int, i, i)
+                updateCount[i] = 0
             end
         end
 
@@ -899,7 +909,7 @@ function DataToColor:CreateFrames(n)
     end
 
     -- background frame
-    local backgroundframe = genFrame("frame_0", 0, 0)
+    local backgroundframe = genFrame("frame_bg", 0, 0)
     backgroundframe:SetHeight(FRAME_ROWS * (CELL_SIZE + CELL_SPACING))
     backgroundframe:SetWidth(ceil(n / FRAME_ROWS) * (CELL_SIZE + CELL_SPACING))
     backgroundframe:SetFrameStrata("FULLSCREEN_DIALOG")
@@ -909,11 +919,40 @@ function DataToColor:CreateFrames(n)
         -- those are grid coordinates (1,2,3,4 by  1,2,3,4 etc), not pixel coordinates
         local y = frame % FRAME_ROWS
         local x = floor(frame / FRAME_ROWS)
-        frames[frame + 1] = genFrame("frame_" .. tostring(frame), x, y)
-        valueCache[frame + 1] = -1
+        frames[frame] = genFrame("frame_" .. tostring(frame), x, y)
+        valueCache[frame] = -1
+        updateCount[frame] = 0
     end
 
-    frames[1]:SetScript("OnUpdate", updateFrames)
+    backgroundframe:SetScript("OnUpdate", updateFrames)
+
+    local function DumpCallCount(maxRow)
+        print("Frame        count  val --- globalCounter: "..globalCounter)
+
+        local tbl = {}
+        local function byUpdateCountDesc(a, b)
+            return a[2] > b[2]
+        end
+
+        for k,v in pairs(updateCount) do
+            table.insert(tbl, { k, v })
+        end
+
+        table.sort(tbl, byUpdateCountDesc)
+
+        maxRow = tonumber(maxRow) or 5
+
+        local c = 0
+        for k,v in ipairs(tbl) do
+            if c >= maxRow then break end
+            print(string.format("%03d  %010d  %s", v[1], v[2], valueCache[v[1]]))
+            c = c + 1
+        end
+    end
+
+    --C_Timer.After(10, DumpCallCount)
+
+    DataToColor:RegisterChatCommand('dcdump', DumpCallCount)
 end
 
 function DataToColor:delete(items)

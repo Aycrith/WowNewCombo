@@ -21,7 +21,6 @@ public sealed partial class BotController : IBotController, IDisposable
 {
     private readonly IServiceProvider serviceProvider;
     private readonly ILogger<BotController> logger;
-    private readonly ILogger globalLogger;
     private readonly IPPather pather;
     private readonly MinimapNodeFinder minimapNodeFinder;
     private readonly DataConfig dataConfig;
@@ -31,11 +30,6 @@ public sealed partial class BotController : IBotController, IDisposable
     private readonly AddonBits bits;
     private readonly PlayerReader playerReader;
     private readonly WowScreen wowScreen;
-    private readonly ActionBarCostReader costReader;
-    private readonly AuraTimeReader<IPlayerBuffTimeReader> playerBuff;
-    private readonly AuraTimeReader<ITargetDebuffTimeReader> targetDebuff;
-    private readonly AuraTimeReader<ITargetBuffTimeReader> targetBuff;
-    private readonly AuraTimeReader<IFocusBuffTimeReader> focusBuff;
 
     public bool IsBotActive => GoapAgent != null && GoapAgent.Active;
 
@@ -62,35 +56,22 @@ public sealed partial class BotController : IBotController, IDisposable
     public double AvgNPCLatency { get; private set; }
 
     public BotController(
-        ILogger<BotController> logger, ILogger globalLogger,
+        ILogger<BotController> logger,
         CancellationTokenSource cts,
         IPPather pather, DataConfig dataConfig,
         WowScreen wowScreen,
         NpcNameFinder npcNameFinder,
         PlayerReader playerReader, AddonReader addonReader,
         AddonBits bits, Wait wait,
-        ActionBarCostReader costReader,
         MinimapNodeFinder minimapNodeFinder,
         IScreenCapture screenCapture,
-        IServiceProvider serviceProvider,
-        AuraTimeReader<IPlayerBuffTimeReader> playerBuff,
-        AuraTimeReader<ITargetDebuffTimeReader> targetDebuff,
-        AuraTimeReader<ITargetBuffTimeReader> targetBuff,
-        AuraTimeReader<IFocusBuffTimeReader> focusBuff)
+        IServiceProvider serviceProvider)
     {
         this.serviceProvider = serviceProvider;
 
-        this.globalLogger = globalLogger;
         this.logger = logger;
         this.pather = pather;
         this.dataConfig = dataConfig;
-
-        this.costReader = costReader;
-
-        this.playerBuff = playerBuff;
-        this.targetDebuff = targetDebuff;
-        this.targetBuff = targetBuff;
-        this.focusBuff = focusBuff;
 
         this.wowScreen = wowScreen;
 
@@ -271,18 +252,11 @@ public sealed partial class BotController : IBotController, IDisposable
         try
         {
             ClassConfig = ReadClassConfiguration(classFile);
-
-            RequirementFactory requirementFactory = new(serviceProvider, ClassConfig);
-
-            ClassConfig.Initialise(dataConfig, addonReader, playerReader,
-                addonReader.GlobalTime, costReader,
-                requirementFactory, globalLogger,
-                playerBuff, targetDebuff, targetBuff, focusBuff,
-                pathFile);
+            ClassConfig.Initialise(serviceProvider, pathFile);
 
             LogProfileLoaded(logger, classFile, ClassConfig.PathFilename);
 
-            Initialize(ClassConfig);
+            CreateSession(ClassConfig);
         }
         catch (Exception ex)
         {
@@ -296,7 +270,7 @@ public sealed partial class BotController : IBotController, IDisposable
         return true;
     }
 
-    private void Initialize(ClassConfiguration config)
+    private void CreateSession(ClassConfiguration config)
     {
         IServiceCollection s = new ServiceCollection();
 
@@ -404,7 +378,7 @@ public sealed partial class BotController : IBotController, IDisposable
     public void OverrideClassConfig(ClassConfiguration classConfig)
     {
         this.ClassConfig = classConfig;
-        Initialize(this.ClassConfig);
+        CreateSession(this.ClassConfig);
     }
 
     #region logging

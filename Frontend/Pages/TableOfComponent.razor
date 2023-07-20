@@ -57,7 +57,7 @@
             var value = pinfo.GetValue(obj, null);
             if (value == null) continue;
 
-            if (pinfo.PropertyType.IsArray)
+            if (pinfo.PropertyType.IsArray && pinfo.PropertyType != typeof(ActionBarCost[]))
             {
                 var arr = value as object[];
                 if (arr == null) continue;
@@ -72,6 +72,37 @@
                         var lst = GetPropertyValues(arr[i]);
                         if (lst != null && lst.Count > 0)
                             propList.AddRange(lst);
+                    }
+                }
+            }
+            else if (pinfo.PropertyType == typeof(ActionBarCost[]))
+            {
+                var arr = value as ActionBarCost[];
+                if (arr == null) continue;
+
+                for (int i = 0; i < arr.Length; i += ActionBar.NUM_OF_COST)
+                {
+                    int index = i / ActionBar.NUM_OF_COST;
+                    string keybind = KeyReader.ActionBarSlotMap.FirstOrDefault(x => x.Value == (index + 1)).Key;
+                    string name = $"[idx:{i,2} | bar:{keybind,2}]";
+                    string allCosts = string.Empty;
+
+                    for (var j = i; j < i + ActionBar.NUM_OF_COST; j++)
+                    {
+                        ActionBarCost abc = arr[j];
+                        if (!abc.Equals(ActionBarCostReader.DefaultCost))
+                        {
+                            allCosts += (allCosts.Length != 0 ? " | " : "") + $"{abc.Cost} {abc.PowerType.ToStringF()}";
+                        }
+                    }
+
+                    if (!string.IsNullOrEmpty(allCosts))
+                    {
+                        propList.Add(new ObjectField()
+                        {
+                            Name = name,
+                            Value = allCosts
+                        });
                     }
                 }
             }

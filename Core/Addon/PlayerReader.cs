@@ -121,6 +121,8 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
     public int PlayerMaxXp => reader.GetInt(51);
     public int PlayerXpPercent => (1 + PlayerXp.Value) * 100 / (1 + PlayerMaxXp);
 
+    public RecordInt UIErrorTime { get; } = new(47);
+
     private UI_ERROR UIError => (UI_ERROR)reader.GetInt(52);
     public UI_ERROR LastUIError { get; set; }
 
@@ -177,7 +179,11 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
     public int FocusHealthCurrent() => reader.GetInt(90);
     public int FocusHealthPercent() => (1 + FocusHealthCurrent()) * 100 / (1 + FocusHealthMax());
 
-    public int LastCastGCD { get; set; }
+    public int LastCastGCD { get; private set; }
+    public void ResetLastCastGCD()
+    {
+        LastCastGCD = 0;
+    }
     public void ReadLastCastGCD()
     {
         LastCastGCD = reader.GetInt(94);
@@ -186,6 +192,9 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
     public RecordInt GCD { get; } = new(95);
 
     public int NetworkLatency => reader.GetInt(96) % 10000;
+
+    public int DoubleNetworkLatency => 2 * NetworkLatency;
+
     public int SpellQueueTimeMs => reader.GetInt(96) / 10000 % 10000;
 
     public RecordInt LootEvent { get; } = new(97);
@@ -220,6 +229,8 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
 
         GCD.Update(reader);
 
+        UIErrorTime.Update(reader);
+
         if (UIError != UI_ERROR.NONE)
             LastUIError = UIError;
     }
@@ -238,6 +249,7 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
         Level.Reset();
 
         LootEvent.Reset();
+        UIErrorTime.Reset();
 
         GCD.Reset();
     }

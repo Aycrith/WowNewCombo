@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 
+using Microsoft.Extensions.Logging;
+
 namespace Core;
 
 public sealed class ActionBarPopulator
@@ -18,14 +20,21 @@ public sealed class ActionBarPopulator
         }
     }
 
+    private readonly ILogger<ActionBarPopulator> logger;
     private readonly ClassConfiguration config;
     private readonly BagReader bagReader;
+    private readonly EquipmentReader equipmentReader;
     private readonly ExecGameCommand execGameCommand;
 
-    public ActionBarPopulator(ClassConfiguration config, BagReader bagReader, ExecGameCommand execGameCommand)
+    public ActionBarPopulator(ILogger<ActionBarPopulator> logger,
+        ClassConfiguration config, BagReader bagReader,
+        EquipmentReader equipmentReader, ExecGameCommand execGameCommand)
     {
+        this.logger = logger;
+
         this.config = config;
         this.bagReader = bagReader;
+        this.equipmentReader = equipmentReader;
         this.execGameCommand = execGameCommand;
     }
 
@@ -33,47 +42,28 @@ public sealed class ActionBarPopulator
     {
         List<ActionBarSlotItem> items = new();
 
-        for (int i = 0; i < config.Form.Length; i++)
+        foreach ((string _, KeyActions keyActions) in config.GetByType<KeyActions>())
         {
-            AddUnique(items, config.Form[i]);
-        }
-
-        for (int i = 0; i < config.Adhoc.Sequence.Length; i++)
-        {
-            AddUnique(items, config.Adhoc.Sequence[i]);
-        }
-
-        for (int i = 0; i < config.AssistFocus.Sequence.Length; i++)
-        {
-            AddUnique(items, config.AssistFocus.Sequence[i]);
-        }
-
-        for (int i = 0; i < config.Parallel.Sequence.Length; i++)
-        {
-            AddUnique(items, config.Parallel.Sequence[i]);
-        }
-
-        for (int i = 0; i < config.Pull.Sequence.Length; i++)
-        {
-            AddUnique(items, config.Pull.Sequence[i]);
-        }
-
-        for (int i = 0; i < config.Combat.Sequence.Length; i++)
-        {
-            AddUnique(items, config.Combat.Sequence[i]);
-        }
-
-        for (int i = 0; i < config.NPC.Sequence.Length; i++)
-        {
-            AddUnique(items, config.NPC.Sequence[i]);
+            foreach (KeyAction keyAction in keyActions.Sequence)
+            {
+                AddUnique(items, keyAction);
+            }
         }
 
         items.Sort((a, b) => a.KeyAction.Slot.CompareTo(b.KeyAction.Slot));
 
-        for (int i = 0; i < items.Count; i++)
+        foreach (ActionBarSlotItem absi in items)
         {
-            string content = ScriptBuilder(items[i]);
-            execGameCommand.Run(content);
+            if (ScriptBuilder(absi, out string content))
+            {
+                execGameCommand.Run(content);
+            }
+            else
+            {
+                logger.LogWarning($"Unable to populate " +
+                    $"{absi.KeyAction.Name} -> " +
+                    $"'{absi.Name}' is not valid Name or ID!");
+            }
         }
     }
 
@@ -101,21 +91,41 @@ public sealed class ActionBarPopulator
             name = bagReader.HighestQuantityOfFoodItemId().ToString();
             isItem = true;
         }
+        else if (keyAction.Item)
+        {
+            if (keyAction.Name == "Trinket 1")
+            {
+                name = equipmentReader.GetId((int)InventorySlotId.Trinket_1).ToString();
+                isItem = true;
+            }
+            else if (keyAction.Name == "Trinket 2")
+            {
+                name = equipmentReader.GetId((int)InventorySlotId.Trinket_2).ToString();
+                isItem = true;
+            }
+        }
 
         items.Add(new(name, keyAction, isItem));
     }
 
-    private static string ScriptBuilder(ActionBarSlotItem abs)
+    private static bool ScriptBuilder(ActionBarSlotItem abs, out string content)
     {
         string nameOrId = $"\"{abs.Name}\"";
         if (int.TryParse(abs.Name, out int id))
         {
             nameOrId = id.ToString();
+            if (nameOrId == "0")
+            {
+                content = "";
+                return false;
+            }
         }
 
         string func = GetFunction(abs);
         int slot = abs.KeyAction.SlotIndex + 1;
-        return $"/run {func}({nameOrId})PlaceAction({slot})ClearCursor()--";
+        content = $"/run {func}({nameOrId})PlaceAction({slot})ClearCursor()--";
+        
+        return true;
     }
 
     private static string GetFunction(ActionBarSlotItem a)

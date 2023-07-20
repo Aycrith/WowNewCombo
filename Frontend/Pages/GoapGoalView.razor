@@ -4,18 +4,20 @@
 @using Core.Goals
 @using System.Text.RegularExpressions
 
+@inject WApi api
+
 @inject IBotController botController
 
 @inject ActionBarCooldownReader ActionBarCooldownReader
 
 <tr class="@ActionClass(IsSelected, 0)">
     <td>
-        <b style="color:@DisplayCanRun(goal.CanRun())">@goal.Cost: @goal.DisplayName</b>
+        <b style="color:@DisplayCanRun(goal.CanRun())">@goal.Cost: @GoalName(goal)</b>
     </td>
     <td>
         @foreach ((GoapKey key, bool value) in goal.Preconditions)
         {
-            <span class="badge @Badge(botController.GoapAgent!.HasState(key) == value)">@(key.ToStringF(value))</span>
+            <span style="margin-right:4px;" class="badge @Badge(botController.GoapAgent!.HasState(key) == value)">@(key.ToStringF(value))</span>
         }
         @if (goal.Keys.Length == 1)
         {
@@ -23,7 +25,7 @@
             @for (int i = 0; i < key.RequirementsRuntime.Length; i++)
             {
                 Requirement rq = key.RequirementsRuntime[i];
-                if (rq.VisibleIfHasRequirement || !rq.HasRequirement())
+                if (rq.VisibleIfHasRequirement || !rq.HasRequirement() || ShowAll)
                 {
                     @(DisplayRequirementBadges(rq))
                 }
@@ -48,9 +50,13 @@
                     if (key.Slot > 0)
                         cooldown = ActionBarCooldownReader.Get(key);
 
-                    <tr class="@ActionClass(lastKey == key.ConsoleKeyFormHash, cooldown)">
+                    <tr class="@ActionClass(goal == botController.GoapAgent!.CurrentGoal && lastKey == key.ConsoleKeyFormHash, cooldown)">
                         <td>
-                            <b style="color:@DisplayCanRun(key.CanRun())">@key.Name [@key.Key]</b>
+                            @if (key.HasForm)
+                            {
+                                <img style="margin-right:4px" src="@FormResourceName(key.FormValue)" />
+                            }
+                            <b style="color:@DisplayCanRun(key.CanRun())">@KeyActionSpellName(key)</b>
                         </td>
                         <td>
                             @{
@@ -59,7 +65,7 @@
                             @for (int r = 0; r < reqSpan.Length; r++)
                             {
                                 Requirement rq = reqSpan[r];
-                                if (rq.VisibleIfHasRequirement || !rq.HasRequirement())
+                                if (rq.VisibleIfHasRequirement || !rq.HasRequirement() || ShowAll)
                                 {
                                     @(DisplayRequirementBadges(rq))
                                 }
@@ -79,6 +85,9 @@
 
     [Parameter]
     public bool Expand { get; set; } = false;
+
+    [Parameter]
+    public bool ShowAll { get; set; } = false;
 
     [Parameter]
     public GoapGoal goal { get; set; } = new NullGoal();
@@ -125,5 +134,26 @@
     private static string DisplayCanRun(bool item)
     {
         return item ? "black" : "gray";
+    }
+
+    private string FormResourceName(Form i)
+    {
+        return $"_content/Frontend/form/small/{i.ToStringF().ToLower()}.jpg";
+    }
+
+    public MarkupString GoalName(GoapGoal goal)
+    {
+        if (goal.Keys.Length == 1)
+            return KeyActionSpellName(goal.Keys[0]);
+
+        return new MarkupString(goal.DisplayName);
+    }
+
+    public MarkupString KeyActionSpellName(KeyAction keyAction)
+    {
+        if (keyAction.SpellId == 0)
+            return new MarkupString($"{keyAction.Name} [{keyAction.Key}]");
+
+        return new($"<a href=\"{api.SpellId}{keyAction.SpellId}\" target=\"_blank\" data-wowhead=\"spell={keyAction.SpellId}\" style=\"text-decoration:none;color:inherit\">{keyAction.Name} [{keyAction.Key}]</a>");
     }
 }

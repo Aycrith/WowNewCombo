@@ -16,23 +16,25 @@
     "USE_TRINKET_1": 0,
     "USE_TRINKET_2": 0
   },
-  "Form": [
-    {
-      "Name": "Battle Stance",
-      "Key": "F1",
-      "Form": "Warrior_BattleStance"
-    },
-    {
-      "Name": "Defensive Stance",
-      "Key": "F2",
-      "Form": "Warrior_DefensiveStance"
-    },
-    {
-      "Name": "Berserker Stance",
-      "Key": "F3",
-      "Form": "Warrior_BerserkerStance"
-    }
-  ],
+  "Form": {
+    "Sequence": [
+      {
+        "Name": "Battle Stance",
+        "Key": "F1",
+        "Form": "Warrior_BattleStance"
+      },
+      {
+        "Name": "Defensive Stance",
+        "Key": "F2",
+        "Form": "Warrior_DefensiveStance"
+      },
+      {
+        "Name": "Berserker Stance",
+        "Key": "F3",
+        "Form": "Warrior_BerserkerStance"
+      }
+    ]
+  },
   "Pull": {
     "Sequence": [
       {
@@ -135,6 +137,7 @@
         "Name": "Pummel",
         "Key": "-",
         "WhenUsable": true,
+        "Form": "Warrior_BerserkerStance",
         "UseWhenTargetIsCasting": true,
         "Requirements": [
           "Form:Warrior_BerserkerStance"
@@ -180,7 +183,7 @@
         "Key": "N2",
         "WhenUsable": true,
         "Requirements": [
-          "Talent: Mortal Strike",
+          "Talent:Mortal Strike",
           "MainHandSwing < -400",
           "MobCount < 2",
           "TargetHealth% > 20"
@@ -284,7 +287,7 @@
         "Name": "HP regen",
         "Requirements": [
           "FoodCount == 0 || !Usable:Food",
-          "Health% < 90"
+          "Health% < 50"
         ]
       }
     ]

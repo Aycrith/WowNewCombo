@@ -1,8 +1,12 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Numerics;
+using System.Reflection;
 
 namespace Core;
 
@@ -22,7 +26,7 @@ public enum Mode
 }
 
 
-public sealed class ClassConfiguration : IDisposable
+public sealed partial class ClassConfiguration
 {
     public bool Log { get; set; } = true;
     public bool LogBagChanges { get; set; } = true;
@@ -51,7 +55,11 @@ public sealed class ClassConfiguration : IDisposable
 
     public int NPCMaxLevels_Above { get; set; } = 1;
     public int NPCMaxLevels_Below { get; set; } = 7;
-    public UnitClassification TargetMask { get; set; } = UnitClassification.Normal | UnitClassification.Trivial | UnitClassification.Rare;
+    public UnitClassification TargetMask { get; set; } =
+        UnitClassification.Normal |
+        UnitClassification.Trivial |
+        UnitClassification.Rare;
+
     public bool CheckTargetGivesExp { get; set; }
     public string[] Blacklist { get; init; } = Array.Empty<string>();
 
@@ -66,8 +74,8 @@ public sealed class ClassConfiguration : IDisposable
     public KeyActions NPC { get; } = new();
     public KeyActions AssistFocus { get; } = new();
     public WaitKeyActions Wait { get; } = new();
+    public FormKeyActions Form { get; } = new();
 
-    public KeyAction[] Form { get; init; } = Array.Empty<KeyAction>();
     public KeyAction[] GatherFindKeyConfig { get; set; } = Array.Empty<KeyAction>();
     public string[] GatherFindKeys { get; init; } = Array.Empty<string>();
 
@@ -123,239 +131,253 @@ public sealed class ClassConfiguration : IDisposable
     public ConsoleKey TurnLeftKey { get; init; } = ConsoleKey.LeftArrow; // 37
     public ConsoleKey TurnRightKey { get; init; } = ConsoleKey.RightArrow; // 39
 
-    public void Initialise(DataConfig dataConfig,
-        AddonReader addonReader, PlayerReader playerReader, RecordInt globalTime,
-        ActionBarCostReader costReader, RequirementFactory requirementFactory,
-        ILogger logger,
-        AuraTimeReader<IPlayerBuffTimeReader> playerBuff,
-        AuraTimeReader<ITargetDebuffTimeReader> targetDebuff,
-        AuraTimeReader<ITargetBuffTimeReader> targetBuff,
-        AuraTimeReader<IFocusBuffTimeReader> focusBuff,
-        string? overridePathProfileFile)
+    public void Initialise(IServiceProvider sp, string? overridePathFile)
     {
-        requirementFactory.InitUserDefinedIntVariables(IntVariables,
-            playerBuff,
-            targetDebuff,
-            targetBuff,
-            focusBuff);
-
         Jump.Key = JumpKey;
         Jump.Name = nameof(Jump);
         Jump.BaseAction = true;
-        Jump.Initialise(this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
 
         TargetLastTarget.Key = TargetLastTargetKey;
         TargetLastTarget.Name = nameof(TargetLastTarget);
         TargetLastTarget.Cooldown = 0;
         TargetLastTarget.BaseAction = true;
-        TargetLastTarget.Initialise(this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
 
         StandUp.Key = StandUpKey;
         StandUp.Name = nameof(StandUp);
         StandUp.Cooldown = 0;
         StandUp.BaseAction = true;
-        StandUp.Initialise(this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
 
         ClearTarget.Key = ClearTargetKey;
         ClearTarget.Name = nameof(ClearTarget);
         ClearTarget.Cooldown = 0;
         ClearTarget.BaseAction = true;
-        ClearTarget.Initialise(this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
 
         StopAttack.Key = StopAttackKey;
         StopAttack.Name = nameof(StopAttack);
         StopAttack.PressDuration = 20;
         StopAttack.BaseAction = true;
-        StopAttack.Initialise(this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
 
         TargetNearestTarget.Key = TargetNearestTargetKey;
         TargetNearestTarget.Name = nameof(TargetNearestTarget);
         TargetNearestTarget.BaseAction = true;
-        TargetNearestTarget.Initialise(this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
 
         TargetPet.Key = TargetPetKey;
         TargetPet.Name = nameof(TargetPet);
         TargetPet.Cooldown = 0;
         TargetPet.BaseAction = true;
-        TargetPet.Initialise(this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
 
         TargetTargetOfTarget.Key = TargetTargetOfTargetKey;
         TargetTargetOfTarget.Name = nameof(TargetTargetOfTarget);
         TargetTargetOfTarget.Cooldown = 0;
         TargetTargetOfTarget.BaseAction = true;
-        TargetTargetOfTarget.Initialise(this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
 
         TargetFocus.Key = TargetFocusKey;
         TargetFocus.Name = nameof(TargetFocus);
         TargetFocus.Cooldown = 0;
         TargetFocus.BaseAction = true;
-        TargetFocus.Initialise(this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
 
         FollowTarget.Key = FollowTargetKey;
         FollowTarget.Name = nameof(FollowTarget);
         FollowTarget.Cooldown = 0;
         FollowTarget.BaseAction = true;
-        FollowTarget.Initialise(this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
 
         PetAttack.Key = PetAttackKey;
         PetAttack.Name = nameof(PetAttack);
         PetAttack.PressDuration = 10;
         PetAttack.BaseAction = true;
-        PetAttack.Initialise(this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
 
         Mount.Key = MountKey;
         Mount.Name = nameof(Mount);
         Mount.BaseAction = true;
         Mount.Cooldown = 6000;
-        Mount.Initialise(this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
 
         Hearthstone.Key = HearthstoneKey;
         Hearthstone.Name = nameof(Hearthstone);
         Hearthstone.HasCastBar = true;
         Hearthstone.AfterCastWaitCastbar = true;
-        Hearthstone.Initialise(this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
 
         Interact.Key = InteractKey;
         Interact.Name = nameof(Interact);
         Interact.Cooldown = 0;
         Interact.PressDuration = 30;
         Interact.BaseAction = true;
-        Interact.Initialise(this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
 
         InteractMouseOver.Key = InteractMouseOverKey;
         InteractMouseOver.Name = nameof(InteractMouseOver);
         InteractMouseOver.Cooldown = 0;
         InteractMouseOver.PressDuration = 10;
         InteractMouseOver.BaseAction = true;
-        InteractMouseOver.Initialise(this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
 
         Approach.Key = InteractKey;
         Approach.Name = nameof(Approach);
         Approach.PressDuration = 10;
         Approach.BaseAction = true;
-        Approach.Initialise(this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
 
         AutoAttack.Key = InteractKey;
         AutoAttack.Name = nameof(AutoAttack);
         AutoAttack.BaseAction = true;
-        AutoAttack.Item = true;
-        AutoAttack.Initialise(this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
 
-        InitializeKeyActions(Pull, Interact, Approach, AutoAttack, StopAttack, PetAttack);
-        InitializeKeyActions(Combat, Interact, Approach, AutoAttack, StopAttack, PetAttack);
+        RequirementFactory factory = new(sp, this);
 
-        logger.LogInformation($"[{nameof(Form)}] Initialise KeyActions.");
-        for (int i = 0; i < Form.Length; i++)
+        ILogger logger = sp.GetRequiredService<ILogger>();
+        PlayerReader playerReader = sp.GetRequiredService<PlayerReader>();
+
+        RecordInt globalTime = sp.GetRequiredService<AddonReader>().GlobalTime;
+
+        var baseActionKeys = GetByType<KeyAction>();
+        foreach ((string _, KeyAction keyAction) in baseActionKeys)
         {
-            Form[i].InitialiseForm(this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
+            keyAction.Init(logger, Log, playerReader, globalTime);
+            factory.Init(keyAction);
         }
 
-        Pull.PreInitialise(nameof(Pull), requirementFactory, logger);
-        Combat.PreInitialise(nameof(Combat), requirementFactory, logger);
-        Adhoc.PreInitialise(nameof(Adhoc), requirementFactory, logger);
-        NPC.PreInitialise(nameof(NPC), requirementFactory, logger);
-        AssistFocus.PreInitialise(nameof(AssistFocus), requirementFactory, logger);
-        Parallel.PreInitialise(nameof(Parallel), requirementFactory, logger);
-        Wait.PreInitialise(nameof(Wait), requirementFactory, logger);
+        SetBaseActions(Pull,
+            Interact, Approach, AutoAttack, StopAttack, PetAttack);
 
-        Pull.Initialise(nameof(Pull), this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
-        Combat.Initialise(nameof(Combat), this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
-        Adhoc.Initialise(nameof(Adhoc), this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
-        NPC.Initialise(nameof(NPC), this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
-        AssistFocus.Initialise(nameof(NPC), this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
-        Parallel.Initialise(nameof(Parallel), this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
-        Wait.Initialise(nameof(Wait), this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
+        SetBaseActions(Combat,
+            Interact, Approach, AutoAttack, StopAttack, PetAttack);
 
-        int index = 0;
+        var groups = GetByType<KeyActions>();
+
+        foreach ((string name, KeyActions keyActions) in groups)
+        {
+            if (keyActions.Sequence.Length > 0)
+            {
+                LogInitBind(logger, name);
+            }
+
+            keyActions.InitBinds(logger, factory);
+
+            if (keyActions is WaitKeyActions wait &&
+                wait.AutoGenerateWaitForFoodAndDrink)
+                wait.AddWaitKeyActionsForFoodOrDrink(logger, groups);
+        }
+
+        foreach ((string name, KeyActions keyActions) in groups)
+        {
+            if (keyActions.Sequence.Length > 0)
+            {
+                LogInitKeyActions(logger, name);
+            }
+
+            keyActions.Init(logger, Log,
+                playerReader, globalTime, factory);
+        }
+
         GatherFindKeyConfig = new KeyAction[GatherFindKeys.Length];
         for (int i = 0; i < GatherFindKeys.Length; i++)
         {
-            GatherFindKeyConfig[index] = new KeyAction
+            KeyAction newAction = new()
             {
-                Key = GatherFindKeys[index],
-                Name = $"Profession {index}"
+                Key = GatherFindKeys[i],
+                Name = $"Profession {i}"
             };
-            GatherFindKeyConfig[index].Initialise(this, addonReader, playerReader, globalTime, costReader, requirementFactory, logger, Log);
-            index++;
+
+            newAction.Init(logger, Log, playerReader, globalTime);
+            factory.Init(newAction);
+
+            GatherFindKeyConfig[i] = newAction;
         }
 
-        OverridePathFilename = overridePathProfileFile;
+        OverridePathFilename = overridePathFile;
         if (!string.IsNullOrEmpty(OverridePathFilename))
         {
             PathFilename = OverridePathFilename;
         }
 
+        DataConfig dataConfig = sp.GetRequiredService<DataConfig>();
         if (!File.Exists(Path.Join(dataConfig.Path, PathFilename)))
         {
             if (!string.IsNullOrEmpty(OverridePathFilename))
-                throw new Exception($"[{nameof(ClassConfiguration)}] `{OverridePathFilename}` file does not exists!");
+                throw new Exception(
+                    $"[{nameof(ClassConfiguration)}] " +
+                    $"`{OverridePathFilename}` file does not exists!");
             else
-                throw new Exception($"[{nameof(ClassConfiguration)}] `{PathFilename}` file does not exists!");
+                throw new Exception(
+                    $"[{nameof(ClassConfiguration)}] " +
+                    $"`{PathFilename}` file does not exists!");
         }
 
-        CheckConfigConsistency(logger);
-    }
-
-    public void Dispose()
-    {
-        Pull.Dispose();
-        Combat.Dispose();
-        Parallel.Dispose();
-        Adhoc.Dispose();
-        NPC.Dispose();
-        AssistFocus.Dispose();
-        Wait.Dispose();
-    }
-
-    private void CheckConfigConsistency(ILogger logger)
-    {
         if (CheckTargetGivesExp)
         {
-            logger.LogWarning($"{nameof(CheckTargetGivesExp)} is enabled. {nameof(NPCMaxLevels_Above)} and {nameof(NPCMaxLevels_Below)} ignored!");
+            logger.LogWarning($"{nameof(CheckTargetGivesExp)} is enabled. " +
+                $"{nameof(NPCMaxLevels_Above)} and {nameof(NPCMaxLevels_Below)} ignored!");
         }
         if (KeyboardOnly)
         {
-            logger.LogWarning($"{nameof(KeyboardOnly)} mode is enabled. Mouse based actions ignored.");
+            logger.LogWarning($"{nameof(KeyboardOnly)} " +
+                $"mode is enabled. Mouse based actions ignored.");
 
             if (GatherCorpse)
-                logger.LogWarning($"{nameof(GatherCorpse)} limited to the last target. Rest going to be skipped!");
+                logger.LogWarning($"{nameof(GatherCorpse)} " +
+                    $"limited to the last target. Rest going to be skipped!");
         }
     }
 
-    private static void InitializeKeyActions(KeyActions userActions, params KeyAction[] defaultActions)
+    private static void SetBaseActions(
+        KeyActions keyActions, params KeyAction[] baseActions)
     {
-        KeyAction dummyDefault = new();
-        for (int i = 0; i < userActions.Sequence.Length; i++)
+        KeyAction @default = new();
+        for (int i = 0; i < keyActions.Sequence.Length; i++)
         {
-            KeyAction user = userActions.Sequence[i];
-            for (int d = 0; d < defaultActions.Length; d++)
+            KeyAction user = keyActions.Sequence[i];
+            for (int d = 0; d < baseActions.Length; d++)
             {
-                KeyAction @default = defaultActions[d];
+                KeyAction baseAction = baseActions[d];
 
-                if (user.Name != @default.Name)
+                if (user.Name != baseAction.Name)
                     continue;
 
-                user.Key = @default.Key;
+                user.Key = baseAction.Key;
 
                 //if (!string.IsNullOrEmpty(@default.Requirement))
                 //    user.Requirement += " " + @default.Requirement;
                 //user.Requirements.AddRange(@default.Requirements);
 
-                if (user.AfterCastDelay == dummyDefault.AfterCastDelay)
-                    user.AfterCastDelay = @default.AfterCastDelay;
+                if (user.AfterCastDelay == @default.AfterCastDelay)
+                    user.AfterCastDelay = baseAction.AfterCastDelay;
 
-                if (user.PressDuration == dummyDefault.PressDuration)
-                    user.PressDuration = @default.PressDuration;
+                if (user.PressDuration == @default.PressDuration)
+                    user.PressDuration = baseAction.PressDuration;
 
-                if (user.Cooldown == dummyDefault.Cooldown)
-                    user.Cooldown = @default.Cooldown;
+                if (user.Cooldown == @default.Cooldown)
+                    user.Cooldown = baseAction.Cooldown;
 
-                if (user.BaseAction == dummyDefault.BaseAction)
-                    user.BaseAction = @default.BaseAction;
+                if (user.BaseAction == @default.BaseAction)
+                    user.BaseAction = baseAction.BaseAction;
 
-                if (user.Item == dummyDefault.Item)
-                    user.Item = @default.Item;
+                if (user.Item == @default.Item)
+                    user.Item = baseAction.Item;
             }
         }
     }
+
+    public List<(string name, T)> GetByType<T>()
+    {
+        return GetType()
+            .GetProperties(BindingFlags.Instance |
+            BindingFlags.Public | BindingFlags.FlattenHierarchy)
+            .Where(OfType)
+            .Select(pInfo =>
+            {
+                return (pInfo.Name, (T)pInfo.GetValue(this)!);
+            })
+            .ToList();
+
+        static bool OfType(PropertyInfo pInfo) =>
+            typeof(T).IsAssignableFrom(pInfo.PropertyType);
+    }
+
+    [LoggerMessage(
+        EventId = 0010,
+        Level = LogLevel.Information,
+        Message = "[{prefix}] Init Binds(Cost, Cooldown)")]
+    static partial void LogInitBind(ILogger logger, string prefix);
+
+    [LoggerMessage(
+        EventId = 0011,
+        Level = LogLevel.Information,
+        Message = "[{prefix}] Init KeyActions")]
+    static partial void LogInitKeyActions(ILogger logger, string prefix);
+
 }

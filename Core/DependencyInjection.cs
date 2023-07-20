@@ -170,6 +170,7 @@ public static class DependencyInjection
         s.AddSingleton<SessionStat>();
         s.AddSingleton<IGrindSessionDAO, LocalGrindSessionDAO>();
         s.AddSingleton<LevelTracker>();
+        s.AddSingleton<TimeToKill>();
 
         s.AddSingleton<AreaDB>();
         s.AddSingleton<WorldMapAreaDB>();
