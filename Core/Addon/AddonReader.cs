@@ -22,7 +22,7 @@ public sealed class AddonReader : IAddonReader
 
     public event Action? AddonDataChanged;
 
-    public RecordInt GlobalTime { get; } = new(98);
+    public RecordInt GlobalTime { get; }
 
     private int lastTargetGuid = -1;
     public string TargetName { get; private set; } = string.Empty;
@@ -36,6 +36,7 @@ public sealed class AddonReader : IAddonReader
         PlayerReader playerReader, AutoResetEvent resetEvent,
         CreatureDB creatureDb,
         CombatLog combatLog,
+        DataFrame[] frames,
         IServiceProvider sp)
     {
         this.reader = reader;
@@ -43,6 +44,8 @@ public sealed class AddonReader : IAddonReader
         this.creatureDb = creatureDb;
         this.combatLog = combatLog;
         this.playerReader = playerReader;
+
+        GlobalTime = new(frames.Length - 2);
 
         readers = sp.GetServices<IReader>().ToImmutableArray();
     }
@@ -106,11 +109,6 @@ public sealed class AddonReader : IAddonReader
         }
 
         SessionReset();
-    }
-
-    public int GetInt(int index)
-    {
-        return reader.GetInt(index);
     }
 
     public void UpdateUI()
