@@ -35,6 +35,7 @@ local UnitIsTapDenied = UnitIsTapDenied
 local ContainerIDToInventoryID = DataToColor.ContainerIDToInventoryID
 local NUM_BAG_SLOTS = NUM_BAG_SLOTS
 
+local CAST_SENT = 999997
 local CAST_START = 999998
 local CAST_SUCCESS = 999999
 
@@ -95,6 +96,10 @@ local errorListMessages = {}
 function DataToColor:RegisterEvents()
     DataToColor:RegisterEvent("UI_ERROR_MESSAGE", 'OnUIErrorMessage')
     DataToColor:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED", 'UnfilteredCombatEvent')
+    DataToColor:RegisterEvent("UNIT_SPELLCAST_SENT", 'OnUnitSpellCastSent')
+    DataToColor:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED", 'OnUnitSpellCastSucceeded')
+    DataToColor:RegisterEvent("UNIT_SPELLCAST_FAILED", 'OnUnitSpellCastFailed')
+    --DataToColor:RegisterEvent("UNIT_SPELLCAST_FAILED_QUIET", 'OnUnitSpellCastFailed')
     DataToColor:RegisterEvent('LOOT_READY', 'OnLootReady')
     DataToColor:RegisterEvent('LOOT_CLOSED', 'OnLootClosed')
     DataToColor:RegisterEvent('BAG_UPDATE', 'OnBagUpdate')
@@ -154,12 +159,14 @@ function DataToColor:OnUIErrorMessage(_, _, message)
     local code = errorListMessages[message] or 0
     if code > 0 then
         DataToColor.uiErrorMessage = code
+        DataToColor.uiErrorMessageTime = DataToColor.globalTime
         UIErrorsFrame:AddMessage(message, 0, 1, 0) -- show as green messasge
         return
     else
         for i, v in pairs(specialErrorS) do
             if string.find(message, i) then
                 DataToColor.uiErrorMessage = v
+                DataToColor.uiErrorMessageTime = DataToColor.globalTime
                 UIErrorsFrame:AddMessage(message, 0, 1, 0) -- show as green messasge
                 return
             end
@@ -298,6 +305,7 @@ function DataToColor:OnCombatEvent(...)
 
         if playerSpellCastStarted[subEvent] then
             DataToColor.lastCastEvent = CAST_START
+            DataToColor.uiErrorMessageTime = DataToColor.globalTime
 
             -- Fix SoM
             if spellId == 0 or spellId == nil then
@@ -326,10 +334,12 @@ function DataToColor:OnCombatEvent(...)
                 local failedMessage = select(15, ...)
                 DataToColor.lastCastEvent = errorListMessages[failedMessage] or 0
                 DataToColor.uiErrorMessage = DataToColor.lastCastEvent
+                DataToColor.uiErrorMessageTime = DataToColor.globalTime
                 --DataToColor:Print(subEvent, " ", lastCastEvent, " -> ", DataToColor.lastCastEvent, " ", failedMessage, " ", spellId)
             else
                 DataToColor.lastCastEvent = CAST_SUCCESS
                 --DataToColor:Print(subEvent, " ", spellId)
+                DataToColor.uiErrorMessageTime = DataToColor.globalTime
 
                 local hasGCD = true
 
@@ -426,6 +436,33 @@ function DataToColor:OnCombatEvent(...)
             --DataToColor:Print(subEvent, " ignored ", destGUID)
         end
     end
+end
+
+function DataToColor:OnUnitSpellCastSent(event, unit, target, castGUID, spellId)
+    --print(event, unit, target, castGUID, spellId)
+    if unit ~= DataToColor.C.unitPlayer then return end
+
+    DataToColor.lastCastEvent = CAST_SENT
+    DataToColor.uiErrorMessageTime = DataToColor.globalTime
+    DataToColor.lastCastSpellId = spellId
+end
+
+function DataToColor:OnUnitSpellCastSucceeded(event, unit, castGUID, spellId)
+    --print(event, unit, castGUID, spellId)
+    if unit ~= DataToColor.C.unitPlayer then return end
+
+    DataToColor.lastCastEvent = CAST_SUCCESS
+    DataToColor.uiErrorMessageTime = DataToColor.globalTime
+    DataToColor.lastCastSpellId = spellId
+end
+
+function DataToColor:OnUnitSpellCastFailed(event, unit, castGUID, spellId)
+    --print(event, unit, castGUID, spellId)
+    if unit ~= DataToColor.C.unitPlayer then return end
+
+    DataToColor.lastCastEvent = DataToColor.uiErrorMessage
+    DataToColor.uiErrorMessageTime = DataToColor.globalTime
+    DataToColor.lastCastSpellId = spellId
 end
 
 function DataToColor:SoM_OnCastSuccess(event, unitTarget, castGuid, spellId)
@@ -536,6 +573,7 @@ function DataToColor:ChatMessageOpeningEvent(event, ...)
     if isempty(playerName) and isempty(playerName2) then
         DataToColor.lastCastEvent = CAST_SUCCESS
         DataToColor.uiErrorMessage = CAST_SUCCESS
+        DataToColor.uiErrorMessageTime = DataToColor.globalTime
     end
 end
 
