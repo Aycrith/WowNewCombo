@@ -38,6 +38,7 @@ public sealed class AddonBits : IReader
     public bool Combat() => v1[Mask._14];
     public bool TargetTarget_PlayerOrPet() => v1[Mask._15];
     public bool AutoShot() => v1[Mask._16];
+    public bool NoTarget() => !v1[Mask._17];
     public bool Target() => v1[Mask._17];
     public bool Mounted() => v1[Mask._18];
     public bool Shoot() => v1[Mask._19];

@@ -110,6 +110,7 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
 
     public int MinRange() => reader.GetInt(49) % 1000;
     public int MaxRange() => reader.GetInt(49) / 1000 % 1000;
+    public bool MinRangeZero() => MinRange() == 0;
 
     public bool IsInMeleeRange() => MinRange() == 0 && MaxRange() != 0 && MaxRange() <= 5;
     public bool InCloseMeleeRange() => MinRange() == 0 && MaxRange() <= 2;

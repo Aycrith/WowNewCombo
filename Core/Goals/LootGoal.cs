@@ -1,4 +1,4 @@
-using Core.Database;
+﻿using Core.Database;
 using Core.GOAP;
 using SharedLib.NpcFinder;
 using Microsoft.Extensions.Logging;
@@ -30,6 +30,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
     private readonly ClassConfiguration classConfig;
     private readonly NpcNameTargeting npcNameTargeting;
     private readonly CombatUtil combatUtil;
+    private readonly CombatLog combatLog;
     private readonly PlayerDirection playerDirection;
     private readonly GoapAgentState state;
 
@@ -45,7 +46,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         StopMoving stopMoving, AddonBits bits,
         ClassConfiguration classConfig, NpcNameTargeting npcNameTargeting,
         CombatUtil combatUtil, PlayerDirection playerDirection,
-        GoapAgentState state)
+        GoapAgentState state, CombatLog combatLog)
         : base(nameof(LootGoal))
     {
         this.logger = logger;
@@ -57,7 +58,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         this.areaDb = areaDb;
         this.stopMoving = stopMoving;
         this.bagReader = bagReader;
-
+        this.combatLog = combatLog;
         this.classConfig = classConfig;
         this.npcNameTargeting = npcNameTargeting;
         this.combatUtil = combatUtil;
@@ -73,6 +74,12 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         combatUtil.Update();
 
         wait.While(LootReset);
+
+        if (combatLog.DamageTakenCount() == 0)
+        {
+            float eMs = wait.Until(Loot.LOOTFRAME_AUTOLOOT_DELAY, bits.NoTarget);
+            LogLostTarget(logger, eMs);
+        }
 
         bagHashNewOrStackGain = bagReader.HashNewOrStackGain;
         money = playerReader.Money;
@@ -170,22 +177,23 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         {
             return false;
         }
-        npcNameTargeting.ChangeNpcType(NpcNames.None);
 
         Log("Nearest Corpse clicked...");
         float elapsedMs = wait.Until(playerReader.NetworkLatency, bits.Target);
         LogFoundNpcNameCount(logger, npcNameTargeting.NpcCount, elapsedMs);
 
+        npcNameTargeting.ChangeNpcType(NpcNames.None);
+
         CheckForGather();
 
-        if (!MinRangeZero())
+        if (!playerReader.MinRangeZero())
         {
             elapsedMs =
                 wait.AfterEquals(MAX_TIME_TO_REACH_MELEE, 2, playerReader._MapPosNoZ,
                 input.PressApproachOnCooldown);
             LogReachedCorpse(logger, elapsedMs);
 
-            return MinRangeZero();
+            return playerReader.MinRangeZero();
         }
 
         return true;
@@ -277,48 +285,42 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         {
             input.PressFastLastTarget();
             wait.Update();
-        }
 
-        if (bits.Target())
-        {
-            if (bits.Target_Dead())
-            {
-                CheckForGather();
-
-                Log("Target Last Target Found!");
-                input.PressFastInteract();
-
-                if (!MinRangeZero())
-                {
-                    float elapsedMs =
-                        wait.AfterEquals(MAX_TIME_TO_REACH_MELEE, 2, playerReader._MapPosNoZ,
-                        input.PressApproachOnCooldown);
-                    LogReachedCorpse(logger, elapsedMs);
-
-                    return MinRangeZero();
-                }
-            }
-            else
-            {
-                LogWarning("Don't attack alive target!");
-                input.PressClearTarget();
-                wait.Update();
-
+            if (!bits.Target())
                 return false;
-            }
         }
 
-        return bits.Target();
+        if (!bits.Target_Dead())
+        {
+            LogWarning("Don't attack alive target!");
+            input.PressClearTarget();
+            wait.Update();
+
+            return false;
+        }
+
+        CheckForGather();
+
+        Log("Target Last Target Found!");
+        input.PressFastInteract();
+        wait.Update();
+
+        if (!playerReader.MinRangeZero())
+        {
+            float elapsedMs =
+                wait.AfterEquals(MAX_TIME_TO_REACH_MELEE, 2, playerReader._MapPosNoZ,
+                input.PressApproachOnCooldown);
+            LogReachedCorpse(logger, elapsedMs);
+
+            return playerReader.MinRangeZero();
+        }
+
+        return true;
     }
 
     private bool LootReset()
     {
         return (LootStatus)playerReader.LootEvent.Value != LootStatus.CORPSE;
-    }
-
-    private bool MinRangeZero()
-    {
-        return playerReader.MinRange() == 0;
     }
 
     #region Logging
@@ -362,6 +364,12 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         Level = LogLevel.Information,
         Message = "Should gather {targetId} ? {gatherCorpse}")]
     static partial void LogShouldGather(ILogger logger, int targetId, bool gatherCorpse);
+
+    [LoggerMessage(
+        EventId = 0135,
+        Level = LogLevel.Information,
+        Message = "Lost target {elapsedMs}ms")]
+    static partial void LogLostTarget(ILogger logger, float elapsedMs);
 
     #endregion
 }

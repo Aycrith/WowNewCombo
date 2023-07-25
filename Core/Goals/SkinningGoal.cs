@@ -1,4 +1,4 @@
-using Core.GOAP;
+﻿using Core.GOAP;
 using SharedLib.NpcFinder;
 using Microsoft.Extensions.Logging;
 using System;
@@ -159,13 +159,13 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
                 return;
             }
 
-            if (!MinRangeZero())
+            if (!playerReader.MinRangeZero())
             {
                 e = wait.AfterEquals(MAX_TIME_TO_REACH_MELEE, 2, playerReader._MapPosNoZ,
                     input.PressApproachOnCooldown);
 
                 LogReachedCorpse(logger, e);
-                interact = !MinRangeZero();
+                interact = !playerReader.MinRangeZero();
             }
 
             playerReader.LastUIError = 0;
@@ -376,11 +376,6 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
             playerReader.LastUIError is
             UI_ERROR.ERR_LOOT_LOCKED or
             UI_ERROR.ERR_REQUIRES_S;
-    }
-
-    private bool MinRangeZero()
-    {
-        return playerReader.MinRange() == 0;
     }
 
     private bool WaitForLosingTarget()
