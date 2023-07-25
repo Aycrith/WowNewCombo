@@ -136,7 +136,7 @@ public sealed partial class NpcNameTargeting : IDisposable
             p.Offset(npcNameFinder.ToScreenCoordinates());
 
             input.SetCursorPos(p);
-            classifier.Classify(out CursorType cls);
+            classifier.Classify(out CursorType cls, out _);
 
             if (cls is CursorType.Kill && mouseOverReader.MouseOverId != 0)
             {
@@ -189,7 +189,7 @@ public sealed partial class NpcNameTargeting : IDisposable
 
                 ct.WaitHandle.WaitOne(Random.Shared.Next(2, INTERACT_DELAY));
 
-                classifier.Classify(out CursorType cls);
+                classifier.Classify(out CursorType cls, out _);
                 if (cursor.Contains(cls))
                 {
                     input.InteractMouseOver(ct);

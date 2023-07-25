@@ -93,7 +93,7 @@ sealed class Program
         {
             Thread.Sleep(1000);
 
-            classifier.Classify(out CursorType cursorType);
+            classifier.Classify(out CursorType cursorType, out _);
             Log.Logger.Information($"{cursorType.ToStringF()}");
 
             i--;
@@ -114,10 +114,10 @@ sealed class Program
 
             long startTime = Stopwatch.GetTimestamp();
 
-            classifier.Classify(out CursorType cursorType);
+            classifier.Classify(out CursorType cursorType, out double similarity);
 
             times[i] = Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
-            //Log.Logger.Information($"{cursorType.ToStringF()} {times[i]:F6}ms");
+            //Log.Logger.Information($"{cursorType.ToStringF()} {similarity} {times[i]:F6}ms");
             i++;
         }
 

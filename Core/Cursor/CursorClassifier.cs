@@ -60,7 +60,7 @@ public sealed class CursorClassifier : IDisposable
     }
 
 
-    public void Classify(out CursorType classification)
+    public void Classify(out CursorType classification, out double similarity)
     {
         CURSORINFO cursorInfo = new();
         cursorInfo.cbSize = Marshal.SizeOf(cursorInfo);
@@ -83,7 +83,7 @@ public sealed class CursorClassifier : IDisposable
         }
 
         int index = 0;
-        double similarity = 0;
+        similarity = 0;
         for (int i = 0; i < imageHashes.Length; i++)
         {
             for (int j = 0; j < imageHashes[i].Length; j++)
