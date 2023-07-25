@@ -1,4 +1,4 @@
-﻿using Core.GOAP;
+using Core.GOAP;
 using SharedLib.NpcFinder;
 using Microsoft.Extensions.Logging;
 using System;
@@ -105,6 +105,12 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
             LogWarning("Inventory is full!");
         }
 
+        ReadOnlySpan<CursorType> types = stackalloc[] {
+            CursorType.Skin,
+            CursorType.Mine,
+            CursorType.Herb
+        };
+
         int attempts = 0;
         while (attempts < MAX_ATTEMPTS)
         {
@@ -141,7 +147,7 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
                 e = wait.Until(MAX_TIME_TO_WAIT_NPC_NAME, npcNameTargeting.FoundNpcName);
                 LogFoundNpcNameCount(logger, npcNameTargeting.NpcCount, e);
 
-                foundTarget = npcNameTargeting.FindBy(CursorType.Skin, CursorType.Mine, CursorType.Herb); // todo salvage icon
+                foundTarget = npcNameTargeting.FindBy(types); // todo salvage icon
                 interact = true;
             }
 

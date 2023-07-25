@@ -1,6 +1,6 @@
 ﻿namespace Core;
 
-public enum CursorType
+public enum CursorType : byte
 {
     None = 0,
     Kill = 1,

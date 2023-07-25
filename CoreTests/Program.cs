@@ -169,7 +169,7 @@ sealed class Program
     private static void Test_FindTargetByCursor()
     {
         //CursorType cursorType = CursorType.Kill;
-        CursorType cursorType = CursorType.Vendor;
+        Span<CursorType> cursorType = stackalloc[] { CursorType.Vendor };
 
         //NpcNames types = NpcNames.Enemy;
         //NpcNames types = NpcNames.Corpse;

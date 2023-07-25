@@ -136,7 +136,7 @@ public sealed class Test_NpcNameFinder : IDisposable
         }
     }
 
-    public bool Execute_FindTargetBy(CursorType cursorType)
+    public bool Execute_FindTargetBy(ReadOnlySpan<CursorType> cursorType)
     {
         return npcNameTargeting.FindBy(cursorType);
     }

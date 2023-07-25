@@ -214,7 +214,14 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
         {
             npcNameTargeting.ChangeNpcType(NpcNames.Friendly | NpcNames.Neutral);
             npcNameTargeting.WaitForUpdate();
-            found = npcNameTargeting.FindBy(CursorType.Vendor, CursorType.Repair, CursorType.Innkeeper);
+
+            ReadOnlySpan<CursorType> types = stackalloc[] {
+                CursorType.Vendor,
+                CursorType.Repair,
+                CursorType.Innkeeper
+            };
+
+            found = npcNameTargeting.FindBy(types);
             wait.Update();
 
             if (!found)

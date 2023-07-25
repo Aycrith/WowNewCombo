@@ -6,6 +6,7 @@ using SharedLib.Extensions;
 using SharedLib.NpcFinder;
 using Game;
 using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
 
 namespace Core.Goals;
 
@@ -163,7 +164,7 @@ public sealed partial class NpcNameTargeting : IDisposable
         return false;
     }
 
-    public bool FindBy(params CursorType[] cursor)
+    public bool FindBy(ReadOnlySpan<CursorType> cursors)
     {
         int c = locFindBy.Length;
         const int e = 3;
@@ -190,7 +191,7 @@ public sealed partial class NpcNameTargeting : IDisposable
                 ct.WaitHandle.WaitOne(Random.Shared.Next(2, INTERACT_DELAY));
 
                 classifier.Classify(out CursorType cls, out _);
-                if (cursor.Contains(cls))
+                if (cursors.BinarySearch(cls, Comparer<CursorType>.Default) != -1)
                 {
                     input.InteractMouseOver(ct);
                     LogFoundTarget(logger, cls.ToStringF(), mouseOverReader.MouseOverId, npc.Rect);

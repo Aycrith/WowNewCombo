@@ -1,4 +1,4 @@
-﻿using Core.Database;
+using Core.Database;
 using Core.GOAP;
 using SharedLib.NpcFinder;
 using Microsoft.Extensions.Logging;
@@ -165,7 +165,8 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         wait.Fixed(playerReader.NetworkLatency);
         npcNameTargeting.WaitForUpdate();
 
-        if (!npcNameTargeting.FindBy(CursorType.Loot))
+        ReadOnlySpan<CursorType> types = stackalloc[] { CursorType.Loot };
+        if (!npcNameTargeting.FindBy(types))
         {
             return false;
         }
