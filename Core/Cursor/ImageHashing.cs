@@ -2,6 +2,7 @@
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.CompilerServices;
+using System.Numerics;
 
 namespace Core;
 
@@ -28,21 +29,6 @@ public static class ImageHashing
         3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,
         4,5,5,6,5,6,6,7,5,6,6,7,6,7,7,8
     };
-
-    /// <summary>
-    /// Counts bits (duh). Utility function for similarity.
-    /// I wouldn't try to understand this. I just copy-pasta'd it
-    /// from Oftedal's implementation. It works.
-    /// </summary>
-    /// <param name="num">The hash we are counting.</param>
-    /// <returns>The total bit count.</returns>
-    private static uint BitCount(ulong num)
-    {
-        uint count = 0;
-        for (; num > 0; num >>= 8)
-            count += bitCounts[num & 0xff];
-        return count;
-    }
 
     /// <summary>
     /// Computes the average hash of an image according to the algorithm given by Dr. Neal Krawetz
@@ -103,6 +89,6 @@ public static class ImageHashing
     /// <returns>The similarity percentage.</returns>
     public static double Similarity(ulong hash1, ulong hash2)
     {
-        return ((64.0 - BitCount(hash1 ^ hash2)) * 100.0) / 64.0;
+        return (64.0 - (uint)BitOperations.PopCount(hash1 ^ hash2)) * 100.0 / 64.0;
     }
 }
