@@ -71,8 +71,8 @@ namespace ReadDBC_CSV
             extractor.HeaderAction = () =>
             {
                 entryIndex = extractor.FindIndex("ID");
-                spellIdIndex = extractor.FindIndex("SpellID", 6);
-                baseLevelIndex = extractor.FindIndex("BaseLevel", 2);
+                spellIdIndex = extractor.FindIndex("SpellID", "", 6);
+                baseLevelIndex = extractor.FindIndex("BaseLevel", "", 2);
             };
 
             void extractLine(string[] values)

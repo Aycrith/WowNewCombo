@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -28,7 +27,7 @@ namespace ReadDBC_CSV
 
         private const Locale locale = Locale.enUS;
         private const string path = "../../../data/";
-        private const string build = "2.5.4.44833"; // SoM 1.14.3.42770 // TBCC 2.5.4.44833 // WOTLK beta 3.4.0.44996
+        private const string build = "3.4.2.50375"; // SoM 1.14.3.49821 // TBCC 2.5.4.44833 // WOTLK 3.4.2.50375
 
         public static void Main()
         {
@@ -129,7 +128,8 @@ namespace ReadDBC_CSV
         private static string DownloadURL(string build, string file)
         {
             string resource = file.Split(".")[0];
-            return $"https://wow.tools/dbc/api/export/?name={resource}&build={build}&locale={locale}";
+            //return $"https://wow.tools/dbc/api/export/?name={resource}&build={build}&locale={locale}";
+            return $"https://wago.tools/db2/{resource}/csv?&build={build}";
         }
 
         #endregion

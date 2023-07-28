@@ -87,11 +87,11 @@ namespace ReadDBC_CSV
                 columnIndex = extractor.FindIndex("ColumnIndex");
                 tabIDIndex = extractor.FindIndex("TabID");
 
-                spellRank0Index = extractor.FindIndex("SpellRank[0]");
-                spellRank1Index = extractor.FindIndex("SpellRank[1]");
-                spellRank2Index = extractor.FindIndex("SpellRank[2]");
-                spellRank3Index = extractor.FindIndex("SpellRank[3]");
-                spellRank4Index = extractor.FindIndex("SpellRank[4]");
+                spellRank0Index = extractor.FindIndex("SpellRank[0]", "SpellRank_0");
+                spellRank1Index = extractor.FindIndex("SpellRank[1]", "SpellRank_1");
+                spellRank2Index = extractor.FindIndex("SpellRank[2]", "SpellRank_2");
+                spellRank3Index = extractor.FindIndex("SpellRank[3]", "SpellRank_3");
+                spellRank4Index = extractor.FindIndex("SpellRank[4]", "SpellRank_4");
             };
 
 

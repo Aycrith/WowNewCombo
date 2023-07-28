@@ -81,8 +81,8 @@ namespace ReadDBC_CSV
             extractor.HeaderAction = () =>
             {
                 entryIndex = extractor.FindIndex("ID");
-                spellIdIndex = extractor.FindIndex("SpellID", 7);
-                ParentItemIDIndex = extractor.FindIndex("ParentItemID", 9);
+                spellIdIndex = extractor.FindIndex("SpellID", "", 7);
+                ParentItemIDIndex = extractor.FindIndex("ParentItemID", "", 9);
             };
 
             List<int> items = new();

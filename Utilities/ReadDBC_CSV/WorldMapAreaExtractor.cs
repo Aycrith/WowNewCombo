@@ -101,11 +101,11 @@ namespace ReadDBC_CSV
 
                 orderIndexIndex = extractor.FindIndex("OrderIndex");
 
-                region0Index = extractor.FindIndex("Region[0]");
-                region1Index = extractor.FindIndex("Region[1]");
+                region0Index = extractor.FindIndex("Region[0]", "Region_0");
+                region1Index = extractor.FindIndex("Region[1]", "Region_1");
 
-                region3Index = extractor.FindIndex("Region[3]");
-                region4Index = extractor.FindIndex("Region[4]");
+                region3Index = extractor.FindIndex("Region[3]", "Region_3");
+                region4Index = extractor.FindIndex("Region[4]", "Region_4");
             };
 
             void extractLine(string[] values)
@@ -148,7 +148,7 @@ namespace ReadDBC_CSV
             extractor.HeaderAction = () =>
             {
                 mapIdIndex = extractor.FindIndex("ID");
-                directoryIndex = extractor.FindIndex("Directory", 1);
+                directoryIndex = extractor.FindIndex("Directory", "", 1);
             };
 
             void extractLine(string[] values)
