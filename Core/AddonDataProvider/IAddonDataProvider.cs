@@ -6,15 +6,13 @@ using System.Text;
 
 namespace Core;
 
-public interface IAddonDataProvider
+public interface IAddonDataProvider : IDisposable
 {
     void Update();
     void InitFrames(DataFrame[] frames) { }
 
     int[] Data { get; }
     StringBuilder TextBuilder { get; }
-
-    void Dispose();
 
     static unsafe void InternalUpdate(BitmapData bd,
         ReadOnlySpan<DataFrame> frames, Span<int> output)
