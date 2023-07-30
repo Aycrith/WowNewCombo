@@ -125,16 +125,7 @@ public sealed partial class WowProcessInput : IMouseInput
 
     public int PressRandom(ConsoleKey key, int milliseconds)
     {
-        keysDown[(int)key] = true;
-        int totalElapsedMs = nativeInput.PressRandom((int)key, milliseconds);
-        keysDown[(int)key] = false;
-
-        if (LogInput)
-        {
-            LogKeyPress(logger, key, totalElapsedMs);
-        }
-
-        return totalElapsedMs;
+        return PressRandom(key, milliseconds, CancellationToken.None);
     }
 
     public int PressRandom(ConsoleKey key, int milliseconds, CancellationToken ct)

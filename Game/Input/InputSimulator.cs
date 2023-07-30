@@ -49,17 +49,14 @@ public sealed class InputSimulator : IInput
 
     public int PressRandom(int key, int milliseconds)
     {
-        simulator.Keyboard.KeyDown((VirtualKeyCode)key);
-        int delay = DelayTime(milliseconds);
-        simulator.Keyboard.KeyUp((VirtualKeyCode)key);
-        return delay;
+        return PressRandom(key, milliseconds, _ct);
     }
 
     public int PressRandom(int key, int milliseconds, CancellationToken ct)
     {
         simulator.Keyboard.KeyDown((VirtualKeyCode)key);
 
-        int delay = milliseconds + Random.Shared.Next(1, maxDelay);
+        int delay = DelayTime(milliseconds);
         ct.WaitHandle.WaitOne(delay);
 
         simulator.Keyboard.KeyUp((VirtualKeyCode)key);

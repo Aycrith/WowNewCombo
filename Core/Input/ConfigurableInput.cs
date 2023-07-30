@@ -58,8 +58,7 @@ public sealed partial class ConfigurableInput
 
     public void PressRandom(KeyAction keyAction)
     {
-        proc.PressRandom(keyAction.ConsoleKey, keyAction.PressDuration);
-        keyAction.SetClicked();
+        PressRandom(keyAction, CancellationToken.None);
     }
 
     public void PressRandom(KeyAction keyAction, CancellationToken ct)
