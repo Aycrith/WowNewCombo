@@ -122,8 +122,6 @@ public sealed partial class ConfigurableInput
 
     public void PressPetAttack() => PressRandom(PetAttack);
 
-    public void PressHearthstone() => PressRandom(Hearthstone);
-
     public void PressMount() => PressRandom(Mount);
 
     public void PressDismount()

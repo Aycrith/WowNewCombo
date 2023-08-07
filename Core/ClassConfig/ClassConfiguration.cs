@@ -123,9 +123,6 @@ public sealed partial class ClassConfiguration
     public KeyAction Mount { get; } = new();
     public string MountKey { get; init; } = "O";
 
-    public KeyAction Hearthstone { get; } = new();
-    public string HearthstoneKey { get; init; } = "I";
-
     public ConsoleKey ForwardKey { get; init; } = ConsoleKey.UpArrow;  // 38
     public ConsoleKey BackwardKey { get; init; } = ConsoleKey.DownArrow; // 40
     public ConsoleKey TurnLeftKey { get; init; } = ConsoleKey.LeftArrow; // 37
@@ -190,11 +187,6 @@ public sealed partial class ClassConfiguration
         Mount.Name = nameof(Mount);
         Mount.BaseAction = true;
         Mount.Cooldown = 6000;
-
-        Hearthstone.Key = HearthstoneKey;
-        Hearthstone.Name = nameof(Hearthstone);
-        Hearthstone.HasCastBar = true;
-        Hearthstone.AfterCastWaitCastbar = true;
 
         Interact.Key = InteractKey;
         Interact.Name = nameof(Interact);

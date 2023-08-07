@@ -389,31 +389,30 @@ Take a look at the class files in `/Json/class` for examples of what you can do.
 | `"ImmunityBlacklist"` | List of Npc ids which have some sort of `School` immunities | true | `""` |
 | `"IntVariables"` | List of user defined `integer` variables | true | `[]` |
 | --- | --- | --- | --- |
-| `"Pull"` | Sequence of `KeyAction(s)` to execute upon [Pull Goal](#pull-goal) | true | `[]` |
-| `"Combat"` | Sequence of `KeyAction(s)` to execute upon [Combat Goal](#combat-goal) | **false** | `[]` |
-| `"AssistFocus"` | Sequence of `KeyAction(s)` to execute upon [Assist Focus Goal](#assist-focus-goal) | **false** | `[]` |
-| `"Adhoc"` | Sequence of `KeyAction(s)` to execute upon [Adhoc Goals](#adhoc-goals) | true | `[]` |
-| `"Parallel"` | Sequence of `KeyAction(s)` to execute upon [Parallel Goal](#parallel-goals) | true | `[]` |
-| `"NPC"` | Sequence of `KeyAction(s)` to execute upon [NPC Goal](#npc-goals) | true | `[]` |
-| `"Wait"` | Sequence of `KeyAction(s)` to execute upon [Wait Goal](#wait-goals) | true | `[]` |
+| `"Pull"` | [KeyActions](#keyactions) to execute upon [Pull Goal](#pull-goal) | true | `{}` |
+| `"Combat"` | [KeyActions](#keyactions) to execute upon [Combat Goal](#combat-goal) | **false** | `{}` |
+| `"AssistFocus"` | [KeyActions](#keyactions) to execute upon [Assist Focus Goal](#assist-focus-goal) | **false** | `{}` |
+| `"Adhoc"` | [KeyActions](#keyactions) to execute upon [Adhoc Goals](#adhoc-goals) | true | `{}` |
+| `"Parallel"` | [KeyActions](#keyactions) to execute upon [Parallel Goal](#parallel-goals) | true | `{}` |
+| `"NPC"` | [KeyActions](#keyactions) to execute upon [NPC Goal](#npc-goals) | true | `{}` |
+| `"Wait"` | [KeyActions](#keyactions) to execute upon [Wait Goal](#wait-goals) | true | `{}` |
 | --- | --- | --- | --- |
 | `"GatherFindKeys"` | List of strings for switching between gathering profiles | true | `string[]` |
-| `"JumpKey"` | `Consolekey` to be pressed on Jump | true | `"Spacebar"` |
-| `"InteractKey"` | `Consolekey` to be pressed on Interact | true | `"I"` |
-| `"TargetLastTargetKey"` | `Consolekey` to be pressed to Target last target | true | `"G"` |
-| `"StandUpKey"` | `Consolekey` to be pressed to stand up | true | `"X"` |
-| `"ClearTargetKey"` | `Consolekey` to be pressed to clear current target | true | `"Insert"` |
-| `"StopAttackKey"` | `Consolekey` to be pressed to stop attack | true | `"Delete"` |
-| `"TargetNearestTargetKey"` | `Consolekey` to be pressed to target nearest target | true | `"Tab"` |
-| `"TargetTargetOfTargetKey"` | `Consolekey` to be pressed to target - target of target | true | `"F"` |
-| `"TargetPetKey"` | `Consolekey` to be pressed to target pet | true | `"Multiply"` |
-| `"PetAttackKey"` | `Consolekey` to be pressed to send attack pet | true | `"Subtract"` |
-| `"MountKey"` | `Consolekey` to be pressed to use mount | true | `"O"` |
-| `"HearthstoneKey"` | `Consolekey` to be pressed to use hearthstone | true | `"I"` |
-| `"ForwardKey"` | `Consolekey` to be pressed to move forward | true | `"UpArrow"` |
-| `"BackwardKey"` | `Consolekey` to be pressed to move backward | true | `"DownArrow"` |
-| `"TurnLeftKey"` | `Consolekey` to be pressed to turn left | true | `"LeftArrow"` |
-| `"TurnRightKey"` | `Consolekey` to be pressed to turn right | true | `"RightArrow"` |
+| `"JumpKey"` | `ConsoleKey` to be pressed on Jump | true | `"Spacebar"` |
+| `"InteractKey"` | `ConsoleKey` to be pressed on Interact | true | `"I"` |
+| `"TargetLastTargetKey"` | `ConsoleKey` to be pressed to Target last target | true | `"G"` |
+| `"StandUpKey"` | `ConsoleKey` to be pressed to stand up | true | `"X"` |
+| `"ClearTargetKey"` | `ConsoleKey` to be pressed to clear current target | true | `"Insert"` |
+| `"StopAttackKey"` | `ConsoleKey` to be pressed to stop attack | true | `"Delete"` |
+| `"TargetNearestTargetKey"` | `ConsoleKey` to be pressed to target nearest target | true | `"Tab"` |
+| `"TargetTargetOfTargetKey"` | `ConsoleKey` to be pressed to target - target of target | true | `"F"` |
+| `"TargetPetKey"` | `ConsoleKey` to be pressed to target pet | true | `"Multiply"` |
+| `"PetAttackKey"` | `ConsoleKey` to be pressed to send attack pet | true | `"Subtract"` |
+| `"MountKey"` | `ConsoleKey` to be pressed to use mount | true | `"O"` |
+| `"ForwardKey"` | `ConsoleKey` to be pressed to move forward | true | `"UpArrow"` |
+| `"BackwardKey"` | `ConsoleKey` to be pressed to move backward | true | `"DownArrow"` |
+| `"TurnLeftKey"` | `ConsoleKey` to be pressed to turn left | true | `"LeftArrow"` |
+| `"TurnRightKey"` | `ConsoleKey` to be pressed to turn right | true | `"RightArrow"` |
 
 ### TargetMask
 
@@ -463,6 +462,10 @@ The path that the class follows is a `json` file in `/Json/path/` which contains
 "PathThereAndBack": true,                   // if true walks the path and the walks it backwards.
 "PathReduceSteps": true,                    // uses every other coordinate.
 ```
+### KeyActions
+
+Its a container type for `Sequence` of [KeyAction](#keyaction).
+
 ### KeyAction
 
 Each `KeyAction` has its own properties to describe what the action is all about. 
@@ -472,13 +475,13 @@ Can specify conditions with [Requirement(s)](#requirement) in order to create a 
 | Property Name | Description | Default value |
 | --- | --- | --- |
 | `"Name"` | Name of the KeyAction. For the `ActionBarPopulator`, lowercase means macro. | `""` |
-| `"Key"` | Key to press (`ConsoleKey`) | `""` |
+| `"Key"` | [ConsoleKey](https://learn.microsoft.com/en-us/dotnet/api/system.consolekey) to press | `""` |
 | `"Cost"` | [Adhoc Goals](#adhoc-goals) or [NPC Goal](#npc-goals) only, priority | `18` |
 | `"PathFilename"` | [NPC Goal](#npc-goals) only, this is a short path to get close to the NPC to avoid walls etc. | `""` |
 | `"HasCastBar"` | After key press cast bar is expected?<br>By default sets `BeforeCastStop`=`true` | `false` |
 | `"InCombat"` | Should combat matter when attempt to cast?<br>Accepted values:<br>* `"any value for doesn't matter"`<br>* `"true"`<br>* `"false"` | `false` |
 | `"Item"` | Like on use Trinket, `Food`, `Drink`.<br>The following spells counts as Item, `Throw`, `Auto Shot`, `Shoot` | `false` |
-| `"PressDuration"` | How many milliseconds to hold the key press | `50` |
+| `"PressDuration"` | How many minimum milliseconds to hold the key press down | `50` |
 | `"Form"` | Shapeshift/Stance form to be in to cast this spell<br>If setted, affects `WhenUsable` | `Form.None` |
 | `"Cooldown"` | **Note this is not the in-game cooldown!**<br>The time in milliseconds before KeyAction can be used again.<br>This property will be updated when the backend registers the `Key` press. It has no feedback from the game. | `400` |
 | `"Charge"` | How many consequent key press should happen before setting Cooldown | `1` |
@@ -633,9 +636,7 @@ Then as defined, in-order, executes those [KeyAction(s)](#keyaction) which fulfi
 
 Upon exiting **Assist Focus Goal**, the current target will be deselected / cleared.
 
-**Note**: You can use every `Buff` and `Debuff` names on the `focus`/`party1` without being targeted.
-
-Just have to prefix it with `F_` example: `F_Mark of the Wild` which means `focus`/`party1` has `Mark of the Wild` buff active.
+**Note**: You can use every `Buff` and `Debuff` names on the `focus`/`party1` without being targeted. Just have to prefix it with `F_` example: `F_Mark of the Wild` which means `focus`/`party1` has `Mark of the Wild` buff active.
 
 e.g. of a Balance Druid
 ```json
@@ -874,7 +875,7 @@ A requirement is something that must be evaluated to be `true` for the [KeyActio
 Not all [KeyAction](#keyaction) requires requirement(s), some rely on
 * `Cooldown` - populated manually
 * `ActionBarCooldownReader` - populated automatically
-* `ActionBarCostReader` - populated automatically including (`MinMana`, `MinRage`, `MinEnergy`, `MinRunicPower`, `MinRuneBlood`, `MinRuneFrost`, `MinRuneUnholy`)
+* `ActionBarCostReader` - populated automatically
 
 Can specify `Requirements` for complex condition.
 
