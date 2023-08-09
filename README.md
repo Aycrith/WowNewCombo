@@ -21,7 +21,7 @@
 - Pathfinders: 
     * World map - Outdoor there are multiple solutions - *by default the app attempts to discover the available services in the following order*:
         * **V3 Remote**: Out of process [AmeisenNavigation](https://github.com/Xian55/AmeisenNavigation/tree/feature/guess-z-coord-after-rewrite)
-        * **V1 Remote**: Out of process [PathingAPI](https://github.com/Xian55/WowClassicGrindBot/tree/dev/PathingAPI) more info [here](#v1-remote-pathing---pathingaPI)
+        * **V1 Remote**: Out of process [PathingAPI](https://github.com/Xian55/WowClassicGrindBot/tree/dev/PathingAPI) more info [here](#v1-remote-pathing---pathingapi)
         * **V1 Local**: In process [PPather](https://github.com/Xian55/WowClassicGrindBot/tree/dev/PPather)
     * World map - Indoors pathfinder only works properly if `PathFilename` is exists.
     * Dungeons / instances **not** supported!
