@@ -18,13 +18,13 @@
 
 - Further detail about the architecture can be found in [Blog post](http://www.codesin.net/post/wowbot/).
 
-- Pathing: 
-    * World map / Outdoor there are multiple solutions - *by default the app attempts to discover the available pathing in the following order*:
-        * V3 Remote - Out of process [AmeisenNavigation](https://github.com/Xian55/AmeisenNavigation/tree/feature/guess-z-coord-after-rewrite)
-        * V1 Remote - Out of process [PathingAPI](https://github.com/Xian55/WowClassicGrindBot/tree/dev/PathingAPI).
-        * V1 Local - In process [PPather](https://github.com/Xian55/WowClassicGrindBot/tree/dev/PPather).
-    * Indoors pathfinder only works properly if `PathFilename` is exists.
-    * Dungeons / instances not yet supported.
+- Pathfinders: 
+    * World map - Outdoor there are multiple solutions - *by default the app attempts to discover the available services in the following order*:
+        * **V3 Remote**: Out of process [AmeisenNavigation](https://github.com/Xian55/AmeisenNavigation/tree/feature/guess-z-coord-after-rewrite)
+        * **V1 Remote**: Out of process [PathingAPI](https://github.com/Xian55/WowClassicGrindBot/tree/dev/PathingAPI) more info [here](#v1-remote-pathing---pathingaPI)
+        * **V1 Local**: In process [PPather](https://github.com/Xian55/WowClassicGrindBot/tree/dev/PPather)
+    * World map - Indoors pathfinder only works properly if `PathFilename` is exists.
+    * Dungeons / instances **not** supported!
 
 # Features
 
@@ -106,6 +106,15 @@ These files are required in order to start the application!
 
 Copy the previously mentioned files under **\Json\MPQ** folder (e.g. `C:\WowClassicGrindBot\Json\MPQ`)
 
+Technical details about **V1**:
+- Precompiled x86 and x64 [Stormlib](https://github.com/ladislav-zezula/StormLib)
+- Source code accessible, written in **C#**
+- Uses `*.mpq` files as source
+- Extracts the geometry on demand during runtime
+- Loads those `*.adt` files which are in use. Lower memory usage compare to V3
+- After calculating a path successfully, caches it under `Json\PathInfo\_CONTINENT_NAME_\`
+- Iteratively development is really easy
+
 ## 2.2 Optional - Using V3 Remote Pathing
 
 Download the navmesh files.
@@ -117,6 +126,15 @@ Download the navmesh files.
 1. Create a [build](https://github.com/Xian55/WowClassicGrindBot/issues/449) of [AmeisenNavigation](https://github.com/Xian55/AmeisenNavigation/tree/feature/guess-z-coord-after-rewrite)
 1. Navigate to the build location and find `config.cfg`
 1. Edit the file last line to look as `sMmapsPath=C:\mmaps`
+
+Technical details about **V3**:
+- Uses an another project called [AmeisenNavigation](https://github.com/Xian55/AmeisenNavigation/tree/feature/guess-z-coord-after-rewrite)
+- Under the hood uses [Recast and Detour](https://github.com/recastnavigation/recastnavigation)
+- Source code is written in **C++**
+- Uses `*.mmap` files as source
+- Loads the whole continent navmesh data into memory. Higher base memory usage, at least around *~600mb*
+- It's super fast path calculations
+- Not always suitable for player movement. Requires considerable amount of time to tweak the navmesh config, then bake it
 
 ## 3.1 System / Video Requirements
 
@@ -1859,7 +1877,7 @@ The best places to grind are:
 * Flat ground.
 
 
-# Pathing
+# V1 Remote Pathing - PathingAPI
 
 Pathing is built into the bot so you don't need to do anything special except download the MPQ files. You can though run it on its own server to visualise routes as they are created by the bot, or to play with route finding.
 
@@ -1888,6 +1906,7 @@ There are 3 pages:
 
 * Watch API Calls
 * Search
+* Route
 * Swagger
 
 Requests to the API can be done in a new browser tab like this or via the Swagger tab. You can then view the result in the Watch API calls viewer.
