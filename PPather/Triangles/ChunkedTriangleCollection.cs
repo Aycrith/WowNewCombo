@@ -1,4 +1,4 @@
-﻿/*
+/*
  *  Part of PPather
  *  Copyright Pontus Borg 2008
  *
@@ -134,7 +134,7 @@ public sealed class ChunkedTriangleCollection
                     out v2.X, out v2.Y, out v2.Z, out _);
 
             float d = PointDistanceToTriangle(toon, v0, v1, v2);
-            if (d < toonSize)
+            if (d < toonSize / 2)
                 return true;
         }
 
@@ -218,7 +218,7 @@ public sealed class ChunkedTriangleCollection
         // if (CheckForCollision(tc, ts, ref from_up, ref to_up)) { return true; }
 
         //close to the ground
-        const float stepDistance = 0.3f;
+        const float stepDistance = 0.4f;
 
         from_low = new Vector3(from.X, from.Y, from.Z);
         from_low.Z = z0 + stepDistance;
