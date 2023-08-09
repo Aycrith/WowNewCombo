@@ -113,7 +113,7 @@ Technical details about **V1**:
 - Extracts the geometry on demand during runtime
 - Loads those `*.adt` files which are in use. Lower memory usage compare to V3
 - After calculating a path successfully, caches it under `Json\PathInfo\_CONTINENT_NAME_\`
-- Iteratively development is really easy
+- Easy to visualize path steps and development iteratively
 
 ## 2.2 Optional - Using V3 Remote Pathing
 
@@ -134,7 +134,8 @@ Technical details about **V3**:
 - Uses `*.mmap` files as source
 - Loads the whole continent navmesh data into memory. Higher base memory usage, at least around *~600mb*
 - It's super fast path calculations
-- Not always suitable for player movement. Requires considerable amount of time to tweak the navmesh config, then bake it
+- Not always suitable for player movement.
+- Requires considerable amount of time to tweak the navmesh config, then bake it
 
 ## 3.1 System / Video Requirements
 
