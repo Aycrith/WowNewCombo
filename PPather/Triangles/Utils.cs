@@ -168,7 +168,7 @@ public static class Utils
     {
         float r;
 
-        Span<Vector3> axes = stackalloc Vector3[]
+        ReadOnlySpan<Vector3> axes = stackalloc Vector3[]
         {
             new(0, -f0.Z, f0.Y),
             new(0, -f1.Z, f1.Y),
