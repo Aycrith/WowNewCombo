@@ -69,7 +69,7 @@ public sealed class TriangleMatrix
                     box_center.Y = grid_y + (resolution / 2);
                     box_center.Z = 0;
 
-                    if (!TestTriangleBoxIntersect(v0, v1, v2, box_center, box_halfsize))
+                    if (!TriangleBoxIntersect(v0, v1, v2, box_center, box_halfsize))
                     {
                         continue;
                     }

@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Part of PPather
  *  Copyright Pontus Borg 2008
  *
@@ -168,10 +168,10 @@ public sealed class ChunkedTriangleCollection
             float dz1 = Abs(z1 - mid_z_hit);
 
             // Console.WriteLine("z0 " + z0 + " z1 " + z1 + " dz0 " + dz0+ " dz1 " + dz1 );
-            if (dz0 > stepLength / 2.0 && dz0 > 1.0)
+            if (dz0 > stepLength / 2.0f && dz0 > 1.0f)
                 return true; // too steep
 
-            if (dz1 > stepLength / 2.0 && dz1 > 1.0)
+            if (dz1 > stepLength / 2.0f && dz1 > 1.0f)
                 return true; // too steep
         }
         else
