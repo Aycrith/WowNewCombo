@@ -22,6 +22,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Numerics;
+using PPather.Extensions;
 
 namespace PPather.Graph;
 
@@ -171,32 +173,27 @@ public sealed class GraphChunk
             }
 
             int n_spots = 0;
-            int n_steps = 0;
             while (br.ReadUInt32() != FILE_ENDMAGIC)
             {
                 n_spots++;
                 uint reserved = br.ReadUInt32();
                 uint flags = br.ReadUInt32();
-                float x = br.ReadSingle();
-                float y = br.ReadSingle();
-                float z = br.ReadSingle();
+                Vector3 pos = br.ReadVector3();
                 uint n_paths = br.ReadUInt32();
 
-                if (x == 0 || y == 0)
+                if (pos == Vector3.Zero)
                 {
                     continue;
                 }
 
-                Spot s = new(x, y, z)
+                Spot s = new(pos)
                 {
-                    flags = flags
+                    flags = flags,
+                    n_paths = (int)n_paths,
+                    paths = new float[(int)n_paths * 3]
                 };
+                br.Read(MemoryMarshal.Cast<float, byte>(s.paths.AsSpan()));
 
-                for (uint i = 0; i < n_paths; i++)
-                {
-                    n_steps++;
-                    s.AddPathTo(br.ReadSingle(), br.ReadSingle(), br.ReadSingle());
-                }
                 _ = AddSpot(s);
 
                 // After loading a Chunk mark it unmodified
@@ -204,7 +201,7 @@ public sealed class GraphChunk
             }
 
             if (logger.IsEnabled(LogLevel.Trace))
-                logger.LogTrace($"[{nameof(GraphChunk)}] Loaded {filePath} {n_spots} spots {n_steps} steps {Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds} ms");
+                logger.LogTrace($"[{nameof(GraphChunk)}] Loaded {filePath} {n_spots} spots {Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds} ms");
 
             return true;
         }
@@ -229,7 +226,6 @@ public sealed class GraphChunk
             bw.Write(FILE_MAGIC);
 
             int n_spots = 0;
-            int n_steps = 0;
             var span = CollectionsMarshal.AsSpan(GetAllSpots());
             for (int j = 0; j < span.Length; j++)
             {
@@ -249,7 +245,6 @@ public sealed class GraphChunk
                     bw.Write(s.paths[off]);
                     bw.Write(s.paths[off + 1]);
                     bw.Write(s.paths[off + 2]);
-                    n_steps++;
                 }
                 n_spots++;
             }
@@ -260,7 +255,7 @@ public sealed class GraphChunk
             modified = false;
 
             if (logger.IsEnabled(LogLevel.Trace))
-                logger.LogTrace($"[{nameof(GraphChunk)}] Saved {filePath} {n_spots} spots {n_steps} steps");
+                logger.LogTrace($"[{nameof(GraphChunk)}] Saved {filePath} {n_spots} spots");
         }
         catch (Exception e)
         {

@@ -39,7 +39,7 @@ public sealed class Spot
     public uint flags;
 
     public int n_paths;
-    public float[] paths; // 3 floats per outgoing path
+    public float[] paths = Array.Empty<float>(); // 3 floats per outgoing path
 
     public GraphChunk chunk;
     public Spot next;  // list on same x,y, used by chunk
@@ -125,7 +125,7 @@ public sealed class Spot
         }
 
         int off = i * 3;
-        x = paths[off];
+        x = paths[off + 0];
         y = paths[off + 1];
         z = paths[off + 2];
         return true;
@@ -167,22 +167,13 @@ public sealed class Spot
 
     public bool HasPathTo(float x, float y, float z)
     {
-        if (paths == null)
-            return false;
-        for (int i = 0; i < n_paths; i++)
-        {
-            int off = i * 3;
-            if (x == paths[off] &&
-               y == paths[off + 1] &&
-               z == paths[off + 2])
-                return true;
-        }
-        return false;
+        ReadOnlySpan<float> pos = stackalloc[] { x, y, z };
+        return paths.AsSpan().IndexOf(pos) != -1;
     }
 
     public void AddPathTo(Spot s)
     {
-        AddPathTo(s.Loc.X, s.Loc.Y, s.Loc.Z);
+        AddPathTo(s.Loc);
     }
 
     public void AddPathTo(Vector3 l)
@@ -194,11 +185,8 @@ public sealed class Spot
     {
         if (HasPathTo(x, y, z))
             return;
-        int old_size;
-        if (paths == null)
-            old_size = 0;
-        else
-            old_size = paths.Length / 3;
+
+        int old_size = paths.Length / 3;
         if (n_paths + 1 > old_size)
         {
             int new_size = old_size * 2;
@@ -208,7 +196,7 @@ public sealed class Spot
         }
 
         int off = n_paths * 3;
-        paths[off] = x;
+        paths[off + 0] = x;
         paths[off + 1] = y;
         paths[off + 2] = z;
         n_paths++;
@@ -228,9 +216,9 @@ public sealed class Spot
         for (int i = 0; i < n_paths && found_index == -1; i++)
         {
             int off = i * 3;
-            if (paths[off] == x &&
-               paths[off + 1] == y &&
-               paths[off + 2] == z)
+            if (paths[off + 0] == x &&
+                paths[off + 1] == y &&
+                paths[off + 2] == z)
             {
                 found_index = i;
             }
@@ -240,7 +228,7 @@ public sealed class Spot
             for (int i = found_index; i < n_paths - 1; i++)
             {
                 int off = i * 3;
-                paths[off] = paths[off + 3];
+                paths[off + 0] = paths[off + 3];
                 paths[off + 1] = paths[off + 4];
                 paths[off + 2] = paths[off + 5];
             }
