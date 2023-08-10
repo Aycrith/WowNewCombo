@@ -30,6 +30,9 @@
         <button @onclick="ToggleWireFrame">
             <span>Wire</span>
         </button>
+        <button @onclick="() => LoadGeometry = !LoadGeometry">
+            <span>@(LoadGeometry ? "Hide3D" : "Show3D")</span>
+        </button>
         <button @onclick="async () => await Reset()">
             <span>Reset</span>
         </button>
@@ -65,6 +68,8 @@
     private CancellationTokenSource searchCts;
 
     private Queue<ChunkEventArgs> chunkEventArgs = new();
+
+    private bool LoadGeometry { get; set; } = true;
 
     private Vector4 lastFrom;
     private Vector4 lastTo;
@@ -217,7 +222,8 @@
         {
             while (chunkEventArgs.TryDequeue(out var e))
             {
-                await DequeueChunkEvent(e);
+                if (LoadGeometry)
+                    await DequeueChunkEvent(e);
             }
 
             if (ClearPath)
