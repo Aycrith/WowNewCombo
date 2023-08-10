@@ -28,6 +28,7 @@ using PPather.Triangles.Data;
 using static Wmo.MapTileFile;
 using System.Buffers;
 using PPather;
+using System.Runtime.CompilerServices;
 
 namespace WowTriangles;
 
@@ -48,8 +49,8 @@ public sealed class MPQTriangleSupplier
         this.mapId = mapId;
 
         archive = new StormDll.ArchiveSet(this.logger, GetArchiveNames(dataConfig));
-        modelmanager = new ModelManager(archive, 160, dataConfig);
-        wmomanager = new WMOManager(archive, modelmanager, 120, dataConfig);
+        modelmanager = new ModelManager(archive, dataConfig);
+        wmomanager = new WMOManager(archive, modelmanager, dataConfig);
 
         wdt = new WDT();
         wdtf = new WDTFile(archive, this.mapId, wdt, wmomanager, modelmanager, this.logger, dataConfig);
@@ -74,6 +75,7 @@ public sealed class MPQTriangleSupplier
         return Directory.GetFiles(dataConfig.MPQ);
     }
 
+    [SkipLocalsInit]
     private void GetChunkData(TriangleCollection triangles, int chunk_x, int chunk_y)
     {
         if (triangles == null || wdtf == null || wdt == null)
@@ -120,6 +122,7 @@ public sealed class MPQTriangleSupplier
         wdt.loaded[index] = false;
     }
 
+    [SkipLocalsInit]
     private static void GetChunkCoord(float x, float y, out int chunk_x, out int chunk_y)
     {
         // yeah, this is ugly. But safe
@@ -139,6 +142,7 @@ public sealed class MPQTriangleSupplier
         }
     }
 
+    [SkipLocalsInit]
     public void GetTriangles(TriangleCollection tc, float min_x, float min_y, float max_x, float max_y)
     {
         for (int i = 0; i < wdt.gwmois.Length; i++)
@@ -156,10 +160,11 @@ public sealed class MPQTriangleSupplier
         }
     }
 
+    [SkipLocalsInit]
     private static void AddTriangles(TriangleCollection tc, MapChunk c)
     {
-        int[,] vertices = new int[9, 9];
-        int[,] verticesMid = new int[8, 8];
+        Span<int> vertices = stackalloc int[9 * 9];
+        Span<int> verticesMid = stackalloc int[8 * 8];
 
         for (int row = 0; row < 9; row++)
         {
@@ -167,7 +172,7 @@ public sealed class MPQTriangleSupplier
             {
                 ChunkGetCoordForPoint(c, row, col, out float x, out float y, out float z);
                 int index = tc.AddVertex(x, y, z);
-                vertices[row, col] = index;
+                vertices[row * 9 + col] = index;
             }
         }
 
@@ -177,7 +182,7 @@ public sealed class MPQTriangleSupplier
             {
                 ChunkGetCoordForMiddlePoint(c, row, col, out float x, out float y, out float z);
                 int index = tc.AddVertex(x, y, z);
-                verticesMid[row, col] = index;
+                verticesMid[row * 8 + col] = index;
             }
         }
 
@@ -187,11 +192,11 @@ public sealed class MPQTriangleSupplier
             {
                 if (!c.isHole(col, row))
                 {
-                    int v0 = vertices[row, col];
-                    int v1 = vertices[row + 1, col];
-                    int v2 = vertices[row + 1, col + 1];
-                    int v3 = vertices[row, col + 1];
-                    int vMid = verticesMid[row, col];
+                    int v0 = vertices[row * 9 + col];
+                    int v1 = vertices[(row + 1) * 9 + col];
+                    int v2 = vertices[(row + 1) * 9 + col + 1];
+                    int v3 = vertices[row * 9 + col + 1];
+                    int vMid = verticesMid[row * 8 + col];
 
                     tc.AddTriangle(v0, v1, vMid, TriangleType.Terrain);
                     tc.AddTriangle(v1, v2, vMid, TriangleType.Terrain);
@@ -213,7 +218,8 @@ public sealed class MPQTriangleSupplier
                     ChunkGetCoordForPoint(c, row, col, out float x, out float y, out float z);
                     float height = c.water_height[ii]; // - 1.5f //why this here
                     int index = tc.AddVertex(x, y, height);
-                    vertices[row, col] = index;
+
+                    vertices[row * LiquidData.HEIGHT_SIZE + col] = index;
                 }
             }
 
@@ -226,10 +232,10 @@ public sealed class MPQTriangleSupplier
                     if (c.water_flags[ii] == 0xf)
                         continue;
 
-                    int v0 = vertices[row, col];
-                    int v1 = vertices[row + 1, col];
-                    int v2 = vertices[row + 1, col + 1];
-                    int v3 = vertices[row, col + 1];
+                    int v0 = vertices[row * LiquidData.HEIGHT_SIZE + col];
+                    int v1 = vertices[(row + 1) * LiquidData.HEIGHT_SIZE + col];
+                    int v2 = vertices[(row + 1) * LiquidData.HEIGHT_SIZE + col + 1];
+                    int v3 = vertices[row * LiquidData.HEIGHT_SIZE + col + 1];
 
                     tc.AddTriangle(v0, v1, v3, TriangleType.Water);
                     tc.AddTriangle(v1, v2, v3, TriangleType.Water);
@@ -238,6 +244,7 @@ public sealed class MPQTriangleSupplier
         }
     }
 
+    [SkipLocalsInit]
     private static void AddTriangles(TriangleCollection tc, WMOInstance wi)
     {
         float dx = wi.pos.X;
@@ -248,12 +255,19 @@ public sealed class MPQTriangleSupplier
         float dir_y = wi.dir.Y - 90;
         float dir_z = -wi.dir.X;
 
-        var pooler = ArrayPool<int>.Shared;
+        int maxVertices = 0;
         WMO wmo = wi.wmo;
         for (int gi = 0; gi < wmo.groups.Length; gi++)
         {
             WMOGroup g = wmo.groups[gi];
-            int[] vertices = pooler.Rent((int)g.nVertices);
+            maxVertices = Math.Max(maxVertices, (int)g.nVertices);
+        }
+
+        Span<int> vertices = stackalloc int[maxVertices];
+
+        for (int gi = 0; gi < wmo.groups.Length; gi++)
+        {
+            WMOGroup g = wmo.groups[gi];
 
             float minx = float.MaxValue;
             float miny = float.MaxValue;
@@ -307,7 +321,6 @@ public sealed class MPQTriangleSupplier
                     //if(t != -1) s.SetTriangleExtra(t, g.materials[0], 0, 0);
                 }
             }
-            pooler.Return(vertices);
         }
 
         /*
@@ -355,63 +368,59 @@ public sealed class MPQTriangleSupplier
 
         if (m.boundingTriangles == null)
         {
+            return;
         }
-        else
+
+        int nBoundingVertices = m.boundingVertices.Length / 3;
+
+        Span<int> vertices = stackalloc int[nBoundingVertices];
+
+        for (int i = 0; i < nBoundingVertices; i++)
         {
-            // We got boiuding stuff, that is better
-            int nBoundingVertices = m.boundingVertices.Length / 3;
+            int off = i * 3;
+            float x = m.boundingVertices[off];
+            float y = m.boundingVertices[off + 2];
+            float z = m.boundingVertices[off + 1];
+            x *= mi.scale;
+            y *= mi.scale;
+            z *= -mi.scale;
 
-            var pooler = ArrayPool<int>.Shared;
-            int[] vertices = pooler.Rent(nBoundingVertices);
+            Vector3 pos = new(x, y, z);
+            Vector3 new_pos = Vector3.Transform(pos, rotMatrix);
+            x = pos.X;
+            y = pos.Y;
+            z = pos.Z;
 
-            for (uint i = 0; i < nBoundingVertices; i++)
-            {
-                uint off = i * 3;
-                float x = m.boundingVertices[off];
-                float y = m.boundingVertices[off + 2];
-                float z = m.boundingVertices[off + 1];
-                x *= mi.scale;
-                y *= mi.scale;
-                z *= -mi.scale;
+            float dir_x = world_dir.Z;
+            float dir_y = world_dir.Y - 90;
+            float dir_z = -world_dir.X;
 
-                Vector3 pos = new(x, y, z);
-                Vector3 new_pos = Vector3.Transform(pos, rotMatrix);
-                x = pos.X;
-                y = pos.Y;
-                z = pos.Z;
+            Rotate(z, y, dir_x, out z, out y);
+            Rotate(x, y, dir_z, out x, out y);
+            Rotate(x, z, dir_y, out x, out z);
 
-                float dir_x = world_dir.Z;
-                float dir_y = world_dir.Y - 90;
-                float dir_z = -world_dir.X;
+            float xx = x + dx;
+            float yy = y + dy;
+            float zz = -z + dz;
 
-                Rotate(z, y, dir_x, out z, out y);
-                Rotate(x, y, dir_z, out x, out y);
-                Rotate(x, z, dir_y, out x, out z);
+            float finalx = ChunkReader.ZEROPOINT - zz;
+            float finaly = ChunkReader.ZEROPOINT - xx;
+            float finalz = yy;
+            vertices[i] = s.AddVertex(finalx, finaly, finalz);
+        }
 
-                float xx = x + dx;
-                float yy = y + dy;
-                float zz = -z + dz;
-
-                float finalx = ChunkReader.ZEROPOINT - zz;
-                float finaly = ChunkReader.ZEROPOINT - xx;
-                float finalz = yy;
-                vertices[i] = s.AddVertex(finalx, finaly, finalz);
-            }
-
-            int nBoundingTriangles = m.boundingTriangles.Length / 3;
-            for (uint i = 0; i < nBoundingTriangles; i++)
-            {
-                uint off = i * 3;
-                int v0 = vertices[m.boundingTriangles[off]];
-                int v1 = vertices[m.boundingTriangles[off + 1]];
-                int v2 = vertices[m.boundingTriangles[off + 2]];
-                s.AddTriangle(v0, v2, v1, TriangleType.Model);
-            }
-
-            pooler.Return(vertices);
+        int nBoundingTriangles = m.boundingTriangles.Length / 3;
+        for (uint i = 0; i < nBoundingTriangles; i++)
+        {
+            uint off = i * 3;
+            int v0 = vertices[m.boundingTriangles[off]];
+            int v1 = vertices[m.boundingTriangles[off + 1]];
+            int v2 = vertices[m.boundingTriangles[off + 2]];
+            s.AddTriangle(v0, v2, v1, TriangleType.Model);
         }
     }
 
+    [SkipLocalsInit]
     private static void AddTriangles(TriangleCollection s, ModelInstance mi)
     {
         float dx = mi.pos.X;
@@ -426,6 +435,8 @@ public sealed class MPQTriangleSupplier
 
         if (m.boundingTriangles == null)
         {
+            return;
+
             // /cry no bouding info, revert to normal vertives
             /*
 				ModelView mv = m.view[0]; // View number 1 ?!?!
@@ -473,54 +484,49 @@ public sealed class MPQTriangleSupplier
 				}
 				*/
         }
-        else
+
+        int nBoundingVertices = m.boundingVertices.Length / 3;
+
+        Span<int> vertices = stackalloc int[nBoundingVertices];
+
+        for (int i = 0; i < nBoundingVertices; i++)
         {
-            // We got boiuding stuff, that is better
-            int nBoundingVertices = m.boundingVertices.Length / 3;
+            int off = i * 3;
+            float x = m.boundingVertices[off];
+            float y = m.boundingVertices[off + 2];
+            float z = m.boundingVertices[off + 1];
 
-            var pooler = ArrayPool<int>.Shared;
-            int[] vertices = pooler.Rent(nBoundingVertices);
+            Rotate(z, y, dir_x, out z, out y);
+            Rotate(x, y, dir_z, out x, out y);
+            Rotate(x, z, dir_y, out x, out z);
 
-            for (uint i = 0; i < nBoundingVertices; i++)
-            {
-                uint off = i * 3;
-                float x = m.boundingVertices[off];
-                float y = m.boundingVertices[off + 2];
-                float z = m.boundingVertices[off + 1];
+            x *= mi.scale;
+            y *= mi.scale;
+            z *= mi.scale;
 
-                Rotate(z, y, dir_x, out z, out y);
-                Rotate(x, y, dir_z, out x, out y);
-                Rotate(x, z, dir_y, out x, out z);
+            float xx = x + dx;
+            float yy = y + dy;
+            float zz = -z + dz;
 
-                x *= mi.scale;
-                y *= mi.scale;
-                z *= mi.scale;
+            float finalx = ChunkReader.ZEROPOINT - zz;
+            float finaly = ChunkReader.ZEROPOINT - xx;
+            float finalz = yy;
 
-                float xx = x + dx;
-                float yy = y + dy;
-                float zz = -z + dz;
+            vertices[i] = s.AddVertex(finalx, finaly, finalz);
+        }
 
-                float finalx = ChunkReader.ZEROPOINT - zz;
-                float finaly = ChunkReader.ZEROPOINT - xx;
-                float finalz = yy;
-
-                vertices[i] = s.AddVertex(finalx, finaly, finalz);
-            }
-
-            int nBoundingTriangles = m.boundingTriangles.Length / 3;
-            for (uint i = 0; i < nBoundingTriangles; i++)
-            {
-                uint off = i * 3;
-                int v0 = vertices[m.boundingTriangles[off]];
-                int v1 = vertices[m.boundingTriangles[off + 1]];
-                int v2 = vertices[m.boundingTriangles[off + 2]];
-                s.AddTriangle(v0, v1, v2, TriangleType.Model);
-            }
-
-            pooler.Return(vertices);
+        int nBoundingTriangles = m.boundingTriangles.Length / 3;
+        for (uint i = 0; i < nBoundingTriangles; i++)
+        {
+            uint off = i * 3;
+            int v0 = vertices[m.boundingTriangles[off]];
+            int v1 = vertices[m.boundingTriangles[off + 1]];
+            int v2 = vertices[m.boundingTriangles[off + 2]];
+            s.AddTriangle(v0, v1, v2, TriangleType.Model);
         }
     }
 
+    [SkipLocalsInit]
     private static void ChunkGetCoordForPoint(MapChunk c, int row, int col,
                                       out float x, out float y, out float z)
     {
@@ -530,6 +536,7 @@ public sealed class MPQTriangleSupplier
         z = c.vertices[off + 1];
     }
 
+    [SkipLocalsInit]
     private static void ChunkGetCoordForMiddlePoint(MapChunk c, int row, int col,
                                         out float x, out float y, out float z)
     {
@@ -539,6 +546,7 @@ public sealed class MPQTriangleSupplier
         z = c.vertices[off + 1];
     }
 
+    [SkipLocalsInit]
     public static void Rotate(float x, float y, float angle, out float nx, out float ny)
     {
         float rot = angle / 360.0f * Tau;
