@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Text.Json;
@@ -58,23 +59,29 @@ public sealed class PPatherController : ControllerBase
     {
         isBusy = true;
         service.SetLocations(service.ToWorld(uimap1, x1, y1), service.ToWorld(uimap2, x2, y2));
-        var path = service.DoSearch(PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
+        Path path = service.DoSearch(PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
         if (path == null)
         {
             isBusy = false;
-            return new JsonResult(System.Array.Empty<Vector3>(), options);
+            return new JsonResult(Array.Empty<Vector3>(), options);
         }
 
         service.Save();
 
-        Vector3[] array = path.locations.ToArray();
-        for (int i = 0; i < array.Length; i++)
+        var pooler = ArrayPool<Vector3>.Shared;
+
+        Vector3[] array = pooler.Rent(path.locations.Count);
+        for (int i = 0; i < path.locations.Count; i++)
         {
-            array[i] = service.ToLocal(array[i], (int)service.SearchFrom.W, uimap1);
+            array[i] = service.ToLocal(path.locations[i], (int)service.SearchFrom.W, uimap1);
         }
+        pooler.Return(array);
 
         isBusy = false;
-        return new JsonResult(array, options);
+
+        return new JsonResult(
+            new ArraySegment<Vector3>(array, 0, path.locations.Count),
+            options);
     }
 
     /// <summary>
@@ -99,7 +106,7 @@ public sealed class PPatherController : ControllerBase
         if (path == null)
         {
             isBusy = false;
-            return new JsonResult(System.Array.Empty<Vector3>(), options);
+            return new JsonResult(Array.Empty<Vector3>(), options);
         }
 
         service.Save();
@@ -126,11 +133,11 @@ public sealed class PPatherController : ControllerBase
     {
         isBusy = true;
         service.SetLocations(service.ToWorldZ(uimap, x1, y1, z1), service.ToWorldZ(uimap, x2, y2, z2));
-        var path = service.DoSearch(PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
+        Path path = service.DoSearch(PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
         if (path == null)
         {
             isBusy = false;
-            return new JsonResult(System.Array.Empty<Vector3>(), options);
+            return new JsonResult(Array.Empty<Vector3>(), options);
         }
         service.Save();
         isBusy = false;
@@ -212,19 +219,19 @@ public sealed class PPatherController : ControllerBase
         float mapId = ContinentDB.NameToId["Azeroth"]; // Azeroth
         Span<Vector3> coords = stackalloc Vector3[]
         {
-            new Vector3(-5609.00f, -479.00f, 397.49f),
-            new Vector3(-5609.33f, -444.00f, 405.22f),
-            new Vector3(-5609.33f, -438.40f, 406.02f),
-            new Vector3(-5608.80f, -427.73f, 404.69f),
-            new Vector3(-5608.80f, -426.67f, 404.69f),
-            new Vector3(-5610.67f, -405.33f, 402.02f),
-            new Vector3(-5635.20f, -368.00f, 392.15f),
-            new Vector3(-5645.07f, -362.67f, 385.49f),
-            new Vector3(-5646.40f, -362.13f, 384.69f),
-            new Vector3(-5664.27f, -355.73f, 378.29f),
-            new Vector3(-5696.00f, -362.67f, 366.02f),
-            new Vector3(-5758.93f, -385.87f, 366.82f),
-            new Vector3(-5782.00f, -394.00f, 366.09f)
+            new(-5609.00f, -479.00f, 397.49f),
+            new(-5609.33f, -444.00f, 405.22f),
+            new(-5609.33f, -438.40f, 406.02f),
+            new(-5608.80f, -427.73f, 404.69f),
+            new(-5608.80f, -426.67f, 404.69f),
+            new(-5610.67f, -405.33f, 402.02f),
+            new(-5635.20f, -368.00f, 392.15f),
+            new(-5645.07f, -362.67f, 385.49f),
+            new(-5646.40f, -362.13f, 384.69f),
+            new(-5664.27f, -355.73f, 378.29f),
+            new(-5696.00f, -362.67f, 366.02f),
+            new(-5758.93f, -385.87f, 366.82f),
+            new(-5782.00f, -394.00f, 366.09f)
         };
 
         if (isBusy) { return false; }
