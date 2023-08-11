@@ -2,31 +2,53 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 
 namespace SharedLib.Converters;
 
 public sealed class Vector4Converter : JsonConverter<Vector4>
 {
-    private const string X = "x";
-    private const string Y = "y";
-    private const string Z = "z";
-    private const string W = "w";
-
     public override bool CanConvert(Type typeToConvert)
     {
         return typeToConvert == typeof(Vector4);
     }
 
+    [SkipLocalsInit]
     public override Vector4 Read(ref Utf8JsonReader reader,
         Type typeToConvert, JsonSerializerOptions options)
     {
-        JsonDocument doc = JsonDocument.ParseValue(ref reader);
-        JsonElement root = doc.RootElement;
+        float x = 0;
+        float y = 0;
+        float z = 0;
+        float w = 0;
 
-        float x = root.GetProperty(X).GetSingle();
-        float y = root.GetProperty(Y).GetSingle();
-        float z = root.GetProperty(Z).GetSingle();
-        float w = root.GetProperty(W).GetSingle();
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+        {
+            if (reader.TokenType != JsonTokenType.PropertyName)
+                continue;
+
+            if (reader.ValueTextEquals("x"u8))
+            {
+                reader.Read();
+                x = reader.GetSingle();
+            }
+            else if (reader.ValueTextEquals("y"u8))
+            {
+                reader.Read();
+                y = reader.GetSingle();
+            }
+            else if (reader.ValueTextEquals("z"u8))
+            {
+                reader.Read();
+                z = reader.GetSingle();
+            }
+            else if (reader.ValueTextEquals("w"u8))
+            {
+                reader.Read();
+                w = reader.GetSingle();
+            }
+        }
+
 
         return new Vector4(x, y, z, w);
     }
@@ -35,10 +57,10 @@ public sealed class Vector4Converter : JsonConverter<Vector4>
         Vector4 value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
-        writer.WriteNumber(X, value.X);
-        writer.WriteNumber(Y, value.Y);
-        writer.WriteNumber(Z, value.Z);
-        writer.WriteNumber(W, value.W);
+        writer.WriteNumber("x"u8, value.X);
+        writer.WriteNumber("y"u8, value.Y);
+        writer.WriteNumber("z"u8, value.Z);
+        writer.WriteNumber("w"u8, value.W);
         writer.WriteEndObject();
     }
 }
