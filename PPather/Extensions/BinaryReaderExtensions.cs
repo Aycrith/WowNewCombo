@@ -13,4 +13,11 @@ public static class BinaryReaderExtensions
         b.Read(MemoryMarshal.Cast<float, byte>(v3));
         return new(v3);
     }
+
+    public static bool EOF(this BinaryReader b)
+    {
+        Stream s = b.BaseStream;
+        return s.Position >= s.Length;
+    }
+
 }
