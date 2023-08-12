@@ -144,7 +144,7 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
                 combatUtil.Update();
 
                 npcNameTargeting.ChangeNpcType(NpcNames.Corpse);
-                e = wait.Until(MAX_TIME_TO_WAIT_NPC_NAME, npcNameTargeting.FoundNpcName);
+                e = wait.Until(MAX_TIME_TO_WAIT_NPC_NAME, npcNameTargeting.FoundAny);
                 LogFoundNpcNameCount(logger, npcNameTargeting.NpcCount, e);
 
                 foundTarget = npcNameTargeting.FindBy(types); // todo salvage icon

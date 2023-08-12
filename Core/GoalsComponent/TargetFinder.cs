@@ -6,22 +6,21 @@ namespace Core.Goals;
 
 public sealed class TargetFinder
 {
-    private const int minMs = 400, maxMs = 1000;
+    private const int waitMs = 200;
 
     private readonly ConfigurableInput input;
-    private readonly ClassConfiguration classConfig;
     private readonly AddonBits bits;
     private readonly NpcNameTargeting npcNameTargeting;
     private readonly Wait wait;
 
     private DateTime lastActive;
 
-    public int ElapsedMs => (int)(DateTime.UtcNow - lastActive).TotalMilliseconds;
+    public int ElapsedMs =>
+        (int)(DateTime.UtcNow - lastActive).TotalMilliseconds;
 
-    public TargetFinder(ConfigurableInput input, ClassConfiguration classConfig,
+    public TargetFinder(ConfigurableInput input,
         AddonBits bits, NpcNameTargeting npcNameTargeting, Wait wait)
     {
-        this.classConfig = classConfig;
         this.input = input;
         this.bits = bits;
         this.npcNameTargeting = npcNameTargeting;
@@ -36,38 +35,42 @@ public sealed class TargetFinder
         npcNameTargeting.Reset();
     }
 
-    public bool Search(NpcNames target, Func<bool> validTarget, CancellationToken ct)
+    public bool Search(
+        NpcNames target, Func<bool> validTarget, CancellationToken ct)
     {
         return LookForTarget(target, ct) && validTarget();
     }
 
-    private bool LookForTarget(NpcNames target, CancellationToken ct)
+    private bool LookForTarget(
+        NpcNames target, CancellationToken ct)
     {
-        if (ElapsedMs < Random.Shared.Next(minMs, maxMs))
+        if (ElapsedMs < waitMs)
             return bits.Target();
 
-        if (!ct.IsCancellationRequested &&
-            classConfig.TargetNearestTarget.GetRemainingCooldown() == 0)
+        if (input.TargetNearestTarget.GetRemainingCooldown() == 0)
         {
+            lastActive = DateTime.UtcNow;
             input.PressNearestTarget();
             wait.Update();
         }
 
-        if (!ct.IsCancellationRequested && !input.KeyboardOnly && !bits.Target())
+        if (!ct.IsCancellationRequested &&
+            !input.KeyboardOnly && !bits.Target())
         {
             npcNameTargeting.ChangeNpcType(target);
             npcNameTargeting.WaitForUpdate();
 
-            if (!ct.IsCancellationRequested &&
-                npcNameTargeting.NpcCount > 0 &&
+            if (ct.IsCancellationRequested)
+                return false;
+
+            if (npcNameTargeting.FoundAny() &&
                 !input.IsKeyDown(input.TurnLeftKey) &&
                 !input.IsKeyDown(input.TurnRightKey))
             {
-                npcNameTargeting.AquireNonBlacklisted(ct);
+                lastActive = DateTime.UtcNow;
+                return npcNameTargeting.AcquireNonBlacklisted(ct);
             }
         }
-
-        lastActive = DateTime.UtcNow;
 
         return bits.Target();
     }

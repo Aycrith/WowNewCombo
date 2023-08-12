@@ -1,6 +1,5 @@
 using System;
 using System.Drawing;
-using System.Linq;
 using System.Threading;
 using SharedLib.Extensions;
 using SharedLib.NpcFinder;
@@ -54,33 +53,36 @@ public sealed partial class NpcNameTargeting : IDisposable
 
         whitePen = new Pen(Color.White, 3);
 
+        float refWidth = npcNameFinder.ScaleToRefWidth;
+        float refHeight = npcNameFinder.ScaleToRefHeight;
+
         locTargeting = new Point[]
         {
             new Point(0, -2),
-            new Point(-13, 8).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
-            new Point(13, 8).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+            new Point(-13, 8).Scale(refWidth, refHeight),
+            new Point(13, 8).Scale(refWidth, refHeight),
         };
 
         locFindBy = new Point[]
         {
             new Point(0, 0),
-            new Point(0, 15).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+            new Point(0, 15).Scale(refWidth, refHeight),
 
-            new Point(0, 50).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
-            new Point(-15, 50).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
-            new Point(15, 50).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+            new Point(0, 50).Scale(refWidth, refHeight),
+            new Point(-15, 50).Scale(refWidth, refHeight),
+            new Point(15, 50).Scale(refWidth, refHeight),
 
-            new Point(0, 100).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
-            new Point(-15, 100).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
-            new Point(15, 100).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+            new Point(0, 100).Scale(refWidth, refHeight),
+            new Point(-15, 100).Scale(refWidth, refHeight),
+            new Point(15, 100).Scale(refWidth, refHeight),
 
-            new Point(0, 150).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
-            new Point(-15, 150).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
-            new Point(15, 150).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+            new Point(0, 150).Scale(refWidth, refHeight),
+            new Point(-15, 150).Scale(refWidth, refHeight),
+            new Point(15, 150).Scale(refWidth, refHeight),
 
-            new Point(0,   200).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
-            new Point(-15, 200).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
-            new Point(-15, 200).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight),
+            new Point(0,   200).Scale(refWidth, refHeight),
+            new Point(-15, 200).Scale(refWidth, refHeight),
+            new Point(-15, 200).Scale(refWidth, refHeight),
         };
 
         // also only visible while using BlazorServer
@@ -110,12 +112,12 @@ public sealed partial class NpcNameTargeting : IDisposable
         npcNameFinder.WaitForUpdate();
     }
 
-    public bool FoundNpcName()
+    public bool FoundAny()
     {
         return npcNameFinder.NpcCount > 0;
     }
 
-    public bool AquireNonBlacklisted(CancellationToken ct)
+    public bool AcquireNonBlacklisted(CancellationToken ct)
     {
         if (npcCount != NpcCount)
         {
@@ -125,42 +127,34 @@ public sealed partial class NpcNameTargeting : IDisposable
 
         if (index > NpcCount - 1)
             return false;
-        NpcPosition npc = npcNameFinder.Npcs[index];
 
-        for (int i = 0; i < locTargeting.Length; i++)
+        ReadOnlySpan<NpcPosition> span = npcNameFinder.Npcs;
+        ref readonly NpcPosition npc = ref span[index];
+
+        Point p = locTargeting[Random.Shared.Next(locTargeting.Length)];
+        p.Offset(npc.ClickPoint);
+        p.Offset(npcNameFinder.ToScreenCoordinates());
+
+        input.SetCursorPos(p);
+        classifier.Classify(out CursorType cls, out _);
+
+        if (cls is CursorType.Kill && mouseOverReader.MouseOverId != 0)
         {
-            if (ct.IsCancellationRequested)
-                return false;
-
-            Point p = locTargeting[i];
-            p.Offset(npc.ClickPoint);
-            p.Offset(npcNameFinder.ToScreenCoordinates());
-
-            input.SetCursorPos(p);
-            classifier.Classify(out CursorType cls, out _);
-
-            if (cls is CursorType.Kill && mouseOverReader.MouseOverId != 0)
+            if (mouseOverBlacklist.Is())
             {
-                //if (mouseOverReader.MouseOverId == 0)
-                //    wait.Update(5);
-
-                //if (mouseOverReader.MouseOverId == 0)
-                //    continue;
-
-                if (mouseOverBlacklist.Is())
-                {
-                    LogBlacklistAdded(logger, index, mouseOverReader.MouseOverId, npc.Rect);
-                    index++;
-                    return false;
-                }
-
-                LogFoundTarget(logger, cls.ToStringF(), mouseOverReader.MouseOverId, npc.Rect);
-                input.InteractMouseOver(ct);
-                return true;
+                LogBlacklistAdded(logger, index,
+                    mouseOverReader.MouseOverId, npc.Rect);
+                index++;
+                return false;
             }
-            //ct.WaitHandle.WaitOne(1);
-            Thread.Sleep(0);
+
+            LogFoundTarget(logger, cls.ToStringF(), mouseOverReader.MouseOverId,
+                npc.Rect);
+
+            input.InteractMouseOver(ct);
+            return true;
         }
+
         return false;
     }
 
@@ -168,27 +162,30 @@ public sealed partial class NpcNameTargeting : IDisposable
     {
         int c = locFindBy.Length;
         const int e = 3;
-        Span<Point> attemptPoints = stackalloc Point[c + (c * e)];
+        Span<Point> attempts = stackalloc Point[c + (c * e)];
 
-        for (int ni = 0; ni < npcNameFinder.Npcs.Count; ni++)
+        float refWidth = npcNameFinder.ScaleToRefWidth;
+        float refHeight = npcNameFinder.ScaleToRefHeight;
+
+        ReadOnlySpan<NpcPosition> span = npcNameFinder.Npcs;
+        for (int i = 0; i < span.Length; i++)
         {
-            NpcPosition npc = npcNameFinder.Npcs[ni];
-            for (int i = 0; i < c; i += e)
+            ref readonly NpcPosition npc = ref span[i];
+            for (int j = 0; j < c; j += e)
             {
-                Point p = locFindBy[i];
-                attemptPoints[i] = p;
-                attemptPoints[i + c] = new Point(npc.Rect.Width / 2, p.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight);
-                attemptPoints[i + c + 1] = new Point(-npc.Rect.Width / 2, p.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight);
+                Point p = locFindBy[j];
+                attempts[j] = p;
+                attempts[j + c] = new Point(npc.Rect.Width / 2, p.Y).Scale(refWidth, refHeight);
+                attempts[j + c + 1] = new Point(-npc.Rect.Width / 2, p.Y).Scale(refWidth, refHeight);
             }
 
-            for (int pi = 0; pi < attemptPoints.Length; pi++)
+            for (int k = 0; k < attempts.Length; k++)
             {
-                Point p = attemptPoints[pi];
+                Point p = attempts[k];
                 p.Offset(npc.ClickPoint);
                 p.Offset(npcNameFinder.ToScreenCoordinates());
-                input.SetCursorPos(p);
 
-                ct.WaitHandle.WaitOne(Random.Shared.Next(2, INTERACT_DELAY));
+                input.SetCursorPos(p);
 
                 classifier.Classify(out CursorType cls, out _);
                 if (cursors.BinarySearch(cls, Comparer<CursorType>.Default) != -1)
@@ -197,6 +194,8 @@ public sealed partial class NpcNameTargeting : IDisposable
                     LogFoundTarget(logger, cls.ToStringF(), mouseOverReader.MouseOverId, npc.Rect);
                     return true;
                 }
+
+                wait.Update();
             }
         }
         return false;

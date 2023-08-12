@@ -237,9 +237,8 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
                 sideActivityCts.Cancel();
                 sideActivityManualReset.Reset();
             }
-            else
-                sideActivityCts.Token.WaitHandle.WaitOne(1);
 
+            sideActivityCts.Token.WaitHandle.WaitOne(1);
             sideActivityManualReset.Wait();
         }
 

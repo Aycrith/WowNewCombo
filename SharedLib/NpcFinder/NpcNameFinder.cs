@@ -4,7 +4,6 @@ using System;
 using System.Drawing;
 using System.Linq;
 using System.Drawing.Imaging;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
 using System.Buffers;
@@ -84,9 +83,12 @@ public sealed partial class NpcNameFinder : IDisposable
     public readonly float ScaleToRefHeight = 1;
 
     private SearchMode searchMode = SearchMode.Fuzzy;
-    private NpcNames nameType = NpcNames.Enemy | NpcNames.Neutral;
+    public NpcNames nameType { private set; get; } =
+        NpcNames.Enemy | NpcNames.Neutral;
 
-    public ArraySegment<NpcPosition> Npcs { get; private set; } = Array.Empty<NpcPosition>();
+    public ArraySegment<NpcPosition> Npcs { get; private set; } =
+        Array.Empty<NpcPosition>();
+
     public int NpcCount => Npcs.Count;
     public int AddCount { private set; get; }
     public int TargetCount { private set; get; }
@@ -216,7 +218,7 @@ public sealed partial class NpcNameFinder : IDisposable
         if (nameType == type)
             return false;
 
-        resetEvent.Reset();
+        resetEvent.ChangeSet();
 
         TargetCount = 0;
         AddCount = 0;
@@ -238,6 +240,9 @@ public sealed partial class NpcNameFinder : IDisposable
         UpdateSearchMode();
 
         LogTypeChanged(logger, type.ToStringF(), searchMode.ToStringF());
+
+        if (nameType == NpcNames.None)
+            resetEvent.ChangeReset();
 
         return true;
     }
@@ -404,9 +409,11 @@ public sealed partial class NpcNameFinder : IDisposable
 
     public void Update()
     {
+        resetEvent.ChangeReset();
         resetEvent.Reset();
 
-        ReadOnlySpan<LineSegment> lineSegments = PopulateLines(bitmapProvider.Bitmap, Area);
+        ReadOnlySpan<LineSegment> lineSegments =
+            PopulateLines(bitmapProvider.Bitmap, Area);
         Npcs = DetermineNpcs(lineSegments);
 
         TargetCount = Npcs.Count(TargetsCount);
@@ -419,7 +426,8 @@ public sealed partial class NpcNameFinder : IDisposable
         }
         else
         {
-            if (PotentialAddsExist && (DateTime.UtcNow - LastPotentialAddsSeen).TotalSeconds > 1)
+            if (PotentialAddsExist &&
+                (DateTime.UtcNow - LastPotentialAddsSeen).TotalSeconds > 1)
             {
                 PotentialAddsExist = false;
                 AddCount = 0;
@@ -462,7 +470,9 @@ public sealed partial class NpcNameFinder : IDisposable
                 if (laterNpcLine.Y > npcLine.Y + offset1) break;
                 if (laterNpcLine.Y > lastY + offset2) break;
 
-                if (laterNpcLine.XStart > npcLine.XCenter || laterNpcLine.XEnd < npcLine.XCenter || laterNpcLine.Y <= lastY)
+                if (laterNpcLine.XStart > npcLine.XCenter ||
+                    laterNpcLine.XEnd < npcLine.XCenter ||
+                    laterNpcLine.Y <= lastY)
                     continue;
 
                 lastY = laterNpcLine.Y;
@@ -490,7 +500,8 @@ public sealed partial class NpcNameFinder : IDisposable
                         rect.Height = n.Y - rect.Y;
                 }
                 int yOffset = YOffset(Area, rect);
-                npcs[c++] = new NpcPosition(rect.Location, rect.Max(), yOffset, heightMul);
+                npcs[c++] = new NpcPosition(
+                    rect.Location, rect.Max(), yOffset, heightMul);
             }
         }
 
@@ -512,7 +523,8 @@ public sealed partial class NpcNameFinder : IDisposable
                 Point pj = jj.Rect.Centre();
                 float midDistance = PointExt.SqrDistance(pi, pj);
 
-                if (ii.Rect.IntersectsWith(jj.Rect) || midDistance <= lineHeight * lineHeight)
+                if (ii.Rect.IntersectsWith(jj.Rect) ||
+                    midDistance <= lineHeight * lineHeight)
                 {
                     Rectangle unionRect = Rectangle.Union(ii.Rect, jj.Rect);
 
@@ -558,13 +570,17 @@ public sealed partial class NpcNameFinder : IDisposable
 
     private bool TargetsCount(NpcPosition c)
     {
-        return !IsAdd(c) && Math.Abs(c.ClickPoint.X - screenMid) < screenTargetBuffer;
+        return !IsAdd(c) &&
+            Math.Abs(c.ClickPoint.X - screenMid) < screenTargetBuffer;
     }
 
     private bool IsAdd(NpcPosition c)
     {
-        return (c.ClickPoint.X < screenMid - screenTargetBuffer && c.ClickPoint.X > screenMid - screenAddBuffer) ||
-            (c.ClickPoint.X > screenMid + screenTargetBuffer && c.ClickPoint.X < screenMid + screenAddBuffer);
+        return
+            (c.ClickPoint.X < screenMid - screenTargetBuffer &&
+             c.ClickPoint.X > screenMid - screenAddBuffer) ||
+            (c.ClickPoint.X > screenMid + screenTargetBuffer &&
+             c.ClickPoint.X < screenMid + screenAddBuffer);
     }
 
     private int YOffset(Rectangle area, Rectangle npc)
@@ -590,7 +606,9 @@ public sealed partial class NpcNameFinder : IDisposable
         float lengthDiff = ScaleWidth(WidthDiff);
         float minEndLength = minLength - lengthDiff;
 
-        BitmapData bitmapData = bitmap.LockBits(new Rectangle(Point.Empty, rect.Size), ImageLockMode.ReadOnly, pixelFormat);
+        BitmapData bitmapData =
+            bitmap.LockBits(new Rectangle(Point.Empty, rect.Size),
+                ImageLockMode.ReadOnly, pixelFormat);
 
         [SkipLocalsInit]
         unsafe void body(int y)
@@ -604,7 +622,10 @@ public sealed partial class NpcNameFinder : IDisposable
             {
                 int xi = x * bytesPerPixel;
 
-                if (!colorMatcher(currentLine[xi + 2], currentLine[xi + 1], currentLine[xi]))
+                if (!colorMatcher(
+                    currentLine[xi + 2],
+                    currentLine[xi + 1],
+                    currentLine[xi]))
                     continue;
 
                 if (xStart > -1 && (x - xEnd) < minLength)

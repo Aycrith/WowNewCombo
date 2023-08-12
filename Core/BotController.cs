@@ -14,6 +14,7 @@ using SharedLib.NpcFinder;
 using PPather.Data;
 using Microsoft.Extensions.DependencyInjection;
 using System.Numerics;
+using SharedLib;
 
 namespace Core;
 
@@ -26,6 +27,7 @@ public sealed partial class BotController : IBotController, IDisposable
     private readonly DataConfig dataConfig;
     private readonly CancellationTokenSource cts;
     private readonly NpcNameFinder npcNameFinder;
+    private readonly INpcResetEvent npcResetEvent;
     private readonly AddonReader addonReader;
     private readonly AddonBits bits;
     private readonly PlayerReader playerReader;
@@ -61,6 +63,7 @@ public sealed partial class BotController : IBotController, IDisposable
         IPPather pather, DataConfig dataConfig,
         WowScreen wowScreen,
         NpcNameFinder npcNameFinder,
+        INpcResetEvent npcResetEvent,
         PlayerReader playerReader, AddonReader addonReader,
         AddonBits bits, Wait wait,
         MinimapNodeFinder minimapNodeFinder,
@@ -83,6 +86,7 @@ public sealed partial class BotController : IBotController, IDisposable
 
         this.cts = cts;
         this.npcNameFinder = npcNameFinder;
+        this.npcResetEvent = npcResetEvent;
 
         addonThread = new(AddonThread);
         addonThread.Priority = ThreadPriority.AboveNormal;
@@ -121,7 +125,7 @@ public sealed partial class BotController : IBotController, IDisposable
         {
             addonReader.Update();
         }
-        logger.LogWarning("Addon thread stoppped!");
+        logger.LogWarning("Addon thread stopped!");
     }
 
     private void ScreenshotThread()
@@ -134,7 +138,12 @@ public sealed partial class BotController : IBotController, IDisposable
         Span<double> screen = stackalloc double[SIZE];
         Span<double> npc = stackalloc double[SIZE];
 
-        while (!cts.IsCancellationRequested)
+        WaitHandle[] waitHandles = new[] {
+            cts.Token.WaitHandle,
+            npcResetEvent.WaitHandle,
+        };
+
+        while (true)
         {
             if (wowScreen.Enabled)
             {
@@ -166,12 +175,18 @@ public sealed partial class BotController : IBotController, IDisposable
                 AvgScreenLatency = Average(screen);
             }
 
+            int waitResult =
+                WaitHandle.WaitAny(waitHandles,
+                Math.Max(
+                    screenshotTickMs -
+                    (int)screen[tickCount & MOD] -
+                    (int)npc[tickCount & MOD],
+                    20));
+
             tickCount++;
 
-            cts.Token.WaitHandle.WaitOne(
-                wowScreen.Enabled || ClassConfig?.Mode == Mode.AttendedGather
-                ? screenshotTickMs
-                : 4);
+            if (waitResult == 0)
+                break;
         }
 
         if (logger.IsEnabled(LogLevel.Debug))
