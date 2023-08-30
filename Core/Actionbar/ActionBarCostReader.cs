@@ -9,24 +9,7 @@ namespace Core;
 
 #pragma warning disable CS0162
 
-public readonly struct ActionBarCost : IEquatable<ActionBarCost>
-{
-    public readonly PowerType PowerType;
-    public readonly int Cost;
-
-    public ActionBarCost(PowerType powerType, int cost)
-    {
-        PowerType = powerType;
-        Cost = cost;
-    }
-
-    public bool Equals(ActionBarCost other)
-    {
-        return
-            other.PowerType == PowerType &&
-            other.Cost == Cost;
-    }
-}
+public readonly record struct ActionBarCost(PowerType PowerType, int Cost);
 
 public sealed class ActionBarCostReader : IReader
 {
