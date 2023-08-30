@@ -30,7 +30,7 @@ public sealed class TriangleMatrix
     {
         long pre = Stopwatch.GetTimestamp();
 
-        matrix = new SparseFloatMatrix2D<List<int>>(resolution);
+        matrix = new SparseFloatMatrix2D<List<int>>(resolution, 8096);
 
         Vector3 v0;
         Vector3 v1;
@@ -104,39 +104,43 @@ public sealed class TriangleMatrix
         matrix.Clear();
     }
 
+    [SkipLocalsInit]
     public ReadOnlySpan<int> GetAllCloseTo(float x, float y, float distance)
     {
-        (ReadOnlyMemory<List<int>> close, int count) =
-            matrix.GetAllInSquare(x - distance, y - distance, x + distance, y + distance);
+        (ReadOnlyMemory<List<int>> close,
+            int count,
+            int totalCount) =
+            matrix.GetAllInSquare(
+                x - distance, y - distance, x + distance, y + distance);
 
-        return GetAsSpan(close, count);
+        return GetAsSpan(close, count, totalCount);
     }
 
+    [SkipLocalsInit]
     public ReadOnlySpan<int> GetAllInSquare(float x0, float y0, float x1, float y1)
     {
-        (ReadOnlyMemory<List<int>> close, int count) =
+        (ReadOnlyMemory<List<int>> close,
+            int count,
+            int totalCount) =
             matrix.GetAllInSquare(x0, y0, x1, y1);
 
-        return GetAsSpan(close, count);
+        return GetAsSpan(close, count, totalCount);
     }
 
-    private static ReadOnlySpan<int> GetAsSpan(ReadOnlyMemory<List<int>> close, int count)
+    [SkipLocalsInit]
+    private static ReadOnlySpan<int> GetAsSpan(
+        ReadOnlyMemory<List<int>> close, int count, int totalCount)
     {
-        int totalSize = 0;
-        for (int i = 0; i < count; i++)
-        {
-            totalSize += close.Span[i].Count;
-        }
-
         var pooler = ArrayPool<int>.Shared;
-        int[] output = pooler.Rent(totalSize);
+        int[] output = pooler.Rent(totalCount);
+        Span<int> toSpan = output.AsSpan();
 
         int c = 0;
         for (int i = 0; i < count; i++)
         {
-            ReadOnlySpan<int> span = CollectionsMarshal.AsSpan(close.Span[i]);
-            span.CopyTo(new Span<int>(output, c, span.Length));
-            c += span.Length;
+            ReadOnlySpan<int> fromSpan = CollectionsMarshal.AsSpan(close.Span[i]);
+            fromSpan.CopyTo(toSpan.Slice(c, fromSpan.Length));
+            c += fromSpan.Length;
         }
 
         pooler.Return(output);

@@ -109,4 +109,17 @@ public static class VectorExt
     {
         return new Vector3(v4.X, v4.Y, v4.Z);
     }
+
+    public static void Deconstruct(this Vector3 v3, out float x, out float y, out float z)
+    {
+        x = v3.X;
+        y = v3.Y;
+        z = v3.Z;
+    }
+
+    public static void Deconstruct(this Vector3 v2, out float x, out float y)
+    {
+        x = v2.X;
+        y = v2.Y;
+    }
 }

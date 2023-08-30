@@ -37,7 +37,7 @@ public sealed class WorldMapAreaDB
 
     //
 
-    public static Vector3 ToWorld_FlipXY(Vector3 map, WorldMapArea wma)
+    public static Vector3 ToWorld_FlipXY(Vector3 map, in WorldMapArea wma)
     {
         return new Vector3(wma.ToWorldX(map.Y), wma.ToWorldY(map.X), map.Z);
     }
@@ -67,7 +67,7 @@ public sealed class WorldMapAreaDB
         return new Vector3(wma.ToMapY(world.Y), wma.ToMapX(world.X), world.Z);
     }
 
-    public static Vector3 ToMap_FlipXY(Vector3 world, WorldMapArea wma)
+    public static Vector3 ToMap_FlipXY(Vector3 world, in WorldMapArea wma)
     {
         return new Vector3(wma.ToMapY(world.Y), wma.ToMapX(world.X), world.Z);
     }

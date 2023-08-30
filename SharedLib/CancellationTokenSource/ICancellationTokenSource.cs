@@ -3,7 +3,7 @@ using System.Threading;
 
 namespace SharedLib;
 
-public interface ICancellationTokenSource<T>
+public interface ICancellationTokenSource<T> : IDisposable
 {
     CancellationToken Token { get; }
 
@@ -13,7 +13,7 @@ public interface ICancellationTokenSource<T>
 }
 
 public sealed class CancellationTokenSource<T> :
-    CancellationTokenSource, ICancellationTokenSource<T>, IDisposable
+    CancellationTokenSource, ICancellationTokenSource<T>
 {
 
 }

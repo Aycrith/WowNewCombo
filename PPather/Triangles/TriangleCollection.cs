@@ -4,14 +4,18 @@
  *
  */
 
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 using Microsoft.Extensions.Logging;
 
 using PPather;
 using PPather.Triangles;
+
+using SharedLib.Extensions;
 
 namespace WowTriangles;
 
@@ -140,7 +144,8 @@ public sealed class TriangleCollection
     public void GetTriangleVertices(int i,
                                     out float x0, out float y0, out float z0,
                                     out float x1, out float y1, out float z1,
-                                    out float x2, out float y2, out float z2, out TriangleType flags)
+                                    out float x2, out float y2, out float z2,
+                                    out TriangleType flags)
     {
         TrianglesGet(i, out int v0, out int v1, out int v2, out flags);
 
@@ -165,11 +170,8 @@ public sealed class TriangleCollection
     [SkipLocalsInit]
     private void VerticesGet(int index, out float x, out float y, out float z)
     {
-        var local = vertecies;
-        Vector3 v = local[index];
-        x = v.X;
-        y = v.Y;
-        z = v.Z;
+        ReadOnlySpan<Vector3> span = CollectionsMarshal.AsSpan(vertecies);
+        (x, y, z) = span[index];
     }
 
     private void VerticesSet(int index, float x, float y, float z)
@@ -179,11 +181,11 @@ public sealed class TriangleCollection
 
 
     [SkipLocalsInit]
-    private void TrianglesGet(int index, out int v0, out int v1, out int v2, out TriangleType flags)
+    private void TrianglesGet(
+        int index, out int v0, out int v1, out int v2, out TriangleType flags)
     {
-        var local = triangles;
-        Triangle<int> t = local[index];
-        (v0, v1, v2, flags) = t;
+        ReadOnlySpan<Triangle<int>> span = CollectionsMarshal.AsSpan(triangles);
+        (v0, v1, v2, flags) = span[index];
     }
 
     private void TrianglesSet(int index, int v0, int v1, int v2, TriangleType flags)
