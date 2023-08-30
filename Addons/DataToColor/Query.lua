@@ -50,6 +50,8 @@ local C_DeathInfo = C_DeathInfo
 local UnitAttackSpeed = UnitAttackSpeed
 local UnitRangedDamage = UnitRangedDamage
 
+local GameMenuFrame = GameMenuFrame
+
 -- bits
 
 local UnitAffectingCombat = UnitAffectingCombat
@@ -158,7 +160,8 @@ function DataToColor:Bits2()
         (DataToColor:IsUnitsTargetIsPlayerOrPet(DataToColor.C.unitmouseover, DataToColor.C.unitmouseovertarget) and 2 or 0) ^ 16 +
         (UnitPlayerControlled(DataToColor.C.unitmouseover) and 2 or 0) ^ 17 +
         (UnitPlayerControlled(DataToColor.C.unitTarget) and 2 or 0) ^ 18 +
-        ((DataToColor.autoFollow) and 2 or 0) ^ 19
+        ((DataToColor.autoFollow) and 2 or 0) ^ 19 +
+        ((GameMenuFrame:IsShown() and 2 or 0)) ^ 20
 end
 
 function DataToColor:CustomTrigger(t)
