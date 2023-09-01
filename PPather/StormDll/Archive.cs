@@ -4,8 +4,6 @@ using System.IO;
 
 namespace StormDll;
 
-#nullable enable
-
 internal sealed class Archive
 {
     public const uint SFILE_INVALID_SIZE = 0xFFFFFFFF;
