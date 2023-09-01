@@ -29,6 +29,7 @@ using PPather.Extensions;
 using System.Text;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
+using StormDll;
 
 namespace Wmo;
 
@@ -75,42 +76,29 @@ internal static class ChunkReader
 
 public sealed class WMOManager : Manager<WMO>
 {
-    private readonly StormDll.ArchiveSet archive;
+    private readonly ArchiveSet archive;
     private readonly ModelManager modelmanager;
-    private readonly DataConfig dataConfig;
 
-    public WMOManager(StormDll.ArchiveSet archive, ModelManager modelmanager, DataConfig dataConfig)
+    public WMOManager(ArchiveSet archive, ModelManager modelmanager)
     {
         this.archive = archive;
         this.modelmanager = modelmanager;
-        this.dataConfig = dataConfig;
     }
 
     public override bool Load(string path, out WMO t)
     {
-        string tempFile = Path.Join(dataConfig.PPather, "wmo.tmp"); //wmo
-        if (!archive.SFileExtractFile(path, tempFile))
-        {
-            t = default;
-            return false;
-        }
-
         t = new()
         {
             fileName = path
         };
 
-        _ = new WmoRootFile(tempFile, t, modelmanager);
+        _ = new WmoRootFile(archive, path, t, modelmanager);
 
         for (int i = 0; i < t.groups.Length; i++)
         {
             ReadOnlySpan<char> part = path[..^4].AsSpan();
-            string gf = string.Format("{0}_{1,3:000}.wmo", part.ToString(), i);
-
-            if (!archive.SFileExtractFile(gf, tempFile))
-                continue;
-
-            _ = new WmoGroupFile(t.groups[i], tempFile);
+            string name = string.Format("{0}_{1,3:000}.wmo", part.ToString(), i);
+            _ = new WmoGroupFile(archive, name, t.groups[i]);
         }
         return true;
     }
@@ -195,32 +183,23 @@ public abstract class Manager<T>
 
 public sealed class ModelManager : Manager<Model>
 {
-    private readonly StormDll.ArchiveSet archive;
-    private readonly DataConfig dataConfig;
+    private readonly ArchiveSet archive;
 
-    public ModelManager(StormDll.ArchiveSet archive, DataConfig dataConfig)
+    public ModelManager(ArchiveSet archive)
     {
         this.archive = archive;
-        this.dataConfig = dataConfig;
     }
 
     public override bool Load(string path, out Model t)
     {
         // change .mdx to .m2
-        //string file=path.Substring(0, path.Length-4)+".m2";
-        if (Path.GetExtension(path).Equals(".mdx") || Path.GetExtension(path).Equals(".mdl"))
+        if (Path.GetExtension(path).Equals(".mdx", StringComparison.OrdinalIgnoreCase) ||
+            Path.GetExtension(path).Equals(".mdl", StringComparison.OrdinalIgnoreCase))
         {
             path = Path.ChangeExtension(path, ".m2");
         }
 
-        string tempFile = Path.Join(dataConfig.PPather, "model.tmp"); //model
-        if (!archive.SFileExtractFile(path, tempFile))
-        {
-            t = default;
-            return false;
-        }
-
-        t = ModelFile.Read(tempFile, path);
+        t = ModelFile.Read(archive, path);
         return true;
     }
 }
@@ -274,9 +253,10 @@ public readonly struct Model
 
 public static class ModelFile
 {
-    public static Model Read(string path, string fileName)
+    public static Model Read(ArchiveSet archive, string fileName)
     {
-        using Stream stream = File.OpenRead(path);
+        using MpqFileStream mpq = archive.GetStream(fileName);
+        using MemoryStream stream = new(mpq.ReadAllBytes());
         using BinaryReader file = new(stream);
 
         // UPDATED FOR WOTLK 17.10.2008 by toblakai
@@ -467,20 +447,18 @@ internal sealed class WDT
 internal sealed class WDTFile
 {
     private readonly ILogger logger;
-    private readonly DataConfig dataConfig;
     private readonly WMOManager wmomanager;
     private readonly ModelManager modelmanager;
     private readonly WDT wdt;
-    private readonly StormDll.ArchiveSet archive;
+    private readonly ArchiveSet archive;
 
     private readonly string pathName;
 
     public bool loaded;
 
-    public WDTFile(StormDll.ArchiveSet archive, float mapId, WDT wdt, WMOManager wmomanager, ModelManager modelmanager, ILogger logger, DataConfig dataConfig)
+    public WDTFile(ArchiveSet archive, float mapId, WDT wdt, WMOManager wmomanager, ModelManager modelmanager, ILogger logger)
     {
         this.logger = logger;
-        this.dataConfig = dataConfig;
         this.pathName = ContinentDB.IdToName[mapId];
 
         this.wdt = wdt;
@@ -489,11 +467,8 @@ internal sealed class WDTFile
         this.archive = archive;
 
         string wdtfile = Path.Join("World", "Maps", pathName, pathName + ".wdt");
-        string tempFile = Path.Join(dataConfig.PPather, "wdt.tmp"); //wdt
-        if (!archive.SFileExtractFile(wdtfile, tempFile))
-            return;
-
-        using Stream stream = File.OpenRead(tempFile);
+        using MpqFileStream mpq = archive.GetStream(wdtfile);
+        using MemoryStream stream = new(mpq.ReadAllBytes());
         using BinaryReader file = new(stream);
 
         List<string> gwmos = new();
@@ -535,14 +510,10 @@ internal sealed class WDTFile
             return;
 
         string filename = Path.Join("World", "Maps", pathName, $"{pathName}_{x}_{y}.adt");
-        string tempFile = Path.Join(dataConfig.PPather, "adt.tmp"); //adt
-        if (!archive.SFileExtractFile(filename, tempFile))
-            return;
-
         if (logger.IsEnabled(LogLevel.Trace))
             logger.LogTrace($"Reading adt: {filename}");
 
-        wdt.maptiles[index] = MapTileFile.Read(tempFile, wmomanager, modelmanager);
+        wdt.maptiles[index] = MapTileFile.Read(archive, filename, wmomanager, modelmanager);
         wdt.loaded[index] = true;
     }
 
@@ -675,7 +646,7 @@ internal static class MapTileFile // adt file
     private static readonly LiquidData eLiquidData = new(0, 0, 0, EmptyMH2OData1, Array.Empty<float>(), Array.Empty<byte>());
     public static ref readonly LiquidData EmptyLiquidData => ref eLiquidData;
 
-    public static MapTile Read(string name, WMOManager wmomanager, ModelManager modelmanager)
+    public static MapTile Read(ArchiveSet archive, string name, WMOManager wmomanager, ModelManager modelmanager)
     {
         LiquidData[] LiquidDataChunk = Array.Empty<LiquidData>();
         Span<int> mcnk_offsets = stackalloc int[MapTile.SIZE * MapTile.SIZE];
@@ -690,7 +661,8 @@ internal static class MapTileFile // adt file
         MapChunk[] chunks = new MapChunk[MapTile.SIZE * MapTile.SIZE];
         BitArray hasChunk = new(chunks.Length);
 
-        using Stream stream = File.OpenRead(name);
+        using MpqFileStream mpq = archive.GetStream(name);
+        using MemoryStream stream = new(mpq.ReadAllBytes());
         using BinaryReader file = new(stream);
 
         do
@@ -1037,7 +1009,11 @@ internal static class MapTileFile // adt file
                 }
             }
 
-            file.BaseStream.Seek(curpos + size, SeekOrigin.Begin);
+            // TODO: MemoryStream.Seek offset 
+            // Reading adt: World\Maps\Northrend\Northrend_36_21.adt
+            // Zul'Drak stairs
+            file.BaseStream.Seek(Math.Min(curpos + size, file.BaseStream.Length), SeekOrigin.Begin);
+            //file.BaseStream.Seek(curpos + size, SeekOrigin.Begin);
         } while (!file.EOF());
 
         //set liquid info from the MH2O chunk since the old MCLQ is no more
@@ -1102,9 +1078,10 @@ internal static class MapTileFile // adt file
 
 internal sealed class WmoRootFile
 {
-    public WmoRootFile(string name, WMO wmo, ModelManager modelmanager)
+    public WmoRootFile(ArchiveSet archive, string name, WMO wmo, ModelManager modelmanager)
     {
-        using Stream stream = File.OpenRead(name);
+        using MpqFileStream mpq = archive.GetStream(name);
+        using MemoryStream stream = new(mpq.ReadAllBytes());
         using BinaryReader file = new(stream);
 
         do
@@ -1247,9 +1224,10 @@ internal sealed class WmoRootFile
 
 internal sealed class WmoGroupFile
 {
-    public WmoGroupFile(WMOGroup g, string name)
+    public WmoGroupFile(ArchiveSet archive, string name, WMOGroup g)
     {
-        using Stream stream = File.OpenRead(name);
+        using MpqFileStream mpq = archive.GetStream(name);
+        using MemoryStream stream = new(mpq.ReadAllBytes());
         using BinaryReader file = new(stream);
 
         file.BaseStream.Seek(0x14, SeekOrigin.Begin);
