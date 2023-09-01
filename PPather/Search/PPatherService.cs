@@ -40,18 +40,6 @@ public sealed class PPatherService
         ContinentDB.Init(worldMapAreaDB.Values);
 
         MPQSelfTest();
-
-        ClearTemporaryFiles();
-    }
-
-    private void ClearTemporaryFiles()
-    {
-        System.IO.DirectoryInfo di = new(dataConfig.PPather);
-        System.IO.FileInfo[] files = di.GetFiles("*.tmp");
-        for (int i = files.Length - 1; i >= 0; i--)
-        {
-            files[i].Delete();
-        }
     }
 
     public void Reset()
