@@ -26,7 +26,6 @@ using System.IO;
 using Microsoft.Extensions.Logging;
 using PPather.Triangles.Data;
 using static Wmo.MapTileFile;
-using System.Buffers;
 using PPather;
 using System.Runtime.CompilerServices;
 
@@ -48,12 +47,12 @@ public sealed class MPQTriangleSupplier
         this.logger = logger;
         this.mapId = mapId;
 
-        archive = new StormDll.ArchiveSet(this.logger, GetArchiveNames(dataConfig));
-        modelmanager = new ModelManager(archive, dataConfig);
-        wmomanager = new WMOManager(archive, modelmanager, dataConfig);
+        archive = new StormDll.ArchiveSet(logger, GetArchiveNames(dataConfig));
+        modelmanager = new ModelManager(archive);
+        wmomanager = new WMOManager(archive, modelmanager);
 
         wdt = new WDT();
-        wdtf = new WDTFile(archive, this.mapId, wdt, wmomanager, modelmanager, this.logger, dataConfig);
+        wdtf = new WDTFile(archive, mapId, wdt, wmomanager, modelmanager, logger);
 
         // TODO: move this to WDTFile
         if (!wdtf.loaded)
