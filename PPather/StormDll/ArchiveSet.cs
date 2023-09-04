@@ -40,7 +40,7 @@ public sealed class ArchiveSet
                 return a.GetStream(fileName);
         }
 
-        throw new FileNotFoundException(nameof(fileName));
+        throw new FileNotFoundException($"{nameof(fileName)} - {fileName}");
     }
 
     public void Close()

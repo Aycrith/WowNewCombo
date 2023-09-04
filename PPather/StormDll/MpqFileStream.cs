@@ -44,8 +44,8 @@ public sealed class MpqFileStream : Stream
         if (count < 0)
             throw new ArgumentOutOfRangeException(nameof(count));
 
-        Span<byte> bufferSpan = buffer.AsSpan(offset);
-        bool success = Archive.SFileReadFile(fileHandle, bufferSpan, count, out long bytesRead);
+        Span<byte> span = buffer.AsSpan(offset);
+        bool success = Archive.SFileReadFile(fileHandle, span, count, out long bytesRead);
         position += bytesRead;
 
         if (!success)
@@ -98,11 +98,8 @@ public sealed class MpqFileStream : Stream
         fileHandle = nint.Zero;
     }
 
-    public byte[] ReadAllBytes()
+    public void ReadAllBytesTo(byte[] buffer)
     {
-        byte[] bytes = new byte[Length];
-        Read(bytes, 0, (int)Length);
-
-        return bytes;
+        Read(buffer, 0, (int)Length);
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 
@@ -24,13 +25,20 @@ internal sealed class Archive
             return;
 
         using MpqFileStream mpq = GetStream("(listfile)");
-        using MemoryStream ms = new(mpq.ReadAllBytes());
-        using StreamReader stream = new(ms);
 
-        while (!stream.EndOfStream)
+        var pooler = ArrayPool<byte>.Shared;
+        byte[] buffer = pooler.Rent((int)mpq.Length);
+        mpq.ReadAllBytesTo(buffer);
+
+        using MemoryStream stream = new(buffer, 0, (int)mpq.Length, false);
+        using StreamReader reader = new(stream);
+
+        while (!reader.EndOfStream)
         {
-            fileList.Add(stream.ReadLine()!);
+            fileList.Add(reader.ReadLine()!);
         }
+
+        pooler.Return(buffer);
 
         if (fileList.Count == 0)
             throw new InvalidOperationException($"{nameof(fileList)} contains no elements!");
