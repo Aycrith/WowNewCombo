@@ -30,6 +30,9 @@ using System.Text;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using StormDll;
+using System.Buffers;
+using CommunityToolkit.HighPerformance;
+using System.Linq;
 
 namespace Wmo;
 
@@ -62,15 +65,47 @@ internal static class ChunkReader
     public const uint MH2O = 0b_01001101_01001000_00110010_01001111;
 
     [SkipLocalsInit]
-    public static string ExtractString(ReadOnlySpan<byte> buff, int off)
+    public static string ExtractString(ReadOnlySpan<byte> buf, int off)
     {
-        int length = 0;
-        while (off + length < buff.Length && buff[off + length] != 0)
+        const byte nullTerminator = 0;
+        int length = buf[off..].IndexOf(nullTerminator);
+        if (length == -1 || length > buf.Length)
         {
-            length++;
+            length = buf.Length;
         }
 
-        return Encoding.ASCII.GetString(buff.Slice(off, length));
+        return Encoding.ASCII.GetString(buf.Slice(off, length));
+    }
+
+    // NOTE:
+    // The caller is responsible to Return the array to the ArrayPool
+    public static string[] ExtractFileNames(BinaryReader file, uint size)
+    {
+        var bytePooler = ArrayPool<byte>.Shared;
+        byte[] byteBuffer = bytePooler.Rent((int)size);
+
+        Span<byte> span = byteBuffer.AsSpan(0, (int)size);
+        file.Read(span);
+
+        const byte nullTerminator = 0;
+        int count = span.Count(nullTerminator);
+
+        var stringPooler = ArrayPool<string>.Shared;
+        string[] names = stringPooler.Rent(count);
+
+        int i = 0;
+        int offset = 0;
+        while (offset < size)
+        {
+            string s = ExtractString(span, offset);
+            offset += s.Length + 1;
+
+            names[i++] = s;
+        }
+
+        bytePooler.Return(byteBuffer);
+
+        return names;
     }
 }
 
@@ -94,9 +129,10 @@ public sealed class WMOManager : Manager<WMO>
 
         _ = new WmoRootFile(archive, path, t, modelmanager);
 
+        ReadOnlySpan<char> part = path[..^4].AsSpan();
+
         for (int i = 0; i < t.groups.Length; i++)
         {
-            ReadOnlySpan<char> part = path[..^4].AsSpan();
             string name = string.Format("{0}_{1,3:000}.wmo", part.ToString(), i);
             _ = new WmoGroupFile(archive, name, t.groups[i]);
         }
@@ -256,7 +292,12 @@ public static class ModelFile
     public static Model Read(ArchiveSet archive, string fileName)
     {
         using MpqFileStream mpq = archive.GetStream(fileName);
-        using MemoryStream stream = new(mpq.ReadAllBytes());
+
+        var pooler = ArrayPool<byte>.Shared;
+        byte[] buffer = pooler.Rent((int)mpq.Length);
+        mpq.ReadAllBytesTo(buffer);
+
+        using MemoryStream stream = new(buffer, 0, (int)mpq.Length, false);
         using BinaryReader file = new(stream);
 
         // UPDATED FOR WOTLK 17.10.2008 by toblakai
@@ -343,6 +384,8 @@ public static class ModelFile
         //_ = file.ReadUInt32(); //  - number of particle emitters;
         //_ = file.ReadUInt32(); //  - offset to particle emitters;
         file.BaseStream.Seek(sizeof(UInt32) * 18, SeekOrigin.Current);
+
+        pooler.Return(buffer);
 
         return new(
             fileName,
@@ -468,10 +511,15 @@ internal sealed class WDTFile
 
         string wdtfile = Path.Join("World", "Maps", pathName, pathName + ".wdt");
         using MpqFileStream mpq = archive.GetStream(wdtfile);
-        using MemoryStream stream = new(mpq.ReadAllBytes());
+
+        var pooler = ArrayPool<byte>.Shared;
+        byte[] buffer = pooler.Rent((int)mpq.Length);
+        mpq.ReadAllBytesTo(buffer);
+
+        using MemoryStream stream = new(buffer, 0, (int)mpq.Length, false);
         using BinaryReader file = new(stream);
 
-        List<string> gwmos = new();
+        string[] gwmos = Array.Empty<string>();
 
         do
         {
@@ -488,18 +536,23 @@ internal sealed class WDTFile
                 case ChunkReader.MODF:
                     HandleMODF(file, wdt, gwmos, wmomanager, size);
                     break;
-                case ChunkReader.MWMO:
-                    HandleMWMO(file, gwmos, size);
+                case ChunkReader.MWMO when size != 0:
+                    gwmos = ChunkReader.ExtractFileNames(file, size);
                     break;
                 case ChunkReader.MAIN:
                     HandleMAIN(file, size);
                     break;
                 default:
-                    logger.LogWarning("WDT Unknown " + type);
+                    //logger.LogWarning($"WDT Unknown {type} - {file.BaseStream.Length} - {curpos} - {size}");
                     break;
             }
-            file.BaseStream.Seek(curpos + size, SeekOrigin.Begin);
+            file.BaseStream.Seek(Math.Min(curpos + size, file.BaseStream.Length), SeekOrigin.Begin);
         } while (!file.EOF());
+
+        if (gwmos.Length != 0)
+            ArrayPool<string>.Shared.Return(gwmos);
+
+        pooler.Return(buffer);
 
         loaded = true;
     }
@@ -517,25 +570,7 @@ internal sealed class WDTFile
         wdt.loaded[index] = true;
     }
 
-    private static void HandleMWMO(BinaryReader file, List<string> gwmos, uint size)
-    {
-        if (size == 0)
-            return;
-
-        Span<byte> span = stackalloc byte[(int)size];
-        file.Read(span);
-
-        int l = 0;
-        while (l < size)
-        {
-            string s = ChunkReader.ExtractString(span, l);
-            l += s.Length + 1;
-
-            gwmos.Add(s);
-        }
-    }
-
-    private static void HandleMODF(BinaryReader file, WDT wdt, List<string> gwmos, WMOManager wmomanager, uint size)
+    private static void HandleMODF(BinaryReader file, WDT wdt, Span<string> gwmos, WMOManager wmomanager, uint size)
     {
         // global wmo instance data
         int gnWMO = (int)size / 64;
@@ -652,8 +687,8 @@ internal static class MapTileFile // adt file
         Span<int> mcnk_offsets = stackalloc int[MapTile.SIZE * MapTile.SIZE];
         Span<int> mcnk_sizes = stackalloc int[MapTile.SIZE * MapTile.SIZE];
 
-        List<string> models = new();
-        List<string> wmos = new();
+        string[] models = Array.Empty<string>();
+        string[] wmos = Array.Empty<string>();
 
         WMOInstance[] wmois = Array.Empty<WMOInstance>();
         ModelInstance[] modelis = Array.Empty<ModelInstance>();
@@ -662,7 +697,12 @@ internal static class MapTileFile // adt file
         BitArray hasChunk = new(chunks.Length);
 
         using MpqFileStream mpq = archive.GetStream(name);
-        using MemoryStream stream = new(mpq.ReadAllBytes());
+
+        var pooler = ArrayPool<byte>.Shared;
+        byte[] buffer = pooler.Rent((int)mpq.Length);
+        mpq.ReadAllBytesTo(buffer);
+
+        using MemoryStream stream = new(buffer, 0, (int)mpq.Length, false);
         using BinaryReader file = new(stream);
 
         do
@@ -677,10 +717,10 @@ internal static class MapTileFile // adt file
                     HandleMCIN(file, mcnk_offsets, mcnk_sizes);
                     break;
                 case ChunkReader.MMDX when size != 0:
-                    HandleMMDX(file, models, size);
+                    models = ChunkReader.ExtractFileNames(file, size);
                     break;
                 case ChunkReader.MWMO when size != 0:
-                    HandleMWMO(file, wmos, size);
+                    wmos = ChunkReader.ExtractFileNames(file, size);
                     break;
                 case ChunkReader.MDDF:
                     HandleMDDF(file, modelmanager, models, size, out modelis);
@@ -693,8 +733,16 @@ internal static class MapTileFile // adt file
                     break;
             }
 
-            file.BaseStream.Seek(curpos + size, SeekOrigin.Begin);
+            file.BaseStream.Seek(Math.Min(curpos + size, file.BaseStream.Length), SeekOrigin.Begin);
         } while (!file.EOF());
+
+        if (wmos.Length != 0)
+            ArrayPool<string>.Shared.Return(wmos);
+
+        if (models.Length != 0)
+            ArrayPool<string>.Shared.Return(models);
+
+        pooler.Return(buffer);
 
         for (int index = 0; index < MapTile.SIZE * MapTile.SIZE; index++)
         {
@@ -853,37 +901,7 @@ internal static class MapTileFile // adt file
         }
     }
 
-    private static void HandleMMDX(BinaryReader file, List<string> models, uint size)
-    {
-        Span<byte> span = stackalloc byte[(int)size];
-        file.Read(span);
-
-        int l = 0;
-        while (l < size)
-        {
-            string s = ChunkReader.ExtractString(span, l);
-            l += s.Length + 1;
-
-            models.Add(s);
-        }
-    }
-
-    private static void HandleMWMO(BinaryReader file, List<string> wmos, uint size)
-    {
-        Span<byte> span = stackalloc byte[(int)size];
-        file.Read(span);
-
-        int l = 0;
-        while (l < size)
-        {
-            string s = ChunkReader.ExtractString(span, l);
-            l += s.Length + 1;
-
-            wmos.Add(s);
-        }
-    }
-
-    private static void HandleMDDF(BinaryReader file, ModelManager modelmanager, List<string> models, uint size, out ModelInstance[] modelis)
+    private static void HandleMDDF(BinaryReader file, ModelManager modelmanager, Span<string> models, uint size, out ModelInstance[] modelis)
     {
         int nMDX = (int)size / 36;
 
@@ -898,7 +916,7 @@ internal static class MapTileFile // adt file
         }
     }
 
-    private static void HandleMODF(BinaryReader file, List<string> wmos, WMOManager wmomanager, uint size, out WMOInstance[] wmois)
+    private static void HandleMODF(BinaryReader file, Span<string> wmos, WMOManager wmomanager, uint size, out WMOInstance[] wmois)
     {
         int nWMO = (int)size / 64;
         wmois = new WMOInstance[nWMO];
@@ -1009,11 +1027,7 @@ internal static class MapTileFile // adt file
                 }
             }
 
-            // TODO: MemoryStream.Seek offset 
-            // Reading adt: World\Maps\Northrend\Northrend_36_21.adt
-            // Zul'Drak stairs
             file.BaseStream.Seek(Math.Min(curpos + size, file.BaseStream.Length), SeekOrigin.Begin);
-            //file.BaseStream.Seek(curpos + size, SeekOrigin.Begin);
         } while (!file.EOF());
 
         //set liquid info from the MH2O chunk since the old MCLQ is no more
@@ -1081,7 +1095,12 @@ internal sealed class WmoRootFile
     public WmoRootFile(ArchiveSet archive, string name, WMO wmo, ModelManager modelmanager)
     {
         using MpqFileStream mpq = archive.GetStream(name);
-        using MemoryStream stream = new(mpq.ReadAllBytes());
+
+        var pooler = ArrayPool<byte>.Shared;
+        byte[] buffer = pooler.Rent((int)mpq.Length);
+        mpq.ReadAllBytesTo(buffer);
+
+        using MemoryStream stream = new(buffer, 0, (int)mpq.Length, false);
         using BinaryReader file = new(stream);
 
         do
@@ -1109,8 +1128,10 @@ internal sealed class WmoRootFile
                     break;
             }
 
-            file.BaseStream.Seek(curpos + size, SeekOrigin.Begin);
+            file.BaseStream.Seek(Math.Min(curpos + size, file.BaseStream.Length), SeekOrigin.Begin);
         } while (!file.EOF());
+
+        pooler.Return(buffer);
     }
 
     private static void HandleMOHD(BinaryReader file, WMO wmo, uint size)
@@ -1158,13 +1179,13 @@ internal sealed class WmoRootFile
         // While WMOs and models (M2s) in a map tile are rotated along the axes,
         //  doodads within a WMO are oriented using quaternions! Hooray for consistency!
         /*
-0x00 	uint32 		Offset to the start of the model's filename in the MODN chunk.
-0x04 	3 * float 	Position (X,Z,-Y)
-0x10 	float 		W component of the orientation quaternion
-0x14 	3 * float 	X, Y, Z components of the orientaton quaternion
-0x20 	float 		Scale factor
-0x24 	4 * uint8 	(B,G,R,A) color. Unknown. It is often (0,0,0,255). (something to do with lighting maybe?)
-			 */
+        0x00 	uint32 		Offset to the start of the model's filename in the MODN chunk.
+        0x04 	3 * float 	Position (X,Z,-Y)
+        0x10 	float 		W component of the orientation quaternion
+        0x14 	3 * float 	X, Y, Z components of the orientaton quaternion
+        0x20 	float 		Scale factor
+        0x24 	4 * uint8 	(B,G,R,A) color. Unknown. It is often (0,0,0,255). (something to do with lighting maybe?)
+		*/
 
         uint sets = size / 0x28;
         wmo.doodadInstances = new ModelInstance[wmo.nDoodads];
@@ -1173,14 +1194,10 @@ internal sealed class WmoRootFile
         {
             uint nameOffsetInMODN = file.ReadUInt32(); // 0x00
 
-            float posx = file.ReadSingle(); // 0x04
-            float posz = file.ReadSingle(); // 0x08
-            float posy = -file.ReadSingle(); // 0x0c
+            Vector3 pos = file.ReadVector3_XZY();
 
             float quatw = file.ReadSingle(); // 0x10
-            float quatx = file.ReadSingle(); // 0x14
-            float quaty = file.ReadSingle(); // 0x18
-            float quatz = file.ReadSingle();// 0x1c
+            Vector3 dir = file.ReadVector3();
 
             float scale = file.ReadSingle(); // 0x20
 
@@ -1190,9 +1207,6 @@ internal sealed class WmoRootFile
             string name = ChunkReader.ExtractString(wmo.MODNraw, (int)nameOffsetInMODN);
             Model m = modelmanager.AddAndLoadIfNeeded(name);
 
-            Vector3 pos = new(posx, posy, posz);
-            Vector3 dir = new(quatx, quaty, quatz);
-
             ModelInstance mi = new(m, pos, dir, scale, quatw);
             wmo.doodadInstances[i] = mi;
         }
@@ -1200,8 +1214,8 @@ internal sealed class WmoRootFile
 
     private static void HandleMODN(BinaryReader file, WMO wmo, uint size)
     {
-        wmo.MODNraw = file.ReadBytes((int)size);
         // List of filenames for M2 (mdx) models that appear in this WMO.
+        wmo.MODNraw = file.ReadBytes((int)size);
     }
 
     private static void HandleMOGI(BinaryReader file, WMO wmo, uint size)
@@ -1227,7 +1241,12 @@ internal sealed class WmoGroupFile
     public WmoGroupFile(ArchiveSet archive, string name, WMOGroup g)
     {
         using MpqFileStream mpq = archive.GetStream(name);
-        using MemoryStream stream = new(mpq.ReadAllBytes());
+
+        var pooler = ArrayPool<byte>.Shared;
+        byte[] buffer = pooler.Rent((int)mpq.Length);
+        mpq.ReadAllBytesTo(buffer);
+
+        using MemoryStream stream = new(buffer, 0, (int)mpq.Length, false);
         using BinaryReader file = new(stream);
 
         file.BaseStream.Seek(0x14, SeekOrigin.Begin);
@@ -1253,24 +1272,26 @@ internal sealed class WmoGroupFile
                     break;
             }
 
-            file.BaseStream.Seek(curpos + size, SeekOrigin.Begin);
+            file.BaseStream.Seek(Math.Min(curpos + size, file.BaseStream.Length), SeekOrigin.Begin);
         } while (!file.EOF());
+
+        pooler.Return(buffer);
     }
 
     private static void HandleMOPY(BinaryReader file, WMOGroup g, uint size)
     {
         g.nTriangles = size / 2;
         // materials
-        /*  0x01 - inside small houses and paths leading indoors
-			 *  0x02 - ???
-			 *  0x04 - set on indoor things and ruins
-			 *  0x08 - ???
-			 *  0x10 - ???
-			 *  0x20 - Always set?
-			 *  0x40 - sometimes set-
-			 *  0x80 - ??? never set
-			 *
-			 */
+        /*
+        *  0x01 - inside small houses and paths leading indoors
+		*  0x02 - ???
+		*  0x04 - set on indoor things and ruins
+		*  0x08 - ???
+		*  0x10 - ???
+		*  0x20 - Always set?
+		*  0x40 - sometimes set-
+		*  0x80 - ??? never set
+		*/
 
         g.materials = new ushort[g.nTriangles];
         file.Read(MemoryMarshal.Cast<ushort, byte>(g.materials.AsSpan()));
@@ -1311,7 +1332,7 @@ internal sealed class WmoGroupFile
         //file.ReadUInt32(); // uint fogCrap
         //file.ReadUInt32(); // uint unknown1
         file.BaseStream.Seek(sizeof(UInt32) * 2, SeekOrigin.Current);
-        
+
         g.id = file.ReadUInt32();
 
         //file.ReadUInt32(); // uint unknown2
