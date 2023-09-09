@@ -16,7 +16,7 @@
 
     private string iconName { get; set; } = string.Empty;
     private string imgLink => ShowIcon && !string.IsNullOrEmpty(iconName) ? string.Format(WApi.MedIconUrl, iconName) : localImg;
-    private string localImg => $"_content/Frontend/equipment/inventoryslot_{EmptyEquipmentResourceName((InventorySlotId)Slot)}.jpg";
+    private string localImg => $"_content/Frontend/img/inventoryslot/{EmptyEquipmentResourceName((InventorySlotId)Slot)}.jpg";
 
     private static Dictionary<int, string> icons = new();
 
