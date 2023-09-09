@@ -335,7 +335,7 @@ public sealed class RouteInfo : IDisposable
         var size = this.canvasSize / 25;
         return pt == Vector3.Zero
             ? string.Empty
-            : $"<image href='_content/Frontend/death.svg' " +
+            : $"<image href='_content/Frontend/img/death.svg' " +
             $"x='{ToCanvasPointX(pt.X) - size / 2}' " +
             $"y='{ToCanvasPointY(pt.Y) - size / 2}' " +
             $"height='{size}' " +
