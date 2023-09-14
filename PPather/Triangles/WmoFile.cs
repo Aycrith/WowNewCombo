@@ -1240,7 +1240,18 @@ internal sealed class WmoGroupFile
 {
     public WmoGroupFile(ArchiveSet archive, string name, WMOGroup g)
     {
-        using MpqFileStream mpq = archive.GetStream(name);
+        MpqFileStream mpq;
+
+        try
+        {
+            mpq = archive.GetStream(name);
+        }
+        catch
+        {
+            // Possible files which were not found
+            // lichking.mpq - world\wmo\northrend\buildings\forsaken\nd_forsaken_apothecary_004.wmo
+            return;
+        }
 
         var pooler = ArrayPool<byte>.Shared;
         byte[] buffer = pooler.Rent((int)mpq.Length);
@@ -1276,6 +1287,7 @@ internal sealed class WmoGroupFile
         } while (!file.EOF());
 
         pooler.Return(buffer);
+        mpq.Dispose();
     }
 
     private static void HandleMOPY(BinaryReader file, WMOGroup g, uint size)

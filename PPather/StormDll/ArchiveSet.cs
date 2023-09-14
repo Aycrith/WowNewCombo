@@ -6,9 +6,11 @@ namespace StormDll;
 public sealed class ArchiveSet
 {
     private readonly Archive[] archives;
+    private readonly ILogger logger;
 
     public ArchiveSet(ILogger logger, string[] files)
     {
+        this.logger = logger;
         archives = new Archive[files.Length];
 
         for (int i = 0; i < files.Length; i++)
@@ -40,6 +42,7 @@ public sealed class ArchiveSet
                 return a.GetStream(fileName);
         }
 
+        logger.LogWarning($"{nameof(fileName)} not found '{fileName}'");
         throw new FileNotFoundException($"{nameof(fileName)} - {fileName}");
     }
 
