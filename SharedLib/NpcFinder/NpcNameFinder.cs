@@ -20,7 +20,8 @@ public enum NpcNames
     Enemy = 1,
     Friendly = 2,
     Neutral = 4,
-    Corpse = 8
+    Corpse = 8,
+    NamePlate = 16
 }
 
 public static class NpcNames_Extension
@@ -32,6 +33,7 @@ public static class NpcNames_Extension
         NpcNames.Friendly => nameof(NpcNames.Friendly),
         NpcNames.Neutral => nameof(NpcNames.Neutral),
         NpcNames.Corpse => nameof(NpcNames.Corpse),
+        NpcNames.NamePlate => nameof(NpcNames.NamePlate),
         _ => nameof(NpcNames.None),
     };
 
@@ -155,6 +157,12 @@ public sealed partial class NpcNameFinder : IDisposable
     public const byte sN_R = 250;
     public const byte sN_G = 250;
     public const byte sN_B = 0;
+
+    public const byte sNamePlate_N = 254;
+
+    public const byte sNamePlate_H_R = 254;
+    public const byte sNamePlate_H_G = 254;
+    public const byte sNamePlate_H_B = 0;
 
     #endregion
 
@@ -286,6 +294,9 @@ public sealed partial class NpcNameFinder : IDisposable
             case NpcNames.Corpse:
                 colorMatcher = SimpleColorCorpse;
                 return;
+            case NpcNames.NamePlate:
+                colorMatcher = SimpleColorNamePlate;
+                return;
             case NpcNames.None:
                 colorMatcher = NoMatch;
                 return;
@@ -316,6 +327,15 @@ public sealed partial class NpcNameFinder : IDisposable
         return r == fC_RGB && g == fC_RGB && b == fC_RGB;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool SimpleColorNamePlate(byte r, byte g, byte b)
+    {
+        return
+            r is sNamePlate_N or sNamePlate_H_R &&
+            g is sNamePlate_N or sNamePlate_H_G &&
+            b is sNamePlate_N or sNamePlate_H_B;
+    }
+
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool CombinedFriendlyNeutrual(byte r, byte g, byte b)
@@ -343,6 +363,9 @@ public sealed partial class NpcNameFinder : IDisposable
     {
         switch (nameType)
         {
+            case NpcNames.Enemy | NpcNames.Neutral | NpcNames.NamePlate:
+                colorMatcher = FuzzyEnemyOrNeutralOrNamePlate;
+                return;
             case NpcNames.Enemy | NpcNames.Neutral:
                 colorMatcher = FuzzyEnemyOrNeutral;
                 return;
@@ -360,6 +383,9 @@ public sealed partial class NpcNameFinder : IDisposable
                 return;
             case NpcNames.Corpse:
                 colorMatcher = FuzzyCorpse;
+                return;
+            case NpcNames.NamePlate:
+                colorMatcher = FuzzyNamePlate;
                 return;
         }
     }
@@ -380,25 +406,33 @@ public sealed partial class NpcNameFinder : IDisposable
         }
     }
 
-    private static bool FuzzyEnemyOrNeutral(byte r, byte g, byte b)
-        => FuzzyColor(fE_R, fE_G, fE_B, r, g, b, colorFuzz) ||
-            FuzzyColor(fN_R, fN_G, fN_B, r, g, b, colorFuzz);
+    private static bool FuzzyEnemyOrNeutral(byte r, byte g, byte b) =>
+        FuzzyColor(fE_R, fE_G, fE_B, r, g, b, colorFuzz) ||
+        FuzzyColor(fN_R, fN_G, fN_B, r, g, b, colorFuzz);
 
-    private static bool FuzzyFriendlyOrNeutral(byte r, byte g, byte b)
-        => FuzzyColor(fF_R, fF_G, fF_B, r, g, b, colorFuzz) ||
-            FuzzyColor(fN_R, fN_G, fN_B, r, g, b, colorFuzz);
+    private static bool FuzzyEnemyOrNeutralOrNamePlate(byte r, byte g, byte b) =>
+        FuzzyEnemyOrNeutral(r, g, b) ||
+        FuzzyNamePlate(r, g, b);
 
-    private static bool FuzzyEnemy(byte r, byte g, byte b)
-        => FuzzyColor(fE_R, fE_G, fE_B, r, g, b, colorFuzz);
+    private static bool FuzzyFriendlyOrNeutral(byte r, byte g, byte b) =>
+        FuzzyColor(fF_R, fF_G, fF_B, r, g, b, colorFuzz) ||
+        FuzzyColor(fN_R, fN_G, fN_B, r, g, b, colorFuzz);
 
-    private static bool FuzzyFriendly(byte r, byte g, byte b)
-        => FuzzyColor(fF_R, fF_G, fF_B, r, g, b, colorFuzz);
+    private static bool FuzzyEnemy(byte r, byte g, byte b) =>
+        FuzzyColor(fE_R, fE_G, fE_B, r, g, b, colorFuzz);
 
-    private static bool FuzzyNeutral(byte r, byte g, byte b)
-        => FuzzyColor(fN_R, fN_G, fN_B, r, g, b, colorFuzz);
+    private static bool FuzzyFriendly(byte r, byte g, byte b) =>
+        FuzzyColor(fF_R, fF_G, fF_B, r, g, b, colorFuzz);
 
-    private static bool FuzzyCorpse(byte r, byte g, byte b)
-        => FuzzyColor(fC_RGB, fC_RGB, fC_RGB, r, g, b, fuzzCorpse);
+    private static bool FuzzyNeutral(byte r, byte g, byte b) =>
+        FuzzyColor(fN_R, fN_G, fN_B, r, g, b, colorFuzz);
+
+    private static bool FuzzyCorpse(byte r, byte g, byte b) =>
+        FuzzyColor(fC_RGB, fC_RGB, fC_RGB, r, g, b, fuzzCorpse);
+
+    private static bool FuzzyNamePlate(byte r, byte g, byte b) =>
+        FuzzyColor(sNamePlate_N, sNamePlate_N, sNamePlate_N, r, g, b, fuzzCorpse) ||
+        FuzzyColor(sNamePlate_H_R, sNamePlate_H_G, sNamePlate_H_B, r, g, b, fuzzCorpse);
 
     #endregion
 
