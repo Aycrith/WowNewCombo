@@ -326,8 +326,17 @@ public sealed partial class ClassConfiguration
                 //    user.Requirement += " " + @default.Requirement;
                 //user.Requirements.AddRange(@default.Requirements);
 
+                if (user.BeforeCastDelay == @default.BeforeCastDelay)
+                    user.BeforeCastDelay = baseAction.BeforeCastDelay;
+
+                if (user.BeforeCastMaxDelay == @default.BeforeCastMaxDelay)
+                    user.BeforeCastMaxDelay = baseAction.BeforeCastMaxDelay;
+
                 if (user.AfterCastDelay == @default.AfterCastDelay)
                     user.AfterCastDelay = baseAction.AfterCastDelay;
+
+                if (user.AfterCastMaxDelay == @default.AfterCastMaxDelay)
+                    user.AfterCastMaxDelay = baseAction.AfterCastMaxDelay;
 
                 if (user.PressDuration == @default.PressDuration)
                     user.PressDuration = baseAction.PressDuration;

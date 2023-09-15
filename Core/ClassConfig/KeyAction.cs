@@ -52,10 +52,13 @@ public sealed partial class KeyAction
     public bool Item { get; set; }
 
     public int BeforeCastDelay { get; set; }
+    public int BeforeCastMaxDelay { get; set; }
+
     public bool BeforeCastStop { get; set; }
     public bool BeforeCastDismount { get; set; } = true;
 
     public int AfterCastDelay { get; set; }
+    public int AfterCastMaxDelay { get; set; }
     public bool AfterCastWaitMeleeRange { get; set; }
     public bool AfterCastWaitBuff { get; set; }
     public bool AfterCastWaitBag { get; set; }
@@ -148,6 +151,12 @@ public sealed partial class KeyAction
         {
             LogPath(logger, Name, PathFilename);
         }
+
+        if (BeforeCastMaxDelay < BeforeCastDelay)
+            BeforeCastMaxDelay = BeforeCastDelay;
+
+        if (AfterCastMaxDelay < AfterCastDelay)
+            AfterCastMaxDelay = AfterCastDelay;
     }
 
     public int GetRemainingCooldown()

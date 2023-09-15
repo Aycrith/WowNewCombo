@@ -472,10 +472,12 @@ public sealed partial class CastingHandler
                 wait.Update();
             }
 
-            if (Log && item.Log)
-                LogBeforeCastDelay(logger, item.Name, item.BeforeCastDelay);
+            int delay = Random.Shared.Next(item.BeforeCastDelay, item.BeforeCastMaxDelay);
 
-            wait.Until(item.BeforeCastDelay, token);
+            if (Log && item.Log)
+                LogBeforeCastDelay(logger, item.Name, delay);
+
+            wait.Until(delay, token);
         }
 
         int auraHash = playerReader.AuraCount.Hash;
@@ -640,10 +642,12 @@ public sealed partial class CastingHandler
 
         if (item.AfterCastDelay > 0)
         {
-            if (Log && item.Log)
-                LogAfterCastDelay(logger, item.Name, item.AfterCastDelay);
+            int delay = Random.Shared.Next(item.AfterCastDelay, item.AfterCastMaxDelay);
 
-            elapsedMs = wait.Until(item.AfterCastDelay, token);
+            if (Log && item.Log)
+                LogAfterCastDelay(logger, item.Name, delay);
+
+            elapsedMs = wait.Until(delay, token);
             if (Log && item.Log && elapsedMs >= 0)
             {
                 LogAfterCastDelayInterrupted(logger, item.Name, elapsedMs);

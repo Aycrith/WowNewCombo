@@ -550,7 +550,8 @@ Can specify conditions with [Requirement(s)](#requirement) in order to create a 
 | `"Log"` | Related events should appear in the logs | `true` |
 | --- | Before keypress cast, ... | --- |
 | `"BeforeCastStop"` | stop moving. | `false` |
-| `"BeforeCastDelay"` | delay in milliseconds | `0` |
+| `"BeforeCastDelay"` | delay in milliseconds. | `0` |
+| `"BeforeCastMaxDelay"` | max delay in milliseconds.<br>If set then using random delay between [`BeforeCastDelay`..`BeforeCastMaxDelay`] | `0` |
 | `"BeforeCastDismount"` | should dismount. [Adhoc Goals](#adhoc-goals) only. | `true` |
 | --- | After Successful cast, ... | --- |
 | `"AfterCastWaitSwing"` | wait for next melee swing to land.<br>Blocks **CastingHandler**. | `false` |
@@ -563,6 +564,7 @@ Can specify conditions with [Requirement(s)](#requirement) in order to create a 
 | `"AfterCastStepBack"` | start backpedaling for milliseconds.<br>If value set to `-1` attempts to use the whole remaining GCD duration.<br>Blocks **CastingHandler**. | `0` |
 | `"AfterCastWaitGCD"` | the Global cooldown fully expire.<br>Blocks **CastingHandler**. | `false` |
 | `"AfterCastDelay"` | delay in milliseconds.<br>Blocks **CastingHandler**. | `0` |
+| `"AfterCastMaxDelay"` | delay in milliseconds.<br>If set then using random delay between [`AfterCastDelay`..`AfterCastMaxDelay`]<br>Blocks **CastingHandler**. | `0` |
 | --- | --- | --- |
 
 Some of these properties are optional and not required to be specified.
