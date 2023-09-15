@@ -405,7 +405,7 @@ Take a look at the class files in `/Json/class` for examples of what you can do.
 | `"CheckTargetGivesExp"` | Only engage the target if it yields experience | true | `false` |
 | `"Blacklist"` | List of names or sub names which must be avoid engaging | true | `[""]` |
 | `"TargetMask"` | [UnitClassification](https://wowpedia.fandom.com/wiki/API_UnitClassification) types that allowed to engage with. | true | `"Normal, Trivial, Rare"` |
-| `"ImmunityBlacklist"` | List of Npc ids which have some sort of `School` immunities | true | `""` |
+| `"NpcSchoolImmunity"` | List of NpcIDs which have one or more [SchoolMask](#npcschoolimmunity) immunities | true | `""` |
 | `"IntVariables"` | List of user defined `integer` variables | true | `[]` |
 | --- | --- | --- | --- |
 | `"Pull"` | [KeyActions](#keyactions) to execute upon [Pull Goal](#pull-goal) | true | `{}` |
@@ -437,16 +437,50 @@ Take a look at the class files in `/Json/class` for examples of what you can do.
 
 Based of [UnitClassification](https://wowpedia.fandom.com/wiki/API_UnitClassification) API.
 
-Valid Values: `"Normal", "Trivial", "Minus", "Rare", "Elite", "RareElite", "WorldBoss"`
+| UnitClassification |
+| --- |
+| Normal |
+| Trivial |
+| Minus |
+| Rare |
+| Elite |
+| RareElite |
+| WorldBoss |
 
 The mentioned values can be combined together like:
 
 e.g.
 ```json
-"TargetMask": "Normal, Trivial, Rare, Elite, RareElite",
+"TargetMask": "Normal, Trivial, Rare, Elite, RareElite",    // multiple combined
 ```
 
 Where `Elite` and `RareElite` has been included compare to default.
+
+### NpcSchoolImmunity
+
+| SchoolMask |
+| --- |
+| None |
+| Physical |
+| Holy |
+| Fire |
+| Nature |
+| Frost |
+| Shadow |
+| Arcane |
+
+Defined as KeyValuePair where the key is the NPC Id and the value is the type of `SchoolMask` type is immune against.
+
+The mentioned values can be combined together like:
+
+e.g.
+```json
+"NpcSchoolImmunity": {
+    "1043": "Shadow",                   // single
+    "9026": "Fire",
+    "1668": "Fire, Shadow, Arcane"      // multiple combined
+}
+```
 
 ### KeyboardOnly
 
@@ -504,7 +538,7 @@ Can specify conditions with [Requirement(s)](#requirement) in order to create a 
 | `"Form"` | Shapeshift/Stance form to be in to cast this spell<br>If setted, affects `WhenUsable` | `Form.None` |
 | `"Cooldown"` | **Note this is not the in-game cooldown!**<br>The time in milliseconds before KeyAction can be used again.<br>This property will be updated when the backend registers the `Key` press. It has no feedback from the game. | `400` |
 | `"Charge"` | How many consequent key press should happen before setting Cooldown | `1` |
-| `"School"` | Indicate what type of element the spell do. Accepted values:<br>* `SchoolMask.Physical`<br>* `SchoolMask.Holy`<br>* `SchoolMask.Fire`<br>* `SchoolMask.Nature`<br>* `SchoolMask.Frost`<br>* `SchoolMask.Shadow`<br>* `SchoolMask.Arcane` | `SchoolMask.None` |
+| `"School"` | Indicate what type of [SchoolMask](#npcschoolimmunity) element the spell will do.  | `None` |
 | --- | --- | --- |
 | `"WhenUsable"` | Mapped to [IsUsableAction](https://wowwiki-archive.fandom.com/wiki/API_IsUsableAction) | `false` |
 | `"UseWhenTargetIsCasting"` | Checks for the target casting/channeling.<br>Accepted values:<br>* `null` -> ignore<br>* `false` -> when enemy not casting<br>* `true` -> when enemy casting | `null` |

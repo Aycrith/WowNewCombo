@@ -5,10 +5,9 @@
   "PathFilename": "24-30 Duskwood wolf ravager.json",
   "PathThereAndBack": false,
   "PathReduceSteps": true,
-  "ImmunityBlacklist": {
-    "1043": [
-      "Shadow"
-    ]
+  "NpcSchoolImmunity": {
+    "1043": "Shadow",
+    "18468": "Fire, Shadow, Arcane"
   },
   "IntVariables": {
     "Item_Soul_Shard": 6265,
@@ -56,7 +55,8 @@
         "Requirements": [
           "Talent:Nightfall",
           "Shadow Trance"
-        ]
+        ],
+        "School": "Shadow"
       },
       {
         "Name": "Drain Soul",
@@ -129,7 +129,8 @@
         "HasCastBar": true,
         "Requirements": [
           "Health% < DRAIN_MIN_HP%"
-        ]
+        ],
+        "School": "Shadow"
       },
       {
         "Name": "Shoot",

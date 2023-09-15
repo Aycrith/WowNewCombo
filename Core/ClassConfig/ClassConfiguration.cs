@@ -63,7 +63,7 @@ public sealed partial class ClassConfiguration
     public bool CheckTargetGivesExp { get; set; }
     public string[] Blacklist { get; init; } = Array.Empty<string>();
 
-    public Dictionary<int, SchoolMask[]> ImmunityBlacklist { get; } = new();
+    public Dictionary<int, SchoolMask> NpcSchoolImmunity { get; } = new();
 
     public Dictionary<string, int> IntVariables { get; } = new();
 

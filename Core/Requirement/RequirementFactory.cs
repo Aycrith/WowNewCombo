@@ -40,7 +40,7 @@ public sealed partial class RequirementFactory
     private readonly ActionBarCooldownReader cooldownReader;
     private readonly ActionBarCostReader costReader;
 
-    private readonly Dictionary<int, SchoolMask[]> immunityBlacklist;
+    private readonly Dictionary<int, SchoolMask> npcSchoolImmunity;
 
     private readonly string[] negateKeywords = new string[2]
     {
@@ -94,7 +94,7 @@ public sealed partial class RequirementFactory
 
         this.classConfig = classConfig;
 
-        this.immunityBlacklist = classConfig.ImmunityBlacklist;
+        this.npcSchoolImmunity = classConfig.NpcSchoolImmunity;
 
         NpcNameFinder npcNameFinder = sp.GetRequiredService<NpcNameFinder>();
         AddonBits bits = sp.GetRequiredService<AddonBits>();
@@ -318,7 +318,7 @@ public sealed partial class RequirementFactory
         AddKeyActionCooldown(list, item);
         AddCharge(list, item);
 
-        AddSpellSchool(list, item, playerReader, immunityBlacklist);
+        AddSpellSchool(list, item, playerReader, npcSchoolImmunity);
 
         item.RequirementsRuntime = list.ToArray();
 
@@ -642,15 +642,15 @@ public sealed partial class RequirementFactory
     }
 
     private void AddSpellSchool(List<Requirement> list, KeyAction item,
-        PlayerReader playerReader, Dictionary<int, SchoolMask[]> immunityBlacklist)
+        PlayerReader playerReader, Dictionary<int, SchoolMask> npcSchoolImmunity)
     {
         if (item.School == SchoolMask.None)
             return;
 
         bool f() =>
-            !immunityBlacklist.TryGetValue(playerReader.TargetId,
-                out SchoolMask[]? immuneAgaints) ||
-                !immuneAgaints.Contains(item.School);
+            !npcSchoolImmunity.TryGetValue(playerReader.TargetId,
+                out SchoolMask immuneAgaints) ||
+                !immuneAgaints.HasValue(item.School);
 
         string s() => item.School.ToStringF();
         list.Add(new Requirement

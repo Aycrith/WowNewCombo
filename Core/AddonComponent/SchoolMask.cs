@@ -1,5 +1,11 @@
-﻿namespace Core;
+﻿using System;
 
+using Newtonsoft.Json;
+
+namespace Core;
+
+[Flags]
+[JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
 public enum SchoolMask
 {
     None = 0,
@@ -26,4 +32,9 @@ public static class SchoolMask_Extension
         SchoolMask.Arcane => nameof(SchoolMask.Arcane),
         _ => nameof(SchoolMask.None)
     };
+
+    public static bool HasValue(this SchoolMask value, SchoolMask flag)
+    {
+        return (value & flag) != 0;
+    }
 }
