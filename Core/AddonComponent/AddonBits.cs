@@ -2,7 +2,7 @@
 
 namespace Core;
 
-public sealed class AddonBits : IReader
+public sealed class AddonBits : IReader, IGameMenuWindowShown
 {
     private const int cell1 = 8;
     private const int cell2 = 9;

@@ -38,7 +38,7 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
     private readonly ClassConfiguration classConfig;
     private readonly NpcNameTargeting npcNameTargeting;
     private readonly IMountHandler mountHandler;
-    private readonly CancellationToken ct;
+    private readonly CancellationToken token;
     private readonly ExecGameCommand execGameCommand;
     private readonly GossipReader gossipReader;
 
@@ -82,7 +82,7 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
         this.npcNameTargeting = npcNameTargeting;
         this.classConfig = classConfig;
         this.mountHandler = mountHandler;
-        ct = cts.Token;
+        token = cts.Token;
         this.execGameCommand = exec;
         this.gossipReader = gossipReader;
 
@@ -199,7 +199,7 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
 
     private void Navigation_OnDestinationReached()
     {
-        if (pathState != PathState.ApproachPathStart || ct.IsCancellationRequested)
+        if (pathState != PathState.ApproachPathStart || token.IsCancellationRequested)
             return;
 
         LogDebug("Reached defined path end");
@@ -221,7 +221,7 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
                 CursorType.Innkeeper
             };
 
-            found = npcNameTargeting.FindBy(types);
+            found = npcNameTargeting.FindBy(types, token);
             wait.Update();
 
             if (!found)
@@ -241,7 +241,7 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
         if (!bits.Target())
         {
             LogWarn("No target found! Turn left to find NPC");
-            input.PressFixed(input.TurnLeftKey, 250, ct);
+            input.PressFixed(input.TurnLeftKey, 250, token);
             return;
         }
 
@@ -269,7 +269,7 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
         // which mean it it would exit the Goal
         // instead keep it trapped to follow the route back
         while (navigation.HasWaypoint() &&
-            !ct.IsCancellationRequested &&
+            !token.IsCancellationRequested &&
             pathState == PathState.FollowPath)
         {
             navigation.Update();

@@ -25,6 +25,8 @@ public sealed partial class NpcNameTargeting : IDisposable
 
     private readonly IBlacklist mouseOverBlacklist;
 
+    private readonly IGameMenuWindowShown gmws;
+
     private readonly Pen whitePen;
 
     private int index;
@@ -38,7 +40,8 @@ public sealed partial class NpcNameTargeting : IDisposable
     public NpcNameTargeting(ILogger<NpcNameTargeting> logger,
         CancellationTokenSource cts, IWowScreen wowScreen,
         NpcNameFinder npcNameFinder, IMouseInput input,
-        IMouseOverReader mouseOverReader, IBlacklist blacklist, Wait wait)
+        IMouseOverReader mouseOverReader, IBlacklist blacklist, Wait wait,
+        IGameMenuWindowShown gmws)
     {
         this.logger = logger;
         ct = cts.Token;
@@ -48,6 +51,8 @@ public sealed partial class NpcNameTargeting : IDisposable
         this.mouseOverReader = mouseOverReader;
         this.mouseOverBlacklist = blacklist;
         this.wait = wait;
+
+        this.gmws = gmws;
 
         classifier = new();
 
@@ -117,7 +122,7 @@ public sealed partial class NpcNameTargeting : IDisposable
         return npcNameFinder.NpcCount > 0;
     }
 
-    public bool AcquireNonBlacklisted(CancellationToken ct)
+    public bool AcquireNonBlacklisted(CancellationToken token)
     {
         if (npcCount != NpcCount)
         {
@@ -151,14 +156,14 @@ public sealed partial class NpcNameTargeting : IDisposable
             LogFoundTarget(logger, cls.ToStringF(), mouseOverReader.MouseOverId,
                 npc.Rect);
 
-            input.InteractMouseOver(ct);
+            input.InteractMouseOver(token);
             return true;
         }
 
         return false;
     }
 
-    public bool FindBy(ReadOnlySpan<CursorType> cursors)
+    public bool FindBy(ReadOnlySpan<CursorType> cursors, CancellationToken token)
     {
         int c = locFindBy.Length;
         const int e = 3;
@@ -168,7 +173,11 @@ public sealed partial class NpcNameTargeting : IDisposable
         float refHeight = npcNameFinder.ScaleToRefHeight;
 
         ReadOnlySpan<NpcPosition> span = npcNameFinder.Npcs;
-        for (int i = 0; i < span.Length; i++)
+        for (int i = 0;
+            i < span.Length &&
+            !token.IsCancellationRequested &&
+            !gmws.GameMenuWindowShown();
+            i++)
         {
             ref readonly NpcPosition npc = ref span[i];
             for (int j = 0; j < c; j += e)
@@ -179,7 +188,11 @@ public sealed partial class NpcNameTargeting : IDisposable
                 attempts[j + c + 1] = new Point(-npc.Rect.Width / 2, p.Y).Scale(refWidth, refHeight);
             }
 
-            for (int k = 0; k < attempts.Length; k++)
+            for (int k = 0;
+                k < attempts.Length &&
+                !token.IsCancellationRequested &&
+                !gmws.GameMenuWindowShown();
+                k++)
             {
                 Point p = attempts[k];
                 p.Offset(npc.ClickPoint);
@@ -190,7 +203,7 @@ public sealed partial class NpcNameTargeting : IDisposable
                 classifier.Classify(out CursorType cls, out _);
                 if (cursors.BinarySearch(cls, Comparer<CursorType>.Default) != -1)
                 {
-                    input.InteractMouseOver(ct);
+                    input.InteractMouseOver(token);
                     LogFoundTarget(logger, cls.ToStringF(), mouseOverReader.MouseOverId, npc.Rect);
                     return true;
                 }
