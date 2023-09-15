@@ -17,7 +17,7 @@ sealed class Program
     private static Microsoft.Extensions.Logging.ILogger logger;
     private static ILoggerFactory loggerFactory;
 
-    private const bool LogOverall = false;
+    private const bool LogOverallTimes = false;
     private const int delay = 150;
 
     public static void Main()
@@ -48,6 +48,7 @@ sealed class Program
         //NpcNames types = NpcNames.Enemy;
         //NpcNames types = NpcNames.Corpse;
         NpcNames types = NpcNames.Enemy | NpcNames.Neutral;
+        //NpcNames types = NpcNames.Enemy | NpcNames.Neutral | NpcNames.NamePlate;
         //NpcNames types = NpcNames.Friendly | NpcNames.Neutral;
 
         using Test_NpcNameFinder test = new(logger, loggerFactory, types);
@@ -61,19 +62,19 @@ sealed class Program
 
         while (i < count)
         {
-            if (LogOverall)
+            if (LogOverallTimes)
                 timestamp = Stopwatch.GetTimestamp();
 
             test.Execute();
 
-            if (LogOverall)
+            if (LogOverallTimes)
                 sample[i] = Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds;
 
             i++;
             Thread.Sleep(delay);
         }
 
-        if (LogOverall)
+        if (LogOverallTimes)
             Log.Logger.Information($"sample: {count} | avg: {sample.Average(),0:0.00} | min: {sample.Min(),0:0.00} | max: {sample.Max(),0:0.00} | total: {sample.Sum()}");
     }
 
@@ -150,19 +151,19 @@ sealed class Program
 
         while (i < count)
         {
-            if (LogOverall)
+            if (LogOverallTimes)
                 timestamp = Stopwatch.GetTimestamp();
 
             test.Execute();
 
-            if (LogOverall)
+            if (LogOverallTimes)
                 sample[i] = Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds;
 
             i++;
             Thread.Sleep(delay);
         }
 
-        if (LogOverall)
+        if (LogOverallTimes)
             Log.Logger.Information($"sample: {count} | avg: {sample.Average(),0:0.00} | min: {sample.Min(),0:0.00} | max: {sample.Max(),0:0.00} | total: {sample.Sum()}");
     }
 

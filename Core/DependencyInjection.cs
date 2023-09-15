@@ -33,6 +33,8 @@ public static class DependencyInjection
         s.ForwardSingleton<AddonReader, IAddonReader>();
 
         s.ForwardSingleton<AddonBits, IReader>();
+        s.ForwardSingleton<AddonBits, IGameMenuWindowShown>();
+
         s.ForwardSingleton<SpellInRange, IReader>();
         s.ForwardSingleton<BuffStatus<IPlayer>, IReader>(x => new(41));
         s.ForwardSingleton<TargetDebuffStatus, IReader>();
@@ -102,6 +104,8 @@ public static class DependencyInjection
         s.ForwardSingleton<PlayerReader>(sp);
 
         s.ForwardSingleton<AddonBits>(sp);
+        s.ForwardSingleton<IGameMenuWindowShown>(sp);
+
         s.ForwardSingleton<SpellInRange>(sp);
         s.ForwardSingleton<BuffStatus<IPlayer>>(sp);
         s.ForwardSingleton<TargetDebuffStatus>(sp);

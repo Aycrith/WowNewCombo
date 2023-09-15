@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using SharedLib.Extensions;
 using System;
+using System.Threading;
 
 namespace Core.Goals;
 
@@ -34,6 +35,8 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
     private readonly PlayerDirection playerDirection;
     private readonly GoapAgentState state;
 
+    private readonly CancellationToken token;
+
     private readonly List<CorpseEvent> corpseLocations = new();
 
     private bool gatherCorpse;
@@ -46,7 +49,8 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         StopMoving stopMoving, AddonBits bits,
         ClassConfiguration classConfig, NpcNameTargeting npcNameTargeting,
         CombatUtil combatUtil, PlayerDirection playerDirection,
-        GoapAgentState state, CombatLog combatLog)
+        GoapAgentState state, CombatLog combatLog,
+        CancellationTokenSource cts)
         : base(nameof(LootGoal))
     {
         this.logger = logger;
@@ -64,6 +68,8 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         this.combatUtil = combatUtil;
         this.playerDirection = playerDirection;
         this.state = state;
+
+        this.token = cts.Token;
 
         AddPrecondition(GoapKey.shouldloot, true);
         AddEffect(GoapKey.shouldloot, false);
@@ -173,7 +179,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         npcNameTargeting.WaitForUpdate();
 
         ReadOnlySpan<CursorType> types = stackalloc[] { CursorType.Loot };
-        if (!npcNameTargeting.FindBy(types))
+        if (!npcNameTargeting.FindBy(types, token))
         {
             return false;
         }

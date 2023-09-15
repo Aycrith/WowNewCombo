@@ -23,7 +23,7 @@ public sealed class Test_NpcNameFinder : IDisposable
     private const bool showOverlay = false;
 
     private const bool LogEachUpdate = true;
-    private const bool LogShowResult = false;
+    private const bool LogEachDetail = false;
 
     private const bool debugTargeting = false;
     private const bool debugSkinning = false;
@@ -58,9 +58,10 @@ public sealed class Test_NpcNameFinder : IDisposable
         npcNameFinder = new(logger, wowScreen, npcResetEvent);
 
         MockMouseOverReader mouseOverReader = new();
+        MockGameMenuWindowShown gmws = new();
         npcNameTargeting = new(loggerFactory.CreateLogger<NpcNameTargeting>(),
             new(), wowScreen, npcNameFinder, wowProcessInput,
-            mouseOverReader, new NoBlacklist(), null!);
+            mouseOverReader, new NoBlacklist(), null!, gmws);
 
         npcNameFinder.ChangeNpcType(types);
 
@@ -114,7 +115,7 @@ public sealed class Test_NpcNameFinder : IDisposable
             SaveImage();
         }
 
-        if (LogEachUpdate && LogShowResult)
+        if (LogEachUpdate && LogEachDetail)
         {
             stringBuilder.Length = 0;
 
@@ -138,7 +139,7 @@ public sealed class Test_NpcNameFinder : IDisposable
 
     public bool Execute_FindTargetBy(ReadOnlySpan<CursorType> cursorType)
     {
-        return npcNameTargeting.FindBy(cursorType);
+        return npcNameTargeting.FindBy(cursorType, CancellationToken.None);
     }
 
     private void SaveImage()

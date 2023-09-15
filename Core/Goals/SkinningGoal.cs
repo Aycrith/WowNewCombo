@@ -3,6 +3,7 @@ using SharedLib.NpcFinder;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace Core.Goals;
 
@@ -28,6 +29,7 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
     private readonly NpcNameTargeting npcNameTargeting;
     private readonly CombatUtil combatUtil;
     private readonly GoapAgentState state;
+    private readonly CancellationToken token;
 
     private bool canRun;
     private int bagHashNewOrStackGain;
@@ -39,7 +41,8 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
         BagReader bagReader, EquipmentReader equipmentReader,
         AddonBits bits, Wait wait, StopMoving stopMoving,
         NpcNameTargeting npcNameTargeting, CombatUtil combatUtil,
-        GoapAgentState state, ClassConfiguration classConfig)
+        GoapAgentState state, ClassConfiguration classConfig,
+        CancellationTokenSource cts)
         : base(nameof(SkinningGoal))
     {
         this.logger = logger;
@@ -55,6 +58,8 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
         this.npcNameTargeting = npcNameTargeting;
         this.combatUtil = combatUtil;
         this.state = state;
+
+        this.token = cts.Token;
 
         canRun = HaveItemRequirement();
         bagReader.DataChanged -= BagReader_DataChanged;
@@ -147,7 +152,7 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
                 e = wait.Until(MAX_TIME_TO_WAIT_NPC_NAME, npcNameTargeting.FoundAny);
                 LogFoundNpcNameCount(logger, npcNameTargeting.NpcCount, e);
 
-                foundTarget = npcNameTargeting.FindBy(types); // todo salvage icon
+                foundTarget = npcNameTargeting.FindBy(types, token); // todo salvage icon
                 interact = true;
             }
 
