@@ -59,6 +59,7 @@ public sealed partial class RequirementFactory
 
     private const string Swimming = "Swimming";
     private const string Falling = "Falling";
+    private const string Flying = "Flying";
 
     public const string AddVisible = "AddVisible";
     public const string Drink = "Drink";
@@ -177,6 +178,7 @@ public sealed partial class RequirementFactory
             // Player Affected
             { Swimming, bits.Swimming },
             { Falling, bits.Falling },
+            { Flying, bits.Flying },
             { "Dead", bits.Dead },
         };
 
