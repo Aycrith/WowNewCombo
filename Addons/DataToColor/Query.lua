@@ -70,6 +70,7 @@ local GetInventoryItemID = GetInventoryItemID
 local UnitOnTaxi = UnitOnTaxi
 local IsSwimming = IsSwimming
 local IsFalling = IsFalling
+local IsFlying = IsFlying
 local IsIndoors = IsIndoors
 local IsStealthed = IsStealthed
 local GetMirrorTimerInfo = GetMirrorTimerInfo
@@ -161,7 +162,8 @@ function DataToColor:Bits2()
         (UnitPlayerControlled(DataToColor.C.unitmouseover) and 2 or 0) ^ 17 +
         (UnitPlayerControlled(DataToColor.C.unitTarget) and 2 or 0) ^ 18 +
         ((DataToColor.autoFollow) and 2 or 0) ^ 19 +
-        ((GameMenuFrame:IsShown() and 2 or 0)) ^ 20
+        ((GameMenuFrame:IsShown() and 2 or 0)) ^ 20 +
+        ((IsFlying() and 2 or 0)) ^ 21
 end
 
 function DataToColor:CustomTrigger(t)

@@ -71,4 +71,10 @@ public sealed class AddonBits : IReader, IGameMenuWindowShown
     public bool Target_PlayerControlled() => v2[Mask._18];
     public bool AutoFollow() => v2[Mask._19];
     public bool GameMenuWindowShown() => v2[Mask._20];
+    public bool Flying() => v2[Mask._21];
+
+
+    // Combined
+
+    public bool Grounded() => !Flying() && !Falling();
 }

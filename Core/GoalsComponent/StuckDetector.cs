@@ -104,7 +104,8 @@ public sealed class StuckDetector
         }
         else
         {
-            input.PressJump();
+            if (!bits.Flying())
+                input.PressJump();
         }
     }
 

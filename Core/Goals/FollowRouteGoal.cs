@@ -385,7 +385,8 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
     private void RandomJump()
     {
-        if ((DateTime.UtcNow - onEnterTime).TotalSeconds > 5 &&
+        if (bits.Grounded() &&
+            (DateTime.UtcNow - onEnterTime).TotalSeconds > 5 &&
             classConfig.Jump.SinceLastClickMs > Random.Shared.Next(10_000, 25_000))
         {
             Log("Random jump");
