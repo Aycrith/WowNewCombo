@@ -127,14 +127,14 @@ public sealed class WMOManager : Manager<WMO>
             fileName = path
         };
 
-        _ = new WmoRootFile(archive, path, t, modelmanager);
+        WmoRootFile.Load(archive, path, t, modelmanager);
 
         ReadOnlySpan<char> part = path[..^4].AsSpan();
 
         for (int i = 0; i < t.groups.Length; i++)
         {
             string name = string.Format("{0}_{1,3:000}.wmo", part.ToString(), i);
-            _ = new WmoGroupFile(archive, name, t.groups[i]);
+            WmoGroupFile.Load(archive, name, t.groups[i]);
         }
         return true;
     }
@@ -1090,9 +1090,9 @@ internal static class MapTileFile // adt file
     }
 }
 
-internal sealed class WmoRootFile
+internal static class WmoRootFile
 {
-    public WmoRootFile(ArchiveSet archive, string name, WMO wmo, ModelManager modelmanager)
+    public static void Load(ArchiveSet archive, string name, WMO wmo, ModelManager modelmanager)
     {
         using MpqFileStream mpq = archive.GetStream(name);
 
@@ -1236,9 +1236,9 @@ internal sealed class WmoRootFile
     }
 }
 
-internal sealed class WmoGroupFile
+internal static class WmoGroupFile
 {
-    public WmoGroupFile(ArchiveSet archive, string name, WMOGroup g)
+    public static void Load(ArchiveSet archive, string name, WMOGroup g)
     {
         MpqFileStream mpq;
 
