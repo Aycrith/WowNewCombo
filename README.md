@@ -1412,6 +1412,7 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | `"TargetCastingSpell"` | Target casts any spell |
 | `"Swimming"` | The player is currently swimming. |
 | `"Falling"` | The player is currently falling down, not touching the ground. |
+| `"Flying"` | The player is currently flying, not touching the ground. |
 | `"Dead"` | The player is currently dead. |
 | `"Has Pet"` | The player's pet is alive |
 | `"Pet HasTarget"` | Players pet has target |
