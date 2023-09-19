@@ -124,21 +124,11 @@ public sealed class MPQTriangleSupplier
     [SkipLocalsInit]
     private static void GetChunkCoord(float x, float y, out int chunk_x, out int chunk_y)
     {
-        // yeah, this is ugly. But safe
-        for (chunk_x = 0; chunk_x < 64; chunk_x++)
-        {
-            float max_y = ChunkReader.ZEROPOINT - (chunk_x * ChunkReader.TILESIZE);
-            float min_y = max_y - ChunkReader.TILESIZE;
-            if (y >= min_y - 0.1f && y < max_y + 0.1f)
-                break;
-        }
-        for (chunk_y = 0; chunk_y < 64; chunk_y++)
-        {
-            float max_x = ChunkReader.ZEROPOINT - (chunk_y * ChunkReader.TILESIZE);
-            float min_x = max_x - ChunkReader.TILESIZE;
-            if (x >= min_x - 0.1f && x < max_x + 0.1f)
-                break;
-        }
+        float xOffset = ChunkReader.ZEROPOINT - y;
+        float yOffset = ChunkReader.ZEROPOINT - x;
+
+        chunk_x = (int)Round(xOffset / ChunkReader.TILESIZE) - 1;
+        chunk_y = (int)Round(yOffset / ChunkReader.TILESIZE) - 1;
     }
 
     [SkipLocalsInit]
