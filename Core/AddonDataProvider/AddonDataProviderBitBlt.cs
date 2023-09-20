@@ -11,7 +11,7 @@ using static WinAPI.NativeMethods;
 
 namespace Core;
 
-public sealed class AddonDataProviderBitBlt : IAddonDataProvider, IDisposable
+public sealed class AddonDataProviderBitBlt : IAddonDataProvider
 {
     public int[] Data { get; private init; }
     public StringBuilder TextBuilder { get; } = new(3);

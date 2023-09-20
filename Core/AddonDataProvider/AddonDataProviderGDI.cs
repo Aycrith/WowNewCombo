@@ -9,7 +9,7 @@ using WinAPI;
 
 namespace Core;
 
-public sealed class AddonDataProviderGDI : IAddonDataProvider, IDisposable
+public sealed class AddonDataProviderGDI : IAddonDataProvider
 {
     public int[] Data { get; private init; }
     public StringBuilder TextBuilder { get; } = new(3);

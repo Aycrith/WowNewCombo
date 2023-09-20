@@ -8,7 +8,7 @@ using System.Threading;
 
 namespace Core;
 
-public sealed class AddonDataProviderGDIConfig : IAddonDataProvider, IDisposable
+public sealed class AddonDataProviderGDIConfig : IAddonDataProvider
 {
     public int[] Data { get; private set; } = Array.Empty<int>();
     public StringBuilder TextBuilder { get; } = new(3);

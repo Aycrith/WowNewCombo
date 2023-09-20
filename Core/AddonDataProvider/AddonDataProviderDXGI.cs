@@ -16,7 +16,7 @@ using static WinAPI.NativeMethods;
 
 namespace Core;
 
-public sealed class AddonDataProviderDXGI : IAddonDataProvider, IDisposable
+public sealed class AddonDataProviderDXGI : IAddonDataProvider
 {
     public int[] Data { get; private init; }
     public StringBuilder TextBuilder { get; } = new(3);
