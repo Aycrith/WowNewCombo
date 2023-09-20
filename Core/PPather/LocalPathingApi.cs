@@ -65,12 +65,11 @@ public sealed class LocalPathingApi : IPPather
             lastSave = DateTime.UtcNow;
         }
 
-        Vector3[] array = new Vector3[path.locations.Count];
-        for (int i = 0; i < array.Length; i++)
+        for (int i = 0; i < path.locations.Count; i++)
         {
-            array[i] = service.ToLocal(path.locations[i], (int)service.SearchFrom.W, uiMap);
+            path.locations[i] = service.ToLocal(path.locations[i], (int)service.SearchFrom.W, uiMap);
         }
-        return array;
+        return path.locations.ToArray();
     }
 
     public Vector3[] FindWorldRoute(int uiMap, Vector3 worldFrom, Vector3 worldTo)
