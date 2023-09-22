@@ -5,7 +5,7 @@
 -- Trigger between emitting game data and frame location data
 local SETUP_SEQUENCE = false
 -- Total number of data frames generated
-local NUMBER_OF_FRAMES = 100
+local NUMBER_OF_FRAMES = 102
 -- Set number of pixel rows
 local FRAME_ROWS = 1
 -- Size of data squares in px. Varies based on rounding errors as well as dimension size. Use as a guideline, but not 100% accurate.
@@ -27,6 +27,10 @@ local max = math.max
 
 local strjoin = strjoin
 local strfind = strfind
+local sub = string.sub
+local len = string.len
+local upper = string.upper
+local byte = string.byte
 local debugstack = debugstack
 local ceil = ceil
 local floor = floor
@@ -122,6 +126,8 @@ local LATENCY_ITERATION_FRAME_CHANGE_RATE = 200 -- 500ms * refresh rate in ms
 local LOOT_RESET_RATE = FRAME_CHANGE_RATE
 -- How often the Player Buff / target Debuff frames change
 local AURA_DURATION_ITERATION_FRAME_CHANGE_RATE = FRAME_CHANGE_RATE
+-- How often the ChatHistory change
+local CHAT_ITERATION_FRAME_CHANGE_RATE = FRAME_CHANGE_RATE
 
 -- Timers
 DataToColor.globalTime = 0
@@ -174,6 +180,9 @@ DataToColor.CombatCreatureDiedQueue = DataToColor.Queue:new()
 local lastDied = 0
 DataToColor.CombatMissTypeQueue = DataToColor.Queue:new()
 
+DataToColor.ChatQueue = DataToColor.Queue:new()
+local chatMsgHead = -2
+
 DataToColor.playerPetSummons = {}
 
 DataToColor.playerBuffTime = DataToColor.struct:new()
@@ -211,7 +220,7 @@ end
 -- This function runs when addon is initialized/player logs in
 function DataToColor:OnInitialize()
     DataToColor:SetupRequirements()
-    DataToColor:CreateFrames(NUMBER_OF_FRAMES)
+    DataToColor:CreateFrames()
     DataToColor:RegisterSlashCommands()
 
     DataToColor:InitStorage()
@@ -413,8 +422,7 @@ function DataToColor:InitTrigger(t)
 end
 
 -- Function to mass generate all of the initial frames for the pixel reader
-function DataToColor:CreateFrames(n)
-
+function DataToColor:CreateFrames()
     local valueCache = {}
     local frames = {}
     local updateCount = {}
@@ -434,7 +442,6 @@ function DataToColor:CreateFrames(n)
 
     local function Pixel(func, value, slot)
         if valueCache[slot] ~= value then
-
             valueCache[slot] = value
             local frame = frames[slot]
             frame:SetBackdropColor(func(self, value))
@@ -445,16 +452,15 @@ function DataToColor:CreateFrames(n)
         return false
     end
 
-    local function UpdateGlobalTime(slot)
-        Pixel(int, DataToColor.globalTime, slot)
+    local function UpdateGlobalTime()
+        Pixel(int, DataToColor.globalTime, GLOBAL_TIME_CELL)
     end
 
     local function updateFrames()
         if not SETUP_SEQUENCE and globalCounter >= initPhase then
-
             Pixel(int, 0, 0)
             -- The final data square, reserved for additional metadata.
-            Pixel(int, 2000001, n - 1)
+            Pixel(int, 2000001, NUMBER_OF_FRAMES - 1)
 
             local x, y = DataToColor:GetPosition()
             Pixel(float, x * 10, 1)
@@ -480,7 +486,6 @@ function DataToColor:CreateFrames(n)
             Pixel(int, UnitPower(DataToColor.C.unitPlayer, nil), 13) -- either mana, rage, energy
 
             if DataToColor.C.CHARACTER_CLASS_ID == 6 then -- death Knight
-
                 local bloodRunes = 0
                 local unholyRunes = 0
                 local frostRunes = 0
@@ -488,25 +493,25 @@ function DataToColor:CreateFrames(n)
                 local numRunes = 0
 
                 for index = 1, 6 do
-                  local startTime = GetRuneCooldown(index)
-                  if startTime == 0 then
-                    numRunes = numRunes + 1
-                    local runeType = GetRuneType(index)
-                    if runeType == 1 then
-                      bloodRunes = bloodRunes + 1
-                    elseif runeType == 2 then
-                      frostRunes = frostRunes + 1
-                    elseif runeType == 3 then
-                      unholyRunes = unholyRunes + 1
-                    elseif runeType == 4 then
-                        deathRunes = deathRunes + 1
+                    local startTime = GetRuneCooldown(index)
+                    if startTime == 0 then
+                        numRunes = numRunes + 1
+                        local runeType = GetRuneType(index)
+                        if runeType == 1 then
+                            bloodRunes = bloodRunes + 1
+                        elseif runeType == 2 then
+                            frostRunes = frostRunes + 1
+                        elseif runeType == 3 then
+                            unholyRunes = unholyRunes + 1
+                        elseif runeType == 4 then
+                            deathRunes = deathRunes + 1
+                        end
                     end
-                  end
                 end
 
-                bloodRunes  = bloodRunes  + deathRunes
+                bloodRunes  = bloodRunes + deathRunes
                 unholyRunes = unholyRunes + deathRunes
-                frostRunes  = frostRunes  + deathRunes
+                frostRunes  = frostRunes + deathRunes
 
                 Pixel(int, numRunes, 14)
                 Pixel(int, bloodRunes * 100 + frostRunes * 10 + unholyRunes, 15)
@@ -539,7 +544,6 @@ function DataToColor:CreateFrames(n)
                 -- 21 22
                 local bagSlotNum = DataToColor.inventoryQueue:shift()
                 if bagSlotNum then
-
                     bagNum = floor(bagSlotNum / 1000)
                     bagSlotNum = bagSlotNum - (bagNum * 1000)
 
@@ -857,9 +861,41 @@ function DataToColor:CreateFrames(n)
                 DataToColor.lastLoot = DataToColor.C.Loot.Corpse
             end
             Pixel(int, DataToColor.lastLoot, 97)
-            -- n - 2 reserved for global time
-            UpdateGlobalTime(GLOBAL_TIME_CELL)
-            -- n - 1 reserved for validation
+
+            if globalCounter % CHAT_ITERATION_FRAME_CHANGE_RATE == 0 then
+                local e = DataToColor.ChatQueue:peek()
+                if e == nil then
+                    Pixel(int, 0, 98)
+                    Pixel(int, 0, 99)
+                else
+                    chatMsgHead = chatMsgHead + 3
+                    if chatMsgHead > e.length then
+                        DataToColor.ChatQueue:shift()
+                        chatMsgHead = -2
+                    else
+                        local s = sub(e.msg, chatMsgHead, chatMsgHead + 2)
+                        local ASCII = ''
+                        for i = 1, len(s) do
+                            local c = upper(sub(s, i))
+                            local b = byte(c) or 32
+
+                            if b == 32 or b > 100 then -- space has no upper
+                                b = byte('@')
+                            end
+
+                           ASCII = ASCII .. b
+                        end
+
+                        --print(e.length, chatMsgHead, "'" .. s .. "'", ASCII)
+
+                        Pixel(int, tonumber(ASCII), 98)
+                        Pixel(int, e.type * 1000000 + 1000 * e.length + chatMsgHead, 99)
+                    end
+                end
+            end
+
+            UpdateGlobalTime()
+            -- NUMBER_OF_FRAMES - 1 reserved for validation
 
             DataToColor:ConsumeChanges()
 
@@ -868,19 +904,19 @@ function DataToColor:CreateFrames(n)
             DataToColor:Update()
         elseif not SETUP_SEQUENCE then
             if globalCounter < initPhase then
-                for i = 1, n - 1 do
+                for i = 1, NUMBER_OF_FRAMES - 1 do
                     Pixel(int, 0, i)
                     updateCount[i] = 0
                 end
             end
-            UpdateGlobalTime(GLOBAL_TIME_CELL)
+            UpdateGlobalTime()
         end
 
         if SETUP_SEQUENCE then
             -- Emits meta data in data square index 0 concerning our estimated cell size, number of rows, and the numbers of frames
-            Pixel(int, CELL_SPACING * 10000000 + CELL_SIZE * 100000 + 1000 * FRAME_ROWS + n, 0)
+            Pixel(int, CELL_SPACING * 10000000 + CELL_SIZE * 100000 + 1000 * FRAME_ROWS + NUMBER_OF_FRAMES, 0)
             -- Assign pixel squares a value equivalent to their respective indices.
-            for i = 1, n - 1 do
+            for i = 1, NUMBER_OF_FRAMES - 1 do
                 Pixel(int, i, i)
                 updateCount[i] = 0
             end
@@ -911,11 +947,11 @@ function DataToColor:CreateFrames(n)
     -- background frame
     local backgroundframe = genFrame("frame_bg", 0, 0)
     backgroundframe:SetHeight(FRAME_ROWS * (CELL_SIZE + CELL_SPACING))
-    backgroundframe:SetWidth(ceil(n / FRAME_ROWS) * (CELL_SIZE + CELL_SPACING))
+    backgroundframe:SetWidth(ceil(NUMBER_OF_FRAMES / FRAME_ROWS) * (CELL_SIZE + CELL_SPACING))
     backgroundframe:SetFrameStrata("FULLSCREEN_DIALOG")
     backgroundframe:SetBackdropColor(0, 0, 0, 1)
 
-    for frame = 0, n - 1 do
+    for frame = 0, NUMBER_OF_FRAMES - 1 do
         -- those are grid coordinates (1,2,3,4 by  1,2,3,4 etc), not pixel coordinates
         local y = frame % FRAME_ROWS
         local x = floor(frame / FRAME_ROWS)
@@ -927,14 +963,14 @@ function DataToColor:CreateFrames(n)
     backgroundframe:SetScript("OnUpdate", updateFrames)
 
     local function DumpCallCount(maxRow)
-        print("Frame        count  val --- globalCounter: "..globalCounter)
+        print("Frame        count  val --- globalCounter: " .. globalCounter)
 
         local tbl = {}
         local function byUpdateCountDesc(a, b)
             return a[2] > b[2]
         end
 
-        for k,v in pairs(updateCount) do
+        for k, v in pairs(updateCount) do
             table.insert(tbl, { k, v })
         end
 
@@ -943,7 +979,7 @@ function DataToColor:CreateFrames(n)
         maxRow = tonumber(maxRow) or 5
 
         local c = 0
-        for k,v in ipairs(tbl) do
+        for k, v in ipairs(tbl) do
             if c >= maxRow then break end
             print(string.format("%03d  %010d  %s", v[1], v[2], valueCache[v[1]]))
             c = c + 1
@@ -1006,7 +1042,6 @@ function DataToColor:sell(items)
             else
                 DataToColor:Print("No grey items were sold.")
             end
-
         else
             DataToColor:Print("Merchant is not open to sell to, please approach and open.")
         end
