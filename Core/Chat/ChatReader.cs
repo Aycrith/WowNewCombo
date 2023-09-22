@@ -2,6 +2,8 @@
 using System.Collections.ObjectModel;
 using System.Text;
 
+using Microsoft.Extensions.Logging;
+
 namespace Core;
 
 public enum ChatMessageType
@@ -20,14 +22,21 @@ public sealed class ChatReader : IReader
     private const int cMsg = 98;
     private const int cMeta = 99;
 
-    public ObservableCollection<ChatMessageEntry> Messages { get; } = new();
+    private readonly ILogger<ChatReader> logger;
 
     // 12 character name
     // 1 space
     // 256 maximum message length
     private readonly StringBuilder sb = new(12 + 1 + 256);
 
+    public ObservableCollection<ChatMessageEntry> Messages { get; } = new();
+
     private int _head;
+
+    public ChatReader(ILogger<ChatReader> logger)
+    {
+        this.logger = logger;
+    }
 
     public void Update(IAddonDataProvider reader)
     {
@@ -57,10 +66,12 @@ public sealed class ChatReader : IReader
         string text = sb.ToString().ToLowerInvariant();
         sb.Clear();
 
-        int firstSpaceIdx = text.IndexOf(" ");
+        int firstSpaceIdx = text.AsSpan().IndexOf(' ');
         string author = text.AsSpan(0, firstSpaceIdx).ToString();
-        text = text.AsSpan(firstSpaceIdx).ToString();
+        text = text.AsSpan(firstSpaceIdx + 1).ToString();
 
-        Messages.Add(new(DateTime.Now, type, author, text));
+        ChatMessageEntry entry = new(DateTime.Now, type, author, text);
+        Messages.Add(entry);
+        logger.LogInformation(entry.ToString());
     }
 }
