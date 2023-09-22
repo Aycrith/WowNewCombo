@@ -47,6 +47,7 @@ public static class DependencyInjection
         s.ForwardSingleton<GossipReader, IReader>();
         s.ForwardSingleton<SpellBookReader, IReader>();
         s.ForwardSingleton<TalentReader, IReader>();
+        s.ForwardSingleton<ChatReader, IReader>();
 
         s.ForwardSingleton<ActionBarCostReader, IReader>();
         s.ForwardSingleton<ActionBarCooldownReader, IReader>();
@@ -123,6 +124,7 @@ public static class DependencyInjection
         s.ForwardSingleton<GossipReader>(sp);
         s.ForwardSingleton<SpellBookReader>(sp);
         s.ForwardSingleton<TalentReader>(sp);
+        s.ForwardSingleton<ChatReader>(sp);
 
         s.ForwardSingleton<ActionBarCostReader>(sp);
         s.ForwardSingleton<ActionBarCooldownReader>(sp);

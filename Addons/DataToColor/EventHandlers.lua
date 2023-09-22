@@ -125,6 +125,14 @@ function DataToColor:RegisterEvents()
     DataToColor:RegisterEvent('AUTOFOLLOW_BEGIN', 'AutoFollowBegin')
     DataToColor:RegisterEvent('AUTOFOLLOW_END', 'AutoFollowEnd')
 
+    DataToColor:RegisterEvent('CHAT_MSG_WHISPER', 'OnMessageWhisper')
+    DataToColor:RegisterEvent('CHAT_MSG_SAY', 'OnMessageSay')
+    DataToColor:RegisterEvent('CHAT_MSG_YELL', 'OnMessageYell')
+    DataToColor:RegisterEvent('CHAT_MSG_EMOTE', 'OnMessageEmote')
+    DataToColor:RegisterEvent('CHAT_MSG_TEXT_EMOTE', 'OnMessageEmote')
+    DataToColor:RegisterEvent('CHAT_MSG_PARTY', 'OnMessageParty')
+    DataToColor:RegisterEvent('CHAT_MSG_PARTY_LEADER', 'OnMessageParty')
+
     -- Season of mastery / vanilla
     if WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
         DataToColor:RegisterEvent('UNIT_SPELLCAST_START', 'SoM_OnCastStart')
@@ -598,6 +606,45 @@ end
 function DataToColor:AutoFollowEnd()
     DataToColor.autoFollow = false
 end
+
+function DataToColor:OnMessageWhisper(event, msg, author)
+    AddMessageToQueue(0, msg, author)
+end
+
+function DataToColor:OnMessageSay(event, msg, author)
+    AddMessageToQueue(1, msg, author)
+end
+
+function DataToColor:OnMessageYell(event, msg, author)
+    AddMessageToQueue(2, msg, author)
+end
+
+function DataToColor:OnMessageEmote(event, msg, author)
+    AddMessageToQueue(3, msg, author)
+end
+
+function DataToColor:OnMessageParty(event, msg, author)
+    AddMessageToQueue(4, msg, author)
+end
+
+function AddMessageToQueue(type, msg, author)
+    --print(author, msg)
+    --author split '-' MyName-Realm
+    local i, length = string.find(author, '-')
+    if i ~= nil then
+        length = length - 1
+    else
+        length = string.len(author)
+    end
+    author = string.sub(author, 1, length)
+
+    msg = author .. ' ' .. msg
+
+    --print(type, string.len(msg), msg)
+
+    DataToColor.ChatQueue:push({ type = type, length = string.len(msg), msg = msg })
+end
+
 
 local CORPSE_RETRIEVAL_DISTANCE = 40
 

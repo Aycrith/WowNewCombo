@@ -32,6 +32,16 @@ function Queue:push(item)
     return table.insert(self.tail, item)
 end
 
+function Queue:peek()
+    if self.index <= self.headLength then
+        return self.head[self.index]
+    elseif #self.tail > 0 then
+        return self.tail[1]
+    end
+
+    return nil
+end
+
 local MinQueue = {}
 DataToColor.MinQueue = MinQueue
 
