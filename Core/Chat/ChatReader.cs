@@ -56,7 +56,7 @@ public sealed class ChatReader : IReader
         else if (_head == head)
             return;
 
-        string part = reader.GetString(cMsg).Replace('@', ' ');
+        string part = reader.GetString(cMsg);
 
         sb.Append(part);
 
@@ -68,9 +68,9 @@ public sealed class ChatReader : IReader
 
         int firstSpaceIdx = text.AsSpan().IndexOf(' ');
         string author = text.AsSpan(0, firstSpaceIdx).ToString();
-        text = text.AsSpan(firstSpaceIdx + 1).ToString();
+        string msg = text.AsSpan(firstSpaceIdx + 1).ToString();
 
-        ChatMessageEntry entry = new(DateTime.Now, type, author, text);
+        ChatMessageEntry entry = new(DateTime.Now, type, author, msg);
         Messages.Add(entry);
         logger.LogInformation(entry.ToString());
     }
