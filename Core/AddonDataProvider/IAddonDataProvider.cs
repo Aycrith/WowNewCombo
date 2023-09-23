@@ -71,6 +71,6 @@ public interface IAddonDataProvider : IDisposable
         n = color % 100;
         if (n > 0) TextBuilder.Append((char)n);
 
-        return TextBuilder.ToString().Trim();
+        return TextBuilder.ToString();
     }
 }

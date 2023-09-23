@@ -456,6 +456,17 @@ function DataToColor:CreateFrames()
         Pixel(int, DataToColor.globalTime, GLOBAL_TIME_CELL)
     end
 
+    local function IdxToRadix(input)
+        if input == 1 then
+            return 10000
+        elseif input == 2 then
+            return 100
+        elseif input == 3 then
+            return 1
+        end
+        return 0
+    end
+
     local function updateFrames()
         if not SETUP_SEQUENCE and globalCounter >= initPhase then
             Pixel(int, 0, 0)
@@ -873,22 +884,20 @@ function DataToColor:CreateFrames()
                         DataToColor.ChatQueue:shift()
                         chatMsgHead = -2
                     else
-                        local s = sub(e.msg, chatMsgHead, chatMsgHead + 2)
-                        local ASCII = ''
-                        for i = 1, len(s) do
-                            local c = upper(sub(s, i))
-                            local b = byte(c) or 32
-
-                            if b == 32 or b > 100 then -- space has no upper
-                                b = byte('@')
+                        local part = sub(e.msg, chatMsgHead, chatMsgHead + 2)
+                        local number = 0
+                        local length = len(part)
+                        for i = 1, length do
+                            local c = upper(sub(part, i))
+                            local b = byte(c) or 32 -- SPACE character fallback
+                            if b > 100 then
+                                b = 32
                             end
-
-                           ASCII = ASCII .. b
+                           number = number + (b * IdxToRadix(i + (3 - length)))
                         end
 
-                        --print(e.length, chatMsgHead, "'" .. s .. "'", ASCII)
-
-                        Pixel(int, tonumber(ASCII), 98)
+                        --print(e.length, chatMsgHead, "'" .. part .. "'", number)
+                        Pixel(int, number, 98)
                         Pixel(int, e.type * 1000000 + 1000 * e.length + chatMsgHead, 99)
                     end
                 end

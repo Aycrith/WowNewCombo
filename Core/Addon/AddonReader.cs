@@ -80,7 +80,7 @@ public sealed class AddonReader : IAddonReader
             TargetName =
                 creatureDb.Entries.TryGetValue(playerReader.TargetId, out string? name)
                 ? name
-                : reader.GetString(16) + reader.GetString(17);
+                : reader.GetString(16).Trim() + reader.GetString(17).Trim();
         }
 
         if (lastMouseOverId != playerReader.MouseOverId)
