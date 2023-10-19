@@ -1,4 +1,4 @@
-﻿using SharedLib.Extensions;
+using SharedLib.Extensions;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Drawing;
@@ -608,7 +608,7 @@ public sealed partial class NpcNameFinder : IDisposable
             Math.Abs(c.ClickPoint.X - screenMid) < screenTargetBuffer;
     }
 
-    private bool IsAdd(NpcPosition c)
+    public bool IsAdd(NpcPosition c)
     {
         return
             (c.ClickPoint.X < screenMid - screenTargetBuffer &&
