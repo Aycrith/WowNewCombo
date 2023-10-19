@@ -8,56 +8,11 @@ using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Threading;
 
-#pragma warning disable 162
+using static SharedLib.NpcFinder.NpcNameColors;
 
 namespace SharedLib.NpcFinder;
-
-[Flags]
-public enum NpcNames
-{
-    None = 0,
-    Enemy = 1,
-    Friendly = 2,
-    Neutral = 4,
-    Corpse = 8,
-    NamePlate = 16
-}
-
-public static class NpcNames_Extension
-{
-    public static string ToStringF(this NpcNames value) => value switch
-    {
-        NpcNames.None => nameof(NpcNames.None),
-        NpcNames.Enemy => nameof(NpcNames.Enemy),
-        NpcNames.Friendly => nameof(NpcNames.Friendly),
-        NpcNames.Neutral => nameof(NpcNames.Neutral),
-        NpcNames.Corpse => nameof(NpcNames.Corpse),
-        NpcNames.NamePlate => nameof(NpcNames.NamePlate),
-        _ => nameof(NpcNames.None),
-    };
-
-    public static bool HasFlagF(this NpcNames value, NpcNames flag)
-    {
-        return (value & flag) != 0;
-    }
-}
-
-public enum SearchMode
-{
-    Simple = 0,
-    Fuzzy = 1
-}
-
-public static class SearchMode_Extension
-{
-    public static string ToStringF(this SearchMode value) => value switch
-    {
-        SearchMode.Simple => nameof(SearchMode.Simple),
-        SearchMode.Fuzzy => nameof(SearchMode.Fuzzy),
-        _ => nameof(SearchMode.Simple),
-    };
-}
 
 public sealed partial class NpcNameFinder : IDisposable
 {
@@ -66,7 +21,7 @@ public sealed partial class NpcNameFinder : IDisposable
     private readonly PixelFormat pixelFormat;
     private readonly INpcResetEvent resetEvent;
 
-    private readonly int bytesPerPixel;
+    private const int bytesPerPixel = 4;
 
     private readonly Pen whitePen;
     private readonly Pen greyPen;
@@ -104,67 +59,15 @@ public sealed partial class NpcNameFinder : IDisposable
 
     private readonly NpcPositionComparer npcPosComparer;
 
-    #region variables
-
-    public float colorFuzziness { get; set; } = 15f;
-
     private const int colorFuzz = 40;
-
-    public int topOffset { get; set; } = 117;
+    private const int topOffset = 117;
+    public int WidthDiff { get; set; } = 4;
 
     private float heightMul;
     public int HeightMulti { get; set; }
-
-    public int MaxWidth { get; set; } = 250;
-
     public int MinHeight { get; set; } = 16;
-
-    public int WidthDiff { get; set; } = 4;
-
     public int HeightOffset1 { get; set; } = 10;
-
     public int HeightOffset2 { get; set; } = 2;
-
-    #endregion
-
-    #region Colors
-
-    public const byte fBase = 230;
-
-    public const byte fE_R = fBase;
-    public const byte fE_G = 0;
-    public const byte fE_B = 0;
-
-    public const byte fF_R = 0;
-    public const byte fF_G = fBase;
-    public const byte fF_B = 0;
-
-    public const byte fN_R = fBase;
-    public const byte fN_G = fBase;
-    public const byte fN_B = 0;
-
-    public const byte fuzzCorpse = 18;
-    public const byte fC_RGB = 128;
-
-    public const byte sE_R = 240;
-    public const byte sE_G = 35;
-    public const byte sE_B = 35;
-
-    public const byte sF_R = 0;
-    public const byte sF_G = 250;
-    public const byte sF_B = 0;
-
-    public const byte sN_R = 250;
-    public const byte sN_G = 250;
-    public const byte sN_B = 0;
-
-    public const byte sNamePlate_N = 254;
-
-    public const byte sNamePlate_H_R = 254;
-    public const byte sNamePlate_H_G = 254;
-    public const byte sNamePlate_H_B = 0;
-
-    #endregion
 
     public NpcNameFinder(ILogger logger, IBitmapProvider bitmapProvider,
         INpcResetEvent resetEvent)
@@ -173,7 +76,6 @@ public sealed partial class NpcNameFinder : IDisposable
         this.bitmapProvider = bitmapProvider;
         this.pixelFormat = bitmapProvider.Bitmap.PixelFormat;
         this.resetEvent = resetEvent;
-        this.bytesPerPixel = Bitmap.GetPixelFormatSize(pixelFormat) / 8;
 
         UpdateSearchMode();
 
@@ -447,7 +349,7 @@ public sealed partial class NpcNameFinder : IDisposable
         resetEvent.Reset();
 
         ReadOnlySpan<LineSegment> lineSegments =
-            PopulateLines(bitmapProvider.Bitmap, Area);
+            PopulateLines(bitmapProvider.Bitmap, Area, colorMatcher, Area, ScaleWidth(MinHeight), ScaleWidth(WidthDiff));
         Npcs = DetermineNpcs(lineSegments);
 
         TargetCount = Npcs.Count(TargetsCount);
@@ -515,42 +417,42 @@ public sealed partial class NpcNameFinder : IDisposable
                 group[gc++] = laterNpcLine;
             }
 
-            if (gc > 0)
+            if (gc <= 0)
+                continue;
+
+            ref LineSegment n = ref group[0];
+            Rectangle rect = new(n.XStart, n.Y, n.XEnd - n.XStart, 1);
+
+            for (int g = 1; g < gc; g++)
             {
-                ref LineSegment n = ref group[0];
-                Rectangle rect = new(n.XStart, n.Y, n.XEnd - n.XStart, 1);
+                n = group[g];
 
-                for (int g = 1; g < gc; g++)
-                {
-                    n = group[g];
+                rect.X = Math.Min(rect.X, n.XStart);
+                rect.Y = Math.Min(rect.Y, n.Y);
 
-                    rect.X = Math.Min(rect.X, n.XStart);
-                    rect.Y = Math.Min(rect.Y, n.Y);
+                if (rect.Right < n.XEnd)
+                    rect.Width = n.XEnd - n.XStart;
 
-                    if (rect.Right < n.XEnd)
-                        rect.Width = n.XEnd - n.XStart;
-
-                    if (rect.Bottom < n.Y)
-                        rect.Height = n.Y - rect.Y;
-                }
-                int yOffset = YOffset(Area, rect);
-                npcs[c++] = new NpcPosition(
-                    rect.Location, rect.Max(), yOffset, heightMul);
+                if (rect.Bottom < n.Y)
+                    rect.Height = n.Y - rect.Y;
             }
+            int yOffset = YOffset(Area, rect);
+            npcs[c++] = new NpcPosition(
+                rect.Location, rect.Max(), yOffset, heightMul);
         }
 
         int lineHeight = 2 * (int)ScaleHeight(MinHeight);
 
-        for (int i = 0; i < c; i++)
+        for (int i = 0; i < c - 1; i++)
         {
             ref readonly NpcPosition ii = ref npcs[i];
             if (ii.Equals(NpcPosition.Empty))
                 continue;
 
-            for (int j = 0; j < c; j++)
+            for (int j = i + 1; j < c; j++)
             {
                 ref readonly NpcPosition jj = ref npcs[j];
-                if (i == j || jj.Equals(NpcPosition.Empty))
+                if (jj.Equals(NpcPosition.Empty))
                     continue;
 
                 Point pi = ii.Rect.Centre();
@@ -608,7 +510,7 @@ public sealed partial class NpcNameFinder : IDisposable
             Math.Abs(c.ClickPoint.X - screenMid) < screenTargetBuffer;
     }
 
-    private bool IsAdd(NpcPosition c)
+    public bool IsAdd(NpcPosition c)
     {
         return
             (c.ClickPoint.X < screenMid - screenTargetBuffer &&
@@ -623,21 +525,19 @@ public sealed partial class NpcNameFinder : IDisposable
     }
 
     [SkipLocalsInit]
-    private ReadOnlySpan<LineSegment> PopulateLines(Bitmap bitmap, Rectangle rect)
+    private ReadOnlySpan<LineSegment> PopulateLines(Bitmap bitmap, Rectangle rect,
+        Func<byte, byte, byte, bool> colorMatcher, Rectangle area, float minLength, float lengthDiff)
     {
-        Rectangle area = this.Area;
-        int bytesPerPixel = this.bytesPerPixel;
-
-        int width = (area.Right - area.Left) / 32;
-        int height = (area.Bottom - area.Top) / 32;
+        const int RESOLUTION = 64;
+        int width = (area.Right - area.Left) / RESOLUTION;
+        int height = (area.Bottom - area.Top) / RESOLUTION;
         int size = width * height;
+
         var pooler = ArrayPool<LineSegment>.Shared;
         LineSegment[] segments = pooler.Rent(size);
         int i = 0;
 
-        Func<byte, byte, byte, bool> colorMatcher = this.colorMatcher;
-        float minLength = ScaleWidth(MinHeight);
-        float lengthDiff = ScaleWidth(WidthDiff);
+        int end = area.Right;
         float minEndLength = minLength - lengthDiff;
 
         BitmapData bitmapData =
@@ -647,9 +547,8 @@ public sealed partial class NpcNameFinder : IDisposable
         [SkipLocalsInit]
         unsafe void body(int y)
         {
-            int xStart = -1;
-            int xEnd = -1;
-            int end = area.Right;
+            int xStart = int.MinValue;
+            int xEnd = int.MinValue;
 
             byte* currentLine = (byte*)bitmapData.Scan0 + (y * bitmapData.Stride);
             for (int x = area.Left; x < end; x++)
@@ -662,18 +561,18 @@ public sealed partial class NpcNameFinder : IDisposable
                     currentLine[xi]))
                     continue;
 
-                if (xStart > -1 && (x - xEnd) < minLength)
+                if (xStart > int.MinValue && (x - xEnd) < minLength)
                 {
                     xEnd = x;
                 }
                 else
                 {
-                    if (xStart > -1 && xEnd - xStart > minEndLength)
+                    if (xStart > int.MinValue && xEnd - xStart > minEndLength)
                     {
                         if (i + 1 >= size)
                             return;
 
-                        segments[i++] = new LineSegment(xStart, xEnd, y);
+                        segments[Interlocked.Add(ref i, 1)] = new LineSegment(xStart, xEnd, y);
                     }
 
                     xStart = x;
@@ -681,9 +580,9 @@ public sealed partial class NpcNameFinder : IDisposable
                 xEnd = x;
             }
 
-            if (i < size && xStart > -1 && xEnd - xStart > minEndLength)
+            if (xStart > int.MinValue && xEnd - xStart > minEndLength)
             {
-                segments[i++] = new LineSegment(xStart, xEnd, y);
+                segments[Interlocked.Add(ref i, 1)] = new LineSegment(xStart, xEnd, y);
             }
         }
         _ = Parallel.For(area.Top, area.Height, body);
