@@ -20,7 +20,7 @@ namespace CoreTests;
 
 internal sealed class Test_NpcNameFinder : IDisposable
 {
-    private const bool saveImage = false;
+    private const bool saveImage = true;
     private const bool showOverlay = false;
 
     private const bool LogEachUpdate = true;

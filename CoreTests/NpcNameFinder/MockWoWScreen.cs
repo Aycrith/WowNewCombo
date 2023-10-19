@@ -20,11 +20,9 @@ internal sealed class MockWoWScreen : IWowScreen
 
     public bool EnablePostProcess { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
-#pragma warning disable CS0414 // The field 'MockWoWScreen.OnScreenChanged' is assigned but its value is never used
-#pragma warning disable CS8632 // The field 'MockWoWScreen.OnScreenChanged' is assigned but its value is never used
+#pragma warning disable CS0067 // The event 'MockWoWScreen.OnScreenChanged' is never used
     public event Action OnScreenChanged;
-#pragma warning restore CS8632 // The field 'MockWoWScreen.OnScreenChanged' is assigned but its value is never used
-#pragma warning restore CS0414 // The field 'MockWoWScreen.OnScreenChanged' is assigned but its value is never used
+#pragma warning restore CS0067 // The event 'MockWoWScreen.OnScreenChanged' is never used
 
     public void AddDrawAction(Action<Graphics> g)
     {
