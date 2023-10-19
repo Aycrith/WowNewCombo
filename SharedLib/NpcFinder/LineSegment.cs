@@ -1,17 +1,17 @@
 ﻿namespace SharedLib.NpcFinder;
 
-public readonly struct LineSegment
+public readonly record struct LineSegment
 {
-    public readonly int XStart;
+    public readonly int X;
     public readonly int Y;
-    public readonly int XEnd;
-    public readonly int XCenter;
+
+    public readonly int XStart => X & 0xFFFF;
+    public readonly int XEnd => X >> 16;
+    public readonly int XCenter => XStart + ((XEnd - XStart) / 2);
 
     public LineSegment(int xStart, int xEnd, int y)
     {
-        this.XStart = xStart;
-        this.Y = y;
-        this.XEnd = xEnd;
-        XCenter = XStart + ((XEnd - XStart) / 2);
+        X = (xEnd << 16) | (xStart & 0xFFFF);
+        Y = y;
     }
 }
