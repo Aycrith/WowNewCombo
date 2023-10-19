@@ -3,7 +3,7 @@ using System.Drawing;
 
 namespace CoreTests;
 
-public class RectProvider : IRectProvider
+internal sealed class RectProvider : IRectProvider
 {
     public RectProvider()
     {

@@ -5,7 +5,7 @@ using Game;
 
 namespace CoreTests;
 
-public class MockWoWProcess : IMouseInput
+internal sealed class MockWoWProcess : IMouseInput
 {
     public void RightClick(Point p)
     {
