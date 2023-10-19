@@ -16,9 +16,9 @@ using static WinAPI.NativeMethods;
 
 namespace Game;
 
-public sealed class WowScreen : IWowScreen, IBitmapProvider, IDisposable
+public sealed class WowScreenGDI : IWowScreen, IBitmapProvider, IDisposable
 {
-    private readonly ILogger<WowScreen> logger;
+    private readonly ILogger<WowScreenGDI> logger;
     private readonly WowProcess wowProcess;
 
     public event Action OnScreenChanged;
@@ -34,6 +34,7 @@ public sealed class WowScreen : IWowScreen, IBitmapProvider, IDisposable
     public Bitmap Bitmap { get; private set; }
 
     public Bitmap MiniMapBitmap { get; private set; }
+    public Rectangle MiniMapRect { get; private set; }
 
     public IntPtr ProcessHwnd => wowProcess.Process.MainWindowHandle;
 
@@ -47,7 +48,7 @@ public sealed class WowScreen : IWowScreen, IBitmapProvider, IDisposable
 
     private readonly bool windowedMode;
 
-    public WowScreen(ILogger<WowScreen> logger, WowProcess wowProcess)
+    public WowScreenGDI(ILogger<WowScreenGDI> logger, WowProcess wowProcess)
     {
         this.logger = logger;
         this.wowProcess = wowProcess;
@@ -164,52 +165,4 @@ public sealed class WowScreen : IWowScreen, IBitmapProvider, IDisposable
 
         blackPen.Dispose();
     }
-
-    private static Bitmap CropImage(Bitmap img, bool highlight)
-    {
-        int x = img.Width / 2;
-        int y = img.Height / 2;
-        int r = Math.Min(x, y);
-
-        Bitmap tmp = new(2 * r, 2 * r);
-        using (Graphics g = Graphics.FromImage(tmp))
-        {
-            if (highlight)
-            {
-                using (SolidBrush brush = new SolidBrush(Color.FromArgb(255, 0, 0)))
-                {
-                    g.FillRectangle(brush, 0, 0, img.Width, img.Height);
-                }
-            }
-
-            g.SmoothingMode = SmoothingMode.None;
-            g.TranslateTransform(tmp.Width / 2, tmp.Height / 2);
-            using (var gp = new GraphicsPath())
-            {
-                gp.AddEllipse(0 - r, 0 - r, 2 * r, 2 * r);
-                using (var region = new Region(gp))
-                {
-                    g.SetClip(region, CombineMode.Replace);
-                    using (var bmp = new Bitmap(img))
-                    {
-
-                        g.DrawImage(bmp, new Rectangle(-r, -r, 2 * r, 2 * r), new Rectangle(x - r, y - r, 2 * r, 2 * r), GraphicsUnit.Pixel);
-                    }
-                }
-            }
-        }
-        return tmp;
-    }
-
-    public static string ToBase64(Bitmap bitmap, Bitmap resized, Graphics graphics)
-    {
-        graphics.DrawImage(bitmap, 0, 0, resized.Width, resized.Height);
-
-        using MemoryStream ms = new();
-        resized.Save(ms, ImageFormat.Png);
-
-        byte[] byteImage = ms.ToArray();
-        return Convert.ToBase64String(byteImage);
-    }
-
 }

@@ -23,7 +23,7 @@ public sealed class AddonDataProviderBitBlt : IAddonDataProvider
     private readonly Bitmap bitmap;
     private readonly Graphics graphics;
 
-    private readonly WowScreen wowScreen;
+    private readonly IWowScreen wowScreen;
 
     private IntPtr hWnd = IntPtr.Zero;
     private IntPtr windowDC = IntPtr.Zero;
@@ -31,7 +31,7 @@ public sealed class AddonDataProviderBitBlt : IAddonDataProvider
     private readonly bool windowedMode;
     private Point p;
 
-    public AddonDataProviderBitBlt(WowScreen wowScreen, DataFrame[] frames)
+    public AddonDataProviderBitBlt(IWowScreen wowScreen, DataFrame[] frames)
     {
         this.wowScreen = wowScreen;
         this.frames = frames;

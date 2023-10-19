@@ -14,7 +14,7 @@ public sealed partial class ScreenCapture : ScreenCaptureCleaner, IDisposable
 {
     private readonly ILogger<ScreenCapture> logger;
     private readonly DataConfig dataConfig;
-    private readonly WowScreen wowScreen;
+    private readonly IWowScreen wowScreen;
     private readonly CancellationToken token;
 
     private readonly ManualResetEventSlim manualReset;
@@ -24,7 +24,7 @@ public sealed partial class ScreenCapture : ScreenCaptureCleaner, IDisposable
     private readonly Graphics graphics;
 
     public ScreenCapture(ILogger<ScreenCapture> logger, DataConfig dataConfig,
-        CancellationTokenSource cts, WowScreen wowScreen)
+        CancellationTokenSource cts, IWowScreen wowScreen)
         : base(logger, dataConfig)
     {
         this.logger = logger;

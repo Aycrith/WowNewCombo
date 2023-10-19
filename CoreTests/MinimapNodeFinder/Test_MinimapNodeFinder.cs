@@ -22,7 +22,7 @@ internal sealed class Test_MinimapNodeFinder : IDisposable
     private readonly ILogger logger;
 
     private readonly WowProcess wowProcess;
-    private readonly WowScreen wowScreen;
+    private readonly IWowScreen wowScreen;
 
     private readonly MinimapNodeFinder minimapNodeFinder;
 
@@ -33,7 +33,7 @@ internal sealed class Test_MinimapNodeFinder : IDisposable
         this.logger = logger;
 
         wowProcess = new();
-        wowScreen = new(loggerFactory.CreateLogger<WowScreen>(), wowProcess);
+        wowScreen = new WowScreenGDI(loggerFactory.CreateLogger<WowScreenGDI>(), wowProcess);
 
         minimapNodeFinder = new(logger, wowScreen);
     }

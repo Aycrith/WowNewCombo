@@ -14,7 +14,7 @@ public class Test_Input : IDisposable
 
     private readonly ILogger logger;
     private readonly WowProcess wowProcess;
-    private readonly WowScreen wowScreen;
+    private readonly IWowScreen wowScreen;
     private readonly WowProcessInput wowProcessInput;
 
     public Test_Input(ILogger logger, ILoggerFactory loggerFactory)
@@ -23,7 +23,7 @@ public class Test_Input : IDisposable
         this.cts = new();
 
         wowProcess = new WowProcess();
-        wowScreen = new(loggerFactory.CreateLogger<WowScreen>(), wowProcess);
+        wowScreen = new WowScreenGDI(loggerFactory.CreateLogger<WowScreenGDI>(), wowProcess);
         wowProcessInput = new(loggerFactory.CreateLogger<WowProcessInput>(), cts, wowProcess);
     }
 

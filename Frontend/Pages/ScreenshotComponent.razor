@@ -1,4 +1,4 @@
-﻿@inject WowScreen wowScreen
+﻿@inject IWowScreen wowScreen
 
 @using System.Drawing
 @using System.Drawing.Drawing2D;
@@ -6,7 +6,7 @@
 <div class="card" @onclick="Toggle">
     @if (inited && wowScreen.EnablePostProcess)
     {
-        <img class="@(Stretch ? "img-filled" : "img-filled-half")" src="data:image/png;base64, @WowScreen.ToBase64(wowScreen.Bitmap, bitmap, graphics)" alt="Toggle preview!" />
+        <img class="@(Stretch ? "img-filled" : "img-filled-half")" src="data:image/png;base64, @WoWScreenUtil.ToBase64(wowScreen.Bitmap, bitmap, graphics)" alt="Toggle preview!" />
     }
     else
     {

@@ -31,7 +31,7 @@ public sealed partial class BotController : IBotController, IDisposable
     private readonly AddonReader addonReader;
     private readonly AddonBits bits;
     private readonly PlayerReader playerReader;
-    private readonly WowScreen wowScreen;
+    private readonly IWowScreen wowScreen;
 
     public bool IsBotActive => GoapAgent != null && GoapAgent.Active;
 
@@ -61,7 +61,7 @@ public sealed partial class BotController : IBotController, IDisposable
         ILogger<BotController> logger,
         CancellationTokenSource cts,
         IPPather pather, DataConfig dataConfig,
-        WowScreen wowScreen,
+        IWowScreen wowScreen,
         NpcNameFinder npcNameFinder,
         INpcResetEvent npcResetEvent,
         PlayerReader playerReader, AddonReader addonReader,

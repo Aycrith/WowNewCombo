@@ -2,7 +2,7 @@
 
 namespace CoreTests;
 
-public class MockMouseOverReader : IMouseOverReader
+internal sealed class MockMouseOverReader : IMouseOverReader
 {
     public int MouseOverLevel => throw new System.NotImplementedException();
 
