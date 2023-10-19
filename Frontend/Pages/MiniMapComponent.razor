@@ -1,7 +1,7 @@
 ﻿@implements IDisposable
 
 @inject IBotController botController
-@inject WowScreen wowScreen
+@inject IWowScreen wowScreen
 
 @inject MinimapNodeFinder minimapNodeFinder
 
@@ -25,7 +25,7 @@
     <div class="card-body" style="padding: 0 0 0 0; width:@(Size)px; height:@(Size)px">
         @if (inited && previewEnabled)
         {
-            <img style="width:@(Size)px; height:@(Size)px" src="data:image/png;base64, @WowScreen.ToBase64(wowScreen.MiniMapBitmap, bitmap, graphics)" alt="Red dot" />
+            <img style="width:@(Size)px; height:@(Size)px" src="data:image/png;base64, @WoWScreenUtil.ToBase64(wowScreen.MiniMapBitmap, bitmap, graphics)" alt="Red dot" />
         }
     </div>
 </div>

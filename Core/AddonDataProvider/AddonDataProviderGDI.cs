@@ -20,12 +20,12 @@ public sealed class AddonDataProviderGDI : IAddonDataProvider
     private readonly Bitmap bitmap;
     private readonly Graphics graphics;
 
-    private readonly WowScreen wowScreen;
+    private readonly IWowScreen wowScreen;
 
     private readonly bool windowedMode;
     private Point p;
 
-    public AddonDataProviderGDI(WowScreen wowScreen, DataFrame[] frames)
+    public AddonDataProviderGDI(IWowScreen wowScreen, DataFrame[] frames)
     {
         this.wowScreen = wowScreen;
         this.frames = frames;

@@ -21,7 +21,7 @@ public sealed class AddonDataProviderDXGI : IAddonDataProvider
     public int[] Data { get; private init; }
     public StringBuilder TextBuilder { get; } = new(3);
 
-    private readonly WowScreen wowScreen;
+    private readonly IWowScreen wowScreen;
     private readonly DataFrame[] frames;
 
     private static readonly FeatureLevel[] s_featureLevels =
@@ -30,8 +30,6 @@ public sealed class AddonDataProviderDXGI : IAddonDataProvider
         FeatureLevel.Level_12_0,
         FeatureLevel.Level_11_0,
     };
-
-    private readonly Vortice.RawRect bounds;
 
     private readonly IDXGIAdapter adapter;
     private readonly IDXGIOutput output;
@@ -47,7 +45,7 @@ public sealed class AddonDataProviderDXGI : IAddonDataProvider
     private readonly bool windowedMode;
     private Point p;
 
-    public AddonDataProviderDXGI(WowScreen wowScreen, DataFrame[] frames)
+    public AddonDataProviderDXGI(IWowScreen wowScreen, DataFrame[] frames)
     {
         this.wowScreen = wowScreen;
 
@@ -66,9 +64,7 @@ public sealed class AddonDataProviderDXGI : IAddonDataProvider
         bitmap = new(rect.Right, rect.Bottom, PixelFormat.Format32bppRgb);
 
         IntPtr hMonitor = MonitorFromWindow(wowScreen.ProcessHwnd, MONITOR_DEFAULT_TO_NULL);
-
         Result result;
-
         IDXGIFactory1 factory = DXGI.CreateDXGIFactory1<IDXGIFactory1>();
         result = factory.EnumAdapters(0, out adapter);
         if (result == Result.Fail)
@@ -86,12 +82,10 @@ public sealed class AddonDataProviderDXGI : IAddonDataProvider
         } while (result != Result.Fail);
 
         output1 = output.QueryInterface<IDXGIOutput1>();
-        result = D3D11.D3D11CreateDevice(adapter, DriverType.Unknown, DeviceCreationFlags.None, s_featureLevels, out device!);
+        result = D3D11.D3D11CreateDevice(adapter, DriverType.Unknown, DeviceCreationFlags.Singlethreaded, s_featureLevels, out device!);
 
         if (result == Result.Fail)
             throw new Exception($"device is null {result.Description}");
-
-        bounds = output1.Description.DesktopCoordinates;
 
         duplication = output1.DuplicateOutput(device);
 
@@ -120,13 +114,13 @@ public sealed class AddonDataProviderDXGI : IAddonDataProvider
     {
         duplication.ReleaseFrame();
         duplication.Dispose();
-
-        addonTexture.Dispose();
         device.Dispose();
+
         adapter.Dispose();
         output1.Dispose();
         output.Dispose();
 
+        addonTexture.Dispose();
         bitmap.Dispose();
     }
 
@@ -154,12 +148,13 @@ public sealed class AddonDataProviderDXGI : IAddonDataProvider
         ID3D11Texture2D texture = desktopResource.QueryInterface<ID3D11Texture2D>();
 
         Box box = new(p.X, p.Y, 0, p.X + rect.Right, p.Y + rect.Bottom, 1);
+
         device.ImmediateContext.CopySubresourceRegion(addonTexture, 0, 0, 0, 0, texture, 0, box);
 
         MappedSubresource dataBox = device.ImmediateContext.Map(addonTexture, 0, MapMode.Read, Vortice.Direct3D11.MapFlags.None);
         int sizeInBytesToCopy = (rect.Right - rect.Left) * AddonDataProviderConfig.BYTES_PER_PIXEL;
 
-        BitmapData bd = bitmap.LockBits(rect, ImageLockMode.ReadWrite, bitmap.PixelFormat);
+        BitmapData bd = bitmap.LockBits(rect, ImageLockMode.WriteOnly, bitmap.PixelFormat);
         for (int y = 0; y < rect.Bottom; y++)
         {
             MemoryHelpers.CopyMemory(bd.Scan0 + y * bd.Stride, dataBox.DataPointer + y * dataBox.RowPitch, sizeInBytesToCopy);

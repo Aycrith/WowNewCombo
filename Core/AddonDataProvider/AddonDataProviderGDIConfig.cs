@@ -15,7 +15,7 @@ public sealed class AddonDataProviderGDIConfig : IAddonDataProvider
 
     private readonly CancellationToken ct;
     private readonly ManualResetEventSlim manualReset = new(true);
-    private readonly WowScreen wowScreen;
+    private readonly IWowScreen wowScreen;
 
     private DataFrame[] frames = Array.Empty<DataFrame>();
 
@@ -25,7 +25,7 @@ public sealed class AddonDataProviderGDIConfig : IAddonDataProvider
 
     private bool disposing;
 
-    public AddonDataProviderGDIConfig(CancellationTokenSource cts, WowScreen wowScreen, DataFrame[] frames)
+    public AddonDataProviderGDIConfig(CancellationTokenSource cts, IWowScreen wowScreen, DataFrame[] frames)
     {
         ct = cts.Token;
         this.wowScreen = wowScreen;

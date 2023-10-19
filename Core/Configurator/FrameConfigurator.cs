@@ -35,7 +35,7 @@ public sealed class FrameConfigurator : IDisposable
 
     private readonly ILogger<FrameConfigurator> logger;
     private readonly WowProcess wowProcess;
-    private readonly WowScreen wowScreen;
+    private readonly IWowScreen wowScreen;
     private readonly WowProcessInput wowProcessInput;
     private readonly ExecGameCommand execGameCommand;
     private readonly AddonConfigurator addonConfigurator;
@@ -61,7 +61,7 @@ public sealed class FrameConfigurator : IDisposable
 
     public FrameConfigurator(ILogger<FrameConfigurator> logger, Wait wait,
         WowProcess wowProcess, IAddonDataProvider reader,
-        WowScreen wowScreen, WowProcessInput wowProcessInput,
+        IWowScreen wowScreen, WowProcessInput wowProcessInput,
         ExecGameCommand execGameCommand, AddonConfigurator addonConfigurator)
     {
         this.logger = logger;

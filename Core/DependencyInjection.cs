@@ -85,7 +85,6 @@ public static class DependencyInjection
 
         s.ForwardSingleton<NpcNameFinder>(sp);
         s.ForwardSingleton<IWowScreen>(sp);
-        s.ForwardSingleton<WowScreen>(sp);
 
         s.ForwardSingleton<IPPather>(sp);
         s.ForwardSingleton<ExecGameCommand>(sp);
@@ -202,8 +201,8 @@ public static class DependencyInjection
         s.AddSingleton<DataConfig>(x => DataConfig.Load(
             x.GetRequiredService<StartupClientVersion>().Path));
 
-        s.ForwardSingleton<WowScreen, IBitmapProvider>();
-        s.ForwardSingleton<WowScreen, IWowScreen>();
+        s.ForwardSingleton<IWowScreen, IBitmapProvider>(
+            x => GetWoWScreen(x.GetRequiredService<IServiceProvider>()));
 
         s.ForwardSingleton<WowProcessInput, IMouseInput>();
 
@@ -271,7 +270,7 @@ public static class DependencyInjection
         var logger = sp.GetRequiredService<ILogger<ScreenCapture>>();
         var dataConfig = sp.GetRequiredService<DataConfig>();
         var cts = sp.GetRequiredService<CancellationTokenSource>();
-        var wowScreen = sp.GetRequiredService<WowScreen>();
+        var wowScreen = sp.GetRequiredService<IWowScreen>();
 
         IScreenCapture value = spd.Value.Enabled
             ? new ScreenCapture(logger, dataConfig, cts, wowScreen)
@@ -286,7 +285,7 @@ public static class DependencyInjection
         IServiceProvider sp, ILogger log)
     {
         var scr = sp.GetRequiredService<IOptions<StartupConfigReader>>();
-        var wowScreen = sp.GetRequiredService<WowScreen>();
+        var wowScreen = sp.GetRequiredService<IWowScreen>();
         var frames = sp.GetRequiredService<DataFrame[]>();
 
         IAddonDataProvider value = scr.Value.ReaderType switch
@@ -367,4 +366,24 @@ public static class DependencyInjection
         return localApi;
     }
 
+    private static IWowScreen GetWoWScreen(IServiceProvider sp)
+    {
+        var scr = sp.GetRequiredService<IOptions<StartupConfigReader>>();
+        var wowProcess = sp.GetRequiredService<WowProcess>();
+        var factory = sp.GetRequiredService<ILoggerFactory>();
+
+        IWowScreen value = scr.Value.ReaderType switch
+        {
+            AddonDataProviderType.GDIConfig or
+            AddonDataProviderType.GDI or
+            AddonDataProviderType.GDIBlit or
+            AddonDataProviderType.DXGI =>
+                new WowScreenGDI(factory.CreateLogger<WowScreenGDI>(), wowProcess),
+            //AddonDataProviderType.DXGI =>
+            //    new WowScreenDXGI(factory.CreateLogger<WowScreenDXGI>(), wowProcess),
+            _ => throw new NotImplementedException(),
+        };
+
+        return value;
+    }
 }

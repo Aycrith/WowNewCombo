@@ -31,14 +31,14 @@ public sealed class MinimapNodeFinder
     private const bool DEBUG_MASK = false;
 
     private readonly ILogger logger;
-    private readonly WowScreen wowScreen;
+    private readonly IWowScreen wowScreen;
     public event EventHandler<MinimapNodeEventArgs>? NodeEvent;
 
     private const int minScore = 2;
     private const byte maxBlue = 34;
     private const byte minRedGreen = 176;
 
-    public MinimapNodeFinder(ILogger logger, WowScreen wowScreen)
+    public MinimapNodeFinder(ILogger logger, IWowScreen wowScreen)
     {
         this.logger = logger;
         this.wowScreen = wowScreen;
