@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Threading;
-using System.Numerics;
-using SharedLib.Extensions;
 using Game;
 using Core.GOAP;
 using SharedLib;
@@ -12,20 +10,20 @@ public sealed class StopMoving
 {
     private readonly WowProcessInput input;
     private readonly PlayerReader playerReader;
+    private readonly AddonBits bits;
     private readonly CancellationToken ct;
 
-    private const float MinDist = 0.001f;
-
-    private Vector3 mapPos;
     private float direction;
 
     public StopMoving(WowProcessInput input,
         PlayerReader playerReader,
-        CancellationTokenSource<GoapAgent> cts)
+        CancellationTokenSource<GoapAgent> cts,
+        AddonBits bits)
     {
         this.input = input;
         this.playerReader = playerReader;
         ct = cts.Token;
+        this.bits = bits;
     }
 
     public void Stop()
@@ -36,35 +34,21 @@ public sealed class StopMoving
 
     public void StopForward()
     {
-        if (mapPos != playerReader.MapPos)
+        if (!bits.Moving())
+            return;
+
+        if (input.IsKeyDown(input.ForwardKey))
         {
-            bool pressedAny = false;
-
-            if (!input.IsKeyDown(input.BackwardKey) &&
-                !input.IsKeyDown(input.ForwardKey) &&
-                mapPos.MapDistanceXYTo(playerReader.MapPos) >= MinDist)
-            {
-                input.PressFixed(input.ForwardKey, Random.Shared.Next(2, 5), ct);
-                pressedAny = true;
-            }
-
-            if (input.IsKeyDown(input.ForwardKey))
-            {
-                input.SetKeyState(input.ForwardKey, false, true);
-                pressedAny = true;
-            }
-
-            if (input.IsKeyDown(input.BackwardKey))
-            {
-                input.SetKeyState(input.BackwardKey, false, true);
-                pressedAny = true;
-            }
-
-            if (pressedAny)
-                ct.WaitHandle.WaitOne(Random.Shared.Next(25, 30));
+            input.SetKeyState(input.ForwardKey, false, true);
         }
-
-        mapPos = playerReader.MapPos;
+        else if (input.IsKeyDown(input.BackwardKey))
+        {
+            input.SetKeyState(input.BackwardKey, false, true);
+        }
+        else // moving by interact key
+        {
+            input.PressFixed(input.ForwardKey, Random.Shared.Next(2, 5), ct);
+        }
     }
 
     public void StopTurn()
@@ -78,8 +62,7 @@ public sealed class StopMoving
                 input.SetKeyState(input.TurnLeftKey, false, true);
                 pressedAny = true;
             }
-
-            if (input.IsKeyDown(input.TurnRightKey))
+            else if (input.IsKeyDown(input.TurnRightKey))
             {
                 input.SetKeyState(input.TurnRightKey, false, true);
                 pressedAny = true;
