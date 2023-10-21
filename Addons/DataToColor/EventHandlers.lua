@@ -125,6 +125,9 @@ function DataToColor:RegisterEvents()
     DataToColor:RegisterEvent('AUTOFOLLOW_BEGIN', 'AutoFollowBegin')
     DataToColor:RegisterEvent('AUTOFOLLOW_END', 'AutoFollowEnd')
 
+    DataToColor:RegisterEvent('PLAYER_STARTED_MOVING', 'PlayerStartedMoving')
+    DataToColor:RegisterEvent('PLAYER_STOPPED_MOVING', 'PlayerStoppedMoving')
+
     DataToColor:RegisterEvent('CHAT_MSG_WHISPER', 'OnMessageWhisper')
     DataToColor:RegisterEvent('CHAT_MSG_SAY', 'OnMessageSay')
     DataToColor:RegisterEvent('CHAT_MSG_YELL', 'OnMessageYell')
@@ -605,6 +608,14 @@ end
 
 function DataToColor:AutoFollowEnd()
     DataToColor.autoFollow = false
+end
+
+function DataToColor:PlayerStartedMoving()
+    DataToColor.moving = true
+end
+
+function DataToColor:PlayerStoppedMoving()
+    DataToColor.moving = false
 end
 
 function DataToColor:OnMessageWhisper(event, msg, author)
