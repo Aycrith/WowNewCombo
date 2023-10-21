@@ -153,6 +153,7 @@ DataToColor.CastNum = 0
 DataToColor.targetChanged = true
 
 DataToColor.autoFollow = false
+DataToColor.moving = false
 
 DataToColor.playerGUID = UnitGUID(DataToColor.C.unitPlayer)
 DataToColor.petGUID = UnitGUID(DataToColor.C.unitPet)

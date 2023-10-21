@@ -72,7 +72,8 @@ public sealed class AddonBits : IReader, IGameMenuWindowShown
     public bool AutoFollow() => v2[Mask._19];
     public bool GameMenuWindowShown() => v2[Mask._20];
     public bool Flying() => v2[Mask._21];
-
+    public bool Moving() => v2[Mask._22];
+    public bool NotMoving() => !Moving();
 
     // Combined
 

@@ -163,7 +163,8 @@ function DataToColor:Bits2()
         (UnitPlayerControlled(DataToColor.C.unitTarget) and 2 or 0) ^ 18 +
         ((DataToColor.autoFollow) and 2 or 0) ^ 19 +
         ((GameMenuFrame:IsShown() and 2 or 0)) ^ 20 +
-        ((IsFlying() and 2 or 0)) ^ 21
+        ((IsFlying() and 2 or 0)) ^ 21 +
+        ((DataToColor.moving and 2 or 0)) ^ 22
 end
 
 function DataToColor:CustomTrigger(t)

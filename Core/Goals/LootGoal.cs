@@ -194,9 +194,9 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
         if (!playerReader.MinRangeZero())
         {
-            elapsedMs =
-                wait.AfterEquals(MAX_TIME_TO_REACH_MELEE, 2, playerReader._MapPosNoZ,
-                input.PressApproachOnCooldown);
+            elapsedMs = wait.Until(MAX_TIME_TO_REACH_MELEE,
+                bits.NotMoving, input.PressApproachOnCooldown);
+
             LogReachedCorpse(logger, elapsedMs);
 
             return playerReader.MinRangeZero();
@@ -313,9 +313,9 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
         if (!playerReader.MinRangeZero())
         {
-            float elapsedMs =
-                wait.AfterEquals(MAX_TIME_TO_REACH_MELEE, 2, playerReader._MapPosNoZ,
-                input.PressApproachOnCooldown);
+            float elapsedMs = wait.Until(MAX_TIME_TO_REACH_MELEE,
+                bits.NotMoving, input.PressApproachOnCooldown);
+
             LogReachedCorpse(logger, elapsedMs);
 
             return playerReader.MinRangeZero();
