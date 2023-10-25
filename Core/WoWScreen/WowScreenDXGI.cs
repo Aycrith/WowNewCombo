@@ -206,8 +206,8 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
 
     public void Dispose()
     {
-        duplication.ReleaseFrame();
-        duplication.Dispose();
+        duplication?.ReleaseFrame();
+        duplication?.Dispose();
 
         minimapTexture.Dispose();
         addonTexture.Dispose();
@@ -263,7 +263,8 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
         //bitmap.Save($"bitmap.bmp", ImageFormat.Bmp);
         //System.Threading.Thread.Sleep(1000);
 
-        IAddonDataProvider.InternalUpdate(bdAddon, frames, Data);
+        if (frames.Length > 0)
+            IAddonDataProvider.InternalUpdate(bdAddon, frames, Data);
 
         addonBitmap.UnlockBits(bdAddon);
 
@@ -349,11 +350,16 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
 
     public Bitmap GetBitmap(int width, int height)
     {
+        Update();
+
         Bitmap bitmap = new(width, height);
         Rectangle sourceRect = new(0, 0, width, height);
 
         using Graphics graphics = Graphics.FromImage(bitmap);
-        graphics.DrawImage(Bitmap, 0, 0, sourceRect, GraphicsUnit.Pixel);
+        lock (Lock)
+        {
+            graphics.DrawImage(Bitmap, 0, 0, sourceRect, GraphicsUnit.Pixel);
+        }
 
         return bitmap;
     }
