@@ -20,8 +20,8 @@ namespace CoreTests;
 
 internal sealed class Test_NpcNameFinder : IDisposable
 {
-    private const bool saveImage = true;
-    private const bool showOverlay = false;
+    private const bool saveImage = false;
+    private const bool showOverlay = true;
 
     private const bool LogEachUpdate = true;
     private const bool LogEachDetail = false;
@@ -33,6 +33,7 @@ internal sealed class Test_NpcNameFinder : IDisposable
     private readonly ILogger logger;
     private readonly NpcNameFinder npcNameFinder;
     private readonly NpcNameTargeting npcNameTargeting;
+    private readonly NpcNameTargetingLocations locations;
 
     private readonly WowProcess wowProcess;
     private readonly IWowScreen wowScreen;
@@ -48,35 +49,45 @@ internal sealed class Test_NpcNameFinder : IDisposable
 
     private readonly NpcNameOverlay? npcNameOverlay;
 
+    private DateTime lastNpcUpdate;
+    private double updateDuration;
+
     public Test_NpcNameFinder(ILogger logger, ILoggerFactory loggerFactory, NpcNames types)
     {
         this.logger = logger;
 
+        // its expected to have at least 2 DataFrame 
+        DataFrame[] mockFrames = new DataFrame[2]
+        {
+            new DataFrame(0, 0, 0),
+            new DataFrame(1, 0, 0),
+        };
+
         wowProcess = new();
-        wowScreen = new WowScreenDXGI(loggerFactory.CreateLogger<WowScreenDXGI>(), wowProcess);
+        wowScreen = new WowScreenDXGI(loggerFactory.CreateLogger<WowScreenDXGI>(), wowProcess, mockFrames);
         //wowScreen = new WowScreenGDI(loggerFactory.CreateLogger<WowScreenGDI>(), wowProcess);
 
         INpcResetEvent npcResetEvent = new NpcResetEvent();
         npcNameFinder = new(logger, wowScreen, npcResetEvent);
+
+        locations = new(npcNameFinder);
 
         MockMouseOverReader mouseOverReader = new();
         MockGameMenuWindowShown gmws = new();
         MockWowProcessInput wpi = new();
 
         npcNameTargeting = new(loggerFactory.CreateLogger<NpcNameTargeting>(),
-            new(), wowScreen, npcNameFinder, wpi,
+            new(), wowScreen, npcNameFinder, locations, wpi,
             mouseOverReader, new NoBlacklist(), null!, gmws);
 
         npcNameFinder.ChangeNpcType(types);
 
-        if (saveImage)
-        {
-            paintBitmap = wowScreen.Bitmap;
-            paint = Graphics.FromImage(paintBitmap);
-        }
+        paintBitmap = wowScreen.Bitmap;
+        paint = Graphics.FromImage(paintBitmap);
 
         if (showOverlay)
-            npcNameOverlay = new(wowProcess.Process.MainWindowHandle, npcNameFinder, npcNameTargeting, debugTargeting, debugSkinning, debugTargetVsAdd);
+            npcNameOverlay = new(wowProcess.Process.MainWindowHandle, npcNameFinder,
+                locations, debugTargeting, debugSkinning, debugTargetVsAdd);
     }
 
     ~Test_NpcNameFinder()
@@ -97,27 +108,34 @@ internal sealed class Test_NpcNameFinder : IDisposable
         wowScreen.Update();
     }
 
-    public void Execute()
+    public (double capture, double update) Execute(int NpcUpdateIntervalMs)
     {
-        long captureTime = GetTimestamp();
+        long captureStart = GetTimestamp();
         UpdateScreen();
+        double captureDuration = GetElapsedTime(captureStart).TotalMilliseconds;
 
         if (LogEachUpdate)
         {
             stringBuilder.Length = 0;
             stringBuilder.Append("Capture: ");
-            stringBuilder.Append($"{GetElapsedTime(captureTime).TotalMilliseconds:F6}");
+            stringBuilder.Append($"{captureDuration:F5}");
             stringBuilder.Append("ms");
         }
 
-        long updateTime = GetTimestamp();
-        npcNameFinder.Update();
+        if (DateTime.UtcNow > lastNpcUpdate.AddMilliseconds(NpcUpdateIntervalMs))
+        {
+            long updateStart = GetTimestamp();
+            npcNameFinder.Update();
+            updateDuration = GetElapsedTime(updateStart).TotalMilliseconds;
+
+            lastNpcUpdate = DateTime.UtcNow;
+        }
 
         if (LogEachUpdate)
         {
             stringBuilder.Append(" | ");
             stringBuilder.Append($"Update: ");
-            stringBuilder.Append($"{GetElapsedTime(updateTime).TotalMilliseconds:F6}");
+            stringBuilder.Append($"{updateDuration:F5}");
             stringBuilder.Append("ms");
 
             logger.LogInformation(stringBuilder.ToString());
@@ -138,16 +156,15 @@ internal sealed class Test_NpcNameFinder : IDisposable
             int i = 0;
             foreach (NpcPosition n in npcNameFinder.Npcs)
             {
-                stringBuilder.Append($"{i,2}");
-                stringBuilder.Append(" -> rect=");
-                stringBuilder.Append(n.Rect);
-                stringBuilder.Append(" ClickPoint=");
-                stringBuilder.AppendLine($"{{{n.ClickPoint.X,4},{n.ClickPoint.Y,4}}}");
+                stringBuilder.Append($"{i,2} ");
+                stringBuilder.AppendLine(n.ToString());
                 i++;
             }
 
             logger.LogInformation(stringBuilder.ToString());
         }
+
+        return (captureDuration, updateDuration);
     }
 
     public bool Execute_FindTargetBy(ReadOnlySpan<CursorType> cursorType)
@@ -168,7 +185,7 @@ internal sealed class Test_NpcNameFinder : IDisposable
 
             if (debugTargeting)
             {
-                foreach (var l in npcNameTargeting.locTargeting)
+                foreach (var l in locations.Targeting)
                 {
                     paint.DrawEllipse(whitePen, l.X + npc.ClickPoint.X, l.Y + npc.ClickPoint.Y, 5, 5);
                 }
@@ -176,18 +193,18 @@ internal sealed class Test_NpcNameFinder : IDisposable
 
             if (debugSkinning)
             {
-                int c = npcNameTargeting.locFindBy.Length;
+                int c = locations.FindBy.Length;
                 const int e = 3;
-                Point[] attemptPoints = new Point[c + (c * e)];
+                Point[] attempts = new Point[c + (c * e)];
                 for (int j = 0; j < c; j += e)
                 {
-                    Point p = npcNameTargeting.locFindBy[j];
-                    attemptPoints[j] = p;
-                    attemptPoints[j + c] = new Point(npc.Rect.Width / 2, p.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight);
-                    attemptPoints[j + c + 1] = new Point(-npc.Rect.Width / 2, p.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight);
+                    Point p = locations.FindBy[j];
+                    attempts[j] = p;
+                    attempts[j + c] = new Point(npc.Rect.Width / 2, p.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight);
+                    attempts[j + c + 1] = new Point(-npc.Rect.Width / 2, p.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight);
                 }
 
-                foreach (var l in attemptPoints)
+                foreach (var l in attempts)
                 {
                     paint.DrawEllipse(whitePen, l.X + npc.ClickPoint.X, l.Y + npc.ClickPoint.Y, 5, 5);
                 }

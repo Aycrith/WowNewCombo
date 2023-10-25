@@ -13,7 +13,6 @@ public interface IWowScreen : IColorReader, IRectProvider, IBitmapProvider, IMin
 
     bool EnablePostProcess { get; set; }
     void PostProcess();
-    void AddDrawAction(Action<Graphics> g);
 
     event Action OnScreenChanged;
 

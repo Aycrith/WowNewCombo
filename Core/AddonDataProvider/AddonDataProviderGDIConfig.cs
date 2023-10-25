@@ -43,7 +43,7 @@ public sealed class AddonDataProviderGDIConfig : IAddonDataProvider
         bitmap?.Dispose();
     }
 
-    public void Update()
+    public void UpdateData()
     {
         manualReset.Wait();
         ct.WaitHandle.WaitOne(25);

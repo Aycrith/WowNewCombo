@@ -62,7 +62,7 @@ public sealed class AddonDataProviderBitBlt : IAddonDataProvider
         bitmap.Dispose();
     }
 
-    public void Update()
+    public void UpdateData()
     {
         if (windowedMode)
         {

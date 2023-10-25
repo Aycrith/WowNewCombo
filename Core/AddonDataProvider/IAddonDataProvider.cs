@@ -3,28 +3,33 @@ using System;
 
 using static Core.AddonDataProviderConfig;
 using System.Text;
+using System.Runtime.CompilerServices;
 
 namespace Core;
 
 public interface IAddonDataProvider : IDisposable
 {
-    void Update();
+    void UpdateData();
     void InitFrames(DataFrame[] frames) { }
 
     int[] Data { get; }
     StringBuilder TextBuilder { get; }
 
+    [SkipLocalsInit]
     static unsafe void InternalUpdate(BitmapData bd,
         ReadOnlySpan<DataFrame> frames, Span<int> output)
     {
-        ReadOnlySpan<byte> first = new(
-            (byte*)bd.Scan0 + (frames[0].Y * bd.Stride) +
-            (frames[0].X * BYTES_PER_PIXEL),
+        int stride = bd.Stride;
+
+        ReadOnlySpan<byte> bitmapSpan =
+            new(bd.Scan0.ToPointer(), bd.Height * stride);
+
+        ReadOnlySpan<byte> first =
+            bitmapSpan.Slice(frames[0].Y * stride + frames[0].X * BYTES_PER_PIXEL,
             BYTES_PER_PIXEL);
 
-        ReadOnlySpan<byte> last = new(
-            (byte*)bd.Scan0 + (frames[^1].Y * bd.Stride) +
-            (frames[^1].X * BYTES_PER_PIXEL),
+        ReadOnlySpan<byte> last =
+            bitmapSpan.Slice(frames[^1].Y * stride + frames[^1].X * BYTES_PER_PIXEL,
             BYTES_PER_PIXEL);
 
         if (!first.SequenceEqual(fColor) ||
@@ -37,10 +42,13 @@ public interface IAddonDataProvider : IDisposable
         {
             DataFrame frame = frames[i];
 
-            byte* y = (byte*)bd.Scan0 + (frame.Y * bd.Stride);
-            int x = frame.X * BYTES_PER_PIXEL;
+            int yOffset = frame.Y * stride;
+            int xOffset = frame.X * BYTES_PER_PIXEL;
 
-            output[frame.Index] = y[x] | (y[x + 1] << 8) | (y[x + 2] << 16);
+            ReadOnlySpan<byte> pixel =
+                bitmapSpan.Slice(yOffset + xOffset, BYTES_PER_PIXEL);
+
+            output[frame.Index] = pixel[0] | (pixel[1] << 8) | (pixel[2] << 16);
         }
     }
 

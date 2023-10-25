@@ -349,7 +349,9 @@ public sealed partial class NpcNameFinder : IDisposable
         resetEvent.Reset();
 
         ReadOnlySpan<LineSegment> lineSegments =
-            PopulateLines(bitmapProvider.Bitmap, Area, colorMatcher, Area, ScaleWidth(MinHeight), ScaleWidth(WidthDiff));
+            PopulateLines(bitmapProvider, Area, colorMatcher, Area,
+            ScaleWidth(MinHeight), ScaleWidth(WidthDiff));
+
         Npcs = DetermineNpcs(lineSegments);
 
         TargetCount = Npcs.Count(TargetsCount);
@@ -375,7 +377,7 @@ public sealed partial class NpcNameFinder : IDisposable
 
     private ArraySegment<NpcPosition> DetermineNpcs(ReadOnlySpan<LineSegment> data)
     {
-        int c = 0;
+        int count = 0;
 
         var pool = ArrayPool<NpcPosition>.Shared;
         NpcPosition[] npcs = pool.Rent(data.Length);
@@ -392,29 +394,29 @@ public sealed partial class NpcNameFinder : IDisposable
             if (inGroup[i])
                 continue;
 
-            ref readonly LineSegment npcLine = ref data[i];
+            ref readonly LineSegment current = ref data[i];
 
             int gc = 0;
-            group[gc++] = npcLine;
-            int lastY = npcLine.Y;
+            group[gc++] = current;
+            int lastY = current.Y;
 
             for (int j = i + 1; j < data.Length; j++)
             {
                 if (gc + 1 >= MAX_GROUP) break;
 
-                ref readonly LineSegment laterNpcLine = ref data[j];
-                if (laterNpcLine.Y > npcLine.Y + offset1) break;
-                if (laterNpcLine.Y > lastY + offset2) break;
+                ref readonly LineSegment next = ref data[j];
+                if (next.Y > current.Y + offset1) break;
+                if (next.Y > lastY + offset2) break;
 
-                if (laterNpcLine.XStart > npcLine.XCenter ||
-                    laterNpcLine.XEnd < npcLine.XCenter ||
-                    laterNpcLine.Y <= lastY)
+                if (next.XStart > current.XCenter ||
+                    next.XEnd < current.XCenter ||
+                    next.Y <= lastY)
                     continue;
 
-                lastY = laterNpcLine.Y;
+                lastY = next.Y;
 
                 inGroup[j] = true;
-                group[gc++] = laterNpcLine;
+                group[gc++] = next;
             }
 
             if (gc <= 0)
@@ -437,19 +439,19 @@ public sealed partial class NpcNameFinder : IDisposable
                     rect.Height = n.Y - rect.Y;
             }
             int yOffset = YOffset(Area, rect);
-            npcs[c++] = new NpcPosition(
+            npcs[count++] = new NpcPosition(
                 rect.Location, rect.Max(), yOffset, heightMul);
         }
 
         int lineHeight = 2 * (int)ScaleHeight(MinHeight);
 
-        for (int i = 0; i < c - 1; i++)
+        for (int i = 0; i < count - 1; i++)
         {
             ref readonly NpcPosition ii = ref npcs[i];
             if (ii.Equals(NpcPosition.Empty))
                 continue;
 
-            for (int j = i + 1; j < c; j++)
+            for (int j = i + 1; j < count; j++)
             {
                 ref readonly NpcPosition jj = ref npcs[j];
                 if (jj.Equals(NpcPosition.Empty))
@@ -471,32 +473,34 @@ public sealed partial class NpcNameFinder : IDisposable
             }
         }
 
-        int length = MoveEmptyToEnd(npcs, NpcPosition.Empty);
+        int length = MoveEmptyToEnd(npcs, count, NpcPosition.Empty);
         Array.Sort(npcs, 0, length, npcPosComparer);
 
         pool.Return(npcs);
 
-        return new ArraySegment<NpcPosition>(npcs, 0, length);
+        return new ArraySegment<NpcPosition>(npcs, 0, Math.Max(0, length - 1));
     }
 
-    private static int MoveEmptyToEnd<T>(Span<T> span, in T empty)
+    [SkipLocalsInit]
+    private static int MoveEmptyToEnd<T>(Span<T> span, int count, in T empty)
     {
-        int emptyIndex = -span.Length;
-        for (int i = 0; i < span.Length; i++)
+        int left = 0;
+        int right = count - 1;
+
+        while (left <= right)
         {
-            if (EqualityComparer<T>.Default.Equals(span[i], empty))
+            if (EqualityComparer<T>.Default.Equals(span[left], empty))
             {
-                if (emptyIndex == -span.Length)
-                    emptyIndex = i;
+                Swap(span, left, right);
+                right--;
             }
-            else if (emptyIndex != -span.Length)
+            else
             {
-                Swap(span, emptyIndex, i);
-                emptyIndex++;
+                left++;
             }
         }
 
-        return emptyIndex;
+        return left;
 
         static void Swap(Span<T> span, int i, int j)
         {
@@ -525,8 +529,10 @@ public sealed partial class NpcNameFinder : IDisposable
     }
 
     [SkipLocalsInit]
-    private ReadOnlySpan<LineSegment> PopulateLines(Bitmap bitmap, Rectangle rect,
-        Func<byte, byte, byte, bool> colorMatcher, Rectangle area, float minLength, float lengthDiff)
+    private ReadOnlySpan<LineSegment> PopulateLines(
+        IBitmapProvider provider, Rectangle rect,
+        Func<byte, byte, byte, bool> colorMatcher,
+        Rectangle area, float minLength, float lengthDiff)
     {
         const int RESOLUTION = 64;
         int width = (area.Right - area.Left) / RESOLUTION;
@@ -540,85 +546,71 @@ public sealed partial class NpcNameFinder : IDisposable
         int end = area.Right;
         float minEndLength = minLength - lengthDiff;
 
-        BitmapData bitmapData =
-            bitmap.LockBits(new Rectangle(Point.Empty, rect.Size),
-                ImageLockMode.ReadOnly, pixelFormat);
-
-        [SkipLocalsInit]
-        unsafe void body(int y)
+        lock (provider.Lock)
         {
-            int xStart = int.MinValue;
-            int xEnd = int.MinValue;
+            Bitmap bitmap = provider.Bitmap;
+            BitmapData bitmapData =
+                bitmap.LockBits(new Rectangle(Point.Empty, rect.Size),
+            ImageLockMode.ReadOnly, pixelFormat);
 
-            byte* currentLine = (byte*)bitmapData.Scan0 + (y * bitmapData.Stride);
-            for (int x = area.Left; x < end; x++)
+            int bdHeight = bitmapData.Height;
+            int bdStride = bitmapData.Stride;
+
+            [SkipLocalsInit]
+            unsafe void body(int y)
             {
-                int xi = x * bytesPerPixel;
+                int xStart = -1;
+                int xEnd = -1;
 
-                if (!colorMatcher(
-                    currentLine[xi + 2],
-                    currentLine[xi + 1],
-                    currentLine[xi]))
-                    continue;
+                ReadOnlySpan<byte> bitmapSpan =
+                    new(bitmapData.Scan0.ToPointer(), bdHeight * bdStride);
 
-                if (xStart > int.MinValue && (x - xEnd) < minLength)
+                ReadOnlySpan<byte> currentLine =
+                    bitmapSpan.Slice(y * bdStride, bdStride);
+
+                for (int x = area.Left; x < end; x++)
                 {
+                    int xi = x * bytesPerPixel;
+
+                    if (!colorMatcher(
+                        currentLine[xi + 2],    // r
+                        currentLine[xi + 1],    // g
+                        currentLine[xi]))       // b 
+                        continue;
+
+                    if (xStart > -1 && (x - xEnd) < minLength)
+                    {
+                        xEnd = x;
+                    }
+                    else
+                    {
+                        if (xStart > -1 && xEnd - xStart > minEndLength)
+                        {
+                            if (i + 1 >= size)
+                                return;
+
+                            segments[Interlocked.Add(ref i, 1)] =
+                                new LineSegment(xStart, xEnd, y);
+                        }
+
+                        xStart = x;
+                    }
                     xEnd = x;
                 }
-                else
+
+                if (xStart > -1 && xEnd - xStart > minEndLength)
                 {
-                    if (xStart > int.MinValue && xEnd - xStart > minEndLength)
-                    {
-                        if (i + 1 >= size)
-                            return;
-
-                        segments[Interlocked.Add(ref i, 1)] = new LineSegment(xStart, xEnd, y);
-                    }
-
-                    xStart = x;
+                    segments[Interlocked.Add(ref i, 1)] =
+                        new LineSegment(xStart, xEnd, y);
                 }
-                xEnd = x;
             }
+            _ = Parallel.For(area.Top, area.Height, body);
 
-            if (xStart > int.MinValue && xEnd - xStart > minEndLength)
-            {
-                segments[Interlocked.Add(ref i, 1)] = new LineSegment(xStart, xEnd, y);
-            }
+            bitmap.UnlockBits(bitmapData);
         }
-        _ = Parallel.For(area.Top, area.Height, body);
-
-        bitmap.UnlockBits(bitmapData);
 
         pooler.Return(segments);
         return new(segments, 0, i);
-    }
-
-    public void ShowNames(Graphics gr)
-    {
-        /*
-        if (Npcs.Any())
-        {
-            // target area
-            gr.DrawLine(whitePen, new Point(Npcs[0].screenMid - Npcs[0].screenTargetBuffer, Area.Top), new Point(Npcs[0].screenMid - Npcs[0].screenTargetBuffer, Area.Bottom));
-            gr.DrawLine(whitePen, new Point(Npcs[0].screenMid + Npcs[0].screenTargetBuffer, Area.Top), new Point(Npcs[0].screenMid + Npcs[0].screenTargetBuffer, Area.Bottom));
-
-            // adds area
-            gr.DrawLine(greyPen, new Point(Npcs[0].screenMid - Npcs[0].screenAddBuffer, Area.Top), new Point(Npcs[0].screenMid - Npcs[0].screenAddBuffer, Area.Bottom));
-            gr.DrawLine(greyPen, new Point(Npcs[0].screenMid + Npcs[0].screenAddBuffer, Area.Top), new Point(Npcs[0].screenMid + Npcs[0].screenAddBuffer, Area.Bottom));
-        }
-        */
-
-        // TODO: Overflow error. ''\_(o.o)_/''
-        /*
-        System.OverflowException: Overflow error.
-        at System.Drawing.Graphics.CheckErrorStatus(Int32 status)
-        at System.Drawing.Graphics.DrawRectangle(Pen pen, Int32 x, Int32 y, Int32 width, Int32 height)
-        */
-        for (int i = 0; i < Npcs.Count; i++)
-        {
-            NpcPosition n = Npcs[i];
-            gr.DrawRectangle(IsAdd(n) ? greyPen : whitePen, n.Rect);
-        }
     }
 
     public Point ToScreenCoordinates()

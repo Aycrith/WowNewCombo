@@ -249,14 +249,18 @@ In order to run `HeadlessServer` please look at the `HeadlessServer\run.bat`.
 
 | cli | Description | Default Value | Possible Values |
 | ---- | ---- | ---- | ---- |
-| `-m` or `-mode` | Pathfinder type | `RemoteV3` | `Local` or `RemoteV1` or `RemoteV3` |
-| `-p` or `-pid` | World of Warcraft process id | `-1` | open up task manager to find PID |
-| `-r` or `-reader` | Addon data screen reader backend | `GDI` | `GDI` works from Win7.<br>`GDIBlit` allows background mode with a bit higher CPU usage.<br>`DXGI` work from Win8 |
+| `-m`<br>`-mode` | Pathfinder type | `RemoteV3` | `Local` or `RemoteV1` or `RemoteV3` |
+| `-p`<br>`-pid` | World of Warcraft process id | `-1` | open up task manager to find PID |
+| `-r`<br>`-reader` | Addon data screen reader backend | `GDI` | `GDI` works from Win7.<br>`GDIBlit` allows background mode with a bit higher CPU usage.<br>`DXGI` work from Win8 |
 | `hostv1` | Navigation Remote V1 host | `localhost` | - |
 | `portv1` | Navigation Remote V1 port | `5001` | - |
 | `hostv3` | Navigation Remote V3 host | `127.0.0.1` | - |
 | `portv3` | Navigation Remote V3 port | `47111` | - |
-| `-d` or `-diag` | Diagnostics, when set, takes screen captures under `Json\cap\*.json` | - | - |
+| `-d`<br>`-diag` | Diagnostics, when set, takes screen captures under `Json\cap\*.json` | - | - |
+| `-o`<br>`-overlay` | Show NpcNameFinder Overlay | `false` | `true` or `false` |
+| `-t`<br>`-otargeting` | While overlay enabled, show Targeting points | `false` | `true` or `false` |
+| `-s`<br>`-oskinning` | While overlay enabled, show Skinning points | `false` | `true` or `false` |
+| `-v`<br>`-otargetvsadd` | While overlay enabled, show Target vs Add points | `false` | `true` or `false` |
 
 e.g. run from Powershell without any optional parameter
 ```ps

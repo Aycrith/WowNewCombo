@@ -5,6 +5,7 @@ using System.Threading;
 using Core.Addon;
 using Core.Database;
 using Core.Extensions;
+using Core.Goals;
 using Core.Session;
 
 using Game;
@@ -84,6 +85,7 @@ public static class DependencyInjection
         s.ForwardSingleton<IMouseOverReader>(sp);
 
         s.ForwardSingleton<NpcNameFinder>(sp);
+        s.ForwardSingleton<NpcNameTargetingLocations>(sp);
         s.ForwardSingleton<IWowScreen>(sp);
 
         s.ForwardSingleton<IPPather>(sp);
@@ -201,7 +203,7 @@ public static class DependencyInjection
         s.AddSingleton<DataConfig>(x => DataConfig.Load(
             x.GetRequiredService<StartupClientVersion>().Path));
 
-        s.ForwardSingleton<IWowScreen, IBitmapProvider>(
+        s.ForwardSingleton<IWowScreen, IBitmapProvider, IMinimapBitmapProvider>(
             x => GetWoWScreen(x.GetRequiredService<IServiceProvider>()));
 
         s.ForwardSingleton<WowProcessInput, IMouseInput>();
@@ -213,6 +215,8 @@ public static class DependencyInjection
 
         s.AddSingleton<INpcResetEvent, NpcResetEvent>();
         s.AddSingleton<NpcNameFinder>();
+
+        s.AddSingleton<NpcNameTargetingLocations>();
 
         return s;
     }
@@ -296,7 +300,7 @@ public static class DependencyInjection
             AddonDataProviderType.GDIBlit =>
                 new AddonDataProviderBitBlt(wowScreen, frames),
             AddonDataProviderType.DXGI =>
-                new AddonDataProviderDXGI(wowScreen, frames),
+                (IAddonDataProvider)wowScreen,
             _ => throw new NotImplementedException(),
         };
 
@@ -371,16 +375,16 @@ public static class DependencyInjection
         var scr = sp.GetRequiredService<IOptions<StartupConfigReader>>();
         var wowProcess = sp.GetRequiredService<WowProcess>();
         var factory = sp.GetRequiredService<ILoggerFactory>();
+        var frames = sp.GetRequiredService<DataFrame[]>();
 
         IWowScreen value = scr.Value.ReaderType switch
         {
             AddonDataProviderType.GDIConfig or
             AddonDataProviderType.GDI or
-            AddonDataProviderType.GDIBlit or
-            AddonDataProviderType.DXGI =>
+            AddonDataProviderType.GDIBlit =>
                 new WowScreenGDI(factory.CreateLogger<WowScreenGDI>(), wowProcess),
-            //AddonDataProviderType.DXGI =>
-            //    new WowScreenDXGI(factory.CreateLogger<WowScreenDXGI>(), wowProcess),
+            AddonDataProviderType.DXGI =>
+                new WowScreenDXGI(factory.CreateLogger<WowScreenDXGI>(), wowProcess, frames),
             _ => throw new NotImplementedException(),
         };
 

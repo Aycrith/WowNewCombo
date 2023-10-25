@@ -1,6 +1,7 @@
 ﻿@implements IDisposable
 
 @inject IBotController botController
+@inject IMinimapBitmapProvider provider
 @inject IWowScreen wowScreen
 
 @inject MinimapNodeFinder minimapNodeFinder
@@ -25,7 +26,15 @@
     <div class="card-body" style="padding: 0 0 0 0; width:@(Size)px; height:@(Size)px">
         @if (inited && previewEnabled)
         {
-            <img style="width:@(Size)px; height:@(Size)px" src="data:image/png;base64, @WoWScreenUtil.ToBase64(wowScreen.MiniMapBitmap, bitmap, graphics)" alt="Red dot" />
+            if (DateTime.UtcNow > lastUpdate.AddMilliseconds(UpdateIntervalMs))
+            {
+                image = WoWScreenUtil.ToBase64(provider, bitmap, graphics);
+                if (image != "")
+                    lastUpdate = DateTime.UtcNow;
+            }
+
+            <img style="width:@(Size)px; height:@(Size)px" src="data:image/png;base64, @image" alt="Red dot" />
+
         }
     </div>
 </div>
@@ -39,6 +48,8 @@
 
     [Parameter]
     public EventCallback<int> OnNodeFound { get; set; }
+
+    private string image = "";
 
     private bool lastNodeFound = false;
     private int lastNodeCount = 0;
@@ -63,6 +74,17 @@
     private Graphics? graphics;
     private Bitmap? bitmap;
 
+    private const int UpdateIntervalMs = 500;
+    private DateTime lastUpdate;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            wowScreen.OnScreenChanged += this.ImageChanged;
+        }
+    }
+
     protected override void OnInitialized()
     {
         if (OnNodeFound.HasDelegate)
@@ -73,6 +95,9 @@
 
     public void Dispose()
     {
+        wowScreen.OnScreenChanged -= this.ImageChanged;
+
+
         if (OnNodeFound.HasDelegate)
         {
             minimapNodeFinder.NodeEvent -= NodeFound;
@@ -82,20 +107,28 @@
         bitmap?.Dispose();
     }
 
+    private async void ImageChanged()
+    {
+        if (inited && previewEnabled)
+        {
+            await base.InvokeAsync(StateHasChanged);
+        }
+    }
+
     private void InitBitmap()
     {
         int width;
         int height;
 
         int size = (int)(Size * DownScale);
-        if (wowScreen.MiniMapBitmap.Width > wowScreen.MiniMapBitmap.Height)
+        if (provider.MiniMapBitmap.Width > provider.MiniMapBitmap.Height)
         {
             width = size;
-            height = Convert.ToInt32(wowScreen.MiniMapBitmap.Height * size / (float)wowScreen.MiniMapBitmap.Width);
+            height = Convert.ToInt32(provider.MiniMapBitmap.Height * size / (float)provider.MiniMapBitmap.Width);
         }
         else
         {
-            width = Convert.ToInt32(wowScreen.MiniMapBitmap.Width * size / (float)wowScreen.MiniMapBitmap.Height);
+            width = Convert.ToInt32(provider.MiniMapBitmap.Width * size / (float)provider.MiniMapBitmap.Height);
             height = size;
         }
 

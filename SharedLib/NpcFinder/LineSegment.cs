@@ -2,16 +2,16 @@
 
 public readonly record struct LineSegment
 {
-    public readonly int X;
+    private readonly int x;
     public readonly int Y;
 
-    public readonly int XStart => X & 0xFFFF;
-    public readonly int XEnd => X >> 16;
+    public readonly int XStart => x & 0xFFFF;
+    public readonly int XEnd => x >> 16;
     public readonly int XCenter => XStart + ((XEnd - XStart) / 2);
 
     public LineSegment(int xStart, int xEnd, int y)
     {
-        X = (xEnd << 16) | (xStart & 0xFFFF);
+        x = (xEnd << 16) | (xStart & 0xFFFF);
         Y = y;
     }
 }

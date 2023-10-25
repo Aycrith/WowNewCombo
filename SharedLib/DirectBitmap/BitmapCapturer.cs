@@ -10,6 +10,8 @@ public sealed class BitmapCapturer : IBitmapProvider, IColorReader, IDisposable
 
     public Bitmap Bitmap { get; private set; }
 
+    public object Lock { get; init; }
+
     private readonly Graphics graphics;
 
     public BitmapCapturer(Rectangle rect)
@@ -18,6 +20,7 @@ public sealed class BitmapCapturer : IBitmapProvider, IColorReader, IDisposable
         Bitmap = new(rect.Width, rect.Height, PixelFormat.Format32bppPArgb);
         graphics = Graphics.FromImage(Bitmap);
 
+        Lock = new();
     }
 
     public void Capture()

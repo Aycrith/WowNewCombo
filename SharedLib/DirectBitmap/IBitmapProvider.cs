@@ -7,4 +7,6 @@ public interface IBitmapProvider
     Bitmap Bitmap { get; }
 
     Rectangle Rect { get; }
+
+    object Lock { get; }
 }

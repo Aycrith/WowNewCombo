@@ -19,6 +19,9 @@ public static class DependencyInjection
 
         services.AddSingleton<IOptions<StartupConfigDiagnostics>>(x =>
             StartupConfigDiagnosticsFactory(x.GetRequiredService<RunOptions>()));
+
+        services.AddSingleton<IOptions<StartupConfigNpcOverlay>>(x =>
+            StartupConfigNpcOverlayFactory(x.GetRequiredService<RunOptions>()));
     }
 
     private static IOptions<StartupConfigPathing> StartupConfigPathingFactory(RunOptions options)
@@ -38,4 +41,14 @@ public static class DependencyInjection
     private static IOptions<StartupConfigDiagnostics> StartupConfigDiagnosticsFactory(RunOptions options)
         => Options.Create<StartupConfigDiagnostics>(
             new() { Enabled = options.Diagnostics });
+
+    private static IOptions<StartupConfigNpcOverlay> StartupConfigNpcOverlayFactory(RunOptions options)
+    => Options.Create<StartupConfigNpcOverlay>(
+        new()
+        {
+            Enabled = options.OverlayEnabled,
+            ShowTargeting = options.OverlayTargeting,
+            ShowSkinning = options.OverlaySkinning,
+            ShowTargetVsAdd = options.OverlayTargetVsAdd,
+        });
 }
