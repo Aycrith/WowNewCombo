@@ -21,5 +21,8 @@ public static class DependencyInjection
 
         services.Configure<StartupConfigReader>
             (configuration.GetSection(StartupConfigReader.Position));
+
+        services.Configure<StartupConfigNpcOverlay>
+            (configuration.GetSection(StartupConfigNpcOverlay.Position));
     }
 }

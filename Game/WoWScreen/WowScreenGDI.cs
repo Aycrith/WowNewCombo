@@ -1,14 +1,11 @@
 ﻿using Microsoft.Extensions.Logging;
 
-using SharedLib;
-
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
-using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 using WinAPI;
 
@@ -16,14 +13,12 @@ using static WinAPI.NativeMethods;
 
 namespace Game;
 
-public sealed class WowScreenGDI : IWowScreen, IBitmapProvider, IDisposable
+public sealed class WowScreenGDI : IWowScreen
 {
     private readonly ILogger<WowScreenGDI> logger;
     private readonly WowProcess wowProcess;
 
     public event Action OnScreenChanged;
-
-    private readonly List<Action<Graphics>> drawActions = new();
 
     // TODO: make it work for higher resolution ex. 4k
     public const int MinimapSize = 200;
@@ -32,9 +27,11 @@ public sealed class WowScreenGDI : IWowScreen, IBitmapProvider, IDisposable
 
     public bool EnablePostProcess { get; set; }
     public Bitmap Bitmap { get; private set; }
+    public object Lock { get; init; }
 
     public Bitmap MiniMapBitmap { get; private set; }
     public Rectangle MiniMapRect { get; private set; }
+    public object MiniMapLock { get; init; }
 
     public IntPtr ProcessHwnd => wowProcess.Process.MainWindowHandle;
 
@@ -58,9 +55,11 @@ public sealed class WowScreenGDI : IWowScreen, IBitmapProvider, IDisposable
 
         Bitmap = new Bitmap(rect.Width, rect.Height, PixelFormat.Format32bppPArgb);
         graphics = Graphics.FromImage(Bitmap);
+        Lock = new();
 
         MiniMapBitmap = new Bitmap(MinimapSize, MinimapSize, PixelFormat.Format32bppPArgb);
         graphicsMinimap = Graphics.FromImage(MiniMapBitmap);
+        MiniMapLock = new();
 
         blackPen = new SolidBrush(Color.Black);
 
@@ -77,25 +76,8 @@ public sealed class WowScreenGDI : IWowScreen, IBitmapProvider, IDisposable
         graphics.CopyFromScreen(rect.Location, Point.Empty, Bitmap.Size);
     }
 
-    public void AddDrawAction(Action<Graphics> a)
-    {
-        drawActions.Add(a);
-    }
-
     public void PostProcess()
     {
-        using (Graphics gr = Graphics.FromImage(Bitmap))
-        {
-            gr.FillRectangle(blackPen,
-                new Rectangle(new Point(Bitmap.Width / 15, Bitmap.Height / 40),
-                new Size(Bitmap.Width / 15, Bitmap.Height / 40)));
-
-            for (int i = 0; i < drawActions.Count; i++)
-            {
-                drawActions[i](gr);
-            }
-        }
-
         OnScreenChanged?.Invoke();
     }
 

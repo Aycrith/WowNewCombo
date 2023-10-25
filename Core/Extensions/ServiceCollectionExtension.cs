@@ -43,4 +43,21 @@ public static class ServiceCollectionExtension
         static TService GetRequired(IServiceProvider x)
             => x.GetRequiredService<TService>();
     }
+
+    public static IServiceCollection ForwardSingleton<TService,
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TInterface1,
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TInterface2>(
+    this IServiceCollection services,
+    Func<IServiceProvider, TService> implementationFactory)
+    where TService : class, TInterface1
+    {
+        services.AddSingleton(typeof(TService), implementationFactory);
+        services.AddSingleton(typeof(TInterface1), GetRequired);
+        services.AddSingleton(typeof(TInterface2), GetRequired);
+
+        return services;
+
+        static TService GetRequired(IServiceProvider x)
+            => x.GetRequiredService<TService>();
+    }
 }

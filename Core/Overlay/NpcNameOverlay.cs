@@ -11,19 +11,19 @@ using SharedLib.NpcFinder;
 using DPoint = System.Drawing.Point;
 using DRectangle = System.Drawing.Rectangle;
 
-namespace CoreTests;
+namespace Core;
 
-internal sealed class NpcNameOverlay : IDisposable
+public sealed class NpcNameOverlay : IDisposable
 {
     private readonly GraphicsWindow window;
     private readonly Graphics graphics;
 
-    private Font font;
-    private SolidBrush brushWhite;
-    private SolidBrush brushGrey;
+    private Font? font;
+    private SolidBrush? brushWhite;
+    private SolidBrush? brushGrey;
 
     private readonly NpcNameFinder npcNameFinder;
-    private readonly NpcNameTargeting npcNameTargeting;
+    private readonly NpcNameTargetingLocations locations;
 
     private readonly bool debugTargeting;
     private readonly bool debugSkinning;
@@ -34,10 +34,11 @@ internal sealed class NpcNameOverlay : IDisposable
     private const int FontSize = 10;
 
     public NpcNameOverlay(IntPtr handle, NpcNameFinder npcNameFinder,
-        NpcNameTargeting npcNameTargeting, bool debugTargeting, bool debugSkinning, bool debugTargetVsAdd)
+        NpcNameTargetingLocations locations,
+        bool debugTargeting, bool debugSkinning, bool debugTargetVsAdd)
     {
         this.npcNameFinder = npcNameFinder;
-        this.npcNameTargeting = npcNameTargeting;
+        this.locations = locations;
         this.debugTargeting = debugTargeting;
         this.debugSkinning = debugSkinning;
         this.debugTargetVsAdd = debugTargetVsAdd;
@@ -65,12 +66,13 @@ internal sealed class NpcNameOverlay : IDisposable
         window.Create();
     }
 
+
+    #region IDisposable Support
+
     ~NpcNameOverlay()
     {
         Dispose(false);
     }
-
-    #region IDisposable Support
 
     private bool disposed;
 
@@ -90,7 +92,7 @@ internal sealed class NpcNameOverlay : IDisposable
 
     #endregion
 
-    private void SetupGraphics(object sender, SetupGraphicsEventArgs e)
+    private void SetupGraphics(object? sender, SetupGraphicsEventArgs e)
     {
         Graphics graphics = e.Graphics;
 
@@ -100,14 +102,14 @@ internal sealed class NpcNameOverlay : IDisposable
         brushGrey = graphics.CreateSolidBrush(128, 128, 128, 255);
     }
 
-    private void DestroyGraphics(object sender, DestroyGraphicsEventArgs e)
+    private void DestroyGraphics(object? sender, DestroyGraphicsEventArgs e)
     {
-        brushWhite.Dispose();
-        brushGrey.Dispose();
-        font.Dispose();
+        brushWhite?.Dispose();
+        brushGrey?.Dispose();
+        font?.Dispose();
     }
 
-    private void DrawGraphics(object sender, DrawGraphicsEventArgs e)
+    private void DrawGraphics(object? sender, DrawGraphicsEventArgs e)
     {
         Graphics g = e.Graphics;
 
@@ -116,11 +118,13 @@ internal sealed class NpcNameOverlay : IDisposable
         if (npcNameFinder.NpcCount <= 0)
             return;
 
-        int c = npcNameTargeting.locFindBy.Length;
+        int c = locations.FindBy.Length;
         const int ex = 3;
-        Span<DPoint> attemptPoints = stackalloc DPoint[c + (c * ex)];
+        Span<DPoint> attempts = stackalloc DPoint[c + (c * ex)];
 
         DRectangle area = npcNameFinder.Area;
+        float w = npcNameFinder.ScaleToRefWidth;
+        float h = npcNameFinder.ScaleToRefHeight;
 
         g.DrawRectangle(brushWhite, area.Left, area.Top, area.Right, area.Bottom, 1);
 
@@ -149,30 +153,24 @@ internal sealed class NpcNameOverlay : IDisposable
 
             g.DrawText(font, FontSize, brushWhite, rect.Left - NumberLeftPadding - padding, rect.Top - padding, i.ToString());
 
-            if (debugTargeting)
+            for (int j = 0; debugTargeting && j < locations.Targeting.Length; j++)
             {
-                for (int k = 0; k < npcNameTargeting.locTargeting.Length; k++)
-                {
-                    DPoint p = npcNameTargeting.locTargeting[k];
-                    g.DrawCircle(brushWhite, p.X + npc.ClickPoint.X, p.Y + npc.ClickPoint.Y, 5, 1);
-                }
+                DPoint p = locations.Targeting[j];
+                g.DrawCircle(brushWhite, p.X + npc.ClickPoint.X, p.Y + npc.ClickPoint.Y, 5, 1);
             }
 
-            if (debugSkinning)
+            for (int j = 0; debugSkinning && j < c; j += ex)
             {
-                for (int j = 0; j < c; j += ex)
-                {
-                    DPoint p = npcNameTargeting.locFindBy[j];
-                    attemptPoints[j] = p;
-                    attemptPoints[j + c] = new DPoint(rect.Width / 2, p.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight);
-                    attemptPoints[j + c + 1] = new DPoint(-rect.Width / 2, p.Y).Scale(npcNameFinder.ScaleToRefWidth, npcNameFinder.ScaleToRefHeight);
-                }
+                DPoint p = locations.FindBy[j];
+                attempts[j] = p;
+                attempts[j + c] = new DPoint(rect.Width / 2, p.Y).Scale(w, h);
+                attempts[j + c + 1] = new DPoint(-rect.Width / 2, p.Y).Scale(w, h);
+            }
 
-                for (int k = 0; k < attemptPoints.Length; k++)
-                {
-                    DPoint p = attemptPoints[k];
-                    g.DrawCircle(brushWhite, p.X + npc.ClickPoint.X, p.Y + npc.ClickPoint.Y, 5, 1);
-                }
+            for (int j = 0; debugSkinning && j < attempts.Length; j++)
+            {
+                DPoint p = attempts[j];
+                g.DrawCircle(brushWhite, p.X + npc.ClickPoint.X, p.Y + npc.ClickPoint.Y, 5, 1);
             }
         }
     }

@@ -54,7 +54,7 @@ public sealed class AddonDataProviderGDI : IAddonDataProvider
         bitmap.Dispose();
     }
 
-    public void Update()
+    public void UpdateData()
     {
         if (windowedMode)
         {

@@ -65,4 +65,28 @@ public sealed class RunOptions
         Default = false,
         HelpText = $"Capture Screenshot for Diagnostics")]
     public bool Diagnostics { get; set; }
+
+    [Option('o', "overlay",
+        Required = false,
+        Default = false,
+        HelpText = $"Show NpcNameFinder Overlay")]
+    public bool OverlayEnabled { get; set; }
+
+    [Option('t', "otargeting",
+        Required = false,
+        Default = false,
+        HelpText = $"Show NpcNameFinder Overlay for Targeting")]
+    public bool OverlayTargeting { get; set; }
+
+    [Option('s', "oskinning",
+        Required = false,
+        Default = false,
+        HelpText = $"Show NpcNameFinder Overlay for Skinning")]
+    public bool OverlaySkinning { get; set; }
+
+    [Option('v', "otargetvsadd",
+        Required = false,
+        Default = false,
+        HelpText = $"Show NpcNameFinder Overlay for Target vs Add")]
+    public bool OverlayTargetVsAdd { get; set; }
 }

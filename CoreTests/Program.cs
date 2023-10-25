@@ -4,6 +4,7 @@ using SharedLib.NpcFinder;
 using System.Diagnostics;
 using System.Threading;
 using System.Linq;
+using System.Collections.Generic;
 using Core;
 using System;
 using Microsoft.Extensions.Logging;
@@ -47,6 +48,7 @@ sealed class Program
     {
         //NpcNames types = NpcNames.Enemy;
         //NpcNames types = NpcNames.Corpse;
+        //NpcNames types = NpcNames.Neutral;
         NpcNames types = NpcNames.Enemy | NpcNames.Neutral;
         //NpcNames types = NpcNames.Enemy | NpcNames.Neutral | NpcNames.NamePlate;
         //NpcNames types = NpcNames.Friendly | NpcNames.Neutral;
@@ -58,6 +60,9 @@ sealed class Program
         long timestamp = Stopwatch.GetTimestamp();
         double[] sample = new double[count];
 
+        double[] captures = new double[count];
+        double[] updates = new double[count];
+
         Log.Logger.Information($"running {count} samples...");
 
         while (i < count)
@@ -65,17 +70,34 @@ sealed class Program
             if (LogOverallTimes)
                 timestamp = Stopwatch.GetTimestamp();
 
-            test.Execute();
+            (captures[i], updates[i]) = test.Execute(delay);
 
             if (LogOverallTimes)
                 sample[i] = Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds;
 
             i++;
-            Thread.Sleep(delay);
+            //Thread.Sleep(delay);
+            Thread.Sleep(4);
         }
 
         if (LogOverallTimes)
-            Log.Logger.Information($"sample: {count} | avg: {sample.Average(),0:0.00} | min: {sample.Min(),0:0.00} | max: {sample.Max(),0:0.00} | total: {sample.Sum()}");
+        {
+            Log.Logger.Information($"overall | sample: {count:D4} | avg: {sample.Average():F2} | min: {sample.Min():F2} | max: {sample.Max():000.000} | total: {sample.Sum():F2}");
+
+            double meanCapture = captures.Average();
+            double stdCapture = Math.Sqrt(captures.Select(t => Math.Pow(t - meanCapture, 2)).Average());
+            double thresholdCapture = meanCapture + stdCapture;
+            List<double> fCaptures = captures.Where(v => v <= thresholdCapture).ToList();
+
+            Log.Logger.Information($"capture | sample: {fCaptures.Count:D4} | avg: {fCaptures.Average():F2} | min: {fCaptures.Min():F2} | max: {fCaptures.Max():000.000} | total: {fCaptures.Sum():F2} | std: {stdCapture:000.00} | thres: {thresholdCapture:F4}ms");
+
+            double meanUpdate = updates.Average();
+            double stdUpdate = Math.Sqrt(updates.Select(t => Math.Pow(t - meanCapture, 2)).Average());
+            double thresholdUpdate = meanUpdate + stdUpdate;
+            List<double> fUpdates = updates.Where(v => v <= thresholdUpdate).ToList();
+
+            Log.Logger.Information($"updates | sample: {fUpdates.Count:D4} | avg: {fUpdates.Average():F2} | min: {fUpdates.Min():F2} | max: {fUpdates.Max():000.000} | total: {fUpdates.Sum():F2} | std: {stdUpdate:000.00} | thres: {thresholdUpdate:F4}ms");
+        }
     }
 
     private static void Test_Input()
@@ -164,7 +186,7 @@ sealed class Program
         }
 
         if (LogOverallTimes)
-            Log.Logger.Information($"sample: {count} | avg: {sample.Average(),0:0.00} | min: {sample.Min(),0:0.00} | max: {sample.Max(),0:0.00} | total: {sample.Sum()}");
+            Log.Logger.Information($"sample: {count} | avg: {sample.Average():F2} | min: {sample.Min():F2} | max: {sample.Max():F2} | total: {sample.Sum()}");
     }
 
     private static void Test_FindTargetByCursor()
@@ -184,7 +206,7 @@ sealed class Program
 
         while (i < count)
         {
-            test.Execute();
+            test.Execute(delay);
             if (test.Execute_FindTargetBy(cursorType))
             {
                 break;

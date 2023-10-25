@@ -26,7 +26,7 @@ public sealed class ConfigAddonReader : IAddonReader
 
     public void Update()
     {
-        reader.Update();
+        reader.UpdateData();
         autoResetEvent.Set();
     }
 

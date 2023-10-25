@@ -8,6 +8,7 @@ using Game;
 
 using Microsoft.Extensions.Logging;
 
+using SharedLib;
 using SharedLib.Extensions;
 
 #pragma warning disable 162
@@ -31,17 +32,21 @@ public sealed class MinimapNodeFinder
     private const bool DEBUG_MASK = false;
 
     private readonly ILogger logger;
-    private readonly IWowScreen wowScreen;
+    private readonly IMinimapBitmapProvider provider;
     public event EventHandler<MinimapNodeEventArgs>? NodeEvent;
 
     private const int minScore = 2;
     private const byte maxBlue = 34;
     private const byte minRedGreen = 176;
 
-    public MinimapNodeFinder(ILogger logger, IWowScreen wowScreen)
+    private readonly int maxY;
+
+    public MinimapNodeFinder(ILogger logger, IMinimapBitmapProvider provider)
     {
         this.logger = logger;
-        this.wowScreen = wowScreen;
+        this.provider = provider;
+
+        maxY = provider.MiniMapBitmap.Height - 6;
     }
 
     public void Update()
@@ -57,14 +62,11 @@ public sealed class MinimapNodeFinder
         var pooler = ArrayPool<PixelPoint>.Shared;
         PixelPoint[] points = pooler.Rent(SIZE);
 
-        Bitmap bitmap = wowScreen.MiniMapBitmap;
-
         // TODO: adjust these values based on resolution
         // The reference resolution is 1920x1080
         const int minX = 6;
         const int maxX = 170;
         const int minY = 36;
-        int maxY = bitmap.Height - 6;
 
         Rectangle rect = new(minX, minY, maxX - minX, maxY - minY);
         Point center = rect.Centre();
@@ -72,48 +74,59 @@ public sealed class MinimapNodeFinder
 
         int count = 0;
 
-        unsafe
+        lock (provider.MiniMapLock)
         {
-            BitmapData data = bitmap.LockBits(new Rectangle(Point.Empty, bitmap.Size),
-                DEBUG_MASK ? ImageLockMode.ReadWrite : ImageLockMode.ReadOnly, bitmap.PixelFormat);
-            const int bytesPerPixel = 4; //Bitmap.GetPixelFormatSize(bitmap.PixelFormat) / 8;
+            Bitmap bitmap = provider.MiniMapBitmap;
 
-            Parallel.For(minY, maxY, y =>
+            unsafe
             {
-                byte* currentLine = (byte*)data.Scan0 + (y * data.Stride);
-                for (int x = minX; x < maxX; x++)
+                BitmapData bd = bitmap.LockBits(new Rectangle(Point.Empty, bitmap.Size),
+                    DEBUG_MASK ? ImageLockMode.ReadWrite : ImageLockMode.ReadOnly, bitmap.PixelFormat);
+                const int bytesPerPixel = 4; //Bitmap.GetPixelFormatSize(bitmap.PixelFormat) / 8;
+
+                Parallel.For(minY, maxY, y =>
                 {
-                    if (!IsValidSquareLocation(x, y, center, radius))
+                    ReadOnlySpan<byte> bitmapSpan = new(bd.Scan0.ToPointer(), bd.Height * bd.Stride);
+                    ReadOnlySpan<byte> currentLine = bitmapSpan.Slice(y * bd.Stride, bd.Stride);
+
+                    for (int x = minX; x < maxX; x++)
                     {
-                        if (DEBUG_MASK)
+                        if (!IsValidSquareLocation(x, y, center, radius))
                         {
-                            int xii = x * bytesPerPixel;
-                            currentLine[xii + 2] = 0;
-                            currentLine[xii + 1] = 0;
-                            currentLine[xii + 0] = 0;
+                            /*
+                            if (DEBUG_MASK)
+                            {
+                                int xii = x * bytesPerPixel;
+                                currentLine[xii + 2] = 0;
+                                currentLine[xii + 1] = 0;
+                                currentLine[xii + 0] = 0;
+                            }
+                            */
+                            continue;
                         }
-                        continue;
-                    }
 
-                    int xi = x * bytesPerPixel;
-                    if (IsMatch(currentLine[xi + 2], currentLine[xi + 1], currentLine[xi]))
-                    {
-                        if (count >= SIZE)
-                            return;
-
-                        points[count++] = new PixelPoint(x, y);
-
-                        if (DEBUG_MASK)
+                        int xi = x * bytesPerPixel;
+                        if (IsMatch(currentLine[xi + 2], currentLine[xi + 1], currentLine[xi]))
                         {
-                            currentLine[xi + 2] = 255;
-                            currentLine[xi + 1] = 0;
-                            currentLine[xi + 0] = 0;
+                            if (count >= SIZE)
+                                return;
+
+                            points[count++] = new PixelPoint(x, y);
+
+                            /*
+                            if (DEBUG_MASK)
+                            {
+                                currentLine[xi + 2] = 255;
+                                currentLine[xi + 1] = 0;
+                                currentLine[xi + 0] = 0;
+                            }
+                            */
                         }
                     }
-                }
-            });
+                });
 
-            bitmap.UnlockBits(data);
+                bitmap.UnlockBits(bd);
+            }
         }
 
         if (count >= SIZE)

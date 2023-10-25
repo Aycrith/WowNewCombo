@@ -53,7 +53,7 @@ public sealed class AddonReader : IAddonReader
     public void Update()
     {
         IAddonDataProvider reader = this.reader;
-        reader.Update();
+        reader.UpdateData();
 
         if (!GlobalTime.UpdatedNoEvent(reader))
             return;

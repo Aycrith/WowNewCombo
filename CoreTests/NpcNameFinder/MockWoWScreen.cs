@@ -1,6 +1,10 @@
 ﻿using Game;
+
+using SharedLib;
+
 using System;
 using System.Drawing;
+using System.Threading;
 
 namespace CoreTests;
 
@@ -20,14 +24,13 @@ internal sealed class MockWoWScreen : IWowScreen
 
     public bool EnablePostProcess { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
+    public object Lock => throw new NotImplementedException();
+
+    public object MiniMapLock => throw new NotImplementedException();
+
 #pragma warning disable CS0067 // The event 'MockWoWScreen.OnScreenChanged' is never used
     public event Action OnScreenChanged;
 #pragma warning restore CS0067 // The event 'MockWoWScreen.OnScreenChanged' is never used
-
-    public void AddDrawAction(Action<Graphics> g)
-    {
-        throw new NotImplementedException();
-    }
 
     public Bitmap GetBitmap(int width, int height)
     {

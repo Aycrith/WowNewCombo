@@ -17,6 +17,7 @@ public sealed partial class NpcNameTargeting : IDisposable
     private readonly CancellationToken ct;
     private readonly IWowScreen wowScreen;
     private readonly NpcNameFinder npcNameFinder;
+    private readonly NpcNameTargetingLocations locations;
     private readonly IMouseInput input;
     private readonly IMouseOverReader mouseOverReader;
     private readonly Wait wait;
@@ -27,19 +28,19 @@ public sealed partial class NpcNameTargeting : IDisposable
 
     private readonly IGameMenuWindowShown gmws;
 
-    private readonly Pen whitePen;
-
     private int index;
     private int npcCount = -1;
 
     public int NpcCount => npcNameFinder.NpcCount;
 
-    public Point[] locTargeting { get; }
-    public Point[] locFindBy { get; }
+    private Point[] Targeting => locations.Targeting;
+    private Point[] locFindBy => locations.FindBy;
 
     public NpcNameTargeting(ILogger<NpcNameTargeting> logger,
         CancellationTokenSource cts, IWowScreen wowScreen,
-        NpcNameFinder npcNameFinder, IMouseInput input,
+        NpcNameFinder npcNameFinder,
+        NpcNameTargetingLocations locations,
+        IMouseInput input,
         IMouseOverReader mouseOverReader, IBlacklist blacklist, Wait wait,
         IGameMenuWindowShown gmws)
     {
@@ -47,6 +48,7 @@ public sealed partial class NpcNameTargeting : IDisposable
         ct = cts.Token;
         this.wowScreen = wowScreen;
         this.npcNameFinder = npcNameFinder;
+        this.locations = locations;
         this.input = input;
         this.mouseOverReader = mouseOverReader;
         this.mouseOverBlacklist = blacklist;
@@ -55,44 +57,6 @@ public sealed partial class NpcNameTargeting : IDisposable
         this.gmws = gmws;
 
         classifier = new();
-
-        whitePen = new Pen(Color.White, 3);
-
-        float refWidth = npcNameFinder.ScaleToRefWidth;
-        float refHeight = npcNameFinder.ScaleToRefHeight;
-
-        locTargeting = new Point[]
-        {
-            new Point(0, -2),
-            new Point(-13, 8).Scale(refWidth, refHeight),
-            new Point(13, 8).Scale(refWidth, refHeight),
-        };
-
-        locFindBy = new Point[]
-        {
-            new Point(0, 0),
-            new Point(0, 15).Scale(refWidth, refHeight),
-
-            new Point(0, 50).Scale(refWidth, refHeight),
-            new Point(-15, 50).Scale(refWidth, refHeight),
-            new Point(15, 50).Scale(refWidth, refHeight),
-
-            new Point(0, 100).Scale(refWidth, refHeight),
-            new Point(-15, 100).Scale(refWidth, refHeight),
-            new Point(15, 100).Scale(refWidth, refHeight),
-
-            new Point(0, 150).Scale(refWidth, refHeight),
-            new Point(-15, 150).Scale(refWidth, refHeight),
-            new Point(15, 150).Scale(refWidth, refHeight),
-
-            new Point(0,   200).Scale(refWidth, refHeight),
-            new Point(-15, 200).Scale(refWidth, refHeight),
-            new Point(-15, 200).Scale(refWidth, refHeight),
-        };
-
-        // also only visible while using BlazorServer
-        //wowScreen.AddDrawAction(npcNameFinder.ShowNames);
-        //wowScreen.AddDrawAction(ShowClickPositions);
     }
 
     public void Dispose()
@@ -136,7 +100,7 @@ public sealed partial class NpcNameTargeting : IDisposable
         ReadOnlySpan<NpcPosition> span = npcNameFinder.Npcs;
         ref readonly NpcPosition npc = ref span[index];
 
-        Point p = locTargeting[Random.Shared.Next(locTargeting.Length)];
+        Point p = Targeting[Random.Shared.Next(Targeting.Length)];
         p.Offset(npc.ClickPoint);
         p.Offset(npcNameFinder.ToScreenCoordinates());
 
@@ -169,8 +133,8 @@ public sealed partial class NpcNameTargeting : IDisposable
         const int e = 3;
         Span<Point> attempts = stackalloc Point[c + (c * e)];
 
-        float refWidth = npcNameFinder.ScaleToRefWidth;
-        float refHeight = npcNameFinder.ScaleToRefHeight;
+        float w = npcNameFinder.ScaleToRefWidth;
+        float h = npcNameFinder.ScaleToRefHeight;
 
         ReadOnlySpan<NpcPosition> span = npcNameFinder.Npcs;
         for (int i = 0;
@@ -184,8 +148,8 @@ public sealed partial class NpcNameTargeting : IDisposable
             {
                 Point p = locFindBy[j];
                 attempts[j] = p;
-                attempts[j + c] = new Point(npc.Rect.Width / 2, p.Y).Scale(refWidth, refHeight);
-                attempts[j + c + 1] = new Point(-npc.Rect.Width / 2, p.Y).Scale(refWidth, refHeight);
+                attempts[j + c] = new Point(npc.Rect.Width / 2, p.Y).Scale(w, h);
+                attempts[j + c + 1] = new Point(-npc.Rect.Width / 2, p.Y).Scale(w, h);
             }
 
             for (int k = 0;
@@ -212,20 +176,6 @@ public sealed partial class NpcNameTargeting : IDisposable
             }
         }
         return false;
-    }
-
-    public void ShowClickPositions(Graphics gr)
-    {
-        for (int i = 0; i < npcNameFinder.Npcs.Count; i++)
-        {
-            NpcPosition npc = npcNameFinder.Npcs[i];
-            for (int j = 0; j < locFindBy.Length; j++)
-            {
-                Point p = locFindBy[j];
-                p.Offset(npc.ClickPoint);
-                gr.DrawEllipse(whitePen, p.X, p.Y, 5, 5);
-            }
-        }
     }
 
     #region Logging

@@ -15,6 +15,7 @@ using PPather.Data;
 using Microsoft.Extensions.DependencyInjection;
 using System.Numerics;
 using SharedLib;
+using Microsoft.Extensions.Options;
 
 namespace Core;
 
@@ -32,6 +33,8 @@ public sealed partial class BotController : IBotController, IDisposable
     private readonly AddonBits bits;
     private readonly PlayerReader playerReader;
     private readonly IWowScreen wowScreen;
+
+    private readonly NpcNameOverlay? npcNameOverlay;
 
     public bool IsBotActive => GoapAgent != null && GoapAgent.Active;
 
@@ -63,12 +66,14 @@ public sealed partial class BotController : IBotController, IDisposable
         IPPather pather, DataConfig dataConfig,
         IWowScreen wowScreen,
         NpcNameFinder npcNameFinder,
+        NpcNameTargetingLocations locations,
         INpcResetEvent npcResetEvent,
         PlayerReader playerReader, AddonReader addonReader,
         AddonBits bits, Wait wait,
         MinimapNodeFinder minimapNodeFinder,
         IScreenCapture screenCapture,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        IOptions<StartupConfigNpcOverlay> overlayOptions)
     {
         this.serviceProvider = serviceProvider;
 
@@ -88,7 +93,16 @@ public sealed partial class BotController : IBotController, IDisposable
         this.npcNameFinder = npcNameFinder;
         this.npcResetEvent = npcResetEvent;
 
-        addonThread = new(AddonThread);
+
+        if (overlayOptions.Value.Enabled)
+            npcNameOverlay = new(wowScreen.ProcessHwnd, npcNameFinder, locations,
+                overlayOptions.Value.ShowTargeting,
+                overlayOptions.Value.ShowSkinning,
+                overlayOptions.Value.ShowTargetVsAdd);
+
+        bool isDXGI = wowScreen is WowScreenDXGI;
+
+        addonThread = new(isDXGI ? DXGI_AddonThread : GDI_AddonThread);
         addonThread.Priority = ThreadPriority.AboveNormal;
         addonThread.Start();
 
@@ -104,7 +118,7 @@ public sealed partial class BotController : IBotController, IDisposable
         logger.LogInformation($"{playerReader.Race.ToStringF()} " +
             $"{playerReader.Class.ToStringF()}!");
 
-        screenshotThread = new(ScreenshotThread);
+        screenshotThread = new(isDXGI ? DXGI_ScreenshotThread : GDI_ScreenshotThread);
         screenshotThread.Start();
 
         if (pather is RemotePathingAPI)
@@ -119,7 +133,7 @@ public sealed partial class BotController : IBotController, IDisposable
         return ClassConfig!;
     }
 
-    private void AddonThread()
+    private void GDI_AddonThread()
     {
         while (!cts.IsCancellationRequested)
         {
@@ -128,7 +142,7 @@ public sealed partial class BotController : IBotController, IDisposable
         logger.LogWarning("Addon thread stopped!");
     }
 
-    private void ScreenshotThread()
+    private void GDI_ScreenshotThread()
     {
         long time;
         int tickCount = 0;
@@ -202,6 +216,113 @@ public sealed partial class BotController : IBotController, IDisposable
             return sum / SIZE;
         }
     }
+
+    private void DXGI_AddonThread()
+    {
+        long time;
+        int tickCount = 0;
+
+        const int SIZE = 8;
+        const int MOD = SIZE - 1;
+        Span<double> screen = stackalloc double[SIZE];
+
+        while (!cts.IsCancellationRequested)
+        {
+            time = Stopwatch.GetTimestamp();
+            wowScreen.Update();
+            screen[tickCount & MOD] =
+                Stopwatch.GetElapsedTime(time).TotalMilliseconds;
+
+            addonReader.Update();
+
+            AvgScreenLatency = Average(screen);
+
+            tickCount++;
+
+            // attempt to reduce CPU usage
+            cts.Token.WaitHandle.WaitOne(4);
+        }
+        logger.LogWarning("Addon thread stopped!");
+
+        static double Average(Span<double> span)
+        {
+            double sum = 0;
+            for (int i = 0; i < SIZE; i++)
+            {
+                sum += span[i];
+            }
+            return sum / SIZE;
+        }
+    }
+
+    private void DXGI_ScreenshotThread()
+    {
+        long time;
+        int tickCount = 0;
+
+        const int SIZE = 8;
+        const int MOD = SIZE - 1;
+        Span<double> npc = stackalloc double[SIZE];
+
+        WaitHandle[] waitHandles = new[] {
+            cts.Token.WaitHandle,
+            npcResetEvent.WaitHandle,
+        };
+
+        while (true)
+        {
+            if (wowScreen.Enabled)
+            {
+                time = Stopwatch.GetTimestamp();
+                npcNameFinder.Update();
+                npc[tickCount & MOD] =
+                    Stopwatch.GetElapsedTime(time).TotalMilliseconds;
+
+                if (wowScreen.EnablePostProcess)
+                    wowScreen.PostProcess();
+
+                AvgNPCLatency = Average(npc);
+            }
+
+            if (ClassConfig?.Mode == Mode.AttendedGather)
+            {
+                time = Stopwatch.GetTimestamp();
+                minimapNodeFinder.Update();
+                npc[tickCount & MOD] =
+                    Stopwatch.GetElapsedTime(time).TotalMilliseconds;
+
+                wowScreen.PostProcess();
+
+                AvgScreenLatency = Average(npc);
+            }
+
+            int waitResult =
+            WaitHandle.WaitAny(waitHandles,
+            Math.Max(
+                screenshotTickMs -
+                (int)npc[tickCount & MOD],
+                20));
+
+            tickCount++;
+
+            if (waitResult == 0)
+                break;
+        }
+
+        if (logger.IsEnabled(LogLevel.Debug))
+            logger.LogDebug("Screenshot Thread stopped!");
+
+        static double Average(Span<double> span)
+        {
+            double sum = 0;
+            for (int i = 0; i < SIZE; i++)
+            {
+                sum += span[i];
+            }
+            return sum / SIZE;
+        }
+    }
+
 
     private void RemotePathingThread()
     {
@@ -333,6 +454,7 @@ public sealed partial class BotController : IBotController, IDisposable
     {
         cts.Cancel();
 
+        npcNameOverlay?.Dispose();
         sessionScope?.Dispose();
     }
 
