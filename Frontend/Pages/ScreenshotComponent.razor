@@ -1,13 +1,14 @@
 ﻿@inject IWowScreen wowScreen
-@inject IBitmapProvider provider
+@inject IScreenImageProvider provider
 
-@using System.Drawing
-@using System.Drawing.Drawing2D;
+@using SixLabors.ImageSharp
+@using SixLabors.ImageSharp.PixelFormats
+@using SixLabors.ImageSharp.Formats.Jpeg
 
 <div class="card" @onclick="Toggle">
-    @if (inited && wowScreen.EnablePostProcess)
+    @if (wowScreen.EnablePostProcess)
     {
-        <img class="@(Stretch ? "img-filled" : "img-filled-half")" src="data:image/png;base64, @WoWScreenUtil.ToBase64(provider, bitmap, graphics)" alt="Toggle preview!" />
+        <img class="@(Stretch ? "img-filled" : "img-filled-half")" src="@provider.ScreenImage.ToBase64String(JpegFormat.Instance)" alt="Toggle preview!" />
     }
     else
     {
@@ -23,11 +24,6 @@
     [Parameter]
     public bool Stretch { get; set; } = false;
 
-    private Bitmap? bitmap;
-    private Graphics? graphics;
-
-    private bool inited = false;
-
     protected override void OnAfterRender(bool firstRender)
     {
         if (firstRender)
@@ -39,46 +35,15 @@
     public void Dispose()
     {
         wowScreen.OnScreenChanged -= this.ImageChanged;
-
-        graphics?.Dispose();
-        bitmap?.Dispose();
     }
 
     protected void Toggle()
     {
-        if (!inited)
-        {
-            int width;
-            int height;
-
-            int size = Size;
-            if (wowScreen.MiniMapBitmap.Width > wowScreen.MiniMapBitmap.Height)
-            {
-                width = size;
-                height = Convert.ToInt32(wowScreen.MiniMapBitmap.Height * size / (float)wowScreen.MiniMapBitmap.Width);
-            }
-            else
-            {
-                width = Convert.ToInt32(wowScreen.MiniMapBitmap.Width * size / (float)wowScreen.MiniMapBitmap.Height);
-                height = size;
-            }
-
-            bitmap = new Bitmap(width, height);
-
-            graphics = Graphics.FromImage(bitmap);
-            graphics.CompositingQuality = CompositingQuality.HighSpeed;
-            graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
-            graphics.CompositingMode = CompositingMode.SourceCopy;
-
-            inited = true;
-        }
-
         wowScreen.EnablePostProcess = !wowScreen.EnablePostProcess;
     }
 
     private async void ImageChanged()
     {
-        if (inited)
-            await base.InvokeAsync(StateHasChanged);
+        await base.InvokeAsync(StateHasChanged);
     }
 }

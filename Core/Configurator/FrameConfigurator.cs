@@ -4,10 +4,11 @@ using Microsoft.Extensions.Logging;
 
 using SharedLib;
 
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Processing;
+
 using System;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.IO;
 using System.Threading;
 
 namespace Core;
@@ -197,15 +198,20 @@ public sealed class FrameConfigurator : IDisposable
                 }
                 break;
             case Stage.CreateDataFrames:
-                Bitmap bitmap = wowScreen.GetBitmap(size.Width, size.Height);
-                if (!auto)
+
+                Size addonSize = size;
+                var cropped = wowScreen.ScreenImage.Clone(cropSize);
+                void cropSize(IImageProcessingContext x)
                 {
-                    using MemoryStream ms = new();
-                    bitmap.Save(ms, ImageFormat.Png);
-                    this.ImageBase64 = Convert.ToBase64String(ms.ToArray());
+                    x.Crop(addonSize.Width, addonSize.Height);
                 }
 
-                DataFrames = FrameConfig.TryCreateFrames(DataFrameMeta, bitmap);
+                if (!auto)
+                {
+                    ImageBase64 = cropped.ToBase64String(JpegFormat.Instance);
+                }
+
+                DataFrames = FrameConfig.TryCreateFrames(DataFrameMeta, cropped);
                 if (DataFrames.Length == DataFrameMeta.frames)
                 {
                     stage++;
@@ -219,7 +225,6 @@ public sealed class FrameConfigurator : IDisposable
                         return false;
                 }
 
-                bitmap.Dispose();
                 break;
             case Stage.ReturnNormalMode:
                 if (auto)
@@ -228,15 +233,32 @@ public sealed class FrameConfigurator : IDisposable
                     wowProcessInput.SetForegroundWindow();
                     ToggleInGameConfiguration(execGameCommand);
                     wait.Fixed(INTERVAL);
+                    wait.Update();
                 }
 
-                if (GetDataFrameMeta() == DataFrameMeta.Empty)
+                temp = GetDataFrameMeta();
+                if (temp == DataFrameMeta.Empty)
+                {
+                    logger.LogDebug(temp.ToString());
                     stage++;
+                }
+                else
+                {
+                    if (auto)
+                    {
+
+                        logger.LogError("Unable to return normal mode!");
+                        ResetConfigState();
+                    }
+
+                    return false;
+                }
                 break;
             case Stage.UpdateReader:
                 reader.InitFrames(DataFrames);
                 wait.Update();
                 wait.Update();
+                reader.UpdateData();
                 stage++;
                 break;
             case Stage.ValidateData:
@@ -282,12 +304,13 @@ public sealed class FrameConfigurator : IDisposable
 
         reader.InitFrames(DataFrames);
         wait.Update();
+
+        logger.LogDebug("ResetConfigState");
     }
 
     private DataFrameMeta GetDataFrameMeta()
     {
-        using Bitmap bitmap = wowScreen.GetBitmap(5, 5);
-        return FrameConfig.GetMeta(bitmap.GetPixel(0, 0));
+        return FrameConfig.GetMeta(wowScreen.ScreenImage[0, 0]);
     }
 
     public void ToggleManualConfig()
@@ -351,6 +374,14 @@ public sealed class FrameConfigurator : IDisposable
 
     public bool TryResolveRaceAndClass(out UnitRace race, out UnitClass @class, out ClientVersion version)
     {
+        if (reader.Data.Length < 46)
+        {
+            race = 0;
+            @class = 0;
+            version = 0;
+            return false;
+        }
+
         int value = reader.GetInt(46);
 
         // RACE_ID * 10000 + CLASS_ID * 100 + ClientVersion

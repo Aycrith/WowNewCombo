@@ -1,24 +1,25 @@
 ﻿using System.Collections.Generic;
-using System.Drawing;
 
 using SharedLib.Extensions;
+
+using SixLabors.ImageSharp;
 
 namespace SharedLib.NpcFinder;
 
 internal sealed class NpcPositionComparer : IComparer<NpcPosition>
 {
-    private readonly IBitmapProvider bitmapProvider;
+    private readonly IScreenImageProvider bitmapProvider;
 
-    public NpcPositionComparer(IBitmapProvider bitmapProvider)
+    public NpcPositionComparer(IScreenImageProvider bitmapProvider)
     {
         this.bitmapProvider = bitmapProvider;
     }
 
     public int Compare(NpcPosition x, NpcPosition y)
     {
-        Point origin = bitmapProvider.Rect.Centre();
-        float dx = PointExt.SqrDistance(origin, x.ClickPoint);
-        float dy = PointExt.SqrDistance(origin, y.ClickPoint);
+        Point origin = bitmapProvider.ScreenRect.Centre();
+        float dx = ImageSharpPointExt.SqrDistance(origin, x.ClickPoint);
+        float dy = ImageSharpPointExt.SqrDistance(origin, y.ClickPoint);
 
         return dx.CompareTo(dy);
     }

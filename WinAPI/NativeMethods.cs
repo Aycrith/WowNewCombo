@@ -1,6 +1,6 @@
 using System;
 
-using System.Drawing;
+using SixLabors.ImageSharp;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 
@@ -111,13 +111,7 @@ public static partial class NativeMethods
     public static void GetWindowRect(IntPtr hWnd, out Rectangle rect)
     {
         GetClientRect(hWnd, out RECT nRect);
-        rect = new Rectangle
-        {
-            X = nRect.left,
-            Y = nRect.top,
-            Width = nRect.right - nRect.left,
-            Height = nRect.bottom - nRect.top
-        };
+        rect = Rectangle.FromLTRB(nRect.left, nRect.top, nRect.right, nRect.bottom);
 
         Point topLeft = new();
         ClientToScreen(hWnd, ref topLeft);
@@ -130,7 +124,7 @@ public static partial class NativeMethods
 
     public static int GetDpi()
     {
-        using Graphics g = Graphics.FromHwnd(IntPtr.Zero);
+        using System.Drawing.Graphics g = System.Drawing.Graphics.FromHwnd(IntPtr.Zero);
         return GetDeviceCaps(g.GetHdc(), LOGPIXELSX);
     }
 
@@ -139,7 +133,7 @@ public static partial class NativeMethods
         int dpi = GetDpi();
         SizeF size = new(GetSystemMetrics(SM_CXCURSOR), GetSystemMetrics(SM_CYCURSOR));
         size *= DPI2PPI(dpi);
-        return size.ToSize();
+        return (Size)size;
     }
 
     public static float DPI2PPI(int dpi)

@@ -7,6 +7,8 @@ using Game;
 
 using Microsoft.Extensions.Logging;
 
+using SixLabors.ImageSharp;
+
 #pragma warning disable 0162
 #pragma warning disable 8618
 
@@ -28,12 +30,12 @@ internal sealed class Test_MinimapNodeFinder : IDisposable
 
     private readonly Stopwatch stopwatch = new();
 
-    public Test_MinimapNodeFinder(ILogger logger, ILoggerFactory loggerFactory)
+    public Test_MinimapNodeFinder(ILogger logger, WowProcess wowProcess, IWowScreen wowScreen, ILoggerFactory loggerFactory)
     {
         this.logger = logger;
 
-        wowProcess = new();
-        wowScreen = new WowScreenGDI(loggerFactory.CreateLogger<WowScreenGDI>(), wowProcess);
+        this.wowProcess = wowProcess;
+        this.wowScreen = wowScreen;
 
         minimapNodeFinder = new(logger, wowScreen);
     }
@@ -49,7 +51,7 @@ internal sealed class Test_MinimapNodeFinder : IDisposable
         if (LogEachUpdate)
             stopwatch.Restart();
 
-        wowScreen.UpdateMinimapBitmap();
+        wowScreen.Update();
 
         if (LogEachUpdate)
             logger.LogInformation($"Capture: {stopwatch.ElapsedMilliseconds}ms");
@@ -70,6 +72,6 @@ internal sealed class Test_MinimapNodeFinder : IDisposable
 
     private void SaveImage()
     {
-        wowScreen.MiniMapBitmap.Save("minimap.png");
+        wowScreen.MiniMapImage.SaveAsPng("minimap.png");
     }
 }

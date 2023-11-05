@@ -8,8 +8,8 @@ using GameOverlay.Windows;
 using SharedLib.Extensions;
 using SharedLib.NpcFinder;
 
-using DPoint = System.Drawing.Point;
-using DRectangle = System.Drawing.Rectangle;
+using DPoint = SixLabors.ImageSharp.Point;
+using DRectangle = SixLabors.ImageSharp.Rectangle;
 
 namespace Core;
 

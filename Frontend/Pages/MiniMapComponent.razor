@@ -1,13 +1,14 @@
 ﻿@implements IDisposable
 
 @inject IBotController botController
-@inject IMinimapBitmapProvider provider
+@inject IMinimapImageProvider provider
 @inject IWowScreen wowScreen
 
 @inject MinimapNodeFinder minimapNodeFinder
 
-@using System.Drawing
-@using System.Drawing.Drawing2D;
+@using SixLabors.ImageSharp
+@using SixLabors.ImageSharp.PixelFormats
+@using SixLabors.ImageSharp.Formats.Jpeg
 
 <div class="card">
     <div class="card-header">
@@ -24,16 +25,16 @@
         </table>
     </div>
     <div class="card-body" style="padding: 0 0 0 0; width:@(Size)px; height:@(Size)px">
-        @if (inited && previewEnabled)
+        @if (previewEnabled)
         {
             if (DateTime.UtcNow > lastUpdate.AddMilliseconds(UpdateIntervalMs))
             {
-                image = WoWScreenUtil.ToBase64(provider, bitmap, graphics);
+                image = provider.MiniMapImage.ToBase64String(JpegFormat.Instance);
                 if (image != "")
                     lastUpdate = DateTime.UtcNow;
             }
 
-            <img style="width:@(Size)px; height:@(Size)px" src="data:image/png;base64, @image" alt="Red dot" />
+            <img style="width:@(Size)px; height:@(Size)px" src="@image" alt="Red dot" />
 
         }
     </div>
@@ -54,25 +55,15 @@
     private bool lastNodeFound = false;
     private int lastNodeCount = 0;
 
-    private bool inited = false;
     private bool preview = false;
     private bool previewEnabled
     {
         get => preview;
         set
         {
-            if (!inited)
-            {
-                inited = true;
-                InitBitmap();
-            }
-
             preview = value;
         }
     }
-
-    private Graphics? graphics;
-    private Bitmap? bitmap;
 
     private const int UpdateIntervalMs = 500;
     private DateTime lastUpdate;
@@ -102,42 +93,14 @@
         {
             minimapNodeFinder.NodeEvent -= NodeFound;
         }
-
-        graphics?.Dispose();
-        bitmap?.Dispose();
     }
 
     private async void ImageChanged()
     {
-        if (inited && previewEnabled)
+        if (previewEnabled)
         {
             await base.InvokeAsync(StateHasChanged);
         }
-    }
-
-    private void InitBitmap()
-    {
-        int width;
-        int height;
-
-        int size = (int)(Size * DownScale);
-        if (provider.MiniMapBitmap.Width > provider.MiniMapBitmap.Height)
-        {
-            width = size;
-            height = Convert.ToInt32(provider.MiniMapBitmap.Height * size / (float)provider.MiniMapBitmap.Width);
-        }
-        else
-        {
-            width = Convert.ToInt32(provider.MiniMapBitmap.Width * size / (float)provider.MiniMapBitmap.Height);
-            height = size;
-        }
-
-        bitmap = new Bitmap(width, height);
-
-        graphics = Graphics.FromImage(bitmap);
-        graphics.CompositingQuality = CompositingQuality.HighSpeed;
-        graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
-        graphics.CompositingMode = CompositingMode.SourceCopy;
     }
 
     private void NodeFound(object? source, MinimapNodeEventArgs e)

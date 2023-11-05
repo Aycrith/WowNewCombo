@@ -29,7 +29,6 @@
 # Features
 
 - Game fullscreen or windowed mode
-- Limited Background mode support with `GDIBlit` reader.
 - Addon supports all available client languages
 - Most of the classes should work. Some classes have more support than others.
 - Highly configurable Combat rotation described in [Class Configuration](#12-class-configuration)
@@ -251,16 +250,16 @@ In order to run `HeadlessServer` please look at the `HeadlessServer\run.bat`.
 | ---- | ---- | ---- | ---- |
 | `-m`<br>`-mode` | Pathfinder type | `RemoteV3` | `Local` or `RemoteV1` or `RemoteV3` |
 | `-p`<br>`-pid` | World of Warcraft process id | `-1` | open up task manager to find PID |
-| `-r`<br>`-reader` | Addon data screen reader backend | `GDI` | `GDI` works from Win7.<br>`GDIBlit` allows background mode with a bit higher CPU usage.<br>`DXGI` work from Win8 |
+| `-r`<br>`-reader` | Addon data screen reader backend | `DXGI` | `DXGI` works since Win8 |
 | `hostv1` | Navigation Remote V1 host | `localhost` | - |
 | `portv1` | Navigation Remote V1 port | `5001` | - |
 | `hostv3` | Navigation Remote V3 host | `127.0.0.1` | - |
 | `portv3` | Navigation Remote V3 port | `47111` | - |
 | `-d`<br>`-diag` | Diagnostics, when set, takes screen captures under `Json\cap\*.json` | - | - |
-| `-o`<br>`-overlay` | Show NpcNameFinder Overlay | `false` | `true` or `false` |
-| `-t`<br>`-otargeting` | While overlay enabled, show Targeting points | `false` | `true` or `false` |
-| `-s`<br>`-oskinning` | While overlay enabled, show Skinning points | `false` | `true` or `false` |
-| `-v`<br>`-otargetvsadd` | While overlay enabled, show Target vs Add points | `false` | `true` or `false` |
+| `-o`<br>`-overlay` | Show NpcNameFinder Overlay | `false` | - |
+| `-t`<br>`-otargeting` | While overlay enabled, show Targeting points | `false` | - |
+| `-s`<br>`-oskinning` | While overlay enabled, show Skinning points | `false` | - |
+| `-v`<br>`-otargetvsadd` | While overlay enabled, show Target vs Add points | `false` | - |
 
 e.g. run from Powershell without any optional parameter
 ```ps

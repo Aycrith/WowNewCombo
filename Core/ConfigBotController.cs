@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Microsoft.Extensions.Logging;
+using Game;
 
 namespace Core;
 
@@ -13,6 +14,7 @@ public sealed class ConfigBotController : IBotController, IDisposable
 
     private readonly Thread addonThread;
     private readonly IAddonReader addonReader;
+    private readonly IWowScreen wowScreen;
 
     public GoapAgent? GoapAgent => throw new NotImplementedException();
     public RouteInfo? RouteInfo => throw new NotImplementedException();
@@ -29,11 +31,15 @@ public sealed class ConfigBotController : IBotController, IDisposable
     public event Action? ProfileLoaded;
     public event Action? StatusChanged;
 
-    public ConfigBotController(ILogger logger, IAddonReader addonReader, CancellationTokenSource cts)
+    public ConfigBotController(ILogger logger,
+        IAddonReader addonReader,
+        IWowScreen wowScreen,
+        CancellationTokenSource cts)
     {
         this.logger = logger;
         this.cts = cts;
         this.addonReader = addonReader;
+        this.wowScreen = wowScreen;
 
         addonThread = new(AddonThread);
         addonThread.Start();
@@ -48,7 +54,9 @@ public sealed class ConfigBotController : IBotController, IDisposable
     {
         while (!cts.IsCancellationRequested)
         {
+            wowScreen.Update();
             addonReader.Update();
+            Thread.Sleep(20);
         }
         logger.LogWarning("Thread stopped!");
     }

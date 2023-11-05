@@ -1,5 +1,6 @@
 ﻿using SharedLib;
-using System.Drawing;
+
+using SixLabors.ImageSharp;
 
 namespace CoreTests;
 

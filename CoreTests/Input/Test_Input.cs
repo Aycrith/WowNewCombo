@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Drawing;
+using SixLabors.ImageSharp;
 using Game;
 using Microsoft.Extensions.Logging;
 using System.Threading;
@@ -17,13 +17,14 @@ public class Test_Input : IDisposable
     private readonly IWowScreen wowScreen;
     private readonly WowProcessInput wowProcessInput;
 
-    public Test_Input(ILogger logger, ILoggerFactory loggerFactory)
+    public Test_Input(ILogger logger, WowProcess wowProcess, IWowScreen wowScreen, ILoggerFactory loggerFactory)
     {
         this.logger = logger;
+        this.wowProcess = wowProcess;
+        this.wowScreen = wowScreen;
+
         this.cts = new();
 
-        wowProcess = new WowProcess();
-        wowScreen = new WowScreenGDI(loggerFactory.CreateLogger<WowScreenGDI>(), wowProcess);
         wowProcessInput = new(loggerFactory.CreateLogger<WowProcessInput>(), cts, wowProcess);
     }
 

@@ -1,21 +1,22 @@
 using Core.Goals;
 using Core.GOAP;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
-using static Newtonsoft.Json.JsonConvert;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Numerics;
 using System.Threading;
 using Game;
+using PPather.Data;
 using WinAPI;
 using SharedLib.NpcFinder;
-using PPather.Data;
-using Microsoft.Extensions.DependencyInjection;
-using System.Numerics;
 using SharedLib;
-using Microsoft.Extensions.Options;
+
+using static System.Diagnostics.Stopwatch;
+using static Newtonsoft.Json.JsonConvert;
 
 namespace Core;
 
@@ -100,9 +101,7 @@ public sealed partial class BotController : IBotController, IDisposable
                 overlayOptions.Value.ShowSkinning,
                 overlayOptions.Value.ShowTargetVsAdd);
 
-        bool isDXGI = wowScreen is WowScreenDXGI;
-
-        addonThread = new(isDXGI ? DXGI_AddonThread : GDI_AddonThread);
+        addonThread = new(AddonThread);
         addonThread.Priority = ThreadPriority.AboveNormal;
         addonThread.Start();
 
@@ -118,7 +117,7 @@ public sealed partial class BotController : IBotController, IDisposable
         logger.LogInformation($"{playerReader.Race.ToStringF()} " +
             $"{playerReader.Class.ToStringF()}!");
 
-        screenshotThread = new(isDXGI ? DXGI_ScreenshotThread : GDI_ScreenshotThread);
+        screenshotThread = new(ScreenshotThread);
         screenshotThread.Start();
 
         if (pather is RemotePathingAPI)
@@ -133,91 +132,7 @@ public sealed partial class BotController : IBotController, IDisposable
         return ClassConfig!;
     }
 
-    private void GDI_AddonThread()
-    {
-        while (!cts.IsCancellationRequested)
-        {
-            addonReader.Update();
-        }
-        logger.LogWarning("Addon thread stopped!");
-    }
-
-    private void GDI_ScreenshotThread()
-    {
-        long time;
-        int tickCount = 0;
-
-        const int SIZE = 8;
-        const int MOD = SIZE - 1;
-        Span<double> screen = stackalloc double[SIZE];
-        Span<double> npc = stackalloc double[SIZE];
-
-        WaitHandle[] waitHandles = new[] {
-            cts.Token.WaitHandle,
-            npcResetEvent.WaitHandle,
-        };
-
-        while (true)
-        {
-            if (wowScreen.Enabled)
-            {
-                time = Stopwatch.GetTimestamp();
-                wowScreen.Update();
-                screen[tickCount & MOD] =
-                    Stopwatch.GetElapsedTime(time).TotalMilliseconds;
-
-                time = Stopwatch.GetTimestamp();
-                npcNameFinder.Update();
-                npc[tickCount & MOD] =
-                    Stopwatch.GetElapsedTime(time).TotalMilliseconds;
-
-                if (wowScreen.EnablePostProcess)
-                    wowScreen.PostProcess();
-
-                AvgScreenLatency = Average(screen);
-                AvgNPCLatency = Average(npc);
-            }
-
-            if (ClassConfig?.Mode == Mode.AttendedGather)
-            {
-                time = Stopwatch.GetTimestamp();
-                wowScreen.UpdateMinimapBitmap();
-                minimapNodeFinder.Update();
-                screen[tickCount & MOD] =
-                    Stopwatch.GetElapsedTime(time).TotalMilliseconds;
-
-                AvgScreenLatency = Average(screen);
-            }
-
-            int waitResult =
-                WaitHandle.WaitAny(waitHandles,
-                Math.Max(
-                    screenshotTickMs -
-                    (int)screen[tickCount & MOD] -
-                    (int)npc[tickCount & MOD],
-                    20));
-
-            tickCount++;
-
-            if (waitResult == 0)
-                break;
-        }
-
-        if (logger.IsEnabled(LogLevel.Debug))
-            logger.LogDebug("Screenshot Thread stopped!");
-
-        static double Average(Span<double> span)
-        {
-            double sum = 0;
-            for (int i = 0; i < SIZE; i++)
-            {
-                sum += span[i];
-            }
-            return sum / SIZE;
-        }
-    }
-
-    private void DXGI_AddonThread()
+    private void AddonThread()
     {
         long time;
         int tickCount = 0;
@@ -228,10 +143,10 @@ public sealed partial class BotController : IBotController, IDisposable
 
         while (!cts.IsCancellationRequested)
         {
-            time = Stopwatch.GetTimestamp();
+            time = GetTimestamp();
             wowScreen.Update();
             screen[tickCount & MOD] =
-                Stopwatch.GetElapsedTime(time).TotalMilliseconds;
+                GetElapsedTime(time).TotalMilliseconds;
 
             addonReader.Update();
 
@@ -240,11 +155,11 @@ public sealed partial class BotController : IBotController, IDisposable
             tickCount++;
 
             // attempt to reduce CPU usage
-            cts.Token.WaitHandle.WaitOne(4);
+            Thread.Sleep(4);
         }
         logger.LogWarning("Addon thread stopped!");
 
-        static double Average(Span<double> span)
+        static double Average(ReadOnlySpan<double> span)
         {
             double sum = 0;
             for (int i = 0; i < SIZE; i++)
@@ -255,7 +170,7 @@ public sealed partial class BotController : IBotController, IDisposable
         }
     }
 
-    private void DXGI_ScreenshotThread()
+    private void ScreenshotThread()
     {
         long time;
         int tickCount = 0;
@@ -273,28 +188,26 @@ public sealed partial class BotController : IBotController, IDisposable
         {
             if (wowScreen.Enabled)
             {
-                time = Stopwatch.GetTimestamp();
+                time = GetTimestamp();
                 npcNameFinder.Update();
                 npc[tickCount & MOD] =
-                    Stopwatch.GetElapsedTime(time).TotalMilliseconds;
+                    GetElapsedTime(time).TotalMilliseconds;
 
                 if (wowScreen.EnablePostProcess)
                     wowScreen.PostProcess();
-
-                AvgNPCLatency = Average(npc);
             }
 
-            if (ClassConfig?.Mode == Mode.AttendedGather)
+            if (wowScreen.MinimapEnabled)
             {
-                time = Stopwatch.GetTimestamp();
+                time = GetTimestamp();
                 minimapNodeFinder.Update();
                 npc[tickCount & MOD] =
-                    Stopwatch.GetElapsedTime(time).TotalMilliseconds;
+                    GetElapsedTime(time).TotalMilliseconds;
 
                 wowScreen.PostProcess();
-
-                AvgScreenLatency = Average(npc);
             }
+
+            AvgNPCLatency = Average(npc);
 
             int waitResult =
             WaitHandle.WaitAny(waitHandles,
@@ -312,7 +225,7 @@ public sealed partial class BotController : IBotController, IDisposable
         if (logger.IsEnabled(LogLevel.Debug))
             logger.LogDebug("Screenshot Thread stopped!");
 
-        static double Average(Span<double> span)
+        static double Average(ReadOnlySpan<double> span)
         {
             double sum = 0;
             for (int i = 0; i < SIZE; i++)
@@ -322,7 +235,6 @@ public sealed partial class BotController : IBotController, IDisposable
             return sum / SIZE;
         }
     }
-
 
     private void RemotePathingThread()
     {
@@ -384,7 +296,7 @@ public sealed partial class BotController : IBotController, IDisposable
 
     private bool InitialiseFromFile(string classFile, string? pathFile)
     {
-        long startTime = Stopwatch.GetTimestamp();
+        long startTime = GetTimestamp();
         try
         {
             ClassConfig = ReadClassConfiguration(classFile);
@@ -401,7 +313,7 @@ public sealed partial class BotController : IBotController, IDisposable
         }
 
         LogProfileLoadedTime(logger,
-            Stopwatch.GetElapsedTime(startTime).TotalMilliseconds);
+            GetElapsedTime(startTime).TotalMilliseconds);
 
         return true;
     }
@@ -436,6 +348,8 @@ public sealed partial class BotController : IBotController, IDisposable
 
         RouteInfo = sessionScope.
             ServiceProvider.GetService<RouteInfo>();
+
+        wowScreen.MinimapEnabled = config.Mode == Mode.AttendedGather;
     }
 
     private static IEnumerable<IRouteProvider> GetPathProviders(IServiceProvider sp)
