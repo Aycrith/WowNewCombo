@@ -1,6 +1,6 @@
-﻿using System.Drawing;
+﻿using SharedLib.Extensions;
 
-using SharedLib.Extensions;
+using SixLabors.ImageSharp;
 
 namespace SharedLib.NpcFinder;
 

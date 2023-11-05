@@ -29,10 +29,8 @@ public sealed class RunOptions
     [Option('r',
         "reader",
         Required = false,
-        Default = AddonDataProviderType.GDI,
+        Default = AddonDataProviderType.DXGI,
         HelpText = $"Screen reader backend." +
-        $"'{nameof(AddonDataProviderType.GDI)}': is the default, compatible from Win7.\n" +
-        $"'{nameof(AddonDataProviderType.GDIBlit)}': GDI based works from Win7 allows background mode.\n" +
         $"'{nameof(AddonDataProviderType.DXGI)}': DirectX based works from Win8.")]
     public AddonDataProviderType Reader { get; set; }
 

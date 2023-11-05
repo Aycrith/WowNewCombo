@@ -1,13 +1,14 @@
 ﻿using System;
-using System.Drawing;
 
 using SharedLib;
 
 namespace Game;
 
-public interface IWowScreen : IColorReader, IRectProvider, IBitmapProvider, IMinimapBitmapProvider, IDisposable
+public interface IWowScreen : IRectProvider, IScreenImageProvider, IMinimapImageProvider, IDisposable
 {
     bool Enabled { get; set; }
+
+    bool MinimapEnabled { get; set; }
 
     IntPtr ProcessHwnd { get; }
 
@@ -17,8 +18,4 @@ public interface IWowScreen : IColorReader, IRectProvider, IBitmapProvider, IMin
     event Action OnScreenChanged;
 
     void Update();
-
-    void UpdateMinimapBitmap();
-
-    void DrawBitmapTo(Graphics g);
 }

@@ -1,39 +1,36 @@
-﻿using System.Drawing.Imaging;
-using System;
+﻿using System;
 
-using static Core.AddonDataProviderConfig;
 using System.Text;
 using System.Runtime.CompilerServices;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Advanced;
+using SixLabors.ImageSharp;
 
 namespace Core;
 
 public interface IAddonDataProvider : IDisposable
 {
+    private static readonly Bgra32 firstColor = new(0, 0, 0, 255);
+    private static readonly Bgra32 lastlColor = new(30, 132, 129, 255);
+
     void UpdateData();
-    void InitFrames(DataFrame[] frames) { }
+    void InitFrames(DataFrame[] frames);
 
     int[] Data { get; }
     StringBuilder TextBuilder { get; }
 
     [SkipLocalsInit]
-    static unsafe void InternalUpdate(BitmapData bd,
+    static unsafe void InternalUpdate(Image<Bgra32> bd,
         ReadOnlySpan<DataFrame> frames, Span<int> output)
     {
-        int stride = bd.Stride;
+        Bgra32 first = bd.DangerousGetPixelRowMemory(frames[0].Y)
+            .Span[frames[0].X];
 
-        ReadOnlySpan<byte> bitmapSpan =
-            new(bd.Scan0.ToPointer(), bd.Height * stride);
+        Bgra32 last = bd.DangerousGetPixelRowMemory(frames[^1].Y)
+            .Span[frames[^1].X];
 
-        ReadOnlySpan<byte> first =
-            bitmapSpan.Slice(frames[0].Y * stride + frames[0].X * BYTES_PER_PIXEL,
-            BYTES_PER_PIXEL);
-
-        ReadOnlySpan<byte> last =
-            bitmapSpan.Slice(frames[^1].Y * stride + frames[^1].X * BYTES_PER_PIXEL,
-            BYTES_PER_PIXEL);
-
-        if (!first.SequenceEqual(fColor) ||
-            !last.SequenceEqual(lColor))
+        if (!first.Equals(firstColor) ||
+            !last.Equals(lastlColor))
         {
             return;
         }
@@ -42,13 +39,10 @@ public interface IAddonDataProvider : IDisposable
         {
             DataFrame frame = frames[i];
 
-            int yOffset = frame.Y * stride;
-            int xOffset = frame.X * BYTES_PER_PIXEL;
+            Span<Bgra32> row = bd.DangerousGetPixelRowMemory(frame.Y).Span;
+            ref Bgra32 pixel = ref row[frame.X];
 
-            ReadOnlySpan<byte> pixel =
-                bitmapSpan.Slice(yOffset + xOffset, BYTES_PER_PIXEL);
-
-            output[frame.Index] = pixel[0] | (pixel[1] << 8) | (pixel[2] << 16);
+            output[frame.Index] = pixel.B | (pixel.G << 8) | (pixel.R << 16);
         }
     }
 

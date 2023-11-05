@@ -80,7 +80,7 @@ public sealed class Startup
         }
         else
         {
-            services.AddCoreConfiguration();
+            services.AddCoreConfiguration(log);
         }
 
         services.AddFrontend();

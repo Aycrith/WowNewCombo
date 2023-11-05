@@ -100,11 +100,11 @@
     <div class="row col-md-12">
         @if (@frameConfigurator.DataFrames.Length != frameConfigurator.DataFrameMeta.frames)
         {
-            <img style="border:1px solid red; margin: 5px" src="data:image/png;base64, @frameConfigurator.ImageBase64" alt="Red dot" />
+            <img style="border:1px solid red; margin: 5px" src="@frameConfigurator.ImageBase64" alt="Red dot" />
         }
         else
         {
-            <img style="border:1px solid green; margin: 5px" src="data:image/png;base64, @frameConfigurator.ImageBase64" alt="Red dot" />
+            <img style="border:1px solid green; margin: 5px" src="@frameConfigurator.ImageBase64" alt="Red dot" />
         }
     </div>
 
@@ -170,7 +170,7 @@
         addonConfig = addonConfigurator.Config;
         frameConfigurator.OnUpdate += OnUpdate;
 
-        if (reader.GetType() == typeof(AddonDataProviderGDIConfig))
+        if (!FrameConfig.Exists())
             disabled = false;
     }
 

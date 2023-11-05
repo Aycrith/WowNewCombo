@@ -15,39 +15,23 @@ namespace Core;
 public static class ImageHashing
 {
     /// <summary>
-    /// Bitcounts array used for BitCount method (used in Similarity comparisons).
-    /// Don't try to read this or understand it, I certainly don't. Credit goes to
-    /// David Oftedal of the University of Oslo, Norway for this.
-    /// http://folk.uio.no/davidjo/computing.php
-    /// </summary>
-    private static readonly byte[] bitCounts = {
-        0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,1,2,2,3,2,3,3,4,
-        2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,
-        2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,
-        4,5,5,6,5,6,6,7,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,
-        2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,2,3,3,4,3,4,4,5,
-        3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,
-        4,5,5,6,5,6,6,7,5,6,6,7,6,7,7,8
-    };
-
-    /// <summary>
     /// Computes the average hash of an image according to the algorithm given by Dr. Neal Krawetz
     /// on his blog: http://www.hackerfactor.com/blog/index.php?/archives/432-Looks-Like-It.html.
     /// </summary>
     /// <param name="image">The image to hash.</param>
     /// <returns>The hash of the image.</returns> 
     [SkipLocalsInit]
-    public static unsafe ulong AverageHash(Bitmap image, Bitmap squeezed, Graphics canvas)
+    public static unsafe ulong AverageHash(Bitmap image, Bitmap scaled, Graphics g)
     {
         Rectangle rect = new(0, 0, 8, 8);
-        canvas.Clear(Color.Transparent);
-        canvas.DrawImage(image, rect);
+        g.Clear(Color.Transparent);
+        g.DrawImage(image, rect);
 
         // Reduce colors to 6-bit grayscale and calculate average color value
         Span<byte> grayscale = stackalloc byte[64];
 
         const int bytesPerPixel = 4; //Image.GetPixelFormatSize(squeezed.PixelFormat) / 8;
-        BitmapData data = squeezed.LockBits(rect, ImageLockMode.ReadOnly, squeezed.PixelFormat);
+        BitmapData data = scaled.LockBits(rect, ImageLockMode.ReadOnly, scaled.PixelFormat);
 
         uint averageValue = 0;
         for (int i = 0; i < 64; i++)
@@ -62,7 +46,7 @@ public static class ImageHashing
             grayscale[i] = (byte)gray;
             averageValue += gray;
         }
-        squeezed.UnlockBits(data);
+        scaled.UnlockBits(data);
 
         averageValue /= 64;
 

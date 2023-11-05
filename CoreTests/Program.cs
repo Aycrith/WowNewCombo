@@ -8,15 +8,19 @@ using System.Collections.Generic;
 using Core;
 using System;
 using Microsoft.Extensions.Logging;
+using Game;
 
 #pragma warning disable 0162
 
 namespace CoreTests;
 
-sealed class Program
+internal sealed class Program
 {
     private static Microsoft.Extensions.Logging.ILogger logger;
     private static ILoggerFactory loggerFactory;
+
+    private static WowProcess wowProcess;
+    private static IWowScreen wowScreen;
 
     private const bool LogOverallTimes = false;
     private const int delay = 150;
@@ -36,12 +40,24 @@ sealed class Program
             builder.ClearProviders().AddSerilog();
         });
 
+        // its expected to have at least 2 DataFrame 
+        DataFrame[] mockFrames = new DataFrame[2]
+        {
+            new DataFrame(0, 0, 0),
+            new DataFrame(1, 0, 0),
+        };
+
+        wowProcess = new();
+        wowScreen = new WowScreenDXGI(loggerFactory.CreateLogger<WowScreenDXGI>(), wowProcess, mockFrames);
+
         Test_NPCNameFinder();
         //Test_Input();
         //Test_CursorGrabber();
         //Test_CursorCompare();
         //Test_MinimapNodeFinder();
         //Test_FindTargetByCursor();
+
+        Environment.Exit(0);
     }
 
     private static void Test_NPCNameFinder()
@@ -53,7 +69,7 @@ sealed class Program
         //NpcNames types = NpcNames.Enemy | NpcNames.Neutral | NpcNames.NamePlate;
         //NpcNames types = NpcNames.Friendly | NpcNames.Neutral;
 
-        using Test_NpcNameFinder test = new(logger, loggerFactory, types);
+        using Test_NpcNameFinder test = new(logger, wowProcess, wowScreen, loggerFactory, types);
         int count = 100;
         int i = 0;
 
@@ -76,7 +92,6 @@ sealed class Program
                 sample[i] = Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds;
 
             i++;
-            //Thread.Sleep(delay);
             Thread.Sleep(4);
         }
 
@@ -102,7 +117,7 @@ sealed class Program
 
     private static void Test_Input()
     {
-        Test_Input test = new(logger, loggerFactory);
+        Test_Input test = new(logger, wowProcess, wowScreen, loggerFactory);
         test.Mouse_Movement();
         test.Mouse_Clicks();
         test.Clipboard();
@@ -140,7 +155,7 @@ sealed class Program
             classifier.Classify(out CursorType cursorType, out double similarity);
 
             times[i] = Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
-            //Log.Logger.Information($"{cursorType.ToStringF()} {similarity} {times[i]:F6}ms");
+            Log.Logger.Information($"{cursorType.ToStringF()} {similarity} {times[i]:F6}ms");
             i++;
         }
 
@@ -161,7 +176,7 @@ sealed class Program
 
     private static void Test_MinimapNodeFinder()
     {
-        using Test_MinimapNodeFinder test = new(logger, loggerFactory);
+        using Test_MinimapNodeFinder test = new(logger, wowProcess, wowScreen, loggerFactory);
 
         int count = 100;
         int i = 0;
@@ -199,7 +214,7 @@ sealed class Program
         //NpcNames types = NpcNames.Enemy | NpcNames.Neutral;
         NpcNames types = NpcNames.Friendly | NpcNames.Neutral;
 
-        using Test_NpcNameFinder test = new(logger, loggerFactory, types);
+        using Test_NpcNameFinder test = new(logger, wowProcess, wowScreen, loggerFactory, types);
 
         int count = 2;
         int i = 0;

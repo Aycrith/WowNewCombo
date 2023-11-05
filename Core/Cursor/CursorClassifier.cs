@@ -34,20 +34,20 @@ public sealed class CursorClassifier : IDisposable
     private readonly Bitmap bitmap;
     private readonly Graphics graphics;
 
-    private readonly Bitmap workBitmap;
-    private readonly Graphics workGraphics;
+    private readonly Bitmap scaledBitmap;
+    private readonly Graphics scaledGraphics;
 
     public CursorClassifier()
     {
-        Size size = GetCursorSize();
+        SixLabors.ImageSharp.Size size = GetCursorSize();
         bitmap = new(size.Width, size.Height);
         graphics = Graphics.FromImage(bitmap);
 
-        workBitmap = new(8, 8, PixelFormat.Format32bppArgb);
-        workGraphics = Graphics.FromImage(workBitmap);
-        workGraphics.CompositingQuality = CompositingQuality.HighQuality;
-        workGraphics.InterpolationMode = InterpolationMode.HighQualityBilinear;
-        workGraphics.SmoothingMode = SmoothingMode.HighQuality;
+        scaledBitmap = new(8, 8, PixelFormat.Format32bppArgb);
+        scaledGraphics = Graphics.FromImage(scaledBitmap);
+        scaledGraphics.CompositingQuality = CompositingQuality.HighQuality;
+        scaledGraphics.InterpolationMode = InterpolationMode.HighQualityBilinear;
+        scaledGraphics.SmoothingMode = SmoothingMode.HighQuality;
     }
 
     public void Dispose()
@@ -55,8 +55,8 @@ public sealed class CursorClassifier : IDisposable
         graphics.Dispose();
         bitmap.Dispose();
 
-        workGraphics.Dispose();
-        workBitmap.Dispose();
+        scaledGraphics.Dispose();
+        scaledBitmap.Dispose();
     }
 
 
@@ -72,7 +72,7 @@ public sealed class CursorClassifier : IDisposable
             graphics.ReleaseHdc();
         }
 
-        ulong cursorHash = ImageHashing.AverageHash(bitmap, workBitmap, workGraphics);
+        ulong cursorHash = ImageHashing.AverageHash(bitmap, scaledBitmap, scaledGraphics);
         if (saveImage)
         {
             string path = Path.Join("..", "..", "..", "..", "Cursors", $"{cursorHash}.bmp");

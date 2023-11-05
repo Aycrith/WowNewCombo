@@ -1,4 +1,4 @@
-using System.Drawing;
+using SixLabors.ImageSharp;
 using SharedLib.Extensions;
 using SharedLib.NpcFinder;
 

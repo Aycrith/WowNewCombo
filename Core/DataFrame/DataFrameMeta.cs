@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Drawing;
+using SixLabors.ImageSharp;
 using Newtonsoft.Json;
 
 namespace Core;
@@ -45,7 +45,7 @@ public readonly struct DataFrameMeta : IEquatable<DataFrameMeta>
             return Size.Empty;
         }
 
-        return estimatedSize.ToSize();
+        return (Size)estimatedSize;
     }
 
     public override int GetHashCode()

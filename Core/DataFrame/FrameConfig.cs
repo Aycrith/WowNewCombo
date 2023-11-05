@@ -1,6 +1,9 @@
 ﻿using Newtonsoft.Json;
+
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+
 using System;
-using System.Drawing;
 using System.IO;
 
 namespace Core;
@@ -72,7 +75,7 @@ public static class FrameConfig
         }
     }
 
-    public static DataFrameMeta GetMeta(Color color)
+    public static DataFrameMeta GetMeta(Bgra32 color)
     {
         int hash = color.R * 65536 + color.G * 256 + color.B;
         if (hash == 0)
@@ -87,7 +90,7 @@ public static class FrameConfig
         return new DataFrameMeta(hash, spacing, size, rows, count);
     }
 
-    public static DataFrame[] TryCreateFrames(DataFrameMeta meta, Bitmap bmp)
+    public static DataFrame[] TryCreateFrames(DataFrameMeta meta, Image<Bgra32> bmp)
     {
         DataFrame[] frames = new DataFrame[meta.frames];
         frames[0] = new(0, 0, 0);
@@ -107,13 +110,13 @@ public static class FrameConfig
         return frames;
     }
 
-    private static bool TryGetNextPoint(Bitmap bmp, int i, int startX, out int x, out int y)
+    private static bool TryGetNextPoint(Image<Bgra32> bmp, int i, int startX, out int x, out int y)
     {
         for (int xi = startX; xi < bmp.Width; xi++)
         {
             for (int yi = 0; yi < bmp.Height; yi++)
             {
-                Color pixel = bmp.GetPixel(xi, yi);
+                Bgra32 pixel = bmp[xi, yi];
                 if (pixel.B == i && pixel.R == 0 && pixel.G == 0)
                 {
                     x = xi;

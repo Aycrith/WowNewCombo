@@ -1,12 +1,12 @@
 ﻿using System;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Threading;
 
 using Game;
 
 using Microsoft.Extensions.Logging;
+
+using SixLabors.ImageSharp;
 
 namespace Core;
 
@@ -20,9 +20,6 @@ public sealed partial class ScreenCapture : ScreenCaptureCleaner, IDisposable
     private readonly ManualResetEventSlim manualReset;
     private readonly Thread thread;
 
-    private readonly Bitmap bitmap;
-    private readonly Graphics graphics;
-
     public ScreenCapture(ILogger<ScreenCapture> logger, DataConfig dataConfig,
         CancellationTokenSource cts, IWowScreen wowScreen)
         : base(logger, dataConfig)
@@ -32,9 +29,6 @@ public sealed partial class ScreenCapture : ScreenCaptureCleaner, IDisposable
         this.token = cts.Token;
         this.wowScreen = wowScreen;
 
-        bitmap = new(wowScreen.Rect.Width, wowScreen.Rect.Height);
-        graphics = Graphics.FromImage(bitmap);
-
         manualReset = new(false);
         thread = new(Thread);
         thread.Start();
@@ -43,9 +37,6 @@ public sealed partial class ScreenCapture : ScreenCaptureCleaner, IDisposable
     public void Dispose()
     {
         manualReset.Set();
-
-        graphics.Dispose();
-        bitmap.Dispose();
     }
 
     private void Thread()
@@ -60,8 +51,7 @@ public sealed partial class ScreenCapture : ScreenCaptureCleaner, IDisposable
                 string fileName = $"{DateTimeOffset.Now:MM_dd_HH_mm_ss_fff}.jpg";
                 LogScreenCapture(logger, fileName);
 
-                wowScreen.DrawBitmapTo(graphics);
-                bitmap.Save(Path.Join(dataConfig.Screenshot, fileName), ImageFormat.Jpeg);
+                wowScreen.ScreenImage.SaveAsJpeg(Path.Join(dataConfig.Screenshot, fileName));
             }
             catch (Exception ex)
             {

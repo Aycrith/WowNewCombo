@@ -11,5 +11,5 @@ public sealed class StartupConfigReader
     public AddonDataProviderType ReaderType =>
         System.Enum.TryParse(Type, out AddonDataProviderType m)
         ? m
-        : AddonDataProviderType.GDI;
+        : AddonDataProviderType.DXGI;
 }

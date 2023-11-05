@@ -4,10 +4,12 @@ using Microsoft.Extensions.Logging;
 
 using SharpGen.Runtime;
 
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.PixelFormats;
+
 using System;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 using Vortice.Direct3D;
@@ -25,28 +27,27 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
 {
     private readonly ILogger<WowScreenDXGI> logger;
     private readonly WowProcess wowProcess;
+    private readonly int Bgra32Size;
 
     public event Action? OnScreenChanged;
 
     public bool Enabled { get; set; }
-
     public bool EnablePostProcess { get; set; }
-    public Bitmap Bitmap { get; private set; }
-    public object Lock { get; init; }
 
-    private const double screenshotTickMs = 180;
-    private DateTime lastScreenUpdate;
+    public bool MinimapEnabled { get; set; }
+
+    public Rectangle ScreenRect => screenRect;
+    private Rectangle screenRect;
+
+    public Image<Bgra32> ScreenImage { get; init; }
+
+    private readonly SixLabors.ImageSharp.Configuration ContiguousJpegConfiguration
+        = new(new JpegConfigurationModule()) { PreferContiguousImageBuffers = true };
 
     // TODO: make it work for higher resolution ex. 4k
     public const int MiniMapSize = 200;
-    public Bitmap MiniMapBitmap { get; private set; }
     public Rectangle MiniMapRect { get; private set; }
-    public object MiniMapLock { get; init; }
-
-    private readonly int minimapBytesToCopy;
-
-    private const double miniMapTickMs = 180;
-    private DateTime lastMinimapUpdate;
+    public Image<Bgra32> MiniMapImage { get; init; }
 
     public IntPtr ProcessHwnd => wowProcess.Process.MainWindowHandle;
 
@@ -63,26 +64,20 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
 
     private readonly ID3D11Texture2D minimapTexture;
     private readonly ID3D11Texture2D screenTexture;
-    private readonly ID3D11Texture2D addonTexture;
+    private ID3D11Texture2D addonTexture = null!;
 
     private readonly ID3D11Device device;
     private readonly IDXGIOutputDuplication duplication;
 
-    private Point p;
-
-    private Rectangle screenRect;
-    public Rectangle Rect => screenRect;
-
     private readonly bool windowedMode;
-    private readonly int screenBytesToCopy;
 
     // IAddonDataProvider
 
-    private readonly Rectangle addonRect;
-    private readonly Bitmap addonBitmap;
-    private readonly DataFrame[] frames;
+    private Rectangle addonRect;
+    private DataFrame[] frames = null!;
+    private Image<Bgra32> addonImage = null!;
 
-    public int[] Data { get; private init; }
+    public int[] Data { get; private set; } = Array.Empty<int>();
     public StringBuilder TextBuilder { get; } = new(3);
 
     public WowScreenDXGI(ILogger<WowScreenDXGI> logger,
@@ -90,39 +85,16 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
     {
         this.logger = logger;
         this.wowProcess = wowProcess;
-        this.frames = frames;
 
-        this.frames = frames;
-
-        Data = new int[frames.Length];
-
-        for (int i = 0; i < frames.Length; i++)
-        {
-            addonRect.Width = Math.Max(addonRect.Width, frames[i].X);
-            addonRect.Height = Math.Max(addonRect.Height, frames[i].Y);
-        }
-        addonRect.Width++;
-        addonRect.Height++;
-
-        addonBitmap =
-            new(addonRect.Right, addonRect.Bottom, PixelFormat.Format32bppRgb);
+        Bgra32Size = Unsafe.SizeOf<Bgra32>();
 
         GetRectangle(out screenRect);
-        p = screenRect.Location;
         windowedMode = IsWindowedMode(screenRect.Location);
 
-        screenBytesToCopy = windowedMode
-            ? (screenRect.Right - screenRect.Left) * 4
-            : (screenRect.Right - screenRect.Left) * 4 * screenRect.Bottom;
-
-        Bitmap =
-            new(screenRect.Width, screenRect.Height, PixelFormat.Format32bppPArgb);
-        Lock = new();
+        ScreenImage = new(ContiguousJpegConfiguration, screenRect.Width, screenRect.Height);
 
         MiniMapRect = new(0, 0, MiniMapSize, MiniMapSize);
-        MiniMapBitmap = new(MiniMapSize, MiniMapSize, PixelFormat.Format32bppPArgb);
-        minimapBytesToCopy = (MiniMapRect.Right - MiniMapRect.Left) * 4;
-        MiniMapLock = new();
+        MiniMapImage = new(ContiguousJpegConfiguration, MiniMapSize, MiniMapSize);
 
         IntPtr hMonitor =
             MonitorFromWindow(wowProcess.Process.MainWindowHandle, MONITOR_DEFAULT_TO_NULL);
@@ -169,20 +141,7 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
         };
         screenTexture = device.CreateTexture2D(screenTextureDesc);
 
-        Texture2DDescription addonTextureDesc = new()
-        {
-            CPUAccessFlags = CpuAccessFlags.Read,
-            BindFlags = BindFlags.None,
-            Format = Format.B8G8R8A8_UNorm,
-            Width = addonRect.Right,
-            Height = addonRect.Bottom,
-            MiscFlags = ResourceOptionFlags.None,
-            MipLevels = 1,
-            ArraySize = 1,
-            SampleDescription = { Count = 1, Quality = 0 },
-            Usage = ResourceUsage.Staging
-        };
-        addonTexture = device.CreateTexture2D(addonTextureDesc);
+        InitFrames(frames);
 
         Texture2DDescription miniMapTextureDesc = new()
         {
@@ -217,21 +176,64 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
         adapter.Dispose();
         output1.Dispose();
         output.Dispose();
-
-        addonBitmap.Dispose();
-        Bitmap.Dispose();
     }
 
+    public void InitFrames(DataFrame[] frames)
+    {
+        this.frames = frames;
+        Data = new int[frames.Length];
+
+        addonRect = new();
+        for (int i = 0; i < frames.Length; i++)
+        {
+            addonRect.Width = Math.Max(addonRect.Width, frames[i].X);
+            addonRect.Height = Math.Max(addonRect.Height, frames[i].Y);
+        }
+        addonRect.Width++;
+        addonRect.Height++;
+
+        addonImage = new(ContiguousJpegConfiguration, addonRect.Right, addonRect.Bottom);
+
+        Texture2DDescription addonTextureDesc = new()
+        {
+            CPUAccessFlags = CpuAccessFlags.Read,
+            BindFlags = BindFlags.None,
+            Format = Format.B8G8R8A8_UNorm,
+            Width = addonRect.Right,
+            Height = addonRect.Bottom,
+            MiscFlags = ResourceOptionFlags.None,
+            MipLevels = 1,
+            ArraySize = 1,
+            SampleDescription = { Count = 1, Quality = 0 },
+            Usage = ResourceUsage.Staging
+        };
+
+        addonTexture?.Dispose();
+        addonTexture = device.CreateTexture2D(addonTextureDesc);
+
+        logger.LogDebug($"DataFrames {frames.Length} - Texture: {addonRect.Width}x{addonRect.Height}");
+    }
+
+    [SkipLocalsInit]
     public void Update()
     {
         if (windowedMode)
+        {
             GetRectangle(out screenRect);
+
+            // TODO: bounds check
+            if (screenRect.X < 0 ||
+                screenRect.Y < 0 ||
+                screenRect.Right > output.Description.DesktopCoordinates.Right ||
+                screenRect.Bottom > output.Description.DesktopCoordinates.Bottom)
+                return;
+        }
 
         duplication.ReleaseFrame();
 
         Result result = duplication.AcquireNextFrame(0,
             out OutduplFrameInfo frame,
-        out IDXGIResource resource);
+        out IDXGIResource idxgiResource);
 
         // If only the pointer was updated(that is, the desktop image was not updated),
         // the AccumulatedFrames, TotalMetadataBufferSize, LastPresentTime members are set to zero.
@@ -243,93 +245,124 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
             return;
         }
 
-        ID3D11Texture2D texture = resource.QueryInterface<ID3D11Texture2D>();
+        ID3D11Texture2D texture
+            = idxgiResource.QueryInterface<ID3D11Texture2D>();
 
-        // Addon
+        UpdateAddonImage(texture);
 
-        Box box = new(p.X, p.Y, 0, p.X + addonRect.Right, p.Y + addonRect.Bottom, 1);
+        if (Enabled)
+            UpdateScreenImage(texture);
+
+        if (MinimapEnabled)
+            UpdateMinimapImage(texture);
+
+        texture.Dispose();
+    }
+
+    [SkipLocalsInit]
+    private void UpdateAddonImage(ID3D11Texture2D texture)
+    {
+        Box box = new(screenRect.X, screenRect.Y, 0, screenRect.X + addonRect.Right, screenRect.Y + addonRect.Bottom, 1);
         device.ImmediateContext.CopySubresourceRegion(addonTexture, 0, 0, 0, 0, texture, 0, box);
 
-        MappedSubresource dataBoxAddon = device.ImmediateContext.Map(addonTexture, 0, MapMode.Read, Vortice.Direct3D11.MapFlags.None);
-        int sizeInBytesToCopy = (addonRect.Right - addonRect.Left) * AddonDataProviderConfig.BYTES_PER_PIXEL;
+        MappedSubresource resource =
+            device.ImmediateContext.Map(addonTexture, 0, MapMode.Read, Vortice.Direct3D11.MapFlags.None);
 
-        BitmapData bdAddon = addonBitmap.LockBits(addonRect, ImageLockMode.WriteOnly, addonBitmap.PixelFormat);
-        for (int y = 0; y < addonRect.Bottom; y++)
+        int width = addonRect.Width;
+        int bytesToCopy = width * Bgra32Size;
+        nint dataPointer = resource.DataPointer;
+        int rowPitch = resource.RowPitch;
+
+        if (addonImage.DangerousTryGetSinglePixelMemory(out Memory<Bgra32> memory) && memory.Length > 1)
         {
-            MemoryHelpers.CopyMemory(bdAddon.Scan0 + y * bdAddon.Stride, dataBoxAddon.DataPointer + y * dataBoxAddon.RowPitch, sizeInBytesToCopy);
-        }
-        device.ImmediateContext.Unmap(addonTexture, 0);
-
-        //bitmap.Save($"bitmap.bmp", ImageFormat.Bmp);
-        //System.Threading.Thread.Sleep(1000);
-
-        if (frames.Length > 0)
-            IAddonDataProvider.InternalUpdate(bdAddon, frames, Data);
-
-        addonBitmap.UnlockBits(bdAddon);
-
-        // Screen
-
-        if (DateTime.UtcNow > lastScreenUpdate.AddMilliseconds(screenshotTickMs))
-        {
-            box = new(p.X, p.Y, 0, p.X + screenRect.Right, p.Y + screenRect.Bottom, 1);
-            device.ImmediateContext.CopySubresourceRegion(screenTexture, 0, 0, 0, 0, texture, 0, box);
-
-            MappedSubresource dataBoxScreen = device.ImmediateContext.Map(screenTexture, 0, MapMode.Read, Vortice.Direct3D11.MapFlags.None);
-
-            lock (Lock)
+            unsafe
             {
-                BitmapData bdScreen = Bitmap.LockBits(screenRect, ImageLockMode.WriteOnly, Bitmap.PixelFormat);
-                if (windowedMode)
+                for (int y = 0; y < addonRect.Height; y++)
                 {
-                    for (int y = 0; y < screenRect.Bottom; y++)
+                    ReadOnlySpan<byte> src = new((dataPointer + (y * rowPitch)).ToPointer(), bytesToCopy);
+                    var dest = memory.Span.Slice(y * width, width).GetPointerUnsafe();
+                    MemoryHelpers.CopyMemory(dest, src);
+                }
+            }
+        }
+
+        device.ImmediateContext.Unmap(addonTexture, 0);
+    }
+
+    [SkipLocalsInit]
+    private void UpdateScreenImage(ID3D11Texture2D texture)
+    {
+        Box box = new(screenRect.X, screenRect.Y, 0, screenRect.Right, screenRect.Bottom, 1);
+        device.ImmediateContext.CopySubresourceRegion(screenTexture, 0, 0, 0, 0, texture, 0, box);
+
+        MappedSubresource resource = device.ImmediateContext.Map(screenTexture, 0, MapMode.Read, Vortice.Direct3D11.MapFlags.None);
+
+        int width = screenRect.Width;
+        int bytesToCopy = width * Bgra32Size;
+        nint dataPointer = resource.DataPointer;
+        int rowPitch = resource.RowPitch;
+
+        if (ScreenImage.DangerousTryGetSinglePixelMemory(out Memory<Bgra32> memory))
+        {
+            if (!windowedMode)
+            {
+                unsafe
+                {
+                    ReadOnlySpan<byte> src
+                        = new(dataPointer.ToPointer(), screenRect.Height * bytesToCopy);
+                    MemoryHelpers.CopyMemory(memory.Span.GetPointerUnsafe(), src);
+                }
+            }
+            else
+            {
+                unsafe
+                {
+                    for (int y = 0; y < screenRect.Height; y++)
                     {
-                        MemoryHelpers.CopyMemory(bdScreen.Scan0 + y * bdScreen.Stride, dataBoxScreen.DataPointer + y * dataBoxScreen.RowPitch, screenBytesToCopy);
+                        ReadOnlySpan<byte> src = new((dataPointer + (y * rowPitch)).ToPointer(), bytesToCopy);
+                        var dest = memory.Span.Slice(y * width, width).GetPointerUnsafe();
+                        MemoryHelpers.CopyMemory(dest, src);
                     }
                 }
-                else
-                {
-                    MemoryHelpers.CopyMemory(bdScreen.Scan0, dataBoxScreen.DataPointer, screenBytesToCopy);
-                }
-
-                device.ImmediateContext.Unmap(screenTexture, 0);
-
-                Bitmap.UnlockBits(bdScreen);
             }
-
-            lastScreenUpdate = DateTime.UtcNow;
         }
+    }
 
-        // Minimap
+    [SkipLocalsInit]
+    private void UpdateMinimapImage(ID3D11Texture2D texture)
+    {
+        Box box = new(screenRect.Right - MiniMapSize, screenRect.Y, 0, screenRect.Right, screenRect.Top + MiniMapRect.Bottom, 1);
+        device.ImmediateContext.CopySubresourceRegion(minimapTexture, 0, 0, 0, 0, texture, 0, box);
 
-        if (DateTime.UtcNow > lastMinimapUpdate.AddMilliseconds(miniMapTickMs))
+        MappedSubresource resource = device.ImmediateContext.Map(minimapTexture, 0, MapMode.Read, Vortice.Direct3D11.MapFlags.None);
+
+        if (MiniMapImage.DangerousTryGetSinglePixelMemory(out Memory<Bgra32> memory))
         {
-            box = new(p.X + screenRect.Right - MiniMapSize, p.Y, 0, p.X + MiniMapRect.Right, p.Y + MiniMapRect.Bottom, 1);
-            device.ImmediateContext.CopySubresourceRegion(minimapTexture, 0, 0, 0, 0, texture, 0, box);
+            int width = MiniMapRect.Width;
+            int bytesToCopy = width * Bgra32Size;
+            nint dataPointer = resource.DataPointer;
+            int rowPitch = resource.RowPitch;
 
-            MappedSubresource dataBoxMap = device.ImmediateContext.Map(minimapTexture, 0, MapMode.Read, Vortice.Direct3D11.MapFlags.None);
-
-            lock (MiniMapLock)
+            unsafe
             {
-                BitmapData bdMap = MiniMapBitmap.LockBits(MiniMapRect, ImageLockMode.WriteOnly, MiniMapBitmap.PixelFormat);
-                for (int y = 0; y < MiniMapRect.Bottom; y++)
+                for (int y = 0; y < MiniMapRect.Height; y++)
                 {
-                    MemoryHelpers.CopyMemory(bdMap.Scan0 + y * bdMap.Stride, dataBoxMap.DataPointer + y * dataBoxMap.RowPitch, minimapBytesToCopy);
+                    ReadOnlySpan<byte> src = new((dataPointer + (y * rowPitch)).ToPointer(), bytesToCopy);
+                    var dest = memory.Span.Slice(y * width, width).GetPointerUnsafe();
+                    MemoryHelpers.CopyMemory(dest, src);
                 }
-
-                device.ImmediateContext.Unmap(screenTexture, 0);
-
-                MiniMapBitmap.UnlockBits(bdMap);
             }
-
-            lastMinimapUpdate = DateTime.UtcNow;
         }
-        texture.Dispose();
+
+        device.ImmediateContext.Unmap(screenTexture, 0);
     }
 
     public void UpdateData()
     {
+        if (frames.Length <= 2)
+            return;
 
+        IAddonDataProvider.InternalUpdate(addonImage, frames, Data);
     }
 
     public void PostProcess()
@@ -345,57 +378,5 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
     public void GetRectangle(out Rectangle rect)
     {
         NativeMethods.GetWindowRect(wowProcess.Process.MainWindowHandle, out rect);
-    }
-
-
-    public Bitmap GetBitmap(int width, int height)
-    {
-        Update();
-
-        Bitmap bitmap = new(width, height);
-        Rectangle sourceRect = new(0, 0, width, height);
-
-        using Graphics graphics = Graphics.FromImage(bitmap);
-        lock (Lock)
-        {
-            graphics.DrawImage(Bitmap, 0, 0, sourceRect, GraphicsUnit.Pixel);
-        }
-
-        return bitmap;
-    }
-
-    public void DrawBitmapTo(Graphics graphics)
-    {
-        lock (Lock)
-        {
-            graphics.DrawImage(Bitmap, 0, 0, screenRect, GraphicsUnit.Pixel);
-        }
-
-        GetCursorPos(out Point cursorPoint);
-        GetRectangle(out Rectangle windowRect);
-
-        if (!windowRect.Contains(cursorPoint))
-            return;
-
-        CURSORINFO cursorInfo = new();
-        cursorInfo.cbSize = Marshal.SizeOf(cursorInfo);
-        if (GetCursorInfo(ref cursorInfo) &&
-            cursorInfo.flags == CURSOR_SHOWING)
-        {
-            DrawIcon(graphics.GetHdc(),
-                cursorPoint.X, cursorPoint.Y, cursorInfo.hCursor);
-
-            graphics.ReleaseHdc();
-        }
-    }
-
-    public System.Drawing.Color GetColorAt(Point point)
-    {
-        return Bitmap.GetPixel(point.X, point.Y);
-    }
-
-    public void UpdateMinimapBitmap()
-    {
-        // not used
     }
 }

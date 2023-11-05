@@ -1,30 +1,25 @@
 using SharedLib.Extensions;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Drawing;
+
 using System.Linq;
-using System.Drawing.Imaging;
-using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
 using System.Buffers;
 using System.Collections.Generic;
-using System.Threading;
 
 using static SharedLib.NpcFinder.NpcNameColors;
+using SixLabors.ImageSharp.Advanced;
+using SixLabors.ImageSharp;
 
 namespace SharedLib.NpcFinder;
 
-public sealed partial class NpcNameFinder : IDisposable
+public sealed partial class NpcNameFinder
 {
     private readonly ILogger logger;
-    private readonly IBitmapProvider bitmapProvider;
-    private readonly PixelFormat pixelFormat;
+    private readonly IScreenImageProvider bitmapProvider;
     private readonly INpcResetEvent resetEvent;
 
     private const int bytesPerPixel = 4;
-
-    private readonly Pen whitePen;
-    private readonly Pen greyPen;
 
     public readonly int screenMid;
     public readonly int screenTargetBuffer;
@@ -69,12 +64,13 @@ public sealed partial class NpcNameFinder : IDisposable
     public int HeightOffset1 { get; set; } = 10;
     public int HeightOffset2 { get; set; } = 2;
 
-    public NpcNameFinder(ILogger logger, IBitmapProvider bitmapProvider,
+    private readonly ArrayCounter counter;
+
+    public NpcNameFinder(ILogger logger, IScreenImageProvider bitmapProvider,
         INpcResetEvent resetEvent)
     {
         this.logger = logger;
         this.bitmapProvider = bitmapProvider;
-        this.pixelFormat = bitmapProvider.Bitmap.PixelFormat;
         this.resetEvent = resetEvent;
 
         UpdateSearchMode();
@@ -88,33 +84,26 @@ public sealed partial class NpcNameFinder : IDisposable
 
         Area = new Rectangle(new Point(0, (int)ScaleHeight(topOffset)),
             new Size(
-                (int)(bitmapProvider.Bitmap.Width * 0.87f),
-                (int)(bitmapProvider.Bitmap.Height * 0.6f)));
+                (int)(bitmapProvider.ScreenImage.Width * 0.87f),
+                (int)(bitmapProvider.ScreenImage.Height * 0.6f)));
 
-        int screenWidth = bitmapProvider.Rect.Width;
+        int screenWidth = bitmapProvider.ScreenRect.Width;
         screenMid = screenWidth / 2;
         screenMidBuffer = screenWidth / 15;
         screenTargetBuffer = screenMidBuffer / 2;
         screenAddBuffer = screenMidBuffer * 3;
 
-        whitePen = new(Color.White, 3);
-        greyPen = new(Color.Gray, 3);
-    }
-
-    public void Dispose()
-    {
-        whitePen.Dispose();
-        greyPen.Dispose();
+        counter = new();
     }
 
     private float ScaleWidth(int value)
     {
-        return value * (bitmapProvider.Rect.Width / refWidth);
+        return value * (bitmapProvider.ScreenRect.Width / refWidth);
     }
 
     private float ScaleHeight(int value)
     {
-        return value * (bitmapProvider.Rect.Height / refHeight);
+        return value * (bitmapProvider.ScreenRect.Height / refHeight);
     }
 
     private void CalculateHeightMultipiler()
@@ -375,6 +364,7 @@ public sealed partial class NpcNameFinder : IDisposable
         resetEvent.Set();
     }
 
+    [SkipLocalsInit]
     private ArraySegment<NpcPosition> DetermineNpcs(ReadOnlySpan<LineSegment> data)
     {
         int count = 0;
@@ -459,7 +449,7 @@ public sealed partial class NpcNameFinder : IDisposable
 
                 Point pi = ii.Rect.Centre();
                 Point pj = jj.Rect.Centre();
-                float midDistance = PointExt.SqrDistance(pi, pj);
+                float midDistance = ImageSharpPointExt.SqrDistance(pi, pj);
 
                 if (ii.Rect.IntersectsWith(jj.Rect) ||
                     midDistance <= lineHeight * lineHeight)
@@ -530,92 +520,45 @@ public sealed partial class NpcNameFinder : IDisposable
 
     [SkipLocalsInit]
     private ReadOnlySpan<LineSegment> PopulateLines(
-        IBitmapProvider provider, Rectangle rect,
+        IScreenImageProvider provider, Rectangle rect,
         Func<byte, byte, byte, bool> colorMatcher,
         Rectangle area, float minLength, float lengthDiff)
     {
-        const int RESOLUTION = 64;
-        int width = (area.Right - area.Left) / RESOLUTION;
+        const int RESOLUTION = 32;
+        int rowSize = (area.Right - area.Left) / RESOLUTION;
         int height = (area.Bottom - area.Top) / RESOLUTION;
-        int size = width * height;
+        int totalSize = rowSize * height;
 
         var pooler = ArrayPool<LineSegment>.Shared;
-        LineSegment[] segments = pooler.Rent(size);
-        int i = 0;
+        LineSegment[] segments = pooler.Rent(totalSize);
 
-        int end = area.Right;
         float minEndLength = minLength - lengthDiff;
 
-        lock (provider.Lock)
-        {
-            Bitmap bitmap = provider.Bitmap;
-            BitmapData bitmapData =
-                bitmap.LockBits(new Rectangle(Point.Empty, rect.Size),
-            ImageLockMode.ReadOnly, pixelFormat);
+        Rectangle rectangle = new(area.X, area.Y, area.Width, area.Height);
 
-            int bdHeight = bitmapData.Height;
-            int bdStride = bitmapData.Stride;
+        counter.count = 0;
+        LineSegmentOperation operation = new(
+            segments,
+            rowSize,
+            rectangle,
+            minLength,
+            minEndLength,
+            counter,
+            colorMatcher,
+            bitmapProvider.ScreenImage.Frames[0].PixelBuffer);
 
-            [SkipLocalsInit]
-            unsafe void body(int y)
-            {
-                int xStart = -1;
-                int xEnd = -1;
-
-                ReadOnlySpan<byte> bitmapSpan =
-                    new(bitmapData.Scan0.ToPointer(), bdHeight * bdStride);
-
-                ReadOnlySpan<byte> currentLine =
-                    bitmapSpan.Slice(y * bdStride, bdStride);
-
-                for (int x = area.Left; x < end; x++)
-                {
-                    int xi = x * bytesPerPixel;
-
-                    if (!colorMatcher(
-                        currentLine[xi + 2],    // r
-                        currentLine[xi + 1],    // g
-                        currentLine[xi]))       // b 
-                        continue;
-
-                    if (xStart > -1 && (x - xEnd) < minLength)
-                    {
-                        xEnd = x;
-                    }
-                    else
-                    {
-                        if (xStart > -1 && xEnd - xStart > minEndLength)
-                        {
-                            if (i + 1 >= size)
-                                return;
-
-                            segments[Interlocked.Add(ref i, 1)] =
-                                new LineSegment(xStart, xEnd, y);
-                        }
-
-                        xStart = x;
-                    }
-                    xEnd = x;
-                }
-
-                if (xStart > -1 && xEnd - xStart > minEndLength)
-                {
-                    segments[Interlocked.Add(ref i, 1)] =
-                        new LineSegment(xStart, xEnd, y);
-                }
-            }
-            _ = Parallel.For(area.Top, area.Height, body);
-
-            bitmap.UnlockBits(bitmapData);
-        }
+        ParallelRowIterator.IterateRows<LineSegmentOperation, LineSegment>(
+            Configuration.Default,
+            rectangle,
+            in operation);
 
         pooler.Return(segments);
-        return new(segments, 0, i);
+        return new(segments, 0, counter.count);
     }
 
     public Point ToScreenCoordinates()
     {
-        return bitmapProvider.Rect.Location;
+        return new(bitmapProvider.ScreenRect.Location.X, bitmapProvider.ScreenRect.Location.Y);
     }
 
 
