@@ -56,7 +56,7 @@ public sealed class ActionBarCooldownReader : IReader
     {
         int index = keyAction.SlotIndex;
 
-        ref Data d = ref data[index];
+        ref readonly Data d = ref data[index];
 
         return Max((int)(d.End - UtcNow).TotalMilliseconds, 0);
     }

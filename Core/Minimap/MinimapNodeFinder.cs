@@ -1,19 +1,14 @@
 ﻿using System;
 using System.Buffers;
-using System.Diagnostics.Metrics;
 
 using Core.Minimap;
 
 using Microsoft.Extensions.Logging;
 
 using SharedLib;
-using SharedLib.Extensions;
-using SharedLib.NpcFinder;
 
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Advanced;
-
-#pragma warning disable 162
 
 namespace Core;
 

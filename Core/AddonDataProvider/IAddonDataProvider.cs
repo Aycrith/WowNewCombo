@@ -23,10 +23,10 @@ public interface IAddonDataProvider : IDisposable
     static unsafe void InternalUpdate(Image<Bgra32> bd,
         ReadOnlySpan<DataFrame> frames, Span<int> output)
     {
-        Bgra32 first = bd.DangerousGetPixelRowMemory(frames[0].Y)
+        ref readonly Bgra32 first = ref bd.DangerousGetPixelRowMemory(frames[0].Y)
             .Span[frames[0].X];
 
-        Bgra32 last = bd.DangerousGetPixelRowMemory(frames[^1].Y)
+        ref readonly Bgra32 last = ref bd.DangerousGetPixelRowMemory(frames[^1].Y)
             .Span[frames[^1].X];
 
         if (!first.Equals(firstColor) ||
@@ -39,8 +39,8 @@ public interface IAddonDataProvider : IDisposable
         {
             DataFrame frame = frames[i];
 
-            Span<Bgra32> row = bd.DangerousGetPixelRowMemory(frame.Y).Span;
-            ref Bgra32 pixel = ref row[frame.X];
+            ReadOnlySpan<Bgra32> row = bd.DangerousGetPixelRowMemory(frame.Y).Span;
+            ref readonly Bgra32 pixel = ref row[frame.X];
 
             output[frame.Index] = pixel.B | (pixel.G << 8) | (pixel.R << 16);
         }

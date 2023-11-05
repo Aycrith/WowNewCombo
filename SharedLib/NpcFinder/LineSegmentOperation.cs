@@ -63,7 +63,7 @@ internal readonly struct LineSegmentOperation : IRowOperation<LineSegment>
 
         for (int x = area.Left; x < end; x++)
         {
-            Bgra32 pixel = row[x];
+            ref readonly Bgra32 pixel = ref row[x];
 
             if (!colorMatcher(pixel.R, pixel.G, pixel.B))
                 continue;

@@ -64,7 +64,7 @@ internal readonly struct MinimapRowOperation : IRowOperation<Point>
                 continue;
             }
 
-            Bgra32 pixel = row[x];
+            ref readonly Bgra32 pixel = ref row[x];
 
             if (IsMatch(pixel.R, pixel.G, pixel.B))
             {
