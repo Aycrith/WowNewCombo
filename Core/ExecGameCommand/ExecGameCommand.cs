@@ -8,33 +8,33 @@ namespace Core;
 public sealed class ExecGameCommand
 {
     private readonly ILogger<ExecGameCommand> logger;
-    private readonly WowProcessInput wowProcessInput;
-    private readonly CancellationToken ct;
+    private readonly WowProcessInput input;
+    private readonly CancellationToken token;
 
     public ExecGameCommand(ILogger<ExecGameCommand> logger,
-        CancellationTokenSource cts, WowProcessInput wowProcessInput)
+        CancellationTokenSource cts, WowProcessInput input)
     {
         this.logger = logger;
-        ct = cts.Token;
-        this.wowProcessInput = wowProcessInput;
+        token = cts.Token;
+        this.input = input;
     }
 
     public void Run(string content)
     {
-        wowProcessInput.SetForegroundWindow();
+        input.SetForegroundWindow();
         logger.LogInformation(content);
 
-        wowProcessInput.SetClipboard(content);
-        ct.WaitHandle.WaitOne(Random.Shared.Next(100, 250));
+        input.SetClipboard(content);
+        token.WaitHandle.WaitOne(Random.Shared.Next(100, 250));
 
         // Open chat inputbox
-        wowProcessInput.PressRandom(ConsoleKey.Enter, 100, ct);
+        input.PressRandom(ConsoleKey.Enter, 100, token);
 
-        wowProcessInput.PasteFromClipboard();
-        ct.WaitHandle.WaitOne(Random.Shared.Next(100, 250));
+        input.PasteFromClipboard();
+        token.WaitHandle.WaitOne(Random.Shared.Next(100, 250));
 
         // Close chat inputbox
-        wowProcessInput.PressRandom(ConsoleKey.Enter, 100, ct);
-        ct.WaitHandle.WaitOne(Random.Shared.Next(100, 250));
+        input.PressRandom(ConsoleKey.Enter, 100, token);
+        token.WaitHandle.WaitOne(Random.Shared.Next(100, 250));
     }
 }

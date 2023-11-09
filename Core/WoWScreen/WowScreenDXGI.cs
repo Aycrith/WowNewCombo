@@ -26,10 +26,10 @@ namespace Core;
 public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
 {
     private readonly ILogger<WowScreenDXGI> logger;
-    private readonly WowProcess wowProcess;
+    private readonly WowProcess process;
     private readonly int Bgra32Size;
 
-    public event Action? OnScreenChanged;
+    public event Action? OnChanged;
 
     public bool Enabled { get; set; }
     public bool EnablePostProcess { get; set; }
@@ -48,8 +48,6 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
     public const int MiniMapSize = 200;
     public Rectangle MiniMapRect { get; private set; }
     public Image<Bgra32> MiniMapImage { get; init; }
-
-    public IntPtr ProcessHwnd => wowProcess.Process.MainWindowHandle;
 
     private static readonly FeatureLevel[] s_featureLevels =
     {
@@ -81,10 +79,10 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
     public StringBuilder TextBuilder { get; } = new(3);
 
     public WowScreenDXGI(ILogger<WowScreenDXGI> logger,
-        WowProcess wowProcess, DataFrame[] frames)
+        WowProcess process, DataFrame[] frames)
     {
         this.logger = logger;
-        this.wowProcess = wowProcess;
+        this.process = process;
 
         Bgra32Size = Unsafe.SizeOf<Bgra32>();
 
@@ -97,7 +95,7 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
         MiniMapImage = new(ContiguousJpegConfiguration, MiniMapSize, MiniMapSize);
 
         IntPtr hMonitor =
-            MonitorFromWindow(wowProcess.Process.MainWindowHandle, MONITOR_DEFAULT_TO_NULL);
+            MonitorFromWindow(process.MainWindowHandle, MONITOR_DEFAULT_TO_NULL);
 
         Result result;
 
@@ -367,16 +365,16 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
 
     public void PostProcess()
     {
-        OnScreenChanged?.Invoke();
+        OnChanged?.Invoke();
     }
 
     public void GetPosition(ref Point point)
     {
-        NativeMethods.GetPosition(wowProcess.Process.MainWindowHandle, ref point);
+        NativeMethods.GetPosition(process.MainWindowHandle, ref point);
     }
 
     public void GetRectangle(out Rectangle rect)
     {
-        NativeMethods.GetWindowRect(wowProcess.Process.MainWindowHandle, out rect);
+        NativeMethods.GetWindowRect(process.MainWindowHandle, out rect);
     }
 }

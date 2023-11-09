@@ -12,9 +12,9 @@ public interface IInput
 
     int PressRandom(int key, int milliseconds);
 
-    int PressRandom(int key, int milliseconds, CancellationToken ct);
+    int PressRandom(int key, int milliseconds, CancellationToken token);
 
-    void PressFixed(int key, int milliseconds, CancellationToken ct);
+    void PressFixed(int key, int milliseconds, CancellationToken token);
 
     void SetCursorPos(Point p);
 

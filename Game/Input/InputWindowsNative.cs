@@ -10,14 +10,13 @@ public sealed class InputWindowsNative : IInput
 {
     private readonly int maxDelay;
 
-    private readonly WowProcess wowProcess;
+    private readonly WowProcess process;
+    private readonly CancellationToken token;
 
-    private readonly CancellationToken _ct;
-
-    public InputWindowsNative(WowProcess wowProcess, CancellationTokenSource cts, int maxDelay)
+    public InputWindowsNative(WowProcess process, CancellationTokenSource cts, int maxDelay)
     {
-        this.wowProcess = wowProcess;
-        _ct = cts.Token;
+        this.process = process;
+        token = cts.Token;
 
         this.maxDelay = maxDelay;
     }
@@ -29,72 +28,72 @@ public sealed class InputWindowsNative : IInput
 
     public void KeyDown(int key)
     {
-        PostMessage(wowProcess.Process.MainWindowHandle, WM_KEYDOWN, key, 0);
+        PostMessage(process.MainWindowHandle, WM_KEYDOWN, key, 0);
     }
 
     public void KeyUp(int key)
     {
-        PostMessage(wowProcess.Process.MainWindowHandle, WM_KEYUP, key, 0);
+        PostMessage(process.MainWindowHandle, WM_KEYUP, key, 0);
     }
 
     public int PressRandom(int key, int milliseconds)
     {
-        return PressRandom(key, milliseconds, _ct);
+        return PressRandom(key, milliseconds, token);
     }
 
-    public int PressRandom(int key, int milliseconds, CancellationToken ct)
+    public int PressRandom(int key, int milliseconds, CancellationToken token)
     {
-        PostMessage(wowProcess.Process.MainWindowHandle, WM_KEYDOWN, key, 0);
+        PostMessage(process.MainWindowHandle, WM_KEYDOWN, key, 0);
 
         int delay = DelayTime(milliseconds);
-        ct.WaitHandle.WaitOne(delay);
+        token.WaitHandle.WaitOne(delay);
 
-        PostMessage(wowProcess.Process.MainWindowHandle, WM_KEYUP, key, 0);
+        PostMessage(process.MainWindowHandle, WM_KEYUP, key, 0);
 
         return delay;
     }
 
-    public void PressFixed(int key, int milliseconds, CancellationToken ct)
+    public void PressFixed(int key, int milliseconds, CancellationToken token)
     {
-        PostMessage(wowProcess.Process.MainWindowHandle, WM_KEYDOWN, key, 0);
-        ct.WaitHandle.WaitOne(milliseconds);
-        PostMessage(wowProcess.Process.MainWindowHandle, WM_KEYUP, key, 0);
+        PostMessage(process.MainWindowHandle, WM_KEYDOWN, key, 0);
+        token.WaitHandle.WaitOne(milliseconds);
+        PostMessage(process.MainWindowHandle, WM_KEYUP, key, 0);
     }
 
     public void LeftClick(Point p)
     {
         SetCursorPos(p);
 
-        ScreenToClient(wowProcess.Process.MainWindowHandle, ref p);
+        ScreenToClient(process.MainWindowHandle, ref p);
         int lparam = MakeLParam(p.X, p.Y);
 
-        PostMessage(wowProcess.Process.MainWindowHandle, WM_LBUTTONDOWN, 0, lparam);
+        PostMessage(process.MainWindowHandle, WM_LBUTTONDOWN, 0, lparam);
 
-        _ct.WaitHandle.WaitOne(DelayTime(maxDelay));
+        token.WaitHandle.WaitOne(DelayTime(maxDelay));
 
         GetCursorPos(out p);
-        ScreenToClient(wowProcess.Process.MainWindowHandle, ref p);
+        ScreenToClient(process.MainWindowHandle, ref p);
         lparam = MakeLParam(p.X, p.Y);
 
-        PostMessage(wowProcess.Process.MainWindowHandle, WM_LBUTTONUP, 0, lparam);
+        PostMessage(process.MainWindowHandle, WM_LBUTTONUP, 0, lparam);
     }
 
     public void RightClick(Point p)
     {
         SetCursorPos(p);
 
-        ScreenToClient(wowProcess.Process.MainWindowHandle, ref p);
+        ScreenToClient(process.MainWindowHandle, ref p);
         int lparam = MakeLParam(p.X, p.Y);
 
-        PostMessage(wowProcess.Process.MainWindowHandle, WM_RBUTTONDOWN, 0, lparam);
+        PostMessage(process.MainWindowHandle, WM_RBUTTONDOWN, 0, lparam);
 
-        _ct.WaitHandle.WaitOne(DelayTime(maxDelay));
+        token.WaitHandle.WaitOne(DelayTime(maxDelay));
 
         GetCursorPos(out p);
-        ScreenToClient(wowProcess.Process.MainWindowHandle, ref p);
+        ScreenToClient(process.MainWindowHandle, ref p);
         lparam = MakeLParam(p.X, p.Y);
 
-        PostMessage(wowProcess.Process.MainWindowHandle, WM_RBUTTONUP, 0, lparam);
+        PostMessage(process.MainWindowHandle, WM_RBUTTONUP, 0, lparam);
     }
 
     public void SetCursorPos(Point p)

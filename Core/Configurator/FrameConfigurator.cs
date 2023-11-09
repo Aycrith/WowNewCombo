@@ -35,9 +35,9 @@ public sealed class FrameConfigurator : IDisposable
     private const int INTERVAL = 500;
 
     private readonly ILogger<FrameConfigurator> logger;
-    private readonly WowProcess wowProcess;
-    private readonly IWowScreen wowScreen;
-    private readonly WowProcessInput wowProcessInput;
+    private readonly WowProcess process;
+    private readonly IWowScreen screen;
+    private readonly WowProcessInput input;
     private readonly ExecGameCommand execGameCommand;
     private readonly AddonConfigurator addonConfigurator;
     private readonly Wait wait;
@@ -61,16 +61,16 @@ public sealed class FrameConfigurator : IDisposable
     public event Action? OnUpdate;
 
     public FrameConfigurator(ILogger<FrameConfigurator> logger, Wait wait,
-        WowProcess wowProcess, IAddonDataProvider reader,
-        IWowScreen wowScreen, WowProcessInput wowProcessInput,
+        WowProcess process, IAddonDataProvider reader,
+        IWowScreen screen, WowProcessInput input,
         ExecGameCommand execGameCommand, AddonConfigurator addonConfigurator)
     {
         this.logger = logger;
         this.wait = wait;
-        this.wowProcess = wowProcess;
+        this.process = process;
         this.reader = reader;
-        this.wowScreen = wowScreen;
-        this.wowProcessInput = wowProcessInput;
+        this.screen = screen;
+        this.input = input;
         this.execGameCommand = execGameCommand;
         this.addonConfigurator = addonConfigurator;
     }
@@ -105,13 +105,13 @@ public sealed class FrameConfigurator : IDisposable
                 stage++;
                 break;
             case Stage.DetectRunningGame:
-                if (wowProcess.IsRunning)
+                if (process.IsRunning)
                 {
                     if (auto)
                     {
                         logger.LogInformation(
-                            $"Found {nameof(WowProcess)} with pid={wowProcess.Process.Id} " +
-                            $"{wowProcess.Process.ProcessName}");
+                            $"Found {nameof(WowProcess)} with pid={process.Id} " +
+                            $"{process.ProcessName}");
                     }
                     stage++;
                 }
@@ -126,7 +126,7 @@ public sealed class FrameConfigurator : IDisposable
                 }
                 break;
             case Stage.CheckGameWindowLocation:
-                wowScreen.GetRectangle(out screenRect);
+                screen.GetRectangle(out screenRect);
                 if (screenRect.Location.X < 0 || screenRect.Location.Y < 0)
                 {
                     logger.LogWarning($"Client window outside of the visible area of the screen {screenRect.Location}");
@@ -161,7 +161,7 @@ public sealed class FrameConfigurator : IDisposable
                     logger.LogInformation($"Addon installed! Version: {version}");
 
                     logger.LogInformation("Enter configuration mode.");
-                    wowProcessInput.SetForegroundWindow();
+                    input.SetForegroundWindow();
                     wait.Fixed(INTERVAL);
                     ToggleInGameConfiguration(execGameCommand);
                     wait.Update();
@@ -200,7 +200,7 @@ public sealed class FrameConfigurator : IDisposable
             case Stage.CreateDataFrames:
 
                 Size addonSize = size;
-                var cropped = wowScreen.ScreenImage.Clone(cropSize);
+                var cropped = screen.ScreenImage.Clone(cropSize);
                 void cropSize(IImageProcessingContext x)
                 {
                     x.Crop(addonSize.Width, addonSize.Height);
@@ -230,7 +230,7 @@ public sealed class FrameConfigurator : IDisposable
                 if (auto)
                 {
                     logger.LogInformation("Exit configuration mode.");
-                    wowProcessInput.SetForegroundWindow();
+                    input.SetForegroundWindow();
                     ToggleInGameConfiguration(execGameCommand);
                     wait.Fixed(INTERVAL);
                     wait.Update();
@@ -310,7 +310,7 @@ public sealed class FrameConfigurator : IDisposable
 
     private DataFrameMeta GetDataFrameMeta()
     {
-        return FrameConfig.GetMeta(wowScreen.ScreenImage[0, 0]);
+        return FrameConfig.GetMeta(screen.ScreenImage[0, 0]);
     }
 
     public void ToggleManualConfig()
@@ -344,7 +344,7 @@ public sealed class FrameConfigurator : IDisposable
             return false;
         }
 
-        wowScreen.GetRectangle(out Rectangle rect);
+        screen.GetRectangle(out Rectangle rect);
         FrameConfig.Save(rect, version, DataFrameMeta, DataFrames);
         logger.LogInformation("Frame configuration was successful! Configuration saved!");
         Saved = true;

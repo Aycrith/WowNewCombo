@@ -19,8 +19,9 @@ internal sealed class Program
     private static Microsoft.Extensions.Logging.ILogger logger;
     private static ILoggerFactory loggerFactory;
 
-    private static WowProcess wowProcess;
-    private static IWowScreen wowScreen;
+    private static CancellationTokenSource cts;
+    private static WowProcess process;
+    private static IWowScreen screen;
 
     private const bool LogOverallTimes = false;
     private const int delay = 150;
@@ -47,8 +48,9 @@ internal sealed class Program
             new DataFrame(1, 0, 0),
         };
 
-        wowProcess = new();
-        wowScreen = new WowScreenDXGI(loggerFactory.CreateLogger<WowScreenDXGI>(), wowProcess, mockFrames);
+        cts = new CancellationTokenSource();
+        process = new(cts);
+        screen = new WowScreenDXGI(loggerFactory.CreateLogger<WowScreenDXGI>(), process, mockFrames);
 
         Test_NPCNameFinder();
         //Test_Input();
@@ -69,7 +71,7 @@ internal sealed class Program
         //NpcNames types = NpcNames.Enemy | NpcNames.Neutral | NpcNames.NamePlate;
         //NpcNames types = NpcNames.Friendly | NpcNames.Neutral;
 
-        using Test_NpcNameFinder test = new(logger, wowProcess, wowScreen, loggerFactory, types);
+        using Test_NpcNameFinder test = new(logger, process, screen, loggerFactory, types);
         int count = 100;
         int i = 0;
 
@@ -117,7 +119,7 @@ internal sealed class Program
 
     private static void Test_Input()
     {
-        Test_Input test = new(logger, wowProcess, wowScreen, loggerFactory);
+        Test_Input test = new(logger, cts, process, screen, loggerFactory);
         test.Mouse_Movement();
         test.Mouse_Clicks();
         test.Clipboard();
@@ -176,7 +178,7 @@ internal sealed class Program
 
     private static void Test_MinimapNodeFinder()
     {
-        using Test_MinimapNodeFinder test = new(logger, wowProcess, wowScreen, loggerFactory);
+        Test_MinimapNodeFinder test = new(logger, screen);
 
         int count = 100;
         int i = 0;
@@ -214,7 +216,7 @@ internal sealed class Program
         //NpcNames types = NpcNames.Enemy | NpcNames.Neutral;
         NpcNames types = NpcNames.Friendly | NpcNames.Neutral;
 
-        using Test_NpcNameFinder test = new(logger, wowProcess, wowScreen, loggerFactory, types);
+        using Test_NpcNameFinder test = new(logger, process, screen, loggerFactory, types);
 
         int count = 2;
         int i = 0;

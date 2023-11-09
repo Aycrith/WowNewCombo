@@ -26,7 +26,7 @@ internal sealed class MockWoWScreen : IWowScreen
     public bool MinimapEnabled { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
 #pragma warning disable CS0067 // The event 'MockWoWScreen.OnScreenChanged' is never used
-    public event Action OnScreenChanged;
+    public event Action OnChanged;
 #pragma warning restore CS0067 // The event 'MockWoWScreen.OnScreenChanged' is never used
 
     public void GetPosition(ref Point point)

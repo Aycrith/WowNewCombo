@@ -11,5 +11,5 @@ public interface IMouseInput
 
     void LeftClick(Point p);
 
-    void InteractMouseOver(CancellationToken ct);
+    void InteractMouseOver(CancellationToken token);
 }

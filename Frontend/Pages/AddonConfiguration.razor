@@ -1,10 +1,10 @@
 ﻿@page "/AddonConfiguration"
 
 @inject ILogger logger
-@inject NavigationManager NavigationManager
+@inject NavigationManager navigationManager
 @inject AddonConfigurator addonConfigurator
 @inject ExecGameCommand exec
-@inject WowProcess wowProcess
+@inject WowProcess process
 
 @implements IDisposable
 
@@ -112,11 +112,11 @@
 
         if (FrameConfig.Exists())
         {
-            NavigationManager.NavigateTo("/RestartServer");
+            navigationManager.NavigateTo("/RestartServer");
         }
         else
         {
-            NavigationManager.NavigateTo("/", true);
+            navigationManager.NavigateTo("/", true);
         }
     }
 

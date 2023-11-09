@@ -1,16 +1,13 @@
 ﻿using System;
-using System.Diagnostics.CodeAnalysis;
 
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Core.Extensions;
 public static class ServiceCollectionExtension
 {
-    public static IServiceCollection ForwardSingleton<
-        TService,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TInterface>
-        (this IServiceCollection services)
-    where TService : class, TInterface
+    public static IServiceCollection ForwardSingleton<TService, TInterface>(
+        this IServiceCollection services)
+        where TService : class, TInterface
     {
         services.AddSingleton(typeof(TService));
         services.AddSingleton(typeof(TInterface), GetRequired);
@@ -22,15 +19,14 @@ public static class ServiceCollectionExtension
     }
 
     public static IServiceCollection ForwardSingleton<TService>(
-        this IServiceCollection services,
-        IServiceProvider sp)
+        this IServiceCollection services, IServiceProvider sp)
         where TService : class
     {
         return services.AddSingleton(sp.GetRequiredService<TService>());
     }
 
-    public static IServiceCollection ForwardSingleton<TService,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TInterface>(
+    public static IServiceCollection ForwardSingleton<
+        TService, TInterface>(
         this IServiceCollection services,
         Func<IServiceProvider, TService> implementationFactory)
         where TService : class, TInterface
@@ -44,14 +40,14 @@ public static class ServiceCollectionExtension
             => x.GetRequiredService<TService>();
     }
 
-    public static IServiceCollection ForwardSingleton<TService,
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TInterface1,
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TInterface2>(
-    this IServiceCollection services,
-    Func<IServiceProvider, TService> implementationFactory)
-    where TService : class, TInterface1
+    public static IServiceCollection ForwardSingleton<
+        TService,
+        TInterface1, TInterface2,
+        TImplementation>(this IServiceCollection services)
+        where TService : class, TInterface1, TInterface2
+        where TImplementation : class, TService
     {
-        services.AddSingleton(typeof(TService), implementationFactory);
+        services.AddSingleton(typeof(TService), typeof(TImplementation));
         services.AddSingleton(typeof(TInterface1), GetRequired);
         services.AddSingleton(typeof(TInterface2), GetRequired);
 

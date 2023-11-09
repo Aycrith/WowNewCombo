@@ -22,7 +22,7 @@ public sealed partial class GoapAgent : IDisposable
     private readonly AddonReader addonReader;
     private readonly PlayerReader playerReader;
     private readonly AddonBits bits;
-    private readonly IWowScreen wowScreen;
+    private readonly IWowScreen screen;
     private readonly RouteInfo routeInfo;
     private readonly ConfigurableInput input;
     private readonly IMountHandler mountHandler;
@@ -62,7 +62,7 @@ public sealed partial class GoapAgent : IDisposable
                     sessionHandler.Stop("Stopped", false);
                 }
 
-                wowScreen.Enabled = false;
+                screen.Enabled = false;
             }
             else
             {
@@ -101,7 +101,7 @@ public sealed partial class GoapAgent : IDisposable
         RouteInfo routeInfo,
         IScreenCapture screenCapture,
         ClassConfiguration classConfiguration,
-        IWowScreen wowScreen,
+        IWowScreen screen,
         GoapAgentState state,
         AddonReader addonReader,
         PlayerReader playerReader,
@@ -126,7 +126,7 @@ public sealed partial class GoapAgent : IDisposable
         this.screenCapture = screenCapture;
         this.classConfig = classConfiguration;
 
-        this.wowScreen = wowScreen;
+        this.screen = screen;
         this.State = state;
         this.addonReader = addonReader;
         this.playerReader = playerReader;

@@ -1,4 +1,5 @@
 ﻿using SixLabors.ImageSharp;
+using System;
 using System.Threading;
 
 using Game;
@@ -9,21 +10,21 @@ internal sealed class MockWoWProcess : IMouseInput
 {
     public void RightClick(Point p)
     {
-        throw new System.NotImplementedException();
+        throw new NotImplementedException();
     }
 
     public void LeftClick(Point p)
     {
-        throw new System.NotImplementedException();
+        throw new NotImplementedException();
     }
 
     public void SetCursorPos(Point p)
     {
-        throw new System.NotImplementedException();
+        throw new NotImplementedException();
     }
 
-    public void InteractMouseOver(CancellationToken ct)
+    public void InteractMouseOver(CancellationToken token)
     {
-        throw new System.NotImplementedException();
+        throw new NotImplementedException();
     }
 }

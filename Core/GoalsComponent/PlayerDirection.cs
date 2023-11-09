@@ -4,12 +4,14 @@ using System.Numerics;
 using System.Threading;
 using SharedLib.Extensions;
 using static System.MathF;
+using Core.GOAP;
+using SharedLib;
 
 #pragma warning disable 162
 
 namespace Core;
 
-public sealed partial class PlayerDirection : IDisposable
+public sealed partial class PlayerDirection
 {
     private const bool debug = false;
 
@@ -18,28 +20,24 @@ public sealed partial class PlayerDirection : IDisposable
     private readonly ILogger<PlayerDirection> logger;
     private readonly ConfigurableInput input;
     private readonly PlayerReader playerReader;
-    private readonly CancellationTokenSource _cts;
+    private readonly CancellationToken token;
 
     public PlayerDirection(ILogger<PlayerDirection> logger,
+        CancellationTokenSource<GoapAgent> cts,
         ConfigurableInput input, PlayerReader playerReader)
     {
         this.logger = logger;
+        this.token = cts.Token;
         this.input = input;
         this.playerReader = playerReader;
-        _cts = new();
-    }
-
-    public void Dispose()
-    {
-        _cts.Cancel();
     }
 
     public void SetDirection(float targetDir, Vector3 map)
     {
-        SetDirection(targetDir, map, DefaultIgnoreDistance, _cts.Token);
+        SetDirection(targetDir, map, DefaultIgnoreDistance, token);
     }
 
-    public void SetDirection(float targetDir, Vector3 world, float ignoreDistance, CancellationToken ct)
+    public void SetDirection(float targetDir, Vector3 world, float ignoreDistance, CancellationToken token)
     {
         float distance = playerReader.WorldPos.WorldDistanceXYTo(world);
         if (distance < ignoreDistance)
@@ -54,7 +52,7 @@ public sealed partial class PlayerDirection : IDisposable
             LogDebugSetDirection(logger, playerReader.Direction, targetDir, distance);
 
         input.PressFixed(GetDirectionKeyToPress(targetDir),
-            TurnDuration(targetDir), ct);
+            TurnDuration(targetDir), token);
     }
 
     private float TurnAmount(float targetDir)

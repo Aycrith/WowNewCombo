@@ -1,5 +1,4 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
 using Core;
 
@@ -10,40 +9,31 @@ using Microsoft.Extensions.Logging;
 using SixLabors.ImageSharp;
 
 #pragma warning disable 0162
-#pragma warning disable 8618
 
 #nullable enable
 
 namespace CoreTests;
 
-internal sealed class Test_MinimapNodeFinder : IDisposable
+internal sealed class Test_MinimapNodeFinder
 {
     private const bool saveImage = false;
     private const bool LogEachUpdate = false;
 
     private readonly ILogger logger;
-
-    private readonly WowProcess wowProcess;
-    private readonly IWowScreen wowScreen;
+    private readonly IWowScreen screen;
 
     private readonly MinimapNodeFinder minimapNodeFinder;
 
-    private readonly Stopwatch stopwatch = new();
+    private readonly Stopwatch stopwatch;
 
-    public Test_MinimapNodeFinder(ILogger logger, WowProcess wowProcess, IWowScreen wowScreen, ILoggerFactory loggerFactory)
+    public Test_MinimapNodeFinder(ILogger logger, IWowScreen screen)
     {
         this.logger = logger;
+        this.screen = screen;
 
-        this.wowProcess = wowProcess;
-        this.wowScreen = wowScreen;
+        stopwatch = new();
 
-        minimapNodeFinder = new(logger, wowScreen);
-    }
-
-    public void Dispose()
-    {
-        wowScreen.Dispose();
-        wowProcess.Dispose();
+        minimapNodeFinder = new(logger, screen);
     }
 
     public void Execute()
@@ -51,7 +41,7 @@ internal sealed class Test_MinimapNodeFinder : IDisposable
         if (LogEachUpdate)
             stopwatch.Restart();
 
-        wowScreen.Update();
+        screen.Update();
 
         if (LogEachUpdate)
             logger.LogInformation($"Capture: {stopwatch.ElapsedMilliseconds}ms");
@@ -72,6 +62,6 @@ internal sealed class Test_MinimapNodeFinder : IDisposable
 
     private void SaveImage()
     {
-        wowScreen.MiniMapImage.SaveAsPng("minimap.png");
+        screen.MiniMapImage.SaveAsPng("minimap.png");
     }
 }

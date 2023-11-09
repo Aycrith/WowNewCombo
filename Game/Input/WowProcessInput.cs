@@ -19,11 +19,11 @@ public sealed partial class WowProcessInput : IMouseInput
 
     private readonly ILogger<WowProcessInput> logger;
 
-    private readonly WowProcess wowProcess;
+    private readonly WowProcess process;
     private readonly InputWindowsNative nativeInput;
     private readonly IInput simulatorInput;
 
-    private readonly BitArray keysDown = new((int)ConsoleKey.OemClear);
+    private readonly BitArray keysDown;
 
     public ConsoleKey ForwardKey { get; set; }
     public ConsoleKey BackwardKey { get; set; }
@@ -32,13 +32,15 @@ public sealed partial class WowProcessInput : IMouseInput
     public ConsoleKey InteractMouseover { get; set; }
     public int InteractMouseoverPress { get; set; }
 
-    public WowProcessInput(ILogger<WowProcessInput> logger, CancellationTokenSource cts, WowProcess wowProcess)
+    public WowProcessInput(ILogger<WowProcessInput> logger, CancellationTokenSource cts, WowProcess process)
     {
         this.logger = logger;
-        this.wowProcess = wowProcess;
+        this.process = process;
 
-        nativeInput = new InputWindowsNative(wowProcess, cts, InputDuration.FastPress);
-        simulatorInput = new InputSimulator(wowProcess, cts, InputDuration.FastPress);
+        keysDown = new((int)ConsoleKey.OemClear);
+
+        nativeInput = new InputWindowsNative(process, cts, InputDuration.FastPress);
+        simulatorInput = new InputSimulator(process, cts, InputDuration.FastPress);
     }
 
     public void Reset()
@@ -121,7 +123,7 @@ public sealed partial class WowProcessInput : IMouseInput
 
     public void SetForegroundWindow()
     {
-        NativeMethods.SetForegroundWindow(wowProcess.Process.MainWindowHandle);
+        NativeMethods.SetForegroundWindow(process.MainWindowHandle);
     }
 
     public int PressRandom(ConsoleKey key, int milliseconds)
@@ -129,21 +131,21 @@ public sealed partial class WowProcessInput : IMouseInput
         return PressRandom(key, milliseconds, CancellationToken.None);
     }
 
-    public int PressRandom(ConsoleKey key, int milliseconds, CancellationToken ct)
+    public int PressRandom(ConsoleKey key, int milliseconds, CancellationToken token)
     {
         keysDown[(int)key] = true;
-        int totalElapsedMs = nativeInput.PressRandom((int)key, milliseconds, ct);
+        int elapsedMs = nativeInput.PressRandom((int)key, milliseconds, token);
         keysDown[(int)key] = false;
 
         if (LogInput)
         {
-            LogKeyPress(logger, key, totalElapsedMs);
+            LogKeyPress(logger, key, elapsedMs);
         }
 
-        return totalElapsedMs;
+        return elapsedMs;
     }
 
-    public void PressFixed(ConsoleKey key, int milliseconds, CancellationToken ct)
+    public void PressFixed(ConsoleKey key, int milliseconds, CancellationToken token)
     {
         if (milliseconds < 1)
             return;
@@ -162,7 +164,7 @@ public sealed partial class WowProcessInput : IMouseInput
         }
 
         keysDown[(int)key] = true;
-        nativeInput.PressFixed((int)key, milliseconds, ct);
+        nativeInput.PressFixed((int)key, milliseconds, token);
         keysDown[(int)key] = false;
     }
 
@@ -189,9 +191,9 @@ public sealed partial class WowProcessInput : IMouseInput
         nativeInput.LeftClick(p);
     }
 
-    public void InteractMouseOver(CancellationToken ct)
+    public void InteractMouseOver(CancellationToken token)
     {
-        PressFixed(InteractMouseover, InteractMouseoverPress, ct);
+        PressFixed(InteractMouseover, InteractMouseoverPress, token);
     }
 
     [LoggerMessage(

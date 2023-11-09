@@ -14,20 +14,20 @@ public sealed partial class ScreenCapture : ScreenCaptureCleaner, IDisposable
 {
     private readonly ILogger<ScreenCapture> logger;
     private readonly DataConfig dataConfig;
-    private readonly IWowScreen wowScreen;
+    private readonly IWowScreen screen;
     private readonly CancellationToken token;
 
     private readonly ManualResetEventSlim manualReset;
     private readonly Thread thread;
 
     public ScreenCapture(ILogger<ScreenCapture> logger, DataConfig dataConfig,
-        CancellationTokenSource cts, IWowScreen wowScreen)
+        CancellationTokenSource cts, IWowScreen screen)
         : base(logger, dataConfig)
     {
         this.logger = logger;
         this.dataConfig = dataConfig;
         this.token = cts.Token;
-        this.wowScreen = wowScreen;
+        this.screen = screen;
 
         manualReset = new(false);
         thread = new(Thread);
@@ -51,7 +51,7 @@ public sealed partial class ScreenCapture : ScreenCaptureCleaner, IDisposable
                 string fileName = $"{DateTimeOffset.Now:MM_dd_HH_mm_ss_fff}.jpg";
                 LogScreenCapture(logger, fileName);
 
-                wowScreen.ScreenImage.SaveAsJpeg(Path.Join(dataConfig.Screenshot, fileName));
+                screen.ScreenImage.SaveAsJpeg(Path.Join(dataConfig.Screenshot, fileName));
             }
             catch (Exception ex)
             {

@@ -5,7 +5,6 @@ using System.Threading;
 using System.Text;
 using System.Diagnostics;
 using System;
-using SharedLib.Extensions;
 using Core;
 using Game;
 using SharedLib;
@@ -34,23 +33,27 @@ internal sealed class Test_NpcNameFinder : IDisposable
     private readonly NpcNameTargeting npcNameTargeting;
     private readonly NpcNameTargetingLocations locations;
 
-    private readonly IWowScreen wowScreen;
+    private readonly IWowScreen screen;
 
-    private readonly Stopwatch stopwatch = new();
-    private readonly StringBuilder stringBuilder = new();
+    private readonly Stopwatch stopwatch;
+    private readonly StringBuilder stringBuilder;
 
     private readonly NpcNameOverlay? npcNameOverlay;
 
     private DateTime lastNpcUpdate;
     private double updateDuration;
 
-    public Test_NpcNameFinder(ILogger logger, WowProcess wowProcess, IWowScreen wowScreen, ILoggerFactory loggerFactory, NpcNames types)
+    public Test_NpcNameFinder(ILogger logger, WowProcess process,
+        IWowScreen screen, ILoggerFactory loggerFactory, NpcNames types)
     {
         this.logger = logger;
-        this.wowScreen = wowScreen;
+        this.screen = screen;
+
+        stopwatch = new();
+        stringBuilder = new();
 
         INpcResetEvent npcResetEvent = new NpcResetEvent();
-        npcNameFinder = new(logger, wowScreen, npcResetEvent);
+        npcNameFinder = new(logger, screen, npcResetEvent);
 
         locations = new(npcNameFinder);
 
@@ -59,16 +62,16 @@ internal sealed class Test_NpcNameFinder : IDisposable
 
         Wait wait = new(new(false), new());
 
-        WowProcessInput input = new(loggerFactory.CreateLogger<WowProcessInput>(), new(), wowProcess);
+        WowProcessInput input = new(loggerFactory.CreateLogger<WowProcessInput>(), new(), process);
 
         npcNameTargeting = new(loggerFactory.CreateLogger<NpcNameTargeting>(),
-            new(), wowScreen, npcNameFinder, locations, input,
+            new(), screen, npcNameFinder, locations, input,
             mouseOverReader, new NoBlacklist(), wait, gmws);
 
         npcNameFinder.ChangeNpcType(types);
 
         if (showOverlay)
-            npcNameOverlay = new(wowScreen.ProcessHwnd, npcNameFinder,
+            npcNameOverlay = new(process.MainWindowHandle, npcNameFinder,
                 locations, debugTargeting, debugSkinning, debugTargetVsAdd);
     }
 
@@ -84,7 +87,7 @@ internal sealed class Test_NpcNameFinder : IDisposable
 
     public void UpdateScreen()
     {
-        wowScreen.Update();
+        screen.Update();
     }
 
     public (double capture, double update) Execute(int NpcUpdateIntervalMs)

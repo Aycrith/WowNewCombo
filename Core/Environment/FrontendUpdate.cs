@@ -8,7 +8,7 @@ public sealed class FrontendUpdate
 {
     private readonly ILogger<FrontendUpdate> logger;
     private readonly IAddonReader addonReader;
-    private readonly CancellationToken ct;
+    private readonly CancellationToken token;
 
     private readonly Thread thread;
     private const int tickMs = 250;
@@ -18,7 +18,7 @@ public sealed class FrontendUpdate
     {
         this.logger = logger;
         this.addonReader = addonReader;
-        this.ct = cts.Token;
+        this.token = cts.Token;
 
         thread = new(Update);
         thread.Start();
@@ -26,10 +26,10 @@ public sealed class FrontendUpdate
 
     private void Update()
     {
-        while (!ct.IsCancellationRequested)
+        while (!token.IsCancellationRequested)
         {
             addonReader.UpdateUI();
-            ct.WaitHandle.WaitOne(tickMs);
+            token.WaitHandle.WaitOne(tickMs);
         }
 
         if (logger.IsEnabled(LogLevel.Debug))

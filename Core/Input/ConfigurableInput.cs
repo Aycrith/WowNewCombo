@@ -7,53 +7,53 @@ namespace Core;
 
 public sealed partial class ConfigurableInput
 {
-    private readonly WowProcessInput proc;
+    private readonly WowProcessInput input;
     private readonly ClassConfiguration classConfig;
 
-    public ConfigurableInput(WowProcessInput wowProcessInput, ClassConfiguration classConfig)
+    public ConfigurableInput(WowProcessInput input, ClassConfiguration classConfig)
     {
-        this.proc = wowProcessInput;
+        this.input = input;
         this.classConfig = classConfig;
 
-        wowProcessInput.ForwardKey = classConfig.ForwardKey;
-        wowProcessInput.BackwardKey = classConfig.BackwardKey;
-        wowProcessInput.TurnLeftKey = classConfig.TurnLeftKey;
-        wowProcessInput.TurnRightKey = classConfig.TurnRightKey;
+        input.ForwardKey = classConfig.ForwardKey;
+        input.BackwardKey = classConfig.BackwardKey;
+        input.TurnLeftKey = classConfig.TurnLeftKey;
+        input.TurnRightKey = classConfig.TurnRightKey;
 
-        wowProcessInput.InteractMouseover = classConfig.InteractMouseOver.ConsoleKey;
-        wowProcessInput.InteractMouseoverPress = classConfig.InteractMouseOver.PressDuration;
+        input.InteractMouseover = classConfig.InteractMouseOver.ConsoleKey;
+        input.InteractMouseoverPress = classConfig.InteractMouseOver.PressDuration;
     }
 
-    public void Reset() => proc.Reset();
+    public void Reset() => input.Reset();
 
     public void StartForward(bool forced)
     {
-        proc.SetKeyState(ForwardKey, true, forced);
+        input.SetKeyState(ForwardKey, true, forced);
     }
 
     public void StopForward(bool forced)
     {
-        if (proc.IsKeyDown(ForwardKey))
-            proc.SetKeyState(ForwardKey, false, forced);
+        if (input.IsKeyDown(ForwardKey))
+            input.SetKeyState(ForwardKey, false, forced);
     }
 
     public void StartBackward(bool forced)
     {
-        proc.SetKeyState(BackwardKey, true, forced);
+        input.SetKeyState(BackwardKey, true, forced);
     }
 
     public void StopBackward(bool forced)
     {
-        if (proc.IsKeyDown(BackwardKey))
-            proc.SetKeyState(BackwardKey, false, forced);
+        if (input.IsKeyDown(BackwardKey))
+            input.SetKeyState(BackwardKey, false, forced);
     }
 
     public void TurnRandomDir(int milliseconds)
     {
-        proc.PressRandom(
+        input.PressRandom(
             Random.Shared.Next(2) == 0
-            ? proc.TurnLeftKey
-            : proc.TurnRightKey, milliseconds);
+            ? input.TurnLeftKey
+            : input.TurnRightKey, milliseconds);
     }
 
     public void PressRandom(KeyAction keyAction)
@@ -61,29 +61,29 @@ public sealed partial class ConfigurableInput
         PressRandom(keyAction, CancellationToken.None);
     }
 
-    public void PressRandom(KeyAction keyAction, CancellationToken ct)
+    public void PressRandom(KeyAction keyAction, CancellationToken token)
     {
-        proc.PressRandom(keyAction.ConsoleKey, keyAction.PressDuration, ct);
+        input.PressRandom(keyAction.ConsoleKey, keyAction.PressDuration, token);
         keyAction.SetClicked();
     }
 
-    public void PressFixed(ConsoleKey key, int milliseconds, CancellationToken ct)
+    public void PressFixed(ConsoleKey key, int milliseconds, CancellationToken token)
     {
-        proc.PressFixed(key, milliseconds, ct);
+        input.PressFixed(key, milliseconds, token);
     }
 
     public void PressRandom(ConsoleKey key, int milliseconds)
     {
-        proc.PressRandom(key, milliseconds);
+        input.PressRandom(key, milliseconds);
     }
 
-    public bool IsKeyDown(ConsoleKey key) => proc.IsKeyDown(key);
+    public bool IsKeyDown(ConsoleKey key) => input.IsKeyDown(key);
 
     public void PressInteract() => PressRandom(Interact);
 
     public void PressFastInteract()
     {
-        proc.PressRandom(Interact.ConsoleKey, InputDuration.FastPress);
+        input.PressRandom(Interact.ConsoleKey, InputDuration.FastPress);
         Interact.SetClicked();
     }
 
@@ -91,7 +91,7 @@ public sealed partial class ConfigurableInput
     {
         if (Approach.GetRemainingCooldown() == 0)
         {
-            proc.PressRandom(Approach.ConsoleKey, InputDuration.FastPress);
+            input.PressRandom(Approach.ConsoleKey, InputDuration.FastPress);
             Approach.SetClicked();
         }
     }
@@ -102,7 +102,7 @@ public sealed partial class ConfigurableInput
 
     public void PressFastLastTarget()
     {
-        proc.PressRandom(TargetLastTarget.ConsoleKey, InputDuration.FastPress);
+        input.PressRandom(TargetLastTarget.ConsoleKey, InputDuration.FastPress);
         TargetLastTarget.SetClicked();
     }
 
@@ -126,7 +126,7 @@ public sealed partial class ConfigurableInput
 
     public void PressDismount()
     {
-        proc.PressRandom(Mount.ConsoleKey, Mount.PressDuration);
+        input.PressRandom(Mount.ConsoleKey, Mount.PressDuration);
     }
 
     public void PressTargetFocus() => PressRandom(TargetFocus);

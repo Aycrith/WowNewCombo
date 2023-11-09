@@ -20,7 +20,7 @@ public sealed class AreaDB : IDisposable
     private readonly ILogger logger;
     private readonly DataConfig dataConfig;
 
-    private readonly CancellationToken ct;
+    private readonly CancellationToken token;
     private readonly ManualResetEventSlim resetEvent;
     private readonly Thread thread;
 
@@ -34,7 +34,7 @@ public sealed class AreaDB : IDisposable
     {
         this.logger = logger;
         this.dataConfig = dataConfig;
-        ct = cts.Token;
+        token = cts.Token;
         resetEvent = new();
 
         thread = new(ReadArea);
@@ -59,7 +59,7 @@ public sealed class AreaDB : IDisposable
     {
         resetEvent.Wait();
 
-        while (!ct.IsCancellationRequested)
+        while (!token.IsCancellationRequested)
         {
             try
             {

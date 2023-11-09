@@ -36,13 +36,13 @@ public sealed class TargetFinder
     }
 
     public bool Search(
-        NpcNames target, Func<bool> validTarget, CancellationToken ct)
+        NpcNames target, Func<bool> validTarget, CancellationToken token)
     {
-        return LookForTarget(target, ct) && validTarget();
+        return LookForTarget(target, token) && validTarget();
     }
 
     private bool LookForTarget(
-        NpcNames target, CancellationToken ct)
+        NpcNames target, CancellationToken token)
     {
         if (ElapsedMs < waitMs)
             return bits.Target();
@@ -54,13 +54,13 @@ public sealed class TargetFinder
             wait.Update();
         }
 
-        if (!ct.IsCancellationRequested &&
+        if (!token.IsCancellationRequested &&
             !input.KeyboardOnly && !bits.Target())
         {
             npcNameTargeting.ChangeNpcType(target);
             npcNameTargeting.WaitForUpdate();
 
-            if (ct.IsCancellationRequested)
+            if (token.IsCancellationRequested)
                 return false;
 
             if (npcNameTargeting.FoundAny() &&
@@ -68,7 +68,7 @@ public sealed class TargetFinder
                 !input.IsKeyDown(input.TurnRightKey))
             {
                 lastActive = DateTime.UtcNow;
-                return npcNameTargeting.AcquireNonBlacklisted(ct);
+                return npcNameTargeting.AcquireNonBlacklisted(token);
             }
         }
 

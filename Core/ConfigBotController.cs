@@ -14,7 +14,7 @@ public sealed class ConfigBotController : IBotController, IDisposable
 
     private readonly Thread addonThread;
     private readonly IAddonReader addonReader;
-    private readonly IWowScreen wowScreen;
+    private readonly IWowScreen screen;
 
     public GoapAgent? GoapAgent => throw new NotImplementedException();
     public RouteInfo? RouteInfo => throw new NotImplementedException();
@@ -33,13 +33,13 @@ public sealed class ConfigBotController : IBotController, IDisposable
 
     public ConfigBotController(ILogger logger,
         IAddonReader addonReader,
-        IWowScreen wowScreen,
+        IWowScreen screen,
         CancellationTokenSource cts)
     {
         this.logger = logger;
         this.cts = cts;
         this.addonReader = addonReader;
-        this.wowScreen = wowScreen;
+        this.screen = screen;
 
         addonThread = new(AddonThread);
         addonThread.Start();
@@ -54,7 +54,7 @@ public sealed class ConfigBotController : IBotController, IDisposable
     {
         while (!cts.IsCancellationRequested)
         {
-            wowScreen.Update();
+            screen.Update();
             addonReader.Update();
             Thread.Sleep(20);
         }

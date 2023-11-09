@@ -12,18 +12,18 @@ public sealed class InputSimulator : IInput
     private readonly int maxDelay;
 
     private readonly GregsStack.InputSimulatorStandard.InputSimulator simulator;
-    private readonly WowProcess wowProcess;
+    private readonly WowProcess process;
 
-    private readonly CancellationToken _ct;
+    private readonly CancellationToken token;
 
-    public InputSimulator(WowProcess wowProcess, CancellationTokenSource cts, int maxDelay)
+    public InputSimulator(WowProcess process, CancellationTokenSource cts, int maxDelay)
     {
-        this.wowProcess = wowProcess;
-        _ct = cts.Token;
+        this.process = process;
+        this.token = cts.Token;
 
         this.maxDelay = maxDelay;
 
-        simulator = new GregsStack.InputSimulatorStandard.InputSimulator();
+        simulator = new();
     }
 
     private int DelayTime(int milliseconds)
@@ -33,41 +33,41 @@ public sealed class InputSimulator : IInput
 
     public void KeyDown(int key)
     {
-        if (GetForegroundWindow() != wowProcess.Process.MainWindowHandle)
-            SetForegroundWindow(wowProcess.Process.MainWindowHandle);
+        if (GetForegroundWindow() != process.MainWindowHandle)
+            SetForegroundWindow(process.MainWindowHandle);
 
         simulator.Keyboard.KeyDown((VirtualKeyCode)key);
     }
 
     public void KeyUp(int key)
     {
-        if (GetForegroundWindow() != wowProcess.Process.MainWindowHandle)
-            SetForegroundWindow(wowProcess.Process.MainWindowHandle);
+        if (GetForegroundWindow() != process.MainWindowHandle)
+            SetForegroundWindow(process.MainWindowHandle);
 
         simulator.Keyboard.KeyUp((VirtualKeyCode)key);
     }
 
     public int PressRandom(int key, int milliseconds)
     {
-        return PressRandom(key, milliseconds, _ct);
+        return PressRandom(key, milliseconds, token);
     }
 
-    public int PressRandom(int key, int milliseconds, CancellationToken ct)
+    public int PressRandom(int key, int milliseconds, CancellationToken token)
     {
         simulator.Keyboard.KeyDown((VirtualKeyCode)key);
 
         int delay = DelayTime(milliseconds);
-        ct.WaitHandle.WaitOne(delay);
+        token.WaitHandle.WaitOne(delay);
 
         simulator.Keyboard.KeyUp((VirtualKeyCode)key);
 
         return delay;
     }
 
-    public void PressFixed(int key, int milliseconds, CancellationToken ct)
+    public void PressFixed(int key, int milliseconds, CancellationToken token)
     {
         simulator.Keyboard.KeyDown((VirtualKeyCode)key);
-        ct.WaitHandle.WaitOne(milliseconds);
+        token.WaitHandle.WaitOne(milliseconds);
         simulator.Keyboard.KeyUp((VirtualKeyCode)key);
     }
 
@@ -76,7 +76,7 @@ public sealed class InputSimulator : IInput
         SetCursorPos(p);
 
         simulator.Mouse.LeftButtonDown();
-        _ct.WaitHandle.WaitOne(DelayTime(maxDelay));
+        token.WaitHandle.WaitOne(DelayTime(maxDelay));
         simulator.Mouse.LeftButtonUp();
     }
 
@@ -85,13 +85,13 @@ public sealed class InputSimulator : IInput
         SetCursorPos(p);
 
         simulator.Mouse.RightButtonDown();
-        _ct.WaitHandle.WaitOne(DelayTime(maxDelay));
+        token.WaitHandle.WaitOne(DelayTime(maxDelay));
         simulator.Mouse.RightButtonUp();
     }
 
     public void SetCursorPos(Point p)
     {
-        GetWindowRect(wowProcess.Process.MainWindowHandle, out Rectangle rect);
+        GetWindowRect(process.MainWindowHandle, out Rectangle rect);
         p.X = p.X * 65535 / rect.Width;
         p.Y = p.Y * 65535 / rect.Height;
         simulator.Mouse.MoveMouseTo(Convert.ToDouble(p.X), Convert.ToDouble(p.Y));
@@ -99,12 +99,12 @@ public sealed class InputSimulator : IInput
 
     public void SendText(string text)
     {
-        if (GetForegroundWindow() != wowProcess.Process.MainWindowHandle)
-            SetForegroundWindow(wowProcess.Process.MainWindowHandle);
+        if (GetForegroundWindow() != process.MainWindowHandle)
+            SetForegroundWindow(process.MainWindowHandle);
 
         simulator.Keyboard.TextEntry(text);
 
-        _ct.WaitHandle.WaitOne(DelayTime(maxDelay));
+        token.WaitHandle.WaitOne(DelayTime(maxDelay));
     }
 
     public void SetClipboard(string text)
@@ -114,8 +114,8 @@ public sealed class InputSimulator : IInput
 
     public void PasteFromClipboard()
     {
-        if (GetForegroundWindow() != wowProcess.Process.MainWindowHandle)
-            SetForegroundWindow(wowProcess.Process.MainWindowHandle);
+        if (GetForegroundWindow() != process.MainWindowHandle)
+            SetForegroundWindow(process.MainWindowHandle);
 
         simulator.Keyboard.ModifiedKeyStroke(VirtualKeyCode.LCONTROL, VirtualKeyCode.VK_V);
     }

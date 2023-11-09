@@ -10,12 +10,10 @@ public interface IWowScreen : IRectProvider, IScreenImageProvider, IMinimapImage
 
     bool MinimapEnabled { get; set; }
 
-    IntPtr ProcessHwnd { get; }
-
     bool EnablePostProcess { get; set; }
     void PostProcess();
 
-    event Action OnScreenChanged;
+    event Action OnChanged;
 
     void Update();
 }

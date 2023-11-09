@@ -2,7 +2,7 @@
 
 @inject IBotController botController
 @inject IMinimapImageProvider provider
-@inject IWowScreen wowScreen
+@inject IWowScreen screen
 
 @inject MinimapNodeFinder minimapNodeFinder
 
@@ -72,7 +72,7 @@
     {
         if (firstRender)
         {
-            wowScreen.OnScreenChanged += this.ImageChanged;
+            screen.OnChanged += this.ImageChanged;
         }
     }
 
@@ -86,7 +86,7 @@
 
     public void Dispose()
     {
-        wowScreen.OnScreenChanged -= this.ImageChanged;
+        screen.OnChanged -= this.ImageChanged;
 
 
         if (OnNodeFound.HasDelegate)

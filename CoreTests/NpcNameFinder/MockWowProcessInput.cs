@@ -8,7 +8,7 @@ namespace CoreTests;
 
 internal sealed class MockWowProcessInput : IMouseInput
 {
-    public void InteractMouseOver(CancellationToken ct)
+    public void InteractMouseOver(CancellationToken token)
     {
         throw new NotImplementedException();
     }

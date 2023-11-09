@@ -6,12 +6,12 @@ using SharedLib;
 
 namespace Core.Goals;
 
-public sealed class StopMoving
+public sealed class StopMoving : IDisposable
 {
     private readonly WowProcessInput input;
     private readonly PlayerReader playerReader;
     private readonly AddonBits bits;
-    private readonly CancellationToken ct;
+    private readonly CancellationToken token;
 
     private float direction;
 
@@ -22,8 +22,16 @@ public sealed class StopMoving
     {
         this.input = input;
         this.playerReader = playerReader;
-        ct = cts.Token;
+        this.token = cts.Token;
         this.bits = bits;
+    }
+
+    public void Dispose()
+    {
+        if (!bits.Moving())
+            return;
+
+        StopForward();
     }
 
     public void Stop()
@@ -47,7 +55,7 @@ public sealed class StopMoving
         }
         else // moving by interact key
         {
-            input.PressFixed(input.ForwardKey, Random.Shared.Next(2, 5), ct);
+            input.PressFixed(input.ForwardKey, Random.Shared.Next(2, 5), token);
         }
     }
 
@@ -69,7 +77,7 @@ public sealed class StopMoving
             }
 
             if (pressedAny)
-                ct.WaitHandle.WaitOne(1);
+                token.WaitHandle.WaitOne(1);
         }
 
         direction = playerReader.Direction;

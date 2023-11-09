@@ -8,12 +8,12 @@ namespace Core;
 public sealed class Wait
 {
     private readonly AutoResetEvent globalTime;
-    private readonly CancellationToken ct;
+    private readonly CancellationToken token;
 
     public Wait(AutoResetEvent globalTime, CancellationTokenSource cts)
     {
         this.globalTime = globalTime;
-        this.ct = cts.Token;
+        this.token = cts.Token;
     }
 
     public void Update()
@@ -28,7 +28,7 @@ public sealed class Wait
 
     public void Fixed(int durationMs)
     {
-        ct.WaitHandle.WaitOne(durationMs);
+        token.WaitHandle.WaitOne(durationMs);
     }
 
     [SkipLocalsInit]

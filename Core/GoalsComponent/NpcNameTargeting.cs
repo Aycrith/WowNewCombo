@@ -14,8 +14,8 @@ public sealed partial class NpcNameTargeting : IDisposable
     private const int INTERACT_DELAY = 5;
 
     private readonly ILogger<NpcNameTargeting> logger;
-    private readonly CancellationToken ct;
-    private readonly IWowScreen wowScreen;
+    private readonly CancellationToken token;
+    private readonly IWowScreen screen;
     private readonly NpcNameFinder npcNameFinder;
     private readonly NpcNameTargetingLocations locations;
     private readonly IMouseInput input;
@@ -37,7 +37,7 @@ public sealed partial class NpcNameTargeting : IDisposable
     private Point[] locFindBy => locations.FindBy;
 
     public NpcNameTargeting(ILogger<NpcNameTargeting> logger,
-        CancellationTokenSource cts, IWowScreen wowScreen,
+        CancellationTokenSource cts, IWowScreen screen,
         NpcNameFinder npcNameFinder,
         NpcNameTargetingLocations locations,
         IMouseInput input,
@@ -45,8 +45,8 @@ public sealed partial class NpcNameTargeting : IDisposable
         IGameMenuWindowShown gmws)
     {
         this.logger = logger;
-        ct = cts.Token;
-        this.wowScreen = wowScreen;
+        token = cts.Token;
+        this.screen = screen;
         this.npcNameFinder = npcNameFinder;
         this.locations = locations;
         this.input = input;
@@ -67,7 +67,7 @@ public sealed partial class NpcNameTargeting : IDisposable
     public void ChangeNpcType(NpcNames npcNames)
     {
         npcNameFinder.ChangeNpcType(npcNames);
-        wowScreen.Enabled = npcNames != NpcNames.None;
+        screen.Enabled = npcNames != NpcNames.None;
     }
 
     public void Reset()

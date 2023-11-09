@@ -1,4 +1,4 @@
-﻿@inject IWowScreen wowScreen
+﻿@inject IWowScreen screen
 @inject IScreenImageProvider provider
 
 @using SixLabors.ImageSharp
@@ -6,7 +6,7 @@
 @using SixLabors.ImageSharp.Formats.Jpeg
 
 <div class="card" @onclick="Toggle">
-    @if (wowScreen.EnablePostProcess)
+    @if (screen.EnablePostProcess)
     {
         <img class="@(Stretch ? "img-filled" : "img-filled-half")" src="@provider.ScreenImage.ToBase64String(JpegFormat.Instance)" alt="Toggle preview!" />
     }
@@ -19,27 +19,24 @@
 @code {
 
     [Parameter]
-    public int Size { get; set; } = 1024;
-
-    [Parameter]
     public bool Stretch { get; set; } = false;
 
     protected override void OnAfterRender(bool firstRender)
     {
         if (firstRender)
         {
-            wowScreen.OnScreenChanged += this.ImageChanged;
+            screen.OnChanged += this.ImageChanged;
         }
     }
 
     public void Dispose()
     {
-        wowScreen.OnScreenChanged -= this.ImageChanged;
+        screen.OnChanged -= this.ImageChanged;
     }
 
     protected void Toggle()
     {
-        wowScreen.EnablePostProcess = !wowScreen.EnablePostProcess;
+        screen.EnablePostProcess = !screen.EnablePostProcess;
     }
 
     private async void ImageChanged()

@@ -15,7 +15,7 @@ public sealed class GrindSessionHandler : IGrindSessionHandler
     private readonly PlayerReader playerReader;
     private readonly SessionStat stats;
     private readonly IGrindSessionDAO grindSessionDAO;
-    private readonly CancellationToken ct;
+    private readonly CancellationToken token;
 
     private readonly GrindSession session;
     private readonly Thread thread;
@@ -30,7 +30,7 @@ public sealed class GrindSessionHandler : IGrindSessionHandler
         this.playerReader = playerReader;
         this.stats = stats;
         this.grindSessionDAO = grindSessionDAO;
-        ct = cts.Token;
+        token = cts.Token;
 
         session = new()
         {
@@ -76,12 +76,12 @@ public sealed class GrindSessionHandler : IGrindSessionHandler
 
     private void PeriodicSave()
     {
-        while (!ct.IsCancellationRequested)
+        while (!token.IsCancellationRequested)
         {
             if (active)
                 Stop("auto save", true);
 
-            ct.WaitHandle.WaitOne(TimeSpan.FromMinutes(1));
+            token.WaitHandle.WaitOne(TimeSpan.FromMinutes(1));
         }
 
         if (logger.IsEnabled(LogLevel.Debug))

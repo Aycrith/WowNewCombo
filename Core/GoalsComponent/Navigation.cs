@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 
 using SharedLib.Extensions;
 using SharedLib;
+using Core.GOAP;
 
 #pragma warning disable 162
 
@@ -61,14 +62,16 @@ public sealed partial class Navigation : IDisposable
     private readonly Queue<PathRequest> pathRequests = new(1);
     private readonly Queue<PathResult> pathResults = new(1);
 
-    private readonly CancellationTokenSource _cts;
+    private readonly CancellationToken token;
     private readonly Thread pathfinderThread;
     private readonly ManualResetEventSlim manualReset;
 
     private int failedAttempt;
     private Vector3 lastFailedDestination;
 
-    public Navigation(ILogger<Navigation> logger, PlayerDirection playerDirection,
+    public Navigation(ILogger<Navigation> logger,
+        CancellationTokenSource<GoapAgent> cts,
+        PlayerDirection playerDirection,
         ConfigurableInput input, PlayerReader playerReader, StopMoving stopMoving,
         StuckDetector stuckDetector, IPPather pather, IMountHandler mountHandler,
         ClassConfiguration classConfiguration)
@@ -85,9 +88,8 @@ public sealed partial class Navigation : IDisposable
         patherName = pather.GetType().Name;
 
         AvgDistance = MinDistance;
-
+        token = cts.Token;
         manualReset = new(false);
-        _cts = new();
         pathfinderThread = new(PathFinderThread);
         pathfinderThread.Start();
 
@@ -102,16 +104,15 @@ public sealed partial class Navigation : IDisposable
 
     public void Dispose()
     {
-        _cts.Cancel();
         manualReset.Set();
     }
 
     public void Update()
     {
-        Update(_cts.Token);
+        Update(token);
     }
 
-    public void Update(CancellationToken ct)
+    public void Update(CancellationToken token)
     {
         active = true;
 
@@ -126,14 +127,14 @@ public sealed partial class Navigation : IDisposable
             result.Callback(result);
         }
 
-        if (ct.IsCancellationRequested || pathRequests.Count > 0)
+        if (token.IsCancellationRequested || pathRequests.Count > 0)
         {
             return;
         }
 
         if (routeToNextWaypoint.Count == 0)
         {
-            RefillRouteToNextWaypoint(ct);
+            RefillRouteToNextWaypoint(token);
             return;
         }
 
@@ -189,7 +190,7 @@ public sealed partial class Navigation : IDisposable
                 targetM = WorldMapAreaDB.ToMap_FlipXY(targetW, playerReader.WorldMapArea);
                 heading = DirectionCalculator.CalculateMapHeading(playerM, targetM);
 
-                AdjustHeading(heading, ct);
+                AdjustHeading(heading, token);
 
                 return;
             }
@@ -199,7 +200,7 @@ public sealed partial class Navigation : IDisposable
         {
             if (stuckDetector.IsGettingCloser())
             {
-                AdjustHeading(heading, ct);
+                AdjustHeading(heading, token);
             }
             else
             {
@@ -303,7 +304,7 @@ public sealed partial class Navigation : IDisposable
         stuckDetector.Reset();
     }
 
-    private void RefillRouteToNextWaypoint(CancellationToken ct)
+    private void RefillRouteToNextWaypoint(CancellationToken token)
     {
         routeToNextWaypoint.Clear();
 
@@ -329,7 +330,7 @@ public sealed partial class Navigation : IDisposable
             Vector3 playerM = WorldMapAreaDB.ToMap_FlipXY(playerW, playerReader.WorldMapArea);
             Vector3 targetM = WorldMapAreaDB.ToMap_FlipXY(targetW, playerReader.WorldMapArea);
             float heading = DirectionCalculator.CalculateMapHeading(playerM, targetM);
-            AdjustHeading(heading, ct);
+            AdjustHeading(heading, token);
 
             stuckDetector.SetTargetLocation(targetW);
             UpdateTotalRoute();
@@ -392,7 +393,7 @@ public sealed partial class Navigation : IDisposable
 
     private void PathFinderThread()
     {
-        while (!_cts.IsCancellationRequested)
+        while (!token.IsCancellationRequested)
         {
             manualReset.Reset();
             if (pathRequests.TryPeek(out PathRequest pathRequest))
@@ -429,7 +430,7 @@ public sealed partial class Navigation : IDisposable
         }
     }
 
-    private void AdjustHeading(float heading, CancellationToken ct)
+    private void AdjustHeading(float heading, CancellationToken token)
     {
         float diff1 = Abs(Tau + heading - playerReader.Direction) % Tau;
         float diff2 = Abs(heading - playerReader.Direction - Tau) % Tau;
@@ -442,7 +443,7 @@ public sealed partial class Navigation : IDisposable
                 stopMoving.Stop();
             }
 
-            playerDirection.SetDirection(heading, routeToNextWaypoint.Peek(), MinDistance, ct);
+            playerDirection.SetDirection(heading, routeToNextWaypoint.Peek(), MinDistance, token);
         }
     }
 

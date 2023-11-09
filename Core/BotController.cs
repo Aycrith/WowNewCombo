@@ -33,7 +33,7 @@ public sealed partial class BotController : IBotController, IDisposable
     private readonly AddonReader addonReader;
     private readonly AddonBits bits;
     private readonly PlayerReader playerReader;
-    private readonly IWowScreen wowScreen;
+    private readonly IWowScreen screen;
 
     private readonly NpcNameOverlay? npcNameOverlay;
 
@@ -65,7 +65,8 @@ public sealed partial class BotController : IBotController, IDisposable
         ILogger<BotController> logger,
         CancellationTokenSource cts,
         IPPather pather, DataConfig dataConfig,
-        IWowScreen wowScreen,
+        WowProcess process,
+        IWowScreen screen,
         NpcNameFinder npcNameFinder,
         NpcNameTargetingLocations locations,
         INpcResetEvent npcResetEvent,
@@ -82,7 +83,7 @@ public sealed partial class BotController : IBotController, IDisposable
         this.pather = pather;
         this.dataConfig = dataConfig;
 
-        this.wowScreen = wowScreen;
+        this.screen = screen;
 
         this.addonReader = addonReader;
         this.playerReader = playerReader;
@@ -96,7 +97,7 @@ public sealed partial class BotController : IBotController, IDisposable
 
 
         if (overlayOptions.Value.Enabled)
-            npcNameOverlay = new(wowScreen.ProcessHwnd, npcNameFinder, locations,
+            npcNameOverlay = new(process.MainWindowHandle, npcNameFinder, locations,
                 overlayOptions.Value.ShowTargeting,
                 overlayOptions.Value.ShowSkinning,
                 overlayOptions.Value.ShowTargetVsAdd);
@@ -139,18 +140,18 @@ public sealed partial class BotController : IBotController, IDisposable
 
         const int SIZE = 8;
         const int MOD = SIZE - 1;
-        Span<double> screen = stackalloc double[SIZE];
+        Span<double> times = stackalloc double[SIZE];
 
         while (!cts.IsCancellationRequested)
         {
             time = GetTimestamp();
-            wowScreen.Update();
-            screen[tickCount & MOD] =
+            screen.Update();
+            times[tickCount & MOD] =
                 GetElapsedTime(time).TotalMilliseconds;
 
             addonReader.Update();
 
-            AvgScreenLatency = Average(screen);
+            AvgScreenLatency = Average(times);
 
             tickCount++;
 
@@ -186,25 +187,25 @@ public sealed partial class BotController : IBotController, IDisposable
 
         while (true)
         {
-            if (wowScreen.Enabled)
+            if (screen.Enabled)
             {
                 time = GetTimestamp();
                 npcNameFinder.Update();
                 npc[tickCount & MOD] =
                     GetElapsedTime(time).TotalMilliseconds;
 
-                if (wowScreen.EnablePostProcess)
-                    wowScreen.PostProcess();
+                if (screen.EnablePostProcess)
+                    screen.PostProcess();
             }
 
-            if (wowScreen.MinimapEnabled)
+            if (screen.MinimapEnabled)
             {
                 time = GetTimestamp();
                 minimapNodeFinder.Update();
                 npc[tickCount & MOD] =
                     GetElapsedTime(time).TotalMilliseconds;
 
-                wowScreen.PostProcess();
+                screen.PostProcess();
             }
 
             AvgNPCLatency = Average(npc);
@@ -349,7 +350,7 @@ public sealed partial class BotController : IBotController, IDisposable
         RouteInfo = sessionScope.
             ServiceProvider.GetService<RouteInfo>();
 
-        wowScreen.MinimapEnabled = config.Mode == Mode.AttendedGather;
+        screen.MinimapEnabled = config.Mode == Mode.AttendedGather;
     }
 
     private static IEnumerable<IRouteProvider> GetPathProviders(IServiceProvider sp)

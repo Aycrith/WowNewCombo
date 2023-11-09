@@ -11,24 +11,24 @@ namespace Core;
 public sealed class AddonConfigurator
 {
     private readonly ILogger<AddonConfigurator> logger;
-    private readonly WowProcess wowProcess;
+    private readonly WowProcess process;
 
     public AddonConfig Config { get; init; }
 
     private const string DefaultAddonName = "DataToColor";
     private const string AddonSourcePath = @".\Addons\";
 
-    private string AddonBasePath => Path.Join(wowProcess.Path, "Interface", "AddOns");
+    private string AddonBasePath => Path.Join(process.Path, "Interface", "AddOns");
 
     private string DefaultAddonPath => Path.Join(AddonBasePath, DefaultAddonName);
     public string FinalAddonPath => Path.Join(AddonBasePath, Config.Title);
 
     public event Action? OnChange;
 
-    public AddonConfigurator(ILogger<AddonConfigurator> logger, WowProcess wowProcess)
+    public AddonConfigurator(ILogger<AddonConfigurator> logger, WowProcess process)
     {
         this.logger = logger;
-        this.wowProcess = wowProcess;
+        this.process = process;
 
         Config = AddonConfig.Load();
     }

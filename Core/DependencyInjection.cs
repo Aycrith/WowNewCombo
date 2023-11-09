@@ -195,7 +195,6 @@ public static class DependencyInjection
 
     public static IServiceCollection AddCoreBase(this IServiceCollection s)
     {
-        s.AddSingleton<CancellationTokenSource>();
         s.AddSingleton<AutoResetEvent>(x => new(false));
         s.AddSingleton<Wait>();
 
@@ -203,8 +202,7 @@ public static class DependencyInjection
         s.AddSingleton<DataConfig>(x => DataConfig.Load(
             x.GetRequiredService<StartupClientVersion>().Path));
 
-        s.ForwardSingleton<IWowScreen, IScreenImageProvider, IMinimapImageProvider>(
-            x => GetWoWScreen(x.GetRequiredService<IServiceProvider>()));
+        s.ForwardSingleton<IWowScreen, IScreenImageProvider, IMinimapImageProvider, WowScreenDXGI>();
 
         s.ForwardSingleton<WowProcessInput, IMouseInput>();
 
@@ -225,18 +223,18 @@ public static class DependencyInjection
     public static bool AddWoWProcess(
         this IServiceCollection services, ILogger log)
     {
+        services.AddSingleton<CancellationTokenSource>();
         services.AddSingleton<WowProcess>();
         services.AddSingleton<AddonConfigurator>();
 
         var sp = services.BuildServiceProvider(
             new ServiceProviderOptions { ValidateOnBuild = true });
 
-        WowProcess wowProcess = sp.GetRequiredService<WowProcess>();
-        log.LogInformation($"Pid: {wowProcess.ProcessId}");
-        log.LogInformation($"Version: {wowProcess.FileVersion}");
+        WowProcess process = sp.GetRequiredService<WowProcess>();
+        log.LogInformation($"Pid: {process.Id}");
+        log.LogInformation($"Version: {process.FileVersion}");
 
-        // TODO: this might need some massage
-        services.AddSingleton<Version>(x => wowProcess.FileVersion);
+        services.AddSingleton<Version>(x => process.FileVersion);
 
         AddonConfigurator configurator = sp.GetRequiredService<AddonConfigurator>();
         Version? installVersion = configurator.GetInstallVersion();
@@ -252,7 +250,7 @@ public static class DependencyInjection
             return false;
         }
 
-        NativeMethods.GetWindowRect(wowProcess.Process.MainWindowHandle, out Rectangle rect);
+        NativeMethods.GetWindowRect(process.MainWindowHandle, out Rectangle rect);
         if (FrameConfig.Exists() && !FrameConfig.IsValid(rect, installVersion))
         {
             // At this point the webpage never loads so fallback to configuration page
@@ -269,15 +267,15 @@ public static class DependencyInjection
     private static IScreenCapture GetScreenCapture(
         IServiceProvider sp, ILogger log)
     {
-        var spd = sp.GetRequiredService<IOptions<StartupConfigDiagnostics>>();
+        var spd = sp.GetRequiredService<IOptions<StartupConfigDiagnostics>>().Value;
         var globalLogger = sp.GetRequiredService<ILogger>();
         var logger = sp.GetRequiredService<ILogger<ScreenCapture>>();
         var dataConfig = sp.GetRequiredService<DataConfig>();
         var cts = sp.GetRequiredService<CancellationTokenSource>();
-        var wowScreen = sp.GetRequiredService<IWowScreen>();
+        var screen = sp.GetRequiredService<IWowScreen>();
 
-        IScreenCapture value = spd.Value.Enabled
-            ? new ScreenCapture(logger, dataConfig, cts, wowScreen)
+        IScreenCapture value = spd.Enabled
+            ? new ScreenCapture(logger, dataConfig, cts, screen)
             : new NoScreenCapture(globalLogger, dataConfig);
 
         log.LogInformation(value.GetType().Name);
@@ -288,14 +286,13 @@ public static class DependencyInjection
     private static IAddonDataProvider GetAddonDataProvider(
         IServiceProvider sp, ILogger log)
     {
-        var scr = sp.GetRequiredService<IOptions<StartupConfigReader>>();
-        var wowScreen = sp.GetRequiredService<IWowScreen>();
-        var frames = sp.GetRequiredService<DataFrame[]>();
+        var scr = sp.GetRequiredService<IOptions<StartupConfigReader>>().Value;
+        var screen = sp.GetRequiredService<IWowScreen>();
 
-        IAddonDataProvider value = scr.Value.ReaderType switch
+        IAddonDataProvider value = scr.ReaderType switch
         {
             AddonDataProviderType.DXGI =>
-                (IAddonDataProvider)wowScreen,
+                (IAddonDataProvider)screen,
             _ => throw new NotImplementedException(),
         };
 
@@ -315,7 +312,8 @@ public static class DependencyInjection
         {
             var remoteLogger = loggerFactory.CreateLogger<RemotePathingAPIV3>();
             RemotePathingAPIV3 api = new(
-                remoteLogger, scp.hostv3, scp.portv3, worldMapAreaDB);
+                remoteLogger,
+                scp.hostv3, scp.portv3, worldMapAreaDB);
             if (api.PingServer())
             {
                 logger.LogInformation(
@@ -363,22 +361,5 @@ public static class DependencyInjection
             $"Using {StartupConfigPathing.Types.Local}({localApi.GetType().Name})");
 
         return localApi;
-    }
-
-    private static IWowScreen GetWoWScreen(IServiceProvider sp)
-    {
-        var scr = sp.GetRequiredService<IOptions<StartupConfigReader>>();
-        var wowProcess = sp.GetRequiredService<WowProcess>();
-        var factory = sp.GetRequiredService<ILoggerFactory>();
-        var frames = sp.GetRequiredService<DataFrame[]>();
-
-        IWowScreen value = scr.Value.ReaderType switch
-        {
-            AddonDataProviderType.DXGI =>
-                new WowScreenDXGI(factory.CreateLogger<WowScreenDXGI>(), wowProcess, frames),
-            _ => throw new NotImplementedException(),
-        };
-
-        return value;
     }
 }

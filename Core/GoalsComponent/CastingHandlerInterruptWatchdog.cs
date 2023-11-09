@@ -1,7 +1,11 @@
 ﻿using System;
 using System.Threading;
 
+using Core.GOAP;
+
 using Microsoft.Extensions.Logging;
+
+using SharedLib;
 
 #pragma warning disable 162
 
@@ -13,26 +17,27 @@ public sealed class CastingHandlerInterruptWatchdog : IDisposable
 
     private readonly ILogger<CastingHandlerInterruptWatchdog> logger;
     private readonly Wait wait;
+    private readonly CancellationToken token;
 
     private readonly Thread thread;
-    private readonly CancellationTokenSource threadCts;
     private readonly ManualResetEventSlim resetEvent;
 
     private bool? initial;
     private Func<bool>? interrupt;
 
-    private CancellationTokenSource cts;
+    private CancellationTokenSource interruptCts;
 
     public CastingHandlerInterruptWatchdog(
-        ILogger<CastingHandlerInterruptWatchdog> logger, Wait wait)
+        ILogger<CastingHandlerInterruptWatchdog> logger, Wait wait,
+        CancellationTokenSource<GoapAgent> cts)
     {
         this.logger = logger;
         this.wait = wait;
+        this.token = cts.Token;
 
-        threadCts = new();
         resetEvent = new(false);
 
-        cts = new();
+        interruptCts = new();
 
         thread = new(Watchdog);
         thread.Start();
@@ -41,14 +46,12 @@ public sealed class CastingHandlerInterruptWatchdog : IDisposable
     public void Dispose()
     {
         interrupt = null;
-
-        threadCts.Cancel();
         resetEvent.Set();
     }
 
     private void Watchdog()
     {
-        while (!threadCts.IsCancellationRequested)
+        while (!token.IsCancellationRequested)
         {
             while (initial == interrupt?.Invoke())
             {
@@ -56,7 +59,7 @@ public sealed class CastingHandlerInterruptWatchdog : IDisposable
                 resetEvent.Wait();
             }
 
-            cts.Cancel();
+            interruptCts.Cancel();
 
             if (Log)
             {
@@ -78,19 +81,19 @@ public sealed class CastingHandlerInterruptWatchdog : IDisposable
         this.initial = interrupt();
         this.interrupt = interrupt;
 
-        if (!cts.TryReset())
+        if (!interruptCts.TryReset())
         {
-            cts.Dispose();
-            cts = new();
+            interruptCts.Dispose();
+            interruptCts = new();
 
             if (Log)
-                logger.LogInformation("New cts");
+                logger.LogDebug("New cts");
         }
         else if (Log)
-            logger.LogInformation("Reuse cts");
+            logger.LogDebug("Reuse cts");
 
         resetEvent.Set();
 
-        return cts.Token;
+        return interruptCts.Token;
     }
 }

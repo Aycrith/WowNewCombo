@@ -1,7 +1,7 @@
 ﻿@inject ILogger logger
 @inject IBotController botController
 @inject AddonConfigurator addonConfigurator
-@inject WowProcess wowProcess
+@inject WowProcess process
 
 @implements IDisposable
 
@@ -17,7 +17,7 @@
 
 @if (AddonConfig.Exists() && FrameConfig.Exists())
 {
-    @if (wowProcess.IsRunning)
+    @if (process.IsRunning)
     {
         <div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
             <ul class="nav flex-column">
@@ -132,7 +132,7 @@ else
                 </NavLink>
             </li>
 
-            @if (wowProcess.IsRunning)
+            @if (process.IsRunning)
             {
                 <li class="nav-item px-3">
                     <NavLink class="nav-link" href="AddonConfiguration" Disabled="disabled">
