@@ -10,7 +10,7 @@ namespace Core;
 
 public static class FrameConfigMeta
 {
-    public const int Version = 3;
+    public const int Version = 4;
     public const string DefaultFilename = "frame_config.json";
 }
 
@@ -28,9 +28,9 @@ public static class FrameConfig
             var config = JsonConvert.DeserializeObject<DataFrameConfig>(File.ReadAllText(FrameConfigMeta.DefaultFilename));
 
             bool sameVersion = config.Version == FrameConfigMeta.Version;
-            bool sameAddonVersion = config.addonVersion == addonVersion;
-            bool sameRect = config.rect.Width == rect.Width && config.rect.Height == rect.Height;
-            return sameAddonVersion && sameVersion && sameRect && config.frames.Length > 1;
+            bool sameAddonVersion = config.AddonVersion == addonVersion;
+            bool sameRect = config.Rect.Width == rect.Width && config.Rect.Height == rect.Height;
+            return sameAddonVersion && sameVersion && sameRect && config.Frames.Length > 1;
         }
         catch
         {
@@ -44,7 +44,7 @@ public static class FrameConfig
         {
             var config = JsonConvert.DeserializeObject<DataFrameConfig>(File.ReadAllText(FrameConfigMeta.DefaultFilename));
             if (config.Version == FrameConfigMeta.Version)
-                return config.frames;
+                return config.Frames;
         }
 
         return Array.Empty<DataFrame>();
@@ -54,7 +54,7 @@ public static class FrameConfig
     {
         var config = JsonConvert.DeserializeObject<DataFrameConfig>(File.ReadAllText(FrameConfigMeta.DefaultFilename));
         if (config.Version == FrameConfigMeta.Version)
-            return config.meta;
+            return config.Meta;
 
         return DataFrameMeta.Empty;
     }
@@ -90,12 +90,12 @@ public static class FrameConfig
         return new DataFrameMeta(hash, spacing, size, rows, count);
     }
 
-    public static DataFrame[] TryCreateFrames(DataFrameMeta meta, Image<Bgra32> bmp)
+    public static DataFrame[] CreateFrames(DataFrameMeta meta, Image<Bgra32> bmp)
     {
-        DataFrame[] frames = new DataFrame[meta.frames];
+        DataFrame[] frames = new DataFrame[meta.Count];
         frames[0] = new(0, 0, 0);
 
-        for (int i = 1; i < meta.frames; i++)
+        for (int i = 1; i < meta.Count; i++)
         {
             if (TryGetNextPoint(bmp, i, frames[i].X, out int x, out int y))
             {

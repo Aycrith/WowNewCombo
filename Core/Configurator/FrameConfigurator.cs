@@ -82,6 +82,8 @@ public sealed class FrameConfigurator : IDisposable
 
     private void ManualConfigThread()
     {
+        screen.Enabled = true;
+
         while (!cts.Token.IsCancellationRequested)
         {
             DoConfig(false);
@@ -91,6 +93,8 @@ public sealed class FrameConfigurator : IDisposable
             wait.Update();
         }
         screenshotThread = null;
+
+        screen.Enabled = false;
     }
 
     private bool DoConfig(bool auto)
@@ -173,10 +177,7 @@ public sealed class FrameConfigurator : IDisposable
                     DataFrameMeta = temp;
                     stage++;
 
-                    if (auto)
-                    {
-                        logger.LogInformation($"{nameof(DataFrameMeta)}: {DataFrameMeta}");
-                    }
+                    logger.LogInformation($"{DataFrameMeta}");
                 }
                 break;
             case Stage.ValidateMetaSize:
@@ -211,14 +212,14 @@ public sealed class FrameConfigurator : IDisposable
                     ImageBase64 = cropped.ToBase64String(JpegFormat.Instance);
                 }
 
-                DataFrames = FrameConfig.TryCreateFrames(DataFrameMeta, cropped);
-                if (DataFrames.Length == DataFrameMeta.frames)
+                DataFrames = FrameConfig.CreateFrames(DataFrameMeta, cropped);
+                if (DataFrames.Length == DataFrameMeta.Count)
                 {
                     stage++;
                 }
                 else
                 {
-                    logger.LogWarning($"DataFrameMeta and FrameConfig dosen't match Frames: ({DataFrames.Length}) != Meta: ({DataFrameMeta.frames})");
+                    logger.LogWarning($"DataFrameMeta and FrameConfig dosen't match Frames: ({DataFrames.Length}) != Meta: ({DataFrameMeta.Count})");
                     stage = Stage.Reset;
 
                     if (auto)
@@ -335,8 +336,8 @@ public sealed class FrameConfigurator : IDisposable
         Version? version = addonConfigurator.GetInstallVersion();
         if (version == null ||
             DataFrames.Length == 0 ||
-            DataFrameMeta.frames == 0 ||
-            DataFrames.Length != DataFrameMeta.frames ||
+            DataFrameMeta.Count == 0 ||
+            DataFrames.Length != DataFrameMeta.Count ||
             !TryResolveRaceAndClass(out _, out _, out _))
         {
             logger.LogInformation("Frame configuration was incomplete! Please try again, after resolving the previusly mentioned issues...");
@@ -354,10 +355,14 @@ public sealed class FrameConfigurator : IDisposable
 
     public bool StartAutoConfig()
     {
+        screen.Enabled = true;
+
         while (DoConfig(true))
         {
             wait.Update();
         }
+
+        screen.Enabled = false;
 
         return FinishConfig();
     }

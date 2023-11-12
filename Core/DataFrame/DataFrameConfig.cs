@@ -1,22 +1,23 @@
 ﻿using System;
+
 using SixLabors.ImageSharp;
 
 namespace Core;
 
-public readonly struct DataFrameConfig
+public readonly record struct DataFrameConfig
 {
     public int Version { get; }
-    public Version addonVersion { get; }
-    public Rectangle rect { get; }
-    public DataFrameMeta meta { get; }
-    public DataFrame[] frames { get; }
+    public Version AddonVersion { get; }
+    public Rectangle Rect { get; }
+    public DataFrameMeta Meta { get; }
+    public DataFrame[] Frames { get; }
 
     public DataFrameConfig(int version, Version addonVersion, Rectangle rect, DataFrameMeta meta, DataFrame[] frames)
     {
         Version = version;
-        this.addonVersion = addonVersion;
-        this.rect = rect;
-        this.meta = meta;
-        this.frames = frames;
+        this.AddonVersion = addonVersion;
+        this.Rect = rect;
+        this.Meta = meta;
+        this.Frames = frames;
     }
 }

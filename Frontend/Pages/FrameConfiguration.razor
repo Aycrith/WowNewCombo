@@ -98,7 +98,7 @@
     <h5 class="row col-md-12">Your screen:</h5>
 
     <div class="row col-md-12">
-        @if (@frameConfigurator.DataFrames.Length != frameConfigurator.DataFrameMeta.frames)
+        @if (@frameConfigurator.DataFrames.Length != frameConfigurator.DataFrameMeta.Count)
         {
             <img style="border:1px solid red; margin: 5px" src="@frameConfigurator.ImageBase64" alt="Red dot" />
         }
@@ -116,7 +116,7 @@
         <ul class="list-group">
             <li class="list-group-item">
                 Step 1: Please ensure the addon <span class="px-2"><b>@addonConfig.Title</b></span> found in the addon folders is running. You should see the multi-coloured pixels at the top left of the screen.
-                @if (frameConfigurator.DataFrames.Length != frameConfigurator.DataFrameMeta.frames)
+                @if (frameConfigurator.DataFrames.Length != frameConfigurator.DataFrameMeta.Count)
                 {
                     <br>
                     <img src="_content/Frontend/img/addon-normal.png" />
@@ -124,16 +124,16 @@
             </li>
             <li class="list-group-item">
                 Step 2: Now we are going to put the addon into configuration mode, this will change the addon colours displayed. In the wow chat window: type <span class="ml-1"><b>&#47;@addonConfig.Command</b></span>
-                @if (frameConfigurator.DataFrames.Length != frameConfigurator.DataFrameMeta.frames)
+                @if (frameConfigurator.DataFrames.Length != frameConfigurator.DataFrameMeta.Count)
                 {
                     <br>
                     <img src="_content/Frontend/img/addon-config.png" />
                 }
             </li>
             <li class="list-group-item">
-                Step 3: Should see @frameConfigurator.DataFrameMeta.frames frames - Now i see @frameConfigurator.DataFrames.Length data frames.
+                Step 3: Should see @frameConfigurator.DataFrameMeta.Count frames - Now i see @frameConfigurator.DataFrames.Length data frames.
             </li>
-            @if (frameConfigurator.DataFrameMeta.frames != 0 && frameConfigurator.DataFrames.Length == frameConfigurator.DataFrameMeta.frames)
+            @if (frameConfigurator.DataFrameMeta.Count != 0 && frameConfigurator.DataFrames.Length == frameConfigurator.DataFrameMeta.Count)
             {
                 <li class="list-group-item">
                     <span>Step 4: Now return to normal mode, In the wow chat window: type <span class="ml-1"><b>&#47;@addonConfig.Command</b></span></span>
