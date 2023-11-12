@@ -246,7 +246,8 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
         ID3D11Texture2D texture
             = idxgiResource.QueryInterface<ID3D11Texture2D>();
 
-        UpdateAddonImage(texture);
+        if (frames.Length > 2)
+            UpdateAddonImage(texture);
 
         if (Enabled)
             UpdateScreenImage(texture);
