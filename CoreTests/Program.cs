@@ -42,11 +42,11 @@ internal sealed class Program
         });
 
         // its expected to have at least 2 DataFrame 
-        DataFrame[] mockFrames = new DataFrame[2]
-        {
+        DataFrame[] mockFrames =
+        [
             new DataFrame(0, 0, 0),
             new DataFrame(1, 0, 0),
-        };
+        ];
 
         cts = new CancellationTokenSource();
         process = new(cts);
@@ -83,6 +83,8 @@ internal sealed class Program
 
         Log.Logger.Information($"running {count} samples...");
 
+        screen.Enabled = true;
+
         while (i < count)
         {
             if (LogOverallTimes)
@@ -96,6 +98,8 @@ internal sealed class Program
             i++;
             Thread.Sleep(4);
         }
+
+        screen.Enabled = false;
 
         if (LogOverallTimes)
         {

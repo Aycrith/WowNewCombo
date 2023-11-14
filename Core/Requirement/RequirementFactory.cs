@@ -682,7 +682,7 @@ public sealed partial class RequirementFactory
             return r;
         }
 
-        if (!boolVariables.ContainsKey(requirement))
+        if (!boolVariables.TryGetValue(requirement, out Func<bool>? value))
         {
             LogUnknown(logger, requirement, string.Join(", ", boolVariables.Keys));
             return new Requirement
@@ -694,7 +694,7 @@ public sealed partial class RequirementFactory
         string s() => requirement;
         Requirement req = new()
         {
-            HasRequirement = boolVariables[requirement],
+            HasRequirement = value,
             LogMessage = s
         };
 
