@@ -210,7 +210,7 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
         addonTexture?.Dispose();
         addonTexture = device.CreateTexture2D(addonTextureDesc);
 
-        logger.LogDebug($"DataFrames {frames.Length} - Texture: {addonSize.Width}x{addonSize.Height}");
+        logger.LogDebug($"DataFrames {frames.Length} - Texture: {addonSize}");
     }
 
     [SkipLocalsInit]
