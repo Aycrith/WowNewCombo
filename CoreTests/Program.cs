@@ -182,7 +182,12 @@ internal sealed class Program
 
     private static void Test_MinimapNodeFinder()
     {
-        Test_MinimapNodeFinder test = new(logger, screen);
+        void nodeEvent(object sender, MinimapNodeEventArgs e)
+        {
+            logger.LogInformation($"[{e.X},{e.Y}] {e.Amount}");
+        }
+
+        Test_MinimapNodeFinder test = new(logger, screen, nodeEvent);
 
         int count = 100;
         int i = 0;
@@ -191,6 +196,8 @@ internal sealed class Program
         double[] sample = new double[count];
 
         Log.Logger.Information($"running {count} samples...");
+
+        screen.MinimapEnabled = true;
 
         while (i < count)
         {
@@ -205,6 +212,8 @@ internal sealed class Program
             i++;
             Thread.Sleep(delay);
         }
+
+        screen.MinimapEnabled = false;
 
         if (LogOverallTimes)
             Log.Logger.Information($"sample: {count} | avg: {sample.Average():F2} | min: {sample.Min():F2} | max: {sample.Max():F2} | total: {sample.Sum()}");
