@@ -168,6 +168,16 @@ Should be only concerned about `Friz Quadrata: the "Everything Else" Font` which
 
 Example - [Robot-Medium](https://fonts.google.com/specimen/Roboto?thickness=5) - Shows big improvement to the `NpcNameFinder` component which is responsible to find - friendly, enemy, corpse - names above NPCs head.
 
+## 3.4 Optional - Enable Minimum Character Name Size
+
+In the modern client under ESC > Options > Accessibility > General > **Minimum Character Name Size = 6**
+
+This feature sets a minimum size of the character/npc names above their head.
+
+However it has one downside, there's distance based alpha blending. It could cause issues with Corpse names.
+
+More info [506](https://github.com/Xian55/WowClassicGrindBot/pull/506)
+
 ## 4.1 Build Requirements
 
 * Windows 10 and above
@@ -255,7 +265,7 @@ In order to run `HeadlessServer` please look at the `HeadlessServer\run.bat`.
 | `portv1` | Navigation Remote V1 port | `5001` | - |
 | `hostv3` | Navigation Remote V3 host | `127.0.0.1` | - |
 | `portv3` | Navigation Remote V3 port | `47111` | - |
-| `-d`<br>`-diag` | Diagnostics, when set, takes screen captures under `Json\cap\*.json` | - | - |
+| `-d`<br>`-diag` | Diagnostics, when set, takes screen captures under `Json\cap\*.jpg` | - | - |
 | `-o`<br>`-overlay` | Show NpcNameFinder Overlay | `false` | - |
 | `-t`<br>`-otargeting` | While overlay enabled, show Targeting points | `false` | - |
 | `-s`<br>`-oskinning` | While overlay enabled, show Skinning points | `false` | - |
@@ -301,16 +311,16 @@ From the main menu (ESC) -> `Key Bindings` set the following:
 
 `Movement Keys`:
 
-| In-Game | ClassConfiguration Name | Default ConsoleKey | Description |
-| ---- | ---- | ---- | ---- |
-| Move Forward | ForwardKey | UpArrow | Change this to `87` for pressing `W` |
-| Move Backward | BackwardKey | DownArrow | Change this to `83` for pressing `S` |
-| Turn Left | TurnLeftKey | LeftArrow | Change this to `65` for pressing `A` |
-| Turn Right | TurnRightKey | RightArrow | Change this to `68` for pressing `D` |
-| Jump | JumpKey | Spacebar | ---- |
-| Sit/Move down | StandUpKey | X |  Used after drinking or eating |
+| In-Game | ClassConfiguration Name | Default [ConsoleKey](https://learn.microsoft.com/en-us/dotnet/api/system.consolekey) |
+| ---- | ---- | ---- |
+| Move Forward | ForwardKey | `UpArrow` |
+| Move Backward | BackwardKey | `DownArrow` |
+| Turn Left | TurnLeftKey | `LeftArrow` |
+| Turn Right | TurnRightKey | `RightArrow` |
+| Jump | Jump.Key | `Spacebar` |
+| Sit/Move down | StandUp.Key | `X` |
 
-To change the default movement keys to `WASD` in the [Class Configuration](#12-class-configuration) file or look at the example `Json\class\Warrior_1_MovementKeys.json`
+To change the default movement keys from arrows to `WASD` in the [Class Configuration](#12-class-configuration) file or look at the example `Json\class\Warrior_1_MovementKeys.json`
 ```json
 "ForwardKey": 87,   // W
 "BackwardKey": 83,  // S
@@ -320,32 +330,31 @@ To change the default movement keys to `WASD` in the [Class Configuration](#12-c
 
 `Targeting`:
 
-| In-Game | Key | ClassConfiguration KeyAction Name | Description |
+| In-Game | HotKey | ClassConfiguration KeyAction | Description |
 | ---- | ---- | ---- | ---- |
-| Target Nearest Enemy | Tab | TargetNearestTargetKey | ---- |
-| Target Pet | Multiply | TargetPetKey | Only pet based class |
-| Target Last Target | G | TargetLastTargetKey | Loot last target |
-| Interact With Mouseover | J | InteractMouseOverKey | Mouse based actions |
-| Interact With Target | I | InteractKey | Targeting and combat |
-| Assist Target | F | TargetTargetOfTargetKey | ---- |
-| Pet attack | Subtract | PetAttackKey | Only pet based class |
-| Target Focus | PageUp | TargetFocusKey | Only for TBC or Wrath version, `"AssistFocus"` Mode |
-| Target Party Member 1 | PageUp | TargetFocusKey | Only for Vanilla version, `"AssistFocus"` Mode |
+| Target Nearest Enemy | `Tab` | TargetNearestTarget | ---- |
+| Target Pet | `Multiply` | TargetPet | Only pet based class |
+| Target Last Target | `G` | TargetLastTarget | Loot last target |
+| Interact With Mouseover | `J` | InteractMouseOver | Mouse based actions |
+| Interact With Target | `I` | Interact | Targeting and combat |
+| Assist Target | `F` | TargetTargetOfTarget | ---- |
+| Pet attack | `Subtract` | PetAttack | Only pet based class |
+| Target Focus | `PageUp` | TargetFocus | TBC or Wrath version, `"AssistFocus"` Mode |
+| Target Party Member 1 | `PageUp` | TargetFocus | Vanilla version, `"AssistFocus"` Mode |
 
 ## 10.1. Actionbar Key Bindings:
 
-The default class profiles assumes the following `Keybinds` setup while using English Keyboard layout.
+The default class profiles assumes the following `Keybinds` setup while using **English Keyboard** layout.
+
 In total, `34` customizable key can be configured.
 
 Highly recommended to use the default setup, in order to get properly working the `ActionBarSlotCost` and `ActionBarSlotUsable` features!
 
-| ActionSlot | Key | Description |
-| --- | --- | --- |
-| 1-12 | 1,2,3 .. 9,0,-,= | 0 is the 10th key. |
-| Bottom Right ActionBar | - | - |
-| 49-58 | N1,N2,N3 .. N9,N0 | N means Numpad - 0 is the 10th key |
-| Bottom Left ActionBar | - | - |
-| 61-72 | F1,F2,F3 .. F11,F12 | F means Functions |
+| Actionbar |ActionSlot | Key | Description |
+| --- | --- | --- | --- |
+| Main | 1-12 | 1,2,3 .. 9,0,-,= | 0 is the 10th key. |
+| Bottom Right | 49-58 | N1,N2,N3 .. N9,N0 | N means Numpad 0 is the 10th key |
+| Bottom Left | 61-72 | F1,F2,F3 .. F11,F12 | F means Functions |
 
 <a href="./images/keybindings.png" target="_blank">
    <img alt="Screenshot" src="./images/keybindings.png" width="75%">
@@ -384,7 +393,9 @@ Each class has a configuration file in `\Json\class` e.g. the config for a `Warr
 
 The configuration file determines what spells the character casts, when pulling and in combat, where to vendor and repair and what buffs consider.
 
-Take a look at the class files in `/Json/class` for examples of what you can do. Your class file probably exists and just needs to be edited to set the pathing file name.
+Take a look at the class files in `/Json/class` for examples of what you can do.
+
+Your class file probably exists and just needs to be edited to set the pathing file name.
 
 | Property Name | Description | Optional | Default value |
 | --- | --- | --- | --- |
@@ -420,21 +431,39 @@ Take a look at the class files in `/Json/class` for examples of what you can do.
 | `"Wait"` | [KeyActions](#keyactions) to execute upon [Wait Goal](#wait-goals) | true | `{}` |
 | --- | --- | --- | --- |
 | `"GatherFindKeys"` | List of strings for switching between gathering profiles | true | `string[]` |
-| `"JumpKey"` | `ConsoleKey` to be pressed on Jump | true | `"Spacebar"` |
-| `"InteractKey"` | `ConsoleKey` to be pressed on Interact | true | `"I"` |
-| `"TargetLastTargetKey"` | `ConsoleKey` to be pressed to Target last target | true | `"G"` |
-| `"StandUpKey"` | `ConsoleKey` to be pressed to stand up | true | `"X"` |
-| `"ClearTargetKey"` | `ConsoleKey` to be pressed to clear current target | true | `"Insert"` |
-| `"StopAttackKey"` | `ConsoleKey` to be pressed to stop attack | true | `"Delete"` |
-| `"TargetNearestTargetKey"` | `ConsoleKey` to be pressed to target nearest target | true | `"Tab"` |
-| `"TargetTargetOfTargetKey"` | `ConsoleKey` to be pressed to target - target of target | true | `"F"` |
-| `"TargetPetKey"` | `ConsoleKey` to be pressed to target pet | true | `"Multiply"` |
-| `"PetAttackKey"` | `ConsoleKey` to be pressed to send attack pet | true | `"Subtract"` |
-| `"MountKey"` | `ConsoleKey` to be pressed to use mount | true | `"O"` |
-| `"ForwardKey"` | `ConsoleKey` to be pressed to move forward | true | `"UpArrow"` |
-| `"BackwardKey"` | `ConsoleKey` to be pressed to move backward | true | `"DownArrow"` |
-| `"TurnLeftKey"` | `ConsoleKey` to be pressed to turn left | true | `"LeftArrow"` |
-| `"TurnRightKey"` | `ConsoleKey` to be pressed to turn right | true | `"RightArrow"` |
+| --- | --- | --- | --- |
+| BaseActionKeys | --- | --- | --- |
+| --- | --- | --- | --- |
+| `"Jump.Key"` | [ConsoleKey](https://learn.microsoft.com/en-us/dotnet/api/system.consolekey) to be pressed to Jump | true | `"Spacebar"` |
+| `"Interact.Key"` | [ConsoleKey](https://learn.microsoft.com/en-us/dotnet/api/system.consolekey) to be pressed to Interact | true | `"I"` |
+| `"TargetLastTarget.Key"` | [ConsoleKey](https://learn.microsoft.com/en-us/dotnet/api/system.consolekey) to be pressed to Target last target | true | `"G"` |
+| `"ClearTarget.Key"` | [ConsoleKey](https://learn.microsoft.com/en-us/dotnet/api/system.consolekey) to be pressed to clear current target | true | `"Insert"` |
+| `"StopAttack.Key"` | [ConsoleKey](https://learn.microsoft.com/en-us/dotnet/api/system.consolekey) to be pressed to stop attack | true | `"Delete"` |
+| `"TargetNearestTarget.Key"` | [ConsoleKey](https://learn.microsoft.com/en-us/dotnet/api/system.consolekey) to be pressed to target nearest target | true | `"Tab"` |
+| `"TargetTargetOfTarget.Key"` | [ConsoleKey](https://learn.microsoft.com/en-us/dotnet/api/system.consolekey) to be pressed to target - target of target | true | `"F"` |
+| `"TargetPet.Key"` | [ConsoleKey](https://learn.microsoft.com/en-us/dotnet/api/system.consolekey) to be pressed to target pet | true | `"Multiply"` |
+| `"PetAttack.Key"` | [ConsoleKey](https://learn.microsoft.com/en-us/dotnet/api/system.consolekey) to be pressed to send attack pet | true | `"Subtract"` |
+| `"Mount.Key"` | [ConsoleKey](https://learn.microsoft.com/en-us/dotnet/api/system.consolekey) to be pressed to use mount | true | `"O"` |
+| `"StandUp.Key"` | [ConsoleKey](https://learn.microsoft.com/en-us/dotnet/api/system.consolekey) to be pressed to stand up | true | `"X"` |
+| --- | --- | --- | --- |
+| `"ForwardKey"` | [ConsoleKey](https://learn.microsoft.com/en-us/dotnet/api/system.consolekey) to be pressed to move forward | true | `"UpArrow"` |
+| `"BackwardKey"` | [ConsoleKey](https://learn.microsoft.com/en-us/dotnet/api/system.consolekey) to be pressed to move backward | true | `"DownArrow"` |
+| `"TurnLeftKey"` | [ConsoleKey](https://learn.microsoft.com/en-us/dotnet/api/system.consolekey) to be pressed to turn left | true | `"LeftArrow"` |
+| `"TurnRightKey"` | [ConsoleKey](https://learn.microsoft.com/en-us/dotnet/api/system.consolekey) to be pressed to turn right | true | `"RightArrow"` |
+
+The following [KeyActions](#keyactions) are `BaseActions`: `Jump`, `Interact`, `TargetLastTarget`, `ClearTarget`, `StopAttack`, `TargetNearestTarget`, `TargetTargetOfTarget`, `TargetPet`, `PetAttack`, `Mount`, `StandUp`. 
+
+Which are shared and unified among [Pull Goal](#pull-goal) and [Combat Goal](#combat-goal).
+
+e.g override default [KeyActions](#keyactions) properties in the [Class Configuration](#12-class-configuration) file
+```json
+"Mount": {
+    "Key": "N0"
+},
+"Jump": {
+    "PressDuration": 200
+}
+```
 
 ### TargetMask
 
@@ -694,7 +723,7 @@ Then as defined, in-order, executes those [KeyAction(s)](#keyaction) which fulfi
 
 Upon exiting **Assist Focus Goal**, the current target will be deselected / cleared.
 
-**Note**: You can use every `Buff` and `Debuff` names on the `focus`/`party1` without being targeted. Just have to prefix it with `F_` example: `F_Mark of the Wild` which means `focus`/`party1` has `Mark of the Wild` buff active.
+**Note**: You can use every [Buff](#buff--debuff--general-boolean-condition-requirements) and [Debuff](#buff--debuff--general-boolean-condition-requirements) names on the `focus`/`party1` without being targeted. Just have to prefix it with `F_` example: `F_Mark of the Wild` which means `focus`/`party1` has `Mark of the Wild` buff active.
 
 e.g. of a Balance Druid
 ```json
@@ -1582,11 +1611,11 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 
 e.g.
 ```json
-"Requirement": "!Well Fed"      // I am not well fed.
+"Requirement": "!Well Fed"         // I am not well fed.
 "Requirement": "not Thorns"        // I don't have the thorns buff.
 "Requirement": "AutoAttacking"     // "Auto Attack" spell is active.
 "Requirement": "Shooting"          // "Shoot" spell is active.
-"Requirement": "Items Broken"      // Some of my armor is broken (red).
+"Requirement": "Items Broken"      // Worn armor is broken (red).
 "Requirement": "BagFull"           // Inventory is full.
 "Requirement": "HasRangedWeapon"   // Has an item equipped at the ranged slot.
 "Requirement": "InMeleeRange"      // Determines if the target is in melee range (0-5 yard)
