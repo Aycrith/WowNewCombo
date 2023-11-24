@@ -15,7 +15,7 @@ public sealed class EquipmentReader : IReader
     private readonly int cItemId = 24;
 
     private readonly int[] equipmentIds = new int[MAX_EQUIPMENT_COUNT];
-    public Item[] Items { get; private set; } = new Item[MAX_EQUIPMENT_COUNT];
+    public Item[] Items { get; private init; } = new Item[MAX_EQUIPMENT_COUNT];
 
     public event EventHandler<(int, int)>? OnEquipmentChanged;
 
