@@ -557,6 +557,7 @@ For example look at the Warlock profiles.
     "DOT_MIN_HEALTH%": 35,
     "Debuff_Frost Fever": 237522,   // iconId https://www.wowhead.com/icons
     "Debuff_Blood Plague": 237514,  // iconId https://www.wowhead.com/icons
+    "Item_Soul_Shard": 6265,
 }
 ```
 
