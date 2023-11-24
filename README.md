@@ -860,6 +860,40 @@ e.g.
 }
 ```
 
+**Note**: that the default combat requirement can be overridden.
+
+e.g high level [Death Knight](./Json/class/DeathKnight_70_Unholy.json) 
+```json
+{
+    "Cost": 3.1,
+    "Name": "Horn of Winter",
+    "Key": "F4",
+    "InCombat": "i dont care",
+    "WhenUsable": true,
+    "Requirements": [
+        "!Horn of Winter || (CD_Horn of Winter <= GCD && TargetAlive && TargetHostile)",
+        "!Mounted"
+    ]
+},
+```
+
+e.g high level [Warlock](./Json/class/Warlock_66_Demo_pet_pull.json)
+```json
+{
+    "Name": "Life Tap",
+    "Cost": 3,
+    "Key": "N9",
+    "InCombat": "i dont care",
+    "Charge": 2,
+    "Requirements": [
+        "!Casting",
+        "Health% > TAP_MIN_MANA%",
+        "Mana% < TAP_MIN_MANA%"
+    ]
+},
+```
+
+
 ### Parallel Goals
 
 These `Sequence` of [KeyAction(s)](#keyaction) are done when not in combat and are not on cooldown. 
