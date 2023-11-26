@@ -3,97 +3,90 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using SharedLib;
+using nietras.SeparatedValues;
 
-namespace ReadDBC_CSV
+namespace ReadDBC_CSV;
+
+internal sealed class SpellExtractor : IExtractor
 {
-    internal sealed class SpellExtractor : IExtractor
+    private readonly string path;
+
+    public string[] FileRequirement { get; } =
+    [
+        "spellname.csv",
+        "spelllevels.csv",
+    ];
+
+    public SpellExtractor(string path)
     {
-        private readonly string path;
+        this.path = path;
+    }
 
-        public List<string> FileRequirement { get; } = new List<string>
+    public void Run()
+    {
+        string spellnameFile = Path.Join(path, FileRequirement[0]);
+        List<Spell> spells = ExtractNames(spellnameFile);
+
+        string spelllevelsFile = Path.Join(path, FileRequirement[1]);
+        ExtractLevels(spelllevelsFile, spells);
+
+        Console.WriteLine($"Spells: {spells.Count}");
+
+        File.WriteAllText(Path.Join(path, "spells.json"), JsonConvert.SerializeObject(spells));
+    }
+
+    private static List<Spell> ExtractNames(string path)
+    {
+        using var reader = Sep.Reader(o => o with
         {
-            "spellname.csv",
-            "spelllevels.csv",
-        };
+            Unescape = true,
+        }).FromFile(path);
 
-        public SpellExtractor(string path)
+        int id = reader.Header.IndexOf("ID");
+        int name = reader.Header.IndexOf("Name_lang");
+
+        List<Spell> spells = new();
+        foreach (SepReader.Row row in reader)
         {
-            this.path = path;
-        }
-
-        public void Run()
-        {
-            string spellnameFile = Path.Join(path, FileRequirement[0]);
-            List<Spell> spells = ExtractNames(spellnameFile);
-
-            string spelllevelsFile = Path.Join(path, FileRequirement[1]);
-            ExtractLevels(spelllevelsFile, spells);
-
-            Console.WriteLine($"Spells: {spells.Count}");
-
-            File.WriteAllText(Path.Join(path, "spells.json"), JsonConvert.SerializeObject(spells));
-        }
-
-        private static List<Spell> ExtractNames(string path)
-        {
-            int entryIndex = -1;
-            int nameIndex = -1;
-
-            CSVExtractor extractor = new();
-            extractor.HeaderAction = () =>
+            spells.Add(new Spell
             {
-                entryIndex = extractor.FindIndex("ID");
-                nameIndex = extractor.FindIndex("Name_lang");
-            };
+                Id = row[id].Parse<int>(),
+                Name = row[name].ToString()
+            });
+        }
+        return spells;
+    }
 
-            List<Spell> spells = new();
-            void extractLine(string[] values)
+    private static void ExtractLevels(string path, List<Spell> spells)
+    {
+        using var reader = Sep.Reader(o => o with
+        {
+            Unescape = true,
+        }).FromFile(path);
+
+        int entry = reader.Header.IndexOf("ID");
+
+        int spellId = reader.Header.IndexOf("SpellID", 6);
+        int baseLevel = reader.Header.IndexOf("BaseLevel", 2);
+
+        foreach (SepReader.Row row in reader)
+        {
+            int level = row[baseLevel].Parse<int>();
+            int spell = row[spellId].Parse<int>();
+
+            if (level > 0 && spell > 0)
             {
-                spells.Add(new Spell
+                int index = spells.FindIndex(0, x => x.Id == spell);
+                if (index > -1)
                 {
-                    Id = int.Parse(values[entryIndex]),
-                    Name = values[nameIndex]
-                });
-            }
-
-            extractor.ExtractTemplate(path, extractLine);
-
-            return spells;
-        }
-
-        private static void ExtractLevels(string path, List<Spell> spells)
-        {
-            int entryIndex = -1;
-            int spellIdIndex = -1;
-            int baseLevelIndex = -1;
-
-            CSVExtractor extractor = new();
-            extractor.HeaderAction = () =>
-            {
-                entryIndex = extractor.FindIndex("ID");
-                spellIdIndex = extractor.FindIndex("SpellID", "", 6);
-                baseLevelIndex = extractor.FindIndex("BaseLevel", "", 2);
-            };
-
-            void extractLine(string[] values)
-            {
-                int level = int.Parse(values[baseLevelIndex]);
-                if (level > 0 && int.TryParse(values[spellIdIndex], out int spellId))
-                {
-                    int index = spells.FindIndex(0, x => x.Id == spellId);
-                    if (index > -1)
+                    spells[index] = new Spell
                     {
-                        spells[index] = new Spell
-                        {
-                            Id = spellId,
-                            Level = level,
-                            Name = spells[index].Name,
-                        };
-                    }
+                        Id = spell,
+                        Level = level,
+                        Name = spells[index].Name,
+                    };
                 }
             }
-
-            extractor.ExtractTemplate(path, extractLine);
         }
     }
 }
