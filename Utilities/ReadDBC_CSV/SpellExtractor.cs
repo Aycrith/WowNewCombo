@@ -74,19 +74,16 @@ internal sealed class SpellExtractor : IExtractor
             int level = row[baseLevel].Parse<int>();
             int spell = row[spellId].Parse<int>();
 
-            if (level > 0 && spell > 0)
-            {
-                int index = spells.FindIndex(0, x => x.Id == spell);
-                if (index > -1)
-                {
-                    spells[index] = new Spell
-                    {
-                        Id = spell,
-                        Level = level,
-                        Name = spells[index].Name,
-                    };
-                }
-            }
+            if (level <= 0 || spell <= 0)
+                continue;
+
+            bool ById(Spell x) => x.Id == spell;
+            int index = spells.FindIndex(0, ById);
+            if (index <= -1)
+                continue;
+
+            Spell s = spells[index];
+            spells[index] = s with { Level = level };
         }
     }
 }

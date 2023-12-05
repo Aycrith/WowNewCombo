@@ -45,7 +45,7 @@ public sealed class EquipmentReader : IReader
             ? ItemDB.EmptyItem
             : itemDB.Items.TryGetValue(itemId, out Item item)
                 ? item
-                : new Item() { Entry = itemId, Name = "Unknown" };
+                : ItemDB.EmptyItem with { Entry = itemId, Name = "Unknown" };
 
         OnEquipmentChanged?.Invoke(this, (index, itemId));
     }

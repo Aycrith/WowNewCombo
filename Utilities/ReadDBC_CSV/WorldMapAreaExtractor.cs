@@ -104,21 +104,16 @@ internal sealed class WorldMapAreaExtractor : IExtractor
             if (index > -1)
             {
                 WorldMapArea wma = wmas[index];
-                wmas[index] = new WorldMapArea
+                wmas[index] = wma with
                 {
                     MapID = row[mapId].Parse<int>(),
                     AreaID = row[areaId].Parse<int>(),
-
-                    AreaName = wma.AreaName,
 
                     LocBottom = row[region0].Parse<float>(),
                     LocRight = row[region1].Parse<float>(),
 
                     LocTop = row[region3].Parse<float>(),
                     LocLeft = row[region4].Parse<float>(),
-
-                    UIMapId = wma.UIMapId,
-                    Continent = wma.Continent,
                 };
             }
         }
@@ -145,20 +140,8 @@ internal sealed class WorldMapAreaExtractor : IExtractor
                     continue;
 
                 WorldMapArea wma = wmas[i];
-                wmas[i] = new WorldMapArea
+                wmas[i] = wma with
                 {
-                    MapID = wma.MapID,
-                    AreaID = wma.AreaID,
-
-                    AreaName = wma.AreaName,
-
-                    LocBottom = wma.LocBottom,
-                    LocRight = wma.LocRight,
-
-                    LocTop = wma.LocTop,
-                    LocLeft = wma.LocLeft,
-
-                    UIMapId = wma.UIMapId,
                     Continent = _directory
                 };
             }
