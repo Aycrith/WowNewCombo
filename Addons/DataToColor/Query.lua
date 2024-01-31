@@ -407,11 +407,14 @@ function DataToColor:areSpellsInRange()
         end
     end
 
-    local c = #DataToColor.S.interactInRangeUnit
-    for i = 1, c do
-        local data = DataToColor.S.interactInRangeUnit[i]
-        if CheckInteractDistance(data[1], data[2]) then
-            inRange = inRange + (2 ^ (24 - c + i - 1))
+    -- CheckInteractDistance restricted in combat
+    if not UnitAffectingCombat(DataToColor.C.unitPlayer) then
+        local c = #DataToColor.S.interactInRangeUnit
+        for i = 1, c do
+            local data = DataToColor.S.interactInRangeUnit[i]
+            if CheckInteractDistance(data[1], data[2]) then
+                inRange = inRange + (2 ^ (24 - c + i - 1))
+            end
         end
     end
 
