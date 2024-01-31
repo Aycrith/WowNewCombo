@@ -290,8 +290,9 @@ function DataToColor:OnCombatEvent(...)
         --DataToColor:Print("Damage Taken ", sourceGUID)
 
         local targetGuid = UnitGUID(DataToColor.C.unitTarget)
-        if targetGuid == sourceGUID and not UnitIsTapDenied(DataToColor.C.unitTarget) then
+        if targetGuid == sourceGUID and not UnitIsTapDenied(DataToColor.C.unitTarget) and DataToColor.eligibleKillCredit[sourceGUID] == nil then
             DataToColor.eligibleKillCredit[sourceGUID] = true
+            --DataToColor:Print("Kill Credit added(take): ", sourceGUID)
         end
 
         DataToColor.CombatDamageTakenQueue:push(DataToColor:getGuidFromUUID(sourceGUID))
@@ -392,8 +393,9 @@ function DataToColor:OnCombatEvent(...)
             --DataToColor:Print(subEvent, " ", destGUID)
 
             local targetGuid = UnitGUID(DataToColor.C.unitTarget)
-            if targetGuid == destGUID and not UnitIsTapDenied(DataToColor.C.unitTarget) then
+            if targetGuid == destGUID and not UnitIsTapDenied(DataToColor.C.unitTarget) and DataToColor.eligibleKillCredit[destGUID] == nil then
                 DataToColor.eligibleKillCredit[destGUID] = true
+                --DataToColor:Print("Kill Credit added(done): ", destGUID)
             end
 
             DataToColor.CombatDamageDoneQueue:push(DataToColor:getGuidFromUUID(destGUID))
@@ -434,6 +436,7 @@ function DataToColor:OnCombatEvent(...)
         if band(destFlags, COMBATLOG_OBJECT_TYPE_NPC) > 0 and DataToColor.eligibleKillCredit[destGUID] then
             DataToColor.CombatCreatureDiedQueue:push(DataToColor:getGuidFromUUID(destGUID))
             DataToColor.lastLoot = DataToColor.C.Loot.Corpse
+            DataToColor.sessionKillCount = DataToColor.sessionKillCount + 1
             --DataToColor:Print(subEvent, " ", destGUID, " ", DataToColor:getGuidFromUUID(destGUID))
         elseif destGUID == DataToColor.playerGUID then
             DataToColor.CombatCreatureDiedQueue:push(16777215)

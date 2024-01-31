@@ -176,7 +176,7 @@ DataToColor.eligibleKillCredit = {}
 DataToColor.CombatDamageDoneQueue = DataToColor.Queue:new()
 local lastDamageDone = 0
 DataToColor.CombatDamageTakenQueue = DataToColor.Queue:new()
-local lastDamaeTaken = 0
+local lastDamageTaken = 0
 DataToColor.CombatCreatureDiedQueue = DataToColor.Queue:new()
 local lastDied = 0
 DataToColor.CombatMissTypeQueue = DataToColor.Queue:new()
@@ -192,6 +192,8 @@ DataToColor.targetDebuffTime = DataToColor.struct:new()
 DataToColor.focusBuffTime = DataToColor.struct:new()
 
 DataToColor.customTrigger1 = {}
+
+DataToColor.sessionKillCount = 0
 
 function DataToColor:RegisterSlashCommands()
     DataToColor:RegisterChatCommand('dc', 'StartSetup')
@@ -273,10 +275,12 @@ function DataToColor:Reset()
 
     DataToColor.corpseInRange = 0
 
+    DataToColor.sessionKillCount = 0
+
     globalCounter = 0
     lastDied = 0
     lastDamageDone = 0
-    lastDamaeTaken = 0
+    lastDamageTaken = 0
 
     bagCache = {}
 
@@ -700,9 +704,9 @@ function DataToColor:CreateFrames()
             end
 
             if globalCounter % COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE == 0 or
-                globalCounter - lastDamaeTaken > COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE then
+                globalCounter - lastDamageTaken > COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE then
                 if Pixel(int, DataToColor.CombatDamageTakenQueue:shift() or 0, 65) then
-                    lastDamaeTaken = globalCounter
+                    lastDamageTaken = globalCounter
                 end
             end
 
