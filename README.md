@@ -1764,6 +1764,8 @@ Formula: `SpellInRange:[Numeric integer value]`
 
 Shared [CheckInteractDistance](https://wowwiki-archive.fandom.com/wiki/API_CheckInteractDistance) API
 
+**Note:** It only works outside of combat since [16th Nov 2023](https://twitter.com/WeakAuras/status/1725238451421782093)
+
 | Unit | id |
 | --- | --- |
 | focustarget Inspect | 12 |
