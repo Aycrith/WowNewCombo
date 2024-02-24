@@ -95,7 +95,7 @@ local GetCoinTextureString = GetCoinTextureString
 local UseContainerItem = DataToColor.UseContainerItem
 
 -- initialization
-local globalCounter = 0
+local globalTick = 0
 local initPhase = 10
 
 DataToColor.DATA_CONFIG = {
@@ -174,11 +174,14 @@ DataToColor.talentQueue = DataToColor.Queue:new()
 DataToColor.eligibleKillCredit = {}
 
 DataToColor.CombatDamageDoneQueue = DataToColor.Queue:new()
-local lastDamageDone = 0
+local lastValueDamageDone = 0
+local lastTickDamageDone = 0;
 DataToColor.CombatDamageTakenQueue = DataToColor.Queue:new()
-local lastDamageTaken = 0
+local lastValueDamageTaken = 0
+local lastTickDamageTaken = 0
 DataToColor.CombatCreatureDiedQueue = DataToColor.Queue:new()
-local lastDied = 0
+local lastValueDied = 0
+local lastTickDied = 0
 DataToColor.CombatMissTypeQueue = DataToColor.Queue:new()
 
 DataToColor.ChatQueue = DataToColor.Queue:new()
@@ -277,10 +280,13 @@ function DataToColor:Reset()
 
     DataToColor.sessionKillCount = 0
 
-    globalCounter = 0
-    lastDied = 0
-    lastDamageDone = 0
-    lastDamageTaken = 0
+    globalTick = 0
+    lastValueDied = 0
+    lastTickDied = 0
+    lastValueDamageDone = 0
+    lastTickDamageDone = 0
+    lastValueDamageTaken = 0
+    lastTickDamageTaken = 0
 
     bagCache = {}
 
@@ -473,7 +479,7 @@ function DataToColor:CreateFrames()
     end
 
     local function updateFrames()
-        if not SETUP_SEQUENCE and globalCounter >= initPhase then
+        if not SETUP_SEQUENCE and globalTick >= initPhase then
             Pixel(int, 0, 0)
             -- The final data square, reserved for additional metadata.
             Pixel(int, 2000001, NUMBER_OF_FRAMES - 1)
@@ -545,7 +551,7 @@ function DataToColor:CreateFrames()
             Pixel(int, UnitHealthMax(DataToColor.C.unitTarget), 18)
             Pixel(int, UnitHealth(DataToColor.C.unitTarget), 19)
 
-            if globalCounter % ITEM_ITERATION_FRAME_CHANGE_RATE == 0 then
+            if globalTick % ITEM_ITERATION_FRAME_CHANGE_RATE == 0 then
                 -- 20
                 local bagNum = DataToColor.bagQueue:shift()
                 if bagNum then
@@ -603,7 +609,7 @@ function DataToColor:CreateFrames()
             Pixel(int, DataToColor:isActionUseable(73, 96), 33)
             Pixel(int, DataToColor:isActionUseable(97, 120), 34)
 
-            if globalCounter % ACTION_BAR_ITERATION_FRAME_CHANGE_RATE == 0 then
+            if globalTick % ACTION_BAR_ITERATION_FRAME_CHANGE_RATE == 0 then
                 local costMeta, costValue = DataToColor.actionBarCostQueue:get()
                 if costMeta and costValue then
                     --DataToColor:Print("actionBarCostQueue: ", costMeta, " ", costValue)
@@ -689,28 +695,31 @@ function DataToColor:CreateFrames()
             Pixel(int, DataToColor.lastCastEvent, 62)
             Pixel(int, DataToColor.lastCastSpellId, 63)
 
-            if globalCounter % COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE == 0 or
-                globalCounter - lastDied > COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE then
-                if Pixel(int, DataToColor.CombatCreatureDiedQueue:shift() or 0, 66) then
-                    lastDied = globalCounter
+            if math.abs(globalTick - lastTickDied) >= COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE or
+                lastValueDied == 0 then
+                lastValueDied = DataToColor.CombatCreatureDiedQueue:shift() or 0
+                if Pixel(int, lastValueDied, 66) then
+                    lastTickDied = globalTick
                 end
             end
 
-            if globalCounter % COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE == 0 or
-                globalCounter - lastDamageDone > COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE then
-                if Pixel(int, DataToColor.CombatDamageDoneQueue:shift() or 0, 64) then
-                    lastDamageDone = globalCounter
+            if math.abs(globalTick - lastTickDamageDone) >= COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE or
+                lastValueDamageDone == 0 then
+                lastValueDamageDone = DataToColor.CombatDamageDoneQueue:shift() or 0
+                if Pixel(int, lastValueDamageDone, 64) then
+                    lastTickDamageDone = globalTick
                 end
             end
 
-            if globalCounter % COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE == 0 or
-                globalCounter - lastDamageTaken > COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE then
-                if Pixel(int, DataToColor.CombatDamageTakenQueue:shift() or 0, 65) then
-                    lastDamageTaken = globalCounter
+            if math.abs(globalTick - lastTickDamageTaken) >= COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE or
+                lastValueDamageTaken == 0 then
+                lastValueDamageTaken = DataToColor.CombatDamageTakenQueue:shift() or 0
+                if Pixel(int, lastValueDamageTaken, 65) then
+                    lastTickDamageTaken = globalTick
                 end
             end
 
-            if globalCounter % COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE == 0 then
+            if globalTick % COMBAT_LOG_ITERATION_FRAME_CHANGE_RATE == 0 then
                 Pixel(int, DataToColor.CombatMissTypeQueue:shift() or 0, 67)
             end
 
@@ -718,15 +727,15 @@ function DataToColor:CreateFrames()
             Pixel(int, DataToColor:getGuidFromUnit(DataToColor.C.unitPetTarget), 69)
             Pixel(int, DataToColor.CastNum, 70)
 
-            if globalCounter % SPELLBOOK_ITERATION_FRAME_CHANGE_RATE == 0 then
+            if globalTick % SPELLBOOK_ITERATION_FRAME_CHANGE_RATE == 0 then
                 Pixel(int, DataToColor.spellBookQueue:shift() or 0, 71)
             end
 
-            if globalCounter % TALENT_ITERATION_FRAME_CHANGE_RATE == 0 then
+            if globalTick % TALENT_ITERATION_FRAME_CHANGE_RATE == 0 then
                 Pixel(int, DataToColor.talentQueue:shift() or 0, 72)
             end
 
-            if globalCounter % GOSSIP_ITERATION_FRAME_CHANGE_RATE == 0 then
+            if globalTick % GOSSIP_ITERATION_FRAME_CHANGE_RATE == 0 then
                 local gossipNum = DataToColor.gossipQueue:shift()
                 if gossipNum then
                     --DataToColor:Print("gossipQueue: ", gossipNum)
@@ -746,7 +755,7 @@ function DataToColor:CreateFrames()
                 Pixel(int, DataToColor:getGuidFromUnit(DataToColor.C.unitFocusTarget), 78)
             end
 
-            if globalCounter % AURA_DURATION_ITERATION_FRAME_CHANGE_RATE == 0 then
+            if globalTick % AURA_DURATION_ITERATION_FRAME_CHANGE_RATE == 0 then
                 local textureId, expireTime = DataToColor.playerBuffTime:get()
                 if textureId then
                     DataToColor.playerBuffTime:setDirty(textureId)
@@ -862,7 +871,7 @@ function DataToColor:CreateFrames()
             local gcd = floor((DataToColor.gcdExpirationTime - GetTime()) * 1000)
             Pixel(int, max(0, gcd), 95)
 
-            if globalCounter % LATENCY_ITERATION_FRAME_CHANGE_RATE == 0 then
+            if globalTick % LATENCY_ITERATION_FRAME_CHANGE_RATE == 0 then
                 local _, _, lagHome, lagWorld = GetNetStats()
 
                 local spellQueue = min(tonumber(GetCVar(DataToColor.C.SpellQueueWindow)) or 0, 999)
@@ -878,7 +887,7 @@ function DataToColor:CreateFrames()
             end
             Pixel(int, DataToColor.lastLoot, 97)
 
-            if globalCounter % CHAT_ITERATION_FRAME_CHANGE_RATE == 0 then
+            if globalTick % CHAT_ITERATION_FRAME_CHANGE_RATE == 0 then
                 local e = DataToColor.ChatQueue:peek()
                 if e == nil then
                     Pixel(int, 0, 98)
@@ -917,7 +926,7 @@ function DataToColor:CreateFrames()
 
             DataToColor:Update()
         elseif not SETUP_SEQUENCE then
-            if globalCounter < initPhase then
+            if globalTick < initPhase then
                 for i = 1, NUMBER_OF_FRAMES - 1 do
                     Pixel(int, 0, i)
                     updateCount[i] = 0
@@ -936,7 +945,7 @@ function DataToColor:CreateFrames()
             end
         end
 
-        globalCounter = globalCounter + 1
+        globalTick = globalTick + 1
     end
 
     local function genFrame(name, x, y)
@@ -977,7 +986,7 @@ function DataToColor:CreateFrames()
     backgroundframe:SetScript("OnUpdate", updateFrames)
 
     local function DumpCallCount(maxRow)
-        print("Frame        count  val --- globalCounter: " .. globalCounter)
+        print("Frame        count  val --- globalTick: " .. globalTick)
 
         local tbl = {}
         local function byUpdateCountDesc(a, b)

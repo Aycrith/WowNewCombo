@@ -329,7 +329,7 @@ public sealed partial class GoapAgent : IDisposable
 
             BroadcastGoapEvent(GoapKey.producedcorpse, true);
 
-            LogActiveKillDetected(logger, State.LastCombatKillCount, combatLog.DamageTakenCount());
+            LogActiveKillDetected(logger, SessionStat.Kills, State.LastCombatKillCount, combatLog.DamageTakenCount());
         }
         else
         {
@@ -391,8 +391,8 @@ public sealed partial class GoapAgent : IDisposable
     [LoggerMessage(
         EventId = 0050,
         Level = LogLevel.Information,
-        Message = "Kill credit detected! Known kills: {count} | Fighting with: {remain}")]
-    static partial void LogActiveKillDetected(ILogger logger, int count, int remain);
+        Message = "Kill credit detected! Session Total: {sessionTotal} | Last Combat: {lastCombatCount} | Currently fighting: {currentCombatRemain}")]
+    static partial void LogActiveKillDetected(ILogger logger, int sessionTotal, int lastCombatCount, int currentCombatRemain);
 
     [LoggerMessage(
         EventId = 0051,
