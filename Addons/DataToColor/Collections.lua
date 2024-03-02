@@ -3,36 +3,49 @@ local DataToColor = unpack(Load)
 
 local GetTime = GetTime
 
-local Queue = {}
-DataToColor.Queue = Queue
+local TimedQueue = {}
+DataToColor.TimedQueue = TimedQueue
 
-function Queue:new()
-    local o = { head = {}, tail = {}, index = 1, headLength = 0 }
+function TimedQueue:new(tickLifetime, defaultValue)
+    local o = {
+        head = {}, tail = {}, index = 1, headLength = 0,
+        tickLifetime = tickLifetime,
+        lastValue = defaultValue,
+        lastChangedTick = 0, defaultValue = defaultValue }
     setmetatable(o, self)
     self.__index = self
     return o
 end
 
-function Queue:shift()
-    if self.index > self.headLength then
-        self.head, self.tail = self.tail, self.head
-        self.index = 1
-        self.headLength = #self.head
-        if self.headLength == 0 then
-            return
+function TimedQueue:shift(globalTick)
+    if math.abs(globalTick - self.lastChangedTick) >= self.tickLifetime or self.lastValue == self.defaultValue then
+        if self.index > self.headLength then
+            self.head, self.tail = self.tail, self.head
+            self.index = 1
+            self.headLength = #self.head
+            if self.headLength == 0 then
+                self.lastValue = self.defaultValue
+                return
+            end
         end
+        local value = self.head[self.index]
+        self.head[self.index] = nil
+        self.index = self.index + 1
+
+        self.lastValue = value
+        self.lastChangedTick = globalTick
+
+        return value
     end
-    local value = self.head[self.index]
-    self.head[self.index] = nil
-    self.index = self.index + 1
-    return value
+
+    return self.lastValue
 end
 
-function Queue:push(item)
+function TimedQueue:push(item)
     return table.insert(self.tail, item)
 end
 
-function Queue:peek()
+function TimedQueue:peek()
     if self.index <= self.headLength then
         return self.head[self.index]
     elseif #self.tail > 0 then
@@ -42,93 +55,90 @@ function Queue:peek()
     return nil
 end
 
-local MinQueue = {}
-DataToColor.MinQueue = MinQueue
-
-function MinQueue:new()
-    local o = {}
-    setmetatable(o, self)
-    self.__index = self
-    return o
-end
-
-function MinQueue:push(key, value)
-    self[key] = value or key
-end
-
-function MinQueue:pop()
-    local key, value = self:minKey()
-    if key ~= nil then
-        value = self[key]
-        self[key] = nil
-        return key, value
-    end
-end
-
-function MinQueue:minKey()
-    local k
-    for i, v in pairs(self) do
-        k = k or i
-        if v < self[k] then k = i end
-    end
-    return k
-end
-
 local struct = {}
 DataToColor.struct = struct
 
-function struct:new()
-    local o = {}
+function struct:new(tickLifetime)
+    local o = {
+        table = {},
+        tickLifetime = tickLifetime,
+        lastChangedTick = 0,
+        lastKey = -1
+    }
     setmetatable(o, self)
     self.__index = self
     return o
 end
 
 function struct:set(key, value)
-    self[key] = { value = value or key, dirty = 0 }
+    self.table[key] = { value = value or key, dirty = 0 }
 end
 
-function struct:get()
+function struct:getTimed(globalTick)
     local time = GetTime()
-    for k, v in pairs(self) do
+    for k, v in pairs(self.table) do
         if v.dirty == 0 or (v.dirty == 1 and v.value - time <= 0) then
+            if self.lastKey ~= k then
+                self.lastKey = k
+                self.lastChangedTick = globalTick
+                --print("changed: ", globalTick, " key:", k, " val: ", v.value)
+            end
             return k, v.value
         end
     end
 end
 
-function struct:getForced()
-    for k, v in pairs(self) do
+function struct:getForced(globalTick)
+    for k, v in pairs(self.table) do
+        if self.lastKey ~= v.value then
+            self.lastKey = v.value
+            self.lastChangedTick = globalTick
+            --print("forced changed: ", globalTick, " key:", k, " val: ", v.value)
+        end
         return k, v.value
     end
 end
 
 function struct:forcedReset()
-    for _, v in pairs(self) do
+    for _, v in pairs(self.table) do
         v.value = GetTime()
     end
 end
 
 function struct:value(key)
-    return self[key].value
+    return self.table[key].value
 end
 
 function struct:exists(key)
-    return self[key] ~= nil
+    return self.table[key] ~= nil
 end
 
 function struct:setDirty(key)
-    self[key].dirty = 1
+    self.table[key].dirty = 1
+end
+
+function struct:setDirtyAfterTime(key, globalTick)
+    if self:exists(key) and math.abs(globalTick - self.lastChangedTick) >= self.tickLifetime then
+        self:setDirty(key)
+    end
 end
 
 function struct:isDirty(key)
-    return self[key].dirty == 1
+    return self.table[key].dirty == 1
 end
 
 function struct:remove(key)
-    self[key] = nil
+    self.table[key] = nil
+end
+
+function struct:removeWhenExpired(key, globalTick)
+    if self:exists(key) and math.abs(globalTick - self.lastChangedTick) >= self.tickLifetime then
+        self:remove(key)
+        return true
+    end
+    return false
 end
 
 function struct:iterator()
-    return pairs(self)
+    return pairs(self.table)
 end

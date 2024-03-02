@@ -30,6 +30,7 @@ DataToColor.C.unitTargetTarget = "targettarget"
 DataToColor.C.unitNormal = "normal"
 DataToColor.C.unitmouseover = "mouseover"
 DataToColor.C.unitmouseovertarget = "mouseovertarget"
+DataToColor.C.unitSoftInteract = "softinteract"
 
 DataToColor.C.SpellQueueWindow = "SpellQueueWindow"
 
@@ -65,6 +66,15 @@ DataToColor.C.Gossip = {
     ["trainer"] = 8,
     ["unlearn"] = 9,
     ["vendor"] = 10,
+}
+
+-- Gossips
+DataToColor.C.GuidType = {
+    ["None"] = 0,
+    ["Creature"] = 1,
+    ["Pet"] = 2,
+    ["GameObject"] = 3,
+    ["Vehicle"] = 4,
 }
 
 -- Mirror timer labels
