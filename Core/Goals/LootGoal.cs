@@ -8,6 +8,7 @@ using System.Numerics;
 using SharedLib.Extensions;
 using System;
 using System.Threading;
+using Core.AddonComponent;
 
 namespace Core.Goals;
 
@@ -192,17 +193,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
         CheckForGather();
 
-        if (!playerReader.MinRangeZero())
-        {
-            elapsedMs = wait.Until(MAX_TIME_TO_REACH_MELEE,
-                bits.NotMoving, input.PressApproachOnCooldown);
-
-            LogReachedCorpse(logger, elapsedMs);
-
-            return playerReader.MinRangeZero();
-        }
-
-        return true;
+        return playerReader.MinRangeZero() || TargetExistsAndReached();
     }
 
     private CorpseEvent? GetClosestCorpse()
@@ -289,16 +280,33 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
     {
         if (!bits.Target())
         {
-            input.PressFastLastTarget();
+            input.PressLastTarget();
             wait.Update();
+            if (bits.Target())
+                Log("Keyboard last target found!");
+        }
 
-            if (!bits.Target())
-                return false;
+        if (/*!bits.Target() &&*/
+            bits.SoftInteract() &&
+            bits.SoftInteract_Hostile() &&
+            bits.SoftInteract_Dead() &&
+            !bits.SoftInteract_Tagged() &&
+            playerReader.SoftInteract_Type == GuidType.Creature)
+        {
+            Log("Keyboard soft target found!");
+            input.PressInteract();
+            wait.Update();
+        }
+
+        if (!bits.Target())
+        {
+            LogWarning("Keyboard No target found!");
+            return false;
         }
 
         if (!bits.Target_Dead())
         {
-            LogWarning("Don't attack alive target!");
+            LogWarning("Keyboard Don't attack alive target!");
             input.PressClearTarget();
             wait.Update();
 
@@ -307,21 +315,22 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
         CheckForGather();
 
-        Log("Target Last Target Found!");
         input.PressFastInteract();
         wait.Update();
 
-        if (!playerReader.MinRangeZero())
-        {
-            float elapsedMs = wait.Until(MAX_TIME_TO_REACH_MELEE,
-                bits.NotMoving, input.PressApproachOnCooldown);
+        return playerReader.MinRangeZero() || TargetExistsAndReached();
+    }
 
-            LogReachedCorpse(logger, elapsedMs);
+    private bool TargetExistsAndReached()
+    {
+        wait.Update();
 
-            return playerReader.MinRangeZero();
-        }
+        float elapsedMs = wait.Until(MAX_TIME_TO_REACH_MELEE,
+            bits.NotMoving, input.PressApproachOnCooldown);
 
-        return true;
+        LogReachedCorpse(logger, bits.Target(), elapsedMs);
+
+        return bits.Target() && playerReader.MinRangeZero();
     }
 
     private bool LootReset()
@@ -362,8 +371,8 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
     [LoggerMessage(
         EventId = 0133,
         Level = LogLevel.Information,
-        Message = "Reached corpse ? {elapsedMs}ms")]
-    static partial void LogReachedCorpse(ILogger logger, float elapsedMs);
+        Message = "Has target ? {hasTarget} | Reached corpse ? {elapsedMs}ms")]
+    static partial void LogReachedCorpse(ILogger logger, bool hasTarget, float elapsedMs);
 
     [LoggerMessage(
         EventId = 0134,

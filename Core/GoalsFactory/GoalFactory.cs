@@ -10,6 +10,7 @@ using System.Threading;
 using static Newtonsoft.Json.JsonConvert;
 using Core.Session;
 using SharedLib;
+using Core.Database;
 
 namespace Core;
 
@@ -224,6 +225,7 @@ public static class GoalFactory
                 x.GetRequiredService<AddonBits>(),
                 x.GetRequiredService<Navigation>(),
                 x.GetRequiredService<StopMoving>(),
+                x.GetRequiredService<AreaDB>(),
                 x.GetRequiredService<NpcNameTargeting>(),
                 x.GetRequiredService<ClassConfiguration>(),
                 x.GetRequiredService<IMountHandler>(),

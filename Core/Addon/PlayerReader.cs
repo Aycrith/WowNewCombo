@@ -1,6 +1,7 @@
 ﻿using System.Collections.Specialized;
 using System.Numerics;
 
+using Core.AddonComponent;
 using Core.Database;
 
 using SharedLib;
@@ -204,6 +205,12 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
     public int FocusTargetGuid => reader.GetInt(78);
 
     public int RangedSpeedMs() => reader.GetInt(88) * 10;
+
+    public int SoftInteract_Guid => reader.GetInt(101);
+
+    public int SoftInteract_Id => reader.GetInt(102);
+
+    public GuidType SoftInteract_Type => (GuidType)reader.GetInt(103);
 
     public void Update(IAddonDataProvider reader)
     {

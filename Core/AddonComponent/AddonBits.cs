@@ -6,9 +6,11 @@ public sealed class AddonBits : IReader, IGameMenuWindowShown
 {
     private const int cell1 = 8;
     private const int cell2 = 9;
+    private const int cell3 = 100;
 
     private BitVector32 v1;
     private BitVector32 v2;
+    private BitVector32 v3;
 
     public AddonBits() { }
 
@@ -16,6 +18,7 @@ public sealed class AddonBits : IReader, IGameMenuWindowShown
     {
         v1 = new(reader.GetInt(cell1));
         v2 = new(reader.GetInt(cell2));
+        v3 = new(reader.GetInt(cell3));
     }
 
     // -- value1 based flags
@@ -78,4 +81,20 @@ public sealed class AddonBits : IReader, IGameMenuWindowShown
     // Combined
 
     public bool Grounded() => !Flying() && !Falling();
+
+
+    // -- value3 based flags
+    public bool SoftInteract() => v3[Mask._0];
+
+    public bool SoftInteract_Dead() => v3[Mask._1];
+
+    public bool SoftInteract_DeadOrGhost() => v3[Mask._2];
+
+    public bool SoftInteract_Player() => v3[Mask._3];
+
+    public bool SoftInteract_Tagged() => v3[Mask._4];
+
+    public bool SoftInteract_Combat() => v3[Mask._5];
+
+    public bool SoftInteract_Hostile() => v3[Mask._6];
 }
