@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using SharedLib.Extensions;
 using Game;
+using Core.Database;
 
 #pragma warning disable 162
 
@@ -23,6 +24,7 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
 
     private const bool debug = false;
 
+    private const int MAX_TIME_TO_REACH_MELEE = 10000;
     private const int TIMEOUT = 5000;
 
     public override float Cost => key.Cost;
@@ -41,6 +43,7 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
     private readonly CancellationToken token;
     private readonly ExecGameCommand execGameCommand;
     private readonly GossipReader gossipReader;
+    private readonly AreaDB areaDB;
 
     private PathState pathState;
 
@@ -67,7 +70,7 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
 
     public AdhocNPCGoal(KeyAction key, ILogger<AdhocNPCGoal> logger, ConfigurableInput input,
         Wait wait, PlayerReader playerReader, GossipReader gossipReader, AddonBits bits,
-        Navigation navigation, StopMoving stopMoving,
+        Navigation navigation, StopMoving stopMoving, AreaDB areaDB,
         NpcNameTargeting npcNameTargeting, ClassConfiguration classConfig,
         IMountHandler mountHandler, ExecGameCommand exec, CancellationTokenSource cts)
         : base(nameof(AdhocNPCGoal))
@@ -79,6 +82,7 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
         this.playerReader = playerReader;
         this.bits = bits;
         this.stopMoving = stopMoving;
+        this.areaDB = areaDB;
         this.npcNameTargeting = npcNameTargeting;
         this.classConfig = classConfig;
         this.mountHandler = mountHandler;
@@ -210,7 +214,18 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
 
         bool found = false;
 
-        if (!input.KeyboardOnly)
+        if (bits.SoftInteract() &&
+            !bits.SoftInteract_Hostile())
+        {
+            input.PressInteract();
+            wait.Update();
+
+            LogWarn($"Soft Interact found NPC with id {playerReader.SoftInteract_Id}");
+
+            found = TargetExistsAndReached();
+        }
+
+        if (!found && !input.KeyboardOnly)
         {
             npcNameTargeting.ChangeNpcType(NpcNames.Friendly | NpcNames.Neutral);
             npcNameTargeting.WaitForUpdate();
@@ -283,6 +298,16 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
 
         navigation.SimplifyRouteToWaypoint = true;
         MountIfPossible();
+    }
+
+    private bool TargetExistsAndReached()
+    {
+        float elapsedMs = wait.Until(MAX_TIME_TO_REACH_MELEE,
+            bits.NotMoving, input.PressApproachOnCooldown);
+
+        //LogReachedCorpse(logger, bits.Target(), elapsedMs);
+
+        return bits.Target() && playerReader.MinRangeZero();
     }
 
     private void MountIfPossible()

@@ -21,6 +21,7 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
     private readonly ConfigurableInput input;
     private readonly ClassConfiguration classConfig;
     private readonly PlayerReader playerReader;
+    private readonly CombatLog combatLog;
     private readonly AddonBits bits;
     private readonly Wait wait;
     private readonly StopMoving stopMoving;
@@ -37,7 +38,7 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
     private readonly List<SkinCorpseEvent> corpses = new();
 
     public SkinningGoal(ILogger<SkinningGoal> logger, ConfigurableInput input,
-        PlayerReader playerReader,
+        PlayerReader playerReader, CombatLog combatLog,
         BagReader bagReader, EquipmentReader equipmentReader,
         AddonBits bits, Wait wait, StopMoving stopMoving,
         NpcNameTargeting npcNameTargeting, CombatUtil combatUtil,
@@ -49,6 +50,7 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
         this.input = input;
         this.classConfig = classConfig;
         this.playerReader = playerReader;
+        this.combatLog = combatLog;
         this.bits = bits;
         this.wait = wait;
         this.stopMoving = stopMoving;
@@ -156,6 +158,19 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
                 interact = true;
             }
 
+            if (!foundTarget &&
+                bits.SoftInteract() &&
+                bits.SoftInteract_Dead() &&
+                bits.SoftInteract_Hostile())
+            {
+                Log("Found soft target!");
+
+                input.PressInteract();
+                wait.Update();
+
+                interact = false;
+            }
+
             if (!foundTarget)
             {
                 SendGoapEvent(ScreenCaptureEvent.Default);
@@ -219,8 +234,10 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
             }
             else
             {
-                if (combatUtil.EnteredCombat() ||
-                playerReader.LastUIError == UI_ERROR.ERR_SPELL_FAILED_INTERRUPTED)
+                if (combatLog.DamageTakenCount() > 0 ||
+                    combatUtil.EnteredCombat() ||
+                    playerReader.LastUIError == UI_ERROR.ERR_SPELL_FAILED_INTERRUPTED
+                    )
                 {
                     Log("Interrupted due combat!");
                     ExitInterruptOrFailed(true);

@@ -136,6 +136,8 @@ function DataToColor:RegisterEvents()
     DataToColor:RegisterEvent('CHAT_MSG_PARTY', 'OnMessageParty')
     DataToColor:RegisterEvent('CHAT_MSG_PARTY_LEADER', 'OnMessageParty')
 
+    DataToColor:RegisterEvent('PLAYER_SOFT_INTERACT_CHANGED', 'OnPlayerSoftInteractChanged')
+
     -- Season of mastery / vanilla
     if WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
         DataToColor:RegisterEvent('UNIT_SPELLCAST_START', 'SoM_OnCastStart')
@@ -659,6 +661,10 @@ function AddMessageToQueue(type, msg, author)
     DataToColor.ChatQueue:push({ type = type, length = string.len(msg), msg = msg })
 end
 
+function DataToColor:OnPlayerSoftInteractChanged(event, old, new)
+    DataToColor.softInteractGuid = new
+    --print(event, old, "vs", new, DataToColor:getGuidFromUUID(new), DataToColor:getNpcIdFromUUID(new))
+end
 
 local CORPSE_RETRIEVAL_DISTANCE = 40
 

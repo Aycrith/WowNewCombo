@@ -167,6 +167,19 @@ function DataToColor:Bits2()
         ((DataToColor.moving and 2 or 0)) ^ 22
 end
 
+function DataToColor:Bits3()
+    return
+    (
+        (UnitExists(DataToColor.C.unitSoftInteract) and 1 or 0) +
+        (UnitIsDead(DataToColor.C.unitSoftInteract) and 2 or 0) ^ 1 +
+        (UnitIsDeadOrGhost(DataToColor.C.unitSoftInteract) and 2 or 0) ^ 2 +
+        (UnitIsPlayer(DataToColor.C.unitSoftInteract) and 2 or 0) ^ 3 +
+        (UnitIsTapDenied(DataToColor.C.unitSoftInteract) and 2 or 0) ^ 4 +
+        (UnitAffectingCombat(DataToColor.C.unitSoftInteract) and 2 or 0) ^ 5 +
+        (DataToColor:IsUnitHostile(DataToColor.C.unitPlayer, DataToColor.C.unitSoftInteract) and 2 or 0) ^ 6
+    )
+end
+
 function DataToColor:CustomTrigger(t)
     local v = t[0]
     for i = 1, 23 do
@@ -331,7 +344,29 @@ function DataToColor:getGuidFromUnit(unit)
 end
 
 function DataToColor:getGuidFromUUID(uuid)
-    return DataToColor:uniqueGuid(select(-2, strsplit('-', uuid)))
+    if uuid ~= nil then
+        return DataToColor:uniqueGuid(select(-2, strsplit('-', uuid)))
+    end
+    return 0
+end
+
+function DataToColor:getNpcIdFromUUID(uuid)
+    if uuid ~= nil then
+        local id = tonumber(uuid:match("-(%d+)-%x+$"), 10)
+        if id and uuid:match("%a+") ~= "Player" then
+            return id
+        end
+    end
+    return 0
+end
+
+function DataToColor:getTypeFromUUID(uuid)
+    if uuid == nil then
+        return 0
+    end
+
+    local type = select(1, strsplit('-', uuid))
+    return DataToColor.C.GuidType[type] or 0
 end
 
 function DataToColor:uniqueGuid(npcId, spawn)
