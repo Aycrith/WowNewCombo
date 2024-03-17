@@ -68,7 +68,7 @@ Further detail about the architecture can be found in [Blog post](http://www.cod
 - Frontend `ActionbarPopulator` One click to populate Actionbar based on [Class Configuration](#12-class-configuration)
 - `DataConfig`: change where the external data(DBC, MPQ, profiles) can be found
 - `NPCNameFinder`: extended to friendly/neutral units
-- Support more 4:3 aspect ratio based resolution
+- Support more resolutions
 - Addon is rewritten/reorganized with performance in mind(caching and reduce cell paint) to achieve game refresh rate speed
 
 # Media
@@ -157,9 +157,10 @@ Technical details about **V3:**
 
 ## 3.1 System / Video Requirements
 
-Resolutions which based on either 4:3 aspect ratio, the followings are tested:
+Tested resolutions with either full screen or windowed:
 * 1024 x 768
 * 1920 x 1080
+* 3440 x 1440
 * 3840 x 2160
 
 For Nvidia users, under Nvidia Control panel settings
