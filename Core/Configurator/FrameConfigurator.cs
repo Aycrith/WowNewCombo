@@ -316,19 +316,18 @@ public sealed class FrameConfigurator : IDisposable
 
     public void ToggleManualConfig()
     {
-        if (screenshotThread == null)
-        {
-            ResetConfigState();
-
-            cts.Dispose();
-            cts = new();
-            screenshotThread = new Thread(ManualConfigThread);
-            screenshotThread.Start();
-        }
-        else
+        if (screenshotThread != null)
         {
             cts.Cancel();
+            return;
         }
+
+        ResetConfigState();
+
+        cts.Dispose();
+        cts = new();
+        screenshotThread = new Thread(ManualConfigThread);
+        screenshotThread.Start();
     }
 
     public bool FinishConfig()

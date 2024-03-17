@@ -53,11 +53,11 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
     public Image<Bgra32> MiniMapImage { get; init; }
 
     private static readonly FeatureLevel[] s_featureLevels =
-    {
+    [
         FeatureLevel.Level_12_1,
         FeatureLevel.Level_12_0,
         FeatureLevel.Level_11_0,
-    };
+    ];
 
     private readonly IDXGIAdapter adapter;
     private readonly IDXGIOutput output;
@@ -78,7 +78,7 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
     private DataFrame[] frames = null!;
     private Image<Bgra32> addonImage = null!;
 
-    public int[] Data { get; private set; } = Array.Empty<int>();
+    public int[] Data { get; private set; } = [];
     public StringBuilder TextBuilder { get; } = new(3);
 
     public WowScreenDXGI(ILogger<WowScreenDXGI> logger,
@@ -113,15 +113,9 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
                 output.Description.Monitor == hMonitor)
             {
                 monitorRect = output.Description.DesktopCoordinates;
-                if ((monitorRect.Right - monitorRect.Left) != screenRect.Width ||
-                    (monitorRect.Bottom - monitorRect.Top) != screenRect.Height)
-                {
-                    windowedMode = true;
-                }
-                else
-                {
-                    windowedMode = false;
-                }
+                windowedMode =
+                    (monitorRect.Right - monitorRect.Left) != screenRect.Width ||
+                    (monitorRect.Bottom - monitorRect.Top) != screenRect.Height;
 
                 NormalizeScreenRect();
 
@@ -171,7 +165,7 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
         };
         minimapTexture = device.CreateTexture2D(miniMapTextureDesc);
 
-        this.logger.LogInformation($"{screenRect} - " +
+        logger.LogInformation($"{screenRect} - " +
             $"Windowed Mode: {windowedMode} - " +
             $"Scale: {DPI2PPI(GetDpi()):F2} - " +
             $"Monitor Rect: {monitorRect} - " +
@@ -249,7 +243,7 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
 
         Result result = duplication.AcquireNextFrame(0,
             out OutduplFrameInfo frame,
-        out IDXGIResource idxgiResource);
+            out IDXGIResource idxgiResource);
 
         // If only the pointer was updated(that is, the desktop image was not updated),
         // the AccumulatedFrames, TotalMetadataBufferSize, LastPresentTime members are set to zero.
@@ -327,10 +321,14 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
         int rowPitch = resource.RowPitch;
         ReadOnlySpan<byte> src = resource.AsSpan(screenRect.Height * rowPitch);
         Span<byte> dest = MemoryMarshal.Cast<Bgra32, byte>(memory.Span);
-
-        if (!windowedMode)
+        
+        // Issue: at 3440x1440 resolution game fullscreen
+        // the dest Span.Length much smaller then the src Span.Length
+        // this fails to copy the buffer
+        // so when TryCopyTo fails just fallback
+        // to copy by row
+        if (!windowedMode && src.TryCopyTo(dest))
         {
-            src.TryCopyTo(dest);
         }
         else
         {
