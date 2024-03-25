@@ -2,13 +2,14 @@
 
 using Core;
 
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using Serilog;
 using Serilog.Events;
-using Serilog.Templates;
 using Serilog.Templates.Themes;
+using Serilog.Templates;
 
 namespace HeadlessServer;
 
@@ -16,6 +17,16 @@ internal sealed class Program
 {
     private static void Main(string[] args)
     {
+        string environmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+
+        IConfiguration configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("headless_appsettings.json", optional: true, reloadOnChange: true)
+            .AddJsonFile($"headless_appsettings.{environmentName}.json", optional: true, reloadOnChange: true)
+            .AddEnvironmentVariables()
+            .AddCommandLine(args)
+            .Build();
+
         IServiceCollection services = new ServiceCollection();
 
         ILoggerFactory logFactory = LoggerFactory.Create(builder =>
@@ -26,10 +37,10 @@ internal sealed class Program
         services.AddLogging(builder =>
         {
             const string outputTemplate = "[{@t:HH:mm:ss:fff} {@l:u1}] {#if Length(SourceContext) > 0}[{Substring(SourceContext, LastIndexOf(SourceContext, '.') + 1),-15}] {#end}{@m}\n{@x}";
+            //const string outputTemplate = "[{@t:HH:mm:ss:fff} {@l:u1}] {SourceContext}] {@m}\n{@x}";
 
             Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Debug()
-                .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+                .ReadFrom.Configuration(configuration)
                 .Enrich.FromLogContext()
                 .WriteTo.File(new ExpressionTemplate(outputTemplate),
                     path: "headless_out.log",

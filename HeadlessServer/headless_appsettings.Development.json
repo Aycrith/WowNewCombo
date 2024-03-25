@@ -1,0 +1,21 @@
+{
+  "DetailedErrors": true,
+  "Serilog": {
+    "MinimumLevel": {
+      "Default": "Error",
+      "Override": {
+        "Microsoft": "Error",
+        "Microsoft.Hosting.Lifetime": "Error",
+        "HeadlessServer.Program": "Debug",
+
+        "Core.BotController": "Debug",
+
+        "Core.Goals.LootGoal": "Verbose",
+
+        "Game.WowProcessInput": "Verbose",
+        "Core.Goals.CastingHandler": "Verbose",
+        "Core.ReactCastError": "Verbose"
+      }
+    }
+  }
+}
