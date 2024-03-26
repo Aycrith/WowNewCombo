@@ -55,6 +55,8 @@ internal sealed class Program
 
         ILogger<Program> log = logFactory.CreateLogger<Program>();
 
+        log.LogInformation($"Hosting environment: {environmentName ?? "Production"}");
+
         log.LogInformation(
             $"{Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName} " +
             $"{DateTimeOffset.Now}");
