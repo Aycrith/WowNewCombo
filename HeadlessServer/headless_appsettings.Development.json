@@ -2,17 +2,17 @@
   "DetailedErrors": true,
   "Serilog": {
     "MinimumLevel": {
-      "Default": "Error",
+      "Default": "Debug",
       "Override": {
-        "Microsoft": "Error",
-        "Microsoft.Hosting.Lifetime": "Error",
+        "Microsoft": "Warning",
+        "Microsoft.Hosting.Lifetime": "Information",
         "HeadlessServer.Program": "Debug",
 
-        "Core.BotController": "Debug",
-
-        "Core.Goals.LootGoal": "Verbose",
-
         "Game.WowProcessInput": "Verbose",
+        "Core.ConfigurableInput": "Verbose",
+
+        "Core.BotController": "Debug",
+        "Core.Goals.LootGoal": "Verbose",
         "Core.Goals.CastingHandler": "Verbose",
         "Core.ReactCastError": "Verbose"
       }

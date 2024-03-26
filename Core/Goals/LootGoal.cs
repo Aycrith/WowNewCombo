@@ -106,6 +106,11 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
             if (state.LastCombatKillCount == 1)
             {
                 success = LootKeyboard();
+
+                if (!success)
+                {
+                    logger.LogError($"Keyboard loot failed. Has target ? {bits.Target()}");
+                }
             }
 
             if (!success)

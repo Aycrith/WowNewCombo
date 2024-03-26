@@ -23,7 +23,7 @@ public sealed partial class CastingHandler
 
     private const int MAX_WAIT_MELEE_RANGE = 10_000;
 
-    private readonly ILogger logger;
+    private readonly ILogger<CastingHandler> logger;
     private readonly bool Log;
     private readonly ConfigurableInput input;
 
@@ -59,7 +59,7 @@ public sealed partial class CastingHandler
     // second cast still problematic
     private KeyAction? lastAction;
 
-    public CastingHandler(ILogger logger, ConfigurableInput input,
+    public CastingHandler(ILogger<CastingHandler> logger, ConfigurableInput input,
         ClassConfiguration classConfig, AddonBits bits,
         ActionBarBits<IUsableAction> usableAction,
         ActionBarBits<ICurrentAction> currentAction,
@@ -487,6 +487,8 @@ public sealed partial class CastingHandler
             if (!CastInstant(item, false, token))
             {
                 // try again after reacted to UI_ERROR
+                LogFailedAttemptTryAgain(logger, item.Name);
+
                 if (token.IsCancellationRequested || !CastInstant(item, true, token))
                 {
                     return false;
@@ -498,6 +500,8 @@ public sealed partial class CastingHandler
             if (!CastCastbar(item, false, token))
             {
                 // try again after reacted to UI_ERROR
+                LogFailedAttemptTryAgain(logger, item.Name);
+
                 if (token.IsCancellationRequested || !CastCastbar(item, true, token))
                 {
                     return false;
@@ -761,7 +765,7 @@ public sealed partial class CastingHandler
     [LoggerMessage(
         EventId = 0077,
         Level = LogLevel.Information,
-        Message = "[{name,-15}] ... casting: {casting} | count:{castCount} | usable: {beforeUsable}->{afterUsable} | {beforeCastEvent}->{afterCastEvent}")]
+        Message = "[{name,-15}] ... count: {castCount} | casting: {casting} | usable: {beforeUsable}->{afterUsable} | {beforeCastEvent}->{afterCastEvent}")]
     static partial void LogCastbarUsableChange(ILogger logger, string name, bool casting, int castCount, bool beforeUsable, bool afterUsable, string beforeCastEvent, string afterCastEvent);
 
     [LoggerMessage(
@@ -878,6 +882,13 @@ public sealed partial class CastingHandler
         Level = LogLevel.Information,
         Message = "[{name,-15}] ... AfterCastWaitMeleeRange")]
     static partial void LogAfterCastWaitMeleeRange(ILogger logger, string name);
+
+    [LoggerMessage(
+        EventId = 0097,
+        Level = LogLevel.Trace,
+        Message = "[{name,-15}] ... Failed try again!")]
+    static partial void LogFailedAttemptTryAgain(ILogger logger, string name);
+
 
     #endregion
 }

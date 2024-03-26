@@ -2,18 +2,25 @@
 using System;
 
 using Game;
+using Microsoft.Extensions.Logging;
 
 namespace Core;
 
 public sealed partial class ConfigurableInput
 {
+    private readonly ILogger<ConfigurableInput> logger;
     private readonly WowProcessInput input;
     private readonly ClassConfiguration classConfig;
 
-    public ConfigurableInput(WowProcessInput input, ClassConfiguration classConfig)
+    private readonly bool Log;
+
+    public ConfigurableInput(ILogger<ConfigurableInput> logger,
+        WowProcessInput input, ClassConfiguration classConfig)
     {
+        this.logger = logger;
         this.input = input;
         this.classConfig = classConfig;
+        Log = classConfig.Log;
 
         input.ForwardKey = classConfig.ForwardKey;
         input.BackwardKey = classConfig.BackwardKey;
@@ -65,6 +72,14 @@ public sealed partial class ConfigurableInput
     {
         input.PressRandom(keyAction.ConsoleKey, keyAction.PressDuration, token);
         keyAction.SetClicked();
+
+        if (Log && keyAction.Log)
+        {
+            if (keyAction.BaseAction)
+                LogBaseActionPressRandom(logger, keyAction.Name, keyAction.ConsoleKey, keyAction.PressDuration);
+            else
+                LogKeyActionPressRandom(logger, keyAction.Name, keyAction.ConsoleKey, keyAction.PressDuration);
+        }
     }
 
     public void PressFixed(ConsoleKey key, int milliseconds, CancellationToken token)
@@ -132,4 +147,21 @@ public sealed partial class ConfigurableInput
     public void PressTargetFocus() => PressRandom(TargetFocus);
 
     public void PressFollowTarget() => PressRandom(FollowTarget);
+
+
+    #region Logging
+
+    [LoggerMessage(
+        EventId = 5000,
+        Level = LogLevel.Trace,
+        Message = @"[{name}] {key} pressed {milliseconds}ms")]
+    static partial void LogBaseActionPressRandom(ILogger logger, string name, ConsoleKey key, int milliseconds);
+
+    [LoggerMessage(
+        EventId = 5001,
+        Level = LogLevel.Debug,
+        Message = @"[{name}] {key} pressed {milliseconds}ms")]
+    static partial void LogKeyActionPressRandom(ILogger logger, string name, ConsoleKey key, int milliseconds);
+
+    #endregion
 }
