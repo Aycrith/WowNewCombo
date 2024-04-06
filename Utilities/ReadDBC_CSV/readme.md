@@ -1,6 +1,6 @@
 # ReadDBC_CSV
 
-**som_game_build** = 1.14.3.49821
+**som_game_build** = 1.15.2.54092
 **tbc_game_build** = 2.5.4.44833
 **wrath_game_build** = 3.4.2.50375
 
