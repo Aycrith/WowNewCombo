@@ -49,6 +49,11 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
 
     #region IRouteProvider
 
+    public Vector3[] MapRoute()
+    {
+        return Array.Empty<Vector3>();
+    }
+
     public Vector3[] PathingRoute()
     {
         return navigation.TotalRoute;

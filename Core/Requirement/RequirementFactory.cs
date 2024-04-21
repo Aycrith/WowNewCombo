@@ -235,6 +235,10 @@ public sealed partial class RequirementFactory
             // Session Stat
             { "Deaths", sessionStat._Deaths },
             { "Kills", sessionStat._Kills },
+            { "Seconds", sessionStat._Seconds },
+
+            { "Level", playerReader.Level._Value },
+            { "ExpPerc", playerReader._PlayerXpPercent }
         };
 
         InitUserDefinedIntVariables(classConfig.IntVariables,
@@ -331,6 +335,15 @@ public sealed partial class RequirementFactory
         list.Clear();
         Process(list, item.Name, item.Interrupts);
         item.InterruptsRuntime = list.ToArray();
+    }
+
+    public void Init(PathSettings item)
+    {
+        List<Requirement> list = [];
+
+        Process(list, item.FileName, item.Requirements);
+
+        item.RequirementsRuntime = list.ToArray();
     }
 
     private void Process(List<Requirement> output, string name,

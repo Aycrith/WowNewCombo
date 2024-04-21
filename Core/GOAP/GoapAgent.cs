@@ -78,6 +78,7 @@ public sealed partial class GoapAgent : IDisposable
 
                 if (classConfig.Mode is Mode.AttendedGrind or Mode.Grind)
                 {
+                    SessionStat.Start();
                     sessionHandler.Start(classConfig.OverridePathFilename ?? classConfig.PathFilename);
                 }
             }

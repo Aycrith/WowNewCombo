@@ -14,7 +14,12 @@ namespace Core.Goals;
 
 public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvider, IEditedRouteReceiver, IDisposable
 {
-    public override float Cost => 20f;
+    public const float DEFAULT_COST = 20f;
+    public const float COST_OFFSET = 0.1f;
+
+    private readonly float cost;
+    public override float Cost => cost;
+    public override bool CanRun() => pathSettings.CanRun();
 
     private const bool debug = false;
 
@@ -38,13 +43,21 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
     private readonly Thread? sideActivityThread;
     private CancellationTokenSource sideActivityCts;
 
-    private Vector3[] mapRoute;
+    private readonly PathSettings pathSettings;
+
+    private Vector3[] mapRoute
+    {
+        get => pathSettings.Path;
+        set => pathSettings.Path = value;
+    }
 
     private DateTime onEnterTime;
 
     #region IRouteProvider
 
     public DateTime LastActive => navigation.LastActive;
+
+    public Vector3[] MapRoute() => mapRoute;
 
     public Vector3[] PathingRoute()
     {
@@ -63,26 +76,39 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
     #endregion
 
-
-    public FollowRouteGoal(ILogger<FollowRouteGoal> logger,
+    public FollowRouteGoal(
+        float cost,
+        PathSettings pathSettings,
+        ILogger<FollowRouteGoal> logger,
         ConfigurableInput input, Wait wait, PlayerReader playerReader,
         AddonBits bits,
-        ClassConfiguration classConfig, Vector3[] route, Navigation navigation,
+        ClassConfiguration classConfig,
+        Navigation navigation,
         IMountHandler mountHandler, TargetFinder targetFinder,
         IBlacklist blacklist)
-        : base(nameof(FollowRouteGoal))
+    : base("Follow " + System.IO.Path.GetFileNameWithoutExtension(pathSettings.FileName))
     {
+        this.cost = cost;
+
         this.logger = logger;
         this.input = input;
-
         this.wait = wait;
         this.classConfig = classConfig;
         this.playerReader = playerReader;
         this.bits = bits;
-        this.mapRoute = route;
+        this.pathSettings = pathSettings;
         this.mountHandler = mountHandler;
         this.targetFinder = targetFinder;
         this.targetBlacklist = blacklist;
+
+        if (pathSettings.Requirements.Count > 0)
+        {
+            Keys = [
+             new KeyAction() {
+                RequirementsRuntime = pathSettings.RequirementsRuntime,
+                Name = "Follow " + System.IO.Path.GetFileNameWithoutExtension(pathSettings.FileName)
+            }];
+        }
 
         this.navigation = navigation;
         navigation.OnPathCalculated += Navigation_OnPathCalculated;
@@ -315,7 +341,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
     public void RefillWaypoints(bool onlyClosest)
     {
-        Log($"{nameof(RefillWaypoints)} - findClosest:{onlyClosest} - ThereAndBack:{classConfig.PathThereAndBack}");
+        Log($"{nameof(RefillWaypoints)} - findClosest:{onlyClosest} - ThereAndBack:{pathSettings.PathThereAndBack}");
 
         Vector3 playerMap = playerReader.MapPos;
 
@@ -358,7 +384,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
         if (mapClosestPoint == pathMap[0] || mapClosestPoint == pathMap[^1])
         {
-            if (classConfig.PathThereAndBack)
+            if (pathSettings.PathThereAndBack)
             {
                 navigation.SetWayPoints(pathMap);
             }
@@ -378,9 +404,14 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
     #endregion
 
-    public void ReceivePath(Vector3[] mapRoute)
+    public void ReceivePath(Vector3[] oldMap, Vector3[] newMap)
     {
-        this.mapRoute = mapRoute;
+        // TODO: Cheap way to avoid override all FollowRouteGoal
+        // to the same path
+        if (mapRoute.SequenceEqual(oldMap))
+        {
+            this.mapRoute = newMap;
+        }
     }
 
     private void RandomJump()

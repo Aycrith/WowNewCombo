@@ -412,6 +412,8 @@ For each of the following click + to add a new key binding.
 
 ## 12. Class Configuration
 
+If one of the Property is not explicitly mentioned during the configuration or in the examples, you can assume it uses the default value!
+
 Each class has a configuration file in [/Json/class/](./Json/class) e.g. the config for a `Warrior` it is in file [Warrior_1.json](./Json/class/Warrior_1.json).
 
 The configuration file determines what spells the character casts, when pulling and in combat, where to vendor and repair and what buffs consider.
@@ -433,9 +435,12 @@ Your class file probably exists and just needs to be edited to set the pathing f
 | `"AllowPvP"` | Should engage combat with the opposite faction | true | `false` |
 | `"AutoPetAttack"` | Should the pet start attacking as soon as possible | true | `true` |
 | `"KeyboardOnly"` | Use keyboard to interact only. See [KeyboardOnly](#keyboardonly) | false | `true` |
-| `"PathFilename"` | [Path](#path) to use while alive | **false** | `""` |
+| --- | --- | --- | --- |
+| `"PathFilename"` | [Path](#path) to use while alive | **false** or [Multiple Paths with Requirements](#multiple-paths-with-requirements) | `""` |
 | `"PathThereAndBack"` | While using the path, [should go start to and reverse](#there-and-back) | true | `true` |
 | `"PathReduceSteps"` | Reduce the number of path points | true | `false` |
+| --- | --- | --- | --- |
+| `"Paths"` | Array of [PathSettings](#pathsettings).<br>Either define this array or use the above properties | true | `[]` |
 | `"Mode"` | What kind of [behaviour](#modes) should the bot operate | true | `Mode.Grind` |
 | `"NPCMaxLevels_Above"` | Maximum allowed level above difference to the player | true | `1` |
 | `"NPCMaxLevels_Below"` | Maximum allowed level below difference to the player | true | `7` |
@@ -565,11 +570,70 @@ For example look at the Warlock profiles.
 ### Path
 
 The path that the player follows during [Follow Route Goal](#follow-route-goal), its a `json` file under [/Json/path/](./Json/path) which contains a list of `x`,`y`,`z` coordinates while looking for mobs.
+
+### PathSettings
+
+| Property Name | Description | Optional | Default value |
+| --- | --- | --- | --- |
+| `"PathFilename"` | [Path](#path) to use while alive | **false** | `""` |
+| `"PathThereAndBack"` | While using the path, [should go start to and reverse](#there-and-back) | true | `true` |
+| `"PathReduceSteps"` | Reduce the number of path points | true | `false` |
+
+### Simple approach
+
+When the bellow properties are defined in the [Class Configuration](#12-class-configuration), a new [PathSettings](#pathsettings) instance is created under in `Paths` array as the first element.
+
 ```json
-"PathFilename": "58_Winterspring.2.json",   // the path to walk when alive
-"PathThereAndBack": true,                   // if true walks the path and the walks it backwards.
-"PathReduceSteps": true,                    // uses every other coordinate.
+"PathFilename": "_pack\\1-20\\Dwarf.Gnome\\1-4_Dun Morogh.json.json",   // the path to walk when alive
+"PathThereAndBack": true,                                               // if true walks the path and the walks it backwards.
+"PathReduceSteps": true,                                                // uses every other coordinate, halve the coordinate count
 ```
+
+I keep the previously mentioned properties for backward compatibility and also if you not interested in changing path during runtime.
+
+Example can be found under [Warrior_1.json](./Json/class/Warrior_1.json).
+
+### Multiple Paths with Requirements
+
+With the latest update it is possible to change between multiple paths during runtime.
+
+In that case properties what mentioned in [Simple approach](#simple-approach) are ignored.
+
+Instead using another structure called [Class Configuration.Paths](#12-class-configuration) array, which is very similar, however theres are addition [Requirements](#requirement) field. Backed by [PathSettings](#pathsettings) object.
+
+Let's look at the following example
+- It is really important to always have one `Path` which doesn't have any condition, serves as fallback.
+- 3 paths defined here. 2 with conditions and 1 with fallback(no requirements which means it can always run)
+- The definition order matters, the first element has the highest priority, while the last element in the array has the lowest.
+- Each path is added as a new [Follow Route Goal](#follow-route-goal) with a custom cost. The base cost is 20, and its auto incremented by `0.1f`. So you can even add your own logic in between the goals.
+- Each [Follow Route Goal](#follow-route-goal) component preserves it state from the last execution time.
+- It can accept [Requirements](#requirement) as condition.
+
+```json
+"Paths": [
+{
+    "PathFilename": "1-5_Gnome.json",                                 // Only runs when the player is below level 4 
+    "PathThereAndBack": false,
+    "PathReduceSteps": false,
+    "Requirements": [
+        "Level < 4"
+    ]
+},
+{
+    "PathFilename": "_pack\\1-20\\Dwarf.Gnome\\1-4_Dun Morogh.json",  // Only runs when the player is at least level 4 but below level 5
+    "Requirements": [
+        "Level < 5"
+    ]
+},
+{
+    "PathFilename": "_pack\\1-20\\Dwarf.Gnome\\4-6_Dun Morogh.json",  // Runs when the player is at least level 5
+    "PathThereAndBack": false,
+    "PathReduceSteps": false
+}
+],
+```
+
+The previously mentioned example can be found under [Hunter_1.json](./Json/class/Hunter_1.json).
 
 ### KeyActions
 
@@ -1019,6 +1083,10 @@ In theory if there is a repeatable quest to collect items, you could set up a NP
 
 Uses the [Path](#path) settings, follows the given route, uses pathfinding depending on the loaded [Class Configuration](#12-class-configuration)s [Mode](#modes).
 
+Basic informations
+* Base cost 20.
+* It can be added multiple times via the [Class Configuration.Paths](#12-class-configuration) property array.
+
 Meanwhile attempts to
 * find a new possible non blacklisted target
 * find a possible gathering node
@@ -1148,6 +1216,10 @@ Formula: `[Keyword] [Operator] [Numeric integer value]`
 | `GCD` | Alias for `1500` value |
 | `Kills` | In the current session how many mobs have been killed by the player. |
 | `Deaths` | In the current session how many times the player have died. |
+| `Level` | Returns with the player current level. |
+| `Seconds` | Returns with the elapsed time in Seconds since the Session started.<br>The Session starts when the `Start Bot` button is pressed! |
+| `ExpPerc` | Returns with the player experience as percentage to hit next level. |
+
 
 For the `MinRange` and `MaxRange` gives an approximation range distance between the player and target.
 

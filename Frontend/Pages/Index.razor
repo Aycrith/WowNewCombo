@@ -51,7 +51,30 @@
 
                 <BotHeader ShowActiveGoal="false" Hide="@(botController.IsBotActive)" />
                 <ProfileSelectorComponent Hide="@(botController.IsBotActive)" />
-                <PathSelectorComponent Hide="@(botController.IsBotActive)" />
+
+                @if (botController.ClassConfig == null)
+                {
+                    <PathSelectorComponent Hide="@(botController.IsBotActive)" />
+                }
+                else
+                {
+                    <MatAccordion>
+                        <MatExpansionPanel @bind-Expanded="@panelOpenState">
+                            <MatExpansionPanelSummary>
+                                <MatExpansionPanelHeader>Override Paths</MatExpansionPanelHeader>
+                            </MatExpansionPanelSummary>
+                            <MatExpansionPanelDetails>
+                                @foreach (var pathSettings in botController.ClassConfig!.Paths)
+                                {
+                                    <PathSelectorComponent Hide="@(botController.IsBotActive)"
+                                                           Target="@(pathSettings)"
+                                                           TargetIndex="@(Array.IndexOf(botController.ClassConfig!.Paths, pathSettings))" />
+                                }
+                            </MatExpansionPanelDetails>
+                        </MatExpansionPanel>
+                    </MatAccordion>
+                }
+
                 <GoalsComponent />
             </div>
         }
@@ -72,9 +95,12 @@
 @code {
     private bool updateAvailable;
 
+    bool panelOpenState;
+
     protected override void OnInitialized()
     {
         botController.StatusChanged += OnStatusChanged;
+        botController.ProfileLoaded += OnStatusChanged;
 
         updateAvailable = addonConfigurator.UpdateAvailable();
     }

@@ -247,7 +247,8 @@
 
     private List<Vector3> editPath { get; set; } = new();
 
-    private string loadedPathFile => botController.ClassConfig!.PathFilename.Replace(dataConfig.Path, "");
+    private string loadedPathFile =>
+        botController.ClassConfig!.Paths[0].PathFilename.Replace(dataConfig.Path, "");
 
     private string areaName = string.Empty;
 

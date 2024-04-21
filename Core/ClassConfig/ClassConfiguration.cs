@@ -42,12 +42,13 @@ public sealed partial class ClassConfiguration
     public bool AllowPvP { get; set; }
     public bool AutoPetAttack { get; set; } = true;
 
+    // Keeping this for backward compatibility
+    // The following properties are consolidated under PathSettings
     public string PathFilename { get; set; } = string.Empty;
-
     public string? OverridePathFilename { get; set; } = string.Empty;
-
     public bool PathThereAndBack { get; set; } = true;
     public bool PathReduceSteps { get; set; }
+    public PathSettings[] Paths { get; set; } = Array.Empty<PathSettings>();
 
     public Mode Mode { get; init; } = Mode.Grind;
 
@@ -84,7 +85,7 @@ public sealed partial class ClassConfiguration
     public ConsoleKey TurnLeftKey { get; init; } = ConsoleKey.LeftArrow;
     public ConsoleKey TurnRightKey { get; init; } = ConsoleKey.RightArrow;
 
-    public void Initialise(IServiceProvider sp, string? overridePathFile)
+    public void Initialise(IServiceProvider sp, Dictionary<int, string> overridePathFile)
     {
         Approach.Key = Interact.Key;
         AutoAttack.Key = Interact.Key;
@@ -151,23 +152,55 @@ public sealed partial class ClassConfiguration
             GatherFindKeyConfig[i] = newAction;
         }
 
-        OverridePathFilename = overridePathFile;
-        if (!string.IsNullOrEmpty(OverridePathFilename))
+        if (Paths == Array.Empty<PathSettings>() &&
+            !string.IsNullOrEmpty(PathFilename))
         {
-            PathFilename = OverridePathFilename;
+            OverridePathFilename = overridePathFile[0];
+            if (!string.IsNullOrEmpty(OverridePathFilename))
+            {
+                PathFilename = OverridePathFilename;
+            }
+
+            Paths =
+            [
+                new PathSettings()
+                {
+                    PathFilename = PathFilename,
+                    OverridePathFilename = overridePathFile[0],
+                    PathThereAndBack = PathThereAndBack,
+                    PathReduceSteps = PathReduceSteps,
+                }
+            ];
         }
 
         DataConfig dataConfig = sp.GetRequiredService<DataConfig>();
-        if (!File.Exists(Path.Join(dataConfig.Path, PathFilename)))
+
+        for (int i = 0; i < Paths.Length; i++)
         {
-            if (!string.IsNullOrEmpty(OverridePathFilename))
-                throw new Exception(
-                    $"[{nameof(ClassConfiguration)}] " +
-                    $"`{OverridePathFilename}` file does not exists!");
-            else
-                throw new Exception(
-                    $"[{nameof(ClassConfiguration)}] " +
-                    $"`{PathFilename}` file does not exists!");
+            PathSettings settings = Paths[i];
+
+            if (overridePathFile.TryGetValue(i, out string? overridePath))
+                settings.OverridePathFilename = overridePath;
+
+            if (!string.IsNullOrEmpty(settings.OverridePathFilename))
+            {
+                settings.PathFilename = settings.OverridePathFilename;
+            }
+
+            if (!File.Exists(Path.Join(dataConfig.Path, settings.PathFilename)))
+            {
+                if (!string.IsNullOrEmpty(OverridePathFilename))
+                    throw new Exception(
+                        $"[{nameof(ClassConfiguration)}.{nameof(Paths)}[{i}]] " +
+                        $"`{settings.OverridePathFilename}` file does not exists!");
+                else
+                    throw new Exception(
+                        $"[{nameof(ClassConfiguration)}.{nameof(Paths)}[{i}]] " +
+                        $"`{settings.PathFilename}` file does not exists!");
+            }
+
+            settings.Init(globalTime);
+            factory.Init(settings);
         }
 
         if (CheckTargetGivesExp)

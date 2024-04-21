@@ -24,6 +24,12 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
 
     public DateTime LastActive => navigation.LastActive;
 
+    public Vector3[] MapRoute()
+    {
+        return Array.Empty<Vector3>();
+    }
+
+
     public Vector3[] PathingRoute()
     {
         return navigation.TotalRoute;

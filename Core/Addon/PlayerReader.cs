@@ -123,6 +123,8 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
     public int PlayerMaxXp => reader.GetInt(51);
     public int PlayerXpPercent => (1 + PlayerXp.Value) * 100 / (1 + PlayerMaxXp);
 
+    public int _PlayerXpPercent() => PlayerXpPercent;
+
     public RecordInt UIErrorTime { get; } = new(47);
 
     private UI_ERROR UIError => (UI_ERROR)reader.GetInt(52);
