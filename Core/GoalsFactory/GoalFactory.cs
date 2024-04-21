@@ -35,10 +35,6 @@ public static class GoalFactory
         else
             services.AddScoped<IBagChangeTracker, NoBagChangeTracker>();
 
-        // TODO: Should be scoped as it comes from ClassConfig
-        // 432 issue
-        services.AddSingleton<Vector3[]>(
-            GetPath(classConfig, sp.GetRequiredService<DataConfig>()));
 
         if (classConfig.Mode != Mode.Grind)
         {
@@ -89,7 +85,7 @@ public static class GoalFactory
             services.AddScoped<GoapGoal, CombatGoal>();
             services.AddScoped<GoapGoal, ApproachTargetGoal>();
             services.AddScoped<GoapGoal, WaitForGatheringGoal>();
-            services.AddScoped<GoapGoal, FollowRouteGoal>();
+            ResolveFollowRouteGoal(services, classConfig);
 
             ResolveLootAndSkin(services, classConfig);
 
@@ -134,7 +130,7 @@ public static class GoalFactory
             }
             else
             {
-                services.AddScoped<GoapGoal, FollowRouteGoal>();
+                ResolveFollowRouteGoal(services, classConfig);
             }
 
             services.AddScoped<GoapGoal, WalkToCorpseGoal>();
@@ -262,6 +258,39 @@ public static class GoalFactory
     }
 
 
+    public static void ResolveFollowRouteGoal(IServiceCollection services,
+        ClassConfiguration classConfig)
+    {
+        float baseCost = FollowRouteGoal.DEFAULT_COST;
+
+        for (int i = 0; i < classConfig.Paths.Length; i++)
+        {
+            int index = i;
+            float cost = baseCost + (index * FollowRouteGoal.COST_OFFSET);
+
+            services.AddKeyedScoped<PathSettings>(i,
+                (IServiceProvider sp, object? key) =>
+                GetPathSettings(
+                    sp.GetRequiredService<ClassConfiguration>().Paths[(int)key!],
+                    sp.GetRequiredService<DataConfig>()));
+
+            services.AddScoped<GoapGoal, FollowRouteGoal>(x => new(
+                cost,
+                x.GetRequiredKeyedService<PathSettings>(index),
+                x.GetRequiredService<ILogger<FollowRouteGoal>>(),
+                x.GetRequiredService<ConfigurableInput>(),
+                x.GetRequiredService<Wait>(),
+                x.GetRequiredService<PlayerReader>(),
+                x.GetRequiredService<AddonBits>(),
+                x.GetRequiredService<ClassConfiguration>(),
+                x.GetRequiredService<Navigation>(),
+                x.GetRequiredService<IMountHandler>(),
+                x.GetRequiredService<TargetFinder>(),
+                x.GetRequiredService<IBlacklist>()
+                ));
+        }
+    }
+
     private static string RelativeFilePath(DataConfig dataConfig, string path)
     {
         return !path.Contains(dataConfig.Path)
@@ -269,37 +298,39 @@ public static class GoalFactory
             : path;
     }
 
-    private static Vector3[] GetPath(ClassConfiguration classConfig,
-        DataConfig dataConfig)
+    private static PathSettings GetPathSettings(PathSettings setting, DataConfig dataConfig)
     {
-        classConfig.PathFilename =
-            RelativeFilePath(dataConfig, classConfig.PathFilename);
+        setting.PathFilename =
+            RelativeFilePath(dataConfig, setting.PathFilename);
 
-        Vector3[] rawPath = DeserializeObject<Vector3[]>(
-            ReadAllText(classConfig.PathFilename))!;
+        setting.Path = DeserializeObject<Vector3[]>(
+            ReadAllText(setting.PathFilename))!;
 
         // TODO: there could be saved user routes where
         //       the Z component not 0
-        for (int i = 0; i < rawPath.Length; i++)
+        for (int i = 0; i < setting.Path.Length; i++)
         {
-            if (rawPath[i].Z != 0)
-                rawPath[i].Z = 0;
+            if (setting.Path[i].Z != 0)
+                setting.Path[i].Z = 0;
         }
 
-        if (!classConfig.PathReduceSteps)
-            return rawPath;
+        if (!setting.PathReduceSteps)
+            return setting;
 
         int step = 2;
-        int reducedLength = rawPath.Length % step == 0
-            ? rawPath.Length / step
-            : (rawPath.Length / step) + 1;
+        int reducedLength = setting.Path.Length % step == 0
+            ? setting.Path.Length / step
+            : (setting.Path.Length / step) + 1;
 
         Vector3[] path = new Vector3[reducedLength];
         for (int i = 0; i < path.Length; i++)
         {
-            path[i] = rawPath[i * step];
+            path[i] = setting.Path[i * step];
         }
-        return path;
+
+        setting.Path = path;
+
+        return setting;
     }
 
     public static Vector3[] GetPath(KeyAction keyAction, DataConfig dataConfig)

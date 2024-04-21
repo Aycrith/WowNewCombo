@@ -46,7 +46,7 @@
     <div class="card-header d-flex justify-content-between align-items-center">
         <label>Path Profile</label>
 
-        <MatAutocompleteList Items="@Files" TItem="string" Label="Path" ValueChanged="OnSelectedPathChanged"
+        <MatAutocompleteList @ref="matAutocompleteList" Items="@Files" TItem="string" Label="Path" ValueChanged="OnSelectedPathChanged"
                              ShowClearButton="true" NumberOfElementsInPopup="@VisibleNum" OnTextChanged="OnTextChanged">
             <ItemTemplate>
                 <div class="mat-autocomplete-list-popup-element" style="display: flex; width: 100%; font-size: 0.75vw">
@@ -74,9 +74,16 @@
 </div>
 
 @code {
+    private MatAutocompleteList<string> matAutocompleteList = null!;
 
     [Parameter]
     public bool Hide { get; set; } = false;
+
+    [Parameter]
+    public PathSettings? Target { get; set; }
+
+    [Parameter]
+    public int TargetIndex { get; set; } = 0;
 
     private IEnumerable<string> Files { get; set; } = null!;
 
@@ -114,6 +121,16 @@
         botController.ProfileLoaded += ValidateLoadButton;
     }
 
+    protected override void OnAfterRender(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+
+        if (firstRender)
+        {
+            matAutocompleteList.ItemSelected(Selected);
+        }
+    }
+
     public void Dispose()
     {
         watcher.Dispose();
@@ -133,6 +150,8 @@
             Selected = string.Empty;
         }
 
+        botController.SelectedPathFilename[TargetIndex] = Selected;
+
         ValidateLoadButton();
         base.InvokeAsync(StateHasChanged);
     }
@@ -151,7 +170,7 @@
 
     private void OnClickButtonLoad()
     {
-        botController.LoadPathProfile(Selected);
+        botController.LoadPathProfile(botController.SelectedPathFilename);
     }
 
     private void ValidateLoadButton()
@@ -162,6 +181,10 @@
     private void GetData()
     {
         Files = botController.PathFiles();
-        Selected = botController.SelectedPathFilename ?? string.Empty;
+
+        if (botController.SelectedPathFilename.TryGetValue(TargetIndex, out string? selected))
+        {
+            Selected = selected ?? string.Empty;
+        }
     }
 }

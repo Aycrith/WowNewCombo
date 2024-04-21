@@ -8,6 +8,7 @@
 @inject BuffStatus<IFocus> focusbuffs
 @inject CombatLog combatLog
 @inject ActionBarCostReader costReader
+@inject SessionStat sessionStat
 
 @implements IDisposable
 
@@ -29,7 +30,6 @@
             <TableOfComponent Obj="@PlayerReader" />
         </div>
     </div>
-
     <div class="card">
         <div class="card-header">
             AddonBits
@@ -81,6 +81,15 @@
         </div>
         <div class="card-body" style="padding-bottom: 0">
             <TableOfComponent Obj="@costReader" />
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            Session Stats
+        </div>
+        <div class="card-body" style="padding-bottom: 0">
+            <TableOfComponent Obj="@sessionStat" />
         </div>
     </div>
 </div>

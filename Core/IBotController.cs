@@ -8,7 +8,7 @@ public interface IBotController
 {
     bool IsBotActive { get; }
     string SelectedClassFilename { get; }
-    string? SelectedPathFilename { get; }
+    Dictionary<int, string> SelectedPathFilename { get; }
     ClassConfiguration? ClassConfig { get; }
     GoapAgent? GoapAgent { get; }
     RouteInfo? RouteInfo { get; }
@@ -32,7 +32,7 @@ public interface IBotController
 
     void LoadClassProfile(string classFilename);
 
-    void LoadPathProfile(string pathFilename);
+    void LoadPathProfile(Dictionary<int, string> pathFilenames);
 
     void OverrideClassConfig(ClassConfiguration classConfig);
 }

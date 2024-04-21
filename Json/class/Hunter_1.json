@@ -1,7 +1,30 @@
 {
   "ClassName": "Hunter",
   //"Mode": "AttendedGrind",
-  "PathFilename": "1_Gnome.json",
+  //"PathFilename": "1_Gnome.json",
+  "Paths": [
+    {
+      "PathFilename": "1-5_Gnome.json",
+      "PathThereAndBack": false,
+      "PathReduceSteps": false,
+      "Requirements": [
+        "Level < 4"
+      ]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Dwarf.Gnome\\1-4_Dun Morogh.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": false,
+      "Requirements": [
+        "Level < 5"
+      ]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Dwarf.Gnome\\4-6_Dun Morogh.json",
+      "PathThereAndBack": false,
+      "PathReduceSteps": false
+    }
+  ],
   "Pull": {
     "Sequence": [
       {
@@ -66,6 +89,7 @@
       },
       {
         "Name": "Approach",
+        "Log": false,
         "Requirements": [
           "InMeleeRange"
         ]

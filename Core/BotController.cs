@@ -48,7 +48,7 @@ public sealed partial class BotController : IBotController, IDisposable
     private const int remotePathingTickMs = 500;
 
     public string SelectedClassFilename { get; private set; } = string.Empty;
-    public string? SelectedPathFilename { get; private set; }
+    public Dictionary<int, string> SelectedPathFilename { get; private set; } = [];
     public ClassConfiguration? ClassConfig { get; private set; }
     public GoapAgent? GoapAgent { get; private set; }
     public RouteInfo? RouteInfo { get; private set; }
@@ -295,13 +295,13 @@ public sealed partial class BotController : IBotController, IDisposable
         StatusChanged?.Invoke();
     }
 
-    private bool InitialiseFromFile(string classFile, string? pathFile)
+    private bool InitialiseFromFile(string classFile, Dictionary<int, string> pathFiles)
     {
         long startTime = GetTimestamp();
         try
         {
             ClassConfig = ReadClassConfiguration(classFile);
-            ClassConfig.Initialise(serviceProvider, pathFile);
+            ClassConfig.Initialise(serviceProvider, pathFiles);
 
             LogProfileLoaded(logger, classFile, ClassConfig.PathFilename);
 
@@ -417,11 +417,11 @@ public sealed partial class BotController : IBotController, IDisposable
         ProfileLoaded?.Invoke();
     }
 
-    public void LoadPathProfile(string pathFilename)
+    public void LoadPathProfile(Dictionary<int, string> pathFilenames)
     {
-        if (InitialiseFromFile(SelectedClassFilename, pathFilename))
+        if (InitialiseFromFile(SelectedClassFilename, pathFilenames))
         {
-            SelectedPathFilename = pathFilename;
+            SelectedPathFilename = pathFilenames;
         }
 
         ProfileLoaded?.Invoke();

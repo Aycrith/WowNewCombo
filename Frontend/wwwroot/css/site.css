@@ -111,9 +111,9 @@ app {
     border: none;
 }
 
-.sidebar-text-toggler:focus {
-    outline: none;
-}
+    .sidebar-text-toggler:focus {
+        outline: none;
+    }
 
 .valid.modified:not([type=checkbox]) {
     outline: 1px solid #26b050;
@@ -233,10 +233,24 @@ app {
 
 .mat-autocomplete-list-popup {
     background-color: #191d21;
+    z-index: 5000 !important;
+    position: relative;
 }
 
 .mat-autocomplete-list-popup-element {
     color: #d3d3d3;
+}
+
+.mat-expansion-panel {
+    background-color: darkslateblue !important;
+}
+
+.mat-expansion-panel__summary {
+    background-color: darkslateblue !important;
+}
+
+.mat-expansion-panel__content {
+    background-color: #191d21 !important;
 }
 
 .bg-majestic {

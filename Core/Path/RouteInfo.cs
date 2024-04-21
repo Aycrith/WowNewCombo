@@ -7,7 +7,6 @@ using System.Numerics;
 using System.Text;
 
 using Core.Database;
-using Core.Extensions;
 
 using SharedLib;
 
@@ -73,16 +72,17 @@ public sealed class RouteInfo : IDisposable
 
     private const int dSize = 2;
 
-    public RouteInfo(Vector3[] route,
+    public RouteInfo(
         IEnumerable<IRouteProvider> pathedRoutes,
         PlayerReader playerReader, AreaDB areaDB,
         WorldMapAreaDB worldmapAreaDB)
     {
-        RouteSrc = this.Route = route;
         this.pathedRoutes = pathedRoutes.ToImmutableArray();
         this.playerReader = playerReader;
         this.areaDB = areaDB;
         this.worldmapAreaDB = worldmapAreaDB;
+
+        RouteSrc = this.Route = pathedRoutes.First().MapRoute();
 
         this.areaDB.Changed += OnZoneChanged;
         OnZoneChanged();
@@ -106,7 +106,7 @@ public sealed class RouteInfo : IDisposable
 
         foreach (var r in pathedRoutes.OfType<IEditedRouteReceiver>())
         {
-            r.ReceivePath(Route);
+            r.ReceivePath(RouteSrc.ToArray(), Route);
         }
     }
 
@@ -314,6 +314,12 @@ public sealed class RouteInfo : IDisposable
 
         if (route == null || !route.HasNext())
             return Vector3.Zero;
+
+        // dynamically update the path based on source
+        if (route.MapRoute() != Array.Empty<Vector3>())
+        {
+            RouteSrc = Route = route.MapRoute();
+        }
 
         return route.NextMapPoint();
     }
