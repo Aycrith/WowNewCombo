@@ -1,6 +1,4 @@
 ﻿using System.Collections.Frozen;
-using System.Collections.Generic;
-using System;
 
 using SharedLib;
 
@@ -16,15 +14,10 @@ public sealed class CreatureDB
 
     public CreatureDB(DataConfig dataConfig)
     {
-        ReadOnlySpan<Creature> creatures = DeserializeObject<Creature[]>(
+        Creature[] creatures = DeserializeObject<Creature[]>(
             ReadAllText(Join(dataConfig.ExpDbc, "creatures.json")))!;
 
-        Dictionary<int, string> entries = [];
-        for (int i = 0; i < creatures.Length; i++)
-        {
-            entries.Add(creatures[i].Entry, creatures[i].Name);
-        }
-
-        Entries = entries.ToFrozenDictionary();
+        Entries = creatures
+            .ToFrozenDictionary(c => c.Entry, c => c.Name);
     }
 }

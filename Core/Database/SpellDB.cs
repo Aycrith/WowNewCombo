@@ -1,6 +1,4 @@
 ﻿using System.Collections.Frozen;
-using System.Collections.Generic;
-using System;
 
 using SharedLib;
 
@@ -16,16 +14,10 @@ public sealed class SpellDB
 
     public SpellDB(DataConfig dataConfig)
     {
-        ReadOnlySpan<Spell> span = DeserializeObject<Spell[]>(
+        Spell[] spells = DeserializeObject<Spell[]>(
             ReadAllText(Join(dataConfig.ExpDbc, "spells.json")))!;
 
-        Dictionary<int, Spell> spells = [];
-
-        for (int i = 0; i < span.Length; i++)
-        {
-            spells.Add(span[i].Id, span[i]);
-        }
-
-        this.Spells = spells.ToFrozenDictionary();
+        this.Spells = spells
+            .ToFrozenDictionary(spell => spell.Id);
     }
 }
