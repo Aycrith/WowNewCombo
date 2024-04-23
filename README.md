@@ -173,6 +173,7 @@ Known issues with other applications:
 
 Required game client settings. Press `ESC` -> `System`
   * System > Graphics > Anti-Aliasing: `None`
+  * System > Graphics > Vertical Sync: `Disabled`
   * System > Advanced > Contrast: `50`
   * System > Advanced > Brightness: `50`
   * System > Advanced > Gamma from: `1.0`
