@@ -70,15 +70,15 @@ public sealed partial class ConfigurableInput
 
     public void PressRandom(KeyAction keyAction, CancellationToken token)
     {
-        input.PressRandom(keyAction.ConsoleKey, keyAction.PressDuration, token);
+        int elapsedMs = input.PressRandom(keyAction.ConsoleKey, keyAction.PressDuration, token);
         keyAction.SetClicked();
 
         if (Log && keyAction.Log)
         {
             if (keyAction.BaseAction)
-                LogBaseActionPressRandom(logger, keyAction.Name, keyAction.ConsoleKey, keyAction.PressDuration);
+                LogBaseActionPressRandom(logger, keyAction.Name, keyAction.ConsoleKey, elapsedMs);
             else
-                LogKeyActionPressRandom(logger, keyAction.Name, keyAction.ConsoleKey, keyAction.PressDuration);
+                LogKeyActionPressRandom(logger, keyAction.Name, keyAction.ConsoleKey, elapsedMs);
         }
     }
 
