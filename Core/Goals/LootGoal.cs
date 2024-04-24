@@ -22,7 +22,6 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
     private readonly ILogger<LootGoal> logger;
     private readonly ConfigurableInput input;
 
-    private readonly AddonReader addonReader;
     private readonly PlayerReader playerReader;
     private readonly AddonBits bits;
     private readonly Wait wait;
@@ -45,7 +44,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
     private int money;
 
     public LootGoal(ILogger<LootGoal> logger,
-        AddonReader addonReader, ConfigurableInput input, Wait wait,
+        ConfigurableInput input, Wait wait,
         PlayerReader playerReader, AreaDB areaDb, BagReader bagReader,
         StopMoving stopMoving, AddonBits bits,
         ClassConfiguration classConfig, NpcNameTargeting npcNameTargeting,
@@ -56,7 +55,6 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
     {
         this.logger = logger;
         this.input = input;
-        this.addonReader = addonReader;
         this.wait = wait;
         this.playerReader = playerReader;
         this.bits = bits;
