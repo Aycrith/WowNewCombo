@@ -1,4 +1,6 @@
-﻿namespace Core;
+﻿using Game;
+
+namespace Core;
 
 public sealed partial class ClassConfiguration
 {
@@ -14,7 +16,7 @@ public sealed partial class ClassConfiguration
         Key = "I",
         Name = nameof(Interact),
         Cooldown = 0,
-        PressDuration = 30,
+        PressDuration = InputDuration.FastPress,
         BaseAction = true
     };
 
@@ -23,7 +25,7 @@ public sealed partial class ClassConfiguration
         Key = "J",
         Name = nameof(InteractMouseOver),
         Cooldown = 0,
-        PressDuration = 10,
+        PressDuration = InputDuration.VeryFastPress,
         BaseAction = true
     };
 
@@ -70,7 +72,7 @@ public sealed partial class ClassConfiguration
     {
         Key = "Delete",
         Name = nameof(StopAttack),
-        PressDuration = 20,
+        PressDuration = InputDuration.FastPress,
         BaseAction = true,
     };
 
@@ -79,6 +81,7 @@ public sealed partial class ClassConfiguration
         Key = "Tab",
         Name = nameof(TargetNearestTarget),
         BaseAction = true,
+        PressDuration = InputDuration.FastPress
     };
 
     public KeyAction TargetTargetOfTarget { get; } = new()
@@ -101,7 +104,7 @@ public sealed partial class ClassConfiguration
     {
         Key = "Subtract",
         Name = nameof(PetAttack),
-        PressDuration = 10,
+        PressDuration = InputDuration.VeryFastPress,
         BaseAction = true,
     };
 
