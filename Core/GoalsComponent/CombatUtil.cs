@@ -1,13 +1,9 @@
 ﻿using Microsoft.Extensions.Logging;
-using SharedLib.Extensions;
-using System.Numerics;
 
 namespace Core;
 
 public sealed class CombatUtil
 {
-    private const float MIN_DISTANCE = 0.01f;
-
     private readonly ILogger<CombatUtil> logger;
     private readonly PlayerReader playerReader;
     private readonly CombatLog combatLog;
@@ -98,12 +94,6 @@ public sealed class CombatUtil
         input.PressClearTarget();
         wait.Update();
         return false;
-    }
-
-    public bool IsPlayerMoving(Vector3 map)
-    {
-        float mapDistance = playerReader.MapPos.MapDistanceXYTo(map);
-        return mapDistance > MIN_DISTANCE;
     }
 
     private bool PlayerOrPetHasTarget()

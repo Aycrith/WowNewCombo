@@ -124,7 +124,7 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
 
             Vector3 last = playerMap;
             playerMap = playerReader.MapPos;
-            if (!combatUtil.IsPlayerMoving(last))
+            if (!bits.Moving())
             {
                 if (playerReader.LastUIError == UI_ERROR.ERR_AUTOFOLLOW_TOO_FAR)
                 {
