@@ -164,6 +164,11 @@ public sealed partial class KeyAction
         return Math.Max(Cooldown - SinceLastClickMs, 0);
     }
 
+    public bool OnCooldown()
+    {
+        return GetRemainingCooldown() > 0;
+    }
+
     public void SetClicked(double offset = 0)
     {
         LastKey = ConsoleKeyFormHash;
