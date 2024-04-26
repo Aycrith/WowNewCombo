@@ -155,7 +155,9 @@ public sealed partial class ClassConfiguration
         if (Paths == Array.Empty<PathSettings>() &&
             !string.IsNullOrEmpty(PathFilename))
         {
-            OverridePathFilename = overridePathFile[0];
+            overridePathFile.TryGetValue(0, out string? firstoverridePath);
+            OverridePathFilename = firstoverridePath ?? string.Empty;
+
             if (!string.IsNullOrEmpty(OverridePathFilename))
             {
                 PathFilename = OverridePathFilename;
@@ -166,7 +168,7 @@ public sealed partial class ClassConfiguration
                 new PathSettings()
                 {
                     PathFilename = PathFilename,
-                    OverridePathFilename = overridePathFile[0],
+                    OverridePathFilename = OverridePathFilename,
                     PathThereAndBack = PathThereAndBack,
                     PathReduceSteps = PathReduceSteps,
                 }
