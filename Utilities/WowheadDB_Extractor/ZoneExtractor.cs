@@ -85,55 +85,61 @@ namespace WowheadDB_Extractor
             //Dictionary<string, int> temp = new() { { "Zangarmarsh", 3521 } };
             //foreach (var entry in temp)
             //foreach (KeyValuePair<string, int> entry in Areas.List)
-            foreach (KeyValuePair<string, int> entry in GetZonesByContient(Continents.Map["Kalimdor"]))
+
+            foreach (string key in Continents.Map.Keys)
             {
-                if (entry.Value == 0) continue;
-                try
+                foreach (KeyValuePair<string, int> entry in GetZonesByContient(Continents.Map[key]))
                 {
-                    var p = GetPayloadFromWebpage(await LoadPage(entry.Value));
+                    if (entry.Value == 0) continue;
 
-                    string baseUrl = ZoneExtractor.BaseUrl();
-
-                    // empty then fall back to retail
-                    if (p == "[]")
+                    try
                     {
-                        var url = GetRetailZoneUrl() + entry.Value;
+                        //var p = GetPayloadFromWebpage(await LoadPage(entry.Value));
+                        //string baseUrl = BaseUrl();
+                        string p;
+                        string baseUrl;
 
-                        HttpClient client = new HttpClient();
-                        var response = await client.GetAsync(url);
-                        var c = await response.Content.ReadAsStringAsync();
-                        p = GetPayloadFromWebpage(c);
+                        // empty then fall back to retail
+                        //if (p == "[]")
+                        {
+                            var url = GetRetailZoneUrl() + entry.Value;
 
-                        baseUrl = RetailUrl;
+                            HttpClient client = new HttpClient();
+                            var response = await client.GetAsync(url);
+                            var c = await response.Content.ReadAsStringAsync();
+                            p = GetPayloadFromWebpage(c);
+
+                            baseUrl = RetailUrl;
+                        }
+
+                        var z = ZoneFromJson(p);
+
+                        PerZoneGatherable skin = new(baseUrl, entry.Value, GatherFilter.Skinnable);
+                        z.skinnable = await skin.Run();
+
+                        PerZoneGatherable g = new(baseUrl, entry.Value, GatherFilter.Gatherable);
+                        z.gatherable = await g.Run();
+
+                        PerZoneGatherable m = new(baseUrl, entry.Value, GatherFilter.Minable);
+                        z.minable = await m.Run();
+
+                        PerZoneGatherable salv = new(baseUrl, entry.Value, GatherFilter.Salvegable);
+                        z.salvegable = await salv.Run();
+
+                        SaveZone(z, entry.Value.ToString());
+                        //SaveZoneNode(entry, z.herb, nameof(z.herb), false, true);
+                        //SaveZoneNode(entry, z.vein, nameof(z.vein), false, true);
+
+                        Console.WriteLine($"Saved {entry.Value,5}={entry.Key}");
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine($"Fail  {entry.Value,5}={entry.Key} -> '{e.Message}'");
+                        Console.WriteLine(e);
                     }
 
-                    var z = ZoneFromJson(p);
-
-                    PerZoneGatherable skin = new(baseUrl, entry.Value, GatherFilter.Skinnable);
-                    z.skinnable = await skin.Run();
-
-                    PerZoneGatherable g = new(baseUrl, entry.Value, GatherFilter.Gatherable);
-                    z.gatherable = await g.Run();
-
-                    PerZoneGatherable m = new(baseUrl, entry.Value, GatherFilter.Minable);
-                    z.minable = await m.Run();
-
-                    PerZoneGatherable salv = new(baseUrl, entry.Value, GatherFilter.Salvegable);
-                    z.salvegable = await salv.Run();
-
-                    SaveZone(z, entry.Value.ToString());
-                    //SaveZoneNode(entry, z.herb, nameof(z.herb), false, true);
-                    //SaveZoneNode(entry, z.vein, nameof(z.vein), false, true);
-
-                    Console.WriteLine($"Saved {entry.Value,5}={entry.Key}");
+                    await Task.Delay(50);
                 }
-                catch (Exception e)
-                {
-                    Console.WriteLine($"Fail  {entry.Value,5}={entry.Key} -> '{e.Message}'");
-                    Console.WriteLine(e);
-                }
-
-                await Task.Delay(50);
             }
         }
 
