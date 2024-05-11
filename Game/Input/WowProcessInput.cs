@@ -54,10 +54,10 @@ public sealed partial class WowProcessInput : IMouseInput
                 return;
         }
 
-        if (IsMovementKey(key))
-            LogMoveKeyDown(logger, key);
-        else
-            LogKeyDown(logger, key);
+        //if (IsMovementKey(key))
+        //    LogMoveKeyDown(logger, key);
+        //else
+        //    LogKeyDown(logger, key);
 
         keysDown[(int)key] = true;
         nativeInput.KeyDown((int)key);
@@ -71,10 +71,10 @@ public sealed partial class WowProcessInput : IMouseInput
                 return;
         }
 
-        if (IsMovementKey(key))
-            LogMoveKeyUp(logger, key);
-        else
-            LogKeyUp(logger, key);
+        //if (IsMovementKey(key))
+        //    LogMoveKeyUp(logger, key);
+        //else
+        //    LogKeyUp(logger, key);
 
         nativeInput.KeyUp((int)key);
         keysDown[(int)key] = false;
