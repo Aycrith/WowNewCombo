@@ -34,6 +34,11 @@ public sealed class WorldMapAreaDB
         return wmas.TryGetValue(uiMap, out WorldMapArea map) ? map.AreaID : -1;
     }
 
+    public int GetMapId(int uiMap)
+    {
+        return wmas.TryGetValue(uiMap, out WorldMapArea map) ? map.MapID : -1;
+    }
+
     public bool TryGet(int uiMap, out WorldMapArea wma)
     {
         return wmas.TryGetValue(uiMap, out wma);

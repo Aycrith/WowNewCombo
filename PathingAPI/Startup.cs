@@ -1,8 +1,6 @@
 using System;
 using System.IO;
 using System.Reflection;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 
 using MatBlazor;
 
@@ -79,7 +77,12 @@ public sealed class Startup
             options.SerializerOptions.Converters.Add(new Vector4Converter());
         });
 
-        services.AddControllers();
+        services.AddControllers().AddJsonOptions(options =>
+        {
+            options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+            options.JsonSerializerOptions.Converters.Add(new Vector3Converter());
+            options.JsonSerializerOptions.Converters.Add(new Vector4Converter());
+        });
 
         // Register the Swagger generator, defining 1 or more Swagger documents
         services.AddSwaggerGen(c =>

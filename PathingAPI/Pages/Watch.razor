@@ -90,12 +90,12 @@
 
         await jsRuntime.InvokeVoidAsync("createScene", Token);
 
-        loggerSink.OnLog += OnLog;
+        //loggerSink.OnLog += OnLog;
 
         pPatherService.OnChunkAdded += OnChunkAdded;
         pPatherService.OnPathCreated += OnDrawFinalPath;
 
-        pPatherService.OnLinesAdded += OnDrawlines;
+        pPatherService.OnLinesAdded += OnDrawLines;
         pPatherService.OnSphereAdded += OnDrawSphere;
         pPatherService.SearchBegin += OnSearchBegin;
     }
@@ -109,7 +109,7 @@
         pPatherService.SearchBegin -= OnSearchBegin;
         pPatherService.OnChunkAdded -= OnChunkAdded;
         pPatherService.OnPathCreated -= OnDrawFinalPath;
-        pPatherService.OnLinesAdded -= OnDrawlines;
+        pPatherService.OnLinesAdded -= OnDrawLines;
         pPatherService.OnSphereAdded -= OnDrawSphere;
 
         await Reset();
@@ -208,7 +208,6 @@
         }
     }
 
-
     private void OnSearchBegin()
     {
         searchCts = new();
@@ -216,15 +215,22 @@
         thread.Start();
     }
 
+    private async Task DrawGeometry()
+    {
+        while (chunkEventArgs.TryDequeue(out var e))
+        {
+            if (LoadGeometry)
+            {
+                await DequeueChunkEvent(e);
+            }
+        }
+    }
+
     private async void OnDrawFinalPath(Path spotPath)
     {
         if (spotPath != null)
         {
-            while (chunkEventArgs.TryDequeue(out var e))
-            {
-                if (LoadGeometry)
-                    await DequeueChunkEvent(e);
-            }
+            await DrawGeometry();
 
             if (ClearPath)
                 await jsRuntime.InvokeVoidAsync("removeMeshes", Token, Name);
@@ -236,10 +242,7 @@
         }
         else
         {
-            while (chunkEventArgs.TryDequeue(out var e))
-            {
-                await DequeueChunkEvent(e);
-            }
+            await DrawGeometry();
             Log("No path found");
         }
 
@@ -252,8 +255,10 @@
             Serialize(e.Location, options), e.Colour, e.Name);
     }
 
-    private async void OnDrawlines(LinesEventArgs e)
+    private async void OnDrawLines(LinesEventArgs e)
     {
+        await DrawGeometry();
+
         await jsRuntime.InvokeVoidAsync("removeMeshes", Token, e.Name);
 
         await jsRuntime.InvokeVoidAsync("drawPath", Token,
