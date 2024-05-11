@@ -54,6 +54,7 @@ local GetSpellBookItemName = GetSpellBookItemName
 local GetNumTalentTabs = GetNumTalentTabs
 local GetNumTalents = GetNumTalents
 local GetTalentInfo = GetTalentInfo
+local GetNumSpellTabs = GetNumSpellTabs
 
 local GetPlayerFacing = GetPlayerFacing
 local UnitLevel = UnitLevel
@@ -390,18 +391,41 @@ end
 
 function DataToColor:InitSpellBookQueue()
     local num, type = 1, 1
-    while true do
-        local name, _, id = GetSpellBookItemName(num, type)
-        if not name then
-            break
+    if GetNumSpellTabs == nil then
+        while true do
+            local name, _, id = GetSpellBookItemName(num, type)
+            if not name then
+                break
+            end
+
+            if id ~= nil then
+                local texture = GetSpellBookItemTexture(num, type)
+                DataToColor.S.playerSpellBookName[texture] = name
+                DataToColor.S.playerSpellBookId[id] = true
+
+                DataToColor.spellBookQueue:push(id)
+                num = num + 1
+            end
         end
+    else
+        for i = 1, GetNumSpellTabs() do
+            local offset, numSlots = select(3, GetSpellTabInfo(i))
+            for j = offset+1, offset+numSlots do
+                local name, _, id = GetSpellBookItemName(num, type)
+                if not name then
+                    break
+                end
 
-        local texture = GetSpellBookItemTexture(num, type)
-        DataToColor.S.playerSpellBookName[texture] = name
-        DataToColor.S.playerSpellBookId[id] = true
+                if id ~= nil then
+                    local texture = GetSpellBookItemTexture(num, type)
+                    DataToColor.S.playerSpellBookName[texture] = name
+                    DataToColor.S.playerSpellBookId[id] = true
 
-        DataToColor.spellBookQueue:push(id)
-        num = num + 1
+                    DataToColor.spellBookQueue:push(id)
+                    num = num + 1
+                end
+            end
+        end
     end
 end
 
