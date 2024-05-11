@@ -192,20 +192,17 @@ public sealed class PathGraph
 
     public void Save()
     {
-        lock (chunks)
+        long timestamp = Stopwatch.GetTimestamp();
+        foreach (GraphChunk gc in chunks.GetAllElements())
         {
-            long timestamp = Stopwatch.GetTimestamp();
-            foreach (GraphChunk gc in chunks.GetAllElements())
+            if (gc.modified)
             {
-                if (gc.modified)
-                {
-                    gc.Save();
-                }
+                gc.Save();
             }
-
-            if (logger.IsEnabled(LogLevel.Trace))
-                logger.LogTrace($"Saved GraphChunks {Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds} ms");
         }
+
+        if (logger.IsEnabled(LogLevel.Trace))
+            logger.LogTrace($"Saved GraphChunks {Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds} ms");
     }
 
     // Create and load from file if exisiting

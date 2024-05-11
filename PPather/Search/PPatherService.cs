@@ -7,6 +7,7 @@ using SharedLib;
 using SharedLib.Data;
 using Microsoft.Extensions.Logging;
 using System.Numerics;
+using SharedLib.Extensions;
 
 namespace PPather;
 
@@ -24,6 +25,8 @@ public sealed class PPatherService
     public Action<SphereEventArgs> OnSphereAdded;
 
     private Search search { get; set; }
+
+    public bool Initialised => search != null;
 
     public Vector4 SearchFrom => search.locationFrom;
     public Vector4 SearchTo => search.locationTo;
@@ -83,6 +86,20 @@ public sealed class PPatherService
         OnChunkAdded?.Invoke(e);
     }
 
+    public Vector4[] CreateLocations(LineArgs lines)
+    {
+        Vector4[] result = new Vector4[lines.Spots.Length];
+        Span<Vector4> span = result.AsSpan();
+
+        for (int i = 0; i < span.Length; i++)
+        {
+            Vector3 spot = lines.Spots[i];
+            span[i] = ToWorld(lines.MapId, spot.X, spot.Y, spot.Z);
+        }
+
+        return result;
+    }
+
     public Vector4 ToWorld(int uiMap, float mapX, float mapY, float z = 0)
     {
         if (!worldMapAreaDB.TryGet(uiMap, out WorldMapArea wma))
@@ -104,6 +121,11 @@ public sealed class PPatherService
         Initialise(wma.MapID);
 
         return search.CreateWorldLocation(x, y, z, wma.MapID);
+    }
+
+    public int GetMapId(int uiMap)
+    {
+        return worldMapAreaDB.GetMapId(uiMap);
     }
 
     public Vector3 ToLocal(Vector3 world, float mapId, int uiMapId)
@@ -143,6 +165,29 @@ public sealed class PPatherService
         return search.PathGraph.CurrentSearchPath();
     }
 
+    public float TransformMapToWorld(int uiMapId, Vector3[] path)
+    {
+        float mapId = -1;
+
+        Span<Vector3> span = path;
+        for (int i = 0; i < span.Length; i++)
+        {
+            Vector3 p = span[i];
+            if (p.Z != 0)
+            {
+                mapId = GetMapId(uiMapId);
+                break;
+            }
+
+            Vector4 world = ToWorld(uiMapId, p.X, p.Y, p.Z);
+
+            span[i] = world.AsVector3();
+            mapId = world.W;
+        }
+
+        return mapId;
+    }
+
     public void DrawPath(float mapId, ReadOnlySpan<Vector3> path)
     {
         Vector4 from = new(path[0], mapId);
@@ -155,7 +200,7 @@ public sealed class PPatherService
             search.CreatePathGraph(mapId);
         }
 
-        List<Spot> spots = new();
+        List<Spot> spots = new(path.Length);
         for (int i = 0; i < path.Length; i++)
         {
             Spot spot = new(path[i]);
