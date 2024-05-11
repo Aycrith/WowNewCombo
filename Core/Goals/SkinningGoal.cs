@@ -296,16 +296,18 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
 
     private void ClearTargetIfExists()
     {
-        if (bits.Target() && bits.Target_Dead())
+        if (!bits.Target() || !bits.Target_Dead())
         {
-            input.PressClearTarget();
-            wait.Update();
+            return;
+        }
 
-            if (bits.Target())
-            {
-                SendGoapEvent(ScreenCaptureEvent.Default);
-                LogWarning($"Unable to clear target! Check Bindpad settings!");
-            }
+        input.PressClearTarget();
+        wait.Update();
+
+        if (bits.Target())
+        {
+            SendGoapEvent(ScreenCaptureEvent.Default);
+            LogWarning($"Unable to clear target! Check Bindpad settings!");
         }
     }
 

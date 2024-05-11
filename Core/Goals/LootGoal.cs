@@ -38,7 +38,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
     private readonly List<CorpseEvent> corpseLocations = [];
 
-    private bool gather;
+    private bool canGather;
     private int targetId;
     private int bagHashNewOrStackGain;
     private int money;
@@ -179,10 +179,12 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         state.GatherableCorpseCount++;
 
         CorpseEvent? ce = GetClosestCorpse();
-        if (ce != null)
+        if (ce == null)
         {
-            SendGoapEvent(new SkinCorpseEvent(ce.MapLoc, ce.Radius, targetId));
+            return;
         }
+
+        SendGoapEvent(new SkinCorpseEvent(ce.MapLoc, ce.Radius, targetId));
     }
 
     private void HandleFailedLoot()
@@ -204,7 +206,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
     private void ClearTargetIfNeeded()
     {
-        if (gather || !bits.Target())
+        if (canGather || !bits.Target())
         {
             return;
         }
@@ -246,9 +248,9 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
         npcNameTargeting.ChangeNpcType(NpcNames.None);
 
-        CheckForGather();
+        CheckForCanGather();
 
-        return playerReader.MinRangeZero() || TargetExistsAndReached();
+        return playerReader.MinRangeZero() || MoveToTargetAndReached();
     }
 
     private CorpseEvent? GetClosestCorpse()
@@ -271,26 +273,25 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         return closest;
     }
 
-    private void CheckForGather()
+    private void CheckForCanGather()
     {
         if (!classConfig.GatherCorpse ||
             areaDb.CurrentArea == null)
             return;
 
-        gather = false;
         targetId = playerReader.TargetId;
         Area area = areaDb.CurrentArea;
 
-        if ((classConfig.Skin && Array.BinarySearch(area.skinnable, targetId) >= 0) ||
-           (classConfig.Herb && Array.BinarySearch(area.gatherable, targetId) >= 0) ||
-           (classConfig.Mine && Array.BinarySearch(area.minable, targetId) >= 0) ||
-           (classConfig.Salvage && Array.BinarySearch(area.salvegable, targetId) >= 0))
-        {
-            gather = true;
-        }
+        canGather = GatherAvailable(classConfig, area, targetId);
 
-        LogShouldGather(logger, targetId, gather);
+        LogShouldGather(logger, targetId, canGather);
     }
+
+    private static bool GatherAvailable(ClassConfiguration config, Area area, int npcId) =>
+        (config.Skin && area.skinnable.AsSpan().BinarySearch(npcId) >= 0) ||
+        (config.Herb && area.gatherable.AsSpan().BinarySearch(npcId) >= 0) ||
+        (config.Mine && area.minable.AsSpan().BinarySearch(npcId) >= 0) ||
+        (config.Salvage && area.salvegable.AsSpan().BinarySearch(npcId) >= 0);
 
     private bool LootWindowClosedOrMoneyChanged()
     {
@@ -364,12 +365,12 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
             return false;
         }
 
-        CheckForGather();
+        CheckForCanGather();
 
         input.PressFastInteract();
         wait.Update();
 
-        return playerReader.MinRangeZero() || TargetExistsAndReached();
+        return playerReader.MinRangeZero() || MoveToTargetAndReached();
     }
 
     private bool EligibleSoftTargetExists() =>
@@ -380,7 +381,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         !bits.SoftInteract_Tagged() &&
         playerReader.SoftInteract_Type == GuidType.Creature;
 
-    private bool TargetExistsAndReached()
+    private bool MoveToTargetAndReached()
     {
         wait.While(input.Approach.OnCooldown);
 

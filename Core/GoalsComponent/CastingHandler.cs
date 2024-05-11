@@ -123,13 +123,15 @@ public sealed partial class CastingHandler
             UI_ERROR.SPELL_FAILED_TARGETS_DEAD;
     }
 
-    private static float AwaitCurrentAction(int duration, Wait wait,
+    private static float WaitCurrentAction(int duration, Wait wait,
         KeyAction item, ActionBarBits<ICurrentAction> currentAction,
         CancellationToken token)
     {
-        return wait.Until(duration,
-            () => currentAction.Is(item) ||
-            token.IsCancellationRequested);
+        return wait.Until(duration, Interrupt);
+
+        bool Interrupt() =>
+            currentAction.Is(item) ||
+            token.IsCancellationRequested;
     }
 
     private bool CastInstant(KeyAction item, bool retry, CancellationToken token)
@@ -156,7 +158,7 @@ public sealed partial class CastingHandler
             return true;
         }
 
-        float elapsedMs = AwaitCurrentAction(
+        float elapsedMs = WaitCurrentAction(
             playerReader.DoubleNetworkLatency, wait, item, currentAction, token);
 
         if (DEBUG && Log && item.Log)
@@ -287,7 +289,7 @@ public sealed partial class CastingHandler
             return true;
         }
 
-        float elapsedMs = AwaitCurrentAction(
+        float elapsedMs = WaitCurrentAction(
             playerReader.DoubleNetworkLatency, wait, item, currentAction, token);
 
         if (DEBUG && Log && item.Log)
@@ -301,16 +303,8 @@ public sealed partial class CastingHandler
             return false;
         }
 
-        elapsedMs = CastBar(playerReader.DoubleNetworkLatency,
+        elapsedMs = WaitTilUIErrorChange(playerReader.DoubleNetworkLatency,
             beforeCastEventTime, wait, playerReader, token);
-
-        static float CastBar(int durationMs,
-            int beforeCastEventTime,
-            Wait wait, PlayerReader playerReader, CancellationToken token)
-            => wait.Until(durationMs,
-            interrupt: () =>
-            beforeCastEventTime != playerReader.UIErrorTime.Value ||
-            token.IsCancellationRequested);
 
         if (DEBUG && Log && item.Log)
             LogCastbarUsableChange(logger, item.Name, playerReader.IsCasting(),
@@ -335,6 +329,7 @@ public sealed partial class CastingHandler
             return false;
         }
 
+        // at this point the player has castbar
         playerReader.ResetLastCastGCD();
         item.SpellId = playerReader.CastSpellId.Value;
         item.SetClicked();
@@ -347,7 +342,7 @@ public sealed partial class CastingHandler
                 if (Log && item.Log)
                     LogVisibleAfterCastWaitCastbar(logger, item.Name, remainMs);
 
-                AfterCastWaitCastbar(remainMs, wait, playerReader, token, RepeatPetAttack);
+                WaitTillNoLongerCasting(remainMs, wait, playerReader, RepeatPetAttack, token);
                 if (token.IsCancellationRequested)
                 {
                     if (playerReader.IsCasting())
@@ -358,13 +353,6 @@ public sealed partial class CastingHandler
 
                     return false;
                 }
-
-                static float AfterCastWaitCastbar(int remainMs, Wait wait, PlayerReader playerReader,
-                    CancellationToken token, Action repeat)
-                    => wait.Until(remainMs,
-                    () =>
-                        !playerReader.IsCasting() ||
-                        token.IsCancellationRequested, repeat);
             }
             else if (playerReader.CastState == UI_ERROR.CAST_START)
             {
@@ -374,7 +362,7 @@ public sealed partial class CastingHandler
                 if (Log && item.Log)
                     LogHiddenAfterCastWaitCastbar(logger, item.Name, remainMs);
 
-                HiddenCastbar(remainMs, beforeCastEventValue, wait, playerReader, token, RepeatPetAttack);
+                WaitTilCastStateChange(remainMs, beforeCastEventValue, wait, playerReader, RepeatPetAttack, token);
 
                 if (token.IsCancellationRequested)
                 {
@@ -383,23 +371,44 @@ public sealed partial class CastingHandler
 
                     return false;
                 }
-
-                static float HiddenCastbar(int durationMs, UI_ERROR beforeCastEventValue,
-                    Wait wait, PlayerReader playerReader, CancellationToken token, Action repeat) =>
-                    wait.Until(durationMs,
-                    () =>
-                    beforeCastEventValue != playerReader.CastState ||
-                    token.IsCancellationRequested,
-                    repeat);
             }
 
-            //Apply the Cooldown
+            // Apply the Cooldown
+            // Successfull Cast
             item.SetClicked();
         }
         else if (!DEBUG && Log && item.Log)
             LogCastbarInput(logger, item.Name, pressMs, elapsedMs);
 
         return true;
+    }
+
+    private static float WaitTilUIErrorChange(int durationMs, int beforeCastEventTime,
+        Wait wait, PlayerReader playerReader, CancellationToken token)
+    {
+        return wait.Until(durationMs,
+            interrupt: () =>
+            beforeCastEventTime != playerReader.UIErrorTime.Value ||
+            token.IsCancellationRequested);
+    }
+
+    private static void WaitTillNoLongerCasting(int remainMs, Wait wait,
+        PlayerReader playerReader, Action repeat, CancellationToken token)
+    {
+        wait.Until(remainMs,
+            interrupt: () =>
+            !playerReader.IsCasting() ||
+            token.IsCancellationRequested, repeat);
+    }
+
+    private static void WaitTilCastStateChange(int durationMs, UI_ERROR beforeCastEventValue,
+        Wait wait, PlayerReader playerReader, Action repeat, CancellationToken token)
+    {
+        wait.Until(durationMs,
+            interrupt: () =>
+            beforeCastEventValue != playerReader.CastState ||
+            token.IsCancellationRequested,
+            repeat);
     }
 
     public bool CastIfReady(KeyAction item, Func<bool> interrupt)

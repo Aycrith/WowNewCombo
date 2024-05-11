@@ -227,7 +227,7 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
 
             LogWarn($"Soft Interact found NPC with id {playerReader.SoftInteract_Id}");
 
-            found = TargetExistsAndReached();
+            found = MoveToTargetAndReached();
         }
 
         if (!found && !input.KeyboardOnly)
@@ -235,11 +235,11 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
             npcNameTargeting.ChangeNpcType(NpcNames.Friendly | NpcNames.Neutral);
             npcNameTargeting.WaitForUpdate();
 
-            ReadOnlySpan<CursorType> types = stackalloc[] {
+            ReadOnlySpan<CursorType> types = [
                 CursorType.Vendor,
                 CursorType.Repair,
                 CursorType.Innkeeper
-            };
+            ];
 
             found = npcNameTargeting.FindBy(types, token);
             wait.Update();
@@ -305,8 +305,10 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
         MountIfPossible();
     }
 
-    private bool TargetExistsAndReached()
+    private bool MoveToTargetAndReached()
     {
+        wait.While(input.Approach.OnCooldown);
+
         float elapsedMs = wait.Until(MAX_TIME_TO_REACH_MELEE,
             bits.NotMoving, input.PressApproachOnCooldown);
 

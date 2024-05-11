@@ -43,9 +43,12 @@ public sealed class ReactCastError
         UI_ERROR value = (UI_ERROR)playerReader.CastEvent.Value;
         switch (value)
         {
+            case UI_ERROR.CAST_SUCCESS:
+                WaitForCooldown(item, value);
+                break;
+
             case UI_ERROR.NONE:
             case UI_ERROR.CAST_START:
-            case UI_ERROR.CAST_SUCCESS:
             case UI_ERROR.SPELL_FAILED_TARGETS_DEAD:
                 break;
             case UI_ERROR.ERR_SPELL_FAILED_INTERRUPTED:
@@ -60,16 +63,7 @@ public sealed class ReactCastError
             break;
             */
             case UI_ERROR.ERR_SPELL_COOLDOWN:
-                logger.LogInformation($"React to {value.ToStringF()} -- wait until its ready");
-                int waitTime = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs);
-                bool before = usableAction.Is(item);
-
-                WaitCooldown(waitTime, before, wait, usableAction, item);
-                static void WaitCooldown(int duration, bool before, Wait wait,
-                    ActionBarBits<IUsableAction> usableAction, KeyAction item) =>
-                    wait.Until(duration, () =>
-                    before != usableAction.Is(item) || usableAction.Is(item));
-
+                WaitForCooldown(item, value);
                 break;
             case UI_ERROR.ERR_ATTACK_PACIFIED:
             case UI_ERROR.ERR_SPELL_FAILED_STUNNED:
@@ -248,4 +242,17 @@ public sealed class ReactCastError
         }
     }
 
+    private void WaitForCooldown(KeyAction item, UI_ERROR value)
+    {
+        logger.LogInformation($"React to {value.ToStringF()} -- wait until its ready");
+        int waitTime = Math.Max(playerReader.GCD.Value, playerReader.RemainCastMs);
+        bool before = usableAction.Is(item);
+
+        WaitCooldown(waitTime, before, wait, usableAction, item);
+        static void WaitCooldown(int duration, bool before, Wait wait,
+            ActionBarBits<IUsableAction> usableAction, KeyAction item) =>
+            wait.Until(duration, () =>
+            before != usableAction.Is(item) || usableAction.Is(item));
+
+    }
 }
