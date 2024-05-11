@@ -12,6 +12,7 @@ local WOW_PROJECT_ID = WOW_PROJECT_ID
 local WOW_PROJECT_CLASSIC = WOW_PROJECT_CLASSIC
 local WOW_PROJECT_BURNING_CRUSADE_CLASSIC = WOW_PROJECT_BURNING_CRUSADE_CLASSIC
 local WOW_PROJECT_WRATH_CLASSIC = WOW_PROJECT_WRATH_CLASSIC
+local WOW_PROJECT_CATACLYSM_CLASSIC = WOW_PROJECT_CATACLYSM_CLASSIC
 local WOW_PROJECT_MAINLINE = WOW_PROJECT_MAINLINE
 
 local LE_EXPANSION_LEVEL_CURRENT = LE_EXPANSION_LEVEL_CURRENT
@@ -31,6 +32,10 @@ function DataToColor.IsClassic_Wrath()
   return WOW_PROJECT_ID == WOW_PROJECT_WRATH_CLASSIC
 end
 
+function DataToColor.IsClassic_Cata()
+  return WOW_PROJECT_ID == WOW_PROJECT_CATACLYSM_CLASSIC
+end
+
 function DataToColor.IsRetail()
   return WOW_PROJECT_ID == WOW_PROJECT_MAINLINE
 end
@@ -44,9 +49,12 @@ local Som140 = DataToColor.IsClassic() and select(4, GetBuildInfo()) == 11400
 local TBC253 = DataToColor.IsClassic_BCC() and select(4, GetBuildInfo()) >= 20503
 local TBC252 = DataToColor.IsClassic_BCC() and select(4, GetBuildInfo()) >= 20502
 local Wrath340 = DataToColor.IsClassic_BCC() and select(4, GetBuildInfo()) >= 30400
+local Cata440 = DataToColor.IsClassic_Cata() and select(4, GetBuildInfo()) >= 40400
 
 if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
   DataToColor.ClientVersion = 1
+elseif WOW_PROJECT_ID == WOW_PROJECT_CATACLYSM_CLASSIC then
+  DataToColor.ClientVersion = 5
 elseif WOW_PROJECT_ID == WOW_PROJECT_WRATH_CLASSIC then
   DataToColor.ClientVersion = 4
 elseif WOW_PROJECT_ID == WOW_PROJECT_BURNING_CRUSADE_CLASSIC then
@@ -60,7 +68,7 @@ elseif WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
   DataToColor.ClientVersion = 2
 end
 
-if DataToColor.IsRetail() or TBC253 or DataToColor.IsClassic_Wrath() then
+if DataToColor.IsRetail() or TBC253 or DataToColor.IsClassic_Wrath() or DataToColor.IsClassic_Cata() then
   DataToColor.UnitCastingInfo = UnitCastingInfo
 elseif Som140 or TBC252 then
   DataToColor.UnitCastingInfo = function(unit)
@@ -82,7 +90,7 @@ else
   end
 end
 
-if DataToColor.IsRetail() or TBC253 or DataToColor.IsClassic_Wrath() then
+if DataToColor.IsRetail() or TBC253 or DataToColor.IsClassic_Wrath() or DataToColor.IsClassic_Cata() then
   DataToColor.UnitChannelInfo = UnitChannelInfo
 elseif Som140 or TBC252 then
   DataToColor.UnitChannelInfo = function(unit)
