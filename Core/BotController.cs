@@ -25,6 +25,7 @@ public sealed partial class BotController : IBotController, IDisposable
     private readonly IServiceProvider serviceProvider;
     private readonly ILogger<BotController> logger;
     private readonly IPPather pather;
+    private readonly IPathVizualizer pathViz;
     private readonly MinimapNodeFinder minimapNodeFinder;
     private readonly DataConfig dataConfig;
     private readonly CancellationTokenSource cts;
@@ -64,7 +65,9 @@ public sealed partial class BotController : IBotController, IDisposable
     public BotController(
         ILogger<BotController> logger,
         CancellationTokenSource cts,
-        IPPather pather, DataConfig dataConfig,
+        IPPather pather,
+        IPathVizualizer pathViz,
+        DataConfig dataConfig,
         WowProcess process,
         IWowScreen screen,
         NpcNameFinder npcNameFinder,
@@ -81,6 +84,7 @@ public sealed partial class BotController : IBotController, IDisposable
 
         this.logger = logger;
         this.pather = pather;
+        this.pathViz = pathViz;
         this.dataConfig = dataConfig;
 
         this.screen = screen;
@@ -121,7 +125,7 @@ public sealed partial class BotController : IBotController, IDisposable
         screenshotThread = new(ScreenshotThread);
         screenshotThread.Start();
 
-        if (pather is RemotePathingAPI)
+        if (pathViz is not NoPathVisualizer)
         {
             remotePathing = new(RemotePathingThread);
             remotePathing.Start();
@@ -239,35 +243,44 @@ public sealed partial class BotController : IBotController, IDisposable
 
     private void RemotePathingThread()
     {
-        bool newLoaded = false;
+        bool routeChanged = false;
+        RouteInfo? routeInfo = null;
+
         ProfileLoaded += OnProfileLoaded;
-        void OnProfileLoaded() => newLoaded = true;
+        void OnProfileLoaded()
+        {
+            routeChanged = true;
+            routeInfo = sessionScope!.ServiceProvider.GetRequiredService<RouteInfo>();
+        }
 
         Vector3 oldPos = Vector3.Zero;
+        Vector3[] mapRoute = Array.Empty<Vector3>();
 
         while (!cts.IsCancellationRequested)
         {
             cts.Token.WaitHandle.WaitOne(remotePathingTickMs);
 
-            if (sessionScope == null)
+            if (sessionScope == null || routeInfo == null)
                 continue;
 
-            if (newLoaded)
+            if (routeChanged)
             {
-                Vector3[] mapRoute = sessionScope
-                    .ServiceProvider.GetRequiredService<Vector3[]>();
-
-                pather.DrawLines(new()
+                mapRoute = routeInfo.Route;
+                if (mapRoute.Length == 0)
                 {
-                    new LineArgs("grindpath",
-                        mapRoute, 2, playerReader.UIMapId.Value)
-                }).AsTask().Wait(cts.Token);
+                    continue;
+                }
+
+                pather.DrawLines(
+                [
+                    new LineArgs("grindpath", mapRoute, 2, playerReader.UIMapId.Value),
+                ]).AsTask().Wait(cts.Token);
 
                 oldPos = Vector3.Zero;
-                newLoaded = false;
+                routeChanged = false;
             }
 
-            if (playerReader.MapPos != oldPos)
+            if (!routeChanged && playerReader.MapPos != oldPos)
             {
                 oldPos = playerReader.MapPos;
 
@@ -276,6 +289,13 @@ public sealed partial class BotController : IBotController, IDisposable
                     bits.Combat() ? 1 : bits.Target() ? 6 : 2,
                     playerReader.UIMapId.Value))
                     .AsTask().Wait(cts.Token);
+
+                _ = routeInfo.NextPoint();
+
+                if (!routeInfo.Route.SequenceEqual(mapRoute))
+                {
+                    routeChanged = true;
+                }
             }
         }
 

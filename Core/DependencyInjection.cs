@@ -166,6 +166,9 @@ public static class DependencyInjection
         s.AddSingleton<IScreenCapture>(x =>
             GetScreenCapture(x.GetRequiredService<IServiceProvider>(), log));
 
+        s.AddSingleton<IPathVizualizer>(x =>
+            GetPathVizualizer(x.GetRequiredService<IServiceProvider>(), log));
+
         s.AddSingleton<IPPather>(x =>
             GetPather(x.GetRequiredService<IServiceProvider>(), log));
 
@@ -306,12 +309,14 @@ public static class DependencyInjection
         var scp = sp.GetRequiredService<IOptions<StartupConfigPathing>>().Value;
         var dataConfig = sp.GetRequiredService<DataConfig>();
         var worldMapAreaDB = sp.GetRequiredService<WorldMapAreaDB>();
+        var pathViz = sp.GetRequiredService<IPathVizualizer>();
 
         bool failed = false;
         if (scp.Type == StartupConfigPathing.Types.RemoteV3)
         {
             var remoteLogger = loggerFactory.CreateLogger<RemotePathingAPIV3>();
             RemotePathingAPIV3 api = new(
+                pathViz,
                 remoteLogger,
                 scp.hostv3, scp.portv3, worldMapAreaDB);
             if (api.PingServer())
@@ -359,5 +364,28 @@ public static class DependencyInjection
             $"Using {StartupConfigPathing.Types.Local}({localApi.GetType().Name})");
 
         return localApi;
+    }
+
+    private static IPathVizualizer GetPathVizualizer(IServiceProvider sp, ILogger logger)
+    {
+        var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+        var remoteLogger = loggerFactory.CreateLogger<RemotePathingAPI>();
+
+        var scp = sp.GetRequiredService<IOptions<StartupConfigPathing>>().Value;
+        RemotePathingAPI? api = new(remoteLogger, scp.hostv1, scp.portv1);
+
+        if (!api.PingServer())
+        {
+            api.Dispose();
+            api = null;
+        }
+        else
+        {
+            logger.LogInformation(
+                $"Found PathViz {StartupConfigPathing.Types.RemoteV1}({api.GetType().Name}) " +
+                $"{scp.hostv1}:{scp.portv1}");
+        }
+
+        return api ?? (IPathVizualizer)new NoPathVisualizer();
     }
 }

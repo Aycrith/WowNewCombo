@@ -21,11 +21,17 @@ Further detail about the architecture can be found in [Blog post](http://www.cod
 # Pathfinders
 
 * World map - Outdoor there are multiple solutions - *by default the app attempts to discover the available services in the following order*:
-    * **V3 Remote**: Out of process [AmeisenNavigation](https://github.com/Xian55/AmeisenNavigation/tree/feature/guess-z-coord-after-rewrite)
+    * **V3 Remote**: Out of process [AmeisenNavigation](https://github.com/Xian55/AmeisenNavigation/tree/feature/multi-version-guess-z-coord)
     * **V1 Remote**: Out of process [PathingAPI](https://github.com/Xian55/WowClassicGrindBot/tree/dev/PathingAPI) more info [here](#v1-remote-pathing---pathingapi)
     * **V1 Local**: In process [PPather](https://github.com/Xian55/WowClassicGrindBot/tree/dev/PPather)
 * World map - Indoors pathfinder only works properly if `PathFilename` is exists.
 * Dungeons / instances **not** supported!
+
+# Supporting Cataclysm Classic limitations
+
+With Cataclysm, the navigation will be limited. Only V3 Remote will be support for now.
+
+V1 Local and V1 Remote does not have the capability as of this moment to read the CASC files only works with MPQs.
 
 # Features
 
@@ -134,19 +140,19 @@ Technical details about **V1:**
 
 - Download the navmesh files.
 
-**Vanilla + TBC:**
 [**Vanilla + TBC**](https://mega.nz/file/7HgkHIyA#c_gzUeTadecWY0JDY3KT39ktfPGLs2vzt_90bMvhszk)
 
-**Vanilla + TBC + Wrath:**
 [**Vanilla + TBC + Wrath**](https://mega.nz/file/zWQ2XIKI#9EKWOPyyTMfY1LACkcP_wioZ0poVIuaGh2xcRh4V9dw)
 
+[**Vanilla + TBC + Wrath + Cataclysm** - work in progress](https://mega.nz/file/7Og32TDA#5HpxZ8Sh1XvDNCmWbI8H-cOFEJzDmh97Z6FGrO2p3X4)
+
 1. Extract and copy anywhere you want, like `C:\mmaps`
-2. Create a [build](https://github.com/Xian55/WowClassicGrindBot/issues/449) of [AmeisenNavigation](https://github.com/Xian55/AmeisenNavigation/tree/feature/guess-z-coord-after-rewrite)
-3. Navigate to the build location and find `config.cfg`
+2. Create a [build](https://github.com/Xian55/WowClassicGrindBot/issues/449) of [AmeisenNavigation](https://github.com/Xian55/AmeisenNavigation/tree/feature/multi-version-guess-z-coord)
+3. Navigate to the build location of `AmeisenNavigation.Server` and find `config.cfg`
 4. Edit the last line of the file to look like `sMmapsPath=C:\mmaps`
 
 Technical details about **V3:**
-- Uses another project called [AmeisenNavigation](https://github.com/Xian55/AmeisenNavigation/tree/feature/guess-z-coord-after-rewrite)
+- Uses another project called [AmeisenNavigation](https://github.com/Xian55/AmeisenNavigation/tree/feature/multi-version-guess-z-coord)
 - Under the hood uses [Recast and Detour](https://github.com/recastnavigation/recastnavigation)
 - Source code is written in **C++**
 - Uses `*.mmap` files as source
