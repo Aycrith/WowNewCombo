@@ -176,13 +176,14 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
     private void GatherCorpseIfNeeded()
     {
+        if (!canGather)
+            return;
+
         state.GatherableCorpseCount++;
 
         CorpseEvent? ce = GetClosestCorpse();
         if (ce == null)
-        {
             return;
-        }
 
         SendGoapEvent(new SkinCorpseEvent(ce.MapLoc, ce.Radius, targetId));
     }
