@@ -24,6 +24,10 @@ public sealed class StartupClientVersion
                 Version = ClientVersion.Wrath;
                 Path = "wrath";
                 break;
+            case 4:
+                Version = ClientVersion.Cata;
+                Path = "cata";
+                break;
             default:
                 Version = ClientVersion.Retail;
                 Path = "retail";
