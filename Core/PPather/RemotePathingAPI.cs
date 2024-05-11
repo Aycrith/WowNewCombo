@@ -10,11 +10,10 @@ using System.Text;
 using System.Numerics;
 using SharedLib.Converters;
 using System.Net.Sockets;
-using System.Diagnostics;
 
 namespace Core;
 
-public sealed class RemotePathingAPI : IPPather, IDisposable
+public sealed class RemotePathingAPI : IPPather, IPathVizualizer, IDisposable
 {
     private readonly ILogger<RemotePathingAPI> logger;
 
@@ -22,8 +21,10 @@ public sealed class RemotePathingAPI : IPPather, IDisposable
     private readonly int port = 5001;
 
     private readonly JsonSerializerOptions options;
-
     private readonly HttpClient client;
+
+    public HttpClient Client => client;
+    public JsonSerializerOptions Options => options;
 
     public RemotePathingAPI(ILogger<RemotePathingAPI> logger,
         string host, int port)

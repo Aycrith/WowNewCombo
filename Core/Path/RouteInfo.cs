@@ -308,20 +308,20 @@ public sealed class RouteInfo : IDisposable
 
     public Vector3 NextPoint()
     {
-        var route = pathedRoutes
+        IRouteProvider? mostRecent = pathedRoutes
             .OrderByDescending(MostRecent)
             .FirstOrDefault();
 
-        if (route == null || !route.HasNext())
+        if (mostRecent == null || !mostRecent.HasNext())
             return Vector3.Zero;
 
         // dynamically update the path based on source
-        if (route.MapRoute() != Array.Empty<Vector3>())
+        if (mostRecent.MapRoute() != Array.Empty<Vector3>())
         {
-            RouteSrc = Route = route.MapRoute();
+            RouteSrc = Route = mostRecent.MapRoute();
         }
 
-        return route.NextMapPoint();
+        return mostRecent.NextMapPoint();
     }
 
     public string RenderNextPoint()
