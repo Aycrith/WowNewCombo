@@ -138,6 +138,8 @@ Technical details about **V1:**
 
 ## 2.2 Optional - Using V3 Remote Pathing
 
+Since [PR 585](https://github.com/Xian55/WowClassicGrindBot/issues/585) using a different branch!
+
 - Download the navmesh files.
 
 [**Vanilla + TBC**](https://mega.nz/file/7HgkHIyA#c_gzUeTadecWY0JDY3KT39ktfPGLs2vzt_90bMvhszk)
@@ -146,10 +148,15 @@ Technical details about **V1:**
 
 [**Vanilla + TBC + Wrath + Cataclysm** - work in progress](https://mega.nz/file/7Og32TDA#5HpxZ8Sh1XvDNCmWbI8H-cOFEJzDmh97Z6FGrO2p3X4)
 
-1. Extract and copy anywhere you want, like `C:\mmaps`
-2. Create a [build](https://github.com/Xian55/WowClassicGrindBot/issues/449) of [AmeisenNavigation](https://github.com/Xian55/AmeisenNavigation/tree/feature/multi-version-guess-z-coord)
-3. Navigate to the build location of `AmeisenNavigation.Server` and find `config.cfg`
-4. Edit the last line of the file to look like `sMmapsPath=C:\mmaps`
+1. Extract the `mmaps` and copy anywhere you want, like `C:\mmaps`
+1. Get the [multi-version-guess-z-coord branch](https://github.com/Xian55/AmeisenNavigation/tree/feature/multi-version-guess-z-coord)
+1. Open the solution file.
+1. Unload **AmeisenNavigation.Exporter** project(right click -> unload project)
+1. ![image](https://github.com/Xian55/WowClassicGrindBot/assets/367101/df443648-bb57-4200-ac99-ee26e723f120)
+1. Select **AmeisenNavigation.Server** Press rebuild.
+1. Navigate to the `AmeisenNavigation.Server` build(ex. `AmeisenNavigation.Server\build\x64\Release`) location and find `config.cfg`
+1. Edit the last line of the file to look like `sMmapsPath=C:\mmaps`
+1. Start `AmeisenNavigation.Server.exe`
 
 Technical details about **V3:**
 - Uses another project called [AmeisenNavigation](https://github.com/Xian55/AmeisenNavigation/tree/feature/multi-version-guess-z-coord)
