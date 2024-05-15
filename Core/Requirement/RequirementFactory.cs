@@ -206,6 +206,7 @@ public sealed partial class RequirementFactory
             { "UnholyRune", playerReader.UnholyRune },
             { "TotalRune", playerReader.MaxRune },
             { "Combo Point", playerReader.ComboPoints },
+            { "Holy Power", playerReader.ComboPoints },
             { "Durability%", playerReader.AvgEquipDurability },
             { "BagCount", bagReader.BagItemCount },
             { "FoodCount", bagReader.FoodItemCount },
@@ -602,7 +603,8 @@ public sealed partial class RequirementFactory
         PowerType.RuneFrost => playerReader.FrostRune,
         PowerType.RuneUnholy => playerReader.UnholyRune,
         PowerType.HealthCost => playerReader.HealthCurrent,
-        //PowerType.ComboPoints => playerReader.ComboPoints,
+        PowerType.HolyPower or
+        PowerType.ComboPoints => playerReader.ComboPoints,
         _ => throw new NotImplementedException($"{type.ToStringF()}"),
     };
 
