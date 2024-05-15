@@ -1208,6 +1208,7 @@ Formula: `[Keyword] [Operator] [Numeric integer value]`
 | `UnholyRune` | Player current unholy runes |
 | `TotalRune` | Player current runes (blood+frost+unholy+death) |
 | `Combo Point` | Player current combo points on the target |
+| `Holy Power` | Player current Holy Power points on the target |
 | `Durability%` | Player worn equipment average durability. **0-99** value range. |
 | `BagCount` | How many items in the player inventory |
 | `FoodCount` | Returns the highest amount of food type, item count |
