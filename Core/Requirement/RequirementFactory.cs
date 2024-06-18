@@ -598,7 +598,8 @@ public sealed partial class RequirementFactory
         PowerType.Mana => playerReader.ManaCurrent,
         PowerType.Rage or
         PowerType.Energy or
-        PowerType.RunicPower => playerReader.PTCurrent,
+        PowerType.RunicPower or
+        PowerType.Focus => playerReader.PTCurrent,
         PowerType.RuneBlood => playerReader.BloodRune,
         PowerType.RuneFrost => playerReader.FrostRune,
         PowerType.RuneUnholy => playerReader.UnholyRune,
