@@ -236,7 +236,9 @@ public sealed partial class RequirementFactory
             // Session Stat
             { "Deaths", sessionStat._Deaths },
             { "Kills", sessionStat._Kills },
-            { "Seconds", sessionStat._Seconds },
+            { "SessionSeconds", sessionStat._Seconds },
+            { "SessionMinutes", sessionStat._Minutes },
+            { "SessionHours", sessionStat._Hours },
 
             { "Level", playerReader.Level._Value },
             { "ExpPerc", playerReader._PlayerXpPercent }
@@ -816,7 +818,7 @@ public sealed partial class RequirementFactory
 
             // 'TargetCastingSpell:_1_?,_n_'
             string[] spellsPart = span[(sep1 + 1)..].ToString().Split(SEP2);
-            int[] spellIds = spellsPart.Select(int.Parse).ToArray();
+            HashSet<int> spellIds = spellsPart.Select(int.Parse).ToHashSet();
 
             bool f() => spellIds.Contains(playerReader.SpellBeingCastByTarget);
             string s() => $"Target casts {playerReader.SpellBeingCastByTarget} ∈ [{string.Join(SEP2, spellIds)}]";
@@ -880,8 +882,7 @@ public sealed partial class RequirementFactory
             int sep = span.IndexOf(SEP1);
             string name = span[(sep + 1)..].Trim().ToString();
 
-            int id;
-            if (int.TryParse(name, out id) &&
+            if (int.TryParse(name, out int id) &&
                 spellBookReader.TryGetValue(id, out Spell spell))
             {
                 name = $"{spell.Name}({id})";
@@ -904,10 +905,10 @@ public sealed partial class RequirementFactory
 
     private Requirement CreateTalent(string requirement)
     {
-        return create(requirement, talentReader);
-        static Requirement create(string requirement, TalentReader talentReader)
+        return create(requirement, talentReader, intVariables);
+        static Requirement create(string requirement, TalentReader talentReader, Dictionary<string, Func<int>> intVariables)
         {
-            // 'Talent:_NAME_?:_RANK_'
+            // 'Talent:_NAME_?:_RANK_OR_INTVARIABLE_'
             ReadOnlySpan<char> span = requirement;
 
             int firstSep = span.IndexOf(SEP1);
@@ -916,7 +917,8 @@ public sealed partial class RequirementFactory
             int rank = 1;
             if (firstSep != lastSep)
             {
-                rank = int.Parse(span[(lastSep + 1)..]);
+                ReadOnlySpan<char> rank_or_variable = span[(lastSep + 1)..];
+                rank = GetIntValueOrVariable(intVariables, rank_or_variable);
             }
             else
             {
@@ -976,16 +978,11 @@ public sealed partial class RequirementFactory
         static Requirement create(string requirement, PlayerReader playerReader,
             Dictionary<string, Func<int>> intVariables, CreatureDB creatureDb)
         {
-            // 'npcID:_INTVARIABLE_OR_ID_'
+            // 'npcID:_ID_OR_INTVARIABLE_'
             ReadOnlySpan<char> span = requirement;
             int sep = span.IndexOf(SEP1);
             ReadOnlySpan<char> name_or_id = span[(sep + 1)..];
-
-            int npcId;
-            if (intVariables.TryGetValue(name_or_id.ToString(), out Func<int>? value))
-                npcId = value();
-            else
-                npcId = int.Parse(name_or_id);
+            int npcId = GetIntValueOrVariable(intVariables, name_or_id);
 
             if (!creatureDb.Entries.TryGetValue(npcId, out string? npcName))
             {
@@ -1009,7 +1006,7 @@ public sealed partial class RequirementFactory
         static Requirement create(string requirement, BagReader bagReader,
             Dictionary<string, Func<int>> intVariables, ItemDB itemDb)
         {
-            // 'BagItem:_INTVARIABLE_OR_ID_?:_COUNT_'
+            // 'BagItem:_ID_OR_INTVARIABLE_?:_COUNT_OR_INTVARIABLE_'
             ReadOnlySpan<char> span = requirement;
 
             int firstSep = span.IndexOf(SEP1);
@@ -1018,7 +1015,8 @@ public sealed partial class RequirementFactory
             int count = 1;
             if (firstSep != lastSep)
             {
-                count = int.Parse(span[(lastSep + 1)..]);
+                var count_or_variable = span[(lastSep + 1)..];
+                count = GetIntValueOrVariable(intVariables, count_or_variable);
             }
             else
             {
@@ -1027,11 +1025,7 @@ public sealed partial class RequirementFactory
 
             ReadOnlySpan<char> name_or_id = span[(firstSep + 1)..lastSep];
 
-            int itemId;
-            if (intVariables.TryGetValue(name_or_id.ToString(), out Func<int>? value))
-                itemId = value();
-            else
-                itemId = int.Parse(name_or_id);
+            int itemId = GetIntValueOrVariable(intVariables, name_or_id);
 
             string itemName = string.Empty;
             if (itemDb.Items.TryGetValue(itemId, out Item item))
@@ -1052,13 +1046,14 @@ public sealed partial class RequirementFactory
 
     private Requirement CreateSpellInRange(string requirement)
     {
-        return create(requirement, playerReader.SpellInRange);
-        static Requirement create(string requirement, SpellInRange range)
+        return create(requirement, playerReader.SpellInRange, intVariables);
+        static Requirement create(string requirement, SpellInRange range,
+            Dictionary<string, Func<int>> intVariables)
         {
-            // 'SpellInRange:_BIT_NUM_'
+            // 'SpellInRange:_BIT_NUM_OR_INTVARIABLE_'
             ReadOnlySpan<char> span = requirement;
             int sep = span.IndexOf(SEP1);
-            int bitNum = int.Parse(span[(sep + 1)..]);
+            int bitNum = GetIntValueOrVariable(intVariables, span[(sep + 1)..]);
             int bitMask = Mask.M[bitNum];
 
             bool f() => range[bitMask];
@@ -1194,6 +1189,13 @@ public sealed partial class RequirementFactory
             default:
                 throw new ArgumentOutOfRangeException(requirement);
         };
+    }
+
+    private static int GetIntValueOrVariable(Dictionary<string, Func<int>> intVariables, ReadOnlySpan<char> count_or_variable)
+    {
+        return intVariables.TryGetValue(count_or_variable.ToString(), out Func<int>? countFunc)
+            ? countFunc()
+            : int.Parse(count_or_variable);
     }
 
     #region Logging

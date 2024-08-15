@@ -1232,7 +1232,9 @@ Formula: `[Keyword] [Operator] [Numeric integer value]`
 | `Kills` | In the current session how many mobs have been killed by the player. |
 | `Deaths` | In the current session how many times the player have died. |
 | `Level` | Returns with the player current level. |
-| `Seconds` | Returns with the elapsed time in Seconds since the Session started.<br>The Session starts when the `Start Bot` button is pressed! |
+| `SessionSeconds` | Returns with the elapsed time in Seconds since the Session started.<br>The Session starts when the `Start Bot` button is pressed! |
+| `SessionMinutes` | Returns with the elapsed time in Minutes since the Session started.<br>The Session starts when the `Start Bot` button is pressed! |
+| `SessionHours` | Returns with the elapsed time in Hours since the Session started.<br>The Session starts when the `Start Bot` button is pressed! |
 | `ExpPerc` | Returns with the player experience as percentage to hit next level. |
 
 
@@ -1329,7 +1331,7 @@ If an `itemid` must be in your bag with given `count` quantity then can use this
 
 Useful to determine when to create warlock Healthstone or soul shards.
 
-Formula: `BagItem:[intVariableKey/itemid]:[count]`
+Formula: `BagItem:[intVariableKey/itemid]:[count/IntVariablesKey]`
 
 e.g.
 
@@ -1437,9 +1439,9 @@ e.g.
 
 If a given Talent `name` must be known by the player then you can use this requirement. 
 
-Useful to determine when the given Talent is learned. Also can specify how many points have to be spent minimium with `rank`.
+Useful to determine when the given Talent is learned. Also can specify how many points have to be spent minimium with `rank` which can be constant or a variable in `IntVariables`
 
-Formula: `Talent:[name]:[rank]`. The `name` only works with the English client name.
+Formula: `Talent:[name]:[rank/IntVariablesKey]`. The `name` only works with the English client name.
 
 e.g.
 
@@ -1787,7 +1789,7 @@ Allow requirements about spell range to be used, the spell in question depends u
 
 This might be useful if you were close enough for a Fireball, but not for a Frostbolt.
 
-Formula: `SpellInRange:[Numeric integer value]`
+Formula: `SpellInRange:[Numeric integer value/IntVariablesKey]`
 
 | Class | Spell | id |
 | --- | --- | --- |

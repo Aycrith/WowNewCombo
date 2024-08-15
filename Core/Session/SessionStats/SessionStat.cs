@@ -17,6 +17,14 @@ public sealed class SessionStat
 
     public int _Seconds() => Seconds;
 
+    public int Minutes => (int)(DateTime.UtcNow - StartTime).TotalMinutes;
+
+    public int _Minutes() => Minutes;
+
+    public int Hours => (int)(DateTime.UtcNow - StartTime).TotalHours;
+
+    public int _Hours() => Hours;
+
     public void Reset()
     {
         Deaths = 0;
