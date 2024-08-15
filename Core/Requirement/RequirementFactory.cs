@@ -1207,7 +1207,7 @@ public sealed partial class RequirementFactory
     [LoggerMessage(
         EventId = 0018,
         Level = LogLevel.Information,
-        Message = "[{name,-15}] Requirement: \"{requirement}\"")]
+        Message = "[{name,-17}] Requirement: \"{requirement}\"")]
     static partial void LogProcessing(ILogger logger, string name, string requirement);
 
     [LoggerMessage(

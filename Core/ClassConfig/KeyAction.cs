@@ -249,37 +249,37 @@ public sealed partial class KeyAction
     [LoggerMessage(
         EventId = 0001,
         Level = LogLevel.Information,
-        Message = "[{name,-15}] Path: {path}")]
+        Message = "[{name,-17}] Path: {path}")]
     static partial void LogPath(ILogger logger, string name, string path);
 
     [LoggerMessage(
         EventId = 0002,
         Level = LogLevel.Information,
-        Message = "[{name,-15}] Required Form: {form}")]
+        Message = "[{name,-17}] Required Form: {form}")]
     static partial void LogFormRequired(ILogger logger, string name, string form);
 
     [LoggerMessage(
         EventId = 0003,
         Level = LogLevel.Information,
-        Message = "[{name,-15}] Actionbar Key:{key} -> Actionbar:{slot} -> Index:{slotIndex}")]
+        Message = "[{name,-17}] Actionbar Key:{key} -> Actionbar:{slot} -> Index:{slotIndex}")]
     static partial void LogInputActionbar(ILogger logger, string name, string key, int slot, int slotIndex);
 
     [LoggerMessage(
         EventId = 0004,
         Level = LogLevel.Information,
-        Message = "[{name,-15}] Non Actionbar {key} -> {consoleKey}")]
+        Message = "[{name,-17}] Non Actionbar {key} -> {consoleKey}")]
     static partial void LogInputNonActionbar(ILogger logger, string name, string key, ConsoleKey consoleKey);
 
     [LoggerMessage(
         EventId = 0005,
         Level = LogLevel.Warning,
-        Message = "[{name,-15}] has no valid Key={key} or ConsoleKey={consoleKey}")]
+        Message = "[{name,-17}] has no valid Key={key} or ConsoleKey={consoleKey}")]
     static partial void LogInputNoValidKey(ILogger logger, string name, string key, ConsoleKey consoleKey);
 
     [LoggerMessage(
         EventId = 0006,
         Level = LogLevel.Information,
-        Message = "[{name,-15}] Update {type} cost to {newCost} from {oldCost}")]
+        Message = "[{name,-17}] Update {type} cost to {newCost} from {oldCost}")]
     static partial void LogPowerCostChange(ILogger logger, string name, string type, int newCost, int oldCost);
 
     #endregion

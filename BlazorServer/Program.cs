@@ -27,7 +27,7 @@ public static class Program
     {
         while (true)
         {
-            Log.Information($"[{nameof(Program),-15}] Starting blazor server");
+            Log.Information($"[{nameof(Program),-17}] Starting blazor server");
             try
             {
                 IHost host = CreateApp(args);
@@ -43,7 +43,7 @@ public static class Program
             }
             catch (Exception ex)
             {
-                Log.Information($"[{nameof(Program),-15}] {ex.Message}");
+                Log.Information($"[{nameof(Program),-17}] {ex.Message}");
                 Log.Information("");
 
                 Thread.Sleep(3000);
@@ -73,7 +73,7 @@ public static class Program
             LoggerSink sink = new();
             builder.Services.AddSingleton(sink);
 
-            const string outputTemplate = "[{@t:HH:mm:ss:fff} {@l:u1}] {#if Length(SourceContext) > 0}[{Substring(SourceContext, LastIndexOf(SourceContext, '.') + 1),-15}] {#end}{@m}\n{@x}";
+            const string outputTemplate = "[{@t:HH:mm:ss:fff} {@l:u1}] {#if Length(SourceContext) > 0}[{Substring(SourceContext, LastIndexOf(SourceContext, '.') + 1),-17}] {#end}{@m}\n{@x}";
             //const string outputTemplate = "[{@t:HH:mm:ss:fff} {@l:u1}] {SourceContext}] {@m}\n{@x}";
 
             Log.Logger = new LoggerConfiguration()
