@@ -73,9 +73,10 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
 
     private void ResetCooldowns()
     {
-        for (int i = 0; i < Keys.Length; i++)
+        ReadOnlySpan<KeyAction> span = Keys;
+        for (int i = 0; i < span.Length; i++)
         {
-            KeyAction keyAction = Keys[i];
+            KeyAction keyAction = span[i];
             if (keyAction.ResetOnNewTarget)
             {
                 keyAction.ResetCooldown();
@@ -132,9 +133,10 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
                 input.PressPetAttack();
             }
 
-            for (int i = 0; bits.Target_Alive() && i < Keys.Length; i++)
+            ReadOnlySpan<KeyAction> span = Keys;
+            for (int i = 0; bits.Target_Alive() && i < span.Length; i++)
             {
-                KeyAction keyAction = Keys[i];
+                KeyAction keyAction = span[i];
 
                 if (castingHandler.SpellInQueue() && !keyAction.BaseAction)
                 {

@@ -20,7 +20,7 @@ public interface IAddonDataProvider : IDisposable
     StringBuilder TextBuilder { get; }
 
     [SkipLocalsInit]
-    static unsafe void InternalUpdate(Image<Bgra32> bd,
+    static void InternalUpdate(Image<Bgra32> bd,
         ReadOnlySpan<DataFrame> frames, Span<int> output)
     {
         ref readonly Bgra32 first = ref bd.DangerousGetPixelRowMemory(frames[0].Y)
@@ -59,19 +59,23 @@ public interface IAddonDataProvider : IDisposable
     string GetString(int index)
     {
         int color = GetInt(index);
-        if (color == 0 || color > 999999)
+        if (color is 0 or > 999999)
             return string.Empty;
 
         TextBuilder.Clear();
 
-        int n = color / 10000;
-        if (n > 0) TextBuilder.Append((char)n);
+        int n1 = color / 10000;
+        int n2 = (color / 100) % 100;
+        int n3 = color % 100;
 
-        n = color / 100 % 100;
-        if (n > 0) TextBuilder.Append((char)n);
+        if (n1 > 0)
+            TextBuilder.Append((char)n1);
 
-        n = color % 100;
-        if (n > 0) TextBuilder.Append((char)n);
+        if (n2 > 0)
+            TextBuilder.Append((char)n2);
+
+        if (n3 > 0)
+            TextBuilder.Append((char)n3);
 
         return TextBuilder.ToString();
     }

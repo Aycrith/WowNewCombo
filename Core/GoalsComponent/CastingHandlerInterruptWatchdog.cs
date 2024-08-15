@@ -22,8 +22,8 @@ public sealed class CastingHandlerInterruptWatchdog : IDisposable
     private readonly Thread thread;
     private readonly ManualResetEventSlim resetEvent;
 
-    private bool? initial;
-    private Func<bool>? interrupt;
+    private bool initialValue;
+    private Func<bool> interrupt = () => false;
 
     private CancellationTokenSource interruptCts;
 
@@ -45,7 +45,6 @@ public sealed class CastingHandlerInterruptWatchdog : IDisposable
 
     public void Dispose()
     {
-        interrupt = null;
         resetEvent.Set();
     }
 
@@ -53,7 +52,7 @@ public sealed class CastingHandlerInterruptWatchdog : IDisposable
     {
         while (!token.IsCancellationRequested)
         {
-            while (initial == interrupt?.Invoke())
+            while (initialValue == interrupt.Invoke())
             {
                 wait.Update();
                 resetEvent.Wait();
@@ -78,7 +77,7 @@ public sealed class CastingHandlerInterruptWatchdog : IDisposable
     {
         resetEvent.Reset();
 
-        this.initial = interrupt();
+        initialValue = interrupt();
         this.interrupt = interrupt;
 
         if (!interruptCts.TryReset())

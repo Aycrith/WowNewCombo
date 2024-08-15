@@ -1,4 +1,5 @@
-﻿using System.Collections.Specialized;
+﻿using System;
+using System.Collections.Specialized;
 
 using static Core.ActionBar;
 
@@ -28,9 +29,10 @@ public sealed class ActionBarBits<T> : IActionBarBits, IReader
 
     public void Update(IAddonDataProvider reader)
     {
-        for (int i = 0; i < bits.Length; i++)
+        Span<BitVector32> span = bits;
+        for (int i = 0; i < span.Length; i++)
         {
-            bits[i] = new(reader.GetInt(cells[i]));
+            span[i] = new(reader.GetInt(cells[i]));
         }
     }
 
