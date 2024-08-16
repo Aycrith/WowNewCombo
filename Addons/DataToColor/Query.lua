@@ -176,7 +176,8 @@ function DataToColor:Bits3()
         (UnitIsPlayer(DataToColor.C.unitSoftInteract) and 2 or 0) ^ 3 +
         (UnitIsTapDenied(DataToColor.C.unitSoftInteract) and 2 or 0) ^ 4 +
         (UnitAffectingCombat(DataToColor.C.unitSoftInteract) and 2 or 0) ^ 5 +
-        (DataToColor:IsUnitHostile(DataToColor.C.unitPlayer, DataToColor.C.unitSoftInteract) and 2 or 0) ^ 6
+        (DataToColor:IsUnitHostile(DataToColor.C.unitPlayer, DataToColor.C.unitSoftInteract) and 2 or 0) ^ 6 +
+        ((DataToColor.channeling and 2 or 0)) ^ 7
     )
 end
 
