@@ -1,17 +1,20 @@
 {
   "ClassName": "Mage",
   "Loot": true,
+  "Mode": "AttendedGrind",
   "NPCMaxLevels_Below": 10,
   "NPCMaxLevels_Above": 2,
-  "UseMount": false,
-  "PathFilename": "_pack\\40-50\\Azshara\\54-55 High Beach.json",
+  "Mount": {
+    "Key": "N0"
+  },
+  "PathFilename": "Burning Steppes_2024_08_15_23_32_17.json",
   "PathThereAndBack": true,
   "PathReduceSteps": true,
   "IntVariables": {
-    "Item_Conjure_Drink": 8078,
+    "Item_Conjure_Drink": 8079,
     "Item_Conjure_Food": 8076,
     "MIN_FOOD%": 50,
-    "MIN_WATER%": 50,
+    "MIN_WATER%": 30,
     "MIN_MANA_SPELL%": 60
   },
   "Pull": {
@@ -30,6 +33,20 @@
           "SpellInRange:3",
           "Mana% > MIN_MANA_SPELL%"
         ]
+      },
+      {
+        "Name": "Shoot",
+        "Key": "0",
+        "Item": true,
+        "BeforeCastStop": true,
+        "Requirements": [
+          "HasRangedWeapon",
+          "!Shooting",
+          "SpellInRange:1",
+          "Mana% < MIN_MANA_SPELL%"
+        ],
+        "AfterCastWaitCombat": true,
+        "AfterCastDelay": 500
       }
     ]
   },
@@ -68,18 +85,9 @@
         "Cooldown": 25000,
         "WhenUsable": true,
         "Requirements": [
-          "InMeleeRange",
-          "MobCount>1"
+          "InMeleeRange"
         ],
-        "AfterCastStepBack": 1000
-      },
-      {
-        "Name": "Frostbolt",
-        "Key": "1",
-        "HasCastBar": true,
-        "Requirements": [
-          "SpellInRange:3"
-        ]
+        "AfterCastStepBack": -1
       },
       {
         "Name": "Arcane Missiles",
@@ -87,24 +95,30 @@
         "HasCastBar": true,
         "Requirements": [
           "SpellInRange:3",
-          "TargetHealth%>30"
-        ]
+          "TargetHealth% > 30",
+          "Mana% > MIN_MANA_SPELL%"
+        ]//,
+        //"AfterCastWaitCastbar": true
       },
       {
         "Name": "Shoot",
         "Key": "0",
         "Item": true,
+        "BeforeCastStop": true,
         "Requirements": [
           "HasRangedWeapon",
           "!Shooting",
           "SpellInRange:1",
           "Mana% < MIN_MANA_SPELL%"
-        ]
+        ],
+        "AfterCastDelay": 500
       },
       {
         "Name": "AutoAttack",
         "Requirements": [
           "!HasRangedWeapon",
+          "!Casting",
+          "!Shooting",
           "!AutoAttacking"
         ]
       },
@@ -140,8 +154,10 @@
         "Cooldown": 600000,
         "Cost": 2,
         "Requirements": [
-          "Mana%<50"
-        ]
+          "Mana% < 50"
+        ],
+        "Interrupt": "Mana% == 100",
+        "AfterCastWaitCastbar": true
       },
       {
         "Name": "Ice Armor",
@@ -151,8 +167,7 @@
       {
         "Name": "Arcane Intellect",
         "Key": "4",
-        "Requirement": "!Arcane Intellect",
-        "Log": false
+        "Requirement": "!Arcane Intellect"
       },
       {
         "Name": "Conjure Water",
