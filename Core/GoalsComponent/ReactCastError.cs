@@ -46,7 +46,14 @@ public sealed class ReactCastError
             case UI_ERROR.CAST_SUCCESS:
                 WaitForCooldown(item, value);
                 break;
+            case UI_ERROR.CAST_SENT:
+                UI_ERROR currentCastState = playerReader.CastState;
+                int maxTime = Math.Min(playerReader.DoubleNetworkLatency, playerReader.RemainCastMs);
+                logger.LogInformation($"React to {value.ToStringF()} -- by waiting {maxTime}ms!");
 
+                wait.Until(maxTime,
+                    () => currentCastState != playerReader.CastState);
+                break;
             case UI_ERROR.NONE:
             case UI_ERROR.CAST_START:
             case UI_ERROR.SPELL_FAILED_TARGETS_DEAD:

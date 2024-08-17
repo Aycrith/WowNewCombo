@@ -155,6 +155,7 @@ DataToColor.targetChanged = true
 
 DataToColor.autoFollow = false
 DataToColor.moving = false
+DataToColor.channeling = false
 
 DataToColor.playerGUID = UnitGUID(DataToColor.C.unitPlayer)
 DataToColor.petGUID = UnitGUID(DataToColor.C.unitPet)

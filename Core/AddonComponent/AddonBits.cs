@@ -97,4 +97,6 @@ public sealed class AddonBits : IReader, IGameMenuWindowShown
     public bool SoftInteract_Combat() => v3[Mask._5];
 
     public bool SoftInteract_Hostile() => v3[Mask._6];
+
+    public bool Channeling() => v3[Mask._7];
 }

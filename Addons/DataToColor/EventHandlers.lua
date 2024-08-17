@@ -99,6 +99,8 @@ function DataToColor:RegisterEvents()
     DataToColor:RegisterEvent("UNIT_SPELLCAST_SENT", 'OnUnitSpellCastSent')
     DataToColor:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED", 'OnUnitSpellCastSucceeded')
     DataToColor:RegisterEvent("UNIT_SPELLCAST_FAILED", 'OnUnitSpellCastFailed')
+    DataToColor:RegisterEvent("UNIT_SPELLCAST_CHANNEL_START", 'OnUnitSpellCastChannelStart')
+    DataToColor:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP", 'OnUnitSpellCastChannelStop')
     --DataToColor:RegisterEvent("UNIT_SPELLCAST_FAILED_QUIET", 'OnUnitSpellCastFailed')
     DataToColor:RegisterEvent('LOOT_READY', 'OnLootReady')
     DataToColor:RegisterEvent('LOOT_CLOSED', 'OnLootClosed')
@@ -479,6 +481,16 @@ function DataToColor:OnUnitSpellCastFailed(event, unit, castGUID, spellId)
     DataToColor.lastCastEvent = DataToColor.uiErrorMessage
     DataToColor.uiErrorMessageTime = DataToColor.globalTime
     DataToColor.lastCastSpellId = spellId
+end
+
+function DataToColor:OnUnitSpellCastChannelStart(event, unit, castGUID, spellID)
+    if unit ~= DataToColor.C.unitPlayer then return end
+    DataToColor.channeling = true
+end
+
+function DataToColor:OnUnitSpellCastChannelStop(event, unit, castGUID, spellID)
+    if unit ~= DataToColor.C.unitPlayer then return end
+    DataToColor.channeling = false
 end
 
 function DataToColor:SoM_OnCastSuccess(event, unitTarget, castGuid, spellId)
