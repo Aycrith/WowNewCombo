@@ -47,29 +47,14 @@ public sealed partial class CastingHandler
 
     private readonly CastingHandlerInterruptWatchdog interruptWatchdog;
 
-    private int lastActionCount;
-
     public bool SpellInQueue()
     {
-        int currentActionCount = currentAction.Count;
-
-        // castbar
-        if (playerReader.IsCasting() || bits.Channeling())
+        if (playerReader.IsCasting())
         {
-            int maxTime = Max(playerReader.RemainCastMs, playerReader.GCD.Value);
-
-            if (maxTime <= playerReader.SpellQueueTimeMs &&
-                currentActionCount > lastActionCount)
-            {
-                lastActionCount = currentActionCount;
-                return true;
-            }
-
-            lastActionCount = currentActionCount;
+            return playerReader.RemainCastMs > playerReader.SpellQueueTimeMs;
         }
-        // instant cast
         else if (playerReader.GCD.Value != 0 &&
-            playerReader.GCD.Value < playerReader.SpellQueueTimeMs)
+            playerReader.GCD.Value < playerReader.HalfSpellQueueTimeMs)
         {
             return true;
         }
@@ -185,8 +170,8 @@ public sealed partial class CastingHandler
         }
 
         float elapsedMs = WaitCurrentAction(
-            Max(playerReader.SpellQueueTimeMs, playerReader.RemainCastMs)
-            + playerReader.DoubleNetworkLatency,
+            Max(playerReader.HalfSpellQueueTimeMs, playerReader.RemainCastMs)
+            + playerReader.NetworkLatency,
             wait, playerReader, item, currentAction, token);
 
         if (DEBUG && Log && item.Log)

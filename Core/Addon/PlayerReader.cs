@@ -203,6 +203,8 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
 
     public int SpellQueueTimeMs => reader.GetInt(96) / 10000 % 10000;
 
+    public int HalfSpellQueueTimeMs => SpellQueueTimeMs / 2;
+
     public RecordInt LootEvent { get; } = new(97);
 
     public int FocusGuid => reader.GetInt(77);
