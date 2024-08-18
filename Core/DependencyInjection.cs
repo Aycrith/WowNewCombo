@@ -372,8 +372,13 @@ public static class DependencyInjection
         var remoteLogger = loggerFactory.CreateLogger<RemotePathingAPI>();
 
         var scp = sp.GetRequiredService<IOptions<StartupConfigPathing>>().Value;
-        RemotePathingAPI? api = new(remoteLogger, scp.hostv1, scp.portv1);
 
+        if (!scp.PathVisualizer)
+        {
+            return new NoPathVisualizer();
+        }
+
+        RemotePathingAPI? api = new(remoteLogger, scp.hostv1, scp.portv1);
         if (!api.PingServer())
         {
             api.Dispose();
