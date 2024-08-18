@@ -6,6 +6,7 @@ using System;
 using System.Threading;
 
 using static System.Math;
+using static Core.AddonTicks;
 
 namespace Core.Goals;
 
@@ -29,6 +30,7 @@ public sealed partial class CastingHandler
 
     private readonly Wait wait;
     private readonly PlayerReader playerReader;
+    private readonly AddonReader addonReader;
     private readonly AddonBits bits;
     private readonly BagReader bagReader;
 
@@ -45,18 +47,37 @@ public sealed partial class CastingHandler
 
     private readonly CastingHandlerInterruptWatchdog interruptWatchdog;
 
-    public DateTime SpellQueueOpen { get; private set; }
-    public bool SpellInQueue() =>
-        lastAction == null || !lastAction.HasCastBar
-        ? DateTime.UtcNow < SpellQueueOpen
-        : playerReader.IsCasting() &&
-        playerReader.RemainCastMs > playerReader.SpellQueueTimeMs;
+    private int lastActionCount;
+
+    public bool SpellInQueue()
+    {
+        int currentActionCount = currentAction.Count;
+
+        // castbar
+        if (playerReader.IsCasting() || bits.Channeling())
+        {
+            int maxTime = Max(playerReader.RemainCastMs, playerReader.GCD.Value);
+
+            if (maxTime <= playerReader.SpellQueueTimeMs &&
+                currentActionCount > lastActionCount)
+            {
+                lastActionCount = currentActionCount;
+                return true;
+            }
+
+            lastActionCount = currentActionCount;
+        }
+        // instant cast
+        else if (playerReader.GCD.Value != 0 &&
+            playerReader.GCD.Value < playerReader.SpellQueueTimeMs)
+        {
+            return true;
+        }
+
+        return false;
+    }
 
     public static int _GCD() => GCD;
-
-    // TODO: doesn't seems right but works better then before :/
-    // second cast still problematic
-    private KeyAction? lastAction;
 
     public CastingHandler(
         ILogger<CastingHandler> logger,
@@ -66,6 +87,7 @@ public sealed partial class CastingHandler
         ActionBarBits<IUsableAction> usableAction,
         ActionBarBits<ICurrentAction> currentAction,
         Wait wait,
+        AddonReader addonReader,
         PlayerReader playerReader,
         BagReader bagReader,
         CombatLog combatLog,
@@ -78,6 +100,7 @@ public sealed partial class CastingHandler
 
         this.wait = wait;
         this.bits = bits;
+        this.addonReader = addonReader;
         this.playerReader = playerReader;
         this.bagReader = bagReader;
 
@@ -142,7 +165,7 @@ public sealed partial class CastingHandler
         if (!playerReader.IsCasting() && item.BeforeCastStop)
         {
             stopMoving.Stop();
-            wait.Update(playerReader.NetworkLatency);
+            wait.Update(playerReader.HalfNetworkLatency);
         }
 
         int beforeCastEventTime = playerReader.UIErrorTime.Value;
@@ -162,14 +185,15 @@ public sealed partial class CastingHandler
         }
 
         float elapsedMs = WaitCurrentAction(
-            playerReader.DoubleNetworkLatency + playerReader.SpellQueueTimeMs,
+            Max(playerReader.SpellQueueTimeMs, playerReader.RemainCastMs)
+            + playerReader.DoubleNetworkLatency,
             wait, playerReader, item, currentAction, token);
 
         if (DEBUG && Log && item.Log)
             LogInstantInput(logger, item.Name, pressMs,
                 playerReader.CastState.ToStringF(), elapsedMs);
 
-        if (elapsedMs < 0 && playerReader.CastState != UI_ERROR.CAST_SUCCESS)
+        if (elapsedMs < 0)
         {
             if (!DEBUG || (Log && item.Log))
                 LogInstantInput(logger, item.Name, pressMs,
@@ -341,9 +365,6 @@ public sealed partial class CastingHandler
                 WaitTillNoLongerCastingOrChanneling(remainMs, wait, playerReader, bits, RepeatPetAttack, token);
                 if (token.IsCancellationRequested)
                 {
-                    if (playerReader.IsCasting())
-                        input.PressRandom(ConsoleKey.Escape, InputDuration.FastPress);
-
                     if (Log && item.Log)
                         LogVisibleAfterCastWaitCastbarInterrupted(logger, item.Name);
 
@@ -393,8 +414,9 @@ public sealed partial class CastingHandler
     {
         wait.Until(remainMs,
             interrupt: () =>
-            (!playerReader.IsCasting() || !bits.Channeling()) ||
-            token.IsCancellationRequested, repeat);
+            (!playerReader.IsCasting() && !bits.Channeling()) ||
+            token.IsCancellationRequested,
+            repeat);
     }
 
     private static float WaitTilCastStateChange(int durationMs, UI_ERROR beforeCastEventValue,
@@ -444,9 +466,7 @@ public sealed partial class CastingHandler
             input.PressStopAttack();
             input.PressStopAttack();
 
-            int waitTimeMs =
-                Max(playerReader.GCD.Value, playerReader.RemainCastMs) +
-            playerReader.DoubleNetworkLatency;
+            int waitTimeMs = playerReader.GCD.Value;
 
             float elapsedMs = wait.Until(waitTimeMs, token);
             logger.LogInformation($"Stop {nameof(bits.Shoot)} and wait {waitTimeMs}ms | {elapsedMs}ms");
@@ -525,7 +545,8 @@ public sealed partial class CastingHandler
         {
             int waitTimeMs =
                 playerReader.SpellQueueTimeMs +
-                playerReader.DoubleNetworkLatency;
+                playerReader.DoubleNetworkLatency +
+                (BAG_UPDATE * (int)addonReader.AvgUpdateLatency);
 
             float elapsedMs = AfterCastWaitBag(waitTimeMs, bagHash, wait, bagReader, token);
             if (Log && item.Log)
@@ -666,8 +687,6 @@ public sealed partial class CastingHandler
 
         if (!item.BaseAction)
         {
-            lastAction = item;
-
             int durationMs = UpdateGCD();
 
             if (DEBUG && Log && item.Log)
@@ -708,8 +727,6 @@ public sealed partial class CastingHandler
             Max(playerReader.LastCastGCD, playerReader.GCD.Value)
             - playerReader.SpellQueueTimeMs;
 
-        SpellQueueOpen = DateTime.UtcNow.AddMilliseconds(durationMs);
-        //logger.LogInformation($"Spell Queue window opens after {durationMs}");
         return durationMs;
     }
 
@@ -729,7 +746,9 @@ public sealed partial class CastingHandler
             playerReader.TargetGuid != playerReader.PetTargetGuid) &&
             input.PetAttack.GetRemainingCooldown() == 0)
         {
-            input.PressStopAttack();
+            if (!playerReader.IsCasting() && !bits.Channeling())
+                input.PressStopAttack();
+
             input.PressPetAttack();
         }
     }

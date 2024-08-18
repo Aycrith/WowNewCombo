@@ -199,6 +199,8 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
 
     public int DoubleNetworkLatency => 2 * NetworkLatency;
 
+    public int HalfNetworkLatency => NetworkLatency / 2;
+
     public int SpellQueueTimeMs => reader.GetInt(96) / 10000 % 10000;
 
     public RecordInt LootEvent { get; } = new(97);

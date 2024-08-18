@@ -70,8 +70,10 @@ public sealed partial class MountHandler : IMountHandler
 
         LogCastStarted(logger, e);
 
+        wait.Update();
+
         e = wait.Until(
-            playerReader.RemainCastMs + playerReader.NetworkLatency,
+            playerReader.RemainCastMs + playerReader.DoubleNetworkLatency,
             MountedOrNotCastingOrValidTargetOrEnteredCombat);
 
         LogCastEnded(logger, e);
