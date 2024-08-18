@@ -56,7 +56,7 @@
                 {
                     <PathSelectorComponent Hide="@(botController.IsBotActive)" />
                 }
-                else
+                else if (!botController.IsBotActive)
                 {
                     <MatAccordion>
                         <MatExpansionPanel @bind-Expanded="@panelOpenState">
