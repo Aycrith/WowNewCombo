@@ -1,4 +1,4 @@
-﻿using Game;
+using Game;
 
 using Microsoft.Extensions.Logging;
 
@@ -468,6 +468,20 @@ public sealed partial class CastingHandler
             return false;
         }
 
+        if (item.BeforeCastFaceTarget)
+        {
+            input.PressFastInteract();
+
+            const int updateCount = 2;
+            float e = wait.AfterEquals(playerReader.SpellQueueTimeMs,
+                updateCount, playerReader._Direction);
+
+            stopMoving.StopForward();
+
+            if (Log && item.Log)
+                LogBeforeCastFaceTarget(logger, item.Name, e);
+        }
+
         if (item.BeforeCastDelay > 0)
         {
             if (!playerReader.IsCasting() && (item.BeforeCastStop || item.HasCastBar))
@@ -920,6 +934,12 @@ public sealed partial class CastingHandler
         Level = LogLevel.Error,
         Message = "[{name,-17}] ... Cast failed due {reason}!")]
     static partial void LogFailedDueReason(ILogger logger, string name, string reason);
+
+    [LoggerMessage(
+        EventId = 0099,
+        Level = LogLevel.Information,
+        Message = "[{name,-17}] ... BeforeCastFaceTarget {elapsedMs}ms")]
+    static partial void LogBeforeCastFaceTarget(ILogger logger, string name, float elapsedMs);
 
 
     #endregion

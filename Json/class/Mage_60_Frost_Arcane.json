@@ -15,6 +15,8 @@
     "Item_Conjure_Food": 8076,
     "MIN_FOOD%": 50,
     "MIN_WATER%": 30,
+    "MIN_WATER": 8,
+    "MIN_FOOD": 8,
     "MIN_MANA_SPELL%": 60
   },
   "Pull": {
@@ -22,8 +24,7 @@
       {
         "Name": "Ice Barrier",
         "Key": "7",
-        "WhenUsable": true,
-        "Requirement": "!Ice Barrier"
+        "Requirement": "!Ice Barrier && Talent:Ice Barrier"
       },
       {
         "Name": "Frostbolt",
@@ -56,8 +57,8 @@
         "Name": "Ice Barrier",
         "Key": "7",
         "Cooldown": 30000,
-        "WhenUsable": true,
-        "Requirement": "!Ice Barrier"
+        //"WhenUsable": true,
+        "Requirement": "!Ice Barrier && Talent:Ice Barrier"
       },
       {
         "Name": "Cone of Cold",
@@ -80,13 +81,26 @@
         ]
       },
       {
+        "Name": "Stepback",
+        "Key": "S",
+        "PressDuration": 3000,
+        "BaseAction": true,
+        "BeforeCastFaceTarget": true,
+        "Requirements": [
+          "Frostbite",
+          "TargetsMe",
+          "InMeleeRange"
+        ],
+        "Interrupt": "InMeleeRange && TargetAlive"
+      },
+      {
         "Name": "Frost Nova",
         "Key": 6,
-        "Cooldown": 25000,
-        "WhenUsable": true,
+        "BeforeCastFaceTarget": true,
         "Requirements": [
           "InMeleeRange"
         ],
+        "Interrupt": "InMeleeRange && TargetAlive",
         "AfterCastStepBack": -1
       },
       {
@@ -97,8 +111,8 @@
           "SpellInRange:3",
           "TargetHealth% > 30",
           "Mana% > MIN_MANA_SPELL%"
-        ]//,
-        //"AfterCastWaitCastbar": true
+        ],
+        "AfterCastWaitCastbar": true
       },
       {
         "Name": "Shoot",
@@ -145,6 +159,15 @@
       }
     ]
   },
+  "Wait": {
+    "Sequence": [
+      {
+        "Cost": 1,
+        "Name": "Menu Closed",
+        "Requirement": "MenuOpen"
+      }
+    ]
+  },
   "Adhoc": {
     "Sequence": [
       {
@@ -173,7 +196,7 @@
         "Name": "Conjure Water",
         "HasCastBar": true,
         "Key": "9",
-        "Requirement": "!BagItem:Item_Conjure_Drink:4",
+        "Requirement": "!BagItem:Item_Conjure_Drink:MIN_WATER",
         "AfterCastWaitCastbar": true,
         "AfterCastWaitBag": true
       },
@@ -181,7 +204,7 @@
         "Name": "Conjure Food",
         "HasCastBar": true,
         "Key": "8",
-        "Requirement": "!BagItem:Item_Conjure_Food:4",
+        "Requirement": "!BagItem:Item_Conjure_Food:MIN_FOOD",
         "AfterCastWaitCastbar": true,
         "AfterCastWaitBag": true
       }

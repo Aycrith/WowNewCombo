@@ -57,6 +57,8 @@ public sealed partial class KeyAction
     public bool BeforeCastStop { get; set; }
     public bool BeforeCastDismount { get; set; } = true;
 
+    public bool BeforeCastFaceTarget { get; set; }
+
     public int AfterCastDelay { get; set; }
     public int AfterCastMaxDelay { get; set; }
     public bool AfterCastWaitMeleeRange { get; set; }
