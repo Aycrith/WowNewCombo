@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Collections.Specialized;
 using Game;
 
 namespace Core;
@@ -13,7 +14,11 @@ public sealed partial class KeyAction
 {
     public float Cost { get; set; } = 18;
     public string Name { get; set; } = string.Empty;
-    public bool HasCastBar { get; set; }
+    public bool HasCastBar
+    {
+        get => features[ActionMask.HasCastBar];
+        set => features[ActionMask.HasCastBar] = value;
+    }
     public ConsoleKey ConsoleKey { get; set; }
     public string Key { get; set; } = string.Empty;
     public int Slot { get; set; }
@@ -21,6 +26,12 @@ public sealed partial class KeyAction
     public int SpellId { get; set; }
 
     public int PressDuration { get; set; } = InputDuration.DefaultPress;
+
+    // enabled by default
+    public BitVector32 features = new(
+        ActionMask.Log |
+        ActionMask.BeforeCastDismount
+        );
 
     public Form? Form { get; init; }
     public Form FormValue => HasForm ? Form!.Value : Core.Form.None;
@@ -41,34 +52,98 @@ public sealed partial class KeyAction
     public List<string> Interrupts { get; } = new();
     public Requirement[] InterruptsRuntime { get; set; } = Array.Empty<Requirement>();
 
-    public bool WhenUsable { get; set; }
+    public bool WhenUsable
+    {
+        get => features[ActionMask.WhenUsable];
+        set => features[ActionMask.WhenUsable] = value;
+    }
 
-    public bool ResetOnNewTarget { get; set; }
+    public bool ResetOnNewTarget
+    {
+        get => features[ActionMask.ResetOnNewTarget];
+        set => features[ActionMask.ResetOnNewTarget] = value;
+    }
 
-    public bool Log { get; set; } = true;
+    public bool Log
+    {
+        get => features[ActionMask.Log];
+        set => features[ActionMask.Log] = value;
+    }
 
-    public bool BaseAction { get; set; }
+    public bool BaseAction
+    {
+        get => features[ActionMask.BaseAction];
+        set => features[ActionMask.BaseAction] = value;
+    }
 
-    public bool Item { get; set; }
+    public bool Item
+    {
+        get => features[ActionMask.Item];
+        set => features[ActionMask.Item] = value;
+    }
 
     public int BeforeCastDelay { get; set; }
     public int BeforeCastMaxDelay { get; set; }
 
-    public bool BeforeCastStop { get; set; }
-    public bool BeforeCastDismount { get; set; } = true;
+    public bool BeforeCastStop
+    {
+        get => features[ActionMask.BeforeCastStop];
+        set => features[ActionMask.BeforeCastStop] = value;
+    }
+    public bool BeforeCastDismount
+    {
+        get => features[ActionMask.BeforeCastDismount];
+        set => features[ActionMask.BeforeCastDismount] = value;
+    }
 
-    public bool BeforeCastFaceTarget { get; set; }
+    public bool BeforeCastFaceTarget
+    {
+        get => features[ActionMask.BeforeCastFaceTarget];
+        set => features[ActionMask.BeforeCastFaceTarget] = value;
+    }
 
     public int AfterCastDelay { get; set; }
     public int AfterCastMaxDelay { get; set; }
-    public bool AfterCastWaitMeleeRange { get; set; }
-    public bool AfterCastWaitBuff { get; set; }
-    public bool AfterCastWaitBag { get; set; }
-    public bool AfterCastWaitSwing { get; set; }
-    public bool AfterCastWaitCastbar { get; set; }
-    public bool AfterCastWaitCombat { get; set; }
-    public bool AfterCastWaitGCD { get; set; }
-    public bool AfterCastAuraExpected { get; set; }
+    public bool AfterCastWaitMeleeRange
+    {
+        get => features[ActionMask.AfterCastWaitMeleeRange];
+        set => features[ActionMask.AfterCastWaitMeleeRange] = value;
+    }
+    public bool AfterCastWaitBuff
+    {
+        get => features[ActionMask.AfterCastWaitBuff];
+        set => features[ActionMask.AfterCastWaitBuff] = value;
+    }
+    public bool AfterCastWaitBag
+    {
+        get => features[ActionMask.AfterCastWaitBag];
+        set => features[ActionMask.AfterCastWaitBag] = value;
+    }
+    public bool AfterCastWaitSwing
+    {
+        get => features[ActionMask.AfterCastWaitSwing];
+        set => features[ActionMask.AfterCastWaitSwing] = value;
+    }
+    public bool AfterCastWaitCastbar
+    {
+        get => features[ActionMask.AfterCastWaitCastbar];
+        set => features[ActionMask.AfterCastWaitCastbar] = value;
+    }
+    public bool AfterCastWaitCombat
+    {
+        get => features[ActionMask.AfterCastWaitCombat];
+        set => features[ActionMask.AfterCastWaitCombat] = value;
+    }
+    public bool AfterCastWaitGCD
+    {
+        get => features[ActionMask.AfterCastWaitGCD];
+        set => features[ActionMask.AfterCastWaitGCD] = value;
+    }
+    public bool AfterCastAuraExpected
+    {
+        get => features[ActionMask.AfterCastAuraExpected];
+        set => features[ActionMask.AfterCastAuraExpected] = value;
+    }
     public int AfterCastStepBack { get; set; }
 
     public string InCombat { get; set; } = "false";
