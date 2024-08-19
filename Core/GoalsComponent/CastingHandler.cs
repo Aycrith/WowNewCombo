@@ -1,4 +1,4 @@
-using Game;
+﻿using Game;
 
 using Microsoft.Extensions.Logging;
 
@@ -592,9 +592,9 @@ public sealed partial class CastingHandler
                 token.IsCancellationRequested);
         }
 
-        if (item.AfterCastStepBack != 0)
+        if (item.AfterCastStepBack != 0 && !token.IsCancellationRequested)
         {
-            int waitMs =
+            int pressDurationMs =
                 item.AfterCastStepBack != -1
                 ? item.AfterCastStepBack
                 : playerReader.GCD.Value != 0
@@ -602,14 +602,14 @@ public sealed partial class CastingHandler
                 : MIN_GCD - playerReader.SpellQueueTimeMs;
 
             if (Log && item.Log)
-                LogAfterCastStepBack(logger, item.Name, waitMs);
+                LogAfterCastStepBack(logger, item.Name, pressDurationMs);
 
             input.StartBackward(true);
 
             if (Random.Shared.Next(3) == 0)
                 input.PressJump();
 
-            float elapsedMs = wait.Until(waitMs, token);
+            float elapsedMs = wait.Until(pressDurationMs, token);
 
             // todo: does this necessary ?
             if (Log && item.Log)
