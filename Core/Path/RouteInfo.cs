@@ -48,7 +48,7 @@ public sealed class RouteInfo : IDisposable
         pathedRoutes.Length > 0 ? pathedRoutes
             .OrderByDescending(MostRecent)
             .First().PathingRoute()
-        : Array.Empty<Vector3>();
+        : [];
 
     private static DateTime MostRecent(IRouteProvider x) => x.LastActive;
 
@@ -82,7 +82,9 @@ public sealed class RouteInfo : IDisposable
         this.areaDB = areaDB;
         this.worldmapAreaDB = worldmapAreaDB;
 
-        RouteSrc = this.Route = pathedRoutes.First().MapRoute();
+        RouteSrc = pathedRoutes.Any()
+            ? (this.Route = pathedRoutes.First().MapRoute() ?? [])
+            : this.Route = [];
 
         this.areaDB.Changed += OnZoneChanged;
         OnZoneChanged();
