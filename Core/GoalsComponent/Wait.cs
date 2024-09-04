@@ -7,10 +7,10 @@ namespace Core;
 
 public sealed class Wait
 {
-    private readonly AutoResetEvent globalTime;
+    private readonly ManualResetEventSlim globalTime;
     private readonly CancellationToken token;
 
-    public Wait(AutoResetEvent globalTime, CancellationTokenSource cts)
+    public Wait(ManualResetEventSlim globalTime, CancellationTokenSource cts)
     {
         this.globalTime = globalTime;
         this.token = cts.Token;
@@ -18,12 +18,20 @@ public sealed class Wait
 
     public void Update()
     {
-        globalTime.WaitOne();
+        globalTime.Wait();
+        globalTime.Reset();
     }
 
-    public bool Update(int timeout)
+    public bool Update(int timeoutMs)
     {
-        return globalTime.WaitOne(timeout);
+        bool result = globalTime.Wait(timeoutMs);
+        if (!result)
+        {
+            return result;
+        }
+
+        globalTime.Reset();
+        return result;
     }
 
     public void Fixed(int durationMs)
