@@ -45,12 +45,12 @@ public sealed partial class KeyAction
     public int MinComboPoints { get; set; }
 
     public string Requirement { get; set; } = string.Empty;
-    public List<string> Requirements { get; } = new();
-    public Requirement[] RequirementsRuntime { get; set; } = Array.Empty<Requirement>();
+    public List<string> Requirements { get; } = [];
+    public Requirement[] RequirementsRuntime { get; set; } = [];
 
     public string Interrupt { get; set; } = string.Empty;
-    public List<string> Interrupts { get; } = new();
-    public Requirement[] InterruptsRuntime { get; set; } = Array.Empty<Requirement>();
+    public List<string> Interrupts { get; } = [];
+    public Requirement[] InterruptsRuntime { get; set; } = [];
 
     public bool WhenUsable
     {
@@ -151,7 +151,7 @@ public sealed partial class KeyAction
     public bool? UseWhenTargetIsCasting { get; set; }
 
     public string PathFilename { get; set; } = string.Empty;
-    public Vector3[] Path { get; set; } = Array.Empty<Vector3>();
+    public Vector3[] Path { get; set; } = [];
 
     public int ConsoleKeyFormHash { private set; get; }
 

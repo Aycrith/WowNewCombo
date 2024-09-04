@@ -141,6 +141,7 @@ public sealed class TriangleCollection
         TrianglesGet(i, out v0, out v1, out v2, out flags);
     }
 
+    [SkipLocalsInit]
     public void GetTriangleVertices(int i,
                                     out float x0, out float y0, out float z0,
                                     out float x1, out float y1, out float z1,
