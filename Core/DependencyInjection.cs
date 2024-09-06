@@ -198,7 +198,7 @@ public static class DependencyInjection
 
     public static IServiceCollection AddCoreBase(this IServiceCollection s)
     {
-        s.AddSingleton<ManualResetEventSlim>(x => new(false));
+        s.AddSingleton<AutoResetEvent>(x => new(false));
         s.AddSingleton<Wait>();
 
         s.AddSingleton<StartupClientVersion>();

@@ -11,7 +11,7 @@ namespace Core;
 public sealed class AddonReader : IAddonReader
 {
     private readonly IAddonDataProvider reader;
-    private readonly ManualResetEventSlim resetEvent;
+    private readonly AutoResetEvent resetEvent;
 
     private readonly PlayerReader playerReader;
     private readonly CreatureDB creatureDb;
@@ -33,7 +33,7 @@ public sealed class AddonReader : IAddonReader
     public double AvgUpdateLatency { private set; get; }
 
     public AddonReader(IAddonDataProvider reader,
-        PlayerReader playerReader, ManualResetEventSlim resetEvent,
+        PlayerReader playerReader, AutoResetEvent resetEvent,
         CreatureDB creatureDb,
         CombatLog combatLog,
         DataFrame[] frames,
