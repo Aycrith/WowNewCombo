@@ -315,7 +315,7 @@ For normal quick startup of `HeadlessServer` please look at the `HeadlessServer\
 | `-t`<br>`-otargeting` | While overlay enabled, show Targeting points | `false` | - |
 | `-s`<br>`-oskinning` | While overlay enabled, show Skinning points | `false` | - |
 | `-v`<br>`-otargetvsadd` | While overlay enabled, show Target vs Add points | `false` | - |
-| `--loadonly` | Loads the given class profile then exists | `false` | - |
+| `--loadonly` | Loads the given class profile then exits | `false` | - |
 
 e.g. run from Powershell without any optional parameter
 ```ps
@@ -329,7 +329,7 @@ cd C:\WowClassicGrindBot\HeadlessServer
 .\run.bat Hunter_1.json -m Local
 ```
 
-e.g. run from Powershell optional parameters, only loads the profile then exists a good indicator that your profile can be loaded
+e.g. run from Powershell optional parameters, only loads the profile then exits a good indicator that your profile can be loaded
 ```ps
 cd C:\WowClassicGrindBot\HeadlessServer
 .\run.bat Hunter_1.json -m Local --loadonly
