@@ -618,18 +618,28 @@ internal readonly struct MapChunk
     public readonly byte[] water_flags;
 
 
-    private static readonly int[] holetab_h = new int[] { 0x1111, 0x2222, 0x4444, 0x8888 };
-    private static readonly int[] holetab_v = new int[] { 0x000F, 0x00F0, 0x0F00, 0xF000 };
+    private static readonly int[] holetab = [
+        0x1111 & 0x000F, 0x1111 & 0x00F0, 0x1111 & 0x0F00, 0x1111 & 0xF000,
+        0x2222 & 0x000F, 0x2222 & 0x00F0, 0x2222 & 0x0F00, 0x2222 & 0xF000,
+        0x4444 & 0x000F, 0x4444 & 0x00F0, 0x4444 & 0x0F00, 0x4444 & 0xF000,
+        0x8888 & 0x000F, 0x8888 & 0x00F0, 0x8888 & 0x0F00, 0x8888 & 0xF000
+    ];
 
     // 0 ..3, 0 ..3
-    public bool isHole(int i, int j)
+    public bool IsHole(int i, int j)
     {
         if (!hasholes)
             return false;
-        i /= 2;
-        j /= 2;
 
-        return i <= 3 && j <= 3 && (holes & holetab_h[i] & holetab_v[j]) != 0;
+        i >>= 1;
+        j >>= 1;
+
+        if (i > 3 || j > 3)
+            return false;
+
+        int index = (i << 2) | j;
+
+        return (holes & holetab[index]) != 0;
     }
 
 
