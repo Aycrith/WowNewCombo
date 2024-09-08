@@ -3,7 +3,7 @@
 namespace Benchmarks.PPather;
 
 [MemoryDiagnoser]
-public class PPatherHasHoles
+public class PPather_HasHoles
 {
 
     public bool hasholes = true;
