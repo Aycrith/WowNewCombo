@@ -93,4 +93,10 @@ public sealed class RunOptions
         Default = false,
         HelpText = $"Disable PathVisualization in RemoteV1")]
     public bool PathVisualizer { get; set; }
+
+    [Option("loadonly",
+        Required = false,
+        Default = false,
+        HelpText = $"Loads the class profile then exists")]
+    public bool LoadOnly { get; set; }
 }

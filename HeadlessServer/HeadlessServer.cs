@@ -1,5 +1,7 @@
 ﻿using CommandLine;
+
 using Core;
+
 using Microsoft.Extensions.Logging;
 
 namespace HeadlessServer;
@@ -23,7 +25,8 @@ public sealed partial class HeadlessServer
         SpellBookReader spellBookReader,
         BagReader bagReader,
         ExecGameCommand exec,
-        AddonConfigurator addonConfigurator, Wait wait)
+        AddonConfigurator addonConfigurator,
+        Wait wait)
     {
         this.logger = logger;
         this.botController = botController;
@@ -43,6 +46,11 @@ public sealed partial class HeadlessServer
         botController.LoadClassProfile(options.Value.ClassConfig!);
 
         botController.ToggleBotStatus();
+    }
+
+    public void RunLoadOnly(ParserResult<RunOptions> options)
+    {
+        botController.LoadClassProfile(options.Value.ClassConfig!);
     }
 
     private void InitState()

@@ -254,14 +254,26 @@ public static class DependencyInjection
         }
 
         NativeMethods.GetWindowRect(process.MainWindowHandle, out Rectangle rect);
-        if (FrameConfig.Exists() && !FrameConfig.IsValid(rect, installVersion))
+        if (!FrameConfig.Exists())
         {
-            // At this point the webpage never loads so fallback to configuration page
-            FrameConfig.Delete();
-            log.LogError($"{nameof(FrameConfig)} doesn't exists or window rect is different then config!");
+            log.LogError($"{nameof(FrameConfig)} doesn't exists!");
 
             return false;
         }
+
+        if (!FrameConfig.IsValid(rect, installVersion))
+        {
+            // At this point the webpage never loads so fallback to configuration page
+            FrameConfig.Delete();
+
+            log.LogError($"{nameof(FrameConfig)} window rect is different then config!");
+            log.LogError($"{nameof(FrameConfig)} {rect}");
+            log.LogError($"{nameof(FrameConfig)} {installVersion}");
+            log.LogError($"{nameof(FrameConfig)} {FrameConfig.Load()}");
+
+            return false;
+        }
+
 
         return true;
     }

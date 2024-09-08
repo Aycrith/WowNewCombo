@@ -306,6 +306,7 @@ In order to run `HeadlessServer` please look at the `HeadlessServer\run.bat`.
 | `-t`<br>`-otargeting` | While overlay enabled, show Targeting points | `false` | - |
 | `-s`<br>`-oskinning` | While overlay enabled, show Skinning points | `false` | - |
 | `-v`<br>`-otargetvsadd` | While overlay enabled, show Target vs Add points | `false` | - |
+| `--loadonly` | Loads the given class profile then exists | `false` | - |
 
 e.g. run from Powershell without any optional parameter
 ```ps
