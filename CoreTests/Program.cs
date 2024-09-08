@@ -1,4 +1,4 @@
-using Serilog;
+﻿using Serilog;
 using Serilog.Extensions.Logging;
 using SharedLib.NpcFinder;
 using System.Diagnostics;
@@ -222,7 +222,7 @@ internal sealed class Program
     private static void Test_FindTargetByCursor()
     {
         //CursorType cursorType = CursorType.Kill;
-        Span<CursorType> cursorType = stackalloc[] { CursorType.Vendor };
+        ReadOnlySpan<CursorType> cursorType = [CursorType.Vendor];
 
         //NpcNames types = NpcNames.Enemy;
         //NpcNames types = NpcNames.Corpse;
@@ -233,6 +233,8 @@ internal sealed class Program
 
         int count = 2;
         int i = 0;
+
+        screen.Enabled = true;
 
         while (i < count)
         {
@@ -245,5 +247,7 @@ internal sealed class Program
             i++;
             Thread.Sleep(delay);
         }
+
+        screen.Enabled = false;
     }
 }
