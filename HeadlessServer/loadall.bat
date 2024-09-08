@@ -12,5 +12,5 @@ for /r "%root%" %%f in (*.json) do (
     set "file=!file:%root%=!"
     echo !file!
 
-    dotnet run -c Release --no-restore -- !file! -m Local --loadonly
+    dotnet run -c Release --no-build --no-restore -- !file! -m Local --loadonly
 )
