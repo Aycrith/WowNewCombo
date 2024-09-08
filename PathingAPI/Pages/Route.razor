@@ -61,7 +61,7 @@
     <select disabled="@IsDisabled" class="form-control" @bind="UIMapId">
         @foreach (var wma in wmas)
         {
-            <option value="@wma.UIMapId">@wma.AreaName</option>
+            <option value="@wma.UIMapId">@wma.AreaName - @wma.UIMapId</option>
         }
     </select>
 
