@@ -244,7 +244,7 @@ The app reads the game state using small blocks of color shown at the top of the
     start "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" "http://localhost:5000"
     c:
     cd C:\WowClassicGrindBot\BlazorServer
-    dotnet run --configuration Release
+    dotnet run -c Release
     pause
     ```
 
@@ -285,7 +285,16 @@ A successful [Configuration process](#5-blazorserver-configuration-process) has 
 * `addon_config.json`
 * `frame_config.json`
 
-In order to run `HeadlessServer` please look at the `HeadlessServer\run.bat`.
+To see how to first time run the `HeadlessServer` please look at `HeadlessServer\install.bat`.
+
+A few use case when you need to run `install.bat`
+* After the first project download
+* After git project clone
+* After downloading a new version of the project
+* After made a change in the source code which result a new Addon Version
+* After switched from **FullScreen** to **Windowed mode** thus a `frame_config.json` needed to be recreated
+
+For normal quick startup of `HeadlessServer` please look at the `HeadlessServer\run.bat`.
 
 **Required** cli parameter: relative [Class Configuration](#12-class-configuration) file name under the [/Json/class/](./Json/class) folder.
 
@@ -317,7 +326,13 @@ cd C:\WowClassicGrindBot\HeadlessServer
 e.g. run from Powershell optional parameters, using `DXGI` reader and forced `Local` pathfinder.
 ```ps
 cd C:\WowClassicGrindBot\HeadlessServer
-.\run.bat Hunter_1.json -m Local -r DXGI
+.\run.bat Hunter_1.json -m Local
+```
+
+e.g. run from Powershell optional parameters, only loads the profile then exists a good indicator that your profile can be loaded
+```ps
+cd C:\WowClassicGrindBot\HeadlessServer
+.\run.bat Hunter_1.json -m Local --loadonly
 ```
 
 ## 8. Configure the Wow Client - Interface Options
