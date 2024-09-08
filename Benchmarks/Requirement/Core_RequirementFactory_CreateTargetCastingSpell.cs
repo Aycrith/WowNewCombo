@@ -12,12 +12,12 @@ internal static class PlayerReader
 }
 
 [MemoryDiagnoser]
-public class CoreRequirementCreateTargetCastingSpell
+public class Core_RequirementFactory_CreateTargetCastingSpell
 {
     private const char SEP1 = ':';
     private const char SEP2 = ',';
 
-    public CoreRequirementCreateTargetCastingSpell()
+    public Core_RequirementFactory_CreateTargetCastingSpell()
     {
         /*
         foreach(var input in CreateTargetCastingSpell_Inputs())
@@ -30,11 +30,13 @@ public class CoreRequirementCreateTargetCastingSpell
 
     [Benchmark(Baseline = true)]
     [ArgumentsSource(nameof(CreateTargetCastingSpell_Inputs))]
-    public void Run_Old(string text) => CreateTargetCastingSpell_Old(text);
+    public void Old_CreateTargetCastingSpell(string text) => CreateTargetCastingSpell_Old(text);
 
     [Benchmark]
     [ArgumentsSource(nameof(CreateTargetCastingSpell_Inputs))]
-    public void Run_New(string text) => CreateTargetCastingSpell_New(text);
+    public void New_CreateTargetCastingSpell(string text) => CreateTargetCastingSpell_New(text);
+
+    //
 
     public Core.Requirement CreateTargetCastingSpell_Old(string requirement)
     {
