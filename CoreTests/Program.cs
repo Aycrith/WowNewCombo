@@ -1,4 +1,4 @@
-﻿using Serilog;
+using Serilog;
 using Serilog.Extensions.Logging;
 using SharedLib.NpcFinder;
 using System.Diagnostics;
@@ -21,7 +21,7 @@ internal sealed class Program
 
     private static CancellationTokenSource cts;
     private static WowProcess process;
-    private static IWowScreen screen;
+    private static WowScreenDXGI screen;
 
     private const bool LogOverallTimes = false;
     private const int delay = 150;

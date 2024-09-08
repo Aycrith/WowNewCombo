@@ -74,7 +74,7 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
 
     // IAddonDataProvider
 
-    private Size addonSize;
+    private SixLabors.ImageSharp.Size addonSize;
     private DataFrame[] frames = null!;
     private Image<Bgra32> addonImage = null!;
 
@@ -231,7 +231,6 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
             GetRectangle(out screenRect);
             NormalizeScreenRect();
 
-            // TODO: bounds check
             if (screenRect.X < 0 ||
                 screenRect.Y < 0 ||
                 screenRect.Right > output.Description.DesktopCoordinates.Right ||
