@@ -17,13 +17,13 @@ public class PPather_Utils_PointDistanceToSegment
 
 
     [Benchmark(Baseline = true)]
-    public void Original()
+    public void Old_PointDistanceToSegment()
     {
         _ = PointDistanceToSegment_old(in p0, in x1, in x2);
     }
 
     [Benchmark]
-    public void New()
+    public void New_PointDistanceToSegment()
     {
         _ = PointDistanceToSegment(in p0, in x1, in x2);
     }

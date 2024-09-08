@@ -41,7 +41,7 @@ public class PPather_Utils_AxesIntersectTriangleBox
 
     [Benchmark(Baseline = true)]
 #pragma warning disable CA1822 // Mark members as static
-    public void Original()
+    public void Old_AxesIntersectTriangleBox()
 #pragma warning restore CA1822 // Mark members as static
     {
         _ = AxesIntersectTriangleBox_old(
@@ -52,7 +52,7 @@ public class PPather_Utils_AxesIntersectTriangleBox
 
     [Benchmark]
 #pragma warning disable CA1822 // Mark members as static
-    public void New()
+    public void New_AxesIntersectTriangleBox()
 #pragma warning restore CA1822 // Mark members as static
     {
         _ = AxesIntersectTriangleBox(

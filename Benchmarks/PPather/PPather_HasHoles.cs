@@ -23,7 +23,7 @@ public class PPather_HasHoles
 
     [Benchmark(Baseline = true)]
     [ArgumentsSource(nameof(Inputs_Fast))]
-    public bool IsHole_Old(int i, int j)
+    public bool Old_IsHole(int i, int j)
     {
         if (!hasholes)
             return false;
@@ -36,7 +36,7 @@ public class PPather_HasHoles
 
     [Benchmark]
     [ArgumentsSource(nameof(Inputs_Fast))]
-    public bool IsHole_New(int i, int j)
+    public bool New_IsHole(int i, int j)
     {
         if (!hasholes)
             return false;

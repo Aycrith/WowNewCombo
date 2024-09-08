@@ -19,7 +19,7 @@ public class PPather_Utils_SegmentTriangleIntersect
 
 
     [Benchmark(Baseline = true)]
-    public void Original()
+    public void Old_SegmentTriangleIntersect()
     {
         _ = SegmentTriangleIntersect_old(
             in p0, in p1,
@@ -28,7 +28,7 @@ public class PPather_Utils_SegmentTriangleIntersect
     }
 
     [Benchmark]
-    public void New()
+    public void New_SegmentTriangleIntersect()
     {
         _ = SegmentTriangleIntersect(
             in p0, in p1,
