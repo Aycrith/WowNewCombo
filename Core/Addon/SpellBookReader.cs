@@ -9,7 +9,7 @@ public sealed class SpellBookReader : IReader
 {
     private const int cSpellId = 71;
 
-    private readonly HashSet<int> spells = new();
+    private readonly HashSet<int> spells = [];
 
     public SpellDB SpellDB { get; }
     public int Count => spells.Count;
@@ -42,7 +42,7 @@ public sealed class SpellBookReader : IReader
         return SpellDB.Spells.TryGetValue(id, out spell);
     }
 
-    public int GetId(string name)
+    public int GetId(ReadOnlySpan<char> name)
     {
         foreach (int id in spells)
         {

@@ -17,6 +17,7 @@ using SharedLib;
 using SharedLib.NpcFinder;
 
 using static Core.Requirement;
+using System.Buffers;
 
 namespace Core;
 
@@ -43,17 +44,19 @@ public sealed partial class RequirementFactory
 
     private readonly FrozenDictionary<int, SchoolMask> npcSchoolImmunity;
 
-    private readonly string[] negateKeywords =
+    private static readonly string[] negateKeywords =
     [
         "not ",
         SymbolNegate
     ];
 
+    private readonly SearchValues<char> negateKeywordsSpan = SearchValues.Create(['!', 'n', 'o', 't', ' ']);
+
     private readonly Dictionary<string, Func<int>> intVariables;
 
     private readonly FrozenDictionary<string, Func<bool>> boolVariables;
 
-    private readonly FrozenDictionary<string, Func<string, Requirement>> requirementMap;
+    private readonly FrozenDictionary<string, Func<ReadOnlySpan<char>, Requirement>> requirementMap;
 
     private const char SEP1 = ':';
     private const char SEP2 = ',';
@@ -111,7 +114,7 @@ public sealed partial class RequirementFactory
         var targetBuff = sp.GetRequiredService<AuraTimeReader<ITargetBuffTimeReader>>();
         var focusBuff = sp.GetRequiredService<AuraTimeReader<IFocusBuffTimeReader>>();
 
-        Dictionary<string, Func<string, Requirement>> requirementMap = new()
+        Dictionary<string, Func<ReadOnlySpan<char>, Requirement>> requirementMap = new()
         {
             { greaterThenOrEqual, CreateGreaterOrEquals },
             { lessThenOrEqual, CreateLesserOrEquals },
@@ -358,9 +361,9 @@ public sealed partial class RequirementFactory
         {
             List<string> expressions = InfixToPostfix.Convert(requirement);
             Stack<Requirement> stack = new();
-            foreach (string expr in CollectionsMarshal.AsSpan(expressions))
+            foreach (ReadOnlySpan<char> expr in CollectionsMarshal.AsSpan(expressions))
             {
-                if (expr.Contains(SymbolAnd))
+                if (expr.Contains(SymbolAndChar))
                 {
                     Requirement a = stack.Pop();
                     Requirement b = stack.Pop();
@@ -368,7 +371,7 @@ public sealed partial class RequirementFactory
 
                     stack.Push(b);
                 }
-                else if (expr.Contains(SymbolOr))
+                else if (expr.Contains(SymbolOrChar))
                 {
                     Requirement a = stack.Pop();
                     Requirement b = stack.Pop();
@@ -378,13 +381,13 @@ public sealed partial class RequirementFactory
                 }
                 else
                 {
-                    string trim = expr.Trim();
-                    if (string.IsNullOrEmpty(trim))
+                    ReadOnlySpan<char> trim = expr.Trim();
+                    if (trim.IsEmpty)
                     {
                         continue;
                     }
 
-                    LogProcessing(logger, name, trim);
+                    LogProcessing(logger, name, trim.ToString());
                     stack.Push(CreateRequirement(trim));
                 }
             }
@@ -687,42 +690,48 @@ public sealed partial class RequirementFactory
     }
 
 
-    public Requirement CreateRequirement(string requirement)
+    public Requirement CreateRequirement(ReadOnlySpan<char> requirement)
     {
-        string? negated = negateKeywords.FirstOrDefault(requirement.StartsWith);
-        if (!string.IsNullOrEmpty(negated))
-        {
-            requirement = requirement[negated.Length..];
-        }
+        int negateIndex = requirement.IndexOfAny(negateKeywordsSpan);
+        int negateLength = requirement.IndexOfAnyExcept(negateKeywordsSpan);
 
-        string? key = requirementMap.Keys.FirstOrDefault(requirement.Contains);
-        if (!string.IsNullOrEmpty(key))
+        ReadOnlySpan<char> negated = negateIndex == -1
+            ? []
+            : requirement[..negateLength];
+
+        requirement = requirement[negateLength..];
+
+        string requirentStr = requirement.ToString();
+
+        string? key = requirementMap.Keys.FirstOrDefault(requirentStr.Contains);
+        if (!string.IsNullOrEmpty(key) && requirementMap.TryGetValue(key, out var createRequirement))
         {
-            Requirement r = requirementMap[key](requirement);
-            if (negated != null)
+            Requirement r = createRequirement(requirement);
+            if (!negated.IsEmpty)
             {
                 r.Negate(negated);
             }
             return r;
         }
 
-        if (!boolVariables.TryGetValue(requirement, out Func<bool>? value))
+        var spanLookupBool = boolVariables.GetAlternateLookup<ReadOnlySpan<char>>();
+        if (!spanLookupBool.TryGetValue(requirement, out Func<bool>? value))
         {
-            LogUnknown(logger, requirement, string.Join(", ", boolVariables.Keys));
+            LogUnknown(logger, requirentStr, string.Join(", ", boolVariables.Keys));
             return new Requirement
             {
-                LogMessage = () => $"UNKNOWN REQUIREMENT! {requirement}"
+                LogMessage = () => $"UNKNOWN REQUIREMENT! {requirentStr}"
             };
         }
 
-        string s() => requirement;
+        string s() => requirentStr;
         Requirement req = new()
         {
             HasRequirement = value,
             LogMessage = s
         };
 
-        if (negated != null)
+        if (!negated.IsEmpty)
         {
             req.Negate(negated);
         }
@@ -801,13 +810,12 @@ public sealed partial class RequirementFactory
             Max(0, playerReader.SpellQueueTimeMs - playerReader.NetworkLatency);
     }
 
-    private Requirement CreateTargetCastingSpell(string requirement)
+    private Requirement CreateTargetCastingSpell(ReadOnlySpan<char> requirement)
     {
         return create(requirement, playerReader);
-        static Requirement create(string requirement, PlayerReader playerReader)
+        static Requirement create(ReadOnlySpan<char> requirement, PlayerReader playerReader)
         {
-            ReadOnlySpan<char> span = requirement;
-            int sep1 = span.IndexOf(SEP1);
+            int sep1 = requirement.IndexOf(SEP1);
             // 'TargetCastingSpell'
             if (sep1 == -1)
             {
@@ -819,8 +827,15 @@ public sealed partial class RequirementFactory
             }
 
             // 'TargetCastingSpell:_1_?,_n_'
-            string[] spellsPart = span[(sep1 + 1)..].ToString().Split(SEP2);
-            HashSet<int> spellIds = spellsPart.Select(int.Parse).ToHashSet();
+            Span<Range> ranges = stackalloc Range[requirement.Length];
+            ReadOnlySpan<char> values = requirement[(sep1 + 1)..];
+            int count = values.Split(ranges, SEP2);
+
+            HashSet<int> spellIds = new(count);
+            foreach (var range in ranges[..count])
+            {
+                spellIds.Add(int.Parse(values[range]));
+            }
 
             bool f() => spellIds.Contains(playerReader.SpellBeingCastByTarget);
             string s() => $"Target casts {playerReader.SpellBeingCastByTarget} ∈ [{string.Join(SEP2, spellIds)}]";
@@ -832,15 +847,14 @@ public sealed partial class RequirementFactory
         }
     }
 
-    private Requirement CreateForm(string requirement)
+    private Requirement CreateForm(ReadOnlySpan<char> requirement)
     {
         return create(requirement, playerReader);
-        static Requirement create(string requirement, PlayerReader playerReader)
+        static Requirement create(ReadOnlySpan<char> requirement, PlayerReader playerReader)
         {
             // 'Form:_FORM_'
-            ReadOnlySpan<char> span = requirement;
-            int sep = span.IndexOf(SEP1);
-            Form form = Enum.Parse<Form>(span[(sep + 1)..]);
+            int sep = requirement.IndexOf(SEP1);
+            Form form = Enum.Parse<Form>(requirement[(sep + 1)..]);
 
             bool f() => playerReader.Form == form;
             string s() => playerReader.Form.ToStringF();
@@ -853,15 +867,14 @@ public sealed partial class RequirementFactory
         }
     }
 
-    private Requirement CreateRace(string requirement)
+    private Requirement CreateRace(ReadOnlySpan<char> requirement)
     {
         return create(requirement, playerReader);
-        static Requirement create(string requirement, PlayerReader playerReader)
+        static Requirement create(ReadOnlySpan<char> requirement, PlayerReader playerReader)
         {
             // 'Race:_RACE_'
-            ReadOnlySpan<char> span = requirement;
-            int sep = span.IndexOf(SEP1);
-            UnitRace race = Enum.Parse<UnitRace>(span[(sep + 1)..]);
+            int sep = requirement.IndexOf(SEP1);
+            UnitRace race = Enum.Parse<UnitRace>(requirement[(sep + 1)..]);
 
             bool f() => playerReader.Race == race;
             string s() => playerReader.Race.ToStringF();
@@ -874,15 +887,14 @@ public sealed partial class RequirementFactory
         }
     }
 
-    private Requirement CreateSpell(string requirement)
+    private Requirement CreateSpell(ReadOnlySpan<char> requirement)
     {
         return create(requirement, spellBookReader);
-        static Requirement create(string requirement, SpellBookReader spellBookReader)
+        static Requirement create(ReadOnlySpan<char> requirement, SpellBookReader spellBookReader)
         {
             // 'Spell:_NAME_OR_ID_'
-            ReadOnlySpan<char> span = requirement;
-            int sep = span.IndexOf(SEP1);
-            string name = span[(sep + 1)..].Trim().ToString();
+            int sep = requirement.IndexOf(SEP1);
+            string name = requirement[(sep + 1)..].Trim().ToString();
 
             if (int.TryParse(name, out int id) &&
                 spellBookReader.TryGetValue(id, out Spell spell))
@@ -905,29 +917,27 @@ public sealed partial class RequirementFactory
         }
     }
 
-    private Requirement CreateTalent(string requirement)
+    private Requirement CreateTalent(ReadOnlySpan<char> requirement)
     {
         return create(requirement, talentReader, intVariables);
-        static Requirement create(string requirement, TalentReader talentReader, Dictionary<string, Func<int>> intVariables)
+        static Requirement create(ReadOnlySpan<char> requirement, TalentReader talentReader, Dictionary<string, Func<int>> intVariables)
         {
             // 'Talent:_NAME_?:_RANK_OR_INTVARIABLE_'
-            ReadOnlySpan<char> span = requirement;
-
-            int firstSep = span.IndexOf(SEP1);
-            int lastSep = span.LastIndexOf(SEP1);
+            int firstSep = requirement.IndexOf(SEP1);
+            int lastSep = requirement.LastIndexOf(SEP1);
 
             int rank = 1;
             if (firstSep != lastSep)
             {
-                ReadOnlySpan<char> rank_or_variable = span[(lastSep + 1)..];
+                ReadOnlySpan<char> rank_or_variable = requirement[(lastSep + 1)..];
                 rank = GetIntValueOrVariable(intVariables, rank_or_variable);
             }
             else
             {
-                lastSep = span.Length;
+                lastSep = requirement.Length;
             }
 
-            string name = span[(firstSep + 1)..lastSep].ToString();
+            string name = requirement[(firstSep + 1)..lastSep].ToString();
 
             bool f() => talentReader.HasTalent(name, rank);
             string s() => rank == 1 ? $"Talent {name}" : $"Talent {name} (Rank {rank})";
@@ -940,27 +950,26 @@ public sealed partial class RequirementFactory
         }
     }
 
-    private Requirement CreateTrigger(string requirement)
+    private Requirement CreateTrigger(ReadOnlySpan<char> requirement)
     {
         return create(requirement, playerReader);
-        static Requirement create(string requirement, PlayerReader playerReader)
+        static Requirement create(ReadOnlySpan<char> requirement, PlayerReader playerReader)
         {
             // 'Trigger:_BIT_NUM_?:_TEXT_'
-            ReadOnlySpan<char> span = requirement;
-            int firstSep = span.IndexOf(SEP1);
-            int lastSep = span.LastIndexOf(SEP1);
+            int firstSep = requirement.IndexOf(SEP1);
+            int lastSep = requirement.LastIndexOf(SEP1);
 
             string text = string.Empty;
             if (firstSep != lastSep)
             {
-                text = span[(lastSep + 1)..].ToString();
+                text = requirement[(lastSep + 1)..].ToString();
             }
             else
             {
-                lastSep = span.Length;
+                lastSep = requirement.Length;
             }
 
-            int bitNum = int.Parse(span[(firstSep + 1)..lastSep]);
+            int bitNum = int.Parse(requirement[(firstSep + 1)..lastSep]);
             int bitMask = Mask.M[bitNum];
 
             bool f() => playerReader.CustomTrigger1[bitMask];
@@ -974,16 +983,15 @@ public sealed partial class RequirementFactory
         }
     }
 
-    private Requirement CreateNpcId(string requirement)
+    private Requirement CreateNpcId(ReadOnlySpan<char> requirement)
     {
         return create(requirement, playerReader, intVariables, creatureDb);
-        static Requirement create(string requirement, PlayerReader playerReader,
+        static Requirement create(ReadOnlySpan<char> requirement, PlayerReader playerReader,
             Dictionary<string, Func<int>> intVariables, CreatureDB creatureDb)
         {
             // 'npcID:_ID_OR_INTVARIABLE_'
-            ReadOnlySpan<char> span = requirement;
-            int sep = span.IndexOf(SEP1);
-            ReadOnlySpan<char> name_or_id = span[(sep + 1)..];
+            int sep = requirement.IndexOf(SEP1);
+            ReadOnlySpan<char> name_or_id = requirement[(sep + 1)..];
             int npcId = GetIntValueOrVariable(intVariables, name_or_id);
 
             if (!creatureDb.Entries.TryGetValue(npcId, out string? npcName))
@@ -1002,30 +1010,28 @@ public sealed partial class RequirementFactory
         }
     }
 
-    private Requirement CreateBagItem(string requirement)
+    private Requirement CreateBagItem(ReadOnlySpan<char> requirement)
     {
         return create(requirement, bagReader, intVariables, itemDb);
-        static Requirement create(string requirement, BagReader bagReader,
+        static Requirement create(ReadOnlySpan<char> requirement, BagReader bagReader,
             Dictionary<string, Func<int>> intVariables, ItemDB itemDb)
         {
             // 'BagItem:_ID_OR_INTVARIABLE_?:_COUNT_OR_INTVARIABLE_'
-            ReadOnlySpan<char> span = requirement;
-
-            int firstSep = span.IndexOf(SEP1);
-            int lastSep = span.LastIndexOf(SEP1);
+            int firstSep = requirement.IndexOf(SEP1);
+            int lastSep = requirement.LastIndexOf(SEP1);
 
             int count = 1;
             if (firstSep != lastSep)
             {
-                var count_or_variable = span[(lastSep + 1)..];
+                var count_or_variable = requirement[(lastSep + 1)..];
                 count = GetIntValueOrVariable(intVariables, count_or_variable);
             }
             else
             {
-                lastSep = span.Length;
+                lastSep = requirement.Length;
             }
 
-            ReadOnlySpan<char> name_or_id = span[(firstSep + 1)..lastSep];
+            ReadOnlySpan<char> name_or_id = requirement[(firstSep + 1)..lastSep];
 
             int itemId = GetIntValueOrVariable(intVariables, name_or_id);
 
@@ -1046,16 +1052,15 @@ public sealed partial class RequirementFactory
         }
     }
 
-    private Requirement CreateSpellInRange(string requirement)
+    private Requirement CreateSpellInRange(ReadOnlySpan<char> requirement)
     {
         return create(requirement, playerReader.SpellInRange, intVariables);
-        static Requirement create(string requirement, SpellInRange range,
+        static Requirement create(ReadOnlySpan<char> requirement, SpellInRange range,
             Dictionary<string, Func<int>> intVariables)
         {
             // 'SpellInRange:_BIT_NUM_OR_INTVARIABLE_'
-            ReadOnlySpan<char> span = requirement;
-            int sep = span.IndexOf(SEP1);
-            int bitNum = GetIntValueOrVariable(intVariables, span[(sep + 1)..]);
+            int sep = requirement.IndexOf(SEP1);
+            int bitNum = GetIntValueOrVariable(intVariables, requirement[(sep + 1)..]);
             int bitMask = Mask.M[bitNum];
 
             bool f() => range[bitMask];
@@ -1069,12 +1074,11 @@ public sealed partial class RequirementFactory
         }
     }
 
-    private Requirement CreateUsable(string requirement)
+    private Requirement CreateUsable(ReadOnlySpan<char> requirement)
     {
         // 'Usable:_KeyAction_Name_'
-        ReadOnlySpan<char> span = requirement;
-        int sep = span.IndexOf(SEP1);
-        ReadOnlySpan<char> name = span[(sep + 1)..].Trim();
+        int sep = requirement.IndexOf(SEP1);
+        ReadOnlySpan<char> name = requirement[(sep + 1)..].Trim();
 
         List<(string _, KeyActions)> groups = classConfig.GetByType<KeyActions>();
 
@@ -1091,55 +1095,53 @@ public sealed partial class RequirementFactory
         }
 
         throw new InvalidOperationException($"'{requirement}' " +
-            $"related named '{name}' {nameof(KeyAction)} not found!");
+            $"related named '{name}' {nameof(Core.KeyAction)} not found!");
     }
 
-    private Requirement CreateGreaterThen(string requirement)
+    private Requirement CreateGreaterThen(ReadOnlySpan<char> requirement)
     {
         return CreateArithmetic(greaterThen, requirement, intVariables);
     }
 
-    private Requirement CreateLesserThen(string requirement)
+    private Requirement CreateLesserThen(ReadOnlySpan<char> requirement)
     {
         return CreateArithmetic(lessThen, requirement, intVariables);
     }
 
-    private Requirement CreateGreaterOrEquals(string requirement)
+    private Requirement CreateGreaterOrEquals(ReadOnlySpan<char> requirement)
     {
         return CreateArithmetic(greaterThenOrEqual, requirement, intVariables);
     }
 
-    private Requirement CreateLesserOrEquals(string requirement)
+    private Requirement CreateLesserOrEquals(ReadOnlySpan<char> requirement)
     {
         return CreateArithmetic(lessThenOrEqual, requirement, intVariables);
     }
 
-    private Requirement CreateEquals(string requirement)
+    private Requirement CreateEquals(ReadOnlySpan<char> requirement)
     {
         return CreateArithmetic(equals, requirement, intVariables);
     }
 
-    private Requirement CreateModulo(string requirement)
+    private Requirement CreateModulo(ReadOnlySpan<char> requirement)
     {
         return CreateArithmetic(modulo, requirement, intVariables);
     }
 
-    private Requirement CreateArithmetic(string symbol, string requirement,
+    private Requirement CreateArithmetic(ReadOnlySpan<char> symbol, ReadOnlySpan<char> requirement,
         Dictionary<string, Func<int>> intVariables)
     {
-        ReadOnlySpan<char> span = requirement;
-        int sep = span.IndexOf(symbol);
+        int sep = requirement.IndexOf(symbol);
 
-        string key = span[..sep].Trim().ToString();
-        ReadOnlySpan<char> varOrConst = span[(sep + symbol.Length)..];
+        ReadOnlySpan<char> key = requirement[..sep].Trim();
+        ReadOnlySpan<char> varOrConst = requirement[(sep + symbol.Length)..];
 
-        if (!intVariables.TryGetValue(key, out Func<int>? aliasOrKey))
+        var spanLookup = intVariables.GetAlternateLookup<string, Func<int>, ReadOnlySpan<char>>();
+        if (!spanLookup.TryGetValue(key, out Func<int>? aliasOrKey))
         {
-            LogUnknown(logger, requirement, string.Join(", ", intVariables.Keys));
-            throw new ArgumentOutOfRangeException(requirement);
+            LogUnknown(logger, requirement.ToString(), string.Join(", ", intVariables.Keys));
+            throw new ArgumentOutOfRangeException(requirement.ToString());
         }
-
-        string display = key;
 
         string aliasKey = aliasOrKey().ToString();
         if (intVariables.ContainsKey(aliasKey))
@@ -1147,7 +1149,7 @@ public sealed partial class RequirementFactory
             key = aliasKey;
         }
 
-        Func<int> lValue = intVariables[key];
+        Func<int> lValue = aliasOrKey;
 
         string varOrConstName = "";
         Func<int> rValue;
@@ -1167,7 +1169,10 @@ public sealed partial class RequirementFactory
         if (!string.IsNullOrEmpty(varOrConstName))
             varOrConstName += " ";
 
-        string msg() => $"{display} {lValue()} {symbol} {varOrConstName}{rValue()}";
+        string display = key.ToString();
+        string displaySymbol = symbol.ToString();
+
+        string msg() => $"{display} {lValue()} {displaySymbol} {varOrConstName}{rValue()}";
         switch (symbol)
         {
             case modulo:
@@ -1189,13 +1194,14 @@ public sealed partial class RequirementFactory
                 bool le() => lValue() <= rValue();
                 return new Requirement { HasRequirement = le, LogMessage = msg };
             default:
-                throw new ArgumentOutOfRangeException(requirement);
+                throw new ArgumentOutOfRangeException(requirement.ToString());
         };
     }
 
     private static int GetIntValueOrVariable(Dictionary<string, Func<int>> intVariables, ReadOnlySpan<char> count_or_variable)
     {
-        return intVariables.TryGetValue(count_or_variable.ToString(), out Func<int>? countFunc)
+        var spanLookup = intVariables.GetAlternateLookup<string, Func<int>, ReadOnlySpan<char>>();
+        return spanLookup.TryGetValue(count_or_variable, out Func<int>? countFunc)
             ? countFunc()
             : int.Parse(count_or_variable);
     }
