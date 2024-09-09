@@ -30,9 +30,9 @@ internal sealed class Program
     // SoM 1.14.4.51829
     // TBCC 2.5.4.44833
     // WOTLK 3.4.3.52237
-    // SoD 1.15.2.54092
-    // Cata 4.4.0.54647
-    private const string build = "4.4.0.54647";
+    // SoD 1.15.4.56493
+    // Cata 4.4.1.56464
+    private const string build = "4.4.1.56464";
 
     public static void Main()
     {
