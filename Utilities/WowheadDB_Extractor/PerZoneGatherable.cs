@@ -52,7 +52,7 @@ namespace WowheadDB_Extractor
                     Console.WriteLine($" - {nameof(PerZoneGatherable)}\n {e}");
             }
 
-            return Array.Empty<int>();
+            return [];
         }
 
 
