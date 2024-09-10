@@ -1,10 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Platforms>AnyCPU;x64;x86</Platforms>
-	<nullable>enable</nullable>
-	<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
-	<LangVersion>preview</LangVersion>
+	  <nullable>enable</nullable>
+	  <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+	  <LangVersion>preview</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
