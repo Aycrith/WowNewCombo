@@ -1136,7 +1136,7 @@ public sealed partial class RequirementFactory
         ReadOnlySpan<char> key = requirement[..sep].Trim();
         ReadOnlySpan<char> varOrConst = requirement[(sep + symbol.Length)..];
 
-        var spanLookup = intVariables.GetAlternateLookup<string, Func<int>, ReadOnlySpan<char>>();
+        var spanLookup = intVariables.GetAlternateLookup<ReadOnlySpan<char>>();
         if (!spanLookup.TryGetValue(key, out Func<int>? aliasOrKey))
         {
             LogUnknown(logger, requirement.ToString(), string.Join(", ", intVariables.Keys));
@@ -1200,7 +1200,7 @@ public sealed partial class RequirementFactory
 
     private static int GetIntValueOrVariable(Dictionary<string, Func<int>> intVariables, ReadOnlySpan<char> count_or_variable)
     {
-        var spanLookup = intVariables.GetAlternateLookup<string, Func<int>, ReadOnlySpan<char>>();
+        var spanLookup = intVariables.GetAlternateLookup<ReadOnlySpan<char>>();
         return spanLookup.TryGetValue(count_or_variable, out Func<int>? countFunc)
             ? countFunc()
             : int.Parse(count_or_variable);
