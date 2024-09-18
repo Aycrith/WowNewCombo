@@ -6,14 +6,14 @@ namespace Core.Addon;
 public sealed class ConfigAddonReader : IAddonReader
 {
     private readonly IAddonDataProvider reader;
-    private readonly AutoResetEvent autoResetEvent;
+    private readonly ManualResetEventSlim autoResetEvent;
 
     public double AvgUpdateLatency => throw new NotImplementedException();
     public string TargetName => throw new NotImplementedException();
 
     public event Action? AddonDataChanged;
 
-    public ConfigAddonReader(IAddonDataProvider reader, AutoResetEvent autoResetEvent)
+    public ConfigAddonReader(IAddonDataProvider reader, ManualResetEventSlim autoResetEvent)
     {
         this.reader = reader;
         this.autoResetEvent = autoResetEvent;
