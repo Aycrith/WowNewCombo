@@ -14,15 +14,15 @@ public sealed class NpcNameTargetingLocations
         float w = npcNameFinder.ScaleToRefWidth;
         float h = npcNameFinder.ScaleToRefHeight;
 
-        Targeting = new Point[]
-        {
+        Targeting =
+        [
             new Point(0, -2),
             new Point(-13, 8).Scale(w, h),
             new Point(13, 8).Scale(w, h),
-        };
+        ];
 
-        FindBy = new Point[]
-        {
+        FindBy =
+        [
             new Point(0, 0),
             new Point(0, 15).Scale(w, h),
 
@@ -41,6 +41,6 @@ public sealed class NpcNameTargetingLocations
             new Point(0,   200).Scale(w, h),
             new Point(-15, 200).Scale(w, h),
             new Point(-15, 200).Scale(w, h),
-        };
+        ];
     }
 }
