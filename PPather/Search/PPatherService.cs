@@ -8,6 +8,7 @@ using SharedLib.Data;
 using Microsoft.Extensions.Logging;
 using System.Numerics;
 using SharedLib.Extensions;
+using System.Diagnostics;
 
 namespace PPather;
 
@@ -144,7 +145,12 @@ public sealed class PPatherService
 
     public void Save()
     {
+        long timestamp = Stopwatch.GetTimestamp();
+
         search.PathGraph.Save();
+
+        if (logger.IsEnabled(LogLevel.Trace))
+            logger.LogTrace($"Saved GraphChunks {Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds} ms");
     }
 
     public void SetLocations(Vector4 from, Vector4 to)
