@@ -9,6 +9,8 @@ using Core;
 using System;
 using Microsoft.Extensions.Logging;
 using Game;
+using Microsoft.Extensions.Options;
+using SharedLib;
 
 #pragma warning disable 0162
 
@@ -49,7 +51,7 @@ internal sealed class Program
         ];
 
         cts = new CancellationTokenSource();
-        process = new(cts);
+        process = new(cts, Options.Create<StartupConfigPid>(new() { Id = -1 }));
         screen = new WowScreenDXGI(loggerFactory.CreateLogger<WowScreenDXGI>(), process, mockFrames);
 
         Test_NPCNameFinder();

@@ -2,6 +2,8 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 
+using Microsoft.Extensions.Options;
+
 using SharedLib;
 
 #nullable enable
@@ -44,7 +46,7 @@ public sealed class WowProcess
 
     public bool IsRunning { get; private set; }
 
-    public WowProcess(CancellationTokenSource cts, int pid = -1)
+    private WowProcess(CancellationTokenSource cts, int pid = -1)
     {
         token = cts.Token;
 
@@ -62,7 +64,7 @@ public sealed class WowProcess
         thread.Start();
     }
 
-    public WowProcess(CancellationTokenSource cts, StartupConfigPid pid) : this(cts, pid.Id) { }
+    public WowProcess(CancellationTokenSource cts, IOptions<StartupConfigPid> options) : this(cts, options.Value.Id) { }
 
     private void PollProcessExited()
     {
