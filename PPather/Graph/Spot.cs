@@ -19,6 +19,8 @@
 using System;
 using System.Buffers;
 using System.Numerics;
+using System.Runtime.CompilerServices;
+
 using SharedLib.Extensions;
 
 namespace PPather.Graph;
@@ -39,7 +41,7 @@ public sealed class Spot
     public uint flags;
 
     public int n_paths;
-    public float[] paths = Array.Empty<float>(); // 3 floats per outgoing path
+    public float[] paths = []; // 3 floats per outgoing path
 
     public GraphChunk chunk;
     public Spot next;  // list on same x,y, used by chunk
@@ -94,6 +96,7 @@ public sealed class Spot
         return Vector2.Distance(Loc.AsVector2(), s.Loc.AsVector2());
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsCloseZ(float z)
     {
         float dz = z - Loc.Z;
@@ -111,6 +114,7 @@ public sealed class Spot
             chunk.modified = true;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsFlagSet(uint flag)
     {
         return (flags & flag) != 0;
@@ -167,7 +171,7 @@ public sealed class Spot
 
     public bool HasPathTo(float x, float y, float z)
     {
-        ReadOnlySpan<float> pos = stackalloc[] { x, y, z };
+        ReadOnlySpan<float> pos = [x, y, z];
         return paths.AsSpan().IndexOf(pos) != -1;
     }
 
@@ -223,33 +227,37 @@ public sealed class Spot
                 found_index = i;
             }
         }
-        if (found_index != -1)
+
+        if (found_index == -1)
         {
-            for (int i = found_index; i < n_paths - 1; i++)
-            {
-                int off = i * 3;
-                paths[off + 0] = paths[off + 3];
-                paths[off + 1] = paths[off + 4];
-                paths[off + 2] = paths[off + 5];
-            }
-            n_paths--;
-            if (chunk != null)
-                chunk.modified = true;
+            return;
         }
+
+        for (int i = found_index; i < n_paths - 1; i++)
+        {
+            int off = i * 3;
+            paths[off + 0] = paths[off + 3];
+            paths[off + 1] = paths[off + 4];
+            paths[off + 2] = paths[off + 5];
+        }
+        n_paths--;
+        if (chunk != null)
+            chunk.modified = true;
     }
 
     // search stuff
 
     public bool SetSearchID(int id)
     {
-        if (searchID != id)
+        if (searchID == id)
         {
-            closed = false;
-            scoreSet = false;
-            searchID = id;
-            return true;
+            return false;
         }
-        return false;
+
+        closed = false;
+        scoreSet = false;
+        searchID = id;
+        return true;
     }
 
     public bool SearchIsClosed(int id)

@@ -23,11 +23,13 @@ public sealed class SparseFloatMatrix2D<T> : SparseMatrix2D<T> where T : IList
         this.gridSize = gridSize;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public float GridToLocal(int grid)
     {
         return (grid * gridSize) - offset;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int LocalToGrid(float f)
     {
         return (int)((f + offset) / gridSize);

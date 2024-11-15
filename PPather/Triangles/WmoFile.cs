@@ -208,10 +208,12 @@ public abstract class Manager<T>
 
     public T AddAndLoadIfNeeded(string path)
     {
-        if (!items.TryGetValue(path, out T t) && Load(path, out t))
+        ref T t = ref CollectionsMarshal.GetValueRefOrAddDefault(items, path, out bool exists);
+        if (!exists && Load(path, out t))
         {
-            items[path] = t;
+
         }
+
         return t;
     }
 }
@@ -227,9 +229,9 @@ public sealed class ModelManager : Manager<Model>
 
     public override bool Load(string path, out Model t)
     {
-        // change .mdx to .m2
-        if (Path.GetExtension(path).Equals(".mdx", StringComparison.OrdinalIgnoreCase) ||
-            Path.GetExtension(path).Equals(".mdl", StringComparison.OrdinalIgnoreCase))
+        // Use spans for string comparison
+        if (path.AsSpan().EndsWith(".mdx".AsSpan(), StringComparison.OrdinalIgnoreCase) ||
+            path.AsSpan().EndsWith(".mdl".AsSpan(), StringComparison.OrdinalIgnoreCase))
         {
             path = Path.ChangeExtension(path, ".m2");
         }

@@ -239,6 +239,9 @@
                 Serialize(spotPath.locations, options), PathColour, Name);
 
             await jsRuntime.InvokeVoidAsync("removeMeshes", Token, "search");
+
+            await jsRuntime.InvokeVoidAsync("drawPath", Token,
+                Serialize(spotPath.locations, options), PathColour, Name);
         }
         else
         {

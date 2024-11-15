@@ -148,9 +148,9 @@ public sealed class MPQTriangleSupplier
         Span<int> vertices = stackalloc int[9 * 9];
         Span<int> verticesMid = stackalloc int[8 * 8];
 
-        for (int row = 0; row < 9; row++)
+        for (int col = 0; col < 9; col++)
         {
-            for (int col = 0; col < 9; col++)
+            for (int row = 0; row < 9; row++)
             {
                 ChunkGetCoordForPoint(c, row, col, out float x, out float y, out float z);
                 int index = tc.AddVertex(x, y, z);
@@ -158,9 +158,9 @@ public sealed class MPQTriangleSupplier
             }
         }
 
-        for (int row = 0; row < 8; row++)
+        for (int col = 0; col < 8; col++)
         {
-            for (int col = 0; col < 8; col++)
+            for (int row = 0; row < 8; row++)
             {
                 ChunkGetCoordForMiddlePoint(c, row, col, out float x, out float y, out float z);
                 int index = tc.AddVertex(x, y, z);
@@ -204,9 +204,9 @@ public sealed class MPQTriangleSupplier
         }
 
         // paint the water
-        for (int row = 0; row < LiquidData.HEIGHT_SIZE; row++)
+        for (int col = 0; col < LiquidData.HEIGHT_SIZE; col++)
         {
-            for (int col = 0; col < LiquidData.HEIGHT_SIZE; col++)
+            for (int row = 0; row < LiquidData.HEIGHT_SIZE; row++)
             {
                 int ii = row * LiquidData.HEIGHT_SIZE + col;
 
@@ -218,13 +218,13 @@ public sealed class MPQTriangleSupplier
             }
         }
 
-        for (int row = 0; row < LiquidData.FLAG_SIZE; row++)
+        for (int col = 0; col < LiquidData.FLAG_SIZE; col++)
         {
-            for (int col = 0; col < LiquidData.FLAG_SIZE; col++)
+            for (int row = 0; row < LiquidData.FLAG_SIZE; row++)
             {
                 int ii = row * LiquidData.FLAG_SIZE + col;
 
-                if (c.water_flags[ii] == 0xf)
+                if (c.water_flags[ii] == 0)
                     continue;
 
                 int v0 = vertices[row * LiquidData.HEIGHT_SIZE + col];

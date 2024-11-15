@@ -135,6 +135,7 @@ public sealed class TriangleCollection
         VerticesGet(i, out x, out y, out z);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void GetTriangle(int i,
         out int v0, out int v1, out int v2, out TriangleType flags)
     {
@@ -142,6 +143,7 @@ public sealed class TriangleCollection
     }
 
     [SkipLocalsInit]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void GetTriangleVertices(int i,
                                     out float x0, out float y0, out float z0,
                                     out float x1, out float y1, out float z1,
@@ -156,6 +158,7 @@ public sealed class TriangleCollection
     }
 
     [SkipLocalsInit]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void GetTriangleVertices(int i,
                                     out float x0, out float y0, out float z0,
                                     out float x1, out float y1, out float z1,
@@ -169,6 +172,7 @@ public sealed class TriangleCollection
     }
 
     [SkipLocalsInit]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void VerticesGet(int index, out float x, out float y, out float z)
     {
         ReadOnlySpan<Vector3> span = CollectionsMarshal.AsSpan(vertecies);
@@ -182,6 +186,7 @@ public sealed class TriangleCollection
 
 
     [SkipLocalsInit]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void TrianglesGet(
         int index, out int v0, out int v1, out int v2, out TriangleType flags)
     {

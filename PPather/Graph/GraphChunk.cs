@@ -24,6 +24,10 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Numerics;
 using PPather.Extensions;
+using System.Runtime.CompilerServices;
+
+using static System.Diagnostics.Stopwatch;
+using System.Buffers;
 
 namespace PPather.Graph;
 
@@ -45,6 +49,8 @@ public sealed class GraphChunk
     public readonly int ix, iy;
     public bool modified;
     public long LRU;
+
+    public int count;
 
     // Per spot:
     // uint32 magic
@@ -77,12 +83,14 @@ public sealed class GraphChunk
 
     public void Clear()
     {
-        for (int i = 0; i < SIZE; i++)
+        ReadOnlySpan<Spot> span = spots.AsSpan();
+        for (int i = 0; i < span.Length; i++)
         {
-            spots[i]?.Clear();
+            span[i]?.Clear();
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void LocalCoords(float x, float y, out int ix, out int iy)
     {
         ix = (int)(x - base_x);
@@ -107,7 +115,7 @@ public sealed class GraphChunk
         return s;
     }
 
-    // return old spot at conflicting poision
+    // return old spot at conflicting position
     // or the same as passed the function if all was ok
     public Spot AddSpot(Spot s)
     {
@@ -123,25 +131,32 @@ public sealed class GraphChunk
         s.next = spots[i];
         spots[i] = s;
         modified = true;
+        count++;
         return s;
     }
 
-    public List<Spot> GetAllSpots()
+    public ReadOnlySpan<Spot> GetAllSpots()
     {
-        List<Spot> l = new();
-        for (int i = 0; i < SIZE; i++)
+        var pool = ArrayPool<Spot>.Shared;
+        var output = pool.Rent(count);
+        int j = 0;
+
+        var span = spots.AsSpan();
+        for (int i = 0; i < span.Length; i++)
         {
-            Spot s = spots[i];
+            Spot s = span[i];
             while (s != null)
             {
-                l.Add(s);
+                output[j++] = s;
                 s = s.next;
             }
         }
 
-        return l;
+        pool.Return(output);
+        return output.AsSpan(0, j);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int Index(int x, int y)
     {
         return (y * CHUNK_SIZE) + x;
@@ -156,7 +171,7 @@ public sealed class GraphChunk
 
         try
         {
-            long timestamp = Stopwatch.GetTimestamp();
+            long startTime = GetTimestamp();
 
             using FileStream stream = File.OpenRead(filePath);
             using BinaryReader br = new(stream);
@@ -172,10 +187,10 @@ public sealed class GraphChunk
                 return false;
             }
 
-            int n_spots = 0;
+            count = 0;
             while (br.ReadUInt32() != FILE_ENDMAGIC)
             {
-                n_spots++;
+                count++;
                 uint reserved = br.ReadUInt32();
                 uint flags = br.ReadUInt32();
                 Vector3 pos = br.ReadVector3();
@@ -201,7 +216,7 @@ public sealed class GraphChunk
             }
 
             if (logger.IsEnabled(LogLevel.Trace))
-                logger.LogTrace($"[{nameof(GraphChunk)}] Loaded {filePath} {n_spots} spots {Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds} ms");
+                logger.LogTrace($"[{nameof(GraphChunk)}] Loaded {filePath} {count} spots {GetElapsedTime(startTime).TotalMilliseconds} ms");
 
             return true;
         }
@@ -226,7 +241,7 @@ public sealed class GraphChunk
             bw.Write(FILE_MAGIC);
 
             int n_spots = 0;
-            var span = CollectionsMarshal.AsSpan(GetAllSpots());
+            ReadOnlySpan<Spot> span = GetAllSpots();
             for (int j = 0; j < span.Length; j++)
             {
                 Spot s = span[j];
@@ -250,8 +265,6 @@ public sealed class GraphChunk
             }
             bw.Write(FILE_ENDMAGIC);
 
-            bw.Close();
-            stream.Close();
             modified = false;
 
             if (logger.IsEnabled(LogLevel.Trace))

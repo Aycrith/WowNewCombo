@@ -28,6 +28,7 @@ using System.IO;
 using PPather.Triangles.Data;
 
 using static System.MathF;
+using static System.Diagnostics.Stopwatch;
 using System.Buffers;
 
 #pragma warning disable 162
@@ -192,7 +193,6 @@ public sealed class PathGraph
 
     public void Save()
     {
-        long timestamp = Stopwatch.GetTimestamp();
         foreach (GraphChunk gc in chunks.GetAllElements())
         {
             if (gc.modified)
@@ -200,9 +200,6 @@ public sealed class PathGraph
                 gc.Save();
             }
         }
-
-        if (logger.IsEnabled(LogLevel.Trace))
-            logger.LogTrace($"Saved GraphChunks {Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds} ms");
     }
 
     // Create and load from file if exisiting
@@ -545,12 +542,12 @@ public sealed class PathGraph
 
     public Spot ClosestSpot;
     public Spot PeekSpot;
-    public Vector3[] TestPoints = Array.Empty<Vector3>();
+    public Vector3[] TestPoints = [];
 
     private Spot Search(Spot fromSpot, Spot destinationSpot, eSearchScoreSpot searchScoreSpot, float minHowClose)
     {
-        long searchDuration = Stopwatch.GetTimestamp();
-        long timeSinceProgress = Stopwatch.GetTimestamp();
+        long searchDuration = GetTimestamp();
+        long timeSinceProgress = searchDuration;
 
         float closest = 99999f;
         ClosestSpot = null;
@@ -602,11 +599,11 @@ public sealed class PathGraph
                 closest = distance;
                 ClosestSpot = currentSearchSpot;
                 PeekSpot = ClosestSpot;
-                timeSinceProgress = Stopwatch.GetTimestamp();
+                timeSinceProgress = GetTimestamp();
             }
 
-            if (Stopwatch.GetElapsedTime(timeSinceProgress).TotalSeconds > ProgressTimeoutSeconds ||
-                Stopwatch.GetElapsedTime(searchDuration).TotalSeconds > TimeoutSeconds)
+            if (GetElapsedTime(timeSinceProgress).TotalSeconds > ProgressTimeoutSeconds ||
+                GetElapsedTime(searchDuration).TotalSeconds > TimeoutSeconds)
             {
                 logger.LogWarning("search failed, 10 seconds since last progress, returning the closest spot.");
                 return ClosestSpot;
@@ -889,7 +886,7 @@ public sealed class PathGraph
         const float zExtend = 1;
 
         float newZ = 0;
-        Span<float> a = stackalloc float[] { 0, 1f, 0.5f, -0.5f, -1f };
+        ReadOnlySpan<float> a = [0, 1f, 0.5f, -0.5f, -1f];
 
         for (int z = 0; z < a.Length; z++)
         {
@@ -919,7 +916,7 @@ public sealed class PathGraph
         if (logger.IsEnabled(LogLevel.Trace))
             logger.LogTrace($"CreatePath from {fromLoc} to {toLoc}");
 
-        long timestamp = Stopwatch.GetTimestamp();
+        long timestamp = GetTimestamp();
 
         fromLoc = GetBestLocations(fromLoc);
         toLoc = GetBestLocations(toLoc);
@@ -933,7 +930,7 @@ public sealed class PathGraph
         Path rawPath = CreatePath(from, to, searchScoreSpot, howClose);
 
         if (logger.IsEnabled(LogLevel.Trace))
-            logger.LogTrace($"CreatePath took {Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds}ms");
+            logger.LogTrace($"CreatePath took {GetElapsedTime(timestamp).TotalMilliseconds}ms");
 
         if (rawPath == null)
         {
