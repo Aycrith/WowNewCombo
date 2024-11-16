@@ -184,10 +184,10 @@ public sealed partial class BotController : IBotController, IDisposable
         const int MOD = SIZE - 1;
         Span<double> npc = stackalloc double[SIZE];
 
-        WaitHandle[] waitHandles = new[] {
+        WaitHandle[] waitHandles = [
             cts.Token.WaitHandle,
             npcResetEvent.WaitHandle,
-        };
+        ];
 
         while (true)
         {

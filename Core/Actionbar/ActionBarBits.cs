@@ -25,9 +25,9 @@ public sealed class ActionBarBits<T> : IActionBarBits, IReader
 
     private readonly BitVector32[] bits;
 
-    public ActionBarBits(params int[] cells)
+    public ActionBarBits(params ReadOnlySpan<int> cells)
     {
-        this.cells = cells;
+        this.cells = cells.ToArray();
         bits = new BitVector32[cells.Length];
     }
 

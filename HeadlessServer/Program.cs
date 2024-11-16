@@ -13,9 +13,9 @@ using Serilog.Templates;
 
 namespace HeadlessServer;
 
-internal sealed class Program
+public sealed class Program
 {
-    private static void Main(string[] args)
+    public static void Main(string[] args)
     {
         var environmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
 
@@ -108,9 +108,17 @@ internal sealed class Program
             logger.LogError(e, e.Message);
         };
 
-        provider
-            .GetRequiredService<HeadlessServer>()
-            .Run(options);
+        HeadlessServer headlessServer = provider.GetRequiredService<HeadlessServer>();
+
+        if (options.Value.LoadOnly)
+        {
+            headlessServer.RunLoadOnly(options);
+            Environment.Exit(0);
+        }
+        else
+        {
+            headlessServer.Run(options);
+        }
 
     Exit:
         Console.ReadKey();

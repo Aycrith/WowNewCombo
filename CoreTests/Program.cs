@@ -23,7 +23,7 @@ internal sealed class Program
 
     private static CancellationTokenSource cts;
     private static WowProcess process;
-    private static IWowScreen screen;
+    private static WowScreenDXGI screen;
 
     private const bool LogOverallTimes = false;
     private const int delay = 150;
@@ -224,7 +224,7 @@ internal sealed class Program
     private static void Test_FindTargetByCursor()
     {
         //CursorType cursorType = CursorType.Kill;
-        Span<CursorType> cursorType = stackalloc[] { CursorType.Vendor };
+        ReadOnlySpan<CursorType> cursorType = [CursorType.Vendor];
 
         //NpcNames types = NpcNames.Enemy;
         //NpcNames types = NpcNames.Corpse;
@@ -235,6 +235,8 @@ internal sealed class Program
 
         int count = 2;
         int i = 0;
+
+        screen.Enabled = true;
 
         while (i < count)
         {
@@ -247,5 +249,7 @@ internal sealed class Program
             i++;
             Thread.Sleep(delay);
         }
+
+        screen.Enabled = false;
     }
 }

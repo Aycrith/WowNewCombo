@@ -74,7 +74,7 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
 
     // IAddonDataProvider
 
-    private Size addonSize;
+    private SixLabors.ImageSharp.Size addonSize;
     private DataFrame[] frames = null!;
     private Image<Bgra32> addonImage = null!;
 
@@ -105,7 +105,7 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
         if (result == Result.Fail)
             throw new Exception($"Unable to enumerate adapter! {result.Description}");
 
-        int srcIdx = 0;
+        uint srcIdx = 0;
         do
         {
             result = adapter.EnumOutputs(srcIdx, out output);
@@ -138,8 +138,8 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
             CPUAccessFlags = CpuAccessFlags.Read,
             BindFlags = BindFlags.None,
             Format = Format.B8G8R8A8_UNorm,
-            Width = screenRect.Right,
-            Height = screenRect.Bottom,
+            Width = (uint)screenRect.Right,
+            Height = (uint)screenRect.Bottom,
             MiscFlags = ResourceOptionFlags.None,
             MipLevels = 1,
             ArraySize = 1,
@@ -155,8 +155,8 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
             CPUAccessFlags = CpuAccessFlags.Read,
             BindFlags = BindFlags.None,
             Format = Format.B8G8R8A8_UNorm,
-            Width = MiniMapRect.Right,
-            Height = MiniMapRect.Bottom,
+            Width = (uint)MiniMapRect.Right,
+            Height = (uint)MiniMapRect.Bottom,
             MiscFlags = ResourceOptionFlags.None,
             MipLevels = 1,
             ArraySize = 1,
@@ -208,8 +208,8 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
             CPUAccessFlags = CpuAccessFlags.Read,
             BindFlags = BindFlags.None,
             Format = Format.B8G8R8A8_UNorm,
-            Width = addonSize.Width,
-            Height = addonSize.Height,
+            Width = (uint)addonSize.Width,
+            Height = (uint)addonSize.Height,
             MiscFlags = ResourceOptionFlags.None,
             MipLevels = 1,
             ArraySize = 1,
@@ -231,7 +231,6 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
             GetRectangle(out screenRect);
             NormalizeScreenRect();
 
-            // TODO: bounds check
             if (screenRect.X < 0 ||
                 screenRect.Y < 0 ||
                 screenRect.Right > output.Description.DesktopCoordinates.Right ||
@@ -287,9 +286,14 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
         MappedSubresource resource = device.ImmediateContext
             .Map(addonTexture, 0, MapMode.Read, Vortice.Direct3D11.MapFlags.None);
 
-        int rowPitch = resource.RowPitch;
+        int rowPitch = (int)resource.RowPitch;
         ReadOnlySpan<byte> src = resource.AsSpan(addonSize.Height * rowPitch);
         Span<byte> dest = MemoryMarshal.Cast<Bgra32, byte>(memory.Span);
+
+        if (addonSize.Height == 1 && src.TryCopyTo(dest))
+        {
+            goto Cleanup;
+        }
 
         int bytesToCopy = addonSize.Width * Bgra32Size;
         for (int y = 0; y < addonSize.Height; y++)
@@ -299,6 +303,7 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
             srcRow.TryCopyTo(destRow);
         }
 
+    Cleanup:
         device.ImmediateContext.Unmap(addonTexture, 0);
     }
 
@@ -318,7 +323,7 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
         MappedSubresource resource = device.ImmediateContext
             .Map(screenTexture, 0, MapMode.Read, Vortice.Direct3D11.MapFlags.None);
 
-        int rowPitch = resource.RowPitch;
+        int rowPitch = (int)resource.RowPitch;
         ReadOnlySpan<byte> src = resource.AsSpan(screenRect.Height * rowPitch);
         Span<byte> dest = MemoryMarshal.Cast<Bgra32, byte>(memory.Span);
         
@@ -360,7 +365,7 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
         MappedSubresource resource = device.ImmediateContext
             .Map(minimapTexture, 0, MapMode.Read, Vortice.Direct3D11.MapFlags.None);
 
-        int rowPitch = resource.RowPitch;
+        int rowPitch = (int)resource.RowPitch;
         ReadOnlySpan<byte> src = resource.AsSpan(MiniMapRect.Height * rowPitch);
         Span<byte> dest = MemoryMarshal.Cast<Bgra32, byte>(memory.Span);
 

@@ -294,3 +294,6 @@ HeadlessServer/data_config.json
 PathingAPI/frame_config.json
 PathingAPI/addon_config.json
 PathingAPI/data_config.json
+
+# BenchmarkDotNet artifacts
+**/BenchmarkDotNet.Artifacts/

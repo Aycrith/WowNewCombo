@@ -222,7 +222,7 @@ public sealed partial class ClassConfiguration
     }
 
     private static void SetBaseActions(
-        KeyActions keyActions, params KeyAction[] baseActions)
+        KeyActions keyActions, params ReadOnlySpan<KeyAction> baseActions)
     {
         KeyAction @default = new();
         for (int i = 0; i < keyActions.Sequence.Length; i++)

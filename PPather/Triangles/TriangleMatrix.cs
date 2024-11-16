@@ -1,4 +1,4 @@
-﻿/*
+/*
  *  Part of PPather
  *  Copyright Pontus Borg 2008
  *
@@ -76,7 +76,7 @@ public sealed class TriangleMatrix
 
                     if (!matrix.TryGetValue(grid_x, grid_y, out List<int> list))
                     {
-                        list = new();
+                        list = [];
                         matrix.Add(grid_x, grid_y, list);
                     }
                     list.Add(i);

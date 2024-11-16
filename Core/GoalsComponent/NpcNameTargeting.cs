@@ -6,6 +6,7 @@ using SharedLib.NpcFinder;
 using Game;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace Core.Goals;
 
@@ -127,6 +128,7 @@ public sealed partial class NpcNameTargeting : IDisposable
         return false;
     }
 
+    [SkipLocalsInit]
     public bool FindBy(ReadOnlySpan<CursorType> cursors, CancellationToken token)
     {
         int c = locFindBy.Length;
@@ -172,7 +174,7 @@ public sealed partial class NpcNameTargeting : IDisposable
                     return true;
                 }
 
-                wait.Update();
+                wait.Update(500); // workaround for CoreTests when the wait is not updated by the GlobalTime change
             }
         }
         return false;

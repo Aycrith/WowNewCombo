@@ -30,7 +30,7 @@ public static class Program
             Log.Information($"[{nameof(Program),-17}] Starting blazor server");
             try
             {
-                IHost host = CreateApp(args);
+                var host = CreateApp(args);
                 var logger = host.Services.GetRequiredService<Microsoft.Extensions.Logging.ILogger>();
 
                 AppDomain.CurrentDomain.UnhandledException += (object sender, UnhandledExceptionEventArgs args) =>

@@ -11,7 +11,7 @@ namespace Core;
 public interface IAddonDataProvider : IDisposable
 {
     private static readonly Bgra32 firstColor = new(0, 0, 0, 255);
-    private static readonly Bgra32 lastlColor = new(30, 132, 129, 255);
+    private static readonly Bgra32 lastColor = new(30, 132, 129, 255);
 
     void UpdateData();
     void InitFrames(DataFrame[] frames);
@@ -30,7 +30,7 @@ public interface IAddonDataProvider : IDisposable
             .Span[frames[^1].X];
 
         if (!first.Equals(firstColor) ||
-            !last.Equals(lastlColor))
+            !last.Equals(lastColor))
         {
             return;
         }

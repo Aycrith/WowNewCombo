@@ -1,9 +1,9 @@
 # ReadDBC_CSV
 
-**som_game_build** = 1.15.2.54092
+**som_game_build** = 1.15.4.56493
 **tbc_game_build** = 2.5.4.44833
 **wrath_game_build** = 3.4.3.52237
-**cata_game_build** = 4.4.0.54647
+**cata_game_build** = 4.4.1.56464
 
 # ReadDBC_CSV_Consumables - What it does
 * It generates the available Food and Water consumables list based on the given DBC files.

@@ -2244,6 +2244,17 @@
     "Continent": "SunwellPlateau"
   },
   {
+    "MapID": 859,
+    "AreaID": 1977,
+    "AreaName": "Zul'Gurub",
+    "LocLeft": -612.5,
+    "LocRight": -2733.3333,
+    "LocTop": -11225.0,
+    "LocBottom": -12639.583,
+    "UIMapId": 337,
+    "Continent": "Zul_Gurub5Man"
+  },
+  {
     "MapID": 861,
     "AreaID": 5733,
     "AreaName": "Molten Front",
@@ -2663,7 +2674,7 @@
   },
   {
     "MapID": 938,
-    "AreaID": 0,
+    "AreaID": 5793,
     "AreaName": "End Time",
     "LocLeft": 793.75,
     "LocRight": 231.25,
@@ -2674,7 +2685,7 @@
   },
   {
     "MapID": 938,
-    "AreaID": 0,
+    "AreaID": 5790,
     "AreaName": "End Time",
     "LocLeft": 1400.5188,
     "LocRight": 534.89825,
@@ -2685,7 +2696,7 @@
   },
   {
     "MapID": 938,
-    "AreaID": 0,
+    "AreaID": 5792,
     "AreaName": "End Time",
     "LocLeft": 1656.25,
     "LocRight": 1181.25,
@@ -2696,7 +2707,7 @@
   },
   {
     "MapID": 938,
-    "AreaID": 0,
+    "AreaID": 5794,
     "AreaName": "End Time",
     "LocLeft": 406.7754,
     "LocRight": -290.10938,
@@ -2707,7 +2718,7 @@
   },
   {
     "MapID": 938,
-    "AreaID": 0,
+    "AreaID": 5795,
     "AreaName": "End Time",
     "LocLeft": -193.224,
     "LocRight": -646.359,

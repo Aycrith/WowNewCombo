@@ -10,6 +10,8 @@ using System.Diagnostics;
 using System.Linq;
 using SharedLib;
 
+using static System.Diagnostics.Stopwatch;
+
 namespace WowheadDB_Extractor
 {
     public class ZoneExtractor
@@ -20,20 +22,14 @@ namespace WowheadDB_Extractor
 
         public static string BaseUrl()
         {
-            switch (EXP)
+            return EXP switch
             {
-                case "som":
-                    return "https://classic.wowhead.com";
-                case "tbc":
-                    return "https://tbc.wowhead.com";
-                case "wrath":
-                    return "https://www.wowhead.com/wotlk";
-                case "cata":
-                    return "https://www.wowhead.com/cata";
-                default:
-                case "retail":
-                    return RetailUrl;
-            }
+                "som" => "https://classic.wowhead.com",
+                "tbc" => "https://tbc.wowhead.com",
+                "wrath" => "https://www.wowhead.com/wotlk",
+                "cata" => "https://www.wowhead.com/cata",
+                _ => RetailUrl,
+            };
         }
 
         private const string parentPath = $"../../../../../Json";
@@ -94,13 +90,13 @@ namespace WowheadDB_Extractor
 
                     try
                     {
-                        //var p = GetPayloadFromWebpage(await LoadPage(entry.Value));
-                        //string baseUrl = BaseUrl();
-                        string p;
-                        string baseUrl;
+                        var p = GetPayloadFromWebpage(await LoadPage(entry.Value));
+                        string baseUrl = BaseUrl();
+                        //string p;
+                        //string baseUrl;
 
                         // empty then fall back to retail
-                        //if (p == "[]")
+                        if (p == "[]")
                         {
                             var url = GetRetailZoneUrl() + entry.Value;
 
@@ -127,6 +123,8 @@ namespace WowheadDB_Extractor
                         z.salvegable = await salv.Run();
 
                         SaveZone(z, entry.Value.ToString());
+
+                        // TSP generation
                         //SaveZoneNode(entry, z.herb, nameof(z.herb), false, true);
                         //SaveZoneNode(entry, z.vein, nameof(z.vein), false, true);
 
@@ -181,21 +179,20 @@ namespace WowheadDB_Extractor
             if (nodes == null)
                 return;
 
-            List<Vector2> points = new();
+            List<Vector2> points = [];
             foreach (var kvp in nodes)
             {
-                points.AddRange(Array.ConvertAll(kvp.Value[0].MapCoords.ToArray(), (Vector3 v3) => new Vector2(v3.X, v3.Y)));
+                points.AddRange(Array.ConvertAll([.. kvp.Value[0].MapCoords], (Vector3 v3) => new Vector2(v3.X, v3.Y)));
             }
 
             GeneticTSPSolver solver = new(points);
-            Stopwatch sw = new();
-            sw.Start();
+            long startTime = GetTimestamp();
             while (solver.UnchangedGens < solver.Length)
             {
                 solver.Evolve();
             }
-            sw.Stop();
-            Console.WriteLine($" - TSP Solver {points.Count} {type} nodes {sw.ElapsedMilliseconds} ms");
+            var elapsed = GetElapsedTime(startTime);
+            Console.WriteLine($" - TSP Solver {points.Count} {type} nodes {elapsed.TotalMilliseconds} ms");
 
             string prefix = $"{zonekvp.Value}_{zonekvp.Key}_{type}";
 

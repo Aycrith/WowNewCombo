@@ -148,9 +148,9 @@ public sealed class MPQTriangleSupplier
         Span<int> vertices = stackalloc int[9 * 9];
         Span<int> verticesMid = stackalloc int[8 * 8];
 
-        for (int row = 0; row < 9; row++)
+        for (int col = 0; col < 9; col++)
         {
-            for (int col = 0; col < 9; col++)
+            for (int row = 0; row < 9; row++)
             {
                 ChunkGetCoordForPoint(c, row, col, out float x, out float y, out float z);
                 int index = tc.AddVertex(x, y, z);
@@ -158,9 +158,9 @@ public sealed class MPQTriangleSupplier
             }
         }
 
-        for (int row = 0; row < 8; row++)
+        for (int col = 0; col < 8; col++)
         {
-            for (int col = 0; col < 8; col++)
+            for (int row = 0; row < 8; row++)
             {
                 ChunkGetCoordForMiddlePoint(c, row, col, out float x, out float y, out float z);
                 int index = tc.AddVertex(x, y, z);
@@ -168,60 +168,72 @@ public sealed class MPQTriangleSupplier
             }
         }
 
-        for (int row = 0; row < 8; row++)
-        {
-            for (int col = 0; col < 8; col++)
-            {
-                if (!c.isHole(col, row))
-                {
-                    int v0 = vertices[row * 9 + col];
-                    int v1 = vertices[(row + 1) * 9 + col];
-                    int v2 = vertices[(row + 1) * 9 + col + 1];
-                    int v3 = vertices[row * 9 + col + 1];
-                    int vMid = verticesMid[row * 8 + col];
+        const int totalCells = 8 * 8;
 
-                    tc.AddTriangle(v0, v1, vMid, TriangleType.Terrain);
-                    tc.AddTriangle(v1, v2, vMid, TriangleType.Terrain);
-                    tc.AddTriangle(v2, v3, vMid, TriangleType.Terrain);
-                    tc.AddTriangle(v3, v0, vMid, TriangleType.Terrain);
-                }
+        for (int cell = 0; cell < totalCells; cell++)
+        {
+            int row = cell / 8;
+            int col = cell % 8;
+
+            if (c.IsHole(col, row))
+            {
+                continue;
+            }
+
+            int rowIndex9 = row * 9;
+            int rowIndexMid = row * 8;
+
+            // Precompute indices for vertices
+            int v0 = vertices[rowIndex9 + col];
+            int v1 = vertices[(row + 1) * 9 + col];
+            int v2 = vertices[(row + 1) * 9 + col + 1];
+            int v3 = vertices[rowIndex9 + col + 1];
+            int vMid = verticesMid[rowIndexMid + col];
+
+            // Add triangles using precomputed indices
+            tc.AddTriangle(v0, v1, vMid, TriangleType.Terrain);
+            tc.AddTriangle(v1, v2, vMid, TriangleType.Terrain);
+            tc.AddTriangle(v2, v3, vMid, TriangleType.Terrain);
+            tc.AddTriangle(v3, v0, vMid, TriangleType.Terrain);
+        }
+
+
+        if (!c.haswater)
+        {
+            return;
+        }
+
+        // paint the water
+        for (int col = 0; col < LiquidData.HEIGHT_SIZE; col++)
+        {
+            for (int row = 0; row < LiquidData.HEIGHT_SIZE; row++)
+            {
+                int ii = row * LiquidData.HEIGHT_SIZE + col;
+
+                ChunkGetCoordForPoint(c, row, col, out float x, out float y, out float z);
+                float height = c.water_height[ii]; // - 1.5f //why this here
+                int index = tc.AddVertex(x, y, height);
+
+                vertices[row * LiquidData.HEIGHT_SIZE + col] = index;
             }
         }
 
-        if (c.haswater)
+        for (int col = 0; col < LiquidData.FLAG_SIZE; col++)
         {
-            // paint the water
-            for (int row = 0; row < LiquidData.HEIGHT_SIZE; row++)
-            {
-                for (int col = 0; col < LiquidData.HEIGHT_SIZE; col++)
-                {
-                    int ii = row * LiquidData.HEIGHT_SIZE + col;
-
-                    ChunkGetCoordForPoint(c, row, col, out float x, out float y, out float z);
-                    float height = c.water_height[ii]; // - 1.5f //why this here
-                    int index = tc.AddVertex(x, y, height);
-
-                    vertices[row * LiquidData.HEIGHT_SIZE + col] = index;
-                }
-            }
-
             for (int row = 0; row < LiquidData.FLAG_SIZE; row++)
             {
-                for (int col = 0; col < LiquidData.FLAG_SIZE; col++)
-                {
-                    int ii = row * LiquidData.FLAG_SIZE + col;
+                int ii = row * LiquidData.FLAG_SIZE + col;
 
-                    if (c.water_flags[ii] == 0xf)
-                        continue;
+                if (c.water_flags[ii] == 0)
+                    continue;
 
-                    int v0 = vertices[row * LiquidData.HEIGHT_SIZE + col];
-                    int v1 = vertices[(row + 1) * LiquidData.HEIGHT_SIZE + col];
-                    int v2 = vertices[(row + 1) * LiquidData.HEIGHT_SIZE + col + 1];
-                    int v3 = vertices[row * LiquidData.HEIGHT_SIZE + col + 1];
+                int v0 = vertices[row * LiquidData.HEIGHT_SIZE + col];
+                int v1 = vertices[(row + 1) * LiquidData.HEIGHT_SIZE + col];
+                int v2 = vertices[(row + 1) * LiquidData.HEIGHT_SIZE + col + 1];
+                int v3 = vertices[row * LiquidData.HEIGHT_SIZE + col + 1];
 
-                    tc.AddTriangle(v0, v1, v3, TriangleType.Water);
-                    tc.AddTriangle(v1, v2, v3, TriangleType.Water);
-                }
+                tc.AddTriangle(v0, v1, v3, TriangleType.Water);
+                tc.AddTriangle(v1, v2, v3, TriangleType.Water);
             }
         }
     }
