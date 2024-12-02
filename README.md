@@ -780,7 +780,7 @@ Should see something like this, you can override any of the following values.
 "Wait": {
     "AutoGenerateWaitForFoodAndDrink": true,    // should generate 'Eating' and 'Drinking' KeyActions
     "FoodDrinkCost": 5,                         // can override the Cost of awaiting Eating and Drinking
-    "Sequence": {
+    "Sequence": [
     {
         "Name": "Eating",
         "Cost": 5,                              // FoodDrinkCost
@@ -791,7 +791,7 @@ Should see something like this, you can override any of the following values.
         "Cost": 5,                              // FoodDrinkCost
         "Requirement": "Drink && Mana% < 99"
     },
-    }
+    ]
 },
 ```
 ---
