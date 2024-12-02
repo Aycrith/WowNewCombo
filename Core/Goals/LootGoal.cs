@@ -68,8 +68,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         this.state = state;
 
         this.token = cts.Token;
-        AddPrecondition(GoapKey.damagedone, false);
-        AddPrecondition(GoapKey.damagetaken, false);
+        AddPrecondition(GoapKey.dangercombat, false);
         AddPrecondition(GoapKey.shouldloot, true);
         AddEffect(GoapKey.shouldloot, false);
     }
