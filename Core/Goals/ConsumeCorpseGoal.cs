@@ -23,11 +23,9 @@ public sealed partial class ConsumeCorpseGoal : GoapGoal
         {
             AddPrecondition(GoapKey.consumablecorpsenearby, true);
         }
-        else
-        {
-            AddPrecondition(GoapKey.damagedone, false);
-            AddPrecondition(GoapKey.damagetaken, false);
-        }
+        AddPrecondition(GoapKey.pulled, false);
+        AddPrecondition(GoapKey.dangercombat, false);
+        AddPrecondition(GoapKey.incombat, false);
 
         AddPrecondition(GoapKey.producedcorpse, true);
         AddPrecondition(GoapKey.consumecorpse, false);
