@@ -147,8 +147,10 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
                 return true;
             }
         }
-
-        return LootMouse();
+        if (!input.KeyboardOnly) {
+            return LootMouse();
+        }
+        return false;
     }
 
     private void HandleSuccessfulLoot()
