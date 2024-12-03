@@ -13,6 +13,8 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
 {
     private const bool debug = true;
     private const double STUCK_INTERVAL_MS = 400; // cant be lower than Approach.Cooldown
+    private const double MAX_APPROACH_DURATION_MS = 15_000; // max time to chase to pull
+    
 
     public override float Cost => 8f;
 
@@ -166,7 +168,7 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
             }
         }
 
-        if (ApproachDurationMs > 15_000)
+        if (ApproachDurationMs > MAX_APPROACH_DURATION_MS)
         {
             if (debug)
                 Log("Too long time. Clear Target. Turn away.");
