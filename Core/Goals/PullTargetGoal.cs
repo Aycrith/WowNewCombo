@@ -13,7 +13,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
     public override float Cost => 7f;
 
     private const int AcquireTargetTimeMs = 5000;
-
+    private const int MAX_PULL_DURATION = 15_000;
     private readonly ILogger<PullTargetGoal> logger;
     private readonly ConfigurableInput input;
     private readonly ClassConfiguration classConfig;
@@ -144,7 +144,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
             return;
         }
 
-        if (PullDurationMs > 15_000)
+        if (PullDurationMs > MAX_PULL_DURATION)
         {
             input.PressClearTarget();
             Log("Pull taking too long. Clear target and face away!");
