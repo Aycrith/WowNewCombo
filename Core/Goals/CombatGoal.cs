@@ -157,7 +157,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
         {
             logger.LogInformation("Lost target!");
 
-            if (combatLog.DamageTakenCount() > 0 && !input.KeyboardOnly)
+            if (combatLog.DamageTakenCount() > 0)
             {
                 stopMoving.Stop();
                 FindNewTarget();
