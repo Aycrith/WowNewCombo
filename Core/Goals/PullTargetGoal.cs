@@ -146,6 +146,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
 
         if (PullDurationMs > MAX_PULL_DURATION)
         {
+            input.PressStopAttack();
             input.PressClearTarget();
             Log("Pull taking too long. Clear target and face away!");
             input.TurnRandomDir(1000);
