@@ -1,4 +1,6 @@
-﻿
+﻿using System.Collections.Generic;
+using System.Numerics;
+
 namespace Core.GOAP;
 
 public sealed class GoapAgentState
@@ -9,4 +11,5 @@ public sealed class GoapAgentState
     public int ConsumableCorpseCount { get; set; }
     public int LastCombatKillCount { get; set; }
     public bool Gathering { get; set; }
+    public LinkedList<Vector3> safeLocations = new LinkedList<Vector3>();
 }

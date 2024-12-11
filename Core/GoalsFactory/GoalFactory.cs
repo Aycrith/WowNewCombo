@@ -83,6 +83,7 @@ public static class GoalFactory
         {
             services.AddScoped<GoapGoal, WalkToCorpseGoal>();
             services.AddScoped<GoapGoal, CombatGoal>();
+            services.AddScoped<GoapGoal, FleeGoal>();
             services.AddScoped<GoapGoal, ApproachTargetGoal>();
             services.AddScoped<GoapGoal, WaitForGatheringGoal>();
             ResolveFollowRouteGoal(services, classConfig);

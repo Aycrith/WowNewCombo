@@ -3,6 +3,7 @@
 using Microsoft.Extensions.Logging;
 
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 
 namespace Core.Goals;
@@ -21,6 +22,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
     private readonly CastingHandler castingHandler;
     private readonly IMountHandler mountHandler;
     private readonly CombatLog combatLog;
+    private readonly GoapAgentState goapAgentState;
 
     private float lastDirection;
     private float lastMinDistance;
@@ -29,7 +31,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
     public CombatGoal(ILogger<CombatGoal> logger, ConfigurableInput input,
         Wait wait, PlayerReader playerReader, StopMoving stopMoving, AddonBits bits,
         ClassConfiguration classConfiguration, ClassConfiguration classConfig,
-        CastingHandler castingHandler, CombatLog combatLog,
+        CastingHandler castingHandler, CombatLog combatLog, GoapAgentState state,
         IMountHandler mountHandler)
         : base(nameof(CombatGoal))
     {
@@ -45,6 +47,8 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
         this.castingHandler = castingHandler;
         this.mountHandler = mountHandler;
         this.classConfig = classConfig;
+
+        this.goapAgentState = state;
 
         AddPrecondition(GoapKey.incombat, true);
         AddPrecondition(GoapKey.hastarget, true);
@@ -161,6 +165,36 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
             {
                 stopMoving.Stop();
                 FindNewTarget();
+            }
+            else
+            {
+                // dont save too close points
+                logger.LogInformation("Target(s) Dead -- trying saving safe pos " + playerReader.MapPosNoZ.ToString());
+                bool foundClosePoint = false;
+                if (this.goapAgentState.safeLocations == null)
+                {
+                    return;
+                }
+                for (LinkedListNode<Vector3> point = this.goapAgentState.safeLocations.Last; point != null; point = point.Previous)
+                {
+                    Vector2 p1 = new Vector2(point.Value.X, point.Value.Y);
+                    Vector2 p2 = new Vector2(playerReader.MapPos.X, playerReader.MapPos.Y);
+                    if (Vector2.Distance(p1, p2) <= 0.1)
+                    {
+                        foundClosePoint = true;
+                        break;
+                    }
+                }
+                if (!foundClosePoint)
+                {
+                    Console.WriteLine("Saving safepos: " + playerReader.MapPosNoZ.ToString());
+                    this.goapAgentState.safeLocations.AddLast(playerReader.MapPosNoZ);
+                    if (this.goapAgentState.safeLocations.Count > 100)
+                    {
+                        this.goapAgentState.safeLocations.RemoveFirst();
+                    }
+                }
+                input.PressClearTarget();
             }
         }
     }
