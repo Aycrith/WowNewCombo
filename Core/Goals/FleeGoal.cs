@@ -20,7 +20,6 @@ public sealed class FleeGoal : GoapGoal, IRouteProvider
     private readonly Navigation navigation;
     private readonly AddonBits bits;
     private readonly CombatLog combatLog;
-    private readonly GoapAgentState goapAgentState;
 
     private readonly SafeSpotCollector safeSpotCollector;
 
@@ -30,7 +29,7 @@ public sealed class FleeGoal : GoapGoal, IRouteProvider
 
     public FleeGoal(ILogger<CombatGoal> logger, ConfigurableInput input,
         Wait wait, PlayerReader playerReader, AddonBits bits,
-        ClassConfiguration classConfiguration, Navigation playerNavigation, GoapAgentState state,
+        ClassConfiguration classConfiguration, Navigation playerNavigation,
         ClassConfiguration classConfig, CombatLog combatLog,
         SafeSpotCollector safeSpotCollector)
         : base(nameof(FleeGoal))
@@ -45,7 +44,6 @@ public sealed class FleeGoal : GoapGoal, IRouteProvider
         this.combatLog = combatLog;
 
         this.classConfig = classConfig;
-        this.goapAgentState = state;
 
         AddPrecondition(GoapKey.incombat, true);
 
@@ -81,18 +79,19 @@ public sealed class FleeGoal : GoapGoal, IRouteProvider
     public override bool CanRun()
     {
         return
-            goapAgentState.SafeLocations.Count > 0 &&
+            safeSpotCollector.Locations.Count > 0 &&
             combatLog.DamageTakenCount() > MOB_COUNT;
     }
 
     public override void OnEnter()
     {
         // TODO: might have to do some pre processing like
-        // straightening the path
-        var count = goapAgentState.SafeLocations.Count;
+        // straightening the path like
+        // PathSimplify.SimplifyPath(MapPoints);
+        var count = safeSpotCollector.Locations.Count;
         MapPoints = new Vector3[count];
 
-        goapAgentState.SafeLocations.CopyTo(MapPoints, 0);
+        safeSpotCollector.Locations.CopyTo(MapPoints, 0);
 
         navigation.SetWayPoints(MapPoints.AsSpan(0, count));
         navigation.ResetStuckParameters();
@@ -101,7 +100,7 @@ public sealed class FleeGoal : GoapGoal, IRouteProvider
     public override void OnExit()
     {
         // TODO: there might be better options here to dont clear all of them
-        goapAgentState.SafeLocations.Clear();
+        safeSpotCollector.Locations.Clear();
 
         navigation.Stop();
         navigation.StopMovement();

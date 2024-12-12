@@ -1,6 +1,8 @@
 ﻿using Core.GOAP;
 
 using System;
+using System.Collections.Generic;
+using System.Numerics;
 using System.Threading;
 
 namespace Core.Goals;
@@ -8,18 +10,17 @@ namespace Core.Goals;
 public sealed class SafeSpotCollector : IDisposable
 {
     private readonly PlayerReader playerReader;
-    private readonly GoapAgentState state;
     private readonly AddonBits bits;
 
     private readonly Timer timer;
 
+    public Stack<Vector3> Locations { get; } = new();
+
     public SafeSpotCollector(
         PlayerReader playerReader,
-        GoapAgentState state,
         AddonBits bits)
     {
         this.playerReader = playerReader;
-        this.state = state;
         this.bits = bits;
 
         timer = new(Update, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
@@ -35,10 +36,11 @@ public sealed class SafeSpotCollector : IDisposable
         if (bits.Combat())
             return;
 
-        if (state.SafeLocations.TryPeek(out var lastPos) &&
+        if (Locations.TryPeek(out var lastPos) &&
             lastPos == playerReader.MapPosNoZ)
             return;
 
-        state.SafeLocations.Push(playerReader.MapPosNoZ);
+        // TODO: might be a good idea to check distance to last location
+        Locations.Push(playerReader.MapPosNoZ);
     }
 }
