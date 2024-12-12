@@ -11,5 +11,6 @@ public sealed class GoapAgentState
     public int ConsumableCorpseCount { get; set; }
     public int LastCombatKillCount { get; set; }
     public bool Gathering { get; set; }
-    public LinkedList<Vector3> safeLocations = new LinkedList<Vector3>();
+
+    public Stack<Vector3> SafeLocations { get; } = new();
 }

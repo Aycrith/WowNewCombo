@@ -57,6 +57,7 @@ public static class GoalFactory
         services.AddScoped<CastingHandler>();
         services.AddScoped<StuckDetector>();
         services.AddScoped<CombatUtil>();
+        services.AddScoped<SafeSpotCollector>();
 
         var playerReader = sp.GetRequiredService<PlayerReader>();
 
@@ -137,6 +138,7 @@ public static class GoalFactory
             services.AddScoped<GoapGoal, WalkToCorpseGoal>();
             services.AddScoped<GoapGoal, PullTargetGoal>();
             services.AddScoped<GoapGoal, ApproachTargetGoal>();
+            services.AddScoped<GoapGoal, FleeGoal>();
             services.AddScoped<GoapGoal, CombatGoal>();
 
             if (classConfig.WrongZone.ZoneId > 0)
