@@ -100,6 +100,7 @@ public sealed class FleeGoal : GoapGoal, IRouteProvider
 
     public override void OnExit()
     {
+        // TODO: there might be better options here to dont clear all of them
         goapAgentState.SafeLocations.Clear();
 
         navigation.Stop();
