@@ -2,6 +2,8 @@
 
 using Microsoft.Extensions.Logging;
 
+using SharedLib.Extensions;
+
 using System;
 using System.Buffers;
 using System.Numerics;
@@ -19,18 +21,15 @@ public sealed class FleeGoal : GoapGoal, IRouteProvider
     private readonly PlayerReader playerReader;
     private readonly Navigation navigation;
     private readonly AddonBits bits;
-    private readonly CombatLog combatLog;
 
     private readonly SafeSpotCollector safeSpotCollector;
 
     private Vector3[] MapPoints = [];
 
-    public int MOB_COUNT = 1;
-
     public FleeGoal(ILogger<CombatGoal> logger, ConfigurableInput input,
         Wait wait, PlayerReader playerReader, AddonBits bits,
         ClassConfiguration classConfiguration, Navigation playerNavigation,
-        ClassConfiguration classConfig, CombatLog combatLog,
+        ClassConfiguration classConfig,
         SafeSpotCollector safeSpotCollector)
         : base(nameof(FleeGoal))
     {
@@ -41,15 +40,13 @@ public sealed class FleeGoal : GoapGoal, IRouteProvider
         this.playerReader = playerReader;
         this.navigation = playerNavigation;
         this.bits = bits;
-        this.combatLog = combatLog;
 
         this.classConfig = classConfig;
 
         AddPrecondition(GoapKey.incombat, true);
 
-        Keys = classConfiguration.Combat.Sequence;
+        Keys = classConfiguration.Flee.Sequence;
 
-        // this will ensure that the component is created
         this.safeSpotCollector = safeSpotCollector;
     }
 
@@ -79,28 +76,32 @@ public sealed class FleeGoal : GoapGoal, IRouteProvider
     public override bool CanRun()
     {
         return
-            safeSpotCollector.Locations.Count > 0 &&
-            combatLog.DamageTakenCount() > MOB_COUNT;
+            safeSpotCollector.MapLocations.Count > 0 &&
+            Keys.Length > 0 && Keys[0].CanRun();
     }
 
     public override void OnEnter()
     {
-        // TODO: might have to do some pre processing like
-        // straightening the path like
-        // PathSimplify.SimplifyPath(MapPoints);
-        var count = safeSpotCollector.Locations.Count;
-        MapPoints = new Vector3[count];
+        int count = safeSpotCollector.MapLocations.Count;
 
-        safeSpotCollector.Locations.CopyTo(MapPoints, 0);
+        ArrayPool<Vector3> pooler = ArrayPool<Vector3>.Shared;
+        Vector3[] array = pooler.Rent(count);
+        var span = array.AsSpan();
 
-        navigation.SetWayPoints(MapPoints.AsSpan(0, count));
+        safeSpotCollector.MapLocations.CopyTo(array, 0);
+
+        Span<Vector3> simplified = PathSimplify.Simplify(array.AsSpan()[..count], PathSimplify.HALF, true);
+        MapPoints = simplified.ToArray();
+
+        navigation.SetWayPoints(simplified);
         navigation.ResetStuckParameters();
+
+        pooler.Return(array);
     }
 
     public override void OnExit()
     {
-        // TODO: there might be better options here to dont clear all of them
-        safeSpotCollector.Locations.Clear();
+        safeSpotCollector.Reduce(playerReader.MapPosNoZ);
 
         navigation.Stop();
         navigation.StopMovement();

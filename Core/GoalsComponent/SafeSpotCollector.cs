@@ -1,4 +1,4 @@
-﻿using Core.GOAP;
+﻿using SharedLib.Extensions;
 
 using System;
 using System.Collections.Generic;
@@ -14,7 +14,7 @@ public sealed class SafeSpotCollector : IDisposable
 
     private readonly Timer timer;
 
-    public Stack<Vector3> Locations { get; } = new();
+    public Stack<Vector3> MapLocations { get; } = new();
 
     public SafeSpotCollector(
         PlayerReader playerReader,
@@ -36,11 +36,34 @@ public sealed class SafeSpotCollector : IDisposable
         if (bits.Combat())
             return;
 
-        if (Locations.TryPeek(out var lastPos) &&
-            lastPos == playerReader.MapPosNoZ)
+        if (MapLocations.TryPeek(out Vector3 lastMapPos) &&
+            lastMapPos == playerReader.MapPosNoZ)
             return;
 
-        // TODO: might be a good idea to check distance to last location
-        Locations.Push(playerReader.MapPosNoZ);
+        MapLocations.Push(playerReader.MapPosNoZ);
+    }
+
+    public void Reduce(Vector3 mapPosition)
+    {
+        lock (MapLocations)
+        {
+            Vector3 closestM = default;
+            float distanceM = float.MaxValue;
+
+            foreach (Vector3 p in MapLocations)
+            {
+                float d = mapPosition.MapDistanceXYTo(p);
+                if (d < distanceM)
+                {
+                    closestM = p;
+                    distanceM = d;
+                }
+            }
+
+            while (MapLocations.TryPeek(out var p) && p != closestM)
+            {
+                MapLocations.Pop();
+            }
+        }
     }
 }
