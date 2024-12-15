@@ -1,5 +1,4 @@
-﻿
-namespace Core.GOAP;
+﻿namespace Core.GOAP;
 
 public sealed class GoapAgentState
 {

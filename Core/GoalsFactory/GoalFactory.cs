@@ -57,6 +57,7 @@ public static class GoalFactory
         services.AddScoped<CastingHandler>();
         services.AddScoped<StuckDetector>();
         services.AddScoped<CombatUtil>();
+        services.AddScoped<SafeSpotCollector>();
 
         var playerReader = sp.GetRequiredService<PlayerReader>();
 
@@ -136,6 +137,7 @@ public static class GoalFactory
             services.AddScoped<GoapGoal, WalkToCorpseGoal>();
             services.AddScoped<GoapGoal, PullTargetGoal>();
             services.AddScoped<GoapGoal, ApproachTargetGoal>();
+            AddFleeGoal(services, classConfig);
             services.AddScoped<GoapGoal, CombatGoal>();
 
             if (classConfig.WrongZone.ZoneId > 0)
@@ -289,6 +291,14 @@ public static class GoalFactory
                 x.GetRequiredService<IBlacklist>()
                 ));
         }
+    }
+
+    public static void AddFleeGoal(IServiceCollection services, ClassConfiguration classConfig)
+    {
+        if (classConfig.Flee.Sequence.Length == 0)
+            return;
+
+        services.AddScoped<GoapGoal, FleeGoal>();
     }
 
     private static string RelativeFilePath(DataConfig dataConfig, string path)

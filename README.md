@@ -482,6 +482,7 @@ Your class file probably exists and just needs to be edited to set the pathing f
 | `"IntVariables"` | List of user defined `integer` variables | true | `[]` |
 | --- | --- | --- | --- |
 | `"Pull"` | [KeyActions](#keyactions) to execute upon [Pull Goal](#pull-goal) | true | `{}` |
+| `"Flee"` | [KeyActions](#keyactions) to execute upon [Flee Goal](#flee-goal). Currently only the first one is considered for the custom logic. | true | `{}` |
 | `"Combat"` | [KeyActions](#keyactions) to execute upon [Combat Goal](#combat-goal) | **false** | `{}` |
 | `"AssistFocus"` | [KeyActions](#keyactions) to execute upon [Assist Focus Goal](#assist-focus-goal) | **false** | `{}` |
 | `"Adhoc"` | [KeyActions](#keyactions) to execute upon [Adhoc Goals](#adhoc-goals) | true | `{}` |
@@ -895,6 +896,33 @@ e.g. of a Balance Druid
                 "SpellInRange:7"
             ],
             "Form": "None"
+        }
+    ]
+},
+```
+
+### Flee Goal
+
+Its an opt-in goal.
+
+Can define custom rules when the character should try to run away from an encounter which seems to be impossible to survive.
+
+The goal will be executed while the player is in combat and the first KeyAction custom [Requirement(s)](#requirement) are met.
+
+While the goal is active
+* the player going to retrace the past locations which were deemed to be safe.
+* Clears the current target if have any.
+
+The path will be simplifed to ensure straight line of movement.
+
+To opt-in the goal execution you have to define the following the [Class Configuration](#12-class-configuration)
+
+```json
+"Flee": {
+    "Sequence": [
+        {
+            "Name": "Flee",
+            "Requirement": "MobCount > 1 && Health% < 50"
         }
     ]
 },
@@ -1931,6 +1959,7 @@ e.g. Rogue_20.json
 Every [KeyAction](#keyaction) has individual Interrupt(s) condition(s) which are [Requirement(s)](#requirement) to stop execution before fully finishing it.
 
 As of now every [Goal groups](#goal-groups) has a default Interrupt.
+* [Flee Goal](#flee-goal) based [KeyAction(s)](#keyaction) interrupted once the player left combat.
 * [Combat Goal](#combat-goal) based [KeyAction(s)](#keyaction) interrupted once the target dies and the player loses the target.
 * [Parallel Goal](#parallel-goals) based [KeyAction(s)](#keyaction) has **No** interrupt conditions.
 * [Adhoc Goals](#adhoc-goals) based [KeyAction(s)](#keyaction) depends on `KeyAction.InCombat` flag.

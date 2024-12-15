@@ -69,6 +69,7 @@ public sealed partial class ClassConfiguration
     public Dictionary<string, int> IntVariables { get; } = new();
 
     public KeyActions Pull { get; } = new();
+    public KeyActions Flee { get; } = new();
     public KeyActions Combat { get; } = new();
     public KeyActions Adhoc { get; } = new();
     public KeyActions Parallel { get; } = new();

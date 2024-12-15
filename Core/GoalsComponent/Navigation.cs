@@ -419,14 +419,10 @@ public sealed partial class Navigation : IDisposable
 
     private void ReduceByDistance(Vector3 playerW, float minDistance)
     {
-        float worldDistance = playerW.WorldDistanceXYTo(routeToNextWaypoint.Peek());
-        while (worldDistance < ReachedDistance(minDistance) && routeToNextWaypoint.Count > 0)
+        while (routeToNextWaypoint.Count > 0 &&
+            playerW.WorldDistanceXYTo(routeToNextWaypoint.Peek()) < ReachedDistance(minDistance))
         {
             routeToNextWaypoint.Pop();
-            if (routeToNextWaypoint.Count > 0)
-            {
-                worldDistance = playerW.WorldDistanceXYTo(routeToNextWaypoint.Peek());
-            }
         }
     }
 
