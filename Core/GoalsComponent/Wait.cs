@@ -131,4 +131,13 @@ public sealed class Wait
             Update();
         }
     }
+    
+    public void WhileWithTimeout(Func<bool> condition, int timeoutMs) {
+        DateTime start = DateTime.UtcNow;
+        float elapsedMs;
+        while ((elapsedMs = (float)(DateTime.UtcNow - start).TotalMilliseconds) < timeoutMs && condition())
+        {
+            Update();
+        }
+    }
 }
