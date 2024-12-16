@@ -65,13 +65,18 @@ public sealed class ChatReader : IReader
 
         string text = sb.ToString().ToLowerInvariant();
         sb.Clear();
-
-        int firstSpaceIdx = text.AsSpan().IndexOf(' ');
-        string author = text.AsSpan(0, firstSpaceIdx).ToString();
-        string msg = text.AsSpan(firstSpaceIdx + 1).ToString();
-
-        ChatMessageEntry entry = new(DateTime.Now, type, author, msg);
-        Messages.Add(entry);
-        logger.LogInformation(entry.ToString());
+        try
+        {
+            int firstSpaceIdx = text.AsSpan().IndexOf(' ');
+            string author = text.AsSpan(0, firstSpaceIdx).ToString();
+            string msg = text.AsSpan(firstSpaceIdx + 1).ToString();
+    
+            ChatMessageEntry entry = new(DateTime.Now, type, author, msg);
+            Messages.Add(entry);
+            logger.LogInformation(entry.ToString());
+        } catch (Exception e)
+        {
+            logger.LogError("ChatEntryError: " + e.ToString());
+        }
     }
 }
