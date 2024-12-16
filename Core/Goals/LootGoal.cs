@@ -124,6 +124,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
     private void CheckInventoryFull()
     {
+        ClearTargetIfNeeded();
         if (!bagReader.BagsFull())
             return;
 
