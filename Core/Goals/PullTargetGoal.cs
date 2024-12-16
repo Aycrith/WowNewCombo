@@ -200,9 +200,6 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
             }
         }
 
-        if (castAny || spellInQueue || playerReader.IsCasting())
-            return;
-
         if (combatUtil.EnteredCombat())
         {
             if (wait.Until(AcquireTargetTimeMs, CombatLogChanged) >= 0)
@@ -227,6 +224,9 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
             SendGoapEvent(new GoapStateEvent(GoapKey.pulled, true));
             return;
         }
+
+        if (castAny || spellInQueue || playerReader.IsCasting())
+            return;
 
         approachAction();
     }
