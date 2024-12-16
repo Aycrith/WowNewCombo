@@ -18,6 +18,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
     private const int MAX_TIME_TO_REACH_MELEE = 10000;
     private const int MAX_TIME_TO_DETECT_LOOT = 2 * CastingHandler.GCD;
+    private const int MAX_TIME_TO_RESET_LOOT = 800;
 
     private readonly ILogger<LootGoal> logger;
     private readonly ConfigurableInput input;
@@ -102,7 +103,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
     private void WaitForLootReset()
     {
-        wait.While(LootReset);
+        wait.WhileWithTimeout(LootReset, MAX_TIME_TO_RESET_LOOT);
     }
 
     private void WaitForLosingTarget()
