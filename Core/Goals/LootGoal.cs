@@ -70,7 +70,6 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
         this.token = cts.Token;
         AddPrecondition(GoapKey.pulled, false);
-        AddPrecondition(GoapKey.incombat, false);
         AddPrecondition(GoapKey.dangercombat, false);
         AddPrecondition(GoapKey.shouldloot, true);
         AddEffect(GoapKey.shouldloot, false);
@@ -78,7 +77,12 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
     public override void OnEnter()
     {
-        WaitForLootReset();
+        float elapsedMs = WaitForLootReset();
+        if (elapsedMs < 0)
+        {
+            LogLootStatusDidNotChangedInTime(logger, elapsedMs);
+            return;
+        }
 
         if (combatLog.DamageTakenCount() == 0)
         {
@@ -103,9 +107,9 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         ClearTargetIfNeeded();
     }
 
-    private void WaitForLootReset()
+    private float WaitForLootReset()
     {
-        wait.WhileWithTimeout(LootReset, MAX_TIME_TO_RESET_LOOT);
+        return wait.Until(MAX_TIME_TO_RESET_LOOT, LootStatusIsCorpse);
     }
 
     private void WaitForLosingTarget()
@@ -151,10 +155,8 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
                 return true;
             }
         }
-        if (!input.KeyboardOnly) {
-            return LootMouse();
-        }
-        return false;
+
+        return !input.KeyboardOnly && LootMouse();
     }
 
     private void HandleSuccessfulLoot()
@@ -400,8 +402,8 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         return bits.Target() && playerReader.MinRangeZero();
     }
 
-    private bool LootReset() =>
-        (LootStatus)playerReader.LootEvent.Value != LootStatus.CORPSE;
+    private bool LootStatusIsCorpse() =>
+        (LootStatus)playerReader.LootEvent.Value == LootStatus.CORPSE;
 
     #region Logging
 
@@ -456,6 +458,12 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         Level = LogLevel.Error,
         Message = "Keyboard loot failed! Has target ? {hasTarget}")]
     static partial void LogKeyboardLootFailed(ILogger logger, bool hasTarget);
+
+    [LoggerMessage(
+        EventId = 0137,
+        Level = LogLevel.Error,
+        Message = "LootGoal failed to start due LootStatus did not changed within the expected time window {elapsedMs}ms")]
+    static partial void LogLootStatusDidNotChangedInTime(ILogger logger, float elapsedMs);
 
     #endregion
 }

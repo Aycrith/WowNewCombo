@@ -34,14 +34,16 @@ public sealed partial class ClassConfiguration
         Key = "I", // Interact.Key
         Name = nameof(Approach),
         PressDuration = 10,
-        BaseAction = true
+        BaseAction = true,
+        Requirement = "!SoftTargetDead"
     };
 
     public KeyAction AutoAttack { get; } = new()
     {
         Key = "I", // Interact.Key
         Name = nameof(AutoAttack),
-        BaseAction = true
+        BaseAction = true,
+        Requirement = "!AutoAttacking && !SoftTargetDead"
     };
 
     public KeyAction TargetLastTarget { get; } = new()

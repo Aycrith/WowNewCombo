@@ -143,6 +143,10 @@ public sealed partial class RequirementFactory
             { "TargetsPet", playerReader.TargetsPet },
             { "TargetsNone", playerReader.TargetsNone },
 
+            // Soft Target
+            { "SoftTarget", bits.SoftInteract },
+            { "SoftTargetDead", bits.SoftInteract_Dead },
+
             { AddVisible, npcNameFinder._PotentialAddsExist },
             { "InCombat", bits.Combat },
 
