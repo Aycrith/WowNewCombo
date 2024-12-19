@@ -67,6 +67,12 @@ public sealed class ChatReader : IReader
         sb.Clear();
 
         int firstSpaceIdx = text.AsSpan().IndexOf(' ');
+        if (firstSpaceIdx == -1)
+        {
+            logger.LogError($"Malformed payload: {text}");
+            return;
+        }
+
         string author = text.AsSpan(0, firstSpaceIdx).ToString();
         string msg = text.AsSpan(firstSpaceIdx + 1).ToString();
 
