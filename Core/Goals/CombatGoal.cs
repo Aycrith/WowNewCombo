@@ -203,6 +203,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
                     ResetCooldowns();
 
                     logger.LogWarning("Found new target!");
+                    wait.Update();
                     return;
                 }
 
