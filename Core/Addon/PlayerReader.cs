@@ -97,6 +97,8 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
     public int TargetLevel => reader.GetInt(43) / 100;
     public UnitClassification TargetClassification => (UnitClassification)(reader.GetInt(43) % 100);
 
+    public bool TargetIsElite() => TargetClassification == UnitClassification.Elite;
+
     public int Money => reader.GetInt(44) + (reader.GetInt(45) * 1000000);
 
     // RACE_ID * 10000 + CLASS_ID * 100 + ClientVersion

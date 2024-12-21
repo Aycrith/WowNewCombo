@@ -482,7 +482,7 @@ Your class file probably exists and just needs to be edited to set the pathing f
 | `"IntVariables"` | List of user defined `integer` variables | true | `[]` |
 | --- | --- | --- | --- |
 | `"Pull"` | [KeyActions](#keyactions) to execute upon [Pull Goal](#pull-goal) | true | `{}` |
-| `"Flee"` | [KeyActions](#keyactions) to execute upon [Flee Goal](#flee-goal). Currently only the first one is considered for the custom logic. | true | `{}` |
+| `"Flee"` | [KeyActions](#keyactions) to execute upon [Flee Goal](#flee-goal). | true | `{}` |
 | `"Combat"` | [KeyActions](#keyactions) to execute upon [Combat Goal](#combat-goal) | **false** | `{}` |
 | `"AssistFocus"` | [KeyActions](#keyactions) to execute upon [Assist Focus Goal](#assist-focus-goal) | **false** | `{}` |
 | `"Adhoc"` | [KeyActions](#keyactions) to execute upon [Adhoc Goals](#adhoc-goals) | true | `{}` |
@@ -907,11 +907,13 @@ Its an opt-in goal.
 
 Can define custom rules when the character should try to run away from an encounter which seems to be impossible to survive.
 
-The goal will be executed while the player is in combat and the first KeyAction custom [Requirement(s)](#requirement) are met.
+The goal will be executed while the player is in combat and the **first** [KeyAction](#keyaction) custom [Requirement(s)](#requirement) are met.
 
 While the goal is active
 * the player going to retrace the past locations which were deemed to be safe.
-* Clears the current target if have any.
+
+When the goal exits
+* Clears the current target.
 
 The path will be simplifed to ensure straight line of movement.
 
@@ -925,6 +927,45 @@ To opt-in the goal execution you have to define the following the [Class Configu
             "Requirement": "MobCount > 1 && Health% < 50"
         }
     ]
+},
+```
+
+Example for a mage
+```json
+"Flee": {
+  "Sequence": [
+    {
+      "Name": "Flee",
+      "Requirement": "MobCount > 1" //&& Health% < 50
+    },
+    {
+      "Name": "Frost Nova",
+      "Key": 6,
+      "Requirement": "InMeleeRange"
+    },
+    {
+      "Name": "HP Potion",
+      "Key": 7,
+      "Requirement": "Health% < 50"
+    },
+    {
+      "name": "Blink",
+      "Key": "F3",
+      "Requirement": "!InMeleeRange"
+    }
+  ]
+},
+```
+
+Example for accidently pulling en elite mob
+```json
+"Flee": {
+  "Sequence": [
+    {
+      "Name": "Flee",
+      "Requirement": "MobCount > 1 || TargetElite" //&& Health% < 50
+    },
+  ]
 },
 ```
 
@@ -1642,6 +1683,7 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | `"TargetsMe"` | The target currently targets the player |
 | `"TargetsPet"` | The target currently targets the player's pet |
 | `"TargetsNone"` | The target currently has not target |
+| `"TargetElite"` | The target is Elite [unit classification](https://wowpedia.fandom.com/wiki/API_UnitClassification) |
 | `"SoftTarget"` | The player has an available soft target |
 | `"SoftTargetDead"` | The player has an available soft target which is dead |
 | `"AddVisible"` | Around the target there are possible additional NPCs |
