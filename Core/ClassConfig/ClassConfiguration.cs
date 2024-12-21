@@ -238,9 +238,8 @@ public sealed partial class ClassConfiguration
 
                 user.Key = baseAction.Key;
 
-                //if (!string.IsNullOrEmpty(@default.Requirement))
-                //    user.Requirement += " " + @default.Requirement;
-                //user.Requirements.AddRange(@default.Requirements);
+                if (!string.IsNullOrEmpty(baseAction.Requirement))
+                    user.Requirement += " " + baseAction.Requirement;
 
                 if (user.BeforeCastDelay == @default.BeforeCastDelay)
                     user.BeforeCastDelay = baseAction.BeforeCastDelay;

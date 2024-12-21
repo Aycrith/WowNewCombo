@@ -18,6 +18,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
     private const int MAX_TIME_TO_REACH_MELEE = 10000;
     private const int MAX_TIME_TO_DETECT_LOOT = 2 * CastingHandler.GCD;
+    private const int MAX_TIME_TO_RESET_LOOT = 800;
 
     private readonly ILogger<LootGoal> logger;
     private readonly ConfigurableInput input;
@@ -68,6 +69,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         this.state = state;
 
         this.token = cts.Token;
+        AddPrecondition(GoapKey.pulled, false);
         AddPrecondition(GoapKey.dangercombat, false);
         AddPrecondition(GoapKey.shouldloot, true);
         AddEffect(GoapKey.shouldloot, false);
@@ -75,7 +77,12 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
     public override void OnEnter()
     {
-        WaitForLootReset();
+        float elapsedMs = WaitForLootReset();
+        if (elapsedMs < 0)
+        {
+            LogLootStatusDidNotChangedInTime(logger, elapsedMs);
+            return;
+        }
 
         if (combatLog.DamageTakenCount() == 0)
         {
@@ -100,9 +107,9 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         ClearTargetIfNeeded();
     }
 
-    private void WaitForLootReset()
+    private float WaitForLootReset()
     {
-        wait.While(LootReset);
+        return wait.Until(MAX_TIME_TO_RESET_LOOT, LootStatusIsCorpse);
     }
 
     private void WaitForLosingTarget()
@@ -121,6 +128,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
     private void CheckInventoryFull()
     {
+        ClearTargetIfNeeded();
         if (!bagReader.BagsFull())
             return;
 
@@ -147,10 +155,8 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
                 return true;
             }
         }
-        if (!input.KeyboardOnly) {
-            return LootMouse();
-        }
-        return false;
+
+        return !input.KeyboardOnly && LootMouse();
     }
 
     private void HandleSuccessfulLoot()
@@ -396,8 +402,8 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         return bits.Target() && playerReader.MinRangeZero();
     }
 
-    private bool LootReset() =>
-        (LootStatus)playerReader.LootEvent.Value != LootStatus.CORPSE;
+    private bool LootStatusIsCorpse() =>
+        (LootStatus)playerReader.LootEvent.Value == LootStatus.CORPSE;
 
     #region Logging
 
@@ -452,6 +458,12 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         Level = LogLevel.Error,
         Message = "Keyboard loot failed! Has target ? {hasTarget}")]
     static partial void LogKeyboardLootFailed(ILogger logger, bool hasTarget);
+
+    [LoggerMessage(
+        EventId = 0137,
+        Level = LogLevel.Error,
+        Message = "LootGoal failed to start due LootStatus did not changed within the expected time window {elapsedMs}ms")]
+    static partial void LogLootStatusDidNotChangedInTime(ILogger logger, float elapsedMs);
 
     #endregion
 }

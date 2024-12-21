@@ -1642,6 +1642,8 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | `"TargetsMe"` | The target currently targets the player |
 | `"TargetsPet"` | The target currently targets the player's pet |
 | `"TargetsNone"` | The target currently has not target |
+| `"SoftTarget"` | The player has an available soft target |
+| `"SoftTargetDead"` | The player has an available soft target which is dead |
 | `"AddVisible"` | Around the target there are possible additional NPCs |
 | `"InCombat"` | Player in combat. |
 | `"TargetCastingSpell"` | Target casts any spell |
