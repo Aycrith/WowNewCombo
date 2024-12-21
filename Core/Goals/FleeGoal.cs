@@ -21,6 +21,7 @@ public sealed class FleeGoal : GoapGoal, IRouteProvider
     private readonly PlayerReader playerReader;
     private readonly Navigation navigation;
     private readonly AddonBits bits;
+    private readonly CastingHandler castingHandler;
 
     private readonly SafeSpotCollector safeSpotCollector;
 
@@ -28,6 +29,7 @@ public sealed class FleeGoal : GoapGoal, IRouteProvider
 
     public FleeGoal(ILogger<CombatGoal> logger, ConfigurableInput input,
         Wait wait, PlayerReader playerReader, AddonBits bits,
+        CastingHandler castingHandler,
         ClassConfiguration classConfiguration, Navigation playerNavigation,
         ClassConfiguration classConfig,
         SafeSpotCollector safeSpotCollector)
@@ -40,6 +42,7 @@ public sealed class FleeGoal : GoapGoal, IRouteProvider
         this.playerReader = playerReader;
         this.navigation = playerNavigation;
         this.bits = bits;
+        this.castingHandler = castingHandler;
 
         this.classConfig = classConfig;
 
@@ -105,16 +108,37 @@ public sealed class FleeGoal : GoapGoal, IRouteProvider
 
         navigation.Stop();
         navigation.StopMovement();
-    }
 
-    public override void Update()
-    {
         if (bits.Target())
         {
             input.PressClearTarget();
         }
+    }
 
+    public override void Update()
+    {
         wait.Update();
         navigation.Update();
+
+        // first element is skipped 
+        // its part of the Goal Custom Condition
+        ReadOnlySpan<KeyAction> span = Keys;
+        for (int i = 1; i < span.Length; i++)
+        {
+            KeyAction keyAction = span[i];
+
+            if (castingHandler.SpellInQueue() && !keyAction.BaseAction)
+            {
+                continue;
+            }
+
+            if (castingHandler.CastIfReady(keyAction,
+                keyAction.Interrupts.Count > 0
+                ? keyAction.CanBeInterrupted
+                : bits.Combat))
+            {
+                break;
+            }
+        }
     }
 }
