@@ -1,10 +1,11 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
+using System.Threading.Tasks;
 
 namespace Core.Session;
 
 public interface IGrindSessionDAO
 {
-    IQueryable<GrindSession> Load();
+    Task<IEnumerable<GrindSession>> LoadAsync();
+
     void Save(GrindSession session);
 }

@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 using static Newtonsoft.Json.JsonConvert;
 
@@ -12,31 +14,40 @@ namespace Core.Session;
 public sealed class LocalGrindSessionDAO : IGrindSessionDAO
 {
     private readonly DataConfig dataConfig;
+    private readonly int[] expList;
 
     public LocalGrindSessionDAO(DataConfig dataConfig)
     {
         this.dataConfig = dataConfig;
 
+        expList = ExperienceProvider.Get(dataConfig);
+
         if (!Directory.Exists(dataConfig.ExpHistory))
             Directory.CreateDirectory(dataConfig.ExpHistory);
     }
 
-    public IQueryable<GrindSession> Load()
+    public async Task<IEnumerable<GrindSession>> LoadAsync()
     {
-        var sessions = Directory.EnumerateFiles(dataConfig.ExpHistory, "*.json")
-            .Select(file => DeserializeObject<GrindSession>(File.ReadAllText(file))!)
-            .OrderByDescending(s => s.SessionStart);
+        var filePaths = Directory.EnumerateFiles(dataConfig.ExpHistory, "*.json");
 
-        if (sessions.Any())
+        var sessions = (await Task.WhenAll(filePaths.Select(async fileName =>
         {
-            int[] expList = ExperienceProvider.Get(dataConfig);
-            foreach (GrindSession? s in sessions)
+            var fileContent = await File.ReadAllTextAsync(fileName);
+            var session = DeserializeObject<GrindSession>(fileContent);
+            if (session != null)
             {
-                s.ExpList = expList;
+                session.ExpList = expList;
+                session.PathName = Path.GetFileNameWithoutExtension(session.PathName) ?? string.Empty;
             }
-        }
+            return session;
+        })))
+        .Where(s => s != null)
+        .Cast<GrindSession>()
+        .OrderByDescending(s => s.SessionStart);
 
-        return sessions.AsQueryable();
+        return !sessions.Any()
+            ? []
+            : sessions;
     }
 
     public void Save(GrindSession session)
