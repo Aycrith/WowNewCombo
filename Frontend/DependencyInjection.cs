@@ -1,5 +1,4 @@
-﻿using BlazorTable;
-using MatBlazor;
+﻿using MatBlazor;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -15,8 +14,6 @@ public static class DependencyInjection
 
         services.AddRazorComponents()
             .AddInteractiveServerComponents();
-
-        services.AddBlazorTable();
 
         return services;
     }

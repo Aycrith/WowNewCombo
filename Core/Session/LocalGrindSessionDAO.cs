@@ -21,14 +21,13 @@ public sealed class LocalGrindSessionDAO : IGrindSessionDAO
             Directory.CreateDirectory(dataConfig.ExpHistory);
     }
 
-    public IEnumerable<GrindSession> Load()
+    public IQueryable<GrindSession> Load()
     {
-        List<GrindSession> sessions = Directory.EnumerateFiles(dataConfig.ExpHistory, "*.json")
+        var sessions = Directory.EnumerateFiles(dataConfig.ExpHistory, "*.json")
             .Select(file => DeserializeObject<GrindSession>(File.ReadAllText(file))!)
-            .OrderByDescending(grindingSession => grindingSession.SessionStart)
-            .ToList();
+            .OrderByDescending(s => s.SessionStart);
 
-        if (sessions.Count != 0)
+        if (sessions.Any())
         {
             int[] expList = ExperienceProvider.Get(dataConfig);
             foreach (GrindSession? s in sessions)
@@ -37,7 +36,7 @@ public sealed class LocalGrindSessionDAO : IGrindSessionDAO
             }
         }
 
-        return sessions;
+        return sessions.AsQueryable();
     }
 
     public void Save(GrindSession session)
