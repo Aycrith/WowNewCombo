@@ -16,19 +16,21 @@
             <div class="col-sm">
                 <ScreenshotComponent Stretch="false" />
                 <table width="100%" style="margin-top: 10px; margin-bottom: 10px;">
-                    <tr>
-                        <td valign="top">
-                            <RouteComponent Size="400" />
-                        </td>
-                        <td valign="top">
-                            <BagChanges />
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <ChatComponent MaxHeight="400" />
-                        </td>
-                    </tr>
+                    <tbody>
+                        <tr>
+                            <td valign="top">
+                                <RouteComponent Size="400" />
+                            </td>
+                            <td valign="top">
+                                <BagChanges />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <ChatComponent MaxHeight="400" />
+                            </td>
+                        </tr>
+                    </tbody>
                 </table>
             </div>
 
@@ -56,23 +58,29 @@
                 {
                     <PathSelectorComponent Hide="@(botController.IsBotActive)" />
                 }
-                else if (!botController.IsBotActive)
+                else if (!botController.IsBotActive && botController.ClassConfig!.Mode != Mode.AttendedGrind)
                 {
-                    <MatAccordion>
-                        <MatExpansionPanel @bind-Expanded="@panelOpenState">
-                            <MatExpansionPanelSummary>
-                                <MatExpansionPanelHeader>Override Paths</MatExpansionPanelHeader>
-                            </MatExpansionPanelSummary>
-                            <MatExpansionPanelDetails>
-                                @foreach (var pathSettings in botController.ClassConfig!.Paths)
-                                {
-                                    <PathSelectorComponent Hide="@(botController.IsBotActive)"
-                                                           Target="@(pathSettings)"
-                                                           TargetIndex="@(Array.IndexOf(botController.ClassConfig!.Paths, pathSettings))" />
-                                }
-                            </MatExpansionPanelDetails>
-                        </MatExpansionPanel>
-                    </MatAccordion>
+                    if (botController.ClassConfig!.Paths.Length > 1)
+                    {
+                        <Accordion>
+                            <AccordionItem Title="Override Paths">
+                                <Content>
+                                    @foreach (var pathSettings in botController.ClassConfig!.Paths)
+                                    {
+                                        <PathSelectorComponent Hide="@(botController.IsBotActive)"
+                                                               Target="@(pathSettings)"
+                                                               TargetIndex="@(Array.IndexOf(botController.ClassConfig!.Paths, pathSettings))" />
+                                    }
+                                </Content>
+                            </AccordionItem>
+                        </Accordion>
+                    }
+                    else
+                    {
+                        <PathSelectorComponent Hide="@(botController.IsBotActive)"
+                                               Target="@(botController.ClassConfig!.Paths.First())"
+                                               TargetIndex="0" />
+                    }
                 }
 
                 <GoalsComponent />
@@ -94,8 +102,6 @@
 
 @code {
     private bool updateAvailable;
-
-    bool panelOpenState;
 
     protected override void OnInitialized()
     {

@@ -9,7 +9,7 @@
     <label><input type="checkbox" @bind="showPath" /> path</label>
 </p>
 
-<QuickGrid class="table table-dark table-striped table-hover" Items="Filtered" Pagination="@pagination">
+<QuickGrid class="table table-striped table-hover" Items="Filtered" Pagination="@pagination">
     <PropertyColumn Title="Start Date" Property="@(x => x.SessionStartToLocalTime)" Sortable="true" IsDefaultSortColumn="true"></PropertyColumn>
     <PropertyColumn Title="Duration Min" Property="@(x => x.TotalTimeInMinutes)" Sortable="true" Align="Align.Right"></PropertyColumn>
     @if (showPath)
