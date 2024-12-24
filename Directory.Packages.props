@@ -7,6 +7,7 @@
   <ItemGroup>
     <!-- Define package versions -->
     <PackageVersion Include="BenchmarkDotNet" Version="0.14.0" />
+    <PackageVersion Include="Blazor.Bootstrap" Version="3.2.0" />
     <PackageVersion Include="MemoryPack" Version="1.21.3" />
     <PackageVersion Include="Microsoft.AspNetCore.Components" Version="9.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.QuickGrid" Version="9.0.0" />
