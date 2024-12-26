@@ -9,13 +9,16 @@
 
 <BlazorBootstrapLayout>
     <SidebarSection>
-        <Sidebar2 Href="/"
-                  @ref="sidebar"
-                  Title="Puppet"
-                  DataProvider="Sidebar2DataProvider"
-                  Width="146"
-                  WidthUnit="Unit.Px">
-        </Sidebar2>
+        <div class="grid">
+            <ThemeSwitcher Class="ms-5" />
+            <Sidebar2 Href="/"
+                      @ref="sidebar"
+                      Title="Puppet"
+                      DataProvider="Sidebar2DataProvider"
+                      Width="146"
+                      WidthUnit="Unit.Px">
+            </Sidebar2>
+        </div>
     </SidebarSection>
 
     <ContentSection>

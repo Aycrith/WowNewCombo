@@ -10,17 +10,14 @@
     <CardHeader>
         <div class="d-flex">
             <div class="p-2 flex-grow-1 bd-highlight">
-                Goals
+                Goals<br/>
+                @PlayerReader.MinRange()-@PlayerReader.MaxRange()
             </div>
             <div class="p-2 bd-highlight">
-                @PlayerReader.MinRange() - @PlayerReader.MaxRange()
-
-                @ttk.Time.ToString("F1")
-
                 <span>
-                    Net: @PlayerReader.NetworkLatency.ToString()ms |
                     Npc: @NpcLatency.ToString("0.0")ms |
-                    Bot: @addonReader.AvgUpdateLatency.ToString("0.0")ms
+                    Bot: @addonReader.AvgUpdateLatency.ToString("0.0")ms<br/>
+                    Net: @PlayerReader.NetworkLatency.ToString()ms
                 </span>
             </div>
             <div class="p-2 bd-highlight">
