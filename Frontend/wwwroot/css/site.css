@@ -215,3 +215,35 @@ app {
     width: 100%;
     aspect-ratio: 1.5/1;
 }
+
+.poor {
+    color: #9d9d9d;
+}
+
+.common {
+    color: var(--bs-emphasis-color);
+}
+
+.uncommon {
+    color: #1eff00;
+}
+
+.rare {
+    color: #0070dd;
+}
+
+.epic {
+    color: #9345ff;
+}
+
+.legendary {
+    color: #ff8000;
+}
+
+.artifact {
+    color: #e5cc80;
+}
+
+.heirloom {
+    color: #e5cc80;
+}
