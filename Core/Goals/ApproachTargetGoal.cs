@@ -1,4 +1,5 @@
-﻿using Core.GOAP;
+﻿using Core.AddonComponent;
+using Core.GOAP;
 
 using Microsoft.Extensions.Logging;
 
@@ -14,7 +15,7 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
     private const bool debug = true;
     private const double STUCK_INTERVAL_MS = 400; // cant be lower than Approach.Cooldown
     private const double MAX_APPROACH_DURATION_MS = 15_000; // max time to chase to pull
-    
+    private const double MIN_TIME_TILL_IDLE = 2000;
 
     public override float Cost => 8f;
 
@@ -106,7 +107,7 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
             return;
         }
 
-        if (input.Approach.GetRemainingCooldown() == 0)
+        if (!input.Approach.OnCooldown() && HasValidSoftInteract())
         {
             input.PressApproach();
         }
@@ -183,7 +184,7 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
         if (playerReader.TargetGuid == initialTargetGuid)
         {
             int initialTargetMinRange = playerReader.MinRange();
-            if (input.TargetNearestTarget.GetRemainingCooldown() == 0)
+            if (!input.TargetNearestTarget.OnCooldown())
             {
                 input.PressNearestTarget();
                 wait.Update();
@@ -218,7 +219,7 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
             }
         }
 
-        if (ApproachDurationMs > 2000 && initialMinRange < playerReader.MinRange())
+        if (ApproachDurationMs > MIN_TIME_TILL_IDLE && initialMinRange < playerReader.MinRange())
         {
             if (debug)
                 Log($"Going away from the target! {initialMinRange} < {playerReader.MinRange()}");
@@ -235,11 +236,21 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
 
     private void RandomJump()
     {
-        if (ApproachDurationMs > 2000 &&
+        if (ApproachDurationMs > MIN_TIME_TILL_IDLE &&
             input.Jump.SinceLastClickMs > Random.Shared.Next(5000, 25_000))
         {
             input.PressJump();
         }
+    }
+
+    private bool HasValidSoftInteract()
+    {
+        return
+            !bits.SoftInteract() ||
+            (bits.SoftInteract() &&
+            !bits.SoftInteract_Dead() &&
+            !bits.SoftInteract_Tagged() &&
+            playerReader.SoftInteract_Type == GuidType.Creature);
     }
 
     private void Log(string text)
