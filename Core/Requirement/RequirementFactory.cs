@@ -1149,12 +1149,11 @@ public sealed partial class RequirementFactory
         }
 
         string aliasKey = aliasOrKey().ToString();
-        if (intVariables.ContainsKey(aliasKey))
-        {
-            key = aliasKey;
-        }
-
         Func<int> lValue = aliasOrKey;
+        if (intVariables.TryGetValue(aliasKey, out Func<int>? currentVal))
+        {
+            lValue = currentVal;
+        }
 
         string varOrConstName = "";
         Func<int> rValue;
