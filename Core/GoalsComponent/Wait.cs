@@ -70,6 +70,19 @@ public sealed class Wait
         return -elapsedMs;
     }
 
+    public float UntilCount(int count, Func<bool> interrupt)
+    {
+        DateTime start = DateTime.UtcNow;
+        for (int i = 0; i < count; i++)
+        {
+            if (interrupt())
+                return (float)(DateTime.UtcNow - start).TotalMilliseconds;
+
+            Update();
+        }
+        return -(float)(DateTime.UtcNow - start).TotalMilliseconds;
+    }
+
     [SkipLocalsInit]
     public float Until(int timeoutMs, CancellationToken token)
     {

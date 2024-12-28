@@ -95,7 +95,7 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
     {
         combatUtil.Update();
 
-        float e = wait.Until(CastingHandler.GCD, LootReset);
+        float e = wait.UntilCount(Loot.LOOT_RESET_UPDATE_COUNT, LootReset);
         if (e < 0)
         {
             LogWarnWindowStillOpen(logger, e);
@@ -112,11 +112,11 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
             LogWarning("Inventory is full!");
         }
 
-        ReadOnlySpan<CursorType> types = stackalloc[] {
+        ReadOnlySpan<CursorType> types = [
             CursorType.Skin,
             CursorType.Mine,
             CursorType.Herb
-        };
+        ];
 
         int attempts = 0;
         while (attempts < MAX_ATTEMPTS)

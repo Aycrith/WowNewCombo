@@ -18,7 +18,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
     private const int MAX_TIME_TO_REACH_MELEE = 10000;
     private const int MAX_TIME_TO_DETECT_LOOT = 2 * CastingHandler.GCD;
-    private const int MAX_TIME_TO_RESET_LOOT = 800;
+    private const int MAX_TIME_TO_RESET_LOOT = CastingHandler.GCD;
 
     private readonly ILogger<LootGoal> logger;
     private readonly ConfigurableInput input;
@@ -80,7 +80,10 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         float elapsedMs = WaitForLootReset();
         if (elapsedMs < 0)
         {
-            LogLootStatusDidNotChangedInTime(logger, elapsedMs);
+            LogLootStatusDidNotChangedInTime(logger,
+                ((LootStatus)playerReader.LootEvent.Value).ToStringF(),
+                elapsedMs);
+
             return;
         }
 
@@ -109,7 +112,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
     private float WaitForLootReset()
     {
-        return wait.Until(MAX_TIME_TO_RESET_LOOT, LootStatusIsCorpse);
+        return wait.UntilCount(Loot.LOOT_RESET_UPDATE_COUNT, LootStatusIsCorpse);
     }
 
     private void WaitForLosingTarget()
@@ -462,8 +465,8 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
     [LoggerMessage(
         EventId = 0137,
         Level = LogLevel.Error,
-        Message = "LootGoal failed to start due LootStatus did not changed within the expected time window {elapsedMs}ms")]
-    static partial void LogLootStatusDidNotChangedInTime(ILogger logger, float elapsedMs);
+        Message = "LootGoal failed to start due LootStatus did not changed(was {value}) within the expected time window {elapsedMs}ms")]
+    static partial void LogLootStatusDidNotChangedInTime(ILogger logger, string value, float elapsedMs);
 
     #endregion
 }
