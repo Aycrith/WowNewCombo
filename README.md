@@ -67,7 +67,7 @@ V1 Local and V1 Remote does not have the capability as of this moment to read th
 
 - Corpse run
 - Semi-automated gathering [mode](#modes)
-- Frontend Dark mode
+- Frontend Dark mode / Light mode
 - Frontend Runtime Class Profile picker
 - Frontend Runtime Path Profile autocomplete search
 - Frontend Edit the loaded profile
@@ -79,9 +79,20 @@ V1 Local and V1 Remote does not have the capability as of this moment to read th
 
 # Media
 
-<a href="./images/Screenshot.png" target="_blank">
-   <img alt="Screenshot" src="./images/Screenshot.png" width="50%">
-</a>
+<table>
+    <tr>
+        <td>
+            <a href="./images/flat_dark.png" target="_blank">
+                <img alt="flat_dark" src="./images/flat_dark.png" width="100%">
+            </a>
+        </td>
+        <td>
+            <a href="./images/flat_light.png" target="_blank">
+                <img alt="flat_light" src="./images/flat_light.png" width="100%">
+            </a>
+        </td>
+    </tr>
+</table>
 
 [![YouTube Video](https://img.youtube.com/vi/CIMgbh5LuCc/0.jpg)](https://www.youtube.com/watch?v=CIMgbh5LuCc)
 
@@ -2171,7 +2182,20 @@ Some goals (combat,pull target) contain a list of spells which can be cast. The 
 
 The visualisation of the pre-conditions and spell [requirement(s)](#requirement) makes it easier to understand what the bot is doing and determine if the class file needs to be tweaked.
 
-![Goals](images/actionsComponent.png)
+<table>
+    <tr>
+        <td>
+            <a href="./images/float_dark_goals_component.png" target="_blank">
+                <img alt="flat_light" src="./images/float_dark_goals_component.png" width="100%">
+            </a>
+        </td>
+        <td>
+            <a href="./images/float_light_goals_component.png" target="_blank">
+                <img alt="flat_light" src="./images/float_light_goals_component.png" width="100%">
+            </a>
+        </td>
+    </tr>
+</table>
 
 # Recording a Path
 
