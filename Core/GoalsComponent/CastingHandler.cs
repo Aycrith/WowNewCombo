@@ -431,7 +431,7 @@ public sealed partial class CastingHandler
                 return false;
             }
 
-            if (!WaitForGCD(item, false, token))
+            if (!WaitForGCD(item, false, false, token))
             {
                 return false;
             }
@@ -463,7 +463,7 @@ public sealed partial class CastingHandler
             }
         }
 
-        if (!item.BaseAction && !WaitForGCD(item, true, token))
+        if (!item.BaseAction && !WaitForGCD(item, true, false, token))
         {
             return false;
         }
@@ -668,8 +668,9 @@ public sealed partial class CastingHandler
                     item.CancelOnInterrupt)
                 {
                     input.PressESC();
+                    WaitForGCD(item, false, true, CancellationToken.None);
                     wait.Fixed(playerReader.NetworkLatency);
-                    wait.Update();
+                    //wait.Update();
                 }
 
                 LogFailedDueReason(logger, item.Name, result.ToStringF());
@@ -708,11 +709,13 @@ public sealed partial class CastingHandler
         return true;
     }
 
-    public bool WaitForGCD(KeyAction item, bool spellQueue, CancellationToken token)
+    public bool WaitForGCD(KeyAction item, bool spellQueue, bool ignoreRemainCast, CancellationToken token)
     {
-        int duration =
-            Max(playerReader.GCD.Value, playerReader.RemainCastMs) +
-            playerReader.NetworkLatency;
+        int duration = ignoreRemainCast
+            ? playerReader.GCD.Value
+            : Max(playerReader.GCD.Value, playerReader.RemainCastMs);
+
+        duration += playerReader.NetworkLatency;
 
         if (spellQueue)
             duration -= playerReader.SpellQueueTimeMs;

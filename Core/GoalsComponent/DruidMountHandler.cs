@@ -57,7 +57,7 @@ public sealed class DruidMountHandler : IMountHandler
             KeyAction keyAction = classConfig.Form.Sequence[i];
             if (keyAction.FormValue is Form.Druid_Flight or Form.Druid_Travel &&
                 keyAction.CanRun() &&
-                castingHandler.WaitForGCD(keyAction, false, CancellationToken.None) &&
+                castingHandler.WaitForGCD(keyAction, false, false, CancellationToken.None) &&
                 castingHandler.SwitchForm(keyAction, CancellationToken.None))
             {
                 return;
