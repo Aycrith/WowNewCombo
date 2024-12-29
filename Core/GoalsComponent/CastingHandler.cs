@@ -670,7 +670,6 @@ public sealed partial class CastingHandler
                     input.PressESC();
                     WaitForGCD(item, false, true, CancellationToken.None);
                     wait.Fixed(playerReader.NetworkLatency);
-                    //wait.Update();
                 }
 
                 LogFailedDueReason(logger, item.Name, result.ToStringF());
