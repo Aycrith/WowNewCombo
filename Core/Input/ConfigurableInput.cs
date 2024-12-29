@@ -148,6 +148,10 @@ public sealed partial class ConfigurableInput
 
     public void PressFollowTarget() => PressRandom(FollowTarget);
 
+    public void PressESC()
+    {
+        input.PressRandom(ConsoleKey.Escape, InputDuration.VeryFastPress);
+    }
 
     #region Logging
 

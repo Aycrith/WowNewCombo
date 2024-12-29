@@ -664,6 +664,14 @@ public sealed partial class CastingHandler
         {
             if (result != CastResult.UIError)
             {
+                if (result == CastResult.TokenInterrupted &&
+                    item.CancelOnInterrupt)
+                {
+                    input.PressESC();
+                    wait.Fixed(playerReader.NetworkLatency);
+                    wait.Update();
+                }
+
                 LogFailedDueReason(logger, item.Name, result.ToStringF());
                 return false;
             }

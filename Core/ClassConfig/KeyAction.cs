@@ -144,6 +144,13 @@ public sealed partial class KeyAction
         get => features[ActionMask.AfterCastAuraExpected];
         set => features[ActionMask.AfterCastAuraExpected] = value;
     }
+
+    public bool CancelOnInterrupt
+    {
+        get => features[ActionMask.CancelOnInterrupt];
+        set => features[ActionMask.CancelOnInterrupt] = value;
+    }
+
     public int AfterCastStepBack { get; set; }
 
     public string InCombat { get; set; } = "false";

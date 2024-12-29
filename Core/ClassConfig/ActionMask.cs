@@ -21,4 +21,5 @@ public static class ActionMask
     public const int AfterCastWaitCombat = 1 << 14;
     public const int AfterCastWaitGCD = 1 << 15;
     public const int AfterCastAuraExpected = 1 << 16;
+    public const int CancelOnInterrupt = 1 << 17;
 }
