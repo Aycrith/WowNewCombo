@@ -698,6 +698,7 @@ Can specify conditions with [Requirement(s)](#requirement) in order to create a 
 | `"Requirements"` | List of [Requirement](#requirement) | `false` |
 | `"Interrupt"` | Single [Requirement](#requirement) | `false` |
 | `"Interrupts"` | List of [Requirement](#requirement) | `false` |
+| `"CancelOnInterrupt"` | If the [Interrupt](#interrupt-requirement) [Requirement](#requirement) has met, shall **Cancel** current castbar spellcast (sending ESC) | `false` |
 | `"ResetOnNewTarget"` | Reset the Cooldown if the target changes | `false` |
 | `"Log"` | Related events should appear in the logs | `true` |
 | --- | Before keypress cast, ... | --- |
@@ -1625,6 +1626,25 @@ e.g.
 },
 ```
 ---
+### **CanRun requirements**
+
+Formula: `CanRun:_KeyAction_Name_`
+
+Where the `_KeyAction_Name_` is one of the [KeyAction.Name](#keyaction).
+
+It is suitable for [Interrupt Requirement](#interrupt-requirement), for such scenario:
+* The player already casting a `Castbar` based spell which has a long cast time like 2-3 seconds
+* However meanwhile a higher priority action can be used, which would be beneficial.
+* Like: A mob is in low hp, so an instant cast spell such as `Earth Shock`, `Fireblast` would execute the enemy.
+
+e.g.
+```json
+"Requirement": "CanRun:Frost Shock"
+"Requirement": "CanRun:Fire Blast"
+"Requirement": "!CanRun:Heartstone"
+```
+
+---
 ### **Trigger requirements**
 
 If you feel the current Requirement toolset is not enough for you, you can use other addons such as **WeakAura's** Trigger to control a given bit.
@@ -2034,6 +2054,36 @@ This **500**ms duration is the reload animation time, while the player has to st
         "Interrupt": "RangedSwing < -500 && TargetAlive"
         },
         //...
+    ]
+}
+```
+---
+
+Execute low hp enemy instead of awaitning the currently casted spell.
+
+The key takeaway here is that the `Earth Shock` spell has higher priority.
+
+```json
+"Combat": {
+    "Sequence": [
+        //...
+        {
+            "Name": "Earth Shock",
+            "Key": "3",
+            "Requirements": [
+                "SpellInRange:1",
+                "TargetAlive && TargetHealth% < 20"
+            ]
+        },
+        {
+            "Name": "Lightning Bolt",
+            "Key": "1",
+            "HasCastBar": true,
+            "AfterCastWaitCastbar": true,
+            "Requirement": "!Clearcasting",
+            "Interrupt": "Clearcasting || CanRun:Earth Shock",
+            "CancelOnInterrupt": true
+        }
     ]
 }
 ```

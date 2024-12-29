@@ -131,7 +131,8 @@ public sealed partial class RequirementFactory
             { "Spell", CreateSpell },
             { "Talent", CreateTalent },
             { "Trigger:", CreateTrigger },
-            { "Usable:", CreateUsable }
+            { "Usable:", CreateUsable },
+            { "CanRun:", CreateCanRun }
         };
         this.requirementMap = requirementMap.ToFrozenDictionary();
 
@@ -780,6 +781,17 @@ public sealed partial class RequirementFactory
         };
     }
 
+    private Requirement CreateActionCanRun(KeyAction item)
+    {
+        bool f() => item.CanRun();
+        string s() => $"CanRun:{item.Name}";
+        return new Requirement
+        {
+            HasRequirement = f,
+            LogMessage = s
+        };
+    }
+
     private Requirement CreateActionCurrent(KeyAction item,
         ActionBarBits<ICurrentAction> currentAction)
     {
@@ -1102,6 +1114,30 @@ public sealed partial class RequirementFactory
         throw new InvalidOperationException($"'{requirement}' " +
             $"related named '{name}' {nameof(Core.KeyAction)} not found!");
     }
+
+    private Requirement CreateCanRun(ReadOnlySpan<char> requirement)
+    {
+        // 'CanRun:_KeyAction_Name_'
+        int sep = requirement.IndexOf(SEP1);
+        ReadOnlySpan<char> name = requirement[(sep + 1)..].Trim();
+
+        List<(string _, KeyActions)> groups = classConfig.GetByType<KeyActions>();
+
+        foreach ((string _, KeyActions keyActions) in groups)
+        {
+            foreach (KeyAction keyAction in keyActions.Sequence)
+            {
+                if (name.SequenceEqual(keyAction.Name))
+                {
+                    return CreateActionCanRun(keyAction);
+                }
+            }
+        }
+
+        throw new InvalidOperationException($"'{requirement}' " +
+            $"related named '{name}' {nameof(Core.KeyAction)} not found!");
+    }
+
 
     private Requirement CreateGreaterThen(ReadOnlySpan<char> requirement)
     {
