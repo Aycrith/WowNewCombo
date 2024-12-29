@@ -1820,6 +1820,9 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | Shaman | `"Shamanistic Focus"` |
 | Shaman | `"Focused"` |
 | Shaman | `"Stoneskin"` |
+| Shaman | `"Elemental Mastery"` |
+| Shaman | `"Stormstrike"` |
+| Shaman | `"Nature's Swiftness"` |
 | Hunter | `"Aspect of the Cheetah"` |
 | Hunter | `"Aspect of the Pack"` |
 | Hunter | `"Aspect of the Hawk"` |

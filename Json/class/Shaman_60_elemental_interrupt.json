@@ -39,6 +39,11 @@
   "Combat": {
     "Sequence": [
       {
+        "Name": "Elemental Mastery",
+        "Key": "5",
+        "Requirement": "!Clearcasting && !Elemental Mastery"
+      },
+      {
         "Name": "Chain Lightning",
         "Key": "2",
         "HasCastBar": true,

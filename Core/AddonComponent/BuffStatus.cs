@@ -112,11 +112,15 @@ public sealed class BuffStatus<T> : IReader
     // Shaman
     public bool Lightning_Shield() => v[Mask._10];
     public bool Water_Shield() => v[Mask._11];
-    [Names([
-        "Shamanistic Focus",
-        "Focused"])]
+
+    [Names(["Shamanistic Focus", "Focused"])]
     public bool Shamanistic_Focus() => v[Mask._12];
     public bool Stoneskin() => v[Mask._13];
+    public bool Elemental_Mastery() => v[Mask._14];
+    public bool Stormstrike() => v[Mask._15];
+
+    [Names(["Nature's Swiftness"])]
+    public bool Natures_Swiftness() => v[Mask._16];
 
     // Hunter
     public bool Aspect_of_the_Cheetah() => v[Mask._10];
