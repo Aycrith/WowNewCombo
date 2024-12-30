@@ -104,8 +104,7 @@
         "Form": "Druid_Bear"
       },
       {
-        "Name": "AutoAttack",
-        "Requirement": "!AutoAttacking"
+        "Name": "AutoAttack"
       },
       {
         "Name": "Approach",

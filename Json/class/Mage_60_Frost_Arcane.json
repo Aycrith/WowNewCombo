@@ -51,6 +51,29 @@
       }
     ]
   },
+  "Flee": {
+    "Sequence": [
+      {
+        "Name": "Flee",
+        "Requirement": "(MobCount > 1 && Health% < 50) || TargetElite" 
+      },
+      {
+        "Name": "Frost Nova",
+        "Key": 6,
+        "Requirement": "InMeleeRange"
+      },
+      {
+        "Name": "HP Potion",
+        "Key": 7,
+        "Requirement": "Health% < 50"
+      },
+      {
+        "name": "Blink",
+        "Key": "F3",
+        "Requirement": "!InMeleeRange"
+      }
+    ]
+  },
   "Combat": {
     "Sequence": [
       {
@@ -129,8 +152,7 @@
         "Requirements": [
           "!HasRangedWeapon",
           "!Casting",
-          "!Shooting",
-          "!AutoAttacking"
+          "!Shooting"
         ]
       },
       {

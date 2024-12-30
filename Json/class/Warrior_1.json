@@ -11,8 +11,7 @@
         "Requirement": "MainHandSwing > -400"
       },
       {
-        "Name": "AutoAttack",
-        "Requirement": "!AutoAttacking"
+        "Name": "AutoAttack"
       },
       {
         "Name": "Approach",

@@ -33,8 +33,7 @@
         "Name": "AutoAttack",
         "Requirements": [
           "!HasRangedWeapon",
-          "!Casting",
-          "!AutoAttacking"
+          "!Casting"
         ]
       },
       {

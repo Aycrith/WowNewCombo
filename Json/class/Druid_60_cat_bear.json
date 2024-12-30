@@ -257,8 +257,7 @@
       {
         "Name": "AutoAttack",
         "Requirements": [
-          "InMeleeRange",
-          "!AutoAttacking"
+          "InMeleeRange"
         ]
       },
       {

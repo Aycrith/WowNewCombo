@@ -36,13 +36,12 @@
         "Name": "Lightning Bolt",
         "Key": "2",
         "HasCastBar": true,
-        "Requirement": "not InMeleeRange"
+        "Requirement": "!InMeleeRange"
       },
       {
         "Name": "AutoAttack",
         "Requirements": [
-          "!Casting",
-          "!AutoAttacking"
+          "!Casting"
         ]
       },
       {

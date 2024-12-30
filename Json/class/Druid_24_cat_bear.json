@@ -81,7 +81,7 @@
         "WhenUsable": true,
         "Requirements": [
           "Form:Druid_Cat",
-          "!TigersFury",
+          "!Tiger's Fury",
           "InMeleeRange"
         ]
       }
@@ -103,7 +103,7 @@
         "WhenUsable": true,
         "Requirements": [
           "Form:Druid_Cat",
-          "!TigersFury",
+          "!Tiger's Fury",
           "Rip",
           "Rake",
           "InMeleeRange"
@@ -218,8 +218,7 @@
         ]
       },
       {
-        "Name": "AutoAttack",
-        "Requirement": "!AutoAttacking"
+        "Name": "AutoAttack"
       },
       {
         "Name": "Approach",

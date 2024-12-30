@@ -38,13 +38,12 @@
         "Key": "2",
         "HasCastBar": true,
         "Requirements": [
-          "not InMeleeRange",
+          "!InMeleeRange",
           "Mana%>50"
         ]
       },
       {
-        "Name": "AutoAttack",
-        "Requirement": "not AutoAttacking"
+        "Name": "AutoAttack"
       },
       {
         "Name": "Approach",

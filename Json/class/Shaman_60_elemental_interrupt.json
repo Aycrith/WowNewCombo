@@ -63,7 +63,7 @@
         "HasCastBar": true,
         "AfterCastWaitCastbar": true,
         "Requirement": "!Clearcasting",
-        "Interrupt": "Clearcasting || CanRun:Earth Shock",
+        "Interrupt": "(Clearcasting && CanRun:Chain Lightning) || CanRun:Earth Shock",
         "CancelOnInterrupt": true
       }
     ]

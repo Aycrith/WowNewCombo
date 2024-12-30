@@ -30,8 +30,7 @@
       {
         "Name": "AutoAttack",
         "Requirements": [
-          "!Casting",
-          "!AutoAttacking"
+          "!Casting"
         ]
       },
       {

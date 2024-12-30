@@ -248,10 +248,7 @@
         ]
       },
       {
-        "Name": "AutoAttack",
-        "Requirements": [
-          "!AutoAttacking"
-        ]
+        "Name": "AutoAttack"
       },
       {
         "Name": "Approach",

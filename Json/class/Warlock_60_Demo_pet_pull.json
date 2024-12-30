@@ -180,8 +180,7 @@
         "Requirements": [
           "!HasRangedWeapon",
           "!Shooting",
-          "!Casting",
-          "!AutoAttacking"
+          "!Casting"
         ]
       }
     ]

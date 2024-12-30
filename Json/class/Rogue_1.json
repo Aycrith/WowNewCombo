@@ -14,8 +14,7 @@
         "Key": "2"
       },
       {
-        "Name": "AutoAttack",
-        "Requirement": "!AutoAttacking"
+        "Name": "AutoAttack"
       },
       {
         "Name": "Approach",
