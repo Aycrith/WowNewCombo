@@ -753,7 +753,7 @@ public sealed partial class CastingHandler
             bits.Pet() &&
             (!playerReader.PetTarget() ||
             playerReader.TargetGuid != playerReader.PetTargetGuid) &&
-            input.PetAttack.GetRemainingCooldown() == 0)
+            !input.PetAttack.OnCooldown())
         {
             if (!playerReader.IsCasting() && !bits.Channeling())
                 input.PressStopAttack();

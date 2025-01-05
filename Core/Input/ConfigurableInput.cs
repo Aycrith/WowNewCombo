@@ -104,11 +104,13 @@ public sealed partial class ConfigurableInput
 
     public void PressApproachOnCooldown()
     {
-        if (Approach.GetRemainingCooldown() == 0)
+        if (Approach.OnCooldown())
         {
-            input.PressRandom(Approach.ConsoleKey, InputDuration.FastPress);
-            Approach.SetClicked();
+            return;
         }
+
+        input.PressRandom(Approach.ConsoleKey, InputDuration.FastPress);
+        Approach.SetClicked();
     }
 
     public void PressApproach() => PressRandom(Approach);

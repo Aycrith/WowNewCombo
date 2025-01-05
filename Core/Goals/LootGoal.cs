@@ -18,7 +18,6 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
     private const int MAX_TIME_TO_REACH_MELEE = 10000;
     private const int MAX_TIME_TO_DETECT_LOOT = 2 * CastingHandler.GCD;
-    private const int MAX_TIME_TO_RESET_LOOT = CastingHandler.GCD;
 
     private readonly ILogger<LootGoal> logger;
     private readonly ConfigurableInput input;

@@ -47,7 +47,7 @@ public sealed class TargetFinder
         if (ElapsedMs < waitMs)
             return bits.Target();
 
-        if (input.TargetNearestTarget.GetRemainingCooldown() == 0)
+        if (!input.TargetNearestTarget.OnCooldown())
         {
             lastActive = DateTime.UtcNow;
             input.PressNearestTarget();

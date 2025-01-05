@@ -129,7 +129,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
             if (classConfig.AutoPetAttack &&
                 bits.Pet() &&
                 (!playerReader.PetTarget() || playerReader.PetTargetGuid != playerReader.TargetGuid) &&
-                input.PetAttack.GetRemainingCooldown() == 0)
+                !input.PetAttack.OnCooldown())
             {
                 input.PressPetAttack();
             }
@@ -182,7 +182,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
 
             if (!bits.Target_Dead())
             {
-                logger.LogWarning("---- New targe from Pet target!");
+                logger.LogWarning("---- New target from Pet target!");
                 return;
             }
 

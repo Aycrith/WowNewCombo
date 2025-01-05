@@ -103,7 +103,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
             mountHandler.Dismount();
         }
 
-        if (Keys.Length != 0 && input.StopAttack.GetRemainingCooldown() == 0)
+        if (Keys.Length != 0 && !input.StopAttack.OnCooldown())
         {
             Log("Stop auto interact!");
             input.PressStopAttack();
@@ -157,7 +157,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
             bits.Pet() &&
             (!playerReader.PetTarget() ||
             playerReader.TargetGuid != playerReader.PetTargetGuid) &&
-            input.PetAttack.GetRemainingCooldown() == 0)
+            !input.PetAttack.OnCooldown())
         {
             input.PressStopAttack();
             input.PressPetAttack();
@@ -245,7 +245,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
 
     private void DefaultApproach()
     {
-        if (input.Approach.GetRemainingCooldown() != 0)
+        if (input.Approach.OnCooldown())
             return;
 
         if (!stuckDetector.IsMoving())
@@ -257,7 +257,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
     private void ConditionalApproach()
     {
         if (approachKey == null ||
-            (!approachKey.CanRun() && approachKey.GetRemainingCooldown() <= 0))
+            (!approachKey.CanRun() && !approachKey.OnCooldown()))
         {
             stopMoving.Stop();
             return;
