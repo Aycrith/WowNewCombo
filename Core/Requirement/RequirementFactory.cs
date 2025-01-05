@@ -643,7 +643,7 @@ public sealed partial class RequirementFactory
         if (item.Cooldown <= 0)
             return;
 
-        bool f() => item.GetRemainingCooldown() == 0;
+        bool f() => !item.OnCooldown();
         string s() => $"Cooldown {item.GetRemainingCooldown() / 1000:F1}";
         list.Add(new Requirement
         {
