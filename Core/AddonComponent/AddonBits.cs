@@ -82,6 +82,7 @@ public sealed class AddonBits : IReader, IGameMenuWindowShown
 
     public bool Grounded() => !Flying() && !Falling();
 
+    public bool Any_AutoAttack() => AutoShot() || Auto_Attack() || Shoot();
 
     // -- value3 based flags
     public bool SoftInteract() => v3[Mask._0];
