@@ -163,10 +163,7 @@ public sealed class ReactCastError
                 break;
             case UI_ERROR.ERR_BADATTACKFACING:
 
-                bool wasAnyAuto =
-                    bits.AutoShot() ||
-                    bits.Auto_Attack() ||
-                    bits.Shoot();
+                bool wasAnyAuto = bits.Any_AutoAttack();
 
                 float beforeDir = playerReader.Direction;
 
