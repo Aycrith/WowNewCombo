@@ -111,7 +111,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
     private float WaitForLootReset()
     {
-        return wait.UntilCount(Loot.LOOT_RESET_UPDATE_COUNT, LootStatusIsCorpse);
+        return wait.UntilCount(Loot.LOOT_RESET_UPDATE_COUNT, LootStatusIsCorpseOrReady);
     }
 
     private void WaitForLosingTarget()
@@ -404,8 +404,9 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         return bits.Target() && playerReader.MinRangeZero();
     }
 
-    private bool LootStatusIsCorpse() =>
-        (LootStatus)playerReader.LootEvent.Value == LootStatus.CORPSE;
+    private bool LootStatusIsCorpseOrReady() =>
+        (LootStatus)playerReader.LootEvent.Value
+            is LootStatus.CORPSE or LootStatus.READY;
 
     #region Logging
 
