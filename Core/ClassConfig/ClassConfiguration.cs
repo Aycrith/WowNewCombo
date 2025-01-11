@@ -48,7 +48,7 @@ public sealed partial class ClassConfiguration
     public string? OverridePathFilename { get; set; } = string.Empty;
     public bool PathThereAndBack { get; set; } = true;
     public bool PathReduceSteps { get; set; }
-    public PathSettings[] Paths { get; set; } = Array.Empty<PathSettings>();
+    public PathSettings[] Paths { get; set; } = [];
 
     public Mode Mode { get; init; } = Mode.Grind;
 
@@ -62,11 +62,11 @@ public sealed partial class ClassConfiguration
         UnitClassification.Rare;
 
     public bool CheckTargetGivesExp { get; set; }
-    public string[] Blacklist { get; init; } = Array.Empty<string>();
+    public string[] Blacklist { get; init; } = [];
 
-    public Dictionary<int, SchoolMask> NpcSchoolImmunity { get; } = new();
+    public Dictionary<int, SchoolMask> NpcSchoolImmunity { get; } = [];
 
-    public Dictionary<string, int> IntVariables { get; } = new();
+    public Dictionary<string, int> IntVariables { get; } = [];
 
     public KeyActions Pull { get; } = new();
     public KeyActions Flee { get; } = new();

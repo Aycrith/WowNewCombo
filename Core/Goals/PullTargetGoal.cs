@@ -1,5 +1,6 @@
 using Core.GOAP;
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using SharedLib.NpcFinder;
@@ -40,7 +41,8 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
 
     public PullTargetGoal(ILogger<PullTargetGoal> logger, ConfigurableInput input,
         Wait wait, CombatLog combatlog, PlayerReader playerReader,
-        AddonBits bits, IBlacklist blacklist,
+        AddonBits bits,
+        [FromKeyedServices("target")] IBlacklist targetBlacklist,
         StopMoving stopMoving, CastingHandler castingHandler,
         IMountHandler mountHandler, NpcNameTargeting npcNameTargeting,
         StuckDetector stuckDetector, CombatUtil combatUtil,
@@ -59,7 +61,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         this.npcNameTargeting = npcNameTargeting;
         this.stuckDetector = stuckDetector;
         this.combatUtil = combatUtil;
-        this.targetBlacklist = blacklist;
+        this.targetBlacklist = targetBlacklist;
         this.classConfig = classConfig;
 
         Keys = classConfig.Pull.Sequence;

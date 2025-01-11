@@ -2,6 +2,7 @@ using System.Numerics;
 
 using Core.Goals;
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using SharedLib.Extensions;
@@ -29,7 +30,8 @@ public sealed partial class MountHandler : IMountHandler
         ClassConfiguration classConfig, AddonBits bits, Wait wait,
         PlayerReader playerReader, ActionBarBits<IUsableAction> usableAction,
         ActionBarCooldownReader cooldownReader,
-        StopMoving stopMoving, IBlacklist blacklist)
+        StopMoving stopMoving,
+        [FromKeyedServices("target")] IBlacklist targetBlacklist)
     {
         this.logger = logger;
         this.classConfig = classConfig;
@@ -40,7 +42,7 @@ public sealed partial class MountHandler : IMountHandler
         this.playerReader = playerReader;
         this.bits = bits;
         this.stopMoving = stopMoving;
-        this.targetBlacklist = blacklist;
+        this.targetBlacklist = targetBlacklist;
     }
 
     public bool CanMount()
