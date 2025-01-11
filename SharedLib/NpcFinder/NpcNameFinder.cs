@@ -338,7 +338,7 @@ public sealed partial class NpcNameFinder
         resetEvent.Reset();
 
         ReadOnlySpan<LineSegment> lineSegments =
-            PopulateLines(bitmapProvider, Area, colorMatcher, Area,
+            PopulateLines(colorMatcher, Area,
             ScaleWidth(MinHeight), ScaleWidth(WidthDiff));
 
         Npcs = DetermineNpcs(lineSegments);
@@ -520,11 +520,10 @@ public sealed partial class NpcNameFinder
 
     [SkipLocalsInit]
     private ReadOnlySpan<LineSegment> PopulateLines(
-        IScreenImageProvider provider, Rectangle rect,
         Func<byte, byte, byte, bool> colorMatcher,
         Rectangle area, float minLength, float lengthDiff)
     {
-        const int RESOLUTION = 32;
+        const int RESOLUTION = 16;
         int rowSize = (area.Right - area.Left) / RESOLUTION;
         int height = (area.Bottom - area.Top) / RESOLUTION;
         int totalSize = rowSize * height;
@@ -553,7 +552,7 @@ public sealed partial class NpcNameFinder
             in operation);
 
         pooler.Return(segments);
-        return new(segments, 0, counter.count);
+        return new(segments, 0, Math.Min(segments.Length, counter.count));
     }
 
     public Point ToScreenCoordinates()
