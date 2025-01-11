@@ -86,7 +86,7 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
     public int PetMaxHealth() => reader.GetInt(38);
     public int PetHealth() => reader.GetInt(39);
     public int PetHealthPercent() => (1 + PetHealth()) * 100 / (1 + PetMaxHealth());
-
+    public bool PetAlive() => PetHealth() > 0;
 
     public SpellInRange SpellInRange { get; }
     public bool WithInPullRange() => SpellInRange.WithinPullRange(this, Class);

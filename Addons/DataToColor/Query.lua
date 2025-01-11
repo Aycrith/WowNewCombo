@@ -52,6 +52,8 @@ local UnitRangedDamage = UnitRangedDamage
 
 local GameMenuFrame = GameMenuFrame
 
+local HasPetUI = HasPetUI
+
 -- bits
 
 local UnitAffectingCombat = UnitAffectingCombat
@@ -164,7 +166,8 @@ function DataToColor:Bits2()
         ((DataToColor.autoFollow) and 2 or 0) ^ 19 +
         ((GameMenuFrame:IsShown() and 2 or 0)) ^ 20 +
         ((IsFlying() and 2 or 0)) ^ 21 +
-        ((DataToColor.moving and 2 or 0)) ^ 22
+        ((DataToColor.moving and 2 or 0)) ^ 22 +
+        ((DataToColor:PetIsDefensive() and 2 or 0)) ^ 23
 end
 
 function DataToColor:Bits3()
@@ -610,4 +613,19 @@ function DataToColor:IsUnitHostile(unit, unittarget)
         UnitExists(unittarget) and
         (UnitReaction(unit, unittarget) or 0) <= 4 and
         not UnitIsFriend(unit, unittarget)
+end
+
+function DataToColor:PetIsDefensive()
+    if not HasPetUI() then
+        return false
+    end
+
+    for i = 1, 10 do
+        local name, _, _, isActive = GetPetActionInfo(i)
+        if isActive and name == DataToColor.C.PET_MODE_DEFENSIVE then
+            return true
+        end
+    end
+
+    return false
 end
