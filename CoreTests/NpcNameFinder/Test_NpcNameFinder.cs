@@ -35,7 +35,6 @@ internal sealed class Test_NpcNameFinder : IDisposable
 
     private readonly IWowScreen screen;
 
-    private readonly Stopwatch stopwatch;
     private readonly StringBuilder stringBuilder;
 
     private readonly NpcNameOverlay? npcNameOverlay;
@@ -49,7 +48,6 @@ internal sealed class Test_NpcNameFinder : IDisposable
         this.logger = logger;
         this.screen = screen;
 
-        stopwatch = new();
         stringBuilder = new();
 
         INpcResetEvent npcResetEvent = new NpcResetEvent();

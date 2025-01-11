@@ -95,8 +95,10 @@ internal readonly struct LineSegmentOperation : IRowOperation<LineSegment>
         if (i == 0)
             return;
 
-        Interlocked.Add(ref counter.count, i);
+        int newCount = Interlocked.Add(ref counter.count, i);
+        if (counter.count + newCount > segments.Length)
+            return;
 
-        span[..i].CopyTo(segments.AsSpan(counter.count, i));
+        span[..i].CopyTo(segments.AsSpan(counter.count, newCount));
     }
 }
