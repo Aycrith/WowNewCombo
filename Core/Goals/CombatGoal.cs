@@ -157,6 +157,13 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
 
             if (combatLog.DamageTakenCount() > 0)
             {
+                if (bits.Target() && bits.Target_Dead())
+                {
+                    logger.LogInformation("Clear current dead target!");
+                    input.PressClearTarget();
+                    wait.Update();
+                }
+
                 logger.LogWarning("Search Possible Threats!");
                 stopMoving.Stop();
 
@@ -165,6 +172,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
             else
             {
                 input.PressClearTarget();
+                wait.Update();
             }
         }
     }
