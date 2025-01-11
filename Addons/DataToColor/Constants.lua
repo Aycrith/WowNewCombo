@@ -82,3 +82,5 @@ DataToColor.C.MIRRORTIMER.BREATH = "BREATH"
 
 DataToColor.C.ActionType.Spell = "spell"
 DataToColor.C.ActionType.Macro = "macro"
+
+DataToColor.C.PET_MODE_DEFENSIVE = "PET_MODE_DEFENSIVE"
