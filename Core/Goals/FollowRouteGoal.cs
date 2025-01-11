@@ -7,6 +7,7 @@ using System.Numerics;
 using System.Threading;
 using SharedLib.Extensions;
 using Game;
+using Microsoft.Extensions.DependencyInjection;
 
 #pragma warning disable 162
 
@@ -85,7 +86,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         ClassConfiguration classConfig,
         Navigation navigation,
         IMountHandler mountHandler, TargetFinder targetFinder,
-        IBlacklist blacklist)
+        [FromKeyedServices("target")] IBlacklist targetBlacklist)
     : base("Follow " + System.IO.Path.GetFileNameWithoutExtension(pathSettings.FileName))
     {
         this.cost = cost;
@@ -99,7 +100,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         this.pathSettings = pathSettings;
         this.mountHandler = mountHandler;
         this.targetFinder = targetFinder;
-        this.targetBlacklist = blacklist;
+        this.targetBlacklist = targetBlacklist;
 
         if (pathSettings.Requirements.Count > 0)
         {
@@ -259,9 +260,18 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         {
             if (targetFinder.Search(NpcNameToFind, bits.Target_NotDead, sideActivityCts.Token))
             {
-                Log("Found target!");
-                sideActivityCts.Cancel();
-                sideActivityManualReset.Reset();
+                if (bits.Target() && targetBlacklist.Is())
+                {
+                    Log("Blacklisted target found, clearing target");
+                    input.PressClearTarget();
+                    wait.Update();
+                }
+                else
+                {
+                    Log("Found target!");
+                    sideActivityCts.Cancel();
+                    sideActivityManualReset.Reset();
+                }
             }
 
             sideActivityCts.Token.WaitHandle.WaitOne(1);

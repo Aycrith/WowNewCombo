@@ -15,8 +15,9 @@ public sealed class CombatLog : IReader
     public event Action? PlayerDeath;
     public event Action? TargetEvade;
 
-    public HashSet<int> DamageDone { get; } = new();
-    public HashSet<int> DamageTaken { get; } = new();
+    public HashSet<int> DamageDone { get; } = [];
+    public HashSet<int> DamageTaken { get; } = [];
+    public HashSet<int> EvadeMobs { get; } = [];
 
     public int DamageTakenCount() => DamageTaken.Count;
     public int DamageDoneCount() => DamageDone.Count;
@@ -59,19 +60,6 @@ public sealed class CombatLog : IReader
     {
         bool combat = bits.Combat();
 
-        if (TargetMissType.Updated(reader))
-        {
-            switch ((MissType)TargetMissType.Value)
-            {
-                case MissType.DODGE:
-                    TargetDodge.UpdateTime();
-                    break;
-                case MissType.EVADE:
-                    TargetEvade?.Invoke();
-                    break;
-            }
-        }
-
         if (combat && DamageTakenGuid.Updated(reader) && DamageTakenGuid.Value > 0)
         {
             DamageTaken.Add(DamageTakenGuid.Value);
@@ -80,6 +68,23 @@ public sealed class CombatLog : IReader
         if (combat && DamageDoneGuid.Updated(reader) && DamageDoneGuid.Value > 0)
         {
             DamageDone.Add(DamageDoneGuid.Value);
+        }
+
+        if (TargetMissType.Updated(reader))
+        {
+            switch ((MissType)TargetMissType.Value)
+            {
+                case MissType.DODGE:
+                    TargetDodge.UpdateTime();
+                    break;
+                case MissType.EVADE:
+                    if (DamageDoneGuid.Value > 0)
+                    {
+                        EvadeMobs.Add(DamageDoneGuid.Value);
+                        TargetEvade?.Invoke();
+                    }
+                    break;
+            }
         }
 
         if (DeadGuid.Updated(reader) && DeadGuid.Value > 0)

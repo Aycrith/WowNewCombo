@@ -1,4 +1,6 @@
-﻿namespace Core.Goals;
+﻿using Microsoft.Extensions.DependencyInjection;
+
+namespace Core.Goals;
 
 public sealed class BlacklistTargetGoal : GoapGoal
 {
@@ -12,7 +14,9 @@ public sealed class BlacklistTargetGoal : GoapGoal
 
     public BlacklistTargetGoal(PlayerReader playerReader,
         AddonBits bits,
-        ConfigurableInput input, IBlacklist blacklist, Wait wait)
+        ConfigurableInput input,
+        [FromKeyedServices("target")] IBlacklist blacklist,
+        Wait wait)
         : base(nameof(BlacklistTargetGoal))
     {
         this.playerReader = playerReader;

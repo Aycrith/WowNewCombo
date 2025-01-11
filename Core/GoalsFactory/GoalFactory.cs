@@ -42,8 +42,15 @@ public static class GoalFactory
         }
         else
         {
-            services.AddScoped<MouseOverBlacklist, MouseOverBlacklist>();
-            services.AddScoped<IBlacklist, TargetBlacklist>();
+            services.AddScoped<IBlacklistSource, BlacklistMouseOver>();
+            services.AddScoped<IBlacklistSource, BlacklistTarget>();
+
+            services.AddScoped<BlacklistMouseOver>();
+            services.AddScoped<BlacklistTarget>();
+
+            services.AddKeyedScoped<IBlacklist, Blacklist<BlacklistMouseOver>>("mouseOver");
+            services.AddKeyedScoped<IBlacklist, Blacklist<BlacklistTarget>>("target");
+
             services.AddScoped<GoapGoal, BlacklistTargetGoal>();
         }
 
@@ -288,7 +295,7 @@ public static class GoalFactory
                 x.GetRequiredService<Navigation>(),
                 x.GetRequiredService<IMountHandler>(),
                 x.GetRequiredService<TargetFinder>(),
-                x.GetRequiredService<IBlacklist>()
+                x.GetRequiredKeyedService<IBlacklist>("target")
                 ));
         }
     }

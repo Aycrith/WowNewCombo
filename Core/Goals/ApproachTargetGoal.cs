@@ -1,6 +1,7 @@
 ﻿using Core.AddonComponent;
 using Core.GOAP;
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using System;
@@ -43,7 +44,8 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
     public ApproachTargetGoal(ILogger<ApproachTargetGoal> logger,
         ConfigurableInput input, Wait wait,
         PlayerReader playerReader, AddonBits addonBits,
-        StopMoving stopMoving, CombatUtil combatUtil, IBlacklist blacklist,
+        StopMoving stopMoving, CombatUtil combatUtil,
+        [FromKeyedServices("target")] IBlacklist blacklist,
         IMountHandler mountHandler)
         : base(nameof(ApproachTargetGoal))
     {

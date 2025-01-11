@@ -7,6 +7,7 @@ using Game;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Core.Goals;
 
@@ -42,7 +43,9 @@ public sealed partial class NpcNameTargeting : IDisposable
         NpcNameFinder npcNameFinder,
         NpcNameTargetingLocations locations,
         IMouseInput input,
-        IMouseOverReader mouseOverReader, IBlacklist blacklist, Wait wait,
+        IMouseOverReader mouseOverReader,
+        [FromKeyedServices("mouseOver")] IBlacklist mouseOverBlacklist,
+        Wait wait,
         IGameMenuWindowShown gmws)
     {
         this.logger = logger;
@@ -52,7 +55,7 @@ public sealed partial class NpcNameTargeting : IDisposable
         this.locations = locations;
         this.input = input;
         this.mouseOverReader = mouseOverReader;
-        this.mouseOverBlacklist = blacklist;
+        this.mouseOverBlacklist = mouseOverBlacklist;
         this.wait = wait;
 
         this.gmws = gmws;
