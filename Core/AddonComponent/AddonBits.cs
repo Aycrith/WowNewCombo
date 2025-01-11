@@ -61,6 +61,7 @@ public sealed class AddonBits : IReader, IGameMenuWindowShown
     public bool FocusTarget_Hostile() => v2[Mask._7];
     public bool MouseOver_Dead() => v2[Mask._8];
     public bool PetTarget_Dead() => v2[Mask._9];
+    public bool PetTarget_Alive() => !PetTarget_Dead();
     public bool Stealthed() => v2[Mask._10];
     public bool Target_Trivial() => v2[Mask._11];
     public bool Target_NotTrivial() => !v2[Mask._11];
@@ -76,6 +77,8 @@ public sealed class AddonBits : IReader, IGameMenuWindowShown
     public bool GameMenuWindowShown() => v2[Mask._20];
     public bool Flying() => v2[Mask._21];
     public bool Moving() => v2[Mask._22];
+    public bool Pet_Defensive() => v2[Mask._23];
+
     public bool NotMoving() => !Moving();
 
     // Combined

@@ -124,44 +124,43 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
             return;
         }
 
-        if (bits.Target())
+        if (classConfig.AutoPetAttack &&
+            bits.Pet() &&
+            (!playerReader.PetTarget() || playerReader.PetTargetGuid != playerReader.TargetGuid) &&
+            !input.PetAttack.OnCooldown())
         {
-            if (classConfig.AutoPetAttack &&
-                bits.Pet() &&
-                (!playerReader.PetTarget() || playerReader.PetTargetGuid != playerReader.TargetGuid) &&
-                !input.PetAttack.OnCooldown())
+            input.PressPetAttack();
+        }
+
+        ReadOnlySpan<KeyAction> span = Keys;
+        for (int i = 0; bits.Target_Alive() && i < span.Length; i++)
+        {
+            KeyAction keyAction = span[i];
+
+            if (castingHandler.SpellInQueue() && !keyAction.BaseAction)
             {
-                input.PressPetAttack();
+                continue;
             }
 
-            ReadOnlySpan<KeyAction> span = Keys;
-            for (int i = 0; bits.Target_Alive() && i < span.Length; i++)
+            if (castingHandler.CastIfReady(keyAction,
+                keyAction.Interrupts.Count > 0
+                ? keyAction.CanBeInterrupted
+                : bits.Target_Alive))
             {
-                KeyAction keyAction = span[i];
-
-                if (castingHandler.SpellInQueue() && !keyAction.BaseAction)
-                {
-                    continue;
-                }
-
-                if (castingHandler.CastIfReady(keyAction,
-                    keyAction.Interrupts.Count > 0
-                    ? keyAction.CanBeInterrupted
-                    : bits.Target_Alive))
-                {
-                    break;
-                }
+                break;
             }
         }
 
-        if (!bits.Target())
+        if (!bits.Target() || (bits.Target() && bits.Target_Dead()))
         {
             logger.LogInformation("Lost target!");
 
             if (combatLog.DamageTakenCount() > 0)
             {
+                logger.LogWarning("Search Possible Threats!");
                 stopMoving.Stop();
-                FindNewTarget();
+
+                FindPossibleThreats();
             }
             else
             {
@@ -170,52 +169,54 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
         }
     }
 
-    private void FindNewTarget()
+    private void FindPossibleThreats()
     {
-        if (playerReader.PetTarget() && combatLog.DeadGuid.Value != playerReader.PetTargetGuid)
+        if (bits.Pet_Defensive())
         {
+            float elapsedPetFoundTarget = wait.Until(CastingHandler.GCD,
+                () => playerReader.PetTarget() && bits.PetTarget_Alive());
+
+            if (elapsedPetFoundTarget < 0)
+            {
+                logger.LogWarning("Pet not found target!");
+                input.PressClearTarget();
+                return;
+            }
+
             ResetCooldowns();
 
             input.PressTargetPet();
             input.PressTargetOfTarget();
             wait.Update();
 
-            if (!bits.Target_Dead())
+            logger.LogWarning($"Found new target by pet. {elapsedPetFoundTarget}ms");
+
+            return;
+        }
+
+        logger.LogInformation("Checking target in front...");
+        input.PressNearestTarget();
+        wait.Update();
+
+        if (bits.Target() && !bits.Target_Dead() && bits.Target_Hostile())
+        {
+            if (bits.Target_Combat() && bits.TargetTarget_PlayerOrPet())
             {
-                logger.LogWarning("---- New target from Pet target!");
+                ResetCooldowns();
+
+                logger.LogWarning("Found new target!");
+                wait.Update();
                 return;
             }
 
+            logger.LogWarning("Dont pull non-hostile target!");
             input.PressClearTarget();
-        }
-
-        if (combatLog.DamageTakenCount() > 1)
-        {
-            logger.LogInformation("Checking target in front...");
-            input.PressNearestTarget();
             wait.Update();
-
-            if (bits.Target() && !bits.Target_Dead())
-            {
-                if (bits.Target_Combat() && bits.TargetTarget_PlayerOrPet())
-                {
-                    stopMoving.Stop();
-                    ResetCooldowns();
-
-                    logger.LogWarning("Found new target!");
-                    wait.Update();
-                    return;
-                }
-
-                input.PressClearTarget();
-                wait.Update();
-            }
-            else if (combatLog.DamageTakenCount() > 0)
-            {
-                logger.LogWarning($"---- Possible threats from behind {combatLog.DamageTakenCount()}. Waiting target by damage taken!");
-                wait.Till(2500, bits.Target);
-            }
         }
+
+        logger.LogWarning($"Waiting for target to exists or lose combat. Possible threats {combatLog.DamageTakenCount()}!");
+        wait.Till(CastingHandler.GCD * 2,
+            () => bits.Target_Alive() || !bits.Combat());
     }
 
     private Vector3 GetCorpseLocation(float distance)
