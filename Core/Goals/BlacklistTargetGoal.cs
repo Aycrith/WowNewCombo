@@ -15,7 +15,7 @@ public sealed class BlacklistTargetGoal : GoapGoal
     public BlacklistTargetGoal(PlayerReader playerReader,
         AddonBits bits,
         ConfigurableInput input,
-        [FromKeyedServices("target")] IBlacklist blacklist,
+        IBlacklist blacklist,
         Wait wait)
         : base(nameof(BlacklistTargetGoal))
     {

@@ -12,6 +12,8 @@ using Core.Session;
 using SharedLib;
 using Core.Database;
 
+using static Core.BlacklistSourceType;
+
 namespace Core;
 
 public static class GoalFactory
@@ -40,8 +42,8 @@ public static class GoalFactory
         {
             services.AddScoped<IBlacklist, NoBlacklist>();
 
-            services.AddKeyedScoped<IBlacklist, NoBlacklist>("target");
-            services.AddKeyedScoped<IBlacklist, NoBlacklist>("mouseOver");
+            services.AddKeyedScoped<IBlacklist, NoBlacklist>(TARGET);
+            services.AddKeyedScoped<IBlacklist, NoBlacklist>(MOUSE_OVER);
         }
         else
         {
@@ -51,8 +53,10 @@ public static class GoalFactory
             services.AddScoped<BlacklistMouseOver>();
             services.AddScoped<BlacklistTarget>();
 
-            services.AddKeyedScoped<IBlacklist, Blacklist<BlacklistMouseOver>>("mouseOver");
-            services.AddKeyedScoped<IBlacklist, Blacklist<BlacklistTarget>>("target");
+            services.AddKeyedScoped<IBlacklist, Blacklist<BlacklistMouseOver>>(MOUSE_OVER);
+            services.AddKeyedScoped<IBlacklist, Blacklist<BlacklistTarget>>(TARGET);
+            
+            services.AddScoped<IBlacklist>(x => x.GetRequiredKeyedService<IBlacklist>(TARGET));
 
             services.AddScoped<GoapGoal, BlacklistTargetGoal>();
         }
@@ -298,7 +302,7 @@ public static class GoalFactory
                 x.GetRequiredService<Navigation>(),
                 x.GetRequiredService<IMountHandler>(),
                 x.GetRequiredService<TargetFinder>(),
-                x.GetRequiredKeyedService<IBlacklist>("target")
+                x.GetRequiredService<IBlacklist>()
                 ));
         }
     }

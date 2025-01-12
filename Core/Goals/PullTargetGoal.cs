@@ -42,7 +42,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
     public PullTargetGoal(ILogger<PullTargetGoal> logger, ConfigurableInput input,
         Wait wait, CombatLog combatlog, PlayerReader playerReader,
         AddonBits bits,
-        [FromKeyedServices("target")] IBlacklist targetBlacklist,
+        IBlacklist targetBlacklist,
         StopMoving stopMoving, CastingHandler castingHandler,
         IMountHandler mountHandler, NpcNameTargeting npcNameTargeting,
         StuckDetector stuckDetector, CombatUtil combatUtil,

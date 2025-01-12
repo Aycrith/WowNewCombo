@@ -45,7 +45,7 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
         ConfigurableInput input, Wait wait,
         PlayerReader playerReader, AddonBits addonBits,
         StopMoving stopMoving, CombatUtil combatUtil,
-        [FromKeyedServices("target")] IBlacklist blacklist,
+        IBlacklist blacklist,
         IMountHandler mountHandler)
         : base(nameof(ApproachTargetGoal))
     {

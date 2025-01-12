@@ -9,6 +9,8 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.DependencyInjection;
 
+using static Core.BlacklistSourceType;
+
 namespace Core.Goals;
 
 public sealed partial class NpcNameTargeting : IDisposable
@@ -44,7 +46,7 @@ public sealed partial class NpcNameTargeting : IDisposable
         NpcNameTargetingLocations locations,
         IMouseInput input,
         IMouseOverReader mouseOverReader,
-        [FromKeyedServices("mouseOver")] IBlacklist mouseOverBlacklist,
+        [FromKeyedServices(MOUSE_OVER)] IBlacklist mouseOverBlacklist,
         Wait wait,
         IGameMenuWindowShown gmws)
     {

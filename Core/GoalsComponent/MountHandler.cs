@@ -31,7 +31,7 @@ public sealed partial class MountHandler : IMountHandler
         PlayerReader playerReader, ActionBarBits<IUsableAction> usableAction,
         ActionBarCooldownReader cooldownReader,
         StopMoving stopMoving,
-        [FromKeyedServices("target")] IBlacklist targetBlacklist)
+        IBlacklist targetBlacklist)
     {
         this.logger = logger;
         this.classConfig = classConfig;
