@@ -39,6 +39,9 @@ public static class GoalFactory
         if (classConfig.Mode != Mode.Grind)
         {
             services.AddScoped<IBlacklist, NoBlacklist>();
+
+            services.AddKeyedScoped<IBlacklist, NoBlacklist>("target");
+            services.AddKeyedScoped<IBlacklist, NoBlacklist>("mouseOver");
         }
         else
         {
