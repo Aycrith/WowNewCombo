@@ -45,6 +45,7 @@ public sealed partial class CorpseConsumedGoal : GoapGoal
         if (goapAgentState.ConsumableCorpseCount == 0)
         {
             goapAgentState.LastCombatKillCount = 0;
+            goapAgentState.RecentlyLooted.Clear();
         }
 
         LogConsumed(logger, goapAgentState.LastCombatKillCount, goapAgentState.ConsumableCorpseCount);
