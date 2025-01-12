@@ -108,9 +108,10 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
             return;
         }
 
-        if (!input.Approach.OnCooldown() && HasValidSoftInteract())
+        if (!input.Approach.OnCooldown() && (!bits.SoftInteract() || HasValidSoftInteract()))
         {
             input.PressApproach();
+            wait.Update();
         }
 
         if (!bits.Combat())
@@ -152,6 +153,7 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
                         wait.While(bits.Falling);
 
                         input.PressInteract();
+                        wait.Update();
 
                         SetNextStuckTimeCheck();
 
@@ -247,11 +249,10 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
     private bool HasValidSoftInteract()
     {
         return
-            !bits.SoftInteract() ||
-            (bits.SoftInteract() &&
+            bits.SoftInteract() &&
             !bits.SoftInteract_Dead() &&
             !bits.SoftInteract_Tagged() &&
-            playerReader.SoftInteract_Type == GuidType.Creature);
+            playerReader.SoftInteract_Type == GuidType.Creature;
     }
 
     private void Log(string text)
