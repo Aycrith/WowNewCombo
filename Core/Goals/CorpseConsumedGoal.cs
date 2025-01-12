@@ -1,8 +1,8 @@
-﻿using System;
-
-using Core.GOAP;
+﻿using Core.GOAP;
 
 using Microsoft.Extensions.Logging;
+
+using System;
 
 namespace Core.Goals;
 

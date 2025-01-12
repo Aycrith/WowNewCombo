@@ -1,22 +1,28 @@
 using Core.Goals;
 using Core.GOAP;
-using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Logging;
+
+using Game;
+
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+using PPather.Data;
+
+using SharedLib;
+using SharedLib.NpcFinder;
+
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
-using Game;
-using PPather.Data;
-using WinAPI;
-using SharedLib.NpcFinder;
-using SharedLib;
 
-using static System.Diagnostics.Stopwatch;
+using WinAPI;
+
 using static Newtonsoft.Json.JsonConvert;
+using static System.Diagnostics.Stopwatch;
 
 namespace Core;
 

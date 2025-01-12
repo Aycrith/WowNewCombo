@@ -1,12 +1,3 @@
-using System;
-using System.Collections.Frozen;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Reflection;
-
-using static System.Math;
-
 using Core.Database;
 using Core.Goals;
 
@@ -16,8 +7,16 @@ using Microsoft.Extensions.Logging;
 using SharedLib;
 using SharedLib.NpcFinder;
 
-using static Core.Requirement;
+using System;
 using System.Buffers;
+using System.Collections.Frozen;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Runtime.InteropServices;
+
+using static Core.Requirement;
+using static System.Math;
 
 namespace Core;
 

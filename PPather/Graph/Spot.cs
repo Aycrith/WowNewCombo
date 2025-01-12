@@ -16,12 +16,12 @@
 
 */
 
+using SharedLib.Extensions;
+
 using System;
 using System.Buffers;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-
-using SharedLib.Extensions;
 
 namespace PPather.Graph;
 

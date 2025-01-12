@@ -1,8 +1,4 @@
-﻿using System;
-using SixLabors.ImageSharp;
-using System.Threading;
-
-using Core.Addon;
+﻿using Core.Addon;
 using Core.Database;
 using Core.Extensions;
 using Core.Goals;
@@ -18,6 +14,11 @@ using PPather;
 
 using SharedLib;
 using SharedLib.NpcFinder;
+
+using SixLabors.ImageSharp;
+
+using System;
+using System.Threading;
 
 using WinAPI;
 

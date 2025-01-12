@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-
-namespace Core.Goals;
+﻿namespace Core.Goals;
 
 public sealed class BlacklistTargetGoal : GoapGoal
 {

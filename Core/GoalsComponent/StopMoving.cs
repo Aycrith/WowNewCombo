@@ -1,8 +1,11 @@
-﻿using System;
-using System.Threading;
+﻿using Core.GOAP;
+
 using Game;
-using Core.GOAP;
+
 using SharedLib;
+
+using System;
+using System.Threading;
 
 namespace Core.Goals;
 

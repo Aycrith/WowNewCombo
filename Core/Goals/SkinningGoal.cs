@@ -1,6 +1,9 @@
 ﻿using Core.GOAP;
-using SharedLib.NpcFinder;
+
 using Microsoft.Extensions.Logging;
+
+using SharedLib.NpcFinder;
+
 using System;
 using System.Collections.Generic;
 using System.Threading;

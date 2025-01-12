@@ -1,7 +1,3 @@
-using System;
-using System.IO;
-using System.Reflection;
-
 using MatBlazor;
 
 using Microsoft.AspNetCore.Builder;
@@ -21,6 +17,10 @@ using Serilog.Events;
 
 using SharedLib;
 using SharedLib.Converters;
+
+using System;
+using System.IO;
+using System.Reflection;
 
 namespace PathingAPI;
 

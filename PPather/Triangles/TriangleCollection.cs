@@ -4,18 +4,18 @@
  *
  */
 
-using System;
-using System.Collections.Generic;
-using System.Numerics;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-
 using Microsoft.Extensions.Logging;
 
 using PPather;
 using PPather.Triangles;
 
 using SharedLib.Extensions;
+
+using System;
+using System.Collections.Generic;
+using System.Numerics;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace WowTriangles;
 

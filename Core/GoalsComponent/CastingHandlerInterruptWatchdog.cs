@@ -1,11 +1,11 @@
-﻿using System;
-using System.Threading;
-
-using Core.GOAP;
+﻿using Core.GOAP;
 
 using Microsoft.Extensions.Logging;
 
 using SharedLib;
+
+using System;
+using System.Threading;
 
 #pragma warning disable 162
 

@@ -2,8 +2,6 @@
 
 using Microsoft.Extensions.Logging;
 
-using SharedLib.Extensions;
-
 using System;
 using System.Buffers;
 using System.Numerics;

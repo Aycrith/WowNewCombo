@@ -18,17 +18,19 @@
 
  */
 
-using System;
-using System.Numerics;
-using static System.MathF;
-using Wmo;
-using System.IO;
 using Microsoft.Extensions.Logging;
-using PPather.Triangles.Data;
-using static Wmo.MapTileFile;
+
 using PPather;
+
+using System;
+using System.IO;
+using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Collections.Generic;
+
+using Wmo;
+
+using static System.MathF;
+using static Wmo.MapTileFile;
 
 namespace WowTriangles;
 

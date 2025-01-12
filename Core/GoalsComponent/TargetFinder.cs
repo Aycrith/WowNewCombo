@@ -1,6 +1,7 @@
 ﻿using SharedLib.NpcFinder;
-using System.Threading;
+
 using System;
+using System.Threading;
 
 namespace Core.Goals;
 

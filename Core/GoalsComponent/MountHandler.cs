@@ -1,11 +1,10 @@
-using System.Numerics;
-
 using Core.Goals;
 
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using SharedLib.Extensions;
+
+using System.Numerics;
 
 namespace Core;
 

@@ -326,7 +326,7 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
         int rowPitch = (int)resource.RowPitch;
         ReadOnlySpan<byte> src = resource.AsSpan(screenRect.Height * rowPitch);
         Span<byte> dest = MemoryMarshal.Cast<Bgra32, byte>(memory.Span);
-        
+
         // Issue: at 3440x1440 resolution game fullscreen
         // the dest Span.Length much smaller then the src Span.Length
         // this fails to copy the buffer

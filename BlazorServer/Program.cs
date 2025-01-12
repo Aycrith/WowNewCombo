@@ -1,23 +1,22 @@
-using System;
-using System.Threading;
-
 using Core;
 
 using Frontend;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 using Serilog;
-using Serilog.Events;
-using Serilog.Templates.Themes;
 using Serilog.Templates;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.FileProviders;
+using Serilog.Templates.Themes;
+
+using System;
 using System.IO;
+using System.Threading;
 
 namespace BlazorServer;
 

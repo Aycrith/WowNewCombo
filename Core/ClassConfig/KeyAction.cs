@@ -1,12 +1,13 @@
 ﻿using Core.Goals;
 
+using Game;
+
 using Microsoft.Extensions.Logging;
 
 using System;
 using System.Collections.Generic;
-using System.Numerics;
 using System.Collections.Specialized;
-using Game;
+using System.Numerics;
 
 namespace Core;
 

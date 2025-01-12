@@ -1,13 +1,16 @@
-using Core.Goals;
-using SharedLib.NpcFinder;
-using Microsoft.Extensions.Logging;
-using System.Threading;
-using System.Text;
-using System.Diagnostics;
-using System;
 using Core;
+using Core.Goals;
+
 using Game;
+
+using Microsoft.Extensions.Logging;
+
 using SharedLib;
+using SharedLib.NpcFinder;
+
+using System;
+using System.Text;
+using System.Threading;
 
 using static System.Diagnostics.Stopwatch;
 

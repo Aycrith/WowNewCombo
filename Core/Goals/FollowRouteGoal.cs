@@ -1,13 +1,16 @@
 using Core.GOAP;
-using SharedLib.NpcFinder;
+
+using Game;
+
 using Microsoft.Extensions.Logging;
+
+using SharedLib.Extensions;
+using SharedLib.NpcFinder;
+
 using System;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
-using SharedLib.Extensions;
-using Game;
-using Microsoft.Extensions.DependencyInjection;
 
 #pragma warning disable 162
 

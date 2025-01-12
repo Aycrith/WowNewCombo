@@ -1,14 +1,18 @@
-﻿using Core.Database;
+﻿using Core.AddonComponent;
+using Core.Database;
 using Core.GOAP;
-using SharedLib.NpcFinder;
+
 using Microsoft.Extensions.Logging;
-using WowheadDB;
+
+using SharedLib.Extensions;
+using SharedLib.NpcFinder;
+
+using System;
 using System.Collections.Generic;
 using System.Numerics;
-using SharedLib.Extensions;
-using System;
 using System.Threading;
-using Core.AddonComponent;
+
+using WowheadDB;
 
 namespace Core.Goals;
 

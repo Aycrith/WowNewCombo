@@ -1,8 +1,8 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+
+using System;
 using System.Collections.ObjectModel;
 using System.Text;
-
-using Microsoft.Extensions.Logging;
 
 namespace Core;
 

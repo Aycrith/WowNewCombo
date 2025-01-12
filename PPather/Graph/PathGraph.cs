@@ -17,19 +17,22 @@
 */
 
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Threading;
-using WowTriangles;
-using SharedLib.Data;
-using System.Numerics;
-using System.IO;
+
 using PPather.Triangles.Data;
 
-using static System.MathF;
-using static System.Diagnostics.Stopwatch;
+using SharedLib.Data;
+
+using System;
 using System.Buffers;
+using System.Collections.Generic;
+using System.IO;
+using System.Numerics;
+using System.Threading;
+
+using WowTriangles;
+
+using static System.Diagnostics.Stopwatch;
+using static System.MathF;
 
 #pragma warning disable 162
 

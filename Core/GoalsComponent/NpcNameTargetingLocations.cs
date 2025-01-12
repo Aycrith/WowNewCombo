@@ -1,6 +1,7 @@
-using SixLabors.ImageSharp;
 using SharedLib.Extensions;
 using SharedLib.NpcFinder;
+
+using SixLabors.ImageSharp;
 
 namespace Core.Goals;
 

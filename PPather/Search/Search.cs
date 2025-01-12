@@ -1,9 +1,11 @@
 ﻿using Microsoft.Extensions.Logging;
+
 using PPather.Graph;
+
 using System;
-using WowTriangles;
 using System.Numerics;
-using SharedLib.Extensions;
+
+using WowTriangles;
 
 namespace PPather;
 

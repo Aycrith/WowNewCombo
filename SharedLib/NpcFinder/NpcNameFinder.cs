@@ -1,15 +1,17 @@
-using SharedLib.Extensions;
 using Microsoft.Extensions.Logging;
-using System;
 
-using System.Linq;
-using System.Runtime.CompilerServices;
+using SharedLib.Extensions;
+
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Advanced;
+
+using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.CompilerServices;
 
 using static SharedLib.NpcFinder.NpcNameColors;
-using SixLabors.ImageSharp.Advanced;
-using SixLabors.ImageSharp;
 
 namespace SharedLib.NpcFinder;
 

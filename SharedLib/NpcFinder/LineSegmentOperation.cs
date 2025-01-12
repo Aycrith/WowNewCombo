@@ -1,11 +1,11 @@
-﻿using System;
-
+﻿using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Advanced;
 using SixLabors.ImageSharp.Memory;
 using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp;
-using System.Threading;
+
+using System;
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace SharedLib.NpcFinder;
 

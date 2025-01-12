@@ -3,7 +3,6 @@
 using Microsoft.Extensions.Logging;
 
 using System;
-using System.Collections.Generic;
 using System.Numerics;
 
 namespace Core.Goals;

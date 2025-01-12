@@ -1,4 +1,5 @@
 ﻿using Core.GOAP;
+
 using System;
 using System.Collections.Generic;
 

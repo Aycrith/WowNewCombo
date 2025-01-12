@@ -1,11 +1,4 @@
-﻿using System;
-using System.Buffers;
-using System.Collections.Generic;
-using System.Numerics;
-using System.Runtime.InteropServices;
-using System.Text.Json;
-
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 using PathingAPI.RateLimit;
@@ -15,6 +8,11 @@ using PPather.Data;
 using PPather.Graph;
 
 using SharedLib.Data;
+
+using System;
+using System.Collections.Generic;
+using System.Numerics;
+using System.Text.Json;
 
 namespace PathingAPI.Controllers;
 

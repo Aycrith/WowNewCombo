@@ -1,12 +1,12 @@
-﻿using System;
-using System.Numerics;
-using System.Threading;
-
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 
 using Newtonsoft.Json;
 
 using SharedLib.Extensions;
+
+using System;
+using System.Numerics;
+using System.Threading;
 
 using WowheadDB;
 

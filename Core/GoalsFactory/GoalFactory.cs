@@ -1,18 +1,21 @@
+using Core.Database;
 using Core.Goals;
 using Core.GOAP;
+using Core.Session;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+
+using SharedLib;
+
 using System;
-using static System.IO.Path;
-using static System.IO.File;
 using System.Numerics;
 using System.Threading;
-using static Newtonsoft.Json.JsonConvert;
-using Core.Session;
-using SharedLib;
-using Core.Database;
 
 using static Core.BlacklistSourceType;
+using static Newtonsoft.Json.JsonConvert;
+using static System.IO.File;
+using static System.IO.Path;
 
 namespace Core;
 
@@ -55,7 +58,7 @@ public static class GoalFactory
 
             services.AddKeyedScoped<IBlacklist, Blacklist<BlacklistMouseOver>>(MOUSE_OVER);
             services.AddKeyedScoped<IBlacklist, Blacklist<BlacklistTarget>>(TARGET);
-            
+
             services.AddScoped<IBlacklist>(x => x.GetRequiredKeyedService<IBlacklist>(TARGET));
 
             services.AddScoped<GoapGoal, BlacklistTargetGoal>();

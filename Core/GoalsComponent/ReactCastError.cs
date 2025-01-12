@@ -3,8 +3,9 @@
 using Microsoft.Extensions.Logging;
 
 using System;
-using static System.MathF;
 using System.Numerics;
+
+using static System.MathF;
 
 namespace Core;
 

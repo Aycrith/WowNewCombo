@@ -1,14 +1,17 @@
-﻿using PPather.Graph;
-using System;
-using System.Collections.Generic;
-using WowTriangles;
+﻿using Microsoft.Extensions.Logging;
+
 using PPather.Data;
+using PPather.Graph;
+
 using SharedLib;
 using SharedLib.Data;
-using Microsoft.Extensions.Logging;
-using System.Numerics;
-using SharedLib.Extensions;
+
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Numerics;
+
+using WowTriangles;
 
 namespace PPather;
 

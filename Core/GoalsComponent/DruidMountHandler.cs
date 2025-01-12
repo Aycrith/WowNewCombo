@@ -1,7 +1,7 @@
-﻿using System.Numerics;
-using System.Threading;
+﻿using Core.Goals;
 
-using Core.Goals;
+using System.Numerics;
+using System.Threading;
 
 namespace Core;
 

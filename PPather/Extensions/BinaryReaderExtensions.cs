@@ -2,7 +2,6 @@
 using System.IO;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 namespace PPather.Extensions;
 

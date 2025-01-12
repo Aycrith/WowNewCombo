@@ -1,11 +1,11 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+
+using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Numerics;
-
-using Newtonsoft.Json;
 
 namespace SharedLib;
 

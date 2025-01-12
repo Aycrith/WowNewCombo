@@ -4,16 +4,20 @@
  *
  */
 
+using Microsoft.Extensions.Logging;
+
+using PPather;
+using PPather.Graph;
+using PPather.Triangles.Data;
+
 using System;
 using System.Numerics;
+using System.Runtime.CompilerServices;
+
 using Wmo;
-using Microsoft.Extensions.Logging;
-using PPather.Graph;
+
 using static System.MathF;
 using static WowTriangles.Utils;
-using PPather.Triangles.Data;
-using PPather;
-using System.Runtime.CompilerServices;
 
 namespace WowTriangles;
 

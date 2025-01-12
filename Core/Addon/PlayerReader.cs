@@ -1,10 +1,10 @@
-﻿using System.Collections.Specialized;
-using System.Numerics;
-
-using Core.AddonComponent;
+﻿using Core.AddonComponent;
 using Core.Database;
 
 using SharedLib;
+
+using System.Collections.Specialized;
+using System.Numerics;
 
 namespace Core;
 

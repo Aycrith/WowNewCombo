@@ -1,9 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
 
-using System;
-
 using SharedLib.Extensions;
 
+using System;
 using System.Buffers;
 
 namespace Core;

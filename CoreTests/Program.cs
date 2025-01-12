@@ -1,16 +1,21 @@
-﻿using Serilog;
-using Serilog.Extensions.Logging;
-using SharedLib.NpcFinder;
-using System.Diagnostics;
-using System.Threading;
-using System.Linq;
-using System.Collections.Generic;
-using Core;
-using System;
-using Microsoft.Extensions.Logging;
+﻿using Core;
+
 using Game;
+
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+
+using Serilog;
+using Serilog.Extensions.Logging;
+
 using SharedLib;
+using SharedLib.NpcFinder;
+
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading;
 
 #pragma warning disable 0162
 

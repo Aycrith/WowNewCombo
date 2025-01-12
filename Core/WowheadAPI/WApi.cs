@@ -1,8 +1,8 @@
-﻿using System.Collections.Concurrent;
+﻿using SharedLib;
+
+using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using System.Xml;
-
-using SharedLib;
 
 namespace Core;
 

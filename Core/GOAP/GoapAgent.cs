@@ -1,15 +1,19 @@
 ﻿using Core.Goals;
-using Game;
-using Microsoft.Extensions.Logging;
-using SharedLib.Extensions;
-using System;
-using System.Threading;
-using System.Collections.Generic;
-using System.Linq;
 using Core.Session;
-using System.Numerics;
-using System.Collections.Specialized;
+
+using Game;
+
+using Microsoft.Extensions.Logging;
+
 using SharedLib;
+using SharedLib.Extensions;
+
+using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.Linq;
+using System.Numerics;
+using System.Threading;
 
 namespace Core.GOAP;
 

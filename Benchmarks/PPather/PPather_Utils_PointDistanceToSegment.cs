@@ -3,7 +3,6 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
-using static System.MathF;
 using static System.Numerics.Vector3;
 
 namespace Benchmarks.PPather;

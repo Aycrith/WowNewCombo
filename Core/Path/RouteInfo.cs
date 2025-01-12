@@ -1,14 +1,14 @@
-﻿using System;
+﻿using Core.Database;
+
+using SharedLib;
+
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Data;
 using System.Linq;
 using System.Numerics;
 using System.Text;
-
-using Core.Database;
-
-using SharedLib;
 
 using WowheadDB;
 

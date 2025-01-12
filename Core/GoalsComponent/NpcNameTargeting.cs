@@ -1,13 +1,17 @@
-using System;
-using SixLabors.ImageSharp;
-using System.Threading;
+using Game;
+
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
 using SharedLib.Extensions;
 using SharedLib.NpcFinder;
-using Game;
-using Microsoft.Extensions.Logging;
+
+using SixLabors.ImageSharp;
+
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using Microsoft.Extensions.DependencyInjection;
+using System.Threading;
 
 using static Core.BlacklistSourceType;
 

@@ -1,10 +1,10 @@
-using System;
-using System.Diagnostics;
-using System.Threading;
-
 using Microsoft.Extensions.Options;
 
 using SharedLib;
+
+using System;
+using System.Diagnostics;
+using System.Threading;
 
 #nullable enable
 

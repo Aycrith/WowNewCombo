@@ -1,8 +1,9 @@
-﻿using System.Threading;
-using System;
+﻿using Game;
 
-using Game;
 using Microsoft.Extensions.Logging;
+
+using System;
+using System.Threading;
 
 namespace Core;
 

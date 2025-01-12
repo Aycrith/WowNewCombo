@@ -5,8 +5,8 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 
-using static System.Math;
 using static Core.AddonTicks;
+using static System.Math;
 
 namespace Core.Goals;
 
@@ -455,7 +455,7 @@ public sealed partial class CastingHandler
 
             float elapsedMs = wait.Until(waitTimeMs, token);
             logger.LogInformation($"Stop {nameof(bits.Shoot)} and wait {waitTimeMs}ms | {elapsedMs}ms");
-            
+
             if (elapsedMs >= 0)
             {
                 wait.Update();

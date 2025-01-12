@@ -1,11 +1,15 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Core.GOAP;
+
+using Microsoft.Extensions.Logging;
+
+using SharedLib;
+using SharedLib.Extensions;
+
 using System;
 using System.Numerics;
 using System.Threading;
-using SharedLib.Extensions;
+
 using static System.MathF;
-using Core.GOAP;
-using SharedLib;
 
 #pragma warning disable 162
 

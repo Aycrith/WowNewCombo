@@ -7,9 +7,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using Serilog;
-using Serilog.Events;
-using Serilog.Templates.Themes;
 using Serilog.Templates;
+using Serilog.Templates.Themes;
 
 namespace HeadlessServer;
 
