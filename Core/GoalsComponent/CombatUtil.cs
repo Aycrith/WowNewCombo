@@ -60,11 +60,13 @@ public sealed class CombatUtil
         if (playerReader.PetTarget())
         {
             input.PressTargetPet();
+            wait.Update();
             Log($"Pets target {playerReader.TargetTarget}");
             if (playerReader.TargetTarget == UnitsTarget.PetHasATarget)
             {
                 Log($"{nameof(AcquiredTarget)}: Found target by pet");
                 input.PressTargetOfTarget();
+                wait.Update();
                 return true;
             }
         }

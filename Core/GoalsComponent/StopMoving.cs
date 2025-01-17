@@ -64,24 +64,24 @@ public sealed class StopMoving : IDisposable
 
     public void StopTurn()
     {
-        if (direction != playerReader.Direction)
+        if (direction == playerReader.Direction)
+            return;
+
+        bool pressedAny = false;
+
+        if (input.IsKeyDown(input.TurnLeftKey))
         {
-            bool pressedAny = false;
-
-            if (input.IsKeyDown(input.TurnLeftKey))
-            {
-                input.SetKeyState(input.TurnLeftKey, false, true);
-                pressedAny = true;
-            }
-            else if (input.IsKeyDown(input.TurnRightKey))
-            {
-                input.SetKeyState(input.TurnRightKey, false, true);
-                pressedAny = true;
-            }
-
-            if (pressedAny)
-                token.WaitHandle.WaitOne(1);
+            input.SetKeyState(input.TurnLeftKey, false, true);
+            pressedAny = true;
         }
+        else if (input.IsKeyDown(input.TurnRightKey))
+        {
+            input.SetKeyState(input.TurnRightKey, false, true);
+            pressedAny = true;
+        }
+
+        if (pressedAny)
+            token.WaitHandle.WaitOne(1);
 
         direction = playerReader.Direction;
     }
