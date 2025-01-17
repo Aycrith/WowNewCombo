@@ -132,7 +132,7 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
 
     private bool AliveOrLoadingScreen()
     {
-        return playerReader.CorpseMapPos == Vector3.Zero;
+        return bits.Dead() && playerReader.CorpseMapPos == Vector3.Zero;
     }
 
     private void Log(string text)
