@@ -43,12 +43,6 @@ public sealed partial class RequirementFactory
 
     private readonly FrozenDictionary<int, SchoolMask> npcSchoolImmunity;
 
-    private static readonly string[] negateKeywords =
-    [
-        "not ",
-        SymbolNegate
-    ];
-
     private readonly SearchValues<char> negateKeywordsSpan = SearchValues.Create(['!', 'n', 'o', 't', ' ']);
 
     private readonly Dictionary<string, Func<int>> intVariables;
@@ -415,22 +409,22 @@ public sealed partial class RequirementFactory
                 throw new Exception($"Unable to add user defined variable to values. [{key} -> {value}]");
             }
 
-            if (key.StartsWith("Buff_"))
+            if (key.StartsWith("Buff_", StringComparison.InvariantCultureIgnoreCase))
             {
                 int l() => playerBuffTimeReader.GetRemainingTimeMs(value);
                 intVariables.TryAdd($"{value}", l);
             }
-            else if (key.StartsWith("Debuff_"))
+            else if (key.StartsWith("Debuff_", StringComparison.InvariantCultureIgnoreCase))
             {
                 int l() => targetDebuffTimeReader.GetRemainingTimeMs(value);
                 intVariables.TryAdd($"{value}", l);
             }
-            else if (key.StartsWith("TBuff_"))
+            else if (key.StartsWith("TBuff_", StringComparison.InvariantCultureIgnoreCase))
             {
                 int l() => targetBuffTimeReader.GetRemainingTimeMs(value);
                 intVariables.TryAdd($"{value}", l);
             }
-            else if (key.StartsWith("FBuff_"))
+            else if (key.StartsWith("FBuff_", StringComparison.InvariantCultureIgnoreCase))
             {
                 int l() => focusBuffTimeReader.GetRemainingTimeMs(value);
                 intVariables.TryAdd($"{value}", l);
@@ -706,9 +700,9 @@ public sealed partial class RequirementFactory
 
         requirement = requirement[negateLength..];
 
-        string requirentStr = requirement.ToString();
+        string requirementStr = requirement.ToString();
 
-        string? key = requirementMap.Keys.FirstOrDefault(requirentStr.Contains);
+        string? key = requirementMap.Keys.FirstOrDefault(requirementStr.Contains);
         if (!string.IsNullOrEmpty(key) && requirementMap.TryGetValue(key, out var createRequirement))
         {
             Requirement r = createRequirement(requirement);
@@ -722,14 +716,14 @@ public sealed partial class RequirementFactory
         var spanLookupBool = boolVariables.GetAlternateLookup<ReadOnlySpan<char>>();
         if (!spanLookupBool.TryGetValue(requirement, out Func<bool>? value))
         {
-            LogUnknown(logger, requirentStr, string.Join(", ", boolVariables.Keys));
+            LogUnknown(logger, requirementStr, string.Join(", ", boolVariables.Keys));
             return new Requirement
             {
-                LogMessage = () => $"UNKNOWN REQUIREMENT! {requirentStr}"
+                LogMessage = () => $"UNKNOWN REQUIREMENT! {requirementStr}"
             };
         }
 
-        string s() => requirentStr;
+        string s() => requirementStr;
         Requirement req = new()
         {
             HasRequirement = value,
@@ -1096,7 +1090,7 @@ public sealed partial class RequirementFactory
         int sep = requirement.IndexOf(SEP1);
         ReadOnlySpan<char> name = requirement[(sep + 1)..].Trim();
 
-        List<(string _, KeyActions)> groups = classConfig.GetByType<KeyActions>();
+        var groups = classConfig.GetByType<KeyActions>();
 
         foreach ((string _, KeyActions keyActions) in groups)
         {
@@ -1111,7 +1105,7 @@ public sealed partial class RequirementFactory
         }
 
         throw new InvalidOperationException($"'{requirement}' " +
-            $"related named '{name}' {nameof(Core.KeyAction)} not found!");
+            $"related named '{name}' {nameof(KeyAction)} not found!");
     }
 
     private Requirement CreateCanRun(ReadOnlySpan<char> requirement)
@@ -1120,7 +1114,7 @@ public sealed partial class RequirementFactory
         int sep = requirement.IndexOf(SEP1);
         ReadOnlySpan<char> name = requirement[(sep + 1)..].Trim();
 
-        List<(string _, KeyActions)> groups = classConfig.GetByType<KeyActions>();
+        var groups = classConfig.GetByType<KeyActions>();
 
         foreach ((string _, KeyActions keyActions) in groups)
         {
@@ -1134,7 +1128,7 @@ public sealed partial class RequirementFactory
         }
 
         throw new InvalidOperationException($"'{requirement}' " +
-            $"related named '{name}' {nameof(Core.KeyAction)} not found!");
+            $"related named '{name}' {nameof(KeyAction)} not found!");
     }
 
 

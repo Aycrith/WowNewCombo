@@ -111,7 +111,7 @@ public sealed partial class ClassConfiguration
         SetBaseActions(Combat,
             Interact, Approach, AutoAttack, StopAttack, PetAttack);
 
-        var groups = GetByType<KeyActions>();
+        var groups = GetByTypeAsList<KeyActions>();
 
         foreach ((string name, KeyActions keyActions) in groups)
         {
@@ -268,20 +268,25 @@ public sealed partial class ClassConfiguration
         }
     }
 
-    public List<(string name, T)> GetByType<T>()
+    public IEnumerable<(string name, T)> GetByType<T>()
     {
         return GetType()
-            .GetProperties(BindingFlags.Instance |
-            BindingFlags.Public | BindingFlags.FlattenHierarchy)
+            .GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.FlattenHierarchy)
             .Where(OfType)
             .Select(pInfo =>
             {
                 return (pInfo.Name, (T)pInfo.GetValue(this)!);
-            })
-            .ToList();
+            });
 
-        static bool OfType(PropertyInfo pInfo) =>
-            typeof(T).IsAssignableFrom(pInfo.PropertyType);
+        static bool OfType(PropertyInfo pInfo)
+        {
+            return typeof(T).IsAssignableFrom(pInfo.PropertyType);
+        }
+    }
+
+    public List<(string name, T)> GetByTypeAsList<T>()
+    {
+        return GetByType<T>().ToList();
     }
 
     [LoggerMessage(
