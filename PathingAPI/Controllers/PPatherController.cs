@@ -10,6 +10,7 @@ using PPather.Graph;
 using SharedLib.Data;
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Text.Json;
@@ -70,12 +71,16 @@ public sealed class PPatherController : ControllerBase
 
         service.Save();
 
+        ArrayPool<Vector3> pool = ArrayPool<Vector3>.Shared;
+        var array = pool.Rent(path.locations.Count);
+
         for (int i = 0; i < path.locations.Count; i++)
         {
-            path.locations[i] = service.ToLocal(path.locations[i], (int)service.SearchFrom.W, uimap1);
+            array[i] = service.ToLocal(path.locations[i], (int)service.SearchFrom.W, uimap1);
         }
 
-        return new JsonResult(path.locations, options);
+        pool.Return(array);
+        return new JsonResult(new ArraySegment<Vector3>(array, 0, path.locations.Count), options);
     }
 
     /// <summary>
