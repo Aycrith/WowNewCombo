@@ -70,6 +70,14 @@ public sealed partial class Blacklist<T> : IBlacklist where T : IBlacklistSource
 
         if (playerReader.PetTarget() && source.UnitGuid == playerReader.PetGuid)
         {
+            if (lastGuid != source.UnitGuid)
+            {
+                LogPetTarget(logger, typeof(T),
+                    source.UnitId, source.UnitGuid, source.UnitName);
+
+                lastGuid = source.UnitGuid;
+            }
+
             return true;
         }
 
@@ -239,6 +247,12 @@ public sealed partial class Blacklist<T> : IBlacklist where T : IBlacklistSource
         Level = LogLevel.Warning,
         Message = "{type} ({id},{guid},{name},{classification}) evade on attack!")]
     static partial void LogEvade(ILogger logger, Type type, int id, int guid, string name, string classification);
+
+    [LoggerMessage(
+        EventId = 0068,
+        Level = LogLevel.Warning,
+        Message = "{type} ({id},{guid},{name}) Pet Target!")]
+    static partial void LogPetTarget(ILogger logger, Type type, int id, int guid, string name);
 
     #endregion
 }
