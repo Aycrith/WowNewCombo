@@ -74,7 +74,7 @@ public sealed class MPQTriangleSupplier
 
     public static string[] GetArchiveNames(DataConfig dataConfig)
     {
-        return Directory.GetFiles(dataConfig.MPQ);
+        return Directory.GetFiles(dataConfig.MPQ, "*.MPQ");
     }
 
     [SkipLocalsInit]
