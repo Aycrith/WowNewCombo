@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 
 using PPather.Data;
 using PPather.Graph;
@@ -76,7 +76,7 @@ public sealed class PPatherService
             return false;
         }
 
-        logger.LogInformation("MPQ files exist.");
+        logger.LogInformation($"MPQ files exist. {string.Join(' ', mpqFiles)}");
         return true;
     }
 
