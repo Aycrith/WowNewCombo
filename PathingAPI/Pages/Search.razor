@@ -62,8 +62,8 @@
     {
         try
         {
-            await jsRuntime.InvokeVoidAsync("removeMeshes", name);
-            await jsRuntime.InvokeVoidAsync("removeMeshes", "search");
+            await jsRuntime.InvokeVoidAsync("removeMesh", name);
+            await jsRuntime.InvokeVoidAsync("removeMesh", "search");
 
             pPatherService.SetLocations(parameters.From.Location, parameters.To.Location);
 

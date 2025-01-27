@@ -11,21 +11,10 @@
     var materials = new Array(layers);
     var rootNodes = new Array(layers);
 
-    showAlert = (message) => {
-        alert(message);
-    }
+    /* Global Functions */
 
-    log = function (message) {
-        console.log(message);
-        document.getElementById('canvasText').innerHTML = message;
-    }
-
-    removeMeshes = function (name) {
-        for (i = scene.meshes.length - 1; i >= 0; i--) {
-            const mesh = scene.meshes[i];
-            if (mesh.name === name)
-                mesh.dispose();
-        }
+    removeMesh = function (name) {
+        scene.getMeshByName(name)?.dispose();
     }
 
     clear = function () {
@@ -35,6 +24,26 @@
                 mesh.dispose();
         }
         cameraPositionSet = false;
+    }
+
+    setCamera = function (pos, look, height) {
+        if (cameraPositionSet) return;
+
+        if (height === undefined) height = 0;
+
+        const camera = scene.activeCamera;
+        cameraPositionSet = true;
+        camera.position = new BABYLON.Vector3(pos.x / div, (pos.z / div) + height, pos.y / div);
+        camera.setTarget(new BABYLON.Vector3(look.x / div, look.z / div, look.y / div));
+    }
+
+    showAlert = (message) => {
+        alert(message);
+    }
+
+    log = function (message) {
+        console.log(message);
+        document.getElementById('canvasText').innerHTML = message;
     }
 
     toggleWireFrame = function () {
@@ -53,54 +62,6 @@
             case 8: layer = 3; break;
         }
         rootNodes[layer].setEnabled(!rootNodes[layer].isEnabled());
-    }
-
-    drawSphere = function (vector, color, name) {
-        vector = JSON.parse(vector);
-
-        removeMeshes(name);
-        const sphere = BABYLON.Mesh.CreateSphere(name, 10.0, 0.5, scene, false, BABYLON.Mesh.DEFAULTSIDE);
-        const material = new BABYLON.StandardMaterial(scene);
-        material.alpha = 1;
-        material.diffuseColor = getColour(color);
-        sphere.material = material;
-        sphere.position = new BABYLON.Vector3(vector.x / div, (vector.z / div) + getHeight(color), vector.y / div);
-
-        //console.log("drawSphere: " + name + " completed.");
-    }
-
-    drawLine = function (vector, color, name) {
-        vector = JSON.parse(vector);
-
-        //log("drawLine: " + name);
-
-        removeMeshes(name);
-        const line1 = [
-            new BABYLON.Vector3(vector.x / div, vector.z / div, vector.y / div),
-            new BABYLON.Vector3(vector.x / div, (vector.z / div) + 10, vector.y / div)];
-
-        const lines1 = BABYLON.MeshBuilder.CreateLines(name, { points: line1 }, scene);
-        lines1.color = getColour(color);
-
-        if (/*!cameraPositionSet || */name === "start") {
-            cameraPositionSet = false;
-            setCamera(vector, vector, 10);
-        }
-
-        //console.log("drawLine: " + name + " completed.");
-    }
-
-    var debugLineCount = 0;
-
-    drawLineDebug = function (vector, color, name, count) {
-        if (debugLineCount != count) {
-            for (let i = debugLineCount; i >= 0; i--) {
-                removeMeshes(name + i)
-            }
-            debugLineCount = count;
-        }
-
-        drawLine(vector, color, name);
     }
 
     getColour = function (color) {
@@ -125,6 +86,209 @@
         }
     }
 
+    /* SinalR MessagePack */
+
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl("/watchHub")
+        .withHubProtocol(new signalR.protocols.msgpack.MessagePackHubProtocol())
+        .withAutomaticReconnect([0, 3000, 5000, 10000, 15000, 30000])
+        .build();
+
+    connection.start().then(function () {
+        console.log("Connected to SignalR Hub");
+    }).catch(function (err) {
+        return console.error(err.toString());
+    });
+
+    connection.on("removeMesh", removeMesh);
+    connection.on("clear", clear);
+
+    connection.on("drawLine", (array, color, name) => {
+
+        var height = 10;
+        if (name.includes("debug")) {
+            height = getHeight(color);
+        }
+
+        removeMesh(name);
+
+        const v = new BABYLON.Vector3.FromArray(array);
+
+        const points = [
+            new BABYLON.Vector3(v.x / div, v.z / div, v.y / div),
+            new BABYLON.Vector3(v.x / div, (v.z / div) + height, v.y / div)];
+
+        const line = BABYLON.MeshBuilder.CreateLines(name, { points: points }, scene);
+        line.color = getColour(color);
+
+        if (name === "start") {
+            //setCamera(points[0], points[1], 10);
+        }
+    })
+
+    connection.on("drawLines", (arrays, color, name) => {
+
+        if (arrays.length === 0)
+            return;
+
+        var height = 10;
+        if (name.includes("debug")) {
+            height = getHeight(color);
+        }
+
+        removeMesh(name);
+
+        const vectors = []
+        for (let i = arrays.length - 1; i >= 0; i--) {
+            const v = new BABYLON.Vector3.FromArray(arrays[i]);
+            v.y = v.y + height;
+            vectors.push(new BABYLON.Vector3(v.x / div, v.z / div, v.y / div));
+        }
+
+        const pcs = new BABYLON.PointsCloudSystem(name, div / 2, scene);
+
+        const c = getColour(color);
+
+        pcs.addPoints(vectors.length, (particle, i) => {
+            particle.position = vectors[i]
+            particle.color = c;
+        });
+
+        pcs.buildMeshAsync();
+    })
+
+    connection.on("drawPath", (arrays, color, name) => {
+
+        if (arrays.length === 0) return;
+
+        const height = getHeight(color);
+
+        const vectors = [];
+        for (i = 0; i < arrays.length; i++) {
+            const t = new BABYLON.Vector3.FromArray(arrays[i]);
+            const v = new BABYLON.Vector3(t.x / div, (t.z / div) + height, t.y / div)
+            vectors.push(v);
+        }
+
+        removeMesh(name);
+
+        const lines = BABYLON.MeshBuilder.CreateLines(name, { points: vectors }, scene);
+        lines.color = getColour(color);
+
+        const start = new BABYLON.Vector3.FromArray(arrays[0]);
+        const end = new BABYLON.Vector3.FromArray(arrays[arrays.length - 1]);
+        setCamera(start, end, 20);
+
+        //console.log("drawPath: " + name + " completed.");
+    })
+
+    connection.on("addModels", (loadedIndices, loadedPositions) => {
+
+        if (loadedPositions.length === 0)
+            return;
+
+        const start = new BABYLON.Vector3.FromArray(loadedPositions[0]);
+        const end = new BABYLON.Vector3.FromArray(loadedPositions[loadedPositions.length - 1]);
+
+        setCamera(start, end, 20);
+
+        const positions = new Float32Array(loadedPositions.length * 3);
+        const uvs = new Float32Array((loadedPositions.length) * 2);
+        const baseX = -4, baseZ = -4, scale = 4;
+
+        for (let i = 0; i < loadedPositions.length; i++) {
+            const p = new BABYLON.Vector3.FromArray(loadedPositions[i]);
+            const index = i * 3;
+            positions[index] = p.x / div;
+            positions[index + 1] = p.z / div;
+            positions[index + 2] = p.y / div;
+
+            const uvIndex = i * 2;
+            uvs[uvIndex] = (positions[index] - baseX) / scale;
+            uvs[uvIndex + 1] = (positions[index + 2] - baseZ) / scale;
+        }
+
+        for (let p = 0; p < loadedIndices.length; p++) {
+            const indices = loadedIndices[p];
+
+            modelId++;
+            const customMesh = new BABYLON.Mesh("custom" + modelId, scene);
+            const normals = new Float32Array(positions.length);
+            BABYLON.VertexData.ComputeNormals(positions, indices, normals);
+
+            const vertexData = new BABYLON.VertexData();
+            vertexData.positions = positions;
+            vertexData.indices = indices;
+            vertexData.normals = normals;
+            vertexData.uvs = uvs;
+            vertexData.applyToMesh(customMesh);
+
+            customMesh.material = materials[p % materials.length];
+            customMesh.parent = rootNodes[p % rootNodes.length];
+        }
+    });
+
+    /* JSON Based */
+
+    toggleSceneExplorer = function (enabled) {
+        if (enabled) {
+            scene.debugLayer.show();
+        }
+        else {
+            scene.debugLayer.hide();
+        }
+    }
+
+    drawSphere = function (vector, color, name) {
+        vector = JSON.parse(vector);
+
+        removeMesh(name);
+        const sphere = BABYLON.Mesh.CreateSphere(name, 10.0, 0.5, scene, false, BABYLON.Mesh.DEFAULTSIDE);
+        const material = new BABYLON.StandardMaterial(scene);
+        material.alpha = 1;
+        material.diffuseColor = getColour(color);
+        sphere.material = material;
+        sphere.position = new BABYLON.Vector3(vector.x / div, (vector.z / div) + getHeight(color), vector.y / div);
+
+        //console.log("drawSphere: " + name + " completed.");
+    }
+
+    drawLine = function (vector, color, name) {
+        vector = JSON.parse(vector);
+
+        //log("drawLine: " + name);
+
+        var height = 10;
+        if (name.includes("debug")) {
+            height = getHeight(color);
+        }
+
+        removeMesh(name);
+
+        const line1 = [
+            new BABYLON.Vector3(vector.x / div, vector.z / div, vector.y / div),
+            new BABYLON.Vector3(vector.x / div, (vector.z / div) + height, vector.y / div)];
+
+        const lines1 = BABYLON.MeshBuilder.CreateLines(name, { points: line1 }, scene);
+        lines1.color = getColour(color);
+
+        if (name === "start") {
+            setCamera(vector, vector, 10);
+        }
+    }
+
+    drawLineDebug = function (vector, color, name) {
+        drawLine(vector, color, name);
+    }
+
+    drawLineDebugs = function (vectors, color, name) {
+        vectors = JSON.parse(vectors);
+        for (let i = vectors.length - 1; i >= 0; i--) {
+            const v = vectors[i];
+            drawLineDebug(JSON.stringify(v), color, name + i);
+        }
+    }
+
     drawPath = function (points, color, name) {
         points = JSON.parse(points);
 
@@ -136,6 +300,8 @@
             const height = getHeight(color);
             path.push(new BABYLON.Vector3(p.x / div, (p.z / div) + height, p.y / div));
         }
+
+        removeMesh(name);
 
         const lines = BABYLON.MeshBuilder.CreateLines(name, { points: path }, scene);
         lines.color = getColour(color);
@@ -240,64 +406,4 @@
 
         log("createScene: completed");
     };
-
-    addModels = function (loadedIndices, loadedPositions) {
-        //log("addModels: " + modelId);
-
-        loadedIndices = JSON.parse(loadedIndices);
-        loadedPositions = JSON.parse(loadedPositions);
-
-        if (loadedPositions.length === 0) {
-            return;
-        }
-
-        setCamera(loadedPositions[0], loadedPositions[loadedPositions.length - 1], 20);
-        //cameraPositionSet = false;
-
-        const positions = [];
-        for (let i = 0; i < loadedPositions.length; i++) {
-            positions.push(loadedPositions[i].x / div);
-            positions.push(loadedPositions[i].z / div);
-            positions.push(loadedPositions[i].y / div);
-        }
-
-        //take uv value relative to bottom left corner of roof (-4, -4) noting length and width of roof is 8. base uv value on the x, z coordinates only
-        const uvs = [];
-        for (let p = 0; p < positions.length / 3; p++) {
-            uvs.push((positions[3 * p] - (-4)) / 4, (positions[3 * p + 2] - (-4)) / 4);
-        }
-
-        // add the models
-        for (let p = 0; p < loadedIndices.length; p++) {
-            const indices = loadedIndices[p];
-
-            modelId++;
-            const customMesh = new BABYLON.Mesh("custom" + modelId, scene);
-            const normals = [];
-            BABYLON.VertexData.ComputeNormals(positions, indices, normals);
-
-            const vertexData = new BABYLON.VertexData();
-            vertexData.positions = positions;
-            vertexData.indices = indices;
-            vertexData.normals = normals;
-            vertexData.uvs = uvs;
-            vertexData.applyToMesh(customMesh);
-            //customMesh.convertToFlatShadedMesh();
-
-            customMesh.material = materials[p];
-            customMesh.parent = rootNodes[p];
-        }
-
-    }
-
-    setCamera = function (pos, look, height) {
-        if (cameraPositionSet) return;
-
-        if (height === undefined) height = 0;
-
-        const camera = scene.activeCamera;
-        cameraPositionSet = true;
-        camera.position = new BABYLON.Vector3(pos.x / div, (pos.z / div) + height, pos.y / div);
-        camera.setTarget(new BABYLON.Vector3(look.x / div, look.z / div, look.y / div));
-    }
 });
