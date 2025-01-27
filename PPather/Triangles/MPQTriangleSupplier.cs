@@ -226,7 +226,7 @@ public sealed class MPQTriangleSupplier
             {
                 int ii = row * LiquidData.FLAG_SIZE + col;
 
-                if (c.water_flags[ii] == 0)
+                if (c.water_flags[ii] == 0xf)
                     continue;
 
                 int v0 = vertices[row * LiquidData.HEIGHT_SIZE + col];

@@ -866,7 +866,7 @@ internal static class MapTileFile // adt file
             float[] water_height = new float[LiquidData.HEIGHT_SIZE * LiquidData.HEIGHT_SIZE];
             byte[] water_flags = new byte[LiquidData.FLAG_SIZE * LiquidData.FLAG_SIZE];
 
-            if ((used & 1) == 1 && offsetData1 != 0 && data1.offsetData2b != 0 && (data1.flags & 1) == 1)
+            if (used != 0 && offsetData1 != 0 && data1.offsetData2b != 0 && (data1.flags & 1) == 1)
             {
                 long lastPos = file.BaseStream.Position;
                 file.BaseStream.Seek(chunkStart + data1.offsetData2b, SeekOrigin.Begin);
