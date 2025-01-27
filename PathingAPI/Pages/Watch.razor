@@ -1,11 +1,15 @@
 ﻿@page "/Watch"
 
 @using static System.Text.Json.JsonSerializer
+@using Microsoft.AspNetCore.SignalR;
+@using System.Buffers;
 
 @inject IJSRuntime jsRuntime
 @inject PPatherService pPatherService
 @inject PathingAPILoggerSink loggerSink
 @inject JsonSerializerOptions options
+
+@inject IHubContext<WatchHub> hubContext;
 
 @implements IAsyncDisposable
 
@@ -15,23 +19,29 @@
         ...
     </div>
     <div style="display:inline-block; float: right">
+        <button @onclick="() => ToggleSceneExplorer()">
+            <span style="@(SceneExplorerEnabled ? "color: green;" : "")">Explorer</span>
+        </button>
+        <button @onclick="() => DrawTestPoints = !DrawTestPoints">
+            <span style="@(DrawTestPoints ? "color: green;" : "")">TestPoints</span>
+        </button>
         <button @onclick="() => ToggleLayer(TriangleType.Model)">
-            <span>Model</span>
+            <span style="@(IsLayerEnabled(TriangleType.Model) ? "color: green;" : "")">Model</span>
         </button>
         <button @onclick="() => ToggleLayer(TriangleType.Object)">
-            <span>Object</span>
+            <span style="@(IsLayerEnabled(TriangleType.Object) ? "color: green;" : "")">Object</span>
         </button>
         <button @onclick="() => ToggleLayer(TriangleType.Water)">
-            <span>Water</span>
+            <span style="@(IsLayerEnabled(TriangleType.Water) ? "color: green;" : "")">Water</span>
         </button>
         <button @onclick="() => ToggleLayer(TriangleType.Terrain)">
-            <span>Terrain</span>
+            <span style="@(IsLayerEnabled(TriangleType.Terrain) ? "color: green;" : "")">Terrain</span>
         </button>
         <button @onclick="ToggleWireFrame">
-            <span>Wire</span>
+            <span style="@(WireFrameEnabled ? "color: green;" : "")">Wire</span>
         </button>
         <button @onclick="() => LoadGeometry = !LoadGeometry">
-            <span>@(LoadGeometry ? "Hide3D" : "Show3D")</span>
+            <span style="@(LoadGeometry ? "color: green;" : "")">Show3D</span>
         </button>
         <button @onclick="async () => await Reset()">
             <span>Reset</span>
@@ -53,6 +63,8 @@
         Yellow
     }
 
+    private const int RefreshTimeMs = 100;
+
     [Parameter]
     public int PathColour { get; set; } = (int)Color.Red;
 
@@ -71,12 +83,20 @@
 
     private bool LoadGeometry { get; set; } = true;
 
+    private bool DrawTestPoints { get; set; } = false;
+
+    private bool SceneExplorerEnabled { get; set; } = false;
+
     private Vector4 lastFrom;
     private Vector4 lastTo;
     private Vector3 lastClosest;
     private Vector3 lastPeek;
 
-    private Vector3[] testPoints;
+    private int testPointsCount = 0;
+
+    private bool[] ToggleLayers = [true, true, true, true];
+
+    private bool WireFrameEnabled = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -85,10 +105,8 @@
 
         this.firstRender = true;
 
-        await jsRuntime.InvokeVoidAsync("log", Token,
-            "Waiting for first search from the API...");
-
-        await jsRuntime.InvokeVoidAsync("createScene", Token);
+        await SendLog("Waiting for first search from the API...", Token);
+        await SendCreateScene(Token);
 
         //loggerSink.OnLog += OnLog;
 
@@ -119,19 +137,34 @@
 
     private async void ToggleLayer(TriangleType layer)
     {
+        ToggleLayers[layer.ToIndex()] = !ToggleLayers[layer.ToIndex()];
         await jsRuntime.InvokeVoidAsync("toggleLayer", Token, layer);
+    }
+
+    private bool IsLayerEnabled(TriangleType layer)
+    {
+        return ToggleLayers[layer.ToIndex()];
     }
 
     private async void ToggleWireFrame()
     {
+        WireFrameEnabled = !WireFrameEnabled;
         await jsRuntime.InvokeVoidAsync("toggleWireFrame", Token);
+    }
+
+    private async void ToggleSceneExplorer()
+    {
+        SceneExplorerEnabled = !SceneExplorerEnabled;
+        await jsRuntime.InvokeVoidAsync("toggleSceneExplorer", Token, SceneExplorerEnabled);
     }
 
     private async ValueTask Reset()
     {
+        testPointsCount = 0;
+
         searchCts?.Cancel();
 
-        await jsRuntime.InvokeVoidAsync("clear", Token);
+        await SendClear(Token);
 
         pPatherService.Reset();
         GC.Collect();
@@ -144,67 +177,50 @@
 
     private async void Log(string message)
     {
-        await jsRuntime.InvokeVoidAsync("log", Token, message);
+        await SendLog(message, Token);
     }
 
     private async void SearchPath_Thread()
     {
-        while (!searchCts.IsCancellationRequested &&
-            !Token.IsCancellationRequested)
+        var cts = CancellationTokenSource.CreateLinkedTokenSource(Token, searchCts.Token);
+        var token = cts.Token;
+
+        while (!token.IsCancellationRequested)
         {
-            var spots = pPatherService.GetCurrentSearchPath();
-            if (spots != null)
-            {
-                var path = spots.Where(s => s != null).Select(s => s.Loc);
-                if (path.Count() > 0)
-                {
-                    await jsRuntime.InvokeVoidAsync("drawPath", Token,
-                        Serialize(path, options), Color.White, "search");
-                }
-            }
+            var points = pPatherService.GetCurrentSearchPath();
+            await SendDrawPath(points, Color.White, "search", token);
 
             if (lastFrom != pPatherService.SearchFrom)
             {
                 lastFrom = pPatherService.SearchFrom;
-                await jsRuntime.InvokeVoidAsync("drawLine", Token,
-                    Serialize(lastFrom.AsVector3(), options), Color.Green, "start2");
+                await SendDrawLine(lastFrom.AsVector3(), Color.Green, "start", token);
             }
 
             if (lastTo != pPatherService.SearchTo)
             {
                 lastTo = pPatherService.SearchTo;
-                await jsRuntime.InvokeVoidAsync("drawLine", Token,
-                    Serialize(lastTo.AsVector3(), options), Color.Blue, "endd");
+                await SendDrawLine(lastTo.AsVector3(), Color.Blue, "end", token);
             }
 
             if (lastClosest != pPatherService.ClosestLocation)
             {
                 lastClosest = pPatherService.ClosestLocation;
-                await jsRuntime.InvokeVoidAsync("drawLine", Token,
-                    Serialize(pPatherService.ClosestLocation, options), Color.Teal, "closest");
+                await SendDrawLine(lastClosest, Color.Teal, "closest", token);
             }
 
-            if (testPoints != pPatherService.TestPoints)
+            if (DrawTestPoints && testPointsCount != pPatherService.TestPoints.Count)
             {
-                testPoints = pPatherService.TestPoints;
-
-                for (int i = 0; i < testPoints.Length; i++)
-                {
-                    Vector3 p = testPoints[i];
-                    await jsRuntime.InvokeVoidAsync("drawLineDebug", Token,
-                        Serialize(p, options), Color.Yellow, "debug" + i, testPoints.Length);
-                }
+                testPointsCount = pPatherService.TestPoints.Count;
+                await SendDrawLines(pPatherService.TestPoints.ToHashSet(), Color.Yellow, "debug", token);
             }
 
             if (lastPeek != pPatherService.PeekLocation)
             {
                 lastPeek = pPatherService.PeekLocation;
-
-                await jsRuntime.InvokeVoidAsync("drawLine", Token,
-                    Serialize(pPatherService.PeekLocation, options), Color.Orange, "peek");
+                await SendDrawLine(lastPeek, Color.Orange, "peek", token);
             }
 
-            searchCts.Token.WaitHandle.WaitOne(100);
+            token.WaitHandle.WaitOne(RefreshTimeMs);
         }
     }
 
@@ -221,35 +237,36 @@
         {
             if (LoadGeometry)
             {
-                await DequeueChunkEvent(e);
+                await DequeueChunkEvent(e, Token);
             }
         }
     }
 
     private async void OnDrawFinalPath(Path spotPath)
     {
-        if (spotPath != null)
-        {
-            await DrawGeometry();
-
-            if (ClearPath)
-                await jsRuntime.InvokeVoidAsync("removeMeshes", Token, Name);
-
-            await jsRuntime.InvokeVoidAsync("drawPath", Token,
-                Serialize(spotPath.locations, options), PathColour, Name);
-
-            await jsRuntime.InvokeVoidAsync("removeMeshes", Token, "search");
-
-            await jsRuntime.InvokeVoidAsync("drawPath", Token,
-                Serialize(spotPath.locations, options), PathColour, Name);
-        }
-        else
-        {
-            await DrawGeometry();
-            Log("No path found");
-        }
-
         searchCts?.Cancel();
+
+        await DrawGeometry();
+
+        if (spotPath == null || spotPath.locations.Count == 0)
+        {
+            Log("No path found");
+            return;
+        }
+
+        await SendRemoveMesh("search", Token);
+
+        await SendDrawPath(spotPath.locations, (Color)PathColour, Name, Token);
+
+        await SendDrawLine(lastFrom.AsVector3(), Color.Green, "start", Token);
+
+        await SendDrawLine(lastTo.AsVector3(), Color.Blue, "end", Token);
+
+        if (DrawTestPoints && testPointsCount != pPatherService.TestPoints.Count)
+        {
+            testPointsCount = pPatherService.TestPoints.Count;
+            await SendDrawLines(pPatherService.TestPoints, Color.Yellow, "debug", Token);
+        }
     }
 
     private async void OnDrawSphere(SphereEventArgs e)
@@ -262,10 +279,10 @@
     {
         await DrawGeometry();
 
-        await jsRuntime.InvokeVoidAsync("removeMeshes", Token, e.Name);
+        await SendRemoveMesh(Name, Token);
 
-        await jsRuntime.InvokeVoidAsync("drawPath", Token,
-            Serialize(e.Locations, options), e.Colour, e.Name);
+        await jsRuntime.InvokeVoidAsync("drawPath", Token, Serialize(e.Locations, options), e.Colour, e.Name);
+        //await SendDrawPath(e.Locations, (Color)e.Colour, e.Name, Token);
     }
 
     private /*async*/ void OnChunkAdded(ChunkEventArgs e)
@@ -274,23 +291,98 @@
         //_ = DequeueChunkEvent(e);
     }
 
-    private async ValueTask DequeueChunkEvent(ChunkEventArgs e)
+    private async ValueTask DequeueChunkEvent(ChunkEventArgs e, CancellationToken token)
     {
-        if (Token.IsCancellationRequested) return;
+        if (token.IsCancellationRequested) return;
 
-        TriangleCollection chunks = pPatherService.GetChunkAt(e.GridX, e.GridY);
+        try
+        {
+            await Task.Delay(RefreshTimeMs, token);
 
-        int i = 0;
-        int[][] models = new int[4][];
-        models[i++] = MeshFactory.CreateTriangles(TriangleType.Terrain, chunks);
-        models[i++] = MeshFactory.CreateTriangles(TriangleType.Water, chunks);
-        models[i++] = MeshFactory.CreateTriangles(TriangleType.Object, chunks);
-        models[i++] = MeshFactory.CreateTriangles(TriangleType.Model, chunks);
+            TriangleCollection chunks = pPatherService.GetChunkAt(e.GridX, e.GridY);
 
-        var positions = MeshFactory.CreatePoints(chunks);
+            var pooler = ArrayPool<int>.Shared;
 
-        await jsRuntime.InvokeVoidAsync("addModels", Token,
-            Serialize(models, options),
-            Serialize(positions, options));
+            int count = chunks.TriangleCount * 3;
+
+            var array1 = pooler.Rent(count);
+            var array2 = pooler.Rent(count);
+            var array3 = pooler.Rent(count);
+            var array4 = pooler.Rent(count);
+
+            try
+            {
+                var c1 = MeshFactory.CreateTriangles(TriangleType.Terrain, chunks, array1);
+                var c2 = MeshFactory.CreateTriangles(TriangleType.Water, chunks, array2);
+                var c3 = MeshFactory.CreateTriangles(TriangleType.Object, chunks, array3);
+                var c4 = MeshFactory.CreateTriangles(TriangleType.Model, chunks, array4);
+
+                int i = 0;
+                Memory<int>[] models = new Memory<int>[4];
+                models[i++] = array1.AsMemory(0, c1);
+                models[i++] = array2.AsMemory(0, c2);
+                models[i++] = array3.AsMemory(0, c3);
+                models[i++] = array4.AsMemory(0, c4);
+
+                var positions = MeshFactory.CreatePoints(chunks);
+
+                await hubContext.Clients.All.SendAsync("addModels", models, positions, token);
+            }
+            finally
+            {
+                pooler.Return(array1, true);
+                pooler.Return(array2, true);
+                pooler.Return(array3, true);
+                pooler.Return(array4, true);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Handle the cancellation exception if needed
+        }
+        catch (Exception ex)
+        {
+            // Log the exception or handle it as needed
+            await SendLog($"Error in DequeueChunkEvent: {ex.Message}", token);
+        }
+    }
+
+    // SignalR methods to babylonjs.js
+
+    private async Task SendLog(string message, CancellationToken token)
+    {
+        await jsRuntime.InvokeVoidAsync("log", token, message);
+        //await hubContext.Clients.All.SendAsync("log", message, token);
+    }
+
+    private async Task SendCreateScene(CancellationToken token)
+    {
+        await jsRuntime.InvokeVoidAsync("createScene", token);
+        // await hubContext.Clients.All.SendAsync("createScene", token);
+    }
+
+    private async Task SendClear(CancellationToken token)
+    {
+        await hubContext.Clients.All.SendAsync("clear", token);
+    }
+
+    private async Task SendDrawPath(IEnumerable<Vector3> points, Color color, string name, CancellationToken token)
+    {
+        await hubContext.Clients.All.SendAsync("drawPath", points, (int)color, name, token);
+    }
+
+    private async Task SendDrawLine(Vector3 point, Color color, string name, CancellationToken token)
+    {
+        await hubContext.Clients.All.SendAsync("drawLine", point, (int)color, name, token);
+    }
+
+    private async Task SendDrawLines(IEnumerable<Vector3> points, Color color, string name, CancellationToken token)
+    {
+        await hubContext.Clients.All.SendAsync("drawLines", points, (int)color, name, token);
+    }
+
+    private async Task SendRemoveMesh(string name, CancellationToken token)
+    {
+        await hubContext.Clients.All.SendAsync("removeMesh", name, token);
     }
 }

@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 
 using PPather.Data;
 using PPather.Graph;
@@ -37,7 +37,7 @@ public sealed class PPatherService
     public Vector3 ClosestLocation => search?.PathGraph?.ClosestSpot?.Loc ?? Vector3.Zero;
     public Vector3 PeekLocation => search?.PathGraph?.PeekSpot?.Loc ?? Vector3.Zero;
 
-    public Vector3[] TestPoints => search?.PathGraph?.TestPoints ?? Array.Empty<Vector3>();
+    public HashSet<Vector3> TestPoints => search?.PathGraph?.TestPoints ?? [];
 
     public PPatherService(ILogger<PPatherService> logger, DataConfig dataConfig, WorldMapAreaDB worldMapAreaDB)
     {
@@ -164,14 +164,11 @@ public sealed class PPatherService
         search.locationTo = to;
     }
 
-    public List<Spot> GetCurrentSearchPath()
+    public List<Vector3> GetCurrentSearchPath()
     {
-        if (search == null || search.PathGraph == null)
-        {
-            return null;
-        }
-
-        return search.PathGraph.CurrentSearchPath();
+        return search == null || search.PathGraph == null
+            ? []
+            : search.PathGraph.CurrentSearchPath();
     }
 
     public float TransformMapToWorld(int uiMapId, Vector3[] path)

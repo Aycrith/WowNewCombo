@@ -7,7 +7,9 @@
 
   <ItemGroup>
     <PackageReference Include="MatBlazor" />
+    <PackageReference Include="MessagePack" />
     <PackageReference Include="Microsoft.AspNetCore.Components" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" />
     <PackageReference Include="Serilog.AspNetCore" />
     <PackageReference Include="Serilog.Extensions.Logging" />
     <PackageReference Include="Serilog.Sinks.File" />
@@ -21,6 +23,12 @@
     <ProjectReference Include="..\DataConfig\DataConfig.csproj" />
     <ProjectReference Include="..\PPather\PPather.csproj" />
     <ProjectReference Include="..\SharedLib\SharedLib.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="wwwroot\js\babylonjs.js">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

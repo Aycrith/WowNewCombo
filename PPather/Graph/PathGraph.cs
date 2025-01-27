@@ -545,7 +545,7 @@ public sealed class PathGraph
 
     public Spot ClosestSpot;
     public Spot PeekSpot;
-    public Vector3[] TestPoints = [];
+    public HashSet<Vector3> TestPoints = [];
 
     private Spot Search(Spot fromSpot, Spot destinationSpot, eSearchScoreSpot searchScoreSpot, float minHowClose)
     {
@@ -608,7 +608,7 @@ public sealed class PathGraph
             if (GetElapsedTime(timeSinceProgress).TotalSeconds > ProgressTimeoutSeconds ||
                 GetElapsedTime(searchDuration).TotalSeconds > TimeoutSeconds)
             {
-                logger.LogWarning("search failed, 10 seconds since last progress, returning the closest spot.");
+                logger.LogWarning($"search failed, {ProgressTimeoutSeconds} seconds since last progress, returning the closest spot.");
                 return ClosestSpot;
             }
 
@@ -617,13 +617,14 @@ public sealed class PathGraph
 
             //score each spot around the current search spot and add them to the queue
             ReadOnlySpan<Spot> spots = currentSearchSpot.GetPathsToSpots(this);
-            //TestPoints = spots.ToVecArray();
 
             for (int i = 0; i < spots.Length; i++)
             {
                 Spot linked = spots[i];
                 if (linked != null && !linked.IsBlocked() && !linked.SearchIsClosed(currentSearchID))
                 {
+                    TestPoints.Add(linked.Loc);
+
                     ScoreSpot(linked, destinationSpot, searchScoreSpot, currentSearchID, prioritySpotQueue);
                 }
             }
@@ -741,7 +742,7 @@ public sealed class PathGraph
         currentSearchSpot.SetFlag(Spot.FLAG_MPQ_MAPPED, true);
 
         //loop through the spots in a circle around the current search spot
-        for (float radianAngle = 0; radianAngle < Tau; radianAngle += PI / 8)
+        for (float radianAngle = 0; radianAngle < Tau; radianAngle += PI / 8) // 4
         {
             //calculate the location of the spot at the angle
             float nx = currentSearchSpot.Loc.X + (Sin(radianAngle) * WantedStepLength);// *0.8f;
@@ -810,27 +811,38 @@ public sealed class PathGraph
 
     private Spot lastCurrentSearchSpot;
 
-    public List<Spot> CurrentSearchPath()
+    public List<Vector3> CurrentSearchPath()
     {
         if (lastCurrentSearchSpot == currentSearchSpot)
         {
-            return null;
+            return [];
         }
 
         lastCurrentSearchSpot = currentSearchSpot;
-        return FollowTraceBack(currentSearchStartSpot, currentSearchSpot);
+        return FollowTraceBackLocations(currentSearchStartSpot, currentSearchSpot);
     }
 
     private static List<Spot> FollowTraceBack(Spot from, Spot to)
     {
-        List<Spot> path = new();
-        Spot backtrack = to;
-        while (backtrack != from && backtrack != null)
+        List<Spot> path = [];
+        for (Spot backtrack = to; backtrack != null; backtrack = backtrack.traceBack)
         {
             path.Insert(0, backtrack);
-            backtrack = backtrack.traceBack;
+            if (backtrack == from)
+                break;
         }
-        path.Insert(0, from);
+        return path;
+    }
+
+    private static List<Vector3> FollowTraceBackLocations(Spot from, Spot to)
+    {
+        List<Vector3> path = [];
+        for (Spot backtrack = to; backtrack != null; backtrack = backtrack.traceBack)
+        {
+            path.Insert(0, backtrack.Loc);
+            if (backtrack == from)
+                break;
+        }
         return path;
     }
 

@@ -1,4 +1,6 @@
-﻿namespace PPather;
+﻿using System;
+
+namespace PPather;
 
 [System.Flags]
 public enum TriangleType : byte
@@ -15,5 +17,17 @@ public static class TriangleType_Ext
     public static bool Has(this TriangleType flags, TriangleType flag)
     {
         return (flags & flag) != 0;
+    }
+
+    public static int ToIndex(this TriangleType type)
+    {
+        return type switch
+        {
+            TriangleType.Terrain => 0,
+            TriangleType.Water => 1,
+            TriangleType.Object => 2,
+            TriangleType.Model => 3,
+            _ => throw new ArgumentOutOfRangeException(nameof(type), $"Unexpected value: {type}")
+        };
     }
 }
