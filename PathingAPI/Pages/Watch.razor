@@ -208,11 +208,14 @@
                 await SendDrawLine(lastClosest, Color.Teal, "closest", token);
             }
 
+            /*
+            // This can be causes issues for really big path
             if (DrawTestPoints && testPointsCount != pPatherService.TestPoints.Count)
             {
                 testPointsCount = pPatherService.TestPoints.Count;
                 await SendDrawLines(pPatherService.TestPoints.ToHashSet(), Color.Yellow, "debug", token);
             }
+            */
 
             if (lastPeek != pPatherService.PeekLocation)
             {
@@ -222,6 +225,8 @@
 
             token.WaitHandle.WaitOne(RefreshTimeMs);
         }
+
+        thread = null;
     }
 
     private void OnSearchBegin()
@@ -233,7 +238,7 @@
 
     private async Task DrawGeometry()
     {
-        while (chunkEventArgs.TryDequeue(out var e))
+        while (chunkEventArgs.TryDequeue(out var e) && !Token.IsCancellationRequested)
         {
             if (LoadGeometry)
             {
@@ -244,9 +249,12 @@
 
     private async void OnDrawFinalPath(Path spotPath)
     {
-        Token.WaitHandle.WaitOne(RefreshTimeMs);
-
         searchCts?.Cancel();
+
+        while (thread != null || Token.IsCancellationRequested)
+        {
+            Token.WaitHandle.WaitOne(RefreshTimeMs);
+        }
 
         await DrawGeometry();
 
