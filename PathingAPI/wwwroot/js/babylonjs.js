@@ -211,6 +211,9 @@
         for (let p = 0; p < loadedIndices.length; p++) {
             const indices = loadedIndices[p];
 
+            if (indices.length === 0)
+                continue;
+
             modelId++;
             const customMesh = new BABYLON.Mesh("custom" + modelId, scene);
             const normals = new Float32Array(positions.length);

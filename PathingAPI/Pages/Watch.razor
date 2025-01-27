@@ -244,6 +244,8 @@
 
     private async void OnDrawFinalPath(Path spotPath)
     {
+        Token.WaitHandle.WaitOne(RefreshTimeMs);
+
         searchCts?.Cancel();
 
         await DrawGeometry();
@@ -330,10 +332,10 @@
             }
             finally
             {
-                pooler.Return(array1, true);
-                pooler.Return(array2, true);
-                pooler.Return(array3, true);
-                pooler.Return(array4, true);
+                pooler.Return(array1);
+                pooler.Return(array2);
+                pooler.Return(array3);
+                pooler.Return(array4);
             }
         }
         catch (OperationCanceledException)
