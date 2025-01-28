@@ -6,6 +6,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="wwwroot\teleport_locations.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="MatBlazor" />
     <PackageReference Include="MessagePack" />
     <PackageReference Include="Microsoft.AspNetCore.Components" />

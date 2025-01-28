@@ -1,4 +1,6 @@
-﻿@inject IJSRuntime jsRuntime
+﻿@using System.Runtime.InteropServices
+
+@inject IJSRuntime jsRuntime
 
 <span class="form-inline px-4">
 
@@ -170,6 +172,37 @@
                 new(5241, 5922, -60, Northrend, "Sholazar, Spot 3"),
                 new(5194, 5709, -85, Northrend, "Sholazar, Spot 4"),
             });
+        }
+
+        ReadTeleportsLocationsFile();
+    }
+
+    private void ReadTeleportsLocationsFile()
+    {
+        foreach (ReadOnlySpan<char> line in System.IO.File.ReadLines("wwwroot/teleport_locations.txt"))
+        {
+            ReadOnlySpan<char> trim = line.Trim();
+            if (trim.IsEmpty)
+                continue;
+
+            // id x y z orientation mapId desc
+            Span<Range> ranges = stackalloc Range[7];
+            trim.Split(ranges, ' ');
+
+            float x = float.Parse(trim[ranges[1]]);
+            float y = float.Parse(trim[ranges[2]]);
+            float z = float.Parse(trim[ranges[3]]);
+            float mapId = float.Parse(trim[ranges[5]]);
+
+            string desc = trim[ranges[6]].ToString();
+
+            ref string valueRef = ref CollectionsMarshal.GetValueRefOrAddDefault(knownMapIds, mapId, out bool exists);
+            if (!exists)
+            {
+                valueRef = desc;
+            }
+
+            knownLocations.Add(new(x, y, z, mapId, desc));
         }
     }
 
