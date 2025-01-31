@@ -110,9 +110,16 @@ public sealed partial class NpcNameTargeting : IDisposable
         ReadOnlySpan<NpcPosition> span = npcNameFinder.Npcs;
         ref readonly NpcPosition npc = ref span[index];
 
+        screen.GetRectangle(out Rectangle screenRect);
+
         Point p = Targeting[Random.Shared.Next(Targeting.Length)];
         p.Offset(npc.ClickPoint);
         p.Offset(npcNameFinder.ToScreenCoordinates());
+
+        if (!screenRect.Contains(p))
+        {
+            return false;
+        }
 
         input.SetCursorPos(p);
         classifier.Classify(out CursorType cls, out _);
@@ -147,6 +154,8 @@ public sealed partial class NpcNameTargeting : IDisposable
         float w = npcNameFinder.ScaleToRefWidth;
         float h = npcNameFinder.ScaleToRefHeight;
 
+        screen.GetRectangle(out Rectangle screenRect);
+
         ReadOnlySpan<NpcPosition> span = npcNameFinder.Npcs;
         for (int i = 0;
             i < span.Length &&
@@ -172,6 +181,11 @@ public sealed partial class NpcNameTargeting : IDisposable
                 Point p = attempts[k];
                 p.Offset(npc.ClickPoint);
                 p.Offset(npcNameFinder.ToScreenCoordinates());
+
+                if (!screenRect.Contains(p))
+                {
+                    continue;
+                }
 
                 input.SetCursorPos(p);
 
