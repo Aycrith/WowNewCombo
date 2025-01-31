@@ -21,4 +21,11 @@ public static class DirectionCalculator
             Cos(wowRadian + (PI / 2)),
             Sin(wowRadian - (PI / 2)));
     }
+
+    public static Vector2 ToNormalRadianNoFlip(float wowRadian)
+    {
+        return new(
+            Cos(wowRadian),
+            Sin(wowRadian));
+    }
 }

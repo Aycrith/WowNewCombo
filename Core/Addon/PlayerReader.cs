@@ -1,4 +1,4 @@
-﻿using Core.AddonComponent;
+using Core.AddonComponent;
 using Core.Database;
 
 using SharedLib;
@@ -46,6 +46,21 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
 
     public float MapX => reader.GetFixed(1) * 10;
     public float MapY => reader.GetFixed(2) * 10;
+
+    public Vector3 TargetMapPos
+    {
+        get
+        {
+            if (!bits.Target())
+            {
+                return Vector3.Zero;
+            }
+
+            float targetDistance = (MaxRange() + MinRange()) / 2;
+
+            return PointEstimator.GetMapPos(WorldMapArea, WorldPos, Direction, targetDistance);
+        }
+    }
 
     public float Direction => reader.GetFixed(3);
 

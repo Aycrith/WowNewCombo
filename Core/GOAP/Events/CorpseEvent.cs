@@ -11,9 +11,12 @@ public sealed class CorpseEvent : GoapEventArgs
     public Vector3 MapLoc { get; }
     public float Radius { get; }
 
-    public CorpseEvent(Vector3 location, float radius)
+    public float PlayerFacing { get; }
+
+    public CorpseEvent(Vector3 location, float radius, float playerFacing)
     {
         MapLoc = location;
         Radius = MathF.Max(1, radius);
+        PlayerFacing = playerFacing;
     }
 }

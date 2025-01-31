@@ -185,7 +185,10 @@ public sealed class RouteInfo : IDisposable
         int navLength = RouteToWaypoint.Length;
         int poiCount = PoiList.Count;
 
-        int length = routeLength + navLength + poiCount + 1;
+        bool hasTarget = playerReader.TargetId != 0;
+        int extraCount = hasTarget ? 2 : 1;
+
+        int length = routeLength + navLength + poiCount + extraCount;
         Span<Vector3> total = stackalloc Vector3[length];
 
         RouteToWaypoint.AsSpan().CopyTo(total);
@@ -201,6 +204,9 @@ public sealed class RouteInfo : IDisposable
         {
             total[navLength + poiCount + idx++] = p;
         }
+
+        if (hasTarget)
+            total[^2] = playerReader.TargetMapPos;
 
         total[^1] = playerReader.MapPos;
 
@@ -329,6 +335,17 @@ public sealed class RouteInfo : IDisposable
     public string RenderNextPoint()
     {
         Vector3 pt = NextPoint();
+        if (pt == Vector3.Zero)
+            return string.Empty;
+
+        return $"<circle " +
+            $"cx='{ToCanvasPointX(pt.X)}' " +
+            $"cy='{ToCanvasPointY(pt.Y)}'" +
+            $"r='{dSize + 1}' />";
+    }
+
+    public string RenderPoint(Vector3 pt)
+    {
         if (pt == Vector3.Zero)
             return string.Empty;
 

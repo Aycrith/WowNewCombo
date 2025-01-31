@@ -49,6 +49,13 @@
                                     <polygon points="5,0 8.5,8.5 1.5,8.5 5,0" fill="@colour" />
                                 </svg>
                             </g>
+
+                            @if (Bits.Target())
+                            {
+                                <g fill="@(Bits.Target_Combat() ? "Red" : "Yellow")">
+                                    @((MarkupString)botController.RouteInfo.RenderPoint(PlayerReader.TargetMapPos))
+                                </g>
+                            }
                         }
                     }
 
