@@ -115,7 +115,8 @@ public sealed partial class Blacklist<T> : IBlacklist where T : IBlacklistSource
             return true; // ignore non white listed unit classification
         }
 
-        if (!allowPvP && (source.Unit_Player() || source.Unit_PlayerControlled()))
+        if (source.UnitGuid != playerReader.PetGuid &&
+            !allowPvP && (source.Unit_Player() || source.Unit_PlayerControlled()))
         {
             if (lastGuid != source.UnitGuid)
             {
