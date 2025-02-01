@@ -2,7 +2,7 @@
 
 public static class ActionMask
 {
-    public const int HasCastBar = 0;
+    public const int HasCastBar = 1;
     public const int WhenUsable = 1 << 1;
     public const int ResetOnNewTarget = 1 << 2;
     public const int Log = 1 << 3;
