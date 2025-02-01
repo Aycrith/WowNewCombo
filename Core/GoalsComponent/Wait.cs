@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
+using static System.Diagnostics.Stopwatch;
+
 namespace Core;
 
 public sealed class Wait
@@ -19,6 +21,17 @@ public sealed class Wait
     public void Update()
     {
         globalTime.Wait();
+        globalTime.Reset();
+    }
+
+    public void Update(CancellationToken token = default)
+    {
+        try
+        {
+            globalTime.Wait(token);
+        }
+        catch (OperationCanceledException) { }
+
         globalTime.Reset();
     }
 
@@ -42,8 +55,8 @@ public sealed class Wait
     [SkipLocalsInit]
     public bool Till(int timeoutMs, Func<bool> interrupt)
     {
-        DateTime start = DateTime.UtcNow;
-        while ((DateTime.UtcNow - start).TotalMilliseconds < timeoutMs)
+        long start = GetTimestamp();
+        while (GetElapsedTime(start).TotalMilliseconds < timeoutMs)
         {
             if (interrupt())
                 return false;
@@ -57,9 +70,9 @@ public sealed class Wait
     [SkipLocalsInit]
     public float Until(int timeoutMs, Func<bool> interrupt)
     {
-        DateTime start = DateTime.UtcNow;
+        long start = GetTimestamp();
         float elapsedMs;
-        while ((elapsedMs = (float)(DateTime.UtcNow - start).TotalMilliseconds) < timeoutMs)
+        while ((elapsedMs = (float)GetElapsedTime(start).TotalMilliseconds) < timeoutMs)
         {
             if (interrupt())
                 return elapsedMs;
@@ -72,23 +85,23 @@ public sealed class Wait
 
     public float UntilCount(int count, Func<bool> interrupt)
     {
-        DateTime start = DateTime.UtcNow;
+        long start = GetTimestamp();
         for (int i = 0; i < count; i++)
         {
             if (interrupt())
-                return (float)(DateTime.UtcNow - start).TotalMilliseconds;
+                return (float)GetElapsedTime(start).TotalMilliseconds;
 
             Update();
         }
-        return -(float)(DateTime.UtcNow - start).TotalMilliseconds;
+        return -(float)GetElapsedTime(start).TotalMilliseconds;
     }
 
     [SkipLocalsInit]
     public float Until(int timeoutMs, CancellationToken token)
     {
-        DateTime start = DateTime.UtcNow;
+        long start = GetTimestamp();
         float elapsedMs;
-        while ((elapsedMs = (float)(DateTime.UtcNow - start).TotalMilliseconds) < timeoutMs)
+        while ((elapsedMs = (float)GetElapsedTime(start).TotalMilliseconds) < timeoutMs)
         {
             if (token.IsCancellationRequested)
                 return elapsedMs;
@@ -102,9 +115,9 @@ public sealed class Wait
     [SkipLocalsInit]
     public float Until(int timeoutMs, Func<bool> interrupt, Action repeat)
     {
-        DateTime start = DateTime.UtcNow;
+        long start = GetTimestamp();
         float elapsedMs;
-        while ((elapsedMs = (float)(DateTime.UtcNow - start).TotalMilliseconds) < timeoutMs)
+        while ((elapsedMs = (float)GetElapsedTime(start).TotalMilliseconds) < timeoutMs)
         {
             repeat.Invoke();
             if (interrupt())
@@ -117,11 +130,29 @@ public sealed class Wait
     }
 
     [SkipLocalsInit]
+    public float UntilWithoutRepeat(int timeoutMs, Func<bool> interrupt, Action repeat)
+    {
+        long start = GetTimestamp();
+        float elapsedMs;
+        while ((elapsedMs = (float)GetElapsedTime(start).TotalMilliseconds) < timeoutMs)
+        {
+            if (interrupt())
+                return elapsedMs;
+            else
+                repeat.Invoke();
+
+            Update();
+        }
+
+        return -elapsedMs;
+    }
+
+    [SkipLocalsInit]
     public float AfterEquals<T>(int timeoutMs, int updateCount, Func<T> func, Action? repeat = null)
     {
-        DateTime start = DateTime.UtcNow;
+        long start = GetTimestamp();
         float elapsedMs;
-        while ((elapsedMs = (float)(DateTime.UtcNow - start).TotalMilliseconds) < timeoutMs)
+        while ((elapsedMs = (float)GetElapsedTime(start).TotalMilliseconds) < timeoutMs)
         {
             T initial = func();
 
@@ -137,11 +168,11 @@ public sealed class Wait
         return -elapsedMs;
     }
 
-    public void While(Func<bool> condition)
+    public void While(Func<bool> condition, CancellationToken token = default)
     {
-        while (condition())
+        while (!token.IsCancellationRequested && condition())
         {
-            Update();
+            Update(token);
         }
     }
 }

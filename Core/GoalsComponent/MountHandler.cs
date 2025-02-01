@@ -64,6 +64,7 @@ public sealed partial class MountHandler : IMountHandler
         wait.Update();
 
         input.PressMount();
+        wait.Update();
 
         float e = wait.Until(
             playerReader.DoubleNetworkLatency,
@@ -104,6 +105,9 @@ public sealed partial class MountHandler : IMountHandler
     public void Dismount()
     {
         input.PressDismount();
+        wait.Update();
+
+        LogIsMounted(logger, bits.Mounted());
     }
 
     public bool IsMounted()

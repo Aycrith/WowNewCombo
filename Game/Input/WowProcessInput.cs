@@ -105,12 +105,7 @@ public sealed partial class WowProcessInput : IMouseInput
         NativeMethods.SetForegroundWindow(process.MainWindowHandle);
     }
 
-    public int PressRandom(ConsoleKey key, int milliseconds)
-    {
-        return PressRandom(key, milliseconds, CancellationToken.None);
-    }
-
-    public int PressRandom(ConsoleKey key, int milliseconds, CancellationToken token)
+    public int PressRandom(ConsoleKey key, int milliseconds = InputDuration.DefaultPress, CancellationToken token = default)
     {
         keysDown[(int)key] = true;
         int elapsedMs = nativeInput.PressRandom((int)key, milliseconds, token);
@@ -121,7 +116,7 @@ public sealed partial class WowProcessInput : IMouseInput
         return elapsedMs;
     }
 
-    public void PressFixed(ConsoleKey key, int milliseconds, CancellationToken token)
+    public void PressFixed(ConsoleKey key, int milliseconds, CancellationToken token = default)
     {
         if (milliseconds < 1)
             return;

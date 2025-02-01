@@ -6,6 +6,8 @@ using System;
 using System.Collections.Immutable;
 using System.Threading;
 
+using static System.Diagnostics.Stopwatch;
+
 namespace Core;
 
 public sealed class AddonReader : IAddonReader
@@ -55,11 +57,12 @@ public sealed class AddonReader : IAddonReader
         IAddonDataProvider reader = this.reader;
         reader.UpdateData();
 
-        if (!GlobalTime.UpdatedNoEvent(reader))
+        long lastUpdate = GlobalTime.LastChanged;
+
+        if (!GlobalTime.Updated(reader))
             return;
 
-        AvgUpdateLatency = (DateTime.UtcNow - GlobalTime.LastChanged).TotalMilliseconds;
-        GlobalTime.UpdateTime();
+        AvgUpdateLatency = GetElapsedTime(lastUpdate).TotalMilliseconds;
 
         if (GlobalTime.Value <= 3)
         {

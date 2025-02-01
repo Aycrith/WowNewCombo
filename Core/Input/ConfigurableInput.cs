@@ -64,12 +64,7 @@ public sealed partial class ConfigurableInput
             : input.TurnRightKey, milliseconds);
     }
 
-    public void PressRandom(KeyAction keyAction)
-    {
-        PressRandom(keyAction, CancellationToken.None);
-    }
-
-    public void PressRandom(KeyAction keyAction, CancellationToken token)
+    public void PressRandom(KeyAction keyAction, CancellationToken token = default)
     {
         int elapsedMs = input.PressRandom(keyAction.ConsoleKey, keyAction.PressDuration, token);
         keyAction.SetClicked();
@@ -95,11 +90,17 @@ public sealed partial class ConfigurableInput
 
     public bool IsKeyDown(ConsoleKey key) => input.IsKeyDown(key);
 
-    public void PressInteract() => PressRandom(Interact);
+    public void PressInteract(CancellationToken token = default) => PressRandom(Interact, token);
 
-    public void PressFastInteract()
+    public void PressFastInteract(CancellationToken token = default)
     {
-        input.PressRandom(Interact.ConsoleKey, InputDuration.FastPress);
+        input.PressRandom(Interact.ConsoleKey, InputDuration.FastPress, token);
+        Interact.SetClicked();
+    }
+
+    public void PressVeryFastInteract()
+    {
+        input.PressRandom(Interact.ConsoleKey, InputDuration.VeryFastPress);
         Interact.SetClicked();
     }
 
@@ -114,46 +115,46 @@ public sealed partial class ConfigurableInput
         Approach.SetClicked();
     }
 
-    public void PressApproach() => PressRandom(Approach);
+    public void PressApproach(CancellationToken token = default) => PressRandom(Approach, token);
 
-    public void PressLastTarget() => PressRandom(TargetLastTarget);
+    public void PressLastTarget(CancellationToken token = default) => PressRandom(TargetLastTarget, token);
 
-    public void PressFastLastTarget()
+    public void PressFastLastTarget(CancellationToken token = default)
     {
-        input.PressRandom(TargetLastTarget.ConsoleKey, InputDuration.FastPress);
+        input.PressRandom(TargetLastTarget.ConsoleKey, InputDuration.FastPress, token);
         TargetLastTarget.SetClicked();
     }
 
-    public void PressStandUp() => PressRandom(StandUp);
+    public void PressStandUp(CancellationToken token = default) => PressRandom(StandUp, token);
 
-    public void PressClearTarget() => PressRandom(ClearTarget);
+    public void PressClearTarget(CancellationToken token = default) => PressRandom(ClearTarget, token);
 
-    public void PressStopAttack() => PressRandom(StopAttack);
+    public void PressStopAttack(CancellationToken token = default) => PressRandom(StopAttack, token);
 
-    public void PressNearestTarget() => PressRandom(TargetNearestTarget);
+    public void PressNearestTarget(CancellationToken token = default) => PressRandom(TargetNearestTarget, token);
 
-    public void PressTargetPet() => PressRandom(TargetPet);
+    public void PressTargetPet(CancellationToken token = default) => PressRandom(TargetPet, token);
 
-    public void PressTargetOfTarget() => PressRandom(TargetTargetOfTarget);
+    public void PressTargetOfTarget(CancellationToken token = default) => PressRandom(TargetTargetOfTarget, token);
 
-    public void PressJump() => PressRandom(Jump);
+    public void PressJump(CancellationToken token = default) => PressRandom(Jump, token);
 
-    public void PressPetAttack() => PressRandom(PetAttack);
+    public void PressPetAttack(CancellationToken token = default) => PressRandom(PetAttack, token);
 
-    public void PressMount() => PressRandom(Mount);
+    public void PressMount(CancellationToken token = default) => PressRandom(Mount, token);
 
-    public void PressDismount()
+    public void PressDismount(CancellationToken token = default)
     {
-        input.PressRandom(Mount.ConsoleKey, Mount.PressDuration);
+        input.PressRandom(Mount.ConsoleKey, Mount.PressDuration, token);
     }
 
-    public void PressTargetFocus() => PressRandom(TargetFocus);
+    public void PressTargetFocus(CancellationToken token = default) => PressRandom(TargetFocus, token);
 
-    public void PressFollowTarget() => PressRandom(FollowTarget);
+    public void PressFollowTarget(CancellationToken token = default) => PressRandom(FollowTarget, token);
 
-    public void PressESC()
+    public void PressESC(CancellationToken token = default)
     {
-        input.PressRandom(ConsoleKey.Escape, InputDuration.VeryFastPress);
+        input.PressRandom(ConsoleKey.Escape, InputDuration.VeryFastPress, token);
     }
 
     #region Logging

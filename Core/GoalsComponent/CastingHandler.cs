@@ -3,6 +3,7 @@
 using Microsoft.Extensions.Logging;
 
 using System;
+using static System.Diagnostics.Stopwatch;
 using System.Threading;
 
 using static Core.AddonTicks;
@@ -117,9 +118,9 @@ public sealed partial class CastingHandler
             input.PressStopAttack();
         }
 
-        DateTime start = DateTime.UtcNow;
+        long start = GetTimestamp();
         input.PressRandom(item, token);
-        return (int)(DateTime.UtcNow - start).TotalMilliseconds;
+        return (int)GetElapsedTime(start).TotalMilliseconds;
     }
 
     private static bool CastInstantSuccessful(int uiEvent)
@@ -147,10 +148,10 @@ public sealed partial class CastingHandler
 
     private CastResult CastInstant(KeyAction item, CancellationToken token)
     {
-        if (!playerReader.IsCasting() && item.BeforeCastStop)
+        if (!playerReader.IsCasting() && bits.Moving() && item.BeforeCastStop)
         {
             stopMoving.Stop();
-            wait.Update(playerReader.HalfNetworkLatency);
+            wait.Update(token);
         }
 
         int beforeCastEventTime = playerReader.UIErrorTime.Value;
@@ -268,7 +269,7 @@ public sealed partial class CastingHandler
         if (item.Item)
         {
             playerReader.ResetLastCastGCD();
-            wait.Update();
+            wait.Update(token);
         }
         else
             playerReader.ReadLastCastGCD();
@@ -278,12 +279,12 @@ public sealed partial class CastingHandler
 
     private CastResult CastCastbar(KeyAction item, CancellationToken token)
     {
-        wait.While(bits.Falling);
+        wait.While(bits.Falling, token);
 
-        if (!playerReader.IsCasting())
+        if (!playerReader.IsCasting() && bits.Moving())
         {
             stopMoving.Stop();
-            wait.Update();
+            wait.Update(token);
         }
 
         bool beforeUsable = usableAction.Is(item);
@@ -458,7 +459,7 @@ public sealed partial class CastingHandler
 
             if (elapsedMs >= 0)
             {
-                wait.Update();
+                wait.Update(token);
                 return false;
             }
         }
@@ -484,10 +485,10 @@ public sealed partial class CastingHandler
 
         if (item.BeforeCastDelay > 0)
         {
-            if (!playerReader.IsCasting() && (item.BeforeCastStop || item.HasCastBar))
+            if (!playerReader.IsCasting() && bits.Moving() && (item.BeforeCastStop || item.HasCastBar))
             {
                 stopMoving.Stop();
-                wait.Update(playerReader.NetworkLatency);
+                wait.Update(token);
             }
             int delay = Random.Shared.Next(item.BeforeCastDelay, item.BeforeCastMaxDelay);
 

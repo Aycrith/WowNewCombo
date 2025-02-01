@@ -51,15 +51,15 @@ public sealed class TargetFinder
         if (!input.TargetNearestTarget.OnCooldown())
         {
             lastActive = DateTime.UtcNow;
-            input.PressNearestTarget();
-            wait.Update();
+            input.PressNearestTarget(token);
+            wait.Update(token);
         }
 
         if (!token.IsCancellationRequested &&
             !input.KeyboardOnly && !bits.Target())
         {
             npcNameTargeting.ChangeNpcType(target);
-            npcNameTargeting.WaitForUpdate();
+            npcNameTargeting.WaitForUpdate(token);
 
             if (token.IsCancellationRequested)
                 return false;

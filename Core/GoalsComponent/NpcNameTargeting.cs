@@ -86,9 +86,9 @@ public sealed partial class NpcNameTargeting : IDisposable
         index = 0;
     }
 
-    public void WaitForUpdate()
+    public void WaitForUpdate(CancellationToken token = default)
     {
-        npcNameFinder.WaitForUpdate();
+        npcNameFinder.WaitForUpdate(token);
     }
 
     public bool FoundAny()
@@ -122,6 +122,8 @@ public sealed partial class NpcNameTargeting : IDisposable
         }
 
         input.SetCursorPos(p);
+        wait.Update();
+
         classifier.Classify(out CursorType cls, out _);
 
         if (cls is CursorType.Kill && mouseOverReader.MouseOverId != 0)
@@ -134,10 +136,12 @@ public sealed partial class NpcNameTargeting : IDisposable
                 return false;
             }
 
+            input.InteractMouseOver(token);
+            wait.Update();
+
             LogFoundTarget(logger, cls.ToStringF(), mouseOverReader.MouseOverId,
                 npc.Rect);
 
-            input.InteractMouseOver(token);
             return true;
         }
 

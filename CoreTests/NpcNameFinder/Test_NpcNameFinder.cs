@@ -64,9 +64,10 @@ internal sealed class Test_NpcNameFinder : IDisposable
         Wait wait = new(new(false), new());
 
         WowProcessInput input = new(loggerFactory.CreateLogger<WowProcessInput>(), new(), process);
+        ConfigurableInput cInput = new(loggerFactory.CreateLogger<ConfigurableInput>(), input, new());
 
         npcNameTargeting = new(loggerFactory.CreateLogger<NpcNameTargeting>(),
-            new(), screen, npcNameFinder, locations, input,
+            new(), screen, npcNameFinder, locations, cInput, input,
             mouseOverReader, new NoBlacklist(), wait, gmws);
 
         npcNameFinder.ChangeNpcType(types);

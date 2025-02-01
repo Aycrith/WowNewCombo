@@ -10,6 +10,7 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 using static SharedLib.NpcFinder.NpcNameColors;
 
@@ -329,9 +330,9 @@ public sealed partial class NpcNameFinder
 
     #endregion
 
-    public void WaitForUpdate()
+    public void WaitForUpdate(CancellationToken token = default)
     {
-        resetEvent.Wait();
+        resetEvent.Wait(token);
     }
 
     public void Update()

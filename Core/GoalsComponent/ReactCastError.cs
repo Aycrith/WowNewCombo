@@ -111,7 +111,7 @@ public sealed class ReactCastError
                         if (playerReader.InCloseMeleeRange())
                         {
                             logger.LogInformation($"React to {value.ToStringF()} -- ({minRange}) wait for close melee range.");
-                            wait.Fixed(30);
+                            wait.Update();
                             wait.Update();
                             return;
                         }

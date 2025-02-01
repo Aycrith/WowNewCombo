@@ -54,7 +54,7 @@ public sealed class CastingHandlerInterruptWatchdog : IDisposable
         {
             while (initialValue == interrupt.Invoke())
             {
-                wait.Update();
+                wait.Update(token);
                 resetEvent.Wait();
             }
 
@@ -66,7 +66,11 @@ public sealed class CastingHandlerInterruptWatchdog : IDisposable
             }
 
             resetEvent.Reset();
-            resetEvent.Wait();
+            try
+            {
+                resetEvent.Wait(token);
+            }
+            catch (OperationCanceledException) { }
         }
 
         if (logger.IsEnabled(LogLevel.Debug))

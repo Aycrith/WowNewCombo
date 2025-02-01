@@ -1,4 +1,4 @@
-using Core.AddonComponent;
+﻿using Core.AddonComponent;
 using Core.Database;
 
 using SharedLib;
@@ -222,7 +222,9 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
 
     public int HalfSpellQueueTimeMs => SpellQueueTimeMs / 2;
 
+    // Formula (10 * LootWindowCount) + LootEvent(0-9)
     public RecordInt LootEvent { get; } = new(97);
+    public RecordInt LootWindowCount { get; } = new(97);
 
     public int FocusGuid => reader.GetInt(77);
     public int FocusTargetGuid => reader.GetInt(78);
@@ -256,7 +258,8 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
         CastEvent.Update(reader);
         CastSpellId.Update(reader);
 
-        LootEvent.Update(reader);
+        LootEvent.UpdateIncludeLeastSignificantDigit(reader, 10);
+        LootWindowCount.UpdateExcludingLeastSignificantDigits(reader, 10);
 
         GCD.Update(reader);
 
@@ -280,6 +283,7 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
         Level.Reset();
 
         LootEvent.Reset();
+        LootWindowCount.Reset();
         UIErrorTime.Reset();
 
         GCD.Reset();
