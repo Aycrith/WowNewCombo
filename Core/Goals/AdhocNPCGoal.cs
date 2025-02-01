@@ -242,7 +242,8 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
             ReadOnlySpan<CursorType> types = [
                 CursorType.Vendor,
                 CursorType.Repair,
-                CursorType.Innkeeper
+                CursorType.Innkeeper,
+                CursorType.Speak
             ];
 
             found = npcNameTargeting.FindBy(types, token);

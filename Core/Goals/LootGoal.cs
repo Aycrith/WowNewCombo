@@ -1,4 +1,4 @@
-﻿using Core.AddonComponent;
+using Core.AddonComponent;
 using Core.Database;
 using Core.GOAP;
 
@@ -236,7 +236,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         wait.Fixed(playerReader.NetworkLatency);
         npcNameTargeting.WaitForUpdate();
 
-        ReadOnlySpan<CursorType> types = [CursorType.Loot];
+        ReadOnlySpan<CursorType> types = [CursorType.Loot, CursorType.Vendor];
         if (!npcNameTargeting.FindBy(types, token))
         {
             return false;
