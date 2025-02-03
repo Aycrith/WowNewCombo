@@ -31,7 +31,7 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
     private readonly BagReader bagReader;
     private readonly EquipmentReader equipmentReader;
     private readonly NpcNameTargeting npcNameTargeting;
-    private readonly CombatUtil combatUtil;
+    private readonly CombatTracker combatTracker;
     private readonly GoapAgentState state;
     private readonly CancellationToken token;
 
@@ -44,7 +44,7 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
         PlayerReader playerReader, CombatLog combatLog,
         BagReader bagReader, EquipmentReader equipmentReader,
         AddonBits bits, Wait wait, StopMoving stopMoving,
-        NpcNameTargeting npcNameTargeting, CombatUtil combatUtil,
+        NpcNameTargeting npcNameTargeting, CombatTracker combatTracker,
         GoapAgentState state, ClassConfiguration classConfig,
         CancellationTokenSource cts)
         : base(nameof(SkinningGoal))
@@ -61,7 +61,7 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
         this.equipmentReader = equipmentReader;
 
         this.npcNameTargeting = npcNameTargeting;
-        this.combatUtil = combatUtil;
+        this.combatTracker = combatTracker;
         this.state = state;
 
         this.token = cts.Token;
@@ -96,14 +96,22 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
 
     public override void OnEnter()
     {
-        combatUtil.Update();
-
-        float e = wait.UntilCount(Loot.LOOT_RESET_UPDATE_COUNT, LootReset);
+        float e = wait.UntilCount(Loot.RESET_UPDATE_COUNT, LootReset);
         if (e < 0)
         {
-            LogWarnWindowStillOpen(logger, e);
-            ExitInterruptOrFailed(false);
-            return;
+            LogWarnWindowStillOpen(logger, playerReader.LootWindowCount.Value, e);
+
+            if (bits.LootFrameShown())
+            {
+                input.PressESC();
+                wait.Update();
+            }
+
+            if (bits.LootFrameShown())
+            {
+                ExitInterruptOrFailed(false);
+                return;
+            }
         }
 
         bagHashNewOrStackGain = bagReader.HashNewOrStackGain;
@@ -151,7 +159,6 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
             if (!foundTarget && !input.KeyboardOnly)
             {
                 stopMoving.Stop();
-                combatUtil.Update();
 
                 npcNameTargeting.ChangeNpcType(NpcNames.Corpse);
                 e = wait.Until(MAX_TIME_TO_WAIT_NPC_NAME, npcNameTargeting.FoundAny);
@@ -170,6 +177,8 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
 
                 input.PressInteract();
                 wait.Update();
+
+                foundTarget = true;
 
                 interact = false;
             }
@@ -206,7 +215,7 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
             else if ((e < 0 || playerReader.LastUIError == UI_ERROR.ERR_LOOT_LOCKED) && !playerReader.IsCasting())
             {
                 int delay = playerReader.LastUIError == UI_ERROR.ERR_LOOT_LOCKED
-                    ? Loot.LOOTFRAME_AUTOLOOT_DELAY
+                    ? Loot.LOOTFRAME_AUTOLOOT_DELAY_MS
                     : playerReader.NetworkLatency;
 
                 wait.Fixed(delay);
@@ -238,7 +247,6 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
             else
             {
                 if (combatLog.DamageTakenCount() > 0 ||
-                    combatUtil.EnteredCombat() ||
                     playerReader.LastUIError == UI_ERROR.ERR_SPELL_FAILED_INTERRUPTED
                     )
                 {
@@ -248,7 +256,7 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
                 }
 
                 LogWarnGatherFailed(logger, playerReader.CastState.ToStringF(), attempts);
-                wait.Fixed(Loot.LOOTFRAME_AUTOLOOT_DELAY);
+                wait.Fixed(Loot.LOOTFRAME_AUTOLOOT_DELAY_MS);
 
                 attempts++;
 
@@ -427,8 +435,8 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
     [LoggerMessage(
         EventId = 0140,
         Level = LogLevel.Warning,
-        Message = "Loot window still open! {elapsedMs}ms")]
-    static partial void LogWarnWindowStillOpen(ILogger logger, float elapsedMs);
+        Message = "OnEnter window still open! Available Loot: {count} {elapsedMs}ms")]
+    static partial void LogWarnWindowStillOpen(ILogger logger, int count, float elapsedMs);
 
     [LoggerMessage(
         EventId = 0141,

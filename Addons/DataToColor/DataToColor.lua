@@ -95,6 +95,8 @@ local GetItemInfo = GetItemInfo
 local GetCoinTextureString = GetCoinTextureString
 local UseContainerItem = DataToColor.UseContainerItem
 
+local GetNumLootItems = GetNumLootItems
+
 -- initialization
 local globalTick = 0
 local initPhase = 10
@@ -254,6 +256,7 @@ end
 function DataToColor:Reset()
     DataToColor.S.playerSpellBookName = {}
     DataToColor.S.playerSpellBookId = {}
+    DataToColor.S.playerSpellBookIdHighest = {}
     DataToColor.S.playerSpellBookIconId = {}
 
     DataToColor.playerGUID = UnitGUID(DataToColor.C.unitPlayer)
@@ -408,6 +411,10 @@ function DataToColor:PopulateSpellBookInfo()
                 DataToColor.S.playerSpellBookName[texture] = name
                 DataToColor.S.playerSpellBookIconToId[texture] = id
 
+                if not DataToColor.S.playerSpellBookIdHighest[texture] or id > DataToColor.S.playerSpellBookIdHighest[texture] then
+                    DataToColor.S.playerSpellBookIdHighest[texture] = id
+                end
+
                 num = num + 1
             end
         end
@@ -426,6 +433,10 @@ function DataToColor:PopulateSpellBookInfo()
                     DataToColor.S.playerSpellBookName[texture] = name
                     DataToColor.S.playerSpellBookIconToId[texture] = id
 
+                    if not DataToColor.S.playerSpellBookIdHighest[texture] or id > DataToColor.S.playerSpellBookIdHighest[texture] then
+                        DataToColor.S.playerSpellBookIdHighest[texture] = id
+                    end
+
                     num = num + 1
                 end
             end
@@ -434,7 +445,7 @@ function DataToColor:PopulateSpellBookInfo()
 end
 
 function DataToColor:InitSpellBookQueue()
-    for id, _ in pairs(DataToColor.S.playerSpellBookId) do
+    for _, id in pairs(DataToColor.S.playerSpellBookIdHighest) do
         DataToColor.spellBookQueue:push(id)
     end
 end
@@ -877,10 +888,11 @@ function DataToColor:CreateFrames()
 
             -- Timers
             if DataToColor.lastLoot == DataToColor.C.Loot.Closed and
-                DataToColor.globalTime - DataToColor.lastLootResetStart > LOOT_RESET_RATE then
+                DataToColor.globalTime - DataToColor.lastLootResetStart >= LOOT_RESET_RATE then
                 DataToColor.lastLoot = DataToColor.C.Loot.Corpse
             end
-            Pixel(int, DataToColor.lastLoot, 97)
+            local lootItemCount = GetNumLootItems()
+            Pixel(int, lootItemCount * 10 + DataToColor.lastLoot, 97)
 
             local e = DataToColor.ChatQueue:peek()
             if e == nil then

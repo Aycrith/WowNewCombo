@@ -141,10 +141,9 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
                 continue;
             }
 
-            if (castingHandler.CastIfReady(keyAction,
-                keyAction.Interrupts.Count > 0
-                ? keyAction.CanBeInterrupted
-                : bits.Target_Alive))
+            bool interrupt() => bits.Target_Alive() && keyAction.CanBeInterrupted();
+
+            if (castingHandler.CastIfReady(keyAction, interrupt))
             {
                 break;
             }

@@ -167,7 +167,7 @@ end
 
 function DataToColor:OnUIErrorMessage(_, _, message)
     if ignoreErrorListMessages[message] then
-        UIErrorsFrame:AddMessage(message, 0.7, 0.7, 0.7) -- show as grey messasge
+        UIErrorsFrame:AddMessage(message, 0.7, 0.7, 0.7) -- show as grey message
         return
     end
 
@@ -175,14 +175,15 @@ function DataToColor:OnUIErrorMessage(_, _, message)
     if code > 0 then
         DataToColor.uiErrorMessage = code
         DataToColor.uiErrorMessageTime = DataToColor.globalTime
-        UIErrorsFrame:AddMessage(message, 0, 1, 0) -- show as green messasge
+        --UIErrorsFrame:AddMessage(code .. " " .. message, 0, 1, 0) -- show as green message
+        UIErrorsFrame:AddMessage(message, 0, 1, 0) -- show as green message
         return
     else
         for i, v in pairs(specialErrorS) do
             if string.find(message, i) then
                 DataToColor.uiErrorMessage = v
                 DataToColor.uiErrorMessageTime = DataToColor.globalTime
-                UIErrorsFrame:AddMessage(message, 0, 1, 0) -- show as green messasge
+                UIErrorsFrame:AddMessage(message, 0, 1, 0) -- show as green message
                 return
             end
         end
