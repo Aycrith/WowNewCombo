@@ -40,6 +40,11 @@ function DataToColor.IsRetail()
   return WOW_PROJECT_ID == WOW_PROJECT_MAINLINE
 end
 
+function DataToColor.IsClassicPreCata()
+  return DataToColor.IsClassic() or DataToColor.IsClassic_BCC() or DataToColor.IsClassic_Wrath()
+end
+
+
 local LibClassicCasterino
 if DataToColor.IsClassic() then
   LibClassicCasterino = _G.LibStub("LibClassicCasterino")

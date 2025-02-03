@@ -12,6 +12,7 @@ DataToColor.S.playerAuraMap = {}
 
 DataToColor.S.playerSpellBookName = {}
 DataToColor.S.playerSpellBookId = {}
+DataToColor.S.playerSpellBookIdHighest = {}
 DataToColor.S.playerSpellBookIconToId = {}
 
 function DataToColor:InitStorage()

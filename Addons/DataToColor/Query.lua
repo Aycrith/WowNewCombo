@@ -51,6 +51,8 @@ local UnitAttackSpeed = UnitAttackSpeed
 local UnitRangedDamage = UnitRangedDamage
 
 local GameMenuFrame = GameMenuFrame
+local LootFrame = LootFrame
+local ChatFrame1EditBox = ChatFrame1EditBox
 
 local HasPetUI = HasPetUI
 
@@ -124,11 +126,11 @@ function DataToColor:Bits1()
         (UnitIsVisible(DataToColor.C.unitPet) and not UnitIsDead(DataToColor.C.unitPet) and 2 or 0) ^ 6 +
         (mainHandEnchant and 2 or 0) ^ 7 +
         (offHandEnchant and 2 or 0) ^ 8 +
-        DataToColor:GetInventoryBroken() ^ 9 +
+        (DataToColor:GetInventoryBroken() ^ 9) +
         (UnitOnTaxi(DataToColor.C.unitPlayer) and 2 or 0) ^ 10 +
         (IsSwimming() and 2 or 0) ^ 11 +
-        (GetPetHappiness() == 3 and 2 or 0) ^ 12 +
-        (GetInventoryItemCount(DataToColor.C.unitPlayer, ammoSlot) > 0 and 2 or 0) ^ 13 +
+        (DataToColor:PetHappy() and 2 or 0) ^ 12 +
+        (DataToColor:HasAmmo() and 2 or 0) ^ 13 +
         (UnitAffectingCombat(DataToColor.C.unitPlayer) and 2 or 0) ^ 14 +
         (DataToColor:IsUnitsTargetIsPlayerOrPet(DataToColor.C.unitTarget, DataToColor.C.unitTargetTarget) and 2 or 0) ^ 15 +
         (IsAutoRepeatSpell(DataToColor.C.Spell.AutoShotId) and 2 or 0) ^ 16 +
@@ -163,11 +165,11 @@ function DataToColor:Bits2()
         (DataToColor:IsUnitsTargetIsPlayerOrPet(DataToColor.C.unitmouseover, DataToColor.C.unitmouseovertarget) and 2 or 0) ^ 16 +
         (UnitPlayerControlled(DataToColor.C.unitmouseover) and 2 or 0) ^ 17 +
         (UnitPlayerControlled(DataToColor.C.unitTarget) and 2 or 0) ^ 18 +
-        ((DataToColor.autoFollow) and 2 or 0) ^ 19 +
-        ((GameMenuFrame:IsShown() and 2 or 0)) ^ 20 +
-        ((IsFlying() and 2 or 0)) ^ 21 +
-        ((DataToColor.moving and 2 or 0)) ^ 22 +
-        ((DataToColor:PetIsDefensive() and 2 or 0)) ^ 23
+        (DataToColor.autoFollow and 2 or 0) ^ 19 +
+        (GameMenuFrame:IsShown() and 2 or 0) ^ 20 +
+        (IsFlying() and 2 or 0) ^ 21 +
+        (DataToColor.moving and 2 or 0) ^ 22 +
+        (DataToColor:PetIsDefensive() and 2 or 0) ^ 23
 end
 
 function DataToColor:Bits3()
@@ -180,7 +182,9 @@ function DataToColor:Bits3()
         (UnitIsTapDenied(DataToColor.C.unitSoftInteract) and 2 or 0) ^ 4 +
         (UnitAffectingCombat(DataToColor.C.unitSoftInteract) and 2 or 0) ^ 5 +
         (DataToColor:IsUnitHostile(DataToColor.C.unitPlayer, DataToColor.C.unitSoftInteract) and 2 or 0) ^ 6 +
-        ((DataToColor.channeling and 2 or 0)) ^ 7
+        (DataToColor.channeling and 2 or 0) ^ 7 +
+        (LootFrame:IsShown() and 2 or 0) ^ 8 +
+        (ChatFrame1EditBox:IsVisible() and 2 or 0) ^ 9
     )
 end
 
@@ -600,6 +604,25 @@ function DataToColor:UnitTargetsPartyOrPet(unittarget)
         if name == UnitName(unittarget) then return true end
     end
     return false
+end
+
+function DataToColor:HasAmmo()
+    -- After Cataclysm, ammo slot was removed
+    if DataToColor:IsClassicPreCata() == false then
+        return true
+    end
+
+    local count = GetInventoryItemCount(DataToColor.C.unitPlayer, ammoSlot)
+    return count > 0
+end
+
+function DataToColor:PetHappy()
+    -- After Cataclysm, pet always happy :)
+    if DataToColor:IsClassicPreCata() == false then
+        return true
+    end
+
+    return GetPetHappiness() == 3
 end
 
 -- Returns true if target of our target is us
