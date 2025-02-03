@@ -1,4 +1,4 @@
-﻿using Core.AddonComponent;
+using Core.AddonComponent;
 using Core.GOAP;
 
 using Microsoft.Extensions.Logging;
@@ -97,7 +97,8 @@ public sealed class ApproachTargetGoal : GoapGoal, IGoapEventListener
     {
         wait.Update();
 
-        if (combatUtil.EnteredCombat() && !bits.Target_Combat())
+        if (combatUtil.EnteredCombat() && !bits.Target_Combat() &&
+            !combatLog.ToPull.Contains(playerReader.TargetGuid))
         {
             stopMoving.Stop();
 

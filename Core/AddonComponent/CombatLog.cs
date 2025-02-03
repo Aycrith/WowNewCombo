@@ -19,8 +19,12 @@ public sealed class CombatLog : IReader
     public HashSet<int> DamageTaken { get; } = [];
     public HashSet<int> EvadeMobs { get; } = [];
 
+    public HashSet<int> ToPull { get; } = [];
+
     public int DamageTakenCount() => DamageTaken.Count;
     public int DamageDoneCount() => DamageDone.Count;
+
+    public int ToPullCount() => ToPull.Count;
 
     public RecordInt DamageDoneGuid { get; }
     public RecordInt DamageTakenGuid { get; }
@@ -92,6 +96,7 @@ public sealed class CombatLog : IReader
             int deadGuid = DeadGuid.Value;
             DamageDone.Remove(deadGuid);
             DamageTaken.Remove(deadGuid);
+            ToPull.Remove(deadGuid);
 
             if (deadGuid == PLAYER_DEATH_EVENT)
             {
@@ -108,6 +113,7 @@ public sealed class CombatLog : IReader
             // left combat
             DamageTaken.Clear();
             DamageDone.Clear();
+            ToPull.Clear();
         }
 
         wasInCombat = combat;

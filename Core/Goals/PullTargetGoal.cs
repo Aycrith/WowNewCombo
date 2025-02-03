@@ -218,10 +218,9 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
                 return;
             }
         }
-        else if (bits.Combat())
+        else if (bits.Target())
         {
-            SendGoapEvent(new GoapStateEvent(GoapKey.pulled, true));
-            return;
+            combatLog.ToPull.Add(playerReader.TargetGuid);
         }
 
         if (castAny || spellInQueue || playerReader.IsCasting())

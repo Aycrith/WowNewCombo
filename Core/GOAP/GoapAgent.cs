@@ -271,7 +271,7 @@ public sealed partial class GoapAgent : IDisposable
             (B(mountHandler.IsMounted()) << (int)GoapKey.ismounted) |
             (B(playerReader.WithInPullRange()) << (int)GoapKey.withinpullrange) |
             (B(playerReader.WithInCombatRange()) << (int)GoapKey.incombatrange) |
-            // pulled always false
+            (B(bits.Combat() && bits.Target_Combat() && combatLog.ToPullCount() > 0) << (int)GoapKey.pulled) |
             (B(b.Dead()) << (int)GoapKey.isdead) |
             (B(State.LootableCorpseCount > 0) << (int)GoapKey.shouldloot) |
             (B(State.GatherableCorpseCount > 0) << (int)GoapKey.shouldgather) |
@@ -280,7 +280,7 @@ public sealed partial class GoapAgent : IDisposable
             (B(b.Swimming()) << (int)GoapKey.isswimming) |
             (B(b.Items_Broken()) << (int)GoapKey.itemsbroken) |
             (B(State.Gathering) << (int)GoapKey.gathering) |
-            (B(b.Target_Hostile()) << (int)GoapKey.targethostile) |
+            (B(b.Target_Hostile() || (bits.Target() && combatLog.ToPull.Contains(playerReader.TargetGuid))) << (int)GoapKey.targethostile) |
             (B(b.Focus()) << (int)GoapKey.hasfocus) |
             (B(b.FocusTarget()) << (int)GoapKey.focushastarget) |
             (B(State.ConsumableCorpseCount > 0) << (int)GoapKey.consumablecorpsenearby)
