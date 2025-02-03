@@ -73,7 +73,7 @@ public static class GoalFactory
         services.AddScoped<CastingHandlerInterruptWatchdog>();
         services.AddScoped<CastingHandler>();
         services.AddScoped<StuckDetector>();
-        services.AddScoped<CombatUtil>();
+        services.AddScoped<CombatTracker>();
         services.AddScoped<SafeSpotCollector>();
 
         var playerReader = sp.GetRequiredService<PlayerReader>();
