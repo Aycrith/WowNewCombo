@@ -170,7 +170,9 @@ public sealed partial class KeyAction
 
     public static int LastKeyClicked()
     {
-        return (DateTime.UtcNow - LastKeyTime).TotalSeconds > 2
+        const int SECONDS_TO_SHOW_AS_ACTIVE = 2;
+
+        return (DateTime.UtcNow - LastKeyTime).TotalSeconds > SECONDS_TO_SHOW_AS_ACTIVE
             ? (int)ConsoleKey.NoName
             : LastKey;
     }

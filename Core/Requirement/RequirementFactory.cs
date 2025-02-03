@@ -185,7 +185,8 @@ public sealed partial class RequirementFactory
             { Flying, bits.Flying },
             { "Dead", bits.Dead },
 
-            { "MenuOpen", bits.GameMenuWindowShown }
+            { "MenuOpen", bits.GameMenuWindowShown },
+            { "ChatInputVisible", bits.ChatInputIsVisible }
         };
 
         AddAura("", boolVariables, playerBuffs);

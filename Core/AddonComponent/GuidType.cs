@@ -1,4 +1,4 @@
-﻿namespace Core.AddonComponent;
+﻿namespace Core;
 
 public enum GuidType
 {

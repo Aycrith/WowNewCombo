@@ -581,6 +581,8 @@ public sealed partial class CastingHandler
             AfterCastWaitMeleeRange(MAX_WAIT_MELEE_RANGE,
                 lastKnownHealth, wait, playerReader, token);
 
+            wait.Update();
+
             static float AfterCastWaitMeleeRange(int duration,
                 int lastKnownHealth, Wait wait, PlayerReader playerReader,
                 CancellationToken token)
