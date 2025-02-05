@@ -4,15 +4,13 @@ local Range = DataToColor.Libs.RangeCheck
 
 local bit = bit
 local band = bit.band
-local date = date
+local pcall = pcall
 
 local floor = math.floor
 
 local tonumber = tonumber
 local sub = string.sub
-local gsub = string.gsub
 local find = string.find
-local len = string.len
 local upper = string.upper
 local byte = string.byte
 local strsplit = strsplit
@@ -89,23 +87,15 @@ local GetPetHappiness = GetPetHappiness
 
 local ammoSlot = GetInventorySlotInfo("AmmoSlot")
 
-DataToColor.unitClassification = {
-    ["normal"] = 1,
-    ["trivial"] = 2,
-    ["minus"] = 4,
-    ["rare"] = 8,
-    ["elite"] = 16,
-    ["rareelite"] = 32,
-    ["worldboss"] = 64
-}
-
 -- Use Astrolabe function to get current player position
 function DataToColor:GetPosition()
-    if DataToColor.map ~= nil then
-        local pos = C_Map.GetPlayerMapPosition(DataToColor.map, DataToColor.C.unitPlayer)
-        if pos ~= nil then
-            return pos:GetXY()
-        end
+    if not DataToColor.map then
+        return 0, 0
+    end
+
+    local pos = C_Map.GetPlayerMapPosition(DataToColor.map, DataToColor.C.unitPlayer)
+    if pos then
+        return pos:GetXY()
     end
     return 0, 0
 end
@@ -147,7 +137,7 @@ function DataToColor:Bits2()
     local type, _, _, scale = GetMirrorTimerInfo(2)
     return
         (type == DataToColor.C.MIRRORTIMER.BREATH and scale < 0 and 1 or 0) +
-        DataToColor.corpseInRange ^ 1 +
+        (DataToColor.corpseInRange ^ 1) +
         (IsIndoors() and 2 or 0) ^ 2 +
         (UnitExists(DataToColor.C.unitFocus) and 2 or 0) ^ 3 +
         (UnitAffectingCombat(DataToColor.C.unitFocus) and 2 or 0) ^ 4 +
@@ -174,7 +164,6 @@ end
 
 function DataToColor:Bits3()
     return
-    (
         (UnitExists(DataToColor.C.unitSoftInteract) and 1 or 0) +
         (UnitIsDead(DataToColor.C.unitSoftInteract) and 2 or 0) ^ 1 +
         (UnitIsDeadOrGhost(DataToColor.C.unitSoftInteract) and 2 or 0) ^ 2 +
@@ -184,8 +173,8 @@ function DataToColor:Bits3()
         (DataToColor:IsUnitHostile(DataToColor.C.unitPlayer, DataToColor.C.unitSoftInteract) and 2 or 0) ^ 6 +
         (DataToColor.channeling and 2 or 0) ^ 7 +
         (LootFrame:IsShown() and 2 or 0) ^ 8 +
-        (ChatFrame1EditBox:IsVisible() and 2 or 0) ^ 9
-    )
+        (ChatFrame1EditBox:IsVisible() and 2 or 0) ^ 9 +
+        (DataToColor:SoftTargetInteractEnabled() and 2 or 0) ^ 10
 end
 
 function DataToColor:CustomTrigger(t)
@@ -210,7 +199,7 @@ function DataToColor:getAuraMaskForClass(func, unitId, table)
     for k, v in pairs(table) do
         for i = 1, 24 do
             local name, texture = func(unitId, i)
-            if name == nil then
+            if not name then
                 break
             end
             if v[texture] or find(name, v[1]) then
@@ -224,15 +213,22 @@ end
 
 function DataToColor:populateAuraTimer(func, unitId, queue)
     local count = 0
-    local existingAuras = {}
+
+    self._existingAuras = self._existingAuras or {}
+    local existingAuras = self._existingAuras
+
+    for k in pairs(existingAuras) do
+        existingAuras[k] = nil
+    end
+
     for i = 1, 40 do
         local name, texture, _, _, duration, expirationTime = func(unitId, i)
-        if name == nil then
+        if not name then
             break
         end
         count = i
 
-        if queue ~= nil then
+        if queue then
             existingAuras[texture] = true
 
             if duration == 0 then
@@ -251,10 +247,10 @@ function DataToColor:populateAuraTimer(func, unitId, queue)
     end
 
     -- Remove unlimited duration Auras.
-    -- Such as clickable Mounts and Buffs 
-    if queue ~= nil then
+    -- Such as clickable Mounts and Buffs
+    if queue then
         for k in queue:iterator() do
-            if existingAuras[k] == nil then
+            if not existingAuras[k] then
                 --DataToColor:Print(k, " remove unlimited")
                 queue:set(k, GetTime())
             end
@@ -266,40 +262,33 @@ end
 
 -- Pass in a string to get the upper case ASCII values. Converts any special character with ASCII values below 100
 local function StringToASCIIHex(str)
-    -- Converts string to upper case so only 2 digit ASCII values
-    -- All lowercase letters have a decimal ASCII value >100, so we only uppercase numbers which are a mere 2 digits long.
-    str = sub(upper(str), 0, 6)
-    -- Sets string to an empty string
-    local ASCII = ''
-    -- Loops through all of string passed to it and converts to upper case ASCII values
-    for i = 1, len(str) do
-        -- Assigns the specific value to a character to then assign to the ASCII string/number
-        local c = sub(str, i, i)
-        -- Concatenation of old string and new character
-        ASCII = ASCII .. byte(c)
+    str = upper(sub(str, 1, min(6, #str)))
+    local asciiValue = 0
+    for i = 1, #str do
+        asciiValue = asciiValue * 100 + min(byte(str, i), 90) -- 90 is Z
     end
-    return tonumber(ASCII)
+    return asciiValue
 end
 
 -- Grabs current targets name
 function DataToColor:GetTargetName(partition)
-    if UnitExists(DataToColor.C.unitTarget) then
-        local target = GetUnitName(DataToColor.C.unitTarget)
-        target = StringToASCIIHex(target)
-        if partition < 3 then
-            return tonumber(sub(target, 0, 6))
-        else if target > 999999 then
-                return tonumber(sub(target, 7, 12))
-            end
-        end
+    if not UnitExists(DataToColor.C.unitTarget) then
+        return 0
     end
-    return 0
+
+    local targetName = StringToASCIIHex(GetUnitName(DataToColor.C.unitTarget))
+
+    if partition >= 3 and targetName > 999999 then
+        return targetName % 10 ^ 6
+    end
+
+    return floor(targetName / 10 ^ 6)
 end
 
 function DataToColor:CastingInfoSpellId(unitId)
     local _, _, _, startTime, endTime, _, _, _, spellID = DataToColor.UnitCastingInfo(unitId)
 
-    if spellID ~= nil then
+    if spellID then
         if unitId == DataToColor.C.unitPlayer and startTime ~= DataToColor.lastCastStartTime then
             DataToColor.lastCastStartTime = startTime
             DataToColor.lastCastEndTime = endTime
@@ -309,7 +298,7 @@ function DataToColor:CastingInfoSpellId(unitId)
     end
 
     local _, _, _, startTime, endTime, _, _, spellID = DataToColor.UnitChannelInfo(unitId)
-    if spellID ~= nil then
+    if spellID then
         if unitId == DataToColor.C.unitPlayer and startTime ~= DataToColor.lastCastStartTime then
             DataToColor.lastCastStartTime = startTime
             DataToColor.lastCastEndTime = endTime
@@ -334,46 +323,51 @@ end
 
 function DataToColor:NpcId(unit)
     local guid = UnitGUID(unit) or ""
-    local id = tonumber(guid:match("-(%d+)-%x+$"), 10)
-    if id and guid:match("%a+") ~= "Player" then
-        return id
+    local id = guid:match("-(%d+)-[^-]+$")
+
+    if id and not guid:find("^Player") then
+        return tonumber(id, 10)
     end
     return 0
 end
 
 function DataToColor:getGuidFromUnit(unit)
+    if not UnitExists(unit) then
+        return 0
+    end
+
     -- Player-4731-02AAD4FF
     -- Creature-0-4488-530-222-19350-000005C0D70
     -- Pet-0-4448-530-222-22123-15004E200E
-    if UnitExists(unit) then
-        return DataToColor:uniqueGuid(select(-2, strsplit('-', UnitGUID(unit))))
-    end
-    return 0
+    return DataToColor:uniqueGuid(select(-2, strsplit('-', UnitGUID(unit))))
 end
 
 function DataToColor:getGuidFromUUID(uuid)
-    if uuid ~= nil then
-        return DataToColor:uniqueGuid(select(-2, strsplit('-', uuid)))
+    if not uuid then
+        return 0
     end
-    return 0
+    return DataToColor:uniqueGuid(select(-2, strsplit('-', uuid)))
 end
 
 function DataToColor:getNpcIdFromUUID(uuid)
-    if uuid ~= nil then
-        local id = tonumber(uuid:match("-(%d+)-%x+$"), 10)
-        if id and uuid:match("%a+") ~= "Player" then
-            return id
-        end
+    if not uuid then
+        return 0
+    end
+
+    local id = uuid:match("-(%d+)-[^-]+$")
+
+    if id and not uuid:find("^Player") then
+        return tonumber(id, 10)
     end
     return 0
 end
 
 function DataToColor:getTypeFromUUID(uuid)
-    if uuid == nil then
+    if not uuid then
         return 0
     end
 
-    local type = select(1, strsplit('-', uuid))
+    local type = uuid:match("^(.-)-")
     return DataToColor.C.GuidType[type] or 0
 end
 
@@ -381,15 +375,7 @@ function DataToColor:uniqueGuid(npcId, spawn)
     local spawnEpochOffset = band(tonumber(sub(spawn, 5), 16), 0x7fffff)
     local spawnIndex = band(tonumber(sub(spawn, 1, 5), 16), 0xffff8)
 
-    local dd = date("*t", spawnEpochOffset)
-    return (
-        dd.day +
-        dd.hour +
-        dd.min +
-        dd.sec +
-        npcId +
-        spawnIndex
-    ) % 0x1000000
+    return (spawnEpochOffset + spawnIndex + npcId) % 0x1000000
 end
 
 local offsetEnumPowerType = 2
@@ -403,7 +389,7 @@ function DataToColor:populateActionbarCost(slot)
 
     if id and actionType == DataToColor.C.ActionType.Spell or actionType == DataToColor.C.ActionType.Macro then
         local costTable = GetSpellPowerCost(id)
-        if costTable ~= nil then
+        if costTable then
             for order, costInfo in ipairs(costTable) do
                 -- cost negative means it produces that type of powertype...
                 if costInfo.cost > 0 then
@@ -435,7 +421,7 @@ function DataToColor:areSpellsInRange()
         local spellIconId = DataToColor.S.spellInRangeTarget[i]
         local spellId = DataToColor.S.playerSpellBookIconToId[spellIconId] or spellIconId -- fallback to spellId
         local spellName = GetSpellInfo(spellId)
-        if spellName ~= nil then
+        if spellName then
             if IsSpellInRange(spellName, DataToColor.C.unitTarget) == 1 then
                 inRange = inRange + (2 ^ (i - 1))
             end
@@ -448,7 +434,7 @@ function DataToColor:areSpellsInRange()
         local data = DataToColor.S.spellInRangeUnit[i]
         local spellId = DataToColor.S.playerSpellBookIconToId[data[1]]
         local unit = data[2]
-        if spellId ~= nil and IsSpellInRange(GetSpellInfo(spellId), unit) == 1 then
+        if spellId and IsSpellInRange(GetSpellInfo(spellId), unit) == 1 then
             inRange = inRange + (2 ^ (targetCount + i - 1))
         end
     end
@@ -504,23 +490,25 @@ function DataToColor:isCurrentAction(min, max)
 end
 
 -- Finds passed in string to return profession level
-function DataToColor:GetProfessionLevel(skill)
-    local numskills = GetNumSkillLines()
-    for c = 1, numskills do
-        local skillname, _, _, skillrank = GetSkillLineInfo(c)
-        if (skillname == skill) then
-            return tonumber(skillrank)
+function DataToColor:GetProfessionLevel(skillName)
+    local max = GetNumSkillLines()
+    for c = 1, max do
+        local name, _, _, rank = GetSkillLineInfo(c)
+        if (name == skillName) then
+            return tonumber(rank)
         end
     end
     return 0
 end
 
 function DataToColor:GetCorpsePosition()
-    if UnitIsGhost(DataToColor.C.unitPlayer) then
-        local corpseMap = C_DeathInfo.GetCorpseMapPosition(DataToColor.map)
-        if corpseMap ~= nil then
-            return corpseMap:GetXY()
-        end
+    if not UnitIsGhost(DataToColor.C.unitPlayer) then
+        return 0, 0
+    end
+
+    local corpseMap = C_DeathInfo.GetCorpseMapPosition(DataToColor.map)
+    if corpseMap then
+        return corpseMap:GetXY()
     end
     return 0, 0
 end
@@ -536,14 +524,14 @@ function DataToColor:getUnitRangedDamage(unit)
 end
 
 function DataToColor:getAvgEquipmentDurability()
-    local c = 0
-    local m = 0
+    local current = 0
+    local max = 0
     for i = 1, 18 do
-        local cc, mm = GetInventoryItemDurability(i)
-        c = c + (cc or 0)
-        m = m + (mm or 0)
+        local c, m = GetInventoryItemDurability(i)
+        current = current + (c or 0)
+        max = max + (m or 0)
     end
-    return max(0, floor((c + 1)* 100 / (m + 1)) - 1) -- 0-99
+    return math.max(0, floor((current + 1) * 100 / (max + 1)) - 1) -- 0-99
 end
 
 -----------------------------------------------------------------
@@ -554,13 +542,13 @@ end
 
 function DataToColor:shapeshiftForm()
     local index = GetShapeshiftForm(false)
-    if index == nil or index == 0 then
+    if not index or index == 0 then
         return 0
     end
 
     local _, _, _, spellId = GetShapeshiftFormInfo(index)
     local form = DataToColor.S.playerAuraMap[spellId]
-    if form ~= nil then
+    if form then
         return form
     end
     return index
@@ -576,32 +564,32 @@ function DataToColor:GetInventoryBroken()
 end
 
 function DataToColor:UnitsTargetAsNumber(unit, unittarget)
-    if not (UnitName(unittarget)) then return 2 end -- target has no target
-    if DataToColor.C.CHARACTER_NAME == UnitName(unit) then return 0 end -- targeting self
+    if not (UnitName(unittarget)) then return 2 end                              -- target has no target
+    if DataToColor.C.CHARACTER_NAME == UnitName(unit) then return 0 end          -- targeting self
     if UnitName(DataToColor.C.unitPet) == UnitName(unittarget) then return 4 end -- targetting my pet
     if DataToColor.playerPetSummons[UnitGUID(unittarget)] then return 4 end
-    if DataToColor.C.CHARACTER_NAME == UnitName(unittarget) then return 1 end -- targetting me
-    if UnitName(DataToColor.C.unitPet) == UnitName(unit) and
-        UnitName(unittarget) ~= nil then return 5 end
+    if DataToColor.C.CHARACTER_NAME == UnitName(unittarget) then return 1 end    -- targetting me
+    if UnitName(DataToColor.C.unitPet) == UnitName(unit) and UnitName(unittarget) then
+        return 5
+    end
     if IsInGroup() and DataToColor:UnitTargetsPartyOrPet(unittarget) then return 6 end
     return 3
 end
 
 function DataToColor:UnitTargetsPartyOrPet(unittarget)
-    for i = 1, 4 do
-        local unit = DataToColor.C.unitParty .. i
-        if UnitExists(unit) == false then
-            return false
-        end
-        local name = UnitName(unit)
-        if name == UnitName(unittarget) then return true end
+    local targetName = UnitName(unittarget)
+    if not targetName then return false end
 
-        unit = DataToColor.C.unitParty .. i .. DataToColor.C.unitPet
-        if UnitExists(unit) == false then
-            return false
+    for i = 1, 4 do
+        local partyUnit = DataToColor.C.unitPartyNames[i]
+        if UnitExists(partyUnit) and UnitName(partyUnit) == targetName then
+            return true
         end
-        name = UnitName(unit)
-        if name == UnitName(unittarget) then return true end
+
+        local petUnit = DataToColor.C.unitPartyPetNames[i]
+        if UnitExists(petUnit) and UnitName(petUnit) == targetName then
+            return true
+        end
     end
     return false
 end
@@ -623,6 +611,11 @@ function DataToColor:PetHappy()
     end
 
     return GetPetHappiness() == 3
+end
+
+function DataToColor:SoftTargetInteractEnabled()
+    local success, value = pcall(GetCVar, DataToColor.C.CVarSoftTargetInteract)
+    return success and tonumber(value) == 3
 end
 
 -- Returns true if target of our target is us

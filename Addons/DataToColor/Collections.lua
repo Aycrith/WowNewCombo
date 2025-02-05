@@ -71,7 +71,14 @@ function struct:new(tickLifetime)
 end
 
 function struct:set(key, value)
-    self.table[key] = { value = value or key, dirty = 0 }
+    local entry = self.table[key]
+    if not entry then
+        self.table[key] = { value = value or key, dirty = 0 }
+        return
+    end
+
+    entry.value = value or key
+    entry.dirty = 0
 end
 
 function struct:getTimed(globalTick)

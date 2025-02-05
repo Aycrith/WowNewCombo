@@ -4,6 +4,7 @@ local DataToColor = unpack(Load)
 local GetBuildInfo = GetBuildInfo
 
 local UnitIsUnit = UnitIsUnit
+local UnitLevel = UnitLevel
 
 local UnitChannelInfo = UnitChannelInfo
 local UnitCastingInfo = UnitCastingInfo
@@ -134,3 +135,17 @@ DataToColor.UseContainerItem = UseContainerItem or C_Container.UseContainerItem
 DataToColor.ContainerIDToInventoryID = ContainerIDToInventoryID or C_Container.ContainerIDToInventoryID
 
 DataToColor.GetGossipOptions = GetGossipOptions or C_GossipInfo.GetOptions
+
+DataToColor.UnitLevelSafe = function(unit, playerLevel)
+  local level = UnitLevel(unit)
+
+  if not level then
+    return 0
+  end
+
+  if level == -1 then
+    return playerLevel + 10
+  end
+
+  return level
+end

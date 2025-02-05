@@ -17,6 +17,9 @@ DataToColor.C.unitParty = "party"
 DataToColor.C.unitRaid = "raid"
 DataToColor.C.unitPet = "pet"
 
+DataToColor.C.unitPartyNames = {}
+DataToColor.C.unitPartyPetNames = {}
+
 if WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
     DataToColor.C.unitFocus = "party1"
     DataToColor.C.unitFocusTarget = "party1target"
@@ -77,6 +80,16 @@ DataToColor.C.GuidType = {
     ["Vehicle"] = 4,
 }
 
+DataToColor.C.unitClassification = {
+    ["normal"] = 1,
+    ["trivial"] = 2,
+    ["minus"] = 4,
+    ["rare"] = 8,
+    ["elite"] = 16,
+    ["rareelite"] = 32,
+    ["worldboss"] = 64
+}
+
 -- Mirror timer labels
 DataToColor.C.MIRRORTIMER.BREATH = "BREATH"
 
@@ -84,3 +97,5 @@ DataToColor.C.ActionType.Spell = "spell"
 DataToColor.C.ActionType.Macro = "macro"
 
 DataToColor.C.PET_MODE_DEFENSIVE = "PET_MODE_DEFENSIVE"
+
+DataToColor.C.CVarSoftTargetInteract = "SoftTargetInteract"
