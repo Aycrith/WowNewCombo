@@ -107,4 +107,6 @@ public sealed class AddonBits : IReader, IGameMenuWindowShown
     public bool LootFrameShown() => v3[Mask._8];
 
     public bool ChatInputIsVisible() => v3[Mask._9];
+
+    public bool SoftInteract_Enabled() => v3[Mask._10];
 }
