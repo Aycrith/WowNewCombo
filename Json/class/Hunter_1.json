@@ -2,6 +2,15 @@
   "ClassName": "Hunter",
   //"Mode": "AttendedGrind",
   //"PathFilename": "1_Gnome.json",
+  "Wait": {
+    "Sequence": [
+      {
+        "Cost": 0.9,
+        "Name": "User",
+        "Requirement": "MenuOpen || ChatInputVisible"
+      }
+    ]
+  },
   "Paths": [
     {
       "PathFilename": "1-5_Gnome.json",
