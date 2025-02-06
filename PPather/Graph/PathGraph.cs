@@ -69,7 +69,7 @@ public sealed class PathGraph
 		*/
 
     public const float CHUNK_BASE = 100000.0f; // Always keep positive
-    public const float MaximumAllowedRangeFromTarget = 40;
+    public const float MaximumAllowedRangeFromTarget = 80; //60
 
     private readonly string chunkDir;
 
@@ -608,7 +608,7 @@ public sealed class PathGraph
             if (GetElapsedTime(timeSinceProgress).TotalSeconds > ProgressTimeoutSeconds ||
                 GetElapsedTime(searchDuration).TotalSeconds > TimeoutSeconds)
             {
-                logger.LogWarning($"search failed, {ProgressTimeoutSeconds} seconds since last progress, returning the closest spot.");
+                logger.LogWarning($"search failed, {ProgressTimeoutSeconds} seconds since last progress, returning the closest spot {ClosestSpot.Loc}");
                 return ClosestSpot;
             }
 
@@ -898,7 +898,15 @@ public sealed class PathGraph
 
     private Vector3 GetBestLocations(Vector3 location)
     {
-        const float zExtend = 1;
+        const float zExtendBig = 500;
+        const float zExtendSmall = 1;
+
+        float zExtend = zExtendSmall;
+
+        if (location.Z == 0)
+        {
+            zExtend = zExtendBig;
+        }
 
         float newZ = 0;
         ReadOnlySpan<float> a = [0, 1f, 0.5f, -0.5f, -1f];
