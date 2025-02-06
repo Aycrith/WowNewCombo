@@ -240,7 +240,7 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
 
         duplication.ReleaseFrame();
 
-        Result result = duplication.AcquireNextFrame(0,
+        Result result = duplication.AcquireNextFrame(5,
             out OutduplFrameInfo frame,
             out IDXGIResource idxgiResource);
 
@@ -251,6 +251,7 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
             frame.TotalMetadataBufferSize == 0 ||
             frame.LastPresentTime == 0)
         {
+            duplication.ReleaseFrame();
             return;
         }
 
