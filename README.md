@@ -1335,6 +1335,7 @@ Formula: `[Keyword] [Operator] [Numeric integer value]`
 | `SessionMinutes` | Returns with the elapsed time in Minutes since the Session started.<br>The Session starts when the `Start Bot` button is pressed! |
 | `SessionHours` | Returns with the elapsed time in Hours since the Session started.<br>The Session starts when the `Start Bot` button is pressed! |
 | `ExpPerc` | Returns with the player experience as percentage to hit next level. |
+| `UIMapId` | Returns with the player current [UIMapId](https://github.com/Xian55/WowClassicGrindBot/blob/9bea201760babc0f6670df2bd5c071c9c3f1220d/Json/dbc/som/WorldMapArea.json#L3C6-L3C11) |
 
 
 For the `MinRange` and `MaxRange` gives an approximation range distance between the player and target.

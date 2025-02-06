@@ -246,7 +246,8 @@ public sealed partial class RequirementFactory
             { "SessionHours", sessionStat._Hours },
 
             { "Level", playerReader.Level._Value },
-            { "ExpPerc", playerReader._PlayerXpPercent }
+            { "ExpPerc", playerReader._PlayerXpPercent },
+            { "UIMapId", playerReader.UIMapId._Value }
         };
 
         InitUserDefinedIntVariables(classConfig.IntVariables,
