@@ -14,6 +14,8 @@ using System.Linq;
 using System.Numerics;
 using System.Threading;
 
+using WowheadDB;
+
 #pragma warning disable 162
 
 namespace Core.Goals;
@@ -55,7 +57,8 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
     private PathState pathState;
 
-    private readonly bool useClosestNPC;
+    private readonly bool tryFindClosestNPC;
+    private NPC? npc;
 
     #region IRouteProvider
 
@@ -119,7 +122,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
         Keys = [key];
 
-        useClosestNPC = key.Path.Length == 0;
+        tryFindClosestNPC = key.Path.Length == 0;
     }
 
     public void Dispose()
@@ -142,11 +145,18 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         }
     }
 
+
     public override void OnEnter()
     {
-        //if (useClosestNPC)
+        if (tryFindClosestNPC)
         {
-            AutoSelectNPCAndSetPath();
+            bool found = TryAutoSelectNPCAndSetPath();
+            if (!found)
+            {
+                pathState = PathState.Finished;
+                LogWarn("No NPC with the criteria!");
+                return;
+            }
         }
 
         input.PressClearTarget();
@@ -159,49 +169,16 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         MountIfPossible();
     }
 
-    private void AutoSelectNPCAndSetPath()
-    {
-        NPCType npcType = NPCType.None;
-
-        string name = key.Name;
-
-        if (name.Contains(NPCType.Repair.ToStringF(), StringComparison.OrdinalIgnoreCase))
-            npcType = NPCType.Repair;
-        else if (name.Contains(NPCType.Innkeeper.ToStringF(), StringComparison.OrdinalIgnoreCase))
-            npcType = NPCType.Innkeeper;
-        else if (name.Contains(NPCType.Flightmaster.ToStringF(), StringComparison.OrdinalIgnoreCase))
-            npcType = NPCType.Flightmaster;
-        else if (name.Contains(NPCType.Trainer.ToStringF(), StringComparison.OrdinalIgnoreCase))
-            npcType = NPCType.Trainer;
-        else if (name.AsSpan().ContainsAny(vendorNpcPattern))
-            npcType = NPCType.Vendor;
-
-        if (areaDB.CurrentArea == null)
-        {
-            return;
-        }
-
-        var npc = areaDB.GetNearestNPC(playerReader.Faction, npcType, playerReader.MapPos);
-        if (npc == null)
-        {
-            return;
-        }
-
-        Vector3 mapPos = npc.MapCoords[0];
-        key.Path = [mapPos];
-
-        LogFoundCloesestNPCByType(logger, npc.name, npcType.ToStringF(), mapPos);
-    }
-
     public override void OnExit()
     {
         navigation.StopMovement();
         navigation.Stop();
         npcNameTargeting.ChangeNpcType(NpcNames.None);
 
-        //if (useClosestNPC)
+        if (tryFindClosestNPC)
         {
             key.Path = [];
+            npc = null;
         }
     }
 
@@ -215,6 +192,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
         wait.Update();
     }
+
 
     private void SetClosestWaypoint()
     {
@@ -273,7 +251,13 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         input.PressClearTarget();
         wait.Update();
 
-        bool found = false;
+        if (tryFindClosestNPC && npc != null)
+        {
+            execGameCommand.Run($"/target {npc.name}");
+            wait.Update();
+        }
+
+        bool found = bits.Target();
 
         if (bits.SoftInteract() &&
             !bits.SoftInteract_Hostile())
@@ -324,6 +308,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
         Log($"Found Target!");
         input.PressInteract();
+        wait.Update();
 
         if (!OpenMerchantWindow())
             return;
@@ -447,6 +432,42 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
             Log($"Merchant sell nothing! {e}ms");
             return true;
         }
+    }
+
+    private bool TryAutoSelectNPCAndSetPath()
+    {
+        NPCType npcType = NPCType.None;
+
+        string name = key.Name;
+
+        if (name.Contains(NPCType.Repair.ToStringF(), StringComparison.OrdinalIgnoreCase))
+            npcType = NPCType.Repair;
+        else if (name.Contains(NPCType.Innkeeper.ToStringF(), StringComparison.OrdinalIgnoreCase))
+            npcType = NPCType.Innkeeper;
+        else if (name.Contains(NPCType.Flightmaster.ToStringF(), StringComparison.OrdinalIgnoreCase))
+            npcType = NPCType.Flightmaster;
+        else if (name.Contains(NPCType.Trainer.ToStringF(), StringComparison.OrdinalIgnoreCase))
+            npcType = NPCType.Trainer;
+        else if (name.AsSpan().ContainsAny(vendorNpcPattern))
+            npcType = NPCType.Vendor;
+
+        if (areaDB.CurrentArea == null)
+        {
+            return false;
+        }
+
+        npc = areaDB.GetNearestNPC(playerReader.Faction, npcType, playerReader.MapPos);
+        if (npc == null)
+        {
+            return false;
+        }
+
+        Vector3 mapPos = npc.MapCoords[0];
+        key.Path = [mapPos];
+
+        LogFoundCloesestNPCByType(logger, npc.name, npcType.ToStringF(), mapPos);
+
+        return true;
     }
 
 
