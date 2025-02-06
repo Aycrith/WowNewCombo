@@ -144,7 +144,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
     public override void OnEnter()
     {
-        if (useClosestNPC)
+        //if (useClosestNPC)
         {
             AutoSelectNPCAndSetPath();
         }
@@ -197,7 +197,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         navigation.Stop();
         npcNameTargeting.ChangeNpcType(NpcNames.None);
 
-        if (useClosestNPC)
+        //if (useClosestNPC)
         {
             key.Path = [];
         }
