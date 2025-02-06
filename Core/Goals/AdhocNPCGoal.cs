@@ -163,15 +163,17 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
     {
         NPCType npcType = NPCType.None;
 
-        if (Name.Contains(NPCType.Repair.ToStringF(), StringComparison.OrdinalIgnoreCase))
+        string name = key.Name;
+
+        if (name.Contains(NPCType.Repair.ToStringF(), StringComparison.OrdinalIgnoreCase))
             npcType = NPCType.Repair;
-        else if (Name.Contains(NPCType.Innkeeper.ToStringF(), StringComparison.OrdinalIgnoreCase))
+        else if (name.Contains(NPCType.Innkeeper.ToStringF(), StringComparison.OrdinalIgnoreCase))
             npcType = NPCType.Innkeeper;
-        else if (Name.Contains(NPCType.Flightmaster.ToStringF(), StringComparison.OrdinalIgnoreCase))
+        else if (name.Contains(NPCType.Flightmaster.ToStringF(), StringComparison.OrdinalIgnoreCase))
             npcType = NPCType.Flightmaster;
-        else if (Name.Contains(NPCType.Trainer.ToStringF(), StringComparison.OrdinalIgnoreCase))
+        else if (name.Contains(NPCType.Trainer.ToStringF(), StringComparison.OrdinalIgnoreCase))
             npcType = NPCType.Trainer;
-        else if (Name.AsSpan().ContainsAny(vendorNpcPattern))
+        else if (name.AsSpan().ContainsAny(vendorNpcPattern))
             npcType = NPCType.Vendor;
 
         if (areaDB.CurrentArea == null)
