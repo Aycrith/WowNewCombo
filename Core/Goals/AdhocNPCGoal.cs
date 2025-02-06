@@ -9,6 +9,7 @@ using SharedLib.Extensions;
 using SharedLib.NpcFinder;
 
 using System;
+using System.Buffers;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
@@ -17,7 +18,7 @@ using System.Threading;
 
 namespace Core.Goals;
 
-public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider, IDisposable
+public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider, IDisposable
 {
     private enum PathState
     {
@@ -30,6 +31,9 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
 
     private const int MAX_TIME_TO_REACH_MELEE = 10000;
     private const int TIMEOUT = 5000;
+
+    private static readonly SearchValues<string> vendorNpcPattern =
+        SearchValues.Create([NPCType.Vendor.ToStringF(), "Sell"], StringComparison.OrdinalIgnoreCase);
 
     public override float Cost => key.Cost;
 
@@ -50,6 +54,8 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
     private readonly AreaDB areaDB;
 
     private PathState pathState;
+
+    private readonly bool useClosestNPC;
 
     #region IRouteProvider
 
@@ -112,6 +118,8 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
         }
 
         Keys = [key];
+
+        useClosestNPC = key.Path.Length == 0;
     }
 
     public void Dispose()
@@ -136,6 +144,11 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
 
     public override void OnEnter()
     {
+        if (useClosestNPC)
+        {
+            AutoSelectNPCAndSetPath();
+        }
+
         input.PressClearTarget();
         stopMoving.Stop();
 
@@ -146,11 +159,48 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
         MountIfPossible();
     }
 
+    private void AutoSelectNPCAndSetPath()
+    {
+        NPCType npcType = NPCType.None;
+
+        if (Name.Contains(NPCType.Repair.ToStringF(), StringComparison.OrdinalIgnoreCase))
+            npcType = NPCType.Repair;
+        else if (Name.Contains(NPCType.Innkeeper.ToStringF(), StringComparison.OrdinalIgnoreCase))
+            npcType = NPCType.Innkeeper;
+        else if (Name.Contains(NPCType.Flightmaster.ToStringF(), StringComparison.OrdinalIgnoreCase))
+            npcType = NPCType.Flightmaster;
+        else if (Name.Contains(NPCType.Trainer.ToStringF(), StringComparison.OrdinalIgnoreCase))
+            npcType = NPCType.Trainer;
+        else if (Name.AsSpan().ContainsAny(vendorNpcPattern))
+            npcType = NPCType.Vendor;
+
+        if (areaDB.CurrentArea == null)
+        {
+            return;
+        }
+
+        var npc = areaDB.GetNearestNPC(playerReader.Faction, npcType, playerReader.MapPos);
+        if (npc == null)
+        {
+            return;
+        }
+
+        Vector3 mapPos = npc.MapCoords[0];
+        key.Path = [mapPos];
+
+        LogFoundCloesestNPCByType(logger, npc.name, npcType.ToStringF(), mapPos);
+    }
+
     public override void OnExit()
     {
         navigation.StopMovement();
         navigation.Stop();
         npcNameTargeting.ChangeNpcType(NpcNames.None);
+
+        if (useClosestNPC)
+        {
+            key.Path = [];
+        }
     }
 
     public override void Update()
@@ -413,4 +463,16 @@ public sealed class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteProvider,
     {
         logger.LogWarning(text);
     }
+
+
+    #region Logging
+
+    [LoggerMessage(
+        EventId = 0300,
+        Level = LogLevel.Information,
+        Message = "Closest NPC found {type} {name} at {pos}")]
+    static partial void LogFoundCloesestNPCByType(ILogger logger, string name, string type, Vector3 pos);
+
+
+    #endregion
 }

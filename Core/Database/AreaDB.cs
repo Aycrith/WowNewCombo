@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using SharedLib.Extensions;
 
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using System.Threading;
 
@@ -14,6 +15,30 @@ using static System.IO.File;
 using static System.IO.Path;
 
 namespace Core.Database;
+
+public enum NPCType
+{
+    None,
+    Flightmaster,
+    Innkeeper,
+    Repair,
+    Vendor,
+    Trainer
+}
+
+public static class NPCType_Extension
+{
+    public static string ToStringF(this NPCType value) => value switch
+    {
+        NPCType.None => nameof(NPCType.None),
+        NPCType.Innkeeper => nameof(NPCType.Innkeeper),
+        NPCType.Flightmaster => nameof(NPCType.Flightmaster),
+        NPCType.Repair => nameof(NPCType.Repair),
+        NPCType.Vendor => nameof(NPCType.Vendor),
+        NPCType.Trainer => nameof(NPCType.Trainer),
+        _ => throw new ArgumentOutOfRangeException(nameof(value), value, null)
+    };
+}
 
 public sealed class AreaDB : IDisposable
 {
@@ -78,25 +103,52 @@ public sealed class AreaDB : IDisposable
         }
     }
 
-    public Vector3 GetNearestVendor(Vector3 map)
+    private List<NPC> GetNPCs(NPCType type)
     {
-        if (CurrentArea == null || CurrentArea.vendor.Count == 0)
-            return Vector3.Zero;
-
-        NPC closestNpc = CurrentArea.vendor[0];
-        float mapDistance = map.MapDistanceXYTo(closestNpc.MapCoords[0]);
-
-        for (int i = 0; i < CurrentArea.vendor.Count; i++)
+        return type switch
         {
-            NPC npc = CurrentArea.vendor[i];
+            NPCType.Flightmaster => CurrentArea?.flightmaster,
+            NPCType.Innkeeper => CurrentArea?.innkeeper,
+            NPCType.Repair => CurrentArea?.repair,
+            NPCType.Vendor => CurrentArea?.vendor,
+            NPCType.Trainer => CurrentArea?.trainer,
+            _ => null
+        } ?? [];
+    }
+
+    public NPC? GetNearestNPC(PlayerFaction faction, NPCType type, Vector3 map)
+    {
+        List<NPC> npcs = GetNPCs(type);
+
+        if (CurrentArea == null || npcs.Count == 0)
+            return null;
+
+        NPC? closestNpc = null;
+        float mapDistance = float.MaxValue;
+
+        for (int i = 0; i < npcs.Count; i++)
+        {
+            NPC npc = npcs[i];
+
+            if (npc.MapCoords.Length == 0)
+                continue;
+
             float d = map.MapDistanceXYTo(npc.MapCoords[0]);
-            if (d < mapDistance)
+            if (d < mapDistance && FriendlyToPlayer(npc, faction))
             {
                 mapDistance = d;
                 closestNpc = npc;
             }
         }
 
-        return closestNpc.MapCoords[0];
+        return closestNpc;
+
+        static bool FriendlyToPlayer(NPC npc, PlayerFaction playerFaction) =>
+            playerFaction switch
+            {
+                PlayerFaction.Alliance => npc.reactalliance == 1,
+                PlayerFaction.Horde => npc.reacthorde == 1,
+                _ => false
+            };
     }
 }
