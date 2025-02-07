@@ -219,7 +219,7 @@ public sealed partial class Navigation : IDisposable
 
                 if (HasBeenActiveRecently())
                 {
-                    stuckDetector.Update();
+                    stuckDetector.Update(token);
                     worldDistance = playerW.WorldDistanceXYTo(routeToNextWaypoint.Peek());
                 }
             }

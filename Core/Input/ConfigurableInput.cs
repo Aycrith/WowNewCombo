@@ -56,12 +56,12 @@ public sealed partial class ConfigurableInput
             input.SetKeyState(BackwardKey, false, forced);
     }
 
-    public void TurnRandomDir(int milliseconds)
+    public void TurnRandomDir(int milliseconds, CancellationToken token = default)
     {
         input.PressRandom(
             Random.Shared.Next(2) == 0
             ? input.TurnLeftKey
-            : input.TurnRightKey, milliseconds);
+            : input.TurnRightKey, milliseconds, token);
     }
 
     public void PressRandom(KeyAction keyAction, CancellationToken token = default)
