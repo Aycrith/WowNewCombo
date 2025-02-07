@@ -79,7 +79,10 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
 
     public override void OnEnter()
     {
-        initialTargetGuid = playerReader.TargetGuid;
+        initialTargetGuid = initialTargetGuid == playerReader.TargetGuid
+            ? -1
+            : playerReader.TargetGuid;
+
         initialMinRange = playerReader.MinRange();
 
         approachStart = GetTimestamp();
@@ -181,7 +184,8 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
             return;
         }
 
-        if (playerReader.TargetGuid == initialTargetGuid)
+        if (playerReader.TargetGuid == initialTargetGuid &&
+            !playerReader.IsInMeleeRange())
         {
             int initialTargetMinRange = playerReader.MinRange();
             if (!input.TargetNearestTarget.OnCooldown())
