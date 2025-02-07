@@ -456,13 +456,12 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
             return false;
         }
 
-        npc = areaDB.GetNearestNPC(playerReader.Faction, npcType, playerReader.MapPos);
-        if (npc == null)
+        if (!areaDB.TryGetNearestNPC(playerReader.Faction, npcType, playerReader.WorldPos, out npc, out Vector3 pos))
         {
             return false;
         }
 
-        Vector3 mapPos = npc.MapCoords[0];
+        Vector3 mapPos = pos;
         key.Path = [mapPos];
 
         LogFoundCloesestNPCByType(logger, npc.name, npcType.ToStringF(), mapPos);

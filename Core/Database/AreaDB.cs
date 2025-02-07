@@ -5,8 +5,11 @@ using Newtonsoft.Json;
 using SharedLib.Extensions;
 
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Threading;
 
 using WowheadDB;
@@ -52,6 +55,11 @@ public sealed class AreaDB : IDisposable
     private int areaId = -1;
     public Area? CurrentArea { private set; get; }
 
+    private static readonly FrozenDictionary<string, Vector3> EmptyNpcWorldLocations =
+        new Dictionary<string, Vector3>().ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
+
+    public FrozenDictionary<string, Vector3> NpcWorldLocations { private set; get; }
+
     public event Action? Changed;
 
     public AreaDB(ILogger logger, DataConfig dataConfig,
@@ -61,6 +69,8 @@ public sealed class AreaDB : IDisposable
         this.dataConfig = dataConfig;
         token = cts.Token;
         resetEvent = new();
+
+        NpcWorldLocations = EmptyNpcWorldLocations;
 
         thread = new(ReadArea);
         thread.Start();
@@ -91,6 +101,13 @@ public sealed class AreaDB : IDisposable
                 CurrentArea = JsonConvert.DeserializeObject<Area>(
                     ReadAllText(Join(dataConfig.ExpArea, $"{areaId}.json")));
 
+                var data = JsonConvert.DeserializeObject<Dictionary<string, Vector3>>(
+                    ReadAllText(Join(dataConfig.NpcLocations, $"{areaId}.json")));
+
+                NpcWorldLocations = data != null
+                    ? data.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase)
+                    : EmptyNpcWorldLocations;
+
                 Changed?.Invoke();
             }
             catch (Exception e)
@@ -103,54 +120,74 @@ public sealed class AreaDB : IDisposable
         }
     }
 
-    private List<NPC> GetNPCs(NPCType type)
+    private ReadOnlySpan<NPC> GetNPCsByType(NPCType type)
     {
-        return type switch
-        {
-            NPCType.Flightmaster => CurrentArea?.flightmaster,
-            NPCType.Innkeeper => CurrentArea?.innkeeper,
-            NPCType.Repair => CurrentArea?.repair,
-            NPCType.Vendor => CurrentArea?.vendor,
-            NPCType.Trainer => CurrentArea?.trainer,
-            _ => null
-        } ?? [];
+        return CurrentArea == null
+            ? []
+            : type switch
+            {
+                NPCType.Flightmaster => CollectionsMarshal.AsSpan(CurrentArea.flightmaster),
+                NPCType.Innkeeper => CollectionsMarshal.AsSpan(CurrentArea.innkeeper),
+                NPCType.Repair => CollectionsMarshal.AsSpan(CurrentArea.repair),
+                NPCType.Vendor => CollectionsMarshal.AsSpan(CurrentArea.vendor),
+                NPCType.Trainer => CollectionsMarshal.AsSpan(CurrentArea.trainer),
+                NPCType.None => [],
+                _ => []
+            };
     }
 
-    public NPC? GetNearestNPC(PlayerFaction faction, NPCType type, Vector3 map)
+    public bool TryGetNearestNPC(
+        PlayerFaction faction,
+        NPCType type,
+        Vector3 playerPosW,
+        [MaybeNullWhen(false)] out NPC npc,
+        out Vector3 pos)
     {
-        List<NPC> npcs = GetNPCs(type);
+        npc = default;
+        pos = default;
 
-        if (CurrentArea == null || npcs.Count == 0)
-            return null;
+        float distance = float.MaxValue;
 
-        NPC? closestNpc = null;
-        float mapDistance = float.MaxValue;
-
-        for (int i = 0; i < npcs.Count; i++)
+        ReadOnlySpan<NPC> npcs = GetNPCsByType(type);
+        for (int i = 0; i < npcs.Length; i++)
         {
-            NPC npc = npcs[i];
+            NPC n = npcs[i];
 
             // Those Vendor NPCS whom are class specific
             // Demon Trainer example
             if (type != NPCType.Trainer &&
-                npc.description != null &&
-                npc.description.Contains(NPCType.Trainer.ToStringF()))
+                n.description != null &&
+                n.description.Contains(NPCType.Trainer.ToStringF()))
             {
                 continue;
             }
 
-            if (npc.MapCoords.Length == 0)
+            if (!NpcWorldLocations.TryGetValue(n.name, out Vector3 worldPos))
                 continue;
 
-            float d = map.MapDistanceXYTo(npc.MapCoords[0]);
-            if (d < mapDistance && FriendlyToPlayer(npc, faction))
+            float d = playerPosW.WorldDistanceXYTo(worldPos);
+            if (d < distance && FriendlyToPlayer(n, faction))
             {
-                mapDistance = d;
-                closestNpc = npc;
+                pos = worldPos;
+                distance = d;
+                npc = n;
             }
         }
 
-        return closestNpc;
+        if (npc != null)
+        {
+            if (npc.MapCoords == null || npc.MapCoords.Length == 0)
+            {
+                npc = default;
+                return false;
+            }
+
+            var firstMapCoord = npc.MapCoords[0];
+            float worldZ = pos.Z;
+            pos = new(firstMapCoord.X, firstMapCoord.Y, worldZ);
+        }
+
+        return npc != null;
 
         static bool FriendlyToPlayer(NPC npc, PlayerFaction playerFaction) =>
             playerFaction switch
