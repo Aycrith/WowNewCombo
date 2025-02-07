@@ -130,6 +130,15 @@ public sealed class AreaDB : IDisposable
         {
             NPC npc = npcs[i];
 
+            // Those Vendor NPCS whom are class specific
+            // Demon Trainer example
+            if (type != NPCType.Trainer &&
+                npc.description != null &&
+                npc.description.Contains(NPCType.Trainer.ToStringF()))
+            {
+                continue;
+            }
+
             if (npc.MapCoords.Length == 0)
                 continue;
 
