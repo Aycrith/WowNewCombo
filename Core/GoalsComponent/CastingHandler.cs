@@ -213,7 +213,9 @@ public sealed partial class CastingHandler
         // Spells appears in CombatLog
         else
         {
-            elapsedMs = InstantSpell(playerReader.DoubleNetworkLatency,
+            int waitTime = playerReader.SpellQueueTimeMs + playerReader.DoubleNetworkLatency;
+
+            elapsedMs = InstantSpell(waitTime,
                 beforeCastEventTime, item,
                 playerReader, wait, token);
 
