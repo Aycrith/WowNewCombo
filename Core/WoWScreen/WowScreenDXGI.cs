@@ -251,7 +251,6 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
             frame.TotalMetadataBufferSize == 0 ||
             frame.LastPresentTime == 0)
         {
-            duplication.ReleaseFrame();
             return;
         }
 
