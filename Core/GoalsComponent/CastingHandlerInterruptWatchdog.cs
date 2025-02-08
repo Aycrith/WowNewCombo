@@ -52,10 +52,14 @@ public sealed class CastingHandlerInterruptWatchdog : IDisposable
     {
         while (!token.IsCancellationRequested)
         {
-            while (initialValue == interrupt.Invoke())
+            while (!token.IsCancellationRequested && initialValue == interrupt.Invoke())
             {
                 wait.Update(token);
-                resetEvent.Wait();
+                try
+                {
+                    resetEvent.Wait(token);
+                }
+                catch (OperationCanceledException) { }
             }
 
             interruptCts.Cancel();
