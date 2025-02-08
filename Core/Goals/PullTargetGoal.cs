@@ -246,8 +246,8 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
 
     private bool PullPrevention()
     {
-        return targetBlacklist.Is() &&
-            playerReader.TargetTarget is not
+        return !targetBlacklist.Is() ||
+            playerReader.TargetTarget is
             UnitsTarget.None or
             UnitsTarget.Me or
             UnitsTarget.Pet or
