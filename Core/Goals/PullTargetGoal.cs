@@ -110,6 +110,9 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
             Log("Stop auto interact!");
             input.PressStopAttack();
             wait.Update();
+            stopMoving.StopForward();
+            wait.Update(playerReader.DoubleNetworkLatency);
+            wait.Update();
         }
 
         if (requiresNpcNameFinder)
