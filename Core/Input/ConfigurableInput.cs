@@ -56,7 +56,12 @@ public sealed partial class ConfigurableInput
             input.SetKeyState(BackwardKey, false, forced);
     }
 
-    public void TurnRandomDir(int milliseconds)
+    public void SetKeyState(ConsoleKey key, bool state, bool forced)
+    {
+        input.SetKeyState(key, state, forced);
+    }
+
+    public void TurnRandomDir(int milliseconds, CancellationToken token = default)
     {
         input.PressRandom(
             Random.Shared.Next(2) == 0

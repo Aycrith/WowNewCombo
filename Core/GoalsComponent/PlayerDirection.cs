@@ -55,6 +55,11 @@ public sealed partial class PlayerDirection
         if (debug)
             LogDebugSetDirection(logger, playerReader.Direction, targetDir, distance);
 
+        SetDirection(targetDir, token);
+    }
+
+    public void SetDirection(float targetDir, CancellationToken token = default)
+    {
         input.PressFixed(GetDirectionKeyToPress(targetDir),
             TurnDuration(targetDir), token);
     }
