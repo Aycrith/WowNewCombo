@@ -1,5 +1,7 @@
 ﻿using Core.GOAP;
 
+using Game;
+
 using Microsoft.Extensions.Logging;
 
 using System;
@@ -149,6 +151,11 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
             }
         }
 
+        if (bits.SoftInteract_Enabled())
+        {
+            DealWithSoftInteract();
+        }
+
         if (!bits.Target() || (bits.Target() && bits.Target_Dead()))
         {
             logger.LogInformation("Lost target!");
@@ -228,5 +235,53 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
     private Vector3 GetCorpseLocation(float distance)
     {
         return PointEstimator.GetMapPos(playerReader.WorldMapArea, playerReader.WorldPos, playerReader.Direction, distance);
+    }
+
+    private void DealWithSoftInteract()
+    {
+        if (!playerReader.IsInMeleeRange() ||
+            playerReader.IsCasting() ||
+            !InvalidSoftInteractExists() ||
+            playerReader.TargetGuid == playerReader.SoftInteract_Guid)
+        {
+            return;
+        }
+
+        ConsoleKey key = Random.Shared.Next(2) == 0
+            ? input.TurnLeftKey
+            : input.TurnRightKey;
+
+        logger.LogWarning($"Invalid SoftInteract Detected Turn away({key}) then face target!");
+
+        input.SetKeyState(key, true, false);
+        while (InvalidSoftInteractExists())
+        {
+            wait.Update();
+        }
+        input.SetKeyState(key, false, false);
+        wait.Fixed(playerReader.DoubleNetworkLatency);
+        wait.Update();
+
+        if (bits.Target() && !InvalidSoftInteractExists())
+        {
+            input.PressFastInteract();
+
+            const int updateCount = 2;
+            float e = wait.AfterEquals(playerReader.SpellQueueTimeMs,
+                updateCount, playerReader._Direction);
+
+            stopMoving.StopForward();
+        }
+    }
+
+    private bool InvalidSoftInteractExists()
+    {
+        return
+            bits.SoftInteract() &&
+            (
+            playerReader.SoftInteract_Type != GuidType.Creature ||
+            bits.SoftInteract_Dead() ||
+            bits.SoftInteract_Tagged()
+            );
     }
 }

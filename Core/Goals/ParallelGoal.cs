@@ -55,7 +55,6 @@ public sealed class ParallelGoal : GoapGoal
         if (mountHandler.IsMounted())
         {
             mountHandler.Dismount();
-            wait.Update();
         }
 
         for (int i = 0; i < Keys.Length; i++)
@@ -80,6 +79,8 @@ public sealed class ParallelGoal : GoapGoal
         if (!castSuccess)
         {
             Cast();
+            
+            wait.Update(playerReader.DoubleNetworkLatency);
             wait.Update();
         }
     }
@@ -87,6 +88,7 @@ public sealed class ParallelGoal : GoapGoal
     public override void OnExit()
     {
         castSuccess = false;
+        wait.Update();
     }
 
     private void Cast()

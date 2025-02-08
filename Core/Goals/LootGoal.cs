@@ -3,6 +3,7 @@ using Core.GOAP;
 
 using Microsoft.Extensions.Logging;
 
+using SharedLib;
 using SharedLib.Extensions;
 using SharedLib.NpcFinder;
 
@@ -80,6 +81,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         if (e < 0)
         {
             LogWarnWindowStillOpen(logger, playerReader.LootWindowCount.Value, e);
+            wait.Fixed(Loot.LOOT_PER_ITEM_TIME_MS);
         }
 
         if (combatLog.DamageTakenCount() == 0)
@@ -135,6 +137,14 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
     private void HandleSuccessfulLoot()
     {
+        // in case the player has not moved to the corpse
+        if (bits.Target() && playerReader.IsInMeleeRange() &&
+            (!bits.SoftInteract() || EligibleCorpseSoftTargetExists()))
+        {
+            input.PressInteract();
+            wait.Update();
+        }
+
         int maxTimeLootWindowOpenMs =
             Math.Max(playerReader.DoubleNetworkLatency, Loot.LOOTFRAME_OPEN_TIME_MS);
 
@@ -212,9 +222,9 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
             return;
         }
 
-        if (bits.Target_Dead())
+        if (bits.Target() && bits.Target_Dead())
         {
-            input.PressInteract();
+            input.PressClearTarget();
             wait.Update();
         }
 
@@ -247,7 +257,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         }
 
         Log("Nearest Corpse clicked...");
-        float elapsedMs = wait.Until(playerReader.NetworkLatency, bits.Target);
+        float elapsedMs = wait.Until(playerReader.DoubleNetworkLatency, bits.Target);
         LogFoundNpcNameCount(logger, npcNameTargeting.NpcCount, elapsedMs);
 
         npcNameTargeting.ChangeNpcType(NpcNames.None);
@@ -262,11 +272,13 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         CorpseEvent? closest = null;
 
         float minDistance = float.MaxValue;
-        Vector3 playerMapLoc = playerReader.MapPos;
+        Vector3 playerWorldLoc = playerReader.WorldPos;
 
         foreach (CorpseEvent corpse in corpseLocations)
         {
-            float distance = playerMapLoc.MapDistanceXYTo(corpse.MapLoc);
+            Vector3 worldPos = WorldMapAreaDB.ToWorld_FlipXY(corpse.MapLoc, playerReader.WorldMapArea);
+
+            float distance = playerWorldLoc.WorldDistanceXYTo(worldPos);
             if (distance < minDistance)
             {
                 minDistance = distance;
@@ -319,11 +331,11 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
             Vector3 playerMap = playerReader.MapPos;
             CorpseEvent e = GetClosestCorpse()!;
             float heading = DirectionCalculator.CalculateMapHeading(playerMap, e.MapLoc);
-            playerDirection.SetDirection(heading, e.MapLoc);
+            playerDirection.SetDirection(heading);
+            wait.Fixed(playerReader.DoubleNetworkLatency);
+            wait.Update();
 
             logger.LogInformation("Look at possible closest corpse and try once again...");
-
-            wait.Fixed(playerReader.NetworkLatency);
 
             if (FoundByCursor())
             {
@@ -336,10 +348,40 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
     private bool LootKeyboard()
     {
+        CorpseEvent? e = GetClosestCorpse();
+        if (e != null)
+        {
+            float pastDirection = e.PlayerFacing;
+            playerDirection.SetDirection(pastDirection);
+            wait.Fixed(playerReader.DoubleNetworkLatency);
+            wait.Update();
+        }
+
+        if (bits.SoftInteract_Enabled() &&
+            (!bits.SoftInteract() || EligibleCorpseSoftTargetExists()))
+        {
+            input.PressInteract();
+            wait.Update();
+
+            if (state.RecentlyLooted.Contains(playerReader.TargetGuid))
+            {
+                logger.LogError("Keyboard target already looted 1");
+                input.PressClearTarget();
+                wait.Update();
+            }
+        }
+
         if (!bits.Target())
         {
             input.PressLastTarget();
             wait.Update();
+
+            if (state.RecentlyLooted.Contains(playerReader.TargetGuid))
+            {
+                logger.LogError("Keyboard target already looted 2");
+                input.PressClearTarget();
+                wait.Update();
+            }
         }
 
         if (bits.Target())
@@ -359,14 +401,6 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
             }
         }
 
-        if (EligibleCorpseSoftTargetExists() && !state.RecentlyLooted.Contains(playerReader.SoftInteract_Guid))
-        {
-            Log($"Keyboard soft target found!");
-
-            input.PressInteract();
-            wait.Update();
-        }
-
         if (!bits.Target())
         {
             LogWarning($"Keyboard No target found!");
@@ -384,12 +418,6 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         }
 
         CheckForCanGather();
-
-        if (!bits.SoftInteract() || EligibleCorpseSoftTargetExists())
-        {
-            input.PressInteract();
-            wait.Update();
-        }
 
         return (bits.Target() && playerReader.MinRangeZero()) || MoveToTargetAndReached();
     }

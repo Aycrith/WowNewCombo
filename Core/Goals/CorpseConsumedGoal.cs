@@ -55,6 +55,7 @@ public sealed partial class CorpseConsumedGoal : GoapGoal
         if (goapAgentState.LastCombatKillCount > 1)
         {
             wait.Fixed(Loot.LOOTFRAME_AUTOLOOT_DELAY_MS);
+            wait.Update();
         }
 
         if (!lootEnabled)

@@ -110,6 +110,9 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
             Log("Stop auto interact!");
             input.PressStopAttack();
             wait.Update();
+            stopMoving.StopForward();
+            wait.Update(playerReader.DoubleNetworkLatency);
+            wait.Update();
         }
 
         if (requiresNpcNameFinder)
@@ -246,8 +249,8 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
 
     private bool PullPrevention()
     {
-        return targetBlacklist.Is() &&
-            playerReader.TargetTarget is not
+        return !targetBlacklist.Is() ||
+            playerReader.TargetTarget is
             UnitsTarget.None or
             UnitsTarget.Me or
             UnitsTarget.Pet or
