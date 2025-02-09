@@ -26,6 +26,15 @@ namespace WowTriangles;
 /// </summary>
 public sealed class ChunkedTriangleCollection
 {
+    /// <summary>
+    /// In World of Warcraft, the maximum slope angle a player can traverse is 60 degrees.
+    /// Any terrain steeper than this will cause the player to slide down.
+    /// This mechanic prevents players from climbing excessively steep surfaces and helps enforce natural movement limitations within the game world.
+    /// </summary>
+    private const float MaxStandableAngleDegrees = 51f;
+    private const float MaxStandableAngleRadians = MaxStandableAngleDegrees * (PI / 180f);
+    private readonly float MaxStandableAngleCos = Cos(MaxStandableAngleRadians);
+
     private readonly ILogger logger;
     private readonly MPQTriangleSupplier supplier;
     private readonly SparseMatrix2D<TriangleCollection> chunks;
@@ -472,9 +481,6 @@ public sealed class ChunkedTriangleCollection
         float best_z = float.MinValue;
         TriangleType best_flags = TriangleType.None;
 
-        // 45f -> 40 degree || 60f -> 50 degree || 30f -> 28.6 degree
-        float angle_z = Sin(30f / 360.0f * Tau);
-
         Vector3 v0;
         Vector3 v1;
         Vector3 v2;
@@ -492,7 +498,7 @@ public sealed class ChunkedTriangleCollection
                 continue;
 
             GetTriangleNormal(v0, v1, v2, out Vector3 normal);
-            if (Abs(normal.Z) <= angle_z)
+            if (normal.Z <= MaxStandableAngleCos)
                 continue;
 
             if (!SegmentTriangleIntersect(s0, s1, v0, v1, v2,
