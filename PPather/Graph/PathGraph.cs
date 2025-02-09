@@ -21,6 +21,7 @@ using Microsoft.Extensions.Logging;
 using PPather.Triangles.Data;
 
 using SharedLib.Data;
+using SharedLib.Extensions;
 
 using System;
 using System.Buffers;
@@ -588,8 +589,9 @@ public sealed class PathGraph
 
             //float distance = currentSearchSpot.location.GetDistanceTo(destinationSpot.location);
             float distance = Vector3.Distance(currentSearchSpot.Loc, destinationSpot.Loc);
+            float distance2D = Vector2.Distance(currentSearchSpot.Loc.AsVector2(), destinationSpot.Loc.AsVector2());
 
-            if (distance <= minHowClose)
+            if (distance <= minHowClose || (distance2D <= minHowClose / 2f))
             {
                 return currentSearchSpot; // got there
             }
