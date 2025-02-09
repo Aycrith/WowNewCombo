@@ -69,10 +69,11 @@
             case 1: return BABYLON.Color3.Red();
             case 2: return BABYLON.Color3.Green();
             case 3: return BABYLON.Color3.Blue();
+            case 4: return BABYLON.Color3.Teal();
             case 5: return BABYLON.Color3.Teal();
             case 6: return new BABYLON.Color3(1, 0.6, 0);
             case 7: return BABYLON.Color3.Yellow();
-            case 4:
+            case 8: return BABYLON.Color3.Black();
             default: return BABYLON.Color3.White();
         }
     }

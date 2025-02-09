@@ -5,9 +5,9 @@
 
 <Watch PathColour="@pathColour" Name="@name" />
 
-<span>
+<div style="position: fixed; bottom: 0; left: 450px; z-index: 1000; background-color: black; color: white; padding: 0 10px; text-align: center; display: flex; align-items: center;">
     <SearchParameters OnSearch="OnSearch" IsDisabled="@IsDisabled" />
-</span>
+</div>
 @code {
     bool IsDisabled = true;
 

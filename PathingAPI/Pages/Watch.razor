@@ -14,7 +14,9 @@
 @implements IAsyncDisposable
 
 
-<div style="position: relative; z-index: 2; left: 0px; padding-left:10px; height:30px; background-color: black;color:white">
+<div style="position: absolute; top: 0; left: 250px; width: -webkit-fill-available; height: 30px;
+    background-color: black; color: white; display: flex;
+    align-items: center; justify-content: space-between; padding: 0 10px; z-index: 10;">
     <div id="canvasText" style="display:inline-block; float: left">
         ...
     </div>
@@ -60,7 +62,8 @@
         Teal,
         White,
         Orange,
-        Yellow
+        Yellow,
+        Black
     }
 
     private const int RefreshTimeMs = 100;
@@ -205,7 +208,7 @@
             if (lastClosest != pPatherService.ClosestLocation)
             {
                 lastClosest = pPatherService.ClosestLocation;
-                await SendDrawLine(lastClosest, Color.Teal, "closest", token);
+                await SendDrawLine(lastClosest, Color.Black, "closest", token);
             }
 
             /*
