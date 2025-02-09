@@ -56,7 +56,7 @@
 
 </style>
 
-<span class="form-inline px-4">
+<div style="position: fixed; bottom: 0; width: 100%; z-index: 1000; background-color: black; color: white; padding: 0 10px; text-align: center; display: flex; align-items: center;">
     <label>Zone:</label>
     <select disabled="@IsDisabled" class="form-control" @bind="UIMapId">
         @foreach (var wma in wmas)
@@ -86,7 +86,7 @@
         </ItemTemplate>
     </MatAutocompleteList>
 
-    <button style="margin-left: 10px" type="button" disabled="@IsDisabled" class="form-control btn btn-primary" @onclick="StartDraw">
+    <button style="margin-left: 10px;" type="button" disabled="@IsDisabled" class="form-control btn btn-primary" @onclick="StartDraw">
         @if (IsDisabled)
         {
             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
@@ -121,7 +121,7 @@
         <option value="2">A* avoid models</option>
     </select>
 
-</span>
+</div>
 
 @code {
     private bool IsDisabled { get; set; } = true;
@@ -161,7 +161,7 @@
     private int SearchType { get; set; } =
         (int)PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance;
 
-    private int pathColour { get; set; } = (int)Watch.Color.Red;
+    private int pathColour { get; set; } = (int)Watch.Color.Orange;
     private string name { get; set; } = "test";
     private bool clearPath { get; set; } = false;
 
