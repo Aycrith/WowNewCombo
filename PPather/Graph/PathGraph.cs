@@ -47,9 +47,12 @@ public sealed class PathGraph
         A_Star_With_Model_Avoidance,
     }
 
-    public const int gradiantMax = 5;
+    public static int TimeoutSeconds = 20;
+    public static int ProgressTimeoutSeconds = 10;
 
     public const int sleepMSBetweenSpots = 0;
+
+    public const int gradiantMax = 5;
 
     public const float toonHeight = 2.0f;
     public const float toonSize = 0.5f;
@@ -71,6 +74,7 @@ public sealed class PathGraph
     public const float CHUNK_BASE = 100000.0f; // Always keep positive
     public const float MaximumAllowedRangeFromTarget = 80; //60
 
+    private readonly ILogger logger;
     private readonly string chunkDir;
 
     private readonly float MapId;
@@ -119,11 +123,6 @@ public sealed class PathGraph
 
         return 0;
     }
-
-    public static int TimeoutSeconds = 20;
-    public static int ProgressTimeoutSeconds = 10;
-
-    private readonly ILogger logger;
 
     public PathGraph(float mapId,
                      ChunkedTriangleCollection triangles,
