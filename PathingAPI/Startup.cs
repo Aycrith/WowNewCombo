@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.Routing.Matching;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
@@ -24,11 +25,19 @@ using SharedLib.Converters;
 using System;
 using System.IO;
 using System.Reflection;
+using System.Threading;
 
 namespace PathingAPI;
 
 public sealed class Startup
 {
+    private readonly IConfiguration configuration;
+
+    public Startup(IConfiguration configuration)
+    {
+        this.configuration = configuration;
+    }
+
     // This method gets called by the runtime. Use this method to add services to the container.
     // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
     public void ConfigureServices(IServiceCollection services)
@@ -63,10 +72,14 @@ public sealed class Startup
 
         Log.Information(DateTimeOffset.Now.ToString());
 
+        string exp = configuration["exp"] ?? Environment.GetEnvironmentVariable("exp") ?? "wrath";
+
+        Log.Information($"Expansion: {exp}");
+
         services.AddMatBlazor();
         services.AddRazorPages();
         services.AddServerSideBlazor();
-        services.AddSingleton<DataConfig>(x => DataConfig.Load()); // going to use the Hardcoded DataConfig.Exp
+        services.AddSingleton<DataConfig>(x => DataConfig.Load(exp));
         services.AddSingleton<WorldMapAreaDB>();
         services.AddSingleton<PPatherService>();
 
