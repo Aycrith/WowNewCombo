@@ -438,7 +438,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
     {
         NPCType npcType = NPCType.None;
 
-        string name = key.Name;
+        ReadOnlySpan<char> name = key.Name;
 
         if (name.Contains(NPCType.Repair.ToStringF(), StringComparison.OrdinalIgnoreCase))
             npcType = NPCType.Repair;
@@ -448,7 +448,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
             npcType = NPCType.Flightmaster;
         else if (name.Contains(NPCType.Trainer.ToStringF(), StringComparison.OrdinalIgnoreCase))
             npcType = NPCType.Trainer;
-        else if (name.AsSpan().ContainsAny(vendorNpcPattern))
+        else if (name.ContainsAny(vendorNpcPattern))
             npcType = NPCType.Vendor;
 
         if (areaDB.CurrentArea == null)
@@ -456,7 +456,23 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
             return false;
         }
 
-        if (!areaDB.TryGetNearestNPC(playerReader.Faction, npcType, playerReader.WorldPos, out npc, out Vector3 pos))
+        string[] allowedNames = [];
+
+        // TODO: faction specific filter?
+        // try to detect pattern
+        // [TYPE][ ][npc1 | npc2 | npc3]
+        int separator = name.IndexOf(' ');
+        if (separator != -1)
+        {
+            allowedNames = name[(separator + 1)..]
+                .ToString()
+                .Split('|', options: StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+
+            if (allowedNames.Length > 0)
+                logger.LogInformation($"Search for {npcType} like {string.Join(',', allowedNames)}");
+        }
+
+        if (!areaDB.TryGetNearestNPC(playerReader.Faction, npcType, playerReader.WorldPos, allowedNames, out npc, out Vector3 pos))
         {
             return false;
         }

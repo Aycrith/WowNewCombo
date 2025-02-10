@@ -5,9 +5,11 @@ using Newtonsoft.Json;
 using SharedLib.Extensions;
 
 using System;
+using System.Buffers;
 using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -52,13 +54,15 @@ public sealed class AreaDB : IDisposable
     private readonly ManualResetEventSlim resetEvent;
     private readonly Thread thread;
 
+    private readonly JsonSerializerSettings npcJsonSettings = new()
+    {
+        StringEscapeHandling = StringEscapeHandling.EscapeNonAscii
+    };
+
     private int areaId = -1;
+
+    public FrozenDictionary<string, Vector3> NpcWorldLocations { private set; get; } = FrozenDictionary<string, Vector3>.Empty;
     public Area? CurrentArea { private set; get; }
-
-    private static readonly FrozenDictionary<string, Vector3> EmptyNpcWorldLocations =
-        new Dictionary<string, Vector3>().ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
-
-    public FrozenDictionary<string, Vector3> NpcWorldLocations { private set; get; }
 
     public event Action? Changed;
 
@@ -69,8 +73,6 @@ public sealed class AreaDB : IDisposable
         this.dataConfig = dataConfig;
         token = cts.Token;
         resetEvent = new();
-
-        NpcWorldLocations = EmptyNpcWorldLocations;
 
         thread = new(ReadArea);
         thread.Start();
@@ -102,11 +104,11 @@ public sealed class AreaDB : IDisposable
                     ReadAllText(Join(dataConfig.ExpArea, $"{areaId}.json")));
 
                 var data = JsonConvert.DeserializeObject<Dictionary<string, Vector3>>(
-                    ReadAllText(Join(dataConfig.NpcLocations, $"{areaId}.json")));
+                    ReadAllText(Join(dataConfig.NpcLocations, $"{areaId}.json")), npcJsonSettings);
 
                 NpcWorldLocations = data != null
                     ? data.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase)
-                    : EmptyNpcWorldLocations;
+                    : FrozenDictionary<string, Vector3>.Empty;
 
                 Changed?.Invoke();
             }
@@ -120,26 +122,64 @@ public sealed class AreaDB : IDisposable
         }
     }
 
-    private ReadOnlySpan<NPC> GetNPCsByType(NPCType type)
+    public ReadOnlySpan<NPC> GetNPCsByType(NPCType type)
     {
-        return CurrentArea == null
-            ? []
-            : type switch
+        if (CurrentArea == null)
+            return [];
+
+        return type switch
+        {
+            NPCType.Flightmaster => CollectionsMarshal.AsSpan(CurrentArea.flightmaster),
+            NPCType.Innkeeper => CollectionsMarshal.AsSpan(CurrentArea.innkeeper),
+            NPCType.Repair => CollectionsMarshal.AsSpan(CurrentArea.repair),
+            NPCType.Vendor => CollectionsMarshal.AsSpan(CurrentArea.vendor),
+            NPCType.Trainer => CollectionsMarshal.AsSpan(CurrentArea.trainer),
+            NPCType.None => GetAllNPCs(),
+            _ => []
+        };
+    }
+
+    private ReadOnlySpan<NPC> GetAllNPCs()
+    {
+        if (CurrentArea == null)
+            return [];
+
+        List<NPC>[] collections = [
+            CurrentArea.flightmaster,
+            CurrentArea.innkeeper,
+            CurrentArea.repair,
+            CurrentArea.vendor,
+            CurrentArea.trainer
+        ];
+
+        int total = 0;
+        foreach (var col in collections)
+            total += col?.Count ?? 0;
+
+        ArrayPool<NPC> pooler = ArrayPool<NPC>.Shared;
+        NPC[] result = pooler.Rent(total);
+        int offset = 0;
+
+        foreach (var col in collections)
+        {
+            if (col == null)
             {
-                NPCType.Flightmaster => CollectionsMarshal.AsSpan(CurrentArea.flightmaster),
-                NPCType.Innkeeper => CollectionsMarshal.AsSpan(CurrentArea.innkeeper),
-                NPCType.Repair => CollectionsMarshal.AsSpan(CurrentArea.repair),
-                NPCType.Vendor => CollectionsMarshal.AsSpan(CurrentArea.vendor),
-                NPCType.Trainer => CollectionsMarshal.AsSpan(CurrentArea.trainer),
-                NPCType.None => [],
-                _ => []
-            };
+                continue;
+            }
+
+            col.CopyTo(result, offset);
+            offset += col.Count;
+        }
+
+        pooler.Return(result);
+        return result.AsSpan(0, offset);
     }
 
     public bool TryGetNearestNPC(
         PlayerFaction faction,
         NPCType type,
         Vector3 playerPosW,
+        string[] allowedNames,
         [MaybeNullWhen(false)] out NPC npc,
         out Vector3 pos)
     {
@@ -161,6 +201,9 @@ public sealed class AreaDB : IDisposable
             {
                 continue;
             }
+
+            if (allowedNames.Length != 0 && !allowedNames.Contains(n.name))
+                continue;
 
             if (!NpcWorldLocations.TryGetValue(n.name, out Vector3 worldPos))
                 continue;
