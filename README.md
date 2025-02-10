@@ -1121,9 +1121,13 @@ e.g.
 
 ### NPC Goals
 
-These command are for vendoring and repair.
+These command are for vendoring and repair. It has two modes 
+* [Manual NPC Route](#manual-npc-route): have to specify a `"PathFilename"`
+* [Auto NPC Route](#auto-npc-route): based on the `"KeyAction.Name"`, can detect the strategy. **(EXPERIMENTAL)**
 
-e.g.
+#### Manual NPC Route
+
+e.g. using a prerecoded path to follow
 ```json
 "NPC": {
     "Sequence": [
@@ -1178,6 +1182,56 @@ If you have an NPC that is easy to get to such as the repair NPC in Arathi Highl
 Short Path Example:
 
 ![Short Path Example](images/NPCPath.png)
+
+---
+
+#### Auto NPC Route
+
+This is rather an **experimental** feature, and it is known to be unstable but it provides an easy way to add npc interaction in the **current zone**.
+
+The key limitation is the navigation, it is known to get stuck with [Indoors](https://wowwiki-archive.fandom.com/wiki/API_IsIndoors) npcs be are of that!
+
+The `"KeyAction.Name"` has a special formula which can be followed to have different behaviour!
+
+* Formula: `[TYPE] {[npc1 | npc2 | npc3 | npcN]}`
+
+The `[TYPE]` can be one of the following
+* `Flightmaster`
+* `Innkeeper`
+* `Repair`
+* `Vendor` / `Sell`
+* `Trainer`
+
+It is only tested with `Vendor` and `Repair` types!
+
+When either zero or list of npc names with `|` separated characters one of the following scenario going to happen:
+* When **no** npc name is specified, the **closest** **[TYPE]** of that NPC is considered.
+* When **one** npc name is specific, only that npc going to be considered.
+* Finally when **one or more** npc name is specified, the **closest** will be picked!
+
+examples of full automatic npc detection or multiple whitelisted names:
+```json
+"NPC": {
+    "Sequence": [
+        {
+            "Cost": 6,
+            "Name": "Repair", // the closest NPC of the Repair(type) is used, highly experimental can lead unexpected behaviours
+            "Key": "C",
+            "Requirement": "Durability% < 35"
+        },
+        {
+            "Cost": 6,
+            "Name": "Sell Adlin Pridedrift | Rybrad Coldbank", // only two npc are consdered of type Vendor
+            "Key": "C",
+            "Requirements": [
+                "BagFull",
+                "BagGreyItem"
+            ]
+        }
+    ]
+}
+```
+
 
 ### Repeatable Quests Handin
 
