@@ -539,9 +539,9 @@ public sealed class ChunkedTriangleCollection
             const float minCliffD = 0.5f;
 
             const int size = 4;
-            Span<bool> nearCliff = stackalloc bool[size] { true, true, true, true };
-            Span<float> dx = stackalloc float[size] { minCliffD, -minCliffD, 0, 0 };
-            Span<float> dy = stackalloc float[size] { 0, 0, minCliffD, -minCliffD };
+            Span<bool> nearCliff = [true, true, true, true];
+            Span<float> dx = [minCliffD, -minCliffD, 0, 0];
+            Span<float> dy = [0, 0, minCliffD, -minCliffD];
 
             bool allGood;
             for (int j = 0; j < ts.Length; j++)
