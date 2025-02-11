@@ -57,6 +57,12 @@
 
     <script src="_framework/blazor.server.js"></script>
 
+    <script type="text/javascript">
+        caches.delete("js/babylonjs.js").then(function (e) {
+            console.log("'js/babylonjs.js' cache deleted");
+        });
+    </script>
+
     <script src="~/js/babylonjs.js"></script>
 
     <script src="~/js/signalr.min.js"></script>
