@@ -80,10 +80,10 @@
 
     getHeight = function (color) {
         switch (color) {
-            case 2: return 0.5;
-            case 4: return 0.1;
-            case 7: return 0.1;
-            default: return 0.11;
+            case 2: return 5 / div;
+            case 4: return 1 / div;
+            case 7: return 1 / div;
+            default: return 1 / div;
         }
     }
 
@@ -106,7 +106,7 @@
 
     connection.on("drawLine", (array, color, name) => {
 
-        var height = 10;
+        var height = 0.5;
         if (name.includes("debug")) {
             height = getHeight(color);
         }
@@ -119,12 +119,14 @@
             new BABYLON.Vector3(v.x / div, v.z / div, v.y / div),
             new BABYLON.Vector3(v.x / div, (v.z / div) + height, v.y / div)];
 
-        const line = BABYLON.MeshBuilder.CreateLines(name, { points: points }, scene);
-        line.color = getColour(color);
+        const c = getColour(color);
 
-        if (name === "start") {
-            //setCamera(points[0], points[1], 10);
-        }
+        const line = BABYLON.MeshBuilder.CreateLines(name, { points: points }, scene);
+        line.color = c;
+        
+        line.enableEdgesRendering();
+        line.edgesWidth = 5.0;
+        line.edgesColor = new BABYLON.Color4(c.r, c.g, c.b, 1);
     })
 
     connection.on("drawLines", (arrays, color, name) => {
@@ -132,7 +134,7 @@
         if (arrays.length === 0)
             return;
 
-        var height = 10;
+        var height = 2.1 / div;
         if (name.includes("debug")) {
             height = getHeight(color);
         }
@@ -162,7 +164,7 @@
 
         if (arrays.length === 0) return;
 
-        const height = getHeight(color);
+        const height = 0 //getHeight(color);
 
         const vectors = [];
         for (i = 0; i < arrays.length; i++) {
@@ -173,8 +175,13 @@
 
         removeMesh(name);
 
+        const c = getColour(color)
+
         const lines = BABYLON.MeshBuilder.CreateLines(name, { points: vectors }, scene);
-        lines.color = getColour(color);
+        lines.enableEdgesRendering();
+        lines.edgesWidth = 5.0;
+        lines.edgesColor = new BABYLON.Color4(c.r, c.g, c.b, 1);
+        lines.color = c;
 
         const start = new BABYLON.Vector3.FromArray(arrays[0]);
         const end = new BABYLON.Vector3.FromArray(arrays[arrays.length - 1]);
@@ -262,20 +269,26 @@
 
         //log("drawLine: " + name);
 
-        var height = 10;
+        var height = 2.1 / div;
         if (name.includes("debug")) {
             height = getHeight(color);
         }
 
         removeMesh(name);
 
-        const line1 = [
+        const points = [
             new BABYLON.Vector3(vector.x / div, vector.z / div, vector.y / div),
             new BABYLON.Vector3(vector.x / div, (vector.z / div) + height, vector.y / div)];
 
-        const lines1 = BABYLON.MeshBuilder.CreateLines(name, { points: line1 }, scene);
-        lines1.color = getColour(color);
+        const c = getColour(color);
 
+        const line = BABYLON.MeshBuilder.CreateLines(name, { points: points }, scene);
+        line.color = c;
+   
+        line.enableEdgesRendering();
+        line.edgesWidth = 5.0;
+        line.edgesColor = new BABYLON.Color4(c.r, c.g, c.b, 1);
+        
         if (name === "start") {
             setCamera(vector, vector, 10);
         }
@@ -331,10 +344,12 @@
         window.addEventListener('resize', function () { engine.resize(); });
 
         camera = new BABYLON.FreeCamera('camera1', new BABYLON.Vector3(0, 50, -0), scene);
-        camera.keysUp.push(87);     // "w"
-        camera.keysDown.push(83);   // "s"
-        camera.keysLeft.push(65);   // "a"
-        camera.keysRight.push(68);  // "d"
+        camera.keysUp.push(87);         // "w"
+        camera.keysDown.push(83);       // "s"
+        camera.keysLeft.push(65);       // "a"
+        camera.keysRight.push(68);      // "d"
+        camera.keysDownward.push(81);   // "q"
+        camera.keysUpward.push(69);     // "e"
         camera.attachControl(canvas, false); // attach the camera to the canvas
 
         const cameraMinSpeed = 0.1;
