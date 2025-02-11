@@ -1,3 +1,5 @@
+using Core.Database;
+
 using MatBlazor;
 
 using Microsoft.AspNetCore.Builder;
@@ -79,9 +81,11 @@ public sealed class Startup
         services.AddMatBlazor();
         services.AddRazorPages();
         services.AddServerSideBlazor();
+        services.AddSingleton<CancellationTokenSource>();
         services.AddSingleton<DataConfig>(x => DataConfig.Load(exp));
         services.AddSingleton<WorldMapAreaDB>();
         services.AddSingleton<PPatherService>();
+        services.AddSingleton<AreaDB>();
 
         services.AddSingleton(provider =>
             provider.GetRequiredService<IOptions<JsonOptions>>().Value.SerializerOptions);

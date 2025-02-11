@@ -66,7 +66,7 @@
         Black
     }
 
-    private const int RefreshTimeMs = 100;
+    private const int RefreshTimeMs = 50;
 
     [Parameter]
     public int PathColour { get; set; } = (int)Color.Red;
@@ -261,6 +261,16 @@
 
         await DrawGeometry();
 
+        if (DrawTestPoints && testPointsCount != pPatherService.TestPoints.Count)
+        {
+            testPointsCount = pPatherService.TestPoints.Count;
+            await SendDrawLines(pPatherService.TestPoints, Color.Yellow, "debug", Token);
+        }
+
+        await SendDrawLine(lastFrom.AsVector3(), Color.Green, "start", Token);
+
+        await SendDrawLine(lastTo.AsVector3(), Color.Blue, "end", Token);
+
         if (spotPath == null || spotPath.locations.Count == 0)
         {
             Log("No path found");
@@ -270,16 +280,6 @@
         await SendRemoveMesh("search", Token);
 
         await SendDrawPath(spotPath.locations, (Color)PathColour, Name, Token);
-
-        await SendDrawLine(lastFrom.AsVector3(), Color.Green, "start", Token);
-
-        await SendDrawLine(lastTo.AsVector3(), Color.Blue, "end", Token);
-
-        if (DrawTestPoints && testPointsCount != pPatherService.TestPoints.Count)
-        {
-            testPointsCount = pPatherService.TestPoints.Count;
-            await SendDrawLines(pPatherService.TestPoints, Color.Yellow, "debug", Token);
-        }
     }
 
     private async void OnDrawSphere(SphereEventArgs e)
