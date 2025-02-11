@@ -1,4 +1,4 @@
-﻿/*
+/*
  *  Part of PPather
  *  Copyright Pontus Borg 2008
  *
@@ -13,6 +13,7 @@ using PPather.Triangles.Data;
 using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 using Wmo;
 
@@ -66,6 +67,7 @@ public sealed class ChunkedTriangleCollection
         chunks.Clear();
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void GetGridStartAt(float x, float y, out int grid_x, out int grid_y)
     {
         x = ChunkReader.ZEROPOINT - x;
@@ -74,6 +76,7 @@ public sealed class ChunkedTriangleCollection
         grid_y = (int)(y / ChunkReader.TILESIZE);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void GetGridLimits(int grid_x, int grid_y,
                                 out float min_x, out float min_y,
                                 out float max_x, out float max_y)
@@ -84,12 +87,14 @@ public sealed class ChunkedTriangleCollection
         min_y = max_y - ChunkReader.TILESIZE;
     }
 
-    private void LoadChunkAt(float x, float y)
+    private TriangleCollection LoadChunkAt(float x, float y)
     {
         GetGridStartAt(x, y, out int grid_x, out int grid_y);
 
-        if (chunks.ContainsKey(grid_x, grid_y))
-            return;
+        if (chunks.TryGetValue(grid_x, grid_y, out TriangleCollection r))
+        {
+            return r;
+        }
 
         GetGridLimits(grid_x, grid_y, out float min_x, out float min_y, out float max_x, out float max_y);
 
@@ -104,16 +109,14 @@ public sealed class ChunkedTriangleCollection
         {
             logger.LogTrace($"Grid [{grid_x},{grid_y}] Bounds: [{min_x:F4}, {min_y:F4}] [{max_x:F4}, {max_y:F4}] [{x}, {y}] - Count: {chunks.Count}");
         }
-
         NotifyChunkAdded?.Invoke(new ChunkEventArgs(grid_x, grid_y));
+
+        return tc;
     }
 
     public TriangleCollection GetChunkAt(float x, float y)
     {
-        LoadChunkAt(x, y);
-        GetGridStartAt(x, y, out int grid_x, out int grid_y);
-
-        return GetChunkAt(grid_x, grid_y);
+        return LoadChunkAt(x, y);
     }
 
     public TriangleCollection GetChunkAt(int grid_x, int grid_y)
