@@ -20,8 +20,9 @@ public sealed class Search
     public Vector4 locationFrom { get; set; }
     public Vector4 locationTo { get; set; }
 
-    private const float toonHeight = 2.0f;
-    private const float toonSize = 0.5f;
+    private const float toonHeight = PathGraph.toonHeight;
+    private const float toonSize = PathGraph.toonSize;
+
     private const float howClose = 5f;
 
     public Search(float mapId, ILogger logger, DataConfig dataConfig)

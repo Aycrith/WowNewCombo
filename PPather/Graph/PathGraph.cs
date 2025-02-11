@@ -58,14 +58,14 @@ public sealed class PathGraph
     public const float toonHeight = 2.0f;
     public const float toonSize = 0.5f;
 
-    public const float MinStepLength = 2f;
-    public const float WantedStepLength = 3f;
-    public const float MaxStepLength = 5f;
+    public const float MinStepLength = 4f * toonSize;
+    public const float WantedStepLength = 6f * toonSize;
+    public const float MaxStepLength = 10f * toonSize;
 
     public const float StepPercent = 0.75f;
     public const float STEP_D = 0.1f;
 
-    public const float IsCloseToModelRange = 2;
+    public const float IsCloseToModelRange = toonSize * 2f;
 
     /*
 		public const float IndoorsWantedStepLength = 1.5f;
@@ -742,34 +742,36 @@ public sealed class PathGraph
         //mark as mapped
         currentSearchSpot.SetFlag(Spot.FLAG_MPQ_MAPPED, true);
 
+        Vector3 loc = currentSearchSpot.Loc;
+
         //loop through the spots in a circle around the current search spot
         for (float radianAngle = 0; radianAngle < Tau; radianAngle += PI / 8) // 4
         {
             //calculate the location of the spot at the angle
-            float nx = currentSearchSpot.Loc.X + (Sin(radianAngle) * WantedStepLength);// *0.8f;
-            float ny = currentSearchSpot.Loc.Y + (Cos(radianAngle) * WantedStepLength);// *0.8f;
+            float nx = loc.X + (Sin(radianAngle) * WantedStepLength);
+            float ny = loc.Y + (Cos(radianAngle) * WantedStepLength);
 
-            PeekSpot = new Spot(nx, ny, currentSearchSpot.Loc.Z);
+            PeekSpot = new Spot(nx, ny, loc.Z);
             if (sleepMSBetweenSpots > 0)
                 Thread.Sleep(sleepMSBetweenSpots / 2);
 
             //find the spot at this location, stop if there is one already
-            if (GetSpot(nx, ny, currentSearchSpot.Loc.Z) != null)
+            if (GetSpot(nx, ny, loc.Z) != null)
             {
                 continue;
             } //found a spot so don't create a new one
 
             // TODO:
             //see if there is a close spot, stop if there is
-            if (FindClosestSpot(new(nx, ny, currentSearchSpot.Loc.Z), MinStepLength) != null)
+            if (FindClosestSpot(new(nx, ny, loc.Z), MinStepLength) != null)
             {
                 continue;
             } // TODO: this is slow
 
             // check we can stand at this new location
             if (!triangleWorld.FindStandableAt(nx, ny,
-                currentSearchSpot.Loc.Z - WantedStepLength * StepPercent,
-                currentSearchSpot.Loc.Z + WantedStepLength * StepPercent,
+                loc.Z - WantedStepLength * StepPercent,
+                loc.Z + WantedStepLength * StepPercent,
                 out float new_z, out TriangleType flags, toonHeight, toonSize))
             {
                 continue;
@@ -783,7 +785,7 @@ public sealed class PathGraph
             }
 
             //if the step is blocked then stop
-            if (triangleWorld.IsStepBlocked(currentSearchSpot.Loc.X, currentSearchSpot.Loc.Y, currentSearchSpot.Loc.Z, nx, ny, new_z, toonHeight, toonSize))
+            if (triangleWorld.IsStepBlocked(loc.X, loc.Y, loc.Z, nx, ny, new_z, toonHeight, toonSize))
             {
                 continue;
             }
