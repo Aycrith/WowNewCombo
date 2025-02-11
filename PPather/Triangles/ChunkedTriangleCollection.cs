@@ -1,4 +1,4 @@
-﻿/*
+/*
  *  Part of PPather
  *  Copyright Pontus Borg 2008
  *
@@ -467,7 +467,7 @@ public sealed class ChunkedTriangleCollection
     public bool FindStandableAt1(float x, float y, float min_z, float max_z,
                                out float z0, out TriangleType flags,
                                float toonHeight, float toonSize,
-                               bool IgnoreGradient, TriangleType allowedFlags)
+                               bool ignoreMaxSlopeAngle, TriangleType allowedFlags)
     {
         TriangleCollection tc = GetChunkAt(x, y);
         TriangleMatrix tm = tc.GetTriangleMatrix();
@@ -498,7 +498,7 @@ public sealed class ChunkedTriangleCollection
                 continue;
 
             GetTriangleNormal(v0, v1, v2, out Vector3 normal);
-            if (normal.Z <= MaxStandableAngleCos)
+            if (!ignoreMaxSlopeAngle && normal.Z <= MaxStandableAngleCos)
                 continue;
 
             if (!SegmentTriangleIntersect(s0, s1, v0, v1, v2,
