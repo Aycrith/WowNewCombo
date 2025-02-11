@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Part of PPather
  *  Copyright Pontus Borg 2008
  *
@@ -481,6 +481,9 @@ public sealed class ChunkedTriangleCollection
         float best_z = float.MinValue;
         TriangleType best_flags = TriangleType.None;
 
+        float total_z = 0;
+        int count = 0;
+
         Vector3 v0;
         Vector3 v1;
         Vector3 v2;
@@ -505,24 +508,23 @@ public sealed class ChunkedTriangleCollection
                 out Vector3 intersect))
                 continue;
 
-            float b = Abs(intersect.Z - best_z);
-            float h = Abs(intersect.Z - hint_z);
 
-            if (h < b && !IsSpotBlocked(
-                    intersect.X, intersect.Y, intersect.Z,
-                    toonHeight, toonSize))
+            if (!IsSpotBlocked(intersect.X, intersect.Y, intersect.Z, toonHeight, toonSize))
             {
-                if (best_z == float.MinValue)
-                {
-                    best_z = intersect.Z;
-                    best_flags = t_flags;
-                }
-                else if (b < Abs(best_z - hint_z))
+                total_z += intersect.Z;
+                count++;
+
+                if (best_z == float.MinValue || Abs(intersect.Z - hint_z) < Abs(best_z - hint_z))
                 {
                     best_z = intersect.Z;
                     best_flags = t_flags;
                 }
             }
+        }
+
+        if (count > 0)
+        {
+            best_z = total_z / count;
         }
 
         z0 = best_z;
