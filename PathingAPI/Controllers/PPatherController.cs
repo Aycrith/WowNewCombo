@@ -26,6 +26,8 @@ public sealed class PPatherController : ControllerBase
 
     private readonly JsonResult emptyVector3;
 
+    private const PathGraph.eSearchScoreSpot eSearch = PathGraph.eSearchScoreSpot.A_Star;
+
     public PPatherController(PPatherService service, JsonSerializerOptions options)
     {
         this.service = service;
@@ -63,7 +65,7 @@ public sealed class PPatherController : ControllerBase
     public JsonResult MapRoute(int uimap1, float x1, float y1, int uimap2, float x2, float y2)
     {
         service.SetLocations(service.ToWorld(uimap1, x1, y1), service.ToWorld(uimap2, x2, y2));
-        Path path = service.DoSearch(PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
+        Path path = service.DoSearch(eSearch);
         if (path == null)
         {
             return emptyVector3;
@@ -106,7 +108,7 @@ public sealed class PPatherController : ControllerBase
     public JsonResult WorldRoute(float x1, float y1, float z1, float x2, float y2, float z2, float mapid)
     {
         service.SetLocations(new(x1, y1, z1, mapid), new(x2, y2, z2, mapid));
-        var path = service.DoSearch(PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
+        var path = service.DoSearch(eSearch);
         if (path == null)
         {
             return emptyVector3;
@@ -140,7 +142,7 @@ public sealed class PPatherController : ControllerBase
     public JsonResult WorldRoute2(float x1, float y1, float z1, float x2, float y2, float z2, int uimap)
     {
         service.SetLocations(service.ToWorldZ(uimap, x1, y1, z1), service.ToWorldZ(uimap, x2, y2, z2));
-        Path path = service.DoSearch(PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
+        Path path = service.DoSearch(eSearch);
         if (path == null)
         {
             return emptyVector3;
@@ -173,7 +175,7 @@ public sealed class PPatherController : ControllerBase
     public JsonResult MapToWorldRoute(float x1, float y1, float z1, float x2, float y2, float z2, int uimap)
     {
         service.SetLocations(service.ToWorld(uimap, x1, y1, z1), service.ToWorld(uimap, x2, y2, z2));
-        Path path = service.DoSearch(PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
+        Path path = service.DoSearch(eSearch);
         if (path == null)
         {
             return emptyVector3;
