@@ -11,7 +11,6 @@ using PPather.Triangles.Data;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -22,15 +21,20 @@ namespace WowTriangles;
 
 public sealed class TriangleMatrix
 {
-    private const float resolution = 6.0f;
+    private const float resolution = 8.0f;
+    private const float halfResoltion = resolution / 2f;
+
+    private const int CellCapacity = 4096;
+    private const int ACount = 1024;
+
     private readonly SparseFloatMatrix2D<List<int>> matrix;
 
-    [SkipLocalsInit]
-    public TriangleMatrix(TriangleCollection tc, ILogger logger)
-    {
-        long pre = Stopwatch.GetTimestamp();
+    public int Count => matrix.Count;
 
-        matrix = new SparseFloatMatrix2D<List<int>>(resolution, 8096);
+    [SkipLocalsInit]
+    public TriangleMatrix(TriangleCollection tc)
+    {
+        matrix = new SparseFloatMatrix2D<List<int>>(resolution, CellCapacity);
 
         Vector3 v0;
         Vector3 v1;
@@ -50,8 +54,8 @@ public sealed class TriangleMatrix
 
             Vector3 box_center;
             Vector3 box_halfsize;
-            box_halfsize.X = resolution / 2;
-            box_halfsize.Y = resolution / 2;
+            box_halfsize.X = halfResoltion;
+            box_halfsize.Y = halfResoltion;
             box_halfsize.Z = 1E6f;
 
             int startx = matrix.LocalToGrid(minx);
@@ -65,8 +69,8 @@ public sealed class TriangleMatrix
                 {
                     float grid_x = matrix.GridToLocal(x);
                     float grid_y = matrix.GridToLocal(y);
-                    box_center.X = grid_x + (resolution / 2);
-                    box_center.Y = grid_y + (resolution / 2);
+                    box_center.X = grid_x + halfResoltion;
+                    box_center.Y = grid_y + halfResoltion;
                     box_center.Z = 0;
 
                     if (!TriangleBoxIntersect(v0, v1, v2, box_center, box_halfsize))
@@ -74,24 +78,17 @@ public sealed class TriangleMatrix
                         continue;
                     }
 
-                    if (!matrix.TryGetValue(grid_x, grid_y, out List<int> list))
+                    int key = matrix.GetKey(grid_x, grid_y);
+                    ref List<int> list = ref CollectionsMarshal.GetValueRefOrAddDefault(matrix.Dict, key, out bool exists);
+                    if (!exists)
                     {
-                        list = [];
-                        matrix.Add(grid_x, grid_y, list);
+                        list = new List<int>(ACount);
+                        matrix.Add(key, list);
                     }
                     list.Add(i);
                 }
             }
         }
-
-        if (logger.IsEnabled(LogLevel.Trace))
-            logger.LogTrace($"Mesh [||,||] Bounds: " +
-                $"[{tc.Min.X:F4}, {tc.Min.Y:F4}] " +
-                $"[{tc.Max.X:F4}, {tc.Max.Y:F4}] - " +
-                $"{tc.TriangleCount} tri - " +
-                $"{tc.VertexCount} ver - " +
-                $"{matrix.Count} c - " +
-                $"{(Stopwatch.GetElapsedTime(pre)).TotalMilliseconds}ms");
     }
 
     public void Clear()
@@ -105,13 +102,10 @@ public sealed class TriangleMatrix
     }
 
     [SkipLocalsInit]
-    public ReadOnlySpan<int> GetAllCloseTo(float x, float y, float distance)
+    public ReadOnlySpan<int> GetAllCloseTo(float x, float y, float range)
     {
-        (ReadOnlyMemory<List<int>> close,
-            int count,
-            int totalCount) =
-            matrix.GetAllInSquare(
-                x - distance, y - distance, x + distance, y + distance);
+        (ReadOnlyMemory<List<int>> close, int count, int totalCount) =
+            matrix.GetAllInSquare(x - range, y - range, x + range, y + range);
 
         return GetAsSpan(close, count, totalCount);
     }

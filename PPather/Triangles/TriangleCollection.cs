@@ -13,6 +13,7 @@ using SharedLib.Extensions;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -67,7 +68,28 @@ public sealed class TriangleCollection
 
     public TriangleMatrix GetTriangleMatrix()
     {
-        matrix ??= new TriangleMatrix(this, logger);
+        if (matrix != null)
+        {
+            return matrix;
+        }
+
+        long start = Stopwatch.GetTimestamp();
+
+        matrix = new TriangleMatrix(this);
+
+        if (logger.IsEnabled(LogLevel.Trace))
+        {
+            var end = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
+
+            logger.LogTrace($"Mesh [||,||] Bounds: " +
+                $"[{Min.X:F4}, {Min.Y:F4}] " +
+                $"[{Max.X:F4}, {Max.Y:F4}] - " +
+                $"{TriangleCount} tri - " +
+                $"{VertexCount} ver - " +
+                $"{matrix.Count} c - " +
+                $"{end}ms");
+        }
+
         return matrix;
     }
 

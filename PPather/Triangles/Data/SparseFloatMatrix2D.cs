@@ -77,4 +77,9 @@ public sealed class SparseFloatMatrix2D<T> : SparseMatrix2D<T> where T : IList
     {
         base.Add(LocalToGrid(x), LocalToGrid(y), val);
     }
+
+    public int GetKey(float x, float y)
+    {
+        return base.GetKey(LocalToGrid(x), LocalToGrid(y));
+    }
 }
