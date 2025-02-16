@@ -1,4 +1,4 @@
-@page "/CloseNPC"
+﻿@page "/CloseNPC"
 @using Core.Database
 
 @using static System.Text.Json.JsonSerializer
@@ -12,60 +12,26 @@
 @inject WorldMapAreaDB worldMapAreaDb
 @inject JsonSerializerOptions options
 
-<Watch PathColour="@pathColour" Name="@name" ClearPath=@clearPath />
+<Watch @ref="@watch" PathColour="@pathColour" Name="@name" ClearPath=@clearPath />
 
 <style>
-    .mat-autocomplete-list {
-        width: 40%;
+    #controlPanel {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    height: 30px;
+    z-index: 1000;
+    background-color: black;
+    color: white;
+    padding: 0 10px;
+    text-align: center;
+    display: flex;
     }
-
-    .mat-autocomplete-list-popup {
-    }
-
-        .mat-autocomplete-list-popup > .mdc-list {
-            position: absolute;
-            bottom: 60px;
-        }
-
-    .thumbnail {
-        position: relative;
-        z-index: 0;
-        text-decoration: none;
-    }
-
-        .thumbnail:hover {
-            background-color: transparent;
-            z-index: 50;
-        }
-
-        .thumbnail .thumbnail-img {
-            /*CSS for enlarged image*/
-            position: absolute;
-            padding: 5px;
-            visibility: hidden;
-            text-decoration: none;
-        }
-
-            .thumbnail .thumbnail-img img {
-                padding: 2px;
-            }
-
-        .thumbnail:hover .thumbnail-img {
-            /*CSS for enlarged image on hover*/
-            visibility: visible;
-            transform: scale(2);
-            transform-origin: top left;
-            position: fixed;
-            top: 5px;
-            left: 5px;
-            pointer-events: none;
-        }
-
 </style>
 
-<div style="position: fixed; bottom: 0; width: 100%; z-index: 1000; background-color: black; color: white; padding: 0 10px; text-align: center; display: flex; align-items: center;">
+<div id="controlPanel">
     <label>Zone:</label>
-    <select disabled="@IsDisabled" class="form-control" @bind="UIMapId">
+    <select disabled="@IsDisabled" @bind="UIMapId">
         @foreach (var wma in wmas)
         {
             <option value="@wma.UIMapId">@wma.AreaName - @wma.AreaID</option>
@@ -76,7 +42,7 @@
     <input disabled="@IsDisabled" checked="@IsReversed" type="checkbox" @onchange="e => IsReversed = !IsReversed" />
 
     <label>Type:</label>
-    <select disabled="@IsDisabled" class="form-control" @bind="NpcType">
+    <select disabled="@IsDisabled" @bind="NpcType">
         @foreach (var type in Enum.GetValues<NPCType>())
         {
             <option value="@type">@type.ToStringF()</option>
@@ -84,23 +50,22 @@
     </select>
 
     <label>Name:</label>
-    <select disabled="@IsDisabled" class="form-control" @bind="npcName">
-        @foreach (var name in Files)
+    <select disabled="@IsDisabled" @bind="npcName">
+        @foreach (var name in NpcNames)
         {
             <option value="@name">@name</option>
         }
     </select>
 
-    <button style="margin-left: 10px;" type="button" disabled="@IsDisabled" class="form-control btn btn-primary" @onclick="GenRandomPlayerPos">
+    <button type="button" disabled="@IsDisabled" class="btn btn-primary" @onclick="GenRandomStartPos">
         @if (IsDisabled)
         {
             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
         }
-        Random Player Pos
+        Random Start Pos
     </button>
 
-
-    <button style="margin-left: 10px;" type="button" disabled="@IsDisabled" class="form-control btn btn-primary" @onclick="StartDraw">
+    <button type="button" disabled="@IsDisabled" class="btn btn-primary" @onclick="StartDraw">
         @if (IsDisabled)
         {
             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
@@ -108,7 +73,7 @@
         Draw Path
     </button>
 
-    <button style="margin-left: 10px" type="button" disabled="@IsDisabled" class="form-control btn btn-primary" @onclick="DoSearch">
+    <button type="button" disabled="@IsDisabled" class="btn btn-primary" @onclick="DoSearch">
         @if (IsDisabled)
         {
             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
@@ -116,29 +81,25 @@
         Search
     </button>
 
-    <!-- Search Type Combo -->
-    <label style="margin-left: 10px">Search:</label>
-    <select disabled="@IsDisabled" class="form-control" @bind="SearchType">
+    <label>Search:</label>
+    <select disabled="@IsDisabled" @bind="SearchType">
         <option value="0">Original</option>
         <option value="1">A*</option>
         <option value="2">A* avoid models</option>
     </select>
-
 </div>
 
 @code {
-    private bool IsDisabled { get; set; } = true;
+    private Watch watch { get; set; }
 
+    private bool IsDisabled { get; set; } = true;
     private bool IsReversed { get; set; }
 
-    private int VisibleNum { get; set; } = 10;
     private string Selected { get; set; } = string.Empty;
 
-    private Vector3 playerPos { get; set; } = new Vector3(0, 0, 0);
+    private Vector3 startPos { get; set; }
 
-    private Vector3[] path { get; set; } = Array.Empty<Vector3>();
-
-    private NPCType npcType { get; set; } = NPCType.None;
+    private NPCType npcType { get; set; }
     private NPCType NpcType
     {
         get => npcType;
@@ -150,7 +111,6 @@
     }
 
     private string npcName { get; set; }
-    //private NPC? npc { get; set; } = null;
 
     private int areaId;
 
@@ -168,9 +128,9 @@
     }
 
     private IEnumerable<WorldMapArea> wmas { get; set; }
-    private IEnumerable<string> Files { get; set; }
+    private IEnumerable<string> NpcNames { get; set; }
 
-    System.Threading.Thread searchPathThread;
+    private System.Threading.Thread searchPathThread;
 
     private int SearchType { get; set; } =
         (int)SearchStrategy.A_Star_With_Model_Avoidance;
@@ -182,7 +142,7 @@
     protected override void OnInitialized()
     {
         wmas = worldMapAreaDb.Values.OrderBy(x => x.AreaName);
-        Files = NpcNames();
+        NpcNames = GetNpcNames();
 
         areaDB.Changed += OnChanged;
 
@@ -192,6 +152,7 @@
     public async ValueTask DisposeAsync()
     {
         pPatherService.OnSphereAdded -= OnDrawSphere;
+        areaDB.Changed -= OnChanged;
 
         await Task.CompletedTask;
 
@@ -200,14 +161,16 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (!firstRender)
         {
-            await jsRuntime.InvokeVoidAsync("createScene");
-            pPatherService.Reset();
-
-            IsDisabled = false;
-            await InvokeAsync(StateHasChanged);
+            return;
         }
+
+        await jsRuntime.InvokeVoidAsync("createScene");
+        pPatherService.Reset();
+
+        IsDisabled = false;
+        await InvokeAsync(StateHasChanged);
     }
 
     private async void OnDrawSphere(SphereEventArgs e)
@@ -220,10 +183,6 @@
     private async Task DoSearch()
     {
         IsDisabled = true;
-
-        PathGraph.ProgressTimeoutSeconds = 10;
-        PathGraph.TimeoutSeconds = 20;
-
         await InvokeAsync(StateHasChanged);
 
         searchPathThread = new Thread(SearchPathThread);
@@ -237,21 +196,19 @@
             worldMapAreaDb.TryGet(UIMapId, out var wma);
             float mapId = ContinentDB.NameToId[wma.Continent];
 
-            Vector3 s = playerPos;
-            Vector4 start = new Vector4(playerPos, mapId);
+            Vector4 start = new Vector4(startPos, mapId);
 
-            areaDB.NpcWorldLocations.TryGetValue(npcName, out var e);
-            Vector4 end = new Vector4(e, mapId);
+            areaDB.NpcWorldLocations.TryGetValue(npcName, out var worldPos);
+            Vector4 end = new Vector4(worldPos, mapId);
 
-            pathColour = (int)Watch.Color.Red;
-            name = "test";
+            pathColour = ((int)SearchType) + 1;
+            name = SearchType.ToString();
             clearPath = true;
             await InvokeAsync(StateHasChanged);
 
-            if (IsReversed)
-                pPatherService.SetLocations(end, start);
-            else
-                pPatherService.SetLocations(start, end);
+            pPatherService.SetLocations(
+                IsReversed ? end : start,
+                IsReversed ? start : end);
 
             var patherPath = pPatherService.DoSearch((SearchStrategy)SearchType);
 
@@ -267,26 +224,30 @@
 
     private void OnChanged()
     {
-        Files = NpcNames();
-        npcName = Files.FirstOrDefault();
+        NpcNames = GetNpcNames();
+        npcName = NpcNames.FirstOrDefault();
+
         base.InvokeAsync(StateHasChanged);
     }
 
-    private void GenRandomPlayerPos()
+    private void GenRandomStartPos()
     {
         worldMapAreaDb.TryGet(UIMapId, out var wma);
         float mapId = ContinentDB.NameToId[wma.Continent];
 
-        float mapX = Random.Shared.NextSingle() * 80f + 10f;
-        float mapY = Random.Shared.NextSingle() * 80f + 10f;
+        float mapX = Random.Shared.NextSingle() * 70f + 20f;
+        float mapY = Random.Shared.NextSingle() * 70f + 20f;
         Vector3 map = new(mapX, mapY, 0);
 
-        playerPos = WorldMapAreaDB.ToWorld_FlipXY(map, wma);
+        Vector4 location = pPatherService.ToWorld(UIMapId, mapX, mapY);
+        startPos = location.AsVector3();
 
-        pPatherService.DrawPath(mapId, [playerPos, playerPos]);
+        watch.Log($"StartPos: {map} -- {startPos}");
 
-        //var e = new SphereEventArgs("player", new Vector4(mapX, mapY, 0, mapId), 2);
-        //pPatherService.OnSphereAdded?.Invoke(e);
+        pPatherService.DrawPath(mapId, [startPos, startPos]);
+
+        SphereEventArgs sphere = new("startSphere", location, 3);
+        pPatherService.OnSphereAdded?.Invoke(sphere);
     }
 
     private void StartDraw()
@@ -294,37 +255,22 @@
         worldMapAreaDb.TryGet(UIMapId, out var wma);
         float mapId = ContinentDB.NameToId[wma.Continent];
 
-        areaDB.NpcWorldLocations.TryGetValue(npcName, out var e);
-        Vector4 end = new Vector4(e, mapId);
-
-        path = IsReversed ? [end.AsVector3(), playerPos] : [playerPos, end.AsVector3()];
+        areaDB.NpcWorldLocations.TryGetValue(npcName, out Vector3 end);
 
         pathColour = (int)Watch.Color.Orange;
         name = "route";
         clearPath = false;
-        StateHasChanged();
+
+        Vector3[] path = IsReversed
+            ? [end, startPos]
+            : [startPos, end];
 
         pPatherService.DrawPath(mapId, path);
 
-        //var evnt = new SphereEventArgs("npc", new Vector4(end.X, end.Y, end.Z, mapId), 3);
-        //pPatherService.OnSphereAdded?.Invoke(evnt);
+        StateHasChanged();
     }
 
-    public Vector3[] GetPath(string path)
-    {
-        return Newtonsoft.Json.JsonConvert
-            .DeserializeObject<Vector3[]>(
-            System.IO.File.ReadAllText(RelativeFilePath(dataConfig, path)))!;
-    }
-
-    private string RelativeFilePath(DataConfig dataConfig, string path)
-    {
-        return !path.Contains(dataConfig.Path)
-            ? Join(dataConfig.Path, path)
-            : path;
-    }
-
-    public IEnumerable<string> NpcNames()
+    public IEnumerable<string> GetNpcNames()
     {
         if (areaId == 0)
         {
@@ -333,5 +279,4 @@
 
         return areaDB.GetNPCsByType(NpcType).ToArray().Select(x => x.name);
     }
-
 }

@@ -1,4 +1,4 @@
-@page "/Search"
+﻿@page "/Search"
 
 @inject IJSRuntime jsRuntime
 @inject PPatherService pPatherService
@@ -69,9 +69,6 @@
         this.searchType = searchType;
         this.pathColour = colour;
         this.name = name;
-
-        PathGraph.ProgressTimeoutSeconds = 60;
-        PathGraph.TimeoutSeconds = 600;
 
         await InvokeAsync(StateHasChanged);
 

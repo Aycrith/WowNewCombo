@@ -1,4 +1,4 @@
-@page "/Watch"
+﻿@page "/Watch"
 
 @using static System.Text.Json.JsonSerializer
 @using Microsoft.AspNetCore.SignalR;
@@ -67,7 +67,8 @@
         White,
         Orange,
         Yellow,
-        Black
+        Black,
+        Pink
     }
 
     private const int RefreshTimeMs = 50;
@@ -100,6 +101,7 @@
     private Vector3 lastPeek;
 
     private int testPointsCount = 0;
+    private int blockedPointsCount = 0;
 
     private bool[] ToggleLayers = [true, true, true, true];
 
@@ -174,6 +176,7 @@
     private async ValueTask Reset()
     {
         testPointsCount = 0;
+        blockedPointsCount = 0;
 
         searchCts?.Cancel();
 
@@ -188,7 +191,7 @@
         Log(logEvent.RenderMessage());
     }
 
-    private async void Log(string message)
+    public async void Log(string message)
     {
         await SendLog(message, Token);
     }
@@ -221,14 +224,28 @@
                 await SendDrawLine(lastClosest, Color.Black, "closest", token);
             }
 
-            /*
             // This can be causes issues for really big path
-            if (DrawTestPoints && testPointsCount != pPatherService.TestPoints.Count)
+            if (PathGraph.DelayMs > 0 && DrawTestPoints)
             {
-                testPointsCount = pPatherService.TestPoints.Count;
-                await SendDrawLines(pPatherService.TestPoints.ToHashSet(), Color.Yellow, "debug", token);
+                if (testPointsCount != pPatherService.TestPoints.Count)
+                {
+                    testPointsCount = pPatherService.TestPoints.Count;
+                    await SendDrawLines(pPatherService.TestPoints.ToHashSet(), Color.Green, "debug", token);
+                }
+
+                if (blockedPointsCount != pPatherService.BlockedPoints.Count)
+                {
+                    blockedPointsCount = pPatherService.BlockedPoints.Count;
+                    await SendDrawLines(pPatherService.BlockedPoints.ToHashSet(), Color.Red, "debug2", token);
+                }
             }
-            */
+
+#pragma warning disable CS0162
+            if (PathGraph.DelayMs > 0)
+            {
+                await DrawGeometry();
+            }
+#pragma warning restore CS0162
 
             if (lastPeek != pPatherService.PeekLocation)
             {
@@ -271,10 +288,10 @@
 
         await DrawGeometry();
 
-        if (DrawTestPoints && testPointsCount != pPatherService.TestPoints.Count)
+        if (DrawTestPoints)
         {
-            testPointsCount = pPatherService.TestPoints.Count;
-            await SendDrawLines(pPatherService.TestPoints, Color.Yellow, "debug", Token);
+            await SendDrawLines(pPatherService.TestPoints, Color.Green, "debug", Token);
+            await SendDrawLines(pPatherService.BlockedPoints, Color.Red, "debug2", Token);
         }
 
         await SendDrawLine(lastFrom.AsVector3(), Color.Green, "start", Token);
