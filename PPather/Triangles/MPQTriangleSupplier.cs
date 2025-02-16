@@ -306,16 +306,20 @@ public sealed class MPQTriangleSupplier
 
             for (int i = 0; i < g.nTriangles; i++)
             {
-                //if ((g.materials[i] & 0x1000) != 0)
-                {
-                    int off = i * 3;
-                    int i0 = vertices[g.triangles[off]];
-                    int i1 = vertices[g.triangles[off + 1]];
-                    int i2 = vertices[g.triangles[off + 2]];
+                Mopy flag = (Mopy)g.materials[i];
 
-                    tc.AddTriangle(i0, i1, i2, TriangleType.Object);
-                    //if(t != -1) s.SetTriangleExtra(t, g.materials[0], 0, 0);
-                }
+                bool isRenderFace = (flag & Mopy.WMO_MATERIAL_RENDER) != 0 && (flag & Mopy.WMO_MATERIAL_DETAIL) == 0;
+                bool isCollision = (flag & Mopy.WMO_MATERIAL_COLLISION) != 0 || isRenderFace;
+
+                if (!isCollision)
+                    continue;
+
+                int off = i * 3;
+                int i0 = vertices[g.triangles[off]];
+                int i1 = vertices[g.triangles[off + 1]];
+                int i2 = vertices[g.triangles[off + 2]];
+
+                tc.AddTriangle(i0, i1, i2, TriangleType.Object);
             }
         }
 

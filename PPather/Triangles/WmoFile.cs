@@ -453,6 +453,19 @@ public static class ModelFile
     }
 }
 
+[Flags]
+public enum Mopy : ushort
+{
+    WMO_MATERIAL_UNK01 = 0x01,
+    WMO_MATERIAL_NOCAMCOLLIDE = 0x02,
+    WMO_MATERIAL_DETAIL = 0x04,
+    WMO_MATERIAL_COLLISION = 0x08,
+    WMO_MATERIAL_HINT = 0x10,
+    WMO_MATERIAL_RENDER = 0x20,
+    WMO_MATERIAL_WALL_SURFACE = 0x40, // Guessed
+    WMO_MATERIAL_COLLIDE_HIT = 0x80
+}
+
 public sealed class WMOGroup
 {
     public uint nameStart, nameStart2;
@@ -473,13 +486,6 @@ public sealed class WMOGroup
     public uint nTriangles;
     public UInt16[] triangles; // 3 per triangle
     public UInt16[] materials;  // 1 per triangle
-
-    public const UInt16 MAT_FLAG_NOCAMCOLLIDE = 0x001;
-    public const UInt16 MAT_FLAG_DETAIL = 0x002;
-    public const UInt16 MAT_FLAG_COLLISION = 0x004;
-    public const UInt16 MAT_FLAG_HINT = 0x008;
-    public const UInt16 MAT_FLAG_RENDER = 0x010;
-    public const UInt16 MAT_FLAG_COLLIDE_HIT = 0x020;
 }
 
 internal sealed class WDT
@@ -1305,21 +1311,10 @@ internal static class WmoGroupFile
         mpq.Dispose();
     }
 
+    // MopyFlags
     private static void HandleMOPY(BinaryReader file, WMOGroup g, uint size)
     {
         g.nTriangles = size / 2;
-        // materials
-        /*
-        *  0x01 - inside small houses and paths leading indoors
-		*  0x02 - ???
-		*  0x04 - set on indoor things and ruins
-		*  0x08 - ???
-		*  0x10 - ???
-		*  0x20 - Always set?
-		*  0x40 - sometimes set-
-		*  0x80 - ??? never set
-		*/
-
         g.materials = new ushort[g.nTriangles];
         file.Read(MemoryMarshal.Cast<ushort, byte>(g.materials.AsSpan()));
     }
