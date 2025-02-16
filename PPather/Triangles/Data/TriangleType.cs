@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 
 namespace PPather;
 
@@ -14,6 +15,7 @@ public enum TriangleType : byte
 
 public static class TriangleType_Ext
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Has(this TriangleType flags, TriangleType flag)
     {
         return (flags & flag) != 0;

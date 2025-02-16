@@ -792,11 +792,11 @@ public sealed class PathGraph
                 Thread.Sleep(sleepMSBetweenSpots / 2);
 
             //check flags return by triangleWorld.FindStandableA
-            if ((flags & TriangleType.Water) != 0)
+            if (flags.Has(TriangleType.Water))
             {
                 newSpot.SetFlag(Spot.FLAG_WATER, true);
             }
-            if (((flags & TriangleType.Model) != 0) || ((flags & TriangleType.Object) != 0))
+            if (flags.Has(TriangleType.Model | TriangleType.Object))
             {
                 newSpot.SetFlag(Spot.FLAG_INDOORS, true);
             }
@@ -846,14 +846,8 @@ public sealed class PathGraph
 
     public bool IsUnderwaterOrInAir(Vector3 l)
     {
-        if (triangleWorld.FindStandableAt(l.X, l.Y, l.Z - 50.0f, l.Z + 5.0f, out _, out TriangleType flags, toonHeight, toonSize))
-        {
-            if ((flags & TriangleType.Water) != 0)
-                return true;
-            else
-                return false;
-        }
-        return false;
+        return triangleWorld.FindStandableAt(l.X, l.Y, l.Z - 50.0f, l.Z + 5.0f, out _, out TriangleType flags, toonHeight, toonSize)
+            && flags.Has(TriangleType.Water);
     }
 
     /*

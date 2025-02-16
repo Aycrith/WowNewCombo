@@ -344,12 +344,10 @@ public sealed class ChunkedTriangleCollection
 
             GetTriangleNormal(v0, v1, v2, out _);
 
-            if (SegmentTriangleIntersect(s0, s1, v0, v1, v2, out _))
+            if (SegmentTriangleIntersect(s0, s1, v0, v1, v2, out _) &&
+                t_flags.Has(TriangleType.Water))
             {
-                if ((t_flags & TriangleType.Water) != 0)
-                {
-                    return true;
-                }
+                return true;
             }
         }
         return false;
@@ -407,6 +405,9 @@ public sealed class ChunkedTriangleCollection
         Vector3 v1;
         Vector3 v2;
 
+        const float minHeight = PathGraph.stepDistance;
+        const float height = PathGraph.toonHeight;
+
         ReadOnlySpan<int> array = tm.GetAllCloseTo(x, y, range);
         for (int i = 0; i < array.Length; i++)
         {
@@ -419,11 +420,8 @@ public sealed class ChunkedTriangleCollection
                     out TriangleType flags);
 
             //check triangle is part of a model
-            if ((flags & TriangleType.Object) != 0 || (flags & TriangleType.Model) != 0)
+            if (flags.Has(TriangleType.Object | TriangleType.Model))
             {
-                const float minHeight = 0.75f;
-                const float height = 2;
-
                 //and the vertex is close to the char
                 if ((v0.Z > z + minHeight && v0.Z < z + height) ||
                     (v1.Z > z + minHeight && v1.Z < z + height) ||
