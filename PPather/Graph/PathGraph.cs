@@ -243,7 +243,7 @@ public sealed class PathGraph
         for (int i = 0; i < close.Length; i++)
         {
             Spot cs = close[i];
-            if (cs.HasPathTo(this, s) && s.HasPathTo(this, cs) || cs.IsBlocked())
+            if (cs.IsBlocked() || s.IsBlocked() || (cs.HasPathTo(this, s) && s.HasPathTo(this, cs)))
             {
             }
             else if (!triangleWorld.IsStepBlocked(s.Loc.X, s.Loc.Y, s.Loc.Z, cs.Loc.X, cs.Loc.Y, cs.Loc.Z, toonHeight, toonSize))
