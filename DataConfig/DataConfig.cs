@@ -79,4 +79,18 @@ public sealed class DataConfig
 
         return this;
     }
+
+    public void DeletePPatherCache()
+    {
+        if (!Directory.Exists(PathInfo))
+        {
+            return;
+        }
+
+        var directories = Directory.GetDirectories(PathInfo);
+        foreach (string directory in directories)
+        {
+            Directory.Delete(directory, true);
+        }
+    }
 }

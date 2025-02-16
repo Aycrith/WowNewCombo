@@ -1,4 +1,4 @@
-﻿@page "/Watch"
+@page "/Watch"
 
 @using static System.Text.Json.JsonSerializer
 @using Microsoft.AspNetCore.SignalR;
@@ -8,6 +8,7 @@
 @inject PPatherService pPatherService
 @inject PathingAPILoggerSink loggerSink
 @inject JsonSerializerOptions options
+@inject DataConfig dataConfig
 
 @inject IHubContext<WatchHub> hubContext;
 
@@ -21,6 +22,9 @@
         ...
     </div>
     <div style="display:inline-block; float: right">
+        <button @onclick="ClearCache">
+            <span style="color: red;">Cache Clear</span>
+        </button>
         <button @onclick="() => ToggleSceneExplorer()">
             <span style="@(SceneExplorerEnabled ? "color: green;" : "")">Explorer</span>
         </button>
@@ -136,6 +140,12 @@
         await Reset();
 
         base.Dispose();
+    }
+
+    private void ClearCache()
+    {
+        dataConfig.DeletePPatherCache();
+        Log($"{TimeOnly.FromDateTime(DateTime.Now)} Cache Cleared {dataConfig.PathInfo}");
     }
 
     private async void ToggleLayer(TriangleType layer)
