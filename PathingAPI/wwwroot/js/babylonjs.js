@@ -74,6 +74,7 @@
             case 6: return new BABYLON.Color3(1, 0.6, 0);
             case 7: return BABYLON.Color3.Yellow();
             case 8: return BABYLON.Color3.Black();
+            case 9: return BABYLON.Color3.Pink();
             default: return BABYLON.Color3.White();
         }
     }
@@ -148,7 +149,7 @@
             vectors.push(new BABYLON.Vector3(v.x / div, v.z / div, v.y / div));
         }
 
-        const pcs = new BABYLON.PointsCloudSystem(name, div / 2, scene);
+        const pcs = new BABYLON.PointsCloudSystem(name, div, scene);
 
         const c = getColour(color);
 
@@ -343,7 +344,7 @@
         // the canvas/window resize event handler
         window.addEventListener('resize', function () { engine.resize(); });
 
-        camera = new BABYLON.FreeCamera('camera1', new BABYLON.Vector3(0, 50, -0), scene);
+        camera = new BABYLON.FreeCamera('camera1', new BABYLON.Vector3(0, 50, 0), scene);
         camera.keysUp.push(87);         // "w"
         camera.keysDown.push(83);       // "s"
         camera.keysLeft.push(65);       // "a"
@@ -352,6 +353,7 @@
         camera.keysUpward.push(69);     // "e"
         camera.attachControl(canvas, false); // attach the camera to the canvas
 
+        const cameraSlowSpeed = 0.01;
         const cameraMinSpeed = 0.1;
         const cameraMaxSpeed = 1;
         camera.speed = cameraMinSpeed;
@@ -382,10 +384,17 @@
             }
         });
 
-        var energy = 0, shiftPressed = false;
+        var energy = 0;
+        var shiftPressed = false;
+        var altPressed = false;
+
         scene.onBeforeRenderObservable.add(function () {
             if (shiftPressed) {
                 camera.speed = cameraMaxSpeed;
+                energy = 25;
+            }
+            else if (altPressed) {
+                camera.speed = cameraSlowSpeed;
                 energy = 25;
             } else {
                 if (energy > 0) {
@@ -402,6 +411,11 @@
                     switch (kbInfo.event.key) {
                         case "Shift":
                             shiftPressed = true;
+                            kbInfo.event.preventDefault();
+                            break;
+                        case "Alt":
+                            altPressed = true;
+                            kbInfo.event.preventDefault();
                             break;
                     }
                     break;
@@ -410,6 +424,11 @@
                     switch (kbInfo.event.key) {
                         case "Shift":
                             shiftPressed = false;
+                            kbInfo.event.preventDefault();
+                            break;
+                        case "Alt":
+                            altPressed = false;
+                            kbInfo.event.preventDefault();
                             break;
                         case "o":
                             log("Camera Position: " + camera.position);
@@ -417,11 +436,6 @@
                     }
             }
         });
-
-        // Optimizer
-        const options = BABYLON.SceneOptimizerOptions.HighDegradationAllowed(30);
-        const optimizer = new BABYLON.SceneOptimizer(scene, options);
-        optimizer.start();
 
         log("createScene: completed");
     };
