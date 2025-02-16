@@ -49,7 +49,7 @@ public sealed class PathGraph
     public const int gradiantMax = 10;
 
     public const float toonHeight = 2.0f;
-    public const float toonSize = 0.35f;
+    public const float toonSize = 0.3f;
 
     public const float toonHeightHalf = toonHeight / 2f;
 
@@ -62,7 +62,7 @@ public sealed class PathGraph
     public const float StepPercent = 0.75f;
     public const float STEP_D = 0.1f;
 
-    public const float IsCloseToModelRange = toonSize * 3f;
+    public const float IsCloseToModelRange = toonSize * 2f;
 
     /*
 	public const float IndoorsWantedStepLength = 1.5f;
