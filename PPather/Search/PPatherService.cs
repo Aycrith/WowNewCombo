@@ -32,8 +32,8 @@ public sealed class PPatherService
 
     public bool Initialised => search != null;
 
-    public Vector4 SearchFrom => search.locationFrom;
-    public Vector4 SearchTo => search.locationTo;
+    public Vector4 SearchFrom => search.From;
+    public Vector4 SearchTo => search.Target;
     public Vector3 ClosestLocation => search?.PathGraph?.ClosestSpot?.Loc ?? Vector3.Zero;
     public Vector3 PeekLocation => search?.PathGraph?.PeekSpot?.Loc ?? Vector3.Zero;
 
@@ -160,8 +160,8 @@ public sealed class PPatherService
     {
         Initialise(from.W);
 
-        search.locationFrom = from;
-        search.locationTo = to;
+        search.From = from;
+        search.Target = to;
     }
 
     public List<Vector3> GetCurrentSearchPath()
