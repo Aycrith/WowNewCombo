@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 
 using PPather.Data;
 using PPather.Graph;
@@ -38,6 +38,8 @@ public sealed class PPatherService
     public Vector3 PeekLocation => search?.PathGraph?.PeekSpot?.Loc ?? Vector3.Zero;
 
     public HashSet<Vector3> TestPoints => search?.PathGraph?.TestPoints ?? [];
+
+    public HashSet<Vector3> BlockedPoints => search?.PathGraph?.BlockedPoints ?? [];
 
     public PPatherService(ILogger<PPatherService> logger, DataConfig dataConfig, WorldMapAreaDB worldMapAreaDB)
     {
@@ -211,7 +213,7 @@ public sealed class PPatherService
         {
             Spot spot = new(path[i]);
             spots.Add(spot);
-            search.PathGraph.CreateSpotsAroundSpot(spot, false);
+            search.PathGraph.CreateSpotsAroundSpot(spot, false, spot);
         }
 
         OnPathCreated?.Invoke(new(spots));
