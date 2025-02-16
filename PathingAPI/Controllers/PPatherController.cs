@@ -26,7 +26,7 @@ public sealed class PPatherController : ControllerBase
 
     private readonly JsonResult emptyVector3;
 
-    private const PathGraph.eSearchScoreSpot eSearch = PathGraph.eSearchScoreSpot.A_Star;
+    private const SearchStrategy eSearch = SearchStrategy.A_Star;
 
     public PPatherController(PPatherService service, JsonSerializerOptions options)
     {

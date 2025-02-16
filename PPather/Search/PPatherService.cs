@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 
 using PPather.Data;
 using PPather.Graph;
@@ -138,7 +138,7 @@ public sealed class PPatherService
         return new Vector3(wma.ToMapY(world.Y), wma.ToMapX(world.X), world.Z);
     }
 
-    public Path DoSearch(PathGraph.eSearchScoreSpot searchType)
+    public Path DoSearch(SearchStrategy searchType)
     {
         SearchBegin?.Invoke();
         var path = search.DoSearch(searchType);

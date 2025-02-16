@@ -1,4 +1,4 @@
-﻿@using System.Runtime.InteropServices
+@using System.Runtime.InteropServices
 
 @inject IJSRuntime jsRuntime
 
@@ -41,6 +41,14 @@
         <option value="2">A* avoid models</option>
     </select>
 
+    <button style="margin-left: 10px" type="button" disabled="@IsDisabled" class="form-control btn btn-primary" @onclick="Draw">
+        @if (IsDisabled)
+        {
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        }
+        Draw
+    </button>
+
     <!-- Search Button -->
     <button style="margin-left: 10px" type="button" disabled="@IsDisabled" class="form-control btn btn-primary" @onclick="StartSearch">
         @if (IsDisabled)
@@ -55,6 +63,9 @@
 
     [Parameter]
     public EventCallback<SearchParam> OnSearch { get; set; }
+
+    [Parameter]
+    public EventCallback<SearchParam> OnDraw { get; set; }
 
     [Parameter]
     public bool IsDisabled { get; set; }
@@ -83,12 +94,34 @@
         {
             From = knownLocations.Where(l => l.Description == this.From).FirstOrDefault(),
             To = knownLocations.Where(l => l.Description == this.To).FirstOrDefault(),
-            SearchType = (PathGraph.eSearchScoreSpot)this.SearchType,
+            SearchType = (SearchStrategy)this.SearchType,
             Continent = ContinentDB.IdToName[this.MapId]
         };
 
         await OnSearch.InvokeAsync(searchParameters);
+    }
 
+    private async Task Draw()
+    {
+        string error = string.Empty;
+        if (string.IsNullOrEmpty(From)) { error += "From is required. "; }
+        if (string.IsNullOrEmpty(To)) { error += "To is required. "; }
+
+        if (!string.IsNullOrEmpty(error))
+        {
+            await jsRuntime.InvokeAsync<object>("showAlert", error);
+            return;
+        }
+
+        SearchParam searchParameters = new()
+        {
+            From = knownLocations.Where(l => l.Description == this.From).FirstOrDefault(),
+            To = knownLocations.Where(l => l.Description == this.To).FirstOrDefault(),
+            SearchType = (SearchStrategy)this.SearchType,
+            Continent = ContinentDB.IdToName[this.MapId]
+        };
+
+        await OnDraw.InvokeAsync(searchParameters);
     }
 
     protected override void OnInitialized()

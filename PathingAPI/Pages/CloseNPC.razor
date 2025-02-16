@@ -1,4 +1,4 @@
-﻿@page "/CloseNPC"
+@page "/CloseNPC"
 @using Core.Database
 
 @using static System.Text.Json.JsonSerializer
@@ -173,7 +173,7 @@
     System.Threading.Thread searchPathThread;
 
     private int SearchType { get; set; } =
-        (int)PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance;
+        (int)SearchStrategy.A_Star_With_Model_Avoidance;
 
     private int pathColour { get; set; } = (int)Watch.Color.Orange;
     private string name { get; set; } = "test";
@@ -253,7 +253,7 @@
             else
                 pPatherService.SetLocations(start, end);
 
-            var patherPath = pPatherService.DoSearch((PathGraph.eSearchScoreSpot)SearchType);
+            var patherPath = pPatherService.DoSearch((SearchStrategy)SearchType);
 
             IsDisabled = false;
         }

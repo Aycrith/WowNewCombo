@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 
 using PPather.Graph;
 
@@ -103,7 +103,7 @@ public sealed class Search
         PathGraph = new(mapId, triangleWorld, logger, dataConfig);
     }
 
-    public Path DoSearch(PathGraph.eSearchScoreSpot searchScoreSpot)
+    public Path DoSearch(SearchStrategy searchScoreSpot)
     {
         try
         {

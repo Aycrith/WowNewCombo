@@ -41,12 +41,7 @@ namespace PPather.Graph;
 
 public sealed class PathGraph
 {
-    public enum eSearchScoreSpot
-    {
-        OriginalPather,
-        A_Star,
-        A_Star_With_Model_Avoidance,
-    }
+    public const int DelayMs = 0;
 
     public static int TimeoutSeconds = 20;
     public static int ProgressTimeoutSeconds = 10;
@@ -547,7 +542,7 @@ public sealed class PathGraph
     public Spot PeekSpot;
     public HashSet<Vector3> TestPoints = [];
 
-    private Spot Search(Spot fromSpot, Spot destinationSpot, eSearchScoreSpot searchScoreSpot, float minHowClose)
+    private Spot Search(Spot fromSpot, Spot destinationSpot, SearchStrategy searchScoreSpot, float minHowClose)
     {
         long searchDuration = GetTimestamp();
         long timeSinceProgress = searchDuration;
@@ -643,19 +638,19 @@ public sealed class PathGraph
         return null;
     }
 
-    private void ScoreSpot(Spot spotLinkedToCurrent, Spot destinationSpot, eSearchScoreSpot searchScoreSpot, int currentSearchID, PriorityQueue<Spot, float> prioritySpotQueue)
+    private void ScoreSpot(Spot spotLinkedToCurrent, Spot destinationSpot, SearchStrategy searchScoreSpot, int currentSearchID, PriorityQueue<Spot, float> prioritySpotQueue)
     {
         switch (searchScoreSpot)
         {
-            case eSearchScoreSpot.A_Star:
+            case SearchStrategy.A_Star:
                 ScoreSpot_A_Star(spotLinkedToCurrent, destinationSpot, currentSearchID, prioritySpotQueue);
                 break;
 
-            case eSearchScoreSpot.A_Star_With_Model_Avoidance:
+            case SearchStrategy.A_Star_With_Model_Avoidance:
                 ScoreSpot_A_Star_With_Model_And_Gradient_Avoidance(spotLinkedToCurrent, destinationSpot, currentSearchID, prioritySpotQueue);
                 break;
 
-            case eSearchScoreSpot.OriginalPather:
+            case SearchStrategy.Original:
             default:
                 ScoreSpot_Pather(spotLinkedToCurrent, destinationSpot, currentSearchID, prioritySpotQueue);
                 break;
@@ -882,7 +877,7 @@ public sealed class PathGraph
         return false;
     }
 
-    private Path CreatePath(Spot from, Spot to, eSearchScoreSpot searchScoreSpot, float minHowClose)
+    private Path CreatePath(Spot from, Spot to, SearchStrategy searchScoreSpot, float minHowClose)
     {
         Spot newTo = Search(from, to, searchScoreSpot, minHowClose);
         if (newTo == null)
@@ -937,7 +932,7 @@ public sealed class PathGraph
         return new(location.X, location.Y, newZ);
     }
 
-    public Path CreatePath(Vector3 fromLoc, Vector3 toLoc, eSearchScoreSpot searchScoreSpot, float howClose)
+    public Path CreatePath(Vector3 fromLoc, Vector3 toLoc, SearchStrategy searchScoreSpot, float howClose)
     {
         if (logger.IsEnabled(LogLevel.Trace))
             logger.LogTrace($"CreatePath from {fromLoc} to {toLoc}");
