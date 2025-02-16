@@ -105,14 +105,11 @@
     connection.on("removeMesh", removeMesh);
     connection.on("clear", clear);
 
-    connection.on("drawLine", (array, color, name) => {
-
-        var height = 0.5;
-        if (name.includes("debug")) {
-            height = getHeight(color);
-        }
+    connection.on("drawLine", (array, height, color, name) => {
 
         removeMesh(name);
+
+        height /= 10;
 
         const v = new BABYLON.Vector3.FromArray(array);
 

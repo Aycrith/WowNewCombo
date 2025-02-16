@@ -209,19 +209,19 @@
             if (lastFrom != pPatherService.SearchFrom)
             {
                 lastFrom = pPatherService.SearchFrom;
-                await SendDrawLine(lastFrom.AsVector3(), Color.Green, "start", token);
+                await SendDrawLine(lastFrom.AsVector3(), PathGraph.toonHeight, Color.Green, "start", token);
             }
 
             if (lastTo != pPatherService.SearchTo)
             {
                 lastTo = pPatherService.SearchTo;
-                await SendDrawLine(lastTo.AsVector3(), Color.Blue, "end", token);
+                await SendDrawLine(lastTo.AsVector3(), PathGraph.toonHeight, Color.Blue, "end", token);
             }
 
             if (lastClosest != pPatherService.ClosestLocation)
             {
                 lastClosest = pPatherService.ClosestLocation;
-                await SendDrawLine(lastClosest, Color.Black, "closest", token);
+                await SendDrawLine(lastClosest, PathGraph.toonHeight, Color.Black, "closest", token);
             }
 
             // This can be causes issues for really big path
@@ -250,7 +250,7 @@
             if (lastPeek != pPatherService.PeekLocation)
             {
                 lastPeek = pPatherService.PeekLocation;
-                await SendDrawLine(lastPeek, Color.Orange, "peek", token);
+                await SendDrawLine(lastPeek, PathGraph.toonHeight, Color.Orange, "peek", token);
             }
 
             token.WaitHandle.WaitOne(RefreshTimeMs);
@@ -294,9 +294,9 @@
             await SendDrawLines(pPatherService.BlockedPoints, Color.Red, "debug2", Token);
         }
 
-        await SendDrawLine(lastFrom.AsVector3(), Color.Green, "start", Token);
+        await SendDrawLine(lastFrom.AsVector3(), PathGraph.toonHeight, Color.Green, "start", Token);
 
-        await SendDrawLine(lastTo.AsVector3(), Color.Blue, "end", Token);
+        await SendDrawLine(lastTo.AsVector3(), PathGraph.toonHeight, Color.Blue, "end", Token);
 
         if (spotPath == null || spotPath.locations.Count == 0)
         {
@@ -411,9 +411,9 @@
         await hubContext.Clients.All.SendAsync("drawPath", points, (int)color, name, token);
     }
 
-    private async Task SendDrawLine(Vector3 point, Color color, string name, CancellationToken token)
+    private async Task SendDrawLine(Vector3 point, float height, Color color, string name, CancellationToken token)
     {
-        await hubContext.Clients.All.SendAsync("drawLine", point, (int)color, name, token);
+        await hubContext.Clients.All.SendAsync("drawLine", point, height, (int)color, name, token);
     }
 
     private async Task SendDrawLines(IEnumerable<Vector3> points, Color color, string name, CancellationToken token)
