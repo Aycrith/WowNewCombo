@@ -114,6 +114,8 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
             }];
         }
 
+        pathSettings.Finished = () => !navigation.HasWaypoint();
+
         this.navigation = navigation;
         navigation.OnPathCalculated += Navigation_OnPathCalculated;
         navigation.OnDestinationReached += Navigation_OnDestinationReached;
@@ -261,7 +263,8 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
         while (!sideActivityCts.IsCancellationRequested)
         {
-            if (targetFinder.Search(NpcNameToFind, bits.Target_NotDead, sideActivityCts.Token))
+            if (pathSettings.CanRunSideActivity() &&
+                targetFinder.Search(NpcNameToFind, bits.Target_NotDead, sideActivityCts.Token))
             {
                 if (bits.Target() && targetBlacklist.Is())
                 {

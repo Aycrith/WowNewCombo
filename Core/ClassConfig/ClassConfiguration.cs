@@ -202,7 +202,7 @@ public sealed partial class ClassConfiguration
                         $"`{settings.PathFilename}` file does not exists!");
             }
 
-            settings.Init(globalTime);
+            settings.Init(globalTime, playerReader, i);
             factory.Init(settings);
         }
 

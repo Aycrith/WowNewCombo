@@ -621,6 +621,7 @@ The path that the player follows during [Follow Route Goal](#follow-route-goal),
 | `"PathFilename"` | [Path](#path) to use while alive | **false** | `""` |
 | `"PathThereAndBack"` | While using the path, [should go start to and reverse](#there-and-back) | true | `true` |
 | `"PathReduceSteps"` | Reduce the number of path points | true | `false` |
+| `"SideActivityRequirements"` | List of [Requirements](#requirement) to limit when the player should search for target<br/>Great for enforcing how closely should follow the path. | true | `true` |
 
 ### Simple approach
 
@@ -630,6 +631,7 @@ When the bellow properties are defined in the [Class Configuration](#12-class-co
 "PathFilename": "_pack\\1-20\\Dwarf.Gnome\\1-4_Dun Morogh.json.json",   // the path to walk when alive
 "PathThereAndBack": true,                                               // if true walks the path and the walks it backwards.
 "PathReduceSteps": true,                                                // uses every other coordinate, halve the coordinate count
+"SideActivityRequirements": [ "PathDist_0 < 10" ]                       // Limit when should search for target, note if multiple paths are used _0 has to be changed accordingly
 ```
 
 I keep the previously mentioned properties for backward compatibility and also if you not interested in changing path during runtime.
@@ -1390,7 +1392,7 @@ Formula: `[Keyword] [Operator] [Numeric integer value]`
 | `SessionHours` | Returns with the elapsed time in Hours since the Session started.<br>The Session starts when the `Start Bot` button is pressed! |
 | `ExpPerc` | Returns with the player experience as percentage to hit next level. |
 | `UIMapId` | Returns with the player current [UIMapId](https://github.com/Xian55/WowClassicGrindBot/blob/9bea201760babc0f6670df2bd5c071c9c3f1220d/Json/dbc/som/WorldMapArea.json#L3C6-L3C11) |
-
+| `PathDist_{PathSettings.Id}` | Returns the closest distance (in yards) from the player location to the Path. |
 
 For the `MinRange` and `MaxRange` gives an approximation range distance between the player and target.
 
@@ -1804,6 +1806,8 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | `"AutoShot"` | (hunter) Auto spell `Auto Shot` is active |
 | `"HasMainHandEnchant"` | Indicates that main hand weapon has active poison/sharpening stone/shaman buff effect |
 | `"HasOffHandEnchant"` | Indicates that off hand weapon has active poison/sharpening stone/shaman buff effect |
+| `"PathEnd_{PathSettings.Id}"` | Returns true when:<br/>* Player has not yet started walking along the path.<br/>* or reached the destination of the path.<br/>**Note**: path can be reversed based on the [PathSettings.PathThereAndBack](#pathsettings)! |
+| `"PathEnd_Any"` | Same as the above, However returns true when any of is true. |
 
 <table>
 <tr><th>Buffs</th><th>Debuffs</th></tr>
