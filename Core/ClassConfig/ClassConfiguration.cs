@@ -48,6 +48,7 @@ public sealed partial class ClassConfiguration
     public string? OverridePathFilename { get; set; } = string.Empty;
     public bool PathThereAndBack { get; set; } = true;
     public bool PathReduceSteps { get; set; }
+    public List<string> SideActivityRequirements = [];
     public PathSettings[] Paths { get; set; } = [];
 
     public Mode Mode { get; init; } = Mode.Grind;
@@ -90,6 +91,30 @@ public sealed partial class ClassConfiguration
     {
         Approach.Key = Interact.Key;
         AutoAttack.Key = Interact.Key;
+
+        if (Paths == Array.Empty<PathSettings>() &&
+            !string.IsNullOrEmpty(PathFilename))
+        {
+            overridePathFile.TryGetValue(0, out string? firstoverridePath);
+            OverridePathFilename = firstoverridePath ?? string.Empty;
+
+            if (!string.IsNullOrEmpty(OverridePathFilename))
+            {
+                PathFilename = OverridePathFilename;
+            }
+
+            Paths =
+            [
+                new PathSettings()
+                {
+                    PathFilename = PathFilename,
+                    OverridePathFilename = OverridePathFilename,
+                    PathThereAndBack = PathThereAndBack,
+                    PathReduceSteps = PathReduceSteps,
+                    SideActivityRequirements = SideActivityRequirements
+                }
+            ];
+        }
 
         RequirementFactory factory = new(sp, this);
 
@@ -151,29 +176,6 @@ public sealed partial class ClassConfiguration
             factory.Init(newAction);
 
             GatherFindKeyConfig[i] = newAction;
-        }
-
-        if (Paths == Array.Empty<PathSettings>() &&
-            !string.IsNullOrEmpty(PathFilename))
-        {
-            overridePathFile.TryGetValue(0, out string? firstoverridePath);
-            OverridePathFilename = firstoverridePath ?? string.Empty;
-
-            if (!string.IsNullOrEmpty(OverridePathFilename))
-            {
-                PathFilename = OverridePathFilename;
-            }
-
-            Paths =
-            [
-                new PathSettings()
-                {
-                    PathFilename = PathFilename,
-                    OverridePathFilename = OverridePathFilename,
-                    PathThereAndBack = PathThereAndBack,
-                    PathReduceSteps = PathReduceSteps,
-                }
-            ];
         }
 
         DataConfig dataConfig = sp.GetRequiredService<DataConfig>();

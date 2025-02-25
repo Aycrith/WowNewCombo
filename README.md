@@ -481,6 +481,7 @@ Your class file probably exists and just needs to be edited to set the pathing f
 | `"PathFilename"` | [Path](#path) to use while alive | **false** or [Multiple Paths with Requirements](#multiple-paths-with-requirements) | `""` |
 | `"PathThereAndBack"` | While using the path, [should go start to and reverse](#there-and-back) | true | `true` |
 | `"PathReduceSteps"` | Reduce the number of path points | true | `false` |
+| `"SideActivityRequirements"` | List of [Requirements](#requirement) to limit when the player should search for target<br/>Great for enforcing how closely should follow the path. | true | `true` |
 | --- | --- | --- | --- |
 | `"Paths"` | Array of [PathSettings](#pathsettings).<br>Either define this array or use the above properties | true | `[]` |
 | `"Mode"` | What kind of [behaviour](#modes) should the bot operate | true | `Mode.Grind` |
