@@ -83,11 +83,17 @@ public sealed class PathSettings
 
     public int GetDistanceXYFromPath()
     {
-        if (Path.Length < 2)
+        if (Path.Length == 0)
             return int.MaxValue;
 
         ReadOnlySpan<Vector3> path = Path;
         Vector2 playerPosition = playerReader.WorldPos.AsVector2();
+
+        if (Path.Length == 1)
+        {
+            Vector3 a = WorldMapAreaDB.ToWorld_FlipXY(path[0], playerReader.WorldMapArea);
+            return (int)Vector2.Distance(a.AsVector2(), playerPosition);
+        }
 
         float distance = float.MaxValue;
 
