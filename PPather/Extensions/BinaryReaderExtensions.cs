@@ -8,16 +8,17 @@ namespace PPather.Extensions;
 public static class BinaryReaderExtensions
 {
     [SkipLocalsInit]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static unsafe Vector3 ReadVector3(this BinaryReader b)
     {
         Vector3 v;
         Span<byte> buffer = new(&v, sizeof(Vector3));
         b.Read(buffer);
         return v;
-
     }
 
     [SkipLocalsInit]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector3 ReadVector3_XZY(this BinaryReader b)
     {
         Vector3 v3 = ReadVector3(b);
