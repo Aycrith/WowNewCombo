@@ -718,7 +718,7 @@ public sealed class PathGraph
         float linkedSpotScore = 1E30f;
         float new_score = currentSearchSpotScore + currentSearchSpot.GetDistanceTo(spotLinkedToCurrent) + TurnCost(currentSearchSpot, spotLinkedToCurrent);
 
-        if (spotLinkedToCurrent.IsFlagSet(Spot.FLAG_WATER)) { new_score += 50; }
+        if (spotLinkedToCurrent.IsFlagSet(Spot.FLAG_WATER)) { new_score += COST_MOVE_THRU_WATER; }
 
         if (spotLinkedToCurrent.SearchScoreIsSet(currentSearchID))
         {
