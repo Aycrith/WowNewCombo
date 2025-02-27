@@ -522,6 +522,8 @@ public sealed partial class RequirementFactory
 
             string nameDistanceToPath = $"PathDist_{settings.Id}";
             intVariables.TryAdd(nameDistanceToPath, settings.GetDistanceXYFromPath);
+
+            Init(settings);
         }
     }
 

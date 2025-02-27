@@ -92,6 +92,11 @@ public sealed partial class ClassConfiguration
         Approach.Key = Interact.Key;
         AutoAttack.Key = Interact.Key;
 
+        ILogger logger = sp.GetRequiredService<ILogger>();
+        PlayerReader playerReader = sp.GetRequiredService<PlayerReader>();
+
+        RecordInt globalTime = sp.GetRequiredService<AddonReader>().GlobalTime;
+
         if (Paths == Array.Empty<PathSettings>() &&
             !string.IsNullOrEmpty(PathFilename))
         {
@@ -116,12 +121,36 @@ public sealed partial class ClassConfiguration
             ];
         }
 
+        DataConfig dataConfig = sp.GetRequiredService<DataConfig>();
+
+        for (int i = 0; i < Paths.Length; i++)
+        {
+            PathSettings settings = Paths[i];
+
+            if (overridePathFile.TryGetValue(i, out string? overridePath))
+                settings.OverridePathFilename = overridePath;
+
+            if (!string.IsNullOrEmpty(settings.OverridePathFilename))
+            {
+                settings.PathFilename = settings.OverridePathFilename;
+            }
+
+            if (!File.Exists(Path.Join(dataConfig.Path, settings.PathFilename)))
+            {
+                if (!string.IsNullOrEmpty(OverridePathFilename))
+                    throw new Exception(
+                        $"[{nameof(ClassConfiguration)}.{nameof(Paths)}[{i}]] " +
+                        $"`{settings.OverridePathFilename}` file does not exists!");
+                else
+                    throw new Exception(
+                        $"[{nameof(ClassConfiguration)}.{nameof(Paths)}[{i}]] " +
+                        $"`{settings.PathFilename}` file does not exists!");
+            }
+
+            settings.Init(globalTime, playerReader, i);
+        }
+
         RequirementFactory factory = new(sp, this);
-
-        ILogger logger = sp.GetRequiredService<ILogger>();
-        PlayerReader playerReader = sp.GetRequiredService<PlayerReader>();
-
-        RecordInt globalTime = sp.GetRequiredService<AddonReader>().GlobalTime;
 
         var baseActionKeys = GetByType<KeyAction>();
         foreach ((string _, KeyAction keyAction) in baseActionKeys)
@@ -176,36 +205,6 @@ public sealed partial class ClassConfiguration
             factory.Init(newAction);
 
             GatherFindKeyConfig[i] = newAction;
-        }
-
-        DataConfig dataConfig = sp.GetRequiredService<DataConfig>();
-
-        for (int i = 0; i < Paths.Length; i++)
-        {
-            PathSettings settings = Paths[i];
-
-            if (overridePathFile.TryGetValue(i, out string? overridePath))
-                settings.OverridePathFilename = overridePath;
-
-            if (!string.IsNullOrEmpty(settings.OverridePathFilename))
-            {
-                settings.PathFilename = settings.OverridePathFilename;
-            }
-
-            if (!File.Exists(Path.Join(dataConfig.Path, settings.PathFilename)))
-            {
-                if (!string.IsNullOrEmpty(OverridePathFilename))
-                    throw new Exception(
-                        $"[{nameof(ClassConfiguration)}.{nameof(Paths)}[{i}]] " +
-                        $"`{settings.OverridePathFilename}` file does not exists!");
-                else
-                    throw new Exception(
-                        $"[{nameof(ClassConfiguration)}.{nameof(Paths)}[{i}]] " +
-                        $"`{settings.PathFilename}` file does not exists!");
-            }
-
-            settings.Init(globalTime, playerReader, i);
-            factory.Init(settings);
         }
 
         if (CheckTargetGivesExp)
