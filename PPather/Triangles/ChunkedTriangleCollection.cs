@@ -434,7 +434,7 @@ public sealed class ChunkedTriangleCollection
                     out TriangleType flags);
 
             //check triangle is part of a model
-            if (flags.Has(TriangleType.Object | TriangleType.Model))
+            if (flags.Has(TriangleType.Model))
             {
                 //and the vertex is close to the char
                 if ((v0.Z > z + minHeight && v0.Z < z + height) ||
