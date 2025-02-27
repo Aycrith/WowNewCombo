@@ -1,4 +1,4 @@
-﻿/*
+/*
  *  Part of PPather
  *  Copyright Pontus Borg 2008
  *
@@ -308,9 +308,10 @@ public sealed class ChunkedTriangleCollection
             tc.GetTriangleVertices(t,
                     out v0.X, out v0.Y, out v0.Z,
                     out v1.X, out v1.Y, out v1.Z,
-                    out v2.X, out v2.Y, out v2.Z);
+                    out v2.X, out v2.Y, out v2.Z,
+                    out TriangleType flags);
 
-            if (SegmentTriangleIntersect(from, to, v0, v1, v2, out Vector3 intersect))
+            if (flags is not TriangleType.Water && SegmentTriangleIntersect(from, to, v0, v1, v2, out Vector3 intersect))
             {
                 if (stepThreshold != 0)
                 {

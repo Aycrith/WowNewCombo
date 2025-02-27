@@ -199,7 +199,6 @@ public sealed class MPQTriangleSupplier
             tc.AddTriangle(v3, v0, vMid, TriangleType.Terrain);
         }
 
-
         if (!c.haswater)
         {
             return;
@@ -213,7 +212,8 @@ public sealed class MPQTriangleSupplier
                 int ii = row * LiquidData.HEIGHT_SIZE + col;
 
                 ChunkGetCoordForPoint(c, row, col, out float x, out float y, out float z);
-                float height = c.water_height[ii]; // - 1.5f //why this here
+                float height = Math.Max(c.water_height[ii], c.water_height1);
+
                 int index = tc.AddVertex(x, y, height);
 
                 vertices[row * LiquidData.HEIGHT_SIZE + col] = index;
@@ -226,7 +226,7 @@ public sealed class MPQTriangleSupplier
             {
                 int ii = row * LiquidData.FLAG_SIZE + col;
 
-                if (c.water_flags[ii] == 0xf)
+                if (c.legacyWater && c.water_flags[ii] == 15) // causing holes in the water!
                     continue;
 
                 int v0 = vertices[row * LiquidData.HEIGHT_SIZE + col];
@@ -252,7 +252,7 @@ public sealed class MPQTriangleSupplier
         float dir_z = -wi.dir.X;
 
         int maxVertices = 0;
-        WMO wmo = wi.wmo;
+        WMORoot wmo = wi.wmo;
         for (int gi = 0; gi < wmo.groups.Length; gi++)
         {
             WMOGroup g = wmo.groups[gi];
