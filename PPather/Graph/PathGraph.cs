@@ -750,6 +750,8 @@ public sealed class PathGraph
         currentSearchSpot.SetFlag(Spot.FLAG_MPQ_MAPPED, true);
 
         Vector3 loc = currentSearchSpot.Loc;
+        loc.Z += stepDistance; // hack
+
         Vector3 target = destination.Loc;
 
         // Calculate the initial angle based on the facing direction
@@ -757,6 +759,7 @@ public sealed class PathGraph
 
         // Loop through the spots in a circle around the current search spot, starting from the facing direction
         for (float radianAngle = initialAngle; radianAngle < initialAngle + Tau; radianAngle += PI / 4) // 4
+        //for (float radianAngle = 0; radianAngle < Tau; radianAngle += PI / 4) // 4
         {
             //calculate the location of the spot at the angle
             float nx = loc.X + (Sin(radianAngle) * WantedStepLength);
@@ -826,7 +829,7 @@ public sealed class PathGraph
             {
                 newSpot.SetFlag(Spot.FLAG_WATER, true);
             }
-            if (flags.Has(TriangleType.Model | TriangleType.Object))
+            if (flags.Has(TriangleType.Object)) // TriangleType.Model
             {
                 newSpot.SetFlag(Spot.FLAG_INDOORS, true);
             }
