@@ -64,13 +64,15 @@ public sealed class PathGraph
 
     public const float IsCloseToModelRange = toonSize * 2f;
 
+    private const int COST_MOVE_THRU_WATER = 128 * 6;
+
     /*
 	public const float IndoorsWantedStepLength = 1.5f;
 	public const float IndoorsMaxStepLength = 2.5f;
 	*/
 
     public const float CHUNK_BASE = 100000.0f; // Always keep positive
-    public const float MaximumAllowedRangeFromTarget = 80; //60
+    public const float MaximumAllowedRangeFromTarget = 5; //60
 
     private readonly ILogger logger;
     private readonly string chunkDir;
@@ -667,7 +669,7 @@ public sealed class PathGraph
         float H_Score = spotLinkedToCurrent.GetDistanceTo2D(destinationSpot) * heuristicsFactor;// the estimated movement cost to move from that given square on the grid to the final destination, point B. This is often referred to as the heuristic, which can be a bit confusing. The reason why it is called that is because it is a guess. We really don�t know the actual distance until we find the path, because all sorts of things can be in the way (walls, water, etc.). You are given one way to calculate H in this tutorial, but there are many others that you can find in other articles on the web.
         float F_Score = G_Score + H_Score;
 
-        if (spotLinkedToCurrent.IsFlagSet(Spot.FLAG_WATER)) { F_Score += 50; }
+        if (spotLinkedToCurrent.IsFlagSet(Spot.FLAG_WATER)) { F_Score += COST_MOVE_THRU_WATER; }
 
         if (!spotLinkedToCurrent.SearchScoreIsSet(currentSearchID) || F_Score < spotLinkedToCurrent.SearchScoreGet(currentSearchID))
         {
@@ -693,7 +695,7 @@ public sealed class PathGraph
         float H_Score = spotLinkedToCurrent.GetDistanceTo2D(destinationSpot) * heuristicsFactor;
         float F_Score = G_Score + H_Score;
 
-        if (spotLinkedToCurrent.IsFlagSet(Spot.FLAG_WATER)) { F_Score += 50; }
+        if (spotLinkedToCurrent.IsFlagSet(Spot.FLAG_WATER)) { F_Score += COST_MOVE_THRU_WATER; }
 
         int score = GetTriangleClosenessScore(spotLinkedToCurrent.Loc);
         score += GetTriangleGradiantScore(spotLinkedToCurrent.Loc, gradiantMax);
