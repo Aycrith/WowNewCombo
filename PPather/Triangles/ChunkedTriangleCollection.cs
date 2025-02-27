@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Part of PPather
  *  Copyright Pontus Borg 2008
  *
@@ -544,13 +544,15 @@ public sealed class ChunkedTriangleCollection
         if (nearCliffCheck && best_flags != TriangleType.None)
         {
             Vector3 up, dn;
-            up.Z = best_z + 2;
-            dn.Z = best_z - 5;
+            up.Z = best_z + toonHeight;
+            dn.Z = best_z - toonHeight;
 
-            const float minCliffD = 0.5f;
+            float minCliffD = toonSize * 0.5f;
 
             const int size = 4;
-            Span<bool> nearCliff = [true, true, true, true];
+            Span<bool> nearCliff = stackalloc bool[size];
+            nearCliff.Fill(true);
+
             ReadOnlySpan<float> dx = [minCliffD, -minCliffD, 0, 0];
             ReadOnlySpan<float> dy = [0, 0, minCliffD, -minCliffD];
 
