@@ -527,7 +527,7 @@ public sealed class ChunkedTriangleCollection
             }
 
             float delta = Math.Abs(intersect.Z - hint_z);
-            if (delta < bestDelta && !IsSpotBlocked(intersect.X, intersect.Y, intersect.Z, toonHeight, toonSize))
+            if (delta <= bestDelta && !IsSpotBlocked(intersect.X, intersect.Y, intersect.Z, toonHeight, toonSize))
             {
                 bestDelta = delta;
                 best_z = intersect.Z;
