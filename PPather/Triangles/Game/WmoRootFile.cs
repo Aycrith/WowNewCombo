@@ -26,6 +26,7 @@ using System;
 using System.Buffers;
 using System.IO;
 using System.Numerics;
+using System.Runtime.InteropServices;
 
 namespace Wmo;
 
@@ -102,16 +103,9 @@ internal static class WmoRootFile
     private static void HandleMODS(BinaryReader file, WMORoot wmo)
     {
         wmo.doodads = new DoodadSet[wmo.nDoodadSets];
-        for (int i = 0; i < wmo.nDoodadSets; i++)
-        {
-            //file.ReadBytes(20); // byte[] name
-            file.BaseStream.Seek(20, SeekOrigin.Current);
 
-            wmo.doodads[i].firstInstance = file.ReadUInt32();
-            wmo.doodads[i].nInstances = file.ReadUInt32();
-            //file.ReadUInt32();
-            file.BaseStream.Seek(sizeof(UInt32), SeekOrigin.Current);
-        }
+        Span<byte> byteSpan = MemoryMarshal.Cast<DoodadSet, byte>(wmo.doodads.AsSpan());
+        file.Read(byteSpan);
     }
 
     private static void HandleMODD(BinaryReader file, WMORoot wmo, ModelManager modelmanager, uint size)

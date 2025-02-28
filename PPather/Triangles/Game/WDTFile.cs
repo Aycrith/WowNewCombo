@@ -64,7 +64,7 @@ internal sealed class WDTFile
         using MemoryStream stream = new(buffer, 0, (int)mpq.Length, false);
         using BinaryReader file = new(stream);
 
-        string[] gwmos = Array.Empty<string>();
+        string[] gwmos = [];
 
         do
         {

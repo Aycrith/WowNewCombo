@@ -30,5 +30,5 @@ internal sealed class WDT
     public readonly BitArray maps = new(SIZE * SIZE);
     public readonly MapTile[] maptiles = new MapTile[SIZE * SIZE];
     public readonly BitArray loaded = new(SIZE * SIZE);
-    public WMOInstance[] gwmois = Array.Empty<WMOInstance>();
+    public WMOInstance[] gwmois = [];
 }

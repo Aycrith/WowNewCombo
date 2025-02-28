@@ -20,33 +20,35 @@
 
 namespace Wmo;
 
-internal static partial class MapTileFile // adt file
+public readonly struct LiquidData
 {
-    public readonly struct LiquidData
+    public const int SIZE = 256;
+    public const int HEIGHT_SIZE = 9;
+    public const int FLAG_SIZE = 8;
+
+    public readonly uint offsetData1;
+    public readonly int used;
+    public readonly uint offsetData2;
+
+    public readonly MH2OData1 data1;
+
+    public readonly float[] water_height;
+    public readonly byte[] water_flags;
+
+    public LiquidData(
+        uint offsetData1,
+        int used,
+        uint offsetData2,
+        MH2OData1 data1,
+        float[] water_height,
+        byte[] water_flags)
     {
-        public const int SIZE = 256;
-        public const int HEIGHT_SIZE = 9;
-        public const int FLAG_SIZE = 8;
+        this.offsetData1 = offsetData1;
+        this.used = used;
+        this.offsetData2 = offsetData2;
+        this.data1 = data1;
 
-        public readonly uint offsetData1;
-        public readonly int used;
-        public readonly uint offsetData2;
-
-        public readonly MH2OData1 data1;
-
-        public readonly float[] water_height;
-        public readonly byte[] water_flags;
-
-        public LiquidData(uint offsetData1, int used, uint offsetData2,
-            MH2OData1 data1, float[] water_height, byte[] water_flags)
-        {
-            this.offsetData1 = offsetData1;
-            this.used = used;
-            this.offsetData2 = offsetData2;
-            this.data1 = data1;
-
-            this.water_height = water_height;
-            this.water_flags = water_flags;
-        }
+        this.water_height = water_height;
+        this.water_flags = water_flags;
     }
 }

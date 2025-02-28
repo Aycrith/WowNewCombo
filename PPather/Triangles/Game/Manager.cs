@@ -26,19 +26,11 @@ namespace Wmo;
 
 public abstract class Manager<T>
 {
-    private readonly Dictionary<string, T> items;
-
-    public Manager()
-    {
-        items = new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
-    }
+    private readonly Dictionary<string, T> items = new(StringComparer.OrdinalIgnoreCase);
 
     public abstract bool Load(string path, out T t);
 
-    public void Clear()
-    {
-        items.Clear();
-    }
+    public void Clear() => items.Clear();
 
     public T AddAndLoadIfNeeded(string path)
     {

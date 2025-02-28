@@ -18,10 +18,28 @@
 
  */
 
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+
 namespace Wmo;
 
-public struct DoodadSet
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public readonly record struct DoodadSet
 {
-    public uint firstInstance;
-    public uint nInstances;
+    public readonly DoodadSetName name;
+    public readonly uint firstInstance;
+    public readonly uint nInstances;
+    public readonly DoodadPadding padding;
+}
+
+[InlineArray(20)]
+public struct DoodadSetName
+{
+    private char _element0;
+}
+
+[InlineArray(4)]
+public struct DoodadPadding
+{
+    private char _element0;
 }

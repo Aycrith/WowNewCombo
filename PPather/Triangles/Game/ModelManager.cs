@@ -21,6 +21,7 @@
 using StormDll;
 
 using System;
+using System.Buffers;
 using System.IO;
 
 namespace Wmo;
@@ -29,6 +30,8 @@ public sealed class ModelManager : Manager<Model>
 {
     private readonly ArchiveSet archive;
 
+    private readonly SearchValues<string> lookup = SearchValues.Create([".mdx", ".mdl"], StringComparison.OrdinalIgnoreCase);
+
     public ModelManager(ArchiveSet archive)
     {
         this.archive = archive;
@@ -36,9 +39,9 @@ public sealed class ModelManager : Manager<Model>
 
     public override bool Load(string path, out Model t)
     {
-        // Use spans for string comparison
-        if (path.AsSpan().EndsWith(".mdx".AsSpan(), StringComparison.OrdinalIgnoreCase) ||
-            path.AsSpan().EndsWith(".mdl".AsSpan(), StringComparison.OrdinalIgnoreCase))
+        string extension = Path.GetExtension(path);
+
+        if (lookup.Contains(extension))
         {
             path = Path.ChangeExtension(path, ".m2");
         }
