@@ -3,6 +3,7 @@ using System.Buffers;
 using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 
 namespace StormDll;
 
@@ -26,27 +27,63 @@ internal sealed class Archive
             return;
 
         using MpqFileStream mpq = GetStream("(listfile)");
-
-        var pooler = ArrayPool<byte>.Shared;
-        byte[] buffer = pooler.Rent((int)mpq.Length);
-        mpq.ReadAllBytesTo(buffer);
-
-        using MemoryStream stream = new(buffer, 0, (int)mpq.Length, false);
-        using StreamReader reader = new(stream);
+        int length = (int)mpq.Length;
 
         HashSet<string> fileList = new(StringComparer.InvariantCultureIgnoreCase);
-        while (!reader.EndOfStream)
-        {
-            fileList.Add(reader.ReadLine()!);
-        }
 
-        pooler.Return(buffer);
+        if (length <= MpqFileStream.MaxStackLimit)
+        {
+            Span<byte> stackBytes = stackalloc byte[length];
+            mpq.Read(stackBytes);
+            ParseFileLines(stackBytes, fileList);
+        }
+        else
+        {
+            var pooler = ArrayPool<byte>.Shared;
+            byte[] array = pooler.Rent(length);
+            try
+            {
+                Span<byte> spanBytes = array.AsSpan(0, length);
+                mpq.Read(spanBytes);
+                ParseFileLines(spanBytes, fileList);
+            }
+            finally
+            {
+                pooler.Return(array);
+            }
+        }
 
         if (fileList.Count == 0)
             throw new InvalidOperationException($"{nameof(fileList)} contains no elements!");
 
         this.fileList = fileList.ToFrozenSet(StringComparer.InvariantCultureIgnoreCase);
     }
+
+    public static void ParseFileLines(ReadOnlySpan<byte> data, HashSet<string> fileList)
+    {
+        string content = Encoding.UTF8.GetString(data);
+        ReadOnlySpan<char> span = content.AsSpan();
+
+        int start = 0;
+        while (start < span.Length)
+        {
+            int end = span[start..].IndexOf('\n');
+            if (end == -1)
+            {
+                end = span.Length - start;
+            }
+
+            ReadOnlySpan<char> lineSpan = span.Slice(start, end).TrimEnd('\r');
+
+            fileList.Add(lineSpan.ToString());
+
+            start += end + 1;
+        }
+
+        if (fileList.Count == 0)
+            throw new InvalidOperationException("File contains no lines.");
+    }
+
 
     public bool IsOpen()
     {
