@@ -22,168 +22,111 @@ using StormDll;
 
 using System;
 using System.Buffers;
-using System.IO;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+
+using static System.Buffers.Binary.BinaryPrimitives;
 
 namespace Wmo;
 
 public static class ModelFile
 {
+    [SkipLocalsInit]
     public static Model Read(ArchiveSet archive, string fileName)
     {
         using MpqFileStream mpq = archive.GetStream(fileName);
+        int length = (int)mpq.Length;
 
         var pooler = ArrayPool<byte>.Shared;
-        byte[] buffer = pooler.Rent((int)mpq.Length);
-        mpq.ReadAllBytesTo(buffer);
+        byte[] array = null;
 
-        using MemoryStream stream = new(buffer, 0, (int)mpq.Length, false);
-        using BinaryReader file = new(stream);
+        Span<byte> stream = length <= MpqFileStream.MaxStackLimit
+            ? stackalloc byte[length]
+            : (array = pooler.Rent(length)).AsSpan(0, length);
 
-        // UPDATED FOR WOTLK 17.10.2008 by toblakai
-        // SOURCE: http://www.madx.dk/wowdev/wiki/index.php?title=M2/WotLK
+        mpq.Read(stream);
 
-        //_ = file.ReadChars(4);
-        //_ = file.ReadUInt32(); // (including \0);
-        //                       // check that we have the new known WOTLK Magic 0x80100000
-        //                       //PPather.Debug("M2 HEADER VERSION: 0x{0:x8}",
-        //                       //    (uint) (version >> 24) | ((version << 8) & 0x00FF0000) | ((version >> 8) & 0x0000FF00) | (version << 24));
-        //_ = file.ReadUInt32(); // (including \0);
-        //_ = file.ReadUInt32();
-        //_ = file.ReadUInt32(); // ? always 0, 1 or 3 (mostly 0);
-        //_ = file.ReadUInt32(); //  - number of global sequences;
-        //_ = file.ReadUInt32(); //  - offset to global sequences;
-        //_ = file.ReadUInt32(); //  - number of animation sequences;
-        //_ = file.ReadUInt32(); //  - offset to animation sequences;
-        //_ = file.ReadUInt32();
-        //_ = file.ReadUInt32(); // Mapping of global IDs to the entries in the Animation sequences block.
-        //                       // NOT IN WOTLK uint nD=file.ReadUInt32(); //  - always 201 or 203 depending on WoW client version;
-        //                       // NOT IN WOTLK uint ofsD=file.ReadUInt32();
-        //_ = file.ReadUInt32(); //  - number of bones;
-        //_ = file.ReadUInt32(); //  - offset to bones;
-        //_ = file.ReadUInt32(); //  - bone lookup table;
-        //_ = file.ReadUInt32();
-        file.BaseStream.Seek((sizeof(byte) * 4) + (sizeof(UInt32) * 14), SeekOrigin.Current);
+        ReadOnlySpan<byte> begining = stream;
 
-        uint nVertices = file.ReadUInt32(); //  - number of vertices;
-        uint ofsVertices = file.ReadUInt32(); //  - offset to vertices;
+        stream = stream[((sizeof(byte) * 4) + (sizeof(UInt32) * 14))..];
 
-        //_ = file.ReadUInt32(); //  - number of views (LOD versions?) 4 for every model;
-        //                       // NOT IN WOTLK (now in .skins) uint ofsViews=file.ReadUInt32(); //  - offset to views;
-        //_ = file.ReadUInt32(); //  - number of color definitions;
-        //_ = file.ReadUInt32(); //  - offset to color definitions;
-        //_ = file.ReadUInt32(); //  - number of textures;
-        //_ = file.ReadUInt32(); //  - offset to texture definitions;
-        //_ = file.ReadUInt32(); //  - number of transparency definitions;
-        //_ = file.ReadUInt32(); //  - offset to transparency definitions;
-        //                       // NOT IN WOTLK uint nTexAnims = file.ReadUInt32(); //  - number of texture animations;
-        //                       // NOT IN WOTLK uint ofsTexAnims = file.ReadUInt32(); //  - offset to texture animations;
-        //_ = file.ReadUInt32(); //  - always 0;
-        //_ = file.ReadUInt32();
-        //_ = file.ReadUInt32();
-        //_ = file.ReadUInt32();
-        //_ = file.ReadUInt32(); //  - number of blending mode definitions;
-        //_ = file.ReadUInt32(); //  - offset to blending mode definitions;
-        //_ = file.ReadUInt32(); //  - bone lookup table;
-        //_ = file.ReadUInt32();
-        //_ = file.ReadUInt32(); //  - number of texture lookup table entries;
-        //_ = file.ReadUInt32(); //  - offset to texture lookup table;
-        //_ = file.ReadUInt32(); //  - texture unit definitions?;
-        //_ = file.ReadUInt32();
-        //_ = file.ReadUInt32(); //  - number of transparency lookup table entries;
-        //_ = file.ReadUInt32(); //  - offset to transparency lookup table;
-        //_ = file.ReadUInt32(); //  - number of texture animation lookup table entries;
-        //_ = file.ReadUInt32(); //  - offset to texture animation lookup table;
+        uint nVertices = ReadUInt32LittleEndian(stream);
+        stream = stream[sizeof(UInt32)..];
 
-        //float[] theFloats = new float[14]; // Noone knows. Meeh, they are here.
-        //for (int i = 0; i < 14; i++)
-        //    file.ReadSingle();
-        file.BaseStream.Seek((sizeof(UInt32) * 23) + (sizeof(Single) * 14), SeekOrigin.Current);
+        uint ofsVertices = ReadUInt32LittleEndian(stream);
+        stream = stream[sizeof(UInt32)..];
 
-        uint nBoundingTriangles = file.ReadUInt32();
-        uint ofsBoundingTriangles = file.ReadUInt32();
-        uint nBoundingVertices = file.ReadUInt32();
-        uint ofsBoundingVertices = file.ReadUInt32();
+        stream = stream[((sizeof(UInt32) * 23) + (sizeof(Single) * 14))..];
 
-        //_ = file.ReadUInt32();
-        //_ = file.ReadUInt32();
-        //_ = file.ReadUInt32();
-        //_ = file.ReadUInt32();
-        //_ = file.ReadUInt32();
-        //_ = file.ReadUInt32();
-        //_ = file.ReadUInt32();
-        //_ = file.ReadUInt32();
-        //_ = file.ReadUInt32(); //  - number of lights;
-        //_ = file.ReadUInt32(); //  - offset to lights;
-        //_ = file.ReadUInt32(); //  - number of cameras;
-        //_ = file.ReadUInt32(); //  - offset to cameras;
-        //_ = file.ReadUInt32();
-        //_ = file.ReadUInt32();
-        //_ = file.ReadUInt32(); //  - number of ribbon emitters;
-        //_ = file.ReadUInt32(); //  - offset to ribbon emitters;
-        //_ = file.ReadUInt32(); //  - number of particle emitters;
-        //_ = file.ReadUInt32(); //  - offset to particle emitters;
-        file.BaseStream.Seek(sizeof(UInt32) * 18, SeekOrigin.Current);
+        uint nBoundingTriangles = ReadUInt32LittleEndian(stream);
+        stream = stream[sizeof(UInt32)..];
 
-        pooler.Return(buffer);
+        uint ofsBoundingTriangles = ReadUInt32LittleEndian(stream);
+        stream = stream[sizeof(UInt32)..];
+
+        uint nBoundingVertices = ReadUInt32LittleEndian(stream);
+        stream = stream[sizeof(UInt32)..];
+
+        uint ofsBoundingVertices = ReadUInt32LittleEndian(stream);
+        stream = stream[sizeof(UInt32)..];
+
+        stream = stream[(sizeof(UInt32) * 18)..];
+
+        if (array != null)
+            pooler.Return(array);
 
         return new(
             fileName,
-            ReadVertices(file, nVertices, ofsVertices),
-            ReadBoundingTriangles(file, nBoundingTriangles, ofsBoundingTriangles),
-            ReadBoundingVertices(file, nBoundingVertices, ofsBoundingVertices));
+            ReadVertices(begining, nVertices, ofsVertices),
+            ReadBoundingTriangles(begining, nBoundingTriangles, ofsBoundingTriangles),
+            ReadBoundingVertices(begining, nBoundingVertices, ofsBoundingVertices));
     }
 
-    private static float[] ReadBoundingVertices(BinaryReader file, uint nVertices, uint ofsVertices)
+    [SkipLocalsInit]
+    private static float[] ReadBoundingVertices(ReadOnlySpan<byte> stream, uint nVertices, uint ofsVertices)
     {
         if (nVertices == 0)
             return [];
 
-        file.BaseStream.Seek(ofsVertices, SeekOrigin.Begin);
-        float[] vertices = new float[nVertices * 3];
+        ReadOnlySpan<byte> vertexData = stream.Slice((int)ofsVertices, (int)nVertices * 3 * sizeof(float));
+        float[] output = new float[nVertices * 3];
 
-        file.Read(MemoryMarshal.Cast<float, byte>(vertices.AsSpan()));
-
-        return vertices;
+        MemoryMarshal.Cast<byte, float>(vertexData).CopyTo(output);
+        return output;
     }
 
-    private static ushort[] ReadBoundingTriangles(BinaryReader file, uint nTriangles, uint ofsTriangles)
+    [SkipLocalsInit]
+    private static ushort[] ReadBoundingTriangles(ReadOnlySpan<byte> stream, uint nTriangles, uint ofsTriangles)
     {
         if (nTriangles == 0)
             return [];
 
-        file.BaseStream.Seek(ofsTriangles, SeekOrigin.Begin);
+        ReadOnlySpan<byte> triangleData = stream.Slice((int)ofsTriangles, (int)(nTriangles * sizeof(ushort)));
 
-        ushort[] triangles = new ushort[nTriangles];
-        file.Read(MemoryMarshal.Cast<ushort, byte>(triangles.AsSpan()));
+        ushort[] output = new ushort[nTriangles];
+        MemoryMarshal.Cast<byte, ushort>(triangleData).CopyTo(output.AsSpan());
 
-        return triangles;
+        return output;
     }
 
-    private static float[] ReadVertices(BinaryReader file, uint nVertices, uint ofcVertices)
+    [SkipLocalsInit]
+    private static float[] ReadVertices(ReadOnlySpan<byte> stream, uint nVertices, uint ofsVertices)
     {
-        float[] vertices = new float[nVertices * 3];
+        float[] output = new float[nVertices * 3];
 
-        file.BaseStream.Seek(ofcVertices, SeekOrigin.Begin);
+        ReadOnlySpan<byte> verticesData = stream[(int)ofsVertices..];
+
+        const int stride = (sizeof(UInt32) * 2) + (sizeof(float) * 7);
+        const int vertexCoordsSize = sizeof(float) * 3;
+
         for (int i = 0; i < nVertices; i++)
         {
-            Span<float> span = vertices.AsSpan(i * 3, 3);
-            file.Read(MemoryMarshal.Cast<float, byte>(span));
+            int offset = i * stride;
 
-            //_ = file.ReadUInt32();  // bone weights
-            //_ = file.ReadUInt32();  // bone indices
-
-            //_ = file.ReadSingle(); // normal *3
-            //_ = file.ReadSingle();
-            //_ = file.ReadSingle();
-
-            //_ = file.ReadSingle(); // texture coordinates
-            //_ = file.ReadSingle();
-
-            //_ = file.ReadSingle(); // some crap
-            //_ = file.ReadSingle();
-            file.BaseStream.Seek((sizeof(UInt32) * 2) + (sizeof(Single) * 7), SeekOrigin.Current);
+            ReadOnlySpan<byte> vertexBytes = verticesData.Slice(offset, vertexCoordsSize);
+            MemoryMarshal.Cast<byte, float>(vertexBytes)
+                         .CopyTo(output.AsSpan(i * 3, 3));
         }
-        return vertices;
+        return output;
     }
 }

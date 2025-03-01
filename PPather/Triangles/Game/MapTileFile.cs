@@ -41,38 +41,39 @@ internal static partial class MapTileFile // adt file
 
     public static MapTile Read(ArchiveSet archive, string name, WMOManager wmomanager, ModelManager modelmanager)
     {
-        LiquidData[] LiquidDataChunk = Array.Empty<LiquidData>();
-        Span<int> mcnk_offsets = stackalloc int[MapTile.SIZE * MapTile.SIZE];
-        Span<int> mcnk_sizes = stackalloc int[MapTile.SIZE * MapTile.SIZE];
+        LiquidData[] LiquidDataChunk = [];
 
-        string[] models = Array.Empty<string>();
-        string[] wmos = Array.Empty<string>();
+        Span<SMChunkInfo> mcin = stackalloc SMChunkInfo[MapTile.SIZE * MapTile.SIZE];
 
-        WMOInstance[] wmois = Array.Empty<WMOInstance>();
-        ModelInstance[] modelis = Array.Empty<ModelInstance>();
+        string[] models = [];
+        string[] wmos = [];
+
+        WMOInstance[] wmois = [];
+        ModelInstance[] modelis = [];
 
         MapChunk[] chunks = new MapChunk[MapTile.SIZE * MapTile.SIZE];
         BitArray hasChunk = new(chunks.Length);
 
         using MpqFileStream mpq = archive.GetStream(name);
+        int length = (int)mpq.Length;
 
         var pooler = ArrayPool<byte>.Shared;
-        byte[] buffer = pooler.Rent((int)mpq.Length);
+        byte[] buffer = pooler.Rent(length);
         mpq.ReadAllBytesTo(buffer);
 
-        using MemoryStream stream = new(buffer, 0, (int)mpq.Length, false);
+        using MemoryStream stream = new(buffer, 0, length, false);
         using BinaryReader file = new(stream);
 
         do
         {
             uint type = file.ReadUInt32();
             uint size = file.ReadUInt32();
-            long curpos = file.BaseStream.Position;
+            long nextPos = file.BaseStream.Position + size;
 
             switch (type)
             {
                 case ChunkReader.MCIN:
-                    HandleMCIN(file, mcnk_offsets, mcnk_sizes);
+                    HandleMCIN(file, mcin);
                     break;
                 case ChunkReader.MMDX when size != 0:
                     models = ChunkReader.ExtractFileNames(file, size);
@@ -91,7 +92,7 @@ internal static partial class MapTileFile // adt file
                     break;
             }
 
-            file.BaseStream.Seek(Math.Min(curpos + size, file.BaseStream.Length), SeekOrigin.Begin);
+            file.BaseStream.Seek(nextPos, SeekOrigin.Begin);
         } while (!file.EOF());
 
         if (wmos.Length != 0)
@@ -104,7 +105,7 @@ internal static partial class MapTileFile // adt file
 
         for (int index = 0; index < MapTile.SIZE * MapTile.SIZE; index++)
         {
-            int off = mcnk_offsets[index];
+            int off = (int)mcin[index].offset;
             file.BaseStream.Seek(off, SeekOrigin.Begin);
 
             chunks[index] = ReadMapChunk(file, LiquidDataChunk.Length > 0 ? LiquidDataChunk[index] : EmptyLiquidData);
@@ -181,16 +182,9 @@ internal static partial class MapTileFile // adt file
         }
     }
 
-    private static void HandleMCIN(BinaryReader file, Span<int> mcnk_offsets, Span<int> mcnk_sizes)
+    private static void HandleMCIN(BinaryReader file, Span<SMChunkInfo> mcnk)
     {
-        for (int i = 0; i < mcnk_offsets.Length; i++)
-        {
-            mcnk_offsets[i] = file.ReadInt32();
-            mcnk_sizes[i] = file.ReadInt32();
-            //file.ReadInt32(); // crap
-            //file.ReadInt32();// crap
-            file.BaseStream.Seek(sizeof(Int32) * 2, SeekOrigin.Current);
-        }
+        file.Read(MemoryMarshal.Cast<SMChunkInfo, byte>(mcnk));
     }
 
     private static void HandleMDDF(BinaryReader file, ModelManager modelmanager, Span<string> models, uint size, out ModelInstance[] modelis)
@@ -291,6 +285,8 @@ internal static partial class MapTileFile // adt file
         float[] water_height = new float[LiquidData.HEIGHT_SIZE * LiquidData.HEIGHT_SIZE];
         byte[] water_flags = new byte[LiquidData.FLAG_SIZE * LiquidData.FLAG_SIZE];
 
+        bool legacyWater = false;
+
         //logger.WriteLine("  " + zpos + " " + xpos + " " + ypos);
         do
         {
@@ -314,6 +310,7 @@ internal static partial class MapTileFile // adt file
                 size = sizeLiquid;
                 if (sizeLiquid != 8)
                 {
+                    legacyWater = true;
                     haswater = true;
                     HandleChunkMCLQ(file, out water_height1, out water_height2, water_height, water_flags);
                 }
@@ -338,7 +335,7 @@ internal static partial class MapTileFile // adt file
         return new(xbase, ybase, zbase,
             areaID, haswater, holes,
             vertices, water_height1, water_height2,
-            water_height, water_flags, (liquidData.used & 1) != 1);
+            water_height, water_flags, legacyWater);
     }
 
     private static void HandleChunkMCVT(BinaryReader file, float xbase, float ybase, float zbase, float[] vertices)
@@ -375,13 +372,7 @@ internal static partial class MapTileFile // adt file
             water_height[i] = file.ReadSingle();
         }
 
-        // LiquidData.FLAG_SIZE * LiquidData.FLAG_SIZE
         Span<byte> water_flagsSpan = water_flags.AsSpan();
         file.Read(water_flagsSpan);
-
-        //for (int i = 0; i < LiquidData.FLAG_SIZE * LiquidData.FLAG_SIZE; i++)
-        //{
-        //    water_flags[i] = file.ReadByte();
-        //}
     }
 }
