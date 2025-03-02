@@ -26,7 +26,7 @@ public sealed class PPatherController : ControllerBase
 
     private readonly JsonResult emptyVector3;
 
-    private const SearchStrategy eSearch = SearchStrategy.A_Star;
+    private const SearchStrategy eSearch = SearchStrategy.A_Star_With_Model_Avoidance;
 
     public PPatherController(PPatherService service, JsonSerializerOptions options)
     {
