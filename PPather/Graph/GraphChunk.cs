@@ -37,7 +37,7 @@ public sealed class GraphChunk
     public const int SIZE = CHUNK_SIZE * CHUNK_SIZE;
     private const bool saveEnabled = true;
 
-    private const uint FILE_MAGIC = 0x23452347;
+    private const uint FILE_MAGIC = 0x23452348;
     private const uint FILE_ENDMAGIC = 0x54325432;
     private const uint SPOT_MAGIC = 0x53504f54;
 
