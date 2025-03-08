@@ -9,6 +9,7 @@
 @inject CombatLog combatLog
 @inject ActionBarCostReader costReader
 @inject SessionStat sessionStat
+@inject GossipReader gossipReader
 @inject ActionBarBits<ICurrentAction> currentAction
 
 @implements IDisposable
@@ -100,6 +101,15 @@
         </div>
         <div class="card-body" style="padding-bottom: 0">
             <TableOfComponent Obj="@sessionStat" />
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            Gossip
+        </div>
+        <div class="card-body" style="padding-bottom: 0">
+            <TableOfComponent Obj="@gossipReader" />
         </div>
     </div>
 </div>
