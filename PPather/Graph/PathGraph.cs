@@ -54,7 +54,6 @@ public sealed class PathGraph
     public const float toonSize = 0.2f;
 
     public const float toonHeightHalf = toonHeight / 2f;
-
     public const float toonHeightQuad = toonHeight / 4f;
 
     public const float stepDistance = toonSize / 2f;
@@ -96,22 +95,24 @@ public sealed class PathGraph
     {
         TriangleType mask = TriangleType.Model | TriangleType.Object;
 
-        if (!triangleWorld.IsCloseToType(loc.X, loc.Y, loc.Z, 4 * MinStepLength, mask))
+        float ignoreStep = toonHeightHalf - stepDistance;
+
+        if (!triangleWorld.IsCloseToType(loc.X, loc.Y, loc.Z + ignoreStep, 4 * WantedStepLength, mask))
         {
             return 0;
         }
 
-        if (!triangleWorld.IsCloseToType(loc.X, loc.Y, loc.Z, 2 * MinStepLength, mask))
-        {
-            return 16;
-        }
-
-        if (!triangleWorld.IsCloseToType(loc.X, loc.Y, loc.Z, 1 * MinStepLength, mask))
+        if (!triangleWorld.IsCloseToType(loc.X, loc.Y, loc.Z + ignoreStep, 2 * WantedStepLength, mask))
         {
             return 32;
         }
 
-        return 64;
+        if (!triangleWorld.IsCloseToType(loc.X, loc.Y, loc.Z + ignoreStep, 1 * WantedStepLength, mask))
+        {
+            return 64;
+        }
+
+        return 128;
     }
 
     public int GetTriangleGradiantScore(Vector3 loc, int gradiantMax)
@@ -860,8 +861,10 @@ public sealed class PathGraph
 
             loc.Z = new_Z;
 
+            float ignoreStep = toonHeightHalf - stepDistance; //toonHeightQuad;
+
             if (IsCloseToObjectRange > 0 &&
-                triangleWorld.IsCloseToType(nx, ny, loc.Z + toonHeightQuad, WantedStepLength, TriangleType.Object | TriangleType.Model))
+                triangleWorld.IsCloseToType(nx, ny, loc.Z + ignoreStep, WantedStepLength, TriangleType.Object | TriangleType.Model))
             {
                 //loc.Z += toonHeightQuad;
                 Spot blockedSpot = new(loc);

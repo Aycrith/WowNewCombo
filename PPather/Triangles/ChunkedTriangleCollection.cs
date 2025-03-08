@@ -395,7 +395,7 @@ public sealed class ChunkedTriangleCollection
         TriangleMatrix tm = tc.GetTriangleMatrix();
 
         Vector3 toon = new(x, y, z);
-        float halfSize = range * 0.5f;
+        float halfRange = range * 0.5f;
 
         ReadOnlySpan<int> ts = tm.GetAllCloseTo(x, y, range);
         foreach (int index in ts)
@@ -414,7 +414,7 @@ public sealed class ChunkedTriangleCollection
                     continue;
 
                 float d = PointDistanceToTriangle(toon, v0, v1, v2);
-                if (d < halfSize)
+                if (d < halfRange)
                 {
                     return true;
                 }
