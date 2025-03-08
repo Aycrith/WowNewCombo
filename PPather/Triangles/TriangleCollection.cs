@@ -195,17 +195,35 @@ public sealed class TriangleCollection
 
     [SkipLocalsInit]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void GetTriangleVertices(int triangleIndex,
+                                    out Vector3 v0, out Vector3 v1, out Vector3 v2, out TriangleType flags)
+    {
+        TrianglesGet(triangleIndex, out int vi0, out int vi1, out int vi2, out flags);
+        VerticesGet(vi0, out v0);
+        VerticesGet(vi1, out v1);
+        VerticesGet(vi2, out v2);
+    }
+
+    [SkipLocalsInit]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void VerticesGet(int index, out float x, out float y, out float z)
     {
         ReadOnlySpan<Vector3> span = CollectionsMarshal.AsSpan(vertecies);
         (x, y, z) = span[index];
     }
 
+    private void VerticesGet(int index, out Vector3 vertex)
+    {
+        ReadOnlySpan<Vector3> span = CollectionsMarshal.AsSpan(vertecies);
+        vertex = span[index];
+    }
+
+    [SkipLocalsInit]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void VerticesSet(int index, float x, float y, float z)
     {
         vertecies.Insert(index, new(x, y, z));
     }
-
 
     [SkipLocalsInit]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -216,6 +234,8 @@ public sealed class TriangleCollection
         (v0, v1, v2, flags) = span[index];
     }
 
+    [SkipLocalsInit]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void TrianglesSet(int index, int v0, int v1, int v2, TriangleType flags)
     {
         triangles.Insert(index, new(v0, v1, v2, flags));

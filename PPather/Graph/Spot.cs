@@ -27,7 +27,7 @@ namespace PPather.Graph;
 
 public sealed class Spot
 {
-    public const float Z_RESOLUTION = 2.0f; // Z spots max this close
+    public const float Z_RESOLUTION = PathGraph.MinStepLength / 2f; // Z spots max this close
 
     public const uint FLAG_VISITED = 0x0001;
     public const uint FLAG_BLOCKED = 0x0002;
@@ -190,19 +190,21 @@ public sealed class Spot
         if (HasPathTo(x, y, z))
             return;
 
-        int old_size = paths.Length / 3;
+        Span<float> span = paths.AsSpan();
+        int old_size = span.Length / 3;
         if (n_paths + 1 > old_size)
         {
             int new_size = old_size * 2;
             if (new_size < 4)
                 new_size = 4;
             Array.Resize(ref paths, new_size * 3);
+            span = paths.AsSpan();
         }
 
         int off = n_paths * 3;
-        paths[off + 0] = x;
-        paths[off + 1] = y;
-        paths[off + 2] = z;
+        span[off + 0] = x;
+        span[off + 1] = y;
+        span[off + 2] = z;
         n_paths++;
         if (chunk != null)
             chunk.modified = true;

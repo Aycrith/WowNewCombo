@@ -9,7 +9,10 @@ public class SparseMatrix2D<T>
 
     public int Count => dict.Count;
 
-    public Dictionary<int, T> Dict => dict;
+    public Dictionary<int, T> Dict
+    {
+        get => dict;
+    }
 
     public SparseMatrix2D(int initialCapacity)
     {

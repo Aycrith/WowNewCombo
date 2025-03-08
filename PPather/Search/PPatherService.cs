@@ -213,7 +213,7 @@ public sealed class PPatherService
         {
             Spot spot = new(path[i]);
             spots.Add(spot);
-            search.PathGraph.CreateSpotsAroundSpot(spot, false, spot);
+            search.PathGraph.CreateSpotsAroundSpot(spot, false/*, spot*/);
         }
 
         OnPathCreated?.Invoke(new(spots));

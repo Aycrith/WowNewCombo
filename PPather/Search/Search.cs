@@ -23,7 +23,7 @@ public sealed class Search
     private const float toonHeight = PathGraph.toonHeight;
     private const float toonSize = PathGraph.toonSize;
 
-    private const float howClose = 5f;
+    private const float howClose = PathGraph.MaxStepLength;
 
     public Search(float mapId, ILogger logger, DataConfig dataConfig)
     {
