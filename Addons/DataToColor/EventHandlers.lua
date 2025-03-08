@@ -560,15 +560,11 @@ function DataToColor:OnGossipShow(event)
 
     DataToColor.gossipQueue:push(GOSSIP_START)
 
-    -- returns variable string - format of one entry
-    -- [1] localized name
-    -- [2] gossip_type
-    local GossipOptions = { GetGossipOptions() }
-    local count = #GossipOptions / 2
-    for k, v in pairs(GossipOptions) do
-        if k % 2 == 0 then
-            DataToColor.gossipQueue:push(10000 * count + 100 * (k / 2) + DataToColor.C.Gossip[v])
-        end
+    local count = #options
+    for i, v in pairs(options) do
+        local hash = 10000 * count + 100 * i + DataToColor.C.GossipIcon[v.icon]
+        --DataToColor:Print(i .. " " .. v.icon .. " " .. DataToColor.C.GossipIcon[v.icon] .. " " .. v.name .. " " .. hash)
+        DataToColor.gossipQueue:push(hash)
     end
     DataToColor.gossipQueue:push(GOSSIP_END)
 end

@@ -57,18 +57,21 @@ DataToColor.C.Loot.Ready = 1
 DataToColor.C.Loot.Closed = 2
 
 -- Gossips
-DataToColor.C.Gossip = {
-    ["banker"] = 0,
-    ["battlemaster"] = 1,
-    ["binder"] = 2,
-    ["gossip"] = 3,
-    ["healer"] = 4,
-    ["petition"] = 5,
-    ["tabard"] = 6,
-    ["taxi"] = 7,
-    ["trainer"] = 8,
-    ["unlearn"] = 9,
-    ["vendor"] = 10,
+
+-- https://www.townlong-yak.com/framexml/live/Helix/ArtTextureID.lua
+-- [132060]="Interface/GossipFrame/VendorGossipIcon"
+DataToColor.C.GossipIcon = {
+    [132050] = 0,   --banker
+    [132051] = 1,   --battlemaster
+    [132052] = 2,   --binder
+    [132053] = 3,   --gossip
+    [132054] = 4,   --healer
+    [132055] = 5,   --petition
+    [132056] = 6,   --tabard
+    [132057] = 7,   --taxi
+    [132058] = 8,   --trainer
+    [132059] = 9,   --unlearn
+    [132060] = 10,  --vendor
 }
 
 -- Gossips
