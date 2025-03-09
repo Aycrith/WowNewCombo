@@ -9,6 +9,8 @@ public sealed class MpqFileStream : Stream
 {
     private const int ERROR_HANDLE_EOF = 38;
 
+    public const int MaxStackLimit = 1024;
+
     private readonly long length;
 
     private nint fileHandle;
@@ -56,6 +58,11 @@ public sealed class MpqFileStream : Stream
         }
 
         return unchecked((int)bytesRead);
+    }
+
+    public sealed override int Read(Span<byte> buffer)
+    {
+        return base.Read(buffer);
     }
 
     public sealed override long Seek(long offset, SeekOrigin origin)

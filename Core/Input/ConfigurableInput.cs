@@ -66,7 +66,7 @@ public sealed partial class ConfigurableInput
         input.PressRandom(
             Random.Shared.Next(2) == 0
             ? input.TurnLeftKey
-            : input.TurnRightKey, milliseconds);
+            : input.TurnRightKey, milliseconds, token);
     }
 
     public void PressRandom(KeyAction keyAction, CancellationToken token = default)

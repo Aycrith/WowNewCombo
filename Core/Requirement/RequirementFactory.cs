@@ -193,6 +193,8 @@ public sealed partial class RequirementFactory
         AddAura("F_", boolVariables, focusBuffs);
         AddAura("", boolVariables, targetDebuffs);
 
+        BindPathSettingsBoolVariables(classConfig.Paths, boolVariables);
+
         this.boolVariables = boolVariables.ToFrozenDictionary();
 
         intVariables = new Dictionary<string, Func<int>>
@@ -249,6 +251,8 @@ public sealed partial class RequirementFactory
             { "ExpPerc", playerReader._PlayerXpPercent },
             { "UIMapId", playerReader.UIMapId._Value }
         };
+
+        BindPathSettingsIntVariables(classConfig.Paths);
 
         InitUserDefinedIntVariables(classConfig.IntVariables,
             playerBuff, targetDebuff,
@@ -351,8 +355,12 @@ public sealed partial class RequirementFactory
         List<Requirement> list = [];
 
         Process(list, item.FileName, item.Requirements);
-
         item.RequirementsRuntime = list.ToArray();
+
+        list.Clear();
+
+        Process(list, item.FileName, item.SideActivityRequirements);
+        item.SideActivityRequirementsRuntime = list.ToArray();
     }
 
     private void Process(List<Requirement> output, string name,
@@ -475,15 +483,63 @@ public sealed partial class RequirementFactory
         }
     }
 
-    private void InitPerKeyAction(KeyAction item)
+    private void BindPathSettingsBoolVariables(PathSettings[] paths,
+        Dictionary<string, Func<bool>> boolVariables)
     {
-        InitPerKeyAction(item, "CD");
-        InitPerKeyAction(item, "Cost");
+        for (int i = 0; i < paths.Length; i++)
+        {
+            PathSettings settings = paths[i];
+
+            string name = $"PathEnd_{settings.Id}";
+            boolVariables.TryAdd(name, settings.PathFinished);
+
+            LogSetPathEnd(logger, settings.FileName, name);
+        }
+
+        if (paths.Length == 0)
+        {
+            return;
+        }
+
+        bool AnyPathFinished()
+        {
+            for (int i = 0; i < paths.Length; i++)
+            {
+                if (paths[i].PathFinished())
+                    return true;
+            }
+            return false;
+        }
+
+        boolVariables.TryAdd("PathEnd_Any", AnyPathFinished);
     }
 
-    private void InitPerKeyAction(KeyAction item, string prefixKey)
+    private void BindPathSettingsIntVariables(PathSettings[] paths)
     {
-        string key = $"{prefixKey}_{item.Name}";
+        for (int i = 0; i < paths.Length; i++)
+        {
+            PathSettings settings = paths[i];
+
+            string prefixKey = "PathDist";
+            string suffix = $"{settings.Id}";
+            string key = $"{prefixKey}_{suffix}";
+            intVariables.TryAdd(key, settings.GetDistanceXYFromPath);
+
+            InitPerKeyAction(prefixKey, suffix);
+
+            Init(settings);
+        }
+    }
+
+    private void InitPerKeyAction(KeyAction item)
+    {
+        InitPerKeyAction("CD", item.Name);
+        InitPerKeyAction("Cost", item.Name);
+    }
+
+    private void InitPerKeyAction(string prefixKey, string suffix)
+    {
+        string key = $"{prefixKey}_{suffix}";
         intVariables.Remove(prefixKey);
 
         if (intVariables.TryGetValue(key, out Func<int>? func))
@@ -1260,6 +1316,12 @@ public sealed partial class RequirementFactory
         Level = LogLevel.Error,
         Message = "UNKNOWN REQUIREMENT! {requirement}: try one of: {available}")]
     static partial void LogUnknown(ILogger logger, string requirement, string available);
+
+    [LoggerMessage(
+        EventId = 0020,
+        Level = LogLevel.Information,
+        Message = "[{name,-17}] Set bool variable as {variable}")]
+    static partial void LogSetPathEnd(ILogger logger, string name, string variable);
 
     #endregion
 }

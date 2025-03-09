@@ -21,12 +21,15 @@ using Microsoft.Extensions.Logging;
 using PPather.Triangles.Data;
 
 using SharedLib.Data;
+using SharedLib.Extensions;
 
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 using WowTriangles;
@@ -40,59 +43,71 @@ namespace PPather.Graph;
 
 public sealed class PathGraph
 {
-    public enum eSearchScoreSpot
-    {
-        OriginalPather,
-        A_Star,
-        A_Star_With_Model_Avoidance,
-    }
+    public const int DelayMs = 0;
 
-    public const int gradiantMax = 5;
+    private const int TimeoutSeconds = 20 + (DelayMs * 100);
+    private const int ProgressTimeoutSeconds = 10 + (DelayMs * 100);
 
-    public const int sleepMSBetweenSpots = 0;
+    public const int gradiantMax = 10;
 
     public const float toonHeight = 2.0f;
-    public const float toonSize = 0.5f;
+    public const float toonSize = 0.2f;
 
-    public const float MinStepLength = 2f;
-    public const float WantedStepLength = 3f;
-    public const float MaxStepLength = 5f;
+    public const float toonHeightHalf = toonHeight / 2f;
+    public const float toonHeightQuad = toonHeight / 4f;
+
+    public const float stepDistance = toonSize / 2f;
+
+    public const float MinStepLength = 4f * toonSize;
+    public const float WantedStepLength = 6f * toonSize;
+    public const float MaxStepLength = 10f * toonSize;
 
     public const float StepPercent = 0.75f;
-    public const float STEP_D = 0.1f;
+    public const float STEP_D = toonSize / 4f;
 
-    public const float IsCloseToModelRange = 2;
+    public const float IsCloseToModelRange = toonSize * 2f;
+
+    public const float IsCloseToObjectRange = MinStepLength;
+
+    private const int COST_MOVE_THRU_WATER = 128 * 6;
 
     /*
-		public const float IndoorsWantedStepLength = 1.5f;
-		public const float IndoorsMaxStepLength = 2.5f;
-		*/
+	public const float IndoorsWantedStepLength = 1.5f;
+	public const float IndoorsMaxStepLength = 2.5f;
+	*/
 
     public const float CHUNK_BASE = 100000.0f; // Always keep positive
-    public const float MaximumAllowedRangeFromTarget = 40;
+    public const float MaximumAllowedRangeFromTarget = 5; //60
 
+    private readonly ILogger logger;
     private readonly string chunkDir;
 
     private readonly float MapId;
     private readonly SparseMatrix2D<GraphChunk> chunks;
     public readonly ChunkedTriangleCollection triangleWorld;
 
+    private readonly HashSet<int> generatedChunks;
+
     private const int maxCache = 512;
     private long LRU;
 
     public int GetTriangleClosenessScore(Vector3 loc)
     {
-        if (!triangleWorld.IsCloseToModel(loc.X, loc.Y, loc.Z, 3))
+        TriangleType mask = TriangleType.Model | TriangleType.Object;
+
+        float ignoreStep = toonHeightHalf - stepDistance;
+
+        if (!triangleWorld.IsCloseToType(loc.X, loc.Y, loc.Z + ignoreStep, 4 * WantedStepLength, mask))
         {
             return 0;
         }
 
-        if (!triangleWorld.IsCloseToModel(loc.X, loc.Y, loc.Z, 2))
+        if (!triangleWorld.IsCloseToType(loc.X, loc.Y, loc.Z + ignoreStep, 2 * WantedStepLength, mask))
         {
-            return 8;
+            return 32;
         }
 
-        if (!triangleWorld.IsCloseToModel(loc.X, loc.Y, loc.Z, 1))
+        if (!triangleWorld.IsCloseToType(loc.X, loc.Y, loc.Z + ignoreStep, 1 * WantedStepLength, mask))
         {
             return 64;
         }
@@ -102,28 +117,23 @@ public sealed class PathGraph
 
     public int GetTriangleGradiantScore(Vector3 loc, int gradiantMax)
     {
-        if (triangleWorld.GradiantScore(loc.X, loc.Y, loc.Z, 1) > gradiantMax)
+        if (triangleWorld.GradiantScore(loc.X, loc.Y, loc.Z, 1, gradiantMax) > gradiantMax)
         {
             return 128;
         }
 
-        if (triangleWorld.GradiantScore(loc.X, loc.Y, loc.Z, 2) > gradiantMax)
+        if (triangleWorld.GradiantScore(loc.X, loc.Y, loc.Z, 2, gradiantMax) > gradiantMax)
         {
             return 64;
         }
 
-        if (triangleWorld.GradiantScore(loc.X, loc.Y, loc.Z, 3) > gradiantMax)
+        if (triangleWorld.GradiantScore(loc.X, loc.Y, loc.Z, 3, gradiantMax) > gradiantMax)
         {
             return 8;
         }
 
         return 0;
     }
-
-    public static int TimeoutSeconds = 20;
-    public static int ProgressTimeoutSeconds = 10;
-
-    private readonly ILogger logger;
 
     public PathGraph(float mapId,
                      ChunkedTriangleCollection triangles,
@@ -138,6 +148,24 @@ public sealed class PathGraph
             Directory.CreateDirectory(chunkDir);
 
         chunks = new SparseMatrix2D<GraphChunk>(8);
+
+        //filePath = System.IO.Path.Join(baseDir, string.Format("c_{0,3:000}_{1,3:000}.bin", ix, iy));
+        var files = Directory.GetFiles(chunkDir, "*.bin");
+        generatedChunks = new HashSet<int>(Math.Min(files.Length, 512));
+
+        foreach (string file in files)
+        {
+            ReadOnlySpan<char> parts = System.IO.Path.GetFileNameWithoutExtension(file);
+
+            var a = parts.Slice(2); // remove c_
+            var sep = a.IndexOf('_');
+
+            int ix = int.Parse(a[..sep]);
+            int iy = int.Parse(a[(sep + 1)..]);
+
+            int key = chunks.GetKey(ix, iy);
+            generatedChunks.Add(key);
+        }
     }
 
     public void Clear()
@@ -151,25 +179,33 @@ public sealed class PathGraph
         chunks.Clear();
     }
 
+    [SkipLocalsInit]
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private static void GetChunkCoord(float x, float y, out int ix, out int iy)
     {
         ix = (int)((CHUNK_BASE + x) / GraphChunk.CHUNK_SIZE);
         iy = (int)((CHUNK_BASE + y) / GraphChunk.CHUNK_SIZE);
     }
 
+    [SkipLocalsInit]
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private static void GetChunkBase(int ix, int iy, out float bx, out float by)
     {
         bx = (float)ix * GraphChunk.CHUNK_SIZE - CHUNK_BASE;
         by = (float)iy * GraphChunk.CHUNK_SIZE - CHUNK_BASE;
     }
 
-    private GraphChunk GetChunkAt(float x, float y)
+    private bool GetChunkAt(float x, float y, [MaybeNullWhen(false)] out GraphChunk c)
     {
         GetChunkCoord(x, y, out int ix, out int iy);
-        if (chunks.TryGetValue(ix, iy, out GraphChunk c))
+        if (chunks.TryGetValue(ix, iy, out c))
+        {
             c.LRU = LRU++;
+            return true;
+        }
 
-        return c ?? default;
+        c = default;
+        return false;
     }
 
     private void CheckForChunkEvict()
@@ -206,27 +242,32 @@ public sealed class PathGraph
     }
 
     // Create and load from file if exisiting
-    private void LoadChunk(float x, float y)
+    private GraphChunk LoadChunk(float x, float y)
     {
-        GraphChunk gc = GetChunkAt(x, y);
-        if (gc != null)
-            return;
+        if (GetChunkAt(x, y, out GraphChunk gc))
+            return gc;
 
         GetChunkCoord(x, y, out int ix, out int iy);
         GetChunkBase(ix, iy, out float base_x, out float base_y);
 
-        gc = new GraphChunk(base_x, base_y, ix, iy, logger, chunkDir, LRU++);
+        gc = new GraphChunk(base_x, base_y, ix, iy, logger, chunkDir);
 
-        //CheckForChunkEvict();
+        int key = chunks.GetKey(ix, iy);
 
-        gc.Load();
+        if (generatedChunks.Contains(key))
+        {
+            gc.Load();
+        }
+
         chunks.Add(ix, iy, gc);
+        generatedChunks.Add(key);
+
+        return gc;
     }
 
     public Spot AddSpot(Spot s)
     {
-        LoadChunk(s.Loc.X, s.Loc.Y);
-        GraphChunk gc = GetChunkAt(s.Loc.X, s.Loc.Y);
+        GraphChunk gc = LoadChunk(s.Loc.X, s.Loc.Y);
         return gc.AddSpot(s);
     }
 
@@ -239,27 +280,24 @@ public sealed class PathGraph
             return s;
         }
 
-        ReadOnlySpan<Spot> close = FindAllSpots(s.Loc, MaxStepLength);
+        Vector3 avoidSmallBumps = new(0, 0, toonHeightHalf);
+
+        ReadOnlySpan<Spot> close = FindAllSpots(s, MaxStepLength);
         for (int i = 0; i < close.Length; i++)
         {
             Spot cs = close[i];
-            if (cs.HasPathTo(this, s) && s.HasPathTo(this, cs) || cs.IsBlocked())
-            {
-            }
-            else if (!triangleWorld.IsStepBlocked(s.Loc.X, s.Loc.Y, s.Loc.Z, cs.Loc.X, cs.Loc.Y, cs.Loc.Z, toonHeight, toonSize))
-            {
-                float mid_x = (s.Loc.X + cs.Loc.X) / 2;
-                float mid_y = (s.Loc.Y + cs.Loc.Y) / 2;
-                float mid_z = (s.Loc.Z + cs.Loc.Z) / 2;
+            if (s == cs)
+                continue;
 
-                if (triangleWorld.FindStandableAt(mid_x, mid_y,
-                    mid_z - WantedStepLength * StepPercent,
-                    mid_z + WantedStepLength * StepPercent,
-                    out _, out _, toonHeight, toonSize))
-                {
-                    s.AddPathTo(cs);
-                    cs.AddPathTo(s);
-                }
+            if (cs.IsBlocked() || s.IsBlocked() || (cs.HasPathTo(this, s) && s.HasPathTo(this, cs)))
+            {
+                continue;
+            }
+
+            if (triangleWorld.LineOfSightExists(s.Loc + avoidSmallBumps, cs.Loc + avoidSmallBumps))
+            {
+                s.AddPathTo(cs);
+                cs.AddPathTo(s);
             }
         }
         return s;
@@ -267,15 +305,13 @@ public sealed class PathGraph
 
     public Spot GetSpot(float x, float y, float z)
     {
-        LoadChunk(x, y);
-        GraphChunk gc = GetChunkAt(x, y);
+        GraphChunk gc = LoadChunk(x, y);
         return gc.GetSpot(x, y, z);
     }
 
     public Spot GetSpot2D(float x, float y)
     {
-        LoadChunk(x, y);
-        GraphChunk gc = GetChunkAt(x, y);
+        GraphChunk gc = LoadChunk(x, y);
         return gc.GetSpot2D(x, y);
     }
 
@@ -357,8 +393,10 @@ public sealed class PathGraph
         return closest;
     }
 
-    public ReadOnlySpan<Spot> FindAllSpots(Vector3 l, float max_d)
+    public ReadOnlySpan<Spot> FindAllSpots(Spot s, float max_d)
     {
+        Vector3 l = s.Loc;
+
         const int SV_LENGTH = 4;
         var pooler = ArrayPool<Spot>.Shared;
         Spot[] sv = pooler.Rent(SV_LENGTH);
@@ -384,16 +422,16 @@ public sealed class PathGraph
 
                 for (int j = 0; j < SV_LENGTH; j++)
                 {
-                    Spot s = sv[j];
-                    Spot ss = s;
-                    while (ss != null)
+                    Spot ss = sv[j];
+                    Spot sss = ss;
+                    while (sss != null)
                     {
-                        float di = ss.GetDistanceTo(l);
+                        float di = sss.GetDistanceTo(l);
                         if (di < max_d)
                         {
-                            sl[c++] = ss;
+                            sl[c++] = sss;
                         }
-                        ss = ss.next;
+                        sss = sss.next;
                     }
                 }
             }
@@ -406,6 +444,26 @@ public sealed class PathGraph
         return new(sl, 0, c);
     }
 
+    public int GetNeighborCount(Spot s)
+    {
+        Vector3 l = s.Loc;
+
+        const float step = WantedStepLength;
+
+        int c = 0;
+        for (float x = -step; x <= step; x += step)
+        {
+            for (float y = -step; y <= step; y += step)
+            {
+                var n = GetSpot2D(l.X + step, l.Y + step);
+                if (n == null || n.IsBlocked() || n == s)
+                    continue;
+
+                c++;
+            }
+        }
+        return c;
+    }
 
     public Spot TryAddSpot(Spot wasAt, Vector3 isAt)
     {
@@ -432,7 +490,7 @@ public sealed class PathGraph
                 isAtSpot.AddPathTo(wasAt);
             }
 
-            ReadOnlySpan<Spot> sl = FindAllSpots(isAtSpot.Loc, MaxStepLength);
+            ReadOnlySpan<Spot> sl = FindAllSpots(isAtSpot, MaxStepLength);
             int connected = 0;
             for (int i = 0; i < sl.Length; i++)
             {
@@ -546,8 +604,9 @@ public sealed class PathGraph
     public Spot ClosestSpot;
     public Spot PeekSpot;
     public HashSet<Vector3> TestPoints = [];
+    public HashSet<Vector3> BlockedPoints = [];
 
-    private Spot Search(Spot fromSpot, Spot destinationSpot, eSearchScoreSpot searchScoreSpot, float minHowClose)
+    private Spot Search(Spot fromSpot, Spot destinationSpot, SearchStrategy searchScoreSpot, float minHowClose)
     {
         long searchDuration = GetTimestamp();
         long timeSinceProgress = searchDuration;
@@ -571,7 +630,7 @@ public sealed class PathGraph
         // A* -ish algorithm
         while (prioritySpotQueue.TryDequeue(out currentSearchSpot, out _))
         {
-            if (sleepMSBetweenSpots > 0) { Thread.Sleep(sleepMSBetweenSpots); } // slow down the pathing
+            //if (sleepMSBetweenSpots > 0) { Thread.Sleep(sleepMSBetweenSpots); } // slow down the pathing
 
             // force the world to be loaded
             _ = triangleWorld.GetChunkAt(currentSearchSpot.Loc.X, currentSearchSpot.Loc.Y);
@@ -589,8 +648,9 @@ public sealed class PathGraph
 
             //float distance = currentSearchSpot.location.GetDistanceTo(destinationSpot.location);
             float distance = Vector3.Distance(currentSearchSpot.Loc, destinationSpot.Loc);
+            float distance2D = Vector2.Distance(currentSearchSpot.Loc.AsVector2(), destinationSpot.Loc.AsVector2());
 
-            if (distance <= minHowClose)
+            if (distance <= minHowClose || (distance2D <= minHowClose / 2f))
             {
                 return currentSearchSpot; // got there
             }
@@ -608,12 +668,12 @@ public sealed class PathGraph
             if (GetElapsedTime(timeSinceProgress).TotalSeconds > ProgressTimeoutSeconds ||
                 GetElapsedTime(searchDuration).TotalSeconds > TimeoutSeconds)
             {
-                logger.LogWarning($"search failed, {ProgressTimeoutSeconds} seconds since last progress, returning the closest spot.");
+                logger.LogWarning($"search failed, {ProgressTimeoutSeconds} seconds since last progress, returning the closest spot {ClosestSpot.Loc}");
                 return ClosestSpot;
             }
 
             //Find spots to link to
-            CreateSpotsAroundSpot(currentSearchSpot);
+            CreateSpotsAroundSpot(currentSearchSpot/*, destinationSpot*/);
 
             //score each spot around the current search spot and add them to the queue
             ReadOnlySpan<Spot> spots = currentSearchSpot.GetPathsToSpots(this);
@@ -642,19 +702,19 @@ public sealed class PathGraph
         return null;
     }
 
-    private void ScoreSpot(Spot spotLinkedToCurrent, Spot destinationSpot, eSearchScoreSpot searchScoreSpot, int currentSearchID, PriorityQueue<Spot, float> prioritySpotQueue)
+    private void ScoreSpot(Spot spotLinkedToCurrent, Spot destinationSpot, SearchStrategy searchScoreSpot, int currentSearchID, PriorityQueue<Spot, float> prioritySpotQueue)
     {
         switch (searchScoreSpot)
         {
-            case eSearchScoreSpot.A_Star:
+            case SearchStrategy.A_Star:
                 ScoreSpot_A_Star(spotLinkedToCurrent, destinationSpot, currentSearchID, prioritySpotQueue);
                 break;
 
-            case eSearchScoreSpot.A_Star_With_Model_Avoidance:
+            case SearchStrategy.A_Star_With_Model_Avoidance:
                 ScoreSpot_A_Star_With_Model_And_Gradient_Avoidance(spotLinkedToCurrent, destinationSpot, currentSearchID, prioritySpotQueue);
                 break;
 
-            case eSearchScoreSpot.OriginalPather:
+            case SearchStrategy.Original:
             default:
                 ScoreSpot_Pather(spotLinkedToCurrent, destinationSpot, currentSearchID, prioritySpotQueue);
                 break;
@@ -668,7 +728,7 @@ public sealed class PathGraph
         float H_Score = spotLinkedToCurrent.GetDistanceTo2D(destinationSpot) * heuristicsFactor;// the estimated movement cost to move from that given square on the grid to the final destination, point B. This is often referred to as the heuristic, which can be a bit confusing. The reason why it is called that is because it is a guess. We really don�t know the actual distance until we find the path, because all sorts of things can be in the way (walls, water, etc.). You are given one way to calculate H in this tutorial, but there are many others that you can find in other articles on the web.
         float F_Score = G_Score + H_Score;
 
-        if (spotLinkedToCurrent.IsFlagSet(Spot.FLAG_WATER)) { F_Score += 50; }
+        if (spotLinkedToCurrent.IsFlagSet(Spot.FLAG_WATER)) { F_Score += COST_MOVE_THRU_WATER; }
 
         if (!spotLinkedToCurrent.SearchScoreIsSet(currentSearchID) || F_Score < spotLinkedToCurrent.SearchScoreGet(currentSearchID))
         {
@@ -683,13 +743,25 @@ public sealed class PathGraph
     public void ScoreSpot_A_Star_With_Model_And_Gradient_Avoidance(Spot spotLinkedToCurrent, Spot destinationSpot, int currentSearchID, PriorityQueue<Spot, float> prioritySpotQueue)
     {
         //score spot
-        float G_Score = currentSearchSpot.traceBackDistance + currentSearchSpot.GetDistanceTo(spotLinkedToCurrent);//  the movement cost to move from the starting point A to a given square on the grid, following the path generated to get there.
-        float H_Score = spotLinkedToCurrent.GetDistanceTo2D(destinationSpot) * heuristicsFactor;// the estimated movement cost to move from that given square on the grid to the final destination, point B. This is often referred to as the heuristic, which can be a bit confusing. The reason why it is called that is because it is a guess. We really don�t know the actual distance until we find the path, because all sorts of things can be in the way (walls, water, etc.). You are given one way to calculate H in this tutorial, but there are many others that you can find in other articles on the web.
+        //  the movement cost to move from the starting point A to a given square on the grid, following the path generated to get there.
+        float G_Score = currentSearchSpot.traceBackDistance + currentSearchSpot.GetDistanceTo(spotLinkedToCurrent);
+        // the estimated movement cost to move from that given square on the grid to the final destination, point B.
+        // This is often referred to as the heuristic, which can be a bit confusing.
+        // The reason why it is called that is because it is a guess.
+        // We really dont know the actual distance until we find the path,
+        // because all sorts of things can be in the way (walls, water, etc.).
+        // You are given one way to calculate H in this tutorial, but there are many others that you can find in other articles on the web.
+        float H_Score = spotLinkedToCurrent.GetDistanceTo2D(destinationSpot) * heuristicsFactor;
         float F_Score = G_Score + H_Score;
 
-        if (spotLinkedToCurrent.IsFlagSet(Spot.FLAG_WATER)) { F_Score += 50; }
+        if (spotLinkedToCurrent.IsFlagSet(Spot.FLAG_WATER)) { F_Score += COST_MOVE_THRU_WATER; }
 
         int score = GetTriangleClosenessScore(spotLinkedToCurrent.Loc);
+
+        // Edges have less neighbours
+        //int neighbourCount = GetNeighborCount(spotLinkedToCurrent);
+        //F_Score += Min(0, 50 * (8 - neighbourCount));
+
         score += GetTriangleGradiantScore(spotLinkedToCurrent.Loc, gradiantMax);
         F_Score += score * 2;
 
@@ -710,7 +782,7 @@ public sealed class PathGraph
         float linkedSpotScore = 1E30f;
         float new_score = currentSearchSpotScore + currentSearchSpot.GetDistanceTo(spotLinkedToCurrent) + TurnCost(currentSearchSpot, spotLinkedToCurrent);
 
-        if (spotLinkedToCurrent.IsFlagSet(Spot.FLAG_WATER)) { new_score += 50; }
+        if (spotLinkedToCurrent.IsFlagSet(Spot.FLAG_WATER)) { new_score += COST_MOVE_THRU_WATER; }
 
         if (spotLinkedToCurrent.SearchScoreIsSet(currentSearchID))
         {
@@ -726,12 +798,12 @@ public sealed class PathGraph
         }
     }
 
-    public void CreateSpotsAroundSpot(Spot currentSearchSpot)
+    public void CreateSpotsAroundSpot(Spot currentSearchSpot/*, Spot destination*/)
     {
-        CreateSpotsAroundSpot(currentSearchSpot, currentSearchSpot.IsFlagSet(Spot.FLAG_MPQ_MAPPED));
+        CreateSpotsAroundSpot(currentSearchSpot, currentSearchSpot.IsFlagSet(Spot.FLAG_MPQ_MAPPED)/*, destination*/);
     }
 
-    public void CreateSpotsAroundSpot(Spot currentSearchSpot, bool mapped)
+    public void CreateSpotsAroundSpot(Spot currentSearchSpot, bool mapped/*, Spot destination*/)
     {
         if (mapped)
         {
@@ -741,71 +813,82 @@ public sealed class PathGraph
         //mark as mapped
         currentSearchSpot.SetFlag(Spot.FLAG_MPQ_MAPPED, true);
 
-        //loop through the spots in a circle around the current search spot
+        Vector3 loc = currentSearchSpot.Loc;
+
+        //Vector3 target = destination.Loc;
+
+        // Calculate the initial angle based on the facing direction
+        //float initialAngle = Atan2(target.Y - loc.Y, target.X - loc.X);
+
+        // Loop through the spots in a circle around the current search spot, starting from the facing direction
+        //for (float radianAngle = initialAngle; radianAngle < initialAngle + Tau; radianAngle += PI / 4) // 4
         for (float radianAngle = 0; radianAngle < Tau; radianAngle += PI / 8) // 4
         {
             //calculate the location of the spot at the angle
-            float nx = currentSearchSpot.Loc.X + (Sin(radianAngle) * WantedStepLength);// *0.8f;
-            float ny = currentSearchSpot.Loc.Y + (Cos(radianAngle) * WantedStepLength);// *0.8f;
+            float nx = loc.X + (Sin(radianAngle) * WantedStepLength);
+            float ny = loc.Y + (Cos(radianAngle) * WantedStepLength);
 
-            PeekSpot = new Spot(nx, ny, currentSearchSpot.Loc.Z);
-            if (sleepMSBetweenSpots > 0)
-                Thread.Sleep(sleepMSBetweenSpots / 2);
+            PeekSpot = new Spot(nx, ny, loc.Z);
+            if (DelayMs > 0)
+                Thread.Sleep(DelayMs / 2);
 
             //find the spot at this location, stop if there is one already
-            if (GetSpot(nx, ny, currentSearchSpot.Loc.Z) != null)
+            if (GetSpot(nx, ny, loc.Z) != null)
             {
                 continue;
-            } //found a spot so don't create a new one
+            }
 
-            // TODO:
             //see if there is a close spot, stop if there is
-            if (FindClosestSpot(new(nx, ny, currentSearchSpot.Loc.Z), MinStepLength) != null)
+            if (FindClosestSpot(PeekSpot.Loc, WantedStepLength) != null) //MinStepLength
             {
                 continue;
-            } // TODO: this is slow
+            }
 
             // check we can stand at this new location
             if (!triangleWorld.FindStandableAt(nx, ny,
-                currentSearchSpot.Loc.Z - WantedStepLength * StepPercent,
-                currentSearchSpot.Loc.Z + WantedStepLength * StepPercent,
-                out float new_z, out TriangleType flags, toonHeight, toonSize))
+                loc.Z - MaxStepLength,
+                loc.Z + MaxStepLength,
+                out float new_Z, out TriangleType flags, toonHeight, toonSize))
             {
+                loc.Z = new_Z;
+                Spot blockedSpot = new(loc);
+                blockedSpot.SetFlag(Spot.FLAG_BLOCKED, true);
+                AddSpot(blockedSpot);
+
+                BlockedPoints.Add(loc);
                 continue;
             }
 
-            // TODO: 
-            //see if a spot already exists at this location
-            if (FindClosestSpot(new(nx, ny, new_z), MinStepLength) != null)
+            loc.Z = new_Z;
+
+            float ignoreStep = toonHeightHalf - stepDistance; //toonHeightQuad;
+
+            if (IsCloseToObjectRange > 0 &&
+                triangleWorld.IsCloseToType(nx, ny, loc.Z + ignoreStep, WantedStepLength, TriangleType.Object | TriangleType.Model))
             {
+                //loc.Z += toonHeightQuad;
+                Spot blockedSpot = new(loc);
+                blockedSpot.SetFlag(Spot.FLAG_BLOCKED, true);
+                AddSpot(blockedSpot);
+
+                BlockedPoints.Add(loc);
                 continue;
             }
 
-            //if the step is blocked then stop
-            if (triangleWorld.IsStepBlocked(currentSearchSpot.Loc.X, currentSearchSpot.Loc.Y, currentSearchSpot.Loc.Z, nx, ny, new_z, toonHeight, toonSize))
+            var tempSpot = new Spot(nx, ny, loc.Z);
+            if (flags.Has(TriangleType.Water))
             {
-                continue;
+                tempSpot.SetFlag(Spot.FLAG_WATER, true);
             }
 
-            //create a new spot and connect it
-            Spot newSpot = AddAndConnectSpot(new Spot(nx, ny, new_z));
-            //PeekSpot = newSpot;
-            if (sleepMSBetweenSpots > 0)
-                Thread.Sleep(sleepMSBetweenSpots / 2);
+            if (flags.Has(TriangleType.Object))
+            {
+                tempSpot.SetFlag(Spot.FLAG_INDOORS, true);
+            }
 
-            //check flags return by triangleWorld.FindStandableA
-            if ((flags & TriangleType.Water) != 0)
-            {
-                newSpot.SetFlag(Spot.FLAG_WATER, true);
-            }
-            if (((flags & TriangleType.Model) != 0) || ((flags & TriangleType.Object) != 0))
-            {
-                newSpot.SetFlag(Spot.FLAG_INDOORS, true);
-            }
-            if (triangleWorld.IsCloseToModel(newSpot.Loc.X, newSpot.Loc.Y, newSpot.Loc.Z, IsCloseToModelRange))
-            {
-                newSpot.SetFlag(Spot.FLAG_CLOSETOMODEL, true);
-            }
+            Spot newSpot = AddAndConnectSpot(tempSpot);
+            if (DelayMs > 0)
+                Thread.Sleep(DelayMs / 2);
         }
     }
 
@@ -848,14 +931,8 @@ public sealed class PathGraph
 
     public bool IsUnderwaterOrInAir(Vector3 l)
     {
-        if (triangleWorld.FindStandableAt(l.X, l.Y, l.Z - 50.0f, l.Z + 5.0f, out _, out TriangleType flags, toonHeight, toonSize))
-        {
-            if ((flags & TriangleType.Water) != 0)
-                return true;
-            else
-                return false;
-        }
-        return false;
+        return triangleWorld.FindStandableAt(l.X, l.Y, l.Z - 50.0f, l.Z + 5.0f, out _, out TriangleType flags, toonHeight, toonSize)
+            && flags.Has(TriangleType.Water);
     }
 
     /*
@@ -879,7 +956,7 @@ public sealed class PathGraph
         return false;
     }
 
-    private Path CreatePath(Spot from, Spot to, eSearchScoreSpot searchScoreSpot, float minHowClose)
+    private Path CreatePath(Spot from, Spot to, SearchStrategy searchScoreSpot, float minHowClose)
     {
         Spot newTo = Search(from, to, searchScoreSpot, minHowClose);
         if (newTo == null)
@@ -898,7 +975,15 @@ public sealed class PathGraph
 
     private Vector3 GetBestLocations(Vector3 location)
     {
-        const float zExtend = 1;
+        const float zExtendBig = 500;
+        const float zExtendSmall = 1;
+
+        float zExtend = zExtendSmall;
+
+        if (location.Z == 0)
+        {
+            zExtend = zExtendBig;
+        }
 
         float newZ = 0;
         ReadOnlySpan<float> a = [0, 1f, 0.5f, -0.5f, -1f];
@@ -926,7 +1011,7 @@ public sealed class PathGraph
         return new(location.X, location.Y, newZ);
     }
 
-    public Path CreatePath(Vector3 fromLoc, Vector3 toLoc, eSearchScoreSpot searchScoreSpot, float howClose)
+    public Path CreatePath(Vector3 fromLoc, Vector3 toLoc, SearchStrategy searchScoreSpot, float howClose)
     {
         if (logger.IsEnabled(LogLevel.Trace))
             logger.LogTrace($"CreatePath from {fromLoc} to {toLoc}");

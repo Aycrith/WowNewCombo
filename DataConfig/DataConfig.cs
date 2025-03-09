@@ -8,7 +8,7 @@ using static System.IO.Path;
 
 public static class DataConfigMeta
 {
-    public const int Version = 13;
+    public const int Version = 14;
     public const string DefaultFileName = "data_config.json";
 }
 
@@ -37,6 +37,8 @@ public sealed class DataConfig
     public string ExpHistory => Join(Root, "History", Exp);
     [JsonIgnore]
     public string ExpExperience => Join(Root, "experience", Exp);
+    [JsonIgnore]
+    public string NpcLocations => Join(Root, "npclocations", Exp);
 
     // at runtime - determined from the running exe file version
     [JsonIgnore]
@@ -76,5 +78,19 @@ public sealed class DataConfig
         WriteAllText(DataConfigMeta.DefaultFileName, SerializeObject(this));
 
         return this;
+    }
+
+    public void DeletePPatherCache()
+    {
+        if (!Directory.Exists(PathInfo))
+        {
+            return;
+        }
+
+        var directories = Directory.GetDirectories(PathInfo);
+        foreach (string directory in directories)
+        {
+            Directory.Delete(directory, true);
+        }
     }
 }

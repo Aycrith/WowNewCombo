@@ -32,12 +32,14 @@ public sealed class PPatherService
 
     public bool Initialised => search != null;
 
-    public Vector4 SearchFrom => search.locationFrom;
-    public Vector4 SearchTo => search.locationTo;
+    public Vector4 SearchFrom => search.From;
+    public Vector4 SearchTo => search.Target;
     public Vector3 ClosestLocation => search?.PathGraph?.ClosestSpot?.Loc ?? Vector3.Zero;
     public Vector3 PeekLocation => search?.PathGraph?.PeekSpot?.Loc ?? Vector3.Zero;
 
     public HashSet<Vector3> TestPoints => search?.PathGraph?.TestPoints ?? [];
+
+    public HashSet<Vector3> BlockedPoints => search?.PathGraph?.BlockedPoints ?? [];
 
     public PPatherService(ILogger<PPatherService> logger, DataConfig dataConfig, WorldMapAreaDB worldMapAreaDB)
     {
@@ -138,7 +140,7 @@ public sealed class PPatherService
         return new Vector3(wma.ToMapY(world.Y), wma.ToMapX(world.X), world.Z);
     }
 
-    public Path DoSearch(PathGraph.eSearchScoreSpot searchType)
+    public Path DoSearch(SearchStrategy searchType)
     {
         SearchBegin?.Invoke();
         var path = search.DoSearch(searchType);
@@ -160,8 +162,8 @@ public sealed class PPatherService
     {
         Initialise(from.W);
 
-        search.locationFrom = from;
-        search.locationTo = to;
+        search.From = from;
+        search.Target = to;
     }
 
     public List<Vector3> GetCurrentSearchPath()
@@ -211,7 +213,7 @@ public sealed class PPatherService
         {
             Spot spot = new(path[i]);
             spots.Add(spot);
-            search.PathGraph.CreateSpotsAroundSpot(spot, false);
+            search.PathGraph.CreateSpotsAroundSpot(spot, false/*, spot*/);
         }
 
         OnPathCreated?.Invoke(new(spots));

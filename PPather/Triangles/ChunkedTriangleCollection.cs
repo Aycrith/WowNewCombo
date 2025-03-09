@@ -13,6 +13,8 @@ using PPather.Triangles.Data;
 using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
 
 using Wmo;
 
@@ -26,6 +28,15 @@ namespace WowTriangles;
 /// </summary>
 public sealed class ChunkedTriangleCollection
 {
+    /// <summary>
+    /// In World of Warcraft, the maximum slope angle a player can traverse is 60 degrees.
+    /// Any terrain steeper than this will cause the player to slide down.
+    /// This mechanic prevents players from climbing excessively steep surfaces and helps enforce natural movement limitations within the game world.
+    /// </summary>
+    private const float MaxStandableAngleDegrees = 51f;
+    private const float MaxStandableAngleRadians = MaxStandableAngleDegrees * (PI / 180f);
+    private readonly float MaxStandableAngleCos = Cos(MaxStandableAngleRadians);
+
     private readonly ILogger logger;
     private readonly MPQTriangleSupplier supplier;
     private readonly SparseMatrix2D<TriangleCollection> chunks;
@@ -57,6 +68,7 @@ public sealed class ChunkedTriangleCollection
         chunks.Clear();
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void GetGridStartAt(float x, float y, out int grid_x, out int grid_y)
     {
         x = ChunkReader.ZEROPOINT - x;
@@ -65,6 +77,7 @@ public sealed class ChunkedTriangleCollection
         grid_y = (int)(y / ChunkReader.TILESIZE);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void GetGridLimits(int grid_x, int grid_y,
                                 out float min_x, out float min_y,
                                 out float max_x, out float max_y)
@@ -75,12 +88,14 @@ public sealed class ChunkedTriangleCollection
         min_y = max_y - ChunkReader.TILESIZE;
     }
 
-    private void LoadChunkAt(float x, float y)
+    private TriangleCollection LoadChunkAt(float x, float y)
     {
         GetGridStartAt(x, y, out int grid_x, out int grid_y);
 
-        if (chunks.ContainsKey(grid_x, grid_y))
-            return;
+        if (chunks.TryGetValue(grid_x, grid_y, out TriangleCollection r))
+        {
+            return r;
+        }
 
         GetGridLimits(grid_x, grid_y, out float min_x, out float min_y, out float max_x, out float max_y);
 
@@ -95,16 +110,14 @@ public sealed class ChunkedTriangleCollection
         {
             logger.LogTrace($"Grid [{grid_x},{grid_y}] Bounds: [{min_x:F4}, {min_y:F4}] [{max_x:F4}, {max_y:F4}] [{x}, {y}] - Count: {chunks.Count}");
         }
-
         NotifyChunkAdded?.Invoke(new ChunkEventArgs(grid_x, grid_y));
+
+        return tc;
     }
 
     public TriangleCollection GetChunkAt(float x, float y)
     {
-        LoadChunkAt(x, y);
-        GetGridStartAt(x, y, out int grid_x, out int grid_y);
-
-        return GetChunkAt(grid_x, grid_y);
+        return LoadChunkAt(x, y);
     }
 
     public TriangleCollection GetChunkAt(int grid_x, int grid_y)
@@ -120,25 +133,21 @@ public sealed class ChunkedTriangleCollection
     {
         TriangleCollection tc = GetChunkAt(x, y);
         TriangleMatrix tm = tc.GetTriangleMatrix();
-        ReadOnlySpan<int> ts = tm.GetAllCloseTo(x, y, toonSize);
+        ReadOnlySpan<int> ts = tm.GetAllCloseTo(x, y, toonHeight);
 
-        Vector3 toon = new(x, y, z + toonHeight - toonSize);
+        Vector3 toon = new(x, y, z + toonHeight);
+        float halfSize = toonSize * 0.5f;
 
-        Vector3 v0;
-        Vector3 v1;
-        Vector3 v2;
-
-        for (int i = 0; i < ts.Length; i++)
+        foreach (int index in ts)
         {
-            int t = ts[i];
-
-            tc.GetTriangleVertices(t,
-                    out v0.X, out v0.Y, out v0.Z,
-                    out v1.X, out v1.Y, out v1.Z,
-                    out v2.X, out v2.Y, out v2.Z, out _);
+            tc.GetTriangleVertices(index,
+                out Vector3 v0,
+                out Vector3 v1,
+                out Vector3 v2,
+                out _);
 
             float d = PointDistanceToTriangle(toon, v0, v1, v2);
-            if (d < toonSize / 2)
+            if (d < halfSize)
                 return true;
         }
 
@@ -158,25 +167,26 @@ public sealed class ChunkedTriangleCollection
         float stepLength = Sqrt((dx * dx) + (dy * dy) + (dz * dz));
         // 1: check steepness
 
+        float cosTheta = (stepLength > 0) ? Abs(dz) / stepLength : 1.0f;
+        if (cosTheta > MaxStandableAngleCos)
+            return true;
+
         // 2: check is there is a big step
 
-        float mid_x = (x0 + x1) / 2.0f;
-        float mid_y = (y0 + y1) / 2.0f;
-        float mid_z = (z0 + z1) / 2.0f;
-        float mid_z_hit;
+        float mid_x = (x0 + x1) * 0.5f;
+        float mid_y = (y0 + y1) * 0.5f;
+        float mid_z = (z0 + z1) * 0.5f;
         float mid_dz = Abs(stepLength);
-        //if (mid_dz < 1.0f) mid_dz = 1.0f;
-        if (FindStandableAt(mid_x, mid_y, mid_z - mid_dz, mid_z + mid_dz, out mid_z_hit, out _, toonHeight, toonSize))
+        if (FindStandableAt(mid_x, mid_y, mid_z - mid_dz, mid_z + mid_dz, out float mid_z_hit, out _, toonHeight, toonSize))
         {
             float dz0 = Abs(z0 - mid_z_hit);
             float dz1 = Abs(z1 - mid_z_hit);
 
-            // Console.WriteLine("z0 " + z0 + " z1 " + z1 + " dz0 " + dz0+ " dz1 " + dz1 );
-            if (dz0 > stepLength / 2.0f && dz0 > 1.0f)
-                return true; // too steep
-
-            if (dz1 > stepLength / 2.0f && dz1 > 1.0f)
-                return true; // too steep
+            if ((dz0 > stepLength * 0.75f && dz0 > 1.2f) ||
+                (dz1 > stepLength * 0.75f && dz1 > 1.2f))
+            {
+                return true;
+            }
         }
         else
         {
@@ -189,19 +199,18 @@ public sealed class ChunkedTriangleCollection
         Vector3 from, from_up, from_low;
         Vector3 to, to_up, to_low;
 
+        float halfToonHeight = toonHeight * 0.5f;
+
         from.X = x0;
         from.Y = y0;
-        from.Z = z0 + toonSize; //+0.5
+        from.Z = z0 + toonSize + PathGraph.stepDistance;
 
         to.X = x1;
         to.Y = y1;
         to.Z = z1 + toonSize;
 
-        from_up = new Vector3(from.X, from.Y, from.Z);
-        from_up.Z = z0 + toonHeight - toonSize;
-
-        to_up = new Vector3(to.X, from.Y, from.Z);
-        to_up.Z = z1 + toonHeight - toonSize;
+        from_up = new Vector3(from.X, from.Y, z0 + PathGraph.stepDistance / 10f); // small amount
+        to_up = new Vector3(to.X, to.Y, z1 + toonHeight);
 
         TriangleMatrix tm = tc.GetTriangleMatrix();
         ReadOnlySpan<int> ts = tm.GetAllInSquare(Min(x0, x1), Min(y0, y1), Max(x0, x1), Max(y0, y1));
@@ -212,25 +221,23 @@ public sealed class ChunkedTriangleCollection
             return true;
         }
 
-        //diagonal
-        if (CheckForCollision(tc, ts, from_up, to))
+        // this does not work properly!
+        //diagonal 
+        //if (CheckForCollision(tc, ts, from_up, to))
+        //{
+        //    return true;
+        //}
+
+        //head height
+        if (CheckForCollision(tc, ts, from_up, to_up))
         {
             return true;
         }
 
-        //head height
-        // if (CheckForCollision(tc, ts, ref from_up, ref to_up)) { return true; }
-
-        //close to the ground
-        const float stepDistance = 0.4f;
-
         from_low = new Vector3(from.X, from.Y, from.Z);
-        from_low.Z = z0 + stepDistance;
-
         to_low = new Vector3(to.X, to.Y, to.Z);
-        to_low.Z = z1 + stepDistance;
 
-        if (CheckForCollision(tc, ts, from_low, to_low))
+        if (CheckForCollision(tc, ts, from_low, to_low, PathGraph.stepDistance))
         {
             return true;
         }
@@ -242,17 +249,23 @@ public sealed class ChunkedTriangleCollection
         to_low.X += ddy;
         to_low.Y += ddx;
 
-        if (CheckForCollision(tc, ts, from_low, to_low))
+        if (CheckForCollision(tc, ts, from_low, to_low, PathGraph.stepDistance))
         {
             return true;
         }
 
-        from_low.X -= 2 * ddy;
-        from_low.Y -= 2 * ddx;
-        to_low.X -= 2 * ddy;
-        to_low.Y -= 2 * ddx;
+        // cause problems with stairs
+        //from_low.X -= 2 * ddy;
+        //from_low.Y -= 2 * ddx;
+        //to_low.X -= 2 * ddy;
+        //to_low.Y -= 2 * ddx;
 
-        return CheckForCollision(tc, ts, from_low, to_low);
+        //if (CheckForCollision(tc, ts, from_low, to_low, PathGraph.stepDistance))
+        //{
+        //    return true;
+        //}
+
+        return false;
     }
 
     public static void GetNormal(float x1, float y1, float x2, float y2, out float dx, out float dy, float factor)
@@ -276,24 +289,27 @@ public sealed class ChunkedTriangleCollection
     }
 
     [SkipLocalsInit]
-    private static bool CheckForCollision(TriangleCollection tc, ReadOnlySpan<int> ts, in Vector3 from, in Vector3 to)
+    private static bool CheckForCollision(TriangleCollection tc, ReadOnlySpan<int> ts, in Vector3 from, in Vector3 to, float stepThreshold = 0)
     {
-        Vector3 v0;
-        Vector3 v1;
-        Vector3 v2;
+        float baseZ = Min(from.Z, to.Z);
 
-        for (int i = 0; i < ts.Length; i++)
+        foreach (int index in ts)
         {
-            int t = ts[i];
+            tc.GetTriangleVertices(index,
+                out Vector3 v0,
+                out Vector3 v1,
+                out Vector3 v2,
+                out TriangleType flags);
 
-            tc.GetTriangleVertices(t,
-                    out v0.X, out v0.Y, out v0.Z,
-                    out v1.X, out v1.Y, out v1.Z,
-                    out v2.X, out v2.Y, out v2.Z);
-
-            if (SegmentTriangleIntersect(from, to, v0, v1, v2, out _))
+            if (flags is not TriangleType.Water && SegmentTriangleIntersect(from, to, v0, v1, v2, out Vector3 intersect))
             {
-                return true;
+                if (stepThreshold != 0)
+                {
+                    if (intersect.Z > baseZ + stepThreshold)
+                        return true;
+                }
+                else
+                    return true;
             }
         }
         return false;
@@ -316,35 +332,27 @@ public sealed class ChunkedTriangleCollection
         Vector3 s0 = new(x, y, min_z);
         Vector3 s1 = new(x, y, max_z);
 
-        Vector3 v0;
-        Vector3 v1;
-        Vector3 v2;
-
-        for (int i = 0; i < ts.Length; i++)
+        foreach (int index in ts)
         {
-            int t = ts[i];
-
-            tc.GetTriangleVertices(t,
-                    out v0.X, out v0.Y, out v0.Z,
-                    out v1.X, out v1.Y, out v1.Z,
-                    out v2.X, out v2.Y, out v2.Z,
+            tc.GetTriangleVertices(index,
+                    out Vector3 v0,
+                    out Vector3 v1,
+                    out Vector3 v2,
                     out TriangleType t_flags);
 
             GetTriangleNormal(v0, v1, v2, out _);
 
-            if (SegmentTriangleIntersect(s0, s1, v0, v1, v2, out _))
+            if (SegmentTriangleIntersect(s0, s1, v0, v1, v2, out _) &&
+                t_flags.Has(TriangleType.Water))
             {
-                if ((t_flags & TriangleType.Water) != 0)
-                {
-                    return true;
-                }
+                return true;
             }
         }
         return false;
     }
 
     [SkipLocalsInit]
-    public int GradiantScore(float x, float y, float z, float range)
+    public int GradiantScore(float x, float y, float z, float range, int maxGradient)
     {
         TriangleCollection tc = GetChunkAt(x, y);
         TriangleMatrix tm = tc.GetTriangleMatrix();
@@ -352,19 +360,14 @@ public sealed class ChunkedTriangleCollection
         float maxZ = float.MinValue;
         float minZ = float.MaxValue;
 
-        Vector3 v0;
-        Vector3 v1;
-        Vector3 v2;
-
-        ReadOnlySpan<int> array = tm.GetAllCloseTo(x, y, range);
-        for (int i = 0; i < array.Length; i++)
+        ReadOnlySpan<int> ts = tm.GetAllCloseTo(x, y, range);
+        foreach (int index in ts)
         {
-            int t = array[i];
-
-            tc.GetTriangleVertices(t,
-                    out v0.X, out v0.Y, out v0.Z,
-                    out v1.X, out v1.Y, out v1.Z,
-                    out v2.X, out v2.Y, out v2.Z, out TriangleType flags);
+            tc.GetTriangleVertices(index,
+                out Vector3 v0,
+                out Vector3 v1,
+                out Vector3 v2,
+                out TriangleType flags);
 
             if (flags == TriangleType.Terrain)
             {
@@ -378,44 +381,40 @@ public sealed class ChunkedTriangleCollection
             }
         }
         int g = (int)(maxZ - minZ);
-        if (g > 10)
+        if (g > maxGradient)
         {
-            g = 10;
+            g = maxGradient;
         }
         return g;
     }
 
     [SkipLocalsInit]
-    public bool IsCloseToModel(float x, float y, float z, float range)
+    public bool IsCloseToType(float x, float y, float z, float range, TriangleType type)
     {
         TriangleCollection tc = GetChunkAt(x, y);
         TriangleMatrix tm = tc.GetTriangleMatrix();
 
-        Vector3 v0;
-        Vector3 v1;
-        Vector3 v2;
+        Vector3 toon = new(x, y, z);
+        float halfRange = range * 0.5f;
 
-        ReadOnlySpan<int> array = tm.GetAllCloseTo(x, y, range);
-        for (int i = 0; i < array.Length; i++)
+        ReadOnlySpan<int> ts = tm.GetAllCloseTo(x, y, range);
+        foreach (int index in ts)
         {
-            int t = array[i];
+            tc.GetTriangleVertices(index,
+                out Vector3 v0,
+                out Vector3 v1,
+                out Vector3 v2,
+                out TriangleType flags);
 
-            tc.GetTriangleVertices(t,
-                    out v0.X, out v0.Y, out v0.Z,
-                    out v1.X, out v1.Y, out v1.Z,
-                    out v2.X, out v2.Y, out v2.Z,
-                    out TriangleType flags);
-
-            //check triangle is part of a model
-            if ((flags & TriangleType.Object) != 0 || (flags & TriangleType.Model) != 0)
+            if (flags.Has(type))
             {
-                const float minHeight = 0.75f;
-                const float height = 2;
+                // ignore the triangle if it is below the toon
+                float minZ = Min3(v0.Z, v1.Z, v2.Z);
+                if (minZ < z)
+                    continue;
 
-                //and the vertex is close to the char
-                if ((v0.Z > z + minHeight && v0.Z < z + height) ||
-                    (v1.Z > z + minHeight && v1.Z < z + height) ||
-                    (v2.Z > z + minHeight && v2.Z < z + height))
+                float d = PointDistanceToTriangle(toon, v0, v1, v2);
+                if (d < halfRange)
                 {
                     return true;
                 }
@@ -425,26 +424,21 @@ public sealed class ChunkedTriangleCollection
     }
 
     [SkipLocalsInit]
-    public bool LineOfSightExists(Spot a, Spot b)
+    public bool LineOfSightExists(Vector3 a, Vector3 b)
     {
-        TriangleCollection tc = GetChunkAt(a.Loc.X, a.Loc.Y);
+        TriangleCollection tc = GetChunkAt(a.X, a.Y);
         TriangleMatrix tm = tc.GetTriangleMatrix();
-        ReadOnlySpan<int> ts = tm.GetAllCloseTo(a.Loc.X, a.Loc.Y, a.GetDistanceTo(b) + 1);
+        ReadOnlySpan<int> ts = tm.GetAllCloseTo(a.X, a.Y, Vector3.Distance(a, b) + 1);
 
-        Vector3 s0 = a.Loc;
-        Vector3 s1 = b.Loc;
+        Vector3 s0 = a;
+        Vector3 s1 = b;
 
-        Vector3 v0;
-        Vector3 v1;
-        Vector3 v2;
-
-        for (int i = 0; i < ts.Length; i++)
+        foreach (int index in ts)
         {
-            int t = ts[i];
-            tc.GetTriangleVertices(t,
-                    out v0.X, out v0.Y, out v0.Z,
-                    out v1.X, out v1.Y, out v1.Z,
-                    out v2.X, out v2.Y, out v2.Z, out _);
+            tc.GetTriangleVertices(index,
+                    out Vector3 v0,
+                    out Vector3 v1,
+                    out Vector3 v2, out _);
 
             if (SegmentTriangleIntersect(s0, s1, v0, v1, v2, out _))
             {
@@ -458,66 +452,54 @@ public sealed class ChunkedTriangleCollection
     public bool FindStandableAt1(float x, float y, float min_z, float max_z,
                                out float z0, out TriangleType flags,
                                float toonHeight, float toonSize,
-                               bool IgnoreGradient, TriangleType allowedFlags)
+                               bool ignoreMaxSlopeAngle, TriangleType allowedFlags)
     {
         TriangleCollection tc = GetChunkAt(x, y);
         TriangleMatrix tm = tc.GetTriangleMatrix();
-        ReadOnlySpan<int> ts = tm.GetAllCloseTo(x, y, 1.0f);
+        ReadOnlySpan<int> ts = tm.GetAllCloseTo(x, y, toonHeight);
 
-        float hint_z = (max_z + min_z) / 2f;
+        float hint_z = (max_z + min_z) * 0.75f; // try to estimate above the mid point
 
         Vector3 s0 = new(x, y, min_z);
         Vector3 s1 = new(x, y, max_z);
 
         float best_z = float.MinValue;
         TriangleType best_flags = TriangleType.None;
+        float bestDelta = float.MaxValue;
 
-        // 45f -> 40 degree || 60f -> 50 degree || 30f -> 28.6 degree
-        float angle_z = Sin(30f / 360.0f * Tau);
-
-        Vector3 v0;
-        Vector3 v1;
-        Vector3 v2;
-
-        for (int i = 0; i < ts.Length; i++)
+        foreach (int index in ts)
         {
-            int t = ts[i];
-            tc.GetTriangleVertices(t,
-                    out v0.X, out v0.Y, out v0.Z,
-                    out v1.X, out v1.Y, out v1.Z,
-                    out v2.X, out v2.Y, out v2.Z,
-                    out TriangleType t_flags);
+            tc.GetTriangleVertices(index,
+                out Vector3 v0,
+                out Vector3 v1,
+                out Vector3 v2,
+                out TriangleType t_flags);
 
             if (!allowedFlags.Has(t_flags))
+            {
                 continue;
+            }
 
             GetTriangleNormal(v0, v1, v2, out Vector3 normal);
-            if (Abs(normal.Z) <= angle_z)
-                continue;
-
-            if (!SegmentTriangleIntersect(s0, s1, v0, v1, v2,
-                out Vector3 intersect))
-                continue;
-
-            float b = Abs(intersect.Z - best_z);
-            float h = Abs(intersect.Z - hint_z);
-
-            if (h < b && !IsSpotBlocked(
-                    intersect.X, intersect.Y, intersect.Z,
-                    toonHeight, toonSize))
+            if (!ignoreMaxSlopeAngle && normal.Z <= MaxStandableAngleCos)
             {
-                if (best_z == float.MinValue)
-                {
-                    best_z = intersect.Z;
-                    best_flags = t_flags;
-                }
-                else if (b < Abs(best_z - hint_z))
-                {
-                    best_z = intersect.Z;
-                    best_flags = t_flags;
-                }
+                continue;
+            }
+
+            if (!SegmentTriangleIntersect(s0, s1, v0, v1, v2, out Vector3 intersect))
+            {
+                continue;
+            }
+
+            float delta = Math.Abs(intersect.Z - hint_z);
+            if (!IsSpotBlocked(intersect.X, intersect.Y, intersect.Z, toonHeight, toonSize) && delta <= bestDelta)
+            {
+                bestDelta = delta;
+                best_z = intersect.Z;
+                best_flags = t_flags;
             }
         }
+
 
         z0 = best_z;
         flags = best_flags;
@@ -527,25 +509,26 @@ public sealed class ChunkedTriangleCollection
         if (nearCliffCheck && best_flags != TriangleType.None)
         {
             Vector3 up, dn;
-            up.Z = best_z + 2;
-            dn.Z = best_z - 5;
+            up.Z = best_z + toonHeight;
+            dn.Z = best_z - toonHeight;
 
-            const float minCliffD = 0.5f;
+            float minCliffD = toonSize * 0.5f;
 
             const int size = 4;
-            Span<bool> nearCliff = stackalloc bool[size] { true, true, true, true };
-            Span<float> dx = stackalloc float[size] { minCliffD, -minCliffD, 0, 0 };
-            Span<float> dy = stackalloc float[size] { 0, 0, minCliffD, -minCliffD };
+            Span<bool> nearCliff = stackalloc bool[size];
+            nearCliff.Fill(true);
+
+            ReadOnlySpan<float> dx = [minCliffD, -minCliffD, 0, 0];
+            ReadOnlySpan<float> dy = [0, 0, minCliffD, -minCliffD];
 
             bool allGood;
-            for (int j = 0; j < ts.Length; j++)
+            foreach (int index in ts)
             {
-                int t = ts[j];
-
-                tc.GetTriangleVertices(t,
-                        out v0.X, out v0.Y, out v0.Z,
-                        out v1.X, out v1.Y, out v1.Z,
-                        out v2.X, out v2.Y, out v2.Z);
+                tc.GetTriangleVertices(index,
+                    out Vector3 v0,
+                    out Vector3 v1,
+                    out Vector3 v2,
+                    out _);
 
                 allGood = true;
                 for (int i = 0; i < size; i++)
@@ -563,11 +546,11 @@ public sealed class ChunkedTriangleCollection
                     break;
             }
 
-            allGood = true;
             for (int i = 0; i < size; i++)
-                allGood &= !nearCliff[i];
-            if (!allGood)
-                return false; // too close to cliff
+            {
+                if (nearCliff[i])
+                    return false; // too close to cliff
+            }
         }
 
         return best_flags != TriangleType.None;

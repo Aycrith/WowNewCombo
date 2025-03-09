@@ -2,6 +2,7 @@
 
 using SharedLib;
 
+using System;
 using System.Collections.Specialized;
 using System.Numerics;
 
@@ -119,6 +120,22 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
     public UnitRace Race => (UnitRace)(reader.GetInt(46) / 10000);
     public UnitClass Class => (UnitClass)(reader.GetInt(46) / 100 % 100);
     public ClientVersion Version => (ClientVersion)(reader.GetInt(46) % 10);
+
+    public PlayerFaction Faction => Race switch {
+        UnitRace.Human => PlayerFaction.Alliance,
+        UnitRace.Dwarf => PlayerFaction.Alliance,
+        UnitRace.NightElf => PlayerFaction.Alliance,
+        UnitRace.Gnome => PlayerFaction.Alliance,
+        UnitRace.Draenei => PlayerFaction.Alliance,
+        UnitRace.Worgen => PlayerFaction.Alliance,
+        UnitRace.Orc => PlayerFaction.Horde,
+        UnitRace.Tauren => PlayerFaction.Horde,
+        UnitRace.Undead => PlayerFaction.Horde,
+        UnitRace.Troll => PlayerFaction.Horde,
+        UnitRace.BloodElf => PlayerFaction.Horde,
+        UnitRace.Goblin => PlayerFaction.Horde,
+        _ => throw new ArgumentNullException(nameof(Faction)),
+    };
 
     // 47 empty
 

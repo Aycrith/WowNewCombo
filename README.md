@@ -481,6 +481,7 @@ Your class file probably exists and just needs to be edited to set the pathing f
 | `"PathFilename"` | [Path](#path) to use while alive | **false** or [Multiple Paths with Requirements](#multiple-paths-with-requirements) | `""` |
 | `"PathThereAndBack"` | While using the path, [should go start to and reverse](#there-and-back) | true | `true` |
 | `"PathReduceSteps"` | Reduce the number of path points | true | `false` |
+| `"SideActivityRequirements"` | List of [Requirements](#requirement) to limit when the player should search for target<br/>Great for enforcing how closely should follow the path. | true | `true` |
 | --- | --- | --- | --- |
 | `"Paths"` | Array of [PathSettings](#pathsettings).<br>Either define this array or use the above properties | true | `[]` |
 | `"Mode"` | What kind of [behaviour](#modes) should the bot operate | true | `Mode.Grind` |
@@ -619,17 +620,21 @@ The path that the player follows during [Follow Route Goal](#follow-route-goal),
 | Property Name | Description | Optional | Default value |
 | --- | --- | --- | --- |
 | `"PathFilename"` | [Path](#path) to use while alive | **false** | `""` |
+| `"Id"` | <b>Must be a Unique Integer value</b> to identify PathSettings. | true | `"Auto incremented from zero"` or `"Unless specified by user."` |
 | `"PathThereAndBack"` | While using the path, [should go start to and reverse](#there-and-back) | true | `true` |
 | `"PathReduceSteps"` | Reduce the number of path points | true | `false` |
+| `"SideActivityRequirements"` | List of [Requirements](#requirement) to limit when the player should search for target<br/>Great for enforcing how closely should follow the path. | true | `true` |
 
 ### Simple approach
 
 When the bellow properties are defined in the [Class Configuration](#12-class-configuration), a new [PathSettings](#pathsettings) instance is created under in `Paths` array as the first element.
 
 ```json
+"Id": 42,                                                               // Optional - Helps identify the path
 "PathFilename": "_pack\\1-20\\Dwarf.Gnome\\1-4_Dun Morogh.json.json",   // the path to walk when alive
 "PathThereAndBack": true,                                               // if true walks the path and the walks it backwards.
 "PathReduceSteps": true,                                                // uses every other coordinate, halve the coordinate count
+"SideActivityRequirements": [ "PathDist_0 < 10" ]                       // Limit when should search for target, note if multiple paths are used _0 has to be changed accordingly
 ```
 
 I keep the previously mentioned properties for backward compatibility and also if you not interested in changing path during runtime.
@@ -1121,9 +1126,13 @@ e.g.
 
 ### NPC Goals
 
-These command are for vendoring and repair.
+These command are for vendoring and repair. It has two modes 
+* [Manual NPC Route](#manual-npc-route): have to specify a `"PathFilename"`
+* [Auto NPC Route](#auto-npc-route): based on the `"KeyAction.Name"`, can detect the strategy. **(EXPERIMENTAL)**
 
-e.g.
+#### Manual NPC Route
+
+e.g. using a prerecoded path to follow
 ```json
 "NPC": {
     "Sequence": [
@@ -1178,6 +1187,56 @@ If you have an NPC that is easy to get to such as the repair NPC in Arathi Highl
 Short Path Example:
 
 ![Short Path Example](images/NPCPath.png)
+
+---
+
+#### Auto NPC Route
+
+This is rather an **experimental** feature, and it is known to be unstable but it provides an easy way to add npc interaction in the **current zone**.
+
+The key limitation is the navigation, it is known to get stuck with [Indoors](https://wowwiki-archive.fandom.com/wiki/API_IsIndoors) npcs be are of that!
+
+The `"KeyAction.Name"` has a special formula which can be followed to have different behaviour!
+
+* Formula: `[TYPE] {[npc1 | npc2 | npc3 | npcN]}`
+
+The `[TYPE]` can be one of the following
+* `Flightmaster`
+* `Innkeeper`
+* `Repair`
+* `Vendor` / `Sell`
+* `Trainer`
+
+It is only tested with `Vendor` and `Repair` types!
+
+When either zero or list of npc names with `|` separated characters one of the following scenario going to happen:
+* When **no** npc name is specified, the **closest** **[TYPE]** of that NPC is considered.
+* When **one** npc name is specific, only that npc going to be considered.
+* Finally when **one or more** npc name is specified, the **closest** will be picked!
+
+examples of full automatic npc detection or multiple whitelisted names:
+```json
+"NPC": {
+    "Sequence": [
+        {
+            "Cost": 6,
+            "Name": "Repair", // the closest NPC of the Repair(type) is used, highly experimental can lead unexpected behaviours
+            "Key": "C",
+            "Requirement": "Durability% < 35"
+        },
+        {
+            "Cost": 6,
+            "Name": "Sell Adlin Pridedrift | Rybrad Coldbank", // only two npc are consdered of type Vendor
+            "Key": "C",
+            "Requirements": [
+                "BagFull",
+                "BagGreyItem"
+            ]
+        }
+    ]
+}
+```
+
 
 ### Repeatable Quests Handin
 
@@ -1336,7 +1395,8 @@ Formula: `[Keyword] [Operator] [Numeric integer value]`
 | `SessionHours` | Returns with the elapsed time in Hours since the Session started.<br>The Session starts when the `Start Bot` button is pressed! |
 | `ExpPerc` | Returns with the player experience as percentage to hit next level. |
 | `UIMapId` | Returns with the player current [UIMapId](https://github.com/Xian55/WowClassicGrindBot/blob/9bea201760babc0f6670df2bd5c071c9c3f1220d/Json/dbc/som/WorldMapArea.json#L3C6-L3C11) |
-
+| `PathDist` | Returns the context [PathSettings](#pathsettings) of closest distance (in yards) from the player location to the Path. |
+| `PathDist_{PathSettings.Id}` | Returns the closest distance (in yards) from the player location to the Path. |
 
 For the `MinRange` and `MaxRange` gives an approximation range distance between the player and target.
 
@@ -1750,6 +1810,8 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | `"AutoShot"` | (hunter) Auto spell `Auto Shot` is active |
 | `"HasMainHandEnchant"` | Indicates that main hand weapon has active poison/sharpening stone/shaman buff effect |
 | `"HasOffHandEnchant"` | Indicates that off hand weapon has active poison/sharpening stone/shaman buff effect |
+| `"PathEnd_{PathSettings.Id}"` | Returns true when:<br/>* Player has not yet started walking along the path.<br/>* or reached the destination of the path.<br/>**Note**: path can be reversed based on the [PathSettings.PathThereAndBack](#pathsettings)! |
+| `"PathEnd_Any"` | Same as the above, However returns true when any of is true. |
 
 <table>
 <tr><th>Buffs</th><th>Debuffs</th></tr>

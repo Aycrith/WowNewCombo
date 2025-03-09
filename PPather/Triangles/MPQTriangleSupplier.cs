@@ -110,7 +110,10 @@ public sealed class MPQTriangleSupplier
 
         for (int i = 0; i < mapTile.modelis.Length; i++)
         {
-            AddTriangles(triangles, mapTile.modelis[i]);
+            //if (mi.model.fileName.Contains("bridge"))
+            //AddBoundingTriangles(triangles, mapTile.modelis[i]);
+
+            AddDetailedTriangles(triangles, mapTile.modelis[i]);
         }
 
         wdt.loaded[index] = false;
@@ -199,7 +202,6 @@ public sealed class MPQTriangleSupplier
             tc.AddTriangle(v3, v0, vMid, TriangleType.Terrain);
         }
 
-
         if (!c.haswater)
         {
             return;
@@ -213,7 +215,8 @@ public sealed class MPQTriangleSupplier
                 int ii = row * LiquidData.HEIGHT_SIZE + col;
 
                 ChunkGetCoordForPoint(c, row, col, out float x, out float y, out float z);
-                float height = c.water_height[ii]; // - 1.5f //why this here
+                float height = Math.Max(c.water_height[ii], c.water_height1);
+
                 int index = tc.AddVertex(x, y, height);
 
                 vertices[row * LiquidData.HEIGHT_SIZE + col] = index;
@@ -226,7 +229,7 @@ public sealed class MPQTriangleSupplier
             {
                 int ii = row * LiquidData.FLAG_SIZE + col;
 
-                if (c.water_flags[ii] == 0xf)
+                if (c.legacyWater && c.water_flags[ii] == 15) // causing holes in the water!
                     continue;
 
                 int v0 = vertices[row * LiquidData.HEIGHT_SIZE + col];
@@ -252,7 +255,7 @@ public sealed class MPQTriangleSupplier
         float dir_z = -wi.dir.X;
 
         int maxVertices = 0;
-        WMO wmo = wi.wmo;
+        WMORoot wmo = wi.wmo;
         for (int gi = 0; gi < wmo.groups.Length; gi++)
         {
             WMOGroup g = wmo.groups[gi];
@@ -306,16 +309,20 @@ public sealed class MPQTriangleSupplier
 
             for (int i = 0; i < g.nTriangles; i++)
             {
-                //if ((g.materials[i] & 0x1000) != 0)
-                {
-                    int off = i * 3;
-                    int i0 = vertices[g.triangles[off]];
-                    int i1 = vertices[g.triangles[off + 1]];
-                    int i2 = vertices[g.triangles[off + 2]];
+                Mopy flag = (Mopy)g.materials[i];
 
-                    tc.AddTriangle(i0, i1, i2, TriangleType.Object);
-                    //if(t != -1) s.SetTriangleExtra(t, g.materials[0], 0, 0);
-                }
+                bool isRenderFace = (flag & Mopy.WMO_MATERIAL_RENDER) != 0 && (flag & Mopy.WMO_MATERIAL_DETAIL) == 0;
+                bool isCollision = (flag & Mopy.WMO_MATERIAL_COLLISION) != 0 || isRenderFace;
+
+                if (!isCollision)
+                    continue;
+
+                int off = i * 3;
+                int i0 = vertices[g.triangles[off]];
+                int i1 = vertices[g.triangles[off + 1]];
+                int i2 = vertices[g.triangles[off + 2]];
+
+                tc.AddTriangle(i0, i1, i2, TriangleType.Object);
             }
         }
 
@@ -417,8 +424,14 @@ public sealed class MPQTriangleSupplier
     }
 
     [SkipLocalsInit]
-    private static void AddTriangles(TriangleCollection s, ModelInstance mi)
+    private static void AddDetailedTriangles(TriangleCollection s, ModelInstance mi)
     {
+        Model m = mi.model;
+        if (m.boundingTriangles == null)
+        {
+            return;
+        }
+
         float dx = mi.pos.X;
         float dy = mi.pos.Y;
         float dz = mi.pos.Z;
@@ -426,60 +439,6 @@ public sealed class MPQTriangleSupplier
         float dir_x = mi.dir.Z;
         float dir_y = mi.dir.Y - 90; // -90 is correct!
         float dir_z = -mi.dir.X;
-
-        Model m = mi.model;
-
-        if (m.boundingTriangles == null)
-        {
-            return;
-
-            // /cry no bouding info, revert to normal vertives
-            /*
-				ModelView mv = m.view[0]; // View number 1 ?!?!
-				if (mv == null) return;
-				int[] vertices = new int[m.vertices.Length / 3];
-				for (uint i = 0; i < m.vertices.Length / 3; i++)
-				{
-					float x = m.vertices[i * 3];
-					float y = m.vertices[i * 3 + 2];
-					float z = m.vertices[i * 3 + 1];
-					x *= mi.sc;
-					y *= mi.sc;
-					z *= mi.sc;
-
-					rotate(y, z, dir_x, out y, out z);
-					rotate(x, y, dir_z, out x, out y);
-					rotate(x, z, dir_y, out x, out z);
-
-					float xx = x + dx;
-					float yy = y + dy;
-					float zz = -z + dz;
-
-					float finalx = ChunkReader.ZEROPOINT - zz;
-					float finaly = ChunkReader.ZEROPOINT - xx;
-					float finalz = yy;
-
-					vertices[i] = s.AddVertex(finalx, finaly, finalz);
-				}
-
-				for (int i = 0; i < mv.triangleList.Length / 3; i++)
-				{
-					int off = i * 3;
-					UInt16 vi0 = mv.triangleList[off];
-					UInt16 vi1 = mv.triangleList[off + 1];
-					UInt16 vi2 = mv.triangleList[off + 2];
-
-					int ind0 = mv.indexList[vi0];
-					int ind1 = mv.indexList[vi1];
-					int ind2 = mv.indexList[vi2];
-
-					int v0 = vertices[ind0];
-					int v1 = vertices[ind1];
-					int v2 = vertices[ind2];
-					s.AddTriangle(v0, v1, v2, ChunkedTriangleCollection.TriangleFlagModel);
-				}
-				*/
-        }
 
         int nBoundingVertices = m.boundingVertices.Length / 3;
 
@@ -520,6 +479,94 @@ public sealed class MPQTriangleSupplier
             int v2 = vertices[m.boundingTriangles[off + 2]];
             s.AddTriangle(v0, v1, v2, TriangleType.Model);
         }
+    }
+
+    [SkipLocalsInit]
+    private static void AddBoundingTriangles(TriangleCollection s, ModelInstance mi)
+    {
+        Model m = mi.model;
+        if (m.boundingTriangles == null)
+        {
+            return;
+        }
+
+        float dx = mi.pos.X;
+        float dy = mi.pos.Y;
+        float dz = mi.pos.Z;
+
+        float dir_x = mi.dir.Z;
+        float dir_y = mi.dir.Y - 90; // -90 is correct!
+        float dir_z = -mi.dir.X;
+
+        // Calculate bounding box
+        float minX = float.MaxValue, minY = float.MaxValue, minZ = float.MaxValue;
+        float maxX = float.MinValue, maxY = float.MinValue, maxZ = float.MinValue;
+
+        for (int i = 0; i < m.boundingVertices.Length / 3; i++)
+        {
+            int off = i * 3;
+            float x = m.boundingVertices[off];
+            float y = m.boundingVertices[off + 2];
+            float z = m.boundingVertices[off + 1];
+
+            Rotate(z, y, dir_x, out z, out y);
+            Rotate(x, y, dir_z, out x, out y);
+            Rotate(x, z, dir_y, out x, out z);
+
+            x *= mi.scale;
+            y *= mi.scale;
+            z *= mi.scale;
+
+            float xx = x + dx;
+            float yy = y + dy;
+            float zz = -z + dz;
+
+            float finalx = ChunkReader.ZEROPOINT - zz;
+            float finaly = ChunkReader.ZEROPOINT - xx;
+            float finalz = yy;
+
+            if (finalx < minX) minX = finalx;
+            if (finaly < minY) minY = finaly;
+            if (finalz < minZ) minZ = finalz;
+
+            if (finalx > maxX) maxX = finalx;
+            if (finaly > maxY) maxY = finaly;
+            if (finalz > maxZ) maxZ = finalz;
+        }
+
+        // Add bounding box triangles
+        int v0 = s.AddVertex(minX, minY, minZ);
+        int v1 = s.AddVertex(maxX, minY, minZ);
+        int v2 = s.AddVertex(maxX, maxY, minZ);
+        int v3 = s.AddVertex(minX, maxY, minZ);
+        int v4 = s.AddVertex(minX, minY, maxZ);
+        int v5 = s.AddVertex(maxX, minY, maxZ);
+        int v6 = s.AddVertex(maxX, maxY, maxZ);
+        int v7 = s.AddVertex(minX, maxY, maxZ);
+
+        // Bottom face
+        s.AddTriangle(v0, v1, v2, TriangleType.Model);
+        s.AddTriangle(v0, v2, v3, TriangleType.Model);
+
+        // Top face
+        s.AddTriangle(v4, v5, v6, TriangleType.Model);
+        s.AddTriangle(v4, v6, v7, TriangleType.Model);
+
+        // Front face
+        s.AddTriangle(v0, v1, v5, TriangleType.Model);
+        s.AddTriangle(v0, v5, v4, TriangleType.Model);
+
+        // Back face
+        s.AddTriangle(v3, v2, v6, TriangleType.Model);
+        s.AddTriangle(v3, v6, v7, TriangleType.Model);
+
+        // Left face
+        s.AddTriangle(v0, v3, v7, TriangleType.Model);
+        s.AddTriangle(v0, v7, v4, TriangleType.Model);
+
+        // Right face
+        s.AddTriangle(v1, v2, v6, TriangleType.Model);
+        s.AddTriangle(v1, v6, v5, TriangleType.Model);
     }
 
     [SkipLocalsInit]

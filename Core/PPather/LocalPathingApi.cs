@@ -18,6 +18,8 @@ public sealed class LocalPathingApi : IPPather
 {
     private const bool debug = false;
 
+    private const SearchStrategy searchStrategy = SearchStrategy.A_Star_With_Model_Avoidance;
+
     private readonly ILogger<LocalPathingApi> logger;
 
     private readonly PPatherService service;
@@ -49,7 +51,7 @@ public sealed class LocalPathingApi : IPPather
             service.ToWorld(uiMap, mapFrom.X, mapFrom.Y, mapFrom.Z),
             service.ToWorld(uiMap, mapTo.X, mapTo.Y));
 
-        Path path = service.DoSearch(PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
+        Path path = service.DoSearch(searchStrategy);
         if (path == null)
         {
             if (debug)
@@ -82,7 +84,7 @@ public sealed class LocalPathingApi : IPPather
             service.ToWorldZ(uiMap, worldFrom.X, worldFrom.Y, worldFrom.Z),
             service.ToWorldZ(uiMap, worldTo.X, worldTo.Y, worldTo.Z));
 
-        Path path = service.DoSearch(PathGraph.eSearchScoreSpot.A_Star_With_Model_Avoidance);
+        Path path = service.DoSearch(searchStrategy);
         if (path == null)
         {
             if (debug)

@@ -37,14 +37,14 @@ public sealed class GraphChunk
     public const int SIZE = CHUNK_SIZE * CHUNK_SIZE;
     private const bool saveEnabled = true;
 
-    private const uint FILE_MAGIC = 0x23452345;
+    private const uint FILE_MAGIC = 0x23452349;
     private const uint FILE_ENDMAGIC = 0x54325432;
     private const uint SPOT_MAGIC = 0x53504f54;
 
     private readonly ILogger logger;
     private readonly float base_x, base_y;
     private readonly string filePath;
-    private readonly Spot[] spots;
+    private readonly Spot[] spots = new Spot[SIZE];
 
     public readonly int ix, iy;
     public bool modified;
@@ -65,7 +65,7 @@ public sealed class GraphChunk
     //     float y;
     //     float z;
 
-    public GraphChunk(float base_x, float base_y, int ix, int iy, ILogger logger, string baseDir, long lru)
+    public GraphChunk(float base_x, float base_y, int ix, int iy, ILogger logger, string baseDir)
     {
         this.logger = logger;
         this.base_x = base_x;
@@ -73,10 +73,6 @@ public sealed class GraphChunk
 
         this.ix = ix;
         this.iy = iy;
-
-        LRU = lru;
-
-        spots = new Spot[SIZE];
 
         filePath = System.IO.Path.Join(baseDir, string.Format("c_{0,3:000}_{1,3:000}.bin", ix, iy));
     }
@@ -164,11 +160,6 @@ public sealed class GraphChunk
 
     public bool Load()
     {
-        if (!File.Exists(filePath))
-        {
-            return false;
-        }
-
         try
         {
             long startTime = GetTimestamp();

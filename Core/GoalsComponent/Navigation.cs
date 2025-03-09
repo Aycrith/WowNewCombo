@@ -224,7 +224,7 @@ public sealed partial class Navigation : IDisposable
 
                 if (HasBeenActiveRecently())
                 {
-                    stuckDetector.Update();
+                    stuckDetector.Update(token);
                     worldDistance = playerW.WorldDistanceXYTo(routeToNextWaypoint.Peek());
                 }
             }
@@ -283,27 +283,40 @@ public sealed partial class Navigation : IDisposable
         return WorldMapAreaDB.ToMap_FlipXY(routeToNextWaypoint.Peek(), playerReader.WorldMapArea);
     }
 
-    public void SetWayPoints(Span<Vector3> mapPoints)
+    public void SetWayPoints(Span<Vector3> points)
     {
         wayPoints.Clear();
         routeToNextWaypoint.Clear();
 
         float mapDistanceXY = 0;
         WorldMapArea wma = playerReader.WorldMapArea;
-        for (int i = mapPoints.Length - 1; i >= 0; i--)
+        for (int i = points.Length - 1; i >= 0; i--)
         {
-            Vector3 worldPos = WorldMapAreaDB.ToWorld_FlipXY(mapPoints[i], wma);
-            if (i != mapPoints.Length - 1)
+            Vector3 point = points[i];
+            if (IsMapPoint(point))
+            {
+                point = WorldMapAreaDB.ToWorld_FlipXY(point, wma);
+            }
+
+            if (i != points.Length - 1)
             {
                 Vector3 prev = wayPoints.Peek();
-                mapDistanceXY += worldPos.WorldDistanceXYTo(prev);
+                mapDistanceXY += point.WorldDistanceXYTo(prev);
             }
-            wayPoints.Push(worldPos);
+
+            wayPoints.Push(point);
         }
 
         AvgDistance = wayPoints.Count > 1 ? Max(mapDistanceXY / wayPoints.Count, OutDoorMinDistance) : OutDoorMinDistance;
 
         UpdateTotalRoute();
+
+        static bool IsMapPoint(Vector3 p)
+        {
+            return
+                p.X is >= 0 and <= 100 &&
+                p.Y is >= 0 and <= 100;
+        }
     }
 
     public void ResetStuckParameters()

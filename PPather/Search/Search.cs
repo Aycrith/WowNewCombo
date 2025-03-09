@@ -17,12 +17,13 @@ public sealed class Search
     private readonly DataConfig dataConfig;
     private readonly ILogger logger;
 
-    public Vector4 locationFrom { get; set; }
-    public Vector4 locationTo { get; set; }
+    public Vector4 From { get; set; }
+    public Vector4 Target { get; set; }
 
-    private const float toonHeight = 2.0f;
-    private const float toonSize = 0.5f;
-    private const float howClose = 5f;
+    private const float toonHeight = PathGraph.toonHeight;
+    private const float toonSize = PathGraph.toonSize;
+
+    private const float howClose = PathGraph.MaxStepLength;
 
     public Search(float mapId, ILogger logger, DataConfig dataConfig)
     {
@@ -61,7 +62,7 @@ public sealed class Search
         if (zModel != float.MinValue)
         {
             if (zTerrain != float.MinValue &&
-                MathF.Abs(zModel - zTerrain) > toonHeight / 2)
+                MathF.Abs(zModel - zTerrain) > PathGraph.toonHeightHalf)
             {
                 return new(x, y, zTerrain, mapId);
             }
@@ -102,11 +103,11 @@ public sealed class Search
         PathGraph = new(mapId, triangleWorld, logger, dataConfig);
     }
 
-    public Path DoSearch(PathGraph.eSearchScoreSpot searchScoreSpot)
+    public Path DoSearch(SearchStrategy searchScoreSpot)
     {
         try
         {
-            return PathGraph.CreatePath(locationFrom.AsVector3(), locationTo.AsVector3(), searchScoreSpot, howClose);
+            return PathGraph.CreatePath(From.AsVector3(), Target.AsVector3(), searchScoreSpot, howClose);
         }
         catch (Exception ex)
         {
