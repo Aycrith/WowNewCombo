@@ -520,8 +520,12 @@ public sealed partial class RequirementFactory
         {
             PathSettings settings = paths[i];
 
-            string nameDistanceToPath = $"PathDist_{settings.Id}";
-            intVariables.TryAdd(nameDistanceToPath, settings.GetDistanceXYFromPath);
+            string prefixKey = "PathDist";
+            string suffix = $"{settings.Id}";
+            string key = $"{prefixKey}_{suffix}";
+            intVariables.TryAdd(key, settings.GetDistanceXYFromPath);
+
+            InitPerKeyAction(prefixKey, suffix);
 
             Init(settings);
         }
@@ -529,13 +533,13 @@ public sealed partial class RequirementFactory
 
     private void InitPerKeyAction(KeyAction item)
     {
-        InitPerKeyAction(item, "CD");
-        InitPerKeyAction(item, "Cost");
+        InitPerKeyAction("CD", item.Name);
+        InitPerKeyAction("Cost", item.Name);
     }
 
-    private void InitPerKeyAction(KeyAction item, string prefixKey)
+    private void InitPerKeyAction(string prefixKey, string suffix)
     {
-        string key = $"{prefixKey}_{item.Name}";
+        string key = $"{prefixKey}_{suffix}";
         intVariables.Remove(prefixKey);
 
         if (intVariables.TryGetValue(key, out Func<int>? func))

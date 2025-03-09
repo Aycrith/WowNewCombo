@@ -44,7 +44,7 @@ public sealed class PathSettings
     {
         this.globalTime = globalTime;
         this.playerReader = playerReader;
-        Id = id;
+        Id = Id == default ? id : Id;
     }
 
     public bool CanRun()

@@ -150,6 +150,11 @@ public sealed partial class ClassConfiguration
             settings.Init(globalTime, playerReader, i);
         }
 
+        if (Paths.Select(x => x.Id).Distinct().Count() != Paths.Length)
+        {
+            throw new ArgumentException("One ore more PathSettings share the same Id. Must be unique!");
+        }
+
         RequirementFactory factory = new(sp, this);
 
         var baseActionKeys = GetByType<KeyAction>();

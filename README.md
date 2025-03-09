@@ -620,6 +620,7 @@ The path that the player follows during [Follow Route Goal](#follow-route-goal),
 | Property Name | Description | Optional | Default value |
 | --- | --- | --- | --- |
 | `"PathFilename"` | [Path](#path) to use while alive | **false** | `""` |
+| `"Id"` | <b>Must be a Unique Integer value</b> to identify PathSettings. | true | `"Auto incremented from zero"` or `"Unless specified by user."` |
 | `"PathThereAndBack"` | While using the path, [should go start to and reverse](#there-and-back) | true | `true` |
 | `"PathReduceSteps"` | Reduce the number of path points | true | `false` |
 | `"SideActivityRequirements"` | List of [Requirements](#requirement) to limit when the player should search for target<br/>Great for enforcing how closely should follow the path. | true | `true` |
@@ -629,6 +630,7 @@ The path that the player follows during [Follow Route Goal](#follow-route-goal),
 When the bellow properties are defined in the [Class Configuration](#12-class-configuration), a new [PathSettings](#pathsettings) instance is created under in `Paths` array as the first element.
 
 ```json
+"Id": 42,                                                               // Optional - Helps identify the path
 "PathFilename": "_pack\\1-20\\Dwarf.Gnome\\1-4_Dun Morogh.json.json",   // the path to walk when alive
 "PathThereAndBack": true,                                               // if true walks the path and the walks it backwards.
 "PathReduceSteps": true,                                                // uses every other coordinate, halve the coordinate count
@@ -1393,6 +1395,7 @@ Formula: `[Keyword] [Operator] [Numeric integer value]`
 | `SessionHours` | Returns with the elapsed time in Hours since the Session started.<br>The Session starts when the `Start Bot` button is pressed! |
 | `ExpPerc` | Returns with the player experience as percentage to hit next level. |
 | `UIMapId` | Returns with the player current [UIMapId](https://github.com/Xian55/WowClassicGrindBot/blob/9bea201760babc0f6670df2bd5c071c9c3f1220d/Json/dbc/som/WorldMapArea.json#L3C6-L3C11) |
+| `PathDist` | Returns the context [PathSettings](#pathsettings) of closest distance (in yards) from the player location to the Path. |
 | `PathDist_{PathSettings.Id}` | Returns the closest distance (in yards) from the player location to the Path. |
 
 For the `MinRange` and `MaxRange` gives an approximation range distance between the player and target.
