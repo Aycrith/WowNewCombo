@@ -8,7 +8,7 @@ using SharedLib.Data;
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
+using static System.Diagnostics.Stopwatch;
 using System.Numerics;
 
 using WowTriangles;
@@ -150,12 +150,12 @@ public sealed class PPatherService
 
     public void Save()
     {
-        long timestamp = Stopwatch.GetTimestamp();
+        long timestamp = GetTimestamp();
 
         search.PathGraph.Save();
 
         if (logger.IsEnabled(LogLevel.Trace))
-            logger.LogTrace($"Saved GraphChunks {Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds} ms");
+            logger.LogTrace($"Saved GraphChunks {GetElapsedTime(timestamp).TotalMilliseconds} ms");
     }
 
     public void SetLocations(Vector4 from, Vector4 to)

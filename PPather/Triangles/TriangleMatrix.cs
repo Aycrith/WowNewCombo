@@ -45,7 +45,10 @@ public sealed class TriangleMatrix
 
         Parallel.For(0, triangleCount, index =>
         {
-            tc.GetTriangleVertices(index,
+            var tSpan = tc.TrianglesSpan;
+            var vSpan = tc.VerteciesSpan;
+
+            TriangleCollection.GetTriangleVertices(tSpan, vSpan, index,
                 out Vector3 v0,
                 out Vector3 v1,
                 out Vector3 v2,

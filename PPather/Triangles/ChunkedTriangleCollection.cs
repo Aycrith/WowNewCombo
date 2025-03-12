@@ -135,12 +135,15 @@ public sealed class ChunkedTriangleCollection
         TriangleMatrix tm = tc.GetTriangleMatrix();
         ReadOnlySpan<int> ts = tm.GetAllCloseTo(x, y, toonHeight);
 
+        var tSpan = tc.TrianglesSpan;
+        var vSpan = tc.VerteciesSpan;
+
         Vector3 toon = new(x, y, z + toonHeight);
         float halfSize = toonSize * 0.5f;
 
         foreach (int index in ts)
         {
-            tc.GetTriangleVertices(index,
+            TriangleCollection.GetTriangleVertices(tSpan, vSpan, index,
                 out Vector3 v0,
                 out Vector3 v1,
                 out Vector3 v2,
@@ -293,9 +296,12 @@ public sealed class ChunkedTriangleCollection
     {
         float baseZ = Min(from.Z, to.Z);
 
+        var tSpan = tc.TrianglesSpan;
+        var vSpan = tc.VerteciesSpan;
+
         foreach (int index in ts)
         {
-            tc.GetTriangleVertices(index,
+            TriangleCollection.GetTriangleVertices(tSpan, vSpan, index,
                 out Vector3 v0,
                 out Vector3 v1,
                 out Vector3 v2,
@@ -329,12 +335,15 @@ public sealed class ChunkedTriangleCollection
         TriangleMatrix tm = tc.GetTriangleMatrix();
         ReadOnlySpan<int> ts = tm.GetAllCloseTo(x, y, 1.0f);
 
+        var tSpan = tc.TrianglesSpan;
+        var vSpan = tc.VerteciesSpan;
+
         Vector3 s0 = new(x, y, min_z);
         Vector3 s1 = new(x, y, max_z);
 
         foreach (int index in ts)
         {
-            tc.GetTriangleVertices(index,
+            TriangleCollection.GetTriangleVertices(tSpan, vSpan, index,
                     out Vector3 v0,
                     out Vector3 v1,
                     out Vector3 v2,
@@ -360,10 +369,13 @@ public sealed class ChunkedTriangleCollection
         float maxZ = float.MinValue;
         float minZ = float.MaxValue;
 
+        var tSpan = tc.TrianglesSpan;
+        var vSpan = tc.VerteciesSpan;
+
         ReadOnlySpan<int> ts = tm.GetAllCloseTo(x, y, range);
         foreach (int index in ts)
         {
-            tc.GetTriangleVertices(index,
+            TriangleCollection.GetTriangleVertices(tSpan, vSpan, index,
                 out Vector3 v0,
                 out Vector3 v1,
                 out Vector3 v2,
@@ -397,10 +409,13 @@ public sealed class ChunkedTriangleCollection
         Vector3 toon = new(x, y, z);
         float halfRange = range * 0.5f;
 
+        var tSpan = tc.TrianglesSpan;
+        var vSpan = tc.VerteciesSpan;
+
         ReadOnlySpan<int> ts = tm.GetAllCloseTo(x, y, range);
         foreach (int index in ts)
         {
-            tc.GetTriangleVertices(index,
+            TriangleCollection.GetTriangleVertices(tSpan, vSpan, index,
                 out Vector3 v0,
                 out Vector3 v1,
                 out Vector3 v2,
@@ -430,15 +445,18 @@ public sealed class ChunkedTriangleCollection
         TriangleMatrix tm = tc.GetTriangleMatrix();
         ReadOnlySpan<int> ts = tm.GetAllCloseTo(a.X, a.Y, Vector3.Distance(a, b) + 1);
 
+        var tSpan = tc.TrianglesSpan;
+        var vSpan = tc.VerteciesSpan;
+
         Vector3 s0 = a;
         Vector3 s1 = b;
 
         foreach (int index in ts)
         {
-            tc.GetTriangleVertices(index,
-                    out Vector3 v0,
-                    out Vector3 v1,
-                    out Vector3 v2, out _);
+            TriangleCollection.GetTriangleVertices(tSpan, vSpan, index,
+                out Vector3 v0,
+                out Vector3 v1,
+                out Vector3 v2, out _);
 
             if (SegmentTriangleIntersect(s0, s1, v0, v1, v2, out _))
             {
@@ -458,6 +476,9 @@ public sealed class ChunkedTriangleCollection
         TriangleMatrix tm = tc.GetTriangleMatrix();
         ReadOnlySpan<int> ts = tm.GetAllCloseTo(x, y, toonHeight);
 
+        var tSpan = tc.TrianglesSpan;
+        var vSpan = tc.VerteciesSpan;
+
         float hint_z = (max_z + min_z) * 0.75f; // try to estimate above the mid point
 
         Vector3 s0 = new(x, y, min_z);
@@ -469,7 +490,7 @@ public sealed class ChunkedTriangleCollection
 
         foreach (int index in ts)
         {
-            tc.GetTriangleVertices(index,
+            TriangleCollection.GetTriangleVertices(tSpan, vSpan, index,
                 out Vector3 v0,
                 out Vector3 v1,
                 out Vector3 v2,
@@ -524,7 +545,7 @@ public sealed class ChunkedTriangleCollection
             bool allGood;
             foreach (int index in ts)
             {
-                tc.GetTriangleVertices(index,
+                TriangleCollection.GetTriangleVertices(tSpan, vSpan, index,
                     out Vector3 v0,
                     out Vector3 v1,
                     out Vector3 v2,

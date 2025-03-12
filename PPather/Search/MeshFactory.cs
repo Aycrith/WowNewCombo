@@ -1,6 +1,4 @@
-﻿using System;
-using System.Buffers;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Numerics;
 
 using WowTriangles;
@@ -19,9 +17,10 @@ public static class MeshFactory
     {
         int c = 0;
 
-        for (int i = 0; i < tc.TriangleCount; i++)
+        var span = tc.TrianglesSpan;
+        for (int i = 0; i < span.Length; i++)
         {
-            tc.GetTriangle(i, out int v0, out int v1, out int v2, out TriangleType flags);
+            TriangleCollection.GetTriangle(span, i, out int v0, out int v1, out int v2, out TriangleType flags);
             if (flags != modelType)
                 continue;
 

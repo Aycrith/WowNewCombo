@@ -603,8 +603,9 @@ public sealed class PathGraph
 
     public Spot ClosestSpot;
     public Spot PeekSpot;
-    public HashSet<Vector3> TestPoints = [];
-    public HashSet<Vector3> BlockedPoints = [];
+
+    public readonly HashSet<Vector3> TestPoints = [];
+    public readonly HashSet<Vector3> BlockedPoints = [];
 
     private Spot Search(Spot fromSpot, Spot destinationSpot, SearchStrategy searchScoreSpot, float minHowClose)
     {
