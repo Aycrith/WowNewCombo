@@ -570,6 +570,7 @@ public sealed class MPQTriangleSupplier
     }
 
     [SkipLocalsInit]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void ChunkGetCoordForPoint(MapChunk c, int row, int col,
                                       out float x, out float y, out float z)
     {

@@ -317,9 +317,6 @@ public sealed class PathGraph
 
     public Spot GetSpot(Vector3 l)
     {
-        // Null?
-        //if (l == null)
-        //    return null;
         return GetSpot(l.X, l.Y, l.Z);
     }
 
@@ -558,33 +555,15 @@ public sealed class PathGraph
             return 0.0f;
 
         Spot prev = from.traceBack;
-        return TurnCost(prev.Loc.X, prev.Loc.Y, prev.Loc.Z, from.Loc.X, from.Loc.Y, from.Loc.Z, to.Loc.X, to.Loc.Y, to.Loc.Z);
+        return TurnCost(prev.Loc, from.Loc, to.Loc);
     }
 
-    private static float TurnCost(float x0, float y0, float z0, float x1, float y1, float z1, float x2, float y2, float z2)
+    private static float TurnCost(Vector3 p0, Vector3 p1, Vector3 p2)
     {
-        float v1x = x1 - x0;
-        float v1y = y1 - y0;
-        float v1z = z1 - z0;
+        Vector3 v1 = Vector3.Normalize(p1 - p0);
+        Vector3 v2 = Vector3.Normalize(p2 - p1);
 
-        float v1l = Sqrt(v1x * v1x + v1y * v1y + v1z * v1z);
-        v1x /= v1l;
-        v1y /= v1l;
-        v1z /= v1l;
-
-        float v2x = x2 - x1;
-        float v2y = y2 - y1;
-        float v2z = z2 - z1;
-
-        float v2l = Sqrt(v2x * v2x + v2y * v2y + v2z * v2z);
-        v2x /= v2l;
-        v2y /= v2l;
-        v2z /= v2l;
-
-        float ddx = v1x - v2x;
-        float ddy = v1y - v2y;
-        float ddz = v1z - v2z;
-        return Sqrt(ddx * ddx + ddy * ddy + ddz * ddz);
+        return Vector3.Distance(v1, v2);
     }
 
     // return null if failed or the last spot in the path found
@@ -674,7 +653,7 @@ public sealed class PathGraph
             }
 
             //Find spots to link to
-            CreateSpotsAroundSpot(currentSearchSpot/*, destinationSpot*/);
+            CreateSpotsAroundSpot(currentSearchSpot, destinationSpot);
 
             //score each spot around the current search spot and add them to the queue
             ReadOnlySpan<Spot> spots = currentSearchSpot.GetPathsToSpots(this);
@@ -799,12 +778,12 @@ public sealed class PathGraph
         }
     }
 
-    public void CreateSpotsAroundSpot(Spot currentSearchSpot/*, Spot destination*/)
+    public void CreateSpotsAroundSpot(Spot currentSearchSpot, Spot destination)
     {
-        CreateSpotsAroundSpot(currentSearchSpot, currentSearchSpot.IsFlagSet(Spot.FLAG_MPQ_MAPPED)/*, destination*/);
+        CreateSpotsAroundSpot(currentSearchSpot, currentSearchSpot.IsFlagSet(Spot.FLAG_MPQ_MAPPED), destination);
     }
 
-    public void CreateSpotsAroundSpot(Spot currentSearchSpot, bool mapped/*, Spot destination*/)
+    public void CreateSpotsAroundSpot(Spot currentSearchSpot, bool mapped, Spot destination)
     {
         if (mapped)
         {

@@ -11,6 +11,7 @@ using PPather.Graph;
 using PPather.Triangles.Data;
 
 using System;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -99,16 +100,18 @@ public sealed class ChunkedTriangleCollection
 
         GetGridLimits(grid_x, grid_y, out float min_x, out float min_y, out float max_x, out float max_y);
 
+        long startTime = Stopwatch.GetTimestamp();
         TriangleCollection tc = new(logger);
         tc.SetLimits(min_x - 1, min_y - 1, -1E30f, max_x + 1, max_y + 1, 1E30f);
 
         supplier.GetTriangles(tc, min_x, min_y, max_x, max_y);
+        var endTime = Stopwatch.GetElapsedTime(startTime);
 
         chunks.Add(grid_x, grid_y, tc);
 
         if (logger.IsEnabled(LogLevel.Trace))
         {
-            logger.LogTrace($"Grid [{grid_x},{grid_y}] Bounds: [{min_x:F4}, {min_y:F4}] [{max_x:F4}, {max_y:F4}] [{x}, {y}] - Count: {chunks.Count}");
+            logger.LogTrace($"Grid [{grid_x},{grid_y}] Bounds: [{min_x:F4}, {min_y:F4}] [{max_x:F4}, {max_y:F4}] [{x}, {y}] - Count: {chunks.Count} - Loaded {endTime.TotalMilliseconds}ms");
         }
         NotifyChunkAdded?.Invoke(new ChunkEventArgs(grid_x, grid_y));
 
