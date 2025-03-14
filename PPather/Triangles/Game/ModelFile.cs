@@ -32,7 +32,7 @@ namespace Wmo;
 public static class ModelFile
 {
     [SkipLocalsInit]
-    public static Model Read(ArchiveSet archive, string fileName)
+    public static Model Read(ArchiveSet archive, ReadOnlySpan<char> fileName)
     {
         using MpqFileStream mpq = archive.GetStream(fileName);
         int length = (int)mpq.Length;
@@ -76,7 +76,6 @@ public static class ModelFile
             pooler.Return(array);
 
         return new(
-            fileName,
             ReadVertices(begining, nVertices, ofsVertices),
             ReadBoundingTriangles(begining, nBoundingTriangles, ofsBoundingTriangles),
             ReadBoundingVertices(begining, nBoundingVertices, ofsBoundingVertices));

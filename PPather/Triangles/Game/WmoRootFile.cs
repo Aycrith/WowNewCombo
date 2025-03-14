@@ -32,7 +32,7 @@ namespace Wmo;
 
 internal static class WmoRootFile
 {
-    public static void Load(ArchiveSet archive, string name, WMORoot wmo, ModelManager modelmanager)
+    public static void Load(ArchiveSet archive, ReadOnlySpan<char> name, WMORoot wmo, ModelManager modelmanager)
     {
         using MpqFileStream mpq = archive.GetStream(name);
 

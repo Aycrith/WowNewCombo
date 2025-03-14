@@ -31,7 +31,7 @@ namespace Wmo;
 
 internal static class WmoGroupFile
 {
-    public static void Load(ArchiveSet archive, string name, WMORoot wmoRoot, WMOGroup g)
+    public static void Load(ArchiveSet archive, ReadOnlySpan<char> name, WMORoot wmoRoot, WMOGroup g)
     {
         MpqFileStream mpq;
 

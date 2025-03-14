@@ -35,20 +35,17 @@ public sealed class WMOManager : Manager<WMORoot>
         this.modelmanager = modelmanager;
     }
 
-    public override bool Load(string path, out WMORoot wmoRoot)
+    public override bool Load(ReadOnlySpan<char> path, out WMORoot wmoRoot)
     {
-        wmoRoot = new()
-        {
-            fileName = path
-        };
+        wmoRoot = new();
 
         WmoRootFile.Load(archive, path, wmoRoot, modelmanager);
 
-        ReadOnlySpan<char> part = path[..^4].AsSpan();
+        ReadOnlySpan<char> part = path[..^4];
 
         for (int i = 0; i < wmoRoot.groups.Length; i++)
         {
-            string name = string.Format("{0}_{1,3:000}.wmo", part.ToString(), i);
+            ReadOnlySpan<char> name = $"{part}_{i,3:000}.wmo";
             WmoGroupFile.Load(archive, name, wmoRoot, wmoRoot.groups[i]);
         }
         return true;

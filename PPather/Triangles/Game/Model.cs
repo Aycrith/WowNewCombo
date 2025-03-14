@@ -22,14 +22,12 @@ namespace Wmo;
 
 public readonly struct Model
 {
-    public readonly string fileName;
     public readonly float[] vertices;           // 3 per vertex
     public readonly float[] boundingVertices;   // 3 per vertex
     public readonly ushort[] boundingTriangles;
 
-    public Model(string fileName, float[] vertices, ushort[] boundingTriangles, float[] boundingVertices)
+    public Model(float[] vertices, ushort[] boundingTriangles, float[] boundingVertices)
     {
-        this.fileName = fileName;
         this.vertices = vertices;
         this.boundingTriangles = boundingTriangles;
         this.boundingVertices = boundingVertices;

@@ -21,7 +21,6 @@
 using StormDll;
 
 using System;
-using System.Buffers;
 using System.IO;
 
 namespace Wmo;
@@ -30,20 +29,24 @@ public sealed class ModelManager : Manager<Model>
 {
     private readonly ArchiveSet archive;
 
-    private readonly SearchValues<string> lookup = SearchValues.Create([".mdx", ".mdl"], StringComparison.OrdinalIgnoreCase);
-
     public ModelManager(ArchiveSet archive)
     {
         this.archive = archive;
     }
 
-    public override bool Load(string path, out Model t)
+    public override bool Load(ReadOnlySpan<char> path, out Model t)
     {
-        string extension = Path.GetExtension(path);
+        ReadOnlySpan<char> extension = Path.GetExtension(path);
 
-        if (lookup.Contains(extension))
+        if (extension.SequenceEqual(".mdx") || extension.SequenceEqual(".mdl") ||
+            extension.SequenceEqual(".MDX") || extension.SequenceEqual(".MDL"))
         {
-            path = Path.ChangeExtension(path, ".m2");
+            Span<char> mutablePath = stackalloc char[path.Length - 1];
+            path[..^1].CopyTo(mutablePath);
+
+            mutablePath[^1] = '2';
+            t = ModelFile.Read(archive, mutablePath);
+            return true;
         }
 
         t = ModelFile.Read(archive, path);

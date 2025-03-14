@@ -26,7 +26,7 @@ internal sealed class Archive
         if (!open)
             return;
 
-        using MpqFileStream mpq = GetStream("(listfile)");
+        using MpqFileStream mpq = GetStream("(listfile)".AsSpan());
         int length = (int)mpq.Length;
 
         HashSet<string> fileList = new(StringComparer.InvariantCultureIgnoreCase);
@@ -92,6 +92,12 @@ internal sealed class Archive
 
     public bool HasFile(string name) => fileList.Contains(name);
 
+    public bool HasFile(ReadOnlySpan<char> name)
+    {
+        var lookup = fileList.GetAlternateLookup<ReadOnlySpan<char>>();
+        return lookup.Contains(name);
+    }
+
     public bool SFileCloseArchive()
     {
         return Is64Bit
@@ -99,7 +105,15 @@ internal sealed class Archive
             : StormDllx86.SFileCloseArchive(handle);
     }
 
+    [Obsolete("Use GetStream instead.")]
     public MpqFileStream GetStream(string fileName)
+    {
+        return !SFileOpenFileEx(handle, fileName, OpenFile.SFILE_OPEN_FROM_MPQ, out IntPtr fileHandle)
+            ? throw new IOException("SFileOpenFileEx failed")
+            : new MpqFileStream(fileHandle);
+    }
+
+    public MpqFileStream GetStream(ReadOnlySpan<char> fileName)
     {
         return !SFileOpenFileEx(handle, fileName, OpenFile.SFILE_OPEN_FROM_MPQ, out IntPtr fileHandle)
             ? throw new IOException("SFileOpenFileEx failed")
@@ -139,12 +153,17 @@ internal sealed class Archive
 
     public static bool SFileOpenFileEx(
         IntPtr archiveHandle,
-        string fileName,
+        ReadOnlySpan<char> fileName,
         OpenFile searchScope,
         out IntPtr fileHandle)
     {
+        // Convert the fileName of Uft16 to Utf8 with null terminated string
+        Span<byte> utf8Bytes = stackalloc byte[Encoding.UTF8.GetByteCount(fileName) + 1];
+        Encoding.UTF8.GetBytes(fileName, utf8Bytes);
+        utf8Bytes[^1] = 0;
+
         return Is64Bit
-            ? StormDllx64.SFileOpenFileEx(archiveHandle, fileName, searchScope, out fileHandle)
-            : StormDllx86.SFileOpenFileEx(archiveHandle, fileName, searchScope, out fileHandle);
+            ? StormDllx64.SFileOpenFileEx(archiveHandle, utf8Bytes, searchScope, out fileHandle)
+            : StormDllx86.SFileOpenFileEx(archiveHandle, utf8Bytes, searchScope, out fileHandle);
     }
 }

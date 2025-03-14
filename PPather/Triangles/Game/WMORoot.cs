@@ -24,7 +24,6 @@ namespace Wmo;
 
 public sealed class WMORoot
 {
-    public string fileName;
     public WMOGroup[] groups;
 
     //int nTextures, nGroups, nP, nLight nX;

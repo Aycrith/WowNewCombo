@@ -54,7 +54,8 @@ internal sealed class WDTFile
         this.modelmanager = modelmanager;
         this.archive = archive;
 
-        string wdtfile = Path.Join("World", "Maps", pathName, pathName + ".wdt");
+        ReadOnlySpan<char> path = pathName.AsSpan();
+        ReadOnlySpan<char> wdtfile = Path.Join("World".AsSpan(), "Maps".AsSpan(), path, $"{path}.wdt".AsSpan());
         using MpqFileStream mpq = archive.GetStream(wdtfile);
 
         var pooler = ArrayPool<byte>.Shared;
@@ -107,7 +108,9 @@ internal sealed class WDTFile
         if (!wdt.maps[index])
             return;
 
-        string filename = Path.Join("World", "Maps", pathName, $"{pathName}_{x}_{y}.adt");
+        ReadOnlySpan<char> path = pathName.AsSpan();
+        ReadOnlySpan<char> filename = $"World\\Maps\\{path}\\{path}_{x}_{y}.adt";
+
         if (logger.IsEnabled(LogLevel.Trace))
             logger.LogTrace($"Reading adt: {filename}");
 

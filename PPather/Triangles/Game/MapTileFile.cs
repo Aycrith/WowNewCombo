@@ -39,7 +39,7 @@ internal static partial class MapTileFile // adt file
     private static readonly LiquidData eLiquidData = new(0, 0, 0, EmptyMH2OData1, [], []);
     public static ref readonly LiquidData EmptyLiquidData => ref eLiquidData;
 
-    public static MapTile Read(ArchiveSet archive, string name, WMOManager wmomanager, ModelManager modelmanager)
+    public static MapTile Read(ArchiveSet archive, ReadOnlySpan<char> name, WMOManager wmomanager, ModelManager modelmanager)
     {
         LiquidData[] LiquidDataChunk = [];
 
