@@ -130,7 +130,7 @@ public sealed class PathGraph
 
         if (triangleWorld.GradiantScore(loc.X, loc.Y, loc.Z, 3, gradiantMax) > gradiantMax)
         {
-            return 8;
+            return 32;
         }
 
         return 0;
