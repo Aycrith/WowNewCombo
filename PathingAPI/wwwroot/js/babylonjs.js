@@ -74,7 +74,7 @@
             case 6: return new BABYLON.Color3(1, 0.6, 0);
             case 7: return BABYLON.Color3.Yellow();
             case 8: return BABYLON.Color3.Black();
-            case 9: return BABYLON.Color3.Pink();
+            case 9: return BABYLON.Color3.Magenta();
             default: return BABYLON.Color3.White();
         }
     }
@@ -235,6 +235,49 @@
             customMesh.material = materials[p % materials.length];
             customMesh.parent = rootNodes[p % rootNodes.length];
         }
+    });
+
+    connection.on("drawBoundBox", (min, max, color, name) => {
+        removeMesh(name);
+
+        const v1 = new BABYLON.Vector3.FromArray(min);
+        const v2 = new BABYLON.Vector3.FromArray(max);
+
+        const v11 = new BABYLON.Vector3(v1.x / div, v1.z / div, v1.y / div);
+        const v22 = new BABYLON.Vector3(v2.x / div, v2.z / div, v2.y / div);
+
+        const vertices = [
+            v11.x, v11.y, v11.z,
+            v22.x, v11.y, v11.z,
+            v22.x, v22.y, v11.z,
+            v11.x, v22.y, v11.z,
+            v11.x, v11.y, v22.z,
+            v22.x, v11.y, v22.z,
+            v22.x, v22.y, v22.z,
+            v11.x, v22.y, v22.z 
+        ];
+
+        const indices = [
+            0, 1, 2, 0, 2, 3,
+            1, 5, 6, 1, 6, 2,
+            5, 4, 7, 5, 7, 6,
+            4, 0, 3, 4, 3, 7,
+            3, 2, 6, 3, 6, 7,
+            4, 5, 1, 4, 1, 0 
+        ];
+
+        const material = new BABYLON.StandardMaterial(scene);
+        material.diffuseColor = getColour(color);  
+        material.wireframe = true;
+
+        const box = new BABYLON.Mesh(name, scene);
+        box.material = material;
+
+        const data = new BABYLON.VertexData();
+        data.positions = vertices;
+        data.indices = indices;
+
+        data.applyToMesh(box);
     });
 
     /* JSON Based */

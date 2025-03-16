@@ -32,6 +32,8 @@ public sealed class PPatherService
 
     public bool Initialised => search != null;
 
+    public bool IsSearching { get; set; }
+
     public Vector4 SearchFrom => search.From;
     public Vector4 SearchTo => search.Target;
     public Vector3 ClosestLocation => search?.PathGraph?.ClosestSpot?.Loc ?? Vector3.Zero;
@@ -143,7 +145,9 @@ public sealed class PPatherService
     public Path DoSearch(SearchStrategy searchType)
     {
         SearchBegin?.Invoke();
+        IsSearching = true;
         var path = search.DoSearch(searchType);
+        IsSearching = false;
         OnPathCreated?.Invoke(path);
         return path;
     }

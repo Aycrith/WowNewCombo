@@ -26,6 +26,7 @@ using SharedLib.Extensions;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Numerics;
@@ -320,73 +321,31 @@ public sealed class PathGraph
         return GetSpot(l.X, l.Y, l.Z);
     }
 
-    // this can be slow...
-
-    public Spot FindClosestSpot(Vector3 l_d)
-    {
-        return FindClosestSpot(l_d, 30.0f);
-    }
-
-    /*
-    public Spot FindClosestSpot(Vector3 l, float max_d)
-    {
-        return FindClosestSpot(l, max_d, null);
-    }
-    */
-
-    // this can be slow...
     public Spot FindClosestSpot(Vector3 l, float max_d)
     {
         Spot closest = null;
-        float closest_d = 1E30f;
-        int d = 0;
+        float closest_d = Math.Max(WantedStepLength, max_d);
+        ReadOnlySpan<int> dx = [-1, 1, 0, 0];
+        ReadOnlySpan<int> dy = [0, 0, -1, 1];
 
-        const int SV_LENGTH = 4;
-        var pooler = ArrayPool<Spot>.Shared;
-        var sv = pooler.Rent(SV_LENGTH);
-
-        while (d <= max_d + STEP_D)
+        for (int y = 0; y < 4; y++)
         {
-            for (int i = -d; i <= d; i++)
+            float nx = l.X + (dx[y] * WantedStepLength);
+            float ny = l.Y + (dy[y] * WantedStepLength);
+
+            Spot s = GetSpot2D(nx, ny);
+            while (s != null)
             {
-                float x_up = l.X + d;
-                float x_dn = l.X - d;
-                float y_up = l.Y + d;
-                float y_dn = l.Y - d;
-
-                sv[0] = GetSpot2D(x_up, l.Y + i);
-                sv[1] = GetSpot2D(x_dn, l.Y + i);
-                sv[2] = GetSpot2D(l.X + i, y_dn);
-                sv[3] = GetSpot2D(l.X + i, y_up);
-
-                for (int i1 = 0; i1 < SV_LENGTH; i1++)
+                float di = s.GetDistanceTo(l);
+                if (di < closest_d && !s.IsBlocked())
                 {
-                    Spot s = sv[i1];
-                    Spot ss = s;
-                    while (ss != null)
-                    {
-                        float di = ss.GetDistanceTo(l);
-                        if (di < max_d && !ss.IsBlocked() &&
-                            (di < closest_d))
-                        {
-                            closest = ss;
-                            closest_d = di;
-                        }
-                        ss = ss.next;
-                    }
+                    closest = s;
+                    closest_d = di;
                 }
+                s = s.next;
             }
-
-            if (closest_d < d) // can't get better
-            {
-                pooler.Return(sv);
-                //Log("Closest2 spot to " + l + " is " + closest);
-                return closest;
-            }
-            d++;
         }
-        pooler.Return(sv);
-        //Log("Closest1 spot to " + l + " is " + closest);
+
         return closest;
     }
 
@@ -783,7 +742,7 @@ public sealed class PathGraph
         CreateSpotsAroundSpot(currentSearchSpot, currentSearchSpot.IsFlagSet(Spot.FLAG_MPQ_MAPPED), destination);
     }
 
-    public void CreateSpotsAroundSpot(Spot currentSearchSpot, bool mapped, Spot destination)
+    public void CreateSpotsAroundSpot(Spot current, bool mapped, Spot destination)
     {
         if (mapped)
         {
@@ -791,9 +750,9 @@ public sealed class PathGraph
         }
 
         //mark as mapped
-        currentSearchSpot.SetFlag(Spot.FLAG_MPQ_MAPPED, true);
+        current.SetFlag(Spot.FLAG_MPQ_MAPPED, true);
 
-        Vector3 loc = currentSearchSpot.Loc;
+        Vector3 loc = current.Loc;
 
         //Vector3 target = destination.Loc;
 
@@ -801,7 +760,7 @@ public sealed class PathGraph
         //float initialAngle = Atan2(target.Y - loc.Y, target.X - loc.X);
 
         // Loop through the spots in a circle around the current search spot, starting from the facing direction
-        //for (float radianAngle = initialAngle; radianAngle < initialAngle + Tau; radianAngle += PI / 4) // 4
+        //for (float radianAngle = initialAngle; radianAngle < initialAngle + Tau; radianAngle += PI / 8) // 4
         for (float radianAngle = 0; radianAngle < Tau; radianAngle += PI / 8) // 4
         {
             //calculate the location of the spot at the angle
@@ -841,7 +800,7 @@ public sealed class PathGraph
 
             loc.Z = new_Z;
 
-            float ignoreStep = toonHeightHalf - stepDistance; //toonHeightQuad;
+            const float ignoreStep = toonHeightHalf - stepDistance; //toonHeightQuad;
 
             if (IsCloseToObjectRange > 0 &&
                 triangleWorld.IsCloseToType(nx, ny, loc.Z + ignoreStep, WantedStepLength, TriangleType.Object | TriangleType.Model))
@@ -907,33 +866,6 @@ public sealed class PathGraph
                 break;
         }
         return path;
-    }
-
-    public bool IsUnderwaterOrInAir(Vector3 l)
-    {
-        return triangleWorld.FindStandableAt(l.X, l.Y, l.Z - 50.0f, l.Z + 5.0f, out _, out TriangleType flags, toonHeight, toonSize)
-            && flags.Has(TriangleType.Water);
-    }
-
-    /*
-    public bool IsUnderwaterOrInAir(Spot s)
-    {
-        return IsUnderwaterOrInAir(s.GetLocation());
-    }
-    */
-
-    public static bool IsInABuilding(Vector3 l)
-    {
-        //int flags;
-        //float z;
-        //if (triangleWorld.FindStandableAt(l.X, l.Y, l.Z +12.0f, l.Z + 50.0f, out z, out  flags, toonHeight, toonSize))
-        //{
-        //   return true;
-        //    //return false;
-        //}
-        //return triangleWorld.IsCloseToModel(l.X,l.Y,l.Z,1);
-        //return true;
-        return false;
     }
 
     private Path CreatePath(Spot from, Spot to, SearchStrategy searchScoreSpot, float minHowClose)
@@ -1019,7 +951,6 @@ public sealed class PathGraph
         else
         {
             Vector3 last = rawPath.GetLast;
-            //if (last.GetDistanceTo(toLoc) > 1.0) 
             if (Vector3.DistanceSquared(last, toLoc) > 1.0)
             {
                 rawPath.Add(toLoc);

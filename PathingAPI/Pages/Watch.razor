@@ -3,6 +3,8 @@
 @using static System.Text.Json.JsonSerializer
 @using Microsoft.AspNetCore.SignalR;
 @using System.Buffers;
+@using static System.Diagnostics.Stopwatch;
+@using System.Collections.Concurrent;
 
 @inject IJSRuntime jsRuntime
 @inject PPatherService pPatherService
@@ -68,7 +70,7 @@
         Orange,
         Yellow,
         Black,
-        Pink
+        Magenta
     }
 
     private const int RefreshTimeMs = 50;
@@ -87,7 +89,7 @@
     private Thread thread;
     private CancellationTokenSource searchCts;
 
-    private Queue<ChunkEventArgs> chunkEventArgs = new();
+    private ConcurrentQueue<ChunkEventArgs> chunkEventArgs = new();
 
     private bool LoadGeometry { get; set; } = true;
 
@@ -201,7 +203,9 @@
         var cts = CancellationTokenSource.CreateLinkedTokenSource(Token, searchCts.Token);
         var token = cts.Token;
 
-        while (!token.IsCancellationRequested)
+        long startTime = GetTimestamp();
+
+        while (!token.IsCancellationRequested && pPatherService.IsSearching)
         {
             var points = pPatherService.GetCurrentSearchPath();
             await SendDrawPath(points, Color.White, "search", token);
@@ -243,7 +247,7 @@
 #pragma warning disable CS0162
             if (PathGraph.DelayMs > 0)
             {
-                await DrawGeometry();
+                await DrawGeometry(token);
             }
 #pragma warning restore CS0162
 
@@ -256,6 +260,8 @@
             token.WaitHandle.WaitOne(RefreshTimeMs);
         }
 
+        Log($"Search took {GetElapsedTime(startTime)} ms");
+
         thread = null;
     }
 
@@ -266,27 +272,27 @@
         thread.Start();
     }
 
-    private async Task DrawGeometry()
+    private async Task DrawGeometry(CancellationToken token)
     {
-        while (chunkEventArgs.TryDequeue(out var e) && !Token.IsCancellationRequested)
+        while (LoadGeometry &&
+            !token.IsCancellationRequested &&
+            chunkEventArgs.TryDequeue(out var e))
         {
-            if (LoadGeometry)
-            {
-                await DequeueChunkEvent(e, Token);
-            }
+            await DequeueChunkEvent(e, token);
         }
     }
 
     private async void OnDrawFinalPath(Path spotPath)
     {
-        searchCts?.Cancel();
-
-        while (thread != null || Token.IsCancellationRequested)
+        if (spotPath != null)
         {
-            Token.WaitHandle.WaitOne(RefreshTimeMs);
+            while (thread != null || Token.IsCancellationRequested)
+            {
+                Token.WaitHandle.WaitOne(RefreshTimeMs);
+            }
         }
 
-        await DrawGeometry();
+        await DrawGeometry(Token);
 
         if (DrawTestPoints)
         {
@@ -317,7 +323,7 @@
 
     private async void OnDrawLines(LinesEventArgs e)
     {
-        await DrawGeometry();
+        await DrawGeometry(Token);
 
         await SendRemoveMesh(Name, Token);
 
@@ -333,12 +339,8 @@
 
     private async ValueTask DequeueChunkEvent(ChunkEventArgs e, CancellationToken token)
     {
-        if (token.IsCancellationRequested) return;
-
         try
         {
-            await Task.Delay(RefreshTimeMs, token);
-
             TriangleCollection chunks = pPatherService.GetChunkAt(e.GridX, e.GridY);
 
             var pooler = ArrayPool<int>.Shared;
@@ -367,6 +369,7 @@
                 var positions = MeshFactory.CreatePoints(chunks);
 
                 await hubContext.Clients.All.SendAsync("addModels", models, positions, token);
+                //await SendDrawBoundBox(chunks.Min, chunks.Max, Color.Magenta, $"boundbox_{e.GridX}_{e.GridY}", token);
             }
             finally
             {
@@ -414,6 +417,11 @@
     private async Task SendDrawLine(Vector3 point, float height, Color color, string name, CancellationToken token)
     {
         await hubContext.Clients.All.SendAsync("drawLine", point, height, (int)color, name, token);
+    }
+
+    private async Task SendDrawBoundBox(Vector3 min, Vector3 max, Color color, string name, CancellationToken token)
+    {
+        await hubContext.Clients.All.SendAsync("drawBoundBox", min, max, (int)color, name, token);
     }
 
     private async Task SendDrawLines(IEnumerable<Vector3> points, Color color, string name, CancellationToken token)
