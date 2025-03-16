@@ -364,7 +364,7 @@ public sealed class ChunkedTriangleCollection
     }
 
     [SkipLocalsInit]
-    public int GradiantScore(float x, float y, float z, float range, int maxGradient)
+    public int GradiantScore(float x, float y, float range)
     {
         TriangleCollection tc = GetChunkAt(x, y);
         TriangleMatrix tm = tc.GetTriangleMatrix();
@@ -384,23 +384,15 @@ public sealed class ChunkedTriangleCollection
                 out Vector3 v2,
                 out TriangleType flags);
 
-            if (flags == TriangleType.Terrain)
+            if (flags != TriangleType.Terrain)
             {
-                if (v0.Z > maxZ) { maxZ = v0.Z; }
-                if (v2.Z > maxZ) { maxZ = v1.Z; }
-                if (v1.Z > maxZ) { maxZ = v2.Z; }
-
-                if (v0.Z < minZ) { minZ = v0.Z; }
-                if (v2.Z < minZ) { minZ = v1.Z; }
-                if (v1.Z < minZ) { minZ = v2.Z; }
+                continue;
             }
+
+            maxZ = Max4(maxZ, v0.Z, v1.Z, v2.Z);
+            minZ = Min4(minZ, v0.Z, v1.Z, v2.Z);
         }
-        int g = (int)(maxZ - minZ);
-        if (g > maxGradient)
-        {
-            g = maxGradient;
-        }
-        return g;
+        return (int)(maxZ - minZ);
     }
 
     [SkipLocalsInit]

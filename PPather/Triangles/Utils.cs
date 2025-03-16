@@ -252,8 +252,20 @@ public static class Utils
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static float Min4(float a, float b, float c, float d)
+    {
+        return Min(Min(a, b), Min(c, d));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static float Max3(float a, float b, float c)
     {
         return Max(a, Max(b, c));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static float Max4(float a, float b, float c, float d)
+    {
+        return Max(Max(a, b), Max(c, d));
     }
 }

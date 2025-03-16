@@ -94,46 +94,28 @@ public sealed class PathGraph
 
     public int GetTriangleClosenessScore(Vector3 loc)
     {
-        TriangleType mask = TriangleType.Model | TriangleType.Object;
+        const TriangleType mask = TriangleType.Model | TriangleType.Object;
 
-        float ignoreStep = toonHeightHalf - stepDistance;
+        const float ignoreStep = toonHeightHalf - stepDistance;
 
-        if (!triangleWorld.IsCloseToType(loc.X, loc.Y, loc.Z + ignoreStep, 4 * WantedStepLength, mask))
-        {
-            return 0;
-        }
-
-        if (!triangleWorld.IsCloseToType(loc.X, loc.Y, loc.Z + ignoreStep, 2 * WantedStepLength, mask))
-        {
-            return 32;
-        }
-
-        if (!triangleWorld.IsCloseToType(loc.X, loc.Y, loc.Z + ignoreStep, 1 * WantedStepLength, mask))
-        {
-            return 64;
-        }
-
-        return 128;
+        return !triangleWorld.IsCloseToType(loc.X, loc.Y, loc.Z + ignoreStep, 4 * WantedStepLength, mask)
+            ? 0
+            : !triangleWorld.IsCloseToType(loc.X, loc.Y, loc.Z + ignoreStep, 2 * WantedStepLength, mask)
+            ? 32
+            : !triangleWorld.IsCloseToType(loc.X, loc.Y, loc.Z + ignoreStep, 1 * WantedStepLength, mask)
+            ? 64
+            : 128;
     }
 
     public int GetTriangleGradiantScore(Vector3 loc, int gradiantMax)
     {
-        if (triangleWorld.GradiantScore(loc.X, loc.Y, loc.Z, 1, gradiantMax) > gradiantMax)
-        {
-            return 128;
-        }
-
-        if (triangleWorld.GradiantScore(loc.X, loc.Y, loc.Z, 2, gradiantMax) > gradiantMax)
-        {
-            return 64;
-        }
-
-        if (triangleWorld.GradiantScore(loc.X, loc.Y, loc.Z, 3, gradiantMax) > gradiantMax)
-        {
-            return 32;
-        }
-
-        return 0;
+        return triangleWorld.GradiantScore(loc.X, loc.Y, 1) > gradiantMax
+            ? 128
+            : triangleWorld.GradiantScore(loc.X, loc.Y, 2) > gradiantMax
+            ? 64
+            : triangleWorld.GradiantScore(loc.X, loc.Y, 3) > gradiantMax
+            ? 32
+            : 0;
     }
 
     public PathGraph(float mapId,
