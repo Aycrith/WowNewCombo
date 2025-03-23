@@ -62,7 +62,16 @@ public sealed class MpqFileStream : Stream
 
     public sealed override int Read(Span<byte> buffer)
     {
-        return base.Read(buffer);
+        if (!Archive.SFileReadFile(fileHandle, buffer, length, out long bytesRead))
+        {
+            int lastError = Marshal.GetLastWin32Error();
+            if (lastError != ERROR_HANDLE_EOF)
+                throw new Win32Exception(lastError);
+        }
+
+        position += bytesRead;
+
+        return unchecked((int)bytesRead);
     }
 
     public sealed override long Seek(long offset, SeekOrigin origin)
