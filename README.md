@@ -1866,6 +1866,12 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | Priest | `"Divine Spirit"` |
 | Priest | `"Renew"` |
 | Priest | `"Shield"` |
+| Priest | `"Spirit"` |
+| Priest | `"Inner Focus"` |
+| Priest | `"Abolish Disease"` |
+| Priest | `"Power Infusion"` |
+| Priest | `"Prayer of Shadow Protection"` |
+| Priest | `"Shadow Protection"` |
 | Rogue | `"Slice And Dice"` |
 | Rogue | `"Stealth"` |
 | Warlock | `"Demon Armor"` |
@@ -1930,6 +1936,10 @@ Allow requirements about what buffs/debuffs you have or the target has or in gen
 | Mage | `"Frostbite"` |
 | Mage | `"Slow"` |
 | Priest | `"Shadow Word: Pain"` |
+| Priest | `"Holy Fire"` |
+| Priest | `"Vampiric Embrace"` |
+| Priest | `"Silence"` |
+| Priest | `"Shackle Undead"` |
 | Warlock | `"Curse of"` |
 | Warlock | `"Curse of Weakness"` |
 | Warlock | `"Curse of Elements"` |

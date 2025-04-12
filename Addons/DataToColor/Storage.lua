@@ -164,6 +164,11 @@ function CreatePlayerBuffList()
         DataToColor.S.playerBuffs[12] = { "Renew", [135953] = 1 }
         DataToColor.S.playerBuffs[13] = { "Shield", [135940] = 1 }
         DataToColor.S.playerBuffs[14] = { "Spirit", [1358982] = 1, [135946] = 1 }
+        DataToColor.S.playerBuffs[15] = { "Inner Focus", [135863] = 1 }
+        DataToColor.S.playerBuffs[16] = { "Abolish Disease", [136066] = 1 }
+        DataToColor.S.playerBuffs[17] = { "Power Infusion", [135939] = 1 }
+        DataToColor.S.playerBuffs[18] = { "Prayer of Shadow Protection", [135945] = 1 }
+        DataToColor.S.playerBuffs[19] = { "Shadow Protection", [136121] = 1 }
     elseif DataToColor.C.CHARACTER_CLASS == "DRUID" then
         DataToColor.S.playerBuffs[10] = { "Mark of the Wild", [136078] = 1 }
         DataToColor.S.playerBuffs[11] = { "Thorns", [136104] = 1 }
@@ -255,6 +260,10 @@ function CreateTargetDebuffList()
     DataToColor.S.targetDebuffs = {}
     if DataToColor.C.CHARACTER_CLASS == "PRIEST" then
         DataToColor.S.targetDebuffs[0] = { "Pain", [136207] = 1 }
+        DataToColor.S.targetDebuffs[1] = { "Holy Fire", [135972] = 1 }
+        DataToColor.S.targetDebuffs[2] = { "Vampiric Embrace", [136230] = 1 }
+        DataToColor.S.targetDebuffs[3] = { "Silence", [136164] = 1 }
+        DataToColor.S.targetDebuffs[4] = { "Shackle Undead", [136091] = 1 }
     elseif DataToColor.C.CHARACTER_CLASS == "DRUID" then
         DataToColor.S.targetDebuffs[0] = { "Roar", [132121] = 1 }
         DataToColor.S.targetDebuffs[1] = { "Faerie Fire", [136033] = 1 }
