@@ -1,6 +1,7 @@
 local Load = select(2, ...)
 local DataToColor = unpack(Load)
 local Range = DataToColor.Libs.RangeCheck
+Range:activate()
 
 local bit = bit
 local band = bit.band

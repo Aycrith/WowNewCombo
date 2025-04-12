@@ -4941,6 +4941,7 @@ end
 -- << load-time initialization
 
 function lib:activate()
+  --print(MAJOR_VERSION .. ": initializing...")
   if not self.frame then
     local frame = CreateFrame("Frame")
     self.frame = frame
@@ -5010,4 +5011,4 @@ end
 
 --- END CallbackHandler stuff
 
-lib:activate()
+--lib:activate()
