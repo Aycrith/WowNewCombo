@@ -138,7 +138,10 @@ function DataToColor:RegisterEvents()
     DataToColor:RegisterEvent('CHAT_MSG_PARTY', 'OnMessageParty')
     DataToColor:RegisterEvent('CHAT_MSG_PARTY_LEADER', 'OnMessageParty')
 
-    DataToColor:RegisterEvent('PLAYER_SOFT_INTERACT_CHANGED', 'OnPlayerSoftInteractChanged')
+    -- allows to use the addon with older client version
+    pcall(function()
+        DataToColor:RegisterEvent("PLAYER_SOFT_INTERACT_CHANGED", "OnPlayerSoftInteractChanged")
+    end)
 
     -- Season of mastery / vanilla
     if WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then

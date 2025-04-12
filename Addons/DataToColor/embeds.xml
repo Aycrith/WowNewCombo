@@ -8,6 +8,7 @@
   <Include file="Libs\Ace3\AceComm-3.0\AceComm-3.0.xml"/>
   <Include file="Libs\Ace3\AceSerializer-3.0\AceSerializer-3.0.xml"/>
 
+  <Include file='Libs\LibRangeCheck-2.0\LibRangeCheck-2.0.lua'/>
   <Include file='Libs\LibRangeCheck-3.0\LibRangeCheck-3.0.lua'/>
   <Include file='Libs\LibClassicCasterino\LibClassicCasterino.lua'/>
 </Ui>
