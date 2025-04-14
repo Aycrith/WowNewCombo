@@ -67,6 +67,8 @@ public static class DependencyInjection
             x => new(83, 84));
         s.ForwardSingleton<AuraTimeReader<IFocusBuffTimeReader>, IReader>(
             x => new(92, 93));
+        s.ForwardSingleton<AuraTimeReader<IPlayerDebuffTimeReader>, IReader>(
+            x => new(104, 105));
 
         return s;
     }
@@ -135,6 +137,7 @@ public static class DependencyInjection
         s.ForwardSingleton<ActionBarBits<IUsableAction>>(sp);
 
         s.ForwardSingleton<AuraTimeReader<IPlayerBuffTimeReader>>(sp);
+        s.ForwardSingleton<AuraTimeReader<IPlayerDebuffTimeReader>>(sp);
         s.ForwardSingleton<AuraTimeReader<ITargetDebuffTimeReader>>(sp);
         s.ForwardSingleton<AuraTimeReader<ITargetBuffTimeReader>>(sp);
         s.ForwardSingleton<AuraTimeReader<IFocusBuffTimeReader>>(sp);

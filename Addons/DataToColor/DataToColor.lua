@@ -5,7 +5,7 @@
 -- Trigger between emitting game data and frame location data
 local SETUP_SEQUENCE = false
 -- Total number of data frames generated
-local NUMBER_OF_FRAMES = 106
+local NUMBER_OF_FRAMES = 108
 -- Set number of pixel rows
 local FRAME_ROWS = 1
 -- Size of data squares in px. Varies based on rounding errors as well as dimension size. Use as a guideline, but not 100% accurate.
@@ -193,6 +193,7 @@ local chatMsgHead = -2
 DataToColor.playerPetSummons = {}
 
 DataToColor.playerBuffTime = DataToColor.struct:new(AURA_DURATION_ITERATION_FRAME_CHANGE_RATE)
+DataToColor.playerDebuffTime = DataToColor.struct:new(AURA_DURATION_ITERATION_FRAME_CHANGE_RATE)
 DataToColor.targetBuffTime = DataToColor.struct:new(AURA_DURATION_ITERATION_FRAME_CHANGE_RATE)
 DataToColor.targetDebuffTime = DataToColor.struct:new(AURA_DURATION_ITERATION_FRAME_CHANGE_RATE)
 DataToColor.focusBuffTime = DataToColor.struct:new(AURA_DURATION_ITERATION_FRAME_CHANGE_RATE)
@@ -305,6 +306,7 @@ function DataToColor:Reset()
     DataToColor.actionBarCooldownQueue = DataToColor.struct:new(ACTION_BAR_ITERATION_FRAME_CHANGE_RATE)
 
     DataToColor.playerBuffTime = DataToColor.struct:new(AURA_DURATION_ITERATION_FRAME_CHANGE_RATE)
+    DataToColor.playerDebuffTime = DataToColor.struct:new(AURA_DURATION_ITERATION_FRAME_CHANGE_RATE)
     DataToColor.targetBuffTime = DataToColor.struct:new(AURA_DURATION_ITERATION_FRAME_CHANGE_RATE)
     DataToColor.targetDebuffTime = DataToColor.struct:new(AURA_DURATION_ITERATION_FRAME_CHANGE_RATE)
     DataToColor.focusBuffTime = DataToColor.struct:new(AURA_DURATION_ITERATION_FRAME_CHANGE_RATE)
@@ -721,7 +723,7 @@ function DataToColor:CreateFrames()
             Pixel(int, DataToColor:getAvgEquipmentDurability() * 100 + ((DataToColor.C.CHARACTER_CLASS_ID == 2 and UnitPower(DataToColor.C.unitPlayer, Enum.PowerType.HolyPower) or GetComboPoints(DataToColor.C.unitPlayer, DataToColor.C.unitTarget)) or 0), 54)                                                                                                                                                                                                                                                -- for paladin holy power or combo points
 
             local playerBuffCount = DataToColor:populateAuraTimer(UnitBuff, DataToColor.C.unitPlayer, DataToColor.playerBuffTime)
-            local playerDebuffCount = DataToColor:populateAuraTimer(UnitDebuff, DataToColor.C.unitPlayer, nil)
+            local playerDebuffCount = DataToColor:populateAuraTimer(UnitDebuff, DataToColor.C.unitPlayer, DataToColor.playerDebuffTime)
             local targetDebuffCount = DataToColor:populateAuraTimer(UnitDebuff, DataToColor.C.unitTarget, DataToColor.targetDebuffTime)
             local targetBuffCount = DataToColor:populateAuraTimer(UnitBuff, DataToColor.C.unitTarget, DataToColor.targetBuffTime)
             local focusBuffCount = DataToColor:populateAuraTimer(UnitBuff, DataToColor.C.unitFocus, DataToColor.focusBuffTime)
@@ -880,8 +882,6 @@ function DataToColor:CreateFrames()
             Pixel(int, UnitHealthMax(DataToColor.C.unitFocus), 89)
             Pixel(int, UnitHealth(DataToColor.C.unitFocus), 90)
             Pixel(int, DataToColor:getAuraMaskForClass(UnitBuff, DataToColor.C.unitFocus, DataToColor.S.playerBuffs), 91)
-            -- 92 used
-            -- 93 used
 
             -- 94 last cast GCD
             Pixel(int, DataToColor.lastCastGCD, 94)
@@ -939,6 +939,25 @@ function DataToColor:CreateFrames()
             Pixel(int, DataToColor:getGuidFromUUID(DataToColor.softInteractGuid), 101)
             Pixel(int, DataToColor:getNpcIdFromUUID(DataToColor.softInteractGuid), 102)
             Pixel(int, DataToColor:getTypeFromUUID(DataToColor.softInteractGuid), 103)
+
+            -- player debuff
+            textureId, expireTime = DataToColor.playerDebuffTime:getTimed(globalTick)
+            if textureId then
+                DataToColor.playerDebuffTime:setDirtyAfterTime(textureId, globalTick)
+
+                local durationSec = max(0, ceil(expireTime - GetTime()))
+                --DataToColor:Print("player debuff update  ", textureId, " ", durationSec)
+                Pixel(int, textureId, 104)
+                Pixel(int, durationSec, 105)
+
+                if durationSec == 0 then
+                    DataToColor.playerDebuffTime:removeWhenExpired(textureId, globalTick)
+                    --DataToColor:Print("player debuff expired ", textureId, " ", durationSec)
+                end
+            else
+                Pixel(int, 0, 104)
+                Pixel(int, 0, 105)
+            end
 
             UpdateGlobalTime()
             -- NUMBER_OF_FRAMES - 1 reserved for validation

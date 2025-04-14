@@ -605,8 +605,12 @@ For example look at the Warlock profiles.
 ```json
 "IntVariables": {
     "DOT_MIN_HEALTH%": 35,
-    "Debuff_Frost Fever": 237522,   // iconId https://www.wowhead.com/icons
-    "Debuff_Blood Plague": 237514,  // iconId https://www.wowhead.com/icons
+    "TDebuff_Frost Fever": 237522,   // iconId https://www.wowhead.com/icons
+    "TDebuff_Blood Plague": 237514,  // iconId https://www.wowhead.com/icons
+    "FBuff_Rejunevation": 12345,
+    "Buff_Slice and Dice": 99999,
+    "Debuff_Poision": 135368,
+    "TBuff_Dispell on Target": 16846,
     "Item_Soul_Shard": 6265,
 }
 ```
@@ -1383,8 +1387,15 @@ Formula: `[Keyword] [Operator] [Numeric integer value]`
 | `CD` | Returns the context [KeyAction](#keyaction) **in-game** cooldown in milliseconds |
 | `CD_{KeyAction.Name}` | Returns the given `{KeyAction.Name}` **in-game** cooldown in milliseconds |
 | `Cost_{KeyAction.Name}` | Returns the given `{KeyAction.Name}` cost value |
-| `Buff_{IntVariable_Name}` | Returns the given `{IntVariable_Name}` remaining player buff up time |
-| `Debuff_{IntVariable_Name}` | Returns the given `{IntVariable_Name}` remaining target debuff up time |
+| --- | --- |
+| `Buff_{IntVariable_Name}` | Returns the given `{IntVariable_Name}` remaining **player buff** up time in miliseconds |
+| `Debuff_{IntVariable_Name}` | Returns the given `{IntVariable_Name}` remaining **player debuff** up time in miliseconds |
+| --- | --- |
+| `TBuff_{IntVariable_Name}` | Returns the given `{IntVariable_Name}` remaining **target debuff** up time in miliseconds |
+| `TDebuff_{IntVariable_Name}` | Returns the given `{IntVariable_Name}` remaining **target debuff** up time in miliseconds |
+| --- | --- |
+| `FBuff_{IntVariable_Name}` | Returns the given `{IntVariable_Name}` remaining **focus buff** up time in miliseconds |
+| --- | --- |
 | `CurGCD` | Returns the player current remaining GCD time |
 | `GCD` | Alias for `1500` value |
 | `Kills` | In the current session how many mobs have been killed by the player. |
@@ -1642,17 +1653,57 @@ e.g.
 }     
 ```
 ---
-### **Target Debuff remaining time requirements**
+### **Player Debuff remaining time requirements**
 
-First in the `IntVariables` have to mention the buff icon id such as `Debuff_{your fancy name}: {icon_id}`
+First in the `IntVariables` have to mention the buff icon id such as `Debuff_{your fancy name}: {icon_id}`.
 
 It is important, the addon keeps track of the **icon_id**! Not **spell_id**
 
 e.g.
 ```json
 "IntVariables": {
-    "Debuff_Blood Plague": 237514,
-    "Debuff_Frost Fever": 237522
+    "Debuff_POISON1": 136006,
+    "Debuff_POISON2": 136007,
+    "Debuff_POISON3": 136016,
+    "Debuff_POISON4": 136064,
+    "Debuff_POISON5": 136067,
+    "Debuff_POISON6": 136077,
+    "Debuff_POISON7": 136093,
+    "Debuff_POISON8": 134437,
+    "Debuff_POISON9": 132273,
+    "Debuff_POISON10": 132274,
+    "Debuff_POISON11": 132105,
+    "Debuff_DISEASE1": 136127,
+    "Debuff_DISEASE2": 136134,
+    "Debuff_DISEASE3": 134324,
+    "Debuff_DISEASE4": 135914
+},
+```
+
+Then in [KeyAction](#keyaction) you can use the following requirement:
+
+e.g.
+```json
+{
+    "Name": "Stoneform",
+    "Key": "F11",
+    "Requirements": [
+        "Debuff_POISON1 > 1 || Debuff_POISON2 > 1 || Debuff_POISON3 > 1 || Debuff_POISON4 > 1 || Debuff_POISON5 > 1 || Debuff_POISON6 > 1 || Debuff_POISON7 > 1 || Debuff_POISON8 > 1 || Debuff_POISON9 > 1 || Debuff_POISON10 > 1 || Debuff_POISON11 > 1 || Debuff_DISEASE1 > 1 || Debuff_DISEASE2 > 1 || Debuff_DISEASE3 > 1 || Debuff_DISEASE4 > 1"
+    ]
+}  
+```
+---
+### **Target Debuff remaining time requirements**
+
+First in the `IntVariables` have to mention the debuff icon id such as `TDebuff_{your fancy name}: {icon_id}`
+
+It is important, the addon keeps track of the **icon_id**! Not **spell_id**
+
+e.g.
+```json
+"IntVariables": {
+    "TDebuff_Blood Plague": 237514,
+    "TDebuff_Frost Fever": 237522
 },
 ```
 
@@ -1665,7 +1716,7 @@ e.g.
     "Key": "F6",
     "WhenUsable": true,
     "Requirements": [
-        "Frost Fever && Blood Plague && (Debuff_Frost Fever < 2000 || Debuff_Blood Plague < 2000)",   // Frost Fever and Blood Plague is up
+        "Frost Fever && Blood Plague && (TDebuff_Frost Fever < 2000 || TDebuff_Blood Plague < 2000)",   // Frost Fever and Blood Plague is up
         "InMeleeRange"                                                                                // and their duration less then 2 seconds
     ]
 }
