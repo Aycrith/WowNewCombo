@@ -103,6 +103,7 @@ public sealed partial class RequirementFactory
         combatLog = sp.GetRequiredService<CombatLog>();
 
         var playerBuff = sp.GetRequiredService<AuraTimeReader<IPlayerBuffTimeReader>>();
+        var playerDebuff = sp.GetRequiredService<AuraTimeReader<IPlayerDebuffTimeReader>>();
         var targetDebuff = sp.GetRequiredService<AuraTimeReader<ITargetDebuffTimeReader>>();
         var targetBuff = sp.GetRequiredService<AuraTimeReader<ITargetBuffTimeReader>>();
         var focusBuff = sp.GetRequiredService<AuraTimeReader<IFocusBuffTimeReader>>();
@@ -232,6 +233,7 @@ public sealed partial class RequirementFactory
             //"Buff_{textureId}"
             //"Debuff_{textureId}"
             //"TBuff_{textureId}"
+            //"TDebuff_{textureId}"
             //"FBuff_{textureId}"
             { "MainHandSpeed", playerReader.MainHandSpeedMs },
             { "MainHandSwing", MainHandSwing },
@@ -255,7 +257,8 @@ public sealed partial class RequirementFactory
         BindPathSettingsIntVariables(classConfig.Paths);
 
         InitUserDefinedIntVariables(classConfig.IntVariables,
-            playerBuff, targetDebuff,
+            playerBuff, playerDebuff,
+            targetDebuff,
             targetBuff, focusBuff);
     }
 
@@ -406,6 +409,7 @@ public sealed partial class RequirementFactory
 
     public void InitUserDefinedIntVariables(Dictionary<string, int> intKeyValues,
         AuraTimeReader<IPlayerBuffTimeReader> playerBuffTimeReader,
+        AuraTimeReader<IPlayerDebuffTimeReader> playerDebuffTimeReader,
         AuraTimeReader<ITargetDebuffTimeReader> targetDebuffTimeReader,
         AuraTimeReader<ITargetBuffTimeReader> targetBuffTimeReader,
         AuraTimeReader<IFocusBuffTimeReader> focusBuffTimeReader)
@@ -425,6 +429,11 @@ public sealed partial class RequirementFactory
                 intVariables.TryAdd($"{value}", l);
             }
             else if (key.StartsWith("Debuff_", StringComparison.InvariantCultureIgnoreCase))
+            {
+                int l() => playerDebuffTimeReader.GetRemainingTimeMs(value);
+                intVariables.TryAdd($"{value}", l);
+            }
+            else if (key.StartsWith("TDebuff_", StringComparison.InvariantCultureIgnoreCase))
             {
                 int l() => targetDebuffTimeReader.GetRemainingTimeMs(value);
                 intVariables.TryAdd($"{value}", l);

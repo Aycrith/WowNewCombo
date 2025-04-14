@@ -15,6 +15,8 @@ public interface IAuraTimeReader
 
 public interface IPlayerBuffTimeReader : IAuraTimeReader { }
 
+public interface IPlayerDebuffTimeReader : IAuraTimeReader { }
+
 public interface ITargetDebuffTimeReader : IAuraTimeReader { }
 
 public interface ITargetBuffTimeReader : IAuraTimeReader { }
