@@ -42,8 +42,8 @@ local CAST_SUCCESS = 999999
 local MERCHANT_SHOW_V = 9999999
 local MERCHANT_CLOSED_V = 9999998
 
-local GOSSIP_START = 69
-local GOSSIP_END = 9999994
+DataToColor.GOSSIP_START = 69
+DataToColor.GOSSIP_END = 9999994
 
 local som_spellId = 0
 
@@ -110,7 +110,7 @@ function DataToColor:RegisterEvents()
     DataToColor:RegisterEvent('MERCHANT_CLOSED', 'OnMerchantClosed')
     DataToColor:RegisterEvent('PLAYER_TARGET_CHANGED', 'OnPlayerTargetChanged')
     DataToColor:RegisterEvent('PLAYER_EQUIPMENT_CHANGED', 'OnPlayerEquipmentChanged')
-    DataToColor:RegisterEvent('GOSSIP_SHOW', 'OnGossipShow')
+    DataToColor:RegisterEvent('GOSSIP_SHOW', 'OnGossipShow') -- defined in Versions.lua
     DataToColor:RegisterEvent('SPELLS_CHANGED', 'OnSpellsChanged')
     DataToColor:RegisterEvent('ACTIONBAR_SLOT_CHANGED', 'ActionbarSlotChanged')
     DataToColor:RegisterEvent('CORPSE_IN_RANGE', 'CorpseInRangeEvent')
@@ -555,6 +555,7 @@ function DataToColor:OnPlayerEquipmentChanged(event, equipmentSlot, hasCurrent)
     --DataToColor:Print("OnPlayerEquipmentChanged "..equipmentSlot.." -> "..c)
 end
 
+--[[
 function DataToColor:OnGossipShow(event)
     local options = GetGossipOptions()
     if not options then
@@ -571,6 +572,7 @@ function DataToColor:OnGossipShow(event)
     end
     DataToColor.gossipQueue:push(GOSSIP_END)
 end
+]]--
 
 function DataToColor:OnSpellsChanged(event)
     DataToColor:InitTalentQueue()

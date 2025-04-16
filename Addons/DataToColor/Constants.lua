@@ -74,6 +74,20 @@ DataToColor.C.GossipIcon = {
     [132060] = 10,  --vendor
 }
 
+DataToColor.C.Gossip = {
+    ["banker"] = 0,
+    ["battlemaster"] = 1,
+    ["binder"] = 2,
+    ["gossip"] = 3,
+    ["healer"] = 4,
+    ["petition"] = 5,
+    ["tabard"] = 6,
+    ["taxi"] = 7,
+    ["trainer"] = 8,
+    ["unlearn"] = 9,
+    ["vendor"] = 10,
+}
+
 -- Gossips
 DataToColor.C.GuidType = {
     ["None"] = 0,
