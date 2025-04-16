@@ -893,6 +893,9 @@ function DataToColor:CreateFrames()
             if globalTick % LATENCY_ITERATION_FRAME_CHANGE_RATE == 0 then
                 local _, _, lagHome, lagWorld = GetNetStats()
 
+                -- artificially increase lagWorld to avoid skipping timers
+                lagWorld = max(lagWorld, 10)
+
                 local lag = min(max(lagHome, lagWorld), 9999)
 
                 Pixel(int, 10000 * SpellQueueWindow + lag, 96)

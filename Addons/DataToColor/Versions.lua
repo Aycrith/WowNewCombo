@@ -149,3 +149,43 @@ DataToColor.UnitLevelSafe = function(unit, playerLevel)
 
   return level
 end
+
+DataToColor.OnGossipShow = function(event)
+  if Som140 or TBC252 then
+    local options = { DataToColor:GetGossipOptions() }
+    local count = #options / 2
+    if count == 0 then
+      return
+    end
+
+    DataToColor.gossipQueue:push(DataToColor.GOSSIP_START)
+    -- returns variable string - format of one entry
+    -- [1] localized name
+    -- [2] gossip_type
+    for k, v in pairs(options) do
+      if k % 2 == 0 then
+        DataToColor.gossipQueue:push(10000 * count + 100 * (k / 2) + DataToColor.C.Gossip[v])
+      end
+    end
+  else
+    local options = DataToColor:GetGossipOptions()
+    if not options then
+      return
+    end
+
+    table.sort(options, function(a, b)
+      return (a.orderIndex or 0) < (b.orderIndex or 0)
+    end)
+
+    DataToColor.gossipQueue:push(DataToColor.GOSSIP_START)
+
+    local count = #options
+    for i, v in pairs(options) do
+      local hash = 10000 * count + 100 * i + DataToColor.C.GossipIcon[v.icon]
+      --DataToColor:Print(i .. " " .. v.icon .. " " .. DataToColor.C.GossipIcon[v.icon] .. " " .. v.name .. " " .. hash)
+      DataToColor.gossipQueue:push(hash)
+    end
+  end
+
+  DataToColor.gossipQueue:push(DataToColor.GOSSIP_END)
+end
