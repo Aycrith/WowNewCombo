@@ -184,7 +184,7 @@ public sealed partial class Blacklist<T> : IBlacklist where T : IBlacklistSource
         }
 
         ReadOnlySpan<char> name = source.UnitName.AsSpan();
-        if (name.IndexOfAny(blacklist) > 0)
+        if (name.IndexOfAny(blacklist) >= 0)
         {
             if (lastGuid != source.UnitGuid)
             {
