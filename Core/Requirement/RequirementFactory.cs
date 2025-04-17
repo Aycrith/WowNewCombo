@@ -966,15 +966,21 @@ public sealed partial class RequirementFactory
 
     private Requirement CreateSpell(ReadOnlySpan<char> requirement)
     {
-        return create(requirement, spellBookReader);
-        static Requirement create(ReadOnlySpan<char> requirement, SpellBookReader spellBookReader)
+        return create(requirement, spellBookReader, intVariables);
+        static Requirement create(ReadOnlySpan<char> requirement, SpellBookReader spellBookReader, Dictionary<string, Func<int>> intVariables)
         {
             // 'Spell:_NAME_OR_ID_'
             int sep = requirement.IndexOf(SEP1);
             string name = requirement[(sep + 1)..].Trim().ToString();
 
-            if (int.TryParse(name, out int id) &&
-                spellBookReader.TryGetValue(id, out Spell spell))
+            // variable
+            var spanLookup = intVariables.GetAlternateLookup<ReadOnlySpan<char>>();
+            if (spanLookup.TryGetValue(name, out Func<int>? idFunc))
+            {
+                name = idFunc().ToString();
+            }
+
+            if (int.TryParse(name, out int id) && spellBookReader.TryGetValue(id, out Spell spell))
             {
                 name = $"{spell.Name}({id})";
             }
