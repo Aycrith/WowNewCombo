@@ -12,6 +12,7 @@ public sealed class SpellBookReader : IReader
     private const int cSpellId = 71;
 
     private readonly HashSet<int> spells = [];
+    private readonly HashSet<string> spellNames = [];
 
     public SpellDB SpellDB { get; }
     public int Count => spells.Count;
@@ -27,16 +28,21 @@ public sealed class SpellBookReader : IReader
         if (spellId == 0) return;
 
         spells.Add(spellId);
+        if (TryGetValue(spellId, out Spell spell))
+        {
+            spellNames.Add(spell.Name);
+        }
     }
 
     public void Reset()
     {
         spells.Clear();
+        spellNames.Clear();
     }
 
     public bool Has(int id)
     {
-        return spells.Contains(id);
+        return spells.Contains(id) || spellNames.Contains(SpellDB.Spells[id].Name);
     }
 
     public bool TryGetValue(int id, out Spell spell)
