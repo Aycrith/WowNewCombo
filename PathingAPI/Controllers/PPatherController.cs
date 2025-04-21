@@ -134,14 +134,15 @@ public sealed class PPatherController : ControllerBase
     /// <param name="y2" example="-2596">to Y</param>
     /// <param name="z2" example="96">to Z</param>
     /// <param name="uimap" example="1413">The Barrens [uimap ID](https://wago.tools/db2/UiMap)</param>
+    /// <param name="startindoors" example="false">If true, the search will prefer lower - underground values - otherwise the higher ones.</param>
     /// <response code="200">List of <see cref="Vector3"/> world coordinates.</response>
     [HttpGet("WorldRoute2")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Vector3[]))]
     [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     [RateLimit]
-    public JsonResult WorldRoute2(float x1, float y1, float z1, float x2, float y2, float z2, int uimap)
+    public JsonResult WorldRoute2(float x1, float y1, float z1, float x2, float y2, float z2, int uimap, bool? startindoors = null)
     {
-        service.SetLocations(service.ToWorldZ(uimap, x1, y1, z1), service.ToWorldZ(uimap, x2, y2, z2));
+        service.SetLocations(service.ToWorldZ(uimap, x1, y1, z1, startindoors), service.ToWorldZ(uimap, x2, y2, z2, null));
         Path path = service.DoSearch(eSearch);
         if (path == null)
         {
