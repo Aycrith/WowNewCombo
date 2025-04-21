@@ -38,7 +38,12 @@ public sealed class DataConfig
     [JsonIgnore]
     public string ExpExperience => Join(Root, "experience", Exp);
     [JsonIgnore]
-    public string NpcLocations => Join(Root, "npclocations", Exp);
+    public string Leaflet => Join(Root, "leaflet", Exp);
+    [JsonIgnore]
+    public string Subzones => Join(Root, "subzones", Exp);
+
+    [JsonIgnore]
+    public string NpcSpawnLocations => Join(Root, "npcspawnlocations", Exp);
 
     // at runtime - determined from the running exe file version
     [JsonIgnore]
@@ -63,13 +68,13 @@ public sealed class DataConfig
             var loaded = DeserializeObject<DataConfig>(ReadAllText(DataConfigMeta.DefaultFileName));
             if (loaded.Version == DataConfigMeta.Version)
             {
-                loaded.Exp = client;
+                loaded.Exp = client.ToLowerInvariant();
                 return loaded;
             }
         }
 
         DataConfig newConfig = new DataConfig().Save();
-        newConfig.Exp = client;
+        newConfig.Exp = client.ToLowerInvariant();
         return newConfig;
     }
 
