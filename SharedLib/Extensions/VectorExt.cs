@@ -110,4 +110,9 @@ public static class VectorExt
         x = v2.X;
         y = v2.Y;
     }
+
+    public static string ToStringF(this Vector3 v)
+    {
+        return $"({v.X} {v.Y} {v.Z})";
+    }
 }
