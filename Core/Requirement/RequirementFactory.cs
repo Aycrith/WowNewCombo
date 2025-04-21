@@ -251,7 +251,11 @@ public sealed partial class RequirementFactory
 
             { "Level", playerReader.Level._Value },
             { "ExpPerc", playerReader._PlayerXpPercent },
-            { "UIMapId", playerReader.UIMapId._Value }
+            { "UIMapId", playerReader.UIMapId._Value },
+
+            { "SpellQueueWindow", playerReader._SpellQueueTimeMs },
+            { "-SpellQueueWindow", playerReader._SpellQueueTimeMsNegative },
+            { "BowReload", () => -(playerReader.NetworkLatency + 500) }
         };
 
         BindPathSettingsIntVariables(classConfig.Paths);
