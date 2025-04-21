@@ -298,13 +298,13 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         targetId = playerReader.TargetId;
         Area area = areaDb.CurrentArea;
 
-        canGather = GatherAvailable(classConfig, area, targetId);
+        canGather = GatherAvailable(classConfig, areaDb, area, targetId);
 
         LogShouldGather(logger, targetId, canGather);
     }
 
-    private static bool GatherAvailable(ClassConfiguration config, Area area, int npcId) =>
-        (config.Skin && area.skinnable.AsSpan().BinarySearch(npcId) >= 0) ||
+    private static bool GatherAvailable(ClassConfiguration config, AreaDB areaDB, Area area, int npcId) =>
+        (config.Skin && areaDB.TryGetCreature(npcId, out Creature c) && c.SkinLoot != 0) ||
         (config.Herb && area.gatherable.AsSpan().BinarySearch(npcId) >= 0) ||
         (config.Mine && area.minable.AsSpan().BinarySearch(npcId) >= 0) ||
         (config.Salvage && area.salvegable.AsSpan().BinarySearch(npcId) >= 0);
