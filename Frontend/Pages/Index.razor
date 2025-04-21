@@ -6,6 +6,7 @@
 @inject IJSRuntime JSRuntime
 @inject AddonConfigurator addonConfigurator
 @inject FrontendUpdate updater // TODO: this is a hack to instantiate this class
+@inject StartupClientVersion client
 
 @implements IDisposable
 
@@ -20,6 +21,10 @@
                         <tr>
                             <td valign="top">
                                 <RouteComponent Size="400" />
+                                @if (client.Version == ClientVersion.SoM)
+                                {
+                                    <LeafletComponent Size="400px" />
+                                }
                             </td>
                             <td valign="top">
                                 <BagChanges />

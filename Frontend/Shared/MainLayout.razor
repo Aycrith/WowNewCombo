@@ -4,6 +4,7 @@
 @inject IBotController botController
 @inject AddonConfigurator addonConfigurator
 @inject WowProcess process
+@inject StartupClientVersion client
 
 @implements IDisposable
 
@@ -76,13 +77,17 @@
 
             new() { Id = "6", Href = "/History", Text = "History"},
 
-
             new() { Id = "9", Href = "/AddonConfiguration", Text = "Addon Config"},
             new() { Id = "10", Href = "/FrameConfiguration", Text = "Frame Config"},
             new() { Id = "11", Href = "/Chat", Text = "Chat"},
             new() { Id = "12", Href = "/Log", Text = "Log"},
             new() { Id = "13", Href = "/RestartServer", Text = "Restart"},
         };
+
+        if (client.Version == ClientVersion.SoM)
+        {
+            navItems.Insert(5, new() { Id = "6", Href = "/Leaflet", Text = "Leaflet" });
+        }
 
         if (!HideClassConfig)
         {
