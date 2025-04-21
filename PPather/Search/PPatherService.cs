@@ -62,7 +62,7 @@ public sealed class PPatherService
         search = null;
     }
 
-    private void Initialise(float mapId)
+    public void Initialise(float mapId)
     {
         if (search != null && mapId == search.MapId)
             return;
@@ -118,17 +118,17 @@ public sealed class PPatherService
 
         Initialise(wma.MapID);
 
-        return search.CreateWorldLocation(worldX, worldY, z, wma.MapID);
+        return search.CreateWorldLocation(worldX, worldY, z, wma.MapID, null);
     }
 
-    public Vector4 ToWorldZ(int uiMap, float x, float y, float z)
+    public Vector4 ToWorldZ(int uiMap, float x, float y, float z, bool? startIndoors = null)
     {
         if (!worldMapAreaDB.TryGet(uiMap, out WorldMapArea wma))
             return Vector4.Zero;
 
         Initialise(wma.MapID);
 
-        return search.CreateWorldLocation(x, y, z, wma.MapID);
+        return search.CreateWorldLocation(x, y, z, wma.MapID, startIndoors);
     }
 
     public int GetMapId(int uiMap)
@@ -221,5 +221,10 @@ public sealed class PPatherService
         }
 
         OnPathCreated?.Invoke(new(spots));
+    }
+
+    public (int, float) GetAreaIdAndZ(Vector3 location)
+    {
+        return search.GetAreaIdAndZ(location);
     }
 }

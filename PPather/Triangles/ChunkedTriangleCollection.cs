@@ -574,4 +574,9 @@ public sealed class ChunkedTriangleCollection
 
         return best_flags != TriangleType.None;
     }
+
+    public (int, float) GetAreaIdAndZ(Vector3 location)
+    {
+        return supplier.GetAreaIdAndZ(location);
+    }
 }

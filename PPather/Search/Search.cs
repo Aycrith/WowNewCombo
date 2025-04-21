@@ -44,7 +44,7 @@ public sealed class Search
     private const float bigExtend = 2000;
     private const float smallExtend = 2 * toonHeight;
 
-    public Vector4 CreateWorldLocation(float x, float y, float z, int mapId)
+    public Vector4 CreateWorldLocation(float x, float y, float z, int mapId, bool? startIndoors)
     {
         float min_z = z == 0 ? z - bigExtend : z - smallExtend;
         float max_z = z == 0 ? z + bigExtend : z + smallExtend;
@@ -61,28 +61,59 @@ public sealed class Search
 
         if (zModel != float.MinValue)
         {
-            if (zTerrain != float.MinValue &&
-                MathF.Abs(zModel - zTerrain) > PathGraph.toonHeightHalf)
+            bool bModel = PathGraph.triangleWorld.IsSpotBlocked(x, y, zModel, toonHeight, 2 * toonSize);
+            bool bTerrain = PathGraph.triangleWorld.IsSpotBlocked(x, y, zTerrain, toonHeight, 2 * toonSize);
+
+            if (startIndoors.HasValue)
             {
-                return new(x, y, zTerrain, mapId);
+                float preferred = startIndoors.Value
+                    ? MathF.Min(zModel, zTerrain)
+                    : MathF.Max(zModel, zTerrain);
+
+                float other = (preferred == zModel) ? zTerrain : zModel;
+
+                bool bPreferred = (preferred == zModel) ? bModel : bTerrain;
+                bool bOther = (preferred == zModel) ? bTerrain : bModel;
+
+                if (!bPreferred)
+                {
+                    return new Vector4(x, y, preferred, mapId);
+                }
+                else if (!bOther)
+                {
+                    return new Vector4(x, y, other, mapId);
+                }
+                else
+                {
+                    return new Vector4(x, y, preferred, mapId); // both blocked, still prefer intended
+                }
             }
             else
             {
-                return new(x, y, zModel, mapId);
+                // Legacy logic
+                if (!bTerrain &&
+                    zTerrain != float.MinValue &&
+                    MathF.Abs(zModel - zTerrain) > PathGraph.toonHeightHalf)
+                {
+                    return new Vector4(x, y, zTerrain, mapId);
+                }
+                else
+                {
+                    return new Vector4(x, y, zModel, mapId);
+                }
             }
         }
         else
         {
-            // incase the smallExtend results none
+            // If zTerrain is not found, try with bigger extend
             if (zTerrain == float.MinValue)
             {
                 min_z = z - bigExtend;
                 max_z = z + bigExtend;
-
                 zTerrain = GetZValueAt(x, y, min_z, max_z, TriangleType.Terrain);
             }
 
-            return new(x, y, zTerrain, mapId);
+            return new Vector4(x, y, zTerrain, mapId);
         }
     }
 
@@ -114,5 +145,10 @@ public sealed class Search
             logger.LogError(ex.Message);
         }
         return null;
+    }
+
+    public (int, float) GetAreaIdAndZ(Vector3 location)
+    {
+        return PathGraph.triangleWorld.GetAreaIdAndZ(location);
     }
 }

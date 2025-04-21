@@ -126,13 +126,35 @@ public sealed class MPQTriangleSupplier
     }
 
     [SkipLocalsInit]
-    private static void GetChunkCoord(float x, float y, out int chunk_x, out int chunk_y)
+    private static void GetChunkCoordIndex(float x, float y, out int chunk_x, out int chunk_y)
     {
         float xOffset = ChunkReader.ZEROPOINT - y;
         float yOffset = ChunkReader.ZEROPOINT - x;
 
         chunk_x = (int)Round(xOffset / ChunkReader.TILESIZE) - 1;
         chunk_y = (int)Round(yOffset / ChunkReader.TILESIZE) - 1;
+    }
+
+    [SkipLocalsInit]
+    private static void GetChunkCoord1(float x, float y, out int chunk_x, out int chunk_y)
+    {
+        float xOffset = ChunkReader.ZEROPOINT - y;
+        float yOffset = ChunkReader.ZEROPOINT - x;
+
+        chunk_x = (int)Floor(xOffset / ChunkReader.TILESIZE); // - 1
+        chunk_y = (int)Floor(yOffset / ChunkReader.TILESIZE); // - 1
+    }
+
+    [SkipLocalsInit]
+    private static int GetChunkIndex(float x, float y)
+    {
+        float localX = (ChunkReader.ZEROPOINT - y) % ChunkReader.TILESIZE;
+        float localY = (ChunkReader.ZEROPOINT - x) % ChunkReader.TILESIZE;
+
+        int chunkX = (int)(localX / ChunkReader.CHUNKSIZE);
+        int chunkY = (int)(localY / ChunkReader.CHUNKSIZE);
+
+        return (chunkY * MapTile.SIZE) + chunkX;
     }
 
     [SkipLocalsInit]
@@ -147,7 +169,7 @@ public sealed class MPQTriangleSupplier
         {
             for (float y = min_y; y < max_y; y += ChunkReader.TILESIZE)
             {
-                GetChunkCoord(x, y, out int chunk_x, out int chunk_y);
+                GetChunkCoordIndex(x, y, out int chunk_x, out int chunk_y);
                 GetChunkData(tc, chunk_x, chunk_y);
             }
         }
@@ -605,5 +627,42 @@ public sealed class MPQTriangleSupplier
 
         nx = (c_y * x) - (s_y * y);
         ny = (s_y * x) + (c_y * y);
+    }
+
+
+    public (int, float) GetAreaIdAndZ(Vector3 p)
+    {
+        long start = Stopwatch.GetTimestamp();
+
+        GetChunkCoord1(p.X, p.Y, out int chunk_x, out int chunk_y);
+
+        int index = chunk_y * WDT.SIZE + chunk_x;
+        if (!wdt.loaded[index])
+        {
+            wdtf.LoadMapTile(chunk_x, chunk_y, index);
+        }
+
+        ref readonly MapTile mapTile = ref wdt.maptiles[index];
+        if (!wdt.loaded[index])
+        {
+            return (0, 0);
+        }
+
+        int chunkIndex = GetChunkIndex(p.X, p.Y);
+        if (chunkIndex < 0)
+        {
+            return (0, 0);
+        }
+
+        ref readonly MapChunk chunk = ref mapTile.chunks[chunkIndex];
+        int areaId = (int)chunk.areaID;
+        float z = chunk.ybase;
+
+        if (logger.IsEnabled(LogLevel.Trace))
+        {
+            logger.LogTrace($"GetAreaId: {p.X} {p.Y} {chunkIndex} {areaId} {z} {Stopwatch.GetElapsedTime(start).TotalMilliseconds}ms");
+        }
+
+        return (areaId, z);
     }
 }
