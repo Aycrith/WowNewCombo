@@ -14,6 +14,8 @@ using Serilog;
 using Serilog.Templates;
 using Serilog.Templates.Themes;
 
+using SharedLib.Converters;
+
 using System;
 using System.IO;
 using System.Threading;
@@ -114,6 +116,14 @@ public static class Program
 
         services.AddCoreFrontend();
 
+
+        services.AddControllers().AddJsonOptions(options =>
+        {
+            options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+            options.JsonSerializerOptions.Converters.Add(new Vector3Converter());
+            options.JsonSerializerOptions.Converters.Add(new Vector4Converter());
+        });
+
         services.BuildServiceProvider(
             new ServiceProviderOptions { ValidateOnBuild = true });
     }
@@ -133,18 +143,20 @@ public static class Program
 
         app.UseStaticFiles();
 
-        DataConfig dataConfig = app.Services.GetRequiredService<DataConfig>();
-        app.UseStaticFiles(new StaticFileOptions
-        {
-            FileProvider = new PhysicalFileProvider(Path.Combine(env.ContentRootPath, dataConfig.Path)),
-            RequestPath = "/path"
-        });
+        app.UseCustomStaticFiles(env);
 
         app.MapRazorComponents<App>()
             .AddInteractiveServerRenderMode()
             .AddAdditionalAssemblies(typeof(Frontend._Imports).Assembly);
 
+        app.UseRouting();
+
         app.UseAntiforgery();
+
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapControllers();
+        });
 
         return app;
     }
