@@ -105,7 +105,7 @@ const editableLayers = new L.FeatureGroup();
 var playerLayer;
 
 var recordPlayerPath = false;
-var currentPlayerPath = '';
+var currentRecordPlayerPath = '';
 
 var layerNames = {};
 
@@ -618,7 +618,7 @@ function setPlayerLocation(x, y, dir) {
         return;
     }
 
-    const polyline = editableLayers.getLayers().find(layer => layer.PathName === currentPlayerPath);
+    const polyline = editableLayers.getLayers().find(layer => layer.PathName === currentRecordPlayerPath);
     if (polyline == null) {
         return;
     }
@@ -678,9 +678,9 @@ function setRecord(state) {
         const latlng = playerLayer.getLatLng();
         const polyline = new L.Polyline([latlng], { color: 'red', weight: 2, opacity: 1, smoothFactor: 1 });
 
-        currentPlayerPath = getFilePathFileName();
+        currentRecordPlayerPath = getFilePathFileName();
 
-        polyline.PathName = currentPlayerPath
+        polyline.PathName = currentRecordPlayerPath
         polyline.groupName = 'Paths';
         polyline.addTo(editableLayers);
 
@@ -688,12 +688,12 @@ function setRecord(state) {
     }
     else if (recordPlayerPath == true && state == false) {
 
-        const polyline = editableLayers.getLayers().find(layer => layer.PathName === currentPlayerPath);
+        const polyline = editableLayers.getLayers().find(layer => layer.PathName === currentRecordPlayerPath);
         if (polyline) {
             polyline.editing.disable();
             editableLayers.removeLayer(polyline);
 
-            currentPlayerPath = '';
+            currentRecordPlayerPath = '';
 
             addGroupLayer('Paths', 'Paths');
             assignLayer(polyline.groupName, polyline.PathName, polyline, true);
@@ -1998,7 +1998,7 @@ async function loadMapPath(areaId, path, color = 'blue') {
 
 async function loadMapPathByFilter(filter, color = 'random') {
 
-    const response = await fetch(`/api/Path?filter=${filter}`)
+    const response = await fetch(`/api/Path?filter=${encodeURIComponent(filter)}`)
         .catch(e => console.error(e));
 
     const fileNames = await response.json();
