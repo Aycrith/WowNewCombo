@@ -92,6 +92,13 @@ V1 Local and V1 Remote does not have the capability as of this moment to read th
             </a>
         </td>
     </tr>
+    <tr>
+        <td>
+            <a href="./images/dark_leaflet.png" target="_blank">
+                <img alt="flat_light" src="./images/dark_leaflet.png" width="100%">
+            </a>
+        </td>
+    </tr>
 </table>
 
 [![YouTube Video](https://img.youtube.com/vi/CIMgbh5LuCc/0.jpg)](https://www.youtube.com/watch?v=CIMgbh5LuCc)
@@ -2310,6 +2317,48 @@ This component shows:
 Pathed routes are shown in Green.
 
 ![Pathed route](images/PathedRoute.png)
+
+
+### Leaflet
+
+This component is meant to replace the Route later on, it has *'readonly'* mode when no autohroing is enabled.
+
+![Leaflet](images/leafletComponent.png)
+
+---
+
+While in the sidebar the Leaflet option theres the authoring tool.
+
+![Leaflet](images/leafletAuthor.png)
+
+Which allows the draw shapes
+* polyline
+* rectangle
+* circle with custom radius
+* single point
+
+TODO: These shapes can be used for the V1 navigation system.
+
+After clicking on any zone, that zone will be the currentArea.
+
+When the current area is Active, at the left side context based filters can be enabled to show certain types of npcs(vendors, skinnable npcs, or nodes)
+
+On the other hand, when pressing the *redcross* button it is possible to record the player movement as a path.
+
+How to record and save a path ?
+* Make sure to have a loaded class profile
+* Navigate to Leaflet
+* Go to the start locatin
+* Press the *redcross* button to start the record
+* When the desired route is reached, press the *redcross* button once again.
+* You should see a yellow highlight of the path has been added then it will become red.
+* **Right click** on the the recorded path, to enable edit mode.
+* Edit mode is active when you should be able to move the route node points.
+* Mouse **middle click** or **scroll button click** on the Route to save it (should see a yellow highlight once again)
+* The route will be saved as the `CurrentZoneName_YYYY_MM_DD_HH_MM_SS.json` under the `/json/path` folder. (example: `Durotar_2025_04_21_15_45_21.json`)
+* The saved route can be loaded and edited the same way.
+
+---
 
 ### Goal
 
