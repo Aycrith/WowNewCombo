@@ -1205,13 +1205,21 @@ The `"KeyAction.Name"` has a special formula which can be followed to have diffe
 * Formula: `[TYPE] {[npc1 | npc2 | npc3 | npcN]}`
 
 The `[TYPE]` can be one of the following
-* `Flightmaster`
-* `Innkeeper`
-* `Repair`
-* `Vendor` / `Sell`
+* `Gossip`
+* `QuestGiver`
 * `Trainer`
-
-It is only tested with `Vendor` and `Repair` types!
+* `ClassTrainer`
+* `ProfessionTrainer`
+* `Vendor` / `Sell`
+* `VendorAmmo`
+* `VendorFood`
+* `VendorPoison`
+* `VendorReagent`
+* `Repair`
+* `FlightMaster`
+* `Innkeeper`
+* `Banker`
+* `StableMaster`
 
 When either zero or list of npc names with `|` separated characters one of the following scenario going to happen:
 * When **no** npc name is specified, the **closest** **[TYPE]** of that NPC is considered.
