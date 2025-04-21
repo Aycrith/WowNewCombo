@@ -2321,6 +2321,13 @@ Pathed routes are shown in Green.
 
 ### Leaflet
 
+**Note:** Currently the component only works for Season Of Discovery client aka 1.15.x client version.
+
+Also it is required to download the map tiles
+* [Som Azeroth and Kalimdor map tiles](https://mega.nz/file/mfgiRRLQ#RvUjd-eb1pMOC5GXCI4jDfpiYyiAUJK_gGfkaWGtz0I)
+* * Copy the content under the `json\leaflet\som` folder.
+* * So the path look like this `Json\leaflet\som\Azeroth\z2x0y0.png`
+
 This component is meant to replace the Route later on, it has *'readonly'* mode when no autohroing is enabled.
 
 ![Leaflet](images/leafletComponent.png)
