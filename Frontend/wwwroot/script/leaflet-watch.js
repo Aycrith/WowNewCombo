@@ -904,7 +904,7 @@ function addZoomButtonsToLayerControl(control) {
                 LeafletMap.setView(layer.getLatLng(), zoom);
             }
             else if (layer.getBounds && typeof layer.getBounds === 'function') {
-                LeafletMap.fitBounds(layer.getBounds(), { padding: [20, 20] }); 
+                LeafletMap.fitBounds(layer.getBounds(), { padding: [20, 20] });
             } else if (layer instanceof L.LayerGroup) {
 
                 let found = false;
@@ -1164,22 +1164,26 @@ async function processOffsetClick(e) {
     const map = worldToPercentage(worldPos, areaId);
 
     const adtClick = document.getElementById("adtClick");
-    adtClick.innerHTML = continent + '_' + adt.x + '_' + adt.y;
+    if (adtClick != null)
+        adtClick.innerHTML = continent + '_' + adt.x + '_' + adt.y;
 
     const worldClick = document.getElementById("worldClick")
-    worldClick.innerHTML = worldPos.x.toFixed(2) + ' ' + worldPos.y.toFixed(2) + ' ' + zPos + ' ' + config.MapID;
+    if (worldClick != null)
+        worldClick.innerHTML = worldPos.x.toFixed(2) + ' ' + worldPos.y.toFixed(2) + ' ' + zPos + ' ' + config.MapID;
 
     if (map != null) {
         currentArea = map.area;
 
         const mapClick = document.getElementById("mapClick");
-        mapClick.innerHTML = map.p.x + ' ' + map.p.y;
+        if (mapClick != null)
+            mapClick.innerHTML = map.p.x + ' ' + map.p.y;
 
         if (map.subZone != null) {
             const subZoneName = document.getElementById("subZoneName");
 
             const subName = map.subZone.AreaName != map.name ? map.subZone.AreaName : '';
-            subZoneName.innerHTML = map.AreaID + ' ' + map.name + ' ' + subName;
+            if (subZoneName != null)
+                subZoneName.innerHTML = map.AreaID + ' ' + map.name + ' ' + subName;
         }
     }
 }
