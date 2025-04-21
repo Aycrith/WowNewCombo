@@ -1392,6 +1392,9 @@ Formula: `[Keyword] [Operator] [Numeric integer value]`
 | `MainHandSwing` | Returns the player predicted next main hand swing time |
 | `RangedSpeed` | Returns the player ranged weapon attack speed in milliseconds |
 | `RangedSwing` | Returns the player predicted next ranged weapon swing time |
+| `SpellQueueWindow` | Returns SpellQueueWindow C_Var |
+| `-SpellQueueWindow` | Returns SpellQueueWindow C_Var negative value. |
+| `BowReload` | Returns the default 500ms time plus the player latency.  |
 | `CD` | Returns the context [KeyAction](#keyaction) **in-game** cooldown in milliseconds |
 | `CD_{KeyAction.Name}` | Returns the given `{KeyAction.Name}` **in-game** cooldown in milliseconds |
 | `Cost_{KeyAction.Name}` | Returns the given `{KeyAction.Name}` cost value |
