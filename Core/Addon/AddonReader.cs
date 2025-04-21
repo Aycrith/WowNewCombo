@@ -2,6 +2,8 @@ using Core.Database;
 
 using Microsoft.Extensions.DependencyInjection;
 
+using SharedLib;
+
 using System;
 using System.Collections.Immutable;
 using System.Threading;
@@ -81,8 +83,8 @@ public sealed class AddonReader : IAddonReader
             lastTargetGuid = playerReader.TargetGuid;
 
             TargetName =
-                creatureDb.Entries.TryGetValue(playerReader.TargetId, out string? name)
-                ? name
+                creatureDb.Entries.TryGetValue(playerReader.TargetId, out Creature c)
+                ? c.Name
                 : reader.GetString(16).Trim() + reader.GetString(17).Trim();
         }
 
@@ -90,8 +92,8 @@ public sealed class AddonReader : IAddonReader
         {
             lastMouseOverId = playerReader.MouseOverId;
             MouseOverName =
-                creatureDb.Entries.TryGetValue(playerReader.MouseOverId, out string? name)
-                ? name
+                creatureDb.Entries.TryGetValue(playerReader.MouseOverId, out Creature c)
+                ? c.Name
                 : string.Empty;
         }
 

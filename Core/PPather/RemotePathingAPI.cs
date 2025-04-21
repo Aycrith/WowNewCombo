@@ -109,7 +109,7 @@ public sealed class RemotePathingAPI : IPPather, IPathVizualizer, IDisposable
         }
     }
 
-    public Vector3[] FindWorldRoute(int uiMap, Vector3 worldFrom, Vector3 worldTo)
+    public Vector3[] FindWorldRoute(int uiMap, bool startIndoors, Vector3 worldFrom, Vector3 worldTo)
     {
         try
         {
@@ -123,7 +123,8 @@ public sealed class RemotePathingAPI : IPPather, IPathVizualizer, IDisposable
                 $"x2={worldTo.X}&" +
                 $"y2={worldTo.Y}&" +
                 $"z2={worldTo.Z}&" +
-                $"uimap={uiMap}";
+                $"uimap={uiMap}&" +
+                $"startindoors={startIndoors}";
 
             //long timestamp = Stopwatch.GetTimestamp();
 

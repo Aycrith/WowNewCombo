@@ -1,8 +1,10 @@
+using Core.Database;
 using Core.GOAP;
 
 using Microsoft.Extensions.Logging;
 
 using SharedLib;
+using SharedLib.Data;
 using SharedLib.Extensions;
 
 using System;
@@ -34,6 +36,7 @@ public sealed partial class Navigation : IDisposable
     private readonly StuckDetector stuckDetector;
     private readonly IPPather pather;
     private readonly IMountHandler mountHandler;
+    private readonly AreaDB areaDB;
 
     private const float MinDistanceMount = 10;
     private readonly float MaxDistance = 200;
@@ -80,7 +83,8 @@ public sealed partial class Navigation : IDisposable
         PlayerReader playerReader, AddonBits bits,
         StopMoving stopMoving,
         StuckDetector stuckDetector, IPPather pather, IMountHandler mountHandler,
-        ClassConfiguration classConfiguration)
+        ClassConfiguration classConfiguration,
+        AreaDB areaDB)
     {
         this.logger = logger;
         this.playerDirection = playerDirection;
@@ -91,6 +95,7 @@ public sealed partial class Navigation : IDisposable
         this.stuckDetector = stuckDetector;
         this.pather = pather;
         this.mountHandler = mountHandler;
+        this.areaDB = areaDB;
 
         patherName = pather.GetType().Name;
 
@@ -338,7 +343,7 @@ public sealed partial class Navigation : IDisposable
                 LogDebug($"Distance: {distance} vs Avg:({AvgDistance * 2},{AvgDistance}) - TAVG: {DIFF_THRESHOLD * AvgDistance} ");
 
             stopMoving.Stop();
-            PathRequest(new PathRequest(playerReader.UIMapId.Value, playerW, targetW, distance, PathCalculatedCallback));
+            PathRequest(new PathRequest(playerReader.UIMapId.Value, bits.Indoors(), playerW, targetW, distance, PathCalculatedCallback));
         }
         else
         {
@@ -377,6 +382,16 @@ public sealed partial class Navigation : IDisposable
             }
 
             failedAttempt++;
+
+            if (failedAttempt == 1 && bits.Indoors())
+            {
+                // try to find closest spawn point
+                (Creature creature, Vector3 worldPos) = areaDB.FindClosestCreatureByNpcFlag(NpcFlags.None, playerReader.WorldPos);
+                playerReader.WorldPosZ = worldPos.Z;
+
+                logger.LogWarning($"Found closest spawn {creature.Name}");
+            }
+ 
             if (failedAttempt > 2)
             {
                 failedAttempt = 0;
@@ -418,7 +433,7 @@ public sealed partial class Navigation : IDisposable
             manualReset.Reset();
             if (pathRequests.TryPeek(out PathRequest pathRequest))
             {
-                Vector3[] path = pather.FindWorldRoute(pathRequest.MapId, pathRequest.StartW, pathRequest.EndW);
+                Vector3[] path = pather.FindWorldRoute(pathRequest.MapId, pathRequest.StartIndoors, pathRequest.StartW, pathRequest.EndW);
                 if (active)
                 {
                     pathResults.Enqueue(new PathResult(pathRequest, path, pathRequest.Callback));
