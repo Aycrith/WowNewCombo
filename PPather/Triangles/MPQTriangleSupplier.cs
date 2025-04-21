@@ -29,6 +29,7 @@ using System.Runtime.CompilerServices;
 
 using Wmo;
 
+using static System.Diagnostics.Stopwatch;
 using static System.MathF;
 using static Wmo.MapTileFile;
 
@@ -632,7 +633,7 @@ public sealed class MPQTriangleSupplier
 
     public (int, float) GetAreaIdAndZ(Vector3 p)
     {
-        long start = Stopwatch.GetTimestamp();
+        long start = GetTimestamp();
 
         GetChunkCoord1(p.X, p.Y, out int chunk_x, out int chunk_y);
 
@@ -660,7 +661,7 @@ public sealed class MPQTriangleSupplier
 
         if (logger.IsEnabled(LogLevel.Trace))
         {
-            logger.LogTrace($"GetAreaId: {p.X} {p.Y} {chunkIndex} {areaId} {z} {Stopwatch.GetElapsedTime(start).TotalMilliseconds}ms");
+            logger.LogTrace($"GetAreaId: {p.X} {p.Y} {chunkIndex} {areaId} {z} {GetElapsedTime(start).TotalMilliseconds}ms");
         }
 
         return (areaId, z);
