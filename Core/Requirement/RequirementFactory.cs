@@ -1076,10 +1076,11 @@ public sealed partial class RequirementFactory
             int sep = requirement.IndexOf(SEP1);
             ReadOnlySpan<char> name_or_id = requirement[(sep + 1)..];
             int npcId = GetIntValueOrVariable(intVariables, name_or_id);
+            string npcName = string.Empty;
 
-            if (!creatureDb.Entries.TryGetValue(npcId, out string? npcName))
+            if (creatureDb.Entries.TryGetValue(npcId, out Creature c))
             {
-                npcName = string.Empty;
+                npcName = c.Name;
             }
 
             bool f() => playerReader.TargetId == npcId;
