@@ -116,6 +116,7 @@
 
     private string AreaName { get; set; } = string.Empty;
 
+    [Parameter] public string expansion { get; set; } = "som";
     [Parameter] public string continent { get; set; } = "Azeroth";
     [Parameter] public int zoom { get; set; } = 5;
     [Parameter] public float x { get; set; } = 0;
@@ -132,6 +133,7 @@
             continent = PlayerReader.WorldMapArea.Continent;
 
             await jsRuntime.InvokeVoidAsync("init", 
+                expansion ?? "som",
                 continent ?? "Azeroth", zoom, x, y, Edit);
 
             ActionZoneChangedAction();
