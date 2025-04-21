@@ -88,6 +88,12 @@ public sealed class MPQTriangleSupplier
             return;
 
         int index = chunk_y * WDT.SIZE + chunk_x;
+
+        if (wdt.loaded[index])
+        {
+            return;
+        }
+
         wdtf.LoadMapTile(chunk_x, chunk_y, index);
 
         MapTile mapTile = wdt.maptiles[index];
