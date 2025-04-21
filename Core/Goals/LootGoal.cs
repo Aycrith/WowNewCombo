@@ -77,6 +77,8 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
     public override void OnEnter()
     {
+        stopMoving.StopForward();
+
         float e = wait.UntilCount(Loot.RESET_UPDATE_COUNT, LootReset);
         if (e < 0)
         {
@@ -264,7 +266,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
         CheckForCanGather();
 
-        return (bits.Target() && playerReader.MinRangeZero()) || MoveToTargetAndReached();
+        return (bits.Target() && playerReader.MinRangeZero() && input.PressApproach()) || MoveToTargetAndReached();
     }
 
     private CorpseEvent? GetClosestCorpse()
@@ -419,7 +421,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
         CheckForCanGather();
 
-        return (bits.Target() && playerReader.MinRangeZero()) || MoveToTargetAndReached();
+        return (bits.Target() && playerReader.MinRangeZero() && input.PressApproach()) || MoveToTargetAndReached();
     }
 
     private bool EligibleCorpseSoftTargetExists() =>
@@ -443,6 +445,8 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
         LogReachedCorpse(logger, bits.Target(), bits.Moving(), elapsedMs);
 
+        wait.Fixed(playerReader.NetworkLatency);
+
         return bits.Target() && playerReader.MinRangeZero();
     }
 
@@ -452,16 +456,16 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
     {
         if (bits.Target() && (!bits.SoftInteract() || EligibleCorpseSoftTargetExists()))
         {
-            if (!bits.Moving())
+            if (!bits.Moving() && !playerReader.IsInMeleeRange())
             {
                 input.PressApproachOnCooldown();
                 if (input.Approach.OnCooldown())
                 {
                     wait.Update();
-                    wait.Update();
                 }
             }
         }
+        wait.Update();
     }
 
     private bool LootReset()

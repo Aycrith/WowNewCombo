@@ -69,7 +69,7 @@ public sealed partial class ConfigurableInput
             : input.TurnRightKey, milliseconds, token);
     }
 
-    public void PressRandom(KeyAction keyAction, CancellationToken token = default)
+    public int PressRandom(KeyAction keyAction, CancellationToken token = default)
     {
         int elapsedMs = input.PressRandom(keyAction.ConsoleKey, keyAction.PressDuration, token);
         keyAction.SetClicked();
@@ -81,6 +81,8 @@ public sealed partial class ConfigurableInput
             else
                 LogKeyActionPressRandom(logger, keyAction.Name, keyAction.ConsoleKey, elapsedMs);
         }
+
+        return elapsedMs;
     }
 
     public void PressFixed(ConsoleKey key, int milliseconds, CancellationToken token)
@@ -120,7 +122,7 @@ public sealed partial class ConfigurableInput
         Approach.SetClicked();
     }
 
-    public void PressApproach(CancellationToken token = default) => PressRandom(Approach, token);
+    public bool PressApproach(CancellationToken token = default) => PressRandom(Approach, token) != 0;
 
     public void PressLastTarget(CancellationToken token = default) => PressRandom(TargetLastTarget, token);
 
