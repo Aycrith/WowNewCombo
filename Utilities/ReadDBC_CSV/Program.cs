@@ -32,7 +32,7 @@ internal sealed class Program
     // WOTLK 3.4.3.52237
     // SoD 1.15.4.56493
     // Cata 4.4.1.56464
-    private const string build = "4.4.1.56464";
+    private const string build = "1.15.7.60000";
 
     public static void Main()
     {
