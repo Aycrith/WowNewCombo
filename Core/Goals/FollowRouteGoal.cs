@@ -56,6 +56,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
     }
 
     private DateTime onEnterTime;
+    private bool refillByOther;
 
     #region IRouteProvider
 
@@ -179,7 +180,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
     private void Resume()
     {
-        onEnterTime = DateTime.UtcNow;
+        SendGoapEvent(FollowRouteChanged.Instance);
 
         if (sideActivityCts.IsCancellationRequested)
         {
@@ -187,8 +188,9 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         }
         sideActivityManualReset.Set();
 
-        if (!navigation.HasWaypoint())
+        if (!navigation.HasWaypoint() || refillByOther)
         {
+            refillByOther = false;
             RefillWaypoints(true);
         }
         else
@@ -198,6 +200,8 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
         if (playerReader.Class != UnitClass.Druid)
             MountIfPossible();
+
+        onEnterTime = DateTime.UtcNow;
     }
 
     public void OnGoapEvent(GoapEventArgs e)
@@ -209,6 +213,10 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         else if (e.GetType() == typeof(ResumeEvent))
         {
             Resume();
+        }
+        else if (e.GetType() == typeof(FollowRouteChanged))
+        {
+            refillByOther = true;
         }
     }
 
