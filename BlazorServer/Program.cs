@@ -4,11 +4,13 @@ using Frontend;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using Serilog;
 using Serilog.Templates;
@@ -116,6 +118,15 @@ public static class Program
 
         services.AddCoreFrontend();
 
+        services.AddSingleton(provider =>
+            provider.GetRequiredService<IOptions<JsonOptions>>().Value.SerializerOptions);
+
+        services.Configure<JsonOptions>(options =>
+        {
+            options.SerializerOptions.PropertyNameCaseInsensitive = true;
+            options.SerializerOptions.Converters.Add(new Vector3Converter());
+            options.SerializerOptions.Converters.Add(new Vector4Converter());
+        });
 
         services.AddControllers().AddJsonOptions(options =>
         {

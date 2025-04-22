@@ -708,6 +708,43 @@ function setRecord(state) {
 }
 
 
+function isMap(p) {
+    return p.x > 0 && p.x < 100;
+}
+
+function setPolyPath(name, path) {
+
+    let polyline = layerNames[name];
+
+    path = JSON.parse(path);
+
+    var worlds = path;
+    if (path.length > 0 && isMap(path[0])) {
+        worlds = path.map(p => localToWorld(currentArea, flipXYLower(p)));
+    }
+
+    const latlngs = worlds.map(w => worldTolatLng(w.x, w.y));
+
+    if (polyline == null) {
+        polyline = new L.Polyline([latlngs], { color: name === 'Route' ? 'white' : 'blue', weight: 2, opacity: 1, smoothFactor: 1 });
+        polyline.PathName = name;
+        polyline.groupName = 'Navigation';
+        polyline.addTo(editableLayers);
+
+        addGroupLayer('Navigation', name);
+        assignLayer(polyline.groupName, polyline.PathName, polyline, true);
+
+        polyline.bringToFront();
+    }
+    else {
+        if (polyline.getLatLngs().length != latlngs.length) {
+            polyline.setLatLngs(latlngs);
+
+            polyline.bringToFront();
+        }
+    }
+}
+
 function atlasImg(p) {
     return `<div class="poiatlas" style="background-position: ${p.x}px ${p.y}px;height:${aSize}px;">&nbsp</div>`
 }
@@ -1948,8 +1985,8 @@ function addSubZonesTexts(areaId) {
 
 function flipXYLower(p) {
     return {
-        x: p.Y,
-        y: p.X
+        x: p.Y || p.y,
+        y: p.X || p.x
     };
 }
 
