@@ -523,6 +523,16 @@ async function init(e, c, z, x, y, urlEdit) {
         processOffsetClick(e);
     });
 
+
+    const mapContainer = document.getElementById('js-map');
+
+    const resizeObserver = new ResizeObserver(() => {
+        LeafletMap.invalidateSize();
+        pixiOverlay.redraw();
+    });
+
+    resizeObserver.observe(mapContainer);
+
     const adtClick = document.getElementById("adtClick");
     if (adtClick != null)
         copyClipboardOnClick(adtClick);
