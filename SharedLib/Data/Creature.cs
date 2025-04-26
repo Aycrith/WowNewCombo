@@ -15,8 +15,4 @@ public readonly record struct Creature
     public int SkinLoot { get; init; }
     public int Family { get; init; }
     public int Type { get; init; }
-
-
-    public bool IsFriendlyToAlliance() => (Faction & 2) != 0;
-    public bool IsFriendlyToHorde() => (Faction & 4) != 0;
 }

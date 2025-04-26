@@ -41,11 +41,20 @@ internal sealed class Program
 
     private static async Task MainAsync()
     {
+        await GenerateFactionTemplate(path);
+
         await GenerateItems(path);
         await GenerateConsumables(path);
         await GenerateSpells(path);
         await GenerateTalents(path);
         await GenerateWorldMapArea(path);
+    }
+
+    private static async Task GenerateFactionTemplate(string path)
+    {
+        FactionTemplateExtractor extractor = new(path);
+        await DownloadRequirements(path, extractor, build);
+        extractor.Run();
     }
 
     private static async Task GenerateItems(string path)

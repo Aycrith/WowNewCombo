@@ -30,6 +30,7 @@ public sealed class AreaDB : IDisposable
 
     private readonly CreatureDB creatures;
     private readonly WorldMapAreaDB worldMapAreaDB;
+    private readonly FactionTemplateDB factionDB;
 
     private readonly CancellationToken token;
     private readonly ManualResetEventSlim resetEvent;
@@ -52,11 +53,13 @@ public sealed class AreaDB : IDisposable
     public AreaDB(ILogger logger, DataConfig dataConfig,
         CreatureDB creatures,
         WorldMapAreaDB worldMapAreaDB,
-        CancellationTokenSource cts)
+        CancellationTokenSource cts,
+        FactionTemplateDB factionDB)
     {
         this.logger = logger;
         this.dataConfig = dataConfig;
         this.creatures = creatures;
+        this.factionDB = factionDB;
         this.worldMapAreaDB = worldMapAreaDB;
 
         token = cts.Token;
@@ -152,7 +155,7 @@ public sealed class AreaDB : IDisposable
             var firstWorldPos = worldPos[0];
 
             float d = playerPosW.WorldDistanceXYTo(firstWorldPos);
-            if (d < distance && FriendlyToPlayer(n, faction))
+            if (d < distance && FriendlyToPlayer(n, faction, factionDB))
             {
                 pos = firstWorldPos;
                 distance = d;
@@ -171,13 +174,25 @@ public sealed class AreaDB : IDisposable
             mapPos.X > 0 && mapPos.X < 100 &&
             mapPos.Y > 0 && mapPos.Y < 100;
 
-        static bool FriendlyToPlayer(Creature npc, PlayerFaction playerFaction) =>
-            playerFaction switch
+        static bool FriendlyToPlayer(Creature npc, PlayerFaction playerFaction, FactionTemplateDB factionDB)
+        {
+            int friendGroup = factionDB.Factions[npc.Faction];
+
+            const int AllPlayers = 1;
+
+            const int AlliancePlayers = 2;
+            int allianceOurMask = AllPlayers | AlliancePlayers;
+
+            const int HordePlayers = 4;
+            int hordeOurMask = AllPlayers | HordePlayers;
+
+            return playerFaction switch
             {
-                PlayerFaction.Alliance => npc.IsFriendlyToAlliance(),
-                PlayerFaction.Horde => npc.IsFriendlyToHorde(),
+                PlayerFaction.Alliance => (friendGroup & allianceOurMask) != 0,
+                PlayerFaction.Horde => (friendGroup & hordeOurMask) != 0,
                 _ => false
             };
+        }
     }
 
     public (Creature, Vector3) FindClosestCreatureByNpcFlag(NpcFlags npcFlag, Vector3 position)

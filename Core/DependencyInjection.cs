@@ -102,6 +102,7 @@ public static class DependencyInjection
         s.ForwardSingleton<WorldMapAreaDB>(sp);
         s.ForwardSingleton<ItemDB>(sp);
         s.ForwardSingleton<CreatureDB>(sp);
+        s.ForwardSingleton<FactionTemplateDB>(sp);
         s.ForwardSingleton<SpellDB>(sp);
         s.ForwardSingleton<TalentDB>(sp);
 
@@ -199,6 +200,7 @@ public static class DependencyInjection
         s.AddSingleton<WorldMapAreaDB>();
         s.AddSingleton<ItemDB>();
         s.AddSingleton<CreatureDB>();
+        s.AddSingleton<FactionTemplateDB>();
         s.AddSingleton<SpellDB>();
         s.AddSingleton<TalentDB>();
 
