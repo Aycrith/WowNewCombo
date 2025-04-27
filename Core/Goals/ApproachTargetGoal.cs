@@ -190,31 +190,33 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
             int initialTargetMinRange = playerReader.MinRange();
             if (!input.TargetNearestTarget.OnCooldown())
             {
+                logger.LogWarning($"Attempt to find closer target IsInMeleeRange:{playerReader.IsInMeleeRange()} - min:{playerReader.MinRange()} | max:{playerReader.MaxRange()} - initialMinRange:{initialTargetMinRange}");
+
                 input.PressNearestTarget();
                 wait.Update();
-            }
 
-            if (bits.Target() && playerReader.TargetGuid != initialTargetGuid)
-            {
-                if (targetBlacklist.Is())
+                if (bits.Target() && playerReader.TargetGuid != initialTargetGuid)
                 {
-                    logger.LogWarning($"Losing the target due blacklist!");
-                    return;
-                }
+                    if (targetBlacklist.Is())
+                    {
+                        logger.LogWarning($"Losing the target due blacklist!");
+                        return;
+                    }
 
-                if (playerReader.MinRange() < initialTargetMinRange)
-                {
-                    logger.LogWarning($"Found a closer target! {playerReader.MinRange()} < {initialTargetMinRange}");
+                    if (playerReader.MinRange() < initialTargetMinRange)
+                    {
+                        logger.LogWarning($"Found a closer target! {playerReader.MinRange()} < {initialTargetMinRange}");
 
-                    initialMinRange = playerReader.MinRange();
-                }
-                else
-                {
-                    initialTargetGuid = -1;
-                    logger.LogWarning("Stick to initial target!");
+                        initialMinRange = playerReader.MinRange();
+                    }
+                    else
+                    {
+                        initialTargetGuid = -1;
+                        logger.LogWarning("Stick to initial target!");
 
-                    input.PressLastTarget();
-                    wait.Update();
+                        input.PressLastTarget();
+                        wait.Update();
+                    }
                 }
             }
         }
