@@ -190,7 +190,7 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
             int initialTargetMinRange = playerReader.MinRange();
             if (!input.TargetNearestTarget.OnCooldown())
             {
-                logger.LogWarning($"Attempt to find closer target IsInMeleeRange:{playerReader.IsInMeleeRange()} - min:{playerReader.MinRange()} | max:{playerReader.MaxRange()} - initialMinRange:{initialTargetMinRange}");
+                //logger.LogWarning($"Attempt to find closer target IsInMeleeRange:{playerReader.IsInMeleeRange()} - min:{playerReader.MinRange()} | max:{playerReader.MaxRange()} - initialMinRange:{initialTargetMinRange}");
 
                 input.PressNearestTarget();
                 wait.Update();
