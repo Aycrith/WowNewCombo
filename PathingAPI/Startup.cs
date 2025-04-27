@@ -85,6 +85,7 @@ public sealed class Startup
         services.AddSingleton<DataConfig>(x => DataConfig.Load(exp));
         services.AddSingleton<WorldMapAreaDB>();
         services.AddSingleton<PPatherService>();
+        services.AddSingleton<FactionTemplateDB>();
         services.AddSingleton<CreatureDB>();
         services.AddSingleton<AreaDB>();
 
