@@ -579,24 +579,25 @@ public sealed partial class CastingHandler
         if (item.AfterCastWaitMeleeRange)
         {
             int lastKnownHealth = playerReader.HealthCurrent();
+            int initialMinRange = playerReader.MinRange();
+
+            float elapsedMs = AfterCastWaitMeleeRange(MAX_WAIT_MELEE_RANGE,
+                lastKnownHealth, initialMinRange,
+                wait, playerReader, token);
 
             if (Log && item.Log)
-                LogAfterCastWaitMeleeRange(logger, item.Name);
-
-            AfterCastWaitMeleeRange(MAX_WAIT_MELEE_RANGE,
-                lastKnownHealth, wait, playerReader, token);
-
-            wait.Update();
+                LogAfterCastWaitMeleeRange(logger, item.Name, elapsedMs);
 
             static float AfterCastWaitMeleeRange(int duration,
-                int lastKnownHealth, Wait wait, PlayerReader playerReader,
+                int lastKnownHealth, int initialMinRange,
+                Wait wait, PlayerReader playerReader,
                 CancellationToken token)
                 => wait.Until(duration,
                 () =>
+                playerReader.MinRange() > initialMinRange ||
                 playerReader.IsInMeleeRange() ||
                 playerReader.IsTargetCasting() ||
                 playerReader.HealthCurrent() < lastKnownHealth ||
-                !playerReader.WithInPullRange() ||
                 token.IsCancellationRequested);
         }
 
@@ -938,8 +939,8 @@ public sealed partial class CastingHandler
     [LoggerMessage(
         EventId = 0096,
         Level = LogLevel.Information,
-        Message = "[{name,-17}] ... AfterCastWaitMeleeRange")]
-    static partial void LogAfterCastWaitMeleeRange(ILogger logger, string name);
+        Message = "[{name,-17}] ... AfterCastWaitMeleeRange {elapsedMs}ms")]
+    static partial void LogAfterCastWaitMeleeRange(ILogger logger, string name, float elapsedMs);
 
     [LoggerMessage(
         EventId = 0097,
