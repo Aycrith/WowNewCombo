@@ -122,7 +122,19 @@ public sealed partial class ConfigurableInput
         Approach.SetClicked();
     }
 
-    public bool PressApproach(CancellationToken token = default) => PressRandom(Approach, token) != 0;
+    public bool PressedApproachOnCooldown()
+    {
+        if (Approach.OnCooldown())
+        {
+            return false;
+        }
+
+        input.PressRandom(Approach.ConsoleKey, InputDuration.FastPress);
+        Approach.SetClicked();
+        return true;
+    }
+
+    public void PressApproach(CancellationToken token = default) => PressRandom(Approach, token);
 
     public void PressLastTarget(CancellationToken token = default) => PressRandom(TargetLastTarget, token);
 
