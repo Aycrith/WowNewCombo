@@ -17,7 +17,6 @@ using System.Linq;
 using System.Numerics;
 using System.Threading;
 
-using WowheadDB;
 using SharedLib;
 
 #pragma warning disable 162
@@ -58,7 +57,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
     private readonly GossipReader gossipReader;
     private readonly AreaDB areaDB;
 
-    private PathState pathState;
+    private PathState pathState = PathState.Finished;
 
     private readonly bool tryFindClosestNPC;
     private Creature npc;
@@ -151,27 +150,22 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
     {
         if (e.GetType() == typeof(ResumeEvent))
         {
-            navigation.ResetStuckParameters();
-            MountIfPossible();
+            Resume();
+
         }
         else if (e.GetType() == typeof(AbortEvent))
         {
-            pathState = PathState.Finished;
+            Abort();
         }
     }
 
-
-    public override void OnEnter()
+    private void Resume()
     {
-        if (tryFindClosestNPC)
+        if (tryFindClosestNPC && !TryAutoSelectNPCAndSetPath())
         {
-            bool found = TryAutoSelectNPCAndSetPath();
-            if (!found)
-            {
-                pathState = PathState.Finished;
-                LogWarn("No NPC with the criteria!");
-                return;
-            }
+            pathState = PathState.Finished;
+            LogWarn("No NPC with the criteria!");
+            return;
         }
 
         input.PressClearTarget();
@@ -179,12 +173,14 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
         SetClosestWaypoint();
 
+        navigation.Resume();
+
         pathState = PathState.ApproachPathStart;
 
         MountIfPossible();
     }
 
-    public override void OnExit()
+    private void Abort()
     {
         navigation.StopMovement();
         navigation.Stop();
@@ -196,6 +192,11 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
             npc = default;
         }
     }
+
+
+    public override void OnEnter() => Resume();
+
+    public override void OnExit() => Abort();
 
     public override void Update()
     {
@@ -261,7 +262,9 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
             return;
 
         LogDebug("Reached defined path end");
+        navigation.StopMovement();
         stopMoving.Stop();
+        wait.Update();
 
         input.PressClearTarget();
         wait.Update();
@@ -272,7 +275,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
             wait.Update();
         }
 
-        bool found = bits.Target();
+        bool hasTarget = bits.Target();
 
         if (bits.SoftInteract() &&
             !bits.SoftInteract_Hostile())
@@ -282,10 +285,10 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
             LogWarn($"Soft Interact found NPC with id {playerReader.SoftInteract_Id}");
 
-            found = MoveToTargetAndReached();
+            hasTarget = MoveToTargetAndReached();
         }
 
-        if (!found && !input.KeyboardOnly)
+        if (!hasTarget && !input.KeyboardOnly)
         {
             npcNameTargeting.ChangeNpcType(NpcNames.Friendly | NpcNames.Neutral);
             npcNameTargeting.WaitForUpdate();
@@ -298,16 +301,16 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
                 CursorType.Speak
             ];
 
-            found = npcNameTargeting.FindBy(types, token);
+            hasTarget = npcNameTargeting.FindBy(types, token);
             wait.Update();
 
-            if (!found)
+            if (!hasTarget)
             {
                 LogWarn($"No target found by cursor({CursorType.Vendor.ToStringF()}, {CursorType.Repair.ToStringF()}, {CursorType.Innkeeper.ToStringF()})!");
             }
         }
 
-        if (!found)
+        if (!hasTarget)
         {
             Log($"Use KeyAction.Key macro to acquire target");
             input.PressRandom(key);
