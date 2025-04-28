@@ -291,6 +291,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
             npcNameTargeting.WaitForUpdate();
 
             ReadOnlySpan<CursorType> types = [
+                CursorType.Loot,
                 CursorType.Vendor,
                 CursorType.Repair,
                 CursorType.Innkeeper,
