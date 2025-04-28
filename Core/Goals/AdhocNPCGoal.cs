@@ -333,6 +333,11 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         input.PressClearTarget();
         wait.Update();
 
+        return;
+        // The following code no longer needed as we know for a fact we are close to an NPC spawnpoint
+        // thus we know the world coordinate and Z/height component
+        // then the pathfinder can reliable locate the player exact location
+
         Span<Vector3> reversePath = stackalloc Vector3[key.Path.Length];
         key.Path.CopyTo(reversePath);
         reversePath.Reverse();
