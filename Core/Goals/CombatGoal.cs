@@ -247,6 +247,9 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
             return;
         }
 
+        // TODO: have to find a better way to deal with this
+        return;
+
         ConsoleKey key = Random.Shared.Next(2) == 0
             ? input.TurnLeftKey
             : input.TurnRightKey;
