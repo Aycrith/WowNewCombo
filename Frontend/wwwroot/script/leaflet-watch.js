@@ -425,6 +425,8 @@ async function init(e, c, z, x, y, urlEdit) {
 
     LeafletMap.setMaxBounds(mapBounds);
 
+    LeafletMap.doubleClickZoom.disable();
+
     L.tileLayer('tiles/' + continent + '/z{z}x{x}y{y}.png', {
         maxZoom: maxZoom,
         maxNativeZoom: config.maxZoom,
