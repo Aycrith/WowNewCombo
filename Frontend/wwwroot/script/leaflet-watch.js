@@ -86,6 +86,8 @@ var expansion = "som";
 var continent = 'Azeroth';
 var startZoom = 4;
 
+var baseUrl = "https://www.wowhead.com/classic";
+
 var config;
 
 var enableUrlEdit = false;
@@ -346,6 +348,25 @@ function getFilePathFileName() {
     return `${currentAreaName}_${currentDate}.json`;
 }
 
+function setBaseUrl(e) {
+    switch (e) {
+        case 'som':
+            baseUrl = "https://classic.wowhead.com";
+            break;
+        case 'tbc':
+            baseUrl = "https://tbc.wowhead.com";
+            break;
+        case 'wrath':
+            baseUrl = "https://www.wowhead.com/wotlk";
+            break;
+        case 'cata':
+            baseUrl = "https://www.wowhead.com/cata";
+            break;
+        default:
+            baseUrl = "https://www.wowhead.com/";
+            break;
+    }
+}
 
 async function init(e, c, z, x, y, urlEdit) {
 
@@ -356,6 +377,8 @@ async function init(e, c, z, x, y, urlEdit) {
     if (expansion !== 'som') {
         return;
     }
+
+    setBaseUrl(expansion);
 
     continent = c;
     startZoom = z;
