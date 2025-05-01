@@ -65,7 +65,14 @@ public sealed class PPatherService
     public void Initialise(float mapId)
     {
         if (search != null && mapId == search.MapId)
+        {
             return;
+        }
+
+        if (search != null && mapId != search.MapId)
+        {
+            Reset();
+        }
 
         search = new Search(mapId, logger, dataConfig);
         search.PathGraph.triangleWorld.NotifyChunkAdded = ChunkAdded;
