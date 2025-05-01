@@ -842,7 +842,14 @@ function testdrawIconAtlasPixi() {
 /// test
 
 const atlasImagePath = '_content/Frontend/img/atlas.png';
-const baseAtlasTexture = PIXI.BaseTexture.from(atlasImagePath);
+var baseAtlasTexture;
+
+const atlasImage = new Image();
+atlasImage.src = atlasImagePath;
+atlasImage.onload = () => {
+    baseAtlasTexture = PIXI.BaseTexture.from(atlasImage);
+};
+
 
 function getPixiIconTexture(name) {
     let iconPos = IconAtlas[name];
