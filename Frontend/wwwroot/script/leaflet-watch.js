@@ -309,7 +309,16 @@ function bindPopupEnrichCoordinates(marker, worldPos, text) {
     });
 }
 
-async function showPixiPopup(worldPos, latlng, baseHtml) {
+async function showPixiPopup(worldPos, latlng, baseHtml, sprite = null) {
+    // Prevent multiple popups on the same marker
+    if (sprite && sprite.popup && LeafletMap.hasLayer(sprite.popup)) {
+        sprite.popup.bringToFront();
+        return;
+    }
+
+    const popupId = `popup-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const loadingId = `${popupId}-loading`;
+
     const popup = L.popup({
         autoClose: false,
         closeOnClick: false,
@@ -317,27 +326,32 @@ async function showPixiPopup(worldPos, latlng, baseHtml) {
         className: 'pixi-tooltip'
     })
         .setLatLng(latlng)
-        .setContent(`${baseHtml}<br/><em>Loading coordinates...</em>`)
+        .setContent(`
+            <div id="${popupId}">
+                ${baseHtml}
+                <br/><em id="${loadingId}">Loading coordinates...</em>
+            </div>
+        `)
         .openOn(LeafletMap);
 
-    requestAnimationFrame(() => {
-        const popupEl = document.querySelector('.leaflet-popup-content');
-        if (!popupEl) return;
+    if (sprite) {
+        sprite.popup = popup;
+    }
 
-        const spans = popupEl.querySelectorAll('.copy-coords');
-        spans.forEach(copyClipboardOnClick);
+    requestAnimationFrame(() => {
+        const popupEl = document.getElementById(popupId);
+        if (!popupEl) return;
+        popupEl.querySelectorAll('.copy-coords').forEach(copyClipboardOnClick);
     });
 
-    // 🕓 async enrichment after popup is shown
     const enriched = await addCoordinates(worldPos);
 
-    const popupEl = document.querySelector('.leaflet-popup-content');
+    const popupEl = document.getElementById(popupId);
     if (popupEl) {
-        popupEl.innerHTML = `${baseHtml}${enriched}`;
-
-        // Re-bind copy-to-clipboard for enriched coords
-        const spans = popupEl.querySelectorAll('.copy-coords');
-        spans.forEach(copyClipboardOnClick);
+        const loadingEl = document.getElementById(loadingId);
+        if (loadingEl) loadingEl.remove();
+        popupEl.insertAdjacentHTML('beforeend', enriched);
+        popupEl.querySelectorAll('.copy-coords').forEach(copyClipboardOnClick);
     }
 }
 
@@ -1608,7 +1622,7 @@ async function addPoi(areaId) {
         const sprite = createSprite(latlng, texture);
 
         sprite.on('pointertap', async () => {
-            await showPixiPopup(worldPos, latlng, poi.name);
+            await showPixiPopup(worldPos, latlng, poi.name, sprite);
         });
 
         pixiOverlay.utils.getContainer().addChild(sprite);
@@ -1643,11 +1657,11 @@ async function addNpcSpawns(npcId, groupName = 'Spawn', iconName = 'red') {
             ${npcName}
             <br/>${creature.MinLevel}-${creature.MaxLevel}
             <br/>${npcId}
-            <br/><div onclick="openInNewTab('https://www.wowhead.com/classic/npc=${npcId}');">wowhead link</div>
+            <br/><div onclick="openInNewTab('${baseUrl}/npc=${npcId}');">wowhead link</div>
         `;
 
         sprite.on('pointertap', async () => {
-            await showPixiPopup(worldPos, latlng, html);
+            await showPixiPopup(worldPos, latlng, html, sprite);
         });
 
         pixiOverlay.utils.getContainer().addChild(sprite);
@@ -1674,7 +1688,7 @@ async function addNodeTypeSpawns(oreName, coords, area, groupName) {
         const sprite = createSprite(latlng, texture);
 
         sprite.on('pointertap', async () => {
-            await showPixiPopup(worldPos, latlng, oreName);
+            await showPixiPopup(worldPos, latlng, oreName, sprite);
         });
 
         pixiOverlay.utils.getContainer().addChild(sprite);
@@ -1796,11 +1810,11 @@ async function addNpc(npcType) {
         const popupHtml = `
             ${npcName}
             <br>${creature.SubName ?? ''}
-            <br><div onclick="openInNewTab('https://www.wowhead.com/classic/npc=${creature.Entry}')">wowhead link</div>
+            <br><div onclick="openInNewTab('${baseUrl}/npc=${creature.Entry}')">wowhead link</div>
         `;
 
         sprite.on('pointertap', async () => {
-            await showPixiPopup(worldPos, latlng, popupHtml);
+            await showPixiPopup(worldPos, latlng, popupHtml, sprite);
         });
 
         pixiOverlay.utils.getContainer().addChild(sprite);
