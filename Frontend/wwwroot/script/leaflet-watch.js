@@ -566,8 +566,15 @@ async function init(e, c, z, x, y, urlEdit) {
     const mapContainer = document.getElementById('js-map');
 
     const resizeObserver = new ResizeObserver(() => {
-        LeafletMap.invalidateSize();
-        pixiOverlay.redraw();
+        requestAnimationFrame(() => {
+            LeafletMap.invalidateSize();
+            pixiOverlay.redraw();
+
+            const canvas = pixiOverlay._renderer?.view;
+            if (canvas && !canvas.parentNode) {
+                document.getElementById('js-map').appendChild(canvas);
+            }
+        })
     });
 
     resizeObserver.observe(mapContainer);
