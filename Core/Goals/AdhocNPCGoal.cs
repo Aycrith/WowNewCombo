@@ -5,19 +5,18 @@ using Game;
 
 using Microsoft.Extensions.Logging;
 
+using SharedLib;
 using SharedLib.Data;
 using SharedLib.Extensions;
 using SharedLib.NpcFinder;
 
 using System;
 using System.Buffers;
-using System.Collections.Generic;
 using System.Collections.Frozen;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
-
-using SharedLib;
 
 #pragma warning disable 162
 
@@ -56,6 +55,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
     private readonly ExecGameCommand execGameCommand;
     private readonly GossipReader gossipReader;
     private readonly AreaDB areaDB;
+    private readonly BagReader bagReader;
 
     private PathState pathState = PathState.Finished;
 
@@ -92,6 +92,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         Wait wait, PlayerReader playerReader, GossipReader gossipReader, AddonBits bits,
         Navigation navigation, StopMoving stopMoving, AreaDB areaDB,
         NpcNameTargeting npcNameTargeting, ClassConfiguration classConfig,
+        BagReader bagReader,
         IMountHandler mountHandler, ExecGameCommand exec, CancellationTokenSource cts)
         : base(nameof(AdhocNPCGoal))
     {
@@ -105,6 +106,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         this.areaDB = areaDB;
         this.npcNameTargeting = npcNameTargeting;
         this.classConfig = classConfig;
+        this.bagReader = bagReader;
         this.mountHandler = mountHandler;
         token = cts.Token;
         this.execGameCommand = exec;
@@ -431,31 +433,40 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
         Log($"Merchant window opened after {e}ms");
 
-        // Sell custom items via macro
-        input.PressRandom(key);
+        if (key.ConsoleKey != default)
+            input.PressRandom(key);
 
-        e = wait.Until(TIMEOUT, gossipReader.MerchantWindowSelling);
-        if (e >= 0)
+        if (bagReader.AnyGreyItem())
         {
+            e = wait.Until(TIMEOUT, gossipReader.MerchantWindowSelling);
+            if (e < 0)
+            {
+                Log($"Merchant sell nothing! {e}ms");
+                goto exit;
+            }
+
             Log($"Merchant sell grey items started after {e}ms");
 
             e = wait.Until(TIMEOUT, gossipReader.MerchantWindowSellingFinished);
             if (e >= 0)
             {
                 Log($"Merchant sell grey items finished, took {e}ms");
-                return true;
             }
             else
             {
                 Log($"Merchant sell grey items timeout! Too many items to sell?! Increase {nameof(TIMEOUT)} - {e}ms");
-                return true;
             }
         }
-        else
+
+    exit:
+        if (!string.IsNullOrEmpty(key.MacroText))
         {
-            Log($"Merchant sell nothing! {e}ms");
-            return true;
+            string text = key.Macro();
+            execGameCommand.Run(text);
+            wait.Update();
         }
+
+        return true;
     }
 
     private bool TryAutoSelectNPCAndSetPath()
@@ -471,7 +482,10 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         foreach ((NpcFlags type, SearchValues<string> pattern) in npcSearchPatterns)
         {
             if (name.ContainsAny(pattern))
+            {
                 npcFlag = type;
+                break;
+            }
         }
 
         string[] allowedNames = [];

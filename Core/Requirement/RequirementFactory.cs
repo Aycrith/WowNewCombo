@@ -49,6 +49,8 @@ public sealed partial class RequirementFactory
 
     private readonly FrozenDictionary<string, Func<bool>> boolVariables;
 
+    private readonly Dictionary<string, Func<string>> stringVariables = [];
+
     private readonly FrozenDictionary<string, Func<ReadOnlySpan<char>, Requirement>> requirementMap;
 
     private const char SEP1 = ':';
@@ -260,7 +262,9 @@ public sealed partial class RequirementFactory
 
         BindPathSettingsIntVariables(classConfig.Paths);
 
-        InitUserDefinedIntVariables(classConfig.IntVariables,
+        InitUserDefinedIntVariables(
+            classConfig.IntVariables,
+            classConfig.StringVariables,
             playerBuff, playerDebuff,
             targetDebuff,
             targetBuff, focusBuff);
@@ -355,6 +359,15 @@ public sealed partial class RequirementFactory
         list.Clear();
         Process(list, item.Name, item.Interrupts);
         item.InterruptsRuntime = list.ToArray();
+
+        if (!string.IsNullOrEmpty(item.MacroText))
+        {
+            var template = item.MacroText;
+            var vars = stringVariables;
+
+            item.Macro = () =>
+                vars.Aggregate(template, (acc, kvp) => acc.Replace(kvp.Key, kvp.Value()));
+        }
     }
 
     public void Init(PathSettings item)
@@ -411,7 +424,9 @@ public sealed partial class RequirementFactory
         }
     }
 
-    public void InitUserDefinedIntVariables(Dictionary<string, int> intKeyValues,
+    public void InitUserDefinedIntVariables(
+        Dictionary<string, int> intKeyValues,
+        Dictionary<string, string> stringKeyValues,
         AuraTimeReader<IPlayerBuffTimeReader> playerBuffTimeReader,
         AuraTimeReader<IPlayerDebuffTimeReader> playerDebuffTimeReader,
         AuraTimeReader<ITargetDebuffTimeReader> targetDebuffTimeReader,
@@ -454,6 +469,30 @@ public sealed partial class RequirementFactory
             }
 
             LogUserDefinedValue(logger, nameof(RequirementFactory), key, value);
+        }
+
+        foreach ((string key, string value) in stringKeyValues)
+        {
+            Func<string> valueOrAlias = () => value;
+            if (intVariables.TryGetValue(value, out var varOrConst))
+            {
+                if (key.StartsWith("$ITEM_NAME", StringComparison.InvariantCultureIgnoreCase) &&
+                    itemDb.Items.TryGetValue(varOrConst(), out Item item))
+                {
+                    valueOrAlias = () => item.Name;
+                }
+                else if (key.StartsWith("$NPC_NAME", StringComparison.InvariantCultureIgnoreCase) &&
+                    creatureDb.Entries.TryGetValue(varOrConst(), out Creature c))
+                {
+                    valueOrAlias = () => c.Name;
+                }
+                else
+                {
+                    valueOrAlias = () => varOrConst().ToString();
+                }
+            }
+
+            stringVariables[key] = valueOrAlias;
         }
     }
 
@@ -1306,7 +1345,8 @@ public sealed partial class RequirementFactory
                 return new Requirement { HasRequirement = le, LogMessage = msg };
             default:
                 throw new ArgumentOutOfRangeException(requirement.ToString());
-        };
+        }
+        ;
     }
 
     private static int GetIntValueOrVariable(Dictionary<string, Func<int>> intVariables, ReadOnlySpan<char> count_or_variable)

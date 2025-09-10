@@ -499,6 +499,7 @@ Your class file probably exists and just needs to be edited to set the pathing f
 | `"TargetMask"` | [UnitClassification](https://wowpedia.fandom.com/wiki/API_UnitClassification) types that allowed to engage with. | true | `"Normal, Trivial, Rare"` |
 | `"NpcSchoolImmunity"` | List of NpcIDs which have one or more [SchoolMask](#npcschoolimmunity) immunities | true | `""` |
 | `"IntVariables"` | List of user defined `integer` variables | true | `[]` |
+| `"StringVariables"` | List of user defined `string` variables | true | `[]` |
 | --- | --- | --- | --- |
 | `"Pull"` | [KeyActions](#keyactions) to execute upon [Pull Goal](#pull-goal) | true | `{}` |
 | `"Flee"` | [KeyActions](#keyactions) to execute upon [Flee Goal](#flee-goal). | true | `{}` |
@@ -619,6 +620,28 @@ For example look at the Warlock profiles.
     "Debuff_Poision": 135368,
     "TBuff_Dispell on Target": 16846,
     "Item_Soul_Shard": 6265,
+    // ...
+    // ...
+    "ITEM_ARROW": 2512,
+    "MIN_COUNT_ARROW": 200,
+    "AMMO_SLOT": 5
+}
+```
+
+### StringVariables
+
+Similar as [IntVariables](#intvariables) just for string values
+
+Note: if the `value` matches any of the `IntVariables` key, the `value` will be replaced with the IntVariable value.
+
+When the variable name starts with `$ITEM_NAME` the value will be replaced with the Item English localized, in this example `Rough Arrow`.
+
+When the variable name starts with `$NPC_NAME` the value will be replaced with the NPC English localized name.
+
+```json
+"StringVariables": {
+    "$ITEM_NAME_ARROW": "ITEM_ARROW",
+    "$AMMO_SLOT": "AMMO_SLOT"
 }
 ```
 
@@ -718,6 +741,7 @@ Can specify conditions with [Requirement(s)](#requirement) in order to create a 
 | `"Cooldown"` | **Note this is not the in-game cooldown!**<br>The time in milliseconds before KeyAction can be used again.<br>This property will be updated when the backend registers the `Key` press. It has no feedback from the game. | `400` |
 | `"Charge"` | How many consequent key press should happen before setting Cooldown | `1` |
 | `"School"` | Indicate what type of [SchoolMask](#npcschoolimmunity) element the spell will do.  | `None` |
+| `"MacroText"` | You can specify a macro text or macro template which can hold variables. make sure the MacroText is no longer then 255 characters. | `""` |
 | --- | --- | --- |
 | `"WhenUsable"` | Mapped to [IsUsableAction](https://wowwiki-archive.fandom.com/wiki/API_IsUsableAction) | `false` |
 | `"UseWhenTargetIsCasting"` | Checks for the target casting/channeling.<br>Accepted values:<br>* `null` -> ignore<br>* `false` -> when enemy not casting<br>* `true` -> when enemy casting | `null` |
@@ -1251,6 +1275,29 @@ examples of full automatic npc detection or multiple whitelisted names:
                 "BagFull",
                 "BagGreyItem"
             ]
+        }
+    ]
+}
+```
+
+#### NPC KeyAction.MacroText
+
+When going to visit and NPC, not it is possible to specify a templated macro text, where the template variables are shows up as `$` prefixed variables.
+
+If you want to use the template variable you need to first specify it [StringVariables](#stringvariables).
+
+Rougly speaking the following block does the following, if the player has less then 200 
+
+```json
+"NPC": {
+    "Sequence": [
+        {
+        "Cost": 6,
+        "Name": "VendorAmmo",
+        "Requirements": [
+            "!BagItem:ITEM_ARROW:MIN_COUNT_ARROW"
+        ],
+        "MacroText": "/run local a={'$ITEM_NAME_ARROW',$AMMO_SLOT} for i=1,GetMerchantNumItems() do if GetMerchantItemInfo(i)==a[1] then for j=1,a[2] do BuyMerchantItem(i,200) end end end"
         }
     ]
 }
