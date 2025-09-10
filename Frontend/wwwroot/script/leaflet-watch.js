@@ -113,7 +113,7 @@ var layerNames = {};
 
 var LeafletMap;
 var pixiOverlay;
-const pixiContainer = new PIXI.Container();
+var pixiContainer;
 
 var currentArea;
 var lastRenderArea;
@@ -382,7 +382,44 @@ function setBaseUrl(e) {
     }
 }
 
+function initializeMap(x, y) {
+    return new L.map('js-map', {
+        center: [x, y],
+        zoom: startZoom,
+        minZoom: 2,
+        maxZoom: maxZoom,
+        crs: L.CRS.Simple,
+        zoomControl: false,
+        preferCanvas: true
+    });
+}
+
+function disposeMap() {
+    if (LeafletMap) {
+        LeafletMap.remove();
+        LeafletMap = null;
+    }
+
+    if (pixiOverlay) {
+        pixiOverlay.remove();
+        pixiOverlay = null;
+    }
+
+    pixiContainer.removeChildren();
+
+    groupedOverlays = {
+        "Zones": {},
+        "Paths": {},
+        "Watch": {},
+    };
+
+    layerNames = {};
+    groupedLayerControls = [];
+}
+
 async function init(e, c, z, x, y, urlEdit) {
+
+    //disposeMap(); // clean previous state
 
     expansion = e;
     enableUrlEdit = urlEdit;
@@ -407,11 +444,23 @@ async function init(e, c, z, x, y, urlEdit) {
 
     LeafletMap = initializeMap(x, y);
 
+    if (!pixiContainer) {
+        pixiContainer = new PIXI.Container();
+    }
+    pixiContainer.interactive = true; // important
+    pixiContainer.interactiveChildren = true; // ensures its children (your sprites) are interactive
+
+    let firstDraw = true;
+    let prevZoom;
+
+    //pixiContainer = new PIXI.Container();
     pixiOverlay = new L.PixiOverlay((utils) => {
         const zoom = utils.getMap().getZoom();
         const scaleFactor = utils.getMap().getZoomScale(6, zoom);
+        const container = utils.getContainer();
+        const renderer = utils.getRenderer();
 
-        for (const sprite of pixiContainer.children) {
+        for (const sprite of container.children) {
             if (!sprite.visible) continue;
 
             const projected = utils.latLngToLayerPoint(sprite.latlng);
@@ -419,18 +468,39 @@ async function init(e, c, z, x, y, urlEdit) {
             sprite.y = projected.y;
 
             if (sprite instanceof PIXI.Text) {
-
-                //sprite.visible = zoom >= 5;
-
                 const textZoomFactor = Math.min(1.5, Math.max(0.5, scaleFactor * 1.2));
                 sprite.scale.set(textZoomFactor);
             } else {
                 sprite.scale.set(aSize / sprite.texture.width * scaleFactor);
+                // TODO: FIX bitmap rendered subzone texts as sprites
+                //const textZoomFactor = Math.min(1.5, Math.max(0.5, scaleFactor * 1.2));
+                //sprite.scale.set(textZoomFactor);
             }
+
+            //if (sprite.interactive) {
+            //    const size = aSize * scaleFactor;
+            //    sprite.hitArea = new PIXI.Rectangle(-size/2, -size/2, size, size);
+            //} 
+        }
+        
+
+        if (firstDraw) {
+            // set coordinates
         }
 
-        utils.getRenderer().render(pixiContainer);
-    }, pixiContainer);
+        if (firstDraw || prevZoom !== zoom) {
+            // update by scale
+        }
+
+        firstDraw = false;
+        prevZoom = zoom;
+        renderer.render(pixiContainer);
+    }, pixiContainer,
+        {
+            destroyInteractionManager: false,
+            autoPreventDefault: false
+        }
+    );
     pixiOverlay.addTo(LeafletMap);
 
     const southWest = LeafletMap.unproject([0, config.resY], config.maxZoom);
@@ -569,11 +639,6 @@ async function init(e, c, z, x, y, urlEdit) {
         requestAnimationFrame(() => {
             LeafletMap.invalidateSize();
             pixiOverlay.redraw();
-
-            const canvas = pixiOverlay._renderer?.view;
-            if (canvas && !canvas.parentNode) {
-                document.getElementById('js-map').appendChild(canvas);
-            }
         })
     });
 
@@ -791,6 +856,9 @@ function setPolyPath(name, path) {
         assignLayer(polyline.groupName, polyline.PathName, polyline, true);
 
         polyline.bringToFront();
+
+        schedulePixiRedraw();
+        scheduleGroupedLayerControlUpdate();
     }
     else {
         if (polyline.getLatLngs().length != latlngs.length) {
@@ -840,7 +908,7 @@ function testdrawIconAtlasPixi() {
         const texture = getPixiIconTexture(name);
         const sprite = createSprite(latlng, texture);
 
-        sprite.on('pointertap', () => {
+        addSpriteClickHandler(sprite, () => {
             const popup = L.popup({
                 autoClose: false,
                 closeOnClick: false,
@@ -901,6 +969,34 @@ function createSprite(latlng, texture) {
     return sprite;
 }
 
+// Helper function to properly add click handlers to sprites
+function addSpriteClickHandler(sprite, handler) {
+    sprite.interactive = true;
+    sprite.buttonMode = true;
+
+    // Use 'click' instead of 'pointertap' as it's more reliable
+    sprite.on('pointertap', (e) => {
+        //console.log('PIXI Sprite clicked!', sprite.latlng, window.location.pathname);
+        handler(e);
+    });
+
+    //sprite.on('click', (e) => {
+        //console.log('PIXI Sprite clicked!', sprite.latlng, window.location.pathname);
+        //handler(e);
+    //});
+
+    // hoover
+    sprite.on('pointerover', (e) => {
+        //console.log('PIXI Sprite hovered!', sprite.latlng);
+        //console.log(sprite.worldTransform, sprite.getBounds(), sprite.interactive);
+        // Optionally change cursor or style here
+    });
+
+    //sprite.on('pointerout', (e) => {
+        //console.log('PIXI Sprite unhovered!', sprite.latlng);
+    //});
+}
+
 
 let controlUpdateScheduled = false;
 function scheduleGroupedLayerControlUpdate() {
@@ -945,7 +1041,6 @@ function createGroupedLayerControl() {
         newGroupedControls.push(control);
     }
 
-    // Remove any leftover old controls that weren’t replaced
     for (const ctrl of groupedLayerControls) {
         if (!newGroupedControls.includes(ctrl)) {
             LeafletMap.removeControl(ctrl);
@@ -1079,6 +1174,11 @@ function addCloseButtonToGroupLayers(control) {
                     LeafletMap.removeLayer(layer);
                 }
 
+                // Properly cleanup PixiSpriteGroupLayer instances
+                if (layer && typeof layer.destroy === 'function') {
+                    layer.destroy();
+                }
+
                 if (layerNames[layerName]) {
                     delete layerNames[layerName];
                 }
@@ -1166,6 +1266,17 @@ const PixiSpriteGroupLayer = L.Layer.extend({
         schedulePixiRedraw();
     },
 
+    destroy() {
+        const container = pixiContainer;
+        for (const sprite of this._sprites) {
+            //if (container.children.includes(sprite)) {
+            //    container.removeChild(sprite);
+            //}
+            //sprite.destroy();
+        }
+        //this._sprites = [];
+    },
+
     getBounds: function () {
         const latlngs = this._sprites.map(s => s.latlng);
         return L.latLngBounds(latlngs);
@@ -1211,20 +1322,6 @@ async function loadPathsByRaceNames() {
     }
 }
 
-
-
-function initializeMap(x, y) {
-    return new L.map('js-map', {
-        center: [x, y],
-        zoom: startZoom,
-        minZoom: 2,
-        maxZoom: maxZoom,
-        crs: L.CRS.Simple,
-        zoomControl: false,
-        preferCanvas: true
-    });
-}
-
 function synchronizeTitleAndURL() {
     const latlng = LeafletMap.getCenter();
     const zoom = LeafletMap.getZoom();
@@ -1245,6 +1342,11 @@ function synchronizeTitleAndURL() {
 }
 
 //// layers
+
+function setText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+}
 
 async function processOffsetClick(e) {
 
@@ -1628,7 +1730,7 @@ async function addPoi(areaId) {
 
         const sprite = createSprite(latlng, texture);
 
-        sprite.on('pointertap', async () => {
+        addSpriteClickHandler(sprite, async () => {
             await showPixiPopup(worldPos, latlng, poi.name, sprite);
         });
 
@@ -1667,7 +1769,7 @@ async function addNpcSpawns(npcId, groupName = 'Spawn', iconName = 'red') {
             <br/><div onclick="openInNewTab('${baseUrl}/npc=${npcId}');">wowhead link</div>
         `;
 
-        sprite.on('pointertap', async () => {
+        addSpriteClickHandler(sprite, async () => {
             await showPixiPopup(worldPos, latlng, html, sprite);
         });
 
@@ -1694,7 +1796,7 @@ async function addNodeTypeSpawns(oreName, coords, area, groupName) {
 
         const sprite = createSprite(latlng, texture);
 
-        sprite.on('pointertap', async () => {
+        addSpriteClickHandler(sprite, async () => {
             await showPixiPopup(worldPos, latlng, oreName, sprite);
         });
 
@@ -1820,7 +1922,7 @@ async function addNpc(npcType) {
             <br><div onclick="openInNewTab('${baseUrl}/npc=${creature.Entry}')">wowhead link</div>
         `;
 
-        sprite.on('pointertap', async () => {
+        addSpriteClickHandler(sprite, async () => {
             await showPixiPopup(worldPos, latlng, popupHtml, sprite);
         });
 
@@ -1992,6 +2094,7 @@ function addSubZones(areaId) {
 function addSubZonesTexts(areaId) {
     const container = pixiOverlay.utils.getContainer();
     const groupName = "SubZoneTexts";
+    const renderer = pixiOverlay.utils.getRenderer();
 
     // Step 1: Count duplicates
     const nameCounts = {};
@@ -2001,44 +2104,48 @@ function addSubZonesTexts(areaId) {
 
     const textStyle = new PIXI.TextStyle({
         fontFamily: 'Arial',
-        fontSize: 20,
+        fontSize: 15,
         fill: '#ffffff',
         stroke: '#000000',
-        strokeThickness: 3,
-        align: 'center'
+        strokeThickness: 4,
+        align: 'center',
+        wordWrap: true,
+        wordWrapWidth: 150
     });
 
     for (const area of Object.values(SubZones)
         .filter(area => areaId == null || area.AreaID == areaId)) {
 
-        let label = area.AreaName;
-        // if the text is longer then 10 then replace the space after with new line
-        if (label.length > 10) {
-            const index = label.indexOf(' ', 10);
-            if (index !== -1) {
-                label = label.substring(0, index) + '\n' + label.substring(index + 1);
-            }
-        }
+        const label = area.AreaName;
 
-        // Step 2: Create unique key for toggling if duplicate
+        // Unique toggle label if duplicates
         const toggleLabel = nameCounts[area.AreaName] > 1
             ? `${area.AreaName} - ${area.AreaID}`
             : area.AreaName;
 
+        // Step 2: Create PIXI.Text
         const text = new PIXI.Text(label, textStyle);
         text.anchor.set(0.5);
 
+        // Step 3: Convert to sprite via texture
+        const texture = renderer.generateTexture(text);
+        const sprite = new PIXI.Sprite(texture);
+        sprite.anchor.set(0.5);
+        sprite.scale.set(2);
+
+        // Step 4: Positioning
         const bounds = getAreaBounds(area).flat();
         const boundsObj = L.latLngBounds(bounds);
         const northCenterLatLng = L.latLng(boundsObj.getNorth(), boundsObj.getCenter().lng);
         const offsetLat = northCenterLatLng.lat - 2;
-        text.latlng = L.latLng(offsetLat, northCenterLatLng.lng);
+        sprite.latlng = L.latLng(offsetLat, northCenterLatLng.lng);
 
-        text.visible = true;
+        sprite.visible = true;
+        sprite.label = toggleLabel;
 
-        container.addChild(text);
+        container.addChild(sprite);
 
-        const groupLayer = createPixiSpriteGroupLayer(groupName, [text]);
+        const groupLayer = createPixiSpriteGroupLayer(groupName, [sprite]);
         addToggleLayer(groupName, toggleLabel, groupLayer, true);
     }
 
@@ -2348,6 +2455,11 @@ window.addEventListener('DOMContentLoaded', function () {
                 requestAnimationFrame(() => {
                     LeafletMap.removeLayer(layer);
                 });
+            }
+
+            // Properly cleanup PixiSpriteGroupLayer instances
+            if (layer && typeof layer.destroy === 'function') {
+                layer.destroy();
             }
 
             if (layerNames[layerName]) {
