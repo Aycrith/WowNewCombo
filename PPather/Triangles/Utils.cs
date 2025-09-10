@@ -18,8 +18,11 @@
 
  */
 
+using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 
 using static System.MathF;
 using static System.Numerics.Vector3;
@@ -144,6 +147,78 @@ public static class Utils
             AxesIntersectTriangleBox(v0, v1, v2, boxExtents, f0, f1, f2) &&
             TriangleVerticesInsideBox(v0, v1, v2, boxExtents) &&
             TrianglePlaneIntersectBox(f0, f1, v0, boxExtents);
+    }
+
+    [SkipLocalsInit]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool TriangleBoxIntersect_SIMD(
+        in Vector3 a, in Vector3 b, in Vector3 c,
+        in Vector3 boxCenter, in Vector3 boxExtents)
+    {
+        // Move triangle to box space
+        Vector3 v0 = a - boxCenter;
+        Vector3 v1 = b - boxCenter;
+        Vector3 v2 = c - boxCenter;
+
+        ReadOnlySpan<Vector3> vs = [v0, v1, v2];
+        ReadOnlySpan<Vector3> fs = [v1 - v0, v2 - v1, v0 - v2];
+
+        if (Sse.IsSupported)
+        {
+            for (int edge = 0; edge < 3; edge++)
+            {
+                var f = fs[edge];
+
+                // Prepare vectors for v0, v1, v2
+                var vx = Vector128.Create(vs[0].X, vs[1].X, vs[2].X, 0f);
+                var vy = Vector128.Create(vs[0].Y, vs[1].Y, vs[2].Y, 0f);
+                var vz = Vector128.Create(vs[0].Z, vs[1].Z, vs[2].Z, 0f);
+
+                // Axis 1: Z * f.Y - Y * f.Z
+                var fY = Vector128.Create(f.Y);
+                var fZ = Vector128.Create(f.Z);
+                var p = Sse.Subtract(
+                    Sse.Multiply(vz, fY),
+                    Sse.Multiply(vy, fZ)
+                );
+                float r = boxExtents.Y * Abs(f.Z) + boxExtents.Z * Abs(f.Y);
+                float p0 = p.GetElement(0), p1 = p.GetElement(1), p2 = p.GetElement(2);
+                if (Max3(p0, p1, p2) < -r || Min3(p0, p1, p2) > r) return false;
+
+                // Axis 2: X * f.Z - Z * f.X
+                var fX = Vector128.Create(f.X);
+                p = Sse.Subtract(
+                    Sse.Multiply(vx, fZ),
+                    Sse.Multiply(vz, fX)
+                );
+                r = boxExtents.X * Abs(f.Z) + boxExtents.Z * Abs(f.X);
+                p0 = p.GetElement(0); p1 = p.GetElement(1); p2 = p.GetElement(2);
+                if (Max3(p0, p1, p2) < -r || Min3(p0, p1, p2) > r) return false;
+
+                // Axis 3: Y * f.X - X * f.Y
+                p = Sse.Subtract(
+                    Sse.Multiply(vy, fX),
+                    Sse.Multiply(vx, fY)
+                );
+                r = boxExtents.X * Abs(f.Y) + boxExtents.Y * Abs(f.X);
+                p0 = p.GetElement(0); p1 = p.GetElement(1); p2 = p.GetElement(2);
+                if (Max3(p0, p1, p2) < -r || Min3(p0, p1, p2) > r) return false;
+            }
+        }
+        else
+        {
+            if (!AxesIntersectTriangleBox(v0, v1, v2, boxExtents, fs[0], fs[1], fs[2]))
+            {
+                return false;
+            }
+        }
+
+        if (!TriangleVerticesInsideBox(v0, v1, v2, boxExtents))
+        {
+            return false;
+        }
+
+        return TrianglePlaneIntersectBox(fs[0], fs[1], v0, boxExtents);
     }
 
     [SkipLocalsInit]
