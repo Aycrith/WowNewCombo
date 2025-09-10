@@ -2374,7 +2374,7 @@ Pathed routes are shown in Green.
 
 ### Leaflet
 
-**Note:** Currently the component only works for Season Of Discovery client aka 1.15.x client version.
+**Note:** Currently the component **only** works for client aka 1.15.x client version. Anniversary realms.
 
 Also it is required to download the map tiles
 * [Som Azeroth and Kalimdor map tiles](https://mega.nz/file/mfgiRRLQ#RvUjd-eb1pMOC5GXCI4jDfpiYyiAUJK_gGfkaWGtz0I)
