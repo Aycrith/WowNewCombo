@@ -1303,6 +1303,12 @@ Rougly speaking the following block does the following, if the player has less t
 }
 ```
 
+the final result will be the following
+
+```lua
+/run local a={'Rough Arrow',5} for i=1,GetMerchantNumItems() do if GetMerchantItemInfo(i)==a[1] then for j=1,a[2] do BuyMerchantItem(i,200) end end end
+```
+
 
 ### Repeatable Quests Handin
 
