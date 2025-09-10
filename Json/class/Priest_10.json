@@ -8,7 +8,8 @@
       "PathReduceSteps": false,
       "Requirements": [
         "Level < 4"
-      ]
+      ],
+      "SideActivityRequirements": [ "PathDist <= 20" ]  
     },
     {
       "PathFilename": "_pack\\1-20\\Dwarf.Gnome\\1-4_Dun Morogh.json",
@@ -16,12 +17,14 @@
       "PathReduceSteps": false,
       "Requirements": [
         "Level < 5"
-      ]
+      ],
+      "SideActivityRequirements": [ "PathDist <= 20" ]  
     },
     {
       "PathFilename": "_pack\\1-20\\Dwarf.Gnome\\4-6_Dun Morogh.json",
       "PathThereAndBack": false,
-      "PathReduceSteps": false
+      "PathReduceSteps": false,
+      "SideActivityRequirements": [ "PathDist <= 20" ]  
     }
   ],
   "IntVariables": {
@@ -33,9 +36,12 @@
     "FLEE_MOB_COUNT": 1,
     "FLEE_HP_LOW%": 60,
     "SPELL_RANK_SHIELD": 17,
-    "SPELL_RANK_PAIN": 589, //594
+    "SPELL_RANK_PAIN": 594,
     "SPELL_RANK_RENEW": 139, 
-    "SPELL_RANK_FLASH": 2061
+    "SPELL_RANK_FLASH": 2061,
+    "SPELL_RANK_FORTITUDE": 1243,
+    "SPELL_RANK_INNER_FIRE": 588,
+    "Debuff_Weakened_Soul": 135871
   },
   "Wait": {
     "Sequence": [
@@ -53,36 +59,49 @@
         "Key": "6",
         "WhenUsable": true,
         "AfterCastWaitBuff": true,
+        "AfterCastWaitGCD": true,
         "Requirements": [
           "Spell:SPELL_RANK_SHIELD", 
-          "MIN_MANA_OFFENSIVE% < Mana%",
+          "Debuff_Weakened_Soul == 0",
           "!Shield"
         ]
       },
       {
         "Name": "Shadow Word: Pain",
         "Key": "5",
+        "BeforeCastStop": true,
         "BeforeCastFaceTarget": true,
+        "AfterCastAuraExpected": true,
+        "AfterCastWaitBuff": true,
         "Requirements": [
           "Spell:SPELL_RANK_PAIN",
-          "MIN_MANA_OFFENSIVE% < Mana%"
+          "Mana% > MIN_MANA_OFFENSIVE%"
         ]
       },
       {
         "Name": "Smite",
         "Key": "2",
         "HasCastBar": true,
-        "BeforeCastFaceTarget": true,
-        "Requirement": "MIN_MANA_OFFENSIVE% < Mana%"
+        "Requirements": [
+          "Mana% > MIN_MANA_OFFENSIVE%"
+        ]
       },
       {
         "Name": "Shoot",
         "Key": "0",
         "Item": true,
+        "AfterCastDelay": 500,
         "Requirements": [
           "HasRangedWeapon",
-          "!Shooting",
-          "MIN_MANA_OFFENSIVE% > Mana%"
+          "!Shooting"
+        ]
+      },
+      {
+        "Name": "Approach",
+        "Requirements": [
+          "InMeleeRange || MIN_MANA_OFFENSIVE% < Mana%",
+          "!Casting",
+          "!Shooting"
         ]
       }
     ]
@@ -104,6 +123,7 @@
         "Requirements": [
           "Spell:SPELL_RANK_PAIN",
           "Mana% < MIN_HP_BEFORE_HEAL%",
+          "Debuff_Weakened_Soul == 0",
           "!Shield"
         ]
       },
@@ -142,32 +162,35 @@
         "Key": "2",
         "HasCastBar": true,
         "Requirements": [
-          "!InMeleeRange",
-          "TargetHealth% > MIN_TARGET_HP%",
-          "Mana% > MIN_MANA_OFFENSIVE%"
+          "Mana% > MIN_MANA_OFFENSIVE%",
+          "!InMeleeRange || Shield",
+          "TargetHealth% > MIN_TARGET_HP%"
         ]
       },
       {
         "Name": "Shoot",
         "Key": "0",
         "Item": true,
+        "AfterCastDelay": 500,
         "Requirements": [
           "HasRangedWeapon",
-          "!Shooting",
-          "Mana% < MIN_MANA_OFFENSIVE%"
+          "!Shooting"
         ]
       },
       {
         "Name": "AutoAttack",
         "Requirements": [
           "!HasRangedWeapon",
-          "!Casting"
+          "!Casting",
+          "!Shooting"
         ]
       },
       {
         "Name": "Approach",
         "Requirements": [
+          "InMeleeRange || Mana% < MIN_MANA_OFFENSIVE%",
           "!Casting",
+          "!Shooting",
           "AutoAttacking"
         ]
       }
@@ -176,18 +199,24 @@
   "Adhoc": {
     "Sequence": [
       {
+        "Cost": 3,
         "Name": "Power Word: Fortitude",
         "Key": "9",
+        "WhenUsable": true,
+        "InCombat": "i dont care",
         "Requirements": [
-          "Spell:1243", //Power Word: Fortitude
+          "Spell:SPELL_RANK_FORTITUDE",
           "!Fortitude"
         ]
       },
       {
+        "Cost": 3,
         "Name": "Inner Fire",
         "Key": "8",
+        "WhenUsable": true,
+        "InCombat": "i dont care",
         "Requirements": [
-          "Spell:588", //Inner Fire
+          "Spell:SPELL_RANK_INNER_FIRE",
           "!Inner Fire"
         ]
       }

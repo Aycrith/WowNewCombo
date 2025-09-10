@@ -8,6 +8,7 @@
 @inject IJSRuntime jsRuntime
 @inject PPatherService pPatherService
 @inject AreaDB areaDB
+@inject CreatureDB creatures
 @inject DataConfig dataConfig
 @inject WorldMapAreaDB worldMapAreaDb
 @inject JsonSerializerOptions options
@@ -16,16 +17,16 @@
 
 <style>
     #controlPanel {
-    position: fixed;
-    bottom: 0;
-    width: 100%;
-    height: 30px;
-    z-index: 1000;
-    background-color: black;
-    color: white;
-    padding: 0 10px;
-    text-align: center;
-    display: flex;
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        height: 30px;
+        z-index: 1000;
+        background-color: black;
+        color: white;
+        padding: 0 10px;
+        text-align: center;
+        display: flex;
     }
 </style>
 
@@ -43,7 +44,7 @@
 
     <label>Type:</label>
     <select disabled="@IsDisabled" @bind="NpcType">
-        @foreach (var type in Enum.GetValues<NPCType>())
+        @foreach (var type in Enum.GetValues<NpcFlags>())
         {
             <option value="@type">@type.ToStringF()</option>
         }
@@ -99,8 +100,8 @@
 
     private Vector3 startPos { get; set; }
 
-    private NPCType npcType { get; set; }
-    private NPCType NpcType
+    private NpcFlags npcType { get; set; }
+    private NpcFlags NpcType
     {
         get => npcType;
         set
@@ -198,8 +199,10 @@
 
             Vector4 start = new Vector4(startPos, mapId);
 
-            areaDB.NpcWorldLocations.TryGetValue(npcName, out var worldPos);
-            Vector4 end = new Vector4(worldPos, mapId);
+            var creature = creatures.Entries.FirstOrDefault(x => x.Value.Name == npcName);
+
+            areaDB.NpcWorldLocations.TryGetValue(creature.Key, out var worldPos);
+            Vector4 end = new Vector4(worldPos[0], mapId);
 
             pathColour = ((int)SearchType) + 1;
             name = SearchType.ToString();
@@ -255,15 +258,17 @@
         worldMapAreaDb.TryGet(UIMapId, out var wma);
         float mapId = ContinentDB.NameToId[wma.Continent];
 
-        areaDB.NpcWorldLocations.TryGetValue(npcName, out Vector3 end);
+        var creature = creatures.Entries.FirstOrDefault(x => x.Value.Name == npcName);
+
+        areaDB.NpcWorldLocations.TryGetValue(creature.Key, out var end);
 
         pathColour = (int)Watch.Color.Orange;
         name = "route";
         clearPath = false;
 
         Vector3[] path = IsReversed
-            ? [end, startPos]
-            : [startPos, end];
+            ? [end[0], startPos]
+            : [startPos, end[0]];
 
         pPatherService.DrawPath(mapId, path);
 
@@ -277,6 +282,24 @@
             return [];
         }
 
-        return areaDB.GetNPCsByType(NpcType).ToArray().Select(x => x.name);
+        List<string> names = new();
+
+        foreach (var npc in areaDB.GetByNpcFlag(NpcType))
+        {
+            if (!areaDB.NpcWorldLocations.TryGetValue(npc.Entry, out var worldPos))
+            {
+                continue;
+            }
+            var firstPos = worldPos[0];
+            var pos = WorldMapAreaDB.ToMap_FlipXY(firstPos, areaDB.Hitbox!.Value);
+
+            if (pos.X > 0 && pos.X < 100 && pos.Y > 0 && pos.Y < 100 &&
+                !string.IsNullOrEmpty(npc.Name))
+            {
+                names.Add(npc.Name);
+            }
+        }
+
+        return names;
     }
 }

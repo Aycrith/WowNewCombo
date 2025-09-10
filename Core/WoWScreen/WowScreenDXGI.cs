@@ -1,4 +1,7 @@
-﻿using Game;
+﻿//#define SAVE_ADDON_IMAGE
+//#define SAVE_SCREEN_IMAGE
+
+using Game;
 
 using Microsoft.Extensions.Logging;
 
@@ -303,6 +306,10 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
             srcRow.TryCopyTo(destRow);
         }
 
+#if SAVE_ADDON_IMAGE
+        addonImage.SaveAsJpeg("addon.jpg");
+#endif
+
     Cleanup:
         device.ImmediateContext.Unmap(addonTexture, 0);
     }
@@ -345,6 +352,10 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
                 srcRow.TryCopyTo(destRow);
             }
         }
+
+#if SAVE_SCREEN_IMAGE
+        ScreenImage.SaveAsJpeg("screen.jpg");
+#endif
 
         device.ImmediateContext.Unmap(screenTexture, 0);
     }

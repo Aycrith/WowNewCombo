@@ -102,6 +102,7 @@ public static class DependencyInjection
         s.ForwardSingleton<WorldMapAreaDB>(sp);
         s.ForwardSingleton<ItemDB>(sp);
         s.ForwardSingleton<CreatureDB>(sp);
+        s.ForwardSingleton<FactionTemplateDB>(sp);
         s.ForwardSingleton<SpellDB>(sp);
         s.ForwardSingleton<TalentDB>(sp);
 
@@ -176,6 +177,15 @@ public static class DependencyInjection
         s.AddSingleton<IPPather>(x =>
             GetPather(x.GetRequiredService<IServiceProvider>(), log));
 
+        s.AddSingleton<PPatherService>(x =>
+        {
+            var loggerFactory = x.GetRequiredService<ILoggerFactory>();
+            var serviceLogger = loggerFactory.CreateLogger<PPatherService>();
+            var dataConfig = x.GetRequiredService<DataConfig>();
+            var worldMapAreaDB = x.GetRequiredService<WorldMapAreaDB>();
+            return new PPatherService(serviceLogger, dataConfig, worldMapAreaDB);
+        });
+
         s.AddSingleton<IAddonDataProvider>(x =>
             GetAddonDataProvider(x.GetRequiredService<IServiceProvider>(), log));
 
@@ -190,6 +200,7 @@ public static class DependencyInjection
         s.AddSingleton<WorldMapAreaDB>();
         s.AddSingleton<ItemDB>();
         s.AddSingleton<CreatureDB>();
+        s.AddSingleton<FactionTemplateDB>();
         s.AddSingleton<SpellDB>();
         s.AddSingleton<TalentDB>();
 
@@ -372,10 +383,10 @@ public static class DependencyInjection
             logger.LogWarning($"{scp.Type} not available!");
         }
 
+        var service = sp.GetRequiredService<PPatherService>();
         var pathingLogger = loggerFactory.CreateLogger<LocalPathingApi>();
-        var serviceLogger = loggerFactory.CreateLogger<PPatherService>();
-        LocalPathingApi localApi = new(pathingLogger, new(
-            serviceLogger, dataConfig, worldMapAreaDB));
+
+        LocalPathingApi localApi = new(pathingLogger, service);
         logger.LogInformation(
             $"Using {StartupConfigPathing.Types.Local}({localApi.GetType().Name})");
 

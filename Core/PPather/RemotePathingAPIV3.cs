@@ -152,7 +152,7 @@ public sealed class RemotePathingAPIV3 : IPPather, IDisposable
         }
     }
 
-    public Vector3[] FindWorldRoute(int uiMap, Vector3 worldFrom, Vector3 worldTo)
+    public Vector3[] FindWorldRoute(int uiMap, bool startIndoors, Vector3 worldFrom, Vector3 worldTo)
     {
         if (!client.IsConnected)
             return result = Array.Empty<Vector3>();

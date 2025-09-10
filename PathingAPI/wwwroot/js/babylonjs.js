@@ -11,13 +11,19 @@
     var materials = new Array(layers);
     var rootNodes = new Array(layers);
 
+    scene = null;
+
     /* Global Functions */
 
     removeMesh = function (name) {
+        if (scene == null) return;
+
         scene.getMeshByName(name)?.dispose();
     }
 
     clear = function () {
+        if (scene == null) return;
+
         for (i = scene.meshes.length - 1; i >= 0; i--) {
             const mesh = scene.meshes[i];
             if (mesh.name !== "skyBox")
@@ -27,6 +33,8 @@
     }
 
     setCamera = function (pos, look, height) {
+        if (scene == null) return;
+
         if (cameraPositionSet) return;
 
         if (height === undefined) height = 0;
@@ -37,22 +45,30 @@
         camera.setTarget(new BABYLON.Vector3(look.x / div, look.z / div, look.y / div));
     }
 
-    showAlert = (message) => {
-        alert(message);
-    }
-
     log = function (message) {
+        if (scene == null) return;
+
         console.log(message);
-        document.getElementById('canvasText').innerHTML = message;
+        const element = document.getElementById('canvasText');
+
+        if (element === null) {
+            return;
+        }
+
+        element.innerHTML = message;
     }
 
     toggleWireFrame = function () {
+        if (scene == null) return;
+
         for (let i = 0; i < materials.length; i++) {
             materials[i].wireframe = !materials[i].wireframe;
         }
     }
 
     toggleLayer = function (layer) {
+        if (scene == null) return;
+
         // TriangleType 2^x => array index
         // Where TriangleType.None is excluded
         switch (layer) {
@@ -65,6 +81,7 @@
     }
 
     getColour = function (color) {
+
         switch (color) {
             case 1: return BABYLON.Color3.Red();
             case 2: return BABYLON.Color3.Green();
@@ -106,6 +123,7 @@
     connection.on("clear", clear);
 
     connection.on("drawLine", (array, height, color, name) => {
+        if (scene == null) return;
 
         removeMesh(name);
 
@@ -128,6 +146,7 @@
     })
 
     connection.on("drawLines", (arrays, color, name) => {
+        if (scene == null) return;
 
         if (arrays.length === 0)
             return;
@@ -159,6 +178,7 @@
     })
 
     connection.on("drawPath", (arrays, color, name) => {
+        if (scene == null) return;
 
         if (arrays.length === 0) return;
 
@@ -189,6 +209,7 @@
     })
 
     connection.on("addModels", (loadedIndices, loadedPositions) => {
+        if (scene == null) return;
 
         if (loadedPositions.length === 0)
             return;
@@ -238,6 +259,8 @@
     });
 
     connection.on("drawBoundBox", (min, max, color, name) => {
+        if (scene == null) return;
+
         removeMesh(name);
 
         const v1 = new BABYLON.Vector3.FromArray(min);
@@ -283,6 +306,8 @@
     /* JSON Based */
 
     toggleSceneExplorer = function (enabled) {
+        if (scene == null) return;
+
         if (enabled) {
             scene.debugLayer.show();
         }
@@ -292,6 +317,8 @@
     }
 
     drawSphere = function (vector, color, name) {
+        if (scene == null) return;
+
         vector = JSON.parse(vector);
 
         removeMesh(name);
@@ -306,6 +333,8 @@
     }
 
     drawLine = function (vector, color, name) {
+        if (scene == null) return;
+
         vector = JSON.parse(vector);
 
         //log("drawLine: " + name);
@@ -336,10 +365,14 @@
     }
 
     drawLineDebug = function (vector, color, name) {
+        if (scene == null) return;
+
         drawLine(vector, color, name);
     }
 
     drawLineDebugs = function (vectors, color, name) {
+        if (scene == null) return;
+
         vectors = JSON.parse(vectors);
         for (let i = vectors.length - 1; i >= 0; i--) {
             const v = vectors[i];
@@ -348,6 +381,8 @@
     }
 
     drawPath = function (points, color, name) {
+        if (scene == null) return;
+
         points = JSON.parse(points);
 
         //log("drawPath: " + name);

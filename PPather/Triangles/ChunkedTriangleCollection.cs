@@ -134,6 +134,9 @@ public sealed class ChunkedTriangleCollection
     public bool IsSpotBlocked(float x, float y, float z,
                               float toonHeight, float toonSize)
     {
+        if (z == float.MinValue)
+            return true;
+
         TriangleCollection tc = GetChunkAt(x, y);
         TriangleMatrix tm = tc.GetTriangleMatrix();
         ReadOnlySpan<int> ts = tm.GetAllCloseTo(x, y, toonHeight);
@@ -570,5 +573,10 @@ public sealed class ChunkedTriangleCollection
         }
 
         return best_flags != TriangleType.None;
+    }
+
+    public (int, float) GetAreaIdAndZ(Vector3 location)
+    {
+        return supplier.GetAreaIdAndZ(location);
     }
 }

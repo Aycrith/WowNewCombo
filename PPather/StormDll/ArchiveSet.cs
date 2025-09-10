@@ -48,6 +48,17 @@ public sealed class ArchiveSet
         throw new FileNotFoundException($"{nameof(fileName)} - {fileName}");
     }
 
+    public bool Exists(ReadOnlySpan<char> fileName)
+    {
+        for (int i = 0; i < archives.Length; i++)
+        {
+            Archive a = archives[i];
+            if (a.HasFile(fileName))
+                return true;
+        }
+        return false;
+    }
+
     public void Close()
     {
         for (int i = 0; i < archives.Length; i++)

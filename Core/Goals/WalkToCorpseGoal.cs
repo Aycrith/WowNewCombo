@@ -1,6 +1,10 @@
+using Core.Database;
 using Core.GOAP;
 
 using Microsoft.Extensions.Logging;
+
+using SharedLib;
+using SharedLib.Data;
 
 using System;
 using System.Numerics;
@@ -19,6 +23,8 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
     private readonly AddonBits bits;
     private readonly Navigation navigation;
     private readonly StopMoving stopMoving;
+
+    private readonly AreaDB areaDB;
 
     private DateTime onEnterTime;
 
@@ -52,7 +58,7 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
     public WalkToCorpseGoal(ILogger<WalkToCorpseGoal> logger,
         ConfigurableInput input, Wait wait,
         PlayerReader playerReader, AddonBits bits,
-        Navigation navigation, StopMoving stopMoving)
+        Navigation navigation, StopMoving stopMoving, AreaDB areaDB)
         : base(nameof(WalkToCorpseGoal))
     {
         this.logger = logger;
@@ -65,6 +71,8 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
         this.stopMoving = stopMoving;
 
         this.navigation = navigation;
+
+        this.areaDB = areaDB;
 
         AddPrecondition(GoapKey.isdead, true);
     }
@@ -87,12 +95,18 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
         playerReader.WorldPosZ = 0;
 
         wait.While(AliveOrLoadingScreen);
-        Log($"Player teleported to the graveyard!");
+
+        (Creature npc, Vector3 worldPos)
+            = areaDB.FindClosestCreatureByNpcFlag(NpcFlags.SpiritHealer, playerReader.WorldPos);
+
+        Log($"Player teleported to the graveyard! {worldPos}");
+
+        playerReader.WorldPosZ = worldPos.Z;
 
         Vector3 corpseLocation = playerReader.CorpseMapPos;
         Log($"Corpse location is {corpseLocation}");
 
-        navigation.SetWayPoints(stackalloc Vector3[] { corpseLocation });
+        navigation.SetWayPoints([corpseLocation]);
 
         onEnterTime = DateTime.UtcNow;
     }

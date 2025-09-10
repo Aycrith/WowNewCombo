@@ -10,13 +10,10 @@ using PPather.Triangles.Data;
 
 using System;
 using System.Buffers;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Runtime.Intrinsics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -43,7 +40,7 @@ public sealed class TriangleMatrix
         var LocalDict = new ThreadLocal<Dictionary<int, List<int>>>(() => new Dictionary<int, List<int>>(ACount), true);
         var m = matrix;
 
-        Parallel.For(0, triangleCount, index =>
+        _ = Parallel.For(0, triangleCount, index =>
         {
             var tSpan = tc.TrianglesSpan;
             var vSpan = tc.VerteciesSpan;
@@ -59,42 +56,54 @@ public sealed class TriangleMatrix
             float miny = Min3(v0.Y, v1.Y, v2.Y);
             float maxy = Max3(v0.Y, v1.Y, v2.Y);
 
-            Vector3 box_center;
-            Vector3 box_halfsize;
-            box_halfsize.X = halfResoltion;
-            box_halfsize.Y = halfResoltion;
-            box_halfsize.Z = 1E6f;
-
             int startx = m.LocalToGrid(minx);
             int endx = m.LocalToGrid(maxx);
             int starty = m.LocalToGrid(miny);
             int endy = m.LocalToGrid(maxy);
 
-            var localDict = LocalDict.Value;
+            const int BatchSize = 8;
+            int cellCount = (endx - startx + 1) * (endy - starty + 1);
+            Span<float> gridXs = stackalloc float[cellCount];
+            Span<float> gridYs = stackalloc float[cellCount];
 
+            int idx = 0;
             for (int x = startx; x <= endx; x++)
             {
                 for (int y = starty; y <= endy; y++)
                 {
-                    float grid_x = m.GridToLocal(x);
-                    float grid_y = m.GridToLocal(y);
-                    box_center.X = grid_x + halfResoltion;
-                    box_center.Y = grid_y + halfResoltion;
-                    box_center.Z = 0;
+                    gridXs[idx] = m.GridToLocal(x) + halfResoltion;
+                    gridYs[idx] = m.GridToLocal(y) + halfResoltion;
+                    idx++;
+                }
+            }
 
-                    if (!TriangleBoxIntersect(v0, v1, v2, box_center, box_halfsize))
-                    {
+            var localDict = LocalDict.Value;
+            Vector3 box_halfsize = new(halfResoltion, halfResoltion, 1E6f);
+
+            // Prepare batch of box centers
+            Span<Vector3> boxCenters = stackalloc Vector3[BatchSize];
+            Span<int> keys = stackalloc int[BatchSize];
+
+            for (int i = 0; i < cellCount; i += BatchSize)
+            {
+                int batchLen = Math.Min(BatchSize, cellCount - i);
+
+                for (int j = 0; j < batchLen; j++)
+                {
+                    boxCenters[j] = new Vector3(gridXs[i + j], gridYs[i + j], 0);
+                    keys[j] = m.GetKey(gridXs[i + j] - halfResoltion, gridYs[i + j] - halfResoltion);
+                }
+
+                for (int j = 0; j < batchLen; j++)
+                {
+                    if (!TriangleBoxIntersect_SIMD(v0, v1, v2, boxCenters[j], box_halfsize))
                         continue;
-                    }
 
-                    int key = m.GetKey(grid_x, grid_y);
-
-                    ref List<int> list = ref CollectionsMarshal.GetValueRefOrAddDefault(localDict, key, out bool exists);
+                    ref List<int> list = ref CollectionsMarshal.GetValueRefOrAddDefault(localDict, keys[j], out bool exists);
                     if (!exists)
                     {
-                        localDict[key] = list = new List<int>(ACount);
+                        localDict[keys[j]] = list = new List<int>(ACount);
                     }
-
                     list.Add(index);
                 }
             }

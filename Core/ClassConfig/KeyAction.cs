@@ -26,6 +26,9 @@ public sealed partial class KeyAction
     public int SlotIndex { get; private set; }
     public int SpellId { get; set; }
 
+    public string MacroText { get; set; } = string.Empty;
+    public Func<string> Macro { get; set; } = () => "";
+
     public int PressDuration { get; set; } = InputDuration.DefaultPress;
 
     // enabled by default

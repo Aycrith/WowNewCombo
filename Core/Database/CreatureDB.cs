@@ -10,7 +10,7 @@ namespace Core.Database;
 
 public sealed class CreatureDB
 {
-    public FrozenDictionary<int, string> Entries { get; }
+    public FrozenDictionary<int, Creature> Entries { get; }
 
     public CreatureDB(DataConfig dataConfig)
     {
@@ -18,6 +18,6 @@ public sealed class CreatureDB
             ReadAllText(Join(dataConfig.ExpDbc, "creatures.json")))!;
 
         Entries = creatures
-            .ToFrozenDictionary(c => c.Entry, c => c.Name);
+            .ToFrozenDictionary(c => c.Entry, c => c);
     }
 }

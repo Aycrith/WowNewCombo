@@ -77,6 +77,8 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
     public override void OnEnter()
     {
+        stopMoving.StopForward();
+
         float e = wait.UntilCount(Loot.RESET_UPDATE_COUNT, LootReset);
         if (e < 0)
         {
@@ -137,20 +139,12 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
     private void HandleSuccessfulLoot()
     {
-        // in case the player has not moved to the corpse
-        if (bits.Target() && playerReader.IsInMeleeRange() &&
-            (!bits.SoftInteract() || EligibleCorpseSoftTargetExists()))
-        {
-            input.PressInteract();
-            wait.Update();
-        }
-
         int maxTimeLootWindowOpenMs =
             Math.Max(playerReader.DoubleNetworkLatency, Loot.LOOTFRAME_OPEN_TIME_MS);
 
         float windowOpenElapsedMs = wait.Until(maxTimeLootWindowOpenMs,
             LootWindowOpen,
-            TryPressSafeApproachOnCooldownIfNeeded);
+            TryPressSafeApproachOnCooldown);
 
         int availableItems = playerReader.LootWindowCount.Value;
         state.RecentlyLooted.Add(playerReader.TargetGuid);
@@ -298,13 +292,13 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         targetId = playerReader.TargetId;
         Area area = areaDb.CurrentArea;
 
-        canGather = GatherAvailable(classConfig, area, targetId);
+        canGather = GatherAvailable(classConfig, areaDb, area, targetId);
 
         LogShouldGather(logger, targetId, canGather);
     }
 
-    private static bool GatherAvailable(ClassConfiguration config, Area area, int npcId) =>
-        (config.Skin && area.skinnable.AsSpan().BinarySearch(npcId) >= 0) ||
+    private static bool GatherAvailable(ClassConfiguration config, AreaDB areaDB, Area area, int npcId) =>
+        (config.Skin && areaDB.TryGetCreature(npcId, out Creature c) && c.SkinLoot != 0) ||
         (config.Herb && area.gatherable.AsSpan().BinarySearch(npcId) >= 0) ||
         (config.Mine && area.minable.AsSpan().BinarySearch(npcId) >= 0) ||
         (config.Salvage && area.salvegable.AsSpan().BinarySearch(npcId) >= 0);
@@ -351,8 +345,9 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         CorpseEvent? e = GetClosestCorpse();
         if (e != null)
         {
-            float pastDirection = e.PlayerFacing;
-            playerDirection.SetDirection(pastDirection);
+            float targetDirection = DirectionCalculator.CalculateMapHeading(playerReader.MapPos, e.MapLoc);
+            playerDirection.SetDirection(targetDirection);
+
             wait.Fixed(playerReader.DoubleNetworkLatency);
             wait.Update();
         }
@@ -435,13 +430,16 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         {
             logger.LogInformation("Moving to corpse...");
             wait.While(input.Approach.OnCooldown);
-            wait.Update();
+
+            TryPressSafeApproachOnCooldownIfNeeded();
+            float movementStartedMs = wait.Until(input.Approach.PressDuration, bits.Moving);
+            logger.LogWarning("Movement Detected ? {elapsedMs}ms", movementStartedMs);
         }
 
-        float elapsedMs = wait.Until(MAX_TIME_TO_REACH_MELEE, //UntilWithoutRepeat
+        float elapsedMs = wait.Until(MAX_TIME_TO_REACH_MELEE,
             NotMovingOrLootAvailable, TryPressSafeApproachOnCooldownIfNeeded);
 
-        LogReachedCorpse(logger, bits.Target(), bits.Moving(), elapsedMs);
+        LogReachedCorpse(logger, bits.Target(), bits.Moving(), playerReader.MinRangeZero(), elapsedMs);
 
         return bits.Target() && playerReader.MinRangeZero();
     }
@@ -452,17 +450,24 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
     {
         if (bits.Target() && (!bits.SoftInteract() || EligibleCorpseSoftTargetExists()))
         {
-            if (!bits.Moving())
+            if (!bits.Moving() && !playerReader.IsInMeleeRange())
             {
-                input.PressApproachOnCooldown();
-                if (input.Approach.OnCooldown())
+                if (input.PressedApproachOnCooldown())
                 {
-                    wait.Update();
                     wait.Update();
                 }
             }
         }
     }
+
+    private void TryPressSafeApproachOnCooldown()
+    {
+        if (bits.Target() && input.PressedApproachOnCooldown())
+        {
+            wait.Update();
+        }
+    }
+
 
     private bool LootReset()
     {
@@ -502,8 +507,8 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
     [LoggerMessage(
         EventId = 0133,
         Level = LogLevel.Information,
-        Message = "Has target ? {hasTarget} | moving ? {moving} | Reached corpse ? {elapsedMs}ms")]
-    static partial void LogReachedCorpse(ILogger logger, bool hasTarget, bool moving, float elapsedMs);
+        Message = "Has target ? {hasTarget} | moving ? {moving} | meleeRange ? {meleeRange} | Reached corpse ? {elapsedMs}ms")]
+    static partial void LogReachedCorpse(ILogger logger, bool hasTarget, bool moving, bool meleeRange, float elapsedMs);
 
     [LoggerMessage(
         EventId = 0134,

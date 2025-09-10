@@ -154,6 +154,7 @@ public sealed partial class CastingHandler
             wait.Update(token);
         }
 
+        int beforeAuraHash = playerReader.AuraCount.Hash;
         int beforeCastEventTime = playerReader.UIErrorTime.Value;
         UI_ERROR beforeCastEventValue = playerReader.CastState;
         bool beforeUsable = usableAction.Is(item);
@@ -216,17 +217,19 @@ public sealed partial class CastingHandler
             int waitTime = playerReader.SpellQueueTimeMs + playerReader.DoubleNetworkLatency;
 
             elapsedMs = InstantSpell(waitTime,
-                beforeCastEventTime, item,
+                beforeCastEventTime, beforeAuraHash, item,
                 playerReader, wait, token);
 
             static float InstantSpell(int durationMs,
                 int beforeCastEventTime,
+                int beforeAuraHash,
                 KeyAction item,
                 PlayerReader playerReader, Wait wait,
                 CancellationToken token)
             {
                 return wait.Until(durationMs,
                     interrupt: () =>
+                    beforeAuraHash != playerReader.AuraCount.Hash ||
                     beforeCastEventTime != playerReader.UIErrorTime.Value ||
                     token.IsCancellationRequested);
             }
@@ -471,7 +474,7 @@ public sealed partial class CastingHandler
             return false;
         }
 
-        if (item.BeforeCastFaceTarget)
+        if (item.BeforeCastFaceTarget && !playerReader.IsCasting())
         {
             input.PressFastInteract();
 
@@ -576,24 +579,25 @@ public sealed partial class CastingHandler
         if (item.AfterCastWaitMeleeRange)
         {
             int lastKnownHealth = playerReader.HealthCurrent();
+            int initialMinRange = playerReader.MinRange();
+
+            float elapsedMs = AfterCastWaitMeleeRange(MAX_WAIT_MELEE_RANGE,
+                lastKnownHealth, initialMinRange,
+                wait, playerReader, token);
 
             if (Log && item.Log)
-                LogAfterCastWaitMeleeRange(logger, item.Name);
-
-            AfterCastWaitMeleeRange(MAX_WAIT_MELEE_RANGE,
-                lastKnownHealth, wait, playerReader, token);
-
-            wait.Update();
+                LogAfterCastWaitMeleeRange(logger, item.Name, elapsedMs);
 
             static float AfterCastWaitMeleeRange(int duration,
-                int lastKnownHealth, Wait wait, PlayerReader playerReader,
+                int lastKnownHealth, int initialMinRange,
+                Wait wait, PlayerReader playerReader,
                 CancellationToken token)
                 => wait.Until(duration,
                 () =>
+                playerReader.MinRange() > initialMinRange ||
                 playerReader.IsInMeleeRange() ||
                 playerReader.IsTargetCasting() ||
                 playerReader.HealthCurrent() < lastKnownHealth ||
-                !playerReader.WithInPullRange() ||
                 token.IsCancellationRequested);
         }
 
@@ -935,8 +939,8 @@ public sealed partial class CastingHandler
     [LoggerMessage(
         EventId = 0096,
         Level = LogLevel.Information,
-        Message = "[{name,-17}] ... AfterCastWaitMeleeRange")]
-    static partial void LogAfterCastWaitMeleeRange(ILogger logger, string name);
+        Message = "[{name,-17}] ... AfterCastWaitMeleeRange {elapsedMs}ms")]
+    static partial void LogAfterCastWaitMeleeRange(ILogger logger, string name, float elapsedMs);
 
     [LoggerMessage(
         EventId = 0097,

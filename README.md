@@ -92,6 +92,13 @@ V1 Local and V1 Remote does not have the capability as of this moment to read th
             </a>
         </td>
     </tr>
+    <tr>
+        <td>
+            <a href="./images/dark_leaflet.png" target="_blank">
+                <img alt="flat_light" src="./images/dark_leaflet.png" width="100%">
+            </a>
+        </td>
+    </tr>
 </table>
 
 [![YouTube Video](https://img.youtube.com/vi/CIMgbh5LuCc/0.jpg)](https://www.youtube.com/watch?v=CIMgbh5LuCc)
@@ -492,6 +499,7 @@ Your class file probably exists and just needs to be edited to set the pathing f
 | `"TargetMask"` | [UnitClassification](https://wowpedia.fandom.com/wiki/API_UnitClassification) types that allowed to engage with. | true | `"Normal, Trivial, Rare"` |
 | `"NpcSchoolImmunity"` | List of NpcIDs which have one or more [SchoolMask](#npcschoolimmunity) immunities | true | `""` |
 | `"IntVariables"` | List of user defined `integer` variables | true | `[]` |
+| `"StringVariables"` | List of user defined `string` variables | true | `[]` |
 | --- | --- | --- | --- |
 | `"Pull"` | [KeyActions](#keyactions) to execute upon [Pull Goal](#pull-goal) | true | `{}` |
 | `"Flee"` | [KeyActions](#keyactions) to execute upon [Flee Goal](#flee-goal). | true | `{}` |
@@ -612,6 +620,28 @@ For example look at the Warlock profiles.
     "Debuff_Poision": 135368,
     "TBuff_Dispell on Target": 16846,
     "Item_Soul_Shard": 6265,
+    // ...
+    // ...
+    "ITEM_ARROW": 2512,
+    "MIN_COUNT_ARROW": 200,
+    "AMMO_SLOT": 5
+}
+```
+
+### StringVariables
+
+Similar as [IntVariables](#intvariables) just for string values
+
+Note: if the `value` matches any of the `IntVariables` key, the `value` will be replaced with the IntVariable value.
+
+When the variable name starts with `$ITEM_NAME` the value will be replaced with the Item English localized, in this example `Rough Arrow`.
+
+When the variable name starts with `$NPC_NAME` the value will be replaced with the NPC English localized name.
+
+```json
+"StringVariables": {
+    "$ITEM_NAME_ARROW": "ITEM_ARROW",
+    "$AMMO_SLOT": "AMMO_SLOT"
 }
 ```
 
@@ -711,6 +741,7 @@ Can specify conditions with [Requirement(s)](#requirement) in order to create a 
 | `"Cooldown"` | **Note this is not the in-game cooldown!**<br>The time in milliseconds before KeyAction can be used again.<br>This property will be updated when the backend registers the `Key` press. It has no feedback from the game. | `400` |
 | `"Charge"` | How many consequent key press should happen before setting Cooldown | `1` |
 | `"School"` | Indicate what type of [SchoolMask](#npcschoolimmunity) element the spell will do.  | `None` |
+| `"MacroText"` | You can specify a macro text or macro template which can hold variables. make sure the MacroText is no longer then 255 characters. | `""` |
 | --- | --- | --- |
 | `"WhenUsable"` | Mapped to [IsUsableAction](https://wowwiki-archive.fandom.com/wiki/API_IsUsableAction) | `false` |
 | `"UseWhenTargetIsCasting"` | Checks for the target casting/channeling.<br>Accepted values:<br>* `null` -> ignore<br>* `false` -> when enemy not casting<br>* `true` -> when enemy casting | `null` |
@@ -1205,13 +1236,21 @@ The `"KeyAction.Name"` has a special formula which can be followed to have diffe
 * Formula: `[TYPE] {[npc1 | npc2 | npc3 | npcN]}`
 
 The `[TYPE]` can be one of the following
-* `Flightmaster`
-* `Innkeeper`
-* `Repair`
-* `Vendor` / `Sell`
+* `Gossip`
+* `QuestGiver`
 * `Trainer`
-
-It is only tested with `Vendor` and `Repair` types!
+* `ClassTrainer`
+* `ProfessionTrainer`
+* `Vendor` / `Sell`
+* `VendorAmmo`
+* `VendorFood`
+* `VendorPoison`
+* `VendorReagent`
+* `Repair`
+* `FlightMaster`
+* `Innkeeper`
+* `Banker`
+* `StableMaster`
 
 When either zero or list of npc names with `|` separated characters one of the following scenario going to happen:
 * When **no** npc name is specified, the **closest** **[TYPE]** of that NPC is considered.
@@ -1239,6 +1278,35 @@ examples of full automatic npc detection or multiple whitelisted names:
         }
     ]
 }
+```
+
+#### NPC KeyAction.MacroText
+
+When going to visit and NPC, not it is possible to specify a templated macro text, where the template variables are shows up as `$` prefixed variables.
+
+If you want to use the template variable you need to first specify it [StringVariables](#stringvariables).
+
+Rougly speaking the following block does the following, if the player has less then 200 
+
+```json
+"NPC": {
+    "Sequence": [
+        {
+        "Cost": 6,
+        "Name": "VendorAmmo",
+        "Requirements": [
+            "!BagItem:ITEM_ARROW:MIN_COUNT_ARROW"
+        ],
+        "MacroText": "/run local a={'$ITEM_NAME_ARROW',$AMMO_SLOT} for i=1,GetMerchantNumItems() do if GetMerchantItemInfo(i)==a[1] then for j=1,a[2] do BuyMerchantItem(i,200) end end end"
+        }
+    ]
+}
+```
+
+the final result will be the following
+
+```lua
+/run local a={'Rough Arrow',5} for i=1,GetMerchantNumItems() do if GetMerchantItemInfo(i)==a[1] then for j=1,a[2] do BuyMerchantItem(i,200) end end end
 ```
 
 
@@ -1384,6 +1452,9 @@ Formula: `[Keyword] [Operator] [Numeric integer value]`
 | `MainHandSwing` | Returns the player predicted next main hand swing time |
 | `RangedSpeed` | Returns the player ranged weapon attack speed in milliseconds |
 | `RangedSwing` | Returns the player predicted next ranged weapon swing time |
+| `SpellQueueWindow` | Returns SpellQueueWindow C_Var |
+| `-SpellQueueWindow` | Returns SpellQueueWindow C_Var negative value. |
+| `BowReload` | Returns the default 500ms time plus the player latency.  |
 | `CD` | Returns the context [KeyAction](#keyaction) **in-game** cooldown in milliseconds |
 | `CD_{KeyAction.Name}` | Returns the given `{KeyAction.Name}` **in-game** cooldown in milliseconds |
 | `Cost_{KeyAction.Name}` | Returns the given `{KeyAction.Name}` cost value |
@@ -2299,6 +2370,55 @@ This component shows:
 Pathed routes are shown in Green.
 
 ![Pathed route](images/PathedRoute.png)
+
+
+### Leaflet
+
+**Note:** Currently the component **only** works for client aka 1.15.x client version. Anniversary realms.
+
+Also it is required to download the map tiles
+* [Som Azeroth and Kalimdor map tiles](https://mega.nz/file/mfgiRRLQ#RvUjd-eb1pMOC5GXCI4jDfpiYyiAUJK_gGfkaWGtz0I)
+* * Copy the content under the `json\leaflet\som` folder.
+* * So the path look like this `Json\leaflet\som\Azeroth\z2x0y0.png`
+
+This component is meant to replace the Route later on, it has *'readonly'* mode when no autohroing is enabled.
+
+![Leaflet](images/leafletComponent.png)
+
+---
+
+While in the sidebar the Leaflet option theres the authoring tool.
+
+![Leaflet](images/leafletAuthor.png)
+
+Which allows the draw shapes
+* polyline
+* rectangle
+* circle with custom radius
+* single point
+
+TODO: These shapes can be used for the V1 navigation system.
+
+After clicking on any zone, that zone will be the currentArea.
+
+When the current area is Active, at the left side context based filters can be enabled to show certain types of npcs(vendors, skinnable npcs, or nodes)
+
+On the other hand, when pressing the *redcross* button it is possible to record the player movement as a path.
+
+How to record and save a path ?
+* Make sure to have a loaded class profile
+* Navigate to Leaflet
+* Go to the start locatin
+* Press the *redcross* button to start the record
+* When the desired route is reached, press the *redcross* button once again.
+* You should see a yellow highlight of the path has been added then it will become red.
+* **Right click** on the the recorded path, to enable edit mode.
+* Edit mode is active when you should be able to move the route node points.
+* Mouse **middle click** or **scroll button click** on the Route to save it (should see a yellow highlight once again)
+* The route will be saved as the `CurrentZoneName_YYYY_MM_DD_HH_MM_SS.json` under the `/json/path` folder. (example: `Durotar_2025_04_21_15_45_21.json`)
+* The saved route can be loaded and edited the same way.
+
+---
 
 ### Goal
 

@@ -4,15 +4,19 @@ using Frontend;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using Serilog;
 using Serilog.Templates;
 using Serilog.Templates.Themes;
+
+using SharedLib.Converters;
 
 using System;
 using System.IO;
@@ -114,6 +118,23 @@ public static class Program
 
         services.AddCoreFrontend();
 
+        services.AddSingleton(provider =>
+            provider.GetRequiredService<IOptions<JsonOptions>>().Value.SerializerOptions);
+
+        services.Configure<JsonOptions>(options =>
+        {
+            options.SerializerOptions.PropertyNameCaseInsensitive = true;
+            options.SerializerOptions.Converters.Add(new Vector3Converter());
+            options.SerializerOptions.Converters.Add(new Vector4Converter());
+        });
+
+        services.AddControllers().AddJsonOptions(options =>
+        {
+            options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+            options.JsonSerializerOptions.Converters.Add(new Vector3Converter());
+            options.JsonSerializerOptions.Converters.Add(new Vector4Converter());
+        });
+
         services.BuildServiceProvider(
             new ServiceProviderOptions { ValidateOnBuild = true });
     }
@@ -133,18 +154,20 @@ public static class Program
 
         app.UseStaticFiles();
 
-        DataConfig dataConfig = app.Services.GetRequiredService<DataConfig>();
-        app.UseStaticFiles(new StaticFileOptions
-        {
-            FileProvider = new PhysicalFileProvider(Path.Combine(env.ContentRootPath, dataConfig.Path)),
-            RequestPath = "/path"
-        });
+        app.UseCustomStaticFiles(env);
 
         app.MapRazorComponents<App>()
             .AddInteractiveServerRenderMode()
             .AddAdditionalAssemblies(typeof(Frontend._Imports).Assembly);
 
+        app.UseRouting();
+
         app.UseAntiforgery();
+
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapControllers();
+        });
 
         return app;
     }

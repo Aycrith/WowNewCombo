@@ -190,6 +190,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
                 castAny = !keyAction.BaseAction;
             }
             else if (PullPrevention() &&
+                !bits.Combat() &&
                 (playerReader.IsCasting() || bits.Any_AutoAttack()))
             {
                 Log("Preventing pulling possible tagged target!");

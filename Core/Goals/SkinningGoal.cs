@@ -116,7 +116,7 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
 
         bagHashNewOrStackGain = bagReader.HashNewOrStackGain;
 
-        wait.Fixed(playerReader.NetworkLatency);
+        wait.Fixed(Math.Max(playerReader.NetworkLatency, Loot.LOOTFRAME_AUTOLOOT_DELAY_MS));
 
         if (bagReader.BagsFull())
         {

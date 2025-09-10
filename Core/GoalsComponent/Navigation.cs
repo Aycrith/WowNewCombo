@@ -1,8 +1,10 @@
+using Core.Database;
 using Core.GOAP;
 
 using Microsoft.Extensions.Logging;
 
 using SharedLib;
+using SharedLib.Data;
 using SharedLib.Extensions;
 
 using System;
@@ -34,6 +36,7 @@ public sealed partial class Navigation : IDisposable
     private readonly StuckDetector stuckDetector;
     private readonly IPPather pather;
     private readonly IMountHandler mountHandler;
+    private readonly AreaDB areaDB;
 
     private const float MinDistanceMount = 10;
     private readonly float MaxDistance = 200;
@@ -80,7 +83,8 @@ public sealed partial class Navigation : IDisposable
         PlayerReader playerReader, AddonBits bits,
         StopMoving stopMoving,
         StuckDetector stuckDetector, IPPather pather, IMountHandler mountHandler,
-        ClassConfiguration classConfiguration)
+        ClassConfiguration classConfiguration,
+        AreaDB areaDB)
     {
         this.logger = logger;
         this.playerDirection = playerDirection;
@@ -91,6 +95,7 @@ public sealed partial class Navigation : IDisposable
         this.stuckDetector = stuckDetector;
         this.pather = pather;
         this.mountHandler = mountHandler;
+        this.areaDB = areaDB;
 
         patherName = pather.GetType().Name;
 
@@ -338,7 +343,7 @@ public sealed partial class Navigation : IDisposable
                 LogDebug($"Distance: {distance} vs Avg:({AvgDistance * 2},{AvgDistance}) - TAVG: {DIFF_THRESHOLD * AvgDistance} ");
 
             stopMoving.Stop();
-            PathRequest(new PathRequest(playerReader.UIMapId.Value, playerW, targetW, distance, PathCalculatedCallback));
+            PathRequest(new PathRequest(playerReader.UIMapId.Value, bits.Indoors(), playerW, targetW, distance, PathCalculatedCallback));
         }
         else
         {
@@ -366,9 +371,20 @@ public sealed partial class Navigation : IDisposable
     private void PathCalculatedCallback(PathResult result)
     {
         if (!active)
+        {
             return;
+        }
 
-        if (result.Path.Length == 0)
+        // TODO: fix this later
+        // Consider trivial proximity as a successful "no path needed"
+        const float TrivialDistanceThreshold = MinDistanceMount; // adjust as per your units
+
+        float distance = (result.EndW - result.StartW).Length(); // assuming it's a Vector3 or similar
+        bool isTriviallyClose = result.Path.Length == 0 && distance < TrivialDistanceThreshold;
+
+        logger.LogWarning($"Pathfinder - Trivial: {isTriviallyClose} | {result.ElapsedMs}ms - {result.StartW.ToStringF()} -> {result.EndW.ToStringF()}");
+
+        if (result.Path.Length == 0 && !isTriviallyClose)
         {
             if (lastFailedDestination != result.EndW)
             {
@@ -377,6 +393,16 @@ public sealed partial class Navigation : IDisposable
             }
 
             failedAttempt++;
+
+            if (failedAttempt == 1 && bits.Indoors())
+            {
+                // try to find closest spawn point
+                (Creature creature, Vector3 worldPos) = areaDB.FindClosestCreatureByNpcFlag(NpcFlags.None, playerReader.WorldPos);
+                playerReader.WorldPosZ = worldPos.Z;
+
+                logger.LogWarning($"Found closest spawn {creature.Name}");
+            }
+ 
             if (failedAttempt > 2)
             {
                 failedAttempt = 0;
@@ -387,15 +413,19 @@ public sealed partial class Navigation : IDisposable
         }
 
         failedAttempt = 0;
-        LogPathfinderSuccess(logger, result.Distance, result.StartW, result.EndW, result.ElapsedMs);
-
-        for (int i = result.Path.Length - 1; i >= 0; i--)
+        // TODO: fix this later
+        //if (!isTriviallyClose)
         {
-            routeToNextWaypoint.Push(result.Path[i]);
-        }
+            LogPathfinderSuccess(logger, result.Distance, result.StartW, result.EndW, result.ElapsedMs);
 
-        if (SimplifyRouteToWaypoint)
-            SimplyfyRouteToWaypoint();
+            for (int i = result.Path.Length - 1; i >= 0; i--)
+            {
+                routeToNextWaypoint.Push(result.Path[i]);
+            }
+
+            if (SimplifyRouteToWaypoint)
+                SimplyfyRouteToWaypoint();
+        }
 
         if (routeToNextWaypoint.Count == 0)
         {
@@ -418,7 +448,7 @@ public sealed partial class Navigation : IDisposable
             manualReset.Reset();
             if (pathRequests.TryPeek(out PathRequest pathRequest))
             {
-                Vector3[] path = pather.FindWorldRoute(pathRequest.MapId, pathRequest.StartW, pathRequest.EndW);
+                Vector3[] path = pather.FindWorldRoute(pathRequest.MapId, pathRequest.StartIndoors, pathRequest.StartW, pathRequest.EndW);
                 if (active)
                 {
                     pathResults.Enqueue(new PathResult(pathRequest, path, pathRequest.Callback));

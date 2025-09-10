@@ -76,12 +76,12 @@ public sealed class LocalPathingApi : IPPather
         return path.locations.ToArray();
     }
 
-    public Vector3[] FindWorldRoute(int uiMap, Vector3 worldFrom, Vector3 worldTo)
+    public Vector3[] FindWorldRoute(int uiMap, bool startIndoors, Vector3 worldFrom, Vector3 worldTo)
     {
         long timestamp = Stopwatch.GetTimestamp();
 
         service.SetLocations(
-            service.ToWorldZ(uiMap, worldFrom.X, worldFrom.Y, worldFrom.Z),
+            service.ToWorldZ(uiMap, worldFrom.X, worldFrom.Y, worldFrom.Z, startIndoors),
             service.ToWorldZ(uiMap, worldTo.X, worldTo.Y, worldTo.Z));
 
         Path path = service.DoSearch(searchStrategy);
