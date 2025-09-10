@@ -30,6 +30,9 @@
         text-align: center;
     }
 
+    .leaflet-container canvas {
+        pointer-events: auto !important;
+    }
 
     .poiatlas {
         background-image: url('_content/Frontend/img/atlas.png');
@@ -94,7 +97,9 @@
     {
         if (firstRender)
         {
-            await jsRuntime.InvokeVoidAsync("init", expansion ?? "som", continent ?? "Azeroth", zoom, x, y, true);
+            await jsRuntime.InvokeVoidAsync("init",
+                expansion ?? "som", continent ?? "Azeroth",
+                zoom, x, y, true);
 
             pPatherService.Reset();
 
