@@ -371,9 +371,20 @@ public sealed partial class Navigation : IDisposable
     private void PathCalculatedCallback(PathResult result)
     {
         if (!active)
+        {
             return;
+        }
 
-        if (result.Path.Length == 0)
+        // TODO: fix this later
+        // Consider trivial proximity as a successful "no path needed"
+        const float TrivialDistanceThreshold = MinDistanceMount; // adjust as per your units
+
+        float distance = (result.EndW - result.StartW).Length(); // assuming it's a Vector3 or similar
+        bool isTriviallyClose = result.Path.Length == 0 && distance < TrivialDistanceThreshold;
+
+        logger.LogWarning($"Pathfinder - Trivial: {isTriviallyClose} | {result.ElapsedMs}ms - {result.StartW.ToStringF()} -> {result.EndW.ToStringF()}");
+
+        if (result.Path.Length == 0 && !isTriviallyClose)
         {
             if (lastFailedDestination != result.EndW)
             {
@@ -402,15 +413,19 @@ public sealed partial class Navigation : IDisposable
         }
 
         failedAttempt = 0;
-        LogPathfinderSuccess(logger, result.Distance, result.StartW, result.EndW, result.ElapsedMs);
-
-        for (int i = result.Path.Length - 1; i >= 0; i--)
+        // TODO: fix this later
+        //if (!isTriviallyClose)
         {
-            routeToNextWaypoint.Push(result.Path[i]);
-        }
+            LogPathfinderSuccess(logger, result.Distance, result.StartW, result.EndW, result.ElapsedMs);
 
-        if (SimplifyRouteToWaypoint)
-            SimplyfyRouteToWaypoint();
+            for (int i = result.Path.Length - 1; i >= 0; i--)
+            {
+                routeToNextWaypoint.Push(result.Path[i]);
+            }
+
+            if (SimplifyRouteToWaypoint)
+                SimplyfyRouteToWaypoint();
+        }
 
         if (routeToNextWaypoint.Count == 0)
         {
