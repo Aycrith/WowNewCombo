@@ -397,11 +397,19 @@ local UtilityActions = {
 }
 
 -- Sets up the BindPadMacro button with wildcard attributes
--- Requires BindPad addon to be installed (provides the working secure button)
+-- The BindPadMacro button can come from either:
+-- 1. DataToColor's own SecureButtons.xml (preferred, no external deps)
+-- 2. Legacy BindPad addon (for backwards compatibility)
 local function SetupMacroButton()
   local btn = BindPadMacro
   if not btn then
-    DataToColor:Print("ERROR: BindPadMacro not found! Install BindPad addon.")
+    DataToColor:Print("|cffff0000ERROR:|r BindPadMacro button not found!")
+    DataToColor:Print("This button should be created by DataToColor's SecureButtons.xml")
+    DataToColor:Print("Possible fixes:")
+    DataToColor:Print("  1. Type /reload to reload the UI")
+    DataToColor:Print("  2. Reinstall DataToColor addon from bot folder")
+    DataToColor:Print("  3. Check that SecureButtons.xml exists in addon folder")
+    DataToColor:Print("  4. Run /dccheck for full diagnostics")
     return false
   end
 
@@ -422,12 +430,16 @@ function DataToColor:CreateSecureButtons()
     return
   end
 
+  DataToColor:Print("Setting up custom action buttons...")
+
   -- Setup the macro button with wildcard attributes
   if not SetupMacroButton() then
+    DataToColor:Print("|cffff0000Custom action setup FAILED|r - see errors above")
     return
   end
 
   local wasChanged = false
+  local alreadyBound = 0
 
   for _, action in ipairs(UtilityActions) do
     -- Binding format: CLICK BindPadMacro:actionName
@@ -438,9 +450,17 @@ function DataToColor:CreateSecureButtons()
       local ok = SetBinding(action.key, clickCommand)
       if ok then
         wasChanged = true
-        DataToColor:Print(string.format("  Bound: %s -> %s", action.key, action.actionName))
+        DataToColor:Print(string.format("  |cff00ff00Bound:|r %s -> %s", action.key, action.actionName))
+      else
+        DataToColor:Print(string.format("  |cffff0000Failed:|r %s -> %s", action.key, action.actionName))
       end
+    else
+      alreadyBound = alreadyBound + 1
     end
+  end
+
+  if alreadyBound > 0 then
+    DataToColor:Print(string.format("  %d binding(s) already configured", alreadyBound))
   end
 
   if wasChanged then
@@ -448,7 +468,9 @@ function DataToColor:CreateSecureButtons()
     local bindingSet = GetCurrentBindingSet()
     SaveBindings(bindingSet)
     local bindingType = bindingSet == 1 and "account-wide" or "character-specific"
-    DataToColor:Print("Custom actions changed and saved to " .. bindingType .. ".")
+    DataToColor:Print("|cff00ff00Custom actions saved|r to " .. bindingType .. " bindings.")
+  else
+    DataToColor:Print("|cff00ff00Custom action setup complete|r (no changes needed)")
   end
 
   -- Refresh binding cache so KeyBindingsReader picks up any changes

@@ -54,6 +54,14 @@ public static class Program
                     break;
                 }
 
+                // Check if this is a "WoW not running" error - don't restart loop for this
+                if (ex.Message.Contains("World of Warcraft process") || 
+                    ex.InnerException?.Message.Contains("World of Warcraft process") == true)
+                {
+                    Log.Fatal("[Program          ] WoW is required to run the bot. Exiting.");
+                    break;
+                }
+
                 Log.Fatal(ex, "[Program          ] Host crashed – restarting in 3s");
                 Thread.Sleep(3000);
             }
@@ -111,11 +119,32 @@ public static class Program
 
         services.AddStartupConfigurations(configuration);
 
-        services.AddWoWProcess(log);
+        // Add startup orchestration first (handles WoW launch, nav server, etc.)
+        services.AddStartupOrchestration(configuration);
+
+        bool wowProcessAvailable = false;
+        try
+        {
+            wowProcessAvailable = services.AddWoWProcess(log);
+        }
+        catch (Exception ex) when (ex.Message.Contains("World of Warcraft process"))
+        {
+            log.LogError("======================================================");
+            log.LogError("  World of Warcraft is not running!");
+            log.LogError("  Please start WoW and log into a character,");
+            log.LogError("  then restart the bot.");
+            log.LogError("======================================================");
+            
+            // Give user time to read the message
+            Thread.Sleep(5000);
+            
+            // Rethrow to trigger proper exit
+            throw;
+        }
 
         services.AddCoreBase();
 
-        if (AddonConfig.Exists() && FrameConfig.Exists())
+        if (wowProcessAvailable && AddonConfig.Exists() && FrameConfig.Exists())
         {
             services.AddCoreNormal(log);
         }

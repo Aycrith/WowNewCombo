@@ -1,4 +1,4 @@
-﻿using Core.Addon;
+using Core.Addon;
 using Core.Database;
 using Core.Extensions;
 using Core.Goals;
@@ -265,6 +265,8 @@ public static class DependencyInjection
         services.AddSingleton<CancellationTokenSource>();
         services.AddSingleton<WowProcess>();
         services.AddSingleton<AddonConfigurator>();
+        services.AddSingleton<AddonValidator>();
+        services.AddSingleton<AddonInstaller>();
 
         var sp = services.BuildServiceProvider(
             new ServiceProviderOptions { ValidateOnBuild = true });

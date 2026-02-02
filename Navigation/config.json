@@ -1,0 +1,11 @@
+{
+    "iClientVersion": 0,
+    "iPort": 47110,
+    "sIP": "127.0.0.1",
+    "sMmapFolder": "mmaps",
+    "iMmapFormat": 0,
+    "iSmoothing": 2,
+    "bPreloadMaps": true,
+    "sCustomMapPattern": "%03d.map",
+    "sCustomMmtilePattern": "%03d%02d%02d.mmtile"
+}

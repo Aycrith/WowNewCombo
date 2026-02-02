@@ -1,0 +1,113 @@
+{
+  "ClassName": "Druid",
+  "OverridePathFilename": "",
+  "Paths": [
+    { "PathFilename": "_pack\\60-70\\Hellfire Peninsula 01.json", "Requirements": ["Level >= 58", "Level < 62"] },
+    { "PathFilename": "_pack\\60-70\\Hellfire Peninsula 02.json", "Requirements": ["Level >= 60", "Level < 63"] },
+    { "PathFilename": "_pack\\60-70\\Zangarmarsh 01.json", "Requirements": ["Level >= 62", "Level < 65"] },
+    { "PathFilename": "_pack\\60-70\\Zangarmarsh 02.json", "Requirements": ["Level >= 63", "Level < 66"] },
+    { "PathFilename": "_pack\\60-70\\Nagrand 01.json", "Requirements": ["Level >= 64", "Level < 67"] },
+    { "PathFilename": "_pack\\60-70\\Nagrand 02.json", "Requirements": ["Level >= 65", "Level < 68"] },
+    { "PathFilename": "_pack\\60-70\\Blade's Edge Mountains 01.json", "Requirements": ["Level >= 66", "Level < 69"] },
+    { "PathFilename": "_pack\\60-70\\Blade's Edge Mountains 02.json", "Requirements": ["Level >= 67", "Level < 70"] },
+    { "PathFilename": "_pack\\60-70\\Netherstorm 01.json", "Requirements": ["Level >= 68", "Level < 71"] },
+    { "PathFilename": "_pack\\60-70\\Netherstorm 02.json", "Requirements": ["Level >= 69"] }
+  ],
+  "Mode": "Grind",
+  "IntVariables": {
+    "RIP_CP": 4,
+    "FB_CP": 5,
+    "TIGER_FURY_ENERGY": 30,
+    "BEAR_FORM_HP%": 30,
+    "REJUV_HP%": 70,
+    "REGROWTH_HP%": 50,
+    "HEALING_TOUCH_HP%": 30,
+    "INNERVATE_MANA%": 20,
+    "MANGLE_PRIORITY": 1
+  },
+  "KeyActions": [
+    { "Name": "Cat Form", "Key": "1", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Bear Form", "Key": "2", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Travel Form", "Key": "3", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Mangle (Cat)", "Key": "4", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Rake", "Key": "5", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Rip", "Key": "6", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Ferocious Bite", "Key": "7", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Shred", "Key": "8", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Tiger's Fury", "Key": "9", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Prowl", "Key": "0", "WhenUsable": true, "Cooldown": 10 },
+    { "Name": "Dash", "Key": "-", "WhenUsable": true, "Cooldown": 300 },
+    { "Name": "Pounce", "Key": "=", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Maul", "Key": "F1", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Mangle (Bear)", "Key": "F2", "WhenUsable": true, "Cooldown": 6 },
+    { "Name": "Lacerate", "Key": "F3", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Swipe", "Key": "F4", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Bash", "Key": "F5", "WhenUsable": true, "Cooldown": 60 },
+    { "Name": "Frenzied Regeneration", "Key": "F6", "WhenUsable": true, "Cooldown": 180 },
+    { "Name": "Rejuvenation", "Key": "F7", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Regrowth", "Key": "F8", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Healing Touch", "Key": "F9", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Lifebloom", "Key": "F10", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Innervate", "Key": "F11", "WhenUsable": true, "Cooldown": 360 },
+    { "Name": "Mark of the Wild", "Key": "F12", "WhenUsable": true, "Cooldown": 0 }
+  ],
+  "Form": {
+    "Sequence": [
+      { "Name": "Cat Form", "Requirements": ["not Form:Cat Form", "not Form:Bear Form", "InCombat"], "Cooldown": 0 }
+    ]
+  },
+  "Pull": {
+    "Sequence": [
+      { "Name": "Cat Form", "Requirements": ["not Form:Cat Form"], "Cooldown": 0 },
+      { "Name": "Prowl", "Requirements": ["not HasBuff:Prowl", "not InCombat"], "Cooldown": 10 },
+      { "Name": "Pounce", "Requirements": ["HasBuff:Prowl", "Behind"], "Cooldown": 0 },
+      { "Name": "Rake", "Requirements": ["not HasDebuff:Rake"], "Cooldown": 0 },
+      { "Name": "Mangle (Cat)", "WhenUsable": true, "Cooldown": 0 }
+    ]
+  },
+  "Combat": {
+    "Sequence": [
+      { "Name": "Bear Form", "Requirements": ["Health% < {BEAR_FORM_HP%}", "not Form:Bear Form"], "Cooldown": 0 },
+      { "Name": "Frenzied Regeneration", "Requirements": ["Form:Bear Form", "Health% < 40", "Rage > 10"], "Cooldown": 180 },
+      { "Name": "Bash", "Requirements": ["Form:Bear Form", "Health% < 25"], "Cooldown": 60 },
+      { "Name": "Maul", "Requirements": ["Form:Bear Form", "Rage > 20"], "Cooldown": 0 },
+      { "Name": "Mangle (Bear)", "Requirements": ["Form:Bear Form"], "Cooldown": 6 },
+      { "Name": "Lacerate", "Requirements": ["Form:Bear Form", "not HasDebuff:Lacerate"], "Cooldown": 0 },
+      { "Name": "Swipe", "Requirements": ["Form:Bear Form", "MobCount >= 2", "Rage > 20"], "Cooldown": 0 },
+      { "Name": "Cat Form", "Requirements": ["Form:Bear Form", "Health% > 60"], "Cooldown": 0 },
+      { "Name": "Tiger's Fury", "Requirements": ["Form:Cat Form", "Energy < {TIGER_FURY_ENERGY}"], "Cooldown": 0 },
+      { "Name": "Ferocious Bite", "Requirements": ["Form:Cat Form", "ComboPoints >= {FB_CP}", "TargetHealth% < 30"], "Cooldown": 0 },
+      { "Name": "Rip", "Requirements": ["Form:Cat Form", "ComboPoints >= {RIP_CP}", "not HasDebuff:Rip", "TargetHealth% > 30"], "Cooldown": 0 },
+      { "Name": "Mangle (Cat)", "Requirements": ["Form:Cat Form", "not HasDebuff:Mangle"], "Cooldown": 0 },
+      { "Name": "Rake", "Requirements": ["Form:Cat Form", "not HasDebuff:Rake"], "Cooldown": 0 },
+      { "Name": "Shred", "Requirements": ["Form:Cat Form", "Behind", "Energy >= 60"], "Cooldown": 0 },
+      { "Name": "Mangle (Cat)", "Requirements": ["Form:Cat Form"], "Cooldown": 0 }
+    ]
+  },
+  "Flee": {
+    "Sequence": [
+      { "Name": "Bash", "Requirements": ["Form:Bear Form"], "Cooldown": 60 },
+      { "Name": "Travel Form", "Requirements": ["not Form:Travel Form", "not InCombat"], "Cooldown": 0 },
+      { "Name": "Dash", "Requirements": ["Form:Cat Form"], "Cooldown": 300 }
+    ]
+  },
+  "Adhoc": {
+    "Sequence": [
+      { "Name": "Rejuvenation", "Requirements": ["Health% < {REJUV_HP%}", "not InCombat", "not HasBuff:Rejuvenation"], "Cooldown": 0 },
+      { "Name": "Regrowth", "Requirements": ["Health% < {REGROWTH_HP%}", "not InCombat", "not HasBuff:Regrowth"], "Cooldown": 0 },
+      { "Name": "Lifebloom", "Requirements": ["Health% < 80", "not InCombat", "not HasBuff:Lifebloom", "Level >= 64"], "Cooldown": 0 },
+      { "Name": "Mark of the Wild", "Requirements": ["not HasBuff:Mark of the Wild"], "Cooldown": 0 },
+      { "Name": "Innervate", "Requirements": ["Mana% < {INNERVATE_MANA%}", "not InCombat"], "Cooldown": 360 }
+    ]
+  },
+  "Parallel": {
+    "Sequence": []
+  },
+  "NPC": {
+    "Sequence": [
+      { "Name": "Repair", "Requirements": ["DurabilityPercent < 50"] },
+      { "Name": "Sell", "Requirements": ["BagsFull"] },
+      { "Name": "Train", "Requirements": ["NewSkillAvailable"] }
+    ]
+  }
+}

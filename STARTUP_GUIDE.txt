@@ -1,0 +1,195 @@
+# WowClassicGrindBot - Quick Start Guide
+
+## One-Click Launcher
+
+The bot has been set up for one-click execution. You have two options:
+
+### Option 1: Use the Desktop Shortcut (Easiest)
+A shortcut named **"WowClassicGrindBot.lnk"** has been created on your desktop.
+Simply **double-click it** to start the entire system.
+
+### Option 2: Run from the Bot Folder
+Navigate to `C:\WowClassicGrindBot` and **double-click `Start.bat`**
+
+---
+
+## What Happens When You Click Start
+
+The launcher will automatically:
+
+1. ✓ Check that .NET SDK is installed
+2. ✓ Build the bot in Release mode (optimized)
+3. ✓ Verify your WoW installation
+4. ✓ Start the navigation server (for pathfinding)
+5. ✓ Install required addons automatically
+6. ✓ Open the web interface in your browser (http://localhost:5000)
+
+---
+
+## Requirements Before Starting
+
+### 1. World of Warcraft Installation
+- **TBC Anniversary Client** is recommended
+- Must be installed at: `C:\Program Files (x86)\World of Warcraft\_anniversary_`
+- Or: `C:\Program Files (x86)\World of Warcraft\_classic_` (for Classic)
+
+### 2. WoW Must Be Running
+**IMPORTANT:** Before double-clicking Start.bat:
+
+1. Launch World of Warcraft
+2. Log into your character
+3. Make sure you can see the game world
+4. **Do NOT be at the login screen**
+
+If WoW is not running when you start the bot, it will show an error and exit.
+
+### 3. .NET SDK 10.0 or Later
+Download from: https://dotnet.microsoft.com/download
+
+If you don't have .NET installed, the launcher will tell you and how to install it.
+
+---
+
+## Step-by-Step Startup
+
+### Before You Start the Bot:
+
+```
+1. Launch World of Warcraft
+2. Click "Realm Connection" if needed
+3. Select your realm
+4. Click "Enter World"
+5. Wait until you can see the game
+6. You're logged in to a character
+```
+
+### Starting the Bot:
+
+```
+1. Double-click Start.bat (or the desktop shortcut)
+2. Read the startup information
+3. Press any key when prompted
+4. The bot will start
+5. Your browser will open automatically to http://localhost:5000
+```
+
+### After the Bot Starts:
+
+1. The DataToColor addon will be installed if needed
+2. You may see a message in WoW to reload the UI (`/reload`)
+3. The bot will detect your character's class
+4. The web UI will show the bot's status
+
+---
+
+## The Web Interface
+
+Once started, open your browser to: **http://localhost:5000**
+
+From there you can:
+- View the bot's status
+- Start/stop grinding routes
+- Monitor progress
+- Adjust settings
+
+---
+
+## Troubleshooting
+
+### Error: ".NET SDK not found"
+- Download .NET 10.0: https://dotnet.microsoft.com/download
+- Restart the launcher after installing
+
+### Error: "World of Warcraft not found"
+- Make sure WoW is installed at the default location
+- Or make sure WoW is running (the bot will auto-detect it)
+
+### WoW Shows "Not Logged In"
+- Log back into a character
+- Close the bot launcher (Ctrl+C in the console)
+- Start the bot again
+
+### Browser Won't Open Automatically
+- Manually open: http://localhost:5000
+- Or check that no other application is using port 5000
+
+### Navigation Server Won't Start
+- This is optional for basic operation
+- Make sure you have MMAP files in: `Navigation\mmaps\`
+- Pathfinding will work without it (slower)
+
+---
+
+## Navigation Server (Optional)
+
+For the best pathfinding performance, you need MMAP files:
+
+1. Download from: https://github.com/FreeHongKongMMO/WowClassicGrindBot/wiki/Navigation
+2. Extract to: `C:\WowClassicGrindBot\Navigation\mmaps\`
+3. Restart the bot
+
+The bot will still work without MMAPs, but pathfinding will be limited.
+
+---
+
+## Commands
+
+Once the bot is running:
+
+| Command | Effect |
+|---------|--------|
+| `Ctrl+C` | Stop the bot gracefully |
+| (in WoW) `/reload` | Reload UI (if addon needed installing) |
+
+---
+
+## Log Files
+
+When the bot runs, it creates: `out.log`
+
+This file is useful for debugging if something goes wrong.
+
+---
+
+## Support & Help
+
+- **GitHub Issues**: https://github.com/FreeHongKongMMO/WowClassicGrindBot/issues
+- **Wiki**: https://github.com/FreeHongKongMMO/WowClassicGrindBot/wiki
+
+---
+
+## Important Notes
+
+- ⚠️  Always ensure WoW is running and logged in before starting the bot
+- ⚠️  The bot requires administrator privileges to function properly
+- ⚠️  Use this bot responsibly and follow Blizzard's Terms of Service
+- ⚠️  Not affiliated with Blizzard Entertainment
+
+---
+
+## First Time Setup
+
+The first time you run the bot:
+
+1. It will detect your WoW installation
+2. It will install the DataToColor addon
+3. It will create `addon_config.json`
+4. It will create `FrameConfig.xml` (WoW UI configuration)
+
+After this, the bot will start much faster.
+
+---
+
+## Running Subsequent Times
+
+The next time you start the bot:
+
+1. It will skip the setup steps
+2. It will start faster (Release build)
+3. All configuration will be remembered
+
+Just double-click Start.bat again!
+
+---
+
+Happy grinding! 🎮

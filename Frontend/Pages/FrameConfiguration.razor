@@ -1,8 +1,9 @@
-﻿@page "/FrameConfiguration"
+@page "/FrameConfiguration"
 
 @inject ILogger logger
 @inject NavigationManager NavigationManager
 @inject AddonConfigurator addonConfigurator
+@inject AddonValidator addonValidator
 @inject FrameConfigurator frameConfigurator
 @inject DataConfig dataConfig
 @inject IAddonDataProvider reader
@@ -23,6 +24,62 @@
     else
     {
         <h1>Frame configuration not found !</h1>
+    }
+
+    @* Addon Validation Status Panel *@
+    @if (validationResult != null)
+    {
+        <div class="card mb-3 @(validationResult.IsValid ? "border-success" : "border-danger")">
+            <div class="card-header @(validationResult.IsValid ? "bg-success text-white" : "bg-danger text-white")">
+                <h5 class="mb-0">
+                    <span class="mr-2">@(validationResult.IsValid ? "✓" : "✗")</span>
+                    Addon Pre-flight Check
+                </h5>
+            </div>
+            <div class="card-body">
+                @if (validationResult.Errors.Count > 0)
+                {
+                    <h6 class="text-danger">Errors (@validationResult.Errors.Count)</h6>
+                    <ul class="list-group mb-3">
+                        @foreach (var error in validationResult.Errors)
+                        {
+                            <li class="list-group-item list-group-item-danger">
+                                <strong>@error.Title</strong><br/>
+                                <small>@error.Description</small>
+                            </li>
+                        }
+                    </ul>
+                }
+                @if (validationResult.Warnings.Count > 0)
+                {
+                    <h6 class="text-warning">Warnings (@validationResult.Warnings.Count)</h6>
+                    <ul class="list-group mb-3">
+                        @foreach (var warning in validationResult.Warnings)
+                        {
+                            <li class="list-group-item list-group-item-warning">
+                                <strong>@warning.Title</strong><br/>
+                                <small>@warning.Description</small>
+                            </li>
+                        }
+                    </ul>
+                }
+                @if (validationResult.Successes.Count > 0 && validationResult.IsValid)
+                {
+                    <h6 class="text-success">Verified (@validationResult.Successes.Count)</h6>
+                    <ul class="list-group">
+                        @foreach (var success in validationResult.Successes)
+                        {
+                            <li class="list-group-item list-group-item-success">@success</li>
+                        }
+                    </ul>
+                }
+                <div class="mt-3">
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="RefreshValidation">
+                        🔄 Refresh Check
+                    </button>
+                </div>
+            </div>
+        </div>
     }
 
     <div class="card-group mb-3 text-center">
@@ -95,6 +152,14 @@
         <br>
     }
 
+    @* Status message from FrameConfigurator *@
+    @if (!string.IsNullOrEmpty(frameConfigurator.StatusMessage) && frameConfigurator.StatusMessage != "Ready")
+    {
+        <div class="alert @(frameConfigurator.PreFlightFailed ? "alert-danger" : "alert-info")" role="alert">
+            <strong>Status:</strong> @frameConfigurator.StatusMessage
+        </div>
+    }
+
     <h5 class="row col-md-12">Your screen:</h5>
 
     <div class="row col-md-12">
@@ -157,6 +222,7 @@
 @code {
 
     private AddonConfig addonConfig = null!;
+    private AddonValidationResult? validationResult;
 
     private bool disabled = true;
     private bool saved = false;
@@ -169,6 +235,9 @@
     {
         addonConfig = addonConfigurator.Config;
         frameConfigurator.OnUpdate += OnUpdate;
+
+        // Run initial validation
+        RefreshValidation();
 
         if (!FrameConfig.Exists())
             disabled = false;
@@ -219,11 +288,16 @@
             NavigationManager.NavigateTo("/RestartServer");
     }
 
-    public async void StartAutoConfigure()
+    public async Task StartAutoConfigure()
     {
-        await Task.Delay(1);
-        bool success = frameConfigurator.StartAutoConfig();
+        disabled = true;
+        await InvokeAsync(StateHasChanged);
+        
+        bool success = await frameConfigurator.StartAutoConfigAsync();
         OnUpdate();
+        
+        disabled = false;
+        
         if (success)
             NavigationManager.NavigateTo("/RestartServer");
     }
@@ -232,5 +306,11 @@
     {
         FrameConfigurator.DeleteConfig();
         NavigationManager.NavigateTo("/RestartServer");
+    }
+
+    public void RefreshValidation()
+    {
+        validationResult = addonValidator.Validate();
+        base.InvokeAsync(StateHasChanged);
     }
 }

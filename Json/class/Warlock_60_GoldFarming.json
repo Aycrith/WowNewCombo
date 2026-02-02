@@ -1,0 +1,102 @@
+{
+  "ClassName": "Warlock",
+  "OverridePathFilename": "",
+  "Paths": [
+    { "PathFilename": "GoldFarm_Felwood_Jadefire_Felcloth.json", "Requirements": ["Level >= 55"] },
+    { "PathFilename": "GoldFarm_Azshara_BloodElves_Runecloth.json", "Requirements": ["Level >= 55"] },
+    { "PathFilename": "GoldFarm_Winterspring_Winterfall_Firewater.json", "Requirements": ["Level >= 55"] },
+    { "PathFilename": "GoldFarm_EPL_Tyr's_Hand_Runecloth.json", "Requirements": ["Level >= 58"] },
+    { "PathFilename": "GoldFarm_Silithus_Twilight_Cultists.json", "Requirements": ["Level >= 55"] }
+  ],
+  "Mode": "Grind",
+  "Description": "Affliction Warlock Gold Farming - DoT and Drain for efficient multi-mob farming",
+  "IntVariables": {
+    "LIFETAP_HP%": 55,
+    "DRAIN_LIFE_HP%": 65,
+    "HEALTH_FUNNEL_PET%": 25,
+    "DARK_PACT_MANA%": 35,
+    "FEAR_HP%": 25,
+    "DEATH_COIL_HP%": 15,
+    "SIPHON_LIFE_HP%": 80,
+    "SEED_CORRUPTION_MOBS": 3,
+    "DOT_ALL_THRESHOLD": 2
+  },
+  "KeyActions": [
+    { "Name": "Corruption", "Key": "1", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Curse of Agony", "Key": "2", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Unstable Affliction", "Key": "3", "WhenUsable": true, "HasCastBar": true, "Cooldown": 0 },
+    { "Name": "Siphon Life", "Key": "4", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Shadow Bolt", "Key": "5", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Drain Life", "Key": "6", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Drain Soul", "Key": "7", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Life Tap", "Key": "8", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Dark Pact", "Key": "9", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Seed of Corruption", "Key": "0", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Fear", "Key": "-", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Death Coil", "Key": "=", "WhenUsable": true, "Cooldown": 120 },
+    { "Name": "Howl of Terror", "Key": "F1", "WhenUsable": true, "Cooldown": 40 },
+    { "Name": "Shadowburn", "Key": "F2", "WhenUsable": true, "Cooldown": 15 },
+    { "Name": "Summon Voidwalker", "Key": "F3", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Health Funnel", "Key": "F4", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Create Healthstone", "Key": "F5", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Use Healthstone", "Key": "F6", "WhenUsable": true, "Cooldown": 120 },
+    { "Name": "Demon Armor", "Key": "F7", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Soul Link", "Key": "F8", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Sacrifice", "Key": "F9", "WhenUsable": true, "Cooldown": 0 }
+  ],
+  "Form": {
+    "Sequence": [
+      { "Name": "Summon Voidwalker", "Requirements": ["not Pet", "HasItem:Soul Shard"], "Cooldown": 10 }
+    ]
+  },
+  "Pull": {
+    "Sequence": [
+      { "Name": "Corruption", "Requirements": ["not HasDebuff:Corruption"], "Cooldown": 1 },
+      { "Name": "Curse of Agony", "Requirements": ["not HasDebuff:Curse of Agony"], "Cooldown": 1 },
+      { "Name": "Unstable Affliction", "Requirements": ["not HasDebuff:Unstable Affliction"], "Cooldown": 1 }
+    ]
+  },
+  "Combat": {
+    "Sequence": [
+      { "Name": "Death Coil", "Requirements": ["Health% < {DEATH_COIL_HP%}"], "Cooldown": 120 },
+      { "Name": "Use Healthstone", "Requirements": ["Health% < 20", "HasItem:Master Healthstone"], "Cooldown": 120 },
+      { "Name": "Drain Life", "Requirements": ["Health% < {DRAIN_LIFE_HP%}"], "Cooldown": 0 },
+      { "Name": "Health Funnel", "Requirements": ["Pet", "PetHealth% < {HEALTH_FUNNEL_PET%}", "Health% > 60"], "Cooldown": 0 },
+      { "Name": "Howl of Terror", "Requirements": ["MobCount >= 3", "Health% < 40"], "Cooldown": 40 },
+      { "Name": "Seed of Corruption", "Requirements": ["MobCount >= {SEED_CORRUPTION_MOBS}"], "Cooldown": 0 },
+      { "Name": "Corruption", "Requirements": ["not HasDebuff:Corruption"], "Cooldown": 1 },
+      { "Name": "Curse of Agony", "Requirements": ["not HasDebuff:Curse of Agony"], "Cooldown": 1 },
+      { "Name": "Unstable Affliction", "Requirements": ["not HasDebuff:Unstable Affliction"], "Cooldown": 1 },
+      { "Name": "Siphon Life", "Requirements": ["Health% < {SIPHON_LIFE_HP%}", "not HasDebuff:Siphon Life"], "Cooldown": 1 },
+      { "Name": "Shadowburn", "Requirements": ["TargetHealth% < 10", "HasItem:Soul Shard"], "Cooldown": 15 },
+      { "Name": "Drain Soul", "Requirements": ["TargetHealth% < 25"], "Cooldown": 0 },
+      { "Name": "Shadow Bolt", "Requirements": ["Mana% > 40", "TargetHealth% > 40"], "Cooldown": 0 },
+      { "Name": "Drain Life", "WhenUsable": true }
+    ]
+  },
+  "Flee": {
+    "Sequence": [
+      { "Name": "Death Coil", "WhenUsable": true, "Cooldown": 120 },
+      { "Name": "Howl of Terror", "WhenUsable": true, "Cooldown": 40 },
+      { "Name": "Fear", "Requirements": ["MobCount == 1"], "Cooldown": 0 }
+    ]
+  },
+  "Adhoc": {
+    "Sequence": [
+      { "Name": "Life Tap", "Requirements": ["Mana% < 35", "Health% > {LIFETAP_HP%}"], "Cooldown": 0 },
+      { "Name": "Dark Pact", "Requirements": ["Mana% < {DARK_PACT_MANA%}", "Pet", "PetMana% > 40"], "Cooldown": 0 },
+      { "Name": "Demon Armor", "Requirements": ["not HasBuff:Demon Armor"], "Cooldown": 0 },
+      { "Name": "Soul Link", "Requirements": ["Pet", "not HasBuff:Soul Link"], "Cooldown": 0 },
+      { "Name": "Summon Voidwalker", "Requirements": ["not Pet", "HasItem:Soul Shard", "not InCombat"], "Cooldown": 10 }
+    ]
+  },
+  "Parallel": {
+    "Sequence": []
+  },
+  "NPC": {
+    "Sequence": [
+      { "Name": "Repair", "Requirements": ["DurabilityPercent < 50"] },
+      { "Name": "Sell", "Requirements": ["BagsFull"] }
+    ]
+  }
+}

@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Configuration;
+using Core.Startup;
+
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 using SharedLib;
@@ -24,5 +26,29 @@ public static class DependencyInjection
 
         services.Configure<StartupConfigNpcOverlay>
             (configuration.GetSection(StartupConfigNpcOverlay.Position));
+    }
+
+    /// <summary>
+    /// Adds the startup orchestration services for automatic WoW launch,
+    /// addon installation, and frame configuration.
+    /// </summary>
+    public static IServiceCollection AddStartupOrchestration(
+        this IServiceCollection services, IConfiguration configuration)
+    {
+        // Bind StartupOptions from configuration
+        services.Configure<StartupOptions>(configuration.GetSection("Startup"));
+
+        // Core startup services
+        services.AddSingleton<StartupState>();
+        services.AddSingleton<WoWPathFinder>();
+        services.AddSingleton<NavigationServerManager>();
+        services.AddSingleton<WoWProcessLauncher>();
+        services.AddSingleton<StartupOrchestrator>();
+
+        // Background services
+        services.AddHostedService<HealthMonitor>();
+        services.AddHostedService<StartupHostedService>();
+
+        return services;
     }
 }

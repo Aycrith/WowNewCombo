@@ -1,0 +1,110 @@
+{
+  "ClassName": "Warlock",
+  "OverridePathFilename": "",
+  "Paths": [
+    { "PathFilename": "_pack\\60-70\\Hellfire Peninsula 01.json", "Requirements": ["Level >= 58", "Level < 62"] },
+    { "PathFilename": "_pack\\60-70\\Hellfire Peninsula 02.json", "Requirements": ["Level >= 60", "Level < 63"] },
+    { "PathFilename": "_pack\\60-70\\Zangarmarsh 01.json", "Requirements": ["Level >= 62", "Level < 65"] },
+    { "PathFilename": "_pack\\60-70\\Zangarmarsh 02.json", "Requirements": ["Level >= 63", "Level < 66"] },
+    { "PathFilename": "_pack\\60-70\\Nagrand 01.json", "Requirements": ["Level >= 64", "Level < 67"] },
+    { "PathFilename": "_pack\\60-70\\Nagrand 02.json", "Requirements": ["Level >= 65", "Level < 68"] },
+    { "PathFilename": "_pack\\60-70\\Blade's Edge Mountains 01.json", "Requirements": ["Level >= 66", "Level < 69"] },
+    { "PathFilename": "_pack\\60-70\\Blade's Edge Mountains 02.json", "Requirements": ["Level >= 67", "Level < 70"] },
+    { "PathFilename": "_pack\\60-70\\Netherstorm 01.json", "Requirements": ["Level >= 68", "Level < 71"] },
+    { "PathFilename": "_pack\\60-70\\Netherstorm 02.json", "Requirements": ["Level >= 69"] }
+  ],
+  "Mode": "Grind",
+  "IntVariables": {
+    "LIFETAP_HP%": 50,
+    "DRAIN_LIFE_HP%": 60,
+    "HEALTH_FUNNEL_PET%": 30,
+    "DARK_PACT_MANA%": 40,
+    "FEAR_HP%": 30,
+    "DEATH_COIL_HP%": 20,
+    "SIPHON_LIFE_HP%": 70,
+    "SEED_CORRUPTION_MOBS": 3
+  },
+  "KeyActions": [
+    { "Name": "Corruption", "Key": "1", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Curse of Agony", "Key": "2", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Unstable Affliction", "Key": "3", "WhenUsable": true, "HasCastBar": true, "Cooldown": 0 },
+    { "Name": "Siphon Life", "Key": "4", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Shadow Bolt", "Key": "5", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Drain Life", "Key": "6", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Drain Soul", "Key": "7", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Life Tap", "Key": "8", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Dark Pact", "Key": "9", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Fear", "Key": "0", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Death Coil", "Key": "-", "WhenUsable": true, "Cooldown": 120 },
+    { "Name": "Howl of Terror", "Key": "=", "WhenUsable": true, "Cooldown": 40 },
+    { "Name": "Seed of Corruption", "Key": "F1", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Shadowburn", "Key": "F2", "WhenUsable": true, "Cooldown": 15 },
+    { "Name": "Fel Domination", "Key": "F3", "WhenUsable": true, "Cooldown": 900 },
+    { "Name": "Demonic Sacrifice", "Key": "F4", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Soul Shatter", "Key": "F5", "WhenUsable": true, "Cooldown": 300 },
+    { "Name": "Summon Felhunter", "Key": "F6", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Summon Voidwalker", "Key": "F7", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Health Funnel", "Key": "F8", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Create Healthstone", "Key": "F9", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Use Healthstone", "Key": "F10", "WhenUsable": true, "Cooldown": 120 },
+    { "Name": "Demon Armor", "Key": "F11", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Fel Armor", "Key": "F12", "WhenUsable": true, "Cooldown": 0 }
+  ],
+  "Form": {
+    "Sequence": [
+      { "Name": "Summon Felhunter", "Requirements": ["not Pet", "HasItem:Soul Shard"], "Cooldown": 10 }
+    ]
+  },
+  "Pull": {
+    "Sequence": [
+      { "Name": "Corruption", "Requirements": ["not HasDebuff:Corruption"], "Cooldown": 1 },
+      { "Name": "Curse of Agony", "Requirements": ["not HasDebuff:Curse of Agony"], "Cooldown": 1 },
+      { "Name": "Unstable Affliction", "Requirements": ["not HasDebuff:Unstable Affliction"], "Cooldown": 1 },
+      { "Name": "Shadow Bolt", "WhenUsable": true }
+    ]
+  },
+  "Combat": {
+    "Sequence": [
+      { "Name": "Death Coil", "Requirements": ["Health% < {DEATH_COIL_HP%}"], "Cooldown": 120 },
+      { "Name": "Use Healthstone", "Requirements": ["Health% < 25", "HasItem:Master Healthstone"], "Cooldown": 120 },
+      { "Name": "Drain Life", "Requirements": ["Health% < {DRAIN_LIFE_HP%}"], "Cooldown": 0 },
+      { "Name": "Health Funnel", "Requirements": ["Pet", "PetHealth% < {HEALTH_FUNNEL_PET%}", "Health% > 50"], "Cooldown": 0 },
+      { "Name": "Fear", "Requirements": ["Health% < {FEAR_HP%}", "MobCount == 1"], "Cooldown": 0 },
+      { "Name": "Howl of Terror", "Requirements": ["MobCount >= 2", "Health% < {FEAR_HP%}"], "Cooldown": 40 },
+      { "Name": "Seed of Corruption", "Requirements": ["MobCount >= {SEED_CORRUPTION_MOBS}"], "Cooldown": 0 },
+      { "Name": "Corruption", "Requirements": ["not HasDebuff:Corruption"], "Cooldown": 1 },
+      { "Name": "Curse of Agony", "Requirements": ["not HasDebuff:Curse of Agony"], "Cooldown": 1 },
+      { "Name": "Unstable Affliction", "Requirements": ["not HasDebuff:Unstable Affliction"], "Cooldown": 1 },
+      { "Name": "Siphon Life", "Requirements": ["Health% < {SIPHON_LIFE_HP%}", "not HasDebuff:Siphon Life"], "Cooldown": 1 },
+      { "Name": "Shadowburn", "Requirements": ["TargetHealth% < 10"], "Cooldown": 15 },
+      { "Name": "Drain Soul", "Requirements": ["TargetHealth% < 25"], "Cooldown": 0 },
+      { "Name": "Shadow Bolt", "WhenUsable": true }
+    ]
+  },
+  "Flee": {
+    "Sequence": [
+      { "Name": "Death Coil", "WhenUsable": true, "Cooldown": 120 },
+      { "Name": "Howl of Terror", "WhenUsable": true, "Cooldown": 40 },
+      { "Name": "Fear", "Requirements": ["MobCount == 1"], "Cooldown": 0 }
+    ]
+  },
+  "Adhoc": {
+    "Sequence": [
+      { "Name": "Life Tap", "Requirements": ["Mana% < 40", "Health% > {LIFETAP_HP%}"], "Cooldown": 0 },
+      { "Name": "Dark Pact", "Requirements": ["Mana% < {DARK_PACT_MANA%}", "Pet", "PetMana% > 30"], "Cooldown": 0 },
+      { "Name": "Fel Armor", "Requirements": ["not HasBuff:Fel Armor", "Level >= 62"], "Cooldown": 0 },
+      { "Name": "Demon Armor", "Requirements": ["not HasBuff:Demon Armor", "not HasBuff:Fel Armor", "Level < 62"], "Cooldown": 0 },
+      { "Name": "Summon Felhunter", "Requirements": ["not Pet", "HasItem:Soul Shard", "not InCombat"], "Cooldown": 10 }
+    ]
+  },
+  "Parallel": {
+    "Sequence": []
+  },
+  "NPC": {
+    "Sequence": [
+      { "Name": "Repair", "Requirements": ["DurabilityPercent < 50"] },
+      { "Name": "Sell", "Requirements": ["BagsFull"] },
+      { "Name": "Train", "Requirements": ["NewSkillAvailable"] }
+    ]
+  }
+}

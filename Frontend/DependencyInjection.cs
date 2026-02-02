@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Builder;
+using System.IO;
+
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
@@ -23,41 +25,26 @@ public static class DependencyInjection
     {
         DataConfig dataConfig = app.ApplicationServices.GetRequiredService<DataConfig>();
 
-        app.UseStaticFiles(new StaticFileOptions
+        // Helper to safely create static file provider
+        void AddStaticFiles(string path, string requestPath)
         {
-            FileProvider = new PhysicalFileProvider(Path.Combine(env.ContentRootPath, dataConfig.Path)),
-            RequestPath = "/path"
-        });
+            var fullPath = Path.Combine(env.ContentRootPath, path);
+            if (Directory.Exists(fullPath))
+            {
+                app.UseStaticFiles(new StaticFileOptions
+                {
+                    FileProvider = new PhysicalFileProvider(fullPath),
+                    RequestPath = requestPath
+                });
+            }
+        }
 
-        app.UseStaticFiles(new StaticFileOptions
-        {
-            FileProvider = new PhysicalFileProvider(Path.Combine(env.ContentRootPath, dataConfig.Leaflet)),
-            RequestPath = "/tiles"
-        });
-
-        app.UseStaticFiles(new StaticFileOptions
-        {
-            FileProvider = new PhysicalFileProvider(Path.Combine(env.ContentRootPath, dataConfig.ExpDbc)),
-            RequestPath = "/dbc"
-        });
-
-        app.UseStaticFiles(new StaticFileOptions
-        {
-            FileProvider = new PhysicalFileProvider(Path.Combine(env.ContentRootPath, dataConfig.ExpArea)),
-            RequestPath = "/area"
-        });
-
-        app.UseStaticFiles(new StaticFileOptions
-        {
-            FileProvider = new PhysicalFileProvider(Path.Combine(env.ContentRootPath, dataConfig.NpcSpawnLocations)),
-            RequestPath = "/npcspawnlocations"
-        });
-
-        app.UseStaticFiles(new StaticFileOptions
-        {
-            FileProvider = new PhysicalFileProvider(Path.Combine(env.ContentRootPath, dataConfig.MailboxLocations)),
-            RequestPath = "/mailboxlocations"
-        });
+        AddStaticFiles(dataConfig.Path, "/path");
+        AddStaticFiles(dataConfig.Leaflet, "/tiles");
+        AddStaticFiles(dataConfig.ExpDbc, "/dbc");
+        AddStaticFiles(dataConfig.ExpArea, "/area");
+        AddStaticFiles(dataConfig.NpcSpawnLocations, "/npcspawnlocations");
+        AddStaticFiles(dataConfig.MailboxLocations, "/mailboxlocations");
 
         return app;
     }

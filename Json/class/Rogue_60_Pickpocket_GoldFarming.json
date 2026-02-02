@@ -1,0 +1,90 @@
+{
+  "ClassName": "Rogue",
+  "OverridePathFilename": "",
+  "Paths": [
+    { "PathFilename": "GoldFarm_Felwood_Jadefire_Felcloth.json", "Requirements": ["Level >= 55"] },
+    { "PathFilename": "GoldFarm_Azshara_BloodElves_Runecloth.json", "Requirements": ["Level >= 55"] },
+    { "PathFilename": "GoldFarm_Winterspring_Winterfall_Firewater.json", "Requirements": ["Level >= 55"] }
+  ],
+  "Mode": "Grind",
+  "Description": "Combat Rogue Gold Farming - Stealth pickpocket and fast kills",
+  "IntVariables": {
+    "EVISCERATE_CP": 5,
+    "SLICE_DICE_CP": 2,
+    "RUPTURE_CP": 4,
+    "EVASION_HP%": 40,
+    "VANISH_HP%": 20,
+    "BLADE_FLURRY_HP%": 80,
+    "ADRENALINE_RUSH_HP%": 70,
+    "BLIND_HP%": 25,
+    "KIDNEY_SHOT_HP%": 30
+  },
+  "KeyActions": [
+    { "Name": "Sinister Strike", "Key": "1", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Eviscerate", "Key": "2", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Slice and Dice", "Key": "3", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Rupture", "Key": "4", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Blade Flurry", "Key": "5", "WhenUsable": true, "Cooldown": 120 },
+    { "Name": "Adrenaline Rush", "Key": "6", "WhenUsable": true, "Cooldown": 300 },
+    { "Name": "Evasion", "Key": "7", "WhenUsable": true, "Cooldown": 300 },
+    { "Name": "Vanish", "Key": "8", "WhenUsable": true, "Cooldown": 300 },
+    { "Name": "Stealth", "Key": "9", "WhenUsable": true, "Cooldown": 10 },
+    { "Name": "Pick Pocket", "Key": "0", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Cheap Shot", "Key": "-", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Kidney Shot", "Key": "=", "WhenUsable": true, "Cooldown": 20 },
+    { "Name": "Gouge", "Key": "F1", "WhenUsable": true, "Cooldown": 10 },
+    { "Name": "Kick", "Key": "F2", "WhenUsable": true, "Cooldown": 10 },
+    { "Name": "Blind", "Key": "F3", "WhenUsable": true, "Cooldown": 180 },
+    { "Name": "Sprint", "Key": "F4", "WhenUsable": true, "Cooldown": 300 },
+    { "Name": "Riposte", "Key": "F5", "WhenUsable": true, "Cooldown": 6 },
+    { "Name": "Expose Armor", "Key": "F6", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Instant Poison", "Key": "F7", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Deadly Poison", "Key": "F8", "WhenUsable": true, "Cooldown": 0 }
+  ],
+  "Pull": {
+    "Sequence": [
+      { "Name": "Stealth", "Requirements": ["not HasBuff:Stealth", "not InCombat"], "Cooldown": 10 },
+      { "Name": "Pick Pocket", "Requirements": ["HasBuff:Stealth", "Range < 5"], "Cooldown": 0 },
+      { "Name": "Cheap Shot", "Requirements": ["HasBuff:Stealth", "Range < 5"], "Cooldown": 0 },
+      { "Name": "Sinister Strike", "WhenUsable": true }
+    ]
+  },
+  "Combat": {
+    "Sequence": [
+      { "Name": "Vanish", "Requirements": ["Health% < {VANISH_HP%}"], "Cooldown": 300 },
+      { "Name": "Evasion", "Requirements": ["Health% < {EVASION_HP%}"], "Cooldown": 300 },
+      { "Name": "Blind", "Requirements": ["Health% < {BLIND_HP%}", "MobCount >= 2"], "Cooldown": 180 },
+      { "Name": "Kidney Shot", "Requirements": ["Health% < {KIDNEY_SHOT_HP%}", "ComboPoints >= 3"], "Cooldown": 20 },
+      { "Name": "Kick", "Requirements": ["TargetCasting"], "Cooldown": 10 },
+      { "Name": "Blade Flurry", "Requirements": ["MobCount >= 2", "TargetHealth% > {BLADE_FLURRY_HP%}"], "Cooldown": 120 },
+      { "Name": "Adrenaline Rush", "Requirements": ["TargetHealth% > {ADRENALINE_RUSH_HP%}", "BossOrElite"], "Cooldown": 300 },
+      { "Name": "Riposte", "WhenUsable": true, "Cooldown": 6 },
+      { "Name": "Slice and Dice", "Requirements": ["ComboPoints >= {SLICE_DICE_CP}", "not HasBuff:Slice and Dice"], "Cooldown": 0 },
+      { "Name": "Eviscerate", "Requirements": ["ComboPoints >= {EVISCERATE_CP}"], "Cooldown": 0 },
+      { "Name": "Rupture", "Requirements": ["ComboPoints >= {RUPTURE_CP}", "not HasDebuff:Rupture", "TargetHealth% > 50"], "Cooldown": 0 },
+      { "Name": "Sinister Strike", "WhenUsable": true }
+    ]
+  },
+  "Flee": {
+    "Sequence": [
+      { "Name": "Vanish", "WhenUsable": true, "Cooldown": 300 },
+      { "Name": "Sprint", "WhenUsable": true, "Cooldown": 300 },
+      { "Name": "Gouge", "Requirements": ["Range < 5"], "Cooldown": 10 },
+      { "Name": "Blind", "WhenUsable": true, "Cooldown": 180 }
+    ]
+  },
+  "Adhoc": {
+    "Sequence": [
+      { "Name": "Stealth", "Requirements": ["not HasBuff:Stealth", "not InCombat"], "Cooldown": 10 }
+    ]
+  },
+  "Parallel": {
+    "Sequence": []
+  },
+  "NPC": {
+    "Sequence": [
+      { "Name": "Repair", "Requirements": ["DurabilityPercent < 50"] },
+      { "Name": "Sell", "Requirements": ["BagsFull"] }
+    ]
+  }
+}

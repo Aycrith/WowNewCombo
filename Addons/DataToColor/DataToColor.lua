@@ -276,6 +276,7 @@ function DataToColor:RegisterSlashCommands()
     DataToColor:RegisterChatCommand('dcbindings', 'SetDefaultBindings')
     DataToColor:RegisterChatCommand('dcactions', 'CreateSecureButtons')
     DataToColor:RegisterChatCommand('dccache', 'ToggleBitCache')
+    DataToColor:RegisterChatCommand('dccheck', 'RunDiagnostics')
 end
 
 function DataToColor:ToggleBitCache()

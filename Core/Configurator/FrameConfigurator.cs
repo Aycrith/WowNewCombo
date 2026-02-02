@@ -1,4 +1,4 @@
-﻿using Game;
+using Game;
 
 using Microsoft.Extensions.Logging;
 
@@ -10,6 +10,7 @@ using SixLabors.ImageSharp.Processing;
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Core;
 
@@ -18,10 +19,12 @@ public sealed class FrameConfigurator : IDisposable
     private enum Stage
     {
         Reset,
+        PreFlightCheck,
         DetectRunningGame,
         CheckGameWindowLocation,
         EnterConfigMode,
         WaitEnterConfigMode,
+        RetryEnterConfigMode,
         ValidateMetaSize,
         CreateDataFrames,
         ReturnNormalMode,
@@ -36,12 +39,14 @@ public sealed class FrameConfigurator : IDisposable
     private const int MAX_HEIGHT = 25; // this one just arbitrary number for sanity check
     private const int INTERVAL = 500;
     private const int MAX_WAIT_RETRIES = 10;
+    private const int MAX_CONFIG_RETRIES = 3;  // Retry toggle config this many times before failing
 
     private readonly ILogger<FrameConfigurator> logger;
     private readonly WowProcess process;
     private readonly IWowScreen screen;
     private readonly WowProcessInput input;
     private readonly AddonConfigurator addonConfigurator;
+    private readonly AddonValidator? addonValidator;
     private readonly Wait wait;
     private readonly IAddonDataProvider reader;
 
@@ -54,19 +59,36 @@ public sealed class FrameConfigurator : IDisposable
 
     public bool Saved { get; private set; }
     public bool AddonNotVisible { get; private set; }
+    
+    /// <summary>
+    /// Current status message for UI display.
+    /// </summary>
+    public string StatusMessage { get; private set; } = "Ready";
+    
+    /// <summary>
+    /// Indicates if there was a pre-flight validation failure.
+    /// </summary>
+    public bool PreFlightFailed { get; private set; }
+    
+    /// <summary>
+    /// Pre-flight validation result, if available.
+    /// </summary>
+    public AddonValidationResult? ValidationResult { get; private set; }
 
     public string ImageBase64 { private set; get; } = "iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==";
 
     private Rectangle screenRect = Rectangle.Empty;
     private Size size = Size.Empty;
     private int waitRetryCount = 0;
+    private int configRetryCount = 0;
 
     public event Action? OnUpdate;
 
     public FrameConfigurator(ILogger<FrameConfigurator> logger, Wait wait,
         WowProcess process, IAddonDataProvider reader,
         IWowScreen screen, WowProcessInput input,
-        AddonConfigurator addonConfigurator)
+        AddonConfigurator addonConfigurator,
+        AddonValidator? addonValidator = null)
     {
         this.logger = logger;
         this.wait = wait;
@@ -75,6 +97,7 @@ public sealed class FrameConfigurator : IDisposable
         this.screen = screen;
         this.input = input;
         this.addonConfigurator = addonConfigurator;
+        this.addonValidator = addonValidator;
     }
 
     public void Dispose()
@@ -107,10 +130,43 @@ public sealed class FrameConfigurator : IDisposable
                 screenRect = Rectangle.Empty;
                 size = Size.Empty;
                 ResetConfigState();
+                StatusMessage = "Initializing...";
 
                 stage++;
                 break;
+                
+            case Stage.PreFlightCheck:
+                if (auto && addonValidator != null)
+                {
+                    StatusMessage = "Running pre-flight checks...";
+                    ValidationResult = addonValidator.Validate();
+                    
+                    if (!ValidationResult.IsValid)
+                    {
+                        PreFlightFailed = true;
+                        logger.LogError("Pre-flight checks failed: {Summary}", ValidationResult.GetSummary());
+                        foreach (var error in ValidationResult.Errors)
+                        {
+                            logger.LogError("  - {Title}: {Description}", error.Title, error.Description);
+                        }
+                        StatusMessage = $"Pre-flight failed: {ValidationResult.GetSummary()}";
+                        stage = Stage.Reset;
+                        return false;
+                    }
+                    
+                    if (ValidationResult.HasWarnings)
+                    {
+                        logger.LogWarning("Pre-flight warnings: {Summary}", ValidationResult.GetSummary());
+                    }
+                    
+                    logger.LogInformation("Pre-flight checks passed");
+                }
+                PreFlightFailed = false;
+                stage++;
+                break;
+                
             case Stage.DetectRunningGame:
+                StatusMessage = "Detecting game...";
                 if (process.IsRunning)
                 {
                     if (auto)
@@ -126,16 +182,19 @@ public sealed class FrameConfigurator : IDisposable
                     if (auto)
                     {
                         logger.LogWarning($"{nameof(WowProcess)} no longer running!");
+                        StatusMessage = "Game not running";
                         return false;
                     }
                     stage--;
                 }
                 break;
             case Stage.CheckGameWindowLocation:
+                StatusMessage = "Checking window position...";
                 screen.GetRectangle(out screenRect);
                 if (screenRect.Location.X < 0 || screenRect.Location.Y < 0)
                 {
                     logger.LogWarning($"Client window outside of the visible area of the screen {screenRect.Location}");
+                    StatusMessage = "Window outside visible area";
                     stage = Stage.Reset;
 
                     if (auto)
@@ -162,11 +221,14 @@ public sealed class FrameConfigurator : IDisposable
                     {
                         stage = Stage.Reset;
                         logger.LogError("Addon is not installed!");
+                        StatusMessage = "Addon not installed";
                         return false;
                     }
                     logger.LogInformation($"Addon installed! Version: {version}");
 
-                    logger.LogInformation("Enter configuration mode.");
+                    StatusMessage = "Entering config mode...";
+                    logger.LogInformation("Enter configuration mode (attempt {Attempt}/{Max})", 
+                        configRetryCount + 1, MAX_CONFIG_RETRIES);
                     input.SetForegroundWindow();
                     wait.Fixed(INTERVAL);
                     ToggleInGameConfiguration();
@@ -187,6 +249,7 @@ public sealed class FrameConfigurator : IDisposable
                 break;
             case Stage.WaitEnterConfigMode:
                 {
+                    StatusMessage = $"Waiting for config mode ({waitRetryCount + 1}/{MAX_WAIT_RETRIES})...";
                     wait.Update();
                     DataFrameMeta temp = GetDataFrameMeta();
                     if (DataFrameMeta == DataFrameMeta.Empty && temp != DataFrameMeta.Empty)
@@ -194,20 +257,47 @@ public sealed class FrameConfigurator : IDisposable
                         DataFrameMeta = temp;
                         stage = Stage.ValidateMetaSize;
                         logger.LogInformation($"{DataFrameMeta}");
+                        configRetryCount = 0;  // Reset retry count on success
                     }
                     else
                     {
                         waitRetryCount++;
                         if (waitRetryCount >= MAX_WAIT_RETRIES)
                         {
-                            logger.LogError("Timeout waiting for config mode!");
-                            stage = Stage.Reset;
-                            if (auto) return false;
+                            // Check if we should retry
+                            if (configRetryCount < MAX_CONFIG_RETRIES - 1)
+                            {
+                                stage = Stage.RetryEnterConfigMode;
+                            }
+                            else
+                            {
+                                logger.LogError("Timeout waiting for config mode after {Retries} attempts!", 
+                                    configRetryCount + 1);
+                                logger.LogError("The SHIFT-PAGEUP binding may not be configured.");
+                                logger.LogError("In WoW, type: /dcactions to setup bindings");
+                                StatusMessage = "Config mode timeout - run /dcactions in WoW";
+                                stage = Stage.Reset;
+                                if (auto) return false;
+                            }
                         }
                     }
                 }
                 break;
+                
+            case Stage.RetryEnterConfigMode:
+                configRetryCount++;
+                logger.LogWarning("Config mode not detected, retrying (attempt {Attempt}/{Max})...", 
+                    configRetryCount + 1, MAX_CONFIG_RETRIES);
+                
+                // Wait a bit longer before retry
+                wait.Fixed(INTERVAL * 2);
+                
+                // Try toggling again
+                stage = Stage.EnterConfigMode;
+                break;
+                
             case Stage.ValidateMetaSize:
+                StatusMessage = "Validating frame size...";
                 size = DataFrameMeta.EstimatedSize(screenRect);
                 if (!size.IsEmpty &&
                     size.Width <= screenRect.Size.Width &&
@@ -219,6 +309,7 @@ public sealed class FrameConfigurator : IDisposable
                 else
                 {
                     logger.LogWarning($"Addon Rect({size}) size issue. Either too small or too big!");
+                    StatusMessage = "Invalid frame size";
                     stage = Stage.Reset;
 
                     if (auto)
@@ -226,6 +317,7 @@ public sealed class FrameConfigurator : IDisposable
                 }
                 break;
             case Stage.CreateDataFrames:
+                StatusMessage = "Creating data frames...";
 
                 Size addonSize = size;
                 var cropped = screen.ScreenImage.Clone(cropSize);
@@ -246,7 +338,8 @@ public sealed class FrameConfigurator : IDisposable
                 }
                 else
                 {
-                    logger.LogWarning($"DataFrameMeta and FrameConfig dosen't match Frames: ({DataFrames.Length}) != Meta: ({DataFrameMeta.Count})");
+                    logger.LogWarning($"DataFrameMeta and FrameConfig doesn't match Frames: ({DataFrames.Length}) != Meta: ({DataFrameMeta.Count})");
+                    StatusMessage = "Frame count mismatch";
                     stage = Stage.Reset;
 
                     if (auto)
@@ -257,6 +350,7 @@ public sealed class FrameConfigurator : IDisposable
             case Stage.ReturnNormalMode:
                 if (auto)
                 {
+                    StatusMessage = "Exiting config mode...";
                     logger.LogInformation("Exit configuration mode.");
                     input.SetForegroundWindow();
                     ToggleInGameConfiguration();
@@ -276,6 +370,7 @@ public sealed class FrameConfigurator : IDisposable
                 break;
             case Stage.WaitReturnNormalMode:
                 {
+                    StatusMessage = $"Waiting for normal mode ({waitRetryCount + 1}/{MAX_WAIT_RETRIES})...";
                     wait.Update();
                     DataFrameMeta temp = GetDataFrameMeta();
                     if (temp == DataFrameMeta.Empty)
@@ -289,6 +384,7 @@ public sealed class FrameConfigurator : IDisposable
                         if (waitRetryCount >= MAX_WAIT_RETRIES)
                         {
                             logger.LogError("Unable to return normal mode!");
+                            StatusMessage = "Could not exit config mode";
                             ResetConfigState();
                             return false;
                         }
@@ -296,6 +392,7 @@ public sealed class FrameConfigurator : IDisposable
                 }
                 break;
             case Stage.UpdateReader:
+                StatusMessage = "Updating data reader...";
                 reader.InitFrames(DataFrames);
                 wait.Update();
                 wait.Update();
@@ -303,18 +400,20 @@ public sealed class FrameConfigurator : IDisposable
                 stage++;
                 break;
             case Stage.ValidateData:
+                StatusMessage = "Validating character data...";
                 if (TryResolveRaceAndClass(out UnitRace race, out UnitClass @class, out ClientVersion clientVersion))
                 {
                     if (auto)
                     {
                         logger.LogInformation($"Found {clientVersion.ToStringF()} {race.ToStringF()} {@class.ToStringF()}!");
                     }
-
+                    StatusMessage = $"Detected: {race.ToStringF()} {@class.ToStringF()}";
                     stage++;
                 }
                 else
                 {
                     logger.LogError($"Unable to identify {nameof(ClientVersion)} {nameof(UnitRace)} and {nameof(UnitClass)}!");
+                    StatusMessage = "Could not detect character";
                     stage = Stage.Reset;
 
                     if (auto)
@@ -322,6 +421,7 @@ public sealed class FrameConfigurator : IDisposable
                 }
                 break;
             case Stage.Done:
+                StatusMessage = "Configuration complete";
                 return false;
             default:
                 break;
@@ -339,6 +439,7 @@ public sealed class FrameConfigurator : IDisposable
         AddonNotVisible = true;
         stage = Stage.Reset;
         Saved = false;
+        configRetryCount = 0;
 
         DataFrameMeta = DataFrameMeta.Empty;
         DataFrames = Array.Empty<DataFrame>();
@@ -379,7 +480,8 @@ public sealed class FrameConfigurator : IDisposable
             DataFrames.Length != DataFrameMeta.Count ||
             !TryResolveRaceAndClass(out _, out _, out _))
         {
-            logger.LogInformation("Frame configuration was incomplete! Please try again, after resolving the previusly mentioned issues...");
+            logger.LogInformation("Frame configuration was incomplete! Please try again, after resolving the previously mentioned issues...");
+            StatusMessage = "Configuration incomplete";
             ResetConfigState();
             return false;
         }
@@ -387,6 +489,7 @@ public sealed class FrameConfigurator : IDisposable
         screen.GetRectangle(out Rectangle rect);
         FrameConfig.Save(rect, version, DataFrameMeta, DataFrames);
         logger.LogInformation("Frame configuration was successful! Configuration saved!");
+        StatusMessage = "Configuration saved!";
         Saved = true;
 
         return true;
@@ -395,6 +498,7 @@ public sealed class FrameConfigurator : IDisposable
     public bool StartAutoConfig()
     {
         screen.Enabled = true;
+        PreFlightFailed = false;
 
         while (DoConfig(true))
         {
@@ -404,6 +508,88 @@ public sealed class FrameConfigurator : IDisposable
         screen.Enabled = false;
 
         return FinishConfig();
+    }
+
+    /// <summary>
+    /// Async version of StartAutoConfig that supports cancellation and doesn't block.
+    /// Use this from the startup orchestrator for non-blocking frame configuration.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>True if configuration succeeded, false otherwise</returns>
+    public async Task<bool> StartAutoConfigAsync(CancellationToken cancellationToken = default)
+    {
+        screen.Enabled = true;
+        PreFlightFailed = false;
+
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested && DoConfig(true))
+            {
+                // Use async delay instead of blocking wait
+                await Task.Delay(INTERVAL, cancellationToken);
+                wait.Update();
+            }
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                StatusMessage = "Configuration cancelled";
+                return false;
+            }
+
+            return FinishConfig();
+        }
+        catch (OperationCanceledException)
+        {
+            StatusMessage = "Configuration cancelled";
+            return false;
+        }
+        finally
+        {
+            screen.Enabled = false;
+        }
+    }
+
+    /// <summary>
+    /// Attempts auto-configuration with retries.
+    /// </summary>
+    /// <param name="maxRetries">Maximum number of retry attempts</param>
+    /// <param name="retryDelaySeconds">Delay between retries in seconds</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>True if configuration succeeded, false otherwise</returns>
+    public async Task<bool> StartAutoConfigWithRetriesAsync(
+        int maxRetries = 3,
+        int retryDelaySeconds = 5,
+        CancellationToken cancellationToken = default)
+    {
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            logger.LogInformation("Frame auto-configuration attempt {Attempt}/{MaxRetries}", attempt, maxRetries);
+
+            ResetConfigState();
+            var success = await StartAutoConfigAsync(cancellationToken);
+
+            if (success)
+            {
+                logger.LogInformation("Frame configuration succeeded on attempt {Attempt}", attempt);
+                return true;
+            }
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return false;
+            }
+
+            if (attempt < maxRetries)
+            {
+                logger.LogWarning("Frame configuration failed, retrying in {Delay} seconds...", retryDelaySeconds);
+                StatusMessage = $"Retrying in {retryDelaySeconds}s (attempt {attempt}/{maxRetries})...";
+                await Task.Delay(TimeSpan.FromSeconds(retryDelaySeconds), cancellationToken);
+            }
+        }
+
+        logger.LogError("Frame configuration failed after {MaxRetries} attempts", maxRetries);
+        StatusMessage = $"Configuration failed after {maxRetries} attempts";
+        return false;
     }
 
     public static void DeleteConfig()
