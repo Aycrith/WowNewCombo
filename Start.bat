@@ -191,25 +191,44 @@ echo  The bot will:
 echo    • Auto-detect your WoW installation
 echo    • Start the navigation server
 echo    • Install required addons
-echo    • Open the web interface in your browser
-echo.
-echo  Your browser should open at: http://localhost:5000
+echo    • Open the web interface in your browser (http://localhost:5000)
 echo.
 echo  To stop the bot, close this window or press Ctrl+C
 echo.
 echo  ════════════════════════════════════════════════════════════════
 echo.
 
+REM Start bot in a separate window so we can open browser
+REM We need to wait a moment for the bot to be ready before opening browser
 REM Start the bot - using Release build if available, otherwise Debug
 if exist "BlazorServer\bin\Release\net10.0\BlazorServer.exe" (
     echo Launching bot (Release build)...
-    BlazorServer\bin\Release\net10.0\BlazorServer.exe
+    REM Start bot in separate window
+    start "" BlazorServer\bin\Release\net10.0\BlazorServer.exe
+    
+    REM Wait for bot to start (5 seconds should be enough)
+    echo Waiting for bot to start...
+    timeout /t 5 /nobreak
+    
+    REM Open browser to localhost:5000
+    echo Opening browser...
+    start http://localhost:5000
+    
+    REM Wait for user to close the bot
+    echo.
+    echo Bot is running. Browser should open shortly.
+    echo Press Ctrl+C in the bot window to stop.
+    echo.
+    pause
 ) else (
     echo Launching bot (Debug build)...
+    REM For debug builds, we can't easily separate the windows, so just start it
     dotnet run --project BlazorServer\BlazorServer.csproj --no-build
 )
 
-REM If we reach here, the bot stopped
+REM If we reach here, either Release build exited or Debug build stopped
+REM For Release builds started with 'start', this message won't show
+REM For Debug builds, this will show when user closes or stops the bot
 echo.
 echo  ════════════════════════════════════════════════════════════════
 echo.
