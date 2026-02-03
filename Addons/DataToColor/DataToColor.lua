@@ -5,13 +5,13 @@
 -- Trigger between emitting game data and frame location data
 local SETUP_SEQUENCE = false
 -- Total number of data frames generated
-local NUMBER_OF_FRAMES = 111
+local NUMBER_OF_FRAMES = 324
 -- Set number of pixel rows
-local FRAME_ROWS = 1
+local FRAME_ROWS = 50
 -- Size of data squares in px. Varies based on rounding errors as well as dimension size. Use as a guideline, but not 100% accurate.
-local CELL_SIZE = 1 -- 1-9
+local CELL_SIZE = 4 -- 1-9
 -- Spacing in px between data squares.
-local CELL_SPACING = 1 -- 0 or 1
+local CELL_SPACING = 0 -- 0 or 1
 
 local GLOBAL_TIME_CELL = NUMBER_OF_FRAMES - 2
 
