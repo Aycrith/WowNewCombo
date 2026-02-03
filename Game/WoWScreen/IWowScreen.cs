@@ -1,4 +1,4 @@
-﻿using SharedLib;
+using SharedLib;
 
 using System;
 
@@ -16,4 +16,12 @@ public interface IWowScreen : IRectProvider, IScreenImageProvider, IMinimapImage
     event Action OnChanged;
 
     void Update();
+    
+    /// <summary>
+    /// Waits for a successful screen update with retries.
+    /// </summary>
+    /// <param name="maxAttempts">Maximum number of attempts</param>
+    /// <param name="delayMs">Delay between attempts in milliseconds</param>
+    /// <returns>True if a frame was successfully acquired</returns>
+    bool WaitForUpdate(int maxAttempts = 10, int delayMs = 50);
 }

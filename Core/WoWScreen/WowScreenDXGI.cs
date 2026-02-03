@@ -1,4 +1,4 @@
-﻿//#define SAVE_ADDON_IMAGE
+//#define SAVE_ADDON_IMAGE
 //#define SAVE_SCREEN_IMAGE
 
 using Game;
@@ -229,6 +229,30 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
     [SkipLocalsInit]
     public void Update()
     {
+        TryUpdate();
+    }
+
+    /// <summary>
+    /// Waits for a successful screen update with retries.
+    /// </summary>
+    /// <param name="maxAttempts">Maximum number of attempts</param>
+    /// <param name="delayMs">Delay between attempts in milliseconds</param>
+    /// <returns>True if a frame was successfully acquired</returns>
+    public bool WaitForUpdate(int maxAttempts = 10, int delayMs = 50)
+    {
+        for (int i = 0; i < maxAttempts; i++)
+        {
+            if (TryUpdate())
+                return true;
+            
+            System.Threading.Thread.Sleep(delayMs);
+        }
+        return false;
+    }
+
+    [SkipLocalsInit]
+    private bool TryUpdate()
+    {
         if (windowedMode)
         {
             GetRectangle(out screenRect);
@@ -238,12 +262,12 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
                 screenRect.Y < 0 ||
                 screenRect.Right > output.Description.DesktopCoordinates.Right ||
                 screenRect.Bottom > output.Description.DesktopCoordinates.Bottom)
-                return;
+                return false;
         }
 
         duplication.ReleaseFrame();
 
-        Result result = duplication.AcquireNextFrame(5,
+        Result result = duplication.AcquireNextFrame(50, // Increased timeout to 50ms
             out OutduplFrameInfo frame,
             out IDXGIResource idxgiResource);
 
@@ -254,7 +278,7 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
             frame.TotalMetadataBufferSize == 0 ||
             frame.LastPresentTime == 0)
         {
-            return;
+            return false;
         }
 
         ID3D11Texture2D texture
@@ -270,6 +294,7 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
             UpdateMinimapImage(texture);
 
         texture.Dispose();
+        return true;
     }
 
     [SkipLocalsInit]

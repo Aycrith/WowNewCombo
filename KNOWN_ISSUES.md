@@ -1,5 +1,17 @@
 # Known Issues and Troubleshooting Guide
 
+## ✅ RESOLVED: Frame Detection Limited to 256 Frames (Fixed Feb 3, 2026)
+
+**Previous Symptom**: "Only found 256/324 frames" in logs
+
+**Cause**: Byte overflow bug in `Core/DataFrame/FrameConfig.cs` - frame indices ≥256 couldn't be detected
+
+**Status**: ✅ **FIXED** - All 324 frames now detect correctly
+
+**Details**: See `CRITICAL_BUG_FIX_FRAME_DETECTION.md` for complete technical breakdown
+
+---
+
 ## Issue 1: BindPadMinimal XML Not Loading
 
 **Symptom**: LUA error on WoW startup mentioning "not well-formed (invalid token)"

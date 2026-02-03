@@ -46,6 +46,35 @@ Existing `.editorconfig` defines style rules. Key conventions:
 - Use pattern matching and null propagation
 - Prefer braces for control statements
 
+## Critical Lessons Learned
+
+### Type Safety in Comparisons (Feb 2026)
+**Context**: Frame detection byte overflow bug
+
+**Issue**: Comparing `byte` values against `int` loop variables can silently fail when values exceed 255:
+```csharp
+// WRONG: pixel.B is byte (0-255), i can be 0-323
+if (pixel.B == i && pixel.R == 0 && pixel.G == 0)  // Fails when i >= 256
+```
+
+**Correct**:
+```csharp
+// Decode int to expected RGB bytes matching addon's encoding
+byte expectedR = (byte)((i >> 16) & 255);
+byte expectedG = (byte)((i >> 8) & 255);
+byte expectedB = (byte)(i & 255);
+if (pixel.R == expectedR && pixel.G == expectedG && pixel.B == expectedB)
+```
+
+**Key Takeaways**:
+1. Always validate type ranges match your data domain
+2. Test boundary values (255, 256, etc.) explicitly
+3. Document encoding schemes clearly (e.g., how integers map to RGB)
+4. Add comprehensive logging for detection failures
+5. Consider adding unit tests for edge cases
+
+**See Also**: `CRITICAL_BUG_FIX_FRAME_DETECTION.md` for full technical details
+
 ## Project Structure
 - `BlazorServer/` - Main web application entry point
 - `Core/` - Core business logic
