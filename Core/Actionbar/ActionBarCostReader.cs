@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 
 using System;
 using System.Runtime.CompilerServices;
@@ -55,6 +55,14 @@ public sealed class ActionBarCostReader : IReader
         int type = meta % POWER_TYPE_MOD;
 
         int index = (slotIdx * NUM_OF_COST) + costIdx;
+
+        // Bounds check - protect against out-of-bounds access
+        if (index < 0 || index >= Data.Length)
+        {
+            logger.LogWarning("ActionBarCostReader: Invalid index {index} (slotIdx: {slotIdx}, costIdx: {costIdx}, meta: {meta}). Array length: {arrayLength}. Skipping update.", 
+                index, slotIdx, costIdx, meta, Data.Length);
+            return;
+        }
 
         ActionBarCost old = Data[index];
         Data[index] = new((PowerType)type, cost);

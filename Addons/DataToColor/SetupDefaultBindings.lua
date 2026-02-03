@@ -321,6 +321,38 @@ function DataToColor:SetDefaultBindings()
   DataToColor:CheckBindingChanges()
 end
 
+-- Sets number row keys (1-9,0,-,=) to main action bar slots 1-12
+-- This is an alternative binding scheme for profiles that use number keys
+-- instead of NumPad or F-keys
+function DataToColor:SetNumberRowBindings()
+  if InCombatLockdown and InCombatLockdown() then
+    DataToColor:Print("Can't apply bindings in combat.")
+    return
+  end
+
+  DataToColor:Print("Applying number row action bar bindings...")
+
+  local wasChanged = false
+
+  -- Main action bar slots 1-12 => 1,2,3,4,5,6,7,8,9,0,-,=
+  local numRowKeys = {"1","2","3","4","5","6","7","8","9","0","-","="}
+  for i = 1, 12 do
+    wasChanged = Bind(numRowKeys[i], "ACTIONBUTTON"..i) or wasChanged
+  end
+
+  if wasChanged then
+    local bindingSet = GetCurrentBindingSet()
+    SaveBindings(bindingSet)
+    local bindingType = bindingSet == 1 and "account-wide" or "character-specific"
+    DataToColor:Print("Number row bindings changed and saved to " .. bindingType .. ".")
+  else
+    DataToColor:Print("Number row bindings already configured.")
+  end
+
+  -- Refresh binding cache so KeyBindingsReader picks up any changes
+  DataToColor:CheckBindingChanges()
+end
+
 -- Sets only essential bindings (targeting, interaction, pet) without touching action bars
 -- Used by auto-setup to avoid overwriting player's action bar keybinds
 function DataToColor:SetEssentialBindings()

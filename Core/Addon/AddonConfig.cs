@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 
 using System.IO;
 
@@ -26,6 +26,9 @@ public sealed class AddonConfig
 
     [JsonIgnore]
     public string CommandBindings => Command + "bindings";
+
+    [JsonIgnore]
+    public string CommandNumberKeys => Command + "numberkeys";
 
     [JsonIgnore]
     public string CommandActions => Command + "actions";
