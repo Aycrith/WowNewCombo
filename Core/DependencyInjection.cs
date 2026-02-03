@@ -178,6 +178,9 @@ public static class DependencyInjection
         s.AddSingleton<SpellDB>();
         s.AddSingleton<IconDB>();
 
+        // Required by TestController for E2E testing
+        s.AddAddonComponents();
+
         return s;
     }
 

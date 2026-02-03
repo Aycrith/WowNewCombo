@@ -339,6 +339,278 @@ public class DiagnosticsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// GET /api/diagnostics/slot/{slotNumber}
+    /// Returns the raw integer value from a specific addon frame slot
+    /// </summary>
+    [HttpGet("slot/{slotNumber:int}")]
+    public IActionResult GetSlotValue(int slotNumber)
+    {
+        try
+        {
+            if (slotNumber < 0 || slotNumber >= 324)
+            {
+                return BadRequest(new { Error = $"Slot number must be between 0 and 323 (got {slotNumber})" });
+            }
+
+            IAddonReader reader = addonReader;
+            IAddonDataProvider dataProvider = ((AddonReader)reader).DataProvider;
+            int value = dataProvider.GetInt(slotNumber);
+            
+            return Ok(new
+            {
+                Slot = slotNumber,
+                Value = value,
+                Hex = $"0x{value:X8}",
+                Timestamp = DateTime.UtcNow
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to read slot {Slot}", slotNumber);
+            return StatusCode(500, new { Error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// GET /api/diagnostics/slots/range?start=0&end=10
+    /// Returns raw values from a range of slots
+    /// </summary>
+    [HttpGet("slots/range")]
+    public IActionResult GetSlotRange([FromQuery] int start = 0, [FromQuery] int end = 10)
+    {
+        try
+        {
+            if (start < 0 || start >= 324)
+                return BadRequest(new { Error = $"Start must be between 0 and 323 (got {start})" });
+            if (end < 0 || end >= 324)
+                return BadRequest(new { Error = $"End must be between 0 and 323 (got {end})" });
+            if (end < start)
+                return BadRequest(new { Error = $"End ({end}) must be >= start ({start})" });
+            if ((end - start) > 50)
+                return BadRequest(new { Error = $"Range too large. Max 50 slots at once (requested {end - start + 1})" });
+
+            IAddonReader reader = addonReader;
+            IAddonDataProvider dataProvider = ((AddonReader)reader).DataProvider;
+            List<object> slots = [];
+
+            for (int i = start; i <= end; i++)
+            {
+                int value = dataProvider.GetInt(i);
+                slots.Add(new
+                {
+                    Slot = i,
+                    Value = value,
+                    Hex = $"0x{value:X8}"
+                });
+            }
+
+            return Ok(new
+            {
+                Start = start,
+                End = end,
+                Count = slots.Count,
+                Slots = slots,
+                Timestamp = DateTime.UtcNow
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to read slot range {Start}-{End}", start, end);
+            return StatusCode(500, new { Error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// GET /api/diagnostics/keybindings/stats
+    /// Returns statistics about keybinding slot reads
+    /// </summary>
+    [HttpGet("keybindings/stats")]
+    public IActionResult GetKeybindingStats()
+    {
+        try
+        {
+            (int totalReads, int nonZeroReads, int consecutiveZeros) = keyBindingsReader.GetReadStats();
+            
+            return Ok(new
+            {
+                TotalReads = totalReads,
+                NonZeroReads = nonZeroReads,
+                ConsecutiveZeros = consecutiveZeros,
+                IsInitialized = keyBindingsReader.IsInitialized,
+                BindingCount = keyBindingsReader.Count,
+                PercentageNonZero = totalReads > 0 ? (nonZeroReads * 100.0 / totalReads) : 0.0,
+                Timestamp = DateTime.UtcNow
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get keybinding stats");
+            return StatusCode(500, new { Error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// GET /api/diagnostics/monitor/slot106?duration=5
+    /// Monitors slot 106 for a specified duration (in seconds) and returns all values seen
+    /// </summary>
+    [HttpGet("monitor/slot106")]
+    public async Task<IActionResult> MonitorSlot106([FromQuery] int duration = 5)
+    {
+        try
+        {
+            if (duration < 1 || duration > 30)
+                return BadRequest(new { Error = "Duration must be between 1 and 30 seconds" });
+
+            IAddonReader reader = addonReader;
+            IAddonDataProvider dataProvider = ((AddonReader)reader).DataProvider;
+            List<object> readings = [];
+            DateTime startTime = DateTime.UtcNow;
+            DateTime endTime = startTime.AddSeconds(duration);
+            int lastValue = -1;
+            int sameValueCount = 0;
+
+            while (DateTime.UtcNow < endTime)
+            {
+                int value = dataProvider.GetInt(106);
+                
+                if (value != lastValue)
+                {
+                    if (lastValue != -1)
+                    {
+                        // Record the previous value's duration
+                        readings.Add(new
+                        {
+                            Value = lastValue,
+                            Hex = $"0x{lastValue:X8}",
+                            Count = sameValueCount,
+                            Timestamp = DateTime.UtcNow.ToString("HH:mm:ss.fff")
+                        });
+                    }
+                    lastValue = value;
+                    sameValueCount = 1;
+                }
+                else
+                {
+                    sameValueCount++;
+                }
+
+                await Task.Delay(10); // 10ms between reads (~100 reads/sec)
+            }
+
+            // Add the last value
+            if (lastValue != -1)
+            {
+                readings.Add(new
+                {
+                    Value = lastValue,
+                    Hex = $"0x{lastValue:X8}",
+                    Count = sameValueCount,
+                    Timestamp = DateTime.UtcNow.ToString("HH:mm:ss.fff")
+                });
+            }
+
+            return Ok(new
+            {
+                DurationSeconds = duration,
+                TotalReadings = readings.Count,
+                NonZeroCount = readings.Count(r => ((dynamic)r).Value != 0),
+                Values = readings,
+                StartTime = startTime.ToString("HH:mm:ss.fff"),
+                EndTime = DateTime.UtcNow.ToString("HH:mm:ss.fff")
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to monitor slot 106");
+            return StatusCode(500, new { Error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// GET /api/diagnostics/bot/state
+    /// Returns current bot state including goals, profile, and system health
+    /// </summary>
+    [HttpGet("bot/state")]
+    public IActionResult GetBotState()
+    {
+        try
+        {
+            Core.GOAP.GoapAgent? goapAgent = botController.GoapAgent;
+            string currentGoal = goapAgent?.CurrentGoal?.GetType().Name ?? "None";
+            List<string> goalStack = goapAgent?.Plan?.Select(g => g.GetType().Name).ToList() ?? [];
+
+            return Ok(new
+            {
+                BotActive = botController.IsBotActive,
+                CurrentGoal = currentGoal,
+                GoalStackDepth = goalStack.Count,
+                GoalStack = goalStack,
+                Profile = new
+                {
+                    FileName = botController.SelectedClassFilename,
+                    Mode = botController.ClassConfig?.Mode.ToString(),
+                    PathCount = botController.SelectedPathFilename?.Count ?? 0
+                },
+                System = new
+                {
+                    AvgScreenLatency = botController.AvgScreenLatency,
+                    AvgNPCLatency = botController.AvgNPCLatency,
+                    KeybindingsInitialized = keyBindingsReader.IsInitialized,
+                    ActionBarInitialized = textureReader.IsInitialized
+                },
+                Timestamp = DateTime.UtcNow
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get bot state");
+            return StatusCode(500, new { Error = ex.Message, Stack = ex.StackTrace });
+        }
+    }
+
+    /// <summary>
+    /// GET /api/diagnostics/bot/combat-log
+    /// Returns recent combat log entries
+    /// </summary>
+    [HttpGet("bot/combat-log")]
+    public IActionResult GetCombatLog([FromQuery] int count = 20)
+    {
+        try
+        {
+            if (count < 1 || count > 100)
+                return BadRequest(new { Error = "Count must be between 1 and 100" });
+
+            // Try to get combat log via reflection
+            Type addonReaderType = addonReader.GetType();
+            var combatLogField = addonReaderType.GetField("combatLog", 
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            
+            if (combatLogField == null)
+            {
+                return Ok(new { Message = "Combat log not available", Entries = Array.Empty<object>() });
+            }
+
+            dynamic? combatLog = combatLogField.GetValue(addonReader);
+            if (combatLog == null)
+            {
+                return Ok(new { Message = "Combat log is null", Entries = Array.Empty<object>() });
+            }
+
+            return Ok(new
+            {
+                Count = count,
+                Entries = new { Message = "Combat log entries available but format unknown - implement based on CombatLog class" },
+                Timestamp = DateTime.UtcNow
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get combat log");
+            return StatusCode(500, new { Error = ex.Message });
+        }
+    }
+
     #endregion
 
     #region Fix Endpoints

@@ -465,6 +465,7 @@ function DataToColor:FushState()
 
     DataToColor:Reset()
     DataToColor:ClearAllQueues()
+    DataToColor:ClearBindingCache()  -- Clear binding cache so bindings repush
 
     DataToColor:PopulateSpellBookInfo()
     DataToColor:InitUpdateQueues()

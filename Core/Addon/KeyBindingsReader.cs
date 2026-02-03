@@ -16,6 +16,9 @@ public sealed partial class KeyBindingsReader : IReader
     private readonly Dictionary<BindingID, (ConsoleKey Key, ModifierKey Modifier)> secondaryBindings = [];
 
     private bool initialized;
+    private int consecutiveZeroReads = 0;
+    private int totalReads = 0;
+    private int nonZeroReads = 0;
 
     public int Count => bindings.Count;
     public bool IsInitialized => initialized;
@@ -36,16 +39,36 @@ public sealed partial class KeyBindingsReader : IReader
     public void Update(IAddonDataProvider reader)
     {
         int encodedValue = reader.GetInt(BINDING_SLOT);
+        totalReads++;
+        
         if (encodedValue == 0)
         {
+            consecutiveZeroReads++;
+            
+            // Log every 100 zero reads to avoid spam
+            if (consecutiveZeroReads % 100 == 0)
+            {
+                LogDebugZeroReadStats(logger, consecutiveZeroReads, totalReads, nonZeroReads);
+            }
+            
             // Queue exhausted, mark as initialized if we received any bindings
             if (bindings.Count > 0 && !initialized)
             {
                 initialized = true;
                 LogBindingsInitialized(logger, bindings.Count);
             }
+            else if (!initialized)
+            {
+                // Still waiting for bindings
+                LogDebugWaitingForBindings(logger, bindings.Count);
+            }
             return;
         }
+
+        // Non-zero value detected!
+        consecutiveZeroReads = 0;
+        nonZeroReads++;
+        LogDebugSlotValue(logger, encodedValue);
 
         var decoded = KeyReader.DecodeBinding(encodedValue);
         if (decoded.HasValue)
@@ -238,7 +261,31 @@ public sealed partial class KeyBindingsReader : IReader
         Message = "Binding removed: {bindingId}")]
     static partial void LogBindingRemoved(ILogger logger, string bindingId);
 
+    [LoggerMessage(
+        EventId = 5,
+        Level = LogLevel.Debug,
+        Message = "Reading binding slot - encodedValue={encodedValue}")]
+    static partial void LogDebugSlotValue(ILogger logger, int encodedValue);
+
+    [LoggerMessage(
+        EventId = 6,
+        Level = LogLevel.Debug,
+        Message = "Waiting for bindings - current count={count}")]
+    static partial void LogDebugWaitingForBindings(ILogger logger, int count);
+
+    [LoggerMessage(
+        EventId = 7,
+        Level = LogLevel.Information,
+        Message = "[KeyBindings Slot 106 Stats] Consecutive zeros: {consecutiveZeros}, Total reads: {totalReads}, Non-zero reads: {nonZeroReads}")]
+    static partial void LogDebugZeroReadStats(ILogger logger, int consecutiveZeros, int totalReads, int nonZeroReads);
+
     #endregion
+    
+    /// <summary>
+    /// Gets diagnostic statistics about slot reading
+    /// </summary>
+    public (int TotalReads, int NonZeroReads, int ConsecutiveZeros) GetReadStats() =>
+        (totalReads, nonZeroReads, consecutiveZeroReads);
 }
 
 public readonly record struct BindingMismatch(

@@ -29,6 +29,11 @@ public sealed class AddonReader : IAddonReader
 
     public RecordInt GlobalTime { get; }
 
+    /// <summary>
+    /// Exposes the underlying data provider for direct frame access (diagnostics/testing)
+    /// </summary>
+    public IAddonDataProvider DataProvider => reader;
+
     private int lastTargetGuid = -1;
     public string TargetName { get; private set; } = string.Empty;
 

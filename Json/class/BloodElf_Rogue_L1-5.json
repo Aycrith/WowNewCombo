@@ -1,0 +1,107 @@
+{
+  "Log": true,
+  "ClassName": "Rogue",
+  "KeyboardOnly": true,
+  "Loot": true,
+  "GatherCorpse": true,
+  "UseMount": false,
+  "AllowPvP": false,
+  "NPCMaxLevels_Above": 1,
+  "NPCMaxLevels_Below": 3,
+
+  "IntVariables": {
+    "FOOD_HP%": 55,
+    "EVISCERATE_CP": 2
+  },
+
+  "Paths": [
+    {
+      "PathFilename": "_pack\\1-20\\Blood elf\\1-6_Eversong Woods.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true
+    }
+  ],
+
+  "Wait": {
+    "Sequence": [
+      {
+        "Cost": 0.9,
+        "Name": "User",
+        "Requirement": "MenuOpen || ChatInputVisible"
+      }
+    ]
+  },
+
+  "Pull": {
+    "Sequence": [
+      {
+        "Name": "Stealth",
+        "Key": "1",
+        "WhenUsable": true,
+        "Requirement": "!Stealth && Energy > 30 && !Swimming",
+        "AfterCastWaitBuff": true
+      },
+      {
+        "Name": "Approach"
+      }
+    ]
+  },
+
+  "Combat": {
+    "Sequence": [
+      {
+        "Name": "Eviscerate",
+        "Key": "3",
+        "Requirement": "Combo Point >= EVISCERATE_CP"
+      },
+      {
+        "Name": "Sinister Strike",
+        "Key": "2",
+        "Requirement": "Energy >= 45"
+      },
+      {
+        "Name": "AutoAttack"
+      },
+      {
+        "Name": "Approach",
+        "Log": false
+      }
+    ]
+  },
+
+  "Adhoc": {
+    "Sequence": [
+      {
+        "Name": "Stealth",
+        "Key": "1",
+        "WhenUsable": true,
+        "Requirement": "!Stealth && !Swimming && !InCombat && Energy > 30",
+        "Cost": 2
+      },
+      {
+        "Name": "Food",
+        "Key": "=",
+        "Requirement": "Health% < FOOD_HP%",
+        "Cost": 3
+      }
+    ]
+  },
+
+  "NPC": {
+    "Sequence": [
+      {
+        "Name": "Repair",
+        "Requirement": "Durability% < 35",
+        "Cost": 6
+      },
+      {
+        "Name": "Sell",
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ],
+        "Cost": 6
+      }
+    ]
+  }
+}

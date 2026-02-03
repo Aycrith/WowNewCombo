@@ -307,3 +307,17 @@ PathingAPI/data_config.json
 
 # BenchmarkDotNet artifacts
 **/BenchmarkDotNet.Artifacts/
+
+# Session-specific files (not for version control)
+session-*.md
+nul
+*.txt.backup
+test-report-*.json
+diagnostic_report.md
+EXECUTION_READY.txt
+READY_TO_LAUNCH.txt
+
+# Navigation server binaries (too large for git)
+Navigation/mmaps/
+Navigation/*.exe
+Navigation/*.dll

@@ -1,4 +1,4 @@
-﻿using Game;
+using Game;
 
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -40,6 +40,11 @@ internal sealed class MockWoWScreen : IWowScreen
     }
 
     public void Update() { }
+
+    public bool WaitForUpdate(int maxAttempts = 10, int delayMs = 50)
+    {
+        throw new NotImplementedException();
+    }
 
     public void PostProcess()
     {

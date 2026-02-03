@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 
 using System.Collections.Generic;
 
@@ -73,12 +73,20 @@ public sealed class ActionBarPopulator
     private void AddUnique(List<ActionBarSlotItem> items, KeyAction keyAction)
     {
         // not bound to actionbar slot
-        if (keyAction.Slot == 0) return;
+        if (keyAction.Slot == 0)
+        {
+            logger.LogDebug("Skipping {Name} - no action bar slot assigned", keyAction.Name);
+            return;
+        }
 
         for (int i = 0; i < items.Count; i++)
         {
             if (items[i].KeyAction.SlotIndex == keyAction.SlotIndex)
+            {
+                logger.LogDebug("Skipping {Name} - slot {Slot} already assigned to {Existing}",
+                    keyAction.Name, keyAction.Slot, items[i].Name);
                 return;
+            }
         }
 
         string name = keyAction.Name;
@@ -86,24 +94,36 @@ public sealed class ActionBarPopulator
 
         if (name.Equals(RequirementFactory.Drink, System.StringComparison.OrdinalIgnoreCase))
         {
-            name = bagReader.HighestQuantityOfDrinkItemId().ToString();
+            int drinkId = bagReader.HighestQuantityOfDrinkItemId();
+            if (drinkId == 0)
+                logger.LogWarning("No drink items in bags for '{Name}'", keyAction.Name);
+            name = drinkId.ToString();
             isItem = true;
         }
         else if (name.Equals(RequirementFactory.Food, System.StringComparison.OrdinalIgnoreCase))
         {
-            name = bagReader.HighestQuantityOfFoodItemId().ToString();
+            int foodId = bagReader.HighestQuantityOfFoodItemId();
+            if (foodId == 0)
+                logger.LogWarning("No food items in bags for '{Name}'", keyAction.Name);
+            name = foodId.ToString();
             isItem = true;
         }
         else if (keyAction.Item)
         {
             if (keyAction.Name == "Trinket 1")
             {
-                name = equipmentReader.GetId((int)InventorySlotId.Trinket_1).ToString();
+                int trinketId = equipmentReader.GetId((int)InventorySlotId.Trinket_1);
+                if (trinketId == 0)
+                    logger.LogWarning("No trinket equipped in slot Trinket_1 for '{Name}'", keyAction.Name);
+                name = trinketId.ToString();
                 isItem = true;
             }
             else if (keyAction.Name == "Trinket 2")
             {
-                name = equipmentReader.GetId((int)InventorySlotId.Trinket_2).ToString();
+                int trinketId = equipmentReader.GetId((int)InventorySlotId.Trinket_2);
+                if (trinketId == 0)
+                    logger.LogWarning("No trinket equipped in slot Trinket_2 for '{Name}'", keyAction.Name);
+                name = trinketId.ToString();
                 isItem = true;
             }
         }
@@ -147,31 +167,47 @@ public sealed class ActionBarPopulator
     public bool Place(KeyAction keyAction)
     {
         if (keyAction.Slot == 0 || string.IsNullOrEmpty(keyAction.Name))
+        {
+            logger.LogDebug("Cannot place action - Slot={Slot}, Name='{Name}'",
+                keyAction.Slot, keyAction.Name ?? "(null)");
             return false;
+        }
 
         string name = keyAction.Name;
         bool isItem = false;
 
         if (name.Equals(RequirementFactory.Drink, System.StringComparison.OrdinalIgnoreCase))
         {
-            name = bagReader.HighestQuantityOfDrinkItemId().ToString();
+            int drinkId = bagReader.HighestQuantityOfDrinkItemId();
+            if (drinkId == 0)
+                logger.LogWarning("No drink items in bags for '{Name}' (Place)", keyAction.Name);
+            name = drinkId.ToString();
             isItem = true;
         }
         else if (name.Equals(RequirementFactory.Food, System.StringComparison.OrdinalIgnoreCase))
         {
-            name = bagReader.HighestQuantityOfFoodItemId().ToString();
+            int foodId = bagReader.HighestQuantityOfFoodItemId();
+            if (foodId == 0)
+                logger.LogWarning("No food items in bags for '{Name}' (Place)", keyAction.Name);
+            name = foodId.ToString();
             isItem = true;
         }
         else if (keyAction.Item)
         {
             if (keyAction.Name == "Trinket 1")
             {
-                name = equipmentReader.GetId((int)InventorySlotId.Trinket_1).ToString();
+                int trinketId = equipmentReader.GetId((int)InventorySlotId.Trinket_1);
+                if (trinketId == 0)
+                    logger.LogWarning("No trinket equipped in slot Trinket_1 for '{Name}' (Place)", keyAction.Name);
+                name = trinketId.ToString();
                 isItem = true;
             }
             else if (keyAction.Name == "Trinket 2")
             {
-                name = equipmentReader.GetId((int)InventorySlotId.Trinket_2).ToString();
+                int trinketId = equipmentReader.GetId((int)InventorySlotId.Trinket_2);
+                if (trinketId == 0)
+                    logger.LogWarning("No trinket equipped in slot Trinket_2 for '{Name}' (Place)", keyAction.Name);
+                name = trinketId.ToString();
                 isItem = true;
             }
         }

@@ -216,6 +216,13 @@ function DataToColor:InitBindingQueue()
     end
 end
 
+-- Clears the binding cache, forcing next CheckBindingChanges to push all bindings
+function DataToColor:ClearBindingCache()
+    for k in pairs(bindingCache) do
+        bindingCache[k] = nil
+    end
+end
+
 -- Checks for binding changes and pushes only changed bindings to the queue
 function DataToColor:CheckBindingChanges()
     for bindingId, index in pairs(BindingIndex) do
@@ -366,27 +373,27 @@ function DataToColor:SetEssentialBindings()
   local wasChanged = false
 
   -- ===== Targeting / interaction =====
-  wasChanged = TryBind("TAB", "TARGETNEARESTENEMY") or wasChanged
-  wasChanged = TryBind("G",   "TARGETLASTTARGET") or wasChanged
-  wasChanged = TryBind("F",   "ASSISTTARGET") or wasChanged
+  wasChanged = Bind("TAB", "TARGETNEARESTENEMY") or wasChanged
+  wasChanged = Bind("G",   "TARGETLASTTARGET") or wasChanged
+  wasChanged = Bind("F",   "ASSISTTARGET") or wasChanged
 
-  -- Interact keys (not present in every era / rules differ by client)
-  wasChanged = TryBind("ALT-HOME", "INTERACTTARGET") or wasChanged
-  wasChanged = TryBind("ALT-END", "INTERACTMOUSEOVER") or wasChanged
+  -- Interact keys - CRITICAL: Bot expects HOME/END without modifiers!
+  wasChanged = Bind("HOME", "INTERACTTARGET") or wasChanged
+  wasChanged = Bind("END", "INTERACTMOUSEOVER") or wasChanged
 
   -- Pet keys (only meaningful for pet classes)
-  wasChanged = TryBind("NUMPADMULTIPLY",  "TARGETPET") or wasChanged
-  wasChanged = TryBind("NUMPADMINUS",  "PETATTACK") or wasChanged
+  wasChanged = Bind("NUMPADMULTIPLY",  "TARGETPET") or wasChanged
+  wasChanged = Bind("NUMPADMINUS",  "PETATTACK") or wasChanged
 
   -- Focus / party targeting (client-dependent)
   if DataToColor.IsVanilla() then
-    wasChanged = TryBind("ALT-PAGEUP", "TARGETPARTYMEMBER1") or wasChanged
+    wasChanged = Bind("ALT-PAGEUP", "TARGETPARTYMEMBER1") or wasChanged
   else
-    wasChanged = TryBind("ALT-PAGEUP", "TARGETFOCUS") or wasChanged
+    wasChanged = Bind("ALT-PAGEUP", "TARGETFOCUS") or wasChanged
   end
 
   -- Follow target
-  wasChanged = TryBind("ALT-PAGEDOWN", "FOLLOWTARGET") or wasChanged
+  wasChanged = Bind("PAGEDOWN", "FOLLOWTARGET") or wasChanged
 
   -- Only save if something actually changed
   if wasChanged then
@@ -408,17 +415,17 @@ end
 local UtilityActions = {
   {
     actionName = "stopattack",
-    key = "ALT-DELETE",
+    key = "INSERT",
     macrotext = "/stopattack\n/stopcasting",
   },
   {
     actionName = "cleartarget",
-    key = "ALT-INSERT",
+    key = "DELETE",
     macrotext = "/cleartarget",
   },
   {
     actionName = "config",
-    key = "SHIFT-PAGEUP",
+    key = "PAGEUP",
     macrotext = "/dc",
   },
   {
