@@ -122,29 +122,16 @@ public static class Program
         // Add startup orchestration first (handles WoW launch, nav server, etc.)
         services.AddStartupOrchestration(configuration);
 
-        bool wowProcessAvailable = false;
-        try
-        {
-            wowProcessAvailable = services.AddWoWProcess(log);
-        }
-        catch (Exception ex) when (ex.Message.Contains("World of Warcraft process"))
-        {
-            log.LogError("======================================================");
-            log.LogError("  World of Warcraft is not running!");
-            log.LogError("  Please start WoW and log into a character,");
-            log.LogError("  then restart the bot.");
-            log.LogError("======================================================");
-            
-            // Give user time to read the message
-            Thread.Sleep(5000);
-            
-            // Rethrow to trigger proper exit
-            throw;
-        }
+        // AddWoWProcess now supports configuration mode - it won't throw if WoW isn't running
+        // Instead, WowProcess will poll for WoW to be launched
+        // wowIsRunning: true if WoW process is currently running (needed for screen capture, input, etc.)
+        // configurationComplete: true if addon and frame config are valid
+        services.AddWoWProcess(log, out bool wowIsRunning, out bool configurationComplete);
 
-        services.AddCoreBase();
+        // Register WoW-dependent services only if WoW is running
+        services.AddCoreBase(wowIsRunning);
 
-        if (wowProcessAvailable && AddonConfig.Exists() && FrameConfig.Exists())
+        if (configurationComplete)
         {
             services.AddCoreNormal(log);
         }

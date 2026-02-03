@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace SharedLib;
 
@@ -10,6 +10,17 @@ public sealed class StartupClientVersion
 
     public StartupClientVersion(Version v)
     {
+        // Debug logging to understand version detection
+        Console.WriteLine($"[StartupClientVersion] Input version: {v} (Major={v?.Major}, Minor={v?.Minor}, Build={v?.Build}, Revision={v?.Revision})");
+        
+        if (v == null)
+        {
+            Console.WriteLine("[StartupClientVersion] WARNING: Version is null, defaulting to unknown");
+            Version = ClientVersion.None;
+            Path = "unknown";
+            return;
+        }
+        
         (Version, Path) = v switch
         {
             // --- Classic branch ---
@@ -30,6 +41,8 @@ public sealed class StartupClientVersion
 
             _ => (ClientVersion.None, "unknown")
         };
+        
+        Console.WriteLine($"[StartupClientVersion] Resolved to: {Version} -> path '{Path}'");
     }
 
 }

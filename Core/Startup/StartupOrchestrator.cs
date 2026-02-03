@@ -5,6 +5,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Game;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -24,6 +26,8 @@ public sealed class StartupOrchestrator
     private readonly AddonValidator _addonValidator;
     private readonly NavigationServerManager _navManager;
     private readonly WoWProcessLauncher _wowLauncher;
+    private readonly FrameConfigurator? _frameConfigurator;
+    private readonly WowProcess? _wowProcess;
 
     private readonly List<(StartupStage Stage, StageResult Result)> _stageResults = [];
 
@@ -44,7 +48,9 @@ public sealed class StartupOrchestrator
         AddonInstaller addonInstaller,
         AddonValidator addonValidator,
         NavigationServerManager navManager,
-        WoWProcessLauncher wowLauncher)
+        WoWProcessLauncher wowLauncher,
+        FrameConfigurator? frameConfigurator = null,
+        WowProcess? wowProcess = null)
     {
         _logger = logger;
         _options = options.Value;
@@ -54,6 +60,8 @@ public sealed class StartupOrchestrator
         _addonValidator = addonValidator;
         _navManager = navManager;
         _wowLauncher = wowLauncher;
+        _frameConfigurator = frameConfigurator;
+        _wowProcess = wowProcess;
     }
 
     /// <summary>
@@ -377,6 +385,20 @@ public sealed class StartupOrchestrator
             return StageResult.Skipped("Configuration already exists");
         }
 
+        // If WoW is running and we have the FrameConfigurator, we can try to detect character
+        // by attempting frame configuration (it will fail if character isn't in-world)
+        if (_frameConfigurator != null && _wowProcess != null && _wowProcess.IsRunning)
+        {
+            _logger.LogInformation("[StartupOrchestrator] WoW is running, proceeding to frame configuration");
+            _logger.LogInformation("[StartupOrchestrator] If character is not in-world, frame config will fail");
+            
+            // Give a short delay for any loading screens to complete
+            _state.StatusMessage = "WoW detected, preparing for frame configuration...";
+            await Task.Delay(2000, ct);
+            
+            return StageResult.Success("WoW process detected, proceeding to frame configuration");
+        }
+
         _logger.LogInformation("[StartupOrchestrator] Waiting for user to log in...");
         _logger.LogInformation("[StartupOrchestrator] ┌────────────────────────────────────────────────────────────┐");
         _logger.LogInformation("[StartupOrchestrator] │  Please log in to World of Warcraft and enter the world   │");
@@ -435,15 +457,63 @@ public sealed class StartupOrchestrator
 
         _state.StatusMessage = "Configuring pixel reading frames...";
 
-        _logger.LogInformation("[StartupOrchestrator] Frame configuration needed");
-        _logger.LogInformation("[StartupOrchestrator] This will be handled by the FrameConfiguration page");
+        // Check if we have the FrameConfigurator available
+        if (_frameConfigurator == null)
+        {
+            _logger.LogWarning("[StartupOrchestrator] FrameConfigurator not available - please configure manually");
+            _state.StatusMessage = "Frame configuration required - please use the WebUI";
+            return StageResult.Warning("Frame configuration pending - complete in WebUI");
+        }
 
-        // The actual frame configuration is complex and requires the full
-        // FrameConfigurator with screen capture. We'll mark this as needing
-        // attention and let the WebUI handle it.
-        _state.StatusMessage = "Frame configuration required - please use the WebUI";
+        _logger.LogInformation("[StartupOrchestrator] Starting automatic frame configuration...");
+        _logger.LogInformation("[StartupOrchestrator] This will send SHIFT-PAGEUP to WoW to toggle config mode");
+        
+        try
+        {
+            // Use the async version with retries
+            var success = await _frameConfigurator.StartAutoConfigWithRetriesAsync(
+                maxRetries: _options.FrameConfigMaxRetries,
+                retryDelaySeconds: _options.FrameConfigRetryDelaySeconds,
+                cancellationToken: ct);
 
-        return StageResult.Warning("Frame configuration pending - complete in WebUI");
+            if (success)
+            {
+                _state.FramesConfigured = true;
+                _logger.LogInformation("[StartupOrchestrator] Frame configuration completed successfully!");
+                return StageResult.Success("Frames configured successfully");
+            }
+            else
+            {
+                // Check what went wrong
+                if (_frameConfigurator.PreFlightFailed)
+                {
+                    _logger.LogError("[StartupOrchestrator] Pre-flight checks failed: {Status}", 
+                        _frameConfigurator.StatusMessage);
+                    return StageResult.Failed($"Pre-flight failed: {_frameConfigurator.StatusMessage}");
+                }
+                
+                if (_frameConfigurator.AddonNotVisible)
+                {
+                    _logger.LogWarning("[StartupOrchestrator] Addon not visible - ensure character is in-world");
+                    _logger.LogWarning("[StartupOrchestrator] Run '/dcactions' in WoW to setup keybindings");
+                    return StageResult.Warning("Addon not visible - run /dcactions in WoW");
+                }
+                
+                _logger.LogWarning("[StartupOrchestrator] Frame configuration failed: {Status}", 
+                    _frameConfigurator.StatusMessage);
+                return StageResult.Warning($"Frame config incomplete: {_frameConfigurator.StatusMessage}");
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("[StartupOrchestrator] Frame configuration cancelled");
+            return StageResult.Warning("Frame configuration cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[StartupOrchestrator] Frame configuration threw exception");
+            return StageResult.Failed($"Frame configuration error: {ex.Message}", ex);
+        }
     }
 
     private Task<StageResult> FinalValidationAsync(CancellationToken ct)

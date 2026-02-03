@@ -1,4 +1,5 @@
 using Core.Startup;
+using Core.Services;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -46,6 +47,8 @@ public static class DependencyInjection
         services.AddSingleton<StartupOrchestrator>();
 
         // Background services
+        services.AddHostedService<ProcessCleanupService>();
+        services.AddHostedService<HealthMonitoringService>();
         services.AddHostedService<HealthMonitor>();
         services.AddHostedService<StartupHostedService>();
 

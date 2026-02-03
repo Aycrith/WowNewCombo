@@ -1,4 +1,4 @@
-﻿namespace SharedLib;
+namespace SharedLib;
 
 public sealed class StartupConfigPid
 {
@@ -6,5 +6,5 @@ public sealed class StartupConfigPid
 
     public StartupConfigPid() { }
 
-    public int Id { get; set; }
+    public int Id { get; set; } = -1;
 }

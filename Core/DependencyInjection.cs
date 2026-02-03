@@ -232,7 +232,7 @@ public static class DependencyInjection
         return s;
     }
 
-    public static IServiceCollection AddCoreBase(this IServiceCollection s)
+    public static IServiceCollection AddCoreBase(this IServiceCollection s, bool wowProcessAvailable = true)
     {
         s.AddSingleton<ManualResetEventSlim>(x => new(false));
         s.AddSingleton<Wait>();
@@ -241,11 +241,22 @@ public static class DependencyInjection
         s.AddSingleton<DataConfig>(x => DataConfig.Load(
             x.GetRequiredService<StartupClientVersion>().Path));
 
-        s.ForwardSingleton<IWowScreen, IScreenImageProvider, IMinimapImageProvider, WowScreenDXGI>();
-
-        s.ForwardSingleton<WowProcessInput, IMouseInput>();
-
-        s.AddSingleton<ExecGameCommand>();
+        // These services require a running WoW process with a valid window handle
+        // Only register them if WoW is actually available
+        if (wowProcessAvailable)
+        {
+            s.ForwardSingleton<IWowScreen, IScreenImageProvider, IMinimapImageProvider, WowScreenDXGI>();
+            s.ForwardSingleton<WowProcessInput, IMouseInput>();
+            s.AddSingleton<ExecGameCommand>();
+        }
+        else
+        {
+            // Register null/mock implementations for configuration mode
+            // These allow the UI to load but functionality is limited
+            s.AddSingleton<IWowScreen, NullWowScreen>();
+            s.AddSingleton<IScreenImageProvider>(x => (IScreenImageProvider)x.GetRequiredService<IWowScreen>());
+            s.AddSingleton<IMinimapImageProvider>(x => (IMinimapImageProvider)x.GetRequiredService<IWowScreen>());
+        }
 
         s.AddSingleton<DataFrame[]>(x => FrameConfig.LoadFrames());
         s.AddSingleton<FrameConfigurator>();
@@ -259,8 +270,15 @@ public static class DependencyInjection
     }
 
 
+    /// <summary>
+    /// Adds WoW process related services.
+    /// </summary>
+    /// <param name="wowIsRunning">Output: true if WoW process is currently running</param>
+    /// <param name="configurationComplete">Output: true if all configuration (addon, frames) is valid</param>
+    /// <returns>True if WoW is running (regardless of configuration state)</returns>
     public static bool AddWoWProcess(
-        this IServiceCollection services, ILogger log)
+        this IServiceCollection services, ILogger log, 
+        out bool wowIsRunning, out bool configurationComplete)
     {
         services.AddSingleton<CancellationTokenSource>();
         services.AddSingleton<WowProcess>();
@@ -272,6 +290,23 @@ public static class DependencyInjection
             new ServiceProviderOptions { ValidateOnBuild = true });
 
         WowProcess process = sp.GetRequiredService<WowProcess>();
+        
+        // Check if WoW process is actually running
+        if (!process.IsRunning)
+        {
+            log.LogWarning("WoW process not found. Starting in configuration mode.");
+            log.LogWarning("The bot will poll for WoW to be launched.");
+            
+            // Register a default version for configuration mode
+            // This will be used for path resolution until WoW is detected
+            services.AddSingleton<Version>(new Version(2, 5, 5, 0)); // Default to TBC Classic
+            
+            wowIsRunning = false;
+            configurationComplete = false;
+            return false;
+        }
+        
+        wowIsRunning = true;
         log.LogInformation($"Pid: {process.Id}");
         log.LogInformation($"Version: {process.FileVersion}");
 
@@ -288,15 +323,16 @@ public static class DependencyInjection
             FrameConfig.Delete();
 
             log.LogError($"{nameof(AddonConfig)} doesn't exists or addon not installed yet!");
-            return false;
+            configurationComplete = false;
+            return true; // WoW is running, but config is not complete
         }
 
         NativeMethods.GetWindowRect(process.MainWindowHandle, out Rectangle rect);
         if (!FrameConfig.Exists())
         {
             log.LogError($"{nameof(FrameConfig)} doesn't exists!");
-
-            return false;
+            configurationComplete = false;
+            return true; // WoW is running, but config is not complete
         }
 
         if (!FrameConfig.IsValid(rect, installVersion))
@@ -309,11 +345,21 @@ public static class DependencyInjection
             log.LogError($"{nameof(FrameConfig)} {installVersion}");
             log.LogError($"{nameof(FrameConfig)} {FrameConfig.Load()}");
 
-            return false;
+            configurationComplete = false;
+            return true; // WoW is running, but config is not complete
         }
 
-
+        configurationComplete = true;
         return true;
+    }
+    
+    /// <summary>
+    /// Legacy overload for backward compatibility
+    /// </summary>
+    public static bool AddWoWProcess(
+        this IServiceCollection services, ILogger log)
+    {
+        return services.AddWoWProcess(log, out _, out var configComplete) && configComplete;
     }
 
 

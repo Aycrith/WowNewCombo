@@ -343,4 +343,110 @@ public static partial class NativeMethods
 
     [LibraryImport("user32.dll")]
     public static partial nint MonitorFromWindow(nint hWnd, uint dwFlags);
+
+    // ========== SendInput API for system-level keyboard input ==========
+    // Use this for keybindings that require modifier keys (Shift, Ctrl, Alt)
+    // as WoW uses GetAsyncKeyState() which only works at system level
+
+    public const uint INPUT_KEYBOARD = 1;
+    public const uint KEYEVENTF_KEYUP = 0x0002;
+    public const uint KEYEVENTF_EXTENDEDKEY = 0x0001;
+    public const uint KEYEVENTF_SCANCODE = 0x0008;  // Required for DirectInput games like WoW
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct KEYBDINPUT
+    {
+        public ushort wVk;
+        public ushort wScan;
+        public uint dwFlags;
+        public uint time;
+        public nuint dwExtraInfo;
+    }
+
+    // INPUT structure for SendInput - must match Windows API exactly
+    // On x64: sizeof(INPUT) = 40 bytes
+    // The union starts at offset 8 (4 bytes for type + 4 bytes padding)
+    [StructLayout(LayoutKind.Explicit, Size = 40)]
+    public struct INPUT
+    {
+        [FieldOffset(0)] public uint type;
+        [FieldOffset(8)] public KEYBDINPUT ki;
+    }
+
+    [LibraryImport("user32.dll", SetLastError = true)]
+    public static partial uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
+
+    /// <summary>
+    /// Sends a key press with optional modifiers using SendInput (system-level).
+    /// Requires the target window to be in the foreground.
+    /// </summary>
+    /// <param name="virtualKey">The main key to press (e.g., VK_PRIOR for PageUp)</param>
+    /// <param name="shift">Press Shift modifier</param>
+    /// <param name="ctrl">Press Ctrl modifier</param>
+    /// <param name="alt">Press Alt modifier</param>
+    /// <param name="pressDurationMs">How long to hold the key down</param>
+    public static void SendKeyWithModifiers(int virtualKey, bool shift, bool ctrl, bool alt, int pressDurationMs = 50)
+    {
+        const int VK_SHIFT = 0x10;
+        const int VK_CONTROL = 0x11;
+        const int VK_MENU = 0x12;  // Alt
+
+        var inputs = new System.Collections.Generic.List<INPUT>();
+
+        // Press modifiers
+        if (shift) inputs.Add(CreateKeyInput(VK_SHIFT, false));
+        if (ctrl) inputs.Add(CreateKeyInput(VK_CONTROL, false));
+        if (alt) inputs.Add(CreateKeyInput(VK_MENU, false));
+
+        // Press main key
+        inputs.Add(CreateKeyInput(virtualKey, false));
+
+        // Send key down
+        if (inputs.Count > 0)
+        {
+            SendInput((uint)inputs.Count, inputs.ToArray(), Marshal.SizeOf<INPUT>());
+        }
+
+        // Wait for key press duration
+        System.Threading.Thread.Sleep(pressDurationMs);
+
+        // Release in reverse order
+        inputs.Clear();
+
+        // Release main key
+        inputs.Add(CreateKeyInput(virtualKey, true));
+
+        // Release modifiers (reverse order)
+        if (alt) inputs.Add(CreateKeyInput(VK_MENU, true));
+        if (ctrl) inputs.Add(CreateKeyInput(VK_CONTROL, true));
+        if (shift) inputs.Add(CreateKeyInput(VK_SHIFT, true));
+
+        if (inputs.Count > 0)
+        {
+            SendInput((uint)inputs.Count, inputs.ToArray(), Marshal.SizeOf<INPUT>());
+        }
+    }
+
+    private static INPUT CreateKeyInput(int virtualKey, bool keyUp)
+    {
+        // For DirectInput games (like WoW), we MUST use KEYEVENTF_SCANCODE
+        // The virtual key is ignored when SCANCODE flag is set
+        // For key up, we need BOTH KEYEVENTF_KEYUP AND KEYEVENTF_SCANCODE
+        uint flags = KEYEVENTF_SCANCODE;
+        
+        if (keyUp)
+            flags |= KEYEVENTF_KEYUP;
+            
+        if (IsExtendedKey(virtualKey))
+            flags |= KEYEVENTF_EXTENDEDKEY;
+
+        var input = new INPUT();
+        input.type = INPUT_KEYBOARD;
+        input.ki.wVk = 0;  // Ignored when using SCANCODE
+        input.ki.wScan = (ushort)MapVirtualKeyA((uint)virtualKey, MAPVK_VK_TO_VSC);
+        input.ki.dwFlags = flags;
+        input.ki.time = 0;
+        input.ki.dwExtraInfo = 0;
+        return input;
+    }
 }
