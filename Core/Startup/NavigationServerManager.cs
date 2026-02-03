@@ -260,9 +260,9 @@ public sealed class NavigationServerManager : IHostedService, IDisposable
             {
                 FileName = _serverPath,
                 WorkingDirectory = _serverDirectory,
-                UseShellExecute = true,
-                WindowStyle = ProcessWindowStyle.Minimized,
-                CreateNoWindow = false
+                UseShellExecute = false,
+                WindowStyle = ProcessWindowStyle.Hidden,
+                CreateNoWindow = true
             };
 
             _process = Process.Start(startInfo);
