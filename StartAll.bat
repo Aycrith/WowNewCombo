@@ -20,11 +20,11 @@ if "%ERRORLEVEL%"=="0" (
     echo  [OK] AmeisenNavigation Server already running
 ) else (
     REM Check if MMAP files exist before starting
-    if exist "Navigation\mmaps\*.map" (
+    if exist "Navigation\mmaps\*.mmap" (
         echo  [INFO] Starting AmeisenNavigation Server...
         start "AmeisenNavigation" /D "Navigation" AmeisenNavigationServer.exe
         timeout /t 3 /nobreak > nul
-        echo  [OK] AmeisenNavigation Server started on port 47111
+        echo  [OK] AmeisenNavigation Server started on port 47110
     ) else (
         echo  [WARN] No MMAP files found - skipping AmeisenNavigation
         echo         Add MMAPs to Navigation\mmaps\ for best pathfinding

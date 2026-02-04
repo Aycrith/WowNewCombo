@@ -194,7 +194,7 @@ This is encoded as RGB values that the bot reads via DXGI screen capture.
 |-----------|--------|-------|
 | .NET 10.0 Runtime | ✅ OK | Version 10.0.102 |
 | BlazorServer Build | ✅ OK | Release build compiles and runs |
-| Navigation Server | ✅ OK | AmeisenNavigation starts on port 47111 |
+| Navigation Server | ✅ OK | AmeisenNavigation starts on port 47110 |
 | MMAPS Files | ✅ OK | 2054 files in Navigation\mmaps |
 | MPQ Files | ✅ OK | common-2.MPQ (1.7GB), expansion.MPQ (1.8GB) |
 | WoW Process Detection | ✅ OK | PID 30100 detected correctly |

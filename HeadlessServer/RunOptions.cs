@@ -54,7 +54,7 @@ public sealed class RunOptions
 
     [Option("portv3",
         Required = false,
-        Default = 47111,
+        Default = 47110,
         HelpText = $"Navigation Remote V3 port")]
     public int Portv3 { get; set; }
 

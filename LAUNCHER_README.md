@@ -4,6 +4,17 @@ A comprehensive launcher system for WowClassicGrindBot that handles all startup 
 
 ## Quick Start
 
+### Production One-Click (Recommended)
+```
+Double-click: OneClickLaunch.bat
+```
+This will:
+- Validate dependencies (.NET runtime, ports)
+- Auto-install required addons (UAC prompt only if needed)
+- Launch/monitor services and verify client alignment
+- If the detected character is **Level 8 BloodElf Rogue**, it will auto-run the validation suite
+  (movement + combat cycle) and start the bot with `BloodElf_Rogue_Starter_Test.json`.
+
 ### First Time Users
 ```
 Double-click: Setup.bat
@@ -136,7 +147,7 @@ The launcher performs these steps in order:
    └── Required addons (DataToColor)
 
 2. START NAVIGATION SERVER
-   └── AmeisenNavigationServer.exe on port 47111
+   └── AmeisenNavigationServer.exe on port 47110
 
 3. CHECK WOW CLIENT
    ├── Detect running WoW process

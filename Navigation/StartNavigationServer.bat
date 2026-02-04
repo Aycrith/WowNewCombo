@@ -51,7 +51,7 @@ if "%MAP_COUNT%"=="0" (
 
 echo  Configuration:
 echo    - IP: 127.0.0.1
-echo    - Port: 47111
+echo    - Port: 47110
 echo    - MMAP Format: Auto-detect
 echo    - Smoothing: Catmull-Rom Spline
 echo.

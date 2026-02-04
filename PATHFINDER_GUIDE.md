@@ -67,7 +67,7 @@ AmeisenNavigation is a high-performance TCP-based navigation server that uses Tr
    ```json
    {
        "iClientVersion": 0,    // 0=Auto, 1=5.4.8
-       "iPort": 47111,
+       "iPort": 47110,
        "sIP": "127.0.0.1",
        "sMmapFolder": "mmaps",
        "iMmapFormat": 0,       // 0=Auto, 1=TrinityCore 3.3.5a, 2=SkyFire 5.4.8
@@ -86,7 +86,7 @@ AmeisenNavigation is a high-performance TCP-based navigation server that uses Tr
    "Pathing": {
        "Mode": "RemoteV3",
        "hostv3": "127.0.0.1",
-       "portv3": 47111
+       "portv3": 47110
    }
    ```
 
@@ -197,7 +197,7 @@ Use the configuration script to quickly change pathfinder settings:
     "hostv1": "localhost",    // PathingAPI host
     "portv1": 5001,           // PathingAPI port
     "hostv3": "127.0.0.1",    // AmeisenNavigation host
-    "portv3": 47111,          // AmeisenNavigation port
+    "portv3": 47110,          // AmeisenNavigation port
     "PathVisualizer": false   // Enable path visualization
   }
 }
@@ -208,7 +208,7 @@ Use the configuration script to quickly change pathfinder settings:
 ```json
 {
     "iClientVersion": 0,              // 0=Auto, 1=MoP 5.4.8
-    "iPort": 47111,                   // TCP port
+    "iPort": 47110,                   // TCP port
     "sIP": "127.0.0.1",               // Bind IP
     "sMmapFolder": "mmaps",           // MMAPs folder path
     "iMmapFormat": 0,                 // 0=Auto, 1=Trinity 3.3.5a, 2=SkyFire
@@ -227,7 +227,7 @@ Use the configuration script to quickly change pathfinder settings:
 
 **"Unable to connect to navigation server"**
 - Make sure AmeisenNavigationServer.exe is running
-- Check that port 47111 is not blocked by firewall
+- Check that port 47110 is not blocked by firewall
 - Verify the mmaps folder contains valid MMAP files
 
 **"No .map files found"**

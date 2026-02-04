@@ -170,12 +170,14 @@ public sealed partial class RequirementFactory
             { "HasMainHandEnchant", bits.MainHandTempEnchant },
             { "HasOffHandEnchant", bits.OffHandTempEnchant },
             
-            // Equipment - Bag
-            { "Items Broken", bits.Items_Broken },
-            { "BagFull", bagReader.BagsFull },
-            { "BagGreyItem", bagReader.AnyGreyItem },
-            { "HasRangedWeapon", equipmentReader.RangedWeapon },
-            { "HasAmmo", bits.Ammo },
+             // Equipment - Bag
+             { "Items Broken", bits.Items_Broken },
+             { "BagFull", bagReader.BagsFull },
+             // BagFullAny: true when there are no free slots across all bags (including specialized bags)
+             { "BagFullAny", () => bagReader.TotalFreeSlotCount() == 0 },
+             { "BagGreyItem", bagReader.AnyGreyItem },
+             { "HasRangedWeapon", equipmentReader.RangedWeapon },
+             { "HasAmmo", bits.Ammo },
 
             { "Casting", playerReader.IsCasting },
             { "HasTarget", bits.Target },

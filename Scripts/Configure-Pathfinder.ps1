@@ -17,7 +17,7 @@
     Host address for AmeisenNavigation server (default: 127.0.0.1)
     
 .PARAMETER V3Port
-    Port for AmeisenNavigation server (default: 47111)
+    Port for AmeisenNavigation server (default: 47110)
     
 .PARAMETER V1Host
     Host address for PathingAPI server (default: localhost)
@@ -40,7 +40,7 @@ param(
     [string]$Backend = "RemoteV3",
     
     [string]$V3Host = "127.0.0.1",
-    [int]$V3Port = 47111,
+    [int]$V3Port = 47110,
     
     [string]$V1Host = "localhost",
     [int]$V1Port = 5001,

@@ -66,7 +66,7 @@ public sealed class StartupOptions
     /// <summary>
     /// Port for the navigation server.
     /// </summary>
-    public int NavigationServerPort { get; set; } = 47111;
+    public int NavigationServerPort { get; set; } = 47110;
 
     /// <summary>
     /// Explicit WoW installation path. If empty, will auto-detect.

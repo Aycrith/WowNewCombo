@@ -97,7 +97,7 @@
       {
         "Name": "Sell",
         "Requirements": [
-          "BagFull",
+          "BagFullAny",
           "BagGreyItem"
         ],
         "Cost": 6

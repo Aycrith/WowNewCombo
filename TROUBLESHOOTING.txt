@@ -208,7 +208,7 @@ SOLUTION D - Check Port Not in Use:
   1. Open Command Prompt as administrator
   2. Run: netstat -ano | find "47110"
   3. If shows something, another app is using this port
-  4. Change port in config.json to something like 47111
+  4. Change port in config.json to something like 47110
 
 SOLUTION E - Restart Navigation Server:
   1. Stop the bot (close the launcher window)

@@ -212,6 +212,12 @@ public sealed class BagReader : IDisposable, IReader
 
     public bool BagsFull() => Bags.Sum(BagFreeSlotCount) == 0;
 
+    // Total free slots across all bags (including specialized bags)
+    public int TotalFreeSlotCount() => Bags.Sum(static b => b.FreeSlot);
+
+    // Total free slots usable for general items (excludes specialized bag types)
+    public int TotalFreeGeneralSlotCount() => Bags.Sum(BagFreeSlotCount);
+
     public bool AnyGreyItem() => BagItems.Any(BagItemCommonQuality);
 
     public int ItemCount(int itemId)

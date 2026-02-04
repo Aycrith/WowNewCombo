@@ -24,7 +24,7 @@ $script:Services = @{
         DisplayName = "Navigation Server"
         Path = Join-Path $BotPath "Navigation\AmeisenNavigationServer.exe"
         WorkingDir = Join-Path $BotPath "Navigation"
-        Port = 47111
+        Port = 47110
         Required = $false
         AutoRestart = $true
     }

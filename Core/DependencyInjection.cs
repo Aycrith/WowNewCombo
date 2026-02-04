@@ -178,6 +178,15 @@ public static class DependencyInjection
         s.AddSingleton<SpellDB>();
         s.AddSingleton<IconDB>();
 
+        // Required by addon components (PlayerReader needs WorldMapAreaDB, EquipmentReader/BagReader need ItemDB)
+        s.AddSingleton<AreaDB>();
+        s.AddSingleton<WorldMapAreaDB>();
+        s.AddSingleton<ItemDB>();
+        s.AddSingleton<CreatureDB>();
+        s.AddSingleton<FactionTemplateDB>();
+        s.AddSingleton<TalentDB>();
+        s.AddSingleton<MailboxDB>();
+
         // Required by TestController for E2E testing
         s.AddAddonComponents();
 
@@ -262,7 +271,12 @@ public static class DependencyInjection
         }
 
         s.AddSingleton<DataFrame[]>(x => FrameConfig.LoadFrames());
-        s.AddSingleton<FrameConfigurator>();
+        // FrameConfigurator requires WowProcessInput; don't register it when WoW isn't running.
+        // This keeps BlazorServer able to start in configuration mode.
+        if (wowProcessAvailable)
+        {
+            s.AddSingleton<FrameConfigurator>();
+        }
 
         s.AddSingleton<INpcResetEvent, NpcResetEvent>();
         s.AddSingleton<NpcNameFinder>();

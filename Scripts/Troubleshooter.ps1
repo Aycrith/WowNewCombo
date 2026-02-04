@@ -214,7 +214,7 @@ function Test-NetworkPorts {
     
     $portsToCheck = @(
         @{ Port = 5000; Name = "Bot Web UI" },
-        @{ Port = 47111; Name = "Navigation Server" }
+        @{ Port = 47110; Name = "Navigation Server" }
     )
     
     foreach ($portInfo in $portsToCheck) {

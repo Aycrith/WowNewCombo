@@ -383,12 +383,6 @@ public sealed class NavigationServerManager : IHostedService, IDisposable
                     {
                         _logger.LogWarning("[NavigationServerManager] Server process exited unexpectedly");
                         Status = NavigationServerStatus.Stopped;
-
-                        if (_options.EnableHealthMonitoring)
-                        {
-                            _logger.LogInformation("[NavigationServerManager] Attempting to restart...");
-                            await StartServerAsync(cancellationToken);
-                        }
                     }
                     else if (!await IsHealthyAsync())
                     {

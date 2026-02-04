@@ -19,6 +19,7 @@ using Serilog.Templates.Themes;
 using SharedLib.Converters;
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 
@@ -28,6 +29,10 @@ public static class Program
 {
     public static void Main(string[] args)
     {
+        const int maxRestartsInWindow = 5;
+        var restartWindow = TimeSpan.FromMinutes(10);
+        List<DateTimeOffset> crashTimes = [];
+
         while (true)
         {
             bool shutdownRequested = false;
@@ -63,7 +68,26 @@ public static class Program
                 }
 
                 Log.Fatal(ex, "[Program          ] Host crashed – restarting in 3s");
-                Thread.Sleep(3000);
+                crashTimes.Add(DateTimeOffset.UtcNow);
+
+                // Trim crashes outside the window
+                crashTimes.RemoveAll(t => (DateTimeOffset.UtcNow - t) > restartWindow);
+
+                if (crashTimes.Count > maxRestartsInWindow)
+                {
+                    Log.Fatal("[Program          ] Too many crashes ({Count}) within {Window}; exiting to avoid restart loop",
+                        crashTimes.Count, restartWindow);
+                    break;
+                }
+
+                // Exponential backoff (3s → 6s → 12s → 24s → 48s → 60s)
+                int exponent = Math.Clamp(crashTimes.Count - 1, 0, 10);
+                int delaySeconds = Math.Min(3 * (1 << exponent), 60);
+
+                Log.Warning("[Program          ] Restarting in {DelaySeconds}s (crash {Crash}/{Max} in {Window})",
+                    delaySeconds, crashTimes.Count, maxRestartsInWindow, restartWindow);
+
+                Thread.Sleep(delaySeconds * 1000);
             }
             finally
             {

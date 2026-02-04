@@ -46,17 +46,35 @@ public interface IAddonDataProvider : IDisposable
 
     int GetInt(int index)
     {
-        return Data[index];
+        int[] data = Data;
+        if ((uint)index >= (uint)data.Length)
+        {
+            return 0;
+        }
+
+        return data[index];
     }
 
     float GetFixed(int index)
     {
-        return Data[index] / 100000f;
+        int[] data = Data;
+        if ((uint)index >= (uint)data.Length)
+        {
+            return 0f;
+        }
+
+        return data[index] / 100000f;
     }
 
     string GetString(int index)
     {
-        int color = GetInt(index);
+        int[] data = Data;
+        if ((uint)index >= (uint)data.Length)
+        {
+            return string.Empty;
+        }
+
+        int color = data[index];
         if ((uint)color > 999999)
             return string.Empty;
 

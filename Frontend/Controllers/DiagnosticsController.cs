@@ -59,6 +59,37 @@ public record PlaceRequest(int Slot, string Name);
 
 public record FixResult(bool Success, string Message, int ChangesApplied = 0);
 
+public record BagMetaDto(
+    int Index,
+    int BagType,
+    int SlotCount,
+    int FreeSlots,
+    int ItemId,
+    string ItemName);
+
+public record BagItemDto(
+    int Bag,
+    int Slot,
+    int ItemId,
+    string Name,
+    int Quality,
+    int Count,
+    bool Tradable,
+    bool Soulbound,
+    bool Locked,
+    bool NoValue);
+
+public record BagDiagnostics(
+    int TotalSlots,
+    int TotalFreeSlots,
+    int TotalFreeSlotsGeneral,
+    bool BagsFull,
+    bool AnyGreyItem,
+    int ItemCount,
+    IReadOnlyCollection<BagMetaDto> Bags,
+    IReadOnlyCollection<BagItemDto> SampleItems,
+    DateTime Timestamp);
+
 #endregion
 
 /// <summary>
@@ -110,6 +141,70 @@ public class DiagnosticsController : ControllerBase
     }
 
     #region Diagnostic Endpoints
+
+    /// <summary>
+    /// GET /api/diagnostics/bags?take=20
+    /// Returns current bag meta + computed bag-full signals
+    /// </summary>
+    [HttpGet("bags")]
+    public IActionResult GetBags([FromQuery] int take = 20)
+    {
+        try
+        {
+            take = Math.Clamp(take, 0, 200);
+
+            List<BagMetaDto> bags = [];
+            for (int i = 0; i < bagReader.Bags.Length; i++)
+            {
+                Bag b = bagReader.Bags[i];
+                bags.Add(new BagMetaDto(
+                    i,
+                    (int)b.BagType,
+                    b.SlotCount,
+                    b.FreeSlot,
+                    b.Item.Entry,
+                    b.Item.Name ?? string.Empty));
+            }
+
+            int totalFreeSlots = bagReader.TotalFreeSlotCount();
+            int totalFreeSlotsGeneral = bagReader.TotalFreeGeneralSlotCount();
+
+            List<BagItemDto> sampleItems = bagReader.BagItems
+                .OrderBy(x => x.Item.Quality)
+                .ThenBy(x => x.Item.Name, StringComparer.OrdinalIgnoreCase)
+                .Take(take)
+                .Select(x => new BagItemDto(
+                    x.Bag,
+                    x.Slot,
+                    x.Item.Entry,
+                    x.Item.Name ?? string.Empty,
+                    x.Item.Quality,
+                    x.Count,
+                    x.IsTradable,
+                    x.IsSoulbound,
+                    x.IsLocked,
+                    x.HasNoValue))
+                .ToList();
+
+            BagDiagnostics result = new(
+                bagReader.SlotCount,
+                totalFreeSlots,
+                totalFreeSlotsGeneral,
+                bagReader.BagsFull(),
+                bagReader.AnyGreyItem(),
+                bagReader.BagItems.Count,
+                bags,
+                sampleItems,
+                DateTime.UtcNow);
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Bag diagnostics failed");
+            return StatusCode(500, new { Error = ex.Message });
+        }
+    }
 
     /// <summary>
     /// GET /api/diagnostics/keybindings

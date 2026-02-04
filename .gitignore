@@ -259,6 +259,9 @@ paket-files/
 # Addon dev
 .addon_dev/
 
+# Local WoW install snapshot (not part of repo)
+BlazorServer/Interface/
+
 # JetBrains Rider
 .idea/
 *.sln.iml

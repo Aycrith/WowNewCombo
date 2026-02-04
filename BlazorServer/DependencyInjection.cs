@@ -48,7 +48,6 @@ public static class DependencyInjection
 
         // Background services
         services.AddHostedService<ProcessCleanupService>();
-        services.AddHostedService<HealthMonitoringService>();
         services.AddHostedService<HealthMonitor>();
         services.AddHostedService<StartupHostedService>();
 
