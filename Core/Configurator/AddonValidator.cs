@@ -304,6 +304,13 @@ public sealed partial class AddonValidator
             {
                 if (kvp.Value) // Only check enabled addons
                 {
+                    // Blizzard_ "addons" are client modules in some Classic branches and may not exist as folders.
+                    // Treat these as non-actionable to avoid noisy warnings that block the launch wizard.
+                    if (kvp.Key.StartsWith("Blizzard_", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
                     string addonPath = Path.Join(AddonsBasePath, kvp.Key);
                     if (!Directory.Exists(addonPath))
                     {

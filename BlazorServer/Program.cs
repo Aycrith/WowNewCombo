@@ -102,6 +102,19 @@ public static class Program
     private static WebApplication CreateApp(string[] args)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
+        // When running directly from `bin/Release/net10.0` (OneClickLauncher default),
+        // static web assets from referenced projects (Frontend) are not copied to `wwwroot`.
+        // Load the static-web-assets manifest so `_content/Frontend/...` scripts/styles resolve.
+        try
+        {
+            builder.WebHost.UseStaticWebAssets();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Program          ] UseStaticWebAssets failed: {ex.Message}");
+        }
+
         builder.Logging.ClearProviders().AddSerilog();
 
         // Ensure Kestrel binds to the configured Web UI port when no explicit URL binding is provided.
@@ -215,6 +228,17 @@ public static class Program
     private static WebApplication ConfigureApp(WebApplicationBuilder builder, IWebHostEnvironment env)
     {
         WebApplication app = builder.Build();
+
+        // Required for `@Assets[...]` references in App.razor in newer ASP.NET Core releases.
+        // This is safe to call even when the static-assets endpoints are not present.
+        try
+        {
+            app.MapStaticAssets();
+        }
+        catch
+        {
+            // Older runtime or stripped build; fall back to classic static-file hosting.
+        }
 
         if (env.IsDevelopment())
         {

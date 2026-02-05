@@ -466,7 +466,7 @@ public sealed class StartupOrchestrator
         }
 
         _logger.LogInformation("[StartupOrchestrator] Starting automatic frame configuration...");
-        _logger.LogInformation("[StartupOrchestrator] This will send SHIFT-PAGEUP to WoW to toggle config mode");
+        _logger.LogInformation("[StartupOrchestrator] This will type '/{Command}' in WoW chat to toggle config mode", GetAddonCommand());
         
         try
         {
@@ -494,9 +494,10 @@ public sealed class StartupOrchestrator
                 
                 if (_frameConfigurator.AddonNotVisible)
                 {
+                    string command = GetAddonCommand();
                     _logger.LogWarning("[StartupOrchestrator] Addon not visible - ensure character is in-world");
-                    _logger.LogWarning("[StartupOrchestrator] Run '/dcactions' in WoW to setup keybindings");
-                    return StageResult.Warning("Addon not visible - run /dcactions in WoW");
+                    _logger.LogWarning("[StartupOrchestrator] Run '/{Command}actions' in WoW to setup keybindings", command);
+                    return StageResult.Warning($"Addon not visible - run /{command}actions in WoW");
                 }
                 
                 _logger.LogWarning("[StartupOrchestrator] Frame configuration failed: {Status}", 
@@ -548,5 +549,23 @@ public sealed class StartupOrchestrator
 
         _state.FramesConfigured = true;
         return Task.FromResult(StageResult.Success("All validations passed"));
+    }
+
+    private static string GetAddonCommand()
+    {
+        try
+        {
+            string cmd = AddonConfig.Load().Command?.Trim() ?? string.Empty;
+            if (cmd.StartsWith("/", StringComparison.Ordinal))
+            {
+                cmd = cmd.TrimStart('/');
+            }
+
+            return string.IsNullOrWhiteSpace(cmd) ? "dc" : cmd;
+        }
+        catch
+        {
+            return "dc";
+        }
     }
 }

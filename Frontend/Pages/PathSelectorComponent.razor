@@ -55,6 +55,7 @@
     private bool ButtonDisabled { get; set; } = true;
 
     private FileSystemWatcher watcher = null!;
+    private bool jsEnhancementsAvailable = true;
 
     protected override void OnInitialized()
     {
@@ -98,9 +99,21 @@
 
     private async Task InitializeImageInjectorAsync()
     {
+        if (!jsEnhancementsAvailable)
+        {
+            return;
+        }
+
         if (Files == null || !Files.Any())
         {
-            await JSRuntime.InvokeVoidAsync("PathAutocompleteImageInjector.init", []);
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("PathAutocompleteImageInjector.init", []);
+            }
+            catch (JSException)
+            {
+                jsEnhancementsAvailable = false;
+            }
             return;
         }
 
@@ -110,7 +123,14 @@
             })
             .ToList();
 
-        await JSRuntime.InvokeVoidAsync("PathAutocompleteImageInjector.init", allItems);
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("PathAutocompleteImageInjector.init", allItems);
+        }
+        catch (JSException)
+        {
+            jsEnhancementsAvailable = false;
+        }
     }
 
     public void Dispose()
@@ -171,6 +191,11 @@
 
     private async Task UpdateImageMapAsync()
     {
+        if (!jsEnhancementsAvailable)
+        {
+            return;
+        }
+
         if (Files == null || !Files.Any())
             return;
 
@@ -178,7 +203,14 @@
             .Select(name => new { name, imagePath = GetImagePath(name) ?? "" })
             .ToList();
 
-        await JSRuntime.InvokeVoidAsync("PathAutocompleteImageInjector.update", allItems);
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("PathAutocompleteImageInjector.update", allItems);
+        }
+        catch (JSException)
+        {
+            jsEnhancementsAvailable = false;
+        }
     }
 
     private async Task<AutoCompleteDataProviderResult<AutoCompleteItem>> DataProvider(AutoCompleteDataProviderRequest<AutoCompleteItem> request)

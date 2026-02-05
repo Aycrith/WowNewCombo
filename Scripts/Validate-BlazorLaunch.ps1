@@ -59,6 +59,18 @@ $args = @(
 & pwsh @args
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+Write-Host "Scenario: Missing addon_config.json (readiness should report error, server stays up)"
+$args = @(
+    "-NoProfile",
+    "-ExecutionPolicy", "Bypass",
+    "-File", (Join-Path $PSScriptRoot "SmokeTest-BlazorServer.ps1"),
+    "-Port", "$($BasePort + 4)",
+    "-TimeoutSeconds", "45",
+    "-SimulateMissingAddonConfig"
+)
+& pwsh @args
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 Write-Host "Scenario: Corrupted addon_config.json (server should not crash)"
 $args = @(
     "-NoProfile",
@@ -67,6 +79,18 @@ $args = @(
     "-Port", "$($BasePort + 3)",
     "-TimeoutSeconds", "45",
     "-SimulateCorruptedAddonConfig"
+)
+& pwsh @args
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "Scenario: Corrupted frame_config.json (server should not crash)"
+$args = @(
+    "-NoProfile",
+    "-ExecutionPolicy", "Bypass",
+    "-File", (Join-Path $PSScriptRoot "SmokeTest-BlazorServer.ps1"),
+    "-Port", "$($BasePort + 5)",
+    "-TimeoutSeconds", "45",
+    "-SimulateCorruptedFrameConfig"
 )
 & pwsh @args
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

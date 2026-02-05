@@ -1,5 +1,6 @@
 using Newtonsoft.Json;
 
+using System;
 using System.IO;
 
 using static Newtonsoft.Json.JsonConvert;
@@ -16,10 +17,10 @@ public sealed class AddonConfig
 {
     public int Version { get; init; } = AddonConfigMeta.Version;
 
-    public string Author { get; set; } = string.Empty;
-    public string CellSize { get; set; } = "1";
-    public string Title { get; set; } = string.Empty;
-    public string Command { get; set; } = string.Empty;
+    public string Author { get; set; } = "FreeHongKongMMO";
+    public string CellSize { get; set; } = "4";
+    public string Title { get; set; } = "DataToColor";
+    public string Command { get; set; } = "dc";
 
     [JsonIgnore]
     public string CommandFlush => Command + "flush";
@@ -47,7 +48,7 @@ public sealed class AddonConfig
         {
             try
             {
-                AddonConfig? loaded = DeserializeObject<AddonConfig>(File.ReadAllText(AddonConfigMeta.DefaultFileName));
+                AddonConfig? loaded = DeserializeObject<AddonConfig>(File.ReadAllText(GetPath()));
                 if (loaded != null && loaded.Version == AddonConfigMeta.Version)
                 {
                     return loaded;
@@ -64,19 +65,24 @@ public sealed class AddonConfig
 
     public static bool Exists()
     {
-        return File.Exists(AddonConfigMeta.DefaultFileName);
+        return File.Exists(GetPath());
     }
 
     public static void Delete()
     {
         if (Exists())
         {
-            File.Delete(AddonConfigMeta.DefaultFileName);
+            File.Delete(GetPath());
         }
     }
 
     public void Save()
     {
-        File.WriteAllText(AddonConfigMeta.DefaultFileName, SerializeObject(this));
+        File.WriteAllText(GetPath(), SerializeObject(this));
+    }
+
+    private static string GetPath()
+    {
+        return Path.Combine(AppContext.BaseDirectory, AddonConfigMeta.DefaultFileName);
     }
 }

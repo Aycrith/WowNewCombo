@@ -18,9 +18,14 @@ public static class FrameConfigMeta
 
 public static class FrameConfig
 {
+    private static string GetPath()
+    {
+        return Path.Combine(AppContext.BaseDirectory, FrameConfigMeta.DefaultFilename);
+    }
+
     public static bool Exists()
     {
-        return File.Exists(FrameConfigMeta.DefaultFilename);
+        return File.Exists(GetPath());
     }
 
     public static bool IsValid(Rectangle rect, Version addonVersion)
@@ -42,7 +47,7 @@ public static class FrameConfig
 
     public static DataFrameConfig Load()
     {
-        return JsonConvert.DeserializeObject<DataFrameConfig>(File.ReadAllText(FrameConfigMeta.DefaultFilename));
+        return JsonConvert.DeserializeObject<DataFrameConfig>(File.ReadAllText(GetPath()));
     }
 
     public static DataFrame[] LoadFrames()
@@ -71,14 +76,14 @@ public static class FrameConfig
         DataFrameConfig config = new(FrameConfigMeta.Version, addonVersion, rect, meta, dataFrames);
 
         string json = JsonConvert.SerializeObject(config);
-        File.WriteAllText(FrameConfigMeta.DefaultFilename, json);
+        File.WriteAllText(GetPath(), json);
     }
 
     public static void Delete()
     {
         if (Exists())
         {
-            File.Delete(FrameConfigMeta.DefaultFilename);
+            File.Delete(GetPath());
         }
     }
 

@@ -327,3 +327,4 @@ READY_TO_LAUNCH.txt
 Navigation/mmaps/
 Navigation/*.exe
 Navigation/*.dll
+logs/

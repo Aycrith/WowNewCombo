@@ -85,7 +85,13 @@ public sealed class FrameConfigurator : IDisposable
     /// </summary>
     public int MetaPixelXOffset => metaPixelXOffset;
 
-    public string ImageBase64 { private set; get; } = "iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==";
+    private const string DefaultImagePngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==";
+
+    public string ImageMimeType { get; private set; } = "image/png";
+
+    public string ImageBase64 { get; private set; } = DefaultImagePngBase64;
+
+    public string ImageDataUri => $"data:{ImageMimeType};base64,{ImageBase64}";
 
     private Rectangle screenRect = Rectangle.Empty;
     private Size size = Size.Empty;
@@ -297,7 +303,7 @@ public sealed class FrameConfigurator : IDisposable
                                 logger.LogError("Timeout waiting for config mode after {Retries} attempts!", 
                                     configRetryCount + 1);
                                 logger.LogError("Ensure character is logged in and chat is available.");
-                                logger.LogError("The bot will type /dc in chat to toggle config mode.");
+                                logger.LogError("The bot will type /{Command} in chat to toggle config mode.", GetAddonCommand());
                                 StatusMessage = "Config mode timeout - ensure character is in-world";
                                 stage = Stage.Reset;
                                 if (auto) return false;
@@ -417,6 +423,7 @@ public sealed class FrameConfigurator : IDisposable
 
                 if (!auto)
                 {
+                    ImageMimeType = "image/jpeg";
                     ImageBase64 = cropped.ToBase64String(JpegFormat.Instance);
                 }
 
@@ -527,11 +534,11 @@ public sealed class FrameConfigurator : IDisposable
                     {
                         waitRetryCount++;
                         
-                        // Every 3 retries, try sending the /dc command again
+                        // Every 3 retries, try sending the command again
                         if (waitRetryCount > 0 && waitRetryCount % 3 == 0 && waitRetryCount < MAX_WAIT_RETRIES)
                         {
-                            logger.LogWarning("Config mode still detected, retrying /dc command (attempt {Attempt})...", 
-                                waitRetryCount / 3 + 1);
+                            logger.LogWarning("Config mode still detected, retrying /{Command} (attempt {Attempt})...",
+                                GetAddonCommand(), waitRetryCount / 3 + 1);
                             input.SetForegroundWindow();
                             wait.Fixed(INTERVAL);
                             ToggleInGameConfiguration();
@@ -803,6 +810,8 @@ public sealed class FrameConfigurator : IDisposable
 
     private void ToggleInGameConfiguration()
     {
+        string command = GetAddonCommand();
+
         // Ensure WoW is in foreground
         input.SetForegroundWindow();
         wait.Fixed(200); // Brief delay to let window focus settle
@@ -818,24 +827,40 @@ public sealed class FrameConfigurator : IDisposable
         input.PressRandom(ConsoleKey.Escape, 50);
         wait.Fixed(300);
         
-        // ROBUST APPROACH: Type /dc command directly in chat
+        // ROBUST APPROACH: Type command directly in chat
         // This bypasses the keybinding requirement entirely - no need for SHIFT-PAGEUP
         // to be configured. Works immediately after addon install.
-        logger.LogDebug("ToggleInGameConfiguration: Typing /dc command in chat...");
+        logger.LogDebug("ToggleInGameConfiguration: Typing /{Command} command in chat...", command);
         
         // Press Enter to open chat
         input.PressRandom(ConsoleKey.Enter, 50);
         wait.Fixed(200);
         
-        // Type the /dc command
-        input.SendText("/dc");
+        // Type the command
+        input.SendText("/" + command);
         wait.Fixed(150);
         
         // Press Enter to execute command
         input.PressRandom(ConsoleKey.Enter, 50);
         wait.Fixed(300);
         
-        logger.LogDebug("ToggleInGameConfiguration: /dc command sent via chat");
+        logger.LogDebug("ToggleInGameConfiguration: /{Command} command sent via chat", command);
+    }
+
+    private string GetAddonCommand()
+    {
+        string cmd = addonConfigurator.Config.Command?.Trim() ?? string.Empty;
+        if (cmd.StartsWith("/", StringComparison.Ordinal))
+        {
+            cmd = cmd.TrimStart('/');
+        }
+
+        if (string.IsNullOrWhiteSpace(cmd))
+        {
+            return "dc";
+        }
+
+        return cmd;
     }
 
     public bool TryResolveRaceAndClass(out UnitRace race, out UnitClass @class, out ClientVersion version)

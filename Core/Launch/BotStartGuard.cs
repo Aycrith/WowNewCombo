@@ -23,7 +23,13 @@ public interface IBotStartGuard
     LaunchReadinessSnapshot Evaluate(ClassConfiguration? classConfig, RouteInfo? routeInfo);
 }
 
-public sealed class BotStartGuard : IBotStartGuard
+public interface ILaunchReadinessCacheInvalidator
+{
+    void InvalidateAddonValidation();
+    void PrimeAddonValidation(AddonValidationResult result, string reason);
+}
+
+public sealed class BotStartGuard : IBotStartGuard, ILaunchReadinessCacheInvalidator
 {
     private readonly ILogger<BotStartGuard> logger;
     private readonly LaunchOptions options;
@@ -46,6 +52,7 @@ public sealed class BotStartGuard : IBotStartGuard
     private DateTimeOffset lastAddonValidationUtc = DateTimeOffset.MinValue;
     private AddonValidationResult? cachedAddonValidation;
     private Task<AddonValidationResult>? addonValidationTask;
+    private DateTimeOffset addonValidationStartedUtc = DateTimeOffset.MinValue;
 
     public BotStartGuard(
         ILogger<BotStartGuard> logger,
@@ -78,11 +85,7 @@ public sealed class BotStartGuard : IBotStartGuard
     public LaunchReadinessSnapshot Evaluate(ClassConfiguration? classConfig, RouteInfo? routeInfo)
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
-        LaunchOverrideSnapshot overrideSnapshot = new(
-            overrides.AllowStartWithWarnings,
-            overrides.SkipNavigationChecks,
-            overrides.SkipKeybindingChecks,
-            overrides.SkipActionBarChecks);
+        LaunchOverrideSnapshot overrideSnapshot = overrides.Snapshot();
 
         if (options.EvaluateTimeoutMs <= 0)
         {
@@ -185,14 +188,15 @@ public sealed class BotStartGuard : IBotStartGuard
         return CreateSnapshot(now, overrideSnapshot, checks);
     }
 
-    private static LaunchReadinessSnapshot CreateSnapshot(
+    private LaunchReadinessSnapshot CreateSnapshot(
         DateTimeOffset now,
         LaunchOverrideSnapshot overrideSnapshot,
         List<LaunchSubsystemCheck> checks)
     {
-        bool hasBlocking = checks.Any(c => c.IsBlocking);
+        List<LaunchSubsystemCheck> effectiveChecks = ApplyOverrides(now, overrideSnapshot, checks);
+        bool hasBlocking = effectiveChecks.Any(c => c.IsBlocking);
 
-        bool strictReady = checks
+        bool strictReady = effectiveChecks
             .Where(c => c.IsRequired)
             .All(c => c.Status is LaunchStatus.Ok or LaunchStatus.Skipped);
 
@@ -202,8 +206,101 @@ public sealed class BotStartGuard : IBotStartGuard
             IsLaunchReady: strictReady,
             CanStartBot: canStart,
             TimestampUtc: now,
-            Checks: checks,
+            Checks: effectiveChecks,
             Overrides: overrideSnapshot);
+    }
+
+    private List<LaunchSubsystemCheck> ApplyOverrides(
+        DateTimeOffset now,
+        LaunchOverrideSnapshot overrideSnapshot,
+        List<LaunchSubsystemCheck> checks)
+    {
+        if (!overrideSnapshot.EmergencyBypassAll && overrideSnapshot.Bypasses.Count == 0)
+        {
+            return checks;
+        }
+
+        List<LaunchSubsystemCheck> updated = new(capacity: checks.Count);
+        foreach (LaunchSubsystemCheck check in checks)
+        {
+            if (!IsBypassed(overrideSnapshot, check.Subsystem, out LaunchSubsystemBypass? bypass))
+            {
+                updated.Add(check);
+                continue;
+            }
+
+            if (check.Subsystem == LaunchSubsystem.Addons &&
+                !overrideSnapshot.EmergencyBypassAll &&
+                (check.Status != LaunchStatus.Ok || check.IsBlocking))
+            {
+                try
+                {
+                    // Safeguard: only allow bypass if a synchronous validation confirms add-ons are actually OK.
+                    AddonValidationResult forced = addonValidator.Validate();
+                    PrimeAddonValidation(forced, "Bypass safeguard");
+
+                    if (!forced.IsValid || forced.HasWarnings)
+                    {
+                        updated.Add(check with
+                        {
+                            Status = LaunchStatus.Error,
+                            IsBlocking = true,
+                            Message = $"Add-on bypass refused: {forced.GetSummary()}",
+                            TimestampUtc = now,
+                            FixHint = "Open Addon Config, install/update DataToColor, then Refresh",
+                            NavigateTo = "/AddonConfiguration"
+                        });
+                        continue;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "[BotStartGuard] Add-on bypass safeguard failed");
+                    updated.Add(check);
+                    continue;
+                }
+            }
+
+            // Safeguard: only emergency bypass can suppress genuine errors.
+            if (check.Status == LaunchStatus.Error && !overrideSnapshot.EmergencyBypassAll)
+            {
+                updated.Add(check);
+                continue;
+            }
+
+            string reason = bypass?.Reason ?? "Emergency bypass";
+            updated.Add(check with
+            {
+                Status = LaunchStatus.Ok,
+                IsBlocking = false,
+                Message = $"{check.Message} (OVERRIDDEN: {reason})",
+                TimestampUtc = now,
+                IsOverridden = true
+            });
+        }
+
+        return updated;
+    }
+
+    private static bool IsBypassed(
+        LaunchOverrideSnapshot snapshot,
+        LaunchSubsystem subsystem,
+        out LaunchSubsystemBypass? bypass)
+    {
+        if (snapshot.EmergencyBypassAll)
+        {
+            bypass = null;
+            return true;
+        }
+
+        if (snapshot.Bypasses.TryGetValue(subsystem, out LaunchSubsystemBypass found) && found.Enabled)
+        {
+            bypass = found;
+            return true;
+        }
+
+        bypass = null;
+        return false;
     }
 
     private static string GetTimeoutTitle(LaunchSubsystem subsystem) => subsystem switch
@@ -260,9 +357,37 @@ public sealed class BotStartGuard : IBotStartGuard
         return check;
     }
 
+    public void InvalidateAddonValidation()
+    {
+        lock (cacheLock)
+        {
+            cachedAddonValidation = null;
+            addonValidationTask = null;
+            addonValidationStartedUtc = DateTimeOffset.MinValue;
+            lastAddonValidationUtc = DateTimeOffset.MinValue;
+        }
+    }
+
+    public void PrimeAddonValidation(AddonValidationResult result, string reason)
+    {
+        lock (cacheLock)
+        {
+            cachedAddonValidation = result;
+            lastAddonValidationUtc = DateTimeOffset.UtcNow;
+            addonValidationTask = null;
+            addonValidationStartedUtc = DateTimeOffset.MinValue;
+        }
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("[BotStartGuard] Primed addon validation cache ({Reason})", reason);
+        }
+    }
+
     private LaunchSubsystemCheck CheckNavigation(DateTimeOffset now, LaunchOverrideSnapshot overrideSnapshot)
     {
-        bool required = !overrideSnapshot.SkipNavigationChecks;
+        bool required = !overrideSnapshot.EmergencyBypassAll &&
+                        !overrideSnapshot.Bypasses.ContainsKey(LaunchSubsystem.Navigation);
 
         if (!required)
         {
@@ -427,6 +552,20 @@ public sealed class BotStartGuard : IBotStartGuard
                     FixHint: "Start WoW before validating add-ons");
             }
 
+            if (!AddonConfig.Exists())
+            {
+                return new LaunchSubsystemCheck(
+                    LaunchSubsystem.Addons,
+                    LaunchStatus.Error,
+                    "Add-ons",
+                    "addon_config.json missing",
+                    IsRequired: true,
+                    IsBlocking: true,
+                    TimestampUtc: now,
+                    FixHint: "Run Auto Fix or complete Addon Configuration",
+                    NavigateTo: "/AddonConfiguration");
+            }
+
             if (!TryGetCachedAddonValidation(now, out AddonValidationResult result))
             {
                 return new LaunchSubsystemCheck(
@@ -495,7 +634,8 @@ public sealed class BotStartGuard : IBotStartGuard
 
     private bool TryGetCachedAddonValidation(DateTimeOffset now, out AddonValidationResult result)
     {
-        const int cacheSeconds = 10;
+        const int cacheSeconds = 3;
+        const int maxValidationSeconds = 30;
 
         lock (cacheLock)
         {
@@ -508,10 +648,73 @@ public sealed class BotStartGuard : IBotStartGuard
             if (addonValidationTask == null || addonValidationTask.IsCompleted)
             {
                 addonValidationTask = Task.Run(() => addonValidator.Validate());
+                addonValidationStartedUtc = now;
+            }
+
+            if (addonValidationTask.IsFaulted)
+            {
+                Exception? ex = addonValidationTask.Exception?.GetBaseException();
+                cachedAddonValidation = new AddonValidationResult();
+                cachedAddonValidation.AddError("Addon validation exception", ex?.Message ?? "Unknown error");
+                lastAddonValidationUtc = now;
+                addonValidationTask = null;
+                addonValidationStartedUtc = DateTimeOffset.MinValue;
+                result = cachedAddonValidation;
+                return true;
+            }
+
+            if (addonValidationTask.IsCanceled)
+            {
+                cachedAddonValidation = new AddonValidationResult();
+                cachedAddonValidation.AddError("Addon validation cancelled", "Validation task was cancelled");
+                lastAddonValidationUtc = now;
+                addonValidationTask = null;
+                addonValidationStartedUtc = DateTimeOffset.MinValue;
+                result = cachedAddonValidation;
+                return true;
             }
 
             if (!addonValidationTask.IsCompleted)
             {
+                if (addonValidationStartedUtc != DateTimeOffset.MinValue &&
+                    (now - addonValidationStartedUtc).TotalSeconds > 1 &&
+                    cachedAddonValidation == null)
+                {
+                    try
+                    {
+                        logger.LogWarning("[BotStartGuard] Addon validation pending >1s; forcing synchronous validation");
+                        cachedAddonValidation = addonValidator.Validate();
+                        lastAddonValidationUtc = now;
+                        addonValidationTask = null;
+                        addonValidationStartedUtc = DateTimeOffset.MinValue;
+                        result = cachedAddonValidation;
+                        return true;
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(ex, "[BotStartGuard] Forced synchronous addon validation failed");
+                        cachedAddonValidation = new AddonValidationResult();
+                        cachedAddonValidation.AddError("Addon validation exception", ex.Message);
+                        lastAddonValidationUtc = now;
+                        addonValidationTask = null;
+                        addonValidationStartedUtc = DateTimeOffset.MinValue;
+                        result = cachedAddonValidation;
+                        return true;
+                    }
+                }
+
+                if (addonValidationStartedUtc != DateTimeOffset.MinValue &&
+                    (now - addonValidationStartedUtc).TotalSeconds > maxValidationSeconds)
+                {
+                    cachedAddonValidation = new AddonValidationResult();
+                    cachedAddonValidation.AddError("Addon validation timeout", $"Validation did not complete within {maxValidationSeconds}s");
+                    lastAddonValidationUtc = now;
+                    addonValidationTask = null;
+                    addonValidationStartedUtc = DateTimeOffset.MinValue;
+                    result = cachedAddonValidation;
+                    return true;
+                }
+
                 if (cachedAddonValidation != null)
                 {
                     result = cachedAddonValidation;
@@ -532,10 +735,13 @@ public sealed class BotStartGuard : IBotStartGuard
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "[BotStartGuard] Addon validation task failed");
-                cachedAddonValidation = null;
+                cachedAddonValidation = new AddonValidationResult();
+                cachedAddonValidation.AddError("Addon validation exception", ex.Message);
+                lastAddonValidationUtc = now;
                 addonValidationTask = null;
-                result = new AddonValidationResult();
-                return false;
+                addonValidationStartedUtc = DateTimeOffset.MinValue;
+                result = cachedAddonValidation;
+                return true;
             }
         }
     }
@@ -750,7 +956,8 @@ public sealed class BotStartGuard : IBotStartGuard
 
     private LaunchSubsystemCheck CheckKeyBindings(DateTimeOffset now, ClassConfiguration? classConfig, LaunchOverrideSnapshot overrideSnapshot)
     {
-        bool required = !overrideSnapshot.SkipKeybindingChecks;
+        bool required = !overrideSnapshot.EmergencyBypassAll &&
+                        !overrideSnapshot.Bypasses.ContainsKey(LaunchSubsystem.KeyBindings);
         if (!required)
         {
             return new LaunchSubsystemCheck(
@@ -780,6 +987,7 @@ public sealed class BotStartGuard : IBotStartGuard
 
         if (!keyBindingsReader.IsInitialized)
         {
+            string command = GetAddonCommand();
             var (totalReads, nonZero, consecutiveZeros) = keyBindingsReader.GetReadStats();
             return new LaunchSubsystemCheck(
                 LaunchSubsystem.KeyBindings,
@@ -789,7 +997,7 @@ public sealed class BotStartGuard : IBotStartGuard
                 IsRequired: true,
                 IsBlocking: true,
                 TimestampUtc: now,
-                FixHint: "Enter world and run /dcbindings (or use Key Bindings page)",
+                FixHint: $"Enter world and run /{command}bindings (or use Key Bindings page)",
                 NavigateTo: "/KeyBindings");
         }
 
@@ -817,13 +1025,31 @@ public sealed class BotStartGuard : IBotStartGuard
             IsRequired: true,
             IsBlocking: true,
             TimestampUtc: now,
-            FixHint: "Open Key Bindings page and apply defaults (/dcbindings, /dcactions)",
+            FixHint: $"Open Key Bindings page and apply defaults (/{GetAddonCommand()}bindings, /{GetAddonCommand()}actions)",
             NavigateTo: "/KeyBindings");
+    }
+
+    private string GetAddonCommand()
+    {
+        try
+        {
+            string cmd = addonConfigurator.Config.Command?.Trim() ?? string.Empty;
+            if (cmd.StartsWith("/", StringComparison.Ordinal))
+            {
+                cmd = cmd.TrimStart('/');
+            }
+            return string.IsNullOrWhiteSpace(cmd) ? "dc" : cmd;
+        }
+        catch
+        {
+            return "dc";
+        }
     }
 
     private LaunchSubsystemCheck CheckActionBar(DateTimeOffset now, ClassConfiguration? classConfig, LaunchOverrideSnapshot overrideSnapshot)
     {
-        bool required = !overrideSnapshot.SkipActionBarChecks;
+        bool required = !overrideSnapshot.EmergencyBypassAll &&
+                        !overrideSnapshot.Bypasses.ContainsKey(LaunchSubsystem.ActionBar);
         if (!required)
         {
             return new LaunchSubsystemCheck(

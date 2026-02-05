@@ -139,7 +139,10 @@ public sealed class WowProcess
                 return;
             }
             
-            token.WaitHandle.WaitOne(2000); // Poll every 2 seconds
+            if (WaitForCancellationOrTimeout(2000))
+            {
+                return;
+            }
         }
     }
 
@@ -150,7 +153,10 @@ public sealed class WowProcess
             if (process == null)
             {
                 // Process was never found, shouldn't happen in this code path
-                token.WaitHandle.WaitOne(5000);
+                if (WaitForCancellationOrTimeout(5000))
+                {
+                    return;
+                }
                 continue;
             }
             
@@ -176,7 +182,25 @@ public sealed class WowProcess
                 }
             }
 
-            token.WaitHandle.WaitOne(5000);
+            if (WaitForCancellationOrTimeout(5000))
+            {
+                return;
+            }
+        }
+    }
+
+    private bool WaitForCancellationOrTimeout(int millisecondsTimeout)
+    {
+        try
+        {
+            // WaitHandle is signaled when the token is cancelled.
+            return token.WaitHandle.WaitOne(millisecondsTimeout);
+        }
+        catch (ObjectDisposedException)
+        {
+            // The CancellationTokenSource was disposed while our background thread is still unwinding.
+            // Treat this as a shutdown signal and exit the polling loop gracefully.
+            return true;
         }
     }
 

@@ -284,8 +284,15 @@
         if (firstRender)
         {
             var dotNetReference = DotNetObjectReference.Create(this);
-            await JSRuntime.InvokeVoidAsync("init", dotNetReference);
-            await JSRuntime.InvokeVoidAsync("draw", Color3, Color4);
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("init", dotNetReference);
+                await JSRuntime.InvokeVoidAsync("draw", Color3, Color4);
+            }
+            catch (JSException)
+            {
+                return;
+            }
 
             UpdateRouteMarkup();
         }
@@ -297,7 +304,13 @@
 
         areaDB.Changed -= OnZoneChanged;
 
-        await JSRuntime.InvokeVoidAsync("dispose");
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("dispose");
+        }
+        catch (JSException)
+        {
+        }
     }
 
 

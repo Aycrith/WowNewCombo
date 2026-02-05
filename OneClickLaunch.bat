@@ -10,9 +10,9 @@ cd /d "%~dp0"
 REM Prefer PowerShell 7 if installed
 where pwsh >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
-  pwsh -NoProfile -ExecutionPolicy Bypass -File "%~dp0Scripts\\OneClickLauncher.ps1" -EnableNavigationServer:$true -AutoStartBot:$false -AutoFix:$false -RunValidation:$false
+  pwsh -NoProfile -ExecutionPolicy Bypass -File "%~dp0Scripts\\OneClickLauncher.ps1" -EnableNavigationServer:$true -AutoStartBot:$false -AutoFix:$true -RunValidation:$true
 ) else (
-  powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0Scripts\\OneClickLauncher.ps1" -EnableNavigationServer:$true -AutoStartBot:$false -AutoFix:$false -RunValidation:$false
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0Scripts\\OneClickLauncher.ps1" -EnableNavigationServer:$true -AutoStartBot:$false -AutoFix:$true -RunValidation:$true
 )
 
 if NOT %ERRORLEVEL%==0 (

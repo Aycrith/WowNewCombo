@@ -141,9 +141,17 @@
             continent = PlayerReader.WorldMapArea.Continent;
             expansion = PlayerReader.Version.ToStringF().ToLower();
 
-            await jsRuntime.InvokeVoidAsync("init", 
-                expansion ?? "som",
-                continent ?? "Azeroth", zoom, x, y, Edit);
+            try
+            {
+                await jsRuntime.InvokeVoidAsync("init",
+                    expansion ?? "som",
+                    continent ?? "Azeroth", zoom, x, y, Edit);
+            }
+            catch (JSException)
+            {
+                // Leaflet UI is optional; avoid crashing the circuit if scripts are missing.
+                return;
+            }
 
             ActionZoneChangedAction();
         }
@@ -220,10 +228,17 @@
 
         InvokeAsync(async () =>
         {
-            await jsRuntime.InvokeVoidAsync("updateArea",
-                PlayerReader.WorldMapArea.AreaID);
+            try
+            {
+                await jsRuntime.InvokeVoidAsync("updateArea",
+                    PlayerReader.WorldMapArea.AreaID);
 
-            await UpdatePlayerPos();
+                await UpdatePlayerPos();
+            }
+            catch (JSException)
+            {
+                // Ignore JS failures; rest of UI still useful.
+            }
         });
 
         StateHasChanged();
@@ -231,8 +246,14 @@
 
     private async Task UpdatePlayerPos()
     {
-        await jsRuntime.InvokeVoidAsync("setPlayerLocation",
-            PlayerReader.WorldPos.X, PlayerReader.WorldPos.Y, PlayerReader.Direction);
+        try
+        {
+            await jsRuntime.InvokeVoidAsync("setPlayerLocation",
+                PlayerReader.WorldPos.X, PlayerReader.WorldPos.Y, PlayerReader.Direction);
+        }
+        catch (JSException)
+        {
+        }
     }
 
     private async Task UpdateRouteToWaypoint()
@@ -242,10 +263,16 @@
         var routeinfo = botController.RouteInfo;
 
         var waypoints = routeinfo.Route;
-        await jsRuntime.InvokeVoidAsync("setPolyPath", "Route", Serialize(waypoints, options));
+        try
+        {
+            await jsRuntime.InvokeVoidAsync("setPolyPath", "Route", Serialize(waypoints, options));
 
-        var routeToWayPoint = routeinfo.RouteToWaypoint;
-        await jsRuntime.InvokeVoidAsync("setPolyPath", "RouteToWaypoint", Serialize(routeToWayPoint, options));
+            var routeToWayPoint = routeinfo.RouteToWaypoint;
+            await jsRuntime.InvokeVoidAsync("setPolyPath", "RouteToWaypoint", Serialize(routeToWayPoint, options));
+        }
+        catch (JSException)
+        {
+        }
     }
 
     private void OnTimerTick(object? s, ElapsedEventArgs e)

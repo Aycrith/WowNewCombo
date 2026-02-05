@@ -70,12 +70,31 @@ public sealed partial class AddonConfigurator
                 logger.LogError($"{nameof(Config)}.{nameof(Config.Title)} - error - use letters only: '{Config.Title}'");
                 return false;
             }
-
-            Config.Command = Config.Title.Trim().ToLower();
         }
         else
         {
             logger.LogError($"{nameof(Config)}.{nameof(Config.Title)} - error - cannot be empty: '{Config.Title}'");
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(Config.Command))
+        {
+            Config.Command = Config.Title.Trim().ToLowerInvariant();
+        }
+
+        // Command should be stored without a leading slash.
+        Config.Command = Config.Command.Trim();
+        if (Config.Command.StartsWith("/", StringComparison.Ordinal))
+        {
+            Config.Command = Config.Command.TrimStart('/');
+        }
+
+        // Keep command predictable and safe to type (letters only).
+        Config.Command = RegexTitle().Replace(Config.Command, string.Empty);
+        Config.Command = new string(Config.Command.Where(char.IsLetter).ToArray()).ToLowerInvariant();
+        if (Config.Command.Length == 0)
+        {
+            logger.LogError($"{nameof(Config)}.{nameof(Config.Command)} - error - use letters only (no slash): '{Config.Command}'");
             return false;
         }
 
@@ -95,6 +114,11 @@ public sealed partial class AddonConfigurator
 
     public void Install()
     {
+        _ = TryInstall(out _);
+    }
+
+    public bool TryInstall(out string message)
+    {
         try
         {
             DeleteAddon();
@@ -102,11 +126,15 @@ public sealed partial class AddonConfigurator
             RenameAddon();
             MakeUnique();
 
+            message = "Success";
             logger.LogInformation($"{nameof(Install)} - Success");
+            return true;
         }
         catch (Exception e)
         {
-            logger.LogInformation($"{nameof(Install)} - Failed\n{e.Message}");
+            message = e.Message;
+            logger.LogError(e, $"{nameof(Install)} - Failed");
+            return false;
         }
     }
 
@@ -158,8 +186,48 @@ public sealed partial class AddonConfigurator
     {
         BulkRename(FinalAddonPath, DefaultAddonName, Config.Title);
         EditToc();
+        PromoteTocForClient();
         EditMainLua();
         EditModulesLua();
+    }
+
+    private void PromoteTocForClient()
+    {
+        // The addon repo contains multiple .toc variants for different Classic branches.
+        // WoW loads only <FolderName>.toc, so we promote the best matching variant to the main name.
+        // This avoids "out of date addon" and ensures the correct file list is used.
+
+        string suffix = process.FileVersion.Major switch
+        {
+            1 => "_Classic",
+            2 => "_TBC",
+            _ => string.Empty
+        };
+
+        if (string.IsNullOrEmpty(suffix))
+        {
+            return;
+        }
+
+        string mainTocPath = Path.Join(FinalAddonPath, $"{Config.Title}.toc");
+        string variantPath = Path.Join(FinalAddonPath, $"{Config.Title}{suffix}.toc");
+
+        if (!File.Exists(variantPath))
+        {
+            logger.LogDebug("TOC variant not found (skipping promote): {Path}", variantPath);
+            return;
+        }
+
+        try
+        {
+            File.Copy(variantPath, mainTocPath, overwrite: true);
+            logger.LogInformation("Promoted TOC variant for client v{Version}: {Variant} -> {Main}",
+                process.FileVersion, Path.GetFileName(variantPath), Path.GetFileName(mainTocPath));
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to promote TOC variant: {Variant} -> {Main}", variantPath, mainTocPath);
+        }
     }
 
     private static void BulkRename(string folderPath, string match, string replacement)

@@ -14,27 +14,41 @@
             Addon Configuration - (@(AddonConfigMeta.DefaultFileName)) file @(AddonConfig.Exists() ? "exists" : "not exists") and @(!addonConfig.IsDefault() ? "valid" : "not valid")
         </div>
         <div class="card-body" style="padding-bottom: 0">
-            <table class="table table-bordered">
-                <tbody>
-                    @foreach (var property in addonConfig.GetType().GetProperties())
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Author</label>
+                    <input class="form-control" @bind="addonConfig.Author" />
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">CellSize (recommended: 4)</label>
+                    <input class="form-control" @bind="addonConfig.CellSize" />
+                    @if (int.TryParse(addonConfig.CellSize, out int cellSize) && cellSize < 4)
                     {
-                        <tr>
-                            @switch (Type.GetTypeCode(property.PropertyType))
-                            {
-                                case TypeCode.String:
-                                    <td>@(property.Name)</td>
-                                    <td>
-                                        <input value="@property.GetValue(addonConfig)?.ToString()"
-                                               class="form-control"
-                                               disabled="@(property.Name.Contains(nameof(addonConfig.Command)) || addonConfigurator.Installed())"
-                                               @onchange="c => { property.SetValue(addonConfig, c.Value); }" />
-                                    </td>
-                                    break;
-                            }
-                        </tr>
+                        <div class="form-text text-warning">
+                            Very small CellSize will make the DataToColor pixel grid nearly invisible and break frame detection.
+                        </div>
                     }
-                </tbody>
-            </table>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Title (addon folder name)</label>
+                    <input class="form-control" @bind="addonConfig.Title" />
+                    <div class="form-text">Letters only. Changing this requires reinstall.</div>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Command (no leading slash)</label>
+                    <input class="form-control" @bind="addonConfig.Command" />
+                    <div class="form-text">Example: <code>dc</code> (commands: <code>/@addonConfig.Command</code>, <code>/@addonConfig.Command@("actions")</code>, <code>/@addonConfig.Command@("bindings")</code>)</div>
+                </div>
+            </div>
+
+            <div class="mt-3 d-flex gap-2">
+                <button class="btn btn-sm btn-outline-primary" @onclick="ApplyRecommended">
+                    Apply recommended (dc + 4)
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -67,6 +81,10 @@
                             <button class="btn btn-sm btn-success" @onclick="Install">
                                 <span>Save</span>
                             </button>
+                            @if (!string.IsNullOrWhiteSpace(lastError))
+                            {
+                                <div class="form-text text-danger">@lastError</div>
+                            }
                         </td>
                     </tr>
                     @if (AddonConfig.Exists())
@@ -92,6 +110,7 @@
 @code {
 
     private AddonConfig addonConfig = null!;
+    private string? lastError;
 
     protected override void OnInitialized()
     {
@@ -114,27 +133,41 @@
         addonConfigurator.Delete();
         exec.Run("/reload");
 
-        if (FrameConfig.Exists())
-        {
-            navigationManager.NavigateTo("/RestartServer");
-        }
-        else
-        {
-            navigationManager.NavigateTo("/", true);
-        }
+        navigationManager.NavigateTo("/AddonConfiguration");
     }
 
     private void Install()
     {
+        lastError = null;
+
         if (addonConfigurator.Validate())
         {
-            addonConfigurator.Install();
+            if (!addonConfigurator.TryInstall(out string message))
+            {
+                lastError = message;
+                base.InvokeAsync(StateHasChanged);
+                return;
+            }
             addonConfigurator.Save();
 
             exec.Run("/reload");
 
             navigationManager.NavigateTo("/FrameConfiguration");
         }
+        else
+        {
+            lastError = "Addon configuration invalid. Fix fields above then try again.";
+            base.InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void ApplyRecommended()
+    {
+        addonConfig.Title = "DataToColor";
+        addonConfig.Command = "dc";
+        addonConfig.CellSize = "4";
+
+        base.InvokeAsync(StateHasChanged);
     }
 
     private MarkupString AddonStatus()

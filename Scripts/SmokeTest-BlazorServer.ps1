@@ -35,7 +35,7 @@ $botRoot = (Resolve-Path -LiteralPath (Join-Path (Get-ScriptRoot) "..")).Path
 $logsDir = Join-Path $botRoot "logs"
 New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
 
-$ts = Get-Date -Format "yyyyMMdd-HHmmss"
+$ts = Get-Date -Format "yyyyMMdd-HHmmssfff"
 $stdoutPath = Join-Path $logsDir "smoke-blazor-${ts}-stdout.log"
 $stderrPath = Join-Path $logsDir "smoke-blazor-${ts}-stderr.log"
 $reportPath = Join-Path $logsDir "smoke-blazor-${ts}-report.json"
@@ -127,6 +127,34 @@ function Assert-LaunchCheckStatus {
     }
 }
 
+function Wait-ForLaunchCheckStatus {
+    param(
+        [Parameter(Mandatory = $true)][string]$BaseUrl,
+        [Parameter(Mandatory = $true)][string]$Title,
+        [Parameter(Mandatory = $true)][int[]]$AllowedStatuses,
+        [int]$TimeoutSeconds = 15
+    )
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    $last = $null
+    while ((Get-Date) -lt $deadline) {
+        $last = Invoke-RestMethod -Uri "$BaseUrl/api/launch/status" -TimeoutSec 10
+        try {
+            Assert-LaunchCheckStatus -Launch $last -Title $Title -AllowedStatuses $AllowedStatuses
+            return $last
+        } catch {
+            # keep polling until status stabilizes (e.g., validation transitions Pending -> Error/Ok)
+        }
+        Start-Sleep -Milliseconds 250
+    }
+
+    if ($last) {
+        throw "Timed out waiting for '$Title' to reach allowed statuses: $($AllowedStatuses -join ', ')"
+    }
+
+    throw "Timed out waiting for /api/launch/status"
+}
+
 try {
     if ($SimulatePortConflict) {
         $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, $Port)
@@ -173,13 +201,23 @@ try {
         }
 
         if ($SimulateMissingFrameConfig) { Assert-LaunchCheckStatus -Launch $launch -Title "Frames" -AllowedStatuses @(4) }
-        if ($SimulateMissingAddonConfig) { Assert-LaunchCheckStatus -Launch $launch -Title "Frames" -AllowedStatuses @(4) }
+        if ($SimulateMissingAddonConfig) { $launch = Wait-ForLaunchCheckStatus -BaseUrl $baseUrl -Title "Add-ons" -AllowedStatuses @(4) -TimeoutSeconds 15 }
         if ($SimulateCorruptedFrameConfig) { Assert-LaunchCheckStatus -Launch $launch -Title "Frames" -AllowedStatuses @(3, 4) }
         if ($SimulateCorruptedAddonConfig) { Assert-LaunchCheckStatus -Launch $launch -Title "Add-ons" -AllowedStatuses @(1, 2, 3, 4) }
 
         $botStatus = Invoke-RestMethod -Uri "$baseUrl/api/bot/status" -TimeoutSec 5
         if (-not $botStatus) {
             throw "/api/bot/status returned empty payload"
+        }
+
+        # Critical regression check: dashboard JS helpers must be served in Release builds (OneClickLauncher runs from bin/Release).
+        try {
+            $js = Invoke-WebRequest -Uri "$baseUrl/_content/Frontend/script/route.js" -TimeoutSec 10 -UseBasicParsing
+            if (-not $js.Content -or $js.Content.Length -lt 50) {
+                throw "route.js content too small"
+            }
+        } catch {
+            throw "Static web assets not reachable: $baseUrl/_content/Frontend/script/route.js ($($_.Exception.Message))"
         }
     } else {
         try {

@@ -89,7 +89,11 @@ public sealed class AddonInstaller
                 return false;
             }
 
-            addonConfigurator.Install();
+            if (!addonConfigurator.TryInstall(out string message))
+            {
+                logger.LogError("Addon install failed: {Message}", message);
+                return false;
+            }
             addonConfigurator.Save();
             
             logger.LogInformation("Addon installed successfully");
@@ -132,6 +136,108 @@ public sealed class AddonInstaller
         if (updatedCount > 0)
         {
             logger.LogInformation("Enabled {AddonName} for {Count} character(s)", addonName, updatedCount);
+        }
+    }
+
+    /// <summary>
+    /// Disables enabled AddOns.txt entries that reference missing addon folders.
+    /// This is primarily intended to clean up stale Blizzard_ module entries that
+    /// can produce noisy warnings in some Classic branches.
+    /// </summary>
+    /// <remarks>
+    /// This does not touch any addons that exist on disk, and only updates entries
+    /// that are currently enabled.
+    /// </remarks>
+    public int DisableEnabledMissingAddOns(string addonPrefix)
+    {
+        if (string.IsNullOrWhiteSpace(addonPrefix))
+        {
+            throw new ArgumentException("Prefix must be non-empty", nameof(addonPrefix));
+        }
+
+        if (!Directory.Exists(WtfPath))
+        {
+            return 0;
+        }
+
+        List<string> addOnsTxtFiles = FindAddOnsTxtFiles();
+        if (addOnsTxtFiles.Count == 0)
+        {
+            return 0;
+        }
+
+        int totalDisabled = 0;
+        foreach (string file in addOnsTxtFiles)
+        {
+            totalDisabled += DisableEnabledMissingAddOnsInFile(file, addonPrefix);
+        }
+
+        if (totalDisabled > 0)
+        {
+            logger.LogInformation("Disabled {Count} stale enabled AddOns.txt entries with prefix '{Prefix}'", totalDisabled, addonPrefix);
+        }
+
+        return totalDisabled;
+    }
+
+    private int DisableEnabledMissingAddOnsInFile(string filePath, string addonPrefix)
+    {
+        try
+        {
+            List<string> lines = File.ReadAllLines(filePath).ToList();
+            bool modified = false;
+            int disabled = 0;
+
+            for (int i = 0; i < lines.Count; i++)
+            {
+                string line = lines[i].Trim();
+                if (string.IsNullOrEmpty(line))
+                {
+                    continue;
+                }
+
+                int colonIndex = line.IndexOf(':');
+                if (colonIndex <= 0)
+                {
+                    continue;
+                }
+
+                string addonName = line[..colonIndex].Trim();
+                if (!addonName.StartsWith(addonPrefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                string state = line[(colonIndex + 1)..].Trim();
+                if (!state.Equals("enabled", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                string addonPath = Path.Join(AddonsBasePath, addonName);
+                if (Directory.Exists(addonPath))
+                {
+                    continue;
+                }
+
+                lines[i] = $"{addonName}: disabled";
+                modified = true;
+                disabled++;
+            }
+
+            if (modified)
+            {
+                File.WriteAllLines(filePath, lines);
+                string relativePath = Path.GetRelativePath(WtfPath, filePath);
+                logger.LogDebug("Updated {FilePath} - disabled {Count} stale enabled entries", relativePath, disabled);
+            }
+
+            return disabled;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to clean AddOns.txt file: {FilePath}", filePath);
+            return 0;
         }
     }
 

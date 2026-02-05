@@ -24,6 +24,7 @@ param(
     [int]$WebPort = 5000,
     [int]$PathingApiPort = 5001,
     [int]$NavPort = 47110,
+    [bool]$DryRun = $false,
 
     [bool]$ShowDashboard = $true,
     [int]$DashboardTailLines = 400,
@@ -41,6 +42,9 @@ param(
 
     [ValidateSet("Auto", "Local", "RemoteV1", "RemoteV3")]
     [string]$PathingMode = "Auto",
+
+    [ValidateSet("Auto", "som", "tbc", "wrath", "cata", "mop", "retail", "legacy_vanilla", "legacy_tbc", "legacy_wrath", "legacy_cata", "legacy_mop")]
+    [string]$PathingExpansion = "Auto",
 
     [int]$MonitorIntervalSeconds = 10,
     [bool]$ExitAfterStartup = $false,
@@ -136,14 +140,14 @@ function Write-CrashReport {
     $reportPath = Join-Path $logsDir ("crash-{0}-{1}-{2}.json" -f $Name, $ts, $runId)
 
     $exitCode = $null
-    $pid = $null
+    $processId = $null
     $stdoutPath = $null
     $stderrPath = $null
 
     if ($Process) {
         try {
             $Process.Refresh()
-            $pid = $Process.Id
+            $processId = $Process.Id
             $stdoutPath = $Process.StdOutPath
             $stderrPath = $Process.StdErrPath
             if ($Process.HasExited) {
@@ -161,7 +165,7 @@ function Write-CrashReport {
         Args = $Args
         Environment = $Environment
         Process = [ordered]@{
-            Pid = $pid
+            Pid = $processId
             ExitCode = $exitCode
             StdOutPath = $stdoutPath
             StdErrPath = $stderrPath
@@ -229,6 +233,38 @@ function Restart-ElevatedIfNeeded {
 
     Start-Process -FilePath $ps -ArgumentList $args -Verb RunAs | Out-Null
     exit 0
+}
+
+function Assert-WoWInstallStructure {
+    param([Parameter(Mandatory)][string]$WoWPath)
+
+    if (-not (Test-Path -LiteralPath $WoWPath)) {
+        throw "WoW path does not exist: $WoWPath"
+    }
+
+    $exeCandidates = @(
+        "WowClassic.exe",
+        "WowClassicT.exe",
+        "WowClassicB.exe",
+        "Wow.exe",
+        "Wow-64.exe"
+    )
+
+    $hasExe = $false
+    foreach ($exe in $exeCandidates) {
+        if (Test-Path -LiteralPath (Join-Path $WoWPath $exe)) {
+            $hasExe = $true
+            break
+        }
+    }
+
+    if (-not $hasExe) {
+        throw "WoW path does not look valid (no client exe found). Expected one of: $($exeCandidates -join ', ') under: $WoWPath"
+    }
+
+    if (-not (Test-Path -LiteralPath (Join-Path $WoWPath "Interface"))) {
+        throw "WoW path does not look valid (missing Interface folder): $WoWPath"
+    }
 }
 
 function Require-File {
@@ -328,6 +364,34 @@ function Ensure-DataConfigJson {
     }
 }
 
+function Ensure-ServiceFile {
+    param(
+        [Parameter(Mandatory)][string]$ServiceName,
+        [Parameter(Mandatory)][string]$SourcePath,
+        [Parameter(Mandatory)][string]$TargetDirectory,
+        [Parameter(Mandatory)][string]$FileName,
+        [bool]$Overwrite = $false
+    )
+
+    $dst = Join-Path $TargetDirectory $FileName
+    if (-not (Test-Path -LiteralPath $SourcePath)) {
+        Write-Log "Source file missing for ${ServiceName}: $SourcePath (skipping)" "WARN"
+        return
+    }
+
+    if ((-not $Overwrite) -and (Test-Path -LiteralPath $dst)) {
+        return
+    }
+
+    try {
+        Copy-Item -LiteralPath $SourcePath -Destination $dst -Force
+        $mode = if ($Overwrite) { "Overwrote" } else { "Copied" }
+        Write-Log "$mode ${ServiceName} file: $dst" "OK"
+    } catch {
+        Write-Log "Failed to copy ${ServiceName} file to $dst ($($_.Exception.Message))" "WARN"
+    }
+}
+
 function Try-GetWoWPathFromRunningProcess {
     try {
         $p = Get-CimInstance Win32_Process -Filter "Name='WowClassic.exe'" -ErrorAction Stop | Select-Object -First 1
@@ -369,6 +433,40 @@ function Resolve-WoWPath {
     }
 
     return $null
+}
+
+function Resolve-PathingExpansion {
+    param([Parameter(Mandatory)][string]$WoWPath)
+
+    if ($PathingExpansion -and $PathingExpansion -ne "Auto") {
+        return $PathingExpansion
+    }
+
+    $wowExe = Join-Path $WoWPath "WowClassic.exe"
+    if (-not (Test-Path -LiteralPath $wowExe)) {
+        return $null
+    }
+
+    try {
+        $vi = (Get-Item -LiteralPath $wowExe).VersionInfo
+        $ver = [Version]::new($vi.FileMajorPart, $vi.FileMinorPart, $vi.FileBuildPart, $vi.FilePrivatePart)
+
+        # Match SharedLib/StartupConfig/StartupClientVersion.cs mapping
+        if ($ver.Major -eq 1 -and $ver.Minor -ge 13) { return "som" }
+        if ($ver.Major -eq 2 -and $ver.Minor -ge 5) { return "tbc" }
+        if ($ver.Major -eq 3 -and $ver.Minor -ge 4) { return "wrath" }
+        if ($ver.Major -eq 4 -and $ver.Minor -ge 4) { return "cata" }
+        if ($ver.Major -eq 1 -and $ver.Minor -le 12) { return "legacy_vanilla" }
+        if ($ver.Major -eq 2 -and $ver.Minor -le 4) { return "legacy_tbc" }
+        if ($ver.Major -eq 3 -and $ver.Minor -le 3) { return "legacy_wrath" }
+        if ($ver.Major -eq 4 -and $ver.Minor -le 3) { return "legacy_cata" }
+        if ($ver.Major -eq 5 -and $ver.Minor -le 4) { return "legacy_mop" }
+        if ($ver.Major -ge 9) { return "retail" }
+
+        return $null
+    } catch {
+        return $null
+    }
 }
 
 function Ensure-AddonInstalled {
@@ -444,6 +542,53 @@ BindPadMinimal.xml
     }
 }
 
+function Repair-InstalledDataToColor {
+    param(
+        [Parameter(Mandatory)][string]$WoWPath,
+        [Parameter(Mandatory)][string]$AddonTitle,
+        [string]$Expansion = ""
+    )
+
+    try {
+        $addonDir = Join-Path $WoWPath ("Interface\\AddOns\\{0}" -f $AddonTitle)
+        if (-not (Test-Path -LiteralPath $addonDir)) {
+            Write-Log "AutoFix: Addon folder not found: $addonDir (skipping file repairs)" "WARN"
+            return
+        }
+
+        # 1) Promote correct TOC for the current Classic branch (reduces 'out of date' and ensures correct file list)
+        $variant = $null
+        if ($Expansion -eq "tbc") { $variant = Join-Path $addonDir ("{0}_TBC.toc" -f $AddonTitle) }
+        elseif ($Expansion -eq "som") { $variant = Join-Path $addonDir ("{0}_Classic.toc" -f $AddonTitle) }
+        else {
+            $tbc = Join-Path $addonDir ("{0}_TBC.toc" -f $AddonTitle)
+            $classic = Join-Path $addonDir ("{0}_Classic.toc" -f $AddonTitle)
+            if (Test-Path -LiteralPath $tbc) { $variant = $tbc }
+            elseif (Test-Path -LiteralPath $classic) { $variant = $classic }
+        }
+
+        $mainToc = Join-Path $addonDir ("{0}.toc" -f $AddonTitle)
+        if ($variant -and (Test-Path -LiteralPath $variant)) {
+            Copy-Item -LiteralPath $variant -Destination $mainToc -Force
+            Write-Log "AutoFix: Promoted TOC: $(Split-Path -Leaf $variant) -> $(Split-Path -Leaf $mainToc)" "OK"
+        }
+
+        # 2) Restore readable pixel size (CELL_SIZE) using the launcher-side recommended default.
+        $luaPath = Join-Path $addonDir ("{0}.lua" -f $AddonTitle)
+        if (Test-Path -LiteralPath $luaPath) {
+            $lua = Get-Content -LiteralPath $luaPath -Raw
+            $desired = 4
+            $updated = [regex]::Replace($lua, "(?m)^local\\s+CELL_SIZE\\s*=\\s*\\d+", "local CELL_SIZE = $desired")
+            if ($updated -ne $lua) {
+                [System.IO.File]::WriteAllText($luaPath, $updated, [System.Text.UTF8Encoding]::new($false))
+                Write-Log "AutoFix: Updated CELL_SIZE to $desired in $luaPath (run /reload in-game)" "OK"
+            }
+        }
+    } catch {
+        Write-Log "AutoFix: DataToColor repair failed: $($_.Exception.Message)" "WARN"
+    }
+}
+
 function Test-TcpPort {
     param([string]$Address, [int]$Port, [int]$TimeoutMs = 1000)
     try {
@@ -470,6 +615,28 @@ function Test-LocalTcpListenPort {
             if ($ep.Port -eq $Port) { return $true }
         }
         return $false
+    } catch {
+        return $false
+    }
+}
+
+function Test-DirectoryWritable {
+    param([Parameter(Mandatory)][string]$Path)
+
+    try {
+        if (-not (Test-Path -LiteralPath $Path)) {
+            return $false
+        }
+
+        # Test harness hook: allow `.wow_mock` scenarios to deterministically simulate permission failures.
+        if (Test-Path -LiteralPath (Join-Path $Path ".wow_mock_deny_write")) {
+            return $false
+        }
+
+        $probe = Join-Path $Path ("._write_probe_{0}.tmp" -f ([Guid]::NewGuid().ToString("n")))
+        New-Item -ItemType File -Path $probe -Force | Out-Null
+        Remove-Item -LiteralPath $probe -Force -ErrorAction SilentlyContinue
+        return $true
     } catch {
         return $false
     }
@@ -519,7 +686,6 @@ function Start-ManagedProcess {
         WindowStyle = "Minimized"
         RedirectStandardOutput = $StdOutPath
         RedirectStandardError = $StdErrPath
-        NoNewWindow = $true
     }
 
     $previousEnv = @{}
@@ -812,6 +978,11 @@ try {
     Ensure-ReleaseBuild -SolutionPath $sln -ExpectedOutputPath $blazorExe
     Ensure-DataConfigJson -TargetDirectory $blazorDir
 
+    # Keep runtime config files present even if the Release build output is stale.
+    # If -AutoFix is enabled we also overwrite addon_config.json to enforce recommended defaults.
+    Ensure-ServiceFile -ServiceName "BlazorServer" -SourcePath (Join-Path $BotRoot "BlazorServer\\addon_config.json") -TargetDirectory $blazorDir -FileName "addon_config.json" -Overwrite:$AutoFix
+    Ensure-ServiceFile -ServiceName "BlazorServer" -SourcePath (Join-Path $BotRoot "BlazorServer\\frame_config.json") -TargetDirectory $blazorDir -FileName "frame_config.json" -Overwrite:$false
+
     $navExe = Join-Path $BotRoot "Navigation\\AmeisenNavigationServer.exe"
     $navDir = Split-Path -Parent $navExe
 
@@ -831,9 +1002,79 @@ try {
         throw "Could not detect WoW installation path. Set Startup:WoWPath in BlazorServer\\appsettings.json or install WoW in a standard path."
     }
     Write-Log "WoW path: $wowPath" "OK"
+    Assert-WoWInstallStructure -WoWPath $wowPath
 
     Ensure-AddonInstalled -WoWPath $wowPath -AddonNames @("DataToColor", "BindPadMinimal", "cTimerBackport", "SoundKitBackport")
     Ensure-BindPadMinimalXmlEncoding -WoWPath $wowPath
+
+    $exp = Resolve-PathingExpansion -WoWPath $wowPath
+    if ($exp) {
+        Write-Log "Detected PathingAPI expansion: $exp" "OK"
+    } else {
+        Write-Log "Unable to detect PathingAPI expansion from WoW version. Defaulting to PathingAPI internal default (may break routes/pathing)." "WARN"
+    }
+
+    if ($AutoFix) {
+        try {
+            $cfg = Read-JsonFile -Path (Join-Path $blazorDir "addon_config.json")
+            $addonTitle = if ($cfg -and $cfg.Title) { [string]$cfg.Title } else { "DataToColor" }
+            Repair-InstalledDataToColor -WoWPath $wowPath -AddonTitle $addonTitle -Expansion $exp
+        } catch {
+            Repair-InstalledDataToColor -WoWPath $wowPath -AddonTitle "DataToColor" -Expansion $exp
+        }
+    }
+
+    if ($DryRun) {
+        $issues = @()
+
+        if (Test-LocalTcpListenPort -Port $WebPort) {
+            $issues += "WebPort $WebPort is already in use"
+        }
+        if (Test-LocalTcpListenPort -Port $PathingApiPort) {
+            $issues += "PathingApiPort $PathingApiPort is already in use"
+        }
+        if (Test-LocalTcpListenPort -Port $NavPort) {
+            $issues += "NavPort $NavPort is already in use"
+        }
+
+        $wowAddons = Join-Path $wowPath "Interface\\AddOns"
+        if (-not (Test-Path -LiteralPath $wowAddons)) {
+            $issues += "WoW AddOns directory missing: $wowAddons"
+        } elseif (-not (Test-DirectoryWritable -Path $wowAddons)) {
+            $issues += "WoW AddOns directory is not writable: $wowAddons"
+        }
+
+        $wowWtf = Join-Path $wowPath "WTF"
+        if ((Test-Path -LiteralPath $wowWtf) -and -not (Test-DirectoryWritable -Path $wowWtf)) {
+            $issues += "WoW WTF directory is not writable: $wowWtf"
+        }
+
+        $report = [ordered]@{
+            Timestamp = (Get-Date).ToString("o")
+            BotRoot = $BotRoot
+            WoWPath = $wowPath
+            DryRun = $true
+            AutoFix = [bool]$AutoFix
+            RunValidation = [bool]$RunValidation
+            Ports = [ordered]@{
+                WebPort = $WebPort
+                PathingApiPort = $PathingApiPort
+                NavPort = $NavPort
+            }
+            Issues = $issues
+            LogFile = $logFile
+        }
+
+        $reportPath = Join-Path $logsDir ("launcher-dryrun-{0}-{1}.json" -f (Get-Date -Format "yyyyMMdd-HHmmss"), $runId)
+        Write-JsonFile -Path $reportPath -Value $report
+
+        if ($issues.Count -gt 0) {
+            throw "DryRun failed: $($issues -join '; ') (report: $reportPath)"
+        }
+
+        Write-Log "DryRun passed. Report: $reportPath" "OK"
+        return
+    }
 
     $navAvailable = $false
     $navProcess = $null
@@ -879,14 +1120,37 @@ try {
     if (Test-Path $pathingExe) {
         Ensure-DataConfigJson -TargetDirectory (Split-Path -Parent $pathingExe)
         if (-not (Test-TcpPort -Address "127.0.0.1" -Port $PathingApiPort -TimeoutMs 250)) {
-            $pathingProcess = Start-ManagedProcess -Name "PathingAPI" -ExePath $pathingExe -WorkingDir $pathingDir
+            $pathingEnv = @{}
+            if ($exp) { $pathingEnv["exp"] = $exp }
+            $pathingProcess = Start-ManagedProcess -Name "PathingAPI" -ExePath $pathingExe -WorkingDir $pathingDir -Environment $pathingEnv
             $managed.PathingAPI.Process = $pathingProcess
             $managed.PathingAPI.Managed = $true
-            Start-Sleep -Seconds 2
+            Start-Sleep -Seconds 1
         }
-        if (Test-TcpPort -Address "127.0.0.1" -Port $PathingApiPort -TimeoutMs 250) {
-            $pathingApiAvailable = $true
+
+        $deadline = (Get-Date).AddSeconds(20)
+        while ((Get-Date) -lt $deadline) {
+            if (Test-TcpPort -Address "127.0.0.1" -Port $PathingApiPort -TimeoutMs 250) {
+                $pathingApiAvailable = $true
+                break
+            }
+
+            if ($pathingProcess) {
+                try {
+                    $pathingProcess.Refresh()
+                    if ($pathingProcess.HasExited) { break }
+                } catch { }
+            }
+
+            Start-Sleep -Milliseconds 500
+        }
+
+        if ($pathingApiAvailable) {
             Write-Log "PathingAPI ready on 127.0.0.1:$PathingApiPort" "OK"
+        } elseif ($pathingProcess -and $pathingProcess.HasExited) {
+            Write-Log "PathingAPI exited early (code=$($pathingProcess.ExitCode)); continuing without it." "WARN"
+        } else {
+            Write-Log "PathingAPI did not open port $PathingApiPort within 20s; continuing without it." "WARN"
         }
     }
 
@@ -1091,7 +1355,9 @@ try {
 
                 Start-Sleep -Seconds $restartBackoff.PathingAPI
                 try {
-                    $pathingProcess = Start-ManagedProcess -Name "PathingAPI" -ExePath $pathingExe -WorkingDir $pathingDir
+                    $pathingEnv = @{}
+                    if ($exp) { $pathingEnv["exp"] = $exp }
+                    $pathingProcess = Start-ManagedProcess -Name "PathingAPI" -ExePath $pathingExe -WorkingDir $pathingDir -Environment $pathingEnv
                     $managed.PathingAPI.Process = $pathingProcess
                     $restartBackoff.PathingAPI = [Math]::Min($restartBackoff.PathingAPI * 2, 60)
                 } catch {

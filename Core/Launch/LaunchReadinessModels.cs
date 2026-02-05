@@ -35,13 +35,19 @@ public sealed record LaunchSubsystemCheck(
     bool IsBlocking,
     DateTimeOffset TimestampUtc,
     string? FixHint = null,
-    string? NavigateTo = null);
+    string? NavigateTo = null,
+    bool IsOverridden = false);
+
+public sealed record LaunchSubsystemBypass(
+    bool Enabled,
+    string Reason,
+    DateTimeOffset TimestampUtc,
+    string Source);
 
 public sealed record LaunchOverrideSnapshot(
     bool AllowStartWithWarnings,
-    bool SkipNavigationChecks,
-    bool SkipKeybindingChecks,
-    bool SkipActionBarChecks);
+    bool EmergencyBypassAll,
+    IReadOnlyDictionary<LaunchSubsystem, LaunchSubsystemBypass> Bypasses);
 
 public sealed record LaunchReadinessSnapshot(
     bool IsLaunchReady,
@@ -49,4 +55,3 @@ public sealed record LaunchReadinessSnapshot(
     DateTimeOffset TimestampUtc,
     IReadOnlyList<LaunchSubsystemCheck> Checks,
     LaunchOverrideSnapshot Overrides);
-

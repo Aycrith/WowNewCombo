@@ -173,8 +173,11 @@ public static class DependencyInjection
     {
         s.AddOptions<LaunchOptions>();
         s.TryAddSingleton<LaunchOverrideState>();
-        s.TryAddSingleton<IBotStartGuard, BotStartGuard>();
+        s.TryAddSingleton<BotStartGuard>();
+        s.TryAddSingleton<IBotStartGuard>(sp => sp.GetRequiredService<BotStartGuard>());
+        s.TryAddSingleton<ILaunchReadinessCacheInvalidator>(sp => sp.GetRequiredService<BotStartGuard>());
         s.TryAddSingleton<LaunchReadinessService>();
+        s.TryAddSingleton<LaunchAutoFixService>();
 
         // Minimal pathing services so launch readiness can evaluate navigation without forcing remote connections.
         s.AddSingleton<PPatherService>(x =>
@@ -225,8 +228,11 @@ public static class DependencyInjection
     {
         s.AddOptions<LaunchOptions>();
         s.TryAddSingleton<LaunchOverrideState>();
-        s.TryAddSingleton<IBotStartGuard, BotStartGuard>();
+        s.TryAddSingleton<BotStartGuard>();
+        s.TryAddSingleton<IBotStartGuard>(sp => sp.GetRequiredService<BotStartGuard>());
+        s.TryAddSingleton<ILaunchReadinessCacheInvalidator>(sp => sp.GetRequiredService<BotStartGuard>());
         s.TryAddSingleton<LaunchReadinessService>();
+        s.TryAddSingleton<LaunchAutoFixService>();
 
         s.AddSingleton<IScreenCapture>(x =>
             GetScreenCapture(x.GetRequiredService<IServiceProvider>(), log));
@@ -439,9 +445,10 @@ public static class DependencyInjection
 
         IAddonDataProvider value = scr.ReaderType switch
         {
-            AddonDataProviderType.DXGI =>
-                (IAddonDataProvider)screen,
-            _ => throw new NotImplementedException(),
+            AddonDataProviderType.DXGI => screen is IAddonDataProvider provider
+                ? provider
+                : new NullAddonDataProvider(),
+            _ => new NullAddonDataProvider(),
         };
 
         log.LogInformation(value.GetType().Name);

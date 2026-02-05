@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -22,7 +23,7 @@ public sealed class LaunchReadinessService
         CanStartBot: false,
         TimestampUtc: DateTimeOffset.MinValue,
         Checks: Array.Empty<LaunchSubsystemCheck>(),
-        Overrides: new LaunchOverrideSnapshot(false, false, false, false));
+        Overrides: new LaunchOverrideSnapshot(false, false, new Dictionary<LaunchSubsystem, LaunchSubsystemBypass>()));
 
     public LaunchReadinessService(
         ILogger<LaunchReadinessService> logger,
@@ -79,4 +80,3 @@ public sealed class LaunchReadinessService
         }
     }
 }
-

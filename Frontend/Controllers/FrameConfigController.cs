@@ -208,14 +208,14 @@ public class FrameConfigController : ControllerBase
     [HttpGet("screenshot")]
     public IActionResult GetScreenshot()
     {
-        var imageBase64 = _frameConfigurator.ImageBase64;
+        var imageDataUri = _frameConfigurator.ImageDataUri;
         
-        if (string.IsNullOrEmpty(imageBase64))
+        if (string.IsNullOrEmpty(imageDataUri))
         {
             return NotFound(new { Message = "No screenshot available" });
         }
         
         // Return as HTML img for easy viewing
-        return Content($"<html><body><h1>WoW Screen Capture</h1><img src='data:image/jpeg;base64,{imageBase64}' style='max-width: 100%;' /></body></html>", "text/html");
+        return Content($"<html><body><h1>WoW Screen Capture</h1><img src='{imageDataUri}' style='max-width: 100%;' /></body></html>", "text/html");
     }
 }

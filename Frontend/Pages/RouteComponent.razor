@@ -168,7 +168,14 @@
     {
         if (firstRender || themeChanged)
         {
-            await JSRuntime.InvokeVoidAsync("draw", Color3, Color4);
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("draw", Color3, Color4);
+            }
+            catch (JSException)
+            {
+                // Dashboard JS helpers are optional; avoid crashing the circuit if scripts are missing.
+            }
             themeChanged = false;
         }
     }

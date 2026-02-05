@@ -14,6 +14,9 @@
 @inject IOptions<LaunchOptions> launchOptions
 @inject IBotController botController
 @inject DataConfig dataConfig
+@inject LaunchAutoFixService autoFix
+@inject AddonValidator addonValidator
+@inject ILaunchReadinessCacheInvalidator cacheInvalidator
 
 @implements IDisposable
 
@@ -123,11 +126,57 @@
                 }
             </div>
             <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-primary" @onclick="RunAutoFix" disabled="@autoFixRunning">
+                    @(autoFixRunning ? "Auto-fixing..." : "Auto Fix")
+                </button>
+                @if (autoFixResult?.RequiresRestart == true)
+                {
+                    <a class="btn btn-sm btn-outline-warning" href="/RestartServer">Restart Server</a>
+                }
                 <a class="btn btn-sm btn-outline-secondary" href="/startup">Startup Status</a>
                 <a class="btn btn-sm btn-outline-secondary" href="/Log">Logs</a>
             </div>
         </div>
     </div>
+
+    @if (autoFixResult != null)
+    {
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Auto Fix Results</span>
+                <span class="badge @(autoFixResult.Success ? "bg-success" : "bg-danger")">
+                    @(autoFixResult.Success ? "OK" : "Failed")
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Step</th>
+                                <th style="width: 120px;">Status</th>
+                                <th>Message</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (LaunchAutoFixStep step in autoFixResult.Steps)
+                            {
+                                <tr class="@(step.Status == LaunchAutoFixStatus.Failed ? "table-danger" : string.Empty)">
+                                    <td>@step.Name</td>
+                                    <td>
+                                        <span class="badge @(step.Status == LaunchAutoFixStatus.Applied ? "bg-success" : step.Status == LaunchAutoFixStatus.Failed ? "bg-danger" : "bg-secondary")">
+                                            @step.Status
+                                        </span>
+                                    </td>
+                                    <td>@step.Message</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
 
     <div class="row">
         <div class="col-lg-3">
@@ -150,24 +199,84 @@
                 <div class="card mt-3">
                     <div class="card-header">Advanced Overrides</div>
                     <div class="card-body">
+                        <div class="mb-2">
+                            <label class="form-label mb-1" for="overrideReason">Override reason</label>
+                            <input id="overrideReason" class="form-control form-control-sm" @bind="overrideReason" />
+                            <small class="text-muted">Overrides are audited to disk and shown as OVERRIDDEN in the dashboard.</small>
+                        </div>
+
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="allowWarn" @bind="allowStartWithWarnings" @bind:after="ApplyOverrides" />
                             <label class="form-check-label" for="allowWarn">Allow start with warnings</label>
                         </div>
+
                         <div class="form-check mt-2">
-                            <input class="form-check-input" type="checkbox" id="skipNav" @bind="skipNavigationChecks" @bind:after="ApplyOverrides" />
-                            <label class="form-check-label" for="skipNav">Skip navigation checks</label>
+                            <input class="form-check-input" type="checkbox" id="emergencyBypassAll" @bind="emergencyBypassAll" @bind:after="ApplyOverrides" />
+                            <label class="form-check-label" for="emergencyBypassAll">
+                                Emergency bypass all gates (unsafe)
+                            </label>
                         </div>
-                        <div class="form-check mt-2">
-                            <input class="form-check-input" type="checkbox" id="skipKb" @bind="skipKeybindingChecks" @bind:after="ApplyOverrides" />
-                            <label class="form-check-label" for="skipKb">Skip keybinding checks</label>
+
+                        <hr />
+                        <div class="small text-muted mb-2">Bypass individual checks (non-emergency bypass will not suppress Errors).</div>
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="bypassAddons" @bind="bypassAddons" @bind:after="ApplyOverrides" />
+                            <label class="form-check-label" for="bypassAddons">Bypass Add-ons gate</label>
                         </div>
-                        <div class="form-check mt-2">
-                            <input class="form-check-input" type="checkbox" id="skipAb" @bind="skipActionBarChecks" @bind:after="ApplyOverrides" />
-                            <label class="form-check-label" for="skipAb">Skip action bar checks</label>
+                        <div class="form-check mt-1">
+                            <input class="form-check-input" type="checkbox" id="bypassFrames" @bind="bypassFrames" @bind:after="ApplyOverrides" />
+                            <label class="form-check-label" for="bypassFrames">Bypass Frames gate</label>
                         </div>
+                        <div class="form-check mt-1">
+                            <input class="form-check-input" type="checkbox" id="bypassHandshake" @bind="bypassHandshake" @bind:after="ApplyOverrides" />
+                            <label class="form-check-label" for="bypassHandshake">Bypass Addon Handshake gate</label>
+                        </div>
+                        <div class="form-check mt-1">
+                            <input class="form-check-input" type="checkbox" id="bypassProfile" @bind="bypassProfile" @bind:after="ApplyOverrides" />
+                            <label class="form-check-label" for="bypassProfile">Bypass Profile gate</label>
+                        </div>
+                        <div class="form-check mt-1">
+                            <input class="form-check-input" type="checkbox" id="bypassRoute" @bind="bypassRoute" @bind:after="ApplyOverrides" />
+                            <label class="form-check-label" for="bypassRoute">Bypass Route gate</label>
+                        </div>
+                        <div class="form-check mt-1">
+                            <input class="form-check-input" type="checkbox" id="bypassNav" @bind="bypassNavigation" @bind:after="ApplyOverrides" />
+                            <label class="form-check-label" for="bypassNav">Bypass Navigation gate</label>
+                        </div>
+                        <div class="form-check mt-1">
+                            <input class="form-check-input" type="checkbox" id="bypassKb" @bind="bypassKeyBindings" @bind:after="ApplyOverrides" />
+                            <label class="form-check-label" for="bypassKb">Bypass Key Bindings gate</label>
+                        </div>
+                        <div class="form-check mt-1">
+                            <input class="form-check-input" type="checkbox" id="bypassAb" @bind="bypassActionBar" @bind:after="ApplyOverrides" />
+                            <label class="form-check-label" for="bypassAb">Bypass Action Bar gate</label>
+                        </div>
+
                         <hr />
                         <button class="btn btn-sm btn-outline-secondary" @onclick="ResetOverrides">Reset overrides</button>
+
+                        <div class="mt-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <strong class="small">Override audit</strong>
+                                <span class="badge bg-secondary">@overrides.GetAudit().Count</span>
+                            </div>
+                            <div class="mt-2 small" style="max-height: 160px; overflow: auto;">
+                                @foreach (LaunchOverrideAuditEntry entry in overrides.GetAudit().Reverse())
+                                {
+                                    <div>
+                                        <span class="text-muted">@entry.TimestampUtc.ToLocalTime().ToString("HH:mm:ss")</span>
+                                        <span class="ms-1">@entry.Action</span>
+                                        @if (entry.Subsystem != null)
+                                        {
+                                            <span class="ms-1">(@entry.Subsystem)</span>
+                                        }
+                                        <span class="ms-1">@((entry.Enabled) ? "ON" : "OFF")</span>
+                                        <span class="ms-2 text-muted">@entry.Reason</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
                     </div>
                 </div>
             }
@@ -216,6 +325,9 @@
                                         @onclick="() => WaitForStep(WizardStep.WoWAndAddons)"
                                         disabled="@(IsStepComplete(WizardStep.WoWAndAddons))">
                                     Wait (@launchOptions.Value.WoWAndAddonsTimeoutSeconds s)
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" @onclick="ForceRefreshAddons">
+                                    Force refresh Add-ons
                                 </button>
                                 <a class="btn btn-sm btn-outline-primary" href="/AddonConfiguration">Open Addon Config</a>
                                 <a class="btn btn-sm btn-outline-primary" href="/FrameConfiguration">Go to Frame Config</a>
@@ -512,23 +624,35 @@
         CanStartBot: false,
         TimestampUtc: DateTimeOffset.MinValue,
         Checks: Array.Empty<LaunchSubsystemCheck>(),
-        Overrides: new LaunchOverrideSnapshot(false, false, false, false));
+        Overrides: new LaunchOverrideSnapshot(false, false, new Dictionary<LaunchSubsystem, LaunchSubsystemBypass>()));
 
     private System.Threading.Timer? refreshTimer;
+    private bool disposed;
 
     private bool advancedMode;
     private bool showLogs = true;
 
     private bool allowStartWithWarnings;
-    private bool skipNavigationChecks;
-    private bool skipKeybindingChecks;
-    private bool skipActionBarChecks;
+    private bool emergencyBypassAll;
+    private bool bypassNavigation;
+    private bool bypassAddons;
+    private bool bypassFrames;
+    private bool bypassHandshake;
+    private bool bypassProfile;
+    private bool bypassRoute;
+    private bool bypassKeyBindings;
+    private bool bypassActionBar;
 
     private string stepError = string.Empty;
+    private string overrideReason = "Manual override";
     private bool checklistConfirmed;
     private bool showKeyboardPreview;
     private string importProfileStatus = string.Empty;
     private string importPathStatus = string.Empty;
+
+    private bool autoFixRunning;
+    private LaunchAutoFixResult? autoFixResult;
+    private bool autoFixAttemptedOnLoad;
 
     protected override void OnInitialized()
     {
@@ -540,18 +664,47 @@
         RefreshSnapshot();
 
         refreshTimer = new System.Threading.Timer(
-            _ => InvokeAsync(() =>
+            _ => _ = InvokeAsync(() =>
             {
-                RefreshSnapshot();
-                StateHasChanged();
+                if (disposed)
+                {
+                    return;
+                }
+
+                try
+                {
+                    RefreshSnapshot();
+                    StateHasChanged();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogDebug(ex, "LaunchWizard refresh failed");
+                }
             }),
             null,
             TimeSpan.FromMilliseconds(250),
             TimeSpan.FromSeconds(1));
+
+        _ = InvokeAsync(async () =>
+        {
+            // In Guided mode, attempt one automatic self-heal pass so users land closer to "all green".
+            await Task.Delay(750);
+            if (disposed || advancedMode || autoFixAttemptedOnLoad)
+            {
+                return;
+            }
+
+            autoFixAttemptedOnLoad = true;
+            if (!snapshot.IsLaunchReady)
+            {
+                await RunAutoFix();
+            }
+        });
     }
 
     public void Dispose()
     {
+        disposed = true;
         botController.ProfileLoaded -= OnExternalStateChanged;
         botController.StatusChanged -= OnExternalStateChanged;
         overrides.Changed -= OnExternalStateChanged;
@@ -587,22 +740,37 @@
     private void SyncOverridesToUi()
     {
         allowStartWithWarnings = overrides.AllowStartWithWarnings;
-        skipNavigationChecks = overrides.SkipNavigationChecks;
-        skipKeybindingChecks = overrides.SkipKeybindingChecks;
-        skipActionBarChecks = overrides.SkipActionBarChecks;
+        emergencyBypassAll = overrides.EmergencyBypassAll;
+
+        bypassNavigation = overrides.TryGetBypass(LaunchSubsystem.Navigation, out _);
+        bypassAddons = overrides.TryGetBypass(LaunchSubsystem.Addons, out _);
+        bypassFrames = overrides.TryGetBypass(LaunchSubsystem.Frames, out _);
+        bypassHandshake = overrides.TryGetBypass(LaunchSubsystem.AddonHandshake, out _);
+        bypassProfile = overrides.TryGetBypass(LaunchSubsystem.Profile, out _);
+        bypassRoute = overrides.TryGetBypass(LaunchSubsystem.Route, out _);
+        bypassKeyBindings = overrides.TryGetBypass(LaunchSubsystem.KeyBindings, out _);
+        bypassActionBar = overrides.TryGetBypass(LaunchSubsystem.ActionBar, out _);
     }
 
     private void ApplyOverrides()
     {
-        overrides.SetAllowStartWithWarnings(allowStartWithWarnings);
-        overrides.SetSkipNavigationChecks(skipNavigationChecks);
-        overrides.SetSkipKeybindingChecks(skipKeybindingChecks);
-        overrides.SetSkipActionBarChecks(skipActionBarChecks);
+        string reason = string.IsNullOrWhiteSpace(overrideReason) ? "Manual override" : overrideReason;
+        overrides.SetAllowStartWithWarnings(allowStartWithWarnings, reason, "Wizard");
+        overrides.SetEmergencyBypassAll(emergencyBypassAll, reason, "Wizard");
+
+        overrides.SetBypass(LaunchSubsystem.Navigation, bypassNavigation, reason, "Wizard");
+        overrides.SetBypass(LaunchSubsystem.Addons, bypassAddons, reason, "Wizard");
+        overrides.SetBypass(LaunchSubsystem.Frames, bypassFrames, reason, "Wizard");
+        overrides.SetBypass(LaunchSubsystem.AddonHandshake, bypassHandshake, reason, "Wizard");
+        overrides.SetBypass(LaunchSubsystem.Profile, bypassProfile, reason, "Wizard");
+        overrides.SetBypass(LaunchSubsystem.Route, bypassRoute, reason, "Wizard");
+        overrides.SetBypass(LaunchSubsystem.KeyBindings, bypassKeyBindings, reason, "Wizard");
+        overrides.SetBypass(LaunchSubsystem.ActionBar, bypassActionBar, reason, "Wizard");
     }
 
     private void ResetOverrides()
     {
-        overrides.Reset();
+        overrides.Reset("Manual reset", "Wizard");
         SyncOverridesToUi();
     }
 
@@ -626,6 +794,29 @@
 
         stepIndex = 0;
         RefreshSnapshot();
+    }
+
+    private async Task RunAutoFix()
+    {
+        stepError = string.Empty;
+        autoFixRunning = true;
+        autoFixResult = null;
+
+        try
+        {
+            autoFixResult = await autoFix.ApplyRecommendedFixesAsync(System.Threading.CancellationToken.None);
+            RefreshSnapshot();
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Auto fix failed");
+            stepError = $"Auto fix failed: {ex.Message}";
+        }
+        finally
+        {
+            autoFixRunning = false;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private void GoToStep(int index)
@@ -842,6 +1033,10 @@
                         <span class="status-dot @StatusDotClass(check.Status)"></span>
                         <strong>@check.Title</strong>
                         <span class="badge @StatusBadgeClass(check.Status) ms-2">@check.Status</span>
+                        @if (check.IsOverridden)
+                        {
+                            <span class="badge bg-info text-dark ms-2">OVR</span>
+                        }
                         @if (check.IsBlocking)
                         {
                             <span class="badge bg-danger ms-2">Blocking</span>
@@ -854,6 +1049,10 @@
                     }
                 </div>
                 <div class="d-flex gap-2">
+                    @if (check.Subsystem == LaunchSubsystem.Addons)
+                    {
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="ForceRefreshAddons">Refresh</button>
+                    }
                     @if (!string.IsNullOrWhiteSpace(check.NavigateTo))
                     {
                         <a class="btn btn-sm btn-outline-primary" href="@check.NavigateTo">Open</a>
@@ -861,6 +1060,24 @@
                 </div>
             </div>
         </div>;
+    }
+
+    private void ForceRefreshAddons()
+    {
+        stepError = string.Empty;
+
+        try
+        {
+            cacheInvalidator.InvalidateAddonValidation();
+            AddonValidationResult result = addonValidator.Validate();
+            cacheInvalidator.PrimeAddonValidation(result, "Wizard refresh");
+            RefreshSnapshot();
+        }
+        catch (Exception ex)
+        {
+            stepError = $"Refresh add-ons failed: {ex.Message}";
+            logger.LogWarning(ex, "Refresh add-ons failed");
+        }
     }
 
     private int GetStepTimeoutSeconds(WizardStep step) => step switch
