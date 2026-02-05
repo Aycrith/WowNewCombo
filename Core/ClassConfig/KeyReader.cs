@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using SharedLib;
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Collections.Generic;
 
@@ -826,12 +827,12 @@ public static class KeyReader
     /// <summary>
     /// Storage for primary bindings received from the game client.
     /// </summary>
-    public static Dictionary<BindingID, (ConsoleKey Key, ModifierKey Modifier)> GameBindings { get; } = [];
+    public static ConcurrentDictionary<BindingID, (ConsoleKey Key, ModifierKey Modifier)> GameBindings { get; } = new();
 
     /// <summary>
     /// Storage for secondary bindings received from the game client.
     /// </summary>
-    public static Dictionary<BindingID, (ConsoleKey Key, ModifierKey Modifier)> GameBindingsSecondary { get; } = [];
+    public static ConcurrentDictionary<BindingID, (ConsoleKey Key, ModifierKey Modifier)> GameBindingsSecondary { get; } = new();
 
     /// <summary>
     /// Processes an encoded binding value and stores it.

@@ -171,6 +171,29 @@ public static class DependencyInjection
     public static IServiceCollection AddCoreConfiguration(
         this IServiceCollection s, ILogger log)
     {
+        s.AddOptions<LaunchOptions>();
+        s.TryAddSingleton<LaunchOverrideState>();
+        s.TryAddSingleton<IBotStartGuard, BotStartGuard>();
+        s.TryAddSingleton<LaunchReadinessService>();
+
+        // Minimal pathing services so launch readiness can evaluate navigation without forcing remote connections.
+        s.AddSingleton<PPatherService>(x =>
+        {
+            var loggerFactory = x.GetRequiredService<ILoggerFactory>();
+            var serviceLogger = loggerFactory.CreateLogger<PPatherService>();
+            var dataConfig = x.GetRequiredService<DataConfig>();
+            var worldMapAreaDB = x.GetRequiredService<WorldMapAreaDB>();
+            return new PPatherService(serviceLogger, dataConfig, worldMapAreaDB);
+        });
+
+        s.AddSingleton<IPPather>(x =>
+        {
+            var loggerFactory = x.GetRequiredService<ILoggerFactory>();
+            var logger = loggerFactory.CreateLogger<LocalPathingApi>();
+            var service = x.GetRequiredService<PPatherService>();
+            return new LocalPathingApi(logger, service);
+        });
+
         s.AddSingleton<IAddonDataProvider>(x => GetAddonDataProvider(x.GetRequiredService<IServiceProvider>(), log));
         s.AddSingleton<IBotController, ConfigBotController>();
         s.AddSingleton<IAddonReader, ConfigAddonReader>();
@@ -191,6 +214,8 @@ public static class DependencyInjection
 
         // Required by TestController for E2E testing
         s.AddAddonComponents();
+
+        s.AddSingleton<ActionBarSlotValidator>();
 
         return s;
     }

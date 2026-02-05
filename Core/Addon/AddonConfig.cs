@@ -45,9 +45,18 @@ public sealed class AddonConfig
     {
         if (Exists())
         {
-            var loaded = DeserializeObject<AddonConfig>(File.ReadAllText(AddonConfigMeta.DefaultFileName))!;
-            if (loaded.Version == AddonConfigMeta.Version)
-                return loaded;
+            try
+            {
+                AddonConfig? loaded = DeserializeObject<AddonConfig>(File.ReadAllText(AddonConfigMeta.DefaultFileName));
+                if (loaded != null && loaded.Version == AddonConfigMeta.Version)
+                {
+                    return loaded;
+                }
+            }
+            catch
+            {
+                // Corrupted/malformed JSON should not crash the server; fall back to defaults.
+            }
         }
 
         return new AddonConfig();

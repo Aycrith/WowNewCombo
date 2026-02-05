@@ -1,2 +1,21 @@
 ﻿@page "/Log"
-<LogComponent MaxHeight="0" />
+
+<div class="container-fluid mt-3">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h1 class="mb-0">Logs</h1>
+        <div class="d-flex gap-2">
+            <a class="btn btn-sm btn-outline-secondary" href="/api/logs/download?file=out.log">Download out.log</a>
+            <a class="btn btn-sm btn-outline-secondary" href="/api/logs/files">List log files (JSON)</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Live (in-memory)</div>
+        <div class="card-body">
+            <LogComponent MaxHeight="0" />
+        </div>
+        <div class="card-footer text-muted small">
+            The launcher captures stdout/stderr into `logs\\*-stdout.log` / `logs\\*-stderr.log` on disk.
+        </div>
+    </div>
+</div>

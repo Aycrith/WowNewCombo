@@ -56,6 +56,7 @@ public static class Program
                 {
                     // We were stopping anyway; don't restart-loop just because Dispose threw.
                     Log.Error(ex, "[Program          ] Exception during shutdown; exiting without restart");
+                    CrashReporter.TryWrite(ex, shutdownRequested: true);
                     break;
                 }
 
@@ -64,10 +65,12 @@ public static class Program
                     ex.InnerException?.Message.Contains("World of Warcraft process") == true)
                 {
                     Log.Fatal("[Program          ] WoW is required to run the bot. Exiting.");
+                    CrashReporter.TryWrite(ex, shutdownRequested: false);
                     break;
                 }
 
                 Log.Fatal(ex, "[Program          ] Host crashed – restarting in 3s");
+                CrashReporter.TryWrite(ex, shutdownRequested: false);
                 crashTimes.Add(DateTimeOffset.UtcNow);
 
                 // Trim crashes outside the window
@@ -100,6 +103,15 @@ public static class Program
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
         builder.Logging.ClearProviders().AddSerilog();
+
+        // Ensure Kestrel binds to the configured Web UI port when no explicit URL binding is provided.
+        // This keeps OneClickLauncher.ps1's Startup__WebUIPort override aligned with the actual server port.
+        string? urls = builder.Configuration["ASPNETCORE_URLS"];
+        if (string.IsNullOrWhiteSpace(urls))
+        {
+            int port = builder.Configuration.GetSection("Startup").GetValue<int>("WebUIPort", 5000);
+            builder.WebHost.UseUrls($"http://localhost:{port}");
+        }
 
         ConfigureServices(builder.Configuration, builder.Services);
 

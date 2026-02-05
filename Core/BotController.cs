@@ -129,16 +129,15 @@ public sealed partial class BotController : IBotController, IDisposable
         addonThread.Priority = ThreadPriority.AboveNormal;
         addonThread.Start();
 
-        do
+        // Do NOT block DI/controller construction waiting for in-game state.
+        // When the server starts while WoW is at login/character select, these values can stay unset for a while.
+        // Readiness APIs should report Pending rather than hanging the entire web UI.
+        Thread playerIdentityThread = new(() => ObservePlayerIdentity(wait))
         {
-            if (!wait.Update(5000))
-                logger.LogError("There is a problem, unable " +
-                    "to read the players UnitClass and UnitRace!");
-        } while (
-            !Enum.IsDefined<UnitClass>(playerReader.Class) ||
-            playerReader.Class == UnitClass.None);
-
-        logger.LogInformation($"{playerReader.Version.ToStringF()} {playerReader.Race.ToStringF()} {playerReader.Class.ToStringF()}!");
+            IsBackground = true,
+            Name = "BotController-PlayerIdentity"
+        };
+        playerIdentityThread.Start();
 
         screenshotThread = new(ScreenshotThread);
         screenshotThread.Start();
@@ -154,6 +153,31 @@ public sealed partial class BotController : IBotController, IDisposable
 
         // Subscribe to macro changes for deferred key resolution
         macroReader.MacroChanged += OnMacroChanged;
+    }
+
+    private void ObservePlayerIdentity(Wait wait)
+    {
+        while (!cts.IsCancellationRequested)
+        {
+            try
+            {
+                if (!wait.Update(5000))
+                {
+                    logger.LogWarning("Unable to read UnitClass/UnitRace yet (waiting for live addon data)");
+                    continue;
+                }
+
+                if (Enum.IsDefined<UnitClass>(playerReader.Class) && playerReader.Class != UnitClass.None)
+                {
+                    logger.LogInformation($"{playerReader.Version.ToStringF()} {playerReader.Race.ToStringF()} {playerReader.Class.ToStringF()}!");
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Player identity observer failed");
+            }
+        }
     }
 
     private bool texturesValidated;

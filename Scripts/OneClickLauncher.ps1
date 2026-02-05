@@ -25,6 +25,10 @@ param(
     [int]$PathingApiPort = 5001,
     [int]$NavPort = 47110,
 
+    [bool]$ShowDashboard = $true,
+    [int]$DashboardTailLines = 400,
+    [int]$DashboardRefreshMs = 500,
+
     [bool]$AutoLaunchWoW = $true,
     [bool]$AutoStartBot = $false,
     [bool]$AutoFix = $false,
@@ -62,6 +66,28 @@ if ([string]::IsNullOrWhiteSpace($BotRoot)) {
 $logsDir = Join-Path $BotRoot "logs"
 New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
 $logFile = Join-Path $logsDir ("launcher-{0}.log" -f (Get-Date -Format "yyyyMMdd-HHmmss"))
+$latestLogFile = Join-Path $logsDir "launcher-latest.log"
+$runId = [Guid]::NewGuid().ToString("n")
+
+if ($ShowDashboard -and -not $env:WCG_LAUNCHER_DASHBOARD) {
+    try {
+        $env:WCG_LAUNCHER_DASHBOARD = "1"
+        $dash = Join-Path $PSScriptRoot "LauncherDashboard.ps1"
+        if (Test-Path -LiteralPath $dash) {
+            Start-Process -FilePath "powershell" -ArgumentList @(
+                "-NoProfile",
+                "-ExecutionPolicy", "Bypass",
+                "-File", $dash,
+                "-LogPath", $latestLogFile,
+                "-LogsDir", $logsDir,
+                "-TailLines", "$DashboardTailLines",
+                "-RefreshMs", "$DashboardRefreshMs"
+            ) | Out-Null
+        }
+    } catch {
+        # Dashboard is optional; never fail launcher startup because of UI.
+    }
+}
 
 function Write-Log {
     param(
@@ -72,12 +98,91 @@ function Write-Log {
     $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff"
     $line = "[{0}] [{1}] {2}" -f $ts, $Level, $Message
     $line | Out-File -FilePath $logFile -Encoding utf8 -Append
+    $line | Out-File -FilePath $latestLogFile -Encoding utf8 -Append
 
     switch ($Level) {
         "OK"    { Write-Host $line -ForegroundColor Green }
         "WARN"  { Write-Host $line -ForegroundColor Yellow }
         "ERROR" { Write-Host $line -ForegroundColor Red }
         default { Write-Host $line -ForegroundColor Gray }
+    }
+}
+
+function Get-LastLines {
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [int]$Tail = 200
+    )
+
+    try {
+        if (-not (Test-Path -LiteralPath $Path)) { return @() }
+        return @(Get-Content -LiteralPath $Path -Tail $Tail -ErrorAction Stop)
+    } catch {
+        return @()
+    }
+}
+
+function Write-CrashReport {
+    param(
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][string]$ExePath,
+        [string[]]$Args = @(),
+        [hashtable]$Environment = @{},
+        [System.Diagnostics.Process]$Process = $null,
+        [string]$Reason = ""
+    )
+
+    $ts = Get-Date -Format "yyyyMMdd-HHmmss"
+    $reportPath = Join-Path $logsDir ("crash-{0}-{1}-{2}.json" -f $Name, $ts, $runId)
+
+    $exitCode = $null
+    $pid = $null
+    $stdoutPath = $null
+    $stderrPath = $null
+
+    if ($Process) {
+        try {
+            $Process.Refresh()
+            $pid = $Process.Id
+            $stdoutPath = $Process.StdOutPath
+            $stderrPath = $Process.StdErrPath
+            if ($Process.HasExited) {
+                try { $exitCode = $Process.ExitCode } catch { }
+            }
+        } catch { }
+    }
+
+    $payload = [ordered]@{
+        Timestamp = (Get-Date).ToString("o")
+        RunId = $runId
+        Reason = $Reason
+        Service = $Name
+        ExePath = $ExePath
+        Args = $Args
+        Environment = $Environment
+        Process = [ordered]@{
+            Pid = $pid
+            ExitCode = $exitCode
+            StdOutPath = $stdoutPath
+            StdErrPath = $stderrPath
+        }
+        Host = [ordered]@{
+            User = $env:USERNAME
+            Computer = $env:COMPUTERNAME
+            OS = [System.Environment]::OSVersion.VersionString
+            DotNet = (Get-Command dotnet -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue)
+            CurrentDirectory = (Get-Location).Path
+        }
+        LastStdOut = if ($stdoutPath) { Get-LastLines -Path $stdoutPath -Tail 200 } else { @() }
+        LastStdErr = if ($stderrPath) { Get-LastLines -Path $stderrPath -Tail 200 } else { @() }
+        LauncherLog = $logFile
+    }
+
+    try {
+        Write-JsonFile -Path $reportPath -Value $payload
+        Write-Log "Crash report written: $reportPath" "ERROR"
+    } catch {
+        Write-Log "Failed to write crash report: $($_.Exception.Message)" "ERROR"
     }
 }
 
@@ -396,12 +501,25 @@ function Start-ManagedProcess {
 
     Require-File -Path $ExePath -Hint "Build the solution (dotnet build -c Release) or restore binaries."
 
+    if ([string]::IsNullOrWhiteSpace($StdOutPath)) {
+        $StdOutPath = Join-Path $logsDir ("{0}-{1}-{2}-stdout.log" -f $Name, (Get-Date -Format "yyyyMMdd-HHmmss"), $runId)
+    }
+    if ([string]::IsNullOrWhiteSpace($StdErrPath)) {
+        $StdErrPath = Join-Path $logsDir ("{0}-{1}-{2}-stderr.log" -f $Name, (Get-Date -Format "yyyyMMdd-HHmmss"), $runId)
+    }
+
+    New-Item -ItemType Directory -Path (Split-Path -Parent $StdOutPath) -Force | Out-Null
+    New-Item -ItemType Directory -Path (Split-Path -Parent $StdErrPath) -Force | Out-Null
+
     $psi = @{
         FilePath = $ExePath
         WorkingDirectory = $WorkingDir
         ArgumentList = $Args
         PassThru = $true
         WindowStyle = "Minimized"
+        RedirectStandardOutput = $StdOutPath
+        RedirectStandardError = $StdErrPath
+        NoNewWindow = $true
     }
 
     $previousEnv = @{}
@@ -421,6 +539,10 @@ function Start-ManagedProcess {
     try {
         Write-Log "Starting ${Name}: $ExePath" "INFO"
         $p = Start-Process @psi
+        try {
+            $p | Add-Member -NotePropertyName "StdOutPath" -NotePropertyValue $StdOutPath -Force
+            $p | Add-Member -NotePropertyName "StdErrPath" -NotePropertyValue $StdErrPath -Force
+        } catch { }
         Write-Log "$Name started (PID: $($p.Id))" "OK"
         return $p
     }
@@ -688,6 +810,7 @@ try {
     $sln = Join-Path $BotRoot "MasterOfPuppets.sln"
     Require-File -Path $sln -Hint "Repository is incomplete."
     Ensure-ReleaseBuild -SolutionPath $sln -ExpectedOutputPath $blazorExe
+    Ensure-DataConfigJson -TargetDirectory $blazorDir
 
     $navExe = Join-Path $BotRoot "Navigation\\AmeisenNavigationServer.exe"
     $navDir = Split-Path -Parent $navExe
@@ -809,6 +932,7 @@ try {
         $managed.BlazorServer.Managed = $true
 
         if (-not (Wait-ForHttp -Url "$baseUrl/api/health" -TimeoutSeconds 60)) {
+            Write-CrashReport -Name "BlazorServer" -ExePath $blazorExe -Args @() -Environment $envOverrides -Process $blazorProcess -Reason "Web UI health endpoint did not become reachable within timeout."
             throw "BlazorServer did not become reachable at $baseUrl within timeout."
         }
     }
@@ -887,6 +1011,10 @@ try {
                 $cause = if ($exited) { "exited (code=$exitCode)" } else { "port not responding" }
                 Write-Log "Navigation server unhealthy ($cause) - restart attempt in $($restartBackoff.NavigationServer)s" "WARN"
 
+                if ($exited) {
+                    Write-CrashReport -Name "NavigationServer" -ExePath $navExe -Process $navProcess -Reason "Process exited in monitor loop."
+                }
+
                 $navRestartHistory.Add((Get-Date)) | Out-Null
                 $windowStart = (Get-Date).AddSeconds(-1 * $NavigationRestartWindowSeconds)
                 $recentRestarts = @($navRestartHistory | Where-Object { $_ -ge $windowStart }).Count
@@ -956,6 +1084,11 @@ try {
         if ($pathingProcess -and $managed.PathingAPI.Managed) {
             if ($pathingProcess.HasExited -or -not (Test-TcpPort -Address "127.0.0.1" -Port $PathingApiPort -TimeoutMs 250)) {
                 Write-Log "PathingAPI unhealthy - restart attempt in $($restartBackoff.PathingAPI)s" "WARN"
+
+                if ($pathingProcess.HasExited) {
+                    Write-CrashReport -Name "PathingAPI" -ExePath $pathingExe -Process $pathingProcess -Reason "Process exited in monitor loop."
+                }
+
                 Start-Sleep -Seconds $restartBackoff.PathingAPI
                 try {
                     $pathingProcess = Start-ManagedProcess -Name "PathingAPI" -ExePath $pathingExe -WorkingDir $pathingDir
@@ -979,6 +1112,11 @@ try {
 
         if ($managed.BlazorServer.Managed -and ($blazorProcess.HasExited -or -not $httpOk)) {
             Write-Log "BlazorServer unhealthy (process exited=$($blazorProcess.HasExited), httpOk=$httpOk) - restart attempt in $($restartBackoff.BlazorServer)s" "WARN"
+
+            if ($blazorProcess.HasExited) {
+                Write-CrashReport -Name "BlazorServer" -ExePath $blazorExe -Environment $envOverrides -Process $blazorProcess -Reason "Process exited in monitor loop."
+            }
+
             Start-Sleep -Seconds $restartBackoff.BlazorServer
             try {
                 if (-not $blazorProcess.HasExited) { try { Stop-Process -Id $blazorProcess.Id -Force } catch { } }

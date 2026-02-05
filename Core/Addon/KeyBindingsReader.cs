@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using SharedLib;
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 namespace Core;
@@ -12,8 +13,8 @@ public sealed partial class KeyBindingsReader : IReader
     private const int BINDING_SLOT = 106;
 
     private readonly ILogger<KeyBindingsReader> logger;
-    private readonly Dictionary<BindingID, (ConsoleKey Key, ModifierKey Modifier)> bindings = [];
-    private readonly Dictionary<BindingID, (ConsoleKey Key, ModifierKey Modifier)> secondaryBindings = [];
+    private readonly ConcurrentDictionary<BindingID, (ConsoleKey Key, ModifierKey Modifier)> bindings = new();
+    private readonly ConcurrentDictionary<BindingID, (ConsoleKey Key, ModifierKey Modifier)> secondaryBindings = new();
 
     private bool initialized;
     private int consecutiveZeroReads = 0;
@@ -94,8 +95,8 @@ public sealed partial class KeyBindingsReader : IReader
             else if (bindings.ContainsKey(bindingId))
             {
                 // Key was unbound
-                bindings.Remove(bindingId);
-                KeyReader.GameBindings.Remove(bindingId);
+                bindings.TryRemove(bindingId, out _);
+                KeyReader.GameBindings.TryRemove(bindingId, out _);
                 changed = true;
                 LogBindingRemoved(logger, bindingId.ToStringF());
             }
@@ -116,8 +117,8 @@ public sealed partial class KeyBindingsReader : IReader
             }
             else if (secondaryBindings.ContainsKey(bindingId))
             {
-                secondaryBindings.Remove(bindingId);
-                KeyReader.GameBindingsSecondary.Remove(bindingId);
+                secondaryBindings.TryRemove(bindingId, out _);
+                KeyReader.GameBindingsSecondary.TryRemove(bindingId, out _);
                 changed = true;
             }
 

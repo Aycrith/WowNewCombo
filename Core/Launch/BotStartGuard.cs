@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
@@ -44,6 +45,7 @@ public sealed class BotStartGuard : IBotStartGuard
     private readonly object cacheLock = new();
     private DateTimeOffset lastAddonValidationUtc = DateTimeOffset.MinValue;
     private AddonValidationResult? cachedAddonValidation;
+    private Task<AddonValidationResult>? addonValidationTask;
 
     public BotStartGuard(
         ILogger<BotStartGuard> logger,
@@ -82,19 +84,112 @@ public sealed class BotStartGuard : IBotStartGuard
             overrides.SkipKeybindingChecks,
             overrides.SkipActionBarChecks);
 
-        List<LaunchSubsystemCheck> checks =
+        if (options.EvaluateTimeoutMs <= 0)
+        {
+            List<LaunchSubsystemCheck> checksNoTimeout =
+            [
+                Timed(now, LaunchSubsystem.Navigation, () => CheckNavigation(now, overrideSnapshot)),
+                Timed(now, LaunchSubsystem.WoWProcess, () => CheckWoW(now)),
+                Timed(now, LaunchSubsystem.Addons, () => CheckAddons(now)),
+                Timed(now, LaunchSubsystem.Frames, () => CheckFrames(now)),
+                Timed(now, LaunchSubsystem.AddonHandshake, () => CheckAddonHandshake(now)),
+                Timed(now, LaunchSubsystem.Profile, () => CheckProfile(now, classConfig)),
+                Timed(now, LaunchSubsystem.Route, () => CheckRoute(now, routeInfo)),
+                Timed(now, LaunchSubsystem.KeyBindings, () => CheckKeyBindings(now, classConfig, overrideSnapshot)),
+                Timed(now, LaunchSubsystem.ActionBar, () => CheckActionBar(now, classConfig, overrideSnapshot))
+            ];
+
+            return CreateSnapshot(now, overrideSnapshot, checksNoTimeout);
+        }
+
+        (LaunchSubsystem subsystem, Func<LaunchSubsystemCheck> factory)[] factories =
         [
-            CheckNavigation(now, overrideSnapshot),
-            CheckWoW(now),
-            CheckAddons(now),
-            CheckFrames(now),
-            CheckAddonHandshake(now),
-            CheckProfile(now, classConfig),
-            CheckRoute(now, routeInfo),
-            CheckKeyBindings(now, classConfig, overrideSnapshot),
-            CheckActionBar(now, classConfig, overrideSnapshot)
+            (LaunchSubsystem.Navigation, () => CheckNavigation(now, overrideSnapshot)),
+            (LaunchSubsystem.WoWProcess, () => CheckWoW(now)),
+            (LaunchSubsystem.Addons, () => CheckAddons(now)),
+            (LaunchSubsystem.Frames, () => CheckFrames(now)),
+            (LaunchSubsystem.AddonHandshake, () => CheckAddonHandshake(now)),
+            (LaunchSubsystem.Profile, () => CheckProfile(now, classConfig)),
+            (LaunchSubsystem.Route, () => CheckRoute(now, routeInfo)),
+            (LaunchSubsystem.KeyBindings, () => CheckKeyBindings(now, classConfig, overrideSnapshot)),
+            (LaunchSubsystem.ActionBar, () => CheckActionBar(now, classConfig, overrideSnapshot))
         ];
 
+        Task<LaunchSubsystemCheck>[] tasks = new Task<LaunchSubsystemCheck>[factories.Length];
+        for (int i = 0; i < factories.Length; i++)
+        {
+            LaunchSubsystem subsystem = factories[i].subsystem;
+            Func<LaunchSubsystemCheck> factory = factories[i].factory;
+            tasks[i] = Task.Run(() => Timed(now, subsystem, factory));
+        }
+
+        try
+        {
+            Task.WaitAll(tasks, millisecondsTimeout: options.EvaluateTimeoutMs);
+        }
+        catch (AggregateException ex)
+        {
+            // Individual task failures are converted to error checks below.
+            logger.LogDebug(ex, "[BotStartGuard] One or more readiness checks faulted");
+        }
+
+        List<LaunchSubsystemCheck> checks = new(capacity: factories.Length);
+        for (int i = 0; i < factories.Length; i++)
+        {
+            LaunchSubsystem subsystem = factories[i].subsystem;
+            Task<LaunchSubsystemCheck> task = tasks[i];
+
+            if (task.IsCompletedSuccessfully)
+            {
+                checks.Add(task.Result);
+                continue;
+            }
+
+            if (task.IsFaulted)
+            {
+                Exception? inner = task.Exception?.GetBaseException() ?? task.Exception;
+                string msg = inner == null ? "Unknown error" : inner.Message;
+
+                logger.LogWarning(inner, "[BotStartGuard] Readiness check faulted: {Subsystem}", subsystem);
+                checks.Add(new LaunchSubsystemCheck(
+                    subsystem,
+                    LaunchStatus.Error,
+                    GetTimeoutTitle(subsystem),
+                    $"Check failed: {msg}",
+                    IsRequired: true,
+                    IsBlocking: true,
+                    TimestampUtc: now,
+                    FixHint: "Open logs for details",
+                    NavigateTo: GetTimeoutNavigateTo(subsystem)));
+                continue;
+            }
+
+            // Timed out (or still running)
+            logger.LogWarning(
+                "[BotStartGuard] Readiness check timed out: {Subsystem} (>{Timeout}ms)",
+                subsystem,
+                options.EvaluateTimeoutMs);
+
+            checks.Add(new LaunchSubsystemCheck(
+                subsystem,
+                LaunchStatus.Error,
+                GetTimeoutTitle(subsystem),
+                $"Timed out while evaluating readiness (>{options.EvaluateTimeoutMs}ms)",
+                IsRequired: true,
+                IsBlocking: true,
+                TimestampUtc: now,
+                FixHint: "This usually indicates a stuck dependency (WoW reader, addon handshake, or file IO). Check logs and try Restart Server.",
+                NavigateTo: GetTimeoutNavigateTo(subsystem)));
+        }
+
+        return CreateSnapshot(now, overrideSnapshot, checks);
+    }
+
+    private static LaunchReadinessSnapshot CreateSnapshot(
+        DateTimeOffset now,
+        LaunchOverrideSnapshot overrideSnapshot,
+        List<LaunchSubsystemCheck> checks)
+    {
         bool hasBlocking = checks.Any(c => c.IsBlocking);
 
         bool strictReady = checks
@@ -109,6 +204,60 @@ public sealed class BotStartGuard : IBotStartGuard
             TimestampUtc: now,
             Checks: checks,
             Overrides: overrideSnapshot);
+    }
+
+    private static string GetTimeoutTitle(LaunchSubsystem subsystem) => subsystem switch
+    {
+        LaunchSubsystem.Navigation => "Navigation",
+        LaunchSubsystem.WoWProcess => "WoW Client",
+        LaunchSubsystem.Addons => "Add-ons",
+        LaunchSubsystem.Frames => "Frames",
+        LaunchSubsystem.AddonHandshake => "Addon Handshake",
+        LaunchSubsystem.Profile => "Profile",
+        LaunchSubsystem.Route => "Route",
+        LaunchSubsystem.KeyBindings => "Key Bindings",
+        LaunchSubsystem.ActionBar => "Action Bar",
+        _ => subsystem.ToString()
+    };
+
+    private static string? GetTimeoutNavigateTo(LaunchSubsystem subsystem) => subsystem switch
+    {
+        LaunchSubsystem.Navigation => "/Settings",
+        LaunchSubsystem.Addons => "/AddonConfiguration",
+        LaunchSubsystem.Frames => "/FrameConfiguration",
+        LaunchSubsystem.AddonHandshake => "/RawPlayerReader",
+        LaunchSubsystem.Profile => "/",
+        LaunchSubsystem.Route => "/",
+        LaunchSubsystem.KeyBindings => "/KeyBindings",
+        LaunchSubsystem.ActionBar => "/KeyBindings",
+        _ => null
+    };
+
+    private LaunchSubsystemCheck Timed(DateTimeOffset now, LaunchSubsystem subsystem, Func<LaunchSubsystemCheck> factory)
+    {
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("[BotStartGuard] Check start {Subsystem}", subsystem);
+        }
+
+        var sw = Stopwatch.StartNew();
+        LaunchSubsystemCheck check = factory();
+        sw.Stop();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("[BotStartGuard] Check end {Subsystem} ({Elapsed}ms)", subsystem, sw.ElapsedMilliseconds);
+        }
+
+        if (sw.ElapsedMilliseconds > options.SlowCheckThresholdMs)
+        {
+            logger.LogWarning(
+                "[BotStartGuard] Slow check {Subsystem} took {Elapsed}ms",
+                subsystem,
+                sw.ElapsedMilliseconds);
+        }
+
+        return check;
     }
 
     private LaunchSubsystemCheck CheckNavigation(DateTimeOffset now, LaunchOverrideSnapshot overrideSnapshot)
@@ -278,7 +427,19 @@ public sealed class BotStartGuard : IBotStartGuard
                     FixHint: "Start WoW before validating add-ons");
             }
 
-            AddonValidationResult result = GetCachedAddonValidation(now);
+            if (!TryGetCachedAddonValidation(now, out AddonValidationResult result))
+            {
+                return new LaunchSubsystemCheck(
+                    LaunchSubsystem.Addons,
+                    LaunchStatus.Pending,
+                    "Add-ons",
+                    "Validating add-ons...",
+                    IsRequired: true,
+                    IsBlocking: true,
+                    TimestampUtc: now,
+                    FixHint: "Wait for validation to complete",
+                    NavigateTo: "/AddonConfiguration");
+            }
             if (result.IsValid && !result.HasWarnings)
             {
                 return new LaunchSubsystemCheck(
@@ -332,7 +493,7 @@ public sealed class BotStartGuard : IBotStartGuard
         }
     }
 
-    private AddonValidationResult GetCachedAddonValidation(DateTimeOffset now)
+    private bool TryGetCachedAddonValidation(DateTimeOffset now, out AddonValidationResult result)
     {
         const int cacheSeconds = 10;
 
@@ -340,12 +501,42 @@ public sealed class BotStartGuard : IBotStartGuard
         {
             if (cachedAddonValidation != null && (now - lastAddonValidationUtc).TotalSeconds < cacheSeconds)
             {
-                return cachedAddonValidation;
+                result = cachedAddonValidation;
+                return true;
             }
 
-            lastAddonValidationUtc = now;
-            cachedAddonValidation = addonValidator.Validate();
-            return cachedAddonValidation;
+            if (addonValidationTask == null || addonValidationTask.IsCompleted)
+            {
+                addonValidationTask = Task.Run(() => addonValidator.Validate());
+            }
+
+            if (!addonValidationTask.IsCompleted)
+            {
+                if (cachedAddonValidation != null)
+                {
+                    result = cachedAddonValidation;
+                    return true;
+                }
+
+                result = new AddonValidationResult();
+                return false;
+            }
+
+            try
+            {
+                cachedAddonValidation = addonValidationTask.GetAwaiter().GetResult();
+                lastAddonValidationUtc = now;
+                result = cachedAddonValidation;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "[BotStartGuard] Addon validation task failed");
+                cachedAddonValidation = null;
+                addonValidationTask = null;
+                result = new AddonValidationResult();
+                return false;
+            }
         }
     }
 

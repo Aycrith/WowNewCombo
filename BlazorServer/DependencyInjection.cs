@@ -41,10 +41,6 @@ public static class DependencyInjection
         services.Configure<StartupOptions>(configuration.GetSection("Startup"));
         services.Configure<LaunchOptions>(configuration.GetSection("Launch"));
 
-        services.AddSingleton<LaunchOverrideState>();
-        services.AddSingleton<IBotStartGuard, BotStartGuard>();
-        services.AddSingleton<LaunchReadinessService>();
-
         // Core startup services
         services.AddSingleton<StartupState>();
         services.AddSingleton<WoWPathFinder>();

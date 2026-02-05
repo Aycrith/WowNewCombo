@@ -226,9 +226,22 @@ public sealed partial class ActionBarSlotValidator
                     {
                         // Only report mismatch if we know the spell (can verify texture)
                         issueCount++;
-                        LogMismatch(logger, keyAction.Name, actualSlot,
-                            iconDB.GetSpellNamesForDisplay(
-                                textureReader.SlotTextures[actualSlot]));
+                        if (textureReader.TryGetTexture(actualSlot, out int actualTextureId))
+                        {
+                            LogMismatch(
+                                logger,
+                                keyAction.Name,
+                                actualSlot,
+                                iconDB.GetSpellNamesForDisplay(actualTextureId));
+                        }
+                        else
+                        {
+                            LogMismatch(
+                                logger,
+                                keyAction.Name,
+                                actualSlot,
+                                []);
+                        }
                     }
                     else
                     {

@@ -13,12 +13,18 @@ This will:
 - Auto-install required addons (UAC prompt only if needed)
 - Launch/monitor services (**BlazorServer + PathingAPI + Navigation**) and verify client alignment
 - If the navigation server becomes unhealthy repeatedly, the launcher will auto-disable it for that session and fall back to `RemoteV1` or `Local` pathing.
+- Open a **Launcher Dashboard** window (persistent log view + crash report list) so you can see output even if a console window closes unexpectedly.
 - Open the **Launch Wizard** at `/launch` for staged pre-flight checks (navigation, add-ons, frames, handshake, profile, route, keybinds/action bar).
 - The bot is **manual start only**: the Start Bot button is enabled only when all required subsystems are green (or Advanced overrides are explicitly enabled).
 
 To disable the navigation server (more stable, uses `RemoteV1`/`Local` pathing):
 ```powershell
 pwsh -NoProfile -ExecutionPolicy Bypass -File C:\WowClassicGrindBot\Scripts\OneClickLauncher.ps1 -EnableNavigationServer:$false
+```
+
+To disable the Launcher Dashboard window:
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File C:\WowClassicGrindBot\Scripts\OneClickLauncher.ps1 -ShowDashboard:$false
 ```
 
 ### First Time Users

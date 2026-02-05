@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 namespace Core;
@@ -10,7 +11,7 @@ public sealed partial class ActionBarTextureReader : IReader
     private const int TEXTURE_SLOT = 107;
 
     private readonly ILogger<ActionBarTextureReader> logger;
-    private readonly Dictionary<int, int> slotTextures = [];
+    private readonly ConcurrentDictionary<int, int> slotTextures = new();
 
     private bool initialized;
 
@@ -65,7 +66,7 @@ public sealed partial class ActionBarTextureReader : IReader
                 }
                 else
                 {
-                    slotTextures.Remove(slot);
+                    slotTextures.TryRemove(slot, out _);
                     LogTextureCleared(logger, slot);
                 }
             }
