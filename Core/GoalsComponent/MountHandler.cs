@@ -1,9 +1,11 @@
 using Core.Goals;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using SharedLib.Extensions;
 
+using System;
 using System.Numerics;
 
 namespace Core;
@@ -24,13 +26,19 @@ public sealed partial class MountHandler : IMountHandler
     private readonly AddonBits bits;
     private readonly StopMoving stopMoving;
     private readonly IBlacklist targetBlacklist;
+    private readonly IOptionsMonitor<MountUnlockOptions> mountUnlockOptions;
+    private readonly ConfigurableInput configurableInput;
+
+    private KeyAction? cachedStealthKey;
+    private bool stealthKeySearched;
 
     public MountHandler(ILogger<MountHandler> logger, ConfigurableInput input,
         ClassConfiguration classConfig, AddonBits bits, Wait wait,
         PlayerReader playerReader, ActionBarBits<IUsableAction> usableAction,
         ActionBarCooldownReader cooldownReader,
         StopMoving stopMoving,
-        IBlacklist targetBlacklist)
+        IBlacklist targetBlacklist,
+        IOptionsMonitor<MountUnlockOptions> mountUnlockOptions)
     {
         this.logger = logger;
         this.classConfig = classConfig;
@@ -42,10 +50,17 @@ public sealed partial class MountHandler : IMountHandler
         this.bits = bits;
         this.stopMoving = stopMoving;
         this.targetBlacklist = targetBlacklist;
+        this.mountUnlockOptions = mountUnlockOptions;
+        this.configurableInput = input;
     }
 
     public bool CanMount()
     {
+        if (!MeetsMountUnlockRequirement())
+        {
+            return false;
+        }
+
         return
             !IsMounted() &&
             !bits.Indoors() &&
@@ -54,6 +69,29 @@ public sealed partial class MountHandler : IMountHandler
             !bits.Falling() &&
             usableAction.Is(classConfig.Mount) &&
             cooldownReader.Get(classConfig.Mount) == 0;
+    }
+
+    private bool MeetsMountUnlockRequirement()
+    {
+        MountUnlockOptions options = mountUnlockOptions.CurrentValue;
+        if (!options.EnforceTbcMountLevelRequirement)
+        {
+            return true;
+        }
+
+        // Only apply this rule to TBC Classic.
+        if (playerReader.Version != SharedLib.ClientVersion.TBC)
+        {
+            return true;
+        }
+
+        int requiredLevel = options.TbcMountUnlockLevel;
+        if (requiredLevel <= 0)
+        {
+            requiredLevel = 30;
+        }
+
+        return playerReader.Level.Value >= requiredLevel;
     }
 
     public void MountUp()
@@ -128,6 +166,104 @@ public sealed partial class MountHandler : IMountHandler
         bits.Target() && bits.Target_Alive() && !targetBlacklist.Is() &&
         playerReader.MinRange() < MIN_DISTANCE_TO_INTERRUPT_CAST;
 
+    private KeyAction? FindStealthKey()
+    {
+        if (stealthKeySearched)
+            return cachedStealthKey;
+
+        stealthKeySearched = true;
+
+        // Search in Pull sequence
+        foreach (KeyAction key in classConfig.Pull.Sequence)
+        {
+            if (key.Name.Equals("Stealth", StringComparison.OrdinalIgnoreCase) ||
+                key.Name.Equals("Prowl", StringComparison.OrdinalIgnoreCase))
+            {
+                cachedStealthKey = key;
+                return cachedStealthKey;
+            }
+        }
+
+        // Search in Adhoc sequence
+        foreach (KeyAction key in classConfig.Adhoc.Sequence)
+        {
+            if (key.Name.Equals("Stealth", StringComparison.OrdinalIgnoreCase) ||
+                key.Name.Equals("Prowl", StringComparison.OrdinalIgnoreCase))
+            {
+                cachedStealthKey = key;
+                return cachedStealthKey;
+            }
+        }
+
+        return null;
+    }
+
+    private bool ShouldUnstealthForTravel(float distance)
+    {
+        MountUnlockOptions options = mountUnlockOptions.CurrentValue;
+        if (!options.AutoUnstealthForTravel)
+            return false;
+
+        if (!bits.Stealthed())
+            return false;
+
+        if (bits.Combat())
+            return false;
+
+        if (CanMount())
+            return false;
+
+        return ShouldMount(distance);
+    }
+
+    private void UnstealthForTravel()
+    {
+        KeyAction? stealthKey = FindStealthKey();
+        if (stealthKey == null)
+        {
+            LogStealthKeyNotFound(logger);
+            return;
+        }
+
+        LogUnstealthingForTravel(logger);
+
+        configurableInput.PressRandom(stealthKey);
+        wait.Update();
+
+        float elapsed = wait.Until(500, () => !bits.Stealthed());
+
+        if (bits.Stealthed())
+        {
+            LogUnstealthTimeout(logger, elapsed);
+        }
+        else
+        {
+            LogUnstealthSuccess(logger, elapsed);
+        }
+    }
+
+    public void OptimizeTravelSpeed(float totalDistance)
+    {
+        // First try mounting if possible
+        if (classConfig.UseMount && CanMount() && ShouldMount(totalDistance))
+        {
+            Log("Mount up");
+            MountUp();
+            return;
+        }
+
+        // Fallback to unstealth for travel speed optimization
+        if (ShouldUnstealthForTravel(totalDistance))
+        {
+            UnstealthForTravel();
+        }
+    }
+
+    private void Log(string text)
+    {
+        logger.LogInformation(text);
+    }
+
 
     #region Logging
 
@@ -148,6 +284,30 @@ public sealed partial class MountHandler : IMountHandler
         Level = LogLevel.Information,
         Message = "Mounted ? {mounted}")]
     static partial void LogIsMounted(ILogger logger, bool mounted);
+
+    [LoggerMessage(
+        EventId = 0113,
+        Level = LogLevel.Information,
+        Message = "[MountHandler      ] Unstealthing for travel")]
+    static partial void LogUnstealthingForTravel(ILogger logger);
+
+    [LoggerMessage(
+        EventId = 0114,
+        Level = LogLevel.Debug,
+        Message = "[MountHandler      ] Unstealth success ({elapsed}ms)")]
+    static partial void LogUnstealthSuccess(ILogger logger, float elapsed);
+
+    [LoggerMessage(
+        EventId = 0115,
+        Level = LogLevel.Warning,
+        Message = "[MountHandler      ] Unstealth timeout ({elapsed}ms) - stealth buff persists")]
+    static partial void LogUnstealthTimeout(ILogger logger, float elapsed);
+
+    [LoggerMessage(
+        EventId = 0116,
+        Level = LogLevel.Warning,
+        Message = "[MountHandler      ] Stealth key not found in Pull or Adhoc sequences")]
+    static partial void LogStealthKeyNotFound(ILogger logger);
 
     #endregion
 }

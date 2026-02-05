@@ -1,7 +1,14 @@
 @page "/Settings"
 
+@using Microsoft.Extensions.Options
+
 @inject IconDB iconDB
 @inject IJSRuntime JSRuntime
+@inject IOptionsMonitor<MountUnlockOptions> mountUnlockOptions
+@inject MountUnlockAdminService mountUnlockAdmin
+@inject StartupClientVersion clientVersion
+
+@implements IDisposable
 
 <Card class="mt-2">
     <CardHeader>Icon CDN Region</CardHeader>
@@ -21,9 +28,83 @@
     </CardBody>
 </Card>
 
+<Card class="mt-2">
+    <CardHeader>Admin: Mount Unlock Rules</CardHeader>
+    <CardBody>
+        <p class="text-muted small mb-2">
+            Controls whether the bot is allowed to mount below the TBC Classic unlock level.
+            This setting is persisted to <code>runtime_feature_flags.json</code> and applies immediately.
+        </p>
+
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <div class="fw-semibold">Enforce TBC mount unlock at level @tbcMountUnlockLevel</div>
+                <div class="text-muted small">
+                    Client detected: <b>@clientVersion.Version</b>
+                </div>
+            </div>
+
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="tbcMountUnlock"
+                       @bind="enforceTbcMountLevelRequirement" @bind:after="MountUnlockSettingChanged" />
+                <label class="form-check-label" for="tbcMountUnlock">
+                    @(enforceTbcMountLevelRequirement ? "On" : "Off")
+                </label>
+            </div>
+        </div>
+
+        <hr class="my-3" />
+
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <div class="fw-semibold">Auto-unstealth for travel (Rogue/Druid)</div>
+                <div class="text-muted small">
+                    Automatically cancel stealth during long-distance travel (40+ yards) when mounting is not available.
+                    Optimizes movement speed for pre-mount levels by moving at normal speed instead of slow stealth speed.
+                </div>
+            </div>
+
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="autoUnstealth"
+                       @bind="autoUnstealthForTravel" @bind:after="MountUnlockSettingChanged" />
+                <label class="form-check-label" for="autoUnstealth">
+                    @(autoUnstealthForTravel ? "On" : "Off")
+                </label>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(mountUnlockSaveStatus))
+        {
+            <div class="mt-2 text-muted small">
+                @mountUnlockSaveStatus
+            </div>
+        }
+    </CardBody>
+</Card>
+
 @code {
     private int selectedRegion;
     private string? detectedRegion;
+
+    private bool enforceTbcMountLevelRequirement;
+    private int tbcMountUnlockLevel;
+    private bool autoUnstealthForTravel;
+    private string mountUnlockSaveStatus = string.Empty;
+    private IDisposable? mountUnlockSubscription;
+
+    protected override void OnInitialized()
+    {
+        SyncMountUnlockState(mountUnlockOptions.CurrentValue);
+
+        mountUnlockSubscription = mountUnlockOptions.OnChange((options, optionName) =>
+        {
+            _ = InvokeAsync(() =>
+            {
+                SyncMountUnlockState(options);
+                StateHasChanged();
+            });
+        });
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -43,5 +124,41 @@
             ? await JSRuntime.InvokeAsync<int>("LocalStorageHelper.detectCdnRegion")
             : selectedRegion;
         iconDB.Region = (CdnRegion)effectiveRegion;
+    }
+
+    private void SyncMountUnlockState(MountUnlockOptions options)
+    {
+        enforceTbcMountLevelRequirement = options.EnforceTbcMountLevelRequirement;
+        autoUnstealthForTravel = options.AutoUnstealthForTravel;
+        tbcMountUnlockLevel = options.TbcMountUnlockLevel <= 0 ? 30 : options.TbcMountUnlockLevel;
+    }
+
+    private Task MountUnlockSettingChanged()
+    {
+        try
+        {
+            mountUnlockSaveStatus = "Saving...";
+
+            mountUnlockAdmin.Save(new MountUnlockOptions
+            {
+                EnforceTbcMountLevelRequirement = enforceTbcMountLevelRequirement,
+                TbcMountUnlockLevel = tbcMountUnlockLevel,
+                AutoUnstealthForTravel = autoUnstealthForTravel
+            });
+
+            mountUnlockSaveStatus = $"Saved. File: {mountUnlockAdmin.RuntimeFlagsFilePath}";
+        }
+        catch (Exception ex)
+        {
+            mountUnlockSaveStatus = $"Save failed: {ex.Message}";
+            SyncMountUnlockState(mountUnlockOptions.CurrentValue);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        mountUnlockSubscription?.Dispose();
     }
 }

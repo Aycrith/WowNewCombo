@@ -49,6 +49,7 @@ public sealed class TargetDebuffStatus : IReader
     public bool Slow() => v[Mask._1];
 
     // Rogue
+    public bool Rupture() => v[Mask._0];
 
     // Warrior
     public bool Rend() => v[Mask._0];

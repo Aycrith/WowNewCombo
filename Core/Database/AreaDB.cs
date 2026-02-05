@@ -224,7 +224,7 @@ public sealed class AreaDB : IDisposable
 
             Vector3 firstWorldPos = worldPos[0];
 
-            float distance = Vector3.DistanceSquared(firstWorldPos, position);
+            float distance = firstWorldPos.WorldDistanceXYTo(position);
             if (distance < closestDistance)
             {
                 closestWorldPos = firstWorldPos;

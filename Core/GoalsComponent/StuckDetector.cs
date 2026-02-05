@@ -38,6 +38,7 @@ public sealed class StuckDetector
     private float prevDistance = MAX_RANGE;
     private long startTime;
     private long attemptTime;
+    private long lastJumpTime;
 
     public double ActionDurationMs => GetElapsedTime(startTime).TotalMilliseconds;
     private double UnstuckMs => GetElapsedTime(attemptTime).TotalMilliseconds;
@@ -70,6 +71,7 @@ public sealed class StuckDetector
     {
         attemptTime = GetTimestamp();
         startTime = GetTimestamp();
+        lastJumpTime = 0;
 
         prevDistance = MAX_RANGE;
     }
@@ -97,7 +99,7 @@ public sealed class StuckDetector
             logger.LogInformation($"Unstuck by moving for {moveDuration}ms");
             input.PressFixed(moveKey, moveDuration, token);
 
-            input.PressJump();
+            TryJump(token);
 
             Vector3 targetM = WorldMapAreaDB.ToMap_FlipXY(worldTarget, playerReader.WorldMapArea);
             float heading = DirectionCalculator.CalculateMapHeading(playerReader.MapPos, targetM);
@@ -105,11 +107,25 @@ public sealed class StuckDetector
 
             attemptTime = GetTimestamp();
         }
-        else
+    }
+
+    private void TryJump(CancellationToken token)
+    {
+        if (bits.Flying())
         {
-            if (!bits.Flying())
-                input.PressJump();
+            return;
         }
+
+        // Avoid spam-jumping when stuck; jumping continuously can prevent reliable heading control
+        // and looks like "jumping in place" during vendor/pathing attempts.
+        if (lastJumpTime != 0 &&
+            GetElapsedTime(lastJumpTime).TotalMilliseconds < 900)
+        {
+            return;
+        }
+
+        input.PressJump(token);
+        lastJumpTime = GetTimestamp();
     }
 
     public bool IsGettingCloser()

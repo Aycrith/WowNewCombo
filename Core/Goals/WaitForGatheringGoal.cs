@@ -108,7 +108,10 @@ public partial class WaitForGatheringGoal : GoapGoal
                     }
                     else
                     {
-                        if (Array.BinarySearch(GatherSpells.Mining, lastKnownCast) < 0)
+                        // Mining nodes can trigger multiple consecutive casts on the same node.
+                        // Herbalism is usually a single cast. Keep waiting for additional casts
+                        // only when the last cast was mining.
+                        if (Array.BinarySearch(GatherSpells.Mining, lastKnownCast) >= 0)
                         {
                             state = CastState.WaitUserInput;
                             LogSuccessMining(logger, CastState.Success.ToStringF(), state.ToStringF(), Timeout);

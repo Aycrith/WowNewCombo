@@ -459,15 +459,26 @@ public sealed partial class MailGoal : GoapGoal, IGoapEventListener, IRouteProvi
     {
         float totalDistance = VectorExt.TotalDistance<Vector3>(navigation.TotalRoute, VectorExt.WorldDistanceXY);
 
-        if ((classConfig.UseMount || key.UseMount) && mountHandler.CanMount() &&
-            (MountHandler.ShouldMount(totalDistance) ||
-            (navigation.TotalRoute.Length > 0 &&
-            mountHandler.ShouldMount(navigation.TotalRoute[^1]))
-            ))
+        // Check if key override allows mounting
+        if (key.UseMount)
         {
-            Log("Mounting for mailbox trip");
-            mountHandler.MountUp();
-            navigation.ResetStuckParameters();
+            if (mountHandler.CanMount() && MountHandler.ShouldMount(totalDistance))
+            {
+                Log("Mounting for mailbox trip");
+                mountHandler.MountUp();
+                navigation.ResetStuckParameters();
+                return;
+            }
+        }
+        else
+        {
+            // Standard travel optimization: mount if possible, otherwise unstealth for speed
+            mountHandler.OptimizeTravelSpeed(totalDistance);
+
+            if (mountHandler.IsMounted())
+            {
+                navigation.ResetStuckParameters();
+            }
         }
     }
 

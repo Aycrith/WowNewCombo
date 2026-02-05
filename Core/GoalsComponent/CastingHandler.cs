@@ -34,6 +34,7 @@ public sealed partial class CastingHandler
     private readonly AddonReader addonReader;
     private readonly AddonBits bits;
     private readonly BagReader bagReader;
+    private readonly SessionStat sessionStat;
 
     private readonly CombatLog combatLog;
 
@@ -76,6 +77,7 @@ public sealed partial class CastingHandler
         AddonReader addonReader,
         PlayerReader playerReader,
         BagReader bagReader,
+        SessionStat sessionStat,
         CombatLog combatLog,
         StopMoving stopMoving,
         ReactCastError react,
@@ -89,6 +91,7 @@ public sealed partial class CastingHandler
         this.addonReader = addonReader;
         this.playerReader = playerReader;
         this.bagReader = bagReader;
+        this.sessionStat = sessionStat;
 
         this.combatLog = combatLog;
 
@@ -270,6 +273,11 @@ public sealed partial class CastingHandler
             item.SpellId = playerReader.CastSpellId.Value;
         }
 
+        if (IsBandage(item))
+        {
+            sessionStat.MarkBandaged();
+        }
+
         item.SetClicked();
         if (item.Item)
         {
@@ -345,6 +353,11 @@ public sealed partial class CastingHandler
         item.SpellId = playerReader.CastSpellId.Value;
         item.SetClicked();
 
+        if (IsBandage(item))
+        {
+            sessionStat.MarkBandaged();
+        }
+
         if (item.AfterCastWaitCastbar)
         {
             if (playerReader.IsCasting() || bits.Channeling())
@@ -389,6 +402,11 @@ public sealed partial class CastingHandler
             LogCastbarInput(logger, item.Name, pressMs, elapsedMs);
 
         return CastResult.Success;
+    }
+
+    private static bool IsBandage(KeyAction item)
+    {
+        return item.Name.Equals("Bandage", StringComparison.OrdinalIgnoreCase);
     }
 
     private static float WaitTilUIErrorTimeChange(int durationMs, int beforeCastEventTime,

@@ -69,4 +69,7 @@ public sealed class DruidMountHandler : IMountHandler
 
     public bool ShouldMount(Vector3 targetW) =>
         mountHandler.ShouldMount(targetW);
+
+    public void OptimizeTravelSpeed(float totalDistance) =>
+        mountHandler.OptimizeTravelSpeed(totalDistance);
 }

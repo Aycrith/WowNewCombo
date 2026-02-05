@@ -154,7 +154,15 @@ public sealed partial class RequirementFactory
             { "InDeadZoneRange", playerReader.IsInDeadZone },
             { "OutOfCombatRange", playerReader.OutOfCombatRange },
             { "InCombatRange", playerReader.WithInCombatRange },
-            
+
+            // Rogue / positional heuristics
+            // True only when we have some signal that a "behind" ability is likely to work.
+            // We don't currently have reliable target-facing data from the addon.
+            { "BehindTarget", () => playerReader.IsInMeleeRange() && !playerReader.TargetsMe() && !sessionStat._RecentlyBadAttackPosition() },
+
+            // Bandage cooldown gating (since "Recently Bandaged" is a debuff, not a buff)
+            { "Recently Bandaged", sessionStat._RecentlyBandaged },
+             
             // Pet
             { "Has Pet", bits.Pet },
             { "Pet Happy", bits.Pet_Happy },

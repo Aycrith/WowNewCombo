@@ -73,6 +73,9 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
     private int searchCount;
     private int searchIndex;
 
+    private static readonly TimeSpan NoPathRetryDelay = TimeSpan.FromSeconds(30);
+    private DateTime noPathBackoffUntilUtc;
+
     #region IRouteProvider
 
     public Vector3[] MapRoute()
@@ -159,7 +162,15 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         navigation.Dispose();
     }
 
-    public override bool CanRun() => key.CanRun();
+    public override bool CanRun()
+    {
+        if (noPathBackoffUntilUtc != default && DateTime.UtcNow < noPathBackoffUntilUtc)
+        {
+            return false;
+        }
+
+        return key.CanRun();
+    }
 
     public void OnGoapEvent(GoapEventArgs e)
     {
@@ -176,6 +187,13 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
     private void Resume()
     {
+        if (noPathBackoffUntilUtc != default && DateTime.UtcNow < noPathBackoffUntilUtc)
+        {
+            pathState = PathState.Finished;
+            LogWarn($"Backoff after pathing failures until {noPathBackoffUntilUtc:O}");
+            return;
+        }
+
         if (tryFindClosestNPC && !TryAutoSelectNPCAndSetPath())
         {
             pathState = PathState.Finished;
@@ -325,7 +343,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
             hasTarget = MoveToTargetAndReached();
         }
 
-        if (!hasTarget && !input.KeyboardOnly)
+        if (!hasTarget)
         {
             npcNameTargeting.ChangeNpcType(NpcNames.Friendly | NpcNames.Neutral);
             npcNameTargeting.WaitForUpdate();
@@ -376,6 +394,8 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
         if (merchantResult != MerchantResult.Success)
             return;
+
+        noPathBackoffUntilUtc = default;
 
         // Signal that vendor/repair completed successfully
         // MailGoal uses this to know it can run
@@ -436,15 +456,26 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
     {
         float totalDistance = VectorExt.TotalDistance<Vector3>(navigation.TotalRoute, VectorExt.WorldDistanceXY);
 
-        if ((classConfig.UseMount || key.UseMount) && mountHandler.CanMount() &&
-            (MountHandler.ShouldMount(totalDistance) ||
-            (navigation.TotalRoute.Length > 0 &&
-            mountHandler.ShouldMount(navigation.TotalRoute[^1]))
-            ))
+        // Check if key override allows mounting
+        if (key.UseMount)
         {
-            Log("Mount up");
-            mountHandler.MountUp();
-            navigation.ResetStuckParameters();
+            if (mountHandler.CanMount() && MountHandler.ShouldMount(totalDistance))
+            {
+                Log("Mount up");
+                mountHandler.MountUp();
+                navigation.ResetStuckParameters();
+                return;
+            }
+        }
+        else
+        {
+            // Standard travel optimization: mount if possible, otherwise unstealth for speed
+            mountHandler.OptimizeTravelSpeed(totalDistance);
+
+            if (mountHandler.IsMounted())
+            {
+                navigation.ResetStuckParameters();
+            }
         }
     }
 
@@ -571,6 +602,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
         if (searchIndex >= searchCount)
         {
+            noPathBackoffUntilUtc = DateTime.UtcNow.Add(NoPathRetryDelay);
             pathState = PathState.Finished;
             LogWarn("No more NPC to try!");
 

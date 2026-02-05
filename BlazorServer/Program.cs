@@ -40,8 +40,8 @@ public static class Program
             try
             {
                 Log.Information("[Program          ] Starting blazor server");
-                var host = CreateApp(args);
-                var lifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
+                using WebApplication host = CreateApp(args);
+                IHostApplicationLifetime lifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
                 lifetime.ApplicationStopping.Register(() =>
                 {
                     shutdownRequested = true;
@@ -52,6 +52,14 @@ public static class Program
             }
             catch (Exception ex)
             {
+                if (IsAddressAlreadyInUse(ex))
+                {
+                    // This usually means a second instance was launched while one is already running.
+                    // Don't crash-loop; log a clear message and exit.
+                    Log.Fatal(ex, "[Program          ] Web UI port is already in use (is another bot instance already running?)");
+                    break;
+                }
+
                 if (shutdownRequested)
                 {
                     // We were stopping anyway; don't restart-loop just because Dispose threw.
@@ -99,9 +107,35 @@ public static class Program
         }
     }
 
+    private static bool IsAddressAlreadyInUse(Exception ex)
+    {
+        // Kestrel wraps this as: IOException -> AddressInUseException -> SocketException(10048)
+        Exception? current = ex;
+        while (current != null)
+        {
+            string msg = current.Message;
+            if (!string.IsNullOrEmpty(msg) &&
+                msg.Contains("address already in use", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+            current = current.InnerException;
+        }
+
+        return false;
+    }
+
     private static WebApplication CreateApp(string[] args)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
+        // Runtime overrides / feature flags (written by the Web UI).
+        // This file is optional and hot-reloads when changed so admin toggles
+        // take effect immediately without restarts.
+        builder.Configuration.AddJsonFile(
+            "runtime_feature_flags.json",
+            optional: true,
+            reloadOnChange: true);
 
         // When running directly from `bin/Release/net10.0` (OneClickLauncher default),
         // static web assets from referenced projects (Frontend) are not copied to `wwwroot`.
@@ -167,6 +201,9 @@ public static class Program
             $"{DateTimeOffset.Now}");
 
         services.AddStartupConfigurations(configuration);
+
+        // Runtime feature flags (hot-reload via runtime_feature_flags.json)
+        services.Configure<MountUnlockOptions>(configuration.GetSection(MountUnlockOptions.Position));
 
         // Add startup orchestration first (handles WoW launch, nav server, etc.)
         services.AddStartupOrchestration(configuration);

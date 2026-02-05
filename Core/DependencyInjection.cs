@@ -197,7 +197,7 @@ public static class DependencyInjection
             return new LocalPathingApi(logger, service);
         });
 
-        s.AddSingleton<IAddonDataProvider>(x => GetAddonDataProvider(x.GetRequiredService<IServiceProvider>(), log));
+        s.AddSingleton<IAddonDataProvider>(x => GetAddonDataProvider(x, log));
         s.AddSingleton<IBotController, ConfigBotController>();
         s.AddSingleton<IAddonReader, ConfigAddonReader>();
         s.AddSingleton<IMailSettingsService, NullMailSettingsService>();
@@ -235,13 +235,13 @@ public static class DependencyInjection
         s.TryAddSingleton<LaunchAutoFixService>();
 
         s.AddSingleton<IScreenCapture>(x =>
-            GetScreenCapture(x.GetRequiredService<IServiceProvider>(), log));
+            GetScreenCapture(x, log));
 
         s.AddSingleton<IPathVizualizer>(x =>
-            GetPathVizualizer(x.GetRequiredService<IServiceProvider>(), log));
+            GetPathVizualizer(x, log));
 
         s.AddSingleton<IPPather>(x =>
-            GetPather(x.GetRequiredService<IServiceProvider>(), log));
+            GetPather(x, log));
 
         s.AddSingleton<PPatherService>(x =>
         {
@@ -253,7 +253,7 @@ public static class DependencyInjection
         });
 
         s.AddSingleton<IAddonDataProvider>(x =>
-            GetAddonDataProvider(x.GetRequiredService<IServiceProvider>(), log));
+            GetAddonDataProvider(x, log));
 
         s.AddSingleton<MinimapNodeFinder>();
 
@@ -459,63 +459,63 @@ public static class DependencyInjection
     {
         var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
         var scp = sp.GetRequiredService<IOptions<StartupConfigPathing>>().Value;
-        var dataConfig = sp.GetRequiredService<DataConfig>();
         var worldMapAreaDB = sp.GetRequiredService<WorldMapAreaDB>();
         var pathViz = sp.GetRequiredService<IPathVizualizer>();
 
-        bool failed = false;
         if (scp.Type == StartupConfigPathing.Types.RemoteV3)
         {
             var remoteLogger = loggerFactory.CreateLogger<RemotePathingAPIV3>();
-            RemotePathingAPIV3 api = new(
+            RemotePathingAPIV3 remote = new(
                 pathViz,
                 remoteLogger,
                 scp.hostv3, scp.portv3, worldMapAreaDB);
-            if (api.PingServer())
+
+            var localService = sp.GetRequiredService<PPatherService>();
+            var localPathingLogger = loggerFactory.CreateLogger<LocalPathingApi>();
+            LocalPathingApi localPathingApi = new(localPathingLogger, localService);
+
+            var hybridLogger = loggerFactory.CreateLogger<HybridPather>();
+            HybridPather hybrid = new(hybridLogger, remote, localPathingApi);
+
+            if (remote.PingServer())
             {
                 logger.LogInformation(
-                    $"Using {StartupConfigPathing.Types.RemoteV3}({api.GetType().Name}) " +
+                    $"Using {StartupConfigPathing.Types.RemoteV3}({nameof(HybridPather)} -> {remote.GetType().Name}) " +
                     $"{scp.hostv3}:{scp.portv3}");
-                return api;
             }
-            api.Dispose();
-            failed = true;
+            else
+            {
+                logger.LogWarning(
+                    $"Using {StartupConfigPathing.Types.RemoteV3}({nameof(HybridPather)}) but {scp.hostv3}:{scp.portv3} is not reachable yet. " +
+                    "Falling back to local pathing until navmesh connects.");
+            }
+
+            return hybrid;
         }
 
-        if (scp.Type == StartupConfigPathing.Types.RemoteV1 || failed)
+        if (scp.Type == StartupConfigPathing.Types.RemoteV1)
         {
             var remoteLogger = loggerFactory.CreateLogger<RemotePathingAPI>();
             RemotePathingAPI api = new(remoteLogger, scp.hostv1, scp.portv1);
             if (api.PingServer())
             {
-                if (scp.Type == StartupConfigPathing.Types.RemoteV3)
-                {
-                    logger.LogWarning(
-                        $"Unavailable {StartupConfigPathing.Types.RemoteV3} " +
-                        $"{scp.hostv3}:{scp.portv3} - Fallback to " +
-                        $"{StartupConfigPathing.Types.RemoteV1}");
-                }
-
                 logger.LogInformation(
                     $"Using {StartupConfigPathing.Types.RemoteV1}({api.GetType().Name}) " +
                     $"{scp.hostv1}:{scp.portv1}");
                 return api;
             }
-        }
 
-        if (scp.Type != StartupConfigPathing.Types.Local)
-        {
             logger.LogWarning($"{scp.Type} not available!");
         }
 
-        var service = sp.GetRequiredService<PPatherService>();
-        var pathingLogger = loggerFactory.CreateLogger<LocalPathingApi>();
+        var fallbackService = sp.GetRequiredService<PPatherService>();
+        var fallbackPathingLogger = loggerFactory.CreateLogger<LocalPathingApi>();
 
-        LocalPathingApi localApi = new(pathingLogger, service);
+        LocalPathingApi fallbackApi = new(fallbackPathingLogger, fallbackService);
         logger.LogInformation(
-            $"Using {StartupConfigPathing.Types.Local}({localApi.GetType().Name})");
+            $"Using {StartupConfigPathing.Types.Local}({fallbackApi.GetType().Name})");
 
-        return localApi;
+        return fallbackApi;
     }
 
     private static IPathVizualizer GetPathVizualizer(IServiceProvider sp, ILogger logger)

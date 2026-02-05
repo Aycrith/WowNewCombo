@@ -35,6 +35,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
     private readonly ClassConfiguration classConfig;
     private readonly IMountHandler mountHandler;
     private readonly Navigation navigation;
+    private readonly ExecGameCommand execGameCommand;
 
     private readonly IBlacklist targetBlacklist;
     private readonly TargetFinder targetFinder;
@@ -90,7 +91,8 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         ClassConfiguration classConfig,
         Navigation navigation,
         IMountHandler mountHandler, TargetFinder targetFinder,
-        IBlacklist targetBlacklist)
+        IBlacklist targetBlacklist,
+        ExecGameCommand execGameCommand)
     : base("Follow " + System.IO.Path.GetFileNameWithoutExtension(pathSettings.FileName))
     {
         this.cost = cost;
@@ -122,6 +124,8 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         navigation.OnDestinationReached += Navigation_OnDestinationReached;
         navigation.OnWayPointReached += Navigation_OnWayPointReached;
 
+        this.execGameCommand = execGameCommand;
+
         if (classConfig.Mode == Mode.AttendedGather)
         {
             AddPrecondition(GoapKey.dangercombat, false);
@@ -146,7 +150,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
         if (classConfig.Mode == Mode.AttendedGather)
         {
-            if (classConfig.GatherFindKeyConfig.Length > 1)
+            if (classConfig.GatherFindKeyConfig.Length > 0)
             {
                 sideActivityThread = new(Thread_AttendedGather);
                 sideActivityThread.Start();
@@ -202,6 +206,13 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
             MountIfPossible();
 
         onEnterTime = DateTime.UtcNow;
+
+        if (classConfig.Mode == Mode.AttendedGather &&
+            classConfig.GatherFindKeyConfig.Length > 0)
+        {
+            // Ensure tracking is active even when only one profession is configured (e.g. Mining only).
+            AlternateGatherTypes();
+        }
     }
 
     public void OnGoapEvent(GoapEventArgs e)
@@ -234,6 +245,26 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
             if (bits.Target())
             {
+                // Fallbacks: ESC + slash command, to avoid depending on BindPad/custom keybinds.
+                input.PressESC();
+                wait.Update();
+
+                input.PressClearTarget();
+                wait.Update();
+
+                if (!bits.Target())
+                {
+                    return;
+                }
+
+                execGameCommand.Run("/cleartarget", logMessage: null);
+                wait.Update();
+
+                if (!bits.Target())
+                {
+                    return;
+                }
+
                 SendGoapEvent(ScreenCaptureEvent.Default);
                 LogWarning($"Unable to clear target! Check Bindpad settings!");
             }
@@ -332,14 +363,11 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
     {
         float totalDistance = VectorExt.TotalDistance<Vector3>(navigation.TotalRoute, VectorExt.WorldDistanceXY);
 
-        if (classConfig.UseMount && mountHandler.CanMount() &&
-            (MountHandler.ShouldMount(totalDistance) ||
-            (navigation.TotalRoute.Length > 0 &&
-            mountHandler.ShouldMount(navigation.TotalRoute[^1]))
-            ))
+        // Optimize travel speed: mount if possible, otherwise unstealth for speed
+        mountHandler.OptimizeTravelSpeed(totalDistance);
+
+        if (mountHandler.IsMounted())
         {
-            Log("Mount up");
-            mountHandler.MountUp();
             navigation.ResetStuckParameters();
         }
     }

@@ -76,6 +76,10 @@ public sealed partial class Navigation : IDisposable
 
     private int failedAttempt;
     private Vector3 lastFailedDestination;
+    private DateTime lastNoPathUtc;
+    private Vector3 lastNoPathDestination;
+
+    private const int NoPathBackoffMs = 1500;
 
     public Navigation(ILogger<Navigation> logger,
         CancellationTokenSource<GoapAgent> cts,
@@ -335,6 +339,19 @@ public sealed partial class Navigation : IDisposable
         routeToNextWaypoint.Clear();
 
         Vector3 playerW = playerReader.WorldPos;
+        if (playerW.Z == 0 && areaDB.CurrentArea != null)
+        {
+            // The addon provides map XY but no reliable Z. Remote navmesh queries can be sensitive
+            // to Z when locating the nearest polygon. Seed Z from the closest known spawnpoint
+            // in the current map so pathfinding has a reasonable height hint.
+            (_, Vector3 worldPos) = areaDB.FindClosestCreatureByNpcFlag(NpcFlags.None, new Vector3(playerW.X, playerW.Y, 0));
+            if (worldPos != default && worldPos.Z != 0)
+            {
+                playerReader.WorldPosZ = worldPos.Z;
+                playerW = new Vector3(playerW.X, playerW.Y, worldPos.Z);
+            }
+        }
+
         Vector3 targetW = wayPoints.Peek();
         float distance = playerW.WorldDistanceXYTo(targetW);
 
@@ -342,6 +359,18 @@ public sealed partial class Navigation : IDisposable
         {
             if (debug)
                 LogDebug($"Distance: {distance} vs Avg:({AvgDistance * 2},{AvgDistance}) - TAVG: {DIFF_THRESHOLD * AvgDistance} ");
+
+            // When the pathfinder repeatedly returns "no path" for the same destination,
+            // avoid hammering the pathing service in a tight loop. Give the stuck logic
+            // a chance to move us to a slightly different position before retrying.
+            if (lastNoPathDestination == targetW &&
+                lastNoPathUtc != default &&
+                (DateTime.UtcNow - lastNoPathUtc).TotalMilliseconds < NoPathBackoffMs)
+            {
+                stuckDetector.SetTargetLocation(targetW);
+                stuckDetector.Update(token);
+                return;
+            }
 
             stopMoving.Stop();
             PathRequest(new PathRequest(playerReader.UIMapId.Value, bits.Indoors(), playerW, targetW, distance, PathCalculatedCallback));
@@ -376,14 +405,16 @@ public sealed partial class Navigation : IDisposable
             return;
         }
 
-        // TODO: fix this later
         // Consider trivial proximity as a successful "no path needed"
-        const float TrivialDistanceThreshold = MinDistanceMount; // adjust as per your units
+        const float TrivialDistanceThreshold = MinDistanceMount;
 
-        float distance = (result.EndW - result.StartW).Length(); // assuming it's a Vector3 or similar
+        float distance = result.StartW.WorldDistanceXYTo(result.EndW);
         bool isTriviallyClose = result.Path.Length == 0 && distance < TrivialDistanceThreshold;
 
-        logger.LogWarning($"Pathfinder - Trivial: {isTriviallyClose} | {result.ElapsedMs}ms - {result.StartW.ToStringF()} -> {result.EndW.ToStringF()}");
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug($"Pathfinder - Trivial: {isTriviallyClose} | {result.ElapsedMs}ms - {result.StartW.ToStringF()} -> {result.EndW.ToStringF()}");
+        }
 
         if (result.Path.Length == 0 && !isTriviallyClose)
         {
@@ -407,6 +438,8 @@ public sealed partial class Navigation : IDisposable
             if (failedAttempt > 2)
             {
                 failedAttempt = 0;
+                lastNoPathDestination = result.EndW;
+                lastNoPathUtc = DateTime.UtcNow;
                 stuckDetector.SetTargetLocation(result.EndW);
                 stuckDetector.Update();
 
@@ -416,6 +449,7 @@ public sealed partial class Navigation : IDisposable
         }
 
         failedAttempt = 0;
+        lastNoPathUtc = default;
         // TODO: fix this later
         //if (!isTriviallyClose)
         {

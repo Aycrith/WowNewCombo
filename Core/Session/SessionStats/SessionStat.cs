@@ -7,6 +7,9 @@ namespace Core;
 
 public sealed class SessionStat
 {
+    private const int RecentlyBandagedMs = 60_000;
+    private const int RecentlyBadAttackPositionMs = 2_000;
+
     public int Deaths { get; set; }
     public int Kills { get; set; }
 
@@ -18,6 +21,9 @@ public sealed class SessionStat
     /// Used to ensure Mail only runs after Vendor/Repair.
     /// </summary>
     public bool VendoredOrRepairedRecently { get; set; }
+
+    private long lastBandageTime;
+    private long lastBadAttackPositionTime;
 
     public int _Deaths() => Deaths;
 
@@ -37,11 +43,43 @@ public sealed class SessionStat
 
     public bool _VendoredOrRepairedRecently() => VendoredOrRepairedRecently;
 
+    public bool _RecentlyBandaged()
+    {
+        if (lastBandageTime == 0)
+        {
+            return false;
+        }
+
+        return GetElapsedTime(lastBandageTime).TotalMilliseconds < RecentlyBandagedMs;
+    }
+
+    public void MarkBandaged()
+    {
+        lastBandageTime = GetTimestamp();
+    }
+
+    public bool _RecentlyBadAttackPosition()
+    {
+        if (lastBadAttackPositionTime == 0)
+        {
+            return false;
+        }
+
+        return GetElapsedTime(lastBadAttackPositionTime).TotalMilliseconds < RecentlyBadAttackPositionMs;
+    }
+
+    public void MarkBadAttackPosition()
+    {
+        lastBadAttackPositionTime = GetTimestamp();
+    }
+
     public void Reset()
     {
         Deaths = 0;
         Kills = 0;
         VendoredOrRepairedRecently = false;
+        lastBandageTime = 0;
+        lastBadAttackPositionTime = 0;
     }
 
     public void Start()

@@ -20,12 +20,14 @@ public sealed class ReactCastError
     private readonly StopMoving stopMoving;
     private readonly PlayerDirection direction;
     private readonly AddonReader addonReader;
+    private readonly SessionStat sessionStat;
 
     public ReactCastError(ILogger<ReactCastError> logger,
         PlayerReader playerReader,
         AddonReader addonReader,
         ActionBarBits<IUsableAction> usableAction,
         AddonBits bits, Wait wait, ConfigurableInput input, StopMoving stopMoving,
+        SessionStat sessionStat,
         PlayerDirection direction)
     {
         this.logger = logger;
@@ -37,6 +39,7 @@ public sealed class ReactCastError
         this.input = input;
         this.stopMoving = stopMoving;
         this.direction = direction;
+        this.sessionStat = sessionStat;
     }
 
     public void Do(KeyAction item)
@@ -216,6 +219,7 @@ public sealed class ReactCastError
                 wait.While(playerReader.IsCasting);
                 break;
             case UI_ERROR.ERR_BADATTACKPOS:
+                sessionStat.MarkBadAttackPosition();
                 if (bits.Auto_Attack())
                 {
                     logger.LogInformation($"React to {value.ToStringF()} -- Interact!");

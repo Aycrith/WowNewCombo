@@ -36,6 +36,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
     private readonly CombatLog combatLog;
     private readonly PlayerDirection playerDirection;
     private readonly GoapAgentState state;
+    private readonly ExecGameCommand execGameCommand;
 
     private readonly CancellationToken token;
 
@@ -51,6 +52,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         ClassConfiguration classConfig, NpcNameTargeting npcNameTargeting,
         PlayerDirection playerDirection,
         GoapAgentState state, CombatLog combatLog,
+        ExecGameCommand execGameCommand,
         CancellationTokenSource cts)
         : base(nameof(LootGoal))
     {
@@ -67,6 +69,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         this.npcNameTargeting = npcNameTargeting;
         this.playerDirection = playerDirection;
         this.state = state;
+        this.execGameCommand = execGameCommand;
 
         this.token = cts.Token;
         AddPrecondition(GoapKey.pulled, false);
@@ -224,6 +227,14 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
         if (bits.Target())
         {
+            execGameCommand.Run("/cleartarget", logMessage: null);
+            wait.Update();
+
+            if (!bits.Target())
+            {
+                return;
+            }
+
             SendGoapEvent(ScreenCaptureEvent.Default);
             LogWarning("Unable to clear target! Check Bindpad settings!");
         }

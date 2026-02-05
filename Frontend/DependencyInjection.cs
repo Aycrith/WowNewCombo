@@ -13,6 +13,9 @@ public static class DependencyInjection
     {
         services.AddBlazorBootstrap();
 
+        // Admin/runtime settings persisted to runtime_feature_flags.json
+        services.AddSingleton<MountUnlockAdminService>();
+
         services.AddRazorPages();
 
         services.AddRazorComponents()

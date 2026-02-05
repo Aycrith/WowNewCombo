@@ -33,6 +33,7 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
     private readonly NpcNameTargeting npcNameTargeting;
     private readonly CombatTracker combatTracker;
     private readonly GoapAgentState state;
+    private readonly ExecGameCommand execGameCommand;
     private readonly CancellationToken token;
 
     private bool canRun;
@@ -46,6 +47,7 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
         AddonBits bits, Wait wait, StopMoving stopMoving,
         NpcNameTargeting npcNameTargeting, CombatTracker combatTracker,
         GoapAgentState state, ClassConfiguration classConfig,
+        ExecGameCommand execGameCommand,
         CancellationTokenSource cts)
         : base(nameof(SkinningGoal))
     {
@@ -63,6 +65,7 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
         this.npcNameTargeting = npcNameTargeting;
         this.combatTracker = combatTracker;
         this.state = state;
+        this.execGameCommand = execGameCommand;
 
         this.token = cts.Token;
 
@@ -133,6 +136,11 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
         while (attempts < MAX_ATTEMPTS)
         {
             bool foundTarget = bits.Target() && bits.Target_Dead();
+            bool allowCursorTargeting =
+                !input.KeyboardOnly ||
+                classConfig.Herb ||
+                classConfig.Mine ||
+                classConfig.Salvage;
 
             if (!foundTarget && state.LastCombatKillCount == 1)
             {
@@ -155,11 +163,28 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
             }
 
             bool interact = false;
-            if (!foundTarget && !input.KeyboardOnly)
+            if (!foundTarget && allowCursorTargeting)
             {
                 stopMoving.Stop();
 
-                npcNameTargeting.ChangeNpcType(NpcNames.Corpse);
+                NpcNames npcNames = NpcNames.None;
+                if (classConfig.Skin)
+                {
+                    npcNames |= NpcNames.Corpse;
+                }
+
+                if (classConfig.Herb || classConfig.Mine || classConfig.Salvage)
+                {
+                    npcNames |= NpcNames.Neutral | NpcNames.Friendly;
+                }
+
+                // Fall back to corpse targeting if no profession type is set (legacy profiles).
+                if (npcNames == NpcNames.None)
+                {
+                    npcNames = NpcNames.Corpse;
+                }
+
+                npcNameTargeting.ChangeNpcType(npcNames);
                 e = wait.Until(MAX_TIME_TO_WAIT_NPC_NAME, npcNameTargeting.FoundAny);
                 LogFoundNpcNameCount(logger, npcNameTargeting.NpcCount, e);
 
@@ -316,6 +341,29 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
 
         if (bits.Target())
         {
+            // Fallback: ESC often clears target in WoW and also closes loot frames that can
+            // interfere with cursor targeting for herb/mining.
+            input.PressESC();
+            wait.Update();
+
+            input.PressClearTarget();
+            wait.Update();
+
+            if (!bits.Target())
+            {
+                return;
+            }
+
+            // Final fallback: run a direct slash command (avoids depending on BindPad/custom keybinds).
+            // Suppress logging to avoid chat command spam in normal logs.
+            execGameCommand.Run("/cleartarget", logMessage: null);
+            wait.Update();
+
+            if (!bits.Target())
+            {
+                return;
+            }
+
             SendGoapEvent(ScreenCaptureEvent.Default);
             LogWarning($"Unable to clear target! Check Bindpad settings!");
         }

@@ -24,6 +24,7 @@ public sealed class RemotePathingAPIV3 : IPPather, IDisposable
 {
     private const bool debug = false;
     private const int watchdogPollMs = 500;
+    private const float DefaultZFallback = 64f;
 
     private const EMessageType TYPE = EMessageType.PATH;
     private const PathRequestFlags FLAGS = PathRequestFlags.SMOOTH_CATMULLROM | PathRequestFlags.VALIDATE_CPOP;
@@ -61,6 +62,11 @@ public sealed class RemotePathingAPIV3 : IPPather, IDisposable
 
     private int uiMap;
     private Vector3[] result = Array.Empty<Vector3>();
+    private float? zHint;
+    private int zHintUiMap;
+    private DateTime lastConnectErrorLogUtc;
+
+    public bool IsConnected => client.IsConnected;
 
     public RemotePathingAPIV3(
         IPathVizualizer pathViz,
@@ -116,13 +122,7 @@ public sealed class RemotePathingAPIV3 : IPPather, IDisposable
             Vector3 worldFrom = areaDB.ToWorld_FlipXY(uiMap, mapFrom);
             Vector3 worldTo = areaDB.ToWorld_FlipXY(uiMap, mapTo);
 
-            // incase haven't asked a pathfinder for a route this value will be 0
-            // that case use the highest location
-            if (worldFrom.Z == 0)
-            {
-                worldFrom.Z = area.LocTop / 2;
-                worldTo.Z = area.LocTop / 2;
-            }
+            ApplyZHint(uiMap, ref worldFrom, ref worldTo);
 
             if (debug)
                 logger.LogDebug($"Finding map route from {mapFrom}({worldFrom}) map {uiMap} to {mapTo}({worldTo}) map {uiMap}...");
@@ -133,7 +133,16 @@ public sealed class RemotePathingAPIV3 : IPPather, IDisposable
                 worldFrom.X, worldFrom.Y, worldFrom.Z, worldTo.X, worldTo.Y, worldTo.Z)).AsArray<Vector3>();
 
             if (path.Length == 1 && path[0] == Vector3.Zero)
-                return result = Array.Empty<Vector3>();
+            {
+                if (TryWithFallbackZ(uiMap, area, ref worldFrom, ref worldTo, out path))
+                {
+                    // ok
+                }
+                else
+                {
+                    return result = Array.Empty<Vector3>();
+                }
+            }
 
             for (int i = 0; i < path.Length; i++)
             {
@@ -143,6 +152,7 @@ public sealed class RemotePathingAPIV3 : IPPather, IDisposable
                 path[i] = areaDB.ToMap_FlipXY(path[i], area.MapID, uiMap);
             }
 
+            UpdateZHint(uiMap, path, mapSpace: true, area);
             return result = path;
         }
         catch (Exception ex)
@@ -164,13 +174,7 @@ public sealed class RemotePathingAPIV3 : IPPather, IDisposable
 
         try
         {
-            // incase haven't asked a pathfinder for a route this value will be 0
-            // that case use the highest location
-            if (worldFrom.Z == 0)
-            {
-                worldFrom.Z = area.LocTop / 2;
-                worldTo.Z = area.LocTop / 2;
-            }
+            ApplyZHint(uiMap, ref worldFrom, ref worldTo);
 
             if (debug)
                 logger.LogDebug($"Finding world route from {worldFrom}({worldFrom}) map {uiMap} to {worldTo}({worldTo}) map {uiMap}...");
@@ -181,8 +185,14 @@ public sealed class RemotePathingAPIV3 : IPPather, IDisposable
                 worldFrom.X, worldFrom.Y, worldFrom.Z, worldTo.X, worldTo.Y, worldTo.Z)).AsArray<Vector3>();
 
             if (path.Length == 1 && path[0] == Vector3.Zero)
-                return result = Array.Empty<Vector3>();
+            {
+                if (!TryWithFallbackZ(uiMap, area, ref worldFrom, ref worldTo, out path))
+                {
+                    return result = Array.Empty<Vector3>();
+                }
+            }
 
+            UpdateZHint(uiMap, path, mapSpace: false, area);
             return result = path;
         }
         catch (Exception ex)
@@ -192,6 +202,105 @@ public sealed class RemotePathingAPIV3 : IPPather, IDisposable
         }
     }
 
+    private void ApplyZHint(int uiMap, ref Vector3 worldFrom, ref Vector3 worldTo)
+    {
+        if (worldFrom.Z != 0 && worldTo.Z == 0)
+        {
+            worldTo.Z = worldFrom.Z;
+            return;
+        }
+
+        if (worldTo.Z != 0 && worldFrom.Z == 0)
+        {
+            worldFrom.Z = worldTo.Z;
+            return;
+        }
+
+        if (worldFrom.Z != 0 || worldTo.Z != 0)
+        {
+            return;
+        }
+
+        if (zHint.HasValue && zHintUiMap == uiMap)
+        {
+            worldFrom.Z = zHint.Value;
+            worldTo.Z = zHint.Value;
+        }
+    }
+
+    private bool TryWithFallbackZ(int uiMap, WorldMapArea area, ref Vector3 worldFrom, ref Vector3 worldTo, out Vector3[] path)
+    {
+        path = Array.Empty<Vector3>();
+
+        if (!client.IsConnected)
+        {
+            return false;
+        }
+
+        if (worldFrom.Z != 0 || worldTo.Z != 0)
+        {
+            return false;
+        }
+
+        // No Z information is available from the addon (map XY only). Some navmesh queries
+        // are sensitive to Z; try a small set of sane fallbacks rather than using unrelated
+        // WorldMapArea bounds (LocTop/LocBottom etc are world XY, not height).
+        ReadOnlySpan<float> candidates = [
+            DefaultZFallback,
+            DefaultZFallback * 2,
+            DefaultZFallback * 4,
+            0f
+        ];
+
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            float z = candidates[i];
+            worldFrom.Z = z;
+            worldTo.Z = z;
+
+            Vector3[] candidate = client.Send(
+                (byte)TYPE,
+                (area.MapID, FLAGS,
+                worldFrom.X, worldFrom.Y, worldFrom.Z, worldTo.X, worldTo.Y, worldTo.Z)).AsArray<Vector3>();
+
+            if (candidate.Length == 1 && candidate[0] == Vector3.Zero)
+            {
+                continue;
+            }
+
+            path = candidate;
+            zHint = candidate[0].Z;
+            zHintUiMap = uiMap;
+            return true;
+        }
+
+        worldFrom.Z = 0;
+        worldTo.Z = 0;
+        return false;
+    }
+
+    private void UpdateZHint(int uiMap, Vector3[] path, bool mapSpace, WorldMapArea area)
+    {
+        if (path.Length == 0)
+        {
+            return;
+        }
+
+        Vector3 first = path[0];
+        if (mapSpace)
+        {
+            // Convert first map point to world for a stable Z hint
+            first = areaDB.ToWorld_FlipXY(uiMap, first);
+        }
+
+        if (first.Z == 0)
+        {
+            return;
+        }
+
+        zHint = first.Z;
+        zHintUiMap = uiMap;
+    }
 
     public bool PingServer()
     {
@@ -231,7 +340,12 @@ public sealed class RemotePathingAPIV3 : IPPather, IDisposable
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex.Message);
+                    // Avoid log spam if the navigation server is intentionally stopped or starting up.
+                    if ((DateTime.UtcNow - lastConnectErrorLogUtc).TotalSeconds >= 30)
+                    {
+                        lastConnectErrorLogUtc = DateTime.UtcNow;
+                        logger.LogError(ex.Message);
+                    }
                     // ignored, will happen when we cant connect
                 }
             }

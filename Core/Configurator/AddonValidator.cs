@@ -299,26 +299,11 @@ public sealed partial class AddonValidator
                 }
             }
 
-            // Check for entries referencing non-existent addons
-            foreach (var kvp in addonStates)
-            {
-                if (kvp.Value) // Only check enabled addons
-                {
-                    // Blizzard_ "addons" are client modules in some Classic branches and may not exist as folders.
-                    // Treat these as non-actionable to avoid noisy warnings that block the launch wizard.
-                    if (kvp.Key.StartsWith("Blizzard_", StringComparison.OrdinalIgnoreCase))
-                    {
-                        continue;
-                    }
-
-                    string addonPath = Path.Join(AddonsBasePath, kvp.Key);
-                    if (!Directory.Exists(addonPath))
-                    {
-                        result.AddWarning($"{relativePath}: {kvp.Key} enabled but missing",
-                            $"Addon '{kvp.Key}' is enabled in AddOns.txt but folder doesn't exist.");
-                    }
-                }
-            }
+            // NOTE:
+            // We intentionally do NOT warn about arbitrary enabled add-ons that are missing their folders.
+            // AddOns.txt often contains stale entries across alts/realms, and these warnings were flooding
+            // the launch wizard and making "Add-ons" appear errored even though the bot add-on is fine.
+            // We only validate DataToColor + explicitly required add-ons above.
         }
         catch (Exception ex)
         {

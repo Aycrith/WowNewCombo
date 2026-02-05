@@ -22,6 +22,8 @@ public sealed class Program
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("headless_appsettings.json", optional: true, reloadOnChange: true)
             .AddJsonFile($"headless_appsettings.{environmentName}.json", optional: true, reloadOnChange: true)
+            // Runtime overrides / feature flags (written by the Web UI in BlazorServer, or edited manually).
+            .AddJsonFile("runtime_feature_flags.json", optional: true, reloadOnChange: true)
             .AddEnvironmentVariables()
             .AddCommandLine(args)
             .Build();
@@ -75,6 +77,9 @@ public sealed class Program
         }
 
         services.AddSingleton<RunOptions>(options.Value);
+
+        // Runtime feature flags (hot-reload via runtime_feature_flags.json)
+        services.Configure<MountUnlockOptions>(configuration.GetSection(MountUnlockOptions.Position));
 
         services.AddStartupConfigFactories();
 
