@@ -1,6 +1,6 @@
-# WowCombo Setup Guide
+# WowNewCombo Setup Guide
 
-This guide will help you get WowCombo running from a fresh clone or download.
+This guide will help you get WowNewCombo running from a fresh clone or download.
 
 ---
 
@@ -21,13 +21,13 @@ This guide will help you get WowCombo running from a fresh clone or download.
 
 **Option A: Git Clone**
 ```bash
-git clone https://github.com/Aycrith/WowCombo.git
-cd WowCombo
+git clone https://github.com/Aycrith/WowNewCombo.git
+cd WowNewCombo
 ```
 
 **Option B: Download ZIP**
-- Download from: https://github.com/Aycrith/WowCombo/archive/refs/heads/main.zip
-- Extract to `C:\WowCombo` (or your preferred location)
+- Download from: https://github.com/Aycrith/WowNewCombo/archive/refs/heads/main.zip
+- Extract to `C:\WowNewCombo` (or your preferred location)
 
 ---
 
@@ -43,7 +43,7 @@ MPQ files provide world geometry for pathfinding. Download the files for your Wo
 
 **Example directory structure:**
 ```
-C:\WowCombo\
+C:\WowNewCombo\
 ├── Json\
 │   └── MPQ\
 │       ├── common-2.MPQ      (for Vanilla)
@@ -69,11 +69,11 @@ If you plan to use **V3 Remote Pathfinding** (best quality, required for Catacly
 
 **Installation:**
 1. Extract the downloaded archive - you should see an `mmaps` folder
-2. Copy the `mmaps` folder to `Navigation\mmaps\` in your WowCombo directory
+2. Copy the `mmaps` folder to `Navigation\mmaps\` in your WowNewCombo directory
 
 **Example directory structure:**
 ```
-C:\WowCombo\
+C:\WowNewCombo\
 ├── Navigation\
 │   ├── mmaps\
 │   │   ├── 0000.mmtile
@@ -204,13 +204,13 @@ Build succeeded.
 
 - **Documentation**: See [README.md](README.md) for complete documentation
 - **Coding Guidelines**: See [AGENTS.md](AGENTS.md) if contributing code
-- **Changelog**: See [CHANGELOG.md](CHANGELOG.md) for what's new in WowCombo fork
-- **Issues**: Report bugs at https://github.com/Aycrith/WowCombo/issues
+- **Changelog**: See [CHANGELOG.md](CHANGELOG.md) for what's new in WowNewCombo fork
+- **Issues**: Report bugs at https://github.com/Aycrith/WowNewCombo/issues
 - **Original Project**: https://github.com/Xian55/WowClassicGrindBot
 
 ---
 
-## 🔀 WowCombo Fork Enhancements
+## 🔀 WowNewCombo Fork Enhancements
 
 This fork adds:
 - ✅ **Autonomous Testing Infrastructure** - API endpoints for automated testing (`/api/test/*`)
@@ -223,3 +223,4 @@ See [CHANGELOG.md](CHANGELOG.md) for detailed changes.
 ---
 
 **Happy Botting!** 🤖
+

@@ -2,6 +2,19 @@
   <img src="images/starme.png" alt="Star this Repo"/>
 </p>
 
+> ## 🔱 WowNewCombo Fork
+>
+> This is a personal fork of [WowClassicGrindBot](https://github.com/Xian55/WowClassicGrindBot) with customizations for my specific setup including:
+> - Critical byte overflow bug fix for 324-frame detection
+> - Enhanced startup orchestration and process detection
+> - Custom launcher scripts and diagnostics
+> - Blood Elf Rogue profiles and class configurations
+> - Comprehensive setup documentation
+>
+> For the official upstream project, visit [Xian55/WowClassicGrindBot](https://github.com/Xian55/WowClassicGrindBot).
+>
+> **⚠️ Navigation Data Required**: The `Navigation/mmaps/` files are NOT included due to size. See [SETUP.md](SETUP.md) for download instructions.
+
 # Master Of Puppets
 
 The project current goal is to supports the following client versions
