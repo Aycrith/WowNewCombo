@@ -84,8 +84,8 @@ public static class KeyReader
 
         // Custom Actions (secure buttons)
         // Note: These must match the addon's SetupDefaultBindings.lua UtilityActions table
-        { BindingID.CUSTOM_STOPATTACK, ConsoleKey.Insert },
-        { BindingID.CUSTOM_CLEARTARGET, ConsoleKey.Delete },
+        { BindingID.CUSTOM_STOPATTACK, ConsoleKey.Delete },
+        { BindingID.CUSTOM_CLEARTARGET, ConsoleKey.Insert },
         // Using SHIFT-PAGEUP/SHIFT-PAGEDOWN - modifiers come from runtime game bindings
         { BindingID.CUSTOM_CONFIG, ConsoleKey.PageUp },
         { BindingID.CUSTOM_FLUSH, ConsoleKey.PageDown },
@@ -428,7 +428,7 @@ public static class KeyReader
         if (defaultBinding.HasValue)
         {
             key.ConsoleKey = defaultBinding.Value.ConsoleKey;
-            key.Modifier = ModifierKey.None; // Defaults don't have modifiers
+            key.Modifier = defaultBinding.Value.Modifier; // Use modifier from defaults
             if (defaultBinding.Value.Slot.HasValue)
                 key.Slot = defaultBinding.Value.Slot.Value;
             return true;

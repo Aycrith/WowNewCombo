@@ -415,17 +415,17 @@ end
 local UtilityActions = {
   {
     actionName = "stopattack",
-    key = "INSERT",
+    key = "ALT-DELETE",
     macrotext = "/stopattack\n/stopcasting",
   },
   {
     actionName = "cleartarget",
-    key = "DELETE",
+    key = "ALT-INSERT",
     macrotext = "/cleartarget",
   },
   {
     actionName = "config",
-    key = "PAGEUP",
+    key = "SHIFT-PAGEUP",
     macrotext = "/dc",
   },
   {

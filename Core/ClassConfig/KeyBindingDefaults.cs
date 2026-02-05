@@ -1,3 +1,5 @@
+using SharedLib;
+
 using System;
 using System.Collections.Generic;
 
@@ -18,7 +20,8 @@ public readonly record struct KeyBinding(
     ConsoleKey ConsoleKey,
     string WoWKey,
     int KeyId,
-    int? Slot = null);
+    int? Slot = null,
+    ModifierKey Modifier = ModifierKey.None);
 
 /// <summary>
 /// Centralized default key bindings. Single source of truth.
@@ -62,12 +65,12 @@ public static class KeyBindingDefaults
         // CUSTOM_STOPATTACK: /stopattack + /stopcasting + /petfollow (better than built-in STOPATTACK)
         // CUSTOM_CLEARTARGET: /cleartarget (no built-in binding exists)
         // Note: These must match the addon's SetupDefaultBindings.lua UtilityActions table
-        { BindingID.CUSTOM_STOPATTACK,   new(BindingID.CUSTOM_STOPATTACK,   "Insert",   ConsoleKey.Insert,   "INSERT",   45) },
-        { BindingID.CUSTOM_CLEARTARGET,  new(BindingID.CUSTOM_CLEARTARGET,  "Delete",   ConsoleKey.Delete,   "DELETE",   46) },
+        { BindingID.CUSTOM_STOPATTACK,   new(BindingID.CUSTOM_STOPATTACK,   "Alt-Delete",   ConsoleKey.Delete,   "DELETE",   46) },
+        { BindingID.CUSTOM_CLEARTARGET,  new(BindingID.CUSTOM_CLEARTARGET,  "Alt-Insert",   ConsoleKey.Insert,   "INSERT",   45) },
         // CUSTOM_CONFIG: /dc (SHIFT-PAGEUP) - opens addon config
         // CUSTOM_FLUSH: /dcflush (SHIFT-PAGEDOWN) - flushes addon state
-        { BindingID.CUSTOM_CONFIG,       new(BindingID.CUSTOM_CONFIG,       "PageUp",   ConsoleKey.PageUp,   "PAGEUP",   33) },
-        { BindingID.CUSTOM_FLUSH,        new(BindingID.CUSTOM_FLUSH,        "PageDown", ConsoleKey.PageDown, "PAGEDOWN", 34) },
+        { BindingID.CUSTOM_CONFIG,       new(BindingID.CUSTOM_CONFIG,       "Shift-PageUp",   ConsoleKey.PageUp,   "PAGEUP",   33) },
+        { BindingID.CUSTOM_FLUSH,        new(BindingID.CUSTOM_FLUSH,        "Shift-PageDown", ConsoleKey.PageDown, "PAGEDOWN", 34) },
 
         // ===== Main Action Bar: slots 1-12 =====
         { BindingID.ACTIONBUTTON1,  new(BindingID.ACTIONBUTTON1,  "1", ConsoleKey.D1,       "1", 49,  Slot: 1) },
@@ -192,12 +195,11 @@ public static class KeyBindingDefaults
         { "PageDown", BindingID.FOLLOWTARGET },
 
         // Custom Actions - MUST MATCH addon's UtilityActions table in SetupDefaultBindings.lua
-        // Addon: stopattack=INSERT, cleartarget=DELETE
-        { "Insert", BindingID.CUSTOM_STOPATTACK },
-        { "Delete", BindingID.CUSTOM_CLEARTARGET },
-        { "PageUp", BindingID.CUSTOM_CONFIG },
-        // Note: PageDown maps to CUSTOM_FLUSH, but FOLLOWTARGET also uses PageDown (ALT-PAGEDOWN)
-        // The KeyNameToBindingID lookup is ambiguous - use BindingID directly when needed
+        // Addon: stopattack=ALT-DELETE, cleartarget=ALT-INSERT, config=SHIFT-PAGEUP, flush=SHIFT-PAGEDOWN
+        { "Alt-Delete", BindingID.CUSTOM_STOPATTACK },
+        { "Alt-Insert", BindingID.CUSTOM_CLEARTARGET },
+        { "Shift-PageUp", BindingID.CUSTOM_CONFIG },
+        { "Shift-PageDown", BindingID.CUSTOM_FLUSH },
 
         // Main Bar
         { "1", BindingID.ACTIONBUTTON1 },
