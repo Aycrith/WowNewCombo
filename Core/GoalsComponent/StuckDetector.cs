@@ -1,9 +1,12 @@
+using Core.FeatureFlags;
 using Core.GOAP;
 using Core.Goals;
+using Core.GoalsComponent;
 
 using Microsoft.Extensions.Logging;
 
 using SharedLib;
+using SharedLib.Data;
 using SharedLib.Extensions;
 
 using System;
@@ -23,6 +26,7 @@ public enum UnstuckState
     InitialAttempt,      // Stop, turn random, move
     StrafeAttempt,       // Strafe left/right
     ReverseAttempt,      // Move backward then forward
+    BreadcrumbBacktrack, // Walk back along recorded position trail
     PathClearAttempt,    // Clear route and find nearest reachable point
     EmergencyEscape      // Use hearthstone or teleport
 }
@@ -59,6 +63,7 @@ public sealed class StuckDetector : IGoapEventListener
         { UnstuckState.InitialAttempt, 3000 },
         { UnstuckState.StrafeAttempt, 4000 },
         { UnstuckState.ReverseAttempt, 5000 },
+        { UnstuckState.BreadcrumbBacktrack, 8000 },
         { UnstuckState.PathClearAttempt, 6000 },
         { UnstuckState.EmergencyEscape, 10000 }
     };
@@ -70,6 +75,8 @@ public sealed class StuckDetector : IGoapEventListener
     private readonly PlayerDirection playerDirection;
     private readonly StopMoving stopMoving;
     private readonly IScreenCapture screenCapture;
+    private readonly BreadcrumbTracker? breadcrumbTracker;
+    private readonly FeatureFlagService? featureFlagService;
 
     private Vector3 worldTarget;
     private float prevDistance = MAX_RANGE;
@@ -97,9 +104,18 @@ public sealed class StuckDetector : IGoapEventListener
     public bool IsCurrentlyStuck => currentUnstuckState != UnstuckState.None;
     public bool IsSpinningDetected => spinDetectionCounter >= SPIN_DETECTION_COUNT;
 
+    /// <summary>
+    /// Indicates whether enhanced stuck recovery (breadcrumb backtracking) is available.
+    /// </summary>
+    public bool IsEnhancedRecoveryAvailable =>
+        breadcrumbTracker != null &&
+        (featureFlagService?.IsEnhancedStuckRecoveryEnabled ?? true);
+
     public StuckDetector(ILogger<StuckDetector> logger, ConfigurableInput input,
         AddonBits bits, PlayerReader playerReader, PlayerDirection playerDirection,
-        StopMoving stopMoving, IScreenCapture screenCapture)
+        StopMoving stopMoving, IScreenCapture screenCapture,
+        BreadcrumbTracker? breadcrumbTracker = null,
+        FeatureFlagService? featureFlagService = null)
     {
         this.logger = logger;
         this.input = input;
@@ -108,6 +124,8 @@ public sealed class StuckDetector : IGoapEventListener
         this.playerDirection = playerDirection;
         this.stopMoving = stopMoving;
         this.screenCapture = screenCapture;
+        this.breadcrumbTracker = breadcrumbTracker;
+        this.featureFlagService = featureFlagService;
 
         Reset();
     }
@@ -148,6 +166,12 @@ public sealed class StuckDetector : IGoapEventListener
     {
         if (bits.Falling())
             return;
+
+        // Record current position for breadcrumb backtracking (only when not stuck)
+        if (currentUnstuckState == UnstuckState.None && IsEnhancedRecoveryAvailable)
+        {
+            breadcrumbTracker!.RecordPosition(playerReader.WorldPos);
+        }
 
         UpdateSpinDetection();
 
@@ -253,7 +277,11 @@ public sealed class StuckDetector : IGoapEventListener
             UnstuckState.None => UnstuckState.InitialAttempt,
             UnstuckState.InitialAttempt => UnstuckState.StrafeAttempt,
             UnstuckState.StrafeAttempt => UnstuckState.ReverseAttempt,
-            UnstuckState.ReverseAttempt => UnstuckState.PathClearAttempt,
+            // Use breadcrumb backtracking if available, otherwise skip to path clear
+            UnstuckState.ReverseAttempt => IsEnhancedRecoveryAvailable
+                ? UnstuckState.BreadcrumbBacktrack
+                : UnstuckState.PathClearAttempt,
+            UnstuckState.BreadcrumbBacktrack => UnstuckState.PathClearAttempt,
             UnstuckState.PathClearAttempt => UnstuckState.EmergencyEscape,
             _ => UnstuckState.EmergencyEscape
         };
@@ -289,6 +317,9 @@ public sealed class StuckDetector : IGoapEventListener
             case UnstuckState.ReverseAttempt:
                 ExecuteReverseUnstuck(token);
                 break;
+            case UnstuckState.BreadcrumbBacktrack:
+                ExecuteBreadcrumbBacktrack(token);
+                break;
             case UnstuckState.PathClearAttempt:
                 ExecutePathClearUnstuck(token);
                 break;
@@ -298,6 +329,65 @@ public sealed class StuckDetector : IGoapEventListener
         }
 
         attemptTime = GetTimestamp();
+    }
+
+    private void ExecuteBreadcrumbBacktrack(CancellationToken token)
+    {
+        if (breadcrumbTracker == null)
+        {
+            logger.LogWarning("[StuckDetector] Breadcrumb backtrack requested but tracker unavailable");
+            return;
+        }
+
+        stopMoving.Stop();
+
+        // Try to find a position to backtrack to (3-5 steps back along the trail)
+        BreadcrumbEntry? backtrackEntry = breadcrumbTracker.GetBacktrackPosition(3);
+        if (backtrackEntry == null)
+            backtrackEntry = breadcrumbTracker.GetBacktrackPosition(5);
+
+        if (backtrackEntry == null)
+        {
+            logger.LogInformation("[StuckDetector] No valid backtrack position found in breadcrumb trail");
+            return;
+        }
+
+        logger.LogInformation(
+            "[StuckDetector] Breadcrumb backtrack: Walking to {Target} ({Distance}y away)",
+            backtrackEntry.Value.Position,
+            playerReader.WorldPos.WorldDistanceXYTo(backtrackEntry.Value.Position));
+
+        // Turn toward the backtrack position
+        Vector3 targetPos = backtrackEntry.Value.Position;
+        
+        // Use map coordinates for heading calculation
+        Vector3 playerM = WorldMapAreaDB.ToMap_FlipXY(playerReader.WorldPos, playerReader.WorldMapArea);
+        Vector3 targetM = WorldMapAreaDB.ToMap_FlipXY(targetPos, playerReader.WorldMapArea);
+        float heading = DirectionCalculator.CalculateMapHeading(playerM, targetM);
+        float angleDiff = Math.Abs(heading - playerReader.Direction);
+        if (angleDiff > MathF.PI) angleDiff = 2 * MathF.PI - angleDiff;
+
+        // Turn to face the target
+        int turnDuration = (int)(angleDiff * 500 / MathF.PI);
+        turnDuration = Math.Clamp(turnDuration, 200, 1500);
+
+        if (heading > playerReader.Direction)
+            input.PressFixed(input.TurnLeftKey, turnDuration, token);
+        else
+            input.PressFixed(input.TurnRightKey, turnDuration, token);
+
+        token.WaitHandle.WaitOne(turnDuration + 100);
+
+        // Walk toward the target
+        float distance = playerReader.WorldPos.WorldDistanceXYTo(targetPos);
+        int walkDuration = (int)(distance * 150); // ~6.7 yards/sec walking speed
+        walkDuration = Math.Clamp(walkDuration, 1000, 5000);
+
+        logger.LogInformation("[StuckDetector] Breadcrumb backtrack: Walking for {Duration}ms", walkDuration);
+        input.PressFixed(input.ForwardKey, walkDuration, token);
+
+        // Clear the breadcrumb trail since we've backtracked
+        breadcrumbTracker.Clear();
     }
 
     private void ExecuteInitialUnstuck(CancellationToken token)
