@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using Newtonsoft.Json;
@@ -116,6 +116,8 @@ public sealed partial class ClassConfiguration
     public ConsoleKey BackwardKey { get; init; } = ConsoleKey.DownArrow;
     public ConsoleKey TurnLeftKey { get; init; } = ConsoleKey.LeftArrow;
     public ConsoleKey TurnRightKey { get; init; } = ConsoleKey.RightArrow;
+    public ConsoleKey StrafeLeftKey { get; init; } = ConsoleKey.Q;
+    public ConsoleKey StrafeRightKey { get; init; } = ConsoleKey.E;
 
     // Cached macro KeyActions for efficient re-resolution on action bar changes
     private readonly List<KeyAction> macroActions = [];

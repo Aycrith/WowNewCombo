@@ -13,6 +13,7 @@ using System.Numerics;
 using System.Threading;
 
 using static System.MathF;
+using static System.Diagnostics.Stopwatch;
 
 #pragma warning disable 162
 
@@ -20,6 +21,11 @@ namespace Core.Goals;
 
 public sealed partial class Navigation : IDisposable
 {
+    /// <summary>
+    /// Tracks a heading entry for oscillation detection
+    /// </summary>
+    private readonly record struct HeadingHistoryEntry(float Heading, long Timestamp);
+
     private const bool debug = false;
 
     private const float DIFF_THRESHOLD = 1.5f;   // within 50% difference
@@ -49,8 +55,20 @@ public sealed partial class Navigation : IDisposable
     private const float minAngleToTurn = PI / 35f;              // 5.14 degree
     private const float minAngleToStopBeforeTurn = PI / 2f;     // 90 degree
 
+    // Oscillation detection constants
+    private const int HEADING_HISTORY_SIZE = 12;
+    private const int OSCILLATION_THRESHOLD = 6;  // Direction changes in history
+    private const double OSCILLATION_RESET_TIME_MS = 2000;
+    private const float MIN_ANGLE_CHANGE_FOR_OSCILLATION = 0.2f;  // ~11.5 degrees
+
     private readonly Stack<Vector3> wayPoints = new();
     private readonly Stack<Vector3> routeToNextWaypoint = new();
+
+    // Oscillation tracking
+    private readonly Queue<HeadingHistoryEntry> headingHistory = new(HEADING_HISTORY_SIZE);
+    private long lastOscillationCheckTime;
+    private int oscillationCount;
+    private bool oscillationDetected;
 
     public Vector3[] TotalRoute { private set; get; } = Array.Empty<Vector3>();
 
@@ -523,6 +541,30 @@ public sealed partial class Navigation : IDisposable
         float diff2 = Abs(heading - playerReader.Direction - Tau) % Tau;
 
         float diff = Min(diff1, diff2);
+
+        // Track heading for oscillation detection
+        TrackHeadingForOscillation();
+
+        // Check for oscillation
+        if (oscillationDetected)
+        {
+            logger.LogWarning($"[Navigation] Oscillation detected ({oscillationCount} rapid direction changes). Notifying StuckDetector.");
+
+            // Notify stuck detector of oscillation
+            if (!stuckDetector.IsCurrentlyStuck)
+            {
+                stuckDetector.SetTargetLocation(routeToNextWaypoint.Peek());
+                stuckDetector.Update(token);
+            }
+
+            // Stop movement to break oscillation
+            stopMoving.Stop();
+
+            // Reset oscillation tracking
+            ResetOscillationTracking();
+            return;
+        }
+
         if (diff > minAngleToTurn)
         {
             if (diff > minAngleToStopBeforeTurn)
@@ -532,6 +574,89 @@ public sealed partial class Navigation : IDisposable
 
             playerDirection.SetDirection(heading, routeToNextWaypoint.Peek(), OutDoorMinDistance, token);
         }
+    }
+
+    /// <summary>
+    /// Tracks current heading for oscillation detection
+    /// </summary>
+    private void TrackHeadingForOscillation()
+    {
+        long now = GetTimestamp();
+
+        // Reset if too much time passed
+        if (headingHistory.Count > 0)
+        {
+            double elapsedMs = GetElapsedTime(lastOscillationCheckTime).TotalMilliseconds;
+            if (elapsedMs > OSCILLATION_RESET_TIME_MS)
+            {
+                ResetOscillationTracking();
+            }
+        }
+
+        // Add new entry
+        headingHistory.Enqueue(new HeadingHistoryEntry(playerReader.Direction, now));
+        if (headingHistory.Count > HEADING_HISTORY_SIZE)
+        {
+            headingHistory.Dequeue();
+        }
+
+        lastOscillationCheckTime = now;
+
+        // Check for oscillation
+        oscillationDetected = DetectOscillation();
+    }
+
+    /// <summary>
+    /// Detects oscillation by analyzing heading history for rapid direction changes
+    /// </summary>
+    private bool DetectOscillation()
+    {
+        if (headingHistory.Count < HEADING_HISTORY_SIZE)
+            return false;
+
+        int directionChanges = 0;
+        float prevDelta = 0;
+
+        var entries = headingHistory.ToArray();
+        for (int i = 1; i < entries.Length; i++)
+        {
+            float delta = entries[i].Heading - entries[i - 1].Heading;
+
+            // Normalize delta
+            if (delta > PI)
+                delta -= 2 * PI;
+            else if (delta < -PI)
+                delta += 2 * PI;
+
+            // Check for significant direction change
+            if (MathF.Abs(delta) > MIN_ANGLE_CHANGE_FOR_OSCILLATION)
+            {
+                // Check if direction reversed
+                if (prevDelta != 0 && Math.Sign(delta) != Math.Sign(prevDelta))
+                {
+                    directionChanges++;
+                }
+                prevDelta = delta;
+            }
+        }
+
+        if (directionChanges >= OSCILLATION_THRESHOLD)
+        {
+            oscillationCount++;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Resets oscillation tracking
+    /// </summary>
+    private void ResetOscillationTracking()
+    {
+        headingHistory.Clear();
+        oscillationDetected = false;
+        lastOscillationCheckTime = GetTimestamp();
     }
 
     private bool AdjustNextWaypointPointToClosest()

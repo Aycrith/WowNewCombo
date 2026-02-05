@@ -83,9 +83,9 @@ public static class KeyReader
         { BindingID.FOLLOWTARGET, ConsoleKey.PageDown },
 
         // Custom Actions (secure buttons)
-        // Using ALT-DELETE/ALT-INSERT - modifiers come from runtime game bindings
-        { BindingID.CUSTOM_STOPATTACK, ConsoleKey.Delete },
-        { BindingID.CUSTOM_CLEARTARGET, ConsoleKey.Insert },
+        // Note: These must match the addon's SetupDefaultBindings.lua UtilityActions table
+        { BindingID.CUSTOM_STOPATTACK, ConsoleKey.Insert },
+        { BindingID.CUSTOM_CLEARTARGET, ConsoleKey.Delete },
         // Using SHIFT-PAGEUP/SHIFT-PAGEDOWN - modifiers come from runtime game bindings
         { BindingID.CUSTOM_CONFIG, ConsoleKey.PageUp },
         { BindingID.CUSTOM_FLUSH, ConsoleKey.PageDown },

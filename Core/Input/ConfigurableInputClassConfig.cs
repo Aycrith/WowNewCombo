@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Core;
 
@@ -10,6 +10,8 @@ public sealed partial class ConfigurableInput
     public ConsoleKey BackwardKey => classConfig.BackwardKey;
     public ConsoleKey TurnLeftKey => classConfig.TurnLeftKey;
     public ConsoleKey TurnRightKey => classConfig.TurnRightKey;
+    public ConsoleKey StrafeLeftKey => classConfig.StrafeLeftKey;
+    public ConsoleKey StrafeRightKey => classConfig.StrafeRightKey;
 
     public KeyAction Jump => classConfig.Jump;
     public KeyAction Interact => classConfig.Interact;

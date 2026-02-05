@@ -1,4 +1,4 @@
-﻿using Game;
+using Game;
 
 using Microsoft.Extensions.Logging;
 
@@ -195,7 +195,18 @@ public sealed partial class ConfigurableInput
 
     public void PressStandUp(CancellationToken token = default) => PressRandom(StandUp, token);
 
-    public void PressClearTarget(CancellationToken token = default) => PressRandom(ClearTarget, token);
+    public void PressClearTarget(CancellationToken token = default)
+    {
+        // Debug logging to troubleshoot binding issues
+        if (ClearTarget.ConsoleKey == ConsoleKey.NoName)
+        {
+            logger.LogError($"[PressClearTarget] FAILED: ClearTarget.ConsoleKey is NoName! Binding not resolved. Key='{ClearTarget.Key}', BindingID={ClearTarget.BindingID}");
+            return;
+        }
+
+        logger.LogDebug($"[PressClearTarget] Pressing {ClearTarget.ConsoleKey} (Key='{ClearTarget.Key}', BindingID={ClearTarget.BindingID})");
+        PressRandom(ClearTarget, token);
+    }
 
     public void PressStopAttack(CancellationToken token = default) => PressRandom(StopAttack, token);
 

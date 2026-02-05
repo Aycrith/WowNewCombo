@@ -61,9 +61,9 @@ public static class KeyBindingDefaults
         // These replace WoW's limited built-in commands with macro-powered versions
         // CUSTOM_STOPATTACK: /stopattack + /stopcasting + /petfollow (better than built-in STOPATTACK)
         // CUSTOM_CLEARTARGET: /cleartarget (no built-in binding exists)
-        // Using ALT-DELETE/ALT-INSERT - modifiers come from runtime game bindings
-        { BindingID.CUSTOM_STOPATTACK,   new(BindingID.CUSTOM_STOPATTACK,   "Delete",   ConsoleKey.Delete,   "DELETE",   46) },
-        { BindingID.CUSTOM_CLEARTARGET,  new(BindingID.CUSTOM_CLEARTARGET,  "Insert",   ConsoleKey.Insert,   "INSERT",   45) },
+        // Note: These must match the addon's SetupDefaultBindings.lua UtilityActions table
+        { BindingID.CUSTOM_STOPATTACK,   new(BindingID.CUSTOM_STOPATTACK,   "Insert",   ConsoleKey.Insert,   "INSERT",   45) },
+        { BindingID.CUSTOM_CLEARTARGET,  new(BindingID.CUSTOM_CLEARTARGET,  "Delete",   ConsoleKey.Delete,   "DELETE",   46) },
         // CUSTOM_CONFIG: /dc (SHIFT-PAGEUP) - opens addon config
         // CUSTOM_FLUSH: /dcflush (SHIFT-PAGEDOWN) - flushes addon state
         { BindingID.CUSTOM_CONFIG,       new(BindingID.CUSTOM_CONFIG,       "PageUp",   ConsoleKey.PageUp,   "PAGEUP",   33) },
@@ -191,9 +191,10 @@ public static class KeyBindingDefaults
         // Follow
         { "PageDown", BindingID.FOLLOWTARGET },
 
-        // Custom Actions (ALT-DELETE/ALT-INSERT, SHIFT-PAGEUP/SHIFT-PAGEDOWN)
-        { "Delete", BindingID.CUSTOM_STOPATTACK },
-        { "Insert", BindingID.CUSTOM_CLEARTARGET },
+        // Custom Actions - MUST MATCH addon's UtilityActions table in SetupDefaultBindings.lua
+        // Addon: stopattack=INSERT, cleartarget=DELETE
+        { "Insert", BindingID.CUSTOM_STOPATTACK },
+        { "Delete", BindingID.CUSTOM_CLEARTARGET },
         { "PageUp", BindingID.CUSTOM_CONFIG },
         // Note: PageDown maps to CUSTOM_FLUSH, but FOLLOWTARGET also uses PageDown (ALT-PAGEDOWN)
         // The KeyNameToBindingID lookup is ambiguous - use BindingID directly when needed
