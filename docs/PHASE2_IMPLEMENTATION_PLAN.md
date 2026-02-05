@@ -3,6 +3,22 @@
 **Prerequisite:** Phase 1 infrastructure must be deployed and runtime-validated  
 **Reference:** [PRD_HAZARD_AVOIDANCE_SYSTEM.md](file:///c:/WowClassicGrindBot/docs/PRD_HAZARD_AVOIDANCE_SYSTEM.md)  
 **Total Effort:** 31 hours (per PRD breakdown)
+**Status:** ✅ Implemented (Feb 5, 2026)
+
+---
+
+## Implementation Status (Feb 5, 2026)
+
+- ✅ Core hazard domain: `Core/Hazard/*` (events, clustering, persistence, background analytics)
+- ✅ Session event capture: `Core/Hazard/HazardEventCollector.cs` (instantiated via `Core/GOAP/GoapAgent.cs`)
+- ✅ Local pathing integration: hazard cost injected in `PPather/Graph/PathGraph.cs`
+- ✅ Visualization: Leaflet heat overlay + UI toggle (`Frontend/wwwroot/leaflet-heat/leaflet-heat.js`, `Frontend/wwwroot/script/hazardHeatMap.js`, `Frontend/Pages/LeafletComponent.razor`)
+- ✅ DI wiring: `services.AddHazardAvoidance()` added in `BlazorServer/Program.cs`
+- ✅ Unit tests: `CoreUnitTests` (DBSCAN, temporal decay, hazard cost multiplier, DAO save/load)
+
+**Notes / Deviations from original plan:**
+- `IHazardProvider` lives in `SharedLib/IHazardProvider.cs` to avoid a Core↔PPather circular reference.
+- Hazard event collection is **session-scoped** (attached to the active bot session) instead of an app-wide `IHostedService`.
 
 ---
 
@@ -10,8 +26,8 @@
 
 Before starting Phase 2, ensure Phase 1 is production-ready:
 
-- [ ] `services.AddPhase1Features(configuration)` called in startup
-- [ ] `runtime_feature_flags.json` created and loaded
+- [x] `services.AddPhase1Features(configuration)` called in startup
+- [x] `runtime_feature_flags.json` created and loaded
 - [ ] `FeatureFlagService` logs show successful startup
 - [ ] `StuckDetector` breadcrumb integration verified in runtime
 - [ ] Unit tests for Phase 1 components passing (≥80% coverage)

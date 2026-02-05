@@ -34,6 +34,11 @@ public enum UnstuckState
 public sealed class StuckEventData
 {
     public Vector3 Position { get; init; }
+    public float MapX { get; init; }
+    public float MapY { get; init; }
+    public int MapId { get; init; }
+    public int UIMapId { get; init; }
+    public string Zone { get; init; } = string.Empty;
     public float Direction { get; init; }
     public UnstuckState State { get; init; }
     public double DurationMs { get; init; }
@@ -505,6 +510,11 @@ public sealed class StuckDetector : IGoapEventListener
             var eventData = new StuckEventData
             {
                 Position = playerReader.WorldPos,
+                MapX = playerReader.MapX,
+                MapY = playerReader.MapY,
+                MapId = playerReader.MapId,
+                UIMapId = playerReader.UIMapId.Value,
+                Zone = playerReader.WorldMapArea.AreaName,
                 Direction = playerReader.Direction,
                 State = currentUnstuckState,
                 DurationMs = ActionDurationMs,

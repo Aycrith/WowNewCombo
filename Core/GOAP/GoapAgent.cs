@@ -1,5 +1,6 @@
 ﻿using Core.Goals;
 using Core.Session;
+using Core.Hazard;
 
 using Game;
 
@@ -41,6 +42,7 @@ public sealed partial class GoapAgent : IDisposable
 
     private readonly IScreenCapture screenCapture;
     private readonly IBagChangeTracker bagChangeTracker;
+    private readonly HazardEventCollector hazardEventCollector;
 
     private bool active;
     public bool Active
@@ -118,7 +120,8 @@ public sealed partial class GoapAgent : IDisposable
         SessionStat sessionStat,
         StopMoving stopMoving,
         IGrindSessionHandler sessionHandler,
-        IEnumerable<GoapGoal> availableGoals
+        IEnumerable<GoapGoal> availableGoals,
+        HazardEventCollector hazardEventCollector
         )
     {
         this.routeInfo = routeInfo;
@@ -142,6 +145,7 @@ public sealed partial class GoapAgent : IDisposable
 
         this.combatLog = combatLog;
         this.bagChangeTracker = bagChangeTracker;
+        this.hazardEventCollector = hazardEventCollector;
 
         SessionStat = sessionStat;
 

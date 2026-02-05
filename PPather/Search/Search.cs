@@ -5,6 +5,8 @@ using PPather.Graph;
 using System;
 using System.Numerics;
 
+using SharedLib;
+
 using WowTriangles;
 
 namespace PPather;
@@ -16,6 +18,7 @@ public sealed class Search
 
     private readonly DataConfig dataConfig;
     private readonly ILogger logger;
+    private readonly IHazardProvider hazardProvider;
 
     public Vector4 From { get; set; }
     public Vector4 Target { get; set; }
@@ -25,11 +28,12 @@ public sealed class Search
 
     private const float howClose = PathGraph.MaxStepLength;
 
-    public Search(float mapId, ILogger logger, DataConfig dataConfig)
+    public Search(float mapId, ILogger logger, DataConfig dataConfig, IHazardProvider hazardProvider = null)
     {
         this.logger = logger;
         this.MapId = mapId;
         this.dataConfig = dataConfig;
+        this.hazardProvider = hazardProvider;
 
         CreatePathGraph(mapId);
     }
@@ -174,7 +178,7 @@ public sealed class Search
 
         MPQTriangleSupplier mpq = new(logger, dataConfig, mapId);
         ChunkedTriangleCollection triangleWorld = new(logger, 64, mpq);
-        PathGraph = new(mapId, triangleWorld, logger, dataConfig);
+        PathGraph = new(mapId, triangleWorld, logger, dataConfig, hazardProvider);
     }
 
     public Path DoSearch(SearchStrategy searchScoreSpot)

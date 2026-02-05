@@ -20,6 +20,7 @@ using Microsoft.Extensions.Logging;
 
 using PPather.Triangles.Data;
 
+using SharedLib;
 using SharedLib.Data;
 using SharedLib.Extensions;
 
@@ -82,6 +83,7 @@ public sealed class PathGraph
 
     private readonly ILogger logger;
     private readonly string chunkDir;
+    private readonly IHazardProvider hazardProvider;
 
     private readonly float MapId;
     private readonly SparseMatrix2D<GraphChunk> chunks;
@@ -120,11 +122,14 @@ public sealed class PathGraph
 
     public PathGraph(float mapId,
                      ChunkedTriangleCollection triangles,
-                     ILogger logger, DataConfig dataConfig)
+                     ILogger logger,
+                     DataConfig dataConfig,
+                     IHazardProvider hazardProvider = null)
     {
         this.logger = logger;
         this.MapId = mapId;
         this.triangleWorld = triangles;
+        this.hazardProvider = hazardProvider;
 
         chunkDir = System.IO.Path.Join(dataConfig.PathInfo, ContinentDB.IdToName[MapId]);
         if (!Directory.Exists(chunkDir))
@@ -685,6 +690,15 @@ public sealed class PathGraph
 
         score += GetTriangleGradiantScore(spotLinkedToCurrent.Loc, gradiantMax);
         F_Score += score * 2;
+
+        if (hazardProvider != null)
+        {
+            float hazardCost = hazardProvider.GetHazardCost(spotLinkedToCurrent.Loc, MapId);
+            if (hazardCost > 0)
+            {
+                F_Score += hazardCost;
+            }
+        }
 
         if (!spotLinkedToCurrent.SearchScoreIsSet(currentSearchID) || F_Score < spotLinkedToCurrent.SearchScoreGet(currentSearchID))
         {

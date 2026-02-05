@@ -1,5 +1,6 @@
 using Core;
 using Core.Extensions;
+using Core.Hazard;
 
 using Frontend;
 
@@ -221,6 +222,9 @@ public static class Program
         // Register Phase 1 infrastructure services (feature flags, circuit breakers, etc.)
         // These are opt-in via runtime_feature_flags.json with hot-reload support
         services.AddPhase1Features(configuration);
+
+        // Phase 2 (Hazard Avoidance) - safe to register even when disabled via feature flags.
+        services.AddHazardAvoidance();
 
         if (configurationComplete)
         {

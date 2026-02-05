@@ -20,6 +20,7 @@ public sealed class PPatherService
     private readonly ILogger<PPatherService> logger;
     private readonly DataConfig dataConfig;
     private readonly WorldMapAreaDB worldMapAreaDB;
+    private readonly IHazardProvider hazardProvider;
 
     public event Action SearchBegin;
     public event Action<Path> OnPathCreated;
@@ -43,11 +44,16 @@ public sealed class PPatherService
 
     public HashSet<Vector3> BlockedPoints => search?.PathGraph?.BlockedPoints ?? [];
 
-    public PPatherService(ILogger<PPatherService> logger, DataConfig dataConfig, WorldMapAreaDB worldMapAreaDB)
+    public PPatherService(
+        ILogger<PPatherService> logger,
+        DataConfig dataConfig,
+        WorldMapAreaDB worldMapAreaDB,
+        IHazardProvider hazardProvider = null)
     {
         this.dataConfig = dataConfig;
         this.logger = logger;
         this.worldMapAreaDB = worldMapAreaDB;
+        this.hazardProvider = hazardProvider;
         ContinentDB.Init(worldMapAreaDB.Values);
 
         MPQSelfTest();
@@ -74,7 +80,7 @@ public sealed class PPatherService
             Reset();
         }
 
-        search = new Search(mapId, logger, dataConfig);
+        search = new Search(mapId, logger, dataConfig, hazardProvider);
         search.PathGraph.triangleWorld.NotifyChunkAdded = ChunkAdded;
     }
 

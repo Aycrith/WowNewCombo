@@ -14,6 +14,8 @@ Phase 1 establishes the foundational infrastructure required for advanced bot fe
 - ✅ `services.AddPhase1Features(configuration)` added to `BlazorServer/Program.cs`
 - ✅ `runtime_feature_flags.json` created with all feature configurations
 - ✅ Build verified: 0 errors
+- ✅ `FeatureFlagService` forwarded into session DI (`Core/DependencyInjection.AddStartupIoC`) so scoped components honor flags
+- ✅ `BreadcrumbTracker` registered per bot session using feature-flag-configured trail size (`Core/GoalsFactory/GoalFactory.cs`)
 
 ---
 

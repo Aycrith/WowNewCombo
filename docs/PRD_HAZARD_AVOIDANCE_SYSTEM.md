@@ -807,7 +807,7 @@ public class HazardZoneStore : IHazardProvider
 
 | Task | Description | Files | Est. |
 |------|-------------|-------|------|
-| 2.1 | Create `IHazardProvider` interface | `Core/Hazard/IHazardProvider.cs` | 0.5h |
+| 2.1 | Create `IHazardProvider` interface | `SharedLib/IHazardProvider.cs` | 0.5h |
 | 2.2 | Create `HazardEventCollector` service | `Core/Hazard/HazardEventCollector.cs` | 2.5h |
 | 2.3 | Extend `StuckEventData` with map metadata | `Core/GoalsComponent/StuckDetector.cs` | 1h |
 
@@ -825,14 +825,14 @@ public class HazardZoneStore : IHazardProvider
 |------|-------------|-------|------|
 | 4.1 | Add `IHazardProvider` to `PathGraph` constructor | `PPather/Graph/PathGraph.cs` | 1h |
 | 4.2 | Inject hazard cost into `ScoreSpot_A_Star*` | `PPather/Graph/PathGraph.cs` | 2h |
-| 4.3 | Add hazard avoidance search strategy enum | `PPather/Search/Search.cs` | 1h |
+| 4.3 | (Optional) Add hazard-specific search strategy enum | `PPather/Graph/SearchStrategy.cs` | 1h |
 
 ### Phase 5: Visualization (Est. 6 hours)
 
 | Task | Description | Files | Est. |
 |------|-------------|-------|------|
-| 5.1 | Add Leaflet.heat JS to wwwroot | `Frontend/wwwroot/lib/leaflet-heat/` | 0.5h |
-| 5.2 | Create heat map JS interop module | `Frontend/wwwroot/js/hazardHeatMap.js` | 1.5h |
+| 5.1 | Add Leaflet.heat JS to wwwroot | `Frontend/wwwroot/leaflet-heat/` | 0.5h |
+| 5.2 | Create heat map JS interop module | `Frontend/wwwroot/script/hazardHeatMap.js` | 1.5h |
 | 5.3 | Extend `LeafletComponent.razor` with toggle | `Frontend/Pages/LeafletComponent.razor` | 2h |
 | 5.4 | Create `HazardHeatMapService` | `Frontend/Services/HazardHeatMapService.cs` | 2h |
 
@@ -840,7 +840,7 @@ public class HazardZoneStore : IHazardProvider
 
 | Task | Description | Files | Est. |
 |------|-------------|-------|------|
-| 6.1 | Create `HazardServiceExtensions` for DI | `Core/Hazard/HazardServiceExtensions.cs` | 1h |
+| 6.1 | Create DI registration extension | `Core/Hazard/HazardServiceCollectionExtensions.cs` | 1h |
 | 6.2 | Create `HazardAnalyticsBackgroundService` | `Core/Hazard/HazardAnalyticsBackgroundService.cs` | 2h |
 
 **Total Estimated Effort:** ~31 hours
@@ -1005,20 +1005,22 @@ Core/
     ├── HazardEventType.cs           # Enum: Stuck, Death, etc.
     ├── HazardEvent.cs               # Event record with position, type, timestamp
     ├── HazardCluster.cs             # Clustered danger zone model
-    ├── IHazardProvider.cs           # Interface for pathfinding integration
     ├── HazardZoneStore.cs           # In-memory store with spatial index
     ├── HazardAnalytics.cs           # Decay and severity calculations
     ├── HazardClusterAnalyzer.cs     # DBSCAN implementation
     ├── HazardEventCollector.cs      # Event subscription service
     ├── RouteRehabilitator.cs        # Success/failure feedback
     ├── LocalHazardDAO.cs            # JSON persistence
-    ├── HazardServiceExtensions.cs   # DI registration
+    ├── HazardServiceCollectionExtensions.cs   # DI registration
     └── HazardAnalyticsBackgroundService.cs  # Periodic clustering
+
+SharedLib/
+└── IHazardProvider.cs               # Interface for pathfinding integration
 
 Frontend/
 ├── wwwroot/
-│   ├── lib/leaflet-heat/            # Leaflet.heat plugin
-│   └── js/hazardHeatMap.js          # JS interop module
+│   ├── leaflet-heat/                # Leaflet.heat plugin
+│   └── script/hazardHeatMap.js      # JS interop module
 └── Services/
     └── HazardHeatMapService.cs      # Coordinate conversion
 

@@ -14,58 +14,58 @@ dotnet test --filter "FullyQualifiedName~Hazard"
 
 ### Phase 1: Data Models (P0)
 
-- [ ] **1.1** Create `Core/Hazard/HazardEventType.cs`
+- [x] **1.1** Create `Core/Hazard/HazardEventType.cs`
   ```csharp
   public enum HazardEventType { Stuck, Death, MultiMobAggro, PathingFailure, Evade, OscillationLoop }
   ```
 
-- [ ] **1.2** Create `Core/Hazard/HazardEvent.cs`
+- [x] **1.2** Create `Core/Hazard/HazardEvent.cs`
   - Record with: `Vector3 WorldPosition`, `float MapId`, `DateTime Timestamp`, `HazardEventType Type`
 
-- [ ] **1.3** Create `Core/Hazard/HazardCluster.cs`
+- [x] **1.3** Create `Core/Hazard/HazardCluster.cs`
   - Model: `Vector3 Centroid`, `float Radius`, `double SeverityScore`, `List<HazardEvent> Events`
 
-- [ ] **1.4** Create `Core/Hazard/HazardZoneStore.cs`
+- [x] **1.4** Create `Core/Hazard/HazardZoneStore.cs`
   - Spatial index: `Dictionary<(int,int), List<HazardCluster>>`
   - Method: `float GetHazardCost(Vector3 position, float mapId)`
 
-- [ ] **1.5** Create `Core/Hazard/LocalHazardDAO.cs`
+- [x] **1.5** Create `Core/Hazard/LocalHazardDAO.cs`
   - Path: `Json/HazardData/{expansion}/hazards_{mapId}.json`
   - Follow `LocalGrindSessionDAO.cs` pattern
 
 ### Phase 2: Event Collection (P0)
 
-- [ ] **2.1** Create `Core/Hazard/IHazardProvider.cs`
+- [x] **2.1** Create `SharedLib/IHazardProvider.cs` (moved to SharedLib to avoid Core↔PPather circular reference)
   ```csharp
   public interface IHazardProvider { float GetHazardCost(Vector3 position, float mapId); }
   ```
 
-- [ ] **2.2** Create `Core/Hazard/HazardEventCollector.cs`
+- [x] **2.2** Create `Core/Hazard/HazardEventCollector.cs`
   - Subscribe to: `StuckDetector.OnStuckDetected`, `CombatLog.PlayerDeath`, `CombatLog.TargetEvade`
 
-- [ ] **2.3** Modify `Core/GoalsComponent/StuckDetector.cs`
+- [x] **2.3** Modify `Core/GoalsComponent/StuckDetector.cs`
   - Add `MapId`, `UIMapId`, `Zone` to `StuckEventData`
 
 ### Phase 3: Analytics (P0)
 
-- [ ] **3.1** Create `Core/Hazard/HazardAnalytics.cs`
+- [x] **3.1** Create `Core/Hazard/HazardAnalytics.cs`
   - Temporal decay: `λ = ln(2) / 30` (30-day half-life)
   - Severity weights: Death=10, Stuck=5, MultiMob=4, PathFail=3, Evade=2, Oscillation=1
 
-- [ ] **3.2** Create `Core/Hazard/HazardClusterAnalyzer.cs`
+- [x] **3.2** Create `Core/Hazard/HazardClusterAnalyzer.cs`
   - DBSCAN: `ε=15 world units`, `minPts=2`
   - Methods: `RunDBSCAN()`, `RangeQuery()`, `ExpandCluster()`
 
-- [ ] **3.3** Create `Core/Hazard/RouteRehabilitator.cs`
+- [x] **3.3** Create `Core/Hazard/RouteRehabilitator.cs`
   - Reduce cluster severity on successful traversal
 
 ### Phase 4: Navigation Integration (P0)
 
-- [ ] **4.1** Modify `PPather/Graph/PathGraph.cs`
+- [x] **4.1** Modify `PPather/Graph/PathGraph.cs`
   - Add `IHazardProvider? _hazardProvider` field
   - Inject via constructor
 
-- [ ] **4.2** Modify `ScoreSpot_A_Star_With_Model_And_Gradient_Avoidance`
+- [x] **4.2** Modify `ScoreSpot_A_Star_With_Model_And_Gradient_Avoidance`
   ```csharp
   float hazardPenalty = _hazardProvider?.GetHazardCost(spot.Loc, MapId) ?? 0f;
   float F_Score = baseScore + (hazardPenalty * HazardCostMultiplier);
@@ -73,28 +73,28 @@ dotnet test --filter "FullyQualifiedName~Hazard"
 
 ### Phase 5: Visualization (P1)
 
-- [ ] **5.1** Add `Frontend/wwwroot/lib/leaflet-heat/leaflet-heat.js`
+- [x] **5.1** Add `Frontend/wwwroot/leaflet-heat/leaflet-heat.js`
   - Source: https://github.com/Leaflet/Leaflet.heat
 
-- [ ] **5.2** Create `Frontend/wwwroot/js/hazardHeatMap.js`
+- [x] **5.2** Create `Frontend/wwwroot/script/hazardHeatMap.js`
   - Methods: `init()`, `show()`, `hide()`, `updateData(points)`
 
-- [ ] **5.3** Extend `Frontend/Pages/LeafletComponent.razor`
+- [x] **5.3** Extend `Frontend/Pages/LeafletComponent.razor`
   - Add toggle button, heat layer initialization
 
 ### Phase 6: DI & Services (P0)
 
-- [ ] **6.1** Create `Core/Hazard/HazardServiceExtensions.cs`
+- [x] **6.1** Create `Core/Hazard/HazardServiceCollectionExtensions.cs`
   ```csharp
-  public static IServiceCollection AddHazardServices(this IServiceCollection services)
+  public static IServiceCollection AddHazardAvoidance(this IServiceCollection services)
   ```
 
-- [ ] **6.2** Create `Core/Hazard/HazardAnalyticsBackgroundService.cs`
+- [x] **6.2** Create `Core/Hazard/HazardAnalyticsBackgroundService.cs`
   - Clustering interval: 60 seconds
   - Save interval: 5 minutes
 
-- [ ] **6.3** Modify `BlazorServer/Program.cs`
-  - Add: `services.AddHazardServices();`
+- [x] **6.3** Modify `BlazorServer/Program.cs`
+  - Add: `services.AddHazardAvoidance();`
 
 ---
 

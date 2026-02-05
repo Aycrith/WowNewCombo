@@ -43,6 +43,9 @@ public sealed class DataConfig
     public string Subzones => Join(Root, "subzones", Exp);
 
     [JsonIgnore]
+    public string ExpHazardData => Join(Root, "HazardData", Exp);
+
+    [JsonIgnore]
     public string NpcSpawnLocations => Join(Root, "npcspawnlocations", Exp);
 
     [JsonIgnore]

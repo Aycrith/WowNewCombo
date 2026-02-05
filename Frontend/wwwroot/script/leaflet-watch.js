@@ -476,6 +476,13 @@ async function init(e, c, z, x, y, urlEdit) {
 
     LeafletMap = initializeMap(x, y);
 
+    try {
+        if (window.hazardHeatMap && typeof window.hazardHeatMap.initialize === 'function') {
+            window.hazardHeatMap.initialize();
+        }
+    } catch {
+    }
+
     if (!pixiContainer) {
         pixiContainer = new PIXI.Container();
     }

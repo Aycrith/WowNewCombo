@@ -1,9 +1,11 @@
 using Core.Addon;
 using Core.Database;
 using Core.Extensions;
+using Core.FeatureFlags;
 using Core.Goals;
 using Core.Launch;
 using Core.Session;
+using Core.Hazard;
 
 using Game;
 
@@ -103,6 +105,10 @@ public static class DependencyInjection
 
         s.ForwardSingleton<DataConfig>(sp);
 
+        // Phase 1/2 infrastructure singletons used inside session-scoped DI (GoalFactory).
+        s.ForwardSingleton<FeatureFlagService>(sp);
+        s.ForwardSingleton<HazardZoneStore>(sp);
+
         s.ForwardSingleton<AreaDB>(sp);
         s.ForwardSingleton<WorldMapAreaDB>(sp);
         s.ForwardSingleton<ItemDB>(sp);
@@ -186,7 +192,8 @@ public static class DependencyInjection
             var serviceLogger = loggerFactory.CreateLogger<PPatherService>();
             var dataConfig = x.GetRequiredService<DataConfig>();
             var worldMapAreaDB = x.GetRequiredService<WorldMapAreaDB>();
-            return new PPatherService(serviceLogger, dataConfig, worldMapAreaDB);
+            var hazardProvider = x.GetService<IHazardProvider>();
+            return new PPatherService(serviceLogger, dataConfig, worldMapAreaDB, hazardProvider);
         });
 
         s.AddSingleton<IPPather>(x =>

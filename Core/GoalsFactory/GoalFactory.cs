@@ -1,7 +1,10 @@
 using Core.Database;
+using Core.FeatureFlags;
 using Core.Goals;
 using Core.GOAP;
+using Core.Hazard;
 using Core.Session;
+using Core.GoalsComponent;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -67,6 +70,13 @@ public static class GoalFactory
         services.AddScoped<CursorScan>();
 
         // Goals components
+        services.AddScoped<BreadcrumbTracker>(sp =>
+        {
+            FeatureFlagService flags = sp.GetRequiredService<FeatureFlagService>();
+            int maxSize = flags.Current.StuckRecoveryV2.BreadcrumbTrailSize;
+            return new BreadcrumbTracker(maxSize);
+        });
+
         services.AddScoped<PlayerDirection>();
         services.AddScoped<StopMoving>();
         services.AddScoped<ReactCastError>();
@@ -75,6 +85,9 @@ public static class GoalFactory
         services.AddScoped<StuckDetector>();
         services.AddScoped<CombatTracker>();
         services.AddScoped<SafeSpotCollector>();
+
+        // Phase 2 hazard collection (no-op unless HazardAvoidance feature flag enabled).
+        services.AddScoped<HazardEventCollector>();
 
         var playerReader = sp.GetRequiredService<PlayerReader>();
 
