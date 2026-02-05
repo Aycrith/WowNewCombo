@@ -116,7 +116,25 @@ Build succeeded.
 
 ---
 
-### 5. **First Run - Configure the Addon**
+### 5. **Configure WoW Graphics Settings** (CRITICAL)
+
+The bot reads game state via colored pixels. You **MUST** configure these settings:
+
+**In WoW System Settings → Graphics:**
+
+| Setting | Required Value | Why |
+|---------|----------------|-----|
+| **Anti-Aliasing** | None / Off | Blurs pixel colors, making them unreadable |
+| **Vertical Sync** | Off | Can cause input lag |
+| **Render Scale** | 100% | Other values distort pixel positions |
+| **Resolution** | Windowed mode recommended | Required for screen capture |
+| **Graphics Quality** | Any (lower = better performance) | - |
+
+> **⚠️ Important:** If the bot cannot read game state, check these settings first!
+
+---
+
+### 6. **First Run - Configure the Addon**
 
 1. **Start World of Warcraft** and log in with a character
 
