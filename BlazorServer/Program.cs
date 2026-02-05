@@ -1,4 +1,5 @@
 using Core;
+using Core.Extensions;
 
 using Frontend;
 
@@ -216,6 +217,10 @@ public static class Program
 
         // Register WoW-dependent services only if WoW is running
         services.AddCoreBase(wowIsRunning);
+
+        // Register Phase 1 infrastructure services (feature flags, circuit breakers, etc.)
+        // These are opt-in via runtime_feature_flags.json with hot-reload support
+        services.AddPhase1Features(configuration);
 
         if (configurationComplete)
         {
