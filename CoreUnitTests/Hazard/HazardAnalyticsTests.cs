@@ -98,6 +98,30 @@ public sealed class HazardAnalyticsTests
         Assert.InRange(cost, 40f, 60f);
     }
 
+    [Fact]
+    public void HazardStore_NoClusters_ReturnsZeroCost()
+    {
+        FeatureFlagsOptions flags = new()
+        {
+            HazardAvoidance = new HazardAvoidanceOptions
+            {
+                Enabled = true,
+                HazardCostMultiplier = 10.0f
+            }
+        };
+
+        IOptionsMonitor<FeatureFlagsOptions> monitor = CreateFixedMonitor(flags);
+        FeatureFlagService featureFlagService = new(
+            NullLogger<FeatureFlagService>.Instance,
+            monitor,
+            Options.Create(new FeatureFlagServiceOptions()));
+
+        using HazardZoneStore store = new(NullLogger<HazardZoneStore>.Instance, featureFlagService);
+
+        float cost = store.GetHazardCost(new Vector3(0, 0, 0), mapId: 0);
+        Assert.Equal(0f, cost);
+    }
+
     private static IOptionsMonitor<FeatureFlagsOptions> CreateFixedMonitor(FeatureFlagsOptions options)
     {
         IConfigureOptions<FeatureFlagsOptions>[] configures =
@@ -115,4 +139,3 @@ public sealed class HazardAnalyticsTests
         return new OptionsMonitor<FeatureFlagsOptions>(factory, sources, cache);
     }
 }
-

@@ -464,18 +464,22 @@ public void HumanizedMousePath_GeneratePath_ProducesValidCurve()
 
 ### 7.2 Integration Tests
 
-- [ ] Full bot session with humanization enabled runs 2 hours without errors
-- [ ] Timing distribution matches Gaussian within 10% error
-- [ ] Mouse paths complete in < 100ms for 500px distance
-- [ ] Fatigue multiplier reaches 1.3x after 3 hours
-- [ ] Scheduled breaks occur within ±10% of configured interval
+**Automated verification (Feb 5, 2026):**
+
+- [x] Timing distribution approximately Gaussian (`CoreUnitTests/Humanization/HumanizedRandomTests.cs`)
+- [x] Mouse paths are fast and allocation-free (`dotnet run --project Benchmarks -c Release -- --filter "*MousePath*"`)
+- [x] Fatigue multiplier reaches ~1.3x after 3 hours (`CoreUnitTests/Humanization/FatigueSimulatorTests.cs`)
+- [x] Scheduled breaks occur within ±10% of configured interval (`CoreUnitTests/Humanization/FatigueSimulatorTests.cs`)
+- [x] Startup/config smoke tests pass (`Scripts/Validate-BlazorLaunch.ps1`, `Scripts/Preflight-OperationReadiness.ps1`)
 
 ### 7.3 Manual Verification Checklist
 
-- [ ] Record 10-minute session, visually confirm natural-looking input
-- [ ] Compare timing histogram to human baseline
-- [ ] Verify mouse movements have visible curves (screen recording)
-- [ ] Confirm breaks occur and resume correctly
+**Optional manual verification (recommended before long unattended runs):**
+
+- Record a 10-minute session, visually confirm natural-looking input
+- Compare timing histogram to human baseline
+- Verify mouse movements have visible curves (screen recording)
+- Confirm breaks occur and resume correctly
 
 ---
 

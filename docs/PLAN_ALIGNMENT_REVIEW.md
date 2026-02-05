@@ -207,10 +207,10 @@ HazardAvoidance
 ├── DEPENDS ON: Phase1.BreadcrumbTracker (data source)
 ├── DEPENDS ON: Core.GoalsComponent.StuckDetector (event source)
 ├── DEPENDS ON: PPather.Graph.PathGraph (integration point)
-└── PRODUCES: IHazardProvider (interface for future consumers)
+└── PRODUCES: `SharedLib/IHazardProvider.cs` (interface for PPather integration)
 ```
 
-**Status:** ✅ **Ready to implement** - All dependencies satisfied, no blockers
+**Status:** ✅ **Implemented (Feb 5, 2026)** - Feature-flagged off by default
 
 #### Phase 2B: Anti-Detection Humanization
 
@@ -457,16 +457,9 @@ graph TD
 #### Gap 2: JSON Schema Versioning for Hazard Data
 **Severity:** ⚠️ Low  
 **Location:** PRD_HAZARD_AVOIDANCE_SYSTEM.md, PHASE2_IMPLEMENTATION_PLAN.md  
-**Issue:** No schema version field in `HazardEvent` or `HazardCluster`
+**Status:** ✅ Implemented at the persisted JSON file schema boundary via `Core/Hazard/LocalHazardDAO.cs` (`HazardDataFile.Version`)
 
-**Recommendation:** Add schema versioning:
-```csharp
-public sealed record HazardEvent
-{
-    public int SchemaVersion { get; init; } = 1; // For future migrations
-    // ... existing fields
-}
-```
+**Recommendation:** No action required for Phase 2A. If future schema migrations are needed, bump `HazardDataFile.Version` and add migration logic in `LocalHazardDAO`.
 
 #### Gap 3: Multi-Bot Detection Risk Underspecified
 **Severity:** ⚠️ Medium  

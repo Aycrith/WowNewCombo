@@ -43,13 +43,13 @@
 | [PLAN_ALIGNMENT_REVIEW.md](PLAN_ALIGNMENT_REVIEW.md) | Meta-Review | **✅ Comprehensive alignment validation** |
 | [MASTER_IMPLEMENTATION_PLAN.md](MASTER_IMPLEMENTATION_PLAN.md) | All phases | Active roadmap |
 | [PHASE1_COMPLETION_STATUS.md](PHASE1_COMPLETION_STATUS.md) | Phase 1 | **✅ Complete & Integrated** |
-| [PHASE2_IMPLEMENTATION_PLAN.md](PHASE2_IMPLEMENTATION_PLAN.md) | Phase 2 | Ready to implement |
-| [PRD_HAZARD_AVOIDANCE_SYSTEM.md](PRD_HAZARD_AVOIDANCE_SYSTEM.md) | Phase 2 | Detailed PRD |
-| [HAZARD_TASKS.md](HAZARD_TASKS.md) | Phase 2 | Task breakdown |
-| [PRD_ANTI_DETECTION_HUMANIZATION.md](PRD_ANTI_DETECTION_HUMANIZATION.md) | Safety | **NEW** - Anti-detection PRD |
-| [ANTI_DETECTION_TASKS.md](ANTI_DETECTION_TASKS.md) | Safety | **NEW** - Implementation tasks |
+| [PHASE2_IMPLEMENTATION_PLAN.md](PHASE2_IMPLEMENTATION_PLAN.md) | Phase 2 | **✅ Implemented** |
+| [PRD_HAZARD_AVOIDANCE_SYSTEM.md](PRD_HAZARD_AVOIDANCE_SYSTEM.md) | Phase 2 | **✅ Implemented (PRD)** |
+| [HAZARD_TASKS.md](HAZARD_TASKS.md) | Phase 2 | **✅ Complete (tasks)** |
+| [PRD_ANTI_DETECTION_HUMANIZATION.md](PRD_ANTI_DETECTION_HUMANIZATION.md) | Safety | **✅ Implemented (Feb 5, 2026)** |
+| [ANTI_DETECTION_TASKS.md](ANTI_DETECTION_TASKS.md) | Safety | **✅ Complete (tasks)** |
 | [RESEARCH_SYNTHESIS_IMPLEMENTATION_PLANS.md](RESEARCH_SYNTHESIS_IMPLEMENTATION_PLANS.md) | Phase 3-4 | Implementation-ready |
-| [RESEARCH_FEATURES_TASKS.md](RESEARCH_FEATURES_TASKS.md) | Phase 3-4 | Task breakdown |
+| [RESEARCH_FEATURES_TASKS.md](RESEARCH_FEATURES_TASKS.md) | Phase 3-4 | Task breakdown (LRU cache ✅) |
 
 ### 3.5 Imported Research Materials
 
@@ -138,7 +138,7 @@ All new features are controlled via [`BlazorServer/runtime_feature_flags.json`](
 | CircuitBreaker | 1 | ✅ Enabled | Deployed |
 | PathSmoothing | 1 | ✅ Enabled | Deployed |
 | StuckRecoveryV2 | 1 | ✅ Enabled | Deployed |
-| HazardAvoidance | 2 | ❌ Disabled | Pending implementation |
+| HazardAvoidance | 2 | ❌ Disabled | ✅ Implemented (off by default) |
 | AIProfileGenerator | 3 | ❌ Disabled | Future |
 | ProfileMarketplace | 3 | ❌ Disabled | Future |
 | BehaviorTreeCombat | 3 | ❌ Disabled | Future |

@@ -10,6 +10,8 @@ using System.Threading;
 
 using WinAPI;
 
+using SharedLib.Humanization;
+
 namespace Game;
 
 public sealed partial class WowProcessInput : IMouseInput
@@ -35,13 +37,18 @@ public sealed partial class WowProcessInput : IMouseInput
     public int InteractMouseoverPress { get; set; }
 
     public WowProcessInput(ILogger<WowProcessInput> logger, CancellationTokenSource cts, WowProcess process)
+        : this(logger, cts, process, null)
+    {
+    }
+
+    public WowProcessInput(ILogger<WowProcessInput> logger, CancellationTokenSource cts, WowProcess process, IHumanizationProvider? humanization)
     {
         this.logger = logger;
         this.process = process;
 
         keysDown = new((int)ConsoleKey.OemClear);
 
-        nativeInput = new(process, cts, InputDuration.FastPress);
+        nativeInput = new(process, cts, InputDuration.FastPress, humanization);
     }
 
     public void Reset()

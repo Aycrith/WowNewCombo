@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 
 using SharedLib;
 using SharedLib.Extensions;
+using SharedLib.Humanization;
 
 using System;
 using System.Collections.Generic;
@@ -43,6 +44,7 @@ public sealed partial class GoapAgent : IDisposable
     private readonly IScreenCapture screenCapture;
     private readonly IBagChangeTracker bagChangeTracker;
     private readonly HazardEventCollector hazardEventCollector;
+    private readonly IHumanizationProvider? humanizationProvider;
 
     private bool active;
     public bool Active
@@ -121,7 +123,8 @@ public sealed partial class GoapAgent : IDisposable
         StopMoving stopMoving,
         IGrindSessionHandler sessionHandler,
         IEnumerable<GoapGoal> availableGoals,
-        HazardEventCollector hazardEventCollector
+        HazardEventCollector hazardEventCollector,
+        IHumanizationProvider? humanizationProvider = null
         )
     {
         this.routeInfo = routeInfo;
@@ -146,6 +149,7 @@ public sealed partial class GoapAgent : IDisposable
         this.combatLog = combatLog;
         this.bagChangeTracker = bagChangeTracker;
         this.hazardEventCollector = hazardEventCollector;
+        this.humanizationProvider = humanizationProvider;
 
         SessionStat = sessionStat;
 
@@ -212,6 +216,20 @@ public sealed partial class GoapAgent : IDisposable
 
         while (!cts.IsCancellationRequested)
         {
+            if (humanizationProvider?.IsOnBreak == true)
+            {
+                stopMoving.Stop();
+                input.Reset();
+
+                TimeSpan remaining = humanizationProvider.RemainingBreakTime;
+                int waitMs = remaining <= TimeSpan.Zero
+                    ? 50
+                    : (int)Math.Clamp(remaining.TotalMilliseconds, 50, 250);
+
+                cts.Token.WaitHandle.WaitOne(waitMs);
+                continue;
+            }
+
             GoapGoal? newGoal = NextGoal();
             if (newGoal != null)
             {

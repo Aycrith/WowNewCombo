@@ -17,6 +17,7 @@ using Microsoft.Extensions.Options;
 using PPather;
 
 using SharedLib;
+using SharedLib.Humanization;
 using SharedLib.NpcFinder;
 
 using SixLabors.ImageSharp;
@@ -108,6 +109,7 @@ public static class DependencyInjection
         // Phase 1/2 infrastructure singletons used inside session-scoped DI (GoalFactory).
         s.ForwardSingleton<FeatureFlagService>(sp);
         s.ForwardSingleton<HazardZoneStore>(sp);
+        s.AddSingleton<IHumanizationProvider>(sp.GetRequiredService<IHumanizationProvider>());
 
         s.ForwardSingleton<AreaDB>(sp);
         s.ForwardSingleton<WorldMapAreaDB>(sp);

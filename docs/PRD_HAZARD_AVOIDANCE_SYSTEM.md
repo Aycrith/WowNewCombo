@@ -4,7 +4,7 @@
 **Version:** 1.0  
 **Date:** February 5, 2026  
 **Author:** GitHub Copilot  
-**Status:** Ready for Implementation
+**Status:** ✅ Implemented (Feb 5, 2026)
 
 ---
 
@@ -53,6 +53,7 @@ Create a learning navigation system that prevents repeated failures by accumulat
 | FR-5 | Apply 30-day half-life exponential decay | P1 | `HazardAnalytics.cs` |
 | FR-6 | Display Leaflet.heat visualization layer | P1 | `LeafletComponent.razor` |
 | FR-7 | Rehabilitate clusters on successful traversal | P2 | `RouteRehabilitator.cs` |
+| FR-8 | Provide debug API to dump hazard snapshots | P1 | `Frontend/Controllers/HazardDebugController.cs` |
 
 ### 2.4 Non-Functional Requirements
 
@@ -64,6 +65,43 @@ Create a learning navigation system that prevents repeated failures by accumulat
 | NFR-4 | Clustering latency | <100ms for 1000 events | Benchmark test |
 
 ---
+
+### 2.5 Debugging & Validation (Debug API)
+
+For runtime validation without attaching a debugger, the Web UI host exposes lightweight debug endpoints:
+
+- `GET /api/debug/hazards/maps`
+  - Returns known `MapId` values with event/cluster counts.
+- `GET /api/debug/hazards/{mapId}`
+  - Returns a snapshot of events/clusters for the selected map.
+  - Query parameters:
+    - `includeEvents` (bool, default `true`)
+    - `includeClusters` (bool, default `true`)
+    - `maxEvents` (int, default `250`, max `10000`)
+    - `maxClusters` (int, default `1000`, max `50000`)
+    - `maxAgeMinutes` (int?, optional; filters events by `Timestamp >= now - maxAgeMinutes`)
+    - `mostRecentFirst` (bool, default `true`)
+
+Synthetic validation endpoints (require `DebugMode: true` in `BlazorServer/runtime_feature_flags.json`):
+
+- `POST /api/debug/hazards/{mapId}/clear`
+  - Clears in-memory events and clusters for that map.
+- `POST /api/debug/hazards/{mapId}/inject`
+  - Adds synthetic hazard events for fast UI/pathing validation.
+  - Body (example):
+    ```json
+    { "x": 0, "y": 0, "z": 0, "uiMapId": 0, "type": 99, "count": 5, "zone": "Debug" }
+    ```
+- `POST /api/debug/hazards/{mapId}/cluster`
+  - Runs DBSCAN clustering immediately for that map and replaces the in-memory cluster snapshot.
+
+Pathing validation endpoint (requires `DebugMode: true`):
+
+- `POST /api/debug/path/{mapId}/compare`
+  - Computes two routes between the same endpoints using two `SearchStrategy` values.
+  - Recommended for avoidance validation:
+    - `HazardStrategy = A_Star_With_Model_Avoidance` (includes hazard penalty)
+    - `BaselineStrategy = A_Star` (no hazard penalty)
 
 ## 3. Product Research Plan (PRP) - Proven Patterns
 

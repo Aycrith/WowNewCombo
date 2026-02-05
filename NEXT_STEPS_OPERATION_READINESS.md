@@ -64,11 +64,16 @@ Navigation server (AmeisenNavigationServer.exe) crashes immediately on startup.
 - ✅ Route following (if routes exist) may work with fallback logic
 
 **Workaround Options**:
-1. **Use simple routes** (straight-line waypoints without complex pathing)
-2. **Manual grinding zones** (stay in one area, don't navigate between zones)
-3. **Fix the navigation server** (requires investigating dependencies)
+1. **Switch Pathing mode in the UI** (Settings → **Pathing**, then **Restart required**)
+2. **Use simple routes** (straight-line waypoints without complex pathing)
+3. **Manual grinding zones** (stay in one area, don't navigate between zones)
+4. **Diagnose/repair the navigation server** (see below)
 
-**To Fix** (Future Task):
+**Current behavior (stability-first):**
+- If `Pathing.Mode=RemoteV3`, the bot uses a **hybrid** pather: it will use RemoteV3 when connected, and fall back to local MPQ pathing when RemoteV3 is unavailable.
+- Launch readiness reports this as **OK** when RemoteV3 is connected, **Warning** when falling back (MPQ present), and **Error** only when neither RemoteV3 nor local MPQs are available.
+
+**Diagnose/repair RemoteV3 navigation server:**
 ```powershell
 # Check dependencies
 dumpbin /dependents C:\WowClassicGrindBot\Navigation\AmeisenNavigationServer.exe
@@ -80,6 +85,23 @@ cd C:\WowClassicGrindBot\Navigation
 # Check Windows Event Viewer for crash details
 eventvwr.msc
 ```
+
+**New diagnostic helper (recommended):**
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File Scripts\Diagnose-NavigationServerCrash.ps1
+```
+This writes a timestamped report to `logs/diagnostics/` including PE architecture, file hash, VC++ runtime registry hints, and relevant Application/WER event log entries.
+
+**Fallback option (recommended if RemoteV3 is unstable):** switch to RemoteV1 (PathingAPI)
+```powershell
+# Switch bot pathing mode to RemoteV1 (writes BlazorServer/appsettings.json)
+pwsh -NoProfile -ExecutionPolicy Bypass -File Scripts\Configure-Pathfinder.ps1 -Backend RemoteV1
+
+# Start PathingAPI (port 5001) then run BlazorServer
+Scripts\\StartPathingAPI.bat
+dotnet run --project BlazorServer
+```
+You can also start/stop `PathingAPI` using `Scripts/ServiceMonitor.ps1`.
 
 ---
 
@@ -218,6 +240,16 @@ eventvwr.msc
 
 3. If no Rogue profile:
    - Find TBC Rogue rotation guide
+
+---
+
+## ✅ Preflight Script (Backend + UI HTTP Checks)
+
+If you want a single command that builds, starts BlazorServer, and performs readiness HTTP checks (health, launch status, Leaflet, hazards snapshot):
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File Scripts\Preflight-OperationReadiness.ps1 -Port 5055 -OpenLeaflet -HoldSeconds 120
+```
    - Create basic profile (Sinister Strike → Eviscerate)
    - Test and iterate
 
@@ -353,4 +385,3 @@ Based on test run results:
 **Document Created**: February 3, 2026 00:25 UTC  
 **Bot Status**: Initialized and Ready for Configuration  
 **Next Action**: Configure Class Profile and Select Route
-

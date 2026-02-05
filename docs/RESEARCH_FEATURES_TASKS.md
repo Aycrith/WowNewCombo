@@ -146,9 +146,9 @@ dotnet build Core/Core.csproj
 ```
 
 **Acceptance Criteria:**
-- [ ] Compiles without errors
-- [ ] Thread-safe operations verified via code review
-- [ ] No allocations after cache warmup
+- [x] Compiles without errors (`dotnet build Core/Core.csproj`)
+- [x] Thread-safe operations verified (`lock`-based implementation + unit tests)
+- [x] No allocations after cache warmup (`CoreUnitTests/Performance/LRUCacheTests.cs`)
 
 ---
 

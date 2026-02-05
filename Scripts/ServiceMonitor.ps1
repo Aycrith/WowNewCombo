@@ -28,6 +28,15 @@ $script:Services = @{
         Required = $false
         AutoRestart = $true
     }
+    PathingAPI = @{
+        Name = "PathingAPI"
+        DisplayName = "Pathing API"
+        Path = Join-Path $BotPath "PathingAPI\bin\Release\net10.0\PathingAPI.exe"
+        WorkingDir = Join-Path $BotPath "PathingAPI\bin\Release\net10.0"
+        Port = 5001
+        Required = $false
+        AutoRestart = $true
+    }
     BlazorServer = @{
         Name = "BlazorServer"
         DisplayName = "Bot Server"
@@ -164,7 +173,13 @@ function Start-AllServices {
     Write-Host ""
     Write-Host "Starting all services..." -ForegroundColor Cyan
     Write-Host ""
-    
+
+    # Start PathingAPI first (optional)
+    if ($script:Services.PathingAPI.Path) {
+        Start-Service -ServiceKey "PathingAPI"
+        Start-Sleep -Seconds 2
+    }
+
     # Start Navigation first
     if ($script:Services.Navigation.Path) {
         Start-Service -ServiceKey "Navigation"
@@ -182,9 +197,10 @@ function Stop-AllServices {
     Write-Host ""
     Write-Host "Stopping all services..." -ForegroundColor Cyan
     Write-Host ""
-    
+
     Stop-Service -ServiceKey "BlazorServer"
     Stop-Service -ServiceKey "Navigation"
+    Stop-Service -ServiceKey "PathingAPI"
     
     Write-Host ""
     Show-AllStatus

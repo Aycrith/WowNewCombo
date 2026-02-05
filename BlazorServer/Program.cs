@@ -226,6 +226,9 @@ public static class Program
         // Phase 2 (Hazard Avoidance) - safe to register even when disabled via feature flags.
         services.AddHazardAvoidance();
 
+        // Humanization (Anti-Detection) - disabled by default; safe to register always.
+        services.AddHumanizationServices();
+
         if (configurationComplete)
         {
             services.AddCoreNormal(log);

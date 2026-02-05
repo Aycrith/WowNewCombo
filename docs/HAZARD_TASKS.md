@@ -82,6 +82,19 @@ dotnet test --filter "FullyQualifiedName~Hazard"
 - [x] **5.3** Extend `Frontend/Pages/LeafletComponent.razor`
   - Add toggle button, heat layer initialization
 
+### Phase 5.4: Debug API (P1)
+
+- [x] **5.4** Add `Frontend/Controllers/HazardDebugController.cs`
+  - Endpoints:
+    - `GET /api/debug/hazards/maps`
+    - `GET /api/debug/hazards/{mapId}?maxEvents=250&maxClusters=1000&maxAgeMinutes=60`
+    - `POST /api/debug/hazards/{mapId}/clear` (requires `DebugMode=true`)
+    - `POST /api/debug/hazards/{mapId}/inject` (requires `DebugMode=true`)
+    - `POST /api/debug/hazards/{mapId}/cluster` (requires `DebugMode=true`)
+  - Optional pathing validation:
+    - `POST /api/debug/path/{mapId}/route` (requires `DebugMode=true`)
+    - `POST /api/debug/path/{mapId}/compare` (requires `DebugMode=true`)
+
 ### Phase 6: DI & Services (P0)
 
 - [x] **6.1** Create `Core/Hazard/HazardServiceCollectionExtensions.cs`
@@ -127,11 +140,11 @@ const float ChunkSize = 100f;
 
 ## Verification Checklist
 
-- [ ] All new files follow `namespace Core.Hazard;` pattern
-- [ ] `IHazardProvider` returns 0 when no hazard data exists
-- [ ] JSON persistence loads gracefully when files don't exist
-- [ ] Background service handles exceptions without crashing
-- [ ] PathGraph works unchanged when `IHazardProvider` is null
+- [x] All new files follow `namespace Core.Hazard;` pattern
+- [x] `IHazardProvider` returns 0 when no hazard data exists (unit-tested)
+- [x] JSON persistence loads gracefully when files don't exist (unit-tested)
+- [x] Background service handles exceptions without crashing (guarded by try/catch in loops)
+- [x] PathGraph works unchanged when `IHazardProvider` is null (provider is optional throughout PPather)
 
 ---
 

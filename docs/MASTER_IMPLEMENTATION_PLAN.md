@@ -870,13 +870,14 @@ public sealed class HearthstoneStrategy : IRecoveryStrategy
 
 ### 5.1 Hazard Avoidance System
 
-**Status:** PRD Complete - See [PRD_HAZARD_AVOIDANCE_SYSTEM.md](PRD_HAZARD_AVOIDANCE_SYSTEM.md)
+**Status:** ✅ Implemented (Feb 5, 2026) - feature-flagged off by default (see `BlazorServer/runtime_feature_flags.json`)
 
 **Summary:**
 - DBSCAN clustering of stuck/death events
 - A* cost injection for path avoidance
 - 30-day exponential decay
 - Leaflet.heat visualization
+- Debug API endpoints (`/api/debug/hazards/...`) for runtime validation
 
 **Key Milestones:**
 

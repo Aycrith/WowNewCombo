@@ -27,7 +27,7 @@ function Run-Smoke {
         [switch]$SimulatePortConflict
     )
 
-    $args = @(
+    $pwshArgs = @(
         "-NoProfile",
         "-ExecutionPolicy", "Bypass",
         "-File", (Join-Path $PSScriptRoot "SmokeTest-BlazorServer.ps1"),
@@ -36,11 +36,13 @@ function Run-Smoke {
     )
 
     if ($SimulatePortConflict) {
-        $args += "-SimulatePortConflict"
+        $pwshArgs += "-SimulatePortConflict"
     }
 
-    & pwsh @args
-    return $LASTEXITCODE
+    & pwsh @pwshArgs | Out-Host
+    $exitCode = $LASTEXITCODE
+    if ($null -eq $exitCode) { $exitCode = 0 }
+    return [int]$exitCode
 }
 
 Write-Host "Scenario: Normal launch"

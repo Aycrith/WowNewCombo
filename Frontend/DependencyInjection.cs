@@ -15,6 +15,8 @@ public static class DependencyInjection
 
         // Admin/runtime settings persisted to runtime_feature_flags.json
         services.AddSingleton<MountUnlockAdminService>();
+        services.AddSingleton<PathingAdminService>();
+        services.AddSingleton<HumanizationAdminService>();
 
         services.AddScoped<Services.HazardHeatMapService>();
 

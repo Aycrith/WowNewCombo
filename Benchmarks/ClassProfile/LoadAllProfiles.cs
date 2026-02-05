@@ -4,32 +4,69 @@ using WinAPI;
 
 namespace Benchmarks.ClassProfile;
 
-public class LoadAllProfiles
+public sealed class LoadAllProfiles
 {
     [Benchmark]
     [ArgumentsSource(nameof(GetProfileNames))]
     public void LoadProfile(string profileName)
     {
+        if (string.IsNullOrWhiteSpace(profileName))
+        {
+            return;
+        }
+
+        string? repoRoot = TryFindRepoRoot();
+        if (repoRoot != null)
+        {
+            Directory.SetCurrentDirectory(repoRoot);
+        }
+
         // TODO: fix loading error frame_config.json not exists
         HeadlessServer.Program.Main([$"{profileName}", "-m Local", "--loadonly"]);
     }
 
     public static IEnumerable<string> GetProfileNames()
     {
-        var dataConfig = DataConfig.Load();
+        string? repoRoot = TryFindRepoRoot();
+        if (repoRoot == null)
+        {
+            yield return string.Empty;
+            yield break;
+        }
 
-        Directory.SetCurrentDirectory("..\\..\\..\\..\\HeadlessServer");
+        string classRoot = Path.Join(repoRoot, "Json", "class");
+        if (!Directory.Exists(classRoot))
+        {
+            yield return string.Empty;
+            yield break;
+        }
 
-        var root = Path.Join(dataConfig.Class, Path.DirectorySeparatorChar.ToString());
-        var files = Directory.EnumerateFiles(root, "*.json*", SearchOption.AllDirectories)
-            .Select(path => path.Replace(root, string.Empty))
+        IEnumerable<string> files = Directory.EnumerateFiles(classRoot, "*.json*", SearchOption.AllDirectories)
+            .Select(path => Path.GetRelativePath(classRoot, path))
             .OrderBy(x => x, new NaturalStringComparer());
 
-        yield return files.First();
+        string? first = files.FirstOrDefault();
+        yield return first ?? string.Empty;
 
         //foreach (var fileName in files)
         //{
         //    yield return fileName;
         //}
+    }
+
+    private static string? TryFindRepoRoot()
+    {
+        string? dir = AppContext.BaseDirectory;
+        for (int i = 0; i < 10 && dir != null; i++)
+        {
+            if (File.Exists(Path.Join(dir, "MasterOfPuppets.sln")))
+            {
+                return dir;
+            }
+
+            dir = Directory.GetParent(dir)?.FullName;
+        }
+
+        return null;
     }
 }

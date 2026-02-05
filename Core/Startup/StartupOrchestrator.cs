@@ -10,6 +10,8 @@ using Game;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
+using SharedLib;
+
 namespace Core.Startup;
 
 /// <summary>
@@ -21,6 +23,7 @@ public sealed class StartupOrchestrator
     private readonly ILogger<StartupOrchestrator> _logger;
     private readonly StartupOptions _options;
     private readonly StartupState _state;
+    private readonly StartupConfigPathing _pathing;
     private readonly WoWPathFinder _pathFinder;
     private readonly AddonInstaller _addonInstaller;
     private readonly AddonValidator _addonValidator;
@@ -43,6 +46,7 @@ public sealed class StartupOrchestrator
     public StartupOrchestrator(
         ILogger<StartupOrchestrator> logger,
         IOptions<StartupOptions> options,
+        IOptions<StartupConfigPathing> pathing,
         StartupState state,
         WoWPathFinder pathFinder,
         AddonInstaller addonInstaller,
@@ -54,6 +58,7 @@ public sealed class StartupOrchestrator
     {
         _logger = logger;
         _options = options.Value;
+        _pathing = pathing.Value;
         _state = state;
         _pathFinder = pathFinder;
         _addonInstaller = addonInstaller;
@@ -312,6 +317,11 @@ public sealed class StartupOrchestrator
         if (!_options.AutoStartNavigationServer)
         {
             return StageResult.Skipped("Navigation server auto-start disabled");
+        }
+
+        if (_pathing.Type != StartupConfigPathing.Types.RemoteV3)
+        {
+            return StageResult.Skipped($"Navigation server skipped (Pathing.Mode={_pathing.Type})");
         }
 
         _state.StatusMessage = "Starting navigation server...";

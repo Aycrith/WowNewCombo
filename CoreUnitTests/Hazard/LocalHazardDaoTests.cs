@@ -65,5 +65,36 @@ public sealed class LocalHazardDaoTests
             }
         }
     }
-}
 
+    [Fact]
+    public async Task Load_MissingFile_ReturnsEmpty()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "WowClassicGrindBot.Tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+
+        try
+        {
+            DataConfig config = new()
+            {
+                Root = root,
+                Exp = "tbc"
+            };
+
+            LocalHazardDAO dao = new(config, NullLogger<LocalHazardDAO>.Instance);
+
+            var loaded = await dao.LoadAsync("tbc", mapId: 123, CancellationToken.None);
+
+            Assert.Empty(loaded);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(root, recursive: true);
+            }
+            catch
+            {
+            }
+        }
+    }
+}

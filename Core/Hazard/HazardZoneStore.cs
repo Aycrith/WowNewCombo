@@ -108,10 +108,40 @@ public sealed class HazardZoneStore : IHazardProvider, IDisposable
         return mapStore.GetClustersSnapshot();
     }
 
+    public void ClearMap(int mapId)
+    {
+        if (!mapStores.TryGetValue(mapId, out ChunkedHazardMap? mapStore))
+        {
+            return;
+        }
+
+        mapStore.Clear();
+    }
+
     public void ReplaceClusters(int mapId, IReadOnlyList<HazardCluster> clusters)
     {
         ChunkedHazardMap mapStore = mapStores.GetOrAdd(mapId, static _ => new ChunkedHazardMap());
         mapStore.ReplaceClusters(clusters);
+    }
+
+    public int ReduceSeverityNear(Vector3 position, int mapId, float safetyMargin, float severityFactor)
+    {
+        if (!mapStores.TryGetValue(mapId, out ChunkedHazardMap? mapStore))
+        {
+            return 0;
+        }
+
+        float factor = severityFactor;
+        if (factor <= 0f)
+        {
+            factor = 0f;
+        }
+        if (factor >= 1f)
+        {
+            return 0;
+        }
+
+        return mapStore.ReduceSeverityNear(position, safetyMargin, factor);
     }
 
     public float GetHazardCost(Vector3 position, float mapId)
@@ -211,6 +241,45 @@ public sealed class HazardZoneStore : IHazardProvider, IDisposable
             }
         }
 
+        public void Clear()
+        {
+            lock (gate)
+            {
+                events.Clear();
+                clusters = [];
+                chunks = new Dictionary<(int, int), HazardCluster[]>();
+            }
+        }
+
+        public int ReduceSeverityNear(Vector3 position, float safetyMargin, float severityFactor)
+        {
+            (int, int) key = GetChunkKey(position);
+
+            lock (gate)
+            {
+                if (!chunks.TryGetValue(key, out HazardCluster[]? list) || list.Length == 0)
+                {
+                    return 0;
+                }
+
+                int adjusted = 0;
+
+                for (int i = 0; i < list.Length; i++)
+                {
+                    HazardCluster cluster = list[i];
+                    if (!cluster.ContainsPosition(position, safetyMargin))
+                    {
+                        continue;
+                    }
+
+                    cluster.SeverityScore *= severityFactor;
+                    adjusted++;
+                }
+
+                return adjusted;
+            }
+        }
+
         public float GetHazardCost(Vector3 position)
         {
             (int, int) key = GetChunkKey(position);
@@ -307,4 +376,3 @@ public sealed class HazardZoneStore : IHazardProvider, IDisposable
         }
     }
 }
-

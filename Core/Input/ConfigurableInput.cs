@@ -3,6 +3,7 @@ using Game;
 using Microsoft.Extensions.Logging;
 
 using SharedLib;
+using SharedLib.Humanization;
 
 using System;
 using System.Threading;
@@ -14,15 +15,19 @@ public sealed partial class ConfigurableInput
     private readonly ILogger<ConfigurableInput> logger;
     private readonly WowProcessInput input;
     private readonly ClassConfiguration classConfig;
+    private readonly IHumanizationProvider? humanization;
 
     private readonly bool Log;
 
     public ConfigurableInput(ILogger<ConfigurableInput> logger,
-        WowProcessInput input, ClassConfiguration classConfig)
+        WowProcessInput input,
+        ClassConfiguration classConfig,
+        IHumanizationProvider? humanization = null)
     {
         this.logger = logger;
         this.input = input;
         this.classConfig = classConfig;
+        this.humanization = humanization;
         Log = classConfig.Log;
 
         input.ForwardKey = classConfig.ForwardKey;
@@ -75,6 +80,19 @@ public sealed partial class ConfigurableInput
     public int PressRandom(KeyAction keyAction, CancellationToken token = default)
     {
         int elapsedMs;
+
+        if (humanization?.Enabled == true && !humanization.IsOnBreak)
+        {
+            int reactionDelay = humanization.GetPreActionReactionDelayMs(complexity: 1, isMovementAction: false);
+            if (reactionDelay > 0)
+            {
+                token.WaitHandle.WaitOne(reactionDelay);
+                if (token.IsCancellationRequested)
+                {
+                    return 0;
+                }
+            }
+        }
 
         // Use modifier-aware pressing if the keyAction has a modifier
         if (keyAction.HasModifier)

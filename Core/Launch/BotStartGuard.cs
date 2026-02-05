@@ -403,6 +403,50 @@ public sealed class BotStartGuard : IBotStartGuard, ILaunchReadinessCacheInvalid
 
         try
         {
+            if (pather is global::Core.HybridPather hybrid)
+            {
+                if (hybrid.IsRemoteConnected)
+                {
+                    return new LaunchSubsystemCheck(
+                        LaunchSubsystem.Navigation,
+                        LaunchStatus.Ok,
+                        "Navigation",
+                        "RemoteV3 connected (hybrid)",
+                        IsRequired: true,
+                        IsBlocking: false,
+                        TimestampUtc: now,
+                        NavigateTo: "/Settings");
+                }
+
+                // Remote is down; evaluate local fallback readiness.
+                bool mpqOk = HasAnyMpqFiles();
+                if (mpqOk)
+                {
+                    bool blocks = !overrideSnapshot.AllowStartWithWarnings;
+                    return new LaunchSubsystemCheck(
+                        LaunchSubsystem.Navigation,
+                        LaunchStatus.Warning,
+                        "Navigation",
+                        "RemoteV3 not connected; using local fallback (MPQ OK)",
+                        IsRequired: true,
+                        IsBlocking: blocks,
+                        TimestampUtc: now,
+                        FixHint: "Start AmeisenNavigationServer.exe (port 47110). If it crashes, run Scripts/Diagnose-NavigationServerCrash.ps1. Or switch to RemoteV1/Local via Scripts/Configure-Pathfinder.ps1 then restart BlazorServer.",
+                        NavigateTo: "/Settings");
+                }
+
+                return new LaunchSubsystemCheck(
+                    LaunchSubsystem.Navigation,
+                    LaunchStatus.Error,
+                    "Navigation",
+                    "RemoteV3 not connected and local fallback degraded (MPQ missing)",
+                    IsRequired: true,
+                    IsBlocking: true,
+                    TimestampUtc: now,
+                    FixHint: "Switch to RemoteV1 via Scripts/Configure-Pathfinder.ps1 -Backend RemoteV1 (start PathingAPI) or install MPQ files (Json/MPQ), then restart BlazorServer.",
+                    NavigateTo: "/Settings");
+            }
+
             if (pather is RemotePathingAPIV3 remoteV3)
             {
                 bool ok = remoteV3.PingServer();
@@ -414,7 +458,7 @@ public sealed class BotStartGuard : IBotStartGuard, ILaunchReadinessCacheInvalid
                     IsRequired: true,
                     IsBlocking: !ok,
                     TimestampUtc: now,
-                    FixHint: ok ? null : "Start AmeisenNavigationServer.exe (port 47110) then restart BlazorServer",
+                    FixHint: ok ? null : "Start AmeisenNavigationServer.exe (port 47110) then restart BlazorServer. If it crashes, run Scripts/Diagnose-NavigationServerCrash.ps1. Or switch to RemoteV1/Local via Scripts/Configure-Pathfinder.ps1 and restart.",
                     NavigateTo: "/Settings");
             }
 
@@ -429,24 +473,24 @@ public sealed class BotStartGuard : IBotStartGuard, ILaunchReadinessCacheInvalid
                     IsRequired: true,
                     IsBlocking: !ok,
                     TimestampUtc: now,
-                    FixHint: ok ? null : "Start PathingAPI.exe (port 5001) then restart BlazorServer",
+                    FixHint: ok ? null : "Start PathingAPI.exe (port 5001) then restart BlazorServer. Or switch to Local via Scripts/Configure-Pathfinder.ps1 and restart.",
                     NavigateTo: "/Settings");
             }
 
             // Local pathing
-            bool mpqOk = HasAnyMpqFiles();
-            LaunchStatus status = mpqOk ? LaunchStatus.Ok : LaunchStatus.Warning;
+            bool mpqAvailable = HasAnyMpqFiles();
+            LaunchStatus status = mpqAvailable ? LaunchStatus.Ok : LaunchStatus.Warning;
 
-            bool blocks = !mpqOk && !overrideSnapshot.AllowStartWithWarnings;
+            bool blocksOnWarning = !mpqAvailable && !overrideSnapshot.AllowStartWithWarnings;
             return new LaunchSubsystemCheck(
                 LaunchSubsystem.Navigation,
                 status,
                 "Navigation",
-                mpqOk ? "Local pathing ready (MPQ OK)" : "Local pathing degraded (MPQ missing)",
+                mpqAvailable ? "Local pathing ready (MPQ OK)" : "Local pathing degraded (MPQ missing)",
                 IsRequired: true,
-                IsBlocking: blocks,
+                IsBlocking: blocksOnWarning,
                 TimestampUtc: now,
-                FixHint: mpqOk ? null : "Download MPQ files (Json/MPQ) or enable Remote pathing",
+                FixHint: mpqAvailable ? null : "Download MPQ files (Json/MPQ) or enable Remote pathing",
                 NavigateTo: "/Settings");
         }
         catch (Exception ex)

@@ -15,6 +15,7 @@ public sealed class FeatureFlagsOptions
     public PathSmoothingOptions PathSmoothing { get; set; } = new();
     public StuckRecoveryV2Options StuckRecoveryV2 { get; set; } = new();
     public HazardAvoidanceOptions HazardAvoidance { get; set; } = new();
+    public HumanizationOptions Humanization { get; set; } = new();
     public AIProfileGeneratorOptions AIProfileGenerator { get; set; } = new();
     public ProfileMarketplaceOptions ProfileMarketplace { get; set; } = new();
     public BehaviorTreeCombatOptions BehaviorTreeCombat { get; set; } = new();
@@ -80,6 +81,75 @@ public sealed class HazardAvoidanceOptions
     public int MaxEventsBeforePrune { get; set; } = 10000;
     public int ClusteringIntervalSeconds { get; set; } = 60;
     public int SaveIntervalMinutes { get; set; } = 5;
+}
+
+/// <summary>
+/// Human-like behavior timing and input shaping. Disabled by default.
+/// </summary>
+public sealed class HumanizationOptions
+{
+    public bool Enabled { get; set; }
+
+    public HumanizationInputTimingOptions InputTiming { get; set; } = new();
+
+    public HumanizationMouseMovementOptions MouseMovement { get; set; } = new();
+
+    public HumanizationFatigueOptions Fatigue { get; set; } = new();
+
+    public HumanizationBehaviorOptions Behavior { get; set; } = new();
+}
+
+public sealed class HumanizationInputTimingOptions
+{
+    public int KeyHoldMeanMs { get; set; } = 55;
+    public int KeyHoldStdDevMs { get; set; } = 15;
+    public int KeyHoldMinMs { get; set; } = 30;
+    public int KeyHoldMaxMs { get; set; } = 200;
+
+    public int ReactionMaxMs { get; set; } = 500;
+}
+
+public sealed class HumanizationMouseMovementOptions
+{
+    public bool Enabled { get; set; } = true;
+
+    public int StepsPerMovement { get; set; } = 15;
+
+    public double CurveIntensity { get; set; } = 0.30;
+
+    public int MicroJitterPixels { get; set; } = 2;
+
+    public double OvershootProbability { get; set; } = 0.08;
+
+    public int StepDelayMinMs { get; set; } = 1;
+
+    public int StepDelayMaxMs { get; set; } = 6;
+}
+
+public sealed class HumanizationFatigueOptions
+{
+    public bool Enabled { get; set; } = true;
+
+    public int BreakIntervalMinutes { get; set; } = 45;
+
+    public double BreakDurationMinMinutes { get; set; } = 1.0;
+
+    public double BreakDurationMaxMinutes { get; set; } = 5.0;
+
+    public double FatigueRatePerHour { get; set; } = 0.10;
+
+    public double MaxFatigueMultiplier { get; set; } = 1.5;
+}
+
+public sealed class HumanizationBehaviorOptions
+{
+    public bool MicroPauseEnabled { get; set; } = true;
+
+    public int MicroPauseIntervalSeconds { get; set; } = 60;
+
+    public int MicroPauseMinMs { get; set; } = 200;
+
+    public int MicroPauseMaxMs { get; set; } = 2000;
 }
 
 /// <summary>
@@ -175,6 +245,7 @@ public static class FeatureFlagExtensions
             nameof(FeatureFlagsOptions.PathSmoothing) => flags.PathSmoothing.Enabled,
             nameof(FeatureFlagsOptions.StuckRecoveryV2) => flags.StuckRecoveryV2.Enabled,
             nameof(FeatureFlagsOptions.HazardAvoidance) => flags.HazardAvoidance.Enabled,
+            nameof(FeatureFlagsOptions.Humanization) => flags.Humanization.Enabled,
             nameof(FeatureFlagsOptions.AIProfileGenerator) => flags.AIProfileGenerator.Enabled,
             nameof(FeatureFlagsOptions.ProfileMarketplace) => flags.ProfileMarketplace.Enabled,
             nameof(FeatureFlagsOptions.BehaviorTreeCombat) => flags.BehaviorTreeCombat.Enabled,
@@ -196,6 +267,7 @@ public static class FeatureFlagExtensions
         if (flags.PathSmoothing.Enabled) yield return nameof(FeatureFlagsOptions.PathSmoothing);
         if (flags.StuckRecoveryV2.Enabled) yield return nameof(FeatureFlagsOptions.StuckRecoveryV2);
         if (flags.HazardAvoidance.Enabled) yield return nameof(FeatureFlagsOptions.HazardAvoidance);
+        if (flags.Humanization.Enabled) yield return nameof(FeatureFlagsOptions.Humanization);
         if (flags.AIProfileGenerator.Enabled) yield return nameof(FeatureFlagsOptions.AIProfileGenerator);
         if (flags.ProfileMarketplace.Enabled) yield return nameof(FeatureFlagsOptions.ProfileMarketplace);
         if (flags.BehaviorTreeCombat.Enabled) yield return nameof(FeatureFlagsOptions.BehaviorTreeCombat);

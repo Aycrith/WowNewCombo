@@ -21,6 +21,9 @@
     <None Update="frame_config.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="runtime_feature_flags.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
@@ -35,10 +38,12 @@
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Exec Command="xcopy /s /Y /i &quot;$(ProjectDir)..\Addons&quot; &quot;$(TargetDir)Addons&quot;" />
+    <Exec Command="xcopy /s /Y /i &quot;$(ProjectDir)..\Json&quot; &quot;$(TargetDir)..\json&quot;" />
   </Target>
 
   <Target Name="CopyCustomContentOnPublish" AfterTargets="Publish">
     <Exec Command="xcopy /s /Y /i &quot;$(ProjectDir)..\Addons&quot; &quot;$(PublishDir)Addons&quot;" />
+    <Exec Command="xcopy /s /Y /i &quot;$(ProjectDir)..\Json&quot; &quot;$(PublishDir)..\json&quot;" />
   </Target>
 
 </Project>

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -20,6 +21,7 @@ public sealed class FeatureFlagService : IHostedService, IDisposable
     private readonly ILogger<FeatureFlagService> logger;
     private readonly IOptionsMonitor<FeatureFlagsOptions> optionsMonitor;
     private readonly string configFilePath;
+    private readonly JsonSerializerOptions jsonOptions;
 
     private FileSystemWatcher? fileWatcher;
     private IDisposable? optionsChangeToken;
@@ -51,6 +53,7 @@ public sealed class FeatureFlagService : IHostedService, IDisposable
     public bool IsPathSmoothingEnabled => Current.PathSmoothing.Enabled;
     public bool IsEnhancedStuckRecoveryEnabled => Current.StuckRecoveryV2.Enabled;
     public bool IsHazardAvoidanceEnabled => Current.HazardAvoidance.Enabled;
+    public bool IsHumanizationEnabled => Current.Humanization.Enabled;
     public bool IsAIProfileGeneratorEnabled => Current.AIProfileGenerator.Enabled;
     public bool IsProfileMarketplaceEnabled => Current.ProfileMarketplace.Enabled;
     public bool IsBehaviorTreeCombatEnabled => Current.BehaviorTreeCombat.Enabled;
@@ -65,6 +68,14 @@ public sealed class FeatureFlagService : IHostedService, IDisposable
         this.optionsMonitor = optionsMonitor;
         configFilePath = serviceOptions.Value.ConfigFilePath ?? "runtime_feature_flags.json";
         currentOptions = optionsMonitor.CurrentValue;
+
+        jsonOptions = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            ReadCommentHandling = JsonCommentHandling.Skip,
+            AllowTrailingCommas = true
+        };
+        jsonOptions.Converters.Add(new JsonStringEnumConverter());
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -74,6 +85,9 @@ public sealed class FeatureFlagService : IHostedService, IDisposable
 
         // Set up file watcher for hot-reload
         SetupFileWatcher();
+
+        // Load from runtime_feature_flags.json if present. This is the source of truth for live toggles.
+        TryReloadFromFile();
 
         logger.LogInformation(
             "[FeatureFlagSvc  ] Started. ObjectPooling={ObjectPooling}, CircuitBreaker={CircuitBreaker}, PathSmoothing={PathSmoothing}",
@@ -141,10 +155,7 @@ public sealed class FeatureFlagService : IHostedService, IDisposable
                     "[FeatureFlagSvc  ] Config file changed: {FilePath}. Reloading...",
                     e.FullPath);
 
-                // The IOptionsMonitor should automatically pick up file changes
-                // if configured with reloadOnChange. This event is for logging/notification.
-                var newOptions = optionsMonitor.CurrentValue;
-                UpdateOptions(newOptions);
+                TryReloadFromFile();
             }
             catch (Exception ex)
             {
@@ -163,6 +174,52 @@ public sealed class FeatureFlagService : IHostedService, IDisposable
         UpdateOptions(newOptions);
     }
 
+    private void TryReloadFromFile()
+    {
+        FeatureFlagsOptions? loaded = TryLoadFromFile(configFilePath);
+        if (loaded == null)
+        {
+            return;
+        }
+
+        UpdateOptions(loaded);
+    }
+
+    private FeatureFlagsOptions? TryLoadFromFile(string path)
+    {
+        try
+        {
+            string fullPath = Path.GetFullPath(path);
+            if (!File.Exists(fullPath))
+            {
+                return null;
+            }
+
+            string json = File.ReadAllText(fullPath);
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return null;
+            }
+
+            RuntimeFeatureFlagsFile? file = JsonSerializer.Deserialize<RuntimeFeatureFlagsFile>(json, jsonOptions);
+            if (file == null)
+            {
+                return null;
+            }
+
+            FeatureFlagsOptions features = file.Features ?? new FeatureFlagsOptions();
+            features.GlobalKillSwitch = file.GlobalKillSwitch;
+            features.DebugMode = file.DebugMode;
+
+            return features;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "[FeatureFlagSvc  ] Failed to parse feature flags file {File}", path);
+            return null;
+        }
+    }
+
     private void UpdateOptions(FeatureFlagsOptions newOptions)
     {
         FeatureFlagsOptions previous;
@@ -177,6 +234,13 @@ public sealed class FeatureFlagService : IHostedService, IDisposable
 
         // Notify subscribers
         OnFlagsChanged?.Invoke(newOptions);
+    }
+
+    private sealed class RuntimeFeatureFlagsFile
+    {
+        public FeatureFlagsOptions? Features { get; set; }
+        public bool GlobalKillSwitch { get; set; }
+        public bool DebugMode { get; set; }
     }
 
     private void LogFeatureFlagChanges(FeatureFlagsOptions previous, FeatureFlagsOptions current)
@@ -198,6 +262,9 @@ public sealed class FeatureFlagService : IHostedService, IDisposable
         if (previous.HazardAvoidance.Enabled != current.HazardAvoidance.Enabled)
             changes.Add($"HazardAvoidance: {previous.HazardAvoidance.Enabled} -> {current.HazardAvoidance.Enabled}");
 
+        if (previous.Humanization.Enabled != current.Humanization.Enabled)
+            changes.Add($"Humanization: {previous.Humanization.Enabled} -> {current.Humanization.Enabled}");
+
         if (changes.Count > 0)
         {
             logger.LogInformation(
@@ -218,6 +285,7 @@ public sealed class FeatureFlagService : IHostedService, IDisposable
             "pathsmoothing" => IsPathSmoothingEnabled,
             "enhancedstuckrecovery" => IsEnhancedStuckRecoveryEnabled,
             "hazardavoidance" => IsHazardAvoidanceEnabled,
+            "humanization" => IsHumanizationEnabled,
             "aiprofilegenerator" => IsAIProfileGeneratorEnabled,
             "profilemarketplace" => IsProfileMarketplaceEnabled,
             "behaviortreecombat" => IsBehaviorTreeCombatEnabled,
@@ -238,6 +306,7 @@ public sealed class FeatureFlagService : IHostedService, IDisposable
             ["PathSmoothing"] = IsPathSmoothingEnabled,
             ["EnhancedStuckRecovery"] = IsEnhancedStuckRecoveryEnabled,
             ["HazardAvoidance"] = IsHazardAvoidanceEnabled,
+            ["Humanization"] = IsHumanizationEnabled,
             ["AIProfileGenerator"] = IsAIProfileGeneratorEnabled,
             ["ProfileMarketplace"] = IsProfileMarketplaceEnabled,
             ["BehaviorTreeCombat"] = IsBehaviorTreeCombatEnabled,

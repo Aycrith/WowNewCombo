@@ -29,7 +29,8 @@ Phase 1 establishes the foundational infrastructure required for advanced bot fe
 
 **Capabilities Delivered:**
 - **Hot-Reload:** `FileSystemWatcher` monitors `runtime_feature_flags.json` for changes
-- **Thread-Safe:** `IOptionsMonitor<T>` + `lock` synchronization for concurrent access
+- **File-Based Loading:** Parses `runtime_feature_flags.json` (including root-level `DebugMode` / `GlobalKillSwitch`)
+- **Thread-Safe:** `lock` synchronization for concurrent access
 - **Convenience API:** Boolean properties like `IsHazardAvoidanceEnabled`, `IsCircuitBreakerEnabled`
 - **Event-Driven:** `OnFlagsChanged` event for react-to-change scenarios
 
@@ -541,36 +542,37 @@ Time Elapsed 00:00:42.15
 Now that Phase 1 infrastructure is complete, implement the [Hazard Avoidance System PRD](file:///c:/WowClassicGrindBot/docs/PRD_HAZARD_AVOIDANCE_SYSTEM.md):
 
 #### Phase 2.1: Data Models & Storage (Est. 6h)
-- [ ] `HazardEventType` enum
-- [ ] `HazardEvent` record with Vector3 positioning
-- [ ] `HazardCluster` model (centroid, radius, severity)
-- [ ] `HazardZoneStore` with chunked spatial index
-- [ ] `LocalHazardDAO` JSON persistence (`Json/HazardData/{expansion}/`)
+- [x] `HazardEventType` enum
+- [x] `HazardEvent` record with Vector3 positioning
+- [x] `HazardCluster` model (centroid, radius, severity)
+- [x] `HazardZoneStore` with chunked spatial index
+- [x] `LocalHazardDAO` JSON persistence (`Json/HazardData/{expansion}/`)
 
 #### Phase 2.2: Event Collection (Est. 4h)
-- [ ] `IHazardProvider` interface
-- [ ] `HazardEventCollector` (subscribes to `StuckDetector.OnStuckDetected`, `CombatLog.PlayerDeath`)
-- [ ] Extend `StuckEventData` with map metadata
+- [x] `IHazardProvider` interface (implemented in `SharedLib` to avoid Core↔PPather circular reference)
+- [x] `HazardEventCollector` (subscribes to `StuckDetector.OnStuckDetected`, `CombatLog.PlayerDeath`)
+- [x] Extend `StuckEventData` with map metadata
 
 #### Phase 2.3: Analytics Engine (Est. 8h)
-- [ ] `HazardAnalytics` (exponential decay, severity scoring)
-- [ ] `HazardClusterAnalyzer` (DBSCAN implementation: ε=15, minPts=2)
-- [ ] `RouteRehabilitator` (success/failure feedback loop)
+- [x] `HazardAnalytics` (exponential decay, severity scoring)
+- [x] `HazardClusterAnalyzer` (DBSCAN implementation: ε=15, minPts=2)
+- [x] `RouteRehabilitator` (success/failure feedback loop)
 
 #### Phase 2.4: Navigation Integration (Est. 4h)
-- [ ] Inject `IHazardProvider` into `PathGraph` constructor
-- [ ] Modify `ScoreSpot_A_Star*` to add hazard cost penalties
-- [ ] Add hazard avoidance toggle to UI
+- [x] Inject `IHazardProvider` into `PathGraph` constructor
+- [x] Modify `ScoreSpot_A_Star*` to add hazard cost penalties
+- [x] Add hazard avoidance toggle to UI
 
 #### Phase 2.5: Visualization (Est. 6h)
-- [ ] Add Leaflet.heat JavaScript library
-- [ ] Create heat map interop module
-- [ ] Extend `LeafletComponent.razor` with hazard layer toggle
-- [ ] `HazardHeatMapService` for coordinate conversion
+- [x] Add Leaflet.heat JavaScript library
+- [x] Create heat map interop module
+- [x] Extend `LeafletComponent.razor` with hazard layer toggle
+- [x] `HazardHeatMapService` for coordinate conversion
+- [x] Debug API endpoints (`/api/debug/hazards/...`) for runtime validation
 
 #### Phase 2.6: Background Services (Est. 3h)
-- [ ] `HazardServiceExtensions` DI registration
-- [ ] `HazardAnalyticsBackgroundService` (60s clustering, 5min auto-save)
+- [x] `HazardServiceExtensions` DI registration
+- [x] `HazardAnalyticsBackgroundService` (60s clustering, 5min auto-save)
 
 **Total Effort:** ~31 hours (per PRD Section 4)
 

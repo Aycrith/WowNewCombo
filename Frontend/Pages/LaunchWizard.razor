@@ -312,7 +312,12 @@
                                 <a class="btn btn-sm btn-outline-primary" href="/Settings">Open Settings</a>
                             </div>
                             <div class="alert alert-info mt-3 mb-0">
-                                Changing Pathing mode requires a BlazorServer restart to re-bind the backend.
+                                <div class="fw-semibold">Notes</div>
+                                <ul class="mb-0">
+                                    <li>When Mode is <b>RemoteV3</b>, the bot uses a hybrid backend: it uses RemoteV3 when connected, otherwise it falls back to local pathing (MPQ).</li>
+                                    <li>Changing Pathing mode writes <code>appsettings.json</code> and requires a BlazorServer restart to re-bind the backend.</li>
+                                    <li>If RemoteV3 keeps crashing, run <code>Scripts/Diagnose-NavigationServerCrash.ps1</code> or switch to RemoteV1/Local in <a href="/Settings">Settings</a>.</li>
+                                </ul>
                             </div>
                             break;
 

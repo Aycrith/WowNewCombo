@@ -1,5 +1,7 @@
 ﻿using Newtonsoft.Json;
 
+using Microsoft.Extensions.Logging;
+
 using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
@@ -19,16 +21,43 @@ public sealed class WorldMapAreaDB
 
     public FrozenDictionary<int, WorldMapArea> AreaHitbox;
 
-    public WorldMapAreaDB(DataConfig dataConfig)
+    public WorldMapAreaDB(DataConfig dataConfig, ILogger<WorldMapAreaDB> logger)
     {
-        ReadOnlySpan<WorldMapArea> span =
-            JsonConvert.DeserializeObject<WorldMapArea[]>(
-                File.ReadAllText(
-                    Path.Join(dataConfig.ExpDbc, "WorldMapArea.json")));
+        string path = Path.Join(dataConfig.ExpDbc, "WorldMapArea.json");
+        if (!File.Exists(path))
+        {
+            logger.LogWarning("[WorldMapAreaDB    ] Missing DBC file: {Path}. Map transforms disabled.", path);
+            this.wmas = FrozenDictionary<int, WorldMapArea>.Empty;
+            AreaHitbox = FrozenDictionary<int, WorldMapArea>.Empty;
+            return;
+        }
+
+        WorldMapArea[] data;
+        try
+        {
+            data = JsonConvert.DeserializeObject<WorldMapArea[]>(File.ReadAllText(path)) ?? Array.Empty<WorldMapArea>();
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "[WorldMapAreaDB    ] Failed to load DBC file: {Path}. Map transforms disabled.", path);
+            this.wmas = FrozenDictionary<int, WorldMapArea>.Empty;
+            AreaHitbox = FrozenDictionary<int, WorldMapArea>.Empty;
+            return;
+        }
+
+        if (data.Length == 0)
+        {
+            logger.LogWarning("[WorldMapAreaDB    ] Empty/invalid DBC file: {Path}. Map transforms disabled.", path);
+            this.wmas = FrozenDictionary<int, WorldMapArea>.Empty;
+            AreaHitbox = FrozenDictionary<int, WorldMapArea>.Empty;
+            return;
+        }
+
+        ReadOnlySpan<WorldMapArea> span = data;
 
 
         Dictionary<int, WorldMapArea> areahitbox = [];
-        Dictionary<int, WorldMapArea> wmas = [];
+        Dictionary<int, WorldMapArea> mapByUiMapId = [];
         for (int i = 0; i < span.Length; i++)
         {
             if (span[i].AreaID > AreaIDOffset)
@@ -38,10 +67,10 @@ public sealed class WorldMapAreaDB
 
             if (span[i].UIMapId == 0)
                 continue;
-            wmas.Add(span[i].UIMapId, span[i]);
+            mapByUiMapId.Add(span[i].UIMapId, span[i]);
         }
 
-        this.wmas = wmas.ToFrozenDictionary();
+        this.wmas = mapByUiMapId.ToFrozenDictionary();
         this.AreaHitbox = areahitbox.ToFrozenDictionary();
     }
 

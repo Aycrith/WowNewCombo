@@ -18,6 +18,8 @@ public sealed class HybridPather : IPPather, IDisposable
     private bool warnedRemoteUnavailable;
     private bool warnedRemoteReturnedNoPath;
 
+    public bool IsRemoteConnected => remote.IsConnected;
+
     public HybridPather(ILogger<HybridPather> logger, RemotePathingAPIV3 remote, IPPather fallback)
     {
         this.logger = logger;

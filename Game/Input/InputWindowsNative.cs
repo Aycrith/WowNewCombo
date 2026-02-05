@@ -3,6 +3,8 @@
 using System;
 using System.Threading;
 
+using SharedLib.Humanization;
+
 using static WinAPI.NativeMethods;
 
 namespace Game;
@@ -13,17 +15,26 @@ public sealed class InputWindowsNative : IInput
 
     private readonly WowProcess process;
     private readonly CancellationToken token;
+    private readonly IHumanizationProvider? humanization;
 
-    public InputWindowsNative(WowProcess process, CancellationTokenSource cts, int maxDelay)
+    public InputWindowsNative(WowProcess process, CancellationTokenSource cts, int maxDelay, IHumanizationProvider? humanization = null)
     {
         this.process = process;
         token = cts.Token;
 
         this.maxDelay = maxDelay;
+        this.humanization = humanization;
     }
 
     private int DelayTime(int milliseconds)
     {
+        if (humanization?.Enabled == true)
+        {
+            int holdMs = humanization.GetKeyHoldDurationMs(milliseconds);
+            int extra = maxDelay > 0 ? Random.Shared.Next(maxDelay) : 0;
+            return holdMs + extra;
+        }
+
         return milliseconds + Random.Shared.Next(maxDelay);
     }
 
@@ -148,10 +159,11 @@ public sealed class InputWindowsNative : IInput
 
     public void LeftClick(Point p)
     {
-        SetCursorPos(p);
+        MoveCursorTo(p);
 
-        ScreenToClient(process.MainWindowHandle, ref p);
-        int lparam = MakeLParam(p.X, p.Y);
+        Point client = p;
+        ScreenToClient(process.MainWindowHandle, ref client);
+        int lparam = MakeLParam(client.X, client.Y);
 
         PostMessage(process.MainWindowHandle, WM_LBUTTONDOWN, 0, lparam);
         token.WaitHandle.WaitOne(DelayTime(maxDelay));
@@ -160,10 +172,11 @@ public sealed class InputWindowsNative : IInput
 
     public void RightClick(Point p)
     {
-        SetCursorPos(p);
+        MoveCursorTo(p);
 
-        ScreenToClient(process.MainWindowHandle, ref p);
-        int lparam = MakeLParam(p.X, p.Y);
+        Point client = p;
+        ScreenToClient(process.MainWindowHandle, ref client);
+        int lparam = MakeLParam(client.X, client.Y);
 
         PostMessage(process.MainWindowHandle, WM_RBUTTONDOWN, 0, lparam);
         token.WaitHandle.WaitOne(DelayTime(maxDelay));
@@ -173,6 +186,45 @@ public sealed class InputWindowsNative : IInput
     public void SetCursorPos(Point p)
     {
         WinAPI.NativeMethods.SetCursorPos(p.X, p.Y);
+    }
+
+    private void MoveCursorTo(Point target)
+    {
+        if (humanization?.Enabled != true)
+        {
+            SetCursorPos(target);
+            return;
+        }
+
+        if (!GetCursorPos(out Point current))
+        {
+            SetCursorPos(target);
+            return;
+        }
+
+        Span<Point> points = stackalloc Point[128];
+        int count = humanization.BuildMousePath(current, target, points);
+        if (count < 2)
+        {
+            SetCursorPos(target);
+            return;
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            SetCursorPos(points[i]);
+
+            if (i == count - 1)
+            {
+                break;
+            }
+
+            int delay = humanization.GetInterKeyDelayMs(0);
+            if (delay > 0)
+            {
+                token.WaitHandle.WaitOne(delay);
+            }
+        }
     }
 
     public void SendText(string text)

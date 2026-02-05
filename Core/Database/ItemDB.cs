@@ -1,5 +1,7 @@
 ﻿using SharedLib;
 
+using Microsoft.Extensions.Logging;
+
 using System.Collections.Frozen;
 using System.Collections.Generic;
 
@@ -39,25 +41,54 @@ public sealed class ItemDB
     ]);
 
 
-    public ItemDB(DataConfig dataConfig, IconDB iconDB)
+    public ItemDB(ILogger<ItemDB> logger, DataConfig dataConfig, IconDB iconDB)
     {
         this.iconDB = iconDB;
 
-        List<Item> items = DeserializeObject<List<Item>>(
-            ReadAllText(Join(dataConfig.ExpDbc, "items.json")))!;
+        string itemsPath = Join(dataConfig.ExpDbc, "items.json");
+        if (!System.IO.File.Exists(itemsPath))
+        {
+            logger.LogWarning("[ItemDB           ] Missing DBC file: {Path}. ItemDB partially disabled.", itemsPath);
+
+            List<Item> fallback = [Backpack];
+            Items = fallback.ToFrozenDictionary(item => item.Entry);
+            FoodIds = System.Array.Empty<int>();
+            DrinkIds = System.Array.Empty<int>();
+            KeyReader.ItemDB = this;
+            return;
+        }
+
+        List<Item> items = DeserializeObject<List<Item>>(ReadAllText(itemsPath)) ?? [];
 
         items.Add(Backpack);
 
         this.Items = items.ToFrozenDictionary(item => item.Entry);
 
-        FoodIds = DeserializeObject<int[]>(
-            ReadAllText(Join(dataConfig.ExpDbc, "foods.json")))!;
-
-        DrinkIds = DeserializeObject<int[]>(
-            ReadAllText(Join(dataConfig.ExpDbc, "waters.json")))!;
+        FoodIds = LoadIntArraySafe(logger, Join(dataConfig.ExpDbc, "foods.json"));
+        DrinkIds = LoadIntArraySafe(logger, Join(dataConfig.ExpDbc, "waters.json"));
 
         // Set static reference for KeyReader item alias resolution
         KeyReader.ItemDB = this;
+    }
+
+    private static int[] LoadIntArraySafe(ILogger logger, string path)
+    {
+        try
+        {
+            if (!System.IO.File.Exists(path))
+            {
+                logger.LogWarning("[ItemDB           ] Missing file: {Path}", path);
+                return System.Array.Empty<int>();
+            }
+
+            int[]? data = DeserializeObject<int[]>(ReadAllText(path));
+            return data ?? System.Array.Empty<int>();
+        }
+        catch (System.Exception ex)
+        {
+            logger.LogWarning(ex, "[ItemDB           ] Failed to read file: {Path}", path);
+            return System.Array.Empty<int>();
+        }
     }
 
     /// <summary>

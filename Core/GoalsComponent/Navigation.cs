@@ -1,5 +1,6 @@
 using Core.Database;
 using Core.GOAP;
+using Core.Hazard;
 
 using Microsoft.Extensions.Logging;
 
@@ -43,6 +44,7 @@ public sealed partial class Navigation : IDisposable
     private readonly IPPather pather;
     private readonly IMountHandler mountHandler;
     private readonly AreaDB areaDB;
+    private readonly RouteRehabilitator routeRehabilitator;
 
     private const float MinDistanceMount = 10;
     private readonly float MaxDistance = 200;
@@ -99,6 +101,13 @@ public sealed partial class Navigation : IDisposable
 
     private const int NoPathBackoffMs = 1500;
 
+    private const float RehabMinDistance = 25f;
+    private static readonly TimeSpan RehabMinInterval = TimeSpan.FromSeconds(20);
+
+    private DateTime lastRehabUtc;
+    private Vector3 lastRehabWorldPos;
+    private bool hasLastRehab;
+
     public Navigation(ILogger<Navigation> logger,
         CancellationTokenSource<GoapAgent> cts,
         PlayerDirection playerDirection,
@@ -106,6 +115,7 @@ public sealed partial class Navigation : IDisposable
         PlayerReader playerReader, AddonBits bits,
         StopMoving stopMoving,
         StuckDetector stuckDetector, IPPather pather, IMountHandler mountHandler,
+        RouteRehabilitator routeRehabilitator,
         ClassConfiguration classConfiguration,
         AreaDB areaDB)
     {
@@ -119,6 +129,7 @@ public sealed partial class Navigation : IDisposable
         this.pather = pather;
         this.mountHandler = mountHandler;
         this.areaDB = areaDB;
+        this.routeRehabilitator = routeRehabilitator;
 
         patherName = pather.GetType().Name;
 
@@ -197,6 +208,8 @@ public sealed partial class Navigation : IDisposable
                 ReduceByDistance(playerW, OutDoorMinDistance);
             else
                 routeToNextWaypoint.Pop();
+
+            TryRehabilitateSuccessfulTraversal(playerW);
 
             OnAnyPointReached?.Invoke();
 
@@ -533,6 +546,30 @@ public sealed partial class Navigation : IDisposable
         {
             routeToNextWaypoint.Pop();
         }
+    }
+
+    private void TryRehabilitateSuccessfulTraversal(Vector3 playerW)
+    {
+        DateTime now = DateTime.UtcNow;
+
+        if (hasLastRehab)
+        {
+            if (now - lastRehabUtc < RehabMinInterval &&
+                playerW.WorldDistanceXYTo(lastRehabWorldPos) < RehabMinDistance)
+            {
+                return;
+            }
+        }
+
+        routeRehabilitator.ReportSuccessfulTraversal(
+            playerW,
+            playerReader.MapId,
+            radius: 20f,
+            severityFactor: 0.95f);
+
+        lastRehabUtc = now;
+        lastRehabWorldPos = playerW;
+        hasLastRehab = true;
     }
 
     private void AdjustHeading(float heading, CancellationToken token)
