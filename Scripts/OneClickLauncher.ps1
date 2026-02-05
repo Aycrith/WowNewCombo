@@ -4,12 +4,13 @@
 
 .DESCRIPTION
   Performs pre-flight checks, installs/validates addons, launches required components
-  in the correct sequence, verifies client/server alignment using built-in API tests,
-  and keeps processes healthy with monitoring + automatic restart.
+  in the correct sequence, and opens the Launch Wizard (/launch) for staged readiness
+  checks before bot activation.
 
-  Default behavior is fully autonomous. If the detected character is not the expected
-  Level 8 Blood Elf Rogue, the launcher will still bring the stack online but will
-  skip automated validation actions that affect gameplay.
+  By default the launcher does NOT auto-start the bot. It keeps services online with
+  monitoring + automatic restart while you complete the Launch Wizard checklist.
+  Legacy automation switches (AutoFix/AutoStartBot/RunValidation) are available for
+  advanced users, but are disabled by default.
 
 .NOTES
   Requires: PowerShell 5.1+, .NET 10 runtime, Windows 10/11
@@ -17,19 +18,17 @@
 
 #Requires -Version 5.1
 
-Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
-
 param(
     [string]$BotRoot = "",
+    [string]$WoWPathOverride = "",
     [int]$WebPort = 5000,
     [int]$PathingApiPort = 5001,
     [int]$NavPort = 47110,
 
     [bool]$AutoLaunchWoW = $true,
-    [bool]$AutoStartBot = $true,
-    [bool]$AutoFix = $true,
-    [bool]$RunValidation = $true,
+    [bool]$AutoStartBot = $false,
+    [bool]$AutoFix = $false,
+    [bool]$RunValidation = $false,
 
     [string]$ExpectedRace = "BloodElf",
     [string]$ExpectedClass = "Rogue",
@@ -39,18 +38,25 @@ param(
     [ValidateSet("Auto", "Local", "RemoteV1", "RemoteV3")]
     [string]$PathingMode = "Auto",
 
-    [int]$MonitorIntervalSeconds = 10
+    [int]$MonitorIntervalSeconds = 10,
+    [bool]$ExitAfterStartup = $false,
+    [int]$AlignmentTimeoutSeconds = 300,
+    [bool]$EnableNavigationServer = $true,
+    [int]$NavigationMaxRestarts = 2,
+    [int]$NavigationRestartWindowSeconds = 300
 )
 
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
 function Get-ScriptRoot {
-    $inv = (Get-Variable MyInvocation -Scope 1).Value
-    return Split-Path -Parent $inv.MyCommand.Path
+    return $PSScriptRoot
 }
 
 if ([string]::IsNullOrWhiteSpace($BotRoot)) {
-    $BotRoot = Resolve-Path (Join-Path (Get-ScriptRoot) "..") | Select-Object -ExpandProperty Path
+    $BotRoot = (Resolve-Path -LiteralPath (Join-Path (Get-ScriptRoot) "..")).Path
 } else {
-    $BotRoot = Resolve-Path $BotRoot | Select-Object -ExpandProperty Path
+    $BotRoot = (Resolve-Path -LiteralPath $BotRoot).Path
 }
 
 $logsDir = Join-Path $BotRoot "logs"
@@ -93,8 +99,9 @@ function Restart-ElevatedIfNeeded {
     $args = @(
         "-NoProfile",
         "-ExecutionPolicy", "Bypass",
-        "-File", (Join-Path (Get-ScriptRoot) "OneClickLauncher.ps1"),
+        "-File", (Join-Path $PSScriptRoot "OneClickLauncher.ps1"),
         "-BotRoot", $BotRoot,
+        "-WoWPathOverride", $WoWPathOverride,
         "-WebPort", $WebPort,
         "-PathingApiPort", $PathingApiPort,
         "-NavPort", $NavPort,
@@ -107,7 +114,12 @@ function Restart-ElevatedIfNeeded {
         "-AutoLaunchWoW:$AutoLaunchWoW",
         "-AutoStartBot:$AutoStartBot",
         "-AutoFix:$AutoFix",
-        "-RunValidation:$RunValidation"
+        "-RunValidation:$RunValidation",
+        "-ExitAfterStartup:$ExitAfterStartup",
+        "-AlignmentTimeoutSeconds", $AlignmentTimeoutSeconds,
+        "-EnableNavigationServer:$EnableNavigationServer",
+        "-NavigationMaxRestarts", $NavigationMaxRestarts,
+        "-NavigationRestartWindowSeconds", $NavigationRestartWindowSeconds
     )
 
     Start-Process -FilePath $ps -ArgumentList $args -Verb RunAs | Out-Null
@@ -119,6 +131,32 @@ function Require-File {
     if (-not (Test-Path $Path)) {
         throw "Missing required file: $Path. $Hint"
     }
+}
+
+function Ensure-ReleaseBuild {
+    param(
+        [Parameter(Mandatory)][string]$SolutionPath,
+        [Parameter(Mandatory)][string]$ExpectedOutputPath
+    )
+
+    if (Test-Path $ExpectedOutputPath) {
+        return
+    }
+
+    Write-Log "Missing build output: $ExpectedOutputPath" "WARN"
+    Write-Log "Attempting to build Release artifacts..." "INFO"
+
+    if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
+        throw "dotnet not found. Install .NET 10 SDK or use prebuilt binaries."
+    }
+
+    & dotnet build $SolutionPath -c Release
+
+    if (-not (Test-Path $ExpectedOutputPath)) {
+        throw "Build completed but expected output still missing: $ExpectedOutputPath"
+    }
+
+    Write-Log "Release build artifacts generated" "OK"
 }
 
 function Get-DotNetRuntimes {
@@ -136,16 +174,53 @@ function Assert-DotNet10 {
     }
 
     $runtimes = Get-DotNetRuntimes
-    $hasCore = $runtimes | Where-Object { $_ -match "^Microsoft\\.NETCore\\.App\\s+10\\." } | Select-Object -First 1
-    $hasAsp = $runtimes | Where-Object { $_ -match "^Microsoft\\.AspNetCore\\.App\\s+10\\." } | Select-Object -First 1
+    $hasCore = $runtimes | Where-Object { $_ -match "^Microsoft\.NETCore\.App\s+10\." } | Select-Object -First 1
+    $hasAsp = $runtimes | Where-Object { $_ -match "^Microsoft\.AspNetCore\.App\s+10\." } | Select-Object -First 1
     if (-not $hasCore -or -not $hasAsp) {
-        throw "Missing .NET 10 runtime. Found runtimes:`n$($runtimes -join \"`n\")"
+        throw "Missing .NET 10 runtime. Found runtimes:`n$($runtimes -join "`n")"
     }
 }
 
 function Read-JsonFile {
     param([string]$Path)
     return (Get-Content -Raw -Path $Path -Encoding UTF8) | ConvertFrom-Json
+}
+
+function Write-JsonFile {
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][object]$Value
+    )
+
+    $json = $Value | ConvertTo-Json -Depth 10
+    $dir = Split-Path -Parent $Path
+    if (-not [string]::IsNullOrWhiteSpace($dir)) {
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    }
+    Set-Content -LiteralPath $Path -Value $json -Encoding UTF8
+}
+
+function Ensure-DataConfigJson {
+    param(
+        [Parameter(Mandatory)][string]$TargetDirectory
+    )
+
+    $target = Join-Path $TargetDirectory "data_config.json"
+    $rootPath = Join-Path $BotRoot "json"
+
+    # Keep this file correct regardless of where the process is started from.
+    # DataConfig.Load() treats Root as a path base for "dbc", "class", etc.
+    $payload = @{
+        Version = 14
+        Root = $rootPath
+    }
+
+    try {
+        Write-JsonFile -Path $target -Value $payload
+        Write-Log "Ensured data_config.json for service: $target (Root=$rootPath)" "OK"
+    } catch {
+        Write-Log "Failed to write service data_config.json: $target ($($_.Exception.Message))" "WARN"
+    }
 }
 
 function Try-GetWoWPathFromRunningProcess {
@@ -214,12 +289,16 @@ function Ensure-AddonInstalled {
             continue
         }
 
-        Restart-ElevatedIfNeeded -Reason "Install WoW addon '$name' to $dest"
-
-        Write-Log "Installing addon: $name -> $dst" "INFO"
-        New-Item -ItemType Directory -Path $dest -Force | Out-Null
-        Copy-Item -Path $src -Destination $dst -Recurse -Force
-        Write-Log "Addon installed: $name" "OK"
+        try {
+            Write-Log "Installing addon: $name -> $dst" "INFO"
+            New-Item -ItemType Directory -Path $dest -Force | Out-Null
+            Copy-Item -Path $src -Destination $dst -Recurse -Force -ErrorAction Stop
+            Write-Log "Addon installed: $name" "OK"
+        }
+        catch [System.UnauthorizedAccessException] {
+            Restart-ElevatedIfNeeded -Reason "Install WoW addon '$name' to $dest"
+            throw
+        }
     }
 }
 
@@ -228,8 +307,6 @@ function Ensure-BindPadMinimalXmlEncoding {
 
     $bindPadDir = Join-Path $WoWPath "Interface\\AddOns\\BindPadMinimal"
     if (-not (Test-Path $bindPadDir)) { return }
-
-    Restart-ElevatedIfNeeded -Reason "Fix BindPadMinimal encoding under $bindPadDir"
 
     try {
         Write-Log "Ensuring BindPadMinimal files use ASCII encoding (no BOM)..." "INFO"
@@ -254,15 +331,19 @@ BindPadMinimal.xml
 
         Write-Log "BindPadMinimal encoding ensured" "OK"
     } catch {
+        if ($_.Exception -is [System.UnauthorizedAccessException]) {
+            Restart-ElevatedIfNeeded -Reason "Fix BindPadMinimal encoding under $bindPadDir"
+            throw
+        }
         Write-Log "BindPadMinimal encoding fix failed: $($_.Exception.Message)" "WARN"
     }
 }
 
 function Test-TcpPort {
-    param([string]$Host, [int]$Port, [int]$TimeoutMs = 1000)
+    param([string]$Address, [int]$Port, [int]$TimeoutMs = 1000)
     try {
         $client = New-Object System.Net.Sockets.TcpClient
-        $iar = $client.BeginConnect($Host, $Port, $null, $null)
+        $iar = $client.BeginConnect($Address, $Port, $null, $null)
         if (-not $iar.AsyncWaitHandle.WaitOne($TimeoutMs, $false)) {
             $client.Close()
             return $false
@@ -273,6 +354,33 @@ function Test-TcpPort {
     } catch {
         return $false
     }
+}
+
+function Test-LocalTcpListenPort {
+    param([int]$Port)
+
+    try {
+        $listeners = [System.Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties().GetActiveTcpListeners()
+        foreach ($ep in $listeners) {
+            if ($ep.Port -eq $Port) { return $true }
+        }
+        return $false
+    } catch {
+        return $false
+    }
+}
+
+function Find-FreeTcpPort {
+    param([int]$StartPort, [int]$MaxTries = 50)
+
+    for ($i = 0; $i -lt $MaxTries; $i++) {
+        $p = $StartPort + $i
+        if (-not (Test-TcpPort -Address "127.0.0.1" -Port $p -TimeoutMs 150)) {
+            return $p
+        }
+    }
+
+    throw "Unable to find a free TCP port starting at $StartPort"
 }
 
 function Start-ManagedProcess {
@@ -296,16 +404,37 @@ function Start-ManagedProcess {
         WindowStyle = "Minimized"
     }
 
+    $previousEnv = @{}
     foreach ($k in $Environment.Keys) {
-        $env:$k = [string]$Environment[$k]
+        $envPath = "Env:$k"
+        $existing = Test-Path $envPath
+        $previousEnv[$k] = @{
+            Exists = $existing
+            Value = if ($existing) { (Get-Item $envPath).Value } else { $null }
+        }
+
+        Set-Item -Path $envPath -Value ([string]$Environment[$k])
     }
 
     # Note: Primary logs are emitted by the services themselves (e.g., out.log). Launcher logs are in $logFile.
 
-    Write-Log "Starting $Name: $ExePath" "INFO"
-    $p = Start-Process @psi
-    Write-Log "$Name started (PID: $($p.Id))" "OK"
-    return $p
+    try {
+        Write-Log "Starting ${Name}: $ExePath" "INFO"
+        $p = Start-Process @psi
+        Write-Log "$Name started (PID: $($p.Id))" "OK"
+        return $p
+    }
+    finally {
+        foreach ($k in $previousEnv.Keys) {
+            $envPath = "Env:$k"
+            $prev = $previousEnv[$k]
+            if ($prev.Exists) {
+                Set-Item -Path $envPath -Value ([string]$prev.Value)
+            } else {
+                Remove-Item -Path $envPath -ErrorAction SilentlyContinue
+            }
+        }
+    }
 }
 
 function Invoke-HttpJson {
@@ -328,6 +457,45 @@ function Invoke-HttpJson {
     }
 
     return Invoke-RestMethod @irm
+}
+
+function Test-IsHttp404 {
+    param([Parameter(Mandatory)]$ErrorRecord)
+
+    try {
+        $ex = $ErrorRecord.Exception
+        if ($ex -and $ex.Response -and $ex.Response.StatusCode) {
+            return ([int]$ex.Response.StatusCode) -eq 404
+        }
+        if ($ex -is [System.Net.WebException] -and $ex.Response -and $ex.Response.StatusCode) {
+            return ([int]$ex.Response.StatusCode) -eq 404
+        }
+    } catch { }
+
+    try {
+        return [string]$ErrorRecord.Exception.Message -match "\\b404\\b"
+    } catch {
+        return $false
+    }
+}
+
+function Invoke-HttpJsonWithFallbackOn404 {
+    param(
+        [Parameter(Mandatory)][string]$Method,
+        [Parameter(Mandatory)][string]$PrimaryUrl,
+        [Parameter(Mandatory)][string]$FallbackUrl,
+        [object]$Body = $null,
+        [int]$TimeoutSec = 5
+    )
+
+    try {
+        return Invoke-HttpJson -Method $Method -Url $PrimaryUrl -Body $Body -TimeoutSec $TimeoutSec
+    } catch {
+        if (-not (Test-IsHttp404 -ErrorRecord $_)) {
+            throw
+        }
+        return Invoke-HttpJson -Method $Method -Url $FallbackUrl -Body $Body -TimeoutSec $TimeoutSec
+    }
 }
 
 function Wait-ForHttp {
@@ -357,7 +525,7 @@ function Wait-ForSystemReady {
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     while ((Get-Date) -lt $deadline) {
         try {
-            $status = Invoke-HttpJson -Method "GET" -Url ("{0}/api/test/status" -f $BaseUrl) -TimeoutSec 10
+            $status = Invoke-HttpJson -Method "GET" -Url ("{0}/api/test/status" -f $BaseUrl) -TimeoutSec 3
             if ($status -and $status.Success -eq $true) {
                 $allPassed = $true
                 foreach ($c in $status.Checks) {
@@ -382,15 +550,25 @@ function Test-ExpectedCharacter {
 
     if ([string]::IsNullOrWhiteSpace($CharacterString)) { return $false }
 
+    $actual = $CharacterString.Trim()
+    $expected = ("{0} {1} L{2}" -f $ExpectedRace, $ExpectedClass, $ExpectedLevel).Trim()
+    if ($actual.Equals($expected, [StringComparison]::OrdinalIgnoreCase)) {
+        return $true
+    }
+
     $pattern = "^(?<race>\\w+)\\s+(?<class>\\w+)\\s+L(?<level>\\d+)$"
-    $m = [regex]::Match($CharacterString, $pattern)
+    $m = [regex]::Match($actual, $pattern)
     if (-not $m.Success) { return $false }
 
     $race = $m.Groups["race"].Value
     $class = $m.Groups["class"].Value
     $level = [int]$m.Groups["level"].Value
 
-    return ($race -eq $ExpectedRace -and $class -eq $ExpectedClass -and $level -eq $ExpectedLevel)
+    return (
+        $race.Equals($ExpectedRace, [StringComparison]::OrdinalIgnoreCase) -and
+        $class.Equals($ExpectedClass, [StringComparison]::OrdinalIgnoreCase) -and
+        $level -eq $ExpectedLevel
+    )
 }
 
 function Try-AutoFix {
@@ -408,7 +586,12 @@ function Try-AutoFix {
 function Try-LoadProfile {
     param([string]$BaseUrl, [string]$FileName)
     try {
-        $r = Invoke-HttpJson -Method "POST" -Url ("{0}/api/bot/profile/load" -f $BaseUrl) -Body @{ fileName = $FileName } -TimeoutSec 10
+        $r = Invoke-HttpJsonWithFallbackOn404 `
+            -Method "POST" `
+            -PrimaryUrl ("{0}/api/bot/profile/load" -f $BaseUrl) `
+            -FallbackUrl ("{0}/api/BotApi/profile/load" -f $BaseUrl) `
+            -Body @{ fileName = $FileName } `
+            -TimeoutSec 10
         Write-Log "Profile load: $($r.Message)" "OK"
         return $true
     } catch {
@@ -420,7 +603,11 @@ function Try-LoadProfile {
 function Try-StartBot {
     param([string]$BaseUrl)
     try {
-        $r = Invoke-HttpJson -Method "POST" -Url ("{0}/api/bot/start" -f $BaseUrl) -TimeoutSec 10
+        $r = Invoke-HttpJsonWithFallbackOn404 `
+            -Method "POST" `
+            -PrimaryUrl ("{0}/api/bot/start" -f $BaseUrl) `
+            -FallbackUrl ("{0}/api/BotApi/start" -f $BaseUrl) `
+            -TimeoutSec 10
         Write-Log $r.Message "OK"
         return $true
     } catch {
@@ -497,7 +684,10 @@ try {
 
     $blazorExe = Join-Path $BotRoot "BlazorServer\\bin\\Release\\net10.0\\BlazorServer.exe"
     $blazorDir = Split-Path -Parent $blazorExe
-    Require-File -Path $blazorExe -Hint "Run: dotnet build MasterOfPuppets.sln -c Release"
+
+    $sln = Join-Path $BotRoot "MasterOfPuppets.sln"
+    Require-File -Path $sln -Hint "Repository is incomplete."
+    Ensure-ReleaseBuild -SolutionPath $sln -ExpectedOutputPath $blazorExe
 
     $navExe = Join-Path $BotRoot "Navigation\\AmeisenNavigationServer.exe"
     $navDir = Split-Path -Parent $navExe
@@ -505,7 +695,15 @@ try {
     $pathingExe = Join-Path $BotRoot "PathingAPI\\bin\\Release\\net10.0\\PathingAPI.exe"
     $pathingDir = Split-Path -Parent $pathingExe
 
-    $wowPath = Resolve-WoWPath
+    $wowPath = $null
+    if (-not [string]::IsNullOrWhiteSpace($WoWPathOverride)) {
+        $wowPath = $WoWPathOverride
+        Write-Log "WoW path override: $wowPath" "WARN"
+    }
+
+    if (-not $wowPath) {
+        $wowPath = Resolve-WoWPath
+    }
     if (-not $wowPath) {
         throw "Could not detect WoW installation path. Set Startup:WoWPath in BlazorServer\\appsettings.json or install WoW in a standard path."
     }
@@ -516,23 +714,30 @@ try {
 
     $navAvailable = $false
     $navProcess = $null
-    if (Test-Path $navExe) {
+    $navRestartHistory = New-Object System.Collections.Generic.List[datetime]
+    $navDisabledForSession = $false
+
+    if (-not $EnableNavigationServer) {
+        Write-Log "Navigation server disabled via -EnableNavigationServer:$false; continuing with fallback pathing." "WARN"
+    } elseif (-not (Test-Path $navExe)) {
+        Write-Log "Navigation server not found at: $navExe (skipping)" "WARN"
+    } else {
         $mmaps = Join-Path $BotRoot "Navigation\\mmaps"
         $hasMmap = Test-Path (Join-Path $mmaps "*.mmap")
         if ($hasMmap) {
-            if (-not (Test-TcpPort -Host "127.0.0.1" -Port $NavPort -TimeoutMs 250)) {
+            if (-not (Test-LocalTcpListenPort -Port $NavPort)) {
                 $navProcess = Start-ManagedProcess -Name "NavigationServer" -ExePath $navExe -WorkingDir $navDir
                 $managed.NavigationServer.Process = $navProcess
                 $managed.NavigationServer.Managed = $true
 
                 $deadline = (Get-Date).AddSeconds(20)
                 while ((Get-Date) -lt $deadline) {
-                    if (Test-TcpPort -Host "127.0.0.1" -Port $NavPort -TimeoutMs 250) { break }
+                    if (Test-LocalTcpListenPort -Port $NavPort) { break }
                     Start-Sleep -Milliseconds 500
                 }
             }
 
-            if (Test-TcpPort -Host "127.0.0.1" -Port $NavPort -TimeoutMs 250) {
+            if (Test-LocalTcpListenPort -Port $NavPort) {
                 $navAvailable = $true
                 Write-Log "Navigation server ready on 127.0.0.1:$NavPort" "OK"
             } else {
@@ -544,26 +749,29 @@ try {
         } else {
             Write-Log "MMAP files missing; skipping navigation server." "WARN"
         }
-    } else {
-        Write-Log "Navigation server not present; skipping." "WARN"
     }
 
     $pathingApiAvailable = $false
     $pathingProcess = $null
     if (Test-Path $pathingExe) {
-        if (-not (Test-TcpPort -Host "127.0.0.1" -Port $PathingApiPort -TimeoutMs 250)) {
+        Ensure-DataConfigJson -TargetDirectory (Split-Path -Parent $pathingExe)
+        if (-not (Test-TcpPort -Address "127.0.0.1" -Port $PathingApiPort -TimeoutMs 250)) {
             $pathingProcess = Start-ManagedProcess -Name "PathingAPI" -ExePath $pathingExe -WorkingDir $pathingDir
             $managed.PathingAPI.Process = $pathingProcess
             $managed.PathingAPI.Managed = $true
             Start-Sleep -Seconds 2
         }
-        if (Test-TcpPort -Host "127.0.0.1" -Port $PathingApiPort -TimeoutMs 250) {
+        if (Test-TcpPort -Address "127.0.0.1" -Port $PathingApiPort -TimeoutMs 250) {
             $pathingApiAvailable = $true
             Write-Log "PathingAPI ready on 127.0.0.1:$PathingApiPort" "OK"
         }
     }
 
+    # If nav server is crashy, avoid RemoteV3. We'll still start it if enabled, but prefer stability.
     $resolvedPathingMode = Determine-PathingMode -NavAvailable $navAvailable -PathingApiAvailable $pathingApiAvailable
+    if ($resolvedPathingMode -eq "RemoteV3" -and -not $navAvailable) {
+        $resolvedPathingMode = if ($pathingApiAvailable) { "RemoteV1" } else { "Local" }
+    }
     Write-Log "Pathing mode: $resolvedPathingMode" "OK"
 
     $envOverrides = @{
@@ -588,6 +796,14 @@ try {
         Write-Log "BlazorServer already running at $baseUrl (reusing existing instance)" "OK"
         $managed.BlazorServer.Managed = $false
     } else {
+        if (Test-TcpPort -Address "127.0.0.1" -Port $WebPort -TimeoutMs 150) {
+            $newPort = Find-FreeTcpPort -StartPort ($WebPort + 1)
+            Write-Log "Port $WebPort is in use. Switching Web UI port to $newPort" "WARN"
+            $WebPort = $newPort
+            $envOverrides["Startup__WebUIPort"] = $WebPort
+            $baseUrl = "http://localhost:$WebPort"
+        }
+
         $blazorProcess = Start-ManagedProcess -Name "BlazorServer" -ExePath $blazorExe -WorkingDir $blazorDir -Environment $envOverrides
         $managed.BlazorServer.Process = $blazorProcess
         $managed.BlazorServer.Managed = $true
@@ -597,26 +813,49 @@ try {
         }
     }
     Write-Log "Web UI reachable: $baseUrl" "OK"
-    try { Start-Process $baseUrl | Out-Null } catch { }
 
-    Write-Log "Waiting for client alignment (addon comms, frames, data freshness)..." "INFO"
-    $ready = Wait-ForSystemReady -BaseUrl $baseUrl -TimeoutSeconds 300
-    if (-not $ready) {
-        Write-Log "System not fully ready within timeout. Keeping services online for manual inspection." "WARN"
-    } else {
-        $char = Get-CharacterString -TestStatus $ready
-        Write-Log "Aligned character: $char" "OK"
+    $wizardUrl = "$baseUrl/launch"
+    Write-Log "Launch Wizard: $wizardUrl" "OK"
+    try { Start-Process $wizardUrl | Out-Null } catch { }
 
-        $isExpected = Test-ExpectedCharacter -CharacterString $char
-        if (-not $isExpected) {
-            Write-Log "Expected '$ExpectedRace $ExpectedClass L$ExpectedLevel' but got '$char' - skipping gameplay-affecting automation." "WARN"
+    $navSummary =
+        if (-not $EnableNavigationServer) { "Disabled" }
+        elseif ($navDisabledForSession) { "Disabled (restart limit)" }
+        elseif ($navAvailable) { "Enabled (127.0.0.1:$NavPort)" }
+        else { "Enabled (unavailable)" }
+
+    $pathingSummary = if ($pathingApiAvailable) { "Up (127.0.0.1:$PathingApiPort)" } else { "Down" }
+    Write-Log "Service summary: WebUI=$baseUrl | PathingMode=$resolvedPathingMode | PathingAPI=$pathingSummary | Nav=$navSummary" "OK"
+
+    Write-Log "Complete the Launch Wizard before starting the bot (Start Bot is disabled until all required checks are green)." "INFO"
+
+    if ($AutoFix -or $AutoStartBot -or $RunValidation) {
+        Write-Log "Advanced automation enabled (AutoFix=$AutoFix, AutoStartBot=$AutoStartBot, RunValidation=$RunValidation)" "WARN"
+
+        Write-Log "Waiting for client alignment (addon comms, frames, data freshness)..." "INFO"
+        $ready = Wait-ForSystemReady -BaseUrl $baseUrl -TimeoutSeconds $AlignmentTimeoutSeconds
+        if (-not $ready) {
+            Write-Log "System not fully ready within timeout. Keeping services online for manual inspection." "WARN"
         } else {
-            if ($AutoFix) { $null = Try-AutoFix -BaseUrl $baseUrl }
-            $null = Try-LoadProfile -BaseUrl $baseUrl -FileName $ProfileFileName
+            $char = Get-CharacterString -TestStatus $ready
+            Write-Log "Aligned character: $char" "OK"
 
-            if ($AutoStartBot) { $null = Try-StartBot -BaseUrl $baseUrl }
-            if ($RunValidation) { Run-ValidationSuite -BaseUrl $baseUrl }
+            $isExpected = Test-ExpectedCharacter -CharacterString $char
+            if (-not $isExpected) {
+                Write-Log "Expected '$ExpectedRace $ExpectedClass L$ExpectedLevel' but got '$char' - skipping gameplay-affecting automation." "WARN"
+            } else {
+                if ($AutoFix) { $null = Try-AutoFix -BaseUrl $baseUrl }
+                $null = Try-LoadProfile -BaseUrl $baseUrl -FileName $ProfileFileName
+
+                if ($AutoStartBot) { $null = Try-StartBot -BaseUrl $baseUrl }
+                if ($RunValidation) { Run-ValidationSuite -BaseUrl $baseUrl }
+            }
         }
+    }
+
+    if ($ExitAfterStartup) {
+        Write-Log "ExitAfterStartup=true; exiting before monitor loop." "INFO"
+        return
     }
 
     Write-Log "Entering monitor loop (interval: ${MonitorIntervalSeconds}s). Close this window to stop." "INFO"
@@ -631,11 +870,77 @@ try {
         Start-Sleep -Seconds $MonitorIntervalSeconds
 
         # Navigation server
-        if ($navProcess -and $navAvailable -and $managed.NavigationServer.Managed) {
-            if ($navProcess.HasExited -or -not (Test-TcpPort -Host "127.0.0.1" -Port $NavPort -TimeoutMs 250)) {
-                Write-Log "Navigation server unhealthy - restart attempt in $($restartBackoff.NavigationServer)s" "WARN"
+        if ($navProcess -and $navAvailable -and $managed.NavigationServer.Managed -and -not $navDisabledForSession) {
+            $portOk = Test-LocalTcpListenPort -Port $NavPort
+            $exited = $false
+            $exitCode = $null
+
+            try {
+                $navProcess.Refresh()
+                $exited = $navProcess.HasExited
+                if ($exited) {
+                    try { $exitCode = $navProcess.ExitCode } catch { }
+                }
+            } catch { }
+
+            if ($exited -or -not $portOk) {
+                $cause = if ($exited) { "exited (code=$exitCode)" } else { "port not responding" }
+                Write-Log "Navigation server unhealthy ($cause) - restart attempt in $($restartBackoff.NavigationServer)s" "WARN"
+
+                $navRestartHistory.Add((Get-Date)) | Out-Null
+                $windowStart = (Get-Date).AddSeconds(-1 * $NavigationRestartWindowSeconds)
+                $recentRestarts = @($navRestartHistory | Where-Object { $_ -ge $windowStart }).Count
+
+                if ($recentRestarts -gt $NavigationMaxRestarts) {
+                    $navDisabledForSession = $true
+                    Write-Log "Navigation server restart limit exceeded ($recentRestarts in ${NavigationRestartWindowSeconds}s). Disabling for this session." "WARN"
+
+                    if ($navProcess) {
+                        try {
+                            $navProcess.Refresh()
+                            if (-not $navProcess.HasExited) {
+                                try { Stop-Process -Id $navProcess.Id -Force -ErrorAction SilentlyContinue } catch { }
+                            }
+                        } catch { }
+                    }
+
+                    # If we started BlazorServer using RemoteV3, restart it with stable pathing.
+                    if ($resolvedPathingMode -eq "RemoteV3") {
+                        $fallback = if ($pathingApiAvailable) { "RemoteV1" } else { "Local" }
+                        Write-Log "Restarting BlazorServer with fallback Pathing mode: $fallback" "WARN"
+
+                        $envOverrides["Pathing__Mode"] = $fallback
+                        $resolvedPathingMode = $fallback
+
+                        try {
+                            if ($managed.BlazorServer.Managed -and $managed.BlazorServer.Process) {
+                                try { Stop-Process -Id $managed.BlazorServer.Process.Id -Force -ErrorAction SilentlyContinue } catch { }
+                            }
+
+                            $blazorProcess = Start-ManagedProcess -Name "BlazorServer" -ExePath $blazorExe -WorkingDir $blazorDir -Environment $envOverrides
+                            $managed.BlazorServer.Process = $blazorProcess
+                            $managed.BlazorServer.Managed = $true
+
+                            if (-not (Wait-ForHttp -Url "$baseUrl/api/health" -TimeoutSeconds 60)) {
+                                Write-Log "BlazorServer fallback restart did not become reachable." "ERROR"
+                            } else {
+                                Write-Log "BlazorServer restarted and reachable with Pathing mode: $fallback" "OK"
+                            }
+                        } catch {
+                            Write-Log "Failed to restart BlazorServer after nav disable: $($_.Exception.Message)" "ERROR"
+                        }
+                    }
+
+                    continue
+                }
+
                 Start-Sleep -Seconds $restartBackoff.NavigationServer
+
                 try {
+                    if (-not $exited) {
+                        try { Stop-Process -Id $navProcess.Id -Force -ErrorAction SilentlyContinue } catch { }
+                    }
+
                     $navProcess = Start-ManagedProcess -Name "NavigationServer" -ExePath $navExe -WorkingDir $navDir
                     $managed.NavigationServer.Process = $navProcess
                     $restartBackoff.NavigationServer = [Math]::Min($restartBackoff.NavigationServer * 2, 60)
@@ -649,7 +954,7 @@ try {
 
         # PathingAPI
         if ($pathingProcess -and $managed.PathingAPI.Managed) {
-            if ($pathingProcess.HasExited -or -not (Test-TcpPort -Host "127.0.0.1" -Port $PathingApiPort -TimeoutMs 250)) {
+            if ($pathingProcess.HasExited -or -not (Test-TcpPort -Address "127.0.0.1" -Port $PathingApiPort -TimeoutMs 250)) {
                 Write-Log "PathingAPI unhealthy - restart attempt in $($restartBackoff.PathingAPI)s" "WARN"
                 Start-Sleep -Seconds $restartBackoff.PathingAPI
                 try {

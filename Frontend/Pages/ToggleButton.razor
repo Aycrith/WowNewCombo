@@ -1,8 +1,12 @@
-﻿@inject IBotController botController
+@using System.Linq
+@using Core.Launch
+
+@inject IBotController botController
+@inject LaunchReadinessService readiness
 
 @implements IDisposable
 
-<Button Color="ButtonColor.Primary" @onclick="ToggleBot" disabled="@(Disable || DisableButton)">
+<Button Color="ButtonColor.Primary" @onclick="ToggleBot" disabled="@(Disable || DisableButton)" title="@DisabledReason">
     @(botController.IsBotActive ? "Stop Bot" : "Start Bot")
 </Button>
 
@@ -11,6 +15,8 @@
     public bool Disable { get; set; } = false;
 
     private bool DisableButton { get; set; }
+    private string DisabledReason { get; set; } = string.Empty;
+    private System.Threading.Timer? refreshTimer;
 
     protected override void OnInitialized()
     {
@@ -18,12 +24,24 @@
 
         botController.ProfileLoaded += OnProfileLoaded;
         botController.StatusChanged += OnStatusChanged;
+
+        // Periodic refresh to reflect live readiness changes (keybinds, addon handshake, etc.)
+        refreshTimer = new System.Threading.Timer(
+            _ => InvokeAsync(() =>
+            {
+                ValidateButton();
+                StateHasChanged();
+            }),
+            null,
+            TimeSpan.FromSeconds(1),
+            TimeSpan.FromSeconds(1));
     }
 
     public void Dispose()
     {
         botController.StatusChanged -= OnStatusChanged;
         botController.ProfileLoaded -= OnProfileLoaded;
+        refreshTimer?.Dispose();
     }
 
     private void OnStatusChanged()
@@ -33,6 +51,11 @@
 
     private void ToggleBot()
     {
+        if (botController is not BotController)
+        {
+            return;
+        }
+
         botController.ToggleBotStatus();
     }
 
@@ -44,6 +67,42 @@
 
     private void ValidateButton()
     {
-        DisableButton = string.IsNullOrEmpty(botController.SelectedClassFilename);
+        DisabledReason = string.Empty;
+
+        // Always allow stopping
+        if (botController.IsBotActive)
+        {
+            DisableButton = false;
+            return;
+        }
+
+        if (botController is not BotController full)
+        {
+            DisableButton = true;
+            DisabledReason = "Bot start unavailable in configuration mode. Start WoW, complete setup, then restart.";
+            return;
+        }
+
+        if (string.IsNullOrEmpty(full.SelectedClassFilename))
+        {
+            DisableButton = true;
+            DisabledReason = "Load a class profile first.";
+            return;
+        }
+
+        LaunchReadinessSnapshot snapshot = readiness.Evaluate(full.ClassConfig, full.RouteInfo);
+
+        DisableButton = !snapshot.CanStartBot;
+        if (DisableButton)
+        {
+            string blocking = string.Join(" | ",
+                snapshot.Checks
+                    .Where(c => c.IsBlocking)
+                    .Select(c => $"{c.Title}: {c.Message}"));
+
+            DisabledReason = string.IsNullOrWhiteSpace(blocking)
+                ? "Start blocked by launch readiness. Open /launch."
+                : $"Start blocked: {blocking}";
+        }
     }
 }

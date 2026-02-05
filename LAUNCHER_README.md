@@ -11,9 +11,15 @@ Double-click: OneClickLaunch.bat
 This will:
 - Validate dependencies (.NET runtime, ports)
 - Auto-install required addons (UAC prompt only if needed)
-- Launch/monitor services and verify client alignment
-- If the detected character is **Level 8 BloodElf Rogue**, it will auto-run the validation suite
-  (movement + combat cycle) and start the bot with `BloodElf_Rogue_Starter_Test.json`.
+- Launch/monitor services (**BlazorServer + PathingAPI + Navigation**) and verify client alignment
+- If the navigation server becomes unhealthy repeatedly, the launcher will auto-disable it for that session and fall back to `RemoteV1` or `Local` pathing.
+- Open the **Launch Wizard** at `/launch` for staged pre-flight checks (navigation, add-ons, frames, handshake, profile, route, keybinds/action bar).
+- The bot is **manual start only**: the Start Bot button is enabled only when all required subsystems are green (or Advanced overrides are explicitly enabled).
+
+To disable the navigation server (more stable, uses `RemoteV1`/`Local` pathing):
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File C:\WowClassicGrindBot\Scripts\OneClickLauncher.ps1 -EnableNavigationServer:$false
+```
 
 ### First Time Users
 ```
@@ -35,7 +41,7 @@ This will:
 2. Start the Navigation Server (if available)
 3. Check if WoW is running
 4. Start the Bot Web UI
-5. Open your browser to http://localhost:5000
+5. Open your browser to http://localhost:5000 (Launch Wizard: /launch)
 
 ### Auto-Launch (Skip Prompts)
 ```
@@ -147,21 +153,22 @@ The launcher performs these steps in order:
    └── Required addons (DataToColor)
 
 2. START NAVIGATION SERVER
-   └── AmeisenNavigationServer.exe on port 47110
+   └── AmeisenNavigationServer.exe on port 47110 (auto-disabled if unstable)
 
-3. CHECK WOW CLIENT
-   ├── Detect running WoW process
-   └── Offer to launch if not running
+ 3. CHECK WOW CLIENT
+    ├── Detect running WoW process
+    └── Offer to launch if not running
 
-4. FINAL SYSTEM CHECK
-   ├── Verify Navigation Server
-   ├── Verify WoW Client
-   └── Confirm ready to start
+ 4. START BOT SERVER
+    ├── Launch BlazorServer.exe
+    ├── Open browser to http://localhost:5000/launch
+    └── Display logs + subsystem status
 
-5. START BOT SERVER
-   ├── Launch BlazorServer.exe
-   ├── Open browser to http://localhost:5000
-   └── Display bot output
+ 5. LAUNCH WIZARD (PRE-FLIGHT) + MANUAL START
+    ├── Validate navigation, add-ons, frames, handshake
+    ├── Select profile + route
+    ├── Verify keybinds + action bar sync
+    └── Start Bot button enabled only when green (or Advanced overrides)
 ```
 
 ## Troubleshooting

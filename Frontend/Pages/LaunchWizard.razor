@@ -1,0 +1,1024 @@
+@page "/launch"
+
+@using System.Collections.Generic
+@using System.IO
+@using System.Linq
+@using Core
+@using Core.Launch
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.Extensions.Options
+
+@inject ILogger logger
+@inject LaunchReadinessService readiness
+@inject LaunchOverrideState overrides
+@inject IOptions<LaunchOptions> launchOptions
+@inject IBotController botController
+@inject DataConfig dataConfig
+
+@implements IDisposable
+
+<style>
+    .wizard-steps .list-group-item { cursor: pointer; }
+    .wizard-steps .list-group-item.active { font-weight: 600; }
+
+    .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 8px;
+    }
+    .status-dot.ok { background: #198754; }
+    .status-dot.warn { background: #ffc107; }
+    .status-dot.err { background: #dc3545; }
+    .status-dot.pending { background: #0dcaf0; }
+    .status-dot.skip { background: #6c757d; }
+</style>
+
+<div class="container-fluid mt-3">
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h1 class="mb-1">Launch Wizard</h1>
+            <div class="text-muted">Staged startup + pre-flight verification before bot activation</div>
+        </div>
+
+        <div class="d-flex gap-2 align-items-center">
+            <div class="btn-group">
+                <button class="btn btn-sm @(advancedMode ? "btn-outline-secondary" : "btn-primary")" @onclick="() => SetAdvancedMode(false)">Guided</button>
+                <button class="btn btn-sm @(advancedMode ? "btn-primary" : "btn-outline-secondary")" @onclick="() => SetAdvancedMode(true)">Advanced</button>
+            </div>
+
+            <button class="btn btn-sm btn-outline-danger" @onclick="Rollback">Rollback / Reset</button>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Pre-flight Dashboard</span>
+            <small class="text-muted">Last update: @snapshot.TimestampUtc.ToLocalTime().ToString("HH:mm:ss")</small>
+        </div>
+
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 220px;">Subsystem</th>
+                            <th style="width: 120px;">Status</th>
+                            <th>Message</th>
+                            <th style="width: 120px;">Required</th>
+                            <th style="width: 180px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (LaunchSubsystemCheck check in snapshot.Checks)
+                        {
+                            <tr class="@(check.IsBlocking ? "table-danger" : string.Empty)">
+                                <td>
+                                    <span class="status-dot @StatusDotClass(check.Status)"></span>
+                                    @check.Title
+                                </td>
+                                <td><span class="badge @StatusBadgeClass(check.Status)">@check.Status</span></td>
+                                <td>
+                                    <div>@check.Message</div>
+                                    @if (!string.IsNullOrWhiteSpace(check.FixHint))
+                                    {
+                                        <small class="text-muted">@check.FixHint</small>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge @(check.IsRequired ? "bg-primary" : "bg-secondary")">
+                                        @(check.IsRequired ? "Yes" : "No")
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(check.NavigateTo))
+                                    {
+                                        <a class="btn btn-sm btn-outline-primary" href="@check.NavigateTo">Open</a>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card-footer d-flex justify-content-between align-items-center">
+            <div>
+                @if (snapshot.IsLaunchReady)
+                {
+                    <span class="badge bg-success">All Green</span>
+                    <span class="ms-2">Launch-ready</span>
+                }
+                else if (snapshot.CanStartBot && advancedMode)
+                {
+                    <span class="badge bg-warning text-dark">Override</span>
+                    <span class="ms-2">Start permitted (advanced overrides applied)</span>
+                }
+                else
+                {
+                    <span class="badge bg-secondary">Not Ready</span>
+                    <span class="ms-2">Complete the wizard steps</span>
+                }
+            </div>
+            <div class="d-flex gap-2">
+                <a class="btn btn-sm btn-outline-secondary" href="/startup">Startup Status</a>
+                <a class="btn btn-sm btn-outline-secondary" href="/Log">Logs</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-3">
+            <div class="list-group wizard-steps">
+                @for (int i = 0; i < steps.Length; i++)
+                {
+                    WizardStep step = steps[i];
+                    bool isActive = stepIndex == i;
+                    <button class="list-group-item list-group-item-action @(isActive ? "active" : string.Empty)" @onclick="() => GoToStep(i)">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>@StepTitle(step)</span>
+                            <span class="badge @StepBadgeClass(step)">@StepBadgeText(step)</span>
+                        </div>
+                    </button>
+                }
+            </div>
+
+            @if (advancedMode)
+            {
+                <div class="card mt-3">
+                    <div class="card-header">Advanced Overrides</div>
+                    <div class="card-body">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="allowWarn" @bind="allowStartWithWarnings" @bind:after="ApplyOverrides" />
+                            <label class="form-check-label" for="allowWarn">Allow start with warnings</label>
+                        </div>
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" id="skipNav" @bind="skipNavigationChecks" @bind:after="ApplyOverrides" />
+                            <label class="form-check-label" for="skipNav">Skip navigation checks</label>
+                        </div>
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" id="skipKb" @bind="skipKeybindingChecks" @bind:after="ApplyOverrides" />
+                            <label class="form-check-label" for="skipKb">Skip keybinding checks</label>
+                        </div>
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" id="skipAb" @bind="skipActionBarChecks" @bind:after="ApplyOverrides" />
+                            <label class="form-check-label" for="skipAb">Skip action bar checks</label>
+                        </div>
+                        <hr />
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="ResetOverrides">Reset overrides</button>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="col-lg-9">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>@StepTitle(CurrentStep)</span>
+                    <span class="badge @StepBadgeClass(CurrentStep)">@StepBadgeText(CurrentStep)</span>
+                </div>
+                <div class="card-body">
+                    @switch (CurrentStep)
+                    {
+                        case WizardStep.Welcome:
+                            <p>
+                                This wizard guides you through a staged startup. Each step must be green before moving on.
+                            </p>
+                            <ul class="mb-0">
+                                <li><b>Guided</b> blocks until required subsystems are fully green.</li>
+                                <li><b>Advanced</b> enables manual overrides for experienced users.</li>
+                            </ul>
+                            break;
+
+                        case WizardStep.Navigation:
+                            @RenderCheck(LaunchSubsystem.Navigation)
+                            <div class="mt-2 d-flex gap-2 flex-wrap">
+                                <button class="btn btn-sm btn-outline-primary"
+                                        @onclick="() => WaitForStep(WizardStep.Navigation)"
+                                        disabled="@(IsStepComplete(WizardStep.Navigation))">
+                                    Wait (@launchOptions.Value.NavigationHandshakeTimeoutSeconds s)
+                                </button>
+                                <a class="btn btn-sm btn-outline-primary" href="/Settings">Open Settings</a>
+                            </div>
+                            <div class="alert alert-info mt-3 mb-0">
+                                Changing Pathing mode requires a BlazorServer restart to re-bind the backend.
+                            </div>
+                            break;
+
+                        case WizardStep.WoWAndAddons:
+                            @RenderCheck(LaunchSubsystem.WoWProcess)
+                            <hr />
+                            @RenderCheck(LaunchSubsystem.Addons)
+                            <div class="mt-2 d-flex gap-2 flex-wrap">
+                                <button class="btn btn-sm btn-outline-primary"
+                                        @onclick="() => WaitForStep(WizardStep.WoWAndAddons)"
+                                        disabled="@(IsStepComplete(WizardStep.WoWAndAddons))">
+                                    Wait (@launchOptions.Value.WoWAndAddonsTimeoutSeconds s)
+                                </button>
+                                <a class="btn btn-sm btn-outline-primary" href="/AddonConfiguration">Open Addon Config</a>
+                                <a class="btn btn-sm btn-outline-primary" href="/FrameConfiguration">Go to Frame Config</a>
+                            </div>
+                            break;
+
+                        case WizardStep.Frames:
+                            @RenderCheck(LaunchSubsystem.Frames)
+                            <div class="mt-2 d-flex gap-2 flex-wrap">
+                                <button class="btn btn-sm btn-outline-primary"
+                                        @onclick="() => WaitForStep(WizardStep.Frames)"
+                                        disabled="@(IsStepComplete(WizardStep.Frames))">
+                                    Wait (@launchOptions.Value.FramesTimeoutSeconds s)
+                                </button>
+                                <a class="btn btn-sm btn-outline-primary" href="/FrameConfiguration">Open Frame Config</a>
+                                <a class="btn btn-sm btn-outline-secondary" href="/RestartServer">Restart Server</a>
+                            </div>
+
+                            @if (TryGetFrameConfigPreview(out DataFrameConfig frameCfg, out string frameCfgError))
+                            {
+                                <div class="card mt-3">
+                                    <div class="card-header">Frame Preview</div>
+                                    <div class="card-body">
+                                        <div><b>Version:</b> @frameCfg.Version</div>
+                                        <div><b>Addon Version:</b> @frameCfg.AddonVersion</div>
+                                        <div><b>Window Rect:</b> @frameCfg.Rect</div>
+                                        <div><b>Frames:</b> @frameCfg.Frames.Length</div>
+                                        <div><b>Meta:</b> spacing=@frameCfg.Meta.Spacing, size=@frameCfg.Meta.Sizes, rows=@frameCfg.Meta.Rows, count=@frameCfg.Meta.Count</div>
+                                    </div>
+                                </div>
+                            }
+                            else if (!string.IsNullOrWhiteSpace(frameCfgError))
+                            {
+                                <div class="alert alert-warning mt-3 mb-0">
+                                    Frame config preview error: @frameCfgError
+                                </div>
+                            }
+
+                            <div class="alert alert-warning mt-3 mb-0">
+                                Frame configuration depends on WoW window size. If you resize the game window, re-run frame configuration.
+                            </div>
+                            break;
+
+                        case WizardStep.Handshake:
+                            @RenderCheck(LaunchSubsystem.AddonHandshake)
+                            <div class="mt-2 d-flex gap-2 flex-wrap">
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => WaitForStep(WizardStep.Handshake)"
+                                        disabled="@(IsStepComplete(WizardStep.Handshake))">
+                                    Wait for handshake (@launchOptions.Value.AddonHandshakeTimeoutSeconds s)
+                                </button>
+                                <a class="btn btn-sm btn-outline-primary" href="/RawPlayerReader">Open Raw Reader</a>
+                            </div>
+                            break;
+
+                        case WizardStep.Profile:
+                            @if (botController is BotController)
+                            {
+                                <p class="text-muted">
+                                    Select a class profile, then click <b>Load Profile</b>.
+                                </p>
+                                <ProfileSelectorComponent />
+                            }
+                            else
+                            {
+                                <div class="alert alert-warning mb-0">
+                                    Profile selection is unavailable in configuration mode. Start WoW and complete add-on/frame setup, then restart the server.
+                                </div>
+                            }
+
+                            <div class="card mt-3">
+                                <div class="card-header">Import / Export (Class Profiles)</div>
+                                <div class="card-body">
+                                    <div class="d-flex gap-2 align-items-center flex-wrap">
+                                        <InputFile OnChange="ImportClassProfile" accept=".json" />
+                                        @if (botController is BotController fullProfile && !string.IsNullOrWhiteSpace(fullProfile.SelectedClassFilename))
+                                        {
+                                            <a class="btn btn-sm btn-outline-secondary"
+                                               href="@($"/api/config/export/class?file={Uri.EscapeDataString(fullProfile.SelectedClassFilename)}")">
+                                                Export selected
+                                            </a>
+                                        }
+                                    </div>
+                                    @if (!string.IsNullOrWhiteSpace(importProfileStatus))
+                                    {
+                                        <div class="mt-2"><small class="text-muted">@importProfileStatus</small></div>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="mt-3">
+                                @RenderCheck(LaunchSubsystem.Profile)
+                                <div class="mt-2">
+                                    <button class="btn btn-sm btn-outline-primary"
+                                            @onclick="() => WaitForStep(WizardStep.Profile)"
+                                            disabled="@(IsStepComplete(WizardStep.Profile))">
+                                        Wait (@launchOptions.Value.ProfileTimeoutSeconds s)
+                                    </button>
+                                </div>
+                            </div>
+                            break;
+
+                        case WizardStep.Route:
+                            <p class="text-muted">
+                                Validate your route profile(s). Load a path profile (or use the profile default).
+                            </p>
+
+                            @if (botController is not BotController)
+                            {
+                                <div class="alert alert-warning mb-0">
+                                    Route selection is unavailable in configuration mode. Start WoW and complete add-on/frame setup, then restart the server.
+                                </div>
+                            }
+                            else if (botController.ClassConfig == null)
+                            {
+                                <PathSelectorComponent />
+                            }
+                            else if (botController.ClassConfig!.Paths.Length > 1)
+                            {
+                                <Accordion>
+                                    <AccordionItem Title="Override Paths (Advanced)">
+                                        <Content>
+                                            @foreach (PathSettings pathSettings in botController.ClassConfig!.Paths)
+                                            {
+                                                <PathSelectorComponent Target="@(pathSettings)"
+                                                                       TargetIndex="@(Array.IndexOf(botController.ClassConfig!.Paths, pathSettings))" />
+                                            }
+                                        </Content>
+                                    </AccordionItem>
+                                </Accordion>
+                            }
+                            else if (botController.ClassConfig != null)
+                            {
+                                <PathSelectorComponent Target="@(botController.ClassConfig!.Paths.First())" TargetIndex="0" />
+                            }
+
+                            <div class="card mt-3">
+                                <div class="card-header">Import / Export (Route Profiles)</div>
+                                <div class="card-body">
+                                    <div class="d-flex gap-2 align-items-center flex-wrap">
+                                        <InputFile OnChange="ImportPathProfile" accept=".json" />
+                                        @if (botController is BotController fullRoute)
+                                        {
+                                            @foreach ((int index, string filename) in fullRoute.SelectedPathFilename)
+                                            {
+                                                if (string.IsNullOrWhiteSpace(filename) || filename == "Use Class Profile Default")
+                                                    continue;
+
+                                                <a class="btn btn-sm btn-outline-secondary"
+                                                   href="@($"/api/config/export/path?file={Uri.EscapeDataString(filename)}")">
+                                                    Export path @index
+                                                </a>
+                                            }
+                                        }
+                                    </div>
+                                    @if (!string.IsNullOrWhiteSpace(importPathStatus))
+                                    {
+                                        <div class="mt-2"><small class="text-muted">@importPathStatus</small></div>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="mt-3">
+                                @RenderCheck(LaunchSubsystem.Route)
+                                <div class="mt-2">
+                                    <button class="btn btn-sm btn-outline-primary"
+                                            @onclick="() => WaitForStep(WizardStep.Route)"
+                                            disabled="@(IsStepComplete(WizardStep.Route))">
+                                        Wait (@launchOptions.Value.RouteTimeoutSeconds s)
+                                    </button>
+                                </div>
+                            </div>
+                            break;
+
+                        case WizardStep.Keybinds:
+                            @RenderCheck(LaunchSubsystem.KeyBindings)
+                            <hr />
+                            @RenderCheck(LaunchSubsystem.ActionBar)
+
+                            <div class="mt-2 d-flex gap-2 align-items-center flex-wrap">
+                                <button class="btn btn-sm btn-outline-primary"
+                                        @onclick="() => WaitForStep(WizardStep.Keybinds)"
+                                        disabled="@(IsStepComplete(WizardStep.Keybinds))">
+                                    Wait (@launchOptions.Value.KeybindsTimeoutSeconds s)
+                                </button>
+                                <a class="btn btn-sm btn-outline-primary" href="/KeyBindings">Open Key Bindings</a>
+                                <button class="btn btn-sm btn-outline-secondary" @onclick="() => showKeyboardPreview = !showKeyboardPreview">
+                                    @(showKeyboardPreview ? "Hide" : "Show") Visual Keyboard
+                                </button>
+                            </div>
+
+                            @if (showKeyboardPreview)
+                            {
+                                <div class="mt-3">
+                                    <KeyboardLayoutComponent />
+                                </div>
+                            }
+                            break;
+
+                        case WizardStep.Review:
+                            <p>
+                                Review the dashboard above. When every required subsystem is green, you can start the bot.
+                            </p>
+
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="confirmChecklist" @bind="checklistConfirmed" />
+                                <label class="form-check-label" for="confirmChecklist">
+                                    I reviewed the checklist and understand the configuration.
+                                </label>
+                            </div>
+
+                            <div class="d-flex gap-2 align-items-center flex-wrap">
+                                <button class="btn btn-success" @onclick="StartBot" disabled="@(!CanStartButton)">Start Bot</button>
+                                <button class="btn btn-outline-danger" @onclick="StopBot" disabled="@(!botController.IsBotActive)">Stop Bot</button>
+                                <a class="btn btn-outline-secondary" href="/">Open Dashboard</a>
+                            </div>
+
+                            @if (!snapshot.IsLaunchReady && !advancedMode)
+                            {
+                                <div class="alert alert-warning mt-3 mb-0">
+                                    Guided mode requires everything green (no warnings). Fix any pending/warning/error items above.
+                                </div>
+                            }
+                            else if (!snapshot.IsLaunchReady && advancedMode && snapshot.CanStartBot)
+                            {
+                                <div class="alert alert-warning mt-3 mb-0">
+                                    Advanced overrides are allowing start even though the system is not fully green.
+                                </div>
+                            }
+                            break;
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(stepError))
+                    {
+                        <div class="alert alert-danger mt-3 mb-0">@stepError</div>
+                    }
+                </div>
+                <div class="card-footer d-flex justify-content-between align-items-center">
+                    <button class="btn btn-outline-secondary" @onclick="Back" disabled="@(stepIndex == 0)">Back</button>
+                    <div class="d-flex gap-2 align-items-center">
+                        <small class="text-muted">@StepHint(CurrentStep)</small>
+                        <button class="btn btn-primary" @onclick="Next" disabled="@(!CanNext)">Next</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Live Logs</span>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => showLogs = !showLogs">@(showLogs ? "Hide" : "Show")</button>
+                </div>
+                @if (showLogs)
+                {
+                    <div class="card-body">
+                        <LogComponent MaxHeight="300" />
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private enum WizardStep
+    {
+        Welcome = 0,
+        Navigation = 1,
+        WoWAndAddons = 2,
+        Frames = 3,
+        Handshake = 4,
+        Profile = 5,
+        Route = 6,
+        Keybinds = 7,
+        Review = 8
+    }
+
+    private readonly WizardStep[] steps =
+    [
+        WizardStep.Welcome,
+        WizardStep.Navigation,
+        WizardStep.WoWAndAddons,
+        WizardStep.Frames,
+        WizardStep.Handshake,
+        WizardStep.Profile,
+        WizardStep.Route,
+        WizardStep.Keybinds,
+        WizardStep.Review
+    ];
+
+    private int stepIndex;
+    private WizardStep CurrentStep => steps[stepIndex];
+
+    private LaunchReadinessSnapshot snapshot = new(
+        IsLaunchReady: false,
+        CanStartBot: false,
+        TimestampUtc: DateTimeOffset.MinValue,
+        Checks: Array.Empty<LaunchSubsystemCheck>(),
+        Overrides: new LaunchOverrideSnapshot(false, false, false, false));
+
+    private System.Threading.Timer? refreshTimer;
+
+    private bool advancedMode;
+    private bool showLogs = true;
+
+    private bool allowStartWithWarnings;
+    private bool skipNavigationChecks;
+    private bool skipKeybindingChecks;
+    private bool skipActionBarChecks;
+
+    private string stepError = string.Empty;
+    private bool checklistConfirmed;
+    private bool showKeyboardPreview;
+    private string importProfileStatus = string.Empty;
+    private string importPathStatus = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        botController.ProfileLoaded += OnExternalStateChanged;
+        botController.StatusChanged += OnExternalStateChanged;
+        overrides.Changed += OnExternalStateChanged;
+
+        SyncOverridesToUi();
+        RefreshSnapshot();
+
+        refreshTimer = new System.Threading.Timer(
+            _ => InvokeAsync(() =>
+            {
+                RefreshSnapshot();
+                StateHasChanged();
+            }),
+            null,
+            TimeSpan.FromMilliseconds(250),
+            TimeSpan.FromSeconds(1));
+    }
+
+    public void Dispose()
+    {
+        botController.ProfileLoaded -= OnExternalStateChanged;
+        botController.StatusChanged -= OnExternalStateChanged;
+        overrides.Changed -= OnExternalStateChanged;
+        refreshTimer?.Dispose();
+    }
+
+    private void OnExternalStateChanged()
+    {
+        RefreshSnapshot();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void RefreshSnapshot()
+    {
+        RouteInfo? routeInfo = botController is BotController full ? full.RouteInfo : null;
+        snapshot = readiness.Evaluate(botController.ClassConfig, routeInfo);
+    }
+
+    private void SetAdvancedMode(bool value)
+    {
+        advancedMode = value;
+        stepError = string.Empty;
+
+        // Guided mode should be strict and predictable.
+        if (!advancedMode)
+        {
+            overrides.Reset();
+            SyncOverridesToUi();
+            RefreshSnapshot();
+        }
+    }
+
+    private void SyncOverridesToUi()
+    {
+        allowStartWithWarnings = overrides.AllowStartWithWarnings;
+        skipNavigationChecks = overrides.SkipNavigationChecks;
+        skipKeybindingChecks = overrides.SkipKeybindingChecks;
+        skipActionBarChecks = overrides.SkipActionBarChecks;
+    }
+
+    private void ApplyOverrides()
+    {
+        overrides.SetAllowStartWithWarnings(allowStartWithWarnings);
+        overrides.SetSkipNavigationChecks(skipNavigationChecks);
+        overrides.SetSkipKeybindingChecks(skipKeybindingChecks);
+        overrides.SetSkipActionBarChecks(skipActionBarChecks);
+    }
+
+    private void ResetOverrides()
+    {
+        overrides.Reset();
+        SyncOverridesToUi();
+    }
+
+    private void Rollback()
+    {
+        stepError = string.Empty;
+        overrides.Reset();
+        SyncOverridesToUi();
+
+        try
+        {
+            if (botController.IsBotActive)
+            {
+                botController.ToggleBotStatus();
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Rollback: failed to stop bot");
+        }
+
+        stepIndex = 0;
+        RefreshSnapshot();
+    }
+
+    private void GoToStep(int index)
+    {
+        stepError = string.Empty;
+        stepIndex = Math.Clamp(index, 0, steps.Length - 1);
+    }
+
+    private void Back()
+    {
+        stepError = string.Empty;
+        stepIndex = Math.Max(0, stepIndex - 1);
+    }
+
+    private void Next()
+    {
+        stepError = string.Empty;
+        if (!CanNext)
+        {
+            stepError = "This step is not complete. Resolve the blocking items in the dashboard above.";
+            return;
+        }
+
+        stepIndex = Math.Min(steps.Length - 1, stepIndex + 1);
+    }
+
+    private bool CanNext
+    {
+        get
+        {
+            if (stepIndex >= steps.Length - 1)
+                return false;
+
+            return IsStepComplete(CurrentStep);
+        }
+    }
+
+    private bool IsStepComplete(WizardStep step)
+    {
+        LaunchSubsystem[] required = GetRequiredSubsystemsForStep(step);
+
+        for (int i = 0; i < required.Length; i++)
+        {
+            LaunchSubsystem subsystem = required[i];
+            LaunchSubsystemCheck? check = snapshot.Checks.FirstOrDefault(c => c.Subsystem == subsystem);
+            if (check == null)
+                return false;
+
+            if (advancedMode)
+            {
+                if (check.IsBlocking)
+                    return false;
+            }
+            else
+            {
+                if (check.Status is not (LaunchStatus.Ok or LaunchStatus.Skipped))
+                    return false;
+            }
+        }
+
+        return true;
+    }
+
+    private LaunchSubsystem[] GetRequiredSubsystemsForStep(WizardStep step) => step switch
+    {
+        WizardStep.Welcome => Array.Empty<LaunchSubsystem>(),
+        WizardStep.Navigation => [LaunchSubsystem.Navigation],
+        WizardStep.WoWAndAddons => [LaunchSubsystem.WoWProcess, LaunchSubsystem.Addons],
+        WizardStep.Frames => [LaunchSubsystem.Frames],
+        WizardStep.Handshake => [LaunchSubsystem.AddonHandshake],
+        WizardStep.Profile => [LaunchSubsystem.Profile],
+        WizardStep.Route => [LaunchSubsystem.Route],
+        WizardStep.Keybinds => [LaunchSubsystem.KeyBindings, LaunchSubsystem.ActionBar],
+        WizardStep.Review => snapshot.Checks.Select(c => c.Subsystem).ToArray(),
+        _ => Array.Empty<LaunchSubsystem>()
+    };
+
+    private static string StepTitle(WizardStep step) => step switch
+    {
+        WizardStep.Welcome => "Welcome",
+        WizardStep.Navigation => "Navigation",
+        WizardStep.WoWAndAddons => "WoW + Add-ons",
+        WizardStep.Frames => "Frames",
+        WizardStep.Handshake => "Addon Handshake",
+        WizardStep.Profile => "Profile Selection",
+        WizardStep.Route => "Route Validation",
+        WizardStep.Keybinds => "Keybinds + Action Bar",
+        WizardStep.Review => "Final Review",
+        _ => step.ToString()
+    };
+
+    private static string StepHint(WizardStep step) => step switch
+    {
+        WizardStep.Welcome => "Choose Guided or Advanced mode.",
+        WizardStep.Navigation => "Ensure pathing is healthy (or intentionally skipped).",
+        WizardStep.WoWAndAddons => "Start WoW and validate DataToColor installation.",
+        WizardStep.Frames => "Verify frame_config is present and valid.",
+        WizardStep.Handshake => "Confirm live addon pixels are flowing.",
+        WizardStep.Profile => "Load a class profile.",
+        WizardStep.Route => "Load and validate a route/path profile.",
+        WizardStep.Keybinds => "Verify bindings + action bar sync.",
+        WizardStep.Review => "Confirm checklist and start the bot.",
+        _ => ""
+    };
+
+    private string StepBadgeText(WizardStep step)
+    {
+        if (step == WizardStep.Review)
+        {
+            return advancedMode ? (snapshot.CanStartBot ? "Ready" : "Blocked") : (snapshot.IsLaunchReady ? "Ready" : "Blocked");
+        }
+
+        return IsStepComplete(step) ? "OK" : "Pending";
+    }
+
+    private string StepBadgeClass(WizardStep step)
+    {
+        if (step == WizardStep.Review)
+        {
+            bool ok = advancedMode ? snapshot.CanStartBot : snapshot.IsLaunchReady;
+            return ok ? "bg-success" : "bg-secondary";
+        }
+
+        return IsStepComplete(step) ? "bg-success" : "bg-secondary";
+    }
+
+    private static string StatusBadgeClass(LaunchStatus status) => status switch
+    {
+        LaunchStatus.Ok => "bg-success",
+        LaunchStatus.Warning => "bg-warning text-dark",
+        LaunchStatus.Error => "bg-danger",
+        LaunchStatus.Pending => "bg-info text-dark",
+        LaunchStatus.Skipped => "bg-secondary",
+        _ => "bg-secondary"
+    };
+
+    private static string StatusDotClass(LaunchStatus status) => status switch
+    {
+        LaunchStatus.Ok => "ok",
+        LaunchStatus.Warning => "warn",
+        LaunchStatus.Error => "err",
+        LaunchStatus.Pending => "pending",
+        LaunchStatus.Skipped => "skip",
+        _ => "skip"
+    };
+
+    private bool CanStartButton
+    {
+        get
+        {
+            if (!checklistConfirmed)
+                return false;
+
+            if (botController.IsBotActive)
+                return false;
+
+            return advancedMode ? snapshot.CanStartBot : snapshot.IsLaunchReady;
+        }
+    }
+
+    private void StartBot()
+    {
+        stepError = string.Empty;
+
+        if (!CanStartButton)
+        {
+            stepError = "Start blocked. Resolve pending items or enable Advanced mode with appropriate overrides.";
+            return;
+        }
+
+        try
+        {
+            botController.ToggleBotStatus();
+            RefreshSnapshot();
+        }
+        catch (Exception ex)
+        {
+            stepError = ex.Message;
+            logger.LogWarning(ex, "Start bot failed");
+        }
+    }
+
+    private void StopBot()
+    {
+        stepError = string.Empty;
+
+        if (!botController.IsBotActive)
+            return;
+
+        try
+        {
+            botController.ToggleBotStatus();
+            RefreshSnapshot();
+        }
+        catch (Exception ex)
+        {
+            stepError = ex.Message;
+            logger.LogWarning(ex, "Stop bot failed");
+        }
+    }
+
+    private RenderFragment RenderCheck(LaunchSubsystem subsystem)
+    {
+        LaunchSubsystemCheck? check = snapshot.Checks.FirstOrDefault(c => c.Subsystem == subsystem);
+        if (check == null)
+        {
+            return @<div class="alert alert-secondary mb-0">No data for @subsystem</div>;
+        }
+
+        return @<div class="card mb-2">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="d-flex align-items-center">
+                        <span class="status-dot @StatusDotClass(check.Status)"></span>
+                        <strong>@check.Title</strong>
+                        <span class="badge @StatusBadgeClass(check.Status) ms-2">@check.Status</span>
+                        @if (check.IsBlocking)
+                        {
+                            <span class="badge bg-danger ms-2">Blocking</span>
+                        }
+                    </div>
+                    <div class="text-muted">@check.Message</div>
+                    @if (!string.IsNullOrWhiteSpace(check.FixHint))
+                    {
+                        <div><small class="text-muted">@check.FixHint</small></div>
+                    }
+                </div>
+                <div class="d-flex gap-2">
+                    @if (!string.IsNullOrWhiteSpace(check.NavigateTo))
+                    {
+                        <a class="btn btn-sm btn-outline-primary" href="@check.NavigateTo">Open</a>
+                    }
+                </div>
+            </div>
+        </div>;
+    }
+
+    private int GetStepTimeoutSeconds(WizardStep step) => step switch
+    {
+        WizardStep.Navigation => launchOptions.Value.NavigationHandshakeTimeoutSeconds,
+        WizardStep.WoWAndAddons => launchOptions.Value.WoWAndAddonsTimeoutSeconds,
+        WizardStep.Frames => launchOptions.Value.FramesTimeoutSeconds,
+        WizardStep.Handshake => launchOptions.Value.AddonHandshakeTimeoutSeconds,
+        WizardStep.Profile => launchOptions.Value.ProfileTimeoutSeconds,
+        WizardStep.Route => launchOptions.Value.RouteTimeoutSeconds,
+        WizardStep.Keybinds => launchOptions.Value.KeybindsTimeoutSeconds,
+        _ => 0
+    };
+
+    private static string GetTimeoutHint(WizardStep step) => step switch
+    {
+        WizardStep.Navigation => "Verify Settings (Pathing mode) and restart the server if you change it.",
+        WizardStep.WoWAndAddons => "Start WoW and ensure DataToColor is installed and enabled.",
+        WizardStep.Frames => "Run Frame Configuration and ensure the game window size matches the saved config.",
+        WizardStep.Handshake => "Ensure the character is in-world and pixels are visible.",
+        WizardStep.Profile => "Load a class profile.",
+        WizardStep.Route => "Load/choose a path profile (route JSON).",
+        WizardStep.Keybinds => "Enter world and wait for sync; then validate keybinds + action bar.",
+        _ => string.Empty
+    };
+
+    private async Task WaitForStep(WizardStep step)
+    {
+        stepError = string.Empty;
+
+        int timeoutSeconds = GetStepTimeoutSeconds(step);
+        if (timeoutSeconds <= 0)
+        {
+            return;
+        }
+
+        timeoutSeconds = Math.Max(1, timeoutSeconds);
+
+        DateTimeOffset start = DateTimeOffset.UtcNow;
+
+        while (DateTimeOffset.UtcNow - start < TimeSpan.FromSeconds(timeoutSeconds))
+        {
+            RefreshSnapshot();
+            if (IsStepComplete(step))
+            {
+                return;
+            }
+
+            await Task.Delay(250);
+        }
+
+        LaunchSubsystem[] required = GetRequiredSubsystemsForStep(step);
+        List<string> remaining = [];
+
+        for (int i = 0; i < required.Length; i++)
+        {
+            LaunchSubsystem subsystem = required[i];
+            LaunchSubsystemCheck? check = snapshot.Checks.FirstOrDefault(c => c.Subsystem == subsystem);
+            if (check == null)
+            {
+                remaining.Add($"{subsystem}: no data");
+                continue;
+            }
+
+            bool incomplete = advancedMode
+                ? check.IsBlocking
+                : check.Status is not (LaunchStatus.Ok or LaunchStatus.Skipped);
+
+            if (incomplete)
+            {
+                remaining.Add($"{check.Title}={check.Status} ({check.Message})");
+            }
+        }
+
+        string hint = GetTimeoutHint(step);
+        string remainingText = remaining.Count == 0 ? "Unknown" : string.Join(" | ", remaining);
+        stepError = $"Timed out waiting for {StepTitle(step)} ({timeoutSeconds}s). {hint} Remaining: {remainingText}";
+    }
+
+    private async Task ImportClassProfile(InputFileChangeEventArgs e)
+    {
+        importProfileStatus = string.Empty;
+
+        IBrowserFile file = e.File;
+        string safeName = Path.GetFileName(file.Name);
+
+        if (!safeName.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        {
+            importProfileStatus = "Only .json files are supported.";
+            return;
+        }
+
+        try
+        {
+            Directory.CreateDirectory(dataConfig.Class);
+            string destPath = Path.Combine(dataConfig.Class, safeName);
+
+            await using Stream stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+            await using FileStream fs = System.IO.File.Create(destPath);
+            await stream.CopyToAsync(fs);
+
+            importProfileStatus = $"Imported: {safeName}";
+        }
+        catch (Exception ex)
+        {
+            importProfileStatus = $"Import failed: {ex.Message}";
+            logger.LogWarning(ex, "Import class profile failed");
+        }
+    }
+
+    private async Task ImportPathProfile(InputFileChangeEventArgs e)
+    {
+        importPathStatus = string.Empty;
+
+        IBrowserFile file = e.File;
+        string safeName = Path.GetFileName(file.Name);
+
+        if (!safeName.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        {
+            importPathStatus = "Only .json files are supported.";
+            return;
+        }
+
+        try
+        {
+            Directory.CreateDirectory(dataConfig.Path);
+            string destPath = Path.Combine(dataConfig.Path, safeName);
+
+            await using Stream stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+            await using FileStream fs = System.IO.File.Create(destPath);
+            await stream.CopyToAsync(fs);
+
+            importPathStatus = $"Imported: {safeName}";
+        }
+        catch (Exception ex)
+        {
+            importPathStatus = $"Import failed: {ex.Message}";
+            logger.LogWarning(ex, "Import path profile failed");
+        }
+    }
+
+    private bool TryGetFrameConfigPreview(out DataFrameConfig config, out string error)
+    {
+        error = string.Empty;
+        config = default;
+
+        if (!FrameConfig.Exists())
+            return false;
+
+        try
+        {
+            config = FrameConfig.Load();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+}

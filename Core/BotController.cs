@@ -1,5 +1,6 @@
 using Core.Goals;
 using Core.GOAP;
+using Core.Launch;
 
 using Game;
 
@@ -44,6 +45,7 @@ public sealed partial class BotController : IBotController, IDisposable
     private readonly ActionBarSlotValidator slotValidator;
     private readonly ActionBarTextureReader textureReader;
     private readonly ActionBarMacroReader macroReader;
+    private readonly IBotStartGuard botStartGuard;
 
     private readonly NpcNameOverlay? npcNameOverlay;
 
@@ -90,7 +92,8 @@ public sealed partial class BotController : IBotController, IDisposable
         IOptions<StartupConfigNpcOverlay> overlayOptions,
         ActionBarSlotValidator slotValidator,
         ActionBarTextureReader textureReader,
-        ActionBarMacroReader macroReader)
+        ActionBarMacroReader macroReader,
+        IBotStartGuard botStartGuard)
     {
         this.serviceProvider = serviceProvider;
 
@@ -107,6 +110,7 @@ public sealed partial class BotController : IBotController, IDisposable
         this.slotValidator = slotValidator;
         this.textureReader = textureReader;
         this.macroReader = macroReader;
+        this.botStartGuard = botStartGuard;
 
         this.minimapNodeFinder = minimapNodeFinder;
 
@@ -398,6 +402,24 @@ public sealed partial class BotController : IBotController, IDisposable
     {
         if (GoapAgent == null)
             return;
+
+        bool starting = !GoapAgent.Active;
+        if (starting)
+        {
+            LaunchReadinessSnapshot snapshot = botStartGuard.Evaluate(ClassConfig, RouteInfo);
+            if (!snapshot.CanStartBot)
+            {
+                string blocking = string.Join(" | ",
+                    snapshot.Checks
+                        .Where(c => c.IsBlocking)
+                        .Select(c => $"{c.Title}: {c.Message}"));
+
+                logger.LogWarning("[BotController     ] Start blocked: {Blocking}", blocking);
+                logger.LogWarning("[BotController     ] Open /launch to resolve pre-flight checks");
+                StatusChanged?.Invoke();
+                return;
+            }
+        }
 
         GoapAgent.Active = !GoapAgent.Active;
 

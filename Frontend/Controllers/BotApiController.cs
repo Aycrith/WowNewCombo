@@ -1,4 +1,5 @@
 using Core;
+using Core.Launch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
@@ -29,19 +30,23 @@ public record ProfileLoadRequest(
 /// <summary>
 /// API controller for bot control operations
 /// </summary>
-[Route("api/[controller]")]
 [ApiController]
+[Route("api/bot")]
+[Route("api/[controller]")]
 public class BotApiController : ControllerBase
 {
     private readonly ILogger<BotApiController> logger;
     private readonly IBotController botController;
+    private readonly IBotStartGuard botStartGuard;
 
     public BotApiController(
         ILogger<BotApiController> logger,
-        IBotController botController)
+        IBotController botController,
+        IBotStartGuard botStartGuard)
     {
         this.logger = logger;
         this.botController = botController;
+        this.botStartGuard = botStartGuard;
     }
 
     /// <summary>
@@ -55,13 +60,24 @@ public class BotApiController : ControllerBase
 
         try
         {
+            string? profileName = null;
+            try { profileName = botController.SelectedClassFilename; } catch (NotImplementedException) { }
+
+            Core.GOAP.GoapAgent? agent = null;
+            try { agent = botController.GoapAgent; } catch (NotImplementedException) { }
+
+            double avgScreen = 0;
+            double avgNpc = 0;
+            try { avgScreen = botController.AvgScreenLatency; } catch (NotImplementedException) { }
+            try { avgNpc = botController.AvgNPCLatency; } catch (NotImplementedException) { }
+
             BotStatus status = new(
                 botController.IsBotActive,
-                botController.SelectedClassFilename,
-                botController.GoapAgent?.CurrentGoal?.Name,
-                botController.GoapAgent?.Plan?.Count,
-                botController.AvgScreenLatency,
-                botController.AvgNPCLatency);
+                profileName,
+                agent?.CurrentGoal?.Name,
+                agent?.Plan?.Count,
+                avgScreen,
+                avgNpc);
 
             sw.Stop();
             logger.LogDebug("Bot status: active={IsActive}, profile={ProfileName} ({ElapsedMs}ms)",
@@ -94,11 +110,33 @@ public class BotApiController : ControllerBase
                 return Ok(new { Message = "Bot already running", IsActive = true });
             }
 
+            LaunchReadinessSnapshot readiness = EvaluateReadiness();
+            if (!readiness.CanStartBot)
+            {
+                sw.Stop();
+                return Conflict(new
+                {
+                    Message = "Bot start blocked by launch readiness. Open /launch for details.",
+                    IsActive = false,
+                    Readiness = readiness
+                });
+            }
+
             logger.LogInformation("Starting bot");
             botController.ToggleBotStatus();
 
             sw.Stop();
-            return Ok(new { Message = "Bot started", IsActive = botController.IsBotActive });
+            if (!botController.IsBotActive)
+            {
+                return Conflict(new
+                {
+                    Message = "Bot start attempted but was blocked. Open /launch for details.",
+                    IsActive = false,
+                    Readiness = EvaluateReadiness()
+                });
+            }
+
+            return Ok(new { Message = "Bot started", IsActive = true });
         }
         catch (System.Exception ex)
         {
@@ -155,6 +193,21 @@ public class BotApiController : ControllerBase
                 wasBotActive ? "active" : "stopped",
                 !wasBotActive ? "active" : "stopped");
 
+            if (!wasBotActive)
+            {
+                LaunchReadinessSnapshot readiness = EvaluateReadiness();
+                if (!readiness.CanStartBot)
+                {
+                    sw.Stop();
+                    return Conflict(new
+                    {
+                        Message = "Bot start blocked by launch readiness. Open /launch for details.",
+                        IsActive = false,
+                        Readiness = readiness
+                    });
+                }
+            }
+
             botController.ToggleBotStatus();
 
             sw.Stop();
@@ -170,6 +223,13 @@ public class BotApiController : ControllerBase
             sw.Stop();
             return StatusCode(500, new { Error = ex.Message });
         }
+    }
+
+    private LaunchReadinessSnapshot EvaluateReadiness()
+    {
+        ClassConfiguration? classConfig = botController.ClassConfig;
+        RouteInfo? routeInfo = botController is BotController full ? full.RouteInfo : null;
+        return botStartGuard.Evaluate(classConfig, routeInfo);
     }
 
     /// <summary>

@@ -2,11 +2,13 @@ using Core.Addon;
 using Core.Database;
 using Core.Extensions;
 using Core.Goals;
+using Core.Launch;
 using Core.Session;
 
 using Game;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -196,6 +198,11 @@ public static class DependencyInjection
     public static IServiceCollection AddCoreNormal(
         this IServiceCollection s, ILogger log)
     {
+        s.AddOptions<LaunchOptions>();
+        s.TryAddSingleton<LaunchOverrideState>();
+        s.TryAddSingleton<IBotStartGuard, BotStartGuard>();
+        s.TryAddSingleton<LaunchReadinessService>();
+
         s.AddSingleton<IScreenCapture>(x =>
             GetScreenCapture(x.GetRequiredService<IServiceProvider>(), log));
 

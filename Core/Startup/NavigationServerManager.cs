@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -209,25 +210,30 @@ public sealed class NavigationServerManager : IHostedService, IDisposable
     /// <summary>
     /// Check if the navigation server is healthy (responding on its port).
     /// </summary>
-    public async Task<bool> IsHealthyAsync()
+    public Task<bool> IsHealthyAsync()
     {
         try
         {
-            using var client = new TcpClient();
-            var connectTask = client.ConnectAsync("127.0.0.1", Port);
-            var completed = await Task.WhenAny(connectTask, Task.Delay(1000));
-
-            if (completed == connectTask && client.Connected)
+            // AmeisenNavigationServer is extremely sensitive to clients that connect/disconnect without following
+            // its expected protocol, and can crash with an access violation (-1073741819).
+            // Avoid probing it with short-lived TCP connections; check for a LISTENing socket instead.
+            System.Net.IPEndPoint[] listeners = IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners();
+            for (int i = 0; i < listeners.Length; i++)
             {
-                return true;
+                if (listeners[i].Port == Port)
+                {
+                    return Task.FromResult(true);
+                }
             }
+
+            return Task.FromResult(false);
         }
         catch
         {
             // Connection failed
         }
 
-        return false;
+        return Task.FromResult(false);
     }
 
     private async Task<bool> StartServerAsync(CancellationToken cancellationToken)

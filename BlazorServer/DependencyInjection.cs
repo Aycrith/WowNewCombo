@@ -1,3 +1,4 @@
+using Core.Launch;
 using Core.Startup;
 using Core.Services;
 
@@ -38,6 +39,11 @@ public static class DependencyInjection
     {
         // Bind StartupOptions from configuration
         services.Configure<StartupOptions>(configuration.GetSection("Startup"));
+        services.Configure<LaunchOptions>(configuration.GetSection("Launch"));
+
+        services.AddSingleton<LaunchOverrideState>();
+        services.AddSingleton<IBotStartGuard, BotStartGuard>();
+        services.AddSingleton<LaunchReadinessService>();
 
         // Core startup services
         services.AddSingleton<StartupState>();
