@@ -1,0 +1,94 @@
+{
+  "Features": {
+    "ObjectPooling": {
+      "Enabled": true,
+      "RolloutPercentage": 100,
+      "MaxPoolSize": 100,
+      "Description": "Reduces GC pressure by pooling frequently allocated objects in hot paths"
+    },
+    "CircuitBreaker": {
+      "Enabled": true,
+      "PathfindingThreshold": 5,
+      "PathfindingCooldownSeconds": 60,
+      "LLMThreshold": 3,
+      "LLMCooldownSeconds": 120,
+      "Description": "Prevents cascading failures when external services are unavailable"
+    },
+    "PathSmoothing": {
+      "Enabled": true,
+      "RDPTolerance": 2.0,
+      "MinWaypointsToSimplify": 5,
+      "Description": "Applies Ramer-Douglas-Peucker algorithm to reduce path complexity"
+    },
+    "StuckRecoveryV2": {
+      "Enabled": true,
+      "BreadcrumbTrailSize": 50,
+      "BacktrackSteps": 3,
+      "EmergencyHearthstoneThreshold": 10,
+      "Description": "Enhanced stuck recovery with breadcrumb tracking and graduated strategies"
+    },
+    "HazardAvoidance": {
+      "Enabled": false,
+      "DBSCANEpsilon": 15.0,
+      "DBSCANMinPoints": 2,
+      "HazardCostMultiplier": 10.0,
+      "DecayHalfLifeDays": 30,
+      "MaxEventsBeforePrune": 10000,
+      "ClusteringIntervalSeconds": 60,
+      "SaveIntervalMinutes": 5,
+      "Description": "Self-learning hazard avoidance using DBSCAN clustering and A* cost injection"
+    },
+    "AIProfileGenerator": {
+      "Enabled": false,
+      "APIProvider": "none",
+      "MaxTokensPerRequest": 4000,
+      "RateLimitPerHour": 20,
+      "CacheResponsesMinutes": 60,
+      "AllowedProviders": ["openai", "anthropic", "local"],
+      "Description": "LLM-powered class profile generation from natural language descriptions"
+    },
+    "ProfileMarketplace": {
+      "Enabled": false,
+      "RepositoryUrl": "https://api.github.com/repos/Xian55/WowClassicGrindBot-Profiles",
+      "CacheDurationMinutes": 5,
+      "MaxDownloadsPerSession": 10,
+      "Description": "Community profile browser and downloader from GitHub repository"
+    },
+    "BehaviorTreeCombat": {
+      "Enabled": false,
+      "FallbackToGOAP": true,
+      "EnableVisualization": false,
+      "Description": "Alternative combat system using behavior trees instead of GOAP"
+    },
+    "HybridLLMDecision": {
+      "Enabled": false,
+      "ConfidenceThreshold": 0.6,
+      "MaxLatencyMs": 2000,
+      "EnableForUnexpectedStates": true,
+      "CacheDecisionsSeconds": 5,
+      "Description": "Hybrid GOAP+LLM decision system for handling edge cases"
+    }
+  },
+  "Monitoring": {
+    "Enabled": true,
+    "MetricsIntervalSeconds": 30,
+    "Thresholds": {
+      "PathfindingLatencyWarningMs": 500,
+      "PathfindingLatencyCriticalMs": 2000,
+      "HazardClusterCountWarning": 1000,
+      "HazardClusterCountCritical": 5000,
+      "LLMLatencyWarningMs": 3000,
+      "LLMLatencyCriticalMs": 10000,
+      "StuckRecoveryAttemptsWarning": 5,
+      "StuckRecoveryAttemptsCritical": 10,
+      "MemoryUsageMBWarning": 500,
+      "MemoryUsageMBCritical": 1000,
+      "FrameProcessingMsWarning": 100,
+      "FrameProcessingMsCritical": 200
+    }
+  },
+  "GlobalKillSwitch": false,
+  "DebugMode": false,
+  "Version": "1.0.0",
+  "LastModified": "2026-02-05T00:00:00Z"
+}
