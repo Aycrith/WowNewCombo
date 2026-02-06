@@ -10,12 +10,8 @@ public sealed class StartupClientVersion
 
     public StartupClientVersion(Version v)
     {
-        // Debug logging to understand version detection
-        Console.WriteLine($"[StartupClientVersion] Input version: {v} (Major={v?.Major}, Minor={v?.Minor}, Build={v?.Build}, Revision={v?.Revision})");
-        
         if (v == null)
         {
-            Console.WriteLine("[StartupClientVersion] WARNING: Version is null, defaulting to unknown");
             Version = ClientVersion.None;
             Path = "unknown";
             return;
@@ -36,13 +32,14 @@ public sealed class StartupClientVersion
             { Major: 4, Minor: <= 3 } => (ClientVersion.Legacy_Cata, "legacy_cata"),
             { Major: 5, Minor: <= 4 } => (ClientVersion.Legacy_Mop, "legacy_mop"),
 
+            // --- Anniversary Edition (Classic Vanilla with Major=205) ---
+            { Major: 205 } => (ClientVersion.SoM, "som"),
+
             // --- Retail fallback ---
             { Major: >= 9 } => (ClientVersion.Retail, "retail"),
 
             _ => (ClientVersion.None, "unknown")
         };
-        
-        Console.WriteLine($"[StartupClientVersion] Resolved to: {Version} -> path '{Path}'");
     }
 
 }

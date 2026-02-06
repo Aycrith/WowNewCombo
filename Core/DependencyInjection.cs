@@ -110,6 +110,7 @@ public static class DependencyInjection
         // Phase 1/2 infrastructure singletons used inside session-scoped DI (GoalFactory).
         s.ForwardSingleton<FeatureFlagService>(sp);
         s.ForwardSingleton<HazardZoneStore>(sp);
+        s.ForwardSingleton<RouteRehabilitator>(sp);
         s.ForwardSingleton<IRotationOptimizer>(sp);
         s.AddSingleton<IHumanizationProvider>(sp.GetRequiredService<IHumanizationProvider>());
 

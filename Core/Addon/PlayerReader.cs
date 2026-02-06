@@ -1,4 +1,4 @@
-﻿using Core.Database;
+using Core.Database;
 
 using SharedLib;
 
@@ -82,7 +82,11 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
 
     public int PTMax() => reader.GetInt(12); // Maximum amount of Power Type (dynamic)
     public int PTCurrent() => reader.GetInt(13); // Current amount of Power Type (dynamic)
-    public int PTPercentage() => PTCurrent() * 100 / PTMax(); // Power Type (dynamic) in terms of a percentage
+    public int PTPercentage() // Power Type (dynamic) in terms of a percentage
+    {
+        int max = PTMax();
+        return max > 0 ? PTCurrent() * 100 / max : 0;
+    }
 
     public int ManaMax() => reader.GetInt(14);
     public int ManaCurrent() => reader.GetInt(15);
