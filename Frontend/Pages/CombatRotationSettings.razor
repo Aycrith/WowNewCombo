@@ -1,10 +1,15 @@
 @page "/combat-rotation"
 
+@implements IDisposable
+
+@using System.Collections.Generic
+@using System.Linq
 @using Core.CombatRotation
 @using Core.FeatureFlags
 
 @inject FeatureFlagService featureFlags
 @inject CombatRotationAdminService combatRotationAdmin
+@inject RotationMetricsCollector metricsCollector
 
 <PageTitle>Combat Rotation Optimizer</PageTitle>
 
@@ -16,6 +21,7 @@
     Settings persist to <code>runtime_feature_flags.json</code> and apply immediately.
 </div>
 
+@* ── Status Card ── *@
 <Card class="mt-2">
     <CardHeader>Status</CardHeader>
     <CardBody>
@@ -40,6 +46,66 @@
     </CardBody>
 </Card>
 
+@* ── Live Metrics Dashboard ── *@
+@if (featureFlags.Current.CombatRotationOptimizer.EnableMetrics)
+{
+    <Card class="mt-2">
+        <CardHeader>Live Metrics</CardHeader>
+        <CardBody>
+            <dl class="row mb-0">
+                <dt class="col-sm-4">Total Ticks</dt>
+                <dd class="col-sm-8">@metricsCollector.CurrentSession.TotalTicks</dd>
+
+                <dt class="col-sm-4">Optimized Ticks</dt>
+                <dd class="col-sm-8">
+                    @metricsCollector.CurrentSession.OptimizedTicks
+                    (@(MetricsOptimizationRate.ToString("F1"))%)
+                </dd>
+
+                <dt class="col-sm-4">Fallback Ticks</dt>
+                <dd class="col-sm-8">@metricsCollector.CurrentSession.FallbackTicks</dd>
+
+                <dt class="col-sm-4">Session Duration</dt>
+                <dd class="col-sm-8">@SessionDuration.ToString(@"hh\:mm\:ss")</dd>
+            </dl>
+
+            @{ IReadOnlyList<AbilityUsageStat> topAbilities = TopAbilities; }
+            @if (topAbilities.Count > 0)
+            {
+                <h6 class="mt-3">Top Abilities (by usage)</h6>
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th>Ability</th>
+                            <th>Attempts</th>
+                            <th>Success Rate</th>
+                            <th>Avg Score</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (AbilityUsageStat stat in topAbilities)
+                        {
+                            <tr>
+                                <td>@stat.Name</td>
+                                <td>@stat.AttemptCount</td>
+                                <td>@(stat.SuccessRate.ToString("P0"))</td>
+                                <td>@stat.AverageScore.ToString("F1")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <p class="text-muted small mt-3 mb-0">
+                    No ability data yet — start a combat session to populate metrics.
+                </p>
+            }
+        </CardBody>
+    </Card>
+}
+
+@* ── Configuration Card ── *@
 <Card class="mt-2">
     <CardHeader>Configuration</CardHeader>
     <CardBody>
@@ -130,7 +196,13 @@
         <div class="d-flex gap-2">
             <button class="btn btn-primary btn-sm" @onclick="Save">Save</button>
             <button class="btn btn-outline-secondary btn-sm" @onclick="Reset">Reset to Defaults</button>
+            <button class="btn btn-outline-info btn-sm" @onclick="ViewMetricsFile">View Metrics File</button>
         </div>
+
+        @if (!string.IsNullOrEmpty(saveError))
+        {
+            <div class="alert alert-danger mt-2 small py-1 px-2">@saveError</div>
+        }
 
         @if (showSaved)
         {
@@ -138,6 +210,17 @@
         }
     </CardBody>
 </Card>
+
+@* ── Metrics File Viewer ── *@
+@if (!string.IsNullOrEmpty(metricsFileContent))
+{
+    <Card class="mt-2">
+        <CardHeader>Metrics JSON</CardHeader>
+        <CardBody>
+            <pre class="small mb-0" style="max-height: 400px; overflow-y: auto;">@metricsFileContent</pre>
+        </CardBody>
+    </Card>
+}
 
 @code {
     private bool enabled;
@@ -148,11 +231,19 @@
     private bool enableSwingTimerAlignment;
     private int metricsFlushIntervalSeconds;
     private string metricsOutputPath = string.Empty;
+
     private bool showSaved;
+    private string? saveError;
+    private string metricsFileContent = string.Empty;
+    private System.Timers.Timer? refreshTimer;
 
     protected override void OnInitialized()
     {
         LoadFromCurrent();
+
+        refreshTimer = new System.Timers.Timer(1000);
+        refreshTimer.Elapsed += async (_, _) => await InvokeAsync(StateHasChanged);
+        refreshTimer.Start();
     }
 
     private void LoadFromCurrent()
@@ -170,20 +261,29 @@
 
     private void Save()
     {
-        CombatRotationOptimizerOptions options = new()
+        try
         {
-            Enabled = enabled,
-            FallbackToStaticPriority = fallbackToStaticPriority,
-            BaseWeightMultiplier = baseWeightMultiplier,
-            EnableMetrics = enableMetrics,
-            EnableResourceForecasting = enableResourceForecasting,
-            EnableSwingTimerAlignment = enableSwingTimerAlignment,
-            MetricsFlushIntervalSeconds = metricsFlushIntervalSeconds,
-            MetricsOutputPath = metricsOutputPath
-        };
+            CombatRotationOptimizerOptions options = new()
+            {
+                Enabled = enabled,
+                FallbackToStaticPriority = fallbackToStaticPriority,
+                BaseWeightMultiplier = baseWeightMultiplier,
+                EnableMetrics = enableMetrics,
+                EnableResourceForecasting = enableResourceForecasting,
+                EnableSwingTimerAlignment = enableSwingTimerAlignment,
+                MetricsFlushIntervalSeconds = metricsFlushIntervalSeconds,
+                MetricsOutputPath = metricsOutputPath
+            };
 
-        combatRotationAdmin.Save(options);
-        showSaved = true;
+            combatRotationAdmin.Save(options);
+            showSaved = true;
+            saveError = null;
+        }
+        catch (Exception ex)
+        {
+            saveError = $"Failed to save: {ex.Message}";
+            showSaved = false;
+        }
     }
 
     private void Reset()
@@ -198,5 +298,57 @@
         metricsFlushIntervalSeconds = defaults.MetricsFlushIntervalSeconds;
         metricsOutputPath = defaults.MetricsOutputPath;
         showSaved = false;
+        saveError = null;
+        metricsFileContent = string.Empty;
+    }
+
+    private void ViewMetricsFile()
+    {
+        try
+        {
+            string path = featureFlags.Current.CombatRotationOptimizer.MetricsOutputPath;
+            if (System.IO.File.Exists(path))
+            {
+                metricsFileContent = System.IO.File.ReadAllText(path);
+            }
+            else
+            {
+                metricsFileContent = "Metrics file not found. Start a combat session to generate metrics.";
+            }
+        }
+        catch (Exception ex)
+        {
+            metricsFileContent = $"Error reading metrics file: {ex.Message}";
+        }
+    }
+
+    private IReadOnlyList<AbilityUsageStat> TopAbilities =>
+        metricsCollector.CurrentSession.GetOrderedStats().Take(10).ToList();
+
+    private float MetricsOptimizationRate
+    {
+        get
+        {
+            int total = metricsCollector.CurrentSession.TotalTicks;
+            if (total == 0) return 0f;
+            return (float)metricsCollector.CurrentSession.OptimizedTicks / total * 100f;
+        }
+    }
+
+    private TimeSpan SessionDuration
+    {
+        get
+        {
+            long start = metricsCollector.CurrentSession.SessionStartTicks;
+            long end = metricsCollector.CurrentSession.SessionEndTicks;
+            if (end == 0) end = Environment.TickCount64;
+            return TimeSpan.FromMilliseconds(end - start);
+        }
+    }
+
+    public void Dispose()
+    {
+        refreshTimer?.Stop();
+        refreshTimer?.Dispose();
     }
 }
