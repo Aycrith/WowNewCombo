@@ -119,6 +119,17 @@
       "BurstDampenerMaxActionsPerSecond": 12.0,
       "BurstDampenerWindowSize": 8,
       "Description": "Input security hardening to reduce detection vectors (WM_CHAR, focus guard, hybrid modifiers)"
+    },
+    "CombatRotationOptimizer": {
+      "Enabled": false,
+      "FallbackToStaticPriority": true,
+      "BaseWeightMultiplier": 1.0,
+      "EnableMetrics": true,
+      "EnableResourceForecasting": true,
+      "EnableSwingTimerAlignment": false,
+      "MetricsFlushIntervalSeconds": 30,
+      "MetricsOutputPath": "logs/rotation_metrics.json",
+      "Description": "Weighted-scoring overlay for combat rotation optimization. Reorders ability priority list based on game state without removing static fallback."
     }
   },
   "Monitoring": {
@@ -137,17 +148,6 @@
       "MemoryUsageMBCritical": 1000,
       "FrameProcessingMsWarning": 100,
       "FrameProcessingMsCritical": 200
-    },
-    "CombatRotationOptimizer": {
-      "Enabled": false,
-      "FallbackToStaticPriority": true,
-      "BaseWeightMultiplier": 1.0,
-      "EnableMetrics": true,
-      "EnableResourceForecasting": true,
-      "EnableSwingTimerAlignment": false,
-      "MetricsFlushIntervalSeconds": 30,
-      "MetricsOutputPath": "logs/rotation_metrics.json",
-      "Description": "Weighted-scoring overlay for combat rotation optimization. Reorders ability priority list based on game state without removing static fallback."
     }
   },
   "GlobalKillSwitch": false,
