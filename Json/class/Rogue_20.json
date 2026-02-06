@@ -37,6 +37,10 @@
       {
         "Name": "Eviscerate",
         "Key": "3",
+        "Weight": 2.0,
+        "ScoreConditions": [
+          { "Condition": "TargetHealth% < 20", "Bonus": 3.0 }
+        ],
         "Requirements": [
           "TargetHealth%>20",
           "Combo Point>1"
@@ -44,7 +48,8 @@
       },
       {
         "Name": "Sinister Strike",
-        "Key": "2"
+        "Key": "2",
+        "Weight": 1.5
       },
       {
         "Name": "AutoAttack"

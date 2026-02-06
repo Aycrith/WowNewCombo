@@ -46,6 +46,10 @@
         "Name": "Cone of Cold",
         "Key": "N8",
         "Cooldown": 10000,
+        "Weight": 2.5,
+        "ScoreConditions": [
+          { "Condition": "TargetHealth% < 20", "Bonus": 3.0 }
+        ],
         "Requirements": [
           "TargetHealth% > 2",
           "TargetHealth% < 20",
@@ -77,6 +81,7 @@
         "Name": "Frostbolt",
         "Key": "1",
         "HasCastBar": true,
+        "Weight": 2.0,
         "Requirements": [
           "SpellInRange:3"
         ]

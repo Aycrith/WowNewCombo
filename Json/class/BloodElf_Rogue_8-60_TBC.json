@@ -58,31 +58,31 @@
       "PathFilename": "_pack\\1-20\\Blood elf\\6-12_Eversong Woods.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 8", "Level < 10", "Race:BloodElf"]
+      "Requirements": ["Level >= 8", "Level < 10", "Race:Blood Elf"]
     },
     {
       "PathFilename": "_pack\\1-20\\Blood elf\\9-12_Ghostlands.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 10", "Level < 13", "Race:BloodElf"]
+      "Requirements": ["Level >= 10", "Level < 13", "Race:Blood Elf"]
     },
     {
       "PathFilename": "_pack\\1-20\\Blood elf\\13-15_Ghostlands_Sanctum of the Sun.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 13", "Level < 16", "Race:BloodElf"]
+      "Requirements": ["Level >= 13", "Level < 16", "Race:Blood Elf"]
     },
     {
       "PathFilename": "_pack\\1-20\\Blood elf\\15-20_Ghostlands_Windrunner.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 15", "Level < 19", "Race:BloodElf"]
+      "Requirements": ["Level >= 15", "Level < 19", "Race:Blood Elf"]
     },
     {
       "PathFilename": "_pack\\1-20\\Blood elf\\18-22_Ghostlands_Deatholme_Approach.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 18", "Level < 22", "Race:BloodElf"]
+      "Requirements": ["Level >= 18", "Level < 22", "Race:Blood Elf"]
     },
     {
       "PathFilename": "_pack\\1-20\\Undead\\14-19_Silverpine Forest_Fenris.json",

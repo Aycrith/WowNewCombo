@@ -100,6 +100,7 @@
         "Name": "Overpower",
         "Key": "0",
         "WhenUsable": true,
+        "Weight": 2.0,
         "Cooldown": 5000,
         "Requirements": [
           "LastTargetDodgeMs > 0 && LastTargetDodgeMs < 5000"
@@ -109,7 +110,11 @@
       {
         "Name": "Execute",
         "Key": "7",
-        "WhenUsable": true
+        "WhenUsable": true,
+        "Weight": 3.0,
+        "ScoreConditions": [
+          { "Condition": "TargetHealth% < 20", "Bonus": 5.0 }
+        ]
       },
       {
         "Name": "Cleave",
@@ -125,6 +130,7 @@
         "Name": "Mortal Strike",
         "Key": "N2",
         "WhenUsable": true,
+        "Weight": 2.5,
         "Requirements": [
           "MainHandSwing < -400",
           "MobCount < 2",
