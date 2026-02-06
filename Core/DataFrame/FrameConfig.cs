@@ -6,7 +6,9 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace Core;
 
@@ -14,6 +16,8 @@ public static class FrameConfigMeta
 {
     public const int Version = 4;
     public const string DefaultFilename = "frame_config.json";
+    public const string ResolutionPrefix = "frame_config_";
+    public const string ResolutionSuffix = ".json";
 }
 
 public static class FrameConfig
@@ -23,9 +27,80 @@ public static class FrameConfig
         return Path.Combine(AppContext.BaseDirectory, FrameConfigMeta.DefaultFilename);
     }
 
+    /// <summary>
+    /// Gets the path for a resolution-specific config file.
+    /// Example: frame_config_1920x1080.json
+    /// </summary>
+    public static string GetResolutionPath(int width, int height)
+    {
+        string filename = $"{FrameConfigMeta.ResolutionPrefix}{width}x{height}{FrameConfigMeta.ResolutionSuffix}";
+        return Path.Combine(AppContext.BaseDirectory, filename);
+    }
+
+    /// <summary>
+    /// Gets the path for a resolution-specific config in the source directory (BlazorServer/).
+    /// </summary>
+    private static string GetSourceResolutionPath(int width, int height)
+    {
+        string filename = $"{FrameConfigMeta.ResolutionPrefix}{width}x{height}{FrameConfigMeta.ResolutionSuffix}";
+        // Walk up from bin/Debug/net10.0/ to find the project root
+        string baseDir = AppContext.BaseDirectory;
+        string? projectDir = FindProjectDirectory(baseDir);
+        if (projectDir != null)
+            return Path.Combine(projectDir, filename);
+
+        return Path.Combine(baseDir, filename);
+    }
+
+    private static string? FindProjectDirectory(string startDir)
+    {
+        string? dir = startDir;
+        while (dir != null)
+        {
+            if (Directory.GetFiles(dir, "*.csproj").Length > 0)
+                return dir;
+            dir = Path.GetDirectoryName(dir);
+        }
+        return null;
+    }
+
     public static bool Exists()
     {
         return File.Exists(GetPath());
+    }
+
+    /// <summary>
+    /// Checks if a resolution-specific config exists.
+    /// </summary>
+    public static bool ExistsForResolution(int width, int height)
+    {
+        return File.Exists(GetResolutionPath(width, height));
+    }
+
+    /// <summary>
+    /// Lists all available resolution-specific configs.
+    /// Returns tuples of (width, height, filePath).
+    /// </summary>
+    public static IReadOnlyList<(int Width, int Height, string Path)> ListResolutionConfigs()
+    {
+        string baseDir = AppContext.BaseDirectory;
+        string pattern = $"{FrameConfigMeta.ResolutionPrefix}*{FrameConfigMeta.ResolutionSuffix}";
+        List<(int, int, string)> results = new();
+
+        foreach (string file in Directory.GetFiles(baseDir, pattern))
+        {
+            string name = System.IO.Path.GetFileNameWithoutExtension(file);
+            string resPart = name.Replace(FrameConfigMeta.ResolutionPrefix, "");
+            string[] parts = resPart.Split('x');
+            if (parts.Length == 2 &&
+                int.TryParse(parts[0], out int w) &&
+                int.TryParse(parts[1], out int h))
+            {
+                results.Add((w, h, file));
+            }
+        }
+
+        return results;
     }
 
     public static bool IsValid(Rectangle rect, Version addonVersion)
@@ -38,6 +113,38 @@ public static class FrameConfig
             bool sameAddonVersion = config.AddonVersion == addonVersion;
             bool sameRect = config.Rect.Width == rect.Width && config.Rect.Height == rect.Height;
             return sameAddonVersion && sameVersion && sameRect && config.Frames.Length > 1;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Tries to activate a resolution-specific config for the given window rect.
+    /// If a matching resolution config exists, copies it to the active frame_config.json.
+    /// Returns true if a matching config was found and activated.
+    /// </summary>
+    public static bool TryActivateForResolution(Rectangle rect, Version addonVersion)
+    {
+        string resPath = GetResolutionPath(rect.Width, rect.Height);
+        if (!File.Exists(resPath))
+            return false;
+
+        try
+        {
+            string json = File.ReadAllText(resPath);
+            DataFrameConfig config = JsonConvert.DeserializeObject<DataFrameConfig>(json);
+
+            if (config.Version != FrameConfigMeta.Version)
+                return false;
+
+            if (config.AddonVersion != addonVersion)
+                return false;
+
+            // Copy the resolution-specific config to the active path
+            File.Copy(resPath, GetPath(), overwrite: true);
+            return true;
         }
         catch
         {
@@ -76,7 +183,40 @@ public static class FrameConfig
         DataFrameConfig config = new(FrameConfigMeta.Version, addonVersion, rect, meta, dataFrames);
 
         string json = JsonConvert.SerializeObject(config);
+
+        // Save to the active config path
         File.WriteAllText(GetPath(), json);
+
+        // Also save a resolution-specific copy
+        string resPath = GetResolutionPath(rect.Width, rect.Height);
+        File.WriteAllText(resPath, json);
+
+        // Try to also save the resolution-specific copy to the source project directory
+        // so it persists across rebuilds
+        try
+        {
+            string sourceResPath = GetSourceResolutionPath(rect.Width, rect.Height);
+            if (sourceResPath != resPath)
+            {
+                string? sourceDir = Path.GetDirectoryName(sourceResPath);
+                if (sourceDir != null && Directory.Exists(sourceDir))
+                {
+                    File.WriteAllText(sourceResPath, json);
+
+                    // Also update the source frame_config.json
+                    string? projectDir = FindProjectDirectory(AppContext.BaseDirectory);
+                    if (projectDir != null)
+                    {
+                        string sourceDefaultPath = Path.Combine(projectDir, FrameConfigMeta.DefaultFilename);
+                        File.WriteAllText(sourceDefaultPath, json);
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Non-critical: source directory write failed
+        }
     }
 
     public static void Delete()

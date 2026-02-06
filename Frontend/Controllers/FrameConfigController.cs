@@ -203,6 +203,40 @@ public class FrameConfigController : ControllerBase
     }
 
     /// <summary>
+    /// List all available resolution-specific frame configs
+    /// </summary>
+    [HttpGet("resolutions")]
+    public IActionResult GetResolutions()
+    {
+        var configs = FrameConfig.ListResolutionConfigs();
+        _screen.GetRectangle(out var currentRect);
+
+        DataFrameConfig? active = null;
+        if (FrameConfig.Exists())
+        {
+            try { active = FrameConfig.Load(); }
+            catch { /* ignore corrupt config */ }
+        }
+
+        return Ok(new
+        {
+            CurrentResolution = new { currentRect.Width, currentRect.Height },
+            ActiveConfig = active.HasValue
+                ? new { active.Value.Rect.Width, active.Value.Rect.Height }
+                : null,
+            AvailableConfigs = configs.Select(c => new
+            {
+                c.Width,
+                c.Height,
+                Label = $"{c.Width}x{c.Height}",
+                IsActive = active.HasValue &&
+                           active.Value.Rect.Width == c.Width &&
+                           active.Value.Rect.Height == c.Height
+            })
+        });
+    }
+
+    /// <summary>
     /// Get the current screenshot as base64 image
     /// </summary>
     [HttpGet("screenshot")]

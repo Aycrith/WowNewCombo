@@ -406,16 +406,23 @@ public static class DependencyInjection
 
         if (!FrameConfig.IsValid(rect, installVersion))
         {
-            // At this point the webpage never loads so fallback to configuration page
-            FrameConfig.Delete();
+            // Try to activate a resolution-specific config that matches the current window
+            if (FrameConfig.TryActivateForResolution(rect, installVersion))
+            {
+                log.LogInformation($"{nameof(FrameConfig)} activated resolution-specific config for {rect.Width}x{rect.Height}");
+            }
+            else
+            {
+                // At this point the webpage never loads so fallback to configuration page
+                FrameConfig.Delete();
 
-            log.LogError($"{nameof(FrameConfig)} window rect is different then config!");
-            log.LogError($"{nameof(FrameConfig)} {rect}");
-            log.LogError($"{nameof(FrameConfig)} {installVersion}");
-            log.LogError($"{nameof(FrameConfig)} {FrameConfig.Load()}");
+                log.LogError($"{nameof(FrameConfig)} window rect is different then config!");
+                log.LogError($"{nameof(FrameConfig)} {rect}");
+                log.LogError($"{nameof(FrameConfig)} {installVersion}");
 
-            configurationComplete = false;
-            return true; // WoW is running, but config is not complete
+                configurationComplete = false;
+                return true; // WoW is running, but config is not complete
+            }
         }
 
         configurationComplete = true;
