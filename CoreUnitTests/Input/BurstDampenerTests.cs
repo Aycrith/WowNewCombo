@@ -15,8 +15,8 @@ public class BurstDampenerTests
     [Fact]
     public void CheckAndDampen_RingBufferNotFull_NoDampening()
     {
-        var dampener = new BurstDampener(windowSize: 8, maxActionsPerSecond: 12.0);
-        using var waitHandle = new ManualResetEvent(false);
+        BurstDampener dampener = new(windowSize: 8, maxActionsPerSecond: 12.0);
+        using ManualResetEvent waitHandle = new(false);
 
         // First few calls should not trigger dampening
         for (int i = 0; i < 5; i++)
@@ -29,8 +29,8 @@ public class BurstDampenerTests
     [Fact]
     public void CheckAndDampen_SlowRate_NoDampening()
     {
-        var dampener = new BurstDampener(windowSize: 4, maxActionsPerSecond: 10.0);
-        using var waitHandle = new ManualResetEvent(false);
+        BurstDampener dampener = new(windowSize: 4, maxActionsPerSecond: 10.0);
+        using ManualResetEvent waitHandle = new(false);
 
         // Space out calls to stay under the rate limit
         for (int i = 0; i < 10; i++)
@@ -44,8 +44,8 @@ public class BurstDampenerTests
     [Fact]
     public void CheckAndDampen_FastRate_TriggersDampening()
     {
-        var dampener = new BurstDampener(windowSize: 4, maxActionsPerSecond: 10.0);
-        using var waitHandle = new ManualResetEvent(false);
+        BurstDampener dampener = new(windowSize: 4, maxActionsPerSecond: 10.0);
+        using ManualResetEvent waitHandle = new(false);
 
         // Fill the ring buffer first
         for (int i = 0; i < 4; i++)
@@ -68,7 +68,7 @@ public class BurstDampenerTests
     [Fact]
     public void GetCurrentRate_EmptyBuffer_ReturnsZero()
     {
-        var dampener = new BurstDampener(windowSize: 8, maxActionsPerSecond: 12.0);
+        BurstDampener dampener = new(windowSize: 8, maxActionsPerSecond: 12.0);
 
         double rate = dampener.GetCurrentRate();
 
@@ -78,8 +78,8 @@ public class BurstDampenerTests
     [Fact]
     public void GetCurrentRate_AfterCalls_ReturnsReasonableRate()
     {
-        var dampener = new BurstDampener(windowSize: 4, maxActionsPerSecond: 100.0);
-        using var waitHandle = new ManualResetEvent(false);
+        BurstDampener dampener = new(windowSize: 4, maxActionsPerSecond: 100.0);
+        using ManualResetEvent waitHandle = new(false);
 
         // Make calls at a known rate
         for (int i = 0; i < 4; i++)
@@ -100,8 +100,8 @@ public class BurstDampenerTests
     [Fact]
     public void Reset_ClearsState()
     {
-        var dampener = new BurstDampener(windowSize: 4, maxActionsPerSecond: 10.0);
-        using var waitHandle = new ManualResetEvent(false);
+        BurstDampener dampener = new(windowSize: 4, maxActionsPerSecond: 10.0);
+        using ManualResetEvent waitHandle = new(false);
 
         // Fill the buffer
         for (int i = 0; i < 4; i++)

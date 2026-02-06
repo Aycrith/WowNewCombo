@@ -1,6 +1,7 @@
 using Core;
 using Core.FeatureFlags;
 using Core.GoalsComponent;
+using CoreUnitTests.TestHelpers;
 
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -50,6 +51,7 @@ public sealed class StuckDetectorBreadcrumbTests
 
     private static StuckDetector CreateDetector(BreadcrumbTracker? tracker, FeatureFlagService? featureFlags)
     {
+        // Constructor bypass keeps this focused on feature-flag wiring; private field names are intentionally asserted below.
         StuckDetector detector = (StuckDetector)RuntimeHelpers.GetUninitializedObject(typeof(StuckDetector));
         SetField(detector, "breadcrumbTracker", tracker);
         SetField(detector, "featureFlagService", featureFlags);
@@ -85,21 +87,4 @@ public sealed class StuckDetectorBreadcrumbTests
             Options.Create(serviceOptions));
     }
 
-    private sealed class FixedOptionsMonitor<T>(T value) : IOptionsMonitor<T>
-    {
-        private readonly T value = value;
-
-        public T CurrentValue => value;
-
-        public T Get(string? name) => value;
-
-        public IDisposable OnChange(Action<T, string?> listener) => new NoopDisposable();
-
-        private sealed class NoopDisposable : IDisposable
-        {
-            public void Dispose()
-            {
-            }
-        }
-    }
 }

@@ -1,4 +1,5 @@
 using Core.FeatureFlags;
+using CoreUnitTests.TestHelpers;
 
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -278,21 +279,4 @@ public sealed class FeatureFlagServiceTests
         Assert.True(condition(), "Timed out waiting for condition.");
     }
 
-    private sealed class FixedOptionsMonitor<T>(T value) : IOptionsMonitor<T>
-    {
-        private readonly T value = value;
-
-        public T CurrentValue => value;
-
-        public T Get(string? name) => value;
-
-        public IDisposable OnChange(Action<T, string?> listener) => new NoopDisposable();
-
-        private sealed class NoopDisposable : IDisposable
-        {
-            public void Dispose()
-            {
-            }
-        }
-    }
 }

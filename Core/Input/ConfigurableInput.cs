@@ -215,24 +215,7 @@ public sealed partial class ConfigurableInput
 
     public void PressClearTarget(CancellationToken token = default)
     {
-        // Primary path: F11 action slot macro (no modifier dependency).
         PressF11ClearTarget(token);
-
-        // Fallback to resolved configured binding when available.
-        if (ClearTarget.ConsoleKey == ConsoleKey.NoName)
-        {
-            logger.LogWarning(
-                "[PressClearTarget ] ClearTarget binding unresolved (Key='{Key}', BindingID={BindingId}); used F11-only path",
-                ClearTarget.Key,
-                ClearTarget.BindingID);
-            return;
-        }
-
-        logger.LogDebug("[PressClearTarget ] Pressing fallback {Key} (Key='{RawKey}', BindingID={BindingId})",
-            ClearTarget.ConsoleKey,
-            ClearTarget.Key,
-            ClearTarget.BindingID);
-        PressRandom(ClearTarget, token);
     }
 
     public void PressF11ClearTarget(CancellationToken token = default)

@@ -1,5 +1,6 @@
 using Core.FeatureFlags;
 using Core.Humanization;
+using CoreUnitTests.TestHelpers;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -96,24 +97,6 @@ public sealed class HumanizationProviderTimingTests
         }
 
         return (double)sum / sampleCount;
-    }
-
-    private sealed class FixedOptionsMonitor<T>(T value) : IOptionsMonitor<T>
-    {
-        private readonly T value = value;
-
-        public T CurrentValue => value;
-
-        public T Get(string? name) => value;
-
-        public IDisposable OnChange(Action<T, string?> listener) => new NoopDisposable();
-
-        private sealed class NoopDisposable : IDisposable
-        {
-            public void Dispose()
-            {
-            }
-        }
     }
 
     private sealed class TestTimeProvider(DateTimeOffset startUtc) : TimeProvider

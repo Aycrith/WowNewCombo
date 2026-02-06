@@ -506,11 +506,15 @@ dotnet build MasterOfPuppets.sln
 - [ ] Verify bot resumes route after clearing target
 - [ ] Check logs for `[ClearTarget      ]` messages showing which method succeeded
 
+**Status (2026-02-06):** Deferred in this environment because no live WoW client/process was available. `dotnet run --project CoreTests` was attempted and failed while WoW was absent (`WowScreenDXGI` image initialization received width `0`), so live target-clear validation remains pending on a machine with WoW running.
+
 ### Task 4.3: Regression Check
 - [ ] Normal combat cycle works (pull → fight → loot → move)
 - [ ] Looting still clears dead targets
 - [ ] Skinning still clears targets after gathering
 - [ ] PullTarget timeout still works
+
+**Status (2026-02-06):** Deferred with Task 4.2 because regression checks require an active WoW session.
 
 ---
 

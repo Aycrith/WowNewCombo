@@ -118,6 +118,7 @@ public sealed class PathGraphHazardBiasTests
         }
 
         MPQTriangleSupplier supplier =
+            // Constructor bypass avoids MPQ/asset setup in unit tests; this is intentionally reflection-fragile.
             (MPQTriangleSupplier)RuntimeHelpers.GetUninitializedObject(typeof(MPQTriangleSupplier));
         ChunkedTriangleCollection triangleWorld = new(NullLogger.Instance, initCapacity: 4, supplier);
 
@@ -150,6 +151,7 @@ public sealed class PathGraphHazardBiasTests
 
         if (!chunks.ContainsKey(gridX, gridY))
         {
+            // Seed minimal chunk state via private field access so path scoring can run in isolation.
             chunks.Add(gridX, gridY, new TriangleCollection(NullLogger.Instance));
         }
     }

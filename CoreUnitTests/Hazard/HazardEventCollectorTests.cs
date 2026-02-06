@@ -2,6 +2,7 @@ using Core;
 using Core.Database;
 using Core.FeatureFlags;
 using Core.Hazard;
+using CoreUnitTests.TestHelpers;
 
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -202,6 +203,7 @@ public sealed class HazardEventCollectorTests
 
     private static StuckDetector CreateUninitializedStuckDetector()
     {
+        // Constructor bypass avoids a large DI setup; this remains reflection-fragile by design.
         return (StuckDetector)RuntimeHelpers.GetUninitializedObject(typeof(StuckDetector));
     }
 
@@ -225,6 +227,7 @@ public sealed class HazardEventCollectorTests
         };
 
         WorldMapAreaDB worldMapAreaDB = new(dataConfig, NullLogger<WorldMapAreaDB>.Instance);
+        // Constructor bypass avoids heavyweight database initialization for test-only map metadata wiring.
         AreaDB areaDb = (AreaDB)RuntimeHelpers.GetUninitializedObject(typeof(AreaDB));
         AddonBits bits = new();
         SpellInRange spellInRange = new();
@@ -278,24 +281,6 @@ public sealed class HazardEventCollectorTests
             NullLogger<FeatureFlagService>.Instance,
             monitor,
             Options.Create(serviceOptions));
-    }
-
-    private sealed class FixedOptionsMonitor<T>(T value) : IOptionsMonitor<T>
-    {
-        private readonly T value = value;
-
-        public T CurrentValue => value;
-
-        public T Get(string? name) => value;
-
-        public IDisposable OnChange(Action<T, string?> listener) => new NoopDisposable();
-
-        private sealed class NoopDisposable : IDisposable
-        {
-            public void Dispose()
-            {
-            }
-        }
     }
 
     private sealed class FakeAddonDataProvider : IAddonDataProvider

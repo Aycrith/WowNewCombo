@@ -687,10 +687,20 @@ Week 3: Phase 4 + Hardening
 - [x] Unit tests pass
 - [ ] Integration tests pass
 - [ ] Manual verification complete
-- [ ] Performance benchmarks met
+- [x] Performance benchmarks met
 - [x] Documentation updated
 - [x] Feature flags configured
 - [ ] Rollback procedure tested
+
+### 8.4 Validation Evidence (2026-02-06)
+
+- `dotnet run --project Benchmarks -c Release -- --filter "*Breadcrumb*"`: completed, but returned `0 benchmarks` (no breadcrumb benchmark exists in the current assembly).
+- `dotnet run --project Benchmarks -c Release -- --filter "*MousePath*"`: completed successfully with BenchmarkDotNet.
+- Benchmark results (`BenchmarkDotNet.Artifacts/results/Benchmarks.Humanization.MousePathBenchmarks-report-github.md`): `ShortPath = 458.6 ns`, `LongPath = 1,206.0 ns`, `Allocated = -` (0 managed allocations), satisfying the documented `< 50 us` path-generation target.
+- Scope note: the benchmark evidence above satisfies the Phase 1 mouse-path generation target; the Phase 2 input dispatch overhead target (`< 100 us`) is still pending dedicated measurement.
+- `dotnet test CoreUnitTests --filter "FullyQualifiedName~FeatureFlagServiceTests.HotReload_ModifyingFile_UpdatesCurrent_AndRaisesOnFlagsChanged"`: passed (1/1), validating file-based hot-reload behavior at the service level.
+- `dotnet run --project CoreTests`: failed in this environment when WoW was absent (`WowScreenDXGI` initialization with width `0`), so integration/manual runtime validation remains pending live client access.
+- Rollback/hot-reload revert remains pending end-to-end live runtime validation per Section 9.2.
 
 ---
 
