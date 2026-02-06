@@ -138,7 +138,8 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
         UnitRace.Troll => PlayerFaction.Horde,
         UnitRace.BloodElf => PlayerFaction.Horde,
         UnitRace.Goblin => PlayerFaction.Horde,
-        _ => throw new ArgumentNullException(nameof(Faction)),
+        // UnitRace.None or unknown: default safely until addon data arrives
+        _ => PlayerFaction.Alliance,
     };
 
     // 47 empty

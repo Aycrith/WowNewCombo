@@ -56,7 +56,16 @@
         {
             if (pinfo.GetIndexParameters().Length != 0) return propList;
 
-            var value = pinfo.GetValue(obj, null);
+            object? value;
+            try
+            {
+                value = pinfo.GetValue(obj, null);
+            }
+            catch (Exception)
+            {
+                propList.Add(new ObjectField() { Name = objName + pinfo.Name, Value = "<error>" });
+                continue;
+            }
             if (value == null) continue;
 
             if (pinfo.PropertyType.IsArray && pinfo.PropertyType != typeof(ActionBarCost[]))
@@ -157,7 +166,14 @@
             ParameterInfo[] parameters = minfo.GetParameters();
             if (parameters.Length == 0)
             {
-                propList.Add(new ObjectField() { Name = objName + minfo.Name, Value = minfo.Invoke(obj, null)!.ToString() ?? "" });
+                try
+                {
+                    propList.Add(new ObjectField() { Name = objName + minfo.Name, Value = minfo.Invoke(obj, null)!.ToString() ?? "" });
+                }
+                catch (Exception)
+                {
+                    propList.Add(new ObjectField() { Name = objName + minfo.Name, Value = "<error>" });
+                }
             }
         }
 

@@ -41,6 +41,7 @@ public sealed class LaunchAutoFixService
     private readonly AddonValidator addonValidator;
     private readonly FrameConfigurator? frameConfigurator;
     private readonly ILaunchReadinessCacheInvalidator? cacheInvalidator;
+    private readonly IAddonReader? addonReader;
 
     public LaunchAutoFixService(
         ILogger<LaunchAutoFixService> logger,
@@ -49,7 +50,8 @@ public sealed class LaunchAutoFixService
         AddonConfigurator addonConfigurator,
         AddonValidator addonValidator,
         FrameConfigurator? frameConfigurator = null,
-        ILaunchReadinessCacheInvalidator? cacheInvalidator = null)
+        ILaunchReadinessCacheInvalidator? cacheInvalidator = null,
+        IAddonReader? addonReader = null)
     {
         this.logger = logger;
         this.services = services;
@@ -58,6 +60,7 @@ public sealed class LaunchAutoFixService
         this.addonValidator = addonValidator;
         this.frameConfigurator = frameConfigurator;
         this.cacheInvalidator = cacheInvalidator;
+        this.addonReader = addonReader;
     }
 
     public async Task<LaunchAutoFixResult> ApplyRecommendedFixesAsync(CancellationToken cancellationToken)
@@ -189,6 +192,10 @@ public sealed class LaunchAutoFixService
                 steps.Add(new LaunchAutoFixStep("Frame auto-config", LaunchAutoFixStatus.Skipped, "FrameConfigurator unavailable"));
             }
 
+            // --- Key Bindings auto-fix ---
+            cancellationToken.ThrowIfCancellationRequested();
+            TryFixKeyBindings(steps);
+
             return new LaunchAutoFixResult(true, requiresRestart, steps);
         }
         catch (OperationCanceledException)
@@ -317,5 +324,42 @@ public sealed class LaunchAutoFixService
         }
 
         return null;
+    }
+
+    private void TryFixKeyBindings(List<LaunchAutoFixStep> steps)
+    {
+        KeyBindingsReader? keyBindings = services.GetService<KeyBindingsReader>();
+        if (keyBindings == null)
+        {
+            steps.Add(new LaunchAutoFixStep("Key bindings", LaunchAutoFixStatus.Skipped, "KeyBindingsReader unavailable"));
+            return;
+        }
+
+        if (keyBindings.IsInitialized)
+        {
+            steps.Add(new LaunchAutoFixStep("Key bindings", LaunchAutoFixStatus.Skipped, $"Already initialized ({keyBindings.Count} bindings)"));
+            return;
+        }
+
+        // Check that addon handshake is alive before sending commands
+        if (addonReader is not AddonReader fullReader || fullReader.GlobalTime.Value <= 3)
+        {
+            steps.Add(new LaunchAutoFixStep("Key bindings", LaunchAutoFixStatus.Skipped,
+                "Addon handshake not yet established — cannot send /dcbindings"));
+            return;
+        }
+
+        ExecGameCommand? exec = services.GetService<ExecGameCommand>();
+        if (exec == null)
+        {
+            steps.Add(new LaunchAutoFixStep("Key bindings", LaunchAutoFixStatus.Skipped, "ExecGameCommand unavailable"));
+            return;
+        }
+
+        string prefix = addonConfigurator.Config.Command ?? "dc";
+        string command = $"/{prefix}bindings";
+        exec.Run(command);
+        logger.LogInformation("[LaunchAutoFix    ] Sent {Command} to populate key bindings", command);
+        steps.Add(new LaunchAutoFixStep("Key bindings", LaunchAutoFixStatus.Applied, $"Sent {command} to WoW"));
     }
 }

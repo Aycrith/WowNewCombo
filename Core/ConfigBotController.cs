@@ -19,17 +19,17 @@ public sealed class ConfigBotController : IBotController, IDisposable
     private readonly IAddonReader addonReader;
     private readonly IWowScreen screen;
 
-    public GoapAgent? GoapAgent => throw new NotImplementedException();
-    public RouteInfo? RouteInfo => throw new NotImplementedException();
-    public string SelectedClassFilename => throw new NotImplementedException();
-    public Dictionary<int, string> SelectedPathFilename => throw new NotImplementedException();
+    public GoapAgent? GoapAgent => null;
+    public RouteInfo? RouteInfo => null;
+    public string SelectedClassFilename => string.Empty;
+    public Dictionary<int, string> SelectedPathFilename => new();
 
     public ClassConfiguration? ClassConfig => null;
 
     public bool IsBotActive => false;
 
-    public double AvgScreenLatency => throw new NotImplementedException();
-    public double AvgNPCLatency => throw new NotImplementedException();
+    public double AvgScreenLatency => 0;
+    public double AvgNPCLatency => 0;
 
     public event Action? ProfileLoaded;
     public event Action? StatusChanged;
@@ -72,45 +72,46 @@ public sealed class ConfigBotController : IBotController, IDisposable
 
     public void MinimapNodeFound()
     {
-        throw new NotImplementedException();
+        // No-op in config mode
     }
 
     public void ToggleBotStatus()
     {
         StatusChanged?.Invoke();
-        throw new NotImplementedException();
+        logger.LogWarning("[ConfigBotController ] ToggleBotStatus called in configuration mode — ignored");
     }
 
     public IEnumerable<string> ClassFiles()
     {
-        throw new NotImplementedException();
+        return Array.Empty<string>();
     }
 
     public IEnumerable<string> PathFiles()
     {
-        throw new NotImplementedException();
+        return Array.Empty<string>();
     }
 
     public void LoadClassProfile(string classFilename)
     {
         ProfileLoaded?.Invoke();
-        throw new NotImplementedException();
+        logger.LogWarning("[ConfigBotController ] LoadClassProfile called in configuration mode — ignored");
     }
 
     public void LoadPathProfile(Dictionary<int, string> pathFilenames)
     {
         ProfileLoaded?.Invoke();
-        throw new NotImplementedException();
+        logger.LogWarning("[ConfigBotController ] LoadPathProfile called in configuration mode — ignored");
     }
 
     public void OverrideClassConfig(ClassConfiguration classConfiguration)
     {
-        throw new NotImplementedException();
+        logger.LogWarning("[ConfigBotController ] OverrideClassConfig called in configuration mode — ignored");
     }
 
     public ClassConfiguration ResolveLoadedProfile()
     {
-        throw new NotImplementedException();
+        logger.LogWarning("[ConfigBotController ] ResolveLoadedProfile called in configuration mode — returning empty config");
+        return new ClassConfiguration();
     }
 
     public void SaveClassConfig()

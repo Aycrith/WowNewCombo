@@ -897,11 +897,24 @@ public sealed class BotStartGuard : IBotStartGuard, ILaunchReadinessCacheInvalid
 
         if (globalTime <= 3)
         {
+            string detail = $"Waiting for live addon data (GlobalTime={globalTime}, enter world and ensure DataToColor pixels are visible)";
+
+            // Add frame config diagnostic if available
+            if (FrameConfig.Exists())
+            {
+                DataFrameConfig frameConfig = FrameConfig.Load();
+                detail += $" [FrameConfig: {frameConfig.Rect.Width}x{frameConfig.Rect.Height}, {frameConfig.Frames.Length} frames]";
+            }
+            else
+            {
+                detail += " [FrameConfig: MISSING — run auto-configure first]";
+            }
+
             return new LaunchSubsystemCheck(
                 LaunchSubsystem.AddonHandshake,
                 LaunchStatus.Pending,
                 "Addon Handshake",
-                "Waiting for live addon data (enter world and ensure DataToColor pixels are visible)",
+                detail,
                 IsRequired: true,
                 IsBlocking: true,
                 TimestampUtc: now,

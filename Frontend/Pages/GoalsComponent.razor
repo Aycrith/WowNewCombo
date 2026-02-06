@@ -95,7 +95,14 @@
 
     public bool CurrentOnly { get; set; } = false;
 
-    public double NpcLatency => botController.AvgScreenLatency + botController.AvgNPCLatency;
+    public double NpcLatency
+    {
+        get
+        {
+            try { return botController.AvgScreenLatency + botController.AvgNPCLatency; }
+            catch { return 0; }
+        }
+    }
 
     protected override void OnInitialized()
     {
