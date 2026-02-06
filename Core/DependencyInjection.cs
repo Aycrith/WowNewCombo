@@ -139,6 +139,8 @@ public static class DependencyInjection
         s.ForwardSingleton<IScreenCapture>(sp);
         s.ForwardSingleton<SessionStat>(sp);
         s.ForwardSingleton<IGrindSessionDAO>(sp);
+        s.ForwardSingleton<LevelTracker>(sp);
+        s.ForwardSingleton<TimeToKill>(sp);
 
         // Addon Components
         s.ForwardSingleton<CombatLog>(sp);

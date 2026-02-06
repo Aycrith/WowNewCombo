@@ -17,9 +17,9 @@ public sealed partial class KeyBindingsReader : IReader
     private readonly ConcurrentDictionary<BindingID, (ConsoleKey Key, ModifierKey Modifier)> secondaryBindings = new();
 
     private bool initialized;
-    private int consecutiveZeroReads = 0;
-    private int totalReads = 0;
-    private int nonZeroReads = 0;
+    private int consecutiveZeroReads;
+    private int totalReads;
+    private int nonZeroReads;
 
     public int Count => bindings.Count;
     public bool IsInitialized => initialized;

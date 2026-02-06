@@ -1078,7 +1078,7 @@ public sealed class BotStartGuard : IBotStartGuard, ILaunchReadinessCacheInvalid
         try
         {
             string cmd = addonConfigurator.Config.Command?.Trim() ?? string.Empty;
-            if (cmd.StartsWith("/", StringComparison.Ordinal))
+            if (cmd.StartsWith('/'))
             {
                 cmd = cmd.TrimStart('/');
             }

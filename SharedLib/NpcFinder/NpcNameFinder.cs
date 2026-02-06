@@ -141,7 +141,10 @@ public sealed partial class NpcNameFinder
         CalculateHeightMultipiler();
         UpdateSearchMode();
 
-        LogTypeChanged(logger, type.ToStringF(), searchMode.ToStringF());
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            LogTypeChanged(logger, type.ToStringF(), searchMode.ToStringF());
+        }
 
         if (nameType == NpcNames.None)
             resetEvent.ChangeReset();

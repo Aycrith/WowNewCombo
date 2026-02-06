@@ -19,10 +19,10 @@ public sealed class InputSecurityOptions
     public bool HybridModifiers { get; set; } = true;
 
     /// <summary>Emit auto-repeat WM_KEYDOWN for long-held keys (F4 fix).</summary>
-    public bool KeyRepeat { get; set; } = false;
+    public bool KeyRepeat { get; set; }
 
     /// <summary>Dampen action bursts that are too regular (F7 fix).</summary>
-    public bool BurstDampening { get; set; } = false;
+    public bool BurstDampening { get; set; }
 
     /// <summary>Stagger delay between modifier press and key press (ms).</summary>
     public int ModifierStaggerMinMs { get; set; } = 4;

@@ -27,7 +27,7 @@ public sealed partial class AddonValidator
 
     // Required addons for the bot to function
     // Note: BindPad was previously required but is now integrated into DataToColor via SecureButtons.xml
-    private static readonly string[] RequiredAddons = { };  // Empty - all functionality now in DataToColor
+    private static readonly string[] RequiredAddons = Array.Empty<string>();  // Empty - all functionality now in DataToColor
 
     public AddonValidator(
         ILogger<AddonValidator> logger,
