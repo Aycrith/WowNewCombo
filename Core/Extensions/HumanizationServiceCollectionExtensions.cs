@@ -26,6 +26,10 @@ public static class HumanizationServiceCollectionExtensions
         services.TryAddSingleton<HumanizationProvider>();
         services.TryAddSingleton<IHumanizationProvider>(sp => sp.GetRequiredService<HumanizationProvider>());
 
+        // Phase 4: Monitoring & Analytics
+        services.TryAddSingleton<HumanizationMetrics>();
+        services.TryAddSingleton<DetectionRiskAnalyzer>();
+
         return services;
     }
 }

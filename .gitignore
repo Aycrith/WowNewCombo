@@ -281,6 +281,9 @@ __pycache__/
 Json/History/*/*.json
 Json/History/*.json
 
+# Hazard data (runtime-generated)
+Json/HazardData/
+
 # PPather temp files
 Json/PPather/*.tmp
 

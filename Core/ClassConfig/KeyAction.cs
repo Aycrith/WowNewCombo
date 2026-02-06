@@ -1,4 +1,5 @@
-﻿using Core.Goals;
+﻿using Core.CombatRotation;
+using Core.Goals;
 
 using Game;
 
@@ -52,6 +53,24 @@ public sealed partial class KeyAction
     public int Charge { get; set; } = 1;
     public SchoolMask School { get; set; } = SchoolMask.None;
     public int MinComboPoints { get; set; }
+
+    /// <summary>
+    /// Base scoring weight for the rotation optimizer.
+    /// Default 1.0 preserves original sequence ordering.
+    /// </summary>
+    public float Weight { get; set; } = 1.0f;
+
+    /// <summary>
+    /// Conditional score bonuses for the rotation optimizer.
+    /// Parsed from JSON profile ScoreConditions entries.
+    /// </summary>
+    public List<ScoreConditionEntry> ScoreConditions { get; } = [];
+
+    /// <summary>
+    /// Compiled runtime representations of ScoreConditions.
+    /// Built by RequirementFactory during profile loading.
+    /// </summary>
+    public ScoreConditionRuntime[] ScoreConditionsRuntime { get; set; } = [];
 
     public string Requirement { get; set; } = string.Empty;
     public List<string> Requirements { get; } = [];

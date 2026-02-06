@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 
+using SharedLib.InputSecurity;
+
 namespace Core.FeatureFlags;
 
 /// <summary>
@@ -20,6 +22,8 @@ public sealed class FeatureFlagsOptions
     public ProfileMarketplaceOptions ProfileMarketplace { get; set; } = new();
     public BehaviorTreeCombatOptions BehaviorTreeCombat { get; set; } = new();
     public HybridLLMDecisionOptions HybridLLMDecision { get; set; } = new();
+    public InputSecurityOptions InputSecurity { get; set; } = new();
+    public CombatRotation.CombatRotationOptimizerOptions CombatRotationOptimizer { get; set; } = new();
 
     public bool GlobalKillSwitch { get; set; }
     public bool DebugMode { get; set; }
@@ -250,6 +254,8 @@ public static class FeatureFlagExtensions
             nameof(FeatureFlagsOptions.ProfileMarketplace) => flags.ProfileMarketplace.Enabled,
             nameof(FeatureFlagsOptions.BehaviorTreeCombat) => flags.BehaviorTreeCombat.Enabled,
             nameof(FeatureFlagsOptions.HybridLLMDecision) => flags.HybridLLMDecision.Enabled,
+            nameof(FeatureFlagsOptions.InputSecurity) => flags.InputSecurity.Enabled,
+            nameof(FeatureFlagsOptions.CombatRotationOptimizer) => flags.CombatRotationOptimizer.Enabled,
             _ => false
         };
     }
@@ -272,5 +278,7 @@ public static class FeatureFlagExtensions
         if (flags.ProfileMarketplace.Enabled) yield return nameof(FeatureFlagsOptions.ProfileMarketplace);
         if (flags.BehaviorTreeCombat.Enabled) yield return nameof(FeatureFlagsOptions.BehaviorTreeCombat);
         if (flags.HybridLLMDecision.Enabled) yield return nameof(FeatureFlagsOptions.HybridLLMDecision);
+        if (flags.InputSecurity.Enabled) yield return nameof(FeatureFlagsOptions.InputSecurity);
+        if (flags.CombatRotationOptimizer.Enabled) yield return nameof(FeatureFlagsOptions.CombatRotationOptimizer);
     }
 }

@@ -17,6 +17,7 @@ public static class DependencyInjection
         services.AddSingleton<MountUnlockAdminService>();
         services.AddSingleton<PathingAdminService>();
         services.AddSingleton<HumanizationAdminService>();
+        services.AddSingleton<CombatRotationAdminService>();
 
         services.AddScoped<Services.HazardHeatMapService>();
 

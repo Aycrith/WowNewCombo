@@ -58,6 +58,7 @@ public sealed class FeatureFlagService : IHostedService, IDisposable
     public bool IsProfileMarketplaceEnabled => Current.ProfileMarketplace.Enabled;
     public bool IsBehaviorTreeCombatEnabled => Current.BehaviorTreeCombat.Enabled;
     public bool IsHybridLLMDecisionEnabled => Current.HybridLLMDecision.Enabled;
+    public bool IsCombatRotationOptimizerEnabled => Current.CombatRotationOptimizer.Enabled;
 
     public FeatureFlagService(
         ILogger<FeatureFlagService> logger,
@@ -290,6 +291,7 @@ public sealed class FeatureFlagService : IHostedService, IDisposable
             "profilemarketplace" => IsProfileMarketplaceEnabled,
             "behaviortreecombat" => IsBehaviorTreeCombatEnabled,
             "hybridllmdecision" => IsHybridLLMDecisionEnabled,
+            "combatrotationoptimizer" => IsCombatRotationOptimizerEnabled,
             _ => false
         };
     }
@@ -310,7 +312,8 @@ public sealed class FeatureFlagService : IHostedService, IDisposable
             ["AIProfileGenerator"] = IsAIProfileGeneratorEnabled,
             ["ProfileMarketplace"] = IsProfileMarketplaceEnabled,
             ["BehaviorTreeCombat"] = IsBehaviorTreeCombatEnabled,
-            ["HybridLLMDecision"] = IsHybridLLMDecisionEnabled
+            ["HybridLLMDecision"] = IsHybridLLMDecisionEnabled,
+            ["CombatRotationOptimizer"] = IsCombatRotationOptimizerEnabled
         };
     }
 }

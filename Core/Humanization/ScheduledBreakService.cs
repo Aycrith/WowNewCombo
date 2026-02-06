@@ -16,6 +16,7 @@ public sealed class ScheduledBreakService : IHostedService, IDisposable
     private readonly FeatureFlagService featureFlags;
     private readonly FatigueSimulator fatigueSimulator;
     private readonly IServiceProvider services;
+    private readonly HumanizationMetrics? metrics;
 
     private Timer? timer;
 
@@ -23,12 +24,14 @@ public sealed class ScheduledBreakService : IHostedService, IDisposable
         ILogger<ScheduledBreakService> logger,
         FeatureFlagService featureFlags,
         FatigueSimulator fatigueSimulator,
-        IServiceProvider services)
+        IServiceProvider services,
+        HumanizationMetrics? metrics = null)
     {
         this.logger = logger;
         this.featureFlags = featureFlags;
         this.fatigueSimulator = fatigueSimulator;
         this.services = services;
+        this.metrics = metrics;
     }
 
     public bool IsOnBreak => fatigueSimulator.IsOnBreak;
@@ -57,6 +60,7 @@ public sealed class ScheduledBreakService : IHostedService, IDisposable
         }
 
         fatigueSimulator.EndBreak();
+        metrics?.RecordBreakEnd();
         logger.LogInformation("[SchedBreakService] Break skipped ({Reason})", reason);
     }
 
@@ -110,6 +114,7 @@ public sealed class ScheduledBreakService : IHostedService, IDisposable
                 return;
             }
 
+            metrics?.RecordBreakStart();
             logger.LogInformation(
                 "[SchedBreakService] Break started {Minutes:F1} min (session={Hours:F2}h)",
                 duration.TotalMinutes,

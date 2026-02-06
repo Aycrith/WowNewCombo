@@ -1,6 +1,9 @@
-﻿using Game;
+using Game;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+using SharedLib.InputSecurity;
 
 using SixLabors.ImageSharp;
 
@@ -28,7 +31,7 @@ public sealed class Test_Input
         this.process = process;
         this.screen = screen;
 
-        input = new(loggerFactory.CreateLogger<WowProcessInput>(), cts, process);
+        input = new(loggerFactory, cts, process, Options.Create(new InputSecurityOptions()));
     }
 
     public void Mouse_Movement()

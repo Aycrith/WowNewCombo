@@ -40,6 +40,7 @@ public sealed class HumanizationProvider : IHumanizationProvider, IDisposable
     private readonly FeatureFlagService featureFlags;
     private readonly FatigueSimulator fatigueSimulator;
     private readonly MicroPauseService microPauseService;
+    private readonly HumanizationMetrics? metrics;
 
     private RuntimeConfig runtime = new RuntimeConfig();
 
@@ -47,12 +48,14 @@ public sealed class HumanizationProvider : IHumanizationProvider, IDisposable
         ILogger<HumanizationProvider> logger,
         FeatureFlagService featureFlags,
         FatigueSimulator fatigueSimulator,
-        MicroPauseService microPauseService)
+        MicroPauseService microPauseService,
+        HumanizationMetrics? metrics = null)
     {
         this.logger = logger;
         this.featureFlags = featureFlags;
         this.fatigueSimulator = fatigueSimulator;
         this.microPauseService = microPauseService;
+        this.metrics = metrics;
 
         ApplyOptions(featureFlags.Current);
         featureFlags.OnFlagsChanged += ApplyOptions;
@@ -85,7 +88,9 @@ public sealed class HumanizationProvider : IHumanizationProvider, IDisposable
             max = baseMs * 3;
         }
 
-        return HumanizedRandom.NextGaussianInt(meanFatigued, cfg.KeyHoldStdDevMs, min, max);
+        int duration = HumanizedRandom.NextGaussianInt(meanFatigued, cfg.KeyHoldStdDevMs, min, max);
+        metrics?.RecordKeyPress(duration);
+        return duration;
     }
 
     public int GetInterKeyDelayMs(int baseMs)
@@ -137,6 +142,7 @@ public sealed class HumanizationProvider : IHumanizationProvider, IDisposable
             reaction = Math.Min(max, reaction + extra);
         }
 
+        metrics?.RecordReactionDelay(reaction, $"Complexity-{complexity}");
         return reaction;
     }
 
@@ -148,7 +154,7 @@ public sealed class HumanizationProvider : IHumanizationProvider, IDisposable
             return 0;
         }
 
-        return HumanizedMousePath.BuildPath(
+        int pathPoints = HumanizedMousePath.BuildPath(
             start,
             end,
             cfg.MouseSteps,
@@ -156,6 +162,12 @@ public sealed class HumanizationProvider : IHumanizationProvider, IDisposable
             cfg.MouseMicroJitterPixels,
             cfg.MouseOvershootProbability,
             buffer);
+
+        // Calculate approximate distance
+        int distance = (int)Math.Sqrt(Math.Pow(end.X - start.X, 2) + Math.Pow(end.Y - start.Y, 2));
+        metrics?.RecordMouseMovement(pathPoints, distance);
+
+        return pathPoints;
     }
 
     private void ApplyOptions(FeatureFlagsOptions options)

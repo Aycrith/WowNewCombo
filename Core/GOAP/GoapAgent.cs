@@ -1,4 +1,4 @@
-﻿using Core.Goals;
+using Core.Goals;
 using Core.Session;
 using Core.Hazard;
 
@@ -241,6 +241,9 @@ public sealed partial class GoapAgent : IDisposable
 
                     LogNewGoal(logger, newGoal.Name);
                     CurrentGoal.OnEnter();
+
+                    // Phase 3: Humanization - Add reaction delay after goal transition
+                    ApplyReactionDelay(newGoal);
                 }
 
                 newGoal.Update();
@@ -455,6 +458,72 @@ public sealed partial class GoapAgent : IDisposable
         Level = LogLevel.Warning,
         Message = "New Plan= NO PLAN")]
     static partial void LogNewEmptyGoal(ILogger logger);
+
+    #endregion
+
+    #region Humanization
+
+    /// <summary>
+    /// Applies a reaction delay after goal transitions to simulate human reaction time.
+    /// Complexity and movement type affect the delay duration.
+    /// </summary>
+    private void ApplyReactionDelay(GoapGoal goal)
+    {
+        if (humanizationProvider?.Enabled != true)
+            return;
+
+        // Determine complexity based on goal name/type
+        int complexity = GetGoalComplexity(goal);
+
+        // Determine if this is a movement action
+        bool isMovement = goal.Name.Contains("Move", StringComparison.OrdinalIgnoreCase) ||
+                         goal.Name.Contains("Walk", StringComparison.OrdinalIgnoreCase) ||
+                         goal.Name.Contains("Route", StringComparison.OrdinalIgnoreCase);
+
+        // Get delay from humanization provider
+        int delayMs = humanizationProvider.GetPreActionReactionDelayMs(complexity, isMovement);
+
+        if (delayMs > 0)
+        {
+            LogReactionDelay(logger, goal.Name, delayMs);
+            cts.Token.WaitHandle.WaitOne(delayMs);
+        }
+    }
+
+    /// <summary>
+    /// Assigns a complexity score to goals for reaction delay calculation.
+    /// Higher complexity = longer reaction time.
+    /// </summary>
+    private static int GetGoalComplexity(GoapGoal goal)
+    {
+        string name = goal.Name;
+
+        // Combat actions - high complexity (tactical decisions)
+        if (name.Contains("Combat", StringComparison.OrdinalIgnoreCase))
+            return 4;
+        if (name.Contains("Pull", StringComparison.OrdinalIgnoreCase))
+            return 3;
+
+        // Movement actions - low complexity (instinctive)
+        if (name.Contains("Move", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Walk", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Route", StringComparison.OrdinalIgnoreCase))
+            return 1;
+
+        // Reactive actions - medium complexity
+        if (name.Contains("Adhoc", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Corpse", StringComparison.OrdinalIgnoreCase))
+            return 2;
+
+        // Default
+        return 2;
+    }
+
+    [LoggerMessage(
+        EventId = 0054,
+        Level = LogLevel.Debug,
+        Message = "[Humanization] Reaction delay before '{goalName}': {delayMs}ms")]
+    static partial void LogReactionDelay(ILogger logger, string goalName, int delayMs);
 
     #endregion
 }

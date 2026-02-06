@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using SharedLib;
 
@@ -11,6 +12,7 @@ using System.Threading;
 using WinAPI;
 
 using SharedLib.Humanization;
+using SharedLib.InputSecurity;
 
 namespace Game;
 
@@ -36,19 +38,19 @@ public sealed partial class WowProcessInput : IMouseInput
     public ModifierKey InteractMouseoverModifier { get; set; }
     public int InteractMouseoverPress { get; set; }
 
-    public WowProcessInput(ILogger<WowProcessInput> logger, CancellationTokenSource cts, WowProcess process)
-        : this(logger, cts, process, null)
+    public WowProcessInput(ILoggerFactory loggerFactory, CancellationTokenSource cts, WowProcess process, IOptions<InputSecurityOptions> securityOptions)
+        : this(loggerFactory, cts, process, null, securityOptions)
     {
     }
 
-    public WowProcessInput(ILogger<WowProcessInput> logger, CancellationTokenSource cts, WowProcess process, IHumanizationProvider? humanization)
+    public WowProcessInput(ILoggerFactory loggerFactory, CancellationTokenSource cts, WowProcess process, IHumanizationProvider? humanization, IOptions<InputSecurityOptions> securityOptions)
     {
-        this.logger = logger;
+        this.logger = loggerFactory.CreateLogger<WowProcessInput>();
         this.process = process;
 
         keysDown = new((int)ConsoleKey.OemClear);
 
-        nativeInput = new(process, cts, InputDuration.FastPress, humanization);
+        nativeInput = new(process, cts, InputDuration.FastPress, humanization, securityOptions?.Value, loggerFactory.CreateLogger<InputWindowsNative>());
     }
 
     public void Reset()

@@ -1,6 +1,7 @@
 ﻿using CommandLine;
 
 using Core;
+using Core.CombatRotation;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -137,6 +138,9 @@ public sealed class Program
 
         services.AddCoreBase();
         services.AddCoreNormal(log);
+
+        // Combat Rotation Optimizer - disabled by default; safe to register always.
+        services.AddCombatRotationOptimizer();
 
         return true;
     }

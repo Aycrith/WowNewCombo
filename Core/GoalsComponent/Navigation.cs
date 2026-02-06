@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using SharedLib;
 using SharedLib.Data;
 using SharedLib.Extensions;
+using SharedLib.Humanization;
 
 using System;
 using System.Collections.Generic;
@@ -45,6 +46,7 @@ public sealed partial class Navigation : IDisposable
     private readonly IMountHandler mountHandler;
     private readonly AreaDB areaDB;
     private readonly RouteRehabilitator routeRehabilitator;
+    private readonly IHumanizationProvider? humanizationProvider;
 
     private const float MinDistanceMount = 10;
     private readonly float MaxDistance = 200;
@@ -117,7 +119,8 @@ public sealed partial class Navigation : IDisposable
         StuckDetector stuckDetector, IPPather pather, IMountHandler mountHandler,
         RouteRehabilitator routeRehabilitator,
         ClassConfiguration classConfiguration,
-        AreaDB areaDB)
+        AreaDB areaDB,
+        IHumanizationProvider? humanizationProvider = null)
     {
         this.logger = logger;
         this.playerDirection = playerDirection;
@@ -130,6 +133,7 @@ public sealed partial class Navigation : IDisposable
         this.mountHandler = mountHandler;
         this.areaDB = areaDB;
         this.routeRehabilitator = routeRehabilitator;
+        this.humanizationProvider = humanizationProvider;
 
         patherName = pather.GetType().Name;
 
@@ -225,6 +229,9 @@ public sealed partial class Navigation : IDisposable
 
                     if (debug)
                         LogDebug($"Reached wayPoint! Distance: {worldDistance} -- Remains: {wayPoints.Count}");
+
+                    // Phase 3: Humanization - Add micro-pause between waypoints
+                    ApplyWaypointDelay();
 
                     OnWayPointReached?.Invoke();
                 }
@@ -816,6 +823,37 @@ public sealed partial class Navigation : IDisposable
         Level = LogLevel.Information,
         Message = "[{name}] total distance {totalDistance} > {maxDistancehalf}. Have to clear RouteToWaypoint.")]
     static partial void LogV1ClearRouteToWaypointTooFar(ILogger logger, string name, float totalDistance, float maxDistancehalf);
+
+    #endregion
+
+    #region Humanization
+
+    /// <summary>
+    /// Applies a micro-pause delay when reaching waypoints to simulate human behavior.
+    /// Humans naturally pause briefly at decision points.
+    /// </summary>
+    private void ApplyWaypointDelay()
+    {
+        if (humanizationProvider?.Enabled != true)
+            return;
+
+        // Small micro-pause between waypoints (100-300ms)
+        // This simulates the natural hesitation humans have at decision points
+        int delayMs = humanizationProvider.GetInterKeyDelayMs(100);
+        delayMs = Math.Clamp(delayMs, 50, 500);
+
+        if (delayMs > 50)
+        {
+            LogWaypointDelay(logger, delayMs, wayPoints.Count);
+            token.WaitHandle.WaitOne(delayMs);
+        }
+    }
+
+    [LoggerMessage(
+        EventId = 0060,
+        Level = LogLevel.Debug,
+        Message = "[Humanization] Waypoint delay: {delayMs}ms (remaining: {remainingWaypoints})")]
+    static partial void LogWaypointDelay(ILogger logger, int delayMs, int remainingWaypoints);
 
     #endregion
 }

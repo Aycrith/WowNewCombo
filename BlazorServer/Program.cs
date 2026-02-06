@@ -1,4 +1,5 @@
 using Core;
+using Core.CombatRotation;
 using Core.Extensions;
 using Core.Hazard;
 
@@ -228,6 +229,9 @@ public static class Program
 
         // Humanization (Anti-Detection) - disabled by default; safe to register always.
         services.AddHumanizationServices();
+
+        // Combat Rotation Optimizer - disabled by default; safe to register always.
+        services.AddCombatRotationOptimizer();
 
         if (configurationComplete)
         {

@@ -1,4 +1,5 @@
-﻿using Core.GOAP;
+﻿using Core.CombatRotation;
+using Core.GOAP;
 
 using Game;
 
@@ -23,6 +24,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
     private readonly CastingHandler castingHandler;
     private readonly IMountHandler mountHandler;
     private readonly CombatLog combatLog;
+    private readonly IRotationOptimizer rotationOptimizer;
 
     private float lastDirection;
     private float lastMinDistance;
@@ -32,7 +34,8 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
         Wait wait, PlayerReader playerReader, StopMoving stopMoving, AddonBits bits,
         ClassConfiguration classConfiguration, ClassConfiguration classConfig,
         CastingHandler castingHandler, CombatLog combatLog,
-        IMountHandler mountHandler)
+        IMountHandler mountHandler,
+        IRotationOptimizer rotationOptimizer)
         : base(nameof(CombatGoal))
     {
         this.logger = logger;
@@ -47,6 +50,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
         this.castingHandler = castingHandler;
         this.mountHandler = mountHandler;
         this.classConfig = classConfig;
+        this.rotationOptimizer = rotationOptimizer;
 
         AddPrecondition(GoapKey.incombat, true);
         AddPrecondition(GoapKey.hastarget, true);
@@ -134,20 +138,65 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
         }
 
         ReadOnlySpan<KeyAction> span = Keys;
-        for (int i = 0; bits.Target_Alive() && i < span.Length; i++)
+
+        // Combat Rotation Optimizer: if enabled, score and sort abilities
+        if (rotationOptimizer.IsEnabled && span.Length > 0 && span.Length <= 32)
         {
-            KeyAction keyAction = span[i];
+            GameStateSnapshot state = new(
+                HealthPercent: playerReader.HealthPercent(),
+                ResourcePercent: playerReader.PTPercentage(),
+                ResourceCurrent: playerReader.PTCurrent(),
+                ResourceMax: playerReader.PTMax(),
+                ComboPoints: playerReader.ComboPoints(),
+                TargetHealthPercent: playerReader.TargetHealthPercent(),
+                GcdRemainingMs: playerReader.GCD.Value,
+                NetworkLatencyMs: playerReader.NetworkLatency,
+                SpellQueueMs: playerReader.SpellQueueTimeMs,
+                MainHandSwingElapsedMs: playerReader.MainHandSwing.ElapsedMs(),
+                MainHandSpeedMs: playerReader.MainHandSpeedMs(),
+                MobCount: 1,
+                InCombat: bits.Combat(),
+                TargetAlive: bits.Target_Alive(),
+                IsTargetCasting: playerReader.IsTargetCasting(),
+                TickTimestamp: Environment.TickCount64);
 
-            if (castingHandler.SpellInQueue() && !keyAction.BaseAction)
+            Span<int> sortedIndices = stackalloc int[span.Length];
+            int count = rotationOptimizer.Optimize(span, in state, sortedIndices);
+
+            for (int i = 0; bits.Target_Alive() && i < count; i++)
             {
-                continue;
+                KeyAction keyAction = span[sortedIndices[i]];
+
+                if (castingHandler.SpellInQueue() && !keyAction.BaseAction)
+                    continue;
+
+                bool interrupt() => bits.Target_Alive() && keyAction.CanBeInterrupted();
+
+                if (castingHandler.CastIfReady(keyAction, interrupt))
+                {
+                    rotationOptimizer.RecordCastResult(keyAction, true);
+                    break;
+                }
             }
-
-            bool interrupt() => bits.Target_Alive() && keyAction.CanBeInterrupted();
-
-            if (castingHandler.CastIfReady(keyAction, interrupt))
+        }
+        else
+        {
+            // Original static priority path (zero overhead when optimizer disabled)
+            for (int i = 0; bits.Target_Alive() && i < span.Length; i++)
             {
-                break;
+                KeyAction keyAction = span[i];
+
+                if (castingHandler.SpellInQueue() && !keyAction.BaseAction)
+                {
+                    continue;
+                }
+
+                bool interrupt() => bits.Target_Alive() && keyAction.CanBeInterrupted();
+
+                if (castingHandler.CastIfReady(keyAction, interrupt))
+                {
+                    break;
+                }
             }
         }
 

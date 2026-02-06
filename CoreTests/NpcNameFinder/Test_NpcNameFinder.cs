@@ -4,8 +4,10 @@ using Core.Goals;
 using Game;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using SharedLib;
+using SharedLib.InputSecurity;
 using SharedLib.NpcFinder;
 
 using System;
@@ -63,7 +65,7 @@ internal sealed class Test_NpcNameFinder : IDisposable
 
         Wait wait = new(new(false), new());
 
-        WowProcessInput input = new(loggerFactory.CreateLogger<WowProcessInput>(), new(), process);
+        WowProcessInput input = new(loggerFactory, new(), process, Options.Create(new InputSecurityOptions()));
 
         npcNameTargeting = new(loggerFactory.CreateLogger<NpcNameTargeting>(),
             new(), screen, npcNameFinder, locations, input,

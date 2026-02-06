@@ -1,6 +1,7 @@
 using Core.Addon;
 using Core.Database;
 using Core.Extensions;
+using Core.CombatRotation;
 using Core.FeatureFlags;
 using Core.Goals;
 using Core.Launch;
@@ -109,6 +110,7 @@ public static class DependencyInjection
         // Phase 1/2 infrastructure singletons used inside session-scoped DI (GoalFactory).
         s.ForwardSingleton<FeatureFlagService>(sp);
         s.ForwardSingleton<HazardZoneStore>(sp);
+        s.ForwardSingleton<IRotationOptimizer>(sp);
         s.AddSingleton<IHumanizationProvider>(sp.GetRequiredService<IHumanizationProvider>());
 
         s.ForwardSingleton<AreaDB>(sp);
