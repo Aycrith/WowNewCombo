@@ -382,9 +382,12 @@ public sealed class PathGraph
         }
 
         pooler.Return(sv);
+
+        Spot[] result = new Spot[c];
+        Array.Copy(sl, result, c);
         pooler.Return(sl);
 
-        return new(sl, 0, c);
+        return new(result, 0, c);
     }
 
     public int GetNeighborCount(Spot s)
@@ -398,7 +401,7 @@ public sealed class PathGraph
         {
             for (float y = -step; y <= step; y += step)
             {
-                var n = GetSpot2D(l.X + step, l.Y + step);
+                var n = GetSpot2D(l.X + x, l.Y + y);
                 if (n == null || n.IsBlocked() || n == s)
                     continue;
 
@@ -473,7 +476,7 @@ public sealed class PathGraph
             (((point.X - line0.X) * (line1.X - line0.X)) +
               ((point.Y - line0.Y) * (line1.Y - line0.Y)) +
               ((point.Z - line0.Z) * (line1.Z - line0.Z))) /
-            (LineMag * LineMag);
+            LineMag;
 
         if (U < 0.0f || U > 1.0f)
             return false;

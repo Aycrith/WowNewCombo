@@ -472,9 +472,11 @@ public sealed partial class NpcNameFinder
         int length = MoveEmptyToEnd(npcs, count, NpcPosition.Empty);
         Array.Sort(npcs, 0, length, npcPosComparer);
 
+        NpcPosition[] result = new NpcPosition[length];
+        Array.Copy(npcs, result, length);
         pool.Return(npcs);
 
-        return new ArraySegment<NpcPosition>(npcs, 0, Math.Max(0, length - 1));
+        return new ArraySegment<NpcPosition>(result, 0, length);
     }
 
     [SkipLocalsInit]

@@ -1,10 +1,11 @@
-﻿using SixLabors.ImageSharp;
+using SixLabors.ImageSharp;
 
+using System;
 using System.Threading;
 
 namespace Game;
 
-public interface IInput
+public interface IInput : IDisposable
 {
     void KeyDown(int key);
 

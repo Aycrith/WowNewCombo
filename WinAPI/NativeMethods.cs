@@ -321,7 +321,10 @@ public static partial class NativeMethods
     public static int GetDpi()
     {
         using System.Drawing.Graphics g = System.Drawing.Graphics.FromHwnd(nint.Zero);
-        return GetDeviceCaps(g.GetHdc(), LOGPIXELSX);
+        nint hdc = g.GetHdc();
+        int dpi = GetDeviceCaps(hdc, LOGPIXELSX);
+        g.ReleaseHdc(hdc);
+        return dpi;
     }
 
     public static Size GetCursorSize()

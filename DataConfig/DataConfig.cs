@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 
 using System.IO;
 
@@ -63,7 +63,7 @@ public sealed class DataConfig
         if (File.Exists(DataConfigMeta.DefaultFileName))
         {
             var loaded = DeserializeObject<DataConfig>(ReadAllText(DataConfigMeta.DefaultFileName));
-            if (loaded.Version == DataConfigMeta.Version)
+            if (loaded != null && loaded.Version == DataConfigMeta.Version)
                 return loaded;
         }
 
@@ -75,7 +75,7 @@ public sealed class DataConfig
         if (File.Exists(DataConfigMeta.DefaultFileName))
         {
             var loaded = DeserializeObject<DataConfig>(ReadAllText(DataConfigMeta.DefaultFileName));
-            if (loaded.Version == DataConfigMeta.Version)
+            if (loaded != null && loaded.Version == DataConfigMeta.Version)
             {
                 loaded.Exp = client.ToLowerInvariant();
                 return loaded;

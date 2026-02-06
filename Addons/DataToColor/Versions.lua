@@ -62,7 +62,7 @@ if DataToColor.IsClassic() then
   LibClassicCasterino = _G.LibStub("LibClassicCasterino")
 end
 
-local Som140 = DataToColor.IsClassic() and buildVersion == 11400 or buildVersion == 11401 or buildVersion == 11402
+local Som140 = DataToColor.IsClassic() and (buildVersion == 11400 or buildVersion == 11401 or buildVersion == 11402)
 local TBC253 = DataToColor.IsClassic_BCC() and buildVersion >= 20503
 local TBC252 = DataToColor.IsClassic_BCC() and buildVersion >= 20502
 local Wrath340 = DataToColor.IsClassic_Wrath() and buildVersion >= 30400

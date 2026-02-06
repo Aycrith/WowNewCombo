@@ -16,7 +16,7 @@ using SharedLib.InputSecurity;
 
 namespace Game;
 
-public sealed partial class WowProcessInput : IMouseInput
+public sealed partial class WowProcessInput : IMouseInput, IDisposable
 {
     // Virtual key codes for modifier keys
     private const int VK_SHIFT = 0x10;
@@ -224,6 +224,11 @@ public sealed partial class WowProcessInput : IMouseInput
         key == BackwardKey ||
         key == TurnLeftKey ||
         key == TurnRightKey;
+
+    public void Dispose()
+    {
+        nativeInput.Dispose();
+    }
 
     [LoggerMessage(
         EventId = 3000,
