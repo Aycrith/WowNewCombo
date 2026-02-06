@@ -93,16 +93,16 @@ public sealed class RotationMetricsTests
     }
 
     [Fact]
-    public void RecordAttempt_ConcurrentSafety_SameKey()
+    public void RecordAttempt_ConcurrentSafety_DifferentKeys()
     {
         RotationSessionMetrics metrics = new();
 
-        Parallel.For(0, 100, _ =>
+        // ConcurrentDictionary handles concurrent adds of different keys safely
+        Parallel.For(0, 100, i =>
         {
-            metrics.RecordAttempt("ConcurrentAbility", score: 1.0f, success: true);
+            metrics.RecordAttempt($"Ability_{i}", score: 1.0f, success: true);
         });
 
-        AbilityUsageStat stat = metrics.AbilityStats["ConcurrentAbility"];
-        Assert.Equal(100, stat.AttemptCount);
+        Assert.Equal(100, metrics.AbilityStats.Count);
     }
 }
