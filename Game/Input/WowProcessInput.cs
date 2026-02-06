@@ -63,36 +63,42 @@ public sealed partial class WowProcessInput : IMouseInput, IDisposable
 
     public void KeyDown(ConsoleKey key, bool forced)
     {
-        if (IsKeyDown(key))
+        lock (keysDown)
         {
-            if (!forced)
-                return;
+            if (IsKeyDown(key))
+            {
+                if (!forced)
+                    return;
+            }
+
+            //if (IsMovementKey(key))
+            //    LogMoveKeyDown(logger, key);
+            //else
+            //    LogKeyDown(logger, key);
+
+            keysDown[(int)key] = true;
         }
-
-        //if (IsMovementKey(key))
-        //    LogMoveKeyDown(logger, key);
-        //else
-        //    LogKeyDown(logger, key);
-
-        keysDown[(int)key] = true;
         nativeInput.KeyDown((int)key);
     }
 
     public void KeyUp(ConsoleKey key, bool forced)
     {
-        if (!IsKeyDown(key))
+        lock (keysDown)
         {
-            if (!forced)
-                return;
+            if (!IsKeyDown(key))
+            {
+                if (!forced)
+                    return;
+            }
+
+            //if (IsMovementKey(key))
+            //    LogMoveKeyUp(logger, key);
+            //else
+            //    LogKeyUp(logger, key);
+
+            nativeInput.KeyUp((int)key);
+            keysDown[(int)key] = false;
         }
-
-        //if (IsMovementKey(key))
-        //    LogMoveKeyUp(logger, key);
-        //else
-        //    LogKeyUp(logger, key);
-
-        nativeInput.KeyUp((int)key);
-        keysDown[(int)key] = false;
     }
 
     public bool IsKeyDown(ConsoleKey key)
@@ -112,9 +118,15 @@ public sealed partial class WowProcessInput : IMouseInput, IDisposable
 
     public int PressRandom(ConsoleKey key, int milliseconds = InputDuration.DefaultPress, CancellationToken token = default)
     {
-        keysDown[(int)key] = true;
+        lock (keysDown)
+        {
+            keysDown[(int)key] = true;
+        }
         int elapsedMs = nativeInput.PressRandom((int)key, milliseconds, token);
-        keysDown[(int)key] = false;
+        lock (keysDown)
+        {
+            keysDown[(int)key] = false;
+        }
 
         LogKeyPressRandom(logger, key, elapsedMs);
 
@@ -144,9 +156,15 @@ public sealed partial class WowProcessInput : IMouseInput, IDisposable
             nativeInput.KeyDown(VK_MENU);
 
         // Press actual key
-        keysDown[(int)key] = true;
+        lock (keysDown)
+        {
+            keysDown[(int)key] = true;
+        }
         int elapsedMs = nativeInput.PressRandom((int)key, milliseconds, token);
-        keysDown[(int)key] = false;
+        lock (keysDown)
+        {
+            keysDown[(int)key] = false;
+        }
 
         // Release modifiers (reverse order)
         if ((modifier & ModifierKey.Alt) != 0)
@@ -171,9 +189,15 @@ public sealed partial class WowProcessInput : IMouseInput, IDisposable
         else
             LogKeyPressFixed(logger, key, milliseconds);
 
-        keysDown[(int)key] = true;
+        lock (keysDown)
+        {
+            keysDown[(int)key] = true;
+        }
         nativeInput.PressFixed((int)key, milliseconds, token);
-        keysDown[(int)key] = false;
+        lock (keysDown)
+        {
+            keysDown[(int)key] = false;
+        }
     }
 
     public void SetKeyState(ConsoleKey key, bool pressDown, bool forced)

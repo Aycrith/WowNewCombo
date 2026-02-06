@@ -231,12 +231,13 @@ public sealed class WowProcess
         }
 
         Console.WriteLine($"[WowProcess] Searching {processList.Length} processes for WoW...");
-        
+
+        Process? foundProcess = null;
         for (int i = 0; i < processList.Length; i++)
         {
             Process p = processList[i];
             string? procName = null;
-            
+
             try
             {
                 procName = p.ProcessName;
@@ -246,24 +247,41 @@ public sealed class WowProcess
                 // Skip processes we can't access
                 continue;
             }
-            
+
             if (string.IsNullOrEmpty(procName))
                 continue;
-                
+
             for (int j = 0; j < defaultProcessNames.Length; j++)
             {
                 // Check if process name matches any of our default names
                 if (procName.Equals(defaultProcessNames[j], StringComparison.OrdinalIgnoreCase))
                 {
                     Console.WriteLine($"[WowProcess] Found WoW process: {procName} (PID: {p.Id})");
-                    return p;
+                    foundProcess = p;
+                    break;
                 }
+            }
+
+            if (foundProcess != null)
+                break;
+        }
+
+        // Dispose all processes except the one we found
+        for (int i = 0; i < processList.Length; i++)
+        {
+            Process p = processList[i];
+            if (p != foundProcess)
+            {
+                p.Dispose();
             }
         }
 
+        if (foundProcess != null)
+            return foundProcess;
+
         // Log what we were looking for vs what we found
         Console.WriteLine($"[WowProcess] WoW not found. Looking for: {string.Join(", ", defaultProcessNames)}");
-        
+
         return null;
     }
 

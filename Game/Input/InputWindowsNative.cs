@@ -22,7 +22,7 @@ namespace Game;
 /// Windows-native input implementation with optional security hardening.
 /// Addresses detection vectors F1-F4 and F7 through configurable mitigations.
 /// </summary>
-public sealed class InputWindowsNative : IInput
+public sealed class InputWindowsNative : IInput, IDisposable
 {
     private readonly int maxDelay;
     private readonly WowProcess process;
