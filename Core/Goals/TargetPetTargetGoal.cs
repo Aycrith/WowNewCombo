@@ -10,16 +10,19 @@ public sealed class TargetPetTargetGoal : GoapGoal
     private readonly PlayerReader playerReader;
     private readonly AddonBits bits;
     private readonly Wait wait;
+    private readonly ExecGameCommand execGameCommand;
 
     public TargetPetTargetGoal(ConfigurableInput input,
         PlayerReader playerReader, AddonBits bits,
-        Wait wait)
+        Wait wait,
+        ExecGameCommand execGameCommand)
         : base(nameof(TargetPetTargetGoal))
     {
         this.input = input;
         this.playerReader = playerReader;
         this.bits = bits;
         this.wait = wait;
+        this.execGameCommand = execGameCommand;
 
         AddPrecondition(GoapKey.targetisalive, false);
 
@@ -51,7 +54,7 @@ public sealed class TargetPetTargetGoal : GoapGoal
         if (bits.Target() &&
             (bits.Target_Dead() || playerReader.TargetGuid == playerReader.PetGuid))
         {
-            input.ForceAggressiveClearTarget(wait, bits);
+            input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
         }
     }
 }

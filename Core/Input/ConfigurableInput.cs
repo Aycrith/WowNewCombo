@@ -215,7 +215,7 @@ public sealed partial class ConfigurableInput
 
     public void PressClearTarget(CancellationToken token = default)
     {
-        PressF11ClearTarget(token);
+        PressRandom(ClearTarget, token);
     }
 
     public void PressF11ClearTarget(CancellationToken token = default)
@@ -234,15 +234,18 @@ public sealed partial class ConfigurableInput
         ExecGameCommand? execGameCommand = null,
         CancellationToken token = default)
     {
-        // Stage 1: F11 macro retries.
-        for (int attempt = 1; attempt <= 3; attempt++)
+        // Stage 1: Configured binding retries.
+        if (ClearTarget.ConsoleKey != ConsoleKey.NoName)
         {
-            PressF11ClearTarget(token);
-            wait.Update();
-            if (!bits.Target())
+            for (int attempt = 1; attempt <= 3; attempt++)
             {
-                logger.LogInformation("[ClearTarget      ] Cleared via F11 (attempt {Attempt})", attempt);
-                return true;
+                PressRandom(ClearTarget, token);
+                wait.Update();
+                if (!bits.Target())
+                {
+                    logger.LogInformation("[ClearTarget      ] Cleared via configured binding (attempt {Attempt})", attempt);
+                    return true;
+                }
             }
         }
 
@@ -255,14 +258,14 @@ public sealed partial class ConfigurableInput
             return true;
         }
 
-        // Stage 3: Configured binding fallback.
-        if (ClearTarget.ConsoleKey != ConsoleKey.NoName)
+        // Stage 3: F11 macro retries.
+        for (int attempt = 1; attempt <= 3; attempt++)
         {
-            PressRandom(ClearTarget, token);
+            PressF11ClearTarget(token);
             wait.Update();
             if (!bits.Target())
             {
-                logger.LogInformation("[ClearTarget      ] Cleared via configured binding");
+                logger.LogInformation("[ClearTarget      ] Cleared via F11 (attempt {Attempt})", attempt);
                 return true;
             }
         }

@@ -9,20 +9,22 @@ public sealed class BlacklistTargetGoal : GoapGoal
     private readonly ConfigurableInput input;
     private readonly Wait wait;
     private readonly IBlacklist targetBlacklist;
+    private readonly ExecGameCommand execGameCommand;
 
     public BlacklistTargetGoal(PlayerReader playerReader,
         AddonBits bits,
         ConfigurableInput input,
         IBlacklist blacklist,
-        Wait wait)
+        Wait wait,
+        ExecGameCommand execGameCommand)
         : base(nameof(BlacklistTargetGoal))
     {
         this.playerReader = playerReader;
         this.bits = bits;
         this.input = input;
         this.targetBlacklist = blacklist;
-        this.bits = bits;
         this.wait = wait;
+        this.execGameCommand = execGameCommand;
     }
 
     public override bool CanRun()
@@ -39,6 +41,6 @@ public sealed class BlacklistTargetGoal : GoapGoal
             input.PressStopAttack();
         }
 
-        input.ForceAggressiveClearTarget(wait, bits);
+        input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
     }
 }

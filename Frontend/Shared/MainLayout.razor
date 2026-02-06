@@ -1,4 +1,4 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 
 @inject ILogger logger
 @inject IBotController botController
@@ -186,28 +186,30 @@
 
     private List<NavItem> GetConfigNavItems()
     {
+        navItems = new List<NavItem> {
+            new() { Id = "cfg-launch", Href = "/launch", Text = "Launch Wizard" },
+            new() { Id = "cfg-settings", Href = "/Settings", Text = "Settings" },
+            new() { Id = "cfg-combat-rotation", Href = "/combat-rotation", Text = "Combat Rotation" },
+        };
+
         if (!process.IsRunning)
         {
-            navItems = new List<NavItem> {
-                new() { Id = "0", IconName = IconName.StopBtn, Text = "Process Not Running" },
-            };
+            navItems.Insert(0, new() { Id = "cfg-process", IconName = IconName.StopBtn, Text = "Process Not Running" });
             return navItems;
         }
 
-        navItems = new List<NavItem> {
-            new() { Id = "1", Text = "1. Restart Game" },
-        };
+        navItems.Add(new() { Id = "cfg-step-1", Text = "1. Restart Game" });
 
         if (process.IsRunning)
         {
-            navItems.Add(new() { Id = "2", Text = "2. Addon Configuration" });
+            navItems.Add(new() { Id = "cfg-step-2", Text = "2. Addon Configuration" });
         }
 
         if (AddonConfigExists)
         {
-            navItems.Add(new() { Id = "3", Text = "3. Restart Game" });
-            navItems.Add(new() { Id = "4", Text = "4. Enter world" });
-            navItems.Add(new() { Id = "5", Text = "5. Frame Configuration" });
+            navItems.Add(new() { Id = "cfg-step-3", Text = "3. Restart Game" });
+            navItems.Add(new() { Id = "cfg-step-4", Text = "4. Enter world" });
+            navItems.Add(new() { Id = "cfg-step-5", Text = "5. Frame Configuration" });
         }
 
         return navItems;

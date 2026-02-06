@@ -21,6 +21,7 @@ public sealed class ReactCastError
     private readonly PlayerDirection direction;
     private readonly AddonReader addonReader;
     private readonly SessionStat sessionStat;
+    private readonly ExecGameCommand execGameCommand;
 
     public ReactCastError(ILogger<ReactCastError> logger,
         PlayerReader playerReader,
@@ -28,7 +29,8 @@ public sealed class ReactCastError
         ActionBarBits<IUsableAction> usableAction,
         AddonBits bits, Wait wait, ConfigurableInput input, StopMoving stopMoving,
         SessionStat sessionStat,
-        PlayerDirection direction)
+        PlayerDirection direction,
+        ExecGameCommand execGameCommand)
     {
         this.logger = logger;
         this.playerReader = playerReader;
@@ -40,6 +42,7 @@ public sealed class ReactCastError
         this.stopMoving = stopMoving;
         this.direction = direction;
         this.sessionStat = sessionStat;
+        this.execGameCommand = execGameCommand;
     }
 
     public void Do(KeyAction item)
@@ -237,7 +240,7 @@ public sealed class ReactCastError
                 {
                     logger.LogInformation($"React to {value.ToStringF()} -- Stop attack and clear target!");
                     input.PressStopAttack();
-                    input.ForceAggressiveClearTarget(wait, bits);
+                    input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
                 }
                 else
                 {

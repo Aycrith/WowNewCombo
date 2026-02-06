@@ -16,6 +16,7 @@ public sealed partial class CombatTracker : IDisposable
     private readonly AddonBits bits;
     private readonly ConfigurableInput input;
     private readonly Wait wait;
+    private readonly ExecGameCommand execGameCommand;
 
     private bool inCombat;
 
@@ -24,7 +25,11 @@ public sealed partial class CombatTracker : IDisposable
     public CombatTracker(ILogger<CombatTracker> logger,
         AddonReader addonReader,
         ConfigurableInput input,
-        AddonBits bits, Wait wait, PlayerReader playerReader, CombatLog combatLog)
+        AddonBits bits,
+        Wait wait,
+        PlayerReader playerReader,
+        CombatLog combatLog,
+        ExecGameCommand execGameCommand)
     {
         this.logger = logger;
         this.addonReader = addonReader;
@@ -33,6 +38,7 @@ public sealed partial class CombatTracker : IDisposable
         this.playerReader = playerReader;
         this.bits = bits;
         this.combatLog = combatLog;
+        this.execGameCommand = execGameCommand;
 
         inCombat = bits.Combat();
         Started = Stopwatch.GetTimestamp();
@@ -93,7 +99,7 @@ public sealed partial class CombatTracker : IDisposable
             return true;
         }
 
-        input.ForceAggressiveClearTarget(wait, bits);
+        input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
 
         if (!wait.Till(maxTimeMs, PlayerOrPetHasTarget))
         {
@@ -103,7 +109,7 @@ public sealed partial class CombatTracker : IDisposable
         }
 
         Log($"{nameof(AcquiredTarget)}: No target found after {maxTimeMs}ms");
-        input.ForceAggressiveClearTarget(wait, bits);
+        input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
 
         return false;
     }

@@ -10,17 +10,20 @@ public sealed class FollowFocusGoal : GoapGoal
     private readonly PlayerReader playerReader;
     private readonly AddonBits bits;
     private readonly Wait wait;
+    private readonly ExecGameCommand execGameCommand;
 
     public FollowFocusGoal(ConfigurableInput input,
         PlayerReader playerReader,
         AddonBits bits,
-        Wait wait)
+        Wait wait,
+        ExecGameCommand execGameCommand)
         : base(nameof(FollowFocusGoal))
     {
         this.input = input;
         this.playerReader = playerReader;
         this.bits = bits;
         this.wait = wait;
+        this.execGameCommand = execGameCommand;
 
         AddPrecondition(GoapKey.hasfocus, true);
         AddPrecondition(GoapKey.dangercombat, false);
@@ -42,7 +45,7 @@ public sealed class FollowFocusGoal : GoapGoal
     {
         if (playerReader.TargetGuid == playerReader.FocusGuid)
         {
-            input.ForceAggressiveClearTarget(wait, bits);
+            input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
         }
     }
 

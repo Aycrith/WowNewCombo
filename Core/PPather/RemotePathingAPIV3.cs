@@ -25,6 +25,7 @@ public sealed class RemotePathingAPIV3 : IPPather, IDisposable
     private const bool debug = false;
     private const int watchdogPollMs = 500;
     private const float DefaultZFallback = 64f;
+    private const int InitialConnectDelayMs = 2500;
     private const int ConnectBackoffMinMs = 500;
     private const int ConnectBackoffMaxMs = 30_000;
 
@@ -333,11 +334,30 @@ public sealed class RemotePathingAPIV3 : IPPather, IDisposable
     private void ObserveConnection()
     {
         int backoffMs = ConnectBackoffMinMs;
+        bool delayNextConnectAttempt = true;
+        bool wasConnected = client.IsConnected;
 
         while (!cts.IsCancellationRequested)
         {
-            if (!client.IsConnected)
+            bool isConnected = client.IsConnected;
+            if (!isConnected)
             {
+                if (wasConnected)
+                {
+                    delayNextConnectAttempt = true;
+                }
+
+                if (delayNextConnectAttempt)
+                {
+                    cts.Token.WaitHandle.WaitOne(InitialConnectDelayMs);
+                    if (cts.IsCancellationRequested)
+                    {
+                        break;
+                    }
+
+                    delayNextConnectAttempt = false;
+                }
+
                 try
                 {
                     client.Connect();
@@ -358,6 +378,8 @@ public sealed class RemotePathingAPIV3 : IPPather, IDisposable
                     backoffMs = Math.Min(backoffMs * 2, ConnectBackoffMaxMs);
                 }
             }
+
+            wasConnected = client.IsConnected;
 
             int waitMs = client.IsConnected ? watchdogPollMs : backoffMs;
             cts.Token.WaitHandle.WaitOne(waitMs);

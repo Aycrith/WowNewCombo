@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net.NetworkInformation;
@@ -271,6 +272,8 @@ public sealed class NavigationServerManager : IHostedService, IDisposable
                 CreateNoWindow = true
             };
 
+            PortCleanupUtility.TryTerminateProcessHoldingPort(Port, "AmeisenNavigationServer", _logger);
+
             _process = Process.Start(startInfo);
 
             if (_process == null)
@@ -370,6 +373,12 @@ public sealed class NavigationServerManager : IHostedService, IDisposable
 
     private void StartMonitoring()
     {
+        if (_monitorTask != null && !_monitorTask.IsCompleted)
+        {
+            return;
+        }
+
+        _monitorCts?.Dispose();
         _monitorCts = new CancellationTokenSource();
         _monitorTask = MonitorServerAsync(_monitorCts.Token);
     }
@@ -387,8 +396,21 @@ public sealed class NavigationServerManager : IHostedService, IDisposable
                     _process.Refresh();
                     if (_process.HasExited)
                     {
-                        _logger.LogWarning("[NavigationServerManager] Server process exited unexpectedly");
+                        int exitCode = _process.ExitCode;
+                        _logger.LogWarning("[NavigationServerManager] Server process exited unexpectedly (code {Code})", exitCode);
+
+                        _process.Dispose();
+                        _process = null;
+                        _state.NavigationProcess = null;
                         Status = NavigationServerStatus.Stopped;
+
+                        bool restarted = await EnsureRunningAsync(cancellationToken);
+                        if (!restarted)
+                        {
+                            Status = NavigationServerStatus.Failed;
+                        }
+
+                        continue;
                     }
                     else if (!await IsHealthyAsync())
                     {

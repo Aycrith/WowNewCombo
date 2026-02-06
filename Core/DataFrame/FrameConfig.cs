@@ -22,6 +22,9 @@ public static class FrameConfigMeta
 
 public static class FrameConfig
 {
+    private const int WidthTolerancePixels = 20;
+    private const int HeightTolerancePixels = 100;
+
     private static string GetPath()
     {
         return Path.Combine(AppContext.BaseDirectory, FrameConfigMeta.DefaultFilename);
@@ -111,7 +114,9 @@ public static class FrameConfig
 
             bool sameVersion = config.Version == FrameConfigMeta.Version;
             bool sameAddonVersion = config.AddonVersion == addonVersion;
-            bool sameRect = config.Rect.Width == rect.Width && config.Rect.Height == rect.Height;
+            bool similarWidth = Math.Abs(config.Rect.Width - rect.Width) <= WidthTolerancePixels;
+            bool similarHeight = Math.Abs(config.Rect.Height - rect.Height) <= HeightTolerancePixels;
+            bool sameRect = similarWidth && similarHeight;
             return sameAddonVersion && sameVersion && sameRect && config.Frames.Length > 1;
         }
         catch

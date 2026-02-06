@@ -1,4 +1,4 @@
-﻿using Core.GOAP;
+using Core.GOAP;
 
 using Microsoft.Extensions.Logging;
 
@@ -22,15 +22,17 @@ public sealed class FleeGoal : GoapGoal, IRouteProvider
     private readonly CastingHandler castingHandler;
 
     private readonly SafeSpotCollector safeSpotCollector;
+    private readonly ExecGameCommand execGameCommand;
 
     private Vector3[] MapPoints = [];
 
     public FleeGoal(ILogger<CombatGoal> logger, ConfigurableInput input,
         Wait wait, PlayerReader playerReader, AddonBits bits,
         CastingHandler castingHandler,
-        ClassConfiguration classConfiguration, Navigation playerNavigation,
+        Navigation playerNavigation,
         ClassConfiguration classConfig,
-        SafeSpotCollector safeSpotCollector)
+        SafeSpotCollector safeSpotCollector,
+        ExecGameCommand execGameCommand)
         : base(nameof(FleeGoal))
     {
         this.logger = logger;
@@ -46,9 +48,10 @@ public sealed class FleeGoal : GoapGoal, IRouteProvider
 
         AddPrecondition(GoapKey.incombat, true);
 
-        Keys = classConfiguration.Flee.Sequence;
+        Keys = classConfig.Flee.Sequence;
 
         this.safeSpotCollector = safeSpotCollector;
+        this.execGameCommand = execGameCommand;
     }
 
     #region IRouteProvider
@@ -109,7 +112,7 @@ public sealed class FleeGoal : GoapGoal, IRouteProvider
 
         if (bits.Target())
         {
-            input.ForceAggressiveClearTarget(wait, bits);
+            input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
         }
     }
 

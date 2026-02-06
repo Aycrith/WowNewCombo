@@ -413,6 +413,33 @@ public static class DependencyInjection
             }
             else
             {
+                Rectangle? storedRect = null;
+                Version? storedAddonVersion = null;
+                int? storedFrameCount = null;
+
+                try
+                {
+                    DataFrameConfig storedConfig = FrameConfig.Load();
+                    storedRect = storedConfig.Rect;
+                    storedAddonVersion = storedConfig.AddonVersion;
+                    storedFrameCount = storedConfig.Frames.Length;
+                }
+                catch (Exception ex)
+                {
+                    log.LogWarning(ex, $"{nameof(FrameConfig)} could not load existing config before delete.");
+                }
+
+                if (storedRect.HasValue)
+                {
+                    log.LogError(
+                        $"{nameof(FrameConfig)} mismatch. StoredRect={storedRect.Value} CurrentRect={rect} " +
+                        $"StoredAddonVersion={storedAddonVersion} CurrentAddonVersion={installVersion} StoredFrames={storedFrameCount}");
+                }
+                else
+                {
+                    log.LogError($"{nameof(FrameConfig)} mismatch. StoredRect=<unavailable> CurrentRect={rect} CurrentAddonVersion={installVersion}");
+                }
+
                 // At this point the webpage never loads so fallback to configuration page
                 FrameConfig.Delete();
 

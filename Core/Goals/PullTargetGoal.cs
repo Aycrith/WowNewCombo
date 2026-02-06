@@ -31,6 +31,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
     private readonly IMountHandler mountHandler;
     private readonly CombatTracker combatTracker;
     private readonly IBlacklist targetBlacklist;
+    private readonly ExecGameCommand execGameCommand;
 
     private readonly KeyAction? approachKey;
     private readonly Action approachAction;
@@ -48,7 +49,8 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         StopMoving stopMoving, CastingHandler castingHandler,
         IMountHandler mountHandler, NpcNameTargeting npcNameTargeting,
         StuckDetector stuckDetector, CombatTracker combatTracker,
-        ClassConfiguration classConfig)
+        ClassConfiguration classConfig,
+        ExecGameCommand execGameCommand)
         : base(nameof(PullTargetGoal))
     {
         this.logger = logger;
@@ -65,6 +67,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         this.combatTracker = combatTracker;
         this.targetBlacklist = targetBlacklist;
         this.classConfig = classConfig;
+        this.execGameCommand = execGameCommand;
 
         Keys = classConfig.Pull.Sequence;
 
@@ -149,7 +152,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         if (PullDurationMs > MAX_PULL_DURATION)
         {
             input.PressStopAttack();
-            input.ForceAggressiveClearTarget(wait, bits);
+            input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
             Log("Pull taking too long. Clear target and face away!");
             input.TurnRandomDir(1000);
             return;
@@ -198,7 +201,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
             {
                 Log("Preventing pulling possible tagged target!");
                 input.PressStopAttack();
-                input.ForceAggressiveClearTarget(wait, bits);
+                input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
                 return;
             }
         }
@@ -208,7 +211,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
             Log("Evading mob");
 
             input.PressStopAttack();
-            input.ForceAggressiveClearTarget(wait, bits);
+            input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
             return;
         }
         else if (bits.Target())

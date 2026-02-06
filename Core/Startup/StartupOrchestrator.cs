@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -210,13 +211,16 @@ public sealed class StartupOrchestrator
     // STAGE IMPLEMENTATIONS
     // ═══════════════════════════════════════════════════════════════════════════
 
-    private Task<StageResult> InitializeAsync(CancellationToken ct)
+    private async Task<StageResult> InitializeAsync(CancellationToken ct)
     {
         _state.StatusMessage = "Initializing startup orchestration...";
+
+        await CleanupPathingApiPortIfStaleAsync(ct);
+
         _logger.LogInformation("[StartupOrchestrator] Options: AutoLaunchWoW={AutoLaunch}, AutoConfigFrames={AutoConfig}, NavServer={NavServer}",
             _options.AutoLaunchWoW, _options.AutoConfigureFrames, _options.AutoStartNavigationServer);
 
-        return Task.FromResult(StageResult.Success("Initialization complete"));
+        return StageResult.Success("Initialization complete");
     }
 
     private Task<StageResult> DiscoverWoWAsync(CancellationToken ct)
@@ -577,5 +581,58 @@ public sealed class StartupOrchestrator
         {
             return "dc";
         }
+    }
+
+    private async Task CleanupPathingApiPortIfStaleAsync(CancellationToken cancellationToken)
+    {
+        if (_pathing.Type != StartupConfigPathing.Types.RemoteV1)
+        {
+            return;
+        }
+
+        int port = _pathing.portv1 > 0 ? _pathing.portv1 : 5001;
+        string host = string.IsNullOrWhiteSpace(_pathing.hostv1) ? "127.0.0.1" : _pathing.hostv1;
+
+        if (!IsLocalHost(host))
+        {
+            return;
+        }
+
+        bool healthy = await IsPathingApiHealthyAsync(host, port, cancellationToken);
+        if (healthy)
+        {
+            return;
+        }
+
+        PortCleanupUtility.TryTerminateProcessHoldingPort(port, "PathingAPI", _logger);
+    }
+
+    private static async Task<bool> IsPathingApiHealthyAsync(string host, int port, CancellationToken cancellationToken)
+    {
+        string url = $"http://{host}:{port}/api/PPather/SelfTest";
+
+        try
+        {
+            using HttpClient client = new() { Timeout = TimeSpan.FromSeconds(2) };
+            using HttpResponseMessage response = await client.GetAsync(url, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                return false;
+            }
+
+            string payload = await response.Content.ReadAsStringAsync(cancellationToken);
+            return payload.Contains("true", StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool IsLocalHost(string host)
+    {
+        return host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+               host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase) ||
+               host.Equals("::1", StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -10,15 +10,17 @@ public sealed class TargetFocusTargetGoal : GoapGoal
     private readonly PlayerReader playerReader;
     private readonly AddonBits bits;
     private readonly Wait wait;
+    private readonly ExecGameCommand execGameCommand;
 
     public TargetFocusTargetGoal(ConfigurableInput input, PlayerReader playerReader,
-        AddonBits bits, ClassConfiguration classConfig, Wait wait)
+        AddonBits bits, ClassConfiguration classConfig, Wait wait, ExecGameCommand execGameCommand)
         : base(nameof(TargetFocusTargetGoal))
     {
         this.input = input;
         this.playerReader = playerReader;
         this.bits = bits;
         this.wait = wait;
+        this.execGameCommand = execGameCommand;
 
         if (classConfig.Loot)
         {
@@ -71,7 +73,7 @@ public sealed class TargetFocusTargetGoal : GoapGoal
     {
         if (!bits.FocusTarget())
         {
-            input.ForceAggressiveClearTarget(wait, bits);
+            input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
         }
     }
 
