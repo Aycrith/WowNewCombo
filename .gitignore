@@ -325,6 +325,10 @@ test-report-*.json
 diagnostic_report.md
 EXECUTION_READY.txt
 READY_TO_LAUNCH.txt
+build_output.txt
+release_build.txt
+release_warnings.txt
+warnings_test.txt
 
 # Navigation server binaries (too large for git)
 Navigation/mmaps/
