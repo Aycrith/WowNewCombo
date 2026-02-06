@@ -327,10 +327,10 @@ All Phase 1-4 feature flags are configured with sensible defaults:
 **Coverage Target:** 80% of Phase 1 components
 
 **Files to Create:**
-- `CoreTests/FeatureFlags/FeatureFlagServiceTests.cs`
-- `CoreTests/Resilience/CircuitBreakerTests.cs`
-- `CoreTests/GoalsComponent/BreadcrumbTrackerTests.cs`
-- `CoreTests/GoalsComponent/StuckDetectorBreadcrumbTests.cs`
+- `CoreUnitTests/FeatureFlags/FeatureFlagServiceTests.cs`
+- `CoreUnitTests/Resilience/CircuitBreakerTests.cs`
+- `CoreUnitTests/GoalsComponent/BreadcrumbTrackerTests.cs` *(pending at original write time)*
+- `CoreUnitTests/GoalsComponent/StuckDetectorBreadcrumbTests.cs` *(pending at original write time)*
 
 **Critical Test Cases:**
 
@@ -411,7 +411,7 @@ dotnet run --project Benchmarks -c Release -- --filter "*Breadcrumb*"
 #### 6. **Integration Tests** (Est. 3 hours)
 **Coverage:** End-to-end feature flag → stuck recovery flow
 
-**File:** `CoreTests/Integration/EnhancedStuckRecoveryE2ETests.cs`
+**File:** `CoreUnitTests/Integration/EnhancedStuckRecoveryE2ETests.cs`
 
 ```csharp
 [Fact]
@@ -531,7 +531,7 @@ Time Elapsed 00:00:42.15
    - Check feature flag `Enabled=true` gates work correctly
 
 3. **Create Unit Tests** (4h)
-   - Follow test patterns in `CoreTests/` directory
+   - Follow test patterns in `CoreUnitTests/` directory
    - Achieve ≥80% code coverage for new components
    - Add to CI pipeline (`dotnet test` in `azure-pipelines.yml`)
 

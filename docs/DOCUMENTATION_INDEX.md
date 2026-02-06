@@ -1,12 +1,13 @@
 # Documentation Index
 
-**Last Updated:** February 5, 2026  
+**Last Updated:** February 6, 2026  
 **Purpose:** Central index of all project documentation for quick navigation
 
 ### Recent Documentation Updates
 
 | Date | Document | Change | Status |
 |------|----------|--------|--------|
+| 2026-02-06 | HANDOFF_COMBAT_ROTATION_FRONTEND.md | Marked as superseded; frontend TODOs confirmed implemented | ✅ Updated |
 | 2026-02-05 | PHASE2_IMPLEMENTATION_PLAN.md | Phase 2 Hazard Avoidance 100% complete (DI fix applied) | ✅ Complete |
 | 2026-02-05 | HAZARD_TASKS.md | All phases (1-5) marked complete | ✅ Complete |
 | 2026-02-05 | DOCUMENTATION_MAINTENANCE.md | Created maintenance guide | ✅ New |
@@ -91,6 +92,14 @@
 |----------|---------|
 | [KEYBINDING_SOLUTION.md](../KEYBINDING_SOLUTION.md) | Keybinding automation |
 | [LAUNCHER_README.md](../LAUNCHER_README.md) | Launcher documentation |
+| [HANDOFF_COMBAT_ROTATION_FRONTEND.md](HANDOFF_COMBAT_ROTATION_FRONTEND.md) | Historical handoff (superseded; frontend complete) |
+
+### 7. Test Projects
+
+| Project | Purpose |
+|---------|---------|
+| `CoreUnitTests` | Core unit/integration-style test coverage |
+| `FrontendUnitTests` | Frontend/controller test coverage |
 
 ---
 
@@ -148,10 +157,12 @@ All new features are controlled via [`BlazorServer/runtime_feature_flags.json`](
 | PathSmoothing | 1 | ✅ Enabled | Deployed |
 | StuckRecoveryV2 | 1 | ✅ Enabled | Deployed |
 | HazardAvoidance | 2 | ❌ Disabled | ✅ 100% Complete (Enable when ready for production) |
+| Humanization | 2 | ✅ Enabled | Deployed |
 | AIProfileGenerator | 3 | ❌ Disabled | Future |
 | ProfileMarketplace | 3 | ❌ Disabled | Future |
 | BehaviorTreeCombat | 3 | ❌ Disabled | Future |
 | HybridLLMDecision | 3 | ❌ Disabled | Future |
+| CombatRotationOptimizer | 2 | ✅ Enabled | Deployed |
 
 ---
 
