@@ -525,10 +525,10 @@ Use this checklist to assess current setup safety:
 | Addon uses only official Lua API | ✅ | DataToColor addon |
 | Input sent via standard Windows messages | ✅ | PostMessage API |
 | Window title doesn't reveal bot identity | ⚠️ | Configurable |
-| Input timing uses Gaussian distribution | ⚠️ | Pending implementation |
-| Mouse movements humanized | ⚠️ | Pending implementation |
-| Session has scheduled breaks | ⚠️ | Pending implementation |
-| Reaction times match human distributions | ⚠️ | Pending implementation |
+| Input timing uses Gaussian distribution | ✅ | `Core/Humanization/HumanizedRandom.cs` |
+| Mouse movements humanized | ✅ | `Core/Humanization/HumanizedMousePath.cs` |
+| Session has scheduled breaks | ✅ | `Core/Humanization/ScheduledBreakService.cs` |
+| Reaction times match human distributions | ✅ | `Core/Humanization/HumanizationProvider.cs` + fatigue scaling |
 
 ---
 

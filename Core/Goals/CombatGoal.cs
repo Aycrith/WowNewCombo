@@ -214,8 +214,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
                 if (bits.Target() && bits.Target_Dead())
                 {
                     logger.LogInformation("Clear current dead target!");
-                    input.PressClearTarget();
-                    wait.Update();
+                    input.ForceAggressiveClearTarget(wait, bits);
                 }
 
                 logger.LogWarning("Search Possible Threats!");
@@ -225,8 +224,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
             }
             else
             {
-                input.PressClearTarget();
-                wait.Update();
+                input.ForceAggressiveClearTarget(wait, bits);
             }
         }
     }
@@ -241,7 +239,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
             if (elapsedPetFoundTarget < 0)
             {
                 logger.LogWarning("Pet not found target!");
-                input.PressClearTarget();
+                input.ForceAggressiveClearTarget(wait, bits);
                 return;
             }
 
@@ -272,8 +270,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
             }
 
             logger.LogWarning("Dont pull non-hostile target!");
-            input.PressClearTarget();
-            wait.Update();
+            input.ForceAggressiveClearTarget(wait, bits);
         }
 
         logger.LogWarning($"Waiting for target to exists or lose combat. Possible threats {combatLog.DamageTakenCount()}!");

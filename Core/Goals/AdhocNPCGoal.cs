@@ -201,7 +201,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
             return;
         }
 
-        input.PressClearTarget();
+        input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
         stopMoving.Stop();
 
         SetClosestWaypoint();
@@ -321,8 +321,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         stopMoving.Stop();
         wait.Update();
 
-        input.PressClearTarget();
-        wait.Update();
+        input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
 
         if (tryFindClosestNPC && npc != default)
         {
@@ -387,7 +386,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         MerchantResult merchantResult = OpenMerchantWindow();
         if (merchantResult == MerchantResult.TryNextNPC && tryFindClosestNPC)
         {
-            input.PressClearTarget();
+            input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
             Resume();
             return;
         }
@@ -402,8 +401,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         sessionStat.VendoredOrRepairedRecently = true;
 
         input.PressRandom(ConsoleKey.Escape, InputDuration.DefaultPress);
-        input.PressClearTarget();
-        wait.Update();
+        input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
 
         return;
         // The following code no longer needed as we know for a fact we are close to an NPC spawnpoint

@@ -240,31 +240,9 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         if (bits.Target() && bits.Target_Dead())
         {
             Log("Has target but its dead.");
-            input.PressClearTarget();
-            wait.Update();
-
-            if (bits.Target())
+            bool cleared = input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
+            if (!cleared && bits.Target())
             {
-                // Fallbacks: ESC + slash command, to avoid depending on BindPad/custom keybinds.
-                input.PressESC();
-                wait.Update();
-
-                input.PressClearTarget();
-                wait.Update();
-
-                if (!bits.Target())
-                {
-                    return;
-                }
-
-                execGameCommand.Run("/cleartarget", logMessage: null);
-                wait.Update();
-
-                if (!bits.Target())
-                {
-                    return;
-                }
-
                 SendGoapEvent(ScreenCaptureEvent.Default);
                 LogWarning($"Unable to clear target! Check Bindpad settings!");
             }
@@ -308,8 +286,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
                 if (bits.Target() && targetBlacklist.Is())
                 {
                     Log("Blacklisted target found, clearing target");
-                    input.PressClearTarget();
-                    wait.Update();
+                    input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
                     continue; // Don't fall through - loop again to find a valid target
                 }
 

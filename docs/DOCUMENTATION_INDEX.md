@@ -7,7 +7,12 @@
 
 | Date | Document | Change | Status |
 |------|----------|--------|--------|
-| 2026-02-06 | HANDOFF_COMBAT_ROTATION_FRONTEND.md | Marked as superseded; frontend TODOs confirmed implemented | ✅ Updated |
+| 2026-02-06 | PRD_F11_TARGET_CLEARING.md | Checked off Phase 1 criteria and Task 2.7 remaining-goal migrations | ✅ Updated |
+| 2026-02-06 | PRD_INPUT_SECURITY_INTERCEPTOR.md | Updated status to implemented; documented inline InputWindowsNative delivery | ✅ Updated |
+| 2026-02-06 | ANTI_DETECTION_IMPLEMENTATION_PLAN.md | Marked WM_CHAR/Hybrid modifiers/Focus guard as complete | ✅ Updated |
+| 2026-02-06 | PRD_ANTI_DETECTION_HUMANIZATION.md | Updated detection checklist from pending to implemented | ✅ Updated |
+| 2026-02-06 | PHASE1_COMPLETION_STATUS.md | Removed stale pending test references; aligned BreadcrumbTracker test API names | ✅ Updated |
+| 2026-02-06 | HANDOFF_COMBAT_ROTATION_FRONTEND.md | Rewritten as superseded historical record; removed stale TODO instructions | ✅ Updated |
 | 2026-02-05 | PHASE2_IMPLEMENTATION_PLAN.md | Phase 2 Hazard Avoidance 100% complete (DI fix applied) | ✅ Complete |
 | 2026-02-05 | HAZARD_TASKS.md | All phases (1-5) marked complete | ✅ Complete |
 | 2026-02-05 | DOCUMENTATION_MAINTENANCE.md | Created maintenance guide | ✅ New |

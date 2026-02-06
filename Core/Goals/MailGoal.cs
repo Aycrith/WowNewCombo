@@ -146,7 +146,7 @@ public sealed partial class MailGoal : GoapGoal, IGoapEventListener, IRouteProvi
             return;
         }
 
-        input.PressClearTarget();
+        input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
         stopMoving.Stop();
 
         SetMailboxDestination();

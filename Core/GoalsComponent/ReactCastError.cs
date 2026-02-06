@@ -237,8 +237,7 @@ public sealed class ReactCastError
                 {
                     logger.LogInformation($"React to {value.ToStringF()} -- Stop attack and clear target!");
                     input.PressStopAttack();
-                    input.PressClearTarget();
-                    wait.Update();
+                    input.ForceAggressiveClearTarget(wait, bits);
                 }
                 else
                 {

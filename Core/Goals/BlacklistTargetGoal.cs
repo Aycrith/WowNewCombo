@@ -39,7 +39,6 @@ public sealed class BlacklistTargetGoal : GoapGoal
             input.PressStopAttack();
         }
 
-        input.PressClearTarget();
-        wait.Update();
+        input.ForceAggressiveClearTarget(wait, bits);
     }
 }

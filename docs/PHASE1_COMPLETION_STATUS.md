@@ -154,8 +154,17 @@ private void UpdateBreadcrumbs()
 // Recovery attempt
 if (stuckState == StuckState.BreadcrumbBacktrack && !_breadcrumbTracker.IsEmpty)
 {
-    var breadcrumbs = _breadcrumbTracker.GetLastN(3);
-    _navigation.SetWaypoints(breadcrumbs);
+    List<Vector3> waypoints = [];
+    for (int i = 1; i <= 3; i++)
+    {
+        BreadcrumbEntry? crumb = _breadcrumbTracker.GetBacktrackPosition(i);
+        if (crumb.HasValue)
+        {
+            waypoints.Add(crumb.Value.Position);
+        }
+    }
+
+    _navigation.SetWayPoints([.. waypoints]);
 }
 ```
 
@@ -329,8 +338,10 @@ All Phase 1-4 feature flags are configured with sensible defaults:
 **Files to Create:**
 - `CoreUnitTests/FeatureFlags/FeatureFlagServiceTests.cs`
 - `CoreUnitTests/Resilience/CircuitBreakerTests.cs`
-- `CoreUnitTests/GoalsComponent/BreadcrumbTrackerTests.cs` *(pending at original write time)*
-- `CoreUnitTests/GoalsComponent/StuckDetectorBreadcrumbTests.cs` *(pending at original write time)*
+- `CoreUnitTests/GoalsComponent/BreadcrumbTrackerTests.cs`
+- `CoreUnitTests/GoalsComponent/StuckDetectorBreadcrumbTests.cs`
+
+**Status (2026-02-06):** All four test files exist in `CoreUnitTests/`.
 
 **Critical Test Cases:**
 
@@ -364,7 +375,7 @@ public async Task ExecuteAsync_RejectsFast_WhenCircuitOpen() { }
 public void RecordPosition_IgnoresDuplicates_WhenDistanceBelowThreshold() { }
 
 [Fact]
-public void GetLastN_ReturnsCorrectSubset() { }
+public void GetBacktrackPosition_ReturnsExpectedReverseRelativeEntries() { }
 
 [Fact]
 public void RecordPosition_EnforcesMaxSize_ByEvictingOldest() { }
@@ -399,7 +410,7 @@ public class BreadcrumbBenchmark
 |-----------|-------------|------|
 | `RecordPosition` (below threshold) | 0 bytes | <10ns |
 | `RecordPosition` (new entry) | 0 bytes | <50ns |
-| `GetLastN(3)` | 1 allocation (array) | <100ns |
+| `GetTrail()` | 1 allocation (snapshot array) | <100ns |
 
 **Run Command:**
 ```bash

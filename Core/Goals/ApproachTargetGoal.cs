@@ -105,8 +105,7 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
 
             LogPreventExtraPull(logger);
 
-            input.PressClearTarget();
-            wait.Update();
+            input.ForceAggressiveClearTarget(wait, bits);
 
             combatTracker.AcquiredTarget(5000);
             return;
@@ -165,9 +164,8 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
 
                 Log($"Seems stuck! Clear Target.");
 
-                input.PressClearTarget();
+                input.ForceAggressiveClearTarget(wait, bits);
                 input.TurnRandomDir(250 + Random.Shared.Next(250));
-                wait.Update();
 
                 return;
             }
@@ -177,9 +175,8 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
         {
             logger.LogWarning("Too long time. Clear Target. Turn away.");
 
-            input.PressClearTarget();
+            input.ForceAggressiveClearTarget(wait, bits);
             input.TurnRandomDir(250 + Random.Shared.Next(250));
-            wait.Update();
 
             return;
         }
@@ -224,8 +221,7 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
         {
             Log($"Going away from the target! {initialMinRange} < {playerReader.MinRange()}");
 
-            input.PressClearTarget();
-            wait.Update();
+            input.ForceAggressiveClearTarget(wait, bits);
         }
     }
 

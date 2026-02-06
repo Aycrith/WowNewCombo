@@ -138,9 +138,9 @@ ForceAggressiveClearTarget()
 ```
 
 **Acceptance Criteria:**
-- [ ] Method exists and compiles
-- [ ] Sends `ConsoleKey.F11` with `FastPress` duration
-- [ ] No modifier key dependency
+- [x] Method exists and compiles
+- [x] Sends `ConsoleKey.F11` with `FastPress` duration
+- [x] No modifier key dependency
 
 ---
 
@@ -206,10 +206,10 @@ ForceAggressiveClearTarget()
 ```
 
 **Acceptance Criteria:**
-- [ ] Method cascades through F11 → ESC → Alt-Insert → /cleartarget
-- [ ] Returns `true`/`false` indicating success
-- [ ] Logs which method succeeded
-- [ ] Logs critical error if all fail
+- [x] Method cascades through F11 → ESC → Alt-Insert → /cleartarget
+- [x] Returns `true`/`false` indicating success
+- [x] Logs which method succeeded
+- [x] Logs critical error if all fail
 
 ---
 
@@ -249,9 +249,9 @@ ForceAggressiveClearTarget()
 ```
 
 **Acceptance Criteria:**
-- [ ] F11 is pressed first on every `PressClearTarget()` call
-- [ ] Original binding still fires as backup (if resolved)
-- [ ] No `return` on `NoName` — F11 still fires even if binding is broken
+- [x] F11 is pressed first on every `PressClearTarget()` call
+- [x] Original binding still fires as backup (if resolved)
+- [x] No `return` on `NoName` — F11 still fires even if binding is broken
 
 ---
 
@@ -449,21 +449,23 @@ Also fix all other bare `input.PressClearTarget()` occurrences at lines 375, 387
 
 ---
 
-### Task 2.7: Fix Remaining Goals
-**Files & Lines:**
+### Task 2.7: Fix Remaining Goals (Completed)
 
-| File | Line | Context |
-|------|------|---------|
-| `FleeGoal.cs` | ~112 | OnExit target clear |
-| `AssistFocusGoal.cs` | ~73 | Target clear |
-| `FollowFocusGoal.cs` | ~45 | Target clear |
-| `MailGoal.cs` | ~149 | Target clear |
-| `TargetFocusTargetGoal.cs` | ~74 | Target clear |
-| `TargetPetTargetGoal.cs` | ~54 | Target clear |
-| `CombatTracker.cs` | ~96, ~107 | Target clear |
-| `ReactCastError.cs` | ~240 | LOS clear target |
+**Status (2026-02-06):** Completed by migrating remaining deadlock-prone clear-target paths to aggressive clearing.
 
-For goals that don't have `ExecGameCommand`, use the simpler approach: `input.PressF11ClearTarget()` followed by `input.PressClearTarget()`. The full `ForceAggressiveClearTarget()` is only needed in deadlock-critical paths.
+| File | Context | Status |
+|------|---------|--------|
+| `Core/Goals/FleeGoal.cs` | OnExit target clear | ✅ Updated |
+| `Core/Goals/AssistFocusGoal.cs` | OnExit target clear | ✅ Updated |
+| `Core/Goals/FollowFocusGoal.cs` | OnExit target clear | ✅ Updated |
+| `Core/Goals/MailGoal.cs` | Resume target clear | ✅ Updated |
+| `Core/Goals/TargetFocusTargetGoal.cs` | OnExit target clear | ✅ Updated |
+| `Core/Goals/TargetPetTargetGoal.cs` | Dead/invalid target clear | ✅ Updated |
+| `Core/GoalsComponent/CombatTracker.cs` | Acquire-target fallback clear | ✅ Updated |
+| `Core/GoalsComponent/ReactCastError.cs` | LOS non-combat clear | ✅ Updated |
+| `Core/Goals/SkinningGoal.cs` | Alive last-target clear fallback | ✅ Updated |
+
+`ForceAggressiveClearTarget(wait, bits, execGameCommand?)` is now the default in these paths, with F11-first fallback cascade and success/failure logging.
 
 ---
 
@@ -493,6 +495,8 @@ dotnet build MasterOfPuppets.sln
 dotnet build MasterOfPuppets.sln
 ```
 **Acceptance:** Zero errors.
+
+**Status (2026-02-06):** ✅ Passed (`dotnet build MasterOfPuppets.sln`, `dotnet test CoreUnitTests`, `dotnet test FrontendUnitTests`).
 
 ### Task 4.2: Runtime Verification Checklist
 - [ ] Start BlazorServer

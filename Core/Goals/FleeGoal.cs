@@ -109,7 +109,7 @@ public sealed class FleeGoal : GoapGoal, IRouteProvider
 
         if (bits.Target())
         {
-            input.PressClearTarget();
+            input.ForceAggressiveClearTarget(wait, bits);
         }
     }
 

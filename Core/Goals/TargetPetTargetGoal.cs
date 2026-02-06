@@ -51,8 +51,7 @@ public sealed class TargetPetTargetGoal : GoapGoal
         if (bits.Target() &&
             (bits.Target_Dead() || playerReader.TargetGuid == playerReader.PetGuid))
         {
-            input.PressClearTarget();
-            wait.Update();
+            input.ForceAggressiveClearTarget(wait, bits);
         }
     }
 }

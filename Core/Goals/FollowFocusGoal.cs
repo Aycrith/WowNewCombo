@@ -42,8 +42,7 @@ public sealed class FollowFocusGoal : GoapGoal
     {
         if (playerReader.TargetGuid == playerReader.FocusGuid)
         {
-            input.PressClearTarget();
-            wait.Update();
+            input.ForceAggressiveClearTarget(wait, bits);
         }
     }
 

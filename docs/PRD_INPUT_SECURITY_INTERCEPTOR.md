@@ -2,7 +2,8 @@
 
 **Version:** 2.0  
 **Date:** February 5, 2026  
-**Status:** Implementation-Ready  
+**Status:** Implemented (Phase 1+2 inline in `InputWindowsNative`)  
+**Implementation Note (Feb 6, 2026):** Hybrid modifiers, WM_CHAR emission, focus guard, key-repeat, and burst dampening are implemented in `Game/Input/InputWindowsNative.cs`. Phase 3 extractor (`InputSecurityInterceptor`) remains an optional refactor, not a functional blocker.  
 **Companion:** [PRD_ANTI_DETECTION_HUMANIZATION.md](PRD_ANTI_DETECTION_HUMANIZATION.md) (behavioral layer)  
 
 ---

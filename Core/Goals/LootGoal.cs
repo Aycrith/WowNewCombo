@@ -214,27 +214,14 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
     private void ClearTargetIfNeeded()
     {
-        if (canGather || !bits.Target())
+        if (canGather || !bits.Target() || !bits.Target_Dead())
         {
             return;
         }
 
-        if (bits.Target() && bits.Target_Dead())
+        bool cleared = input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
+        if (!cleared && bits.Target())
         {
-            input.PressClearTarget();
-            wait.Update();
-        }
-
-        if (bits.Target())
-        {
-            execGameCommand.Run("/cleartarget", logMessage: null);
-            wait.Update();
-
-            if (!bits.Target())
-            {
-                return;
-            }
-
             SendGoapEvent(ScreenCaptureEvent.Default);
             LogWarning("Unable to clear target! Check Bindpad settings!");
         }
@@ -372,8 +359,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
             if (state.RecentlyLooted.Contains(playerReader.TargetGuid))
             {
                 logger.LogError("Keyboard target already looted 1");
-                input.PressClearTarget();
-                wait.Update();
+                input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
             }
         }
 
@@ -384,8 +370,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
             if (state.RecentlyLooted.Contains(playerReader.TargetGuid))
             {
                 logger.LogError("Keyboard target already looted 2");
-                input.PressClearTarget();
-                wait.Update();
+                input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
             }
         }
 
@@ -395,8 +380,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
             Log($"Keyboard last target {targetGuid}!");
             if (state.RecentlyLooted.Contains(targetGuid))
             {
-                input.PressClearTarget();
-                wait.Update();
+                input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
 
                 LogWarning($"Keyboard target already looted! {targetGuid}");
             }
@@ -416,8 +400,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         {
             LogWarning("Keyboard Don't attack alive target!");
 
-            input.PressClearTarget();
-            wait.Update();
+            input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
 
             return false;
         }

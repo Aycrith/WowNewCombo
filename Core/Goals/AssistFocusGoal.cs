@@ -69,9 +69,7 @@ public sealed class AssistFocusGoal : GoapGoal
 
     public override void OnExit()
     {
-        wait.Update();
-        input.PressClearTarget();
-        wait.Update();
+        input.ForceAggressiveClearTarget(wait, bits);
     }
 
     public override void Update()

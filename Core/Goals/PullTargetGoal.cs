@@ -149,7 +149,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         if (PullDurationMs > MAX_PULL_DURATION)
         {
             input.PressStopAttack();
-            input.PressClearTarget();
+            input.ForceAggressiveClearTarget(wait, bits);
             Log("Pull taking too long. Clear target and face away!");
             input.TurnRandomDir(1000);
             return;
@@ -198,8 +198,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
             {
                 Log("Preventing pulling possible tagged target!");
                 input.PressStopAttack();
-                input.PressClearTarget();
-                wait.Update();
+                input.ForceAggressiveClearTarget(wait, bits);
                 return;
             }
         }
@@ -209,8 +208,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
             Log("Evading mob");
 
             input.PressStopAttack();
-            input.PressClearTarget();
-            wait.Update();
+            input.ForceAggressiveClearTarget(wait, bits);
             return;
         }
         else if (bits.Target())

@@ -156,8 +156,7 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
                     else
                     {
                         Log("Last Target is alive!");
-                        input.PressClearTarget();
-                        wait.Update();
+                        input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
                     }
                 }
             }
@@ -336,34 +335,9 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
             return;
         }
 
-        input.PressClearTarget();
-        wait.Update();
-
-        if (bits.Target())
+        bool cleared = input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
+        if (!cleared && bits.Target())
         {
-            // Fallback: ESC often clears target in WoW and also closes loot frames that can
-            // interfere with cursor targeting for herb/mining.
-            input.PressESC();
-            wait.Update();
-
-            input.PressClearTarget();
-            wait.Update();
-
-            if (!bits.Target())
-            {
-                return;
-            }
-
-            // Final fallback: run a direct slash command (avoids depending on BindPad/custom keybinds).
-            // Suppress logging to avoid chat command spam in normal logs.
-            execGameCommand.Run("/cleartarget", logMessage: null);
-            wait.Update();
-
-            if (!bits.Target())
-            {
-                return;
-            }
-
             SendGoapEvent(ScreenCaptureEvent.Default);
             LogWarning($"Unable to clear target! Check Bindpad settings!");
         }

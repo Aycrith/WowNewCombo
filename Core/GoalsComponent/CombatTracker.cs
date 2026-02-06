@@ -93,8 +93,7 @@ public sealed partial class CombatTracker : IDisposable
             return true;
         }
 
-        input.PressClearTarget();
-        wait.Update();
+        input.ForceAggressiveClearTarget(wait, bits);
 
         if (!wait.Till(maxTimeMs, PlayerOrPetHasTarget))
         {
@@ -104,8 +103,7 @@ public sealed partial class CombatTracker : IDisposable
         }
 
         Log($"{nameof(AcquiredTarget)}: No target found after {maxTimeMs}ms");
-        input.PressClearTarget();
-        wait.Update();
+        input.ForceAggressiveClearTarget(wait, bits);
 
         return false;
     }

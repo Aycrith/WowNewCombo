@@ -71,8 +71,7 @@ public sealed class TargetFocusTargetGoal : GoapGoal
     {
         if (!bits.FocusTarget())
         {
-            input.PressClearTarget();
-            wait.Update();
+            input.ForceAggressiveClearTarget(wait, bits);
         }
     }
 

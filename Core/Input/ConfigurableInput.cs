@@ -215,15 +215,89 @@ public sealed partial class ConfigurableInput
 
     public void PressClearTarget(CancellationToken token = default)
     {
-        // Debug logging to troubleshoot binding issues
+        // Primary path: F11 action slot macro (no modifier dependency).
+        PressF11ClearTarget(token);
+
+        // Fallback to resolved configured binding when available.
         if (ClearTarget.ConsoleKey == ConsoleKey.NoName)
         {
-            logger.LogError($"[PressClearTarget] FAILED: ClearTarget.ConsoleKey is NoName! Binding not resolved. Key='{ClearTarget.Key}', BindingID={ClearTarget.BindingID}");
+            logger.LogWarning(
+                "[PressClearTarget ] ClearTarget binding unresolved (Key='{Key}', BindingID={BindingId}); used F11-only path",
+                ClearTarget.Key,
+                ClearTarget.BindingID);
             return;
         }
 
-        logger.LogDebug($"[PressClearTarget] Pressing {ClearTarget.ConsoleKey} (Key='{ClearTarget.Key}', BindingID={ClearTarget.BindingID})");
+        logger.LogDebug("[PressClearTarget ] Pressing fallback {Key} (Key='{RawKey}', BindingID={BindingId})",
+            ClearTarget.ConsoleKey,
+            ClearTarget.Key,
+            ClearTarget.BindingID);
         PressRandom(ClearTarget, token);
+    }
+
+    public void PressF11ClearTarget(CancellationToken token = default)
+    {
+        logger.LogDebug("[PressClearTarget ] F11 macro key pressed");
+        input.PressRandom(ConsoleKey.F11, InputDuration.FastPress, token);
+    }
+
+    /// <summary>
+    /// Aggressively clears target with escalating fallback path.
+    /// Returns true when the target no longer exists after any stage.
+    /// </summary>
+    public bool ForceAggressiveClearTarget(
+        Wait wait,
+        AddonBits bits,
+        ExecGameCommand? execGameCommand = null,
+        CancellationToken token = default)
+    {
+        // Stage 1: F11 macro retries.
+        for (int attempt = 1; attempt <= 3; attempt++)
+        {
+            PressF11ClearTarget(token);
+            wait.Update();
+            if (!bits.Target())
+            {
+                logger.LogInformation("[ClearTarget      ] Cleared via F11 (attempt {Attempt})", attempt);
+                return true;
+            }
+        }
+
+        // Stage 2: Escape key fallback.
+        PressESC(token);
+        wait.Update();
+        if (!bits.Target())
+        {
+            logger.LogInformation("[ClearTarget      ] Cleared via ESC");
+            return true;
+        }
+
+        // Stage 3: Configured binding fallback.
+        if (ClearTarget.ConsoleKey != ConsoleKey.NoName)
+        {
+            PressRandom(ClearTarget, token);
+            wait.Update();
+            if (!bits.Target())
+            {
+                logger.LogInformation("[ClearTarget      ] Cleared via configured binding");
+                return true;
+            }
+        }
+
+        // Stage 4: Slash command fallback when available.
+        if (execGameCommand != null)
+        {
+            execGameCommand.Run("/cleartarget", logMessage: null);
+            wait.Update();
+            if (!bits.Target())
+            {
+                logger.LogInformation("[ClearTarget      ] Cleared via /cleartarget command");
+                return true;
+            }
+        }
+
+        logger.LogError("[ClearTarget      ] FAILED: All target clearing methods exhausted; target persists.");
+        return false;
     }
 
     public void PressStopAttack(CancellationToken token = default) => PressRandom(StopAttack, token);
