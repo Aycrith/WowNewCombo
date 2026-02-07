@@ -68,7 +68,7 @@
   },
   "Mail": true,
   "MailConfig": {
-    "RecipientName": "",
+    "RecipientName": "Bankonelol",
     "MinimumGoldToKeep": 10000,
     "MinimumItemQuality": 2,
     "SendGold": true,
