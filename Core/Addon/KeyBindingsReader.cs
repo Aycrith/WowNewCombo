@@ -53,7 +53,7 @@ public sealed partial class KeyBindingsReader : IReader
             }
             
             // Queue exhausted, mark as initialized if we received any bindings
-            if (bindings.Count > 0 && !initialized)
+            if (!bindings.IsEmpty && !initialized)
             {
                 initialized = true;
                 LogBindingsInitialized(logger, bindings.Count);

@@ -95,14 +95,14 @@ public sealed class FrameConfigurator : IDisposable
 
     private Rectangle screenRect = Rectangle.Empty;
     private Size size = Size.Empty;
-    private int waitRetryCount = 0;
-    private int configRetryCount = 0;
+    private int waitRetryCount;
+    private int configRetryCount;
     
     /// <summary>
     /// The X offset where the addon's metadata pixel was found.
     /// The addon may have a small border/offset before its pixel grid starts.
     /// </summary>
-    private int metaPixelXOffset = 0;
+    private int metaPixelXOffset;
     
     /// <summary>
     /// Maximum X pixels to scan when looking for the metadata pixel.

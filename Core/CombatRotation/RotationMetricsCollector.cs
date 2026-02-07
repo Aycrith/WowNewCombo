@@ -18,6 +18,11 @@ namespace Core.CombatRotation;
 /// </summary>
 public sealed class RotationMetricsCollector : IHostedService, IDisposable
 {
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        WriteIndented = true
+    };
+    
     private readonly ILogger<RotationMetricsCollector> logger;
     private readonly FeatureFlagService featureFlags;
     private readonly RotationSessionMetrics currentSession;
@@ -104,11 +109,6 @@ public sealed class RotationMetricsCollector : IHostedService, IDisposable
 
             currentSession.SessionEndTicks = Environment.TickCount64;
 
-            JsonSerializerOptions jsonOptions = new()
-            {
-                WriteIndented = true
-            };
-
             string json = JsonSerializer.Serialize(new
             {
                 Timestamp = DateTime.UtcNow,
@@ -117,7 +117,7 @@ public sealed class RotationMetricsCollector : IHostedService, IDisposable
                 currentSession.FallbackTicks,
                 DurationMs = currentSession.SessionEndTicks - currentSession.SessionStartTicks,
                 Abilities = currentSession.GetOrderedStats()
-            }, jsonOptions);
+            }, JsonOptions);
 
             // Atomic write via temp file
             string tempPath = path + ".tmp";

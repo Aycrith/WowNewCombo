@@ -537,7 +537,7 @@ public class TestController : ControllerBase
     {
         public string Direction { get; set; } = "forward";
         public int DurationMs { get; set; } = 500;
-        public bool ReturnToStart { get; set; } = false;
+        public bool ReturnToStart { get; set; }
     }
 
     /// <summary>
@@ -738,8 +738,8 @@ public class TestController : ControllerBase
     {
         public string AbilityName { get; set; } = "Unknown";
         public string Key { get; set; } = "1";
-        public int ExpectedEnergyCost { get; set; } = 0;
-        public int ExpectedComboPoints { get; set; } = 0;
+        public int ExpectedEnergyCost { get; set; }
+        public int ExpectedComboPoints { get; set; }
         public int WaitAfterCastMs { get; set; } = 1500; // Default GCD
     }
 
@@ -1021,7 +1021,7 @@ public class TestController : ControllerBase
     /// </summary>
     public class CombatCycleRequest
     {
-        public bool UseProfileAbilities { get; set; } = false;
+        public bool UseProfileAbilities { get; set; }
         public string[] FallbackAbilities { get; set; } = ["2"]; // Default: Sinister Strike on key 2
         public int MaxCombatDurationMs { get; set; } = 60000; // 60 seconds max
         public int TargetTimeoutMs { get; set; } = 10000; // 10 seconds to find target

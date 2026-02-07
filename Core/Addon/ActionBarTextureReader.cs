@@ -41,7 +41,7 @@ public sealed partial class ActionBarTextureReader : IReader
         if (encodedValue == 0)
         {
             // Queue exhausted, mark as initialized if we received any textures
-            if (slotTextures.Count > 0 && !initialized)
+            if (!slotTextures.IsEmpty && !initialized)
             {
                 initialized = true;
                 LogTexturesInitialized(logger, slotTextures.Count);

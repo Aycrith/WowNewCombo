@@ -86,5 +86,5 @@ public sealed class StartupOptions
     /// <summary>
     /// Skip startup orchestration entirely (for debugging).
     /// </summary>
-    public bool SkipStartupOrchestration { get; set; } = false;
+    public bool SkipStartupOrchestration { get; set; }
 }
