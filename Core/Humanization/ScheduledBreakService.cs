@@ -19,6 +19,7 @@ public sealed class ScheduledBreakService : IHostedService, IDisposable
     private readonly HumanizationMetrics? metrics;
 
     private Timer? timer;
+    private bool disposed;
 
     public ScheduledBreakService(
         ILogger<ScheduledBreakService> logger,
@@ -128,6 +129,13 @@ public sealed class ScheduledBreakService : IHostedService, IDisposable
 
     public void Dispose()
     {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
         timer?.Dispose();
+        timer = null;
     }
 }

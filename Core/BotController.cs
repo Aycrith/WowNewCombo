@@ -539,8 +539,13 @@ public sealed partial class BotController : IBotController, IDisposable
     {
         cts.Cancel();
 
+        addonThread.Join(TimeSpan.FromSeconds(3));
+        screenshotThread.Join(TimeSpan.FromSeconds(3));
+        remotePathing?.Join(TimeSpan.FromSeconds(3));
+
         npcNameOverlay?.Dispose();
         sessionScope?.Dispose();
+        cts.Dispose();
     }
 
     public void MinimapNodeFound()

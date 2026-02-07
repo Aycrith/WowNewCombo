@@ -18,8 +18,11 @@ public sealed class HybridPather : IPPather, IDisposable
     private readonly IPPather fallback;
     private readonly CircuitBreaker<Vector3[]>? circuitBreaker;
 
-    private bool warnedRemoteUnavailable;
-    private bool warnedRemoteReturnedNoPath;
+    private DateTimeOffset lastRemoteUnavailableLog;
+    private DateTimeOffset lastRemoteNoPathLog;
+    private int remoteUnavailableFallbackCount;
+    private int remoteNoPathFallbackCount;
+    private static readonly TimeSpan LogThrottleInterval = TimeSpan.FromSeconds(60);
 
     public bool IsRemoteConnected => remote.IsConnected;
 
@@ -155,23 +158,33 @@ public sealed class HybridPather : IPPather, IDisposable
 
     private void WarnRemoteUnavailableOnce()
     {
-        if (warnedRemoteUnavailable)
+        remoteUnavailableFallbackCount++;
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        if (now - lastRemoteUnavailableLog < LogThrottleInterval)
         {
             return;
         }
 
-        warnedRemoteUnavailable = true;
-        logger.LogWarning("[HybridPather] Remote navmesh is not connected; using local pathing fallback.");
+        lastRemoteUnavailableLog = now;
+        logger.LogWarning(
+            "[HybridPather    ] Remote navmesh not connected; using local fallback ({Count} times since last log)",
+            remoteUnavailableFallbackCount);
+        remoteUnavailableFallbackCount = 0;
     }
 
     private void WarnRemoteReturnedNoPathOnce()
     {
-        if (warnedRemoteReturnedNoPath)
+        remoteNoPathFallbackCount++;
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        if (now - lastRemoteNoPathLog < LogThrottleInterval)
         {
             return;
         }
 
-        warnedRemoteReturnedNoPath = true;
-        logger.LogWarning("[HybridPather] Remote navmesh returned no path; using local pathing fallback.");
+        lastRemoteNoPathLog = now;
+        logger.LogWarning(
+            "[HybridPather    ] Remote navmesh returned no path; using local fallback ({Count} times since last log)",
+            remoteNoPathFallbackCount);
+        remoteNoPathFallbackCount = 0;
     }
 }

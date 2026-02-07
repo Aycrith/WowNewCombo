@@ -26,10 +26,6 @@ public sealed class DpsRoleStrategy : IRoleStrategy
     // Scoring constants - tuned for balanced DPS optimization
     private const float ExecutePhaseBonusValue = 2.0f;
     private const float ExecutePhaseThreshold = 20;
-    private const float DebuffMissingBonus = 1.5f;
-    private const float DebuffExpiringBonusBase = 1.0f;
-    private const float DebuffExpiringThresholdMs = 3000;
-    private const float BuffActiveBonusBase = 0.5f;
     private const float ResourceHighPenalty = -0.3f;
     private const float ResourceHighThreshold = 90;
     private const float TiebreakerDivisor = 1000f;

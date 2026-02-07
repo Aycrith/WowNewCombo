@@ -76,15 +76,20 @@ public sealed class WoWProcessLauncher
         {
             try
             {
-                var processes = Process.GetProcessesByName(processName);
+                Process[] processes = Process.GetProcessesByName(processName);
                 if (processes.Length > 0)
                 {
-                    var process = processes[0];
+                    Process process = processes[0];
                     _logger.LogInformation("[WoWProcessLauncher] Found existing WoW process: {Name} (PID: {PID})",
                         processName, process.Id);
                     CurrentProcess = process;
                     _state.WoWProcess = process;
                     Status = WoWProcessStatus.Running;
+
+                    // Dispose extra process handles from multi-boxing
+                    for (int i = 1; i < processes.Length; i++)
+                        processes[i].Dispose();
+
                     return process;
                 }
             }

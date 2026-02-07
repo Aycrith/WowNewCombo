@@ -18,6 +18,7 @@ public sealed class MicroPauseService : IHostedService, IDisposable
     private readonly IServiceProvider services;
 
     private Timer? timer;
+    private bool disposed;
     private long microPauseUntilUtcTicks;
     private long nextDueUtcTicks;
 
@@ -145,6 +146,13 @@ public sealed class MicroPauseService : IHostedService, IDisposable
 
     public void Dispose()
     {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
         timer?.Dispose();
+        timer = null;
     }
 }
