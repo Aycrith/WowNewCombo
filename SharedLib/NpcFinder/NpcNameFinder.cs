@@ -559,8 +559,11 @@ public sealed partial class NpcNameFinder
             rectangle,
             in operation);
 
+        int resultCount = Math.Min(segments.Length, counter.count);
+        LineSegment[] result = new LineSegment[resultCount];
+        Array.Copy(segments, result, resultCount);
         pooler.Return(segments);
-        return new(segments, 0, Math.Min(segments.Length, counter.count));
+        return new(result, 0, resultCount);
     }
 
     public Point ToScreenCoordinates()

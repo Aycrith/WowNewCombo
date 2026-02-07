@@ -1,4 +1,4 @@
-﻿using Core.CombatRotation;
+using Core.CombatRotation;
 using Core.GOAP;
 
 using Game;
@@ -32,7 +32,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
 
     public CombatGoal(ILogger<CombatGoal> logger, ConfigurableInput input,
         Wait wait, PlayerReader playerReader, StopMoving stopMoving, AddonBits bits,
-        ClassConfiguration classConfiguration, ClassConfiguration classConfig,
+        ClassConfiguration classConfig,
         CastingHandler castingHandler, CombatLog combatLog,
         IMountHandler mountHandler,
         IRotationOptimizer rotationOptimizer)
@@ -63,7 +63,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
         AddEffect(GoapKey.targetisalive, false);
         AddEffect(GoapKey.hastarget, false);
 
-        Keys = classConfiguration.Combat.Sequence;
+        Keys = classConfig.Combat.Sequence;
     }
 
     public void OnGoapEvent(GoapEventArgs e)
@@ -176,6 +176,10 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
                 {
                     rotationOptimizer.RecordCastResult(keyAction, true);
                     break;
+                }
+                else
+                {
+                    rotationOptimizer.RecordCastResult(keyAction, false);
                 }
             }
         }
@@ -294,33 +298,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
         }
 
         // TODO: have to find a better way to deal with this
-        return;
-
-        ConsoleKey key = Random.Shared.Next(2) == 0
-            ? input.TurnLeftKey
-            : input.TurnRightKey;
-
-        logger.LogWarning($"Invalid SoftInteract Detected Turn away({key}) then face target!");
-
-        input.SetKeyState(key, true, false);
-        while (InvalidSoftInteractExists())
-        {
-            wait.Update();
-        }
-        input.SetKeyState(key, false, false);
-        wait.Fixed(playerReader.DoubleNetworkLatency);
-        wait.Update();
-
-        if (bits.Target() && !InvalidSoftInteractExists())
-        {
-            input.PressFastInteract();
-
-            const int updateCount = 2;
-            float e = wait.AfterEquals(playerReader.SpellQueueTimeMs,
-                updateCount, playerReader._Direction);
-
-            stopMoving.StopForward();
-        }
+        // Dead code removed - feature intentionally disabled pending redesign
     }
 
     private bool InvalidSoftInteractExists()

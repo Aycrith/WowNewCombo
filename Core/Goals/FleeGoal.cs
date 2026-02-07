@@ -12,7 +12,7 @@ public sealed class FleeGoal : GoapGoal, IRouteProvider
 {
     public override float Cost => 3.1f;
 
-    private readonly ILogger<CombatGoal> logger;
+    private readonly ILogger<FleeGoal> logger;
     private readonly ConfigurableInput input;
     private readonly ClassConfiguration classConfig;
     private readonly Wait wait;
@@ -26,7 +26,7 @@ public sealed class FleeGoal : GoapGoal, IRouteProvider
 
     private Vector3[] MapPoints = [];
 
-    public FleeGoal(ILogger<CombatGoal> logger, ConfigurableInput input,
+    public FleeGoal(ILogger<FleeGoal> logger, ConfigurableInput input,
         Wait wait, PlayerReader playerReader, AddonBits bits,
         CastingHandler castingHandler,
         Navigation playerNavigation,

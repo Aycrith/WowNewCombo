@@ -1,3 +1,4 @@
+using Core.CombatRotation;
 using Core.Database;
 using Core.Goals;
 
@@ -372,6 +373,25 @@ public sealed partial class RequirementFactory
         list.Clear();
         Process(list, item.Name, item.Interrupts);
         item.InterruptsRuntime = list.ToArray();
+
+        // Compile ScoreConditions for rotation optimizer
+        if (item.ScoreConditions.Count > 0)
+        {
+            var scoreConditionsList = new List<ScoreConditionRuntime>(item.ScoreConditions.Count);
+            foreach (var entry in item.ScoreConditions)
+            {
+                if (!string.IsNullOrWhiteSpace(entry.Condition))
+                {
+                    list.Clear();
+                    Process(list, item.Name, new List<string> { entry.Condition });
+                    if (list.Count > 0)
+                    {
+                        scoreConditionsList.Add(new ScoreConditionRuntime(list[0], entry.Bonus));
+                    }
+                }
+            }
+            item.ScoreConditionsRuntime = scoreConditionsList.ToArray();
+        }
 
         if (!string.IsNullOrEmpty(item.MacroText))
         {

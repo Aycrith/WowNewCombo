@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -25,6 +26,9 @@ public sealed class RotationOptimizer : IRotationOptimizer
     private readonly FeatureFlagService featureFlags;
     private readonly IRoleStrategy roleStrategy;
     private readonly RotationMetricsCollector? metricsCollector;
+
+    // Stores last computed scores by action name for metrics
+    private readonly Dictionary<string, float> lastScores = new();
 
     public bool IsEnabled
     {
@@ -67,11 +71,13 @@ public sealed class RotationOptimizer : IRotationOptimizer
 
             float weightMultiplier = options.BaseWeightMultiplier;
 
+            lastScores.Clear();
             for (int i = 0; i < count; i++)
             {
                 sortedIndices[i] = i;
                 float score = roleStrategy.ScoreAbility(keys[i], in state, i);
                 scores[i] = score == float.MinValue ? float.MinValue : score * weightMultiplier;
+                lastScores[keys[i].Name] = scores[i];
             }
 
             // Insertion sort by descending score — optimal for small N, stable, zero-allocation
@@ -112,6 +118,8 @@ public sealed class RotationOptimizer : IRotationOptimizer
 
     public void RecordCastResult(KeyAction action, bool success)
     {
-        metricsCollector?.RecordCastAttempt(action.Name, 0f, success);
+        float score = lastScores.TryGetValue(action.Name, out float s) ? s : 0f;
+        metricsCollector?.RecordCastAttempt(action.Name, score, success);
     }
+
 }

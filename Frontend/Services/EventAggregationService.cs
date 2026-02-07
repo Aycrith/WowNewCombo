@@ -102,7 +102,9 @@ public sealed class EventAggregationService : BackgroundService, IGoapEventListe
     private void HandleLogChanged()
     {
         // Get the most recent log event from the ring buffer
-        LogEvent? logEvent = loggerSink.Log[loggerSink.Head];
+        // Capture head index locally to avoid race with concurrent writers
+        int head = loggerSink.Head;
+        LogEvent? logEvent = loggerSink.Log[head];
         if (logEvent == null)
             return;
 

@@ -1,7 +1,10 @@
-﻿using CommandLine;
+using CommandLine;
 
 using Core;
 using Core.CombatRotation;
+using Core.Extensions;
+using Core.Hazard;
+using Core.Humanization;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -95,7 +98,7 @@ public sealed class Program
             goto Exit;
         }
 
-        if (!ConfigureServices(log, services))
+        if (!ConfigureServices(log, services, configuration))
         {
             goto Exit;
         }
@@ -131,13 +134,19 @@ public sealed class Program
 
     private static bool ConfigureServices(
         Microsoft.Extensions.Logging.ILogger log,
-        IServiceCollection services)
+        IServiceCollection services,
+        IConfiguration configuration)
     {
         if (!services.AddWoWProcess(log))
             return false;
 
         services.AddCoreBase();
         services.AddCoreNormal(log);
+
+        // Phase 1/2 feature systems (disabled by default, opt-in via runtime_feature_flags.json)
+        services.AddPhase1Features(configuration);
+        services.AddHazardAvoidance();
+        services.AddHumanizationServices();
 
         // Combat Rotation Optimizer - disabled by default; safe to register always.
         services.AddCombatRotationOptimizer();

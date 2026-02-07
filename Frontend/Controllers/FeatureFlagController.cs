@@ -95,8 +95,6 @@ public sealed class FeatureFlagController : ControllerBase
         {
             // Read current flags
             string json = await System.IO.File.ReadAllTextAsync(flagsFilePath);
-            using JsonDocument doc = JsonDocument.Parse(json);
-            JsonElement root = doc.RootElement;
 
             // Build a mutable dictionary tree
             Dictionary<string, object> mutableRoot = JsonSerializer.Deserialize<Dictionary<string, object>>(json)

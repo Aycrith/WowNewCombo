@@ -21,6 +21,38 @@ public sealed class ProfileController : ControllerBase
     private readonly ILogger<ProfileController> logger;
     private readonly string profilesDirectory;
 
+    private static bool IsValidProfileName(string name)
+    {
+        return !string.IsNullOrWhiteSpace(name) &&
+               !name.Contains("..") &&
+               !name.Contains('/') &&
+               !name.Contains('\\');
+    }
+
+    private bool TryGetProfilePath(string name, out string profilePath, out IActionResult? errorResult)
+    {
+        errorResult = null;
+
+        if (!IsValidProfileName(name))
+        {
+            errorResult = BadRequest(new { Error = "Invalid profile name" });
+            profilePath = string.Empty;
+            return false;
+        }
+
+        profilePath = Path.Combine(profilesDirectory, $"{name}.json");
+        string fullPath = Path.GetFullPath(profilePath);
+        string fullProfilesDir = Path.GetFullPath(profilesDirectory);
+
+        if (!fullPath.StartsWith(fullProfilesDir, StringComparison.OrdinalIgnoreCase))
+        {
+            errorResult = BadRequest(new { Error = "Invalid profile name" });
+            return false;
+        }
+
+        return true;
+    }
+
     public ProfileController(ILogger<ProfileController> logger)
     {
         this.logger = logger;
@@ -87,7 +119,10 @@ public sealed class ProfileController : ControllerBase
             return NotFound(new { Error = "Profiles directory not found" });
         }
 
-        string profilePath = Path.Combine(profilesDirectory, $"{name}.json");
+        if (!TryGetProfilePath(name, out string profilePath, out IActionResult? error))
+        {
+            return error!;
+        }
 
         if (!System.IO.File.Exists(profilePath))
         {
@@ -125,7 +160,10 @@ public sealed class ProfileController : ControllerBase
             return NotFound(new { Error = "Profiles directory not found" });
         }
 
-        string profilePath = Path.Combine(profilesDirectory, $"{name}.json");
+        if (!TryGetProfilePath(name, out string profilePath, out IActionResult? error))
+        {
+            return error!;
+        }
 
         if (!System.IO.File.Exists(profilePath))
         {
@@ -190,6 +228,11 @@ public sealed class ProfileController : ControllerBase
         if (!Directory.Exists(profilesDirectory))
         {
             return NotFound(new { Error = "Profiles directory not found" });
+        }
+
+        if (!IsValidProfileName(name))
+        {
+            return BadRequest(new { Error = "Invalid profile name" });
         }
 
         string[] backups = Directory.GetFiles(profilesDirectory, $"{name}.json.backup_*")
