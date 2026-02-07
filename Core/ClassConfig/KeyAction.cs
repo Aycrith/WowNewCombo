@@ -1,4 +1,4 @@
-﻿using Core.CombatRotation;
+using Core.CombatRotation;
 using Core.Goals;
 
 using Game;
@@ -50,6 +50,7 @@ public sealed partial class KeyAction
     public int Cooldown { get; set; } = CastingHandler.SPELL_QUEUE;
 
     private int _charge;
+    private readonly object _chargeLock = new();  // Thread safety for concurrent access
     public int Charge { get; set; } = 1;
     public SchoolMask School { get; set; } = SchoolMask.None;
     public int MinComboPoints { get; set; }
@@ -313,21 +314,27 @@ public sealed partial class KeyAction
         if (Charge <= 1)
             return;
 
-        _charge--;
-        if (_charge > 0)
+        lock (_chargeLock)
         {
-            ResetCooldown();
-        }
-        else
-        {
-            ResetCharges();
-            SetClicked();
+            _charge--;
+            if (_charge > 0)
+            {
+                ResetCooldown();
+            }
+            else
+            {
+                ResetCharges();
+                SetClicked();
+            }
         }
     }
 
     public void ResetCharges()
     {
-        _charge = Charge;
+        lock (_chargeLock)
+        {
+            _charge = Charge;
+        }
     }
 
     public bool CanRun()
@@ -336,6 +343,12 @@ public sealed partial class KeyAction
             return canRun;
 
         canRunTime = globalTime.Value;
+
+        // Null safety: if requirements not loaded, allow by default
+        if (RequirementsRuntime == null)
+        {
+            return canRun = true;
+        }
 
         ReadOnlySpan<Requirement> span = RequirementsRuntime;
         for (int i = 0; i < span.Length; i++)
@@ -353,6 +366,12 @@ public sealed partial class KeyAction
             return canBeInterrupted;
 
         canBeInterruptedTime = globalTime.Value;
+
+        // Null safety: if interrupts not loaded, allow by default
+        if (InterruptsRuntime == null)
+        {
+            return canBeInterrupted = true;
+        }
 
         ReadOnlySpan<Requirement> span = InterruptsRuntime;
         for (int i = 0; i < span.Length; i++)

@@ -154,7 +154,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
                 SpellQueueMs: playerReader.SpellQueueTimeMs,
                 MainHandSwingElapsedMs: playerReader.MainHandSwing.ElapsedMs(),
                 MainHandSpeedMs: playerReader.MainHandSpeedMs(),
-                MobCount: 1,
+                MobCount: GetMobCount(),
                 InCombat: bits.Combat(),
                 TargetAlive: bits.Target_Alive(),
                 IsTargetCasting: playerReader.IsTargetCasting(),
@@ -231,6 +231,24 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
                 input.ForceAggressiveClearTarget(wait, bits);
             }
         }
+    }
+
+    /// <summary>
+    /// Gets the current number of mobs in combat with the player.
+    /// Uses CombatLog.DamageTaken as a proxy for engaged enemies.
+    /// </summary>
+    private int GetMobCount()
+    {
+        // Count unique mobs that have damaged us (best available proxy)
+        int mobCount = combatLog.DamageTakenCount();
+        
+        // If we have a target but no damage taken yet, count it
+        if (mobCount == 0 && bits.Target_Alive())
+        {
+            mobCount = 1;
+        }
+        
+        return mobCount;
     }
 
     private void FindPossibleThreats()

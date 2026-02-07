@@ -1,3 +1,4 @@
+using System;
 using System.Runtime.CompilerServices;
 
 using Microsoft.Extensions.Logging;
@@ -41,51 +42,59 @@ public sealed class DpsRoleStrategy : IRoleStrategy
     }
 
     [SkipLocalsInit]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public float ScoreAbility(KeyAction action, in GameStateSnapshot state, int sequenceIndex)
     {
-        // Gate: if the ability can't run, skip entirely
-        if (!action.CanRun())
+        try
         {
-            return float.MinValue;
+            // Gate: if the ability can't run, skip entirely
+            if (!action.CanRun())
+            {
+                return float.MinValue;
+            }
+
+            // CooldownGate: zero if on cooldown
+            if (action.OnCooldown())
+            {
+                return float.MinValue;
+            }
+
+            // Base weight from JSON profile (default 1.0)
+            float score = action.Weight;
+
+            // Execute phase bonus: boost execute abilities when target < 20% HP
+            if (state.IsExecutePhase)
+            {
+                score += ExecutePhaseBonusValue;
+            }
+
+            // Resource efficiency: penalize when near resource cap to encourage spending
+            if (state.ResourcePercent >= (int)ResourceHighThreshold)
+            {
+                score += ResourceEfficiencyBonusBase;
+            }
+
+            // Overcap penalty: if we're at max resource, penalize abilities that don't spend
+            if (state.ResourcePercent >= 95)
+            {
+                score += ResourceHighPenalty;
+            }
+
+            // Evaluate profile-defined score conditions
+            float conditionBonus = EvaluateScoreConditions(action);
+            score += conditionBonus;
+
+            // Sequence position tiebreaker: lower index = slightly higher score
+            // This ensures default-weight profiles maintain exact original ordering
+            score += (1000 - sequenceIndex) / TiebreakerDivisor;
+
+            return score;
         }
-
-        // Base weight from JSON profile (default 1.0)
-        float score = action.Weight;
-
-        // CooldownGate: zero if on cooldown
-        if (action.OnCooldown())
+        catch (Exception ex)
         {
-            return float.MinValue;
+            logger.LogError(ex, "[DpsRoleStrategy] Failed to score action {Action} at index {Index}", 
+                action.Name, sequenceIndex);
+            return float.MinValue; // Skip this ability on error
         }
-
-        // Execute phase bonus: boost execute abilities when target < 20% HP
-        if (state.IsExecutePhase)
-        {
-            score += ExecutePhaseBonusValue;
-        }
-
-        // Resource efficiency: penalize when near resource cap to encourage spending
-        if (state.ResourcePercent >= (int)ResourceHighThreshold)
-        {
-            score += ResourceEfficiencyBonusBase;
-        }
-
-        // Overcap penalty: if we're at max resource, penalize abilities that don't spend
-        if (state.ResourcePercent >= 95)
-        {
-            score += ResourceHighPenalty;
-        }
-
-        // Evaluate profile-defined score conditions
-        float conditionBonus = EvaluateScoreConditions(action);
-        score += conditionBonus;
-
-        // Sequence position tiebreaker: lower index = slightly higher score
-        // This ensures default-weight profiles maintain exact original ordering
-        score += (1000 - sequenceIndex) / TiebreakerDivisor;
-
-        return score;
     }
 
     /// <summary>

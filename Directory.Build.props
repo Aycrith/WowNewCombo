@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <!-- 
+      CA1873: Suppress "argument may be expensive and unnecessary if logging is disabled"
+      Rationale: Serilog (our logging framework) already performs message template caching
+      and deferred evaluation. The source-generated LoggerMessage pattern is overkill for
+      this codebase and would add significant boilerplate.
+    -->
+    <NoWarn>$(NoWarn);CA1873</NoWarn>
+  </PropertyGroup>
+</Project>

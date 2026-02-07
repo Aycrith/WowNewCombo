@@ -121,12 +121,12 @@
       "Description": "Input security hardening to reduce detection vectors (WM_CHAR, focus guard, hybrid modifiers)"
     },
     "CombatRotationOptimizer": {
-      "Enabled": false,
+      "Enabled": true,
       "FallbackToStaticPriority": true,
       "BaseWeightMultiplier": 1.0,
       "EnableMetrics": true,
       "EnableResourceForecasting": true,
-      "EnableSwingTimerAlignment": false,
+      "EnableSwingTimerAlignment": true,
       "MetricsFlushIntervalSeconds": 30,
       "MetricsOutputPath": "logs/rotation_metrics.json",
       "Description": "Weighted-scoring overlay for combat rotation optimization. Reorders ability priority list based on game state without removing static fallback."
