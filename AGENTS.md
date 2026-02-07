@@ -208,3 +208,217 @@ end
 - Use `wipe(t)` instead of `t = {}`
 - Avoid closures in hot paths
 - Cache loop lengths: `local len = #items`
+
+---
+
+## LLM Agent Integration
+
+This section documents integration points for AI agents to monitor and control the bot.
+
+### Bot Monitoring & Intervention Reference
+
+#### Health API Endpoints
+- **`GET http://localhost:5000/api/health`** — Full health status (app version, PID, uptime, OS, thread count, startup state, config options)
+- **`GET http://localhost:5000/api/health/startup`** — Startup state snapshot only
+
+#### Feature Flag Hot-Reload
+- **File:** `BlazorServer/runtime_feature_flags.json` (and `HeadlessServer/runtime_feature_flags.json`)
+- **Mechanism:** `FileSystemWatcher` with 100ms debounce + `IOptionsMonitor<FeatureFlagsOptions>.OnChange`
+- **No restart required** — changes are applied immediately
+- **Event notification:** `FeatureFlagService.OnFlagsChanged` event fires on any change
+
+#### Log Sink Architecture
+- **Class:** `Frontend.LoggerSink` — Serilog `ILogEventSink` implementation
+- **Ring buffer:** 256 entries (power-of-2 with bitmask indexing)
+- **Event:** `OnLogChanged` fires on every log emit
+- **Access:** Registered as singleton in DI, available via `IServiceProvider`
+
+#### GOAP Event Bus
+- **Pattern:** Full-mesh broadcast — every `GoapGoal` subscribes to every other goal's `GoapEvent` delegate
+- **Base type:** `GoapEventArgs` (in `Core/GOAP/Events/`)
+- **Event types:**
+  - `GoapStateEvent` — World state bit change (`GoapKey` + `bool Value`)
+  - `CorpseEvent` / `SkinCorpseEvent` — Spatial events with map coordinates
+  - `AbortEvent` / `ResumeEvent` — Lifecycle markers
+  - `ScreenCaptureEvent` — Screenshot trigger
+  - `RemoveClosestPoi` — POI management
+  - `FollowRouteChanged` — Route updates
+- **Interface:** `IGoapEventListener` — single method `void OnGoapEvent(GoapEventArgs e)`
+
+#### Key Error Signals
+| Signal | Location | Meaning |
+|--------|----------|---------|
+| **"NO PLAN"** | `GoapAgent.cs:456`, `EventId = 0053`, `LogLevel.Warning` | GOAP planner found no valid goal — bot is stuck or misconfigured |
+| **Death events** | `CombatLog.cs`, `SessionStat.Deaths++` | Player died, triggers corpse run |
+| **Stuck detection** | `StuckRecoveryV2Options`, backtracking thresholds | Bot hasn't moved, initiating recovery |
+| **Circuit breaker trips** | `CircuitBreaker<T>`, `State = Open` | External service (pathfinding API, LLM API) unavailable |
+
+#### Context7 Library ID
+- **ID:** `/xian55/wowclassicgrindbot`
+- **Coverage:** 282 code snippets — class profiles, combat rotations, requirement syntax, GOAP architecture
+
+---
+
+### LLM Feature Flags Reference
+
+All feature flags are in `Core/FeatureFlags/FeatureFlagsOptions.cs` and `runtime_feature_flags.json`.
+
+#### HybridLLMDecision (Disabled by default)
+```json
+"HybridLLMDecision": {
+  "Enabled": false,
+  "ConfidenceThreshold": 0.6,
+  "MaxLatencyMs": 2000,
+  "EnableForUnexpectedStates": true,
+  "CacheDecisionsSeconds": 5,
+  "Description": "Hybrid GOAP+LLM decision system for handling edge cases"
+}
+```
+
+**Integration point:** When GOAP returns "NO PLAN" or encounters unexpected states, query an LLM endpoint for a decision. Uses circuit breaker (see below).
+
+#### AIProfileGenerator (Disabled by default)
+```json
+"AIProfileGenerator": {
+  "Enabled": false,
+  "APIProvider": "none",
+  "MaxTokensPerRequest": 4000,
+  "RateLimitPerHour": 20,
+  "CacheResponsesMinutes": 60,
+  "AllowedProviders": ["openai", "anthropic", "local"],
+  "Description": "LLM-powered class profile generation from natural language descriptions"
+}
+```
+
+**Integration point:** Generate class profile JSON from natural language (e.g., "level 20-30 warrior grinding build with execute spam").
+
+#### CircuitBreaker — LLM Thresholds
+```json
+"CircuitBreaker": {
+  "Enabled": true,
+  "LLMThreshold": 3,
+  "LLMCooldownSeconds": 120,
+  "Description": "Prevents cascading failures when external services are unavailable"
+}
+```
+
+**Behavior:** After 3 consecutive LLM API failures, circuit opens for 120 seconds (rejects all requests, returns fallback). Auto-recovers via half-open state.
+
+#### MonitoringThresholds — LLM Latency
+```json
+"Thresholds": {
+  "LLMLatencyWarningMs": 3000,
+  "LLMLatencyCriticalMs": 10000
+}
+```
+
+**Warning:** LLM response took >3s. **Critical:** LLM response took >10s (may degrade bot performance).
+
+---
+
+### Class Profile Schema Reference
+
+Class profiles are JSON files in `Json/class/` (100+ profiles). They define combat rotations, pull sequences, pathing, and requirements.
+
+#### Profile Structure
+```json
+{
+  "ClassName": "Warrior",
+  "Mode": "Grind",
+  "PathFilename": "_pack\\1-20\\Human\\18-20_Duskwood.json",
+  "PathThereAndBack": true,
+  "Loot": true,
+  "Skin": false,
+  "UseMount": false,
+  "NPCMaxLevels_Above": 1,
+  "NPCMaxLevels_Below": 7,
+  "Blacklist": ["Defias Messenger", "Hogger"],
+
+  "Pull": { "Sequence": [ /* KeyAction array */ ] },
+  "Combat": { "Sequence": [ /* KeyAction array */ ] },
+  "Adhoc": { "Sequence": [ /* KeyAction array */ ] },
+  "NPC": { "Sequence": [ /* KeyAction array */ ] }
+}
+```
+
+#### Available Modes
+| Mode | Description |
+|------|-------------|
+| `Grind` | Standard grinding — kill mobs along a path |
+| `CorpseRun` | Recovery mode — run to corpse and resurrect |
+| `AttendedGather` | Semi-automated gathering (herbs/mining/skinning) |
+| `AttendedGrind` | Requires user input for targeting |
+| `AssistFocus` | Assist a focus target in combat |
+
+#### KeyAction Properties
+```json
+{
+  "Name": "Frostbolt",
+  "Key": "1",
+  "WhenUsable": true,
+  "HasCastBar": true,
+  "Cost": 18,
+  "Requirement": "TargetHealth% > 20",
+  "Requirements": ["!InMeleeRange", "HasTarget", "TargetAlive"],
+  "AfterCastWaitCastbar": true,
+  "BeforeCastStop": true
+}
+```
+
+#### Requirement Syntax
+| Requirement | Meaning |
+|-------------|---------|
+| `Health% < 40` | Player health below 40% |
+| `TargetHealth% > 50` | Target health above 50% |
+| `!BuffName` | Buff not active (e.g., `!Battle Shout`) |
+| `SpellInRange:0` | Spell slot 0 in range (for pulls) |
+| `InMeleeRange` | Target within melee range |
+| `HasTarget` | Has a valid target |
+| `TargetAlive` | Target is alive |
+| `MobCount < 2` | Fewer than 2 nearby mobs |
+| `MainHandSwing > -400` | Main hand swing timer (>-400ms means ready) |
+| `BagFull` | Any bag is full |
+| `Durability% < 35` | Item durability below 35% |
+
+Full requirement syntax is in `Core/ClassConfig/RequirementFactory.cs`.
+
+---
+
+### Agent Intervention Playbook
+
+#### Emergency Stop
+**Action:** Set `GlobalKillSwitch: true` in `runtime_feature_flags.json`
+
+**Effect:** All feature flags disabled immediately, bot enters safe state.
+
+#### Toggle Features
+**Files:** `BlazorServer/runtime_feature_flags.json` or `HeadlessServer/runtime_feature_flags.json`
+
+**Examples:**
+- Enable humanization: `"Humanization": { "Enabled": true }`
+- Disable hazard avoidance: `"HazardAvoidance": { "Enabled": false }`
+- Enable LLM decision system: `"HybridLLMDecision": { "Enabled": true }`
+
+**Trigger:** File save automatically reloads within 100ms (no restart).
+
+#### Edit Combat Rotation
+**Files:** `Json/class/{ProfileName}.json`
+
+**Example:** Reorder abilities in `Combat.Sequence`, adjust requirements, change key bindings.
+
+**Trigger:** Reload class profile from UI or restart the bot.
+
+#### Adjust Pathfinding
+**Files:** `Json/path/{PathName}.json`
+
+**Format:** Array of `{ "X": float, "Y": float, "Z": float }` waypoints.
+
+**Trigger:** Route reload via UI or `/reload` command.
+
+#### CircuitBreaker Behavior
+**Pathfinding API:** After 5 failures, circuit opens for 60 seconds (falls back to local pathfinding).
+
+**LLM API:** After 3 failures, circuit opens for 120 seconds (falls back to pure GOAP).
+
+**Manual reset:** Not exposed via API (automatic recovery only).
+

@@ -2,6 +2,7 @@ using System;
 
 using Core.FeatureFlags;
 using Core.GoalsComponent;
+using Core.LLM;
 using Core.Performance;
 using Core.Resilience;
 
@@ -50,6 +51,10 @@ public static class Phase1ServiceCollectionExtensions
 
         // Register breadcrumb tracker (transient - each Navigation gets its own instance)
         services.AddTransient<BreadcrumbTracker>();
+
+        // Register LLM services (disabled by default, controlled by HybridLLMDecisionOptions)
+        services.AddSingleton<ILLMClient, NullLLMClient>();
+        services.AddHostedService<HybridLLMDecisionService>();
 
         return services;
     }

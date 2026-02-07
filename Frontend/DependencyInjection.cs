@@ -21,6 +21,10 @@ public static class DependencyInjection
 
         services.AddScoped<Services.HazardHeatMapService>();
 
+        // Event aggregation service for real-time monitoring and LLM integration
+        services.AddSingleton<Services.EventAggregationService>();
+        services.AddHostedService(sp => sp.GetRequiredService<Services.EventAggregationService>());
+
         services.AddRazorPages();
 
         services.AddRazorComponents()
