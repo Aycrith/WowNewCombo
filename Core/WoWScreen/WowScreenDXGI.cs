@@ -65,6 +65,7 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
     private readonly IDXGIAdapter adapter;
     private readonly IDXGIOutput output;
     private readonly IDXGIOutput1 output1;
+    private readonly IDXGIFactory1 factory;
 
     private readonly ID3D11Texture2D minimapTexture;
     private readonly ID3D11Texture2D screenTexture;
@@ -74,6 +75,7 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
     private readonly IDXGIOutputDuplication duplication;
 
     private readonly bool windowedMode;
+    private bool disposed;
 
     // IAddonDataProvider
 
@@ -103,7 +105,7 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
 
         Result result;
 
-        IDXGIFactory1 factory = DXGI.CreateDXGIFactory1<IDXGIFactory1>();
+        factory = DXGI.CreateDXGIFactory1<IDXGIFactory1>();
         result = factory.EnumAdapters(0, out adapter);
         if (result == Result.Fail)
             throw new Exception($"Unable to enumerate adapter! {result.Description}");
@@ -177,17 +179,33 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
 
     public void Dispose()
     {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
+
+        // Release DXGI frame first
         try { duplication?.ReleaseFrame(); } catch { }
+
+        // Dispose ImageSharp images
+        try { addonImage?.Dispose(); } catch { }
+        try { MiniMapImage?.Dispose(); } catch { }
+        try { ScreenImage?.Dispose(); } catch { }
+
+        // Dispose D3D11 textures
+        try { addonTexture?.Dispose(); } catch { }
+        try { minimapTexture?.Dispose(); } catch { }
+        try { screenTexture?.Dispose(); } catch { }
+
+        // Dispose DXGI resources (reverse creation order)
         try { duplication?.Dispose(); } catch { }
-
-        try { minimapTexture.Dispose(); } catch { }
-        try { addonTexture.Dispose(); } catch { }
-        try { screenTexture.Dispose(); } catch { }
-
-        try { device.Dispose(); } catch { }
-        try { adapter.Dispose(); } catch { }
-        try { output1.Dispose(); } catch { }
-        try { output.Dispose(); } catch { }
+        try { device?.Dispose(); } catch { }
+        try { output1?.Dispose(); } catch { }
+        try { output?.Dispose(); } catch { }
+        try { adapter?.Dispose(); } catch { }
+        try { factory?.Dispose(); } catch { }
     }
 
     public void InitFrames(DataFrame[] frames)
