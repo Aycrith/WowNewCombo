@@ -850,7 +850,7 @@ public sealed class FrameConfigurator : IDisposable
     private string GetAddonCommand()
     {
         string cmd = addonConfigurator.Config.Command?.Trim() ?? string.Empty;
-        if (cmd.StartsWith("/", StringComparison.Ordinal))
+        if (cmd.StartsWith('/'))
         {
             cmd = cmd.TrimStart('/');
         }

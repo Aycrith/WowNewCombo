@@ -84,7 +84,7 @@ public sealed partial class AddonConfigurator
 
         // Command should be stored without a leading slash.
         Config.Command = Config.Command.Trim();
-        if (Config.Command.StartsWith("/", StringComparison.Ordinal))
+        if (Config.Command.StartsWith('/'))
         {
             Config.Command = Config.Command.TrimStart('/');
         }

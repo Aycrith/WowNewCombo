@@ -239,7 +239,7 @@ public sealed class LaunchAutoFixService
             config.Command = FallbackCommand;
             changed = true;
         }
-        else if (config.Command.StartsWith("/", StringComparison.Ordinal))
+        else if (config.Command.StartsWith('/'))
         {
             config.Command = config.Command.TrimStart('/');
             changed = true;

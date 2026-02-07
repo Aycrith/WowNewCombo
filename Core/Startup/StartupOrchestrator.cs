@@ -570,7 +570,7 @@ public sealed class StartupOrchestrator
         try
         {
             string cmd = AddonConfig.Load().Command?.Trim() ?? string.Empty;
-            if (cmd.StartsWith("/", StringComparison.Ordinal))
+            if (cmd.StartsWith('/'))
             {
                 cmd = cmd.TrimStart('/');
             }
