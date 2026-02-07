@@ -530,13 +530,12 @@ public static class DependencyInjection
             if (!featureFlags.GlobalKillSwitch && featureFlags.CircuitBreaker.Enabled)
             {
                 var cbOptions = featureFlags.CircuitBreaker;
-                var cbLogger = loggerFactory.CreateLogger<CircuitBreaker<System.Numerics.Vector3[]>>();
-                pathCB = new CircuitBreaker<System.Numerics.Vector3[]>(
-                    cbLogger,
+                var cbFactory = sp.GetRequiredService<ICircuitBreakerFactory>();
+                pathCB = cbFactory.GetOrCreate<System.Numerics.Vector3[]>(
                     "Pathfinding",
+                    static () => System.Array.Empty<System.Numerics.Vector3>(),
                     cbOptions.PathfindingThreshold,
-                    TimeSpan.FromSeconds(cbOptions.PathfindingCooldownSeconds),
-                    static () => System.Array.Empty<System.Numerics.Vector3>());
+                    TimeSpan.FromSeconds(cbOptions.PathfindingCooldownSeconds));
             }
 
             HybridPather hybrid = new(hybridLogger, remote, localPathingApi, pathCB);
