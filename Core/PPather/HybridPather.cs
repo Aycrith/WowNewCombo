@@ -14,7 +14,7 @@ namespace Core;
 public sealed class HybridPather : IPPather, IDisposable
 {
     private readonly ILogger<HybridPather> logger;
-    private readonly RemotePathingAPIV3 remote;
+    private readonly IRemotePather remote;
     private readonly IPPather fallback;
     private readonly CircuitBreaker<Vector3[]>? circuitBreaker;
 
@@ -26,7 +26,7 @@ public sealed class HybridPather : IPPather, IDisposable
 
     public bool IsRemoteConnected => remote.IsConnected;
 
-    public HybridPather(ILogger<HybridPather> logger, RemotePathingAPIV3 remote, IPPather fallback,
+    public HybridPather(ILogger<HybridPather> logger, IRemotePather remote, IPPather fallback,
         CircuitBreaker<Vector3[]>? circuitBreaker = null)
     {
         this.logger = logger;
