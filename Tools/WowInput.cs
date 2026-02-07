@@ -85,7 +85,7 @@ class WowInput
         }
 
         // Find WoW process
-        var wowProcess = FindWowProcess();
+        using var wowProcess = FindWowProcess();
         if (wowProcess == null)
         {
             Console.WriteLine("ERROR: WoW process not found");
@@ -142,18 +142,27 @@ class WowInput
         Console.WriteLine("Done");
     }
 
-    static Process FindWowProcess()
+    static Process? FindWowProcess()
     {
-        foreach (var proc in Process.GetProcesses())
+        Process[] processes = Process.GetProcesses();
+        Process? found = null;
+
+        foreach (Process proc in processes)
         {
-            if (proc.ProcessName.Contains("WowClassic", StringComparison.OrdinalIgnoreCase) ||
-                proc.ProcessName.Contains("Wow", StringComparison.OrdinalIgnoreCase))
+            if (found == null &&
+                (proc.ProcessName.Contains("WowClassic", StringComparison.OrdinalIgnoreCase) ||
+                 proc.ProcessName.Contains("Wow", StringComparison.OrdinalIgnoreCase)) &&
+                proc.MainWindowHandle != IntPtr.Zero)
             {
-                if (proc.MainWindowHandle != IntPtr.Zero)
-                    return proc;
+                found = proc;
+            }
+            else
+            {
+                proc.Dispose();
             }
         }
-        return null;
+
+        return found;
     }
 
     static bool BringToForeground(IntPtr hWnd)

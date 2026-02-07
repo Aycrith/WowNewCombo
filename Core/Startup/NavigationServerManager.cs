@@ -438,6 +438,20 @@ public sealed class NavigationServerManager : IHostedService, IDisposable
     {
         _monitorCts?.Cancel();
         _monitorCts?.Dispose();
-        _process?.Dispose();
+
+        if (_process != null)
+        {
+            try
+            {
+                if (!_process.HasExited)
+                {
+                    _process.Kill(true);
+                }
+            }
+            catch { }
+            _process.Dispose();
+            _process = null;
+            _state.NavigationProcess = null;
+        }
     }
 }

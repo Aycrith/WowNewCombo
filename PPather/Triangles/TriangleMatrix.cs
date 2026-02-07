@@ -163,10 +163,13 @@ public sealed class TriangleMatrix
             c += fromSpan.Length;
         }
 
+        int[] result = new int[totalSize];
+        outputSpan[..totalSize].CopyTo(result);
+
         collectionPooler.Return(collection);
         intPooler.Return(elements);
 
-        return outputSpan[..totalSize];
+        return result.AsSpan();
     }
 
     [SkipLocalsInit]
@@ -193,9 +196,12 @@ public sealed class TriangleMatrix
             c += fromSpan.Length;
         }
 
+        int[] result = new int[totalSize];
+        outputSpan[..totalSize].CopyTo(result);
+
         collectionPooler.Return(collection);
         intPooler.Return(elements);
 
-        return outputSpan[..totalSize];
+        return result.AsSpan();
     }
 }

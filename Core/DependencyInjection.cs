@@ -5,6 +5,7 @@ using Core.CombatRotation;
 using Core.FeatureFlags;
 using Core.Goals;
 using Core.Launch;
+using Core.Resilience;
 using Core.Session;
 using Core.Hazard;
 
@@ -523,7 +524,22 @@ public static class DependencyInjection
             LocalPathingApi localPathingApi = new(localPathingLogger, localService);
 
             var hybridLogger = loggerFactory.CreateLogger<HybridPather>();
-            HybridPather hybrid = new(hybridLogger, remote, localPathingApi);
+
+            CircuitBreaker<System.Numerics.Vector3[]>? pathCB = null;
+            var featureFlags = sp.GetRequiredService<IOptionsMonitor<FeatureFlagsOptions>>().CurrentValue;
+            if (!featureFlags.GlobalKillSwitch && featureFlags.CircuitBreaker.Enabled)
+            {
+                var cbOptions = featureFlags.CircuitBreaker;
+                var cbLogger = loggerFactory.CreateLogger<CircuitBreaker<System.Numerics.Vector3[]>>();
+                pathCB = new CircuitBreaker<System.Numerics.Vector3[]>(
+                    cbLogger,
+                    "Pathfinding",
+                    cbOptions.PathfindingThreshold,
+                    TimeSpan.FromSeconds(cbOptions.PathfindingCooldownSeconds),
+                    static () => System.Array.Empty<System.Numerics.Vector3>());
+            }
+
+            HybridPather hybrid = new(hybridLogger, remote, localPathingApi, pathCB);
 
             if (remote.PingServer())
             {

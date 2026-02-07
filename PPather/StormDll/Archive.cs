@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections.Frozen;
 using System.Collections.Generic;
@@ -7,11 +7,11 @@ using System.Text;
 
 namespace StormDll;
 
-internal sealed class Archive
+internal sealed class Archive : IDisposable
 {
     public const uint SFILE_INVALID_SIZE = 0xFFFFFFFF;
 
-    private readonly IntPtr handle;
+    private IntPtr handle;
 
     private readonly FrozenSet<string> fileList;
 
@@ -103,6 +103,15 @@ internal sealed class Archive
         return Is64Bit
             ? StormDllx64.SFileCloseArchive(handle)
             : StormDllx86.SFileCloseArchive(handle);
+    }
+
+    public void Dispose()
+    {
+        if (handle != IntPtr.Zero)
+        {
+            SFileCloseArchive();
+            handle = IntPtr.Zero;
+        }
     }
 
     [Obsolete("Use GetStream instead.")]

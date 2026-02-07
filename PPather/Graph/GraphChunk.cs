@@ -148,8 +148,10 @@ public sealed class GraphChunk
             }
         }
 
+        Spot[] result = new Spot[j];
+        Array.Copy(output, result, j);
         pool.Return(output);
-        return output.AsSpan(0, j);
+        return result.AsSpan(0, j);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

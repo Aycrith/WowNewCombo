@@ -154,8 +154,10 @@ public sealed class Spot
                 array[j++] = spot;
         }
 
+        Spot[] result = new Spot[j];
+        Array.Copy(array, result, j);
         pooler.Return(array);
-        return new(array, 0, j);
+        return new(result, 0, j);
     }
 
     public bool HasPathTo(PathGraph pg, Spot s)

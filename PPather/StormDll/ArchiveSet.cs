@@ -1,11 +1,11 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 
 using System;
 using System.IO;
 
 namespace StormDll;
 
-public sealed class ArchiveSet
+public sealed class ArchiveSet : IDisposable
 {
     private readonly Archive[] archives;
     private readonly ILogger logger;
@@ -63,5 +63,11 @@ public sealed class ArchiveSet
     {
         for (int i = 0; i < archives.Length; i++)
             archives[i].SFileCloseArchive();
+    }
+
+    public void Dispose()
+    {
+        for (int i = 0; i < archives.Length; i++)
+            archives[i]?.Dispose();
     }
 }

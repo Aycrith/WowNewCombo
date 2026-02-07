@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Numerics;
@@ -65,8 +65,10 @@ public static class PathSimplify
         if (curr != Vector3.Zero && !prev.Equals(curr))
             reduced[c++] = curr;
 
+        Vector3[] result = new Vector3[c];
+        reduced.AsSpan(0, c).CopyTo(result);
         pooler.Return(reduced);
-        return reduced.AsSpan(0, c);
+        return result.AsSpan();
     }
 
     // simplification using optimized Douglas-Peucker algorithm with recursion elimination
@@ -121,8 +123,10 @@ public static class PathSimplify
                 reduced[count++] = points[i];
         }
 
+        Vector3[] result = new Vector3[count];
+        reduced.AsSpan(0, count).CopyTo(result);
         pooler.Return(reduced);
-        return reduced.AsSpan(0, count);
+        return result.AsSpan();
     }
 
     /// <summary>

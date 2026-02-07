@@ -188,6 +188,8 @@ public sealed partial class GoapAgent : IDisposable
         cts.Cancel();
         sessionPauseEvent.Set();
 
+        goapThread.Join(TimeSpan.FromSeconds(5));
+
         foreach (GoapGoal a in AvailableGoals)
         {
             a.GoapEvent -= HandleGoapEvent;
@@ -201,6 +203,9 @@ public sealed partial class GoapAgent : IDisposable
 
         combatLog.KillCredit -= OnKillCredit;
         combatLog.PlayerDeath -= PlayerDied;
+
+        sessionPauseEvent.Dispose();
+        cts.Dispose();
     }
 
     private void GoapThread()

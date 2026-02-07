@@ -1,4 +1,4 @@
-﻿using AnTCP.Client;
+using AnTCP.Client;
 
 using Microsoft.Extensions.Logging;
 
@@ -90,6 +90,8 @@ public sealed class RemotePathingAPIV3 : IPPather, IDisposable
     public void Dispose()
     {
         RequestDisconnect();
+        connectionWatchdog.Join(TimeSpan.FromSeconds(5));
+        cts.Dispose();
     }
 
     public ValueTask DrawLines(List<LineArgs> lineArgs)

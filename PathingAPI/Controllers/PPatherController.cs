@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 using PathingAPI.RateLimit;
@@ -81,8 +81,10 @@ public sealed class PPatherController : ControllerBase
             array[i] = service.ToLocal(path.locations[i], (int)service.SearchFrom.W, uimap1);
         }
 
+        Vector3[] result = new Vector3[path.locations.Count];
+        Array.Copy(array, result, path.locations.Count);
         pool.Return(array);
-        return new JsonResult(new ArraySegment<Vector3>(array, 0, path.locations.Count), options);
+        return new JsonResult(result, options);
     }
 
     /// <summary>

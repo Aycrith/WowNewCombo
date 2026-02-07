@@ -1,4 +1,4 @@
-﻿using Core.Minimap;
+using Core.Minimap;
 
 using Microsoft.Extensions.Logging;
 
@@ -53,9 +53,12 @@ public sealed class MinimapNodeFinder
             operation.rect,
             in operation);
 
+        int resultCount = counter.count;
+        Point[] result = new Point[resultCount];
+        Array.Copy(points, result, resultCount);
         pooler.Return(points);
 
-        return points.AsSpan(0, counter.count);
+        return result.AsSpan();
     }
 
     private static void ScorePoints(ReadOnlySpan<Point> points, out Point best, out int amountAboveMin)
