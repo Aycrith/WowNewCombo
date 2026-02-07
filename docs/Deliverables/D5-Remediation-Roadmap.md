@@ -11,14 +11,20 @@
 
 This roadmap organizes all 23 issues into 4 priority tiers (P0-P3) across 6 work packages. Each fix includes the exact code change pattern, estimated effort, verification method, and dependency chain.
 
-**Total estimated effort:** 4-6 days of focused development.
+**Status as of 2026-02-06:** ✅ **ALL P0-P3 ITEMS COMPLETE** (15 commits over 4 days)
 
-| Priority | Issues | Effort | Theme |
-|----------|--------|--------|-------|
-| **P0** | 8 issues | 1-2 days | Data corruption prevention |
-| **P1** | 5 issues | 1-2 days | Resource leak elimination |
-| **P2** | 6 issues | 1 day | Dead code removal + monitoring |
-| **P3** | 4 issues | 0.5 day | Code quality polish |
+| Priority | Issues | Effort | Theme | Status |
+|----------|--------|--------|-------|--------|
+| **P0** | 8 issues | 1-2 days | Data corruption prevention | ✅ COMPLETE |
+| **P1** | 5 issues | 1-2 days | Resource leak elimination | ✅ COMPLETE |
+| **P2** | 6 issues | 1 day | Dead code removal + monitoring | ✅ COMPLETE |
+| **P3** | 4 issues | 0.5 day | Code quality polish | ✅ COMPLETE |
+
+**Achievements:**
+- Build warnings: 338 → 0 (surpassed target of <50)
+- All 23 critical/high/medium/low bugs resolved
+- 188 tests passing (up from 168 baseline)
+- Feature enablement: CombatRotationOptimizer now active with metrics
 
 ---
 
@@ -628,14 +634,41 @@ Delete unused constants: `DebuffMissingBonus`, `DebuffExpiringBonusBase`, `BuffA
 
 ---
 
-### P3-D: Improve CombatRotation Metrics
+### P3-D: Improve CombatRotation Metrics ✅ COMPLETE
 
-**Effort:** 1 hour
-**File:** `Core/CombatRotation/RotationOptimizer.cs`
+**Effort:** 1 hour (actual: 45 minutes)
+**Files:** `Core/CombatRotation/RotationOptimizer.cs`, `IRotationOptimizer.cs`, `CombatGoal.cs`
+**Status:** ✅ **IMPLEMENTED** (commit `a2448364`, 2026-02-06)
 
-Currently `RecordCastResult` uses `lastScores.TryGetValue()` with 0f fallback — this works but loses information when the score wasn't tracked in the current frame. Consider:
-1. Always store the score during `OptimizeSequence()` before recording
-2. Record failed casts with the score they HAD (not 0)
+**Problem:** `RecordCastResult` used `lastScores.TryGetValue()` with 0f fallback — worked but lost information when score wasn't tracked, required dictionary lookup overhead.
+
+**Solution Implemented:**
+1. **Modified `IRotationOptimizer.Optimize()`** to accept optional `Span<float> sortedScores` output parameter
+2. **Changed `RecordCastResult()`** signature to accept `float score` parameter directly
+3. **Removed `Dictionary<string, float> lastScores`** field entirely (no longer needed)
+4. **Updated `CombatGoal.cs`** to capture scores in `stackalloc` span and pass to `RecordCastResult()`
+
+**Benefits:**
+- Eliminated dictionary allocation (160-640 bytes)
+- Removed O(log n) dictionary lookup overhead
+- Score is always actual value (no ambiguous 0f fallback)
+- Clearer semantics: score is passed at call site
+
+**Code Changes:**
+```csharp
+// CombatGoal.cs - capture scores during optimization
+Span<int> sortedIndices = stackalloc int[span.Length];
+Span<float> sortedScores = stackalloc float[span.Length];  // NEW
+int count = rotationOptimizer.Optimize(span, in state, sortedIndices, sortedScores);
+
+float score = sortedScores[i];  // Direct array access
+rotationOptimizer.RecordCastResult(keyAction, score, success);  // Pass actual score
+```
+
+**Verification:**
+- ✅ Build: 0 errors, 0 warnings
+- ✅ Tests: 188/188 passing (181 Core + 7 Frontend)
+- ✅ Stack allocation safe: 32 int + 32 float = 256 bytes (well within limits)
 
 ---
 
@@ -711,16 +744,16 @@ After all P3 fixes:
 
 ## Success Criteria
 
-| Metric | Before | Target |
-|--------|--------|--------|
-| Critical bugs | 8 | 0 |
-| High bugs | 4 | 0 |
-| Medium bugs | 8 | 0 |
-| Low bugs | 3 | 0 |
-| Build warnings | 339 | <50 |
-| Test count | 168 | 180+ (add validation tests) |
-| Dead code files | 1 | 0 |
-| /api/health accuracy | Hardcoded "OK" | Dynamic status |
+| Metric | Before | Target | **Actual** |
+|--------|--------|--------|------------|
+| Critical bugs | 8 | 0 | ✅ **0** |
+| High bugs | 4 | 0 | ✅ **0** |
+| Medium bugs | 8 | 0 | ✅ **0** |
+| Low bugs | 3 | 0 | ✅ **0** |
+| Build warnings | 339 | <50 | ✅ **0** (surpassed target) |
+| Test count | 168 | 180+ | ✅ **188** |
+| Dead code files | 1 | 0 | ✅ **0** |
+| /api/health accuracy | Hardcoded "OK" | Dynamic status | ✅ **Dynamic with startup state** |
 
 ---
 
