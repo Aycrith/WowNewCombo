@@ -19,15 +19,21 @@ public interface IRotationOptimizer
     /// Caller-provided span to receive sorted indices.
     /// Must be at least <paramref name="keys"/>.Length in size.
     /// </param>
+    /// <param name="sortedScores">
+    /// Optional caller-provided span to receive scores corresponding to sortedIndices.
+    /// If provided, must be at least <paramref name="keys"/>.Length in size.
+    /// sortedScores[i] will contain the score for keys[sortedIndices[i]].
+    /// </param>
     /// <returns>Number of valid entries written to <paramref name="sortedIndices"/>.</returns>
-    int Optimize(ReadOnlySpan<KeyAction> keys, in GameStateSnapshot state, Span<int> sortedIndices);
+    int Optimize(ReadOnlySpan<KeyAction> keys, in GameStateSnapshot state, Span<int> sortedIndices, Span<float> sortedScores = default);
 
     /// <summary>
     /// Records the result of a cast attempt for metrics tracking.
     /// </summary>
     /// <param name="action">The ability that was attempted.</param>
+    /// <param name="score">The score assigned to this ability during the last Optimize() call.</param>
     /// <param name="success">Whether the cast succeeded.</param>
-    void RecordCastResult(KeyAction action, bool success);
+    void RecordCastResult(KeyAction action, float score, bool success);
 
     /// <summary>
     /// Whether the optimizer is currently enabled via feature flags.

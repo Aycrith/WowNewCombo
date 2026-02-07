@@ -161,11 +161,13 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
                 TickTimestamp: Environment.TickCount64);
 
             Span<int> sortedIndices = stackalloc int[span.Length];
-            int count = rotationOptimizer.Optimize(span, in state, sortedIndices);
+            Span<float> sortedScores = stackalloc float[span.Length];
+            int count = rotationOptimizer.Optimize(span, in state, sortedIndices, sortedScores);
 
             for (int i = 0; bits.Target_Alive() && i < count; i++)
             {
                 KeyAction keyAction = span[sortedIndices[i]];
+                float score = sortedScores[i];
 
                 if (castingHandler.SpellInQueue() && !keyAction.BaseAction)
                     continue;
@@ -174,12 +176,12 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
 
                 if (castingHandler.CastIfReady(keyAction, interrupt))
                 {
-                    rotationOptimizer.RecordCastResult(keyAction, true);
+                    rotationOptimizer.RecordCastResult(keyAction, score, true);
                     break;
                 }
                 else
                 {
-                    rotationOptimizer.RecordCastResult(keyAction, false);
+                    rotationOptimizer.RecordCastResult(keyAction, score, false);
                 }
             }
         }

@@ -27,9 +27,6 @@ public sealed class RotationOptimizer : IRotationOptimizer
     private readonly IRoleStrategy roleStrategy;
     private readonly RotationMetricsCollector? metricsCollector;
 
-    // Stores last computed scores by action name for metrics
-    private readonly Dictionary<string, float> lastScores = new();
-
     public bool IsEnabled
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -54,7 +51,7 @@ public sealed class RotationOptimizer : IRotationOptimizer
     /// is cache-friendly and allocation-free on stack.
     /// </summary>
     [SkipLocalsInit]
-    public int Optimize(ReadOnlySpan<KeyAction> keys, in GameStateSnapshot state, Span<int> sortedIndices)
+    public int Optimize(ReadOnlySpan<KeyAction> keys, in GameStateSnapshot state, Span<int> sortedIndices, Span<float> sortedScores = default)
     {
         int count = keys.Length;
         if (count == 0)
@@ -71,13 +68,11 @@ public sealed class RotationOptimizer : IRotationOptimizer
 
             float weightMultiplier = options.BaseWeightMultiplier;
 
-            lastScores.Clear();
             for (int i = 0; i < count; i++)
             {
                 sortedIndices[i] = i;
                 float score = roleStrategy.ScoreAbility(keys[i], in state, i);
                 scores[i] = score == float.MinValue ? float.MinValue : score * weightMultiplier;
-                lastScores[keys[i].Name] = scores[i];
             }
 
             // Insertion sort by descending score — optimal for small N, stable, zero-allocation
@@ -98,6 +93,12 @@ public sealed class RotationOptimizer : IRotationOptimizer
                 scores[j + 1] = keyScore;
             }
 
+            // Optionally populate sortedScores output span
+            if (!sortedScores.IsEmpty && sortedScores.Length >= count)
+            {
+                scores.CopyTo(sortedScores);
+            }
+
             metricsCollector?.RecordOptimizedTick();
             return count;
         }
@@ -110,15 +111,18 @@ public sealed class RotationOptimizer : IRotationOptimizer
             for (int i = 0; i < count; i++)
             {
                 sortedIndices[i] = i;
+                if (!sortedScores.IsEmpty && sortedScores.Length >= count)
+                {
+                    sortedScores[i] = 0f;
+                }
             }
 
             return count;
         }
     }
 
-    public void RecordCastResult(KeyAction action, bool success)
+    public void RecordCastResult(KeyAction action, float score, bool success)
     {
-        float score = lastScores.TryGetValue(action.Name, out float s) ? s : 0f;
         metricsCollector?.RecordCastAttempt(action.Name, score, success);
     }
 

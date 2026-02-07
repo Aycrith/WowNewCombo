@@ -229,8 +229,8 @@ public sealed class RotationOptimizerTests
         KeyAction action = new();
 
         // Should not throw even without metrics collector
-        optimizer.RecordCastResult(action, success: true);
-        optimizer.RecordCastResult(action, success: false);
+        optimizer.RecordCastResult(action, score: 0f, success: true);
+        optimizer.RecordCastResult(action, score: 0f, success: false);
     }
 
 }
