@@ -18,6 +18,11 @@ namespace Frontend.Controllers;
 [Route("api/profiles")]
 public sealed class ProfileController : ControllerBase
 {
+    private static readonly JsonSerializerOptions IndentedJsonOptions = new()
+    {
+        WriteIndented = true
+    };
+    
     private readonly ILogger<ProfileController> logger;
     private readonly string profilesDirectory;
 
@@ -188,10 +193,7 @@ public sealed class ProfileController : ControllerBase
             System.IO.File.Copy(profilePath, backupPath, overwrite: true);
 
             // Write updated profile with formatting
-            string formattedJson = JsonSerializer.Serialize(profile, new JsonSerializerOptions
-            {
-                WriteIndented = true
-            });
+            string formattedJson = JsonSerializer.Serialize(profile, IndentedJsonOptions);
 
             await System.IO.File.WriteAllTextAsync(profilePath, formattedJson);
 

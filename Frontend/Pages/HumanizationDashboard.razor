@@ -266,7 +266,7 @@
             snapshot = metrics.GetSnapshot();
             riskAssessment = riskAnalyzer.AnalyzeRisk(humanizationProvider);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // Silent fail - will retry on next tick
         }

@@ -20,6 +20,11 @@ namespace Frontend.Controllers;
 [Route("api/features")]
 public sealed class FeatureFlagController : ControllerBase
 {
+    private static readonly JsonSerializerOptions IndentedJsonOptions = new()
+    {
+        WriteIndented = true
+    };
+    
     private readonly FeatureFlagService featureFlagService;
     private readonly ILogger<FeatureFlagController> logger;
     private readonly string flagsFilePath;
@@ -125,10 +130,7 @@ public sealed class FeatureFlagController : ControllerBase
             mutableRoot["Features"] = features;
 
             // Write back with formatting
-            string updatedJson = JsonSerializer.Serialize(mutableRoot, new JsonSerializerOptions
-            {
-                WriteIndented = true
-            });
+            string updatedJson = JsonSerializer.Serialize(mutableRoot, IndentedJsonOptions);
 
             await System.IO.File.WriteAllTextAsync(flagsFilePath, updatedJson);
 
@@ -165,10 +167,7 @@ public sealed class FeatureFlagController : ControllerBase
 
             root["GlobalKillSwitch"] = request.Active;
 
-            string updatedJson = JsonSerializer.Serialize(root, new JsonSerializerOptions
-            {
-                WriteIndented = true
-            });
+            string updatedJson = JsonSerializer.Serialize(root, IndentedJsonOptions);
 
             await System.IO.File.WriteAllTextAsync(flagsFilePath, updatedJson);
 

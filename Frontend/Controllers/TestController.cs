@@ -1431,7 +1431,7 @@ public class TestController : ControllerBase
         };
     }
 
-    private class CombatResult
+    private sealed class CombatResult
     {
         public bool Success { get; set; }
         public int TargetingDurationMs { get; set; }
