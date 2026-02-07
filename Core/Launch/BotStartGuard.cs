@@ -293,7 +293,7 @@ public sealed class BotStartGuard : IBotStartGuard, ILaunchReadinessCacheInvalid
             return true;
         }
 
-        if (snapshot.Bypasses.TryGetValue(subsystem, out LaunchSubsystemBypass found) && found.Enabled)
+        if (snapshot.Bypasses.TryGetValue(subsystem, out LaunchSubsystemBypass? found) && found is { Enabled: true })
         {
             bypass = found;
             return true;

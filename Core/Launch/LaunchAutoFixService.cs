@@ -307,7 +307,9 @@ public sealed class LaunchAutoFixService
     private static int? TryReadInstalledCellSize(string luaPath)
     {
         string[] lines = File.ReadAllLines(luaPath);
+#pragma warning disable SYSLIB1045 // Use GeneratedRegexAttribute for compile-time regex - pattern only used during startup
         Regex rx = new(@"^\s*local\s+CELL_SIZE\s*=\s*(?<n>\d+)\s*", RegexOptions.Compiled);
+#pragma warning restore SYSLIB1045
 
         foreach (string line in lines)
         {

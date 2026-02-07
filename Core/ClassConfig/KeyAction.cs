@@ -73,6 +73,12 @@ public sealed partial class KeyAction
     /// </summary>
     public ScoreConditionRuntime[] ScoreConditionsRuntime { get; set; } = [];
 
+    /// <summary>
+    /// Cached ability type classification for performance.
+    /// Computed once at profile load time to avoid string allocations in hot path.
+    /// </summary>
+    public AbilityType AbilityType { get; internal set; } = AbilityType.Other;
+
     public string Requirement { get; set; } = string.Empty;
     public List<string> Requirements { get; } = [];
     public Requirement[] RequirementsRuntime { get; set; } = [];

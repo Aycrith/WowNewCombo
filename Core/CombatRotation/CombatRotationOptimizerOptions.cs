@@ -51,4 +51,10 @@ public sealed class CombatRotationOptimizerOptions
     /// Path for the JSON metrics log file.
     /// </summary>
     public string MetricsOutputPath { get; set; } = "logs/rotation_metrics.json";
+
+    /// <summary>
+    /// Role strategy to use for scoring. Options: "DPS", "Tank", "Healer".
+    /// Default: "DPS"
+    /// </summary>
+    public string Role { get; set; } = "DPS";
 }

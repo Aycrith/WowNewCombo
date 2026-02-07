@@ -24,15 +24,16 @@ public sealed class DpsRoleStrategyTests
     [Fact]
     public void RoleName_ReturnsDPS()
     {
-        DpsRoleStrategy strategy = new(NullLogger<DpsRoleStrategy>.Instance);
+        // Pass null for featureFlags - strategy works without it (feature disabled by default)
+        DpsRoleStrategy strategy = new(NullLogger<DpsRoleStrategy>.Instance, null);
         Assert.Equal("DPS", strategy.RoleName);
     }
 
     [Fact]
     public void Strategy_CanBeConstructed()
     {
-        // Verify DI-friendly constructor
-        DpsRoleStrategy strategy = new(NullLogger<DpsRoleStrategy>.Instance);
+        // Verify DI-friendly constructor - works with null featureFlags
+        DpsRoleStrategy strategy = new(NullLogger<DpsRoleStrategy>.Instance, null);
         Assert.NotNull(strategy);
     }
 }

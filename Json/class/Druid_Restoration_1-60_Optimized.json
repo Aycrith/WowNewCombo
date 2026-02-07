@@ -1,0 +1,340 @@
+{
+  "ClassName": "Druid",
+  "Log": false,
+  "Loot": true,
+  "Skin": false,
+  "GatherCorpse": true,
+  "UseMount": true,
+  "AllowPvP": false,
+  "KeyboardOnly": true,
+  "NPCMaxLevels_Above": 2,
+  "NPCMaxLevels_Below": 8,
+  "PathThereAndBack": true,
+  "PathReduceSteps": true,
+  "Mount": { "Key": "N0" },
+  "IntVariables": {
+    "MIN_HP_EMERGENCY%": 25,
+    "MIN_HP_URGENT%": 50,
+    "MIN_HP_NORMAL%": 70,
+    "MIN_MANA_EMERGENCY%": 20,
+    "MIN_MANA_CONSERVE%": 40,
+    "HOT_REFRESH_MS": 3000,
+    "FLEE_HP%": 15,
+    "FLEE_MOB_COUNT": 3,
+    "FOOD_HP%": 50,
+    "DRINK_MANA%": 30,
+    "LIFEBLOOM_STACKS": 3
+  },
+  "Form": {
+    "Sequence": [
+      {
+        "Name": "Caster Form",
+        "Key": "F1"
+      },
+      {
+        "Name": "Bear Form",
+        "Key": "F2",
+        "Form": "Druid_BearForm"
+      },
+      {
+        "Name": "Cat Form",
+        "Key": "F3",
+        "Form": "Druid_CatForm"
+      },
+      {
+        "Name": "Travel Form",
+        "Key": "F4",
+        "Form": "Druid_TravelForm"
+      }
+    ]
+  },
+  "Paths": [
+    {
+      "PathFilename": "_pack\\1-20\\Night elf\\01-04_Teldrassil_Shadowglen.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:NightElf"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Tauren\\01-06_Mulgore_Red Cloud Mesa.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 6", "Race:Tauren"]
+    },
+    {
+      "PathFilename": "_pack\\20-30\\Duskwood\\20-27 Raven Hill Cemetery.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 20", "Level < 25"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Eastern Plaguelands\\57-60 Browman Mill - Noxious Glade.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 57", "Level <= 60"]
+    }
+  ],
+  "Wait": {
+    "Sequence": [
+      {
+        "Name": "User",
+        "Cost": 0.9,
+        "Requirement": "MenuOpen || ChatInputVisible"
+      }
+    ]
+  },
+  "Pull": {
+    "Sequence": [
+      {
+        "Name": "Mark of the Wild",
+        "Key": "3",
+        "Weight": 2.0,
+        "ScoreConditions": [
+          { "Condition": "!Mark of the Wild", "Bonus": 4.0 }
+        ],
+        "Requirement": "!Mark of the Wild && Level >= 2"
+      },
+      {
+        "Name": "Thorns",
+        "Key": "4",
+        "Weight": 2.0,
+        "ScoreConditions": [
+          { "Condition": "!Thorns", "Bonus": 3.0 }
+        ],
+        "Requirement": "!Thorns && Level >= 6"
+      },
+      {
+        "Name": "Moonfire",
+        "Key": "1",
+        "Weight": 2.0,
+        "ScoreConditions": [
+          { "Condition": "!Moonfire", "Bonus": 3.0 },
+          { "Condition": "TargetHealth% > 50", "Bonus": 0.5 }
+        ],
+        "Requirement": "Level >= 4"
+      },
+      {
+        "Name": "Shoot",
+        "Key": "0",
+        "Item": true,
+        "Requirements": ["HasRangedWeapon", "!Shooting"]
+      },
+      {
+        "Name": "Approach"
+      }
+    ]
+  },
+  "Combat": {
+    "Sequence": [
+      {
+        "Name": "Barkskin",
+        "Key": "F5",
+        "WhenUsable": true,
+        "Weight": 4.0,
+        "ScoreConditions": [
+          { "Condition": "Health% < 40", "Bonus": 6.0 },
+          { "Condition": "MobCount > 2", "Bonus": 2.0 }
+        ],
+        "Requirement": "Level >= 26"
+      },
+      {
+        "Name": "Nature's Swiftness",
+        "Key": "F6",
+        "WhenUsable": true,
+        "Weight": 5.0,
+        "ScoreConditions": [
+          { "Condition": "Health% < MIN_HP_EMERGENCY%", "Bonus": 10.0 }
+        ],
+        "Requirement": "Level >= 30"
+      },
+      {
+        "Name": "Swiftmend",
+        "Key": "F7",
+        "WhenUsable": true,
+        "Weight": 6.0,
+        "ScoreConditions": [
+          { "Condition": "Health% < MIN_HP_EMERGENCY%", "Bonus": 12.0 },
+          { "Condition": "Health% < MIN_HP_URGENT%", "Bonus": 6.0 },
+          { "Condition": "Rejuvenation || Regrowth", "Bonus": 8.0 }
+        ],
+        "Requirements": ["(Rejuvenation || Regrowth) && Health% < MIN_HP_URGENT%", "Level >= 50"]
+      },
+      {
+        "Name": "Lifebloom",
+        "Key": "6",
+        "Weight": 3.0,
+        "ScoreConditions": [
+          { "Condition": "Lifebloom < LIFEBLOOM_STACKS", "Bonus": 5.0 },
+          { "Condition": "Lifebloom RemainingMs < HOT_REFRESH_MS", "Bonus": 4.0 }
+        ],
+        "Requirements": ["Lifebloom < LIFEBLOOM_STACKS || Lifebloom RemainingMs < HOT_REFRESH_MS", "Level >= 64"]
+      },
+      {
+        "Name": "Regrowth",
+        "Key": "5",
+        "HasCastBar": true,
+        "Weight": 3.5,
+        "ScoreConditions": [
+          { "Condition": "!Regrowth", "Bonus": 4.0 },
+          { "Condition": "Regrowth RemainingMs < HOT_REFRESH_MS", "Bonus": 5.0 },
+          { "Condition": "Health% < MIN_HP_URGENT%", "Bonus": 3.0 }
+        ],
+        "Requirements": ["(!Regrowth || Regrowth RemainingMs < HOT_REFRESH_MS) && Health% < MIN_HP_URGENT%", "Mana% > MIN_MANA_EMERGENCY%", "Level >= 12"]
+      },
+      {
+        "Name": "Rejuvenation",
+        "Key": "2",
+        "Weight": 3.0,
+        "ScoreConditions": [
+          { "Condition": "!Rejuvenation", "Bonus": 5.0 },
+          { "Condition": "Rejuvenation RemainingMs < HOT_REFRESH_MS", "Bonus": 6.0 },
+          { "Condition": "Health% < MIN_HP_NORMAL%", "Bonus": 2.0 }
+        ],
+        "Requirements": ["!Rejuvenation || Rejuvenation RemainingMs < HOT_REFRESH_MS", "Level >= 4"]
+      },
+      {
+        "Name": "Healing Touch",
+        "Key": "3",
+        "HasCastBar": true,
+        "Weight": 3.5,
+        "ScoreConditions": [
+          { "Condition": "Health% < MIN_HP_EMERGENCY%", "Bonus": 8.0 },
+          { "Condition": "Health% < MIN_HP_URGENT%", "Bonus": 4.0 },
+          { "Condition": "Nature's Swiftness", "Bonus": 15.0 }
+        ],
+        "Requirements": ["Health% < MIN_HP_URGENT%", "Mana% > MIN_MANA_EMERGENCY%", "Level >= 2"]
+      },
+      {
+        "Name": "Tranquility",
+        "Key": "F8",
+        "HasCastBar": true,
+        "WhenUsable": true,
+        "Weight": 5.0,
+        "ScoreConditions": [
+          { "Condition": "MobCount > 2", "Bonus": 8.0 },
+          { "Condition": "Health% < MIN_HP_URGENT%", "Bonus": 3.0 }
+        ],
+        "Requirements": ["MobCount > 2 && Health% < MIN_HP_URGENT%", "Level >= 30"]
+      },
+      {
+        "Name": "Innervate",
+        "Key": "F9",
+        "WhenUsable": true,
+        "Weight": 5.0,
+        "ScoreConditions": [
+          { "Condition": "Mana% < MIN_MANA_EMERGENCY%", "Bonus": 10.0 }
+        ],
+        "Requirement": "Mana% < MIN_MANA_EMERGENCY% && Level >= 40"
+      },
+      {
+        "Name": "Abolish Poison",
+        "Key": "7",
+        "Weight": 3.0,
+        "ScoreConditions": [
+          { "Condition": "Poison", "Bonus": 5.0 }
+        ],
+        "Requirement": "Level >= 26"
+      },
+      {
+        "Name": "Remove Curse",
+        "Key": "8",
+        "Weight": 3.0,
+        "ScoreConditions": [
+          { "Condition": "Curse", "Bonus": 5.0 }
+        ],
+        "Requirement": "Level >= 24"
+      },
+      {
+        "Name": "Wrath",
+        "Key": "1",
+        "HasCastBar": true,
+        "Weight": 1.5,
+        "ScoreConditions": [
+          { "Condition": "Mana% > MIN_MANA_CONSERVE%", "Bonus": 0.5 }
+        ],
+        "Requirements": ["Mana% > MIN_MANA_EMERGENCY%", "SpellInRange:3"]
+      },
+      {
+        "Name": "Moonfire",
+        "Key": "4",
+        "Weight": 1.5,
+        "ScoreConditions": [
+          { "Condition": "!Moonfire", "Bonus": 2.0 }
+        ],
+        "Requirement": "Level >= 4"
+      },
+      {
+        "Name": "AutoAttack",
+        "Requirement": "!HasRangedWeapon && Mana% < MIN_MANA_EMERGENCY%"
+      },
+      {
+        "Name": "Approach"
+      }
+    ]
+  },
+  "Flee": {
+    "Sequence": [
+      {
+        "Name": "Entangling Roots",
+        "Key": "9",
+        "Weight": 4.0,
+        "ScoreConditions": [
+          { "Condition": "MobCount > 1", "Bonus": 5.0 }
+        ],
+        "HasCastBar": true,
+        "Requirement": "Level >= 8"
+      },
+      {
+        "Name": "Bear Form",
+        "Key": "F2",
+        "Weight": 3.0,
+        "ScoreConditions": [
+          { "Condition": "!Bear Form", "Bonus": 4.0 }
+        ],
+        "Requirement": "!Bear Form && Level >= 10"
+      },
+      {
+        "Name": "Flee",
+        "Requirement": "(MobCount >= FLEE_MOB_COUNT && Health% < FLEE_HP%) || TargetElite"
+      }
+    ]
+  },
+  "Adhoc": {
+    "Sequence": [
+      {
+        "Name": "Mark of the Wild",
+        "Key": "3",
+        "Weight": 2.0,
+        "ScoreConditions": [
+          { "Condition": "!Mark of the Wild", "Bonus": 3.0 }
+        ],
+        "InCombat": "i dont care",
+        "Requirement": "!Mark of the Wild && Level >= 2"
+      },
+      {
+        "Name": "Thorns",
+        "Key": "4",
+        "Weight": 2.0,
+        "ScoreConditions": [
+          { "Condition": "!Thorns", "Bonus": 3.0 }
+        ],
+        "InCombat": "i dont care",
+        "Requirement": "!Thorns && Level >= 6"
+      },
+      {
+        "Name": "Drink",
+        "Key": "N2",
+        "Weight": 3.0,
+        "ScoreConditions": [
+          { "Condition": "Mana% < DRINK_MANA%", "Bonus": 4.0 }
+        ],
+        "Requirement": "Mana% < DRINK_MANA%"
+      },
+      {
+        "Name": "Food",
+        "Key": "N1",
+        "Requirement": "Health% < FOOD_HP%"
+      }
+    ]
+  }
+}

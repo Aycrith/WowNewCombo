@@ -24,8 +24,10 @@ public sealed class NullWowScreen : IWowScreen
     
     public Image<Bgra32> MiniMapImage { get; }
     public Rectangle MiniMapRect => EmptyRect;
-    
+
+#pragma warning disable CS0067 // Event is never used - required by IWowScreen interface
     public event Action? OnChanged;
+#pragma warning restore CS0067
 
     public NullWowScreen()
     {

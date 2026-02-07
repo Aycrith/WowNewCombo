@@ -33,9 +33,7 @@ public sealed partial class PlayerDirection
     private readonly CancellationToken token;
 
     // Tracking for turn verification
-    private float lastTargetDirection;
     private int consecutiveFailedTurns;
-    private long lastTurnAttemptTime;
 
     public PlayerDirection(ILogger<PlayerDirection> logger,
         CancellationTokenSource<GoapAgent> cts,

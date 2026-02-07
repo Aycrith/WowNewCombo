@@ -1,0 +1,273 @@
+{
+  "ClassName": "Shaman",
+  "Log": false,
+  "Loot": true,
+  "Skin": false,
+  "GatherCorpse": true,
+  "UseMount": true,
+  "AllowPvP": false,
+  "KeyboardOnly": true,
+  "NPCMaxLevels_Above": 2,
+  "NPCMaxLevels_Below": 8,
+  "PathThereAndBack": true,
+  "PathReduceSteps": true,
+  "Mount": { "Key": "N0" },
+  "IntVariables": {
+    "MIN_HP_EMERGENCY%": 25,
+    "MIN_HP_URGENT%": 50,
+    "MIN_HP_NORMAL%": 70,
+    "MIN_MANA_EMERGENCY%": 20,
+    "MIN_MANA_CONSERVE%": 40,
+    "HOT_REFRESH_MS": 3000,
+    "FLEE_HP%": 15,
+    "FLEE_MOB_COUNT": 3,
+    "FOOD_HP%": 50,
+    "DRINK_MANA%": 30,
+    "SHIELD_THRESHOLD%": 80,
+    "EARTH_SHIELD_STACKS": 3
+  },
+  "Paths": [
+    {
+      "PathFilename": "_pack\\1-20\\Draenei\\1-5_Azuremyst Isle.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Draenei"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Orc.Troll\\1-5_Durotar_Valley of Trials.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Orc || Race:Troll"]
+    },
+    {
+      "PathFilename": "_pack\\20-30\\Duskwood\\20-27 Raven Hill Cemetery.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 20", "Level < 25"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Eastern Plaguelands\\57-60 Browman Mill - Noxious Glade.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 57", "Level <= 60"]
+    }
+  ],
+  "Wait": {
+    "Sequence": [
+      {
+        "Name": "User",
+        "Cost": 0.9,
+        "Requirement": "MenuOpen || ChatInputVisible"
+      }
+    ]
+  },
+  "Pull": {
+    "Sequence": [
+      {
+        "Name": "Lightning Bolt",
+        "Key": "1",
+        "HasCastBar": true,
+        "Weight": 2.0,
+        "ScoreConditions": [
+          { "Condition": "Mana% > MIN_MANA_CONSERVE%", "Bonus": 0.5 }
+        ],
+        "Requirements": ["Mana% > MIN_MANA_EMERGENCY%", "SpellInRange:3"]
+      },
+      {
+        "Name": "Earth Shock",
+        "Key": "4",
+        "WhenUsable": true,
+        "Weight": 2.5,
+        "ScoreConditions": [
+          { "Condition": "TargetCastingSpell", "Bonus": 4.0 },
+          { "Condition": "TargetHealth% < 20", "Bonus": 2.0 }
+        ],
+        "Requirement": "Level >= 4"
+      },
+      {
+        "Name": "Shoot",
+        "Key": "0",
+        "Item": true,
+        "Requirements": ["HasRangedWeapon", "!Shooting"]
+      },
+      {
+        "Name": "Approach"
+      }
+    ]
+  },
+  "Combat": {
+    "Sequence": [
+      {
+        "Name": "Stoneclaw Totem",
+        "Key": "F1",
+        "WhenUsable": true,
+        "Weight": 4.0,
+        "ScoreConditions": [
+          { "Condition": "MobCount > 2", "Bonus": 5.0 },
+          { "Condition": "Health% < 40", "Bonus": 3.0 }
+        ],
+        "Requirement": "Level >= 8"
+      },
+      {
+        "Name": "Healing Stream Totem",
+        "Key": "F2",
+        "WhenUsable": true,
+        "Weight": 3.0,
+        "ScoreConditions": [
+          { "Condition": "!Healing Stream Totem", "Bonus": 4.0 },
+          { "Condition": "Health% < 80", "Bonus": 1.0 }
+        ],
+        "Requirement": "Level >= 20"
+      },
+      {
+        "Name": "Earth Shield",
+        "Key": "5",
+        "WhenUsable": true,
+        "Weight": 3.5,
+        "ScoreConditions": [
+          { "Condition": "!Earth Shield", "Bonus": 6.0 },
+          { "Condition": "Earth Shield < EARTH_SHIELD_STACKS", "Bonus": 4.0 }
+        ],
+        "Requirement": "Level >= 50"
+      },
+      {
+        "Name": "Nature's Swiftness",
+        "Key": "F3",
+        "WhenUsable": true,
+        "Weight": 5.0,
+        "ScoreConditions": [
+          { "Condition": "Health% < MIN_HP_EMERGENCY%", "Bonus": 10.0 }
+        ],
+        "Requirement": "Level >= 40"
+      },
+      {
+        "Name": "Healing Wave",
+        "Key": "2",
+        "HasCastBar": true,
+        "Weight": 3.5,
+        "ScoreConditions": [
+          { "Condition": "Health% < MIN_HP_EMERGENCY%", "Bonus": 8.0 },
+          { "Condition": "Health% < MIN_HP_URGENT%", "Bonus": 4.0 },
+          { "Condition": "Nature's Swiftness", "Bonus": 15.0 }
+        ],
+        "Requirements": ["Health% < MIN_HP_URGENT%", "Mana% > MIN_MANA_EMERGENCY%", "Level >= 20"]
+      },
+      {
+        "Name": "Lesser Healing Wave",
+        "Key": "3",
+        "HasCastBar": true,
+        "Weight": 3.0,
+        "ScoreConditions": [
+          { "Condition": "Health% < MIN_HP_URGENT%", "Bonus": 5.0 },
+          { "Condition": "Tidal Force", "Bonus": 8.0 }
+        ],
+        "Requirements": ["Health% < MIN_HP_URGENT%", "Mana% > MIN_MANA_EMERGENCY%", "Level >= 20"]
+      },
+      {
+        "Name": "Chain Heal",
+        "Key": "6",
+        "HasCastBar": true,
+        "Weight": 4.0,
+        "ScoreConditions": [
+          { "Condition": "MobCount > 1", "Bonus": 6.0 },
+          { "Condition": "Health% < MIN_HP_URGENT%", "Bonus": 2.0 }
+        ],
+        "Requirements": ["Health% < MIN_HP_URGENT%", "Mana% > MIN_MANA_EMERGENCY%", "Level >= 40"]
+      },
+      {
+        "Name": "Riptide",
+        "Key": "7",
+        "Weight": 2.5,
+        "ScoreConditions": [
+          { "Condition": "!Riptide", "Bonus": 5.0 },
+          { "Condition": "Riptide RemainingMs < HOT_REFRESH_MS", "Bonus": 6.0 }
+        ],
+        "Requirement": "Level >= 60"
+      },
+      {
+        "Name": "Mana Tide Totem",
+        "Key": "F4",
+        "WhenUsable": true,
+        "Weight": 5.0,
+        "ScoreConditions": [
+          { "Condition": "Mana% < MIN_MANA_EMERGENCY%", "Bonus": 8.0 }
+        ],
+        "Requirement": "Mana% < MIN_MANA_EMERGENCY% && Level >= 40"
+      },
+      {
+        "Name": "Earth Shock",
+        "Key": "4",
+        "WhenUsable": true,
+        "Weight": 2.0,
+        "ScoreConditions": [
+          { "Condition": "TargetCastingSpell", "Bonus": 4.0 }
+        ],
+        "Requirement": "Level >= 4"
+      },
+      {
+        "Name": "Lightning Bolt",
+        "Key": "1",
+        "HasCastBar": true,
+        "Weight": 1.5,
+        "ScoreConditions": [
+          { "Condition": "Mana% > MIN_MANA_CONSERVE%", "Bonus": 0.5 }
+        ],
+        "Requirements": ["Mana% > MIN_MANA_EMERGENCY%", "SpellInRange:3"]
+      },
+      {
+        "Name": "AutoAttack",
+        "Requirement": "!HasRangedWeapon && Mana% < MIN_MANA_EMERGENCY%"
+      },
+      {
+        "Name": "Approach"
+      }
+    ]
+  },
+  "Flee": {
+    "Sequence": [
+      {
+        "Name": "Stoneclaw Totem",
+        "Key": "F1",
+        "Weight": 5.0,
+        "ScoreConditions": [
+          { "Condition": "MobCount > 1", "Bonus": 5.0 }
+        ],
+        "WhenUsable": true,
+        "Requirement": "Level >= 8"
+      },
+      {
+        "Name": "Flee",
+        "Requirement": "(MobCount >= FLEE_MOB_COUNT && Health% < FLEE_HP%) || TargetElite"
+      }
+    ]
+  },
+  "Adhoc": {
+    "Sequence": [
+      {
+        "Name": "Water Shield",
+        "Key": "8",
+        "Weight": 2.5,
+        "ScoreConditions": [
+          { "Condition": "!Water Shield", "Bonus": 4.0 },
+          { "Condition": "Mana% < MIN_MANA_CONSERVE%", "Bonus": 2.0 }
+        ],
+        "InCombat": "i dont care",
+        "Requirement": "!Water Shield && Level >= 20"
+      },
+      {
+        "Name": "Drink",
+        "Key": "N2",
+        "Weight": 3.0,
+        "ScoreConditions": [
+          { "Condition": "Mana% < DRINK_MANA%", "Bonus": 4.0 }
+        ],
+        "Requirement": "Mana% < DRINK_MANA%"
+      },
+      {
+        "Name": "Food",
+        "Key": "N1",
+        "Requirement": "Health% < FOOD_HP%"
+      }
+    ]
+  }
+}

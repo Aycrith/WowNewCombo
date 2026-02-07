@@ -269,35 +269,35 @@ public sealed partial class AddonValidator
             var lines = File.ReadAllLines(filePath);
             var addonStates = ParseAddOnsTxt(lines);
 
-            // Check DataToColor addon
-            if (!string.IsNullOrEmpty(addonTitle))
-            {
-                if (!addonStates.ContainsKey(addonTitle))
+                // Check DataToColor addon
+                if (!string.IsNullOrEmpty(addonTitle))
                 {
-                    result.AddWarning($"{relativePath}: {addonTitle} not listed",
-                        "The main addon isn't in AddOns.txt. Enable it in WoW's addon menu.");
+                    if (!addonStates.TryGetValue(addonTitle, out bool enabled))
+                    {
+                        result.AddWarning($"{relativePath}: {addonTitle} not listed",
+                            "The main addon isn't in AddOns.txt. Enable it in WoW's addon menu.");
+                    }
+                    else if (!enabled)
+                    {
+                        result.AddWarning($"{relativePath}: {addonTitle} disabled",
+                            "The main addon is disabled. Enable it in WoW's addon menu.");
+                    }
                 }
-                else if (!addonStates[addonTitle])
-                {
-                    result.AddWarning($"{relativePath}: {addonTitle} disabled",
-                        "The main addon is disabled. Enable it in WoW's addon menu.");
-                }
-            }
 
-            // Check required addons
-            foreach (string required in RequiredAddons)
-            {
-                if (!addonStates.ContainsKey(required))
+                // Check required addons
+                foreach (string required in RequiredAddons)
                 {
-                    result.AddWarning($"{relativePath}: {required} not listed",
-                        $"Required addon {required} isn't in AddOns.txt. Enable it in WoW's addon menu.");
+                    if (!addonStates.TryGetValue(required, out bool enabled))
+                    {
+                        result.AddWarning($"{relativePath}: {required} not listed",
+                            $"Required addon {required} isn't in AddOns.txt. Enable it in WoW's addon menu.");
+                    }
+                    else if (!enabled)
+                    {
+                        result.AddError($"{relativePath}: {required} disabled",
+                            $"Required addon {required} is disabled! Enable it in WoW's addon menu, then /reload.");
+                    }
                 }
-                else if (!addonStates[required])
-                {
-                    result.AddError($"{relativePath}: {required} disabled",
-                        $"Required addon {required} is disabled! Enable it in WoW's addon menu, then /reload.");
-                }
-            }
 
             // NOTE:
             // We intentionally do NOT warn about arbitrary enabled add-ons that are missing their folders.

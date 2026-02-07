@@ -337,6 +337,9 @@ public sealed partial class RequirementFactory
 
     public void Init(KeyAction item)
     {
+        // Classify ability type at load time to avoid string allocations in hot path
+        item.AbilityType = AbilityClassifier.Classify(item.Name);
+
         if (item.Name is Drink or Food)
             AddConsumable(item);
 

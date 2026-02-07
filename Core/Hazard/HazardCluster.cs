@@ -36,7 +36,7 @@ public sealed class HazardCluster
     public float SeverityScore { get; set; }
 
     /// <summary>Map ID for spatial queries.</summary>
-    public int MapId => Events.FirstOrDefault()?.MapId ?? 0;
+    public int MapId => Events.Count > 0 ? Events[0].MapId : 0;
 
     /// <summary>
     /// Tests if a position falls within this hazard zone.
