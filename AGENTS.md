@@ -120,6 +120,24 @@ byte expectedB = (byte)(frameIndex & 255);
 
 Always validate type ranges match your data domain.
 
+## ArrayPool Use-After-Return Warning
+
+**Critical Bug Pattern (ArrayPool race condition):**
+```csharp
+// WRONG: Return array to pool, then use it
+pooler.Return(segments);
+return new(segments, 0, count); // segments may be overwritten by another thread!
+
+// CORRECT: Copy data before returning to pool
+int resultCount = Math.Min(segments.Length, counter.count);
+LineSegment[] result = new LineSegment[resultCount];
+Array.Copy(segments, result, resultCount);
+pooler.Return(segments);
+return new(result, 0, resultCount);
+```
+
+Always copy pooled array data before returning to the pool if the data will be accessed after the method returns.
+
 ---
 
 ## Project Structure

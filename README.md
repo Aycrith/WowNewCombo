@@ -246,6 +246,40 @@ The Mail page in the browser UI allows you to:
 - Click items to add/remove from exclusion list
 - Save settings to profile or use runtime overrides
 
+## Phase 1 & 2 Advanced Features (Optional)
+
+All Phase 1 and 2 features are **disabled by default** and opt-in via `runtime_feature_flags.json`:
+
+### Combat Rotation Optimizer
+- **Weighted scoring system** for ability prioritization
+- Profile-defined `ScoreConditions` with conditional bonuses (e.g., "Rage > 60" → +0.5)
+- Execute phase detection and resource efficiency scoring
+- Real-time metrics dashboard in Frontend
+- Zero overhead when disabled (static priority fallback)
+
+### Hazard Avoidance System
+- **Self-learning hazard detection** using DBSCAN clustering
+- Automatic hazard zone creation from deaths, stuck events, evades
+- A* pathfinding cost injection to avoid danger zones
+- Temporal decay (older hazards become less significant)
+- Route rehabilitation (successful passes reduce hazard severity)
+- Per-map JSON persistence
+
+### Humanization System
+- **Anti-detection input timing** with Gaussian randomization
+- Bezier curve mouse movement with micro-jitter and overshoot
+- Session fatigue simulation with scheduled breaks
+- Micro-pauses during non-combat gameplay
+- Combat-safe break scheduling
+
+### Feature Flags & Circuit Breaker
+- **Hot-reload configuration** via FileSystemWatcher
+- GlobalKillSwitch for emergency stop
+- Circuit breaker pattern for external services (pathfinding, LLM)
+- Per-feature enable/disable toggles
+
+See `BlazorServer/runtime_feature_flags.json` for full configuration options.
+
 ## Additional Features
 
 - Corpse run

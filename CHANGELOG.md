@@ -4,6 +4,50 @@ All notable changes to the WowClassicGrindBot project (WowCombo fork).
 
 ## [Unreleased] - February 2026
 
+### Critical Bug Fixes & System Strengthening
+
+#### ArrayPool Race Condition Fix (P0)
+- **Fixed data corruption race in NpcNameFinder.PopulateLines**
+- Root cause: Returning pooled array to pool before creating result span
+- Solution: Copy data to new array before returning pooled buffer
+- Impact: Prevents silent data corruption in NPC detection
+
+#### Security Hardening
+- **Fixed path traversal vulnerability in ProfileController**
+- Added `IsValidProfileName()` validation
+- Added `TryGetProfilePath()` with resolved path verification
+- Prevents directory escape attacks via malicious profile names
+
+#### CombatRotation System Completion
+- **ScoreConditionsRuntime compilation now functional**
+  - JSON profile conditions compile to runtime delegates
+  - RequirementFactory.Init() properly wires ScoreConditions
+- **Accurate metrics tracking**
+  - RecordCastResult now passes actual scores (was hardcoded 0f)
+  - Failed cast attempts tracked for accurate SuccessRate
+  - Added `lastScores` dictionary to persist scores between Optimize() and RecordCastResult()
+
+#### Code Quality Improvements
+- Removed CombatGoal duplicate ClassConfiguration parameter
+- Removed 25 lines dead code in CombatGoal.DealWithSoftInteract
+- Fixed FleeGoal logger type (ILogger<CombatGoal> → ILogger<FleeGoal>)
+- Fixed EventAggregationService ring buffer race condition
+- Removed FeatureFlagController double-deserialization waste
+
+#### Infrastructure Parity
+- Added runtime_feature_flags.json to HeadlessServer
+- Registered Phase 1/2 features in HeadlessServer:
+  - HazardAvoidance (DBSCAN clustering, A* cost injection)
+  - Humanization (Gaussian timing, Bezier mouse paths)
+  - FeatureFlags (hot-reload, GlobalKillSwitch)
+
+### Validation Results
+- Build: 0 errors, 0 warnings
+- Tests: 168 passing (161 CoreUnitTests + 7 FrontendUnitTests)
+- All Phase 1/2 systems production-ready
+
+## [Unreleased] - February 2026
+
 ### Major Features
 
 #### Autonomous Testing Infrastructure
