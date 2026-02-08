@@ -120,9 +120,19 @@ public sealed class MockWoWClient : IDisposable
     /// </summary>
     public void Advance(TimeSpan time)
     {
+        // Process any pending inputs first
+        InputProcessor.ProcessFrame(time);
         Clock.Advance(time);
         GameState.Update(time);
         FrameMapper.UpdateFrames();
+    }
+
+    /// <summary>
+    /// Processes all pending inputs immediately.
+    /// </summary>
+    public void ProcessInputs()
+    {
+        InputProcessor.ProcessFrame(TimeSpan.FromMilliseconds(16));
     }
 
     /// <summary>
