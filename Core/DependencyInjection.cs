@@ -233,6 +233,9 @@ public static class DependencyInjection
         // Required by TestController for E2E testing
         s.AddAddonComponents();
 
+        s.AddSingleton<LevelTracker>();
+        s.AddSingleton<TimeToKill>();
+
         s.AddSingleton<ActionBarSlotValidator>();
 
         return s;
@@ -321,6 +324,12 @@ public static class DependencyInjection
             s.AddSingleton<IWowScreen, NullWowScreen>();
             s.AddSingleton<IScreenImageProvider>(x => (IScreenImageProvider)x.GetRequiredService<IWowScreen>());
             s.AddSingleton<IMinimapImageProvider>(x => (IMinimapImageProvider)x.GetRequiredService<IWowScreen>());
+
+            // Register Input services to satisfy UI dependencies (InitButton)
+            // They won't work without a process, but they won't crash the startup
+            s.AddSingleton<WowProcessInput>();
+            s.AddSingleton<IMouseInput>(x => x.GetRequiredService<WowProcessInput>());
+            s.AddSingleton<ExecGameCommand>();
         }
 
         s.AddSingleton<DataFrame[]>(x => FrameConfig.LoadFrames());
