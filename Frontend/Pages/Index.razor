@@ -11,30 +11,40 @@
 @implements IDisposable
 
 <style>
-    .main-layout {
+    .dashboard-layout {
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: var(--ds-space-4, 1rem);
+        animation: ds-fade-in 0.3s ease-out;
     }
 
-    .top-section {
+    .dashboard-top-section {
         display: flex;
         flex-direction: row;
         justify-content: space-between;
-        gap: 10px;
+        gap: var(--ds-space-4, 1rem);
     }
 
-    .left-panel {
+    .dashboard-left-panel {
         flex: 1 1 70%;
     }
 
-    .right-panel {
+    .dashboard-right-panel {
         flex: 1 1 30%;
-        max-width: 300px; /* Optional max width for BagChanges */
+        max-width: 320px;
     }
 
-    .bottom-section {
+    .dashboard-bottom-section {
         width: 100%;
+    }
+
+    @@media (max-width: 992px) {
+        .dashboard-top-section {
+            flex-direction: column;
+        }
+        .dashboard-right-panel {
+            max-width: 100%;
+        }
     }
 </style>
 
@@ -42,17 +52,17 @@
     <div class="row">
         @if (AddonConfig.Exists() && FrameConfig.Exists())
         {
-            <div class="col-sm main-layout">
-                <div class="top-section">
-                    <div class="left-panel">
+            <div class="col-sm dashboard-layout">
+                <div class="dashboard-top-section">
+                    <div class="dashboard-left-panel">
                         <RouteComponent Size="400" />
                     </div>
-                    <div class="right-panel">
+                    <div class="dashboard-right-panel">
                         <BagChanges />
                     </div>
                 </div>
 
-                <div class="bottom-section">
+                <div class="dashboard-bottom-section">
                     @if (client.Version is ClientVersion.SoM or ClientVersion.TBC)
                     {
                         <LeafletComponent Size="400px" />

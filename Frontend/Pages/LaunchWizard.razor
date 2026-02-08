@@ -21,21 +21,58 @@
 @implements IDisposable
 
 <style>
-    .wizard-steps .list-group-item { cursor: pointer; }
-    .wizard-steps .list-group-item.active { font-weight: 600; }
+    /* Wizard Steps Enhanced Styling */
+    .wizard-steps .list-group-item {
+        cursor: pointer;
+        transition: all var(--ds-transition-base, 150ms ease);
+        border-left: 3px solid transparent;
+    }
+    .wizard-steps .list-group-item:hover {
+        background: var(--ds-bg-tertiary, rgba(0, 0, 0, 0.02));
+        transform: translateX(3px);
+    }
+    .wizard-steps .list-group-item.active {
+        font-weight: 600;
+        background: rgba(147, 69, 255, 0.08);
+        border-left-color: var(--ds-arcane, #9345ff);
+    }
 
+    /* Status Dots with Glow Effects */
     .status-dot {
         width: 10px;
         height: 10px;
         border-radius: 50%;
         display: inline-block;
         margin-right: 8px;
+        transition: all var(--ds-transition-base, 150ms ease);
     }
-    .status-dot.ok { background: #198754; }
-    .status-dot.warn { background: #ffc107; }
-    .status-dot.err { background: #dc3545; }
-    .status-dot.pending { background: #0dcaf0; }
-    .status-dot.skip { background: #6c757d; }
+    .status-dot.ok {
+        background: #198754;
+        box-shadow: 0 0 8px rgba(25, 135, 84, 0.5);
+        animation: pulse-success 2s infinite;
+    }
+    .status-dot.warn {
+        background: #ffc107;
+        box-shadow: 0 0 8px rgba(255, 193, 7, 0.5);
+    }
+    .status-dot.err {
+        background: #dc3545;
+        box-shadow: 0 0 8px rgba(220, 53, 69, 0.5);
+        animation: pulse-danger 1.5s infinite;
+    }
+    .status-dot.pending {
+        background: #0dcaf0;
+        box-shadow: 0 0 8px rgba(13, 202, 240, 0.5);
+        animation: pulse-info 1.5s infinite;
+    }
+    .status-dot.skip {
+        background: #6c757d;
+    }
+    
+    @@keyframes pulse-danger {
+        0%, 100% { transform: scale(1); box-shadow: 0 0 8px rgba(220, 53, 69, 0.5); }
+        50% { transform: scale(1.1); box-shadow: 0 0 12px rgba(220, 53, 69, 0.7); }
+    }
 </style>
 
 <div class="container-fluid mt-3">
