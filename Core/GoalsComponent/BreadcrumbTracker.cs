@@ -21,7 +21,8 @@ namespace Core.GoalsComponent;
 /// </remarks>
 public sealed class BreadcrumbTracker
 {
-    private readonly Queue<BreadcrumbEntry> _trail = new();
+    // Use List<T> instead of Queue<T> for O(1) indexed access
+    private readonly List<BreadcrumbEntry> _trail = new();
     private readonly int _maxSize;
     private readonly float _minDistance;
     private readonly object _lock = new();
@@ -100,20 +101,20 @@ public sealed class BreadcrumbTracker
                 return false;
             }
 
-            // Remove oldest if at capacity
+            // Remove oldest if at capacity (List[0] is oldest)
             if (_trail.Count >= _maxSize)
             {
-                _trail.Dequeue();
+                _trail.RemoveAt(0);
             }
 
-            // Record new breadcrumb
+            // Record new breadcrumb (adds to end - newest)
             var entry = new BreadcrumbEntry(
                 Position: position,
                 MapId: mapId,
                 Timestamp: DateTime.UtcNow
             );
 
-            _trail.Enqueue(entry);
+            _trail.Add(entry);
             _lastRecordedPosition = position;
             _lastRecordedTime = DateTime.UtcNow;
             Interlocked.Increment(ref _totalRecorded);
@@ -136,9 +137,9 @@ public sealed class BreadcrumbTracker
             if (_trail.Count < stepsBack)
                 return null;
 
-            // Convert to list for indexed access (trail is oldest-to-newest)
+            // O(1) indexed access using List (trail is oldest-to-newest, so newest is at end)
             int index = _trail.Count - stepsBack;
-            return _trail.ElementAt(index);
+            return _trail[index];
         }
     }
 
@@ -160,7 +161,7 @@ public sealed class BreadcrumbTracker
     {
         lock (_lock)
         {
-            return _trail.Count > 0 ? _trail.Peek() : null;
+            return _trail.Count > 0 ? _trail[0] : null;
         }
     }
 
@@ -245,9 +246,9 @@ public sealed class BreadcrumbTracker
             DateTime cutoff = DateTime.UtcNow - maxAge;
             int removed = 0;
 
-            while (_trail.Count > 0 && _trail.Peek().Timestamp < cutoff)
+            while (_trail.Count > 0 && _trail[0].Timestamp < cutoff)
             {
-                _trail.Dequeue();
+                _trail.RemoveAt(0);
                 removed++;
             }
 
@@ -289,7 +290,7 @@ public sealed class BreadcrumbTracker
                 TotalRecorded: TotalRecorded,
                 TotalSkipped: TotalSkipped,
                 TotalDistance: CalculateTotalDistance(),
-                OldestTimestamp: _trail.Count > 0 ? _trail.Peek().Timestamp : null,
+                OldestTimestamp: _trail.Count > 0 ? _trail[0].Timestamp : null,
                 NewestTimestamp: _trail.Count > 0 ? _trail.Last().Timestamp : null
             );
         }

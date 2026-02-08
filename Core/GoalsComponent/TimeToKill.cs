@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 using static System.Diagnostics.Stopwatch;
 
@@ -74,7 +74,7 @@ public class TimeToKill : IDisposable
     {
         startGuid = 0;
         startHealth = 0;
-        startHealth = 0;
+        startTime = 0;
         time = float.PositiveInfinity;
     }
 }

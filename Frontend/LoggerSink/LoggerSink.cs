@@ -1,4 +1,6 @@
-﻿using Serilog.Core;
+using System.Threading;
+
+using Serilog.Core;
 using Serilog.Events;
 
 namespace Frontend;
@@ -21,7 +23,8 @@ public sealed class LoggerSink : ILogEventSink
 
     public void Emit(LogEvent logEvent)
     {
-        Log[callCount++ & MOD] = logEvent;
+        int index = Interlocked.Increment(ref callCount) - 1;
+        Log[index & MOD] = logEvent;
         OnLogChanged?.Invoke();
     }
 }

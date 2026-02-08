@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
@@ -27,6 +28,7 @@ public sealed class FeatureFlagService : IHostedService, IDisposable
     private IDisposable? optionsChangeToken;
     private FeatureFlagsOptions currentOptions;
     private readonly object syncLock = new();
+    private FrozenDictionary<string, Func<bool>> featureLookup;
 
     /// <summary>
     /// Event raised when any feature flag value changes.
@@ -69,6 +71,22 @@ public sealed class FeatureFlagService : IHostedService, IDisposable
         this.optionsMonitor = optionsMonitor;
         configFilePath = serviceOptions.Value.ConfigFilePath ?? "runtime_feature_flags.json";
         currentOptions = optionsMonitor.CurrentValue;
+
+        // Build case-insensitive feature lookup table for zero-allocation checks
+        featureLookup = new Dictionary<string, Func<bool>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["objectpooling"] = () => IsObjectPoolingEnabled,
+            ["circuitbreaker"] = () => IsCircuitBreakerEnabled,
+            ["pathsmoothing"] = () => IsPathSmoothingEnabled,
+            ["enhancedstuckrecovery"] = () => IsEnhancedStuckRecoveryEnabled,
+            ["hazardavoidance"] = () => IsHazardAvoidanceEnabled,
+            ["humanization"] = () => IsHumanizationEnabled,
+            ["aiprofilegenerator"] = () => IsAIProfileGeneratorEnabled,
+            ["profilemarketplace"] = () => IsProfileMarketplaceEnabled,
+            ["behaviortreecombat"] = () => IsBehaviorTreeCombatEnabled,
+            ["hybridllmdecision"] = () => IsHybridLLMDecisionEnabled,
+            ["combatrotationoptimizer"] = () => IsCombatRotationOptimizerEnabled
+        }.ToFrozenDictionary();
 
         jsonOptions = new JsonSerializerOptions
         {
@@ -276,24 +294,15 @@ public sealed class FeatureFlagService : IHostedService, IDisposable
 
     /// <summary>
     /// Checks if a specific feature is enabled by name.
+    /// Uses frozen dictionary with OrdinalIgnoreCase comparison for zero-allocation lookups.
     /// </summary>
     public bool IsFeatureEnabled(string featureName)
     {
-        return featureName.ToLowerInvariant() switch
+        if (featureLookup.TryGetValue(featureName, out Func<bool>? check))
         {
-            "objectpooling" => IsObjectPoolingEnabled,
-            "circuitbreaker" => IsCircuitBreakerEnabled,
-            "pathsmoothing" => IsPathSmoothingEnabled,
-            "enhancedstuckrecovery" => IsEnhancedStuckRecoveryEnabled,
-            "hazardavoidance" => IsHazardAvoidanceEnabled,
-            "humanization" => IsHumanizationEnabled,
-            "aiprofilegenerator" => IsAIProfileGeneratorEnabled,
-            "profilemarketplace" => IsProfileMarketplaceEnabled,
-            "behaviortreecombat" => IsBehaviorTreeCombatEnabled,
-            "hybridllmdecision" => IsHybridLLMDecisionEnabled,
-            "combatrotationoptimizer" => IsCombatRotationOptimizerEnabled,
-            _ => false
-        };
+            return check();
+        }
+        return false;
     }
 
     /// <summary>

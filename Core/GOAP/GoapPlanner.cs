@@ -1,4 +1,4 @@
-﻿using Core.Goals;
+using Core.Goals;
 
 using System;
 using System.Collections.Generic;
@@ -15,10 +15,6 @@ public static class GoapPlanner
     public static readonly bool[] EmptyGoalState = Array.Empty<bool>();
     public static readonly Stack<GoapGoal> EmptyGoal = new();
 
-    private static readonly HashSet<GoapGoal> usable = new();
-    private static readonly PriorityQueue<Node, float> leaves = new();
-    private static readonly Stack<GoapGoal> result = new();
-
     /**
     * Plan what sequence of actions can fulfill the goal.
     * Returns null if a plan could not be found, or a list of the actions
@@ -32,8 +28,11 @@ public static class GoapPlanner
     {
         Node root = new(null, 0, worldState, null);
 
+        // Use local collections instead of static fields to avoid thread-safety issues
+        HashSet<GoapGoal> usable = new();
+        PriorityQueue<Node, float> leaves = new();
+
         // check what actions can run using their checkProceduralPrecondition
-        usable.Clear();
         for (int i = 0; i < available.Length; i++)
         {
             GoapGoal a = available[i];
@@ -44,7 +43,6 @@ public static class GoapPlanner
         }
 
         // build up the tree and record the leaf nodes that provide a solution to the goal.
-        leaves.Clear();
         if (BuildGraph(root, leaves, usable, goal) == 0)
         {
             return EmptyGoal;
@@ -53,7 +51,7 @@ public static class GoapPlanner
         // get the cheapest leaf
         if (leaves.TryDequeue(out Node? node, out _))
         {
-            result.Clear();
+            Stack<GoapGoal> result = new();
             while (node != null)
             {
                 if (node.action != null)
