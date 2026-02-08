@@ -45,10 +45,11 @@ public abstract class TestScenarioBase : IAsyncLifetime
     {
         _output.WriteLine($"=== Starting Scenario: {ScenarioName} ===");
         _output.WriteLine($"Description: {ScenarioDescription}");
-        
+
         MockClient = new MockWoWClient.MockWoWClient();
-        MockClient.Start();
-        
+        // Don't start the async loop for tests - we'll use synchronous Advance instead
+        // MockClient.Start();
+
         return Task.CompletedTask;
     }
 
@@ -62,8 +63,16 @@ public abstract class TestScenarioBase : IAsyncLifetime
             await MockClient.StopAsync();
             MockClient.Dispose();
         }
-        
+
         _output.WriteLine($"=== Completed Scenario: {ScenarioName} ===");
+    }
+
+    /// <summary>
+    /// Advances simulation time and processes all pending inputs.
+    /// </summary>
+    protected void AdvanceSimulation(TimeSpan time)
+    {
+        MockClient.Advance(time);
     }
 
     /// <summary>

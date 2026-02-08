@@ -4,6 +4,7 @@ using Core.Goals;
 using FluentAssertions;
 using System;
 using System.Collections.Generic;
+using Requirement = Core.Requirement;
 using Xunit;
 
 namespace CoreUnitTests.RequirementTests;
