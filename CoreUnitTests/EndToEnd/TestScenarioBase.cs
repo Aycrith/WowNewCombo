@@ -47,8 +47,7 @@ public abstract class TestScenarioBase : IAsyncLifetime
         _output.WriteLine($"Description: {ScenarioDescription}");
 
         MockClient = new MockWoWClient.MockWoWClient();
-        // Don't start the async loop for tests - we'll use synchronous Advance instead
-        // MockClient.Start();
+        MockClient.Start();
 
         return Task.CompletedTask;
     }
