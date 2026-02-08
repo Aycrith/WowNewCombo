@@ -212,11 +212,15 @@ public class FrameConfigController : ControllerBase
         _screen.GetRectangle(out var currentRect);
 
         DataFrameConfig? active = null;
-        if (FrameConfig.Exists())
-        {
-            try { active = FrameConfig.Load(); }
-            catch { /* ignore corrupt config */ }
-        }
+            if (FrameConfig.Exists())
+            {
+                try { active = FrameConfig.Load(); }
+                catch (Exception)
+                {
+                    // ignore corrupt config - will auto-detect on next run
+                    active = null;
+                }
+            }
 
         return Ok(new
         {

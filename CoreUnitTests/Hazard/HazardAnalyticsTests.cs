@@ -122,7 +122,7 @@ public sealed class HazardAnalyticsTests
         Assert.Equal(0f, cost);
     }
 
-    private static IOptionsMonitor<FeatureFlagsOptions> CreateFixedMonitor(FeatureFlagsOptions options)
+    private static OptionsMonitor<FeatureFlagsOptions> CreateFixedMonitor(FeatureFlagsOptions options)
     {
         IConfigureOptions<FeatureFlagsOptions>[] configures =
         [

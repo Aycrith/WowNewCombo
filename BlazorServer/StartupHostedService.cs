@@ -99,7 +99,11 @@ public sealed class StartupHostedService : BackgroundService
                 UseShellExecute = true
             };
 
-            Process.Start(psi);
+            Process? proc = Process.Start(psi);
+            if (proc == null)
+            {
+                _logger.LogWarning("[StartupHostedService] Process.Start returned null - browser may not have opened");
+            }
         }
         catch (Exception ex)
         {

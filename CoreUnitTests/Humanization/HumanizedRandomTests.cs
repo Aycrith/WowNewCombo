@@ -88,30 +88,30 @@ public sealed class HumanizedRandomTests
         }
     }
 
-    private static double Mean(IReadOnlyList<double> samples)
+    private static double Mean(double[] samples)
     {
         double sum = 0.0;
-        for (int i = 0; i < samples.Count; i++)
+        for (int i = 0; i < samples.Length; i++)
         {
             sum += samples[i];
         }
 
-        return sum / samples.Count;
+        return sum / samples.Length;
     }
 
-    private static double StdDev(IReadOnlyList<double> samples, double mean)
+    private static double StdDev(double[] samples, double mean)
     {
         double sum = 0.0;
-        for (int i = 0; i < samples.Count; i++)
+        for (int i = 0; i < samples.Length; i++)
         {
             double d = samples[i] - mean;
             sum += d * d;
         }
 
-        return Math.Sqrt(sum / samples.Count);
+        return Math.Sqrt(sum / samples.Length);
     }
 
-    private static (double Skewness, double ExcessKurtosis) ShapeMoments(IReadOnlyList<double> samples, double mean, double stdDev)
+    private static (double Skewness, double ExcessKurtosis) ShapeMoments(double[] samples, double mean, double stdDev)
     {
         if (stdDev <= 0)
         {
@@ -120,7 +120,7 @@ public sealed class HumanizedRandomTests
 
         double m3 = 0.0;
         double m4 = 0.0;
-        for (int i = 0; i < samples.Count; i++)
+        for (int i = 0; i < samples.Length; i++)
         {
             double z = (samples[i] - mean) / stdDev;
             double z2 = z * z;
@@ -128,15 +128,15 @@ public sealed class HumanizedRandomTests
             m4 += z2 * z2;
         }
 
-        double n = samples.Count;
+        double n = samples.Length;
         double skewness = m3 / n;
         double excessKurtosis = (m4 / n) - 3.0;
         return (skewness, excessKurtosis);
     }
 
-    private static double Quantile(IReadOnlyList<double> sorted, double p)
+    private static double Quantile(double[] sorted, double p)
     {
-        if (sorted.Count == 0)
+        if (sorted.Length == 0)
         {
             return 0;
         }
@@ -151,9 +151,9 @@ public sealed class HumanizedRandomTests
             return sorted[^1];
         }
 
-        double index = p * (sorted.Count - 1);
+        double index = p * (sorted.Length - 1);
         int lower = (int)index;
-        int upper = Math.Min(lower + 1, sorted.Count - 1);
+        int upper = Math.Min(lower + 1, sorted.Length - 1);
         double fraction = index - lower;
         return sorted[lower] + ((sorted[upper] - sorted[lower]) * fraction);
     }

@@ -168,7 +168,7 @@ public static class Program
         return ConfigureApp(builder, builder.Environment);
     }
 
-    private static void ConfigureServices(IConfiguration configuration, IServiceCollection services)
+    private static void ConfigureServices(ConfigurationManager configuration, IServiceCollection services)
     {
         ILoggerFactory logFactory = LoggerFactory.Create(builder =>
         {

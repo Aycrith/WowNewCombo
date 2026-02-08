@@ -518,8 +518,9 @@ public sealed class BotStartGuard : IBotStartGuard, ILaunchReadinessCacheInvalid
             Task connect = client.ConnectAsync(baseAddress.Host, baseAddress.Port);
             return connect.Wait(TimeSpan.FromMilliseconds(350));
         }
-        catch
+        catch (Exception)
         {
+            // TCP connection failure is expected when service is not running
             return false;
         }
     }
@@ -535,8 +536,9 @@ public sealed class BotStartGuard : IBotStartGuard, ILaunchReadinessCacheInvalid
             return Directory.EnumerateFiles(mpqDir, "*.MPQ", SearchOption.TopDirectoryOnly).Any() ||
                    Directory.EnumerateFiles(mpqDir, "*.mpq", SearchOption.TopDirectoryOnly).Any();
         }
-        catch
+        catch (Exception)
         {
+            // File system errors should not block startup - treat as "no MPQ files"
             return false;
         }
     }
@@ -1097,8 +1099,9 @@ public sealed class BotStartGuard : IBotStartGuard, ILaunchReadinessCacheInvalid
             }
             return string.IsNullOrWhiteSpace(cmd) ? "dc" : cmd;
         }
-        catch
+        catch (Exception)
         {
+            // AddonConfig not available is expected during first-run
             return "dc";
         }
     }

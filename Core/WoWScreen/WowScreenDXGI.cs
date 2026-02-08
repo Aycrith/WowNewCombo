@@ -187,25 +187,38 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
         disposed = true;
 
         // Release DXGI frame first
-        try { duplication?.ReleaseFrame(); } catch { }
+        try { duplication?.ReleaseFrame(); }
+        catch (Exception ex) { logger?.LogDebug(ex, "Failed to release DXGI frame during dispose"); }
 
         // Dispose ImageSharp images
-        try { addonImage?.Dispose(); } catch { }
-        try { MiniMapImage?.Dispose(); } catch { }
-        try { ScreenImage?.Dispose(); } catch { }
+        try { addonImage?.Dispose(); }
+        catch (Exception ex) { logger?.LogDebug(ex, "Failed to dispose addonImage during cleanup"); }
+        try { MiniMapImage?.Dispose(); }
+        catch (Exception ex) { logger?.LogDebug(ex, "Failed to dispose MiniMapImage during cleanup"); }
+        try { ScreenImage?.Dispose(); }
+        catch (Exception ex) { logger?.LogDebug(ex, "Failed to dispose ScreenImage during cleanup"); }
 
         // Dispose D3D11 textures
-        try { addonTexture?.Dispose(); } catch { }
-        try { minimapTexture?.Dispose(); } catch { }
-        try { screenTexture?.Dispose(); } catch { }
+        try { addonTexture?.Dispose(); }
+        catch (Exception ex) { logger?.LogDebug(ex, "Failed to dispose addonTexture during cleanup"); }
+        try { minimapTexture?.Dispose(); }
+        catch (Exception ex) { logger?.LogDebug(ex, "Failed to dispose minimapTexture during cleanup"); }
+        try { screenTexture?.Dispose(); }
+        catch (Exception ex) { logger?.LogDebug(ex, "Failed to dispose screenTexture during cleanup"); }
 
         // Dispose DXGI resources (reverse creation order)
-        try { duplication?.Dispose(); } catch { }
-        try { device?.Dispose(); } catch { }
-        try { output1?.Dispose(); } catch { }
-        try { output?.Dispose(); } catch { }
-        try { adapter?.Dispose(); } catch { }
-        try { factory?.Dispose(); } catch { }
+        try { duplication?.Dispose(); }
+        catch (Exception ex) { logger?.LogDebug(ex, "Failed to dispose duplication during cleanup"); }
+        try { device?.Dispose(); }
+        catch (Exception ex) { logger?.LogDebug(ex, "Failed to dispose device during cleanup"); }
+        try { output1?.Dispose(); }
+        catch (Exception ex) { logger?.LogDebug(ex, "Failed to dispose output1 during cleanup"); }
+        try { output?.Dispose(); }
+        catch (Exception ex) { logger?.LogDebug(ex, "Failed to dispose output during cleanup"); }
+        try { adapter?.Dispose(); }
+        catch (Exception ex) { logger?.LogDebug(ex, "Failed to dispose adapter during cleanup"); }
+        try { factory?.Dispose(); }
+        catch (Exception ex) { logger?.LogDebug(ex, "Failed to dispose factory during cleanup"); }
     }
 
     public void InitFrames(DataFrame[] frames)

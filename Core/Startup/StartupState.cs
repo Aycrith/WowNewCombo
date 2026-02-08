@@ -138,13 +138,15 @@ public sealed class StartupState
                     _wowProcess.Refresh();
                     return !_wowProcess.HasExited;
                 }
-                catch
+                catch (InvalidOperationException)
                 {
+                    // Process handle is invalid or process exited between check and Refresh
                     return false;
                 }
             }
         }
     }
+
 
     /// <summary>Whether navigation server is currently running.</summary>
     public bool IsNavigationServerRunning
@@ -159,8 +161,9 @@ public sealed class StartupState
                     _navigationProcess.Refresh();
                     return !_navigationProcess.HasExited;
                 }
-                catch
+                catch (InvalidOperationException)
                 {
+                    // Process handle is invalid or process exited between check and Refresh
                     return false;
                 }
             }

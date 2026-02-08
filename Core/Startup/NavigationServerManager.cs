@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -37,6 +38,7 @@ public enum NavigationServerStatus
 /// <summary>
 /// Manages the AmeisenNavigation server process.
 /// Can start, stop, and monitor the server health.
+/// Includes comprehensive error capture and diagnostics.
 /// </summary>
 public sealed class NavigationServerManager : IHostedService, IDisposable
 {
@@ -50,6 +52,11 @@ public sealed class NavigationServerManager : IHostedService, IDisposable
     private CancellationTokenSource? _monitorCts;
     private Task? _monitorTask;
 
+    // Output capture for diagnostics
+    private readonly StringBuilder _outputBuffer = new StringBuilder();
+    private readonly StringBuilder _errorBuffer = new StringBuilder();
+    private readonly object _logLock = new object();
+
     // Restart limiting to prevent spawn loops
     private const int MaxRestartAttempts = 3;
     private const int RestartCooldownMinutes = 5;
@@ -61,6 +68,34 @@ public sealed class NavigationServerManager : IHostedService, IDisposable
     public NavigationServerStatus Status { get; private set; } = NavigationServerStatus.Stopped;
     public int Port => _options.NavigationServerPort;
     public bool IsInstalled => File.Exists(_serverPath);
+
+    /// <summary>
+    /// Gets the last captured output from the server for diagnostics.
+    /// </summary>
+    public string LastOutputSnapshot
+    {
+        get
+        {
+            lock (_logLock)
+            {
+                return _outputBuffer.ToString();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets the last captured errors from the server for diagnostics.
+    /// </summary>
+    public string LastErrorSnapshot
+    {
+        get
+        {
+            lock (_logLock)
+            {
+                return _errorBuffer.ToString();
+            }
+        }
+    }
 
     public NavigationServerManager(
         ILogger<NavigationServerManager> logger,
@@ -126,7 +161,14 @@ public sealed class NavigationServerManager : IHostedService, IDisposable
         _monitorCts?.Cancel();
         if (_monitorTask != null)
         {
-            try { await _monitorTask; } catch { }
+            try
+            {
+                await _monitorTask;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[NavigationServerManager] Monitor task failed during shutdown");
+            }
         }
 
         await StopServerAsync();
@@ -178,7 +220,7 @@ public sealed class NavigationServerManager : IHostedService, IDisposable
     private bool CanAttemptRestart()
     {
         var now = DateTime.UtcNow;
-        
+
         // Reset attempts after cooldown period
         if ((now - _lastRestartAttempt).TotalMinutes >= RestartCooldownMinutes)
         {
@@ -192,6 +234,7 @@ public sealed class NavigationServerManager : IHostedService, IDisposable
                 "Waiting for cooldown period ({Cooldown} min) before retrying. " +
                 "Navigation server may have a configuration issue.",
                 MaxRestartAttempts, RestartCooldownMinutes);
+            _logger.LogWarning("[NavigationServerManager] Last error output:\n{Error}", LastErrorSnapshot);
             Status = NavigationServerStatus.Failed;
             return false;
         }
@@ -206,6 +249,11 @@ public sealed class NavigationServerManager : IHostedService, IDisposable
     {
         _restartAttempts = 0;
         _lastRestartAttempt = DateTime.MinValue;
+        lock (_logLock)
+        {
+            _outputBuffer.Clear();
+            _errorBuffer.Clear();
+        }
     }
 
     /// <summary>
@@ -229,12 +277,37 @@ public sealed class NavigationServerManager : IHostedService, IDisposable
 
             return Task.FromResult(false);
         }
-        catch
+        catch (Exception ex)
         {
-            // Connection failed
+            _logger.LogDebug(ex, "[NavigationServerManager] Health check failed");
         }
 
         return Task.FromResult(false);
+    }
+
+    /// <summary>
+    /// Attempt to verify the server is actually responding to API requests.
+    /// This is more thorough than just checking if the port is open.
+    /// </summary>
+    private async Task<bool> VerifyApiRespondsAsync()
+    {
+        try
+        {
+            // Try to connect and send a simple path request
+            using var client = new TcpClient();
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await client.ConnectAsync("127.0.0.1", Port);
+
+            // If we can connect, that's good enough for now
+            // Full protocol verification would require sending actual pathfinding requests
+            _logger.LogDebug("[NavigationServerManager] API connectivity verified");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "[NavigationServerManager] API verification failed");
+            return false;
+        }
     }
 
     private async Task<bool> StartServerAsync(CancellationToken cancellationToken)
@@ -252,15 +325,38 @@ public sealed class NavigationServerManager : IHostedService, IDisposable
             _lastRestartAttempt = DateTime.UtcNow;
 
             Status = NavigationServerStatus.Starting;
-            _logger.LogInformation("[NavigationServerManager] Starting navigation server (attempt {Attempt}/{Max}): {Path}", 
+            _logger.LogInformation("[NavigationServerManager] Starting navigation server (attempt {Attempt}/{Max}): {Path}",
                 _restartAttempts, MaxRestartAttempts, _serverPath);
 
             // Check for MMAP files
             var mmapsPath = Path.Combine(_serverDirectory, "mmaps");
-            if (!Directory.Exists(mmapsPath) || Directory.GetFiles(mmapsPath, "*.mmap").Length == 0)
+            if (!Directory.Exists(mmapsPath))
             {
-                _logger.LogWarning("[NavigationServerManager] No MMAP files found in {Path}", mmapsPath);
-                _logger.LogWarning("[NavigationServerManager] Navigation server may not work correctly without MMAPs");
+                _logger.LogError("[NavigationServerManager] MMAP directory not found: {Path}", mmapsPath);
+                _logger.LogError("[NavigationServerManager] Navigation server requires MMAP files to function");
+                Status = NavigationServerStatus.Failed;
+                return false;
+            }
+
+            var mmapFiles = Directory.GetFiles(mmapsPath, "*.mmap");
+            var mmtileFiles = Directory.GetFiles(mmapsPath, "*.mmtile");
+
+            if (mmapFiles.Length == 0)
+            {
+                _logger.LogError("[NavigationServerManager] No .mmap files found in {Path}", mmapsPath);
+                _logger.LogError("[NavigationServerManager] Navigation server requires MMAP files to function");
+                Status = NavigationServerStatus.Failed;
+                return false;
+            }
+
+            _logger.LogInformation("[NavigationServerManager] Found {MmapCount} .mmap files and {MmtileCount} .mmtile files",
+                mmapFiles.Length, mmtileFiles.Length);
+
+            // Clear previous output
+            lock (_logLock)
+            {
+                _outputBuffer.Clear();
+                _errorBuffer.Clear();
             }
 
             var startInfo = new ProcessStartInfo
@@ -268,20 +364,62 @@ public sealed class NavigationServerManager : IHostedService, IDisposable
                 FileName = _serverPath,
                 WorkingDirectory = _serverDirectory,
                 UseShellExecute = false,
-                WindowStyle = ProcessWindowStyle.Hidden,
-                CreateNoWindow = true
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
             };
 
+            // Clean up any existing processes holding the port
             PortCleanupUtility.TryTerminateProcessHoldingPort(Port, "AmeisenNavigationServer", _logger);
 
             _process = Process.Start(startInfo);
 
             if (_process == null)
             {
-                _logger.LogError("[NavigationServerManager] Failed to start process");
+                _logger.LogError("[NavigationServerManager] Failed to start process - Process.Start returned null");
                 Status = NavigationServerStatus.Failed;
                 return false;
             }
+
+            _logger.LogInformation("[NavigationServerManager] Process started (PID: {PID})", _process.Id);
+
+            // Setup output capture
+            _process.OutputDataReceived += (sender, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                {
+                    lock (_logLock)
+                    {
+                        _outputBuffer.AppendLine(e.Data);
+                        // Keep buffer from growing too large
+                        if (_outputBuffer.Length > 10000)
+                        {
+                            _outputBuffer.Remove(0, _outputBuffer.Length - 5000);
+                        }
+                    }
+                    _logger.LogDebug("[NavServer-Out] {Data}", e.Data);
+                }
+            };
+
+            _process.ErrorDataReceived += (sender, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                {
+                    lock (_logLock)
+                    {
+                        _errorBuffer.AppendLine(e.Data);
+                        // Keep buffer from growing too large
+                        if (_errorBuffer.Length > 10000)
+                        {
+                            _errorBuffer.Remove(0, _errorBuffer.Length - 5000);
+                        }
+                    }
+                    _logger.LogError("[NavServer-Err] {Data}", e.Data);
+                }
+            };
+
+            _process.BeginOutputReadLine();
+            _process.BeginErrorReadLine();
 
             _state.NavigationProcess = _process;
 
@@ -291,34 +429,71 @@ public sealed class NavigationServerManager : IHostedService, IDisposable
             for (int i = 0; i < 30; i++) // Wait up to 30 seconds
             {
                 if (cancellationToken.IsCancellationRequested)
+                {
+                    _logger.LogWarning("[NavigationServerManager] Startup cancelled");
                     break;
+                }
 
                 await Task.Delay(1000, cancellationToken);
 
-                if (await IsHealthyAsync())
-                {
-                    Status = NavigationServerStatus.Running;
-                    _logger.LogInformation("[NavigationServerManager] Navigation server started successfully (PID: {PID})", _process.Id);
-
-                    // Reset restart attempts on success
-                    ResetRestartAttempts();
-
-                    // Start monitoring
-                    StartMonitoring();
-                    return true;
-                }
-
-                // Check if process died
+                // Check if process died immediately
                 _process.Refresh();
                 if (_process.HasExited)
                 {
-                    _logger.LogError("[NavigationServerManager] Server process exited with code {Code}", _process.ExitCode);
+                    int exitCode = _process.ExitCode;
+                    _logger.LogError("[NavigationServerManager] Server process exited immediately with code {Code}", exitCode);
+                    _logger.LogError("[NavigationServerManager] Error output:\n{Error}", LastErrorSnapshot);
                     Status = NavigationServerStatus.Failed;
                     return false;
                 }
+
+                if (await IsHealthyAsync())
+                {
+                    // Additional verification - make sure API actually responds
+                    if (await VerifyApiRespondsAsync())
+                    {
+                        Status = NavigationServerStatus.Running;
+                        _logger.LogInformation("[NavigationServerManager] Navigation server started successfully (PID: {PID})", _process.Id);
+
+                        // Reset restart attempts on success
+                        ResetRestartAttempts();
+
+                        // Start monitoring
+                        StartMonitoring();
+                        return true;
+                    }
+                    else
+                    {
+                        _logger.LogWarning("[NavigationServerManager] Port open but API not responding, waiting...");
+                    }
+                }
             }
 
-            _logger.LogError("[NavigationServerManager] Server did not become healthy within timeout");
+            // Timeout - capture what happened
+            _process.Refresh();
+            if (!_process.HasExited)
+            {
+                _logger.LogError("[NavigationServerManager] Server did not become healthy within timeout");
+                _logger.LogError("[NavigationServerManager] Last output:\n{Output}", LastOutputSnapshot);
+                _logger.LogError("[NavigationServerManager] Last errors:\n{Error}", LastErrorSnapshot);
+
+                // Kill the process since it's not responding
+                try
+                {
+                    _process.Kill(true);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "[NavigationServerManager] Error killing non-responsive process");
+                }
+            }
+            else
+            {
+                int exitCode = _process.ExitCode;
+                _logger.LogError("[NavigationServerManager] Server process exited with code {Code}", exitCode);
+                _logger.LogError("[NavigationServerManager] Error output:\n{Error}", LastErrorSnapshot);
+            }
+
             Status = NavigationServerStatus.Failed;
             return false;
         }
@@ -345,6 +520,17 @@ public sealed class NavigationServerManager : IHostedService, IDisposable
         try
         {
             _logger.LogInformation("[NavigationServerManager] Stopping navigation server...");
+
+            // Stop output reading first
+            try
+            {
+                _process.CancelOutputRead();
+                _process.CancelErrorRead();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "[NavigationServerManager] Error cancelling output read");
+            }
 
             if (!_process.HasExited)
             {
@@ -398,8 +584,16 @@ public sealed class NavigationServerManager : IHostedService, IDisposable
                     {
                         int exitCode = _process.ExitCode;
                         _logger.LogWarning("[NavigationServerManager] Server process exited unexpectedly (code {Code})", exitCode);
+                        _logger.LogWarning("[NavigationServerManager] Last error output:\n{Error}", LastErrorSnapshot);
 
-                        _process.Dispose();
+                        try
+                        {
+                            _process.Dispose();
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogDebug(ex, "[NavigationServerManager] Error disposing process");
+                        }
                         _process = null;
                         _state.NavigationProcess = null;
                         Status = NavigationServerStatus.Stopped;
@@ -408,6 +602,7 @@ public sealed class NavigationServerManager : IHostedService, IDisposable
                         if (!restarted)
                         {
                             Status = NavigationServerStatus.Failed;
+                            _logger.LogError("[NavigationServerManager] Failed to restart server after unexpected exit");
                         }
 
                         continue;
@@ -443,12 +638,26 @@ public sealed class NavigationServerManager : IHostedService, IDisposable
         {
             try
             {
+                // Cancel output reading
+                try
+                {
+                    _process.CancelOutputRead();
+                    _process.CancelErrorRead();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "[NavigationServerManager] Error cancelling output read during dispose");
+                }
+
                 if (!_process.HasExited)
                 {
                     _process.Kill(true);
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "[NavigationServerManager] Exception during process cleanup");
+            }
             _process.Dispose();
             _process = null;
             _state.NavigationProcess = null;

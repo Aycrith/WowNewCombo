@@ -77,7 +77,8 @@ public sealed class StartupOrchestrator
     {
         if (_options.SkipStartupOrchestration)
         {
-            _logger.LogInformation("[StartupOrchestrator] Startup orchestration disabled, skipping");
+            _logger.LogWarning("[StartupOrchestrator] Startup orchestration disabled via config (SkipStartupOrchestration=true). " +
+                "Marking ready WITHOUT verifying WoW, addons, frames, or navigation server.");
             _state.IsReady = true;
             return StartupResult.CreateSuccess(TimeSpan.Zero, []);
         }
@@ -119,7 +120,10 @@ public sealed class StartupOrchestrator
 
             // Stage 6: Wait for Character (user must log in manually)
             // This stage is handled differently - it waits indefinitely or times out
-            await ExecuteStageAsync(StartupStage.WaitingForCharacter, WaitForCharacterAsync, cancellationToken);
+            if (!await ExecuteStageAsync(StartupStage.WaitingForCharacter, WaitForCharacterAsync, cancellationToken))
+            {
+                _logger.LogWarning("[StartupOrchestrator] Character detection failed or timed out - continuing but frame config may fail");
+            }
 
             // Stage 7: Configure Frames (if needed)
             if (!await ExecuteStageAsync(StartupStage.ConfiguringFrames, ConfigureFramesAsync, cancellationToken))
@@ -132,10 +136,27 @@ public sealed class StartupOrchestrator
             if (!await ExecuteStageAsync(StartupStage.FinalValidation, FinalValidationAsync, cancellationToken))
                 return CreateFailureResult(StartupStage.FinalValidation, overallStopwatch.Elapsed);
 
-            // Success!
+            // Success - but log which optional stages failed
             overallStopwatch.Stop();
+
+            bool navFailed = _stageResults.Any(s => s.Stage == StartupStage.StartingNavigationServer && !s.Result.CanContinue);
+            bool framesFailed = !_state.FramesConfigured;
+
+            if (navFailed || framesFailed)
+            {
+                _logger.LogWarning("[StartupOrchestrator] ═══════════════════════════════════════════════════════════════");
+                _logger.LogWarning("[StartupOrchestrator]   STARTUP COMPLETE WITH DEGRADED SUBSYSTEMS:");
+                if (navFailed)
+                    _logger.LogWarning("[StartupOrchestrator]     ⚠ Navigation server is NOT running");
+                if (framesFailed)
+                    _logger.LogWarning("[StartupOrchestrator]     ⚠ Frame configuration is NOT complete");
+                _logger.LogWarning("[StartupOrchestrator] ═══════════════════════════════════════════════════════════════");
+            }
+
             _state.CurrentStage = StartupStage.Ready;
-            _state.StatusMessage = "Startup complete! Bot is ready.";
+            _state.StatusMessage = navFailed || framesFailed
+                ? "Startup complete with warnings - some subsystems need attention"
+                : "Startup complete! Bot is ready.";
             _state.IsReady = true;
 
             _logger.LogInformation("[StartupOrchestrator] ═══════════════════════════════════════════════════════════════");
@@ -577,8 +598,9 @@ public sealed class StartupOrchestrator
 
             return string.IsNullOrWhiteSpace(cmd) ? "dc" : cmd;
         }
-        catch
+        catch (Exception)
         {
+            // Static method - cannot log. AddonConfig not available is expected during first-run.
             return "dc";
         }
     }
@@ -623,8 +645,9 @@ public sealed class StartupOrchestrator
             string payload = await response.Content.ReadAsStringAsync(cancellationToken);
             return payload.Contains("true", StringComparison.OrdinalIgnoreCase);
         }
-        catch
+        catch (Exception)
         {
+            // Static method - cannot log. Connection failure is expected when PathingAPI is not running.
             return false;
         }
     }

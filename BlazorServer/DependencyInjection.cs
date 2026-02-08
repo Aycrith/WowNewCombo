@@ -1,3 +1,4 @@
+using Core.Diagnostics;
 using Core.Launch;
 using Core.Startup;
 using Core.Services;
@@ -47,6 +48,7 @@ public static class DependencyInjection
         services.AddSingleton<NavigationServerManager>();
         services.AddSingleton<WoWProcessLauncher>();
         services.AddSingleton<StartupOrchestrator>();
+        services.AddSingleton<SystemDiagnostics>();
 
         // Background services
         services.AddHostedService<ProcessCleanupService>();

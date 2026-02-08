@@ -61,15 +61,19 @@ public class BotApiController : ControllerBase
         try
         {
             string? profileName = null;
-            try { profileName = botController.SelectedClassFilename; } catch (NotImplementedException) { }
+            try { profileName = botController.SelectedClassFilename; }
+            catch (NotImplementedException ex) { logger.LogWarning(ex, "SelectedClassFilename not implemented"); }
 
             Core.GOAP.GoapAgent? agent = null;
-            try { agent = botController.GoapAgent; } catch (NotImplementedException) { }
+            try { agent = botController.GoapAgent; }
+            catch (NotImplementedException ex) { logger.LogWarning(ex, "GoapAgent access not implemented"); }
 
             double avgScreen = 0;
             double avgNpc = 0;
-            try { avgScreen = botController.AvgScreenLatency; } catch (NotImplementedException) { }
-            try { avgNpc = botController.AvgNPCLatency; } catch (NotImplementedException) { }
+            try { avgScreen = botController.AvgScreenLatency; }
+            catch (NotImplementedException ex) { logger.LogWarning(ex, "AvgScreenLatency not implemented"); }
+            try { avgNpc = botController.AvgNPCLatency; }
+            catch (NotImplementedException ex) { logger.LogWarning(ex, "AvgNPCLatency not implemented"); }
 
             BotStatus status = new(
                 botController.IsBotActive,
