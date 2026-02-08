@@ -147,6 +147,8 @@ public sealed class GameStateManager
                 return;
 
             Player.InCombat = true;
+            Player.State = EntityState.Attacking;
+            Player.IsMounted = false; // Dismount when entering combat
             CombatStartTime = CurrentTime;
 
             var combatEvent = new CombatEvent
