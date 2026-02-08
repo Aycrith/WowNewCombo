@@ -288,7 +288,31 @@ public sealed partial class ConfigurableInput
 
     public void PressStopAttack(CancellationToken token = default) => PressRandom(StopAttack, token);
 
+    /// <summary>
+    /// Attempts to stop auto-attack with verification.
+    /// Presses StopAttack key and waits for combat state to clear.
+    /// </summary>
+    /// <returns>True if combat stopped within timeout, false otherwise.</returns>
+    public bool ForceStopAttack(Wait wait, AddonBits bits, int timeoutMs = 500, CancellationToken token = default)
+    {
+        // Press stop attack
+        PressStopAttack(token);
+        
+        // Wait for combat to clear or auto-attack to stop
+        return wait.Until(timeoutMs, () => !bits.Combat() && !bits.Any_AutoAttack()) > 0;
+    }
+
     public void PressNearestTarget(CancellationToken token = default) => PressRandom(TargetNearestTarget, token);
+
+    /// <summary>
+    /// Presses TargetNearestTarget and waits for a target to appear.
+    /// </summary>
+    /// <returns>True if target appeared within timeout, false if timed out.</returns>
+    public bool PressNearestTargetAndWait(Wait wait, Func<bool> hasTarget, int timeoutMs = 300, CancellationToken token = default)
+    {
+        PressNearestTarget(token);
+        return wait.Until(timeoutMs, hasTarget) > 0;
+    }
 
     public void PressTargetPet(CancellationToken token = default) => PressRandom(TargetPet, token);
 
@@ -299,6 +323,17 @@ public sealed partial class ConfigurableInput
     public void PressPetAttack(CancellationToken token = default) => PressRandom(PetAttack, token);
 
     public void PressMount(CancellationToken token = default) => PressRandom(Mount, token);
+
+    /// <summary>
+    /// Attempts to mount with verification.
+    /// Presses Mount key and waits for mounted state to appear.
+    /// </summary>
+    /// <returns>True if mounted within timeout, false otherwise.</returns>
+    public bool PressMountAndWait(Wait wait, AddonBits bits, int timeoutMs = 2000, CancellationToken token = default)
+    {
+        PressMount(token);
+        return wait.Until(timeoutMs, bits.Mounted) > 0;
+    }
 
     public void PressDismount(CancellationToken token = default)
     {
