@@ -1,8 +1,11 @@
 using Core;
+using Core.Diagnostics;
+using Core.Startup;
 using Core.Testing;
 using Game;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using SharedLib;
 using System;
 using System.Collections.Generic;
@@ -111,6 +114,9 @@ public class DiagnosticsController : ControllerBase
     private readonly BagReader bagReader;
     private readonly EquipmentReader equipmentReader;
     private readonly ILoggerFactory loggerFactory;
+    private readonly SystemDiagnostics systemDiagnostics;
+
+    private readonly StartupOptions startupOptions;
 
     public DiagnosticsController(
         ILogger<DiagnosticsController> logger,
@@ -124,7 +130,9 @@ public class DiagnosticsController : ControllerBase
         WowProcessInput wowInput,
         BagReader bagReader,
         EquipmentReader equipmentReader,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        SystemDiagnostics systemDiagnostics,
+        IOptions<StartupOptions> startupOptions)
     {
         this.logger = logger;
         this.keyBindingsReader = keyBindingsReader;
@@ -138,6 +146,8 @@ public class DiagnosticsController : ControllerBase
         this.bagReader = bagReader;
         this.equipmentReader = equipmentReader;
         this.loggerFactory = loggerFactory;
+        this.systemDiagnostics = systemDiagnostics;
+        this.startupOptions = startupOptions.Value;
     }
 
     #region Diagnostic Endpoints
@@ -704,6 +714,75 @@ public class DiagnosticsController : ControllerBase
             logger.LogError(ex, "Failed to get combat log");
             return StatusCode(500, new { Error = ex.Message });
         }
+    }
+
+    /// <summary>
+    /// GET /api/diagnostics/system
+    /// Returns comprehensive system diagnostics using SystemDiagnostics service.
+    /// Checks: WoW process, navigation server, addon status.
+    /// </summary>
+    [HttpGet("system")]
+    public async Task<IActionResult> GetSystemDiagnostics()
+    {
+        Stopwatch sw = Stopwatch.StartNew();
+
+        try
+        {
+            // Build server path
+            string serverPath = string.IsNullOrEmpty(startupOptions.NavigationServerPath)
+                ? System.IO.Path.Combine(AppContext.BaseDirectory, "Navigation", "AmeisenNavigationServer.exe")
+                : startupOptions.NavigationServerPath;
+
+            // Run individual checks
+            var navCheck = await systemDiagnostics.CheckNavigationServerAsync(serverPath, startupOptions.NavigationServerPort);
+            var wowCheck = systemDiagnostics.CheckWoWProcess();
+
+            // Build response
+            var response = new
+            {
+                Timestamp = DateTime.UtcNow,
+                OverallStatus = DetermineOverallStatus(new[] { navCheck.Status, wowCheck.Status }),
+                Checks = new[]
+                {
+                    new
+                    {
+                        navCheck.Name,
+                        Status = navCheck.Status.ToString(),
+                        navCheck.Message,
+                        navCheck.Recommendation,
+                        navCheck.Details
+                    },
+                    new
+                    {
+                        wowCheck.Name,
+                        Status = wowCheck.Status.ToString(),
+                        wowCheck.Message,
+                        wowCheck.Recommendation,
+                        wowCheck.Details
+                    }
+                }
+            };
+
+            sw.Stop();
+            logger.LogInformation("System diagnostics completed in {ElapsedMs}ms", sw.ElapsedMilliseconds);
+
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "System diagnostics failed");
+            sw.Stop();
+            return StatusCode(500, new { Error = ex.Message });
+        }
+    }
+
+    private static string DetermineOverallStatus(IEnumerable<DiagnosticStatus> statuses)
+    {
+        if (statuses.Any(s => s == DiagnosticStatus.Error))
+            return "Error";
+        if (statuses.Any(s => s == DiagnosticStatus.Warning))
+            return "Warning";
+        return "Healthy";
     }
 
     #endregion
