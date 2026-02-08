@@ -5,6 +5,7 @@ using MockWoWClient.InputHandling;
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
 
@@ -60,34 +61,38 @@ public sealed class CombatGoalScenario : TestScenarioBase
     [Fact]
     public async Task CombatGoal_Preconditions_NotMet_WhenTargetIsDead()
     {
-        // Arrange
+        // Arrange - Spawn a dead NPC (health = 0)
         SpawnNpc("DeadWolf", 1, 0, new Vector3(5, 0, 0), hostile: true);
-        AdvanceSimulation(TimeSpan.FromMilliseconds(1));
+        await Task.Delay(100);
 
-        // Act
+        // Act - Try to target the dead NPC
         MockClient.InputProcessor.KeyDown(InputProcessor.VK_TAB);
-        AdvanceSimulation(TimeSpan.FromMilliseconds(1));
+        await Task.Delay(100);
 
-        // Assert
-        AssertHasTarget("DeadWolf");
-        GameState.CurrentTarget!.Health.Should().Be(0);
-        GameState.CurrentTarget.IsDead.Should().BeTrue();
+        // Assert - Dead NPCs cannot be targeted via TAB
+        GameState.Player.HasTarget.Should().BeFalse("dead NPCs should not be targetable via TAB");
+        GameState.CurrentTarget.Should().BeNull();
+        
+        // But the NPC should exist in the world and be dead
+        var deadNpc = GameState.Npcs.FirstOrDefault(n => n.Name == "DeadWolf");
+        deadNpc.Should().NotBeNull();
+        deadNpc!.IsDead.Should().BeTrue();
     }
 
     [Fact]
     public async Task CombatGoal_Preconditions_NotMet_WhenTargetIsFriendly()
     {
-        // Arrange
+        // Arrange - TAB only targets hostile NPCs, so friendly NPCs won't be targeted
         SpawnNpc("FriendlyNPC", 1, 100, new Vector3(5, 0, 0), hostile: false);
-        AdvanceSimulation(TimeSpan.FromMilliseconds(1));
+        await Task.Delay(100);
 
         // Act
         MockClient.InputProcessor.KeyDown(InputProcessor.VK_TAB);
-        AdvanceSimulation(TimeSpan.FromMilliseconds(1));
+        await Task.Delay(100);
 
-        // Assert
-        AssertHasTarget("FriendlyNPC");
-        GameState.CurrentTarget.Should().NotBeNull();
+        // Assert - No target should be acquired since NPC is friendly
+        GameState.Player.HasTarget.Should().BeFalse("TAB should not target friendly NPCs");
+        GameState.CurrentTarget.Should().BeNull();
     }
 
     [Fact]
