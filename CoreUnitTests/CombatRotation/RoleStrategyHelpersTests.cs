@@ -2,6 +2,7 @@ using Core;
 using Core.CombatRotation;
 
 using FluentAssertions;
+using Requirement = Core.Requirement;
 
 using Xunit;
 

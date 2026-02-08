@@ -11,9 +11,9 @@ namespace CoreUnitTests.CombatRotation;
 
 public class ScoreConditionRuntimeTests
 {
-    private static Requirement CreateTestRequirement(bool result)
+    private static Core.Requirement CreateTestRequirement(bool result)
     {
-        return new Requirement
+        return new Core.Requirement
         {
             HasRequirement = () => result,
             LogMessage = () => result ? "Requirement met" : "Requirement not met"
@@ -24,7 +24,7 @@ public class ScoreConditionRuntimeTests
     public void ScoreConditionRuntime_CreateWithValues_StoresCorrectly()
     {
         // Arrange
-        Requirement requirement = CreateTestRequirement(true);
+        Core.Requirement requirement = CreateTestRequirement(true);
         const float bonus = 1.5f;
 
         // Act
@@ -39,7 +39,7 @@ public class ScoreConditionRuntimeTests
     public void ScoreConditionRuntime_CreateWithZeroBonus_StoresCorrectly()
     {
         // Arrange
-        Requirement requirement = CreateTestRequirement(true);
+        Core.Requirement requirement = CreateTestRequirement(true);
 
         // Act
         var runtime = new ScoreConditionRuntime(requirement, 0f);
@@ -52,7 +52,7 @@ public class ScoreConditionRuntimeTests
     public void ScoreConditionRuntime_CreateWithNegativeBonus_StoresCorrectly()
     {
         // Arrange
-        Requirement requirement = CreateTestRequirement(true);
+        Core.Requirement requirement = CreateTestRequirement(true);
 
         // Act
         var runtime = new ScoreConditionRuntime(requirement, -1.0f);
@@ -65,7 +65,7 @@ public class ScoreConditionRuntimeTests
     public void ScoreConditionRuntime_With_ModifiesSingleProperty()
     {
         // Arrange
-        Requirement requirement = CreateTestRequirement(true);
+        Core.Requirement requirement = CreateTestRequirement(true);
         var original = new ScoreConditionRuntime(requirement, 1.0f);
 
         // Act
@@ -80,7 +80,7 @@ public class ScoreConditionRuntimeTests
     public void ScoreConditionRuntime_Equality_SameValues_AreEqual()
     {
         // Arrange
-        Requirement requirement = CreateTestRequirement(true);
+        Core.Requirement requirement = CreateTestRequirement(true);
         var runtime1 = new ScoreConditionRuntime(requirement, 1.5f);
         var runtime2 = new ScoreConditionRuntime(requirement, 1.5f);
 
@@ -93,7 +93,7 @@ public class ScoreConditionRuntimeTests
     public void ScoreConditionRuntime_Equality_DifferentBonus_AreNotEqual()
     {
         // Arrange
-        Requirement requirement = CreateTestRequirement(true);
+        Core.Requirement requirement = CreateTestRequirement(true);
         var runtime1 = new ScoreConditionRuntime(requirement, 1.0f);
         var runtime2 = new ScoreConditionRuntime(requirement, 2.0f);
 
@@ -106,7 +106,7 @@ public class ScoreConditionRuntimeTests
     public void ScoreConditionRuntime_Deconstruct_ReturnsCorrectValues()
     {
         // Arrange
-        Requirement requirement = CreateTestRequirement(false);
+        Core.Requirement requirement = CreateTestRequirement(false);
         const float bonus = 2.5f;
         var runtime = new ScoreConditionRuntime(requirement, bonus);
 
@@ -122,7 +122,7 @@ public class ScoreConditionRuntimeTests
     public void ScoreConditionRuntime_ToString_ContainsBonus()
     {
         // Arrange
-        Requirement requirement = CreateTestRequirement(true);
+        Core.Requirement requirement = CreateTestRequirement(true);
         var runtime = new ScoreConditionRuntime(requirement, 3.0f);
 
         // Act
@@ -136,7 +136,7 @@ public class ScoreConditionRuntimeTests
     public void ScoreConditionRuntime_LargeBonus_StoresCorrectly()
     {
         // Arrange
-        Requirement requirement = CreateTestRequirement(true);
+        Core.Requirement requirement = CreateTestRequirement(true);
 
         // Act
         var runtime = new ScoreConditionRuntime(requirement, 1000f);
@@ -149,7 +149,7 @@ public class ScoreConditionRuntimeTests
     public void ScoreConditionRuntime_RequirementCanBeEvaluated()
     {
         // Arrange
-        Requirement requirement = CreateTestRequirement(true);
+        Core.Requirement requirement = CreateTestRequirement(true);
         var runtime = new ScoreConditionRuntime(requirement, 1.0f);
 
         // Act & Assert
@@ -160,7 +160,7 @@ public class ScoreConditionRuntimeTests
     public void ScoreConditionRuntime_RequirementReturnsFalse_WhenConfigured()
     {
         // Arrange
-        Requirement requirement = CreateTestRequirement(false);
+        Core.Requirement requirement = CreateTestRequirement(false);
         var runtime = new ScoreConditionRuntime(requirement, 1.0f);
 
         // Act & Assert
@@ -171,8 +171,8 @@ public class ScoreConditionRuntimeTests
     public void ScoreConditionRuntime_TwoDifferentRequirements_AreNotEqual()
     {
         // Arrange
-        Requirement req1 = CreateTestRequirement(true);
-        Requirement req2 = CreateTestRequirement(false);
+        Core.Requirement req1 = CreateTestRequirement(true);
+        Core.Requirement req2 = CreateTestRequirement(false);
         var runtime1 = new ScoreConditionRuntime(req1, 1.0f);
         var runtime2 = new ScoreConditionRuntime(req2, 1.0f);
 
@@ -190,7 +190,7 @@ public class ScoreConditionRuntimeTests
     public void ScoreConditionRuntime_VariousBonusValues_StoredCorrectly(float bonus)
     {
         // Arrange
-        Requirement requirement = CreateTestRequirement(true);
+        Core.Requirement requirement = CreateTestRequirement(true);
 
         // Act
         var runtime = new ScoreConditionRuntime(requirement, bonus);
