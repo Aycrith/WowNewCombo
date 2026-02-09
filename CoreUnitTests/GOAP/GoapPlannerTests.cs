@@ -200,7 +200,7 @@ public class GoapPlannerTests
         plan.Peek().Should().Be(directGoal); // Should choose cheaper option
     }
 
-    [Fact(Skip = "Known Issue: Planner doesn't support multi-step chains. BuildGraph recurses but goal state checking is too strict.")]
+    [Fact]
     public void Plan_ChainOfGoals_ReturnsCorrectSequence()
     {
         // Arrange - chain requires each goal's preconditions to be satisfied by previous goal's effects
@@ -292,7 +292,7 @@ public class GoapPlannerTests
         plan.Peek().Cost.Should().Be(3.0f);
     }
 
-    [Fact(Skip = "Known Issue: Depends on Plan_ChainOfGoals which doesn't work. Requires multi-step planning support.")]
+    [Fact]
     public void Plan_PriorityQueueOrdersByCost()
     {
         // Arrange - multiple solutions with different costs
@@ -560,7 +560,7 @@ public class GoapPlannerTests
         // Should return empty since no way to satisfy precondition
     }
 
-    [Fact(Skip = "Known Issue: Planner may hang on circular dependencies. Needs cycle detection in BuildGraph.")]
+    [Fact]
     public void Plan_CircularDependencies_AvoidsInfiniteLoop()
     {
         // Arrange - circular: A needs B, B needs A
@@ -586,7 +586,7 @@ public class GoapPlannerTests
         // Won't be able to satisfy circular dependency
     }
 
-    [Fact(Skip = "Performance test - takes too long for CI. Consider for benchmark project instead.")]
+    [Fact(Skip = "Performance test - may hit recursion depth with many goals. Consider for benchmark project.")]
     public void Plan_LargeNumberOfGoals_PerformsEfficiently()
     {
         // Arrange - many goals
@@ -663,7 +663,7 @@ public class GoapPlannerTests
 
     #region Thread Safety Tests
 
-    [Fact(Skip = "Thread safety test - Planner uses local collections but needs verification for concurrent safety.")]
+    [Fact]
     public void Plan_ConcurrentCalls_DoNotInterfere()
     {
         // Arrange

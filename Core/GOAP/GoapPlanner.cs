@@ -125,10 +125,13 @@ public static class GoapPlanner
 
     private static bool InState(bool[] test, BitVector32 state)
     {
+        // Only check indices that are explicitly set (not default/false)
+        // This allows partial goal matching for chain planning
         for (int i = 0; i < test.Length; i++)
         {
-            if (!test[i].Equals(state[1 << i]))
+            if (test[i] && !state[1 << i])
             {
+                // Goal requires true but state is false
                 return false;
             }
         }
