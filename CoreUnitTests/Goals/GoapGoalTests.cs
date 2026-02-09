@@ -510,7 +510,7 @@ public class GoapGoalTests
         goal.Cost.Should().Be(-1.0f);
     }
 
-    [Fact(Skip = "Empty string causes index out of range in GoapGoal constructor")]
+    [Fact]
     public void Name_EmptyString_Accepted()
     {
         // Arrange - edge case: empty name
@@ -521,7 +521,7 @@ public class GoapGoalTests
         goal.DisplayName.Should().BeEmpty();
     }
 
-    [Fact(Skip = "Name with only 'Goal' suffix causes index out of range")]
+    [Fact]
     public void Name_OnlyGoalSuffix_Removed()
     {
         // Arrange

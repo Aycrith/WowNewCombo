@@ -148,7 +148,6 @@ public sealed class PullTargetGoalScenario : TestScenarioBase
     public async Task PullTargetGoal_ShouldAcquireTarget_WithinTimeout()
     {
         // Arrange
-        const int acquireTimeout = 5000;
         AdvanceSimulation(TimeSpan.FromMilliseconds(1));
 
         // Act - Acquire within timeout
@@ -358,7 +357,6 @@ public sealed class PullTargetGoalScenario : TestScenarioBase
     public async Task PullTargetGoal_ShouldComplete_WithinMaxDuration()
     {
         // Arrange
-        const int maxDuration = 15000;
         SpawnNpc("Wolf", 2, 100, new Vector3(20, 0, 0), hostile: true);
         AdvanceSimulation(TimeSpan.FromMilliseconds(1));
 
@@ -490,7 +488,6 @@ public async Task PullTargetGoal_ShouldRecover_WhenStuck()
     {
         // Arrange
         string mode = "AssistFocus";
-        bool targetTargetsUs = true;
         AdvanceSimulation(TimeSpan.FromMilliseconds(1));
 
         // Assert - In assist mode, target can already target us

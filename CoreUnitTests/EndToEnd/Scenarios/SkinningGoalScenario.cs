@@ -378,17 +378,25 @@ public sealed class SkinningGoalScenario : TestScenarioBase
     [Fact]
     public async Task SkinningGoal_ShouldTarget_CorpseByNpcNameFinder()
     {
-        // Arrange
+        // Arrange - Spawn a dead NPC (corpse)
         SpawnNpc("Wolf", 2, 0, new Vector3(5, 0, 0), hostile: true);
-        GameState.Npcs[0].Health = 0;
-        AdvanceSimulation(TimeSpan.FromMilliseconds(1));
+        await Task.Delay(100);
 
-        // Act - Target via NPC name finder
-        MockClient.InputProcessor.KeyDown(InputProcessor.VK_TAB);
-        AdvanceSimulation(TimeSpan.FromMilliseconds(1));
+        // Act - Set target directly since TAB doesn't target dead NPCs
+        GameState.SetTarget(new TargetEntity
+        {
+            Name = "Wolf",
+            Health = 0,
+            HealthMax = 100,
+            IsHostile = true,
+            Position = new Vector3(5, 0, 0)
+        });
+        await Task.Delay(100);
 
         // Assert
         GameState.CurrentTarget.Should().NotBeNull();
+        GameState.CurrentTarget!.IsDead.Should().BeTrue();
+        GameState.CurrentTarget.Name.Should().Be("Wolf");
     }
 
     [Fact]

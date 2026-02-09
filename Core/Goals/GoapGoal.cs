@@ -1,4 +1,4 @@
-﻿using Core.GOAP;
+using Core.GOAP;
 
 using System;
 using System.Collections.Generic;
@@ -34,7 +34,14 @@ public abstract partial class GoapGoal
     protected GoapGoal(string name)
     {
         string output = RegexGoalName().Replace(name.Replace("Goal", ""), m => " " + m.Value.ToUpperInvariant());
-        DisplayName = Name = string.Concat(output[0].ToString().ToUpper(), output.AsSpan(1));
+        if (string.IsNullOrEmpty(output))
+        {
+            DisplayName = Name = string.Empty;
+        }
+        else
+        {
+            DisplayName = Name = string.Concat(output[0].ToString().ToUpper(), output.AsSpan(1));
+        }
     }
 
     public void SendGoapEvent(GoapEventArgs e)

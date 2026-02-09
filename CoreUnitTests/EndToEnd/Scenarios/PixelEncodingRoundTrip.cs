@@ -173,9 +173,8 @@ public sealed class PixelEncodingRoundTrip : TestScenarioBase
         using var image = _renderer.CaptureScreen();
         var values = new int[324];
         
-        // Grid layout: 50 rows, 7 columns (324 frames / 50 rows = 6.48 -> 7 cols)
+        // Grid layout: 50 rows (324 frames / 50 rows = 6.48 -> 7 cols)
         const int rows = 50;
-        const int cols = 7;
 
         for (int i = 0; i < 324; i++)
         {

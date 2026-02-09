@@ -51,10 +51,17 @@ public sealed class GoapAgentScenario : TestScenarioBase
     [Fact]
     public async Task GoapAgent_ShouldUpdate_WorldState_WhenCombatChanges()
     {
-        // Arrange
-        SpawnNpc("Wolf", 2, 100, new Vector3(5, 0, 0), hostile: true);
-        GameState.Player.HasTarget = true;
-        AdvanceSimulation(TimeSpan.FromMilliseconds(1));
+        // Arrange - Spawn NPC and target it
+        var npc = SpawnNpc("Wolf", 2, 100, new Vector3(5, 0, 0), hostile: true);
+        await Task.Delay(100);
+        
+        // Target the NPC
+        MockClient.InputProcessor.KeyDown(InputProcessor.VK_TAB);
+        await Task.Delay(100);
+        
+        // Verify target was acquired
+        GameState.Player.HasTarget.Should().BeTrue("player should have targeted the NPC");
+        GameState.CurrentTarget.Should().NotBeNull("current target should be set");
 
         // Act - Enter combat
         MockClient.InputProcessor.KeyDown(InputProcessor.VK_1);
