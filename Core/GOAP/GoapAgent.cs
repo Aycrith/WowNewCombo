@@ -1,3 +1,4 @@
+using Core.Diagnostics;
 using Core.Goals;
 using Core.Session;
 using Core.Hazard;
@@ -45,6 +46,7 @@ public sealed partial class GoapAgent : IDisposable
     private readonly IBagChangeTracker bagChangeTracker;
     private readonly HazardEventCollector hazardEventCollector;
     private readonly IHumanizationProvider? humanizationProvider;
+    private readonly IGoapEventHistory? goapEventHistory;
 
     private bool active;
     public bool Active
@@ -103,29 +105,30 @@ public sealed partial class GoapAgent : IDisposable
     public Stack<GoapGoal> Plan { get; private set; }
     public GoapGoal? CurrentGoal { get; private set; }
 
-    public GoapAgent(
-        ILogger<GoapAgent> logger,
-        ILogger globalLogger,
-        CancellationTokenSource<GoapAgent> cts,
-        RouteInfo routeInfo,
-        IScreenCapture screenCapture,
-        ClassConfiguration classConfiguration,
-        IWowScreen screen,
-        GoapAgentState state,
-        AddonReader addonReader,
-        PlayerReader playerReader,
-        AddonBits bits,
-        ConfigurableInput input,
-        IMountHandler mountHandler,
-        CombatLog combatLog,
-        IBagChangeTracker bagChangeTracker,
-        SessionStat sessionStat,
-        StopMoving stopMoving,
-        IGrindSessionHandler sessionHandler,
-        IEnumerable<GoapGoal> availableGoals,
-        HazardEventCollector hazardEventCollector,
-        IHumanizationProvider? humanizationProvider = null
-        )
+public GoapAgent(
+    ILogger<GoapAgent> logger,
+    ILogger globalLogger,
+    CancellationTokenSource<GoapAgent> cts,
+    RouteInfo routeInfo,
+    IScreenCapture screenCapture,
+    ClassConfiguration classConfiguration,
+    IWowScreen screen,
+    GoapAgentState state,
+    AddonReader addonReader,
+    PlayerReader playerReader,
+    AddonBits bits,
+    ConfigurableInput input,
+    IMountHandler mountHandler,
+    CombatLog combatLog,
+    IBagChangeTracker bagChangeTracker,
+    SessionStat sessionStat,
+    StopMoving stopMoving,
+    IGrindSessionHandler sessionHandler,
+    IEnumerable<GoapGoal> availableGoals,
+    HazardEventCollector hazardEventCollector,
+    IHumanizationProvider? humanizationProvider = null,
+    IGoapEventHistory? goapEventHistory = null
+)
     {
         this.routeInfo = routeInfo;
 
@@ -150,6 +153,7 @@ public sealed partial class GoapAgent : IDisposable
         this.bagChangeTracker = bagChangeTracker;
         this.hazardEventCollector = hazardEventCollector;
         this.humanizationProvider = humanizationProvider;
+        this.goapEventHistory = goapEventHistory;
 
         SessionStat = sessionStat;
 
@@ -235,29 +239,43 @@ public sealed partial class GoapAgent : IDisposable
                 continue;
             }
 
-            GoapGoal? newGoal = NextGoal();
-            if (newGoal != null)
-            {
-                if (newGoal != CurrentGoal)
+                GoapGoal? newGoal = NextGoal();
+                if (newGoal != null)
                 {
-                    wasEmpty = false;
-                    CurrentGoal?.OnExit();
-                    CurrentGoal = newGoal;
+                    if (newGoal != CurrentGoal)
+                    {
+                        wasEmpty = false;
+                        string? fromGoalName = CurrentGoal?.Name;
+                        CurrentGoal?.OnExit();
+                        CurrentGoal = newGoal;
 
-                    LogNewGoal(logger, newGoal.Name);
-                    CurrentGoal.OnEnter();
+                        LogNewGoal(logger, newGoal.Name);
+                        CurrentGoal.OnEnter();
 
-                    // Phase 3: Humanization - Add reaction delay after goal transition
-                    ApplyReactionDelay(newGoal);
+                        // Record goal transition for diagnostics
+                        goapEventHistory?.RecordTransition(
+                            fromGoalName,
+                            newGoal.Name,
+                            "Plan execution",
+                            Plan.Count);
+
+                        // Phase 3: Humanization - Add reaction delay after goal transition
+                        ApplyReactionDelay(newGoal);
+                    }
+
+                    newGoal.Update();
                 }
+                else if (!wasEmpty)
+                {
+                    LogNewEmptyGoal(logger);
+                    wasEmpty = true;
 
-                newGoal.Update();
-            }
-            else if (!wasEmpty)
-            {
-                LogNewEmptyGoal(logger);
-                wasEmpty = true;
-            }
+                    // Record NO PLAN event for diagnostics
+                    goapEventHistory?.RecordNoPlanEvent(
+                        WorldState.ToString(),
+                        AvailableGoals.Select(g => g.Name).ToList(),
+                        $"WorldState: {WorldState}");
+                }
 
             Thread.Sleep(2);
 
