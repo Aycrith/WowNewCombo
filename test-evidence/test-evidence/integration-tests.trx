@@ -1,0 +1,244 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="5e215b10-3e36-4283-ae6a-13e008593404" name="camer@ILI 2026-02-14 02:49:31" runUser="ILI\camer" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-02-14T02:49:31.2763327-05:00" queuing="2026-02-14T02:49:31.2763328-05:00" start="2026-02-14T02:49:30.5197921-05:00" finish="2026-02-14T02:49:32.0275238-05:00" />
+  <TestSettings name="default" id="6ad74537-99f3-492c-97de-f003a13ce4f0">
+    <Deployment runDeploymentRoot="camer_ILI_2026-02-14_02_49_31" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="2deac1b0-8c94-45b1-b9b1-7f7f747bb593" testId="a69564cd-a3f0-d222-da0b-8c28c01dec65" testName="CoreUnitTests.CombatRotation.FeatureFlagIntegrationTests.FeatureFlagsOptions_IsEnabled_ReturnsTrueWhenEnabled" computerName="ILI" duration="00:00:00.0845227" startTime="2026-02-14T02:49:31.2236158-05:00" endTime="2026-02-14T02:49:31.2236314-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2deac1b0-8c94-45b1-b9b1-7f7f747bb593" />
+    <UnitTestResult executionId="64064fb8-7bc6-4223-8316-ad8df04c6527" testId="796d3fae-a1d5-0a7a-21d3-08e23206fadc" testName="CoreUnitTests.EndToEnd.Scenarios.BotIntegrationTest.Implements_BothInterfaces" computerName="ILI" duration="00:00:00.0004015" startTime="2026-02-14T02:49:31.2902740-05:00" endTime="2026-02-14T02:49:31.2902741-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="64064fb8-7bc6-4223-8316-ad8df04c6527">
+      <Output>
+        <StdOut>=== Starting Scenario: Bot Integration ===&#xD;
+Description: Validates MockWowScreen implements both IWowScreen and IAddonDataProvider for bot integration&#xD;
+=== Completed Scenario: Bot Integration ===</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="47c25a5b-e264-4988-bc15-fac9d3ef9bd3" testId="d4b10412-88c8-df1c-c131-0fc4e93c50b6" testName="CoreUnitTests.Integration.BotFailureScenarioTests.SimulateRehabilitation_ShouldCreateRehabEvent" computerName="ILI" duration="00:00:00.0039395" startTime="2026-02-14T02:49:31.2731655-05:00" endTime="2026-02-14T02:49:31.2731658-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="47c25a5b-e264-4988-bc15-fac9d3ef9bd3" />
+    <UnitTestResult executionId="66e1389c-6216-4c65-958d-6a1b2065fd57" testId="70470666-0fec-af76-7540-38f6fd83fbeb" testName="CoreUnitTests.EndToEnd.Scenarios.BotIntegrationTest.Update_TriggersOnChangedEvent" computerName="ILI" duration="00:00:00.0003189" startTime="2026-02-14T02:49:31.2915663-05:00" endTime="2026-02-14T02:49:31.2915664-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="66e1389c-6216-4c65-958d-6a1b2065fd57">
+      <Output>
+        <StdOut>=== Starting Scenario: Bot Integration ===&#xD;
+Description: Validates MockWowScreen implements both IWowScreen and IAddonDataProvider for bot integration&#xD;
+=== Completed Scenario: Bot Integration ===</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="79de2512-2f12-4db9-af7a-9bf43e3f025c" testId="eceecc5e-2175-ea4a-0e1f-07157a635d76" testName="CoreUnitTests.Integration.BotFailureScenarioTests.SimulateHotZone_ShouldCreateHotZoneWithMultipleFailures" computerName="ILI" duration="00:00:00.0015723" startTime="2026-02-14T02:49:31.2913369-05:00" endTime="2026-02-14T02:49:31.2913369-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="79de2512-2f12-4db9-af7a-9bf43e3f025c" />
+    <UnitTestResult executionId="55cc4adf-fe94-4014-be46-55ed22129bc1" testId="2ee01620-c19d-0188-9b9d-7a6fc7c2a117" testName="CoreUnitTests.CombatRotation.FeatureFlagIntegrationTests.FeatureFlagsOptions_IsEnabled_ReturnsFalseForCombatRotation" computerName="ILI" duration="00:00:00.0000490" startTime="2026-02-14T02:49:31.2563309-05:00" endTime="2026-02-14T02:49:31.2563310-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="55cc4adf-fe94-4014-be46-55ed22129bc1" />
+    <UnitTestResult executionId="92fcb5d8-951f-48cb-a33f-db6bac741573" testId="340d46c4-49da-eaf1-e441-bfca4f6eae61" testName="CoreUnitTests.Integration.RouteRerouterIntegrationTests.Integration_UIActionRecording_ShouldRecordAndReplay" computerName="ILI" duration="00:00:00.3771412" startTime="2026-02-14T02:49:31.6060189-05:00" endTime="2026-02-14T02:49:31.6060191-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="92fcb5d8-951f-48cb-a33f-db6bac741573" />
+    <UnitTestResult executionId="6d9bddb4-d50c-454b-b235-7bcd80410744" testId="bbcd9c70-e504-0ad4-9f72-b3bd572dabfd" testName="CoreUnitTests.CombatRotation.FeatureFlagIntegrationTests.FeatureFlagsOptions_GetEnabledFeatures_ExcludesWhenDisabled" computerName="ILI" duration="00:00:00.0052180" startTime="2026-02-14T02:49:31.2288354-05:00" endTime="2026-02-14T02:49:31.2288355-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6d9bddb4-d50c-454b-b235-7bcd80410744" />
+    <UnitTestResult executionId="3d88e86c-45b8-4c96-a233-431f662927b2" testId="5b1dab26-c620-e93d-bf63-9e40241a0d4e" testName="CoreUnitTests.Integration.BotFailureScenarioTests.SimulateMultiMobAggro_ShouldSpawnMobsAndStartCombat" computerName="ILI" duration="00:00:00.0034602" startTime="2026-02-14T02:49:31.2767108-05:00" endTime="2026-02-14T02:49:31.2767109-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3d88e86c-45b8-4c96-a233-431f662927b2" />
+    <UnitTestResult executionId="8c99d099-a16f-484d-9372-0be2a542f681" testId="775196b1-b9c2-cb26-fb40-1755bbb185f9" testName="CoreUnitTests.Integration.BotFailureScenarioTests.SimulateStuck_ShouldCreateStuckEventWithCorrectPosition" computerName="ILI" duration="00:00:00.0013266" startTime="2026-02-14T02:49:31.2939002-05:00" endTime="2026-02-14T02:49:31.2939003-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8c99d099-a16f-484d-9372-0be2a542f681" />
+    <UnitTestResult executionId="0943b552-1d4e-4812-9a0c-39f489eb14cd" testId="97e5b77b-847c-bd0c-58ed-057982921619" testName="CoreUnitTests.Integration.BotFailureScenarioTests.SimulateStuck_WithHighAttemptCount_ShouldMarkAsSpinning" computerName="ILI" duration="00:00:00.0010954" startTime="2026-02-14T02:49:31.2929063-05:00" endTime="2026-02-14T02:49:31.2929063-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0943b552-1d4e-4812-9a0c-39f489eb14cd" />
+    <UnitTestResult executionId="85987001-a9a0-48fe-8347-9368b9eac196" testId="684f1ccc-927a-08a7-8f0d-1549e60a7d00" testName="CoreUnitTests.EndToEnd.Scenarios.BotIntegrationTest.IWowScreen_Properties_ReturnCorrectValues" computerName="ILI" duration="00:00:00.0004515" startTime="2026-02-14T02:49:31.2922560-05:00" endTime="2026-02-14T02:49:31.2922560-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="85987001-a9a0-48fe-8347-9368b9eac196">
+      <Output>
+        <StdOut>=== Starting Scenario: Bot Integration ===&#xD;
+Description: Validates MockWowScreen implements both IWowScreen and IAddonDataProvider for bot integration&#xD;
+=== Completed Scenario: Bot Integration ===</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="e6ee1279-2297-4095-9143-f310a9093d43" testId="8da653c5-cdc6-bb62-4099-47964b2c5bd2" testName="CoreUnitTests.EndToEnd.Scenarios.BotIntegrationTest.IAddonDataProvider_ImplementsAllMethods" computerName="ILI" duration="00:00:00.0121041" startTime="2026-02-14T02:49:31.2887210-05:00" endTime="2026-02-14T02:49:31.2887210-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e6ee1279-2297-4095-9143-f310a9093d43">
+      <Output>
+        <StdOut>=== Starting Scenario: Bot Integration ===&#xD;
+Description: Validates MockWowScreen implements both IWowScreen and IAddonDataProvider for bot integration&#xD;
+=== Completed Scenario: Bot Integration ===</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="1d91d9d5-87f1-4b82-afe4-f3e3e147f2ad" testId="1ba7d5b6-f610-b605-eb5d-d74f8dbf6e09" testName="CoreUnitTests.Hazard.HazardPipelineIntegrationTests.PersistenceRoundTrip_LoadRecluster_PreservesCostBehavior" computerName="ILI" duration="00:00:00.0558588" startTime="2026-02-14T02:49:31.3028318-05:00" endTime="2026-02-14T02:49:31.3028319-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1d91d9d5-87f1-4b82-afe4-f3e3e147f2ad" />
+    <UnitTestResult executionId="ab77182d-dc7b-4cdc-a962-70e45c46bef6" testId="bbb0189f-fe75-845d-2240-1b46846a5462" testName="CoreUnitTests.EndToEnd.Scenarios.BotIntegrationTest.DataDecoding_RoundTripsGameStateValues" computerName="ILI" duration="00:00:00.0007906" startTime="2026-02-14T02:49:31.2935792-05:00" endTime="2026-02-14T02:49:31.2935793-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ab77182d-dc7b-4cdc-a962-70e45c46bef6">
+      <Output>
+        <StdOut>=== Starting Scenario: Bot Integration ===&#xD;
+Description: Validates MockWowScreen implements both IWowScreen and IAddonDataProvider for bot integration&#xD;
+=== Completed Scenario: Bot Integration ===</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="481a6562-fa3b-4290-bb3b-8dcb5c606692" testId="8441b681-f087-e80c-6e1a-90039d953d15" testName="CoreUnitTests.Integration.RouteRerouterIntegrationTests.Integration_FullScenario_MovementAndRecording" computerName="ILI" duration="00:00:00.3801908" startTime="2026-02-14T02:49:31.9862821-05:00" endTime="2026-02-14T02:49:31.9862822-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="481a6562-fa3b-4290-bb3b-8dcb5c606692" />
+    <UnitTestResult executionId="e3ebdbf1-c235-44a3-8cc0-ddc0a7c5b2c5" testId="aaf3ce73-8ab5-369a-86ff-155b4efc6388" testName="CoreUnitTests.Integration.BotFailureScenarioTests.FailureSimulation_ClearHistory_ShouldRemoveAllEvents" computerName="ILI" duration="00:00:00.0036602" startTime="2026-02-14T02:49:31.2878647-05:00" endTime="2026-02-14T02:49:31.2878650-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e3ebdbf1-c235-44a3-8cc0-ddc0a7c5b2c5" />
+    <UnitTestResult executionId="41a79b0d-0d9f-4c10-ba78-2316776297c3" testId="eb3c43d7-e96c-e274-54f8-66f8e7f902d6" testName="CoreUnitTests.Hazard.HazardPipelineIntegrationTests.FeatureDisabled_ReturnsZeroCost_EvenWithClustersPresent" computerName="ILI" duration="00:00:00.0004028" startTime="2026-02-14T02:49:31.2565024-05:00" endTime="2026-02-14T02:49:31.2565025-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="41a79b0d-0d9f-4c10-ba78-2316776297c3" />
+    <UnitTestResult executionId="f69f6e0a-cd0f-4dc4-b1ed-99bfcf07e806" testId="85c981cb-151c-6ca7-00c1-6436b5fde22a" testName="CoreUnitTests.CombatRotation.FeatureFlagIntegrationTests.FeatureFlagsOptions_CombatRotationOptimizer_DefaultsToDisabled" computerName="ILI" duration="00:00:00.0000713" startTime="2026-02-14T02:49:31.2295962-05:00" endTime="2026-02-14T02:49:31.2295963-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f69f6e0a-cd0f-4dc4-b1ed-99bfcf07e806" />
+    <UnitTestResult executionId="d0626186-a4e9-4d8a-b85f-55d64070c061" testId="1df21e80-ea82-be10-e5a3-3c634aeda2ee" testName="CoreUnitTests.Integration.BotFailureScenarioTests.FullScenario_StuckThenDeathThenHotZone" computerName="ILI" duration="00:00:00.1349015" startTime="2026-02-14T02:49:31.2691679-05:00" endTime="2026-02-14T02:49:31.2691682-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d0626186-a4e9-4d8a-b85f-55d64070c061" />
+    <UnitTestResult executionId="04d88c25-ee02-4b54-8d9f-b6f367b19d53" testId="c64aff57-2cb5-a74c-85b3-5c859d6240c4" testName="CoreUnitTests.Integration.BotFailureScenarioTests.StuckDetection_Integration_WithBreadcrumbTracker" computerName="ILI" duration="00:00:00.0017681" startTime="2026-02-14T02:49:31.2896941-05:00" endTime="2026-02-14T02:49:31.2896941-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="04d88c25-ee02-4b54-8d9f-b6f367b19d53" />
+    <UnitTestResult executionId="49d091cb-7f21-43ec-91c0-f886f4bcfddd" testId="11fdb42f-4edb-9560-bc91-3e2f5b99d06f" testName="CoreUnitTests.Hazard.HazardPipelineIntegrationTests.StoreClusterCostPipeline_ProducesHighCostNearCentroid_ZeroFarAway" computerName="ILI" duration="00:00:00.1100249" startTime="2026-02-14T02:49:31.2564747-05:00" endTime="2026-02-14T02:49:31.2564748-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="49d091cb-7f21-43ec-91c0-f886f4bcfddd" />
+    <UnitTestResult executionId="3f3e8b96-36b7-4f17-9491-38e147c91c11" testId="fdc5b4a2-6e14-8951-3298-5e15068c040b" testName="CoreUnitTests.EndToEnd.Scenarios.BotIntegrationTest.Update_CapturesScreenImage" computerName="ILI" duration="00:00:00.0004057" startTime="2026-02-14T02:49:31.2910032-05:00" endTime="2026-02-14T02:49:31.2910033-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3f3e8b96-36b7-4f17-9491-38e147c91c11">
+      <Output>
+        <StdOut>=== Starting Scenario: Bot Integration ===&#xD;
+Description: Validates MockWowScreen implements both IWowScreen and IAddonDataProvider for bot integration&#xD;
+=== Completed Scenario: Bot Integration ===</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="f83cd8b9-c446-41d1-9f70-32b53418ebb2" testId="98e8aae4-54af-32e9-7231-02063db5287f" testName="CoreUnitTests.Integration.BotFailureScenarioTests.SmartBlacklist_AddEntry_ShouldBeRetrievable" computerName="ILI" duration="00:00:00.0045952" startTime="2026-02-14T02:49:31.2814033-05:00" endTime="2026-02-14T02:49:31.2814034-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f83cd8b9-c446-41d1-9f70-32b53418ebb2" />
+    <UnitTestResult executionId="8dbbcd06-68ba-4302-bca2-7aee9fa41f7c" testId="3a06349c-9e18-b247-a0ce-8f6d3fe4ed37" testName="CoreUnitTests.Integration.BotFailureScenarioTests.FailureSimulation_GetRecentStuckEvents_ShouldReturnEventsWithinWindow" computerName="ILI" duration="00:00:00.0010013" startTime="2026-02-14T02:49:31.2949345-05:00" endTime="2026-02-14T02:49:31.2949346-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8dbbcd06-68ba-4302-bca2-7aee9fa41f7c" />
+    <UnitTestResult executionId="d9007845-19d4-4a45-9787-92fac38bb821" testId="35952fe0-1929-c035-7219-2a9fce00dacc" testName="CoreUnitTests.Integration.BotFailureScenarioTests.SimulateDeath_ShouldCreateDeathEventAndKillPlayer" computerName="ILI" duration="00:00:00.0026608" startTime="2026-02-14T02:49:31.2841445-05:00" endTime="2026-02-14T02:49:31.2841449-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d9007845-19d4-4a45-9787-92fac38bb821" />
+    <UnitTestResult executionId="f216b658-7ad0-4419-a792-34e1c3141544" testId="6593840e-73f5-0290-42d1-c1f9f79ea222" testName="CoreUnitTests.CombatRotation.FeatureFlagIntegrationTests.FeatureFlagsOptions_GetEnabledFeatures_IncludesCombatRotation" computerName="ILI" duration="00:00:00.0008025" startTime="2026-02-14T02:49:31.2295526-05:00" endTime="2026-02-14T02:49:31.2295527-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f216b658-7ad0-4419-a792-34e1c3141544" />
+    <UnitTestResult executionId="e04ad737-7d75-4d06-b2b7-4fa9b718efb4" testId="7905723c-f500-4ea1-86b8-294e768b709a" testName="CoreUnitTests.EndToEnd.Scenarios.BotIntegrationTest.WaitForUpdate_WithRetries_Succeeds" computerName="ILI" duration="00:00:00.0001576" startTime="2026-02-14T02:49:31.2929407-05:00" endTime="2026-02-14T02:49:31.2929408-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e04ad737-7d75-4d06-b2b7-4fa9b718efb4">
+      <Output>
+        <StdOut>=== Starting Scenario: Bot Integration ===&#xD;
+Description: Validates MockWowScreen implements both IWowScreen and IAddonDataProvider for bot integration&#xD;
+=== Completed Scenario: Bot Integration ===</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="501f29df-c618-472c-8522-160d82201dc4" testId="733e2199-a91e-603a-4bb2-51ac74de8d7b" testName="CoreUnitTests.Integration.RouteRerouterIntegrationTests.Integration_RerouteWithGameState_ShouldWorkWithPlayerPosition" computerName="ILI" duration="00:00:00.0944957" startTime="2026-02-14T02:49:31.2294793-05:00" endTime="2026-02-14T02:49:31.2294793-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="501f29df-c618-472c-8522-160d82201dc4" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CoreUnitTests.CombatRotation.FeatureFlagIntegrationTests.FeatureFlagsOptions_GetEnabledFeatures_IncludesCombatRotation" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="6593840e-73f5-0290-42d1-c1f9f79ea222">
+      <Execution id="f216b658-7ad0-4419-a792-34e1c3141544" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.CombatRotation.FeatureFlagIntegrationTests" name="FeatureFlagsOptions_GetEnabledFeatures_IncludesCombatRotation" />
+    </UnitTest>
+    <UnitTest name="CoreUnitTests.EndToEnd.Scenarios.BotIntegrationTest.Update_TriggersOnChangedEvent" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="70470666-0fec-af76-7540-38f6fd83fbeb">
+      <Execution id="66e1389c-6216-4c65-958d-6a1b2065fd57" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.EndToEnd.Scenarios.BotIntegrationTest" name="Update_TriggersOnChangedEvent" />
+    </UnitTest>
+    <UnitTest name="CoreUnitTests.Hazard.HazardPipelineIntegrationTests.StoreClusterCostPipeline_ProducesHighCostNearCentroid_ZeroFarAway" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="11fdb42f-4edb-9560-bc91-3e2f5b99d06f">
+      <Execution id="49d091cb-7f21-43ec-91c0-f886f4bcfddd" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.Hazard.HazardPipelineIntegrationTests" name="StoreClusterCostPipeline_ProducesHighCostNearCentroid_ZeroFarAway" />
+    </UnitTest>
+    <UnitTest name="CoreUnitTests.Hazard.HazardPipelineIntegrationTests.PersistenceRoundTrip_LoadRecluster_PreservesCostBehavior" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="1ba7d5b6-f610-b605-eb5d-d74f8dbf6e09">
+      <Execution id="1d91d9d5-87f1-4b82-afe4-f3e3e147f2ad" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.Hazard.HazardPipelineIntegrationTests" name="PersistenceRoundTrip_LoadRecluster_PreservesCostBehavior" />
+    </UnitTest>
+    <UnitTest name="CoreUnitTests.CombatRotation.FeatureFlagIntegrationTests.FeatureFlagsOptions_IsEnabled_ReturnsFalseForCombatRotation" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="2ee01620-c19d-0188-9b9d-7a6fc7c2a117">
+      <Execution id="55cc4adf-fe94-4014-be46-55ed22129bc1" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.CombatRotation.FeatureFlagIntegrationTests" name="FeatureFlagsOptions_IsEnabled_ReturnsFalseForCombatRotation" />
+    </UnitTest>
+    <UnitTest name="CoreUnitTests.Integration.BotFailureScenarioTests.FullScenario_StuckThenDeathThenHotZone" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="1df21e80-ea82-be10-e5a3-3c634aeda2ee">
+      <Execution id="d0626186-a4e9-4d8a-b85f-55d64070c061" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.Integration.BotFailureScenarioTests" name="FullScenario_StuckThenDeathThenHotZone" />
+    </UnitTest>
+    <UnitTest name="CoreUnitTests.Integration.BotFailureScenarioTests.FailureSimulation_ClearHistory_ShouldRemoveAllEvents" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="aaf3ce73-8ab5-369a-86ff-155b4efc6388">
+      <Execution id="e3ebdbf1-c235-44a3-8cc0-ddc0a7c5b2c5" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.Integration.BotFailureScenarioTests" name="FailureSimulation_ClearHistory_ShouldRemoveAllEvents" />
+    </UnitTest>
+    <UnitTest name="CoreUnitTests.CombatRotation.FeatureFlagIntegrationTests.FeatureFlagsOptions_IsEnabled_ReturnsTrueWhenEnabled" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="a69564cd-a3f0-d222-da0b-8c28c01dec65">
+      <Execution id="2deac1b0-8c94-45b1-b9b1-7f7f747bb593" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.CombatRotation.FeatureFlagIntegrationTests" name="FeatureFlagsOptions_IsEnabled_ReturnsTrueWhenEnabled" />
+    </UnitTest>
+    <UnitTest name="CoreUnitTests.Integration.BotFailureScenarioTests.StuckDetection_Integration_WithBreadcrumbTracker" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="c64aff57-2cb5-a74c-85b3-5c859d6240c4">
+      <Execution id="04d88c25-ee02-4b54-8d9f-b6f367b19d53" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.Integration.BotFailureScenarioTests" name="StuckDetection_Integration_WithBreadcrumbTracker" />
+    </UnitTest>
+    <UnitTest name="CoreUnitTests.EndToEnd.Scenarios.BotIntegrationTest.IAddonDataProvider_ImplementsAllMethods" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="8da653c5-cdc6-bb62-4099-47964b2c5bd2">
+      <Execution id="e6ee1279-2297-4095-9143-f310a9093d43" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.EndToEnd.Scenarios.BotIntegrationTest" name="IAddonDataProvider_ImplementsAllMethods" />
+    </UnitTest>
+    <UnitTest name="CoreUnitTests.Integration.RouteRerouterIntegrationTests.Integration_RerouteWithGameState_ShouldWorkWithPlayerPosition" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="733e2199-a91e-603a-4bb2-51ac74de8d7b">
+      <Execution id="501f29df-c618-472c-8522-160d82201dc4" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.Integration.RouteRerouterIntegrationTests" name="Integration_RerouteWithGameState_ShouldWorkWithPlayerPosition" />
+    </UnitTest>
+    <UnitTest name="CoreUnitTests.EndToEnd.Scenarios.BotIntegrationTest.DataDecoding_RoundTripsGameStateValues" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="bbb0189f-fe75-845d-2240-1b46846a5462">
+      <Execution id="ab77182d-dc7b-4cdc-a962-70e45c46bef6" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.EndToEnd.Scenarios.BotIntegrationTest" name="DataDecoding_RoundTripsGameStateValues" />
+    </UnitTest>
+    <UnitTest name="CoreUnitTests.CombatRotation.FeatureFlagIntegrationTests.FeatureFlagsOptions_GetEnabledFeatures_ExcludesWhenDisabled" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="bbcd9c70-e504-0ad4-9f72-b3bd572dabfd">
+      <Execution id="6d9bddb4-d50c-454b-b235-7bcd80410744" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.CombatRotation.FeatureFlagIntegrationTests" name="FeatureFlagsOptions_GetEnabledFeatures_ExcludesWhenDisabled" />
+    </UnitTest>
+    <UnitTest name="CoreUnitTests.EndToEnd.Scenarios.BotIntegrationTest.WaitForUpdate_WithRetries_Succeeds" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="7905723c-f500-4ea1-86b8-294e768b709a">
+      <Execution id="e04ad737-7d75-4d06-b2b7-4fa9b718efb4" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.EndToEnd.Scenarios.BotIntegrationTest" name="WaitForUpdate_WithRetries_Succeeds" />
+    </UnitTest>
+    <UnitTest name="CoreUnitTests.EndToEnd.Scenarios.BotIntegrationTest.Implements_BothInterfaces" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="796d3fae-a1d5-0a7a-21d3-08e23206fadc">
+      <Execution id="64064fb8-7bc6-4223-8316-ad8df04c6527" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.EndToEnd.Scenarios.BotIntegrationTest" name="Implements_BothInterfaces" />
+    </UnitTest>
+    <UnitTest name="CoreUnitTests.Integration.BotFailureScenarioTests.SimulateRehabilitation_ShouldCreateRehabEvent" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="d4b10412-88c8-df1c-c131-0fc4e93c50b6">
+      <Execution id="47c25a5b-e264-4988-bc15-fac9d3ef9bd3" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.Integration.BotFailureScenarioTests" name="SimulateRehabilitation_ShouldCreateRehabEvent" />
+    </UnitTest>
+    <UnitTest name="CoreUnitTests.Hazard.HazardPipelineIntegrationTests.FeatureDisabled_ReturnsZeroCost_EvenWithClustersPresent" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="eb3c43d7-e96c-e274-54f8-66f8e7f902d6">
+      <Execution id="41a79b0d-0d9f-4c10-ba78-2316776297c3" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.Hazard.HazardPipelineIntegrationTests" name="FeatureDisabled_ReturnsZeroCost_EvenWithClustersPresent" />
+    </UnitTest>
+    <UnitTest name="CoreUnitTests.Integration.RouteRerouterIntegrationTests.Integration_FullScenario_MovementAndRecording" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="8441b681-f087-e80c-6e1a-90039d953d15">
+      <Execution id="481a6562-fa3b-4290-bb3b-8dcb5c606692" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.Integration.RouteRerouterIntegrationTests" name="Integration_FullScenario_MovementAndRecording" />
+    </UnitTest>
+    <UnitTest name="CoreUnitTests.Integration.RouteRerouterIntegrationTests.Integration_UIActionRecording_ShouldRecordAndReplay" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="340d46c4-49da-eaf1-e441-bfca4f6eae61">
+      <Execution id="92fcb5d8-951f-48cb-a33f-db6bac741573" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.Integration.RouteRerouterIntegrationTests" name="Integration_UIActionRecording_ShouldRecordAndReplay" />
+    </UnitTest>
+    <UnitTest name="CoreUnitTests.Integration.BotFailureScenarioTests.SimulateStuck_ShouldCreateStuckEventWithCorrectPosition" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="775196b1-b9c2-cb26-fb40-1755bbb185f9">
+      <Execution id="8c99d099-a16f-484d-9372-0be2a542f681" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.Integration.BotFailureScenarioTests" name="SimulateStuck_ShouldCreateStuckEventWithCorrectPosition" />
+    </UnitTest>
+    <UnitTest name="CoreUnitTests.Integration.BotFailureScenarioTests.SimulateDeath_ShouldCreateDeathEventAndKillPlayer" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="35952fe0-1929-c035-7219-2a9fce00dacc">
+      <Execution id="d9007845-19d4-4a45-9787-92fac38bb821" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.Integration.BotFailureScenarioTests" name="SimulateDeath_ShouldCreateDeathEventAndKillPlayer" />
+    </UnitTest>
+    <UnitTest name="CoreUnitTests.EndToEnd.Scenarios.BotIntegrationTest.IWowScreen_Properties_ReturnCorrectValues" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="684f1ccc-927a-08a7-8f0d-1549e60a7d00">
+      <Execution id="85987001-a9a0-48fe-8347-9368b9eac196" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.EndToEnd.Scenarios.BotIntegrationTest" name="IWowScreen_Properties_ReturnCorrectValues" />
+    </UnitTest>
+    <UnitTest name="CoreUnitTests.Integration.BotFailureScenarioTests.SmartBlacklist_AddEntry_ShouldBeRetrievable" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="98e8aae4-54af-32e9-7231-02063db5287f">
+      <Execution id="f83cd8b9-c446-41d1-9f70-32b53418ebb2" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.Integration.BotFailureScenarioTests" name="SmartBlacklist_AddEntry_ShouldBeRetrievable" />
+    </UnitTest>
+    <UnitTest name="CoreUnitTests.Integration.BotFailureScenarioTests.SimulateStuck_WithHighAttemptCount_ShouldMarkAsSpinning" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="97e5b77b-847c-bd0c-58ed-057982921619">
+      <Execution id="0943b552-1d4e-4812-9a0c-39f489eb14cd" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.Integration.BotFailureScenarioTests" name="SimulateStuck_WithHighAttemptCount_ShouldMarkAsSpinning" />
+    </UnitTest>
+    <UnitTest name="CoreUnitTests.CombatRotation.FeatureFlagIntegrationTests.FeatureFlagsOptions_CombatRotationOptimizer_DefaultsToDisabled" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="85c981cb-151c-6ca7-00c1-6436b5fde22a">
+      <Execution id="f69f6e0a-cd0f-4dc4-b1ed-99bfcf07e806" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.CombatRotation.FeatureFlagIntegrationTests" name="FeatureFlagsOptions_CombatRotationOptimizer_DefaultsToDisabled" />
+    </UnitTest>
+    <UnitTest name="CoreUnitTests.Integration.BotFailureScenarioTests.FailureSimulation_GetRecentStuckEvents_ShouldReturnEventsWithinWindow" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="3a06349c-9e18-b247-a0ce-8f6d3fe4ed37">
+      <Execution id="8dbbcd06-68ba-4302-bca2-7aee9fa41f7c" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.Integration.BotFailureScenarioTests" name="FailureSimulation_GetRecentStuckEvents_ShouldReturnEventsWithinWindow" />
+    </UnitTest>
+    <UnitTest name="CoreUnitTests.EndToEnd.Scenarios.BotIntegrationTest.Update_CapturesScreenImage" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="fdc5b4a2-6e14-8951-3298-5e15068c040b">
+      <Execution id="3f3e8b96-36b7-4f17-9491-38e147c91c11" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.EndToEnd.Scenarios.BotIntegrationTest" name="Update_CapturesScreenImage" />
+    </UnitTest>
+    <UnitTest name="CoreUnitTests.Integration.BotFailureScenarioTests.SimulateMultiMobAggro_ShouldSpawnMobsAndStartCombat" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="5b1dab26-c620-e93d-bf63-9e40241a0d4e">
+      <Execution id="3d88e86c-45b8-4c96-a233-431f662927b2" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.Integration.BotFailureScenarioTests" name="SimulateMultiMobAggro_ShouldSpawnMobsAndStartCombat" />
+    </UnitTest>
+    <UnitTest name="CoreUnitTests.Integration.BotFailureScenarioTests.SimulateHotZone_ShouldCreateHotZoneWithMultipleFailures" storage="c:\wowclassicgrindbot\coreunittests\bin\release\net10.0\coreunittests.dll" id="eceecc5e-2175-ea4a-0e1f-07157a635d76">
+      <Execution id="79de2512-2f12-4db9-af7a-9bf43e3f025c" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Release\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.Integration.BotFailureScenarioTests" name="SimulateHotZone_ShouldCreateHotZoneWithMultipleFailures" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="a69564cd-a3f0-d222-da0b-8c28c01dec65" executionId="2deac1b0-8c94-45b1-b9b1-7f7f747bb593" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="796d3fae-a1d5-0a7a-21d3-08e23206fadc" executionId="64064fb8-7bc6-4223-8316-ad8df04c6527" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d4b10412-88c8-df1c-c131-0fc4e93c50b6" executionId="47c25a5b-e264-4988-bc15-fac9d3ef9bd3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="70470666-0fec-af76-7540-38f6fd83fbeb" executionId="66e1389c-6216-4c65-958d-6a1b2065fd57" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="eceecc5e-2175-ea4a-0e1f-07157a635d76" executionId="79de2512-2f12-4db9-af7a-9bf43e3f025c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2ee01620-c19d-0188-9b9d-7a6fc7c2a117" executionId="55cc4adf-fe94-4014-be46-55ed22129bc1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="340d46c4-49da-eaf1-e441-bfca4f6eae61" executionId="92fcb5d8-951f-48cb-a33f-db6bac741573" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="bbcd9c70-e504-0ad4-9f72-b3bd572dabfd" executionId="6d9bddb4-d50c-454b-b235-7bcd80410744" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5b1dab26-c620-e93d-bf63-9e40241a0d4e" executionId="3d88e86c-45b8-4c96-a233-431f662927b2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="775196b1-b9c2-cb26-fb40-1755bbb185f9" executionId="8c99d099-a16f-484d-9372-0be2a542f681" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="97e5b77b-847c-bd0c-58ed-057982921619" executionId="0943b552-1d4e-4812-9a0c-39f489eb14cd" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="684f1ccc-927a-08a7-8f0d-1549e60a7d00" executionId="85987001-a9a0-48fe-8347-9368b9eac196" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8da653c5-cdc6-bb62-4099-47964b2c5bd2" executionId="e6ee1279-2297-4095-9143-f310a9093d43" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1ba7d5b6-f610-b605-eb5d-d74f8dbf6e09" executionId="1d91d9d5-87f1-4b82-afe4-f3e3e147f2ad" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="bbb0189f-fe75-845d-2240-1b46846a5462" executionId="ab77182d-dc7b-4cdc-a962-70e45c46bef6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8441b681-f087-e80c-6e1a-90039d953d15" executionId="481a6562-fa3b-4290-bb3b-8dcb5c606692" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="aaf3ce73-8ab5-369a-86ff-155b4efc6388" executionId="e3ebdbf1-c235-44a3-8cc0-ddc0a7c5b2c5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="eb3c43d7-e96c-e274-54f8-66f8e7f902d6" executionId="41a79b0d-0d9f-4c10-ba78-2316776297c3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="85c981cb-151c-6ca7-00c1-6436b5fde22a" executionId="f69f6e0a-cd0f-4dc4-b1ed-99bfcf07e806" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1df21e80-ea82-be10-e5a3-3c634aeda2ee" executionId="d0626186-a4e9-4d8a-b85f-55d64070c061" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c64aff57-2cb5-a74c-85b3-5c859d6240c4" executionId="04d88c25-ee02-4b54-8d9f-b6f367b19d53" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="11fdb42f-4edb-9560-bc91-3e2f5b99d06f" executionId="49d091cb-7f21-43ec-91c0-f886f4bcfddd" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="fdc5b4a2-6e14-8951-3298-5e15068c040b" executionId="3f3e8b96-36b7-4f17-9491-38e147c91c11" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="98e8aae4-54af-32e9-7231-02063db5287f" executionId="f83cd8b9-c446-41d1-9f70-32b53418ebb2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3a06349c-9e18-b247-a0ce-8f6d3fe4ed37" executionId="8dbbcd06-68ba-4302-bca2-7aee9fa41f7c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="35952fe0-1929-c035-7219-2a9fce00dacc" executionId="d9007845-19d4-4a45-9787-92fac38bb821" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6593840e-73f5-0290-42d1-c1f9f79ea222" executionId="f216b658-7ad0-4419-a792-34e1c3141544" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7905723c-f500-4ea1-86b8-294e768b709a" executionId="e04ad737-7d75-4d06-b2b7-4fa9b718efb4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="733e2199-a91e-603a-4bb2-51ac74de8d7b" executionId="501f29df-c618-472c-8522-160d82201dc4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="29" executed="29" passed="29" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.7+8f2703126a (64-bit .NET 10.0.2)&#xD;
+[xUnit.net 00:00:00.07]   Discovering: CoreUnitTests&#xD;
+[xUnit.net 00:00:00.23]   Discovered:  CoreUnitTests&#xD;
+[xUnit.net 00:00:00.23]   Starting:    CoreUnitTests&#xD;
+[xUnit.net 00:00:01.12]   Finished:    CoreUnitTests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

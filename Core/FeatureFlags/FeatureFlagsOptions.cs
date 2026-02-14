@@ -24,6 +24,10 @@ public sealed class FeatureFlagsOptions
     public HybridLLMDecisionOptions HybridLLMDecision { get; set; } = new();
     public InputSecurityOptions InputSecurity { get; set; } = new();
     public CombatRotation.CombatRotationOptimizerOptions CombatRotationOptimizer { get; set; } = new();
+    public SmartBlacklistOptions SmartBlacklist { get; set; } = new();
+    public StuckSensitivityOptions StuckSensitivity { get; set; } = new();
+    public NoPlanRecoveryOptions NoPlanRecovery { get; set; } = new();
+    public FailureAnalyticsOptions FailureAnalytics { get; set; } = new();
 
     public bool GlobalKillSwitch { get; set; }
     public bool DebugMode { get; set; }
@@ -231,6 +235,81 @@ public sealed class MonitoringThresholds
 }
 
 /// <summary>
+/// Smart blacklist configuration with temporal tiers.
+/// </summary>
+public sealed class SmartBlacklistOptions
+{
+    public bool Enabled { get; set; } = true;
+    public int MaxEntries { get; set; } = 1000;
+    public int AutoSaveIntervalMinutes { get; set; } = 5;
+    public bool AutoSaveOnChange { get; set; } = false;
+    public bool LogBlacklistHits { get; set; } = false;
+}
+
+/// <summary>
+/// Stuck detection sensitivity configuration.
+/// </summary>
+public sealed class StuckSensitivityOptions
+{
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>Minimum distance change to consider movement (lower = more sensitive).</summary>
+    public float MinDistance { get; set; } = 0.1f;
+
+    /// <summary>Time before triggering unstuck (ms).</summary>
+    public int UnstuckAfterMs { get; set; } = 2000;
+
+    /// <summary>Enable predictive stuck detection using breadcrumb analysis.</summary>
+    public bool EnablePredictiveDetection { get; set; } = true;
+
+    /// <summary>Risk threshold for preemptive path adjustment (0-100).</summary>
+    public int PredictiveRiskThreshold { get; set; } = 70;
+
+    /// <summary>Maximum approach duration multiplier (base is 15s).</summary>
+    public float ApproachTimeoutMultiplier { get; set; } = 1.0f;
+}
+
+/// <summary>
+/// NO PLAN recovery configuration.
+/// </summary>
+public sealed class NoPlanRecoveryOptions
+{
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>Threshold for ResetState strategy.</summary>
+    public int ResetStateThreshold { get; set; } = 2;
+
+    /// <summary>Threshold for ForceReplan strategy.</summary>
+    public int ForceReplanThreshold { get; set; } = 4;
+
+    /// <summary>Threshold for EmergencyReset strategy.</summary>
+    public int EmergencyResetThreshold { get; set; } = 6;
+
+    /// <summary>Delay between recovery attempts (ms).</summary>
+    public int RecoveryDelayMs { get; set; } = 1000;
+}
+
+/// <summary>
+/// Failure analytics configuration.
+/// </summary>
+public sealed class FailureAnalyticsOptions
+{
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>How often to flush to disk (minutes).</summary>
+    public int FlushIntervalMinutes { get; set; } = 5;
+
+    /// <summary>Maximum events to keep in memory.</summary>
+    public int MaxEventsInMemory { get; set; } = 1000;
+
+    /// <summary>Maximum events to persist to disk.</summary>
+    public int MaxPersistedEvents { get; set; } = 10000;
+
+    /// <summary>How long to retain events (days).</summary>
+    public int RetentionDays { get; set; } = 30;
+}
+
+/// <summary>
 /// Extension methods for feature flag checking.
 /// </summary>
 public static class FeatureFlagExtensions
@@ -256,6 +335,10 @@ public static class FeatureFlagExtensions
             nameof(FeatureFlagsOptions.HybridLLMDecision) => flags.HybridLLMDecision.Enabled,
             nameof(FeatureFlagsOptions.InputSecurity) => flags.InputSecurity.Enabled,
             nameof(FeatureFlagsOptions.CombatRotationOptimizer) => flags.CombatRotationOptimizer.Enabled,
+            nameof(FeatureFlagsOptions.SmartBlacklist) => flags.SmartBlacklist.Enabled,
+            nameof(FeatureFlagsOptions.StuckSensitivity) => flags.StuckSensitivity.Enabled,
+            nameof(FeatureFlagsOptions.NoPlanRecovery) => flags.NoPlanRecovery.Enabled,
+            nameof(FeatureFlagsOptions.FailureAnalytics) => flags.FailureAnalytics.Enabled,
             _ => false
         };
     }
@@ -280,5 +363,9 @@ public static class FeatureFlagExtensions
         if (flags.HybridLLMDecision.Enabled) yield return nameof(FeatureFlagsOptions.HybridLLMDecision);
         if (flags.InputSecurity.Enabled) yield return nameof(FeatureFlagsOptions.InputSecurity);
         if (flags.CombatRotationOptimizer.Enabled) yield return nameof(FeatureFlagsOptions.CombatRotationOptimizer);
+        if (flags.SmartBlacklist.Enabled) yield return nameof(FeatureFlagsOptions.SmartBlacklist);
+        if (flags.StuckSensitivity.Enabled) yield return nameof(FeatureFlagsOptions.StuckSensitivity);
+        if (flags.NoPlanRecovery.Enabled) yield return nameof(FeatureFlagsOptions.NoPlanRecovery);
+        if (flags.FailureAnalytics.Enabled) yield return nameof(FeatureFlagsOptions.FailureAnalytics);
     }
 }

@@ -1,4 +1,4 @@
-﻿using Core.GOAP;
+using Core.GOAP;
 
 using Microsoft.Extensions.Logging;
 
@@ -98,6 +98,13 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
     {
         wait.Update();
 
+        // Multi-mob detection - early retreat
+        if (!bits.Combat() && DetectMultiMobThreat())
+        {
+            HandleMultiMobThreat();
+            return;
+        }
+
         if (bits.Combat() && !bits.Target_Combat() &&
             !combatLog.ToPull.Contains(playerReader.TargetGuid))
         {
@@ -123,6 +130,80 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
             RandomJump();
         }
     }
+
+    #region Multi-Mob Detection
+
+    private int multiMobThreatCount;
+    private DateTime lastMultiMobCheck;
+
+    /// <summary>
+    /// Detects if approaching this target would pull multiple mobs.
+    /// </summary>
+    private bool DetectMultiMobThreat()
+    {
+        // Rate limit checks
+        if ((DateTime.UtcNow - lastMultiMobCheck).TotalMilliseconds < 500)
+        {
+            return multiMobThreatCount > 1;
+        }
+
+        lastMultiMobCheck = DateTime.UtcNow;
+        multiMobThreatCount = 0;
+
+        // Count nearby hostiles using DamageTaken as proxy for mobs aware of us
+        int nearbyHostiles = combatLog.DamageTaken.Count;
+
+        // Also check if there are multiple mobs in ToPull (about to aggro)
+        int toPullCount = combatLog.ToPull.Count;
+
+        // Check target proximity - if target is close and we're not in combat,
+        // there might be other mobs nearby
+        if (playerReader.MinRange() < 15 && !bits.Combat())
+        {
+            // Estimate threat based on target type
+            if (playerReader.TargetClassification == UnitClassification.Normal)
+            {
+                // Normal mobs often come in groups
+                multiMobThreatCount = Math.Max(1, toPullCount) + nearbyHostiles;
+            }
+            else if (playerReader.TargetClassification == UnitClassification.Elite)
+            {
+                // Elites usually solo, but check anyway
+                multiMobThreatCount = 1 + nearbyHostiles;
+            }
+        }
+
+        if (multiMobThreatCount > 1 && debug)
+        {
+            Log($"Multi-mob threat detected: {multiMobThreatCount} (nearby: {nearbyHostiles}, topull: {toPullCount})");
+        }
+
+        return multiMobThreatCount > 1;
+    }
+
+    /// <summary>
+    /// Handles detected multi-mob threat by aborting approach.
+    /// </summary>
+    private void HandleMultiMobThreat()
+    {
+        logger.LogWarning("[ApproachTarget] Multi-mob threat detected ({Count} mobs). Aborting approach!", multiMobThreatCount);
+
+        stopMoving.Stop();
+
+        // Clear target to avoid accidental pull
+        input.ForceAggressiveClearTarget(wait, bits);
+
+        // Turn away from the threat cluster
+        input.TurnRandomDir(1000 + Random.Shared.Next(500));
+
+        // Mark this target as temporary blacklist to avoid re-aggro
+        if (playerReader.TargetGuid != 0)
+        {
+            Log($"Target {playerReader.TargetGuid} blacklisted temporarily due to multi-mob");
+        }
+    }
+
+    #endregion
 
     private void NonCombatApproach()
     {

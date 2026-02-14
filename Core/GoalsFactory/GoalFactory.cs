@@ -64,6 +64,20 @@ public static class GoalFactory
             services.AddScoped<IBlacklist>(x => x.GetRequiredKeyedService<IBlacklist>(TARGET));
 
             services.AddScoped<GoapGoal, BlacklistTargetGoal>();
+
+            // SmartBlacklist for temporal blacklisting with persistence
+            services.AddSingleton<GoalsComponent.Blacklist.SmartBlacklist>(sp =>
+            {
+                FeatureFlagService flags = sp.GetRequiredService<FeatureFlagService>();
+                ILogger<GoalsComponent.Blacklist.SmartBlacklist> logger = sp.GetRequiredService<ILogger<GoalsComponent.Blacklist.SmartBlacklist>>();
+                return new GoalsComponent.Blacklist.SmartBlacklist(logger, flags.Current.SmartBlacklist);
+            });
+
+            // NO PLAN recovery service
+            services.AddHostedService<Recovery.NoPlanRecoveryService>();
+
+            // Failure analytics service
+            services.AddHostedService<Analytics.FailureAnalytics>();
         }
 
         services.AddScoped<NpcNameTargeting>();

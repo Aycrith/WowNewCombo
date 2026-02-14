@@ -3,6 +3,8 @@ using Core.Launch;
 using Core.Startup;
 using Core.Services;
 
+using Frontend.Services;
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -53,6 +55,9 @@ public static class DependencyInjection
     // Diagnostic services for agent troubleshooting
     services.AddSingleton<Core.Diagnostics.IGoapEventHistory, Core.Diagnostics.GoapEventHistory>();
     services.AddSingleton<Core.Diagnostics.IExecutionTracer, Core.Diagnostics.ExecutionTracer>();
+    
+    // Route visualization service for hot zone and stuck event display
+    services.AddSingleton<RouteVisualizationService>();
 
         // Background services
         services.AddHostedService<ProcessCleanupService>();

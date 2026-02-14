@@ -545,11 +545,12 @@ public sealed class StuckDetectorScenario : TestScenarioBase
     public async Task StuckDetector_ShouldCheck_EnhancedRecoveryAvailability()
     {
         // Arrange - Player has breadcrumb history
+        GameState.Player.PositionHistory.Clear();
         for (int i = 0; i < 30; i++)
         {
             GameState.Player.Position = new Vector3(i, 0, 0);
             GameState.Player.IsMoving = true;
-            await Task.Delay(10);
+            await Task.Delay(50); // Longer delay to ensure history is recorded
         }
 
         // Act & Assert
