@@ -2,7 +2,7 @@
 
 using SixLabors.ImageSharp;
 
-namespace CoreTests;
+namespace CoreManualTests;
 
 internal sealed class RectProvider : IRectProvider
 {

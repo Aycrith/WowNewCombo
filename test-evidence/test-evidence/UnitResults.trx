@@ -1,0 +1,254 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="5aefa3be-d1db-4f91-8b0e-93868ed1bce8" name="camer@ILI 2026-02-14 08:37:02" runUser="ILI\camer" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-02-14T08:37:02.2866866-05:00" queuing="2026-02-14T08:37:02.2866868-05:00" start="2026-02-14T08:37:00.4731000-05:00" finish="2026-02-14T08:37:02.3931118-05:00" />
+  <TestSettings name="default" id="daf5e98e-6d2a-4a2c-a204-30ba7ff8edc8">
+    <Deployment runDeploymentRoot="camer_ILI_2026-02-14_08_37_02" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="e78d7102-4828-48e1-b1a6-708fae90860f" testId="3ea0fb5e-5945-1173-c803-bca00261f95e" testName="FrontendUnitTests.Services.RouteVisualizationServiceTests.EdgeCase_LargeCoordinates_ShouldNotOverflow" computerName="ILI" duration="00:00:00.0003579" startTime="2026-02-14T08:37:02.2664537-05:00" endTime="2026-02-14T08:37:02.2664538-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e78d7102-4828-48e1-b1a6-708fae90860f" />
+    <UnitTestResult executionId="c2fe1287-261a-40f5-ba9a-49fae6165700" testId="f01657fc-8dc8-40b8-a602-14e5f99fb98b" testName="FrontendUnitTests.Services.RouteVisualizationServiceTests.Functional_HotZoneDetection_ShouldFindZonesInDirection" computerName="ILI" duration="00:00:00.0002505" startTime="2026-02-14T08:37:02.3210284-05:00" endTime="2026-02-14T08:37:02.3210291-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c2fe1287-261a-40f5-ba9a-49fae6165700" />
+    <UnitTestResult executionId="0f1c9972-cf6f-4383-a697-5eda25721dd0" testId="aef7d8d4-84c1-eee3-0959-1b10cd3d44e3" testName="FrontendUnitTests.Controllers.HazardDebugControllerTests.InjectAndCluster_WhenDebugModeEnabled_CreatesCluster" computerName="ILI" duration="00:00:00.0044415" startTime="2026-02-14T08:37:00.9395214-05:00" endTime="2026-02-14T08:37:00.9395215-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0f1c9972-cf6f-4383-a697-5eda25721dd0" />
+    <UnitTestResult executionId="fc610232-211f-4608-ae99-f7e126741481" testId="8f8e7948-0ff9-702a-4d8f-7f2f2e8ad507" testName="FrontendUnitTests.Services.RouteVisualizationServiceTests.Performance_ConcurrentAccess_ShouldMaintainThroughput" computerName="ILI" duration="00:00:01.3187932" startTime="2026-02-14T08:37:02.2532143-05:00" endTime="2026-02-14T08:37:02.2532143-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="fc610232-211f-4608-ae99-f7e126741481">
+      <Output>
+        <StdOut>=== Concurrent Access Performance ===&#xD;
+Total operations: 10000&#xD;
+Threads: 8&#xD;
+Time: 1.318s&#xD;
+Throughput: 7586 ops/sec</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="eeb3e78d-f658-4b3d-83f1-17dffd4d58fa" testId="42c701ff-2213-9a97-61f5-04c3a93d9acc" testName="FrontendUnitTests.Services.RouteVisualizationServiceTests.Functional_StuckEvent_ShouldTriggerHandler" computerName="ILI" duration="00:00:00.0019638" startTime="2026-02-14T08:37:02.2686235-05:00" endTime="2026-02-14T08:37:02.2686235-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="eeb3e78d-f658-4b3d-83f1-17dffd4d58fa" />
+    <UnitTestResult executionId="3a1ebf8a-8063-4704-a777-bab0b4c62c92" testId="f97c051a-8741-491d-1f1f-93c36532d257" testName="FrontendUnitTests.Services.RouteVisualizationServiceTests.Performance_StuckMarkerCreation_LatencyShouldBeUnderThreshold" computerName="ILI" duration="00:00:00.0096415" startTime="2026-02-14T08:37:02.3052558-05:00" endTime="2026-02-14T08:37:02.3052559-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3a1ebf8a-8063-4704-a777-bab0b4c62c92">
+      <Output>
+        <StdOut>=== Stuck Marker Creation Latency Histogram ===&#xD;
+  0-1ms:   ####################################################################################################&#xD;
+  1-5ms:   &#xD;
+  5-10ms:  &#xD;
+ 10-25ms:  &#xD;
+ 25-50ms:  &#xD;
+ 50-100ms: &#xD;
+100-150ms: &#xD;
+150ms+:    &#xD;
+&#xD;
+
+Statistics:&#xD;
+  Average: 0.00ms&#xD;
+  P95: 0.00ms&#xD;
+  Max: 1ms</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="be11d265-5d30-4039-baeb-1d562b51aa90" testId="0d4a9432-edd0-4362-09f6-fdbd942e6814" testName="FrontendUnitTests.Controllers.PathDebugControllerTests.Compare_WhenDebugModeDisabled_Returns403" computerName="ILI" duration="00:00:00.0008805" startTime="2026-02-14T08:37:00.9272932-05:00" endTime="2026-02-14T08:37:00.9272933-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="be11d265-5d30-4039-baeb-1d562b51aa90" />
+    <UnitTestResult executionId="2fa728f9-a301-4129-a44f-cb69f93c5047" testId="88274193-ada0-fa65-0936-953536ee3e9c" testName="FrontendUnitTests.Services.RouteVisualizationServiceTests.AutoReroute_ShouldNotFlagZonesBehindPlayer" computerName="ILI" duration="00:00:00.0004928" startTime="2026-02-14T08:37:02.2665602-05:00" endTime="2026-02-14T08:37:02.2665602-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2fa728f9-a301-4129-a44f-cb69f93c5047" />
+    <UnitTestResult executionId="9ba86c84-d04f-4f4c-9246-72696ba3aa32" testId="61242fd6-d19d-a986-4bb4-053d4d91af48" testName="FrontendUnitTests.Services.RouteVisualizationServiceTests.EdgeCase_MaximumMarkers_ShouldHandleGracefully" computerName="ILI" duration="00:00:00.0088070" startTime="2026-02-14T08:37:02.2667039-05:00" endTime="2026-02-14T08:37:02.2667039-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9ba86c84-d04f-4f4c-9246-72696ba3aa32">
+      <Output>
+        <StdOut>Created 10000 markers in 8ms</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="5b24045b-1cfe-47bb-8c93-a7b1493fd9ef" testId="f0913536-86a8-4174-fcde-9e3dc716a2c8" testName="FrontendUnitTests.Services.RouteVisualizationServiceTests.Memory_ConcurrentOperations_ShouldBeStable" computerName="ILI" duration="00:00:00.0065638" startTime="2026-02-14T08:37:02.3207470-05:00" endTime="2026-02-14T08:37:02.3207470-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5b24045b-1cfe-47bb-8c93-a7b1493fd9ef">
+      <Output>
+        <StdOut>Memory growth after clear: 6 KB (0.45%)</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="1db4f5d3-a9c7-4d5b-9ccb-6d5c4c268b59" testId="a0e3ab31-2aa4-33e0-43a7-5579d273a32e" testName="FrontendUnitTests.Controllers.HazardDebugControllerTests.GetKnownMaps_ReturnsCounts" computerName="ILI" duration="00:00:00.0020728" startTime="2026-02-14T08:37:00.9343311-05:00" endTime="2026-02-14T08:37:00.9343312-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1db4f5d3-a9c7-4d5b-9ccb-6d5c4c268b59" />
+    <UnitTestResult executionId="e14d32ea-476f-488b-96af-bec0f5be8604" testId="d43cc13b-f5c1-6202-229a-03fb2cad1e88" testName="FrontendUnitTests.Services.RouteVisualizationServiceTests.Memory_Dispose_ShouldReleaseAllResources" computerName="ILI" duration="00:00:00.0081853" startTime="2026-02-14T08:37:02.2955935-05:00" endTime="2026-02-14T08:37:02.2955936-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e14d32ea-476f-488b-96af-bec0f5be8604">
+      <Output>
+        <StdOut>Baseline memory: 1338 KB&#xD;
+After 100 create/dispose cycles: 1344 KB&#xD;
+Memory growth: 6 KB</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="032587e2-d2ee-4416-856c-6db724bc98d0" testId="ecdc9ac4-3bf9-42d5-db13-8f7256dbe812" testName="FrontendUnitTests.Controllers.HazardDebugControllerTests.InjectEvents_WhenDebugModeDisabled_ReturnsForbid" computerName="ILI" duration="00:00:00.0006144" startTime="2026-02-14T08:37:00.9350267-05:00" endTime="2026-02-14T08:37:00.9350268-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="032587e2-d2ee-4416-856c-6db724bc98d0" />
+    <UnitTestResult executionId="a3000d81-b79a-4167-8319-01c7b3ab681e" testId="1f107fdf-240a-1762-bcaa-56e2fbcbed97" testName="FrontendUnitTests.Services.RouteVisualizationServiceTests.Functional_Cleanup_ShouldRemoveOldMarkers" computerName="ILI" duration="00:00:00.0017512" startTime="2026-02-14T08:37:02.2666078-05:00" endTime="2026-02-14T08:37:02.2666079-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a3000d81-b79a-4167-8319-01c7b3ab681e" />
+    <UnitTestResult executionId="88d08ab6-3832-486c-bcf0-bc402356b6c8" testId="b22aa6ce-6802-d1d6-5d2c-2c42390b3252" testName="FrontendUnitTests.Services.RouteVisualizationServiceTests.Performance_HotZoneQuery_ShouldBeFast" computerName="ILI" duration="00:00:00.0066611" startTime="2026-02-14T08:37:02.3277564-05:00" endTime="2026-02-14T08:37:02.3277564-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="88d08ab6-3832-486c-bcf0-bc402356b6c8">
+      <Output>
+        <StdOut>=== Hot Zone Query Latency Histogram ===&#xD;
+  0-1ms:   ####################################################################################################&#xD;
+  1-5ms:   &#xD;
+  5-10ms:  &#xD;
+ 10-25ms:  &#xD;
+ 25-50ms:  &#xD;
+ 50-100ms: &#xD;
+100-150ms: &#xD;
+150ms+:    &#xD;
+&#xD;
+
+P95: 0.00ms, Max: 0ms</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="2a00d2f4-ed93-47c5-9e43-51f9f28a4e58" testId="1bd2bfd7-6c0e-0337-a1c8-d52dc5a8c57b" testName="FrontendUnitTests.Services.RouteVisualizationServiceTests.ThreadSafety_ConcurrentGridUpdates_ShouldBeAtomic" computerName="ILI" duration="00:00:00.0251494" startTime="2026-02-14T08:37:00.9345194-05:00" endTime="2026-02-14T08:37:00.9345195-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2a00d2f4-ed93-47c5-9e43-51f9f28a4e58">
+      <Output>
+        <StdOut>Total grid failures recorded: 10000</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="a423f3d0-e695-449d-9520-878151e8c6d5" testId="d8d11f12-77d8-1134-5980-3eb871b7bc1f" testName="FrontendUnitTests.Services.RouteVisualizationServiceTests.Functional_DeathMarkers_ShouldPersist" computerName="ILI" duration="00:00:00.0007270" startTime="2026-02-14T08:37:02.2665085-05:00" endTime="2026-02-14T08:37:02.2665085-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a423f3d0-e695-449d-9520-878151e8c6d5" />
+    <UnitTestResult executionId="6db359d7-c170-472c-98a8-6f80198983f6" testId="3a204b80-2a87-9a2d-2a40-5b0bcdf932da" testName="FrontendUnitTests.Services.RouteVisualizationServiceTests.Memory_Leak_StuckMarkers_ShouldNotGrowUnbounded" computerName="ILI" duration="00:00:00.0087281" startTime="2026-02-14T08:37:02.3140994-05:00" endTime="2026-02-14T08:37:02.3140996-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6db359d7-c170-472c-98a8-6f80198983f6">
+      <Output>
+        <StdOut>Initial memory: 1348 KB&#xD;
+After 1000 markers: 1590 KB&#xD;
+After clear: 1402 KB&#xD;
+Memory growth: 53 KB (3.98%)</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="1581c3ee-7e6a-42a8-b2c6-0a06703799c7" testId="790bab93-2727-4b65-7f1d-dc29d01242f7" testName="FrontendUnitTests.Services.RouteVisualizationServiceTests.EdgeCase_RapidEventSubscription_ShouldBeSafe" computerName="ILI" duration="00:00:00.0006989" startTime="2026-02-14T08:37:02.2666472-05:00" endTime="2026-02-14T08:37:02.2666472-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1581c3ee-7e6a-42a8-b2c6-0a06703799c7" />
+    <UnitTestResult executionId="487a029d-642b-4b9d-a18d-4b538cf45da8" testId="4f0b961d-1b75-191f-27b1-5513fd92ebc3" testName="FrontendUnitTests.Services.RouteVisualizationServiceTests.ThreadSafety_DisposeDuringActiveOperations_ShouldBeSafe" computerName="ILI" duration="00:00:00.0132543" startTime="2026-02-14T08:37:02.3506128-05:00" endTime="2026-02-14T08:37:02.3506130-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="487a029d-642b-4b9d-a18d-4b538cf45da8">
+      <Output>
+        <StdOut>Exceptions during disposal: 0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="1a119f62-bfd5-437a-a47b-563069d578b8" testId="ef97a723-b7eb-ef1b-a630-7a8184f802f9" testName="FrontendUnitTests.Controllers.HazardDebugControllerTests.GetSnapshot_RespectsMaxAgeFilter" computerName="ILI" duration="00:00:00.0004897" startTime="2026-02-14T08:37:00.9400464-05:00" endTime="2026-02-14T08:37:00.9400466-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1a119f62-bfd5-437a-a47b-563069d578b8" />
+    <UnitTestResult executionId="66b947ee-134c-4f2d-8d4b-cedb6f888560" testId="09a8e4c6-36a8-6ca7-c9f8-d0d3303efc44" testName="FrontendUnitTests.Controllers.HazardDebugControllerTests.GetSnapshot_RespectsMaxEventsAndOrdering" computerName="ILI" duration="00:00:00.0221601" startTime="2026-02-14T08:37:00.9322076-05:00" endTime="2026-02-14T08:37:00.9322077-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="66b947ee-134c-4f2d-8d4b-cedb6f888560" />
+    <UnitTestResult executionId="24b7a0b1-f1a6-4e6c-a7cc-385e2205a70a" testId="af5ca2d8-074a-7583-346c-b2786bcab0a1" testName="FrontendUnitTests.Controllers.PathDebugControllerTests.Route_WhenDebugModeDisabled_Returns403" computerName="ILI" duration="00:00:00.0121695" startTime="2026-02-14T08:37:00.9246837-05:00" endTime="2026-02-14T08:37:00.9246977-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="24b7a0b1-f1a6-4e6c-a7cc-385e2205a70a" />
+    <UnitTestResult executionId="068600c3-9b8e-4ece-9c99-97bc8aec4adc" testId="2f86bfd4-1500-d69c-3d71-f2c01dfc738a" testName="FrontendUnitTests.Services.RouteVisualizationServiceTests.AutoReroute_ShouldDetectUpcomingHotZone" computerName="ILI" duration="00:00:00.0017311" startTime="2026-02-14T08:37:02.2872827-05:00" endTime="2026-02-14T08:37:02.2872827-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="068600c3-9b8e-4ece-9c99-97bc8aec4adc" />
+    <UnitTestResult executionId="c2fea18c-9057-4a37-8205-fbe3902aec29" testId="0e90bf61-2469-7510-684f-5e24932035a8" testName="FrontendUnitTests.Services.RouteVisualizationServiceTests.ThreadSafety_ConcurrentFlashUpdates_ShouldNotCorruptState" computerName="ILI" duration="00:00:00.0069058" startTime="2026-02-14T08:37:02.3363419-05:00" endTime="2026-02-14T08:37:02.3363421-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c2fea18c-9057-4a37-8205-fbe3902aec29" />
+    <UnitTestResult executionId="2084a5ea-a160-43f3-b480-1ba1249c9477" testId="119f88b7-7af2-768f-2cac-3a1e32278430" testName="FrontendUnitTests.Services.RouteVisualizationServiceTests.ThreadSafety_ConcurrentAddRemove_ShouldBeSafe" computerName="ILI" duration="00:00:00.0167435" startTime="2026-02-14T08:37:02.2854747-05:00" endTime="2026-02-14T08:37:02.2854748-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2084a5ea-a160-43f3-b480-1ba1249c9477" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="FrontendUnitTests.Services.RouteVisualizationServiceTests.EdgeCase_RapidEventSubscription_ShouldBeSafe" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="790bab93-2727-4b65-7f1d-dc29d01242f7">
+      <Execution id="1581c3ee-7e6a-42a8-b2c6-0a06703799c7" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Services.RouteVisualizationServiceTests" name="EdgeCase_RapidEventSubscription_ShouldBeSafe" />
+    </UnitTest>
+    <UnitTest name="FrontendUnitTests.Controllers.HazardDebugControllerTests.GetSnapshot_RespectsMaxAgeFilter" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="ef97a723-b7eb-ef1b-a630-7a8184f802f9">
+      <Execution id="1a119f62-bfd5-437a-a47b-563069d578b8" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Controllers.HazardDebugControllerTests" name="GetSnapshot_RespectsMaxAgeFilter" />
+    </UnitTest>
+    <UnitTest name="FrontendUnitTests.Services.RouteVisualizationServiceTests.Functional_StuckEvent_ShouldTriggerHandler" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="42c701ff-2213-9a97-61f5-04c3a93d9acc">
+      <Execution id="eeb3e78d-f658-4b3d-83f1-17dffd4d58fa" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Services.RouteVisualizationServiceTests" name="Functional_StuckEvent_ShouldTriggerHandler" />
+    </UnitTest>
+    <UnitTest name="FrontendUnitTests.Services.RouteVisualizationServiceTests.ThreadSafety_ConcurrentFlashUpdates_ShouldNotCorruptState" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="0e90bf61-2469-7510-684f-5e24932035a8">
+      <Execution id="c2fea18c-9057-4a37-8205-fbe3902aec29" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Services.RouteVisualizationServiceTests" name="ThreadSafety_ConcurrentFlashUpdates_ShouldNotCorruptState" />
+    </UnitTest>
+    <UnitTest name="FrontendUnitTests.Services.RouteVisualizationServiceTests.EdgeCase_MaximumMarkers_ShouldHandleGracefully" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="61242fd6-d19d-a986-4bb4-053d4d91af48">
+      <Execution id="9ba86c84-d04f-4f4c-9246-72696ba3aa32" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Services.RouteVisualizationServiceTests" name="EdgeCase_MaximumMarkers_ShouldHandleGracefully" />
+    </UnitTest>
+    <UnitTest name="FrontendUnitTests.Services.RouteVisualizationServiceTests.AutoReroute_ShouldNotFlagZonesBehindPlayer" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="88274193-ada0-fa65-0936-953536ee3e9c">
+      <Execution id="2fa728f9-a301-4129-a44f-cb69f93c5047" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Services.RouteVisualizationServiceTests" name="AutoReroute_ShouldNotFlagZonesBehindPlayer" />
+    </UnitTest>
+    <UnitTest name="FrontendUnitTests.Services.RouteVisualizationServiceTests.Functional_Cleanup_ShouldRemoveOldMarkers" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="1f107fdf-240a-1762-bcaa-56e2fbcbed97">
+      <Execution id="a3000d81-b79a-4167-8319-01c7b3ab681e" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Services.RouteVisualizationServiceTests" name="Functional_Cleanup_ShouldRemoveOldMarkers" />
+    </UnitTest>
+    <UnitTest name="FrontendUnitTests.Controllers.HazardDebugControllerTests.GetKnownMaps_ReturnsCounts" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="a0e3ab31-2aa4-33e0-43a7-5579d273a32e">
+      <Execution id="1db4f5d3-a9c7-4d5b-9ccb-6d5c4c268b59" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Controllers.HazardDebugControllerTests" name="GetKnownMaps_ReturnsCounts" />
+    </UnitTest>
+    <UnitTest name="FrontendUnitTests.Controllers.HazardDebugControllerTests.InjectAndCluster_WhenDebugModeEnabled_CreatesCluster" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="aef7d8d4-84c1-eee3-0959-1b10cd3d44e3">
+      <Execution id="0f1c9972-cf6f-4383-a697-5eda25721dd0" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Controllers.HazardDebugControllerTests" name="InjectAndCluster_WhenDebugModeEnabled_CreatesCluster" />
+    </UnitTest>
+    <UnitTest name="FrontendUnitTests.Services.RouteVisualizationServiceTests.Functional_HotZoneDetection_ShouldFindZonesInDirection" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="f01657fc-8dc8-40b8-a602-14e5f99fb98b">
+      <Execution id="c2fe1287-261a-40f5-ba9a-49fae6165700" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Services.RouteVisualizationServiceTests" name="Functional_HotZoneDetection_ShouldFindZonesInDirection" />
+    </UnitTest>
+    <UnitTest name="FrontendUnitTests.Services.RouteVisualizationServiceTests.Performance_HotZoneQuery_ShouldBeFast" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="b22aa6ce-6802-d1d6-5d2c-2c42390b3252">
+      <Execution id="88d08ab6-3832-486c-bcf0-bc402356b6c8" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Services.RouteVisualizationServiceTests" name="Performance_HotZoneQuery_ShouldBeFast" />
+    </UnitTest>
+    <UnitTest name="FrontendUnitTests.Controllers.PathDebugControllerTests.Route_WhenDebugModeDisabled_Returns403" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="af5ca2d8-074a-7583-346c-b2786bcab0a1">
+      <Execution id="24b7a0b1-f1a6-4e6c-a7cc-385e2205a70a" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Controllers.PathDebugControllerTests" name="Route_WhenDebugModeDisabled_Returns403" />
+    </UnitTest>
+    <UnitTest name="FrontendUnitTests.Services.RouteVisualizationServiceTests.ThreadSafety_ConcurrentGridUpdates_ShouldBeAtomic" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="1bd2bfd7-6c0e-0337-a1c8-d52dc5a8c57b">
+      <Execution id="2a00d2f4-ed93-47c5-9e43-51f9f28a4e58" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Services.RouteVisualizationServiceTests" name="ThreadSafety_ConcurrentGridUpdates_ShouldBeAtomic" />
+    </UnitTest>
+    <UnitTest name="FrontendUnitTests.Services.RouteVisualizationServiceTests.ThreadSafety_DisposeDuringActiveOperations_ShouldBeSafe" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="4f0b961d-1b75-191f-27b1-5513fd92ebc3">
+      <Execution id="487a029d-642b-4b9d-a18d-4b538cf45da8" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Services.RouteVisualizationServiceTests" name="ThreadSafety_DisposeDuringActiveOperations_ShouldBeSafe" />
+    </UnitTest>
+    <UnitTest name="FrontendUnitTests.Controllers.HazardDebugControllerTests.GetSnapshot_RespectsMaxEventsAndOrdering" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="09a8e4c6-36a8-6ca7-c9f8-d0d3303efc44">
+      <Execution id="66b947ee-134c-4f2d-8d4b-cedb6f888560" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Controllers.HazardDebugControllerTests" name="GetSnapshot_RespectsMaxEventsAndOrdering" />
+    </UnitTest>
+    <UnitTest name="FrontendUnitTests.Services.RouteVisualizationServiceTests.AutoReroute_ShouldDetectUpcomingHotZone" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="2f86bfd4-1500-d69c-3d71-f2c01dfc738a">
+      <Execution id="068600c3-9b8e-4ece-9c99-97bc8aec4adc" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Services.RouteVisualizationServiceTests" name="AutoReroute_ShouldDetectUpcomingHotZone" />
+    </UnitTest>
+    <UnitTest name="FrontendUnitTests.Services.RouteVisualizationServiceTests.Memory_ConcurrentOperations_ShouldBeStable" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="f0913536-86a8-4174-fcde-9e3dc716a2c8">
+      <Execution id="5b24045b-1cfe-47bb-8c93-a7b1493fd9ef" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Services.RouteVisualizationServiceTests" name="Memory_ConcurrentOperations_ShouldBeStable" />
+    </UnitTest>
+    <UnitTest name="FrontendUnitTests.Services.RouteVisualizationServiceTests.Functional_DeathMarkers_ShouldPersist" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="d8d11f12-77d8-1134-5980-3eb871b7bc1f">
+      <Execution id="a423f3d0-e695-449d-9520-878151e8c6d5" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Services.RouteVisualizationServiceTests" name="Functional_DeathMarkers_ShouldPersist" />
+    </UnitTest>
+    <UnitTest name="FrontendUnitTests.Services.RouteVisualizationServiceTests.Memory_Dispose_ShouldReleaseAllResources" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="d43cc13b-f5c1-6202-229a-03fb2cad1e88">
+      <Execution id="e14d32ea-476f-488b-96af-bec0f5be8604" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Services.RouteVisualizationServiceTests" name="Memory_Dispose_ShouldReleaseAllResources" />
+    </UnitTest>
+    <UnitTest name="FrontendUnitTests.Controllers.HazardDebugControllerTests.InjectEvents_WhenDebugModeDisabled_ReturnsForbid" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="ecdc9ac4-3bf9-42d5-db13-8f7256dbe812">
+      <Execution id="032587e2-d2ee-4416-856c-6db724bc98d0" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Controllers.HazardDebugControllerTests" name="InjectEvents_WhenDebugModeDisabled_ReturnsForbid" />
+    </UnitTest>
+    <UnitTest name="FrontendUnitTests.Services.RouteVisualizationServiceTests.Performance_ConcurrentAccess_ShouldMaintainThroughput" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="8f8e7948-0ff9-702a-4d8f-7f2f2e8ad507">
+      <Execution id="fc610232-211f-4608-ae99-f7e126741481" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Services.RouteVisualizationServiceTests" name="Performance_ConcurrentAccess_ShouldMaintainThroughput" />
+    </UnitTest>
+    <UnitTest name="FrontendUnitTests.Services.RouteVisualizationServiceTests.Memory_Leak_StuckMarkers_ShouldNotGrowUnbounded" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="3a204b80-2a87-9a2d-2a40-5b0bcdf932da">
+      <Execution id="6db359d7-c170-472c-98a8-6f80198983f6" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Services.RouteVisualizationServiceTests" name="Memory_Leak_StuckMarkers_ShouldNotGrowUnbounded" />
+    </UnitTest>
+    <UnitTest name="FrontendUnitTests.Services.RouteVisualizationServiceTests.Performance_StuckMarkerCreation_LatencyShouldBeUnderThreshold" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="f97c051a-8741-491d-1f1f-93c36532d257">
+      <Execution id="3a1ebf8a-8063-4704-a777-bab0b4c62c92" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Services.RouteVisualizationServiceTests" name="Performance_StuckMarkerCreation_LatencyShouldBeUnderThreshold" />
+    </UnitTest>
+    <UnitTest name="FrontendUnitTests.Controllers.PathDebugControllerTests.Compare_WhenDebugModeDisabled_Returns403" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="0d4a9432-edd0-4362-09f6-fdbd942e6814">
+      <Execution id="be11d265-5d30-4039-baeb-1d562b51aa90" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Controllers.PathDebugControllerTests" name="Compare_WhenDebugModeDisabled_Returns403" />
+    </UnitTest>
+    <UnitTest name="FrontendUnitTests.Services.RouteVisualizationServiceTests.ThreadSafety_ConcurrentAddRemove_ShouldBeSafe" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="119f88b7-7af2-768f-2cac-3a1e32278430">
+      <Execution id="2084a5ea-a160-43f3-b480-1ba1249c9477" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Services.RouteVisualizationServiceTests" name="ThreadSafety_ConcurrentAddRemove_ShouldBeSafe" />
+    </UnitTest>
+    <UnitTest name="FrontendUnitTests.Services.RouteVisualizationServiceTests.EdgeCase_LargeCoordinates_ShouldNotOverflow" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="3ea0fb5e-5945-1173-c803-bca00261f95e">
+      <Execution id="e78d7102-4828-48e1-b1a6-708fae90860f" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Services.RouteVisualizationServiceTests" name="EdgeCase_LargeCoordinates_ShouldNotOverflow" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="3ea0fb5e-5945-1173-c803-bca00261f95e" executionId="e78d7102-4828-48e1-b1a6-708fae90860f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f01657fc-8dc8-40b8-a602-14e5f99fb98b" executionId="c2fe1287-261a-40f5-ba9a-49fae6165700" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="aef7d8d4-84c1-eee3-0959-1b10cd3d44e3" executionId="0f1c9972-cf6f-4383-a697-5eda25721dd0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8f8e7948-0ff9-702a-4d8f-7f2f2e8ad507" executionId="fc610232-211f-4608-ae99-f7e126741481" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="42c701ff-2213-9a97-61f5-04c3a93d9acc" executionId="eeb3e78d-f658-4b3d-83f1-17dffd4d58fa" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f97c051a-8741-491d-1f1f-93c36532d257" executionId="3a1ebf8a-8063-4704-a777-bab0b4c62c92" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0d4a9432-edd0-4362-09f6-fdbd942e6814" executionId="be11d265-5d30-4039-baeb-1d562b51aa90" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="88274193-ada0-fa65-0936-953536ee3e9c" executionId="2fa728f9-a301-4129-a44f-cb69f93c5047" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="61242fd6-d19d-a986-4bb4-053d4d91af48" executionId="9ba86c84-d04f-4f4c-9246-72696ba3aa32" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f0913536-86a8-4174-fcde-9e3dc716a2c8" executionId="5b24045b-1cfe-47bb-8c93-a7b1493fd9ef" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a0e3ab31-2aa4-33e0-43a7-5579d273a32e" executionId="1db4f5d3-a9c7-4d5b-9ccb-6d5c4c268b59" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d43cc13b-f5c1-6202-229a-03fb2cad1e88" executionId="e14d32ea-476f-488b-96af-bec0f5be8604" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ecdc9ac4-3bf9-42d5-db13-8f7256dbe812" executionId="032587e2-d2ee-4416-856c-6db724bc98d0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1f107fdf-240a-1762-bcaa-56e2fbcbed97" executionId="a3000d81-b79a-4167-8319-01c7b3ab681e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b22aa6ce-6802-d1d6-5d2c-2c42390b3252" executionId="88d08ab6-3832-486c-bcf0-bc402356b6c8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1bd2bfd7-6c0e-0337-a1c8-d52dc5a8c57b" executionId="2a00d2f4-ed93-47c5-9e43-51f9f28a4e58" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d8d11f12-77d8-1134-5980-3eb871b7bc1f" executionId="a423f3d0-e695-449d-9520-878151e8c6d5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3a204b80-2a87-9a2d-2a40-5b0bcdf932da" executionId="6db359d7-c170-472c-98a8-6f80198983f6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="790bab93-2727-4b65-7f1d-dc29d01242f7" executionId="1581c3ee-7e6a-42a8-b2c6-0a06703799c7" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4f0b961d-1b75-191f-27b1-5513fd92ebc3" executionId="487a029d-642b-4b9d-a18d-4b538cf45da8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ef97a723-b7eb-ef1b-a630-7a8184f802f9" executionId="1a119f62-bfd5-437a-a47b-563069d578b8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="09a8e4c6-36a8-6ca7-c9f8-d0d3303efc44" executionId="66b947ee-134c-4f2d-8d4b-cedb6f888560" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="af5ca2d8-074a-7583-346c-b2786bcab0a1" executionId="24b7a0b1-f1a6-4e6c-a7cc-385e2205a70a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2f86bfd4-1500-d69c-3d71-f2c01dfc738a" executionId="068600c3-9b8e-4ece-9c99-97bc8aec4adc" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0e90bf61-2469-7510-684f-5e24932035a8" executionId="c2fea18c-9057-4a37-8205-fbe3902aec29" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="119f88b7-7af2-768f-2cac-3a1e32278430" executionId="2084a5ea-a160-43f3-b480-1ba1249c9477" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="26" executed="26" passed="26" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.7+8f2703126a (64-bit .NET 10.0.2)&#xD;
+[xUnit.net 00:00:00.05]   Discovering: FrontendUnitTests&#xD;
+[xUnit.net 00:00:00.08]   Discovered:  FrontendUnitTests&#xD;
+[xUnit.net 00:00:00.09]   Starting:    FrontendUnitTests&#xD;
+[xUnit.net 00:00:01.56]   Finished:    FrontendUnitTests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

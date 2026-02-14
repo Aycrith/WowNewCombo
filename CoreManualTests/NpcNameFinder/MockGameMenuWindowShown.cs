@@ -1,6 +1,6 @@
 ﻿using Core;
 
-namespace CoreTests;
+namespace CoreManualTests;
 
 internal sealed class MockGameMenuWindowShown : IGameMenuWindowShown
 {

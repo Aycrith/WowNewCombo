@@ -19,7 +19,7 @@ using static System.Diagnostics.Stopwatch;
 #pragma warning disable 0162
 #nullable enable
 
-namespace CoreTests;
+namespace CoreManualTests;
 
 internal sealed class Test_NpcNameFinder : IDisposable
 {

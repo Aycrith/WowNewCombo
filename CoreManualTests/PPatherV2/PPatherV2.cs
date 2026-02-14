@@ -16,7 +16,7 @@ using SharedLib.Converters;
 using StormDll;
 using System.Numerics;
 
-namespace CoreTests.PPatherV2;
+namespace CoreManualTests.PPatherV2;
 
 public class PPatherV2
 {

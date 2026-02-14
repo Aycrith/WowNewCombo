@@ -10,7 +10,7 @@ using SixLabors.ImageSharp;
 using System;
 using System.Threading;
 
-namespace CoreTests;
+namespace CoreManualTests;
 
 public sealed class Test_Input
 {

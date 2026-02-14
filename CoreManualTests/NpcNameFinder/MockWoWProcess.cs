@@ -5,7 +5,7 @@ using SixLabors.ImageSharp;
 using System;
 using System.Threading;
 
-namespace CoreTests;
+namespace CoreManualTests;
 
 internal sealed class MockWoWProcess : IMouseInput
 {

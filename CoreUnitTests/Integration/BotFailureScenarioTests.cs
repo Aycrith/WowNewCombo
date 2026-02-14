@@ -12,6 +12,8 @@ using Core.Testing;
 
 using FluentAssertions;
 
+using Microsoft.Extensions.Logging.Abstractions;
+
 using MockWoWClient.GameState;
 
 using Xunit;
@@ -25,27 +27,21 @@ namespace CoreUnitTests.Integration;
 /// - Failure simulation through MockWoWClient
 /// - Hot zone creation and visualization
 /// </summary>
-public sealed class BotFailureScenarioTests : IDisposable
+public sealed class BotFailureScenarioTests : IntegrationTestBase
 {
-    private readonly SimulationClock _clock;
-    private readonly GameStateManager _gameState;
-    private readonly FailureSimulationService _failureSimulation;
     private readonly BreadcrumbTracker _breadcrumbTracker;
     private readonly SmartBlacklist _blacklist;
     private readonly string _testDir;
 
     public BotFailureScenarioTests()
     {
-        _clock = new SimulationClock();
-        _gameState = new GameStateManager(_clock);
-        _failureSimulation = new FailureSimulationService(_gameState, _clock);
         _breadcrumbTracker = new BreadcrumbTracker(maxSize: 50, minDistance: 3f);
 
         // Setup test directory for SmartBlacklist
         _testDir = Path.Combine(Path.GetTempPath(), $"BotFailureTests_{Guid.NewGuid()}");
         Directory.CreateDirectory(_testDir);
 
-        var options = new Core.FeatureFlags.SmartBlacklistOptions
+        var options = new SmartBlacklistOptions
         {
             MaxEntries = 100,
             AutoSaveIntervalMinutes = 0, // Disable for tests
@@ -53,7 +49,7 @@ public sealed class BotFailureScenarioTests : IDisposable
             LogBlacklistHits = false
         };
 
-        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<SmartBlacklist>.Instance;
+        var logger = NullLogger<SmartBlacklist>.Instance;
         _blacklist = new SmartBlacklist(logger, options, Path.Combine(_testDir, "test_blacklist.json"));
     }
 
@@ -62,14 +58,14 @@ public sealed class BotFailureScenarioTests : IDisposable
     {
         // Arrange
         SimulatedStuckEvent? capturedEvent = null;
-        _failureSimulation.OnStuckSimulated += evt => capturedEvent = evt;
+        FailureSimulation.OnStuckSimulated += evt => capturedEvent = evt;
 
         Vector3 expectedPosition = new(100f, 200f, 0f);
-        _gameState.Player.Position = expectedPosition;
-        _gameState.Player.Direction = 45f;
+        GameState.Player.Position = expectedPosition;
+        GameState.Player.Direction = 45f;
 
         // Act
-        _failureSimulation.SimulateStuck(UnstuckState.InitialAttempt, durationMs: 3000, attemptCount: 1);
+        FailureSimulation.SimulateStuck(UnstuckState.InitialAttempt, durationMs: 3000, attemptCount: 1);
 
         // Assert
         capturedEvent.Should().NotBeNull();
@@ -86,12 +82,12 @@ public sealed class BotFailureScenarioTests : IDisposable
     {
         // Arrange
         SimulatedStuckEvent? capturedEvent = null;
-        _failureSimulation.OnStuckSimulated += evt => capturedEvent = evt;
+        FailureSimulation.OnStuckSimulated += evt => capturedEvent = evt;
 
-        _gameState.Player.Position = Vector3.Zero;
+        GameState.Player.Position = Vector3.Zero;
 
         // Act
-        _failureSimulation.SimulateStuck(UnstuckState.InitialAttempt, durationMs: 5000, attemptCount: 3);
+        FailureSimulation.SimulateStuck(UnstuckState.InitialAttempt, durationMs: 5000, attemptCount: 3);
 
         // Assert
         capturedEvent.Should().NotBeNull();
@@ -103,22 +99,22 @@ public sealed class BotFailureScenarioTests : IDisposable
     {
         // Arrange
         SimulatedDeathEvent? capturedEvent = null;
-        _failureSimulation.OnDeathSimulated += evt => capturedEvent = evt;
+        FailureSimulation.OnDeathSimulated += evt => capturedEvent = evt;
 
         Vector3 expectedPosition = new(500f, 500f, 0f);
-        _gameState.Player.Position = expectedPosition;
-        _gameState.Player.Health = 100;
-        _gameState.Player.Level = 10;
+        GameState.Player.Position = expectedPosition;
+        GameState.Player.Health = 100;
+        GameState.Player.Level = 10;
 
         // Act
-        _failureSimulation.SimulateDeath("Killed by Hogger");
+        FailureSimulation.SimulateDeath("Killed by Hogger");
 
         // Assert
         capturedEvent.Should().NotBeNull();
         capturedEvent!.Position.Should().Be(expectedPosition);
         capturedEvent.Cause.Should().Be("Killed by Hogger");
         capturedEvent.Level.Should().Be(10);
-        _gameState.Player.IsDead.Should().BeTrue();
+        GameState.Player.IsDead.Should().BeTrue();
     }
 
     [Fact]
@@ -128,13 +124,13 @@ public sealed class BotFailureScenarioTests : IDisposable
         SimulatedHotZone? capturedZone = null;
         int stuckCount = 0;
 
-        _failureSimulation.OnHotZoneCreated += zone => capturedZone = zone;
-        _failureSimulation.OnStuckSimulated += _ => stuckCount++;
+        FailureSimulation.OnHotZoneCreated += zone => capturedZone = zone;
+        FailureSimulation.OnStuckSimulated += _ => stuckCount++;
 
-        _gameState.Player.Position = new Vector3(1000f, 1000f, 0f);
+        GameState.Player.Position = new Vector3(1000f, 1000f, 0f);
 
         // Act
-        _failureSimulation.SimulateHotZone(FailureType.Stuck, failureCount: 5, radius: 15f);
+        FailureSimulation.SimulateHotZone(FailureType.Stuck, failureCount: 5, radius: 15f);
 
         // Assert
         capturedZone.Should().NotBeNull();
@@ -148,17 +144,17 @@ public sealed class BotFailureScenarioTests : IDisposable
     public void SimulateMultiMobAggro_ShouldSpawnMobsAndStartCombat()
     {
         // Arrange
-        _gameState.Player.Position = Vector3.Zero;
-        _gameState.Player.Level = 10;
+        GameState.Player.Position = Vector3.Zero;
+        GameState.Player.Level = 10;
 
         // Act
-        List<NpcEntity> spawnedMobs = _failureSimulation.SimulateMultiMobAggro(mobCount: 5, maxDistance: 20f);
+        List<NpcEntity> spawnedMobs = FailureSimulation.SimulateMultiMobAggro(mobCount: 5, maxDistance: 20f);
 
         // Assert
         spawnedMobs.Should().HaveCount(5);
-        _gameState.Npcs.Should().HaveCount(5);
-        _gameState.InCombat.Should().BeTrue();
-        _gameState.CurrentTarget.Should().NotBeNull();
+        GameState.Npcs.Should().HaveCount(5);
+        GameState.InCombat.Should().BeTrue();
+        GameState.CurrentTarget.Should().NotBeNull();
 
         // Verify mobs are within maxDistance
         foreach (NpcEntity npc in spawnedMobs)
@@ -173,12 +169,12 @@ public sealed class BotFailureScenarioTests : IDisposable
     {
         // Arrange
         SimulatedRehabEvent? capturedEvent = null;
-        _failureSimulation.OnRehabSimulated += evt => capturedEvent = evt;
+        FailureSimulation.OnRehabSimulated += evt => capturedEvent = evt;
 
         Vector3 rehabPosition = new(2000f, 2000f, 0f);
 
         // Act
-        _failureSimulation.SimulateRehabilitation(rehabPosition, radius: 30f);
+        FailureSimulation.SimulateRehabilitation(rehabPosition, radius: 30f);
 
         // Assert
         capturedEvent.Should().NotBeNull();
@@ -192,7 +188,7 @@ public sealed class BotFailureScenarioTests : IDisposable
     {
         // Arrange - simulate player movement then getting stuck
         Vector3 stuckPosition = new(5000f, 5000f, 0f);
-        _gameState.Player.Position = stuckPosition;
+        GameState.Player.Position = stuckPosition;
 
         // Record position in breadcrumb tracker
         _breadcrumbTracker.RecordPosition(stuckPosition, mapId: 1);
@@ -213,9 +209,9 @@ public sealed class BotFailureScenarioTests : IDisposable
     {
         // Arrange
         Vector3 hostilePos = new(3000f, 3000f, 0f);
-        _gameState.Player.Position = hostilePos;
+        GameState.Player.Position = hostilePos;
 
-        NpcEntity hostileNpc = _gameState.SpawnNpc("Hostile NPC", level: 10, health: 100, position: hostilePos + new Vector3(5f, 0f, 0f));
+        NpcEntity hostileNpc = GameState.SpawnNpc("Hostile NPC", level: 10, health: 100, position: hostilePos + new Vector3(5f, 0f, 0f));
 
         // Act - Add to blacklist
         _blacklist.Add(
@@ -234,15 +230,15 @@ public sealed class BotFailureScenarioTests : IDisposable
     public void FailureSimulation_GetRecentStuckEvents_ShouldReturnEventsWithinWindow()
     {
         // Arrange
-        _gameState.Player.Position = Vector3.Zero;
+        GameState.Player.Position = Vector3.Zero;
 
         // Simulate 3 stuck events
-        _failureSimulation.SimulateStuck(UnstuckState.InitialAttempt, attemptCount: 1);
-        _failureSimulation.SimulateStuck(UnstuckState.StrafeAttempt, attemptCount: 2);
-        _failureSimulation.SimulateStuck(UnstuckState.ReverseAttempt, attemptCount: 3);
+        FailureSimulation.SimulateStuck(UnstuckState.InitialAttempt, attemptCount: 1);
+        FailureSimulation.SimulateStuck(UnstuckState.StrafeAttempt, attemptCount: 2);
+        FailureSimulation.SimulateStuck(UnstuckState.ReverseAttempt, attemptCount: 3);
 
         // Act
-        IReadOnlyList<SimulatedStuckEvent> recentEvents = _failureSimulation.GetRecentStuckEvents(TimeSpan.FromMinutes(1));
+        IReadOnlyList<SimulatedStuckEvent> recentEvents = FailureSimulation.GetRecentStuckEvents(TimeSpan.FromMinutes(1));
 
         // Assert
         recentEvents.Should().HaveCount(3);
@@ -252,16 +248,16 @@ public sealed class BotFailureScenarioTests : IDisposable
     public void FailureSimulation_ClearHistory_ShouldRemoveAllEvents()
     {
         // Arrange
-        _gameState.Player.Position = Vector3.Zero;
-        _failureSimulation.SimulateStuck(UnstuckState.InitialAttempt);
-        _failureSimulation.SimulateDeath("Test death");
+        GameState.Player.Position = Vector3.Zero;
+        FailureSimulation.SimulateStuck(UnstuckState.InitialAttempt);
+        FailureSimulation.SimulateDeath("Test death");
 
         // Act
-        _failureSimulation.ClearHistory();
+        FailureSimulation.ClearHistory();
 
         // Assert
-        IReadOnlyList<SimulatedStuckEvent> stuckEvents = _failureSimulation.GetRecentStuckEvents(TimeSpan.FromMinutes(1));
-        IReadOnlyList<SimulatedDeathEvent> deathEvents = _failureSimulation.GetRecentDeathEvents(TimeSpan.FromMinutes(1));
+        IReadOnlyList<SimulatedStuckEvent> stuckEvents = FailureSimulation.GetRecentStuckEvents(TimeSpan.FromMinutes(1));
+        IReadOnlyList<SimulatedDeathEvent> deathEvents = FailureSimulation.GetRecentDeathEvents(TimeSpan.FromMinutes(1));
 
         stuckEvents.Should().BeEmpty();
         deathEvents.Should().BeEmpty();
@@ -280,19 +276,19 @@ public sealed class BotFailureScenarioTests : IDisposable
         List<SimulatedDeathEvent> deathEvents = [];
         SimulatedHotZone? hotZone = null;
 
-        _failureSimulation.OnStuckSimulated += evt => stuckEvents.Add(evt);
-        _failureSimulation.OnDeathSimulated += evt => deathEvents.Add(evt);
-        _failureSimulation.OnHotZoneCreated += zone => hotZone = zone;
+        FailureSimulation.OnStuckSimulated += evt => stuckEvents.Add(evt);
+        FailureSimulation.OnDeathSimulated += evt => deathEvents.Add(evt);
+        FailureSimulation.OnHotZoneCreated += zone => hotZone = zone;
 
         // Act - simulate getting stuck
-        _gameState.Player.Position = new Vector3(100f, 100f, 0f);
-        _failureSimulation.SimulateStuck(UnstuckState.BreadcrumbBacktrack, durationMs: 10000, attemptCount: 5);
+        GameState.Player.Position = new Vector3(100f, 100f, 0f);
+        FailureSimulation.SimulateStuck(UnstuckState.BreadcrumbBacktrack, durationMs: 10000, attemptCount: 5);
 
         // Simulate death at same location
-        _failureSimulation.SimulateDeath("Died while stuck");
+        FailureSimulation.SimulateDeath("Died while stuck");
 
         // Simulate hot zone creation (3 deaths in same area)
-        _failureSimulation.SimulateHotZone(FailureType.Death, failureCount: 3, radius: 10f);
+        FailureSimulation.SimulateHotZone(FailureType.Death, failureCount: 3, radius: 10f);
 
         // Assert
         stuckEvents.Should().HaveCount(1);
@@ -304,8 +300,9 @@ public sealed class BotFailureScenarioTests : IDisposable
         hotZone.PrimaryType.Should().Be(FailureType.Death);
     }
 
-    public void Dispose()
+    protected override void CleanupTestData()
     {
         _blacklist.Dispose();
+        base.CleanupTestData();
     }
 }

@@ -5,7 +5,7 @@ using SixLabors.ImageSharp.PixelFormats;
 
 using System;
 
-namespace CoreTests;
+namespace CoreManualTests;
 
 internal sealed class MockWoWScreen : IWowScreen
 {

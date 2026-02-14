@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using System.Threading;
 using System.Threading.Tasks;
 
 using Core;
@@ -27,21 +26,14 @@ namespace CoreUnitTests.Integration;
 /// Integration tests combining RouteRerouter, HazardZoneStore, and MockWoWClient.
 /// Tests the complete failure recovery pipeline from simulation to rerouting.
 /// </summary>
-public sealed class RouteRerouterVisualizationIntegrationTests : IDisposable
+public sealed class RouteRerouterVisualizationIntegrationTests : IntegrationTestBase
 {
-    private readonly SimulationClock _clock;
-    private readonly GameStateManager _gameState;
-    private readonly FailureSimulationService _failureSimulation;
     private readonly RouteRerouter _routeRerouter;
     private readonly HazardZoneStore _hazardStore;
     private readonly FeatureFlagService _featureFlags;
 
     public RouteRerouterVisualizationIntegrationTests()
     {
-        _clock = new SimulationClock();
-        _gameState = new GameStateManager(_clock);
-        _failureSimulation = new FailureSimulationService(_gameState, _clock);
-
         // Create FeatureFlags with hazard avoidance enabled
         FeatureFlagsOptions options = new()
         {
@@ -79,7 +71,7 @@ public sealed class RouteRerouterVisualizationIntegrationTests : IDisposable
 
         Vector3 playerPosition = new(100f, 100f, 0f);
         Vector3 targetPosition = new(200f, 100f, 0f);
-        _gameState.Player.Position = playerPosition;
+        GameState.Player.Position = playerPosition;
 
         // Pre-populate hazard store with clusters on the path
         // Create events first
@@ -136,13 +128,13 @@ public sealed class RouteRerouterVisualizationIntegrationTests : IDisposable
     {
         // Arrange
         SimulatedStuckEvent? capturedEvent = null;
-        _failureSimulation.OnStuckSimulated += evt => capturedEvent = evt;
+        FailureSimulation.OnStuckSimulated += evt => capturedEvent = evt;
 
         Vector3 stuckPosition = new(500f, 500f, 0f);
-        _gameState.Player.Position = stuckPosition;
+        GameState.Player.Position = stuckPosition;
 
         // Act - Simulate getting stuck
-        _failureSimulation.SimulateStuck(
+        FailureSimulation.SimulateStuck(
             UnstuckState.BreadcrumbBacktrack,
             durationMs: 5000,
             attemptCount: 3);
@@ -159,19 +151,19 @@ public sealed class RouteRerouterVisualizationIntegrationTests : IDisposable
     {
         // Arrange
         SimulatedDeathEvent? capturedEvent = null;
-        _failureSimulation.OnDeathSimulated += evt => capturedEvent = evt;
+        FailureSimulation.OnDeathSimulated += evt => capturedEvent = evt;
 
         Vector3 deathPosition = new(1000f, 1000f, 0f);
-        _gameState.Player.Position = deathPosition;
+        GameState.Player.Position = deathPosition;
 
         // Act - Simulate death
-        _failureSimulation.SimulateDeath("Slain by elite mob");
+        FailureSimulation.SimulateDeath("Slain by elite mob");
 
         // Assert - Event captured
         capturedEvent.Should().NotBeNull();
         capturedEvent!.Position.Should().Be(deathPosition);
         capturedEvent.Cause.Should().Be("Slain by elite mob");
-        _gameState.Player.IsDead.Should().BeTrue();
+        GameState.Player.IsDead.Should().BeTrue();
     }
 
     [Fact]
@@ -179,16 +171,16 @@ public sealed class RouteRerouterVisualizationIntegrationTests : IDisposable
     {
         // Arrange
         List<SimulatedHotZone> hotZones = [];
-        _failureSimulation.OnHotZoneCreated += zone => hotZones.Add(zone);
+        FailureSimulation.OnHotZoneCreated += zone => hotZones.Add(zone);
 
         int stuckCount = 0;
-        _failureSimulation.OnStuckSimulated += _ => stuckCount++;
+        FailureSimulation.OnStuckSimulated += _ => stuckCount++;
 
         Vector3 zoneCenter = new(100f, 100f, 0f);
-        _gameState.Player.Position = zoneCenter;
+        GameState.Player.Position = zoneCenter;
 
         // Act - Create hot zone with 3 stuck events
-        _failureSimulation.SimulateHotZone(FailureType.Stuck, failureCount: 3, radius: 15f);
+        FailureSimulation.SimulateHotZone(FailureType.Stuck, failureCount: 3, radius: 15f);
 
         // Assert
         hotZones.Should().HaveCount(1);
@@ -233,12 +225,12 @@ public sealed class RouteRerouterVisualizationIntegrationTests : IDisposable
     {
         // Arrange
         SimulatedRehabEvent? capturedEvent = null;
-        _failureSimulation.OnRehabSimulated += evt => capturedEvent = evt;
+        FailureSimulation.OnRehabSimulated += evt => capturedEvent = evt;
 
         Vector3 rehabPosition = new(500f, 500f, 0f);
 
         // Act - Simulate rehabilitation
-        _failureSimulation.SimulateRehabilitation(rehabPosition, radius: 30f);
+        FailureSimulation.SimulateRehabilitation(rehabPosition, radius: 30f);
 
         // Assert - Rehab event created
         capturedEvent.Should().NotBeNull();
@@ -251,18 +243,18 @@ public sealed class RouteRerouterVisualizationIntegrationTests : IDisposable
     public void Multi_Mob_Aggro_Should_Spawn_And_Enter_Combat()
     {
         // Arrange
-        _gameState.Player.Position = new Vector3(0f, 0f, 0f);
-        _gameState.Player.Level = 10;
+        GameState.Player.Position = new Vector3(0f, 0f, 0f);
+        GameState.Player.Level = 10;
 
         // Act - Simulate multi-mob aggro
-        List<NpcEntity> spawnedMobs = _failureSimulation.SimulateMultiMobAggro(
+        List<NpcEntity> spawnedMobs = FailureSimulation.SimulateMultiMobAggro(
             mobCount: 5, maxDistance: 20f);
 
         // Assert
         spawnedMobs.Should().HaveCount(5);
-        _gameState.Npcs.Should().HaveCount(5);
-        _gameState.InCombat.Should().BeTrue();
-        _gameState.CurrentTarget.Should().NotBeNull();
+        GameState.Npcs.Should().HaveCount(5);
+        GameState.InCombat.Should().BeTrue();
+        GameState.CurrentTarget.Should().NotBeNull();
     }
 
     [Fact]
@@ -306,21 +298,21 @@ public sealed class RouteRerouterVisualizationIntegrationTests : IDisposable
     public void Clear_History_Should_Reset_Failure_Simulation_State()
     {
         // Arrange - Create some events
-        _gameState.Player.Position = new Vector3(100f, 100f, 0f);
-        _failureSimulation.SimulateStuck(UnstuckState.InitialAttempt);
-        _failureSimulation.SimulateDeath("Test death");
-        _failureSimulation.SimulateHotZone(FailureType.Stuck, failureCount: 2);
+        GameState.Player.Position = new Vector3(100f, 100f, 0f);
+        FailureSimulation.SimulateStuck(UnstuckState.InitialAttempt);
+        FailureSimulation.SimulateDeath("Test death");
+        FailureSimulation.SimulateHotZone(FailureType.Stuck, failureCount: 2);
 
         // Verify events exist
-        _failureSimulation.GetRecentStuckEvents(TimeSpan.FromMinutes(1)).Should().NotBeEmpty();
-        _failureSimulation.GetRecentDeathEvents(TimeSpan.FromMinutes(1)).Should().NotBeEmpty();
+        FailureSimulation.GetRecentStuckEvents(TimeSpan.FromMinutes(1)).Should().NotBeEmpty();
+        FailureSimulation.GetRecentDeathEvents(TimeSpan.FromMinutes(1)).Should().NotBeEmpty();
 
         // Act - Clear history
-        _failureSimulation.ClearHistory();
+        FailureSimulation.ClearHistory();
 
         // Assert
-        _failureSimulation.GetRecentStuckEvents(TimeSpan.FromMinutes(1)).Should().BeEmpty();
-        _failureSimulation.GetRecentDeathEvents(TimeSpan.FromMinutes(1)).Should().BeEmpty();
+        FailureSimulation.GetRecentStuckEvents(TimeSpan.FromMinutes(1)).Should().BeEmpty();
+        FailureSimulation.GetRecentDeathEvents(TimeSpan.FromMinutes(1)).Should().BeEmpty();
     }
 
     [Fact]
@@ -352,10 +344,11 @@ public sealed class RouteRerouterVisualizationIntegrationTests : IDisposable
         rerouteTriggered.Should().BeFalse();
     }
 
-    public void Dispose()
+    protected override void CleanupTestData()
     {
         _routeRerouter?.Dispose();
         _hazardStore?.Dispose();
         _featureFlags?.Dispose();
+        base.CleanupTestData();
     }
 }

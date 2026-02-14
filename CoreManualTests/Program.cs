@@ -1,4 +1,4 @@
-﻿using Core;
+using Core;
 
 using Game;
 
@@ -19,7 +19,7 @@ using System.Threading;
 
 #pragma warning disable 0162
 
-namespace CoreTests;
+namespace CoreManualTests;
 
 internal sealed class Program
 {

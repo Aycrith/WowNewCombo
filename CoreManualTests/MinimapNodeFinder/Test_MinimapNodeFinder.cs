@@ -1,4 +1,4 @@
-﻿using Core;
+using Core;
 
 using Game;
 
@@ -13,7 +13,7 @@ using System.Diagnostics;
 
 #nullable enable
 
-namespace CoreTests;
+namespace CoreManualTests;
 
 internal sealed class Test_MinimapNodeFinder
 {

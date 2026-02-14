@@ -4,10 +4,8 @@ using System.Threading.Tasks;
 
 using Core;
 
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-using MockWoWClient.GameState;
 using MockWoWClient.InputHandling;
 
 using Xunit;
@@ -17,20 +15,16 @@ namespace CoreUnitTests.Integration;
 /// <summary>
 /// Integration tests for RouteRerouter with MockWoWClient components.
 /// </summary>
-public sealed class RouteRerouterIntegrationTests : IDisposable
+public sealed class RouteRerouterIntegrationTests : IntegrationTestBase
 {
-    private readonly SimulationClock _clock;
-    private readonly GameStateManager _gameState;
     private readonly InputProcessor _inputProcessor;
     private readonly UIActionSimulator _uiSimulator;
     private readonly RouteRerouter _rerouter;
 
     public RouteRerouterIntegrationTests()
     {
-        _clock = new SimulationClock();
-        _gameState = new GameStateManager(_clock);
-        _inputProcessor = new InputProcessor(_gameState);
-        _uiSimulator = new UIActionSimulator(_gameState, _inputProcessor, NullLogger<UIActionSimulator>.Instance);
+        _inputProcessor = new InputProcessor(GameState);
+        _uiSimulator = new UIActionSimulator(GameState, _inputProcessor, NullLogger<UIActionSimulator>.Instance);
         _rerouter = new RouteRerouter(NullLogger<RouteRerouter>.Instance);
     }
 
@@ -42,12 +36,12 @@ public sealed class RouteRerouterIntegrationTests : IDisposable
     public async Task Integration_RerouteWithGameState_ShouldWorkWithPlayerPosition()
     {
         // Arrange - Set player position
-        _gameState.Player.Position = new Vector3(0, 0, 0);
+        GameState.Player.Position = new Vector3(0, 0, 0);
 
         Vector3 targetPos = new(100, 0, 0);
 
         // Act - Without hot zones, should not trigger
-        bool triggered = await _rerouter.TriggerRerouteAsync(_gameState.Player.Position, targetPos, 1);
+        bool triggered = await _rerouter.TriggerRerouteAsync(GameState.Player.Position, targetPos, 1);
 
         // Assert - Should not trigger without hazard store
         Assert.False(triggered);
@@ -84,7 +78,7 @@ public sealed class RouteRerouterIntegrationTests : IDisposable
     public async Task Integration_FullScenario_MovementAndRecording()
     {
         // Arrange
-        _gameState.Player.Position = new Vector3(0, 0, 0);
+        GameState.Player.Position = new Vector3(0, 0, 0);
 
         _uiSimulator.ClearHistory();
 
@@ -92,7 +86,7 @@ public sealed class RouteRerouterIntegrationTests : IDisposable
 
         // Act - Simulate movement and detect reroute
         await _uiSimulator.KeyPressAsync(InputProcessor.VK_W);
-        bool rerouteTriggered = await _rerouter.TriggerRerouteAsync(_gameState.Player.Position, targetPos, 1);
+        bool rerouteTriggered = await _rerouter.TriggerRerouteAsync(GameState.Player.Position, targetPos, 1);
 
         // Record UI actions
         await _uiSimulator.OpenPanelAsync("map");
@@ -106,9 +100,10 @@ public sealed class RouteRerouterIntegrationTests : IDisposable
         Assert.False(rerouteTriggered);
     }
 
-    public void Dispose()
+    protected override void CleanupTestData()
     {
         _uiSimulator.Dispose();
         _rerouter.Dispose();
+        base.CleanupTestData();
     }
 }
