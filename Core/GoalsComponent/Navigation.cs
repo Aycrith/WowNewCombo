@@ -23,15 +23,13 @@ namespace Core.Goals;
 
 public sealed partial class Navigation : IDisposable
 {
-    /// <summary>
-    /// Tracks a heading entry for oscillation detection
-    /// </summary>
-    private readonly record struct HeadingHistoryEntry(float Heading, long Timestamp);
-
     private const bool debug = false;
 
-    private const float DIFF_THRESHOLD = 1.5f;   // within 50% difference
-    private const float UNIFORM_DIST_DIV = 2;    // within 50% difference
+    /// <summary>Threshold for distance difference comparison (1.5f = 150%). Used to detect significant deviation from expected path.</summary>
+    private const float DIFF_THRESHOLD = 1.5f;
+
+    /// <summary>Divisor for uniform distance calculations (2 = 50% threshold). Controls how path distance variations are normalized.</summary>
+    private const float UNIFORM_DIST_DIV = 2;
 
     private readonly string patherName;
 
@@ -45,8 +43,9 @@ public sealed partial class Navigation : IDisposable
     private readonly IPPather pather;
     private readonly IMountHandler mountHandler;
     private readonly AreaDB areaDB;
-    private readonly RouteRehabilitator routeRehabilitator;
-    private readonly IHumanizationProvider? humanizationProvider;
+    private readonly OscillationDetector oscillationDetector;
+    private readonly RouteRehabilitationCoordinator routeRehabCoordinator;
+    private readonly HumanizedMover humanizedMover;
 
     private const float MinDistanceMount = 10;
     private readonly float MaxDistance = 200;
@@ -56,23 +55,14 @@ public sealed partial class Navigation : IDisposable
     private float AvgDistance;
     private float lastWorldDistance = float.MaxValue;
 
-    private const float minAngleToTurn = PI / 35f;              // 5.14 degree
-    private const float minAngleToStopBeforeTurn = PI / 2f;     // 90 degree
+    /// <summary>Minimum angle in radians (~5.14 degrees) before triggering turn adjustment. Prevents over-correction on minor heading deviations.</summary>
+    private const float minAngleToTurn = PI / 35f;
 
-    // Oscillation detection constants
-    private const int HEADING_HISTORY_SIZE = 12;
-    private const int OSCILLATION_THRESHOLD = 6;  // Direction changes in history
-    private const double OSCILLATION_RESET_TIME_MS = 2000;
-    private const float MIN_ANGLE_CHANGE_FOR_OSCILLATION = 0.2f;  // ~11.5 degrees
+    /// <summary>Minimum angle in radians (90 degrees) before stopping to turn. Ensures character stops for large direction changes.</summary>
+    private const float minAngleToStopBeforeTurn = PI / 2f;
 
     private readonly Stack<Vector3> wayPoints = new();
     private readonly Stack<Vector3> routeToNextWaypoint = new();
-
-    // Oscillation tracking
-    private readonly Queue<HeadingHistoryEntry> headingHistory = new(HEADING_HISTORY_SIZE);
-    private long lastOscillationCheckTime;
-    private int oscillationCount;
-    private bool oscillationDetected;
 
     public Vector3[] TotalRoute { private set; get; } = Array.Empty<Vector3>();
 
@@ -103,13 +93,6 @@ public sealed partial class Navigation : IDisposable
 
     private const int NoPathBackoffMs = 1500;
 
-    private const float RehabMinDistance = 25f;
-    private static readonly TimeSpan RehabMinInterval = TimeSpan.FromSeconds(20);
-
-    private DateTime lastRehabUtc;
-    private Vector3 lastRehabWorldPos;
-    private bool hasLastRehab;
-
     public Navigation(ILogger<Navigation> logger,
         CancellationTokenSource<GoapAgent> cts,
         PlayerDirection playerDirection,
@@ -132,8 +115,13 @@ public sealed partial class Navigation : IDisposable
         this.pather = pather;
         this.mountHandler = mountHandler;
         this.areaDB = areaDB;
-        this.routeRehabilitator = routeRehabilitator;
-        this.humanizationProvider = humanizationProvider;
+
+        // Initialize extracted helper classes
+        oscillationDetector = new OscillationDetector();
+        routeRehabCoordinator = new RouteRehabilitationCoordinator(routeRehabilitator);
+        humanizedMover = new HumanizedMover(humanizationProvider);
+
+        patherName = pather.GetType().Name;
 
         patherName = pather.GetType().Name;
 
@@ -488,8 +476,8 @@ public sealed partial class Navigation : IDisposable
 
         failedAttempt = 0;
         lastNoPathUtc = default;
-        // TODO: fix this later
-        //if (!isTriviallyClose)
+
+        // Log pathfinder success and populate route
         {
             LogPathfinderSuccess(logger, result.Distance, result.StartW, result.EndW, result.ElapsedMs);
 
@@ -557,26 +545,11 @@ public sealed partial class Navigation : IDisposable
 
     private void TryRehabilitateSuccessfulTraversal(Vector3 playerW)
     {
-        DateTime now = DateTime.UtcNow;
-
-        if (hasLastRehab)
-        {
-            if (now - lastRehabUtc < RehabMinInterval &&
-                playerW.WorldDistanceXYTo(lastRehabWorldPos) < RehabMinDistance)
-            {
-                return;
-            }
-        }
-
-        routeRehabilitator.ReportSuccessfulTraversal(
+        routeRehabCoordinator.TryRehabilitate(
             playerW,
             playerReader.MapId,
             radius: 20f,
             severityFactor: 0.95f);
-
-        lastRehabUtc = now;
-        lastRehabWorldPos = playerW;
-        hasLastRehab = true;
     }
 
     private void AdjustHeading(float heading, CancellationToken token)
@@ -587,12 +560,12 @@ public sealed partial class Navigation : IDisposable
         float diff = Min(diff1, diff2);
 
         // Track heading for oscillation detection
-        TrackHeadingForOscillation();
+        oscillationDetector.TrackHeading(playerReader.Direction);
 
         // Check for oscillation
-        if (oscillationDetected)
+        if (oscillationDetector.IsOscillating)
         {
-            logger.LogWarning($"[Navigation] Oscillation detected ({oscillationCount} rapid direction changes). Notifying StuckDetector.");
+            logger.LogWarning($"[Navigation] Oscillation detected ({oscillationDetector.OscillationCount} rapid direction changes). Notifying StuckDetector.");
 
             // Notify stuck detector of oscillation
             if (!stuckDetector.IsCurrentlyStuck)
@@ -605,7 +578,7 @@ public sealed partial class Navigation : IDisposable
             stopMoving.Stop();
 
             // Reset oscillation tracking
-            ResetOscillationTracking();
+            oscillationDetector.Reset();
             return;
         }
 
@@ -618,89 +591,6 @@ public sealed partial class Navigation : IDisposable
 
             playerDirection.SetDirection(heading, routeToNextWaypoint.Peek(), OutDoorMinDistance, token);
         }
-    }
-
-    /// <summary>
-    /// Tracks current heading for oscillation detection
-    /// </summary>
-    private void TrackHeadingForOscillation()
-    {
-        long now = GetTimestamp();
-
-        // Reset if too much time passed
-        if (headingHistory.Count > 0)
-        {
-            double elapsedMs = GetElapsedTime(lastOscillationCheckTime).TotalMilliseconds;
-            if (elapsedMs > OSCILLATION_RESET_TIME_MS)
-            {
-                ResetOscillationTracking();
-            }
-        }
-
-        // Add new entry
-        headingHistory.Enqueue(new HeadingHistoryEntry(playerReader.Direction, now));
-        if (headingHistory.Count > HEADING_HISTORY_SIZE)
-        {
-            headingHistory.Dequeue();
-        }
-
-        lastOscillationCheckTime = now;
-
-        // Check for oscillation
-        oscillationDetected = DetectOscillation();
-    }
-
-    /// <summary>
-    /// Detects oscillation by analyzing heading history for rapid direction changes
-    /// </summary>
-    private bool DetectOscillation()
-    {
-        if (headingHistory.Count < HEADING_HISTORY_SIZE)
-            return false;
-
-        int directionChanges = 0;
-        float prevDelta = 0;
-
-        var entries = headingHistory.ToArray();
-        for (int i = 1; i < entries.Length; i++)
-        {
-            float delta = entries[i].Heading - entries[i - 1].Heading;
-
-            // Normalize delta
-            if (delta > PI)
-                delta -= 2 * PI;
-            else if (delta < -PI)
-                delta += 2 * PI;
-
-            // Check for significant direction change
-            if (MathF.Abs(delta) > MIN_ANGLE_CHANGE_FOR_OSCILLATION)
-            {
-                // Check if direction reversed
-                if (prevDelta != 0 && Math.Sign(delta) != Math.Sign(prevDelta))
-                {
-                    directionChanges++;
-                }
-                prevDelta = delta;
-            }
-        }
-
-        if (directionChanges >= OSCILLATION_THRESHOLD)
-        {
-            oscillationCount++;
-            return true;
-        }
-
-        return false;
-    }
-
-    /// <summary>
-    /// Resets oscillation tracking
-    /// </summary>
-    private void ResetOscillationTracking()
-    {
-        headingHistory.Clear();
-        oscillationDetected = false;
-        lastOscillationCheckTime = GetTimestamp();
     }
 
     private bool AdjustNextWaypointPointToClosest()
@@ -834,26 +724,8 @@ public sealed partial class Navigation : IDisposable
     /// </summary>
     private void ApplyWaypointDelay()
     {
-        if (humanizationProvider?.Enabled != true)
-            return;
-
-        // Small micro-pause between waypoints (100-300ms)
-        // This simulates the natural hesitation humans have at decision points
-        int delayMs = humanizationProvider.GetInterKeyDelayMs(100);
-        delayMs = Math.Clamp(delayMs, 50, 500);
-
-        if (delayMs > 50)
-        {
-            LogWaypointDelay(logger, delayMs, wayPoints.Count);
-            token.WaitHandle.WaitOne(delayMs);
-        }
+        humanizedMover.ApplyWaypointDelay(token);
     }
-
-    [LoggerMessage(
-        EventId = 0060,
-        Level = LogLevel.Debug,
-        Message = "[Humanization] Waypoint delay: {delayMs}ms (remaining: {remainingWaypoints})")]
-    static partial void LogWaypointDelay(ILogger logger, int delayMs, int remainingWaypoints);
 
     #endregion
 }

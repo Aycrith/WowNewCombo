@@ -15,7 +15,7 @@ public class GoapGoalTests
 {
     #region Test Helpers
 
-    private class TestGoal : GoapGoal
+    private sealed class TestGoal : GoapGoal
     {
         public override float Cost { get; }
         private readonly bool canRunResult;

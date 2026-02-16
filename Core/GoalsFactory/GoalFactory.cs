@@ -386,9 +386,10 @@ public static class GoalFactory
         setting.Path = DeserializeObject<Vector3[]>(
             ReadAllText(setting.PathFilename))!;
 
-        // TODO: there could be saved user routes where
-        //       the Z component not 0
-        for (int i = 0; i < setting.Path.Length; i++)
+            // Normalize Z component to 0 for all path points.
+            // Some saved user routes may have non-zero Z values which
+            // can cause pathfinding issues in the 2D navigation system.
+            for (int i = 0; i < setting.Path.Length; i++)
         {
             if (setting.Path[i].Z != 0)
                 setting.Path[i].Z = 0;

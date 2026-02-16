@@ -22,7 +22,7 @@ public sealed class MockWowScreen : IWowScreen
     }
 
     public bool MinimapEnabled { get; set; } = true;
-    public bool EnablePostProcess { get; set; } = false;
+    public bool EnablePostProcess { get; set; }
 
     public Image<Bgra32> ScreenImage => _lastScreenImage ?? throw new InvalidOperationException("Screen not updated yet. Call Update() first.");
 

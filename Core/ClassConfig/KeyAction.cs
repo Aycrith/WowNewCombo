@@ -49,9 +49,25 @@ public sealed partial class KeyAction
 
     public int Cooldown { get; set; } = CastingHandler.SPELL_QUEUE;
 
-    private int _charge;
-    private readonly object _chargeLock = new();  // Thread safety for concurrent access
-    public int Charge { get; set; } = 1;
+    private int _charge = 1;
+    private readonly object _chargeLock = new(); // Thread safety for concurrent access
+    public int Charge
+    {
+        get
+        {
+            lock (_chargeLock)
+            {
+                return _charge;
+            }
+        }
+        set
+        {
+            lock (_chargeLock)
+            {
+                _charge = value;
+            }
+        }
+    }
     public SchoolMask School { get; set; } = SchoolMask.None;
     public int MinComboPoints { get; set; }
 

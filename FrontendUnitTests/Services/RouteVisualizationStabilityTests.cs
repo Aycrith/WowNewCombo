@@ -39,6 +39,9 @@ public class RouteVisualizationStabilityTests : IDisposable
     private const int MaxP95LatencyMs = 100;
     private const int MaxAvgLatencyMs = 50;
 
+    // Cached JsonSerializerOptions to avoid repeated allocations (CA1869)
+    private static readonly JsonSerializerOptions ReportSerializerOptions = new() { WriteIndented = true };
+
     public RouteVisualizationStabilityTests(ITestOutputHelper output)
     {
         _output = output;
@@ -110,10 +113,10 @@ public class RouteVisualizationStabilityTests : IDisposable
             FinalMemoryBytes = finalMemory,
             MemoryGrowthPercent = ((finalMemory - initialMemory) / (double)initialMemory) * 100,
             ExceptionCount = exceptions.Count,
-            AvgLatencyMs = latencyMetrics.Any() ? latencyMetrics.Average(m => m.LatencyMs) : 0,
-            P95LatencyMs = latencyMetrics.Any() ? CalculatePercentile(latencyMetrics.Select(m => m.LatencyMs).ToList(), 0.95) : 0,
-            MaxLatencyMs = latencyMetrics.Any() ? latencyMetrics.Max(m => m.LatencyMs) : 0
-        }, new JsonSerializerOptions { WriteIndented = true }));
+            AvgLatencyMs = latencyMetrics.Count > 0 ? latencyMetrics.Average(m => m.LatencyMs) : 0,
+            P95LatencyMs = latencyMetrics.Count > 0 ? CalculatePercentile(latencyMetrics.Select(m => m.LatencyMs).ToList(), 0.95) : 0,
+            MaxLatencyMs = latencyMetrics.Count > 0 ? latencyMetrics.Max(m => m.LatencyMs) : 0
+        }, ReportSerializerOptions));
 
         _output.WriteLine($"\nDetailed report saved to: {reportPath}");
 
@@ -128,7 +131,7 @@ public class RouteVisualizationStabilityTests : IDisposable
 
         Assert.Empty(exceptions);
 
-        if (latencyMetrics.Any())
+        if (latencyMetrics.Count > 0)
         {
             double p95Latency = CalculatePercentile(latencyMetrics.Select(m => m.LatencyMs).ToList(), 0.95);
             Assert.True(p95Latency < MaxP95LatencyMs,
@@ -435,7 +438,7 @@ public class RouteVisualizationStabilityTests : IDisposable
         sb.AppendLine();
 
         // Latency analysis
-        if (latencyMetrics.Any())
+        if (latencyMetrics.Count > 0)
         {
             sb.AppendLine("--- Latency Analysis ---");
             var latencies = latencyMetrics.Select(m => m.LatencyMs).ToList();
@@ -465,7 +468,7 @@ public class RouteVisualizationStabilityTests : IDisposable
         // Exception analysis
         sb.AppendLine("--- Exception Analysis ---");
         sb.AppendLine($"Total Exceptions: {exceptions.Count}");
-        if (exceptions.Any())
+        if (exceptions.Count > 0)
         {
             var grouped = exceptions.GroupBy(e => e.GetType().Name);
             foreach (var group in grouped)
@@ -478,8 +481,8 @@ public class RouteVisualizationStabilityTests : IDisposable
         sb.AppendLine();
         sb.AppendLine("--- Test Status ---");
         bool passed = exceptions.Count == 0 &&
-                     growthPercent < MaxMemoryGrowthPercent &&
-                     (!latencyMetrics.Any() || CalculatePercentile(latencyMetrics.Select(m => m.LatencyMs).ToList(), 0.95) < MaxP95LatencyMs);
+            growthPercent < MaxMemoryGrowthPercent &&
+            (latencyMetrics.Count == 0 || CalculatePercentile(latencyMetrics.Select(m => m.LatencyMs).ToList(), 0.95) < MaxP95LatencyMs);
         sb.AppendLine(passed ? "PASSED" : "FAILED");
 
         return sb.ToString();
@@ -487,7 +490,7 @@ public class RouteVisualizationStabilityTests : IDisposable
 
     private static double CalculatePercentile(List<long> values, double percentile)
     {
-        if (!values.Any()) return 0;
+        if (values.Count == 0) return 0;
         var sorted = values.OrderBy(x => x).ToList();
         int index = (int)Math.Ceiling(sorted.Count * percentile) - 1;
         return sorted[Math.Max(0, Math.Min(index, sorted.Count - 1))];
@@ -516,14 +519,14 @@ public class RouteVisualizationStabilityTests : IDisposable
 
     #region Data Structures
 
-    private class MemorySnapshot
+    private sealed class MemorySnapshot
     {
         public DateTime Timestamp { get; set; }
         public long MemoryBytes { get; set; }
         public int OperationCount { get; set; }
     }
 
-    private class LatencyMetric
+    private sealed class LatencyMetric
     {
         public DateTime Timestamp { get; set; }
         public long LatencyMs { get; set; }
@@ -534,7 +537,7 @@ public class RouteVisualizationStabilityTests : IDisposable
 
     #region Fake Implementation
 
-    private class FakeFailureSimulationService : IFailureSimulationService
+    private sealed class FakeFailureSimulationService : IFailureSimulationService
     {
         public event Action<SimulatedStuckEvent>? OnStuckSimulated;
         public event Action<SimulatedDeathEvent>? OnDeathSimulated;

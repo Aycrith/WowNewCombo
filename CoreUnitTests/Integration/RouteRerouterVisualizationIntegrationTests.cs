@@ -53,9 +53,9 @@ public sealed class RouteRerouterVisualizationIntegrationTests : IntegrationTest
         // Create RouteRerouter with HazardZoneStore
         _routeRerouter = new RouteRerouter(
             NullLogger<RouteRerouter>.Instance,
-            rehabilitator: null,
-            hazardStore: _hazardStore,
-            featureFlags: _featureFlags);
+            rehabilitatorParam: null,
+            hazardStoreParam: _hazardStore,
+            featureFlagsParam: _featureFlags);
 
         // Set low threshold for testing
         _routeRerouter.HotZoneSeverityThreshold = 1f;

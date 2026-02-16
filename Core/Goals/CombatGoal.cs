@@ -317,8 +317,8 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
             return;
         }
 
-        // TODO: have to find a better way to deal with this
-        // Dead code removed - feature intentionally disabled pending redesign
+        // Feature disabled: Soft-interact targeting logic was intentionally removed
+        // pending redesign. Reserved for future soft-target implementation.
     }
 
     private bool InvalidSoftInteractExists()

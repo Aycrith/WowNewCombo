@@ -21,19 +21,57 @@ namespace Core.Startup;
 /// </summary>
 public sealed class StartupOrchestrator
 {
-    private readonly ILogger<StartupOrchestrator> _logger;
-    private readonly StartupOptions _options;
-    private readonly StartupState _state;
-    private readonly StartupConfigPathing _pathing;
-    private readonly WoWPathFinder _pathFinder;
-    private readonly AddonInstaller _addonInstaller;
-    private readonly AddonValidator _addonValidator;
-    private readonly NavigationServerManager _navManager;
-    private readonly WoWProcessLauncher _wowLauncher;
-    private readonly FrameConfigurator? _frameConfigurator;
-    private readonly WowProcess? _wowProcess;
+    private readonly ILogger<StartupOrchestrator> logger;
+    private readonly StartupOptions options;
+    private readonly StartupState state;
+    private readonly StartupConfigPathing pathing;
+    private readonly WoWPathFinder pathFinder;
+    private readonly AddonInstaller addonInstaller;
+    private readonly AddonValidator addonValidator;
+    private readonly NavigationServerManager navManager;
+    private readonly WoWProcessLauncher wowLauncher;
+    private readonly FrameConfigurator? frameConfigurator;
+    private readonly WowProcess? wowProcess;
 
     private readonly List<(StartupStage Stage, StageResult Result)> _stageResults = [];
+
+    // Constants
+
+    /// <summary>
+    /// Delay in milliseconds between startup stages.
+    /// Allows UI updates and prevents rapid-fire stage transitions.
+    /// </summary>
+    private const int StageTransitionDelayMs = 2000;
+
+    /// <summary>
+    /// Default timeout in minutes for waiting for character login.
+    /// Used when WaitForCharacterTimeoutSeconds option is not configured.
+    /// </summary>
+    private const int DefaultCharacterWaitTimeoutMinutes = 10;
+
+    /// <summary>
+    /// Polling interval in milliseconds when waiting for character.
+    /// Controls how often we check if the character is in-world.
+    /// </summary>
+    private const int CharacterWaitPollIntervalMs = 5000;
+
+    /// <summary>
+    /// Default port for RemoteV1 pathing API.
+    /// Used when portv1 is not configured or is invalid.
+    /// </summary>
+    private const int DefaultPathingApiPort = 5001;
+
+    /// <summary>
+    /// HTTP timeout in seconds for pathing API health checks.
+    /// Prevents indefinite blocking when checking if pathing API is responsive.
+    /// </summary>
+    private const int PathingApiHealthCheckTimeoutSeconds = 2;
+
+    /// <summary>
+    /// Default localhost IP address for pathing API.
+    /// Used when hostv1 is not configured or is empty.
+    /// </summary>
+    private const string DefaultPathingApiHost = "127.0.0.1";
 
     /// <summary>Event raised when a stage completes.</summary>
     public event EventHandler<StageCompletedEventArgs>? StageCompleted;
@@ -42,32 +80,32 @@ public sealed class StartupOrchestrator
     public event EventHandler<StartupResult>? StartupComplete;
 
     /// <summary>Current startup state (for UI binding).</summary>
-    public StartupState State => _state;
+    public StartupState State => state;
 
     public StartupOrchestrator(
-        ILogger<StartupOrchestrator> logger,
-        IOptions<StartupOptions> options,
-        IOptions<StartupConfigPathing> pathing,
-        StartupState state,
-        WoWPathFinder pathFinder,
-        AddonInstaller addonInstaller,
-        AddonValidator addonValidator,
-        NavigationServerManager navManager,
-        WoWProcessLauncher wowLauncher,
-        FrameConfigurator? frameConfigurator = null,
-        WowProcess? wowProcess = null)
+        ILogger<StartupOrchestrator> loggerParam,
+        IOptions<StartupOptions> optionsParam,
+        IOptions<StartupConfigPathing> pathingParam,
+        StartupState stateParam,
+        WoWPathFinder pathFinderParam,
+        AddonInstaller addonInstallerParam,
+        AddonValidator addonValidatorParam,
+        NavigationServerManager navManagerParam,
+        WoWProcessLauncher wowLauncherParam,
+        FrameConfigurator? frameConfiguratorParam = null,
+        WowProcess? wowProcessParam = null)
     {
-        _logger = logger;
-        _options = options.Value;
-        _pathing = pathing.Value;
-        _state = state;
-        _pathFinder = pathFinder;
-        _addonInstaller = addonInstaller;
-        _addonValidator = addonValidator;
-        _navManager = navManager;
-        _wowLauncher = wowLauncher;
-        _frameConfigurator = frameConfigurator;
-        _wowProcess = wowProcess;
+        logger = loggerParam;
+        options = optionsParam.Value;
+        pathing = pathingParam.Value;
+        state = stateParam;
+        pathFinder = pathFinderParam;
+        addonInstaller = addonInstallerParam;
+        addonValidator = addonValidatorParam;
+        navManager = navManagerParam;
+        wowLauncher = wowLauncherParam;
+        frameConfigurator = frameConfiguratorParam;
+        wowProcess = wowProcessParam;
     }
 
     /// <summary>
@@ -75,20 +113,20 @@ public sealed class StartupOrchestrator
     /// </summary>
     public async Task<StartupResult> RunAsync(CancellationToken cancellationToken = default)
     {
-        if (_options.SkipStartupOrchestration)
+        if (options.SkipStartupOrchestration)
         {
-            _logger.LogWarning("[StartupOrchestrator] Startup orchestration disabled via config (SkipStartupOrchestration=true). " +
+            logger.LogWarning("[StartupOrchestrator] Startup orchestration disabled via config (SkipStartupOrchestration=true). " +
                 "Marking ready WITHOUT verifying WoW, addons, frames, or navigation server.");
-            _state.IsReady = true;
+            state.IsReady = true;
             return StartupResult.CreateSuccess(TimeSpan.Zero, []);
         }
 
-        _logger.LogInformation("[StartupOrchestrator] ═══════════════════════════════════════════════════════════════");
-        _logger.LogInformation("[StartupOrchestrator]              STARTUP ORCHESTRATION BEGINNING");
-        _logger.LogInformation("[StartupOrchestrator] ═══════════════════════════════════════════════════════════════");
+        logger.LogInformation("[StartupOrchestrator] ═══════════════════════════════════════════════════════════════");
+        logger.LogInformation("[StartupOrchestrator]              STARTUP ORCHESTRATION BEGINNING");
+        logger.LogInformation("[StartupOrchestrator] ═══════════════════════════════════════════════════════════════");
 
-        _state.Reset();
-        _state.StartTime = DateTime.UtcNow;
+        state.Reset();
+        state.StartTime = DateTime.UtcNow;
         _stageResults.Clear();
 
         var overallStopwatch = Stopwatch.StartNew();
@@ -111,7 +149,7 @@ public sealed class StartupOrchestrator
             if (!await ExecuteStageAsync(StartupStage.StartingNavigationServer, StartNavigationServerAsync, cancellationToken))
             {
                 // Navigation server is optional, log warning but continue
-                _logger.LogWarning("[StartupOrchestrator] Navigation server failed to start, continuing without it");
+                logger.LogWarning("[StartupOrchestrator] Navigation server failed to start, continuing without it");
             }
 
             // Stage 5: Launch/Detect WoW
@@ -122,14 +160,14 @@ public sealed class StartupOrchestrator
             // This stage is handled differently - it waits indefinitely or times out
             if (!await ExecuteStageAsync(StartupStage.WaitingForCharacter, WaitForCharacterAsync, cancellationToken))
             {
-                _logger.LogWarning("[StartupOrchestrator] Character detection failed or timed out - continuing but frame config may fail");
+                logger.LogWarning("[StartupOrchestrator] Character detection failed or timed out - continuing but frame config may fail");
             }
 
             // Stage 7: Configure Frames (if needed)
             if (!await ExecuteStageAsync(StartupStage.ConfiguringFrames, ConfigureFramesAsync, cancellationToken))
             {
                 // Frame config might need user action, but we don't fail startup for it
-                _logger.LogWarning("[StartupOrchestrator] Frame configuration incomplete - may need manual setup");
+                logger.LogWarning("[StartupOrchestrator] Frame configuration incomplete - may need manual setup");
             }
 
             // Stage 8: Final Validation
@@ -140,29 +178,29 @@ public sealed class StartupOrchestrator
             overallStopwatch.Stop();
 
             bool navFailed = _stageResults.Any(s => s.Stage == StartupStage.StartingNavigationServer && !s.Result.CanContinue);
-            bool framesFailed = !_state.FramesConfigured;
+            bool framesFailed = !state.FramesConfigured;
 
             if (navFailed || framesFailed)
             {
-                _logger.LogWarning("[StartupOrchestrator] ═══════════════════════════════════════════════════════════════");
-                _logger.LogWarning("[StartupOrchestrator]   STARTUP COMPLETE WITH DEGRADED SUBSYSTEMS:");
+                logger.LogWarning("[StartupOrchestrator] ═══════════════════════════════════════════════════════════════");
+                logger.LogWarning("[StartupOrchestrator]   STARTUP COMPLETE WITH DEGRADED SUBSYSTEMS:");
                 if (navFailed)
-                    _logger.LogWarning("[StartupOrchestrator]     ⚠ Navigation server is NOT running");
+                    logger.LogWarning("[StartupOrchestrator]     ⚠ Navigation server is NOT running");
                 if (framesFailed)
-                    _logger.LogWarning("[StartupOrchestrator]     ⚠ Frame configuration is NOT complete");
-                _logger.LogWarning("[StartupOrchestrator] ═══════════════════════════════════════════════════════════════");
+                    logger.LogWarning("[StartupOrchestrator]     ⚠ Frame configuration is NOT complete");
+                logger.LogWarning("[StartupOrchestrator] ═══════════════════════════════════════════════════════════════");
             }
 
-            _state.CurrentStage = StartupStage.Ready;
-            _state.StatusMessage = navFailed || framesFailed
+            state.CurrentStage = StartupStage.Ready;
+            state.StatusMessage = navFailed || framesFailed
                 ? "Startup complete with warnings - some subsystems need attention"
                 : "Startup complete! Bot is ready.";
-            _state.IsReady = true;
+            state.IsReady = true;
 
-            _logger.LogInformation("[StartupOrchestrator] ═══════════════════════════════════════════════════════════════");
-            _logger.LogInformation("[StartupOrchestrator]              STARTUP COMPLETE - SYSTEM READY");
-            _logger.LogInformation("[StartupOrchestrator]              Total Time: {Elapsed:mm\\:ss\\.fff}", overallStopwatch.Elapsed);
-            _logger.LogInformation("[StartupOrchestrator] ═══════════════════════════════════════════════════════════════");
+            logger.LogInformation("[StartupOrchestrator] ═══════════════════════════════════════════════════════════════");
+            logger.LogInformation("[StartupOrchestrator]              STARTUP COMPLETE - SYSTEM READY");
+            logger.LogInformation("[StartupOrchestrator]              Total Time: {Elapsed:mm\\:ss\\.fff}", overallStopwatch.Elapsed);
+            logger.LogInformation("[StartupOrchestrator] ═══════════════════════════════════════════════════════════════");
 
             var result = StartupResult.CreateSuccess(overallStopwatch.Elapsed, _stageResults);
             StartupComplete?.Invoke(this, result);
@@ -170,13 +208,13 @@ public sealed class StartupOrchestrator
         }
         catch (OperationCanceledException)
         {
-            _logger.LogWarning("[StartupOrchestrator] Startup cancelled");
-            return CreateFailureResult(_state.CurrentStage, overallStopwatch.Elapsed, "Startup cancelled");
+            logger.LogWarning("[StartupOrchestrator] Startup cancelled");
+            return CreateFailureResult(state.CurrentStage, overallStopwatch.Elapsed, "Startup cancelled");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[StartupOrchestrator] Unexpected error during startup");
-            return CreateFailureResult(_state.CurrentStage, overallStopwatch.Elapsed, ex.Message);
+            logger.LogError(ex, "[StartupOrchestrator] Unexpected error during startup");
+            return CreateFailureResult(state.CurrentStage, overallStopwatch.Elapsed, ex.Message);
         }
     }
 
@@ -185,9 +223,9 @@ public sealed class StartupOrchestrator
         Func<CancellationToken, Task<StageResult>> stageFunc,
         CancellationToken cancellationToken)
     {
-        _state.CurrentStage = stage;
-        _logger.LogInformation("[StartupOrchestrator] ──────────────────────────────────────────────────────────────");
-        _logger.LogInformation("[StartupOrchestrator] Stage: {Stage}", stage);
+        state.CurrentStage = stage;
+        logger.LogInformation("[StartupOrchestrator] ──────────────────────────────────────────────────────────────");
+        logger.LogInformation("[StartupOrchestrator] Stage: {Stage}", stage);
 
         var stopwatch = Stopwatch.StartNew();
         StageResult result;
@@ -198,14 +236,14 @@ public sealed class StartupOrchestrator
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[StartupOrchestrator] Stage {Stage} threw exception", stage);
+            logger.LogError(ex, "[StartupOrchestrator] Stage {Stage} threw exception", stage);
             result = StageResult.Failed(ex.Message, ex);
         }
 
         stopwatch.Stop();
         _stageResults.Add((stage, result));
 
-        _logger.LogInformation("[StartupOrchestrator] Stage {Stage}: {Result} ({Elapsed:mm\\:ss\\.fff})",
+        logger.LogInformation("[StartupOrchestrator] Stage {Stage}: {Result} ({Elapsed:mm\\:ss\\.fff})",
             stage, result.Type, stopwatch.Elapsed);
 
         StageCompleted?.Invoke(this, new StageCompletedEventArgs(stage, result, stopwatch.Elapsed));
@@ -215,15 +253,15 @@ public sealed class StartupOrchestrator
 
     private StartupResult CreateFailureResult(StartupStage stage, TimeSpan elapsed, string? message = null)
     {
-        _state.CurrentStage = StartupStage.Failed;
-        _state.StatusMessage = message ?? $"Startup failed at stage: {stage}";
-        _state.IsReady = false;
+        state.CurrentStage = StartupStage.Failed;
+        state.StatusMessage = message ?? $"Startup failed at stage: {stage}";
+        state.IsReady = false;
 
-        _logger.LogError("[StartupOrchestrator] ═══════════════════════════════════════════════════════════════");
-        _logger.LogError("[StartupOrchestrator]              STARTUP FAILED AT STAGE: {Stage}", stage);
-        _logger.LogError("[StartupOrchestrator] ═══════════════════════════════════════════════════════════════");
+        logger.LogError("[StartupOrchestrator] ═══════════════════════════════════════════════════════════════");
+        logger.LogError("[StartupOrchestrator]              STARTUP FAILED AT STAGE: {Stage}", stage);
+        logger.LogError("[StartupOrchestrator] ═══════════════════════════════════════════════════════════════");
 
-        var result = StartupResult.CreateFailure(stage, _state.StatusMessage, elapsed, _stageResults);
+        var result = StartupResult.CreateFailure(stage, state.StatusMessage, elapsed, _stageResults);
         StartupComplete?.Invoke(this, result);
         return result;
     }
@@ -234,44 +272,44 @@ public sealed class StartupOrchestrator
 
     private async Task<StageResult> InitializeAsync(CancellationToken ct)
     {
-        _state.StatusMessage = "Initializing startup orchestration...";
+        state.StatusMessage = "Initializing startup orchestration...";
 
         await CleanupPathingApiPortIfStaleAsync(ct);
 
-        _logger.LogInformation("[StartupOrchestrator] Options: AutoLaunchWoW={AutoLaunch}, AutoConfigFrames={AutoConfig}, NavServer={NavServer}",
-            _options.AutoLaunchWoW, _options.AutoConfigureFrames, _options.AutoStartNavigationServer);
+        logger.LogInformation("[StartupOrchestrator] Options: AutoLaunchWoW={AutoLaunch}, AutoConfigFrames={AutoConfig}, NavServer={NavServer}",
+            options.AutoLaunchWoW, options.AutoConfigureFrames, options.AutoStartNavigationServer);
 
         return StageResult.Success("Initialization complete");
     }
 
     private Task<StageResult> DiscoverWoWAsync(CancellationToken ct)
     {
-        _state.StatusMessage = "Searching for World of Warcraft installation...";
+        state.StatusMessage = "Searching for World of Warcraft installation...";
 
-        var installation = _pathFinder.FindInstallation();
+        var installation = pathFinder.FindInstallation();
         if (installation == null)
         {
             return Task.FromResult(StageResult.Failed(
                 "Could not find WoW installation. Please configure WoWPath in appsettings.json or ensure WoW is installed in a standard location."));
         }
 
-        _state.WoWInstallation = installation;
-        _state.StatusMessage = $"Found WoW at: {installation.Path}";
+        state.WoWInstallation = installation;
+        state.StatusMessage = $"Found WoW at: {installation.Path}";
 
-        _logger.LogInformation("[StartupOrchestrator] WoW Installation: {Path}", installation.Path);
-        _logger.LogInformation("[StartupOrchestrator]   Executable: {Exe}", installation.ExecutableName);
-        _logger.LogInformation("[StartupOrchestrator]   Version: {Version}", installation.Version);
-        _logger.LogInformation("[StartupOrchestrator]   DataToColor: {HasAddon}", installation.HasDataToColorAddon);
-        _logger.LogInformation("[StartupOrchestrator]   SecureButtons.xml: {HasSecure}", installation.HasSecureButtonsXml);
+        logger.LogInformation("[StartupOrchestrator] WoW Installation: {Path}", installation.Path);
+        logger.LogInformation("[StartupOrchestrator]   Executable: {Exe}", installation.ExecutableName);
+        logger.LogInformation("[StartupOrchestrator]   Version: {Version}", installation.Version);
+        logger.LogInformation("[StartupOrchestrator]   DataToColor: {HasAddon}", installation.HasDataToColorAddon);
+        logger.LogInformation("[StartupOrchestrator]   SecureButtons.xml: {HasSecure}", installation.HasSecureButtonsXml);
 
         return Task.FromResult(StageResult.Success($"Found WoW: {installation.Path}"));
     }
 
     private async Task<StageResult> ValidateAddonsAsync(CancellationToken ct)
     {
-        _state.StatusMessage = "Validating and installing addons...";
+        state.StatusMessage = "Validating and installing addons...";
 
-        var wowPath = _state.WoWInstallation?.Path;
+        var wowPath = state.WoWInstallation?.Path;
         if (string.IsNullOrEmpty(wowPath))
         {
             return StageResult.Failed("WoW path not set");
@@ -282,38 +320,38 @@ public sealed class StartupOrchestrator
             // Check if this is a first-run scenario (AddonConfig doesn't exist)
             if (!AddonConfig.Exists())
             {
-                _logger.LogWarning("[StartupOrchestrator] AddonConfig not found - first-run setup required");
-                _state.StatusMessage = "First-run: Please configure addon in WebUI";
+                logger.LogWarning("[StartupOrchestrator] AddonConfig not found - first-run setup required");
+                state.StatusMessage = "First-run: Please configure addon in WebUI";
                 return StageResult.Warning("Addon configuration required - please complete setup in WebUI at /AddonConfiguration");
             }
 
             // Run addon installer maintenance
-            _addonInstaller.PerformMaintenance();
+            addonInstaller.PerformMaintenance();
 
             // Validate addons
-            var validation = _addonValidator.Validate();
+            var validation = addonValidator.Validate();
 
             if (validation.IsValid)
             {
-                _state.AddonsValidated = true;
+                state.AddonsValidated = true;
                 return StageResult.Success("All addons validated");
             }
 
             // Log errors
             foreach (var error in validation.Errors)
             {
-                _logger.LogError("[StartupOrchestrator] Addon Error: {Title}: {Desc}", error.Title, error.Description);
+                logger.LogError("[StartupOrchestrator] Addon Error: {Title}: {Desc}", error.Title, error.Description);
             }
 
             foreach (var warning in validation.Warnings)
             {
-                _logger.LogWarning("[StartupOrchestrator] Addon Warning: {Title}: {Desc}", warning.Title, warning.Description);
+                logger.LogWarning("[StartupOrchestrator] Addon Warning: {Title}: {Desc}", warning.Title, warning.Description);
             }
 
             // If there are only warnings, we can continue
             if (validation.Errors.Count == 0)
             {
-                _state.AddonsValidated = true;
+                state.AddonsValidated = true;
                 return StageResult.Warning("Addons validated with warnings");
             }
 
@@ -324,8 +362,8 @@ public sealed class StartupOrchestrator
 
             if (isFirstRunError)
             {
-                _logger.LogWarning("[StartupOrchestrator] Addon not yet configured - first-run setup required");
-                _state.StatusMessage = "First-run: Please configure addon in WebUI";
+                logger.LogWarning("[StartupOrchestrator] Addon not yet configured - first-run setup required");
+                state.StatusMessage = "First-run: Please configure addon in WebUI";
                 return StageResult.Warning("Addon configuration required - please complete setup in WebUI at /AddonConfiguration");
             }
 
@@ -339,28 +377,28 @@ public sealed class StartupOrchestrator
 
     private async Task<StageResult> StartNavigationServerAsync(CancellationToken ct)
     {
-        if (!_options.AutoStartNavigationServer)
+        if (!options.AutoStartNavigationServer)
         {
             return StageResult.Skipped("Navigation server auto-start disabled");
         }
 
-        if (_pathing.Type != StartupConfigPathing.Types.RemoteV3)
+        if (pathing.Type != StartupConfigPathing.Types.RemoteV3)
         {
-            return StageResult.Skipped($"Navigation server skipped (Pathing.Mode={_pathing.Type})");
+            return StageResult.Skipped($"Navigation server skipped (Pathing.Mode={pathing.Type})");
         }
 
-        _state.StatusMessage = "Starting navigation server...";
+        state.StatusMessage = "Starting navigation server...";
 
         try
         {
-            var success = await _navManager.EnsureRunningAsync(ct);
+            var success = await navManager.EnsureRunningAsync(ct);
 
             if (success)
             {
-                return StageResult.Success($"Navigation server running on port {_navManager.Port}");
+                return StageResult.Success($"Navigation server running on port {navManager.Port}");
             }
 
-            if (_navManager.Status == NavigationServerStatus.NotInstalled)
+            if (navManager.Status == NavigationServerStatus.NotInstalled)
             {
                 return StageResult.Warning("Navigation server not installed - pathfinding will use local fallback");
             }
@@ -375,31 +413,31 @@ public sealed class StartupOrchestrator
 
     private async Task<StageResult> LaunchWoWAsync(CancellationToken ct)
     {
-        _state.StatusMessage = "Checking for WoW process...";
+        state.StatusMessage = "Checking for WoW process...";
 
         // First check if WoW is already running
-        var existing = _wowLauncher.FindExistingProcess();
+        var existing = wowLauncher.FindExistingProcess();
         if (existing != null)
         {
             return StageResult.Success($"WoW already running (PID: {existing.Id})");
         }
 
-        if (!_options.AutoLaunchWoW)
+        if (!options.AutoLaunchWoW)
         {
-            _state.StatusMessage = "Please start World of Warcraft...";
+            state.StatusMessage = "Please start World of Warcraft...";
             return StageResult.Waiting("Waiting for user to launch WoW");
         }
 
         // Launch WoW
-        _state.StatusMessage = "Launching World of Warcraft...";
+        state.StatusMessage = "Launching World of Warcraft...";
 
-        var installation = _state.WoWInstallation;
+        var installation = state.WoWInstallation;
         if (installation == null)
         {
             return StageResult.Failed("No WoW installation available");
         }
 
-        var success = await _wowLauncher.LaunchAsync(installation, ct);
+        var success = await wowLauncher.LaunchAsync(installation, ct);
 
         if (success)
         {
@@ -411,43 +449,43 @@ public sealed class StartupOrchestrator
 
     private async Task<StageResult> WaitForCharacterAsync(CancellationToken ct)
     {
-        _state.StatusMessage = "Please log in and enter the game world...";
+        state.StatusMessage = "Please log in and enter the game world...";
 
         // Check if we already have frame config (character was previously configured)
         if (FrameConfig.Exists() && AddonConfig.Exists())
         {
-            _logger.LogInformation("[StartupOrchestrator] Frame config exists, assuming character ready");
+            logger.LogInformation("[StartupOrchestrator] Frame config exists, assuming character ready");
             return StageResult.Skipped("Configuration already exists");
         }
 
         // If WoW is running and we have the FrameConfigurator, we can try to detect character
         // by attempting frame configuration (it will fail if character isn't in-world)
-        if (_frameConfigurator != null && _wowProcess != null && _wowProcess.IsRunning)
+        if (frameConfigurator != null && wowProcess != null && wowProcess.IsRunning)
         {
-            _logger.LogInformation("[StartupOrchestrator] WoW is running, proceeding to frame configuration");
-            _logger.LogInformation("[StartupOrchestrator] If character is not in-world, frame config will fail");
+            logger.LogInformation("[StartupOrchestrator] WoW is running, proceeding to frame configuration");
+            logger.LogInformation("[StartupOrchestrator] If character is not in-world, frame config will fail");
             
             // Give a short delay for any loading screens to complete
-            _state.StatusMessage = "WoW detected, preparing for frame configuration...";
-            await Task.Delay(2000, ct);
+            state.StatusMessage = "WoW detected, preparing for frame configuration...";
+            await Task.Delay(StageTransitionDelayMs, ct);
             
             return StageResult.Success("WoW process detected, proceeding to frame configuration");
         }
 
-        _logger.LogInformation("[StartupOrchestrator] Waiting for user to log in...");
-        _logger.LogInformation("[StartupOrchestrator] ┌────────────────────────────────────────────────────────────┐");
-        _logger.LogInformation("[StartupOrchestrator] │  Please log in to World of Warcraft and enter the world   │");
-        _logger.LogInformation("[StartupOrchestrator] │  with your character. The bot will continue automatically  │");
-        _logger.LogInformation("[StartupOrchestrator] │  once your character is in-game.                           │");
-        _logger.LogInformation("[StartupOrchestrator] └────────────────────────────────────────────────────────────┘");
+        logger.LogInformation("[StartupOrchestrator] Waiting for user to log in...");
+        logger.LogInformation("[StartupOrchestrator] ┌────────────────────────────────────────────────────────────┐");
+        logger.LogInformation("[StartupOrchestrator] │  Please log in to World of Warcraft and enter the world   │");
+        logger.LogInformation("[StartupOrchestrator] │  with your character. The bot will continue automatically  │");
+        logger.LogInformation("[StartupOrchestrator] │  once your character is in-game.                           │");
+        logger.LogInformation("[StartupOrchestrator] └────────────────────────────────────────────────────────────┘");
 
         // For now, we just wait for a reasonable time and let the frame configurator handle detection
         // In a more sophisticated implementation, we could poll pixel data to detect in-world state
 
-        // Wait up to 5 minutes for user to log in (checking every 5 seconds)
-        var timeout = _options.WaitForCharacterTimeoutSeconds > 0
-            ? TimeSpan.FromSeconds(_options.WaitForCharacterTimeoutSeconds)
-            : TimeSpan.FromMinutes(10); // Default max wait
+            // Wait up to 5 minutes for user to log in (checking every 5 seconds)
+            var timeout = options.WaitForCharacterTimeoutSeconds > 0
+                ? TimeSpan.FromSeconds(options.WaitForCharacterTimeoutSeconds)
+                : TimeSpan.FromMinutes(DefaultCharacterWaitTimeoutMinutes);
 
         var startTime = DateTime.UtcNow;
 
@@ -456,21 +494,21 @@ public sealed class StartupOrchestrator
             var elapsed = DateTime.UtcNow - startTime;
             if (elapsed > timeout)
             {
-                _logger.LogWarning("[StartupOrchestrator] Timeout waiting for character, proceeding anyway");
+                logger.LogWarning("[StartupOrchestrator] Timeout waiting for character, proceeding anyway");
                 return StageResult.Warning("Timeout waiting for character");
             }
 
             // Check if WoW is still running
-            if (!_wowLauncher.IsRunning())
+            if (!wowLauncher.IsRunning())
             {
                 return StageResult.Failed("WoW process exited");
             }
 
             // Update status message with elapsed time
             var remaining = timeout - elapsed;
-            _state.StatusMessage = $"Waiting for character to enter world... ({remaining:mm\\:ss} remaining)";
+            state.StatusMessage = $"Waiting for character to enter world... ({remaining:mm\\:ss} remaining)";
 
-            await Task.Delay(5000, ct);
+            await Task.Delay(CharacterWaitPollIntervalMs, ct);
         }
 
         return StageResult.Warning("Wait cancelled");
@@ -478,7 +516,7 @@ public sealed class StartupOrchestrator
 
     private async Task<StageResult> ConfigureFramesAsync(CancellationToken ct)
     {
-        if (!_options.AutoConfigureFrames)
+        if (!options.AutoConfigureFrames)
         {
             return StageResult.Skipped("Auto frame configuration disabled");
         }
@@ -486,80 +524,80 @@ public sealed class StartupOrchestrator
         // Check if frame config already exists and is valid
         if (FrameConfig.Exists() && AddonConfig.Exists())
         {
-            _state.FramesConfigured = true;
+            state.FramesConfigured = true;
             return StageResult.Skipped("Frame configuration already exists");
         }
 
-        _state.StatusMessage = "Configuring pixel reading frames...";
+        state.StatusMessage = "Configuring pixel reading frames...";
 
         // Check if we have the FrameConfigurator available
-        if (_frameConfigurator == null)
+        if (frameConfigurator == null)
         {
-            _logger.LogWarning("[StartupOrchestrator] FrameConfigurator not available - please configure manually");
-            _state.StatusMessage = "Frame configuration required - please use the WebUI";
+            logger.LogWarning("[StartupOrchestrator] FrameConfigurator not available - please configure manually");
+            state.StatusMessage = "Frame configuration required - please use the WebUI";
             return StageResult.Warning("Frame configuration pending - complete in WebUI");
         }
 
-        _logger.LogInformation("[StartupOrchestrator] Starting automatic frame configuration...");
-        _logger.LogInformation("[StartupOrchestrator] This will type '/{Command}' in WoW chat to toggle config mode", GetAddonCommand());
+        logger.LogInformation("[StartupOrchestrator] Starting automatic frame configuration...");
+        logger.LogInformation("[StartupOrchestrator] This will type '/{Command}' in WoW chat to toggle config mode", GetAddonCommand());
         
         try
         {
             // Use the async version with retries
-            var success = await _frameConfigurator.StartAutoConfigWithRetriesAsync(
-                maxRetries: _options.FrameConfigMaxRetries,
-                retryDelaySeconds: _options.FrameConfigRetryDelaySeconds,
+            var success = await frameConfigurator.StartAutoConfigWithRetriesAsync(
+                maxRetries: options.FrameConfigMaxRetries,
+                retryDelaySeconds: options.FrameConfigRetryDelaySeconds,
                 cancellationToken: ct);
 
             if (success)
             {
-                _state.FramesConfigured = true;
-                _logger.LogInformation("[StartupOrchestrator] Frame configuration completed successfully!");
+                state.FramesConfigured = true;
+                logger.LogInformation("[StartupOrchestrator] Frame configuration completed successfully!");
                 return StageResult.Success("Frames configured successfully");
             }
             else
             {
                 // Check what went wrong
-                if (_frameConfigurator.PreFlightFailed)
+                if (frameConfigurator.PreFlightFailed)
                 {
-                    _logger.LogError("[StartupOrchestrator] Pre-flight checks failed: {Status}", 
-                        _frameConfigurator.StatusMessage);
-                    return StageResult.Failed($"Pre-flight failed: {_frameConfigurator.StatusMessage}");
+                    logger.LogError("[StartupOrchestrator] Pre-flight checks failed: {Status}", 
+                        frameConfigurator.StatusMessage);
+                    return StageResult.Failed($"Pre-flight failed: {frameConfigurator.StatusMessage}");
                 }
                 
-                if (_frameConfigurator.AddonNotVisible)
+                if (frameConfigurator.AddonNotVisible)
                 {
                     string command = GetAddonCommand();
-                    _logger.LogWarning("[StartupOrchestrator] Addon not visible - ensure character is in-world");
-                    _logger.LogWarning("[StartupOrchestrator] Run '/{Command}actions' in WoW to setup keybindings", command);
+                    logger.LogWarning("[StartupOrchestrator] Addon not visible - ensure character is in-world");
+                    logger.LogWarning("[StartupOrchestrator] Run '/{Command}actions' in WoW to setup keybindings", command);
                     return StageResult.Warning($"Addon not visible - run /{command}actions in WoW");
                 }
                 
-                _logger.LogWarning("[StartupOrchestrator] Frame configuration failed: {Status}", 
-                    _frameConfigurator.StatusMessage);
-                return StageResult.Warning($"Frame config incomplete: {_frameConfigurator.StatusMessage}");
+                logger.LogWarning("[StartupOrchestrator] Frame configuration failed: {Status}", 
+                    frameConfigurator.StatusMessage);
+                return StageResult.Warning($"Frame config incomplete: {frameConfigurator.StatusMessage}");
             }
         }
         catch (OperationCanceledException)
         {
-            _logger.LogWarning("[StartupOrchestrator] Frame configuration cancelled");
+            logger.LogWarning("[StartupOrchestrator] Frame configuration cancelled");
             return StageResult.Warning("Frame configuration cancelled");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[StartupOrchestrator] Frame configuration threw exception");
+            logger.LogError(ex, "[StartupOrchestrator] Frame configuration threw exception");
             return StageResult.Failed($"Frame configuration error: {ex.Message}", ex);
         }
     }
 
     private Task<StageResult> FinalValidationAsync(CancellationToken ct)
     {
-        _state.StatusMessage = "Performing final validation...";
+        state.StatusMessage = "Performing final validation...";
 
         var issues = new List<string>();
 
         // Check WoW is running
-        if (!_wowLauncher.IsRunning())
+        if (!wowLauncher.IsRunning())
         {
             issues.Add("WoW is not running");
         }
@@ -578,11 +616,11 @@ public sealed class StartupOrchestrator
 
         if (issues.Count > 0)
         {
-            _logger.LogWarning("[StartupOrchestrator] Validation issues: {Issues}", string.Join(", ", issues));
+            logger.LogWarning("[StartupOrchestrator] Validation issues: {Issues}", string.Join(", ", issues));
             return Task.FromResult(StageResult.Warning($"Ready with issues: {string.Join(", ", issues)}"));
         }
 
-        _state.FramesConfigured = true;
+        state.FramesConfigured = true;
         return Task.FromResult(StageResult.Success("All validations passed"));
     }
 
@@ -607,13 +645,13 @@ public sealed class StartupOrchestrator
 
     private async Task CleanupPathingApiPortIfStaleAsync(CancellationToken cancellationToken)
     {
-        if (_pathing.Type != StartupConfigPathing.Types.RemoteV1)
+        if (pathing.Type != StartupConfigPathing.Types.RemoteV1)
         {
             return;
         }
 
-        int port = _pathing.portv1 > 0 ? _pathing.portv1 : 5001;
-        string host = string.IsNullOrWhiteSpace(_pathing.hostv1) ? "127.0.0.1" : _pathing.hostv1;
+            int port = pathing.portv1 > 0 ? pathing.portv1 : DefaultPathingApiPort;
+            string host = string.IsNullOrWhiteSpace(pathing.hostv1) ? DefaultPathingApiHost : pathing.hostv1;
 
         if (!IsLocalHost(host))
         {
@@ -626,7 +664,7 @@ public sealed class StartupOrchestrator
             return;
         }
 
-        PortCleanupUtility.TryTerminateProcessHoldingPort(port, "PathingAPI", _logger);
+        PortCleanupUtility.TryTerminateProcessHoldingPort(port, "PathingAPI", logger);
     }
 
     private static async Task<bool> IsPathingApiHealthyAsync(string host, int port, CancellationToken cancellationToken)
@@ -635,7 +673,7 @@ public sealed class StartupOrchestrator
 
         try
         {
-            using HttpClient client = new() { Timeout = TimeSpan.FromSeconds(2) };
+            using HttpClient client = new() { Timeout = TimeSpan.FromSeconds(PathingApiHealthCheckTimeoutSeconds) };
             using HttpResponseMessage response = await client.GetAsync(url, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {

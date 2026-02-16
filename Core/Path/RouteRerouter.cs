@@ -19,20 +19,69 @@ namespace Core;
 /// </summary>
 public sealed class RouteRerouter : IRouteRerouter, IDisposable
 {
-    private readonly ILogger<RouteRerouter> _logger;
-    private readonly RouteRehabilitator? _rehabilitator;
-    private readonly HazardZoneStore? _hazardStore;
-    private readonly FeatureFlagService? _featureFlags;
+    private readonly ILogger<RouteRerouter> logger;
+    private readonly RouteRehabilitator? rehabilitator;
+    private readonly HazardZoneStore? hazardStore;
+    private readonly FeatureFlagService? featureFlags;
 
-    private RerouteInfo? _activeReroute;
-    private readonly object _rerouteLock = new();
-    private bool _isEnabled = true;
+    private RerouteInfo? activeReroute;
+    private readonly object rerouteLock = new();
+    private bool isEnabled = true;
 
     // Configuration
-    private float _hotZoneSeverityThreshold = 5f;
-    private float _safetyMargin = 30f;
-    private readonly TimeSpan _rerouteCooldown = TimeSpan.FromSeconds(5);
-    private DateTime _lastRerouteTime = DateTime.MinValue;
+    private float hotZoneSeverityThreshold = DefaultHotZoneSeverityThreshold;
+    private float safetyMargin = DefaultSafetyMargin;
+    private readonly TimeSpan rerouteCooldown = TimeSpan.FromSeconds(RerouteCooldownSeconds);
+    private DateTime lastRerouteTime = DateTime.MinValue;
+
+    /// <summary>
+    /// Default hot zone severity threshold.
+    /// Minimum severity score required to trigger a reroute around a hazard zone.
+    /// </summary>
+    private const float DefaultHotZoneSeverityThreshold = 5f;
+
+    /// <summary>
+    /// Minimum allowed hot zone severity threshold.
+    /// </summary>
+    private const float MinHotZoneSeverityThreshold = 1f;
+
+    /// <summary>
+    /// Maximum allowed hot zone severity threshold.
+    /// </summary>
+    private const float MaxHotZoneSeverityThreshold = 10f;
+
+    /// <summary>
+    /// Default safety margin in units (yards/meters).
+    /// Distance to maintain from hazard zones when calculating detours.
+    /// </summary>
+    private const float DefaultSafetyMargin = 30f;
+
+    /// <summary>
+    /// Minimum allowed safety margin.
+    /// </summary>
+    private const float MinSafetyMargin = 10f;
+
+    /// <summary>
+    /// Maximum allowed safety margin.
+    /// </summary>
+    private const float MaxSafetyMargin = 100f;
+
+    /// <summary>
+    /// Cooldown period in seconds between reroute attempts.
+    /// Prevents excessive rerouting in quick succession.
+    /// </summary>
+    private const int RerouteCooldownSeconds = 5;
+
+    /// <summary>
+    /// Minimum number of waypoints required for a valid path.
+    /// </summary>
+    private const int MinPathWaypoints = 2;
+
+    /// <summary>
+    /// Epsilon value for floating-point path length comparisons.
+    /// Used to detect zero-length paths.
+    /// </summary>
+    private const float PathLengthEpsilon = 0.001f;
 
     /// <inheritdoc />
     public event Action<RerouteEventArgs>? OnRerouteTriggered;
@@ -41,35 +90,35 @@ public sealed class RouteRerouter : IRouteRerouter, IDisposable
     public event Action<DetourPathCalculatedEventArgs>? OnDetourCalculated;
 
     /// <inheritdoc />
-    public bool IsEnabled => _isEnabled && (_featureFlags?.IsHazardAvoidanceEnabled ?? true);
+    public bool IsEnabled => isEnabled && (featureFlags?.IsHazardAvoidanceEnabled ?? true);
 
     /// <inheritdoc />
     public float HotZoneSeverityThreshold
     {
-        get => _hotZoneSeverityThreshold;
-        set => _hotZoneSeverityThreshold = Math.Max(1f, Math.Min(10f, value));
+        get => hotZoneSeverityThreshold;
+        set => hotZoneSeverityThreshold = Math.Max(MinHotZoneSeverityThreshold, Math.Min(MaxHotZoneSeverityThreshold, value));
     }
 
     /// <inheritdoc />
     public float SafetyMargin
     {
-        get => _safetyMargin;
-        set => _safetyMargin = Math.Max(10f, Math.Min(100f, value));
+        get => safetyMargin;
+        set => safetyMargin = Math.Max(MinSafetyMargin, Math.Min(MaxSafetyMargin, value));
     }
 
     public RouteRerouter(
-        ILogger<RouteRerouter> logger,
-        RouteRehabilitator? rehabilitator = null,
-        HazardZoneStore? hazardStore = null,
-        FeatureFlagService? featureFlags = null)
+        ILogger<RouteRerouter> loggerParam,
+        RouteRehabilitator? rehabilitatorParam = null,
+        HazardZoneStore? hazardStoreParam = null,
+        FeatureFlagService? featureFlagsParam = null)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _rehabilitator = rehabilitator;
-        _hazardStore = hazardStore;
-        _featureFlags = featureFlags;
+        logger = loggerParam ?? throw new ArgumentNullException(nameof(loggerParam));
+        rehabilitator = rehabilitatorParam;
+        hazardStore = hazardStoreParam;
+        featureFlags = featureFlagsParam;
 
-        _logger.LogInformation("[RouteRerouter  ] Initialized with threshold={Threshold}, margin={Margin}",
-            _hotZoneSeverityThreshold, _safetyMargin);
+        logger.LogInformation("[RouteRerouter ] Initialized with threshold={Threshold}, margin={Margin}",
+            hotZoneSeverityThreshold, safetyMargin);
     }
 
     /// <inheritdoc />
@@ -81,14 +130,14 @@ public sealed class RouteRerouter : IRouteRerouter, IDisposable
     {
         if (!IsEnabled)
         {
-            _logger.LogDebug("[RouteRerouter  ] Reroute skipped - disabled");
+            logger.LogDebug("[RouteRerouter ] Reroute skipped - disabled");
             return false;
         }
 
         // Check cooldown
-        if (DateTime.UtcNow - _lastRerouteTime < _rerouteCooldown)
+        if (DateTime.UtcNow - lastRerouteTime < rerouteCooldown)
         {
-            _logger.LogDebug("[RouteRerouter  ] Reroute skipped - cooldown active");
+            logger.LogDebug("[RouteRerouter ] Reroute skipped - cooldown active");
             return false;
         }
 
@@ -106,10 +155,10 @@ public sealed class RouteRerouter : IRouteRerouter, IDisposable
 
         // Check if severity threshold is met
         float maxSeverity = hotZones.Max(z => z.Severity);
-        if (maxSeverity < _hotZoneSeverityThreshold)
+        if (maxSeverity < hotZoneSeverityThreshold)
         {
-            _logger.LogDebug("[RouteRerouter  ] Hot zones detected but severity {Severity} below threshold {Threshold}",
-                maxSeverity, _hotZoneSeverityThreshold);
+            logger.LogDebug("[RouteRerouter ] Hot zones detected but severity {Severity} below threshold {Threshold}",
+                maxSeverity, hotZoneSeverityThreshold);
             return false;
         }
 
@@ -117,16 +166,16 @@ public sealed class RouteRerouter : IRouteRerouter, IDisposable
         Vector3[] originalPath = [currentPosition, targetPosition];
         Vector3[]? detourPath = await CalculateDetourAsync(originalPath, mapId, cancellationToken);
 
-        if (detourPath == null || detourPath.Length < 2)
+            if (detourPath == null || detourPath.Length < MinPathWaypoints)
         {
-            _logger.LogWarning("[RouteRerouter  ] Failed to calculate detour path");
+            logger.LogWarning("[RouteRerouter ] Failed to calculate detour path");
             return false;
         }
 
         // Create reroute info
-        lock (_rerouteLock)
+        lock (rerouteLock)
         {
-            _activeReroute = new RerouteInfo
+            activeReroute = new RerouteInfo
             {
                 Id = Guid.NewGuid(),
                 StartedAt = DateTime.UtcNow,
@@ -135,7 +184,7 @@ public sealed class RouteRerouter : IRouteRerouter, IDisposable
                 CurrentWaypointIndex = 0,
                 IsCompleted = false
             };
-            _lastRerouteTime = DateTime.UtcNow;
+            lastRerouteTime = DateTime.UtcNow;
         }
 
         // Notify listeners
@@ -148,8 +197,8 @@ public sealed class RouteRerouter : IRouteRerouter, IDisposable
         };
         OnRerouteTriggered?.Invoke(rerouteArgs);
 
-        _logger.LogInformation(
-            "[RouteRerouter  ] Reroute triggered: {ZoneCount} hot zones, {WaypointCount} waypoints",
+        logger.LogInformation(
+            "[RouteRerouter ] Reroute triggered: {ZoneCount} hot zones, {WaypointCount} waypoints",
             hotZones.Count, detourPath.Length);
 
         return true;
@@ -163,7 +212,7 @@ public sealed class RouteRerouter : IRouteRerouter, IDisposable
     {
         var stopwatch = Stopwatch.StartNew();
 
-        if (!IsEnabled || _rehabilitator == null || originalPath.Length < 2)
+            if (!IsEnabled || rehabilitator == null || originalPath.Length < MinPathWaypoints)
         {
             return Task.FromResult<Vector3[]?>(null);
         }
@@ -172,8 +221,8 @@ public sealed class RouteRerouter : IRouteRerouter, IDisposable
         Vector3 end = originalPath[^1];
 
         // Get alternative path suggestions from RouteRehabilitator
-        List<Vector3> detourPoints = _rehabilitator.SuggestAlternativePath(
-            start, end, mapId, _safetyMargin);
+        List<Vector3> detourPoints = rehabilitator.SuggestAlternativePath(
+            start, end, mapId, safetyMargin);
 
         if (detourPoints.Count == 0)
         {
@@ -206,8 +255,8 @@ public sealed class RouteRerouter : IRouteRerouter, IDisposable
         };
         OnDetourCalculated?.Invoke(args);
 
-        _logger.LogDebug(
-            "[RouteRerouter  ] Detour calculated: {Distance:F1}m additional, {TimeMs:F1}ms",
+        logger.LogDebug(
+            "[RouteRerouter ] Detour calculated: {Distance:F1}m additional, {TimeMs:F1}ms",
             additionalDistance, stopwatch.Elapsed.TotalMilliseconds);
 
         return Task.FromResult<Vector3[]?>(detourPath.ToArray());
@@ -216,31 +265,31 @@ public sealed class RouteRerouter : IRouteRerouter, IDisposable
     /// <inheritdoc />
     public RerouteInfo? GetActiveReroute()
     {
-        lock (_rerouteLock)
+        lock (rerouteLock)
         {
-            return _activeReroute;
+            return activeReroute;
         }
     }
 
     /// <inheritdoc />
     public void ClearActiveReroute()
     {
-        lock (_rerouteLock)
+        lock (rerouteLock)
         {
-            if (_activeReroute != null)
+            if (activeReroute != null)
             {
-                _activeReroute.IsCompleted = true;
-                _logger.LogDebug("[RouteRerouter  ] Active reroute cleared");
+                activeReroute.IsCompleted = true;
+                logger.LogDebug("[RouteRerouter ] Active reroute cleared");
             }
-            _activeReroute = null;
+            activeReroute = null;
         }
     }
 
     /// <inheritdoc />
     public void SetEnabled(bool enabled)
     {
-        _isEnabled = enabled;
-        _logger.LogInformation("[RouteRerouter  ] Auto-rerouting {Status}",
+        isEnabled = enabled;
+        logger.LogInformation("[RouteRerouter ] Auto-rerouting {Status}",
             enabled ? "enabled" : "disabled");
     }
 
@@ -250,19 +299,19 @@ public sealed class RouteRerouter : IRouteRerouter, IDisposable
     /// </summary>
     public bool AdvanceWaypoint()
     {
-        lock (_rerouteLock)
+        lock (rerouteLock)
         {
-            if (_activeReroute == null)
+            if (activeReroute == null)
             {
                 return false;
             }
 
-            _activeReroute.CurrentWaypointIndex++;
+            activeReroute.CurrentWaypointIndex++;
 
-            if (_activeReroute.CurrentWaypointIndex >= _activeReroute.DetourWaypoints.Length)
+            if (activeReroute.CurrentWaypointIndex >= activeReroute.DetourWaypoints.Length)
             {
-                _activeReroute.IsCompleted = true;
-                _activeReroute = null;
+                activeReroute.IsCompleted = true;
+                activeReroute = null;
                 return false;
             }
 
@@ -275,15 +324,15 @@ public sealed class RouteRerouter : IRouteRerouter, IDisposable
     /// </summary>
     public Vector3? GetCurrentWaypoint()
     {
-        lock (_rerouteLock)
+        lock (rerouteLock)
         {
-            if (_activeReroute == null ||
-                _activeReroute.CurrentWaypointIndex >= _activeReroute.DetourWaypoints.Length)
+            if (activeReroute == null ||
+                activeReroute.CurrentWaypointIndex >= activeReroute.DetourWaypoints.Length)
             {
                 return null;
             }
 
-            return _activeReroute.DetourWaypoints[_activeReroute.CurrentWaypointIndex];
+            return activeReroute.DetourWaypoints[activeReroute.CurrentWaypointIndex];
         }
     }
 
@@ -295,24 +344,24 @@ public sealed class RouteRerouter : IRouteRerouter, IDisposable
     {
         var hotZones = new List<HotZoneInfo>();
 
-        if (_hazardStore == null)
+        if (hazardStore == null)
         {
             return hotZones;
         }
 
         await Task.Yield(); // Allow cancellation
 
-        IReadOnlyList<HazardCluster> clusters = _hazardStore.GetClustersSnapshot(mapId);
+        IReadOnlyList<HazardCluster> clusters = hazardStore.GetClustersSnapshot(mapId);
 
         foreach (HazardCluster cluster in clusters)
         {
-            if (cluster.SeverityScore < _hotZoneSeverityThreshold)
+            if (cluster.SeverityScore < hotZoneSeverityThreshold)
             {
                 continue;
             }
 
             // Check if cluster is on the path
-            if (IsPointNearPath(currentPosition, targetPosition, cluster.Centroid, cluster.Radius + _safetyMargin))
+            if (IsPointNearPath(currentPosition, targetPosition, cluster.Centroid, cluster.Radius + safetyMargin))
             {
                 hotZones.Add(new HotZoneInfo
                 {
@@ -332,16 +381,16 @@ public sealed class RouteRerouter : IRouteRerouter, IDisposable
     {
         var zones = new List<HotZoneInfo>();
 
-        if (_hazardStore == null)
+        if (hazardStore == null)
         {
             return zones;
         }
 
-        IReadOnlyList<HazardCluster> clusters = _hazardStore.GetClustersSnapshot(mapId);
+        IReadOnlyList<HazardCluster> clusters = hazardStore.GetClustersSnapshot(mapId);
 
         foreach (HazardCluster cluster in clusters)
         {
-            if (IsPointNearPath(start, end, cluster.Centroid, cluster.Radius + _safetyMargin))
+            if (IsPointNearPath(start, end, cluster.Centroid, cluster.Radius + safetyMargin))
             {
                 zones.Add(new HotZoneInfo
                 {
@@ -362,7 +411,7 @@ public sealed class RouteRerouter : IRouteRerouter, IDisposable
         Vector3 pathDir = end - start;
         float pathLength = pathDir.Length();
 
-        if (pathLength < 0.001f)
+            if (pathLength < PathLengthEpsilon)
         {
             return Vector3.Distance(start, point) < threshold;
         }

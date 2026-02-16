@@ -68,6 +68,12 @@ public static class PortCleanupUtility
     /// </summary>
     public static HashSet<int> GetListeningProcessIds(int port)
     {
+        // Validate port is in valid range
+        if (port < 1 || port > 65535)
+        {
+            throw new ArgumentOutOfRangeException(nameof(port), "Port must be between 1 and 65535");
+        }
+
         HashSet<int> processIds = [];
 
         ProcessStartInfo psi = new()

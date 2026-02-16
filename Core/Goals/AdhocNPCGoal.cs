@@ -1,4 +1,4 @@
-﻿using Core.Database;
+using Core.Database;
 using Core.GOAP;
 
 using Game;
@@ -566,9 +566,9 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
         string[] allowedNames = [];
 
-        // TODO: faction specific filter?
-        // try to detect pattern
-        // [TYPE][ ][npc1 | npc2 | npc3]
+        // Parse NPC name pattern: [TYPE][ ][npc1 | npc2 | npc3]
+        // Supports multiple NPC names separated by pipe character
+        // Note: Faction-specific filtering could be added here in the future
         int separator = name.IndexOf(' ');
         if (separator != -1)
         {

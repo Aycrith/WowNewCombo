@@ -46,6 +46,7 @@ public sealed partial class BotController : IBotController, IDisposable
     private readonly ActionBarTextureReader textureReader;
     private readonly ActionBarMacroReader macroReader;
     private readonly IBotStartGuard botStartGuard;
+    private readonly ProfileManager profileManager;
 
     private readonly NpcNameOverlay? npcNameOverlay;
 
@@ -54,10 +55,44 @@ public sealed partial class BotController : IBotController, IDisposable
     private readonly Thread addonThread;
 
     private readonly Thread screenshotThread;
-    private const int screenshotTickMs = 200;
+
+    /// <summary>
+    /// Screenshot thread tick interval in milliseconds.
+    /// Controls the frequency of screen capture updates.
+    /// </summary>
+    private const int ScreenshotTickMs = 200;
 
     private readonly Thread? remotePathing;
-    private const int remotePathingTickMs = 500;
+
+    /// <summary>
+    /// Remote pathing thread tick interval in milliseconds.
+    /// Controls the frequency of path visualization updates sent to remote clients.
+    /// </summary>
+    private const int RemotePathingTickMs = 500;
+
+    /// <summary>
+    /// Minimum wait time in milliseconds for thread synchronization.
+    /// Ensures we don't wait negative time in WaitHandle operations.
+    /// </summary>
+    private const int MinimumWaitMs = 20;
+
+    /// <summary>
+    /// Player identity observation timeout in milliseconds.
+    /// How long to wait for valid player data before logging a warning.
+    /// </summary>
+    private const int PlayerIdentityTimeoutMs = 5000;
+
+    /// <summary>
+    /// Hash modulus for macro name hashing.
+    /// Used to compute consistent hash values for macro names.
+    /// </summary>
+    private const int MacroHashModulus = 200000;
+
+    /// <summary>
+    /// Addon thread sleep duration in milliseconds between update cycles.
+    /// Controls CPU usage of the addon reader thread.
+    /// </summary>
+    private const int AddonThreadSleepMs = 2;
 
     public string SelectedClassFilename { get; private set; } = string.Empty;
     public Dictionary<int, string> SelectedPathFilename { get; private set; } = [];
@@ -118,6 +153,8 @@ public sealed partial class BotController : IBotController, IDisposable
         this.npcNameFinder = npcNameFinder;
         this.npcResetEvent = npcResetEvent;
 
+        // Initialize ProfileManager
+        profileManager = new ProfileManager(dataConfig);
 
         if (overlayOptions.Value.Enabled)
             npcNameOverlay = new(process.MainWindowHandle, npcNameFinder, locations,
@@ -161,7 +198,7 @@ public sealed partial class BotController : IBotController, IDisposable
         {
             try
             {
-                if (!wait.Update(5000))
+                if (!wait.Update(PlayerIdentityTimeoutMs))
                 {
                     logger.LogWarning("Unable to read UnitClass/UnitRace yet (waiting for live addon data)");
                     continue;
@@ -205,7 +242,7 @@ public sealed partial class BotController : IBotController, IDisposable
     {
         foreach (KeyAction action in config.MacroActions)
         {
-            int actionHash = ActionBarMacroReader.ComputeDJB2Hash24(action.Name) % 200000;
+            int actionHash = ActionBarMacroReader.ComputeDJB2Hash24(action.Name) % MacroHashModulus;
 
             // If a specific slot changed, only update actions that match the hash
             // or actions that were previously on that slot
@@ -277,7 +314,7 @@ public sealed partial class BotController : IBotController, IDisposable
             AvgScreenLatency = Average(times);
             tickCount++;
 
-            Thread.Sleep(2);
+            Thread.Sleep(AddonThreadSleepMs);
         }
         logger.LogWarning("Addon thread stopped!");
 
@@ -332,11 +369,11 @@ public sealed partial class BotController : IBotController, IDisposable
             AvgNPCLatency = Average(npc);
 
             int waitResult =
-            WaitHandle.WaitAny(waitHandles,
-            Math.Max(
-                screenshotTickMs -
+                WaitHandle.WaitAny(waitHandles,
+                Math.Max(
+                ScreenshotTickMs -
                 (int)npc[tickCount & MOD],
-                20));
+                MinimumWaitMs));
 
             tickCount++;
 
@@ -375,7 +412,7 @@ public sealed partial class BotController : IBotController, IDisposable
 
         while (!cts.IsCancellationRequested)
         {
-            cts.Token.WaitHandle.WaitOne(remotePathingTickMs);
+            cts.Token.WaitHandle.WaitOne(RemotePathingTickMs);
 
             if (sessionScope == null || routeInfo == null)
                 continue;
@@ -531,8 +568,7 @@ public sealed partial class BotController : IBotController, IDisposable
 
     private ClassConfiguration ReadClassConfiguration(string classFile)
     {
-        string filePath = Path.Join(dataConfig.Class, classFile);
-        return DeserializeObject<ClassConfiguration>(File.ReadAllText(filePath))!;
+        return profileManager.ReadClassConfiguration(classFile);
     }
 
     public void Dispose()
@@ -560,26 +596,12 @@ public sealed partial class BotController : IBotController, IDisposable
 
     public IEnumerable<string> ClassFiles()
     {
-        var root = Path.Join(dataConfig.Class, Path.DirectorySeparatorChar.ToString());
-        var files = Directory.EnumerateFiles(root, "*.json*", SearchOption.AllDirectories)
-            .Select(path => path.Replace(root, string.Empty))
-            .OrderBy(x => x, new NaturalStringComparer())
-            .ToList();
-
-        files.Insert(0, "Press Init State first!");
-        return files;
+        return profileManager.GetClassFiles();
     }
 
     public IEnumerable<string> PathFiles()
     {
-        var root = Path.Join(dataConfig.Path, Path.DirectorySeparatorChar.ToString());
-        var files = Directory.EnumerateFiles(root, "*.json*", SearchOption.AllDirectories)
-            .Select(path => path.Replace(root, string.Empty))
-            .OrderBy(x => x, new NaturalStringComparer())
-            .ToList();
-
-        files.Insert(0, "Use Class Profile Default");
-        return files;
+        return profileManager.GetPathFiles();
     }
 
     public void LoadClassProfile(string classFilename)

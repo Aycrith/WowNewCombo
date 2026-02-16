@@ -59,7 +59,7 @@ public class GoapPlannerTests
     /// <summary>
     /// Test goal implementation for unit testing.
     /// </summary>
-    private class TestGoal : GoapGoal
+    private sealed class TestGoal : GoapGoal
     {
         private readonly float cost;
         private readonly bool canRunValue;

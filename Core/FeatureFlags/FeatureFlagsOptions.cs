@@ -242,8 +242,8 @@ public sealed class SmartBlacklistOptions
     public bool Enabled { get; set; } = true;
     public int MaxEntries { get; set; } = 1000;
     public int AutoSaveIntervalMinutes { get; set; } = 5;
-    public bool AutoSaveOnChange { get; set; } = false;
-    public bool LogBlacklistHits { get; set; } = false;
+    public bool AutoSaveOnChange { get; set; }
+    public bool LogBlacklistHits { get; set; }
 }
 
 /// <summary>

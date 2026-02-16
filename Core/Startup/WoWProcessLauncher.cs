@@ -246,9 +246,9 @@ public sealed class WoWProcessLauncher
                 }
             }
 
-            // TODO: In the full implementation, we would check if the addon is responding
-            // by looking at pixel data. For now, we rely on the FrameConfigurator to
-            // detect when the character is in-world during frame configuration.
+            // Note: Full addon responsiveness check would verify pixel data.
+            // Current implementation relies on FrameConfigurator to detect
+            // in-world state during frame configuration phase.
 
             await Task.Delay(1000, cancellationToken);
         }

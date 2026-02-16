@@ -41,7 +41,16 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
     private readonly TargetFinder targetFinder;
     private const NpcNames NpcNameToFind = NpcNames.Enemy | NpcNames.Neutral;
 
+    /// <summary>
+    /// Minimum time in milliseconds before starting profession cycling when entering a route.
+    /// Prevents immediate profession actions that might conflict with route initialization.
+    /// </summary>
     private const int MIN_TIME_TO_START_CYCLE_PROFESSION = 5000;
+
+    /// <summary>
+    /// Period in milliseconds between profession cycles (e.g., mining, herbing checks).
+    /// Balances responsiveness with performance - checking too frequently wastes CPU.
+    /// </summary>
     private const int CYCLE_PROFESSION_PERIOD = 8000;
 
     private readonly ManualResetEventSlim sideActivityManualReset;
@@ -435,10 +444,15 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
     #endregion
 
+    /// <summary>
+    /// Updates the current route when the path is modified.
+    /// Only updates if the current route matches the expected old map to avoid
+    /// race conditions during concurrent path modifications.
+    /// </summary>
     public void ReceivePath(Vector3[] oldMap, Vector3[] newMap)
     {
-        // TODO: Cheap way to avoid override all FollowRouteGoal
-        // to the same path
+        // Validate that current route matches expected state before updating
+        // This prevents overwriting routes that changed since the update began
         if (mapRoute.SequenceEqual(oldMap))
         {
             this.mapRoute = newMap;

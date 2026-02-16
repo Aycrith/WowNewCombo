@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 using PPather;
@@ -48,7 +48,34 @@ public class PathController : ControllerBase
     [HttpPost("SavePath")]
     public IActionResult SavePath([FromQuery] string fileName, [FromBody] Vector3[] mapPoints)
     {
-        string filePath = Path.Join(dataConfig.Path, fileName);
+        // Validate filename - prevent path traversal attacks
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            return BadRequest(new { Error = "Filename cannot be empty" });
+        }
+
+        // Check for path traversal sequences
+        if (fileName.Contains("..") || fileName.Contains('/') || fileName.Contains('\\'))
+        {
+            return BadRequest(new { Error = "Invalid filename - path traversal detected" });
+        }
+
+        // Ensure file has .json extension
+        if (!fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        {
+            fileName += ".json";
+        }
+
+        // Resolve the full path and verify it's within the allowed directory
+        string filePath = Path.GetFullPath(Path.Combine(dataConfig.Path, fileName));
+        string fullDataPath = Path.GetFullPath(dataConfig.Path);
+
+        // Security check: verify the resolved path is within the allowed directory
+        if (!filePath.StartsWith(fullDataPath, StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest(new { Error = "Invalid path - file must be within data directory" });
+        }
+
         System.IO.File.WriteAllText(filePath, JsonSerializer.Serialize(mapPoints, options));
 
         return Ok();

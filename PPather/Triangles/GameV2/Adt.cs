@@ -1,4 +1,4 @@
-﻿using SharedLib;
+using SharedLib;
 
 using System;
 using System.Collections.Generic;
@@ -621,8 +621,10 @@ public sealed class Adt
                                 AddLiquidVert(mliq.Value, dataPtr, (int)y + 1, (int)x, structure.Verts, tranform);
                                 AddLiquidVert(mliq.Value, dataPtr, (int)y + 1, (int)x + 1, structure.Verts, tranform);
                                 
-                                byte f = 0; // TODO: interpret flags from flagsSpan as needed.
-                                if (true || f != 0x0F)
+            // Liquid flags interpretation - currently using default behavior
+            // flagsSpan contains additional liquid type flags that could be processed here
+            byte f = 0;
+            if (true || f != 0x0F)
                                 {
                                     structure.Tris.Add(new Tri(vertsIndex + 2, vertsIndex, vertsIndex + 1));
                                     structure.Tris.Add(new Tri(vertsIndex + 1, vertsIndex + 3, vertsIndex + 2));

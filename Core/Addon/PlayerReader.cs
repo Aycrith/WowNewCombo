@@ -31,7 +31,8 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
         SpellInRange = spellInRange;
         Stance = stance;
 
-        // TODO: inject! value type tho
+        // CustomTrigger1 is a value type and cannot be easily injected via DI.
+        // It reads from a specific frame index and is instantiated here for simplicity.
         CustomTrigger1 = new(reader.GetInt(74));
     }
 

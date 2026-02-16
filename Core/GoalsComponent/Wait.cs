@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -30,7 +30,10 @@ public sealed class Wait
         {
             globalTime.Wait(token);
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            // Expected when cancellation is requested - continue with reset
+        }
 
         globalTime.Reset();
     }

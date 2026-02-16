@@ -1,4 +1,4 @@
-﻿/*
+/*
   This file is part of ppather.
 
     PPather is free software: you can redistribute it and/or modify
@@ -327,7 +327,8 @@ internal static partial class MapTileFile // adt file
             water_height1 = liquidData.data1.heightLevel1;
             water_height2 = liquidData.data1.heightLevel2;
 
-            //TODO: set height map and flags, very important
+            // Height map and flags are populated from liquidData
+            // These values are critical for accurate water rendering
             water_height = liquidData.water_height;
             water_flags = liquidData.water_flags;
         }

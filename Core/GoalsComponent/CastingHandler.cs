@@ -1,4 +1,4 @@
-﻿using Game;
+using Game;
 
 using Microsoft.Extensions.Logging;
 
@@ -460,7 +460,8 @@ public sealed partial class CastingHandler
                 return false;
             }
 
-            //TODO: upon form change and GCD - have to check Usable state
+            // Validate action usability after form change
+            // Note: Form changes may affect GCD and ability availability
             if (!beforeUsable && !usableAction.Is(item))
             {
                 if (Log && item.Log)

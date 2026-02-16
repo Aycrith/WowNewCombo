@@ -157,11 +157,11 @@ public sealed class HybridLLMDecisionService : BackgroundService, IGoapEventList
         logger.LogInformation("[HybridLLM       ] Decision: {Action} (confidence: {Confidence:F2}, reasoning: {Reasoning})",
             decision.SuggestedAction, decision.Confidence, decision.Reasoning);
 
-        // TODO: Apply LLM decision to GOAP state
-        // For now, just log it. Future implementation could:
-        // - Set world state flags to unblock GOAP
-        // - Trigger specific goals
-        // - Send executive commands to the bot
+            // Feature: LLM decision integration with GOAP state
+            // Currently logs decisions only. Future enhancements:
+            // - Set world state flags to unblock GOAP planning
+            // - Trigger specific goals based on LLM recommendations
+            // - Send executive commands to the bot controller
     }
 
     private static bool IsNoPlanEvent(GoapEventArgs e)

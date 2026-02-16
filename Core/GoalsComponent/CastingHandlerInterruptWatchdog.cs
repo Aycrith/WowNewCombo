@@ -1,4 +1,4 @@
-﻿using Core.GOAP;
+using Core.GOAP;
 
 using Microsoft.Extensions.Logging;
 
@@ -55,11 +55,31 @@ public sealed class CastingHandlerInterruptWatchdog : IDisposable
             while (!token.IsCancellationRequested && initialValue == interrupt.Invoke())
             {
                 wait.Update(token);
-                try
-                {
-                    resetEvent.Wait(token);
-                }
-                catch (OperationCanceledException) { }
+        try
+        {
+            resetEvent.Wait(token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when cancellation is requested during watchdog operation
+        }
+
+        interruptCts.Cancel();
+
+        if (Log)
+        {
+            logger.LogWarning("Interrupted! Waiting...");
+        }
+
+        resetEvent.Reset();
+        try
+        {
+            resetEvent.Wait(token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when cancellation is requested during reset operation
+        }
             }
 
             interruptCts.Cancel();
