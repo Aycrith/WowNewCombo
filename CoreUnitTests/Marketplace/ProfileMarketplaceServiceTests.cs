@@ -257,7 +257,7 @@ public sealed class ProfileMarketplaceServiceTests
     private static ProfileMarketplaceService CreateService(
         Core.FeatureFlags.FeatureFlagService? featureFlagService = null)
     {
-        FakeHttpClientFactory httpClientFactory = new();
+        HttpClient httpClient = new();
         Microsoft.Extensions.Logging.Abstractions.NullLogger<ProfileMarketplaceService> logger = new();
         DataConfig dataConfig = new();
         Core.FeatureFlags.ProfileMarketplaceOptions options = new()
@@ -269,19 +269,10 @@ public sealed class ProfileMarketplaceServiceTests
         };
 
         return new ProfileMarketplaceService(
-            httpClientFactory,
+            httpClient,
             logger,
             dataConfig,
             Microsoft.Extensions.Options.Options.Create(options),
             featureFlagService);
-    }
-
-    // =======================================================================
-    // Test doubles
-    // =======================================================================
-
-    private sealed class FakeHttpClientFactory : System.Net.Http.IHttpClientFactory
-    {
-        public HttpClient CreateClient(string name) => new();
     }
 }

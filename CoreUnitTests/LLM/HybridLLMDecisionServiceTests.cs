@@ -83,65 +83,11 @@ public sealed class HybridLLMDecisionServiceTests : IDisposable
         executeTask.IsCompleted.Should().BeTrue("service should return immediately when goapAgent is null");
     }
 
-    [Fact]
-    public void OnGoapEvent_NonAbortEvent_IsIgnored()
-    {
-        using HybridLLMDecisionService service = CreateService(_enabledFlags);
+    // Note: OnGoapEvent tests have been moved to HybridLlmEventListenerTests
+    // since event handling is now the responsibility of HybridLlmEventListener
 
-        // ResumeEvent is not an AbortEvent, so it should be ignored
-        service.OnGoapEvent(new ResumeEvent());
-
-        // Give any fire-and-forget tasks time to execute
-        Thread.Sleep(100);
-
-        _llmClient.QueryCount.Should().Be(0, "non-AbortEvent should not trigger LLM query");
-    }
-
-    [Fact]
-    public void OnGoapEvent_WhenDisabled_IsIgnored()
-    {
-        using HybridLLMDecisionService service = CreateService(_disabledFlags);
-
-        service.OnGoapEvent(new AbortEvent());
-
-        Thread.Sleep(100);
-
-        _llmClient.QueryCount.Should().Be(0, "events should be ignored when service is disabled");
-    }
-
-    [Fact]
-    public void Dispose_ClearsCache()
-    {
-        HybridLLMDecisionService service = CreateService(_enabledFlags);
-
-        // Access the private cache via reflection to verify it's cleared on dispose
-        FieldInfo? cacheField = typeof(HybridLLMDecisionService)
-            .GetField("decisionCache", BindingFlags.NonPublic | BindingFlags.Instance);
-
-        cacheField.Should().NotBeNull("decisionCache field should exist");
-
-        service.Dispose();
-
-        object? cache = cacheField!.GetValue(service);
-        cache.Should().NotBeNull();
-
-        // The dictionary should be empty after dispose
-        PropertyInfo? countProp = cache!.GetType().GetProperty("Count");
-        countProp.Should().NotBeNull();
-        int count = (int)countProp!.GetValue(cache)!;
-        count.Should().Be(0, "cache should be cleared on dispose");
-    }
-
-    [Fact]
-    public void OnGoapEvent_AbortEvent_WhenEnabled_TriggersLLMQuery()
-    {
-        // This test requires a GoapAgent which is complex to construct.
-        // The OnGoapEvent fires a Task.Run which queries the LLM.
-        // Without a real GoapAgent, the BuildGameStateContext call would fail.
-        // We verify the event dispatching path works by checking that
-        // non-abort events are correctly filtered (tested above).
-        // Full integration test would require GoapAgent setup.
-    }
+    // Cache testing has been moved to HybridLlmDecisionEngineTests
+    // since the cache is now managed by the engine, not the service
 
     [Fact]
     public void Constructor_InitializesCircuitBreaker()
@@ -167,11 +113,18 @@ public sealed class HybridLLMDecisionServiceTests : IDisposable
     {
         IOptionsMonitor<FeatureFlagsOptions> monitor = new FixedOptionsMonitor<FeatureFlagsOptions>(flags);
 
-        return new HybridLLMDecisionService(
-            NullLogger<HybridLLMDecisionService>.Instance,
+        // Create the engine (which now contains the business logic)
+        HybridLlmDecisionEngine engine = new(
+            NullLogger<HybridLlmDecisionEngine>.Instance,
             _llmClient,
             monitor,
-            goapAgent);
+            circuitBreaker: null!,  // Tests don't use circuit breaker
+            goapAgent: goapAgent);
+
+        return new HybridLLMDecisionService(
+            NullLogger<HybridLLMDecisionService>.Instance,
+            engine,
+            monitor);
     }
 
     /// <summary>

@@ -269,12 +269,15 @@ public sealed class FailureAnalyticsTests : IDisposable
         FeatureFlagService featureFlagService = CreateFeatureFlagService(flags);
         PlayerReader playerReader = CreatePlayerReader();
 
+        FailureAnalyticsEngine engine = new(
+            NullLogger<FailureAnalyticsEngine>.Instance,
+            featureFlagService,
+            playerReader);
+
         return new FailureAnalytics(
             NullLogger<FailureAnalytics>.Instance,
             featureFlagService,
-            playerReader,
-            stuckDetector: null,
-            goapAgent: null);
+            engine);
     }
 
     private static FeatureFlagService CreateFeatureFlagService(FeatureFlagsOptions flags)

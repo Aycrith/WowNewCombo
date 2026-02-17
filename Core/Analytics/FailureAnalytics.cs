@@ -68,6 +68,46 @@ public sealed class FailureAnalytics : IHostedService, IDisposable
         return engine.GetSessionStatistics();
     }
 
+    /// <summary>
+    /// Records a death event (delegates to engine).
+    /// </summary>
+    public void RecordDeath(string? cause = null)
+    {
+        engine.RecordDeath(cause);
+    }
+
+    /// <summary>
+    /// Records a failed pull attempt (delegates to engine).
+    /// </summary>
+    public void RecordFailedPull(int targetGuid, string reason)
+    {
+        engine.RecordFailedPull(targetGuid, reason);
+    }
+
+    /// <summary>
+    /// Records a multi-mob retreat (delegates to engine).
+    /// </summary>
+    public void RecordMultiMobRetreat(int mobCount)
+    {
+        engine.RecordMultiMobRetreat(mobCount);
+    }
+
+    /// <summary>
+    /// Handles GOAP events - only AbortEvent is recorded as a NoPlan failure (delegates to engine).
+    /// Note: StuckDetector events are handled by FailureAnalyticsEventListener instead.
+    /// </summary>
+    public void OnGoapEvent(GoapEventArgs e)
+    {
+        if (!featureFlags.Current.FailureAnalytics.Enabled)
+            return;
+
+        // Only respond to "NO PLAN" events (AbortEvent)
+        if (e is AbortEvent)
+        {
+            engine.RecordNoPlanFailure("GOAP could not find valid plan");
+        }
+    }
+
     public void Dispose()
     {
         flushTimer?.Dispose();
