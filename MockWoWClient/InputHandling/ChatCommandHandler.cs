@@ -113,7 +113,7 @@ public sealed class ChatCommandHandler
         // In the real addon, this toggles between config mode and data mode
         // Config mode displays frame indices as RGB values
         // Data mode displays actual game data
-        
+
         // This will be handled by the MockWoWClient's mode property
         OnConfigModeToggled?.Invoke();
     }

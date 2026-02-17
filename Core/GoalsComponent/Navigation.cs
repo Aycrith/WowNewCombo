@@ -279,7 +279,8 @@ public sealed partial class Navigation : IDisposable
         }
 
         int removed = 0;
-        while (AdjustNextWaypointPointToClosest() && removed < 5) { removed++; };
+        while (AdjustNextWaypointPointToClosest() && removed < 5) { removed++; }
+        ;
         if (removed > 0)
         {
             UpdateTotalRoute();
@@ -460,7 +461,7 @@ public sealed partial class Navigation : IDisposable
 
                 logger.LogWarning($"Found closest spawn {creature.Name}");
             }
- 
+
             if (failedAttempt > 2)
             {
                 failedAttempt = 0;

@@ -436,10 +436,10 @@ public static partial class NativeMethods
         // The virtual key is ignored when SCANCODE flag is set
         // For key up, we need BOTH KEYEVENTF_KEYUP AND KEYEVENTF_SCANCODE
         uint flags = KEYEVENTF_SCANCODE;
-        
+
         if (keyUp)
             flags |= KEYEVENTF_KEYUP;
-            
+
         if (IsExtendedKey(virtualKey))
             flags |= KEYEVENTF_EXTENDEDKEY;
 

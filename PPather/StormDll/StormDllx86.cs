@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace StormDll;
- 
+
 internal sealed partial class StormDllx86
 {
     [LibraryImport("MPQ\\StormLib_x86.dll")]

@@ -208,11 +208,11 @@ public sealed class JsonToBehaviorTreeConverter
         int threshold = ParseThreshold(requirement);
         int healthPercent = ctx.Player.HealthPercent();
 
-        if (requirement.Contains(">"))
+        if (requirement.Contains('>'))
         {
             return healthPercent > threshold;
         }
-        else if (requirement.Contains("<"))
+        else if (requirement.Contains('<'))
         {
             return healthPercent < threshold;
         }
@@ -225,11 +225,11 @@ public sealed class JsonToBehaviorTreeConverter
         int threshold = ParseThreshold(requirement);
         int resourcePercent = ctx.Player.ManaPercent();
 
-        if (requirement.Contains(">"))
+        if (requirement.Contains('>'))
         {
             return resourcePercent > threshold;
         }
-        else if (requirement.Contains("<"))
+        else if (requirement.Contains('<'))
         {
             return resourcePercent < threshold;
         }
@@ -246,11 +246,11 @@ public sealed class JsonToBehaviorTreeConverter
 
         int threshold = ParseThreshold(requirement);
 
-        if (requirement.Contains(">"))
+        if (requirement.Contains('>'))
         {
             return ctx.CurrentTarget.HealthPercent > threshold;
         }
-        else if (requirement.Contains("<"))
+        else if (requirement.Contains('<'))
         {
             return ctx.CurrentTarget.HealthPercent < threshold;
         }

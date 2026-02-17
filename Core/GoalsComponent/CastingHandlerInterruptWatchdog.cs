@@ -55,31 +55,31 @@ public sealed class CastingHandlerInterruptWatchdog : IDisposable
             while (!token.IsCancellationRequested && initialValue == interrupt.Invoke())
             {
                 wait.Update(token);
-        try
-        {
-            resetEvent.Wait(token);
-        }
-        catch (OperationCanceledException)
-        {
-            // Expected when cancellation is requested during watchdog operation
-        }
+                try
+                {
+                    resetEvent.Wait(token);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected when cancellation is requested during watchdog operation
+                }
 
-        interruptCts.Cancel();
+                interruptCts.Cancel();
 
-        if (Log)
-        {
-            logger.LogWarning("Interrupted! Waiting...");
-        }
+                if (Log)
+                {
+                    logger.LogWarning("Interrupted! Waiting...");
+                }
 
-        resetEvent.Reset();
-        try
-        {
-            resetEvent.Wait(token);
-        }
-        catch (OperationCanceledException)
-        {
-            // Expected when cancellation is requested during reset operation
-        }
+                resetEvent.Reset();
+                try
+                {
+                    resetEvent.Wait(token);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected when cancellation is requested during reset operation
+                }
             }
 
             interruptCts.Cancel();

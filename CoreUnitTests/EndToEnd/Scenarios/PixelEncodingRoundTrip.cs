@@ -36,7 +36,7 @@ public sealed class PixelEncodingRoundTrip : TestScenarioBase
     public override async Task InitializeAsync()
     {
         await base.InitializeAsync();
-        
+
         // Get components from the already-initialized MockClient
         _gameState = MockClient.GameState;
         _renderer = MockClient.Renderer;
@@ -103,7 +103,7 @@ public sealed class PixelEncodingRoundTrip : TestScenarioBase
 
         // Assert: Verify target health was encoded
         Assert.Equal(npc.Health, decodedValues[FrameIndices.TargetHealth]);
-        
+
         // Verify HasTarget bit is set in BitsCell1
         bool hasTargetBit = (decodedValues[FrameIndices.BitsCell1] & (1 << AddonBitFlags.HasTarget)) != 0;
         Assert.True(hasTargetBit);
@@ -144,15 +144,15 @@ public sealed class PixelEncodingRoundTrip : TestScenarioBase
 
         // Act - capture the screen
         using var image = _renderer.CaptureScreen();
-        
+
         // Debug: Print image size
         _output.WriteLine($"Image size: {image.Width}x{image.Height}");
-        
+
         // Sample the center of the last frame
         int centerX = lastFrame.X + lastFrame.Width / 2;
         int centerY = lastFrame.Y + lastFrame.Height / 2;
         _output.WriteLine($"Sampling pixel at [{centerX},{centerY}]");
-        
+
         var lastPixel = image[centerX, centerY];
         _output.WriteLine($"Last frame pixel: R={lastPixel.R}, G={lastPixel.G}, B={lastPixel.B}");
 
@@ -172,7 +172,7 @@ public sealed class PixelEncodingRoundTrip : TestScenarioBase
     {
         using var image = _renderer.CaptureScreen();
         var values = new int[324];
-        
+
         // Grid layout: 50 rows (324 frames / 50 rows = 6.48 -> 7 cols)
         const int rows = 50;
 
@@ -181,11 +181,11 @@ public sealed class PixelEncodingRoundTrip : TestScenarioBase
             // Frame i is at: row = i % 50, col = i / 50
             int row = i % rows;
             int col = i / rows;
-            
+
             // Each cell is CellSize (4) pixels
             int pixelX = col * 4 + 2; // Center of the 4x4 cell
             int pixelY = row * 4 + 2;
-            
+
             if (pixelX < image.Width && pixelY < image.Height)
             {
                 var pixel = image[pixelX, pixelY];

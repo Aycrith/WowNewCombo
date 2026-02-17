@@ -223,9 +223,9 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
 
                     return;
                 }
-            // Handle pacified state - occurs when mounted and attempting combat actions
-            // Dismount and retry interaction to resolve the pacified condition
-            else if (playerReader.LastUIError == UI_ERROR.ERR_ATTACK_PACIFIED)
+                // Handle pacified state - occurs when mounted and attempting combat actions
+                // Dismount and retry interaction to resolve the pacified condition
+                else if (playerReader.LastUIError == UI_ERROR.ERR_ATTACK_PACIFIED)
                 {
                     playerReader.LastUIError = UI_ERROR.NONE;
 

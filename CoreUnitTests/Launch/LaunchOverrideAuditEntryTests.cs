@@ -76,9 +76,9 @@ public class LaunchOverrideAuditEntryTests
         // Arrange
         DateTimeOffset timestamp = DateTimeOffset.UtcNow;
         var entry1 = new LaunchOverrideAuditEntry(
-            timestamp,             LaunchSubsystem.Frames, "Enable", true, "Test", "UI");
+            timestamp, LaunchSubsystem.Frames, "Enable", true, "Test", "UI");
         var entry2 = new LaunchOverrideAuditEntry(
-            timestamp,             LaunchSubsystem.Frames, "Enable", true, "Test", "UI");
+            timestamp, LaunchSubsystem.Frames, "Enable", true, "Test", "UI");
 
         // Assert
         entry1.Should().Be(entry2);
@@ -92,7 +92,7 @@ public class LaunchOverrideAuditEntryTests
         // Arrange
         DateTimeOffset timestamp = DateTimeOffset.UtcNow;
         var entry1 = new LaunchOverrideAuditEntry(
-            timestamp,             LaunchSubsystem.Addons, "Enable", true, "Test", "UI");
+            timestamp, LaunchSubsystem.Addons, "Enable", true, "Test", "UI");
         var entry2 = new LaunchOverrideAuditEntry(
             timestamp, LaunchSubsystem.Addons, "Disable", true, "Test", "UI");
 
@@ -107,7 +107,7 @@ public class LaunchOverrideAuditEntryTests
         // Arrange
         DateTimeOffset timestamp = DateTimeOffset.UtcNow;
         var entry = new LaunchOverrideAuditEntry(
-            timestamp,             LaunchSubsystem.Navigation, "Test", false, "Reason", "System");
+            timestamp, LaunchSubsystem.Navigation, "Test", false, "Reason", "System");
 
         // Act
         var (ts, subsys, action, enabled, reason, source) = entry;

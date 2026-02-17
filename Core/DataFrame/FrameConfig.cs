@@ -254,12 +254,12 @@ public static class FrameConfig
         // 
         // The addon uses format: CELL_SPACING * 10000000 + CELL_SIZE * 100000 + 1000 * FRAME_ROWS + NUMBER_OF_FRAMES
         // For example: 0 * 10000000 + 4 * 100000 + 50 * 1000 + 324 = 450324
-        
+
         bool isValid = spacing >= 0 && spacing <= 5 &&    // Reasonable cell spacing
                        size >= 2 && size <= 20 &&          // Reasonable cell size (at least 2 pixels)
                        rows >= 10 && rows <= 100 &&        // Reasonable row count
                        count >= 50 && count <= 999;        // Reasonable frame count
-        
+
         if (!isValid)
             return DataFrameMeta.Empty;
 
@@ -270,12 +270,12 @@ public static class FrameConfig
     {
         return CreateFrames(meta, bmp, 0, null);
     }
-    
+
     public static DataFrame[] CreateFrames(DataFrameMeta meta, Image<Bgra32> bmp, int xOffset)
     {
         return CreateFrames(meta, bmp, xOffset, null);
     }
-    
+
     public static DataFrame[] CreateFrames(DataFrameMeta meta, Image<Bgra32> bmp, int xOffset, ILogger? logger)
     {
         DataFrame[] frames = new DataFrame[meta.Count];
@@ -292,22 +292,22 @@ public static class FrameConfig
             else
             {
                 // Frame not found - remaining frames will have default coordinates
-                logger?.LogWarning("Frame {Index} not found. Previous frame at ({PrevX},{PrevY}). Image size: {W}x{H}", 
+                logger?.LogWarning("Frame {Index} not found. Previous frame at ({PrevX},{PrevY}). Image size: {W}x{H}",
                     i, frames[i - 1].X, frames[i - 1].Y, bmp.Width, bmp.Height);
-                
+
                 // Log expected position for this frame
                 int gridX = i / meta.Rows;
                 int gridY = i % meta.Rows;
                 int expectedX = gridX * meta.Sizes + xOffset;
                 int expectedY = gridY * meta.Sizes;
-                
+
                 if (expectedX < bmp.Width && expectedY < bmp.Height)
                 {
                     var p = bmp[expectedX, expectedY];
-                    logger?.LogWarning("Frame {Index}: expected at grid({GridX},{GridY}) -> pixel({ExpX},{ExpY}), found RGB=({R},{G},{B}), expected B={Index}", 
+                    logger?.LogWarning("Frame {Index}: expected at grid({GridX},{GridY}) -> pixel({ExpX},{ExpY}), found RGB=({R},{G},{B}), expected B={Index}",
                         i, gridX, gridY, expectedX, expectedY, p.R, p.G, p.B, i);
                 }
-                
+
                 break;
             }
         }
@@ -315,7 +315,7 @@ public static class FrameConfig
         // Log summary
         if (foundCount < meta.Count)
         {
-            logger?.LogError("Only found {Found}/{Total} frames (image size: {W}x{H}, X offset: {Offset})", 
+            logger?.LogError("Only found {Found}/{Total} frames (image size: {W}x{H}, X offset: {Offset})",
                 foundCount, meta.Count, bmp.Width, bmp.Height, xOffset);
         }
         else
@@ -334,7 +334,7 @@ public static class FrameConfig
         byte expectedR = (byte)((i >> 16) & 255);
         byte expectedG = (byte)((i >> 8) & 255);
         byte expectedB = (byte)(i & 255);
-        
+
         for (int xi = startX; xi < bmp.Width; xi++)
         {
             for (int yi = 0; yi < bmp.Height; yi++)

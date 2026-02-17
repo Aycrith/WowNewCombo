@@ -72,7 +72,7 @@ public sealed class CombatGoalScenario : TestScenarioBase
         // Assert - Dead NPCs cannot be targeted via TAB
         GameState.Player.HasTarget.Should().BeFalse("dead NPCs should not be targetable via TAB");
         GameState.CurrentTarget.Should().BeNull();
-        
+
         // But the NPC should exist in the world and be dead
         var deadNpc = GameState.Npcs.FirstOrDefault(n => n.Name == "DeadWolf");
         deadNpc.Should().NotBeNull();

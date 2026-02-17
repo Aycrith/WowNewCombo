@@ -22,7 +22,7 @@ public sealed class ProfileController : ControllerBase
     {
         WriteIndented = true
     };
-    
+
     private readonly ILogger<ProfileController> logger;
     private readonly string profilesDirectory;
 

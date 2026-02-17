@@ -22,7 +22,7 @@ public sealed class RotationMetricsCollector : IHostedService, IDisposable
     {
         WriteIndented = true
     };
-    
+
     private readonly ILogger<RotationMetricsCollector> logger;
     private readonly FeatureFlagService featureFlags;
     private readonly RotationSessionMetrics currentSession;

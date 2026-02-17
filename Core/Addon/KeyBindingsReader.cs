@@ -41,17 +41,17 @@ public sealed partial class KeyBindingsReader : IReader
     {
         int encodedValue = reader.GetInt(BINDING_SLOT);
         totalReads++;
-        
+
         if (encodedValue == 0)
         {
             consecutiveZeroReads++;
-            
+
             // Log every 100 zero reads to avoid spam
             if (consecutiveZeroReads % 100 == 0)
             {
                 LogDebugZeroReadStats(logger, consecutiveZeroReads, totalReads, nonZeroReads);
             }
-            
+
             // Queue exhausted, mark as initialized if we received any bindings
             if (!bindings.IsEmpty && !initialized)
             {
@@ -281,7 +281,7 @@ public sealed partial class KeyBindingsReader : IReader
     static partial void LogDebugZeroReadStats(ILogger logger, int consecutiveZeros, int totalReads, int nonZeroReads);
 
     #endregion
-    
+
     /// <summary>
     /// Gets diagnostic statistics about slot reading
     /// </summary>

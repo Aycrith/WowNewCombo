@@ -119,19 +119,19 @@ public class FrameConfigController : ControllerBase
     public IActionResult GetDiagnostics()
     {
         _screen.GetRectangle(out var screenRect);
-        
+
         // Enable screen capture temporarily to get a frame
         bool wasEnabled = _screen.Enabled;
         _screen.Enabled = true;
-        
+
         try
         {
             // Give it a moment to capture
             System.Threading.Thread.Sleep(100);
             _screen.Update();
-            
+
             var screenImage = _screen.ScreenImage;
-            
+
             // Read the first few pixels
             var topLeftPixels = new List<object>();
             for (int x = 0; x < Math.Min(20, screenImage.Width); x++)
@@ -139,11 +139,11 @@ public class FrameConfigController : ControllerBase
                 var pixel = screenImage[x, 0];
                 topLeftPixels.Add(new { x, r = pixel.R, g = pixel.G, b = pixel.B, a = pixel.A });
             }
-            
+
             // Scan for the first non-black metadata pixel (like the fixed GetDataFrameMeta does)
             int detectedXOffset = -1;
             DataFrameMeta foundMeta = DataFrameMeta.Empty;
-            
+
             for (int x = 0; x < Math.Min(20, screenImage.Width); x++)
             {
                 var pixel = screenImage[x, 0];
@@ -155,43 +155,45 @@ public class FrameConfigController : ControllerBase
                     break;
                 }
             }
-            
+
             // Also check the original (0,0) pixel for comparison
             var originalMetaPixel = screenImage[0, 0];
             var originalMeta = FrameConfig.GetMeta(originalMetaPixel);
-            
+
             return Ok(new
             {
                 ScreenRect = new { screenRect.X, screenRect.Y, screenRect.Width, screenRect.Height },
                 ScreenEnabled = _screen.Enabled,
                 ImageWidth = screenImage.Width,
                 ImageHeight = screenImage.Height,
-                
+
                 // Original pixel at (0,0) - for debugging
                 OriginalMetaPixel = new { X = 0, originalMetaPixel.R, originalMetaPixel.G, originalMetaPixel.B },
                 OriginalMetaIsEmpty = originalMeta == DataFrameMeta.Empty,
-                
+
                 // Scanned result - what the fixed code will find
                 DetectedXOffset = detectedXOffset,
-                DetectedMeta = detectedXOffset >= 0 ? new { 
-                    foundMeta.Hash, 
-                    foundMeta.Spacing, 
-                    Sizes = foundMeta.Sizes, 
-                    foundMeta.Rows, 
+                DetectedMeta = detectedXOffset >= 0 ? new
+                {
+                    foundMeta.Hash,
+                    foundMeta.Spacing,
+                    Sizes = foundMeta.Sizes,
+                    foundMeta.Rows,
                     foundMeta.Count,
                     IsEmpty = false
-                } : new { 
-                    Hash = -1, 
-                    Spacing = 0, 
-                    Sizes = 0, 
-                    Rows = 0, 
+                } : new
+                {
+                    Hash = -1,
+                    Spacing = 0,
+                    Sizes = 0,
+                    Rows = 0,
                     Count = 0,
                     IsEmpty = true
                 },
-                
+
                 // Current state from configurator
                 ConfiguratorXOffset = _frameConfigurator.MetaPixelXOffset,
-                
+
                 TopLeftPixels = topLeftPixels,
                 ImageBase64Length = _frameConfigurator.ImageBase64?.Length ?? 0
             });
@@ -212,15 +214,15 @@ public class FrameConfigController : ControllerBase
         _screen.GetRectangle(out var currentRect);
 
         DataFrameConfig? active = null;
-            if (FrameConfig.Exists())
+        if (FrameConfig.Exists())
+        {
+            try { active = FrameConfig.Load(); }
+            catch (Exception)
             {
-                try { active = FrameConfig.Load(); }
-                catch (Exception)
-                {
-                    // ignore corrupt config - will auto-detect on next run
-                    active = null;
-                }
+                // ignore corrupt config - will auto-detect on next run
+                active = null;
             }
+        }
 
         return Ok(new
         {
@@ -247,12 +249,12 @@ public class FrameConfigController : ControllerBase
     public IActionResult GetScreenshot()
     {
         var imageDataUri = _frameConfigurator.ImageDataUri;
-        
+
         if (string.IsNullOrEmpty(imageDataUri))
         {
             return NotFound(new { Message = "No screenshot available" });
         }
-        
+
         // Return as HTML img for easy viewing
         return Content($"<html><body><h1>WoW Screen Capture</h1><img src='{imageDataUri}' style='max-width: 100%;' /></body></html>", "text/html");
     }

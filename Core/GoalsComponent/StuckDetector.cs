@@ -364,7 +364,7 @@ public sealed class StuckDetector : IGoapEventListener
 
         // Turn toward the backtrack position
         Vector3 targetPos = backtrackEntry.Value.Position;
-        
+
         // Use map coordinates for heading calculation
         Vector3 playerM = WorldMapAreaDB.ToMap_FlipXY(playerReader.WorldPos, playerReader.WorldMapArea);
         Vector3 targetM = WorldMapAreaDB.ToMap_FlipXY(targetPos, playerReader.WorldMapArea);

@@ -38,7 +38,7 @@ public sealed class MdnsAdvertisingService : IHostedService, IDisposable
     private readonly Lock _addressLock = new();
 
     public MdnsAdvertisingService(
-        ILogger<MdnsAdvertisingService> logger, 
+        ILogger<MdnsAdvertisingService> logger,
         IServer server,
         IHostApplicationLifetime lifetime)
     {
@@ -107,7 +107,7 @@ public sealed class MdnsAdvertisingService : IHostedService, IDisposable
         {
             // Initialize IP address cache
             RefreshIPAddressCache();
-            
+
             // Using Application started event to get the port from Kestral
             _startedRegistration = _lifetime.ApplicationStarted.Register(() =>
             {
@@ -153,7 +153,7 @@ public sealed class MdnsAdvertisingService : IHostedService, IDisposable
                 // Also announce our hostname A record
                 AnnounceHostname();
 
-                if(_logger.IsEnabled(LogLevel.Information)) 
+                if (_logger.IsEnabled(LogLevel.Information))
                 {
                     _logger.LogInformation(
                         "mDNS: Service advertised at http://{Hostname}.local:{Port}",

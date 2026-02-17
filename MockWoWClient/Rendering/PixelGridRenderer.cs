@@ -83,7 +83,7 @@ public sealed class PixelGridRenderer : IDisposable
         }
 
         _frameValues[frameIndex] = value;
-        
+
         if (!_isConfigMode)
         {
             RenderFrame(frameIndex, value);

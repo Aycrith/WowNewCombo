@@ -58,9 +58,9 @@ public sealed class MPQTriangleSupplier
         wdt = new WDT();
         wdtf = new WDTFile(archive, mapId, wdt, wmomanager, modelmanager, logger);
 
-            // Note: WDT loading validation could be moved into WDTFile constructor
-            // for better encapsulation. Currently handled here for error reporting.
-            if (!wdtf.loaded)
+        // Note: WDT loading validation could be moved into WDTFile constructor
+        // for better encapsulation. Currently handled here for error reporting.
+        if (!wdtf.loaded)
         {
             wdt = null; // bad
             throw new Exception("Failed to set continent to: " + mapId);

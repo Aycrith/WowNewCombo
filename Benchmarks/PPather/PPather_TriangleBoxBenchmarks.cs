@@ -5,6 +5,7 @@ using System.Numerics;
 using WowTriangles;
 
 namespace Benchmarks.PPather;
+
 public class PPather_TriangleBoxBenchmarks
 {
     private Vector3 a, b, c, boxCenter, boxExtents;

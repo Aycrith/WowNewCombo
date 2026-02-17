@@ -15,10 +15,10 @@ public sealed class MockWowScreen : IWowScreen
     private Image<Bgra32>? _lastScreenImage;
     private bool _enabled = true;
 
-    public bool Enabled 
-    { 
-        get => _enabled; 
-        set => _enabled = value; 
+    public bool Enabled
+    {
+        get => _enabled;
+        set => _enabled = value;
     }
 
     public bool MinimapEnabled { get; set; } = true;
@@ -48,7 +48,7 @@ public sealed class MockWowScreen : IWowScreen
         {
             // Capture screen from MockWoWClient
             var image = _client.CaptureScreen();
-            
+
             // Dispose old image if exists
             _lastScreenImage?.Dispose();
             _lastScreenImage = image;
@@ -73,7 +73,7 @@ public sealed class MockWowScreen : IWowScreen
         for (int i = 0; i < maxAttempts; i++)
         {
             Update();
-            
+
             if (_lastScreenImage != null)
             {
                 return true;

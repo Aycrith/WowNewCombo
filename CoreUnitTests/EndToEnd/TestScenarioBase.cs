@@ -78,17 +78,17 @@ public abstract class TestScenarioBase : IAsyncLifetime
     /// Helper method to wait for a condition with timeout.
     /// </summary>
     protected async Task<bool> WaitForConditionAsync(
-        Func<bool> condition, 
+        Func<bool> condition,
         string description,
         TimeSpan? timeout = null,
         TimeSpan? pollInterval = null)
     {
         timeout ??= TimeSpan.FromSeconds(10);
         pollInterval ??= TimeSpan.FromMilliseconds(100);
-        
+
         var startTime = DateTime.UtcNow;
         var attempts = 0;
-        
+
         while (DateTime.UtcNow - startTime < timeout)
         {
             attempts++;
@@ -97,10 +97,10 @@ public abstract class TestScenarioBase : IAsyncLifetime
                 _output.WriteLine($"  Condition met: {description} (after {attempts} attempts, {(DateTime.UtcNow - startTime).TotalMilliseconds:F0}ms)");
                 return true;
             }
-            
+
             await Task.Delay(pollInterval.Value);
         }
-        
+
         _output.WriteLine($"  Condition FAILED: {description} (timeout after {attempts} attempts, {timeout.Value.TotalSeconds}s)");
         return false;
     }
@@ -115,10 +115,10 @@ public abstract class TestScenarioBase : IAsyncLifetime
         TimeSpan? timeout = null)
     {
         timeout ??= TimeSpan.FromSeconds(10);
-        
+
         var startTime = DateTime.UtcNow;
         T lastValue = default!;
-        
+
         while (DateTime.UtcNow - startTime < timeout)
         {
             lastValue = valueProvider();
@@ -127,10 +127,10 @@ public abstract class TestScenarioBase : IAsyncLifetime
                 _output.WriteLine($"  Value condition met: {description} = {lastValue}");
                 return lastValue;
             }
-            
+
             await Task.Delay(100);
         }
-        
+
         throw new TimeoutException($"Timeout waiting for: {description}. Last value: {lastValue}");
     }
 
@@ -208,10 +208,10 @@ public abstract class TestScenarioBase : IAsyncLifetime
     {
         var growth = currentMemory - baselineMemory;
         var growthPercent = (growth / (double)baselineMemory) * 100;
-        
+
         _output.WriteLine($"  Memory: Baseline={baselineMemory / 1024 / 1024}MB, Current={currentMemory / 1024 / 1024}MB, Growth={growthPercent:F2}%");
-        
-        growthPercent.Should().BeLessThan(maxGrowthPercent, 
+
+        growthPercent.Should().BeLessThan(maxGrowthPercent,
             $"memory growth should be less than {maxGrowthPercent}%");
     }
 }
@@ -223,7 +223,7 @@ public abstract class TestScenarioBase : IAsyncLifetime
 public class EndToEndScenarioAttribute : Attribute
 {
     public string ScenarioName { get; }
-    
+
     public EndToEndScenarioAttribute(string name)
     {
         ScenarioName = name;

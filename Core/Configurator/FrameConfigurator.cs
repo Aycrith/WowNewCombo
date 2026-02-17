@@ -63,22 +63,22 @@ public sealed class FrameConfigurator : IDisposable
 
     public bool Saved { get; private set; }
     public bool AddonNotVisible { get; private set; }
-    
+
     /// <summary>
     /// Current status message for UI display.
     /// </summary>
     public string StatusMessage { get; private set; } = "Ready";
-    
+
     /// <summary>
     /// Indicates if there was a pre-flight validation failure.
     /// </summary>
     public bool PreFlightFailed { get; private set; }
-    
+
     /// <summary>
     /// Pre-flight validation result, if available.
     /// </summary>
     public AddonValidationResult? ValidationResult { get; private set; }
-    
+
     /// <summary>
     /// The detected X offset where the addon's metadata pixel was found.
     /// Exposed for diagnostics. Returns 0 if not yet detected.
@@ -97,13 +97,13 @@ public sealed class FrameConfigurator : IDisposable
     private Size size = Size.Empty;
     private int waitRetryCount;
     private int configRetryCount;
-    
+
     /// <summary>
     /// The X offset where the addon's metadata pixel was found.
     /// The addon may have a small border/offset before its pixel grid starts.
     /// </summary>
     private int metaPixelXOffset;
-    
+
     /// <summary>
     /// Maximum X pixels to scan when looking for the metadata pixel.
     /// </summary>
@@ -152,7 +152,7 @@ public sealed class FrameConfigurator : IDisposable
     private bool DoConfig(bool auto)
     {
         logger.LogDebug("DoConfig: Stage={Stage}, Auto={Auto}", stage, auto);
-        
+
         switch (stage)
         {
             case Stage.Reset:
@@ -163,13 +163,13 @@ public sealed class FrameConfigurator : IDisposable
 
                 stage++;
                 break;
-                
+
             case Stage.PreFlightCheck:
                 if (auto && addonValidator != null)
                 {
                     StatusMessage = "Running pre-flight checks...";
                     ValidationResult = addonValidator.Validate();
-                    
+
                     if (!ValidationResult.IsValid)
                     {
                         PreFlightFailed = true;
@@ -182,18 +182,18 @@ public sealed class FrameConfigurator : IDisposable
                         stage = Stage.Reset;
                         return false;
                     }
-                    
+
                     if (ValidationResult.HasWarnings)
                     {
                         logger.LogWarning("Pre-flight warnings: {Summary}", ValidationResult.GetSummary());
                     }
-                    
+
                     logger.LogInformation("Pre-flight checks passed");
                 }
                 PreFlightFailed = false;
                 stage++;
                 break;
-                
+
             case Stage.DetectRunningGame:
                 StatusMessage = "Detecting game...";
                 if (process.IsRunning)
@@ -256,7 +256,7 @@ public sealed class FrameConfigurator : IDisposable
                     logger.LogInformation($"Addon installed! Version: {version}");
 
                     StatusMessage = "Entering config mode...";
-                    logger.LogInformation("Enter configuration mode (attempt {Attempt}/{Max})", 
+                    logger.LogInformation("Enter configuration mode (attempt {Attempt}/{Max})",
                         configRetryCount + 1, MAX_CONFIG_RETRIES);
                     input.SetForegroundWindow();
                     wait.Fixed(INTERVAL);
@@ -300,7 +300,7 @@ public sealed class FrameConfigurator : IDisposable
                             }
                             else
                             {
-                                logger.LogError("Timeout waiting for config mode after {Retries} attempts!", 
+                                logger.LogError("Timeout waiting for config mode after {Retries} attempts!",
                                     configRetryCount + 1);
                                 logger.LogError("Ensure character is logged in and chat is available.");
                                 logger.LogError("The bot will type /{Command} in chat to toggle config mode.", GetAddonCommand());
@@ -312,23 +312,23 @@ public sealed class FrameConfigurator : IDisposable
                     }
                 }
                 break;
-                
+
             case Stage.RetryEnterConfigMode:
                 configRetryCount++;
-                logger.LogWarning("Config mode not detected, retrying (attempt {Attempt}/{Max})...", 
+                logger.LogWarning("Config mode not detected, retrying (attempt {Attempt}/{Max})...",
                     configRetryCount + 1, MAX_CONFIG_RETRIES);
-                
+
                 // Wait a bit longer before retry
                 wait.Fixed(INTERVAL * 2);
-                
+
                 // Try toggling again
                 stage = Stage.EnterConfigMode;
                 break;
-                
+
             case Stage.ValidateMetaSize:
                 StatusMessage = "Validating frame size...";
                 size = DataFrameMeta.EstimatedSize(screenRect);
-                
+
                 // Sanity checks:
                 // 1. Size must not be empty
                 // 2. Size must fit within screen bounds
@@ -339,7 +339,7 @@ public sealed class FrameConfigurator : IDisposable
                     size.Height <= screenRect.Size.Height &&
                     DataFrameMeta.Rows <= MAX_ROWS &&
                     DataFrameMeta.Sizes <= MAX_CELL_SIZE;
-                
+
                 if (sizeValid)
                 {
                     logger.LogDebug($"Frame size validated: {size.Width}x{size.Height}, Rows={DataFrameMeta.Rows}, CellSize={DataFrameMeta.Sizes}");
@@ -363,22 +363,22 @@ public sealed class FrameConfigurator : IDisposable
                 const int MAX_UPDATE_ATTEMPTS = 10;
                 const int UPDATE_DELAY_MS = 200;
                 bool foundConfigFrame = false;
-                
+
                 logger.LogDebug("Attempting to capture config mode screen (max {MaxAttempts} attempts)...", MAX_UPDATE_ATTEMPTS);
-                
+
                 while (updateAttempts < MAX_UPDATE_ATTEMPTS && !foundConfigFrame)
                 {
                     // Use WaitForUpdate for better frame acquisition
                     bool frameAcquired = screen.WaitForUpdate(3, 50);
                     updateAttempts++;
-                    
+
                     if (!frameAcquired)
                     {
                         logger.LogDebug("Screen update attempt {Attempt}: no new frame acquired", updateAttempts);
                         wait.Fixed(UPDATE_DELAY_MS);
                         continue;
                     }
-                    
+
                     // Verify we have a valid config frame by checking for frame 1 marker
                     var testImage = screen.ScreenImage;
                     if (testImage == null || testImage.Width == 0 || testImage.Height == 0)
@@ -387,28 +387,28 @@ public sealed class FrameConfigurator : IDisposable
                         wait.Fixed(UPDATE_DELAY_MS);
                         continue;
                     }
-                    
+
                     int expectedFrame1Y = DataFrameMeta.Sizes; // CELL_SIZE (typically 4)
                     if (testImage.Height > expectedFrame1Y && testImage.Width > metaPixelXOffset)
                     {
                         // Check for frame 1 marker at (xOffset, CELL_SIZE)
                         var pixel = testImage[metaPixelXOffset, expectedFrame1Y];
-                        logger.LogDebug("Screen update attempt {Attempt}: pixel at ({X},{Y}) = R:{R} G:{G} B:{B} (expect frame 1: R:0 G:0 B:1)", 
+                        logger.LogDebug("Screen update attempt {Attempt}: pixel at ({X},{Y}) = R:{R} G:{G} B:{B} (expect frame 1: R:0 G:0 B:1)",
                             updateAttempts, metaPixelXOffset, expectedFrame1Y, pixel.R, pixel.G, pixel.B);
-                        
+
                         if (pixel.B == 1 && pixel.R == 0 && pixel.G == 0)
                         {
                             foundConfigFrame = true;
                             logger.LogInformation("Found valid config frame at attempt {Attempt}", updateAttempts);
                         }
                     }
-                    
+
                     if (!foundConfigFrame && updateAttempts < MAX_UPDATE_ATTEMPTS)
                     {
                         wait.Fixed(UPDATE_DELAY_MS);
                     }
                 }
-                
+
                 if (!foundConfigFrame)
                 {
                     logger.LogWarning("Could not verify config frame marker after {Attempts} attempts, proceeding with frame detection anyway", updateAttempts);
@@ -429,10 +429,10 @@ public sealed class FrameConfigurator : IDisposable
 
                 // Pass logger to CreateFrames for detailed diagnostics
                 DataFrames = FrameConfig.CreateFrames(DataFrameMeta, cropped, metaPixelXOffset, logger);
-                
+
                 // Diagnostic: Check if frame detection succeeded
                 int detectedFrames = DataFrames.Count(f => f.X != 0 || f.Y != 0) + (DataFrames.Length > 0 ? 1 : 0);
-                
+
                 if (detectedFrames < DataFrameMeta.Count)
                 {
                     // Save diagnostic image
@@ -440,16 +440,16 @@ public sealed class FrameConfigurator : IDisposable
                     try
                     {
                         cropped.SaveAsPng(debugPath);
-                        logger.LogError("Frame detection incomplete: found {Found}/{Expected} frames. Debug image saved to: {Path}", 
+                        logger.LogError("Frame detection incomplete: found {Found}/{Expected} frames. Debug image saved to: {Path}",
                             detectedFrames, DataFrameMeta.Count, debugPath);
-                        
+
                         // Log detailed info about first few frames
                         logger.LogError("Frame detection details:");
-                        logger.LogError("  Metadata: Hash={Hash}, Spacing={Spacing}, Size={Size}, Rows={Rows}, Count={Count}", 
+                        logger.LogError("  Metadata: Hash={Hash}, Spacing={Spacing}, Size={Size}, Rows={Rows}, Count={Count}",
                             DataFrameMeta.Hash, DataFrameMeta.Spacing, DataFrameMeta.Sizes, DataFrameMeta.Rows, DataFrameMeta.Count);
-                        logger.LogError("  Cropped image size: {W}x{H}, X offset: {Offset}", 
+                        logger.LogError("  Cropped image size: {W}x{H}, X offset: {Offset}",
                             cropped.Width, cropped.Height, metaPixelXOffset);
-                        
+
                         // Log expected positions and actual pixel values for first few frames
                         for (int i = 0; i < Math.Min(10, DataFrameMeta.Count); i++)
                         {
@@ -457,17 +457,17 @@ public sealed class FrameConfigurator : IDisposable
                             int gridY = i % DataFrameMeta.Rows;
                             int expectedPixelX = gridX * DataFrameMeta.Sizes + metaPixelXOffset;
                             int expectedPixelY = gridY * DataFrameMeta.Sizes;
-                            
+
                             string pixelInfo = "out of bounds";
                             if (expectedPixelX < cropped.Width && expectedPixelY < cropped.Height)
                             {
                                 var p = cropped[expectedPixelX, expectedPixelY];
                                 pixelInfo = $"RGB=({p.R},{p.G},{p.B})";
                             }
-                            
+
                             string detectedInfo = i < DataFrames.Length ? $"detected at ({DataFrames[i].X},{DataFrames[i].Y})" : "not detected";
-                            
-                            logger.LogError("  Frame {Index}: grid({GridX},{GridY}) -> expected pixel({ExpX},{ExpY}) {PixelInfo}, {DetectedInfo}", 
+
+                            logger.LogError("  Frame {Index}: grid({GridX},{GridY}) -> expected pixel({ExpX},{ExpY}) {PixelInfo}, {DetectedInfo}",
                                 i, gridX, gridY, expectedPixelX, expectedPixelY, pixelInfo, detectedInfo);
                         }
                     }
@@ -476,12 +476,12 @@ public sealed class FrameConfigurator : IDisposable
                         logger.LogError(ex, "Failed to save debug image");
                     }
                 }
-                
+
                 if (DataFrames.Length == DataFrameMeta.Count)
                 {
                     if (metaPixelXOffset > 0)
                     {
-                        logger.LogInformation("Created {Count} frames with X offset {Offset}", 
+                        logger.LogInformation("Created {Count} frames with X offset {Offset}",
                             DataFrames.Length, metaPixelXOffset);
                     }
                     stage++;
@@ -533,7 +533,7 @@ public sealed class FrameConfigurator : IDisposable
                     else
                     {
                         waitRetryCount++;
-                        
+
                         // Every 3 retries, try sending the command again
                         if (waitRetryCount > 0 && waitRetryCount % 3 == 0 && waitRetryCount < MAX_WAIT_RETRIES)
                         {
@@ -544,7 +544,7 @@ public sealed class FrameConfigurator : IDisposable
                             ToggleInGameConfiguration();
                             wait.Fixed(INTERVAL);
                         }
-                        
+
                         if (waitRetryCount >= MAX_WAIT_RETRIES)
                         {
                             logger.LogError("Unable to return normal mode after {Retries} attempts!", MAX_WAIT_RETRIES);
@@ -620,33 +620,33 @@ public sealed class FrameConfigurator : IDisposable
     {
         // Refresh the screen capture before reading pixels
         screen.Update();
-        
+
         // Scan the first row to find the metadata pixel
         // The addon may have a small offset/border before its pixel grid starts
         var image = screen.ScreenImage;
-        
+
         if (image == null || image.Width == 0 || image.Height == 0)
         {
             logger.LogWarning("GetDataFrameMeta: Screen image is null or empty");
             return DataFrameMeta.Empty;
         }
-        
+
         int scanLimit = Math.Min(MAX_META_SCAN_PIXELS, image.Width);
-        logger.LogDebug("GetDataFrameMeta: Scanning first {ScanLimit} pixels of row 0 (image size: {W}x{H})", 
+        logger.LogDebug("GetDataFrameMeta: Scanning first {ScanLimit} pixels of row 0 (image size: {W}x{H})",
             scanLimit, image.Width, image.Height);
-        
+
         for (int x = 0; x < scanLimit; x++)
         {
             var pixel = image[x, 0];
             var meta = FrameConfig.GetMeta(pixel);
-            
+
             if (x < 5 || meta != DataFrameMeta.Empty)
             {
                 // Log first few pixels and any valid meta found
-                logger.LogDebug("GetDataFrameMeta: Pixel[{X},0] = R:{R} G:{G} B:{B} -> Meta: {Meta}", 
+                logger.LogDebug("GetDataFrameMeta: Pixel[{X},0] = R:{R} G:{G} B:{B} -> Meta: {Meta}",
                     x, pixel.R, pixel.G, pixel.B, meta);
             }
-            
+
             if (meta != DataFrameMeta.Empty)
             {
                 if (x > 0)
@@ -657,10 +657,10 @@ public sealed class FrameConfigurator : IDisposable
                 return meta;
             }
         }
-        
+
         // Log that we didn't find any valid metadata
         logger.LogDebug("GetDataFrameMeta: No valid metadata pixel found in first {ScanLimit} pixels", scanLimit);
-        
+
         // Reset offset if not found
         metaPixelXOffset = 0;
         return DataFrameMeta.Empty;
@@ -815,35 +815,35 @@ public sealed class FrameConfigurator : IDisposable
         // Ensure WoW is in foreground
         input.SetForegroundWindow();
         wait.Fixed(200); // Brief delay to let window focus settle
-        
+
         // IMPORTANT: Press Escape first to close any open UI (chat, menus, targeting, etc.)
         // This ensures a clean state before we open chat and type the command.
         // Without this, if chat is already open from a previous command, we'd type into it wrong.
         logger.LogDebug("ToggleInGameConfiguration: Pressing Escape to ensure clean UI state...");
         input.PressRandom(ConsoleKey.Escape, 50);
         wait.Fixed(300); // Wait for any UI to close
-        
+
         // Press Escape again to be extra sure (handles nested menus, targeting, etc.)
         input.PressRandom(ConsoleKey.Escape, 50);
         wait.Fixed(300);
-        
+
         // ROBUST APPROACH: Type command directly in chat
         // This bypasses the keybinding requirement entirely - no need for SHIFT-PAGEUP
         // to be configured. Works immediately after addon install.
         logger.LogDebug("ToggleInGameConfiguration: Typing /{Command} command in chat...", command);
-        
+
         // Press Enter to open chat
         input.PressRandom(ConsoleKey.Enter, 50);
         wait.Fixed(200);
-        
+
         // Type the command
         input.SendText("/" + command);
         wait.Fixed(150);
-        
+
         // Press Enter to execute command
         input.PressRandom(ConsoleKey.Enter, 50);
         wait.Fixed(300);
-        
+
         logger.LogDebug("ToggleInGameConfiguration: /{Command} command sent via chat", command);
     }
 

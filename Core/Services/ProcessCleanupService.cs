@@ -29,10 +29,10 @@ public sealed class ProcessCleanupService : IHostedService, IDisposable
     public Task StartAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("[ProcessCleanup] Service started - monitoring for shutdown signals");
-        
+
         // Register cleanup on application stopping
         _lifetime.ApplicationStopping.Register(OnApplicationStopping);
-        
+
         return Task.CompletedTask;
     }
 
@@ -76,10 +76,10 @@ public sealed class ProcessCleanupService : IHostedService, IDisposable
     public void Dispose()
     {
         if (_disposed) return;
-        
+
         _logger.LogDebug("[ProcessCleanup] Disposing service");
         PerformCleanup();
-        
+
         _disposed = true;
     }
 }

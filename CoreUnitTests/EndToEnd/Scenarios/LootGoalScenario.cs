@@ -455,10 +455,10 @@ public sealed class LootGoalScenario : TestScenarioBase
         // Arrange
         SpawnNpc("Wolf", 2, 10, new Vector3(5, 0, 0), hostile: true);
         GameState.Npcs[0].Health = 0; // Kill the NPC
-        
+
         // Force corpse creation
         AdvanceTime(TimeSpan.FromSeconds(1));
-        
+
         // Verify corpse exists
         GameState.Corpses.Should().NotBeEmpty("corpse should be created when NPC dies");
 
@@ -531,10 +531,10 @@ public sealed class LootGoalScenario : TestScenarioBase
         // Arrange
         SpawnNpc("Wolf", 2, 10, new Vector3(5, 0, 0), hostile: true);
         GameState.Npcs[0].Health = 0; // Kill the NPC
-        
+
         // Force corpse creation by advancing time
         AdvanceTime(TimeSpan.FromSeconds(1));
-        
+
         // Verify corpse exists
         GameState.Corpses.Count.Should().BeGreaterThan(0, "corpse should be created when NPC dies");
         int initialCount = GameState.Corpses.Count;

@@ -23,12 +23,12 @@ public class RoleStrategyHelpersTests
         result.Should().Be(0f);
     }
 
-[Fact]
-public void EvaluateScoreConditions_NullConditions_ReturnsZero()
-{
-    // Arrange - intentionally testing null handling
+    [Fact]
+    public void EvaluateScoreConditions_NullConditions_ReturnsZero()
+    {
+        // Arrange - intentionally testing null handling
 #pragma warning disable CS8625
-    var action = new KeyAction { ScoreConditionsRuntime = null };
+        var action = new KeyAction { ScoreConditionsRuntime = null };
 #pragma warning restore CS8625
 
         // Act

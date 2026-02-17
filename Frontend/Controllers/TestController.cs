@@ -782,8 +782,8 @@ public class TestController : ControllerBase
             checks.Add(TestHelpers.CreateBoolCheck(
                 "Target acquired",
                 targetAcquired,
-                targetAcquired 
-                    ? $"Target ID: {after.TargetId}, Level: {after.TargetLevel}" 
+                targetAcquired
+                    ? $"Target ID: {after.TargetId}, Level: {after.TargetLevel}"
                     : "No target found - ensure enemies are nearby"));
 
             if (targetAcquired)
@@ -805,8 +805,8 @@ public class TestController : ControllerBase
                 checks.Add(TestHelpers.CreateBoolCheck(
                     "Target health readable",
                     hasHealth,
-                    hasHealth 
-                        ? $"HP: {after.TargetHealth}/{after.TargetHealthMax}" 
+                    hasHealth
+                        ? $"HP: {after.TargetHealth}/{after.TargetHealthMax}"
                         : "Target health unavailable"));
             }
 
@@ -859,7 +859,7 @@ public class TestController : ControllerBase
 
         try
         {
-            _logger.LogInformation("Starting ability test: {AbilityName} on key {Key}", 
+            _logger.LogInformation("Starting ability test: {AbilityName} on key {Key}",
                 request.AbilityName, request.Key);
 
             // 1. Ensure we have a target
@@ -941,8 +941,8 @@ public class TestController : ControllerBase
                     "Energy cost",
                     request.ExpectedEnergyCost.ToString(),
                     energySpent.ToString(),
-                    energySpentCorrect 
-                        ? $"Spent {energySpent} energy" 
+                    energySpentCorrect
+                        ? $"Spent {energySpent} energy"
                         : $"Expected {request.ExpectedEnergyCost}, actual {energySpent}"));
             }
 
@@ -954,8 +954,8 @@ public class TestController : ControllerBase
                     "Combo points",
                     request.ExpectedComboPoints.ToString(),
                     comboPointsGained.ToString(),
-                    cpGained 
-                        ? $"Gained {comboPointsGained} CP (now {after.ComboPoints})" 
+                    cpGained
+                        ? $"Gained {comboPointsGained} CP (now {after.ComboPoints})"
                         : $"Expected +{request.ExpectedComboPoints}, got +{comboPointsGained}"));
             }
 
@@ -964,8 +964,8 @@ public class TestController : ControllerBase
             checks.Add(TestHelpers.CreateBoolCheck(
                 "Damage dealt",
                 dealtDamage,
-                dealtDamage 
-                    ? $"Dealt {damageDealt} damage ({after.TargetHealth}/{after.TargetHealthMax} HP remaining)" 
+                dealtDamage
+                    ? $"Dealt {damageDealt} damage ({after.TargetHealth}/{after.TargetHealthMax} HP remaining)"
                     : "No damage detected - ability may have missed or not cast"));
 
             // Combat state check

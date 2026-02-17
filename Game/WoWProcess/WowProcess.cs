@@ -45,7 +45,7 @@ public sealed class WowProcess
     public IntPtr MainWindowHandle => process?.MainWindowHandle ?? IntPtr.Zero;
 
     public bool IsRunning { get; private set; }
-    
+
     /// <summary>
     /// Indicates that this WowProcess was created in configuration mode without a running WoW process.
     /// The polling thread will try to find WoW and update state when it becomes available.
@@ -62,7 +62,7 @@ public sealed class WowProcess
         token = cts.Token;
 
         Process? p = Get(pid);
-        
+
         if (p == null)
         {
             if (allowConfigurationMode)
@@ -72,7 +72,7 @@ public sealed class WowProcess
                 IsRunning = false;
                 IsConfigurationMode = true;
                 process = null;
-                
+
                 // Start polling thread to find WoW when it starts
                 thread = new(PollForProcess);
                 thread.Start();
@@ -97,7 +97,7 @@ public sealed class WowProcess
     }
 
     public WowProcess(CancellationTokenSource cts, IOptions<StartupConfigPid> options) : this(cts, options.Value.Id, allowConfigurationMode: true) { }
-    
+
     /// <summary>
     /// Creates a WowProcess, optionally allowing configuration mode if WoW is not running.
     /// </summary>
@@ -105,7 +105,7 @@ public sealed class WowProcess
     {
         return new WowProcess(cts, pid, allowConfigurationMode);
     }
-    
+
     /// <summary>
     /// Poll for WoW process when it's not initially running (configuration mode)
     /// </summary>
@@ -121,7 +121,7 @@ public sealed class WowProcess
                 id = process.Id;
                 IsRunning = true;
                 IsConfigurationMode = false;
-                
+
                 try
                 {
                     (Path, FileVersion) = GetProcessInfo();
@@ -133,12 +133,12 @@ public sealed class WowProcess
                     Console.WriteLine($"[WowProcess] Error getting process info: {ex.Message}");
                     // Continue with the process even if we can't get version info
                 }
-                
+
                 // Switch to the normal polling loop
                 PollProcessExited();
                 return;
             }
-            
+
             if (WaitForCancellationOrTimeout(2000))
             {
                 return;
@@ -159,7 +159,7 @@ public sealed class WowProcess
                 }
                 continue;
             }
-            
+
             process.Refresh();
             if (process.HasExited)
             {
@@ -289,7 +289,7 @@ public sealed class WowProcess
     {
         // Try WinAPI first
         string? path = WinAPI.ExecutablePath.Get(process);
-        
+
         // If WinAPI fails or returns empty, try MainModule
         if (string.IsNullOrEmpty(path))
         {
@@ -309,7 +309,7 @@ public sealed class WowProcess
                 // MainModule access can fail due to permissions
             }
         }
-        
+
         // If we still don't have a path, throw
         if (string.IsNullOrEmpty(path))
         {
@@ -327,7 +327,7 @@ public sealed class WowProcess
         string exeName = (process.ProcessName ?? "WowClassic") + ".exe";
 #pragma warning restore CS8602
         var exePath = System.IO.Path.Join(path, exeName);
-        
+
         // Verify the file exists
         if (!System.IO.File.Exists(exePath))
         {
@@ -335,7 +335,7 @@ public sealed class WowProcess
                 $"WoW executable not found at expected location: {exePath}. " +
                 $"Process Name: {process.ProcessName}, Path: {path}");
         }
-        
+
         FileVersionInfo info = FileVersionInfo.GetVersionInfo(exePath);
 
         if (info.FileMajorPart > 0)

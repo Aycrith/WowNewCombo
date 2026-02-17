@@ -95,7 +95,7 @@ public sealed class AddonInstaller
                 return false;
             }
             addonConfigurator.Save();
-            
+
             logger.LogInformation("Addon installed successfully");
             return true;
         }
@@ -366,7 +366,7 @@ public sealed class AddonInstaller
                 {
                     string dirName = Path.GetFileName(dir);
                     logger.LogInformation("Removing broken symlink: {DirName}", dirName);
-                    
+
                     try
                     {
                         // For symlinks/junctions, we need to delete the directory entry itself
@@ -396,7 +396,7 @@ public sealed class AddonInstaller
     public bool RemoveLegacyBindPadAddon()
     {
         string bindPadPath = Path.Join(AddonsBasePath, "BindPad");
-        
+
         if (!Directory.Exists(bindPadPath))
             return false;
 
@@ -407,18 +407,18 @@ public sealed class AddonInstaller
             try
             {
                 string tocContent = File.ReadAllText(tocPath);
-                
+
                 // Only remove if it's our minimal version
-                if (tocContent.Contains("Minimal BindPad") || 
+                if (tocContent.Contains("Minimal BindPad") ||
                     tocContent.Contains("WowGrindBot") ||
                     tocContent.Contains("DataToColor"))
                 {
                     logger.LogInformation("Removing legacy BindPad addon (now integrated into DataToColor)");
                     Directory.Delete(bindPadPath, true);
-                    
+
                     // Also disable it in AddOns.txt
                     DisableAddonForAllCharacters("BindPad");
-                    
+
                     return true;
                 }
                 else
@@ -551,7 +551,7 @@ public sealed class AddonMaintenanceResult
             return $"Maintenance failed: {ErrorMessage ?? "Unknown error"}";
 
         var parts = new List<string>();
-        
+
         if (AddonInstalled)
             parts.Add("Addon ready");
         if (LegacyBindPadRemoved)
@@ -559,8 +559,8 @@ public sealed class AddonMaintenanceResult
         if (BrokenSymlinksRemoved > 0)
             parts.Add($"{BrokenSymlinksRemoved} broken symlink(s) cleaned");
 
-        return parts.Count > 0 
-            ? string.Join(", ", parts) 
+        return parts.Count > 0
+            ? string.Join(", ", parts)
             : "No maintenance needed";
     }
 }

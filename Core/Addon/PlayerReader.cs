@@ -126,7 +126,8 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
     public UnitClass Class => (UnitClass)(reader.GetInt(46) / 100 % 100);
     public ClientVersion Version => (ClientVersion)(reader.GetInt(46) % 100);
 
-    public PlayerFaction Faction => Race switch {
+    public PlayerFaction Faction => Race switch
+    {
         UnitRace.Human => PlayerFaction.Alliance,
         UnitRace.Dwarf => PlayerFaction.Alliance,
         UnitRace.NightElf => PlayerFaction.Alliance,

@@ -164,12 +164,12 @@ public sealed class GameStateFrameMapper
             if (slot < player.ActionBars.Length)
             {
                 var actionBar = player.ActionBars[slot];
-                
+
                 // Encode action bar state: slot * 100000 + usable + cost
                 int usableFlag = actionBar.IsUsable ? 1 : 0;
                 int inRangeFlag = actionBar.InRange ? 1 : 0;
                 int value = (slot * 100000) + (usableFlag * 10000) + (inRangeFlag * 1000) + actionBar.Cost;
-                
+
                 _renderer.SetFrame(FrameIndices.ActionBarStart + i, value);
             }
         }

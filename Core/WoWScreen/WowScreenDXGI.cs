@@ -50,9 +50,9 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
     private readonly SixLabors.ImageSharp.Configuration ContiguousJpegConfiguration
         = new(new JpegConfigurationModule()) { PreferContiguousImageBuffers = true };
 
-        // Note: MiniMapSize is currently fixed at 200 pixels.
-        // Higher resolutions (e.g., 4K) may require dynamic sizing in the future.
-        public const int MiniMapSize = 200;
+    // Note: MiniMapSize is currently fixed at 200 pixels.
+    // Higher resolutions (e.g., 4K) may require dynamic sizing in the future.
+    public const int MiniMapSize = 200;
     public Rectangle MiniMapRect { get; private set; }
     public Image<Bgra32> MiniMapImage { get; init; }
 
@@ -276,7 +276,7 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
         {
             if (TryUpdate())
                 return true;
-            
+
             System.Threading.Thread.Sleep(delayMs);
         }
         return false;

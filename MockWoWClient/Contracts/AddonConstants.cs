@@ -138,7 +138,7 @@ public static class FrameEncoder
 
         int value = 0;
         int length = Math.Min(text.Length, 3);
-        
+
         for (int i = 0; i < length; i++)
         {
             char c = text[i];
@@ -154,7 +154,7 @@ public static class FrameEncoder
     public static string DecodeString(byte r, byte g, byte b)
     {
         int value = DecodeInt(r, g, b);
-        
+
         char c1 = (char)(value / 10000);
         char c2 = (char)((value / 100) % 100);
         char c3 = (char)(value % 100);

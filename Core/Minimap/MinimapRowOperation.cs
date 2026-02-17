@@ -11,6 +11,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace Core.Minimap;
+
 internal readonly struct MinimapRowOperation : IRowOperation<Point>
 {
     public const int SIZE = 100;

@@ -117,7 +117,7 @@ public class SchoolMaskExtensionTests
     public void HasValue_AllSchoolsCombined()
     {
         // Arrange
-        SchoolMask allSchools = SchoolMask.Physical | SchoolMask.Holy | SchoolMask.Fire | 
+        SchoolMask allSchools = SchoolMask.Physical | SchoolMask.Holy | SchoolMask.Fire |
                                 SchoolMask.Nature | SchoolMask.Frost | SchoolMask.Shadow | SchoolMask.Arcane;
 
         // Act & Assert

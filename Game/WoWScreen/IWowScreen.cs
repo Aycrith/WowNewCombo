@@ -16,7 +16,7 @@ public interface IWowScreen : IRectProvider, IScreenImageProvider, IMinimapImage
     event Action OnChanged;
 
     void Update();
-    
+
     /// <summary>
     /// Waits for a successful screen update with retries.
     /// </summary>

@@ -59,7 +59,7 @@ public sealed class ActionBarCostReader : IReader
         // Bounds check - protect against out-of-bounds access
         if (index < 0 || index >= Data.Length)
         {
-            logger.LogWarning("ActionBarCostReader: Invalid index {index} (slotIdx: {slotIdx}, costIdx: {costIdx}, meta: {meta}). Array length: {arrayLength}. Skipping update.", 
+            logger.LogWarning("ActionBarCostReader: Invalid index {index} (slotIdx: {slotIdx}, costIdx: {costIdx}, meta: {meta}). Array length: {arrayLength}. Skipping update.",
                 index, slotIdx, costIdx, meta, Data.Length);
             return;
         }

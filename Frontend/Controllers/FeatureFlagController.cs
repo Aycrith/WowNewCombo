@@ -24,7 +24,7 @@ public sealed class FeatureFlagController : ControllerBase
     {
         WriteIndented = true
     };
-    
+
     private readonly FeatureFlagService featureFlagService;
     private readonly ILogger<FeatureFlagController> logger;
     private readonly string flagsFilePath;

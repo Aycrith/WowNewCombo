@@ -386,7 +386,7 @@ public class DiagnosticsController : ControllerBase
         try
         {
             ClassConfiguration? classConfig = botController.ClassConfig;
-            
+
             // Get all diagnostics
             KeybindDiagnostics? keybinds = null;
             ActionBarDiagnostics? actionBar = null;
@@ -461,7 +461,7 @@ public class DiagnosticsController : ControllerBase
             IAddonReader reader = addonReader;
             IAddonDataProvider dataProvider = ((AddonReader)reader).DataProvider;
             int value = dataProvider.GetInt(slotNumber);
-            
+
             return Ok(new
             {
                 Slot = slotNumber,
@@ -536,7 +536,7 @@ public class DiagnosticsController : ControllerBase
         try
         {
             (int totalReads, int nonZeroReads, int consecutiveZeros) = keyBindingsReader.GetReadStats();
-            
+
             return Ok(new
             {
                 TotalReads = totalReads,
@@ -578,7 +578,7 @@ public class DiagnosticsController : ControllerBase
             while (DateTime.UtcNow < endTime)
             {
                 int value = dataProvider.GetInt(106);
-                
+
                 if (value != lastValue)
                 {
                     if (lastValue != -1)
@@ -688,9 +688,9 @@ public class DiagnosticsController : ControllerBase
 
             // Try to get combat log via reflection
             Type addonReaderType = addonReader.GetType();
-            var combatLogField = addonReaderType.GetField("combatLog", 
+            var combatLogField = addonReaderType.GetField("combatLog",
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            
+
             if (combatLogField == null)
             {
                 return Ok(new { Message = "Combat log not available", Entries = Array.Empty<object>() });
@@ -802,7 +802,7 @@ public class DiagnosticsController : ControllerBase
         {
             string command = $"/{addonConfigurator.Config.CommandBindings}";
             logger.LogInformation("Executing {Command}", command);
-            
+
             exec.Run(command);
             await Task.Delay(500); // Give WoW time to apply bindings
 
@@ -830,7 +830,7 @@ public class DiagnosticsController : ControllerBase
         {
             string command = $"/{addonConfigurator.Config.CommandNumberKeys}";
             logger.LogInformation("Executing {Command}", command);
-            
+
             exec.Run(command);
             await Task.Delay(500); // Give WoW time to apply bindings
 
@@ -858,7 +858,7 @@ public class DiagnosticsController : ControllerBase
         {
             string command = $"/{addonConfigurator.Config.CommandActions}";
             logger.LogInformation("Executing {Command}", command);
-            
+
             exec.Run(command);
             await Task.Delay(500); // Give WoW time to create buttons
 
@@ -1040,7 +1040,7 @@ public class DiagnosticsController : ControllerBase
 
             sw.Stop();
             logger.LogInformation("Auto-fix sequence complete: {Steps}", string.Join(", ", steps));
-            
+
             return Ok(new FixResult(true, string.Join(" → ", steps), steps.Count));
         }
         catch (Exception ex)

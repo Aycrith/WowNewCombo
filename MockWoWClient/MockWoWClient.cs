@@ -79,9 +79,9 @@ public sealed class MockWoWClient : IDisposable
             return;
 
         _logger.LogInformation("Stopping MockWoWClient simulation");
-        
+
         _cts.Cancel();
-        
+
         if (_simulationTask != null)
         {
             try

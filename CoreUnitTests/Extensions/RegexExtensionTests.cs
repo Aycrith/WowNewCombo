@@ -8,14 +8,14 @@ using Xunit;
 
 namespace CoreUnitTests.Extensions;
 
-public class RegexExtensionTests
+public partial class RegexExtensionTests
 {
     [Fact]
     public void Replace_NamedGroup_ReplacesCorrectly()
     {
         // Arrange - Pattern that matches only "World" specifically
         string input = "Hello World";
-        Regex regex = new(@"(?<word>World)");
+        Regex regex = MyRegex();
         string groupName = "word";
         string replacement = "Universe";
 
@@ -283,4 +283,7 @@ public class RegexExtensionTests
         // Assert
         result.Should().Be("Line1\nREPLACED\nLine3");
     }
+
+    [GeneratedRegex(@"(?<word>World)")]
+    private static partial Regex MyRegex();
 }

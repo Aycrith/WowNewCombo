@@ -44,20 +44,20 @@ public static class DependencyInjection
         services.Configure<StartupOptions>(configuration.GetSection("Startup"));
         services.Configure<LaunchOptions>(configuration.GetSection("Launch"));
 
-    // Core startup services
-    services.AddSingleton<StartupState>();
-    services.AddSingleton<WoWPathFinder>();
-    services.AddSingleton<NavigationServerManager>();
-    services.AddSingleton<WoWProcessLauncher>();
-    services.AddSingleton<StartupOrchestrator>();
-    services.AddSingleton<SystemDiagnostics>();
+        // Core startup services
+        services.AddSingleton<StartupState>();
+        services.AddSingleton<WoWPathFinder>();
+        services.AddSingleton<NavigationServerManager>();
+        services.AddSingleton<WoWProcessLauncher>();
+        services.AddSingleton<StartupOrchestrator>();
+        services.AddSingleton<SystemDiagnostics>();
 
-    // Diagnostic services for agent troubleshooting
-    services.AddSingleton<Core.Diagnostics.IGoapEventHistory, Core.Diagnostics.GoapEventHistory>();
-    services.AddSingleton<Core.Diagnostics.IExecutionTracer, Core.Diagnostics.ExecutionTracer>();
-    
-    // Route visualization service for hot zone and stuck event display
-    services.AddSingleton<RouteVisualizationService>();
+        // Diagnostic services for agent troubleshooting
+        services.AddSingleton<Core.Diagnostics.IGoapEventHistory, Core.Diagnostics.GoapEventHistory>();
+        services.AddSingleton<Core.Diagnostics.IExecutionTracer, Core.Diagnostics.ExecutionTracer>();
+
+        // Route visualization service for hot zone and stuck event display
+        services.AddSingleton<RouteVisualizationService>();
 
         // Background services
         services.AddHostedService<ProcessCleanupService>();

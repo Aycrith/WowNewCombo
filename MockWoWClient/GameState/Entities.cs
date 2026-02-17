@@ -155,7 +155,7 @@ public class PlayerEntity : Entity
         }
 
         // Record position for breadcrumb tracking
-        if (PositionHistory.Count == 0 || 
+        if (PositionHistory.Count == 0 ||
             Vector3.Distance(PositionHistory.Last(), Position) >= 5.0f)
         {
             PositionHistory.Enqueue(Position);

@@ -356,7 +356,7 @@ public sealed class StartupOrchestrator
             }
 
             // Check if the error is about addon not being configured (first-run)
-            bool isFirstRunError = validation.Errors.Any(e => 
+            bool isFirstRunError = validation.Errors.Any(e =>
                 e.Title.Contains("not configured", StringComparison.OrdinalIgnoreCase) ||
                 e.Description.Contains("configuration is missing", StringComparison.OrdinalIgnoreCase));
 
@@ -464,11 +464,11 @@ public sealed class StartupOrchestrator
         {
             logger.LogInformation("[StartupOrchestrator] WoW is running, proceeding to frame configuration");
             logger.LogInformation("[StartupOrchestrator] If character is not in-world, frame config will fail");
-            
+
             // Give a short delay for any loading screens to complete
             state.StatusMessage = "WoW detected, preparing for frame configuration...";
             await Task.Delay(StageTransitionDelayMs, ct);
-            
+
             return StageResult.Success("WoW process detected, proceeding to frame configuration");
         }
 
@@ -482,10 +482,10 @@ public sealed class StartupOrchestrator
         // For now, we just wait for a reasonable time and let the frame configurator handle detection
         // In a more sophisticated implementation, we could poll pixel data to detect in-world state
 
-            // Wait up to 5 minutes for user to log in (checking every 5 seconds)
-            var timeout = options.WaitForCharacterTimeoutSeconds > 0
-                ? TimeSpan.FromSeconds(options.WaitForCharacterTimeoutSeconds)
-                : TimeSpan.FromMinutes(DefaultCharacterWaitTimeoutMinutes);
+        // Wait up to 5 minutes for user to log in (checking every 5 seconds)
+        var timeout = options.WaitForCharacterTimeoutSeconds > 0
+            ? TimeSpan.FromSeconds(options.WaitForCharacterTimeoutSeconds)
+            : TimeSpan.FromMinutes(DefaultCharacterWaitTimeoutMinutes);
 
         var startTime = DateTime.UtcNow;
 
@@ -540,7 +540,7 @@ public sealed class StartupOrchestrator
 
         logger.LogInformation("[StartupOrchestrator] Starting automatic frame configuration...");
         logger.LogInformation("[StartupOrchestrator] This will type '/{Command}' in WoW chat to toggle config mode", GetAddonCommand());
-        
+
         try
         {
             // Use the async version with retries
@@ -560,11 +560,11 @@ public sealed class StartupOrchestrator
                 // Check what went wrong
                 if (frameConfigurator.PreFlightFailed)
                 {
-                    logger.LogError("[StartupOrchestrator] Pre-flight checks failed: {Status}", 
+                    logger.LogError("[StartupOrchestrator] Pre-flight checks failed: {Status}",
                         frameConfigurator.StatusMessage);
                     return StageResult.Failed($"Pre-flight failed: {frameConfigurator.StatusMessage}");
                 }
-                
+
                 if (frameConfigurator.AddonNotVisible)
                 {
                     string command = GetAddonCommand();
@@ -572,8 +572,8 @@ public sealed class StartupOrchestrator
                     logger.LogWarning("[StartupOrchestrator] Run '/{Command}actions' in WoW to setup keybindings", command);
                     return StageResult.Warning($"Addon not visible - run /{command}actions in WoW");
                 }
-                
-                logger.LogWarning("[StartupOrchestrator] Frame configuration failed: {Status}", 
+
+                logger.LogWarning("[StartupOrchestrator] Frame configuration failed: {Status}",
                     frameConfigurator.StatusMessage);
                 return StageResult.Warning($"Frame config incomplete: {frameConfigurator.StatusMessage}");
             }
@@ -650,8 +650,8 @@ public sealed class StartupOrchestrator
             return;
         }
 
-            int port = pathing.portv1 > 0 ? pathing.portv1 : DefaultPathingApiPort;
-            string host = string.IsNullOrWhiteSpace(pathing.hostv1) ? DefaultPathingApiHost : pathing.hostv1;
+        int port = pathing.portv1 > 0 ? pathing.portv1 : DefaultPathingApiPort;
+        string host = string.IsNullOrWhiteSpace(pathing.hostv1) ? DefaultPathingApiHost : pathing.hostv1;
 
         if (!IsLocalHost(host))
         {

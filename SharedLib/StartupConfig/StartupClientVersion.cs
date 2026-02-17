@@ -12,21 +12,21 @@ public sealed class StartupClientVersion
     {
         // Priority 1: Anniversary Edition path detection - force to SoM regardless of version number
         string detectedPath = installPath ?? DetectAnniversaryPath();
-        
+
         if (!string.IsNullOrEmpty(detectedPath) && detectedPath.Contains("_anniversary_"))
         {
             Version = ClientVersion.SoM;
             Path = "som";
             return;
         }
-        
+
         if (v == null)
         {
             Version = ClientVersion.None;
             Path = "unknown";
             return;
         }
-        
+
         (Version, Path) = v switch
         {
             // --- Classic branch ---
@@ -59,12 +59,12 @@ public sealed class StartupClientVersion
             // Check Windows Registry for Anniversary Edition
             using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
                 @"SOFTWARE\WOW6432Node\Blizzard Entertainment\World of Warcraft");
-            
+
             if (key != null)
             {
                 var installPath = key.GetValue("InstallPath") as string;
                 key.Close();
-                
+
                 if (!string.IsNullOrEmpty(installPath) && installPath.Contains("_anniversary_"))
                 {
                     return installPath;
@@ -75,7 +75,7 @@ public sealed class StartupClientVersion
         {
             // Ignore registry access errors
         }
-        
+
         // Check common paths for Anniversary Edition
         string[] anniversaryPaths = {
             @"C:\Program Files (x86)\World of Warcraft\_anniversary_",
@@ -85,7 +85,7 @@ public sealed class StartupClientVersion
             @"E:\World of Warcraft\_anniversary_",
             @"E:\Games\World of Warcraft\_anniversary_"
         };
-        
+
         foreach (var path in anniversaryPaths)
         {
             if (System.IO.Directory.Exists(path))
@@ -93,7 +93,7 @@ public sealed class StartupClientVersion
                 return path;
             }
         }
-        
+
         return string.Empty;
     }
 }

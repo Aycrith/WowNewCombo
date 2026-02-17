@@ -72,7 +72,7 @@ public static class Program
                 }
 
                 // Check if this is a "WoW not running" error - don't restart loop for this
-                if (ex.Message.Contains("World of Warcraft process") || 
+                if (ex.Message.Contains("World of Warcraft process") ||
                     ex.InnerException?.Message.Contains("World of Warcraft process") == true)
                 {
                     Log.Fatal("[Program          ] WoW is required to run the bot. Exiting.");
@@ -268,7 +268,7 @@ public static class Program
         });
 
         // Register mDNS advertising service for http://wowbot.local access
-        if(Environment.GetEnvironmentVariable("USE_MDNS") != null)
+        if (Environment.GetEnvironmentVariable("USE_MDNS") != null)
         {
             services.AddHostedService<MdnsAdvertisingService>();
         }

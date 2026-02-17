@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 /// <summary>
 /// Parses LLM responses into structured decision results.
 /// </summary>
-public sealed class LLMResponseParser
+public sealed partial class LLMResponseParser
 {
     private readonly ILogger<LLMResponseParser>? logger;
 
@@ -95,7 +95,7 @@ public sealed class LLMResponseParser
     private static string? ExtractJson(string response)
     {
         // Try to find JSON block in markdown code fences
-        Match codeBlockMatch = Regex.Match(response, @"```(?:json)?\s*(\{[\s\S]*?\})\s*```", RegexOptions.IgnoreCase);
+        Match codeBlockMatch = MyRegex().Match(response);
         if (codeBlockMatch.Success)
         {
             return codeBlockMatch.Groups[1].Value.Trim();
@@ -137,4 +137,7 @@ public sealed class LLMResponseParser
 
         return 0;
     }
+
+    [GeneratedRegex(@"```(?:json)?\s*(\{[\s\S]*?\})\s*```", RegexOptions.IgnoreCase, "en-US")]
+    private static partial Regex MyRegex();
 }

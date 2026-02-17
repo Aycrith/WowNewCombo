@@ -3,6 +3,7 @@
 using System;
 
 namespace Core.Extensions;
+
 public static class ServiceCollectionExtension
 {
     public static IServiceCollection ForwardSingleton<TService, TInterface>(

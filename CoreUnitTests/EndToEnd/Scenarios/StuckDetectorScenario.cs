@@ -386,7 +386,7 @@ public sealed class StuckDetectorScenario : TestScenarioBase
 
         // Assert
         // Position should be close to initial (stuck), not moved significantly
-        Vector3.Distance(GameState.Player.Position, initialPos).Should().BeLessThan(1.0f, 
+        Vector3.Distance(GameState.Player.Position, initialPos).Should().BeLessThan(1.0f,
             "player should still be near stuck position");
     }
 

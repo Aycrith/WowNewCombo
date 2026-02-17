@@ -105,30 +105,30 @@ public sealed partial class GoapAgent : IDisposable
     public Stack<GoapGoal> Plan { get; private set; }
     public GoapGoal? CurrentGoal { get; private set; }
 
-public GoapAgent(
-    ILogger<GoapAgent> logger,
-    ILogger globalLogger,
-    CancellationTokenSource<GoapAgent> cts,
-    RouteInfo routeInfo,
-    IScreenCapture screenCapture,
-    ClassConfiguration classConfiguration,
-    IWowScreen screen,
-    GoapAgentState state,
-    AddonReader addonReader,
-    PlayerReader playerReader,
-    AddonBits bits,
-    ConfigurableInput input,
-    IMountHandler mountHandler,
-    CombatLog combatLog,
-    IBagChangeTracker bagChangeTracker,
-    SessionStat sessionStat,
-    StopMoving stopMoving,
-    IGrindSessionHandler sessionHandler,
-    IEnumerable<GoapGoal> availableGoals,
-    HazardEventCollector hazardEventCollector,
-    IHumanizationProvider? humanizationProvider = null,
-    IGoapEventHistory? goapEventHistory = null
-)
+    public GoapAgent(
+        ILogger<GoapAgent> logger,
+        ILogger globalLogger,
+        CancellationTokenSource<GoapAgent> cts,
+        RouteInfo routeInfo,
+        IScreenCapture screenCapture,
+        ClassConfiguration classConfiguration,
+        IWowScreen screen,
+        GoapAgentState state,
+        AddonReader addonReader,
+        PlayerReader playerReader,
+        AddonBits bits,
+        ConfigurableInput input,
+        IMountHandler mountHandler,
+        CombatLog combatLog,
+        IBagChangeTracker bagChangeTracker,
+        SessionStat sessionStat,
+        StopMoving stopMoving,
+        IGrindSessionHandler sessionHandler,
+        IEnumerable<GoapGoal> availableGoals,
+        HazardEventCollector hazardEventCollector,
+        IHumanizationProvider? humanizationProvider = null,
+        IGoapEventHistory? goapEventHistory = null
+    )
     {
         this.routeInfo = routeInfo;
 
@@ -239,43 +239,43 @@ public GoapAgent(
                 continue;
             }
 
-                GoapGoal? newGoal = NextGoal();
-                if (newGoal != null)
+            GoapGoal? newGoal = NextGoal();
+            if (newGoal != null)
+            {
+                if (newGoal != CurrentGoal)
                 {
-                    if (newGoal != CurrentGoal)
-                    {
-                        wasEmpty = false;
-                        string? fromGoalName = CurrentGoal?.Name;
-                        CurrentGoal?.OnExit();
-                        CurrentGoal = newGoal;
+                    wasEmpty = false;
+                    string? fromGoalName = CurrentGoal?.Name;
+                    CurrentGoal?.OnExit();
+                    CurrentGoal = newGoal;
 
-                        LogNewGoal(logger, newGoal.Name);
-                        CurrentGoal.OnEnter();
+                    LogNewGoal(logger, newGoal.Name);
+                    CurrentGoal.OnEnter();
 
-                        // Record goal transition for diagnostics
-                        goapEventHistory?.RecordTransition(
-                            fromGoalName,
-                            newGoal.Name,
-                            "Plan execution",
-                            Plan.Count);
+                    // Record goal transition for diagnostics
+                    goapEventHistory?.RecordTransition(
+                        fromGoalName,
+                        newGoal.Name,
+                        "Plan execution",
+                        Plan.Count);
 
-                        // Phase 3: Humanization - Add reaction delay after goal transition
-                        ApplyReactionDelay(newGoal);
-                    }
-
-                    newGoal.Update();
+                    // Phase 3: Humanization - Add reaction delay after goal transition
+                    ApplyReactionDelay(newGoal);
                 }
-                else if (!wasEmpty)
-                {
-                    LogNewEmptyGoal(logger);
-                    wasEmpty = true;
 
-                    // Record NO PLAN event for diagnostics
-                    goapEventHistory?.RecordNoPlanEvent(
-                        WorldState.ToString(),
-                        AvailableGoals.Select(g => g.Name).ToList(),
-                        $"WorldState: {WorldState}");
-                }
+                newGoal.Update();
+            }
+            else if (!wasEmpty)
+            {
+                LogNewEmptyGoal(logger);
+                wasEmpty = true;
+
+                // Record NO PLAN event for diagnostics
+                goapEventHistory?.RecordNoPlanEvent(
+                    WorldState.ToString(),
+                    AvailableGoals.Select(g => g.Name).ToList(),
+                    $"WorldState: {WorldState}");
+            }
 
             Thread.Sleep(2);
 

@@ -274,14 +274,14 @@ public sealed class InputProcessor : IInputReceiver
     {
         var player = _gameState.Player;
         float distance = (float)(MovementSpeed * deltaTime.TotalSeconds);
-        
+
         // Calculate new position based on direction
         float radians = MathF.PI * player.Direction / 180f;
         player.Position += new Vector3(
             MathF.Sin(radians) * distance,
             MathF.Cos(radians) * distance,
             0);
-        
+
         player.IsMoving = true;
         player.State = EntityState.Moving;
     }
@@ -290,13 +290,13 @@ public sealed class InputProcessor : IInputReceiver
     {
         var player = _gameState.Player;
         float distance = (float)(MovementSpeed * deltaTime.TotalSeconds * 0.5f); // Slower backward
-        
+
         float radians = MathF.PI * (player.Direction + 180) / 180f;
         player.Position += new Vector3(
             MathF.Sin(radians) * distance,
             MathF.Cos(radians) * distance,
             0);
-        
+
         player.IsMoving = true;
     }
 
@@ -339,7 +339,7 @@ public sealed class InputProcessor : IInputReceiver
                 IsTagged = nearest.IsTagged,
                 IsPlayerControlled = false
             };
-            
+
             _gameState.SetTarget(target);
         }
     }
@@ -386,14 +386,14 @@ public sealed class InputProcessor : IInputReceiver
             // Simple auto-attack damage
             int damage = 10;
             _gameState.CurrentTarget.TakeDamage(damage);
-            
+
             // Also damage the original NPC (TargetEntity is a copy)
             var originalNpc = _gameState.Npcs.FirstOrDefault(n => n.Id == _gameState.CurrentTarget.Id);
             if (originalNpc != null)
             {
                 originalNpc.TakeDamage(damage);
             }
-            
+
             _gameState.RecordCombatAction(actionBar.SpellName ?? "Auto Attack", damage);
 
             if (!_gameState.InCombat)
@@ -407,12 +407,12 @@ public sealed class InputProcessor : IInputReceiver
     {
         // Custom action keys (using Alt modifier)
         // These are typically set up by the addon
-        
+
         // Stop Attack: Alt-Delete
         _keyBindings[VK_DELETE] = new KeyBinding
         {
             Name = "StopAttack",
-            Action = () => 
+            Action = () =>
             {
                 _gameState.Player.IsAutoAttacking = false;
             }
@@ -429,7 +429,7 @@ public sealed class InputProcessor : IInputReceiver
         _keyBindings[VK_PRIOR] = new KeyBinding
         {
             Name = "ToggleConfig",
-            Action = () => 
+            Action = () =>
             {
                 // This would toggle the mock client's config mode
             }

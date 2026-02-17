@@ -14,14 +14,14 @@ namespace Core;
 public sealed class NullWowScreen : IWowScreen
 {
     private static readonly Rectangle EmptyRect = new(0, 0, 1, 1);
-    
+
     public bool Enabled { get; set; }
     public bool MinimapEnabled { get; set; }
     public bool EnablePostProcess { get; set; }
-    
+
     public Image<Bgra32> ScreenImage { get; }
     public Rectangle ScreenRect => EmptyRect;
-    
+
     public Image<Bgra32> MiniMapImage { get; }
     public Rectangle MiniMapRect => EmptyRect;
 

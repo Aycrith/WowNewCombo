@@ -78,7 +78,7 @@ public sealed class RouteRerouterEvidenceTests : IDisposable
                         {
                             await Task.Delay(6000); // Wait past cooldown
                         }
-                        
+
                         bool triggered = await rerouter.TriggerRerouteAsync(currentPos, targetPos, mapId);
                         if (triggered)
                         {
@@ -148,7 +148,7 @@ public sealed class RouteRerouterEvidenceTests : IDisposable
                         var current = rerouter.GetCurrentWaypoint();
                         var hasMore = rerouter.AdvanceWaypoint();
                         var active = rerouter.GetActiveReroute();
-                        
+
                         // Small delay to increase contention
                         Thread.Sleep(1);
                     }
@@ -356,7 +356,7 @@ public sealed class RouteRerouterEvidenceTests : IDisposable
             bool triggered = await rerouter.TriggerRerouteAsync(currentPos, targetPos, mapId);
             timestamps.Add(DateTime.UtcNow);
             results.Add(triggered);
-            
+
             // Vary the delay to test timing boundaries
             await Task.Delay(i % 2 == 0 ? 100 : 6000);
         }
@@ -370,19 +370,19 @@ public sealed class RouteRerouterEvidenceTests : IDisposable
         _output.WriteLine($"\n=== Rapid Cooldown Edge Case Evidence ===");
         _output.WriteLine($"Total attempts: 20");
         _output.WriteLine($"Successful triggers: {triggerTimes.Count}");
-        
+
         if (triggerTimes.Count >= 2)
         {
             var intervals = triggerTimes.Skip(1)
                 .Zip(triggerTimes, (curr, prev) => (curr - prev).TotalMilliseconds)
                 .ToList();
-            
+
             _output.WriteLine($"Min interval: {intervals.Min():F0}ms");
             _output.WriteLine($"Max interval: {intervals.Max():F0}ms");
             _output.WriteLine($"Avg interval: {intervals.Average():F0}ms");
-            
+
             // All intervals should be at least 5000ms (cooldown)
-            Assert.All(intervals, interval => Assert.True(interval >= 4900, 
+            Assert.All(intervals, interval => Assert.True(interval >= 4900,
                 $"Interval {interval:F0}ms is less than cooldown period"));
         }
     }
@@ -402,7 +402,7 @@ public sealed class RouteRerouterEvidenceTests : IDisposable
         var rerouter = CreateRerouter();
         var latencies = new List<long>();
         var exceptions = new List<Exception>();
-        
+
         GC.Collect();
         GC.WaitForPendingFinalizers();
         long memStart = GC.GetTotalMemory(true);
@@ -419,15 +419,15 @@ public sealed class RouteRerouterEvidenceTests : IDisposable
             try
             {
                 testStopwatch.Restart();
-                
+
                 // Simulate typical rerouter operations
                 _ = rerouter.IsEnabled;
                 _ = rerouter.GetCurrentWaypoint();
                 _ = rerouter.GetActiveReroute();
-                
+
                 testStopwatch.Stop();
                 latencies.Add(testStopwatch.ElapsedMilliseconds);
-                
+
                 iterations++;
                 await Task.Delay(50); // ~20 ops/sec
             }
@@ -438,7 +438,7 @@ public sealed class RouteRerouterEvidenceTests : IDisposable
         }
 
         stopwatch.Stop();
-        
+
         GC.Collect();
         GC.WaitForPendingFinalizers();
         long memEnd = GC.GetTotalMemory(true);
@@ -453,7 +453,7 @@ public sealed class RouteRerouterEvidenceTests : IDisposable
         _output.WriteLine($"Memory start: {memStart / 1024 / 1024} MB");
         _output.WriteLine($"Memory end: {memEnd / 1024 / 1024} MB");
         _output.WriteLine($"Memory growth: {memGrowth / 1024 / 1024} MB ({growthPercent:F2}%)");
-        
+
         if (latencies.Count > 0)
         {
             _output.WriteLine($"Avg latency: {latencies.Average():F2}ms");
@@ -492,7 +492,7 @@ public sealed class RouteRerouterEvidenceTests : IDisposable
 
             // Clear and verify clean state
             rerouter.ClearActiveReroute();
-            
+
             current = rerouter.GetCurrentWaypoint();
             active = rerouter.GetActiveReroute();
             hasMore = rerouter.AdvanceWaypoint();

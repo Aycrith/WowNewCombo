@@ -79,7 +79,7 @@ public sealed class ParallelGoal : GoapGoal
         if (!castSuccess)
         {
             Cast();
-            
+
             wait.Update(playerReader.DoubleNetworkLatency);
             wait.Update();
         }

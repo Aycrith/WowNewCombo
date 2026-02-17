@@ -297,7 +297,7 @@ public sealed partial class ConfigurableInput
     {
         // Press stop attack
         PressStopAttack(token);
-        
+
         // Wait for combat to clear or auto-attack to stop
         return wait.Until(timeoutMs, () => !bits.Combat() && !bits.Any_AutoAttack()) > 0;
     }

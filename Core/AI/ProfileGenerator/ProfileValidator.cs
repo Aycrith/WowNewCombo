@@ -16,6 +16,7 @@ public sealed class ProfileValidator
     private readonly HashSet<string> validConsoleKeys;
     private readonly HashSet<string> validClasses;
     private readonly HashSet<string> validModes;
+    private static readonly string[] Errors = new[] { "Empty JSON" };
 
     public ProfileValidator(ILogger<ProfileValidator> logger)
     {
@@ -69,7 +70,7 @@ public sealed class ProfileValidator
 
         if (string.IsNullOrWhiteSpace(json))
         {
-            return new ValidationResult(false, new[] { "Empty JSON" });
+            return new ValidationResult(false, Errors);
         }
 
         // Try to parse as JSON

@@ -75,7 +75,7 @@ public sealed class BotIntegrationTest : TestScenarioBase
         Assert.NotNull(_screenProvider.ScreenImage);
         Assert.Equal(MockClient.Renderer.Width, _screenProvider.ScreenImage.Width);
         Assert.Equal(MockClient.Renderer.Height, _screenProvider.ScreenImage.Height);
-        
+
         // Verify image has actual pixel data (not empty)
         var pixel = _screenProvider.ScreenImage[0, 0];
         // Frame 0 should be black (0, 0, 0)
@@ -226,11 +226,11 @@ public sealed class BotIntegrationTest : TestScenarioBase
             // Frame positions match PixelGridRenderer layout (top-left of each cell)
             int row = i % rows;      // 0-49
             int col = i / rows;      // 0-6 (7 columns for 324 frames)
-            
+
             // Pixel coordinates (top-left corner of 4x4 cell)
             int x = col * cellSize;
             int y = row * cellSize;
-            
+
             frames[i] = new DataFrame(i, x, y);
         }
         return frames;
@@ -320,51 +320,51 @@ public sealed class BotIntegrationTest : TestScenarioBase
             _addonImage = new Image<Bgra32>(maxX + 4, maxY + 4);
         }
 
-    public void UpdateData()
-    {
-        if (_frames.Length <= 2 || _addonImage == null) return;
+        public void UpdateData()
+        {
+            if (_frames.Length <= 2 || _addonImage == null) return;
 
-        // Update the addon image from current screen
-        UpdateAddonImage();
+            // Update the addon image from current screen
+            UpdateAddonImage();
 
-        // Decode pixel data using the same method as real implementation
-        IAddonDataProvider.InternalUpdate(_addonImage, _frames.AsSpan(), Data.AsSpan());
-    }
+            // Decode pixel data using the same method as real implementation
+            IAddonDataProvider.InternalUpdate(_addonImage, _frames.AsSpan(), Data.AsSpan());
+        }
 
-    public int GetInt(int index)
-    {
-        if ((uint)index >= (uint)Data.Length) return 0;
-        return Data[index];
-    }
+        public int GetInt(int index)
+        {
+            if ((uint)index >= (uint)Data.Length) return 0;
+            return Data[index];
+        }
 
-    public float GetFixed(int index)
-    {
-        if ((uint)index >= (uint)Data.Length) return 0f;
-        return Data[index] / 100000f;
-    }
+        public float GetFixed(int index)
+        {
+            if ((uint)index >= (uint)Data.Length) return 0f;
+            return Data[index] / 100000f;
+        }
 
-    public string GetString(int index)
-    {
-        if ((uint)index >= (uint)Data.Length) return string.Empty;
+        public string GetString(int index)
+        {
+            if ((uint)index >= (uint)Data.Length) return string.Empty;
 
-        int color = Data[index];
-        if ((uint)color > 999999) return string.Empty;
+            int color = Data[index];
+            if ((uint)color > 999999) return string.Empty;
 
-        Span<char> buffer = stackalloc char[3];
-        int count = 0;
+            Span<char> buffer = stackalloc char[3];
+            int count = 0;
 
-        int n1 = color / 10000;
-        int n2 = color / 100 % 100;
-        int n3 = color % 100;
+            int n1 = color / 10000;
+            int n2 = color / 100 % 100;
+            int n3 = color % 100;
 
-        if (n1 > 0) buffer[count++] = (char)n1;
-        if (n2 > 0) buffer[count++] = (char)n2;
-        if (n3 > 0) buffer[count++] = (char)n3;
+            if (n1 > 0) buffer[count++] = (char)n1;
+            if (n2 > 0) buffer[count++] = (char)n2;
+            if (n3 > 0) buffer[count++] = (char)n3;
 
-        return buffer[..count].ToString();
-    }
+            return buffer[..count].ToString();
+        }
 
-    private void UpdateAddonImage()
+        private void UpdateAddonImage()
         {
             if (_addonImage == null) return;
 

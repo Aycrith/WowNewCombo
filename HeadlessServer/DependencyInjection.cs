@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using SharedLib;
 
 namespace HeadlessServer;
+
 public static class DependencyInjection
 {
     public static void AddStartupConfigFactories(this IServiceCollection services)

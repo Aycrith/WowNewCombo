@@ -434,43 +434,43 @@ public sealed class PullTargetGoalScenario : TestScenarioBase
         attemptCount.Should().Be(0);
     }
 
-#endregion
+    #endregion
 
-#region Stuck Detection
+    #region Stuck Detection
 
-[Fact]
-public async Task PullTargetGoal_ShouldDetect_Stuck()
-{
-    // Arrange
-    GameState.Player.Position = new Vector3(0, 0, 0);
-    AdvanceSimulation(TimeSpan.FromMilliseconds(1));
+    [Fact]
+    public async Task PullTargetGoal_ShouldDetect_Stuck()
+    {
+        // Arrange
+        GameState.Player.Position = new Vector3(0, 0, 0);
+        AdvanceSimulation(TimeSpan.FromMilliseconds(1));
 
-    // Act - Not moving despite trying
-    bool stuck = true;
-    AdvanceSimulation(TimeSpan.FromMilliseconds(1));
+        // Act - Not moving despite trying
+        bool stuck = true;
+        AdvanceSimulation(TimeSpan.FromMilliseconds(1));
 
-    // Assert
-    stuck.Should().BeTrue();
-}
+        // Assert
+        stuck.Should().BeTrue();
+    }
 
-[Fact]
-public async Task PullTargetGoal_ShouldRecover_WhenStuck()
-{
-    // Arrange
-    GameState.Player.Position = new Vector3(0, 0, 0);
-    AdvanceSimulation(TimeSpan.FromMilliseconds(1));
+    [Fact]
+    public async Task PullTargetGoal_ShouldRecover_WhenStuck()
+    {
+        // Arrange
+        GameState.Player.Position = new Vector3(0, 0, 0);
+        AdvanceSimulation(TimeSpan.FromMilliseconds(1));
 
-    // Act - Recover
-    GameState.Player.Position = new Vector3(1, 0, 0);
-    AdvanceSimulation(TimeSpan.FromMilliseconds(1));
+        // Act - Recover
+        GameState.Player.Position = new Vector3(1, 0, 0);
+        AdvanceSimulation(TimeSpan.FromMilliseconds(1));
 
-    // Assert
-    GameState.Player.Position.Should().NotBe(Vector3.Zero);
-}
+        // Assert
+        GameState.Player.Position.Should().NotBe(Vector3.Zero);
+    }
 
-#endregion
+    #endregion
 
-#region Mode Support
+    #region Mode Support
 
     [Fact]
     public async Task PullTargetGoal_ShouldSupport_AssistFocusMode()

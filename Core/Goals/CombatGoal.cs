@@ -267,13 +267,13 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
     {
         // Count unique mobs that have damaged us (best available proxy)
         int mobCount = combatLog.DamageTakenCount();
-        
+
         // If we have a target but no damage taken yet, count it
         if (mobCount == 0 && bits.Target_Alive())
         {
             mobCount = 1;
         }
-        
+
         return mobCount;
     }
 

@@ -166,7 +166,7 @@ public sealed class RouteRerouter : IRouteRerouter, IDisposable
         Vector3[] originalPath = [currentPosition, targetPosition];
         Vector3[]? detourPath = await CalculateDetourAsync(originalPath, mapId, cancellationToken);
 
-            if (detourPath == null || detourPath.Length < MinPathWaypoints)
+        if (detourPath == null || detourPath.Length < MinPathWaypoints)
         {
             logger.LogWarning("[RouteRerouter ] Failed to calculate detour path");
             return false;
@@ -212,7 +212,7 @@ public sealed class RouteRerouter : IRouteRerouter, IDisposable
     {
         var stopwatch = Stopwatch.StartNew();
 
-            if (!IsEnabled || rehabilitator == null || originalPath.Length < MinPathWaypoints)
+        if (!IsEnabled || rehabilitator == null || originalPath.Length < MinPathWaypoints)
         {
             return Task.FromResult<Vector3[]?>(null);
         }
@@ -411,7 +411,7 @@ public sealed class RouteRerouter : IRouteRerouter, IDisposable
         Vector3 pathDir = end - start;
         float pathLength = pathDir.Length();
 
-            if (pathLength < PathLengthEpsilon)
+        if (pathLength < PathLengthEpsilon)
         {
             return Vector3.Distance(start, point) < threshold;
         }
