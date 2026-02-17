@@ -54,6 +54,23 @@ public static class Phase1ServiceCollectionExtensions
 
         // Register LLM services (disabled by default, controlled by HybridLLMDecisionOptions)
         services.AddSingleton<ILLMClient, NullLLMClient>();
+
+        // Register circuit breaker for LLM decisions
+        services.AddSingleton(sp =>
+        {
+            ICircuitBreakerFactory factory = sp.GetRequiredService<ICircuitBreakerFactory>();
+            IOptionsMonitor<FeatureFlagsOptions> opts = sp.GetRequiredService<IOptionsMonitor<FeatureFlagsOptions>>();
+            HybridLLMDecisionOptions llmOpts = opts.CurrentValue.HybridLLMDecision;
+            return factory.GetOrCreate<LLMDecision>(
+                "HybridLLM",
+                static () => new LLMDecision("NoAction", "Circuit open", 0f),
+                llmOpts.CircuitBreakerThreshold,
+                TimeSpan.FromSeconds(llmOpts.CircuitBreakerCooldownSeconds));
+        });
+
+        // Register Hybrid LLM decision engine and event listener (SRP-compliant)
+        services.AddSingleton<HybridLlmDecisionEngine>();
+        services.AddSingleton<HybridLlmEventListener>();
         services.AddHostedService<HybridLLMDecisionService>();
 
         return services;

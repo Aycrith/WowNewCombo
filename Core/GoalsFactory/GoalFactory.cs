@@ -76,7 +76,9 @@ public static class GoalFactory
             // NO PLAN recovery service
             services.AddHostedService<Recovery.NoPlanRecoveryService>();
 
-            // Failure analytics service
+            // Failure analytics service (SRP-compliant: engine + listener + hosted service)
+            services.AddSingleton<Analytics.FailureAnalyticsEngine>();
+            services.AddSingleton<Analytics.FailureAnalyticsEventListener>();
             services.AddHostedService<Analytics.FailureAnalytics>();
         }
 
