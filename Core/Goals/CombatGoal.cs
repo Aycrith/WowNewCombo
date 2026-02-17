@@ -1,9 +1,12 @@
+using Core.BehaviorTree;
 using Core.CombatRotation;
+using Core.FeatureFlags;
 using Core.GOAP;
 
 using Game;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using System;
 using System.Numerics;
@@ -25,17 +28,22 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
     private readonly IMountHandler mountHandler;
     private readonly CombatLog combatLog;
     private readonly IRotationOptimizer rotationOptimizer;
+    private readonly BehaviorTreeCombatEngine? behaviorTreeEngine;
+    private readonly FeatureFlagsOptions featureFlags;
 
     private float lastDirection;
     private float lastMinDistance;
     private float lastMaxDistance;
+    private BehaviorContext? behaviorContext;
 
     public CombatGoal(ILogger<CombatGoal> logger, ConfigurableInput input,
         Wait wait, PlayerReader playerReader, StopMoving stopMoving, AddonBits bits,
         ClassConfiguration classConfig,
         CastingHandler castingHandler, CombatLog combatLog,
         IMountHandler mountHandler,
-        IRotationOptimizer rotationOptimizer)
+        IRotationOptimizer rotationOptimizer,
+        IOptions<FeatureFlagsOptions> featureFlagsOptions,
+        IBehaviorTreeCombatEngineFactory? behaviorTreeFactory = null)
         : base(nameof(CombatGoal))
     {
         this.logger = logger;
@@ -51,6 +59,15 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
         this.mountHandler = mountHandler;
         this.classConfig = classConfig;
         this.rotationOptimizer = rotationOptimizer;
+        this.featureFlags = featureFlagsOptions.Value;
+
+        // Initialize behavior tree if enabled and factory provided
+        if (behaviorTreeFactory != null && this.featureFlags.BehaviorTreeCombat?.Enabled == true)
+        {
+            this.behaviorTreeEngine = behaviorTreeFactory.CreateEngine();
+            this.behaviorTreeEngine.SetBehaviorTree(this.behaviorTreeEngine.BuildCombatTree(classConfig));
+            this.logger.LogInformation("[CombatGoal] Behavior tree combat system enabled");
+        }
 
         AddPrecondition(GoapKey.incombat, true);
         AddPrecondition(GoapKey.hastarget, true);
@@ -112,6 +129,13 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
     public override void Update()
     {
         wait.Update();
+
+        // Behavior Tree Combat System: if enabled, use behavior tree for decision making
+        if (featureFlags.BehaviorTreeCombat?.Enabled == true && behaviorTreeEngine != null)
+        {
+            UpdateBehaviorTree();
+            return;
+        }
 
         if (MathF.Abs(lastDirection - playerReader.Direction) > MathF.PI / 2)
         {
@@ -324,11 +348,41 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
     private bool InvalidSoftInteractExists()
     {
         return
-            bits.SoftInteract() &&
-            (
+        bits.SoftInteract() &&
+        (
             playerReader.SoftInteract_Type != GuidType.Creature ||
             bits.SoftInteract_Dead() ||
             bits.SoftInteract_Tagged()
-            );
+        );
+    }
+
+    /// <summary>
+    /// Updates using behavior tree combat system.
+    /// </summary>
+    private void UpdateBehaviorTree()
+    {
+        // Initialize behavior context if needed
+        if (behaviorContext == null)
+        {
+            behaviorContext = new BehaviorContext
+            {
+                Player = playerReader,
+                Casting = castingHandler,
+                StopMoving = stopMoving,
+                Input = input,
+                Logger = logger,
+                CombatSequence = classConfig.Combat.Sequence ?? Array.Empty<KeyAction>(),
+                ElapsedMs = 0
+            };
+        }
+
+        // Execute behavior tree tick
+        NodeStatus status = behaviorTreeEngine!.Tick(behaviorContext);
+
+        if (status == NodeStatus.Failure)
+        {
+            logger.LogWarning("[CombatGoal] Behavior tree returned Failure, falling back to GOAP");
+            // Could trigger fallback to GOAP here
+        }
     }
 }

@@ -1,0 +1,198 @@
+@page "/ProfileGenerator"
+
+@using Core.AI.ProfileGenerator
+@using Core.FeatureFlags
+@using Microsoft.Extensions.Options
+@using System.Text.Json
+
+@inject AIProfileGeneratorService ProfileGeneratorService
+@inject IOptionsMonitor<FeatureFlagsOptions> FeatureFlags
+@inject ILogger<ProfileGeneratorPage> Logger
+
+<h3>AI Profile Generator</h3>
+<p class="text-muted small">Generate class profiles using natural language descriptions.</p>
+
+@if (!FeatureFlags.CurrentValue.AIProfileGenerator.Enabled)
+{
+    <div class="alert alert-info">
+        <strong>Feature Disabled:</strong> AI Profile Generator is currently disabled. 
+        Enable it in <code>runtime_feature_flags.json</code> to use this feature.
+    </div>
+}
+else if (!isAvailable)
+{
+    <div class="alert alert-warning">
+        <strong>Not Available:</strong> No LLM provider is configured. 
+        Set the <code>OPENAI_API_KEY</code> environment variable or configure a local LLM.
+    </div>
+}
+
+<div class="card mt-3">
+    <div class="card-header">Generate New Profile</div>
+    <div class="card-body">
+        <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea class="form-control" 
+                      @bind="description" 
+                      placeholder="Example: Level 30 Frost Mage in Hillsbrad, focus on frostbolt and frost nova for kiting"
+                      rows="3"
+                      disabled="@isGenerating">
+            </textarea>
+            <div class="form-text">Describe your character, level, zone, and play style.</div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary" 
+                    @onclick="GenerateProfileAsync" 
+                    disabled="@(!CanGenerate)">
+                @if (isGenerating)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    <span>Generating...</span>
+                }
+                else
+                {
+                    <span>Generate Profile</span>
+                }
+            </button>
+            
+            <button class="btn btn-outline-secondary" 
+                    @onclick="ClearResults"
+                    disabled="@isGenerating">
+                Clear
+            </button>
+        </div>
+
+        @if (!string.IsNullOrEmpty(statusMessage))
+        {
+            <div class="mt-3 alert @(isSuccess ? "alert-success" : "alert-danger")">
+                @statusMessage
+            </div>
+        }
+    </div>
+</div>
+
+@if (generatedProfile != null)
+{
+    <div class="card mt-3">
+        <div class="card-header">Generated Profile</div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label">Profile JSON</label>
+                <pre class="bg-light p-3 rounded"><code>@formattedJson</code></pre>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button class="btn btn-success" @onclick="DownloadProfile">
+                    Download Profile
+                </button>
+                <button class="btn btn-outline-primary" @onclick="CopyToClipboard">
+                    Copy to Clipboard
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private string description = "";
+    private bool isGenerating = false;
+    private bool isAvailable = false;
+    private bool isSuccess = false;
+    private string? statusMessage;
+    private ProfileGenerationResult? result;
+    private Core.ClassConfiguration? generatedProfile;
+    private string formattedJson = "";
+
+    private bool CanGenerate => 
+        !string.IsNullOrWhiteSpace(description) && 
+        !isGenerating && 
+        FeatureFlags.CurrentValue.AIProfileGenerator.Enabled &&
+        isAvailable;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            isAvailable = await ProfileGeneratorService.IsAvailableAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to check LLM availability");
+            isAvailable = false;
+        }
+    }
+
+    private async Task GenerateProfileAsync()
+    {
+        if (string.IsNullOrWhiteSpace(description))
+            return;
+
+        isGenerating = true;
+        isSuccess = false;
+        statusMessage = null;
+        generatedProfile = null;
+        formattedJson = "";
+
+        try
+        {
+            result = await ProfileGeneratorService.GenerateProfileAsync(description);
+            
+            if (result.Success && result.Profile != null)
+            {
+                generatedProfile = result.Profile;
+                formattedJson = JsonSerializer.Serialize(result.Profile, new JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+                isSuccess = true;
+                statusMessage = "Profile generated successfully!";
+            }
+            else
+            {
+                isSuccess = false;
+                statusMessage = "Generation failed: " + string.Join(", ", result.Errors);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Profile generation failed");
+            isSuccess = false;
+            statusMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isGenerating = false;
+        }
+    }
+
+    private void ClearResults()
+    {
+        description = "";
+        generatedProfile = null;
+        result = null;
+        statusMessage = null;
+        formattedJson = "";
+    }
+
+    private async Task DownloadProfile()
+    {
+        if (generatedProfile == null)
+            return;
+
+        // Trigger browser download
+        var fileName = $"AI_Generated_{DateTime.Now:yyyyMMdd_HHmmss}.json";
+        await JSRuntime.InvokeVoidAsync("downloadFile", fileName, formattedJson);
+    }
+
+    private async Task CopyToClipboard()
+    {
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", formattedJson);
+        statusMessage = "Copied to clipboard!";
+        isSuccess = true;
+    }
+
+    [Inject]
+    private IJSRuntime JSRuntime { get; set; } = null!;
+}

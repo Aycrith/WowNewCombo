@@ -204,6 +204,9 @@ public sealed class HybridLLMDecisionOptions
     public int MaxLatencyMs { get; set; } = 2000;
     public bool EnableForUnexpectedStates { get; set; } = true;
     public int CacheDecisionsSeconds { get; set; } = 5;
+    public int CircuitBreakerThreshold { get; set; } = 3;
+    public int CircuitBreakerCooldownSeconds { get; set; } = 60;
+    public string Provider { get; set; } = "openai";
 }
 
 /// <summary>

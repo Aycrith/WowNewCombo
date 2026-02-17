@@ -227,6 +227,12 @@ public static class Program
         // Phase 2 (Hazard Avoidance) - safe to register even when disabled via feature flags.
         services.AddHazardAvoidance();
 
+        // Phase 2 (AI Profile Generator & Profile Marketplace) - feature-flagged, disabled by default.
+        services.AddPhase2Features();
+
+        // Phase 3 (Behavior Trees, Hybrid LLM) - feature-flagged, disabled by default.
+        services.AddPhase3Features();
+
         // Humanization (Anti-Detection) - disabled by default; safe to register always.
         services.AddHumanizationServices();
 
