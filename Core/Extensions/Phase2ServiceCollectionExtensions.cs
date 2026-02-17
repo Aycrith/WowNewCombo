@@ -57,16 +57,16 @@ public static class Phase2ServiceCollectionExtensions
 
     /// <summary>
     /// Adds Profile Marketplace services with proper HttpClient management.
-    /// Uses IHttpClientFactory to avoid socket exhaustion and DNS rotation issues.
+    /// Uses AddHttpClient<T>() pattern to provide ProfileMarketplaceService with an HttpClient
+    /// configured for marketplace operations.
     /// </summary>
     private static IServiceCollection AddProfileMarketplace(
         this IServiceCollection services)
     {
-        // Register named HttpClient for marketplace (IHttpClientFactory pattern)
-        services.AddHttpClient("GitHubMarketplace");
-
-        // Marketplace Service uses IHttpClientFactory (not direct HttpClient)
-        services.AddSingleton<ProfileMarketplaceService>();
+        // Register ProfileMarketplaceService with dedicated HttpClient via AddHttpClient<T>
+        // This ensures proper lifecycle management and socket reuse
+        services.AddHttpClient<ProfileMarketplaceService>()
+            .SetHandlerLifetime(TimeSpan.FromMinutes(5));
 
         return services;
     }

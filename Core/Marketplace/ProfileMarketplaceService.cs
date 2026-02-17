@@ -22,7 +22,7 @@ namespace Core.Marketplace;
 /// </summary>
 public sealed class ProfileMarketplaceService
 {
-    private readonly IHttpClientFactory httpClientFactory;
+    private readonly HttpClient httpClient;
     private readonly ILogger<ProfileMarketplaceService> logger;
     private readonly DataConfig dataConfig;
     private readonly ProfileMarketplaceOptions options;
@@ -55,14 +55,14 @@ public sealed class ProfileMarketplaceService
     internal const int MaxResponseSizeBytes = 10 * 1024 * 1024;
 
     public ProfileMarketplaceService(
-        IHttpClientFactory httpClientFactory,
+        HttpClient httpClient,
         ILogger<ProfileMarketplaceService> logger,
         DataConfig dataConfig,
         IOptions<ProfileMarketplaceOptions> options,
         FeatureFlagService? featureFlagService = null,
         TimeProvider? timeProvider = null)
     {
-        this.httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
+        this.httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
         this.dataConfig = dataConfig ?? throw new ArgumentNullException(nameof(dataConfig));
         this.options = options?.Value ?? throw new ArgumentNullException(nameof(options));
@@ -73,6 +73,7 @@ public sealed class ProfileMarketplaceService
     /// <summary>
     /// Creates an HttpRequestMessage with GitHub API headers and per-request auth token.
     /// Token is set per-request (not on DefaultRequestHeaders) to prevent leakage.
+    /// Token is only added to requests to trusted GitHub hosts.
     /// </summary>
     internal static HttpRequestMessage CreateGitHubRequest(HttpMethod method, string url)
     {
@@ -80,10 +81,14 @@ public sealed class ProfileMarketplaceService
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github.v3+json"));
         request.Headers.UserAgent.Add(new ProductInfoHeaderValue("WowClassicGrindBot", "1.0"));
 
-        string? token = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
-        if (!string.IsNullOrEmpty(token))
+        // Only add auth token to trusted GitHub hosts to prevent token leakage
+        if (IsTrustedDownloadUrl(url))
         {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            string? token = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
+            if (!string.IsNullOrEmpty(token))
+            {
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            }
         }
 
         return request;
@@ -227,11 +232,10 @@ public sealed class ProfileMarketplaceService
             logger.LogInformation("[Marketplace   ] Downloading profile {Id}", profileId);
 
             // Download content with size limit
-            using HttpClient client = httpClientFactory.CreateClient("GitHubMarketplace");
             using HttpRequestMessage request = new(HttpMethod.Get, listing.DownloadUrl);
             request.Headers.UserAgent.Add(new ProductInfoHeaderValue("WowClassicGrindBot", "1.0"));
 
-            using HttpResponseMessage response = await client.SendAsync(request,
+            using HttpResponseMessage response = await httpClient.SendAsync(request,
                 HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             response.EnsureSuccessStatusCode();
 
@@ -372,9 +376,8 @@ public sealed class ProfileMarketplaceService
             // GitHub API URL for contents
             string apiUrl = $"https://api.github.com/repos/{repoInfo.Owner}/{repoInfo.Repo}/contents/index.json";
 
-            using HttpClient client = httpClientFactory.CreateClient("GitHubMarketplace");
             using HttpRequestMessage request = CreateGitHubRequest(HttpMethod.Get, apiUrl);
-            using HttpResponseMessage httpResponse = await client.SendAsync(request, cancellationToken);
+            using HttpResponseMessage httpResponse = await httpClient.SendAsync(request, cancellationToken);
             httpResponse.EnsureSuccessStatusCode();
 
             GitHubContent? response = await httpResponse.Content.ReadFromJsonAsync<GitHubContent>(
@@ -452,13 +455,24 @@ public sealed class ProfileMarketplaceService
         // Strip any directory components first (defense-in-depth against path traversal)
         fileName = Path.GetFileName(fileName);
 
+        // Replace invalid filename characters
         char[] invalid = Path.GetInvalidFileNameChars();
         StringBuilder sanitized = new(fileName);
         foreach (char c in invalid)
         {
             sanitized.Replace(c, '_');
         }
-        return sanitized.ToString();
+
+        string result = sanitized.ToString();
+
+        // Verify the result is a valid filename (contains no directory separators after sanitization)
+        // This prevents edge cases where exotic Unicode characters might reconstruct path traversal
+        if (result.Contains(Path.DirectorySeparatorChar) || result.Contains(Path.AltDirectorySeparatorChar))
+        {
+            result = Path.GetFileName(result);
+        }
+
+        return result;
     }
 }
 
