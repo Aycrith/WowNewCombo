@@ -37,9 +37,9 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: 1
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
   DOTNET_NOLOGO: true
-  # Coverage thresholds
-  MIN_LINE_COVERAGE: 10  # Will increase to 80% as we improve coverage
-  MIN_BRANCH_COVERAGE: 5  # Will increase to 70% as we improve coverage
+  # Coverage thresholds (raised from 10%/5% on 2026-02-16 audit)
+  MIN_LINE_COVERAGE: 25
+  MIN_BRANCH_COVERAGE: 15
 
 jobs:
   # Job 1: Smoke Tests (Fast Feedback)
@@ -244,11 +244,11 @@ jobs:
     
     - name: Build with warnings as errors
       run: dotnet build --no-restore --configuration Release -p:TreatWarningsAsErrors=true
-      continue-on-error: true  # Allow warnings for now
-    
+      continue-on-error: true  # TODO: Fix remaining warnings then enforce
+
     - name: Run dotnet format check
       run: dotnet format --verify-no-changes --verbosity detailed
-      continue-on-error: true  # Don't fail on formatting issues
+      continue-on-error: true  # TODO: Run dotnet format to fix then enforce
 
   # Job 5: Package Security Scan
   security-scan:
@@ -269,7 +269,6 @@ jobs:
     
     - name: Run security audit
       run: dotnet list package --vulnerable --include-transitive
-      continue-on-error: true
     
     - name: Run CodeQL Analysis
       uses: github/codeql-action/init@v3

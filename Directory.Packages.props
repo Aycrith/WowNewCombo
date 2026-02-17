@@ -22,19 +22,20 @@
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.9" />
     <PackageVersion Include="Microsoft.AspNetCore.JsonPatch" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Caching.Abstractions" Version="9.0.9" />
-    <PackageVersion Include="System.Net.Http" Version="4.3.4" />
+    <!-- System.Net.Http 4.3.4 removed: redundant on .NET 10, had CVE-2018-8292 -->
     <PackageVersion Include="System.Net.Http.Json" Version="9.0.9" />
     <PackageVersion Include="GameOverlay.Net" Version="4.3.1" />
     <PackageVersion Include="Makaretu.Dns.Multicast.New" Version="0.38.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.0" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageVersion Include="System.Drawing.Common" Version="10.0.0" />
     <PackageVersion Include="BlazorTable" Version="1.17.0" />
     <PackageVersion Include="MatBlazor" Version="2.10.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="10.0.0" />
-    <PackageVersion Include="System.Text.Json" Version="8.0.4" />
-    <PackageVersion Include="System.Text.RegularExpressions" Version="4.3.1" />
+    <PackageVersion Include="System.Text.Json" Version="10.0.0" />
+    <!-- System.Text.RegularExpressions 4.3.1 removed: redundant on .NET 10, had CVE-2019-0820 -->
     <PackageVersion Include="Vortice.Direct3D11" Version="3.6.2" />
     <PackageVersion Include="CommandLineParser" Version="2.9.1" />
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="10.0.0" />

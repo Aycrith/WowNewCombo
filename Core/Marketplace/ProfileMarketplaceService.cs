@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
@@ -21,10 +22,12 @@ namespace Core.Marketplace;
 /// </summary>
 public sealed class ProfileMarketplaceService
 {
-    private readonly HttpClient httpClient;
+    private readonly IHttpClientFactory httpClientFactory;
     private readonly ILogger<ProfileMarketplaceService> logger;
     private readonly DataConfig dataConfig;
     private readonly ProfileMarketplaceOptions options;
+    private readonly FeatureFlagService? featureFlagService;
+    private readonly TimeProvider timeProvider;
 
     // Cache
     private ProfileIndex? cachedIndex;
@@ -32,30 +35,84 @@ public sealed class ProfileMarketplaceService
     private readonly SemaphoreSlim cacheLock = new(1, 1);
 
     // Download tracking
-    private int downloadsThisSession = 0;
+    private int downloadsThisSession;
+
+    /// <summary>
+    /// Trusted domains for profile downloads. Downloads from untrusted hosts are rejected
+    /// to prevent token leakage via attacker-controlled DownloadUrl values.
+    /// </summary>
+    private static readonly HashSet<string> TrustedDownloadHosts = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "raw.githubusercontent.com",
+        "github.com",
+        "api.github.com",
+        "objects.githubusercontent.com"
+    };
+
+    /// <summary>
+    /// Maximum response size for downloads (10 MB).
+    /// </summary>
+    internal const int MaxResponseSizeBytes = 10 * 1024 * 1024;
 
     public ProfileMarketplaceService(
-        HttpClient httpClient,
+        IHttpClientFactory httpClientFactory,
         ILogger<ProfileMarketplaceService> logger,
         DataConfig dataConfig,
-        IOptions<ProfileMarketplaceOptions> options)
+        IOptions<ProfileMarketplaceOptions> options,
+        FeatureFlagService? featureFlagService = null,
+        TimeProvider? timeProvider = null)
     {
-        this.httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        this.httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
         this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
         this.dataConfig = dataConfig ?? throw new ArgumentNullException(nameof(dataConfig));
         this.options = options?.Value ?? throw new ArgumentNullException(nameof(options));
+        this.featureFlagService = featureFlagService;
+        this.timeProvider = timeProvider ?? TimeProvider.System;
+    }
 
-        // Set GitHub API headers
-        this.httpClient.DefaultRequestHeaders.Add("Accept", "application/vnd.github.v3+json");
-        this.httpClient.DefaultRequestHeaders.Add("User-Agent", "WowClassicGrindBot/1.0");
+    /// <summary>
+    /// Creates an HttpRequestMessage with GitHub API headers and per-request auth token.
+    /// Token is set per-request (not on DefaultRequestHeaders) to prevent leakage.
+    /// </summary>
+    internal static HttpRequestMessage CreateGitHubRequest(HttpMethod method, string url)
+    {
+        HttpRequestMessage request = new(method, url);
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github.v3+json"));
+        request.Headers.UserAgent.Add(new ProductInfoHeaderValue("WowClassicGrindBot", "1.0"));
 
-        // Add auth token if available (for higher rate limits)
-        var token = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
+        string? token = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
         if (!string.IsNullOrEmpty(token))
         {
-            this.httpClient.DefaultRequestHeaders.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
+
+        return request;
+    }
+
+    /// <summary>
+    /// Checks if the marketplace feature is enabled via feature flags.
+    /// </summary>
+    public bool IsEnabled()
+    {
+        if (featureFlagService == null)
+        {
+            return true;
+        }
+
+        return featureFlagService.Current.ProfileMarketplace.Enabled;
+    }
+
+    /// <summary>
+    /// Validates that a download URL points to a trusted GitHub host.
+    /// </summary>
+    internal static bool IsTrustedDownloadUrl(string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? uri))
+        {
+            return false;
+        }
+
+        return uri.Scheme == Uri.UriSchemeHttps && TrustedDownloadHosts.Contains(uri.Host);
     }
 
     /// <summary>
@@ -65,11 +122,17 @@ public sealed class ProfileMarketplaceService
         ProfileSearchCriteria criteria,
         CancellationToken cancellationToken = default)
     {
+        if (!IsEnabled())
+        {
+            logger.LogDebug("[Marketplace   ] Feature is disabled");
+            return Array.Empty<ProfileListing>();
+        }
+
         try
         {
-            var index = await GetIndexAsync(cancellationToken);
+            ProfileIndex index = await GetIndexAsync(cancellationToken);
 
-            var results = index.Profiles.AsEnumerable();
+            IEnumerable<ProfileListing> results = index.Profiles.AsEnumerable();
 
             // Apply filters
             if (!string.IsNullOrEmpty(criteria.ClassName))
@@ -96,7 +159,7 @@ public sealed class ProfileMarketplaceService
 
             if (!string.IsNullOrEmpty(criteria.SearchText))
             {
-                var searchLower = criteria.SearchText.ToLowerInvariant();
+                string searchLower = criteria.SearchText.ToLowerInvariant();
                 results = results.Where(p =>
                     p.Name.Contains(searchLower, StringComparison.OrdinalIgnoreCase) ||
                     p.Description.Contains(searchLower, StringComparison.OrdinalIgnoreCase) ||
@@ -125,6 +188,13 @@ public sealed class ProfileMarketplaceService
         string profileId,
         CancellationToken cancellationToken = default)
     {
+        if (!IsEnabled())
+        {
+            return new DownloadResult(
+                Success: false,
+                ErrorMessage: "Profile marketplace is disabled");
+        }
+
         // Check download limit
         if (downloadsThisSession >= options.MaxDownloadsPerSession)
         {
@@ -135,8 +205,8 @@ public sealed class ProfileMarketplaceService
 
         try
         {
-            var index = await GetIndexAsync(cancellationToken);
-            var listing = index.Profiles.FirstOrDefault(p => p.Id == profileId);
+            ProfileIndex index = await GetIndexAsync(cancellationToken);
+            ProfileListing? listing = index.Profiles.FirstOrDefault(p => p.Id == profileId);
 
             if (listing == null)
             {
@@ -145,16 +215,47 @@ public sealed class ProfileMarketplaceService
                     ErrorMessage: $"Profile '{profileId}' not found");
             }
 
-            logger.LogInformation("[Marketplace   ] Downloading profile {Id} from {Url}",
-                profileId, listing.DownloadUrl);
+            // Validate download URL against trusted hosts
+            if (!IsTrustedDownloadUrl(listing.DownloadUrl))
+            {
+                logger.LogWarning("[Marketplace   ] Rejected untrusted download URL: {Url}", listing.DownloadUrl);
+                return new DownloadResult(
+                    Success: false,
+                    ErrorMessage: "Download URL is not from a trusted source");
+            }
 
-            // Download content
-            string content = await httpClient.GetStringAsync(listing.DownloadUrl, cancellationToken);
+            logger.LogInformation("[Marketplace   ] Downloading profile {Id}", profileId);
+
+            // Download content with size limit
+            using HttpClient client = httpClientFactory.CreateClient("GitHubMarketplace");
+            using HttpRequestMessage request = new(HttpMethod.Get, listing.DownloadUrl);
+            request.Headers.UserAgent.Add(new ProductInfoHeaderValue("WowClassicGrindBot", "1.0"));
+
+            using HttpResponseMessage response = await client.SendAsync(request,
+                HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            // Check content length before reading body
+            if (response.Content.Headers.ContentLength > MaxResponseSizeBytes)
+            {
+                return new DownloadResult(
+                    Success: false,
+                    ErrorMessage: $"Profile too large ({response.Content.Headers.ContentLength} bytes)");
+            }
+
+            string content = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            if (content.Length > MaxResponseSizeBytes)
+            {
+                return new DownloadResult(
+                    Success: false,
+                    ErrorMessage: $"Profile content too large ({content.Length} bytes)");
+            }
 
             // Validate JSON
             try
             {
-                using var doc = JsonDocument.Parse(content);
+                using JsonDocument doc = JsonDocument.Parse(content);
             }
             catch (JsonException ex)
             {
@@ -163,9 +264,20 @@ public sealed class ProfileMarketplaceService
                     ErrorMessage: $"Invalid JSON in profile: {ex.Message}");
             }
 
-            // Sanitize filename
+            // Sanitize filename and validate path containment
             string safeName = SanitizeFileName($"{listing.ClassName}_{listing.Name}_{listing.Id}.json");
             string targetPath = Path.Combine(dataConfig.Class, safeName);
+
+            // Path containment check: ensure the resolved path is within the expected directory
+            string fullTargetPath = Path.GetFullPath(targetPath);
+            string fullBaseDir = Path.GetFullPath(dataConfig.Class);
+            if (!fullTargetPath.StartsWith(fullBaseDir, StringComparison.OrdinalIgnoreCase))
+            {
+                logger.LogWarning("[Marketplace   ] Path traversal blocked: {Path}", targetPath);
+                return new DownloadResult(
+                    Success: false,
+                    ErrorMessage: "Invalid profile path");
+            }
 
             // Ensure directory exists
             Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
@@ -197,7 +309,12 @@ public sealed class ProfileMarketplaceService
         int count = 10,
         CancellationToken cancellationToken = default)
     {
-        var index = await GetIndexAsync(cancellationToken);
+        if (!IsEnabled())
+        {
+            return Array.Empty<ProfileListing>();
+        }
+
+        ProfileIndex index = await GetIndexAsync(cancellationToken);
 
         return index.Profiles
             .OrderByDescending(p => p.Downloads)
@@ -236,9 +353,11 @@ public sealed class ProfileMarketplaceService
         await cacheLock.WaitAsync(cancellationToken);
         try
         {
+            DateTime now = timeProvider.GetUtcNow().DateTime;
+
             // Check if cache is still valid
             if (cachedIndex != null &&
-                DateTime.UtcNow - lastIndexFetch < TimeSpan.FromMinutes(options.CacheDurationMinutes))
+                now - lastIndexFetch < TimeSpan.FromMinutes(options.CacheDurationMinutes))
             {
                 logger.LogDebug("[Marketplace   ] Using cached index");
                 return cachedIndex;
@@ -248,16 +367,28 @@ public sealed class ProfileMarketplaceService
             logger.LogInformation("[Marketplace   ] Fetching profile index from {Repo}", options.RepositoryUrl);
 
             // Parse repository URL
-            var repoInfo = ParseRepositoryUrl(options.RepositoryUrl);
+            (string Owner, string Repo) repoInfo = ParseRepositoryUrl(options.RepositoryUrl);
 
             // GitHub API URL for contents
             string apiUrl = $"https://api.github.com/repos/{repoInfo.Owner}/{repoInfo.Repo}/contents/index.json";
 
-            var response = await httpClient.GetFromJsonAsync<GitHubContent>(apiUrl, cancellationToken);
+            using HttpClient client = httpClientFactory.CreateClient("GitHubMarketplace");
+            using HttpRequestMessage request = CreateGitHubRequest(HttpMethod.Get, apiUrl);
+            using HttpResponseMessage httpResponse = await client.SendAsync(request, cancellationToken);
+            httpResponse.EnsureSuccessStatusCode();
+
+            GitHubContent? response = await httpResponse.Content.ReadFromJsonAsync<GitHubContent>(
+                cancellationToken: cancellationToken);
 
             if (response?.Content == null)
             {
                 throw new InvalidOperationException("GitHub API returned empty content");
+            }
+
+            // Check base64 size before decoding
+            if (response.Content.Length > MaxResponseSizeBytes)
+            {
+                throw new InvalidOperationException($"Index content too large ({response.Content.Length} bytes)");
             }
 
             // Decode base64 content
@@ -274,7 +405,7 @@ public sealed class ProfileMarketplaceService
                 throw new InvalidOperationException("Failed to deserialize profile index");
             }
 
-            lastIndexFetch = DateTime.UtcNow;
+            lastIndexFetch = now;
             logger.LogInformation("[Marketplace   ] Loaded {Count} profiles from index",
                 cachedIndex.Profiles.Count);
 
@@ -289,7 +420,7 @@ public sealed class ProfileMarketplaceService
     /// <summary>
     /// Parses GitHub repository URL.
     /// </summary>
-    private static (string Owner, string Repo) ParseRepositoryUrl(string url)
+    internal static (string Owner, string Repo) ParseRepositoryUrl(string url)
     {
         // Handle various GitHub URL formats
         // https://github.com/owner/repo
@@ -299,13 +430,13 @@ public sealed class ProfileMarketplaceService
 
         if (url.Contains("/repos/"))
         {
-            var parts = url.Split("/repos/")[1].Split('/');
+            string[] parts = url.Split("/repos/")[1].Split('/');
             return (parts[0], parts[1]);
         }
 
         if (url.Contains("github.com/"))
         {
-            var parts = url.Split("github.com/")[1].Split('/');
+            string[] parts = url.Split("github.com/")[1].Split('/');
             return (parts[0], parts[1]);
         }
 
@@ -314,12 +445,16 @@ public sealed class ProfileMarketplaceService
 
     /// <summary>
     /// Sanitizes a filename for safe filesystem use.
+    /// Strips directory components and replaces invalid characters.
     /// </summary>
-    private static string SanitizeFileName(string fileName)
+    internal static string SanitizeFileName(string fileName)
     {
-        var invalid = Path.GetInvalidFileNameChars();
-        var sanitized = new StringBuilder(fileName);
-        foreach (var c in invalid)
+        // Strip any directory components first (defense-in-depth against path traversal)
+        fileName = Path.GetFileName(fileName);
+
+        char[] invalid = Path.GetInvalidFileNameChars();
+        StringBuilder sanitized = new(fileName);
+        foreach (char c in invalid)
         {
             sanitized.Replace(c, '_');
         }

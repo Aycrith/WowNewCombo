@@ -33,6 +33,7 @@ public sealed class FailureAnalytics : IHostedService, IDisposable, IGoapEventLi
     private readonly PlayerReader playerReader;
     private readonly StuckDetector? stuckDetector;
     private readonly GoapAgent? goapAgent;
+    private readonly TimeProvider timeProvider;
 
     private readonly List<FailureEvent> sessionEvents = new();
     private readonly object eventLock = new();
@@ -46,13 +47,15 @@ public sealed class FailureAnalytics : IHostedService, IDisposable, IGoapEventLi
         FeatureFlagService featureFlags,
         PlayerReader playerReader,
         StuckDetector? stuckDetector = null,
-        GoapAgent? goapAgent = null)
+        GoapAgent? goapAgent = null,
+        TimeProvider? timeProvider = null)
     {
         this.logger = logger;
         this.featureFlags = featureFlags;
         this.playerReader = playerReader;
         this.stuckDetector = stuckDetector;
         this.goapAgent = goapAgent;
+        this.timeProvider = timeProvider ?? TimeProvider.System;
 
         // Set persistence path
         string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
@@ -155,7 +158,7 @@ public sealed class FailureAnalytics : IHostedService, IDisposable, IGoapEventLi
         {
             var evt = new FailureEvent
             {
-                Timestamp = DateTime.UtcNow,
+                Timestamp = timeProvider.GetUtcNow().DateTime,
                 Type = type,
                 Reason = reason,
                 TargetGuid = targetGuid,
@@ -169,14 +172,16 @@ public sealed class FailureAnalytics : IHostedService, IDisposable, IGoapEventLi
             sessionEvents.Add(evt);
             Interlocked.Increment(ref totalFailures);
 
+            // Enforce memory bound: trim oldest events when exceeding limit
+            int maxEvents = featureFlags.Current.FailureAnalytics.MaxEventsInMemory;
+            if (sessionEvents.Count > maxEvents)
+            {
+                int excess = sessionEvents.Count - maxEvents;
+                sessionEvents.RemoveRange(0, excess);
+            }
+
             logger.LogDebug("[FailureAnalytics  ] Recorded {Type}: {Reason} at {Position}",
                 type, reason, evt.Position);
-
-            // Prune if too many events in memory
-            if (sessionEvents.Count > featureFlags.Current.FailureAnalytics.MaxEventsInMemory)
-            {
-                sessionEvents.RemoveAt(0);
-            }
         }
     }
 
@@ -247,7 +252,7 @@ public sealed class FailureAnalytics : IHostedService, IDisposable, IGoapEventLi
                 allEvents.AddRange(sessionEvents);
 
                 // Prune old events
-                DateTime cutoff = DateTime.UtcNow.AddDays(-featureFlags.Current.FailureAnalytics.RetentionDays);
+                DateTime cutoff = timeProvider.GetUtcNow().DateTime.AddDays(-featureFlags.Current.FailureAnalytics.RetentionDays);
                 allEvents.RemoveAll(e => e.Timestamp < cutoff);
 
                 // Keep max events

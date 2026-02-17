@@ -4,7 +4,7 @@ using WinAPI;
 
 namespace Benchmarks.ClassProfile;
 
-public sealed class LoadAllProfiles
+public class LoadAllProfiles
 {
     [Benchmark]
     [ArgumentsSource(nameof(GetProfileNames))]

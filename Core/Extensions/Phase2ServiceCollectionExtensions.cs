@@ -1,12 +1,9 @@
 using System;
-using System.Net.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 using Core.AI.LLM;
 using Core.AI.ProfileGenerator;
-using Core.FeatureFlags;
 using Core.Marketplace;
 
 namespace Core.Extensions;
@@ -59,12 +56,16 @@ public static class Phase2ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Adds Profile Marketplace services.
+    /// Adds Profile Marketplace services with proper HttpClient management.
+    /// Uses IHttpClientFactory to avoid socket exhaustion and DNS rotation issues.
     /// </summary>
     private static IServiceCollection AddProfileMarketplace(
         this IServiceCollection services)
     {
-        // Marketplace Service - HttpClient created inline in service
+        // Register named HttpClient for marketplace (IHttpClientFactory pattern)
+        services.AddHttpClient("GitHubMarketplace");
+
+        // Marketplace Service uses IHttpClientFactory (not direct HttpClient)
         services.AddSingleton<ProfileMarketplaceService>();
 
         return services;

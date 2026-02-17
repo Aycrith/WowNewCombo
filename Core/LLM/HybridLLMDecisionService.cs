@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,8 +27,10 @@ public sealed class HybridLLMDecisionService : BackgroundService, IGoapEventList
     private readonly IOptionsMonitor<FeatureFlagsOptions> featureFlags;
     private readonly GoapAgent? goapAgent;
     private readonly CircuitBreaker<LLMDecision> circuitBreaker;
+    private readonly TimeProvider timeProvider;
 
-    // Simple decision cache to prevent redundant LLM queries
+    // Simple decision cache to prevent redundant LLM queries (bounded to prevent memory leaks)
+    private const int MaxCacheEntries = 100;
     private readonly Dictionary<string, (LLMDecision Decision, DateTime Expiry)> decisionCache = new();
     private readonly object cacheLock = new();
 
@@ -37,12 +38,14 @@ public sealed class HybridLLMDecisionService : BackgroundService, IGoapEventList
         ILogger<HybridLLMDecisionService> logger,
         ILLMClient llmClient,
         IOptionsMonitor<FeatureFlagsOptions> featureFlags,
-        GoapAgent? goapAgent = null)
+        GoapAgent? goapAgent = null,
+        TimeProvider? timeProvider = null)
     {
         this.logger = logger;
         this.llmClient = llmClient;
         this.featureFlags = featureFlags;
         this.goapAgent = goapAgent;
+        this.timeProvider = timeProvider ?? TimeProvider.System;
 
         CircuitBreakerOptions cbOptions = featureFlags.CurrentValue.CircuitBreaker;
         circuitBreaker = new CircuitBreaker<LLMDecision>(
@@ -116,7 +119,7 @@ public sealed class HybridLLMDecisionService : BackgroundService, IGoapEventList
         {
             if (decisionCache.TryGetValue(context, out (LLMDecision Decision, DateTime Expiry) cached))
             {
-                if (cached.Expiry > DateTime.UtcNow)
+                if (cached.Expiry > timeProvider.GetUtcNow().DateTime)
                 {
                     logger.LogDebug("[HybridLLM       ] Returning cached decision");
                     return cached.Decision;
@@ -132,12 +135,24 @@ public sealed class HybridLLMDecisionService : BackgroundService, IGoapEventList
             return await llmClient.QueryAsync(context, cts.Token);
         });
 
-        // Cache the decision
+        // Cache the decision (with bounded size)
         if (decision.Confidence >= options.ConfidenceThreshold)
         {
             lock (cacheLock)
             {
-                DateTime expiry = DateTime.UtcNow.AddSeconds(options.CacheDecisionsSeconds);
+                // Evict expired entries if cache is at capacity
+                if (decisionCache.Count >= MaxCacheEntries)
+                {
+                    EvictExpiredCacheEntries();
+                }
+
+                // If still at capacity after eviction, clear oldest entries
+                if (decisionCache.Count >= MaxCacheEntries)
+                {
+                    decisionCache.Clear();
+                }
+
+                DateTime expiry = timeProvider.GetUtcNow().DateTime.AddSeconds(options.CacheDecisionsSeconds);
                 decisionCache[context] = (decision, expiry);
             }
         }
@@ -157,11 +172,11 @@ public sealed class HybridLLMDecisionService : BackgroundService, IGoapEventList
         logger.LogInformation("[HybridLLM       ] Decision: {Action} (confidence: {Confidence:F2}, reasoning: {Reasoning})",
             decision.SuggestedAction, decision.Confidence, decision.Reasoning);
 
-            // Feature: LLM decision integration with GOAP state
-            // Currently logs decisions only. Future enhancements:
-            // - Set world state flags to unblock GOAP planning
-            // - Trigger specific goals based on LLM recommendations
-            // - Send executive commands to the bot controller
+        // Feature: LLM decision integration with GOAP state
+        // Currently logs decisions only. Future enhancements:
+        // - Set world state flags to unblock GOAP planning
+        // - Trigger specific goals based on LLM recommendations
+        // - Send executive commands to the bot controller
     }
 
     private static bool IsNoPlanEvent(GoapEventArgs e)
@@ -172,32 +187,57 @@ public sealed class HybridLLMDecisionService : BackgroundService, IGoapEventList
         return e is AbortEvent;
     }
 
+    /// <summary>
+    /// Removes expired entries from the decision cache. Must be called under cacheLock.
+    /// </summary>
+    private void EvictExpiredCacheEntries()
+    {
+        DateTime now = timeProvider.GetUtcNow().DateTime;
+        List<string>? expired = null;
+
+        foreach (KeyValuePair<string, (LLMDecision Decision, DateTime Expiry)> kvp in decisionCache)
+        {
+            if (kvp.Value.Expiry <= now)
+            {
+                expired ??= [];
+                expired.Add(kvp.Key);
+            }
+        }
+
+        if (expired != null)
+        {
+            foreach (string key in expired)
+            {
+                decisionCache.Remove(key);
+            }
+        }
+    }
+
     private static string BuildGameStateContext(GoapAgent agent)
     {
-        // Build a JSON context of current game state for LLM
-        StringBuilder sb = new();
-        sb.AppendLine("{");
-        sb.AppendLine($"  \"CurrentGoal\": \"{agent.CurrentGoal?.Name ?? "None"}\",");
-        sb.AppendLine($"  \"WorldState\": {{");
-
-        // Serialize world state bits
-        List<string> stateFlags = new();
+        Dictionary<string, bool> worldState = new();
         foreach (GoapKey key in Enum.GetValues<GoapKey>())
         {
-            bool value = agent.WorldState[(int)key];
-            stateFlags.Add($"    \"{key}\": {value.ToString().ToLowerInvariant()}");
+            worldState[key.ToString()] = agent.WorldState[(int)key];
         }
-        sb.AppendLine(string.Join(",\n", stateFlags));
 
-        sb.AppendLine("  },");
-        sb.AppendLine($"  \"SessionStats\": {{");
-        sb.AppendLine($"    \"Kills\": {agent.SessionStat.Kills},");
-        sb.AppendLine($"    \"Deaths\": {agent.SessionStat.Deaths},");
-        sb.AppendLine($"    \"UptimeMinutes\": {agent.SessionStat.Minutes}");
-        sb.AppendLine("  }");
-        sb.AppendLine("}");
+        var context = new
+        {
+            CurrentGoal = agent.CurrentGoal?.Name ?? "None",
+            WorldState = worldState,
+            SessionStats = new
+            {
+                agent.SessionStat.Kills,
+                agent.SessionStat.Deaths,
+                UptimeMinutes = agent.SessionStat.Minutes
+            }
+        };
 
-        return sb.ToString();
+        return JsonSerializer.Serialize(context, new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
     }
 
     public override void Dispose()
