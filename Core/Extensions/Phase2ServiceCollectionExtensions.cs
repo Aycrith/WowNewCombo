@@ -1,8 +1,10 @@
 using System;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using Core.AI.LLM;
+using Core.FeatureFlags;
 using Core.AI.ProfileGenerator;
 using Core.Marketplace;
 
@@ -20,8 +22,17 @@ public static class Phase2ServiceCollectionExtensions
     /// <param name="configuration">Configuration for feature flags.</param>
     /// <returns>The service collection for chaining.</returns>
     public static IServiceCollection AddPhase2Features(
-        this IServiceCollection services)
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
+        // Configure AI Profile Generator options from configuration
+        services.Configure<AIProfileGeneratorOptions>(
+            configuration.GetSection("Features:AIProfileGenerator"));
+
+        // Configure Profile Marketplace options from configuration
+        services.Configure<ProfileMarketplaceOptions>(
+            configuration.GetSection("Features:ProfileMarketplace"));
+
         // AI Profile Generator
         services.AddAIProfileGenerator();
 

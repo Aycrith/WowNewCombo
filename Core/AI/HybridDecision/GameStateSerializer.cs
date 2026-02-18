@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using Core;
 using Core.GOAP;
 
 /// <summary>
@@ -15,12 +16,14 @@ using Core.GOAP;
 public sealed class GameStateSerializer
 {
     private readonly JsonSerializerOptions jsonOptions;
+    private readonly PlayerReader playerReader;
 
     /// <summary>
     /// Creates a new game state serializer.
     /// </summary>
-    public GameStateSerializer()
+    public GameStateSerializer(PlayerReader playerReader)
     {
+        this.playerReader = playerReader ?? throw new ArgumentNullException(nameof(playerReader));
         jsonOptions = new JsonSerializerOptions
         {
             WriteIndented = true,
@@ -35,20 +38,19 @@ public sealed class GameStateSerializer
     /// <returns>JSON representation of game state.</returns>
     public string SerializeState()
     {
-        // TODO: Integrate with actual PlayerReader and game state
-        // For now, return a placeholder structure
+        // Populate with actual player state from PlayerReader
         var state = new GameStateSnapshot
         {
             Player = new PlayerState
             {
-                HealthPercent = 100,
-                ManaPercent = 100,
-                Level = 60,
-                Class = "Warrior",
-                Position = new Vector3(0, 0, 0),
+                HealthPercent = playerReader.HealthPercent(),
+                ManaPercent = playerReader.ManaPercent(),
+                Level = playerReader.Level.Value,
+                Class = playerReader.Class.ToString(),
+                Position = playerReader.MapPos,
                 InCombat = false,
                 IsMoving = false,
-                HasTarget = false
+                HasTarget = playerReader.TargetGuid > 0
             },
             Target = null,
             Environment = new EnvironmentState

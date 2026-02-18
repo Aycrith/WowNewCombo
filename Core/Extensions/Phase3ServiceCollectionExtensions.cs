@@ -56,8 +56,9 @@ public static class Phase3ServiceCollectionExtensions
             GoapAgent goapAgent = sp.GetRequiredService<GoapAgent>();
             ILLMClientFactory llmFactory = sp.GetRequiredService<ILLMClientFactory>();
             IOptions<FeatureFlagsOptions> options = sp.GetRequiredService<IOptions<FeatureFlagsOptions>>();
+            PlayerReader playerReader = sp.GetRequiredService<PlayerReader>();
 
-            return new HybridDecisionEngine(logger, goapAgent, llmFactory, options);
+            return new HybridDecisionEngine(logger, goapAgent, llmFactory, options, playerReader);
         });
 
         return services;

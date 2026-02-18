@@ -38,7 +38,8 @@ public sealed class HybridDecisionEngine
         ILogger<HybridDecisionEngine> logger,
         GoapAgent goapAgent,
         ILLMClientFactory llmFactory,
-        IOptions<FeatureFlagsOptions> options)
+        IOptions<FeatureFlagsOptions> options,
+        PlayerReader playerReader)
     {
         this.logger = logger;
         this.goapAgent = goapAgent;
@@ -46,7 +47,7 @@ public sealed class HybridDecisionEngine
         this.flags = options.Value;
 
         cache = new HybridDecisionCache();
-        stateSerializer = new GameStateSerializer();
+        stateSerializer = new GameStateSerializer(playerReader);
 
         // Initialize circuit breaker
         HybridLLMDecisionOptions? hybridConfig = flags.HybridLLMDecision;
@@ -123,9 +124,8 @@ public sealed class HybridDecisionEngine
     {
         try
         {
-            // Use reflection or direct call to get GOAP action
-            // For now, return the current goal's next action
-            return null; // TODO: Implement proper GOAP integration
+            // Return first action from current GOAP goal's planned sequence
+            return goapAgent.CurrentGoal?.Keys.FirstOrDefault();
         }
         catch (Exception ex)
         {

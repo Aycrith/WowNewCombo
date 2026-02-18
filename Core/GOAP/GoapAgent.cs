@@ -48,6 +48,8 @@ public sealed partial class GoapAgent : IDisposable
     private readonly IHumanizationProvider? humanizationProvider;
     private readonly IGoapEventHistory? goapEventHistory;
 
+    private readonly IEnumerable<IGoapEventListener> extraListeners;
+
     private bool active;
     public bool Active
     {
@@ -127,7 +129,8 @@ public sealed partial class GoapAgent : IDisposable
         IEnumerable<GoapGoal> availableGoals,
         HazardEventCollector hazardEventCollector,
         IHumanizationProvider? humanizationProvider = null,
-        IGoapEventHistory? goapEventHistory = null
+        IGoapEventHistory? goapEventHistory = null,
+        IEnumerable<IGoapEventListener>? extraListeners = null
     )
     {
         this.routeInfo = routeInfo;
@@ -155,6 +158,8 @@ public sealed partial class GoapAgent : IDisposable
         this.humanizationProvider = humanizationProvider;
         this.goapEventHistory = goapEventHistory;
 
+        this.extraListeners = extraListeners ?? Array.Empty<IGoapEventListener>();
+
         SessionStat = sessionStat;
 
         this.stopMoving = stopMoving;
@@ -180,6 +185,12 @@ public sealed partial class GoapAgent : IDisposable
                 if (b != a)
                     a.GoapEvent += b.OnGoapEvent;
             }
+
+            // Wire extra listeners (DI-registered services like FailureAnalyticsEventListener, HybridLlmEventListener)
+            foreach (IGoapEventListener extraListener in this.extraListeners)
+            {
+                a.GoapEvent += extraListener.OnGoapEvent;
+            }
         }
 
         sessionPauseEvent = new(false);
@@ -202,6 +213,12 @@ public sealed partial class GoapAgent : IDisposable
             {
                 if (b != a)
                     a.GoapEvent -= b.OnGoapEvent;
+            }
+
+            // Unwire extra listeners
+            foreach (IGoapEventListener extraListener in this.extraListeners)
+            {
+                a.GoapEvent -= extraListener.OnGoapEvent;
             }
         }
 

@@ -148,6 +148,12 @@ public sealed class Program
         services.AddHazardAvoidance();
         services.AddHumanizationServices();
 
+        // Phase 2 (AI Profile Generator & Profile Marketplace) - feature-flagged, disabled by default.
+        services.AddPhase2Features(configuration);
+
+        // Phase 3 (Behavior Trees, Hybrid LLM) - feature-flagged, disabled by default.
+        services.AddPhase3Features();
+
         // Combat Rotation Optimizer - disabled by default; safe to register always.
         services.AddCombatRotationOptimizer();
 
