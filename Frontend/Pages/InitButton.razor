@@ -1,0 +1,15 @@
+﻿@using System
+@inject IAddonReader addonReader
+@inject WowProcessInput wowInput
+
+<Button Color="ButtonColor.Primary" @onpointerup="InitState">
+    Init State
+</Button>
+
+@code {
+    private void InitState()
+    {
+        addonReader.FullReset();
+        wowInput.PressFlushKey();
+    }
+}

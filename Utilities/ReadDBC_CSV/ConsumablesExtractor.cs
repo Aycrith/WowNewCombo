@@ -1,122 +1,94 @@
 ﻿using Newtonsoft.Json;
+using nietras.SeparatedValues;
+
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using SharedLib;
 
-namespace ReadDBC_CSV
+namespace ReadDBC_CSV;
+
+internal sealed class ConsumablesExtractor : IExtractor
 {
-    public class ConsumablesExtractor : IExtractor
+    private readonly string path;
+
+    private readonly string foodDesc;
+    private readonly string waterDesc;
+
+    public string[] FileRequirement { get; } =
+    [
+        "spell.csv",
+        "itemeffect.csv",
+    ];
+
+    public ConsumablesExtractor(string path, string foodDesc, string waterDesc)
     {
-        private readonly string path;
+        this.path = path;
 
-        private readonly string foodDesc;
-        private readonly string waterDesc;
+        this.foodDesc = foodDesc;
+        this.waterDesc = waterDesc;
+    }
 
-        public List<string> FileRequirement { get; } = new List<string>
+    public void Run()
+    {
+        string spellFile = Path.Join(path, FileRequirement[0]);
+
+        List<int> foodSpells = ExtractSpells(spellFile, foodDesc);
+        List<int> waterSpells = ExtractSpells(spellFile, waterDesc);
+
+        string itemEffectFile = Path.Join(path, FileRequirement[1]);
+
+        List<int> foodIds = ExtractItem(itemEffectFile, foodSpells);
+        foodIds.Sort();
+        Console.WriteLine($"Foods: {foodIds.Count}");
+        File.WriteAllText(Path.Join(path, "foods.json"), JsonConvert.SerializeObject(foodIds));
+
+        List<int> waterIds = ExtractItem(itemEffectFile, waterSpells);
+        waterIds.Sort();
+        Console.WriteLine($"Waters: {waterIds.Count}");
+        File.WriteAllText(Path.Join(path, "waters.json"), JsonConvert.SerializeObject(waterIds));
+    }
+
+    private static List<int> ExtractSpells(string path, string descLang)
+    {
+        using var reader = Sep.Reader(o => o with
         {
-            "spell.csv",
-            "itemeffect.csv",
-        };
+            Unescape = true,
+        }).FromFile(path);
 
-        public ConsumablesExtractor(string path, string foodDesc, string waterDesc)
+        int id = reader.Header.IndexOf("ID");
+        int desc = reader.Header.IndexOf("Description_lang");
+
+        List<int> items = new();
+        foreach (SepReader.Row row in reader)
         {
-            this.path = path;
-
-            this.foodDesc = foodDesc;
-            this.waterDesc = waterDesc;
+            if (row[desc].Span.IndexOf(descLang.AsSpan()) > -1)
+            {
+                items.Add(row[id].Parse<int>());
+            }
         }
 
-        public void Run()
+        return items;
+    }
+
+    private static List<int> ExtractItem(string path, List<int> spells)
+    {
+        using var reader = Sep.Reader(o => o with
         {
-            var spell = Path.Join(path, FileRequirement[0]);
+            Unescape = true,
+        }).FromFile(path);
 
-            var foodSpells = ExtractSpells(spell, foodDesc);
-            var waterSpells = ExtractSpells(spell, waterDesc);
+        int spellId = reader.Header.IndexOf("SpellID", 7);
+        int parentItemID = reader.Header.IndexOf("ParentItemID", 9);
 
-            var itemEffect = Path.Join(path, FileRequirement[1]);
-
-            var foodIds = ExtractItem(itemEffect, foodSpells);
-            foodIds.Sort((a, b) => a.Id.CompareTo(b.Id));
-            Console.WriteLine($"Foods: {foodIds.Count}");
-            File.WriteAllText(Path.Join(path, "foods.json"), JsonConvert.SerializeObject(foodIds));
-
-            var waterIds = ExtractItem(itemEffect, waterSpells);
-            waterIds.Sort((a, b) => a.Id.CompareTo(b.Id));
-            Console.WriteLine($"Waters: {waterIds.Count}");
-            File.WriteAllText(Path.Join(path, "waters.json"), JsonConvert.SerializeObject(waterIds));
-        }
-
-        private static List<EntityId> ExtractSpells(string path, string descLang)
+        List<int> items = [];
+        foreach (SepReader.Row row in reader)
         {
-            int entryIndex = -1;
-            int descIndex = -1;
-
-            var extractor = new CSVExtractor();
-            extractor.HeaderAction = () =>
+            int spell = row[spellId].Parse<int>();
+            if (spells.Contains(spell))
             {
-                entryIndex = extractor.FindIndex("ID");
-                descIndex = extractor.FindIndex("Description_lang");
-            };
-
-            var items = new List<EntityId>();
-            Action<string> extractLine = line =>
-            {
-                var values = line.Split(",");
-                if (values.Length > entryIndex &&
-                    values.Length > descIndex &&
-                    values[descIndex].Contains(descLang))
-                {
-                    items.Add(new EntityId
-                    {
-                        Id = int.Parse(values[entryIndex])
-                    });
-                }
-            };
-
-            extractor.ExtractTemplate(path, extractLine);
-            return items;
+                items.Add(row[parentItemID].Parse<int>());
+            }
         }
-
-        private static List<EntityId> ExtractItem(string path, List<EntityId> spells)
-        {
-            int entryIndex = -1;
-            int spellIdIndex = -1;
-            int ParentItemIDIndex = -1;
-
-            var extractor = new CSVExtractor();
-            extractor.HeaderAction = () =>
-            {
-                entryIndex = extractor.FindIndex("ID");
-                spellIdIndex = extractor.FindIndex("SpellID");
-                ParentItemIDIndex = extractor.FindIndex("ParentItemID");
-            };
-
-            var items = new List<EntityId>();
-            Action<string> extractLine = line =>
-            {
-                var values = line.Split(",");
-                if (values.Length > entryIndex &&
-                    values.Length > spellIdIndex &&
-                    values.Length > ParentItemIDIndex)
-                {
-                    int spellId = int.Parse(values[spellIdIndex]);
-                    if (spells.Any(s => s.Id == spellId))
-                    {
-                        int ItemId = int.Parse(values[ParentItemIDIndex]);
-                        items.Add(new EntityId
-                        {
-                            Id = ItemId
-                        });
-                    }
-                }
-            };
-
-            extractor.ExtractTemplate(path, extractLine);
-
-            return items;
-        }
-
+        return items;
     }
 }

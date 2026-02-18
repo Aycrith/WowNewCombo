@@ -1,0 +1,338 @@
+@using Core.Goals
+@using Core.Database
+@using Core.FeatureFlags
+@using Frontend.Services
+@using System.Linq
+@using System.Numerics
+@using System.Timers
+@using System.Buffers
+@using System.Text.Json
+
+@using static System.Text.Json.JsonSerializer
+
+@inject IAddonReader addonReader
+@inject IBotController botController
+
+@inject DataConfig dataConfig
+@inject CombatLog combatLog
+@inject PlayerReader PlayerReader
+@inject AddonBits Bits
+@inject IJSRuntime jsRuntime
+@inject WorldMapAreaDB worldmapAreaDB
+@inject AreaDB areaDB
+@inject FeatureFlagService featureFlags
+@inject HazardHeatMapService hazardHeatMapService
+
+@inject JsonSerializerOptions options
+
+@implements IDisposable
+
+<style>
+    .adtText {
+    color: white;
+    background-color: #00000099;
+    width: 50px;
+    text-align: center;
+    }
+
+    .leaflet-container canvas {
+        pointer-events: auto !important;
+    }
+
+    .poiatlas {
+    background-image: url('_content/Frontend/img/atlas.png');
+    background-repeat: no-repeat;
+    background-position: 32px 32px;
+    }
+
+    .flash {
+    animation: flash-effect 0.3s ease-in-out;
+    }
+
+    @@keyframes flash-effect {
+    0% {
+    background-color: #ffff99;
+    }
+
+    100% {
+    background-color: transparent;
+    }
+    }
+
+    .specText {
+    opacity: 0.8;
+    background-color: #222;
+    border-radius: 4px;
+    color: #fff;
+    height: 26px;
+    left: 60px;
+    padding: 2px;
+    position: absolute;
+    text-align: center;
+    z-index: 1000;
+    font-size: 16px;
+    }
+
+    #adtClick {
+    top: 20px;
+    }
+
+    #worldClick {
+    top: 60px;
+    }
+
+    #mapClick {
+    top: 100px;
+    }
+
+    #subZoneName {
+    top: 140px;
+    }
+
+</style>
+
+
+<Card>
+    <CardHeader>
+        <div class="d-flex">
+            <div class="p-2 flex-grow-1 bd-highlight">
+                Leaflet
+            </div>
+
+            <div class="p-2 bd-highlight">
+                <span class="me-3">
+                    <label class="form-check form-switch d-inline-flex align-items-center m-0">
+                        <input class="form-check-input" type="checkbox" role="switch"
+                               @bind="showHazardLayer"
+                               @bind:after="OnHazardLayerToggled"
+                               disabled="@(!featureFlags.IsHazardAvoidanceEnabled)" />
+                        <span class="form-check-label ms-2">Hazards</span>
+                    </label>
+                </span>
+                [@PlayerReader.MapX.ToString("00.0000"),@PlayerReader.MapY.ToString("00.0000")] @(AreaName) (@PlayerReader.UIMapId.Value)
+            </div>
+        </div>
+    </CardHeader>
+
+    <CardBody style="padding: 0 0 0 0">
+        <div id="js-map" style="height:@(Size);background-color:rgb(0 29 40);">
+            @if(Edit)
+            {
+                <div class="specText" id="adtClick"></div>
+                <div class="specText" id="worldClick"></div>
+                <div class="specText" id="mapClick"></div>
+                <div class="specText" id="subZoneName"></div>
+            }
+        </div>
+    </CardBody>
+</Card>
+
+@code {
+
+    [Parameter]
+    public string Size { get; set; } = "400px";
+
+    [Parameter]
+    public bool Edit { get; set; } = false;
+
+    private string AreaName { get; set; } = string.Empty;
+
+    [Parameter] public string expansion { get; set; } = "som";
+    [Parameter] public string continent { get; set; } = "Azeroth";
+    [Parameter] public int zoom { get; set; } = 5;
+    [Parameter] public float x { get; set; } = 0;
+    [Parameter] public float y { get; set; } = 0;
+
+    private Timer refreshTimer = new Timer();
+    private Vector3 lastPos;
+    private float lastDir;
+    private bool showHazardLayer;
+    private DateTime lastHazardUpdateUtc = DateTime.MinValue;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            continent = PlayerReader.WorldMapArea.Continent;
+            expansion = PlayerReader.Version.ToStringF().ToLower();
+
+            try
+            {
+                await jsRuntime.InvokeVoidAsync("init",
+                    expansion ?? "som",
+                    continent ?? "Azeroth", zoom, x, y, Edit);
+            }
+            catch (JSException)
+            {
+                // Leaflet UI is optional; avoid crashing the circuit if scripts are missing.
+                return;
+            }
+
+            ActionZoneChangedAction();
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        botController.ProfileLoaded += OnProfileLoaded;
+        addonReader.AddonDataChanged += OnAddonDataChanged;
+        areaDB.Changed += OnZoneChanged;
+        //combatLog.PlayerDeath += OnPlayerDeath;
+
+        UpdateZoneName();
+        //UpdateDeaths();
+        //UpdateSymbol();
+
+        //botController.RouteInfo?.SetRouteSource(null);
+
+        if (!refreshTimer.Enabled)
+        {
+            refreshTimer.Interval = 100;
+            refreshTimer.Enabled = true;
+
+            refreshTimer.Elapsed += OnTimerTick;
+
+            refreshTimer.Start();
+        }
+    }
+
+    public void Dispose()
+    {
+        refreshTimer.Dispose();
+
+        botController.ProfileLoaded -= OnProfileLoaded;
+        addonReader.AddonDataChanged -= OnAddonDataChanged;
+        areaDB.Changed -= OnZoneChanged;
+        // combatLog.PlayerDeath -= OnPlayerDeath;
+    }
+
+    private void OnAddonDataChanged()
+    {
+        base.InvokeAsync(OnAddonDataChangedAction);
+    }
+
+    private void OnAddonDataChangedAction()
+    {
+        StateHasChanged();
+    }
+
+    private void UpdateZoneName()
+    {
+        AreaName = PlayerReader.WorldMapArea.AreaName;
+    }
+
+    private void OnZoneChanged()
+    {
+        base.InvokeAsync(ActionZoneChangedAction);
+    }
+
+    private void OnProfileLoaded()
+    {
+        if (botController.ClassConfig == null) return;
+
+        foreach (var pathSettings in botController.ClassConfig.Paths)
+        {
+            //var pathName = Path.GetFileNameWithoutExtension(pathSettings.FileName);
+            //jsRuntime.InvokeVoidAsync("loadMapPathByFilter", pathName).ConfigureAwait(false);
+        }
+    }
+
+    private void ActionZoneChangedAction()
+    {
+        UpdateZoneName();
+
+        InvokeAsync(async () =>
+        {
+            try
+            {
+                await jsRuntime.InvokeVoidAsync("updateArea",
+                    PlayerReader.WorldMapArea.AreaID);
+
+                await UpdatePlayerPos();
+            }
+            catch (JSException)
+            {
+                // Ignore JS failures; rest of UI still useful.
+            }
+        });
+
+        StateHasChanged();
+    }
+
+    private async Task UpdatePlayerPos()
+    {
+        try
+        {
+            await jsRuntime.InvokeVoidAsync("setPlayerLocation",
+                PlayerReader.WorldPos.X, PlayerReader.WorldPos.Y, PlayerReader.Direction);
+        }
+        catch (JSException)
+        {
+        }
+    }
+
+    private async Task UpdateRouteToWaypoint()
+    {
+        if (botController == null || botController.RouteInfo == null) return;
+
+        var routeinfo = botController.RouteInfo;
+
+        var waypoints = routeinfo.Route;
+        try
+        {
+            await jsRuntime.InvokeVoidAsync("setPolyPath", "Route", Serialize(waypoints, options));
+
+            var routeToWayPoint = routeinfo.RouteToWaypoint;
+            await jsRuntime.InvokeVoidAsync("setPolyPath", "RouteToWaypoint", Serialize(routeToWayPoint, options));
+        }
+        catch (JSException)
+        {
+        }
+    }
+
+    private async Task OnHazardLayerToggled()
+    {
+        try
+        {
+            if (showHazardLayer)
+                await hazardHeatMapService.ShowAsync();
+            else
+                await hazardHeatMapService.HideAsync();
+
+            await UpdateHazardLayer(force: true);
+        }
+        catch (JSException)
+        {
+        }
+    }
+
+    private async Task UpdateHazardLayer(bool force = false)
+    {
+        if (!showHazardLayer || !featureFlags.IsHazardAvoidanceEnabled)
+        {
+            return;
+        }
+
+        if (!force && (DateTime.UtcNow - lastHazardUpdateUtc) < TimeSpan.FromSeconds(1))
+        {
+            return;
+        }
+
+        lastHazardUpdateUtc = DateTime.UtcNow;
+
+        await hazardHeatMapService.UpdateHeatMapAsync(PlayerReader.MapId);
+    }
+
+    private void OnTimerTick(object? s, ElapsedEventArgs e)
+    {
+        UpdateRouteToWaypoint().ConfigureAwait(false);
+        UpdateHazardLayer().ConfigureAwait(false);
+
+        if (PlayerReader.WorldPos == lastPos && PlayerReader.Direction == lastDir) return;
+
+        UpdatePlayerPos().ConfigureAwait(false);
+
+        lastPos = PlayerReader.WorldPos;
+        lastDir = PlayerReader.Direction;
+    }
+}

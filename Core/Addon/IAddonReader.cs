@@ -1,38 +1,21 @@
-﻿using Core.Database;
+﻿using System;
+using System.Threading;
 
-namespace Core
+namespace Core;
+
+public interface IAddonReader
 {
-    public interface IAddonReader
-    {
-        bool Active { get; set; }
+    double AvgUpdateLatency { get; }
 
-        PlayerReader PlayerReader { get; }
+    string TargetName { get; }
 
-        BagReader BagReader { get; }
+    event Action? AddonDataChanged;
 
-        EquipmentReader EquipmentReader { get; }
+    ManualResetEventSlim DataReady { get; }
 
-        ActionBarCostReader ActionBarCostReader { get; }
+    void FullReset();
 
-        SpellBookReader SpellBookReader { get; }
-
-        TalentReader TalentReader { get; }
-
-        LevelTracker LevelTracker { get; }
-
-        WorldMapAreaDB WorldMapAreaDb { get; }
-
-        double AvgUpdateLatency { get; }
-
-        int CombatCreatureCount { get; }
-
-        string TargetName { get; }
-
-        RecordInt UIMapId { get; }
-
-        void Refresh();
-        void Reset();
-
-        int GetIntAt(int index);
-    }
+    void Update();
+    void UpdateUI();
+    void SessionReset();
 }

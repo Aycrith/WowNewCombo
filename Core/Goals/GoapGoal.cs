@@ -1,120 +1,71 @@
-﻿using Core.GOAP;
+using Core.GOAP;
+
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
-namespace Core.Goals
+namespace Core.Goals;
+
+public abstract partial class GoapGoal
 {
-    public class GoapPreCondition
-    {
-        public string Description { get; private set; }
-        public object State { get; private set; }
+    public Dictionary<GoapKey, bool> Preconditions { get; } = new();
+    public Dictionary<GoapKey, bool> Effects { get; } = new();
 
-        public GoapPreCondition(string description, object state)
+    private KeyAction[] keys = Array.Empty<KeyAction>();
+    public KeyAction[] Keys
+    {
+        get => keys;
+        protected set
         {
-            this.Description = description;
-            this.State = state;
+            keys = value;
+            if (keys.Length == 1)
+                DisplayName = $"{keys[0].Name} [{keys[0].Key}]";
         }
     }
 
-    public class ActionEventArgs : EventArgs
-    {
-        public GoapKey Key { get; private set; }
-        public object Value { get; private set; }
+    public abstract float Cost { get; }
 
-        public ActionEventArgs(GoapKey key, object value)
+    public string Name { get; }
+
+    public string DisplayName { get; protected set; }
+
+    public event Action<GoapEventArgs>? GoapEvent;
+
+    protected GoapGoal(string name)
+    {
+        string output = RegexGoalName().Replace(name.Replace("Goal", ""), m => " " + m.Value.ToUpperInvariant());
+        if (string.IsNullOrEmpty(output))
         {
-            this.Key = key;
-            this.Value = value;
+            DisplayName = Name = string.Empty;
+        }
+        else
+        {
+            DisplayName = Name = string.Concat(output[0].ToString().ToUpper(), output.AsSpan(1));
         }
     }
 
-    public abstract class GoapGoal
+    public void SendGoapEvent(GoapEventArgs e)
     {
-        public HashSet<KeyValuePair<GoapKey, GoapPreCondition>> Preconditions { get; private set; } = new HashSet<KeyValuePair<GoapKey, GoapPreCondition>>();
-        public HashSet<KeyValuePair<GoapKey, object>> Effects { get; private set; } = new HashSet<KeyValuePair<GoapKey, object>>();
-
-        public List<KeyAction> Keys { get; private set; } = new List<KeyAction>();
-
-        public abstract float CostOfPerformingAction { get; }
-
-        private string name = string.Empty;
-
-        public virtual string Name
-        {
-            get
-            {
-                if (string.IsNullOrEmpty(name))
-                {
-                    string output = Regex.Replace(this.GetType().Name.Replace("Action", ""), @"\p{Lu}", m => " " + m.Value.ToUpperInvariant());
-                    this.name = char.ToUpperInvariant(output[0]) + output.Substring(1);
-                }
-                return name;
-            }
-        }
-
-        public delegate void ActionEventHandler(object sender, ActionEventArgs e);
-
-        public event ActionEventHandler? ActionEvent;
-
-        public void SendActionEvent(ActionEventArgs e)
-        {
-            ActionEvent?.Invoke(this, e);
-        }
-
-        public Dictionary<string, bool> State { get; private set; } = new Dictionary<string, bool>();
-
-        public void SetState(Dictionary<string, bool> newState)
-        {
-            State = newState;
-        }
-
-        public virtual bool CheckIfActionCanRun()
-        {
-            return true;
-        }
-
-        public virtual ValueTask OnEnter()
-        {
-            return ValueTask.CompletedTask;
-        }
-
-        public virtual ValueTask OnExit()
-        {
-            return ValueTask.CompletedTask;
-        }
-
-        public abstract ValueTask PerformAction();
-
-        public void AddPrecondition(GoapKey key, object value)
-        {
-            var precondition = new GoapPreCondition(GoapKeyDescription.ToString(key, value), value);
-            Preconditions.Add(new KeyValuePair<GoapKey, GoapPreCondition>(key, precondition));
-        }
-
-        public void RemovePrecondition(GoapKey key)
-        {
-            Preconditions.RemoveWhere(o => o.Key.Equals(key));
-        }
-
-        public void AddEffect(GoapKey key, object value)
-        {
-            Effects.Add(new KeyValuePair<GoapKey, object>(key, value));
-        }
-
-        public void RemoveEffect(GoapKey key)
-        {
-            Effects.RemoveWhere(o => o.Key.Equals(key));
-        }
-
-        public virtual void OnActionEvent(object sender, ActionEventArgs e)
-        {
-        }
-
-        public virtual string Description()
-        {
-            return $"{Name} " + (Keys.Count == 1 ? $"[{Keys[0].ConsoleKey}]" : "");
-        }
+        GoapEvent?.Invoke(e);
     }
+
+    public virtual bool CanRun() => true;
+
+    public virtual void OnEnter() { }
+
+    public virtual void OnExit() { }
+
+    public virtual void Update() { }
+
+    protected void AddPrecondition(GoapKey key, bool value)
+    {
+        Preconditions[key] = value;
+    }
+    protected void AddEffect(GoapKey key, bool value)
+    {
+        Effects[key] = value;
+    }
+
+    [GeneratedRegex(@"\p{Lu}")]
+    private static partial Regex RegexGoalName();
 }

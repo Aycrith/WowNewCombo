@@ -1,72 +1,105 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
-using WinAPI;
 
-namespace Core
+using static WinAPI.NativeMethods;
+
+#pragma warning disable CS0162
+
+namespace Core;
+
+public sealed class CursorClassifier : IDisposable
 {
-    public static class CursorClassifier
+    private const bool saveImage = false;
+
+    // index matches CursorType order
+    private static readonly ulong[][] imageHashes =
+    [
+        [4645529528554094592, 4665762466636896256, 6376251547633783040, 6376251547633783552],                           // None
+        [9286546093378506253, 16208728271425048093, 16208728271425052189, 16276563724689350168, 16276563724695641624],  // Kill
+        [16205332705670085656, 16495805933079509016, 16283318718186420248, 18012595853599471616],                       // Loot
+        [13901748381153107456, 16207591392111181312, 9798142283158525952],                                              // Skin
+        [4669700909741929478, 4669700909674820614],                                                                     // Mine
+        [4683320813727784960, 4669700909741929478, 4683461550142398464],                                                // Herb
+        [17940331276560775168, 17940331276594329600, 17940331276594460672, 18012595827828094976],                       // Vendor
+        [16207573517913036808, 4669140166357294088, 14185844589096599552, 16491828335798648832],                        // Repair
+        [4667452417086599168, 4676529985085517824],                                                                     // Innkeeper
+        [4682718988357606424, 4682718988358655000],                                                                     // Quest
+        [108225472810063872],                                                                                           // Speak
+        [108227128140922368]                                                                                            // Mail
+    ];
+
+    private readonly Bitmap bitmap;
+    private readonly Graphics graphics;
+
+    private readonly Bitmap scaledBitmap;
+    private readonly Graphics scaledGraphics;
+
+    public CursorClassifier()
     {
-        private static readonly Dictionary<CursorType, List<ulong>> imageHashes = new Dictionary<CursorType, List<ulong>>()
+        SixLabors.ImageSharp.Size size = GetCursorSize();
+        bitmap = new(size.Width, size.Height);
+        graphics = Graphics.FromImage(bitmap);
+
+        scaledBitmap = new(8, 8, PixelFormat.Format32bppArgb);
+        scaledGraphics = Graphics.FromImage(scaledBitmap);
+        scaledGraphics.CompositingQuality = CompositingQuality.HighQuality;
+        scaledGraphics.InterpolationMode = InterpolationMode.HighQualityBilinear;
+        scaledGraphics.SmoothingMode = SmoothingMode.HighQuality;
+    }
+
+    public void Dispose()
+    {
+        graphics.Dispose();
+        bitmap.Dispose();
+
+        scaledGraphics.Dispose();
+        scaledBitmap.Dispose();
+    }
+
+
+    public void Classify(out CursorType classification, out double similarity)
+    {
+        CURSORINFO cursorInfo = new();
+        cursorInfo.cbSize = Marshal.SizeOf(cursorInfo);
+        if (GetCursorInfo(ref cursorInfo) &&
+            cursorInfo.flags == CURSOR_SHOWING)
         {
-            {CursorType.Kill, new List<ulong>{ 9286546093378506253 } },
+            graphics.Clear(Color.Transparent);
+            DrawIcon(graphics.GetHdc(), 0, 0, cursorInfo.hCursor);
+            graphics.ReleaseHdc();
+        }
 
-            {CursorType.Loot, new List<ulong>{16205332705670085656}},
-
-            {CursorType.Skin, new List<ulong>{13901748381153107456}},
-
-            {CursorType.Mine, new List<ulong>{ 4669700909741929478,4669700909674820614 }},
-
-            {CursorType.Herb, new List<ulong>{ 4683320813727784960,4669700909741929478,4683461550142398464 }},
-
-            {CursorType.None, new List<ulong>{4645529528554094592, 4665762466636896256,6376251547633783040,6376251547633783552 }},
-
-            {CursorType.Vendor, new List<ulong>{ 17940331276560775168, 17940331276594329600,17940331276594460672} },
-
-            {CursorType.Repair, new List<ulong>{ 16207573517913036808, 4669140166357294088 } },
-
-            {CursorType.Innkeeper, new List<ulong> { 4667452417086599168, 4676529985085517824 } },
-
-            {CursorType.Quest, new List<ulong> { 4682718988357606424, 4682718988358655000 } }
-        };
-
-        public static void Classify(out CursorType classification)
+        ulong cursorHash = ImageHashing.AverageHash(bitmap, scaledBitmap, scaledGraphics);
+        if (saveImage)
         {
-            Size size = NativeMethods.GetCursorSize();
-            Bitmap cursor = new Bitmap(size.Width, size.Height);
-
-            var cursorInfo = new NativeMethods.CURSORINFO();
-            cursorInfo.cbSize = Marshal.SizeOf(cursorInfo);
-            if (NativeMethods.GetCursorInfo(out cursorInfo))
+            string path = Path.Join("..", "..", "..", "..", "Cursors", $"{cursorHash}.bmp");
+            if (!File.Exists(path))
             {
-                using Graphics g = Graphics.FromImage(cursor);
-                if (cursorInfo.flags == NativeMethods.CURSOR_SHOWING)
+                bitmap.Save(path);
+            }
+        }
+
+        int index = 0;
+        similarity = 0;
+        for (int i = 0; i < imageHashes.Length; i++)
+        {
+            for (int j = 0; j < imageHashes[i].Length; j++)
+            {
+                double sim = ImageHashing.Similarity(cursorHash, imageHashes[i][j]);
+                if (sim > 80 && sim > similarity)
                 {
-                    NativeMethods.DrawIcon(g.GetHdc(), 0, 0, cursorInfo.hCursor);
+                    index = i;
+                    similarity = sim;
                 }
             }
-
-            var hash = ImageHashing.AverageHash(cursor);
-            //var filename = hash + ".bmp";
-            //var path = Path.Join("../Cursors/", filename);
-            //if (!File.Exists(path))
-            //{
-            //    cursor.Save(path);
-            //}
-            cursor.Dispose();
-
-            var matching = imageHashes
-                .SelectMany(i => i.Value.Select(v => (similarity: ImageHashing.Similarity(hash, v), imagehash: i)))
-                .Where(t => t.similarity > 80)
-                .OrderByDescending(t => t.similarity)
-                .FirstOrDefault();
-
-            classification = matching.imagehash.Key;
-            Debug.WriteLine($"[CursorClassifier.Classify] {classification} - {matching.similarity}");
         }
+
+        classification = (CursorType)index;
+        Debug.WriteLine($"[CursorClassifier.Classify] {cursorHash} - {classification.ToStringF()} - {similarity}");
     }
 }

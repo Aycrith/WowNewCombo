@@ -1,59 +1,99 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
+using static System.Diagnostics.Stopwatch;
 
-namespace Core
+namespace Core;
+
+public sealed class RecordInt
 {
-    public class RecordInt
+    private readonly int cell;
+
+    public int Value { private set; get; }
+
+    public int _Value() => Value;
+
+    public long LastChanged { private set; get; }
+
+    public int ElapsedMs() => (int)GetElapsedTime(LastChanged).TotalMilliseconds;
+
+    public event Action? Changed;
+
+    public RecordInt(int cell)
     {
-        private readonly int cell;
-        private int temp;
+        this.cell = cell;
+    }
 
-        public int Value { private set; get; }
-        public DateTime LastChanged { private set; get; }
+    public bool Updated(IAddonDataProvider reader)
+    {
+        int temp = Value;
+        Value = reader.GetInt(cell);
 
-        public int ElapsedMs => (int)(DateTime.UtcNow - LastChanged).TotalMilliseconds;
-
-        public event EventHandler? Changed;
-
-        public RecordInt(int cell)
+        if (temp == Value)
         {
-            this.cell = cell;
-        }
-
-        public bool Updated(ISquareReader reader)
-        {
-            temp = reader.GetIntAtCell(cell);
-            if (temp != Value)
-            {
-                Value = temp;
-                Changed?.Invoke(this, EventArgs.Empty);
-                LastChanged = DateTime.UtcNow;
-                return true;
-            }
-
             return false;
         }
 
-        public void Update(ISquareReader reader)
+        Changed?.Invoke();
+        UpdateTime();
+        return true;
+    }
+
+    public void Update(IAddonDataProvider reader)
+    {
+        int temp = Value;
+        Value = reader.GetInt(cell);
+
+        if (temp == Value)
         {
-            temp = reader.GetIntAtCell(cell);
-            if (temp != Value)
-            {
-                Value = temp;
-                Changed?.Invoke(this, EventArgs.Empty);
-                LastChanged = DateTime.UtcNow;
-            }
+            return;
         }
 
-        public void Reset()
+        Changed?.Invoke();
+        UpdateTime();
+    }
+
+    public void UpdateExcludingLeastSignificantDigits(IAddonDataProvider reader, int excludeDigit)
+    {
+        int temp = Value / excludeDigit;
+        Value = reader.GetInt(cell) / excludeDigit;
+
+        if (temp == Value)
         {
-            Value = 0;
-            temp = 0;
-            LastChanged = default;
+            return;
         }
 
-        public void ForceUpdate(int value)
+        Changed?.Invoke();
+        UpdateTime();
+    }
+
+    public void UpdateIncludeLeastSignificantDigit(IAddonDataProvider reader, int includeDigit)
+    {
+        int temp = Value % includeDigit;
+        Value = reader.GetInt(cell) % includeDigit;
+
+        if (temp == Value)
         {
-            Value = value;
+            return;
         }
+
+        Changed?.Invoke();
+        UpdateTime();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void UpdateTime()
+    {
+        LastChanged = GetTimestamp();
+    }
+
+    public void Reset()
+    {
+        Value = 0;
+        LastChanged = default;
+    }
+
+    public void ForceUpdate(int value)
+    {
+        Value = value;
     }
 }

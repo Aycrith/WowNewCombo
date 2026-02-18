@@ -12,9 +12,10 @@
       {
         "Name": "Throw",
         "Key": "9",
-        "HasCastbar": true,
+        "Item": true,
         "WhenUsable": true,
-        "WaitForWithinMeleeRange": true,
+        "BeforeCastStop": true,
+        "AfterCastWaitMeleeRange": true,
         "Requirements": [
           "AddVisible",
           "HasRangedWeapon",
@@ -26,16 +27,15 @@
         "Name": "Charge",
         "Key": "3",
         "WhenUsable": true,
-        "Requirement": "SpellInRange:0",
-        "Form": "Warrior_BattleStance"
+        "Requirement": "SpellInRange:0"
       },
       {
         "Name": "StopAttack",
-        "DelayBeforeCast": 30,
+        "BeforeCastDelay": 30,
         "Requirements": [
           "Battle Shout && AutoAttacking && Rage >= Cost_Heroic Strike"
         ],
-        "DelayAfterCast": 50
+        "AfterCastDelay": 50
       },
       {
         "Name": "Approach",
@@ -58,63 +58,50 @@
         "Name": "Thunder Clap",
         "Key": "6",
         "WhenUsable": true,
-        "MinRage": 20,
-        "Cooldown": 14000,
+        "Cooldown": 16000,
         "Requirements": [
           "!Thunder Clap && MobCount > 1"
-        ],
-        "Form": "Warrior_BattleStance"
+        ]
       },
       {
         "Name": "Overpower",
         "Key": "0",
-        "WhenUsable": true,
-        "MinRage": 5
+        "WhenUsable": true
       },
       {
         "Name": "Cleave",
         "Key": "1",
         "WhenUsable": true,
-        "MinRage": 20,
         "Requirements": [
-          "!Charge Stun && MainHandSwing > -400",
+          "MainHandSwing > -400",
           "MobCount > 1"
         ],
-        "AfterCastWaitNextSwing": true
+        "AfterCastWaitSwing": true
       },
       {
         "Name": "Heroic Strike",
         "Key": "2",
         "WhenUsable": true,
-        "MinRage": 15,
         "Requirements": [
-          "!Charge Stun && MainHandSwing > -400",
+          "MainHandSwing > -400",
           "MobCount < 2"
         ],
-        "AfterCastWaitNextSwing": true
+        "AfterCastWaitSwing": true
       },
       {
         "Name": "Rend",
         "Key": "5",
         "WhenUsable": true,
-        "MinRage": 10,
         "Requirements": [
-          "!Charge Stun && TargetHealth% > 50",
+          "TargetHealth% > 50",
           "!Rend"
-        ],
-        "Form": "Warrior_BattleStance"
-      },
-      {
-        "Name": "AutoAttack",
-        "Requirements": [
-          "InMeleeRange",
-          "!Charge Stun",
-          "!AutoAttacking"
         ]
       },
       {
+        "Name": "AutoAttack"
+      },
+      {
         "Name": "Approach",
-        "Requirement": "!Charge Stun",
         "Log": false
       }
     ]
@@ -127,9 +114,7 @@
         "Key": "4",
         "InCombat": "i dont care",
         "WhenUsable": true,
-        "MinRage": 10,
-        "Requirement": "!Battle Shout",
-        "AfterCastWaitBuff": true
+        "Requirement": "!Battle Shout"
       },
       {
         "Name": "Food",
@@ -144,8 +129,8 @@
       {
         "Name": "Repair",
         "Key": "C",
-        "Requirement": "Items Broken",
-        "PathFilename": "10_Loch_Modan_Vendor.json",
+        "Requirement": "Durability% < 35",
+        "PathFilename": "10_Loch Modan_Vendor.json.json",
         "Cost": 6
       },
       {
@@ -155,7 +140,7 @@
           "BagFull",
           "BagGreyItem"
         ],
-        "PathFilename": "10_Loch_Modan_Vendor.json",
+        "PathFilename": "10_Loch Modan_Vendor.json.json",
         "Cost": 6
       }
     ]

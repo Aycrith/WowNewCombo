@@ -1,85 +1,57 @@
 ﻿using System;
 
-namespace Core
+using static System.Diagnostics.Stopwatch;
+
+namespace Core;
+
+public sealed class LevelTracker : IDisposable
 {
-    public class LevelTracker
+    private readonly PlayerReader playerReader;
+
+    private long levelStartTime;
+    private int levelStartXP;
+
+    public TimeSpan TimeToLevel { get; private set; } = TimeSpan.Zero;
+    public DateTime PredictedLevelUpTime { get; private set; } = DateTime.MaxValue;
+
+    public LevelTracker(PlayerReader playerReader)
     {
-        private readonly PlayerReader playerReader;
+        this.playerReader = playerReader;
 
-        private DateTime levelStartTime = DateTime.UtcNow;
-        private int levelStartXP;
+        levelStartTime = GetTimestamp();
 
-        public string TimeToLevel { get; private set; } = "∞";
-        public DateTime PredictedLevelUpTime { get; private set; } = DateTime.MaxValue;
+        playerReader.Level.Changed += PlayerLevel_Changed;
+        playerReader.PlayerXp.Changed += PlayerExp_Changed;
+    }
 
-        public int MobsKilled { get; private set; }
-        public int Death { get; private set; }
+    public void Dispose()
+    {
+        playerReader.Level.Changed -= PlayerLevel_Changed;
+        playerReader.PlayerXp.Changed -= PlayerExp_Changed;
+    }
 
-        public LevelTracker(PlayerReader playerReader, EventHandler? playerDeath, CreatureHistory creatureHistory)
+    private void PlayerExp_Changed()
+    {
+        UpdateExpPerHour();
+    }
+
+    private void PlayerLevel_Changed()
+    {
+        levelStartTime = GetTimestamp();
+        levelStartXP = playerReader.PlayerXp.Value;
+    }
+
+    public void UpdateExpPerHour()
+    {
+        double runningSeconds = GetElapsedTime(levelStartTime).TotalSeconds;
+        double xpPerSecond = (playerReader.PlayerXp.Value - levelStartXP) / runningSeconds;
+        double secondsLeft = (playerReader.PlayerMaxXp - playerReader.PlayerXp.Value) / xpPerSecond;
+
+        TimeToLevel = xpPerSecond > 0 ? TimeSpan.FromSeconds(secondsLeft) : TimeSpan.Zero;
+
+        if (secondsLeft > 0 && secondsLeft < 60 * 60 * 10)
         {
-            this.playerReader = playerReader;
-
-            playerReader.Level.Changed -= PlayerLevel_Changed;
-            playerReader.Level.Changed += PlayerLevel_Changed;
-
-            playerReader.PlayerXp.Changed -= PlayerExp_Changed;
-            playerReader.PlayerXp.Changed += PlayerExp_Changed;
-
-            playerDeath -= OnPlayerDeath;
-            playerDeath += OnPlayerDeath;
-
-            creatureHistory.KillCredit -= OnKillCredit;
-            creatureHistory.KillCredit += OnKillCredit;
-        }
-
-        public void Reset()
-        {
-            MobsKilled = 0;
-            Death = 0;
-
-            UpdateExpPerHour();
-        }
-
-        private void PlayerExp_Changed(object? sender, EventArgs e)
-        {
-            UpdateExpPerHour();
-        }
-
-        private void PlayerLevel_Changed(object? sender, EventArgs e)
-        {
-            levelStartTime = DateTime.UtcNow;
-            levelStartXP = playerReader.PlayerXp.Value;
-        }
-
-        private void OnPlayerDeath(object? sender, EventArgs e)
-        {
-            Death++;
-        }
-
-        private void OnKillCredit(object? sender, EventArgs e)
-        {
-            MobsKilled++;
-        }
-
-        public void UpdateExpPerHour()
-        {
-            var runningSeconds = (DateTime.UtcNow - levelStartTime).TotalSeconds;
-            var xpPerSecond = (playerReader.PlayerXp.Value - levelStartXP) / runningSeconds;
-            var secondsLeft = (playerReader.PlayerMaxXp - playerReader.PlayerXp.Value) / xpPerSecond;
-
-            if (xpPerSecond > 0)
-            {
-                TimeToLevel = new TimeSpan(0, 0, (int)secondsLeft).ToString();
-            }
-            else
-            {
-                TimeToLevel = "∞";
-            }
-
-            if (secondsLeft > 0 && secondsLeft < 60 * 60 * 10)
-            {
-                PredictedLevelUpTime = DateTime.UtcNow.AddSeconds(secondsLeft).ToLocalTime();
-            }
+            PredictedLevelUpTime = DateTime.UtcNow.AddSeconds(secondsLeft).ToLocalTime();
         }
     }
 }

@@ -1,0 +1,311 @@
+@page "/humanization-dashboard"
+
+@using System
+@using System.Linq
+@using System.Threading
+@using Core.Humanization
+@using Core.FeatureFlags
+@using SharedLib.Humanization
+
+@inject HumanizationMetrics metrics
+@inject DetectionRiskAnalyzer riskAnalyzer
+@inject IHumanizationProvider humanizationProvider
+@inject FeatureFlagService featureFlags
+@inject FatigueSimulator fatigueSimulator
+@inject ScheduledBreakService scheduledBreaks
+
+@implements IDisposable
+
+<PageTitle>Humanization Dashboard</PageTitle>
+
+<h3>Humanization Dashboard</h3>
+
+<div class="alert alert-secondary small">
+    Real-time metrics and detection risk analysis for anti-detection monitoring.
+</div>
+
+<div class="row">
+    <!-- Risk Score Card -->
+    <div class="col-md-4 mb-3">
+        <Card>
+            <CardHeader>Detection Risk</CardHeader>
+            <CardBody>
+                @if (riskAssessment != null)
+                {
+                    <div class="text-center">
+                        <div class="display-4 @GetRiskColorClass(riskAssessment.Level)">
+                            @riskAssessment.OverallScore.ToString("F0")
+                        </div>
+                        <div class="text-muted">@riskAssessment.Level Risk</div>
+                    </div>
+
+                    <hr />
+
+                    <h6>Risk Factors</h6>
+                    <div class="small">
+                        @foreach (var factor in riskAssessment.Factors.OrderByDescending(f => f.Score))
+                        {
+                            <div class="d-flex justify-content-between">
+                                <span>@factor.Name</span>
+                                <span class="@GetRiskColorClass(GetRiskLevel(factor.Score))">@factor.Score.ToString("F0")</span>
+                            </div>
+                        }
+                    </div>
+
+                    @if (riskAssessment.Recommendations.Any())
+                    {
+                        <hr />
+                        <h6>Recommendations</h6>
+                        <ul class="small mb-0">
+                            @foreach (var rec in riskAssessment.Recommendations)
+                            {
+                                <li>@rec</li>
+                            }
+                        </ul>
+                    }
+                }
+                else
+                {
+                    <div class="text-center text-muted">Loading...</div>
+                }
+            </CardBody>
+        </Card>
+    </div>
+
+    <!-- Status Card -->
+    <div class="col-md-4 mb-3">
+        <Card>
+            <CardHeader>Status</CardHeader>
+            <CardBody>
+                <dl class="row mb-0 small">
+                    <dt class="col-sm-6">Humanization</dt>
+                    <dd class="col-sm-6 @(featureFlags.Current.Humanization.Enabled ? "text-success" : "text-danger")">
+                        @(featureFlags.Current.Humanization.Enabled ? "Enabled" : "Disabled")
+                    </dd>
+
+                    <dt class="col-sm-6">Session</dt>
+                    <dd class="col-sm-6">@fatigueSimulator.SessionDuration.ToString("hh\\:mm\\:ss")</dd>
+
+                    <dt class="col-sm-6">Fatigue</dt>
+                    <dd class="col-sm-6">@(((fatigueSimulator.FatigueMultiplier - 1) * 100).ToString("F0"))%</dd>
+
+                    <dt class="col-sm-6">On Break</dt>
+                    <dd class="col-sm-6">
+                        @if (scheduledBreaks.IsOnBreak)
+                        {
+                            <span class="text-warning">Yes (@scheduledBreaks.RemainingBreakTime.ToString("mm\\:ss"))</span>
+                        }
+                        else
+                        {
+                            <span>No</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-6">Input Security</dt>
+                    <dd class="col-sm-6 @(featureFlags.Current.InputSecurity.Enabled ? "text-success" : "text-danger")">
+                        @(featureFlags.Current.InputSecurity.Enabled ? "Active" : "Inactive")
+                    </dd>
+                </dl>
+
+                <div class="mt-3 d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="SkipBreak" disabled="@(!scheduledBreaks.IsOnBreak)">
+                        Skip Break
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="ResetSession">
+                        Reset Session
+                    </button>
+                </div>
+            </CardBody>
+        </Card>
+    </div>
+
+    <!-- Quick Stats Card -->
+    <div class="col-md-4 mb-3">
+        <Card>
+            <CardHeader>Session Statistics</CardHeader>
+            <CardBody>
+                @if (snapshot != null)
+                {
+                    <dl class="row mb-0 small">
+                        <dt class="col-sm-7">Key Presses</dt>
+                        <dd class="col-sm-5 text-end">@snapshot.TotalKeyPresses</dd>
+
+                        <dt class="col-sm-7">Avg Hold Time</dt>
+                        <dd class="col-sm-5 text-end">@snapshot.AverageKeyHoldTimeMs.ToString("F0") ms</dd>
+
+                        <dt class="col-sm-7">Reaction Delays</dt>
+                        <dd class="col-sm-5 text-end">@snapshot.TotalReactionDelays</dd>
+
+                        <dt class="col-sm-7">Avg Reaction</dt>
+                        <dd class="col-sm-5 text-end">@snapshot.AverageReactionDelayMs.ToString("F0") ms</dd>
+
+                        <dt class="col-sm-7">Waypoint Delays</dt>
+                        <dd class="col-sm-5 text-end">@snapshot.TotalWaypointDelays</dd>
+
+                        <dt class="col-sm-7">Mouse Moves</dt>
+                        <dd class="col-sm-5 text-end">@snapshot.TotalMouseMovements</dd>
+
+                        <dt class="col-sm-7">Breaks Taken</dt>
+                        <dd class="col-sm-5 text-end">@snapshot.BreaksTaken</dd>
+
+                        <dt class="col-sm-7">Break Time</dt>
+                        <dd class="col-sm-5 text-end">@snapshot.TotalBreakTimeMinutes.ToString("F1") min</dd>
+                    </dl>
+                }
+                else
+                {
+                    <div class="text-center text-muted">Loading...</div>
+                }
+            </CardBody>
+        </Card>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <Card>
+            <CardHeader>Recent Key Hold Times</CardHeader>
+            <CardBody>
+                @if (snapshot?.RecentKeyHoldTimes.Any() == true)
+                {
+                    <div class="small" style="max-height: 200px; overflow-y: auto;">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Duration</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var sample in snapshot.RecentKeyHoldTimes.TakeLast(20).Reverse())
+                                {
+                                    <tr>
+                                        <td>@sample.Timestamp.ToString("HH:mm:ss")</td>
+                                        <td>@sample.DurationMs ms</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center text-muted">No data</div>
+                }
+            </CardBody>
+        </Card>
+    </div>
+
+    <div class="col-md-6 mb-3">
+        <Card>
+            <CardHeader>Recent Reaction Delays</CardHeader>
+            <CardBody>
+                @if (snapshot?.RecentReactionDelays.Any() == true)
+                {
+                    <div class="small" style="max-height: 200px; overflow-y: auto;">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Delay</th>
+                                    <th>Context</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var sample in snapshot.RecentReactionDelays.TakeLast(20).Reverse())
+                                {
+                                    <tr>
+                                        <td>@sample.Timestamp.ToString("HH:mm:ss")</td>
+                                        <td>@sample.DurationMs ms</td>
+                                        <td>@sample.Context</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center text-muted">No data</div>
+                }
+            </CardBody>
+        </Card>
+    </div>
+</div>
+
+<div class="mt-3">
+    <a class="btn btn-sm btn-outline-secondary" href="/humanization">Edit Settings</a>
+    <a class="btn btn-sm btn-outline-secondary" href="/">Back to Bot</a>
+</div>
+
+@code {
+    private RiskAssessment? riskAssessment;
+    private MetricsSnapshot? snapshot;
+    private Timer? refreshTimer;
+
+    protected override void OnInitialized()
+    {
+        RefreshData();
+
+        // Auto-refresh every 2 seconds
+        refreshTimer = new Timer(_ =>
+        {
+            InvokeAsync(() =>
+            {
+                RefreshData();
+                StateHasChanged();
+            });
+        }, null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2));
+    }
+
+    private void RefreshData()
+    {
+        try
+        {
+            snapshot = metrics.GetSnapshot();
+            riskAssessment = riskAnalyzer.AnalyzeRisk(humanizationProvider);
+        }
+        catch (Exception)
+        {
+            // Silent fail - will retry on next tick
+        }
+    }
+
+    private static string GetRiskColorClass(RiskLevel level)
+    {
+        return level switch
+        {
+            RiskLevel.Low => "text-success",
+            RiskLevel.Medium => "text-warning",
+            RiskLevel.High => "text-danger",
+            RiskLevel.Critical => "text-danger fw-bold",
+            _ => ""
+        };
+    }
+
+    private static RiskLevel GetRiskLevel(double score)
+    {
+        if (score < 25) return RiskLevel.Low;
+        if (score < 50) return RiskLevel.Medium;
+        if (score < 75) return RiskLevel.High;
+        return RiskLevel.Critical;
+    }
+
+    private Task SkipBreak()
+    {
+        scheduledBreaks.SkipBreak("Dashboard");
+        return Task.CompletedTask;
+    }
+
+    private Task ResetSession()
+    {
+        scheduledBreaks.ResetSession("Dashboard");
+        return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        refreshTimer?.Dispose();
+    }
+}

@@ -1,0 +1,532 @@
+@using Core.Goals
+@using Core.Database
+@using Core.Hazard
+@using Frontend.Services
+@using System.Linq
+@using System.Numerics
+@using System.Timers
+@using System.Buffers
+
+@inject IAddonReader addonReader
+@inject IBotController botController
+@inject CombatLog combatLog
+@inject PlayerReader PlayerReader
+@inject AddonBits Bits
+@inject IJSRuntime JSRuntime
+@inject WorldMapAreaDB worldmapAreaDB
+@inject AreaDB areaDB
+@inject RouteVisualizationService RouteVisService
+@inject RouteRehabilitator? RouteRehab
+
+@implements IDisposable
+
+<style>
+    @@keyframes flash {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+    }
+    
+    @@keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.2); }
+    }
+    
+    .stuck-marker-flash {
+        animation: flash 0.5s ease-in-out infinite;
+    }
+    
+    .hot-zone-pulse {
+        animation: pulse 2s ease-in-out infinite;
+    }
+    
+    .rehab-marker {
+        opacity: 0.7;
+    }
+    
+    .hot-zone-tooltip {
+        position: absolute;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        pointer-events: none;
+        z-index: 1000;
+    }
+</style>
+
+<Card>
+    <CardHeader>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                Route @routeSymbol
+                @if (upcomingHotZone != null)
+                {
+                    <span class="badge bg-warning ms-2" title="Hot zone ahead - @upcomingHotZone.FailureCount failures detected">
+                        ⚠️ Hot Zone Ahead
+                    </span>
+                }
+            </div>
+
+            <div class="d-flex align-items-center gap-3">
+                @if (activeHotZones.Count > 0)
+                {
+                    <span class="badge bg-danger">@activeHotZones.Count Hot Zones</span>
+                }
+                @if (activeStuckMarkers.Count > 0)
+                {
+                    <span class="badge bg-warning">@activeStuckMarkers.Count Stuck Events</span>
+                }
+                <small>[@PlayerReader.MapX.ToString("00.0000"),@PlayerReader.MapY.ToString("00.0000")] @(AreaName) (@PlayerReader.UIMapId.Value)</small>
+            </div>
+        </div>
+    </CardHeader>
+    <CardBody style="padding: 0 0 0 0">
+        <div id="grid" style="position: relative;">
+            <svg width="@(Size+2)px" height="@(Size+2)px" style="margin-top:0px">
+                <g class="background">
+                </g>
+                <g class="group2">
+                    @{
+                        var colour = Bits.Combat() ? "red" : "orange";
+                        if (botController.GoapAgent?.CurrentGoal is FollowRouteGoal)
+                        {
+                            colour = "blue";
+                        }
+
+                        @if (botController.RouteInfo != null)
+                        {
+                            <g id="playerloc" transform='translate(@(botController.RouteInfo.ToCanvasPointX(PlayerReader.MapX)-5), @(botController.RouteInfo.ToCanvasPointY(PlayerReader.MapY)-5)) rotate(@PlayerDir 5 5)'>
+                                <svg width="10" height="10">
+                                    <polygon points="5,0 8.5,8.5 1.5,8.5 5,0" fill="@colour" />
+                                </svg>
+                            </g>
+
+                            @if (Bits.Target())
+                            {
+                                <g fill="@(Bits.Target_Combat() ? "Red" : "Yellow")">
+                                    @((MarkupString)botController.RouteInfo.RenderPoint(PlayerReader.TargetMapPos))
+                                </g>
+                            }
+                        }
+                    }
+
+                    <g stroke-width="1" stroke="@Color1">
+                        @this.PathLines
+                    </g>
+                    <g fill="@Color2">
+                        @this.PathPoints
+                    </g>
+
+                    <g stroke-width="1" stroke="@Color2">
+                        @this.RouteToWaypointLines
+                    </g>
+                    <g fill="green">
+                        @this.RouteToWaypointPoints
+                    </g>
+
+                    @if (botController.RouteInfo != null)
+                    {
+                        <g fill="blue">
+                            @((MarkupString)botController.RouteInfo.RenderNextPoint())
+                        </g>
+
+                        <g>
+                            @foreach (var death in this.deaths)
+                            {
+                                @((MarkupString)botController.RouteInfo.DeathImage(death))
+                            }
+                        </g>
+
+                        <g>
+                            @foreach (var poi in this.botController.RouteInfo.PoiList)
+                            {
+                                @((MarkupString)botController.RouteInfo.DrawPoi(poi))
+                            }
+                        </g>
+                    }
+                    
+                    <!-- Hot Zones -->
+                    @foreach (var zone in activeHotZones)
+                    {
+                        @((MarkupString)RenderHotZone(zone))
+                    }
+                    
+                    <!-- Stuck Markers -->
+                    @foreach (var marker in activeStuckMarkers)
+                    {
+                        @((MarkupString)RenderStuckMarker(marker))
+                    }
+                    
+                    <!-- Rehabilitation Markers -->
+                    @foreach (var rehab in rehabMarkers)
+                    {
+                        @((MarkupString)RenderRehabilitationMarker(rehab))
+                    }
+                </g>
+            </svg>
+            
+            <!-- Tooltip overlay -->
+            @if (hoveredHotZone != null)
+            {
+                <div class="hot-zone-tooltip" style="left: @(tooltipX)px; top: @(tooltipY)px;">
+                    <strong>Hot Zone</strong><br/>
+                    Failures: @hoveredHotZone.FailureCount<br/>
+                    Type: @hoveredHotZone.PrimaryType<br/>
+                    Created: @hoveredHotZone.CreatedAt.ToString("HH:mm:ss")<br/>
+                    @if (hoveredHotZone.IsRehabilitated)
+                    {
+                        <span class="text-success">✓ Rehabilitated</span>
+                    }
+                    else
+                    {
+                        <button class="btn btn-sm btn-success mt-1" @onclick="() => RehabilitateZone(hoveredHotZone.Id)">Rehabilitate</button>
+                    }
+                </div>
+            }
+        </div>
+    </CardBody>
+</Card>
+
+@code {
+
+    [Parameter]
+    public int Size { get; set; } = 1024;
+
+    public int margin = 10;
+
+    private MarkupString routeSymbol = new();
+
+    private MarkupString RouteToWaypointLines = new();
+    private MarkupString RouteToWaypointPoints = new();
+
+    private MarkupString PathLines = new();
+    private MarkupString PathPoints = new();
+
+    // dark theme
+    private string Color1 = Color1Dark;
+    private string Color2 = Color2Dark;
+    private string Color3 = Color3Dark;
+    private string Color4 = Color4Dark;
+
+    private const string Color1Dark = "gray";
+    private const string Color2Dark = "white";
+    private const string Color3Dark = "#444";
+    private const string Color4Dark = "#666";
+
+    private const string Color1Light = "#BFBFBF";
+    private const string Color2Light = "#000000";
+    private const string Color3Light = "#BBBBBB";
+    private const string Color4Light = "#999999";
+
+    private bool themeChanged = false;
+
+    private Timer refreshTimer = new Timer();
+    private Timer? visUpdateTimer;
+
+    private float PlayerDir => -PlayerReader.Direction * (180f / MathF.PI);
+
+    private List<Vector3> deaths = new();
+
+    private string AreaName { get; set; } = string.Empty;
+    
+    // Visualization state
+    private List<HotZoneView> activeHotZones = new();
+    private List<StuckMarker> activeStuckMarkers = new();
+    private List<RehabilitationMarker> rehabMarkers = new();
+    private HotZoneView? upcomingHotZone;
+    private HotZoneView? hoveredHotZone;
+    private double tooltipX = 0;
+    private double tooltipY = 0;
+
+    protected override void OnInitialized()
+    {
+        botController.ProfileLoaded += OnProfileLoaded;
+        addonReader.AddonDataChanged += OnAddonDataChanged;
+        areaDB.Changed += OnZoneChanged;
+        combatLog.PlayerDeath += OnPlayerDeath;
+        RouteVisService.OnVisualizationStateChanged += OnVisualizationStateChanged;
+
+        UpdateZoneName();
+        UpdateDeaths();
+        UpdateSymbol();
+
+        botController.RouteInfo?.SetRouteSource(null);
+        
+        // Start visualization update timer
+        visUpdateTimer = new Timer(1000); // Update every second
+        visUpdateTimer.Elapsed += OnVisUpdateTimerElapsed;
+        visUpdateTimer.Start();
+        
+        UpdateVisualizationState();
+    }
+
+    public void Dispose()
+    {
+        refreshTimer.Dispose();
+        visUpdateTimer?.Dispose();
+
+        botController.ProfileLoaded -= OnProfileLoaded;
+        addonReader.AddonDataChanged -= OnAddonDataChanged;
+        areaDB.Changed -= OnZoneChanged;
+        combatLog.PlayerDeath -= OnPlayerDeath;
+        RouteVisService.OnVisualizationStateChanged -= OnVisualizationStateChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender || themeChanged)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("draw", Color3, Color4);
+            }
+            catch (JSException)
+            {
+                // Dashboard JS helpers are optional; avoid crashing the circuit if scripts are missing.
+            }
+            themeChanged = false;
+        }
+    }
+
+    private void Update()
+    {
+        if (botController.RouteInfo == null) return;
+
+        botController.RouteInfo.SetMargin(margin);
+        botController.RouteInfo.SetCanvasSize(Size);
+
+        RefreshPathMarkup();
+        CheckForUpcomingHotZone();
+    }
+
+    private void OnThemeChanged(string themeName)
+    {
+        if (themeName == "dark")
+        {
+            Color1 = Color1Dark;
+            Color2 = Color2Dark;
+            Color3 = Color3Dark;
+            Color4 = Color4Dark;
+        }
+        else
+        {
+            Color1 = Color1Light;
+            Color2 = Color2Light;
+            Color3 = Color3Light;
+            Color4 = Color4Light;
+        }
+
+        themeChanged = true;
+    }
+
+    private void OnTimerTick(object? s, ElapsedEventArgs e)
+    {
+        if (botController.RouteInfo == null) return;
+
+        botController.RouteInfo.CalculatePointToGrid();
+        RefreshPathMarkup();
+    }
+
+    private void OnAddonDataChangedAction()
+    {
+        Update();
+        StateHasChanged();
+    }
+
+    private void OnAddonDataChanged()
+    {
+        base.InvokeAsync(OnAddonDataChangedAction);
+    }
+
+    private void ActionZoneChangedAction()
+    {
+        UpdateZoneName();
+        StateHasChanged();
+    }
+
+    private void OnZoneChanged()
+    {
+        base.InvokeAsync(ActionZoneChangedAction);
+    }
+
+    private async Task OnPlayerDeathAction()
+    {
+        // have to wait for pressing Release Spirit
+        while (PlayerReader.CorpseMapPos == Vector3.Zero)
+        {
+            await Task.Delay(200);
+        }
+
+        UpdateDeaths();
+        StateHasChanged();
+    }
+
+    private void OnPlayerDeath()
+    {
+        base.InvokeAsync(OnPlayerDeathAction);
+    }
+
+    private void OnVisualizationStateChanged()
+    {
+        base.InvokeAsync(() =>
+        {
+            UpdateVisualizationState();
+            StateHasChanged();
+        });
+    }
+
+    private void OnVisUpdateTimerElapsed(object? sender, ElapsedEventArgs e)
+    {
+        base.InvokeAsync(() =>
+        {
+            UpdateVisualizationState();
+            CheckForUpcomingHotZone();
+            StateHasChanged();
+        });
+    }
+
+    private void UpdateVisualizationState()
+    {
+        activeHotZones = RouteVisService.GetActiveHotZones().ToList();
+        activeStuckMarkers = RouteVisService.GetActiveStuckMarkers().ToList();
+        rehabMarkers = RouteVisService.GetRehabilitationMarkers().ToList();
+    }
+
+    private void CheckForUpcomingHotZone()
+    {
+        var playerPos = PlayerReader.WorldPos;
+        var direction = new Vector3(MathF.Cos(PlayerReader.Direction), MathF.Sin(PlayerReader.Direction), 0);
+        
+        upcomingHotZone = RouteVisService.GetUpcomingHotZone(playerPos, direction, 50f);
+        
+        // Trigger auto-reroute if configured
+        if (upcomingHotZone != null && upcomingHotZone.FailureCount >= 5 && !upcomingHotZone.IsRehabilitated)
+        {
+            // This could trigger automatic path recalculation
+            // For now, just log it
+            Console.WriteLine($"[RouteComponent] Warning: High-severity hot zone ahead with {upcomingHotZone.FailureCount} failures");
+        }
+    }
+
+    private void RefreshPathMarkup()
+    {
+        if (botController.RouteInfo == null) return;
+
+        var routeinfo = botController.RouteInfo;
+
+        var paths = routeinfo.Route;
+        this.PathLines = new MarkupString(routeinfo.RenderPathLines(paths));
+        this.PathPoints = new MarkupString(routeinfo.RenderPathPoints(paths));
+
+        if (routeinfo.RouteToWaypoint.Length > 0)
+        {
+            int length = routeinfo.RouteToWaypoint.Length;
+            Span<Vector3> waylist = stackalloc Vector3[length];
+            routeinfo.RouteToWaypoint.CopyTo(waylist);
+
+            worldmapAreaDB.ToMap_FlipXY(PlayerReader.UIMapId.Value, waylist);
+
+            this.RouteToWaypointLines =
+                new MarkupString(routeinfo.RenderPathLines(waylist));
+            this.RouteToWaypointPoints =
+                new MarkupString(routeinfo.RenderPathPoints(waylist));
+        }
+        else
+        {
+            this.RouteToWaypointLines = new MarkupString();
+            this.RouteToWaypointPoints = new MarkupString();
+        }
+
+    }
+
+    private void OnProfileLoaded()
+    {
+        if (!refreshTimer.Enabled)
+        {
+            refreshTimer.Interval = 1000;
+            refreshTimer.Enabled = true;
+
+            refreshTimer.Elapsed += OnTimerTick;
+
+            refreshTimer.Start();
+        }
+
+        UpdateSymbol();
+    }
+
+    private void UpdateSymbol()
+    {
+        if (botController.ClassConfig == null) return;
+
+        PathSettings? first = botController.ClassConfig.Paths.First(x => x.CanRun());
+        if (first == null) return;
+
+        routeSymbol = first.PathThereAndBack ?
+        new MarkupString("<span style=\"font-size: 125%;\">⥹</span>") :
+        new MarkupString("<span style=\"font-size: 125%;\">⟳</span>");
+    }
+
+    private void UpdateZoneName()
+    {
+        AreaName = PlayerReader.WorldMapArea.AreaName;
+    }
+
+    private void UpdateDeaths()
+    {
+        if (botController.GoapAgent == null) return;
+
+        deaths.Add(PlayerReader.CorpseMapPos);
+    }
+    
+    private string RenderHotZone(HotZoneView zone)
+    {
+        if (botController.RouteInfo == null) return "";
+        
+        var cx = botController.RouteInfo.ToCanvasPointX(zone.Center.X);
+        var cy = botController.RouteInfo.ToCanvasPointY(zone.Center.Y);
+        var radius = Math.Min(50, zone.Radius * Size / 1000f);
+        var cssClass = zone.IsPulsing ? "hot-zone-pulse" : "";
+        
+        var circleAttrs = $"cx=\"{cx:F0}\" cy=\"{cy:F0}\" r=\"{radius:F0}\"";
+        var styleAttrs = $"fill=\"{zone.Color}\" fill-opacity=\"0.3\" stroke=\"{zone.Color}\" stroke-width=\"2\"";
+        var eventAttrs = $"onmouseover=\"showHotZoneTooltip('{zone.Id}')\" onmouseout=\"hideHotZoneTooltip()\"";
+        
+        return $"<circle {circleAttrs} {styleAttrs} class=\"{cssClass}\" {eventAttrs} />";
+    }
+    
+    private string RenderStuckMarker(StuckMarker marker)
+    {
+        if (botController.RouteInfo == null) return "";
+        
+        var cx = botController.RouteInfo.ToCanvasPointX(marker.MapX);
+        var cy = botController.RouteInfo.ToCanvasPointY(marker.MapY);
+        var cssClass = marker.IsFlashing ? "stuck-marker-flash" : "";
+        var symbol = marker.IsDeathMarker ? "💀" : "⚠️";
+        
+        var transform = $"translate({cx:F0},{cy:F0})";
+        var text = $"<text x=\"0\" y=\"0\" font-size=\"16\" text-anchor=\"middle\" dominant-baseline=\"middle\">{symbol}</text>";
+        var circle = $"<circle cx=\"0\" cy=\"0\" r=\"12\" fill=\"{marker.Color}\" fill-opacity=\"0.3\" stroke=\"{marker.Color}\" stroke-width=\"1\" />";
+        
+        return $"<g transform=\"{transform}\" class=\"{cssClass}\">{text}{circle}</g>";
+    }
+    
+    private string RenderRehabilitationMarker(RehabilitationMarker rehab)
+    {
+        if (botController.RouteInfo == null) return "";
+        
+        var cx = botController.RouteInfo.ToCanvasPointX(rehab.Position.X);
+        var cy = botController.RouteInfo.ToCanvasPointY(rehab.Position.Y);
+        var radius = rehab.Radius * Size / 1000f;
+        
+        var rehabCircle = $"<circle cx=\"{cx:F0}\" cy=\"{cy:F0}\" r=\"{radius:F0}\" fill=\"#00FF00\" fill-opacity=\"0.2\" stroke=\"#00FF00\" stroke-width=\"2\" stroke-dasharray=\"5,5\" />";
+        var rehabText = $"<text x=\"{cx:F0}\" y=\"{cy:F0}\" font-size=\"12\" text-anchor=\"middle\" fill=\"#00FF00\">✓</text>";
+        return $"<g class=\"rehab-marker\">{rehabCircle}{rehabText}</g>";
+    }
+    
+    private void RehabilitateZone(Guid zoneId)
+    {
+        RouteVisService.RehabilitateHotZone(zoneId);
+        hoveredHotZone = null;
+    }
+}

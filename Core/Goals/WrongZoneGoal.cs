@@ -1,102 +1,104 @@
 ﻿using Core.GOAP;
+
 using Microsoft.Extensions.Logging;
+
 using SharedLib.Extensions;
+
 using System;
-using System.Threading.Tasks;
+using System.Numerics;
 
-namespace Core.Goals
+using static System.MathF;
+
+namespace Core.Goals;
+
+public sealed class WrongZoneGoal : GoapGoal
 {
-    public class WrongZoneGoal : GoapGoal
+    public override float Cost => 19f;
+
+    private readonly ILogger<WrongZoneGoal> logger;
+    private readonly ConfigurableInput input;
+    private readonly PlayerReader playerReader;
+    private readonly PlayerDirection playerDirection;
+    private readonly StuckDetector stuckDetector;
+    private readonly ClassConfiguration classConfig;
+
+    private float lastDistance = 999;
+
+    public DateTime LastActive { get; private set; }
+
+    public WrongZoneGoal(ILogger<WrongZoneGoal> logger,
+        PlayerReader playerReader, ConfigurableInput input,
+        PlayerDirection playerDirection,
+        StuckDetector stuckDetector, ClassConfiguration classConfig)
+        : base(nameof(WrongZoneGoal))
     {
-        private float RADIAN = MathF.PI * 2;
-        private ConfigurableInput input;
+        this.playerReader = playerReader;
+        this.input = input;
+        this.playerDirection = playerDirection;
+        this.logger = logger;
+        this.stuckDetector = stuckDetector;
+        this.classConfig = classConfig;
 
-        private readonly AddonReader addonReader;
-        private readonly PlayerReader playerReader;
-        private readonly IPlayerDirection playerDirection;
-        private readonly StuckDetector stuckDetector;
-        private readonly ClassConfiguration classConfiguration;
-        private float lastDistance = 999;
-        public DateTime LastActive { get; set; }
-        private ILogger logger;
+        AddPrecondition(GoapKey.incombat, false);
+    }
 
-        public WrongZoneGoal(AddonReader addonReader, ConfigurableInput input, IPlayerDirection playerDirection, ILogger logger, StuckDetector stuckDetector, ClassConfiguration classConfiguration)
+    public override bool CanRun()
+    {
+        return playerReader.UIMapId.Value == classConfig.WrongZone.ZoneId;
+    }
+
+    public override void Update()
+    {
+        Vector3 exitMap = classConfig.WrongZone.ExitZoneLocation;
+
+        input.StartForward(true);
+
+        if ((DateTime.UtcNow - LastActive).TotalMilliseconds > 10000)
         {
-            this.addonReader = addonReader;
-            this.playerReader = addonReader.PlayerReader;
-            this.input = input;
-            this.playerDirection = playerDirection;
-            this.logger = logger;
-            this.stuckDetector = stuckDetector;
-            this.classConfiguration = classConfiguration;
-            AddPrecondition(GoapKey.incombat, false);
+            stuckDetector.SetTargetLocation(exitMap);
         }
 
-        public override bool CheckIfActionCanRun()
+        Vector3 playerMap = playerReader.MapPos;
+        float mapDistance = playerMap.MapDistanceXYTo(exitMap);
+        float heading = DirectionCalculator.CalculateMapHeading(playerMap, exitMap);
+
+        if (lastDistance < mapDistance)
         {
-            return addonReader.UIMapId.Value == this.classConfiguration.WrongZone.ZoneId;
+            logger.LogInformation("Further away");
+            playerDirection.SetDirection(heading, exitMap);
+        }
+        else if (!stuckDetector.IsGettingCloser())
+        {
+            input.StartForward(true);
+
+            if (HasBeenActiveRecently())
+            {
+                stuckDetector.Update();
+            }
+            else
+            {
+                logger.LogInformation("Resuming movement");
+            }
+        }
+        else
+        {
+            float diff1 = Abs(Tau + heading - playerReader.Direction) % Tau;
+            float diff2 = Abs(heading - playerReader.Direction - Tau) % Tau;
+
+            if (Min(diff1, diff2) > 0.3)
+            {
+                logger.LogInformation("Correcting direction");
+                playerDirection.SetDirection(heading, exitMap);
+            }
         }
 
-        public override float CostOfPerformingAction { get => 19f; }
+        lastDistance = mapDistance;
 
-        public override async ValueTask PerformAction()
-        {
-            var targetLocation = this.classConfiguration.WrongZone.ExitZoneLocation;
+        LastActive = DateTime.UtcNow;
+    }
 
-            SendActionEvent(new ActionEventArgs(GoapKey.fighting, false));
-
-            await Task.Delay(200);
-            input.SetKeyState(input.ForwardKey, true, false, "FollowRouteAction 5");
-
-            if (this.playerReader.Bits.PlayerInCombat) { return; }
-
-            if ((DateTime.UtcNow - LastActive).TotalSeconds > 10)
-            {
-                this.stuckDetector.SetTargetLocation(targetLocation);
-            }
-
-            var location = playerReader.PlayerLocation;
-            var distance = location.DistanceXYTo(targetLocation);
-            var heading = DirectionCalculator.CalculateHeading(location, targetLocation);
-
-            if (lastDistance < distance)
-            {
-                playerDirection.SetDirection(heading, targetLocation, "Further away");
-            }
-            else if (!this.stuckDetector.IsGettingCloser())
-            {
-                // stuck so jump
-                input.SetKeyState(input.ForwardKey, true, false, "FollowRouteAction 6");
-                await Task.Delay(100);
-                if (HasBeenActiveRecently())
-                {
-                    this.stuckDetector.Unstick();
-                }
-                else
-                {
-                    await Task.Delay(1000);
-                    logger.LogInformation("Resuming movement");
-                }
-            }
-            else // distance closer
-            {
-                var diff1 = MathF.Abs(RADIAN + heading - playerReader.Direction) % RADIAN;
-                var diff2 = MathF.Abs(heading - playerReader.Direction - RADIAN) % RADIAN;
-
-                if (MathF.Min(diff1, diff2) > 0.3)
-                {
-                    playerDirection.SetDirection(heading, targetLocation, "Correcting direction");
-                }
-            }
-
-            lastDistance = distance;
-
-            LastActive = DateTime.UtcNow;
-        }
-
-        private bool HasBeenActiveRecently()
-        {
-            return (DateTime.UtcNow - LastActive).TotalSeconds < 2;
-        }
+    private bool HasBeenActiveRecently()
+    {
+        return (DateTime.UtcNow - LastActive).TotalMilliseconds < 2000;
     }
 }

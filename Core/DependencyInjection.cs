@@ -1,0 +1,620 @@
+using Core.Addon;
+using Core.Database;
+using Core.Extensions;
+using Core.CombatRotation;
+using Core.FeatureFlags;
+using Core.Goals;
+using Core.Launch;
+using Core.Resilience;
+using Core.Session;
+using Core.Hazard;
+
+using Game;
+
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+using PPather;
+
+using SharedLib;
+using SharedLib.Humanization;
+using SharedLib.NpcFinder;
+
+using SixLabors.ImageSharp;
+
+using System;
+using System.Threading;
+
+using WinAPI;
+
+namespace Core;
+
+public static class DependencyInjection
+{
+    public static IServiceCollection AddAddonComponents(
+        this IServiceCollection s)
+    {
+        s.ForwardSingleton<PlayerReader, IReader>();
+        s.ForwardSingleton<PlayerReader, IMouseOverReader>();
+
+        s.ForwardSingleton<AddonReader, IAddonReader>();
+
+        s.ForwardSingleton<AddonBits, IReader>();
+        s.ForwardSingleton<AddonBits, IGameMenuWindowShown>();
+
+        s.ForwardSingleton<SpellInRange, IReader>();
+        s.ForwardSingleton<BuffStatus<IPlayer>, IReader>(x => new(41));
+        s.ForwardSingleton<TargetDebuffStatus, IReader>();
+        s.ForwardSingleton<BuffStatus<IFocus>, IReader>(x => new(91));
+        s.ForwardSingleton<Stance, IReader>();
+
+        s.ForwardSingleton<CombatLog, IReader>();
+        s.ForwardSingleton<EquipmentReader, IReader>();
+        s.ForwardSingleton<BagReader, IReader>();
+        s.ForwardSingleton<GossipReader, IReader>();
+        s.ForwardSingleton<SpellBookReader, IReader>();
+        s.ForwardSingleton<TalentReader, IReader>();
+        s.ForwardSingleton<ChatReader, IReader>();
+        s.ForwardSingleton<KeyBindingsReader, IReader>();
+        s.ForwardSingleton<ActionBarTextureReader, IReader>();
+        s.ForwardSingleton<ActionBarMacroReader, IReader>();
+
+        s.ForwardSingleton<ActionBarCostReader, IReader>();
+        s.ForwardSingleton<ActionBarCooldownReader, IReader>();
+
+        s.ForwardSingleton<ActionBarBits<ICurrentAction>, IReader>(
+            x => new(25, 26, 27, 28, 29));
+        s.ForwardSingleton<ActionBarBits<IUsableAction>, IReader>(
+            x => new(30, 31, 32, 33, 34));
+
+        s.ForwardSingleton<AuraTimeReader<IPlayerBuffTimeReader>, IReader>(
+            x => new(79, 80));
+        s.ForwardSingleton<AuraTimeReader<ITargetDebuffTimeReader>, IReader>(
+            x => new(81, 82));
+        s.ForwardSingleton<AuraTimeReader<ITargetBuffTimeReader>, IReader>(
+            x => new(83, 84));
+        s.ForwardSingleton<AuraTimeReader<IFocusBuffTimeReader>, IReader>(
+            x => new(92, 93));
+        s.ForwardSingleton<AuraTimeReader<IPlayerDebuffTimeReader>, IReader>(
+            x => new(104, 105));
+
+        return s;
+    }
+
+    public static IServiceCollection AddStartupIoC(
+        this IServiceCollection s, IServiceProvider sp)
+    {
+        s.ForwardSingleton<ILoggerFactory>(sp);
+        s.ForwardSingleton<ILogger>(sp);
+
+        s.AddLogging();
+
+        s.ForwardSingleton<CancellationTokenSource>(sp);
+
+        s.ForwardSingleton<WowProcessInput>(sp);
+        s.ForwardSingleton<IMouseInput>(sp);
+        s.ForwardSingleton<IMouseOverReader>(sp);
+
+        s.ForwardSingleton<NpcNameFinder>(sp);
+        s.ForwardSingleton<NpcNameTargetingLocations>(sp);
+        s.ForwardSingleton<IWowScreen>(sp);
+
+        s.ForwardSingleton<IPPather>(sp);
+        s.ForwardSingleton<ExecGameCommand>(sp);
+
+        s.ForwardSingleton<Wait>(sp);
+
+        s.ForwardSingleton<DataConfig>(sp);
+
+        // Phase 1/2 infrastructure singletons used inside session-scoped DI (GoalFactory).
+        s.ForwardSingleton<FeatureFlagService>(sp);
+        s.ForwardSingleton<HazardZoneStore>(sp);
+        s.ForwardSingleton<RouteRehabilitator>(sp);
+        s.ForwardSingleton<IRotationOptimizer>(sp);
+        s.AddSingleton<IHumanizationProvider>(sp.GetRequiredService<IHumanizationProvider>());
+
+        s.ForwardSingleton<AreaDB>(sp);
+        s.ForwardSingleton<WorldMapAreaDB>(sp);
+        s.ForwardSingleton<ItemDB>(sp);
+        s.ForwardSingleton<CreatureDB>(sp);
+        s.ForwardSingleton<FactionTemplateDB>(sp);
+        s.ForwardSingleton<SpellDB>(sp);
+        s.ForwardSingleton<IconDB>(sp);
+        s.ForwardSingleton<TalentDB>(sp);
+        s.ForwardSingleton<MailboxDB>(sp);
+
+        s.ForwardSingleton<AddonReader>(sp);
+        s.ForwardSingleton<PlayerReader>(sp);
+
+        s.ForwardSingleton<AddonBits>(sp);
+        s.ForwardSingleton<IGameMenuWindowShown>(sp);
+
+        s.ForwardSingleton<SpellInRange>(sp);
+        s.ForwardSingleton<BuffStatus<IPlayer>>(sp);
+        s.ForwardSingleton<TargetDebuffStatus>(sp);
+        s.ForwardSingleton<BuffStatus<IFocus>>(sp);
+        s.ForwardSingleton<Stance>(sp);
+
+        s.ForwardSingleton<IScreenCapture>(sp);
+        s.ForwardSingleton<SessionStat>(sp);
+        s.ForwardSingleton<IGrindSessionDAO>(sp);
+        s.ForwardSingleton<LevelTracker>(sp);
+        s.ForwardSingleton<TimeToKill>(sp);
+
+        // Addon Components
+        s.ForwardSingleton<CombatLog>(sp);
+        s.ForwardSingleton<EquipmentReader>(sp);
+        s.ForwardSingleton<BagReader>(sp);
+        s.ForwardSingleton<GossipReader>(sp);
+        s.ForwardSingleton<SpellBookReader>(sp);
+        s.ForwardSingleton<TalentReader>(sp);
+        s.ForwardSingleton<ChatReader>(sp);
+
+        s.ForwardSingleton<ActionBarCostReader>(sp);
+        s.ForwardSingleton<ActionBarCooldownReader>(sp);
+
+        s.ForwardSingleton<ActionBarBits<ICurrentAction>>(sp);
+        s.ForwardSingleton<ActionBarBits<IUsableAction>>(sp);
+
+        s.ForwardSingleton<AuraTimeReader<IPlayerBuffTimeReader>>(sp);
+        s.ForwardSingleton<AuraTimeReader<IPlayerDebuffTimeReader>>(sp);
+        s.ForwardSingleton<AuraTimeReader<ITargetDebuffTimeReader>>(sp);
+        s.ForwardSingleton<AuraTimeReader<ITargetBuffTimeReader>>(sp);
+        s.ForwardSingleton<AuraTimeReader<IFocusBuffTimeReader>>(sp);
+
+        s.ForwardSingleton<ActionBarTextureReader>(sp);
+        s.ForwardSingleton<ActionBarMacroReader>(sp);
+        s.ForwardSingleton<ActionBarSlotValidator>(sp);
+
+        s.ForwardSingleton<AddonConfigurator>(sp);
+
+        return s;
+    }
+
+    public static IServiceCollection AddCoreFrontend(
+        this IServiceCollection s)
+    {
+        s.AddSingleton<WApi>();
+        s.AddSingleton<FrontendUpdate>();
+
+        return s;
+    }
+
+    public static IServiceCollection AddCoreConfiguration(
+        this IServiceCollection s, ILogger log)
+    {
+        s.AddOptions<LaunchOptions>();
+        s.TryAddSingleton<LaunchOverrideState>();
+        s.TryAddSingleton<BotStartGuard>();
+        s.TryAddSingleton<IBotStartGuard>(sp => sp.GetRequiredService<BotStartGuard>());
+        s.TryAddSingleton<ILaunchReadinessCacheInvalidator>(sp => sp.GetRequiredService<BotStartGuard>());
+        s.TryAddSingleton<LaunchReadinessService>();
+        s.TryAddSingleton<LaunchAutoFixService>();
+
+        // Minimal pathing services so launch readiness can evaluate navigation without forcing remote connections.
+        s.AddSingleton<PPatherService>(x =>
+        {
+            var loggerFactory = x.GetRequiredService<ILoggerFactory>();
+            var serviceLogger = loggerFactory.CreateLogger<PPatherService>();
+            var dataConfig = x.GetRequiredService<DataConfig>();
+            var worldMapAreaDB = x.GetRequiredService<WorldMapAreaDB>();
+            var hazardProvider = x.GetService<IHazardProvider>();
+            return new PPatherService(serviceLogger, dataConfig, worldMapAreaDB, hazardProvider);
+        });
+
+        s.AddSingleton<IPPather>(x =>
+        {
+            var loggerFactory = x.GetRequiredService<ILoggerFactory>();
+            var logger = loggerFactory.CreateLogger<LocalPathingApi>();
+            var service = x.GetRequiredService<PPatherService>();
+            return new LocalPathingApi(logger, service);
+        });
+
+        s.AddSingleton<IAddonDataProvider>(x => GetAddonDataProvider(x, log));
+        s.AddSingleton<IBotController, ConfigBotController>();
+        s.AddSingleton<IAddonReader, ConfigAddonReader>();
+        s.AddSingleton<IMailSettingsService, NullMailSettingsService>();
+
+        // Required by MainLayout even in configuration mode
+        s.AddSingleton<SpellDB>();
+        s.AddSingleton<IconDB>();
+
+        // Required by addon components (PlayerReader needs WorldMapAreaDB, EquipmentReader/BagReader need ItemDB)
+        s.AddSingleton<AreaDB>();
+        s.AddSingleton<WorldMapAreaDB>();
+        s.AddSingleton<ItemDB>();
+        s.AddSingleton<CreatureDB>();
+        s.AddSingleton<FactionTemplateDB>();
+        s.AddSingleton<TalentDB>();
+        s.AddSingleton<MailboxDB>();
+
+        // Required by TestController for E2E testing
+        s.AddAddonComponents();
+
+        s.AddSingleton<LevelTracker>();
+        s.AddSingleton<TimeToKill>();
+
+        s.AddSingleton<ActionBarSlotValidator>();
+
+        return s;
+    }
+
+    public static IServiceCollection AddCoreNormal(
+        this IServiceCollection s, ILogger log)
+    {
+        s.AddOptions<LaunchOptions>();
+        s.TryAddSingleton<LaunchOverrideState>();
+        s.TryAddSingleton<BotStartGuard>();
+        s.TryAddSingleton<IBotStartGuard>(sp => sp.GetRequiredService<BotStartGuard>());
+        s.TryAddSingleton<ILaunchReadinessCacheInvalidator>(sp => sp.GetRequiredService<BotStartGuard>());
+        s.TryAddSingleton<LaunchReadinessService>();
+        s.TryAddSingleton<LaunchAutoFixService>();
+
+        s.AddSingleton<IScreenCapture>(x =>
+            GetScreenCapture(x, log));
+
+        s.AddSingleton<IPathVizualizer>(x =>
+            GetPathVizualizer(x, log));
+
+        s.AddSingleton<IPPather>(x =>
+            GetPather(x, log));
+
+        s.AddSingleton<PPatherService>(x =>
+        {
+            var loggerFactory = x.GetRequiredService<ILoggerFactory>();
+            var serviceLogger = loggerFactory.CreateLogger<PPatherService>();
+            var dataConfig = x.GetRequiredService<DataConfig>();
+            var worldMapAreaDB = x.GetRequiredService<WorldMapAreaDB>();
+            return new PPatherService(serviceLogger, dataConfig, worldMapAreaDB);
+        });
+
+        s.AddSingleton<IAddonDataProvider>(x =>
+            GetAddonDataProvider(x, log));
+
+        s.AddSingleton<MinimapNodeFinder>();
+
+        s.AddSingleton<SessionStat>();
+        s.AddSingleton<IGrindSessionDAO, LocalGrindSessionDAO>();
+        s.AddSingleton<LevelTracker>();
+        s.AddSingleton<TimeToKill>();
+
+        s.AddSingleton<AreaDB>();
+        s.AddSingleton<WorldMapAreaDB>();
+        s.AddSingleton<ItemDB>();
+        s.AddSingleton<CreatureDB>();
+        s.AddSingleton<FactionTemplateDB>();
+        s.AddSingleton<SpellDB>();
+        s.AddSingleton<IconDB>();
+        s.AddSingleton<TalentDB>();
+        s.AddSingleton<MailboxDB>();
+
+        s.AddAddonComponents();
+
+        s.AddSingleton<ActionBarSlotValidator>();
+
+        s.AddSingleton<IBotController, BotController>();
+        s.AddSingleton<IMailSettingsService, MailSettingsService>();
+
+        return s;
+    }
+
+    public static IServiceCollection AddCoreBase(this IServiceCollection s, bool wowProcessAvailable = true)
+    {
+        s.AddSingleton<ManualResetEventSlim>(x => new(false));
+        s.AddSingleton<Wait>();
+
+        s.AddSingleton<StartupClientVersion>();
+        s.AddSingleton<DataConfig>(x => DataConfig.Load(
+            x.GetRequiredService<StartupClientVersion>().Path));
+
+        // These services require a running WoW process with a valid window handle
+        // Only register them if WoW is actually available
+        if (wowProcessAvailable)
+        {
+            s.ForwardSingleton<IWowScreen, IScreenImageProvider, IMinimapImageProvider, WowScreenDXGI>();
+            s.ForwardSingleton<WowProcessInput, IMouseInput>();
+            s.AddSingleton<ExecGameCommand>();
+        }
+        else
+        {
+            // Register null/mock implementations for configuration mode
+            // These allow the UI to load but functionality is limited
+            s.AddSingleton<IWowScreen, NullWowScreen>();
+            s.AddSingleton<IScreenImageProvider>(x => (IScreenImageProvider)x.GetRequiredService<IWowScreen>());
+            s.AddSingleton<IMinimapImageProvider>(x => (IMinimapImageProvider)x.GetRequiredService<IWowScreen>());
+
+            // Register Input services to satisfy UI dependencies (InitButton)
+            // They won't work without a process, but they won't crash the startup
+            s.AddSingleton<WowProcessInput>();
+            s.AddSingleton<IMouseInput>(x => x.GetRequiredService<WowProcessInput>());
+            s.AddSingleton<ExecGameCommand>();
+        }
+
+        s.AddSingleton<DataFrame[]>(x => FrameConfig.LoadFrames());
+        // FrameConfigurator requires WowProcessInput; don't register it when WoW isn't running.
+        // This keeps BlazorServer able to start in configuration mode.
+        if (wowProcessAvailable)
+        {
+            s.AddSingleton<FrameConfigurator>();
+        }
+
+        s.AddSingleton<INpcResetEvent, NpcResetEvent>();
+        s.AddSingleton<NpcNameFinder>();
+
+        s.AddSingleton<NpcNameTargetingLocations>();
+
+        return s;
+    }
+
+
+    /// <summary>
+    /// Adds WoW process related services.
+    /// </summary>
+    /// <param name="wowIsRunning">Output: true if WoW process is currently running</param>
+    /// <param name="configurationComplete">Output: true if all configuration (addon, frames) is valid</param>
+    /// <returns>True if WoW is running (regardless of configuration state)</returns>
+    public static bool AddWoWProcess(
+        this IServiceCollection services, ILogger log,
+        out bool wowIsRunning, out bool configurationComplete)
+    {
+        services.AddSingleton<CancellationTokenSource>();
+        services.AddSingleton<WowProcess>();
+        services.AddSingleton<AddonConfigurator>();
+        services.AddSingleton<AddonValidator>();
+        services.AddSingleton<AddonInstaller>();
+
+        var sp = services.BuildServiceProvider(
+            new ServiceProviderOptions { ValidateOnBuild = true });
+
+        WowProcess process = sp.GetRequiredService<WowProcess>();
+
+        // Check if WoW process is actually running
+        if (!process.IsRunning)
+        {
+            log.LogWarning("WoW process not found. Starting in configuration mode.");
+            log.LogWarning("The bot will poll for WoW to be launched.");
+
+            // Register a default version for configuration mode
+            // This will be used for path resolution until WoW is detected
+            services.AddSingleton<Version>(new Version(2, 5, 5, 0)); // Default to TBC Classic
+
+            wowIsRunning = false;
+            configurationComplete = false;
+            return false;
+        }
+
+        wowIsRunning = true;
+        log.LogInformation($"Pid: {process.Id}");
+        log.LogInformation($"Version: {process.FileVersion}");
+
+        services.AddSingleton<Version>(x => process.FileVersion);
+
+        AddonConfigurator configurator = sp.GetRequiredService<AddonConfigurator>();
+        Version? installVersion = configurator.GetInstallVersion();
+        log.LogInformation($"Addon version: {installVersion}");
+
+        if (configurator.IsDefault() || installVersion == null)
+        {
+            // At this point the webpage never loads so fallback to configuration page
+            configurator.Delete();
+            FrameConfig.Delete();
+
+            log.LogError($"{nameof(AddonConfig)} doesn't exists or addon not installed yet!");
+            configurationComplete = false;
+            return true; // WoW is running, but config is not complete
+        }
+
+        NativeMethods.GetWindowRect(process.MainWindowHandle, out Rectangle rect);
+        if (!FrameConfig.Exists())
+        {
+            log.LogError($"{nameof(FrameConfig)} doesn't exists!");
+            configurationComplete = false;
+            return true; // WoW is running, but config is not complete
+        }
+
+        if (!FrameConfig.IsValid(rect, installVersion))
+        {
+            // Try to activate a resolution-specific config that matches the current window
+            if (FrameConfig.TryActivateForResolution(rect, installVersion))
+            {
+                log.LogInformation($"{nameof(FrameConfig)} activated resolution-specific config for {rect.Width}x{rect.Height}");
+            }
+            else
+            {
+                Rectangle? storedRect = null;
+                Version? storedAddonVersion = null;
+                int? storedFrameCount = null;
+
+                try
+                {
+                    DataFrameConfig storedConfig = FrameConfig.Load();
+                    storedRect = storedConfig.Rect;
+                    storedAddonVersion = storedConfig.AddonVersion;
+                    storedFrameCount = storedConfig.Frames.Length;
+                }
+                catch (Exception ex)
+                {
+                    log.LogWarning(ex, $"{nameof(FrameConfig)} could not load existing config before delete.");
+                }
+
+                if (storedRect.HasValue)
+                {
+                    log.LogError(
+                        $"{nameof(FrameConfig)} mismatch. StoredRect={storedRect.Value} CurrentRect={rect} " +
+                        $"StoredAddonVersion={storedAddonVersion} CurrentAddonVersion={installVersion} StoredFrames={storedFrameCount}");
+                }
+                else
+                {
+                    log.LogError($"{nameof(FrameConfig)} mismatch. StoredRect=<unavailable> CurrentRect={rect} CurrentAddonVersion={installVersion}");
+                }
+
+                // At this point the webpage never loads so fallback to configuration page
+                FrameConfig.Delete();
+
+                log.LogError($"{nameof(FrameConfig)} window rect is different then config!");
+                log.LogError($"{nameof(FrameConfig)} {rect}");
+                log.LogError($"{nameof(FrameConfig)} {installVersion}");
+
+                configurationComplete = false;
+                return true; // WoW is running, but config is not complete
+            }
+        }
+
+        configurationComplete = true;
+        return true;
+    }
+
+    /// <summary>
+    /// Legacy overload for backward compatibility
+    /// </summary>
+    public static bool AddWoWProcess(
+        this IServiceCollection services, ILogger log)
+    {
+        return services.AddWoWProcess(log, out _, out var configComplete) && configComplete;
+    }
+
+
+    private static IScreenCapture GetScreenCapture(
+        IServiceProvider sp, ILogger log)
+    {
+        var spd = sp.GetRequiredService<IOptions<StartupConfigDiagnostics>>().Value;
+        var globalLogger = sp.GetRequiredService<ILogger>();
+        var logger = sp.GetRequiredService<ILogger<ScreenCapture>>();
+        var dataConfig = sp.GetRequiredService<DataConfig>();
+        var cts = sp.GetRequiredService<CancellationTokenSource>();
+        var screen = sp.GetRequiredService<IWowScreen>();
+
+        IScreenCapture value = spd.Enabled
+            ? new ScreenCapture(logger, dataConfig, cts, screen)
+            : new NoScreenCapture(globalLogger, dataConfig);
+
+        log.LogInformation(value.GetType().Name);
+
+        return value;
+    }
+
+    private static IAddonDataProvider GetAddonDataProvider(
+        IServiceProvider sp, ILogger log)
+    {
+        var scr = sp.GetRequiredService<IOptions<StartupConfigReader>>().Value;
+        var screen = sp.GetRequiredService<IWowScreen>();
+
+        IAddonDataProvider value = scr.ReaderType switch
+        {
+            AddonDataProviderType.DXGI => screen is IAddonDataProvider provider
+                ? provider
+                : new NullAddonDataProvider(),
+            _ => new NullAddonDataProvider(),
+        };
+
+        log.LogInformation(value.GetType().Name);
+        return value;
+    }
+
+    private static IPPather GetPather(IServiceProvider sp, ILogger logger)
+    {
+        var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+        var scp = sp.GetRequiredService<IOptions<StartupConfigPathing>>().Value;
+        var worldMapAreaDB = sp.GetRequiredService<WorldMapAreaDB>();
+        var pathViz = sp.GetRequiredService<IPathVizualizer>();
+
+        if (scp.Type == StartupConfigPathing.Types.RemoteV3)
+        {
+            var remoteLogger = loggerFactory.CreateLogger<RemotePathingAPIV3>();
+            RemotePathingAPIV3 remote = new(
+                pathViz,
+                remoteLogger,
+                scp.hostv3, scp.portv3, worldMapAreaDB);
+
+            var localService = sp.GetRequiredService<PPatherService>();
+            var localPathingLogger = loggerFactory.CreateLogger<LocalPathingApi>();
+            LocalPathingApi localPathingApi = new(localPathingLogger, localService);
+
+            var hybridLogger = loggerFactory.CreateLogger<HybridPather>();
+
+            CircuitBreaker<System.Numerics.Vector3[]>? pathCB = null;
+            var featureFlags = sp.GetRequiredService<IOptionsMonitor<FeatureFlagsOptions>>().CurrentValue;
+            if (!featureFlags.GlobalKillSwitch && featureFlags.CircuitBreaker.Enabled)
+            {
+                var cbOptions = featureFlags.CircuitBreaker;
+                var cbFactory = sp.GetRequiredService<ICircuitBreakerFactory>();
+                pathCB = cbFactory.GetOrCreate<System.Numerics.Vector3[]>(
+                    "Pathfinding",
+                    static () => System.Array.Empty<System.Numerics.Vector3>(),
+                    cbOptions.PathfindingThreshold,
+                    TimeSpan.FromSeconds(cbOptions.PathfindingCooldownSeconds));
+            }
+
+            HybridPather hybrid = new(hybridLogger, remote, localPathingApi, pathCB);
+
+            if (remote.PingServer())
+            {
+                logger.LogInformation(
+                    $"Using {StartupConfigPathing.Types.RemoteV3}({nameof(HybridPather)} -> {remote.GetType().Name}) " +
+                    $"{scp.hostv3}:{scp.portv3}");
+            }
+            else
+            {
+                logger.LogWarning(
+                    $"Using {StartupConfigPathing.Types.RemoteV3}({nameof(HybridPather)}) but {scp.hostv3}:{scp.portv3} is not reachable yet. " +
+                    "Falling back to local pathing until navmesh connects.");
+            }
+
+            return hybrid;
+        }
+
+        if (scp.Type == StartupConfigPathing.Types.RemoteV1)
+        {
+            var remoteLogger = loggerFactory.CreateLogger<RemotePathingAPI>();
+            RemotePathingAPI api = new(remoteLogger, scp.hostv1, scp.portv1);
+            if (api.PingServer())
+            {
+                logger.LogInformation(
+                    $"Using {StartupConfigPathing.Types.RemoteV1}({api.GetType().Name}) " +
+                    $"{scp.hostv1}:{scp.portv1}");
+                return api;
+            }
+
+            logger.LogWarning($"{scp.Type} not available!");
+        }
+
+        var fallbackService = sp.GetRequiredService<PPatherService>();
+        var fallbackPathingLogger = loggerFactory.CreateLogger<LocalPathingApi>();
+
+        LocalPathingApi fallbackApi = new(fallbackPathingLogger, fallbackService);
+        logger.LogInformation(
+            $"Using {StartupConfigPathing.Types.Local}({fallbackApi.GetType().Name})");
+
+        return fallbackApi;
+    }
+
+    private static IPathVizualizer GetPathVizualizer(IServiceProvider sp, ILogger logger)
+    {
+        var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+        var remoteLogger = loggerFactory.CreateLogger<RemotePathingAPI>();
+
+        var scp = sp.GetRequiredService<IOptions<StartupConfigPathing>>().Value;
+
+        if (!scp.PathVisualizer)
+        {
+            return new NoPathVisualizer();
+        }
+
+        RemotePathingAPI? api = new(remoteLogger, scp.hostv1, scp.portv1);
+        if (!api.PingServer())
+        {
+            api.Dispose();
+            api = null;
+        }
+        else
+        {
+            logger.LogInformation(
+                $"Found PathViz {StartupConfigPathing.Types.RemoteV1}({api.GetType().Name}) " +
+                $"{scp.hostv1}:{scp.portv1}");
+        }
+
+        return api ?? (IPathVizualizer)new NoPathVisualizer();
+    }
+}

@@ -3,212 +3,280 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using SharedLib;
+using nietras.SeparatedValues;
+using System.Linq;
 
-namespace ReadDBC_CSV
+namespace ReadDBC_CSV;
+
+internal sealed class WorldMapAreaExtractor : IExtractor
 {
-    public class WorldMapAreaExtractor : IExtractor
+    private readonly string path;
+
+    public string[] FileRequirement { get; } =
+    [
+        "uimap.csv",
+        "uimapassignment.csv",
+        "map.csv",
+        "areatable.csv"
+    ];
+
+    public WorldMapAreaExtractor(string path)
     {
-        private readonly string path;
+        this.path = path;
+    }
 
-        public List<string> FileRequirement { get; } = new List<string>()
+    public void Run()
+    {
+        // UIMapId - AreaName
+        string uimapFile = Path.Join(path, FileRequirement[0]);
+        List<WorldMapArea> wmas = ExtractUIMap(uimapFile);
+
+        // MapID - AreaID - LocBottom - LocRight - LocTop - LocLeft
+        string uimapassignmentFile = Path.Join(path, FileRequirement[1]);
+        ExtractBoundaries(uimapassignmentFile, wmas);
+
+        // Extend Subzones
+        ExtendWithSubZones(path, wmas);
+
+        // ParentAreaId - ExplorationLevel
+        string areaTableFile = Path.Join(path, FileRequirement[3]);
+        ExtractParentAndLevel(areaTableFile, wmas);
+
+        // Continent / Directory
+        string mapFile = Path.Join(path, FileRequirement[2]);
+        ExtractContinent(mapFile, wmas);
+
+        ClearEmptyBound(wmas);
+
+        Console.WriteLine($"WMAs: {wmas.Count}");
+        File.WriteAllText(Path.Join(path, "WorldMapArea.json"), JsonConvert.SerializeObject(wmas, Formatting.Indented));
+    }
+
+    private static List<WorldMapArea> ExtractUIMap(string path)
+    {
+        using var reader = Sep.Reader(o => o with
         {
-            "uimap.csv",
-            "uimapassignment.csv",
-            "map.csv"
-        };
+            Unescape = true,
+        }).FromFile(path);
 
-        public WorldMapAreaExtractor(string path)
+        int idIndex = reader.Header.IndexOf("ID");
+        int nameIndex = reader.Header.IndexOf("Name_lang");
+        int systemIndex = reader.Header.IndexOf("System");
+
+        List<WorldMapArea> items = new();
+        foreach (SepReader.Row row in reader)
         {
-            this.path = path;
-        }
+            int uiMapId = row[idIndex].Parse<int>();
+            int system = row[systemIndex].Parse<int>();
 
-        public void Run()
-        {
-            // UIMapId - AreaName
-            var uimap = Path.Join(path, FileRequirement[0]);
-            var wmas = ExtractUIMap(uimap);
-
-            // MapID - AreaID - LocBottom - LocRight - LocTop - LocLeft
-            var uimapassignment = Path.Join(path, FileRequirement[1]);
-            ExtractBoundaries(uimapassignment, wmas);
-
-            // Continent / Directory
-            var map = Path.Join(path, FileRequirement[2]);
-            ExtractContinent(map, wmas);
-
-            ClearEmptyBound(wmas);
-
-            Console.WriteLine($"WMAs: {wmas.Count}");
-            File.WriteAllText(Path.Join(path, "WorldMapArea.json"), JsonConvert.SerializeObject(wmas, Formatting.Indented));
-        }
-
-        private static List<WorldMapArea> ExtractUIMap(string path)
-        {
-            int idIndex = -1;
-            int nameIndex = -1;
-
-            var extractor = new CSVExtractor();
-            extractor.HeaderAction = () =>
+            // 1 ([DEPRECATED] Legacy Taxi)
+            // 2 (Taxi and Adventure)
+            if (system == 1 || system == 2)
             {
-                idIndex = extractor.FindIndex("ID");
-                nameIndex = extractor.FindIndex("Name_lang");
+                continue;
+            }
+
+            items.Add(new WorldMapArea
+            {
+                UIMapId = uiMapId,
+                AreaName = row[nameIndex].ToString(),
+            });
+        }
+
+        return items;
+    }
+
+    private static void ExtractBoundaries(string path, List<WorldMapArea> wmas)
+    {
+        using var reader = Sep.Reader(o => o with
+        {
+            Unescape = true,
+        }).FromFile(path);
+
+        int uiMapId = reader.Header.IndexOf("UiMapID");
+        int mapId = reader.Header.IndexOf("MapID");
+        int areaId = reader.Header.IndexOf("AreaID");
+
+        int orderIndex = reader.Header.IndexOf("OrderIndex");
+
+        int region0 = reader.Header.IndexOf("Region_0", "Region[0]");
+        int region1 = reader.Header.IndexOf("Region_1", "Region[1]");
+
+        int region3 = reader.Header.IndexOf("Region_3", "Region[3]");
+        int region4 = reader.Header.IndexOf("Region_4", "Region[4]");
+
+        foreach (SepReader.Row row in reader)
+        {
+            int _uiMapId = row[uiMapId].Parse<int>();
+            int _orderIndex = row[orderIndex].Parse<int>();
+
+            int index = wmas.FindIndex(x => x.UIMapId == _uiMapId && _orderIndex == 0);
+            if (index > -1)
+            {
+                WorldMapArea wma = wmas[index];
+                wmas[index] = wma with
+                {
+                    MapID = row[mapId].Parse<int>(),
+                    AreaID = row[areaId].Parse<int>(),
+
+                    LocBottom = row[region0].Parse<float>(),
+                    LocRight = row[region1].Parse<float>(),
+
+                    LocTop = row[region3].Parse<float>(),
+                    LocLeft = row[region4].Parse<float>(),
+                };
+            }
+        }
+    }
+
+    private static void ExtractContinent(string path, List<WorldMapArea> wmas)
+    {
+        using var reader = Sep.Reader(o => o with
+        {
+            Unescape = true,
+        }).FromFile(path);
+
+        int mapId = reader.Header.IndexOf("ID");
+        int directory = reader.Header.IndexOf("Directory", 1);
+
+        foreach (SepReader.Row row in reader)
+        {
+            int _mapId = row[mapId].Parse<int>();
+            string _directory = row[directory].ToString();
+
+            for (int i = 0; i < wmas.Count; i++)
+            {
+                if (wmas[i].MapID != _mapId)
+                    continue;
+
+                WorldMapArea wma = wmas[i];
+                wmas[i] = wma with
+                {
+                    Continent = _directory
+                };
+            }
+        }
+    }
+
+    private static void ExtractParentAndLevel(string path, List<WorldMapArea> wmas)
+    {
+        using var reader = Sep.Reader(o => o with
+        {
+            Unescape = true,
+        }).FromFile(path);
+
+        int areaId = reader.Header.IndexOf("ID");
+        int zoneName = reader.Header.IndexOf("ZoneName");
+        int areaNameLang = reader.Header.IndexOf("AreaName_lang");
+        int continentID = reader.Header.IndexOf("ContinentID");
+        int parentAreaId = reader.Header.IndexOf("ParentAreaID");
+        int explorationLevel = reader.Header.IndexOf("ExplorationLevel");
+
+        foreach (SepReader.Row row in reader)
+        {
+            int _areaId = row[areaId].Parse<int>();
+            string _areaNameLang = row[areaNameLang].ToString();
+            string _zoneName = row[zoneName].ToString();
+            int _parentAreaId = row[parentAreaId].Parse<int>();
+            int _contientID = row[continentID].Parse<int>();
+            int _explorationLevel = row[explorationLevel].Parse<int>();
+
+            if (_zoneName.Contains("NightmareGrove"))
+                continue;
+
+            int i = wmas.FindIndex(x => x.AreaID == _areaId);
+            if (i == -1)
+            {
+                //Console.WriteLine($"[{_areaId}] not found {_areaNameLang} {_zoneName}");
+                continue;
+            }
+
+            WorldMapArea wma = wmas[i];
+            var newWma = wma with
+            {
+                MapID = _contientID,
+                ParentAreaId = _parentAreaId,
+                ExplorationLevel = _explorationLevel,
+                AreaName = _areaNameLang,
             };
 
-            var items = new List<WorldMapArea>();
-            Action<string> extractLine = line =>
+            wmas[i] = newWma;
+        }
+    }
+
+    private static void ExtendWithSubZones(string rootPath, List<WorldMapArea> wmas)
+    {
+        var filesWithNumberOnlyInName = Directory.GetFiles(rootPath, "*.json", SearchOption.AllDirectories)
+            .Where(x => Path.GetFileNameWithoutExtension(x).All(char.IsDigit));
+
+        foreach (string file in filesWithNumberOnlyInName)
+        {
+            ReadOnlySpan<SubZoneArea> subzones = JsonConvert.DeserializeObject<SubZoneArea[]>(File.ReadAllText(file));
+
+            foreach (SubZoneArea sub in subzones)
             {
-                var values = line.Split(",");
-                if (values.Length > idIndex &&
-                    values.Length > nameIndex)
+                (float left, float right, float top, float bottom) = ConvertCoord(sub);
+
+                // skip if already exists
+                if (wmas.Exists(x => x.AreaID == sub.Id))
                 {
-                    int uiMapId = int.Parse(values[idIndex]);
-                    items.Add(new WorldMapArea
+                    var existing = wmas.Find(x => x.AreaID == sub.Id);
+
+                    WorldMapArea clickWMA = existing with
                     {
-                        UIMapId = uiMapId,
-                        AreaName = values[nameIndex]
-                    });
+                        UIMapId = 0,
+                        AreaID = sub.Id + 1000000,
+                        AreaName = "C_" + existing.AreaName,
+                        LocLeft = left,
+                        LocRight = right,
+                        LocTop = top,
+                        LocBottom = bottom,
+                    };
+                    wmas.Add(clickWMA);
+
+                    continue;
                 }
-            };
 
-            extractor.ExtractTemplate(path, extractLine);
-            return items;
-        }
-
-        private static void ExtractBoundaries(string path, List<WorldMapArea> wmas)
-        {
-            int uiMapIdIndex = -1;
-            int mapIdIndex = -1;
-            int areaIdIndex = -1;
-
-            int orderIndexIndex = -1;
-
-            int region0Index = -1;
-            int region1Index = -1;
-            int region3Index = -1;
-            int region4Index = -1;
-
-            var extractor = new CSVExtractor();
-            extractor.HeaderAction = () =>
-            {
-                uiMapIdIndex = extractor.FindIndex("UiMapID");
-                mapIdIndex = extractor.FindIndex("MapID");
-                areaIdIndex = extractor.FindIndex("AreaID");
-
-                orderIndexIndex = extractor.FindIndex("OrderIndex");
-
-                region0Index = extractor.FindIndex("Region[0]");
-                region1Index = extractor.FindIndex("Region[1]");
-
-                region3Index = extractor.FindIndex("Region[3]");
-                region4Index = extractor.FindIndex("Region[4]");
-            };
-
-            Action<string> extractLine = line =>
-            {
-                var values = line.Split(",");
-                if (values.Length > uiMapIdIndex &&
-                    values.Length > mapIdIndex &&
-                    values.Length > areaIdIndex &&
-
-                    values.Length > region0Index &&
-                    values.Length > region1Index &&
-                    values.Length > region3Index &&
-                    values.Length > region4Index
-                    )
+                WorldMapArea wma = new()
                 {
-                    int uiMapId = int.Parse(values[uiMapIdIndex]);
-                    int orderIndex = int.Parse(values[orderIndexIndex]);
+                    AreaID = sub.Id,
+                    LocLeft = left,
+                    LocRight = right,
+                    LocTop = top,
+                    LocBottom = bottom,
+                };
 
-                    int index = wmas.FindIndex(x => x.UIMapId == uiMapId && orderIndex == 0);
-                    if (index > -1)
-                    {
-                        var wma = wmas[index];
-                        wmas[index] = new WorldMapArea
-                        {
-                            MapID = int.Parse(values[mapIdIndex]),
-                            AreaID = int.Parse(values[areaIdIndex]),
-
-                            AreaName = wma.AreaName,
-
-                            LocBottom = float.Parse(values[region0Index]),
-                            LocRight = float.Parse(values[region1Index]),
-
-                            LocTop = float.Parse(values[region3Index]),
-                            LocLeft = float.Parse(values[region4Index]),
-
-                            UIMapId = wma.UIMapId,
-                            Continent = wma.Continent,
-                        };
-                    }
-                }
-            };
-
-            extractor.ExtractTemplate(path, extractLine);
+                wmas.Add(wma);
+            }
         }
+    }
 
-        private static void ExtractContinent(string path, List<WorldMapArea> wmas)
+    private static (float left, float right, float top, float bottom) ConvertCoord(SubZoneArea sub)
+    {
+        return (
+            sub.Min.Y, // left
+            sub.Max.Y, // right
+            sub.Min.X, // top
+            sub.Max.X);// bottom   
+    }
+
+
+    private static void ClearEmptyBound(List<WorldMapArea> wmas)
+    {
+        for (int i = wmas.Count - 1; i >= 0; i--)
         {
-            int mapIdIndex = -1;
-            int directoryIndex = -1;
+            WorldMapArea wma = wmas[i];
 
-            var extractor = new CSVExtractor();
-            extractor.HeaderAction = () =>
+            if ((wma.LocBottom == 0 &&
+                wma.LocLeft == 0 &&
+                wma.LocRight == 0 &&
+                wma.LocTop == 0) ||
+                wma.AreaName == null ||
+                wma.AreaName.Contains("UNUSED") ||
+                wma.AreaName.Contains("DELETE ME"))
             {
-                mapIdIndex = extractor.FindIndex("ID");
-                directoryIndex = extractor.FindIndex("Directory");
-            };
-
-            Action<string> extractLine = line =>
-            {
-                string[] values;
-                if (line.Contains('\"'))
-                    values = CSVExtractor.SplitQuotes(line);
-                else
-                    values = line.Split(",");
-
-                if (values.Length > directoryIndex &&
-                    values.Length > mapIdIndex)
-                {
-                    int mapId = int.Parse(values[mapIdIndex]);
-
-                    var list = wmas.FindAll(x => x.MapID == mapId);
-                    for (int i = 0; i < list.Count; i++)
-                    {
-                        var wma = list[i];
-                        list[i] = new WorldMapArea
-                        {
-                            MapID = wma.MapID,
-                            AreaID = wma.AreaID,
-
-                            AreaName = wma.AreaName,
-
-                            LocBottom = wma.LocBottom,
-                            LocRight = wma.LocRight,
-
-                            LocTop = wma.LocTop,
-                            LocLeft = wma.LocLeft,
-
-                            UIMapId = wma.UIMapId,
-                            Continent = values[directoryIndex]
-                        };
-                    }
-                }
-            };
-
-            extractor.ExtractTemplate(path, extractLine);
-        }
-
-        private static void ClearEmptyBound(List<WorldMapArea> wmas)
-        {
-            for (int i = wmas.Count - 1; i >= 0; i--)
-            {
-                if (wmas[i].LocBottom == 0 &&
-                    wmas[i].LocLeft == 0 &&
-                    wmas[i].LocRight == 0 &&
-                    wmas[i].LocTop == 0)
-                {
-                    wmas.RemoveAt(i);
-                }
+                Console.WriteLine($"{wma}");
+                wmas.RemoveAt(i);
             }
         }
     }

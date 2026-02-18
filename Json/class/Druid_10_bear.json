@@ -4,38 +4,42 @@
   "PathFilename": "_pack\\1-20\\Night elf\\09-11_Teldrassil_Near Lake Al'Ameth.json",
   "PathReduceSteps": true,
   "CheckTargetGivesExp": true,
-  "Form": [
-    {
-      //macro: /cancelform
-      "Name": "cancelform",
-      "Key": "F1",
-      "Form": "None"
-    },
-    {
-      "Name": "Bear Form",
-      "Key": "F2",
-      "Form": "Druid_Bear"
-    }
-  ],
-  "Pull": {
+  "Form": {
     "Sequence": [
       {
-        "Name": "Moonfire",
-        "Key": "5",
-        "StopBeforeCast": true,
-        "AfterCastWaitBuff": true,
-        "Requirements": [
-          "!Moonfire",
-          "AddVisible",
-          "SpellInRange:0",
-          "MinRange > 10"
-        ],
+        //macro: /cancelform
+        "Name": "cancelform",
+        "BaseAction": true,
+        "Key": "F1",
         "Form": "None"
       },
       {
         "Name": "Bear Form",
         "Key": "F2",
-        "WaitForWithinMeleeRange": true,
+        "Form": "Druid_Bear"
+      }
+    ]
+  },
+  "Pull": {
+    "Sequence": [
+      {
+        "Name": "Moonfire",
+        "Key": "5",
+        "Form": "None",
+        "BeforeCastStop": true,
+        "AfterCastWaitBuff": true,
+        "AfterCastWaitGCD": true,
+        "Requirements": [
+          "!Moonfire",
+          "AddVisible",
+          "SpellInRange:0",
+          "MinRange > 10"
+        ]
+      },
+      {
+        "Name": "Bear Form",
+        "Key": "F2",
+        "AfterCastWaitMeleeRange": true,
         "Requirements": [
           "Moonfire",
           "!Form:Druid_Bear"
@@ -74,7 +78,6 @@
       {
         "Name": "Demoralizing Roar",
         "Key": "3",
-        "MinRage": 10,
         "WhenUsable": true,
         "Requirements": [
           "InMeleeRange",
@@ -86,18 +89,16 @@
       {
         "Name": "Maul",
         "Key": "2",
-        "MinRage": 15,
         "Requirements": [
           "InMeleeRange",
           "LastMainHandMs > 2100",
           "Form:Druid_Bear"
         ], // bear swing speed fixed at 2.5
-        "AfterCastWaitNextSwing": true,
+        "AfterCastWaitSwing": true,
         "Form": "Druid_Bear"
       },
       {
-        "Name": "AutoAttack",
-        "Requirement": "!AutoAttacking"
+        "Name": "AutoAttack"
       },
       {
         "Name": "Approach",
@@ -120,7 +121,7 @@
         "Form": "None"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "-",
         "Requirement": "Mana% < 40",
         "Form": "None"
@@ -134,7 +135,7 @@
         "Name": "Repair",
         "Key": "C",
         "Form": "None",
-        "Requirement": "Items Broken",
+        "Requirement": "Durability% < 35",
         "PathFilename": "5_NightElf_Vendor.json"
       },
       {

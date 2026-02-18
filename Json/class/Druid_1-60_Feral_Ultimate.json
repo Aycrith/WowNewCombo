@@ -1,0 +1,508 @@
+{
+  "ClassName": "Druid",
+  "Log": false,
+  "Loot": true,
+  "Skin": true,
+  "GatherCorpse": true,
+  "UseMount": true,
+  "AllowPvP": false,
+  "KeyboardOnly": true,
+  "NPCMaxLevels_Above": 2,
+  "NPCMaxLevels_Below": 8,
+  "PathThereAndBack": true,
+  "PathReduceSteps": true,
+  "Mount": { "Key": "N0" },
+
+  "IntVariables": {
+    "HEAL_HP%": 40,
+    "REGROWTH_HP%": 50,
+    "REJUV_HP%": 60,
+    "BARKSKIN_HP%": 35,
+    "MANA_HEAL%": 30,
+    "DRINK_MANA%": 25,
+    "FOOD_HP%": 50,
+    "FLEE_HP%": 15,
+    "FLEE_MOB_COUNT": 3,
+    "RIP_CP": 4,
+    "FB_CP": 5,
+    "TIGER_FURY_ENERGY": 30
+  },
+
+  "Form": {
+    "Sequence": [
+      {
+        "Name": "Cat Form",
+        "Key": "1",
+        "Form": "Druid_Cat"
+      },
+      {
+        "Name": "Bear Form",
+        "Key": "F1",
+        "Form": "Druid_Bear"
+      },
+      {
+        "Name": "Travel Form",
+        "Key": "F2",
+        "Form": "Druid_Travel"
+      },
+      {
+        "Name": "Moonkin Form",
+        "Key": "F3",
+        "Form": "Druid_Moonkin"
+      }
+    ]
+  },
+
+  "Paths": [
+    {
+      "PathFilename": "_pack\\1-20\\Night elf\\01-04_Teldrassil_Shadowglen.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:NightElf"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Tauren\\01-06_Mulgore_Red Cloud Mesa.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 6", "Race:Tauren"]
+    },
+    {
+      "PathFilename": "_pack\\20-30\\Ashenvale\\17-21 Spiders.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 17", "Level < 22"]
+    },
+    {
+      "PathFilename": "_pack\\20-30\\Duskwood\\21-24 Tranquil Gardens.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 21", "Level < 26"]
+    },
+    {
+      "PathFilename": "_pack\\20-30\\Duskwood\\25-30 Vul Gol Ogre Mound.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 25", "Level < 30"]
+    },
+    {
+      "PathFilename": "_pack\\30-40\\Stranglethorn Vale\\30-50 big walk.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 30", "Level < 36"]
+    },
+    {
+      "PathFilename": "_pack\\30-40\\Swamp of Sorrows\\35-39 Gorillas Crocs.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 35", "Level < 40"]
+    },
+    {
+      "PathFilename": "_pack\\40-50\\Feralas\\41-45 Ferelas Hippogryphs.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 40", "Level < 46"]
+    },
+    {
+      "PathFilename": "_pack\\40-50\\Felwood\\48-50 Deadwood Village - Furbolg - quest-rep.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 46", "Level < 52"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Felwood\\52-54 Timbermaw Hold - furbolgs.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 52", "Level < 56"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Winterspring\\56-58 Winterfall Village.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 56", "Level < 59"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Eastern Plaguelands\\57-60 Browman Mill - Noxious Glade.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 57", "Level <= 60"]
+    }
+  ],
+
+  "Wait": {
+    "Sequence": [
+      {
+        "Cost": 0.9,
+        "Name": "User",
+        "Requirement": "MenuOpen || ChatInputVisible"
+      }
+    ]
+  },
+
+  "Pull": {
+    "Sequence": [
+      {
+        "Name": "Cat Form",
+        "Key": "1",
+        "WhenUsable": true,
+        "Requirement": "!Form:Druid_Cat && Level >= 20"
+      },
+      {
+        "Name": "Prowl",
+        "Key": "N1",
+        "WhenUsable": true,
+        "Requirements": [
+          "Form:Druid_Cat",
+          "!Prowl",
+          "Level >= 20"
+        ]
+      },
+      {
+        "Name": "Pounce",
+        "Key": "N2",
+        "WhenUsable": true,
+        "Requirements": [
+          "Form:Druid_Cat",
+          "Prowl",
+          "InMeleeRange",
+          "Level >= 36"
+        ]
+      },
+      {
+        "Name": "Ravage",
+        "Key": "N3",
+        "WhenUsable": true,
+        "Requirements": [
+          "Form:Druid_Cat",
+          "Prowl",
+          "InMeleeRange",
+          "BehindTarget",
+          "Level >= 32"
+        ]
+      },
+      {
+        "Name": "Faerie Fire (Feral)",
+        "Key": "N4",
+        "WhenUsable": true,
+        "Requirements": [
+          "Form:Druid_Cat || Form:Druid_Bear",
+          "!Faerie Fire",
+          "Level >= 30"
+        ]
+      },
+      {
+        "Name": "Moonfire",
+        "Key": "3",
+        "WhenUsable": true,
+        "BeforeCastStop": true,
+        "Requirements": [
+          "!Form:Druid_Cat && !Form:Druid_Bear",
+          "Level >= 4"
+        ]
+      },
+      {
+        "Name": "Wrath",
+        "Key": "2",
+        "HasCastBar": true,
+        "Requirements": [
+          "!Form:Druid_Cat && !Form:Druid_Bear",
+          "Level >= 1"
+        ]
+      },
+      {
+        "Name": "Approach"
+      }
+    ]
+  },
+
+  "Combat": {
+    "Sequence": [
+      {
+        "Name": "Barkskin",
+        "Key": "F4",
+        "WhenUsable": true,
+        "Requirement": "Health% < BARKSKIN_HP% && Level >= 44"
+      },
+      {
+        "Name": "Survival Instincts",
+        "Key": "F5",
+        "WhenUsable": true,
+        "Requirements": [
+          "Health% < 25",
+          "Form:Druid_Cat || Form:Druid_Bear",
+          "Level >= 50"
+        ]
+      },
+      {
+        "Name": "Bash",
+        "Key": "N9",
+        "WhenUsable": true,
+        "UseWhenTargetIsCasting": true,
+        "Requirement": "Form:Druid_Bear && Level >= 14"
+      },
+      {
+        "Name": "Maim",
+        "Key": "N8",
+        "WhenUsable": true,
+        "UseWhenTargetIsCasting": true,
+        "Requirements": [
+          "Form:Druid_Cat",
+          "Combo Point >= 2",
+          "Level >= 62"
+        ]
+      },
+      {
+        "Name": "Bear Form",
+        "Key": "F1",
+        "WhenUsable": true,
+        "Requirements": [
+          "Health% < 30",
+          "MobCount > 1",
+          "!Form:Druid_Bear",
+          "Level >= 10"
+        ]
+      },
+      {
+        "Name": "Cat Form",
+        "Key": "1",
+        "WhenUsable": true,
+        "Requirements": [
+          "!Form:Druid_Cat",
+          "Health% > 50",
+          "Level >= 20"
+        ]
+      },
+      {
+        "Name": "Tiger's Fury",
+        "Key": "4",
+        "WhenUsable": true,
+        "Requirements": [
+          "Form:Druid_Cat",
+          "Energy < TIGER_FURY_ENERGY",
+          "Level >= 24"
+        ]
+      },
+      {
+        "Name": "Mangle (Cat)",
+        "Key": "5",
+        "WhenUsable": true,
+        "Requirements": [
+          "Form:Druid_Cat",
+          "Level >= 50"
+        ]
+      },
+      {
+        "Name": "Rake",
+        "Key": "6",
+        "WhenUsable": true,
+        "Requirements": [
+          "Form:Druid_Cat",
+          "!Rake",
+          "TargetHealth% > 40",
+          "Level >= 24"
+        ]
+      },
+      {
+        "Name": "Rip",
+        "Key": "7",
+        "WhenUsable": true,
+        "Requirements": [
+          "Form:Druid_Cat",
+          "!Rip",
+          "Combo Point >= RIP_CP",
+          "TargetHealth% > 50",
+          "Level >= 20"
+        ]
+      },
+      {
+        "Name": "Ferocious Bite",
+        "Key": "8",
+        "WhenUsable": true,
+        "Requirements": [
+          "Form:Druid_Cat",
+          "Combo Point >= FB_CP",
+          "Level >= 32"
+        ]
+      },
+      {
+        "Name": "Shred",
+        "Key": "9",
+        "WhenUsable": true,
+        "Requirements": [
+          "Form:Druid_Cat",
+          "BehindTarget",
+          "Level >= 22"
+        ]
+      },
+      {
+        "Name": "Claw",
+        "Key": "-",
+        "WhenUsable": true,
+        "Requirements": [
+          "Form:Druid_Cat",
+          "!BehindTarget",
+          "Level >= 20"
+        ]
+      },
+      {
+        "Name": "Maul",
+        "Key": "=",
+        "WhenUsable": true,
+        "Requirements": [
+          "Form:Druid_Bear",
+          "Level >= 10"
+        ]
+      },
+      {
+        "Name": "Swipe",
+        "Key": "N5",
+        "WhenUsable": true,
+        "Requirements": [
+          "Form:Druid_Bear",
+          "MobCount > 1",
+          "Level >= 16"
+        ]
+      },
+      {
+        "Name": "Moonfire",
+        "Key": "3",
+        "WhenUsable": true,
+        "Requirements": [
+          "!Form:Druid_Cat && !Form:Druid_Bear",
+          "!Moonfire",
+          "Level >= 4"
+        ]
+      },
+      {
+        "Name": "Wrath",
+        "Key": "2",
+        "HasCastBar": true,
+        "Requirements": [
+          "!Form:Druid_Cat && !Form:Druid_Bear",
+          "Level >= 1"
+        ]
+      },
+      {
+        "Name": "AutoAttack"
+      },
+      {
+        "Name": "Approach",
+        "Log": false
+      }
+    ]
+  },
+
+  "Flee": {
+    "Sequence": [
+      {
+        "Name": "Travel Form",
+        "Key": "F2",
+        "WhenUsable": true,
+        "Requirement": "Health% < FLEE_HP% && Level >= 30"
+      },
+      {
+        "Name": "Dash",
+        "Key": "N6",
+        "WhenUsable": true,
+        "Requirements": [
+          "Form:Druid_Cat",
+          "Health% < FLEE_HP%",
+          "Level >= 26"
+        ]
+      },
+      {
+        "Name": "Flee",
+        "Requirement": "(MobCount >= FLEE_MOB_COUNT && Health% < FLEE_HP%) || TargetElite"
+      }
+    ]
+  },
+
+  "Adhoc": {
+    "Sequence": [
+      {
+        "Cost": 3,
+        "Name": "Mark of the Wild",
+        "Key": "0",
+        "WhenUsable": true,
+        "InCombat": "i dont care",
+        "Requirement": "!Mark of the Wild && Level >= 1"
+      },
+      {
+        "Cost": 3,
+        "Name": "Thorns",
+        "Key": "N7",
+        "WhenUsable": true,
+        "InCombat": "i dont care",
+        "Requirement": "!Thorns && Level >= 6"
+      },
+      {
+        "Name": "Regrowth",
+        "Key": "F6",
+        "HasCastBar": true,
+        "WhenUsable": true,
+        "Requirements": [
+          "!Form:Druid_Cat && !Form:Druid_Bear",
+          "Health% < REGROWTH_HP%",
+          "!Regrowth",
+          "Level >= 12"
+        ]
+      },
+      {
+        "Name": "Rejuvenation",
+        "Key": "F7",
+        "WhenUsable": true,
+        "Requirements": [
+          "!Form:Druid_Cat && !Form:Druid_Bear",
+          "Health% < REJUV_HP%",
+          "!Rejuvenation",
+          "Level >= 4"
+        ]
+      },
+      {
+        "Name": "Healing Touch",
+        "Key": "F8",
+        "HasCastBar": true,
+        "WhenUsable": true,
+        "Requirements": [
+          "!Form:Druid_Cat && !Form:Druid_Bear",
+          "Health% < HEAL_HP%",
+          "Level >= 1"
+        ]
+      }
+    ]
+  },
+
+  "Parallel": {
+    "Sequence": [
+      {
+        "Name": "Food",
+        "Key": "N0",
+        "Requirement": "Health% < FOOD_HP%"
+      },
+      {
+        "Name": "Drink",
+        "Key": "F9",
+        "Requirement": "Mana% < DRINK_MANA%"
+      }
+    ]
+  },
+
+  "NPC": {
+    "Sequence": [
+      {
+        "Cost": 6,
+        "Name": "Repair",
+        "Key": "C",
+        "Requirement": "Durability% < 35"
+      },
+      {
+        "Cost": 6,
+        "Name": "Sell",
+        "Key": "C",
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ]
+      }
+    ]
+  }
+}

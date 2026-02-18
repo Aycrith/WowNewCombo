@@ -2,77 +2,91 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.RegularExpressions;
 using SharedLib;
+using nietras.SeparatedValues;
 
-namespace ReadDBC_CSV
+namespace ReadDBC_CSV;
+
+internal sealed class ItemExtractor : IExtractor
 {
-    public class ItemExtractor : IExtractor
+    private readonly string path;
+
+    public string[] FileRequirement { get; } =
+    [
+        "itemsparse.csv",
+        "item.csv"
+    ];
+
+    public ItemExtractor(string path)
     {
-        private readonly string path;
+        this.path = path;
+    }
 
-        public List<string> FileRequirement { get; } = new List<string>()
+    public void Run()
+    {
+        // First load icon mappings from item.csv
+        string itemFile = Path.Join(path, FileRequirement[1]);
+        Dictionary<int, int> iconMap = ExtractIconMap(itemFile);
+        Console.WriteLine($"Item icons: {iconMap.Count}");
+
+        // Then load items and join with icons
+        string itemSparseFile = Path.Join(path, FileRequirement[0]);
+        List<Item> items = ExtractItems(itemSparseFile, iconMap);
+
+        Console.WriteLine($"Items: {items.Count}");
+        File.WriteAllText(Path.Join(path, "items.json"), JsonConvert.SerializeObject(items));
+    }
+
+    /// <summary>
+    /// Extracts item ID to icon texture ID mapping from item.csv
+    /// </summary>
+    private static Dictionary<int, int> ExtractIconMap(string path)
+    {
+        using var reader = Sep.Reader().FromFile(path);
+
+        int id = reader.Header.IndexOf("ID");
+        int iconFileDataId = reader.Header.IndexOf("IconFileDataID");
+
+        Dictionary<int, int> iconMap = [];
+        foreach (SepReader.Row row in reader)
         {
-            "itemsparse.csv"
-        };
-
-        public ItemExtractor(string path)
-        {
-            this.path = path;
-        }
-
-        public void Run()
-        {
-            var itemsearchname = Path.Join(path, FileRequirement[0]);
-            var items = ExtractItems(itemsearchname);
-
-            Console.WriteLine($"Items: {items.Count}");
-            File.WriteAllText(Path.Join(path, "items.json"), JsonConvert.SerializeObject(items));
-
-        }
-
-        private static List<Item> ExtractItems(string path)
-        {
-            int idIndex = -1;
-            int nameIndex = -1;
-            int qualityIndex = -1;
-            int sellPriceIndex = -1;
-
-            var extractor = new CSVExtractor();
-            extractor.HeaderAction = () =>
+            int itemId = row[id].Parse<int>();
+            int textureId = row[iconFileDataId].Parse<int>();
+            if (textureId > 0)
             {
-                idIndex = extractor.FindIndex("ID");
-                nameIndex = extractor.FindIndex("Display_lang");
-                qualityIndex = extractor.FindIndex("OverallQualityID");
-                sellPriceIndex = extractor.FindIndex("SellPrice");
-            };
-
-            var items = new List<Item>();
-            Action<string> extractLine = line =>
-            {
-                string[] values = line.Split(",");
-                if (line.Contains('\"'))
-                    values = CSVExtractor.SplitQuotes(line);
-                else
-                    values = line.Split(",");
-
-                if (values.Length > idIndex &&
-                    values.Length > nameIndex &&
-                    values.Length > qualityIndex &&
-                    values.Length > sellPriceIndex)
-                {
-                    items.Add(new Item
-                    {
-                        Entry = int.Parse(values[idIndex]),
-                        Quality = int.Parse(values[qualityIndex]),
-                        Name = values[nameIndex],
-                        SellPrice = int.Parse(values[sellPriceIndex])
-                    });
-                }
-            };
-
-            extractor.ExtractTemplate(path, extractLine);
-            return items;
+                iconMap[itemId] = textureId;
+            }
         }
+        return iconMap;
+    }
+
+    private static List<Item> ExtractItems(string path, Dictionary<int, int> iconMap)
+    {
+        using var reader = Sep.Reader(o => o with
+        {
+            Unescape = true,
+        }).FromFile(path);
+
+        int id = reader.Header.IndexOf("ID");
+        int name = reader.Header.IndexOf("Display_lang");
+        int quality = reader.Header.IndexOf("OverallQualityID");
+        int sellPrice = reader.Header.IndexOf("SellPrice");
+
+        List<Item> items = [];
+        foreach (SepReader.Row row in reader)
+        {
+            int itemId = row[id].Parse<int>();
+            iconMap.TryGetValue(itemId, out int textureId);
+
+            items.Add(new Item
+            {
+                Entry = itemId,
+                Quality = row[quality].Parse<int>(),
+                Name = row[name].ToString(),
+                SellPrice = row[sellPrice].Parse<int>(),
+                TextureId = textureId
+            });
+        }
+        return items;
     }
 }

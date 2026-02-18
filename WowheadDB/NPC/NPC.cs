@@ -1,21 +1,24 @@
-﻿using System.Collections.Generic;
-using System.Numerics;
+﻿using Newtonsoft.Json;
+
 using SharedLib.Extensions;
 
-namespace WowheadDB
+using System.Collections.Generic;
+using System.Numerics;
+
+namespace WowheadDB;
+
+public sealed class NPC
 {
-    public class NPC
-    {
-        public List<List<float>> coords;
+    public List<List<float>> coords;
 
-        public int level;
-        public string name;
-        public int type;
-        public int id;
-        public int reacthorde;
-        public int reactalliance;
-        public string description;
+    public int level;
+    public string name;
+    public int type;
+    public int id;
+    public int reacthorde;
+    public int reactalliance;
+    public string description;
 
-        public List<Vector3> points => VectorExt.FromList(coords);
-    }
+    [JsonIgnore]
+    public Vector3[] MapCoords => VectorExt.FromList(coords);
 }

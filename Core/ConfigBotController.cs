@@ -1,86 +1,121 @@
 ﻿using Core.GOAP;
+
+using Game;
+
+using Microsoft.Extensions.Logging;
+
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using Core.Session;
-using SharedLib;
-using Game;
 
-namespace Core
+namespace Core;
+
+public sealed class ConfigBotController : IBotController, IDisposable
 {
-    public class ConfigBotController : IBotController
+    private readonly ILogger logger;
+    private readonly CancellationTokenSource cts;
+
+    private readonly Thread addonThread;
+    private readonly IAddonReader addonReader;
+    private readonly IWowScreen screen;
+
+    public GoapAgent? GoapAgent => null;
+    public RouteInfo? RouteInfo => null;
+    public string SelectedClassFilename => string.Empty;
+    public Dictionary<int, string> SelectedPathFilename => new();
+
+    public ClassConfiguration? ClassConfig => null;
+
+    public bool IsBotActive => false;
+
+    public double AvgScreenLatency => 0;
+    public double AvgNPCLatency => 0;
+
+    public event Action? ProfileLoaded;
+    public event Action? StatusChanged;
+
+    public ConfigBotController(ILogger logger,
+        IAddonReader addonReader,
+        IWowScreen screen,
+        CancellationTokenSource cts)
     {
-        public DataConfig DataConfig { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public AddonReader AddonReader { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public Thread? screenshotThread { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public Thread addonThread { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public Thread? botThread { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public GoalFactory ActionFactory { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public GoapAgent? GoapAgent { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public RouteInfo? RouteInfo { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public WowScreen WowScreen { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public WowProcessInput WowProcessInput { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public ConfigurableInput? ConfigurableInput { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public IGrindSession GrindSession { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public string SelectedClassFilename { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public string? SelectedPathFilename { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        this.logger = logger;
+        this.cts = cts;
+        this.addonReader = addonReader;
+        this.screen = screen;
 
-        public bool IsBotActive => false;
+        addonThread = new(AddonThread);
+        addonThread.Start();
+    }
 
-        public IImageProvider? MinimapImageFinder { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public ClassConfiguration? ClassConfig { get => null; set => throw new NotImplementedException(); }
+    public void Dispose()
+    {
+        cts.Cancel();
+    }
 
-        public ActionBarPopulator? ActionBarPopulator { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-
-        public ExecGameCommand ExecGameCommand { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-
-        public event EventHandler? ProfileLoaded;
-        public event EventHandler<bool>? StatusChanged;
-
-        public double AvgScreenLatency { get => throw new NotImplementedException(); }
-        public double AvgNPCLatency { get => throw new NotImplementedException(); }
-
-        public void Shutdown()
+    private void AddonThread()
+    {
+        while (!cts.IsCancellationRequested)
         {
-
+            screen.Update();
+            addonReader.Update();
+            Thread.Sleep(20);
         }
+        logger.LogWarning("Thread stopped!");
+    }
 
-        public void StopBot()
-        {
-            StatusChanged?.Invoke(this, false);
-            throw new NotImplementedException();
-        }
 
-        public void ToggleBotStatus()
-        {
-            throw new NotImplementedException();
-        }
+    public void Shutdown()
+    {
+        cts.Cancel();
+    }
 
-        public void LoadClassProfile(string classFilename)
-        {
-            ProfileLoaded?.Invoke(this, EventArgs.Empty);
-            throw new NotImplementedException();
-        }
+    public void MinimapNodeFound()
+    {
+        // No-op in config mode
+    }
 
-        public List<string> ClassFileList()
-        {
-            throw new NotImplementedException();
-        }
+    public void ToggleBotStatus()
+    {
+        StatusChanged?.Invoke();
+        logger.LogWarning("[ConfigBotController ] ToggleBotStatus called in configuration mode — ignored");
+    }
 
-        public List<string> PathFileList()
-        {
-            throw new NotImplementedException();
-        }
+    public IEnumerable<string> ClassFiles()
+    {
+        return Array.Empty<string>();
+    }
 
-        public void LoadPathProfile(string pathFilename)
-        {
-            ProfileLoaded?.Invoke(this, EventArgs.Empty);
-            throw new NotImplementedException();
-        }
+    public IEnumerable<string> PathFiles()
+    {
+        return Array.Empty<string>();
+    }
 
-        public void OverrideClassConfig(ClassConfiguration classConfiguration)
-        {
-            throw new NotImplementedException();
-        }
+    public void LoadClassProfile(string classFilename)
+    {
+        ProfileLoaded?.Invoke();
+        logger.LogWarning("[ConfigBotController ] LoadClassProfile called in configuration mode — ignored");
+    }
+
+    public void LoadPathProfile(Dictionary<int, string> pathFilenames)
+    {
+        ProfileLoaded?.Invoke();
+        logger.LogWarning("[ConfigBotController ] LoadPathProfile called in configuration mode — ignored");
+    }
+
+    public void OverrideClassConfig(ClassConfiguration classConfiguration)
+    {
+        logger.LogWarning("[ConfigBotController ] OverrideClassConfig called in configuration mode — ignored");
+    }
+
+    public ClassConfiguration ResolveLoadedProfile()
+    {
+        logger.LogWarning("[ConfigBotController ] ResolveLoadedProfile called in configuration mode — returning empty config");
+        return new ClassConfiguration();
+    }
+
+    public void SaveClassConfig()
+    {
+        // No-op for config-only controller
     }
 }

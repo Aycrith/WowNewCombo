@@ -1,13 +1,11 @@
 ﻿using SharedLib;
 
-namespace Core
+namespace Core;
+
+public sealed class Bag
 {
-    public class Bag
-    {
-        public int ItemId { get; set; }
-        public BagType BagType { get; set; }
-        public int SlotCount { get; set; }
-        public int FreeSlot { get; set; }
-        public string Name { get; set; } = string.Empty;
-    }
+    public Item Item { get; set; }
+    public BagType BagType { get; set; }
+    public int SlotCount { get; set; }
+    public int FreeSlot { get; set; }
 }

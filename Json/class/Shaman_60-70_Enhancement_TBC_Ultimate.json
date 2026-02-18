@@ -1,0 +1,103 @@
+{
+  "ClassName": "Shaman",
+  "OverridePathFilename": "",
+  "Paths": [
+    { "PathFilename": "_pack\\60-70\\Hellfire Peninsula 01.json", "Requirements": ["Level >= 58", "Level < 62"] },
+    { "PathFilename": "_pack\\60-70\\Hellfire Peninsula 02.json", "Requirements": ["Level >= 60", "Level < 63"] },
+    { "PathFilename": "_pack\\60-70\\Zangarmarsh 01.json", "Requirements": ["Level >= 62", "Level < 65"] },
+    { "PathFilename": "_pack\\60-70\\Zangarmarsh 02.json", "Requirements": ["Level >= 63", "Level < 66"] },
+    { "PathFilename": "_pack\\60-70\\Nagrand 01.json", "Requirements": ["Level >= 64", "Level < 67"] },
+    { "PathFilename": "_pack\\60-70\\Nagrand 02.json", "Requirements": ["Level >= 65", "Level < 68"] },
+    { "PathFilename": "_pack\\60-70\\Blade's Edge Mountains 01.json", "Requirements": ["Level >= 66", "Level < 69"] },
+    { "PathFilename": "_pack\\60-70\\Blade's Edge Mountains 02.json", "Requirements": ["Level >= 67", "Level < 70"] },
+    { "PathFilename": "_pack\\60-70\\Netherstorm 01.json", "Requirements": ["Level >= 68", "Level < 71"] },
+    { "PathFilename": "_pack\\60-70\\Netherstorm 02.json", "Requirements": ["Level >= 69"] }
+  ],
+  "Mode": "Grind",
+  "IntVariables": {
+    "STORMSTRIKE_HP%": 50,
+    "HEALING_WAVE_HP%": 50,
+    "LESSER_HEALING_HP%": 70,
+    "SHAMANISTIC_RAGE_HP%": 40,
+    "EARTH_SHOCK_MANA%": 30,
+    "CHAIN_LIGHTNING_MOBS": 3,
+    "TOTEM_MANA%": 40,
+    "BLOODLUST_HP%": 80
+  },
+  "KeyActions": [
+    { "Name": "Stormstrike", "Key": "1", "WhenUsable": true, "Cooldown": 10 },
+    { "Name": "Earth Shock", "Key": "2", "WhenUsable": true, "Cooldown": 6 },
+    { "Name": "Flame Shock", "Key": "3", "WhenUsable": true, "Cooldown": 6 },
+    { "Name": "Frost Shock", "Key": "4", "WhenUsable": true, "Cooldown": 6 },
+    { "Name": "Lightning Bolt", "Key": "5", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Chain Lightning", "Key": "6", "WhenUsable": true, "HasCastBar": true, "Cooldown": 6 },
+    { "Name": "Shamanistic Rage", "Key": "7", "WhenUsable": true, "Cooldown": 120 },
+    { "Name": "Bloodlust", "Key": "8", "WhenUsable": true, "Cooldown": 600 },
+    { "Name": "Lesser Healing Wave", "Key": "9", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Healing Wave", "Key": "0", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Searing Totem", "Key": "-", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Strength of Earth Totem", "Key": "=", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Grace of Air Totem", "Key": "F1", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Windfury Totem", "Key": "F2", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Fire Nova Totem", "Key": "F3", "WhenUsable": true, "Cooldown": 15 },
+    { "Name": "Magma Totem", "Key": "F4", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Grounding Totem", "Key": "F5", "WhenUsable": true, "Cooldown": 15 },
+    { "Name": "Earthbind Totem", "Key": "F6", "WhenUsable": true, "Cooldown": 15 },
+    { "Name": "Windfury Weapon", "Key": "F7", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Flametongue Weapon", "Key": "F8", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Lightning Shield", "Key": "F9", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Water Shield", "Key": "F10", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Cure Poison", "Key": "F11", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Cure Disease", "Key": "F12", "WhenUsable": true, "Cooldown": 0 }
+  ],
+  "Pull": {
+    "Sequence": [
+      { "Name": "Lightning Shield", "Requirements": ["not HasBuff:Lightning Shield", "not HasBuff:Water Shield"], "Cooldown": 0 },
+      { "Name": "Searing Totem", "Requirements": ["not HasTotem:Fire", "Mana% > {TOTEM_MANA%}"], "Cooldown": 0 },
+      { "Name": "Lightning Bolt", "WhenUsable": true },
+      { "Name": "Flame Shock", "Requirements": ["not HasDebuff:Flame Shock"], "Cooldown": 6 }
+    ]
+  },
+  "Combat": {
+    "Sequence": [
+      { "Name": "Shamanistic Rage", "Requirements": ["Health% < {SHAMANISTIC_RAGE_HP%}"], "Cooldown": 120 },
+      { "Name": "Lesser Healing Wave", "Requirements": ["Health% < {LESSER_HEALING_HP%}"], "Cooldown": 0 },
+      { "Name": "Healing Wave", "Requirements": ["Health% < {HEALING_WAVE_HP%}", "Mana% > 30"], "Cooldown": 0 },
+      { "Name": "Bloodlust", "Requirements": ["TargetHealth% > {BLOODLUST_HP%}", "BossOrElite"], "Cooldown": 600 },
+      { "Name": "Earth Shock", "Requirements": ["TargetCasting"], "Cooldown": 6 },
+      { "Name": "Chain Lightning", "Requirements": ["MobCount >= {CHAIN_LIGHTNING_MOBS}", "Mana% > 40"], "Cooldown": 6 },
+      { "Name": "Fire Nova Totem", "Requirements": ["MobCount >= 3", "Mana% > 30"], "Cooldown": 15 },
+      { "Name": "Magma Totem", "Requirements": ["MobCount >= 3", "HasTotem:Fire"], "Cooldown": 0 },
+      { "Name": "Stormstrike", "Requirements": ["TargetHealth% > {STORMSTRIKE_HP%}"], "Cooldown": 10 },
+      { "Name": "Earth Shock", "Requirements": ["Mana% > {EARTH_SHOCK_MANA%}"], "Cooldown": 6 },
+      { "Name": "Flame Shock", "Requirements": ["not HasDebuff:Flame Shock"], "Cooldown": 6 }
+    ]
+  },
+  "Flee": {
+    "Sequence": [
+      { "Name": "Frost Shock", "WhenUsable": true, "Cooldown": 6 },
+      { "Name": "Earthbind Totem", "WhenUsable": true, "Cooldown": 15 },
+      { "Name": "Ghost Wolf", "Requirements": ["not InCombat"], "Cooldown": 0 }
+    ]
+  },
+  "Adhoc": {
+    "Sequence": [
+      { "Name": "Water Shield", "Requirements": ["Mana% < 50", "not HasBuff:Water Shield", "Level >= 62"], "Cooldown": 0 },
+      { "Name": "Lightning Shield", "Requirements": ["Mana% > 60", "not HasBuff:Lightning Shield", "not HasBuff:Water Shield"], "Cooldown": 0 },
+      { "Name": "Windfury Weapon", "Requirements": ["not HasBuff:Windfury Weapon", "not InCombat"], "Cooldown": 0 },
+      { "Name": "Lesser Healing Wave", "Requirements": ["Health% < 80", "not InCombat", "Mana% > 50"], "Cooldown": 0 },
+      { "Name": "Cure Poison", "Requirements": ["HasDebuff:Poison"], "Cooldown": 0 },
+      { "Name": "Cure Disease", "Requirements": ["HasDebuff:Disease"], "Cooldown": 0 }
+    ]
+  },
+  "Parallel": {
+    "Sequence": []
+  },
+  "NPC": {
+    "Sequence": [
+      { "Name": "Repair", "Requirements": ["DurabilityPercent < 50"] },
+      { "Name": "Sell", "Requirements": ["BagsFull"] },
+      { "Name": "Train", "Requirements": ["NewSkillAvailable"] }
+    ]
+  }
+}

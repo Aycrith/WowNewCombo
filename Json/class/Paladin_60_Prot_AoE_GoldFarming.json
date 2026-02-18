@@ -1,0 +1,84 @@
+{
+  "ClassName": "Paladin",
+  "OverridePathFilename": "",
+  "Paths": [
+    { "PathFilename": "GoldFarm_EPL_Tyr's_Hand_Runecloth.json", "Requirements": ["Level >= 58"] },
+    { "PathFilename": "GoldFarm_Silithus_Twilight_Cultists.json", "Requirements": ["Level >= 55"] }
+  ],
+  "Mode": "Grind",
+  "Description": "Protection Paladin AoE Gold Farming - Mass pull, Consecration, never die",
+  "IntVariables": {
+    "CONSECRATION_MANA%": 40,
+    "LOH_HP%": 8,
+    "DIVINE_SHIELD_HP%": 12,
+    "FLASH_HEAL_HP%": 60,
+    "HOLY_SHIELD_HP%": 95,
+    "AVENGERS_SHIELD_MOBS": 2,
+    "HAMMER_WRATH_HP%": 20,
+    "AOE_PULL_COUNT": 5
+  },
+  "KeyActions": [
+    { "Name": "Seal of Righteousness", "Key": "1", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Judgement", "Key": "2", "WhenUsable": true, "Cooldown": 10 },
+    { "Name": "Consecration", "Key": "3", "WhenUsable": true, "Cooldown": 8 },
+    { "Name": "Holy Shield", "Key": "4", "WhenUsable": true, "Cooldown": 10 },
+    { "Name": "Avenger's Shield", "Key": "5", "WhenUsable": true, "Cooldown": 30 },
+    { "Name": "Hammer of Wrath", "Key": "6", "WhenUsable": true, "Cooldown": 6 },
+    { "Name": "Exorcism", "Key": "7", "WhenUsable": true, "HasCastBar": true, "Cooldown": 15 },
+    { "Name": "Flash of Light", "Key": "8", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Holy Light", "Key": "9", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Lay on Hands", "Key": "0", "WhenUsable": true, "Cooldown": 3600 },
+    { "Name": "Divine Shield", "Key": "-", "WhenUsable": true, "Cooldown": 300 },
+    { "Name": "Avenging Wrath", "Key": "=", "WhenUsable": true, "Cooldown": 180 },
+    { "Name": "Hammer of Justice", "Key": "F1", "WhenUsable": true, "Cooldown": 60 },
+    { "Name": "Blessing of Sanctuary", "Key": "F2", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Retribution Aura", "Key": "F3", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Devotion Aura", "Key": "F4", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Righteous Fury", "Key": "F5", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Divine Protection", "Key": "F6", "WhenUsable": true, "Cooldown": 300 }
+  ],
+  "Pull": {
+    "Sequence": [
+      { "Name": "Holy Shield", "Requirements": ["not HasBuff:Holy Shield"], "Cooldown": 10 },
+      { "Name": "Avenger's Shield", "Requirements": ["MobCount >= {AVENGERS_SHIELD_MOBS}"], "Cooldown": 30 },
+      { "Name": "Seal of Righteousness", "Requirements": ["not HasBuff:Seal of Righteousness"], "Cooldown": 0 }
+    ]
+  },
+  "Combat": {
+    "Sequence": [
+      { "Name": "Lay on Hands", "Requirements": ["Health% < {LOH_HP%}"], "Cooldown": 3600 },
+      { "Name": "Divine Shield", "Requirements": ["Health% < {DIVINE_SHIELD_HP%}"], "Cooldown": 300 },
+      { "Name": "Flash of Light", "Requirements": ["Health% < {FLASH_HEAL_HP%}", "Mana% > 35"], "Cooldown": 0 },
+      { "Name": "Holy Shield", "Requirements": ["not HasBuff:Holy Shield"], "Cooldown": 10 },
+      { "Name": "Consecration", "Requirements": ["MobCount >= 2", "Mana% > {CONSECRATION_MANA%}"], "Cooldown": 8 },
+      { "Name": "Avenging Wrath", "Requirements": ["MobCount >= {AOE_PULL_COUNT}"], "Cooldown": 180 },
+      { "Name": "Hammer of Wrath", "Requirements": ["TargetHealth% < {HAMMER_WRATH_HP%}"], "Cooldown": 6 },
+      { "Name": "Judgement", "WhenUsable": true, "Cooldown": 10 },
+      { "Name": "Exorcism", "Requirements": ["TargetType:Undead || TargetType:Demon"], "Cooldown": 15 },
+      { "Name": "Seal of Righteousness", "Requirements": ["not HasBuff:Seal of Righteousness"], "Cooldown": 0 }
+    ]
+  },
+  "Flee": {
+    "Sequence": [
+      { "Name": "Divine Shield", "WhenUsable": true, "Cooldown": 300 },
+      { "Name": "Lay on Hands", "Requirements": ["Health% < 15"], "Cooldown": 3600 }
+    ]
+  },
+  "Adhoc": {
+    "Sequence": [
+      { "Name": "Blessing of Sanctuary", "Requirements": ["not HasBuff:Blessing of Sanctuary"], "Cooldown": 0 },
+      { "Name": "Retribution Aura", "Requirements": ["not HasBuff:Retribution Aura"], "Cooldown": 0 },
+      { "Name": "Righteous Fury", "Requirements": ["not HasBuff:Righteous Fury"], "Cooldown": 0 },
+      { "Name": "Flash of Light", "Requirements": ["Health% < 85", "not InCombat", "Mana% > 50"], "Cooldown": 0 }
+    ]
+  },
+  "Parallel": {
+    "Sequence": []
+  },
+  "NPC": {
+    "Sequence": [
+      { "Name": "Repair", "Requirements": ["DurabilityPercent < 50"] },
+      { "Name": "Sell", "Requirements": ["BagsFull"] }
+    ]
+  }
+}

@@ -5,7 +5,7 @@
   "PathThereAndBack": true,
   "PathReduceSteps": true,
   "NPCMaxLevels_Above": 2,
-  "MountKey": "N0",
+  "Mount": { "Key": "N0"},
   "PathFilename": "_pack\\60-70\\Blade's Edge Mountains\\Dragon.json",
   "IntVariables": {
     "MIN_MANA_VIPER%": 40,
@@ -17,17 +17,26 @@
       {
         "Name": "Concussive Shot",
         "Key": "9",
-        "DelayBeforeCast": 500,
-        "StopBeforeCast": true,
-        "Requirements": ["HasRangedWeapon", "!InMeleeRange", "HasAmmo", "!Aspect of the Viper"]
+        "BeforeCastStop": true,
+        "Requirements": [
+          "HasRangedWeapon",
+          "!InMeleeRange",
+          "HasAmmo",
+          "!Aspect of the Viper"
+        ]
       },
       {
         "Name": "Serpent Sting (rank 1)",
         "Key": "2",
-        "DelayBeforeCast": 500,
         "HasCastBar": true,
         "WhenUsable": true,
-        "Requirements": ["!InMeleeRange", "HasRangedWeapon", "!AutoShot", "HasAmmo", "Aspect of the Viper"]
+        "Requirements": [
+          "!InMeleeRange",
+          "HasRangedWeapon",
+          "!AutoShot",
+          "HasAmmo",
+          "Aspect of the Viper"
+        ]
       }
     ]
   },
@@ -38,35 +47,51 @@
         "Key": "1",
         "HasCastBar": true,
         "WhenUsable": true,
-        "Requirements": ["Race:Draenei", "Health% < 45"]
+        "Requirements": [
+          "Race:Draenei",
+          "Health% < 45"
+        ]
       },
       {
         "Name": "Mend Pet",
         "Key": "N7",
-        "MinMana": 200,
         "Cooldown": 15000,
-        "Requirements": ["Has Pet", "PetHealth% < 50"]
+        "Requirements": [
+          "Has Pet",
+          "PetHealth% < 50"
+        ]
       },
       {
         "Name": "Intimidation",
         "Key": "N4",
-        "MinMana": 15,
         "WhenUsable": true,
-        "Requirements": ["Has Pet", "(TargetHealth% < 95 && TargetsMe) || TargetCastingSpell"]
+        "Requirements": [
+          "Has Pet",
+          "(TargetHealth% < 95 && TargetsMe) || TargetCastingSpell"
+        ]
       },
       {
         "Name": "Bestial Wrath",
         "Key": "N2",
-        "MinMana": 15,
         "WhenUsable": true,
-        "Requirements": ["!InMeleeRange", "HasRangedWeapon", "HasAmmo", "Has Pet", "TargetHealth% > MIN_TARGET_HP_CD%"]
+        "Requirements": [
+          "!InMeleeRange",
+          "HasRangedWeapon",
+          "HasAmmo",
+          "Has Pet",
+          "TargetHealth% > MIN_TARGET_HP_CD%"
+        ]
       },
       {
         "Name": "Rapid Fire",
         "Key": "N3",
-        "MinMana": 15,
         "WhenUsable": true,
-        "Requirements": ["!InMeleeRange", "HasRangedWeapon", "HasAmmo", "TargetHealth% > MIN_TARGET_HP_CD%"]
+        "Requirements": [
+          "!InMeleeRange",
+          "HasRangedWeapon",
+          "HasAmmo",
+          "TargetHealth% > MIN_TARGET_HP_CD%"
+        ]
       },
       {
         "Name": "Kill Command",
@@ -81,7 +106,13 @@
         "HasCastBar": true,
         "Charge": 2,
         "Cooldown": 5000,
-        "Requirements": ["!InMeleeRange", "HasRangedWeapon", "HasAmmo", "LastAutoShotMs < 500", "!Aspect of the Viper"]
+        "Requirements": [
+          "!InMeleeRange",
+          "HasRangedWeapon",
+          "HasAmmo",
+          "LastAutoShotMs < 500",
+          "!Aspect of the Viper"
+        ]
       },
       {
         "Name": "Serpent Sting (rank 1)",
@@ -89,28 +120,42 @@
         "WhenUsable": true,
         "Cooldown": 15000,
         "Key": "2",
-        "Requirements": ["!InMeleeRange", "HasRangedWeapon", "!AutoShot", "HasAmmo"]
+        "Requirements": [
+          "!InMeleeRange",
+          "HasRangedWeapon",
+          "!AutoShot",
+          "HasAmmo"
+        ]
       },
       {
         "Name": "Disengage",
         "Key": "N8",
         "WhenUsable": true,
         "Cooldown": 5000,
-        "MinMana": 15,
-        "Requirements": ["InMeleeRange", "TargetsMe", "AutoAttacking"]
+        "Requirements": [
+          "InMeleeRange",
+          "TargetsMe",
+          "AutoAttacking"
+        ]
       },
       {
         "Name": "Raptor Strike",
         "Key": "4",
         "WhenUsable": true,
-        "AfterCastWaitNextSwing": true,
-        "MinMana": 15,
-        "StepBackAfterCast": 1000,
-        "Requirements": ["InMeleeRange", "!AutoShot"]
+        "AfterCastWaitSwing": true,
+        "AfterCastStepBack": 1000,
+        "Requirements": [
+          "MainHandSwing > -400",
+          "InMeleeRange",
+          "!AutoShot"
+        ]
       },
       {
         "Name": "AutoAttack",
-        "Requirements": ["InMeleeRange", "!AutoShot", "!AutoAttacking"]
+        "Requirements": [
+          "InMeleeRange",
+          "!AutoShot"
+        ]
       }
     ]
   },
@@ -121,26 +166,34 @@
         "Name": "Aspect of the Viper",
         "Key": "7",
         "InCombat": "i dont care",
-        "Requirements": ["!Aspect of the Viper", "Mana% < MIN_MANA_VIPER%"]
+        "Requirements": [
+          "!Aspect of the Viper",
+          "Mana% < MIN_MANA_VIPER%"
+        ]
       },
       {
         "Cost": 3.2,
         "Name": "Aspect of the Hawk",
         "Key": "5",
         "InCombat": "i dont care",
-        "Requirements": ["!Aspect of the Hawk", "Mana% > MIN_MANA_HAWK%"]
+        "Requirements": [
+          "!Aspect of the Hawk",
+          "Mana% > MIN_MANA_HAWK%"
+        ]
       },
       {
         "Name": "feedpet",
         "Key": "N5",
         "WhenUsable": true,
         "Cooldown": 20000,
-        "Requirements": ["Has Pet", "!Pet Happy"]
+        "Requirements": [
+          "Has Pet",
+          "!Pet Happy"
+        ]
       },
       {
         "Name": "sumpet",
         "Key": "N6",
-        "MinMana": 20,
         "HasCastBar": true,
         "Cooldown": 4000,
         "Requirement": "!Has Pet"
@@ -155,7 +208,7 @@
         "Requirement": "Health% < 40"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "=",
         "Requirement": "Mana% < 10"
       }

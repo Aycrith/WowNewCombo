@@ -1,45 +1,72 @@
 ﻿using System;
 
-namespace Core
+namespace Core;
+
+public static class RequirementExt
 {
-    public static class RequirementExt
+    public static void Or(this Requirement f1, Requirement f2)
     {
-        public static Requirement Or(this Requirement f1, Requirement f2)
-        {
-            return new Requirement
-            {
-                HasRequirement = () => f1.HasRequirement() || f2.HasRequirement(),
-                LogMessage = () => string.IsNullOrEmpty(f1.LogMessage()) ?
-                f2.LogMessage() :
-                string.Join(" or ", f1.LogMessage(), f2.LogMessage())
-            };
-        }
+        Func<bool> HasRequirement = f1.HasRequirement;
+        Func<string> LogMessage = f1.LogMessage;
 
-        public static Requirement And(this Requirement f1, Requirement f2)
-        {
-            return new Requirement
-            {
-                HasRequirement = () => f1.HasRequirement() && f2.HasRequirement(),
-                LogMessage = () => string.IsNullOrEmpty(f1.LogMessage()) ?
-                f2.LogMessage() :
-                string.Join(" and ", f1.LogMessage(), f2.LogMessage())
-            };
-        }
+        f1.HasRequirement = CombinedReq;
+        f1.LogMessage = Message;
 
-        public static Requirement Negate(this Requirement f, string keyword)
-        {
-            return new Requirement
-            {
-                HasRequirement = () => !f.HasRequirement(),
-                LogMessage = () => $"{keyword}{f.LogMessage()}"
-            };
-        }
+        bool CombinedReq() =>
+            HasRequirement() || f2.HasRequirement();
+
+        string Message() =>
+            string.Join(Requirement.Or,
+            LogMessage(), f2.LogMessage());
     }
 
-    public class Requirement
+    public static void And(this Requirement f1, Requirement f2)
     {
-        public Func<bool> HasRequirement { get; set; } = () => false;
-        public Func<string> LogMessage { get; set; } = () => "Unknown requirement";
-        public bool VisibleIfHasRequirement { get; set; } = true;
+        Func<bool> HasRequirement = f1.HasRequirement;
+        Func<string> LogMessage = f1.LogMessage;
+
+        f1.HasRequirement = CombinedReq;
+        f1.LogMessage = Message;
+
+        bool CombinedReq()
+            => HasRequirement() && f2.HasRequirement();
+
+        string Message()
+            => string.Join(Requirement.And,
+            LogMessage(), f2.LogMessage());
     }
+
+    public static void Negate(this Requirement f, ReadOnlySpan<char> keyword)
+    {
+        Func<bool> HasRequirement = f.HasRequirement;
+        Func<string> LogMessage = f.LogMessage;
+
+        string keywordStr = keyword.ToString();
+
+        f.HasRequirement = Negated;
+        f.LogMessage = Message;
+
+        bool Negated() => !HasRequirement();
+        string Message() => $"{keywordStr}{LogMessage()}";
+    }
+}
+
+public sealed class Requirement
+{
+    public const string And = " and ";
+    public const string Or = " or ";
+
+    public const string SymbolNegate = "!";
+    public const string SymbolAnd = "&&";
+    public const string SymbolOr = "||";
+
+    public const char SymbolAndChar = '&';
+    public const char SymbolOrChar = '|';
+
+    private static bool False() => false;
+    private static string Default() => "Unknown requirement";
+
+    public Func<bool> HasRequirement { get; set; } = False;
+    public Func<string> LogMessage { get; set; } = Default;
+    public bool VisibleIfHasRequirement { get; init; }
 }

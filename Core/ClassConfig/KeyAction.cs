@@ -1,295 +1,447 @@
-﻿using Microsoft.Extensions.Logging;
+using Core.CombatRotation;
+using Core.Goals;
+
+using Game;
+
+using Microsoft.Extensions.Logging;
+
+using SharedLib;
+
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
+using System.Collections.Specialized;
 using System.Numerics;
 
-namespace Core
+namespace Core;
+
+public sealed partial class KeyAction
 {
-    public class KeyAction
+    public float Cost { get; set; } = 18;
+    public string Name { get; set; } = string.Empty;
+    public bool HasCastBar
     {
-        public string Name { get; set; } = string.Empty;
-        public bool HasCastBar { get; set; }
-        public bool StopBeforeCast { get; set; }
-        public ConsoleKey ConsoleKey { get; set; }
-        public string Key { get; set; } = string.Empty;
-        public int PressDuration { get; set; } = 50;
-        public string Form { get; set; } = string.Empty;
-        public Form FormEnum { get; set; } = Core.Form.None;
-        public float Cooldown { get; set; }
+        get => features[ActionMask.HasCastBar];
+        set => features[ActionMask.HasCastBar] = value;
+    }
+    public ConsoleKey ConsoleKey { get; set; }
+    public ModifierKey Modifier { get; set; } = ModifierKey.None;
+    public bool HasModifier => Modifier != ModifierKey.None;
+    public string Key { get; set; } = string.Empty;
+    public BindingID BindingID { get; set; }
+    public int Slot { get; set; }
+    public int SlotIndex { get; private set; }
+    public int SpellId { get; set; }
 
-        private int _charge;
-        public int Charge { get; set; } = 1;
-        public SchoolMask School { get; set; } = SchoolMask.None;
-        public int MinMana { get; set; }
-        public int MinRage { get; set; }
-        public int MinEnergy { get; set; }
-        public int MinComboPoints { get; set; }
+    public string MacroText { get; set; } = string.Empty;
+    public Func<string> Macro { get; set; } = () => "";
 
-        public string Requirement { get; set; } = string.Empty;
-        public List<string> Requirements { get; } = new List<string>();
+    public int PressDuration { get; set; } = InputDuration.DefaultPress;
 
-        public bool WhenUsable { get; set; }
+    // enabled by default
+    public BitVector32 features = new(
+        ActionMask.Log |
+        ActionMask.BeforeCastDismount
+        );
 
-        public bool WaitForWithinMeleeRange { get; set; }
-        public bool ResetOnNewTarget { get; set; }
+    public Form? Form { get; init; }
+    public Form FormValue => HasForm ? Form!.Value : Core.Form.None;
+    public bool HasForm => Form.HasValue;
 
-        public bool Log { get; set; } = true;
-        public int DelayAfterCast { get; set; } = 1450; // GCD 1500 - but spell queue window 400 ms
+    public int Cooldown { get; set; } = CastingHandler.SPELL_QUEUE;
 
-        public bool WaitForGCD { get; set; } = true;
-
-        public bool SkipValidation { get; set; }
-
-        public bool AfterCastWaitBuff { get; set; }
-
-        public bool AfterCastWaitNextSwing { get; set; }
-
-        public bool DelayUntilCombat { get; set; }
-        public int DelayBeforeCast { get; set; }
-        public float Cost { get; set; } = 18;
-        public string InCombat { get; set; } = "false";
-
-        public bool? UseWhenTargetIsCasting { get; set; }
-
-        public string PathFilename { get; set; } = string.Empty;
-        public List<Vector3> Path { get; } = new List<Vector3>();
-
-        public int StepBackAfterCast { get; set; }
-
-        public Vector3 LastClickPostion { get; private set; }
-
-        public List<Requirement> RequirementObjects { get; } = new List<Requirement>();
-
-        public int ConsoleKeyFormHash { private set; get; }
-
-        protected static ConcurrentDictionary<int, DateTime> LastClicked { get; } = new ConcurrentDictionary<int, DateTime>();
-
-        public static int LastKeyClicked()
+    private int _charge = 1;
+    private readonly object _chargeLock = new(); // Thread safety for concurrent access
+    public int Charge
+    {
+        get
         {
-            var last = LastClicked.OrderByDescending(s => s.Value).FirstOrDefault();
-            if (last.Key == 0 || (DateTime.UtcNow - last.Value).TotalSeconds > 2)
+            lock (_chargeLock)
             {
-                return (int)ConsoleKey.NoName;
-            }
-            return last.Key;
-        }
-
-        private PlayerReader playerReader = null!;
-
-        private ILogger logger = null!;
-
-        public void CreateDynamicBinding(RequirementFactory requirementFactory)
-        {
-            requirementFactory.CreateDynamicBindings(this);
-        }
-
-        public void Initialise(AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger, KeyActions? keyActions = null)
-        {
-            this.playerReader = addonReader.PlayerReader;
-            this.logger = logger;
-
-            ResetCharges();
-
-            if (!KeyReader.ReadKey(logger, this))
-            {
-                throw new Exception($"[{Name}] has no valid Key={ConsoleKey}");
-            }
-
-            if (!string.IsNullOrEmpty(this.Requirement))
-            {
-                Requirements.Add(this.Requirement);
-            }
-
-            if (HasFormRequirement())
-            {
-                if (Enum.TryParse(Form, out Form desiredForm))
-                {
-                    this.FormEnum = desiredForm;
-                    this.logger.LogInformation($"[{Name}] Required Form: {FormEnum}");
-
-                    if (KeyReader.ActionBarSlotMap.TryGetValue(Key, out int slot))
-                    {
-                        int offset = Stance.RuntimeSlotToActionBar(this, playerReader, slot);
-                        this.logger.LogInformation($"[{Name}] Actionbar Form key map: Key:{Key} -> Actionbar:{slot} -> Form Map:{slot + offset}");
-                    }
-                }
-                else
-                {
-                    throw new Exception($"[{Name}] Unknown form: {Form}");
-                }
-            }
-
-            ConsoleKeyFormHash = ((int)FormEnum * 1000) + (int)ConsoleKey;
-
-            InitialiseMinResourceRequirement(playerReader, addonReader.ActionBarCostReader);
-
-            requirementFactory.InitialiseRequirements(this, keyActions);
-        }
-
-        public void InitialiseForm(AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger)
-        {
-            Initialise(addonReader, requirementFactory, logger);
-
-            if (HasFormRequirement())
-            {
-                if (addonReader.PlayerReader.FormCost.ContainsKey(FormEnum))
-                {
-                    addonReader.PlayerReader.FormCost.Remove(FormEnum);
-                }
-
-                addonReader.PlayerReader.FormCost.Add(FormEnum, MinMana);
-                logger.LogInformation($"[{Name}] Added {FormEnum} to FormCost with {MinMana}");
+                return _charge;
             }
         }
-
-        public float GetCooldownRemaining()
+        set
         {
-            var remain = MillisecondsSinceLastClick;
-            if (remain == double.MaxValue) return 0;
-            return MathF.Max(Cooldown - (float)remain, 0);
-        }
-
-        public bool CanDoFormChangeAndHaveMinimumMana()
-        {
-            return playerReader.FormCost.ContainsKey(FormEnum) &&
-                playerReader.ManaCurrent >= playerReader.FormCost[FormEnum] + MinMana;
-        }
-
-        internal void SetClicked()
-        {
-            LastClickPostion = playerReader.PlayerLocation;
-
-            if (!LastClicked.TryAdd(ConsoleKeyFormHash, DateTime.UtcNow))
+            lock (_chargeLock)
             {
-                LastClicked[ConsoleKeyFormHash] = DateTime.UtcNow;
-            }
-        }
-
-        public double MillisecondsSinceLastClick =>
-            LastClicked.TryGetValue(ConsoleKeyFormHash, out DateTime lastTime) ?
-            (DateTime.UtcNow - lastTime).TotalMilliseconds :
-            double.MaxValue;
-
-        internal void ResetCooldown()
-        {
-            LastClicked.TryRemove(ConsoleKeyFormHash, out _);
-        }
-
-        public int GetChargeRemaining()
-        {
-            return _charge;
-        }
-
-        public void ConsumeCharge()
-        {
-            if (Charge > 1)
-            {
-                _charge--;
-                if (_charge > 0)
-                {
-                    ResetCooldown();
-                }
-                else
-                {
-                    ResetCharges();
-                    SetClicked();
-                }
-            }
-        }
-
-        internal void ResetCharges()
-        {
-            _charge = Charge;
-        }
-
-        public bool CanRun()
-        {
-            return !this.RequirementObjects.Any(r => !r.HasRequirement());
-        }
-
-        public bool HasFormRequirement()
-        {
-            return !string.IsNullOrEmpty(Form);
-        }
-
-        private void InitialiseMinResourceRequirement(PlayerReader playerReader, ActionBarCostReader actionBarCostReader)
-        {
-            var (type, cost) = actionBarCostReader.GetCostByActionBarSlot(playerReader, this);
-            if (cost != 0)
-            {
-                int oldValue = 0;
-                switch (type)
-                {
-                    case PowerType.Mana:
-                        oldValue = MinMana;
-                        MinMana = cost;
-                        break;
-                    case PowerType.Rage:
-                        oldValue = MinRage;
-                        MinRage = cost;
-                        break;
-                    case PowerType.Energy:
-                        oldValue = MinEnergy;
-                        MinEnergy = cost;
-                        break;
-                }
-
-                int formCost = 0;
-                if (HasFormRequirement() && FormEnum != Core.Form.None && playerReader.FormCost.ContainsKey(FormEnum))
-                {
-                    formCost = playerReader.FormCost[FormEnum];
-                }
-
-                logger.LogInformation($"[{Name}] Update {type} cost to {cost} from {oldValue}" + (formCost > 0 ? $" +{formCost} Mana to change {FormEnum} Form" : ""));
-            }
-
-            actionBarCostReader.OnActionCostChanged -= ActionBarCostReader_OnActionCostChanged;
-            actionBarCostReader.OnActionCostChanged += ActionBarCostReader_OnActionCostChanged;
-        }
-
-        private void ActionBarCostReader_OnActionCostChanged(object? sender, ActionBarCostEventArgs e)
-        {
-            if (!KeyReader.ActionBarSlotMap.TryGetValue(Key, out int slot)) return;
-
-            if (slot <= 12)
-            {
-                slot += Stance.RuntimeSlotToActionBar(this, playerReader, slot);
-            }
-
-            if (slot == e.index)
-            {
-                int oldValue = 0;
-                switch (e.powerType)
-                {
-                    case PowerType.Mana:
-                        oldValue = MinMana;
-                        MinMana = e.cost;
-                        break;
-                    case PowerType.Rage:
-                        oldValue = MinRage;
-                        MinRage = e.cost;
-                        break;
-                    case PowerType.Energy:
-                        oldValue = MinEnergy;
-                        MinEnergy = e.cost;
-                        break;
-                }
-
-                if (e.cost != oldValue)
-                {
-                    logger.LogInformation($"[{Name}] Update {e.powerType} cost to {e.cost} from {oldValue}");
-                }
-            }
-        }
-
-        public void LogInformation(string message)
-        {
-            if (Log)
-            {
-                logger.LogInformation($"{Name}: {message}");
+                _charge = value;
             }
         }
     }
+    public SchoolMask School { get; set; } = SchoolMask.None;
+    public int MinComboPoints { get; set; }
+
+    /// <summary>
+    /// Base scoring weight for the rotation optimizer.
+    /// Default 1.0 preserves original sequence ordering.
+    /// </summary>
+    public float Weight { get; set; } = 1.0f;
+
+    /// <summary>
+    /// Conditional score bonuses for the rotation optimizer.
+    /// Parsed from JSON profile ScoreConditions entries.
+    /// </summary>
+    public List<ScoreConditionEntry> ScoreConditions { get; } = [];
+
+    /// <summary>
+    /// Compiled runtime representations of ScoreConditions.
+    /// Built by RequirementFactory during profile loading.
+    /// </summary>
+    public ScoreConditionRuntime[] ScoreConditionsRuntime { get; set; } = [];
+
+    /// <summary>
+    /// Cached ability type classification for performance.
+    /// Computed once at profile load time to avoid string allocations in hot path.
+    /// </summary>
+    public AbilityType AbilityType { get; internal set; } = AbilityType.Other;
+
+    public string Requirement { get; set; } = string.Empty;
+    public List<string> Requirements { get; } = [];
+    public Requirement[] RequirementsRuntime { get; set; } = [];
+
+    public string Interrupt { get; set; } = string.Empty;
+    public List<string> Interrupts { get; } = [];
+    public Requirement[] InterruptsRuntime { get; set; } = [];
+
+    public bool WhenUsable
+    {
+        get => features[ActionMask.WhenUsable];
+        set => features[ActionMask.WhenUsable] = value;
+    }
+
+    public bool ResetOnNewTarget
+    {
+        get => features[ActionMask.ResetOnNewTarget];
+        set => features[ActionMask.ResetOnNewTarget] = value;
+    }
+
+    public bool Log
+    {
+        get => features[ActionMask.Log];
+        set => features[ActionMask.Log] = value;
+    }
+
+    public bool BaseAction
+    {
+        get => features[ActionMask.BaseAction];
+        set => features[ActionMask.BaseAction] = value;
+    }
+
+    public bool Item
+    {
+        get => features[ActionMask.Item];
+        set => features[ActionMask.Item] = value;
+    }
+
+    public int BeforeCastDelay { get; set; }
+    public int BeforeCastMaxDelay { get; set; }
+
+    public bool BeforeCastStop
+    {
+        get => features[ActionMask.BeforeCastStop];
+        set => features[ActionMask.BeforeCastStop] = value;
+    }
+    public bool BeforeCastDismount
+    {
+        get => features[ActionMask.BeforeCastDismount];
+        set => features[ActionMask.BeforeCastDismount] = value;
+    }
+
+    public bool BeforeCastFaceTarget
+    {
+        get => features[ActionMask.BeforeCastFaceTarget];
+        set => features[ActionMask.BeforeCastFaceTarget] = value;
+    }
+
+    public int AfterCastDelay { get; set; }
+    public int AfterCastMaxDelay { get; set; }
+    public bool AfterCastWaitMeleeRange
+    {
+        get => features[ActionMask.AfterCastWaitMeleeRange];
+        set => features[ActionMask.AfterCastWaitMeleeRange] = value;
+    }
+    public bool AfterCastWaitBuff
+    {
+        get => features[ActionMask.AfterCastWaitBuff];
+        set => features[ActionMask.AfterCastWaitBuff] = value;
+    }
+    public bool AfterCastWaitBag
+    {
+        get => features[ActionMask.AfterCastWaitBag];
+        set => features[ActionMask.AfterCastWaitBag] = value;
+    }
+    public bool AfterCastWaitSwing
+    {
+        get => features[ActionMask.AfterCastWaitSwing];
+        set => features[ActionMask.AfterCastWaitSwing] = value;
+    }
+    public bool AfterCastWaitCastbar
+    {
+        get => features[ActionMask.AfterCastWaitCastbar];
+        set => features[ActionMask.AfterCastWaitCastbar] = value;
+    }
+    public bool AfterCastWaitCombat
+    {
+        get => features[ActionMask.AfterCastWaitCombat];
+        set => features[ActionMask.AfterCastWaitCombat] = value;
+    }
+    public bool AfterCastWaitGCD
+    {
+        get => features[ActionMask.AfterCastWaitGCD];
+        set => features[ActionMask.AfterCastWaitGCD] = value;
+    }
+    public bool AfterCastAuraExpected
+    {
+        get => features[ActionMask.AfterCastAuraExpected];
+        set => features[ActionMask.AfterCastAuraExpected] = value;
+    }
+
+    public bool CancelOnInterrupt
+    {
+        get => features[ActionMask.CancelOnInterrupt];
+        set => features[ActionMask.CancelOnInterrupt] = value;
+    }
+
+    public bool UseMount
+    {
+        get => features[ActionMask.UseMount];
+        set => features[ActionMask.UseMount] = value;
+    }
+
+    public int AfterCastStepBack { get; set; }
+
+    public string InCombat { get; set; } = "false";
+
+    public bool? UseWhenTargetIsCasting { get; set; }
+
+    public string PathFilename { get; set; } = string.Empty;
+    public Vector3[] Path { get; set; } = [];
+
+    public int ConsoleKeyFormHash { private set; get; }
+
+    private DateTime LastClicked = DateTime.UtcNow.AddDays(-1);
+
+    private static int LastKey;
+    private static DateTime LastKeyTime;
+
+    public static int LastKeyClicked()
+    {
+        const int SECONDS_TO_SHOW_AS_ACTIVE = 2;
+
+        return (DateTime.UtcNow - LastKeyTime).TotalSeconds > SECONDS_TO_SHOW_AS_ACTIVE
+            ? (int)ConsoleKey.NoName
+            : LastKey;
+    }
+
+    private RecordInt globalTime = null!;
+    private int canRunTime;
+    private bool canRun;
+
+    private int canBeInterruptedTime;
+    private bool canBeInterrupted;
+
+    public void InitSlot(ILogger logger)
+    {
+        if (!KeyReader.ReadKey(logger, this) && !BaseAction)
+        {
+            LogInputNoValidKey(logger, Name, Key, ConsoleKey);
+        }
+        else if (Slot == 0)
+        {
+            LogInputNonActionbar(logger, Name, Key, Modifier.ToPrefix(), ConsoleKey);
+        }
+    }
+
+    public void Init(
+        ILogger logger, bool globalLog,
+        PlayerReader playerReader,
+        RecordInt globalTime)
+    {
+        this.globalTime = globalTime;
+        this.canRunTime = globalTime.Value;
+        this.canBeInterruptedTime = globalTime.Value;
+
+        if (!globalLog)
+            Log = false;
+
+        ResetCharges();
+
+        InitSlot(logger);
+        if (Slot > 0)
+        {
+            this.SlotIndex = Stance.ToSlot(this, playerReader) - 1;
+            LogInputActionbar(logger, Name, Key, Slot, SlotIndex);
+        }
+
+        if (HasForm)
+        {
+            LogFormRequired(logger, Name, FormValue.ToStringF());
+        }
+
+        ConsoleKeyFormHash = ((int)FormValue * 1000) + (int)ConsoleKey;
+
+        if (!string.IsNullOrEmpty(Requirement))
+        {
+            Requirements.Add(Requirement);
+        }
+
+        if (!string.IsNullOrEmpty(Interrupt))
+        {
+            Interrupts.Add(Interrupt);
+        }
+
+        if (!string.IsNullOrEmpty(PathFilename))
+        {
+            LogPath(logger, Name, PathFilename);
+        }
+
+        if (BeforeCastMaxDelay < BeforeCastDelay)
+            BeforeCastMaxDelay = BeforeCastDelay;
+
+        if (AfterCastMaxDelay < AfterCastDelay)
+            AfterCastMaxDelay = AfterCastDelay;
+    }
+
+    public int GetRemainingCooldown()
+    {
+        return Math.Max(Cooldown - SinceLastClickMs, 0);
+    }
+
+    public bool OnCooldown()
+    {
+        return GetRemainingCooldown() > 0;
+    }
+
+    public void SetClicked(double offset = 0)
+    {
+        LastKey = ConsoleKeyFormHash;
+        LastKeyTime = LastClicked = DateTime.UtcNow.AddMilliseconds(offset);
+    }
+
+    public int SinceLastClickMs =>
+        (int)(DateTime.UtcNow - LastClicked).TotalMilliseconds;
+
+    public void ResetCooldown()
+    {
+        LastClicked = DateTime.UtcNow.AddDays(-1);
+    }
+
+    public int GetChargeRemaining()
+    {
+        return _charge;
+    }
+
+    public void ConsumeCharge()
+    {
+        if (Charge <= 1)
+            return;
+
+        lock (_chargeLock)
+        {
+            _charge--;
+            if (_charge > 0)
+            {
+                ResetCooldown();
+            }
+            else
+            {
+                ResetCharges();
+                SetClicked();
+            }
+        }
+    }
+
+    public void ResetCharges()
+    {
+        lock (_chargeLock)
+        {
+            _charge = Charge;
+        }
+    }
+
+    public bool CanRun()
+    {
+        if (canRunTime == globalTime.Value)
+            return canRun;
+
+        canRunTime = globalTime.Value;
+
+        // Null safety: if requirements not loaded, allow by default
+        if (RequirementsRuntime == null)
+        {
+            return canRun = true;
+        }
+
+        ReadOnlySpan<Requirement> span = RequirementsRuntime;
+        for (int i = 0; i < span.Length; i++)
+        {
+            if (!span[i].HasRequirement())
+                return canRun = false;
+        }
+
+        return canRun = true;
+    }
+
+    public bool CanBeInterrupted()
+    {
+        if (canBeInterruptedTime == globalTime.Value)
+            return canBeInterrupted;
+
+        canBeInterruptedTime = globalTime.Value;
+
+        // Null safety: if interrupts not loaded, allow by default
+        if (InterruptsRuntime == null)
+        {
+            return canBeInterrupted = true;
+        }
+
+        ReadOnlySpan<Requirement> span = InterruptsRuntime;
+        for (int i = 0; i < span.Length; i++)
+        {
+            if (!span[i].HasRequirement())
+                return canBeInterrupted = false;
+        }
+
+        return canBeInterrupted = true;
+    }
+
+    #region Logging
+
+    [LoggerMessage(
+        EventId = 0001,
+        Level = LogLevel.Information,
+        Message = "[{name,-17}] Path: {path}")]
+    static partial void LogPath(ILogger logger, string name, string path);
+
+    [LoggerMessage(
+        EventId = 0002,
+        Level = LogLevel.Information,
+        Message = "[{name,-17}] Required Form: {form}")]
+    static partial void LogFormRequired(ILogger logger, string name, string form);
+
+    [LoggerMessage(
+        EventId = 0003,
+        Level = LogLevel.Information,
+        Message = "[{name,-17}] Actionbar Key:{key} -> Actionbar:{slot} -> Index:{slotIndex}")]
+    static partial void LogInputActionbar(ILogger logger, string name, string key, int slot, int slotIndex);
+
+    [LoggerMessage(
+        EventId = 0004,
+        Level = LogLevel.Information,
+        Message = "[{name,-17}] Non Actionbar {key} -> {modifier}{consoleKey}")]
+    static partial void LogInputNonActionbar(ILogger logger, string name, string key, string modifier, ConsoleKey consoleKey);
+
+    [LoggerMessage(
+        EventId = 0005,
+        Level = LogLevel.Warning,
+        Message = "[{name,-17}] has no valid Key={key} or ConsoleKey={consoleKey}")]
+    static partial void LogInputNoValidKey(ILogger logger, string name, string key, ConsoleKey consoleKey);
+
+    [LoggerMessage(
+        EventId = 0006,
+        Level = LogLevel.Information,
+        Message = "[{name,-17}] Update {type} cost to {newCost} from {oldCost}")]
+    static partial void LogPowerCostChange(ILogger logger, string name, string type, int newCost, int oldCost);
+
+    #endregion
 }

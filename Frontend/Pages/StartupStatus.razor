@@ -1,0 +1,365 @@
+@page "/startup"
+
+@using Core.Startup
+
+@inject StartupState StartupState
+@inject StartupOrchestrator Orchestrator
+@inject NavigationManager Navigation
+
+@implements IDisposable
+
+<style>
+    .startup-container {
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 20px;
+    }
+
+    .startup-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .startup-header h1 {
+        font-size: 2rem;
+        margin-bottom: 10px;
+    }
+
+    .stage-list {
+        list-style: none;
+        padding: 0;
+    }
+
+    .stage-item {
+        display: flex;
+        align-items: center;
+        padding: 12px 16px;
+        margin: 8px 0;
+        border-radius: 8px;
+        background: var(--bs-tertiary-bg);
+        transition: all 0.3s ease;
+    }
+
+    .stage-item.completed {
+        background: rgba(25, 135, 84, 0.1);
+        border-left: 4px solid #198754;
+    }
+
+    .stage-item.in-progress {
+        background: rgba(13, 110, 253, 0.1);
+        border-left: 4px solid #0d6efd;
+        animation: pulse 2s infinite;
+    }
+
+    .stage-item.pending {
+        opacity: 0.5;
+    }
+
+    .stage-item.failed {
+        background: rgba(220, 53, 69, 0.1);
+        border-left: 4px solid #dc3545;
+    }
+
+    .stage-item.warning {
+        background: rgba(255, 193, 7, 0.1);
+        border-left: 4px solid #ffc107;
+    }
+
+    @@keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.7; }
+        100% { opacity: 1; }
+    }
+
+    .stage-icon {
+        width: 24px;
+        height: 24px;
+        margin-right: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .stage-info {
+        flex: 1;
+    }
+
+    .stage-name {
+        font-weight: 500;
+        margin-bottom: 2px;
+    }
+
+    .stage-description {
+        font-size: 0.85rem;
+        opacity: 0.7;
+    }
+
+    .status-message {
+        text-align: center;
+        padding: 20px;
+        font-size: 1.1rem;
+        margin-top: 20px;
+    }
+
+    .elapsed-time {
+        text-align: center;
+        font-size: 0.9rem;
+        color: var(--bs-secondary);
+        margin-top: 10px;
+    }
+
+    .ready-banner {
+        text-align: center;
+        padding: 30px;
+        background: rgba(25, 135, 84, 0.1);
+        border-radius: 12px;
+        margin-top: 30px;
+    }
+
+    .ready-banner h2 {
+        color: #198754;
+        margin-bottom: 15px;
+    }
+
+    .system-status {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-top: 30px;
+    }
+
+    .status-card {
+        padding: 16px;
+        border-radius: 8px;
+        background: var(--bs-tertiary-bg);
+    }
+
+    .status-card h4 {
+        font-size: 0.9rem;
+        margin-bottom: 8px;
+        opacity: 0.7;
+    }
+
+    .status-card .value {
+        font-size: 1.1rem;
+        font-weight: 500;
+    }
+
+    .status-indicator {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 8px;
+    }
+
+    .status-indicator.running { background: #198754; }
+    .status-indicator.stopped { background: #dc3545; }
+    .status-indicator.unknown { background: #6c757d; }
+</style>
+
+<div class="startup-container">
+    <div class="startup-header">
+        <h1>WowClassicGrindBot</h1>
+        <p class="text-muted">Startup Orchestration</p>
+    </div>
+
+    <ul class="stage-list">
+        @foreach (var stage in stages)
+        {
+            var stageClass = GetStageClass(stage);
+            <li class="stage-item @stageClass">
+                <div class="stage-icon">
+                    @if (IsCompleted(stage))
+                    {
+                        <span style="color: #198754;">&#10003;</span>
+                    }
+                    else if (IsInProgress(stage))
+                    {
+                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    }
+                    else if (IsFailed(stage))
+                    {
+                        <span style="color: #dc3545;">&#10007;</span>
+                    }
+                    else
+                    {
+                        <span style="color: #6c757d;">&#9675;</span>
+                    }
+                </div>
+                <div class="stage-info">
+                    <div class="stage-name">@GetStageName(stage)</div>
+                    <div class="stage-description">@GetStageDescription(stage)</div>
+                </div>
+            </li>
+        }
+    </ul>
+
+    <div class="status-message">
+        @snapshot.StatusMessage
+    </div>
+
+    <div class="elapsed-time">
+        Elapsed: @snapshot.ElapsedTime.ToString(@"mm\:ss")
+    </div>
+
+    @if (snapshot.IsReady)
+    {
+        <div class="ready-banner">
+            <h2>System Ready!</h2>
+            <p>The bot is fully initialized and ready to use.</p>
+            <a class="btn btn-success btn-lg" href="/">Go to Dashboard</a>
+        </div>
+    }
+
+    <div class="system-status">
+        <div class="status-card">
+            <h4>WoW Process</h4>
+            <div class="value">
+                <span class="status-indicator @(snapshot.IsWoWRunning ? "running" : "stopped")"></span>
+                @(snapshot.IsWoWRunning ? "Running" : "Not Running")
+            </div>
+        </div>
+        <div class="status-card">
+            <h4>Navigation Server</h4>
+            <div class="value">
+                <span class="status-indicator @(snapshot.IsNavigationServerRunning ? "running" : "stopped")"></span>
+                @(snapshot.IsNavigationServerRunning ? "Running" : "Not Running")
+            </div>
+        </div>
+        <div class="status-card">
+            <h4>Addons</h4>
+            <div class="value">
+                <span class="status-indicator @(snapshot.AddonsValidated ? "running" : "unknown")"></span>
+                @(snapshot.AddonsValidated ? "Validated" : "Pending")
+            </div>
+        </div>
+        <div class="status-card">
+            <h4>Frame Config</h4>
+            <div class="value">
+                <span class="status-indicator @(snapshot.FramesConfigured ? "running" : "unknown")"></span>
+                @(snapshot.FramesConfigured ? "Configured" : "Pending")
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(snapshot.WoWPath))
+    {
+        <div class="status-card" style="margin-top: 16px;">
+            <h4>WoW Installation</h4>
+            <div class="value" style="font-size: 0.9rem; word-break: break-all;">
+                @snapshot.WoWPath
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private StartupStateSnapshot snapshot = new(
+        StartupStage.NotStarted, "Initializing...", null, false, false, false, false, false, TimeSpan.Zero);
+
+    private System.Threading.Timer? refreshTimer;
+
+    private readonly StartupStage[] stages = new[]
+    {
+        StartupStage.Initializing,
+        StartupStage.DiscoveringWoW,
+        StartupStage.ValidatingAddons,
+        StartupStage.StartingNavigationServer,
+        StartupStage.LaunchingWoW,
+        StartupStage.WaitingForCharacter,
+        StartupStage.ConfiguringFrames,
+        StartupStage.FinalValidation,
+        StartupStage.Ready
+    };
+
+    protected override void OnInitialized()
+    {
+        StartupState.StateChanged += OnStateChanged;
+        snapshot = StartupState.GetSnapshot();
+
+        // Refresh every second for elapsed time display
+        refreshTimer = new System.Threading.Timer(
+            _ => InvokeAsync(StateHasChanged),
+            null,
+            TimeSpan.FromSeconds(1),
+            TimeSpan.FromSeconds(1));
+    }
+
+    public void Dispose()
+    {
+        StartupState.StateChanged -= OnStateChanged;
+        refreshTimer?.Dispose();
+    }
+
+    private void OnStateChanged(object? sender, EventArgs e)
+    {
+        snapshot = StartupState.GetSnapshot();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private string GetStageClass(StartupStage stage)
+    {
+        if (snapshot.CurrentStage == StartupStage.Failed && stage == GetFailedStage())
+            return "failed";
+        if (stage == snapshot.CurrentStage && snapshot.CurrentStage != StartupStage.Ready)
+            return "in-progress";
+        if ((int)stage < (int)snapshot.CurrentStage || snapshot.CurrentStage == StartupStage.Ready)
+            return "completed";
+        return "pending";
+    }
+
+    private StartupStage GetFailedStage()
+    {
+        // If we failed, the current stage before failure is the failed stage
+        // This is a simplification; in reality we'd track this in state
+        return snapshot.CurrentStage;
+    }
+
+    private bool IsCompleted(StartupStage stage)
+    {
+        if (snapshot.CurrentStage == StartupStage.Ready)
+            return stage != StartupStage.Failed;
+        return (int)stage < (int)snapshot.CurrentStage;
+    }
+
+    private bool IsInProgress(StartupStage stage)
+    {
+        return stage == snapshot.CurrentStage && snapshot.CurrentStage != StartupStage.Ready && snapshot.CurrentStage != StartupStage.Failed;
+    }
+
+    private bool IsFailed(StartupStage stage)
+    {
+        return snapshot.CurrentStage == StartupStage.Failed;
+    }
+
+    private string GetStageName(StartupStage stage) => stage switch
+    {
+        StartupStage.Initializing => "Initialize",
+        StartupStage.DiscoveringWoW => "Discover WoW",
+        StartupStage.ValidatingAddons => "Validate Addons",
+        StartupStage.StartingNavigationServer => "Navigation Server",
+        StartupStage.LaunchingWoW => "Launch WoW",
+        StartupStage.WaitingForCharacter => "Wait for Character",
+        StartupStage.ConfiguringFrames => "Configure Frames",
+        StartupStage.FinalValidation => "Final Validation",
+        StartupStage.Ready => "Ready",
+        _ => stage.ToString()
+    };
+
+    private string GetStageDescription(StartupStage stage) => stage switch
+    {
+        StartupStage.Initializing => "Loading configuration and preparing services",
+        StartupStage.DiscoveringWoW => "Finding WoW installation on your system",
+        StartupStage.ValidatingAddons => "Checking and installing required addons",
+        StartupStage.StartingNavigationServer => "Starting pathfinding server",
+        StartupStage.LaunchingWoW => "Starting or detecting WoW process",
+        StartupStage.WaitingForCharacter => "Waiting for you to log in",
+        StartupStage.ConfiguringFrames => "Setting up pixel reading frames",
+        StartupStage.FinalValidation => "Performing final system checks",
+        StartupStage.Ready => "System is ready to use",
+        _ => ""
+    };
+}

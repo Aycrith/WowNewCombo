@@ -1,94 +1,94 @@
-﻿using System;
-using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
 
-namespace Core
+using System;
+using System.Runtime.CompilerServices;
+
+using static Core.ActionBar;
+
+namespace Core;
+
+#pragma warning disable CS0162
+
+public readonly record struct ActionBarCost(PowerType PowerType, int Cost);
+
+public sealed class ActionBarCostReader : IReader
 {
-    public class ActionBarCostEventArgs : EventArgs
-    {
-        public readonly int index;
-        public readonly PowerType powerType;
-        public readonly int cost;
+#if DEBUG
+    private const bool DEBUG = true;
+#else
+    private const bool DEBUG = false;
+#endif
 
-        public ActionBarCostEventArgs(int index, PowerType powerType, int cost)
+    private const int COST_ORDER = 10000;
+    private const int POWER_TYPE_MOD = 100;
+
+    private const int cActionbarMeta = 35;
+    private const int cActionbarNum = 36;
+
+    private static readonly ActionBarCost defaultCost = new(PowerType.Mana, 0);
+    public static ref readonly ActionBarCost DefaultCost => ref defaultCost;
+
+    public ActionBarCost[] Data { get; init; }
+
+    public int Count { get; private set; }
+
+    private readonly ILogger<ActionBarCostReader> logger;
+
+    public ActionBarCostReader(ILogger<ActionBarCostReader> logger)
+    {
+        this.logger = logger;
+
+        Data = new ActionBarCost[CELL_COUNT * BIT_PER_CELL * NUM_OF_COST];
+
+        Reset();
+    }
+
+    public void Update(IAddonDataProvider reader)
+    {
+        int meta = reader.GetInt(cActionbarMeta);
+        int cost = reader.GetInt(cActionbarNum);
+        if ((cost == 0 && meta == 0) || meta < ACTION_SLOT_MUL)
+            return;
+
+        int slotIdx = (meta / ACTION_SLOT_MUL) - 1;
+        int costIdx = (meta / COST_ORDER % 10) - 1;
+        int type = meta % POWER_TYPE_MOD;
+
+        int index = (slotIdx * NUM_OF_COST) + costIdx;
+
+        // Bounds check - protect against out-of-bounds access
+        if (index < 0 || index >= Data.Length)
         {
-            this.index = index;
-            this.powerType = powerType;
-            this.cost = cost;
+            logger.LogWarning("ActionBarCostReader: Invalid index {index} (slotIdx: {slotIdx}, costIdx: {costIdx}, meta: {meta}). Array length: {arrayLength}. Skipping update.",
+                index, slotIdx, costIdx, meta, Data.Length);
+            return;
+        }
+
+        ActionBarCost old = Data[index];
+        Data[index] = new((PowerType)type, cost);
+
+        if (!old.Equals(Data[index]))
+        {
+            if (DEBUG)
+                logger.LogInformation($"[{index,3}][{slotIdx + 1,3}][{costIdx}] {cost} {((PowerType)type).ToStringF()}");
+
+            Count++;
         }
     }
 
-    public class ActionBarCostReader
+    public void Reset()
     {
-        private readonly ISquareReader reader;
-        private readonly int cActionbarNum;
+        Count = 0;
 
-        private readonly float MAX_POWER_TYPE = 1000000f;
-        private readonly float MAX_ACTION_IDX = 1000f;
+        var span = Data.AsSpan();
+        span.Fill(DefaultCost);
+    }
 
-        //https://wowwiki-archive.fandom.com/wiki/ActionSlot
-        private readonly Dictionary<int, (PowerType type, int cost)> dict = new Dictionary<int, (PowerType, int)>();
-
-        private readonly (PowerType type, int cost) empty = (PowerType.Mana, 0);
-
-        public int MaxCount { get; } = 108; // maximum amount of actionbar slot which tracked
-
-        public int Count => dict.Count;
-
-        public event EventHandler<ActionBarCostEventArgs>? OnActionCostChanged;
-
-        public ActionBarCostReader(ISquareReader reader, int cActionbarNum)
-        {
-            this.cActionbarNum = cActionbarNum;
-            this.reader = reader;
-        }
-
-        public void Read()
-        {
-            // formula
-            // MAX_POWER_TYPE * type + MAX_ACTION_IDX * slot + cost
-            int data = reader.GetIntAtCell(cActionbarNum);
-            if (data == 0) return;
-
-            int type = (int)(data / MAX_POWER_TYPE);
-            data -= (int)MAX_POWER_TYPE * type;
-
-            int index = (int)(data / MAX_ACTION_IDX);
-            data -= (int)MAX_ACTION_IDX * index;
-
-            int cost = data;
-
-            if (dict.TryGetValue(index, out var tuple) && tuple.cost != cost)
-            {
-                dict.Remove(index);
-            }
-
-            if (dict.TryAdd(index, ((PowerType)type, cost)))
-            {
-                OnActionCostChanged?.Invoke(this, new ActionBarCostEventArgs(index, (PowerType)type, cost));
-            }
-        }
-
-        public void Reset()
-        {
-            dict.Clear();
-        }
-
-        public (PowerType type, int cost) GetCostByActionBarSlot(PlayerReader playerReader, KeyAction keyAction)
-        {
-            if (KeyReader.ActionBarSlotMap.TryGetValue(keyAction.Key, out int slot))
-            {
-                if (slot <= 12)
-                {
-                    slot += Stance.RuntimeSlotToActionBar(keyAction, playerReader, slot);
-                }
-
-                if (dict.TryGetValue(slot, out var tuple))
-                {
-                    return tuple;
-                }
-            }
-
-            return empty;
-        }
+    [SkipLocalsInit]
+    public ActionBarCost Get(KeyAction keyAction, int costIndex = 0)
+    {
+        int slotIdx = keyAction.SlotIndex;
+        int index = (slotIdx * NUM_OF_COST) + costIndex;
+        return Data[index];
     }
 }

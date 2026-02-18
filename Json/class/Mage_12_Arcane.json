@@ -1,57 +1,103 @@
 {
   "ClassName": "Mage",
-  "Loot": false,
-
-  "PathFilename": "12_LochModan.json",
-  "SpiritPathFilename": "12_LochModan_Spirithealer.json",
+  //"Mode": "AttendedGrind", //Grind
+  "Loot": true,
+  "PathFilename": "_pack\\1-20\\Dwarf.Gnome\\10-12_Loch Modan.json",
   "PathThereAndBack": true,
   "PathReduceSteps": false,
-
+  "IntVariables": {
+    "Item_Conjure_Drink": 2288,
+    "Item_Conjure_Food": 1113,
+    "MIN_FOOD%": 50,
+    "MIN_WATER%": 30,
+    "MIN_MANA_SPELL%": 60,
+    "MIN_TARGET_HP_NOVA%": 15
+  },
   "Pull": {
     "Sequence": [
       {
         "Name": "Frostbolt",
         "Key": "1",
         "HasCastBar": true,
-        "Requirement": "SpellInRange:3",
-        "MinMana": 35
+        "Requirements": [
+          "SpellInRange:3",
+          "Mana% > MIN_MANA_SPELL%"
+        ]
+      },
+      {
+        "Name": "Shoot",
+        "Key": "0",
+        "Item": true,
+        "Requirements": [
+          "HasRangedWeapon",
+          "!Shooting",
+          "SpellInRange:1",
+          "Mana% < MIN_MANA_SPELL%"
+        ]
+      },
+      {
+        "Name": "Approach",
+        "Requirements": [
+          "!Casting",
+          "!Shooting"
+        ]
       }
     ]
   },
   "Combat": {
     "Sequence": [
       {
-        "Name": "Fire Blast",
-        "Key": "5",
-        "MinMana": 40,
-        "WhenUsable": true,
-        "Requirements": ["TargetHealth%<45", "SpellInRange:4"]
-      },
-      {
         "Name": "Frost Nova",
         "Key": "6",
-        "MinMana": 55,
         "WhenUsable": true,
-        "Requirement": "InMeleeRange",
-        "StepBackAfterCast": 1000,
-        "DelayAfterCast": 0
+        "Requirements": [
+          "InMeleeRange",
+          "TargetHealth% > MIN_TARGET_HP_NOVA%"
+        ],
+        "AfterCastStepBack": -1 //1000
+      },
+      {
+        "Name": "Fire Blast",
+        "Key": "5",
+        "WhenUsable": true,
+        "Requirements": [
+          "TargetHealth% < 45",
+          "SpellInRange:4"
+        ]
       },
       {
         "Name": "Arcane Missiles",
         "Key": "7",
         "HasCastBar": true,
-        "MinMana": 140,
-        "Requirement": "SpellInRange:3"
+        "Requirements": [
+          "Mana% > MIN_MANA_SPELL%",
+          "TargetHealth% > 35",
+          "SpellInRange:3"
+        ]
       },
       {
         "Name": "Shoot",
         "Key": "0",
-        "HasCastBar": true,
-        "Requirements": ["HasRangedWeapon", "not Shooting", "SpellInRange:1"]
+        "Item": true,
+        "Requirements": [
+          "HasRangedWeapon",
+          "!Shooting",
+          "SpellInRange:1",
+          "Mana% < MIN_MANA_SPELL%"
+        ]
       },
       {
         "Name": "AutoAttack",
-        "Requirements": ["not HasRangedWeapon", "not AutoAttacking"]
+        "Requirements": [
+          "!HasRangedWeapon"
+        ]
+      },
+      {
+        "Name": "Approach",
+        "Requirements": [
+          "!Casting",
+          "!Shooting"
+        ]
       }
     ]
   },
@@ -60,43 +106,42 @@
       {
         "Name": "Food",
         "Key": "=",
-        "Requirement": "Health%<90"
+        "Requirement": "Health% < MIN_FOOD%"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "-",
-        "Requirement": "Mana%<90"
+        "Requirement": "Mana% < MIN_WATER%"
       }
     ]
-    },
-
+  },
   "Adhoc": {
     "Sequence": [
       {
         "Name": "Frost Armor",
         "Key": "3",
-        "MinMana": 60,
-        "Requirement": "not Frost Armor"
+        "Requirement": "!Frost Armor"
       },
       {
         "Name": "Arcane Intellect",
         "Key": "4",
-        "MinMana": 60,
-        "Requirement": "not Arcane Intellect"
+        "Requirement": "!Arcane Intellect"
       },
       {
         "Name": "Conjure Water",
         "Key": "9",
         "HasCastBar": true,
-        "Requirement": "not BagItem:2288:4",
-        "Cooldown": 30000
+        "Requirement": "!BagItem:Item_Conjure_Drink:4",
+        "AfterCastWaitCastbar": true,
+        "AfterCastWaitBag": true
       },
       {
         "Name": "Conjure Food",
         "Key": "8",
         "HasCastBar": true,
-        "Requirement": "not BagItem:1113:4",
-        "Cooldown": 30000
+        "Requirement": "!BagItem:Item_Conjure_Food:4",
+        "AfterCastWaitCastbar": true,
+        "AfterCastWaitBag": true
       }
     ]
   }

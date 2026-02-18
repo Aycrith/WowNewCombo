@@ -1,0 +1,33 @@
+{
+  "Features": {
+    "SmartBlacklist": {
+      "Enabled": true,
+      "MaxEntries": 1000,
+      "AutoSaveIntervalMinutes": 5,
+      "AutoSaveOnChange": false,
+      "LogBlacklistHits": false
+    },
+    "StuckSensitivity": {
+      "Enabled": true,
+      "MinDistance": 0.1,
+      "UnstuckAfterMs": 2000,
+      "EnablePredictiveDetection": true,
+      "PredictiveRiskThreshold": 70,
+      "ApproachTimeoutMultiplier": 1.0
+    },
+    "NoPlanRecovery": {
+      "Enabled": true,
+      "ResetStateThreshold": 2,
+      "ForceReplanThreshold": 4,
+      "EmergencyResetThreshold": 6,
+      "RecoveryDelayMs": 1000
+    },
+    "FailureAnalytics": {
+      "Enabled": true,
+      "FlushIntervalMinutes": 5,
+      "MaxEventsInMemory": 1000,
+      "MaxPersistedEvents": 10000,
+      "RetentionDays": 30
+    }
+  }
+}

@@ -1,0 +1,285 @@
+@page "/ProfileMarketplace"
+
+@using Core.Marketplace
+@using Core.FeatureFlags
+@using Microsoft.Extensions.Options
+
+@inject ProfileMarketplaceService MarketplaceService
+@inject IOptionsMonitor<FeatureFlagsOptions> FeatureFlags
+@inject ILogger<ProfileMarketplacePage> Logger
+
+<h3>Profile Marketplace</h3>
+<p class="text-muted small">Discover and download community-created profiles from GitHub.</p>
+
+@if (!FeatureFlags.CurrentValue.ProfileMarketplace.Enabled)
+{
+    <div class="alert alert-info">
+        <strong>Feature Disabled:</strong> Profile Marketplace is currently disabled. 
+        Enable it in <code>runtime_feature_flags.json</code> to use this feature.
+    </div>
+}
+
+<div class="card mt-3">
+    <div class="card-header">Search Profiles</div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Class</label>
+                <select class="form-select" @bind="searchCriteria.ClassName">
+                    <option value="">Any Class</option>
+                    <option value="Mage">Mage</option>
+                    <option value="Warlock">Warlock</option>
+                    <option value="Priest">Priest</option>
+                    <option value="Rogue">Rogue</option>
+                    <option value="Warrior">Warrior</option>
+                    <option value="Hunter">Hunter</option>
+                    <option value="Paladin">Paladin</option>
+                    <option value="Druid">Druid</option>
+                    <option value="Shaman">Shaman</option>
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label">Min Level</label>
+                <input type="number" class="form-control" @bind="searchCriteria.MinLevel" min="1" max="60" />
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label">Max Level</label>
+                <input type="number" class="form-control" @bind="searchCriteria.MaxLevel" min="1" max="60" />
+            </div>
+            
+            <div class="col-md-2 d-flex align-items-end">
+                <button class="btn btn-primary w-100" @onclick="SearchAsync" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                    }
+                    else
+                    {
+                        <span>Search</span>
+                    }
+                </button>
+            </div>
+        </div>
+
+        <div class="row g-3 mt-2">
+            <div class="col-md-8">
+                <label class="form-label">Search Text</label>
+                <input type="text" class="form-control" @bind="searchCriteria.SearchText" 
+                       placeholder="Search in name, description, or tags..." />
+            </div>
+            
+            <div class="col-md-4 d-flex align-items-end">
+                <button class="btn btn-outline-secondary" @onclick="LoadFeaturedAsync">
+                    Show Featured
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (profiles.Count > 0)
+{
+    <div class="card mt-3">
+        <div class="card-header">
+            Results (@profiles.Count profiles)
+            <button class="btn btn-sm btn-outline-primary float-end" @onclick="ClearResults">
+                Clear
+            </button>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Class</th>
+                            <th>Level Range</th>
+                            <th>Rating</th>
+                            <th>Downloads</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var profile in profiles)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">@profile.Name</div>
+                                    <div class="small text-muted">@profile.Description</div>
+                                    <div class="small text-muted">by @profile.Author</div>
+                                </td>
+                                <td>@profile.ClassName</td>
+                                <td>@profile.MinLevel - @profile.MaxLevel</td>
+                                <td>
+                                    @RenderStars(profile.Rating)
+                                </td>
+                                <td>@profile.Downloads.ToString("N0")</td>
+                                <td>
+                                    <button class="btn btn-sm btn-success" 
+                                            @onclick="() => DownloadProfileAsync(profile.Id, profile.Name)"
+                                            disabled="@isDownloading">
+                                        @if (downloadingId == profile.Id)
+                                        {
+                                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                                        }
+                                        else
+                                        {
+                                            <span>Download</span>
+                                        }
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+else if (hasSearched && !isLoading)
+{
+    <div class="alert alert-info mt-3">
+        No profiles found matching your criteria.
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(statusMessage))
+{
+    <div class="mt-3 alert @(isSuccess ? "alert-success" : "alert-danger")">
+        @statusMessage
+    </div>
+}
+
+@code {
+    private ProfileSearchCriteria searchCriteria = new()
+    {
+        MaxResults = 20
+    };
+    
+    private List<ProfileListing> profiles = new();
+    private bool isLoading = false;
+    private bool isDownloading = false;
+    private string? downloadingId = null;
+    private bool hasSearched = false;
+    private bool isSuccess = false;
+    private string? statusMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load featured profiles on initial load
+        await LoadFeaturedAsync();
+    }
+
+    private async Task SearchAsync()
+    {
+        isLoading = true;
+        hasSearched = true;
+        statusMessage = null;
+        
+        try
+        {
+            var results = await MarketplaceService.SearchProfilesAsync(searchCriteria);
+            profiles = results.ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to search profiles");
+            statusMessage = $"Search failed: {ex.Message}";
+            isSuccess = false;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadFeaturedAsync()
+    {
+        isLoading = true;
+        hasSearched = true;
+        statusMessage = null;
+        
+        try
+        {
+            var results = await MarketplaceService.GetFeaturedProfilesAsync(20);
+            profiles = results.ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load featured profiles");
+            statusMessage = $"Failed to load profiles: {ex.Message}";
+            isSuccess = false;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task DownloadProfileAsync(string profileId, string profileName)
+    {
+        isDownloading = true;
+        downloadingId = profileId;
+        statusMessage = null;
+        
+        try
+        {
+            var result = await MarketplaceService.DownloadProfileAsync(profileId);
+            
+            if (result.Success)
+            {
+                statusMessage = $"Downloaded '{profileName}' to {result.LocalPath}";
+                isSuccess = true;
+            }
+            else
+            {
+                statusMessage = $"Download failed: {result.ErrorMessage}";
+                isSuccess = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to download profile {ProfileId}", profileId);
+            statusMessage = $"Download error: {ex.Message}";
+            isSuccess = false;
+        }
+        finally
+        {
+            isDownloading = false;
+            downloadingId = null;
+        }
+    }
+
+    private void ClearResults()
+    {
+        profiles.Clear();
+        hasSearched = false;
+        statusMessage = null;
+    }
+
+    private static RenderFragment RenderStars(float rating) => builder =>
+    {
+        int fullStars = (int)rating;
+        bool hasHalfStar = rating - fullStars >= 0.5f;
+        
+        for (int i = 0; i < 5; i++)
+        {
+            if (i < fullStars)
+            {
+                builder.AddContent(i, "★");
+            }
+            else if (i == fullStars && hasHalfStar)
+            {
+                builder.AddContent(i, "⯪");
+            }
+            else
+            {
+                builder.AddContent(i, "☆");
+            }
+        }
+        
+        builder.AddContent(5, $" ({rating:F1})");
+    };
+}

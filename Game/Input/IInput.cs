@@ -1,25 +1,27 @@
-﻿using System.Drawing;
+using SixLabors.ImageSharp;
 
-namespace Game
+using System;
+using System.Threading;
+
+namespace Game;
+
+public interface IInput : IDisposable
 {
-    public interface IInput
-    {
-        void KeyDown(int key);
+    void KeyDown(int key);
 
-        void KeyUp(int key);
+    void KeyUp(int key);
 
-        int KeyPress(int key, int milliseconds);
+    int PressRandom(int key, int milliseconds);
 
-        void KeyPressSleep(int key, int milliseconds);
+    int PressRandom(int key, int milliseconds, CancellationToken token);
 
-        void SetCursorPosition(Point p);
+    void PressFixed(int key, int milliseconds, CancellationToken token);
 
-        void RightClickMouse(Point p);
+    void SetCursorPos(Point p);
 
-        void LeftClickMouse(Point p);
+    void RightClick(Point p);
 
-        void SendText(string text);
+    void LeftClick(Point p);
 
-        void PasteFromClipboard();
-    }
+    void SendText(string text);
 }

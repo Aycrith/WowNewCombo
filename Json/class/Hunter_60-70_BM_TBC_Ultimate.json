@@ -1,0 +1,113 @@
+{
+  "ClassName": "Hunter",
+  "OverridePathFilename": "",
+  "Paths": [
+    { "PathFilename": "_pack\\60-70\\Hellfire Peninsula 01.json", "Requirements": ["Level >= 58", "Level < 62"] },
+    { "PathFilename": "_pack\\60-70\\Hellfire Peninsula 02.json", "Requirements": ["Level >= 60", "Level < 63"] },
+    { "PathFilename": "_pack\\60-70\\Zangarmarsh 01.json", "Requirements": ["Level >= 62", "Level < 65"] },
+    { "PathFilename": "_pack\\60-70\\Zangarmarsh 02.json", "Requirements": ["Level >= 63", "Level < 66"] },
+    { "PathFilename": "_pack\\60-70\\Nagrand 01.json", "Requirements": ["Level >= 64", "Level < 67"] },
+    { "PathFilename": "_pack\\60-70\\Nagrand 02.json", "Requirements": ["Level >= 65", "Level < 68"] },
+    { "PathFilename": "_pack\\60-70\\Blade's Edge Mountains 01.json", "Requirements": ["Level >= 66", "Level < 69"] },
+    { "PathFilename": "_pack\\60-70\\Blade's Edge Mountains 02.json", "Requirements": ["Level >= 67", "Level < 70"] },
+    { "PathFilename": "_pack\\60-70\\Netherstorm 01.json", "Requirements": ["Level >= 68", "Level < 71"] },
+    { "PathFilename": "_pack\\60-70\\Netherstorm 02.json", "Requirements": ["Level >= 69"] }
+  ],
+  "Mode": "Grind",
+  "IntVariables": {
+    "MEND_PET_HP%": 50,
+    "BESTIAL_WRATH_HP%": 80,
+    "ASPECT_VIPER_MANA%": 30,
+    "INTIMIDATION_HP%": 40,
+    "FEIGN_DEATH_HP%": 20,
+    "KILL_COMMAND_FOCUS": 25,
+    "STEADY_SHOT_FOCUS": 35
+  },
+  "KeyActions": [
+    { "Name": "Aspect of the Hawk", "Key": "1", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Aspect of the Viper", "Key": "2", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Hunter's Mark", "Key": "3", "WhenUsable": true, "Cooldown": 0, "HasCastBar": false },
+    { "Name": "Arcane Shot", "Key": "4", "WhenUsable": true, "Cooldown": 6 },
+    { "Name": "Serpent Sting", "Key": "5", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Steady Shot", "Key": "6", "WhenUsable": true, "HasCastBar": true, "Cooldown": 0, "AfterCastWait": 200 },
+    { "Name": "Auto Shot", "Key": "7", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Multi-Shot", "Key": "8", "WhenUsable": true, "Cooldown": 10 },
+    { "Name": "Kill Command", "Key": "9", "WhenUsable": true, "Cooldown": 5 },
+    { "Name": "Bestial Wrath", "Key": "0", "WhenUsable": true, "Cooldown": 120 },
+    { "Name": "Intimidation", "Key": "-", "WhenUsable": true, "Cooldown": 60 },
+    { "Name": "Mend Pet", "Key": "=", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Rapid Fire", "Key": "F1", "WhenUsable": true, "Cooldown": 300 },
+    { "Name": "Feign Death", "Key": "F2", "WhenUsable": true, "Cooldown": 30 },
+    { "Name": "Disengage", "Key": "F3", "WhenUsable": true, "Cooldown": 5 },
+    { "Name": "Concussive Shot", "Key": "F4", "WhenUsable": true, "Cooldown": 12 },
+    { "Name": "Wing Clip", "Key": "F5", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Raptor Strike", "Key": "F6", "WhenUsable": true, "Cooldown": 6 },
+    { "Name": "Mongoose Bite", "Key": "F7", "WhenUsable": true, "Cooldown": 5 },
+    { "Name": "Revive Pet", "Key": "F8", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Call Pet", "Key": "F9", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Freezing Trap", "Key": "F10", "WhenUsable": true, "Cooldown": 30 },
+    { "Name": "Misdirection", "Key": "F11", "WhenUsable": true, "Cooldown": 120 },
+    { "Name": "Kill Shot", "Key": "F12", "WhenUsable": true, "Cooldown": 15 }
+  ],
+  "Form": {
+    "Sequence": [
+      { "Name": "Call Pet", "Requirements": ["not Pet"], "Cooldown": 3 },
+      { "Name": "Revive Pet", "Requirements": ["Pet dead"], "Cooldown": 10 }
+    ]
+  },
+  "Pull": {
+    "Sequence": [
+      { "Name": "Aspect of the Hawk", "Requirements": ["not HasBuff:Aspect of the Hawk", "Mana% > {ASPECT_VIPER_MANA%}"], "Cooldown": 2 },
+      { "Name": "Hunter's Mark", "Requirements": ["not HasDebuff:Hunter's Mark"], "Cooldown": 1 },
+      { "Name": "Kill Command", "Requirements": ["Pet", "PetFocus > {KILL_COMMAND_FOCUS}"], "Cooldown": 5 },
+      { "Name": "Serpent Sting", "Requirements": ["not HasDebuff:Serpent Sting", "Health% > 30"], "Cooldown": 1 },
+      { "Name": "Arcane Shot", "WhenUsable": true, "Cooldown": 6 },
+      { "Name": "Auto Shot", "WhenUsable": true }
+    ]
+  },
+  "Combat": {
+    "Sequence": [
+      { "Name": "Feign Death", "Requirements": ["Health% < {FEIGN_DEATH_HP%}", "not Pet", "InCombat"], "Cooldown": 30 },
+      { "Name": "Mend Pet", "Requirements": ["Pet", "PetHealth% < {MEND_PET_HP%}", "not PetHasBuff:Mend Pet"], "Cooldown": 15 },
+      { "Name": "Bestial Wrath", "Requirements": ["Pet", "TargetHealth% > {BESTIAL_WRATH_HP%}"], "Cooldown": 120 },
+      { "Name": "Intimidation", "Requirements": ["Pet", "Health% < {INTIMIDATION_HP%}"], "Cooldown": 60 },
+      { "Name": "Rapid Fire", "Requirements": ["TargetHealth% > 80", "BossOrElite"], "Cooldown": 300 },
+      { "Name": "Kill Shot", "Requirements": ["TargetHealth% < 20"], "Cooldown": 15 },
+      { "Name": "Kill Command", "Requirements": ["Pet", "PetFocus > {KILL_COMMAND_FOCUS}"], "Cooldown": 5 },
+      { "Name": "Serpent Sting", "Requirements": ["not HasDebuff:Serpent Sting", "TargetHealth% > 30"], "Cooldown": 1 },
+      { "Name": "Arcane Shot", "WhenUsable": true, "Cooldown": 6 },
+      { "Name": "Steady Shot", "Requirements": ["Mana% > 20", "Range > 5"], "Cooldown": 0 },
+      { "Name": "Multi-Shot", "Requirements": ["MobCount >= 2", "Mana% > 30"], "Cooldown": 10 },
+      { "Name": "Auto Shot", "WhenUsable": true },
+      { "Name": "Raptor Strike", "Requirements": ["Range < 5"], "Cooldown": 6 },
+      { "Name": "Mongoose Bite", "Requirements": ["Range < 5"], "Cooldown": 5 }
+    ]
+  },
+  "Flee": {
+    "Sequence": [
+      { "Name": "Feign Death", "Requirements": ["InCombat"], "Cooldown": 30 },
+      { "Name": "Concussive Shot", "WhenUsable": true, "Cooldown": 12 },
+      { "Name": "Wing Clip", "Requirements": ["Range < 5"], "Cooldown": 0 },
+      { "Name": "Disengage", "Requirements": ["Range < 8"], "Cooldown": 5 }
+    ]
+  },
+  "Adhoc": {
+    "Sequence": [
+      { "Name": "Aspect of the Viper", "Requirements": ["Mana% < {ASPECT_VIPER_MANA%}", "not HasBuff:Aspect of the Viper"], "Cooldown": 2 },
+      { "Name": "Aspect of the Hawk", "Requirements": ["Mana% > 60", "HasBuff:Aspect of the Viper"], "Cooldown": 2 },
+      { "Name": "Mend Pet", "Requirements": ["Pet", "PetHealth% < {MEND_PET_HP%}", "not InCombat", "not PetHasBuff:Mend Pet"], "Cooldown": 15 },
+      { "Name": "Revive Pet", "Requirements": ["Pet dead"], "Cooldown": 10 },
+      { "Name": "Call Pet", "Requirements": ["not Pet"], "Cooldown": 3 }
+    ]
+  },
+  "Parallel": {
+    "Sequence": []
+  },
+  "NPC": {
+    "Sequence": [
+      { "Name": "Repair", "Requirements": ["DurabilityPercent < 50"] },
+      { "Name": "Sell", "Requirements": ["BagsFull"] },
+      { "Name": "Train", "Requirements": ["NewSkillAvailable"] }
+    ]
+  }
+}

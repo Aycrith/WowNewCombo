@@ -1,46 +1,60 @@
-﻿using System;
-using SharedLib;
+﻿using SharedLib;
 
-namespace Core
+using Core.Database;
+
+using System;
+
+namespace Core;
+
+public sealed class BagItem
 {
-    public class BagItem
+    public int Bag { get; }
+    public int Slot { get; }
+    public int Count { get; private set; }
+    public int LastCount { get; private set; }
+    public Item Item { get; }
+    public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
+
+    // Item flags from addon
+    public bool IsTradable { get; private set; }
+    public bool IsSoulbound { get; private set; }
+    public bool IsLocked { get; private set; }
+    public bool HasNoValue { get; private set; }
+
+    // Computed properties
+    public bool IsConjured => ItemDB.ConjuredItemIds.Contains(Item.Entry);
+    public bool IsMailable => IsTradable && !IsConjured;
+
+    public int LastChange => Count - LastCount;
+
+    public BagItem(int bag, int slot, int count, Item item, int flags = 1)
     {
-        public int Bag { get; private set; }
-        public int ItemId { get; private set; }
-        public int BagIndex { get; private set; }
-        public int Count { get; private set; }
-        public Item Item { get; private set; }
-        public string LastChangeDescription { get; private set; } = "New";
-        public int LastChange { get; private set; }
-        public bool IsSoulbound { get; private set; }
+        this.Bag = bag;
+        this.Slot = slot;
+        this.Count = count;
+        this.LastCount = count;
+        this.Item = item;
+        SetFlags(flags);
+    }
 
-        public void UpdateCount(int count)
-        {
-            if (Count == count)
-            {
-                return;
-            }
+    public void UpdateCount(int count)
+    {
+        LastCount = Count;
+        Count = count;
+        LastUpdated = DateTime.UtcNow;
+    }
 
-            LastUpdated = DateTime.UtcNow;
-            LastChange = count - Count;
-            LastChangeDescription = LastChange.ToString();
-            if (!LastChangeDescription.StartsWith("-")) { LastChangeDescription = $"+{LastChangeDescription}"; }
-            this.Count = count;
-        }
+    public void UpdateFlags(int flags)
+    {
+        SetFlags(flags);
+        LastUpdated = DateTime.UtcNow;
+    }
 
-        public static readonly int MaxLifeTime = 30;
-
-        public DateTime LastUpdated { get; set; }
-        public bool WasRecentlyUpdated => (DateTime.UtcNow - LastUpdated).TotalSeconds < MaxLifeTime;
-
-        public BagItem(int bag, int bagIndex, int itemId, int count, Item item, bool IsSoulbound)
-        {
-            this.Bag = bag;
-            this.BagIndex = bagIndex;
-            this.ItemId = itemId;
-            this.Count = count;
-            this.Item = item;
-            this.IsSoulbound = IsSoulbound;
-        }
+    private void SetFlags(int flags)
+    {
+        IsTradable = (flags & 1) != 0;
+        IsSoulbound = (flags & 2) != 0;
+        IsLocked = (flags & 4) != 0;
+        HasNoValue = (flags & 8) != 0;
     }
 }

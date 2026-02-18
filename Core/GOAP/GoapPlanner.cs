@@ -1,262 +1,174 @@
-﻿using Core.Goals;
-using Microsoft.Extensions.Logging;
+using Core.Goals;
+
+using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 
-namespace Core.GOAP
+namespace Core.GOAP;
+
+/**
+* Plans what actions can be completed in order to fulfill a goal state.
+*/
+
+public static class GoapPlanner
 {
+    public static readonly bool[] EmptyGoalState = Array.Empty<bool>();
+    public static readonly Stack<GoapGoal> EmptyGoal = new();
+
     /**
-	 * Plans what actions can be completed in order to fulfill a goal state.
-	 */
+    * Plan what sequence of actions can fulfill the goal.
+    * Returns null if a plan could not be found, or a list of the actions
+    * that must be performed, in order, to fulfill the goal.
+    */
 
-    public class GoapPlanner
+    public static Stack<GoapGoal> Plan(
+        GoapGoal[] available,
+        BitVector32 worldState,
+        bool[] goal)
     {
-        private ILogger logger;
+        Node root = new(null, 0, worldState, null);
 
-        public GoapPlanner(ILogger logger)
-        {
-            this.logger = logger;
-        }
+        // Use local collections instead of static fields to avoid thread-safety issues
+        HashSet<GoapGoal> usable = new();
+        PriorityQueue<Node, float> leaves = new();
 
-        public static void RefreshState(IEnumerable<GoapGoal> availableActions)
+        // check what actions can run using their checkProceduralPrecondition
+        for (int i = 0; i < available.Length; i++)
         {
-            foreach (GoapGoal a in availableActions)
+            GoapGoal a = available[i];
+            if (a.CanRun())
             {
-                a.SetState(InState(a.Preconditions, new HashSet<KeyValuePair<GoapKey, object>>()));
+                usable.Add(a);
             }
         }
 
-        /**
-		 * Plan what sequence of actions can fulfill the goal.
-		 * Returns null if a plan could not be found, or a list of the actions
-		 * that must be performed, in order, to fulfill the goal.
-		 */
-
-        public Queue<GoapGoal> Plan(IEnumerable<GoapGoal> availableActions,
-                                      HashSet<KeyValuePair<GoapKey, object>> worldState,
-                                      HashSet<KeyValuePair<GoapKey, GoapPreCondition>> goal)
+        // build up the tree and record the leaf nodes that provide a solution to the goal.
+        if (BuildGraph(root, leaves, usable, goal) == 0)
         {
-            Node start = new Node(null, 0, worldState, null);
+            return EmptyGoal;
+        }
 
-            // check what actions can run using their checkProceduralPrecondition
-            HashSet<GoapGoal> usableActions = new HashSet<GoapGoal>();
-            foreach (GoapGoal a in availableActions)
+        // get the cheapest leaf
+        if (leaves.TryDequeue(out Node? node, out _))
+        {
+            Stack<GoapGoal> result = new();
+            while (node != null)
             {
-                if (a.CheckIfActionCanRun())
+                if (node.action != null)
                 {
-                    usableActions.Add(a);
+                    result.Push(node.action);
+                }
+                node = node.parent;
+            }
+            return result;
+        }
+
+        return EmptyGoal;
+    }
+
+
+    /**
+	* Returns true if at least one solution was found.
+	* The possible paths are stored in the leaves list. Each leaf has a
+	* 'runningCost' value where the lowest cost will be the best action
+	* sequence.
+	*/
+
+    private static int BuildGraph(Node parent, PriorityQueue<Node, float> leaves, HashSet<GoapGoal> usable, bool[] goal)
+    {
+        // go through each action available at this node and see if we can use it here
+        foreach (GoapGoal action in usable)
+        {
+            // if the parent state has the conditions for this action's preconditions, we can use it here
+            if (InState(action.Preconditions, parent.state))
+            {
+                // apply the action's effects to the parent state
+                BitVector32 effectedState = PopulateState(parent.state, action.Effects);
+                Node node = new(parent, parent.runningCost + action.Cost, effectedState, action);
+
+                if (InState(goal, effectedState))
+                {
+                    // we found a solution!
+                    leaves.Enqueue(node, node.runningCost);
                 }
                 else
                 {
-                    a.SetState(InState(a.Preconditions, start.state));
+                    // not at a solution yet, so test all the remaining actions and branch out the tree
+                    HashSet<GoapGoal> subset = new(usable);
+                    subset.Remove(action);
+
+                    BuildGraph(node, leaves, subset, goal);
                 }
             }
-
-            // we now have all actions that can run, stored in usableActions
-
-            // build up the tree and record the leaf nodes that provide a solution to the goal.
-            List<Node> leaves = new List<Node>();
-
-            // build graph
-            bool success = BuildGraph(start, leaves, usableActions, goal);
-
-            if (!success)
-            {
-                // oh no, we didn't get a plan
-                logger.LogInformation("New Plan= NO PLAN");
-
-                return new Queue<GoapGoal>();
-            }
-
-            // get the cheapest leaf
-            Node? cheapest = null;
-            foreach (Node leaf in leaves)
-            {
-                if (cheapest == null)
-                {
-                    cheapest = leaf;
-                }
-                else
-                {
-                    if (leaf.runningCost < cheapest.runningCost)
-                        cheapest = leaf;
-                }
-            }
-
-            // get its node and work back through the parents
-            List<GoapGoal> result = new List<GoapGoal>();
-            Node? n = cheapest;
-            while (n != null)
-            {
-                if (n.action != null)
-                {
-                    result.Insert(0, n.action); // insert the action in the front
-                }
-                n = n.parent;
-            }
-            // we now have this action list in correct order
-
-            Queue<GoapGoal> queue = new Queue<GoapGoal>();
-            foreach (GoapGoal a in result)
-            {
-                queue.Enqueue(a);
-            }
-
-            // hooray we have a plan!
-            return queue;
         }
 
-        /**
-		 * Returns true if at least one solution was found.
-		 * The possible paths are stored in the leaves list. Each leaf has a
-		 * 'runningCost' value where the lowest cost will be the best action
-		 * sequence.
-		 */
+        return leaves.Count;
+    }
 
-        private bool BuildGraph(Node parent, List<Node> leaves, HashSet<GoapGoal> usableActions, HashSet<KeyValuePair<GoapKey, GoapPreCondition>> goal)
+    /**
+	* Check that all items in 'test' are in 'state'. If just one does not match or is not there
+	* then this returns false.
+	*/
+
+    private static bool InState(Dictionary<GoapKey, bool> test, BitVector32 state)
+    {
+        foreach ((GoapKey key, bool value) in test)
         {
-            bool foundOne = false;
-
-            // go through each action available at this node and see if we can use it here
-            foreach (GoapGoal action in usableActions)
+            if (state[1 << (int)key] != value)
             {
-                // if the parent state has the conditions for this action's preconditions, we can use it here
-                var result = InState(action.Preconditions, parent.state);
-                action.SetState(result);
-
-                if (!result.ContainsValue(false))
-                {
-                    // apply the action's effects to the parent state
-                    var currentState = PopulateState(parent.state, action.Effects);
-                    //Debug.Log(GoapAgent.prettyPrint(currentState));
-                    var node = new Node(parent, parent.runningCost + action.CostOfPerformingAction, currentState, action);
-
-                    result = InState(goal, currentState);
-                    if (!result.ContainsValue(false))
-                    {
-                        // we found a solution!
-                        leaves.Add(node);
-                        foundOne = true;
-                    }
-                    else
-                    {
-                        // not at a solution yet, so test all the remaining actions and branch out the tree
-                        HashSet<GoapGoal> subset = ActionSubset(usableActions, action);
-                        bool found = BuildGraph(node, leaves, subset, goal);
-                        if (found)
-                        {
-                            foundOne = true;
-                        }
-                    }
-                }
+                return false;
             }
-
-            return foundOne;
         }
 
-        /**
-		 * Create a subset of the actions excluding the removeMe one. Creates a new set.
-		 */
+        return true;
+    }
 
-        private static HashSet<GoapGoal> ActionSubset(HashSet<GoapGoal> actions, GoapGoal removeMe)
+    private static bool InState(bool[] test, BitVector32 state)
+    {
+        // Only check indices that are explicitly set (not default/false)
+        // This allows partial goal matching for chain planning
+        for (int i = 0; i < test.Length; i++)
         {
-            HashSet<GoapGoal> subset = new HashSet<GoapGoal>();
-            foreach (GoapGoal a in actions)
+            if (test[i] && !state[1 << i])
             {
-                if (!a.Equals(removeMe))
-                    subset.Add(a);
+                // Goal requires true but state is false
+                return false;
             }
-            return subset;
         }
+        return true;
+    }
 
-        /**
-		 * Check that all items in 'test' are in 'state'. If just one does not match or is not there
-		 * then this returns false.
-		 */
+    /**
+	* Apply the stateChange to the currentState
+	*/
 
-        private static Dictionary<string, bool> InState(HashSet<KeyValuePair<GoapKey, GoapPreCondition>> test, HashSet<KeyValuePair<GoapKey, object>> state)
+    private static BitVector32 PopulateState(BitVector32 state, Dictionary<GoapKey, bool> effects)
+    {
+        BitVector32 future = new(state);
+        foreach ((GoapKey key, bool value) in effects)
         {
-            var resultState = new Dictionary<string, bool>();
-            foreach (KeyValuePair<GoapKey, GoapPreCondition> t in test)
-            {
-                bool found = false;
-                foreach (KeyValuePair<GoapKey, object> s in state)
-                {
-                    found = s.Key == t.Key;
-                    if (found)
-                    {
-                        resultState.Add(t.Value.Description, s.Value.Equals(t.Value.State));
-                        break;
-                    }
-                }
-
-                if (!found)
-                {
-                    resultState.Add(t.Value.Description, false);
-                }
-            }
-            return resultState;
+            future[1 << (int)key] = value;
         }
+        return future;
+    }
 
-        /**
-		 * Apply the stateChange to the currentState
-		 */
+    /**
+	* Used for building up the graph and holding the running costs of actions.
+	*/
 
-        private static HashSet<KeyValuePair<GoapKey, object>> PopulateState(HashSet<KeyValuePair<GoapKey, object>> currentState, HashSet<KeyValuePair<GoapKey, object>> stateChange)
+    private sealed class Node
+    {
+        public readonly Node? parent;
+        public readonly float runningCost;
+        public readonly BitVector32 state;
+        public readonly GoapGoal? action;
+
+        public Node(Node? parent, float runningCost, BitVector32 state, GoapGoal? action)
         {
-            HashSet<KeyValuePair<GoapKey, object>> state = new HashSet<KeyValuePair<GoapKey, object>>();
-            // copy the KVPs over as new objects
-            foreach (KeyValuePair<GoapKey, object> s in currentState)
-            {
-                state.Add(new KeyValuePair<GoapKey, object>(s.Key, s.Value));
-            }
-
-            foreach (KeyValuePair<GoapKey, object> change in stateChange)
-            {
-                // if the key exists in the current state, update the Value
-                bool exists = false;
-
-                foreach (KeyValuePair<GoapKey, object> s in state)
-                {
-                    if (s.Equals(change))
-                    {
-                        exists = true;
-                        break;
-                    }
-                }
-
-                if (exists)
-                {
-                    state.RemoveWhere((KeyValuePair<GoapKey, object> kvp) => { return kvp.Key.Equals(change.Key); });
-                    KeyValuePair<GoapKey, object> updated = new KeyValuePair<GoapKey, object>(change.Key, change.Value);
-                    state.Add(updated);
-                }
-                // if it does not exist in the current state, add it
-                else
-                {
-                    state.Add(new KeyValuePair<GoapKey, object>(change.Key, change.Value));
-                }
-            }
-            return state;
-        }
-
-        /**
-		 * Used for building up the graph and holding the running costs of actions.
-		 */
-
-        private class Node
-        {
-            public Node? parent;
-            public float runningCost;
-            public HashSet<KeyValuePair<GoapKey, object>> state;
-            public GoapGoal? action;
-
-            public Node(Node? parent, float runningCost, HashSet<KeyValuePair<GoapKey, object>> state, GoapGoal? action)
-            {
-                this.parent = parent;
-                this.runningCost = runningCost;
-                this.state = state;
-                this.action = action;
-            }
+            this.parent = parent;
+            this.runningCost = runningCost;
+            this.state = state;
+            this.action = action;
         }
     }
 }

@@ -1,247 +1,388 @@
-﻿using Core.GOAP;
+using Core.BehaviorTree;
+using Core.CombatRotation;
+using Core.FeatureFlags;
+using Core.GOAP;
+
+using Game;
+
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
 using System;
-using System.Linq;
 using System.Numerics;
-using System.Threading.Tasks;
 
-namespace Core.Goals
+namespace Core.Goals;
+
+public sealed class CombatGoal : GoapGoal, IGoapEventListener
 {
-    public class CombatGoal : GoapGoal
+    public override float Cost => 4f;
+
+    private readonly ILogger<CombatGoal> logger;
+    private readonly ConfigurableInput input;
+    private readonly ClassConfiguration classConfig;
+    private readonly Wait wait;
+    private readonly PlayerReader playerReader;
+    private readonly AddonBits bits;
+    private readonly StopMoving stopMoving;
+    private readonly CastingHandler castingHandler;
+    private readonly IMountHandler mountHandler;
+    private readonly CombatLog combatLog;
+    private readonly IRotationOptimizer rotationOptimizer;
+    private readonly BehaviorTreeCombatEngine? behaviorTreeEngine;
+    private readonly FeatureFlagsOptions featureFlags;
+
+    private float lastDirection;
+    private float lastMinDistance;
+    private float lastMaxDistance;
+    private BehaviorContext? behaviorContext;
+
+    public CombatGoal(ILogger<CombatGoal> logger, ConfigurableInput input,
+        Wait wait, PlayerReader playerReader, StopMoving stopMoving, AddonBits bits,
+        ClassConfiguration classConfig,
+        CastingHandler castingHandler, CombatLog combatLog,
+        IMountHandler mountHandler,
+        IRotationOptimizer rotationOptimizer,
+        IOptions<FeatureFlagsOptions> featureFlagsOptions,
+        IBehaviorTreeCombatEngineFactory? behaviorTreeFactory = null)
+        : base(nameof(CombatGoal))
     {
-        public override float CostOfPerformingAction { get => 4f; }
+        this.logger = logger;
+        this.input = input;
 
-        private readonly ILogger logger;
-        private readonly ConfigurableInput input;
+        this.wait = wait;
+        this.playerReader = playerReader;
+        this.bits = bits;
+        this.combatLog = combatLog;
 
-        private readonly Wait wait;
-        private readonly AddonReader addonReader;
-        private readonly PlayerReader playerReader;
-        private readonly StopMoving stopMoving;
-        private readonly CastingHandler castingHandler;
-        private readonly MountHandler mountHandler;
+        this.stopMoving = stopMoving;
+        this.castingHandler = castingHandler;
+        this.mountHandler = mountHandler;
+        this.classConfig = classConfig;
+        this.rotationOptimizer = rotationOptimizer;
+        this.featureFlags = featureFlagsOptions.Value;
 
-        private readonly ClassConfiguration classConfiguration;
-
-        private float lastDirectionForTurnAround;
-
-        private float lastKnwonPlayerDirection;
-        private float lastKnownMinDistance;
-        private float lastKnownMaxDistance;
-
-        public CombatGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, StopMoving stopMoving, ClassConfiguration classConfiguration, CastingHandler castingHandler, MountHandler mountHandler)
+        // Initialize behavior tree if enabled and factory provided
+        if (behaviorTreeFactory != null && this.featureFlags.BehaviorTreeCombat?.Enabled == true)
         {
-            this.logger = logger;
-            this.input = input;
-
-            this.wait = wait;
-            this.addonReader = addonReader;
-            this.playerReader = addonReader.PlayerReader;
-            this.stopMoving = stopMoving;
-            
-            this.classConfiguration = classConfiguration;
-            this.castingHandler = castingHandler;
-            this.mountHandler = mountHandler;
-
-            AddPrecondition(GoapKey.incombat, true);
-            AddPrecondition(GoapKey.hastarget, true);
-            AddPrecondition(GoapKey.targetisalive, true);
-            AddPrecondition(GoapKey.incombatrange, true);
-
-            AddEffect(GoapKey.producedcorpse, true);
-            AddEffect(GoapKey.targetisalive, false);
-            AddEffect(GoapKey.hastarget, false);
-
-            classConfiguration.Combat.Sequence.Where(k => k != null).ToList().ForEach(key => Keys.Add(key));
+            this.behaviorTreeEngine = behaviorTreeFactory.CreateEngine();
+            this.behaviorTreeEngine.SetBehaviorTree(this.behaviorTreeEngine.BuildCombatTree(classConfig));
+            this.logger.LogInformation("[CombatGoal] Behavior tree combat system enabled");
         }
 
-        protected void Fight()
-        {
-            if (playerReader.Bits.HasPet && !playerReader.PetHasTarget)
-            {
-                input.TapPetAttack("");
-            }
+        AddPrecondition(GoapKey.incombat, true);
+        AddPrecondition(GoapKey.hastarget, true);
+        AddPrecondition(GoapKey.targetisalive, true);
+        AddPrecondition(GoapKey.targethostile, true);
+        //AddPrecondition(GoapKey.targettargetsus, true);
+        AddPrecondition(GoapKey.incombatrange, true);
 
-            foreach (var item in Keys)
+        AddEffect(GoapKey.producedcorpse, true);
+        AddEffect(GoapKey.targetisalive, false);
+        AddEffect(GoapKey.hastarget, false);
+
+        Keys = classConfig.Combat.Sequence;
+    }
+
+    public void OnGoapEvent(GoapEventArgs e)
+    {
+        if (e is GoapStateEvent s && s.Key == GoapKey.producedcorpse)
+        {
+            // have to check range
+            // ex. target died far away have to consider the range and approximate
+            float distance = (lastMaxDistance + lastMinDistance) / 2f;
+            SendGoapEvent(new CorpseEvent(GetCorpseLocation(distance), distance, playerReader.Direction, playerReader.MapPos));
+        }
+    }
+
+    private void ResetCooldowns()
+    {
+        ReadOnlySpan<KeyAction> span = Keys;
+        for (int i = 0; i < span.Length; i++)
+        {
+            KeyAction keyAction = span[i];
+            if (keyAction.ResetOnNewTarget)
             {
-                if (!playerReader.HasTarget)
+                keyAction.ResetCooldown();
+                keyAction.ResetCharges();
+            }
+        }
+    }
+
+    public override void OnEnter()
+    {
+        if (mountHandler.IsMounted())
+        {
+            mountHandler.Dismount();
+        }
+
+        lastDirection = playerReader.Direction;
+    }
+
+    public override void OnExit()
+    {
+        if (combatLog.DamageTakenCount() > 0 && !bits.Target())
+        {
+            stopMoving.Stop();
+        }
+    }
+
+    public override void Update()
+    {
+        wait.Update();
+
+        // Behavior Tree Combat System: if enabled, use behavior tree for decision making
+        if (featureFlags.BehaviorTreeCombat?.Enabled == true && behaviorTreeEngine != null)
+        {
+            UpdateBehaviorTree();
+            return;
+        }
+
+        if (MathF.Abs(lastDirection - playerReader.Direction) > MathF.PI / 2)
+        {
+            logger.LogInformation("Turning too fast!");
+            stopMoving.Stop();
+        }
+
+        lastDirection = playerReader.Direction;
+        lastMinDistance = playerReader.MinRange();
+        lastMaxDistance = playerReader.MaxRange();
+
+        if (bits.Drowning())
+        {
+            input.PressJump();
+            return;
+        }
+
+        if (classConfig.AutoPetAttack &&
+            bits.Pet() &&
+            (!playerReader.PetTarget() || playerReader.PetTargetGuid != playerReader.TargetGuid) &&
+            !input.PetAttack.OnCooldown())
+        {
+            input.PressPetAttack();
+        }
+
+        ReadOnlySpan<KeyAction> span = Keys;
+
+        // Combat Rotation Optimizer: if enabled, score and sort abilities
+        if (rotationOptimizer.IsEnabled && span.Length > 0 && span.Length <= 32)
+        {
+            GameStateSnapshot state = new(
+                HealthPercent: playerReader.HealthPercent(),
+                ResourcePercent: playerReader.PTPercentage(),
+                ResourceCurrent: playerReader.PTCurrent(),
+                ResourceMax: playerReader.PTMax(),
+                ComboPoints: playerReader.ComboPoints(),
+                TargetHealthPercent: playerReader.TargetHealthPercent(),
+                GcdRemainingMs: playerReader.GCD.Value,
+                NetworkLatencyMs: playerReader.NetworkLatency,
+                SpellQueueMs: playerReader.SpellQueueTimeMs,
+                MainHandSwingElapsedMs: playerReader.MainHandSwing.ElapsedMs(),
+                MainHandSpeedMs: playerReader.MainHandSpeedMs(),
+                MobCount: GetMobCount(),
+                InCombat: bits.Combat(),
+                TargetAlive: bits.Target_Alive(),
+                IsTargetCasting: playerReader.IsTargetCasting(),
+                TickTimestamp: Environment.TickCount64);
+
+            Span<int> sortedIndices = stackalloc int[span.Length];
+            Span<float> sortedScores = stackalloc float[span.Length];
+            int count = rotationOptimizer.Optimize(span, in state, sortedIndices, sortedScores);
+
+            for (int i = 0; bits.Target_Alive() && i < count; i++)
+            {
+                KeyAction keyAction = span[sortedIndices[i]];
+                float score = sortedScores[i];
+
+                if (castingHandler.SpellInQueue() && !keyAction.BaseAction)
+                    continue;
+
+                bool interrupt() => bits.Target_Alive() && keyAction.CanBeInterrupted();
+
+                if (castingHandler.CastIfReady(keyAction, interrupt))
                 {
-                    logger.LogInformation($"{nameof(CombatGoal)}: Lost Target!");
-                    stopMoving.Stop();
-                    return;
+                    rotationOptimizer.RecordCastResult(keyAction, score, true);
+                    break;
                 }
                 else
                 {
-                    lastKnwonPlayerDirection = playerReader.Direction;
-                    lastKnownMinDistance = playerReader.MinRange;
-                    lastKnownMaxDistance = playerReader.MaxRange;
+                    rotationOptimizer.RecordCastResult(keyAction, score, false);
+                }
+            }
+        }
+        else
+        {
+            // Original static priority path (zero overhead when optimizer disabled)
+            for (int i = 0; bits.Target_Alive() && i < span.Length; i++)
+            {
+                KeyAction keyAction = span[i];
+
+                if (castingHandler.SpellInQueue() && !keyAction.BaseAction)
+                {
+                    continue;
                 }
 
-                if (castingHandler.CastIfReady(item, item.DelayBeforeCast))
-                {
-                    if (item.Name == classConfiguration.Approach.Name ||
-                        item.Name == classConfiguration.AutoAttack.Name)
-                    {
-                        castingHandler.ReactToLastUIErrorMessage($"{nameof(CombatGoal)}: Fight {item.Name}");
-                    }
+                bool interrupt() => bits.Target_Alive() && keyAction.CanBeInterrupted();
 
+                if (castingHandler.CastIfReady(keyAction, interrupt))
+                {
                     break;
                 }
             }
         }
 
-        public override void OnActionEvent(object sender, ActionEventArgs e)
+        if (bits.SoftInteract_Enabled())
         {
-            if (e.Key == GoapKey.newtarget)
-            {
-                logger.LogInformation($"{nameof(CombatGoal)}: Reset cooldowns");
-
-                ResetCooldowns();
-            }
-
-            if (e.Key == GoapKey.producedcorpse && (bool)e.Value)
-            {
-                // have to check range
-                // ex. target died far away have to consider the range and approximate
-                //logger.LogInformation($"{nameof(CombatGoal)}: --- Target is killed! Record death location.");
-                float distance = (lastKnownMaxDistance + lastKnownMinDistance) / 2f;
-                SendActionEvent(new ActionEventArgs(GoapKey.corpselocation, new CorpseLocation(GetCorpseLocation(distance), distance)));
-            }
+            DealWithSoftInteract();
         }
 
-        private void ResetCooldowns()
+        if (!bits.Target() || (bits.Target() && bits.Target_Dead()))
         {
-            this.classConfiguration.Combat.Sequence
-            .Where(i => i.ResetOnNewTarget)
-            .ToList()
-            .ForEach(item =>
+            logger.LogInformation("Lost target!");
+
+            if (combatLog.DamageTakenCount() > 0)
             {
-                logger.LogInformation($"Reset cooldown on {item.Name}");
-                item.ResetCooldown();
-                item.ResetCharges();
-            });
-        }
+                if (bits.Target() && bits.Target_Dead())
+                {
+                    logger.LogInformation("Clear current dead target!");
+                    input.ForceAggressiveClearTarget(wait, bits);
+                }
 
-        protected bool HasPickedUpAnAdd
-        {
-            get
-            {
-                return this.playerReader.Bits.PlayerInCombat &&
-                    !this.playerReader.Bits.TargetOfTargetIsPlayer
-                    && this.playerReader.TargetHealthPercentage == 100;
-            }
-        }
-
-        public override ValueTask OnEnter()
-        {
-            if (mountHandler.IsMounted())
-            {
-                mountHandler.Dismount();
-            }
-
-            lastDirectionForTurnAround = playerReader.Direction;
-
-            SendActionEvent(new ActionEventArgs(GoapKey.fighting, true));
-
-            return ValueTask.CompletedTask;
-        }
-
-        public override ValueTask OnExit()
-        {
-            if (addonReader.CombatCreatureCount > 0 && !playerReader.HasTarget)
-            {
-                stopMoving.Stop();
-            }
-
-            return ValueTask.CompletedTask;
-        }
-
-        public override ValueTask PerformAction()
-        {
-            if (MathF.Abs(lastDirectionForTurnAround - playerReader.Direction) > MathF.PI / 2)
-            {
-                logger.LogInformation($"{nameof(CombatGoal)}: Turning too fast!");
+                logger.LogWarning("Search Possible Threats!");
                 stopMoving.Stop();
 
-                lastDirectionForTurnAround = playerReader.Direction;
+                FindPossibleThreats();
             }
-
-            if (playerReader.Bits.IsDrowning)
+            else
             {
-                StopDrowning();
-                return ValueTask.CompletedTask;
+                input.ForceAggressiveClearTarget(wait, bits);
             }
+        }
+    }
 
-            if (playerReader.HasTarget)
-            {
-                Fight();
-            }
+    /// <summary>
+    /// Gets the current number of mobs in combat with the player.
+    /// Uses CombatLog.DamageTaken as a proxy for engaged enemies.
+    /// </summary>
+    private int GetMobCount()
+    {
+        // Count unique mobs that have damaged us (best available proxy)
+        int mobCount = combatLog.DamageTakenCount();
 
-            if (!playerReader.HasTarget && addonReader.CombatCreatureCount > 0)
-            {
-                CreatureTargetMeOrMyPet();
-            }
-
-            wait.Update(1);
-            return ValueTask.CompletedTask;
+        // If we have a target but no damage taken yet, count it
+        if (mobCount == 0 && bits.Target_Alive())
+        {
+            mobCount = 1;
         }
 
-        private void CreatureTargetMeOrMyPet()
-        {
-            wait.Update(1);
-            if (playerReader.PetHasTarget && addonReader.CreatureHistory.CombatDeadGuid.Value != playerReader.PetTargetGuid)
-            {
-                logger.LogWarning("---- My pet has a target!");
-                ResetCooldowns();
+        return mobCount;
+    }
 
-                input.TapTargetPet();
-                input.TapTargetOfTarget();
-                wait.Update(1);
+    private void FindPossibleThreats()
+    {
+        if (bits.Pet_Defensive())
+        {
+            float elapsedPetFoundTarget = wait.Until(CastingHandler.GCD,
+                () => playerReader.PetTarget() && bits.PetTarget_Alive());
+
+            if (elapsedPetFoundTarget < 0)
+            {
+                logger.LogWarning("Pet not found target!");
+                input.ForceAggressiveClearTarget(wait, bits);
                 return;
             }
 
-            if (addonReader.CombatCreatureCount > 1)
+            ResetCooldowns();
+
+            input.PressTargetPet();
+            input.PressTargetOfTarget();
+            wait.Update();
+
+            logger.LogWarning($"Found new target by pet. {elapsedPetFoundTarget}ms");
+
+            return;
+        }
+
+        logger.LogInformation("Checking target in front...");
+        input.PressNearestTarget();
+        wait.Update();
+
+        if (bits.Target() && !bits.Target_Dead() && bits.Target_Hostile())
+        {
+            if (bits.Target_Combat() && bits.TargetTarget_PlayerOrPet())
             {
-                input.TapNearestTarget($"{nameof(CombatGoal)}: Checking target in front of me");
-                wait.Update(1);
-                if (playerReader.HasTarget)
-                {
-                    if (playerReader.Bits.TargetInCombat && playerReader.Bits.TargetOfTargetIsPlayer)
-                    {
-                        ResetCooldowns();
+                ResetCooldowns();
 
-                        logger.LogWarning("---- Somebody is attacking me!");
-                        input.TapInteractKey("Found new target to attack");
-                        stopMoving.Stop();
-                        wait.Update(1);
-                        return;
-                    }
-
-                    input.TapClearTarget();
-                    wait.Update(1);
-                }
-                else
-                {
-                    // threat must be behind me
-                    var anyDamageTakens = addonReader.CreatureHistory.DamageTaken.Where(x => (DateTime.UtcNow - x.LastEvent).TotalSeconds < 10 && x.HealthPercent > 0);
-                    if (anyDamageTakens.Any())
-                    {
-                        logger.LogWarning($"---- Possible threats found behind {anyDamageTakens.Count()}. Waiting for my target to change!");
-                        wait.Till(2000, () => playerReader.HasTarget);
-                    }
-                }
+                logger.LogWarning("Found new target!");
+                wait.Update();
+                return;
             }
+
+            logger.LogWarning("Dont pull non-hostile target!");
+            input.ForceAggressiveClearTarget(wait, bits);
         }
 
-        private void StopDrowning()
+        logger.LogWarning($"Waiting for target to exists or lose combat. Possible threats {combatLog.DamageTakenCount()}!");
+        wait.Till(CastingHandler.GCD * 2,
+            () => bits.Target_Alive() || !bits.Combat());
+    }
+
+    private Vector3 GetCorpseLocation(float distance)
+    {
+        return PointEstimator.GetMapPos(playerReader.WorldMapArea, playerReader.WorldPos, playerReader.Direction, distance);
+    }
+
+    private void DealWithSoftInteract()
+    {
+        if (!playerReader.IsInMeleeRange() ||
+            playerReader.IsCasting() ||
+            !InvalidSoftInteractExists() ||
+            playerReader.TargetGuid == playerReader.SoftInteract_Guid)
         {
-            input.TapJump("Drowning! Swim up");
-            wait.Update(1);
+            return;
         }
 
-        private Vector3 GetCorpseLocation(float distance)
+        // Feature disabled: Soft-interact targeting logic was intentionally removed
+        // pending redesign. Reserved for future soft-target implementation.
+    }
+
+    private bool InvalidSoftInteractExists()
+    {
+        return
+        bits.SoftInteract() &&
+        (
+            playerReader.SoftInteract_Type != GuidType.Creature ||
+            bits.SoftInteract_Dead() ||
+            bits.SoftInteract_Tagged()
+        );
+    }
+
+    /// <summary>
+    /// Updates using behavior tree combat system.
+    /// </summary>
+    private void UpdateBehaviorTree()
+    {
+        // Initialize behavior context if needed
+        if (behaviorContext == null)
         {
-            return PointEsimator.GetPoint(playerReader.PlayerLocation, playerReader.Direction, distance);
+            behaviorContext = new BehaviorContext
+            {
+                Player = playerReader,
+                Casting = castingHandler,
+                StopMoving = stopMoving,
+                Input = input,
+                Logger = logger,
+                CombatSequence = classConfig.Combat.Sequence ?? Array.Empty<KeyAction>(),
+                ElapsedMs = 0
+            };
+        }
+
+        // Execute behavior tree tick
+        NodeStatus status = behaviorTreeEngine!.Tick(behaviorContext);
+
+        if (status == NodeStatus.Failure)
+        {
+            logger.LogWarning("[CombatGoal] Behavior tree returned Failure, falling back to GOAP");
+            // Could trigger fallback to GOAP here
         }
     }
 }

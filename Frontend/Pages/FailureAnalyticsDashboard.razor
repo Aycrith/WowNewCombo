@@ -1,0 +1,403 @@
+@page "/analytics"
+
+@using System
+@using System.Linq
+@using System.Threading
+@using Core.Analytics
+@using Core.FeatureFlags
+@using Core.Hazard
+
+@inject FailureAnalytics failureAnalytics
+@inject HazardZoneStore hazardStore
+@inject FeatureFlagService featureFlags
+@inject PlayerReader PlayerReader
+@inject IJSRuntime JSRuntime
+
+@implements IDisposable
+
+<PageTitle>Failure Analytics</PageTitle>
+
+<h3>Failure Analytics Dashboard</h3>
+
+<div class="alert alert-secondary small">
+    Track bot failures, visualize hot zones, and manage hazard areas for improved pathfinding.
+</div>
+
+<div class="row">
+    <!-- Summary Statistics Card -->
+    <div class="col-md-4 mb-3">
+        <Card>
+            <CardHeader>Session Statistics</CardHeader>
+            <CardBody>
+                @if (statistics != null)
+                {
+                    <div class="text-center mb-3">
+                        <div class="display-4 @GetFailureCountClass(statistics.TotalFailures)">
+                            @statistics.TotalFailures
+                        </div>
+                        <div class="text-muted">Total Failures</div>
+                    </div>
+
+                    <hr />
+
+                    <h6>Failures by Type</h6>
+                    <div class="small">
+                        @foreach (var kvp in statistics.EventsByType.OrderByDescending(x => x.Value))
+                        {
+                            <div class="d-flex justify-content-between">
+                                <span>@kvp.Key</span>
+                                <span class="@GetFailureCountClass(kvp.Value)">@kvp.Value</span>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center text-muted">Loading...</div>
+                }
+            </CardBody>
+        </Card>
+    </div>
+
+    <!-- Hot Zones Card -->
+    <div class="col-md-8 mb-3">
+        <Card>
+            <CardHeader>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>Hot Zones</span>
+                    @if (statistics?.HotZones.Any() == true)
+                    {
+                        <span class="badge bg-danger">@statistics.HotZones.Count zones</span>
+                    }
+                </div>
+            </CardHeader>
+            <CardBody>
+                @if (statistics?.HotZones.Any() == true)
+                {
+                    <div class="small" style="max-height: 250px; overflow-y: auto;">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Location</th>
+                                    <th>Count</th>
+                                    <th>Type</th>
+                                    <th>Last</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var zone in statistics.HotZones.Take(10))
+                                {
+                                    <tr>
+                                        <td>
+                                            <small class="text-muted">
+                                                [@zone.Center.X.ToString("F0"), @zone.Center.Y.ToString("F0")]
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <span class="badge @GetHotZoneBadgeClass(zone.FailureCount)">
+                                                @zone.FailureCount
+                                            </span>
+                                        </td>
+                                        <td>@zone.PrimaryType</td>
+                                        <td>@FormatTimeAgo(zone.LastFailure)</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-success" 
+                                                    @onclick="() => RehabilitateZone(zone)"
+                                                    title="Mark as rehabilitated - reduce hazard severity">
+                                                <i class="bi bi-check-circle"></i> Rehabilitate
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    @if (statistics.HotZones.Count > 10)
+                    {
+                        <div class="text-center text-muted small mt-2">
+                            Showing top 10 of @statistics.HotZones.Count hot zones
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="text-center text-muted">
+                        <i class="bi bi-check-circle text-success" style="font-size: 2rem;"></i>
+                        <p class="mt-2">No hot zones detected yet.</p>
+                        <p class="small">Hot zones appear when multiple failures occur in the same area.</p>
+                    </div>
+                }
+            </CardBody>
+        </Card>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Failures Card -->
+    <div class="col-md-6 mb-3">
+        <Card>
+            <CardHeader>Recent Failures</CardHeader>
+            <CardBody>
+                @if (statistics?.RecentEvents.Any() == true)
+                {
+                    <div class="small" style="max-height: 300px; overflow-y: auto;">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Type</th>
+                                    <th>Reason</th>
+                                    <th>Zone</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var evt in statistics.RecentEvents)
+                                {
+                                    <tr>
+                                        <td>@evt.Timestamp.ToString("HH:mm:ss")</td>
+                                        <td>
+                                            <span class="badge @GetFailureTypeBadgeClass(evt.Type)">
+                                                @evt.Type
+                                            </span>
+                                        </td>
+                                        <td>@evt.Reason</td>
+                                        <td><small class="text-muted">@evt.Zone</small></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center text-muted">No recent failures</div>
+                }
+            </CardBody>
+        </Card>
+    </div>
+
+    <!-- Current Zone Status Card -->
+    <div class="col-md-6 mb-3">
+        <Card>
+            <CardHeader>Current Zone Status</CardHeader>
+            <CardBody>
+                <dl class="row mb-0 small">
+                    <dt class="col-sm-5">Current Zone</dt>
+                    <dd class="col-sm-7">@PlayerReader.WorldMapArea.AreaName</dd>
+
+                    <dt class="col-sm-5">Position</dt>
+                    <dd class="col-sm-7">
+                        <small class="text-muted">
+                            [@PlayerReader.WorldPos.X.ToString("F1"), @PlayerReader.WorldPos.Y.ToString("F1")]
+                        </small>
+                    </dd>
+
+                    <dt class="col-sm-5">Map ID</dt>
+                    <dd class="col-sm-7">@PlayerReader.MapId</dd>
+
+                    <dt class="col-sm-5">Hazard Zones</dt>
+                    <dd class="col-sm-7">
+                        @if (featureFlags.IsHazardAvoidanceEnabled)
+                        {
+                            <span class="text-success">@hazardClusters.Length clusters active</span>
+                        }
+                        else
+                        {
+                            <span class="text-warning">Hazard avoidance disabled</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-5">Analytics</dt>
+                    <dd class="col-sm-7">
+                        @if (featureFlags.Current.FailureAnalytics.Enabled)
+                        {
+                            <span class="text-success">Enabled</span>
+                        }
+                        else
+                        {
+                            <span class="text-warning">Disabled</span>
+                        }
+                    </dd>
+                </dl>
+
+                @if (hazardClusters.Length > 0)
+                {
+                    <hr />
+                    <h6 class="small">Nearby Hazard Clusters</h6>
+                    <div class="small" style="max-height: 150px; overflow-y: auto;">
+                        @foreach (var cluster in hazardClusters.Take(5))
+                        {
+                            <div class="d-flex justify-content-between mb-1">
+                                <small class="text-muted">
+                                    [@cluster.Centroid.X.ToString("F0"), @cluster.Centroid.Y.ToString("F0")]
+                                </small>
+                                <span class="badge @GetSeverityBadgeClass(cluster.SeverityScore)">
+                                    Severity: @cluster.SeverityScore.ToString("F1")
+                                </span>
+                            </div>
+                        }
+                    </div>
+                }
+            </CardBody>
+        </Card>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Actions Card -->
+    <div class="col-12 mb-3">
+        <Card>
+            <CardHeader>Actions</CardHeader>
+            <CardBody>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button class="btn btn-outline-primary" @onclick="RefreshData">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh Data
+                    </button>
+                    <button class="btn btn-outline-success" @onclick="RehabilitateCurrentZone">
+                        <i class="bi bi-check-circle"></i> Rehabilitate Current Zone
+                    </button>
+                    <button class="btn btn-outline-danger" @onclick="ClearSessionData">
+                        <i class="bi bi-trash"></i> Clear Session Data
+                    </button>
+                </div>
+            </CardBody>
+        </Card>
+    </div>
+</div>
+
+<div class="mt-3">
+    <a class="btn btn-sm btn-outline-secondary" href="/">Back to Bot</a>
+    <a class="btn btn-sm btn-outline-secondary" href="/Leaflet">View Map</a>
+</div>
+
+@code {
+    private FailureStatistics? statistics;
+    private HazardCluster[] hazardClusters = [];
+    private Timer? refreshTimer;
+
+    protected override void OnInitialized()
+    {
+        RefreshData();
+
+        // Auto-refresh every 3 seconds
+        refreshTimer = new Timer(_ =>
+        {
+            InvokeAsync(() =>
+            {
+                RefreshData();
+                StateHasChanged();
+            });
+        }, null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));
+    }
+
+    private void RefreshData()
+    {
+        try
+        {
+            statistics = failureAnalytics.GetSessionStatistics();
+            hazardClusters = [.. hazardStore.GetClustersSnapshot(PlayerReader.MapId)];
+        }
+        catch (Exception)
+        {
+            // Silent fail - will retry on next tick
+        }
+    }
+
+    private async Task RehabilitateZone(FailureHotZone zone)
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("alert", 
+                $"Zone at [{zone.Center.X:F0}, {zone.Center.Y:F0}] has been marked for rehabilitation.");
+            RefreshData();
+        }
+        catch
+        {
+            // JS may not be available
+        }
+    }
+
+    private async Task RehabilitateCurrentZone()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("alert", 
+                "Current zone has been marked for rehabilitation.");
+        }
+        catch
+        {
+            // JS may not be available
+        }
+    }
+
+    private void ClearSessionData()
+    {
+        // Note: Actual implementation would require a method on FailureAnalytics
+        // For now, just refresh to show current state
+        RefreshData();
+    }
+
+    private static string GetFailureCountClass(int count)
+    {
+        return count switch
+        {
+            0 => "text-success",
+            <= 5 => "text-warning",
+            _ => "text-danger"
+        };
+    }
+
+    private static string GetHotZoneBadgeClass(int count)
+    {
+        return count switch
+        {
+            <= 2 => "bg-warning",
+            <= 5 => "bg-danger",
+            _ => "bg-dark"
+        };
+    }
+
+    private static string GetFailureTypeBadgeClass(FailureType type)
+    {
+        return type switch
+        {
+            FailureType.Stuck => "bg-warning",
+            FailureType.Death => "bg-danger",
+            FailureType.NoPlan => "bg-info",
+            FailureType.MultiMobRetreat => "bg-secondary",
+            FailureType.FailedPull => "bg-primary",
+            _ => "bg-secondary"
+        };
+    }
+
+    private static string GetSeverityBadgeClass(float severity)
+    {
+        return severity switch
+        {
+            <= 3 => "bg-success",
+            <= 6 => "bg-warning",
+            _ => "bg-danger"
+        };
+    }
+
+    private static string FormatTimeAgo(DateTime timestamp)
+    {
+        TimeSpan elapsed = DateTime.UtcNow - timestamp;
+        
+        if (elapsed.TotalMinutes < 1)
+            return "Just now";
+        if (elapsed.TotalHours < 1)
+            return $"{(int)elapsed.TotalMinutes}m ago";
+        if (elapsed.TotalHours < 24)
+            return $"{(int)elapsed.TotalHours}h ago";
+        
+        return $"{(int)elapsed.TotalDays}d ago";
+    }
+
+    public void Dispose()
+    {
+        refreshTimer?.Dispose();
+    }
+}

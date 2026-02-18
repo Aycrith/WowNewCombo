@@ -1,0 +1,310 @@
+{
+  "ClassName": "Priest",
+  "Log": false,
+  "Loot": true,
+  "Skin": false,
+  "GatherCorpse": true,
+  "UseMount": true,
+  "AllowPvP": false,
+  "KeyboardOnly": true,
+  "NPCMaxLevels_Above": 2,
+  "NPCMaxLevels_Below": 8,
+  "PathThereAndBack": true,
+  "PathReduceSteps": true,
+  "Mount": { "Key": "N0" },
+  "IntVariables": {
+    "MIN_HP_EMERGENCY%": 25,
+    "MIN_HP_URGENT%": 50,
+    "MIN_HP_NORMAL%": 70,
+    "MIN_MANA_EMERGENCY%": 20,
+    "MIN_MANA_CONSERVE%": 40,
+    "HOT_REFRESH_MS": 3000,
+    "FLEE_HP%": 15,
+    "FLEE_MOB_COUNT": 3,
+    "FOOD_HP%": 50,
+    "DRINK_MANA%": 30,
+    "SHIELD_THRESHOLD%": 80,
+    "RENEW_THRESHOLD%": 60
+  },
+  "Paths": [
+    {
+      "PathFilename": "_pack\\1-20\\Human\\01-04_Elwynn Forest_Northshire Valley (kobold-wolves-defias).json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Dwarf.Gnome\\1-4_Dun Morogh.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Dwarf || Race:Gnome"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Night elf\\01-04_Teldrassil_Shadowglen.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:NightElf"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Undead\\01-05_Tirisfal Glades_Deathknell.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Undead"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Blood elf\\01-06_Eversong Woods_Sunstrider Isle.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 6", "Race:BloodElf"]
+    },
+    {
+      "PathFilename": "_pack\\20-30\\Duskwood\\20-27 Raven Hill Cemetery.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 20", "Level < 25"]
+    },
+    {
+      "PathFilename": "_pack\\30-40\\Desolace\\30-35.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 30", "Level < 35"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Eastern Plaguelands\\57-60 Browman Mill - Noxious Glade.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 57", "Level <= 60"]
+    }
+  ],
+  "Wait": {
+    "Sequence": [
+      {
+        "Name": "User",
+        "Cost": 0.9,
+        "Requirement": "MenuOpen || ChatInputVisible"
+      }
+    ]
+  },
+  "Pull": {
+    "Sequence": [
+      {
+        "Name": "Power Word: Fortitude",
+        "Key": "3",
+        "Weight": 2.0,
+        "ScoreConditions": [
+          { "Condition": "!Power Word: Fortitude", "Bonus": 4.0 }
+        ],
+        "Requirement": "!Power Word: Fortitude && Level >= 2"
+      },
+      {
+        "Name": "Power Word: Shield",
+        "Key": "4",
+        "Weight": 2.5,
+        "ScoreConditions": [
+          { "Condition": "!Power Word: Shield", "Bonus": 5.0 },
+          { "Condition": "Health% < SHIELD_THRESHOLD%", "Bonus": 2.0 }
+        ],
+        "Requirement": "!Power Word: Shield && Level >= 6"
+      },
+      {
+        "Name": "Smite",
+        "Key": "1",
+        "HasCastBar": true,
+        "Weight": 1.5,
+        "ScoreConditions": [
+          { "Condition": "Mana% > MIN_MANA_CONSERVE%", "Bonus": 0.5 }
+        ],
+        "Requirements": ["Mana% > MIN_MANA_EMERGENCY%", "SpellInRange:3"]
+      },
+      {
+        "Name": "Shoot",
+        "Key": "0",
+        "Item": true,
+        "Requirements": ["HasRangedWeapon", "!Shooting"]
+      },
+      {
+        "Name": "Approach"
+      }
+    ]
+  },
+  "Combat": {
+    "Sequence": [
+      {
+        "Name": "Psychic Scream",
+        "Key": "F1",
+        "WhenUsable": true,
+        "Weight": 4.0,
+        "ScoreConditions": [
+          { "Condition": "MobCount > 2", "Bonus": 5.0 },
+          { "Condition": "Health% < 40", "Bonus": 3.0 }
+        ],
+        "Requirements": ["MobCount > 1 || Health% < 50", "Level >= 14"]
+      },
+      {
+        "Name": "Desperate Prayer",
+        "Key": "F2",
+        "WhenUsable": true,
+        "Weight": 5.0,
+        "ScoreConditions": [
+          { "Condition": "Health% < MIN_HP_EMERGENCY%", "Bonus": 10.0 }
+        ],
+        "Requirement": "Health% < MIN_HP_EMERGENCY% && Level >= 20"
+      },
+      {
+        "Name": "Power Word: Shield",
+        "Key": "4",
+        "Weight": 3.0,
+        "ScoreConditions": [
+          { "Condition": "!Power Word: Shield", "Bonus": 4.0 },
+          { "Condition": "Health% < 50", "Bonus": 2.0 }
+        ],
+        "Requirement": "!Power Word: Shield && Level >= 6"
+      },
+      {
+        "Name": "Renew",
+        "Key": "5",
+        "Weight": 2.5,
+        "ScoreConditions": [
+          { "Condition": "!Renew", "Bonus": 5.0 },
+          { "Condition": "Renew RemainingMs < HOT_REFRESH_MS", "Bonus": 6.0 },
+          { "Condition": "Health% < RENEW_THRESHOLD%", "Bonus": 2.0 }
+        ],
+        "Requirements": ["!Renew || Renew RemainingMs < HOT_REFRESH_MS", "Level >= 8"]
+      },
+      {
+        "Name": "Flash Heal",
+        "Key": "6",
+        "HasCastBar": true,
+        "Weight": 3.5,
+        "ScoreConditions": [
+          { "Condition": "Health% < MIN_HP_EMERGENCY%", "Bonus": 8.0 },
+          { "Condition": "Health% < MIN_HP_URGENT%", "Bonus": 4.0 }
+        ],
+        "Requirements": ["Health% < MIN_HP_URGENT%", "Mana% > MIN_MANA_EMERGENCY%", "Level >= 20"]
+      },
+      {
+        "Name": "Greater Heal",
+        "Key": "7",
+        "HasCastBar": true,
+        "Weight": 3.0,
+        "ScoreConditions": [
+          { "Condition": "Health% < MIN_HP_URGENT%", "Bonus": 3.0 },
+          { "Condition": "Mana% > MIN_MANA_CONSERVE%", "Bonus": 1.0 }
+        ],
+        "Requirements": ["Health% < MIN_HP_URGENT%", "Mana% > MIN_MANA_EMERGENCY%", "Level >= 40"]
+      },
+      {
+        "Name": "Heal",
+        "Key": "2",
+        "HasCastBar": true,
+        "Weight": 2.5,
+        "ScoreConditions": [
+          { "Condition": "Health% < MIN_HP_NORMAL%", "Bonus": 2.0 },
+          { "Condition": "Mana% > MIN_MANA_CONSERVE%", "Bonus": 0.5 }
+        ],
+        "Requirements": ["Health% < MIN_HP_NORMAL%", "Mana% > MIN_MANA_EMERGENCY%", "Level >= 16"]
+      },
+      {
+        "Name": "Lesser Heal",
+        "Key": "2",
+        "HasCastBar": true,
+        "Weight": 2.0,
+        "ScoreConditions": [
+          { "Condition": "Health% < MIN_HP_NORMAL%", "Bonus": 1.5 }
+        ],
+        "Requirements": ["Health% < MIN_HP_NORMAL%", "Level < 16"]
+      },
+      {
+        "Name": "Mana Potion",
+        "Key": "N5",
+        "Weight": 4.0,
+        "ScoreConditions": [
+          { "Condition": "Mana% < MIN_MANA_EMERGENCY%", "Bonus": 5.0 }
+        ],
+        "Requirement": "Mana% < MIN_MANA_EMERGENCY%"
+      },
+      {
+        "Name": "HP Potion",
+        "Key": "N6",
+        "Weight": 4.5,
+        "ScoreConditions": [
+          { "Condition": "Health% < MIN_HP_EMERGENCY%", "Bonus": 5.0 }
+        ],
+        "Requirement": "Health% < MIN_HP_EMERGENCY%"
+      },
+      {
+        "Name": "Smite",
+        "Key": "1",
+        "HasCastBar": true,
+        "Weight": 1.5,
+        "ScoreConditions": [
+          { "Condition": "Mana% > MIN_MANA_CONSERVE%", "Bonus": 0.5 }
+        ],
+        "Requirements": ["Mana% > MIN_MANA_EMERGENCY%", "SpellInRange:3"]
+      },
+      {
+        "Name": "AutoAttack",
+        "Requirement": "!HasRangedWeapon && Mana% < MIN_MANA_EMERGENCY%"
+      },
+      {
+        "Name": "Approach"
+      }
+    ]
+  },
+  "Flee": {
+    "Sequence": [
+      {
+        "Name": "Psychic Scream",
+        "Key": "F1",
+        "Weight": 5.0,
+        "ScoreConditions": [
+          { "Condition": "MobCount > 1", "Bonus": 5.0 }
+        ],
+        "WhenUsable": true,
+        "Requirement": "MobCount > 1 && Level >= 14"
+      },
+      {
+        "Name": "Flee",
+        "Requirement": "(MobCount >= FLEE_MOB_COUNT && Health% < FLEE_HP%) || TargetElite"
+      }
+    ]
+  },
+  "Adhoc": {
+    "Sequence": [
+      {
+        "Name": "Power Word: Fortitude",
+        "Key": "3",
+        "Weight": 2.0,
+        "ScoreConditions": [
+          { "Condition": "!Power Word: Fortitude", "Bonus": 3.0 }
+        ],
+        "InCombat": "i dont care",
+        "Requirement": "!Power Word: Fortitude && Level >= 2"
+      },
+      {
+        "Name": "Inner Fire",
+        "Key": "8",
+        "Weight": 2.0,
+        "ScoreConditions": [
+          { "Condition": "!Inner Fire", "Bonus": 3.0 }
+        ],
+        "InCombat": "i dont care",
+        "Requirement": "!Inner Fire && Level >= 12"
+      },
+      {
+        "Name": "Drink",
+        "Key": "N2",
+        "Weight": 3.0,
+        "ScoreConditions": [
+          { "Condition": "Mana% < DRINK_MANA%", "Bonus": 4.0 }
+        ],
+        "Requirement": "Mana% < DRINK_MANA%"
+      },
+      {
+        "Name": "Food",
+        "Key": "N1",
+        "Requirement": "Health% < FOOD_HP%"
+      }
+    ]
+  }
+}

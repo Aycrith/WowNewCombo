@@ -1,176 +1,308 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+using SharedLib;
+
+using SixLabors.ImageSharp;
+
 using System;
-using System.Collections.Concurrent;
-using System.Drawing;
+using System.Collections;
+using System.Threading;
+
 using WinAPI;
 
-namespace Game
+using SharedLib.Humanization;
+using SharedLib.InputSecurity;
+
+namespace Game;
+
+public sealed partial class WowProcessInput : IMouseInput, IDisposable
 {
-    public partial class WowProcessInput : IMouseInput
+    // Virtual key codes for modifier keys
+    private const int VK_SHIFT = 0x10;
+    private const int VK_CONTROL = 0x11;
+    private const int VK_MENU = 0x12;  // Alt key
+
+    private readonly ILogger<WowProcessInput> logger;
+
+    private readonly WowProcess process;
+    private readonly InputWindowsNative nativeInput;
+
+    private readonly BitArray keysDown;
+
+    public ConsoleKey ForwardKey { get; set; }
+    public ConsoleKey BackwardKey { get; set; }
+    public ConsoleKey TurnLeftKey { get; set; }
+    public ConsoleKey TurnRightKey { get; set; }
+    public ConsoleKey InteractMouseover { get; set; }
+    public ModifierKey InteractMouseoverModifier { get; set; }
+    public int InteractMouseoverPress { get; set; }
+
+    public WowProcessInput(ILoggerFactory loggerFactory, CancellationTokenSource cts, WowProcess process, IOptions<InputSecurityOptions> securityOptions)
+        : this(loggerFactory, cts, process, null, securityOptions)
     {
-        private readonly bool log = true;
+    }
 
-        private const int MIN_DELAY = 25;
-        private const int MAX_DELAY = 55;
+    public WowProcessInput(ILoggerFactory loggerFactory, CancellationTokenSource cts, WowProcess process, IHumanizationProvider? humanization, IOptions<InputSecurityOptions> securityOptions)
+    {
+        this.logger = loggerFactory.CreateLogger<WowProcessInput>();
+        this.process = process;
 
-        private readonly ILogger logger;
-        private readonly WowProcess wowProcess;
-        private readonly IInput nativeInput;
-        private readonly IInput simulatorInput;
+        keysDown = new((int)ConsoleKey.OemClear);
 
-        private readonly ConcurrentDictionary<ConsoleKey, bool> keyDict = new();
+        nativeInput = new(process, cts, InputDuration.FastPress, humanization, securityOptions?.Value, loggerFactory.CreateLogger<InputWindowsNative>());
+    }
 
-        public WowProcessInput(ILogger logger, WowProcess wowProcess)
+    public void Reset()
+    {
+        lock (keysDown)
         {
-            this.logger = logger;
-            this.wowProcess = wowProcess;
-
-            this.nativeInput = new InputWindowsNative(wowProcess.WarcraftProcess, MIN_DELAY, MAX_DELAY);
-            this.simulatorInput = new InputSimulator(wowProcess.WarcraftProcess, MIN_DELAY, MAX_DELAY);
+            keysDown.SetAll(false);
         }
+    }
 
-        private void KeyDown(ConsoleKey key, string description = "")
+    public void KeyDown(ConsoleKey key, bool forced)
+    {
+        lock (keysDown)
         {
-            if (keyDict.ContainsKey(key))
+            if (IsKeyDown(key))
             {
-                //if (keyDict[key] == true) { return; }
-            }
-            else
-            {
-                if (!keyDict.TryAdd(key, true))
-                {
+                if (!forced)
                     return;
-                }
             }
 
-            if (log && !string.IsNullOrEmpty(description))
-                LogKeyDown(logger, key, description);
+            //if (IsMovementKey(key))
+            //    LogMoveKeyDown(logger, key);
+            //else
+            //    LogKeyDown(logger, key);
 
-            nativeInput.KeyDown((int)key);
-            keyDict[key] = true;
+            keysDown[(int)key] = true;
         }
+        nativeInput.KeyDown((int)key);
+    }
 
-        private void KeyUp(ConsoleKey key, bool forceClick, string description = "")
+    public void KeyUp(ConsoleKey key, bool forced)
+    {
+        lock (keysDown)
         {
-            if (keyDict.ContainsKey(key))
+            if (!IsKeyDown(key))
             {
-                if (!forceClick)
-                {
-                    if (keyDict[key] == false) { return; }
-                }
-            }
-            else
-            {
-                if (!keyDict.TryAdd(key, false))
-                {
+                if (!forced)
                     return;
-                }
             }
 
-            if (log && !string.IsNullOrEmpty(description))
-                LogKeyUp(logger, key, description);
+            //if (IsMovementKey(key))
+            //    LogMoveKeyUp(logger, key);
+            //else
+            //    LogKeyUp(logger, key);
 
             nativeInput.KeyUp((int)key);
-
-            keyDict[key] = false;
+            keysDown[(int)key] = false;
         }
-
-        public bool IsKeyDown(ConsoleKey key)
-        {
-            if (keyDict.TryGetValue(key, out var down))
-            {
-                return down;
-            }
-            return false;
-        }
-
-        public void SendText(string payload)
-        {
-            simulatorInput.SendText(payload);
-        }
-
-        public void PasteFromClipboard()
-        {
-            simulatorInput.PasteFromClipboard();
-        }
-
-        public void SetForegroundWindow()
-        {
-            NativeMethods.SetForegroundWindow(wowProcess.WarcraftProcess.MainWindowHandle);
-        }
-
-
-        public void KeyPress(ConsoleKey key, int milliseconds, string description = "")
-        {
-            keyDict[key] = true;
-            int totalElapsedMs = nativeInput.KeyPress((int)key, milliseconds);
-            keyDict[key] = false;
-            if (log && !string.IsNullOrEmpty(description))
-            {
-                LogKeyPress(logger, key, description, totalElapsedMs);
-            }
-        }
-
-        public void KeyPressSleep(ConsoleKey key, int milliseconds, string description = "")
-        {
-            if (milliseconds < 1)
-                return;
-
-            if (log && !string.IsNullOrEmpty(description))
-            {
-                LogKeyPress(logger, key, description, milliseconds);
-            }
-
-            keyDict[key] = true;
-            nativeInput.KeyPressSleep((int)key, milliseconds);
-            keyDict[key] = false;
-        }
-
-        public void SetKeyState(ConsoleKey key, bool pressDown, bool forceClick, string description = "")
-        {
-            if (log && !string.IsNullOrEmpty(description))
-                description = "SetKeyState-" + description;
-
-            if (pressDown) { KeyDown(key, description); } else { KeyUp(key, forceClick, description); }
-        }
-
-        public void SetCursorPosition(Point position)
-        {
-            nativeInput.SetCursorPosition(position);
-        }
-
-        public void RightClickMouse(Point position)
-        {
-            nativeInput.RightClickMouse(position);
-        }
-
-        public void LeftClickMouse(Point position)
-        {
-            nativeInput.LeftClickMouse(position);
-        }
-
-        [LoggerMessage(
-            EventId = 25,
-            Level = LogLevel.Debug,
-            Message = @"Input: KeyDown {key} {description}")]
-        static partial void LogKeyDown(ILogger logger, ConsoleKey key, string description);
-
-        [LoggerMessage(
-            EventId = 26,
-            Level = LogLevel.Debug,
-            Message = @"Input: KeyUp {key} {description}")]
-        static partial void LogKeyUp(ILogger logger, ConsoleKey key, string description);
-
-        [LoggerMessage(
-            EventId = 27,
-            Level = LogLevel.Debug,
-            Message = @"Input: [{key}] {description} pressed for {milliseconds}ms")]
-        static partial void LogKeyPress(ILogger logger, ConsoleKey key, string description, int milliseconds);
-
-        [LoggerMessage(
-            EventId = 28,
-            Level = LogLevel.Debug,
-            Message = @"Input: [{key}] {description} pressing for {milliseconds}ms")]
-        static partial void LogKeyPressNoDelay(ILogger logger, ConsoleKey key, string description, int milliseconds);
     }
+
+    public bool IsKeyDown(ConsoleKey key)
+    {
+        return keysDown[(int)key];
+    }
+
+    public void SendText(string text)
+    {
+        nativeInput.SendText(text);
+    }
+
+    public void SetForegroundWindow()
+    {
+        NativeMethods.SetForegroundWindow(process.MainWindowHandle);
+    }
+
+    public int PressRandom(ConsoleKey key, int milliseconds = InputDuration.DefaultPress, CancellationToken token = default)
+    {
+        lock (keysDown)
+        {
+            keysDown[(int)key] = true;
+        }
+        int elapsedMs = nativeInput.PressRandom((int)key, milliseconds, token);
+        lock (keysDown)
+        {
+            keysDown[(int)key] = false;
+        }
+
+        LogKeyPressRandom(logger, key, elapsedMs);
+
+        return elapsedMs;
+    }
+
+    public int PressRandomWithModifier(ConsoleKey key, ModifierKey modifier, int milliseconds = InputDuration.DefaultPress, CancellationToken token = default)
+    {
+        // If no modifier, use the simple path
+        if (modifier == ModifierKey.None)
+        {
+            return PressRandom(key, milliseconds, token);
+        }
+
+        // Note: PostMessage sends WM_KEYDOWN to the window's message queue.
+        // WoW processes messages in FIFO order, so modifier keys are "pressed"
+        // before the main key. No delay needed between messages.
+        // If WoW uses GetKeyState() instead of tracking WM_KEYDOWN messages,
+        // modifiers may not work - would need SendInput (foreground only).
+
+        // Press modifier(s) down
+        if ((modifier & ModifierKey.Shift) != 0)
+            nativeInput.KeyDown(VK_SHIFT);
+        if ((modifier & ModifierKey.Ctrl) != 0)
+            nativeInput.KeyDown(VK_CONTROL);
+        if ((modifier & ModifierKey.Alt) != 0)
+            nativeInput.KeyDown(VK_MENU);
+
+        // Press actual key
+        lock (keysDown)
+        {
+            keysDown[(int)key] = true;
+        }
+        int elapsedMs = nativeInput.PressRandom((int)key, milliseconds, token);
+        lock (keysDown)
+        {
+            keysDown[(int)key] = false;
+        }
+
+        // Release modifiers (reverse order)
+        if ((modifier & ModifierKey.Alt) != 0)
+            nativeInput.KeyUp(VK_MENU);
+        if ((modifier & ModifierKey.Ctrl) != 0)
+            nativeInput.KeyUp(VK_CONTROL);
+        if ((modifier & ModifierKey.Shift) != 0)
+            nativeInput.KeyUp(VK_SHIFT);
+
+        LogKeyPressRandomWithModifier(logger, key, modifier, elapsedMs);
+
+        return elapsedMs;
+    }
+
+    public void PressFixed(ConsoleKey key, int milliseconds, CancellationToken token = default)
+    {
+        if (milliseconds < 1)
+            return;
+
+        if (IsMovementKey(key))
+            LogMoveKeyPress(logger, key, milliseconds);
+        else
+            LogKeyPressFixed(logger, key, milliseconds);
+
+        lock (keysDown)
+        {
+            keysDown[(int)key] = true;
+        }
+        nativeInput.PressFixed((int)key, milliseconds, token);
+        lock (keysDown)
+        {
+            keysDown[(int)key] = false;
+        }
+    }
+
+    public void SetKeyState(ConsoleKey key, bool pressDown, bool forced)
+    {
+        if (pressDown)
+            KeyDown(key, forced);
+        else
+            KeyUp(key, forced);
+    }
+
+    public void SetCursorPos(Point p)
+    {
+        nativeInput.SetCursorPos(p);
+    }
+
+    public void RightClick(Point p)
+    {
+        nativeInput.RightClick(p);
+    }
+
+    public void LeftClick(Point p)
+    {
+        nativeInput.LeftClick(p);
+    }
+
+    public void InteractMouseOver(CancellationToken token)
+    {
+        if (InteractMouseoverModifier != ModifierKey.None)
+        {
+            PressRandomWithModifier(InteractMouseover, InteractMouseoverModifier, InteractMouseoverPress, token);
+        }
+        else
+        {
+            PressFixed(InteractMouseover, InteractMouseoverPress, token);
+        }
+    }
+
+    /// <summary>
+    /// Presses SHIFT-PAGEDOWN to trigger CUSTOM_FLUSH (/dcflush) in the addon.
+    /// </summary>
+    public void PressFlushKey()
+    {
+        PressRandomWithModifier(ConsoleKey.PageDown, ModifierKey.Shift, 50);
+    }
+
+    private bool IsMovementKey(ConsoleKey key) =>
+        key == ForwardKey ||
+        key == BackwardKey ||
+        key == TurnLeftKey ||
+        key == TurnRightKey;
+
+    public void Dispose()
+    {
+        nativeInput.Dispose();
+    }
+
+    [LoggerMessage(
+        EventId = 3000,
+        Level = LogLevel.Debug,
+        Message = @"[{key}] KeyDown")]
+    static partial void LogKeyDown(ILogger logger, ConsoleKey key);
+
+    [LoggerMessage(
+        EventId = 3001,
+        Level = LogLevel.Debug,
+        Message = @"[{key}] KeyUp")]
+    static partial void LogKeyUp(ILogger logger, ConsoleKey key);
+
+    [LoggerMessage(
+        EventId = 3002,
+        Level = LogLevel.Information,
+        Message = @"[{key}] press fix {milliseconds}ms")]
+    static partial void LogKeyPressFixed(ILogger logger, ConsoleKey key, int milliseconds);
+
+    [LoggerMessage(
+        EventId = 3003,
+        Level = LogLevel.Information,
+        Message = @"[{key}] press random {milliseconds}ms")]
+    static partial void LogKeyPressRandom(ILogger logger, ConsoleKey key, int milliseconds);
+
+    [LoggerMessage(
+        EventId = 3007,
+        Level = LogLevel.Information,
+        Message = @"[{modifier}-{key}] press random {milliseconds}ms")]
+    static partial void LogKeyPressRandomWithModifier(ILogger logger, ConsoleKey key, ModifierKey modifier, int milliseconds);
+
+    #region Movement Trance
+
+    [LoggerMessage(
+        EventId = 3004,
+        Level = LogLevel.Trace,
+        Message = @"[{key}] move KeyDown")]
+    static partial void LogMoveKeyDown(ILogger logger, ConsoleKey key);
+
+    [LoggerMessage(
+        EventId = 3005,
+        Level = LogLevel.Trace,
+        Message = @"[{key}] move KeyUp")]
+    static partial void LogMoveKeyUp(ILogger logger, ConsoleKey key);
+
+    [LoggerMessage(
+        EventId = 3006,
+        Level = LogLevel.Trace,
+        Message = @"[{key}] move Pressed {milliseconds}ms")]
+    static partial void LogMoveKeyPress(ILogger logger, ConsoleKey key, int milliseconds);
+
+    #endregion
 }

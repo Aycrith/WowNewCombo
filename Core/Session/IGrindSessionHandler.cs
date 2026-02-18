@@ -1,10 +1,7 @@
-﻿using System.Collections.Generic;
+﻿namespace Core.Session;
 
-namespace Core.Session
+public interface IGrindSessionHandler
 {
-    public interface IGrindSessionHandler
-    {
-        List<GrindSession> Load();
-        void Save(IGrindSession grindSession);
-    }
+    void Start(string path);
+    void Stop(string reason, bool active);
 }

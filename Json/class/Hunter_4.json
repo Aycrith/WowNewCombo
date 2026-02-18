@@ -6,23 +6,26 @@
       {
         "Name": "Serpent Sting",
         "Key": "2",
-        "MinMana": 15,
-        "Cooldown": 2000,
-        "Requirements": ["HasRangedWeapon", "HasAmmo", "!InMeleeRange", "!Serpent Sting"]
+        "BeforeCastStop": true,
+        "AfterCastAuraExpected": true,
+        "Requirements": [
+          "HasRangedWeapon",
+          "HasAmmo",
+          "!InMeleeRange",
+          "!Serpent Sting"
+        ]
       },
       {
         "Name": "Auto Shot",
-        "HasCastBar": true,
         "Key": "3",
-        "Requirements": ["HasRangedWeapon", "HasAmmo", "!InMeleeRange", "!AutoShot"]
-      },
-      {
-        "Name": "Raptor Strike",
-        "Key": "4",
-        "WhenUsable": true,
-        "AfterCastWaitNextSwing": true,
-        "StepBackAfterCast": 1000,
-        "Requirements": ["InMeleeRange", "!AutoShot"]
+        "Item": true,
+        "AfterCastWaitCombat": true,
+        "Requirements": [
+          "HasRangedWeapon",
+          "HasAmmo",
+          "!InMeleeRange",
+          "!AutoShot"
+        ]
       }
     ]
   },
@@ -30,21 +33,51 @@
     "Sequence": [
       {
         "Name": "Auto Shot",
-        "HasCastBar": true,
         "Key": "3",
-        "Requirements": ["HasRangedWeapon", "HasAmmo", "!InMeleeRange", "!AutoShot"]
+        "Item": true,
+        "BeforeCastStop": true,
+        "Requirements": [
+          "HasRangedWeapon",
+          "HasAmmo",
+          "!InMeleeRange",
+          "!AutoShot"
+        ]
+      },
+      {
+        "Name": "Stepback",
+        "Key": "S",
+        "PressDuration": 3000,
+        "BaseAction": true,
+        "Requirements": [
+          "TargetsMe",
+          "LastAutoShotMs < 400",
+          "!InMeleeRange",
+          "AutoShot"
+        ],
+        "Interrupt": "RangedSwing < -500 && TargetAlive"
       },
       {
         "Name": "Raptor Strike",
         "Key": "4",
         "WhenUsable": true,
-        "AfterCastWaitNextSwing": true,
-        "MinMana": 15,
-        "Requirements": ["InMeleeRange", "!AutoShot"]
+        "AfterCastWaitSwing": true,
+        "Requirements": [
+          "MainHandSwing > -400",
+          "InMeleeRange",
+          "!AutoShot"
+        ]
       },
       {
         "Name": "AutoAttack",
-        "Requirements": ["InMeleeRange", "!AutoShot", "!AutoAttacking"]
+        "Requirements": [
+          "InMeleeRange"
+        ]
+      },
+      {
+        "Name": "Approach",
+        "Requirements": [
+          "InMeleeRange"
+        ]
       }
     ]
   },
@@ -53,7 +86,6 @@
       {
         "Name": "Aspect of the Monkey",
         "Key": "5",
-        "MinMana": 20,
         "Requirement": "!Aspect of the Monkey"
       }
     ]
@@ -66,7 +98,7 @@
         "Requirement": "Health% < 30"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "7",
         "Requirement": "Mana% < 30"
       }
@@ -77,14 +109,17 @@
       {
         "Name": "Repair",
         "Key": "C",
-        "Requirement": "Items Broken",
+        "Requirement": "Durability% < 35",
         "PathFilename": "1_Gnome_Vendor.json",
         "Cost": 6
       },
       {
         "Name": "Sell",
         "Key": "C",
-        "Requirements": ["BagFull", "BagGreyItem"],
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ],
         "PathFilename": "1_Gnome_Vendor.json",
         "Cost": 6
       }

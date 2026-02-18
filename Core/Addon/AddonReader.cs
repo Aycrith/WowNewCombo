@@ -1,200 +1,129 @@
 using Core.Database;
-using Microsoft.Extensions.Logging;
+
+using Microsoft.Extensions.DependencyInjection;
+
+using SharedLib;
+
 using System;
-using Cyotek.Collections.Generic;
-using System.Linq;
+using System.Collections.Immutable;
+using System.Threading;
 
-namespace Core
+using static System.Diagnostics.Stopwatch;
+
+namespace Core;
+
+public sealed class AddonReader : IAddonReader
 {
-    public sealed class AddonReader : IAddonReader, IDisposable
+    private readonly IAddonDataProvider reader;
+
+    private readonly PlayerReader playerReader;
+    private readonly CreatureDB creatureDb;
+
+    private readonly CombatLog combatLog;
+
+    private readonly ImmutableArray<IReader> readers;
+
+    public event Action? AddonDataChanged;
+
+    public ManualResetEventSlim DataReady { get; }
+
+    public RecordInt GlobalTime { get; }
+
+    /// <summary>
+    /// Exposes the underlying data provider for direct frame access (diagnostics/testing)
+    /// </summary>
+    public IAddonDataProvider DataProvider => reader;
+
+    private int lastTargetGuid = -1;
+    public string TargetName { get; private set; } = string.Empty;
+
+    private int lastMouseOverId = -1;
+    public string MouseOverName { get; private set; } = string.Empty;
+
+    public double AvgUpdateLatency { private set; get; }
+
+    public AddonReader(IAddonDataProvider reader,
+        PlayerReader playerReader, ManualResetEventSlim resetEvent,
+        CreatureDB creatureDb,
+        CombatLog combatLog,
+        DataFrame[] frames,
+        IServiceProvider sp)
     {
-        private readonly ILogger logger;
-        private readonly ISquareReader squareReader;
-        private readonly IAddonDataProvider addonDataProvider;
+        this.reader = reader;
+        this.creatureDb = creatureDb;
+        this.combatLog = combatLog;
+        this.playerReader = playerReader;
+        DataReady = resetEvent;
 
-        public bool Initialized { get; private set; }
+        GlobalTime = new(frames.Length - 2);
 
-        public bool Active { get; set; } = true;
-        public PlayerReader PlayerReader { get; private set; }
+        readers = sp.GetServices<IReader>().ToImmutableArray();
+    }
 
-        public CreatureHistory CreatureHistory { get; private set; }
+    public void Update()
+    {
+        IAddonDataProvider reader = this.reader;
+        reader.UpdateData();
 
-        public BagReader BagReader { get; private set; }
-        public EquipmentReader EquipmentReader { get; private set; }
+        long lastUpdate = GlobalTime.LastChanged;
 
-        public ActionBarCostReader ActionBarCostReader { get; private set; }
+        if (!GlobalTime.Updated(reader))
+            return;
 
-        public ActionBarCooldownReader ActionBarCooldownReader { get; private set; }
+        AvgUpdateLatency = GetElapsedTime(lastUpdate).TotalMilliseconds;
 
-        public ActionBarBits CurrentAction => new ActionBarBits(PlayerReader, squareReader, 26, 27, 28, 29, 30);
-        public ActionBarBits UsableAction => new ActionBarBits(PlayerReader, squareReader, 31, 32, 33, 34, 35);
-
-        public GossipReader GossipReader { get; private set; }
-
-        public SpellBookReader SpellBookReader { get; private set; }
-        public TalentReader TalentReader { get; private set; }
-
-        public LevelTracker LevelTracker { get; private set; }
-
-        public event EventHandler? AddonDataChanged;
-        public event EventHandler? ZoneChanged;
-        public event EventHandler? PlayerDeath;
-
-        public WorldMapAreaDB WorldMapAreaDb { get; private set; }
-        public ItemDB ItemDb { get; private set; }
-        public CreatureDB CreatureDb { get; private set; }
-        public AreaDB AreaDb { get; private set; }
-
-        private readonly SpellDB spellDb;
-        private readonly TalentDB talentDB;
-
-        public RecordInt UIMapId { private set; get; } = new RecordInt(4);
-
-        public RecordInt GlobalTime { private set; get; } = new RecordInt(98);
-
-        public int CombatCreatureCount => CreatureHistory.DamageTaken.Count(c => c.HealthPercent > 0);
-
-        public string TargetName
+        if (GlobalTime.Value <= 3)
         {
-            get
-            {
-                return CreatureDb.Entries.TryGetValue(PlayerReader.TargetId, out SharedLib.Creature creature)
-                    ? creature.Name
-                    : squareReader.GetStringAtCell(16) + squareReader.GetStringAtCell(17);
-            }
+            FullReset();
+            return;
         }
 
-        public double AvgUpdateLatency { private set; get; } = 5;
-        private readonly CircularBuffer<double> UpdateLatencys;
-
-        private DateTime lastFrontendUpdate;
-        private readonly int FrontendUpdateIntervalMs = 250;
-
-        public AddonReader(ILogger logger, DataConfig dataConfig, IAddonDataProvider addonDataProvider)
+        ReadOnlySpan<IReader> span = readers.AsSpan();
+        for (int i = 0; i < span.Length; i++)
         {
-            this.logger = logger;
-            this.addonDataProvider = addonDataProvider;
-
-            this.squareReader = new SquareReader(this);
-
-            this.AreaDb = new AreaDB(logger, dataConfig);
-            this.WorldMapAreaDb = new WorldMapAreaDB(logger, dataConfig);
-            this.ItemDb = new ItemDB(logger, dataConfig);
-            this.CreatureDb = new CreatureDB(logger, dataConfig);
-            this.spellDb = new SpellDB(logger, dataConfig);
-            this.talentDB = new TalentDB(logger, dataConfig, spellDb);
-
-            this.CreatureHistory = new CreatureHistory(squareReader, 64, 65, 66, 67);
-
-            this.EquipmentReader = new EquipmentReader(squareReader, 24, 25);
-            this.BagReader = new BagReader(squareReader, ItemDb, EquipmentReader, 20, 21, 22, 23);
-
-            this.ActionBarCostReader = new ActionBarCostReader(squareReader, 36);
-            this.ActionBarCooldownReader = new ActionBarCooldownReader(squareReader, 37);
-
-            this.GossipReader = new GossipReader(squareReader, 73);
-
-            this.SpellBookReader = new SpellBookReader(squareReader, 71, spellDb);
-
-            this.PlayerReader = new PlayerReader(squareReader);
-            this.LevelTracker = new LevelTracker(PlayerReader, PlayerDeath, CreatureHistory);
-            this.TalentReader = new TalentReader(squareReader, 72, PlayerReader, talentDB);
-
-            UpdateLatencys = new CircularBuffer<double>(10);
-
-            UIMapId.Changed += (object? obj, EventArgs e) =>
-            {
-                this.AreaDb.Update(WorldMapAreaDb.GetAreaId(UIMapId.Value));
-                ZoneChanged?.Invoke(this, EventArgs.Empty);
-            };
-
-            GlobalTime.Changed += (object? obj, EventArgs e) =>
-            {
-                UpdateLatencys.Put((DateTime.UtcNow - GlobalTime.LastChanged).TotalMilliseconds);
-                AvgUpdateLatency = 0;
-                for (int i = 0; i < UpdateLatencys.Size; i++)
-                {
-                    AvgUpdateLatency += UpdateLatencys.PeekAt(i);
-                }
-                AvgUpdateLatency /= UpdateLatencys.Size;
-            };
+            span[i].Update(reader);
         }
 
-        public void AddonRefresh()
+        if (lastTargetGuid != playerReader.TargetGuid)
         {
-            Refresh();
+            lastTargetGuid = playerReader.TargetGuid;
 
-            CreatureHistory.Update(PlayerReader.TargetGuid, PlayerReader.TargetHealthPercentage);
-
-            BagReader.Read();
-            EquipmentReader.Read();
-
-            ActionBarCostReader.Read();
-            ActionBarCooldownReader.Read();
-
-            GossipReader.Read();
-
-            SpellBookReader.Read();
-            TalentReader.Read();
-
-            if ((DateTime.UtcNow - lastFrontendUpdate).TotalMilliseconds >= FrontendUpdateIntervalMs)
-            {
-                AddonDataChanged?.Invoke(this, EventArgs.Empty);
-                lastFrontendUpdate = DateTime.UtcNow;
-            }
+            TargetName =
+                creatureDb.Entries.TryGetValue(playerReader.TargetId, out Creature c)
+                ? c.Name
+                : reader.GetString(16).Trim() + reader.GetString(17).Trim();
         }
 
-        public void Refresh()
+        if (lastMouseOverId != playerReader.MouseOverId)
         {
-            addonDataProvider.Update();
-
-            if (GlobalTime.Updated(squareReader) && (GlobalTime.Value <= 3 || !Initialized))
-            {
-                Reset();
-            }
-
-            PlayerReader.Updated();
-
-            UIMapId.Update(squareReader);
+            lastMouseOverId = playerReader.MouseOverId;
+            MouseOverName =
+                creatureDb.Entries.TryGetValue(playerReader.MouseOverId, out Creature c)
+                ? c.Name
+                : string.Empty;
         }
 
-        public void SoftReset()
+        DataReady.Set();
+    }
+
+    public void SessionReset()
+    {
+        combatLog.Reset();
+    }
+
+    public void FullReset()
+    {
+        ReadOnlySpan<IReader> span = readers.AsSpan();
+        for (int i = 0; i < span.Length; i++)
         {
-            LevelTracker.Reset();
-            CreatureHistory.Reset();
+            span[i].Reset();
         }
 
-        public void Reset()
-        {
-            Initialized = false;
+        SessionReset();
+    }
 
-            PlayerReader.Reset();
-
-            UIMapId.Reset();
-
-            ActionBarCostReader.Reset();
-            ActionBarCooldownReader.Reset();
-            SpellBookReader.Reset();
-            TalentReader.Reset();
-
-            SoftReset();
-
-            Initialized = true;
-        }
-
-        public int GetIntAt(int index)
-        {
-            return addonDataProvider.GetInt(index);
-        }
-
-        public void Dispose()
-        {
-            addonDataProvider?.Dispose();
-        }
-
-        public void PlayerDied()
-        {
-            PlayerDeath?.Invoke(this, EventArgs.Empty);
-        }
+    public void UpdateUI()
+    {
+        AddonDataChanged?.Invoke();
     }
 }

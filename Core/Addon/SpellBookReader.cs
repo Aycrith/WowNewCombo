@@ -1,51 +1,99 @@
-﻿using System.Collections.Generic;
-using Core.Database;
+﻿using Core.Database;
+
 using SharedLib;
 
-namespace Core
+using System;
+using System.Collections.Generic;
+
+namespace Core;
+
+public sealed class SpellBookReader : IReader
 {
-    public class SpellBookReader
+    private const int cSpellId = 71;
+
+    private readonly HashSet<int> spells = [];
+    private readonly HashSet<string> spellNames = new(StringComparer.OrdinalIgnoreCase);
+    private int[] spellIdsSnapshot = [];
+
+    public SpellDB SpellDB { get; }
+    public int Count => spells.Count;
+    public int Hash { get; private set; }
+    public int[] SpellIds => spellIdsSnapshot;
+
+    public SpellBookReader(SpellDB spellDB)
     {
-        private readonly int cSpellId;
+        this.SpellDB = spellDB;
 
-        private readonly ISquareReader reader;
-        public SpellDB SpellDB { private set; get; }
+        // Set static reference for KeyReader spell checking
+        KeyReader.SpellBookReader = this;
+    }
 
-        public int Count => Spells.Count;
+    public void Update(IAddonDataProvider reader)
+    {
+        int spellId = reader.GetInt(cSpellId);
+        if (spellId == 0) return;
 
-        public Dictionary<int, Spell> Spells { get; private set; } = new Dictionary<int, Spell>();
-
-        public SpellBookReader(ISquareReader reader, int cSpellId, SpellDB spellDB)
+        if (spells.Add(spellId))
         {
-            this.reader = reader;
-            this.cSpellId = cSpellId;
-            this.SpellDB = spellDB;
-        }
-
-        public void Read()
-        {
-            int spellId = reader.GetIntAtCell(cSpellId);
-            if (spellId == 0) return;
-            if (!Spells.ContainsKey(spellId) && SpellDB.Spells.TryGetValue(spellId, out Spell spell))
+            Hash++;
+            spellIdsSnapshot = [.. spells];
+            if (TryGetValue(spellId, out Spell spell))
             {
-                Spells.Add(spellId, spell);
+                spellNames.Add(spell.Name);
+            }
+        }
+    }
+
+    public void Reset()
+    {
+        spells.Clear();
+        spellNames.Clear();
+        spellIdsSnapshot = [];
+        Hash++;
+    }
+
+    public bool Has(int id)
+    {
+        return spells.Contains(id) || spellNames.Contains(SpellDB.Spells[id].Name);
+    }
+
+    public bool TryGetValue(int id, out Spell spell)
+    {
+        return SpellDB.Spells.TryGetValue(id, out spell);
+    }
+
+    public int GetId(ReadOnlySpan<char> name)
+    {
+        foreach (int id in spells)
+        {
+            if (TryGetValue(id, out Spell spell) &&
+                name.Contains(spell.Name, StringComparison.OrdinalIgnoreCase))
+            {
+                return spell.Id;
             }
         }
 
-        public void Reset()
+        return 0;
+    }
+
+    /// <summary>
+    /// Checks if a spell name is known by the player (case-insensitive).
+    /// Supports partial matching for ranked spells (e.g., "Create Healthstone" matches "Create Healthstone (Minor)").
+    /// </summary>
+    public bool KnowsSpell(string name)
+    {
+        // Fast path: exact match
+        if (spellNames.Contains(name))
+            return true;
+
+        // Partial match: check if any known spell starts with the given name
+        // This handles ranked spells like "Create Healthstone (Minor)" matching "Create Healthstone"
+        foreach (string knownSpell in spellNames)
         {
-            Spells.Clear();
+            if (knownSpell.StartsWith(name, StringComparison.OrdinalIgnoreCase))
+                return true;
         }
 
-        public int GetSpellIdByName(string name)
-        {
-            foreach (var kvp in Spells)
-            {
-                if (kvp.Value.Name.ToLower() == name.ToLower())
-                    return kvp.Key;
-            }
-
-            return 0;
-        }
+        return false;
     }
 }

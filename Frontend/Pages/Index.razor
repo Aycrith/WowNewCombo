@@ -1,0 +1,159 @@
+﻿@page "/"
+
+@inject ILogger logger
+
+@inject IBotController botController
+@inject IJSRuntime JSRuntime
+@inject AddonConfigurator addonConfigurator
+@inject FrontendUpdate updater // TODO: this is a hack to instantiate this class
+@inject StartupClientVersion client
+
+@implements IDisposable
+
+<style>
+    .dashboard-layout {
+        display: flex;
+        flex-direction: column;
+        gap: var(--ds-space-4, 1rem);
+        animation: ds-fade-in 0.3s ease-out;
+    }
+
+    .dashboard-top-section {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: var(--ds-space-4, 1rem);
+    }
+
+    .dashboard-left-panel {
+        flex: 1 1 70%;
+    }
+
+    .dashboard-right-panel {
+        flex: 1 1 30%;
+        max-width: 320px;
+    }
+
+    .dashboard-bottom-section {
+        width: 100%;
+    }
+
+    @@media (max-width: 992px) {
+        .dashboard-top-section {
+            flex-direction: column;
+        }
+        .dashboard-right-panel {
+            max-width: 100%;
+        }
+    }
+</style>
+
+<div class="container-fluid">
+    <div class="row">
+        @if (AddonConfig.Exists() && FrameConfig.Exists())
+        {
+            <div class="col-sm dashboard-layout">
+                <div class="dashboard-top-section">
+                    <div class="dashboard-left-panel">
+                        <RouteComponent Size="400" />
+                    </div>
+                    <div class="dashboard-right-panel">
+                        <BagChanges />
+                    </div>
+                </div>
+
+                <div class="dashboard-bottom-section">
+                    @if (client.Version is ClientVersion.SoM or ClientVersion.TBC)
+                    {
+                        <LeafletComponent Size="400px" />
+                    }
+                </div>
+            </div>
+
+            <div class="col-sm">
+                @if (updateAvailable)
+                {
+                    <div class="card" style="margin-bottom: 10px">
+                        <div class="card-header">
+                            <b>New Addon version available!</b>
+                            <span class="float-right">
+                                <button class="btn btn-sm btn-success">
+                                    <NavLink class="nav-link" href="AddonConfiguration">
+                                        <span style="text-decoration: none;font-weight: bold;color: white;">Update</span>
+                                    </NavLink>
+                                </button>
+                            </span>
+                        </div>
+                    </div>
+                }
+
+                <BotHeader ShowActiveGoal="false" Hide="@(botController.IsBotActive)" />
+                <ProfileSelectorComponent Hide="@(botController.IsBotActive)" />
+
+                @if (botController.ClassConfig == null)
+                {
+                    <PathSelectorComponent Hide="@(botController.IsBotActive)" />
+                }
+                else if (!botController.IsBotActive && botController.ClassConfig!.Mode != Mode.AttendedGrind)
+                {
+                    if (botController.ClassConfig!.Paths.Length > 1)
+                    {
+                        <Accordion>
+                            <AccordionItem Title="Override Paths">
+                                <Content>
+                                    @foreach (var pathSettings in botController.ClassConfig!.Paths)
+                                    {
+                                        <PathSelectorComponent Hide="@(botController.IsBotActive)"
+                                                               Target="@(pathSettings)"
+                                                               TargetIndex="@(Array.IndexOf(botController.ClassConfig!.Paths, pathSettings))" />
+                                    }
+                                </Content>
+                            </AccordionItem>
+                        </Accordion>
+                    }
+                    else
+                    {
+                        <PathSelectorComponent Hide="@(botController.IsBotActive)"
+                                               Target="@(botController.ClassConfig!.Paths.First())"
+                                               TargetIndex="0" />
+                    }
+                }
+
+                <GoalsComponent />
+            </div>
+        }
+        else if (!AddonConfig.Exists())
+        {
+            <AddonConfiguration />
+        }
+        else if (!FrameConfig.Exists())
+        {
+            <FrameConfiguration />
+        }
+    </div>
+</div>
+
+<div id="tooltip" display="none" style="position: absolute; display: none;"></div>
+
+
+@code {
+    private bool updateAvailable;
+
+    protected override void OnInitialized()
+    {
+        botController.StatusChanged += OnStatusChanged;
+        botController.ProfileLoaded += OnStatusChanged;
+
+        updateAvailable = addonConfigurator.UpdateAvailable();
+    }
+
+    public void Dispose()
+    {
+        botController.StatusChanged -= OnStatusChanged;
+    }
+
+    private void OnStatusChanged()
+    {
+        base.InvokeAsync(StateHasChanged);
+    }
+}

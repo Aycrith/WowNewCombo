@@ -1,0 +1,127 @@
+using System;
+using System.Collections.Generic;
+using System.Net.Http;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+using Core.FeatureFlags;
+
+namespace Core.AI.LLM;
+
+/// <summary>
+/// Factory for creating LLM clients based on configuration.
+/// </summary>
+public sealed class LLMClientFactory : ILLMClientFactory
+{
+    private readonly IServiceProvider serviceProvider;
+    private readonly ILogger<LLMClientFactory> logger;
+    private readonly AIProfileGeneratorOptions options;
+
+    // Cache of clients by provider name
+    private readonly Dictionary<string, ILLMClient> clientCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly object cacheLock = new();
+
+    public LLMClientFactory(
+        IServiceProvider serviceProvider,
+        ILogger<LLMClientFactory> logger,
+        IOptions<AIProfileGeneratorOptions> options)
+    {
+        this.serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+        this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        this.options = options?.Value ?? throw new ArgumentNullException(nameof(options));
+    }
+
+    /// <inheritdoc />
+    public ILLMClient CreateClient(string providerName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(providerName);
+
+        lock (cacheLock)
+        {
+            if (clientCache.TryGetValue(providerName, out var cached))
+            {
+                return cached;
+            }
+        }
+
+        ILLMClient client = providerName.ToLowerInvariant() switch
+        {
+            "openai" => CreateOpenAIClient(),
+            "local" or "llama" or "local_llama" => CreateLocalLlamaClient(),
+            _ => throw new ArgumentException($"Unknown LLM provider: {providerName}. " +
+                $"Supported: {string.Join(", ", options.AllowedProviders)}", nameof(providerName))
+        };
+
+        lock (cacheLock)
+        {
+            clientCache[providerName] = client;
+        }
+
+        return client;
+    }
+
+    /// <inheritdoc />
+    public ILLMClient GetDefaultClient()
+    {
+        // Use configured provider or fallback to first available
+        var provider = !string.IsNullOrEmpty(options.APIProvider) &&
+                       options.APIProvider != "none"
+            ? options.APIProvider
+            : GetFirstAvailableProvider();
+
+        if (string.IsNullOrEmpty(provider))
+        {
+            throw new InvalidOperationException(
+                "No LLM provider configured. Set AIProfileGenerator:APIProvider to 'openai' or 'local' " +
+                "and configure the appropriate API key.");
+        }
+
+        return CreateClient(provider);
+    }
+
+    /// <summary>
+    /// Creates an OpenAI client.
+    /// </summary>
+    private ILLMClient CreateOpenAIClient()
+    {
+        logger.LogInformation("[LLMClientFactry] Creating OpenAI client");
+
+        var httpClient = new HttpClient();
+        var openaiLogger = (ILogger<OpenAIClient>)serviceProvider.GetService(typeof(ILogger<OpenAIClient>))
+            ?? throw new InvalidOperationException("ILogger<OpenAIClient> not registered");
+        var options = Microsoft.Extensions.Options.Options.Create(this.options);
+
+        return new OpenAIClient(httpClient, openaiLogger, options);
+    }
+
+    /// <summary>
+    /// Creates a local Llama client.
+    /// </summary>
+    private ILLMClient CreateLocalLlamaClient()
+    {
+        logger.LogInformation("[LLMClientFactry] Creating LocalLlama client");
+
+        var httpClient = new HttpClient();
+        var llamaLogger = (ILogger<LocalLlamaClient>)serviceProvider.GetService(typeof(ILogger<LocalLlamaClient>))
+            ?? throw new InvalidOperationException("ILogger<LocalLlamaClient> not registered");
+        var options = Microsoft.Extensions.Options.Options.Create(this.options);
+
+        return new LocalLlamaClient(httpClient, llamaLogger, options);
+    }
+
+    /// <summary>
+    /// Determines the first available provider based on environment.
+    /// </summary>
+    private static string GetFirstAvailableProvider()
+    {
+        // Check for OpenAI key
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("OPENAI_API_KEY")))
+        {
+            return "openai";
+        }
+
+        // Check for local LLM
+        // This would need async check, so for now just return empty
+        return "";
+    }
+}

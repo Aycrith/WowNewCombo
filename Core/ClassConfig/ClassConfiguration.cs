@@ -1,262 +1,454 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+using Newtonsoft.Json;
+
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Reflection;
 
-namespace Core
+namespace Core;
+
+public class BadZone
 {
-    public class BadZone
+    public int ZoneId { get; init; } = -1;
+    public Vector3 ExitZoneLocation { get; init; }
+}
+
+public enum Mode
+{
+    Grind = 0,
+    CorpseRun = 1,
+    AttendedGather = 2,
+    AttendedGrind = 3,
+    AssistFocus = 4
+}
+
+
+public sealed partial class ClassConfiguration
+{
+    public string FileName { get; set; } = string.Empty;
+
+    public bool Log { get; set; } = true;
+    public bool LogBagChanges { get; set; } = true;
+    public bool Loot { get; set; } = true;
+    public bool Skin { get; set; }
+    public bool Herb { get; set; }
+    public bool Mine { get; set; }
+    public bool Salvage { get; set; }
+    public bool GatherCorpse => Skin || Herb || Mine || Salvage;
+
+    public bool UseMount { get; set; } = true;
+    public bool KeyboardOnly { get; set; }
+    public bool AllowPvP { get; set; }
+    public bool AutoPetAttack { get; set; } = true;
+
+    // Keeping this for backward compatibility
+    // The following properties are consolidated under PathSettings
+    public string PathFilename { get; set; } = string.Empty;
+    public string? OverridePathFilename { get; set; } = string.Empty;
+    public bool PathThereAndBack { get; set; } = true;
+    public bool PathReduceSteps { get; set; }
+    public List<string> SideActivityRequirements = [];
+    public PathSettings[] Paths { get; set; } = [];
+
+    public Mode Mode { get; set; } = Mode.Grind;
+
+    public BadZone WrongZone { get; } = new BadZone();
+
+    public int NPCMaxLevels_Above { get; set; } = 1;
+    public int NPCMaxLevels_Below { get; set; } = 7;
+    public UnitClassification TargetMask { get; set; } =
+        UnitClassification.Normal |
+        UnitClassification.Trivial |
+        UnitClassification.Rare;
+
+    public bool CheckTargetGivesExp { get; set; }
+    public string[] Blacklist { get; init; } = [];
+
+    public Dictionary<int, SchoolMask> NpcSchoolImmunity { get; } = [];
+
+    public Dictionary<string, int> IntVariables { get; } = [];
+
+    public Dictionary<string, string> StringVariables { get; } = [];
+
+    public KeyActions Pull { get; } = new();
+    public KeyActions Flee { get; } = new();
+    public KeyActions Combat { get; } = new();
+    public KeyActions Adhoc { get; } = new();
+    public KeyActions Parallel { get; } = new();
+    public KeyActions NPC { get; } = new();
+    public KeyActions AssistFocus { get; } = new();
+    public WaitKeyActions Wait { get; } = new();
+    public FormKeyActions Form { get; } = new();
+
+    /// <summary>
+    /// Whether mail functionality is enabled for this profile.
+    /// </summary>
+    public bool Mail { get; set; }
+
+    /// <summary>
+    /// External mail configuration filename (relative to Json/mail/).
+    /// If empty, uses inline MailConfig settings.
+    /// </summary>
+    public string MailFilename { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Mail configuration settings (inline or loaded from external file).
+    /// </summary>
+    public MailConfiguration MailConfig { get; set; } = new();
+
+    /// <summary>
+    /// Runtime mail configuration overrides (from UI/localStorage).
+    /// Takes priority over MailConfig when set. Not serialized to JSON.
+    /// </summary>
+    [JsonIgnore]
+    public MailConfiguration? RuntimeMailConfig { get; set; }
+
+    public KeyAction[] GatherFindKeyConfig { get; set; } = Array.Empty<KeyAction>();
+    public string[] GatherFindKeys { get; init; } = Array.Empty<string>();
+
+    public ConsoleKey ForwardKey { get; init; } = ConsoleKey.UpArrow;
+    public ConsoleKey BackwardKey { get; init; } = ConsoleKey.DownArrow;
+    public ConsoleKey TurnLeftKey { get; init; } = ConsoleKey.LeftArrow;
+    public ConsoleKey TurnRightKey { get; init; } = ConsoleKey.RightArrow;
+    public ConsoleKey StrafeLeftKey { get; init; } = ConsoleKey.Q;
+    public ConsoleKey StrafeRightKey { get; init; } = ConsoleKey.E;
+
+    // Cached macro KeyActions for efficient re-resolution on action bar changes
+    private readonly List<KeyAction> macroActions = [];
+    public IReadOnlyList<KeyAction> MacroActions => macroActions;
+
+    public void Initialise(IServiceProvider sp, Dictionary<int, string> overridePathFile)
     {
-        public int ZoneId { get; set; } = -1;
-        public Vector3 ExitZoneLocation { get; set; }
-    }
+        Approach.Key = Interact.Key;
+        AutoAttack.Key = Interact.Key;
 
-    public enum Mode
-    {
-        Grind = 0,
-        CorpseRun = 1,
-        AttendedGather = 2,
-        AttendedGrind = 3
-    }
+        ILogger logger = sp.GetRequiredService<ILogger>();
+        PlayerReader playerReader = sp.GetRequiredService<PlayerReader>();
 
+        RecordInt globalTime = sp.GetRequiredService<AddonReader>().GlobalTime;
 
-    public class ClassConfiguration
-    {
-        public string ClassName { get; set; } = string.Empty;
-        public bool Loot { get; set; } = true;
-        public bool Skin { get; set; }
-        public bool UseMount { get; set; } = true;
-        public bool KeyboardOnly { get; set; }
-
-        public string PathFilename { get; set; } = string.Empty;
-        public string SpiritPathFilename { get; set; } = string.Empty;
-
-        public string? OverridePathFilename { get; set; } = string.Empty;
-
-        public bool PathThereAndBack { get; set; } = true;
-        public bool PathReduceSteps { get; set; }
-
-        public Mode Mode { get; set; } = Mode.Grind;
-
-        public BadZone WrongZone { get; set; } = new BadZone();
-
-        public int NPCMaxLevels_Above { get; set; } = 1;
-        public int NPCMaxLevels_Below { get; set; } = 7;
-
-        public bool CheckTargetGivesExp { get; set; }
-        public List<string> Blacklist { get; } = new List<string>();
-
-        public Dictionary<int, List<SchoolMask>> ImmunityBlacklist { get; } = new Dictionary<int, List<SchoolMask>>();
-
-        public Dictionary<string, int> IntVariables { get; } = new Dictionary<string, int>();
-
-        public KeyActions Pull { get; set; } = new KeyActions();
-        public KeyActions Combat { get; set; } = new KeyActions();
-        public KeyActions Adhoc { get; set; } = new KeyActions();
-        public KeyActions Parallel { get; set; } = new KeyActions();
-        public KeyActions NPC { get; set; } = new KeyActions();
-
-        public List<KeyAction> Form { get; } = new List<KeyAction>();
-        public List<KeyAction> GatherFindKeyConfig { get; } = new List<KeyAction>();
-        public List<string> GatherFindKeys { get; } = new List<string>();
-
-        public KeyAction Jump { get; set; } = new KeyAction();
-        public string JumpKey { get; set; } = "Spacebar";
-
-        public KeyAction Interact { get; set; } = new KeyAction();
-        public string InteractKey { get; set; } = "I";
-
-        public KeyAction Approach { get; set; } = new KeyAction();
-        public KeyAction AutoAttack { get; set; } = new KeyAction();
-
-        public KeyAction TargetLastTarget { get; set; } = new KeyAction();
-        public string TargetLastTargetKey { get; set; } = "G";
-
-        public KeyAction StandUp { get; set; } = new KeyAction();
-        public string StandUpKey { get; set; } = "X";
-
-        public KeyAction ClearTarget { get; set; } = new KeyAction();
-        public string ClearTargetKey { get; set; } = "Insert";
-
-        public KeyAction StopAttack { get; set; } = new KeyAction();
-        public string StopAttackKey { get; set; } = "Delete";
-
-        public KeyAction TargetNearestTarget { get; set; } = new KeyAction();
-        public string TargetNearestTargetKey { get; set; } = "Tab";
-
-        public KeyAction TargetTargetOfTarget { get; set; } = new KeyAction();
-        public string TargetTargetOfTargetKey { get; set; } = "F";
-        public KeyAction TargetPet { get; set; } = new KeyAction();
-        public string TargetPetKey { get; set; } = "Multiply";
-
-        public KeyAction PetAttack { get; set; } = new KeyAction();
-        public string PetAttackKey { get; set; } = "Subtract";
-
-        public KeyAction Mount { get; set; } = new KeyAction();
-        public string MountKey { get; set; } = "O";
-
-        public ConsoleKey ForwardKey { get; set; } = ConsoleKey.UpArrow;  // 38
-        public ConsoleKey BackwardKey { get; set; } = ConsoleKey.DownArrow; // 40
-        public ConsoleKey TurnLeftKey { get; set; } = ConsoleKey.LeftArrow; // 37
-        public ConsoleKey TurnRightKey { get; set; } = ConsoleKey.RightArrow; // 39
-
-        public static Dictionary<Form, ConsoleKey> FormKeys { get; private set; } = new Dictionary<Form, ConsoleKey>();
-
-        public void Initialise(DataConfig dataConfig, AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger, string? overridePathProfileFile)
+        if (Paths == Array.Empty<PathSettings>() &&
+            !string.IsNullOrEmpty(PathFilename))
         {
-            SpiritPathFilename = string.Empty;
+            overridePathFile.TryGetValue(0, out string? firstoverridePath);
+            OverridePathFilename = firstoverridePath ?? string.Empty;
 
-            requirementFactory.PopulateUserDefinedIntVariables(IntVariables);
-
-            Jump.Key = JumpKey;
-            Jump.Initialise(addonReader, requirementFactory, logger);
-
-            TargetLastTarget.Key = TargetLastTargetKey;
-            TargetLastTarget.Initialise(addonReader, requirementFactory, logger);
-
-            StandUp.Key = StandUpKey;
-            StandUp.Initialise(addonReader, requirementFactory, logger);
-
-            ClearTarget.Key = ClearTargetKey;
-            ClearTarget.Initialise(addonReader, requirementFactory, logger);
-
-            StopAttack.Key = StopAttackKey;
-            StopAttack.Initialise(addonReader, requirementFactory, logger);
-
-            TargetNearestTarget.Key = TargetNearestTargetKey;
-            TargetNearestTarget.Cooldown = 400;
-            TargetNearestTarget.Initialise(addonReader, requirementFactory, logger);
-
-            TargetPet.Key = TargetPetKey;
-            TargetPet.Initialise(addonReader, requirementFactory, logger);
-
-            TargetTargetOfTarget.Key = TargetTargetOfTargetKey;
-            TargetTargetOfTarget.Initialise(addonReader, requirementFactory, logger);
-
-            PetAttack.Key = PetAttackKey;
-            PetAttack.PressDuration = 10;
-            PetAttack.Initialise(addonReader, requirementFactory, logger);
-
-            Mount.Key = MountKey;
-            Mount.Initialise(addonReader, requirementFactory, logger);
-
-            Interact.Key = InteractKey;
-            Interact.Name = "Interact";
-            Interact.WaitForGCD = false;
-            Interact.DelayAfterCast = 0;
-            Interact.PressDuration = 30;
-            Interact.SkipValidation = true;
-            Interact.Initialise(addonReader, requirementFactory, logger);
-
-            Approach.Key = InteractKey;
-            Approach.Name = "Approach";
-            Approach.WaitForGCD = false;
-            Approach.DelayAfterCast = 0;
-            Approach.PressDuration = 10;
-            Approach.Cooldown = 400;
-            Approach.SkipValidation = true;
-            Approach.Initialise(addonReader, requirementFactory, logger);
-
-            AutoAttack.Key = InteractKey;
-            AutoAttack.Name = "AutoAttack";
-            AutoAttack.WaitForGCD = false;
-            AutoAttack.DelayAfterCast = 0;
-            AutoAttack.SkipValidation = true;
-            AutoAttack.Initialise(addonReader, requirementFactory, logger);
-
-            StopAttack.Name = "StopAttack";
-            StopAttack.WaitForGCD = false;
-            StopAttack.PressDuration = 20;
-            StopAttack.SkipValidation = true;
-
-            InitializeKeyActions(Pull, Interact, Approach, AutoAttack, StopAttack);
-            InitializeKeyActions(Combat, Interact, Approach, AutoAttack, StopAttack);
-
-            logger.LogInformation($"[{nameof(Form)}] Initialise KeyActions.");
-            Form.ForEach(i => i.InitialiseForm(addonReader, requirementFactory, logger));
-
-            Pull.PreInitialise(nameof(Pull), requirementFactory, logger);
-            Combat.PreInitialise(nameof(Combat), requirementFactory, logger);
-            Adhoc.PreInitialise(nameof(Adhoc), requirementFactory, logger);
-            NPC.PreInitialise(nameof(NPC), requirementFactory, logger);
-            Parallel.PreInitialise(nameof(Parallel), requirementFactory, logger);
-
-            Pull.Initialise(nameof(Pull), addonReader, requirementFactory, logger);
-            Combat.Initialise(nameof(Combat), addonReader, requirementFactory, logger);
-            Adhoc.Initialise(nameof(Adhoc), addonReader, requirementFactory, logger);
-            NPC.Initialise(nameof(NPC), addonReader, requirementFactory, logger);
-            Parallel.Initialise(nameof(Parallel), addonReader, requirementFactory, logger);
-
-            GatherFindKeys.ForEach(key =>
-            {
-                GatherFindKeyConfig.Add(new KeyAction { Key = key });
-                GatherFindKeyConfig.Last().Initialise(addonReader, requirementFactory, logger);
-            });
-
-            OverridePathFilename = overridePathProfileFile;
             if (!string.IsNullOrEmpty(OverridePathFilename))
             {
                 PathFilename = OverridePathFilename;
             }
 
-            if (!File.Exists(Path.Join(dataConfig.Path, PathFilename)))
+            Paths =
+            [
+                new PathSettings()
+                {
+                    PathFilename = PathFilename,
+                    OverridePathFilename = OverridePathFilename,
+                    PathThereAndBack = PathThereAndBack,
+                    PathReduceSteps = PathReduceSteps,
+                    SideActivityRequirements = SideActivityRequirements
+                }
+            ];
+        }
+
+        DataConfig dataConfig = sp.GetRequiredService<DataConfig>();
+
+        // Load mail config from external file if MailFilename is specified
+        if (!string.IsNullOrEmpty(MailFilename))
+        {
+            string mailPath = Path.Join(dataConfig.Mail, MailFilename);
+            if (File.Exists(mailPath))
+            {
+                MailConfig = Newtonsoft.Json.JsonConvert.DeserializeObject<MailConfiguration>(
+                    File.ReadAllText(mailPath)) ?? new MailConfiguration();
+                logger.LogInformation("Loaded mail config from {MailPath}", mailPath);
+            }
+            else
+            {
+                logger.LogWarning("Mail config file not found: {MailPath}", mailPath);
+            }
+        }
+
+        for (int i = 0; i < Paths.Length; i++)
+        {
+            PathSettings settings = Paths[i];
+
+            if (overridePathFile.TryGetValue(i, out string? overridePath))
+                settings.OverridePathFilename = overridePath;
+
+            if (!string.IsNullOrEmpty(settings.OverridePathFilename))
+            {
+                settings.PathFilename = settings.OverridePathFilename;
+            }
+
+            if (!File.Exists(Path.Join(dataConfig.Path, settings.PathFilename)))
             {
                 if (!string.IsNullOrEmpty(OverridePathFilename))
-                    throw new Exception($"The `{OverridePathFilename}` path file does not exists!");
+                    throw new Exception(
+                        $"[{nameof(ClassConfiguration)}.{nameof(Paths)}[{i}]] " +
+                        $"`{settings.OverridePathFilename}` file does not exists!");
                 else
-                    throw new Exception($"The loaded class config contains not existing `{PathFilename}` path file!");
+                    throw new Exception(
+                        $"[{nameof(ClassConfiguration)}.{nameof(Paths)}[{i}]] " +
+                        $"`{settings.PathFilename}` file does not exists!");
             }
 
-            CheckConfigConsistency(logger);
+            settings.Init(globalTime, playerReader, i);
         }
 
-        private void CheckConfigConsistency(ILogger logger)
+        if (Paths.Select(x => x.Id).Distinct().Count() != Paths.Length)
         {
-            if (CheckTargetGivesExp)
-            {
-                logger.LogWarning("CheckTargetGivesExp is enabled. NPCMaxLevels_Above and NPCMaxLevels_Below will be ignored.");
-            }
-            if (KeyboardOnly)
-            {
-                logger.LogWarning("KeyboardOnly mode is enabled. The bot will not try to utilize your mouse. Skin will be disabled and the npc target function will be limited.");
-                Skin = false;
-            }
+            throw new ArgumentException("One ore more PathSettings share the same Id. Must be unique!");
         }
 
-        private static void InitializeKeyActions(KeyActions userActions, params KeyAction[] defaultActions)
-        {
-            KeyAction dummyDefault = new KeyAction();
-            var defaults = defaultActions.ToList();
+        RequirementFactory factory = new(sp, this);
 
-            userActions.Sequence.ForEach(user =>
+        var baseActionKeys = GetByType<KeyAction>();
+        foreach ((string _, KeyAction keyAction) in baseActionKeys)
+        {
+            keyAction.Init(logger, Log, playerReader, globalTime);
+            factory.Init(keyAction);
+        }
+
+        SetBaseActions(Pull,
+            Interact, Approach, AutoAttack, StopAttack, PetAttack);
+
+        SetBaseActions(Combat,
+            Interact, Approach, AutoAttack, StopAttack, PetAttack);
+
+        var groups = GetByTypeAsList<KeyActions>();
+
+        foreach ((string name, KeyActions keyActions) in groups)
+        {
+            if (keyActions.Sequence.Length > 0)
             {
-                defaults.ForEach(@default =>
+                LogInitBind(logger, name);
+            }
+
+            keyActions.InitBinds(logger, factory);
+
+            if (keyActions is WaitKeyActions wait &&
+                wait.AutoGenerateWaitForFoodAndDrink)
+                wait.AddWaitKeyActionsForFoodOrDrink(logger, groups);
+        }
+
+        foreach ((string name, KeyActions keyActions) in groups)
+        {
+            if (keyActions.Sequence.Length > 0)
+            {
+                LogInitKeyActions(logger, name);
+            }
+
+            keyActions.Init(logger, Log,
+                playerReader, globalTime, factory);
+        }
+
+        // Cache macro KeyActions (lowercase names) for efficient action bar change handling
+        macroActions.Clear();
+        foreach ((string _, KeyActions keyActions) in groups)
+        {
+            foreach (KeyAction action in keyActions.Sequence)
+            {
+                if (!string.IsNullOrEmpty(action.Name) && char.IsLower(action.Name[0]))
                 {
-                    if (user.Name == @default.Name)
-                    {
-                        user.Key = @default.Key;
-                        user.WaitForGCD = @default.WaitForGCD;
+                    macroActions.Add(action);
+                }
+            }
+        }
 
-                        //if (!string.IsNullOrEmpty(@default.Requirement))
-                        //    user.Requirement += " " + @default.Requirement;
-                        //user.Requirements.AddRange(@default.Requirements);
+        GatherFindKeyConfig = new KeyAction[GatherFindKeys.Length];
+        for (int i = 0; i < GatherFindKeys.Length; i++)
+        {
+            KeyAction newAction = new()
+            {
+                Key = GatherFindKeys[i],
+                Name = $"Profession {i}"
+            };
 
-                        if (user.DelayAfterCast == dummyDefault.DelayAfterCast)
-                            user.DelayAfterCast = @default.DelayAfterCast;
+            newAction.Init(logger, Log, playerReader, globalTime);
+            factory.Init(newAction);
 
-                        if (user.DelayAfterCast == dummyDefault.DelayAfterCast)
-                            user.PressDuration = @default.PressDuration;
+            GatherFindKeyConfig[i] = newAction;
+        }
 
-                        if (user.Cooldown == dummyDefault.Cooldown)
-                            user.Cooldown = @default.Cooldown;
+        if (CheckTargetGivesExp)
+        {
+            logger.LogWarning($"{nameof(CheckTargetGivesExp)} is enabled. " +
+                $"{nameof(NPCMaxLevels_Above)} and {nameof(NPCMaxLevels_Below)} ignored!");
+        }
+        if (KeyboardOnly)
+        {
+            logger.LogWarning($"{nameof(KeyboardOnly)} " +
+                $"mode is enabled. Mouse based actions ignored.");
 
-                        if (user.SkipValidation == dummyDefault.SkipValidation)
-                            user.SkipValidation = @default.SkipValidation;
-                    }
-                });
-            });
+            if (GatherCorpse)
+                logger.LogWarning($"{nameof(GatherCorpse)} " +
+                    $"limited to the last target. Rest going to be skipped!");
+        }
+
+        // Mail configuration validation
+        // Only warn (don't throw) since BlazorServer users can set recipient at runtime via UI
+        if (Mail && !HasMailRecipient())
+        {
+            logger.LogWarning(
+                $"[Mail] Enabled but no recipient configured yet. " +
+                $"Set via UI (BlazorServer), {MailConfiguration.RecipientEnvVar} env var, " +
+                $"or RecipientName in config.");
         }
     }
+
+    /// <summary>
+    /// Gets the effective mail configuration (runtime overrides ?? persisted config).
+    /// </summary>
+    public MailConfiguration GetEffectiveMailConfig()
+    {
+        return RuntimeMailConfig ?? MailConfig;
+    }
+
+    /// <summary>
+    /// Gets the effective recipient name from runtime config, env var, or persisted config.
+    /// Priority: RuntimeMailConfig.RecipientName > MAIL_RECIPIENT env var > MailConfig.RecipientName
+    /// </summary>
+    public string GetEffectiveRecipientName()
+    {
+        // Priority 1: Runtime config recipient
+        if (RuntimeMailConfig != null && !string.IsNullOrWhiteSpace(RuntimeMailConfig.RecipientName))
+        {
+            return RuntimeMailConfig.RecipientName;
+        }
+
+        // Priority 2: Environment variable
+        string? envRecipient = Environment.GetEnvironmentVariable(MailConfiguration.RecipientEnvVar);
+        if (!string.IsNullOrWhiteSpace(envRecipient))
+        {
+            return envRecipient;
+        }
+
+        // Priority 3: Persisted config
+        return MailConfig.RecipientName;
+    }
+
+    /// <summary>
+    /// Returns true if a valid recipient is configured (via runtime config, env var, or JSON).
+    /// </summary>
+    public bool HasMailRecipient()
+    {
+        return !string.IsNullOrWhiteSpace(GetEffectiveRecipientName());
+    }
+
+    /// <summary>
+    /// Gets the effective list of excluded item IDs by merging persisted config with runtime exclusions.
+    /// </summary>
+    public int[] GetEffectiveExcludedItemIds()
+    {
+        if (RuntimeMailConfig == null || RuntimeMailConfig.ExcludedItemIds.Length == 0)
+        {
+            return MailConfig.ExcludedItemIds;
+        }
+
+        return [.. MailConfig.ExcludedItemIds.Union(RuntimeMailConfig.ExcludedItemIds)];
+    }
+
+    /// <summary>
+    /// Gets a FrozenSet of effective excluded item IDs for efficient lookups.
+    /// Merges persisted config with runtime exclusions.
+    /// </summary>
+    public FrozenSet<int> GetEffectiveExcludedItemIdSet()
+    {
+        if (RuntimeMailConfig == null || RuntimeMailConfig.ExcludedItemIds.Length == 0)
+        {
+            return MailConfig.ExcludedItemIdSet;
+        }
+
+        return MailConfig.ExcludedItemIds.Union(RuntimeMailConfig.ExcludedItemIds).ToFrozenSet();
+    }
+
+    private static void SetBaseActions(
+        KeyActions keyActions, params ReadOnlySpan<KeyAction> baseActions)
+    {
+        KeyAction @default = new();
+        for (int i = 0; i < keyActions.Sequence.Length; i++)
+        {
+            KeyAction user = keyActions.Sequence[i];
+            for (int d = 0; d < baseActions.Length; d++)
+            {
+                KeyAction baseAction = baseActions[d];
+
+                if (user.Name != baseAction.Name)
+                    continue;
+
+                // Copy key-related properties from base action
+                user.Key = baseAction.Key;
+                user.ConsoleKey = baseAction.ConsoleKey;
+                user.BindingID = baseAction.BindingID;
+
+                if (!string.IsNullOrEmpty(baseAction.Requirement))
+                    user.Requirement += " " + baseAction.Requirement;
+
+                if (user.BeforeCastDelay == @default.BeforeCastDelay)
+                    user.BeforeCastDelay = baseAction.BeforeCastDelay;
+
+                if (user.BeforeCastMaxDelay == @default.BeforeCastMaxDelay)
+                    user.BeforeCastMaxDelay = baseAction.BeforeCastMaxDelay;
+
+                if (user.AfterCastDelay == @default.AfterCastDelay)
+                    user.AfterCastDelay = baseAction.AfterCastDelay;
+
+                if (user.AfterCastMaxDelay == @default.AfterCastMaxDelay)
+                    user.AfterCastMaxDelay = baseAction.AfterCastMaxDelay;
+
+                if (user.PressDuration == @default.PressDuration)
+                    user.PressDuration = baseAction.PressDuration;
+
+                if (user.Cooldown == @default.Cooldown)
+                    user.Cooldown = baseAction.Cooldown;
+
+                if (user.BaseAction == @default.BaseAction)
+                    user.BaseAction = baseAction.BaseAction;
+
+                if (user.Item == @default.Item)
+                    user.Item = baseAction.Item;
+            }
+        }
+    }
+
+    public IEnumerable<(string name, T)> GetByType<T>()
+    {
+        return GetType()
+            .GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.FlattenHierarchy)
+            .Where(OfType)
+            .Select(pInfo =>
+            {
+                return (pInfo.Name, (T)pInfo.GetValue(this)!);
+            });
+
+        static bool OfType(PropertyInfo pInfo)
+        {
+            return typeof(T).IsAssignableFrom(pInfo.PropertyType);
+        }
+    }
+
+    public List<(string name, T)> GetByTypeAsList<T>()
+    {
+        return GetByType<T>().ToList();
+    }
+
+    [LoggerMessage(
+        EventId = 0010,
+        Level = LogLevel.Information,
+        Message = "[{prefix}] Init Binds(Cost, Cooldown)")]
+    static partial void LogInitBind(ILogger logger, string prefix);
+
+    [LoggerMessage(
+        EventId = 0011,
+        Level = LogLevel.Information,
+        Message = "[{prefix}] Init KeyActions")]
+    static partial void LogInitKeyActions(ILogger logger, string prefix);
+
 }

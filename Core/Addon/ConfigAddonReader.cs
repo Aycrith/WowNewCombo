@@ -1,49 +1,43 @@
 ﻿using System;
-using System.Drawing;
-using Core.Database;
+using System.Threading;
 
-namespace Core.Addon
+namespace Core.Addon;
+
+public sealed class ConfigAddonReader : IAddonReader
 {
-    public class ConfigAddonReader : IAddonReader
+    private readonly IAddonDataProvider reader;
+
+    public double AvgUpdateLatency => throw new NotImplementedException();
+    public string TargetName => throw new NotImplementedException();
+
+    public ManualResetEventSlim DataReady { get; }
+
+    public event Action? AddonDataChanged;
+
+    public ConfigAddonReader(IAddonDataProvider reader, ManualResetEventSlim resetEvent)
     {
-        public PlayerReader PlayerReader { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public BagReader BagReader { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public EquipmentReader EquipmentReader { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public bool Active { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public LevelTracker LevelTracker { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public ActionBarCostReader ActionBarCostReader { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        this.reader = reader;
+        DataReady = resetEvent;
+    }
 
-        public SpellBookReader SpellBookReader { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public TalentReader TalentReader { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+    public void FullReset()
+    {
+        throw new NotImplementedException();
+    }
 
-        public WorldMapAreaDB WorldMapAreaDb { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+    public void Update()
+    {
+        reader.UpdateData();
+        DataReady.Set();
+    }
 
-        public double AvgUpdateLatency => throw new NotImplementedException();
+    public void UpdateUI()
+    {
+        AddonDataChanged?.Invoke();
+    }
 
-        public int CombatCreatureCount => throw new NotImplementedException();
-
-        public string TargetName => throw new NotImplementedException();
-
-        public RecordInt UIMapId => throw new NotImplementedException();
-
-        private void ConfigAddonReader_AddonDataChanged(object sender, EventArgs e)
-        {
-            throw new NotImplementedException();
-        }
-
-        public int GetIntAt(int index)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Refresh()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Reset()
-        {
-            throw new NotImplementedException();
-        }
+    public void SessionReset()
+    {
+        throw new NotImplementedException();
     }
 }

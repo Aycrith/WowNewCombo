@@ -27,6 +27,16 @@ bld/
 
 # Visual Studio 2015 cache/options directory
 .vs/
+
+# Visual Studio Code
+.vscode/
+
+# Claude AI files
+.claude/
+
+# Launcher smoke-test files
+.wow_mock/
+
 # Uncomment if you have tasks that create the project's static files in wwwroot
 #wwwroot/
 
@@ -249,8 +259,11 @@ _Pvt_Extensions
 .paket/paket.exe
 paket-files/
 
-# FAKE - F# Make
-.fake/
+# Addon dev
+.addon_dev/
+
+# Local WoW install snapshot (not part of repo)
+BlazorServer/Interface/
 
 # JetBrains Rider
 .idea/
@@ -265,7 +278,24 @@ __pycache__/
 
 # Logs
 *.log
-Json/History/*.*
+Json/History/*/*.json
+Json/History/*.json
+
+# Hazard data (runtime-generated)
+Json/HazardData/
+
+# PPather temp files
+Json/PPather/*.tmp
+
+# Private profiles
+Json/class/_
+Json/path/_
+
+# ScreenCaptures
+Json/cap/*.jpg
+
+# leaflet files
+Json/leaflet/**/*.png
 
 # Configs
 **/frame_config.json
@@ -276,6 +306,32 @@ BlazorServer/frame_config.json
 BlazorServer/addon_config.json
 BlazorServer/data_config.json
 
+HeadlessServer/frame_config.json
+HeadlessServer/addon_config.json
+HeadlessServer/data_config.json
+
 PathingAPI/frame_config.json
 PathingAPI/addon_config.json
 PathingAPI/data_config.json
+
+# BenchmarkDotNet artifacts
+**/BenchmarkDotNet.Artifacts/
+
+# Session-specific files (not for version control)
+session-*.md
+nul
+*.txt.backup
+test-report-*.json
+diagnostic_report.md
+EXECUTION_READY.txt
+READY_TO_LAUNCH.txt
+build_output.txt
+release_build.txt
+release_warnings.txt
+warnings_test.txt
+
+# Navigation server binaries (too large for git)
+Navigation/mmaps/
+Navigation/*.exe
+Navigation/*.dll
+logs/

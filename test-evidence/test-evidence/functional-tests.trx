@@ -1,0 +1,52 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="2a296816-9a4d-4708-8b53-105a6cc67bef" name="camer@ILI 2026-02-14 02:49:27" runUser="ILI\camer" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-02-14T02:49:27.7178607-05:00" queuing="2026-02-14T02:49:27.7178608-05:00" start="2026-02-14T02:49:27.2247773-05:00" finish="2026-02-14T02:49:27.7223483-05:00" />
+  <TestSettings name="default" id="8e2cfac5-831b-496a-a6fa-ffe3b58ba6ba">
+    <Deployment runDeploymentRoot="camer_ILI_2026-02-14_02_49_27" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="73eb2aab-ee38-4237-a1b1-3d8543b5ea24" testId="f01657fc-8dc8-40b8-a602-14e5f99fb98b" testName="FrontendUnitTests.Services.RouteVisualizationServiceTests.Functional_HotZoneDetection_ShouldFindZonesInDirection" computerName="ILI" duration="00:00:00.0013824" startTime="2026-02-14T02:49:27.6487794-05:00" endTime="2026-02-14T02:49:27.6487797-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="73eb2aab-ee38-4237-a1b1-3d8543b5ea24" />
+    <UnitTestResult executionId="2c5f788d-7767-4dad-8b40-fbbce5e4a17f" testId="1f107fdf-240a-1762-bcaa-56e2fbcbed97" testName="FrontendUnitTests.Services.RouteVisualizationServiceTests.Functional_Cleanup_ShouldRemoveOldMarkers" computerName="ILI" duration="00:00:00.0044945" startTime="2026-02-14T02:49:27.6452557-05:00" endTime="2026-02-14T02:49:27.6452558-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2c5f788d-7767-4dad-8b40-fbbce5e4a17f" />
+    <UnitTestResult executionId="988a097e-667c-4d49-ab19-2a1d182121e1" testId="d8d11f12-77d8-1134-5980-3eb871b7bc1f" testName="FrontendUnitTests.Services.RouteVisualizationServiceTests.Functional_DeathMarkers_ShouldPersist" computerName="ILI" duration="00:00:00.0081999" startTime="2026-02-14T02:49:27.6413318-05:00" endTime="2026-02-14T02:49:27.6413463-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="988a097e-667c-4d49-ab19-2a1d182121e1" />
+    <UnitTestResult executionId="b6868309-25dd-4f92-9580-ae71bad2b553" testId="42c701ff-2213-9a97-61f5-04c3a93d9acc" testName="FrontendUnitTests.Services.RouteVisualizationServiceTests.Functional_StuckEvent_ShouldTriggerHandler" computerName="ILI" duration="00:00:00.0020781" startTime="2026-02-14T02:49:27.6473508-05:00" endTime="2026-02-14T02:49:27.6473509-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b6868309-25dd-4f92-9580-ae71bad2b553" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="FrontendUnitTests.Services.RouteVisualizationServiceTests.Functional_StuckEvent_ShouldTriggerHandler" storage="c:\wowclassicgrindbot\frontendunittests\bin\release\net10.0\frontendunittests.dll" id="42c701ff-2213-9a97-61f5-04c3a93d9acc">
+      <Execution id="b6868309-25dd-4f92-9580-ae71bad2b553" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Release\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Services.RouteVisualizationServiceTests" name="Functional_StuckEvent_ShouldTriggerHandler" />
+    </UnitTest>
+    <UnitTest name="FrontendUnitTests.Services.RouteVisualizationServiceTests.Functional_DeathMarkers_ShouldPersist" storage="c:\wowclassicgrindbot\frontendunittests\bin\release\net10.0\frontendunittests.dll" id="d8d11f12-77d8-1134-5980-3eb871b7bc1f">
+      <Execution id="988a097e-667c-4d49-ab19-2a1d182121e1" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Release\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Services.RouteVisualizationServiceTests" name="Functional_DeathMarkers_ShouldPersist" />
+    </UnitTest>
+    <UnitTest name="FrontendUnitTests.Services.RouteVisualizationServiceTests.Functional_HotZoneDetection_ShouldFindZonesInDirection" storage="c:\wowclassicgrindbot\frontendunittests\bin\release\net10.0\frontendunittests.dll" id="f01657fc-8dc8-40b8-a602-14e5f99fb98b">
+      <Execution id="73eb2aab-ee38-4237-a1b1-3d8543b5ea24" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Release\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Services.RouteVisualizationServiceTests" name="Functional_HotZoneDetection_ShouldFindZonesInDirection" />
+    </UnitTest>
+    <UnitTest name="FrontendUnitTests.Services.RouteVisualizationServiceTests.Functional_Cleanup_ShouldRemoveOldMarkers" storage="c:\wowclassicgrindbot\frontendunittests\bin\release\net10.0\frontendunittests.dll" id="1f107fdf-240a-1762-bcaa-56e2fbcbed97">
+      <Execution id="2c5f788d-7767-4dad-8b40-fbbce5e4a17f" />
+      <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Release\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Services.RouteVisualizationServiceTests" name="Functional_Cleanup_ShouldRemoveOldMarkers" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="f01657fc-8dc8-40b8-a602-14e5f99fb98b" executionId="73eb2aab-ee38-4237-a1b1-3d8543b5ea24" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1f107fdf-240a-1762-bcaa-56e2fbcbed97" executionId="2c5f788d-7767-4dad-8b40-fbbce5e4a17f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d8d11f12-77d8-1134-5980-3eb871b7bc1f" executionId="988a097e-667c-4d49-ab19-2a1d182121e1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="42c701ff-2213-9a97-61f5-04c3a93d9acc" executionId="b6868309-25dd-4f92-9580-ae71bad2b553" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="4" executed="4" passed="4" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.7+8f2703126a (64-bit .NET 10.0.2)&#xD;
+[xUnit.net 00:00:00.04]   Discovering: FrontendUnitTests&#xD;
+[xUnit.net 00:00:00.08]   Discovered:  FrontendUnitTests&#xD;
+[xUnit.net 00:00:00.08]   Starting:    FrontendUnitTests&#xD;
+[xUnit.net 00:00:00.13]   Finished:    FrontendUnitTests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

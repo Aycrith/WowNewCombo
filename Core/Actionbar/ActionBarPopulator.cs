@@ -1,168 +1,225 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
+
 using System.Collections.Generic;
 
-namespace Core
+namespace Core;
+
+public sealed class ActionBarPopulator
 {
-    public class ActionBarPopulator
+    internal sealed class ActionBarSlotItem
     {
-        struct ActionBarSource
+        public string Name { get; }
+        public KeyAction KeyAction { get; }
+        public bool IsItem { get; }
+
+        public ActionBarSlotItem(string name, KeyAction keyAction, bool isItem)
         {
-            public string Name;
-            public string Key;
-            public bool Item;
-            public KeyAction KeyAction;
+            Name = name;
+            KeyAction = keyAction;
+            IsItem = isItem;
         }
+    }
 
-        private readonly ILogger logger;
-        private readonly ClassConfiguration config;
-        private readonly AddonReader addonReader;
-        private readonly ExecGameCommand execGameCommand;
+    private readonly ILogger<ActionBarPopulator> logger;
+    private readonly ClassConfiguration config;
+    private readonly AddonConfig addonConfig;
+    private readonly BagReader bagReader;
+    private readonly EquipmentReader equipmentReader;
+    private readonly ExecGameCommand execGameCommand;
 
-        public ActionBarPopulator(ILogger logger, ClassConfiguration config, AddonReader addonReader, ExecGameCommand execGameCommand)
+    public ActionBarPopulator(ILogger<ActionBarPopulator> logger,
+        ClassConfiguration config, AddonConfigurator addonConfigurator,
+        BagReader bagReader, EquipmentReader equipmentReader,
+        ExecGameCommand execGameCommand)
+    {
+        this.logger = logger;
+
+        this.config = config;
+        this.addonConfig = addonConfigurator.Config;
+        this.bagReader = bagReader;
+        this.equipmentReader = equipmentReader;
+        this.execGameCommand = execGameCommand;
+    }
+
+    public void Execute()
+    {
+        List<ActionBarSlotItem> items = new();
+
+        foreach ((string _, KeyActions keyActions) in config.GetByType<KeyActions>())
         {
-            this.logger = logger;
-            this.config = config;
-            this.addonReader = addonReader;
-            this.execGameCommand = execGameCommand;
-        }
-
-        private readonly List<ActionBarSource> sources = new List<ActionBarSource>();
-
-
-        public void Execute()
-        {
-            CollectKeyActions();
-            Run();
-        }
-
-        private void CollectKeyActions()
-        {
-            sources.Clear();
-
-            config.Form.ForEach(k => AddUnique(k));
-            config.Adhoc.Sequence.ForEach(k => AddUnique(k));
-            config.Parallel.Sequence.ForEach(k => AddUnique(k));
-            config.Pull.Sequence.ForEach(k => AddUnique(k));
-            config.Combat.Sequence.ForEach(k => AddUnique(k));
-            config.NPC.Sequence.ForEach(k => AddUnique(k));
-
-            ResolveConsumables();
-
-            sources.Sort((a, b) => a.Key.CompareTo(b.Key));
-        }
-
-
-        private void AddUnique(KeyAction a)
-        {
-            if (!KeyReader.KeyMapping.ContainsKey(a.Key)) return;
-            if (sources.FindIndex(i => i.KeyAction.ConsoleKeyFormHash == a.ConsoleKeyFormHash) > -1) return;
-
-            var source = new ActionBarSource
+            foreach (KeyAction keyAction in keyActions.Sequence)
             {
-                Name = a.Name,
-                Key = a.Key,
-                Item = false,
-                KeyAction = a
-            };
-
-            sources.Add(source);
+                AddUnique(items, keyAction);
+            }
         }
 
-        private void Run()
+        items.Sort((a, b) => a.KeyAction.Slot.CompareTo(b.KeyAction.Slot));
+
+        foreach (ActionBarSlotItem absi in items)
         {
-            foreach (var a in sources)
+            if (ScriptBuilder(absi, out string content))
             {
-                var content = ScriptBuilder(a);
                 execGameCommand.Run(content);
             }
-        }
-
-
-        #region Consumable
-
-        private void ResolveConsumables()
-        {
-            ReplaceIfExists("Water", 
-                addonReader.BagReader.HighestQuantityOfWaterId().ToString());
-
-            ReplaceIfExists("Food",
-                addonReader.BagReader.HighestQuantityOfFoodId().ToString());
-        }
-
-        private void ReplaceIfExists(string key, string val)
-        {
-            int index = sources.FindIndex(i => i.Name == key);
-            if (index != -1)
+            else
             {
-                var item = sources[index];
-                item.Item = true;
-                item.Name = val;
-                sources[index] = item;
+                logger.LogWarning($"Unable to populate " +
+                    $"{absi.KeyAction.Name} -> " +
+                    $"'{absi.Name}' is not valid Name or ID!");
+            }
+        }
+    }
+
+    private void AddUnique(List<ActionBarSlotItem> items, KeyAction keyAction)
+    {
+        // not bound to actionbar slot
+        if (keyAction.Slot == 0)
+        {
+            logger.LogDebug("Skipping {Name} - no action bar slot assigned", keyAction.Name);
+            return;
+        }
+
+        for (int i = 0; i < items.Count; i++)
+        {
+            if (items[i].KeyAction.SlotIndex == keyAction.SlotIndex)
+            {
+                logger.LogDebug("Skipping {Name} - slot {Slot} already assigned to {Existing}",
+                    keyAction.Name, keyAction.Slot, items[i].Name);
+                return;
             }
         }
 
-        #endregion
+        string name = keyAction.Name;
+        bool isItem = false;
 
-
-        private string ScriptBuilder(ActionBarSource a)
+        if (name.Equals(RequirementFactory.Drink, System.StringComparison.OrdinalIgnoreCase))
         {
-            string nameOrId = $"\"{a.Name}\"";
-            if (int.TryParse(a.Name, out int id))
+            int drinkId = bagReader.HighestQuantityOfDrinkItemId();
+            if (drinkId == 0)
+                logger.LogWarning("No drink items in bags for '{Name}'", keyAction.Name);
+            name = drinkId.ToString();
+            isItem = true;
+        }
+        else if (name.Equals(RequirementFactory.Food, System.StringComparison.OrdinalIgnoreCase))
+        {
+            int foodId = bagReader.HighestQuantityOfFoodItemId();
+            if (foodId == 0)
+                logger.LogWarning("No food items in bags for '{Name}'", keyAction.Name);
+            name = foodId.ToString();
+            isItem = true;
+        }
+        else if (keyAction.Item)
+        {
+            if (keyAction.Name == "Trinket 1")
             {
-                nameOrId = id.ToString();
+                int trinketId = equipmentReader.GetId((int)InventorySlotId.Trinket_1);
+                if (trinketId == 0)
+                    logger.LogWarning("No trinket equipped in slot Trinket_1 for '{Name}'", keyAction.Name);
+                name = trinketId.ToString();
+                isItem = true;
             }
-
-            string func = GetFunction(a);
-            string slot = GetActionBarSlotHotkey(a);
-            return $"/run {func}({nameOrId})PlaceAction({slot})ClearCursor()--";
-        }
-
-        private static string GetFunction(ActionBarSource a)
-        {
-            if (a.Item)
-                return "PickupItem";
-
-            if (char.IsLower(a.Name[0]))
-                return "PickupMacro";
-
-            return "PickupSpellBookItem";
-        }
-        
-        private string GetActionBarSlotHotkey(ActionBarSource a)
-        {
-            if(a.Key.StartsWith(KeyReader.BR))
-                return CalculateActionNumber(a, a.Key, KeyReader.BR, KeyReader.BRIdx);
-
-            if (a.Key.StartsWith(KeyReader.BL))
-                return CalculateActionNumber(a, a.Key, KeyReader.BL, KeyReader.BLIdx);
-
-            // "-" "=" keys
-            if (KeyReader.ActionBarSlotMap.ContainsKey(a.Key))
-                return CalculateActionNumber(a, KeyReader.ActionBarSlotMap[a.Key].ToString(), "", 0);
-
-            return CalculateActionNumber(a, a.Key, "", 0);
-        }
-
-        private string CalculateActionNumber(ActionBarSource a, string key, string prefix, int offset)
-        {
-            if (!string.IsNullOrEmpty(prefix))
-                key = key.Replace(prefix, "");
-
-            if (int.TryParse(key, out int hotkey))
+            else if (keyAction.Name == "Trinket 2")
             {
-                if (offset == 0 && hotkey <= 12)
-                {
-                    offset += Stance.RuntimeSlotToActionBar(a.KeyAction, addonReader.PlayerReader, hotkey);
-                }
-
-                if (hotkey == 0)
-                    return (offset + 10).ToString();
-
-                return (offset + hotkey).ToString();
+                int trinketId = equipmentReader.GetId((int)InventorySlotId.Trinket_2);
+                if (trinketId == 0)
+                    logger.LogWarning("No trinket equipped in slot Trinket_2 for '{Name}'", keyAction.Name);
+                name = trinketId.ToString();
+                isItem = true;
             }
-
-            return key;
         }
 
+        items.Add(new(name, keyAction, isItem));
+    }
+
+    private bool ScriptBuilder(ActionBarSlotItem abs, out string content)
+    {
+        int actionSlot = abs.KeyAction.SlotIndex + 1;
+
+        // For items, use PickupItem with item ID
+        if (abs.IsItem)
+        {
+            if (int.TryParse(abs.Name, out int itemId) && itemId > 0)
+            {
+                content = $"/run PickupItem({itemId})PlaceAction({actionSlot})ClearCursor()--";
+                return true;
+            }
+            content = "";
+            return false;
+        }
+
+        // For macros (lowercase names), use PickupMacro
+        if (char.IsLower(abs.Name[0]))
+        {
+            content = $"/run PickupMacro(\"{abs.Name}\")PlaceAction({actionSlot})ClearCursor()--";
+            return true;
+        }
+
+        // For spells, use addon's PS() function which searches spellbook by name prefix
+        // This handles ranked spells like "Immolate(Rank 9)" by matching "Immolate"
+        content = $"/run {addonConfig.Title}:PS(\"{abs.Name}\",{actionSlot})";
+        return true;
+    }
+
+    /// <summary>
+    /// Places a single KeyAction on the action bar.
+    /// Handles spells, macros, items, food, drink, and trinkets.
+    /// </summary>
+    public bool Place(KeyAction keyAction)
+    {
+        if (keyAction.Slot == 0 || string.IsNullOrEmpty(keyAction.Name))
+        {
+            logger.LogDebug("Cannot place action - Slot={Slot}, Name='{Name}'",
+                keyAction.Slot, keyAction.Name ?? "(null)");
+            return false;
+        }
+
+        string name = keyAction.Name;
+        bool isItem = false;
+
+        if (name.Equals(RequirementFactory.Drink, System.StringComparison.OrdinalIgnoreCase))
+        {
+            int drinkId = bagReader.HighestQuantityOfDrinkItemId();
+            if (drinkId == 0)
+                logger.LogWarning("No drink items in bags for '{Name}' (Place)", keyAction.Name);
+            name = drinkId.ToString();
+            isItem = true;
+        }
+        else if (name.Equals(RequirementFactory.Food, System.StringComparison.OrdinalIgnoreCase))
+        {
+            int foodId = bagReader.HighestQuantityOfFoodItemId();
+            if (foodId == 0)
+                logger.LogWarning("No food items in bags for '{Name}' (Place)", keyAction.Name);
+            name = foodId.ToString();
+            isItem = true;
+        }
+        else if (keyAction.Item)
+        {
+            if (keyAction.Name == "Trinket 1")
+            {
+                int trinketId = equipmentReader.GetId((int)InventorySlotId.Trinket_1);
+                if (trinketId == 0)
+                    logger.LogWarning("No trinket equipped in slot Trinket_1 for '{Name}' (Place)", keyAction.Name);
+                name = trinketId.ToString();
+                isItem = true;
+            }
+            else if (keyAction.Name == "Trinket 2")
+            {
+                int trinketId = equipmentReader.GetId((int)InventorySlotId.Trinket_2);
+                if (trinketId == 0)
+                    logger.LogWarning("No trinket equipped in slot Trinket_2 for '{Name}' (Place)", keyAction.Name);
+                name = trinketId.ToString();
+                isItem = true;
+            }
+        }
+
+        var item = new ActionBarSlotItem(name, keyAction, isItem);
+        if (ScriptBuilder(item, out string content))
+        {
+            execGameCommand.Run(content);
+            return true;
+        }
+
+        logger.LogWarning($"Unable to place {keyAction.Name} -> '{name}' is not valid!");
+        return false;
     }
 }

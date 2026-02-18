@@ -1,122 +1,160 @@
-﻿using Newtonsoft.Json;
+﻿using Microsoft.Extensions.Logging;
+
+using PPather.Data;
+
+using SharedLib.Converters;
+
 using System;
-using System.Linq;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using System.Diagnostics;
-using Core.PPather;
-using System.Text;
+using System.Net.Sockets;
 using System.Numerics;
+using System.Text;
+using System.Text.Json;
+using System.Threading.Tasks;
 
-namespace Core
+namespace Core;
+
+public sealed class RemotePathingAPI : IPPather, IPathVizualizer, IDisposable
 {
-    public class RemotePathingAPI : IPPather
+    private readonly ILogger<RemotePathingAPI> logger;
+
+    private readonly string host = "127.0.0.1";
+    private readonly int port = 5001;
+
+    private readonly JsonSerializerOptions options;
+    private readonly HttpClient client;
+
+    public HttpClient Client => client;
+    public JsonSerializerOptions Options => options;
+
+    public RemotePathingAPI(ILogger<RemotePathingAPI> logger,
+        string host, int port)
     {
-        private readonly ILogger logger;
+        this.logger = logger;
+        this.host = host;
+        this.port = port;
 
-        private string host = "localhost";
-
-        private int port = 5001;
-
-        private string api => $"http://{host}:{port}/api/PPather/";
-
-        private List<LineArgs> lineArgs = new List<LineArgs>();
-
-        public RemotePathingAPI(ILogger logger, string host="", int port=0)
+        options = new()
         {
-            this.logger = logger;
-            this.host = host;
-            this.port = port;
+            PropertyNameCaseInsensitive = true
+        };
+        options.Converters.Add(new Vector3Converter());
+        options.Converters.Add(new Vector4Converter());
+
+        string url = $"http://{host}:{port}/api/PPather/";
+
+        client = new()
+        {
+            BaseAddress = new Uri(url)
+        };
+    }
+
+    public void Dispose()
+    {
+        client.Dispose();
+    }
+
+    public async ValueTask DrawLines(List<LineArgs> lineArgs)
+    {
+        using StringContent content =
+            new(JsonSerializer.Serialize(lineArgs, options),
+            Encoding.UTF8, "application/json");
+
+        logger.LogDebug($"Drawing lines " +
+            $"'{string.Join(", ", lineArgs.Select(l => l.MapId))}'...");
+
+        await client.PostAsync("Drawlines", content);
+    }
+
+    public async ValueTask DrawSphere(SphereArgs args)
+    {
+        using StringContent content =
+            new(JsonSerializer.Serialize(args, options),
+            Encoding.UTF8, "application/json");
+
+        await client.PostAsync("DrawSphere", content);
+    }
+
+    public Vector3[] FindMapRoute(int uiMap, Vector3 mapFrom, Vector3 mapTo)
+    {
+        try
+        {
+            //logger.LogDebug($"map {uiMap} | {mapFrom} to {mapTo}");
+
+            string request = $"MapRoute?" +
+                $"uimap1={uiMap}&" +
+                $"x1={mapFrom.X}&" +
+                $"y1={mapFrom.Y}&" +
+                $"uimap2={uiMap}&" +
+                $"x2={mapTo.X}&" +
+                $"y2={mapTo.Y}";
+
+            //long timestamp = Stopwatch.GetTimestamp();
+
+            string response = client.GetStringAsync(request).GetAwaiter().GetResult();
+
+            //logger.LogInformation($"map {uiMap} | {mapFrom} to {mapTo} took " +
+            //    $"{Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds}ms");
+
+            return
+                JsonSerializer.Deserialize<Vector3[]>(response, options)
+                ?? Array.Empty<Vector3>();
         }
-
-        public async ValueTask DrawLines(List<LineArgs> lineArgs)
+        catch (Exception ex)
         {
-            this.lineArgs = lineArgs;
-
-            using (var handler = new HttpClientHandler())
-            {
-                using (var client = new HttpClient(handler))
-                {
-                    using (var content = new StringContent(JsonConvert.SerializeObject(lineArgs), Encoding.UTF8, "application/json"))
-                    {
-                        logger.LogInformation($"Drawing lines '{string.Join(", ", lineArgs.Select(l => l.MapId))}'...");
-                        await client.PostAsync($"{api}Drawlines", content);
-                    }
-                }
-            }
+            logger.LogError(ex, $"{mapFrom} to {mapTo}");
+            return Array.Empty<Vector3>();
         }
+    }
 
-        public async ValueTask DrawLines()
+    public Vector3[] FindWorldRoute(int uiMap, bool startIndoors, Vector3 worldFrom, Vector3 worldTo)
+    {
+        try
         {
-            await DrawLines(lineArgs);
+            //logger.LogDebug($"map {uiMap} | {worldFrom} map {uiMap} to {worldTo}");
+
+            string request =
+                $"WorldRoute2?" +
+                $"x1={worldFrom.X}&" +
+                $"y1={worldFrom.Y}&" +
+                $"z1={worldFrom.Z}&" +
+                $"x2={worldTo.X}&" +
+                $"y2={worldTo.Y}&" +
+                $"z2={worldTo.Z}&" +
+                $"uimap={uiMap}&" +
+                $"startindoors={startIndoors}";
+
+            //long timestamp = Stopwatch.GetTimestamp();
+
+            string response = client.GetStringAsync(request).GetAwaiter().GetResult();
+
+            //logger.LogDebug($"map {uiMap} | {worldFrom} to {worldTo} took " +
+            //    $"{Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds}ms");
+
+            return
+                JsonSerializer.Deserialize<Vector3[]>(response, options)
+                ?? Array.Empty<Vector3>();
         }
-
-        public async ValueTask DrawSphere(SphereArgs args)
+        catch (Exception ex)
         {
-            using (var handler = new HttpClientHandler())
-            {
-                using (var client = new HttpClient(handler))
-                {
-                    using (var content = new StringContent(JsonConvert.SerializeObject(args), Encoding.UTF8, "application/json"))
-                    {
-                        await client.PostAsync($"{api}DrawSphere", content);
-                    }
-                }
-            }
+            logger.LogError(ex, $"{worldFrom} to {worldTo}");
+            return Array.Empty<Vector3>();
         }
+    }
 
-        public async ValueTask<List<Vector3>> FindRoute(int map, Vector3 fromPoint, Vector3 toPoint)
+    public bool PingServer()
+    {
+        try
         {
-            try
-            {
-                logger.LogInformation($"Finding route from {fromPoint} map {map} to {toPoint} map {map}...");
-                var url = $"{api}MapRoute?map1={map}&x1={fromPoint.X}&y1={fromPoint.Y}&map2={map}&x2={toPoint.X}&y2={toPoint.Y}";
-                var sw = new Stopwatch();
-                sw.Start();
-
-                using (var handler = new HttpClientHandler())
-                {
-                    using (var client = new HttpClient(handler))
-                    {
-                        var responseString = await client.GetStringAsync(url);
-                        logger.LogInformation($"Finding route from {fromPoint} map {map} to {toPoint} took {sw.ElapsedMilliseconds} ms.");
-                        var path = JsonConvert.DeserializeObject<IEnumerable<WorldMapAreaSpot>>(responseString);
-                        var result = path.Select(l => new Vector3(l.X, l.Y, l.Z)).ToList();
-                        return result;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, $"Finding route from {fromPoint} to {toPoint}");
-                Console.WriteLine(ex);
-                return new List<Vector3>();
-            }
+            using TcpClient client = new(host, port);
+            return true;
         }
-
-        public async Task<bool> PingServer()
+        catch (Exception ex)
         {
-            try
-            {
-                var url = $"{api}SelfTest";
-
-                using (var handler = new HttpClientHandler())
-                {
-                    using (var client = new HttpClient(handler))
-                    {
-                        var responseString = await client.GetStringAsync(url);
-                        var result = JsonConvert.DeserializeObject<bool>(responseString);
-                        return result;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning($"INFO: Pathing API is not running remotely, this means the local one will be used. {api} Gave({ex.Message}).");
-                return false;
-            }
+            logger.LogError(ex.Message);
+            return false;
         }
     }
 }

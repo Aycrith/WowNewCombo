@@ -1,17 +1,17 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Numerics;
 
-namespace Core
+namespace Core;
+
+public interface IRouteProvider
 {
-    public interface IRouteProvider
-    {
-        List<Vector3> PathingRoute();
+    Vector3[] MapRoute();
 
-        DateTime LastActive { get; }
+    Vector3[] PathingRoute();
 
-        bool HasNext();
+    DateTime LastActive { get; }
 
-        Vector3 NextPoint();
-    }
+    bool HasNext();
+
+    Vector3 NextMapPoint();
 }

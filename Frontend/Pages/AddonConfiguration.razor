@@ -1,0 +1,189 @@
+﻿@page "/AddonConfiguration"
+
+@inject ILogger logger
+@inject NavigationManager navigationManager
+@inject AddonConfigurator addonConfigurator
+@inject ExecGameCommand exec
+@inject WowProcess process
+
+@implements IDisposable
+
+<div class="container mt-3">
+    <div class="card">
+        <div class="card-header">
+            Addon Configuration - (@(AddonConfigMeta.DefaultFileName)) file @(AddonConfig.Exists() ? "exists" : "not exists") and @(!addonConfig.IsDefault() ? "valid" : "not valid")
+        </div>
+        <div class="card-body" style="padding-bottom: 0">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Author</label>
+                    <input class="form-control" @bind="addonConfig.Author" />
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">CellSize (recommended: 4)</label>
+                    <input class="form-control" @bind="addonConfig.CellSize" />
+                    @if (int.TryParse(addonConfig.CellSize, out int cellSize) && cellSize < 4)
+                    {
+                        <div class="form-text text-warning">
+                            Very small CellSize will make the DataToColor pixel grid nearly invisible and break frame detection.
+                        </div>
+                    }
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Title (addon folder name)</label>
+                    <input class="form-control" @bind="addonConfig.Title" />
+                    <div class="form-text">Letters only. Changing this requires reinstall.</div>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Command (no leading slash)</label>
+                    <input class="form-control" @bind="addonConfig.Command" />
+                    <div class="form-text">Example: <code>dc</code> (commands: <code>/@addonConfig.Command</code>, <code>/@addonConfig.Command@("actions")</code>, <code>/@addonConfig.Command@("bindings")</code>)</div>
+                </div>
+            </div>
+
+            <div class="mt-3 d-flex gap-2">
+                <button class="btn btn-sm btn-outline-primary" @onclick="ApplyRecommended">
+                    Apply recommended (dc + 4)
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container mt-3">
+    <div class="card">
+        <div class="card-header">
+            Addon Control panel
+        </div>
+        <div class="card-body" style="padding-bottom: 0">
+            <table class="table table-bordered">
+                <tbody>
+                    <tr>
+                        <td style="width:25%">Status</td>
+                        <td>
+                            <label class="form-control" disabled>
+                                @AddonStatus()
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Install path</td>
+                        <td>
+                            <input value="@addonConfigurator.FinalAddonPath" class="form-control" disabled="true" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Install / Update addon and config</td>
+                        <td>
+                            <button class="btn btn-sm btn-success" @onclick="Install">
+                                <span>Save</span>
+                            </button>
+                            @if (!string.IsNullOrWhiteSpace(lastError))
+                            {
+                                <div class="form-text text-danger">@lastError</div>
+                            }
+                        </td>
+                    </tr>
+                    @if (AddonConfig.Exists())
+                    {
+                        <tr>
+                            <td>Delete current addon and config</td>
+                            <td>
+                                <button class="btn btn-sm btn-danger" @onclick="Delete">
+                                    <span>Delete</span>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <hr />
+    <LogComponent />
+</div>
+
+
+@code {
+
+    private AddonConfig addonConfig = null!;
+    private string? lastError;
+
+    protected override void OnInitialized()
+    {
+        addonConfigurator.OnChange += OnChanged;
+        addonConfig = addonConfigurator.Config;
+    }
+
+    public void Dispose()
+    {
+        addonConfigurator.OnChange -= OnChanged;
+    }
+
+    public void OnChanged()
+    {
+        base.InvokeAsync(StateHasChanged);
+    }
+
+    private void Delete()
+    {
+        addonConfigurator.Delete();
+        exec.Run("/reload");
+
+        navigationManager.NavigateTo("/AddonConfiguration");
+    }
+
+    private void Install()
+    {
+        lastError = null;
+
+        if (addonConfigurator.Validate())
+        {
+            if (!addonConfigurator.TryInstall(out string message))
+            {
+                lastError = message;
+                base.InvokeAsync(StateHasChanged);
+                return;
+            }
+            addonConfigurator.Save();
+
+            exec.Run("/reload");
+
+            navigationManager.NavigateTo("/FrameConfiguration");
+        }
+        else
+        {
+            lastError = "Addon configuration invalid. Fix fields above then try again.";
+            base.InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void ApplyRecommended()
+    {
+        addonConfig.Title = "DataToColor";
+        addonConfig.Command = "dc";
+        addonConfig.CellSize = "4";
+
+        base.InvokeAsync(StateHasChanged);
+    }
+
+    private MarkupString AddonStatus()
+    {
+        if (AddonConfig.Exists() && addonConfigurator.Installed())
+        {
+            if (addonConfigurator.UpdateAvailable())
+            {
+                return new("<p class=\"text-warning\">Update available</p>");
+            }
+            else
+            {
+                return new("<p class=\"text-success\">Up to Date</p>");
+            }
+        }
+
+        return new("<p class=\"text-danger\">Not Installed</p>");
+    }
+}

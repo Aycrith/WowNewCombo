@@ -1,0 +1,19 @@
+{
+  "RecipientName": "Bankonelol",
+  "MinimumGoldToKeep": 50000,
+  "MinimumItemQuality": 3,
+  "SendGold": true,
+  "SendItems": true,
+  "ExcludedItemIds": [
+    6948,
+    5956,
+    7005,
+    2901,
+    4238,
+    3275,
+    1760,
+    13446,
+    18564,
+    22577
+  ]
+}

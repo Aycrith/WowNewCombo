@@ -4,32 +4,33 @@
   "PathFilename": "\\_pack\\1-20\\Human\\15-18_Westfall_The Dagger Hills (defias).json",
   "PathReduceSteps": true,
   "CheckTargetGivesExp": true,
-  "Form": [
-    {
-      //macro: /cancelform
-      "Name": "cancelform",
-      "Key": "F1",
-      "Form": "None"
-    },
-    {
-      "Name": "Bear Form",
-      "Key": "F2",
-      "Form": "Druid_Bear",
-      "MinMana": 50
-    },
-    {
-      "Name": "Cat form",
-      "Key": "F3",
-      "Form": "Druid_Cat",
-      "MinMana": 123
-    }
-  ],
+  "Form": {
+    "Sequence": [
+      {
+        //macro: /cancelform
+        "Name": "cancelform",
+        "BaseAction": true,
+        "Key": "F1",
+        "Form": "None"
+      },
+      {
+        "Name": "Bear Form",
+        "Key": "F2",
+        "Form": "Druid_Bear"
+      },
+      {
+        "Name": "Cat form",
+        "Key": "F3",
+        "Form": "Druid_Cat"
+      }
+    ]
+  },
   "Pull": {
     "Sequence": [
       {
         "Name": "Rejuvenation",
         "Key": "6",
-        "StopBeforeCast": true,
+        "BeforeCastStop": true,
         "AfterCastWaitBuff": true,
         "Requirements": [
           "Health% < 75",
@@ -40,8 +41,9 @@
       {
         "Name": "Moonfire",
         "Key": "5",
-        "StopBeforeCast": true,
+        "BeforeCastStop": true,
         "AfterCastWaitBuff": true,
+        "AfterCastWaitGCD": true,
         "Requirements": [
           "!Moonfire",
           "AddVisible",
@@ -53,7 +55,7 @@
       {
         "Name": "Cat Form",
         "Key": "F3",
-        "WaitForWithinMeleeRange": true,
+        "AfterCastWaitMeleeRange": true,
         "Requirements": [
           "Moonfire",
           "!Form:Druid_Cat"
@@ -81,13 +83,12 @@
       {
         "Name": "Rip",
         "Key": "3",
-        "MinEnergy": 30,
-        "MinComboPoints": 1,
         "WhenUsable": true,
         "Requirements": [
-          "SpellInRange:2",
-          "!Rip",
           "MobCount < 2",
+          "SpellInRange:2",
+          "Combo Point > 0",
+          "!Rip",
           "Form:Druid_Cat"
         ],
         "Form": "Druid_Cat"
@@ -95,7 +96,6 @@
       {
         "Name": "Claw",
         "Key": "2",
-        "MinEnergy": 40,
         "WhenUsable": true,
         "Requirements": [
           "SpellInRange:2",
@@ -120,7 +120,6 @@
           "TargetCastingSpell || Health% < 38"
         ],
         "WhenUsable": true,
-        "MinRage": 10,
         "Form": "Druid_Bear"
       },
       {
@@ -133,7 +132,6 @@
       {
         "Name": "Demoralizing Roar",
         "Key": "3",
-        "MinRage": 10,
         "WhenUsable": true,
         "Requirements": [
           "InMeleeRange",
@@ -146,7 +144,6 @@
       {
         "Name": "Swipe",
         "Key": "6",
-        "MinRage": 20,
         "WhenUsable": true,
         "Requirements": [
           "InMeleeRange",
@@ -158,14 +155,13 @@
       {
         "Name": "Maul",
         "Key": "2",
-        "MinRage": 15,
         "Requirements": [
           "InMeleeRange",
           "MobCount < 2",
           "LastMainHandMs > 2100",
           "Form:Druid_Bear"
         ], // bear swing speed fixed at 2.5
-        "AfterCastWaitNextSwing": true,
+        "AfterCastWaitSwing": true,
         "Form": "Druid_Bear"
       },
       {
@@ -178,8 +174,7 @@
         ]
       },
       {
-        "Name": "AutoAttack",
-        "Requirement": "!AutoAttacking"
+        "Name": "AutoAttack"
       },
       {
         "Name": "Approach",
@@ -202,7 +197,7 @@
         "Form": "None"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "-",
         "Requirement": "Mana% < 30",
         "Form": "None"
@@ -215,7 +210,7 @@
         "Cost": 6,
         "Name": "Repair",
         "Key": "C",
-        "Requirement": "Items Broken",
+        "Requirement": "Durability% < 35",
         "PathFilename": "20_Westfall_Vendor.json"
       },
       {

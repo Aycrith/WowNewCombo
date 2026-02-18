@@ -1,0 +1,323 @@
+{
+  "ClassName": "Hunter",
+  "Skin": true,
+  "Loot": true,
+  "UseMount": true,
+  "PathThereAndBack": true,
+  "PathReduceSteps": true,
+  "NPCMaxLevels_Above": 2,
+  "NPCMaxLevels_Below": 5,
+  "CheckTargetGivesExp": true,
+  "TargetMask": "Normal, Trivial, Rare",
+  "Blacklist": ["Fel Reaver", "Doomwalker", "Elite"],
+  
+  "IntVariables": {
+    "MEND_PET_THRESHOLD": 50,
+    "EAT_THRESHOLD": 40,
+    "DRINK_THRESHOLD": 40,
+    "COOLDOWN_HEALTH%": 85,
+    "ITEM_ARROW": 2512,
+    "MIN_COUNT_ARROW": 200
+  },
+  
+  "Mount": { "Key": "O" },
+  "PathFilename": "_pack/60-70/Nagrand/65-70 Oshugun.json",
+  
+  "Paths": [
+    {
+      "PathFilename": "_pack/60-70/Hellfire Peninsula/60-64 Felspark Ravine.json",
+      "Requirements": ["Level < 63"]
+    },
+    {
+      "PathFilename": "_pack/60-70/Zangarmarsh/60-65 Ragestone.json",
+      "Requirements": ["Level >= 63", "Level < 65"]
+    },
+    {
+      "PathFilename": "_pack/60-70/Nagrand/65-70 Oshugun.json"
+    }
+  ],
+  
+  "Pull": {
+    "Sequence": [
+      {
+        "Name": "Hunter's Mark",
+        "Key": "8",
+        "BeforeCastStop": true,
+        "Requirements": [
+          "!Hunter's Mark",
+          "TargetHealth% > 50"
+        ]
+      },
+      {
+        "Name": "Concussive Shot",
+        "Key": "9",
+        "BeforeCastStop": true,
+        "Requirements": [
+          "HasRangedWeapon",
+          "!InMeleeRange",
+          "HasAmmo"
+        ]
+      }
+    ]
+  },
+  
+  "Combat": {
+    "Sequence": [
+      {
+        "Name": "Gift of the Naaru",
+        "Key": "F11",
+        "HasCastBar": true,
+        "WhenUsable": true,
+        "Requirements": [
+          "Race:Draenei",
+          "Health% < 45"
+        ]
+      },
+      {
+        "Name": "Mend Pet",
+        "Key": "N7",
+        "Cooldown": 15000,
+        "Requirements": [
+          "Has Pet",
+          "PetHealth% < MEND_PET_THRESHOLD"
+        ]
+      },
+      {
+        "Name": "Kill Command",
+        "Key": "N1",
+        "WhenUsable": true,
+        "Requirements": [
+          "Has Pet",
+          "Pet HasTarget"
+        ]
+      },
+      {
+        "Name": "Intimidation",
+        "Key": "N4",
+        "WhenUsable": true,
+        "Requirements": [
+          "Has Pet",
+          "TargetHealth% < 70 || TargetCastingSpell"
+        ]
+      },
+      {
+        "Name": "Bestial Wrath",
+        "Key": "N2",
+        "WhenUsable": true,
+        "Requirements": [
+          "!InMeleeRange",
+          "HasRangedWeapon",
+          "HasAmmo",
+          "Has Pet",
+          "TargetHealth% > COOLDOWN_HEALTH%"
+        ]
+      },
+      {
+        "Name": "Rapid Fire",
+        "Key": "N3",
+        "WhenUsable": true,
+        "Requirements": [
+          "!InMeleeRange",
+          "HasRangedWeapon",
+          "HasAmmo",
+          "TargetHealth% > 75"
+        ]
+      },
+      {
+        "Name": "Arcane Shot",
+        "Key": "7",
+        "WhenUsable": true,
+        "Requirements": [
+          "!InMeleeRange",
+          "HasRangedWeapon",
+          "HasAmmo",
+          "Mana% > 50"
+        ]
+      },
+      {
+        "Name": "Serpent Sting",
+        "Key": "0",
+        "Requirements": [
+          "!InMeleeRange",
+          "HasRangedWeapon",
+          "HasAmmo",
+          "!Serpent Sting",
+          "TargetHealth% > 40"
+        ]
+      },
+      {
+        "Name": "Steady Shot",
+        "Key": "6",
+        "WhenUsable": true,
+        "HasCastBar": true,
+        "Charge": 2,
+        "Cooldown": 5000,
+        "Requirements": [
+          "!InMeleeRange",
+          "HasRangedWeapon",
+          "HasAmmo",
+          "LastAutoShotMs < 500"
+        ]
+      },
+      {
+        "Name": "Auto Shot",
+        "Key": "3",
+        "Item": true,
+        "Requirements": [
+          "!InMeleeRange",
+          "HasRangedWeapon",
+          "!AutoShot",
+          "HasAmmo"
+        ]
+      },
+      {
+        "Name": "Disengage",
+        "Key": "N8",
+        "WhenUsable": true,
+        "Cooldown": 5000,
+        "Requirements": [
+          "InMeleeRange",
+          "AutoAttacking"
+        ]
+      },
+      {
+        "Name": "Raptor Strike",
+        "Key": "4",
+        "WhenUsable": true,
+        "AfterCastWaitSwing": true,
+        "AfterCastStepBack": 1000,
+        "Requirements": [
+          "MainHandSwing > -400",
+          "InMeleeRange",
+          "!AutoShot"
+        ]
+      },
+      {
+        "Name": "Wing Clip",
+        "Key": "5",
+        "WhenUsable": true,
+        "Requirements": [
+          "InMeleeRange",
+          "!Wing Clip"
+        ]
+      },
+      {
+        "Name": "AutoAttack",
+        "Requirements": [
+          "InMeleeRange",
+          "!AutoShot"
+        ]
+      }
+    ]
+  },
+  
+  "Adhoc": {
+    "Sequence": [
+      {
+        "Name": "Aspect of the Hawk",
+        "Key": "F1",
+        "Requirement": "!Aspect of the Hawk && !Aspect of the Viper"
+      },
+      {
+        "Name": "Aspect of the Viper",
+        "Key": "F2",
+        "Requirements": [
+          "Mana% < 20",
+          "!Aspect of the Viper"
+        ]
+      },
+      {
+        "Name": "feedpet",
+        "Key": "N5",
+        "WhenUsable": true,
+        "Cooldown": 20000,
+        "Requirements": [
+          "Has Pet",
+          "!Pet Happy"
+        ]
+      },
+      {
+        "Name": "sumpet",
+        "Key": "N6",
+        "HasCastBar": true,
+        "Cooldown": 4000,
+        "Requirement": "!Has Pet"
+      },
+      {
+        "Name": "Revive Pet",
+        "Key": "N9",
+        "HasCastBar": true,
+        "Requirement": "!Has Pet"
+      },
+      {
+        "Name": "Food",
+        "Key": "-",
+        "Requirement": "Health% < EAT_THRESHOLD"
+      },
+      {
+        "Name": "Drink",
+        "Key": "=",
+        "Requirement": "Mana% < DRINK_THRESHOLD"
+      }
+    ]
+  },
+  
+  "Parallel": {
+    "Sequence": [
+      {
+        "Name": "Food",
+        "Key": "-",
+        "Requirement": "Health% < EAT_THRESHOLD"
+      },
+      {
+        "Name": "Drink",
+        "Key": "=",
+        "Requirement": "Mana% < DRINK_THRESHOLD"
+      }
+    ]
+  },
+  
+  "Flee": {
+    "Sequence": [
+      {
+        "Name": "Flee",
+        "Requirement": "MobCount > 2 || Health% < 15"
+      },
+      {
+        "Name": "Feign Death",
+        "Key": "F5",
+        "WhenUsable": true,
+        "Requirement": "MobCount > 1"
+      }
+    ]
+  },
+  
+  "NPC": {
+    "Sequence": [
+      {
+        "Name": "Repair",
+        "Key": "C",
+        "Requirement": "Items Broken",
+        "UseMount": true,
+        "PathFilename": "60_Hellfire Peninsula_Honor Hold_Vendor.json",
+        "Cost": 6
+      },
+      {
+        "Name": "Sell",
+        "Key": "C",
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ],
+        "UseMount": true,
+        "PathFilename": "60_Hellfire Peninsula_Honor Hold_Vendor.json",
+        "Cost": 6
+      }
+    ]
+  },
+  
+  "Wait": {
+    "AutoGenerateWaitForFoodAndDrink": true,
+    "FoodDrinkCost": 5
+  }
+}

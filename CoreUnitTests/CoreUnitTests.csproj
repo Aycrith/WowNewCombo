@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+<PropertyGroup>
+<TargetFramework>net10.0</TargetFramework>
+<IsTestProject>true</IsTestProject>
+<Nullable>enable</Nullable>
+<LangVersion>preview</LangVersion>
+</PropertyGroup>
+
+<ItemGroup>
+<PackageReference Include="Microsoft.NET.Test.Sdk" />
+<PackageReference Include="xunit" />
+<PackageReference Include="xunit.runner.visualstudio" />
+<PackageReference Include="coverlet.collector" PrivateAssets="all" />
+<PackageReference Include="coverlet.msbuild" PrivateAssets="all" />
+<PackageReference Include="FluentAssertions" />
+<PackageReference Include="Moq" />
+</ItemGroup>
+
+<ItemGroup>
+<ProjectReference Include="..\Core\Core.csproj" />
+<ProjectReference Include="..\MockWoWClient\MockWoWClient.csproj" />
+</ItemGroup>
+
+<!-- Exclude generated test stubs from compilation - they are templates for manual implementation -->
+<ItemGroup>
+<Compile Remove="Generated\**" />
+<None Include="Generated\**" />
+</ItemGroup>
+
+</Project>
+

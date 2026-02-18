@@ -1,0 +1,12 @@
+<!-- 
+    SecureButtons.xml
+    Creates the secure action buttons required for DataToColor
+    These buttons must be created via XML to work with key bindings
+    
+    BindPadMacro - Used for executing macros/config toggle (SHIFT-PAGEUP)
+    BindPadKey - Used for ability keybinds
+-->
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+    <Button name="BindPadMacro" inherits="SecureActionButtonTemplate"/>
+    <Button name="BindPadKey" inherits="SecureActionButtonTemplate"/>
+</Ui>

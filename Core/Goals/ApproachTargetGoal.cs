@@ -1,219 +1,349 @@
-﻿using Core.GOAP;
+using Core.GOAP;
+
 using Microsoft.Extensions.Logging;
-using SharedLib.Extensions;
+
 using System;
-using System.Numerics;
-using System.Threading.Tasks;
 
-namespace Core.Goals
+using static System.Diagnostics.Stopwatch;
+
+#pragma warning disable 162
+
+namespace Core.Goals;
+
+public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
 {
-    public class ApproachTargetGoal : GoapGoal
+    private const bool debug = true;
+    private const double STUCK_INTERVAL_MS = 400; // cant be lower than Approach.Cooldown
+    private const double MAX_APPROACH_DURATION_MS = 15_000; // max time to chase to pull
+    private const double MIN_TIME_TILL_IDLE = 2000;
+
+    public override float Cost => 8f;
+
+    private readonly ILogger<ApproachTargetGoal> logger;
+    private readonly ConfigurableInput input;
+    private readonly Wait wait;
+    private readonly PlayerReader playerReader;
+    private readonly AddonBits bits;
+    private readonly StopMoving stopMoving;
+    private readonly CombatTracker combatTracker;
+    private readonly IMountHandler mountHandler;
+    private readonly IBlacklist targetBlacklist;
+    private readonly CombatLog combatLog;
+
+    private long approachStart;
+
+    private double nextStuckCheckTime;
+
+    private int initialTargetGuid;
+    private float initialMinRange;
+
+    private double ApproachDurationMs => GetElapsedTime(approachStart).TotalMilliseconds;
+
+    public ApproachTargetGoal(ILogger<ApproachTargetGoal> logger,
+        ConfigurableInput input, Wait wait,
+        PlayerReader playerReader, AddonBits addonBits,
+        StopMoving stopMoving, CombatTracker combatTracker,
+        IBlacklist blacklist,
+        IMountHandler mountHandler,
+        CombatLog combatLog)
+        : base(nameof(ApproachTargetGoal))
     {
-        public override float CostOfPerformingAction { get => 8f; }
+        this.logger = logger;
+        this.input = input;
 
-        private readonly ILogger logger;
-        private readonly ConfigurableInput input;
+        this.wait = wait;
+        this.playerReader = playerReader;
+        this.bits = addonBits;
 
-        private readonly Wait wait;
-        private readonly PlayerReader playerReader;
-        private readonly StopMoving stopMoving;
-        private readonly MountHandler mountHandler;
+        this.stopMoving = stopMoving;
+        this.combatTracker = combatTracker;
+        this.mountHandler = mountHandler;
+        this.targetBlacklist = blacklist;
+        this.combatLog = combatLog;
 
-        private readonly bool debug = true;
+        AddPrecondition(GoapKey.hastarget, true);
+        AddPrecondition(GoapKey.targetisalive, true);
+        AddPrecondition(GoapKey.targethostile, true);
+        AddPrecondition(GoapKey.incombatrange, false);
 
-        private readonly Random random = new();
+        AddEffect(GoapKey.incombatrange, true);
+    }
 
-        private DateTime approachStart;
-
-        private bool playerWasInCombat;
-        private float lastPlayerDistance;
-        private Vector3 lastPlayerLocation;
-
-        private int initialTargetGuid;
-        private float initialMinRange;
-
-        private int SecondsSinceApproachStarted => (int)(DateTime.UtcNow - approachStart).TotalSeconds;
-
-        private bool HasPickedUpAnAdd
+    public void OnGoapEvent(GoapEventArgs e)
+    {
+        if (e.GetType() == typeof(ResumeEvent))
         {
-            get
+            approachStart = GetTimestamp();
+        }
+    }
+
+    public override void OnEnter()
+    {
+        initialTargetGuid = initialTargetGuid == playerReader.TargetGuid
+            ? -1
+            : playerReader.TargetGuid;
+
+        initialMinRange = playerReader.MinRange();
+
+        approachStart = GetTimestamp();
+        SetNextStuckTimeCheck();
+    }
+
+    public override void OnExit()
+    {
+        input.StopForward(false);
+    }
+
+    public override void Update()
+    {
+        wait.Update();
+
+        // Multi-mob detection - early retreat
+        if (!bits.Combat() && DetectMultiMobThreat())
+        {
+            HandleMultiMobThreat();
+            return;
+        }
+
+        if (bits.Combat() && !bits.Target_Combat() &&
+            !combatLog.ToPull.Contains(playerReader.TargetGuid))
+        {
+            stopMoving.Stop();
+
+            LogPreventExtraPull(logger);
+
+            input.ForceAggressiveClearTarget(wait, bits);
+
+            combatTracker.AcquiredTarget(5000);
+            return;
+        }
+
+        if (!input.Approach.OnCooldown() && (!bits.SoftInteract() || HasValidSoftInteract()))
+        {
+            input.PressApproach();
+            wait.Update();
+        }
+
+        if (!bits.Combat())
+        {
+            NonCombatApproach();
+            RandomJump();
+        }
+    }
+
+    #region Multi-Mob Detection
+
+    private int multiMobThreatCount;
+    private DateTime lastMultiMobCheck;
+
+    /// <summary>
+    /// Detects if approaching this target would pull multiple mobs.
+    /// </summary>
+    private bool DetectMultiMobThreat()
+    {
+        // Rate limit checks
+        if ((DateTime.UtcNow - lastMultiMobCheck).TotalMilliseconds < 500)
+        {
+            return multiMobThreatCount > 1;
+        }
+
+        lastMultiMobCheck = DateTime.UtcNow;
+        multiMobThreatCount = 0;
+
+        // Count nearby hostiles using DamageTaken as proxy for mobs aware of us
+        int nearbyHostiles = combatLog.DamageTaken.Count;
+
+        // Also check if there are multiple mobs in ToPull (about to aggro)
+        int toPullCount = combatLog.ToPull.Count;
+
+        // Check target proximity - if target is close and we're not in combat,
+        // there might be other mobs nearby
+        if (playerReader.MinRange() < 15 && !bits.Combat())
+        {
+            // Estimate threat based on target type
+            if (playerReader.TargetClassification == UnitClassification.Normal)
             {
-                return playerReader.Bits.PlayerInCombat && !playerReader.Bits.TargetOfTargetIsPlayer;
+                // Normal mobs often come in groups
+                multiMobThreatCount = Math.Max(1, toPullCount) + nearbyHostiles;
+            }
+            else if (playerReader.TargetClassification == UnitClassification.Elite)
+            {
+                // Elites usually solo, but check anyway
+                multiMobThreatCount = 1 + nearbyHostiles;
             }
         }
 
-        public ApproachTargetGoal(ILogger logger, ConfigurableInput input, Wait wait, PlayerReader playerReader, StopMoving stopMoving, MountHandler mountHandler)
+        if (multiMobThreatCount > 1 && debug)
         {
-            this.logger = logger;
-            this.input = input;
-
-            this.wait = wait;
-            this.playerReader = playerReader;
-            this.stopMoving = stopMoving;
-            this.mountHandler = mountHandler;
-
-            lastPlayerDistance = 0;
-            lastPlayerLocation = playerReader.PlayerLocation;
-
-            initialTargetGuid = playerReader.TargetGuid;
-            initialMinRange = 0;
-
-            AddPrecondition(GoapKey.hastarget, true);
-            AddPrecondition(GoapKey.targetisalive, true);
-            AddPrecondition(GoapKey.incombatrange, false);
-
-            AddEffect(GoapKey.incombatrange, true);
+            Log($"Multi-mob threat detected: {multiMobThreatCount} (nearby: {nearbyHostiles}, topull: {toPullCount})");
         }
 
-        public override ValueTask OnEnter()
+        return multiMobThreatCount > 1;
+    }
+
+    /// <summary>
+    /// Handles detected multi-mob threat by aborting approach.
+    /// </summary>
+    private void HandleMultiMobThreat()
+    {
+        logger.LogWarning("[ApproachTarget] Multi-mob threat detected ({Count} mobs). Aborting approach!", multiMobThreatCount);
+
+        stopMoving.Stop();
+
+        // Clear target to avoid accidental pull
+        input.ForceAggressiveClearTarget(wait, bits);
+
+        // Turn away from the threat cluster
+        input.TurnRandomDir(1000 + Random.Shared.Next(500));
+
+        // Mark this target as temporary blacklist to avoid re-aggro
+        if (playerReader.TargetGuid != 0)
         {
-            playerWasInCombat = playerReader.Bits.PlayerInCombat;
-
-            initialTargetGuid = playerReader.TargetGuid;
-            initialMinRange = playerReader.MinRange;
-
-            approachStart = DateTime.UtcNow;
-
-            return ValueTask.CompletedTask;
+            Log($"Target {playerReader.TargetGuid} blacklisted temporarily due to multi-mob");
         }
+    }
 
-        public override ValueTask PerformAction()
+    #endregion
+
+    private void NonCombatApproach()
+    {
+        if (ApproachDurationMs >= nextStuckCheckTime)
         {
-            lastPlayerLocation = playerReader.PlayerLocation;
-            wait.Update(1);
+            SetNextStuckTimeCheck();
 
-            if (!playerReader.Bits.PlayerInCombat)
+            if (!bits.Moving())
             {
-                playerWasInCombat = false;
-            }
-            else
-            {
-                // we are in combat
-                if (!playerWasInCombat && HasPickedUpAnAdd)
+                if (playerReader.LastUIError is
+                    UI_ERROR.ERR_AUTOFOLLOW_TOO_FAR or UI_ERROR.ERR_BADATTACKPOS)
                 {
-                    logger.LogInformation("WARN Bodypull -- Looks like we have an add on approach");
-                    logger.LogInformation($"Combat={playerReader.Bits.PlayerInCombat}, Is Target targetting me={playerReader.Bits.TargetOfTargetIsPlayer}");
+                    playerReader.LastUIError = UI_ERROR.NONE;
 
-                    stopMoving.Stop();
-                    input.TapClearTarget();
-                    wait.Update(1);
+                    Log($"Target is too far({playerReader.MinRange()} yard) for interact, start moving forward!");
+                    input.StartForward(false);
 
-                    if (playerReader.PetHasTarget)
+                    return;
+                }
+                // Handle pacified state - occurs when mounted and attempting combat actions
+                // Dismount and retry interaction to resolve the pacified condition
+                else if (playerReader.LastUIError == UI_ERROR.ERR_ATTACK_PACIFIED)
+                {
+                    playerReader.LastUIError = UI_ERROR.NONE;
+
+                    if (mountHandler.IsMounted())
                     {
-                        input.TapTargetPet();
-                        input.TapTargetOfTarget();
-                        wait.Update(1);
+                        mountHandler.Dismount();
+
+                        wait.While(bits.Falling);
+
+                        input.PressInteract();
+                        wait.Update();
+
+                        SetNextStuckTimeCheck();
+
+                        return;
                     }
                 }
 
-                playerWasInCombat = true;
+                Log($"Seems stuck! Clear Target.");
+
+                input.ForceAggressiveClearTarget(wait, bits);
+                input.TurnRandomDir(250 + Random.Shared.Next(250));
+
+                return;
             }
+        }
 
-            if (input.ClassConfig.Approach.GetCooldownRemaining() == 0)
+        if (ApproachDurationMs > MAX_APPROACH_DURATION_MS)
+        {
+            logger.LogWarning("Too long time. Clear Target. Turn away.");
+
+            input.ForceAggressiveClearTarget(wait, bits);
+            input.TurnRandomDir(250 + Random.Shared.Next(250));
+
+            return;
+        }
+
+        if (playerReader.TargetGuid == initialTargetGuid &&
+            !playerReader.IsInMeleeRange())
+        {
+            int initialTargetMinRange = playerReader.MinRange();
+            if (!input.TargetNearestTarget.OnCooldown())
             {
-                input.TapApproachKey("");
-            }
+                //logger.LogWarning($"Attempt to find closer target IsInMeleeRange:{playerReader.IsInMeleeRange()} - min:{playerReader.MinRange()} | max:{playerReader.MaxRange()} - initialMinRange:{initialTargetMinRange}");
 
-            lastPlayerDistance = playerReader.PlayerLocation.DistanceXYTo(lastPlayerLocation);
+                input.PressNearestTarget();
+                wait.Update();
 
-            if (lastPlayerDistance < 0.05 && playerReader.LastUIErrorMessage == UI_ERROR.ERR_AUTOFOLLOW_TOO_FAR)
-            {
-                playerReader.LastUIErrorMessage = UI_ERROR.NONE;
-
-                input.SetKeyState(input.ForwardKey, true, false, $"{nameof(ApproachTargetGoal)}: Too far, start moving forward!");
-                wait.Update(1);
-            }
-
-            if (SecondsSinceApproachStarted > 1 && lastPlayerDistance < 0.05 && !playerReader.Bits.PlayerInCombat)
-            {
-                input.TapClearTarget("");
-                wait.Update(1);
-                input.KeyPress(random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey, 1000, $"Seems stuck! Clear Target. Turn away. d: {lastPlayerDistance}");
-
-                approachStart = DateTime.UtcNow;
-            }
-
-            if (SecondsSinceApproachStarted > 15 && !playerReader.Bits.PlayerInCombat)
-            {
-                input.TapClearTarget("");
-                wait.Update(1);
-                input.KeyPress(random.Next(2) == 0 ? input.TurnLeftKey : input.TurnRightKey, 1000, "Too long time. Clear Target. Turn away.");
-
-                approachStart = DateTime.UtcNow;
-            }
-
-            if (playerReader.TargetGuid == initialTargetGuid)
-            {
-                var initialTargetMinRange = playerReader.MinRange;
-                if (!playerReader.Bits.PlayerInCombat)
+                if (bits.Target() && playerReader.TargetGuid != initialTargetGuid)
                 {
-                    if (input.ClassConfig.TargetNearestTarget.GetCooldownRemaining() == 0)
+                    if (targetBlacklist.Is())
                     {
-                        input.TapNearestTarget("Try to find closer target...");
-                        wait.Update(1);
+                        logger.LogWarning($"Losing the target due blacklist!");
+                        return;
                     }
-                }
 
-                if (playerReader.TargetGuid != initialTargetGuid)
-                {
-                    if (playerReader.HasTarget) // blacklist
+                    if (playerReader.MinRange() < initialTargetMinRange)
                     {
-                        if (playerReader.MinRange < initialTargetMinRange)
-                        {
-                            Log($"Found a closer target! {playerReader.MinRange} < {initialTargetMinRange}");
-                            initialMinRange = playerReader.MinRange;
-                        }
-                        else
-                        {
-                            initialTargetGuid = -1;
-                            input.TapLastTargetKey($"Stick to initial target!");
-                            wait.Update(1);
-                        }
+                        logger.LogWarning($"Found a closer target! {playerReader.MinRange()} < {initialTargetMinRange}");
+
+                        initialMinRange = playerReader.MinRange();
                     }
                     else
                     {
-                        Log($"Lost the target due blacklist!");
+                        initialTargetGuid = -1;
+                        logger.LogWarning("Stick to initial target!");
+
+                        input.PressLastTargetAndWait(wait, bits.Target);
                     }
                 }
             }
-
-            if (initialMinRange < playerReader.MinRange && !playerReader.Bits.PlayerInCombat)
-            {
-                Log($"We are going away from the target! {initialMinRange} < {playerReader.MinRange}");
-                input.TapClearTarget();
-                wait.Update(1);
-
-                approachStart = DateTime.UtcNow;
-            }
-
-            RandomJump();
-
-            return ValueTask.CompletedTask;
         }
 
-        public override void OnActionEvent(object sender, ActionEventArgs e)
+        if (ApproachDurationMs > MIN_TIME_TILL_IDLE && initialMinRange < playerReader.MinRange())
         {
-            if (e.Key == GoapKey.resume)
-            {
-                approachStart = DateTime.UtcNow;
-            }
-        }
+            Log($"Going away from the target! {initialMinRange} < {playerReader.MinRange()}");
 
-        private void RandomJump()
-        {
-            if (input.ClassConfig.Jump.MillisecondsSinceLastClick > random.Next(12_000, 30_000))
-            {
-                input.TapJump();
-            }
+            input.ForceAggressiveClearTarget(wait, bits);
         }
-
-        private void Log(string text)
-        {
-            if (debug)
-            {
-                logger.LogInformation($"{nameof(ApproachTargetGoal)}: {text}");
-            }
-        }
-
     }
+
+    private void SetNextStuckTimeCheck()
+    {
+        nextStuckCheckTime = ApproachDurationMs + STUCK_INTERVAL_MS;
+    }
+
+    private void RandomJump()
+    {
+        if (ApproachDurationMs > MIN_TIME_TILL_IDLE &&
+            input.Jump.SinceLastClickMs > Random.Shared.Next(5000, 25_000))
+        {
+            input.PressJump();
+            wait.Update();
+        }
+    }
+
+    private bool HasValidSoftInteract()
+    {
+        return
+            bits.SoftInteract() &&
+            !bits.SoftInteract_Dead() &&
+            !bits.SoftInteract_Tagged() &&
+            playerReader.SoftInteract_Type == GuidType.Creature;
+    }
+
+    private void Log(string text)
+    {
+        logger.LogDebug(text);
+    }
+
+
+    #region Logging
+
+    [LoggerMessage(
+        EventId = 4001,
+        Level = LogLevel.Warning,
+        Message = "Clear current target as not in combat!")]
+    static partial void LogPreventExtraPull(ILogger logger);
+
+    #endregion
 }

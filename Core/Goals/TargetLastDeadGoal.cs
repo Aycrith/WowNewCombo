@@ -1,40 +1,33 @@
 ﻿using Core.GOAP;
+
 using Microsoft.Extensions.Logging;
-using System.Threading.Tasks;
 
-namespace Core.Goals
+namespace Core.Goals;
+
+public sealed class TargetLastDeadGoal : GoapGoal
 {
-    public class TargetLastDeadGoal : GoapGoal
+    public override float Cost => 4.2f;
+
+    private readonly ILogger logger;
+    private readonly ConfigurableInput input;
+    private readonly Wait wait;
+    private readonly AddonBits bits;
+
+    public TargetLastDeadGoal(ILogger logger, ConfigurableInput input,
+        Wait wait, AddonBits bits)
+        : base(nameof(TargetLastDeadGoal))
     {
-        public override float CostOfPerformingAction { get => 4.2f; }
+        this.logger = logger;
+        this.input = input;
+        this.wait = wait;
+        this.bits = bits;
 
-        private readonly ILogger logger;
-        private readonly ConfigurableInput input;
-        private bool debug = true;
-        
+        AddPrecondition(GoapKey.hastarget, false);
+        AddPrecondition(GoapKey.producedcorpse, true);
+    }
 
-        public TargetLastDeadGoal(ILogger logger, ConfigurableInput input)
-        {
-            this.logger = logger;
-            this.input = input;
-
-            AddPrecondition(GoapKey.hastarget, false);
-            AddPrecondition(GoapKey.producedcorpse, true);
-        }
-
-        public override ValueTask PerformAction()
-        {
-            input.TapLastTargetKey(nameof(TargetLastDeadGoal));
-
-            return ValueTask.CompletedTask;
-        }
-
-        private void Log(string text)
-        {
-            if (debug)
-            {
-                logger.LogInformation($"{nameof(TargetLastDeadGoal)}: {text}");
-            }
-        }
+    public override void Update()
+    {
+        input.PressLastTargetAndWait(wait, bits.Target);
     }
 }

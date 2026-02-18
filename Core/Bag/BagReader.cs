@@ -1,234 +1,347 @@
-﻿using SharedLib;
 using Core.Database;
+
+using SharedLib;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 
-namespace Core
+namespace Core;
+
+public enum BagItemChange
 {
-    public class BagReader
+    New,
+    Remove,
+    Update
+}
+
+public sealed class BagReader : IDisposable, IReader
+{
+    private const int cBagMeta = 20;
+    private const int cItemNumCount = 21;
+    private const int cItemId = 22;
+
+    private readonly EquipmentReader equipmentReader;
+
+    private readonly ItemDB ItemDB;
+
+    public List<BagItem> BagItems { get; } = new();
+
+    public Bag[] Bags { get; } = new Bag[5];
+
+    public event Action? DataChanged;
+    public event Action<BagItem, BagItemChange>? BagItemChange;
+
+    public int Hash { private set; get; }
+    public int HashNewOrStackGain { private set; get; }
+
+    public BagReader(ItemDB itemDb, EquipmentReader equipmentReader)
     {
-        private readonly int cBagMeta;
-        private readonly int cItemNumCount;
-        private readonly int cItemId;
-        private readonly int cItemBits;
+        this.ItemDB = itemDb;
+        this.equipmentReader = equipmentReader;
 
-        private readonly ISquareReader reader;
-        private readonly ItemDB itemDb;
-        private readonly EquipmentReader equipmentReader;
+        this.equipmentReader.OnEquipmentChanged -= OnEquipmentChanged;
+        this.equipmentReader.OnEquipmentChanged += OnEquipmentChanged;
 
-        private DateTime lastEvent;
-
-        public List<BagItem> BagItems { get; private set; } = new List<BagItem>();
-
-        public Bag[] Bags { get; private set; } = new Bag[5];
-
-        public event EventHandler? DataChanged;
-
-        private bool changedFromEvent;
-
-        public BagReader(ISquareReader reader, ItemDB itemDb, EquipmentReader equipmentReader, int cbagMeta, int citemNumCount, int cItemId, int cItemBits)
+        for (int i = 0; i < Bags.Length; i++)
         {
-            this.reader = reader;
-            this.itemDb = itemDb;
-            this.equipmentReader = equipmentReader;
-
-            this.equipmentReader.OnEquipmentChanged -= OnEquipmentChanged;
-            this.equipmentReader.OnEquipmentChanged += OnEquipmentChanged;
-
-            this.cBagMeta = cbagMeta;
-            this.cItemNumCount = citemNumCount;
-            this.cItemId = cItemId;
-            this.cItemBits = cItemBits;
-
-            for (int i = 0; i < Bags.Length; i++)
-            {
-                Bags[i] = new Bag();
-                if (i == 0)
-                {
-                    Bags[i].Name = "Backpack";
-                }
-            }
+            Bags[i] = new Bag();
         }
+        Bags[0].Item = ItemDB.Backpack;
+    }
 
-        public void Read()
+    public void Dispose()
+    {
+        this.equipmentReader.OnEquipmentChanged -= OnEquipmentChanged;
+    }
+
+    public void Update(IAddonDataProvider reader)
+    {
+        ReadBagMeta(reader, out bool metaChanged);
+
+        ReadInventory(reader, out bool inventoryChanged);
+
+        if (metaChanged || inventoryChanged)
         {
-            ReadBagMeta(out bool metaChanged);
+            DataChanged?.Invoke();
 
-            ReadInventory(out bool inventoryChanged);
-
-            if (changedFromEvent || metaChanged || inventoryChanged || (DateTime.UtcNow - this.lastEvent).TotalSeconds > 11)
-            {
-                changedFromEvent = false;
-                DataChanged?.Invoke(this, EventArgs.Empty);
-                lastEvent = DateTime.UtcNow;
-            }
+            Hash++;
         }
+    }
 
-        private void ReadBagMeta(out bool changed)
+    private void ReadBagMeta(IAddonDataProvider reader, out bool changed)
+    {
+        int data = reader.GetInt(cBagMeta);
+        if (data == 0)
         {
             changed = false;
-
-            //bagType * 1000000 + bagNum * 100000 + freeSlots * 1000 + self:bagSlots(bagNum)
-            int data = reader.GetIntAtCell(cBagMeta);
-            if (data == 0) return;
-
-            int bagType = (int)(data / 1000000f);
-            data -= 1000000 * bagType;
-
-            int index = (int)(data / 100000f);
-            data -= 100000 * index;
-
-            int freeSlots = (int)(data / 1000f);
-            data -= 1000 * freeSlots;
-
-            int slotCount = data;
-
-            if (index >= 0 && index < Bags.Length)
-            {
-                Bag bag = Bags[index];
-
-                // default bag, the first has no equipment slot
-                if (index != 0)
-                {
-                    bag.ItemId = equipmentReader.GetId((int)InventorySlotId.Bag_0 + index - 1);
-                    UpdateBagName(index);
-                }
-
-                bag.BagType = (BagType)bagType;
-                bag.SlotCount = slotCount;
-                bag.FreeSlot = freeSlots;
-
-                BagItems.RemoveAll(b => b.Bag == index && b.BagIndex > bag.SlotCount);
-
-                changed = true;
-            }
+            return;
         }
 
-        private void ReadInventory(out bool hasChanged)
+        //bagType * 1000000 + bagNum * 100000 + freeSlots * 1000 + slotCount
+        int bagType = data / 1000000;
+        int index = data / 100000 % 10;
+        int freeSlots = data / 1000 % 100;
+        int slotCount = data % 1000;
+
+        if (index >= 0 && index < Bags.Length)
         {
-            hasChanged = false;
+            Bag bag = Bags[index];
 
-            // 20 -- 0-4 bagNum + 1-21 itenNum + 1-1000 quantity
-            int itemCount = reader.GetIntAtCell(cItemNumCount);
-            if (itemCount == 0) return;
-
-            int bag = (int)(itemCount / 1000000f);
-            itemCount -= 1000000 * bag;
-
-            int slot = (int)(itemCount / 10000f);
-            itemCount -= 10000 * slot;
-
-            // 21 -- 1-999999 itemId
-            int itemId = reader.GetIntAtCell(cItemId);
-
-            // 22 -- 0-24 item bits
-            int itemBits = reader.GetIntAtCell(cItemBits);
-
-            bool isSoulbound = itemBits == 1;
-
-            var existingItem = BagItems.Where(b => b.BagIndex == slot).Where(b => b.Bag == bag).FirstOrDefault();
-
-            if (itemCount > 0)
+            // default bag, the first has no equipment slot
+            if (index != 0)
             {
-                bool addItem = true;
+                int itemId = equipmentReader.GetId((int)InventorySlotId.Bag_0 + index - 1);
+                UpdateBagItem(index, itemId);
+            }
 
-                if (existingItem != null)
+            bag.BagType = (BagType)bagType;
+            bag.SlotCount = slotCount;
+            bag.FreeSlot = freeSlots;
+
+            BagItems.RemoveAll(RemoveByIndex);
+            bool RemoveByIndex(BagItem b)
+                => b.Bag == index && b.Slot > bag.SlotCount;
+
+            changed = true;
+        }
+        else
+        {
+            changed = false;
+        }
+    }
+
+    private void ReadInventory(IAddonDataProvider reader, out bool hasChanged)
+    {
+        hasChanged = false;
+
+        int data = reader.GetInt(cItemNumCount);
+        if (data == 0) return;
+
+        // 21 -- 0-4 bagNum + 1-21 itemNum + 1-1000 quantity
+        int bag = data / 1000000;
+        int slot = data / 10000 % 100;
+        int itemCount = data % 10000;
+
+        // 22 -- flags * 1000000 + itemId (flags: bits 0-3)
+        int itemIdData = reader.GetInt(cItemId);
+        int flags = itemIdData / 1000000;
+        int itemId = itemIdData % 1000000;
+
+        BagItem? existingItem = BagItems.FirstOrDefault(Exists);
+        bool Exists(BagItem b) =>
+            b.Bag == bag && b.Slot == slot;
+
+        if (itemCount > 0)
+        {
+            bool addItem = true;
+
+            if (existingItem != null)
+            {
+                if (existingItem.Item.Entry != itemId)
                 {
-                    if (existingItem.ItemId != itemId)
-                    {
-                        BagItems.Remove(existingItem);
-                        addItem = true;
-                    }
-                    else
-                    {
-                        addItem = false;
-
-                        if (existingItem.Count != itemCount)
-                        {
-                            existingItem.UpdateCount(itemCount);
-                            hasChanged = true;
-                        }
-                    }
+                    BagItemChange?.Invoke(existingItem, Core.BagItemChange.Remove);
+                    BagItems.Remove(existingItem);
+                    addItem = true;
                 }
-
-                if (addItem)
+                else
                 {
-                    if (itemDb.Items.TryGetValue(itemId, out var item))
+                    addItem = false;
+
+                    bool countChanged = existingItem.Count != itemCount;
+                    bool flagsChanged =
+                        existingItem.IsTradable != ((flags & 1) != 0) ||
+                        existingItem.IsSoulbound != ((flags & 2) != 0) ||
+                        existingItem.IsLocked != ((flags & 4) != 0) ||
+                        existingItem.HasNoValue != ((flags & 8) != 0);
+
+                    if (countChanged || flagsChanged)
                     {
-                        BagItems.Add(new BagItem(bag, slot, itemId, itemCount, item, isSoulbound));
+                        if (countChanged)
+                        {
+                            if (existingItem.Count < itemCount)
+                                HashNewOrStackGain++;
+                            existingItem.UpdateCount(itemCount);
+                        }
+                        if (flagsChanged)
+                        {
+                            existingItem.UpdateFlags(flags);
+                        }
+                        BagItemChange?.Invoke(existingItem, Core.BagItemChange.Update);
                         hasChanged = true;
                     }
                 }
             }
-            else
+
+            if (addItem)
             {
-                if (existingItem != null)
+                hasChanged = true;
+
+                if (ItemDB.Items.TryGetValue(itemId, out Item item))
                 {
-                    BagItems.Remove(existingItem);
-                    hasChanged = true;
+                    BagItem newItem = new(bag, slot, itemCount, item, flags);
+                    BagItems.Add(newItem);
+                    BagItemChange?.Invoke(newItem, Core.BagItemChange.New);
                 }
+                else
+                {
+                    BagItem unknownItem =
+                        new(bag, slot, itemCount, new Item() { Entry = itemId, Name = "Unknown" }, flags);
+                    BagItems.Add(unknownItem);
+                    BagItemChange?.Invoke(unknownItem, Core.BagItemChange.New);
+                }
+
+                HashNewOrStackGain++;
             }
         }
-
-        public List<string> ToBagString()
+        else
         {
-            return Enumerable.Range(0, 5).Select(i =>
-                $"Bag {i}: " + string.Join(", ",
-                 BagItems.Where(b => b.Bag == i)
-                     .OrderBy(b => b.BagIndex)
-                     .Select(b => $"{b.ItemId}({b.Count})")
-                 ))
-                .ToList();
-        }
-
-        public int SlotCount => Bags.Sum((x) => x.SlotCount);
-
-        public bool BagsFull => Bags.Sum((x) => x.BagType == BagType.Unspecified ? x.FreeSlot : 0) == 0;
-
-        public bool AnyGreyItem => BagItems.Any((x) => x.Item.Quality == 0);
-
-        public int ItemCount(int itemId) => BagItems.Where(bi => bi.ItemId == itemId).Sum(bi => bi.Count);
-
-        public bool HasItem(int itemId) => ItemCount(itemId) != 0;
-
-        public int HighestQuantityOfWaterId()
-        {
-            return itemDb.WaterIds.
-                OrderByDescending(c => ItemCount(c)).
-                FirstOrDefault();
-        }
-
-        public int HighestQuantityOfFoodId()
-        {
-            return itemDb.FoodIds.
-                OrderByDescending(c => ItemCount(c)).
-                FirstOrDefault();
-        }
-
-        private void OnEquipmentChanged(object? s, (int, int) tuple)
-        {
-            if (tuple.Item1 is >= ((int)InventorySlotId.Bag_0) and <= ((int)InventorySlotId.Bag_3))
+            if (existingItem != null)
             {
-                int index = tuple.Item1 - (int)InventorySlotId.Tabard;
-                Bags[index].ItemId = tuple.Item2;
-
-                UpdateBagName(index);
-
-                changedFromEvent = true;
-            }
-        }
-
-        private void UpdateBagName(int index)
-        {
-            if (itemDb.Items.TryGetValue(Bags[index].ItemId, out var item))
-            {
-                Bags[index].Name = item.Name;
-            }
-            else
-            {
-                Bags[index].Name = string.Empty;
+                BagItemChange?.Invoke(existingItem, Core.BagItemChange.Remove);
+                BagItems.Remove(existingItem);
+                hasChanged = true;
             }
         }
     }
+
+    public int BagItemCount() => BagItems.Count;
+
+    public int SlotCount => Bags.Sum(BagSlotCount);
+
+    public bool BagsFull() => Bags.Sum(BagFreeSlotCount) == 0;
+
+    // Total free slots across all bags (including specialized bags)
+    public int TotalFreeSlotCount() => Bags.Sum(static b => b.FreeSlot);
+
+    // Total free slots usable for general items (excludes specialized bag types)
+    public int TotalFreeGeneralSlotCount() => Bags.Sum(BagFreeSlotCount);
+
+    public bool AnyGreyItem() => BagItems.Any(BagItemCommonQuality);
+
+    public int ItemCount(int itemId)
+    {
+        int count = 0;
+
+        var span = CollectionsMarshal.AsSpan(BagItems);
+        for (int i = 0; i < span.Length; i++)
+        {
+            if (span[i].Item.Entry == itemId)
+            {
+                count += span[i].Count;
+            }
+        }
+
+        return count;
+    }
+
+    public bool HasItem(int itemId)
+    {
+        return BagItems.Exists(ById);
+        bool ById(BagItem x) => x.Item.Entry == itemId;
+    }
+
+    public int HighestQuantityOfDrinkItemId()
+    {
+        return ItemDB.DrinkIds.
+            OrderByDescending(ItemCount).
+            FirstOrDefault();
+    }
+
+    public int DrinkItemCount()
+    {
+        return ItemCount(HighestQuantityOfDrinkItemId());
+    }
+
+    public int HighestQuantityOfFoodItemId()
+    {
+        return ItemDB.FoodIds.
+            OrderByDescending(ItemCount).
+            FirstOrDefault();
+    }
+    public int FoodItemCount()
+    {
+        return ItemCount(HighestQuantityOfFoodItemId());
+    }
+
+    private void OnEquipmentChanged(object? s, (int, int) tuple)
+    {
+        if (tuple.Item1 is
+            not >= ((int)InventorySlotId.Bag_0) or
+            not <= ((int)InventorySlotId.Bag_3))
+        {
+            return;
+        }
+        int index = tuple.Item1 - (int)InventorySlotId.Tabard;
+        UpdateBagItem(index, tuple.Item2);
+    }
+
+    private void UpdateBagItem(int index, int itemId)
+    {
+        if (ItemDB.Items.TryGetValue(itemId, out Item item))
+            Bags[index].Item = item;
+        else
+            Bags[index].Item = ItemDB.EmptyItem;
+    }
+
+
+    #region Helpers
+
+    private static int BagSlotCount(Bag b) => b.SlotCount;
+
+    private static int BagFreeSlotCount(Bag b) => b.BagType == BagType.Unspecified ? b.FreeSlot : 0;
+
+    private static bool BagItemCommonQuality(BagItem bi) => bi.Item.Quality == 0;
+
+    public int BagMaxSlot() => Bags.Max(BagSlotCount);
+
+    /// <summary>
+    /// Checks if there are any items meeting the quality threshold for mailing.
+    /// </summary>
+    /// <param name="minQuality">Minimum item quality (0=grey, 1=white, 2=green, etc.)</param>
+    /// <param name="excludedItemIds">Set of item IDs to exclude</param>
+    /// <returns>True if mailable items exist</returns>
+    public bool HasMailableItems(int minQuality, IReadOnlySet<int> excludedItemIds)
+    {
+        var span = CollectionsMarshal.AsSpan(BagItems);
+        for (int i = 0; i < span.Length; i++)
+        {
+            BagItem item = span[i];
+            if (item.IsTradable && item.Item.Quality >= minQuality)
+            {
+                if (!excludedItemIds.Contains(item.Item.Entry))
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Counts items meeting the quality threshold for mailing.
+    /// </summary>
+    /// <param name="minQuality">Minimum item quality (0=grey, 1=white, 2=green, etc.)</param>
+    /// <param name="excludedItemIds">Set of item IDs to exclude</param>
+    /// <returns>Count of mailable items</returns>
+    public int CountMailableItems(int minQuality, IReadOnlySet<int> excludedItemIds)
+    {
+        int count = 0;
+        var span = CollectionsMarshal.AsSpan(BagItems);
+        for (int i = 0; i < span.Length; i++)
+        {
+            BagItem item = span[i];
+            if (item.IsTradable && item.Item.Quality >= minQuality)
+            {
+                if (!excludedItemIds.Contains(item.Item.Entry))
+                {
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    #endregion
 }

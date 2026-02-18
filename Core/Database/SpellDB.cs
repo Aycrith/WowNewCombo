@@ -1,22 +1,37 @@
-﻿using System.Collections.Generic;
-using System.IO;
+﻿using SharedLib;
+
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using SharedLib;
 
-namespace Core.Database
+using System.Collections.Frozen;
+
+using static Newtonsoft.Json.JsonConvert;
+using static System.IO.File;
+using static System.IO.Path;
+
+namespace Core.Database;
+
+public sealed class SpellDB
 {
-    public class SpellDB
-    {
-        public Dictionary<int, Spell> Spells { get; } = new Dictionary<int, Spell>();
+    public FrozenDictionary<int, Spell> Spells { get; }
 
-        public SpellDB(ILogger logger, DataConfig dataConfig)
+    public SpellDB(DataConfig dataConfig, ILogger<SpellDB> logger)
+    {
+        string path = Join(dataConfig.ExpDbc, "spells.json");
+        if (!System.IO.File.Exists(path))
         {
-            var items = JsonConvert.DeserializeObject<List<Spell>>(File.ReadAllText(Path.Join(dataConfig.Dbc, "spells.json")));
-            items.ForEach(i =>
-            {
-                Spells.Add(i.Id, i);
-            });
+            logger.LogWarning("[SpellDB           ] Missing DBC file: {Path}. SpellDB disabled.", path);
+            Spells = FrozenDictionary<int, Spell>.Empty;
+            return;
         }
+
+        Spell[]? spells = DeserializeObject<Spell[]>(ReadAllText(path));
+        if (spells == null || spells.Length == 0)
+        {
+            logger.LogWarning("[SpellDB           ] Empty/invalid DBC file: {Path}. SpellDB disabled.", path);
+            Spells = FrozenDictionary<int, Spell>.Empty;
+            return;
+        }
+
+        Spells = spells.ToFrozenDictionary(spell => spell.Id);
     }
 }

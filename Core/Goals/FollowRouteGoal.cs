@@ -1,345 +1,487 @@
 using Core.GOAP;
-using SharedLib.NpcFinder;
+
+using Game;
+
 using Microsoft.Extensions.Logging;
+
+using SharedLib.Extensions;
+using SharedLib.NpcFinder;
+
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
-using System.Threading.Tasks;
-using SharedLib.Extensions;
 
-namespace Core.Goals
+#pragma warning disable 162
+
+namespace Core.Goals;
+
+public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvider, IEditedRouteReceiver, IDisposable
 {
-    public class FollowRouteGoal : GoapGoal, IRouteProvider
+    public const float DEFAULT_COST = 20f;
+    public const float COST_OFFSET = 0.1f;
+
+    private readonly float cost;
+    public override float Cost => cost;
+    public override bool CanRun() => pathSettings.CanRun();
+
+    private const bool debug = false;
+
+    private readonly ILogger<FollowRouteGoal> logger;
+    private readonly ConfigurableInput input;
+    private readonly Wait wait;
+    private readonly PlayerReader playerReader;
+    private readonly AddonBits bits;
+    private readonly ClassConfiguration classConfig;
+    private readonly IMountHandler mountHandler;
+    private readonly Navigation navigation;
+    private readonly ExecGameCommand execGameCommand;
+
+    private readonly IBlacklist targetBlacklist;
+    private readonly TargetFinder targetFinder;
+    private const NpcNames NpcNameToFind = NpcNames.Enemy | NpcNames.Neutral;
+
+    /// <summary>
+    /// Minimum time in milliseconds before starting profession cycling when entering a route.
+    /// Prevents immediate profession actions that might conflict with route initialization.
+    /// </summary>
+    private const int MIN_TIME_TO_START_CYCLE_PROFESSION = 5000;
+
+    /// <summary>
+    /// Period in milliseconds between profession cycles (e.g., mining, herbing checks).
+    /// Balances responsiveness with performance - checking too frequently wastes CPU.
+    /// </summary>
+    private const int CYCLE_PROFESSION_PERIOD = 8000;
+
+    private readonly ManualResetEventSlim sideActivityManualReset;
+    private readonly Thread? sideActivityThread;
+    private CancellationTokenSource sideActivityCts;
+
+    private readonly PathSettings pathSettings;
+
+    private Vector3[] mapRoute
     {
-        public override float CostOfPerformingAction { get => 20f; }
+        get => pathSettings.Path;
+        set => pathSettings.Path = value;
+    }
 
-        private readonly bool debug = false;
+    private DateTime onEnterTime;
+    private bool refillByOther;
 
-        private readonly ILogger logger;
-        private readonly ConfigurableInput input;
-        private readonly Wait wait;
-        private readonly AddonReader addonReader;
-        private readonly PlayerReader playerReader;
-        private readonly NpcNameFinder npcNameFinder;
-        private readonly ClassConfiguration classConfig;
-        private readonly MountHandler mountHandler;
-        private readonly Navigation navigation;
-        private readonly List<Vector3> routePoints;
+    #region IRouteProvider
 
-        private readonly TargetFinder targetFinder;
-        private CancellationTokenSource? targetFinderCts;
-        private Thread? targetFinderThread;
-        private readonly int minMs = 500, maxMs = 1000;
-        private readonly NpcNames NpcNameToFind = NpcNames.Enemy | NpcNames.Neutral;
+    public DateTime LastActive => navigation.LastActive;
 
+    public Vector3[] MapRoute() => mapRoute;
 
-        private bool shouldMount;
+    public Vector3[] PathingRoute()
+    {
+        return navigation.TotalRoute;
+    }
 
-        private readonly Random random = new();
+    public bool HasNext()
+    {
+        return navigation.HasNext();
+    }
 
-        #region IRouteProvider
+    public Vector3 NextMapPoint()
+    {
+        return navigation.NextMapPoint();
+    }
 
-        public DateTime LastActive => navigation.LastActive;
+    #endregion
 
-        public List<Vector3> PathingRoute()
+    public FollowRouteGoal(
+        float cost,
+        PathSettings pathSettings,
+        ILogger<FollowRouteGoal> logger,
+        ConfigurableInput input, Wait wait, PlayerReader playerReader,
+        AddonBits bits,
+        ClassConfiguration classConfig,
+        Navigation navigation,
+        IMountHandler mountHandler, TargetFinder targetFinder,
+        IBlacklist targetBlacklist,
+        ExecGameCommand execGameCommand)
+    : base("Follow " + System.IO.Path.GetFileNameWithoutExtension(pathSettings.FileName))
+    {
+        this.cost = cost;
+
+        this.logger = logger;
+        this.input = input;
+        this.wait = wait;
+        this.classConfig = classConfig;
+        this.playerReader = playerReader;
+        this.bits = bits;
+        this.pathSettings = pathSettings;
+        this.mountHandler = mountHandler;
+        this.targetFinder = targetFinder;
+        this.targetBlacklist = targetBlacklist;
+
+        if (pathSettings.Requirements.Count > 0)
         {
-            return navigation.TotalRoute;
+            Keys = [
+             new KeyAction() {
+                RequirementsRuntime = pathSettings.RequirementsRuntime,
+                Name = "Follow " + System.IO.Path.GetFileNameWithoutExtension(pathSettings.FileName)
+            }];
         }
 
-        public bool HasNext()
+        pathSettings.Finished = () => !navigation.HasWaypoint();
+
+        this.navigation = navigation;
+        navigation.OnPathCalculated += Navigation_OnPathCalculated;
+        navigation.OnDestinationReached += Navigation_OnDestinationReached;
+        navigation.OnWayPointReached += Navigation_OnWayPointReached;
+
+        this.execGameCommand = execGameCommand;
+
+        if (classConfig.Mode == Mode.AttendedGather)
         {
-            return navigation.HasNext();
+            AddPrecondition(GoapKey.dangercombat, false);
+            navigation.OnAnyPointReached += Navigation_OnWayPointReached;
         }
-
-        public Vector3 NextPoint()
+        else
         {
-            return navigation.NextPoint();
-        }
-
-        #endregion
-
-
-        public FollowRouteGoal(ILogger logger, ConfigurableInput input, Wait wait, AddonReader addonReader, ClassConfiguration classConfig, List<Vector3> points, Navigation navigation, MountHandler mountHandler, NpcNameFinder npcNameFinder, TargetFinder targetFinder)
-        {
-            this.logger = logger;
-            this.input = input;
-
-            this.wait = wait;
-            this.addonReader = addonReader;
-            this.classConfig = classConfig;
-            this.playerReader = addonReader.PlayerReader;
-            this.routePoints = points;
-            this.npcNameFinder = npcNameFinder;
-            this.mountHandler = mountHandler;
-            this.targetFinder = targetFinder;
-
-            this.navigation = navigation;
-            navigation.OnPathCalculated += Navigation_OnPathCalculated;
-            navigation.OnDestinationReached += Navigation_OnDestinationReached;
-            navigation.OnWayPointReached += Navigation_OnWayPointReached;
-
-            if (classConfig.Mode != Mode.AttendedGather)
+            if (classConfig.Loot)
             {
-                AddPrecondition(GoapKey.dangercombat, false);
-                AddPrecondition(GoapKey.producedcorpse, false);
-                AddPrecondition(GoapKey.consumecorpse, false);
+                AddPrecondition(GoapKey.incombat, false);
+            }
+
+            AddPrecondition(GoapKey.damagedone, false);
+            AddPrecondition(GoapKey.damagetaken, false);
+
+            AddPrecondition(GoapKey.producedcorpse, false);
+            AddPrecondition(GoapKey.consumecorpse, false);
+        }
+
+        sideActivityCts = new();
+        sideActivityManualReset = new(false);
+
+        if (classConfig.Mode == Mode.AttendedGather)
+        {
+            if (classConfig.GatherFindKeyConfig.Length > 0)
+            {
+                sideActivityThread = new(Thread_AttendedGather);
+                sideActivityThread.Start();
+            }
+        }
+        else
+        {
+            sideActivityThread = new(Thread_LookingForTarget);
+            sideActivityThread.Start();
+        }
+    }
+
+    public void Dispose()
+    {
+        navigation.Dispose();
+
+        sideActivityCts.Cancel();
+        sideActivityManualReset.Set();
+    }
+
+    private void Abort()
+    {
+        if (!targetBlacklist.Is())
+            navigation.StopMovement();
+
+        navigation.Stop();
+
+        sideActivityManualReset.Reset();
+        targetFinder.Reset();
+    }
+
+    private void Resume()
+    {
+        SendGoapEvent(FollowRouteChanged.Instance);
+
+        if (sideActivityCts.IsCancellationRequested)
+        {
+            sideActivityCts = new();
+        }
+        sideActivityManualReset.Set();
+
+        if (!navigation.HasWaypoint() || refillByOther)
+        {
+            refillByOther = false;
+            RefillWaypoints(true);
+        }
+        else
+        {
+            navigation.Resume();
+        }
+
+        if (playerReader.Class != UnitClass.Druid)
+            MountIfPossible();
+
+        onEnterTime = DateTime.UtcNow;
+
+        if (classConfig.Mode == Mode.AttendedGather &&
+            classConfig.GatherFindKeyConfig.Length > 0)
+        {
+            // Ensure tracking is active even when only one profession is configured (e.g. Mining only).
+            AlternateGatherTypes();
+        }
+    }
+
+    public void OnGoapEvent(GoapEventArgs e)
+    {
+        if (e.GetType() == typeof(AbortEvent))
+        {
+            Abort();
+        }
+        else if (e.GetType() == typeof(ResumeEvent))
+        {
+            Resume();
+        }
+        else if (e.GetType() == typeof(FollowRouteChanged))
+        {
+            refillByOther = true;
+        }
+    }
+
+    public override void OnEnter() => Resume();
+
+    public override void OnExit() => Abort();
+
+    public override void Update()
+    {
+        if (bits.Target() && bits.Target_Dead())
+        {
+            Log("Has target but its dead.");
+            bool cleared = input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
+            if (!cleared && bits.Target())
+            {
+                SendGoapEvent(ScreenCaptureEvent.Default);
+                LogWarning($"Unable to clear target! Check Bindpad settings!");
             }
         }
 
-        public override void OnActionEvent(object sender, ActionEventArgs e)
+        if (bits.Drowning())
         {
-            if (e.Key == GoapKey.abort)
-            {
-                targetFinderCts?.Cancel();
-            }
+            input.PressJump();
+        }
 
-            if (e.Key == GoapKey.resume)
+        if (bits.Combat() && classConfig.Mode != Mode.AttendedGather) { return; }
+
+        if (!sideActivityCts.IsCancellationRequested)
+        {
+            navigation.Update(sideActivityCts.Token);
+        }
+        else
+        {
+            if (!bits.Target())
             {
-                if (classConfig.Mode != Mode.AttendedGather)
+                LogWarning($"{nameof(sideActivityCts)} is cancelled but needs to be restarted!");
+                sideActivityCts = new();
+                sideActivityManualReset.Set();
+            }
+        }
+
+        RandomJump();
+
+        wait.Update();
+    }
+
+    private void Thread_LookingForTarget()
+    {
+        sideActivityManualReset.Wait();
+
+        while (!sideActivityCts.IsCancellationRequested)
+        {
+            if (pathSettings.CanRunSideActivity() &&
+                targetFinder.Search(NpcNameToFind, bits.Target_NotDead, sideActivityCts.Token))
+            {
+                if (bits.Target() && targetBlacklist.Is())
                 {
-                    StartLookingForTarget();
-                    navigation.ResetStuckParameters();
+                    Log("Blacklisted target found, clearing target");
+                    input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
+                    continue; // Don't fall through - loop again to find a valid target
+                }
 
-                    if (!navigation.HasWaypoint())
-                    {
-                        RefillWaypoints(true);
-                    }
-                    else
-                    {
-                        navigation.Resume();
-                    }
+                if (bits.Target())
+                {
+                    Log("Found target!");
+                    sideActivityCts.Cancel();
+                    sideActivityManualReset.Reset();
                 }
             }
+
+            wait.Update();
+            sideActivityManualReset.Wait();
         }
 
-        public override ValueTask OnEnter()
+        if (logger.IsEnabled(LogLevel.Debug))
+            logger.LogDebug("LookingForTarget Thread stopped!");
+    }
+
+    private void Thread_AttendedGather()
+    {
+        sideActivityManualReset.Wait();
+
+        while (!sideActivityCts.IsCancellationRequested)
         {
-            SendActionEvent(new ActionEventArgs(GoapKey.fighting, false));
-
-            if (!navigation.HasWaypoint())
-            {
-                RefillWaypoints(true);
-            }
-            else
-            {
-                navigation.Resume();
-            }
-
-            if (classConfig.UseMount &&
-                mountHandler.CanMount() && !shouldMount &&
-                mountHandler.ShouldMount(navigation.TotalRoute.Last()))
-            {
-                shouldMount = true;
-                Log("Mount up since desination far away");
-            }
-
-            if (classConfig.Mode != Mode.AttendedGather)
-            {
-                StartLookingForTarget();
-            }
-
-            return base.OnEnter();
-        }
-
-        public override ValueTask OnExit()
-        {
-            navigation.Stop();
-            targetFinderCts?.Cancel();
-
-            return base.OnExit();
-        }
-
-        public override ValueTask PerformAction()
-        {
-            if (playerReader.HasTarget && playerReader.Bits.TargetIsDead)
-            {
-                input.TapClearTarget("Has target but its dead.");
-                wait.Update(1);
-            }
-
-            if (playerReader.Bits.IsDrowning)
-            {
-                input.TapJump("Drowning! Swim up");
-            }
-
-            if (classConfig.Mode == Mode.AttendedGather)
+            if ((DateTime.UtcNow - onEnterTime).TotalMilliseconds > MIN_TIME_TO_START_CYCLE_PROFESSION)
             {
                 AlternateGatherTypes();
             }
-
-            if (playerReader.Bits.PlayerInCombat && classConfig.Mode != Mode.AttendedGather) { return ValueTask.CompletedTask; }
-
-            navigation.Update();
-
-            RandomJump();
-
-            wait.Update(1);
-
-            return ValueTask.CompletedTask;
+            sideActivityCts.Token.WaitHandle.WaitOne(CYCLE_PROFESSION_PERIOD);
+            sideActivityManualReset.Wait();
         }
 
-        private void StartLookingForTarget()
-        {
-            targetFinderCts?.Dispose();
-            targetFinderCts = new CancellationTokenSource();
+        if (logger.IsEnabled(LogLevel.Debug))
+            logger.LogDebug("AttendedGather Thread stopped!");
+    }
 
-            targetFinderThread = new Thread(Thread_LookingForTarget);
-            targetFinderThread.Start();
+    private void AlternateGatherTypes()
+    {
+        var oldestKey = classConfig.GatherFindKeyConfig.MaxBy(x => x.SinceLastClickMs);
+        if (!playerReader.IsCasting() &&
+            oldestKey?.SinceLastClickMs > CYCLE_PROFESSION_PERIOD)
+        {
+            logger.LogInformation($"[{oldestKey.Key}] {oldestKey.Name} pressed for {InputDuration.DefaultPress}ms");
+            input.PressRandom(oldestKey);
+            oldestKey.SetClicked();
         }
+    }
 
-        private void Thread_LookingForTarget()
+    private void MountIfPossible()
+    {
+        float totalDistance = VectorExt.TotalDistance<Vector3>(navigation.TotalRoute, VectorExt.WorldDistanceXY);
+
+        // Optimize travel speed: mount if possible, otherwise unstealth for speed
+        mountHandler.OptimizeTravelSpeed(totalDistance);
+
+        if (mountHandler.IsMounted())
         {
-            if (targetFinderCts == null)
-            {
-                logger.LogWarning($"{nameof(FollowRouteGoal)}: .. Unable to start search target!");
-                return;
-            }
-
-            Log("Start searching for target...");
-
-            Func<bool> validTarget = () =>
-                playerReader.HasTarget &&
-                !playerReader.Bits.TargetIsDead;
-
-            bool found = false;
-            while (!found && !targetFinderCts.IsCancellationRequested)
-            {
-                if (classConfig.TargetNearestTarget.MillisecondsSinceLastClick > random.Next(minMs, maxMs) &&
-                    !input.IsKeyDown(input.TurnLeftKey) && !input.IsKeyDown(input.TurnRightKey))
-                {
-                    found = targetFinder.Search(NpcNameToFind, validTarget, nameof(FollowRouteGoal), targetFinderCts.Token);
-                }
-                wait.Update(1);
-            }
-
-            if (found)
-                Log("Found target!");
-
-            if (targetFinderCts.IsCancellationRequested)
-                Log("Finding target aborted!");
+            navigation.ResetStuckParameters();
         }
+    }
 
+    #region Refill rules
 
-        private void AlternateGatherTypes()
-        {
-            if (classConfig.GatherFindKeyConfig.Count < 1)
-            {
-                return;
-            }
+    private void Navigation_OnPathCalculated()
+    {
+        MountIfPossible();
+    }
 
-            var oldestKey = classConfig.GatherFindKeyConfig.OrderByDescending(x => x.MillisecondsSinceLastClick).First();
-            if (oldestKey.MillisecondsSinceLastClick > 3000)
-            {
-                input.KeyPress(oldestKey.ConsoleKey, input.defaultKeyPress);
-                oldestKey.SetClicked();
-            }
-        }
-
-        private void MountIfRequired()
-        {
-            if (shouldMount && !mountHandler.IsMounted())
-            {
-                if (!npcNameFinder.MobsVisible)
-                {
-                    shouldMount = false;
-                    Log("Mount up");
-                    mountHandler.MountUp();
-                    navigation.ResetStuckParameters();
-                }
-                else
-                {
-                    LogDebug("Not mounting as can see NPC.");
-                }
-            }
-        }
-
-        #region Refill rules
-
-        private void Navigation_OnPathCalculated(object? sender, EventArgs e)
-        {
-            MountIfRequired();
-        }
-
-        private void Navigation_OnDestinationReached(object? sender, EventArgs e)
-        {
+    private void Navigation_OnDestinationReached()
+    {
+        if (debug)
             LogDebug("Navigation_OnDestinationReached");
-            RefillWaypoints(false);
+
+        RefillWaypoints(false);
+        MountIfPossible();
+    }
+
+    private void Navigation_OnWayPointReached()
+    {
+        MountIfPossible();
+    }
+
+    public void RefillWaypoints(bool onlyClosest)
+    {
+        Log($"{nameof(RefillWaypoints)} - findClosest:{onlyClosest} - ThereAndBack:{pathSettings.PathThereAndBack}");
+
+        Vector3 playerMap = playerReader.MapPos;
+
+        Span<Vector3> pathMap = stackalloc Vector3[mapRoute.Length];
+        mapRoute.CopyTo(pathMap);
+
+        float mapDistanceToFirst = playerMap.MapDistanceXYTo(pathMap[0]);
+        float mapDistanceToLast = playerMap.MapDistanceXYTo(pathMap[^1]);
+
+        if (mapDistanceToLast < mapDistanceToFirst)
+        {
+            pathMap.Reverse();
         }
 
-        private void Navigation_OnWayPointReached(object? sender, EventArgs e)
+        int closestIndex = 0;
+        Vector3 mapClosestPoint = Vector3.Zero;
+        float distance = float.MaxValue;
+
+        for (int i = 0; i < pathMap.Length; i++)
         {
-            MountIfRequired();
+            Vector3 p = pathMap[i];
+            float d = playerMap.MapDistanceXYTo(p);
+            if (d < distance)
+            {
+                distance = d;
+                closestIndex = i;
+                mapClosestPoint = p;
+            }
         }
 
-        public void RefillWaypoints(bool onlyClosest)
+        if (onlyClosest)
         {
-            Log($"RefillWaypoints - findClosest:{onlyClosest} - ThereAndBack:{input.ClassConfig.PathThereAndBack}");
+            if (debug)
+                LogDebug($"{nameof(RefillWaypoints)}: Closest wayPoint: {mapClosestPoint}");
 
-            var player = playerReader.PlayerLocation;
-            var path = routePoints.ToList();
+            navigation.SetWayPoints(stackalloc Vector3[1] { mapClosestPoint });
 
-            var distanceToFirst = player.DistanceXYTo(path[0]);
-            var distanceToLast = player.DistanceXYTo(path[^1]);
+            return;
+        }
 
-            if (distanceToLast < distanceToFirst)
+        if (mapClosestPoint == pathMap[0] || mapClosestPoint == pathMap[^1])
+        {
+            if (pathSettings.PathThereAndBack)
             {
-                path.Reverse();
-            }
-
-            var closestPoint = path.ToList().OrderBy(p => player.DistanceXYTo(p)).First();
-            if (onlyClosest)
-            {
-                var closestPath = new List<Vector3> { closestPoint };
-                LogDebug($"RefillWaypoints: Closest wayPoint: {closestPoint}");
-                navigation.SetWayPoints(closestPath);
-                return;
-            }
-
-            int closestIndex = path.IndexOf(closestPoint);
-            if (closestPoint == path[0] || closestPoint == path[^1])
-            {
-                if (input.ClassConfig.PathThereAndBack)
-                {
-                    navigation.SetWayPoints(path);
-                }
-                else
-                {
-                    path.Reverse();
-                    navigation.SetWayPoints(path);
-                }
+                navigation.SetWayPoints(pathMap);
             }
             else
             {
-                var points = path.Take(closestIndex).ToList();
-                points.Reverse();
-                Log($"RefillWaypoints - Set destination from closest to nearest endpoint - with {points.Count} waypoints");
-                navigation.SetWayPoints(points);
+                pathMap.Reverse();
+                navigation.SetWayPoints(pathMap);
             }
         }
-
-        #endregion
-
-        private void RandomJump()
+        else
         {
-            if (classConfig.Jump.MillisecondsSinceLastClick > random.Next(15_000, 45_000))
-            {
-                input.TapJump("Random jump");
-            }
+            Span<Vector3> points = pathMap[closestIndex..];
+            Log($"{nameof(RefillWaypoints)} - Set destination from closest to nearest endpoint - with {points.Length} waypoints");
+            navigation.SetWayPoints(points);
         }
+    }
 
-        private void LogDebug(string text)
-        {
-            if (debug)
-            {
-                logger.LogDebug($"{nameof(FollowRouteGoal)}: {text}");
-            }
-        }
+    #endregion
 
-        private void Log(string text)
+    /// <summary>
+    /// Updates the current route when the path is modified.
+    /// Only updates if the current route matches the expected old map to avoid
+    /// race conditions during concurrent path modifications.
+    /// </summary>
+    public void ReceivePath(Vector3[] oldMap, Vector3[] newMap)
+    {
+        // Validate that current route matches expected state before updating
+        // This prevents overwriting routes that changed since the update began
+        if (mapRoute.SequenceEqual(oldMap))
         {
-            logger.LogInformation($"{nameof(FollowRouteGoal)}: {text}");
+            this.mapRoute = newMap;
         }
+    }
+
+    private void RandomJump()
+    {
+        if (bits.Grounded() &&
+            (DateTime.UtcNow - onEnterTime).TotalSeconds > 5 &&
+            classConfig.Jump.SinceLastClickMs > Random.Shared.Next(10_000, 25_000))
+        {
+            Log("Random jump");
+            input.PressJump();
+        }
+    }
+
+    private void LogDebug(string text)
+    {
+        logger.LogDebug(text);
+    }
+
+    private void LogWarning(string text)
+    {
+        logger.LogWarning(text);
+    }
+
+    private void Log(string text)
+    {
+        logger.LogInformation(text);
     }
 }

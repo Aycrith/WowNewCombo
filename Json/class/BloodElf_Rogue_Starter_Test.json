@@ -1,0 +1,189 @@
+{
+  "ClassName": "Rogue",
+  "Log": true,
+  "Loot": true,
+  "Skin": false,
+  "GatherCorpse": true,
+  "UseMount": false,
+  "AllowPvP": false,
+  "KeyboardOnly": true,
+  "NPCMaxLevels_Above": 2,
+  "NPCMaxLevels_Below": 5,
+  "PathThereAndBack": true,
+  "PathReduceSteps": true,
+
+  "ForwardKey": 87,
+  "BackwardKey": 83,
+  "TurnLeftKey": 65,
+  "TurnRightKey": 68,
+
+  "IntVariables": {
+    "MIN_HP_EVASION%": 30,
+    "MIN_HP_GOUGE%": 40,
+    "FLEE_HP%": 15,
+    "FLEE_MOB_COUNT": 3,
+    "FOOD_HP%": 50,
+    "EVISCERATE_CP": 3,
+    "SLICE_DICE_CP": 2
+  },
+
+  "Paths": [
+    {
+      "PathFilename": "_pack\\1-20\\Blood elf\\1-6_Eversong Woods.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 7"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Blood elf\\6-12_Eversong Woods.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 6", "Level < 13"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Blood elf\\9-12_Ghostlands.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 9", "Level < 13"]
+    }
+  ],
+
+  "Wait": {
+    "Sequence": [
+      {
+        "Cost": 0.9,
+        "Name": "User",
+        "Requirement": "MenuOpen || ChatInputVisible"
+      }
+    ]
+  },
+
+  "Pull": {
+    "Sequence": [
+      {
+        "Name": "Stealth",
+        "Key": "1",
+        "Slot": 1,
+        "WhenUsable": true,
+        "Requirement": "!Stealth && Energy > 30 && !Swimming",
+        "AfterCastWaitBuff": true
+      },
+      {
+        "Name": "Cheap Shot",
+        "Key": "3",
+        "Slot": 3,
+        "WhenUsable": true,
+        "Requirements": [
+          "Stealth",
+          "InMeleeRange"
+        ],
+        "StopBeforeCast": true
+      },
+      {
+        "Name": "Approach"
+      }
+    ]
+  },
+
+  "Combat": {
+    "Sequence": [
+      {
+        "Name": "Evasion",
+        "Key": "5",
+        "Slot": 5,
+        "WhenUsable": true,
+        "Requirement": "Health% < MIN_HP_EVASION%"
+      },
+      {
+        "Name": "Gouge",
+        "Key": "4",
+        "Slot": 4,
+        "WhenUsable": true,
+        "Requirements": [
+          "Health% < MIN_HP_GOUGE%",
+          "MobCount > 1"
+        ]
+      },
+      {
+        "Name": "Slice and Dice",
+        "Key": "6",
+        "Slot": 6,
+        "Requirements": [
+          "!Slice and Dice",
+          "Combo Point >= SLICE_DICE_CP",
+          "TargetHealth% > 40"
+        ]
+      },
+      {
+        "Name": "Eviscerate",
+        "Key": "7",
+        "Slot": 7,
+        "Requirements": [
+          "Combo Point >= EVISCERATE_CP"
+        ]
+      },
+      {
+        "Name": "Sinister Strike",
+        "Key": "2",
+        "Slot": 2,
+        "Requirement": "Energy >= 45"
+      },
+      {
+        "Name": "AutoAttack"
+      },
+      {
+        "Name": "Approach",
+        "Log": false
+      }
+    ]
+  },
+
+  "Flee": {
+    "Sequence": [
+      {
+        "Name": "Flee",
+        "Requirement": "(MobCount >= FLEE_MOB_COUNT && Health% < FLEE_HP%) || TargetElite"
+      }
+    ]
+  },
+
+  "Adhoc": {
+    "Sequence": [
+      {
+        "Name": "Stealth",
+        "Key": "1",
+        "Slot": 1,
+        "WhenUsable": true,
+        "Requirement": "!Stealth && !Swimming && !InCombat",
+        "Cost": 2
+      },
+      {
+        "Name": "Food",
+        "Key": "=",
+        "Slot": 12,
+        "Requirement": "Health% < FOOD_HP%",
+        "Cost": 3
+      }
+    ]
+  },
+
+  "NPC": {
+    "Sequence": [
+      {
+        "Name": "Repair",
+        "Key": "C",
+        "Requirement": "Durability% < 40",
+        "Cost": 6
+      },
+      {
+        "Name": "Sell",
+        "Key": "C",
+        "Requirements": [
+          "BagFullAny",
+          "BagGreyItem"
+        ],
+        "Cost": 6
+      }
+    ]
+  }
+}

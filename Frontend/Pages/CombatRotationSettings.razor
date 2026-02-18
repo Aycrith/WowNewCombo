@@ -1,0 +1,354 @@
+@page "/combat-rotation"
+
+@implements IDisposable
+
+@using System.Collections.Generic
+@using System.Linq
+@using Core.CombatRotation
+@using Core.FeatureFlags
+
+@inject FeatureFlagService featureFlags
+@inject CombatRotationAdminService combatRotationAdmin
+@inject RotationMetricsCollector metricsCollector
+
+<PageTitle>Combat Rotation Optimizer</PageTitle>
+
+<h3>Combat Rotation Optimizer</h3>
+
+<div class="alert alert-secondary small">
+    The combat rotation optimizer is opt-in and disabled by default.
+    It reorders ability priority lists using weighted scoring based on live game state.
+    Settings persist to <code>runtime_feature_flags.json</code> and apply immediately.
+</div>
+
+@* ── Status Card ── *@
+<Card class="mt-2">
+    <CardHeader>Status</CardHeader>
+    <CardBody>
+        <dl class="row mb-0">
+            <dt class="col-sm-4">Enabled</dt>
+            <dd class="col-sm-8">
+                <b>@(featureFlags.Current.CombatRotationOptimizer.Enabled ? "On" : "Off")</b>
+            </dd>
+
+            <dt class="col-sm-4">Fallback Mode</dt>
+            <dd class="col-sm-8">
+                @(featureFlags.Current.CombatRotationOptimizer.FallbackToStaticPriority
+                    ? "Static priority fallback active"
+                    : "Pure optimizer mode")
+            </dd>
+
+            <dt class="col-sm-4">Metrics</dt>
+            <dd class="col-sm-8">
+                @(featureFlags.Current.CombatRotationOptimizer.EnableMetrics ? "Collecting" : "Disabled")
+            </dd>
+        </dl>
+    </CardBody>
+</Card>
+
+@* ── Live Metrics Dashboard ── *@
+@if (featureFlags.Current.CombatRotationOptimizer.EnableMetrics)
+{
+    <Card class="mt-2">
+        <CardHeader>Live Metrics</CardHeader>
+        <CardBody>
+            <dl class="row mb-0">
+                <dt class="col-sm-4">Total Ticks</dt>
+                <dd class="col-sm-8">@metricsCollector.CurrentSession.TotalTicks</dd>
+
+                <dt class="col-sm-4">Optimized Ticks</dt>
+                <dd class="col-sm-8">
+                    @metricsCollector.CurrentSession.OptimizedTicks
+                    (@(MetricsOptimizationRate.ToString("F1"))%)
+                </dd>
+
+                <dt class="col-sm-4">Fallback Ticks</dt>
+                <dd class="col-sm-8">@metricsCollector.CurrentSession.FallbackTicks</dd>
+
+                <dt class="col-sm-4">Session Duration</dt>
+                <dd class="col-sm-8">@SessionDuration.ToString(@"hh\:mm\:ss")</dd>
+            </dl>
+
+            @{ IReadOnlyList<AbilityUsageStat> topAbilities = TopAbilities; }
+            @if (topAbilities.Count > 0)
+            {
+                <h6 class="mt-3">Top Abilities (by usage)</h6>
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th>Ability</th>
+                            <th>Attempts</th>
+                            <th>Success Rate</th>
+                            <th>Avg Score</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (AbilityUsageStat stat in topAbilities)
+                        {
+                            <tr>
+                                <td>@stat.Name</td>
+                                <td>@stat.AttemptCount</td>
+                                <td>@(stat.SuccessRate.ToString("P0"))</td>
+                                <td>@stat.AverageScore.ToString("F1")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <p class="text-muted small mt-3 mb-0">
+                    No ability data yet — start a combat session to populate metrics.
+                </p>
+            }
+        </CardBody>
+    </Card>
+}
+
+@* ── Configuration Card ── *@
+<Card class="mt-2">
+    <CardHeader>Configuration</CardHeader>
+    <CardBody>
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" id="crEnabled"
+                   @bind="enabled" />
+            <label class="form-check-label" for="crEnabled">Enable Combat Rotation Optimizer</label>
+        </div>
+
+        <hr class="my-3" />
+
+        <h5>Core Settings</h5>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="form-check form-switch mt-1">
+                    <input class="form-check-input" type="checkbox" role="switch" id="crFallback"
+                           @bind="fallbackToStaticPriority" />
+                    <label class="form-check-label" for="crFallback">
+                        Fallback to Static Priority
+                        <small class="text-muted d-block">
+                            Revert to original ordering if optimizer errors
+                        </small>
+                    </label>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Base Weight Multiplier</label>
+                <input class="form-control" type="number" step="0.1" min="0.1" max="10.0"
+                       @bind="baseWeightMultiplier" />
+                <small class="text-muted">Global multiplier applied to all ability weights</small>
+            </div>
+        </div>
+
+        <hr class="my-3" />
+
+        <h5>Advanced Features</h5>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="form-check form-switch mt-1">
+                    <input class="form-check-input" type="checkbox" role="switch" id="crForecasting"
+                           @bind="enableResourceForecasting" />
+                    <label class="form-check-label" for="crForecasting">
+                        Resource Forecasting
+                        <small class="text-muted d-block">
+                            Project resource levels at GCD end
+                        </small>
+                    </label>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-check form-switch mt-1">
+                    <input class="form-check-input" type="checkbox" role="switch" id="crSwingTimer"
+                           @bind="enableSwingTimerAlignment" />
+                    <label class="form-check-label" for="crSwingTimer">
+                        Swing Timer Alignment
+                        <small class="text-muted d-block">
+                            Align instant casts with melee swing timer
+                        </small>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <hr class="my-3" />
+
+        <h5>Metrics</h5>
+        <div class="row g-3">
+            <div class="col-md-3">
+                <div class="form-check form-switch mt-1">
+                    <input class="form-check-input" type="checkbox" role="switch" id="crMetrics"
+                           @bind="enableMetrics" />
+                    <label class="form-check-label" for="crMetrics">Enable Metrics</label>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Flush Interval (sec)</label>
+                <input class="form-control" type="number" min="5" max="300"
+                       @bind="metricsFlushIntervalSeconds" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Metrics Output Path</label>
+                <input class="form-control" type="text" @bind="metricsOutputPath" />
+            </div>
+        </div>
+
+        <hr class="my-3" />
+
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary btn-sm" @onclick="Save">Save</button>
+            <button class="btn btn-outline-secondary btn-sm" @onclick="Reset">Reset to Defaults</button>
+            <button class="btn btn-outline-info btn-sm" @onclick="ViewMetricsFile">View Metrics File</button>
+        </div>
+
+        @if (!string.IsNullOrEmpty(saveError))
+        {
+            <div class="alert alert-danger mt-2 small py-1 px-2">@saveError</div>
+        }
+
+        @if (showSaved)
+        {
+            <div class="alert alert-success mt-2 small py-1 px-2">Settings saved.</div>
+        }
+    </CardBody>
+</Card>
+
+@* ── Metrics File Viewer ── *@
+@if (!string.IsNullOrEmpty(metricsFileContent))
+{
+    <Card class="mt-2">
+        <CardHeader>Metrics JSON</CardHeader>
+        <CardBody>
+            <pre class="small mb-0" style="max-height: 400px; overflow-y: auto;">@metricsFileContent</pre>
+        </CardBody>
+    </Card>
+}
+
+@code {
+    private bool enabled;
+    private bool fallbackToStaticPriority;
+    private float baseWeightMultiplier;
+    private bool enableMetrics;
+    private bool enableResourceForecasting;
+    private bool enableSwingTimerAlignment;
+    private int metricsFlushIntervalSeconds;
+    private string metricsOutputPath = string.Empty;
+
+    private bool showSaved;
+    private string? saveError;
+    private string metricsFileContent = string.Empty;
+    private System.Timers.Timer? refreshTimer;
+
+    protected override void OnInitialized()
+    {
+        LoadFromCurrent();
+
+        refreshTimer = new System.Timers.Timer(1000);
+        refreshTimer.Elapsed += async (_, _) => await InvokeAsync(StateHasChanged);
+        refreshTimer.Start();
+    }
+
+    private void LoadFromCurrent()
+    {
+        CombatRotationOptimizerOptions opts = featureFlags.Current.CombatRotationOptimizer;
+        enabled = opts.Enabled;
+        fallbackToStaticPriority = opts.FallbackToStaticPriority;
+        baseWeightMultiplier = opts.BaseWeightMultiplier;
+        enableMetrics = opts.EnableMetrics;
+        enableResourceForecasting = opts.EnableResourceForecasting;
+        enableSwingTimerAlignment = opts.EnableSwingTimerAlignment;
+        metricsFlushIntervalSeconds = opts.MetricsFlushIntervalSeconds;
+        metricsOutputPath = opts.MetricsOutputPath;
+    }
+
+    private void Save()
+    {
+        try
+        {
+            CombatRotationOptimizerOptions options = new()
+            {
+                Enabled = enabled,
+                FallbackToStaticPriority = fallbackToStaticPriority,
+                BaseWeightMultiplier = baseWeightMultiplier,
+                EnableMetrics = enableMetrics,
+                EnableResourceForecasting = enableResourceForecasting,
+                EnableSwingTimerAlignment = enableSwingTimerAlignment,
+                MetricsFlushIntervalSeconds = metricsFlushIntervalSeconds,
+                MetricsOutputPath = metricsOutputPath
+            };
+
+            combatRotationAdmin.Save(options);
+            showSaved = true;
+            saveError = null;
+        }
+        catch (Exception ex)
+        {
+            saveError = $"Failed to save: {ex.Message}";
+            showSaved = false;
+        }
+    }
+
+    private void Reset()
+    {
+        CombatRotationOptimizerOptions defaults = new();
+        enabled = defaults.Enabled;
+        fallbackToStaticPriority = defaults.FallbackToStaticPriority;
+        baseWeightMultiplier = defaults.BaseWeightMultiplier;
+        enableMetrics = defaults.EnableMetrics;
+        enableResourceForecasting = defaults.EnableResourceForecasting;
+        enableSwingTimerAlignment = defaults.EnableSwingTimerAlignment;
+        metricsFlushIntervalSeconds = defaults.MetricsFlushIntervalSeconds;
+        metricsOutputPath = defaults.MetricsOutputPath;
+        showSaved = false;
+        saveError = null;
+        metricsFileContent = string.Empty;
+    }
+
+    private void ViewMetricsFile()
+    {
+        try
+        {
+            string path = featureFlags.Current.CombatRotationOptimizer.MetricsOutputPath;
+            if (System.IO.File.Exists(path))
+            {
+                metricsFileContent = System.IO.File.ReadAllText(path);
+            }
+            else
+            {
+                metricsFileContent = "Metrics file not found. Start a combat session to generate metrics.";
+            }
+        }
+        catch (Exception ex)
+        {
+            metricsFileContent = $"Error reading metrics file: {ex.Message}";
+        }
+    }
+
+    private IReadOnlyList<AbilityUsageStat> TopAbilities =>
+        metricsCollector.CurrentSession.GetOrderedStats().Take(10).ToList();
+
+    private float MetricsOptimizationRate
+    {
+        get
+        {
+            int total = metricsCollector.CurrentSession.TotalTicks;
+            if (total == 0) return 0f;
+            return (float)metricsCollector.CurrentSession.OptimizedTicks / total * 100f;
+        }
+    }
+
+    private TimeSpan SessionDuration
+    {
+        get
+        {
+            long start = metricsCollector.CurrentSession.SessionStartTicks;
+            long end = metricsCollector.CurrentSession.SessionEndTicks;
+            if (end == 0) end = Environment.TickCount64;
+            return TimeSpan.FromMilliseconds(end - start);
+        }
+    }
+
+    public void Dispose()
+    {
+        refreshTimer?.Stop();
+        refreshTimer?.Dispose();
+    }
+}

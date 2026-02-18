@@ -27,15 +27,24 @@
         "HasCastBar": true
       },
       {
+        "Name": "AutoAttack",
+        "Requirements": [
+          "!Casting"
+        ]
+      },
+      {
         "Name": "Approach",
-        "Log": false
+        "Requirements": [
+          "!Casting",
+          "AutoAttacking"
+        ]
       }
     ]
   },
   "Adhoc": {
     "Sequence": [
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "-",
         "Requirement": "Mana% < 30"
       },
@@ -52,7 +61,7 @@
         "Cost": 6,
         "Name": "Repair",
         "Key": "C",
-        "Requirement": "Items Broken",
+        "Requirement": "Durability% < 35",
         "PathFilename": "1_NightElf_Vendor.json"
       },
       {

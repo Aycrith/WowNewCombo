@@ -1,0 +1,490 @@
+{
+  "ClassName": "Hunter",
+  "Log": false,
+  "Loot": true,
+  "Skin": true,
+  "GatherCorpse": true,
+  "UseMount": true,
+  "AllowPvP": false,
+  "AutoPetAttack": true,
+  "KeyboardOnly": true,
+  "NPCMaxLevels_Above": 2,
+  "NPCMaxLevels_Below": 8,
+  "PathThereAndBack": true,
+  "PathReduceSteps": true,
+  "Mount": { "Key": "N0" },
+  "IntVariables": {
+    "MEND_PET_HP%": 50,
+    "MEND_PET_COOLDOWN": 15000,
+    "BESTIAL_WRATH_HP%": 85,
+    "INTIMIDATION_HP%": 70,
+    "RAPID_FIRE_HP%": 75,
+    "ASPECT_VIPER_MANA%": 30,
+    "FEIGN_DEATH_HP%": 20,
+    "FEIGN_DEATH_MOB_COUNT": 2,
+    "FLEE_HP%": 15,
+    "FLEE_MOB_COUNT": 3,
+    "FOOD_HP%": 50,
+    "DRINK_MANA%": 40,
+    "AOE_MOB_COUNT": 3
+  },
+  "Paths": [
+    {
+      "PathFilename": "_pack\\1-20\\Human\\01-04_Elwynn Forest_Northshire Valley (kobold-wolves-defias).json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Human\\05-09_Elwynn Forest_Farms Tour (pigs, bears, humans).json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 5", "Level < 10", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Human\\10-14_Westfall_beta.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 10", "Level < 15", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Human\\15-18_Westfall_The Dagger Hills (defias).json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 15", "Level < 18", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Human\\18-20_Duskwood_The Darkened Bank - wolves spiders.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 18", "Level < 21", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Dwarf.Gnome\\1-4_Dun Morogh.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Dwarf"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Night elf\\01-04_Teldrassil_Shadowglen.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:NightElf"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Draenei\\1-5_Azuremyst Isle.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Draenei"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Troll.Orc\\1-5_Durotar_Valley of Trials.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Orc || Race:Troll"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Tauren\\01-06_Mulgore_Red Cloud Mesa.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 6", "Race:Tauren"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Blood elf\\01-06_Eversong Woods_Sunstrider Isle.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 6", "Race:BloodElf"]
+    },
+    {
+      "PathFilename": "_pack\\20-30\\Duskwood\\20-27 Raven Hill Cemetery.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 20", "Level < 25"]
+    },
+    {
+      "PathFilename": "_pack\\20-30\\Wetlands\\22-29 Murlocks.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 22", "Level < 28"]
+    },
+    {
+      "PathFilename": "_pack\\20-30\\Duskwood\\27-30.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 27", "Level < 31"]
+    },
+    {
+      "PathFilename": "_pack\\30-40\\Thousand Needles\\30-35 Shimmering Flats.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 30", "Level < 36"]
+    },
+    {
+      "PathFilename": "_pack\\30-40\\Swamp of Sorrows\\35-39 Gorillas Crocs.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 35", "Level < 40"]
+    },
+    {
+      "PathFilename": "_pack\\40-50\\Badlands\\40-45 Ogre camp.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 40", "Level < 45"]
+    },
+    {
+      "PathFilename": "_pack\\40-50\\Feralas\\44-49 Hyppos.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 44", "Level < 50"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Azshara\\50-53 Azshara Legash Encampment.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 50", "Level < 54"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Winterspring\\56-58 Winterfall Village.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 54", "Level < 58"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Eastern Plaguelands\\57-60 Browman Mill - Noxious Glade.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 57", "Level <= 60"]
+    }
+  ],
+  "Wait": {
+    "Sequence": [
+      {
+        "Name": "User",
+        "Cost": 0.9,
+        "Requirement": "MenuOpen || ChatInputVisible"
+      }
+    ]
+  },
+  "Pull": {
+    "Sequence": [
+      {
+        "Name": "Hunter's Mark",
+        "Key": "7",
+        "Weight": 2.0,
+        "ScoreConditions": [
+          { "Condition": "!Hunter's Mark", "Bonus": 3.0 }
+        ],
+        "WhenUsable": true,
+        "BeforeCastStop": true,
+        "Requirements": [
+          "!Hunter's Mark",
+          "Level >= 6"
+        ]
+      },
+      {
+        "Name": "Concussive Shot",
+        "Key": "9",
+        "Weight": 1.8,
+        "ScoreConditions": [
+          { "Condition": "!Concussive Shot", "Bonus": 1.5 }
+        ],
+        "BeforeCastStop": true,
+        "Requirements": [
+          "HasRangedWeapon",
+          "!InMeleeRange",
+          "HasAmmo",
+          "Level >= 8"
+        ]
+      },
+      {
+        "Name": "Serpent Sting",
+        "Key": "8",
+        "Weight": 2.0,
+        "ScoreConditions": [
+          { "Condition": "!Serpent Sting", "Bonus": 3.0 },
+          { "Condition": "TargetHealth% > 50", "Bonus": 0.5 }
+        ],
+        "BeforeCastStop": true,
+        "Requirements": [
+          "!Serpent Sting",
+          "HasRangedWeapon",
+          "!InMeleeRange",
+          "HasAmmo",
+          "Level >= 4"
+        ]
+      },
+      {
+        "Name": "Auto Shot",
+        "Key": "3",
+        "Weight": 1.5,
+        "ScoreConditions": [
+          { "Condition": "!AutoShot", "Bonus": 2.0 }
+        ],
+        "Item": true,
+        "Requirements": [
+          "HasRangedWeapon",
+          "!InMeleeRange",
+          "!AutoShot",
+          "HasAmmo"
+        ]
+      },
+      {
+        "Name": "Approach",
+        "Requirement": "Level < 4"
+      }
+    ]
+  },
+  "Combat": {
+    "Sequence": [
+      {
+        "Name": "Gift of the Naaru",
+        "Key": "F1",
+        "Weight": 4.0,
+        "ScoreConditions": [
+          { "Condition": "Health% < 30", "Bonus": 5.0 }
+        ],
+        "HasCastBar": true,
+        "WhenUsable": true,
+        "Requirements": [
+          "Race:Draenei",
+          "Health% < 45"
+        ]
+      },
+      {
+        "Name": "Feign Death",
+        "Key": "F3",
+        "Weight": 5.0,
+        "ScoreConditions": [
+          { "Condition": "Health% < 15", "Bonus": 8.0 },
+          { "Condition": "MobCount > 2", "Bonus": 3.0 }
+        ],
+        "WhenUsable": true,
+        "AfterCastDelay": 3000,
+        "Requirements": [
+          "(Health% < FEIGN_DEATH_HP% || (MobCount >= FEIGN_DEATH_MOB_COUNT && Health% < 40))",
+          "Level >= 30"
+        ]
+      },
+      {
+        "Name": "Mend Pet",
+        "Key": "N7",
+        "Weight": 3.0,
+        "ScoreConditions": [
+          { "Condition": "PetHealth% < 20", "Bonus": 5.0 },
+          { "Condition": "PetHealth% < 50", "Bonus": 2.0 }
+        ],
+        "Cooldown": "MEND_PET_COOLDOWN",
+        "Requirements": [
+          "Has Pet",
+          "PetHealth% < MEND_PET_HP%"
+        ]
+      },
+      {
+        "Name": "Revive Pet",
+        "Key": "N9",
+        "Weight": 4.0,
+        "ScoreConditions": [
+          { "Condition": "!Has Pet", "Bonus": 5.0 }
+        ],
+        "HasCastBar": true,
+        "WhenUsable": true,
+        "Requirements": [
+          "!Has Pet",
+          "Level >= 10"
+        ]
+      },
+      {
+        "Name": "Call Pet",
+        "Key": "N8",
+        "Weight": 4.0,
+        "ScoreConditions": [
+          { "Condition": "!Has Pet", "Bonus": 5.0 }
+        ],
+        "WhenUsable": true,
+        "Requirements": [
+          "!Has Pet",
+          "Level >= 10"
+        ]
+      },
+      {
+        "Name": "Intimidation",
+        "Key": "N4",
+        "Weight": 3.5,
+        "ScoreConditions": [
+          { "Condition": "TargetCastingSpell", "Bonus": 6.0 },
+          { "Condition": "TargetHealth% < 30", "Bonus": 2.0 }
+        ],
+        "WhenUsable": true,
+        "Requirements": [
+          "Has Pet",
+          "TargetHealth% < INTIMIDATION_HP% || TargetCastingSpell",
+          "Level >= 30"
+        ]
+      },
+      {
+        "Name": "Bestial Wrath",
+        "Key": "N2",
+        "Weight": 3.0,
+        "ScoreConditions": [
+          { "Condition": "TargetHealth% > 70", "Bonus": 2.0 },
+          { "Condition": "TargetHealth% < 90", "Bonus": 1.0 }
+        ],
+        "WhenUsable": true,
+        "Requirements": [
+          "!InMeleeRange",
+          "HasRangedWeapon",
+          "HasAmmo",
+          "Has Pet",
+          "TargetHealth% > BESTIAL_WRATH_HP%",
+          "Level >= 40"
+        ]
+      },
+      {
+        "Name": "Rapid Fire",
+        "Key": "N3",
+        "Weight": 3.0,
+        "ScoreConditions": [
+          { "Condition": "TargetHealth% > 70", "Bonus": 2.0 },
+          { "Condition": "Bestial Wrath", "Bonus": 1.0 }
+        ],
+        "WhenUsable": true,
+        "Requirements": [
+          "!InMeleeRange",
+          "HasRangedWeapon",
+          "HasAmmo",
+          "TargetHealth% > RAPID_FIRE_HP%",
+          "Level >= 26"
+        ]
+      },
+      {
+        "Name": "Aspect of the Viper",
+        "Key": "6",
+        "Weight": 3.0,
+        "ScoreConditions": [
+          { "Condition": "Mana% < 10", "Bonus": 5.0 },
+          { "Condition": "Mana% < ASPECT_VIPER_MANA%", "Bonus": 2.0 }
+        ],
+        "Requirement": "Mana% < ASPECT_VIPER_MANA% && !Aspect of the Viper"
+      },
+      {
+        "Name": "Multi-Shot",
+        "Key": "5",
+        "Weight": 2.5,
+        "ScoreConditions": [
+          { "Condition": "MobCount > 2", "Bonus": 3.0 },
+          { "Condition": "MobCount > 1", "Bonus": 1.5 }
+        ],
+        "BeforeCastStop": true,
+        "Requirements": [
+          "HasRangedWeapon",
+          "!InMeleeRange",
+          "HasAmmo",
+          "Level >= 18"
+        ]
+      },
+      {
+        "Name": "Arcane Shot",
+        "Key": "4",
+        "Weight": 2.0,
+        "ScoreConditions": [
+          { "Condition": "TargetHealth% < 30", "Bonus": 1.5 }
+        ],
+        "BeforeCastStop": true,
+        "Requirements": [
+          "HasRangedWeapon",
+          "!InMeleeRange",
+          "HasAmmo",
+          "Level >= 6"
+        ]
+      },
+      {
+        "Name": "Serpent Sting",
+        "Key": "8",
+        "Weight": 2.0,
+        "ScoreConditions": [
+          { "Condition": "!Serpent Sting", "Bonus": 3.0 },
+          { "Condition": "TargetHealth% > 50", "Bonus": 0.5 }
+        ],
+        "BeforeCastStop": true,
+        "Requirements": [
+          "!Serpent Sting",
+          "HasRangedWeapon",
+          "!InMeleeRange",
+          "HasAmmo",
+          "Level >= 4"
+        ]
+      },
+      {
+        "Name": "Auto Shot",
+        "Key": "3",
+        "Weight": 1.5,
+        "ScoreConditions": [
+          { "Condition": "!AutoShot", "Bonus": 2.0 }
+        ],
+        "Item": true,
+        "Requirements": [
+          "HasRangedWeapon",
+          "!InMeleeRange",
+          "!AutoShot",
+          "HasAmmo"
+        ]
+      },
+      {
+        "Name": "Raptor Strike",
+        "Key": "2",
+        "Weight": 1.8,
+        "ScoreConditions": [
+          { "Condition": "InMeleeRange", "Bonus": 2.0 }
+        ],
+        "WhenUsable": true,
+        "Requirements": [
+          "InMeleeRange",
+          "Level >= 4"
+        ]
+      },
+      {
+        "Name": "Approach"
+      }
+    ]
+  },
+  "Flee": {
+    "Sequence": [
+      {
+        "Name": "Flee",
+        "Requirement": "(MobCount >= FLEE_MOB_COUNT && Health% < FLEE_HP%) || TargetElite"
+      }
+    ]
+  },
+  "Adhoc": {
+    "Sequence": [
+      {
+        "Name": "Aspect of the Hawk",
+        "Key": "N5",
+        "Weight": 2.0,
+        "ScoreConditions": [
+          { "Condition": "!Aspect of the Hawk", "Bonus": 3.0 }
+        ],
+        "Requirement": "!Aspect of the Hawk && Mana% > ASPECT_VIPER_MANA% && Level >= 10"
+      },
+      {
+        "Name": "Aspect of the Monkey",
+        "Key": "N6",
+        "Weight": 1.5,
+        "ScoreConditions": [
+          { "Condition": "!Aspect of the Monkey", "Bonus": 2.0 }
+        ],
+        "Requirement": "!Aspect of the Monkey && Level >= 4"
+      },
+      {
+        "Name": "Food",
+        "Key": "N1",
+        "Requirement": "Health% < FOOD_HP%"
+      },
+      {
+        "Name": "Drink",
+        "Key": "N2",
+        "Requirement": "Mana% < DRINK_MANA%"
+      }
+    ]
+  }
+}

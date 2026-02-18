@@ -1,0 +1,100 @@
+{
+  "ClassName": "Paladin",
+  "OverridePathFilename": "",
+  "Paths": [
+    { "PathFilename": "_pack\\60-70\\Hellfire Peninsula 01.json", "Requirements": ["Level >= 58", "Level < 62"] },
+    { "PathFilename": "_pack\\60-70\\Hellfire Peninsula 02.json", "Requirements": ["Level >= 60", "Level < 63"] },
+    { "PathFilename": "_pack\\60-70\\Zangarmarsh 01.json", "Requirements": ["Level >= 62", "Level < 65"] },
+    { "PathFilename": "_pack\\60-70\\Zangarmarsh 02.json", "Requirements": ["Level >= 63", "Level < 66"] },
+    { "PathFilename": "_pack\\60-70\\Nagrand 01.json", "Requirements": ["Level >= 64", "Level < 67"] },
+    { "PathFilename": "_pack\\60-70\\Nagrand 02.json", "Requirements": ["Level >= 65", "Level < 68"] },
+    { "PathFilename": "_pack\\60-70\\Blade's Edge Mountains 01.json", "Requirements": ["Level >= 66", "Level < 69"] },
+    { "PathFilename": "_pack\\60-70\\Blade's Edge Mountains 02.json", "Requirements": ["Level >= 67", "Level < 70"] },
+    { "PathFilename": "_pack\\60-70\\Netherstorm 01.json", "Requirements": ["Level >= 68", "Level < 71"] },
+    { "PathFilename": "_pack\\60-70\\Netherstorm 02.json", "Requirements": ["Level >= 69"] }
+  ],
+  "Mode": "Grind",
+  "IntVariables": {
+    "JUDGEMENT_HP%": 40,
+    "CONSECRATION_MANA%": 50,
+    "LOH_HP%": 10,
+    "DIVINE_SHIELD_HP%": 15,
+    "FLASH_HEAL_HP%": 50,
+    "AVENGING_WRATH_HP%": 80,
+    "CRUSADER_STRIKE_MANA%": 20,
+    "HAMMER_WRATH_HP%": 20
+  },
+  "KeyActions": [
+    { "Name": "Seal of Command", "Key": "1", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Seal of Blood", "Key": "2", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Judgement", "Key": "3", "WhenUsable": true, "Cooldown": 10 },
+    { "Name": "Crusader Strike", "Key": "4", "WhenUsable": true, "Cooldown": 6 },
+    { "Name": "Consecration", "Key": "5", "WhenUsable": true, "Cooldown": 8 },
+    { "Name": "Exorcism", "Key": "6", "WhenUsable": true, "HasCastBar": true, "Cooldown": 15 },
+    { "Name": "Hammer of Wrath", "Key": "7", "WhenUsable": true, "Cooldown": 6 },
+    { "Name": "Flash of Light", "Key": "8", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Holy Light", "Key": "9", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Lay on Hands", "Key": "0", "WhenUsable": true, "Cooldown": 3600 },
+    { "Name": "Divine Shield", "Key": "-", "WhenUsable": true, "Cooldown": 300 },
+    { "Name": "Avenging Wrath", "Key": "=", "WhenUsable": true, "Cooldown": 180 },
+    { "Name": "Hammer of Justice", "Key": "F1", "WhenUsable": true, "Cooldown": 60 },
+    { "Name": "Blessing of Might", "Key": "F2", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Blessing of Wisdom", "Key": "F3", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Retribution Aura", "Key": "F4", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Devotion Aura", "Key": "F5", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Sanctity Aura", "Key": "F6", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Righteous Fury", "Key": "F7", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Divine Protection", "Key": "F8", "WhenUsable": true, "Cooldown": 300 },
+    { "Name": "Blessing of Protection", "Key": "F9", "WhenUsable": true, "Cooldown": 300 },
+    { "Name": "Cleanse", "Key": "F10", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Purify", "Key": "F11", "WhenUsable": true, "Cooldown": 0 }
+  ],
+  "Pull": {
+    "Sequence": [
+      { "Name": "Seal of Command", "Requirements": ["not HasBuff:Seal of Command", "not HasBuff:Seal of Blood"], "Cooldown": 0 },
+      { "Name": "Judgement", "WhenUsable": true, "Cooldown": 10 },
+      { "Name": "Crusader Strike", "WhenUsable": true, "Cooldown": 6 }
+    ]
+  },
+  "Combat": {
+    "Sequence": [
+      { "Name": "Lay on Hands", "Requirements": ["Health% < {LOH_HP%}"], "Cooldown": 3600 },
+      { "Name": "Divine Shield", "Requirements": ["Health% < {DIVINE_SHIELD_HP%}"], "Cooldown": 300 },
+      { "Name": "Flash of Light", "Requirements": ["Health% < {FLASH_HEAL_HP%}", "Mana% > 30"], "Cooldown": 0 },
+      { "Name": "Hammer of Justice", "Requirements": ["Health% < 30", "TargetHealth% > 20"], "Cooldown": 60 },
+      { "Name": "Avenging Wrath", "Requirements": ["TargetHealth% > {AVENGING_WRATH_HP%}", "BossOrElite"], "Cooldown": 180 },
+      { "Name": "Seal of Blood", "Requirements": ["not HasBuff:Seal of Blood", "Level >= 64", "Health% > 60"], "Cooldown": 0 },
+      { "Name": "Seal of Command", "Requirements": ["not HasBuff:Seal of Command", "not HasBuff:Seal of Blood"], "Cooldown": 0 },
+      { "Name": "Hammer of Wrath", "Requirements": ["TargetHealth% < {HAMMER_WRATH_HP%}"], "Cooldown": 6 },
+      { "Name": "Crusader Strike", "Requirements": ["Mana% > {CRUSADER_STRIKE_MANA%}"], "Cooldown": 6 },
+      { "Name": "Judgement", "Requirements": ["TargetHealth% > {JUDGEMENT_HP%}"], "Cooldown": 10 },
+      { "Name": "Consecration", "Requirements": ["MobCount >= 2", "Mana% > {CONSECRATION_MANA%}"], "Cooldown": 8 },
+      { "Name": "Exorcism", "Requirements": ["TargetType:Undead || TargetType:Demon"], "Cooldown": 15 }
+    ]
+  },
+  "Flee": {
+    "Sequence": [
+      { "Name": "Divine Shield", "WhenUsable": true, "Cooldown": 300 },
+      { "Name": "Hammer of Justice", "WhenUsable": true, "Cooldown": 60 },
+      { "Name": "Blessing of Protection", "WhenUsable": true, "Cooldown": 300 }
+    ]
+  },
+  "Adhoc": {
+    "Sequence": [
+      { "Name": "Blessing of Might", "Requirements": ["not HasBuff:Blessing of Might", "not HasBuff:Blessing of Wisdom"], "Cooldown": 0 },
+      { "Name": "Sanctity Aura", "Requirements": ["not HasBuff:Sanctity Aura", "not HasBuff:Retribution Aura"], "Cooldown": 0 },
+      { "Name": "Flash of Light", "Requirements": ["Health% < 70", "not InCombat", "Mana% > 40"], "Cooldown": 0 },
+      { "Name": "Cleanse", "Requirements": ["HasDebuff:Poison || HasDebuff:Disease || HasDebuff:Magic"], "Cooldown": 0 }
+    ]
+  },
+  "Parallel": {
+    "Sequence": []
+  },
+  "NPC": {
+    "Sequence": [
+      { "Name": "Repair", "Requirements": ["DurabilityPercent < 50"] },
+      { "Name": "Sell", "Requirements": ["BagsFull"] },
+      { "Name": "Train", "Requirements": ["NewSkillAvailable"] }
+    ]
+  }
+}

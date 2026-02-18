@@ -3,6 +3,15 @@
   "Loot": true,
   "PathFilename": "_pack\\1-20\\Night elf\\01-04_Teldrassil_Shadowglen.json",
   "PathReduceSteps": true,
+  "Wait": {
+    "Sequence": [
+      {
+        "Cost": 0.9,
+        "Name": "User",
+        "Requirement": "MenuOpen || ChatInputVisible"
+      }
+    ]
+  },
   "Pull": {
     "Sequence": [
       {
@@ -29,18 +38,23 @@
       },
       {
         "Name": "AutoAttack",
-        "Requirement": "!AutoAttacking"
+        "Requirements": [
+          "!Casting"
+        ]
       },
       {
         "Name": "Approach",
-        "Log": false
+        "Requirements": [
+          "!Casting",
+          "AutoAttacking"
+        ]
       }
     ]
   },
   "Adhoc": {
     "Sequence": [
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "-",
         "Requirement": "Mana% < 30"
       }
@@ -52,7 +66,7 @@
         "Cost": 6,
         "Name": "Repair",
         "Key": "C",
-        "Requirement": "Items Broken",
+        "Requirement": "Durability% < 35",
         "PathFilename": "1_NightElf_Vendor.json"
       },
       {

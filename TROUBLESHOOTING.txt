@@ -1,0 +1,456 @@
+================================================================================
+WowClassicGrindBot - Troubleshooting Guide
+================================================================================
+
+This guide helps you fix common issues when starting the bot.
+
+================================================================================
+TABLE OF CONTENTS
+================================================================================
+
+1. Bot Won't Start
+2. .NET Not Found Error
+3. Build Failed Error
+4. World of Warcraft Not Running Error
+5. Browser Not Opening
+6. Navigation Server Issues
+7. Addon Installation Problems
+8. Performance Issues
+9. Advanced Troubleshooting
+10. Getting Help
+
+================================================================================
+1. BOT WON'T START
+================================================================================
+
+SYMPTOM: Double-clicking Start.bat shows errors or closes immediately
+
+SOLUTION A - Check Prerequisites:
+  1. Open Command Prompt (Windows key + R, type 'cmd')
+  2. Run: dotnet --version
+     - Should show version 10.0 or later
+     - If not, install from: https://dotnet.microsoft.com/download
+  
+  3. Verify files exist:
+     - C:\WowClassicGrindBot\BlazorServer\BlazorServer.csproj should exist
+     - If not, re-extract the bot files
+
+SOLUTION B - Run as Administrator:
+  1. Right-click Start.bat
+  2. Select "Run as administrator"
+  3. Click "Yes" if prompted
+
+SOLUTION C - Check WoW is Running:
+  1. Ensure World of Warcraft is OPEN
+  2. Ensure you're LOGGED INTO A CHARACTER
+  3. You should see the game world (not at login screen)
+  4. Then start the bot
+
+SOLUTION D - Check Recent Logs:
+  1. Look for "out.log" file in C:\WowClassicGrindBot\
+  2. Open it with Notepad
+  3. Look for error messages (lines with "[ERROR]" or "[FATAL]")
+  4. Search for specific error text in section 9 below
+
+================================================================================
+2. .NET SDK NOT FOUND ERROR
+================================================================================
+
+SYMPTOM: Error message says "ERROR: .NET SDK not found"
+
+CAUSE: .NET SDK is not installed or not in system PATH
+
+SOLUTION:
+  1. Download .NET SDK from: https://dotnet.microsoft.com/download
+  2. Install .NET SDK 10.0 or later
+  3. Restart your computer (to update PATH)
+  4. Try running Start.bat again
+
+VERIFY INSTALLATION:
+  1. Open Command Prompt
+  2. Type: dotnet --version
+  3. Should show version 10.0 or higher
+  4. If not found, .NET wasn't installed correctly - retry step 1-3
+
+================================================================================
+3. BUILD FAILED ERROR
+================================================================================
+
+SYMPTOM: Error message says "ERROR: Build failed"
+
+COMMON CAUSES:
+  A. Permission issue (file locked or read-only)
+  B. Disk space issue
+  C. Network issue (first build downloads dependencies)
+  D. C# compiler issue
+
+SOLUTION A - Run as Administrator:
+  1. Right-click Start.bat
+  2. Select "Run as administrator"
+  3. Click "Yes" when prompted
+
+SOLUTION B - Check Disk Space:
+  1. Open File Explorer
+  2. Right-click C: drive
+  3. Select "Properties"
+  4. Should show at least 2 GB free space
+  5. If low, delete old files to free up space
+
+SOLUTION C - Clean and Rebuild:
+  1. Delete folders:
+     - C:\WowClassicGrindBot\BlazorServer\bin
+     - C:\WowClassicGrindBot\BlazorServer\obj
+  2. Open Command Prompt
+  3. Navigate: cd C:\WowClassicGrindBot
+  4. Run: dotnet build BlazorServer/BlazorServer.csproj --configuration Release
+  5. Wait for build to complete
+
+SOLUTION D - Check Network:
+  1. Ensure you have internet connection
+  2. First build downloads NuGet packages
+  3. Close any VPN if you have one
+  4. Try again
+
+================================================================================
+4. WORLD OF WARCRAFT NOT RUNNING ERROR
+================================================================================
+
+SYMPTOM: Startup fails with "World of Warcraft is not running!"
+
+CAUSE: Bot requires WoW to be running before starting
+
+SOLUTION:
+  1. Close the bot launcher window
+  2. Open World of Warcraft
+  3. Click "Play" and wait for login screen
+  4. Enter your credentials and log in
+  5. Wait until you see the game world
+  6. THEN double-click Start.bat to launch the bot
+  7. The bot will detect WoW is running
+
+IMPORTANT: WoW MUST be fully loaded with character in game world
+  - Being at login screen is NOT sufficient
+  - You must see the actual game (terrain, NPCs, other players)
+  - Character must be standing in the world (not in loading screen)
+
+WHY THIS IS REQUIRED:
+  - Bot reads game data from running WoW process
+  - Can't start bot before WoW is initialized
+  - This is by design and requires WoW to be running
+
+================================================================================
+5. BROWSER NOT OPENING
+================================================================================
+
+SYMPTOM: Bot starts but browser doesn't automatically open to http://localhost:5000
+
+CAUSE: AutoOpenBrowser setting or system browser issue
+
+SOLUTION A - Manual Browser Open:
+  1. Open your web browser (Chrome, Firefox, Edge, etc.)
+  2. Type in address bar: http://localhost:5000
+  3. Press Enter
+  4. Bot UI should load
+
+SOLUTION B - Check AutoOpenBrowser Setting:
+  1. Open file: C:\WowClassicGrindBot\BlazorServer\appsettings.json
+  2. Look for: "AutoOpenBrowser": true
+  3. If false, change to true:
+     "AutoOpenBrowser": true
+  4. Save and restart bot
+
+SOLUTION C - Check Port:
+  1. Bot runs on port 5000 by default
+  2. To verify port is not in use:
+     - Open Command Prompt as administrator
+     - Run: netstat -ano | find "5000"
+     - If nothing shows, port is free (good)
+     - If something shows, another app is using port 5000
+  3. To change port:
+     - Open appsettings.json
+     - Change: "WebUIPort": 5000
+     - Use a different port like 5001, 5002, etc.
+     - Access bot at: http://localhost:5001 (or your new port)
+
+SOLUTION D - Browser Issue:
+  1. Try a different browser (Edge instead of Chrome, etc.)
+  2. Disable browser extensions (they sometimes block localhost)
+  3. Check if browser allows localhost connections
+
+================================================================================
+6. NAVIGATION SERVER ISSUES
+================================================================================
+
+SYMPTOM: Navigation Server shows "⚠ not found" or bot can't navigate
+
+CAUSE: Navigation server components missing or misconfigured
+
+SOLUTION A - Verify Files Exist:
+  1. Check these files exist:
+     - C:\WowClassicGrindBot\Navigation\AmeisenNavigationServer.exe
+     - C:\WowClassicGrindBot\Navigation\config.cfg
+     - C:\WowClassicGrindBot\Navigation\config.json
+  2. If missing, re-extract bot files
+
+SOLUTION B - Verify Configuration:
+  1. Open: C:\WowClassicGrindBot\Navigation\config.json
+  2. Check for: "iPort": 47110
+  3. Should be port 47110 (matches appsettings.json)
+
+SOLUTION C - Verify MMAP Files:
+  1. Check folder exists: C:\WowClassicGrindBot\Navigation\mmaps\
+  2. Should contain .mmap files
+  3. Should contain .mmtile files
+  4. If empty or missing, navigation features won't work
+  5. Bot can still run without these (just no pathfinding)
+
+SOLUTION D - Check Port Not in Use:
+  1. Open Command Prompt as administrator
+  2. Run: netstat -ano | find "47110"
+  3. If shows something, another app is using this port
+  4. Change port in config.json to something like 47110
+
+SOLUTION E - Restart Navigation Server:
+  1. Stop the bot (close the launcher window)
+  2. Open Task Manager (Ctrl+Shift+Esc)
+  3. Find: AmeisenNavigationServer.exe
+  4. If found, right-click and select "End Task"
+  5. Start the bot again - it will restart the server
+
+================================================================================
+7. ADDON INSTALLATION PROBLEMS
+================================================================================
+
+SYMPTOM: DataToColor addon not installing or not working
+
+CAUSE: Addon folder issues or WoW path not detected
+
+SOLUTION A - Manual Installation:
+  1. Locate WoW AddOns folder:
+     - Typical: C:\Program Files (x86)\World of Warcraft\_anniversary_\Interface\AddOns
+  2. Copy folder: C:\WowClassicGrindBot\Addons\DataToColor
+  3. Paste into: C:\Program Files (x86)\World of Warcraft\_anniversary_\Interface\AddOns
+  4. Restart WoW (close and reopen)
+
+SOLUTION B - Verify WoW Path:
+  1. Open: C:\WowClassicGrindBot\BlazorServer\appsettings.json
+  2. Check: "WoWPath": "" (in Startup section)
+  3. If empty, bot will auto-detect (this is fine)
+  4. If auto-detect isn't working, manually set:
+     "WoWPath": "C:\Program Files (x86)\World of Warcraft\_anniversary_"
+  5. Save and restart bot
+
+SOLUTION C - Check Addon Folder:
+  1. If DataToColor addon is installed:
+     - Open: C:\Program Files (x86)\World of Warcraft\_anniversary_\Interface\AddOns\DataToColor
+     - Should contain files like DataToColor.toc, DataToColor.lua, etc.
+     - If folder is empty, copy files from: C:\WowClassicGrindBot\Addons\DataToColor
+
+SOLUTION D - Addon Configuration:
+  1. Check file exists: C:\WowClassicGrindBot\addon_config.json
+  2. If not, bot will create it on startup
+  3. This file must exist for addon to work properly
+
+SOLUTION E - Test Addon in Game:
+  1. Open WoW
+  2. In game, open chat (press Enter)
+  3. Type: /reload (reloads UI and addons)
+  4. Check if DataToColor appears in addons list:
+     - Click "Addons" button in login screen
+     - Look for "DataToColor" in the list
+
+================================================================================
+8. PERFORMANCE ISSUES
+================================================================================
+
+SYMPTOM: Bot is slow, UI is laggy, or bot freezes
+
+CAUSE: Usually WoW client interference, system resources, or nav server
+
+SOLUTION A - Check System Resources:
+  1. Open Task Manager (Ctrl+Shift+Esc)
+  2. Look at CPU and Memory usage
+  3. If either is at 90%+ (especially memory), system is under pressure
+  4. Close other applications
+  5. Restart bot
+
+SOLUTION B - Check WoW Performance:
+  1. These affect bot performance:
+     - WoW rendering performance
+     - High player counts in zone
+     - Complex textures/models
+  2. Try:
+     - Lower WoW graphics settings
+     - Go to less crowded zone
+     - Close Discord/browser (they reduce WoW performance)
+
+SOLUTION C - Navigation Server Performance:
+  1. Task Manager -> look for AmeisenNavigationServer.exe
+  2. If using 30%+ CPU, pathfinding is heavy
+  3. Solutions:
+     - Disable pathfinding in bot settings
+     - Use simpler navigation (waypoint-based instead of dynamic)
+     - Restart navigation server (see section 6, Solution E)
+
+SOLUTION D - Rebuild Release Version:
+  1. Navigation server can be slow if using Debug build
+  2. To force Release build:
+     - Delete: C:\WowClassicGrindBot\BlazorServer\bin\Debug
+     - Run Start.bat again (will build Release)
+  3. Release build is much faster
+
+================================================================================
+9. ADVANCED TROUBLESHOOTING
+================================================================================
+
+CHECK LOGFILES:
+  1. Locate: C:\WowClassicGrindBot\out.log
+  2. Open with Notepad or text editor
+  3. Look for "[ERROR]" or "[FATAL]" lines
+  4. Search log for keywords from error messages below
+
+COMMON ERROR PATTERNS IN LOGS:
+
+ERROR: "Cannot find directory" or "Path not found"
+  - Solution: Check file paths in appsettings.json
+  - Verify WoW installation location
+  - Verify MMAP folder exists if using navigation
+
+ERROR: "Port already in use"
+  - Solution: Another app is using the port
+  - See section 5 (Solution C) or section 6 (Solution D)
+  - Or just change the port in appsettings.json
+
+ERROR: "Addon configuration file missing"
+  - Solution: Delete addon_config.json
+  - Bot will recreate it on next startup
+  - File is at: C:\WowClassicGrindBot\addon_config.json
+
+ERROR: "Navigation server crashed"
+  - Solution: See section 6 (Navigation Server Issues)
+  - Common causes: Port conflict, missing MMAP files, permission issue
+
+ERROR: "WoW process not found"
+  - Solution: See section 4 (WoW Not Running)
+  - Ensure WoW is fully loaded and character is in game world
+
+WINDOWS COMMAND TOOLS:
+
+View running processes with specific port:
+  netstat -ano | find "5000"    (for bot, or replace 5000 with another port)
+  netstat -ano | find "47110"   (for navigation server)
+
+Kill process using a port:
+  taskkill /PID [PID_NUMBER] /F
+  (where [PID_NUMBER] is from netstat output)
+
+Check what's listening on port:
+  Get-NetTCPConnection -LocalPort 5000 (PowerShell)
+
+Find WoW process:
+  tasklist | find "Wow"         (should show WowClassic.exe)
+  Get-Process -Name "*Wow*"     (PowerShell)
+
+================================================================================
+10. GETTING HELP
+================================================================================
+
+IF YOU'RE STILL STUCK:
+
+1. Gather Information:
+   - Error message from Start.bat (screenshot)
+   - Last 20 lines from out.log file
+   - Your Windows version
+   - .NET version (run: dotnet --version)
+   - WoW installation location
+
+2. Check GitHub Issues:
+   - https://github.com/FreeHongKongMMO/WowClassicGrindBot/issues
+   - Search for similar issues
+   - Read resolved issues for solutions
+
+3. Report New Issue:
+   - Click "New Issue"
+   - Include ALL information from step 1
+   - Include error messages (exact text)
+   - Include steps to reproduce
+
+4. Discord/Community:
+   - If available, join project Discord
+   - Post in support channel
+   - Include: your WoW version, error message, what you've tried
+
+5. Quick Diagnostics to Share:
+   - Run: C:\WowClassicGrindBot\Start.bat
+   - Capture screenshot of any errors
+   - Share file: C:\WowClassicGrindBot\out.log
+   - Share file: C:\WowClassicGrindBot\BlazorServer\appsettings.json (with sensitive info removed)
+
+================================================================================
+COMMON QUICK FIXES
+================================================================================
+
+Issue: "ERROR: .NET SDK not found"
+Quick Fix: Install .NET 10.0+ from https://dotnet.microsoft.com/download
+
+Issue: "World of Warcraft is not running"
+Quick Fix: Start WoW, log into character, wait for game to fully load
+
+Issue: "Browser won't open"
+Quick Fix: Manually visit http://localhost:5000 in your browser
+
+Issue: "Port 5000 in use"
+Quick Fix: Change WebUIPort in appsettings.json to 5001, 5002, etc.
+
+Issue: "Build failed with admin error"
+Quick Fix: Right-click Start.bat, select "Run as administrator"
+
+Issue: "Navigation server shows warning"
+Quick Fix: This is normal if MMAP files aren't available - bot still works
+
+Issue: "Addon not installing"
+Quick Fix: Manually copy Addons\DataToColor to WoW's Interface\AddOns folder
+
+Issue: "Bot starts but freezes/lags"
+Quick Fix: Close other applications, check Task Manager for resource usage
+
+================================================================================
+MORE DETAILED LOGGING
+================================================================================
+
+To enable more verbose logging:
+  1. Open: C:\WowClassicGrindBot\BlazorServer\appsettings.json
+  2. Change MinimumLevel from "Debug" to "Verbose" (if available)
+  3. Or change "Debug" to "Information" for more details
+  4. Look at out.log for more information
+  5. Note: More verbose logging may slow down bot slightly
+
+================================================================================
+RESET BOT TO DEFAULTS
+================================================================================
+
+If configuration is corrupted and bot won't start:
+
+1. Delete these files (they'll be recreated):
+   - C:\WowClassicGrindBot\addon_config.json
+   - C:\WowClassicGrindBot\FrameConfig.xml
+   - C:\WowClassicGrindBot\out.log
+
+2. Clean build folders:
+   - Delete: C:\WowClassicGrindBot\BlazorServer\bin
+   - Delete: C:\WowClassicGrindBot\BlazorServer\obj
+
+3. Start bot again - it will recreate all config files fresh
+
+================================================================================
+END OF TROUBLESHOOTING GUIDE
+================================================================================
+
+Last Updated: 2/2/2026
+For latest info: https://github.com/FreeHongKongMMO/WowClassicGrindBot
+
+If this guide didn't help, please file an issue with:
+- Your error message (exact text)
+- Steps you followed from this guide
+- Your system details
+- Content of out.log file

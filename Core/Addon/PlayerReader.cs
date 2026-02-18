@@ -1,165 +1,318 @@
-﻿using System;
-using System.Collections.Generic;
+using Core.Database;
+
+using SharedLib;
+
+using System;
+using System.Collections.Specialized;
 using System.Numerics;
 
-namespace Core
+namespace Core;
+
+public sealed partial class PlayerReader : IMouseOverReader, IReader
 {
-    public partial class PlayerReader
+    private readonly IAddonDataProvider reader;
+    private readonly WorldMapAreaDB worldMapAreaDB;
+    private readonly AreaDB areaDb;
+    private readonly AddonBits bits;
+
+    public PlayerReader(
+        IAddonDataProvider reader,
+        WorldMapAreaDB mapAreaDB,
+        AreaDB areaDb,
+        AddonBits addonBits,
+        SpellInRange spellInRange,
+        Stance stance)
     {
-        private readonly ISquareReader reader;
-        public PlayerReader(ISquareReader reader)
+        this.worldMapAreaDB = mapAreaDB;
+        this.areaDb = areaDb;
+        this.reader = reader;
+
+        bits = addonBits;
+        SpellInRange = spellInRange;
+        Stance = stance;
+
+        // CustomTrigger1 is a value type and cannot be easily injected via DI.
+        // It reads from a specific frame index and is instantiated here for simplicity.
+        CustomTrigger1 = new(reader.GetInt(74));
+    }
+
+    public WorldMapArea WorldMapArea { get; private set; }
+
+    public Vector3 MapPos => new(MapX, MapY, WorldPosZ);
+    public Vector3 MapPosNoZ => new(MapX, MapY, 0);
+    public Vector3 _MapPosNoZ() => MapPosNoZ;
+    public Vector3 WorldPos => worldMapAreaDB.ToWorld_FlipXY(UIMapId.Value, MapPos);
+
+    public float WorldPosZ { get; set; } // MapZ not exists. Alias for WorldLoc.Z
+
+    public float MapX => reader.GetFixed(1) * 10;
+    public float MapY => reader.GetFixed(2) * 10;
+
+    public Vector3 TargetMapPos
+    {
+        get
         {
-            this.reader = reader;
-        }
-
-        public Dictionary<Form, int> FormCost { private set; get; } = new Dictionary<Form, int>();
-
-        public Vector3 PlayerLocation => new Vector3(XCoord, YCoord, ZCoord);
-
-        public float XCoord => reader.GetFixedPointAtCell(1) * 10;
-        public float YCoord => reader.GetFixedPointAtCell(2) * 10;
-        public float ZCoord { get; set; }
-        public float Direction => reader.GetFixedPointAtCell(3);
-
-        public RecordInt Level { private set; get; } = new RecordInt(5);
-
-        public Vector3 CorpseLocation => new Vector3(CorpseX, CorpseY, 0);
-        public float CorpseX => reader.GetFixedPointAtCell(6) * 10;
-        public float CorpseY => reader.GetFixedPointAtCell(7) * 10;
-
-        public AddonBits Bits => new AddonBits(reader.GetIntAtCell(8), reader.GetIntAtCell(9));
-
-        public int HealthMax => reader.GetIntAtCell(10);
-        public int HealthCurrent => reader.GetIntAtCell(11);
-        public int HealthPercent => HealthMax == 0 || HealthCurrent == 1 ? 0 : (HealthCurrent * 100) / HealthMax;
-
-        public int PTMax => reader.GetIntAtCell(12); // Maximum amount of Power Type (dynamic)
-        public int PTCurrent => reader.GetIntAtCell(13); // Current amount of Power Type (dynamic)
-        public int PTPercentage => PTMax == 0 ? 0 : (PTCurrent * 100) / PTMax; // Power Type (dynamic) in terms of a percentage
-
-        public int ManaMax => reader.GetIntAtCell(14);
-        public int ManaCurrent => reader.GetIntAtCell(15);
-        public int ManaPercentage => ManaMax == 0 ? 0 : (ManaCurrent * 100) / ManaMax;
-
-        // TODO: check this
-        public bool HasTarget => Bits.HasTarget;// || TargetHealth > 0;
-
-        public int TargetMaxHealth => reader.GetIntAtCell(18);
-        public int TargetHealth => reader.GetIntAtCell(19);
-        public int TargetHealthPercentage => TargetMaxHealth == 0 || TargetHealth == 1 ? 0 : (TargetHealth * 100) / TargetMaxHealth;
-
-
-        public int PetMaxHealth => reader.GetIntAtCell(38);
-        public int PetHealth => reader.GetIntAtCell(39);
-        public int PetHealthPercentage => PetMaxHealth == 0 || PetHealth == 1 ? 0 : (PetHealth * 100) / PetMaxHealth;
-
-
-        public SpellInRange SpellInRange => new SpellInRange(reader.GetIntAtCell(40));
-        public bool WithInPullRange => SpellInRange.WithinPullRange(this, Class);
-        public bool WithInCombatRange => SpellInRange.WithinCombatRange(this, Class);
-
-        public BuffStatus Buffs => new BuffStatus(reader.GetIntAtCell(41));
-        public TargetDebuffStatus TargetDebuffs => new TargetDebuffStatus(reader.GetIntAtCell(42));
-
-        public int TargetLevel => reader.GetIntAtCell(43);
-
-        public int Gold => reader.GetIntAtCell(44) + (reader.GetIntAtCell(45) * 1000000);
-
-        public RaceEnum Race => (RaceEnum)(reader.GetIntAtCell(46) / 100f);
-
-        public PlayerClassEnum Class => (PlayerClassEnum)(reader.GetIntAtCell(46) - ((int)Race * 100f));
-
-        public bool Unskinnable => reader.GetIntAtCell(47) != 0; // Returns 1 if creature is unskinnable
-
-        public Stance Stance => new Stance(reader.GetIntAtCell(48));
-        public Form Form => Stance.Get(this, Class);
-
-        public int MinRange => (int)(reader.GetIntAtCell(49) / 100000f);
-        public int MaxRange => (int)((reader.GetIntAtCell(49) - (MinRange * 100000f)) / 100f);
-
-        public bool IsInMeleeRange => MinRange == 0 && MaxRange != 0 && MaxRange <= 5;
-        public bool IsInDeadZone => MinRange >= 5 && Bits.IsInDeadZoneRange; // between 5-8 yard - hunter and warrior
-
-        public RecordInt PlayerXp { private set; get; } = new RecordInt(50);
-
-        public int PlayerMaxXp => reader.GetIntAtCell(51);
-        public int PlayerXpPercentage => (PlayerXp.Value * 100) / (PlayerMaxXp == 0 ? 1 : PlayerMaxXp);
-
-        private int UIErrorMessage => reader.GetIntAtCell(52);
-        public UI_ERROR LastUIErrorMessage { get; set; }
-
-        public int SpellBeingCast => reader.GetIntAtCell(53);
-        public bool IsCasting => SpellBeingCast != 0;
-
-        public int ComboPoints => reader.GetIntAtCell(54);
-
-        public AuraCount AuraCount => new AuraCount(reader, 55);
-
-        public int TargetId => reader.GetIntAtCell(56);
-        public int TargetGuid => reader.GetIntAtCell(57);
-
-        public int SpellBeingCastByTarget => reader.GetIntAtCell(58);
-        public bool IsTargetCasting => SpellBeingCastByTarget != 0;
-
-        public TargetTargetEnum TargetTarget => (TargetTargetEnum)reader.GetIntAtCell(59);
-
-        public RecordInt AutoShot { private set; get; } = new RecordInt(60);
-        public RecordInt MainHandSwing { private set; get; } = new RecordInt(61);
-        public RecordInt CastEvent { private set; get; } = new RecordInt(62);
-        public RecordInt CastSpellId { private set; get; } = new RecordInt(63);
-
-        public int PetGuid => reader.GetIntAtCell(68);
-        public int PetTargetGuid => reader.GetIntAtCell(69);
-        public bool PetHasTarget => PetTargetGuid != 0;
-
-        public int CastCount => reader.GetIntAtCell(70);
-
-        public BitStatus CustomTrigger1 => new BitStatus(reader.GetIntAtCell(74));
-
-        public int MainHandSpeedMs => (int)(reader.GetIntAtCell(75) / 10000f) * 10;
-
-        public int OffHandSpeed => (int)(reader.GetIntAtCell(75) - (MainHandSpeedMs * 1000f));  // supposed to be 10000f - but theres a 10x
-
-        public int LastLootTime => reader.GetIntAtCell(97);
-
-        // https://wowpedia.fandom.com/wiki/Mob_experience
-        public bool TargetYieldXP => Level.Value switch
-        {
-            int n when n < 5 => true,
-            int n when n >= 6 && n <= 39 => TargetLevel > (Level.Value - MathF.Floor(Level.Value / 10f) - 5),
-            int n when n >= 40 && n <= 59 => TargetLevel > (Level.Value - MathF.Floor(Level.Value / 5f) - 5),
-            int n when n >= 60 && n <= 70 => TargetLevel > Level.Value - 9,
-            _ => false
-        };
-
-        internal void Updated()
-        {
-            if (UIErrorMessage > 0)
+            if (!bits.Target())
             {
-                LastUIErrorMessage = (UI_ERROR)UIErrorMessage;
+                return Vector3.Zero;
             }
 
-            PlayerXp.Update(reader);
-            Level.Update(reader);
+            float targetDistance = (MaxRange() + MinRange()) / 2;
 
-            AutoShot.Update(reader);
-            MainHandSwing.Update(reader);
-            CastEvent.Update(reader);
-            CastSpellId.Update(reader);
+            return PointEstimator.GetMapPos(WorldMapArea, WorldPos, Direction, targetDistance);
         }
+    }
 
-        public void Reset()
+    public float Direction => reader.GetFixed(3);
+
+    public float _Direction() => Direction;
+
+    public RecordInt UIMapId { get; } = new(4);
+
+    public int MapId { get; private set; }
+
+    public RecordInt Level { get; } = new(5);
+
+    public Vector3 CorpseMapPos => new(CorpseMapX, CorpseMapY, 0);
+    public float CorpseMapX => reader.GetFixed(6) * 10;
+    public float CorpseMapY => reader.GetFixed(7) * 10;
+
+    public int HealthMax() => reader.GetInt(10);
+    public int HealthCurrent() => reader.GetInt(11);
+    public int HealthPercent() => (1 + HealthCurrent()) * 100 / (1 + HealthMax());
+
+    public int PTMax() => reader.GetInt(12); // Maximum amount of Power Type (dynamic)
+    public int PTCurrent() => reader.GetInt(13); // Current amount of Power Type (dynamic)
+    public int PTPercentage() // Power Type (dynamic) in terms of a percentage
+    {
+        int max = PTMax();
+        return max > 0 ? PTCurrent() * 100 / max : 0;
+    }
+
+    public int ManaMax() => reader.GetInt(14);
+    public int ManaCurrent() => reader.GetInt(15);
+    public int ManaPercent() => (1 + ManaCurrent()) * 100 / (1 + ManaMax());
+
+    public int MaxRune() => reader.GetInt(14);
+
+    public int BloodRune() => reader.GetInt(15) / 100 % 10;
+    public int FrostRune() => reader.GetInt(15) / 10 % 10;
+    public int UnholyRune() => reader.GetInt(15) % 10;
+
+    public int TargetMaxHealth() => reader.GetInt(18);
+    public int TargetHealth() => reader.GetInt(19);
+    public int TargetHealthPercent() => (1 + TargetHealth()) * 100 / (1 + TargetMaxHealth());
+
+    public int PetMaxHealth() => reader.GetInt(38);
+    public int PetHealth() => reader.GetInt(39);
+    public int PetHealthPercent() => (1 + PetHealth()) * 100 / (1 + PetMaxHealth());
+    public bool PetAlive() => PetHealth() > 0;
+
+    public SpellInRange SpellInRange { get; }
+    public bool WithInPullRange() => SpellInRange.WithinPullRange(this, Class);
+    public bool WithInCombatRange() => SpellInRange.WithinCombatRange(this, Class);
+    public bool OutOfCombatRange() => !SpellInRange.WithinCombatRange(this, Class);
+
+    // TargetLevel * 100 + TargetClass
+    public int TargetLevel => reader.GetInt(43) / 100;
+    public UnitClassification TargetClassification => (UnitClassification)(reader.GetInt(43) % 100);
+
+    public bool TargetIsElite() => TargetClassification == UnitClassification.Elite;
+
+    public int Money => reader.GetInt(44) + (reader.GetInt(45) * 1000000);
+
+    // RACE_ID * 10000 + CLASS_ID * 100 + ClientVersion
+    public UnitRace Race => (UnitRace)(reader.GetInt(46) / 10000);
+    public UnitClass Class => (UnitClass)(reader.GetInt(46) / 100 % 100);
+    public ClientVersion Version => (ClientVersion)(reader.GetInt(46) % 100);
+
+    public PlayerFaction Faction => Race switch
+    {
+        UnitRace.Human => PlayerFaction.Alliance,
+        UnitRace.Dwarf => PlayerFaction.Alliance,
+        UnitRace.NightElf => PlayerFaction.Alliance,
+        UnitRace.Gnome => PlayerFaction.Alliance,
+        UnitRace.Draenei => PlayerFaction.Alliance,
+        UnitRace.Worgen => PlayerFaction.Alliance,
+        UnitRace.Orc => PlayerFaction.Horde,
+        UnitRace.Tauren => PlayerFaction.Horde,
+        UnitRace.Undead => PlayerFaction.Horde,
+        UnitRace.Troll => PlayerFaction.Horde,
+        UnitRace.BloodElf => PlayerFaction.Horde,
+        UnitRace.Goblin => PlayerFaction.Horde,
+        // UnitRace.None or unknown: default safely until addon data arrives
+        _ => PlayerFaction.Alliance,
+    };
+
+    // 47 empty
+
+    public Stance Stance { get; }
+    public Form Form => Stance.Get(Class, bits.Stealthed(), Version);
+
+    public int MinRange() => reader.GetInt(49) % 1000;
+    public int MaxRange() => reader.GetInt(49) / 1000 % 1000;
+    public bool MinRangeZero() => MinRange() == 0;
+
+    public bool IsInMeleeRange() => MinRange() == 0 && MaxRange() != 0 && MaxRange() <= 5;
+    public bool InCloseMeleeRange() => MinRange() == 0 && MaxRange() <= 2;
+
+    public bool IsInDeadZone() => MinRange() >= 5 && SpellInRange.Target_Trade; // between 5-8 yard - hunter and warrior
+
+    public RecordInt PlayerXp { get; } = new(50);
+
+    public int PlayerMaxXp => reader.GetInt(51);
+    public int PlayerXpPercent => (1 + PlayerXp.Value) * 100 / (1 + PlayerMaxXp);
+
+    public int _PlayerXpPercent() => PlayerXpPercent;
+
+    public RecordInt UIErrorTime { get; } = new(47);
+
+    private UI_ERROR UIError => (UI_ERROR)reader.GetInt(52);
+    public UI_ERROR LastUIError { get; set; }
+
+    public int SpellBeingCast => reader.GetInt(53);
+    public bool IsCasting() => SpellBeingCast != 0;
+
+    // avgEquipDurability * 100 + target combo points
+    public int ComboPoints() => reader.GetInt(54) % 100;
+    public int AvgEquipDurability() => reader.GetInt(54) / 100; // 0-99
+
+    public AuraCount AuraCount => new(reader, 55);
+
+    public int TargetId => reader.GetInt(56);
+    public int TargetGuid => reader.GetInt(57);
+
+    public int SpellBeingCastByTarget => reader.GetInt(58);
+    public bool IsTargetCasting() => SpellBeingCastByTarget != 0;
+
+    // 10 * MouseOverTarget + TargetTarget
+    public UnitsTarget MouseOverTarget => (UnitsTarget)(reader.GetInt(59) / 10 % 10);
+    public UnitsTarget TargetTarget => (UnitsTarget)(reader.GetInt(59) % 10);
+    public bool TargetsMe() => TargetTarget == UnitsTarget.Me;
+    public bool TargetsPet() => TargetTarget == UnitsTarget.Pet;
+    public bool TargetsNone() => TargetTarget == UnitsTarget.None;
+
+    public RecordInt AutoShot { get; } = new(60);
+    public RecordInt MainHandSwing { get; } = new(61);
+    public RecordInt CastEvent { get; } = new(62);
+    public UI_ERROR CastState => (UI_ERROR)CastEvent.Value;
+    public RecordInt CastSpellId { get; } = new(63);
+
+    public int PetGuid => reader.GetInt(68);
+    public int PetTargetGuid => reader.GetInt(69);
+    public bool PetTarget() => PetTargetGuid != 0;
+
+    public int CastCount => reader.GetInt(70);
+
+    public BitVector32 CustomTrigger1;
+
+    // 10000 * off * 100 + main * 100
+    public int MainHandSpeedMs() => reader.GetInt(75) % 10000 * 10;
+    public int OffHandSpeed => reader.GetInt(75) / 10000 * 10;
+
+    public int RemainCastMs => reader.GetInt(76);
+
+
+    // MouseOverLevel * 100 + MouseOverClassification
+    public int MouseOverLevel => reader.GetInt(85) / 100;
+    public UnitClassification MouseOverClassification => (UnitClassification)(reader.GetInt(85) % 100);
+    public int MouseOverId => reader.GetInt(86);
+    public int MouseOverGuid => reader.GetInt(87);
+
+    public int FocusHealthMax() => reader.GetInt(89);
+    public int FocusHealthCurrent() => reader.GetInt(90);
+    public int FocusHealthPercent() => (1 + FocusHealthCurrent()) * 100 / (1 + FocusHealthMax());
+
+    public int LastCastGCD { get; private set; }
+    public void ResetLastCastGCD()
+    {
+        LastCastGCD = 0;
+    }
+    public void ReadLastCastGCD()
+    {
+        LastCastGCD = reader.GetInt(94);
+    }
+
+    public RecordInt GCD { get; } = new(95);
+
+    public int NetworkLatency => reader.GetInt(96) % 10000;
+
+    public int DoubleNetworkLatency => 2 * NetworkLatency;
+
+    public int HalfNetworkLatency => NetworkLatency / 2;
+
+    public int SpellQueueTimeMs => reader.GetInt(96) / 10000 % 10000;
+
+    public int _SpellQueueTimeMs() => SpellQueueTimeMs;
+
+    public int _SpellQueueTimeMsNegative() => -SpellQueueTimeMs;
+
+    public int HalfSpellQueueTimeMs => SpellQueueTimeMs / 2;
+
+    // Formula (10 * LootWindowCount) + LootEvent(0-9)
+    public RecordInt LootEvent { get; } = new(97);
+    public RecordInt LootWindowCount { get; } = new(97);
+
+    public int FocusGuid => reader.GetInt(77);
+    public int FocusTargetGuid => reader.GetInt(78);
+
+    public int RangedSpeedMs() => reader.GetInt(88) * 10;
+
+    public int SoftInteract_Guid => reader.GetInt(101);
+
+    public int SoftInteract_Id => reader.GetInt(102);
+
+    public GuidType SoftInteract_Type => (GuidType)reader.GetInt(103);
+
+    public void Update(IAddonDataProvider reader)
+    {
+        if (UIMapId.Updated(reader) && UIMapId.Value != 0 &&
+            worldMapAreaDB.TryGet(UIMapId.Value, out WorldMapArea wma))
         {
-            FormCost.Clear();
+            WorldMapArea = wma;
+            MapId = wma.MapID;
 
-            // Reset all RecordInt
-            AutoShot.Reset();
-            MainHandSwing.Reset();
-            CastEvent.Reset();
-            CastSpellId.Reset();
-
-            PlayerXp.Reset();
-            Level.Reset();
+            areaDb.Update(wma.AreaID);
         }
+
+        CustomTrigger1 = new(reader.GetInt(74));
+
+        PlayerXp.Update(reader);
+        Level.Update(reader);
+
+        AutoShot.Update(reader);
+        MainHandSwing.Update(reader);
+        CastEvent.Update(reader);
+        CastSpellId.Update(reader);
+
+        LootEvent.UpdateIncludeLeastSignificantDigit(reader, 10);
+        LootWindowCount.UpdateExcludingLeastSignificantDigits(reader, 10);
+
+        GCD.Update(reader);
+
+        UIErrorTime.Update(reader);
+
+        if (UIError != UI_ERROR.NONE)
+            LastUIError = UIError;
+    }
+
+    public void Reset()
+    {
+        UIMapId.Reset();
+
+        // Reset all RecordInt
+        AutoShot.Reset();
+        MainHandSwing.Reset();
+        CastEvent.Reset();
+        CastSpellId.Reset();
+
+        PlayerXp.Reset();
+        Level.Reset();
+
+        LootEvent.Reset();
+        LootWindowCount.Reset();
+        UIErrorTime.Reset();
+
+        GCD.Reset();
     }
 }

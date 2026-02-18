@@ -1,79 +1,74 @@
-﻿using System.Collections.Generic;
+﻿using Core.Database;
 using Core.Talents;
-using Core.Database;
-using System.Linq;
 
-namespace Core
+using System.Collections.Generic;
+
+namespace Core;
+
+public sealed class TalentReader : IReader
 {
-    public class TalentReader
+    private const int cTalent = 72;
+
+    private readonly PlayerReader playerReader;
+    private readonly TalentDB talentDB;
+    public int Count { get; private set; }
+
+    public Dictionary<int, Talent> Talents { get; } = new();
+    public Dictionary<int, int> Spells { get; } = new();
+
+    public TalentReader(PlayerReader playerReader, TalentDB talentDB)
     {
-        private readonly int cTalent;
+        this.playerReader = playerReader;
+        this.talentDB = talentDB;
+    }
 
-        private readonly ISquareReader reader;
-        private readonly PlayerReader playerReader;
-        private readonly TalentDB talentDB;
-        public int Count => Talents.Sum(x => x.Value.CurrentRank);
+    public void Update(IAddonDataProvider reader)
+    {
+        int hash = reader.GetInt(cTalent);
+        if (hash == 0 || Talents.ContainsKey(hash)) return;
 
-        public Dictionary<int, Talent> Talents { get; private set; } = new Dictionary<int, Talent>();
+        //           1-3 +         1-11 +         1-4 +         1-5
+        // tab * 1000000 + tier * 10000 + column * 10 + currentRank
+        int tab = hash / 1000000;
+        int tier = hash / 10000 % 100;
+        int column = hash / 10 % 10;
+        int rank = hash % 10;
 
-        public TalentReader(ISquareReader reader, int cTalent, PlayerReader playerReader, TalentDB talentDB)
+        Talent talent = new()
         {
-            this.reader = reader;
-            this.cTalent = cTalent;
+            Hash = hash,
+            TabNum = tab,
+            TierNum = tier,
+            ColumnNum = column,
+            CurrentRank = rank
+        };
 
-            this.playerReader = playerReader;
-            this.talentDB = talentDB;
+        if (talentDB.Update(ref talent, playerReader.Class, out int id))
+        {
+            Talents.Add(hash, talent);
+            Spells.Add(hash, id);
+            Count += talent.CurrentRank;
         }
+    }
 
-        public void Read()
+    public void Reset()
+    {
+        Count = 0;
+        Talents.Clear();
+        Spells.Clear();
+    }
+
+    public bool HasTalent(string name, int rank)
+    {
+        foreach ((int _, Talent t) in Talents)
         {
-            int data = reader.GetIntAtCell(cTalent);
-            if (data == 0 || Talents.ContainsKey(data)) return;
-
-            int hash = data;
-
-            int tab = (int)(data / 1000000f);
-            data -= 1000000 * tab;
-
-            int tier = (int)(data / 10000f);
-            data -= 10000 * tier;
-
-            int column = (int)(data / 10f);
-            data -= 10 * column;
-
-            var talent = new Talent
+            if (t.CurrentRank >= rank &&
+                t.Name.Contains(name, System.StringComparison.OrdinalIgnoreCase))
             {
-                Hash = hash,
-                TabNum = tab,
-                TierNum = tier,
-                ColumnNum = column,
-                CurrentRank = data
-            };
-
-            if (talentDB.Update(ref talent, playerReader.Class))
-            {
-                Talents.Add(hash, talent);
+                return true;
             }
         }
 
-        public void Reset()
-        {
-            Talents.Clear();
-        }
-
-        public bool HasTalent(string name, int rank)
-        {
-            foreach (var kvp in Talents)
-            {
-                if (!string.IsNullOrEmpty(kvp.Value.Name) &&
-                    kvp.Value.Name.ToLower() == name.ToLower() &&
-                    kvp.Value.CurrentRank >= rank)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
+        return false;
     }
 }

@@ -1,107 +1,101 @@
-﻿namespace Core.GOAP
+﻿namespace Core.GOAP;
+
+public enum GoapKey
 {
-    public enum GoapKey
+    hastarget,
+    dangercombat,
+    damagetaken,
+    damagedone,
+    damagetakenordone,
+    targetisalive,
+    targettargetsus,
+    incombat,
+    pethastarget,
+    ismounted,
+    withinpullrange,
+    incombatrange,
+    pulled,
+    isdead,
+    shouldloot,
+    shouldgather,
+    producedcorpse,
+    consumecorpse,
+    isswimming,
+    itemsbroken,
+    gathering,
+    targethostile,
+    hasfocus,
+    focushastarget,
+    consumablecorpsenearby,
+    LENGTH
+}
+
+public static class GoapKey_Extension
+{
+    private const string unknown = "Unknown";
+
+    private static string ToStringTrue(GoapKey value) => value switch
     {
-        hastarget = 10,
-        dangercombat = 11,
-        targetisalive = 20,
-        incombat = 30,
-        pethastarget = 31,
-        withinpullrange = 40,
-        incombatrange = 50,
-        pulled = 60,
-        shouldheal = 70,
-        isdead = 80,
-        shouldloot = 90,
-        postloot = 91,
-        shouldskin = 92,
-        usehealingpotion = 100,
-        newtarget = 110,
-        fighting = 120,
-        producedcorpse = 130,
-        consumecorpse = 131,
-        corpselocation = 999,
-        abort = 140,
-        resume = 141,
-        shoulddrink = 150,
-        classMount = 160,
-        isalive=170,
-        isswimming=180,
-        itemsbroken=190
-    }
+        GoapKey.hastarget => "Target",
+        GoapKey.dangercombat => "Danger",
+        GoapKey.damagetaken => "Damage Taken",
+        GoapKey.damagedone => "Damage Done",
+        GoapKey.targetisalive => "Target alive",
+        GoapKey.targettargetsus => "Targets us",
+        GoapKey.incombat => "Combat",
+        GoapKey.pethastarget => "Pet target",
+        GoapKey.ismounted => "Mounted",
+        GoapKey.withinpullrange => "Pull range",
+        GoapKey.incombatrange => "Combat range",
+        GoapKey.pulled => "Pulled",
+        GoapKey.isdead => "Dead",
+        GoapKey.shouldloot => "Loot",
+        GoapKey.shouldgather => "Gather",
+        GoapKey.producedcorpse => "Killing blow",
+        GoapKey.consumecorpse => "Consume Corpse",
+        GoapKey.isswimming => "Swimming",
+        GoapKey.itemsbroken => "Broken",
+        GoapKey.gathering => "Gathering",
+        GoapKey.hasfocus => "Focus",
+        GoapKey.focushastarget => "Focus Target",
+        GoapKey.targethostile => "Target Hostile",
+        GoapKey.damagetakenordone => "Damage Taken or Done",
+        GoapKey.consumablecorpsenearby => "Consume Corpse nearby",
+        _ => unknown
+    };
 
-    public static class GoapKeyDescription
+    private static string ToStringFalse(GoapKey value) => value switch
     {
-        public static string ToString(GoapKey key, object state)
-             => (key, state) switch
-             {
-                 (GoapKey.hastarget, true) => "Has a target",
-                 (GoapKey.hastarget, false) => "Has no target",
+        GoapKey.hastarget => "!Target",
+        GoapKey.dangercombat => "!Danger",
+        GoapKey.damagetaken => "!Damage Taken",
+        GoapKey.damagedone => "!Damage Done",
+        GoapKey.targetisalive => "!Target alive",
+        GoapKey.targettargetsus => "!Targets us",
+        GoapKey.incombat => "!Combat",
+        GoapKey.pethastarget => "!Pet target",
+        GoapKey.ismounted => "!Mounted",
+        GoapKey.withinpullrange => "!Pull range",
+        GoapKey.incombatrange => "!Combat range",
+        GoapKey.pulled => "!Pulled",
+        GoapKey.isdead => "!Dead",
+        GoapKey.shouldloot => "!Loot",
+        GoapKey.shouldgather => "!Gather",
+        GoapKey.producedcorpse => "!Killing blow",
+        GoapKey.consumecorpse => "!Consume Corpse",
+        GoapKey.isswimming => "!Swimming",
+        GoapKey.itemsbroken => "!Broken",
+        GoapKey.gathering => "!Gathering",
+        GoapKey.hasfocus => "!Focus",
+        GoapKey.focushastarget => "!Focus Target",
+        GoapKey.targethostile => "!Target Hostile",
+        GoapKey.damagetakenordone => "!Damage Taken or Done",
+        GoapKey.consumablecorpsenearby => "!Consume Corpse nearby",
+        _ => unknown
+    };
 
-                 (GoapKey.dangercombat, true) => "Danger from combat",
-                 (GoapKey.dangercombat, false) => "No danger",
-
-                 (GoapKey.targetisalive, true) => "Target alive",
-                 (GoapKey.targetisalive, false) => "Target dead",
-
-                 (GoapKey.incombat, true) => "In combat",
-                 (GoapKey.incombat, false) => "Out of combat",
-
-                 (GoapKey.pethastarget, true) => "Pet has target",
-                 (GoapKey.pethastarget, false) => "Pet has no target",
-
-                 (GoapKey.withinpullrange, true) => "In pull range",
-                 (GoapKey.withinpullrange, false) => "Out of pull range",
-
-                 (GoapKey.incombatrange, true) => "In combat range",
-                 (GoapKey.incombatrange, false) => "Out of combat range",
-
-                 (GoapKey.pulled, true) => "Pulled",
-                 (GoapKey.pulled, false) => "Not pulled",
-
-                 (GoapKey.shouldheal, true) => "Need to heal",
-                 (GoapKey.shouldheal, false) => "Health ok",
-
-                 (GoapKey.isdead, true) => "I am dead",
-                 (GoapKey.isdead, false) => "I am alive",
-
-                 (GoapKey.shouldloot, true) => "Need to loot",
-                 (GoapKey.shouldloot, false) => "No need to loot",
-
-                 (GoapKey.shouldskin, true) => "Need to skin",
-                 (GoapKey.shouldskin, false) => "No need to skin",
-
-                 (GoapKey.usehealingpotion, true) => "Use healing pot",
-                 (GoapKey.usehealingpotion, false) => "My health is ok",
-
-                 (GoapKey.newtarget, true) => "Has a new target",
-                 (GoapKey.newtarget, false) => "No new target",
-
-                 (GoapKey.fighting, true) => "Is fighting",
-                 (GoapKey.fighting, false) => "Is not fighting",
-
-                 (GoapKey.producedcorpse, true) => "Kill credit",
-                 (GoapKey.producedcorpse, false) => "No kill",
-
-                 (GoapKey.consumecorpse, true) => "Corpse nearby",
-                 (GoapKey.consumecorpse, false) => "No corpse",
-
-                 (GoapKey.abort, true) => "Should abort",
-                 (GoapKey.abort, false) => "Should not abort",
-
-                 (GoapKey.shoulddrink, true) => "Mana low",
-                 (GoapKey.shoulddrink, false) => "Mana ok",
-
-                 (GoapKey.classMount, true) => "Should mount",
-                 (GoapKey.classMount, false) => "No need to mount",
-
-                 (GoapKey.isswimming, true) => "Swimming",
-                 (GoapKey.isswimming, false) => "Not Swimming",
-
-                 (GoapKey.itemsbroken, true) => "Gear is red",
-                 (GoapKey.itemsbroken, false) => "Gear is not red",
-
-                 (_, _) => "Unknown"
-             };
+    public static string ToStringF(this GoapKey key, bool state)
+    {
+        return state ? ToStringTrue(key) : ToStringFalse(key);
     }
 }

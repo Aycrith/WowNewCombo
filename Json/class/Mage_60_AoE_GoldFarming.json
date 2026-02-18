@@ -1,0 +1,95 @@
+{
+  "ClassName": "Mage",
+  "OverridePathFilename": "",
+  "Paths": [
+    { "PathFilename": "GoldFarm_Felwood_Jadefire_Felcloth.json", "Requirements": ["Level >= 55"] },
+    { "PathFilename": "GoldFarm_Azshara_BloodElves_Runecloth.json", "Requirements": ["Level >= 55"] },
+    { "PathFilename": "GoldFarm_Winterspring_Winterfall_Firewater.json", "Requirements": ["Level >= 55"] },
+    { "PathFilename": "GoldFarm_EPL_Tyr's_Hand_Runecloth.json", "Requirements": ["Level >= 58"] },
+    { "PathFilename": "GoldFarm_Silithus_Twilight_Cultists.json", "Requirements": ["Level >= 55"] }
+  ],
+  "Mode": "Grind",
+  "Description": "Frost Mage AoE Gold Farming - Optimized for mass mob pulling and Blizzard kiting",
+  "IntVariables": {
+    "AOE_MOB_COUNT": 5,
+    "FROST_NOVA_HP%": 90,
+    "ICE_BARRIER_HP%": 95,
+    "ICE_BLOCK_HP%": 15,
+    "COLD_SNAP_HP%": 20,
+    "CONE_OF_COLD_RANGE": 10,
+    "BLINK_DISTANCE": 8,
+    "EVOCATION_MANA%": 25,
+    "MANA_SHIELD_HP%": 30
+  },
+  "KeyActions": [
+    { "Name": "Frostbolt", "Key": "1", "WhenUsable": true, "HasCastBar": true, "AfterCastWait": 100 },
+    { "Name": "Ice Lance", "Key": "2", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Frost Nova", "Key": "3", "WhenUsable": true, "Cooldown": 25 },
+    { "Name": "Blizzard", "Key": "4", "WhenUsable": true, "HasCastBar": true, "Cooldown": 0 },
+    { "Name": "Cone of Cold", "Key": "5", "WhenUsable": true, "Cooldown": 10 },
+    { "Name": "Blink", "Key": "6", "WhenUsable": true, "Cooldown": 15 },
+    { "Name": "Ice Block", "Key": "7", "WhenUsable": true, "Cooldown": 300 },
+    { "Name": "Ice Barrier", "Key": "8", "WhenUsable": true, "Cooldown": 30 },
+    { "Name": "Cold Snap", "Key": "9", "WhenUsable": true, "Cooldown": 480 },
+    { "Name": "Icy Veins", "Key": "0", "WhenUsable": true, "Cooldown": 180 },
+    { "Name": "Arcane Explosion", "Key": "-", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Flamestrike", "Key": "=", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Evocation", "Key": "F1", "WhenUsable": true, "HasCastBar": true, "Cooldown": 480 },
+    { "Name": "Mana Shield", "Key": "F2", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Counterspell", "Key": "F3", "WhenUsable": true, "Cooldown": 24 },
+    { "Name": "Arcane Intellect", "Key": "F4", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Frost Armor", "Key": "F5", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Ice Armor", "Key": "F6", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Conjure Water", "Key": "F7", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Conjure Food", "Key": "F8", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Summon Water Elemental", "Key": "F9", "WhenUsable": true, "Cooldown": 180 }
+  ],
+  "Pull": {
+    "Sequence": [
+      { "Name": "Ice Barrier", "Requirements": ["not HasBuff:Ice Barrier"], "Cooldown": 30 },
+      { "Name": "Summon Water Elemental", "Requirements": ["not Pet", "Level >= 70"], "Cooldown": 180 },
+      { "Name": "Frostbolt", "WhenUsable": true, "Requirements": ["MobCount < {AOE_MOB_COUNT}"] }
+    ]
+  },
+  "Combat": {
+    "Sequence": [
+      { "Name": "Ice Block", "Requirements": ["Health% < {ICE_BLOCK_HP%}"], "Cooldown": 300 },
+      { "Name": "Cold Snap", "Requirements": ["Health% < {COLD_SNAP_HP%}"], "Cooldown": 480 },
+      { "Name": "Ice Barrier", "Requirements": ["not HasBuff:Ice Barrier", "Health% < {ICE_BARRIER_HP%}"], "Cooldown": 30 },
+      { "Name": "Mana Shield", "Requirements": ["Health% < {MANA_SHIELD_HP%}", "Mana% > 50", "not HasBuff:Mana Shield"], "Cooldown": 0 },
+      { "Name": "Frost Nova", "Requirements": ["Range < 10", "MobCount >= 2"], "Cooldown": 25 },
+      { "Name": "Blink", "Requirements": ["Range < {BLINK_DISTANCE}", "MobCount >= 2"], "Cooldown": 15 },
+      { "Name": "Blizzard", "Requirements": ["MobCount >= {AOE_MOB_COUNT}", "Range > 15"], "Cooldown": 0 },
+      { "Name": "Cone of Cold", "Requirements": ["Range < {CONE_OF_COLD_RANGE}", "MobCount >= 2"], "Cooldown": 10 },
+      { "Name": "Arcane Explosion", "Requirements": ["Range < 10", "MobCount >= 3", "Mana% > 40"], "Cooldown": 0 },
+      { "Name": "Icy Veins", "Requirements": ["MobCount >= {AOE_MOB_COUNT}"], "Cooldown": 180 },
+      { "Name": "Ice Lance", "Requirements": ["TargetHasBuff:Frozen"], "Cooldown": 0 },
+      { "Name": "Flamestrike", "Requirements": ["MobCount >= 3", "Mana% > 30"], "Cooldown": 0 },
+      { "Name": "Frostbolt", "WhenUsable": true, "Requirements": ["MobCount < 3"] }
+    ]
+  },
+  "Flee": {
+    "Sequence": [
+      { "Name": "Frost Nova", "Requirements": ["Range < 10"], "Cooldown": 25 },
+      { "Name": "Blink", "WhenUsable": true, "Cooldown": 15 },
+      { "Name": "Ice Block", "Requirements": ["Health% < 10"], "Cooldown": 300 }
+    ]
+  },
+  "Adhoc": {
+    "Sequence": [
+      { "Name": "Evocation", "Requirements": ["Mana% < {EVOCATION_MANA%}", "not InCombat"], "Cooldown": 480 },
+      { "Name": "Arcane Intellect", "Requirements": ["not HasBuff:Arcane Intellect"], "Cooldown": 0 },
+      { "Name": "Ice Armor", "Requirements": ["not HasBuff:Ice Armor", "not HasBuff:Frost Armor", "Level >= 40"], "Cooldown": 0 },
+      { "Name": "Frost Armor", "Requirements": ["not HasBuff:Frost Armor", "not HasBuff:Ice Armor", "Level < 40"], "Cooldown": 0 }
+    ]
+  },
+  "Parallel": {
+    "Sequence": []
+  },
+  "NPC": {
+    "Sequence": [
+      { "Name": "Repair", "Requirements": ["DurabilityPercent < 50"] },
+      { "Name": "Sell", "Requirements": ["BagsFull"] }
+    ]
+  }
+}

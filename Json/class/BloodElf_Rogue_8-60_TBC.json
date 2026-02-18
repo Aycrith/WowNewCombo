@@ -1,0 +1,480 @@
+{
+  "ClassName": "Rogue",
+  "Log": true,
+  "LogBagChanges": true,
+  "Loot": true,
+  "Skin": false,
+  "GatherCorpse": true,
+  "UseMount": true,
+  "AllowPvP": false,
+  "KeyboardOnly": true,
+  "AutoPetAttack": false,
+  "Mode": 0,
+
+  "NPCMaxLevels_Above": 2,
+  "NPCMaxLevels_Below": 8,
+  "TargetMask": 7,
+  "CheckTargetGivesExp": true,
+
+  "PathThereAndBack": true,
+  "PathReduceSteps": true,
+
+  "Mount": { "Key": "N0" },
+
+  "ForwardKey": 87,
+  "BackwardKey": 83,
+  "TurnLeftKey": 65,
+  "TurnRightKey": 68,
+
+  "IntVariables": {
+    "MIN_HP_EVASION%": 40,
+    "MIN_HP_VANISH%": 15,
+    "MIN_HP_BLIND%": 25,
+    "MIN_HP_GOUGE%": 50,
+    "MIN_HP_SPRINT%": 20,
+    "FLEE_HP%": 12,
+    "FLEE_MOB_COUNT": 3,
+    "FOOD_HP%": 50,
+    "BANDAGE_HP%": 45,
+    "EVISCERATE_CP": 4,
+    "SLICE_DICE_CP": 2,
+    "RUPTURE_CP": 3,
+    "KIDNEY_CP": 4,
+    "STEALTH_ENERGY": 40,
+    "BACKSTAB_ENERGY": 60,
+    "SS_ENERGY": 45
+  },
+
+  "Blacklist": [
+    "Deatholme Acolyte",
+    "Phantom Ghostwolf",
+    "Risen Hungerer",
+    "Eye of Dar'Khan",
+    "Nerubis Guard"
+  ],
+
+  "Paths": [
+    {
+      "PathFilename": "_pack\\1-20\\Blood elf\\6-12_Eversong Woods.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 8", "Level < 10", "Race:Blood Elf"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Blood elf\\9-12_Ghostlands.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 10", "Level < 13", "Race:Blood Elf"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Blood elf\\13-15_Ghostlands_Sanctum of the Sun.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 13", "Level < 16", "Race:Blood Elf"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Blood elf\\15-20_Ghostlands_Windrunner.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 15", "Level < 19", "Race:Blood Elf"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Blood elf\\18-22_Ghostlands_Deatholme_Approach.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 18", "Level < 22", "Race:Blood Elf"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Undead\\14-19_Silverpine Forest_Fenris.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 15", "Level < 20"]
+    },
+    {
+      "PathFilename": "_pack\\20-30\\The Barrens\\20-26 Zeplin behind Camp Taurajo.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 20", "Level < 23"]
+    },
+    {
+      "PathFilename": "_pack\\20-30\\Hillsbrad Foothills\\22-26 River.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 22", "Level < 26"]
+    },
+    {
+      "PathFilename": "_pack\\20-30\\Hillsbrad Foothills\\26-30 Spriders Bears Cats.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 26", "Level < 30"]
+    },
+    {
+      "PathFilename": "_pack\\30-40\\Arathi Highlands\\30-35 Circle of bindings.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 30", "Level < 35"]
+    },
+    {
+      "PathFilename": "_pack\\30-40\\Arathi Highlands\\35-37 Boulderfist Hall - Ogres.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 35", "Level < 38"]
+    },
+    {
+      "PathFilename": "_pack\\30-40\\Stranglethorn Vale\\37-42 Gorillas.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 38", "Level < 42"]
+    },
+    {
+      "PathFilename": "_pack\\40-50\\Tanaris\\40-43 Tanaris - Steamwheedle Port walk.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 40", "Level < 44"]
+    },
+    {
+      "PathFilename": "_pack\\40-50\\Tanaris\\45-48 Dunemaul Ogre.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 44", "Level < 49"]
+    },
+    {
+      "PathFilename": "_pack\\40-50\\Tanaris\\47-50 Southmoon Ruins (Dunemaul Ogres).json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 49", "Level < 51"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Azshara\\50-53 Azshara Legash Encampment.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 50", "Level < 54"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Felwood\\53-55 Felwood - Irontree Woods.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 54", "Level < 56"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Winterspring\\56-58 Winterfall Village.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 56", "Level < 58"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Eastern Plaguelands\\57-60 Browman Mill - Noxious Glade.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 58", "Level <= 60"]
+    }
+  ],
+
+  "Wait": {
+    "Sequence": [
+      {
+        "Name": "User",
+        "Cost": 0.9,
+        "Requirement": "MenuOpen || ChatInputVisible"
+      }
+    ]
+  },
+
+  "Pull": {
+    "Sequence": [
+      {
+        "Name": "Stealth",
+        "Key": "1",
+        "Slot": 1,
+        "WhenUsable": true,
+        "Requirements": ["!Stealth", "Energy >= STEALTH_ENERGY", "!Swimming", "Level >= 2"],
+        "AfterCastWaitBuff": true
+      },
+      {
+        "Name": "Cheap Shot",
+        "Key": "7",
+        "Slot": 7,
+        "WhenUsable": true,
+        "Requirements": ["Stealth", "InMeleeRange", "Level >= 26"],
+        "StopBeforeCast": true,
+        "Cost": 10
+      },
+      {
+        "Name": "Ambush",
+        "Key": "8",
+        "Slot": 8,
+        "WhenUsable": true,
+        "Requirements": ["Stealth", "InMeleeRange", "BehindTarget", "Level >= 18"],
+        "StopBeforeCast": true,
+        "Cost": 11
+      },
+      {
+        "Name": "Garrote",
+        "Key": "9",
+        "Slot": 9,
+        "WhenUsable": true,
+        "Requirements": ["Stealth", "InMeleeRange", "BehindTarget", "Level >= 14"],
+        "StopBeforeCast": true,
+        "Cost": 12
+      },
+      {
+        "Name": "Shoot",
+        "Key": "0",
+        "Slot": 10,
+        "Item": true,
+        "AfterCastDelay": 500,
+        "Requirements": ["HasRangedWeapon", "!InMeleeRange", "!Stealth"],
+        "Cost": 15
+      },
+      {
+        "Name": "Approach",
+        "Cost": 20
+      }
+    ]
+  },
+
+  "Combat": {
+    "Sequence": [
+      {
+        "Name": "Vanish",
+        "Key": "F1",
+        "Slot": 25,
+        "WhenUsable": true,
+        "Requirements": ["Health% < MIN_HP_VANISH%", "Level >= 22"],
+        "Cost": 1
+      },
+      {
+        "Name": "Evasion",
+        "Key": "5",
+        "Slot": 5,
+        "WhenUsable": true,
+        "Requirements": ["Health% < MIN_HP_EVASION%", "Level >= 8"],
+        "Cost": 2
+      },
+      {
+        "Name": "Blind",
+        "Key": "F2",
+        "Slot": 26,
+        "WhenUsable": true,
+        "Requirements": ["Health% < MIN_HP_BLIND%", "MobCount > 1", "Level >= 34"],
+        "Cost": 3
+      },
+      {
+        "Name": "Gouge",
+        "Key": "-",
+        "Slot": 12,
+        "WhenUsable": true,
+        "Requirements": ["Health% < MIN_HP_GOUGE%", "!BehindTarget", "Level >= 6"],
+        "Cost": 4
+      },
+      {
+        "Name": "Kick",
+        "Key": "6",
+        "Slot": 6,
+        "WhenUsable": true,
+        "UseWhenTargetIsCasting": true,
+        "Requirements": ["Level >= 12"],
+        "Cost": 5
+      },
+      {
+        "Name": "Adrenaline Rush",
+        "Key": "F4",
+        "Slot": 28,
+        "WhenUsable": true,
+        "Requirements": ["TargetHealth% > 70", "Level >= 40"],
+        "Cost": 6
+      },
+      {
+        "Name": "Blade Flurry",
+        "Key": "F5",
+        "Slot": 29,
+        "WhenUsable": true,
+        "Requirements": ["MobCount > 1", "Level >= 30"],
+        "Cost": 7
+      },
+      {
+        "Name": "Cold Blood",
+        "Key": "F6",
+        "Slot": 30,
+        "WhenUsable": true,
+        "Requirements": ["TargetHealth% < 50", "Combo Point >= EVISCERATE_CP", "Level >= 30"],
+        "Cost": 8
+      },
+      {
+        "Name": "Kidney Shot",
+        "Key": "N1",
+        "Slot": 49,
+        "WhenUsable": true,
+        "Requirements": ["Combo Point >= KIDNEY_CP", "TargetHealth% > 40", "Level >= 30"],
+        "Cost": 9
+      },
+      {
+        "Name": "Slice and Dice",
+        "Key": "4",
+        "Slot": 4,
+        "Requirements": ["!Slice and Dice", "Combo Point >= SLICE_DICE_CP", "TargetHealth% > 50", "Level >= 10"],
+        "Cost": 10
+      },
+      {
+        "Name": "Rupture",
+        "Key": "N2",
+        "Slot": 50,
+        "Requirements": ["!Rupture", "Combo Point >= RUPTURE_CP", "TargetHealth% > 60", "Level >= 20"],
+        "Cost": 11
+      },
+      {
+        "Name": "Eviscerate",
+        "Key": "3",
+        "Slot": 3,
+        "Requirements": ["Combo Point >= EVISCERATE_CP", "TargetHealth% < 50 || Combo Point == 5"],
+        "Cost": 12
+      },
+      {
+        "Name": "Backstab",
+        "Key": "N3",
+        "Slot": 51,
+        "WhenUsable": true,
+        "Requirements": ["BehindTarget", "Energy >= BACKSTAB_ENERGY", "Level >= 4"],
+        "Cost": 13
+      },
+      {
+        "Name": "Sinister Strike",
+        "Key": "2",
+        "Slot": 2,
+        "Requirements": ["Energy >= SS_ENERGY"],
+        "Cost": 14
+      },
+      {
+        "Name": "AutoAttack",
+        "Cost": 15
+      },
+      {
+        "Name": "Approach",
+        "Log": false,
+        "Cost": 16
+      }
+    ]
+  },
+
+  "Flee": {
+    "Sequence": [
+      {
+        "Name": "Sprint",
+        "Key": "F3",
+        "Slot": 27,
+        "WhenUsable": true,
+        "Requirements": ["Health% < MIN_HP_SPRINT%", "Level >= 16"],
+        "Cost": 1
+      },
+      {
+        "Name": "Vanish",
+        "Key": "F1",
+        "Slot": 25,
+        "WhenUsable": true,
+        "Requirements": ["Health% < MIN_HP_VANISH%", "Level >= 22"],
+        "Cost": 2
+      },
+      {
+        "Name": "Flee",
+        "Requirement": "(MobCount >= FLEE_MOB_COUNT && Health% < FLEE_HP%) || TargetElite",
+        "Cost": 5
+      }
+    ]
+  },
+
+  "Adhoc": {
+    "Sequence": [
+      {
+        "Name": "Stealth",
+        "Key": "1",
+        "Slot": 1,
+        "WhenUsable": true,
+        "Requirements": ["!Stealth", "!Swimming", "!InCombat", "Energy >= STEALTH_ENERGY", "Level >= 2"],
+        "Cost": 2
+      },
+      {
+        "Name": "Food",
+        "Key": "=",
+        "Slot": 24,
+        "Requirement": "Health% < FOOD_HP%",
+        "Cost": 3
+      },
+      {
+        "Name": "Bandage",
+        "Key": "N9",
+        "Slot": 57,
+        "HasCastbar": true,
+        "Requirements": ["Health% < BANDAGE_HP%", "!Recently Bandaged"],
+        "AfterCastWaitCastbar": true,
+        "Cost": 2.5
+      },
+      {
+        "Name": "Poison MH - Instant",
+        "Key": "N4",
+        "Slot": 52,
+        "HasCastbar": true,
+        "Requirements": ["!HasMainHandEnchant", "Level >= 20"],
+        "AfterCastAuraExpected": true,
+        "Cost": 4
+      },
+      {
+        "Name": "Poison OH - Deadly",
+        "Key": "N5",
+        "Slot": 53,
+        "HasCastbar": true,
+        "Requirements": ["!HasOffHandEnchant", "Level >= 30"],
+        "AfterCastAuraExpected": true,
+        "Cost": 5
+      },
+      {
+        "Name": "Thistle Tea",
+        "Key": "N6",
+        "Slot": 54,
+        "Requirements": ["Energy < 20", "BagItem:7676:1"],
+        "Cooldown": 300000,
+        "Cost": 6
+      },
+      {
+        "Name": "Open Lockbox",
+        "Key": "N7",
+        "Slot": 55,
+        "Cooldown": 30000,
+        "Requirements": ["BagItem:16882:1 || BagItem:16883:1 || BagItem:16884:1 || BagItem:16885:1"],
+        "Log": false,
+        "Cost": 7
+      },
+      {
+        "Name": "Arcane Torrent",
+        "Key": "N8",
+        "Slot": 56,
+        "WhenUsable": true,
+        "Requirements": ["InCombat", "Energy < 30", "Level >= 1"],
+        "Cooldown": 120000,
+        "Cost": 1.5
+      }
+    ]
+  },
+
+  "NPC": {
+    "Sequence": [
+      {
+        "Name": "Repair",
+        "Key": "C",
+        "Requirement": "Durability% < 35",
+        "Cost": 6
+      },
+      {
+        "Name": "Sell",
+        "Key": "C",
+        "Requirements": ["BagFull", "BagGreyItem"],
+        "Cost": 6
+      },
+      {
+        "Name": "Sell",
+        "Key": "C",
+        "Requirements": ["BagFullAny", "BagGreyItem"],
+        "Cost": 7
+      }
+    ]
+  }
+}

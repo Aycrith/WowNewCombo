@@ -1,0 +1,330 @@
+{
+  "ClassName": "Rogue",
+  "Log": false,
+  "Loot": true,
+  "Skin": false,
+  "GatherCorpse": true,
+  "UseMount": true,
+  "AllowPvP": false,
+  "KeyboardOnly": true,
+  "NPCMaxLevels_Above": 2,
+  "NPCMaxLevels_Below": 6,
+  "PathThereAndBack": true,
+  "PathReduceSteps": true,
+  "Mount": { "Key": "N0" },
+
+  "IntVariables": {
+    "MIN_HP_EVASION%": 40,
+    "MIN_HP_VANISH%": 15,
+    "MIN_HP_CLOAK%": 20,
+    "FLEE_HP%": 12,
+    "FLEE_MOB_COUNT": 3,
+    "FOOD_HP%": 55,
+    "BANDAGE_HP%": 50,
+    "EVISCERATE_CP": 4,
+    "SLICE_DICE_CP": 2,
+    "RUPTURE_CP": 3,
+    "KIDNEY_CP": 4
+  },
+
+  "Paths": [
+    {
+      "PathFilename": "_pack\\60-70\\Hellfire Peninsula\\58-60 Pools of Aggonar.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 58", "Level < 61"]
+    },
+    {
+      "PathFilename": "_pack\\60-70\\Hellfire Peninsula\\60-62 Expedition Armory.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 60", "Level < 63"]
+    },
+    {
+      "PathFilename": "_pack\\60-70\\Zangarmarsh\\62-63 Boglash.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 62", "Level < 64"]
+    },
+    {
+      "PathFilename": "_pack\\60-70\\Zangarmarsh\\63-65 Umbrafen Lake.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 63", "Level < 65"]
+    },
+    {
+      "PathFilename": "_pack\\60-70\\Nagrand\\64-67 Sunspring Post.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 64", "Level < 67"]
+    },
+    {
+      "PathFilename": "_pack\\60-70\\Nagrand\\65-70 Oshugun.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 65", "Level < 68"]
+    },
+    {
+      "PathFilename": "_pack\\60-70\\Blade's Edge Mountains\\67-69 Bladespire Hold.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 67", "Level < 70"]
+    },
+    {
+      "PathFilename": "_pack\\60-70\\Netherstorm\\68-70 Area 52.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 68", "Level <= 70"]
+    }
+  ],
+
+  "Wait": {
+    "Sequence": [
+      {
+        "Cost": 0.9,
+        "Name": "User",
+        "Requirement": "MenuOpen || ChatInputVisible"
+      }
+    ]
+  },
+
+  "Pull": {
+    "Sequence": [
+      {
+        "Name": "Stealth",
+        "Key": "1",
+        "WhenUsable": true,
+        "Requirement": "!Stealth && Energy > 40",
+        "AfterCastWaitBuff": true
+      },
+      {
+        "Name": "Cheap Shot",
+        "Key": "7",
+        "WhenUsable": true,
+        "Requirements": [
+          "Stealth",
+          "InMeleeRange"
+        ],
+        "StopBeforeCast": true
+      },
+      {
+        "Name": "Ambush",
+        "Key": "8",
+        "WhenUsable": true,
+        "Requirements": [
+          "Stealth",
+          "InMeleeRange",
+          "BehindTarget"
+        ],
+        "StopBeforeCast": true
+      },
+      {
+        "Name": "Garrote",
+        "Key": "9",
+        "WhenUsable": true,
+        "Requirements": [
+          "Stealth",
+          "InMeleeRange",
+          "BehindTarget"
+        ],
+        "StopBeforeCast": true
+      },
+      {
+        "Name": "Approach"
+      }
+    ]
+  },
+
+  "Combat": {
+    "Sequence": [
+      {
+        "Name": "Cloak of Shadows",
+        "Key": "F1",
+        "WhenUsable": true,
+        "Requirement": "Health% < MIN_HP_CLOAK%"
+      },
+      {
+        "Name": "Vanish",
+        "Key": "F2",
+        "WhenUsable": true,
+        "Requirement": "Health% < MIN_HP_VANISH%"
+      },
+      {
+        "Name": "Evasion",
+        "Key": "5",
+        "WhenUsable": true,
+        "Requirement": "Health% < MIN_HP_EVASION%"
+      },
+      {
+        "Name": "Blind",
+        "Key": "F3",
+        "WhenUsable": true,
+        "Requirements": [
+          "Health% < 25",
+          "MobCount > 1"
+        ]
+      },
+      {
+        "Name": "Kick",
+        "Key": "6",
+        "WhenUsable": true,
+        "UseWhenTargetIsCasting": true
+      },
+      {
+        "Name": "Adrenaline Rush",
+        "Key": "F4",
+        "WhenUsable": true,
+        "Requirement": "TargetHealth% > 70"
+      },
+      {
+        "Name": "Blade Flurry",
+        "Key": "F5",
+        "WhenUsable": true,
+        "Requirement": "MobCount > 1"
+      },
+      {
+        "Name": "Cold Blood",
+        "Key": "F6",
+        "WhenUsable": true,
+        "Requirement": "TargetHealth% < 50 && Combo Point >= EVISCERATE_CP"
+      },
+      {
+        "Name": "Slice and Dice",
+        "Key": "4",
+        "Requirements": [
+          "!Slice and Dice",
+          "Combo Point >= SLICE_DICE_CP",
+          "TargetHealth% > 50"
+        ]
+      },
+      {
+        "Name": "Rupture",
+        "Key": "N2",
+        "Requirements": [
+          "!Rupture",
+          "Combo Point >= RUPTURE_CP",
+          "TargetHealth% > 60"
+        ]
+      },
+      {
+        "Name": "Envenom",
+        "Key": "N1",
+        "Requirements": [
+          "Combo Point >= EVISCERATE_CP",
+          "DeadlyPoison > 3"
+        ]
+      },
+      {
+        "Name": "Eviscerate",
+        "Key": "3",
+        "Requirements": [
+          "Combo Point >= EVISCERATE_CP",
+          "TargetHealth% < 50 || Combo Point == 5"
+        ]
+      },
+      {
+        "Name": "Mutilate",
+        "Key": "N3",
+        "WhenUsable": true,
+        "Requirements": [
+          "HasOffHandWeapon"
+        ]
+      },
+      {
+        "Name": "Backstab",
+        "Key": "N4",
+        "WhenUsable": true,
+        "Requirements": [
+          "BehindTarget",
+          "Energy >= 60"
+        ]
+      },
+      {
+        "Name": "Sinister Strike",
+        "Key": "2"
+      },
+      {
+        "Name": "AutoAttack"
+      },
+      {
+        "Name": "Approach",
+        "Log": false
+      }
+    ]
+  },
+
+  "Flee": {
+    "Sequence": [
+      {
+        "Name": "Sprint",
+        "Key": "F7",
+        "WhenUsable": true,
+        "Requirement": "Health% < FLEE_HP%"
+      },
+      {
+        "Name": "Flee",
+        "Requirement": "(MobCount >= FLEE_MOB_COUNT && Health% < FLEE_HP%) || TargetElite"
+      }
+    ]
+  },
+
+  "Adhoc": {
+    "Sequence": [
+      {
+        "Name": "Stealth",
+        "Key": "1",
+        "WhenUsable": true,
+        "Requirement": "!Stealth && !Swimming",
+        "Cost": 2
+      },
+      {
+        "Name": "Food",
+        "Key": "=",
+        "Requirement": "Health% < FOOD_HP%",
+        "Cost": 3
+      },
+      {
+        "Name": "Bandage",
+        "Key": "N9",
+        "HasCastbar": true,
+        "Requirement": "Health% < BANDAGE_HP% && !Recently Bandaged",
+        "AfterCastWaitCastbar": true,
+        "Cost": 2.5
+      },
+      {
+        "Name": "Poison MH - Instant",
+        "Key": "N5",
+        "HasCastbar": true,
+        "Requirement": "!HasMainHandEnchant",
+        "AfterCastAuraExpected": true
+      },
+      {
+        "Name": "Poison OH - Deadly",
+        "Key": "N6",
+        "HasCastbar": true,
+        "Requirement": "!HasOffHandEnchant",
+        "AfterCastAuraExpected": true
+      }
+    ]
+  },
+
+  "NPC": {
+    "Sequence": [
+      {
+        "Name": "Repair",
+        "Key": "C",
+        "Requirement": "Durability% < 35",
+        "Cost": 6
+      },
+      {
+        "Name": "Sell",
+        "Key": "C",
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ],
+        "Cost": 6
+      }
+    ]
+  }
+}

@@ -1,0 +1,458 @@
+{
+  "ClassName": "Mage",
+  "Log": false,
+  "Loot": true,
+  "Skin": false,
+  "GatherCorpse": true,
+  "UseMount": true,
+  "AllowPvP": false,
+  "KeyboardOnly": true,
+  "NPCMaxLevels_Above": 2,
+  "NPCMaxLevels_Below": 8,
+  "PathThereAndBack": true,
+  "PathReduceSteps": true,
+  "Mount": { "Key": "N0" },
+
+  "IntVariables": {
+    "MIN_MANA_ATTACK%": 30,
+    "MIN_MANA_DRINK%": 20,
+    "FLEE_HP%": 20,
+    "FLEE_MOB_COUNT": 2,
+    "FOOD_HP%": 50,
+    "SHIELD_HP%": 50,
+    "FROST_NOVA_HP%": 40,
+    "COLD_SNAP_HP%": 25,
+    "ICE_BLOCK_HP%": 15,
+    "EVOCATION_MANA%": 15,
+    "BLIZZARD_MOB_COUNT": 3,
+    "CONE_OF_COLD_RANGE": 10
+  },
+
+  "Paths": [
+    {
+      "PathFilename": "_pack\\1-20\\Human\\01-04_Elwynn Forest_Northshire Valley (kobold-wolves-defias).json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Human\\05-09_Elwynn Forest_Farms Tour (pigs, bears, humans).json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 5", "Level < 10", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Human\\10-14_Westfall_beta.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 10", "Level < 15", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Human\\15-18_Westfall_The Dagger Hills (defias).json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 15", "Level < 18", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Human\\18-20_Duskwood_The Darkened Bank - wolves spiders.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 18", "Level < 21", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Dwarf.Gnome\\1-4_Dun Morogh.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Gnome"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Undead\\01-05_Tirisfal Glades_Deathknell.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Undead"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Troll.Orc\\1-5_Durotar_Valley of Trials.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Troll"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Blood elf\\01-06_Eversong Woods_Sunstrider Isle.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 6", "Race:BloodElf"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Draenei\\1-5_Azuremyst Isle.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Draenei"]
+    },
+    {
+      "PathFilename": "_pack\\20-30\\Duskwood\\21-24 Tranquil Gardens.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 20", "Level < 25"]
+    },
+    {
+      "PathFilename": "_pack\\20-30\\Duskwood\\25-30 Vul Gol Ogre Mound.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 25", "Level < 30"]
+    },
+    {
+      "PathFilename": "_pack\\30-40\\Thousand Needles\\30-35 Shimmering Flats.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 30", "Level < 36"]
+    },
+    {
+      "PathFilename": "_pack\\30-40\\Dustwallow Marsh\\36-38 Dreadmurk Shore - murlocs - turtles.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 36", "Level < 40"]
+    },
+    {
+      "PathFilename": "_pack\\40-50\\Tanaris\\40-43 Tanaris - Steamwheedle Port walk.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 40", "Level < 45"]
+    },
+    {
+      "PathFilename": "_pack\\40-50\\Tanaris\\45-48 Dunemaul Ogre.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 45", "Level < 50"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Azshara\\50-53 Azshara Legash Encampment.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 50", "Level < 55"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Winterspring\\56-59 Elements.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 55", "Level < 58"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Eastern Plaguelands\\57-60 Browman Mill - Noxious Glade.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 57", "Level <= 60"]
+    }
+  ],
+
+  "Wait": {
+    "Sequence": [
+      {
+        "Cost": 0.9,
+        "Name": "User",
+        "Requirement": "MenuOpen || ChatInputVisible"
+      }
+    ]
+  },
+
+  "Pull": {
+    "Sequence": [
+      {
+        "Name": "Frostbolt",
+        "Key": "2",
+        "HasCastBar": true,
+        "BeforeCastStop": true,
+        "Requirements": [
+          "Mana% > MIN_MANA_ATTACK%",
+          "!InMeleeRange"
+        ]
+      },
+      {
+        "Name": "Fireball",
+        "Key": "3",
+        "HasCastBar": true,
+        "BeforeCastStop": true,
+        "Requirements": [
+          "Mana% > MIN_MANA_ATTACK%",
+          "!InMeleeRange",
+          "Level < 4"
+        ]
+      },
+      {
+        "Name": "Shoot",
+        "Key": "0",
+        "Item": true,
+        "AfterCastDelay": 500,
+        "Requirements": [
+          "HasRangedWeapon",
+          "!InMeleeRange",
+          "Mana% < MIN_MANA_ATTACK%"
+        ]
+      },
+      {
+        "Name": "Approach"
+      }
+    ]
+  },
+
+  "Combat": {
+    "Sequence": [
+      {
+        "Name": "Ice Block",
+        "Key": "F1",
+        "WhenUsable": true,
+        "Requirement": "Health% < ICE_BLOCK_HP% && Level >= 30"
+      },
+      {
+        "Name": "Cold Snap",
+        "Key": "F2",
+        "WhenUsable": true,
+        "Requirement": "Health% < COLD_SNAP_HP% && CD_Frost Nova > 0 && Level >= 40"
+      },
+      {
+        "Name": "Mana Shield",
+        "Key": "6",
+        "WhenUsable": true,
+        "Requirement": "Health% < SHIELD_HP% && !Mana Shield && Mana% > 40 && Level >= 20"
+      },
+      {
+        "Name": "Frost Nova",
+        "Key": "5",
+        "WhenUsable": true,
+        "Requirements": [
+          "Health% < FROST_NOVA_HP%",
+          "InMeleeRange",
+          "Level >= 10"
+        ]
+      },
+      {
+        "Name": "Blink",
+        "Key": "F3",
+        "WhenUsable": true,
+        "Requirements": [
+          "InMeleeRange",
+          "Level >= 20"
+        ]
+      },
+      {
+        "Name": "Counterspell",
+        "Key": "7",
+        "WhenUsable": true,
+        "UseWhenTargetIsCasting": true,
+        "Requirement": "Level >= 24"
+      },
+      {
+        "Name": "Presence of Mind",
+        "Key": "N1",
+        "WhenUsable": true,
+        "Requirement": "TargetHealth% > 60 && Level >= 30"
+      },
+      {
+        "Name": "Arcane Power",
+        "Key": "N2",
+        "WhenUsable": true,
+        "Requirement": "TargetHealth% > 80 && Level >= 40"
+      },
+      {
+        "Name": "Icy Veins",
+        "Key": "N3",
+        "WhenUsable": true,
+        "Requirement": "TargetHealth% > 70 && Level >= 40"
+      },
+      {
+        "Name": "Ice Lance",
+        "Key": "N4",
+        "WhenUsable": true,
+        "Requirements": [
+          "TargetFrozen",
+          "Level >= 66"
+        ]
+      },
+      {
+        "Name": "Blizzard",
+        "Key": "N5",
+        "HasCastBar": true,
+        "WhenUsable": true,
+        "Requirements": [
+          "MobCount >= BLIZZARD_MOB_COUNT",
+          "Mana% > 50",
+          "Level >= 20"
+        ]
+      },
+      {
+        "Name": "Cone of Cold",
+        "Key": "8",
+        "WhenUsable": true,
+        "Requirements": [
+          "InMeleeRange",
+          "Level >= 26"
+        ]
+      },
+      {
+        "Name": "Arcane Missiles",
+        "Key": "N6",
+        "HasCastBar": true,
+        "WhenUsable": true,
+        "Requirements": [
+          "Mana% > MIN_MANA_ATTACK%",
+          "Level >= 8"
+        ]
+      },
+      {
+        "Name": "Fire Blast",
+        "Key": "4",
+        "WhenUsable": true,
+        "Requirements": [
+          "Level >= 6"
+        ]
+      },
+      {
+        "Name": "Frostbolt",
+        "Key": "2",
+        "HasCastBar": true,
+        "Requirements": [
+          "Mana% > MIN_MANA_ATTACK%",
+          "!InMeleeRange || Mana Shield"
+        ]
+      },
+      {
+        "Name": "Fireball",
+        "Key": "3",
+        "HasCastBar": true,
+        "Requirements": [
+          "Mana% > MIN_MANA_ATTACK%",
+          "!InMeleeRange",
+          "Level < 6"
+        ]
+      },
+      {
+        "Name": "Shoot",
+        "Key": "0",
+        "Item": true,
+        "AfterCastDelay": 500,
+        "Requirements": [
+          "HasRangedWeapon"
+        ]
+      },
+      {
+        "Name": "AutoAttack",
+        "Requirement": "!HasRangedWeapon"
+      },
+      {
+        "Name": "Approach",
+        "Log": false
+      }
+    ]
+  },
+
+  "Flee": {
+    "Sequence": [
+      {
+        "Name": "Flee",
+        "Requirement": "(MobCount >= FLEE_MOB_COUNT && Health% < FLEE_HP%) || TargetElite"
+      }
+    ]
+  },
+
+  "Adhoc": {
+    "Sequence": [
+      {
+        "Cost": 3,
+        "Name": "Arcane Intellect",
+        "Key": "9",
+        "WhenUsable": true,
+        "InCombat": "i dont care",
+        "Requirement": "!Arcane Intellect"
+      },
+      {
+        "Cost": 3,
+        "Name": "Frost Armor",
+        "Key": "-",
+        "WhenUsable": true,
+        "InCombat": "i dont care",
+        "Requirement": "!Frost Armor && !Ice Armor && Level < 30"
+      },
+      {
+        "Cost": 3,
+        "Name": "Ice Armor",
+        "Key": "-",
+        "WhenUsable": true,
+        "InCombat": "i dont care",
+        "Requirement": "!Ice Armor && Level >= 30"
+      },
+      {
+        "Cost": 3,
+        "Name": "Molten Armor",
+        "Key": "=",
+        "WhenUsable": true,
+        "InCombat": "i dont care",
+        "Requirement": "!Molten Armor && Level >= 62"
+      },
+      {
+        "Cost": 3,
+        "Name": "Mage Armor",
+        "Key": "F4",
+        "WhenUsable": true,
+        "InCombat": "i dont care",
+        "Requirement": "!Mage Armor && Level >= 34"
+      },
+      {
+        "Name": "Evocation",
+        "Key": "F5",
+        "HasCastBar": true,
+        "WhenUsable": true,
+        "Requirement": "Mana% < EVOCATION_MANA% && Level >= 20",
+        "AfterCastWaitCastbar": true
+      },
+      {
+        "Name": "Conjure Food",
+        "Key": "F6",
+        "HasCastBar": true,
+        "Requirement": "!BagItem:22895:5 && Level >= 65",
+        "AfterCastWaitCastbar": true
+      },
+      {
+        "Name": "Conjure Water",
+        "Key": "F7",
+        "HasCastBar": true,
+        "Requirement": "!BagItem:22018:5 && Level >= 60",
+        "AfterCastWaitCastbar": true
+      }
+    ]
+  },
+
+  "Parallel": {
+    "Sequence": [
+      {
+        "Name": "Food",
+        "Key": "N7",
+        "Requirement": "Health% < FOOD_HP%"
+      },
+      {
+        "Name": "Drink",
+        "Key": "N8",
+        "Requirement": "Mana% < MIN_MANA_DRINK%"
+      }
+    ]
+  },
+
+  "NPC": {
+    "Sequence": [
+      {
+        "Cost": 6,
+        "Name": "Repair",
+        "Key": "C",
+        "Requirement": "Durability% < 35"
+      },
+      {
+        "Cost": 6,
+        "Name": "Sell",
+        "Key": "C",
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ]
+      }
+    ]
+  }
+}

@@ -1,107 +1,109 @@
 ﻿using Core.GOAP;
+
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+
 using System.Threading.Tasks;
-using Core.Extensions;
 
-namespace Core.Goals
+namespace Core.Goals;
+
+public sealed class ParallelGoal : GoapGoal
 {
-    public class ParallelGoal : GoapGoal
+    public override float Cost => 3f;
+
+    private readonly ILogger logger;
+    private readonly ConfigurableInput input;
+    private readonly StopMoving stopMoving;
+    private readonly Wait wait;
+    private readonly PlayerReader playerReader;
+    private readonly CastingHandler castingHandler;
+    private readonly IMountHandler mountHandler;
+
+    private static bool None() => false;
+
+    private bool castSuccess;
+
+    public ParallelGoal(ILogger logger, ConfigurableInput input, Wait wait,
+        PlayerReader playerReader, StopMoving stopMoving, ClassConfiguration classConfig,
+        CastingHandler castingHandler, IMountHandler mountHandler)
+        : base(nameof(ParallelGoal))
     {
-        public override float CostOfPerformingAction => 3f;
+        this.logger = logger;
+        this.input = input;
+        this.stopMoving = stopMoving;
+        this.wait = wait;
+        this.playerReader = playerReader;
+        this.castingHandler = castingHandler;
+        this.mountHandler = mountHandler;
 
-        private readonly ILogger logger;
-        private readonly ConfigurableInput input;
+        AddPrecondition(GoapKey.incombat, false);
 
-        private readonly StopMoving stopMoving;
-        private readonly Wait wait;
-        private readonly PlayerReader playerReader;
+        Keys = classConfig.Parallel.Sequence;
+    }
 
-        private readonly CastingHandler castingHandler;
-        private readonly MountHandler mountHandler;
-
-        public ParallelGoal(ILogger logger, ConfigurableInput input, Wait wait, PlayerReader playerReader, StopMoving stopMoving, List<KeyAction> keysConfig, CastingHandler castingHandler, MountHandler mountHandler)
+    public override bool CanRun()
+    {
+        for (int i = 0; i < Keys.Length; i++)
         {
-            this.logger = logger;
-            this.input = input;
+            if (Keys[i].CanRun())
+                return true;
+        }
+        return false;
+    }
 
-            this.stopMoving = stopMoving;
-            this.wait = wait;
-            this.playerReader = playerReader;
-
-            this.castingHandler = castingHandler;
-            this.mountHandler = mountHandler;
-
-            AddPrecondition(GoapKey.incombat, false);
-
-            keysConfig.ForEach(key => Keys.Add(key));
+    public override void OnEnter()
+    {
+        if (mountHandler.IsMounted())
+        {
+            mountHandler.Dismount();
         }
 
-        public override bool CheckIfActionCanRun()
+        for (int i = 0; i < Keys.Length; i++)
         {
-            return Keys.Any(key => key.CanRun());
-        }
-
-        public override async ValueTask OnEnter()
-        {
-            if (Keys.Any(k => k.StopBeforeCast))
+            if (Keys[i].BeforeCastStop)
             {
                 stopMoving.Stop();
-                wait.Update(1);
-
-                if (mountHandler.IsMounted())
-                {
-                    mountHandler.Dismount();
-                    wait.Update(1);
-                }
-            }
-
-            await AsyncExt.Loop(Keys, (KeyAction key) =>
-            {
-                var pressed = castingHandler.CastIfReady(key, key.DelayBeforeCast);
-                key.ResetCooldown();
-                key.SetClicked();
-                return Task.CompletedTask;
-            });
-
-            bool wasDrinkingOrEating = playerReader.Buffs.Drinking || playerReader.Buffs.Eating;
-
-            DateTime startTime = DateTime.UtcNow;
-            while ((playerReader.Buffs.Drinking || playerReader.Buffs.Eating || playerReader.IsCasting) && !playerReader.Bits.PlayerInCombat)
-            {
-                wait.Update(1);
-
-                if (playerReader.Buffs.Drinking && playerReader.Buffs.Eating)
-                {
-                    if (playerReader.ManaPercentage > 98 && playerReader.HealthPercent > 98) { break; }
-                }
-                else if (playerReader.Buffs.Drinking)
-                {
-                    if (playerReader.ManaPercentage > 98) { break; }
-                }
-                else if (playerReader.Buffs.Eating)
-                {
-                    if (playerReader.HealthPercent > 98) { break; }
-                }
-
-                if ((DateTime.UtcNow - startTime).TotalSeconds >= 25)
-                {
-                    logger.LogInformation($"Waited (25s) long enough for {Name}");
-                    break;
-                }
-            }
-
-            if (wasDrinkingOrEating)
-            {
-                input.TapStandUpKey();
+                wait.Update();
+                break;
             }
         }
+    }
 
-        public override ValueTask PerformAction()
+    public override void Update()
+    {
+        if (castingHandler.SpellInQueue())
         {
-            return ValueTask.CompletedTask;
+            wait.Update();
+            return;
+        }
+
+        if (!castSuccess)
+        {
+            Cast();
+
+            wait.Update(playerReader.DoubleNetworkLatency);
+            wait.Update();
+        }
+    }
+
+    public override void OnExit()
+    {
+        castSuccess = false;
+        wait.Update();
+    }
+
+    private void Cast()
+    {
+        Parallel.For(0, Keys.Length, Execute);
+    }
+
+    private void Execute(int i)
+    {
+        if (castingHandler.CastIfReady(Keys[i], None))
+        {
+            Keys[i].ResetCooldown();
+            Keys[i].SetClicked();
+
+            castSuccess = true;
         }
     }
 }

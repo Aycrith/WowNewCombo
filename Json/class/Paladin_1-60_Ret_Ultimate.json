@@ -1,0 +1,406 @@
+{
+  "ClassName": "Paladin",
+  "Log": false,
+  "Loot": true,
+  "Skin": false,
+  "GatherCorpse": true,
+  "UseMount": true,
+  "AllowPvP": false,
+  "KeyboardOnly": true,
+  "NPCMaxLevels_Above": 2,
+  "NPCMaxLevels_Below": 8,
+  "PathThereAndBack": true,
+  "PathReduceSteps": true,
+  "Mount": { "Key": "N0" },
+
+  "IntVariables": {
+    "SEAL_HP%": 95,
+    "JUDGEMENT_HP%": 90,
+    "CONSECRATION_MANA%": 40,
+    "FLASH_HEAL_HP%": 35,
+    "HOLY_LIGHT_HP%": 50,
+    "LOH_HP%": 15,
+    "BUBBLE_HP%": 20,
+    "BLESSING_HP%": 95,
+    "FOOD_HP%": 50,
+    "DRINK_MANA%": 30,
+    "FLEE_HP%": 15,
+    "FLEE_MOB_COUNT": 3,
+    "AOE_MOB_COUNT": 2
+  },
+
+  "Paths": [
+    {
+      "PathFilename": "_pack\\1-20\\Human\\01-04_Elwynn Forest_Northshire Valley (kobold-wolves-defias).json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Human\\05-09_Elwynn Forest_Farms Tour (pigs, bears, humans).json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 5", "Level < 10", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Human\\10-14_Westfall_beta.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 10", "Level < 15", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Human\\15-18_Westfall_The Dagger Hills (defias).json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 15", "Level < 18", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Human\\18-20_Duskwood_The Darkened Bank - wolves spiders.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 18", "Level < 21", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Dwarf.Gnome\\1-4_Dun Morogh.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Dwarf"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Draenei\\1-5_Azuremyst Isle.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Draenei"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Blood elf\\01-06_Eversong Woods_Sunstrider Isle.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 6", "Race:BloodElf"]
+    },
+    {
+      "PathFilename": "_pack\\20-30\\Duskwood\\20-27 Raven Hill Cemetery.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 20", "Level < 25"]
+    },
+    {
+      "PathFilename": "_pack\\20-30\\Duskwood\\25-30 Vul Gol Ogre Mound.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 25", "Level < 30"]
+    },
+    {
+      "PathFilename": "_pack\\30-40\\Desolace\\30-35.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 30", "Level < 36"]
+    },
+    {
+      "PathFilename": "_pack\\30-40\\Arathi Highlands\\35-37 Boulderfist Hall - Ogres.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 35", "Level < 40"]
+    },
+    {
+      "PathFilename": "_pack\\40-50\\Tanaris\\40-43 Tanaris - Steamwheedle Port walk.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 40", "Level < 45"]
+    },
+    {
+      "PathFilename": "_pack\\40-50\\Tanaris\\45-48 Dunemaul Ogre.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 45", "Level < 50"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Azshara\\50-53 Azshara Legash Encampment.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 50", "Level < 55"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Winterspring\\56-58 Winterfall Village.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 55", "Level < 58"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Eastern Plaguelands\\57-60 Browman Mill - Noxious Glade.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 57", "Level <= 60"]
+    }
+  ],
+
+  "Wait": {
+    "Sequence": [
+      {
+        "Cost": 0.9,
+        "Name": "User",
+        "Requirement": "MenuOpen || ChatInputVisible"
+      }
+    ]
+  },
+
+  "Pull": {
+    "Sequence": [
+      {
+        "Name": "Seal of Righteousness",
+        "Key": "2",
+        "WhenUsable": true,
+        "Requirements": [
+          "!Seal of Righteousness && !Seal of Command && !Seal of the Crusader",
+          "Level >= 1"
+        ]
+      },
+      {
+        "Name": "Seal of Command",
+        "Key": "N1",
+        "WhenUsable": true,
+        "Requirements": [
+          "!Seal of Command && !Seal of Righteousness && !Seal of the Crusader",
+          "Level >= 20"
+        ]
+      },
+      {
+        "Name": "Judgement",
+        "Key": "3",
+        "WhenUsable": true,
+        "Requirements": [
+          "Seal of Righteousness || Seal of Command || Seal of the Crusader",
+          "Level >= 4"
+        ]
+      },
+      {
+        "Name": "Approach"
+      }
+    ]
+  },
+
+  "Combat": {
+    "Sequence": [
+      {
+        "Name": "Divine Shield",
+        "Key": "F1",
+        "WhenUsable": true,
+        "Requirement": "Health% < BUBBLE_HP% && Level >= 34"
+      },
+      {
+        "Name": "Lay on Hands",
+        "Key": "F2",
+        "WhenUsable": true,
+        "Requirement": "Health% < LOH_HP% && Level >= 10"
+      },
+      {
+        "Name": "Hammer of Justice",
+        "Key": "6",
+        "WhenUsable": true,
+        "UseWhenTargetIsCasting": true,
+        "Requirement": "Level >= 8"
+      },
+      {
+        "Name": "Flash of Light",
+        "Key": "7",
+        "HasCastBar": true,
+        "WhenUsable": true,
+        "Requirements": [
+          "Health% < FLASH_HEAL_HP%",
+          "Level >= 20"
+        ]
+      },
+      {
+        "Name": "Holy Light",
+        "Key": "8",
+        "HasCastBar": true,
+        "WhenUsable": true,
+        "Requirements": [
+          "Health% < HOLY_LIGHT_HP%",
+          "Level >= 1",
+          "Level < 20"
+        ]
+      },
+      {
+        "Name": "Avenging Wrath",
+        "Key": "N2",
+        "WhenUsable": true,
+        "Requirement": "TargetHealth% > 80 && Level >= 70"
+      },
+      {
+        "Name": "Crusader Strike",
+        "Key": "N3",
+        "WhenUsable": true,
+        "Requirement": "Level >= 50"
+      },
+      {
+        "Name": "Seal of Command",
+        "Key": "N1",
+        "WhenUsable": true,
+        "Requirements": [
+          "!Seal of Command",
+          "Level >= 20"
+        ]
+      },
+      {
+        "Name": "Seal of Righteousness",
+        "Key": "2",
+        "WhenUsable": true,
+        "Requirements": [
+          "!Seal of Righteousness && !Seal of Command",
+          "Level >= 1"
+        ]
+      },
+      {
+        "Name": "Judgement",
+        "Key": "3",
+        "WhenUsable": true,
+        "Requirements": [
+          "Seal of Righteousness || Seal of Command",
+          "TargetHealth% > 20",
+          "Level >= 4"
+        ]
+      },
+      {
+        "Name": "Consecration",
+        "Key": "5",
+        "WhenUsable": true,
+        "Requirements": [
+          "MobCount >= AOE_MOB_COUNT",
+          "Mana% > CONSECRATION_MANA%",
+          "Level >= 20"
+        ]
+      },
+      {
+        "Name": "Holy Wrath",
+        "Key": "N4",
+        "WhenUsable": true,
+        "Requirements": [
+          "MobCount >= AOE_MOB_COUNT",
+          "TargetCreatureType:Undead || TargetCreatureType:Demon",
+          "Level >= 50"
+        ]
+      },
+      {
+        "Name": "Exorcism",
+        "Key": "N5",
+        "WhenUsable": true,
+        "Requirements": [
+          "TargetCreatureType:Undead || TargetCreatureType:Demon",
+          "Level >= 20"
+        ]
+      },
+      {
+        "Name": "Hammer of Wrath",
+        "Key": "N6",
+        "WhenUsable": true,
+        "Requirements": [
+          "TargetHealth% < 20",
+          "Level >= 44"
+        ]
+      },
+      {
+        "Name": "AutoAttack"
+      },
+      {
+        "Name": "Approach",
+        "Log": false
+      }
+    ]
+  },
+
+  "Flee": {
+    "Sequence": [
+      {
+        "Name": "Flee",
+        "Requirement": "(MobCount >= FLEE_MOB_COUNT && Health% < FLEE_HP%) || TargetElite"
+      }
+    ]
+  },
+
+  "Adhoc": {
+    "Sequence": [
+      {
+        "Cost": 3,
+        "Name": "Blessing of Might",
+        "Key": "4",
+        "WhenUsable": true,
+        "InCombat": "i dont care",
+        "Requirement": "!Blessing of Might && !Blessing of Kings && !Blessing of Wisdom && Level >= 4"
+      },
+      {
+        "Cost": 3,
+        "Name": "Blessing of Kings",
+        "Key": "N7",
+        "WhenUsable": true,
+        "InCombat": "i dont care",
+        "Requirement": "!Blessing of Kings && Level >= 20"
+      },
+      {
+        "Cost": 3,
+        "Name": "Devotion Aura",
+        "Key": "9",
+        "WhenUsable": true,
+        "InCombat": "i dont care",
+        "Requirement": "!Devotion Aura && !Retribution Aura && !Sanctity Aura && Level >= 1"
+      },
+      {
+        "Cost": 3,
+        "Name": "Retribution Aura",
+        "Key": "-",
+        "WhenUsable": true,
+        "InCombat": "i dont care",
+        "Requirement": "!Retribution Aura && Level >= 16"
+      },
+      {
+        "Cost": 3,
+        "Name": "Sanctity Aura",
+        "Key": "N8",
+        "WhenUsable": true,
+        "InCombat": "i dont care",
+        "Requirement": "!Sanctity Aura && Level >= 30"
+      },
+      {
+        "Name": "Divine Protection",
+        "Key": "F3",
+        "WhenUsable": true,
+        "Requirement": "Health% < 40 && Level >= 6"
+      }
+    ]
+  },
+
+  "Parallel": {
+    "Sequence": [
+      {
+        "Name": "Food",
+        "Key": "=",
+        "Requirement": "Health% < FOOD_HP%"
+      },
+      {
+        "Name": "Drink",
+        "Key": "F4",
+        "Requirement": "Mana% < DRINK_MANA%"
+      }
+    ]
+  },
+
+  "NPC": {
+    "Sequence": [
+      {
+        "Cost": 6,
+        "Name": "Repair",
+        "Key": "C",
+        "Requirement": "Durability% < 35"
+      },
+      {
+        "Cost": 6,
+        "Name": "Sell",
+        "Key": "C",
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ]
+      }
+    ]
+  }
+}

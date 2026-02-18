@@ -1,74 +1,349 @@
+using Microsoft.Extensions.Options;
+
+using SharedLib;
+
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 
 #nullable enable
 
-namespace Game
+namespace Game;
+
+public sealed class WowProcess
 {
-    public class WowProcess
+    private static readonly string[] defaultProcessNames = [
+        "Wow",
+        "WowClassic",
+        "WowClassicT",
+        "Wow-64",
+        "WowClassicB"
+    ];
+
+    private readonly Thread? thread;
+    private readonly CancellationToken token;
+
+    public Version FileVersion { get; private set; } = new Version(0, 0, 0, 0);
+
+    public string Path { get; private set; } = string.Empty;
+
+    private Process? process;
+
+    private int id = -1;
+    public int Id
     {
-        private Process _warcraftProcess;
-        public Process WarcraftProcess
+        get => id;
+        set
         {
-            get
+            id = value;
+            process = Process.GetProcessById(id);
+        }
+    }
+
+    public string ProcessName => process?.ProcessName ?? "Unknown";
+
+    public IntPtr MainWindowHandle => process?.MainWindowHandle ?? IntPtr.Zero;
+
+    public bool IsRunning { get; private set; }
+
+    /// <summary>
+    /// Indicates that this WowProcess was created in configuration mode without a running WoW process.
+    /// The polling thread will try to find WoW and update state when it becomes available.
+    /// </summary>
+    public bool IsConfigurationMode { get; private set; }
+
+    /// <summary>
+    /// Event fired when WoW process is found (useful in configuration mode)
+    /// </summary>
+    public event Action? OnProcessFound;
+
+    private WowProcess(CancellationTokenSource cts, int pid = -1, bool allowConfigurationMode = false)
+    {
+        token = cts.Token;
+
+        Process? p = Get(pid);
+
+        if (p == null)
+        {
+            if (allowConfigurationMode)
             {
-                if (this._warcraftProcess == null)
-                {
-                    var process = Get();
-                    if (process == null)
-                    {
-                        throw new ArgumentOutOfRangeException("Unable to find the Wow process");
-                    }
+                // Configuration mode - WoW not running but we'll poll for it
+                Console.WriteLine("[WowProcess] WoW not found. Starting in configuration mode - will poll for WoW process.");
+                IsRunning = false;
+                IsConfigurationMode = true;
+                process = null;
 
-                    if (process.MainWindowHandle == IntPtr.Zero)
-                    {
-                        throw new NullReferenceException($"Unable read {nameof(process.MainWindowHandle)} {process.ProcessName} - {process.Id} - {process.Handle}");
-                    }
-
-                    this._warcraftProcess = process;
-                }
-
-                return this._warcraftProcess;
+                // Start polling thread to find WoW when it starts
+                thread = new(PollForProcess);
+                thread.Start();
+                return;
+            }
+            else
+            {
+                throw new NullReferenceException(
+                    $"Unable to find {(pid == -1 ? "any" : $"pid={pid}")} " +
+                    $"running World of Warcraft process!");
             }
         }
 
-        private static readonly List<string> defaultProcessNames = 
-            new List<string> { "Wow", "WowClassic", "WowClassicT", "Wow-64", "WowClassicB" };
+        process = p;
+        id = process.Id;
+        IsRunning = true;
+        IsConfigurationMode = false;
+        (Path, FileVersion) = GetProcessInfo();
 
-        public WowProcess()
+        thread = new(PollProcessExited);
+        thread.Start();
+    }
+
+    public WowProcess(CancellationTokenSource cts, IOptions<StartupConfigPid> options) : this(cts, options.Value.Id, allowConfigurationMode: true) { }
+
+    /// <summary>
+    /// Creates a WowProcess, optionally allowing configuration mode if WoW is not running.
+    /// </summary>
+    public static WowProcess Create(CancellationTokenSource cts, int pid = -1, bool allowConfigurationMode = true)
+    {
+        return new WowProcess(cts, pid, allowConfigurationMode);
+    }
+
+    /// <summary>
+    /// Poll for WoW process when it's not initially running (configuration mode)
+    /// </summary>
+    private void PollForProcess()
+    {
+        while (!token.IsCancellationRequested && !IsRunning)
         {
-            var process = Get();
+            Process? p = Get();
+            if (p != null)
+            {
+                Console.WriteLine($"[WowProcess] Found WoW process! PID: {p.Id}, Name: {p.ProcessName}");
+                process = p;
+                id = process.Id;
+                IsRunning = true;
+                IsConfigurationMode = false;
+
+                try
+                {
+                    (Path, FileVersion) = GetProcessInfo();
+                    Console.WriteLine($"[WowProcess] WoW path: {Path}, Version: {FileVersion}");
+                    OnProcessFound?.Invoke();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[WowProcess] Error getting process info: {ex.Message}");
+                    // Continue with the process even if we can't get version info
+                }
+
+                // Switch to the normal polling loop
+                PollProcessExited();
+                return;
+            }
+
+            if (WaitForCancellationOrTimeout(2000))
+            {
+                return;
+            }
+        }
+    }
+
+    private void PollProcessExited()
+    {
+        while (!token.IsCancellationRequested)
+        {
             if (process == null)
             {
-                throw new ArgumentOutOfRangeException("Unable to find the Wow process");
-            }
-
-            if (process.MainWindowHandle == IntPtr.Zero)
-            {
-                throw new NullReferenceException($"Unable read {nameof(process.MainWindowHandle)} {process.ProcessName} - {process.Id} - {process.Handle}");
-            }
-
-            this._warcraftProcess = process;
-        }
-
-        //Get the wow-process, if success returns the process else null
-        public static Process? Get(string name = "")
-        {
-            var names = string.IsNullOrEmpty(name) ? defaultProcessNames : new List<string> { name };
-
-            var processList = Process.GetProcesses();
-            foreach (var p in processList)
-            {
-                if (names.Contains(p.ProcessName))
+                // Process was never found, shouldn't happen in this code path
+                if (WaitForCancellationOrTimeout(5000))
                 {
-                    return p;
+                    return;
+                }
+                continue;
+            }
+
+            process.Refresh();
+            if (process.HasExited)
+            {
+                IsRunning = false;
+
+                Process? p = Get();
+                if (p != null)
+                {
+                    process = p;
+                    id = process.Id;
+                    IsRunning = true;
+                    try
+                    {
+                        (Path, FileVersion) = GetProcessInfo();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[WowProcess] Error getting process info after reconnect: {ex.Message}");
+                    }
                 }
             }
 
-            //logger.Error($"Failed to find the wow process, tried: {string.Join(", ", names)}");
+            if (WaitForCancellationOrTimeout(5000))
+            {
+                return;
+            }
+        }
+    }
 
+    private bool WaitForCancellationOrTimeout(int millisecondsTimeout)
+    {
+        try
+        {
+            // WaitHandle is signaled when the token is cancelled.
+            return token.WaitHandle.WaitOne(millisecondsTimeout);
+        }
+        catch (ObjectDisposedException)
+        {
+            // The CancellationTokenSource was disposed while our background thread is still unwinding.
+            // Treat this as a shutdown signal and exit the polling loop gracefully.
+            return true;
+        }
+    }
+
+    public static Process? Get(int processId = -1)
+    {
+        if (processId != -1)
+        {
+            try
+            {
+                return Process.GetProcessById(processId);
+            }
+            catch (ArgumentException)
+            {
+                // Process doesn't exist or access denied
+                return null;
+            }
+        }
+
+        Process[] processList;
+        try
+        {
+            processList = Process.GetProcesses();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[WowProcess] Failed to enumerate processes: {ex.Message}");
             return null;
         }
+
+        Console.WriteLine($"[WowProcess] Searching {processList.Length} processes for WoW...");
+
+        Process? foundProcess = null;
+        for (int i = 0; i < processList.Length; i++)
+        {
+            Process p = processList[i];
+            string? procName = null;
+
+            try
+            {
+                procName = p.ProcessName;
+            }
+            catch (Exception)
+            {
+                // Skip processes we can't access
+                continue;
+            }
+
+            if (string.IsNullOrEmpty(procName))
+                continue;
+
+            for (int j = 0; j < defaultProcessNames.Length; j++)
+            {
+                // Check if process name matches any of our default names
+                if (procName.Equals(defaultProcessNames[j], StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine($"[WowProcess] Found WoW process: {procName} (PID: {p.Id})");
+                    foundProcess = p;
+                    break;
+                }
+            }
+
+            if (foundProcess != null)
+                break;
+        }
+
+        // Dispose all processes except the one we found
+        for (int i = 0; i < processList.Length; i++)
+        {
+            Process p = processList[i];
+            if (p != foundProcess)
+            {
+                p.Dispose();
+            }
+        }
+
+        if (foundProcess != null)
+            return foundProcess;
+
+        // Log what we were looking for vs what we found
+        Console.WriteLine($"[WowProcess] WoW not found. Looking for: {string.Join(", ", defaultProcessNames)}");
+
+        return null;
+    }
+
+    private (string path, Version version) GetProcessInfo()
+    {
+        // Try WinAPI first
+        string? path = WinAPI.ExecutablePath.Get(process);
+
+        // If WinAPI fails or returns empty, try MainModule
+        if (string.IsNullOrEmpty(path))
+        {
+            try
+            {
+                // MainModule can be null due to permissions or process state
+                // Suppress CS8602: We're in a try-catch block, null dereference is safe
+#pragma warning disable CS8602
+                if (process.MainModule != null && !string.IsNullOrEmpty(process.MainModule.FileName))
+                {
+                    path = System.IO.Path.GetDirectoryName(process.MainModule.FileName);
+                }
+#pragma warning restore CS8602
+            }
+            catch
+            {
+                // MainModule access can fail due to permissions
+            }
+        }
+
+        // If we still don't have a path, throw
+        if (string.IsNullOrEmpty(path))
+        {
+#pragma warning disable CS8602 // Dereference of a possibly null reference - safe because we provide fallback with ??
+            string processName = process.ProcessName ?? "Unknown";
+#pragma warning restore CS8602
+            throw new NullReferenceException(
+                $"Unable to identify World of Warcraft process path! " +
+                $"Process ID: {process.Id}, Process Name: {processName}. " +
+                $"Try running the bot as Administrator.");
+        }
+
+        // Construct full executable path
+#pragma warning disable CS8602 // Dereference of a possibly null reference - safe because we provide fallback with ??
+        string exeName = (process.ProcessName ?? "WowClassic") + ".exe";
+#pragma warning restore CS8602
+        var exePath = System.IO.Path.Join(path, exeName);
+
+        // Verify the file exists
+        if (!System.IO.File.Exists(exePath))
+        {
+            throw new System.IO.FileNotFoundException(
+                $"WoW executable not found at expected location: {exePath}. " +
+                $"Process Name: {process.ProcessName}, Path: {path}");
+        }
+
+        FileVersionInfo info = FileVersionInfo.GetVersionInfo(exePath);
+
+        if (info.FileMajorPart > 0)
+        {
+            Version v = new(info.FileMajorPart, info.FileMinorPart, info.FileBuildPart, info.FilePrivatePart);
+            return (path, v);
+        }
+
+        return (path, new Version());
     }
 }

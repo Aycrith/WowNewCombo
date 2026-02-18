@@ -1,35 +1,21 @@
 ﻿using System.Drawing;
 
-namespace SharedLib.Extensions
+namespace SharedLib.Extensions;
+
+public static class RectangleExt
 {
-    public static class RectangleExt
+    public static Point Centre(this Rectangle r)
     {
-        public static Point Centre(this Rectangle r)
-        {
-            return new Point(r.Left + r.Width / 2, r.Top + r.Height / 2);
-        }
-
-        public static Point BottomCentre(this Rectangle r)
-        {
-            return new Point(r.Left + r.Width / 2, r.Bottom);
-        }
-
-        public static float SqrDistance(Point p1, Point p2)
-        {
-            return ((p1.X - p2.X) * (p1.X - p2.X)) + ((p1.Y - p2.Y) * (p1.Y - p2.Y));
-        }
+        return new Point(r.Left + r.Width / 2, r.Top + r.Height / 2);
     }
 
-    public static class PointExt
+    public static Point Max(this Rectangle r)
     {
-        public static Point Scale(this Point p, float scale)
-        {
-            return new Point((int)(p.X * scale), (int)(p.Y * scale));
-        }
+        return new Point(r.Left + r.Width, r.Top + r.Height);
+    }
 
-        public static Point Scale(this Point p, float scaleX, float scaleY)
-        {
-            return new Point((int)(p.X * scaleX), (int)(p.Y * scaleY));
-        }
+    public static Point BottomCentre(this Rectangle r)
+    {
+        return new Point(r.Left + r.Width / 2, r.Bottom);
     }
 }

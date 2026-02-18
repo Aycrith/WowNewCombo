@@ -1,149 +1,78 @@
 ﻿using System;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using System.Numerics;
+using System.Runtime.CompilerServices;
 
-namespace Core
+namespace Core;
+
+/// <summary>
+/// Contains a variety of methods useful in generating image hashes for image comparison
+/// and recognition.
+/// https://github.com/jforshee/ImageHashing
+/// Credit for the AverageHash implementation to David Oftedal of the University of Oslo.
+/// </summary>
+public static class ImageHashing
 {
     /// <summary>
-    /// Contains a variety of methods useful in generating image hashes for image comparison
-    /// and recognition.
-    /// https://github.com/jforshee/ImageHashing
-    /// Credit for the AverageHash implementation to David Oftedal of the University of Oslo.
+    /// Computes the average hash of an image according to the algorithm given by Dr. Neal Krawetz
+    /// on his blog: http://www.hackerfactor.com/blog/index.php?/archives/432-Looks-Like-It.html.
     /// </summary>
-    public static class ImageHashing
+    /// <param name="image">The image to hash.</param>
+    /// <returns>The hash of the image.</returns> 
+    [SkipLocalsInit]
+    public static unsafe ulong AverageHash(Bitmap image, Bitmap scaled, Graphics g)
     {
-        /// <summary>
-        /// Bitcounts array used for BitCount method (used in Similarity comparisons).
-        /// Don't try to read this or understand it, I certainly don't. Credit goes to
-        /// David Oftedal of the University of Oslo, Norway for this.
-        /// http://folk.uio.no/davidjo/computing.php
-        /// </summary>
-        private static byte[] bitCounts = {
-            0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,1,2,2,3,2,3,3,4,
-            2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,
-            2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,
-            4,5,5,6,5,6,6,7,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,
-            2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,2,3,3,4,3,4,4,5,
-            3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,
-            4,5,5,6,5,6,6,7,5,6,6,7,6,7,7,8
-        };
+        Rectangle rect = new(0, 0, 8, 8);
+        g.Clear(Color.Transparent);
+        g.DrawImage(image, rect);
 
-        /// <summary>
-        /// Counts bits (duh). Utility function for similarity.
-        /// I wouldn't try to understand this. I just copy-pasta'd it
-        /// from Oftedal's implementation. It works.
-        /// </summary>
-        /// <param name="num">The hash we are counting.</param>
-        /// <returns>The total bit count.</returns>
-        private static uint BitCount(ulong num)
+        // Reduce colors to 6-bit grayscale and calculate average color value
+        Span<byte> grayscale = stackalloc byte[64];
+
+        const int bytesPerPixel = 4; //Image.GetPixelFormatSize(squeezed.PixelFormat) / 8;
+        BitmapData data = scaled.LockBits(rect, ImageLockMode.ReadOnly, scaled.PixelFormat);
+
+        uint averageValue = 0;
+        for (int i = 0; i < 64; i++)
         {
-            uint count = 0;
-            for (; num > 0; num >>= 8)
-                count += bitCounts[(num & 0xff)];
-            return count;
+            byte* pixel = (byte*)data.Scan0 + (data.Stride * i / 8) + (bytesPerPixel * i % 8);
+            uint argb = (uint)(pixel[0] | (pixel[1] << 8) | (pixel[2] << 16) | (pixel[3] << 24));
+            uint gray = (argb & 0x00ff0000) >> 16;
+            gray += (argb & 0x0000ff00) >> 8;
+            gray += (argb & 0x000000ff);
+            gray >>= 2; // divide by 12
+
+            grayscale[i] = (byte)gray;
+            averageValue += gray;
         }
+        scaled.UnlockBits(data);
 
-        /// <summary>
-        /// Computes the average hash of an image according to the algorithm given by Dr. Neal Krawetz
-        /// on his blog: http://www.hackerfactor.com/blog/index.php?/archives/432-Looks-Like-It.html.
-        /// </summary>
-        /// <param name="image">The image to hash.</param>
-        /// <returns>The hash of the image.</returns>
-        public static ulong AverageHash(Image image)
+        averageValue /= 64;
+
+        // Compute the hash: each bit is a pixel
+        // 1 = higher than average, 0 = lower than average
+        ulong hash = 0;
+        for (int i = 0; i < 64; i++)
         {
-            // Squeeze the image into an 8x8 canvas
-            Bitmap squeezed = new Bitmap(8, 8, PixelFormat.Format32bppRgb);
-            Graphics canvas = Graphics.FromImage(squeezed);
-            canvas.CompositingQuality = CompositingQuality.HighQuality;
-            canvas.InterpolationMode = InterpolationMode.HighQualityBilinear;
-            canvas.SmoothingMode = SmoothingMode.HighQuality;
-            canvas.DrawImage(image, 0, 0, 8, 8);
-
-            // Reduce colors to 6-bit grayscale and calculate average color value
-            byte[] grayscale = new byte[64];
-            uint averageValue = 0;
-            for (int y = 0; y < 8; y++)
-                for (int x = 0; x < 8; x++)
-                {
-                    uint pixel = (uint)squeezed.GetPixel(x, y).ToArgb();
-                    uint gray = (pixel & 0x00ff0000) >> 16;
-                    gray += (pixel & 0x0000ff00) >> 8;
-                    gray += (pixel & 0x000000ff);
-                    gray /= 12;
-
-                    grayscale[x + (y * 8)] = (byte)gray;
-                    averageValue += gray;
-                }
-            averageValue /= 64;
-
-            // Compute the hash: each bit is a pixel
-            // 1 = higher than average, 0 = lower than average
-            ulong hash = 0;
-            for (int i = 0; i < 64; i++)
+            if (grayscale[i] >= averageValue)
             {
-                if (grayscale[i] >= averageValue)
-                {
-                    hash |= (1UL << (63 - i));
-                }
+                hash |= 1UL << (63 - i);
             }
-
-            squeezed.Dispose();
-
-            return hash;
         }
 
-        /// <summary>
-        /// Computes the average hash of the image content in the given file.
-        /// </summary>
-        /// <param name="path">Path to the input file.</param>
-        /// <returns>The hash of the input file's image content.</returns>
-        public static ulong AverageHash(String path)
-        {
-            Bitmap bmp = new Bitmap(path);
-            var result = AverageHash(bmp);
-            bmp.Dispose();
-            return result;
-        }
+        return hash;
+    }
 
-        /// <summary>
-        /// Returns a percentage-based similarity value between the two given hashes. The higher
-        /// the percentage, the closer the hashes are to being identical.
-        /// </summary>
-        /// <param name="hash1">The first hash.</param>
-        /// <param name="hash2">The second hash.</param>
-        /// <returns>The similarity percentage.</returns>
-        public static double Similarity(ulong hash1, ulong hash2)
-        {
-            return ((64 - BitCount(hash1 ^ hash2)) * 100) / 64.0;
-        }
-
-        /// <summary>
-        /// Returns a percentage-based similarity value between the two given images. The higher
-        /// the percentage, the closer the images are to being identical.
-        /// </summary>
-        /// <param name="image1">The first image.</param>
-        /// <param name="image2">The second image.</param>
-        /// <returns>The similarity percentage.</returns>
-        public static double Similarity(Image image1, Image image2)
-        {
-            ulong hash1 = AverageHash(image1);
-            ulong hash2 = AverageHash(image2);
-            return Similarity(hash1, hash2);
-        }
-
-        /// <summary>
-        /// Returns a percentage-based similarity value between the image content of the two given
-        /// files. The higher the percentage, the closer the image contents are to being identical.
-        /// </summary>
-        /// <param name="image1">The first image file.</param>
-        /// <param name="image2">The second image file.</param>
-        /// <returns>The similarity percentage.</returns>
-        public static double Similarity(String path1, String path2)
-        {
-            ulong hash1 = AverageHash(path1);
-            ulong hash2 = AverageHash(path2);
-            return Similarity(hash1, hash2);
-        }
+    /// <summary>
+    /// Returns a percentage-based similarity value between the two given hashes. The higher
+    /// the percentage, the closer the hashes are to being identical.
+    /// </summary>
+    /// <param name="hash1">The first hash.</param>
+    /// <param name="hash2">The second hash.</param>
+    /// <returns>The similarity percentage.</returns>
+    public static double Similarity(ulong hash1, ulong hash2)
+    {
+        return (64.0 - (uint)BitOperations.PopCount(hash1 ^ hash2)) * 100.0 / 64.0;
     }
 }

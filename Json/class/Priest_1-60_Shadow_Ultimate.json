@@ -1,0 +1,492 @@
+{
+  "ClassName": "Priest",
+  "Log": false,
+  "Loot": true,
+  "Skin": false,
+  "GatherCorpse": true,
+  "UseMount": true,
+  "AllowPvP": false,
+  "KeyboardOnly": true,
+  "NPCMaxLevels_Above": 2,
+  "NPCMaxLevels_Below": 8,
+  "PathThereAndBack": true,
+  "PathReduceSteps": true,
+  "Mount": { "Key": "N0" },
+
+  "IntVariables": {
+    "MIN_TARGET_HP%": 20,
+    "MIN_HP_HEAL%": 40,
+    "MIN_HP_FLASH%": 30,
+    "MIN_MANA_OFFENSIVE%": 40,
+    "MIN_MANA_DRINK%": 25,
+    "MIN_HP_EAT%": 40,
+    "FLEE_MOB_COUNT": 2,
+    "FLEE_HP_LOW%": 20,
+    "SHIELD_HP%": 70,
+    "RENEW_HP%": 60,
+    "FADE_MOB_COUNT": 2,
+    "Debuff_Weakened_Soul": 6788
+  },
+
+  "Paths": [
+    {
+      "PathFilename": "_pack\\1-20\\Human\\01-04_Elwynn Forest_Northshire Valley (kobold-wolves-defias).json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Human\\05-09_Elwynn Forest_Farms Tour (pigs, bears, humans).json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 5", "Level < 10", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Human\\10-14_Westfall_beta.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 10", "Level < 15", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Human\\15-18_Westfall_The Dagger Hills (defias).json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 15", "Level < 18", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Human\\18-20_Duskwood_The Darkened Bank - wolves spiders.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 18", "Level < 21", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Dwarf.Gnome\\1-4_Dun Morogh.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Dwarf"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Night elf\\01-04_Teldrassil_Shadowglen.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:NightElf"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Draenei\\1-5_Azuremyst Isle.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Draenei"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Troll.Orc\\1-5_Durotar_Valley of Trials.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Troll"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Undead\\01-05_Tirisfal Glades_Deathknell.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Undead"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Blood elf\\01-06_Eversong Woods_Sunstrider Isle.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 6", "Race:BloodElf"]
+    },
+    {
+      "PathFilename": "_pack\\20-30\\Duskwood\\21-24 Tranquil Gardens.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 20", "Level < 25"]
+    },
+    {
+      "PathFilename": "_pack\\20-30\\Duskwood\\25-30 Vul Gol Ogre Mound.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 25", "Level < 30"]
+    },
+    {
+      "PathFilename": "_pack\\30-40\\Desolace\\30-33 Sargeron Satyrs.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 30", "Level < 35"]
+    },
+    {
+      "PathFilename": "_pack\\30-40\\Arathi Highlands\\35-37 Near Bolderfist Hall Raptor Bird Spider Ogre.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 35", "Level < 40"]
+    },
+    {
+      "PathFilename": "_pack\\40-50\\Tanaris\\40-43 Tanaris - Steamwheedle Port walk.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 40", "Level < 45"]
+    },
+    {
+      "PathFilename": "_pack\\40-50\\Feralas\\46-50 Woodpaw Hills.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 45", "Level < 50"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Azshara\\50-53 Azshara Legash Encampment.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 50", "Level < 54"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Winterspring\\56-58 Winterfall Village.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 54", "Level < 58"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Eastern Plaguelands\\57-60 Browman Mill - Noxious Glade.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 57", "Level <= 60"]
+    }
+  ],
+
+  "Wait": {
+    "Sequence": [
+      {
+        "Cost": 0.9,
+        "Name": "User",
+        "Requirement": "MenuOpen || ChatInputVisible"
+      }
+    ]
+  },
+
+  "Pull": {
+    "Sequence": [
+      {
+        "Name": "Power Word: Shield",
+        "Key": "6",
+        "WhenUsable": true,
+        "AfterCastWaitBuff": true,
+        "AfterCastWaitGCD": true,
+        "Requirements": [
+          "!Weakened Soul",
+          "!Shield",
+          "Level >= 6"
+        ]
+      },
+      {
+        "Name": "Vampiric Embrace",
+        "Key": "N2",
+        "WhenUsable": true,
+        "AfterCastWaitBuff": true,
+        "Requirements": [
+          "!Vampiric Embrace",
+          "Level >= 20"
+        ]
+      },
+      {
+        "Name": "Shadow Word: Pain",
+        "Key": "5",
+        "BeforeCastStop": true,
+        "BeforeCastFaceTarget": true,
+        "AfterCastAuraExpected": true,
+        "AfterCastWaitBuff": true,
+        "Requirements": [
+          "Mana% > MIN_MANA_OFFENSIVE%",
+          "Level >= 4"
+        ]
+      },
+      {
+        "Name": "Mind Blast",
+        "Key": "N1",
+        "HasCastBar": true,
+        "WhenUsable": true,
+        "Requirements": [
+          "Mana% > MIN_MANA_OFFENSIVE%",
+          "Level >= 10"
+        ]
+      },
+      {
+        "Name": "Smite",
+        "Key": "2",
+        "HasCastBar": true,
+        "Requirements": [
+          "Mana% > MIN_MANA_OFFENSIVE%"
+        ]
+      },
+      {
+        "Name": "Shoot",
+        "Key": "0",
+        "Item": true,
+        "AfterCastDelay": 500,
+        "Requirements": [
+          "HasRangedWeapon",
+          "!Shooting"
+        ]
+      },
+      {
+        "Name": "Approach",
+        "Requirements": [
+          "InMeleeRange || MIN_MANA_OFFENSIVE% < Mana%",
+          "!Casting",
+          "!Shooting"
+        ]
+      }
+    ]
+  },
+
+  "Combat": {
+    "Sequence": [
+      {
+        "Name": "Desperate Prayer",
+        "Key": "F1",
+        "WhenUsable": true,
+        "Requirement": "Health% < 25"
+      },
+      {
+        "Name": "Gift of the Naaru",
+        "Key": "F2",
+        "HasCastBar": true,
+        "WhenUsable": true,
+        "Requirements": [
+          "Race:Draenei",
+          "Health% < 40"
+        ]
+      },
+      {
+        "Name": "Fade",
+        "Key": "N5",
+        "WhenUsable": true,
+        "Requirement": "MobCount >= FADE_MOB_COUNT && Level >= 8"
+      },
+      {
+        "Name": "Psychic Scream",
+        "Key": "N6",
+        "WhenUsable": true,
+        "Requirements": [
+          "MobCount >= 2",
+          "Health% < 40",
+          "Level >= 14"
+        ]
+      },
+      {
+        "Name": "Power Word: Shield",
+        "Key": "6",
+        "WhenUsable": true,
+        "Requirements": [
+          "Health% < SHIELD_HP%",
+          "!Weakened Soul",
+          "!Shield",
+          "Level >= 6"
+        ]
+      },
+      {
+        "Name": "Renew",
+        "Key": "4",
+        "Requirements": [
+          "!Renew",
+          "Health% < RENEW_HP%",
+          "Mana% > MIN_HP_HEAL%",
+          "Level >= 8"
+        ]
+      },
+      {
+        "Name": "Flash Heal",
+        "Key": "7",
+        "HasCastBar": true,
+        "Requirements": [
+          "Shield",
+          "Health% < MIN_HP_FLASH%",
+          "Mana% > MIN_HP_HEAL%",
+          "Level >= 20"
+        ]
+      },
+      {
+        "Name": "Lesser Heal",
+        "Key": "3",
+        "HasCastBar": true,
+        "Requirements": [
+          "Health% < MIN_HP_HEAL%",
+          "!Shield",
+          "Mana% > MIN_HP_HEAL%",
+          "Level < 20"
+        ]
+      },
+      {
+        "Name": "Shadowform",
+        "Key": "N3",
+        "WhenUsable": true,
+        "Requirement": "!Shadowform && Level >= 40"
+      },
+      {
+        "Name": "Vampiric Touch",
+        "Key": "N7",
+        "HasCastBar": true,
+        "WhenUsable": true,
+        "Requirements": [
+          "!Vampiric Touch",
+          "TargetHealth% > 50",
+          "Level >= 50"
+        ]
+      },
+      {
+        "Name": "Shadow Word: Pain",
+        "Key": "5",
+        "WhenUsable": true,
+        "Requirements": [
+          "!Shadow Word: Pain",
+          "TargetHealth% > 30",
+          "Level >= 4"
+        ]
+      },
+      {
+        "Name": "Mind Blast",
+        "Key": "N1",
+        "HasCastBar": true,
+        "WhenUsable": true,
+        "Requirement": "Mana% > MIN_MANA_OFFENSIVE% && Level >= 10"
+      },
+      {
+        "Name": "Shadow Word: Death",
+        "Key": "N8",
+        "WhenUsable": true,
+        "Requirements": [
+          "TargetHealth% < 25",
+          "Health% > 40",
+          "Level >= 62"
+        ]
+      },
+      {
+        "Name": "Mind Flay",
+        "Key": "N4",
+        "HasCastBar": true,
+        "WhenUsable": true,
+        "Requirements": [
+          "Mana% > MIN_MANA_OFFENSIVE%",
+          "!InMeleeRange",
+          "Level >= 20"
+        ]
+      },
+      {
+        "Name": "Smite",
+        "Key": "2",
+        "HasCastBar": true,
+        "Requirements": [
+          "!Shadowform",
+          "Mana% > MIN_MANA_OFFENSIVE%",
+          "!InMeleeRange || Shield",
+          "TargetHealth% > MIN_TARGET_HP%"
+        ]
+      },
+      {
+        "Name": "Shoot",
+        "Key": "0",
+        "Item": true,
+        "AfterCastDelay": 500,
+        "Requirements": [
+          "HasRangedWeapon",
+          "!Shooting"
+        ]
+      },
+      {
+        "Name": "AutoAttack",
+        "Requirements": [
+          "!HasRangedWeapon",
+          "!Casting",
+          "!Shooting"
+        ]
+      },
+      {
+        "Name": "Approach",
+        "Requirements": [
+          "InMeleeRange || Mana% < MIN_MANA_OFFENSIVE%",
+          "!Casting",
+          "!Shooting",
+          "AutoAttacking"
+        ]
+      }
+    ]
+  },
+
+  "Flee": {
+    "Sequence": [
+      {
+        "Name": "Flee",
+        "Requirement": "(MobCount > FLEE_MOB_COUNT && Health% < FLEE_HP_LOW%) || TargetElite"
+      }
+    ]
+  },
+
+  "Adhoc": {
+    "Sequence": [
+      {
+        "Cost": 3,
+        "Name": "Power Word: Fortitude",
+        "Key": "9",
+        "WhenUsable": true,
+        "InCombat": "i dont care",
+        "Requirement": "!Fortitude && Level >= 1"
+      },
+      {
+        "Cost": 3,
+        "Name": "Inner Fire",
+        "Key": "8",
+        "WhenUsable": true,
+        "InCombat": "i dont care",
+        "Requirement": "!Inner Fire && Level >= 12"
+      },
+      {
+        "Cost": 3,
+        "Name": "Divine Spirit",
+        "Key": "F3",
+        "WhenUsable": true,
+        "InCombat": "i dont care",
+        "Requirement": "!Divine Spirit && Level >= 30"
+      },
+      {
+        "Cost": 3,
+        "Name": "Shadow Protection",
+        "Key": "F4",
+        "WhenUsable": true,
+        "InCombat": "i dont care",
+        "Requirement": "!Shadow Protection && Level >= 30"
+      }
+    ]
+  },
+
+  "Parallel": {
+    "Sequence": [
+      {
+        "Name": "Food",
+        "Key": "=",
+        "Requirement": "Health% < MIN_HP_EAT%"
+      },
+      {
+        "Name": "Drink",
+        "Key": "-",
+        "Requirement": "Mana% < MIN_MANA_DRINK%"
+      }
+    ]
+  },
+
+  "NPC": {
+    "Sequence": [
+      {
+        "Cost": 6,
+        "Name": "Repair",
+        "Key": "C",
+        "Requirement": "Durability% < 35"
+      },
+      {
+        "Cost": 6,
+        "Name": "Sell",
+        "Key": "C",
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ]
+      }
+    ]
+  }
+}

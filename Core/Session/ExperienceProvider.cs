@@ -1,16 +1,21 @@
-﻿using System.IO;
-using Newtonsoft.Json;
+﻿using static Newtonsoft.Json.JsonConvert;
+using static System.IO.File;
+using static System.IO.Path;
 
-namespace Core.Session
+namespace Core.Session;
+
+public static class ExperienceProvider
 {
-    public static class ExperienceProvider
+    public static int MaxLevel = 60;
+
+    public static int[] Get(DataConfig dataConfig)
     {
-        public static float[] GetExperienceList()
-        {
-            var dataConfig = new DataConfig();
-            var json = File.ReadAllText($"{dataConfig.Experience}exp_tbc.json");
-            var expList = JsonConvert.DeserializeObject<float[]>(json);
-            return expList;
-        }
+        string json = ReadAllText(Join(dataConfig.ExpExperience, "exp.json"));
+
+        int[] array = DeserializeObject<int[]>(json) ?? [];
+
+        MaxLevel = array.Length + 1;
+
+        return array;
     }
 }

@@ -4,13 +4,21 @@
   "PathFilename": "_pack\\1-20\\Draenei\\1-5_Azuremyst Isle.json",
   "PathThereAndBack": true,
   "PathReduceSteps": true,
+  "Wait": {
+    "Sequence": [
+      {
+        "Cost": 0.9,
+        "Name": "User",
+        "Requirement": "MenuOpen || ChatInputVisible"
+      }
+    ]
+  },
   "Pull": {
     "Sequence": [
       {
         "Name": "Lightning Bolt",
         "Key": "2",
-        "HasCastBar": true,
-        "MinMana": 15
+        "HasCastBar": true
       }
     ]
   },
@@ -21,30 +29,36 @@
         "Key": "4",
         "HasCastBar": true,
         "WhenUsable": true,
-        "Requirements": ["Race:Draenei", "Health%<50"]
+        "Requirements": [
+          "Race:Draenei",
+          "Health%<50"
+        ]
       },
       {
         "Name": "Healing Wave",
         "Key": "3",
         "Requirement": "Health%<40",
         "Cooldown": 10000,
-        "HasCastBar": true,
-        "MinMana": 25
+        "HasCastBar": true
       },
       {
         "Name": "Lightning Bolt",
         "Key": "2",
         "HasCastBar": true,
-        "MinMana": 15,
-        "Requirement": "not InMeleeRange"
+        "Requirement": "!InMeleeRange"
       },
       {
         "Name": "AutoAttack",
-        "Requirement": "not AutoAttacking"
+        "Requirements": [
+          "!Casting"
+        ]
       },
       {
         "Name": "Approach",
-        "Log": false
+        "Requirements": [
+          "!Casting",
+          "AutoAttacking"
+        ]
       }
     ]
   },
@@ -56,7 +70,7 @@
         "Requirement": "Health%<30"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "-",
         "Requirement": "Mana%<30"
       }

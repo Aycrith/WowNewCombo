@@ -9,8 +9,7 @@
       {
         "Name": "Lightning Bolt",
         "Key": "2",
-        "HasCastBar": true,
-        "MinMana": 15
+        "HasCastBar": true
       }
     ]
   },
@@ -21,7 +20,10 @@
         "Key": "4",
         "HasCastBar": true,
         "WhenUsable": true,
-        "Requirements": ["Race:Draenei", "Health%<50"]
+        "Requirements": [
+          "Race:Draenei",
+          "Health%<50"
+        ]
       },
       {
         "Name": "Healing Wave",
@@ -29,23 +31,26 @@
         "Requirement": "Health%<40",
         "Cooldown": 10000,
         "HasCastBar": true,
-        "Log": false,
-        "MinMana": 25
+        "Log": false
       },
       {
         "Name": "Lightning Bolt",
         "Key": "2",
         "HasCastBar": true,
-        "MinMana": 15,
-        "Requirement": "not InMeleeRange"
+        "Requirement": "!InMeleeRange"
       },
       {
         "Name": "AutoAttack",
-        "Requirement": "not AutoAttacking"
+        "Requirements": [
+          "!Casting"
+        ]
       },
       {
         "Name": "Approach",
-        "Log": false
+        "Requirements": [
+          "!Casting",
+          "AutoAttacking"
+        ]
       }
     ]
   },
@@ -54,8 +59,8 @@
       {
         "Name": "Rockbiter Weapon",
         "Key": "5",
-        "MinMana": 15,
-        "Requirement": "not HasMainHandEnchant"
+        "Requirement": "!HasMainHandEnchant",
+        "AfterCastAuraExpected": true
       }
     ]
   },
@@ -67,7 +72,7 @@
         "Requirement": "Health%<30"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "-",
         "Requirement": "Mana%<30"
       }

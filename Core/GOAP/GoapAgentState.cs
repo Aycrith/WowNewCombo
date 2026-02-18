@@ -1,27 +1,15 @@
-﻿
-namespace Core.GOAP
+﻿using System.Collections.Generic;
+
+namespace Core.GOAP;
+
+public sealed class GoapAgentState
 {
-    public class GoapAgentState
-    {
-        public bool ShouldConsumeCorpse { get; set; }
+    public bool ShouldConsumeCorpse { get; set; }
+    public int LootableCorpseCount { get; set; }
+    public int GatherableCorpseCount { get; set; }
+    public int ConsumableCorpseCount { get; set; }
+    public int LastCombatKillCount { get; set; }
+    public bool Gathering { get; set; }
 
-        public bool NeedLoot { get; set; }
-        public bool NeedSkin { get; set; }
-
-        public int LastCombatKillCount { get; private set; }
-
-        public void IncKillCount()
-        {
-            LastCombatKillCount++;
-        }
-
-        public void DecKillCount()
-        {
-            LastCombatKillCount--;
-            if (LastCombatKillCount < 0)
-            {
-                LastCombatKillCount = 0;
-            }
-        }
-    }
+    public HashSet<int> RecentlyLooted { get; } = [];
 }

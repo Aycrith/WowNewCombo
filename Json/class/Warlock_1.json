@@ -4,13 +4,21 @@
   "PathFilename": "1_Gnome.json",
   "PathThereAndBack": true,
   "PathReduceSteps": false,
+  "Wait": {
+    "Sequence": [
+      {
+        "Cost": 0.9,
+        "Name": "User",
+        "Requirement": "MenuOpen || ChatInputVisible"
+      }
+    ]
+  },
   "Pull": {
     "Sequence": [
       {
         "Name": "Shadow Bolt",
         "Key": "2",
-        "HasCastBar": true,
-        "MinMana": 25
+        "HasCastBar": true
       }
     ]
   },
@@ -19,16 +27,20 @@
       {
         "Name": "Shadow Bolt",
         "HasCastBar": true,
-        "Key": "2",
-        "MinMana": 25
+        "Key": "2"
       },
       {
         "Name": "AutoAttack",
-        "Requirement": "!AutoAttacking"
+        "Requirements": [
+          "!Casting"
+        ]
       },
       {
         "Name": "Approach",
-        "Log": false
+        "Requirements": [
+          "!Casting",
+          "AutoAttacking"
+        ]
       }
     ]
   },
@@ -37,7 +49,6 @@
       {
         "Name": "Demon Skin",
         "Key": "3",
-        "MinMana": 50,
         "Requirement": "!Demon Skin"
       },
       {
@@ -46,7 +57,7 @@
         "Requirement": "Health% < 50"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "-",
         "Requirement": "Mana% < 50"
       }
@@ -57,14 +68,17 @@
       {
         "Name": "Repair",
         "Key": "C",
-        "Requirement": "Items Broken",
+        "Requirement": "Durability% < 35",
         "PathFilename": "1_Gnome_Vendor.json",
         "Cost": 6
       },
       {
         "Name": "Sell",
         "Key": "C",
-        "Requirements": ["BagFull", "BagGreyItem"],
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ],
         "PathFilename": "1_Gnome_Vendor.json",
         "Cost": 6
       }

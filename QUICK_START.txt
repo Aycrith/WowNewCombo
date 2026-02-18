@@ -1,0 +1,314 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║             WowClassicGrindBot - QUICK START CHECKLIST                   ║
+║                                                                            ║
+║  Print this page or bookmark it for easy reference during startup        ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ BEFORE YOU START                                                           │
+└────────────────────────────────────────────────────────────────────────────┘
+
+□ I have World of Warcraft installed
+  Location: C:\Program Files (x86)\World of Warcraft\_anniversary_
+  
+  ⚠ Not found? Download from: https://worldofwarcraft.com
+
+□ I have .NET SDK 10.0 or newer installed
+  Check: Open Command Prompt and type: dotnet --version
+  Should show: 10.0.xxx or higher
+  
+  ⚠ Not found? Download from: https://dotnet.microsoft.com/download
+  Then restart your computer
+
+□ I have extracted bot files to: C:\WowClassicGrindBot
+  Verify: Should contain folders:
+  • BlazorServer
+  • Core
+  • Frontend
+  • Navigation
+  • Addons
+
+□ I have at least 2 GB free disk space
+  Check: Right-click C: drive → Properties
+  Should show: Free space > 2 GB
+
+□ I'm ready to let bot control my character
+  (Bot needs exclusive control while running)
+
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ STEP 1: LAUNCH WORLD OF WARCRAFT                                           │
+└────────────────────────────────────────────────────────────────────────────┘
+
+□ Open Battle.net launcher
+□ Select World of Warcraft
+□ Click "Play" button
+□ Wait for login screen to load
+□ Enter your username and password
+□ Select your realm
+□ Select your character (or create one)
+□ Click "Enter World"
+⚠ WAIT until the game fully loads and you can see the game world
+   (This is CRITICAL - bot needs WoW fully initialized)
+
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ STEP 2: START THE BOT                                                      │
+└────────────────────────────────────────────────────────────────────────────┘
+
+Option A - Easiest (Recommended):
+  □ Open File Explorer
+  □ Navigate to: C:\WowClassicGrindBot
+  □ Double-click: Start.bat
+  □ Watch the colorful startup messages
+
+Option B - From Desktop (if you created shortcut):
+  □ Double-click desktop icon: "WowClassicGrindBot"
+
+Option C - Command Line (Advanced):
+  □ Open Command Prompt
+  □ Navigate: cd C:\WowClassicGrindBot
+  □ Run: BlazorServer\bin\Release\net10.0\BlazorServer.exe
+
+✓ If something goes wrong, see "TROUBLESHOOTING" section below
+
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ STEP 3: WAIT FOR VALIDATION (30-60 seconds)                               │
+└────────────────────────────────────────────────────────────────────────────┘
+
+You should see these checkmarks appear:
+
+  ✓ [STEP 1] Validating Prerequisites...
+      ✓ .NET SDK found
+      ✓ BlazorServer project found
+      ✓ Configuration files OK
+
+  ✓ [STEP 2] Building Project...
+      ✓ Build successful
+
+  ✓ [STEP 3] Checking WoW Installation...
+      ✓ WoW TBC Anniversary found
+
+  ✓ [STEP 4] Checking Navigation Server...
+      ✓ Navigation Server found (optional)
+      ✓ MMAP files available (optional)
+
+  ✓ [STEP 5] Checking DataToColor Addon...
+      ✓ DataToColor addon (optional)
+
+  ⚠ After this, you'll be asked to confirm WoW is ready
+      Press any key to continue
+
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ STEP 4: BROWSER OPENS AUTOMATICALLY                                        │
+└────────────────────────────────────────────────────────────────────────────┘
+
+✓ Browser should open automatically at: http://localhost:5000
+
+If not, manually open:
+  □ Open your web browser
+  □ Type in address bar: http://localhost:5000
+  □ Press Enter
+
+You should see: WowClassicGrindBot Web Interface
+
+✓ Bot is now running! You're done with setup!
+
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ STEP 5: CONFIGURE AND START GRINDING                                       │
+└────────────────────────────────────────────────────────────────────────────┘
+
+In the bot UI:
+
+  □ Select your profile
+  □ Configure grinding settings
+  □ Choose combat options
+  □ Set loot rules
+  □ Click "Start" or appropriate action button
+
+Now the bot will:
+  • Read your character from WoW
+  • Move to grinding location
+  • Kill mobs
+  • Collect loot
+  • Handle inventory
+  • Manage health/mana
+  • Return to vendor/bank as needed
+
+✓ Bot is now grinding! Monitor it periodically.
+
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ STOPPING THE BOT                                                           │
+└────────────────────────────────────────────────────────────────────────────┘
+
+Option A - Normal shutdown:
+  □ Close the dark console window (the bot launcher)
+  □ Or press Ctrl+C in that window
+  □ Wait for graceful shutdown (5-10 seconds)
+
+Option B - Emergency stop:
+  □ Close the console window
+  □ WoW will stop responding to bot
+  □ Manual control returns to you
+
+✓ Always stop bot before closing WoW
+
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ TROUBLESHOOTING QUICK REFERENCE                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+ERROR: "World of Warcraft not running!"
+  □ Make sure WoW is open
+  □ Make sure you're logged into a character
+  □ Make sure you can see the game world
+  □ Close bot, wait 5 seconds, try again
+
+ERROR: ".NET SDK not found"
+  □ Install .NET 10.0+ from https://dotnet.microsoft.com/download
+  □ Restart your computer
+  □ Try bot again
+
+ERROR: "Build failed"
+  □ Right-click Start.bat
+  □ Select "Run as Administrator"
+  □ Try again
+
+ERROR: Browser won't open
+  □ Manually navigate to http://localhost:5000
+  □ This is normal, bot still works
+
+PORT IN USE:
+  □ Another app is using port 5000
+  □ Edit: C:\WowClassicGrindBot\BlazorServer\appsettings.json
+  □ Change: "WebUIPort": 5000 to "WebUIPort": 5001
+  □ Access bot at: http://localhost:5001
+
+For more help:
+  • Read: C:\WowClassicGrindBot\TROUBLESHOOTING.txt
+  • Check: C:\WowClassicGrindBot\out.log
+  • Report: https://github.com/FreeHongKongMMO/WowClassicGrindBot/issues
+
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ IMPORTANT NOTES                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+⚠ MUST READ BEFORE USING:
+
+  1. GAME POLICY
+     • Using automation tools may violate Terms of Service
+     • Accounts using bots can be banned
+     • Use at your own risk on farm/throwaway characters
+     • This is NOT OFFICIAL and NOT ENDORSED by Blizzard
+
+  2. FIRST RUN
+     • Takes longer than subsequent runs (compiling)
+     • Will create configuration files automatically
+     • Addon will auto-install to your WoW installation
+     • Normal and expected!
+
+  3. REQUIREMENTS
+     • WoW MUST be running before bot starts
+     • WoW MUST be fully loaded (in game world)
+     • Character MUST be standing in world
+     • Can't use bot while playing manually
+
+  4. MONITORING
+     • Watch bot initially to ensure it's working correctly
+     • Check back periodically
+     • Keep eye on stats and inventory
+     • Monitor CPU/Memory in Task Manager
+
+  5. UPDATES
+     • Check GitHub for latest version
+     • New features and fixes released regularly
+     • Keep software up to date
+
+  6. COMMUNITY
+     • Join community for help and support
+     • Report bugs on GitHub Issues
+     • Check existing issues before reporting
+     • Include error details when reporting
+
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ YOUR CHECKLIST - MARK THESE OFF                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+SETUP COMPLETION:
+  □ Read and understood the terms
+  □ Have WoW installed and working
+  □ Have .NET 10.0+ installed
+  □ Have bot files extracted to C:\WowClassicGrindBot
+  □ Read README.txt (comprehensive guide)
+  □ Bookmarked TROUBLESHOOTING.txt
+
+FIRST RUN:
+  □ Tested bot successfully (at least once)
+  □ Browser opens automatically (or manually visit localhost:5000)
+  □ Bot can see my character
+  □ Bot ran without errors
+  □ Know how to stop the bot (Ctrl+C)
+  □ Understand monitoring requirements
+
+READY TO GRIND:
+  □ Confident with basic operation
+  □ Know where to find help (TROUBLESHOOTING.txt)
+  □ Know how to report bugs (GitHub Issues)
+  □ Understand the risks
+  □ Ready to start real grinding session
+
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ SUPPORT RESOURCES                                                          │
+└────────────────────────────────────────────────────────────────────────────┘
+
+Documentation:
+  📄 README.txt                    Comprehensive setup and operation guide
+  📄 TROUBLESHOOTING.txt           Solutions for common problems
+  📄 READY_TO_LAUNCH.txt           Quick reference
+  📄 STARTUP_GUIDE.txt             Step-by-step startup guide
+
+Online:
+  🌐 GitHub: https://github.com/FreeHongKongMMO/WowClassicGrindBot
+  🐛 Issues: https://github.com/FreeHongKongMMO/WowClassicGrindBot/issues
+  📚 Wiki:   https://github.com/FreeHongKongMMO/WowClassicGrindBot/wiki
+  💬 Discord: (if available)
+
+Local Help:
+  📋 out.log - Full bot logs and error messages
+  ⚙️  appsettings.json - Configuration file
+
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ QUICK REFERENCE - KEEP THIS HANDY!                                         │
+└────────────────────────────────────────────────────────────────────────────┘
+
+START BOT:          Double-click C:\WowClassicGrindBot\Start.bat
+OPEN BOT UI:        http://localhost:5000
+STOP BOT:           Close launcher window or press Ctrl+C
+VIEW LOGS:          C:\WowClassicGrindBot\out.log
+READ HELP:          C:\WowClassicGrindBot\TROUBLESHOOTING.txt
+GET SUPPORT:        https://github.com/FreeHongKongMMO/WowClassicGrindBot/issues
+CHECK .NET:         Open Command Prompt, type: dotnet --version
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                         YOU'RE ALL SET!                                   ║
+║                                                                            ║
+║  Your WowClassicGrindBot is ready to go. Happy grinding!                 ║
+║                                                                            ║
+║  Remember: This is unofficial automation software. Use at your own risk   ║
+║  on farm/throwaway characters. Respect the game and its community.        ║
+║                                                                            ║
+║  For any issues, check TROUBLESHOOTING.txt first, then GitHub.            ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝

@@ -1,56 +1,41 @@
 ﻿using Core.GOAP;
+
+using System;
 using System.Collections.Generic;
-using System.Threading;
-using Core.Session;
-using Game;
 
-namespace Core
+namespace Core;
+
+public interface IBotController
 {
-    public interface IBotController
-    {
-        DataConfig DataConfig { get; set; }
-        AddonReader AddonReader { get; set; }
-        Thread? screenshotThread { get; set; }
-        Thread addonThread { get; set; }
-        Thread? botThread { get; set; }
-        //GoalFactory ActionFactory { get; set; }
-        GoapAgent? GoapAgent { get; set; }
-        RouteInfo? RouteInfo { get; set; }
-        WowScreen WowScreen { get; set; }
-        WowProcessInput WowProcessInput { get; set; }
-        ConfigurableInput? ConfigurableInput { get; set; }
-        ClassConfiguration? ClassConfig { get; set; }
-        IImageProvider? MinimapImageFinder { get; set; }
+    bool IsBotActive { get; }
+    string SelectedClassFilename { get; }
+    Dictionary<int, string> SelectedPathFilename { get; }
+    ClassConfiguration? ClassConfig { get; }
+    GoapAgent? GoapAgent { get; }
+    RouteInfo? RouteInfo { get; }
+    double AvgScreenLatency { get; }
+    double AvgNPCLatency { get; }
 
-        ExecGameCommand ExecGameCommand { get; set; }
+    event Action? ProfileLoaded;
+    event Action? StatusChanged;
 
-        ActionBarPopulator? ActionBarPopulator { get; set; }
-        public IGrindSession GrindSession { get; set; }
+    ClassConfiguration ResolveLoadedProfile();
 
-        string SelectedClassFilename { get; set; }
-        string? SelectedPathFilename { get; set; }
+    void ToggleBotStatus();
 
-        event System.EventHandler? ProfileLoaded;
-        event System.EventHandler<bool> StatusChanged;
+    void MinimapNodeFound();
 
-        double AvgScreenLatency { get; }
-        double AvgNPCLatency { get; }
+    void Shutdown();
 
-        void ToggleBotStatus();
-        void StopBot();
+    IEnumerable<string> ClassFiles();
 
-        void Shutdown();
+    IEnumerable<string> PathFiles();
 
-        bool IsBotActive { get; }
+    void LoadClassProfile(string classFilename);
 
-        List<string> ClassFileList();
+    void LoadPathProfile(Dictionary<int, string> pathFilenames);
 
-        void LoadClassProfile(string classFilename);
+    void OverrideClassConfig(ClassConfiguration classConfig);
 
-        List<string> PathFileList();
-
-        void LoadPathProfile(string pathFilename);
-
-        void OverrideClassConfig(ClassConfiguration classConfiguration);
-    }
+    void SaveClassConfig();
 }

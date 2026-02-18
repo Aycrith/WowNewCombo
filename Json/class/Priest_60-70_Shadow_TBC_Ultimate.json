@@ -1,0 +1,365 @@
+{
+  "ClassName": "Priest",
+  "Log": false,
+  "Loot": true,
+  "Skin": false,
+  "GatherCorpse": true,
+  "UseMount": true,
+  "AllowPvP": false,
+  "KeyboardOnly": true,
+  "NPCMaxLevels_Above": 2,
+  "NPCMaxLevels_Below": 6,
+  "PathThereAndBack": true,
+  "PathReduceSteps": true,
+  "Mount": { "Key": "N0" },
+
+  "IntVariables": {
+    "MIN_TARGET_HP%": 20,
+    "MIN_HP_HEAL%": 35,
+    "MIN_HP_FLASH%": 25,
+    "MIN_MANA_OFFENSIVE%": 35,
+    "MIN_MANA_DRINK%": 25,
+    "MIN_HP_EAT%": 40,
+    "FLEE_MOB_COUNT": 2,
+    "FLEE_HP_LOW%": 15,
+    "SHIELD_HP%": 65,
+    "RENEW_HP%": 55,
+    "FADE_MOB_COUNT": 2,
+    "SW_DEATH_HP%": 25
+  },
+
+  "Paths": [
+    {
+      "PathFilename": "_pack\\60-70\\Hellfire Peninsula\\58-60 Pools of Aggonar.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 58", "Level < 61"]
+    },
+    {
+      "PathFilename": "_pack\\60-70\\Hellfire Peninsula\\60-62 Expedition Armory.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 60", "Level < 63"]
+    },
+    {
+      "PathFilename": "_pack\\60-70\\Zangarmarsh\\62-63 Boglash.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 62", "Level < 64"]
+    },
+    {
+      "PathFilename": "_pack\\60-70\\Zangarmarsh\\63-65 Umbrafen Lake.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 63", "Level < 65"]
+    },
+    {
+      "PathFilename": "_pack\\60-70\\Nagrand\\64-67 Sunspring Post.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 64", "Level < 67"]
+    },
+    {
+      "PathFilename": "_pack\\60-70\\Nagrand\\65-70 Oshugun.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 65", "Level < 68"]
+    },
+    {
+      "PathFilename": "_pack\\60-70\\Blade's Edge Mountains\\67-69 Bladespire Hold.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 67", "Level < 70"]
+    },
+    {
+      "PathFilename": "_pack\\60-70\\Netherstorm\\68-70 Area 52.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 68", "Level <= 70"]
+    }
+  ],
+
+  "Wait": {
+    "Sequence": [
+      {
+        "Cost": 0.9,
+        "Name": "User",
+        "Requirement": "MenuOpen || ChatInputVisible"
+      }
+    ]
+  },
+
+  "Pull": {
+    "Sequence": [
+      {
+        "Name": "Power Word: Shield",
+        "Key": "6",
+        "WhenUsable": true,
+        "AfterCastWaitBuff": true,
+        "AfterCastWaitGCD": true,
+        "Requirements": [
+          "!Weakened Soul",
+          "!Shield"
+        ]
+      },
+      {
+        "Name": "Vampiric Touch",
+        "Key": "N1",
+        "HasCastBar": true,
+        "BeforeCastStop": true,
+        "Requirements": [
+          "!Vampiric Touch",
+          "Mana% > MIN_MANA_OFFENSIVE%"
+        ]
+      },
+      {
+        "Name": "Shadow Word: Pain",
+        "Key": "5",
+        "BeforeCastStop": true,
+        "BeforeCastFaceTarget": true,
+        "AfterCastAuraExpected": true,
+        "Requirements": [
+          "Mana% > MIN_MANA_OFFENSIVE%"
+        ]
+      },
+      {
+        "Name": "Mind Blast",
+        "Key": "N2",
+        "HasCastBar": true,
+        "WhenUsable": true,
+        "Requirements": [
+          "Mana% > MIN_MANA_OFFENSIVE%"
+        ]
+      },
+      {
+        "Name": "Approach"
+      }
+    ]
+  },
+
+  "Combat": {
+    "Sequence": [
+      {
+        "Name": "Desperate Prayer",
+        "Key": "F1",
+        "WhenUsable": true,
+        "Requirement": "Health% < 20"
+      },
+      {
+        "Name": "Shadowfiend",
+        "Key": "F2",
+        "WhenUsable": true,
+        "Requirement": "Mana% < 30 && TargetHealth% > 50"
+      },
+      {
+        "Name": "Fade",
+        "Key": "N5",
+        "WhenUsable": true,
+        "Requirement": "MobCount >= FADE_MOB_COUNT"
+      },
+      {
+        "Name": "Psychic Scream",
+        "Key": "N6",
+        "WhenUsable": true,
+        "Requirements": [
+          "MobCount >= 2",
+          "Health% < 35"
+        ]
+      },
+      {
+        "Name": "Power Word: Shield",
+        "Key": "6",
+        "WhenUsable": true,
+        "Requirements": [
+          "Health% < SHIELD_HP%",
+          "!Weakened Soul",
+          "!Shield"
+        ]
+      },
+      {
+        "Name": "Renew",
+        "Key": "4",
+        "Requirements": [
+          "!Renew",
+          "Health% < RENEW_HP%",
+          "Mana% > MIN_HP_HEAL%"
+        ]
+      },
+      {
+        "Name": "Flash Heal",
+        "Key": "7",
+        "HasCastBar": true,
+        "Requirements": [
+          "Shield",
+          "Health% < MIN_HP_FLASH%",
+          "Mana% > MIN_HP_HEAL%"
+        ]
+      },
+      {
+        "Name": "Shadowform",
+        "Key": "N3",
+        "WhenUsable": true,
+        "Requirement": "!Shadowform"
+      },
+      {
+        "Name": "Vampiric Touch",
+        "Key": "N1",
+        "HasCastBar": true,
+        "WhenUsable": true,
+        "Requirements": [
+          "!Vampiric Touch",
+          "TargetHealth% > 50"
+        ]
+      },
+      {
+        "Name": "Shadow Word: Pain",
+        "Key": "5",
+        "WhenUsable": true,
+        "Requirements": [
+          "!Shadow Word: Pain",
+          "TargetHealth% > 30"
+        ]
+      },
+      {
+        "Name": "Devouring Plague",
+        "Key": "N7",
+        "WhenUsable": true,
+        "Requirements": [
+          "!Devouring Plague",
+          "TargetHealth% > 40"
+        ]
+      },
+      {
+        "Name": "Shadow Word: Death",
+        "Key": "N8",
+        "WhenUsable": true,
+        "Requirements": [
+          "TargetHealth% < SW_DEATH_HP%",
+          "Health% > 40"
+        ]
+      },
+      {
+        "Name": "Mind Blast",
+        "Key": "N2",
+        "HasCastBar": true,
+        "WhenUsable": true,
+        "Requirement": "Mana% > MIN_MANA_OFFENSIVE%"
+      },
+      {
+        "Name": "Mind Flay",
+        "Key": "N4",
+        "HasCastBar": true,
+        "WhenUsable": true,
+        "Requirements": [
+          "Mana% > MIN_MANA_OFFENSIVE%",
+          "!InMeleeRange"
+        ]
+      },
+      {
+        "Name": "Shoot",
+        "Key": "0",
+        "Item": true,
+        "AfterCastDelay": 500,
+        "Requirements": [
+          "HasRangedWeapon",
+          "!Shooting"
+        ]
+      },
+      {
+        "Name": "AutoAttack",
+        "Requirements": [
+          "!HasRangedWeapon",
+          "!Casting"
+        ]
+      },
+      {
+        "Name": "Approach",
+        "Requirements": [
+          "InMeleeRange || Mana% < MIN_MANA_OFFENSIVE%",
+          "!Casting"
+        ]
+      }
+    ]
+  },
+
+  "Flee": {
+    "Sequence": [
+      {
+        "Name": "Flee",
+        "Requirement": "(MobCount > FLEE_MOB_COUNT && Health% < FLEE_HP_LOW%) || TargetElite"
+      }
+    ]
+  },
+
+  "Adhoc": {
+    "Sequence": [
+      {
+        "Cost": 3,
+        "Name": "Power Word: Fortitude",
+        "Key": "9",
+        "WhenUsable": true,
+        "InCombat": "i dont care",
+        "Requirement": "!Fortitude"
+      },
+      {
+        "Cost": 3,
+        "Name": "Inner Fire",
+        "Key": "8",
+        "WhenUsable": true,
+        "InCombat": "i dont care",
+        "Requirement": "!Inner Fire"
+      },
+      {
+        "Cost": 3,
+        "Name": "Divine Spirit",
+        "Key": "F3",
+        "WhenUsable": true,
+        "InCombat": "i dont care",
+        "Requirement": "!Divine Spirit"
+      },
+      {
+        "Cost": 3,
+        "Name": "Shadow Protection",
+        "Key": "F4",
+        "WhenUsable": true,
+        "InCombat": "i dont care",
+        "Requirement": "!Shadow Protection"
+      }
+    ]
+  },
+
+  "Parallel": {
+    "Sequence": [
+      {
+        "Name": "Food",
+        "Key": "=",
+        "Requirement": "Health% < MIN_HP_EAT%"
+      },
+      {
+        "Name": "Drink",
+        "Key": "-",
+        "Requirement": "Mana% < MIN_MANA_DRINK%"
+      }
+    ]
+  },
+
+  "NPC": {
+    "Sequence": [
+      {
+        "Cost": 6,
+        "Name": "Repair",
+        "Key": "C",
+        "Requirement": "Durability% < 35"
+      },
+      {
+        "Cost": 6,
+        "Name": "Sell",
+        "Key": "C",
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ]
+      }
+    ]
+  }
+}

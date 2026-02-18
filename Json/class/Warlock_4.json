@@ -13,8 +13,7 @@
       {
         "Name": "Immolate",
         "Key": "5",
-        "HasCastBar": true,
-        "MinMana": 25
+        "HasCastBar": true
       }
     ]
   },
@@ -27,8 +26,7 @@
         "Requirements": [
           "TargetHealth% > DOT_MIN_HEALTH%",
           "!Immolate"
-        ],
-        "MinMana": 25
+        ]
       },
       {
         "Name": "Corruption",
@@ -37,23 +35,26 @@
         "Requirements": [
           "TargetHealth% > DOT_MIN_HEALTH%",
           "!Corruption"
-        ],
-        "MinMana": 25
+        ]
       },
       {
         "Name": "Shadow Bolt",
         "Key": "2",
         "HasCastBar": true,
-        "MinMana": 25,
         "Cooldown": 8000
       },
       {
         "Name": "AutoAttack",
-        "Requirement": "!AutoAttacking"
+        "Requirements": [
+          "!Casting"
+        ]
       },
       {
         "Name": "Approach",
-        "Log": false
+        "Requirements": [
+          "!Casting",
+          "AutoAttacking"
+        ]
       }
     ]
   },
@@ -62,15 +63,15 @@
       {
         "Name": "Demon Skin",
         "Key": "3",
-        "MinMana": 50,
         "Requirement": "!Demon Skin"
       },
       {
         "Name": "Summon Imp",
         "Key": "4",
         "HasCastBar": true,
-        "MinMana": 122,
-        "Requirement": "!Has Pet"
+        "Requirement": "!Has Pet",
+        "AfterCastWaitCastbar": true,
+        "AfterCastAuraExpected": true
       },
       {
         "Name": "Food",
@@ -78,7 +79,7 @@
         "Requirement": "Health% < 50"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "-",
         "Requirement": "Mana% < 50"
       }
@@ -89,14 +90,17 @@
       {
         "Name": "Repair",
         "Key": "C",
-        "Requirement": "Items Broken",
+        "Requirement": "Durability% < 35",
         "PathFilename": "1_Gnome_Vendor.json",
         "Cost": 6
       },
       {
         "Name": "Sell",
         "Key": "C",
-        "Requirements": ["BagFull", "BagGreyItem"],
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ],
         "PathFilename": "1_Gnome_Vendor.json",
         "Cost": 6
       }

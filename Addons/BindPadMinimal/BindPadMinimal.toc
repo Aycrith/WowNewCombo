@@ -1,0 +1,7 @@
+## Interface: 20505
+## Title: BindPadMinimal
+## Version: 1.0
+## Author: WowGrindBot
+## Notes: Minimal BindPad replacement providing BindPadMacro button for DataToColor
+
+BindPadMinimal.xml

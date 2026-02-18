@@ -1,0 +1,99 @@
+{
+  "ClassName": "Mage",
+  "OverridePathFilename": "",
+  "Paths": [
+    { "PathFilename": "_pack\\60-70\\Hellfire Peninsula 01.json", "Requirements": ["Level >= 58", "Level < 62"] },
+    { "PathFilename": "_pack\\60-70\\Hellfire Peninsula 02.json", "Requirements": ["Level >= 60", "Level < 63"] },
+    { "PathFilename": "_pack\\60-70\\Zangarmarsh 01.json", "Requirements": ["Level >= 62", "Level < 65"] },
+    { "PathFilename": "_pack\\60-70\\Zangarmarsh 02.json", "Requirements": ["Level >= 63", "Level < 66"] },
+    { "PathFilename": "_pack\\60-70\\Nagrand 01.json", "Requirements": ["Level >= 64", "Level < 67"] },
+    { "PathFilename": "_pack\\60-70\\Nagrand 02.json", "Requirements": ["Level >= 65", "Level < 68"] },
+    { "PathFilename": "_pack\\60-70\\Blade's Edge Mountains 01.json", "Requirements": ["Level >= 66", "Level < 69"] },
+    { "PathFilename": "_pack\\60-70\\Blade's Edge Mountains 02.json", "Requirements": ["Level >= 67", "Level < 70"] },
+    { "PathFilename": "_pack\\60-70\\Netherstorm 01.json", "Requirements": ["Level >= 68", "Level < 71"] },
+    { "PathFilename": "_pack\\60-70\\Netherstorm 02.json", "Requirements": ["Level >= 69"] }
+  ],
+  "Mode": "Grind",
+  "IntVariables": {
+    "FROST_NOVA_HP%": 35,
+    "ICE_BLOCK_HP%": 15,
+    "COLD_SNAP_HP%": 20,
+    "ICE_BARRIER_HP%": 80,
+    "EVOCATION_MANA%": 20,
+    "BLIZZARD_MOB_COUNT": 3,
+    "CONE_OF_COLD_MOBS": 2,
+    "MANA_SHIELD_HP%": 25
+  },
+  "KeyActions": [
+    { "Name": "Frostbolt", "Key": "1", "WhenUsable": true, "HasCastBar": true, "AfterCastWait": 100 },
+    { "Name": "Ice Lance", "Key": "2", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Frost Nova", "Key": "3", "WhenUsable": true, "Cooldown": 25 },
+    { "Name": "Blink", "Key": "4", "WhenUsable": true, "Cooldown": 15 },
+    { "Name": "Ice Block", "Key": "5", "WhenUsable": true, "Cooldown": 300 },
+    { "Name": "Ice Barrier", "Key": "6", "WhenUsable": true, "Cooldown": 30 },
+    { "Name": "Cold Snap", "Key": "7", "WhenUsable": true, "Cooldown": 480 },
+    { "Name": "Icy Veins", "Key": "8", "WhenUsable": true, "Cooldown": 180 },
+    { "Name": "Summon Water Elemental", "Key": "9", "WhenUsable": true, "Cooldown": 180 },
+    { "Name": "Blizzard", "Key": "0", "WhenUsable": true, "HasCastBar": true, "Cooldown": 0 },
+    { "Name": "Cone of Cold", "Key": "-", "WhenUsable": true, "Cooldown": 10 },
+    { "Name": "Fire Blast", "Key": "=", "WhenUsable": true, "Cooldown": 8 },
+    { "Name": "Arcane Explosion", "Key": "F1", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Counterspell", "Key": "F2", "WhenUsable": true, "Cooldown": 24 },
+    { "Name": "Evocation", "Key": "F3", "WhenUsable": true, "HasCastBar": true, "Cooldown": 480 },
+    { "Name": "Mana Shield", "Key": "F4", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Polymorph", "Key": "F5", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Arcane Intellect", "Key": "F6", "WhenUsable": true, "Cooldown": 0 },
+    { "Name": "Conjure Mana Gem", "Key": "F7", "WhenUsable": true, "HasCastBar": true },
+    { "Name": "Use Mana Gem", "Key": "F8", "WhenUsable": true, "Cooldown": 120 },
+    { "Name": "Invisibility", "Key": "F9", "WhenUsable": true, "Cooldown": 300 },
+    { "Name": "Spellsteal", "Key": "F10", "WhenUsable": true, "Cooldown": 0 }
+  ],
+  "Pull": {
+    "Sequence": [
+      { "Name": "Summon Water Elemental", "Requirements": ["not Pet", "Level >= 70"], "Cooldown": 180 },
+      { "Name": "Ice Barrier", "Requirements": ["not HasBuff:Ice Barrier", "Health% > {ICE_BARRIER_HP%}"], "Cooldown": 30 },
+      { "Name": "Frostbolt", "WhenUsable": true }
+    ]
+  },
+  "Combat": {
+    "Sequence": [
+      { "Name": "Ice Block", "Requirements": ["Health% < {ICE_BLOCK_HP%}"], "Cooldown": 300 },
+      { "Name": "Cold Snap", "Requirements": ["Health% < {COLD_SNAP_HP%}", "not HasCooldown:Ice Block"], "Cooldown": 480 },
+      { "Name": "Frost Nova", "Requirements": ["Health% < {FROST_NOVA_HP%}", "Range < 10"], "Cooldown": 25 },
+      { "Name": "Blink", "Requirements": ["Health% < {FROST_NOVA_HP%}", "Range < 8"], "Cooldown": 15 },
+      { "Name": "Mana Shield", "Requirements": ["Health% < {MANA_SHIELD_HP%}", "Mana% > 40", "not HasBuff:Mana Shield"], "Cooldown": 0 },
+      { "Name": "Ice Barrier", "Requirements": ["not HasBuff:Ice Barrier"], "Cooldown": 30 },
+      { "Name": "Icy Veins", "Requirements": ["TargetHealth% > 80", "BossOrElite"], "Cooldown": 180 },
+      { "Name": "Counterspell", "Requirements": ["TargetCasting"], "Cooldown": 24 },
+      { "Name": "Blizzard", "Requirements": ["MobCount >= {BLIZZARD_MOB_COUNT}", "Mana% > 40"], "Cooldown": 0 },
+      { "Name": "Cone of Cold", "Requirements": ["MobCount >= {CONE_OF_COLD_MOBS}", "Range < 10"], "Cooldown": 10 },
+      { "Name": "Ice Lance", "Requirements": ["TargetHasBuff:Frozen"], "Cooldown": 0 },
+      { "Name": "Fire Blast", "Requirements": ["TargetHealth% < 15"], "Cooldown": 8 },
+      { "Name": "Frostbolt", "WhenUsable": true }
+    ]
+  },
+  "Flee": {
+    "Sequence": [
+      { "Name": "Frost Nova", "Requirements": ["Range < 10"], "Cooldown": 25 },
+      { "Name": "Blink", "WhenUsable": true, "Cooldown": 15 },
+      { "Name": "Invisibility", "Requirements": ["Health% < 20"], "Cooldown": 300 }
+    ]
+  },
+  "Adhoc": {
+    "Sequence": [
+      { "Name": "Evocation", "Requirements": ["Mana% < {EVOCATION_MANA%}", "not InCombat"], "Cooldown": 480 },
+      { "Name": "Arcane Intellect", "Requirements": ["not HasBuff:Arcane Intellect", "not InCombat"], "Cooldown": 0 },
+      { "Name": "Use Mana Gem", "Requirements": ["Mana% < 30", "InCombat", "HasItem:Mana Emerald"], "Cooldown": 120 }
+    ]
+  },
+  "Parallel": {
+    "Sequence": []
+  },
+  "NPC": {
+    "Sequence": [
+      { "Name": "Repair", "Requirements": ["DurabilityPercent < 50"] },
+      { "Name": "Sell", "Requirements": ["BagsFull"] },
+      { "Name": "Train", "Requirements": ["NewSkillAvailable"] }
+    ]
+  }
+}

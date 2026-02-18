@@ -1,0 +1,418 @@
+using Core.Extensions;
+
+using Game;
+
+using Microsoft.Extensions.Logging;
+
+using System;
+using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
+
+namespace Core;
+
+public sealed partial class AddonConfigurator
+{
+    private readonly ILogger<AddonConfigurator> logger;
+    private readonly WowProcess process;
+
+    public AddonConfig Config { get; init; }
+
+    private const string DefaultAddonName = "DataToColor";
+    private const string AddonSourcePath = @".\Addons\";
+
+    private string AddonBasePath => Path.Join(process.Path, "Interface", "AddOns");
+
+    private string DefaultAddonPath => Path.Join(AddonBasePath, DefaultAddonName);
+    public string FinalAddonPath => Path.Join(AddonBasePath, Config.Title);
+
+    public event Action? OnChange;
+
+    public AddonConfigurator(ILogger<AddonConfigurator> logger, WowProcess process)
+    {
+        this.logger = logger;
+        this.process = process;
+
+        Config = AddonConfig.Load();
+    }
+
+    public bool Installed()
+    {
+        return GetInstallVersion() != null;
+    }
+
+    public bool IsDefault()
+    {
+        return Config.IsDefault();
+    }
+
+    public bool Validate()
+    {
+        if (string.IsNullOrEmpty(Config.Author))
+        {
+            logger.LogError($"{nameof(Config)}.{nameof(Config.Author)} - error - cannot be empty: '{Config.Author}'");
+            return false;
+        }
+
+        if (!string.IsNullOrEmpty(Config.Title))
+        {
+            // this will appear in the lua code so
+            // special character not allowed
+            // also numbers not allowed
+            Config.Title = RegexTitle().Replace(Config.Title, string.Empty);
+            Config.Title = new string(Config.Title.Where(char.IsLetter).ToArray());
+            Config.Title =
+                Config.Title.Trim()
+                .Replace(" ", "");
+
+            if (Config.Title.Length == 0)
+            {
+                logger.LogError($"{nameof(Config)}.{nameof(Config.Title)} - error - use letters only: '{Config.Title}'");
+                return false;
+            }
+        }
+        else
+        {
+            logger.LogError($"{nameof(Config)}.{nameof(Config.Title)} - error - cannot be empty: '{Config.Title}'");
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(Config.Command))
+        {
+            Config.Command = Config.Title.Trim().ToLowerInvariant();
+        }
+
+        // Command should be stored without a leading slash.
+        Config.Command = Config.Command.Trim();
+        if (Config.Command.StartsWith('/'))
+        {
+            Config.Command = Config.Command.TrimStart('/');
+        }
+
+        // Keep command predictable and safe to type (letters only).
+        Config.Command = RegexTitle().Replace(Config.Command, string.Empty);
+        Config.Command = new string(Config.Command.Where(char.IsLetter).ToArray()).ToLowerInvariant();
+        if (Config.Command.Length == 0)
+        {
+            logger.LogError($"{nameof(Config)}.{nameof(Config.Command)} - error - use letters only (no slash): '{Config.Command}'");
+            return false;
+        }
+
+        if (!int.TryParse(Config.CellSize, out int size))
+        {
+            logger.LogError($"{nameof(Config)}.{nameof(Config.CellSize)} - error - be a number: '{Config.CellSize}'");
+            return false;
+        }
+        else if (size < 1 || size > 9)
+        {
+            logger.LogError($"{nameof(Config)}.{nameof(Config.CellSize)} - error - must be, including between 1 and 9: '{Config.CellSize}'");
+            return false;
+        }
+
+        return true;
+    }
+
+    public void Install()
+    {
+        _ = TryInstall(out _);
+    }
+
+    public bool TryInstall(out string message)
+    {
+        try
+        {
+            DeleteAddon();
+            CopyAddonFiles();
+            RenameAddon();
+            MakeUnique();
+
+            message = "Success";
+            logger.LogInformation($"{nameof(Install)} - Success");
+            return true;
+        }
+        catch (Exception e)
+        {
+            message = e.Message;
+            logger.LogError(e, $"{nameof(Install)} - Failed");
+            return false;
+        }
+    }
+
+    private void DeleteAddon()
+    {
+        if (Directory.Exists(DefaultAddonPath))
+        {
+            logger.LogInformation($"{nameof(DeleteAddon)} -> Default Addon Exists");
+            Directory.Delete(DefaultAddonPath, true);
+        }
+
+        if (!string.IsNullOrEmpty(Config.Title) && Directory.Exists(FinalAddonPath))
+        {
+            logger.LogInformation($"{nameof(DeleteAddon)} -> Unique Addon Exists");
+            Directory.Delete(FinalAddonPath, true);
+        }
+    }
+
+    private void CopyAddonFiles()
+    {
+        try
+        {
+            CopyFolder("");
+            logger.LogInformation($"{nameof(CopyAddonFiles)} - Success");
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e.Message);
+
+            // This only should be happen when running from IDE
+            CopyFolder(".");
+            logger.LogInformation($"{nameof(CopyAddonFiles)} - Success");
+        }
+    }
+
+    private void CopyFolder(string parentFolder)
+    {
+        DirectoryCopy(Path.Join(parentFolder + AddonSourcePath), AddonBasePath, true);
+    }
+
+    private void RenameAddon()
+    {
+        string src = Path.Join(AddonBasePath, DefaultAddonName);
+        if (src != FinalAddonPath)
+            Directory.Move(src, FinalAddonPath);
+    }
+
+    private void MakeUnique()
+    {
+        BulkRename(FinalAddonPath, DefaultAddonName, Config.Title);
+        EditToc();
+        PromoteTocForClient();
+        EditMainLua();
+        EditModulesLua();
+    }
+
+    private void PromoteTocForClient()
+    {
+        // The addon repo contains multiple .toc variants for different Classic branches.
+        // WoW loads only <FolderName>.toc, so we promote the best matching variant to the main name.
+        // This avoids "out of date addon" and ensures the correct file list is used.
+
+        string suffix = process.FileVersion.Major switch
+        {
+            1 => "_Classic",
+            2 => "_TBC",
+            _ => string.Empty
+        };
+
+        if (string.IsNullOrEmpty(suffix))
+        {
+            return;
+        }
+
+        string mainTocPath = Path.Join(FinalAddonPath, $"{Config.Title}.toc");
+        string variantPath = Path.Join(FinalAddonPath, $"{Config.Title}{suffix}.toc");
+
+        if (!File.Exists(variantPath))
+        {
+            logger.LogDebug("TOC variant not found (skipping promote): {Path}", variantPath);
+            return;
+        }
+
+        try
+        {
+            File.Copy(variantPath, mainTocPath, overwrite: true);
+            logger.LogInformation("Promoted TOC variant for client v{Version}: {Variant} -> {Main}",
+                process.FileVersion, Path.GetFileName(variantPath), Path.GetFileName(mainTocPath));
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to promote TOC variant: {Variant} -> {Main}", variantPath, mainTocPath);
+        }
+    }
+
+    private static void BulkRename(string folderPath, string match, string replacement)
+    {
+        if (string.IsNullOrEmpty(match))
+            throw new ArgumentException("match must not be empty", nameof(match));
+
+        DirectoryInfo dir = new(folderPath);
+
+        foreach (var file in dir.EnumerateFiles())
+        {
+            var baseName = Path.GetFileNameWithoutExtension(file.Name);
+            if (baseName is null || !baseName.Contains(match, StringComparison.Ordinal))
+                continue;
+
+            var ext = file.Extension;
+
+            var newBaseName = baseName.Replace(match, replacement, StringComparison.Ordinal);
+
+            var targetPath = Path.Combine(file.DirectoryName!, newBaseName + ext);
+
+            if (string.Equals(file.FullName, targetPath, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (File.Exists(targetPath))
+                throw new IOException($"Target file already exists: {targetPath}");
+
+            file.MoveTo(targetPath);
+        }
+    }
+
+    private void EditToc()
+    {
+        FileInfo[] files = new DirectoryInfo(FinalAddonPath).GetFiles("*.toc");
+        foreach (var f in files)
+        {
+            string tocPath = f.FullName;
+            string text =
+                File.ReadAllText(tocPath)
+                .Replace(DefaultAddonName, Config.Title)
+                .Replace("## Author: FreeHongKongMMO", "## Author: " + Config.Author);
+
+            File.WriteAllText(tocPath, text);
+        }
+    }
+
+    private void EditMainLua()
+    {
+        string mainLuaPath = Path.Join(FinalAddonPath, Config.Title + ".lua");
+        string text =
+            File.ReadAllText(mainLuaPath)
+            .Replace(DefaultAddonName, Config.Title)
+            .Replace("dc", Config.Command)
+            .Replace("DC", Config.Command);
+
+        Regex cellSizeRegex = RegexCellSize();
+        text = text.Replace(cellSizeRegex, "SIZE", Config.CellSize);
+
+        File.WriteAllText(mainLuaPath, text);
+    }
+
+    private void EditModulesLua()
+    {
+        FileInfo[] files = new DirectoryInfo(FinalAddonPath).GetFiles();
+        foreach (var f in files)
+        {
+            if (f.Extension.Contains("lua"))
+            {
+                string path = f.FullName;
+                string text = File.ReadAllText(path);
+                text = text.Replace(DefaultAddonName, Config.Title);
+                // Replace slash commands (e.g., /dc -> /addonname, /dcflush -> /addonnameflush)
+                text = text.Replace("/dc", "/" + Config.Command);
+
+                File.WriteAllText(path, text);
+            }
+        }
+    }
+
+    public void Delete()
+    {
+        DeleteAddon();
+        AddonConfig.Delete();
+
+        OnChange?.Invoke();
+    }
+
+    public void Save()
+    {
+        Config.Save();
+
+        OnChange?.Invoke();
+    }
+
+    private static void DirectoryCopy(string sourceDirName, string destDirName, bool copySubDirs)
+    {
+        // Get the subdirectories for the specified directory.
+        DirectoryInfo dir = new DirectoryInfo(sourceDirName);
+
+        if (!dir.Exists)
+        {
+            throw new DirectoryNotFoundException(
+                "Source directory does not exist or could not be found: "
+                + sourceDirName);
+        }
+
+        DirectoryInfo[] dirs = dir.GetDirectories();
+
+        // If the destination directory doesn't exist, create it.       
+        Directory.CreateDirectory(destDirName);
+
+        // Get the files in the directory and copy them to the new location.
+        FileInfo[] files = dir.GetFiles();
+        foreach (FileInfo file in files)
+        {
+            string tempPath = Path.Combine(destDirName, file.Name);
+            file.CopyTo(tempPath, true);
+        }
+
+        // If copying subdirectories, copy them and their contents to new location.
+        if (copySubDirs)
+        {
+            foreach (DirectoryInfo subdir in dirs)
+            {
+                string tempPath = Path.Combine(destDirName, subdir.Name);
+                DirectoryCopy(subdir.FullName, tempPath, copySubDirs);
+            }
+        }
+    }
+
+    public bool UpdateAvailable()
+    {
+        if (Config.IsDefault())
+            return false;
+
+        Version? repo = GetRepoVerion();
+        Version? installed = GetInstallVersion();
+
+        return installed != null && repo != null && repo > installed;
+    }
+
+    public Version? GetRepoVerion()
+    {
+        Version? repo = null;
+        try
+        {
+            repo = GetVersion(Path.Join(AddonSourcePath, DefaultAddonName), DefaultAddonName);
+
+            if (repo == null)
+            {
+                repo = GetVersion(Path.Join("." + AddonSourcePath, DefaultAddonName), DefaultAddonName);
+            }
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e.Message);
+        }
+        return repo;
+    }
+
+    public Version? GetInstallVersion()
+    {
+        return GetVersion(FinalAddonPath, Config.Title);
+    }
+
+    private static Version? GetVersion(string path, string fileName)
+    {
+        string tocPath = Path.Join(path, fileName + ".toc");
+
+        if (!File.Exists(tocPath))
+            return null;
+
+        string begin = "## Version: ";
+        string? line = File
+            .ReadLines(tocPath)
+            .SkipWhile(line => !line.StartsWith(begin))
+            .FirstOrDefault();
+
+        string? versionStr = line?.Split(begin)[1];
+        return Version.TryParse(versionStr, out Version? version) ? version : null;
+    }
+
+    [GeneratedRegex(@"[^\u0000-\u007F]+")]
+    private static partial Regex RegexTitle();
+
+    [GeneratedRegex(@"^local CELL_SIZE = (?<SIZE>[0-9]+)", RegexOptions.Multiline)]
+    private static partial Regex RegexCellSize();
+}

@@ -1,0 +1,429 @@
+{
+  "ClassName": "Rogue",
+  "Log": false,
+  "Loot": true,
+  "Skin": false,
+  "GatherCorpse": true,
+  "UseMount": true,
+  "AllowPvP": false,
+  "KeyboardOnly": true,
+  "NPCMaxLevels_Above": 2,
+  "NPCMaxLevels_Below": 8,
+  "PathThereAndBack": true,
+  "PathReduceSteps": true,
+  "Mount": { "Key": "N0" },
+
+  "IntVariables": {
+    "MIN_HP_EVASION%": 40,
+    "MIN_HP_VANISH%": 15,
+    "MIN_HP_BLIND%": 25,
+    "MIN_HP_GOUGE%": 50,
+    "FLEE_HP%": 12,
+    "FLEE_MOB_COUNT": 3,
+    "FOOD_HP%": 50,
+    "BANDAGE_HP%": 45,
+    "EVISCERATE_CP": 4,
+    "SLICE_DICE_CP": 2,
+    "RUPTURE_CP": 3,
+    "KIDNEY_CP": 4
+  },
+
+  "Paths": [
+    {
+      "PathFilename": "_pack\\1-20\\Human\\01-04_Elwynn Forest_Northshire Valley (kobold-wolves-defias).json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Human\\05-09_Elwynn Forest_Farms Tour (pigs, bears, humans).json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 5", "Level < 10", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Human\\10-14_Westfall_beta.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 10", "Level < 15", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Human\\15-18_Westfall_The Dagger Hills (defias).json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 15", "Level < 18", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Human\\18-20_Duskwood_The Darkened Bank - wolves spiders.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 18", "Level < 21", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Dwarf.Gnome\\1-4_Dun Morogh.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Dwarf || Race:Gnome"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Night elf\\01-04_Teldrassil_Shadowglen.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:NightElf"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Troll.Orc\\1-5_Durotar_Valley of Trials.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Orc || Race:Troll"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Undead\\01-05_Tirisfal Glades_Deathknell.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Undead"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Blood elf\\01-06_Eversong Woods_Sunstrider Isle.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 6", "Race:BloodElf"]
+    },
+    {
+      "PathFilename": "_pack\\20-30\\Duskwood\\20-27 Raven Hill Cemetery.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 20", "Level < 25"]
+    },
+    {
+      "PathFilename": "_pack\\20-30\\Duskwood\\25-30 Vul Gol Ogre Mound.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 25", "Level < 30"]
+    },
+    {
+      "PathFilename": "_pack\\30-40\\Desolace\\30-35.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 30", "Level < 35"]
+    },
+    {
+      "PathFilename": "_pack\\30-40\\Arathi Highlands\\35-37 Boulderfist Hall - Ogres.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 35", "Level < 40"]
+    },
+    {
+      "PathFilename": "_pack\\40-50\\Tanaris\\40-43 Tanaris - Steamwheedle Port walk.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 40", "Level < 44"]
+    },
+    {
+      "PathFilename": "_pack\\40-50\\Tanaris\\45-48 Dunemaul Ogre.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 44", "Level < 50"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Azshara\\50-53 Azshara Legash Encampment.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 50", "Level < 54"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Azshara\\54-60 blood elves.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 54", "Level < 58"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Eastern Plaguelands\\57-60 Browman Mill - Noxious Glade.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 57", "Level <= 60"]
+    }
+  ],
+
+  "Wait": {
+    "Sequence": [
+      {
+        "Cost": 0.9,
+        "Name": "User",
+        "Requirement": "MenuOpen || ChatInputVisible"
+      }
+    ]
+  },
+
+  "Pull": {
+    "Sequence": [
+      {
+        "Name": "Stealth",
+        "Key": "1",
+        "WhenUsable": true,
+        "Requirement": "!Stealth && Level >= 2 && Energy > 40",
+        "AfterCastWaitBuff": true
+      },
+      {
+        "Name": "Cheap Shot",
+        "Key": "7",
+        "WhenUsable": true,
+        "Requirements": [
+          "Stealth",
+          "InMeleeRange",
+          "Level >= 26"
+        ],
+        "StopBeforeCast": true
+      },
+      {
+        "Name": "Ambush",
+        "Key": "8",
+        "WhenUsable": true,
+        "Requirements": [
+          "Stealth",
+          "InMeleeRange",
+          "BehindTarget",
+          "Level >= 18"
+        ],
+        "StopBeforeCast": true
+      },
+      {
+        "Name": "Garrote",
+        "Key": "9",
+        "WhenUsable": true,
+        "Requirements": [
+          "Stealth",
+          "InMeleeRange",
+          "BehindTarget",
+          "Level >= 14"
+        ],
+        "StopBeforeCast": true
+      },
+      {
+        "Name": "Shoot",
+        "Key": "0",
+        "Item": true,
+        "AfterCastDelay": 500,
+        "Requirements": [
+          "HasRangedWeapon",
+          "!InMeleeRange",
+          "!Stealth"
+        ]
+      },
+      {
+        "Name": "Approach"
+      }
+    ]
+  },
+
+  "Combat": {
+    "Sequence": [
+      {
+        "Name": "Vanish",
+        "Key": "F1",
+        "WhenUsable": true,
+        "Requirement": "Health% < MIN_HP_VANISH% && Level >= 22"
+      },
+      {
+        "Name": "Evasion",
+        "Key": "5",
+        "WhenUsable": true,
+        "Requirement": "Health% < MIN_HP_EVASION% && Level >= 8"
+      },
+      {
+        "Name": "Blind",
+        "Key": "F2",
+        "WhenUsable": true,
+        "Requirements": [
+          "Health% < MIN_HP_BLIND%",
+          "MobCount > 1",
+          "Level >= 34"
+        ]
+      },
+      {
+        "Name": "Gouge",
+        "Key": "-",
+        "WhenUsable": true,
+        "Requirements": [
+          "Health% < MIN_HP_GOUGE%",
+          "!BehindTarget",
+          "Level >= 6"
+        ]
+      },
+      {
+        "Name": "Kick",
+        "Key": "6",
+        "WhenUsable": true,
+        "UseWhenTargetIsCasting": true,
+        "Requirement": "Level >= 12"
+      },
+      {
+        "Name": "Adrenaline Rush",
+        "Key": "F4",
+        "WhenUsable": true,
+        "Requirement": "TargetHealth% > 70 && Level >= 40"
+      },
+      {
+        "Name": "Blade Flurry",
+        "Key": "F5",
+        "WhenUsable": true,
+        "Requirement": "MobCount > 1 && Level >= 30"
+      },
+      {
+        "Name": "Cold Blood",
+        "Key": "F6",
+        "WhenUsable": true,
+        "Requirement": "TargetHealth% < 50 && Combo Point >= EVISCERATE_CP && Level >= 30"
+      },
+      {
+        "Name": "Kidney Shot",
+        "Key": "N1",
+        "WhenUsable": true,
+        "Requirements": [
+          "Combo Point >= KIDNEY_CP",
+          "TargetHealth% > 40",
+          "Level >= 30"
+        ]
+      },
+      {
+        "Name": "Slice and Dice",
+        "Key": "4",
+        "Requirements": [
+          "!Slice and Dice",
+          "Combo Point >= SLICE_DICE_CP",
+          "TargetHealth% > 50",
+          "Level >= 10"
+        ]
+      },
+      {
+        "Name": "Rupture",
+        "Key": "N2",
+        "Requirements": [
+          "!Rupture",
+          "Combo Point >= RUPTURE_CP",
+          "TargetHealth% > 60",
+          "Level >= 20"
+        ]
+      },
+      {
+        "Name": "Eviscerate",
+        "Key": "3",
+        "Requirements": [
+          "Combo Point >= EVISCERATE_CP",
+          "TargetHealth% < 50 || Combo Point == 5"
+        ]
+      },
+      {
+        "Name": "Backstab",
+        "Key": "N3",
+        "WhenUsable": true,
+        "Requirements": [
+          "BehindTarget",
+          "Energy >= 60",
+          "Level >= 4"
+        ]
+      },
+      {
+        "Name": "Sinister Strike",
+        "Key": "2"
+      },
+      {
+        "Name": "AutoAttack"
+      },
+      {
+        "Name": "Approach",
+        "Log": false
+      }
+    ]
+  },
+
+  "Flee": {
+    "Sequence": [
+      {
+        "Name": "Sprint",
+        "Key": "F3",
+        "WhenUsable": true,
+        "Requirement": "Health% < FLEE_HP% && Level >= 16"
+      },
+      {
+        "Name": "Flee",
+        "Requirement": "(MobCount >= FLEE_MOB_COUNT && Health% < FLEE_HP%) || TargetElite"
+      }
+    ]
+  },
+
+  "Adhoc": {
+    "Sequence": [
+      {
+        "Name": "Stealth",
+        "Key": "1",
+        "WhenUsable": true,
+        "Requirement": "!Stealth && Level >= 2 && !Swimming",
+        "Cost": 2
+      },
+      {
+        "Name": "Food",
+        "Key": "=",
+        "Requirement": "Health% < FOOD_HP%",
+        "Cost": 3
+      },
+      {
+        "Name": "Bandage",
+        "Key": "N9",
+        "HasCastbar": true,
+        "Requirement": "Health% < BANDAGE_HP% && !Recently Bandaged",
+        "AfterCastWaitCastbar": true,
+        "Cost": 2.5
+      },
+      {
+        "Name": "Poison MH - Instant",
+        "Key": "N4",
+        "HasCastbar": true,
+        "Requirement": "!HasMainHandEnchant && Level >= 20",
+        "AfterCastAuraExpected": true
+      },
+      {
+        "Name": "Poison OH - Deadly",
+        "Key": "N5",
+        "HasCastbar": true,
+        "Requirement": "!HasOffHandEnchant && Level >= 30",
+        "AfterCastAuraExpected": true
+      },
+      {
+        "Name": "Thistle Tea",
+        "Key": "N6",
+        "Requirement": "Energy < 20 && BagItem:7676:1",
+        "Cooldown": 300000
+      },
+      {
+        "Name": "Open Lockbox",
+        "Key": "N7",
+        "Cooldown": 30000,
+        "Requirements": [
+          "BagItem:16882:1 || BagItem:16883:1 || BagItem:16884:1 || BagItem:16885:1"
+        ],
+        "Log": false
+      }
+    ]
+  },
+
+  "NPC": {
+    "Sequence": [
+      {
+        "Name": "Repair",
+        "Key": "C",
+        "Requirement": "Durability% < 35",
+        "Cost": 6
+      },
+      {
+        "Name": "Sell",
+        "Key": "C",
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ],
+        "Cost": 6
+      }
+    ]
+  }
+}

@@ -1,19 +1,17 @@
 ﻿@page "/Search"
 
-@using PathingAPI.Data
-
 @inject IJSRuntime jsRuntime
 @inject PPatherService pPatherService
 
 <Watch PathColour="@pathColour" Name="@name" />
 
-<span>
-    <SearchParameters OnSearch="OnSearch" IsDisabled="@IsDisabled" />
-</span>
+<div style="position: fixed; bottom: 0; left: 450px; z-index: 1000; background-color: black; color: white; padding: 0 10px; text-align: center; display: flex; align-items: center;">
+    <SearchParameters OnSearch="OnSearch" IsDisabled="@IsDisabled" OnDraw="OnDraw" />
+</div>
 @code {
     bool IsDisabled = true;
 
-    PatherPath.Graph.PathGraph.eSearchScoreSpot searchType;
+    SearchStrategy searchType;
     int pathColour = 1;
     string name;
     SearchParam parameters;
@@ -25,39 +23,11 @@
         if (firstRender)
         {
             await jsRuntime.InvokeVoidAsync("createScene");
-
-            PatherPath.Graph.PathGraph.SearchEnabled = true;
-
             pPatherService.Reset();
 
-
-            //var mapId = 1451;
-            //this.parameters = new SearchParam
-            //{
-            //    From = pPatherService.GetWorldLocation(mapId, 46.8f, 54.2f),
-            //    To = pPatherService.GetWorldLocation(mapId, 51.2f, 38.9f)
-            //};
-
-            //var mapId = 1428;
-            //this.parameters = new SearchParam
-            //{
-            //    From= pPatherService.GetWorldLocation(mapId, 82.7f, 63.2f),
-            //    To= pPatherService.GetWorldLocation(mapId, 64.9f, 27.0f)
-            //};
-
-            //DoSearch(PatherPath.Graph.PathGraph.eSearchScoreSpot.OriginalPather, 1, "Test");
-
             IsDisabled = false;
-            await InvokeAsyncBase(() => StateHasChanged());
+            await InvokeAsync(StateHasChanged);
         }
-    }
-
-    public async Task InvokeAsyncBase(Action action)
-    {
-        await base.InvokeAsync(() =>
-        {
-            try { action(); } catch { }
-        });
     }
 
     public async Task OnSearch(SearchParam searchParameters)
@@ -71,7 +41,28 @@
         await DoSearch(parameters.SearchType, ((int)parameters.SearchType) + 1, parameters.SearchType.ToString());
     }
 
-    private async Task DoSearch(PatherPath.Graph.PathGraph.eSearchScoreSpot searchType, int colour, string name)
+    public void OnDraw(SearchParam searchParameters)
+    {
+        if (searchParameters.From == null || searchParameters.To == null)
+        {
+            return;
+        }
+
+        var mapId = searchParameters.From.Location.W;
+
+        var start = searchParameters.From.Location.AsVector3();
+        var end = searchParameters.To.Location.AsVector3();
+
+        ReadOnlySpan<Vector3> path = [start, end];
+
+        pathColour = (int)Watch.Color.Orange;
+        name = "route";
+        StateHasChanged();
+
+        pPatherService.DrawPath(mapId, path);
+    }
+
+    private async Task DoSearch(SearchStrategy searchType, int colour, string name)
     {
         IsDisabled = true;
 
@@ -79,36 +70,30 @@
         this.pathColour = colour;
         this.name = name;
 
-        PatherPath.Graph.PathGraph.SearchEnabled = true;
-        PatherPath.Graph.PathGraph.ProgressTimeoutSeconds = 60;
-        PatherPath.Graph.PathGraph.TimeoutSeconds = 600;
+        await InvokeAsync(StateHasChanged);
 
-        await InvokeAsyncBase(() => StateHasChanged());
-
-        searchPathThread = new System.Threading.Thread(new System.Threading.ThreadStart(SearchPathThread));
+        searchPathThread = new Thread(SearchPathThread);
         searchPathThread.Start();
     }
 
-    public void SearchPathThread()
+    public async void SearchPathThread()
     {
         try
         {
-            InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("removeMeshes", name)).Wait();
-            InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("removeMeshes", "search")).Wait();
+            await jsRuntime.InvokeVoidAsync("removeMesh", name);
+            await jsRuntime.InvokeVoidAsync("removeMesh", "search");
 
-
-            var from = parameters.From;
-            var to = parameters.To;
-
-            pPatherService.SetLocations(from, to);
+            pPatherService.SetLocations(parameters.From.Location, parameters.To.Location);
 
             var patherPath = pPatherService.DoSearch(searchType);
 
-            InvokeAsyncBase(() => { IsDisabled = false; StateHasChanged(); }).Wait();
+            IsDisabled = false;
         }
         catch (Exception ex)
         {
-            InvokeAsyncBase(() => jsRuntime.InvokeVoidAsync("log", ex.Message)).Wait();
+            await jsRuntime.InvokeVoidAsync("log", ex.Message);
         }
+
+        await InvokeAsync(StateHasChanged);
     }
 }

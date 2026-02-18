@@ -1,89 +1,93 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
-namespace Core
+namespace Core;
+
+public static class InfixToPostfix
 {
-    public static class InfixToPostfix
+    public static List<string> Convert(ReadOnlySpan<char> span)
     {
-        public static List<string> Convert(string input)
+        List<string> output = new();
+        Stack<string> stack = new();
+
+        int i = 0;
+        while (i < span.Length)
         {
-            List<string> output = new();
-            Stack<string> stack = new();
+            ReadOnlySpan<char> c = span.Slice(i, 1);
 
-            int i = 0;
-            while (i < input.Length)
+            if (IsSpecial(c))
             {
-                if (IsSpecialChar(input[i]))
+                if (c.SequenceEqual("("))
                 {
-                    if (input[i] == '(')
-                    {
-                        stack.Push(input[i].ToString());
-                        i++;
-                    }
-                    else if (input[i] == ')')
-                    {
-                        while (stack.Count != 0 && stack.Peek() != "(")
-                        {
-                            output.Add(stack.Pop());
-                        }
-                        stack.Pop();
-                        i++;
-                    }
-                    else if (IsOperator(input, i, out string @operator))
-                    {
-                        i += @operator.Length;
-
-                        while (stack.Count != 0 && OperatorPriority(stack.Peek()) >= OperatorPriority(@operator))
-                        {
-                            output.Add(stack.Pop());
-                        }
-
-                        stack.Push(@operator);
-                    }
+                    stack.Push(c.ToString());
+                    i++;
                 }
-                else
+                else if (c.SequenceEqual(")"))
                 {
-                    int start = i;
-                    while (i < input.Length && !IsSpecialChar(input[i]))
+                    while (stack.Count != 0 && stack.Peek() != "(")
                     {
-                        i++;
+                        output.Add(stack.Pop());
+                    }
+                    stack.Pop();
+                    i++;
+                }
+                else if (IsOperator(span, i, out ReadOnlySpan<char> op))
+                {
+                    i += op.Length;
+
+                    while (stack.Count != 0 && OperatorPriority(stack.Peek()) >= OperatorPriority(op))
+                    {
+                        output.Add(stack.Pop());
                     }
 
-                    output.Add(input[start..i]); // operand
+                    stack.Push(op.ToString());
                 }
             }
-
-            while (stack.Count != 0)
+            else
             {
-                output.Add(stack.Pop());
-            }
+                int start = i;
+                while (i < span.Length && !IsSpecial(span.Slice(i, 1)))
+                {
+                    i++;
+                }
 
-            return output;
+                output.Add(span[start..i].ToString()); // operand
+            }
         }
 
-        private static bool IsSpecialChar(char c)
+        while (stack.Count != 0)
+        {
+            output.Add(stack.Pop());
+        }
+
+        return output;
+
+        static bool IsSpecial(ReadOnlySpan<char> c)
         {
             // where 
             // '|' means "||"
             // '&' means "&&"
-            return c is '(' or ')' or '|' or '&';
+            return
+                c.SequenceEqual("(") ||
+                c.SequenceEqual(")") ||
+                c.SequenceEqual("&") ||
+                c.SequenceEqual("|");
         }
 
-        private static bool IsOperator(string s, int index, out string @operator)
+        static bool IsOperator(ReadOnlySpan<char> span, int index, out ReadOnlySpan<char> @operator)
         {
-            @operator = s.Substring(index, 2);
-            return @operator is "&&" or "||";
+            @operator = span.Slice(index, 2);
+            return
+                @operator.SequenceEqual(Requirement.SymbolAnd) ||
+                @operator.SequenceEqual(Requirement.SymbolOr);
         }
 
-        private static int OperatorPriority(string o)
+        static int OperatorPriority(ReadOnlySpan<char> o)
         {
-            if (o == "&&")
-            {
+            if (o.SequenceEqual(Requirement.SymbolAnd))
                 return 2;
-            }
-            else if (o == "||")
-            {
+            else if (o.SequenceEqual(Requirement.SymbolOr))
                 return 1;
-            }
 
             return 0; // "(" or ")"
         }

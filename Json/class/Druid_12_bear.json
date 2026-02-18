@@ -4,20 +4,22 @@
   "PathFilename": "_pack\\1-20\\Night elf\\10-12_Darkshore_Crawlers.json",
   "PathReduceSteps": true,
   "CheckTargetGivesExp": true,
-  "Form": [
-    {
-      //macro: /cancelform
-      "Name": "cancelform",
-      "Key": "F1",
-      "Form": "None"
-    },
-    {
-      "Name": "Bear Form",
-      "Key": "F2",
-      "Form": "Druid_Bear",
-      "MinMana": 50
-    }
-  ],
+  "Form": {
+    "Sequence": [
+      {
+        //macro: /cancelform
+        "Name": "cancelform",
+        "BaseAction": true,
+        "Key": "F1",
+        "Form": "None"
+      },
+      {
+        "Name": "Bear Form",
+        "Key": "F2",
+        "Form": "Druid_Bear"
+      }
+    ]
+  },
   "Pull": {
     "Sequence": [
       {
@@ -34,8 +36,9 @@
       {
         "Name": "Moonfire",
         "Key": "5",
-        "StopBeforeCast": true,
+        "BeforeCastStop": true,
         "AfterCastWaitBuff": true,
+        "AfterCastWaitGCD": true,
         "Requirements": [
           "!Moonfire",
           "AddVisible",
@@ -47,7 +50,7 @@
       {
         "Name": "Bear Form",
         "Key": "F2",
-        "WaitForWithinMeleeRange": true,
+        "AfterCastWaitMeleeRange": true,
         "Requirements": [
           "Moonfire",
           "!Form:Druid_Bear"
@@ -82,7 +85,6 @@
       {
         "Name": "Demoralizing Roar",
         "Key": "3",
-        "MinRage": 10,
         "WhenUsable": true,
         "Requirements": [
           "InMeleeRange",
@@ -94,18 +96,16 @@
       {
         "Name": "Maul",
         "Key": "2",
-        "MinRage": 15,
         "Requirements": [
           "InMeleeRange",
           "LastMainHandMs > 2100",
           "Form:Druid_Bear"
         ], // bear swing speed fixed at 2.5
-        "AfterCastWaitNextSwing": true,
+        "AfterCastWaitSwing": true,
         "Form": "Druid_Bear"
       },
       {
-        "Name": "AutoAttack",
-        "Requirement": "!AutoAttacking"
+        "Name": "AutoAttack"
       },
       {
         "Name": "Approach",
@@ -119,7 +119,8 @@
         //macro: #showtooltip Small Barnacled Clam /use Small Barnacled Clam
         "Name": "clam",
         "Key": "F12",
-        "DelayAfterCast": 0,
+        "Item": true,
+        "WhenUsable": true,
         "Requirement": "BagItem:5523"
       },
       {
@@ -135,7 +136,7 @@
         "Form": "None"
       },
       {
-        "Name": "Water",
+        "Name": "Drink",
         "Key": "-",
         "Requirement": "Mana% < 40",
         "Form": "None"
@@ -149,7 +150,7 @@
         "Name": "Repair",
         "Key": "C",
         "Form": "None",
-        "Requirement": "Items Broken",
+        "Requirement": "Durability% < 35",
         "PathFilename": "10_NightElf_Vendor.json"
       },
       {

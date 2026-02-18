@@ -1,43 +1,36 @@
 ﻿using Microsoft.Extensions.Logging;
-using System.Collections.Generic;
 
-namespace Core
+using System;
+
+namespace Core;
+
+public class KeyActions
 {
-    public partial class KeyActions
+    public KeyAction[] Sequence { get; set; } =
+        Array.Empty<KeyAction>();
+
+    public virtual void InitBinds(ILogger logger,
+        RequirementFactory factory)
     {
-        public List<KeyAction> Sequence { get; } = new List<KeyAction>();
-
-        public void PreInitialise(string prefix, RequirementFactory requirementFactory, ILogger logger)
+        for (int i = 0; i < Sequence.Length; i++)
         {
-            if (Sequence.Count > 0)
-            {
-                LogDynamicBinding(logger, prefix);
-            }
+            KeyAction keyAction = Sequence[i];
 
-            Sequence.ForEach(i => i.CreateDynamicBinding(requirementFactory));
+            keyAction.InitSlot(logger);
+            factory.InitAutoBinds(keyAction);
         }
+    }
 
-        public void Initialise(string prefix, AddonReader addonReader, RequirementFactory requirementFactory, ILogger logger)
+    public void Init(ILogger logger, bool globalLog,
+        PlayerReader playerReader, RecordInt globalTime,
+        RequirementFactory factory)
+    {
+        for (int i = 0; i < Sequence.Length; i++)
         {
-            if (Sequence.Count > 0)
-            {
-                LogInitKeyActions(logger, prefix);
-            }
+            KeyAction keyAction = Sequence[i];
 
-            Sequence.ForEach(i => i.Initialise(addonReader, requirementFactory, logger, this));
+            keyAction.Init(logger, globalLog, playerReader, globalTime);
+            factory.Init(keyAction);
         }
-
-        [LoggerMessage(
-            EventId = 10,
-            Level = LogLevel.Information,
-            Message = "[{prefix}] CreateDynamicBindings.")]
-        static partial void LogDynamicBinding(ILogger logger, string prefix);
-
-        [LoggerMessage(
-            EventId = 11,
-            Level = LogLevel.Information,
-            Message = "[{prefix}] Initialise KeyActions.")]
-        static partial void LogInitKeyActions(ILogger logger, string prefix);
-
     }
 }

@@ -1,0 +1,507 @@
+{
+  "ClassName": "Warrior",
+  "Log": false,
+  "Loot": true,
+  "Skin": false,
+  "GatherCorpse": true,
+  "UseMount": true,
+  "AllowPvP": false,
+  "AutoPetAttack": false,
+  "KeyboardOnly": true,
+  "NPCMaxLevels_Above": 2,
+  "NPCMaxLevels_Below": 8,
+  "PathThereAndBack": true,
+  "PathReduceSteps": true,
+  "Mount": { "Key": "N0" },
+  "IntVariables": {
+    "CD_MIN_TARGET_HP%": 70,
+    "MIN_RAGE_HEROIC_STRIKE": 40,
+    "MIN_RAGE_EXECUTE": 15,
+    "EXECUTE_HP%": 20,
+    "FLEE_HP%": 15,
+    "FLEE_MOB_COUNT": 3,
+    "FOOD_HP%": 50,
+    "BANDAGE_HP%": 40,
+    "HAMSTRING_HP%": 30,
+    "AOE_MOB_COUNT": 2,
+    "MIN_RAGE_MORTAL_STRIKE": 30,
+    "MIN_RAGE_BLOODTHIRST": 30
+  },
+  "Paths": [
+    {
+      "PathFilename": "_pack\\1-20\\Human\\01-04_Elwynn Forest_Northshire Valley (kobold-wolves-defias).json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Human\\05-09_Elwynn Forest_Farms Tour (pigs, bears, humans).json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 5", "Level < 10", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Human\\10-14_Westfall_beta.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 10", "Level < 15", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Human\\15-18_Westfall_The Dagger Hills (defias).json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 15", "Level < 18", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Human\\18-20_Duskwood_The Darkened Bank - wolves spiders.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 18", "Level < 21", "Race:Human"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Dwarf.Gnome\\1-4_Dun Morogh.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Dwarf || Race:Gnome"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Dwarf.Gnome\\4-6_Dun Morogh.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 4", "Level < 7", "Race:Dwarf || Race:Gnome"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Dwarf.Gnome\\6-9_Dun Morogh.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 6", "Level < 10", "Race:Dwarf || Race:Gnome"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Night elf\\01-04_Teldrassil_Shadowglen.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:NightElf"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Troll.Orc\\1-5_Durotar_Valley of Trials.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Orc || Race:Troll"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Undead\\01-05_Tirisfal Glades_Deathknell.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 5", "Race:Undead"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Tauren\\01-06_Mulgore_Red Cloud Mesa.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level < 6", "Race:Tauren"]
+    },
+    {
+      "PathFilename": "_pack\\20-30\\Duskwood\\20-27 Raven Hill Cemetery.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 20", "Level < 25"]
+    },
+    {
+      "PathFilename": "_pack\\20-30\\Duskwood\\25-30 Vul Gol Ogre Mound.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 25", "Level < 30"]
+    },
+    {
+      "PathFilename": "_pack\\30-40\\Alterac Mountains\\32-36 Yettis-Ogers.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 30", "Level < 36"]
+    },
+    {
+      "PathFilename": "_pack\\30-40\\Alterac Mountains\\35-40 Hills.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 36", "Level < 40"]
+    },
+    {
+      "PathFilename": "_pack\\40-50\\The Hinterlands\\41-42 wolves.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 40", "Level < 43"]
+    },
+    {
+      "PathFilename": "_pack\\40-50\\Tanaris\\43-48.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 43", "Level < 48"]
+    },
+    {
+      "PathFilename": "_pack\\40-50\\Tanaris\\47-50 Southmoon Ruins (Dunemaul Ogres).json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 48", "Level < 52"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Azshara\\50-53 Azshara Legash Encampment.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 50", "Level < 54"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Eastern Plaguelands\\57-60 Browman Mill - Noxious Glade.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 57", "Level <= 60"]
+    }
+  ],
+  "Form": {
+    "Sequence": [
+      {
+        "Name": "Battle Stance",
+        "Key": "F1",
+        "Form": "Warrior_BattleStance"
+      },
+      {
+        "Name": "Defensive Stance",
+        "Key": "F2",
+        "Form": "Warrior_DefensiveStance"
+      },
+      {
+        "Name": "Berserker Stance",
+        "Key": "F3",
+        "Form": "Warrior_BerserkerStance"
+      }
+    ]
+  },
+  "Wait": {
+    "Sequence": [
+      {
+        "Name": "User",
+        "Cost": 0.9,
+        "Requirement": "MenuOpen || ChatInputVisible"
+      }
+    ]
+  },
+  "Pull": {
+    "Sequence": [
+      {
+        "Name": "Shoot",
+        "Key": "9",
+        "Item": true,
+        "WhenUsable": true,
+        "AfterCastWaitMeleeRange": true,
+        "Requirements": [
+          "AddVisible",
+          "HasRangedWeapon && !Items Broken",
+          "!InMeleeRange && (SpellInRange:2 || SpellInRange:3)"
+        ]
+      },
+      {
+        "Name": "Bloodrage",
+        "Key": "8",
+        "WhenUsable": true,
+        "Requirement": "Health% > 50 && CD_Intercept == 0 && Rage < Cost_Intercept && Level >= 32",
+        "Form": "Warrior_BerserkerStance"
+      },
+      {
+        "Name": "Intercept",
+        "Key": "3",
+        "WhenUsable": true,
+        "Requirement": "SpellInRange:0 && !InMeleeRange && Level >= 30",
+        "Form": "Warrior_BerserkerStance",
+        "AfterCastWaitMeleeRange": true
+      },
+      {
+        "Name": "Charge",
+        "Key": "3",
+        "WhenUsable": true,
+        "Requirement": "SpellInRange:0 && !InMeleeRange",
+        "Form": "Warrior_BattleStance",
+        "AfterCastWaitMeleeRange": true
+      },
+      {
+        "Name": "Approach",
+        "Requirements": [
+          "CD_Charge > 0 || !SpellInRange:0"
+        ]
+      }
+    ]
+  },
+  "Combat": {
+    "Sequence": [
+      {
+        "Name": "Victory Rush",
+        "Key": "N5",
+        "WhenUsable": true,
+        "Weight": 3.0,
+        "ScoreConditions": [
+          { "Condition": "Level >= 62", "Bonus": 5.0 }
+        ],
+        "Requirement": "Level >= 62"
+      },
+      {
+        "Name": "Shield Wall",
+        "Key": "N4",
+        "WhenUsable": true,
+        "Weight": 2.5,
+        "ScoreConditions": [
+          { "Condition": "Health% < 20", "Bonus": 8.0 },
+          { "Condition": "MobCount > 2", "Bonus": 2.0 }
+        ],
+        "Requirement": "Health% < 20 && MobCount > 1",
+        "Form": "Warrior_DefensiveStance"
+      },
+      {
+        "Name": "Retaliation",
+        "Key": "N1",
+        "WhenUsable": true,
+        "Weight": 2.0,
+        "ScoreConditions": [
+          { "Condition": "MobCount > 2", "Bonus": 3.0 }
+        ],
+        "Requirement": "MobCount > AOE_MOB_COUNT && Level >= 20",
+        "Form": "Warrior_BattleStance"
+      },
+      {
+        "Name": "Bloodrage",
+        "Key": "8",
+        "WhenUsable": true,
+        "Weight": 1.8,
+        "ScoreConditions": [
+          { "Condition": "Rage < 10", "Bonus": 1.0 }
+        ],
+        "Requirement": "Health% > 50 && Rage < Cost_Heroic Strike"
+      },
+      {
+        "Name": "Berserker Rage",
+        "Key": "5",
+        "WhenUsable": true,
+        "Weight": 1.8,
+        "ScoreConditions": [
+          { "Condition": "Rage < 20", "Bonus": 0.5 }
+        ],
+        "Requirement": "Form:Warrior_BerserkerStance && Rage < Cost_Heroic Strike && Level >= 32"
+      },
+      {
+        "Name": "Sweeping Strikes",
+        "Key": "N6",
+        "WhenUsable": true,
+        "Weight": 2.5,
+        "ScoreConditions": [
+          { "Condition": "MobCount > 2", "Bonus": 4.0 },
+          { "Condition": "TargetHealth% > 50", "Bonus": 1.0 }
+        ],
+        "Requirement": "MobCount > 1 && Level >= 30",
+        "Form": "Warrior_BattleStance"
+      },
+      {
+        "Name": "Death Wish",
+        "Key": "F5",
+        "WhenUsable": true,
+        "Weight": 2.0,
+        "ScoreConditions": [
+          { "Condition": "TargetHealth% > 70", "Bonus": 1.0 },
+          { "Condition": "TargetHealth% < 95", "Bonus": 0.5 }
+        ],
+        "Requirement": "TargetHealth% > CD_MIN_TARGET_HP% && TargetHealth% < 95 && Level >= 30"
+      },
+      {
+        "Name": "Whirlwind",
+        "Key": "N7",
+        "WhenUsable": true,
+        "Weight": 2.8,
+        "ScoreConditions": [
+          { "Condition": "MobCount > 2", "Bonus": 3.0 },
+          { "Condition": "MobCount > 1", "Bonus": 1.5 }
+        ],
+        "Requirement": "MobCount > 1 && Level >= 36",
+        "Form": "Warrior_BerserkerStance"
+      },
+      {
+        "Name": "Thunder Clap",
+        "Key": "6",
+        "WhenUsable": true,
+        "Cooldown": 16000,
+        "Weight": 2.0,
+        "ScoreConditions": [
+          { "Condition": "MobCount > 2", "Bonus": 2.0 }
+        ],
+        "Requirements": [
+          "!Thunder Clap",
+          "Form:Warrior_BattleStance && MobCount > 1 && Level >= 6"
+        ]
+      },
+      {
+        "Name": "Overpower",
+        "Key": "0",
+        "WhenUsable": true,
+        "Weight": 3.0,
+        "ScoreConditions": [
+          { "Condition": "LastTargetDodgeMs > 0", "Bonus": 5.0 }
+        ],
+        "Cooldown": 5000,
+        "Requirements": [
+          "LastTargetDodgeMs > 0 && LastTargetDodgeMs < 5000 && Level >= 12"
+        ],
+        "Form": "Warrior_BattleStance"
+      },
+      {
+        "Name": "Execute",
+        "Key": "7",
+        "WhenUsable": true,
+        "Weight": 4.0,
+        "ScoreConditions": [
+          { "Condition": "TargetHealth% < 20", "Bonus": 8.0 },
+          { "Condition": "Rage > 30", "Bonus": 2.0 },
+          { "Condition": "Rage > 50", "Bonus": 1.0 }
+        ],
+        "Requirement": "TargetHealth% < EXECUTE_HP% && Level >= 24 && Rage >= MIN_RAGE_EXECUTE"
+      },
+      {
+        "Name": "Mortal Strike",
+        "Key": "N2",
+        "WhenUsable": true,
+        "Weight": 3.0,
+        "ScoreConditions": [
+          { "Condition": "MobCount < 2", "Bonus": 1.0 },
+          { "Condition": "TargetHealth% > 20", "Bonus": 0.5 },
+          { "Condition": "Rage > MIN_RAGE_MORTAL_STRIKE", "Bonus": 0.5 }
+        ],
+        "Requirements": [
+          "MainHandSwing < -400",
+          "MobCount < 2",
+          "TargetHealth% > 20",
+          "Level >= 40"
+        ]
+      },
+      {
+        "Name": "Bloodthirst",
+        "Key": "N3",
+        "WhenUsable": true,
+        "Weight": 2.8,
+        "ScoreConditions": [
+          { "Condition": "TargetHealth% > 20", "Bonus": 0.5 },
+          { "Condition": "Rage > MIN_RAGE_BLOODTHIRST", "Bonus": 0.5 }
+        ],
+        "Requirements": [
+          "TargetHealth% > 20",
+          "Level >= 40"
+        ]
+      },
+      {
+        "Name": "Cleave",
+        "Key": "1",
+        "WhenUsable": true,
+        "Weight": 2.2,
+        "ScoreConditions": [
+          { "Condition": "MobCount > 2", "Bonus": 1.5 },
+          { "Condition": "Rage > 60", "Bonus": 0.5 }
+        ],
+        "Requirements": [
+          "MainHandSwing > -400",
+          "MobCount > 1 && Level >= 20"
+        ],
+        "AfterCastWaitSwing": true
+      },
+      {
+        "Name": "Heroic Strike",
+        "Key": "2",
+        "WhenUsable": true,
+        "Weight": 1.5,
+        "ScoreConditions": [
+          { "Condition": "Rage > 60", "Bonus": 1.0 },
+          { "Condition": "TargetHealth% < 50", "Bonus": 0.5 }
+        ],
+        "Requirements": [
+          "MainHandSwing > -400",
+          "MobCount < 2 || Level < 20",
+          "TargetHealth% > 20",
+          "Rage >= MIN_RAGE_HEROIC_STRIKE"
+        ],
+        "AfterCastWaitSwing": true
+      },
+      {
+        "Name": "Hamstring",
+        "Key": "N8",
+        "WhenUsable": true,
+        "Weight": 1.2,
+        "ScoreConditions": [
+          { "Condition": "TargetHealth% < 30", "Bonus": 2.0 }
+        ],
+        "Requirements": [
+          "!Hamstring",
+          "TargetHealth% < HAMSTRING_HP%",
+          "Level >= 8"
+        ]
+      },
+      {
+        "Name": "Rend",
+        "Key": "5",
+        "WhenUsable": true,
+        "Weight": 1.5,
+        "ScoreConditions": [
+          { "Condition": "TargetHealth% > 60", "Bonus": 0.5 }
+        ],
+        "Requirements": [
+          "!Rend",
+          "TargetHealth% > 50",
+          "Form:Warrior_BattleStance",
+          "Level >= 4"
+        ]
+      },
+      {
+        "Name": "Sunder Armor",
+        "Key": "-",
+        "WhenUsable": true,
+        "Weight": 1.3,
+        "ScoreConditions": [
+          { "Condition": "Sunder Armor < 3", "Bonus": 1.0 },
+          { "Condition": "TargetHealth% > 60", "Bonus": 0.5 }
+        ],
+        "Requirements": [
+          "Sunder Armor < 5",
+          "TargetHealth% > 60",
+          "Level >= 10"
+        ]
+      },
+      {
+        "Name": "AutoAttack"
+      },
+      {
+        "Name": "Approach"
+      }
+    ]
+  },
+  "Flee": {
+    "Sequence": [
+      {
+        "Name": "Flee",
+        "Requirement": "(MobCount >= FLEE_MOB_COUNT && Health% < FLEE_HP%) || TargetElite"
+      }
+    ]
+  },
+  "Adhoc": {
+    "Sequence": [
+      {
+        "Name": "Food",
+        "Key": "N1",
+        "Requirement": "Health% < FOOD_HP%",
+        "Cost": 3
+      },
+      {
+        "Name": "Bandage",
+        "Key": "N9",
+        "HasCastbar": true,
+        "Requirement": "Health% < BANDAGE_HP% && !Recently Bandaged",
+        "AfterCastWaitCastbar": true,
+        "Cost": 2.5
+      },
+      {
+        "Name": "Battle Shout",
+        "Key": "4",
+        "Requirement": "!Battle Shout && Level >= 1"
+      }
+    ]
+  }
+}

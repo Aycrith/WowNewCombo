@@ -1,0 +1,30 @@
+﻿﻿<Router AppAssembly="@GetType().Assembly">
+    <Found Context="routeData">
+        <ErrorBoundary>
+            <ChildContent>
+                <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+                <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+            </ChildContent>
+            <ErrorContent Context="ex">
+                <LayoutView Layout="@typeof(MainLayout)">
+                    <div class="alert alert-danger mt-3">
+                        <div class="fw-semibold">UI Error</div>
+                        <div class="small text-muted">The UI crashed, but the server may still be running. Check logs for details.</div>
+                        <div class="mt-2">
+                            <a class="btn btn-sm btn-outline-light" href="/Log">Open Live Logs</a>
+                            <a class="btn btn-sm btn-outline-light ms-2" href="/launch">Open Launch Wizard</a>
+                        </div>
+                        <div class="mt-2 small">
+                            @ex.Message
+                        </div>
+                    </div>
+                </LayoutView>
+            </ErrorContent>
+        </ErrorBoundary>
+    </Found>
+    <NotFound>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <p>Sorry, there's nothing at this address.</p>
+        </LayoutView>
+    </NotFound>
+</Router>

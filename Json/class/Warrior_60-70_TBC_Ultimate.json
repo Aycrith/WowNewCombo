@@ -1,0 +1,379 @@
+{
+  "ClassName": "Warrior",
+  "Log": false,
+  "Loot": true,
+  "Skin": false,
+  "GatherCorpse": true,
+  "UseMount": true,
+  "AllowPvP": false,
+  "KeyboardOnly": true,
+  "NPCMaxLevels_Above": 2,
+  "NPCMaxLevels_Below": 6,
+  "PathThereAndBack": true,
+  "PathReduceSteps": true,
+  "Mount": { "Key": "N0" },
+
+  "IntVariables": {
+    "CD_MIN_TARGET_HP%": 70,
+    "MIN_RAGE_HEROIC_STRIKE": 45,
+    "EXECUTE_HP%": 20,
+    "FLEE_HP%": 15,
+    "FLEE_MOB_COUNT": 3,
+    "FOOD_HP%": 55,
+    "BANDAGE_HP%": 45,
+    "AOE_MOB_COUNT": 2
+  },
+
+  "Paths": [
+    {
+      "PathFilename": "_pack\\60-70\\Hellfire Peninsula\\58-60 Pools of Aggonar.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 58", "Level < 61"]
+    },
+    {
+      "PathFilename": "_pack\\60-70\\Hellfire Peninsula\\60-62 Expedition Armory.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 60", "Level < 63"]
+    },
+    {
+      "PathFilename": "_pack\\60-70\\Zangarmarsh\\62-63 Boglash.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 62", "Level < 64"]
+    },
+    {
+      "PathFilename": "_pack\\60-70\\Zangarmarsh\\63-65 Umbrafen Lake.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 63", "Level < 65"]
+    },
+    {
+      "PathFilename": "_pack\\60-70\\Nagrand\\64-67 Sunspring Post.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 64", "Level < 67"]
+    },
+    {
+      "PathFilename": "_pack\\60-70\\Nagrand\\65-70 Oshugun.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 65", "Level < 68"]
+    },
+    {
+      "PathFilename": "_pack\\60-70\\Blade's Edge Mountains\\67-69 Bladespire Hold.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 67", "Level < 70"]
+    },
+    {
+      "PathFilename": "_pack\\60-70\\Netherstorm\\68-70 Area 52.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 68", "Level <= 70"]
+    }
+  ],
+
+  "Form": {
+    "Sequence": [
+      {
+        "Name": "Battle Stance",
+        "Key": "F1",
+        "Form": "Warrior_BattleStance"
+      },
+      {
+        "Name": "Defensive Stance",
+        "Key": "F2",
+        "Form": "Warrior_DefensiveStance"
+      },
+      {
+        "Name": "Berserker Stance",
+        "Key": "F3",
+        "Form": "Warrior_BerserkerStance"
+      }
+    ]
+  },
+
+  "Wait": {
+    "Sequence": [
+      {
+        "Cost": 0.9,
+        "Name": "User",
+        "Requirement": "MenuOpen || ChatInputVisible"
+      }
+    ]
+  },
+
+  "Pull": {
+    "Sequence": [
+      {
+        "Name": "Shoot",
+        "Key": "9",
+        "Item": true,
+        "WhenUsable": true,
+        "AfterCastWaitMeleeRange": true,
+        "Requirements": [
+          "AddVisible",
+          "HasRangedWeapon && !Items Broken",
+          "!InMeleeRange"
+        ]
+      },
+      {
+        "Name": "Bloodrage",
+        "Key": "8",
+        "WhenUsable": true,
+        "Requirement": "Health% > 50 && CD_Intercept == 0 && Rage < Cost_Intercept",
+        "Form": "Warrior_BerserkerStance"
+      },
+      {
+        "Name": "Intercept",
+        "Key": "3",
+        "WhenUsable": true,
+        "Requirement": "SpellInRange:0 && !InMeleeRange",
+        "Form": "Warrior_BerserkerStance",
+        "AfterCastWaitMeleeRange": true
+      },
+      {
+        "Name": "Charge",
+        "Key": "3",
+        "WhenUsable": true,
+        "Requirement": "SpellInRange:0 && !InMeleeRange",
+        "Form": "Warrior_BattleStance",
+        "AfterCastWaitMeleeRange": true
+      },
+      {
+        "Name": "Approach",
+        "Requirements": [
+          "CD_Charge > 0 || !SpellInRange:0"
+        ]
+      }
+    ]
+  },
+
+  "Combat": {
+    "Sequence": [
+      {
+        "Name": "Victory Rush",
+        "Key": "N5",
+        "WhenUsable": true
+      },
+      {
+        "Name": "Shield Wall",
+        "Key": "N4",
+        "WhenUsable": true,
+        "Requirement": "Health% < 20 && MobCount > 1",
+        "Form": "Warrior_DefensiveStance"
+      },
+      {
+        "Name": "Retaliation",
+        "Key": "N1",
+        "WhenUsable": true,
+        "Requirement": "MobCount > AOE_MOB_COUNT",
+        "Form": "Warrior_BattleStance"
+      },
+      {
+        "Name": "Bloodrage",
+        "Key": "8",
+        "WhenUsable": true,
+        "Requirement": "Health% > 50 && Rage < Cost_Mortal Strike"
+      },
+      {
+        "Name": "Berserker Rage",
+        "Key": "5",
+        "WhenUsable": true,
+        "Requirement": "Form:Warrior_BerserkerStance && Rage < Cost_Mortal Strike"
+      },
+      {
+        "Name": "Sweeping Strikes",
+        "Key": "N6",
+        "WhenUsable": true,
+        "Requirement": "MobCount > 1",
+        "Form": "Warrior_BattleStance"
+      },
+      {
+        "Name": "Death Wish",
+        "Key": "F5",
+        "WhenUsable": true,
+        "Requirement": "TargetHealth% > CD_MIN_TARGET_HP% && TargetHealth% < 95"
+      },
+      {
+        "Name": "Whirlwind",
+        "Key": "N7",
+        "WhenUsable": true,
+        "Requirement": "MobCount > 1",
+        "Form": "Warrior_BerserkerStance"
+      },
+      {
+        "Name": "Thunder Clap",
+        "Key": "6",
+        "WhenUsable": true,
+        "Cooldown": 16000,
+        "Requirements": [
+          "!Thunder Clap",
+          "Form:Warrior_BattleStance && MobCount > 1"
+        ]
+      },
+      {
+        "Name": "Overpower",
+        "Key": "0",
+        "WhenUsable": true,
+        "Cooldown": 5000,
+        "Requirements": [
+          "LastTargetDodgeMs > 0 && LastTargetDodgeMs < 5000"
+        ],
+        "Form": "Warrior_BattleStance"
+      },
+      {
+        "Name": "Execute",
+        "Key": "7",
+        "WhenUsable": true,
+        "Requirement": "TargetHealth% < EXECUTE_HP%"
+      },
+      {
+        "Name": "Mortal Strike",
+        "Key": "N2",
+        "WhenUsable": true,
+        "Requirements": [
+          "MainHandSwing < -400",
+          "MobCount < 2",
+          "TargetHealth% > 20"
+        ]
+      },
+      {
+        "Name": "Bloodthirst",
+        "Key": "N3",
+        "WhenUsable": true,
+        "Requirements": [
+          "TargetHealth% > 20"
+        ]
+      },
+      {
+        "Name": "Cleave",
+        "Key": "1",
+        "WhenUsable": true,
+        "Requirements": [
+          "MainHandSwing > -400",
+          "MobCount > 1"
+        ],
+        "AfterCastWaitSwing": true
+      },
+      {
+        "Name": "Heroic Strike",
+        "Key": "2",
+        "WhenUsable": true,
+        "Requirements": [
+          "MainHandSwing > -400",
+          "MobCount < 2",
+          "TargetHealth% > 20",
+          "Rage >= MIN_RAGE_HEROIC_STRIKE"
+        ],
+        "AfterCastWaitSwing": true
+      },
+      {
+        "Name": "Rend",
+        "Key": "5",
+        "WhenUsable": true,
+        "Requirements": [
+          "!Rend",
+          "TargetHealth% > 50",
+          "Form:Warrior_BattleStance"
+        ]
+      },
+      {
+        "Name": "Berserker Stance",
+        "Key": "F3",
+        "WhenUsable": true,
+        "Requirements": [
+          "Rend",
+          "MobCount < 2",
+          "Rage <= 5",
+          "Form:Warrior_BattleStance"
+        ]
+      },
+      {
+        "Name": "Battle Stance",
+        "Key": "F1",
+        "WhenUsable": true,
+        "Requirements": [
+          "MobCount > 1",
+          "Rage <= 5",
+          "Form:Warrior_BerserkerStance"
+        ]
+      },
+      {
+        "Name": "AutoAttack"
+      },
+      {
+        "Name": "Approach",
+        "Log": false
+      }
+    ]
+  },
+
+  "Flee": {
+    "Sequence": [
+      {
+        "Name": "Flee",
+        "Requirement": "(MobCount >= FLEE_MOB_COUNT && Health% < FLEE_HP%) || TargetElite"
+      }
+    ]
+  },
+
+  "Adhoc": {
+    "Sequence": [
+      {
+        "Cost": 3.1,
+        "Name": "Battle Shout",
+        "Key": "4",
+        "InCombat": "i dont care",
+        "WhenUsable": true,
+        "Requirement": "!Battle Shout"
+      },
+      {
+        "Name": "Food",
+        "Key": "=",
+        "Requirement": "Health% < FOOD_HP%",
+        "Cost": 3
+      },
+      {
+        "Name": "Bandage",
+        "Key": "-",
+        "HasCastbar": true,
+        "Requirement": "Health% < BANDAGE_HP% && !Recently Bandaged",
+        "AfterCastWaitCastbar": true,
+        "Cost": 2.5
+      },
+      {
+        "Cost": 18,
+        "Name": "Adamantite Sharpening Stone",
+        "Key": "F4",
+        "WhenUsable": true,
+        "HasCastbar": true,
+        "Requirement": "!HasMainHandEnchant",
+        "AfterCastWaitCastbar": true,
+        "AfterCastAuraExpected": true
+      }
+    ]
+  },
+
+  "NPC": {
+    "Sequence": [
+      {
+        "Name": "Repair",
+        "Key": "C",
+        "Requirement": "Durability% < 35",
+        "Cost": 6
+      },
+      {
+        "Name": "Sell",
+        "Key": "C",
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ],
+        "Cost": 6
+      }
+    ]
+  }
+}

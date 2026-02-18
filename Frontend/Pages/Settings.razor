@@ -1,0 +1,354 @@
+@page "/Settings"
+
+@using Microsoft.Extensions.Options
+@using SharedLib
+@using System.Linq
+
+@inject IconDB iconDB
+@inject IJSRuntime JSRuntime
+@inject IOptionsMonitor<MountUnlockOptions> mountUnlockOptions
+@inject MountUnlockAdminService mountUnlockAdmin
+@inject IOptionsMonitor<StartupConfigPathing> pathingOptions
+@inject PathingAdminService pathingAdmin
+@inject StartupClientVersion clientVersion
+@inject DataConfig dataConfig
+
+@implements IDisposable
+
+<Card class="mt-2">
+    <CardHeader>Icon CDN Region</CardHeader>
+    <CardBody>
+        <p class="text-muted small">Select the closest CDN for faster icon loading.</p>
+        <select class="form-select" style="width: auto;" @bind="selectedRegion" @bind:after="OnRegionChanged">
+            <option value="0">Auto-detect</option>
+            <option value="1">US (Americas)</option>
+            <option value="2">EU (Europe/Africa)</option>
+            <option value="3">KR (Korea)</option>
+            <option value="4">TW (Taiwan)</option>
+        </select>
+        @if (detectedRegion != null)
+        {
+            <small class="text-muted ms-2">Detected: @detectedRegion</small>
+        }
+    </CardBody>
+</Card>
+
+<Card class="mt-2">
+    <CardHeader>Pathing</CardHeader>
+    <CardBody>
+        <p class="text-muted small mb-2">
+            Configures which pathing backend the bot uses. Changing this setting writes to <code>appsettings.json</code>
+            and requires a BlazorServer restart to re-bind the backend.
+        </p>
+
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Mode</label>
+                <select class="form-select" @bind="pathingMode">
+                    <option value="Local">Local</option>
+                    <option value="RemoteV1">RemoteV1 (PathingAPI)</option>
+                    <option value="RemoteV3">RemoteV3 (AmeisenNavigation)</option>
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">RemoteV1 Host</label>
+                <input class="form-control" @bind="pathingHostV1" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">RemoteV1 Port</label>
+                <input class="form-control" type="number" @bind="pathingPortV1" />
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">RemoteV3 Host</label>
+                <input class="form-control" @bind="pathingHostV3" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">RemoteV3 Port</label>
+                <input class="form-control" type="number" @bind="pathingPortV3" />
+            </div>
+
+            <div class="col-md-4 d-flex align-items-end">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch" id="pathViz"
+                           @bind="pathVisualizer" />
+                    <label class="form-check-label" for="pathViz">Path Visualizer (RemoteV1)</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-3 d-flex gap-2 flex-wrap">
+            <button class="btn btn-sm btn-primary" @onclick="SavePathingSettings">Save Pathing</button>
+            <a class="btn btn-sm btn-outline-secondary" href="/RestartServer">Restart Server</a>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(pathingSaveStatus))
+        {
+            <div class="mt-2 text-muted small">
+                @pathingSaveStatus
+            </div>
+        }
+
+        <hr class="my-3" />
+
+        <div class="small">
+            <div class="fw-semibold mb-1">Health Hints</div>
+            <ul class="mb-0">
+                <li>RemoteV3 listening (@pathingPortV3): <b>@(IsPortListening(pathingPortV3) ? "Yes" : "No")</b></li>
+                <li>RemoteV1 reachable (@pathingHostV1:@pathingPortV1): <b>@(TryTcpConnect(pathingHostV1, pathingPortV1) ? "Yes" : "No")</b></li>
+                <li>MPQ present (@(dataConfig.MPQ ?? string.Empty)): <b>@(HasAnyMpqFiles() ? "Yes" : "No")</b></li>
+            </ul>
+        </div>
+    </CardBody>
+</Card>
+
+<Card class="mt-2">
+    <CardHeader>Admin: Mount Unlock Rules</CardHeader>
+    <CardBody>
+        <p class="text-muted small mb-2">
+            Controls whether the bot is allowed to mount below the TBC Classic unlock level.
+            This setting is persisted to <code>runtime_feature_flags.json</code> and applies immediately.
+        </p>
+
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <div class="fw-semibold">Enforce TBC mount unlock at level @tbcMountUnlockLevel</div>
+                <div class="text-muted small">
+                    Client detected: <b>@clientVersion.Version</b>
+                </div>
+            </div>
+
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="tbcMountUnlock"
+                       @bind="enforceTbcMountLevelRequirement" @bind:after="MountUnlockSettingChanged" />
+                <label class="form-check-label" for="tbcMountUnlock">
+                    @(enforceTbcMountLevelRequirement ? "On" : "Off")
+                </label>
+            </div>
+        </div>
+
+        <hr class="my-3" />
+
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <div class="fw-semibold">Auto-unstealth for travel (Rogue/Druid)</div>
+                <div class="text-muted small">
+                    Automatically cancel stealth during long-distance travel (40+ yards) when mounting is not available.
+                    Optimizes movement speed for pre-mount levels by moving at normal speed instead of slow stealth speed.
+                </div>
+            </div>
+
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="autoUnstealth"
+                       @bind="autoUnstealthForTravel" @bind:after="MountUnlockSettingChanged" />
+                <label class="form-check-label" for="autoUnstealth">
+                    @(autoUnstealthForTravel ? "On" : "Off")
+                </label>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(mountUnlockSaveStatus))
+        {
+            <div class="mt-2 text-muted small">
+                @mountUnlockSaveStatus
+            </div>
+        }
+    </CardBody>
+</Card>
+
+@code {
+    private int selectedRegion;
+    private string? detectedRegion;
+
+    private bool enforceTbcMountLevelRequirement;
+    private int tbcMountUnlockLevel;
+    private bool autoUnstealthForTravel;
+    private string mountUnlockSaveStatus = string.Empty;
+    private IDisposable? mountUnlockSubscription;
+
+    private string pathingMode = "RemoteV3";
+    private string pathingHostV1 = "localhost";
+    private int pathingPortV1 = 5001;
+    private string pathingHostV3 = "127.0.0.1";
+    private int pathingPortV3 = 47110;
+    private bool pathVisualizer;
+    private string pathingSaveStatus = string.Empty;
+    private IDisposable? pathingSubscription;
+
+    protected override void OnInitialized()
+    {
+        SyncMountUnlockState(mountUnlockOptions.CurrentValue);
+        SyncPathingState(pathingOptions.CurrentValue);
+
+        mountUnlockSubscription = mountUnlockOptions.OnChange((options, optionName) =>
+        {
+            _ = InvokeAsync(() =>
+            {
+                SyncMountUnlockState(options);
+                StateHasChanged();
+            });
+        });
+
+        pathingSubscription = pathingOptions.OnChange((options, optionName) =>
+        {
+            _ = InvokeAsync(() =>
+            {
+                SyncPathingState(options);
+                StateHasChanged();
+            });
+        });
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            selectedRegion = await JSRuntime.InvokeAsync<int>("LocalStorageHelper.getCdnRegion");
+            int detected = await JSRuntime.InvokeAsync<int>("LocalStorageHelper.detectCdnRegion");
+            detectedRegion = detected switch { 1 => "US", 2 => "EU", 3 => "KR", 4 => "TW", _ => "US" };
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnRegionChanged()
+    {
+        await JSRuntime.InvokeVoidAsync("LocalStorageHelper.setCdnRegion", selectedRegion);
+        int effectiveRegion = selectedRegion == 0
+            ? await JSRuntime.InvokeAsync<int>("LocalStorageHelper.detectCdnRegion")
+            : selectedRegion;
+        iconDB.Region = (CdnRegion)effectiveRegion;
+    }
+
+    private void SyncMountUnlockState(MountUnlockOptions options)
+    {
+        enforceTbcMountLevelRequirement = options.EnforceTbcMountLevelRequirement;
+        autoUnstealthForTravel = options.AutoUnstealthForTravel;
+        tbcMountUnlockLevel = options.TbcMountUnlockLevel <= 0 ? 30 : options.TbcMountUnlockLevel;
+    }
+
+    private Task MountUnlockSettingChanged()
+    {
+        try
+        {
+            mountUnlockSaveStatus = "Saving...";
+
+            mountUnlockAdmin.Save(new MountUnlockOptions
+            {
+                EnforceTbcMountLevelRequirement = enforceTbcMountLevelRequirement,
+                TbcMountUnlockLevel = tbcMountUnlockLevel,
+                AutoUnstealthForTravel = autoUnstealthForTravel
+            });
+
+            mountUnlockSaveStatus = $"Saved. File: {mountUnlockAdmin.RuntimeFlagsFilePath}";
+        }
+        catch (Exception ex)
+        {
+            mountUnlockSaveStatus = $"Save failed: {ex.Message}";
+            SyncMountUnlockState(mountUnlockOptions.CurrentValue);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void SyncPathingState(StartupConfigPathing options)
+    {
+        pathingMode = string.IsNullOrWhiteSpace(options.Mode) ? "Local" : options.Mode;
+        pathingHostV1 = string.IsNullOrWhiteSpace(options.hostv1) ? "localhost" : options.hostv1;
+        pathingPortV1 = options.portv1 <= 0 ? 5001 : options.portv1;
+        pathingHostV3 = string.IsNullOrWhiteSpace(options.hostv3) ? "127.0.0.1" : options.hostv3;
+        pathingPortV3 = options.portv3 <= 0 ? 47110 : options.portv3;
+        pathVisualizer = options.PathVisualizer;
+    }
+
+    private Task SavePathingSettings()
+    {
+        try
+        {
+            pathingSaveStatus = "Saving...";
+
+            pathingAdmin.Save(new PathingAdminService.PathingSettings(
+                Mode: pathingMode,
+                HostV1: pathingHostV1,
+                PortV1: pathingPortV1,
+                HostV3: pathingHostV3,
+                PortV3: pathingPortV3,
+                PathVisualizer: pathVisualizer));
+
+            pathingSaveStatus = $"Saved. File: {pathingAdmin.AppSettingsFilePath} (restart required)";
+        }
+        catch (Exception ex)
+        {
+            pathingSaveStatus = $"Save failed: {ex.Message}";
+            SyncPathingState(pathingOptions.CurrentValue);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private static bool IsPortListening(int port)
+    {
+        try
+        {
+            System.Net.IPEndPoint[] listeners =
+                System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners();
+
+            for (int i = 0; i < listeners.Length; i++)
+            {
+                if (listeners[i].Port == port)
+                {
+                    return true;
+                }
+            }
+        }
+        catch
+        {
+        }
+
+        return false;
+    }
+
+    private static bool TryTcpConnect(string host, int port)
+    {
+        if (string.IsNullOrWhiteSpace(host) || port <= 0)
+        {
+            return false;
+        }
+
+        try
+        {
+            using System.Net.Sockets.TcpClient client = new();
+            Task connect = client.ConnectAsync(host, port);
+            return connect.Wait(TimeSpan.FromMilliseconds(350));
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private bool HasAnyMpqFiles()
+    {
+        try
+        {
+            string mpqDir = dataConfig.MPQ;
+            if (string.IsNullOrWhiteSpace(mpqDir) || !Directory.Exists(mpqDir))
+            {
+                return false;
+            }
+
+            return Directory.EnumerateFiles(mpqDir, "*.MPQ", SearchOption.TopDirectoryOnly).Any() ||
+                   Directory.EnumerateFiles(mpqDir, "*.mpq", SearchOption.TopDirectoryOnly).Any();
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public void Dispose()
+    {
+        mountUnlockSubscription?.Dispose();
+        pathingSubscription?.Dispose();
+    }
+}
