@@ -228,7 +228,7 @@ public static class Program
         services.AddHazardAvoidance();
 
         // Phase 2 (AI Profile Generator & Profile Marketplace) - feature-flagged, disabled by default.
-        services.AddPhase2Features();
+        services.AddPhase2Features(configuration);
 
         // Phase 3 (Behavior Trees, Hybrid LLM) - feature-flagged, disabled by default.
         services.AddPhase3Features();

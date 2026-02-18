@@ -186,43 +186,6 @@ public sealed class FailureAnalyticsTests : IDisposable
     }
 
     [Fact]
-    public void OnGoapEvent_AbortEvent_RecordsNoPlan()
-    {
-        using FailureAnalytics service = CreateService(_enabledFlags);
-
-        service.OnGoapEvent(new AbortEvent());
-
-        FailureStatistics stats = service.GetSessionStatistics();
-        stats.TotalFailures.Should().Be(1);
-        stats.EventsByType.Should().ContainKey(FailureType.NoPlan);
-        stats.EventsByType[FailureType.NoPlan].Should().Be(1);
-        stats.RecentEvents[0].Reason.Should().Be("GOAP could not find valid plan");
-    }
-
-    [Fact]
-    public void OnGoapEvent_NonAbortEvent_IsIgnored()
-    {
-        using FailureAnalytics service = CreateService(_enabledFlags);
-
-        service.OnGoapEvent(new ResumeEvent());
-
-        FailureStatistics stats = service.GetSessionStatistics();
-        stats.TotalFailures.Should().Be(0);
-        stats.EventsByType.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void OnGoapEvent_WhenDisabled_IsIgnored()
-    {
-        using FailureAnalytics service = CreateService(_disabledFlags);
-
-        service.OnGoapEvent(new AbortEvent());
-
-        FailureStatistics stats = service.GetSessionStatistics();
-        stats.TotalFailures.Should().Be(0);
-    }
-
-    [Fact]
     public void HotZoneDetection_GroupsNearbyFailures()
     {
         using FailureAnalytics service = CreateService(_enabledFlags);

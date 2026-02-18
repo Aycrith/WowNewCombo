@@ -92,21 +92,6 @@ public sealed class FailureAnalytics : IHostedService, IDisposable
         engine.RecordMultiMobRetreat(mobCount);
     }
 
-    /// <summary>
-    /// Handles GOAP events - only AbortEvent is recorded as a NoPlan failure (delegates to engine).
-    /// Note: StuckDetector events are handled by FailureAnalyticsEventListener instead.
-    /// </summary>
-    public void OnGoapEvent(GoapEventArgs e)
-    {
-        if (!featureFlags.Current.FailureAnalytics.Enabled)
-            return;
-
-        // Only respond to "NO PLAN" events (AbortEvent)
-        if (e is AbortEvent)
-        {
-            engine.RecordNoPlanFailure("GOAP could not find valid plan");
-        }
-    }
 
     public void Dispose()
     {

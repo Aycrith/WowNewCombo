@@ -1,5 +1,7 @@
+using Core.Analytics;
 using Core.Goals;
 using Core.GOAP;
+using Core.LLM;
 using Core.Launch;
 
 using Game;
@@ -536,6 +538,24 @@ public sealed partial class BotController : IBotController, IDisposable
             sp.GetRequiredService<IBotController>().ResolveLoadedProfile();
 
         GoalFactory.Create(s, serviceProvider, config);
+
+        // Register factory for extra listeners from root provider and session scope
+        s.AddScoped<IEnumerable<IGoapEventListener>>(sp =>
+        {
+            var listeners = new List<IGoapEventListener>();
+
+            // Get HybridLlmEventListener from root provider (Phase 1 singleton)
+            var hybridListener = serviceProvider.GetService<HybridLlmEventListener>();
+            if (hybridListener != null)
+                listeners.Add(hybridListener);
+
+            // Get FailureAnalyticsEventListener from session scope (registered in GoalFactory)
+            var analyticsListener = sp.GetService<FailureAnalyticsEventListener>();
+            if (analyticsListener != null)
+                listeners.Add(analyticsListener);
+
+            return listeners;
+        });
 
         s.AddScoped<IEnumerable<IRouteProvider>>(GetPathProviders);
         s.AddScoped<RouteInfo>();
