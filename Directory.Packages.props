@@ -61,6 +61,7 @@
     <PackageVersion Include="coverlet.collector" Version="6.0.2" />
     <PackageVersion Include="coverlet.msbuild" Version="6.0.2" />
     <PackageVersion Include="FluentAssertions" Version="6.12.0" />
+    <PackageVersion Include="Moq" Version="4.20.70" />
     <PackageVersion Include="bunit" Version="1.36.0" />
     <PackageVersion Include="bunit.core" Version="1.36.0" />
     <PackageVersion Include="bunit.web" Version="1.36.0" />
