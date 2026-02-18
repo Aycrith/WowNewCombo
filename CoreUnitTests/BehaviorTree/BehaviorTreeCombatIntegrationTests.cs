@@ -36,6 +36,7 @@ public sealed class BehaviorTreeCombatIntegrationTests
             Input = null!,
             Logger = NullLogger.Instance,
             NearbyEnemies = nearbyEnemies,
+            PlayerHealthPercent = playerHealth,
             CurrentTarget = targetDead ? null : new TargetInfo
             {
                 HealthPercent = targetHealth,
@@ -211,7 +212,7 @@ public sealed class BehaviorTreeCombatIntegrationTests
         SelectorNode root = new("CombatRoot");
 
         SequenceNode emergencySeq = new("Emergency");
-        emergencySeq.Children.Add(new ConditionNode("IsLowHealth", ctx => ctx.Player != null ? ctx.Player.HealthPercent() < 30 : false));
+        emergencySeq.Children.Add(new ConditionNode("IsLowHealth", ctx => ctx.PlayerHealthPercent < 30));
         emergencySeq.Children.Add(new ActionNode("Retreat", ctx =>
         {
             retreatCalled = true;
@@ -362,10 +363,12 @@ public sealed class BehaviorTreeCombatIntegrationTests
     {
         var engine = new BehaviorTreeCombatEngine(new NullLogger<BehaviorTreeCombatEngine>());
 
+        // Single throwing node — ActionNode catches the exception and returns Failure,
+        // SelectorNode propagates that Failure up. Engine returns Failure.
         SelectorNode root = new("Root");
         root.Children.Add(new ActionNode("ThrowingNode", _ =>
             throw new InvalidOperationException("Intentional error")));
-        root.Children.Add(new ActionNode("Fallback", _ => NodeStatus.Success));
+        // No Fallback: we want to verify the engine returns Failure when all nodes fail.
 
         engine.SetBehaviorTree(root);
 
