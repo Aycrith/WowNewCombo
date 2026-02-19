@@ -58,6 +58,16 @@ public sealed class MailConfiguration
     public int[] ExcludedItemIds { get; set; } = [];
 
     /// <summary>
+    /// Keep food and drink items in inventory by auto-excluding detected food/water item IDs.
+    /// </summary>
+    public bool ExcludeFoodAndDrink { get; set; }
+
+    /// <summary>
+    /// Keep conjured consumables (e.g., conjured food/water, healthstones) in inventory.
+    /// </summary>
+    public bool ExcludeConjuredItems { get; set; }
+
+    /// <summary>
     /// Cached FrozenSet of excluded item IDs for efficient lookups.
     /// Lazily initialized from ExcludedItemIds.
     /// </summary>
@@ -67,6 +77,6 @@ public sealed class MailConfiguration
 
     public override string ToString()
     {
-        return $"MailConfiguration {{ SendGold = {SendGold}, SendItems = {SendItems}, MinimumGoldToKeep = {MinimumGoldToKeep}, MinimumItemQuality = {MinimumItemQuality}, ExcludedItemIds = [{string.Join(", ", ExcludedItemIds)}] }}";
+        return $"MailConfiguration {{ SendGold = {SendGold}, SendItems = {SendItems}, MinimumGoldToKeep = {MinimumGoldToKeep}, MinimumItemQuality = {MinimumItemQuality}, ExcludeFoodAndDrink = {ExcludeFoodAndDrink}, ExcludeConjuredItems = {ExcludeConjuredItems}, ExcludedItemIds = [{string.Join(", ", ExcludedItemIds)}] }}";
     }
 }

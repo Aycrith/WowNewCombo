@@ -265,6 +265,10 @@ public static class Program
         services.Configure<HostOptions>(o =>
         {
             o.ShutdownTimeout = TimeSpan.FromSeconds(1);
+            // Prevent DXGI capture exceptions (E_INVALIDARG after window resize) from
+            // crashing the entire host. Background services are responsible for
+            // their own exception handling and restart logic.
+            o.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore;
         });
 
         // Register mDNS advertising service for http://wowbot.local access

@@ -344,6 +344,7 @@ public static class DependencyInjection
         s.AddSingleton<NpcNameFinder>();
 
         s.AddSingleton<NpcNameTargetingLocations>();
+        s.AddScoped<CursorScan>();
 
         return s;
     }

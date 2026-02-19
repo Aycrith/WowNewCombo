@@ -8,7 +8,7 @@
     },
     "CircuitBreaker": {
       "Enabled": true,
-      "PathfindingThreshold": 5,
+      "PathfindingThreshold": 15,
       "PathfindingCooldownSeconds": 60,
       "LLMThreshold": 3,
       "LLMCooldownSeconds": 120,

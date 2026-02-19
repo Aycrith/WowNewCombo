@@ -44,15 +44,21 @@ public sealed class BotStartGuard : IBotStartGuard, ILaunchReadinessCacheInvalid
     private readonly KeyBindingsReader keyBindingsReader;
     private readonly ActionBarTextureReader actionBarTextureReader;
     private readonly ActionBarSlotValidator actionBarSlotValidator;
+    private readonly AddonBits addonBits;
 
     private readonly IPPather pather;
     private readonly DataConfig dataConfig;
+    private readonly PlayerReader playerReader;
+    private readonly WorldMapAreaDB worldMapAreaDB;
 
     private readonly object cacheLock = new();
     private DateTimeOffset lastAddonValidationUtc = DateTimeOffset.MinValue;
     private AddonValidationResult? cachedAddonValidation;
     private Task<AddonValidationResult>? addonValidationTask;
     private DateTimeOffset addonValidationStartedUtc = DateTimeOffset.MinValue;
+
+    private readonly object keyBindingsStateLock = new();
+    private DateTimeOffset keyBindingsPendingSinceUtc = DateTimeOffset.MinValue;
 
     public BotStartGuard(
         ILogger<BotStartGuard> logger,
@@ -65,8 +71,11 @@ public sealed class BotStartGuard : IBotStartGuard, ILaunchReadinessCacheInvalid
         KeyBindingsReader keyBindingsReader,
         ActionBarTextureReader actionBarTextureReader,
         ActionBarSlotValidator actionBarSlotValidator,
+        AddonBits addonBits,
         IPPather pather,
-        DataConfig dataConfig)
+        DataConfig dataConfig,
+        PlayerReader playerReader,
+        WorldMapAreaDB worldMapAreaDB)
     {
         this.logger = logger;
         this.options = options.Value;
@@ -78,8 +87,11 @@ public sealed class BotStartGuard : IBotStartGuard, ILaunchReadinessCacheInvalid
         this.keyBindingsReader = keyBindingsReader;
         this.actionBarTextureReader = actionBarTextureReader;
         this.actionBarSlotValidator = actionBarSlotValidator;
+        this.addonBits = addonBits;
         this.pather = pather;
         this.dataConfig = dataConfig;
+        this.playerReader = playerReader;
+        this.worldMapAreaDB = worldMapAreaDB;
     }
 
     public LaunchReadinessSnapshot Evaluate(ClassConfiguration? classConfig, RouteInfo? routeInfo)
@@ -97,7 +109,7 @@ public sealed class BotStartGuard : IBotStartGuard, ILaunchReadinessCacheInvalid
                 Timed(now, LaunchSubsystem.Frames, () => CheckFrames(now)),
                 Timed(now, LaunchSubsystem.AddonHandshake, () => CheckAddonHandshake(now)),
                 Timed(now, LaunchSubsystem.Profile, () => CheckProfile(now, classConfig)),
-                Timed(now, LaunchSubsystem.Route, () => CheckRoute(now, routeInfo)),
+                Timed(now, LaunchSubsystem.Route, () => CheckRoute(now, classConfig, routeInfo)),
                 Timed(now, LaunchSubsystem.KeyBindings, () => CheckKeyBindings(now, classConfig, overrideSnapshot)),
                 Timed(now, LaunchSubsystem.ActionBar, () => CheckActionBar(now, classConfig, overrideSnapshot))
             ];
@@ -113,7 +125,7 @@ public sealed class BotStartGuard : IBotStartGuard, ILaunchReadinessCacheInvalid
             (LaunchSubsystem.Frames, () => CheckFrames(now)),
             (LaunchSubsystem.AddonHandshake, () => CheckAddonHandshake(now)),
             (LaunchSubsystem.Profile, () => CheckProfile(now, classConfig)),
-            (LaunchSubsystem.Route, () => CheckRoute(now, routeInfo)),
+            (LaunchSubsystem.Route, () => CheckRoute(now, classConfig, routeInfo)),
             (LaunchSubsystem.KeyBindings, () => CheckKeyBindings(now, classConfig, overrideSnapshot)),
             (LaunchSubsystem.ActionBar, () => CheckActionBar(now, classConfig, overrideSnapshot))
         ];
@@ -265,6 +277,26 @@ public sealed class BotStartGuard : IBotStartGuard, ILaunchReadinessCacheInvalid
             if (check.Status == LaunchStatus.Error && !overrideSnapshot.EmergencyBypassAll)
             {
                 updated.Add(check);
+                continue;
+            }
+
+            // Safeguard: NEVER bypass KeyBindings=0 — bot cannot function without keybindings.
+            // Without keybindings the bot autorun-spams targets without attacking
+            // and the stuck-recovery eventually sends ESC opening the game menu.
+            if (check.Subsystem == LaunchSubsystem.KeyBindings &&
+                check.Status == LaunchStatus.Pending &&
+                keyBindingsReader.Count == 0)
+            {
+                logger.LogWarning("[BotStartGuard] KeyBindings bypass refused: count=0. Run /dcflush in-game first.");
+                updated.Add(check with
+                {
+                    Status = LaunchStatus.Error,
+                    IsBlocking = true,
+                    Message = "Key Bindings: 0 bindings received — run /dcflush in-game before starting",
+                    TimestampUtc = now,
+                    FixHint = "Enter /dcflush in WoW chat, wait for bindings, then start",
+                    NavigateTo = "/KeyBindings"
+                });
                 continue;
             }
 
@@ -691,8 +723,23 @@ public sealed class BotStartGuard : IBotStartGuard, ILaunchReadinessCacheInvalid
                 return true;
             }
 
-            if (addonValidationTask == null || addonValidationTask.IsCompleted)
+            if (addonValidationTask == null)
             {
+                addonValidationTask = Task.Run(() => addonValidator.Validate());
+                addonValidationStartedUtc = now;
+            }
+            else if (addonValidationTask.IsCompleted && !addonValidationTask.IsFaulted && !addonValidationTask.IsCanceled)
+            {
+                // Task completed successfully — read and cache result before starting a new cycle
+                try
+                {
+                    cachedAddonValidation = addonValidationTask.GetAwaiter().GetResult();
+                    lastAddonValidationUtc = now;
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "[BotStartGuard] Addon validation task result read failed");
+                }
                 addonValidationTask = Task.Run(() => addonValidator.Validate());
                 addonValidationStartedUtc = now;
             }
@@ -938,6 +985,20 @@ public sealed class BotStartGuard : IBotStartGuard, ILaunchReadinessCacheInvalid
                 NavigateTo: "/RawPlayerReader");
         }
 
+        if (addonBits.ChatInputIsVisible())
+        {
+            return new LaunchSubsystemCheck(
+                LaunchSubsystem.AddonHandshake,
+                LaunchStatus.Error,
+                "Addon Handshake",
+                "Chat input is open in WoW (automation keys would be typed into chat)",
+                IsRequired: true,
+                IsBlocking: true,
+                TimestampUtc: now,
+                FixHint: "Press Escape in WoW to close chat input, then retry start",
+                NavigateTo: "/RawPlayerReader");
+        }
+
         return new LaunchSubsystemCheck(
             LaunchSubsystem.AddonHandshake,
             LaunchStatus.Ok,
@@ -974,7 +1035,7 @@ public sealed class BotStartGuard : IBotStartGuard, ILaunchReadinessCacheInvalid
             TimestampUtc: now);
     }
 
-    private static LaunchSubsystemCheck CheckRoute(DateTimeOffset now, RouteInfo? routeInfo)
+    private LaunchSubsystemCheck CheckRoute(DateTimeOffset now, ClassConfiguration? classConfig, RouteInfo? routeInfo)
     {
         if (routeInfo == null)
         {
@@ -1003,6 +1064,84 @@ public sealed class BotStartGuard : IBotStartGuard, ILaunchReadinessCacheInvalid
                 FixHint: "Load/choose a Path profile (route JSON)");
         }
 
+        if (classConfig is { Paths.Length: > 0 })
+        {
+            List<PathSettings> runnablePaths = [];
+            List<PathSettings> requirementMatchedPaths = [];
+            List<PathSettings> zoneMismatchPaths = [];
+
+            foreach (PathSettings path in classConfig.Paths)
+            {
+                if (!path.CanRunRequirementsOnly())
+                {
+                    continue;
+                }
+
+                requirementMatchedPaths.Add(path);
+
+                if (path.CanRun())
+                {
+                    runnablePaths.Add(path);
+                    continue;
+                }
+
+                if (path.IsZoneMismatch())
+                {
+                    zoneMismatchPaths.Add(path);
+                }
+            }
+
+            if (runnablePaths.Count == 0 && zoneMismatchPaths.Count > 0)
+            {
+                PathSettings blockedPath = zoneMismatchPaths[0];
+                int currentUiMapId = playerReader.UIMapId.Value;
+                int expectedUiMapId = blockedPath.EffectiveExpectedUIMapId;
+
+                string currentAreaName = ResolveAreaName(currentUiMapId);
+                string expectedAreaName = ResolveAreaName(expectedUiMapId);
+
+                return new LaunchSubsystemCheck(
+                    LaunchSubsystem.Route,
+                    LaunchStatus.Error,
+                    "Route",
+                    $"Route zone mismatch: active character is in {currentAreaName} (UIMapId={currentUiMapId}) but eligible route '{blockedPath.FileName}' expects {expectedAreaName} (UIMapId={expectedUiMapId})",
+                    IsRequired: true,
+                    IsBlocking: true,
+                    TimestampUtc: now,
+                    FixHint: "Move character to the expected zone or load a route/profile that matches current zone",
+                    NavigateTo: "/");
+            }
+
+            if (runnablePaths.Count == 0 && requirementMatchedPaths.Count == 0)
+            {
+                return new LaunchSubsystemCheck(
+                    LaunchSubsystem.Route,
+                    LaunchStatus.Error,
+                    "Route",
+                    "No route currently matches profile requirements (level/conditions)",
+                    IsRequired: true,
+                    IsBlocking: true,
+                    TimestampUtc: now,
+                    FixHint: "Adjust path requirements or load a profile with a matching route",
+                    NavigateTo: "/");
+            }
+
+            if (runnablePaths.Count == 0 && requirementMatchedPaths.Count > 0)
+            {
+                int currentUiMapId = playerReader.UIMapId.Value;
+                return new LaunchSubsystemCheck(
+                    LaunchSubsystem.Route,
+                    LaunchStatus.Error,
+                    "Route",
+                    $"No runnable route after zone gating (current UIMapId={currentUiMapId})",
+                    IsRequired: true,
+                    IsBlocking: true,
+                    TimestampUtc: now,
+                    FixHint: "Ensure the character is in the intended zone and addon map data is updating",
+                    NavigateTo: "/");
+            }
+        }
+
         return new LaunchSubsystemCheck(
             LaunchSubsystem.Route,
             LaunchStatus.Ok,
@@ -1013,12 +1152,29 @@ public sealed class BotStartGuard : IBotStartGuard, ILaunchReadinessCacheInvalid
             TimestampUtc: now);
     }
 
+    private string ResolveAreaName(int uiMapId)
+    {
+        if (uiMapId <= 0)
+        {
+            return "Unknown";
+        }
+
+        if (worldMapAreaDB.TryGet(uiMapId, out WorldMapArea area) &&
+            !string.IsNullOrWhiteSpace(area.AreaName))
+        {
+            return area.AreaName;
+        }
+
+        return $"UIMapId {uiMapId}";
+    }
+
     private LaunchSubsystemCheck CheckKeyBindings(DateTimeOffset now, ClassConfiguration? classConfig, LaunchOverrideSnapshot overrideSnapshot)
     {
         bool required = !overrideSnapshot.EmergencyBypassAll &&
                         !overrideSnapshot.Bypasses.ContainsKey(LaunchSubsystem.KeyBindings);
         if (!required)
         {
+            ResetKeyBindingsPendingTimer();
             return new LaunchSubsystemCheck(
                 LaunchSubsystem.KeyBindings,
                 LaunchStatus.Skipped,
@@ -1032,6 +1188,7 @@ public sealed class BotStartGuard : IBotStartGuard, ILaunchReadinessCacheInvalid
 
         if (classConfig == null)
         {
+            ResetKeyBindingsPendingTimer();
             return new LaunchSubsystemCheck(
                 LaunchSubsystem.KeyBindings,
                 LaunchStatus.Pending,
@@ -1048,17 +1205,36 @@ public sealed class BotStartGuard : IBotStartGuard, ILaunchReadinessCacheInvalid
         {
             string command = GetAddonCommand();
             var (totalReads, nonZero, consecutiveZeros) = keyBindingsReader.GetReadStats();
+            DateTimeOffset pendingSince = GetOrSetKeyBindingsPendingSince(now);
+            double pendingSeconds = Math.Max(0, (now - pendingSince).TotalSeconds);
+
+            if (options.KeybindsTimeoutSeconds > 0 && pendingSeconds >= options.KeybindsTimeoutSeconds)
+            {
+                return new LaunchSubsystemCheck(
+                    LaunchSubsystem.KeyBindings,
+                    LaunchStatus.Error,
+                    "Key Bindings",
+                    $"Timed out waiting for bindings ({pendingSeconds:F0}s, reads={totalReads}, nonZero={nonZero}, zeros={consecutiveZeros})",
+                    IsRequired: true,
+                    IsBlocking: true,
+                    TimestampUtc: now,
+                    FixHint: $"Run /{command}flush (or /{command}bindings) in WoW, then re-check",
+                    NavigateTo: "/KeyBindings");
+            }
+
             return new LaunchSubsystemCheck(
                 LaunchSubsystem.KeyBindings,
                 LaunchStatus.Pending,
                 "Key Bindings",
-                $"Reading in-game bindings... (reads={totalReads}, nonZero={nonZero}, zeros={consecutiveZeros})",
+                $"Reading in-game bindings... ({pendingSeconds:F0}s, reads={totalReads}, nonZero={nonZero}, zeros={consecutiveZeros})",
                 IsRequired: true,
                 IsBlocking: true,
                 TimestampUtc: now,
                 FixHint: $"Enter world and run /{command}bindings (or use Key Bindings page)",
                 NavigateTo: "/KeyBindings");
         }
+
+        ResetKeyBindingsPendingTimer();
 
         List<KeyAction> expected = GetExpectedKeyActions(classConfig);
         List<BindingMismatch> mismatches = keyBindingsReader.GetMismatches(expected);
@@ -1086,6 +1262,27 @@ public sealed class BotStartGuard : IBotStartGuard, ILaunchReadinessCacheInvalid
             TimestampUtc: now,
             FixHint: $"Open Key Bindings page and apply defaults (/{GetAddonCommand()}bindings, /{GetAddonCommand()}actions)",
             NavigateTo: "/KeyBindings");
+    }
+
+    private DateTimeOffset GetOrSetKeyBindingsPendingSince(DateTimeOffset now)
+    {
+        lock (keyBindingsStateLock)
+        {
+            if (keyBindingsPendingSinceUtc == DateTimeOffset.MinValue)
+            {
+                keyBindingsPendingSinceUtc = now;
+            }
+
+            return keyBindingsPendingSinceUtc;
+        }
+    }
+
+    private void ResetKeyBindingsPendingTimer()
+    {
+        lock (keyBindingsStateLock)
+        {
+            keyBindingsPendingSinceUtc = DateTimeOffset.MinValue;
+        }
     }
 
     private string GetAddonCommand()

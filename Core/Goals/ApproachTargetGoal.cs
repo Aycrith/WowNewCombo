@@ -29,6 +29,7 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
     private readonly IMountHandler mountHandler;
     private readonly IBlacklist targetBlacklist;
     private readonly CombatLog combatLog;
+    private DateTime lastBrokenGearWarning = DateTime.MinValue;
 
     private long approachStart;
 
@@ -97,6 +98,22 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
     public override void Update()
     {
         wait.Update();
+
+        if (IsGearTooBrokenToFight())
+        {
+            if ((DateTime.UtcNow - lastBrokenGearWarning).TotalSeconds >= 3)
+            {
+                Log("Gear durability critically low/broken; blocking approach and clearing target.");
+                lastBrokenGearWarning = DateTime.UtcNow;
+            }
+
+            stopMoving.Stop();
+            if (bits.Target())
+            {
+                input.ForceAggressiveClearTarget(wait, bits);
+            }
+            return;
+        }
 
         // Multi-mob detection - early retreat
         if (!bits.Combat() && DetectMultiMobThreat())
@@ -334,6 +351,11 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
     private void Log(string text)
     {
         logger.LogDebug(text);
+    }
+
+    private bool IsGearTooBrokenToFight()
+    {
+        return bits.Items_Broken() || playerReader.AvgEquipDurability() <= 5;
     }
 
 

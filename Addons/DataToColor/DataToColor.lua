@@ -363,6 +363,10 @@ function DataToColor:SetupRequirements()
     DataToColor.SafeSetCVar("renderScale", 1)           -- Render Scale: 100%
     DataToColor.SafeSetCVar("ffxGlow", 0)               -- Disable glow effect
 
+    -- UI Scale: MUST be disabled for 1:1 pixel mapping with screen capture
+    DataToColor.SafeSetCVar("useUiScale", 0)            -- Disable UI scaling
+    DataToColor.SafeSetCVar("uiScale", 1)               -- Reset scale to 100%
+
     -- Display calibration
     DataToColor.SafeSetCVar("Contrast", 50)
     DataToColor.SafeSetCVar("Brightness", 50)

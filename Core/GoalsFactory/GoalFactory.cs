@@ -74,11 +74,12 @@ public static class GoalFactory
             });
 
             // NO PLAN recovery service
-            services.AddHostedService<Recovery.NoPlanRecoveryService>();
+            // Must be Scoped: depends on scoped GoapAgent → CancellationTokenSource<GoapAgent>
+            services.AddScoped<Recovery.NoPlanRecoveryService>();
 
             // Failure analytics service (SRP-compliant: engine + listener + hosted service)
             services.AddSingleton<Analytics.FailureAnalyticsEngine>();
-            services.AddSingleton<Analytics.FailureAnalyticsEventListener>();
+            services.AddScoped<Analytics.FailureAnalyticsEventListener>();  // Must be Scoped: depends on scoped StuckDetector
             services.AddHostedService<Analytics.FailureAnalytics>();
         }
 

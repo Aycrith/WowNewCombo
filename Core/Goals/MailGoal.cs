@@ -34,7 +34,12 @@ public sealed partial class MailGoal : GoapGoal, IGoapEventListener, IRouteProvi
     public const int MIN_MAIL_FEE = 30;
 
     private const int TIMEOUT = 15000;  // 15s to handle many mail batches with rate limiting delays
-    private const int MAILBOX_INTERACT_TIMEOUT = 1000;
+    private const int MAILBOX_INTERACT_TIMEOUT = 5000;
+    private const int MAILBOX_INTERACT_ATTEMPTS = 6;
+    private const int MAILBOX_INTERACT_STEP_TIMEOUT = 700;
+    private const int MAX_MAILBOX_OPEN_FAILURES = 3;
+    private const float MAILBOX_PROXIMITY_TRIGGER_DISTANCE = 2.5f;
+    private const float MAILBOX_INTERACT_DISTANCE = 1.75f;
 
     public override float Cost => key.Cost;
 
@@ -60,6 +65,8 @@ public sealed partial class MailGoal : GoapGoal, IGoapEventListener, IRouteProvi
 
     private MailState mailState = MailState.Finished;
     private MailGossipState lastMailGossipState = MailGossipState.None;
+    private int mailboxOpenFailures;
+    private int mailboxCursorScanFailures;
 
     private readonly bool tryFindClosestMailbox;
     private Vector3 mailboxLocation;
@@ -154,6 +161,8 @@ public sealed partial class MailGoal : GoapGoal, IGoapEventListener, IRouteProvi
         navigation.Resume();
 
         mailState = MailState.ApproachMailbox;
+        mailboxOpenFailures = 0;
+        mailboxCursorScanFailures = 0;
 
         MountIfPossible();
     }
@@ -182,6 +191,7 @@ public sealed partial class MailGoal : GoapGoal, IGoapEventListener, IRouteProvi
         if (mailState != MailState.Finished)
         {
             CheckMailStateTransition();
+            TryTriggerMailboxArrivalByProximity();
             navigation.Update();
         }
 
@@ -256,7 +266,14 @@ public sealed partial class MailGoal : GoapGoal, IGoapEventListener, IRouteProvi
 
         mailState = MailState.InteractMailbox;
 
-        if (!bits.MailFrameShown() && !InteractWithMailbox())
+        float arrivalDistance = playerReader.WorldPos.WorldDistanceXYTo(mailboxLocation);
+        if (arrivalDistance > MAILBOX_INTERACT_DISTANCE)
+        {
+            LogWarn($"Mailbox waypoint reached at distance {arrivalDistance:F2}; forcing closer approach.");
+            ForceCloseApproachToMailbox();
+        }
+
+        if (!bits.MailFrameShown() && !InteractWithMailbox(allowMouseScan: true))
         {
             LogWarn("Failed to interact with mailbox");
             mailState = MailState.Finished;
@@ -265,11 +282,33 @@ public sealed partial class MailGoal : GoapGoal, IGoapEventListener, IRouteProvi
 
         mailState = MailState.WaitForMailboxOpen;
 
-        float elapsed = wait.Until(MAILBOX_INTERACT_TIMEOUT, bits.MailFrameShown);
-        CheckMailStateTransition();
+        float elapsed = -1;
+        for (int cycle = 1; cycle <= MAX_MAILBOX_OPEN_FAILURES; cycle++)
+        {
+            elapsed = TryOpenMailboxWithRetries();
+            if (elapsed >= 0)
+            {
+                mailboxOpenFailures = 0;
+                break;
+            }
+
+            mailboxOpenFailures = cycle;
+            if (cycle < MAX_MAILBOX_OPEN_FAILURES)
+            {
+                LogWarn($"Mailbox did not open (attempt cycle {cycle}/{MAX_MAILBOX_OPEN_FAILURES}); reattempting in place.");
+                input.TurnRandomDir(150);
+                wait.Update();
+                if (!input.Approach.OnCooldown())
+                {
+                    input.PressApproach();
+                    wait.Update();
+                }
+            }
+        }
+
         if (elapsed < 0)
         {
-            LogWarn($"Mailbox did not open after {MAILBOX_INTERACT_TIMEOUT}ms");
+            LogWarn($"Mailbox did not open after retries ({MAX_MAILBOX_OPEN_FAILURES} cycles).");
             mailState = MailState.Finished;
             return;
         }
@@ -277,13 +316,35 @@ public sealed partial class MailGoal : GoapGoal, IGoapEventListener, IRouteProvi
         Log($"Mailbox opened after {elapsed}ms");
         mailState = MailState.SendMail;
 
-        StartMailSending();
+        if (!StartMailSending())
+        {
+            CloseMailbox();
+            return;
+        }
 
         mailState = MailState.WaitForMailFinished;
 
+        MailGossipState startState = gossipReader.GetMailState();
+
         // Wait for MAIL_SENDING or MAIL_FINISHED to confirm the addon has started/completed
         // MAIL_FINISHED can arrive directly when only one mail is sent (fast path)
-        elapsed = wait.Until(TIMEOUT, () => gossipReader.MailSending() || gossipReader.MailFinished());
+        elapsed = wait.Until(TIMEOUT, () =>
+        {
+            MailGossipState state = gossipReader.GetMailState();
+            if (state == MailGossipState.None)
+            {
+                return false;
+            }
+
+            if (state == startState)
+            {
+                return false;
+            }
+
+            return state == MailGossipState.Sending ||
+                state == MailGossipState.Finished ||
+                state == MailGossipState.SendFailed;
+        });
         CheckMailStateTransition();
         if (elapsed < 0)
         {
@@ -343,7 +404,7 @@ public sealed partial class MailGoal : GoapGoal, IGoapEventListener, IRouteProvi
         }
     }
 
-    private bool InteractWithMailbox()
+    private bool InteractWithMailbox(bool allowMouseScan)
     {
         // Try SoftInteract first (Cata+ clients)
         if (bits.SoftInteract_Enabled() && bits.SoftInteract())
@@ -357,22 +418,93 @@ public sealed partial class MailGoal : GoapGoal, IGoapEventListener, IRouteProvi
             }
         }
 
-        // Try cursor scan for mailbox (works on all clients with mouse)
-        if (!input.KeyboardOnly)
+        // Direct interact first to avoid unnecessary mouse control.
+        input.PressInteract();
+        wait.Update();
+
+        if (bits.MailFrameShown() || !allowMouseScan)
         {
-            if (cursorScan.Find(CursorType.Mail, out Point _))
+            return true;
+        }
+
+        // Mailbox-only mouse scan fallback (works even in keyboard-only mode).
+        if (cursorScan.Find(CursorType.Mail, out Point mailboxCursorPoint))
+        {
+            // First try the configured interact-mouseover binding.
+            LogDebug("Mailbox cursor found via scan; trying InteractMouseOver binding.");
+            mouseInput.InteractMouseOver(token);
+            wait.Update();
+
+            if (bits.MailFrameShown())
             {
-                mouseInput.InteractMouseOver(token);
+                LogDebug("Mailbox opened via InteractMouseOver.");
                 return true;
             }
 
-            LogWarn("Mailbox cursor not found via scan");
+            // Some clients/configurations do not honor interact-mouseover reliably.
+            // Fall back to direct click interaction on the detected mailbox cursor point.
+            LogDebug("Mailbox not opened via InteractMouseOver; trying right-click fallback.");
+            mouseInput.RightClick(mailboxCursorPoint);
+            wait.Update();
+
+            if (bits.MailFrameShown())
+            {
+                LogDebug("Mailbox opened via right-click fallback.");
+                return true;
+            }
+
+            LogDebug("Mailbox still closed after right-click; trying left-click fallback.");
+            mouseInput.LeftClick(mailboxCursorPoint);
+            wait.Update();
+            return true;
         }
 
-        return false;
+        mailboxCursorScanFailures++;
+        LogWarn("Mailbox cursor not found via scan");
+        return true;
     }
 
-    private void StartMailSending()
+    private float TryOpenMailboxWithRetries()
+    {
+        if (bits.MailFrameShown())
+        {
+            return 0;
+        }
+
+        float totalElapsed = 0;
+        for (int attempt = 1; attempt <= MAILBOX_INTERACT_ATTEMPTS; attempt++)
+        {
+            bool allowMouseScan = attempt % 3 == 0 || attempt == MAILBOX_INTERACT_ATTEMPTS;
+            InteractWithMailbox(allowMouseScan);
+
+            float elapsed = wait.Until(MAILBOX_INTERACT_STEP_TIMEOUT, bits.MailFrameShown);
+            CheckMailStateTransition();
+            if (elapsed >= 0)
+            {
+                return totalElapsed + elapsed;
+            }
+
+            totalElapsed += MAILBOX_INTERACT_STEP_TIMEOUT;
+
+            // Nudge orientation/position slightly between attempts.
+            input.TurnRandomDir(120);
+            wait.Update();
+            if (!input.Approach.OnCooldown())
+            {
+                input.PressApproach();
+                wait.Update();
+            }
+
+            if (mailboxCursorScanFailures > 0 && mailboxCursorScanFailures % 3 == 0)
+            {
+                ForceCloseApproachToMailbox();
+            }
+        }
+
+        return -1;
+    }
+
+    private bool StartMailSending()
     {
         MailConfiguration mail = classConfig.GetEffectiveMailConfig();
         string addonName = addonConfigurator.Config.Title;
@@ -381,12 +513,15 @@ public sealed partial class MailGoal : GoapGoal, IGoapEventListener, IRouteProvi
         if (string.IsNullOrWhiteSpace(recipient))
         {
             LogWarn("No mail recipient configured! Set MAIL_RECIPIENT env var or RecipientName in config.");
-            return;
+            return false;
         }
 
         // Calculate mail fee: 30 copper per attachment slot
         // This ensures addon keeps enough gold to pay for mail fees
-        IReadOnlySet<int> excludedSet = classConfig.GetEffectiveExcludedItemIdSet();
+        IReadOnlySet<int> excludedSet = bagReader.BuildEffectiveMailExcludedItemIdSet(
+            classConfig.GetEffectiveExcludedItemIdSet(),
+            mail.ExcludeFoodAndDrink,
+            mail.ExcludeConjuredItems);
         int itemCount = bagReader.CountMailableItems(mail.MinimumItemQuality, excludedSet);
 
         // Fee: 30 copper per item, or 30 copper base if gold-only
@@ -405,7 +540,10 @@ public sealed partial class MailGoal : GoapGoal, IGoapEventListener, IRouteProvi
 
         // 2. Send excluded item IDs in batches (if any)
         // Use effective exclusions which merge JSON config with runtime UI exclusions
-        int[] effectiveExclusions = classConfig.GetEffectiveExcludedItemIds();
+        int[] effectiveExclusions = bagReader.BuildEffectiveMailExcludedItemIds(
+            classConfig.GetEffectiveExcludedItemIds(),
+            mail.ExcludeFoodAndDrink,
+            mail.ExcludeConjuredItems);
         if (effectiveExclusions.Length > 0)
         {
             SendExcludedItemsBatched(addonName, effectiveExclusions);
@@ -416,6 +554,7 @@ public sealed partial class MailGoal : GoapGoal, IGoapEventListener, IRouteProvi
         Log($"Starting mail sending to recipient (keeping at least {adjustedGoldToKeep} copper for fees)");
         execGameCommand.Run(startCmd);
         wait.Update();
+        return true;
     }
 
     private void SendExcludedItemsBatched(string addonName, int[] excludedIds)
@@ -487,6 +626,52 @@ public sealed partial class MailGoal : GoapGoal, IGoapEventListener, IRouteProvi
     private void LogDebug(string text) => logger.LogDebug(text);
 
     private void LogWarn(string text) => logger.LogWarning(text);
+
+    private void TryTriggerMailboxArrivalByProximity()
+    {
+        if (mailState != MailState.ApproachMailbox || mailboxLocation == Vector3.Zero)
+        {
+            return;
+        }
+
+        float distance = playerReader.WorldPos.WorldDistanceXYTo(mailboxLocation);
+        if (distance > MAILBOX_PROXIMITY_TRIGGER_DISTANCE)
+        {
+            return;
+        }
+
+        LogDebug($"Mailbox proximity reached ({distance:F2}). Triggering interaction workflow.");
+        Navigation_OnDestinationReached();
+    }
+
+    private void ForceCloseApproachToMailbox()
+    {
+        if (mailboxLocation == Vector3.Zero)
+        {
+            return;
+        }
+
+        if (mountHandler.IsMounted())
+        {
+            mountHandler.Dismount();
+            wait.Update();
+        }
+
+        navigation.SetWayPoints([mailboxLocation]);
+        navigation.Resume();
+
+        wait.Until(MAILBOX_INTERACT_TIMEOUT, () =>
+        {
+            navigation.Update();
+            wait.Update();
+            float distance = playerReader.WorldPos.WorldDistanceXYTo(mailboxLocation);
+            return distance <= MAILBOX_INTERACT_DISTANCE;
+        });
+
+        navigation.StopMovement();
+        stopMoving.Stop();
+        wait.Update();
+    }
 
     #region Logging
 

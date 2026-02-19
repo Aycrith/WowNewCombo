@@ -445,6 +445,10 @@ public sealed partial class Navigation : IDisposable
 
         if (result.Path.Length == 0 && !isTriviallyClose)
         {
+            // Stop forward movement immediately when no path is available.
+            // Prevents continuing in stale heading into terrain/water.
+            stopMoving.Stop();
+
             if (lastFailedDestination != result.EndW)
             {
                 lastFailedDestination = result.EndW;

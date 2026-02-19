@@ -42,6 +42,8 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
     private const int MAX_TIME_TO_REACH_MELEE = 10000;
     private const int TIMEOUT = 5000;
+    private const float NPC_DESTINATION_PROXIMITY = 12f;
+    private const int MAX_FAR_DESTINATION_RETRIES = 3;
 
     private readonly FrozenDictionary<NpcFlags, SearchValues<string>> npcSearchPatterns;
 
@@ -75,6 +77,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
     private static readonly TimeSpan NoPathRetryDelay = TimeSpan.FromSeconds(30);
     private DateTime noPathBackoffUntilUtc;
+    private int farDestinationRetryCount;
 
     #region IRouteProvider
 
@@ -209,6 +212,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         navigation.Resume();
 
         pathState = PathState.ApproachPathStart;
+        farDestinationRetryCount = 0;
 
         MountIfPossible();
     }
@@ -316,6 +320,29 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         if (pathState != PathState.ApproachPathStart || token.IsCancellationRequested)
             return;
 
+        if (key.Path.Length > 0)
+        {
+            Vector3 destination = key.Path[^1];
+            float destinationDistance = playerReader.WorldPos.WorldDistanceXYTo(destination);
+            if (destinationDistance > NPC_DESTINATION_PROXIMITY)
+            {
+                farDestinationRetryCount++;
+                LogWarn($"Reached path end but still {destinationDistance:F1} away from NPC destination; re-pathing.");
+
+                if (tryFindClosestNPC && farDestinationRetryCount >= MAX_FAR_DESTINATION_RETRIES)
+                {
+                    LogWarn("NPC destination retries exhausted; trying next candidate NPC.");
+                    Resume();
+                    return;
+                }
+
+                navigation.SetWayPoints([destination]);
+                navigation.Resume();
+                return;
+            }
+        }
+
+        farDestinationRetryCount = 0;
         LogDebug("Reached defined path end");
         navigation.StopMovement();
         stopMoving.Stop();
@@ -342,7 +369,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
             hasTarget = MoveToTargetAndReached();
         }
 
-        if (!hasTarget)
+        if (!hasTarget && !input.KeyboardOnly)
         {
             npcNameTargeting.ChangeNpcType(NpcNames.Friendly | NpcNames.Neutral);
             npcNameTargeting.WaitForUpdate();
@@ -580,11 +607,18 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
                 logger.LogInformation($"Search for {npcFlag} like {string.Join(',', allowedNames)}");
         }
 
+        NpcFlags searchFlags = npcFlag;
+        if (npcFlag == NpcFlags.Repair)
+        {
+            // Some valid repair NPCs are only tagged as Vendor in the DB.
+            searchFlags = NpcFlags.Repair | NpcFlags.Vendor;
+        }
+
         if (searchResult.Length == 0)
         {
             searchResult = new NpcSearchResult[8];
 
-            int found = areaDB.GetNearestNpcs(playerReader.Faction, npcFlag, playerReader.WorldPos, allowedNames, searchResult.AsSpan(), out searchCount);
+            int found = areaDB.GetNearestNpcs(playerReader.Faction, searchFlags, playerReader.WorldPos, allowedNames, searchResult.AsSpan(), out searchCount);
             if (found == 0 || searchCount == 0)
             {
                 return false;

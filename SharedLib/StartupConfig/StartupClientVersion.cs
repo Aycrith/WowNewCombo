@@ -10,14 +10,20 @@ public sealed class StartupClientVersion
 
     public StartupClientVersion(Version v, string installPath = null)
     {
-        // Priority 1: Anniversary Edition path detection - force to SoM regardless of version number
+        // Priority 1: Anniversary Edition path detection
+        // Only force SoM when the WoW version is vanilla (Major <= 1) or unknown.
+        // When Major >= 2 (TBC phase or later), fall through to version-based detection.
         string detectedPath = installPath ?? DetectAnniversaryPath();
 
         if (!string.IsNullOrEmpty(detectedPath) && detectedPath.Contains("_anniversary_"))
         {
-            Version = ClientVersion.SoM;
-            Path = "som";
-            return;
+            if (v == null || v.Major <= 1)
+            {
+                Version = ClientVersion.SoM;
+                Path = "som";
+                return;
+            }
+            // Anniversary server in TBC+ phase: fall through to version switch below
         }
 
         if (v == null)
@@ -42,8 +48,13 @@ public sealed class StartupClientVersion
             { Major: 4, Minor: <= 3 } => (ClientVersion.Legacy_Cata, "legacy_cata"),
             { Major: 5, Minor: <= 4 } => (ClientVersion.Legacy_Mop, "legacy_mop"),
 
-            // --- Anniversary Edition (Classic Vanilla with Major=205) ---
-            { Major: 205 } => (ClientVersion.SoM, "som"),
+            // --- Anniversary Edition ---
+            // Major=205 is Blizzard's internal versioning for Anniversary Edition.
+            // As the anniversary server progresses through game phases:
+            //   Phase 1-4 (Vanilla): uses "som" (Season of Mastery) database
+            //   Phase 5+ (TBC content): uses "tbc" database which includes all vanilla zones
+            // Since TBC is a superset of vanilla zones, "tbc" is safe for all anniversary phases.
+            { Major: 205 } => (ClientVersion.TBC, "tbc"),
 
             // --- Retail fallback ---
             { Major: >= 9 } => (ClientVersion.Retail, "retail"),

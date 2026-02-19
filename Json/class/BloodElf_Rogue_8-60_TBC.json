@@ -11,10 +11,22 @@
   "AutoPetAttack": false,
   "Mode": 0,
 
+  "Mail": true,
+  "MailConfig": {
+    "RecipientName": "Bankonelol",
+    "MinimumGoldToKeep": 10000,
+    "MinimumItemQuality": 1,
+    "SendGold": true,
+    "SendItems": true,
+    "ExcludeFoodAndDrink": true,
+    "ExcludeConjuredItems": true,
+    "ExcludedItemIds": [6948, 5956, 7005, 2901, 4238, 3275, 1760]
+  },
+
   "NPCMaxLevels_Above": 2,
-  "NPCMaxLevels_Below": 8,
+  "NPCMaxLevels_Below": 2,
   "TargetMask": 7,
-  "CheckTargetGivesExp": true,
+  "CheckTargetGivesExp": false,
 
   "PathThereAndBack": true,
   "PathReduceSteps": true,
@@ -55,34 +67,40 @@
 
   "Paths": [
     {
+      "PathFilename": "_pack\\1-20\\Blood elf\\7-10_Eversong Woods_TheLivingWood.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 8", "Level < 10", "Race:Blood Elf", "UIMapId == 1941"]
+    },
+    {
       "PathFilename": "_pack\\1-20\\Blood elf\\6-12_Eversong Woods.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 8", "Level < 10", "Race:Blood Elf"]
+      "Requirements": ["Level >= 9", "Level < 10", "Race:Blood Elf", "UIMapId == 1941"]
     },
     {
       "PathFilename": "_pack\\1-20\\Blood elf\\9-12_Ghostlands.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 10", "Level < 13", "Race:Blood Elf"]
+      "Requirements": ["Level >= 10", "Level < 13", "Race:Blood Elf", "UIMapId == 1942"]
     },
     {
       "PathFilename": "_pack\\1-20\\Blood elf\\13-15_Ghostlands_Sanctum of the Sun.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 13", "Level < 16", "Race:Blood Elf"]
+      "Requirements": ["Level >= 13", "Level < 16", "Race:Blood Elf", "UIMapId == 1942"]
     },
     {
       "PathFilename": "_pack\\1-20\\Blood elf\\15-20_Ghostlands_Windrunner.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 15", "Level < 19", "Race:Blood Elf"]
+      "Requirements": ["Level >= 15", "Level < 19", "Race:Blood Elf", "UIMapId == 1942"]
     },
     {
       "PathFilename": "_pack\\1-20\\Blood elf\\18-22_Ghostlands_Deatholme_Approach.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 18", "Level < 22", "Race:Blood Elf"]
+      "Requirements": ["Level >= 18", "Level < 22", "Race:Blood Elf", "UIMapId == 1942"]
     },
     {
       "PathFilename": "_pack\\1-20\\Undead\\14-19_Silverpine Forest_Fenris.json",
@@ -171,13 +189,7 @@
   ],
 
   "Wait": {
-    "Sequence": [
-      {
-        "Name": "User",
-        "Cost": 0.9,
-        "Requirement": "MenuOpen || ChatInputVisible"
-      }
-    ]
+    "Sequence": []
   },
 
   "Pull": {
@@ -460,13 +472,13 @@
       {
         "Name": "Repair",
         "Key": "C",
-        "Requirement": "Durability% < 35",
+        "Requirement": "Items Broken || Durability% < 35",
         "Cost": 6
       },
       {
         "Name": "Sell",
         "Key": "C",
-        "Requirements": ["BagFull", "BagGreyItem"],
+        "Requirement": "BagGreyItem",
         "Cost": 6
       },
       {
@@ -474,6 +486,12 @@
         "Key": "C",
         "Requirements": ["BagFullAny", "BagGreyItem"],
         "Cost": 7
+      },
+      {
+        "Name": "Mail",
+        "Key": "C",
+        "Requirements": ["VendoredOrRepairedRecently", "HasMailWork"],
+        "Cost": 6.5
       }
     ]
   }

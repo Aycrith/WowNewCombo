@@ -3,6 +3,7 @@ using Core.Database;
 using SharedLib;
 
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -25,6 +26,8 @@ public sealed class BagReader : IDisposable, IReader
     private readonly EquipmentReader equipmentReader;
 
     private readonly ItemDB ItemDB;
+    private readonly FrozenSet<int> foodItemIds;
+    private readonly FrozenSet<int> drinkItemIds;
 
     public List<BagItem> BagItems { get; } = new();
 
@@ -40,6 +43,8 @@ public sealed class BagReader : IDisposable, IReader
     {
         this.ItemDB = itemDb;
         this.equipmentReader = equipmentReader;
+        foodItemIds = itemDb.FoodIds.Length > 0 ? itemDb.FoodIds.ToFrozenSet() : FrozenSet<int>.Empty;
+        drinkItemIds = itemDb.DrinkIds.Length > 0 ? itemDb.DrinkIds.ToFrozenSet() : FrozenSet<int>.Empty;
 
         this.equipmentReader.OnEquipmentChanged -= OnEquipmentChanged;
         this.equipmentReader.OnEquipmentChanged += OnEquipmentChanged;
@@ -341,6 +346,59 @@ public sealed class BagReader : IDisposable, IReader
             }
         }
         return count;
+    }
+
+    /// <summary>
+    /// Builds an effective exclusion set for mailing by merging configured exclusions
+    /// with optional dynamic exclusions from current bag contents.
+    /// </summary>
+    public FrozenSet<int> BuildEffectiveMailExcludedItemIdSet(
+        IReadOnlySet<int> baseExcludedItemIds,
+        bool excludeFoodAndDrink,
+        bool excludeConjuredItems)
+    {
+        if (!excludeFoodAndDrink && !excludeConjuredItems)
+        {
+            return baseExcludedItemIds as FrozenSet<int> ?? baseExcludedItemIds.ToFrozenSet();
+        }
+
+        HashSet<int> merged = [.. baseExcludedItemIds];
+
+        ReadOnlySpan<BagItem> span = CollectionsMarshal.AsSpan(BagItems);
+        for (int i = 0; i < span.Length; i++)
+        {
+            int itemId = span[i].Item.Entry;
+            if (excludeFoodAndDrink &&
+                (foodItemIds.Contains(itemId) || drinkItemIds.Contains(itemId)))
+            {
+                merged.Add(itemId);
+            }
+
+            if (excludeConjuredItems && ItemDB.ConjuredItemIds.Contains(itemId))
+            {
+                merged.Add(itemId);
+            }
+        }
+
+        return merged.Count == 0 ? FrozenSet<int>.Empty : merged.ToFrozenSet();
+    }
+
+    /// <summary>
+    /// Builds an effective exclusion array for mail command serialization.
+    /// </summary>
+    public int[] BuildEffectiveMailExcludedItemIds(
+        int[] baseExcludedItemIds,
+        bool excludeFoodAndDrink,
+        bool excludeConjuredItems)
+    {
+        FrozenSet<int> baseSet = baseExcludedItemIds.Length > 0
+            ? baseExcludedItemIds.ToFrozenSet()
+            : FrozenSet<int>.Empty;
+
+        FrozenSet<int> effectiveSet = BuildEffectiveMailExcludedItemIdSet(
+            baseSet, excludeFoodAndDrink, excludeConjuredItems);
+
+        return [.. effectiveSet];
     }
 
     #endregion
