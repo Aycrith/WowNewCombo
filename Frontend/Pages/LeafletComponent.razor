@@ -7,11 +7,13 @@
 @using System.Timers
 @using System.Buffers
 @using System.Text.Json
+@using Serilog.Events
 
 @using static System.Text.Json.JsonSerializer
 
 @inject IAddonReader addonReader
 @inject IBotController botController
+@inject LoggerSink sink
 
 @inject DataConfig dataConfig
 @inject CombatLog combatLog
@@ -109,6 +111,13 @@
                         <span class="form-check-label ms-2">Hazards</span>
                     </label>
                 </span>
+                <span class="me-3">
+                    <label class="form-check form-switch d-inline-flex align-items-center m-0">
+                        <input class="form-check-input" type="checkbox" role="switch"
+                               @bind="showNavigationLog" />
+                        <span class="form-check-label ms-2">Nav Log</span>
+                    </label>
+                </span>
                 [@PlayerReader.MapX.ToString("00.0000"),@PlayerReader.MapY.ToString("00.0000")] @(AreaName) (@PlayerReader.UIMapId.Value)
             </div>
         </div>
@@ -124,6 +133,25 @@
                 <div class="specText" id="subZoneName"></div>
             }
         </div>
+        @if (showNavigationLog)
+        {
+            <div class="border-top p-2" style="max-height: 220px; overflow: auto; background-color: #111; color: #ddd;">
+                @if (navigationEvents.Length == 0)
+                {
+                    <div class="small text-muted">No navigation telemetry yet.</div>
+                }
+                else
+                {
+                    @foreach (LogEvent evt in navigationEvents)
+                    {
+                        <div class="@GetNavigationLogCss(evt.Level) small">
+                            <span class="font-monospace">@evt.Timestamp.ToString("HH:mm:ss")</span>
+                            <span class="font-monospace"> @evt.RenderMessage()</span>
+                        </div>
+                    }
+                }
+            </div>
+        }
     </CardBody>
 </Card>
 
@@ -147,7 +175,10 @@
     private Vector3 lastPos;
     private float lastDir;
     private bool showHazardLayer;
+    private bool showNavigationLog = true;
     private DateTime lastHazardUpdateUtc = DateTime.MinValue;
+    private const int MaxNavigationEvents = 80;
+    private LogEvent[] navigationEvents = Array.Empty<LogEvent>();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -189,10 +220,12 @@
         botController.ProfileLoaded += OnProfileLoaded;
         addonReader.AddonDataChanged += OnAddonDataChanged;
         areaDB.Changed += OnZoneChanged;
+        sink.OnLogChanged += OnLogChanged;
         //combatLog.PlayerDeath += OnPlayerDeath;
 
         UpdateZoneName();
         showHazardLayer = featureFlags.IsHazardAvoidanceEnabled;
+        RefreshNavigationEvents();
         //UpdateDeaths();
         //UpdateSymbol();
 
@@ -216,12 +249,19 @@
         botController.ProfileLoaded -= OnProfileLoaded;
         addonReader.AddonDataChanged -= OnAddonDataChanged;
         areaDB.Changed -= OnZoneChanged;
+        sink.OnLogChanged -= OnLogChanged;
         // combatLog.PlayerDeath -= OnPlayerDeath;
     }
 
     private void OnAddonDataChanged()
     {
         base.InvokeAsync(OnAddonDataChangedAction);
+    }
+
+    private void OnLogChanged()
+    {
+        RefreshNavigationEvents();
+        base.InvokeAsync(StateHasChanged);
     }
 
     private void OnAddonDataChangedAction()
@@ -363,4 +403,54 @@
         lastPos = PlayerReader.WorldPos;
         lastDir = PlayerReader.Direction;
     }
+
+    private void RefreshNavigationEvents()
+    {
+        int head = Math.Max(sink.Head - 1, 0);
+        List<LogEvent> events = new(MaxNavigationEvents);
+
+        for (int i = LoggerSink.SIZE; i >= 0; i--)
+        {
+            LogEvent? evt = sink.Log[(head + i) % LoggerSink.SIZE];
+            if (evt == null)
+            {
+                continue;
+            }
+
+            string message = evt.RenderMessage();
+            if (!IsNavigationMessage(message))
+            {
+                continue;
+            }
+
+            events.Add(evt);
+            if (events.Count > MaxNavigationEvents)
+            {
+                events.RemoveAt(0);
+            }
+        }
+
+        navigationEvents = [.. events];
+    }
+
+    private static bool IsNavigationMessage(string message)
+    {
+        return
+            message.Contains("[Navigation       ]", StringComparison.Ordinal) ||
+            message.Contains("[StuckDetector", StringComparison.Ordinal) ||
+            message.Contains("[RouteRerouter", StringComparison.Ordinal) ||
+            message.Contains("[Rehabilitator", StringComparison.Ordinal) ||
+            message.Contains("[HazardCollector", StringComparison.Ordinal) ||
+            message.Contains("detour", StringComparison.OrdinalIgnoreCase) ||
+            message.Contains("stuck", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string GetNavigationLogCss(LogEventLevel level) => level switch
+    {
+        LogEventLevel.Debug => "text-info",
+        LogEventLevel.Warning => "text-warning",
+        LogEventLevel.Error => "text-danger",
+        LogEventLevel.Fatal => "text-danger",
+        _ => "text-light"
+    };
 }

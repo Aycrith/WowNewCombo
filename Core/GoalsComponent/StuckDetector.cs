@@ -62,8 +62,8 @@ public sealed class StuckDetector : IGoapEventListener
     private const float SPIN_THRESHOLD_RADIANS = 2.0f;
     private const int SPIN_DETECTION_COUNT = 3;
     private const int HEADING_HISTORY_SIZE = 10;
-    private const float RepeatHotspotRadius = 6f;
-    private static readonly TimeSpan RepeatHotspotWindow = TimeSpan.FromSeconds(45);
+    private const float RepeatHotspotRadius = 10f;
+    private static readonly TimeSpan RepeatHotspotWindow = TimeSpan.FromSeconds(120);
 
     private static readonly Dictionary<UnstuckState, double> StateTimeouts = new()
     {
