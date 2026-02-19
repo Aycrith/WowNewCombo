@@ -1,5 +1,7 @@
 window.hazardHeatMap = {
     heatLayer: null,
+    eventLayer: null,
+    clusterLayer: null,
 
     initialize: function () {
         try {
@@ -27,13 +29,16 @@ window.hazardHeatMap = {
                     1.0: '#8b0000'
                 }
             });
+
+            this.eventLayer = L.layerGroup();
+            this.clusterLayer = L.layerGroup();
         } catch {
         }
     },
 
-    updateClusters: function (clusters) {
+    updateData: function (points) {
         try {
-            if (this.heatLayer === null || clusters === null || clusters === undefined) {
+            if (this.heatLayer === null || points === null || points === undefined) {
                 return;
             }
 
@@ -41,25 +46,63 @@ window.hazardHeatMap = {
                 return;
             }
 
+            if (this.eventLayer !== null) {
+                this.eventLayer.clearLayers();
+            }
+
+            if (this.clusterLayer !== null) {
+                this.clusterLayer.clearLayers();
+            }
+
             const heatData = [];
 
-            for (let i = 0; i < clusters.length; i++) {
-                const c = clusters[i];
-                if (c === null || c === undefined) continue;
+            for (let i = 0; i < points.length; i++) {
+                const p = points[i];
+                if (p === null || p === undefined) continue;
 
-                const x = (c.x !== undefined) ? c.x : c.X;
-                const y = (c.y !== undefined) ? c.y : c.Y;
-                const severity = (c.severityScore !== undefined) ? c.severityScore : c.SeverityScore;
+                const x = (p.x !== undefined) ? p.x : p.X;
+                const y = (p.y !== undefined) ? p.y : p.Y;
+                const rawIntensity = (p.intensity !== undefined)
+                    ? p.intensity
+                    : ((p.Intensity !== undefined)
+                        ? p.Intensity
+                        : ((p.severityScore !== undefined) ? p.severityScore / 10.0 : ((p.SeverityScore !== undefined) ? p.SeverityScore / 10.0 : 0.5)));
+                const categoryValue = (p.category !== undefined) ? p.category : p.Category;
+                const category = (typeof categoryValue === 'string') ? categoryValue.toLowerCase() : 'cluster';
 
                 const ll = worldTolatLng(x, y);
-                const intensity = Math.max(0, Math.min(1, severity / 100.0));
+                const intensity = Math.max(0.15, Math.min(1, rawIntensity));
 
                 heatData.push([ll.lat, ll.lng, intensity]);
+
+                if (category === 'event' && this.eventLayer !== null) {
+                    const eventColor = intensity >= 0.85 ? '#d00000' : '#ff6b00';
+                    L.circleMarker(ll, {
+                        radius: 2 + (intensity * 4),
+                        color: '#111111',
+                        weight: 1,
+                        fillColor: eventColor,
+                        fillOpacity: 0.9
+                    }).addTo(this.eventLayer);
+                }
+                else if (category === 'cluster' && this.clusterLayer !== null) {
+                    L.circleMarker(ll, {
+                        radius: 4 + (intensity * 6),
+                        color: '#ffd166',
+                        weight: 2,
+                        fillColor: '#ffb703',
+                        fillOpacity: 0.15
+                    }).addTo(this.clusterLayer);
+                }
             }
 
             this.heatLayer.setLatLngs(heatData);
         } catch {
         }
+    },
+
+    updateClusters: function (clusters) {
+        this.updateData(clusters);
     },
 
     show: function () {
@@ -79,6 +122,14 @@ window.hazardHeatMap = {
             if (!LeafletMap.hasLayer(this.heatLayer)) {
                 this.heatLayer.addTo(LeafletMap);
             }
+
+            if (this.clusterLayer !== null && !LeafletMap.hasLayer(this.clusterLayer)) {
+                this.clusterLayer.addTo(LeafletMap);
+            }
+
+            if (this.eventLayer !== null && !LeafletMap.hasLayer(this.eventLayer)) {
+                this.eventLayer.addTo(LeafletMap);
+            }
         } catch {
         }
     },
@@ -95,6 +146,14 @@ window.hazardHeatMap = {
 
             if (LeafletMap.hasLayer(this.heatLayer)) {
                 LeafletMap.removeLayer(this.heatLayer);
+            }
+
+            if (this.clusterLayer !== null && LeafletMap.hasLayer(this.clusterLayer)) {
+                LeafletMap.removeLayer(this.clusterLayer);
+            }
+
+            if (this.eventLayer !== null && LeafletMap.hasLayer(this.eventLayer)) {
+                LeafletMap.removeLayer(this.eventLayer);
             }
         } catch {
         }

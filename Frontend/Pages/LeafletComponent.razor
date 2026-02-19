@@ -168,6 +168,18 @@
                 return;
             }
 
+            if (showHazardLayer && featureFlags.IsHazardAvoidanceEnabled)
+            {
+                try
+                {
+                    await hazardHeatMapService.ShowAsync();
+                    await UpdateHazardLayer(force: true);
+                }
+                catch (JSException)
+                {
+                }
+            }
+
             ActionZoneChangedAction();
         }
     }
@@ -180,6 +192,7 @@
         //combatLog.PlayerDeath += OnPlayerDeath;
 
         UpdateZoneName();
+        showHazardLayer = featureFlags.IsHazardAvoidanceEnabled;
         //UpdateDeaths();
         //UpdateSymbol();
 
