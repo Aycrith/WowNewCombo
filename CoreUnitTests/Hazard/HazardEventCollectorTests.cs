@@ -180,6 +180,45 @@ public sealed class HazardEventCollectorTests
         Assert.Equal(0, GetEventSubscriberCount(combatLog, "TargetEvade"));
     }
 
+    [Fact]
+    public void HandleStuckDetected_DeduplicatesNearIdenticalEvents()
+    {
+        FeatureFlagService featureFlags = CreateFeatureFlagService(enabled: true);
+        using HazardZoneStore store = new(NullLogger<HazardZoneStore>.Instance, featureFlags);
+
+        StuckDetector stuckDetector = CreateUninitializedStuckDetector();
+        CombatLog combatLog = new(new AddonBits());
+        PlayerReader playerReader = CreatePlayerReader();
+
+        using HazardEventCollector collector = new(
+            NullLogger<HazardEventCollector>.Instance,
+            featureFlags,
+            store,
+            stuckDetector,
+            combatLog,
+            playerReader);
+
+        DateTime now = DateTime.UtcNow;
+        StuckEventData data = new()
+        {
+            Position = new Vector3(100f, 100f, 0f),
+            MapX = 50f,
+            MapY = 50f,
+            MapId = 7,
+            UIMapId = 77,
+            Zone = "TestZone",
+            DurationMs = 3000,
+            AttemptCount = 1,
+            Timestamp = now
+        };
+
+        InvokePrivateHandler(collector, "HandleStuckDetected", data);
+        InvokePrivateHandler(collector, "HandleStuckDetected", data);
+
+        IReadOnlyList<HazardEvent> events = store.GetEventsSnapshot(7);
+        Assert.Single(events);
+    }
+
     private static void InvokePrivateHandler(HazardEventCollector collector, string methodName, params object[] args)
     {
         MethodInfo? method = typeof(HazardEventCollector).GetMethod(

@@ -91,7 +91,16 @@ public static class GoalFactory
         {
             FeatureFlagService flags = sp.GetRequiredService<FeatureFlagService>();
             int maxSize = flags.Current.StuckRecoveryV2.BreadcrumbTrailSize;
-            return new BreadcrumbTracker(maxSize);
+            float minDistance = BreadcrumbTracker.DefaultMinDistance;
+
+            if (flags.Current.StuckSensitivity.Enabled)
+            {
+                // Tie breadcrumb density to stuck sensitivity so backtracking has enough granularity
+                // near obstacles without exploding trail size.
+                minDistance = Math.Clamp(flags.Current.StuckSensitivity.MinDistance * 10f, 0.75f, 4f);
+            }
+
+            return new BreadcrumbTracker(maxSize, minDistance);
         });
 
         services.AddScoped<PlayerDirection>();

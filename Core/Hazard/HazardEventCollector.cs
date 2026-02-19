@@ -3,6 +3,7 @@ using Core.FeatureFlags;
 using Microsoft.Extensions.Logging;
 
 using System;
+using System.Numerics;
 
 namespace Core.Hazard;
 
@@ -11,12 +12,19 @@ namespace Core.Hazard;
 /// </summary>
 public sealed class HazardEventCollector : IDisposable
 {
+    private const float DuplicateStuckDistanceThreshold = 1.25f;
+    private const int DuplicateStuckDurationToleranceMs = 250;
+    private static readonly TimeSpan DuplicateStuckWindow = TimeSpan.FromSeconds(2);
+
     private readonly ILogger<HazardEventCollector> logger;
     private readonly FeatureFlagService featureFlagService;
     private readonly HazardZoneStore store;
     private readonly StuckDetector stuckDetector;
     private readonly CombatLog combatLog;
     private readonly PlayerReader playerReader;
+
+    private readonly object duplicateGate = new();
+    private HazardEvent? lastStuckEvent;
 
     public HazardEventCollector(
         ILogger<HazardEventCollector> logger,
@@ -72,6 +80,16 @@ public sealed class HazardEventCollector : IDisposable
             PlayerClass = playerReader.Class.ToString(),
             PlayerLevel = playerReader.Level.Value
         };
+
+        if (IsDuplicateStuckEvent(hazardEvent))
+        {
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("[HazardCollector    ] Deduplicated stuck event at {Pos}", hazardEvent.WorldPosition);
+            }
+
+            return;
+        }
 
         store.AddEvent(hazardEvent);
 
@@ -140,5 +158,30 @@ public sealed class HazardEventCollector : IDisposable
                 hazardEvent.Zone);
         }
     }
-}
 
+    private bool IsDuplicateStuckEvent(HazardEvent candidate)
+    {
+        lock (duplicateGate)
+        {
+            if (lastStuckEvent == null)
+            {
+                lastStuckEvent = candidate;
+                return false;
+            }
+
+            bool isRecent = Math.Abs((candidate.Timestamp - lastStuckEvent.Timestamp).TotalMilliseconds) <= DuplicateStuckWindow.TotalMilliseconds;
+            bool isSameAttempt = candidate.AttemptCount == lastStuckEvent.AttemptCount;
+            bool isSameMap = candidate.MapId == lastStuckEvent.MapId;
+            bool isNear = Vector3.Distance(candidate.WorldPosition, lastStuckEvent.WorldPosition) <= DuplicateStuckDistanceThreshold;
+            bool similarDuration = Math.Abs(candidate.DurationMs - lastStuckEvent.DurationMs) <= DuplicateStuckDurationToleranceMs;
+
+            if (isRecent && isSameAttempt && isSameMap && isNear && similarDuration)
+            {
+                return true;
+            }
+
+            lastStuckEvent = candidate;
+            return false;
+        }
+    }
+}

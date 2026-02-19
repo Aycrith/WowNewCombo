@@ -333,7 +333,22 @@
 
         lastHazardUpdateUtc = DateTime.UtcNow;
 
-        await hazardHeatMapService.UpdateHeatMapAsync(PlayerReader.MapId);
+        await hazardHeatMapService.UpdateHeatMapAsync(ResolveHazardMapId());
+    }
+
+    private int ResolveHazardMapId()
+    {
+        if (PlayerReader.MapId > 0)
+        {
+            return PlayerReader.MapId;
+        }
+
+        if (PlayerReader.WorldMapArea.MapID > 0)
+        {
+            return PlayerReader.WorldMapArea.MapID;
+        }
+
+        return PlayerReader.UIMapId.Value;
     }
 
     private void OnTimerTick(object? s, ElapsedEventArgs e)

@@ -1,4 +1,5 @@
 using Core.Database;
+using Core.FeatureFlags;
 using Core.GOAP;
 using Core.Hazard;
 
@@ -47,6 +48,7 @@ public sealed partial class Navigation : IDisposable
     private readonly RouteRehabilitationCoordinator routeRehabCoordinator;
     private readonly IRouteRerouter? routeRerouter;
     private readonly HumanizedMover humanizedMover;
+    private readonly FeatureFlagService? featureFlagService;
 
     private const float MinDistanceMount = 10;
     private readonly float MaxDistance = 200;
@@ -93,6 +95,11 @@ public sealed partial class Navigation : IDisposable
     private Vector3 lastNoPathDestination;
 
     private const int NoPathBackoffMs = 1500;
+    private const double DefaultRouteResetTimeoutMs = 8_000;
+    private static readonly TimeSpan DynamicDetourCooldown = TimeSpan.FromSeconds(2);
+    private const int MinRouteWaypointsForDynamicDetour = 1;
+
+    private DateTime lastDynamicDetourAttemptUtc = DateTime.MinValue;
 
     public Navigation(ILogger<Navigation> logger,
         CancellationTokenSource<GoapAgent> cts,
@@ -105,7 +112,8 @@ public sealed partial class Navigation : IDisposable
         ClassConfiguration classConfiguration,
         AreaDB areaDB,
         IRouteRerouter? routeRerouter = null,
-        IHumanizationProvider? humanizationProvider = null)
+        IHumanizationProvider? humanizationProvider = null,
+        FeatureFlagService? featureFlagService = null)
     {
         this.logger = logger;
         this.playerDirection = playerDirection;
@@ -118,6 +126,7 @@ public sealed partial class Navigation : IDisposable
         this.mountHandler = mountHandler;
         this.areaDB = areaDB;
         this.routeRerouter = routeRerouter;
+        this.featureFlagService = featureFlagService;
 
         // Initialize extracted helper classes
         oscillationDetector = new OscillationDetector();
@@ -250,7 +259,12 @@ public sealed partial class Navigation : IDisposable
             }
             else
             {
-                if (stuckDetector.ActionDurationMs > 10_000)
+                if (TryApplyDynamicHazardDetour(token))
+                {
+                    return;
+                }
+
+                if (stuckDetector.ActionDurationMs > GetRouteResetTimeoutMs())
                 {
                     if (mountHandler.IsMounted())
                         mountHandler.Dismount();
@@ -701,6 +715,114 @@ public sealed partial class Navigation : IDisposable
     private bool HasBeenActiveRecently()
     {
         return (DateTime.UtcNow - LastActive).TotalSeconds < 2;
+    }
+
+    private bool TryApplyDynamicHazardDetour(CancellationToken token)
+    {
+        if (routeRerouter?.IsEnabled != true || routeToNextWaypoint.Count < MinRouteWaypointsForDynamicDetour)
+        {
+            return false;
+        }
+
+        DateTime now = DateTime.UtcNow;
+        if ((now - lastDynamicDetourAttemptUtc) < DynamicDetourCooldown)
+        {
+            return false;
+        }
+
+        // Wait for sustained non-progress before rebuilding the active segment.
+        if (stuckDetector.ActionDurationMs < GetRouteResetTimeoutMs() * 0.2)
+        {
+            return false;
+        }
+
+        lastDynamicDetourAttemptUtc = now;
+
+        Vector3[] remainingPath = routeToNextWaypoint.ToArray();
+        if (remainingPath.Length < MinRouteWaypointsForDynamicDetour)
+        {
+            return false;
+        }
+
+        Vector3[] originalPath = new Vector3[remainingPath.Length + 1];
+        originalPath[0] = playerReader.WorldPos;
+        Array.Copy(remainingPath, 0, originalPath, 1, remainingPath.Length);
+
+        try
+        {
+            Vector3[]? detour = routeRerouter.CalculateDetourAsync(
+                originalPath,
+                playerReader.MapId,
+                token).GetAwaiter().GetResult();
+
+            if (!IsMeaningfulDynamicDetour(originalPath, detour))
+            {
+                return false;
+            }
+
+            routeToNextWaypoint.Clear();
+
+            // Detour includes the current position at index 0, so skip it.
+            for (int i = detour!.Length - 1; i >= 1; i--)
+            {
+                routeToNextWaypoint.Push(detour[i]);
+            }
+
+            stuckDetector.SetTargetLocation(routeToNextWaypoint.Peek());
+            UpdateTotalRoute();
+
+            logger.LogInformation(
+                "[Navigation       ] Dynamic hazard detour applied while stalled ({OriginalCount} -> {DetourCount} waypoints)",
+                originalPath.Length,
+                detour.Length);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "[Navigation       ] Dynamic hazard detour attempt failed");
+            return false;
+        }
+    }
+
+    private static bool IsMeaningfulDynamicDetour(Vector3[] originalPath, Vector3[]? detour)
+    {
+        if (detour is not { Length: >= 2 })
+        {
+            return false;
+        }
+
+        if (detour.Length > originalPath.Length)
+        {
+            return true;
+        }
+
+        int compareCount = Math.Min(originalPath.Length, detour.Length);
+        float accumulatedDelta = 0f;
+
+        for (int i = 1; i < compareCount; i++)
+        {
+            accumulatedDelta += Vector3.Distance(originalPath[i], detour[i]);
+        }
+
+        return accumulatedDelta >= 2.5f;
+    }
+
+    private double GetRouteResetTimeoutMs()
+    {
+        if (featureFlagService == null)
+        {
+            return DefaultRouteResetTimeoutMs;
+        }
+
+        StuckSensitivityOptions options = featureFlagService.Current.StuckSensitivity;
+        if (!options.Enabled)
+        {
+            return DefaultRouteResetTimeoutMs;
+        }
+
+        float multiplier = Math.Clamp(options.ApproachTimeoutMultiplier, 0.5f, 3f);
+        return DefaultRouteResetTimeoutMs * multiplier;
     }
 
 

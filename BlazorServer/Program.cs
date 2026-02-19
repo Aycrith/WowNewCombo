@@ -131,14 +131,16 @@ public static class Program
     private static WebApplication CreateApp(string[] args)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+        string runtimeFeatureFlagsPath = ResolveRuntimeFeatureFlagsPath("BlazorServer");
 
         // Runtime overrides / feature flags (written by the Web UI).
         // This file is optional and hot-reloads when changed so admin toggles
         // take effect immediately without restarts.
         builder.Configuration.AddJsonFile(
-            "runtime_feature_flags.json",
+            runtimeFeatureFlagsPath,
             optional: true,
             reloadOnChange: true);
+        builder.Configuration["FeatureFlags:ConfigFilePath"] = runtimeFeatureFlagsPath;
 
         // When running directly from `bin/Release/net10.0` (OneClickLauncher default),
         // static web assets from referenced projects (Frontend) are not copied to `wwwroot`.
@@ -166,6 +168,28 @@ public static class Program
         ConfigureServices(builder.Configuration, builder.Services);
 
         return ConfigureApp(builder, builder.Environment);
+    }
+
+    private static string ResolveRuntimeFeatureFlagsPath(string projectFolderName)
+    {
+        string[] candidates =
+        [
+            "runtime_feature_flags.json",
+            Path.Combine(projectFolderName, "runtime_feature_flags.json"),
+            Path.Combine(AppContext.BaseDirectory, "runtime_feature_flags.json"),
+            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "runtime_feature_flags.json")),
+            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", projectFolderName, "runtime_feature_flags.json"))
+        ];
+
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            if (File.Exists(candidates[i]))
+            {
+                return candidates[i];
+            }
+        }
+
+        return "runtime_feature_flags.json";
     }
 
     private static void ConfigureServices(ConfigurationManager configuration, IServiceCollection services)

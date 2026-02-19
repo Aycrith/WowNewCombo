@@ -25,6 +25,9 @@ public sealed class RouteRehabilitator
     private const int MinFailuresForHotZone = 2;
     private const float HotZoneRadius = 25f;
     private const float SingleEventRadius = 12f;
+    private const int MaxAlternativeDetours = 3;
+    private const float MinDetourSeparation = 12f;
+    private static readonly TimeSpan RecentFallbackEventWindow = TimeSpan.FromHours(2);
 
     public RouteRehabilitator(
         HazardZoneStore store,
@@ -186,9 +189,45 @@ public sealed class RouteRehabilitator
             return alternatives;
         }
 
-        // Check if direct path intersects any high-severity clusters
-        foreach (HazardCluster cluster in clusters)
+        // Prefer very recent failure events first so we can react immediately to fresh stuck loops.
+        DateTime cutoff = DateTime.UtcNow - RecentFallbackEventWindow;
+        for (int i = events.Count - 1; i >= 0 && alternatives.Count < MaxAlternativeDetours; i--)
         {
+            HazardEvent hazardEvent = events[i];
+
+            if (hazardEvent.Timestamp < cutoff)
+            {
+                break;
+            }
+
+            if (hazardEvent.Type is not (HazardEventType.Stuck or HazardEventType.Death or HazardEventType.PathfindingFailure))
+            {
+                continue;
+            }
+
+            if (!IsPathNearPoint(start, end, hazardEvent.WorldPosition, SingleEventRadius + safetyMargin))
+            {
+                continue;
+            }
+
+            Vector3 detour = CalculateDetourPoint(start, end, hazardEvent.WorldPosition, SingleEventRadius, safetyMargin);
+            if (TryAddDistinctDetour(alternatives, detour))
+            {
+                logger.LogDebug(
+                    "[Rehabilitator     ] Suggested detour around recent {Type} event at {Position}",
+                    hazardEvent.Type,
+                    hazardEvent.WorldPosition);
+            }
+        }
+
+        List<HazardCluster> sortedClusters = clusters
+            .OrderByDescending(static c => c.SeverityScore)
+            .ToList();
+
+        // Then add longer-term cluster detours to keep routing stable through known problem zones.
+        for (int i = 0; i < sortedClusters.Count && alternatives.Count < MaxAlternativeDetours; i++)
+        {
+            HazardCluster cluster = sortedClusters[i];
             if (cluster.SeverityScore < 5f)
             {
                 continue; // Only avoid high-severity clusters
@@ -196,36 +235,14 @@ public sealed class RouteRehabilitator
 
             if (IsPathNearCluster(start, end, cluster, safetyMargin))
             {
-                // Suggest detour points
                 Vector3 detour = CalculateDetourPoint(start, end, cluster, safetyMargin);
-                alternatives.Add(detour);
-
-                logger.LogDebug(
-                    "[Rehabilitator     ] Suggested detour around cluster at {Centroid} (severity={Severity})",
-                    cluster.Centroid,
-                    cluster.SeverityScore);
-            }
-        }
-
-        // Fallback for immediate learning: if clustering hasn't produced hot zones yet,
-        // still avoid recent stuck/death events directly.
-        if (alternatives.Count == 0)
-        {
-            for (int i = events.Count - 1; i >= 0; i--)
-            {
-                HazardEvent hazardEvent = events[i];
-                if (hazardEvent.Type is not (HazardEventType.Stuck or HazardEventType.Death or HazardEventType.PathfindingFailure))
+                if (TryAddDistinctDetour(alternatives, detour))
                 {
-                    continue;
+                    logger.LogDebug(
+                        "[Rehabilitator     ] Suggested detour around cluster at {Centroid} (severity={Severity})",
+                        cluster.Centroid,
+                        cluster.SeverityScore);
                 }
-
-                if (!IsPathNearPoint(start, end, hazardEvent.WorldPosition, SingleEventRadius + safetyMargin))
-                {
-                    continue;
-                }
-
-                Vector3 detour = CalculateDetourPoint(start, end, hazardEvent.WorldPosition, SingleEventRadius, safetyMargin);
-                alternatives.Add(detour);
             }
         }
 
@@ -386,6 +403,20 @@ public sealed class RouteRehabilitator
         detour.Z = center.Z; // Maintain same Z
 
         return detour;
+    }
+
+    private static bool TryAddDistinctDetour(List<Vector3> alternatives, Vector3 detour)
+    {
+        for (int i = 0; i < alternatives.Count; i++)
+        {
+            if (Vector3.Distance(alternatives[i], detour) < MinDetourSeparation)
+            {
+                return false;
+            }
+        }
+
+        alternatives.Add(detour);
+        return true;
     }
 
     #endregion

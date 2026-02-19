@@ -108,6 +108,98 @@ public sealed class RouteRehabilitatorTests
         Assert.Equal(100f, cluster.SeverityScore);
     }
 
+    [Fact]
+    public void SuggestAlternativePath_WhenManyNearbyEvents_LimitsDetourCount()
+    {
+        (HazardZoneStore store, FeatureFlagService flags) = CreateStore(enabled: true);
+        RouteRehabilitator rehab = new(store, NullLogger<RouteRehabilitator>.Instance, flags);
+
+        List<HazardEvent> events = [];
+        DateTime now = DateTime.UtcNow;
+
+        for (int i = 0; i < 8; i++)
+        {
+            events.Add(new HazardEvent
+            {
+                WorldPosition = new Vector3(50 + i, 1 + (i % 2), 0),
+                MapId = 1,
+                UIMapId = 100,
+                Type = HazardEventType.Stuck,
+                Timestamp = now.AddSeconds(-i)
+            });
+        }
+
+        store.AddEvents(1, events);
+
+        List<Vector3> alternatives = rehab.SuggestAlternativePath(
+            start: new Vector3(0, 0, 0),
+            end: new Vector3(100, 0, 0),
+            mapId: 1,
+            safetyMargin: 20f);
+
+        Assert.NotEmpty(alternatives);
+        Assert.InRange(alternatives.Count, 1, 3);
+    }
+
+    [Fact]
+    public void SuggestAlternativePath_IgnoresOldFallbackEvents()
+    {
+        (HazardZoneStore store, FeatureFlagService flags) = CreateStore(enabled: true);
+        RouteRehabilitator rehab = new(store, NullLogger<RouteRehabilitator>.Instance, flags);
+
+        store.AddEvent(new HazardEvent
+        {
+            WorldPosition = new Vector3(50, 0, 0),
+            MapId = 1,
+            UIMapId = 100,
+            Type = HazardEventType.Stuck,
+            Timestamp = DateTime.UtcNow.AddHours(-5)
+        });
+
+        List<Vector3> alternatives = rehab.SuggestAlternativePath(
+            start: new Vector3(0, 0, 0),
+            end: new Vector3(100, 0, 0),
+            mapId: 1,
+            safetyMargin: 20f);
+
+        Assert.Empty(alternatives);
+    }
+
+    [Fact]
+    public void SuggestAlternativePath_IncludesRecentEventDetour_WhenClustersAlsoExist()
+    {
+        (HazardZoneStore store, FeatureFlagService flags) = CreateStore(enabled: true);
+        RouteRehabilitator rehab = new(store, NullLogger<RouteRehabilitator>.Instance, flags);
+
+        store.ReplaceClusters(1,
+            [
+                new HazardCluster
+                {
+                    Centroid = new Vector3(50, 0, 0),
+                    Radius = 12f,
+                    SeverityScore = 9f,
+                    Events = new List<HazardEvent>()
+                }
+            ]);
+
+        store.AddEvent(new HazardEvent
+        {
+            WorldPosition = new Vector3(80, 2, 0),
+            MapId = 1,
+            UIMapId = 100,
+            Type = HazardEventType.Stuck,
+            Timestamp = DateTime.UtcNow.AddMinutes(-1)
+        });
+
+        List<Vector3> alternatives = rehab.SuggestAlternativePath(
+            start: new Vector3(0, 0, 0),
+            end: new Vector3(120, 0, 0),
+            mapId: 1,
+            safetyMargin: 20f);
+
+        Assert.True(alternatives.Count >= 2);
+    }
+
     private static (HazardZoneStore Store, FeatureFlagService Flags) CreateStore(bool enabled)
     {
         FeatureFlagsOptions flags = new()

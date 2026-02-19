@@ -14,6 +14,8 @@ using Serilog;
 using Serilog.Templates;
 using Serilog.Templates.Themes;
 
+using System.Collections.Generic;
+
 namespace HeadlessServer;
 
 public sealed class Program
@@ -21,13 +23,18 @@ public sealed class Program
     public static void Main(string[] args)
     {
         var environmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        string runtimeFeatureFlagsPath = ResolveRuntimeFeatureFlagsPath("HeadlessServer");
 
         IConfiguration configuration = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("headless_appsettings.json", optional: true, reloadOnChange: true)
             .AddJsonFile($"headless_appsettings.{environmentName}.json", optional: true, reloadOnChange: true)
             // Runtime overrides / feature flags (written by the Web UI in BlazorServer, or edited manually).
-            .AddJsonFile("runtime_feature_flags.json", optional: true, reloadOnChange: true)
+            .AddJsonFile(runtimeFeatureFlagsPath, optional: true, reloadOnChange: true)
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["FeatureFlags:ConfigFilePath"] = runtimeFeatureFlagsPath
+            })
             .AddEnvironmentVariables()
             .AddCommandLine(args)
             .Build();
@@ -130,6 +137,28 @@ public sealed class Program
 
     Exit:
         Console.ReadKey();
+    }
+
+    private static string ResolveRuntimeFeatureFlagsPath(string projectFolderName)
+    {
+        string[] candidates =
+        [
+            "runtime_feature_flags.json",
+            Path.Combine(projectFolderName, "runtime_feature_flags.json"),
+            Path.Combine(AppContext.BaseDirectory, "runtime_feature_flags.json"),
+            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "runtime_feature_flags.json")),
+            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", projectFolderName, "runtime_feature_flags.json"))
+        ];
+
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            if (File.Exists(candidates[i]))
+            {
+                return candidates[i];
+            }
+        }
+
+        return "runtime_feature_flags.json";
     }
 
     private static bool ConfigureServices(
