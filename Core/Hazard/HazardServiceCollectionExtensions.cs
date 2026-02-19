@@ -1,3 +1,5 @@
+using Core;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -15,10 +17,11 @@ public static class HazardServiceCollectionExtensions
         services.TryAddSingleton<LocalHazardDAO>();
         services.TryAddSingleton<HazardClusterAnalyzer>();
         services.TryAddSingleton<RouteRehabilitator>();
+        services.TryAddSingleton<RouteRerouter>();
+        services.TryAddSingleton<IRouteRerouter>(static sp => sp.GetRequiredService<RouteRerouter>());
 
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, HazardAnalyticsBackgroundService>());
 
         return services;
     }
 }
-

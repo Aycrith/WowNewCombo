@@ -223,7 +223,25 @@ public sealed class BagReader : IDisposable, IReader
     // Total free slots usable for general items (excludes specialized bag types)
     public int TotalFreeGeneralSlotCount() => Bags.Sum(BagFreeSlotCount);
 
-    public bool AnyGreyItem() => BagItems.Any(BagItemCommonQuality);
+    public bool AnyGreyItem()
+    {
+        ReadOnlySpan<BagItem> span = CollectionsMarshal.AsSpan(BagItems);
+        for (int i = 0; i < span.Length; i++)
+        {
+            BagItem item = span[i];
+            if (item.Item.Quality != 0 || item.HasNoValue)
+            {
+                continue;
+            }
+
+            if (ItemDB.Items.ContainsKey(item.Item.Entry))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     public int ItemCount(int itemId)
     {
@@ -296,8 +314,6 @@ public sealed class BagReader : IDisposable, IReader
     private static int BagSlotCount(Bag b) => b.SlotCount;
 
     private static int BagFreeSlotCount(Bag b) => b.BagType == BagType.Unspecified ? b.FreeSlot : 0;
-
-    private static bool BagItemCommonQuality(BagItem bi) => bi.Item.Quality == 0;
 
     public int BagMaxSlot() => Bags.Max(BagSlotCount);
 

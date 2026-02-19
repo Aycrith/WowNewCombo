@@ -45,6 +45,7 @@ public sealed partial class Navigation : IDisposable
     private readonly AreaDB areaDB;
     private readonly OscillationDetector oscillationDetector;
     private readonly RouteRehabilitationCoordinator routeRehabCoordinator;
+    private readonly IRouteRerouter? routeRerouter;
     private readonly HumanizedMover humanizedMover;
 
     private const float MinDistanceMount = 10;
@@ -103,6 +104,7 @@ public sealed partial class Navigation : IDisposable
         RouteRehabilitator routeRehabilitator,
         ClassConfiguration classConfiguration,
         AreaDB areaDB,
+        IRouteRerouter? routeRerouter = null,
         IHumanizationProvider? humanizationProvider = null)
     {
         this.logger = logger;
@@ -115,6 +117,7 @@ public sealed partial class Navigation : IDisposable
         this.pather = pather;
         this.mountHandler = mountHandler;
         this.areaDB = areaDB;
+        this.routeRerouter = routeRerouter;
 
         // Initialize extracted helper classes
         oscillationDetector = new OscillationDetector();
@@ -484,11 +487,36 @@ public sealed partial class Navigation : IDisposable
 
         // Log pathfinder success and populate route
         {
+            Vector3[] pathToApply = result.Path;
+            if (routeRerouter?.IsEnabled == true && result.Path.Length >= 2)
+            {
+                try
+                {
+                    Vector3[]? detour = routeRerouter.CalculateDetourAsync(
+                        result.Path,
+                        playerReader.MapId,
+                        token).GetAwaiter().GetResult();
+
+                    if (detour is { Length: >= 2 })
+                    {
+                        pathToApply = detour;
+                        logger.LogInformation(
+                            "[Navigation       ] Applied hazard detour ({OriginalCount} -> {DetourCount} waypoints)",
+                            result.Path.Length,
+                            detour.Length);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "[Navigation       ] Hazard detour calculation failed");
+                }
+            }
+
             LogPathfinderSuccess(logger, result.Distance, result.StartW, result.EndW, result.ElapsedMs);
 
-            for (int i = result.Path.Length - 1; i >= 0; i--)
+            for (int i = pathToApply.Length - 1; i >= 0; i--)
             {
-                routeToNextWaypoint.Push(result.Path[i]);
+                routeToNextWaypoint.Push(pathToApply[i]);
             }
 
             if (SimplifyRouteToWaypoint)

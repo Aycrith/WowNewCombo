@@ -24,6 +24,7 @@ public sealed class RouteRehabilitator
     private const float HotZoneSeverityIncrease = 2.0f;
     private const int MinFailuresForHotZone = 2;
     private const float HotZoneRadius = 25f;
+    private const float SingleEventRadius = 12f;
 
     public RouteRehabilitator(
         HazardZoneStore store,
@@ -178,8 +179,9 @@ public sealed class RouteRehabilitator
 
         List<Vector3> alternatives = [];
         IReadOnlyList<HazardCluster> clusters = store.GetClustersSnapshot(mapId);
+        IReadOnlyList<HazardEvent> events = store.GetEventsSnapshot(mapId);
 
-        if (clusters.Count == 0)
+        if (clusters.Count == 0 && events.Count == 0)
         {
             return alternatives;
         }
@@ -202,6 +204,28 @@ public sealed class RouteRehabilitator
                     "[Rehabilitator     ] Suggested detour around cluster at {Centroid} (severity={Severity})",
                     cluster.Centroid,
                     cluster.SeverityScore);
+            }
+        }
+
+        // Fallback for immediate learning: if clustering hasn't produced hot zones yet,
+        // still avoid recent stuck/death events directly.
+        if (alternatives.Count == 0)
+        {
+            for (int i = events.Count - 1; i >= 0; i--)
+            {
+                HazardEvent hazardEvent = events[i];
+                if (hazardEvent.Type is not (HazardEventType.Stuck or HazardEventType.Death or HazardEventType.PathfindingFailure))
+                {
+                    continue;
+                }
+
+                if (!IsPathNearPoint(start, end, hazardEvent.WorldPosition, SingleEventRadius + safetyMargin))
+                {
+                    continue;
+                }
+
+                Vector3 detour = CalculateDetourPoint(start, end, hazardEvent.WorldPosition, SingleEventRadius, safetyMargin);
+                alternatives.Add(detour);
             }
         }
 
@@ -298,24 +322,26 @@ public sealed class RouteRehabilitator
 
     private static bool IsPathNearCluster(Vector3 start, Vector3 end, HazardCluster cluster, float margin)
     {
-        // Simple check: if either endpoint is near cluster, or cluster is between them
-        float radius = cluster.Radius + margin;
+        return IsPathNearPoint(start, end, cluster.Centroid, cluster.Radius + margin);
+    }
 
-        if (Vector3.Distance(start, cluster.Centroid) < radius ||
-            Vector3.Distance(end, cluster.Centroid) < radius)
+    private static bool IsPathNearPoint(Vector3 start, Vector3 end, Vector3 point, float radius)
+    {
+        if (Vector3.Distance(start, point) < radius ||
+            Vector3.Distance(end, point) < radius)
         {
             return true;
         }
 
-        // Check if cluster is between start and end (rough approximation)
+        // Check if point is between start and end (rough approximation)
         Vector3 pathDir = Vector3.Normalize(end - start);
-        Vector3 toCluster = cluster.Centroid - start;
-        float projection = Vector3.Dot(toCluster, pathDir);
+        Vector3 toPoint = point - start;
+        float projection = Vector3.Dot(toPoint, pathDir);
 
         if (projection > 0 && projection < Vector3.Distance(start, end))
         {
             Vector3 closestPoint = start + pathDir * projection;
-            return Vector3.Distance(closestPoint, cluster.Centroid) < radius;
+            return Vector3.Distance(closestPoint, point) < radius;
         }
 
         return false;
@@ -323,8 +349,18 @@ public sealed class RouteRehabilitator
 
     private static Vector3 CalculateDetourPoint(Vector3 start, Vector3 end, HazardCluster cluster, float margin)
     {
+        return CalculateDetourPoint(start, end, cluster.Centroid, cluster.Radius, margin);
+    }
+
+    private static Vector3 CalculateDetourPoint(
+        Vector3 start,
+        Vector3 end,
+        Vector3 center,
+        float hazardRadius,
+        float margin)
+    {
         Vector3 pathDir = Vector3.Normalize(end - start);
-        Vector3 toCluster = cluster.Centroid - start;
+        Vector3 toCluster = center - start;
 
         // Calculate perpendicular direction
         Vector3 perpendicular = new(-pathDir.Y, pathDir.X, 0);
@@ -345,9 +381,9 @@ public sealed class RouteRehabilitator
         }
 
         // Calculate detour point
-        float detourDistance = cluster.Radius + margin + 10f;
-        Vector3 detour = cluster.Centroid + perpendicular * detourDistance;
-        detour.Z = cluster.Centroid.Z; // Maintain same Z
+        float detourDistance = hazardRadius + margin + 10f;
+        Vector3 detour = center + perpendicular * detourDistance;
+        detour.Z = center.Z; // Maintain same Z
 
         return detour;
     }

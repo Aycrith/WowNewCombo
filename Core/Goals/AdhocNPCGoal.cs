@@ -410,7 +410,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         input.PressInteract();
         wait.Update();
 
-        MerchantResult merchantResult = OpenMerchantWindow();
+        MerchantResult merchantResult = OpenMerchantWindow(out bool performedVendorWork);
         if (merchantResult == MerchantResult.TryNextNPC && tryFindClosestNPC)
         {
             input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
@@ -423,9 +423,12 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
         noPathBackoffUntilUtc = default;
 
-        // Signal that vendor/repair completed successfully
-        // MailGoal uses this to know it can run
-        sessionStat.VendoredOrRepairedRecently = true;
+        // Signal that vendor/repair completed successfully.
+        // MailGoal uses this to know it can run, but only after actual vendor work.
+        if (performedVendorWork)
+        {
+            sessionStat.VendoredOrRepairedRecently = true;
+        }
 
         input.PressRandom(ConsoleKey.Escape, InputDuration.DefaultPress);
         input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
@@ -504,8 +507,9 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         }
     }
 
-    private MerchantResult OpenMerchantWindow()
+    private MerchantResult OpenMerchantWindow(out bool performedVendorWork)
     {
+        performedVendorWork = false;
         float e = wait.Until(TIMEOUT, gossipReader.GossipStartOrMerchantWindowOpened);
         if (gossipReader.MerchantWindowOpened())
         {
@@ -536,10 +540,13 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
         Log($"Merchant window opened after {e}ms");
 
+        bool hadRepairNeed = bits.Items_Broken() || playerReader.AvgEquipDurability() < 100;
+        bool hadGreyToSell = bagReader.AnyGreyItem();
+
         if (key.ConsoleKey != default)
             input.PressRandom(key);
 
-        if (bagReader.AnyGreyItem())
+        if (hadGreyToSell)
         {
             e = wait.Until(TIMEOUT, gossipReader.MerchantWindowSelling);
             if (e < 0)
@@ -569,6 +576,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
             wait.Update();
         }
 
+        performedVendorWork = hadRepairNeed || hadGreyToSell;
         return MerchantResult.Success;
     }
 
