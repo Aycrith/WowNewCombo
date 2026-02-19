@@ -97,9 +97,13 @@ public sealed partial class Navigation : IDisposable
     private const int NoPathBackoffMs = 1500;
     private const double DefaultRouteResetTimeoutMs = 8_000;
     private static readonly TimeSpan DynamicDetourCooldown = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan FrontBypassCooldown = TimeSpan.FromSeconds(1.5);
     private const int MinRouteWaypointsForDynamicDetour = 1;
+    private const float DynamicReconnectDuplicateDistance = 1.0f;
 
     private DateTime lastDynamicDetourAttemptUtc = DateTime.MinValue;
+    private DateTime lastFrontBypassUtc = DateTime.MinValue;
+    private int frontBypassAttemptCount;
 
     public Navigation(ILogger<Navigation> logger,
         CancellationTokenSource<GoapAgent> cts,
@@ -719,7 +723,7 @@ public sealed partial class Navigation : IDisposable
 
     private bool TryApplyDynamicHazardDetour(CancellationToken token)
     {
-        if (routeRerouter?.IsEnabled != true || routeToNextWaypoint.Count < MinRouteWaypointsForDynamicDetour)
+        if (routeToNextWaypoint.Count < MinRouteWaypointsForDynamicDetour)
         {
             return false;
         }
@@ -744,45 +748,67 @@ public sealed partial class Navigation : IDisposable
             return false;
         }
 
-        Vector3[] originalPath = new Vector3[remainingPath.Length + 1];
-        originalPath[0] = playerReader.WorldPos;
-        Array.Copy(remainingPath, 0, originalPath, 1, remainingPath.Length);
+        Vector3 playerPosition = playerReader.WorldPos;
+        Vector3 nextWaypoint = remainingPath[0];
+        Vector3[] localSegment = [playerPosition, nextWaypoint];
 
-        try
+        if (routeRerouter?.IsEnabled == true)
         {
-            Vector3[]? detour = routeRerouter.CalculateDetourAsync(
-                originalPath,
-                playerReader.MapId,
-                token).GetAwaiter().GetResult();
-
-            if (!IsMeaningfulDynamicDetour(originalPath, detour))
+            try
             {
-                return false;
+                Vector3[]? detour = routeRerouter.CalculateDetourAsync(
+                    localSegment,
+                    playerReader.MapId,
+                    token).GetAwaiter().GetResult();
+
+                if (IsMeaningfulDynamicDetour(localSegment, detour))
+                {
+                    Vector3[] stitchedRoute = StitchDetourWithRemainingPath(detour!, remainingPath, DynamicReconnectDuplicateDistance);
+                    ApplyDynamicRoute(stitchedRoute);
+
+                    logger.LogInformation(
+                        "[Navigation       ] Dynamic hazard detour applied while stalled ({OriginalCount} -> {DetourCount} waypoints, reconnect={Reconnect})",
+                        remainingPath.Length,
+                        stitchedRoute.Length,
+                        nextWaypoint);
+
+                    return true;
+                }
             }
-
-            routeToNextWaypoint.Clear();
-
-            // Detour includes the current position at index 0, so skip it.
-            for (int i = detour!.Length - 1; i >= 1; i--)
+            catch (Exception ex)
             {
-                routeToNextWaypoint.Push(detour[i]);
+                logger.LogWarning(ex, "[Navigation       ] Dynamic hazard detour attempt failed");
             }
-
-            stuckDetector.SetTargetLocation(routeToNextWaypoint.Peek());
-            UpdateTotalRoute();
-
-            logger.LogInformation(
-                "[Navigation       ] Dynamic hazard detour applied while stalled ({OriginalCount} -> {DetourCount} waypoints)",
-                originalPath.Length,
-                detour.Length);
-
-            return true;
         }
-        catch (Exception ex)
+
+        // Fallback when no hazard-driven detour is available yet:
+        // synthesize a short side-step route around a likely obstacle directly in front,
+        // then reconnect to the intended next waypoint and keep the remaining route.
+        if ((now - lastFrontBypassUtc) < FrontBypassCooldown)
         {
-            logger.LogWarning(ex, "[Navigation       ] Dynamic hazard detour attempt failed");
             return false;
         }
+
+        frontBypassAttemptCount++;
+        lastFrontBypassUtc = now;
+
+        Vector3[]? bypassPath = BuildFrontObstacleBypassPath(playerPosition, nextWaypoint, frontBypassAttemptCount);
+        if (bypassPath is null)
+        {
+            return false;
+        }
+
+        Vector3[] stitchedBypassRoute = StitchDetourWithRemainingPath(bypassPath, remainingPath, DynamicReconnectDuplicateDistance);
+        ApplyDynamicRoute(stitchedBypassRoute);
+
+        logger.LogInformation(
+            "[Navigation       ] Dynamic front-obstacle bypass applied ({OriginalCount} -> {BypassCount} waypoints, reconnect={Reconnect}, side={Side})",
+            remainingPath.Length,
+            stitchedBypassRoute.Length,
+            nextWaypoint,
+            (frontBypassAttemptCount & 1) == 0 ? "left" : "right");
+
+        return true;
     }
 
     private static bool IsMeaningfulDynamicDetour(Vector3[] originalPath, Vector3[]? detour)
@@ -806,6 +832,89 @@ public sealed partial class Navigation : IDisposable
         }
 
         return accumulatedDelta >= 2.5f;
+    }
+
+    internal static Vector3[] StitchDetourWithRemainingPath(
+        Vector3[] detourPath,
+        Vector3[] remainingPath,
+        float duplicateDistance = 1.0f)
+    {
+        if (remainingPath.Length == 0)
+        {
+            return Array.Empty<Vector3>();
+        }
+
+        if (detourPath.Length < 2)
+        {
+            return remainingPath;
+        }
+
+        List<Vector3> stitched = new(detourPath.Length + remainingPath.Length);
+
+        static void AddIfDistinct(List<Vector3> points, Vector3 candidate, float minDistance)
+        {
+            if (points.Count > 0 &&
+                Vector3.Distance(points[points.Count - 1], candidate) <= minDistance)
+            {
+                return;
+            }
+
+            points.Add(candidate);
+        }
+
+        // Skip index 0 because it is the current position.
+        for (int i = 1; i < detourPath.Length; i++)
+        {
+            AddIfDistinct(stitched, detourPath[i], duplicateDistance);
+        }
+
+        for (int i = 1; i < remainingPath.Length; i++)
+        {
+            AddIfDistinct(stitched, remainingPath[i], duplicateDistance);
+        }
+
+        return stitched.ToArray();
+    }
+
+    internal static Vector3[]? BuildFrontObstacleBypassPath(Vector3 start, Vector3 nextWaypoint, int attemptIndex)
+    {
+        Vector3 toTarget = nextWaypoint - start;
+        toTarget.Z = 0;
+
+        float distance = toTarget.Length();
+        if (distance < 1.5f)
+        {
+            return null;
+        }
+
+        Vector3 direction = Vector3.Normalize(toTarget);
+        Vector3 perpendicular = Vector3.Normalize(new Vector3(-direction.Y, direction.X, 0));
+
+        float sideSign = (attemptIndex & 1) == 0 ? 1f : -1f;
+        float lateralDistance = Math.Clamp(distance * 0.5f, 3.0f, 7.5f);
+        float forwardDistance = Math.Clamp(distance * 0.45f, 2.5f, 9.0f);
+
+        Vector3 bypass = start + (direction * forwardDistance) + (perpendicular * lateralDistance * sideSign);
+        bypass.Z = nextWaypoint.Z != 0 ? nextWaypoint.Z : start.Z;
+
+        return [start, bypass, nextWaypoint];
+    }
+
+    private void ApplyDynamicRoute(Vector3[] route)
+    {
+        routeToNextWaypoint.Clear();
+
+        for (int i = route.Length - 1; i >= 0; i--)
+        {
+            routeToNextWaypoint.Push(route[i]);
+        }
+
+        if (routeToNextWaypoint.Count > 0)
+        {
+            stuckDetector.SetTargetLocation(routeToNextWaypoint.Peek());
+        }
+
+        UpdateTotalRoute();
     }
 
     private double GetRouteResetTimeoutMs()
