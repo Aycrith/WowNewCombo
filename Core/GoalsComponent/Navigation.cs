@@ -139,8 +139,6 @@ public sealed partial class Navigation : IDisposable
 
         patherName = pather.GetType().Name;
 
-        patherName = pather.GetType().Name;
-
         AvgDistance = OutDoorMinDistance;
         token = cts.Token;
         manualReset = new(false);
@@ -811,7 +809,7 @@ public sealed partial class Navigation : IDisposable
         return true;
     }
 
-    private static bool IsMeaningfulDynamicDetour(Vector3[] originalPath, Vector3[]? detour)
+    internal static bool IsMeaningfulDynamicDetour(Vector3[] originalPath, Vector3[]? detour)
     {
         if (detour is not { Length: >= 2 })
         {

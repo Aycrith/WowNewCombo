@@ -142,4 +142,54 @@ public sealed class NavigationDynamicBypassTests
         firstPath[1].Y.Should().BeGreaterThan(0f);
         secondPath[1].Y.Should().BeLessThan(0f);
     }
+
+    // Task 1: IsMeaningfulDynamicDetour unit tests
+
+    [Fact]
+    public void IsMeaningfulDynamicDetour_NullDetour_ReturnsFalse()
+    {
+        Vector3[] original = [new(0, 0, 0), new(5, 0, 0)];
+        Navigation.IsMeaningfulDynamicDetour(original, null).Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsMeaningfulDynamicDetour_SinglePointDetour_ReturnsFalse()
+    {
+        Vector3[] original = [new(0, 0, 0), new(5, 0, 0)];
+        Vector3[] detour = [new(0, 0, 0)];
+        Navigation.IsMeaningfulDynamicDetour(original, detour).Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsMeaningfulDynamicDetour_IdenticalPaths_ReturnsFalse()
+    {
+        Vector3[] p = [new(0, 0, 0), new(5, 0, 0), new(10, 0, 0)];
+        Navigation.IsMeaningfulDynamicDetour(p, p).Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsMeaningfulDynamicDetour_SlightDivergence_BelowThreshold_ReturnsFalse()
+    {
+        // 1.0f per node × 2 nodes = 2.0f < 2.5f threshold
+        Vector3[] original = [new(0, 0, 0), new(5, 0, 0), new(10, 0, 0)];
+        Vector3[] detour   = [new(0, 0, 0), new(5, 1, 0), new(10, 1, 0)];
+        Navigation.IsMeaningfulDynamicDetour(original, detour).Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsMeaningfulDynamicDetour_MeaningfulDivergence_ReturnsTrue()
+    {
+        // 2.0f per node × 2 nodes = 4.0f >= 2.5f threshold
+        Vector3[] original = [new(0, 0, 0), new(5, 0, 0), new(10, 0, 0)];
+        Vector3[] detour   = [new(0, 0, 0), new(5, 2, 0), new(10, 2, 0)];
+        Navigation.IsMeaningfulDynamicDetour(original, detour).Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsMeaningfulDynamicDetour_LongerDetour_AlwaysTrue()
+    {
+        Vector3[] original = [new(0, 0, 0), new(5, 0, 0)];
+        Vector3[] detour   = [new(0, 0, 0), new(2, 0, 0), new(5, 0, 0)];
+        Navigation.IsMeaningfulDynamicDetour(original, detour).Should().BeTrue();
+    }
 }
