@@ -47,8 +47,8 @@ public sealed class NavSoakMetricsService : IDisposable
 
     public NavSoakMetricsService(
         ILogger<NavSoakMetricsService> logger,
-        StuckDetector stuckDetector,
-        Goals.Navigation navigation,
+        StuckDetector? stuckDetector = null,
+        Goals.Navigation? navigation = null,
         string? outputDir = null,
         TimeSpan? windowDuration = null)
     {
@@ -61,16 +61,30 @@ public sealed class NavSoakMetricsService : IDisposable
             $"soak-nav-{soakStart:yyyyMMdd-HHmmss}.json");
         windowStart = soakStart;
 
-        stuckDetector.OnStuckDetected += HandleStuckDetected;
-        navigation.OnDynamicDetourApplied += HandleDetourApplied;
-        navigation.OnSuccessfulReconnect += HandleSuccessfulReconnect;
+        // Wire event handlers only if dependencies are available (may be null during Phase 1)
+        if (stuckDetector != null)
+            stuckDetector.OnStuckDetected += HandleStuckDetected;
+
+        if (navigation != null)
+        {
+            navigation.OnDynamicDetourApplied += HandleDetourApplied;
+            navigation.OnSuccessfulReconnect += HandleSuccessfulReconnect;
+        }
+
+        if (stuckDetector == null || navigation == null)
+            logger.LogDebug("[NavSoakMetrics ] Initialized with missing dependencies; will activate when available");
     }
 
     public void Dispose()
     {
-        stuckDetector.OnStuckDetected -= HandleStuckDetected;
-        navigation.OnDynamicDetourApplied -= HandleDetourApplied;
-        navigation.OnSuccessfulReconnect -= HandleSuccessfulReconnect;
+        if (stuckDetector != null)
+            stuckDetector.OnStuckDetected -= HandleStuckDetected;
+
+        if (navigation != null)
+        {
+            navigation.OnDynamicDetourApplied -= HandleDetourApplied;
+            navigation.OnSuccessfulReconnect -= HandleSuccessfulReconnect;
+        }
     }
 
     public async Task FlushAsync(CancellationToken cancellationToken = default)
