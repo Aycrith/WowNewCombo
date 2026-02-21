@@ -192,4 +192,17 @@ public sealed class NavigationDynamicBypassTests
         Vector3[] detour   = [new(0, 0, 0), new(2, 0, 0), new(5, 0, 0)];
         Navigation.IsMeaningfulDynamicDetour(original, detour).Should().BeTrue();
     }
+
+    // Task 2: TailRecalcFailures counter test
+
+    [Fact]
+    public void Navigation_TailRecalcFailures_PropertyIsPublicInt()
+    {
+        System.Reflection.PropertyInfo? prop = typeof(Navigation)
+            .GetProperty("TailRecalcFailures",
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+
+        prop.Should().NotBeNull("TailRecalcFailures must be public for soak telemetry");
+        prop!.PropertyType.Should().Be(typeof(int));
+    }
 }

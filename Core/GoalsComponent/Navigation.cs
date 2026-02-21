@@ -69,6 +69,9 @@ public sealed partial class Navigation : IDisposable
 
     public Vector3[] TotalRoute { private set; get; } = Array.Empty<Vector3>();
 
+    /// <summary>Running count of tail recalculations where the pather returned no usable path.</summary>
+    public int TailRecalcFailures => tailRecalcFailures;
+
     public DateTime LastActive { get; private set; }
 
     public event Action? OnPathCalculated;
@@ -104,6 +107,7 @@ public sealed partial class Navigation : IDisposable
     private DateTime lastDynamicDetourAttemptUtc = DateTime.MinValue;
     private DateTime lastFrontBypassUtc = DateTime.MinValue;
     private int frontBypassAttemptCount;
+    private int tailRecalcFailures;
 
     public Navigation(ILogger<Navigation> logger,
         CancellationTokenSource<GoapAgent> cts,
@@ -967,7 +971,10 @@ public sealed partial class Navigation : IDisposable
             }
         }
 
-        logger.LogDebug("[Navigation       ] Dynamic route tail recalculation unavailable; using stitched remaining path");
+        Interlocked.Increment(ref tailRecalcFailures);
+        logger.LogWarning(
+            "[Navigation       ] Tail recalc unavailable - pather returned no usable path (failures: {FailureCount}); using stitched fallback",
+            tailRecalcFailures);
         return StitchDetourWithRemainingPath(localDetour, remainingPath, DynamicReconnectDuplicateDistance);
     }
 
