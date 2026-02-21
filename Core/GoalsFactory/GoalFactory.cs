@@ -130,7 +130,7 @@ public static class GoalFactory
         services.AddScoped<TargetFinder>();
 
         // each GoapGoal gets an individual instance
-        services.AddTransient<Navigation>();
+        services.AddTransient<Goals.Navigation>();
 
         if (classConfig.Mode == Mode.CorpseRun)
         {

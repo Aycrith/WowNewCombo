@@ -79,6 +79,8 @@ public sealed partial class Navigation : IDisposable
     public event Action? OnDestinationReached;
     public event Action? OnAnyPointReached;
     public event Action? OnNoPathFound;
+    public event Action? OnDynamicDetourApplied;
+    public event Action? OnSuccessfulReconnect;
 
     public bool SimplifyRouteToWaypoint { get; set; } = true;
 
@@ -767,6 +769,7 @@ public sealed partial class Navigation : IDisposable
                 {
                     Vector3[] integratedRoute = BuildIntegratedDynamicRoute(detour!, remainingPath);
                     ApplyDynamicRoute(integratedRoute);
+                    OnDynamicDetourApplied?.Invoke();
 
                     logger.LogInformation(
                         "[Navigation       ] Dynamic hazard detour applied while stalled ({OriginalCount} -> {DetourCount} waypoints, reconnect={Reconnect})",
@@ -802,6 +805,7 @@ public sealed partial class Navigation : IDisposable
 
         Vector3[] integratedBypassRoute = BuildIntegratedDynamicRoute(bypassPath, remainingPath);
         ApplyDynamicRoute(integratedBypassRoute);
+        OnDynamicDetourApplied?.Invoke();
 
         logger.LogInformation(
             "[Navigation       ] Dynamic front-obstacle bypass applied ({OriginalCount} -> {BypassCount} waypoints, reconnect={Reconnect}, side={Side})",
@@ -957,6 +961,8 @@ public sealed partial class Navigation : IDisposable
                     localDetour.Length,
                     recalculatedTail.Length,
                     merged.Length);
+
+                OnSuccessfulReconnect?.Invoke();
 
                 // ApplyDynamicRoute expects route waypoints without current player position at index 0.
                 // localDetour starts at player, so strip only that first point.
