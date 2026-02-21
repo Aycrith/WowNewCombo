@@ -763,13 +763,13 @@ public sealed partial class Navigation : IDisposable
 
                 if (IsMeaningfulDynamicDetour(localSegment, detour))
                 {
-                    Vector3[] stitchedRoute = StitchDetourWithRemainingPath(detour!, remainingPath, DynamicReconnectDuplicateDistance);
-                    ApplyDynamicRoute(stitchedRoute);
+                    Vector3[] integratedRoute = BuildIntegratedDynamicRoute(detour!, remainingPath);
+                    ApplyDynamicRoute(integratedRoute);
 
                     logger.LogInformation(
                         "[Navigation       ] Dynamic hazard detour applied while stalled ({OriginalCount} -> {DetourCount} waypoints, reconnect={Reconnect})",
                         remainingPath.Length,
-                        stitchedRoute.Length,
+                        integratedRoute.Length,
                         nextWaypoint);
 
                     return true;
@@ -798,13 +798,13 @@ public sealed partial class Navigation : IDisposable
             return false;
         }
 
-        Vector3[] stitchedBypassRoute = StitchDetourWithRemainingPath(bypassPath, remainingPath, DynamicReconnectDuplicateDistance);
-        ApplyDynamicRoute(stitchedBypassRoute);
+        Vector3[] integratedBypassRoute = BuildIntegratedDynamicRoute(bypassPath, remainingPath);
+        ApplyDynamicRoute(integratedBypassRoute);
 
         logger.LogInformation(
             "[Navigation       ] Dynamic front-obstacle bypass applied ({OriginalCount} -> {BypassCount} waypoints, reconnect={Reconnect}, side={Side})",
             remainingPath.Length,
-            stitchedBypassRoute.Length,
+            integratedBypassRoute.Length,
             nextWaypoint,
             (frontBypassAttemptCount & 1) == 0 ? "left" : "right");
 
@@ -876,6 +876,47 @@ public sealed partial class Navigation : IDisposable
         return stitched.ToArray();
     }
 
+    internal static Vector3[] MergeRouteSegments(
+        Vector3[] firstSegment,
+        Vector3[] secondSegment,
+        float duplicateDistance = 1.0f)
+    {
+        if (firstSegment.Length == 0)
+        {
+            return secondSegment;
+        }
+
+        if (secondSegment.Length == 0)
+        {
+            return firstSegment;
+        }
+
+        List<Vector3> merged = new(firstSegment.Length + secondSegment.Length);
+
+        static void AddIfDistinct(List<Vector3> points, Vector3 candidate, float minDistance)
+        {
+            if (points.Count > 0 &&
+                Vector3.Distance(points[points.Count - 1], candidate) <= minDistance)
+            {
+                return;
+            }
+
+            points.Add(candidate);
+        }
+
+        for (int i = 0; i < firstSegment.Length; i++)
+        {
+            AddIfDistinct(merged, firstSegment[i], duplicateDistance);
+        }
+
+        for (int i = 0; i < secondSegment.Length; i++)
+        {
+            AddIfDistinct(merged, secondSegment[i], duplicateDistance);
+        }
+
+        return merged.ToArray();
+    }
+
     internal static Vector3[]? BuildFrontObstacleBypassPath(Vector3 start, Vector3 nextWaypoint, int attemptIndex)
     {
         Vector3 toTarget = nextWaypoint - start;
@@ -898,6 +939,86 @@ public sealed partial class Navigation : IDisposable
         bypass.Z = nextWaypoint.Z != 0 ? nextWaypoint.Z : start.Z;
 
         return [start, bypass, nextWaypoint];
+    }
+
+    private Vector3[] BuildIntegratedDynamicRoute(Vector3[] localDetour, Vector3[] remainingPath)
+    {
+        Vector3[]? recalculatedTail = TryRecalculateTailRoute(localDetour[^1]);
+        if (recalculatedTail is { Length: >= 2 })
+        {
+            Vector3[] merged = MergeRouteSegments(localDetour, recalculatedTail, DynamicReconnectDuplicateDistance);
+
+            if (merged.Length >= 2)
+            {
+                logger.LogInformation(
+                    "[Navigation       ] Dynamic route recalculated from reconnect ({LocalCount} + {TailCount} -> {MergedCount})",
+                    localDetour.Length,
+                    recalculatedTail.Length,
+                    merged.Length);
+
+                // ApplyDynamicRoute expects route waypoints without current player position at index 0.
+                // localDetour starts at player, so strip only that first point.
+                if (merged.Length > 1 && Vector3.Distance(merged[0], playerReader.WorldPos) <= DynamicReconnectDuplicateDistance)
+                {
+                    Vector3[] trimmed = new Vector3[merged.Length - 1];
+                    Array.Copy(merged, 1, trimmed, 0, trimmed.Length);
+                    return trimmed;
+                }
+
+                return merged;
+            }
+        }
+
+        logger.LogDebug("[Navigation       ] Dynamic route tail recalculation unavailable; using stitched remaining path");
+        return StitchDetourWithRemainingPath(localDetour, remainingPath, DynamicReconnectDuplicateDistance);
+    }
+
+    private Vector3[]? TryRecalculateTailRoute(Vector3 reconnectPoint)
+    {
+        if (wayPoints.Count == 0)
+        {
+            return null;
+        }
+
+        Vector3 destination = wayPoints.Peek();
+        if (Vector3.Distance(reconnectPoint, destination) <= OutDoorMinDistance)
+        {
+            return [reconnectPoint, destination];
+        }
+
+        Vector3[] refreshed = pather.FindWorldRoute(
+            playerReader.UIMapId.Value,
+            bits.Indoors(),
+            reconnectPoint,
+            destination);
+
+        if (refreshed.Length < 2)
+        {
+            return null;
+        }
+
+        // Optionally re-apply hazard detour on the refreshed tail for consistent global avoidance.
+        if (routeRerouter?.IsEnabled == true)
+        {
+            try
+            {
+                Vector3[]? hazardTail = routeRerouter.CalculateDetourAsync(
+                    refreshed,
+                    playerReader.MapId,
+                    token).GetAwaiter().GetResult();
+
+                if (hazardTail is { Length: >= 2 } && IsMeaningfulDynamicDetour(refreshed, hazardTail))
+                {
+                    return hazardTail;
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "[Navigation       ] Tail hazard detour recalculation skipped due to error");
+            }
+        }
+
+        return refreshed;
     }
 
     private void ApplyDynamicRoute(Vector3[] route)

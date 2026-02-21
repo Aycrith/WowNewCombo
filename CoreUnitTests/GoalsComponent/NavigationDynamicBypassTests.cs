@@ -11,6 +11,54 @@ namespace CoreUnitTests.GoalsComponent;
 public sealed class NavigationDynamicBypassTests
 {
     [Fact]
+    public void MergeRouteSegments_CombinesSegments_WithoutDuplicateReconnectNode()
+    {
+        Vector3[] local =
+        [
+            new Vector3(4, 2, 0),
+            new Vector3(10, 0, 0)
+        ];
+
+        Vector3[] recalculatedTail =
+        [
+            new Vector3(10, 0, 0),
+            new Vector3(15, 3, 0),
+            new Vector3(24, 6, 0)
+        ];
+
+        Vector3[] merged = Navigation.MergeRouteSegments(local, recalculatedTail, duplicateDistance: 0.5f);
+
+        merged.Should().HaveCount(4);
+        merged[0].Should().Be(new Vector3(4, 2, 0));
+        merged[1].Should().Be(new Vector3(10, 0, 0));
+        merged[2].Should().Be(new Vector3(15, 3, 0));
+        merged[3].Should().Be(new Vector3(24, 6, 0));
+    }
+
+    [Fact]
+    public void MergeRouteSegments_DeduplicatesNearAdjacentNodes()
+    {
+        Vector3[] local =
+        [
+            new Vector3(4, 2, 0),
+            new Vector3(10, 0, 0)
+        ];
+
+        Vector3[] recalculatedTail =
+        [
+            new Vector3(10.2f, 0.1f, 0),
+            new Vector3(14, 2, 0)
+        ];
+
+        Vector3[] merged = Navigation.MergeRouteSegments(local, recalculatedTail, duplicateDistance: 0.5f);
+
+        merged.Should().HaveCount(3);
+        merged[0].Should().Be(new Vector3(4, 2, 0));
+        merged[1].Should().Be(new Vector3(10, 0, 0));
+        merged[2].Should().Be(new Vector3(14, 2, 0));
+    }
+
+    [Fact]
     public void StitchDetourWithRemainingPath_ReconnectsToNextWaypoint_AndPreservesTail()
     {
         Vector3[] remainingPath =
