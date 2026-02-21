@@ -26,7 +26,7 @@ public sealed class NavigationDynamicBypassTests
             new Vector3(24, 6, 0)
         ];
 
-        Vector3[] merged = Navigation.MergeRouteSegments(local, recalculatedTail, duplicateDistance: 0.5f);
+        Vector3[] merged = Core.Goals.Navigation.MergeRouteSegments(local, recalculatedTail, duplicateDistance: 0.5f);
 
         merged.Should().HaveCount(4);
         merged[0].Should().Be(new Vector3(4, 2, 0));
@@ -50,7 +50,7 @@ public sealed class NavigationDynamicBypassTests
             new Vector3(14, 2, 0)
         ];
 
-        Vector3[] merged = Navigation.MergeRouteSegments(local, recalculatedTail, duplicateDistance: 0.5f);
+        Vector3[] merged = Core.Goals.Navigation.MergeRouteSegments(local, recalculatedTail, duplicateDistance: 0.5f);
 
         merged.Should().HaveCount(3);
         merged[0].Should().Be(new Vector3(4, 2, 0));
@@ -75,7 +75,7 @@ public sealed class NavigationDynamicBypassTests
             new Vector3(10, 0, 0)
         ];
 
-        Vector3[] stitched = Navigation.StitchDetourWithRemainingPath(localDetour, remainingPath);
+        Vector3[] stitched = Core.Goals.Navigation.StitchDetourWithRemainingPath(localDetour, remainingPath);
 
         stitched.Should().HaveCount(4);
         stitched[0].Should().Be(new Vector3(5, 4, 0));
@@ -101,7 +101,7 @@ public sealed class NavigationDynamicBypassTests
             new Vector3(10.1f, 0, 0)
         ];
 
-        Vector3[] stitched = Navigation.StitchDetourWithRemainingPath(localDetour, remainingPath, duplicateDistance: 0.5f);
+        Vector3[] stitched = Core.Goals.Navigation.StitchDetourWithRemainingPath(localDetour, remainingPath, duplicateDistance: 0.5f);
 
         stitched.Should().HaveCount(3);
         stitched[0].Should().Be(new Vector3(8, 2, 0));
@@ -115,7 +115,7 @@ public sealed class NavigationDynamicBypassTests
         Vector3 start = new(0, 0, 0);
         Vector3 next = new(12, 0, 0);
 
-        Vector3[]? bypass = Navigation.BuildFrontObstacleBypassPath(start, next, attemptIndex: 0);
+        Vector3[]? bypass = Core.Goals.Navigation.BuildFrontObstacleBypassPath(start, next, attemptIndex: 0);
 
         Assert.NotNull(bypass);
         Vector3[] path = bypass!;
@@ -132,8 +132,8 @@ public sealed class NavigationDynamicBypassTests
         Vector3 start = new(0, 0, 0);
         Vector3 next = new(12, 0, 0);
 
-        Vector3[]? first = Navigation.BuildFrontObstacleBypassPath(start, next, attemptIndex: 0);
-        Vector3[]? second = Navigation.BuildFrontObstacleBypassPath(start, next, attemptIndex: 1);
+        Vector3[]? first = Core.Goals.Navigation.BuildFrontObstacleBypassPath(start, next, attemptIndex: 0);
+        Vector3[]? second = Core.Goals.Navigation.BuildFrontObstacleBypassPath(start, next, attemptIndex: 1);
 
         Assert.NotNull(first);
         Assert.NotNull(second);
@@ -149,7 +149,7 @@ public sealed class NavigationDynamicBypassTests
     public void IsMeaningfulDynamicDetour_NullDetour_ReturnsFalse()
     {
         Vector3[] original = [new(0, 0, 0), new(5, 0, 0)];
-        Navigation.IsMeaningfulDynamicDetour(original, null).Should().BeFalse();
+        Core.Goals.Navigation.IsMeaningfulDynamicDetour(original, null).Should().BeFalse();
     }
 
     [Fact]
@@ -157,14 +157,14 @@ public sealed class NavigationDynamicBypassTests
     {
         Vector3[] original = [new(0, 0, 0), new(5, 0, 0)];
         Vector3[] detour = [new(0, 0, 0)];
-        Navigation.IsMeaningfulDynamicDetour(original, detour).Should().BeFalse();
+        Core.Goals.Navigation.IsMeaningfulDynamicDetour(original, detour).Should().BeFalse();
     }
 
     [Fact]
     public void IsMeaningfulDynamicDetour_IdenticalPaths_ReturnsFalse()
     {
         Vector3[] p = [new(0, 0, 0), new(5, 0, 0), new(10, 0, 0)];
-        Navigation.IsMeaningfulDynamicDetour(p, p).Should().BeFalse();
+        Core.Goals.Navigation.IsMeaningfulDynamicDetour(p, p).Should().BeFalse();
     }
 
     [Fact]
@@ -173,7 +173,7 @@ public sealed class NavigationDynamicBypassTests
         // 1.0f per node × 2 nodes = 2.0f < 2.5f threshold
         Vector3[] original = [new(0, 0, 0), new(5, 0, 0), new(10, 0, 0)];
         Vector3[] detour   = [new(0, 0, 0), new(5, 1, 0), new(10, 1, 0)];
-        Navigation.IsMeaningfulDynamicDetour(original, detour).Should().BeFalse();
+        Core.Goals.Navigation.IsMeaningfulDynamicDetour(original, detour).Should().BeFalse();
     }
 
     [Fact]
@@ -182,7 +182,7 @@ public sealed class NavigationDynamicBypassTests
         // 2.0f per node × 2 nodes = 4.0f >= 2.5f threshold
         Vector3[] original = [new(0, 0, 0), new(5, 0, 0), new(10, 0, 0)];
         Vector3[] detour   = [new(0, 0, 0), new(5, 2, 0), new(10, 2, 0)];
-        Navigation.IsMeaningfulDynamicDetour(original, detour).Should().BeTrue();
+        Core.Goals.Navigation.IsMeaningfulDynamicDetour(original, detour).Should().BeTrue();
     }
 
     [Fact]
@@ -190,7 +190,7 @@ public sealed class NavigationDynamicBypassTests
     {
         Vector3[] original = [new(0, 0, 0), new(5, 0, 0)];
         Vector3[] detour   = [new(0, 0, 0), new(2, 0, 0), new(5, 0, 0)];
-        Navigation.IsMeaningfulDynamicDetour(original, detour).Should().BeTrue();
+        Core.Goals.Navigation.IsMeaningfulDynamicDetour(original, detour).Should().BeTrue();
     }
 
     // Task 2: TailRecalcFailures counter test
@@ -198,7 +198,7 @@ public sealed class NavigationDynamicBypassTests
     [Fact]
     public void Navigation_TailRecalcFailures_PropertyIsPublicInt()
     {
-        System.Reflection.PropertyInfo? prop = typeof(Navigation)
+        System.Reflection.PropertyInfo? prop = typeof(Core.Goals.Navigation)
             .GetProperty("TailRecalcFailures",
                 System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
 
