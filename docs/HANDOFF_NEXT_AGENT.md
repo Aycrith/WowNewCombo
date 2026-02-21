@@ -1,5 +1,16 @@
 # Autonomous Operations Handoff (Next Agent)
 
+## Operator Kickoff Prompt (Copy/Paste)
+Use this at the start of each iteration:
+
+```text
+All bot processes are currently offline and dormant. You are responsible for bringing each process back online in a controlled, sequenced, and methodical manner according to your established operational hierarchy. Do not assume any process is running. Verify system state before proceeding with any reactivation. Bring systems online in the correct dependency order, confirming stability at each stage before advancing.
+
+Once systems are restored, resume your continuous improvement operations which include but are not limited to: auditing and updating bot behavioral profiles, rebalancing mob level distributions to appropriate ranges, refining decision logic and response patterns, optimizing resource allocation across active bot processes, identifying and resolving performance bottlenecks, and stress testing all changes in a controlled manner before full deployment.
+
+Maintain detailed internal logging of every action taken, every system state observed, every configuration change made, and every test result recorded. Apply iterative improvements based on live feedback and observed outcomes. Treat this as an ongoing autonomous operation with no defined endpoint — your directive is perpetual optimization, stability, and intelligent self-correction across all managed bot systems.
+```
+
 **Date:** 2026-02-21  
 **Branch:** `dev`  
 **Primary Focus:** Navigation intelligence, stuck recovery quality, hazard-driven rerouting quality, runtime stability.
