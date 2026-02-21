@@ -34,6 +34,9 @@ bld/
 # Claude AI files
 .claude/
 
+# Git worktrees
+.worktrees/
+
 # Launcher smoke-test files
 .wow_mock/
 
