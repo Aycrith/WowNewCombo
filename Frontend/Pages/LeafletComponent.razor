@@ -1,6 +1,7 @@
 @using Core.Goals
 @using Core.Database
 @using Core.FeatureFlags
+@using Core.Navigation
 @using Frontend.Services
 @using System.Linq
 @using System.Numerics
@@ -24,6 +25,7 @@
 @inject AreaDB areaDB
 @inject FeatureFlagService featureFlags
 @inject HazardHeatMapService hazardHeatMapService
+@inject NavSoakMetricsService? soakMetrics
 
 @inject JsonSerializerOptions options
 
@@ -135,6 +137,17 @@
         </div>
         @if (showNavigationLog)
         {
+            @if (soakMetrics != null)
+            {
+                <div class="d-flex gap-3 p-1 border-top" style="background-color:#1a1a2e; font-size:0.75rem; color:#aaa;">
+                    <span>Bypass: <strong class="text-info">@soakMetrics.CurrentWindowFrontBypassActivations</strong></span>
+                    <span>Reconnects: <strong class="text-success">@soakMetrics.CurrentWindowSuccessfulReconnects</strong></span>
+                    <span>Stuck: <strong class="text-warning">@soakMetrics.CurrentWindowStuckEvents</strong></span>
+                    <span>RepeatRate: <strong class="@(soakMetrics.CurrentWindowRepeatStuckRate > 0.2 ? "text-danger" : "text-light")">
+                        @soakMetrics.CurrentWindowRepeatStuckRate.ToString("F4")
+                    </strong></span>
+                </div>
+            }
             <div class="border-top p-2" style="max-height: 220px; overflow: auto; background-color: #111; color: #ddd;">
                 @if (navigationEvents.Length == 0)
                 {
