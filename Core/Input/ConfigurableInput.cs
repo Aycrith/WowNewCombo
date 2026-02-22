@@ -15,18 +15,22 @@ public sealed partial class ConfigurableInput
     private readonly ILogger<ConfigurableInput> logger;
     private readonly WowProcessInput input;
     private readonly ClassConfiguration classConfig;
+    private readonly AddonBits bits;
     private readonly IHumanizationProvider? humanization;
+    private DateTime lastChatInputWarningUtc = DateTime.MinValue;
 
     private readonly bool Log;
 
     public ConfigurableInput(ILogger<ConfigurableInput> logger,
         WowProcessInput input,
         ClassConfiguration classConfig,
+        AddonBits bits,
         IHumanizationProvider? humanization = null)
     {
         this.logger = logger;
         this.input = input;
         this.classConfig = classConfig;
+        this.bits = bits;
         this.humanization = humanization;
         Log = classConfig.Log;
 
@@ -44,6 +48,11 @@ public sealed partial class ConfigurableInput
 
     public void StartForward(bool forced)
     {
+        if (!EnsureChatInputClosed())
+        {
+            return;
+        }
+
         input.SetKeyState(ForwardKey, true, forced);
     }
 
@@ -55,6 +64,11 @@ public sealed partial class ConfigurableInput
 
     public void StartBackward(bool forced)
     {
+        if (!EnsureChatInputClosed())
+        {
+            return;
+        }
+
         input.SetKeyState(BackwardKey, true, forced);
     }
 
@@ -66,6 +80,11 @@ public sealed partial class ConfigurableInput
 
     public void SetKeyState(ConsoleKey key, bool state, bool forced)
     {
+        if (state && key != ConsoleKey.Escape && !EnsureChatInputClosed())
+        {
+            return;
+        }
+
         input.SetKeyState(key, state, forced);
     }
 
@@ -79,6 +98,12 @@ public sealed partial class ConfigurableInput
 
     public int PressRandom(KeyAction keyAction, CancellationToken token = default)
     {
+        if (keyAction.ConsoleKey != ConsoleKey.Escape &&
+            !EnsureChatInputClosed(token))
+        {
+            return 0;
+        }
+
         int elapsedMs;
 
         if (humanization?.Enabled == true && !humanization.IsOnBreak)
@@ -119,11 +144,23 @@ public sealed partial class ConfigurableInput
 
     public void PressFixed(ConsoleKey key, int milliseconds, CancellationToken token)
     {
+        if (key != ConsoleKey.Escape &&
+            !EnsureChatInputClosed(token))
+        {
+            return;
+        }
+
         input.PressFixed(key, milliseconds, token);
     }
 
     public void PressRandom(ConsoleKey key, int milliseconds)
     {
+        if (key != ConsoleKey.Escape &&
+            !EnsureChatInputClosed())
+        {
+            return;
+        }
+
         input.PressRandom(key, milliseconds);
     }
 
@@ -133,6 +170,11 @@ public sealed partial class ConfigurableInput
 
     public void PressFastInteract(CancellationToken token = default)
     {
+        if (!EnsureChatInputClosed(token))
+        {
+            return;
+        }
+
         if (Interact.HasModifier)
             input.PressRandomWithModifier(Interact.ConsoleKey, Interact.Modifier, InputDuration.FastPress, token);
         else
@@ -142,6 +184,11 @@ public sealed partial class ConfigurableInput
 
     public void PressVeryFastInteract()
     {
+        if (!EnsureChatInputClosed())
+        {
+            return;
+        }
+
         if (Interact.HasModifier)
             input.PressRandomWithModifier(Interact.ConsoleKey, Interact.Modifier, InputDuration.VeryFastPress);
         else
@@ -156,6 +203,11 @@ public sealed partial class ConfigurableInput
             return;
         }
 
+        if (!EnsureChatInputClosed())
+        {
+            return;
+        }
+
         if (Approach.HasModifier)
             input.PressRandomWithModifier(Approach.ConsoleKey, Approach.Modifier, InputDuration.FastPress);
         else
@@ -166,6 +218,11 @@ public sealed partial class ConfigurableInput
     public bool PressedApproachOnCooldown()
     {
         if (Approach.OnCooldown())
+        {
+            return false;
+        }
+
+        if (!EnsureChatInputClosed())
         {
             return false;
         }
@@ -194,6 +251,11 @@ public sealed partial class ConfigurableInput
 
     public void PressFastLastTarget(CancellationToken token = default)
     {
+        if (!EnsureChatInputClosed(token))
+        {
+            return;
+        }
+
         if (TargetLastTarget.HasModifier)
             input.PressRandomWithModifier(TargetLastTarget.ConsoleKey, TargetLastTarget.Modifier, InputDuration.FastPress, token);
         else
@@ -337,6 +399,11 @@ public sealed partial class ConfigurableInput
 
     public void PressDismount(CancellationToken token = default)
     {
+        if (!EnsureChatInputClosed(token))
+        {
+            return;
+        }
+
         if (Mount.HasModifier)
             input.PressRandomWithModifier(Mount.ConsoleKey, Mount.Modifier, Mount.PressDuration, token);
         else
@@ -350,6 +417,24 @@ public sealed partial class ConfigurableInput
     public void PressESC(CancellationToken token = default)
     {
         input.PressRandom(ConsoleKey.Escape, InputDuration.VeryFastPress, token);
+    }
+
+    private bool EnsureChatInputClosed(CancellationToken token = default)
+    {
+        if (!bits.ChatInputIsVisible())
+        {
+            return true;
+        }
+
+        DateTime now = DateTime.UtcNow;
+        if ((now - lastChatInputWarningUtc).TotalSeconds >= 2)
+        {
+            logger.LogWarning("[ConfigurableInput] Chat input is visible; pressing ESC to prevent key spam");
+            lastChatInputWarningUtc = now;
+        }
+
+        PressESC(token);
+        return !bits.ChatInputIsVisible();
     }
 
     #region Logging

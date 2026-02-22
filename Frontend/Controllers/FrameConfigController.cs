@@ -205,6 +205,66 @@ public class FrameConfigController : ControllerBase
     }
 
     /// <summary>
+    /// Read pixel at a specific screen position (for debugging frame positions)
+    /// </summary>
+    [HttpGet("pixel")]
+    public IActionResult GetPixel([FromQuery] int x = 0, [FromQuery] int y = 0, [FromQuery] int count = 1)
+    {
+        bool wasEnabled = _screen.Enabled;
+        _screen.Enabled = true;
+
+        try
+        {
+            System.Threading.Thread.Sleep(100);
+            _screen.Update();
+
+            var screenImage = _screen.ScreenImage;
+            int maxX = Math.Min(x + count, screenImage.Width);
+            int maxY = screenImage.Height;
+
+            var pixels = new List<object>();
+            for (int px = x; px < maxX; px++)
+            {
+                if (px >= 0 && px < screenImage.Width && y >= 0 && y < screenImage.Height)
+                {
+                    var p = screenImage[px, y];
+                    int value = p.B | (p.G << 8) | (p.R << 16);
+                    pixels.Add(new { px, y, r = p.R, g = p.G, b = p.B, a = p.A, value });
+                }
+            }
+
+            // Also read the sentinel positions from frame_config if it exists
+            object? sentinelInfo = null;
+            if (FrameConfig.Exists())
+            {
+                DataFrameConfig config = FrameConfig.Load();
+                if (config.Frames.Length > 0)
+                {
+                    DataFrame first = config.Frames[0];
+                    DataFrame last = config.Frames[^1];
+
+                    var fp = screenImage[first.X, first.Y];
+                    var lp = screenImage[last.X, last.Y];
+
+                    sentinelInfo = new
+                    {
+                        FirstFrame = new { first.Index, first.X, first.Y, r = fp.R, g = fp.G, b = fp.B, value = fp.B | (fp.G << 8) | (fp.R << 16) },
+                        LastFrame = new { last.Index, last.X, last.Y, r = lp.R, g = lp.G, b = lp.B, value = lp.B | (lp.G << 8) | (lp.R << 16) },
+                        ExpectedFirstValue = 0,
+                        ExpectedLastValue = 2000001
+                    };
+                }
+            }
+
+            return Ok(new { Pixels = pixels, Sentinel = sentinelInfo });
+        }
+        finally
+        {
+            _screen.Enabled = wasEnabled;
+        }
+    }
+
+    /// <summary>
     /// List all available resolution-specific frame configs
     /// </summary>
     [HttpGet("resolutions")]

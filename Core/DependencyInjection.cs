@@ -112,6 +112,11 @@ public static class DependencyInjection
         s.ForwardSingleton<FeatureFlagService>(sp);
         s.ForwardSingleton<HazardZoneStore>(sp);
         s.ForwardSingleton<RouteRehabilitator>(sp);
+        IRouteRerouter? routeRerouter = sp.GetService<IRouteRerouter>();
+        if (routeRerouter != null)
+        {
+            s.AddSingleton(routeRerouter);
+        }
         s.ForwardSingleton<IRotationOptimizer>(sp);
         s.AddSingleton<IHumanizationProvider>(sp.GetRequiredService<IHumanizationProvider>());
 
@@ -344,6 +349,7 @@ public static class DependencyInjection
         s.AddSingleton<NpcNameFinder>();
 
         s.AddSingleton<NpcNameTargetingLocations>();
+        s.AddScoped<CursorScan>();
 
         return s;
     }

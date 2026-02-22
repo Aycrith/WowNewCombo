@@ -8,7 +8,7 @@
     },
     "CircuitBreaker": {
       "Enabled": true,
-      "PathfindingThreshold": 5,
+      "PathfindingThreshold": 15,
       "PathfindingCooldownSeconds": 60,
       "LLMThreshold": 3,
       "LLMCooldownSeconds": 120,
@@ -29,13 +29,13 @@
     },
     "HazardAvoidance": {
       "Enabled": true,
-      "DBSCANEpsilon": 15.0,
+      "DBSCANEpsilon": 12.0,
       "DBSCANMinPoints": 2,
-      "HazardCostMultiplier": 10.0,
-      "DecayHalfLifeDays": 30,
+      "HazardCostMultiplier": 18.0,
+      "DecayHalfLifeDays": 14,
       "MaxEventsBeforePrune": 10000,
-      "ClusteringIntervalSeconds": 60,
-      "SaveIntervalMinutes": 5,
+      "ClusteringIntervalSeconds": 15,
+      "SaveIntervalMinutes": 3,
       "Description": "Self-learning hazard avoidance using DBSCAN clustering and A* cost injection"
     },
     "Humanization": {
@@ -73,7 +73,7 @@
       "Description": "Opt-in human-like timing, mouse movement, micro-pauses, and scheduled breaks"
     },
     "AIProfileGenerator": {
-      "Enabled": false,
+      "Enabled": true,
       "APIProvider": "none",
       "MaxTokensPerRequest": 4000,
       "RateLimitPerHour": 20,
@@ -82,20 +82,20 @@
       "Description": "LLM-powered class profile generation from natural language descriptions"
     },
     "ProfileMarketplace": {
-      "Enabled": false,
+      "Enabled": true,
       "RepositoryUrl": "https://api.github.com/repos/Xian55/WowClassicGrindBot-Profiles",
       "CacheDurationMinutes": 5,
       "MaxDownloadsPerSession": 10,
       "Description": "Community profile browser and downloader from GitHub repository"
     },
     "BehaviorTreeCombat": {
-      "Enabled": false,
+      "Enabled": true,
       "FallbackToGOAP": true,
       "EnableVisualization": false,
       "Description": "Alternative combat system using behavior trees instead of GOAP"
     },
     "HybridLLMDecision": {
-      "Enabled": false,
+      "Enabled": true,
       "ConfidenceThreshold": 0.6,
       "MaxLatencyMs": 2000,
       "EnableForUnexpectedStates": true,
@@ -130,6 +130,15 @@
       "MetricsFlushIntervalSeconds": 30,
       "MetricsOutputPath": "logs/rotation_metrics.json",
       "Description": "Weighted-scoring overlay for combat rotation optimization. Reorders ability priority list based on game state without removing static fallback."
+    },
+    "StuckSensitivity": {
+      "Enabled": true,
+      "MinDistance": 0.12,
+      "UnstuckAfterMs": 1500,
+      "EnablePredictiveDetection": true,
+      "PredictiveRiskThreshold": 45,
+      "ApproachTimeoutMultiplier": 0.7,
+      "Description": "Adaptive stuck thresholds and predictive recovery tuned for obstacle-heavy routes"
     }
   },
   "Monitoring": {

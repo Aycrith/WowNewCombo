@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 
 using System;
 using System.IO;
+using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
@@ -49,6 +50,41 @@ public sealed class StuckDetectorBreadcrumbTests
         Assert.False(detector.IsEnhancedRecoveryAvailable);
     }
 
+    [Fact]
+    public void GetInitialUnstuckState_RepeatedHotspot_EscalatesToBreadcrumbBacktrack()
+    {
+        FeatureFlagService featureFlags = CreateFeatureFlagService(enabled: true);
+        BreadcrumbTracker tracker = new();
+        StuckDetector detector = CreateDetector(tracker, featureFlags);
+
+        Vector3 hotspot = new(100f, 200f, 5f);
+
+        UnstuckState first = InvokeInitialState(detector, hotspot);
+        UnstuckState second = InvokeInitialState(detector, hotspot);
+        UnstuckState third = InvokeInitialState(detector, hotspot);
+
+        Assert.Equal(UnstuckState.InitialAttempt, first);
+        Assert.Equal(UnstuckState.StrafeAttempt, second);
+        Assert.Equal(UnstuckState.BreadcrumbBacktrack, third);
+    }
+
+    [Fact]
+    public void GetInitialUnstuckState_RepeatedHotspot_WithoutBreadcrumbs_StaysAtStrafe()
+    {
+        FeatureFlagService featureFlags = CreateFeatureFlagService(enabled: true);
+        StuckDetector detector = CreateDetector(null, featureFlags);
+
+        Vector3 hotspot = new(50f, 50f, 0f);
+
+        UnstuckState first = InvokeInitialState(detector, hotspot);
+        UnstuckState second = InvokeInitialState(detector, hotspot);
+        UnstuckState third = InvokeInitialState(detector, hotspot);
+
+        Assert.Equal(UnstuckState.InitialAttempt, first);
+        Assert.Equal(UnstuckState.StrafeAttempt, second);
+        Assert.Equal(UnstuckState.StrafeAttempt, third);
+    }
+
     private static StuckDetector CreateDetector(BreadcrumbTracker? tracker, FeatureFlagService? featureFlags)
     {
         // Constructor bypass keeps this focused on feature-flag wiring; private field names are intentionally asserted below.
@@ -85,6 +121,18 @@ public sealed class StuckDetectorBreadcrumbTests
             NullLogger<FeatureFlagService>.Instance,
             monitor,
             Options.Create(serviceOptions));
+    }
+
+    private static UnstuckState InvokeInitialState(StuckDetector detector, Vector3 position)
+    {
+        MethodInfo? method = typeof(StuckDetector).GetMethod(
+            "GetInitialUnstuckState",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+
+        Assert.NotNull(method);
+        object? result = method.Invoke(detector, new object[] { position });
+        Assert.NotNull(result);
+        return Assert.IsType<UnstuckState>(result);
     }
 
 }

@@ -628,7 +628,12 @@ public sealed partial class RequirementFactory
             if (playerReader.Money < MailGoal.MIN_MAIL_FEE)
                 return false;
 
-            return bagReader.HasMailableItems(mail.MinimumItemQuality, classConfig.GetEffectiveExcludedItemIdSet());
+            var effectiveExcluded = bagReader.BuildEffectiveMailExcludedItemIdSet(
+                classConfig.GetEffectiveExcludedItemIdSet(),
+                mail.ExcludeFoodAndDrink,
+                mail.ExcludeConjuredItems);
+
+            return bagReader.HasMailableItems(mail.MinimumItemQuality, effectiveExcluded);
         }
         boolVariables.TryAdd("HasMailableItems", HasMailableItems);
 
@@ -1084,9 +1089,18 @@ public sealed partial class RequirementFactory
         return create(requirement, playerReader);
         static Requirement create(ReadOnlySpan<char> requirement, PlayerReader playerReader)
         {
-            // 'Race:_RACE_'
+            // 'Race:_RACE_' — strip spaces for enum names like "Blood Elf" → "BloodElf"
             int sep = requirement.IndexOf(SEP1);
-            UnitRace race = Enum.Parse<UnitRace>(requirement[(sep + 1)..]);
+            ReadOnlySpan<char> raceSpan = requirement[(sep + 1)..];
+            // Remove spaces for multi-word race names (e.g. "Blood Elf" → "BloodElf", "Night Elf" → "NightElf")
+            Span<char> normalized = stackalloc char[raceSpan.Length];
+            int len = 0;
+            foreach (char c in raceSpan)
+            {
+                if (c != ' ')
+                    normalized[len++] = c;
+            }
+            UnitRace race = Enum.Parse<UnitRace>(normalized[..len]);
 
             bool f() => playerReader.Race == race;
             string s() => playerReader.Race.ToStringF();

@@ -67,6 +67,8 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
     private DateTime onEnterTime;
     private bool refillByOther;
+    private bool warnedSwimming;
+    private bool warnedZoneMismatch;
 
     #region IRouteProvider
 
@@ -246,6 +248,37 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
     public override void Update()
     {
+        if (pathSettings.IsZoneMismatch())
+        {
+            if (!warnedZoneMismatch)
+            {
+                LogWarning($"Route zone mismatch detected for '{pathSettings.FileName}'. Stopping movement.");
+                warnedZoneMismatch = true;
+            }
+
+            navigation.StopMovement();
+            navigation.Stop();
+            return;
+        }
+
+        warnedZoneMismatch = false;
+
+        if (bits.Swimming())
+        {
+            if (!warnedSwimming)
+            {
+                LogWarning("Swimming detected while following route. Stopping movement to avoid drifting farther into water.");
+                warnedSwimming = true;
+            }
+
+            navigation.StopMovement();
+            navigation.Stop();
+            input.PressJump();
+            return;
+        }
+
+        warnedSwimming = false;
+
         if (bits.Target() && bits.Target_Dead())
         {
             Log("Has target but its dead.");
@@ -396,19 +429,29 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
             pathMap.Reverse();
         }
 
-        int closestIndex = 0;
-        Vector3 mapClosestPoint = Vector3.Zero;
+        int closestSegmentStartIndex = 0;
+        Vector3 mapClosestPoint = pathMap[0];
         float distance = float.MaxValue;
 
-        for (int i = 0; i < pathMap.Length; i++)
+        if (pathMap.Length == 1)
         {
-            Vector3 p = pathMap[i];
-            float d = playerMap.MapDistanceXYTo(p);
-            if (d < distance)
+            distance = playerMap.MapDistanceXYTo(pathMap[0]);
+        }
+        else
+        {
+            Vector2 playerXY = playerMap.AsVector2();
+            for (int i = 0; i < pathMap.Length - 1; i++)
             {
-                distance = d;
-                closestIndex = i;
-                mapClosestPoint = p;
+                Vector3 a = pathMap[i];
+                Vector3 b = pathMap[i + 1];
+                Vector2 closestOnSegment = VectorExt.GetClosestPointOnLineSegment(a.AsVector2(), b.AsVector2(), playerXY);
+                float d = Vector2.Distance(playerXY, closestOnSegment);
+                if (d < distance)
+                {
+                    distance = d;
+                    closestSegmentStartIndex = i;
+                    mapClosestPoint = new Vector3(closestOnSegment.X, closestOnSegment.Y, 0);
+                }
             }
         }
 
@@ -422,24 +465,22 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
             return;
         }
 
-        if (mapClosestPoint == pathMap[0] || mapClosestPoint == pathMap[^1])
+        int remainingCount = pathMap.Length - (closestSegmentStartIndex + 1);
+        if (remainingCount <= 0)
         {
-            if (pathSettings.PathThereAndBack)
-            {
-                navigation.SetWayPoints(pathMap);
-            }
-            else
-            {
-                pathMap.Reverse();
-                navigation.SetWayPoints(pathMap);
-            }
+            navigation.SetWayPoints(stackalloc Vector3[1] { mapClosestPoint });
+            return;
         }
-        else
+
+        Vector3[] points = new Vector3[remainingCount + 1];
+        points[0] = mapClosestPoint;
+        for (int i = 0; i < remainingCount; i++)
         {
-            Span<Vector3> points = pathMap[closestIndex..];
-            Log($"{nameof(RefillWaypoints)} - Set destination from closest to nearest endpoint - with {points.Length} waypoints");
-            navigation.SetWayPoints(points);
+            points[i + 1] = pathMap[closestSegmentStartIndex + 1 + i];
         }
+
+        Log($"{nameof(RefillWaypoints)} - Set destination from closest segment - with {points.Length} waypoints");
+        navigation.SetWayPoints(points);
     }
 
     #endregion

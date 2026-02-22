@@ -77,6 +77,11 @@ public sealed class BehaviorContext
     /// Current combat sequence configuration.
     /// </summary>
     public IReadOnlyList<KeyAction> CombatSequence { get; init; } = Array.Empty<KeyAction>();
+
+    /// <summary>
+    /// Player health percentage (0-100). Used when Player object is unavailable (e.g., in tests).
+    /// </summary>
+    public float PlayerHealthPercent { get; set; } = 100f;
 }
 
 /// <summary>

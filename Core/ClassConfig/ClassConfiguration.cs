@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 
 using Newtonsoft.Json;
 
+using SharedLib;
+
 using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
@@ -158,6 +160,7 @@ public sealed partial class ClassConfiguration
         }
 
         DataConfig dataConfig = sp.GetRequiredService<DataConfig>();
+        WorldMapAreaDB worldMapAreaDB = sp.GetRequiredService<WorldMapAreaDB>();
 
         // Load mail config from external file if MailFilename is specified
         if (!string.IsNullOrEmpty(MailFilename))
@@ -199,6 +202,7 @@ public sealed partial class ClassConfiguration
                         $"`{settings.PathFilename}` file does not exists!");
             }
 
+            settings.ResolveExpectedUiMapId(worldMapAreaDB, logger);
             settings.Init(globalTime, playerReader, i);
         }
 

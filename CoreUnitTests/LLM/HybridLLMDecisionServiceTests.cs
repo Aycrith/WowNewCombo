@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Core.FeatureFlags;
 using Core.GOAP;
 using Core.LLM;
+using Core.Resilience;
 
 using CoreUnitTests.TestHelpers;
 
@@ -113,12 +114,20 @@ public sealed class HybridLLMDecisionServiceTests : IDisposable
     {
         IOptionsMonitor<FeatureFlagsOptions> monitor = new FixedOptionsMonitor<FeatureFlagsOptions>(flags);
 
+        // Create a real CircuitBreaker so the engine constructor guard is satisfied
+        CircuitBreaker<LLMDecision> circuitBreaker = new(
+            NullLogger.Instance,
+            serviceName: "LLM",
+            failureThreshold: flags.CircuitBreaker.LLMThreshold,
+            cooldownPeriod: TimeSpan.FromSeconds(flags.CircuitBreaker.LLMCooldownSeconds),
+            fallback: () => new LLMDecision("NoAction", "Circuit open", 0.0f));
+
         // Create the engine (which now contains the business logic)
         HybridLlmDecisionEngine engine = new(
             NullLogger<HybridLlmDecisionEngine>.Instance,
             _llmClient,
             monitor,
-            circuitBreaker: null!,  // Tests don't use circuit breaker
+            circuitBreaker: circuitBreaker,
             goapAgent: goapAgent);
 
         return new HybridLLMDecisionService(

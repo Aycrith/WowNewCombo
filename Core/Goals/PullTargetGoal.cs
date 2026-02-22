@@ -32,6 +32,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
     private readonly CombatTracker combatTracker;
     private readonly IBlacklist targetBlacklist;
     private readonly ExecGameCommand execGameCommand;
+    private DateTime lastBrokenGearWarning = DateTime.MinValue;
 
     private readonly KeyAction? approachKey;
     private readonly Action approachAction;
@@ -97,6 +98,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         }
         AddPrecondition(GoapKey.targethostile, true);
         AddPrecondition(GoapKey.withinpullrange, true);
+        AddPrecondition(GoapKey.itemsbroken, false);
 
         AddEffect(GoapKey.pulled, true);
     }
@@ -148,6 +150,30 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
     public override void Update()
     {
         wait.Update();
+
+        if (IsGearTooBrokenToFight())
+        {
+            if ((DateTime.UtcNow - lastBrokenGearWarning).TotalSeconds >= 3)
+            {
+                Log("Gear durability critically low/broken; blocking combat pull and clearing target.");
+                lastBrokenGearWarning = DateTime.UtcNow;
+            }
+
+            input.PressStopAttack();
+            if (bits.Target())
+            {
+                input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
+            }
+            return;
+        }
+
+        if (bits.Target() && targetBlacklist.Is())
+        {
+            Log("Blacklisted target detected during pull, clearing target.");
+            input.PressStopAttack();
+            input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
+            return;
+        }
 
         if (PullDurationMs > MAX_PULL_DURATION)
         {
@@ -272,5 +298,10 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
     private void Log(string text)
     {
         logger.LogInformation(text);
+    }
+
+    private bool IsGearTooBrokenToFight()
+    {
+        return bits.Items_Broken() || playerReader.AvgEquipDurability() <= 5;
     }
 }

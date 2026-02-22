@@ -459,8 +459,12 @@
     {
         if (botController.ClassConfig == null) return;
 
-        PathSettings? first = botController.ClassConfig.Paths.First(x => x.CanRun());
-        if (first == null) return;
+        PathSettings? first = botController.ClassConfig.Paths.FirstOrDefault(x => x.CanRun());
+        if (first == null)
+        {
+            routeSymbol = new MarkupString(string.Empty);
+            return;
+        }
 
         routeSymbol = first.PathThereAndBack ?
         new MarkupString("<span style=\"font-size: 125%;\">⥹</span>") :

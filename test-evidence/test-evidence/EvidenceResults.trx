@@ -1,26 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TestRun id="210d7ae0-5a4f-4e8e-b327-a7d2ed830e30" name="camer@ILI 2026-02-14 08:37:07" runUser="ILI\camer" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
-  <Times creation="2026-02-14T08:37:07.0407077-05:00" queuing="2026-02-14T08:37:07.0407078-05:00" start="2026-02-14T08:37:05.2309464-05:00" finish="2026-02-14T08:40:09.6216735-05:00" />
-  <TestSettings name="default" id="c1f5f446-d7b1-4464-a94b-f04a880064ec">
-    <Deployment runDeploymentRoot="camer_ILI_2026-02-14_08_37_07" />
+<TestRun id="082c482b-fe96-4825-a0a3-aefdf0c12064" name="camer@ILI 2026-02-18 01:28:49" runUser="ILI\camer" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-02-18T01:28:49.5525993-05:00" queuing="2026-02-18T01:28:49.5525997-05:00" start="2026-02-18T01:28:47.7606716-05:00" finish="2026-02-18T01:31:52.1054990-05:00" />
+  <TestSettings name="default" id="1929583e-67fd-421c-b545-f112ce4a11cd">
+    <Deployment runDeploymentRoot="camer_ILI_2026-02-18_01_28_49" />
   </TestSettings>
   <Results>
-    <UnitTestResult executionId="b101f515-d4cf-44e9-8289-215f40ea7ca0" testId="6e9cbac9-1d09-0122-db6b-f92d998cd848" testName="CoreUnitTests.Routing.RouteRerouterEvidenceTests.EdgeCase_RapidCooldownResets_ShouldBeConsistent" computerName="ILI" duration="00:01:01.1925675" startTime="2026-02-14T08:40:09.5759273-05:00" endTime="2026-02-14T08:40:09.5759275-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b101f515-d4cf-44e9-8289-215f40ea7ca0">
-      <Output>
-        <StdOut>=== Rapid Cooldown Edge Case Evidence ===&#xD;
-Total attempts: 20&#xD;
-Successful triggers: 0</StdOut>
-      </Output>
-    </UnitTestResult>
-    <UnitTestResult executionId="a7157d55-0630-40ad-8005-d6f7f8f33ee9" testId="9005b9db-84a4-f295-a24c-2026b5baab0b" testName="CoreUnitTests.Routing.RouteRerouterEvidenceTests.EdgeCase_MaximumWaypoints_ShouldHandleGracefully" computerName="ILI" duration="00:00:00.0107677" startTime="2026-02-14T08:39:06.0161046-05:00" endTime="2026-02-14T08:39:06.0161047-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a7157d55-0630-40ad-8005-d6f7f8f33ee9">
-      <Output>
-        <StdOut>=== Maximum Waypoints Edge Case Evidence ===&#xD;
-Memory before: 6 MB&#xD;
-Memory after: 6 MB&#xD;
-Growth: 0 MB</StdOut>
-      </Output>
-    </UnitTestResult>
-    <UnitTestResult executionId="abd36f1c-822a-4774-82df-f37d271f66be" testId="aaff8800-4e71-6acc-3b8f-321dbc836006" testName="CoreUnitTests.Routing.RouteRerouterEvidenceTests.ThreadSafety_NoDeadlocks_UnderMixedOperations" computerName="ILI" duration="00:00:01.5742742" startTime="2026-02-14T08:39:07.5904585-05:00" endTime="2026-02-14T08:39:07.5904588-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="abd36f1c-822a-4774-82df-f37d271f66be">
+    <UnitTestResult executionId="be8286e7-57a9-4398-9a22-27a739fd5d79" testId="aaff8800-4e71-6acc-3b8f-321dbc836006" testName="CoreUnitTests.Routing.RouteRerouterEvidenceTests.ThreadSafety_NoDeadlocks_UnderMixedOperations" computerName="ILI" duration="00:00:01.5761791" startTime="2026-02-18T01:30:50.0797313-05:00" endTime="2026-02-18T01:30:50.0797316-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="be8286e7-57a9-4398-9a22-27a739fd5d79">
       <Output>
         <StdOut>=== Deadlock Prevention Evidence ===&#xD;
 Writer threads: 10&#xD;
@@ -30,37 +15,16 @@ Exceptions: 0&#xD;
 Deadlocks detected: 0</StdOut>
       </Output>
     </UnitTestResult>
-    <UnitTestResult executionId="59c83c0e-d3ce-4626-925d-b2f22681dd12" testId="5c28d34d-f808-5548-fc46-e449aba3a772" testName="CoreUnitTests.Routing.RouteRerouterEvidenceTests.Stability_RecoveryAfterFailure_ShouldSucceed" computerName="ILI" duration="00:00:00.0035762" startTime="2026-02-14T08:38:05.9092151-05:00" endTime="2026-02-14T08:38:05.9092153-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="59c83c0e-d3ce-4626-925d-b2f22681dd12">
-      <Output>
-        <StdOut>=== Recovery Evidence ===&#xD;
-Exceptions: 0&#xD;
-Recovery successful: True</StdOut>
-      </Output>
-    </UnitTestResult>
-    <UnitTestResult executionId="b03d1e6d-2ce7-4642-9fa4-58234cd89ace" testId="be364dde-89a4-faff-e58d-24ffa9583814" testName="CoreUnitTests.Routing.RouteRerouterEvidenceTests.Stability_OneMinuteOperation_ShouldNotDegrade" computerName="ILI" duration="00:01:00.0958440" startTime="2026-02-14T08:39:06.0051288-05:00" endTime="2026-02-14T08:39:06.0051295-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b03d1e6d-2ce7-4642-9fa4-58234cd89ace">
-      <Output>
-        <StdOut>=== One-Minute Stability Evidence ===&#xD;
-Duration: 60.1s&#xD;
-Iterations: 946&#xD;
-Exceptions: 0&#xD;
-Memory start: 6 MB&#xD;
-Memory end: 6 MB&#xD;
-Memory growth: 0 MB (-0.06%)&#xD;
-Avg latency: 0.00ms&#xD;
-P95 latency: 0.00ms&#xD;
-Max latency: 0ms</StdOut>
-      </Output>
-    </UnitTestResult>
-    <UnitTestResult executionId="d05c3140-880c-44c9-917f-3ab07558f6dd" testId="294e3109-27a9-c50f-af3a-594baa3f325b" testName="CoreUnitTests.Routing.RouteRerouterEvidenceTests.ThreadSafety_ConcurrentWaypointAdvance_ShouldBeSafe" computerName="ILI" duration="00:00:00.7927096" startTime="2026-02-14T08:39:08.3832679-05:00" endTime="2026-02-14T08:39:08.3832680-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d05c3140-880c-44c9-917f-3ab07558f6dd">
+    <UnitTestResult executionId="5bc8bf6d-e448-41a5-914a-55ea1856cde5" testId="294e3109-27a9-c50f-af3a-594baa3f325b" testName="CoreUnitTests.Routing.RouteRerouterEvidenceTests.ThreadSafety_ConcurrentWaypointAdvance_ShouldBeSafe" computerName="ILI" duration="00:00:00.7951513" startTime="2026-02-18T01:30:50.8749736-05:00" endTime="2026-02-18T01:30:50.8749738-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5bc8bf6d-e448-41a5-914a-55ea1856cde5">
       <Output>
         <StdOut>=== Concurrent Waypoint Evidence ===&#xD;
 Threads: 20&#xD;
 Operations per thread: 50&#xD;
 Exceptions: 0&#xD;
-Duration: 791ms</StdOut>
+Duration: 794ms</StdOut>
       </Output>
     </UnitTestResult>
-    <UnitTestResult executionId="3af0695a-6cb0-4deb-bd34-758d594646ea" testId="e2d12948-8918-d0aa-972c-f8536362a0cd" testName="CoreUnitTests.Routing.RouteRerouterEvidenceTests.EdgeCase_ZeroLengthPaths_ShouldNotCrash" computerName="ILI" duration="00:00:00.0083587" startTime="2026-02-14T08:37:05.7878376-05:00" endTime="2026-02-14T08:37:05.7878517-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3af0695a-6cb0-4deb-bd34-758d594646ea">
+    <UnitTestResult executionId="955195af-2418-4247-b685-1c3fd9755d5f" testId="e2d12948-8918-d0aa-972c-f8536362a0cd" testName="CoreUnitTests.Routing.RouteRerouterEvidenceTests.EdgeCase_ZeroLengthPaths_ShouldNotCrash" computerName="ILI" duration="00:00:00.0085039" startTime="2026-02-18T01:28:48.3226167-05:00" endTime="2026-02-18T01:28:48.3226304-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="955195af-2418-4247-b685-1c3fd9755d5f">
       <Output>
         <StdOut>Test 'empty array': Result=null&#xD;
 Test 'single point': Result=null&#xD;
@@ -74,7 +38,15 @@ Test cases: 6&#xD;
 Exceptions: 0</StdOut>
       </Output>
     </UnitTestResult>
-    <UnitTestResult executionId="c44b8578-656d-48b4-b8f6-58ddc4b26855" testId="ba822eba-beba-7d23-1479-cc2ab18380bb" testName="CoreUnitTests.Routing.RouteRerouterEvidenceTests.ThreadSafety_ConcurrentTrigger_ShouldBeSafe" computerName="ILI" duration="00:01:00.1158711" startTime="2026-02-14T08:38:05.9046605-05:00" endTime="2026-02-14T08:38:05.9046607-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c44b8578-656d-48b4-b8f6-58ddc4b26855">
+    <UnitTestResult executionId="1ce880c0-03fc-48ac-8d27-516e26a9406d" testId="9005b9db-84a4-f295-a24c-2026b5baab0b" testName="CoreUnitTests.Routing.RouteRerouterEvidenceTests.EdgeCase_MaximumWaypoints_ShouldHandleGracefully" computerName="ILI" duration="00:00:00.0120317" startTime="2026-02-18T01:30:48.5033824-05:00" endTime="2026-02-18T01:30:48.5033825-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1ce880c0-03fc-48ac-8d27-516e26a9406d">
+      <Output>
+        <StdOut>=== Maximum Waypoints Edge Case Evidence ===&#xD;
+Memory before: 7 MB&#xD;
+Memory after: 7 MB&#xD;
+Growth: 0 MB</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="29e1b62b-4ca1-4bc3-90f2-282b328fe653" testId="ba822eba-beba-7d23-1479-cc2ab18380bb" testName="CoreUnitTests.Routing.RouteRerouterEvidenceTests.ThreadSafety_ConcurrentTrigger_ShouldBeSafe" computerName="ILI" duration="00:01:00.0955916" startTime="2026-02-18T01:29:48.4191061-05:00" endTime="2026-02-18T01:29:48.4191062-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="29e1b62b-4ca1-4bc3-90f2-282b328fe653">
       <Output>
         <StdOut>=== Thread Safety Evidence ===&#xD;
 Threads: 50&#xD;
@@ -82,54 +54,82 @@ Operations per thread: 100&#xD;
 Total operations: 5000&#xD;
 Successful triggers: 0&#xD;
 Exceptions: 0&#xD;
-Duration: 60.112s&#xD;
+Duration: 60.092s&#xD;
 Throughput: 83 ops/sec</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="7f396d82-d49b-45e3-bb2d-b4b30097f9c4" testId="6e9cbac9-1d09-0122-db6b-f92d998cd848" testName="CoreUnitTests.Routing.RouteRerouterEvidenceTests.EdgeCase_RapidCooldownResets_ShouldBeConsistent" computerName="ILI" duration="00:01:01.1866402" startTime="2026-02-18T01:31:52.0617029-05:00" endTime="2026-02-18T01:31:52.0617031-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7f396d82-d49b-45e3-bb2d-b4b30097f9c4">
+      <Output>
+        <StdOut>=== Rapid Cooldown Edge Case Evidence ===&#xD;
+Total attempts: 20&#xD;
+Successful triggers: 0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="d09348d7-f42f-4fe7-b58a-5cc1d557adcf" testId="be364dde-89a4-faff-e58d-24ffa9583814" testName="CoreUnitTests.Routing.RouteRerouterEvidenceTests.Stability_OneMinuteOperation_ShouldNotDegrade" computerName="ILI" duration="00:01:00.0677710" startTime="2026-02-18T01:30:48.4912089-05:00" endTime="2026-02-18T01:30:48.4912091-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d09348d7-f42f-4fe7-b58a-5cc1d557adcf">
+      <Output>
+        <StdOut>=== One-Minute Stability Evidence ===&#xD;
+Duration: 60.0s&#xD;
+Iterations: 947&#xD;
+Exceptions: 0&#xD;
+Memory start: 7 MB&#xD;
+Memory end: 7 MB&#xD;
+Memory growth: 0 MB (-0.07%)&#xD;
+Avg latency: 0.00ms&#xD;
+P95 latency: 0.00ms&#xD;
+Max latency: 0ms</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="b93ea12a-f3d5-452b-829c-8ec92928ec7a" testId="5c28d34d-f808-5548-fc46-e449aba3a772" testName="CoreUnitTests.Routing.RouteRerouterEvidenceTests.Stability_RecoveryAfterFailure_ShouldSucceed" computerName="ILI" duration="00:00:00.0033508" startTime="2026-02-18T01:29:48.4233712-05:00" endTime="2026-02-18T01:29:48.4233712-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b93ea12a-f3d5-452b-829c-8ec92928ec7a">
+      <Output>
+        <StdOut>=== Recovery Evidence ===&#xD;
+Exceptions: 0&#xD;
+Recovery successful: True</StdOut>
       </Output>
     </UnitTestResult>
   </Results>
   <TestDefinitions>
     <UnitTest name="CoreUnitTests.Routing.RouteRerouterEvidenceTests.ThreadSafety_NoDeadlocks_UnderMixedOperations" storage="c:\wowclassicgrindbot\coreunittests\bin\debug\net10.0\coreunittests.dll" id="aaff8800-4e71-6acc-3b8f-321dbc836006">
-      <Execution id="abd36f1c-822a-4774-82df-f37d271f66be" />
+      <Execution id="be8286e7-57a9-4398-9a22-27a739fd5d79" />
       <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Debug\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.Routing.RouteRerouterEvidenceTests" name="ThreadSafety_NoDeadlocks_UnderMixedOperations" />
     </UnitTest>
     <UnitTest name="CoreUnitTests.Routing.RouteRerouterEvidenceTests.EdgeCase_ZeroLengthPaths_ShouldNotCrash" storage="c:\wowclassicgrindbot\coreunittests\bin\debug\net10.0\coreunittests.dll" id="e2d12948-8918-d0aa-972c-f8536362a0cd">
-      <Execution id="3af0695a-6cb0-4deb-bd34-758d594646ea" />
+      <Execution id="955195af-2418-4247-b685-1c3fd9755d5f" />
       <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Debug\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.Routing.RouteRerouterEvidenceTests" name="EdgeCase_ZeroLengthPaths_ShouldNotCrash" />
     </UnitTest>
     <UnitTest name="CoreUnitTests.Routing.RouteRerouterEvidenceTests.Stability_OneMinuteOperation_ShouldNotDegrade" storage="c:\wowclassicgrindbot\coreunittests\bin\debug\net10.0\coreunittests.dll" id="be364dde-89a4-faff-e58d-24ffa9583814">
-      <Execution id="b03d1e6d-2ce7-4642-9fa4-58234cd89ace" />
+      <Execution id="d09348d7-f42f-4fe7-b58a-5cc1d557adcf" />
       <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Debug\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.Routing.RouteRerouterEvidenceTests" name="Stability_OneMinuteOperation_ShouldNotDegrade" />
     </UnitTest>
     <UnitTest name="CoreUnitTests.Routing.RouteRerouterEvidenceTests.ThreadSafety_ConcurrentWaypointAdvance_ShouldBeSafe" storage="c:\wowclassicgrindbot\coreunittests\bin\debug\net10.0\coreunittests.dll" id="294e3109-27a9-c50f-af3a-594baa3f325b">
-      <Execution id="d05c3140-880c-44c9-917f-3ab07558f6dd" />
+      <Execution id="5bc8bf6d-e448-41a5-914a-55ea1856cde5" />
       <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Debug\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.Routing.RouteRerouterEvidenceTests" name="ThreadSafety_ConcurrentWaypointAdvance_ShouldBeSafe" />
     </UnitTest>
     <UnitTest name="CoreUnitTests.Routing.RouteRerouterEvidenceTests.EdgeCase_MaximumWaypoints_ShouldHandleGracefully" storage="c:\wowclassicgrindbot\coreunittests\bin\debug\net10.0\coreunittests.dll" id="9005b9db-84a4-f295-a24c-2026b5baab0b">
-      <Execution id="a7157d55-0630-40ad-8005-d6f7f8f33ee9" />
+      <Execution id="1ce880c0-03fc-48ac-8d27-516e26a9406d" />
       <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Debug\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.Routing.RouteRerouterEvidenceTests" name="EdgeCase_MaximumWaypoints_ShouldHandleGracefully" />
     </UnitTest>
     <UnitTest name="CoreUnitTests.Routing.RouteRerouterEvidenceTests.EdgeCase_RapidCooldownResets_ShouldBeConsistent" storage="c:\wowclassicgrindbot\coreunittests\bin\debug\net10.0\coreunittests.dll" id="6e9cbac9-1d09-0122-db6b-f92d998cd848">
-      <Execution id="b101f515-d4cf-44e9-8289-215f40ea7ca0" />
+      <Execution id="7f396d82-d49b-45e3-bb2d-b4b30097f9c4" />
       <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Debug\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.Routing.RouteRerouterEvidenceTests" name="EdgeCase_RapidCooldownResets_ShouldBeConsistent" />
     </UnitTest>
     <UnitTest name="CoreUnitTests.Routing.RouteRerouterEvidenceTests.ThreadSafety_ConcurrentTrigger_ShouldBeSafe" storage="c:\wowclassicgrindbot\coreunittests\bin\debug\net10.0\coreunittests.dll" id="ba822eba-beba-7d23-1479-cc2ab18380bb">
-      <Execution id="c44b8578-656d-48b4-b8f6-58ddc4b26855" />
+      <Execution id="29e1b62b-4ca1-4bc3-90f2-282b328fe653" />
       <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Debug\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.Routing.RouteRerouterEvidenceTests" name="ThreadSafety_ConcurrentTrigger_ShouldBeSafe" />
     </UnitTest>
     <UnitTest name="CoreUnitTests.Routing.RouteRerouterEvidenceTests.Stability_RecoveryAfterFailure_ShouldSucceed" storage="c:\wowclassicgrindbot\coreunittests\bin\debug\net10.0\coreunittests.dll" id="5c28d34d-f808-5548-fc46-e449aba3a772">
-      <Execution id="59c83c0e-d3ce-4626-925d-b2f22681dd12" />
+      <Execution id="b93ea12a-f3d5-452b-829c-8ec92928ec7a" />
       <TestMethod codeBase="C:\WowClassicGrindBot\CoreUnitTests\bin\Debug\net10.0\CoreUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CoreUnitTests.Routing.RouteRerouterEvidenceTests" name="Stability_RecoveryAfterFailure_ShouldSucceed" />
     </UnitTest>
   </TestDefinitions>
   <TestEntries>
-    <TestEntry testId="6e9cbac9-1d09-0122-db6b-f92d998cd848" executionId="b101f515-d4cf-44e9-8289-215f40ea7ca0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="9005b9db-84a4-f295-a24c-2026b5baab0b" executionId="a7157d55-0630-40ad-8005-d6f7f8f33ee9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="aaff8800-4e71-6acc-3b8f-321dbc836006" executionId="abd36f1c-822a-4774-82df-f37d271f66be" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="5c28d34d-f808-5548-fc46-e449aba3a772" executionId="59c83c0e-d3ce-4626-925d-b2f22681dd12" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="be364dde-89a4-faff-e58d-24ffa9583814" executionId="b03d1e6d-2ce7-4642-9fa4-58234cd89ace" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="294e3109-27a9-c50f-af3a-594baa3f325b" executionId="d05c3140-880c-44c9-917f-3ab07558f6dd" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="e2d12948-8918-d0aa-972c-f8536362a0cd" executionId="3af0695a-6cb0-4deb-bd34-758d594646ea" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="ba822eba-beba-7d23-1479-cc2ab18380bb" executionId="c44b8578-656d-48b4-b8f6-58ddc4b26855" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="aaff8800-4e71-6acc-3b8f-321dbc836006" executionId="be8286e7-57a9-4398-9a22-27a739fd5d79" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="294e3109-27a9-c50f-af3a-594baa3f325b" executionId="5bc8bf6d-e448-41a5-914a-55ea1856cde5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e2d12948-8918-d0aa-972c-f8536362a0cd" executionId="955195af-2418-4247-b685-1c3fd9755d5f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="9005b9db-84a4-f295-a24c-2026b5baab0b" executionId="1ce880c0-03fc-48ac-8d27-516e26a9406d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ba822eba-beba-7d23-1479-cc2ab18380bb" executionId="29e1b62b-4ca1-4bc3-90f2-282b328fe653" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6e9cbac9-1d09-0122-db6b-f92d998cd848" executionId="7f396d82-d49b-45e3-bb2d-b4b30097f9c4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="be364dde-89a4-faff-e58d-24ffa9583814" executionId="d09348d7-f42f-4fe7-b58a-5cc1d557adcf" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5c28d34d-f808-5548-fc46-e449aba3a772" executionId="b93ea12a-f3d5-452b-829c-8ec92928ec7a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
   </TestEntries>
   <TestLists>
     <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
@@ -140,9 +140,9 @@ Throughput: 83 ops/sec</StdOut>
     <Output>
       <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.7+8f2703126a (64-bit .NET 10.0.2)&#xD;
 [xUnit.net 00:00:00.06]   Discovering: CoreUnitTests&#xD;
-[xUnit.net 00:00:00.20]   Discovered:  CoreUnitTests&#xD;
-[xUnit.net 00:00:00.20]   Starting:    CoreUnitTests&#xD;
-[xUnit.net 00:03:04.04]   Finished:    CoreUnitTests&#xD;
+[xUnit.net 00:00:00.21]   Discovered:  CoreUnitTests&#xD;
+[xUnit.net 00:00:00.21]   Starting:    CoreUnitTests&#xD;
+[xUnit.net 00:03:04.00]   Finished:    CoreUnitTests&#xD;
 </StdOut>
     </Output>
   </ResultSummary>

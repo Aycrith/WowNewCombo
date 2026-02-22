@@ -1,5 +1,6 @@
 using Core;
 using Core.Diagnostics;
+using Core.Goals;
 using Core.Startup;
 using Core.Testing;
 using Game;
@@ -7,10 +8,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharedLib;
+using SixLabors.ImageSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Frontend.Controllers;
@@ -93,6 +96,16 @@ public record BagDiagnostics(
     IReadOnlyCollection<BagItemDto> SampleItems,
     DateTime Timestamp);
 
+public record MailboxInteractDiagnostics(
+    bool MailFrameShown,
+    bool CursorFound,
+    string CursorType,
+    int CursorX,
+    int CursorY,
+    string InteractionStep,
+    int Attempts,
+    long ElapsedMs);
+
 #endregion
 
 /// <summary>
@@ -111,6 +124,8 @@ public class DiagnosticsController : ControllerBase
     private readonly AddonConfigurator addonConfigurator;
     private readonly IAddonReader addonReader;
     private readonly WowProcessInput wowInput;
+    private readonly CursorScan cursorScan;
+    private readonly AddonBits addonBits;
     private readonly BagReader bagReader;
     private readonly EquipmentReader equipmentReader;
     private readonly ILoggerFactory loggerFactory;
@@ -128,6 +143,8 @@ public class DiagnosticsController : ControllerBase
         AddonConfigurator addonConfigurator,
         IAddonReader addonReader,
         WowProcessInput wowInput,
+        CursorScan cursorScan,
+        AddonBits addonBits,
         BagReader bagReader,
         EquipmentReader equipmentReader,
         ILoggerFactory loggerFactory,
@@ -143,6 +160,8 @@ public class DiagnosticsController : ControllerBase
         this.addonConfigurator = addonConfigurator;
         this.addonReader = addonReader;
         this.wowInput = wowInput;
+        this.cursorScan = cursorScan;
+        this.addonBits = addonBits;
         this.bagReader = bagReader;
         this.equipmentReader = equipmentReader;
         this.loggerFactory = loggerFactory;
@@ -790,6 +809,116 @@ public class DiagnosticsController : ControllerBase
     #region Fix Endpoints
 
     /// <summary>
+    /// POST /api/diagnostics/mailbox/interact?attempts=2
+    /// Attempts mailbox interaction via cursor scan + interact + click fallbacks.
+    /// </summary>
+    [HttpPost("mailbox/interact")]
+    public async Task<IActionResult> TryInteractMailbox([FromQuery] int attempts = 2)
+    {
+        Stopwatch sw = Stopwatch.StartNew();
+
+        try
+        {
+            attempts = Math.Clamp(attempts, 1, 5);
+
+            if (addonBits.MailFrameShown())
+            {
+                sw.Stop();
+                return Ok(new MailboxInteractDiagnostics(
+                    MailFrameShown: true,
+                    CursorFound: false,
+                    CursorType: nameof(CursorType.None),
+                    CursorX: 0,
+                    CursorY: 0,
+                    InteractionStep: "already_open",
+                    Attempts: 0,
+                    ElapsedMs: sw.ElapsedMilliseconds));
+            }
+
+            Point foundPoint = default;
+            CursorType foundCursor = CursorType.None;
+            int usedAttempt = 0;
+
+            for (int attempt = 1; attempt <= attempts; attempt++)
+            {
+                if (cursorScan.FindAny([CursorType.Mail, CursorType.Speak], out foundCursor, out foundPoint))
+                {
+                    usedAttempt = attempt;
+                    break;
+                }
+
+                await Task.Delay(100);
+            }
+
+            if (usedAttempt == 0)
+            {
+                sw.Stop();
+                return Ok(new MailboxInteractDiagnostics(
+                    MailFrameShown: addonBits.MailFrameShown(),
+                    CursorFound: false,
+                    CursorType: nameof(CursorType.None),
+                    CursorX: 0,
+                    CursorY: 0,
+                    InteractionStep: "cursor_not_found",
+                    Attempts: attempts,
+                    ElapsedMs: sw.ElapsedMilliseconds));
+            }
+
+            wowInput.InteractMouseOver(CancellationToken.None);
+            await Task.Delay(150);
+            if (addonBits.MailFrameShown())
+            {
+                sw.Stop();
+                return Ok(new MailboxInteractDiagnostics(
+                    MailFrameShown: true,
+                    CursorFound: true,
+                    CursorType: foundCursor.ToStringF(),
+                    CursorX: foundPoint.X,
+                    CursorY: foundPoint.Y,
+                    InteractionStep: "interact_mouseover",
+                    Attempts: usedAttempt,
+                    ElapsedMs: sw.ElapsedMilliseconds));
+            }
+
+            wowInput.RightClick(foundPoint);
+            await Task.Delay(150);
+            if (addonBits.MailFrameShown())
+            {
+                sw.Stop();
+                return Ok(new MailboxInteractDiagnostics(
+                    MailFrameShown: true,
+                    CursorFound: true,
+                    CursorType: foundCursor.ToStringF(),
+                    CursorX: foundPoint.X,
+                    CursorY: foundPoint.Y,
+                    InteractionStep: "right_click",
+                    Attempts: usedAttempt,
+                    ElapsedMs: sw.ElapsedMilliseconds));
+            }
+
+            wowInput.LeftClick(foundPoint);
+            await Task.Delay(150);
+
+            sw.Stop();
+            return Ok(new MailboxInteractDiagnostics(
+                MailFrameShown: addonBits.MailFrameShown(),
+                CursorFound: true,
+                CursorType: foundCursor.ToStringF(),
+                CursorX: foundPoint.X,
+                CursorY: foundPoint.Y,
+                InteractionStep: addonBits.MailFrameShown() ? "left_click" : "all_interactions_failed",
+                Attempts: usedAttempt,
+                ElapsedMs: sw.ElapsedMilliseconds));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Mailbox interact diagnostics failed");
+            sw.Stop();
+            return StatusCode(500, new { Error = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// POST /api/diagnostics/fix/bindings
     /// Runs /{prefix}bindings command to set default action bar bindings (NumPad, F-keys)
     /// </summary>
@@ -913,11 +1042,39 @@ public class DiagnosticsController : ControllerBase
     }
 
     /// <summary>
+    /// POST /api/diagnostics/fix/flush
+    /// Runs /{prefix}flush command in chat to force addon state refresh.
+    /// </summary>
+    [HttpPost("fix/flush")]
+    public async Task<IActionResult> FixFlush()
+    {
+        Stopwatch sw = Stopwatch.StartNew();
+
+        try
+        {
+            string command = $"/{addonConfigurator.Config.CommandFlush}";
+            logger.LogInformation("Executing {Command}", command);
+
+            exec.Run(command);
+            await Task.Delay(500);
+
+            sw.Stop();
+            return Ok(new FixResult(true, $"Executed {command}", 1));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Fix flush failed");
+            sw.Stop();
+            return StatusCode(500, new FixResult(false, ex.Message));
+        }
+    }
+
+    /// <summary>
     /// POST /api/diagnostics/fix/initstate
     /// Resets addon state and flushes data
     /// </summary>
     [HttpPost("fix/initstate")]
-    public IActionResult FixInitState()
+    public async Task<IActionResult> FixInitState()
     {
         Stopwatch sw = Stopwatch.StartNew();
 
@@ -925,10 +1082,18 @@ public class DiagnosticsController : ControllerBase
         {
             logger.LogInformation("Resetting addon state");
             addonReader.FullReset();
+
+            // Primary path: explicit slash command (does not depend on custom keybindings).
+            string command = $"/{addonConfigurator.Config.CommandFlush}";
+            exec.Run(command);
+            await Task.Delay(350);
+
+            // Fallback path: keep legacy keybind trigger for compatibility.
             wowInput.PressFlushKey();
+            await Task.Delay(200);
 
             sw.Stop();
-            return Ok(new FixResult(true, "Addon state reset and flushed", 1));
+            return Ok(new FixResult(true, $"Addon state reset and flushed via {command}", 2));
         }
         catch (Exception ex)
         {
@@ -1007,6 +1172,12 @@ public class DiagnosticsController : ControllerBase
         try
         {
             logger.LogInformation("Starting auto-fix sequence");
+
+            // Step 0: Force state flush (slash command, independent of keybinds).
+            string flushCommand = $"/{addonConfigurator.Config.CommandFlush}";
+            exec.Run(flushCommand);
+            steps.Add($"Executed {flushCommand}");
+            await Task.Delay(500);
 
             // Step 1: Default bindings (NumPad, F-keys)
             exec.Run($"/{addonConfigurator.Config.CommandBindings}");

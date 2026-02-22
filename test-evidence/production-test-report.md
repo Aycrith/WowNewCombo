@@ -1,7 +1,7 @@
 # WowClassicGrindBot Production Test Report
 
-**Generated:** 2026-02-14 08:40:41
-**Total Duration:** 00:03:57
+**Generated:** 2026-02-18 01:32:23
+**Total Duration:** 00:03:45
 **Configuration:** Debug
 
 ## Summary

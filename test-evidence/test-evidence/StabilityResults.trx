@@ -1,57 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TestRun id="142236d4-b80f-4909-a190-5c2962457423" name="camer@ILI 2026-02-14 08:40:40" runUser="ILI\camer" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
-  <Times creation="2026-02-14T08:40:40.8795243-05:00" queuing="2026-02-14T08:40:40.8795246-05:00" start="2026-02-14T08:40:10.3466855-05:00" finish="2026-02-14T08:40:41.1503676-05:00" />
-  <TestSettings name="default" id="78f47191-74d9-460c-931a-020a815f8323">
-    <Deployment runDeploymentRoot="camer_ILI_2026-02-14_08_40_40" />
+<TestRun id="2cbdbc9e-d763-4e77-8e11-ea31d5299b3e" name="camer@ILI 2026-02-18 01:32:23" runUser="ILI\camer" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-02-18T01:32:23.3601228-05:00" queuing="2026-02-18T01:32:23.3601231-05:00" start="2026-02-18T01:31:52.8411937-05:00" finish="2026-02-18T01:32:23.6639755-05:00" />
+  <TestSettings name="default" id="2466f926-1b6e-4692-88e1-1c40ea8e36ee">
+    <Deployment runDeploymentRoot="camer_ILI_2026-02-18_01_32_23" />
   </TestSettings>
   <Results>
-    <UnitTestResult executionId="a8d09e5e-47e6-477f-985b-0e316315cd39" testId="554e1f97-096b-f29b-b98b-b5859025db3c" testName="FrontendUnitTests.Services.RouteVisualizationStabilityTests.Stability_24HourSimulation_ShouldMaintainPerformance" computerName="ILI" duration="00:00:30.0727016" startTime="2026-02-14T08:40:40.8599724-05:00" endTime="2026-02-14T08:40:40.8599870-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a8d09e5e-47e6-477f-985b-0e316315cd39">
-      <Output>
-        <StdOut>=== 24-Hour Stability Test Started ===&#xD;
-Initial Memory: 0 MB&#xD;
-Test Duration: 30 seconds (simulating 24 hours)&#xD;
-=== 24-Hour Stability Test Report ===&#xD;
-&#xD;
-Test Duration: 30.0 seconds&#xD;
-Simulated Operations: 16774&#xD;
-&#xD;
---- Memory Analysis ---&#xD;
-Initial Memory: 0.00 MB&#xD;
-Final Memory: 3.00 MB&#xD;
-Memory Delta: 2.00 MB&#xD;
-Growth: 330.66%&#xD;
-Snapshots Taken: 17&#xD;
-Avg Bytes/Operation: 171.60&#xD;
-&#xD;
---- Latency Analysis ---&#xD;
-Total Operations: 16774&#xD;
-Average: 1.54ms&#xD;
-P50: 0.00ms&#xD;
-P95: 15.00ms&#xD;
-P99: 16.00ms&#xD;
-Max: 16.00ms&#xD;
-
-Latency Distribution:&#xD;
-         0-1ms:  15038 ( 89.7%)&#xD;
-         1-5ms:     15 (  0.1%)&#xD;
-        5-10ms:      1 (  0.0%)&#xD;
-       10-25ms:   1720 ( 10.3%)&#xD;
-       25-50ms:      0 (  0.0%)&#xD;
-      50-100ms:      0 (  0.0%)&#xD;
-     100-150ms:      0 (  0.0%)&#xD;
-        150+ms:      0 (  0.0%)&#xD;
-&#xD;
---- Exception Analysis ---&#xD;
-Total Exceptions: 0&#xD;
-&#xD;
---- Test Status ---&#xD;
-FAILED&#xD;
-&#xD;
-
-Detailed report saved to: C:\Users\camer\AppData\Local\Temp\stability-test-report.json</StdOut>
-      </Output>
-    </UnitTestResult>
-    <UnitTestResult executionId="6fcf2b32-f822-40f3-bd57-384bf7ccc0a6" testId="be54ac9a-2aa1-71a7-6b9d-80b00628178f" testName="FrontendUnitTests.Services.RouteVisualizationStabilityTests.Stability_MemoryLeakDetection_UnderSustainedLoad" computerName="ILI" duration="00:00:00.0383115" startTime="2026-02-14T08:40:41.1072850-05:00" endTime="2026-02-14T08:40:41.1072851-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6fcf2b32-f822-40f3-bd57-384bf7ccc0a6">
+    <UnitTestResult executionId="8512abbd-b1e8-46d8-8b8b-0ddb481aa36e" testId="be54ac9a-2aa1-71a7-6b9d-80b00628178f" testName="FrontendUnitTests.Services.RouteVisualizationStabilityTests.Stability_MemoryLeakDetection_UnderSustainedLoad" computerName="ILI" duration="00:00:00.0381333" startTime="2026-02-18T01:32:23.6211731-05:00" endTime="2026-02-18T01:32:23.6211733-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8512abbd-b1e8-46d8-8b8b-0ddb481aa36e">
       <Output>
         <StdOut>=== Memory Leak Analysis ===&#xD;
 Time		Memory (MB)&#xD;
@@ -70,7 +24,7 @@ Time		Memory (MB)&#xD;
 Memory Growth: 0.00 MB per 100 operations</StdOut>
       </Output>
     </UnitTestResult>
-    <UnitTestResult executionId="5a81a4b0-c3f1-4755-93f3-1af46e5c5841" testId="165aca9c-5678-11c2-5954-2b7e49e26d54" testName="FrontendUnitTests.Services.RouteVisualizationStabilityTests.Stability_ThreadContention_UnderHighConcurrency" computerName="ILI" duration="00:00:00.2081104" startTime="2026-02-14T08:40:41.0689000-05:00" endTime="2026-02-14T08:40:41.0689001-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5a81a4b0-c3f1-4755-93f3-1af46e5c5841">
+    <UnitTestResult executionId="1edf9e45-ce67-41b1-9f4d-52e5bf4a216f" testId="165aca9c-5678-11c2-5954-2b7e49e26d54" testName="FrontendUnitTests.Services.RouteVisualizationStabilityTests.Stability_ThreadContention_UnderHighConcurrency" computerName="ILI" duration="00:00:00.2405080" startTime="2026-02-18T01:32:23.5829750-05:00" endTime="2026-02-18T01:32:23.5829750-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1edf9e45-ce67-41b1-9f4d-52e5bf4a216f">
       <Output>
         <StdOut>=== Thread Contention Results ===&#xD;
 Total Operations: 10000&#xD;
@@ -79,25 +33,71 @@ P95 Latency: 0.00ms&#xD;
 Max Latency: 3.00ms</StdOut>
       </Output>
     </UnitTestResult>
+    <UnitTestResult executionId="ecf3adf5-30c2-4cf4-9a62-7dda23b1d0ba" testId="554e1f97-096b-f29b-b98b-b5859025db3c" testName="FrontendUnitTests.Services.RouteVisualizationStabilityTests.Stability_24HourSimulation_ShouldMaintainPerformance" computerName="ILI" duration="00:00:30.0737593" startTime="2026-02-18T01:32:23.3416208-05:00" endTime="2026-02-18T01:32:23.3416364-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ecf3adf5-30c2-4cf4-9a62-7dda23b1d0ba">
+      <Output>
+        <StdOut>=== 24-Hour Stability Test Started ===&#xD;
+Initial Memory: 0 MB&#xD;
+Test Duration: 30 seconds (simulating 24 hours)&#xD;
+=== 24-Hour Stability Test Report ===&#xD;
+&#xD;
+Test Duration: 30.0 seconds&#xD;
+Simulated Operations: 16802&#xD;
+&#xD;
+--- Memory Analysis ---&#xD;
+Initial Memory: 0.00 MB&#xD;
+Final Memory: 3.00 MB&#xD;
+Memory Delta: 2.00 MB&#xD;
+Growth: 326.85%&#xD;
+Snapshots Taken: 17&#xD;
+Avg Bytes/Operation: 169.78&#xD;
+&#xD;
+--- Latency Analysis ---&#xD;
+Total Operations: 16802&#xD;
+Average: 1.54ms&#xD;
+P50: 0.00ms&#xD;
+P95: 15.00ms&#xD;
+P99: 16.00ms&#xD;
+Max: 16.00ms&#xD;
+
+Latency Distribution:&#xD;
+         0-1ms:  15065 ( 89.7%)&#xD;
+         1-5ms:     14 (  0.1%)&#xD;
+        5-10ms:      1 (  0.0%)&#xD;
+       10-25ms:   1722 ( 10.2%)&#xD;
+       25-50ms:      0 (  0.0%)&#xD;
+      50-100ms:      0 (  0.0%)&#xD;
+     100-150ms:      0 (  0.0%)&#xD;
+        150+ms:      0 (  0.0%)&#xD;
+&#xD;
+--- Exception Analysis ---&#xD;
+Total Exceptions: 0&#xD;
+&#xD;
+--- Test Status ---&#xD;
+FAILED&#xD;
+&#xD;
+
+Detailed report saved to: C:\Users\camer\AppData\Local\Temp\stability-test-report.json</StdOut>
+      </Output>
+    </UnitTestResult>
   </Results>
   <TestDefinitions>
     <UnitTest name="FrontendUnitTests.Services.RouteVisualizationStabilityTests.Stability_ThreadContention_UnderHighConcurrency" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="165aca9c-5678-11c2-5954-2b7e49e26d54">
-      <Execution id="5a81a4b0-c3f1-4755-93f3-1af46e5c5841" />
+      <Execution id="1edf9e45-ce67-41b1-9f4d-52e5bf4a216f" />
       <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Services.RouteVisualizationStabilityTests" name="Stability_ThreadContention_UnderHighConcurrency" />
     </UnitTest>
     <UnitTest name="FrontendUnitTests.Services.RouteVisualizationStabilityTests.Stability_MemoryLeakDetection_UnderSustainedLoad" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="be54ac9a-2aa1-71a7-6b9d-80b00628178f">
-      <Execution id="6fcf2b32-f822-40f3-bd57-384bf7ccc0a6" />
+      <Execution id="8512abbd-b1e8-46d8-8b8b-0ddb481aa36e" />
       <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Services.RouteVisualizationStabilityTests" name="Stability_MemoryLeakDetection_UnderSustainedLoad" />
     </UnitTest>
     <UnitTest name="FrontendUnitTests.Services.RouteVisualizationStabilityTests.Stability_24HourSimulation_ShouldMaintainPerformance" storage="c:\wowclassicgrindbot\frontendunittests\bin\debug\net10.0\frontendunittests.dll" id="554e1f97-096b-f29b-b98b-b5859025db3c">
-      <Execution id="a8d09e5e-47e6-477f-985b-0e316315cd39" />
+      <Execution id="ecf3adf5-30c2-4cf4-9a62-7dda23b1d0ba" />
       <TestMethod codeBase="C:\WowClassicGrindBot\FrontendUnitTests\bin\Debug\net10.0\FrontendUnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="FrontendUnitTests.Services.RouteVisualizationStabilityTests" name="Stability_24HourSimulation_ShouldMaintainPerformance" />
     </UnitTest>
   </TestDefinitions>
   <TestEntries>
-    <TestEntry testId="554e1f97-096b-f29b-b98b-b5859025db3c" executionId="a8d09e5e-47e6-477f-985b-0e316315cd39" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="be54ac9a-2aa1-71a7-6b9d-80b00628178f" executionId="6fcf2b32-f822-40f3-bd57-384bf7ccc0a6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="165aca9c-5678-11c2-5954-2b7e49e26d54" executionId="5a81a4b0-c3f1-4755-93f3-1af46e5c5841" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="be54ac9a-2aa1-71a7-6b9d-80b00628178f" executionId="8512abbd-b1e8-46d8-8b8b-0ddb481aa36e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="165aca9c-5678-11c2-5954-2b7e49e26d54" executionId="1edf9e45-ce67-41b1-9f4d-52e5bf4a216f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="554e1f97-096b-f29b-b98b-b5859025db3c" executionId="ecf3adf5-30c2-4cf4-9a62-7dda23b1d0ba" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
   </TestEntries>
   <TestLists>
     <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
@@ -110,7 +110,7 @@ Max Latency: 3.00ms</StdOut>
 [xUnit.net 00:00:00.05]   Discovering: FrontendUnitTests&#xD;
 [xUnit.net 00:00:00.08]   Discovered:  FrontendUnitTests&#xD;
 [xUnit.net 00:00:00.09]   Starting:    FrontendUnitTests&#xD;
-[xUnit.net 00:00:30.45]   Finished:    FrontendUnitTests&#xD;
+[xUnit.net 00:00:30.48]   Finished:    FrontendUnitTests&#xD;
 </StdOut>
     </Output>
   </ResultSummary>

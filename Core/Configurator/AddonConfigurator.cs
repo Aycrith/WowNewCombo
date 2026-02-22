@@ -197,7 +197,9 @@ public sealed partial class AddonConfigurator
         // WoW loads only <FolderName>.toc, so we promote the best matching variant to the main name.
         // This avoids "out of date addon" and ensures the correct file list is used.
 
-        string suffix = process.FileVersion.Major switch
+        int clientBranchMajor = GetClientBranchMajor(process.FileVersion.Major);
+
+        string suffix = clientBranchMajor switch
         {
             1 => "_Classic",
             2 => "_TBC",
@@ -228,6 +230,20 @@ public sealed partial class AddonConfigurator
         {
             logger.LogWarning(ex, "Failed to promote TOC variant: {Variant} -> {Main}", variantPath, mainTocPath);
         }
+    }
+
+    /// <summary>
+    /// WoW file versions are often encoded as 205/304/404 instead of 2/3/4.
+    /// Normalize them so TOC promotion can pick the correct variant.
+    /// </summary>
+    private static int GetClientBranchMajor(int major)
+    {
+        if (major >= 100)
+        {
+            return major / 100;
+        }
+
+        return major;
     }
 
     private static void BulkRename(string folderPath, string match, string replacement)

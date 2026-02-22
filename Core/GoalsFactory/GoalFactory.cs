@@ -74,11 +74,12 @@ public static class GoalFactory
             });
 
             // NO PLAN recovery service
-            services.AddHostedService<Recovery.NoPlanRecoveryService>();
+            // Must be Scoped: depends on scoped GoapAgent → CancellationTokenSource<GoapAgent>
+            services.AddScoped<Recovery.NoPlanRecoveryService>();
 
             // Failure analytics service (SRP-compliant: engine + listener + hosted service)
             services.AddSingleton<Analytics.FailureAnalyticsEngine>();
-            services.AddSingleton<Analytics.FailureAnalyticsEventListener>();
+            services.AddScoped<Analytics.FailureAnalyticsEventListener>();  // Must be Scoped: depends on scoped StuckDetector
             services.AddHostedService<Analytics.FailureAnalytics>();
         }
 
@@ -90,7 +91,16 @@ public static class GoalFactory
         {
             FeatureFlagService flags = sp.GetRequiredService<FeatureFlagService>();
             int maxSize = flags.Current.StuckRecoveryV2.BreadcrumbTrailSize;
-            return new BreadcrumbTracker(maxSize);
+            float minDistance = BreadcrumbTracker.DefaultMinDistance;
+
+            if (flags.Current.StuckSensitivity.Enabled)
+            {
+                // Tie breadcrumb density to stuck sensitivity so backtracking has enough granularity
+                // near obstacles without exploding trail size.
+                minDistance = Math.Clamp(flags.Current.StuckSensitivity.MinDistance * 10f, 0.75f, 4f);
+            }
+
+            return new BreadcrumbTracker(maxSize, minDistance);
         });
 
         services.AddScoped<PlayerDirection>();
@@ -120,7 +130,7 @@ public static class GoalFactory
         services.AddScoped<TargetFinder>();
 
         // each GoapGoal gets an individual instance
-        services.AddTransient<Navigation>();
+        services.AddTransient<Goals.Navigation>();
 
         if (classConfig.Mode == Mode.CorpseRun)
         {

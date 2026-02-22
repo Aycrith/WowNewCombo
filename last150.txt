@@ -1,0 +1,150 @@
+[13:02:01:345 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:367 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:384 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:401 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:417 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:434 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:451 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:467 I] [KeyBindingsReader] [KeyBindings Slot 106 Stats] Consecutive zeros: 7300, Total reads: 7300, Non-zero reads: 0
+[13:02:01:467 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:470 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:487 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:504 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:520 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:537 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:554 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:570 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:587 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:596 D] [BotStartGuard    ] [BotStartGuard] Check start Navigation
+[13:02:01:596 D] [BotStartGuard    ] [BotStartGuard] Check start KeyBindings
+[13:02:01:596 D] [BotStartGuard    ] [BotStartGuard] Check start Route
+[13:02:01:596 D] [BotStartGuard    ] [BotStartGuard] Check start Addons
+[13:02:01:596 D] [BotStartGuard    ] [BotStartGuard] Check start WoWProcess
+[13:02:01:596 D] [BotStartGuard    ] [BotStartGuard] Check start AddonHandshake
+[13:02:01:596 D] [BotStartGuard    ] [BotStartGuard] Check start Frames
+[13:02:01:596 D] [BotStartGuard    ] [BotStartGuard] Check start Profile
+[13:02:01:596 D] [BotStartGuard    ] [BotStartGuard] Check start ActionBar
+[13:02:01:596 D] [BotStartGuard    ] [BotStartGuard] Check end Navigation (0ms)
+[13:02:01:597 D] [BotStartGuard    ] [BotStartGuard] Check end KeyBindings (0ms)
+[13:02:01:597 D] [BotStartGuard    ] [BotStartGuard] Check end Route (0ms)
+[13:02:01:597 D] [BotStartGuard    ] [BotStartGuard] Check end Addons (0ms)
+[13:02:01:597 D] [BotStartGuard    ] [BotStartGuard] Check end WoWProcess (0ms)
+[13:02:01:597 D] [BotStartGuard    ] [BotStartGuard] Check end AddonHandshake (0ms)
+[13:02:01:597 D] [BotStartGuard    ] [BotStartGuard] Check end Profile (0ms)
+[13:02:01:598 D] [BotStartGuard    ] [BotStartGuard] Check end ActionBar (0ms)
+[13:02:01:598 D] [BotStartGuard    ] [BotStartGuard] Check end Frames (0ms)
+[13:02:01:599 D] [BotStartGuard    ] [BotStartGuard] Check start Navigation
+[13:02:01:599 D] [BotStartGuard    ] [BotStartGuard] Check start Route
+[13:02:01:599 D] [BotStartGuard    ] [BotStartGuard] Check start Addons
+[13:02:01:599 D] [BotStartGuard    ] [BotStartGuard] Check start Frames
+[13:02:01:599 D] [BotStartGuard    ] [BotStartGuard] Check start AddonHandshake
+[13:02:01:599 D] [BotStartGuard    ] [BotStartGuard] Check start WoWProcess
+[13:02:01:599 D] [BotStartGuard    ] [BotStartGuard] Check start Profile
+[13:02:01:599 D] [BotStartGuard    ] [BotStartGuard] Check start KeyBindings
+[13:02:01:599 D] [BotStartGuard    ] [BotStartGuard] Check start ActionBar
+[13:02:01:599 D] [BotStartGuard    ] [BotStartGuard] Check end Navigation (0ms)
+[13:02:01:599 D] [BotStartGuard    ] [BotStartGuard] Check end Route (0ms)
+[13:02:01:600 D] [BotStartGuard    ] [BotStartGuard] Check end Addons (0ms)
+[13:02:01:600 D] [BotStartGuard    ] [BotStartGuard] Check end AddonHandshake (0ms)
+[13:02:01:600 D] [BotStartGuard    ] [BotStartGuard] Check end WoWProcess (0ms)
+[13:02:01:600 D] [BotStartGuard    ] [BotStartGuard] Check end Profile (0ms)
+[13:02:01:600 D] [BotStartGuard    ] [BotStartGuard] Check end Frames (0ms)
+[13:02:01:600 D] [BotStartGuard    ] [BotStartGuard] Check end KeyBindings (0ms)
+[13:02:01:600 D] [BotStartGuard    ] [BotStartGuard] Check end ActionBar (0ms)
+[13:02:01:602 I] [AddonValidator   ] Addon validation passed with 2 checks
+[13:02:01:604 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:612 D] [BotStartGuard    ] [BotStartGuard] Check start WoWProcess
+[13:02:01:612 D] [BotStartGuard    ] [BotStartGuard] Check start WoWProcess
+[13:02:01:612 D] [BotStartGuard    ] [BotStartGuard] Check start ActionBar
+[13:02:01:612 D] [BotStartGuard    ] [BotStartGuard] Check start Frames
+[13:02:01:612 D] [BotStartGuard    ] [BotStartGuard] Check start Route
+[13:02:01:612 D] [BotStartGuard    ] [BotStartGuard] Check start Profile
+[13:02:01:612 D] [BotStartGuard    ] [BotStartGuard] Check start Route
+[13:02:01:612 D] [BotStartGuard    ] [BotStartGuard] Check start Addons
+[13:02:01:612 D] [BotStartGuard    ] [BotStartGuard] Check start Navigation
+[13:02:01:612 D] [BotStartGuard    ] [BotStartGuard] Check start AddonHandshake
+[13:02:01:612 D] [BotStartGuard    ] [BotStartGuard] Check start Frames
+[13:02:01:612 D] [BotStartGuard    ] [BotStartGuard] Check end WoWProcess (0ms)
+[13:02:01:612 D] [BotStartGuard    ] [BotStartGuard] Check start Profile
+[13:02:01:612 D] [BotStartGuard    ] [BotStartGuard] Check start KeyBindings
+[13:02:01:612 D] [BotStartGuard    ] [BotStartGuard] Check start AddonHandshake
+[13:02:01:612 D] [BotStartGuard    ] [BotStartGuard] Check start Addons
+[13:02:01:612 D] [BotStartGuard    ] [BotStartGuard] Check start Navigation
+[13:02:01:612 D] [BotStartGuard    ] [BotStartGuard] Check start KeyBindings
+[13:02:01:612 D] [BotStartGuard    ] [BotStartGuard] Check start ActionBar
+[13:02:01:612 D] [BotStartGuard    ] [BotStartGuard] Check end WoWProcess (0ms)
+[13:02:01:613 D] [BotStartGuard    ] [BotStartGuard] Check end ActionBar (0ms)
+[13:02:01:613 D] [BotStartGuard    ] [BotStartGuard] Check end Route (0ms)
+[13:02:01:613 D] [BotStartGuard    ] [BotStartGuard] Check end Profile (0ms)
+[13:02:01:613 D] [BotStartGuard    ] [BotStartGuard] Check end Route (0ms)
+[13:02:01:613 D] [BotStartGuard    ] [BotStartGuard] Check end Frames (0ms)
+[13:02:01:613 D] [BotStartGuard    ] [BotStartGuard] Check end Addons (0ms)
+[13:02:01:613 D] [BotStartGuard    ] [BotStartGuard] Check end Navigation (0ms)
+[13:02:01:614 D] [BotStartGuard    ] [BotStartGuard] Check end AddonHandshake (0ms)
+[13:02:01:614 D] [BotStartGuard    ] [BotStartGuard] Check end Profile (0ms)
+[13:02:01:614 D] [BotStartGuard    ] [BotStartGuard] Check end KeyBindings (0ms)
+[13:02:01:614 D] [BotStartGuard    ] [BotStartGuard] Check end Frames (0ms)
+[13:02:01:614 D] [BotStartGuard    ] [BotStartGuard] Check end AddonHandshake (0ms)
+[13:02:01:614 D] [BotStartGuard    ] [BotStartGuard] Check end Addons (0ms)
+[13:02:01:614 D] [BotStartGuard    ] [BotStartGuard] Check end Navigation (0ms)
+[13:02:01:614 D] [BotStartGuard    ] [BotStartGuard] Check end KeyBindings (0ms)
+[13:02:01:615 D] [BotStartGuard    ] [BotStartGuard] Check end ActionBar (0ms)
+[13:02:01:616 D] [BotStartGuard    ] [BotStartGuard] Check start Navigation
+[13:02:01:616 D] [BotStartGuard    ] [BotStartGuard] Check start WoWProcess
+[13:02:01:616 D] [BotStartGuard    ] [BotStartGuard] Check start Profile
+[13:02:01:616 D] [BotStartGuard    ] [BotStartGuard] Check start Route
+[13:02:01:616 D] [BotStartGuard    ] [BotStartGuard] Check start ActionBar
+[13:02:01:616 D] [BotStartGuard    ] [BotStartGuard] Check start Frames
+[13:02:01:616 D] [BotStartGuard    ] [BotStartGuard] Check start AddonHandshake
+[13:02:01:616 D] [BotStartGuard    ] [BotStartGuard] Check start Addons
+[13:02:01:616 D] [BotStartGuard    ] [BotStartGuard] Check start KeyBindings
+[13:02:01:617 D] [BotStartGuard    ] [BotStartGuard] Check start Navigation
+[13:02:01:617 D] [BotStartGuard    ] [BotStartGuard] Check start WoWProcess
+[13:02:01:617 D] [BotStartGuard    ] [BotStartGuard] Check start Addons
+[13:02:01:617 D] [BotStartGuard    ] [BotStartGuard] Check start Frames
+[13:02:01:617 D] [BotStartGuard    ] [BotStartGuard] Check end Navigation (0ms)
+[13:02:01:617 D] [BotStartGuard    ] [BotStartGuard] Check start AddonHandshake
+[13:02:01:617 D] [BotStartGuard    ] [BotStartGuard] Check start Profile
+[13:02:01:617 D] [BotStartGuard    ] [BotStartGuard] Check start Route
+[13:02:01:617 D] [BotStartGuard    ] [BotStartGuard] Check start ActionBar
+[13:02:01:617 D] [BotStartGuard    ] [BotStartGuard] Check end WoWProcess (0ms)
+[13:02:01:617 D] [BotStartGuard    ] [BotStartGuard] Check start KeyBindings
+[13:02:01:617 D] [BotStartGuard    ] [BotStartGuard] Check end Profile (0ms)
+[13:02:01:617 D] [BotStartGuard    ] [BotStartGuard] Check end Route (0ms)
+[13:02:01:617 D] [BotStartGuard    ] [BotStartGuard] Check end ActionBar (0ms)
+[13:02:01:627 D] [BotStartGuard    ] [BotStartGuard] Check end AddonHandshake (0ms)
+[13:02:01:627 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:627 D] [BotStartGuard    ] [BotStartGuard] Check end Addons (0ms)
+[13:02:01:628 D] [BotStartGuard    ] [BotStartGuard] Check end KeyBindings (0ms)
+[13:02:01:628 D] [BotStartGuard    ] [BotStartGuard] Check end Frames (10ms)
+[13:02:01:628 D] [BotStartGuard    ] [BotStartGuard] Check end Navigation (0ms)
+[13:02:01:628 D] [BotStartGuard    ] [BotStartGuard] Check end WoWProcess (0ms)
+[13:02:01:628 I] [AddonValidator   ] Addon validation passed with 2 checks
+[13:02:01:628 D] [BotStartGuard    ] [BotStartGuard] Check end Addons (0ms)
+[13:02:01:628 D] [BotStartGuard    ] [BotStartGuard] Check end AddonHandshake (0ms)
+[13:02:01:629 D] [BotStartGuard    ] [BotStartGuard] Check end Profile (0ms)
+[13:02:01:629 D] [BotStartGuard    ] [BotStartGuard] Check end Frames (0ms)
+[13:02:01:629 D] [BotStartGuard    ] [BotStartGuard] Check end Route (0ms)
+[13:02:01:629 D] [BotStartGuard    ] [BotStartGuard] Check end ActionBar (0ms)
+[13:02:01:629 D] [BotStartGuard    ] [BotStartGuard] Check end KeyBindings (0ms)
+[13:02:01:651 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:667 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:685 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:691 I] [TroubleshootController] [Troubleshoot] Generating diagnostic report
+[13:02:01:694 I] [TroubleshootController] [Troubleshoot] Report generated in 2ms
+[13:02:01:700 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:717 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:734 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:751 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:768 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:788 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:804 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:822 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:838 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:854 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:871 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:888 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:900 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:917 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:934 D] [KeyBindingsReader] Waiting for bindings - current count=0
+[13:02:01:951 D] [KeyBindingsReader] Waiting for bindings - current count=0

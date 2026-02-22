@@ -52,16 +52,18 @@ public sealed class StuckDetector : IGoapEventListener
 {
     private const bool debug = false;
 
-    private const float MIN_RANGE_DIFF = 2f;
-    private const float MIN_DISTANCE = 0.2f;
+    private const float DEFAULT_MIN_RANGE_DIFF = 2f;
+    private const float DEFAULT_MIN_DISTANCE = 0.2f;
     private const float MAX_RANGE = 999999;
-    private const double UNSTUCK_AFTER_MS = 2000;
-    private const double ACTION_STUCK_TIME = 3000;
+    private const double DEFAULT_UNSTUCK_AFTER_MS = 2000;
+    private const double DEFAULT_ACTION_STUCK_TIME = 3000;
 
     private const double SPIN_CHECK_INTERVAL_MS = 500;
     private const float SPIN_THRESHOLD_RADIANS = 2.0f;
     private const int SPIN_DETECTION_COUNT = 3;
     private const int HEADING_HISTORY_SIZE = 10;
+    private const float RepeatHotspotRadius = 10f;
+    private static readonly TimeSpan RepeatHotspotWindow = TimeSpan.FromSeconds(120);
 
     private static readonly Dictionary<UnstuckState, double> StateTimeouts = new()
     {
@@ -100,6 +102,9 @@ public sealed class StuckDetector : IGoapEventListener
     private Vector3? lastAttemptPosition;
     private int unstuckAttemptCount;
     private DateTime stuckDetectedTimestamp;
+    private Vector3 lastStuckTriggerPosition = Vector3.Zero;
+    private DateTime lastStuckTriggerUtc = DateTime.MinValue;
+    private int repeatedHotspotCount;
 
     public event Action<StuckEventData>? OnStuckDetected;
 
@@ -189,10 +194,20 @@ public sealed class StuckDetector : IGoapEventListener
             return;
         }
 
-        bool shouldTriggerUnstuck = UnstuckMs > UNSTUCK_AFTER_MS || IsSpinningDetected;
+        bool predictiveTriggered = IsPredictiveStuckRiskTriggered();
+        bool shouldTriggerUnstuck =
+            UnstuckMs > GetUnstuckAfterMsThreshold() ||
+            IsSpinningDetected ||
+            predictiveTriggered;
 
         if (shouldTriggerUnstuck)
         {
+            if (predictiveTriggered)
+            {
+                logger.LogWarning(
+                    "[StuckDetector] Predictive stuck risk exceeded threshold; forcing recovery early.");
+            }
+
             TriggerUnstuck(token);
         }
     }
@@ -216,7 +231,7 @@ public sealed class StuckDetector : IGoapEventListener
             headingHistory.Dequeue();
 
         float distance = playerReader.WorldPos.WorldDistanceXYTo(worldTarget);
-        bool positionChanged = MathF.Abs(distance - prevDistance) > MIN_DISTANCE;
+        bool positionChanged = MathF.Abs(distance - prevDistance) > GetMinDistanceThreshold();
 
         if (accumulatedRotationDelta > SPIN_THRESHOLD_RADIANS && !positionChanged)
         {
@@ -263,15 +278,20 @@ public sealed class StuckDetector : IGoapEventListener
 
     private void TriggerUnstuck(CancellationToken token)
     {
-        currentUnstuckState = UnstuckState.InitialAttempt;
+        currentUnstuckState = GetInitialUnstuckState(playerReader.WorldPos);
         unstuckStateEnterTime = GetTimestamp();
         lastAttemptPosition = playerReader.WorldPos;
         stuckDetectedTimestamp = DateTime.UtcNow;
         unstuckAttemptCount++;
 
-        logger.LogWarning($"[StuckDetector] TRIGGERING UNSTUCK - State: {currentUnstuckState}, Attempt: {unstuckAttemptCount}, Spinning: {IsSpinningDetected}");
+        logger.LogWarning(
+            "[StuckDetector] TRIGGERING UNSTUCK - State: {State}, Attempt: {Attempt}, RepeatedHotspotCount: {RepeatedHotspotCount}, Spinning: {IsSpinning}",
+            currentUnstuckState,
+            unstuckAttemptCount,
+            repeatedHotspotCount,
+            IsSpinningDetected);
 
-        CollectStuckData($"Unstuck triggered - InitialAttempt");
+        CollectStuckData($"Unstuck triggered - {currentUnstuckState}");
         ExecuteUnstuckState(token);
     }
 
@@ -306,7 +326,7 @@ public sealed class StuckDetector : IGoapEventListener
             return false;
 
         float movedDistance = playerReader.WorldPos.WorldDistanceXYTo(lastAttemptPosition.Value);
-        return movedDistance > MIN_RANGE_DIFF;
+        return movedDistance > GetRangeDiffThreshold();
     }
 
     private void ExecuteUnstuckState(CancellationToken token)
@@ -347,9 +367,10 @@ public sealed class StuckDetector : IGoapEventListener
         stopMoving.Stop();
 
         // Try to find a position to backtrack to (3-5 steps back along the trail)
-        BreadcrumbEntry? backtrackEntry = breadcrumbTracker.GetBacktrackPosition(3);
+        int preferredSteps = GetBacktrackSteps();
+        BreadcrumbEntry? backtrackEntry = breadcrumbTracker.GetBacktrackPosition(preferredSteps);
         if (backtrackEntry == null)
-            backtrackEntry = breadcrumbTracker.GetBacktrackPosition(5);
+            backtrackEntry = breadcrumbTracker.GetBacktrackPosition(preferredSteps + 2);
 
         if (backtrackEntry == null)
         {
@@ -540,7 +561,7 @@ public sealed class StuckDetector : IGoapEventListener
     public bool IsGettingCloser()
     {
         float distance = playerReader.WorldPos.WorldDistanceXYTo(worldTarget);
-        if (distance <= prevDistance - MIN_RANGE_DIFF)
+        if (distance <= prevDistance - GetRangeDiffThreshold())
         {
             if (currentUnstuckState != UnstuckState.None)
             {
@@ -551,13 +572,13 @@ public sealed class StuckDetector : IGoapEventListener
             return true;
         }
 
-        return ActionDurationMs < ACTION_STUCK_TIME;
+        return ActionDurationMs < GetActionStuckTimeThreshold();
     }
 
     public bool IsMoving()
     {
         float distance = playerReader.WorldPos.WorldDistanceXYTo(worldTarget);
-        if (MathF.Abs(distance - prevDistance) > MIN_DISTANCE)
+        if (MathF.Abs(distance - prevDistance) > GetMinDistanceThreshold())
         {
             if (currentUnstuckState != UnstuckState.None)
             {
@@ -568,7 +589,7 @@ public sealed class StuckDetector : IGoapEventListener
             return true;
         }
 
-        return ActionDurationMs < ACTION_STUCK_TIME;
+        return ActionDurationMs < GetActionStuckTimeThreshold();
     }
 
     public bool IsOscillating()
@@ -592,5 +613,141 @@ public sealed class StuckDetector : IGoapEventListener
         }
 
         return directionChanges > 5;
+    }
+
+    private bool IsPredictiveStuckRiskTriggered()
+    {
+        if (breadcrumbTracker == null || featureFlagService == null)
+        {
+            return false;
+        }
+
+        FeatureFlagsOptions currentFlags = featureFlagService.Current;
+        StuckSensitivityOptions options = currentFlags.StuckSensitivity;
+
+        if (!options.Enabled || !options.EnablePredictiveDetection || breadcrumbTracker.Count < 6)
+        {
+            return false;
+        }
+
+        int threshold = Math.Clamp(options.PredictiveRiskThreshold, 20, 95);
+        int risk = breadcrumbTracker.CalculateStuckRisk();
+
+        // Avoid firing predictive recovery instantly after a reset.
+        if (UnstuckMs < GetUnstuckAfterMsThreshold() * 0.5)
+        {
+            return false;
+        }
+
+        return risk >= threshold;
+    }
+
+    private UnstuckState GetInitialUnstuckState(Vector3 currentPosition)
+    {
+        DateTime now = DateTime.UtcNow;
+        bool repeatedHotspot =
+            lastStuckTriggerUtc != DateTime.MinValue &&
+            (now - lastStuckTriggerUtc) <= RepeatHotspotWindow &&
+            WorldDistanceXY(currentPosition, lastStuckTriggerPosition) <= RepeatHotspotRadius;
+
+        repeatedHotspotCount = repeatedHotspot ? repeatedHotspotCount + 1 : 0;
+        lastStuckTriggerPosition = currentPosition;
+        lastStuckTriggerUtc = now;
+
+        if (repeatedHotspotCount >= 2 && IsEnhancedRecoveryAvailable)
+        {
+            return UnstuckState.BreadcrumbBacktrack;
+        }
+
+        if (repeatedHotspotCount >= 1)
+        {
+            return UnstuckState.StrafeAttempt;
+        }
+
+        return UnstuckState.InitialAttempt;
+    }
+
+    private static float WorldDistanceXY(Vector3 a, Vector3 b)
+    {
+        float dx = a.X - b.X;
+        float dy = a.Y - b.Y;
+        return MathF.Sqrt((dx * dx) + (dy * dy));
+    }
+
+    private float GetRangeDiffThreshold()
+    {
+        if (featureFlagService == null)
+        {
+            return DEFAULT_MIN_RANGE_DIFF;
+        }
+
+        StuckSensitivityOptions options = featureFlagService.Current.StuckSensitivity;
+        if (!options.Enabled)
+        {
+            return DEFAULT_MIN_RANGE_DIFF;
+        }
+
+        float minDistance = Math.Clamp(options.MinDistance, 0.05f, 1.5f);
+        return Math.Clamp(minDistance * 6f, 0.4f, 2.5f);
+    }
+
+    private float GetMinDistanceThreshold()
+    {
+        if (featureFlagService == null)
+        {
+            return DEFAULT_MIN_DISTANCE;
+        }
+
+        StuckSensitivityOptions options = featureFlagService.Current.StuckSensitivity;
+        if (!options.Enabled)
+        {
+            return DEFAULT_MIN_DISTANCE;
+        }
+
+        return Math.Clamp(options.MinDistance, 0.05f, 1.5f);
+    }
+
+    private double GetUnstuckAfterMsThreshold()
+    {
+        if (featureFlagService == null)
+        {
+            return DEFAULT_UNSTUCK_AFTER_MS;
+        }
+
+        StuckSensitivityOptions options = featureFlagService.Current.StuckSensitivity;
+        if (!options.Enabled)
+        {
+            return DEFAULT_UNSTUCK_AFTER_MS;
+        }
+
+        return Math.Clamp(options.UnstuckAfterMs, 750, 10_000);
+    }
+
+    private double GetActionStuckTimeThreshold()
+    {
+        if (featureFlagService == null)
+        {
+            return DEFAULT_ACTION_STUCK_TIME;
+        }
+
+        StuckSensitivityOptions options = featureFlagService.Current.StuckSensitivity;
+        if (!options.Enabled)
+        {
+            return DEFAULT_ACTION_STUCK_TIME;
+        }
+
+        double baseWindow = Math.Clamp(options.UnstuckAfterMs + 1200, 1_500, 15_000);
+        float multiplier = Math.Clamp(options.ApproachTimeoutMultiplier, 0.5f, 3f);
+        return baseWindow * multiplier;
+    }
+
+    private int GetBacktrackSteps()
+    {
+        if (featureFlagService == null)
+        {
+            return 3;
+        }
+
+        return Math.Clamp(featureFlagService.Current.StuckRecoveryV2.BacktrackSteps, 1, 12);
     }
 }

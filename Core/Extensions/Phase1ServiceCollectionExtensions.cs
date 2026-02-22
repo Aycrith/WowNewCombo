@@ -3,6 +3,7 @@ using System;
 using Core.FeatureFlags;
 using Core.GoalsComponent;
 using Core.LLM;
+using Core.Navigation;
 using Core.Performance;
 using Core.Resilience;
 
@@ -51,6 +52,9 @@ public static class Phase1ServiceCollectionExtensions
 
         // Register breadcrumb tracker (transient - each Navigation gets its own instance)
         services.AddTransient<BreadcrumbTracker>();
+
+        // Register navigation soak metrics service (scoped - per bot session)
+        services.AddScoped<NavSoakMetricsService>();
 
         // Register LLM services (disabled by default, controlled by HybridLLMDecisionOptions)
         services.AddSingleton<ILLMClient, NullLLMClient>();
