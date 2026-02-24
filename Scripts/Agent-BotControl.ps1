@@ -633,6 +633,83 @@ function Start-BlazorServer
 
     if (-not $ready)
     {
+        $healthSnapshot = $null
+        try
+        {
+            $healthSnapshot = Invoke-AgentApi -Method GET -Path "/api/health" -TimeoutSec 5
+        }
+        catch
+        {
+            $healthSnapshot = $null
+        }
+
+        $stageValue = Get-StartupStageValue -Health $healthSnapshot
+        if ($stageValue -eq 7)
+        {
+            Write-WarnLine "Startup stalled in frame configuration (stage 7); attempting /api/frameconfig/auto-configure"
+
+            $frameStatusPrecheck = Invoke-AgentApiSafe -Method GET -Path "/api/frameconfig/status" -TimeoutSec 8
+            if ($frameStatusPrecheck.Success)
+            {
+                [void](Write-ArtifactJson -Name ("{0}-frameconfig-status-precheck.json" -f $script:RunTag) -Object $frameStatusPrecheck.Result)
+
+                if ([bool]$frameStatusPrecheck.Result.AddonNotVisible)
+                {
+                    $zeroSnap = Invoke-AgentApiSafe -Method GET -Path "/api/test/snapshot" -TimeoutSec 10
+                    if ($zeroSnap.Success -and $zeroSnap.Result.Success -and $null -ne $zeroSnap.Result.Data -and $null -ne $zeroSnap.Result.Data.snapshot)
+                    {
+                        [void](Write-ArtifactJson -Name ("{0}-frameconfig-snapshot-precheck.json" -f $script:RunTag) -Object $zeroSnap.Result)
+                        $snap = $zeroSnap.Result.Data.snapshot
+                        if (([int]$snap.UIMapId -le 0) -and ([int]$snap.Level -le 0))
+                        {
+                            throw "Frame config blocked: addon pixels are not visible and player snapshot is zeroed (UIMapId=0, Level=0). Enter world on the WoW client and ensure DataToColor pixels are visible, then rerun."
+                        }
+                    }
+                }
+            }
+
+            try
+            {
+                $frameStatus = Invoke-AgentApiSafe -Method GET -Path "/api/frameconfig/status" -TimeoutSec 8
+                if ($frameStatus.Success)
+                {
+                    [void](Write-ArtifactJson -Name ("{0}-frameconfig-status-before.json" -f $script:RunTag) -Object $frameStatus.Result)
+                }
+
+                $autoCfg = Invoke-AgentApiSafe -Method POST -Path "/api/frameconfig/auto-configure" -Body @{} -TimeoutSec 180
+                [void](Write-ArtifactJson -Name ("{0}-frameconfig-auto-configure.json" -f $script:RunTag) -Object ([ordered]@{
+                        Success = $autoCfg.Success
+                        Error = $autoCfg.Error
+                        Data = $autoCfg.Result
+                        TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+                    }))
+
+                if (-not $autoCfg.Success)
+                {
+                    throw "Frame auto-config API call failed: $($autoCfg.Error)"
+                }
+
+                $ready = Wait-Until -Label "Startup stage Ready (after frame auto-config)" -TimeoutSec $StartupTimeoutSeconds -PollMs 1500 -Condition {
+                    try
+                    {
+                        $health = Invoke-AgentApi -Method GET -Path "/api/health" -TimeoutSec 3
+                        (Get-StartupStageValue -Health $health) -ge 9
+                    }
+                    catch
+                    {
+                        $false
+                    }
+                }
+            }
+            catch
+            {
+                Write-WarnLine "Frame auto-config recovery attempt failed: $($_.Exception.Message)"
+            }
+        }
+    }
+
+    if (-not $ready)
+    {
         throw "BlazorServer never reached StartupStage.Ready."
     }
 }
