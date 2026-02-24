@@ -373,24 +373,23 @@ public sealed class BagReader : IDisposable, IReader
         bool excludeFoodAndDrink,
         bool excludeConjuredItems)
     {
-        if (!excludeFoodAndDrink && !excludeConjuredItems)
-        {
-            return baseExcludedItemIds as FrozenSet<int> ?? baseExcludedItemIds.ToFrozenSet();
-        }
-
+        // Survival consumables should never be mailed, regardless of runtime mail flags.
+        // We still honor optional flags for compatibility, but food/drink/conjured are hard-protected.
         HashSet<int> merged = [.. baseExcludedItemIds];
 
         ReadOnlySpan<BagItem> span = CollectionsMarshal.AsSpan(BagItems);
         for (int i = 0; i < span.Length; i++)
         {
             int itemId = span[i].Item.Entry;
-            if (excludeFoodAndDrink &&
-                (foodItemIds.Contains(itemId) || drinkItemIds.Contains(itemId)))
+            bool isFoodOrDrink = foodItemIds.Contains(itemId) || drinkItemIds.Contains(itemId);
+            bool isConjured = ItemDB.ConjuredItemIds.Contains(itemId);
+
+            if (isFoodOrDrink)
             {
                 merged.Add(itemId);
             }
 
-            if (excludeConjuredItems && ItemDB.ConjuredItemIds.Contains(itemId))
+            if (isConjured)
             {
                 merged.Add(itemId);
             }

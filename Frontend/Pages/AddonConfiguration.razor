@@ -42,6 +42,16 @@
                     <input class="form-control" @bind="addonConfig.Command" />
                     <div class="form-text">Example: <code>dc</code> (commands: <code>/@addonConfig.Command</code>, <code>/@addonConfig.Command@("actions")</code>, <code>/@addonConfig.Command@("bindings")</code>)</div>
                 </div>
+
+                <div class="col-12">
+                    <div class="form-check">
+                        <input id="excludeBag1FromAutoSell" class="form-check-input" type="checkbox" @bind="addonConfig.ExcludeBag1FromAutoSell" />
+                        <label class="form-check-label" for="excludeBag1FromAutoSell">
+                            Exclude bag 1 from auto-sell (never sell junk from first equipped bag)
+                        </label>
+                    </div>
+                    <div class="form-text">Useful for reserving food, potions, and emergency supplies in a protected bag.</div>
+                </div>
             </div>
 
             <div class="mt-3 d-flex gap-2">

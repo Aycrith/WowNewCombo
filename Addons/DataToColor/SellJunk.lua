@@ -17,6 +17,11 @@ local GetContainerNumSlots = DataToColor.GetContainerNumSlots
 local GetContainerItemLink = DataToColor.GetContainerItemLink
 local GetItemInfo = GetItemInfo
 local GetCoinTextureString = GetCoinTextureString
+local tonumber = tonumber
+local ITEM_CLASS_CONSUMABLE = ITEM_CLASS_CONSUMABLE
+local LE_ITEM_CLASS_CONSUMABLE = LE_ITEM_CLASS_CONSUMABLE
+
+local HEARTHSTONE_ITEM_ID = 6948
 
 local MERCHANT_SELLING = 9999997
 local MERCHANT_SELLING_FINISHED = 9999996
@@ -28,6 +33,30 @@ mFrame:RegisterEvent("MERCHANT_CLOSED")
 local mIterationCount, mIterationInterval, mTotalPrice = 500, 0.2, 0
 local mSellJunkTicker, mBagID, mBagSlot
 local mSelling = false
+
+local function IsConsumableItemClass(itemType, itemClassId)
+    if itemClassId ~= nil then
+        if LE_ITEM_CLASS_CONSUMABLE ~= nil then
+            return itemClassId == LE_ITEM_CLASS_CONSUMABLE
+        end
+
+        return itemClassId == 0
+    end
+
+    return ITEM_CLASS_CONSUMABLE ~= nil and itemType == ITEM_CLASS_CONSUMABLE
+end
+
+local function IsProtectedSurvivalItem(itemId, itemType, itemClassId)
+    if itemId == HEARTHSTONE_ITEM_ID then
+        return true
+    end
+
+    return IsConsumableItemClass(itemType, itemClassId)
+end
+
+local function ShouldSkipAutoSellBag(bagID)
+    return bagID == 1 and DataToColor.DATA_CONFIG.EXCLUDE_BAG1_FROM_AUTO_SELL == true
+end
 
 mFrame:SetScript("OnEvent", function(self, event)
     if event == "MERCHANT_SHOW" then
@@ -68,35 +97,38 @@ function SellJunkFunc()
     local itemLink
 
     for bagID = 0, 4 do
-        for bagSlot = 1, GetContainerNumSlots(bagID) do
-            itemLink = GetContainerItemLink(bagID, bagSlot)
-            if itemLink then
-                _, _, rarity, _, _, _, _, _, _, _, itemPrice = GetItemInfo(itemLink)
-                local _, itemCount = GetContainerItemInfo(bagID, bagSlot)
-                if rarity == 0 and itemPrice ~= 0 then
-                    if not MerchantFrame:IsShown() then
-                        -- If merchant frame is not open, stop selling
-                        DataToColor:Print("Unable to sell. Merchant Frame is closed!")
-                        StopSelling()
-                        return
-                    end
+        if not ShouldSkipAutoSellBag(bagID) then
+            for bagSlot = 1, GetContainerNumSlots(bagID) do
+                itemLink = GetContainerItemLink(bagID, bagSlot)
+                if itemLink then
+                    local itemId = tonumber(itemLink:match("item:(%d+)"))
+                    local _, _, rarity, _, _, itemType, _, _, _, _, itemPrice, itemClassId = GetItemInfo(itemLink)
+                    local _, itemCount = GetContainerItemInfo(bagID, bagSlot)
+                    if not IsProtectedSurvivalItem(itemId, itemType, itemClassId) and rarity == 0 and itemPrice ~= 0 then
+                        if not MerchantFrame:IsShown() then
+                            -- If merchant frame is not open, stop selling
+                            DataToColor:Print("Unable to sell. Merchant Frame is closed!")
+                            StopSelling()
+                            return
+                        end
 
-                    soldCount = soldCount + 1
-                    UseContainerItem(bagID, bagSlot)
+                        soldCount = soldCount + 1
+                        UseContainerItem(bagID, bagSlot)
 
-                    if not mSelling then
-                        mSelling = true
-                        DataToColor.gossipQueue:push(MERCHANT_SELLING)
-                    end
+                        if not mSelling then
+                            mSelling = true
+                            DataToColor.gossipQueue:push(MERCHANT_SELLING)
+                        end
 
-                    if mSellJunkTicker._remainingIterations == mIterationCount then
-                        mTotalPrice = mTotalPrice + (itemPrice * itemCount)
-                        -- Store first sold bag slot for analysis
-                        if soldCount == 1 then
-                            mBagID, mBagSlot = bagID, bagSlot
-                            if not mSelling then
-                                mSelling = true
-                                DataToColor.gossipQueue:push(MERCHANT_SELLING)
+                        if mSellJunkTicker._remainingIterations == mIterationCount then
+                            mTotalPrice = mTotalPrice + (itemPrice * itemCount)
+                            -- Store first sold bag slot for analysis
+                            if soldCount == 1 then
+                                mBagID, mBagSlot = bagID, bagSlot
+                                if not mSelling then
+                                    mSelling = true
+                                    DataToColor.gossipQueue:push(MERCHANT_SELLING)
+                                end
                             end
                         end
                     end

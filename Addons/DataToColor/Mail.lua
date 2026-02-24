@@ -48,6 +48,10 @@ local gmatch = string.gmatch
 local GetSendMailItem = GetSendMailItem
 local MailFrameTab_OnClick = MailFrameTab_OnClick
 local SendMailSubjectEditBox = SendMailSubjectEditBox
+local ITEM_CLASS_CONSUMABLE = ITEM_CLASS_CONSUMABLE
+local LE_ITEM_CLASS_CONSUMABLE = LE_ITEM_CLASS_CONSUMABLE
+
+local HEARTHSTONE_ITEM_ID = 6948
 
 -- Mail state constants (matching C# MailReader)
 -- Note: Opened/Closed states are handled by the MailFrameShown bit, not gossip
@@ -135,6 +139,26 @@ local function IsExcludedItem(itemId)
     return mExcludedItems[itemId] == true
 end
 
+local function IsConsumableItemClass(itemType, itemClassId)
+    if itemClassId ~= nil then
+        if LE_ITEM_CLASS_CONSUMABLE ~= nil then
+            return itemClassId == LE_ITEM_CLASS_CONSUMABLE
+        end
+
+        return itemClassId == 0
+    end
+
+    return ITEM_CLASS_CONSUMABLE ~= nil and itemType == ITEM_CLASS_CONSUMABLE
+end
+
+local function IsProtectedMailItem(itemId, itemType, itemClassId)
+    if itemId == HEARTHSTONE_ITEM_ID then
+        return true
+    end
+
+    return IsConsumableItemClass(itemType, itemClassId)
+end
+
 -- Scans bags for mailable items (quality >= minQuality, not excluded, not bound)
 local function ScanForMailableItems()
     wipe(mMailableItems)
@@ -149,10 +173,10 @@ local function ScanForMailableItems()
                     -- Check if item is already bound (11th return from GetContainerItemInfo)
                     local _, _, _, _, _, _, _, _, _, _, isBound = GetContainerItemInfo(bagId, slot)
                     if not isBound then
-                        -- Check item properties: quality (3rd), bindType (14th)
-                        local _, _, quality, _, _, _, _, _, _, _, _, _, _, bindType = GetItemInfo(itemLink)
+                        -- Check item properties: quality (3rd), itemType (6th), itemClassId (12th), bindType (14th)
+                        local _, _, quality, _, _, itemType, _, _, _, _, _, itemClassId, _, bindType = GetItemInfo(itemLink)
                         -- Skip BoP (1) and Quest items (4) - these cannot be mailed
-                        if quality and quality >= mMinQuality and (not bindType or (bindType ~= 1 and bindType ~= 4)) then
+                        if quality and quality >= mMinQuality and (not bindType or (bindType ~= 1 and bindType ~= 4)) and not IsProtectedMailItem(itemId, itemType, itemClassId) then
                             mMailableItems[#mMailableItems + 1] = {
                                 bag = bagId,
                                 slot = slot,

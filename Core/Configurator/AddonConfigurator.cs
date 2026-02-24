@@ -301,9 +301,13 @@ public sealed partial class AddonConfigurator
 
         Regex cellSizeRegex = RegexCellSize();
         text = text.Replace(cellSizeRegex, "SIZE", Config.CellSize);
+        text = text.Replace("EXCLUDE_BAG1_FROM_AUTO_SELL = false",
+            $"EXCLUDE_BAG1_FROM_AUTO_SELL = {ToLuaBoolean(Config.ExcludeBag1FromAutoSell)}");
 
         File.WriteAllText(mainLuaPath, text);
     }
+
+    private static string ToLuaBoolean(bool value) => value ? "true" : "false";
 
     private void EditModulesLua()
     {

@@ -173,7 +173,8 @@ DataToColor.DATA_CONFIG = {
     DECLINE_PARTY_REQUESTS = false, -- O
     AUTO_REPAIR_ITEMS = true, -- O
     AUTO_RESURRECT = true,
-    AUTO_SELL_GREY_ITEMS = true
+    AUTO_SELL_GREY_ITEMS = true,
+    EXCLUDE_BAG1_FROM_AUTO_SELL = false
 }
 
 local FRAME_CHANGE_RATE = 5

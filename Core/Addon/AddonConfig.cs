@@ -21,6 +21,7 @@ public sealed class AddonConfig
     public string CellSize { get; set; } = "4";
     public string Title { get; set; } = "DataToColor";
     public string Command { get; set; } = "dc";
+    public bool ExcludeBag1FromAutoSell { get; set; }
 
     [JsonIgnore]
     public string CommandFlush => Command + "flush";
