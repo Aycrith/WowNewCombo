@@ -19,9 +19,9 @@ public sealed class OscillationDetector
     private readonly record struct HeadingHistoryEntry(float Heading, long Timestamp);
 
     // Oscillation detection constants
-    private const int HEADING_HISTORY_SIZE = 12;
-    private const int OSCILLATION_THRESHOLD = 6; // Direction changes in history
-    private const double OSCILLATION_RESET_TIME_MS = 2000;
+    private const int HEADING_HISTORY_SIZE = 8;
+    private const int OSCILLATION_THRESHOLD = 4; // Direction changes in history
+    private const double OSCILLATION_RESET_TIME_MS = 1500;
     private const float MIN_ANGLE_CHANGE_FOR_OSCILLATION = 0.2f; // ~11.5 degrees
 
     private readonly Queue<HeadingHistoryEntry> headingHistory = new(HEADING_HISTORY_SIZE);
@@ -78,7 +78,7 @@ public sealed class OscillationDetector
     /// </summary>
     private bool DetectOscillation()
     {
-        if (headingHistory.Count < HEADING_HISTORY_SIZE)
+        if (headingHistory.Count < Math.Max(4, HEADING_HISTORY_SIZE / 2))
             return false;
 
         int directionChanges = 0;
