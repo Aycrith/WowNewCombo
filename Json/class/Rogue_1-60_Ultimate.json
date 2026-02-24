@@ -1,5 +1,11 @@
 {
   "ClassName": "Rogue",
+  "ForwardKey": 87,
+  "BackwardKey": 83,
+  "TurnLeftKey": 65,
+  "TurnRightKey": 68,
+  "StrafeLeftKey": 37,
+  "StrafeRightKey": 39,
   "Log": false,
   "Loot": true,
   "Skin": false,
@@ -200,10 +206,11 @@
         "StopBeforeCast": true
       },
       {
-        "Name": "Shoot",
-        "Key": "0",
+        "Name": "Throw",
+        "Key": "Z",
         "Item": true,
-        "AfterCastDelay": 500,
+        "BeforeCastStop": true,
+        "AfterCastWaitMeleeRange": true,
         "Requirements": [
           "HasRangedWeapon",
           "!InMeleeRange",

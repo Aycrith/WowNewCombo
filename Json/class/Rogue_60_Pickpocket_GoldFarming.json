@@ -1,5 +1,11 @@
 {
   "ClassName": "Rogue",
+  "ForwardKey": 87,
+  "BackwardKey": 83,
+  "TurnLeftKey": 65,
+  "TurnRightKey": 68,
+  "StrafeLeftKey": 37,
+  "StrafeRightKey": 39,
   "OverridePathFilename": "",
   "Paths": [
     { "PathFilename": "GoldFarm_Felwood_Jadefire_Felcloth.json", "Requirements": ["Level >= 55"] },

@@ -1,6 +1,12 @@
 {
   "Log": false,
   "ClassName": "Rogue",
+  "ForwardKey": 87,
+  "BackwardKey": 83,
+  "TurnLeftKey": 65,
+  "TurnRightKey": 68,
+  "StrafeLeftKey": 37,
+  "StrafeRightKey": 39,
   "KeyboardOnly": true,
   "Paths": [
     {

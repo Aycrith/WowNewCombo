@@ -1,5 +1,11 @@
 {
   "ClassName": "Rogue",
+  "ForwardKey": 87,
+  "BackwardKey": 83,
+  "TurnLeftKey": 65,
+  "TurnRightKey": 68,
+  "StrafeLeftKey": 37,
+  "StrafeRightKey": 39,
   "Log": true,
   "LogBagChanges": true,
   "Loot": true,
@@ -32,13 +38,7 @@
   "PathReduceSteps": true,
 
   "Mount": { "Key": "N0" },
-
-  "ForwardKey": 87,
-  "BackwardKey": 83,
-  "TurnLeftKey": 65,
-  "TurnRightKey": 68,
-
-  "IntVariables": {
+"IntVariables": {
     "MIN_HP_EVASION%": 40,
     "MIN_HP_VANISH%": 15,
     "MIN_HP_BLIND%": 25,
@@ -199,7 +199,7 @@
         "Key": "1",
         "Slot": 1,
         "WhenUsable": true,
-        "Requirements": ["!Stealth", "Energy >= STEALTH_ENERGY", "!Swimming", "Level >= 2"],
+        "Requirements": ["!Stealth", "Energy >= STEALTH_ENERGY", "!Swimming", "Level >= 14"],
         "AfterCastWaitBuff": true
       },
       {
@@ -230,11 +230,12 @@
         "Cost": 12
       },
       {
-        "Name": "Shoot",
-        "Key": "0",
+        "Name": "Throw",
+        "Key": "Z",
         "Slot": 10,
         "Item": true,
-        "AfterCastDelay": 500,
+        "BeforeCastStop": true,
+        "AfterCastWaitMeleeRange": true,
         "Requirements": ["HasRangedWeapon", "!InMeleeRange", "!Stealth"],
         "Cost": 15
       },
@@ -401,7 +402,7 @@
         "Key": "1",
         "Slot": 1,
         "WhenUsable": true,
-        "Requirements": ["!Stealth", "!Swimming", "!InCombat", "Energy >= STEALTH_ENERGY", "Level >= 2"],
+        "Requirements": ["!Stealth", "!Swimming", "!InCombat", "Energy >= STEALTH_ENERGY", "Level >= 14"],
         "Cost": 2
       },
       {
@@ -478,7 +479,7 @@
       {
         "Name": "Sell",
         "Key": "C",
-        "Requirement": "BagGreyItem",
+        "Requirements": ["BagFullAny", "BagGreyItem"],
         "Cost": 6
       },
       {

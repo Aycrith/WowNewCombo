@@ -1,5 +1,11 @@
 {
   "ClassName": "Rogue",
+  "ForwardKey": 87,
+  "BackwardKey": 83,
+  "TurnLeftKey": 65,
+  "TurnRightKey": 68,
+  "StrafeLeftKey": 37,
+  "StrafeRightKey": 39,
   "Log": true,
   "Loot": true,
   "Skin": false,
@@ -11,13 +17,7 @@
   "NPCMaxLevels_Below": 5,
   "PathThereAndBack": true,
   "PathReduceSteps": true,
-
-  "ForwardKey": 87,
-  "BackwardKey": 83,
-  "TurnLeftKey": 65,
-  "TurnRightKey": 68,
-
-  "IntVariables": {
+"IntVariables": {
     "MIN_HP_EVASION%": 30,
     "MIN_HP_GOUGE%": 40,
     "FLEE_HP%": 15,

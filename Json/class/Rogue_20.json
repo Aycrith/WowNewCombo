@@ -1,13 +1,20 @@
 {
   "ClassName": "Rogue",
+  "ForwardKey": 87,
+  "BackwardKey": 83,
+  "TurnLeftKey": 65,
+  "TurnRightKey": 68,
+  "StrafeLeftKey": 37,
+  "StrafeRightKey": 39,
   "PathFilename": "10_Gnome.json",
   "Pull": {
     "Sequence": [
       {
-        "Name": "Shoot",
-        "Key": "9",
-        "AfterCastDelay": 1000,
-        "AfterCastWaitMeleeRange": false
+        "Name": "Throw",
+        "Key": "Z",
+        "Item": true,
+        "BeforeCastStop": true,
+        "AfterCastWaitMeleeRange": true
       }
     ]
   },
