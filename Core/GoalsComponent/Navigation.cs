@@ -751,6 +751,16 @@ public sealed partial class Navigation : IDisposable
             {
                 break;
             }
+
+            // [NEW] If the next two waypoints require a significant turn, stop popping
+            // to avoid overshooting turns while mounted
+            if (routeToNextWaypoint.Count >= 2 && TryGetUpcomingRoutePoints(out Vector3 curr, out Vector3 next))
+            {
+                if (IsSharpTurn(playerW, curr, next, SimplifyPreserveTurnRadians))
+                {
+                    break;
+                }
+            }
         }
     }
 
