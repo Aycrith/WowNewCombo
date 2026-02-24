@@ -626,9 +626,14 @@ public sealed partial class BotController : IBotController, IDisposable
 
     public void LoadClassProfile(string classFilename)
     {
-        if (InitialiseFromFile(classFilename, SelectedPathFilename))
+        // Do not carry stale per-path overrides across profile loads.
+        // Route overrides should only be applied explicitly via LoadPathProfile.
+        Dictionary<int, string> emptyPathOverrides = [];
+
+        if (InitialiseFromFile(classFilename, emptyPathOverrides))
         {
             SelectedClassFilename = classFilename;
+            SelectedPathFilename = [];
         }
 
         ProfileLoaded?.Invoke();

@@ -103,13 +103,30 @@ public sealed partial class Navigation : IDisposable
     private const double DefaultRouteResetTimeoutMs = 8_000;
     private static readonly TimeSpan DynamicDetourCooldown = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan FrontBypassCooldown = TimeSpan.FromSeconds(1.5);
+    private static readonly TimeSpan FailedReconnectCooldown = TimeSpan.FromSeconds(20);
     private const int MinRouteWaypointsForDynamicDetour = 1;
     private const float DynamicReconnectDuplicateDistance = 1.0f;
+    private const float FailedReconnectDuplicateDistance = 8.0f;
+    private const float PrecisionVerticalZDelta = 0.9f;
+    private const float PrecisionReachedDistanceMin = 0.9f;
+    private const float PrecisionReachedDistanceScale = 0.45f;
+    private const float PrecisionSteeringIgnoreDistance = 0.4f;
+    private const float PrecisionTurnLookaheadDistance = 8f;
+    private const float TightTurnPrecisionRadians = PI / 5f;
+    private const float SimplifyPreserveVerticalZDelta = 0.75f;
+    private const float SimplifyPreserveTurnRadians = PI / 6f;
+    private static readonly TimeSpan HeadingAdjustCooldown = TimeSpan.FromMilliseconds(140);
+    private static readonly TimeSpan PrecisionHeadingAdjustCooldown = TimeSpan.FromMilliseconds(90);
+    private const float HeadingAdjustImmediateDiff = PI / 7f;
+    private const float HeadingAdjustThrottleMinDiff = 0.18f;
 
     private DateTime lastDynamicDetourAttemptUtc = DateTime.MinValue;
     private DateTime lastFrontBypassUtc = DateTime.MinValue;
+    private DateTime lastFailedReconnectUtc = DateTime.MinValue;
+    private DateTime lastHeadingAdjustUtc = DateTime.MinValue;
     private int frontBypassAttemptCount;
     private int tailRecalcFailures;
+    private Vector3 lastFailedReconnectPoint;
 
     public Navigation(ILogger<Navigation> logger,
         CancellationTokenSource<GoapAgent> cts,
@@ -123,7 +140,8 @@ public sealed partial class Navigation : IDisposable
         AreaDB areaDB,
         IRouteRerouter? routeRerouter = null,
         IHumanizationProvider? humanizationProvider = null,
-        FeatureFlagService? featureFlagService = null)
+        FeatureFlagService? featureFlagService = null,
+        Core.Navigation.NavSoakMetricsService? navSoakMetricsService = null)
     {
         this.logger = logger;
         this.playerDirection = playerDirection;
@@ -144,6 +162,7 @@ public sealed partial class Navigation : IDisposable
         humanizedMover = new HumanizedMover(humanizationProvider);
 
         patherName = pather.GetType().Name;
+        navSoakMetricsService?.AttachRuntimeSources(stuckDetector, this);
 
         AvgDistance = OutDoorMinDistance;
         token = cts.Token;
@@ -209,7 +228,11 @@ public sealed partial class Navigation : IDisposable
         Vector3 targetM = WorldMapAreaDB.ToMap_FlipXY(targetW, playerReader.WorldMapArea);
         float heading = DirectionCalculator.CalculateMapHeading(playerM, targetM);
 
-        if (worldDistance < ReachedDistance(OutDoorMinDistance))
+        float reachedDistance = GetActiveReachedDistance(playerW, targetW, worldDistance);
+        float steeringIgnoreDistance = GetSteeringIgnoreDistance(playerW, targetW, worldDistance);
+        bool preciseTracking = steeringIgnoreDistance <= (PrecisionSteeringIgnoreDistance + 0.05f);
+
+        if (worldDistance < reachedDistance)
         {
             if (targetW.Z != 0 && targetW.Z != playerW.Z)
             {
@@ -217,7 +240,7 @@ public sealed partial class Navigation : IDisposable
             }
 
             if (SimplifyRouteToWaypoint)
-                ReduceByDistance(playerW, OutDoorMinDistance);
+                ReduceByDistance(playerW, reachedDistance, preciseTracking);
             else
                 routeToNextWaypoint.Pop();
 
@@ -253,7 +276,7 @@ public sealed partial class Navigation : IDisposable
                 targetM = WorldMapAreaDB.ToMap_FlipXY(targetW, playerReader.WorldMapArea);
                 heading = DirectionCalculator.CalculateMapHeading(playerM, targetM);
 
-                AdjustHeading(heading, token);
+                AdjustHeading(heading, steeringIgnoreDistance, token);
 
                 return;
             }
@@ -263,7 +286,7 @@ public sealed partial class Navigation : IDisposable
         {
             if (stuckDetector.IsGettingCloser())
             {
-                AdjustHeading(heading, token);
+                AdjustHeading(heading, steeringIgnoreDistance, token);
             }
             else
             {
@@ -589,12 +612,92 @@ public sealed partial class Navigation : IDisposable
                 : minDistance;
     }
 
-    private void ReduceByDistance(Vector3 playerW, float minDistance)
+    private float GetActiveReachedDistance(Vector3 playerW, Vector3 targetW, float worldDistance)
+    {
+        float baseDistance = ReachedDistance(OutDoorMinDistance);
+        if (!RequiresPreciseTracking(playerW, targetW, worldDistance))
+        {
+            return baseDistance;
+        }
+
+        return Max(PrecisionReachedDistanceMin, baseDistance * PrecisionReachedDistanceScale);
+    }
+
+    private float GetSteeringIgnoreDistance(Vector3 playerW, Vector3 targetW, float worldDistance)
+    {
+        return RequiresPreciseTracking(playerW, targetW, worldDistance)
+            ? PrecisionSteeringIgnoreDistance
+            : OutDoorMinDistance;
+    }
+
+    private bool RequiresPreciseTracking(Vector3 playerW, Vector3 targetW, float worldDistance)
+    {
+        if (mountHandler.IsMounted())
+        {
+            return false;
+        }
+
+        if (Abs(targetW.Z - playerW.Z) >= PrecisionVerticalZDelta)
+        {
+            return true;
+        }
+
+        if (worldDistance > PrecisionTurnLookaheadDistance)
+        {
+            return false;
+        }
+
+        if (TryGetUpcomingRoutePoints(out Vector3 current, out Vector3 next))
+        {
+            if (Abs(next.Z - current.Z) >= PrecisionVerticalZDelta)
+            {
+                return true;
+            }
+
+            if (IsSharpTurn(playerW, current, next, TightTurnPrecisionRadians))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool TryGetUpcomingRoutePoints(out Vector3 current, out Vector3 next)
+    {
+        current = default;
+        next = default;
+
+        int index = 0;
+        foreach (Vector3 point in routeToNextWaypoint)
+        {
+            if (index == 0)
+            {
+                current = point;
+            }
+            else if (index == 1)
+            {
+                next = point;
+                return true;
+            }
+
+            index++;
+        }
+
+        return false;
+    }
+
+    private void ReduceByDistance(Vector3 playerW, float minDistance, bool singlePop = false)
     {
         while (routeToNextWaypoint.Count > 0 &&
             playerW.WorldDistanceXYTo(routeToNextWaypoint.Peek()) < ReachedDistance(minDistance))
         {
             routeToNextWaypoint.Pop();
+
+            if (singlePop)
+            {
+                break;
+            }
         }
     }
 
@@ -609,6 +712,12 @@ public sealed partial class Navigation : IDisposable
 
     private void AdjustHeading(float heading, CancellationToken token)
     {
+        AdjustHeading(heading, OutDoorMinDistance, token);
+    }
+
+    private void AdjustHeading(float heading, float steeringIgnoreDistance, CancellationToken token)
+    {
+        DateTime now = DateTime.UtcNow;
         float diff1 = Abs(Tau + heading - playerReader.Direction) % Tau;
         float diff2 = Abs(heading - playerReader.Direction - Tau) % Tau;
 
@@ -639,13 +748,39 @@ public sealed partial class Navigation : IDisposable
 
         if (diff > minAngleToTurn)
         {
+            if (ShouldThrottleHeadingAdjustment(diff, steeringIgnoreDistance, now))
+            {
+                return;
+            }
+
             if (diff > minAngleToStopBeforeTurn)
             {
                 stopMoving.Stop();
             }
 
-            playerDirection.SetDirection(heading, routeToNextWaypoint.Peek(), OutDoorMinDistance, token);
+            playerDirection.SetDirection(heading, routeToNextWaypoint.Peek(), steeringIgnoreDistance, token);
+            lastHeadingAdjustUtc = now;
         }
+    }
+
+    private bool ShouldThrottleHeadingAdjustment(float diff, float steeringIgnoreDistance, DateTime now)
+    {
+        if (stuckDetector.IsCurrentlyStuck)
+        {
+            return false;
+        }
+
+        if (diff >= HeadingAdjustImmediateDiff || diff <= HeadingAdjustThrottleMinDiff)
+        {
+            return false;
+        }
+
+        TimeSpan cooldown = steeringIgnoreDistance <= (PrecisionSteeringIgnoreDistance + 0.05f)
+            ? PrecisionHeadingAdjustCooldown
+            : HeadingAdjustCooldown;
+
+        return lastHeadingAdjustUtc != DateTime.MinValue &&
+            (now - lastHeadingAdjustUtc) < cooldown;
     }
 
     private bool AdjustNextWaypointPointToClosest()
@@ -702,7 +837,13 @@ public sealed partial class Navigation : IDisposable
     private void SimplyfyRouteToWaypoint()
     {
         const bool HighQuality = false;
-        Span<Vector3> reduced = PathSimplify.Simplify(routeToNextWaypoint.ToArray(), OutDoorMinDistance / 2, HighQuality);
+        Vector3[] route = routeToNextWaypoint.ToArray();
+        if (ShouldPreserveDetailedRoute(route))
+        {
+            return;
+        }
+
+        Span<Vector3> reduced = PathSimplify.Simplify(route, OutDoorMinDistance / 2, HighQuality);
         if (debug)
             LogDebug($"{nameof(SimplyfyRouteToWaypoint)} {routeToNextWaypoint.Count} -> {reduced.Length} | HQ: {HighQuality}");
 
@@ -711,6 +852,52 @@ public sealed partial class Navigation : IDisposable
         {
             routeToNextWaypoint.Push(reduced[i]);
         }
+    }
+
+    private bool ShouldPreserveDetailedRoute(Vector3[] route)
+    {
+        if (route.Length < 3 || mountHandler.IsMounted())
+        {
+            return false;
+        }
+
+        int inspectCount = Math.Min(route.Length, 12);
+
+        for (int i = 1; i < inspectCount; i++)
+        {
+            if (Abs(route[i].Z - route[i - 1].Z) >= SimplifyPreserveVerticalZDelta)
+            {
+                return true;
+            }
+        }
+
+        for (int i = 0; i < inspectCount - 2; i++)
+        {
+            if (IsSharpTurn(route[i], route[i + 1], route[i + 2], SimplifyPreserveTurnRadians))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsSharpTurn(Vector3 from, Vector3 via, Vector3 to, float minTurnRadians)
+    {
+        Vector2 incoming = new(via.X - from.X, via.Y - from.Y);
+        Vector2 outgoing = new(to.X - via.X, to.Y - via.Y);
+
+        if (incoming.LengthSquared() < 0.01f || outgoing.LengthSquared() < 0.01f)
+        {
+            return false;
+        }
+
+        incoming = Vector2.Normalize(incoming);
+        outgoing = Vector2.Normalize(outgoing);
+
+        float dot = Math.Clamp(Vector2.Dot(incoming, outgoing), -1f, 1f);
+        float angle = MathF.Acos(dot);
+        return angle >= minTurnRadians;
     }
 
     private void UpdateTotalRoute()
@@ -767,6 +954,15 @@ public sealed partial class Navigation : IDisposable
 
                 if (IsMeaningfulDynamicDetour(localSegment, detour))
                 {
+                    Vector3 reconnectPoint = detour![^1];
+                    if (ShouldSkipReconnectPoint(reconnectPoint, now))
+                    {
+                        logger.LogDebug(
+                            "[Navigation       ] Skipping hazard detour reconnect near recent tail-recalc failure ({Reconnect})",
+                            reconnectPoint);
+                        return false;
+                    }
+
                     Vector3[] integratedRoute = BuildIntegratedDynamicRoute(detour!, remainingPath);
                     ApplyDynamicRoute(integratedRoute);
                     OnDynamicDetourApplied?.Invoke();
@@ -978,10 +1174,28 @@ public sealed partial class Navigation : IDisposable
         }
 
         Interlocked.Increment(ref tailRecalcFailures);
+        lastFailedReconnectPoint = localDetour[^1];
+        lastFailedReconnectUtc = DateTime.UtcNow;
         logger.LogWarning(
-            "[Navigation       ] Tail recalc unavailable - pather returned no usable path (failures: {FailureCount}); using stitched fallback",
-            tailRecalcFailures);
+            "[Navigation       ] Tail recalc unavailable - pather returned no usable path (failures: {FailureCount}, reconnect={Reconnect}); using stitched fallback",
+            tailRecalcFailures,
+            localDetour[^1]);
         return StitchDetourWithRemainingPath(localDetour, remainingPath, DynamicReconnectDuplicateDistance);
+    }
+
+    private bool ShouldSkipReconnectPoint(Vector3 reconnectPoint, DateTime now)
+    {
+        if (lastFailedReconnectUtc == DateTime.MinValue)
+        {
+            return false;
+        }
+
+        if ((now - lastFailedReconnectUtc) > FailedReconnectCooldown)
+        {
+            return false;
+        }
+
+        return Vector3.Distance(reconnectPoint, lastFailedReconnectPoint) <= FailedReconnectDuplicateDistance;
     }
 
     private Vector3[]? TryRecalculateTailRoute(Vector3 reconnectPoint)

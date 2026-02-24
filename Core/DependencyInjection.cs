@@ -112,6 +112,12 @@ public static class DependencyInjection
         s.ForwardSingleton<FeatureFlagService>(sp);
         s.ForwardSingleton<HazardZoneStore>(sp);
         s.ForwardSingleton<RouteRehabilitator>(sp);
+        Core.Navigation.NavSoakMetricsService? navSoakMetricsService =
+            sp.GetService<Core.Navigation.NavSoakMetricsService>();
+        if (navSoakMetricsService != null)
+        {
+            s.AddSingleton(navSoakMetricsService);
+        }
         IRouteRerouter? routeRerouter = sp.GetService<IRouteRerouter>();
         if (routeRerouter != null)
         {

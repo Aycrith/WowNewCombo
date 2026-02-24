@@ -20,17 +20,18 @@ public sealed class NavSoakMetricsService : IDisposable
 {
     private static readonly TimeSpan DefaultWindowDuration = TimeSpan.FromMinutes(10);
     private const float RepeatStuckRadius = 10f;
+    private readonly object sync = new();
 
     private readonly ILogger<NavSoakMetricsService> logger;
-    private readonly StuckDetector stuckDetector;
-    private readonly Goals.Navigation navigation;
     private readonly string outputDir;
     private readonly TimeSpan windowDuration;
-    private readonly string artifactPath;
-    private readonly DateTime soakStart = DateTime.UtcNow;
     private readonly List<NavSoakWindow> completedWindows = new();
     private readonly JsonSerializerOptions jsonOptions = new() { WriteIndented = true };
+    private readonly HashSet<Goals.Navigation> attachedNavigations = [];
 
+    private StuckDetector? stuckDetector;
+    private string artifactPath = string.Empty;
+    private DateTime soakStart;
     private int frontBypassActivations;
     private int successfulReconnects;
     private int stuckEvents;
@@ -53,37 +54,27 @@ public sealed class NavSoakMetricsService : IDisposable
         TimeSpan? windowDuration = null)
     {
         this.logger = logger;
-        this.stuckDetector = stuckDetector;
-        this.navigation = navigation;
-        this.outputDir = outputDir ?? "logs";
+        this.outputDir = ResolveOutputDir(outputDir ?? "logs");
         this.windowDuration = windowDuration ?? DefaultWindowDuration;
-        artifactPath = Path.Combine(this.outputDir,
-            $"soak-nav-{soakStart:yyyyMMdd-HHmmss}.json");
-        windowStart = soakStart;
+        ResetSessionStateLocked();
 
-        // Wire event handlers only if dependencies are available (may be null during Phase 1)
-        if (stuckDetector != null)
-            stuckDetector.OnStuckDetected += HandleStuckDetected;
-
-        if (navigation != null)
+        if (stuckDetector != null && navigation != null)
         {
-            navigation.OnDynamicDetourApplied += HandleDetourApplied;
-            navigation.OnSuccessfulReconnect += HandleSuccessfulReconnect;
+            AttachRuntimeSources(stuckDetector, navigation);
+        }
+        else
+        {
+            logger.LogDebug("[NavSoakMetrics ] Initialized with missing dependencies; awaiting session attachment");
         }
 
-        if (stuckDetector == null || navigation == null)
-            logger.LogDebug("[NavSoakMetrics ] Initialized with missing dependencies; will activate when available");
+        logger.LogDebug("[NavSoakMetrics ] Output directory: {OutputDir}", this.outputDir);
     }
 
     public void Dispose()
     {
-        if (stuckDetector != null)
-            stuckDetector.OnStuckDetected -= HandleStuckDetected;
-
-        if (navigation != null)
+        lock (sync)
         {
-            navigation.OnDynamicDetourApplied -= HandleDetourApplied;
-            navigation.OnSuccessfulReconnect -= HandleSuccessfulReconnect;
+            DetachAllLocked();
         }
     }
 
@@ -93,34 +84,89 @@ public sealed class NavSoakMetricsService : IDisposable
         await WriteArtifactAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Late-binds the telemetry service to the active session runtime sources.
+    /// Supports multiple transient Navigation instances per session while using
+    /// StuckDetector identity to detect session boundaries.
+    /// </summary>
+    public void AttachRuntimeSources(StuckDetector sessionStuckDetector, Goals.Navigation sessionNavigation)
+    {
+        bool attachedNewNavigation = false;
+        bool startedNewSession = false;
+
+        lock (sync)
+        {
+            if (!ReferenceEquals(stuckDetector, sessionStuckDetector))
+            {
+                DetachAllLocked();
+                ResetSessionStateLocked();
+
+                stuckDetector = sessionStuckDetector;
+                stuckDetector.OnStuckDetected += HandleStuckDetected;
+                startedNewSession = true;
+            }
+
+            if (attachedNavigations.Add(sessionNavigation))
+            {
+                sessionNavigation.OnDynamicDetourApplied += HandleDetourApplied;
+                sessionNavigation.OnSuccessfulReconnect += HandleSuccessfulReconnect;
+                attachedNewNavigation = true;
+            }
+        }
+
+        if (startedNewSession)
+        {
+            logger.LogInformation("[NavSoakMetrics ] Attached to new session telemetry sources");
+        }
+        else if (attachedNewNavigation)
+        {
+            logger.LogDebug("[NavSoakMetrics ] Attached additional Navigation instance");
+        }
+    }
+
     private void HandleStuckDetected(StuckEventData data)
     {
-        Interlocked.Increment(ref stuckEvents);
+        lock (sync)
+        {
+            stuckEvents++;
 
-        float dx = data.Position.X - lastStuckPosition.X;
-        float dy = data.Position.Y - lastStuckPosition.Y;
-        if (MathF.Sqrt((dx * dx) + (dy * dy)) <= RepeatStuckRadius)
-            Interlocked.Increment(ref repeatStuckCount);
+            float dx = data.Position.X - lastStuckPosition.X;
+            float dy = data.Position.Y - lastStuckPosition.Y;
+            if (MathF.Sqrt((dx * dx) + (dy * dy)) <= RepeatStuckRadius)
+                repeatStuckCount++;
 
-        lastStuckPosition = data.Position;
+            lastStuckPosition = data.Position;
+        }
         MaybeCloseWindow();
     }
 
     private void HandleDetourApplied()
     {
-        Interlocked.Increment(ref frontBypassActivations);
+        lock (sync)
+        {
+            frontBypassActivations++;
+        }
         MaybeCloseWindow();
     }
 
     private void HandleSuccessfulReconnect()
     {
-        Interlocked.Increment(ref successfulReconnects);
+        lock (sync)
+        {
+            successfulReconnects++;
+        }
         MaybeCloseWindow();
     }
 
     private void MaybeCloseWindow()
     {
-        if (DateTime.UtcNow - windowStart < windowDuration)
+        bool shouldClose;
+        lock (sync)
+        {
+            shouldClose = (DateTime.UtcNow - windowStart) >= windowDuration;
+        }
+
+        if (!shouldClose)
             return;
 
         CloseCurrentWindow();
@@ -129,27 +175,43 @@ public sealed class NavSoakMetricsService : IDisposable
 
     private void CloseCurrentWindow()
     {
-        NavSoakWindow window = new()
-        {
-            WindowStartUtc = windowStart,
-            WindowEndUtc = DateTime.UtcNow,
-            FrontBypassActivations = frontBypassActivations,
-            SuccessfulReconnects = successfulReconnects,
-            StuckEvents = stuckEvents,
-            RepeatStuckCount = repeatStuckCount,
-            TailRecalcFailures = navigation.TailRecalcFailures
-        };
-        completedWindows.Add(window);
+        NavSoakWindow? window = null;
 
-        Interlocked.Exchange(ref frontBypassActivations, 0);
-        Interlocked.Exchange(ref successfulReconnects, 0);
-        Interlocked.Exchange(ref stuckEvents, 0);
-        Interlocked.Exchange(ref repeatStuckCount, 0);
-        windowStart = DateTime.UtcNow;
+        lock (sync)
+        {
+            if (stuckDetector == null || attachedNavigations.Count == 0)
+            {
+                return;
+            }
+
+            int tailRecalcFailures = 0;
+            foreach (Goals.Navigation nav in attachedNavigations)
+            {
+                tailRecalcFailures += nav.TailRecalcFailures;
+            }
+
+            window = new NavSoakWindow
+            {
+                WindowStartUtc = windowStart,
+                WindowEndUtc = DateTime.UtcNow,
+                FrontBypassActivations = frontBypassActivations,
+                SuccessfulReconnects = successfulReconnects,
+                StuckEvents = stuckEvents,
+                RepeatStuckCount = repeatStuckCount,
+                TailRecalcFailures = tailRecalcFailures
+            };
+            completedWindows.Add(window);
+
+            frontBypassActivations = 0;
+            successfulReconnects = 0;
+            stuckEvents = 0;
+            repeatStuckCount = 0;
+            windowStart = DateTime.UtcNow;
+        }
 
         logger.LogInformation(
             "[NavSoakMetrics ] Window closed: Bypass={Bypass} Reconnects={Reconnects} Stuck={Stuck} RepeatRate={Rate:F4}",
-            window.FrontBypassActivations,
+            window!.FrontBypassActivations,
             window.SuccessfulReconnects,
             window.StuckEvents,
             window.RepeatStuckRate);
@@ -159,9 +221,21 @@ public sealed class NavSoakMetricsService : IDisposable
     {
         try
         {
-            Directory.CreateDirectory(outputDir);
+            object artifact;
+            lock (sync)
+            {
+                if (string.IsNullOrWhiteSpace(artifactPath) || completedWindows.Count == 0)
+                    return;
 
-            object artifact = new { SoakStartUtc = soakStart, SoakEndUtc = DateTime.UtcNow, Windows = completedWindows };
+                artifact = new
+                {
+                    SoakStartUtc = soakStart,
+                    SoakEndUtc = DateTime.UtcNow,
+                    Windows = completedWindows.ToArray()
+                };
+            }
+
+            Directory.CreateDirectory(outputDir);
 
             await using FileStream stream = new(
                 artifactPath, FileMode.Create, FileAccess.Write,
@@ -175,5 +249,58 @@ public sealed class NavSoakMetricsService : IDisposable
         {
             logger.LogError(ex, "[NavSoakMetrics ] Failed to write soak artifact");
         }
+    }
+
+    private void ResetSessionStateLocked()
+    {
+        soakStart = DateTime.UtcNow;
+        windowStart = soakStart;
+        artifactPath = Path.Combine(outputDir, $"soak-nav-{soakStart:yyyyMMdd-HHmmss}.json");
+        completedWindows.Clear();
+        frontBypassActivations = 0;
+        successfulReconnects = 0;
+        stuckEvents = 0;
+        repeatStuckCount = 0;
+        lastStuckPosition = default;
+    }
+
+    private static string ResolveOutputDir(string configuredOutputDir)
+    {
+        if (Path.IsPathRooted(configuredOutputDir))
+        {
+            return configuredOutputDir;
+        }
+
+        string baseDir = AppContext.BaseDirectory;
+        DirectoryInfo? current = new(baseDir);
+        while (current != null)
+        {
+            string solutionPath = Path.Combine(current.FullName, "MasterOfPuppets.sln");
+            if (File.Exists(solutionPath))
+            {
+                return Path.GetFullPath(Path.Combine(current.FullName, configuredOutputDir));
+            }
+
+            current = current.Parent;
+        }
+
+        return configuredOutputDir;
+    }
+
+    private void DetachAllLocked()
+    {
+        if (stuckDetector != null)
+        {
+            stuckDetector.OnStuckDetected -= HandleStuckDetected;
+            stuckDetector = null;
+        }
+
+        foreach (Goals.Navigation nav in attachedNavigations)
+        {
+            nav.OnDynamicDetourApplied -= HandleDetourApplied;
+            nav.OnSuccessfulReconnect -= HandleSuccessfulReconnect;
+        }
+
+        attachedNavigations.Clear();
     }
 }

@@ -53,8 +53,9 @@ public static class Phase1ServiceCollectionExtensions
         // Register breadcrumb tracker (transient - each Navigation gets its own instance)
         services.AddTransient<BreadcrumbTracker>();
 
-        // Register navigation soak metrics service (scoped - per bot session)
-        services.AddScoped<NavSoakMetricsService>();
+        // Register navigation soak metrics service as a singleton UI/session bridge.
+        // It late-binds to the active bot session's StuckDetector/Navigation instances.
+        services.AddSingleton<NavSoakMetricsService>();
 
         // Register LLM services (disabled by default, controlled by HybridLLMDecisionOptions)
         services.AddSingleton<ILLMClient, NullLLMClient>();
