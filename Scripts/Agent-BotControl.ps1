@@ -484,12 +484,31 @@ function Get-LaunchStatusCode([object]$Check)
         return -1
     }
 
-    if ($Check.Status -is [int])
+    if ($null -eq $Check.Status)
     {
-        return [int]$Check.Status
+        return -1
     }
 
-    $statusText = "$($Check.Status)"
+    $statusValue = $Check.Status
+    if ($statusValue -is [System.IConvertible] -and $statusValue -isnot [string])
+    {
+        try
+        {
+            return [int]$statusValue
+        }
+        catch
+        {
+            # Fall through to text parsing.
+        }
+    }
+
+    $parsedNumericStatus = 0
+    $statusText = "$statusValue"
+    if ([int]::TryParse($statusText, [ref]$parsedNumericStatus))
+    {
+        return $parsedNumericStatus
+    }
+
     switch ($statusText)
     {
         "Pending" { return 1 }
@@ -519,6 +538,82 @@ function Set-LaunchOverrides
 
     $null = Invoke-AgentApi -Method POST -Path "/api/launch/overrides" -Body $body
     Write-Ok "Launch overrides applied"
+}
+
+function Set-ActionBarBypassOverride
+{
+    param(
+        [Parameter(Mandatory = $true)][bool]$Enabled,
+        [string]$Reason = "agent-cli-dynamic-actionbar"
+    )
+
+    $body = @{
+        AllowStartWithWarnings = [bool]$AllowStartWithWarnings
+        EmergencyBypassAll = $false
+        Bypass = @{
+            Route = $false
+            ActionBar = $Enabled
+            KeyBindings = $false
+        }
+        Reason = $Reason
+        Source = "Agent-BotControl"
+    }
+
+    $null = Invoke-AgentApi -Method POST -Path "/api/launch/overrides" -Body $body
+}
+
+function Try-ResolveBenignActionBarBlocker
+{
+    try
+    {
+        $diag = Invoke-AgentApi -Method GET -Path "/api/diagnostics/actionbar" -TimeoutSec 8
+        if ($null -eq $diag -or [int]$diag.IssueCount -ne 1 -or $null -eq $diag.Issues -or $diag.Issues.Count -ne 1)
+        {
+            return $false
+        }
+
+        $issue = $diag.Issues[0]
+        $spellName = "$($issue.SpellName)"
+        $status = "$($issue.Status)"
+        $canResolve = [bool]$issue.CanResolve
+        $slot = [int]$issue.Slot
+
+        if (-not $canResolve -or $status -ne "EmptySlot" -or $spellName -ne "Stealth")
+        {
+            return $false
+        }
+
+        Write-WarnLine "Detected persistent benign Action Bar blocker ($spellName slot $slot empty); attempting targeted place"
+
+        try
+        {
+            $null = Invoke-AgentApi -Method POST -Path "/api/diagnostics/fix/place" -TimeoutSec 15 -Body @{
+                slot = $slot
+                name = $spellName
+            }
+            Start-Sleep -Seconds 1
+        }
+        catch
+        {
+            Write-WarnLine "Targeted fix/place failed for $spellName slot ${slot}: $($_.Exception.Message)"
+        }
+
+        $recheck = Invoke-AgentApi -Method GET -Path "/api/diagnostics/actionbar" -TimeoutSec 8
+        if ($null -ne $recheck -and [int]$recheck.IssueCount -eq 0)
+        {
+            Write-Ok "Action Bar issue resolved by targeted placement"
+            return $true
+        }
+
+        Write-WarnLine "Applying Action Bar bypass override for persistent '$spellName' empty-slot blocker"
+        Set-ActionBarBypassOverride -Enabled $true -Reason "agent-cli-stealth-slot-bypass"
+        return $true
+    }
+    catch
+    {
+        Write-WarnLine "Action Bar blocker analysis failed: $($_.Exception.Message)"
+        return $false
+    }
 }
 
 function Load-BotProfile
@@ -572,6 +667,7 @@ function Wait-ForReadiness
     $deadline = (Get-Date).AddSeconds($ReadinessTimeoutSeconds)
     $attempt = 0
     $lastBlocking = @()
+    $actionBarBypassApplied = $false
 
     while ((Get-Date) -lt $deadline)
     {
@@ -612,6 +708,14 @@ function Wait-ForReadiness
 
             Write-WarnLine "Readiness not complete (attempt $attempt); reapplying startup fixes"
             Invoke-ReadinessFixes
+
+            if ($actionStatus -eq 4 -and -not $actionBarBypassApplied)
+            {
+                if (Try-ResolveBenignActionBarBlocker)
+                {
+                    $actionBarBypassApplied = $true
+                }
+            }
         }
 
         Start-Sleep -Seconds 3

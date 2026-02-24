@@ -84,7 +84,7 @@ public sealed class LaunchController : ControllerBase
     public sealed record LaunchOverrideRequest(
         bool AllowStartWithWarnings,
         bool EmergencyBypassAll,
-        Dictionary<LaunchSubsystem, bool>? Bypass,
+        Dictionary<string, bool>? Bypass,
         string? Reason,
         string? Source);
 
@@ -101,11 +101,36 @@ public sealed class LaunchController : ControllerBase
         {
             foreach (var kvp in request.Bypass)
             {
-                overrides.SetBypass(kvp.Key, kvp.Value, reason, source);
+                if (TryParseLaunchSubsystemKey(kvp.Key, out LaunchSubsystem subsystem))
+                {
+                    overrides.SetBypass(subsystem, kvp.Value, reason, source);
+                }
+                else
+                {
+                    logger.LogWarning("[LaunchController] Ignoring unknown launch bypass key '{Key}'", kvp.Key);
+                }
             }
         }
 
         return Ok(new { Success = true });
+    }
+
+    private static bool TryParseLaunchSubsystemKey(string key, out LaunchSubsystem subsystem)
+    {
+        if (Enum.TryParse(key, ignoreCase: true, out subsystem))
+        {
+            return true;
+        }
+
+        if (int.TryParse(key, out int numeric) &&
+            Enum.IsDefined(typeof(LaunchSubsystem), numeric))
+        {
+            subsystem = (LaunchSubsystem)numeric;
+            return true;
+        }
+
+        subsystem = default;
+        return false;
     }
 
     [HttpPost("overrides/reset")]
