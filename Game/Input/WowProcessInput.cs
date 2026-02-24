@@ -7,6 +7,7 @@ using SixLabors.ImageSharp;
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Threading;
 
 using WinAPI;
@@ -58,6 +59,52 @@ public sealed partial class WowProcessInput : IMouseInput, IDisposable
         lock (keysDown)
         {
             keysDown.SetAll(false);
+        }
+    }
+
+    public (bool Enabled, bool FocusGuard, bool HybridModifiers, bool EmitWmChar) GetInputSecurityState()
+    {
+        return nativeInput.GetInputSecurityState();
+    }
+
+    public void SetBackgroundCompatibleInputMode(bool enabled)
+    {
+        nativeInput.SetBackgroundCompatibleMode(enabled);
+    }
+
+    public void EmergencyReleaseAllKeys()
+    {
+        List<ConsoleKey> pressed = [];
+
+        lock (keysDown)
+        {
+            for (int i = 0; i < keysDown.Length; i++)
+            {
+                if (!keysDown[i])
+                {
+                    continue;
+                }
+
+                keysDown[i] = false;
+                pressed.Add((ConsoleKey)i);
+            }
+        }
+
+        foreach (ConsoleKey key in pressed)
+        {
+            try
+            {
+                nativeInput.KeyUp((int)key);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "[WowProcessInput   ] Emergency key release failed for {Key}", key);
+            }
+        }
+
+        if (pressed.Count > 0)
+        {
+            logger.LogWarning("[WowProcessInput   ] Emergency released {Count} held keys", pressed.Count);
         }
     }
 

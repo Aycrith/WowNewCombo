@@ -46,6 +46,9 @@ public static partial class NativeMethods
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool SetForegroundWindow(nint hWnd);
 
+    [LibraryImport("user32.dll")]
+    public static partial short GetAsyncKeyState(int vKey);
+
     [LibraryImport("user32.dll", EntryPoint = "PostMessageA")]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool PostMessage(nint hWnd, uint Msg, int wParam, int lParam);

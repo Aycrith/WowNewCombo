@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 
 using WinAPI;
 
@@ -26,10 +28,7 @@ public sealed class ProfileManager
     public IEnumerable<string> GetClassFiles()
     {
         string root = Path.Join(dataConfig.Class, Path.DirectorySeparatorChar.ToString());
-        List<string> files = Directory.EnumerateFiles(root, "*.json*", SearchOption.AllDirectories)
-            .Select(path => path.Replace(root, string.Empty))
-            .OrderBy(x => x, new NaturalStringComparer())
-            .ToList();
+        List<string> files = EnumerateJsonFilesSafe(root);
 
         files.Insert(0, "Press Init State first!");
         return files;
@@ -41,10 +40,7 @@ public sealed class ProfileManager
     public IEnumerable<string> GetPathFiles()
     {
         string root = Path.Join(dataConfig.Path, Path.DirectorySeparatorChar.ToString());
-        List<string> files = Directory.EnumerateFiles(root, "*.json*", SearchOption.AllDirectories)
-            .Select(path => path.Replace(root, string.Empty))
-            .OrderBy(x => x, new NaturalStringComparer())
-            .ToList();
+        List<string> files = EnumerateJsonFilesSafe(root);
 
         files.Insert(0, "Use Class Profile Default");
         return files;
@@ -59,5 +55,42 @@ public sealed class ProfileManager
     {
         string filePath = Path.Join(dataConfig.Class, classFile);
         return DeserializeObject<ClassConfiguration>(File.ReadAllText(filePath))!;
+    }
+
+    private static List<string> EnumerateJsonFilesSafe(string root)
+    {
+        if (!Directory.Exists(root))
+        {
+            return [];
+        }
+
+        for (int attempt = 0; attempt < 5; attempt++)
+        {
+            try
+            {
+                return Directory.EnumerateFiles(root, "*.json*", SearchOption.AllDirectories)
+                    .Select(path => path.Replace(root, string.Empty))
+                    .OrderBy(x => x, new NaturalStringComparer())
+                    .ToList();
+            }
+            catch (IOException) when (attempt < 4)
+            {
+                Thread.Sleep(25 * (attempt + 1));
+            }
+            catch (UnauthorizedAccessException) when (attempt < 4)
+            {
+                Thread.Sleep(25 * (attempt + 1));
+            }
+            catch (IOException)
+            {
+                break;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                break;
+            }
+        }
+
+        return [];
     }
 }

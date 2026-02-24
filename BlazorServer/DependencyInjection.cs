@@ -62,6 +62,7 @@ public static class DependencyInjection
         // Background services
         services.AddHostedService<ProcessCleanupService>();
         services.AddHostedService<HealthMonitor>();
+        services.AddHostedService<GlobalHotkeyKillSwitchService>();
         services.AddHostedService<StartupHostedService>();
 
         return services;

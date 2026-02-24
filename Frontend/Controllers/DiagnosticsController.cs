@@ -36,6 +36,16 @@ public record KeybindDiagnostics(
     IReadOnlyCollection<BindingInfo> Bindings,
     IReadOnlyCollection<MismatchInfo> Mismatches);
 
+public record InputSecurityModeInfo(
+    string Mode,
+    bool BackgroundCompatible,
+    bool Enabled,
+    bool FocusGuard,
+    bool HybridModifiers,
+    bool EmitWmChar);
+
+public record SetInputSecurityModeRequest(bool BackgroundCompatible);
+
 public record ActionBarIssueDto(
     string SpellName,
     int Slot,
@@ -1219,6 +1229,69 @@ public class DiagnosticsController : ControllerBase
             logger.LogError(ex, "Auto-fix sequence failed at step {StepCount}", steps.Count + 1);
             sw.Stop();
             return StatusCode(500, new FixResult(false, $"{ex.Message} (after {steps.Count} steps)"));
+        }
+    }
+
+    /// <summary>
+    /// GET /api/diagnostics/input-mode
+    /// Returns current runtime input dispatch mode (foreground-safe vs background-compatible).
+    /// </summary>
+    [HttpGet("input-mode")]
+    public IActionResult GetInputMode()
+    {
+        try
+        {
+            var state = wowInput.GetInputSecurityState();
+            bool backgroundCompatible = !state.FocusGuard && !state.HybridModifiers;
+
+            return Ok(new InputSecurityModeInfo(
+                backgroundCompatible ? "BackgroundCompatible" : "ForegroundSafe",
+                backgroundCompatible,
+                state.Enabled,
+                state.FocusGuard,
+                state.HybridModifiers,
+                state.EmitWmChar));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Get input mode failed");
+            return StatusCode(500, new { Error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// POST /api/diagnostics/input-mode
+    /// Body: { "backgroundCompatible": true|false }
+    /// </summary>
+    [HttpPost("input-mode")]
+    public IActionResult SetInputMode([FromBody] SetInputSecurityModeRequest request)
+    {
+        try
+        {
+            wowInput.EmergencyReleaseAllKeys();
+            wowInput.SetBackgroundCompatibleInputMode(request.BackgroundCompatible);
+
+            var state = wowInput.GetInputSecurityState();
+            bool backgroundCompatible = !state.FocusGuard && !state.HybridModifiers;
+
+            logger.LogWarning(
+                "[Diagnostics       ] Input mode set to {Mode} (FocusGuard={FocusGuard}, HybridModifiers={HybridModifiers})",
+                backgroundCompatible ? "BackgroundCompatible" : "ForegroundSafe",
+                state.FocusGuard,
+                state.HybridModifiers);
+
+            return Ok(new InputSecurityModeInfo(
+                backgroundCompatible ? "BackgroundCompatible" : "ForegroundSafe",
+                backgroundCompatible,
+                state.Enabled,
+                state.FocusGuard,
+                state.HybridModifiers,
+                state.EmitWmChar));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Set input mode failed");
+            return StatusCode(500, new { Error = ex.Message });
         }
     }
 

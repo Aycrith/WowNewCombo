@@ -24,6 +24,7 @@ namespace Game;
 /// </summary>
 public sealed class InputWindowsNative : IInput, IDisposable
 {
+    private readonly object securitySync = new();
     private readonly int maxDelay;
     private readonly WowProcess process;
     private readonly CancellationToken token;
@@ -84,6 +85,43 @@ public sealed class InputWindowsNative : IInput, IDisposable
                     null); // Logger is optional, pass null for now
             }
         }
+    }
+
+    public (bool Enabled, bool FocusGuard, bool HybridModifiers, bool EmitWmChar) GetInputSecurityState()
+    {
+        lock (securitySync)
+        {
+            return (
+                securityOptions.Enabled,
+                securityOptions.FocusGuard,
+                securityOptions.HybridModifiers,
+                securityOptions.EmitWmChar);
+        }
+    }
+
+    public void SetBackgroundCompatibleMode(bool enabled)
+    {
+        lock (securitySync)
+        {
+            if (enabled)
+            {
+                // Background-compatible mode must avoid foreground-only/system-level modifier injection.
+                securityOptions.FocusGuard = false;
+                securityOptions.HybridModifiers = false;
+            }
+            else
+            {
+                // Restore safer defaults for focused/foreground play.
+                securityOptions.FocusGuard = true;
+                securityOptions.HybridModifiers = true;
+            }
+        }
+
+        logger?.LogInformation(
+            "[InputSecurity] Mode={Mode} (FocusGuard={FocusGuard}, HybridModifiers={HybridModifiers})",
+            enabled ? "BackgroundCompatible" : "ForegroundSafe",
+            securityOptions.FocusGuard,
+            securityOptions.HybridModifiers);
     }
 
     private int DelayTime(int milliseconds)
