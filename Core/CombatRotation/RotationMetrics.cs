@@ -69,6 +69,10 @@ public sealed class AbilityUsageStat
         {
             initial = totalScore;
             updated = initial + score;
+            if (!float.IsFinite(updated))
+            {
+                updated = initial;
+            }
         } while (Interlocked.CompareExchange(ref totalScore, updated, initial) != initial);
     }
 }
@@ -92,7 +96,7 @@ public sealed class RotationSessionMetrics
     {
         AbilityUsageStat stat = AbilityStats.GetOrAdd(abilityName, _ => new AbilityUsageStat { Name = abilityName });
         stat.IncrementAttemptCount();
-        stat.AddScore(score);
+        stat.AddScore(float.IsFinite(score) ? score : 0f);
 
         if (success)
         {
