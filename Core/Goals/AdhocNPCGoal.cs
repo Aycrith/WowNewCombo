@@ -172,7 +172,44 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
             return false;
         }
 
-        return key.CanRun();
+        if (!key.CanRun())
+        {
+            return false;
+        }
+
+        // Defensive gate: sell actions that are configured to require bag-full should not
+        // run while there are still general-purpose bag slots available, even if a profile
+        // requirement evaluates incorrectly due transient bag meta state.
+        if (RequiresBagFullSellGate() && bagReader.TotalFreeGeneralSlotCount() > 0)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool RequiresBagFullSellGate()
+    {
+        if (!key.Name.Contains("Sell", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(key.Requirement) &&
+            key.Requirement.Contains("BagFull", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        foreach (string requirement in key.Requirements)
+        {
+            if (requirement.Contains("BagFull", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public void OnGoapEvent(GoapEventArgs e)

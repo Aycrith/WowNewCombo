@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 
 using SharedLib;
 using SharedLib.Data;
+using SharedLib.Extensions;
 
 using System;
 using System.Numerics;
@@ -35,8 +36,11 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
     private const int CorpseRetrieveRetryMs = 3000;
     private const int SpiritHealerInteractRetryMs = 5000;
     private const float SpiritHealerInteractDistanceYards = 7f;
+    private const float SpiritHealerLookupMaxDistanceYards = 500f;
+    private const float CorpseRetrieveConfirmDistanceYards = 35f;
     private bool navigatedToSpiritHealer;
     private Vector3 spiritHealerWorldPos;
+    private string spiritHealerName = string.Empty;
 
     #region IRouteProvider
 
@@ -108,13 +112,27 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
 
         wait.While(AliveOrLoadingScreen);
 
+        Vector3 playerWorldPos = playerReader.WorldPos;
         (Creature npc, Vector3 worldPos)
-            = areaDB.FindClosestCreatureByNpcFlag(NpcFlags.SpiritHealer, playerReader.WorldPos);
+            = areaDB.FindClosestCreatureByNpcFlag(NpcFlags.SpiritHealer, playerWorldPos);
+
+        float spiritHealerLookupDistance = worldPos.WorldDistanceXYTo(playerWorldPos);
+        if (worldPos == default || spiritHealerLookupDistance > SpiritHealerLookupMaxDistanceYards)
+        {
+            logger.LogWarning(
+                "Spirit healer lookup returned suspicious target {SpiritHealerPos} ({Distance:F1}y from player). Using player ghost position fallback {PlayerPos}",
+                worldPos,
+                spiritHealerLookupDistance,
+                playerWorldPos);
+
+            worldPos = new Vector3(playerWorldPos.X, playerWorldPos.Y, worldPos.Z);
+        }
 
         Log($"Player teleported to the graveyard! {worldPos}");
 
         playerReader.WorldPosZ = worldPos.Z;
         spiritHealerWorldPos = worldPos;
+        spiritHealerName = npc.Name ?? string.Empty;
         navigatedToSpiritHealer = false;
 
         Vector3 corpseLocation = playerReader.CorpseMapPos;
@@ -148,8 +166,17 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
 
     public override void Update()
     {
-        if (!bits.CorpseInRange())
+        if (!IsCorpseInRetrieveRange())
         {
+            if (IsNearSpiritHealerForInteraction())
+            {
+                stopMoving.Stop();
+                navigation.ResetStuckParameters();
+                TryInteractSpiritHealer();
+                wait.Update();
+                return;
+            }
+
             if (!navigatedToSpiritHealer &&
                 (DateTime.UtcNow - onEnterTime).TotalSeconds > CorpseWalkTimeoutSec)
             {
@@ -167,8 +194,6 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
             navigation.ResetStuckParameters();
             TryRetrieveCorpse();
         }
-
-        RandomJump();
 
         wait.Update();
     }
@@ -196,6 +221,42 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
         execGameCommand.Run("/run RetrieveCorpse()", logMessage: null);
     }
 
+    private bool IsCorpseInRetrieveRange()
+    {
+        if (!bits.CorpseInRange())
+        {
+            return false;
+        }
+
+        Vector3 corpseMapPos = playerReader.CorpseMapPos;
+        if (corpseMapPos == Vector3.Zero)
+        {
+            return true;
+        }
+
+        Vector3 corpseWorldPos = WorldMapAreaDB.ToWorld_FlipXY(corpseMapPos, playerReader.WorldMapArea);
+        if (corpseWorldPos == default)
+        {
+            return true;
+        }
+
+        float corpseDistance = playerReader.WorldPos.WorldDistanceXYTo(corpseWorldPos);
+        if (!float.IsFinite(corpseDistance))
+        {
+            return true;
+        }
+
+        if (corpseDistance <= CorpseRetrieveConfirmDistanceYards)
+        {
+            return true;
+        }
+
+        logger.LogDebug(
+            "CorpseInRange bit reported true but corpse is still {Distance:F1}y away; continuing corpse navigation",
+            corpseDistance);
+        return false;
+    }
+
     private void TryInteractSpiritHealer()
     {
         if (!navigatedToSpiritHealer || DateTime.UtcNow < nextSpiritHealerInteractUtc || !bits.Dead())
@@ -203,7 +264,7 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
             return;
         }
 
-        float distanceToSpiritHealer = Vector3.Distance(playerReader.WorldPos, spiritHealerWorldPos);
+        float distanceToSpiritHealer = playerReader.WorldPos.WorldDistanceXYTo(spiritHealerWorldPos);
         if (distanceToSpiritHealer > SpiritHealerInteractDistanceYards)
         {
             return;
@@ -212,9 +273,43 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
         nextSpiritHealerInteractUtc = DateTime.UtcNow.AddMilliseconds(SpiritHealerInteractRetryMs);
 
         Log($"Near spirit healer ({distanceToSpiritHealer:F1}y) - attempting interaction");
+        TryTargetAndInteractSpiritHealer();
         input.PressInteract();
         wait.Update();
+        TryConfirmSpiritHealerResurrection();
         execGameCommand.Run("/run RetrieveCorpse()", logMessage: null);
+    }
+
+    private bool IsNearSpiritHealerForInteraction()
+    {
+        if (!navigatedToSpiritHealer || !bits.Dead())
+        {
+            return false;
+        }
+
+        float distanceToSpiritHealer = playerReader.WorldPos.WorldDistanceXYTo(spiritHealerWorldPos);
+        return distanceToSpiritHealer <= (SpiritHealerInteractDistanceYards + 1.5f);
+    }
+
+    private void TryTargetAndInteractSpiritHealer()
+    {
+        if (!string.IsNullOrWhiteSpace(spiritHealerName))
+        {
+            execGameCommand.Run($"/targetexact {spiritHealerName}", logMessage: null);
+            wait.Update();
+        }
+
+        execGameCommand.Run("/run if UnitExists('target') then InteractUnit('target') end", logMessage: null);
+        wait.Update();
+    }
+
+    private void TryConfirmSpiritHealerResurrection()
+    {
+        const string clickSpiritPopup =
+            "/run if StaticPopup1 and StaticPopup1:IsShown() and StaticPopup1Button1 then StaticPopup1Button1:Click() end";
+
+        execGameCommand.Run(clickSpiritPopup, logMessage: null);
+        wait.Update();
     }
 
     private bool AliveOrLoadingScreen()

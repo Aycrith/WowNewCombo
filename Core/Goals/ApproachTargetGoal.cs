@@ -16,6 +16,7 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
     private const double STUCK_INTERVAL_MS = 400; // cant be lower than Approach.Cooldown
     private const double MAX_APPROACH_DURATION_MS = 15_000; // max time to chase to pull
     private const double MIN_TIME_TILL_IDLE = 2000;
+    private const int MIN_CLOSER_TARGET_RANGE_IMPROVEMENT = 8;
 
     public override float Cost => 8f;
 
@@ -281,7 +282,8 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
         }
 
         if (playerReader.TargetGuid == initialTargetGuid &&
-            !playerReader.IsInMeleeRange())
+            !playerReader.IsInMeleeRange() &&
+            !bits.Stealthed())
         {
             int initialTargetMinRange = playerReader.MinRange();
             if (!input.TargetNearestTarget.OnCooldown())
@@ -299,16 +301,26 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
                         return;
                     }
 
-                    if (playerReader.MinRange() < initialTargetMinRange)
-                    {
-                        logger.LogWarning($"Found a closer target! {playerReader.MinRange()} < {initialTargetMinRange}");
+                    int closerTargetRange = playerReader.MinRange();
+                    int rangeImprovement = initialTargetMinRange - closerTargetRange;
 
-                        initialMinRange = playerReader.MinRange();
+                    if (rangeImprovement >= MIN_CLOSER_TARGET_RANGE_IMPROVEMENT)
+                    {
+                        logger.LogWarning(
+                            "Found a meaningfully closer target! {NewRange} < {OldRange} (improvement {Improvement})",
+                            closerTargetRange,
+                            initialTargetMinRange,
+                            rangeImprovement);
+
+                        initialMinRange = closerTargetRange;
                     }
                     else
                     {
                         initialTargetGuid = -1;
-                        logger.LogWarning("Stick to initial target!");
+                        logger.LogWarning(
+                            "Stick to initial target (closer target improvement too small: {Improvement} < {Threshold})",
+                            rangeImprovement,
+                            MIN_CLOSER_TARGET_RANGE_IMPROVEMENT);
 
                         input.PressLastTargetAndWait(wait, bits.Target);
                     }

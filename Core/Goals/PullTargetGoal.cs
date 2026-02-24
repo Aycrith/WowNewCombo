@@ -16,6 +16,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
 
     private const int AcquireTargetTimeMs = 5000;
     private const int MAX_PULL_DURATION = 15_000;
+    private const int RangedPullFailureAbortCount = 4;
 
     private readonly ILogger<PullTargetGoal> logger;
     private readonly ConfigurableInput input;
@@ -40,6 +41,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
     private readonly bool requiresNpcNameFinder;
 
     private long pullStart;
+    private int consecutiveRangedPullFailures;
 
     private double PullDurationMs => GetElapsedTime(pullStart).TotalMilliseconds;
 
@@ -107,6 +109,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
     {
         wait.Update();
         stuckDetector.Reset();
+        consecutiveRangedPullFailures = 0;
 
         if (mountHandler.IsMounted())
         {
@@ -150,6 +153,11 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
     public override void Update()
     {
         wait.Update();
+
+        if (!bits.Target() || bits.Combat())
+        {
+            consecutiveRangedPullFailures = 0;
+        }
 
         if (IsGearTooBrokenToFight())
         {
@@ -215,11 +223,40 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
                 break;
             }
 
+            bool isRangedPullAction = IsRangedPullAction(keyAction);
             bool interrupt() => keyAction.CanBeInterrupted() || PullPrevention();
 
             if (castAny = castingHandler.Cast(keyAction, interrupt))
             {
                 castAny = !keyAction.BaseAction;
+                if (isRangedPullAction)
+                {
+                    consecutiveRangedPullFailures = 0;
+                }
+            }
+            else if (isRangedPullAction &&
+                bits.Target() &&
+                !bits.Combat() &&
+                !playerReader.IsInMeleeRange())
+            {
+                consecutiveRangedPullFailures++;
+
+                if (consecutiveRangedPullFailures >= RangedPullFailureAbortCount)
+                {
+                    Log($"Ranged pull '{keyAction.Name}' failed {consecutiveRangedPullFailures}x; refusing body-pull and clearing target.");
+                    input.PressStopAttack();
+                    input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
+                    consecutiveRangedPullFailures = 0;
+                    return;
+                }
+
+                logger.LogDebug(
+                    "Ranged pull '{ActionName}' failed to confirm ({FailureCount}/{MaxFailures}); retrying without approach",
+                    keyAction.Name,
+                    consecutiveRangedPullFailures,
+                    RangedPullFailureAbortCount);
+                wait.Fixed(Math.Max(playerReader.NetworkLatency, 50));
+                return;
             }
             else if (PullPrevention() &&
                 !bits.Combat() &&
@@ -294,6 +331,12 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         !bits.SoftInteract_Dead() &&
         !bits.SoftInteract_Tagged() &&
         playerReader.SoftInteract_Type == GuidType.Creature;
+
+    private static bool IsRangedPullAction(KeyAction keyAction)
+    {
+        return keyAction.Name.Equals("Shoot", StringComparison.OrdinalIgnoreCase) ||
+               keyAction.Name.Equals("Throw", StringComparison.OrdinalIgnoreCase);
+    }
 
     private void Log(string text)
     {

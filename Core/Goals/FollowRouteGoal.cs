@@ -26,6 +26,12 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
     public override bool CanRun() => pathSettings.CanRun();
 
     private const bool debug = false;
+    private const float RefillOrientationFlipPenalty = 4f;
+    private const float RefillBackwardSegmentPenalty = 6f;
+    private const int RefillBackwardSegmentGrace = 2;
+    private const float RefillAnchorTeleportResetDistance = 20f;
+    private const int RefillSameSegmentLoopLimit = 3;
+    private static readonly TimeSpan RefillSameSegmentLoopWindow = TimeSpan.FromSeconds(3);
 
     private readonly ILogger<FollowRouteGoal> logger;
     private readonly ConfigurableInput input;
@@ -69,6 +75,15 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
     private bool refillByOther;
     private bool warnedSwimming;
     private bool warnedZoneMismatch;
+    private bool hasRefillProgressAnchor;
+    private bool refillRouteReversed;
+    private int refillSegmentAnchorIndex;
+    private Vector3 refillAnchorMapPoint;
+    private bool hasRecentRefillApply;
+    private bool lastRefillAppliedReversed;
+    private int lastRefillAppliedSegmentIndex;
+    private DateTime lastRefillAppliedUtc;
+    private int repeatedSameRefillCount;
 
     #region IRouteProvider
 
@@ -191,6 +206,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
         sideActivityManualReset.Reset();
         targetFinder.Reset();
+        ResetRefillProgressAnchor();
     }
 
     private void Resume()
@@ -416,44 +432,47 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
     {
         Log($"{nameof(RefillWaypoints)} - findClosest:{onlyClosest} - ThereAndBack:{pathSettings.PathThereAndBack}");
 
+        if (mapRoute.Length == 0)
+        {
+            return;
+        }
+
         Vector3 playerMap = playerReader.MapPos;
 
-        Span<Vector3> pathMap = stackalloc Vector3[mapRoute.Length];
-        mapRoute.CopyTo(pathMap);
-
-        float mapDistanceToFirst = playerMap.MapDistanceXYTo(pathMap[0]);
-        float mapDistanceToLast = playerMap.MapDistanceXYTo(pathMap[^1]);
-
-        if (mapDistanceToLast < mapDistanceToFirst)
+        if (hasRefillProgressAnchor &&
+            playerMap.MapDistanceXYTo(refillAnchorMapPoint) > RefillAnchorTeleportResetDistance)
         {
-            pathMap.Reverse();
+            ResetRefillProgressAnchor();
         }
 
-        int closestSegmentStartIndex = 0;
-        Vector3 mapClosestPoint = pathMap[0];
-        float distance = float.MaxValue;
+        Vector3[] normalPath = mapRoute;
+        RefillCandidate normalCandidate = FindClosestRefillCandidate(normalPath, playerMap);
+        float normalScore = ScoreRefillCandidate(normalCandidate, reversed: false);
 
-        if (pathMap.Length == 1)
+        Vector3[] chosenPath = normalPath;
+        RefillCandidate chosenCandidate = normalCandidate;
+        bool chosenReversed = false;
+
+        if (mapRoute.Length > 1)
         {
-            distance = playerMap.MapDistanceXYTo(pathMap[0]);
-        }
-        else
-        {
-            Vector2 playerXY = playerMap.AsVector2();
-            for (int i = 0; i < pathMap.Length - 1; i++)
+            Vector3[] reversedPath = (Vector3[])mapRoute.Clone();
+            Array.Reverse(reversedPath);
+
+            RefillCandidate reversedCandidate = FindClosestRefillCandidate(reversedPath, playerMap);
+            float reversedScore = ScoreRefillCandidate(reversedCandidate, reversed: true);
+
+            if (reversedScore < normalScore)
             {
-                Vector3 a = pathMap[i];
-                Vector3 b = pathMap[i + 1];
-                Vector2 closestOnSegment = VectorExt.GetClosestPointOnLineSegment(a.AsVector2(), b.AsVector2(), playerXY);
-                float d = Vector2.Distance(playerXY, closestOnSegment);
-                if (d < distance)
-                {
-                    distance = d;
-                    closestSegmentStartIndex = i;
-                    mapClosestPoint = new Vector3(closestOnSegment.X, closestOnSegment.Y, 0);
-                }
+                chosenPath = reversedPath;
+                chosenCandidate = reversedCandidate;
+                chosenReversed = true;
             }
         }
+
+        int closestSegmentStartIndex = chosenCandidate.SegmentStartIndex;
+        Vector3 mapClosestPoint = chosenCandidate.MapClosestPoint;
+        ApplyRefillLoopBreaker(chosenPath, onlyClosest, chosenReversed, ref closestSegmentStartIndex, ref mapClosestPoint);
+        UpdateRefillProgressAnchor(new RefillCandidate(closestSegmentStartIndex, mapClosestPoint, chosenCandidate.DistanceToRoute), chosenReversed);
 
         if (onlyClosest)
         {
@@ -465,7 +484,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
             return;
         }
 
-        int remainingCount = pathMap.Length - (closestSegmentStartIndex + 1);
+        int remainingCount = chosenPath.Length - (closestSegmentStartIndex + 1);
         if (remainingCount <= 0)
         {
             navigation.SetWayPoints(stackalloc Vector3[1] { mapClosestPoint });
@@ -476,12 +495,139 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         points[0] = mapClosestPoint;
         for (int i = 0; i < remainingCount; i++)
         {
-            points[i + 1] = pathMap[closestSegmentStartIndex + 1 + i];
+            points[i + 1] = chosenPath[closestSegmentStartIndex + 1 + i];
         }
 
         Log($"{nameof(RefillWaypoints)} - Set destination from closest segment - with {points.Length} waypoints");
         navigation.SetWayPoints(points);
     }
+
+    private void ResetRefillProgressAnchor()
+    {
+        hasRefillProgressAnchor = false;
+        refillRouteReversed = false;
+        refillSegmentAnchorIndex = 0;
+        refillAnchorMapPoint = default;
+        hasRecentRefillApply = false;
+        lastRefillAppliedReversed = false;
+        lastRefillAppliedSegmentIndex = 0;
+        lastRefillAppliedUtc = DateTime.MinValue;
+        repeatedSameRefillCount = 0;
+    }
+
+    private void UpdateRefillProgressAnchor(RefillCandidate candidate, bool reversed)
+    {
+        hasRefillProgressAnchor = true;
+        refillRouteReversed = reversed;
+        refillSegmentAnchorIndex = candidate.SegmentStartIndex;
+        refillAnchorMapPoint = candidate.MapClosestPoint;
+    }
+
+    private void ApplyRefillLoopBreaker(
+        ReadOnlySpan<Vector3> chosenPath,
+        bool onlyClosest,
+        bool chosenReversed,
+        ref int closestSegmentStartIndex,
+        ref Vector3 mapClosestPoint)
+    {
+        if (onlyClosest)
+        {
+            return;
+        }
+
+        DateTime now = DateTime.UtcNow;
+        bool sameSegmentLoop =
+            hasRecentRefillApply &&
+            chosenReversed == lastRefillAppliedReversed &&
+            closestSegmentStartIndex == lastRefillAppliedSegmentIndex &&
+            (now - lastRefillAppliedUtc) <= RefillSameSegmentLoopWindow;
+
+        if (sameSegmentLoop)
+        {
+            repeatedSameRefillCount++;
+        }
+        else
+        {
+            repeatedSameRefillCount = 1;
+        }
+
+        hasRecentRefillApply = true;
+        lastRefillAppliedReversed = chosenReversed;
+        lastRefillAppliedSegmentIndex = closestSegmentStartIndex;
+        lastRefillAppliedUtc = now;
+
+        if (repeatedSameRefillCount < RefillSameSegmentLoopLimit)
+        {
+            return;
+        }
+
+        int advanceToPointIndex = closestSegmentStartIndex + 1;
+        if (advanceToPointIndex >= chosenPath.Length)
+        {
+            return;
+        }
+
+        LogWarning($"Refill loop detected on segment {closestSegmentStartIndex} (x{repeatedSameRefillCount}) - advancing route anchor");
+        closestSegmentStartIndex = advanceToPointIndex;
+        mapClosestPoint = chosenPath[advanceToPointIndex];
+        repeatedSameRefillCount = 0;
+    }
+
+    private float ScoreRefillCandidate(RefillCandidate candidate, bool reversed)
+    {
+        float score = candidate.DistanceToRoute;
+
+        if (!hasRefillProgressAnchor)
+        {
+            return score;
+        }
+
+        if (reversed != refillRouteReversed)
+        {
+            score += RefillOrientationFlipPenalty;
+        }
+        else
+        {
+            int backwardsSegments = refillSegmentAnchorIndex - candidate.SegmentStartIndex - RefillBackwardSegmentGrace;
+            if (backwardsSegments > 0)
+            {
+                score += backwardsSegments * RefillBackwardSegmentPenalty;
+            }
+        }
+
+        return score;
+    }
+
+    private static RefillCandidate FindClosestRefillCandidate(ReadOnlySpan<Vector3> pathMap, Vector3 playerMap)
+    {
+        if (pathMap.Length == 1)
+        {
+            return new RefillCandidate(0, pathMap[0], playerMap.MapDistanceXYTo(pathMap[0]));
+        }
+
+        Vector2 playerXY = playerMap.AsVector2();
+        int closestSegmentStartIndex = 0;
+        Vector3 mapClosestPoint = pathMap[0];
+        float bestDistance = float.MaxValue;
+
+        for (int i = 0; i < pathMap.Length - 1; i++)
+        {
+            Vector3 a = pathMap[i];
+            Vector3 b = pathMap[i + 1];
+            Vector2 closestOnSegment = VectorExt.GetClosestPointOnLineSegment(a.AsVector2(), b.AsVector2(), playerXY);
+            float distance = Vector2.Distance(playerXY, closestOnSegment);
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                closestSegmentStartIndex = i;
+                mapClosestPoint = new Vector3(closestOnSegment.X, closestOnSegment.Y, 0);
+            }
+        }
+
+        return new RefillCandidate(closestSegmentStartIndex, mapClosestPoint, bestDistance);
+    }
+
+    private readonly record struct RefillCandidate(int SegmentStartIndex, Vector3 MapClosestPoint, float DistanceToRoute);
 
     #endregion
 
@@ -497,6 +643,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         if (mapRoute.SequenceEqual(oldMap))
         {
             this.mapRoute = newMap;
+            ResetRefillProgressAnchor();
         }
     }
 
