@@ -12,6 +12,20 @@ using System.Threading.Tasks;
 
 namespace Core.Navigation;
 
+public sealed record NavSoakMetricsSnapshot(
+    bool IsAttached,
+    string ArtifactPath,
+    int CompletedWindowCount,
+    DateTime SoakStartUtc,
+    DateTime CurrentWindowStartUtc,
+    int CurrentWindowFrontBypassActivations,
+    int CurrentWindowSuccessfulReconnects,
+    int CurrentWindowStuckEvents,
+    int CurrentWindowRepeatStuckCount,
+    double CurrentWindowRepeatStuckRate,
+    float CurrentWindowMaxRouteDeviation,
+    float CurrentWindowAvgRouteDeviation);
+
 /// <summary>
 /// Session-scoped service accumulating navigation soak metrics and persisting them
 /// to logs/soak-nav-YYYYMMDD-HHmmss.json at window close and on demand.
@@ -48,6 +62,9 @@ public sealed class NavSoakMetricsService : IDisposable
     public int CurrentWindowRepeatStuckCount => repeatStuckCount;
     public double CurrentWindowRepeatStuckRate =>
         stuckEvents == 0 ? 0.0 : Math.Round((double)repeatStuckCount / stuckEvents, 4);
+    public float CurrentWindowMaxRouteDeviation => maxDeviation;
+    public float CurrentWindowAvgRouteDeviation =>
+        deviationSampleCount == 0 ? 0f : deviationSum / deviationSampleCount;
 
     public NavSoakMetricsService(
         ILogger<NavSoakMetricsService> logger,
@@ -85,6 +102,26 @@ public sealed class NavSoakMetricsService : IDisposable
     {
         CloseCurrentWindow();
         await WriteArtifactAsync(cancellationToken);
+    }
+
+    public NavSoakMetricsSnapshot GetSnapshot()
+    {
+        lock (sync)
+        {
+            return new NavSoakMetricsSnapshot(
+                IsAttached: stuckDetector != null && attachedNavigations.Count > 0,
+                ArtifactPath: artifactPath,
+                CompletedWindowCount: completedWindows.Count,
+                SoakStartUtc: soakStart,
+                CurrentWindowStartUtc: windowStart,
+                CurrentWindowFrontBypassActivations: frontBypassActivations,
+                CurrentWindowSuccessfulReconnects: successfulReconnects,
+                CurrentWindowStuckEvents: stuckEvents,
+                CurrentWindowRepeatStuckCount: repeatStuckCount,
+                CurrentWindowRepeatStuckRate: stuckEvents == 0 ? 0.0 : Math.Round((double)repeatStuckCount / stuckEvents, 4),
+                CurrentWindowMaxRouteDeviation: maxDeviation,
+                CurrentWindowAvgRouteDeviation: deviationSampleCount == 0 ? 0f : deviationSum / deviationSampleCount);
+        }
     }
 
     /// <summary>

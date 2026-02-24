@@ -9,12 +9,13 @@ public class WowInput {
 }
 "@
 
-$hwnd = [IntPtr]::new(1377998)
+$wow = Get-Process -Name "WowClassic" -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($null -eq $wow) { throw "WowClassic process not found." }
+if ($wow.MainWindowHandle -eq 0) { throw "WowClassic MainWindowHandle is 0 (window not ready)." }
+$hwnd = [IntPtr]::new($wow.MainWindowHandle)
 Write-Host "WoW HWND: $hwnd"
 
-# Show and focus WoW
-[WowInput]::ShowWindow($hwnd, 9)
-Start-Sleep -Milliseconds 800
+# Focus WoW (avoid ShowWindow restore; can resize/reposition the client)
 [WowInput]::SetForegroundWindow($hwnd)
 Start-Sleep -Milliseconds 1500
 
@@ -27,12 +28,6 @@ if ($fg -eq $hwnd) {
 }
 
 Add-Type -AssemblyName System.Windows.Forms
-
-# Press Escape to clear any UI state
-[System.Windows.Forms.SendKeys]::SendWait("{ESC}")
-Start-Sleep -Milliseconds 400
-[System.Windows.Forms.SendKeys]::SendWait("{ESC}")
-Start-Sleep -Milliseconds 400
 
 # Open chat  
 [System.Windows.Forms.SendKeys]::SendWait("{ENTER}")

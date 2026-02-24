@@ -15,7 +15,7 @@
   pwsh -NoProfile -ExecutionPolicy Bypass -File .\Scripts\Agent-BotControl.ps1 -Action Api -ApiMethod GET -ApiPath /api/launch/status
 #>
 param(
-    [ValidateSet("Start", "StartAndValidate", "Validate", "Status", "Stop", "Restart", "Monitor", "Api")]
+    [ValidateSet("Start", "StartAndValidate", "Validate", "Status", "Stop", "Restart", "Monitor", "Api", "CollectEvidence", "Soak", "LiveSession")]
     [string]$Action = "StartAndValidate",
 
     [string]$Profile = "BloodElf_Rogue_8-60_TBC.json",
@@ -27,6 +27,12 @@ param(
     [int]$ReadinessTimeoutSeconds = 120,
     [int]$ValidationTimeoutSeconds = 30,
     [int]$MonitorIntervalSeconds = 10,
+    [int]$SoakMinutes = 20,
+    [int]$WindowMinutes = 10,
+    [int]$MaxPatchLoops = 5,
+    [string]$ArtifactTag = "",
+    [int]$EvidenceIntervalSeconds = 150,
+    [int]$ShortValidationSeconds = 240,
 
     [switch]$AllowStartWithWarnings,
     [switch]$BypassActionBar,
@@ -57,6 +63,8 @@ $script:LogsDir = Join-Path $BotRoot "logs"
 New-Item -ItemType Directory -Path $script:LogsDir -Force | Out-Null
 $script:RunStamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $script:RunTag = "agentctl-$script:RunStamp"
+$script:SessionTag = if ([string]::IsNullOrWhiteSpace($ArtifactTag)) { "live-session-$script:RunStamp" } else { $ArtifactTag }
+$script:SessionArtifactDir = Join-Path $script:LogsDir $script:SessionTag
 
 function Write-Info([string]$Message)
 {
@@ -81,6 +89,173 @@ function Write-ErrLine([string]$Message)
 function Get-JsonDepth([object]$Obj, [int]$Depth = 8)
 {
     return ($Obj | ConvertTo-Json -Depth $Depth)
+}
+
+function Ensure-SessionArtifactDir
+{
+    if (-not (Test-Path -LiteralPath $script:SessionArtifactDir))
+    {
+        New-Item -ItemType Directory -Path $script:SessionArtifactDir -Force | Out-Null
+    }
+
+    return $script:SessionArtifactDir
+}
+
+function Get-SafeArtifactName([string]$Name)
+{
+    $invalid = [System.IO.Path]::GetInvalidFileNameChars()
+    $safe = $Name
+    foreach ($c in $invalid)
+    {
+        $safe = $safe.Replace([string]$c, "_")
+    }
+
+    return $safe
+}
+
+function Write-ArtifactText
+{
+    param(
+        [Parameter(Mandatory = $true)][string]$Name,
+        [Parameter(Mandatory = $true)][string]$Content
+    )
+
+    $dir = Ensure-SessionArtifactDir
+    $path = Join-Path $dir (Get-SafeArtifactName -Name $Name)
+    Set-Content -LiteralPath $path -Value $Content -Encoding UTF8
+    return $path
+}
+
+function Write-ArtifactJson
+{
+    param(
+        [Parameter(Mandatory = $true)][string]$Name,
+        [AllowNull()][object]$Object
+    )
+
+    $dir = Ensure-SessionArtifactDir
+    $path = Join-Path $dir (Get-SafeArtifactName -Name $Name)
+    $Object | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $path -Encoding UTF8
+    return $path
+}
+
+function Invoke-AgentApiSafe
+{
+    param(
+        [Parameter(Mandatory = $true)][string]$Method,
+        [Parameter(Mandatory = $true)][string]$Path,
+        [AllowNull()][object]$Body = $null,
+        [int]$TimeoutSec = 15
+    )
+
+    try
+    {
+        return [ordered]@{
+            Success = $true
+            Result = (Invoke-AgentApi -Method $Method -Path $Path -Body $Body -TimeoutSec $TimeoutSec)
+            Error = $null
+        }
+    }
+    catch
+    {
+        return [ordered]@{
+            Success = $false
+            Result = $null
+            Error = $_.Exception.Message
+        }
+    }
+}
+
+function Save-ApiSnapshot
+{
+    param(
+        [Parameter(Mandatory = $true)][string]$ApiPath,
+        [Parameter(Mandatory = $true)][string]$FileStem,
+        [int]$TimeoutSec = 10
+    )
+
+    $response = Invoke-AgentApiSafe -Method GET -Path $ApiPath -TimeoutSec $TimeoutSec
+    if ($response.Success)
+    {
+        $saved = Write-ArtifactJson -Name $FileStem -Object ([ordered]@{
+                TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+                Path = $ApiPath
+                Success = $true
+                Data = $response.Result
+            })
+        Write-Info "Saved API snapshot: $ApiPath -> $saved"
+        return $true
+    }
+
+    $savedErr = Write-ArtifactJson -Name $FileStem -Object ([ordered]@{
+            TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+            Path = $ApiPath
+            Success = $false
+            Error = $response.Error
+        })
+    Write-WarnLine "API snapshot failed: $ApiPath (saved error to $savedErr)"
+    return $false
+}
+
+function Get-PortStateSnapshot
+{
+    return [ordered]@{
+        TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+        WebPort = [ordered]@{
+            Port = $WebPort
+            Listening = (Test-PortListening -Port $WebPort)
+            Pid = (Get-ListeningPid -Port $WebPort)
+        }
+        NavigationPort = [ordered]@{
+            Port = $NavigationPort
+            Listening = (Test-PortListening -Port $NavigationPort)
+            Pid = (Get-ListeningPid -Port $NavigationPort)
+        }
+        Processes = [ordered]@{
+            BlazorServer = @((Get-Process -Name "BlazorServer" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id))
+            AmeisenNavigationServer = @((Get-Process -Name "AmeisenNavigationServer" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id))
+            WowClassic = @((Get-Process -Name "WowClassic" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id))
+        }
+    }
+}
+
+function Save-LatestLogTail
+{
+    param(
+        [Parameter(Mandatory = $true)][string]$Pattern,
+        [Parameter(Mandatory = $true)][string]$Label,
+        [int]$Lines = 300
+    )
+
+    $filesResp = Invoke-AgentApiSafe -Method GET -Path "/api/logs/files" -TimeoutSec 8
+    if (-not $filesResp.Success -or $null -eq $filesResp.Result -or $null -eq $filesResp.Result.Files)
+    {
+        Write-WarnLine "Unable to list logs for $Label"
+        return
+    }
+
+    $file = $filesResp.Result.Files |
+        Where-Object { "$($_.Relative)" -like $Pattern -or "$($_.Name)" -like $Pattern } |
+        Sort-Object LastWriteTimeUtc -Descending |
+        Select-Object -First 1
+
+    if ($null -eq $file)
+    {
+        Write-WarnLine "No log file matched '$Pattern' for $Label"
+        return
+    }
+
+    $encoded = [Uri]::EscapeDataString("$($file.Relative)")
+    $tailResp = Invoke-AgentApiSafe -Method GET -Path "/api/logs/tail?file=$encoded&lines=$Lines" -TimeoutSec 12
+    if (-not $tailResp.Success)
+    {
+        Write-WarnLine "Failed to tail log '$($file.Relative)'"
+        return
+    }
+
+    [void](Write-ArtifactJson -Name ("{0}-meta.json" -f $Label) -Object $file)
+    [void](Write-ArtifactText -Name ("{0}-tail.txt" -f $Label) -Content "$($tailResp.Result.Content)")
+    Write-Info "Saved log tail for $Label from $($file.Relative)"
 }
 
 function Invoke-AgentApi
@@ -281,7 +456,7 @@ function Get-StartupStageValue([object]$Health)
 
 function Should-ForceBlazorRestart
 {
-    return $Action -in @("Start", "StartAndValidate", "Restart")
+    return $Action -in @("Start", "StartAndValidate", "Restart", "LiveSession")
 }
 
 function Stop-StaleServerProcesses
@@ -1104,6 +1279,213 @@ function Show-Status
     }
 }
 
+function Invoke-CollectEvidence
+{
+    param(
+        [string]$Stage = "snapshot",
+        [switch]$FlushSoak
+    )
+
+    $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+    Ensure-SessionArtifactDir | Out-Null
+
+    [void](Write-ArtifactJson -Name ("{0}-{1}-ports.json" -f $stamp, $Stage) -Object (Get-PortStateSnapshot))
+    [void](Save-ApiSnapshot -ApiPath "/api/health" -FileStem ("{0}-{1}-health.json" -f $stamp, $Stage) -TimeoutSec 6)
+    [void](Save-ApiSnapshot -ApiPath "/api/launch/status" -FileStem ("{0}-{1}-launch-status.json" -f $stamp, $Stage) -TimeoutSec 8)
+    [void](Save-ApiSnapshot -ApiPath "/api/bot/status" -FileStem ("{0}-{1}-bot-status.json" -f $stamp, $Stage) -TimeoutSec 6)
+    [void](Save-ApiSnapshot -ApiPath "/api/test/status" -FileStem ("{0}-{1}-test-status.json" -f $stamp, $Stage) -TimeoutSec $ValidationTimeoutSeconds)
+    [void](Save-ApiSnapshot -ApiPath "/api/test/frames" -FileStem ("{0}-{1}-test-frames.json" -f $stamp, $Stage) -TimeoutSec $ValidationTimeoutSeconds)
+    [void](Save-ApiSnapshot -ApiPath "/api/test/snapshot" -FileStem ("{0}-{1}-test-snapshot.json" -f $stamp, $Stage) -TimeoutSec $ValidationTimeoutSeconds)
+    [void](Save-ApiSnapshot -ApiPath "/api/diagnostics/bags?take=50" -FileStem ("{0}-{1}-bags.json" -f $stamp, $Stage) -TimeoutSec 10)
+    [void](Save-ApiSnapshot -ApiPath "/api/features" -FileStem ("{0}-{1}-features.json" -f $stamp, $Stage) -TimeoutSec 8)
+    [void](Save-ApiSnapshot -ApiPath "/api/diagnostics/soak/current" -FileStem ("{0}-{1}-soak-current.json" -f $stamp, $Stage) -TimeoutSec 8)
+    [void](Save-ApiSnapshot -ApiPath "/api/logs/files" -FileStem ("{0}-{1}-logs-files.json" -f $stamp, $Stage) -TimeoutSec 8)
+
+    if ($FlushSoak)
+    {
+        $flushResp = Invoke-AgentApiSafe -Method POST -Path "/api/diagnostics/soak/flush" -Body @{} -TimeoutSec 20
+        [void](Write-ArtifactJson -Name ("{0}-{1}-soak-flush.json" -f $stamp, $Stage) -Object ([ordered]@{
+                TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+                Success = $flushResp.Success
+                Error = $flushResp.Error
+                Data = $flushResp.Result
+            }))
+        if ($flushResp.Success)
+        {
+            Write-Ok "Soak metrics flushed"
+        }
+        else
+        {
+            Write-WarnLine "Soak flush failed: $($flushResp.Error)"
+        }
+    }
+
+    Save-LatestLogTail -Pattern "logs/soak-nav-*.json" -Label ("{0}-{1}-soak-artifact" -f $stamp, $Stage) -Lines 1200
+    Save-LatestLogTail -Pattern "logs/agentctl-*-validation.json" -Label ("{0}-{1}-validation-artifact" -f $stamp, $Stage) -Lines 1200
+    Save-LatestLogTail -Pattern "out*.log" -Label ("{0}-{1}-server-out" -f $stamp, $Stage) -Lines 400
+    Save-LatestLogTail -Pattern "logs/*.log" -Label ("{0}-{1}-logs-tail" -f $stamp, $Stage) -Lines 400
+
+    Write-Ok "Evidence snapshot captured for stage '$Stage' in $script:SessionArtifactDir"
+}
+
+function Get-ActiveRunHealthSample
+{
+    $result = [ordered]@{
+        TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+        Ports = (Get-PortStateSnapshot)
+        BotStatus = $null
+        LaunchStatus = $null
+        Snapshot = $null
+        Health = $null
+        Errors = @()
+    }
+
+    $health = Invoke-AgentApiSafe -Method GET -Path "/api/health" -TimeoutSec 5
+    if ($health.Success) { $result.Health = $health.Result } else { $result.Errors += "health: $($health.Error)" }
+
+    $launch = Invoke-AgentApiSafe -Method GET -Path "/api/launch/status" -TimeoutSec 8
+    if ($launch.Success) { $result.LaunchStatus = $launch.Result } else { $result.Errors += "launch: $($launch.Error)" }
+
+    $bot = Invoke-AgentApiSafe -Method GET -Path "/api/bot/status" -TimeoutSec 5
+    if ($bot.Success) { $result.BotStatus = $bot.Result } else { $result.Errors += "bot: $($bot.Error)" }
+
+    $snap = Invoke-AgentApiSafe -Method GET -Path "/api/test/snapshot" -TimeoutSec 10
+    if ($snap.Success -and $snap.Result.Success) { $result.Snapshot = $snap.Result.Data.snapshot } else { $result.Errors += "snapshot: $($snap.Error)" }
+
+    return $result
+}
+
+function Assert-NoImmediateAbortCondition
+{
+    param([Parameter(Mandatory = $true)][object]$Sample)
+
+    if ($null -eq $Sample)
+    {
+        throw "Active run sample is null"
+    }
+
+    if (-not $Sample.Ports.WebPort.Listening)
+    {
+        throw "Abort: Web port $WebPort is not listening"
+    }
+    if (-not $Sample.Ports.NavigationPort.Listening)
+    {
+        throw "Abort: Navigation port $NavigationPort is not listening"
+    }
+
+    if ($null -ne $Sample.BotStatus -and -not [bool]$Sample.BotStatus.IsActive)
+    {
+        throw "Abort: Bot became inactive during live validation"
+    }
+
+    if ($null -ne $Sample.Snapshot)
+    {
+        if ([bool]$Sample.Snapshot.Dead) { throw "Abort: Character is dead during live run" }
+        if ([bool]$Sample.Snapshot.Swimming) { throw "Abort: Character is swimming during live run" }
+        if (($Sample.Snapshot.MapX -le 0) -or ($Sample.Snapshot.MapX -gt 100) -or ($Sample.Snapshot.MapY -le 0) -or ($Sample.Snapshot.MapY -gt 100))
+        {
+            throw "Abort: Character map position out of bounds (MapX=$($Sample.Snapshot.MapX), MapY=$($Sample.Snapshot.MapY))"
+        }
+    }
+}
+
+function Invoke-ShortActiveValidation
+{
+    param([int]$DurationSeconds = 240)
+
+    Write-Info "Running short active validation for ${DurationSeconds}s"
+    $deadline = (Get-Date).AddSeconds($DurationSeconds)
+    $sampleIndex = 0
+    while ((Get-Date) -lt $deadline)
+    {
+        $sampleIndex++
+        $sample = Get-ActiveRunHealthSample
+        Assert-NoImmediateAbortCondition -Sample $sample
+
+        [void](Write-ArtifactJson -Name ("{0}-short-validate-sample-{1:D3}.json" -f (Get-Date -Format "yyyyMMdd-HHmmss"), $sampleIndex) -Object $sample)
+
+        $goal = if ($null -ne $sample.BotStatus) { "$($sample.BotStatus.CurrentGoal)" } else { "n/a" }
+        $pos = if ($null -ne $sample.Snapshot) { "Map=($([math]::Round($sample.Snapshot.MapX,2)),$([math]::Round($sample.Snapshot.MapY,2)))" } else { "Map=(n/a)" }
+        Write-Info "Short validation sample ${sampleIndex}: Goal=$goal $pos"
+
+        Start-Sleep -Seconds ([Math]::Max(5, [Math]::Min(15, $MonitorIntervalSeconds)))
+    }
+
+    Write-Ok "Short active validation completed"
+}
+
+function Invoke-SoakRun
+{
+    Write-Info "Starting soak run (${SoakMinutes}m target, ${WindowMinutes}m windows, cadence ${EvidenceIntervalSeconds}s)"
+    if ($MaxPatchLoops -gt 0)
+    {
+        Write-Info "MaxPatchLoops parameter set to $MaxPatchLoops (manual triage/patch loop remains operator-driven)"
+    }
+
+    Invoke-CollectEvidence -Stage "soak-start"
+
+    $deadline = (Get-Date).AddMinutes($SoakMinutes)
+    $sampleIndex = 0
+    while ((Get-Date) -lt $deadline)
+    {
+        $sampleIndex++
+        $sample = Get-ActiveRunHealthSample
+        Assert-NoImmediateAbortCondition -Sample $sample
+        [void](Write-ArtifactJson -Name ("{0}-soak-sample-{1:D3}.json" -f (Get-Date -Format "yyyyMMdd-HHmmss"), $sampleIndex) -Object $sample)
+
+        $repeatRate = $null
+        $deviation = $null
+        $soakResp = Invoke-AgentApiSafe -Method GET -Path "/api/diagnostics/soak/current" -TimeoutSec 8
+        if ($soakResp.Success -and $null -ne $soakResp.Result)
+        {
+            $repeatRate = $soakResp.Result.CurrentWindowRepeatStuckRate
+            $deviation = $soakResp.Result.CurrentWindowMaxRouteDeviation
+            [void](Write-ArtifactJson -Name ("{0}-soak-current-{1:D3}.json" -f (Get-Date -Format "yyyyMMdd-HHmmss"), $sampleIndex) -Object $soakResp.Result)
+        }
+
+        Write-Info ("Soak sample {0}: Goal={1} RepeatRate={2} MaxDev={3}" -f
+            $sampleIndex,
+            $(if ($sample.BotStatus) { $sample.BotStatus.CurrentGoal } else { "n/a" }),
+            $(if ($null -ne $repeatRate) { [string]([math]::Round([double]$repeatRate, 4)) } else { "n/a" }),
+            $(if ($null -ne $deviation) { [string]([math]::Round([double]$deviation, 2)) } else { "n/a" }))
+
+        $remaining = [int][Math]::Ceiling(($deadline - (Get-Date)).TotalSeconds)
+        if ($remaining -le 0) { break }
+        Start-Sleep -Seconds ([Math]::Min($EvidenceIntervalSeconds, [Math]::Max(1, $remaining)))
+    }
+
+    Invoke-CollectEvidence -Stage "soak-end" -FlushSoak
+    Write-Ok "Soak run completed"
+}
+
+function Invoke-LiveSession
+{
+    Ensure-SessionArtifactDir | Out-Null
+    Write-Info "Session artifact directory: $script:SessionArtifactDir"
+
+    $baseline = [ordered]@{
+        TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+        Action = $Action
+        Profile = $Profile
+        Branch = (& git rev-parse --abbrev-ref HEAD 2>$null)
+        Commit = (& git rev-parse --short HEAD 2>$null)
+        SoakMinutes = $SoakMinutes
+        WindowMinutes = $WindowMinutes
+        EvidenceIntervalSeconds = $EvidenceIntervalSeconds
+        ShortValidationSeconds = $ShortValidationSeconds
+        MaxPatchLoops = $MaxPatchLoops
+    }
+    [void](Write-ArtifactJson -Name "session-manifest.json" -Object $baseline)
+    [void](Write-ArtifactJson -Name "prestart-ports.json" -Object (Get-PortStateSnapshot))
+
+    Invoke-StartFlow -WithValidation
+    Invoke-CollectEvidence -Stage "post-start"
+    Invoke-ShortActiveValidation -DurationSeconds $ShortValidationSeconds
+    Invoke-CollectEvidence -Stage "pre-soak"
+    Invoke-SoakRun
+    Invoke-CollectEvidence -Stage "final" -FlushSoak
+}
+
 function Invoke-StartFlow([switch]$WithValidation)
 {
     Stop-StaleServerProcesses
@@ -1203,6 +1585,18 @@ try
 
             $result = Invoke-AgentApi -Method $ApiMethod -Path $ApiPath -Body $bodyObj -TimeoutSec $ApiTimeoutSeconds
             $result | ConvertTo-Json -Depth 16
+        }
+        "CollectEvidence"
+        {
+            Invoke-CollectEvidence -Stage "manual" -FlushSoak
+        }
+        "Soak"
+        {
+            Invoke-SoakRun
+        }
+        "LiveSession"
+        {
+            Invoke-LiveSession
         }
     }
 

@@ -34,7 +34,10 @@ public class WowInputSend {
 }
 "@
 
-$hwnd = [IntPtr]::new(2033338)
+$wow = Get-Process -Name "WowClassic" -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($null -eq $wow) { throw "WowClassic process not found." }
+if ($wow.MainWindowHandle -eq 0) { throw "WowClassic MainWindowHandle is 0 (window not ready)." }
+$hwnd = [IntPtr]::new($wow.MainWindowHandle)
 Write-Host "WoW HWND: $hwnd"
 
 $cmd = if ($args.Count -gt 0) { $args[0] } else { "/reload" }

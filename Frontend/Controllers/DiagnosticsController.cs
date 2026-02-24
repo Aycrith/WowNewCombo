@@ -140,6 +140,7 @@ public class DiagnosticsController : ControllerBase
     private readonly EquipmentReader equipmentReader;
     private readonly ILoggerFactory loggerFactory;
     private readonly SystemDiagnostics systemDiagnostics;
+    private readonly Core.Navigation.NavSoakMetricsService? navSoakMetricsService;
 
     private readonly StartupOptions startupOptions;
 
@@ -159,7 +160,8 @@ public class DiagnosticsController : ControllerBase
         EquipmentReader equipmentReader,
         ILoggerFactory loggerFactory,
         SystemDiagnostics systemDiagnostics,
-        IOptions<StartupOptions> startupOptions)
+        IOptions<StartupOptions> startupOptions,
+        Core.Navigation.NavSoakMetricsService? navSoakMetricsService = null)
     {
         this.logger = logger;
         this.keyBindingsReader = keyBindingsReader;
@@ -177,6 +179,7 @@ public class DiagnosticsController : ControllerBase
         this.loggerFactory = loggerFactory;
         this.systemDiagnostics = systemDiagnostics;
         this.startupOptions = startupOptions.Value;
+        this.navSoakMetricsService = navSoakMetricsService;
     }
 
     #region Diagnostic Endpoints
@@ -241,6 +244,63 @@ public class DiagnosticsController : ControllerBase
         catch (Exception ex)
         {
             logger.LogError(ex, "Bag diagnostics failed");
+            return StatusCode(500, new { Error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// GET /api/diagnostics/soak/current
+    /// Returns current in-memory navigation soak counters and artifact metadata.
+    /// </summary>
+    [HttpGet("soak/current")]
+    public IActionResult GetSoakCurrent()
+    {
+        try
+        {
+            if (navSoakMetricsService == null)
+            {
+                return StatusCode(503, new { Error = "NavSoakMetricsService is not available in the current runtime." });
+            }
+
+            Core.Navigation.NavSoakMetricsSnapshot snapshot = navSoakMetricsService.GetSnapshot();
+            return Ok(snapshot);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to retrieve current soak metrics");
+            return StatusCode(500, new { Error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// POST /api/diagnostics/soak/flush
+    /// Forces the current soak window to close (if attached) and writes artifact JSON.
+    /// </summary>
+    [HttpPost("soak/flush")]
+    public async Task<IActionResult> FlushSoak()
+    {
+        try
+        {
+            if (navSoakMetricsService == null)
+            {
+                return StatusCode(503, new { Error = "NavSoakMetricsService is not available in the current runtime." });
+            }
+
+            await navSoakMetricsService.FlushAsync();
+            Core.Navigation.NavSoakMetricsSnapshot snapshot = navSoakMetricsService.GetSnapshot();
+
+            return Ok(new
+            {
+                Success = true,
+                snapshot.ArtifactPath,
+                snapshot.CompletedWindowCount,
+                Snapshot = snapshot,
+                TimestampUtc = DateTime.UtcNow
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to flush soak metrics");
             return StatusCode(500, new { Error = ex.Message });
         }
     }
