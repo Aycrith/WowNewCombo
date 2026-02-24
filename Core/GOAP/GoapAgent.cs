@@ -47,6 +47,7 @@ public sealed partial class GoapAgent : IDisposable
     private readonly HazardEventCollector hazardEventCollector;
     private readonly IHumanizationProvider? humanizationProvider;
     private readonly IGoapEventHistory? goapEventHistory;
+    private readonly GoapCurrentGoalState currentGoalState;
 
     private readonly IEnumerable<IGoapEventListener> extraListeners;
 
@@ -130,7 +131,8 @@ public sealed partial class GoapAgent : IDisposable
         HazardEventCollector hazardEventCollector,
         IHumanizationProvider? humanizationProvider = null,
         IGoapEventHistory? goapEventHistory = null,
-        IEnumerable<IGoapEventListener>? extraListeners = null
+        IEnumerable<IGoapEventListener>? extraListeners = null,
+        GoapCurrentGoalState? goapCurrentGoalState = null
     )
     {
         this.routeInfo = routeInfo;
@@ -145,6 +147,7 @@ public sealed partial class GoapAgent : IDisposable
 
         this.screen = screen;
         this.State = state;
+        currentGoalState = goapCurrentGoalState ?? new GoapCurrentGoalState();
         this.addonReader = addonReader;
         this.playerReader = playerReader;
         this.bits = bits;
@@ -200,6 +203,7 @@ public sealed partial class GoapAgent : IDisposable
 
     public void Dispose()
     {
+        currentGoalState.Clear();
         cts.Cancel();
         sessionPauseEvent.Set();
 
@@ -265,6 +269,7 @@ public sealed partial class GoapAgent : IDisposable
                     string? fromGoalName = CurrentGoal?.Name;
                     CurrentGoal?.OnExit();
                     CurrentGoal = newGoal;
+                    currentGoalState.SetCurrentGoal(newGoal);
 
                     LogNewGoal(logger, newGoal.Name);
                     CurrentGoal.OnEnter();
@@ -284,6 +289,7 @@ public sealed partial class GoapAgent : IDisposable
             }
             else if (!wasEmpty)
             {
+                currentGoalState.Clear();
                 LogNewEmptyGoal(logger);
                 wasEmpty = true;
 

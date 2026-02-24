@@ -33,6 +33,7 @@ public static class GoalFactory
 
         services.AddScoped<ConfigurableInput>();
         services.AddScoped<GoapAgentState>();
+        services.AddScoped<GoapCurrentGoalState>();
 
         services.AddScoped<CancellationTokenSource<GoapAgent>>();
         services.AddScoped<IGrindSessionHandler, GrindSessionHandler>();
