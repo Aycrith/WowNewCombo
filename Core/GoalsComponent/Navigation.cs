@@ -796,8 +796,12 @@ public sealed partial class Navigation : IDisposable
             return;
         }
 
-        // Track heading for oscillation detection
-        oscillationDetector.TrackHeading(playerReader.Direction);
+        // Only track heading when actually correcting — avoids polluting
+        // oscillation history on straight segments where diff < minAngleToTurn.
+        if (diff > minAngleToTurn)
+        {
+            oscillationDetector.TrackHeading(playerReader.Direction);
+        }
 
         // Check for oscillation
         if (oscillationDetector.IsOscillating)
