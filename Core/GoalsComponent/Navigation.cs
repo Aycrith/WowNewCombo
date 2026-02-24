@@ -367,8 +367,7 @@ public sealed partial class Navigation : IDisposable
         }
 
         int removed = 0;
-        while (AdjustNextWaypointPointToClosest() && removed < 5) { removed++; }
-        ;
+        while (AdjustNextWaypointPointToClosest() && removed < 2) { removed++; }
         if (removed > 0)
         {
             UpdateTotalRoute();
