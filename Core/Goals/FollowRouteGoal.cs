@@ -446,7 +446,10 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         }
 
         Vector3[] normalPath = mapRoute;
-        RefillCandidate normalCandidate = FindClosestRefillCandidate(normalPath, playerMap);
+        int minSegmentIndex = hasRefillProgressAnchor
+            ? Math.Max(0, refillSegmentAnchorIndex - RefillBackwardSegmentGrace)
+            : 0;
+        RefillCandidate normalCandidate = FindClosestRefillCandidate(normalPath, playerMap, minSegmentIndex);
         float normalScore = ScoreRefillCandidate(normalCandidate, reversed: false);
 
         Vector3[] chosenPath = normalPath;
@@ -458,7 +461,10 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
             Vector3[] reversedPath = (Vector3[])mapRoute.Clone();
             Array.Reverse(reversedPath);
 
-            RefillCandidate reversedCandidate = FindClosestRefillCandidate(reversedPath, playerMap);
+            int reversedMinSegment = hasRefillProgressAnchor
+                ? Math.Max(0, (mapRoute.Length - 1 - refillSegmentAnchorIndex) - RefillBackwardSegmentGrace)
+                : 0;
+            RefillCandidate reversedCandidate = FindClosestRefillCandidate(reversedPath, playerMap, reversedMinSegment);
             float reversedScore = ScoreRefillCandidate(reversedCandidate, reversed: true);
 
             if (reversedScore < normalScore)
@@ -598,7 +604,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         return score;
     }
 
-    private static RefillCandidate FindClosestRefillCandidate(ReadOnlySpan<Vector3> pathMap, Vector3 playerMap)
+    private static RefillCandidate FindClosestRefillCandidate(ReadOnlySpan<Vector3> pathMap, Vector3 playerMap, int minSegmentIndex = 0)
     {
         if (pathMap.Length == 1)
         {
@@ -606,11 +612,11 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         }
 
         Vector2 playerXY = playerMap.AsVector2();
-        int closestSegmentStartIndex = 0;
-        Vector3 mapClosestPoint = pathMap[0];
+        int closestSegmentStartIndex = minSegmentIndex;
+        Vector3 mapClosestPoint = pathMap[Math.Min(minSegmentIndex, pathMap.Length - 1)];
         float bestDistance = float.MaxValue;
 
-        for (int i = 0; i < pathMap.Length - 1; i++)
+        for (int i = minSegmentIndex; i < pathMap.Length - 1; i++)
         {
             Vector3 a = pathMap[i];
             Vector3 b = pathMap[i + 1];
