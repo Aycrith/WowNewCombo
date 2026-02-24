@@ -23,7 +23,7 @@ public sealed partial class PlayerDirection
 
     // Closed-loop control constants
     private const int MAX_TURN_RETRIES = 3;
-    private const float TURN_TOLERANCE_RADIANS = 0.15f;  // ~8.6 degrees
+    private const float TURN_TOLERANCE_RADIANS = 0.20f;  // ~11.5 degrees
     private const int TURN_VERIFICATION_DELAY_MS = 50;
     private const int MAX_TOTAL_TURN_DURATION_MS = 3000;
 
@@ -177,10 +177,10 @@ public sealed partial class PlayerDirection
     private static int CalculateTurnDuration(float angleRadians)
     {
         // Base calculation: time to turn at ~180°/second
-        int duration = (int)(angleRadians * 1000f / PI);
+        int duration = (int)(angleRadians * 850f / PI);
 
         // Clamp to reasonable range
-        return Math.Clamp(duration, 50, 1000);
+        return Math.Clamp(duration, 40, 700);
     }
 
     private float TurnAmount(float targetDir)

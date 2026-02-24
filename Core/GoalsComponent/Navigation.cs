@@ -49,6 +49,7 @@ public sealed partial class Navigation : IDisposable
     private readonly IRouteRerouter? routeRerouter;
     private readonly HumanizedMover humanizedMover;
     private readonly FeatureFlagService? featureFlagService;
+    private readonly GoapCurrentGoalState? goapCurrentGoalState;
 
     private const float MinDistanceMount = 10;
     private readonly float MaxDistance = 200;
@@ -59,7 +60,7 @@ public sealed partial class Navigation : IDisposable
     private float lastWorldDistance = float.MaxValue;
 
     /// <summary>Minimum angle in radians (~5.14 degrees) before triggering turn adjustment. Prevents over-correction on minor heading deviations.</summary>
-    private const float minAngleToTurn = PI / 35f;
+    private const float minAngleToTurn = PI / 24f;
 
     /// <summary>Minimum angle in radians (90 degrees) before stopping to turn. Ensures character stops for large direction changes.</summary>
     private const float minAngleToStopBeforeTurn = PI / 2f;
@@ -103,10 +104,32 @@ public sealed partial class Navigation : IDisposable
     private const double DefaultRouteResetTimeoutMs = 8_000;
     private static readonly TimeSpan DynamicDetourCooldown = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan FrontBypassCooldown = TimeSpan.FromSeconds(1.5);
-    private static readonly TimeSpan FailedReconnectCooldown = TimeSpan.FromSeconds(20);
+    private static readonly TimeSpan FrontBypassRepeatWindow = TimeSpan.FromSeconds(12);
+    private static readonly TimeSpan FrontBypassBreakerCooldown = TimeSpan.FromSeconds(18);
+    private static readonly TimeSpan FrontBypassClusterWindow = TimeSpan.FromSeconds(16);
+    private static readonly TimeSpan FrontBypassNoProgressWindow = TimeSpan.FromSeconds(16);
+    private static readonly TimeSpan HazardDetourRepeatWindow = TimeSpan.FromSeconds(12);
+    private static readonly TimeSpan HazardDetourBreakerCooldown = TimeSpan.FromSeconds(12);
+    private static readonly TimeSpan CorpseRecoveryHazardSuppressGrace = TimeSpan.FromSeconds(20);
+    private static readonly TimeSpan FailedReconnectCooldown = TimeSpan.FromSeconds(35);
+    private static readonly TimeSpan FailedReconnectClusterWindow = TimeSpan.FromSeconds(40);
     private const int MinRouteWaypointsForDynamicDetour = 1;
     private const float DynamicReconnectDuplicateDistance = 1.0f;
     private const float FailedReconnectDuplicateDistance = 8.0f;
+    private const float FrontBypassRepeatDistance = 15.0f;
+    private const int FrontBypassRepeatLimit = 4;
+    private const float FrontBypassClusterDistance = 24.0f;
+    private const int FrontBypassClusterLimit = 4;
+    private const int FrontBypassNoProgressRepeatLimit = 3;
+    private const int FrontBypassNoProgressMaxRouteDelta = 1;
+    private const float HazardDetourRepeatDistance = 20.0f;
+    private const int HazardDetourRepeatLimit = 3;
+    private const float FailedReconnectClusterDistance = 18.0f;
+    private const int FailedReconnectClusterSkipThreshold = 2;
+    private const float HazardDetourMaxAdditionalDistance = 80.0f;
+    private const float HazardDetourMaxLengthRatio = 1.75f;
+    private const float HazardDetourHardMaxAdditionalDistance = 120.0f;
+    private const float CorpseTargetMatchDistance = 8.0f;
     private const float PrecisionVerticalZDelta = 0.9f;
     private const float PrecisionReachedDistanceMin = 0.9f;
     private const float PrecisionReachedDistanceScale = 0.45f;
@@ -115,18 +138,32 @@ public sealed partial class Navigation : IDisposable
     private const float TightTurnPrecisionRadians = PI / 5f;
     private const float SimplifyPreserveVerticalZDelta = 0.75f;
     private const float SimplifyPreserveTurnRadians = PI / 6f;
-    private static readonly TimeSpan HeadingAdjustCooldown = TimeSpan.FromMilliseconds(140);
-    private static readonly TimeSpan PrecisionHeadingAdjustCooldown = TimeSpan.FromMilliseconds(90);
+    private static readonly TimeSpan HeadingAdjustCooldown = TimeSpan.FromMilliseconds(220);
+    private static readonly TimeSpan PrecisionHeadingAdjustCooldown = TimeSpan.FromMilliseconds(130);
     private const float HeadingAdjustImmediateDiff = PI / 7f;
-    private const float HeadingAdjustThrottleMinDiff = 0.18f;
+    private const float HeadingAdjustThrottleMinDiff = 0.24f;
 
     private DateTime lastDynamicDetourAttemptUtc = DateTime.MinValue;
     private DateTime lastFrontBypassUtc = DateTime.MinValue;
+    private DateTime hazardDetourBreakerUntilUtc = DateTime.MinValue;
+    private DateTime lastHazardDetourRepeatUtc = DateTime.MinValue;
+    private DateTime lastCorpseRecoveryContextUtc = DateTime.MinValue;
+    private DateTime frontBypassBreakerUntilUtc = DateTime.MinValue;
+    private DateTime lastFrontBypassRepeatUtc = DateTime.MinValue;
+    private DateTime lastFrontBypassNoProgressUtc = DateTime.MinValue;
     private DateTime lastFailedReconnectUtc = DateTime.MinValue;
     private DateTime lastHeadingAdjustUtc = DateTime.MinValue;
     private int frontBypassAttemptCount;
+    private int repeatedHazardDetourCount;
+    private int repeatedFrontBypassCount;
+    private int repeatedFrontBypassNoProgressCount;
     private int tailRecalcFailures;
+    private Vector3 lastHazardDetourRepeatPoint;
+    private Vector3 lastFrontBypassRepeatPoint;
+    private Vector3 lastFrontBypassNoProgressPoint;
     private Vector3 lastFailedReconnectPoint;
+    private readonly Queue<ReconnectSample> recentFrontBypassReconnects = new();
+    private readonly Queue<ReconnectSample> recentFailedReconnects = new();
 
     public Navigation(ILogger<Navigation> logger,
         CancellationTokenSource<GoapAgent> cts,
@@ -141,7 +178,8 @@ public sealed partial class Navigation : IDisposable
         IRouteRerouter? routeRerouter = null,
         IHumanizationProvider? humanizationProvider = null,
         FeatureFlagService? featureFlagService = null,
-        Core.Navigation.NavSoakMetricsService? navSoakMetricsService = null)
+        Core.Navigation.NavSoakMetricsService? navSoakMetricsService = null,
+        GoapCurrentGoalState? goapCurrentGoalState = null)
     {
         this.logger = logger;
         this.playerDirection = playerDirection;
@@ -155,6 +193,7 @@ public sealed partial class Navigation : IDisposable
         this.areaDB = areaDB;
         this.routeRerouter = routeRerouter;
         this.featureFlagService = featureFlagService;
+        this.goapCurrentGoalState = goapCurrentGoalState;
 
         // Initialize extracted helper classes
         oscillationDetector = new OscillationDetector();
@@ -192,6 +231,7 @@ public sealed partial class Navigation : IDisposable
     public void Update(CancellationToken token)
     {
         active = true;
+        TrackCorpseRecoveryContext(DateTime.UtcNow);
 
         if (wayPoints.Count == 0 && routeToNextWaypoint.Count == 0)
         {
@@ -533,7 +573,10 @@ public sealed partial class Navigation : IDisposable
         // Log pathfinder success and populate route
         {
             Vector3[] pathToApply = result.Path;
-            if (routeRerouter?.IsEnabled == true && result.Path.Length >= 2)
+            DateTime now = DateTime.UtcNow;
+            if (routeRerouter?.IsEnabled == true &&
+                result.Path.Length >= 2 &&
+                CanUseHazardDetours(now, result.EndW))
             {
                 try
                 {
@@ -544,11 +587,21 @@ public sealed partial class Navigation : IDisposable
 
                     if (detour is { Length: >= 2 })
                     {
+                        if (IsExcessiveHazardDetour(result.Path, detour))
+                        {
+                            logger.LogDebug(
+                                "[Navigation       ] Skipping excessive hazard detour on path apply ({OriginalCount} -> {DetourCount})",
+                                result.Path.Length,
+                                detour.Length);
+                        }
+                        else
+                        {
                         pathToApply = detour;
                         logger.LogInformation(
                             "[Navigation       ] Applied hazard detour ({OriginalCount} -> {DetourCount} waypoints)",
                             result.Path.Length,
                             detour.Length);
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -723,6 +776,11 @@ public sealed partial class Navigation : IDisposable
 
         float diff = Min(diff1, diff2);
 
+        if (stuckDetector.IsCurrentlyStuck)
+        {
+            return;
+        }
+
         // Track heading for oscillation detection
         oscillationDetector.TrackHeading(playerReader.Direction);
 
@@ -760,6 +818,17 @@ public sealed partial class Navigation : IDisposable
 
             playerDirection.SetDirection(heading, routeToNextWaypoint.Peek(), steeringIgnoreDistance, token);
             lastHeadingAdjustUtc = now;
+
+            if (playerDirection.GetConsecutiveFailedTurns() >= 2 && routeToNextWaypoint.Count > 0)
+            {
+                logger.LogWarning(
+                    "[Navigation       ] Repeated heading turn failures ({Failures}); clearing active route to force repath",
+                    playerDirection.GetConsecutiveFailedTurns());
+                stopMoving.Stop();
+                ResetStuckParameters();
+                routeToNextWaypoint.Clear();
+                playerDirection.ResetFailedTurnCounter();
+            }
         }
     }
 
@@ -943,7 +1012,7 @@ public sealed partial class Navigation : IDisposable
         Vector3 nextWaypoint = remainingPath[0];
         Vector3[] localSegment = [playerPosition, nextWaypoint];
 
-        if (routeRerouter?.IsEnabled == true)
+        if (routeRerouter?.IsEnabled == true && CanUseHazardDetours(now, nextWaypoint))
         {
             try
             {
@@ -954,7 +1023,27 @@ public sealed partial class Navigation : IDisposable
 
                 if (IsMeaningfulDynamicDetour(localSegment, detour))
                 {
-                    Vector3 reconnectPoint = detour![^1];
+                    if (IsExcessiveHazardDetour(localSegment, detour!))
+                    {
+                        logger.LogDebug(
+                            "[Navigation       ] Skipping excessive dynamic hazard detour while stalled ({OriginalCount} -> {DetourCount})",
+                            localSegment.Length,
+                            detour!.Length);
+                    }
+                    else
+                    {
+                    Vector3 hazardReconnectPoint = detour![^1];
+                    if (ShouldBreakHazardDetourLoop(hazardReconnectPoint, now))
+                    {
+                        routeToNextWaypoint.Clear();
+                        logger.LogWarning(
+                            "[Navigation       ] Hazard-detour loop detected near {Reconnect}; clearing active route and suppressing hazard detours for {Cooldown}s",
+                            hazardReconnectPoint,
+                            HazardDetourBreakerCooldown.TotalSeconds);
+                        return true;
+                    }
+
+                    Vector3 reconnectPoint = hazardReconnectPoint;
                     if (ShouldSkipReconnectPoint(reconnectPoint, now))
                     {
                         logger.LogDebug(
@@ -974,6 +1063,7 @@ public sealed partial class Navigation : IDisposable
                         nextWaypoint);
 
                     return true;
+                    }
                 }
             }
             catch (Exception ex)
@@ -985,6 +1075,16 @@ public sealed partial class Navigation : IDisposable
         // Fallback when no hazard-driven detour is available yet:
         // synthesize a short side-step route around a likely obstacle directly in front,
         // then reconnect to the intended next waypoint and keep the remaining route.
+        if (goapCurrentGoalState?.IsCurrentGoal(nameof(WalkToCorpseGoal)) == true)
+        {
+            return false;
+        }
+
+        if (now < frontBypassBreakerUntilUtc)
+        {
+            return false;
+        }
+
         if ((now - lastFrontBypassUtc) < FrontBypassCooldown)
         {
             return false;
@@ -999,7 +1099,31 @@ public sealed partial class Navigation : IDisposable
             return false;
         }
 
+        if (ShouldBreakFrontBypassLoop(bypassPath[^1], now))
+        {
+            routeToNextWaypoint.Clear();
+            PrimeFailedReconnectCluster(bypassPath[^1], now);
+            logger.LogWarning(
+                "[Navigation       ] Front-bypass loop detected near {Reconnect}; clearing active route and suspending bypass for {Cooldown}s",
+                bypassPath[^1],
+                FrontBypassBreakerCooldown.TotalSeconds);
+            return true;
+        }
+
         Vector3[] integratedBypassRoute = BuildIntegratedDynamicRoute(bypassPath, remainingPath);
+        if (ShouldBreakFrontBypassNoProgressLoop(remainingPath.Length, integratedBypassRoute.Length, bypassPath[^1], now))
+        {
+            routeToNextWaypoint.Clear();
+            PrimeFailedReconnectCluster(bypassPath[^1], now);
+            logger.LogWarning(
+                "[Navigation       ] Front-bypass no-progress loop detected near {Reconnect} ({RemainingCount}->{BypassCount}); clearing active route and suspending bypass for {Cooldown}s",
+                bypassPath[^1],
+                remainingPath.Length,
+                integratedBypassRoute.Length,
+                FrontBypassBreakerCooldown.TotalSeconds);
+            return true;
+        }
+
         ApplyDynamicRoute(integratedBypassRoute);
         OnDynamicDetourApplied?.Invoke();
 
@@ -1012,6 +1136,247 @@ public sealed partial class Navigation : IDisposable
 
         return true;
     }
+
+    private void PrimeFailedReconnectCluster(Vector3 reconnectPoint, DateTime now)
+    {
+        lastFailedReconnectPoint = reconnectPoint;
+        lastFailedReconnectUtc = now;
+        TrackFailedReconnectSample(reconnectPoint, now);
+    }
+
+    private void TrackCorpseRecoveryContext(DateTime now)
+    {
+        if (IsLikelyCorpseRecoveryContext())
+        {
+            lastCorpseRecoveryContextUtc = now;
+        }
+    }
+
+    private bool CanUseHazardDetours(DateTime now, Vector3? targetWorld = null)
+    {
+        if (now < hazardDetourBreakerUntilUtc)
+        {
+            return false;
+        }
+
+        if (IsLikelyCorpseRecoveryContext())
+        {
+            lastCorpseRecoveryContextUtc = now;
+            return false;
+        }
+
+        if (lastCorpseRecoveryContextUtc != DateTime.MinValue &&
+            (now - lastCorpseRecoveryContextUtc) < CorpseRecoveryHazardSuppressGrace)
+        {
+            return false;
+        }
+
+        if (targetWorld.HasValue && IsCorpseRecoveryTarget(targetWorld.Value))
+        {
+            lastCorpseRecoveryContextUtc = now;
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool IsCorpseRecoveryTarget(Vector3 targetWorld)
+    {
+        if (!TryGetCorpseWorldPos(out Vector3 corpseWorld))
+        {
+            return false;
+        }
+
+        return Vector3.Distance(targetWorld, corpseWorld) <= CorpseTargetMatchDistance;
+    }
+
+    private bool IsLikelyCorpseRecoveryContext()
+    {
+        if (goapCurrentGoalState?.IsCurrentGoal(nameof(WalkToCorpseGoal)) == true)
+        {
+            return true;
+        }
+
+        if (bits.Dead() || bits.CorpseInRange())
+        {
+            return true;
+        }
+
+        // WoW/addon death-state flags are not always reliable during ghost movement.
+        // A non-zero corpse marker is a stronger signal that corpse recovery is active.
+        if (playerReader.CorpseMapX != 0f || playerReader.CorpseMapY != 0f)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryGetCorpseWorldPos(out Vector3 corpseWorld)
+    {
+        corpseWorld = default;
+
+        if (playerReader.CorpseMapX == 0f && playerReader.CorpseMapY == 0f)
+        {
+            return false;
+        }
+
+        corpseWorld = WorldMapAreaDB.ToWorld_FlipXY(playerReader.CorpseMapPos, playerReader.WorldMapArea);
+        return true;
+    }
+
+    private static bool IsExcessiveHazardDetour(Vector3[] originalPath, Vector3[] detourPath)
+    {
+        if (originalPath.Length < 2 || detourPath.Length < 2)
+        {
+            return false;
+        }
+
+        float originalDistance = VectorExt.TotalDistance<Vector3>(originalPath, VectorExt.WorldDistanceXY);
+        float detourDistance = VectorExt.TotalDistance<Vector3>(detourPath, VectorExt.WorldDistanceXY);
+
+        if (originalDistance <= 0.01f || detourDistance <= originalDistance)
+        {
+            return false;
+        }
+
+        float additionalDistance = detourDistance - originalDistance;
+        float ratio = detourDistance / originalDistance;
+
+        if (additionalDistance >= HazardDetourHardMaxAdditionalDistance)
+        {
+            return true;
+        }
+
+        return additionalDistance >= HazardDetourMaxAdditionalDistance &&
+            ratio >= HazardDetourMaxLengthRatio;
+    }
+
+    private bool ShouldBreakHazardDetourLoop(Vector3 reconnectPoint, DateTime now)
+    {
+        if (lastHazardDetourRepeatUtc == DateTime.MinValue ||
+            (now - lastHazardDetourRepeatUtc) > HazardDetourRepeatWindow ||
+            Vector3.Distance(reconnectPoint, lastHazardDetourRepeatPoint) > HazardDetourRepeatDistance)
+        {
+            repeatedHazardDetourCount = 1;
+            lastHazardDetourRepeatPoint = reconnectPoint;
+            lastHazardDetourRepeatUtc = now;
+            return false;
+        }
+
+        repeatedHazardDetourCount++;
+        lastHazardDetourRepeatPoint = reconnectPoint;
+        lastHazardDetourRepeatUtc = now;
+
+        if (repeatedHazardDetourCount < HazardDetourRepeatLimit)
+        {
+            return false;
+        }
+
+        repeatedHazardDetourCount = 0;
+        hazardDetourBreakerUntilUtc = now + HazardDetourBreakerCooldown;
+        return true;
+    }
+
+    private bool ShouldBreakFrontBypassLoop(Vector3 reconnectPoint, DateTime now)
+    {
+        TrackFrontBypassReconnectSample(reconnectPoint, now);
+
+        if (lastFrontBypassRepeatUtc == DateTime.MinValue ||
+            (now - lastFrontBypassRepeatUtc) > FrontBypassRepeatWindow ||
+            Vector3.Distance(reconnectPoint, lastFrontBypassRepeatPoint) > FrontBypassRepeatDistance)
+        {
+            repeatedFrontBypassCount = 1;
+            lastFrontBypassRepeatPoint = reconnectPoint;
+            lastFrontBypassRepeatUtc = now;
+            return false;
+        }
+
+        repeatedFrontBypassCount++;
+        lastFrontBypassRepeatPoint = reconnectPoint;
+        lastFrontBypassRepeatUtc = now;
+
+        if (repeatedFrontBypassCount < FrontBypassRepeatLimit)
+        {
+            int nearbyReconnects = CountNearbyReconnectSamples(recentFrontBypassReconnects, reconnectPoint, FrontBypassClusterDistance);
+            if (nearbyReconnects < FrontBypassClusterLimit)
+            {
+                return false;
+            }
+        }
+
+        repeatedFrontBypassCount = 0;
+        frontBypassBreakerUntilUtc = now + FrontBypassBreakerCooldown;
+        return true;
+    }
+
+    private bool ShouldBreakFrontBypassNoProgressLoop(int remainingCount, int bypassCount, Vector3 reconnectPoint, DateTime now)
+    {
+        if (Math.Abs(bypassCount - remainingCount) > FrontBypassNoProgressMaxRouteDelta)
+        {
+            repeatedFrontBypassNoProgressCount = 0;
+            return false;
+        }
+
+        if (lastFrontBypassNoProgressUtc == DateTime.MinValue ||
+            (now - lastFrontBypassNoProgressUtc) > FrontBypassNoProgressWindow ||
+            Vector3.Distance(reconnectPoint, lastFrontBypassNoProgressPoint) > FrontBypassClusterDistance)
+        {
+            repeatedFrontBypassNoProgressCount = 1;
+            lastFrontBypassNoProgressPoint = reconnectPoint;
+            lastFrontBypassNoProgressUtc = now;
+            return false;
+        }
+
+        repeatedFrontBypassNoProgressCount++;
+        lastFrontBypassNoProgressPoint = reconnectPoint;
+        lastFrontBypassNoProgressUtc = now;
+
+        if (repeatedFrontBypassNoProgressCount < FrontBypassNoProgressRepeatLimit)
+        {
+            return false;
+        }
+
+        repeatedFrontBypassNoProgressCount = 0;
+        frontBypassBreakerUntilUtc = now + FrontBypassBreakerCooldown;
+        return true;
+    }
+
+    private void TrackFrontBypassReconnectSample(Vector3 reconnectPoint, DateTime now)
+    {
+        PruneReconnectSamples(recentFrontBypassReconnects, now, FrontBypassClusterWindow);
+        recentFrontBypassReconnects.Enqueue(new ReconnectSample(now, reconnectPoint));
+    }
+
+    private void TrackFailedReconnectSample(Vector3 reconnectPoint, DateTime now)
+    {
+        PruneReconnectSamples(recentFailedReconnects, now, FailedReconnectClusterWindow);
+        recentFailedReconnects.Enqueue(new ReconnectSample(now, reconnectPoint));
+    }
+
+    private static void PruneReconnectSamples(Queue<ReconnectSample> samples, DateTime now, TimeSpan window)
+    {
+        while (samples.Count > 0 && (now - samples.Peek().TimestampUtc) > window)
+        {
+            samples.Dequeue();
+        }
+    }
+
+    private static int CountNearbyReconnectSamples(Queue<ReconnectSample> samples, Vector3 point, float maxDistance)
+    {
+        int count = 0;
+        foreach (ReconnectSample sample in samples)
+        {
+            if (Vector3.Distance(sample.Point, point) <= maxDistance)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private readonly record struct ReconnectSample(DateTime TimestampUtc, Vector3 Point);
 
     internal static bool IsMeaningfulDynamicDetour(Vector3[] originalPath, Vector3[]? detour)
     {
@@ -1176,6 +1541,7 @@ public sealed partial class Navigation : IDisposable
         Interlocked.Increment(ref tailRecalcFailures);
         lastFailedReconnectPoint = localDetour[^1];
         lastFailedReconnectUtc = DateTime.UtcNow;
+        TrackFailedReconnectSample(localDetour[^1], lastFailedReconnectUtc);
         logger.LogWarning(
             "[Navigation       ] Tail recalc unavailable - pather returned no usable path (failures: {FailureCount}, reconnect={Reconnect}); using stitched fallback",
             tailRecalcFailures,
@@ -1195,7 +1561,23 @@ public sealed partial class Navigation : IDisposable
             return false;
         }
 
-        return Vector3.Distance(reconnectPoint, lastFailedReconnectPoint) <= FailedReconnectDuplicateDistance;
+        if (Vector3.Distance(reconnectPoint, lastFailedReconnectPoint) <= FailedReconnectDuplicateDistance)
+        {
+            return true;
+        }
+
+        PruneReconnectSamples(recentFailedReconnects, now, FailedReconnectClusterWindow);
+        int nearbyFailures = CountNearbyReconnectSamples(recentFailedReconnects, reconnectPoint, FailedReconnectClusterDistance);
+        if (nearbyFailures >= FailedReconnectClusterSkipThreshold)
+        {
+            logger.LogDebug(
+                "[Navigation       ] Skipping reconnect near repeated tail-recalc failure cluster ({Reconnect}, nearbyFailures={NearbyFailures})",
+                reconnectPoint,
+                nearbyFailures);
+            return true;
+        }
+
+        return false;
     }
 
     private Vector3[]? TryRecalculateTailRoute(Vector3 reconnectPoint)
@@ -1223,7 +1605,7 @@ public sealed partial class Navigation : IDisposable
         }
 
         // Optionally re-apply hazard detour on the refreshed tail for consistent global avoidance.
-        if (routeRerouter?.IsEnabled == true)
+        if (routeRerouter?.IsEnabled == true && CanUseHazardDetours(DateTime.UtcNow, destination))
         {
             try
             {
@@ -1232,7 +1614,9 @@ public sealed partial class Navigation : IDisposable
                     playerReader.MapId,
                     token).GetAwaiter().GetResult();
 
-                if (hazardTail is { Length: >= 2 } && IsMeaningfulDynamicDetour(refreshed, hazardTail))
+                if (hazardTail is { Length: >= 2 } &&
+                    IsMeaningfulDynamicDetour(refreshed, hazardTail) &&
+                    !IsExcessiveHazardDetour(refreshed, hazardTail))
                 {
                     return hazardTail;
                 }
