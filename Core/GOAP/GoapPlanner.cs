@@ -12,6 +12,18 @@ namespace Core.GOAP;
 
 public static class GoapPlanner
 {
+    [ThreadStatic]
+    private static GoapGoal[]? cachedUsableGoals;
+
+    [ThreadStatic]
+    private static GoapGoal[]? cachedAvailableGoals;
+
+    [ThreadStatic]
+    private static int cachedWorldStateBits;
+
+    [ThreadStatic]
+    private static bool hasUsableGoalsCache;
+
     public static readonly bool[] EmptyGoalState = Array.Empty<bool>();
     public static readonly Stack<GoapGoal> EmptyGoal = new();
 
@@ -32,14 +44,37 @@ public static class GoapPlanner
         HashSet<GoapGoal> usable = new();
         PriorityQueue<Node, float> leaves = new();
 
-        // check what actions can run using their checkProceduralPrecondition
-        for (int i = 0; i < available.Length; i++)
+        int worldStateBits = worldState.Data;
+
+        if (hasUsableGoalsCache &&
+            cachedUsableGoals != null &&
+            cachedWorldStateBits == worldStateBits &&
+            ReferenceEquals(cachedAvailableGoals, available))
         {
-            GoapGoal a = available[i];
-            if (a.CanRun())
+            for (int i = 0; i < cachedUsableGoals.Length; i++)
             {
-                usable.Add(a);
+                usable.Add(cachedUsableGoals[i]);
             }
+        }
+        else
+        {
+            List<GoapGoal> usableList = new(available.Length);
+
+            // check what actions can run using their checkProceduralPrecondition
+            for (int i = 0; i < available.Length; i++)
+            {
+                GoapGoal a = available[i];
+                if (a.CanRun())
+                {
+                    usable.Add(a);
+                    usableList.Add(a);
+                }
+            }
+
+            cachedUsableGoals = usableList.Count == 0 ? Array.Empty<GoapGoal>() : usableList.ToArray();
+            cachedAvailableGoals = available;
+            cachedWorldStateBits = worldStateBits;
+            hasUsableGoalsCache = true;
         }
 
         // build up the tree and record the leaf nodes that provide a solution to the goal.
