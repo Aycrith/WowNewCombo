@@ -1,0 +1,226 @@
+================================================================================
+NAVIGATION STABILITY PLAN - AGENT HANDOFF SUMMARY
+================================================================================
+
+PROJECT: WowClassicGrindBot - Navigation Stability Implementation
+BRANCH: dev
+CURRENT COMMIT: ce92afbbf (docs: add handoff guide)
+TASK STATUS: 1 of 9 Complete (11% - Ready for Continuation)
+
+================================================================================
+WHAT WAS DONE (SESSION 1)
+================================================================================
+
+✓ TASK 1 COMPLETE: Fix WaitForTurn 200ms cap (R1)
+  Commit: 21ca6c0a9
+  Changes:
+    - Core/GoalsComponent/PlayerDirection.cs:152 (1 line fix)
+    - CoreUnitTests/GoalsComponent/PlayerDirectionTests.cs (47 lines, 10 tests)
+  Impact: Turns >67° now wait full duration (up to 750ms) instead of being cut
+          short at 200ms. Eliminates stutter-turning on sharp waypoints.
+  Tests: 10/10 passing (TurnDuration + WaitTime tests)
+
+✓ BUILD VERIFIED: All 1673 unit tests passing, 0 failures
+✓ PLAN DOCUMENT: docs/plans/2026-02-24-navigation-stability.md (9 tasks, 1200+ lines)
+✓ HANDOFF GUIDE: docs/IMPLEMENTATION_HANDOFF.md (complete step-by-step for Tasks 2-9)
+
+================================================================================
+WHAT NEEDS TO BE DONE (TASKS 2-9)
+================================================================================
+
+Task 2: Add heading-diff guard before OscillationDetector tracking (R2)
+  Files: Navigation.cs, OscillationDetectorTests.cs (new)
+  Lines of code: ~5 changed + ~100 test lines
+  Complexity: Medium (test-first, guard condition)
+  Estimated effort: 15 min
+
+Task 3: Hoist ReachedDistance() out of ReduceByDistance loop (R3)
+  Files: Navigation.cs
+  Lines of code: ~12 changed (no tests needed - optimization only)
+  Complexity: Low (refactoring, single method)
+  Estimated effort: 10 min
+
+Task 4: Scope corpse-recovery hazard suppression (R5)
+  Files: Navigation.cs
+  Lines of code: ~8 changed (no tests needed - scoping fix)
+  Complexity: Low (single method fix)
+  Estimated effort: 5 min
+
+Task 5: Add route-deviation metric to NavSoakWindow (R4)
+  Files: Navigation.cs, NavSoakWindow.cs, NavSoakMetricsService.cs, NavSoakDeviationTests.cs (new)
+  Lines of code: ~40 changed + ~50 test lines
+  Complexity: Medium (multi-file wiring, event subscription)
+  Estimated effort: 20 min
+
+Task 6: Unit tests for FollowRouteGoal refill logic (R7)
+  Files: FollowRouteGoalRefillTests.cs (new)
+  Lines of code: ~160 test lines
+  Complexity: Low (pure test-only, no production code changes)
+  Estimated effort: 10 min
+
+Task 7: Unit tests for Navigation static helpers (R7)
+  Files: NavigationHelperTests.cs (new)
+  Lines of code: ~150 test lines
+  Complexity: Low (pure test-only, no production code changes)
+  Estimated effort: 10 min
+
+Task 8: GOAP planner usable-goals cache (R8)
+  Files: GoapPlanner.cs, GoapPlannerCacheTests.cs (new)
+  Lines of code: ~20 changed + ~50 test lines
+  Complexity: Medium-High (requires reading GoapPlanner structure first)
+  Estimated effort: 20 min
+
+Task 9: Final integration — push, verify soak baseline
+  Files: none (verification only)
+  Complexity: Low (build, test, push)
+  Estimated effort: 5 min
+
+TOTAL REMAINING EFFORT: ~95 minutes (all tasks are well-defined and ready to execute)
+
+================================================================================
+CRITICAL INFORMATION FOR NEXT AGENT
+================================================================================
+
+PRIMARY RESOURCE:
+  File: docs/plans/2026-02-24-navigation-stability.md
+  Purpose: Complete specification of all 9 tasks with exact code to write
+  Usage: Copy code from plan document directly into test files and source
+
+HANDOFF GUIDE:
+  File: docs/IMPLEMENTATION_HANDOFF.md
+  Purpose: Step-by-step instructions for Tasks 2-9 with references to plan
+  Usage: Follow this for exact commands and commit messages
+
+TEST PATTERN (TDD):
+  1. Create test file (copy from plan document)
+  2. Run tests to verify they fail (proves test is valid)
+  3. Write minimal implementation to pass tests
+  4. Run full test suite (1673 tests must still pass)
+  5. Commit with provided message
+
+BUILD VERIFICATION:
+  When in doubt, run:
+    cd /c/WowClassicGrindBot
+    dotnet build MasterOfPuppets.sln --nologo -q
+    dotnet test CoreUnitTests --no-build --verbosity minimal
+  Expected: "Build succeeded. 0 Error(s)" + "Passed! Failed: 0"
+
+MSBuild CACHE ISSUES (if encountered):
+  rm -rf ~/.nuget/v3-cache .vs
+  dotnet clean && dotnet build MasterOfPuppets.sln
+
+GIT WORKFLOW:
+  - All changes on dev branch (no new branches needed)
+  - Each task = 1 independent commit
+  - Commit messages provided in handoff guide
+  - After Task 9: git push origin dev
+
+================================================================================
+SUCCESS METRICS
+================================================================================
+
+Navigation system is stable when all of the following are true:
+
+✓ All unit tests pass (1673+ tests)
+✓ No route-nuking on curves (fixed in prior commit 51bd85c)
+✓ Turns complete correctly on 90°+ angles (Task 1 - DONE)
+✓ Oscillation detector only fires on real oscillation (Task 2)
+✓ Route adherence is measurable (Task 5)
+✓ Forward-only waypoint selection guaranteed (Task 6)
+✓ Helper functions have unit test coverage (Task 7)
+✓ GOAP planner allocation reduced 80% (Task 8)
+✓ 9 commits total in git log (Tasks 1-9)
+✓ Soak baseline established (Task 9)
+
+================================================================================
+CRITICAL LESSONS & GOTCHAS
+================================================================================
+
+1. TDD IS REQUIRED: Tests must be written before implementation. Do not skip
+   the "run tests to verify they fail" step - it proves the test is valid.
+
+2. FULL SUITE AFTER EACH TASK: Always run the complete test suite after each
+   change. Never assume "my change is isolated" - integration issues are hidden.
+
+3. EXACT CODE FROM PLAN: The plan document contains exact code to copy. Don't
+   paraphrase or "improve" - follow the plan exactly. Deviations introduce bugs.
+
+4. MSBuild CACHE: If you see "Building target X completely" errors, it's a
+   transient cache issue. Use the workaround above - don't spend time debugging
+   MSBuild itself. Just clean and rebuild.
+
+5. NO ARCHITECTURAL CHANGES: These 9 tasks are surgical fixes and tests. Do not
+   refactor Navigation.cs structure, rename methods, or change APIs. Stick to
+   the exact changes specified in the plan.
+
+6. EACH COMMIT INDEPENDENTLY BUILDABLE: After each commit, the codebase must
+   compile and all 1673 tests must pass. If a commit breaks the build, you've
+   diverged from the plan.
+
+================================================================================
+FILES TOUCHED BY PLAN
+================================================================================
+
+Modified (already):
+  ✓ Core/GoalsComponent/PlayerDirection.cs
+
+Created (already):
+  ✓ CoreUnitTests/GoalsComponent/PlayerDirectionTests.cs
+
+Will modify:
+  • Core/GoalsComponent/Navigation.cs (Tasks 2, 3, 4, 5)
+  • Core/Navigation/NavSoakWindow.cs (Task 5)
+  • Core/Navigation/NavSoakMetricsService.cs (Task 5)
+  • Core/GOAP/GoapPlanner.cs (Task 8)
+
+Will create:
+  • CoreUnitTests/GoalsComponent/OscillationDetectorTests.cs (Task 2)
+  • CoreUnitTests/Navigation/NavSoakDeviationTests.cs (Task 5)
+  • CoreUnitTests/GoalsComponent/FollowRouteGoalRefillTests.cs (Task 6)
+  • CoreUnitTests/GoalsComponent/NavigationHelperTests.cs (Task 7)
+  • CoreUnitTests/GOAP/GoapPlannerCacheTests.cs (Task 8)
+
+NO OTHER FILES SHOULD BE MODIFIED.
+
+================================================================================
+IMMEDIATE NEXT STEPS
+================================================================================
+
+1. Read this file completely
+2. Read docs/IMPLEMENTATION_HANDOFF.md (560 lines, 20 min read)
+3. Verify pre-flight:
+     dotnet build MasterOfPuppets.sln --nologo -q
+     dotnet test CoreUnitTests --no-build --verbosity minimal
+4. Open docs/plans/2026-02-24-navigation-stability.md
+5. Start Task 2: "Add heading-diff guard before OscillationDetector tracking"
+6. Follow step-by-step instructions in IMPLEMENTATION_HANDOFF.md
+
+You are fully prepared to complete all 8 remaining tasks. 🚀
+
+================================================================================
+CONTACT / QUESTIONS
+================================================================================
+
+If you encounter issues not covered in this handoff:
+1. Check docs/IMPLEMENTATION_HANDOFF.md for common issues (MSBuild cache, etc.)
+2. Review the specific task section in docs/plans/2026-02-24-navigation-stability.md
+3. Check git log to see what Task 1 did (commit 21ca6c0a9)
+4. Read the code you're modifying to understand context
+
+All 9 tasks are self-contained and well-documented. You have everything needed
+to complete them independently.
+
+================================================================================
+GIT LOG (for reference)
+================================================================================
+
+Latest commits:
+  ce92afbbf - docs: add comprehensive handoff guide for remaining navigation stability tasks
+  21ca6c0a9 - fix(nav): remove 200ms WaitForTurn cap to allow full turn completion
+  (previous commits: navigation stability foundation work)
+
+After Task 9 is complete, there will be 9 commits total from this session.
+
+================================================================================
+END OF HANDOFF
+================================================================================
