@@ -751,9 +751,14 @@ public sealed partial class Navigation : IDisposable
                 break;
             }
 
-            // [NEW] If the next two waypoints require a significant turn, stop popping
-            // to avoid overshooting turns while mounted
-            if (routeToNextWaypoint.Count >= 2 && TryGetUpcomingRoutePoints(out Vector3 curr, out Vector3 next))
+            // If the next two waypoints form a significant turn AND the player is
+            // still a meaningful distance from the turn apex, stop popping.
+            // Guard: playerW must be > OutDoorMinDistance from curr so the
+            // incoming vector playerW→curr is a valid forward direction, not
+            // a near-zero or backward vector from slight overshoot.
+            if (routeToNextWaypoint.Count >= 2 &&
+                TryGetUpcomingRoutePoints(out Vector3 curr, out Vector3 next) &&
+                playerW.WorldDistanceXYTo(curr) > OutDoorMinDistance)
             {
                 if (IsSharpTurn(playerW, curr, next, SimplifyPreserveTurnRadians))
                 {
@@ -787,6 +792,7 @@ public sealed partial class Navigation : IDisposable
 
         if (stuckDetector.IsCurrentlyStuck)
         {
+            oscillationDetector.Reset();
             return;
         }
 
@@ -828,16 +834,10 @@ public sealed partial class Navigation : IDisposable
             playerDirection.SetDirection(heading, routeToNextWaypoint.Peek(), steeringIgnoreDistance, token);
             lastHeadingAdjustUtc = now;
 
-            if (playerDirection.GetConsecutiveFailedTurns() >= 2 && routeToNextWaypoint.Count > 0)
-            {
-                logger.LogWarning(
-                    "[Navigation       ] Repeated heading turn failures ({Failures}); clearing active route to force repath",
-                    playerDirection.GetConsecutiveFailedTurns());
-                stopMoving.Stop();
-                ResetStuckParameters();
-                routeToNextWaypoint.Clear();
-                playerDirection.ResetFailedTurnCounter();
-            }
+            // Reset failed turn counter on each successful heading adjustment
+            // to avoid false positives accumulating across unrelated steering calls.
+            // Actual stuck conditions are handled by StuckDetector, not turn failures.
+            playerDirection.ResetFailedTurnCounter();
         }
     }
 
