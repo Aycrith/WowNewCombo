@@ -148,8 +148,8 @@ public sealed partial class PlayerDirection
     /// </summary>
     private static void WaitForTurn(int expectedDuration, CancellationToken token)
     {
-        // Wait at least the expected duration
-        int waitTime = Math.Min(expectedDuration + TURN_VERIFICATION_DELAY_MS, 200);
+        // Wait at least the expected duration (no hard cap: CalculateTurnDuration clamps to 40–700ms)
+        int waitTime = expectedDuration + TURN_VERIFICATION_DELAY_MS;
 
         // Use spin wait for better precision with cancellation support
         var sw = System.Diagnostics.Stopwatch.StartNew();
