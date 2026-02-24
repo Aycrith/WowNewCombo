@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Net.NetworkInformation;
 
 namespace Core.Startup;
 
@@ -27,6 +28,7 @@ public sealed class StartupState
     private WoWInstallation? _wowInstallation;
     private Process? _wowProcess;
     private Process? _navigationProcess;
+    private int _navigationServerPort = 47110;
     private bool _addonsValidated;
     private bool _framesConfigured;
     private bool _isReady;
@@ -66,6 +68,13 @@ public sealed class StartupState
     {
         get { lock (_lock) return _navigationProcess; }
         set { lock (_lock) _navigationProcess = value; }
+    }
+
+    /// <summary>Configured navigation server TCP port used for health fallback checks.</summary>
+    public int NavigationServerPort
+    {
+        get { lock (_lock) return _navigationServerPort; }
+        set { lock (_lock) _navigationServerPort = value; }
     }
 
     /// <summary>Whether addons have been validated/installed.</summary>
@@ -153,20 +162,32 @@ public sealed class StartupState
     {
         get
         {
+            Process? navigationProcess;
+            int navigationPort;
+
             lock (_lock)
             {
-                if (_navigationProcess == null) return false;
+                navigationProcess = _navigationProcess;
+                navigationPort = _navigationServerPort;
+            }
+
+            if (navigationProcess != null)
+            {
                 try
                 {
-                    _navigationProcess.Refresh();
-                    return !_navigationProcess.HasExited;
+                    navigationProcess.Refresh();
+                    if (!navigationProcess.HasExited)
+                    {
+                        return true;
+                    }
                 }
                 catch (InvalidOperationException)
                 {
                     // Process handle is invalid or process exited between check and Refresh
-                    return false;
                 }
             }
+
+            return IsTcpPortListening(navigationPort);
         }
     }
 
@@ -176,6 +197,32 @@ public sealed class StartupState
     private void OnStateChanged()
     {
         StateChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private static bool IsTcpPortListening(int port)
+    {
+        if (port is < 1 or > 65535)
+        {
+            return false;
+        }
+
+        try
+        {
+            System.Net.IPEndPoint[] listeners = IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners();
+            for (int i = 0; i < listeners.Length; i++)
+            {
+                if (listeners[i].Port == port)
+                {
+                    return true;
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // Fallback probe should never crash health reporting.
+        }
+
+        return false;
     }
 
     /// <summary>Reset state for a fresh startup attempt.</summary>

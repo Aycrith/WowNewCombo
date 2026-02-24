@@ -105,6 +105,7 @@ public sealed class NavigationServerManager : IHostedService, IDisposable
         _logger = logger;
         _options = options.Value;
         _state = state;
+        _state.NavigationServerPort = _options.NavigationServerPort;
 
         // Determine server path
         if (!string.IsNullOrEmpty(_options.NavigationServerPath))

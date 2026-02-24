@@ -63,6 +63,7 @@ public static class DependencyInjection
         services.AddHostedService<ProcessCleanupService>();
         services.AddHostedService<HealthMonitor>();
         services.AddHostedService<GlobalHotkeyKillSwitchService>();
+        services.AddHostedService<InputSecurityModeSyncService>();
         services.AddHostedService<StartupHostedService>();
 
         return services;
