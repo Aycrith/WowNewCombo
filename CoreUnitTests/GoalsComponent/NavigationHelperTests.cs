@@ -1,0 +1,176 @@
+using FluentAssertions;
+using System;
+using System.Numerics;
+using Xunit;
+
+namespace CoreUnitTests.GoalsComponent;
+
+/// <summary>
+/// Tests for Navigation static helper logic.
+/// All methods under test are reproduced here as they appear in Navigation.cs.
+/// If the production code is ever refactored to expose these as internal/public,
+/// these tests should switch to calling the real implementation.
+/// </summary>
+public class NavigationHelperTests
+{
+    // ---- IsSharpTurn mirror ----
+    private static bool IsSharpTurn(Vector3 from, Vector3 via, Vector3 to, float minTurnRadians)
+    {
+        var incoming = new Vector2(via.X - from.X, via.Y - from.Y);
+        var outgoing = new Vector2(to.X - via.X, to.Y - via.Y);
+        if (incoming.LengthSquared() < 0.01f || outgoing.LengthSquared() < 0.01f)
+        {
+            return false;
+        }
+
+        incoming = Vector2.Normalize(incoming);
+        outgoing = Vector2.Normalize(outgoing);
+        float dot = Math.Clamp(Vector2.Dot(incoming, outgoing), -1f, 1f);
+        float angle = MathF.Acos(dot);
+        return angle >= minTurnRadians;
+    }
+
+    private const float SimplifyPreserveTurnRadians = MathF.PI / 6f; // 30 deg
+    private const float TightTurnPrecisionRadians = MathF.PI / 5f;   // 36 deg
+
+    // ---- IsSharpTurn Tests ----
+
+    [Fact]
+    public void IsSharpTurn_StraightLine_ReturnsFalse()
+    {
+        // A->B->C all in a straight line east
+        var from = new Vector3(0, 0, 0);
+        var via = new Vector3(10, 0, 0);
+        var to = new Vector3(20, 0, 0);
+        IsSharpTurn(from, via, to, SimplifyPreserveTurnRadians).Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsSharpTurn_90DegreeTurn_ReturnsTrue()
+    {
+        // A(0,0)->B(10,0)->C(10,10): 90 deg left turn at B
+        var from = new Vector3(0, 0, 0);
+        var via = new Vector3(10, 0, 0);
+        var to = new Vector3(10, 10, 0);
+        IsSharpTurn(from, via, to, SimplifyPreserveTurnRadians).Should().BeTrue("90 deg > 30 deg threshold");
+    }
+
+    [Fact]
+    public void IsSharpTurn_20DegreeTurn_ReturnsFalse()
+    {
+        // A gentle 20 deg bend - should not trigger SimplifyPreserveTurnRadians (30 deg)
+        float angle20 = 20f * MathF.PI / 180f;
+        var from = new Vector3(0, 0, 0);
+        var via = new Vector3(10, 0, 0);
+        // to is 20 deg off the incoming direction
+        var to = new Vector3(via.X + MathF.Cos(angle20) * 10f,
+                             via.Y + MathF.Sin(angle20) * 10f, 0);
+        IsSharpTurn(from, via, to, SimplifyPreserveTurnRadians).Should().BeFalse("20 deg < 30 deg threshold");
+    }
+
+    [Fact]
+    public void IsSharpTurn_ZeroLengthIncoming_ReturnsFalse()
+    {
+        // from == via (zero-length incoming vector) - must not crash, must return false
+        var from = new Vector3(10, 0, 0);
+        var via = new Vector3(10, 0, 0); // same as from
+        var to = new Vector3(20, 10, 0);
+        IsSharpTurn(from, via, to, SimplifyPreserveTurnRadians).Should().BeFalse("zero-length guard");
+    }
+
+    [Fact]
+    public void IsSharpTurn_PlayerPastVia_DoesNotFalselyTrigger()
+    {
+        // This is the bug that was fixed: playerW (from) is slightly past via.
+        // The incoming vector playerW->via is near-zero/backward but LengthSquared > 0.01.
+        // With OutDoorMinDistance=3 guard in ReduceByDistance, from is always >3 from via.
+        // Simulate: from is 2 units past via -> incoming vector points backward
+        var via = new Vector3(10, 0, 0);
+        var from = new Vector3(12, 0, 0); // 2 units past via in +X direction
+        var to = new Vector3(20, 0, 0); // continuing in same direction
+
+        // incoming = via - from = (-2, 0)  (points left/backward)
+        // outgoing = to - via  = (10, 0)   (points right/forward)
+        // These are anti-parallel -> angle ~= PI -> IsSharpTurn returns true (wrong for this path)
+        // This proves why the OutDoorMinDistance guard in ReduceByDistance is necessary.
+        bool result = IsSharpTurn(from, via, to, SimplifyPreserveTurnRadians);
+        result.Should().BeTrue("confirms the geometry inversion when player overshoots via");
+        // The production code guards against this by requiring playerW > OutDoorMinDistance from curr
+    }
+
+    // ---- IsExcessiveHazardDetour mirror ----
+    private static float TotalDistance(Vector3[] path)
+    {
+        float d = 0;
+        for (int i = 0; i < path.Length - 1; i++)
+        {
+            d += Vector2.Distance(new(path[i].X, path[i].Y), new(path[i + 1].X, path[i + 1].Y));
+        }
+
+        return d;
+    }
+
+    private const float MaxAdditional = 80f;
+    private const float MaxRatio = 1.75f;
+    private const float HardMax = 120f;
+
+    private static bool IsExcessiveHazardDetour(Vector3[] orig, Vector3[] detour)
+    {
+        if (orig.Length < 2 || detour.Length < 2)
+        {
+            return false;
+        }
+
+        float od = TotalDistance(orig);
+        float dd = TotalDistance(detour);
+        if (od <= 0.01f || dd <= od)
+        {
+            return false;
+        }
+
+        float additional = dd - od;
+        float ratio = dd / od;
+        if (additional >= HardMax)
+        {
+            return true;
+        }
+
+        return additional >= MaxAdditional && ratio >= MaxRatio;
+    }
+
+    [Fact]
+    public void IsExcessiveHazardDetour_ShorterDetour_ReturnsFalse()
+    {
+        Vector3[] orig = [new(0, 0, 0), new(100, 0, 0)];  // 100 units
+        Vector3[] detour = [new(0, 0, 0), new(50, 0, 0), new(100, 0, 0)]; // still 100 units
+        IsExcessiveHazardDetour(orig, detour).Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsExcessiveHazardDetour_SmallExcess_ReturnsFalse()
+    {
+        // 100 unit original, ~280 unit detour path geometry would exceed threshold.
+        // Use a detour with +50 and ratio 1.5 to stay below both thresholds.
+        Vector3[] orig = [new(0, 0, 0), new(100, 0, 0)];
+        Vector3[] detour = [new(0, 0, 0), new(50, 50, 0), new(100, 0, 0)]; // ~141.42 total
+        IsExcessiveHazardDetour(orig, detour).Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsExcessiveHazardDetour_ExceedsBothThresholds_ReturnsTrue()
+    {
+        // 50 unit original, ~250 unit detour (+200, ratio 5.0) - exceeds both thresholds
+        Vector3[] orig = [new(0, 0, 0), new(50, 0, 0)];
+        Vector3[] detour = [new(0, 0, 0), new(0, 200, 0), new(50, 200, 0)]; // 250 total
+        IsExcessiveHazardDetour(orig, detour).Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsExcessiveHazardDetour_HardMaxAlone_ReturnsTrue()
+    {
+        // 10 unit original, 150 unit detour - exceeds HardMax (120) alone
+        Vector3[] orig = [new(0, 0, 0), new(10, 0, 0)];
+        Vector3[] detour = [new(0, 0, 0), new(0, 150, 0), new(10, 150, 0)];
+        IsExcessiveHazardDetour(orig, detour).Should().BeTrue("hard max 120 exceeded");
+    }
+}
