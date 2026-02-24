@@ -12,6 +12,8 @@ public sealed record NavSoakWindow
     public int StuckEvents { get; init; }
     public int RepeatStuckCount { get; init; }
     public int TailRecalcFailures { get; init; }
+    public float MaxRouteDeviation { get; init; }
+    public float AvgRouteDeviation { get; init; }
 
     public double RepeatStuckRate =>
         StuckEvents == 0 ? 0.0 : Math.Round((double)RepeatStuckCount / StuckEvents, 4);

@@ -82,6 +82,9 @@ public sealed partial class Navigation : IDisposable
     public event Action? OnNoPathFound;
     public event Action? OnDynamicDetourApplied;
     public event Action? OnSuccessfulReconnect;
+    /// <summary>Fired each Update() tick with the perpendicular distance from
+    /// the player to the current route segment. Used for route-adherence telemetry.</summary>
+    public event Action<float>? OnDeviationSample;
 
     public bool SimplifyRouteToWaypoint { get; set; } = true;
 
@@ -263,6 +266,17 @@ public sealed partial class Navigation : IDisposable
         playerWorldPos = playerW;
         Vector3 targetW = routeToNextWaypoint.Peek();
         float worldDistance = playerW.WorldDistanceXYTo(targetW);
+
+        // Sample route deviation for telemetry (fires each active tick)
+        if (routeToNextWaypoint.Count >= 2 &&
+            TryGetUpcomingRoutePoints(out Vector3 deviationCurr, out Vector3 deviationNext))
+        {
+            Vector2 playerXY = new(playerW.X, playerW.Y);
+            Vector2 closestOnSeg = VectorExt.GetClosestPointOnLineSegment(
+                deviationCurr.AsVector2(), deviationNext.AsVector2(), playerXY);
+            float deviation = Vector2.Distance(playerXY, closestOnSeg);
+            OnDeviationSample?.Invoke(deviation);
+        }
 
         Vector3 playerM = WorldMapAreaDB.ToMap_FlipXY(playerW, playerReader.WorldMapArea);
         Vector3 targetM = WorldMapAreaDB.ToMap_FlipXY(targetW, playerReader.WorldMapArea);

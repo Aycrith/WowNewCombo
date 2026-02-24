@@ -38,6 +38,9 @@ public sealed class NavSoakMetricsService : IDisposable
     private int repeatStuckCount;
     private DateTime windowStart;
     private Vector3 lastStuckPosition;
+    private float maxDeviation;
+    private float deviationSum;
+    private int deviationSampleCount;
 
     public int CurrentWindowFrontBypassActivations => frontBypassActivations;
     public int CurrentWindowSuccessfulReconnects => successfulReconnects;
@@ -110,6 +113,7 @@ public sealed class NavSoakMetricsService : IDisposable
             {
                 sessionNavigation.OnDynamicDetourApplied += HandleDetourApplied;
                 sessionNavigation.OnSuccessfulReconnect += HandleSuccessfulReconnect;
+                sessionNavigation.OnDeviationSample += HandleDeviationSampleReceived;
                 attachedNewNavigation = true;
             }
         }
@@ -158,6 +162,20 @@ public sealed class NavSoakMetricsService : IDisposable
         MaybeCloseWindow();
     }
 
+    private void HandleDeviationSampleReceived(float deviation)
+    {
+        lock (sync)
+        {
+            if (deviation > maxDeviation)
+            {
+                maxDeviation = deviation;
+            }
+
+            deviationSum += deviation;
+            deviationSampleCount++;
+        }
+    }
+
     private void MaybeCloseWindow()
     {
         bool shouldClose;
@@ -198,7 +216,9 @@ public sealed class NavSoakMetricsService : IDisposable
                 SuccessfulReconnects = successfulReconnects,
                 StuckEvents = stuckEvents,
                 RepeatStuckCount = repeatStuckCount,
-                TailRecalcFailures = tailRecalcFailures
+                TailRecalcFailures = tailRecalcFailures,
+                MaxRouteDeviation = maxDeviation,
+                AvgRouteDeviation = deviationSampleCount > 0 ? deviationSum / deviationSampleCount : 0f
             };
             completedWindows.Add(window);
 
@@ -206,6 +226,9 @@ public sealed class NavSoakMetricsService : IDisposable
             successfulReconnects = 0;
             stuckEvents = 0;
             repeatStuckCount = 0;
+            maxDeviation = 0f;
+            deviationSum = 0f;
+            deviationSampleCount = 0;
             windowStart = DateTime.UtcNow;
         }
 
@@ -262,6 +285,9 @@ public sealed class NavSoakMetricsService : IDisposable
         stuckEvents = 0;
         repeatStuckCount = 0;
         lastStuckPosition = default;
+        maxDeviation = 0f;
+        deviationSum = 0f;
+        deviationSampleCount = 0;
     }
 
     private static string ResolveOutputDir(string configuredOutputDir)
@@ -299,6 +325,7 @@ public sealed class NavSoakMetricsService : IDisposable
         {
             nav.OnDynamicDetourApplied -= HandleDetourApplied;
             nav.OnSuccessfulReconnect -= HandleSuccessfulReconnect;
+            nav.OnDeviationSample -= HandleDeviationSampleReceived;
         }
 
         attachedNavigations.Clear();
