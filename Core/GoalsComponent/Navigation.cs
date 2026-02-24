@@ -60,7 +60,7 @@ public sealed partial class Navigation : IDisposable
     private float lastWorldDistance = float.MaxValue;
 
     /// <summary>Minimum angle in radians (~5.14 degrees) before triggering turn adjustment. Prevents over-correction on minor heading deviations.</summary>
-    private const float minAngleToTurn = PI / 24f;
+    private const float minAngleToTurn = PI / 35f;
 
     /// <summary>Minimum angle in radians (90 degrees) before stopping to turn. Ensures character stops for large direction changes.</summary>
     private const float minAngleToStopBeforeTurn = PI / 2f;
@@ -138,10 +138,10 @@ public sealed partial class Navigation : IDisposable
     private const float TightTurnPrecisionRadians = PI / 5f;
     private const float SimplifyPreserveVerticalZDelta = 0.75f;
     private const float SimplifyPreserveTurnRadians = PI / 6f;
-    private static readonly TimeSpan HeadingAdjustCooldown = TimeSpan.FromMilliseconds(220);
-    private static readonly TimeSpan PrecisionHeadingAdjustCooldown = TimeSpan.FromMilliseconds(130);
+    private static readonly TimeSpan HeadingAdjustCooldown = TimeSpan.FromMilliseconds(140);
+    private static readonly TimeSpan PrecisionHeadingAdjustCooldown = TimeSpan.FromMilliseconds(90);
     private const float HeadingAdjustImmediateDiff = PI / 7f;
-    private const float HeadingAdjustThrottleMinDiff = 0.24f;
+    private const float HeadingAdjustThrottleMinDiff = 0.18f;
 
     private DateTime lastDynamicDetourAttemptUtc = DateTime.MinValue;
     private DateTime lastFrontBypassUtc = DateTime.MinValue;
