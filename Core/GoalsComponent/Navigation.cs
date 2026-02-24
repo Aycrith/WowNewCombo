@@ -1215,13 +1215,8 @@ public sealed partial class Navigation : IDisposable
             return true;
         }
 
-        // WoW/addon death-state flags are not always reliable during ghost movement.
-        // A non-zero corpse marker is a stronger signal that corpse recovery is active.
-        if (playerReader.CorpseMapX != 0f || playerReader.CorpseMapY != 0f)
-        {
-            return true;
-        }
-
+        // Do NOT use CorpseMapX/Y — those remain non-zero for the entire ghost run
+        // and would suppress hazard detours even during normal FollowRouteGoal navigation.
         return false;
     }
 
