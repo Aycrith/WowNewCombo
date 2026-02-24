@@ -1,5 +1,11 @@
 {
   "ClassName": "Warrior",
+  "ForwardKey": 87,
+  "BackwardKey": 83,
+  "TurnLeftKey": 65,
+  "TurnRightKey": 68,
+  "StrafeLeftKey": 37,
+  "StrafeRightKey": 39,
   "PathFilename": "_pack\\20-30\\Duskwood\\23-26 Near Twilight Grove v3 - wolves-ghostwalk.json",
   "PathThereAndBack": false,
   "PathReduceSteps": false,

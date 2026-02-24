@@ -1,5 +1,11 @@
 {
   "ClassName": "DeatkKnight",
+  "ForwardKey": 87,
+  "BackwardKey": 83,
+  "TurnLeftKey": 65,
+  "TurnRightKey": 68,
+  "StrafeLeftKey": 37,
+  "StrafeRightKey": 39,
   "Mode": "AttendedGrind", //Grind
   "Loot": true,
   "PathFilename": "_pack\\40-50\\The Hinterlands\\41-42 wolves.json", // todo update profile

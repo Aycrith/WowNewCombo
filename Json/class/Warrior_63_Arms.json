@@ -1,5 +1,11 @@
 {
   "ClassName": "Warrior",
+  "ForwardKey": 87,
+  "BackwardKey": 83,
+  "TurnLeftKey": 65,
+  "TurnRightKey": 68,
+  "StrafeLeftKey": 37,
+  "StrafeRightKey": 39,
   //"Mode": "AttendedGrind", //Grind
   //"KeyboardOnly": true,
   "PathFilename": "_pack\\60-70\\Terokkar Forest\\62-64.json",

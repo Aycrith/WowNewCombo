@@ -1,5 +1,11 @@
 {
   "ClassName": "Warlock",
+  "ForwardKey": 87,
+  "BackwardKey": 83,
+  "TurnLeftKey": 65,
+  "TurnRightKey": 68,
+  "StrafeLeftKey": 37,
+  "StrafeRightKey": 39,
   "Loot": true,
   "NPCMaxLevels_Below": 5,
   "PathFilename": "5_Gnome.json",

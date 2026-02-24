@@ -1,5 +1,11 @@
 {
   "ClassName": "Warrior",
+  "ForwardKey": 87,
+  "BackwardKey": 83,
+  "TurnLeftKey": 65,
+  "TurnRightKey": 68,
+  "StrafeLeftKey": 37,
+  "StrafeRightKey": 39,
   "Mode": "AttendedGrind",
   "PathFilename": "_pack\\1-20\\Human\\07-10_Elwynn Forest.json",
   "Wait": {

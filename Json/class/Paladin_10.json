@@ -1,5 +1,11 @@
 {
   "ClassName": "Paladin",
+  "ForwardKey": 87,
+  "BackwardKey": 83,
+  "TurnLeftKey": 65,
+  "TurnRightKey": 68,
+  "StrafeLeftKey": 37,
+  "StrafeRightKey": 39,
   "PathFilename": "_p2\\10-17_westfall.json",
   "Pull": {
     "Sequence": [

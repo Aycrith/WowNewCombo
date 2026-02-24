@@ -1,5 +1,11 @@
 {
   "ClassName": "Mage",
+  "ForwardKey": 87,
+  "BackwardKey": 83,
+  "TurnLeftKey": 65,
+  "TurnRightKey": 68,
+  "StrafeLeftKey": 37,
+  "StrafeRightKey": 39,
   "Loot": true,
   "PathFilename": "10_Gnome.json",
   "PathThereAndBack": true,

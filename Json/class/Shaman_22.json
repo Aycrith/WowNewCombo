@@ -1,5 +1,11 @@
 {
   "ClassName": "Shaman",
+  "ForwardKey": 87,
+  "BackwardKey": 83,
+  "TurnLeftKey": 65,
+  "TurnRightKey": 68,
+  "StrafeLeftKey": 37,
+  "StrafeRightKey": 39,
   "Loot": true,
   "PathFilename": "_pack\\20-30\\Stonetalon Mountains\\21-23 Mirkfallonlage.json",
   "PathThereAndBack": true,
