@@ -741,8 +741,10 @@ public sealed partial class Navigation : IDisposable
 
     private void ReduceByDistance(Vector3 playerW, float minDistance, bool singlePop = false)
     {
+        float reached = ReachedDistance(minDistance);
+
         while (routeToNextWaypoint.Count > 0 &&
-            playerW.WorldDistanceXYTo(routeToNextWaypoint.Peek()) < ReachedDistance(minDistance))
+               playerW.WorldDistanceXYTo(routeToNextWaypoint.Peek()) < reached)
         {
             routeToNextWaypoint.Pop();
 
@@ -758,12 +760,10 @@ public sealed partial class Navigation : IDisposable
             // a near-zero or backward vector from slight overshoot.
             if (routeToNextWaypoint.Count >= 2 &&
                 TryGetUpcomingRoutePoints(out Vector3 curr, out Vector3 next) &&
-                playerW.WorldDistanceXYTo(curr) > OutDoorMinDistance)
+                playerW.WorldDistanceXYTo(curr) > OutDoorMinDistance &&
+                IsSharpTurn(playerW, curr, next, SimplifyPreserveTurnRadians))
             {
-                if (IsSharpTurn(playerW, curr, next, SimplifyPreserveTurnRadians))
-                {
-                    break;
-                }
+                break;
             }
         }
     }
