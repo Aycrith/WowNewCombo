@@ -1125,7 +1125,20 @@ public class DiagnosticsController : ControllerBase
             const string command = "/reload";
             logger.LogInformation("Executing {Command}", command);
 
-            exec.Run(command);
+            // Mirror FrameConfigurator's slash-command sequence to recover from hung DTC states.
+            wowInput.SetForegroundWindow();
+            await Task.Delay(200);
+
+            wowInput.PressRandom(ConsoleKey.Escape, 50);
+            await Task.Delay(300);
+            wowInput.PressRandom(ConsoleKey.Escape, 50);
+            await Task.Delay(300);
+
+            wowInput.PressRandom(ConsoleKey.Enter, 50);
+            await Task.Delay(200);
+            wowInput.SendText(command);
+            await Task.Delay(150);
+            wowInput.PressRandom(ConsoleKey.Enter, 50);
             await Task.Delay(500);
 
             sw.Stop();

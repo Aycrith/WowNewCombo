@@ -455,6 +455,30 @@ function Get-StartupStageValue([object]$Health)
     return -998
 }
 
+function Get-StartupElapsedSeconds([object]$Health)
+{
+    try
+    {
+        if ($null -eq $Health -or $null -eq $Health.Startup -or $null -eq $Health.Startup.ElapsedTime)
+        {
+            return $null
+        }
+
+        $elapsedRaw = "$($Health.Startup.ElapsedTime)"
+        if ([string]::IsNullOrWhiteSpace($elapsedRaw))
+        {
+            return $null
+        }
+
+        $elapsed = [TimeSpan]::Parse($elapsedRaw)
+        return [int][Math]::Floor($elapsed.TotalSeconds)
+    }
+    catch
+    {
+        return $null
+    }
+}
+
 function Get-TestFramesValidationMarker
 {
     param([AllowNull()][object]$FramesResponse)
@@ -658,6 +682,40 @@ function Wait-ForDtcRecovery
     }
 }
 
+function Invoke-DtcReloadFallbackScript
+{
+    $fallbackScript = Join-Path $BotRoot "send-reload.ps1"
+    if (-not (Test-Path -LiteralPath $fallbackScript))
+    {
+        return [pscustomobject][ordered]@{
+            Success = $false
+            Error = "Fallback script not found: $fallbackScript"
+            Output = $null
+            ScriptPath = $fallbackScript
+        }
+    }
+
+    try
+    {
+        $output = & pwsh -NoProfile -ExecutionPolicy Bypass -File $fallbackScript 2>&1 | Out-String
+        return [pscustomobject][ordered]@{
+            Success = $true
+            Error = $null
+            Output = $output
+            ScriptPath = $fallbackScript
+        }
+    }
+    catch
+    {
+        return [pscustomobject][ordered]@{
+            Success = $false
+            Error = $_.Exception.Message
+            Output = $null
+            ScriptPath = $fallbackScript
+        }
+    }
+}
+
 function Invoke-DtcReloadRecovery
 {
     param(
@@ -759,6 +817,30 @@ function Invoke-DtcReloadRecovery
 
     Start-Sleep -Seconds 8
     $recovery = Wait-ForDtcRecovery -TimeoutSec 30
+
+    if (-not $recovery.Success)
+    {
+        Write-WarnLine "API /reload did not restore DTC within 30s; attempting send-reload.ps1 fallback"
+        $fallbackReload = Invoke-DtcReloadFallbackScript
+        [void](Write-ArtifactJson -Name ("{0}-dtc-reload-fallback-result.json" -f $script:RunTag) -Object ([ordered]@{
+                TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+                Reason = $Reason
+                Success = [bool]$fallbackReload.Success
+                Error = $fallbackReload.Error
+                ScriptPath = $fallbackReload.ScriptPath
+                Output = $fallbackReload.Output
+            }))
+
+        if ($fallbackReload.Success)
+        {
+            Start-Sleep -Seconds 8
+            $fallbackRecovery = Wait-ForDtcRecovery -TimeoutSec 30
+            if ($fallbackRecovery.Success)
+            {
+                $recovery = $fallbackRecovery
+            }
+        }
+    }
 
     $afterHealth = Invoke-AgentApiSafe -Method GET -Path "/api/health" -TimeoutSec 5
     $afterFrameStatus = Invoke-AgentApiSafe -Method GET -Path "/api/frameconfig/status" -TimeoutSec 8
@@ -973,6 +1055,45 @@ function Start-BlazorServer
         }
 
         $stageValue = Get-StartupStageValue -Health $healthSnapshot
+        if ($stageValue -eq 7)
+        {
+            $stage7StallThresholdSec = 240
+            $startupElapsedSec = Get-StartupElapsedSeconds -Health $healthSnapshot
+            if ($null -ne $startupElapsedSec -and $startupElapsedSec -lt $stage7StallThresholdSec)
+            {
+                $graceSec = $stage7StallThresholdSec - $startupElapsedSec
+                Write-WarnLine "Startup still in frame configuration at ${startupElapsedSec}s; waiting additional ${graceSec}s before DTC recovery/auto-config intervention"
+
+                $ready = Wait-Until -Label "Startup stage Ready (stage 7 grace window)" -TimeoutSec $graceSec -PollMs 1500 -Condition {
+                    try
+                    {
+                        $health = Invoke-AgentApi -Method GET -Path "/api/health" -TimeoutSec 3
+                        (Get-StartupStageValue -Health $health) -ge 9
+                    }
+                    catch
+                    {
+                        $false
+                    }
+                }
+
+                if ($ready)
+                {
+                    return
+                }
+
+                try
+                {
+                    $healthSnapshot = Invoke-AgentApi -Method GET -Path "/api/health" -TimeoutSec 5
+                }
+                catch
+                {
+                    $healthSnapshot = $null
+                }
+
+                $stageValue = Get-StartupStageValue -Health $healthSnapshot
+            }
+        }
+
         if ($stageValue -eq 7)
         {
             Write-WarnLine "Startup stalled in frame configuration (stage 7); attempting /api/frameconfig/auto-configure"

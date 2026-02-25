@@ -421,9 +421,16 @@ public static class DependencyInjection
         NativeMethods.GetWindowRect(process.MainWindowHandle, out Rectangle rect);
         if (!FrameConfig.Exists())
         {
-            log.LogError($"{nameof(FrameConfig)} doesn't exists!");
-            configurationComplete = false;
-            return true; // WoW is running, but config is not complete
+            if (FrameConfig.TryActivateForResolution(rect, installVersion))
+            {
+                log.LogInformation($"{nameof(FrameConfig)} activated resolution-specific config for {rect.Width}x{rect.Height}");
+            }
+            else
+            {
+                log.LogError($"{nameof(FrameConfig)} doesn't exists!");
+                configurationComplete = false;
+                return true; // WoW is running, but config is not complete
+            }
         }
 
         if (!FrameConfig.IsValid(rect, installVersion))
