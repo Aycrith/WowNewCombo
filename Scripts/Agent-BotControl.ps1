@@ -65,6 +65,7 @@ $script:RunStamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $script:RunTag = "agentctl-$script:RunStamp"
 $script:SessionTag = if ([string]::IsNullOrWhiteSpace($ArtifactTag)) { "live-session-$script:RunStamp" } else { $ArtifactTag }
 $script:SessionArtifactDir = Join-Path $script:LogsDir $script:SessionTag
+$script:DtcReloadRecoveryAttempted = $false
 
 function Write-Info([string]$Message)
 {
@@ -454,6 +455,334 @@ function Get-StartupStageValue([object]$Health)
     return -998
 }
 
+function Get-TestFramesValidationMarker
+{
+    param([AllowNull()][object]$FramesResponse)
+
+    try
+    {
+        if ($null -eq $FramesResponse -or $null -eq $FramesResponse.Data)
+        {
+            return $null
+        }
+
+        if ($null -eq $FramesResponse.Data.validationMarker)
+        {
+            return $null
+        }
+
+        return [int]$FramesResponse.Data.validationMarker
+    }
+    catch
+    {
+        return $null
+    }
+}
+
+function Save-DtcRecoveryApiArtifact
+{
+    param(
+        [Parameter(Mandatory = $true)][string]$Name,
+        [AllowNull()][object]$SafeResponse
+    )
+
+    [void](Write-ArtifactJson -Name $Name -Object ([ordered]@{
+            TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+            Success = $(if ($null -ne $SafeResponse) { [bool]$SafeResponse.Success } else { $false })
+            Error = $(if ($null -ne $SafeResponse) { $SafeResponse.Error } else { "No response object" })
+            Data = $(if ($null -ne $SafeResponse) { $SafeResponse.Result } else { $null })
+        }))
+}
+
+function Test-DtcFrozenStartupSignature
+{
+    param(
+        [switch]$IgnoreStageRequirement
+    )
+
+    $healthResp = Invoke-AgentApiSafe -Method GET -Path "/api/health" -TimeoutSec 5
+    $frameStatusResp = Invoke-AgentApiSafe -Method GET -Path "/api/frameconfig/status" -TimeoutSec 8
+    $snapshotResp = Invoke-AgentApiSafe -Method GET -Path "/api/test/snapshot" -TimeoutSec 10
+    $framesResp = Invoke-AgentApiSafe -Method GET -Path "/api/test/frames" -TimeoutSec 10
+
+    $wowRunning = $null -ne (Get-Process -Name "WowClassic" -ErrorAction SilentlyContinue | Select-Object -First 1)
+    $stageValue = $(if ($healthResp.Success) { Get-StartupStageValue -Health $healthResp.Result } else { -999 })
+    $stageMatches = $IgnoreStageRequirement.IsPresent -or ($stageValue -eq 7)
+
+    $addonNotVisible = $false
+    if ($frameStatusResp.Success)
+    {
+        try
+        {
+            $addonNotVisible = [bool]$frameStatusResp.Result.AddonNotVisible
+        }
+        catch
+        {
+            $addonNotVisible = $false
+        }
+    }
+
+    $snapshotZeroed = $false
+    $uiMapId = $null
+    $level = $null
+    if ($snapshotResp.Success)
+    {
+        try
+        {
+            if ($null -ne $snapshotResp.Result.Data -and $null -ne $snapshotResp.Result.Data.snapshot)
+            {
+                $snap = $snapshotResp.Result.Data.snapshot
+                $uiMapId = [int]$snap.UIMapId
+                $level = [int]$snap.Level
+                $snapshotZeroed = ($uiMapId -le 0) -and ($level -le 0)
+            }
+        }
+        catch
+        {
+            $snapshotZeroed = $false
+        }
+    }
+
+    $validationMarker = $(Get-TestFramesValidationMarker -FramesResponse $(if ($framesResp.Success) { $framesResp.Result } else { $null }))
+    $framesMarkerMatches = ($null -eq $validationMarker) -or ($validationMarker -eq 0)
+
+    $isFrozen = $wowRunning -and
+        $healthResp.Success -and
+        $stageMatches -and
+        $frameStatusResp.Success -and
+        $addonNotVisible -and
+        $snapshotResp.Success -and
+        $snapshotZeroed -and
+        $framesMarkerMatches
+
+    return [pscustomobject][ordered]@{
+        IsFrozen = $isFrozen
+        WowRunning = $wowRunning
+        HealthReachable = [bool]$healthResp.Success
+        StageValue = $stageValue
+        RequireStage7 = (-not $IgnoreStageRequirement.IsPresent)
+        StageMatches = $stageMatches
+        AddonNotVisible = $addonNotVisible
+        SnapshotZeroed = $snapshotZeroed
+        SnapshotUIMapId = $uiMapId
+        SnapshotLevel = $level
+        FramesValidationMarker = $validationMarker
+        FramesMarkerMatches = $framesMarkerMatches
+        HealthResponse = $healthResp
+        FrameStatusResponse = $frameStatusResp
+        SnapshotResponse = $snapshotResp
+        FramesResponse = $framesResp
+    }
+}
+
+function Wait-ForDtcRecovery
+{
+    param(
+        [int]$TimeoutSec = 30
+    )
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSec)
+    $lastProbe = $null
+
+    while ((Get-Date) -lt $deadline)
+    {
+        $framesResp = Invoke-AgentApiSafe -Method GET -Path "/api/test/frames" -TimeoutSec 8
+        $snapshotResp = Invoke-AgentApiSafe -Method GET -Path "/api/test/snapshot" -TimeoutSec 8
+        $diagResp = Invoke-AgentApiSafe -Method GET -Path "/api/frameconfig/diagnostics" -TimeoutSec 8
+
+        $marker = $(Get-TestFramesValidationMarker -FramesResponse $(if ($framesResp.Success) { $framesResp.Result } else { $null }))
+
+        $uiMapId = $null
+        $level = $null
+        if ($snapshotResp.Success)
+        {
+            try
+            {
+                if ($null -ne $snapshotResp.Result.Data -and $null -ne $snapshotResp.Result.Data.snapshot)
+                {
+                    $snap = $snapshotResp.Result.Data.snapshot
+                    $uiMapId = [int]$snap.UIMapId
+                    $level = [int]$snap.Level
+                }
+            }
+            catch
+            {
+                $uiMapId = $null
+                $level = $null
+            }
+        }
+
+        $detectedXOffset = $null
+        if ($diagResp.Success)
+        {
+            try
+            {
+                $detectedXOffset = [int]$diagResp.Result.DetectedXOffset
+            }
+            catch
+            {
+                $detectedXOffset = $null
+            }
+        }
+
+        $recovered = ($marker -eq 2000001) -or
+            (($null -ne $uiMapId) -and ($null -ne $level) -and ($uiMapId -gt 0) -and ($level -gt 0)) -or
+            (($null -ne $detectedXOffset) -and ($detectedXOffset -ge 0))
+
+        $lastProbe = [pscustomobject][ordered]@{
+            TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+            Recovered = $recovered
+            FramesValidationMarker = $marker
+            SnapshotUIMapId = $uiMapId
+            SnapshotLevel = $level
+            DetectedXOffset = $detectedXOffset
+            FramesResponse = $framesResp
+            SnapshotResponse = $snapshotResp
+            DiagnosticsResponse = $diagResp
+        }
+
+        if ($recovered)
+        {
+            return [pscustomobject][ordered]@{
+                Success = $true
+                Probe = $lastProbe
+            }
+        }
+
+        Start-Sleep -Seconds 1
+    }
+
+    return [pscustomobject][ordered]@{
+        Success = $false
+        Probe = $lastProbe
+    }
+}
+
+function Invoke-DtcReloadRecovery
+{
+    param(
+        [string]$Reason = "unknown",
+        [switch]$Force
+    )
+
+    if ($script:DtcReloadRecoveryAttempted)
+    {
+        Write-WarnLine "DTC /reload recovery already attempted once in this startup flow; skipping additional attempt"
+        return [pscustomobject][ordered]@{
+            Attempted = $false
+            Recovered = $false
+            SkippedReason = "already-attempted"
+            Reason = $Reason
+            Error = $null
+            Signature = $null
+            RecoveryProbe = $null
+        }
+    }
+
+    $botStatusResp = Invoke-AgentApiSafe -Method GET -Path "/api/bot/status" -TimeoutSec 5
+    if ($botStatusResp.Success)
+    {
+        try
+        {
+            if ([bool]$botStatusResp.Result.IsActive)
+            {
+                Write-WarnLine "Skipping DTC /reload recovery because bot is already active"
+                return [pscustomobject][ordered]@{
+                    Attempted = $false
+                    Recovered = $false
+                    SkippedReason = "bot-active"
+                    Reason = $Reason
+                    Error = $null
+                    Signature = $null
+                    RecoveryProbe = $null
+                }
+            }
+        }
+        catch
+        {
+            # Ignore parse issues and continue with recovery attempt.
+        }
+    }
+
+    $signature = Test-DtcFrozenStartupSignature -IgnoreStageRequirement:$Force.IsPresent
+    if (-not $Force.IsPresent -and -not $signature.IsFrozen)
+    {
+        return [pscustomobject][ordered]@{
+            Attempted = $false
+            Recovered = $false
+            SkippedReason = "signature-not-matched"
+            Reason = $Reason
+            Error = $null
+            Signature = $signature
+            RecoveryProbe = $null
+        }
+    }
+
+    if ($Force.IsPresent -and -not $signature.IsFrozen)
+    {
+        Write-WarnLine "Forcing DTC /reload recovery despite non-startup signature (reason: $Reason)"
+    }
+
+    $script:DtcReloadRecoveryAttempted = $true
+
+    Save-DtcRecoveryApiArtifact -Name ("{0}-dtc-freeze-before-health.json" -f $script:RunTag) -SafeResponse $signature.HealthResponse
+    Save-DtcRecoveryApiArtifact -Name ("{0}-dtc-freeze-before-frameconfig-status.json" -f $script:RunTag) -SafeResponse $signature.FrameStatusResponse
+    Save-DtcRecoveryApiArtifact -Name ("{0}-dtc-freeze-before-snapshot.json" -f $script:RunTag) -SafeResponse $signature.SnapshotResponse
+    Save-DtcRecoveryApiArtifact -Name ("{0}-dtc-freeze-before-frames.json" -f $script:RunTag) -SafeResponse $signature.FramesResponse
+    $beforeDiag = Invoke-AgentApiSafe -Method GET -Path "/api/frameconfig/diagnostics" -TimeoutSec 10
+    Save-DtcRecoveryApiArtifact -Name ("{0}-dtc-freeze-before-diagnostics.json" -f $script:RunTag) -SafeResponse $beforeDiag
+
+    Write-WarnLine "Attempting one-time DTC /reload recovery ($Reason)"
+
+    $reloadResp = Invoke-AgentApiSafe -Method POST -Path "/api/diagnostics/fix/reload" -Body @{} -TimeoutSec 20
+    [void](Write-ArtifactJson -Name ("{0}-dtc-reload-result.json" -f $script:RunTag) -Object ([ordered]@{
+            TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+            Reason = $Reason
+            Success = [bool]$reloadResp.Success
+            Error = $reloadResp.Error
+            Data = $reloadResp.Result
+            Signature = $signature
+        }))
+
+    if (-not $reloadResp.Success)
+    {
+        return [pscustomobject][ordered]@{
+            Attempted = $true
+            Recovered = $false
+            SkippedReason = $null
+            Reason = $Reason
+            Error = $reloadResp.Error
+            Signature = $signature
+            RecoveryProbe = $null
+        }
+    }
+
+    Start-Sleep -Seconds 8
+    $recovery = Wait-ForDtcRecovery -TimeoutSec 30
+
+    $afterHealth = Invoke-AgentApiSafe -Method GET -Path "/api/health" -TimeoutSec 5
+    $afterFrameStatus = Invoke-AgentApiSafe -Method GET -Path "/api/frameconfig/status" -TimeoutSec 8
+    $afterSnapshot = Invoke-AgentApiSafe -Method GET -Path "/api/test/snapshot" -TimeoutSec 10
+    $afterFrames = Invoke-AgentApiSafe -Method GET -Path "/api/test/frames" -TimeoutSec 10
+    $afterDiag = Invoke-AgentApiSafe -Method GET -Path "/api/frameconfig/diagnostics" -TimeoutSec 10
+
+    Save-DtcRecoveryApiArtifact -Name ("{0}-dtc-freeze-after-health.json" -f $script:RunTag) -SafeResponse $afterHealth
+    Save-DtcRecoveryApiArtifact -Name ("{0}-dtc-freeze-after-frameconfig-status.json" -f $script:RunTag) -SafeResponse $afterFrameStatus
+    Save-DtcRecoveryApiArtifact -Name ("{0}-dtc-freeze-after-snapshot.json" -f $script:RunTag) -SafeResponse $afterSnapshot
+    Save-DtcRecoveryApiArtifact -Name ("{0}-dtc-freeze-after-frames.json" -f $script:RunTag) -SafeResponse $afterFrames
+    Save-DtcRecoveryApiArtifact -Name ("{0}-dtc-freeze-after-diagnostics.json" -f $script:RunTag) -SafeResponse $afterDiag
+
+    return [pscustomobject][ordered]@{
+        Attempted = $true
+        Recovered = [bool]$recovery.Success
+        SkippedReason = $null
+        Reason = $Reason
+        Error = $null
+        Signature = $signature
+        RecoveryProbe = $recovery.Probe
+    }
+}
+
 function Should-ForceBlazorRestart
 {
     return $Action -in @("Start", "StartAndValidate", "Restart", "LiveSession")
@@ -648,23 +977,27 @@ function Start-BlazorServer
         {
             Write-WarnLine "Startup stalled in frame configuration (stage 7); attempting /api/frameconfig/auto-configure"
 
-            $frameStatusPrecheck = Invoke-AgentApiSafe -Method GET -Path "/api/frameconfig/status" -TimeoutSec 8
-            if ($frameStatusPrecheck.Success)
+            $startupDtcFreeze = Test-DtcFrozenStartupSignature
+            if ($startupDtcFreeze.FrameStatusResponse.Success)
             {
-                [void](Write-ArtifactJson -Name ("{0}-frameconfig-status-precheck.json" -f $script:RunTag) -Object $frameStatusPrecheck.Result)
+                [void](Write-ArtifactJson -Name ("{0}-frameconfig-status-precheck.json" -f $script:RunTag) -Object $startupDtcFreeze.FrameStatusResponse.Result)
+            }
 
-                if ([bool]$frameStatusPrecheck.Result.AddonNotVisible)
+            if ($startupDtcFreeze.SnapshotResponse.Success -and
+                $null -ne $startupDtcFreeze.SnapshotResponse.Result -and
+                $startupDtcFreeze.SnapshotResponse.Result.Success)
+            {
+                [void](Write-ArtifactJson -Name ("{0}-frameconfig-snapshot-precheck.json" -f $script:RunTag) -Object $startupDtcFreeze.SnapshotResponse.Result)
+            }
+
+            if ($startupDtcFreeze.IsFrozen)
+            {
+                Write-WarnLine "Detected frozen DataToColor signature during stage 7; attempting one-time /reload recovery before failing"
+
+                $dtcRecovery = Invoke-DtcReloadRecovery -Reason "startup-stage7-frameconfig"
+                if (-not $dtcRecovery.Recovered)
                 {
-                    $zeroSnap = Invoke-AgentApiSafe -Method GET -Path "/api/test/snapshot" -TimeoutSec 10
-                    if ($zeroSnap.Success -and $zeroSnap.Result.Success -and $null -ne $zeroSnap.Result.Data -and $null -ne $zeroSnap.Result.Data.snapshot)
-                    {
-                        [void](Write-ArtifactJson -Name ("{0}-frameconfig-snapshot-precheck.json" -f $script:RunTag) -Object $zeroSnap.Result)
-                        $snap = $zeroSnap.Result.Data.snapshot
-                        if (([int]$snap.UIMapId -le 0) -and ([int]$snap.Level -le 0))
-                        {
-                            throw "Frame config blocked: addon pixels are not visible and player snapshot is zeroed (UIMapId=0, Level=0). Enter world on the WoW client and ensure DataToColor pixels are visible, then rerun."
-                        }
-                    }
+                    throw "DTC remained frozen after auto /reload; verify character is in-world and addon UI/pixels are visible."
                 }
             }
 
@@ -920,6 +1253,7 @@ function Wait-ForReadiness
     $attempt = 0
     $lastBlocking = @()
     $actionBarBypassApplied = $false
+    $dtcHandshakeReloadAttempted = $false
 
     while ((Get-Date) -lt $deadline)
     {
@@ -943,6 +1277,8 @@ function Wait-ForReadiness
         $actionStatus = Get-LaunchStatusCode -Check $actionCheck
         $handshakeStatus = Get-LaunchStatusCode -Check $handshakeCheck
         $navStatus = Get-LaunchStatusCode -Check $navCheck
+        $handshakeMessage = $(if ($null -ne $handshakeCheck -and $null -ne $handshakeCheck.Message) { "$($handshakeCheck.Message)" } else { "" })
+        $handshakeGlobalTimeZero = (($handshakeStatus -eq 1) -or ($handshakeStatus -eq 4)) -and ($handshakeMessage -like "*GlobalTime=0*")
 
         if ($navStatus -eq 4 -and -not (Test-PortListening -Port $NavigationPort))
         {
@@ -950,7 +1286,7 @@ function Wait-ForReadiness
             Start-NavigationServer
         }
 
-        if ($handshakeStatus -eq 4 -or $keyStatus -eq 1 -or $actionStatus -eq 4)
+        if ($handshakeStatus -eq 4 -or $keyStatus -eq 1 -or $actionStatus -eq 4 -or $handshakeGlobalTimeZero)
         {
             $snapshot = Get-CurrentSnapshot
             if ($null -ne $snapshot -and $snapshot.ChatInputVisible)
@@ -966,6 +1302,27 @@ function Wait-ForReadiness
                 if (Try-ResolveBenignActionBarBlocker)
                 {
                     $actionBarBypassApplied = $true
+                }
+            }
+
+            if ($handshakeGlobalTimeZero -and -not $dtcHandshakeReloadAttempted)
+            {
+                Write-WarnLine "Addon handshake appears frozen (GlobalTime=0); attempting one-time /reload recovery"
+                $dtcRecovery = Invoke-DtcReloadRecovery -Reason "readiness-handshake-globaltime0" -Force
+                $dtcHandshakeReloadAttempted = $true
+
+                if ($dtcRecovery.Attempted -and $dtcRecovery.Recovered)
+                {
+                    Write-Info "DTC /reload recovery succeeded during readiness; reapplying startup fixes"
+                    Invoke-ReadinessFixes
+                }
+                elseif ($dtcRecovery.Attempted)
+                {
+                    Write-WarnLine "DTC /reload recovery did not restore addon handshake during readiness"
+                }
+                elseif ($null -ne $dtcRecovery.SkippedReason)
+                {
+                    Write-WarnLine "Skipped DTC /reload readiness recovery: $($dtcRecovery.SkippedReason)"
                 }
             }
         }

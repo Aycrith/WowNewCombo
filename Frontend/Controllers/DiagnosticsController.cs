@@ -1112,6 +1112,34 @@ public class DiagnosticsController : ControllerBase
     }
 
     /// <summary>
+    /// POST /api/diagnostics/fix/reload
+    /// Runs /reload in chat to recover a hung/frozen addon state.
+    /// </summary>
+    [HttpPost("fix/reload")]
+    public async Task<IActionResult> FixReload()
+    {
+        Stopwatch sw = Stopwatch.StartNew();
+
+        try
+        {
+            const string command = "/reload";
+            logger.LogInformation("Executing {Command}", command);
+
+            exec.Run(command);
+            await Task.Delay(500);
+
+            sw.Stop();
+            return Ok(new FixResult(true, $"Executed {command}", 1));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Fix reload failed");
+            sw.Stop();
+            return StatusCode(500, new FixResult(false, ex.Message));
+        }
+    }
+
+    /// <summary>
     /// POST /api/diagnostics/fix/flush
     /// Runs /{prefix}flush command in chat to force addon state refresh.
     /// </summary>

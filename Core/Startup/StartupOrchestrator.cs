@@ -32,6 +32,7 @@ public sealed class StartupOrchestrator
     private readonly WoWProcessLauncher wowLauncher;
     private readonly FrameConfigurator? frameConfigurator;
     private readonly WowProcess? wowProcess;
+    private readonly global::Core.ExecGameCommand? execGameCommand;
 
     private readonly List<(StartupStage Stage, StageResult Result)> _stageResults = [];
 
@@ -93,7 +94,8 @@ public sealed class StartupOrchestrator
         NavigationServerManager navManagerParam,
         WoWProcessLauncher wowLauncherParam,
         FrameConfigurator? frameConfiguratorParam = null,
-        WowProcess? wowProcessParam = null)
+        WowProcess? wowProcessParam = null,
+        global::Core.ExecGameCommand? execGameCommandParam = null)
     {
         logger = loggerParam;
         options = optionsParam.Value;
@@ -106,6 +108,7 @@ public sealed class StartupOrchestrator
         wowLauncher = wowLauncherParam;
         frameConfigurator = frameConfiguratorParam;
         wowProcess = wowProcessParam;
+        execGameCommand = execGameCommandParam;
     }
 
     /// <summary>
@@ -565,6 +568,27 @@ public sealed class StartupOrchestrator
                     return StageResult.Failed($"Pre-flight failed: {frameConfigurator.StatusMessage}");
                 }
 
+                if (frameConfigurator.AddonNotVisible &&
+                    await TryRecoverFrozenDataToColorDuringFrameConfigAsync(ct))
+                {
+                    logger.LogInformation("[StartupOrchestrator] /reload recovery succeeded");
+
+                    bool retrySuccess = await frameConfigurator.StartAutoConfigWithRetriesAsync(
+                        maxRetries: options.FrameConfigMaxRetries,
+                        retryDelaySeconds: options.FrameConfigRetryDelaySeconds,
+                        cancellationToken: ct);
+
+                    if (retrySuccess)
+                    {
+                        state.FramesConfigured = true;
+                        logger.LogInformation("[StartupOrchestrator] Frame configuration completed successfully after /reload recovery");
+                        return StageResult.Success("Frames configured successfully after /reload recovery");
+                    }
+
+                    logger.LogWarning("[StartupOrchestrator] /reload recovery failed to restore frame auto-config (Status={Status})",
+                        frameConfigurator.StatusMessage);
+                }
+
                 if (frameConfigurator.AddonNotVisible)
                 {
                     string command = GetAddonCommand();
@@ -588,6 +612,46 @@ public sealed class StartupOrchestrator
             logger.LogError(ex, "[StartupOrchestrator] Frame configuration threw exception");
             return StageResult.Failed($"Frame configuration error: {ex.Message}", ex);
         }
+    }
+
+    private async Task<bool> TryRecoverFrozenDataToColorDuringFrameConfigAsync(CancellationToken ct)
+    {
+        if (execGameCommand == null)
+        {
+            logger.LogWarning("[StartupOrchestrator] Detected likely frozen DataToColor during frame config, but ExecGameCommand is unavailable");
+            return false;
+        }
+
+        logger.LogWarning("[StartupOrchestrator] Detected likely frozen DataToColor during frame config");
+        logger.LogWarning("[StartupOrchestrator] Attempting one-time /reload recovery");
+
+        try
+        {
+            execGameCommand.Run("/reload");
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "[StartupOrchestrator] /reload recovery failed to dispatch");
+            return false;
+        }
+
+        await Task.Delay(TimeSpan.FromSeconds(10), ct);
+
+        for (int i = 0; i < 20; i++)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            if (!wowLauncher.IsRunning())
+            {
+                logger.LogWarning("[StartupOrchestrator] /reload recovery failed: WoW process exited");
+                return false;
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds(1), ct);
+        }
+
+        logger.LogInformation("[StartupOrchestrator] Retrying frame auto-config after /reload");
+        return true;
     }
 
     private Task<StageResult> FinalValidationAsync(CancellationToken ct)
