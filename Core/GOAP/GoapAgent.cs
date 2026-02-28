@@ -353,6 +353,16 @@ public sealed partial class GoapAgent : IDisposable
                 }
 
                 newGoal.Update();
+
+                // If the selected goal can no longer run after its Update(),
+                // clear the plan so the planner re-evaluates on the next tick.
+                // This handles cases where a goal's CanRun() flips mid-execution
+                // (e.g., Stealth entered → AdhocGoal can no longer cast).
+                if (!newGoal.CanRun())
+                {
+                    Plan.Clear();
+                    GoapPlanner.InvalidateCache();
+                }
             }
             else if (!wasEmpty)
             {
@@ -439,7 +449,14 @@ public sealed partial class GoapAgent : IDisposable
             (B(b.Target_Hostile() || (bits.Target() && combatLog.ToPull.Contains(playerReader.TargetGuid))) << (int)GoapKey.targethostile) |
             (B(b.Focus()) << (int)GoapKey.hasfocus) |
             (B(b.FocusTarget()) << (int)GoapKey.focushastarget) |
-            (B(State.ConsumableCorpseCount > 0) << (int)GoapKey.consumablecorpsenearby)
+            (B(State.ConsumableCorpseCount > 0) << (int)GoapKey.consumablecorpsenearby) |
+
+            // Encode player Form (stance) into upper bits for planner cache
+            // invalidation. Without this, entering/exiting stealth or other
+            // forms does not change worldStateBits, causing the GoapPlanner
+            // to reuse a stale usable-goals cache and repeatedly select a
+            // goal whose CanRun() has since become false.
+            ((int)playerReader.Form << (int)GoapKey.LENGTH)
             ;
 
         WorldState = new(data);

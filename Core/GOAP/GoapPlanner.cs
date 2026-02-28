@@ -27,6 +27,17 @@ public static class GoapPlanner
     public static readonly bool[] EmptyGoalState = Array.Empty<bool>();
     public static readonly Stack<GoapGoal> EmptyGoal = new();
 
+    /// <summary>
+    /// Explicitly invalidates the usable-goals cache so the next
+    /// <see cref="Plan"/> call re-evaluates every goal's CanRun().
+    /// Call this when external state (e.g. player form/stance) changes
+    /// in a way not captured by the WorldState bit vector.
+    /// </summary>
+    public static void InvalidateCache()
+    {
+        hasUsableGoalsCache = false;
+    }
+
     /**
     * Plan what sequence of actions can fulfill the goal.
     * Returns null if a plan could not be found, or a list of the actions
