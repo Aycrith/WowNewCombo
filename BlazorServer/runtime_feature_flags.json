@@ -48,7 +48,7 @@
         "ReactionMaxMs": 500
       },
       "MouseMovement": {
-        "Enabled": true,
+        "Enabled": false,
         "StepsPerMovement": 15,
         "CurveIntensity": 0.3,
         "MicroJitterPixels": 2,
@@ -57,20 +57,19 @@
         "StepDelayMaxMs": 6
       },
       "Fatigue": {
-        "Enabled": true,
+        "Enabled": false,
         "BreakIntervalMinutes": 45,
-        "BreakDurationMinMinutes": 1.0,
-        "BreakDurationMaxMinutes": 5.0,
+        "BreakDurationMinMinutes": 1,
+        "BreakDurationMaxMinutes": 5,
         "FatigueRatePerHour": 0.1,
         "MaxFatigueMultiplier": 1.5
       },
       "Behavior": {
-        "MicroPauseEnabled": true,
+        "MicroPauseEnabled": false,
         "MicroPauseIntervalSeconds": 60,
         "MicroPauseMinMs": 200,
         "MicroPauseMaxMs": 2000
-      },
-      "Description": "Opt-in human-like timing, mouse movement, micro-pauses, and scheduled breaks"
+      }
     },
     "AIProfileGenerator": {
       "Enabled": true,
@@ -78,7 +77,11 @@
       "MaxTokensPerRequest": 4000,
       "RateLimitPerHour": 20,
       "CacheResponsesMinutes": 60,
-      "AllowedProviders": ["openai", "anthropic", "local"],
+      "AllowedProviders": [
+        "openai",
+        "anthropic",
+        "local"
+      ],
       "Description": "LLM-powered class profile generation from natural language descriptions"
     },
     "ProfileMarketplace": {
@@ -100,7 +103,7 @@
       "MaxLatencyMs": 2000,
       "EnableForUnexpectedStates": true,
       "CacheDecisionsSeconds": 5,
-      "Description": "Hybrid GOAP+LLM decision system for handling edge cases"
+      "Description": "Hybrid GOAP\u002BLLM decision system for handling edge cases"
     },
     "InputSecurity": {
       "Enabled": true,
@@ -121,15 +124,14 @@
       "Description": "Input security hardening to reduce detection vectors (WM_CHAR, focus guard, hybrid modifiers)"
     },
     "CombatRotationOptimizer": {
-      "Enabled": true,
-      "FallbackToStaticPriority": true,
-      "BaseWeightMultiplier": 1.0,
-      "EnableMetrics": true,
-      "EnableResourceForecasting": true,
-      "EnableSwingTimerAlignment": true,
+      "Enabled": false,
+      "FallbackToStaticPriority": false,
+      "BaseWeightMultiplier": 1,
+      "EnableMetrics": false,
+      "EnableResourceForecasting": false,
+      "EnableSwingTimerAlignment": false,
       "MetricsFlushIntervalSeconds": 30,
-      "MetricsOutputPath": "logs/rotation_metrics.json",
-      "Description": "Weighted-scoring overlay for combat rotation optimization. Reorders ability priority list based on game state without removing static fallback."
+      "MetricsOutputPath": "logs/rotation_metrics.json"
     },
     "StuckSensitivity": {
       "Enabled": true,
@@ -162,23 +164,5 @@
   "GlobalKillSwitch": false,
   "DebugMode": false,
   "Version": "1.0.0",
-  "LastModified": "2026-02-05T00:00:00Z"
+  "LastModified": "2026-02-28T15:09:22Z"
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

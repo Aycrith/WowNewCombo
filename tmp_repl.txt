@@ -1,0 +1,19 @@
+
+>     private void Thread_AttendedGather()
+      {
+          sideActivityManualReset.Wait();
+  
+          while (!sideActivityCts.IsCancellationRequested)
+          {
+              if ((DateTime.UtcNow - onEnterTime).TotalMilliseconds > MIN_TIME_TO_START_CYCLE_PROFESSION)
+              {
+                  AlternateGatherTypes();
+              }
+              sideActivityCts.Token.WaitHandle.WaitOne(CYCLE_PROFESSION_PERIOD);
+              sideActivityManualReset.Wait();
+          }
+  
+          if (logger.IsEnabled(LogLevel.Debug))
+              logger.LogDebug("AttendedGather Thread stopped!");
+      }
+
