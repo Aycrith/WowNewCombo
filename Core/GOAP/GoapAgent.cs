@@ -51,6 +51,15 @@ public sealed partial class GoapAgent : IDisposable
 
     private readonly IEnumerable<IGoapEventListener> extraListeners;
 
+    /// <summary>
+    /// Goal-switch hysteresis: a new goal must win for this many consecutive
+    /// ticks before the agent actually transitions to it. Prevents single-frame
+    /// plan oscillation (e.g. FollowRoute → Adhoc → FollowRoute churn).
+    /// </summary>
+    private const int GoalSwitchHysteresisThreshold = 3;
+    private GoapGoal? pendingGoal;
+    private int pendingGoalTicks;
+
     private bool active;
     public bool Active
     {
@@ -265,6 +274,40 @@ public sealed partial class GoapAgent : IDisposable
             {
                 if (newGoal != CurrentGoal)
                 {
+                    // Hysteresis: require the new goal to win for N consecutive
+                    // ticks before actually switching. This prevents single-frame
+                    // oscillation where transient world-state bits (e.g. damagetaken)
+                    // cause FollowRoute to drop out for one tick.
+                    if (newGoal == pendingGoal)
+                    {
+                        pendingGoalTicks++;
+                    }
+                    else
+                    {
+                        pendingGoal = newGoal;
+                        pendingGoalTicks = 1;
+                    }
+
+                    if (pendingGoalTicks < GoalSwitchHysteresisThreshold)
+                    {
+                        // Not enough consecutive wins yet — keep executing current goal
+                        CurrentGoal?.Update();
+                        Thread.Sleep(2);
+
+                        try
+                        {
+                            WaitHandle.WaitAny(waitHandles);
+                            sessionPauseEvent.Wait(cts.Token);
+                        }
+                        catch (OperationCanceledException) { break; }
+                        catch (ObjectDisposedException) { break; }
+                        continue;
+                    }
+
+                    // Hysteresis satisfied — commit the transition
+                    pendingGoal = null;
+                    pendingGoalTicks = 0;
+
                     wasEmpty = false;
                     string? fromGoalName = CurrentGoal?.Name;
                     CurrentGoal?.OnExit();
