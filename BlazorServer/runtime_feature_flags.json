@@ -21,14 +21,14 @@
       "Description": "Applies Ramer-Douglas-Peucker algorithm to reduce path complexity"
     },
     "StuckRecoveryV2": {
-      "Enabled": false,
+      "Enabled": true,
       "BreadcrumbTrailSize": 50,
       "BacktrackSteps": 3,
       "EmergencyHearthstoneThreshold": 10,
-      "Description": "DISABLED for nav recovery baseline. Enhanced stuck recovery with breadcrumb tracking — re-enable after baseline stability proven."
+      "Description": "Enhanced stuck recovery with breadcrumb tracking. Enabled after baseline stability proven."
     },
     "HazardAvoidance": {
-      "Enabled": false,
+      "Enabled": true,
       "DBSCANEpsilon": 12.0,
       "DBSCANMinPoints": 2,
       "HazardCostMultiplier": 18.0,
@@ -36,7 +36,7 @@
       "MaxEventsBeforePrune": 10000,
       "ClusteringIntervalSeconds": 15,
       "SaveIntervalMinutes": 3,
-      "Description": "DISABLED for nav recovery baseline. Self-learning hazard avoidance — re-enable after baseline stability proven."
+      "Description": "Self-learning hazard avoidance. Enabled after baseline stability proven."
     },
     "Humanization": {
       "Enabled": false,
@@ -121,7 +121,7 @@
       "Description": "Input security hardening to reduce detection vectors (WM_CHAR, focus guard, hybrid modifiers)"
     },
     "CombatRotationOptimizer": {
-      "Enabled": false,
+      "Enabled": true,
       "FallbackToStaticPriority": true,
       "BaseWeightMultiplier": 1.0,
       "EnableMetrics": true,
