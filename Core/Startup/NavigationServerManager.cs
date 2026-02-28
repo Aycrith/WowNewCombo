@@ -290,25 +290,13 @@ public sealed class NavigationServerManager : IHostedService, IDisposable
     /// Attempt to verify the server is actually responding to API requests.
     /// This is more thorough than just checking if the port is open.
     /// </summary>
-    private async Task<bool> VerifyApiRespondsAsync()
+    private Task<bool> VerifyApiRespondsAsync()
     {
-        try
-        {
-            // Try to connect and send a simple path request
-            using var client = new TcpClient();
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            await client.ConnectAsync("127.0.0.1", Port);
-
-            // If we can connect, that's good enough for now
-            // Full protocol verification would require sending actual pathfinding requests
-            _logger.LogDebug("[NavigationServerManager] API connectivity verified");
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "[NavigationServerManager] API verification failed");
-            return false;
-        }
+        // Avoid probing it with short-lived TCP connections as described in IsHealthyAsync.
+        // It's known to crash AmeisenNavigationServer with 0xC0000005.
+        // If IsHealthyAsync returned true, the port is listening.
+        _logger.LogDebug("[NavigationServerManager] API verify skipped to avoid crash");
+        return Task.FromResult(true);
     }
 
     private async Task<bool> StartServerAsync(CancellationToken cancellationToken)

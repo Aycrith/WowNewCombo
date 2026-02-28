@@ -125,7 +125,7 @@ public sealed class NoPlanRecoveryService : BackgroundService, IGoapEventListene
 
                 case RecoveryAction.EmergencyReset:
                     EnterState(RecoveryState.EmergencyReset);
-                    ExecuteEmergencyReset();
+                    _ = ExecuteEmergencyResetAsync();
                     break;
             }
         }
@@ -228,7 +228,7 @@ public sealed class NoPlanRecoveryService : BackgroundService, IGoapEventListene
         }
     }
 
-    private void ExecuteEmergencyReset()
+    private async Task ExecuteEmergencyResetAsync()
     {
         logger.LogError("[NoPlanRecovery  ] Strategy: EmergencyReset - {Consecutive} consecutive failures",
             consecutiveFailures);
@@ -243,7 +243,7 @@ public sealed class NoPlanRecoveryService : BackgroundService, IGoapEventListene
             }
 
             // 2. Wait a moment
-            Task.Delay(1000).Wait();
+            await Task.Delay(1000);
 
             // 3. Trigger session reset
             if (goapAgent != null)

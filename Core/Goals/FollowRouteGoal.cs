@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Core.GOAP;
 
 using Game;
@@ -59,8 +60,8 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
     /// </summary>
     private const int CYCLE_PROFESSION_PERIOD = 8000;
 
-    private readonly ManualResetEventSlim sideActivityManualReset;
-    private readonly Thread? sideActivityThread;
+    private readonly AsyncManualResetEvent sideActivityManualReset;
+    private Task? sideActivityTask;
     private CancellationTokenSource sideActivityCts;
 
     private readonly PathSettings pathSettings;
@@ -178,14 +179,12 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         {
             if (classConfig.GatherFindKeyConfig.Length > 0)
             {
-                sideActivityThread = new(Thread_AttendedGather);
-                sideActivityThread.Start();
+                sideActivityTask = Task.Run(Thread_AttendedGatherAsync);
             }
         }
         else
         {
-            sideActivityThread = new(Thread_LookingForTarget);
-            sideActivityThread.Start();
+            sideActivityTask = Task.Run(Thread_LookingForTargetAsync);
         }
     }
 
@@ -332,9 +331,9 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         wait.Update();
     }
 
-    private void Thread_LookingForTarget()
+    private async Task Thread_LookingForTargetAsync()
     {
-        sideActivityManualReset.Wait();
+        await sideActivityManualReset.WaitAsync();
 
         while (!sideActivityCts.IsCancellationRequested)
         {
@@ -356,17 +355,17 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
                 }
             }
 
-            wait.Update();
-            sideActivityManualReset.Wait();
+            try { await Task.Delay(10, sideActivityCts.Token).ConfigureAwait(false); } catch (OperationCanceledException) { }
+            await sideActivityManualReset.WaitAsync();
         }
 
-        if (logger.IsEnabled(LogLevel.Debug))
-            logger.LogDebug("LookingForTarget Thread stopped!");
+        if (logger.IsEnabled(Microsoft.Extensions.Logging.LogLevel.Debug))
+            logger.LogDebug("LookingForTarget Task stopped!");
     }
 
-    private void Thread_AttendedGather()
+    private async Task Thread_AttendedGatherAsync()
     {
-        sideActivityManualReset.Wait();
+        await sideActivityManualReset.WaitAsync();
 
         while (!sideActivityCts.IsCancellationRequested)
         {
@@ -374,13 +373,16 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
             {
                 AlternateGatherTypes();
             }
-            sideActivityCts.Token.WaitHandle.WaitOne(CYCLE_PROFESSION_PERIOD);
-            sideActivityManualReset.Wait();
+
+            try { await Task.Delay(CYCLE_PROFESSION_PERIOD, sideActivityCts.Token).ConfigureAwait(false); } catch (OperationCanceledException) { }
+            await sideActivityManualReset.WaitAsync();
         }
 
-        if (logger.IsEnabled(LogLevel.Debug))
-            logger.LogDebug("AttendedGather Thread stopped!");
+        if (logger.IsEnabled(Microsoft.Extensions.Logging.LogLevel.Debug))
+            logger.LogDebug("AttendedGather Task stopped!");
     }
+
+
 
     private void AlternateGatherTypes()
     {
@@ -679,3 +681,5 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         logger.LogInformation(text);
     }
 }
+
+

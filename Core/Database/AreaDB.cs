@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 using Newtonsoft.Json;
 
@@ -33,8 +34,7 @@ public sealed class AreaDB : IDisposable
     private readonly FactionTemplateDB factionDB;
 
     private readonly CancellationToken token;
-    private readonly ManualResetEventSlim resetEvent;
-    private readonly Thread thread;
+    private readonly AsyncManualResetEvent resetEvent;
 
     private readonly JsonSerializerSettings npcJsonSettings = new()
     {
@@ -63,10 +63,9 @@ public sealed class AreaDB : IDisposable
         this.worldMapAreaDB = worldMapAreaDB;
 
         token = cts.Token;
-        resetEvent = new();
+        resetEvent = new(false);
 
-        thread = new(ReadArea);
-        thread.Start();
+        Task.Run(ReadAreaAsync, token);
     }
 
     public void Dispose()
@@ -83,9 +82,9 @@ public sealed class AreaDB : IDisposable
         resetEvent.Set();
     }
 
-    private void ReadArea()
+    private async Task ReadAreaAsync()
     {
-        resetEvent.Wait();
+        await resetEvent.WaitAsync();
 
         while (!token.IsCancellationRequested)
         {
@@ -113,7 +112,7 @@ public sealed class AreaDB : IDisposable
             }
 
             resetEvent.Reset();
-            resetEvent.Wait();
+            await resetEvent.WaitAsync();
         }
     }
 
@@ -240,3 +239,4 @@ public sealed class AreaDB : IDisposable
         return creatures.Entries.TryGetValue(entry, out creature);
     }
 }
+
