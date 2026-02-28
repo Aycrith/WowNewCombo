@@ -138,6 +138,16 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
         Vector3 corpseLocation = playerReader.CorpseMapPos;
         Log($"Corpse location is {corpseLocation}");
 
+        Vector3 corpseWorld = WorldMapAreaDB.ToWorld_FlipXY(corpseLocation, playerReader.WorldMapArea);
+        float corpseDistanceYards = playerReader.WorldPos.WorldDistanceXYTo(corpseWorld);
+        logger.LogInformation(
+            "Corpse run: ghost at {GhostPos} -> corpse at map {CorpseMap} (world {CorpseWorld}), distance ~{Distance:F0}y, Z hint={ZHint:F1}",
+            playerReader.WorldPos,
+            corpseLocation,
+            corpseWorld,
+            corpseDistanceYards,
+            worldPos.Z);
+
         bool corpseOutOfBounds =
             corpseLocation.X < 0 || corpseLocation.X > 100 ||
             corpseLocation.Y < 0 || corpseLocation.Y > 100;

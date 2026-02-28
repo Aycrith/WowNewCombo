@@ -349,6 +349,15 @@ public sealed partial class Navigation : IDisposable
                     if (mountHandler.IsMounted())
                         mountHandler.Dismount();
 
+                    if (IsLikelyCorpseRecoveryContext())
+                    {
+                        logger.LogWarning(
+                            "[Navigation       ] Corpse run route cleared after {ElapsedMs:F0}ms stuck (route had {Count} remaining points, target={Target})",
+                            stuckDetector.ActionDurationMs,
+                            routeToNextWaypoint.Count,
+                            routeToNextWaypoint.Count > 0 ? routeToNextWaypoint.Peek() : default);
+                    }
+
                     LogClearRouteToWaypointStuck(logger, stuckDetector.ActionDurationMs);
                     stuckDetector.Reset();
                     routeToNextWaypoint.Clear();
@@ -620,6 +629,7 @@ public sealed partial class Navigation : IDisposable
 
             LogPathfinderSuccess(logger, result.Distance, result.StartW, result.EndW, result.ElapsedMs);
 
+            int rawPathPointCount = pathToApply.Length;
             for (int i = pathToApply.Length - 1; i >= 0; i--)
             {
                 routeToNextWaypoint.Push(pathToApply[i]);
@@ -627,6 +637,15 @@ public sealed partial class Navigation : IDisposable
 
             if (SimplifyRouteToWaypoint)
                 SimplyfyRouteToWaypoint();
+
+            if (IsLikelyCorpseRecoveryContext())
+            {
+                logger.LogInformation(
+                    "[Navigation       ] Corpse run path: {RawCount} raw -> {FinalCount} final points, distance={Distance:F1}",
+                    rawPathPointCount,
+                    routeToNextWaypoint.Count,
+                    result.Distance);
+            }
         }
 
         if (routeToNextWaypoint.Count == 0)
@@ -880,6 +899,13 @@ public sealed partial class Navigation : IDisposable
         Vector3[] route = routeToNextWaypoint.ToArray();
         if (ShouldPreserveDetailedRoute(route))
         {
+            if (route.Length > LongRoutePreserveThreshold)
+            {
+                logger.LogDebug(
+                    "[Navigation       ] Preserving detailed route ({Count} points, long-path or terrain feature detected)",
+                    route.Length);
+            }
+
             return;
         }
 
@@ -894,6 +920,14 @@ public sealed partial class Navigation : IDisposable
         }
     }
 
+    /// <summary>
+    /// Long paths (e.g. corpse runs) from the pathfinder with Catmull-Rom smoothing
+    /// already have reasonable point spacing. Simplification of these removes critical
+    /// terrain-following detail, creating straight-line segments that cross impassable
+    /// terrain and cause stuck → repath → backtrack loops.
+    /// </summary>
+    private const int LongRoutePreserveThreshold = 40;
+
     private bool ShouldPreserveDetailedRoute(Vector3[] route)
     {
         if (route.Length < 3)
@@ -901,7 +935,20 @@ public sealed partial class Navigation : IDisposable
             return false;
         }
 
-        int inspectCount = Math.Min(route.Length, 12);
+        // Long paths from the pathfinder (e.g. corpse runs spanning 200+ yards) should
+        // always preserve detail. The Catmull-Rom smoothed path already has reasonable
+        // point spacing, and aggressive simplification (RDP) creates long straight-line
+        // segments that frequently cross terrain the bot cannot traverse, causing
+        // stuck → repath → backtrack oscillation.
+        if (route.Length > LongRoutePreserveThreshold)
+        {
+            return true;
+        }
+
+        // Inspect the ENTIRE route for terrain features, not just the first few points.
+        // Previously capped at 12 — this missed sharp turns and elevation changes deeper
+        // in the path, allowing simplification to destroy critical waypoints.
+        int inspectCount = route.Length;
 
         // Only check vertical terrain when not mounted (Z changes irrelevant at mount speed)
         if (!mountHandler.IsMounted())
