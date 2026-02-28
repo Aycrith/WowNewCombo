@@ -199,7 +199,7 @@
         "Key": "1",
         "Slot": 1,
         "WhenUsable": true,
-        "Requirements": ["!Stealth", "Energy >= STEALTH_ENERGY", "!Swimming", "Level >= 14"],
+        "Requirements": ["!Form:Rogue_Stealth", "Energy >= STEALTH_ENERGY", "!Swimming", "Level >= 14"],
         "AfterCastWaitBuff": true
       },
       {
@@ -207,7 +207,7 @@
         "Key": "7",
         "Slot": 7,
         "WhenUsable": true,
-        "Requirements": ["Stealth", "InMeleeRange", "Level >= 26"],
+        "Requirements": ["Form:Rogue_Stealth", "InMeleeRange", "Level >= 26"],
         "StopBeforeCast": true,
         "Cost": 10
       },
@@ -216,7 +216,7 @@
         "Key": "8",
         "Slot": 8,
         "WhenUsable": true,
-        "Requirements": ["Stealth", "InMeleeRange", "BehindTarget", "Level >= 18"],
+        "Requirements": ["Form:Rogue_Stealth", "InMeleeRange", "BehindTarget", "Level >= 18"],
         "StopBeforeCast": true,
         "Cost": 11
       },
@@ -225,7 +225,7 @@
         "Key": "9",
         "Slot": 9,
         "WhenUsable": true,
-        "Requirements": ["Stealth", "InMeleeRange", "BehindTarget", "Level >= 14"],
+        "Requirements": ["Form:Rogue_Stealth", "InMeleeRange", "BehindTarget", "Level >= 14"],
         "StopBeforeCast": true,
         "Cost": 12
       },
@@ -236,7 +236,7 @@
         "Item": true,
         "BeforeCastStop": true,
         "AfterCastWaitMeleeRange": true,
-        "Requirements": ["HasRangedWeapon", "!InMeleeRange", "!Stealth"],
+        "Requirements": ["HasRangedWeapon", "!InMeleeRange", "!Form:Rogue_Stealth"],
         "Cost": 15
       },
       {
@@ -402,7 +402,7 @@
         "Key": "1",
         "Slot": 1,
         "WhenUsable": true,
-        "Requirements": ["!Stealth", "!Swimming", "!InCombat", "Energy >= STEALTH_ENERGY", "Level >= 14"],
+        "Requirements": ["!Form:Rogue_Stealth", "!Swimming", "!InCombat", "Energy >= STEALTH_ENERGY", "Level >= 14"],
         "Cost": 2
       },
       {

@@ -18,6 +18,7 @@ public sealed partial class KeyAction
 {
     public float Cost { get; set; } = 18;
     public string Name { get; set; } = string.Empty;
+    public bool Enabled { get; set; } = true;
     public bool HasCastBar
     {
         get => features[ActionMask.HasCastBar];
@@ -361,6 +362,9 @@ public sealed partial class KeyAction
 
     public bool CanRun()
     {
+        if (!Enabled)
+            return false;
+
         if (canRunTime == globalTime.Value)
             return canRun;
 
