@@ -16,7 +16,7 @@
     },
     "PathSmoothing": {
       "Enabled": true,
-      "RDPTolerance": 2.0,
+      "RDPTolerance": 1.5,
       "MinWaypointsToSimplify": 5,
       "Description": "Applies Ramer-Douglas-Peucker algorithm to reduce path complexity"
     },

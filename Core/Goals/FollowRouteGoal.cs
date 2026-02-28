@@ -447,7 +447,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
         Vector3[] normalPath = mapRoute;
         int minSegmentIndex = hasRefillProgressAnchor
-            ? Math.Max(0, refillSegmentAnchorIndex - RefillBackwardSegmentGrace)
+            ? refillSegmentAnchorIndex
             : 0;
         RefillCandidate normalCandidate = FindClosestRefillCandidate(normalPath, playerMap, minSegmentIndex);
         float normalScore = ScoreRefillCandidate(normalCandidate, reversed: false);

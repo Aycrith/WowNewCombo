@@ -156,4 +156,24 @@ public class FollowRouteGoalRefillTests
         score.Should().BeApproximately(candidate.DistanceToRoute, 0.01f,
             "one segment back is within grace window, no penalty");
     }
+
+    [Fact]
+    public void FindClosestRefillCandidate_AnchorAtSegment2_DoesNotReturnSegment0Or1()
+    {
+        // Regression test for forward-only enforcement fix.
+        // After combat, bot is physically closest to segment 0, but anchor is at segment 2.
+        // With forward-only enforcement (minSegmentIndex = anchorIndex, not anchorIndex - grace),
+        // the search must not consider segments before the anchor.
+
+        var player = new Vector3(9.5f, 0, 0); // Physically closer to segment 0 (distance 0.5)
+
+        // Without guard: would return segment 0
+        var noGuard = FindClosestRefillCandidate(StraightRoute, player, minSegmentIndex: 0);
+        noGuard.SegmentStartIndex.Should().Be(0);
+
+        // With forward-only guard at anchor=2: must return segment >= 2
+        var withGuard = FindClosestRefillCandidate(StraightRoute, player, minSegmentIndex: 2);
+        withGuard.SegmentStartIndex.Should().BeGreaterThanOrEqualTo(2,
+            "forward-only enforcement must prevent regression to earlier segments after anchor");
+    }
 }

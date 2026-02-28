@@ -141,10 +141,6 @@ public sealed partial class Navigation : IDisposable
     private const float TightTurnPrecisionRadians = PI / 5f;
     private const float SimplifyPreserveVerticalZDelta = 0.75f;
     private const float SimplifyPreserveTurnRadians = PI / 6f;
-    private static readonly TimeSpan HeadingAdjustCooldown = TimeSpan.FromMilliseconds(140);
-    private static readonly TimeSpan PrecisionHeadingAdjustCooldown = TimeSpan.FromMilliseconds(90);
-    private const float HeadingAdjustImmediateDiff = PI / 7f;
-    private const float HeadingAdjustThrottleMinDiff = 0.18f;
 
     private DateTime lastDynamicDetourAttemptUtc = DateTime.MinValue;
     private DateTime lastFrontBypassUtc = DateTime.MinValue;
@@ -155,7 +151,6 @@ public sealed partial class Navigation : IDisposable
     private DateTime lastFrontBypassRepeatUtc = DateTime.MinValue;
     private DateTime lastFrontBypassNoProgressUtc = DateTime.MinValue;
     private DateTime lastFailedReconnectUtc = DateTime.MinValue;
-    private DateTime lastHeadingAdjustUtc = DateTime.MinValue;
     private int frontBypassAttemptCount;
     private int repeatedHazardDetourCount;
     private int repeatedFrontBypassCount;
@@ -821,7 +816,6 @@ public sealed partial class Navigation : IDisposable
             }
 
             playerDirection.SetDirection(heading, routeToNextWaypoint.Peek(), steeringIgnoreDistance, token);
-            lastHeadingAdjustUtc = now;
 
             // Reset failed turn counter on each successful heading adjustment
             // to avoid false positives accumulating across unrelated steering calls.
@@ -902,21 +896,26 @@ public sealed partial class Navigation : IDisposable
 
     private bool ShouldPreserveDetailedRoute(Vector3[] route)
     {
-        if (route.Length < 3 || mountHandler.IsMounted())
+        if (route.Length < 3)
         {
             return false;
         }
 
         int inspectCount = Math.Min(route.Length, 12);
 
-        for (int i = 1; i < inspectCount; i++)
+        // Only check vertical terrain when not mounted (Z changes irrelevant at mount speed)
+        if (!mountHandler.IsMounted())
         {
-            if (Abs(route[i].Z - route[i - 1].Z) >= SimplifyPreserveVerticalZDelta)
+            for (int i = 1; i < inspectCount; i++)
             {
-                return true;
+                if (Abs(route[i].Z - route[i - 1].Z) >= SimplifyPreserveVerticalZDelta)
+                {
+                    return true;
+                }
             }
         }
 
+        // Always preserve sharp turns regardless of mount status
         for (int i = 0; i < inspectCount - 2; i++)
         {
             if (IsSharpTurn(route[i], route[i + 1], route[i + 2], SimplifyPreserveTurnRadians))
@@ -928,7 +927,7 @@ public sealed partial class Navigation : IDisposable
         return false;
     }
 
-    private static bool IsSharpTurn(Vector3 from, Vector3 via, Vector3 to, float minTurnRadians)
+    internal static bool IsSharpTurn(Vector3 from, Vector3 via, Vector3 to, float minTurnRadians)
     {
         Vector2 incoming = new(via.X - from.X, via.Y - from.Y);
         Vector2 outgoing = new(to.X - via.X, to.Y - via.Y);
