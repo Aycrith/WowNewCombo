@@ -26,12 +26,12 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
     public override bool CanRun() => pathSettings.CanRun();
 
     private const bool debug = false;
-    private const float RefillOrientationFlipPenalty = 4f;
-    private const float RefillBackwardSegmentPenalty = 6f;
+    private const float RefillOrientationFlipPenalty = 1f;
+    private const float RefillBackwardSegmentPenalty = 2f;
     private const int RefillBackwardSegmentGrace = 1;
     private const float RefillAnchorTeleportResetDistance = 20f;
-    private const int RefillSameSegmentLoopLimit = 2;
-    private static readonly TimeSpan RefillSameSegmentLoopWindow = TimeSpan.FromSeconds(2);
+    private const int RefillSameSegmentLoopLimit = 5;
+    private static readonly TimeSpan RefillSameSegmentLoopWindow = TimeSpan.FromSeconds(5);
 
     private readonly ILogger<FollowRouteGoal> logger;
     private readonly ConfigurableInput input;

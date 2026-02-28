@@ -25,7 +25,7 @@
       "BreadcrumbTrailSize": 50,
       "BacktrackSteps": 3,
       "EmergencyHearthstoneThreshold": 10,
-      "Description": "Enhanced stuck recovery with breadcrumb tracking and graduated strategies"
+      "Description": "Enhanced stuck recovery with breadcrumb tracking. Enabled after baseline stability proven."
     },
     "HazardAvoidance": {
       "Enabled": true,
@@ -36,7 +36,7 @@
       "MaxEventsBeforePrune": 10000,
       "ClusteringIntervalSeconds": 15,
       "SaveIntervalMinutes": 3,
-      "Description": "Self-learning hazard avoidance using DBSCAN clustering and A* cost injection"
+      "Description": "Self-learning hazard avoidance. Enabled after baseline stability proven."
     },
     "Humanization": {
       "Enabled": false,
@@ -133,12 +133,12 @@
     },
     "StuckSensitivity": {
       "Enabled": true,
-      "MinDistance": 0.12,
-      "UnstuckAfterMs": 1500,
-      "EnablePredictiveDetection": true,
-      "PredictiveRiskThreshold": 45,
-      "ApproachTimeoutMultiplier": 0.7,
-      "Description": "Adaptive stuck thresholds and predictive recovery tuned for obstacle-heavy routes"
+      "MinDistance": 0.2,
+      "UnstuckAfterMs": 5000,
+      "EnablePredictiveDetection": false,
+      "PredictiveRiskThreshold": 70,
+      "ApproachTimeoutMultiplier": 2.0,
+      "Description": "Conservative stuck thresholds for nav recovery baseline. Gives heading corrections ample time to complete before triggering stuck recovery."
     }
   },
   "Monitoring": {

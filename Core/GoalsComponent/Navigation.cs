@@ -806,44 +806,15 @@ public sealed partial class Navigation : IDisposable
 
         if (stuckDetector.IsCurrentlyStuck)
         {
-            oscillationDetector.Reset();
             return;
         }
 
-        // Only track heading when actually correcting — avoids polluting
-        // oscillation history on straight segments where diff < minAngleToTurn.
-        if (diff > minAngleToTurn)
-        {
-            oscillationDetector.TrackHeading(playerReader.Direction);
-        }
-
-        // Check for oscillation
-        if (oscillationDetector.IsOscillating)
-        {
-            logger.LogWarning($"[Navigation] Oscillation detected ({oscillationDetector.OscillationCount} rapid direction changes). Notifying StuckDetector.");
-
-            // Notify stuck detector of oscillation
-            if (!stuckDetector.IsCurrentlyStuck)
-            {
-                stuckDetector.SetTargetLocation(routeToNextWaypoint.Peek());
-                stuckDetector.Update(token);
-            }
-
-            // Stop movement to break oscillation
-            stopMoving.Stop();
-
-            // Reset oscillation tracking
-            oscillationDetector.Reset();
-            return;
-        }
+        // Nav recovery baseline: removed oscillation detector integration
+        // and heading throttle. These added complexity that masked real stuck
+        // conditions and created sluggish steering. Just turn if needed.
 
         if (diff > minAngleToTurn)
         {
-            if (ShouldThrottleHeadingAdjustment(diff, steeringIgnoreDistance, now))
-            {
-                return;
-            }
-
             if (diff > minAngleToStopBeforeTurn)
             {
                 stopMoving.Stop();
@@ -854,29 +825,8 @@ public sealed partial class Navigation : IDisposable
 
             // Reset failed turn counter on each successful heading adjustment
             // to avoid false positives accumulating across unrelated steering calls.
-            // Actual stuck conditions are handled by StuckDetector, not turn failures.
             playerDirection.ResetFailedTurnCounter();
         }
-    }
-
-    private bool ShouldThrottleHeadingAdjustment(float diff, float steeringIgnoreDistance, DateTime now)
-    {
-        if (stuckDetector.IsCurrentlyStuck)
-        {
-            return false;
-        }
-
-        if (diff >= HeadingAdjustImmediateDiff || diff <= HeadingAdjustThrottleMinDiff)
-        {
-            return false;
-        }
-
-        TimeSpan cooldown = steeringIgnoreDistance <= (PrecisionSteeringIgnoreDistance + 0.05f)
-            ? PrecisionHeadingAdjustCooldown
-            : HeadingAdjustCooldown;
-
-        return lastHeadingAdjustUtc != DateTime.MinValue &&
-            (now - lastHeadingAdjustUtc) < cooldown;
     }
 
     private bool AdjustNextWaypointPointToClosest()
@@ -1010,6 +960,11 @@ public sealed partial class Navigation : IDisposable
 
     private bool TryApplyDynamicHazardDetour(CancellationToken token)
     {
+        // DISABLED for nav recovery baseline: The dual detour system
+        // (hazard + front-bypass) with independent loop breakers produces
+        // movement chaos. Re-enable incrementally after baseline stability.
+        return false;
+
         if (routeToNextWaypoint.Count < MinRouteWaypointsForDynamicDetour)
         {
             return false;
