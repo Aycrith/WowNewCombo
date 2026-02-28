@@ -242,6 +242,47 @@ public sealed partial class GoapAgent : IDisposable
         cts.Dispose();
     }
 
+    /// <summary>
+    /// Advances the goal-switch hysteresis state machine. When a new goal differs from the
+    /// current goal, this method tracks how many consecutive ticks the new goal has won
+    /// planning. When the threshold is reached, returns true to signal that the transition
+    /// should be committed.
+    ///
+    /// Prevents single-frame plan oscillation (e.g., FollowRoute → Adhoc → FollowRoute churn)
+    /// caused by transient world-state bits like DamageTaken.
+    /// </summary>
+    /// <param name="newGoal">The goal returned by this tick's GOAP planning pass.</param>
+    /// <returns>
+    /// True if the hysteresis threshold has been satisfied (newGoal has won for
+    /// GoalSwitchHysteresisThreshold consecutive ticks). False if the goal is still
+    /// accumulating ticks or has just switched.
+    /// </returns>
+    internal bool TryAdvanceHysteresis(GoapGoal? newGoal)
+    {
+        // If newGoal == CurrentGoal, clear any pending alternative and return true
+        // (no state change needed — execute the goal normally).
+        if (newGoal == CurrentGoal)
+        {
+            pendingGoal = null;
+            pendingGoalTicks = 0;
+            return true;
+        }
+
+        // Track consecutive wins for the new goal
+        if (newGoal == pendingGoal)
+        {
+            pendingGoalTicks++;
+        }
+        else
+        {
+            pendingGoal = newGoal;
+            pendingGoalTicks = 1;
+        }
+
+        // Return true when threshold is satisfied
+        return pendingGoalTicks >= GoalSwitchHysteresisThreshold;
+    }
+
     private void GoapThread()
     {
         bool wasEmpty = false;
@@ -274,21 +315,7 @@ public sealed partial class GoapAgent : IDisposable
             {
                 if (newGoal != CurrentGoal)
                 {
-                    // Hysteresis: require the new goal to win for N consecutive
-                    // ticks before actually switching. This prevents single-frame
-                    // oscillation where transient world-state bits (e.g. damagetaken)
-                    // cause FollowRoute to drop out for one tick.
-                    if (newGoal == pendingGoal)
-                    {
-                        pendingGoalTicks++;
-                    }
-                    else
-                    {
-                        pendingGoal = newGoal;
-                        pendingGoalTicks = 1;
-                    }
-
-                    if (pendingGoalTicks < GoalSwitchHysteresisThreshold)
+                    if (!TryAdvanceHysteresis(newGoal))
                     {
                         // Not enough consecutive wins yet — keep executing current goal
                         CurrentGoal?.Update();
@@ -305,9 +332,6 @@ public sealed partial class GoapAgent : IDisposable
                     }
 
                     // Hysteresis satisfied — commit the transition
-                    pendingGoal = null;
-                    pendingGoalTicks = 0;
-
                     wasEmpty = false;
                     string? fromGoalName = CurrentGoal?.Name;
                     CurrentGoal?.OnExit();

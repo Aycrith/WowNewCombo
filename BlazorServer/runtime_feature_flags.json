@@ -121,7 +121,7 @@
       "Description": "Input security hardening to reduce detection vectors (WM_CHAR, focus guard, hybrid modifiers)"
     },
     "CombatRotationOptimizer": {
-      "Enabled": true,
+      "Enabled": false,
       "FallbackToStaticPriority": true,
       "BaseWeightMultiplier": 1.0,
       "EnableMetrics": true,

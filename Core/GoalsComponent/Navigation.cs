@@ -829,26 +829,6 @@ public sealed partial class Navigation : IDisposable
         }
     }
 
-    private bool ShouldThrottleHeadingAdjustment(float diff, float steeringIgnoreDistance, DateTime now)
-    {
-        if (stuckDetector.IsCurrentlyStuck)
-        {
-            return false;
-        }
-
-        if (diff >= HeadingAdjustImmediateDiff || diff <= HeadingAdjustThrottleMinDiff)
-        {
-            return false;
-        }
-
-        TimeSpan cooldown = steeringIgnoreDistance <= (PrecisionSteeringIgnoreDistance + 0.05f)
-            ? PrecisionHeadingAdjustCooldown
-            : HeadingAdjustCooldown;
-
-        return lastHeadingAdjustUtc != DateTime.MinValue &&
-            (now - lastHeadingAdjustUtc) < cooldown;
-    }
-
     private bool AdjustNextWaypointPointToClosest()
     {
         if (wayPoints.Count < 2) { return false; }

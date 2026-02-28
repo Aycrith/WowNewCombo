@@ -22,7 +22,7 @@ public class FollowRouteGoalRefillTests
     // (mirrors the code in FollowRouteGoal.cs for white-box testing)
     // -----------------------------------------------------------------------
 
-    private static readonly float BackwardSegmentPenalty = 6f;
+    private static readonly float BackwardSegmentPenalty = 2f;
     private static readonly int BackwardSegmentGrace = 1;
 
     private record RefillCandidate(int SegmentStartIndex, Vector3 MapClosestPoint, float DistanceToRoute);
