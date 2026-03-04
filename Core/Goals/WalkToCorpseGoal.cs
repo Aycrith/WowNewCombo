@@ -149,8 +149,8 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
             worldPos.Z);
 
         bool corpseOutOfBounds =
-            corpseLocation.X < 0 || corpseLocation.X > 100 ||
-            corpseLocation.Y < 0 || corpseLocation.Y > 100;
+            corpseLocation.X <= 0 || corpseLocation.X > 100 ||
+            corpseLocation.Y <= 0 || corpseLocation.Y > 100;
 
         if (corpseOutOfBounds)
         {

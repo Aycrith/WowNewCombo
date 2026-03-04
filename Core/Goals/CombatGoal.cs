@@ -36,6 +36,13 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
     private float lastMaxDistance;
     private BehaviorContext? behaviorContext;
 
+    /// <summary>
+    /// Number of consecutive GOAP ticks on which the target-loss condition fired.
+    /// A grace period of 2 ticks is required before acting, which absorbs single-frame
+    /// addon latency gaps that temporarily report bits.Target() == false mid-combat.
+    /// </summary>
+    private int targetLostConsecutiveTicks;
+
     public CombatGoal(ILogger<CombatGoal> logger, ConfigurableInput input,
         Wait wait, PlayerReader playerReader, StopMoving stopMoving, AddonBits bits,
         ClassConfiguration classConfig,
@@ -116,6 +123,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
         }
 
         lastDirection = playerReader.Direction;
+        targetLostConsecutiveTicks = 0;
     }
 
     public override void OnExit()
@@ -233,6 +241,19 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
         if (bits.SoftInteract_Enabled())
         {
             DealWithSoftInteract();
+        }
+
+        // Debounce target-loss: require 2 consecutive ticks to absorb single-frame
+        // addon latency gaps that transiently report no target during active combat.
+        if (!bits.Target() || (bits.Target() && bits.Target_Dead()))
+        {
+            targetLostConsecutiveTicks++;
+            if (targetLostConsecutiveTicks < 2)
+                return;
+        }
+        else
+        {
+            targetLostConsecutiveTicks = 0;
         }
 
         if (!bits.Target() || (bits.Target() && bits.Target_Dead()))

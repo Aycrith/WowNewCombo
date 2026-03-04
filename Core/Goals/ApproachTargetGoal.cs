@@ -39,6 +39,9 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
     private int initialTargetGuid;
     private float initialMinRange;
 
+    // Throttle Tab (nearest target) presses to avoid rapid target churn.
+    private double _lastTabAttemptMs;
+
     private double ApproachDurationMs => GetElapsedTime(approachStart).TotalMilliseconds;
 
     public ApproachTargetGoal(ILogger<ApproachTargetGoal> logger,
@@ -87,6 +90,7 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
 
         initialMinRange = playerReader.MinRange();
 
+        _lastTabAttemptMs = 0;
         approachStart = GetTimestamp();
         SetNextStuckTimeCheck();
     }
@@ -286,8 +290,10 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
             !bits.Stealthed())
         {
             int initialTargetMinRange = playerReader.MinRange();
-            if (!input.TargetNearestTarget.OnCooldown())
+            if (!input.TargetNearestTarget.OnCooldown() &&
+                (ApproachDurationMs - _lastTabAttemptMs) > 2000)
             {
+                _lastTabAttemptMs = ApproachDurationMs;
                 //logger.LogWarning($"Attempt to find closer target IsInMeleeRange:{playerReader.IsInMeleeRange()} - min:{playerReader.MinRange()} | max:{playerReader.MaxRange()} - initialMinRange:{initialTargetMinRange}");
 
                 input.PressNearestTarget();

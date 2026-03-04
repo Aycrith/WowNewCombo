@@ -1,0 +1,381 @@
+{
+  "ClassName": "Warlock",
+  "ForwardKey": 87,
+  "BackwardKey": 83,
+  "TurnLeftKey": 65,
+  "TurnRightKey": 68,
+  "StrafeLeftKey": 37,
+  "StrafeRightKey": 39,
+  "Log": true,
+  "Loot": true,
+  "Skin": false,
+  "GatherCorpse": true,
+  "UseMount": false,
+  "AllowPvP": false,
+  "AutoPetAttack": true,
+  "KeyboardOnly": true,
+  "NPCMaxLevels_Above": 2,
+  "NPCMaxLevels_Below": 8,
+  "CheckTargetGivesExp": true,
+  "PathThereAndBack": true,
+  "PathReduceSteps": true,
+
+  "IntVariables": {
+    "MIN_MANA_DRAIN": 25,
+    "LIFETAP_HP": 60,
+    "DRAIN_LIFE_HP": 50,
+    "FEAR_HP": 30,
+    "FEAR_MOB_COUNT": 2,
+    "FLEE_HP": 15,
+    "FLEE_MOB_COUNT": 3,
+    "FOOD_HP": 50,
+    "DOT_MIN_HEALTH%": 35
+  },
+
+  "Paths": [
+    {
+      "PathFilename": "_pack\\1-20\\Blood elf\\1-6_Eversong Woods.json",
+      "PathThereAndBack": false,
+      "PathReduceSteps": false,
+      "Requirements": ["Level < 7"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Blood elf\\6-12_Eversong Woods.json",
+      "PathThereAndBack": false,
+      "PathReduceSteps": false,
+      "Requirements": ["Level >= 6", "Level < 13"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Blood elf\\9-12_Ghostlands.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 9", "Level < 13"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Blood elf\\13-15_Ghostlands_Sanctum of the Sun.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 13", "Level < 16"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Blood elf\\15-20_Ghostlands_Windrunner.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 15", "Level < 21"]
+    },
+    {
+      "PathFilename": "_pack\\1-20\\Blood elf\\18-22_Ghostlands_Deatholme_Approach.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 18", "Level < 23"]
+    },
+    {
+      "PathFilename": "_pack\\20-30\\The Barrens\\20-26 Zeplin behind Camp Taurajo.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 20", "Level < 27"]
+    },
+    {
+      "PathFilename": "_pack\\20-30\\The Barrens\\22-24 Field of Giants.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 22", "Level < 25"]
+    },
+    {
+      "PathFilename": "_pack\\20-30\\Hillsbrad Foothills\\22-26 River.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 22", "Level < 27"]
+    },
+    {
+      "PathFilename": "_pack\\20-30\\Hillsbrad Foothills\\26-30 Spriders Bears Cats.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 26", "Level < 31"]
+    },
+    {
+      "PathFilename": "_pack\\30-40\\Desolace\\30-33 Sargeron Satyrs.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 30", "Level < 34"]
+    },
+    {
+      "PathFilename": "_pack\\30-40\\Desolace\\30-35.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 33", "Level < 36"]
+    },
+    {
+      "PathFilename": "_pack\\30-40\\Arathi Highlands\\35-37 Near Bolderfist Hall Raptor Bird Spider Ogre.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 35", "Level < 38"]
+    },
+    {
+      "PathFilename": "_pack\\40-50\\Badlands\\40-45 Ogre camp.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 40", "Level < 46"]
+    },
+    {
+      "PathFilename": "_pack\\40-50\\Feralas\\46-50 Woodpaw Hills.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 46", "Level < 51"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Azshara\\50-53 Azshara Legash Encampment.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 50", "Level < 54"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Felwood\\53-55 Felwood - Irontree Woods.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 53", "Level < 56"]
+    },
+    {
+      "PathFilename": "_pack\\50-60\\Eastern Plaguelands\\57-60 Browman Mill - Noxious Glade.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 57", "Level < 61"]
+    },
+    {
+      "PathFilename": "_pack\\60-70\\Hellfire Peninsula\\60-64 Felspark Ravine.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 60", "Level < 65"]
+    },
+    {
+      "PathFilename": "_pack\\60-70\\Zangarmarsh\\60-64 Dead mire.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 62", "Level < 67"]
+    },
+    {
+      "PathFilename": "_pack\\60-70\\Nagrand\\64-67 Ogres.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 64", "Level < 68"]
+    },
+    {
+      "PathFilename": "_pack\\60-70\\Blade's Edge Mountains\\65-67.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 66", "Level < 70"]
+    },
+    {
+      "PathFilename": "_pack\\60-70\\Netherstorm\\68-70 Ruins of Farahlon.json",
+      "PathThereAndBack": true,
+      "PathReduceSteps": true,
+      "Requirements": ["Level >= 68", "Level < 71"]
+    }
+  ],
+
+  "Wait": {
+    "AutoGenerateWaitForFoodAndDrink": true,
+    "Sequence": []
+  },
+
+  "Pull": {
+    "Sequence": [
+      {
+        "Name": "Immolate",
+        "Key": "6",
+        "HasCastBar": true,
+        "ResetOnNewTarget": true,
+        "MinMana": 25,
+        "School": "Fire"
+      },
+      {
+        "Name": "Shadow Bolt",
+        "Key": "2",
+        "HasCastBar": true,
+        "ResetOnNewTarget": true,
+        "MinMana": 25,
+        "School": "Shadow"
+      },
+      {
+        "Name": "Approach"
+      }
+    ]
+  },
+
+  "Combat": {
+    "Sequence": [
+      {
+        "Name": "Summon Voidwalker",
+        "Key": "N8",
+        "HasCastBar": true,
+        "Requirements": [
+          "!Has Pet",
+          "Level >= 10"
+        ]
+      },
+      {
+        "Name": "Summon Imp",
+        "Key": "N9",
+        "HasCastBar": true,
+        "Requirements": [
+          "!Has Pet",
+          "Level < 10"
+        ]
+      },
+      {
+        "Name": "Fear",
+        "Key": "7",
+        "Requirement": "MobCount > 1 && Health% < FEAR_HP",
+        "HasCastBar": true,
+        "Cooldown": 100
+      },
+      {
+        "Name": "Drain Life",
+        "Key": "8",
+        "Requirement": "Health% < DRAIN_LIFE_HP",
+        "HasCastBar": true,
+        "Cooldown": 100
+      },
+      {
+        "Name": "Immolate",
+        "Key": "6",
+        "HasCastBar": true,
+        "ResetOnNewTarget": true,
+        "Requirements": [
+          "TargetHealth% > DOT_MIN_HEALTH%",
+          "!Immolate"
+        ],
+        "MinMana": 25,
+        "School": "Fire"
+      },
+      {
+        "Name": "Curse of Agony",
+        "Key": "5",
+        "ResetOnNewTarget": true,
+        "Requirements": [
+          "Level >= 8",
+          "TargetHealth% > DOT_MIN_HEALTH%",
+          "!Curse of Agony"
+        ],
+        "MinMana": 25,
+        "School": "Shadow"
+      },
+      {
+        "Name": "Corruption",
+        "Key": "4",
+        "HasCastBar": true,
+        "ResetOnNewTarget": true,
+        "Requirements": [
+          "TargetHealth% > DOT_MIN_HEALTH%",
+          "!Corruption"
+        ],
+        "MinMana": 25,
+        "School": "Shadow"
+      },
+      {
+        "Name": "Shadow Bolt",
+        "Key": "2",
+        "HasCastBar": true,
+        "ResetOnNewTarget": true,
+        "MinMana": 25,
+        "School": "Shadow",
+        "Cooldown": 8000
+      },
+      {
+        "Name": "Shoot",
+        "Key": "0",
+        "HasCastbar": true,
+        "Requirements": [
+          "HasRangedWeapon",
+          "!Shooting",
+          "SpellInRange:1"
+        ]
+      },
+      {
+        "Name": "AutoAttack",
+        "Requirements": [
+          "!HasRangedWeapon",
+          "!AutoAttacking"
+        ]
+      }
+    ]
+  },
+
+  "Flee": {
+    "Sequence": [
+      {
+        "Name": "Fear",
+        "Key": "7",
+        "WhenUsable": true,
+        "Requirement": "MobCount == 1",
+        "HasCastBar": true
+      },
+      {
+        "Name": "Flee",
+        "Requirement": "MobCount >= FLEE_MOB_COUNT && Health% < FLEE_HP"
+      }
+    ]
+  },
+
+  "Adhoc": {
+    "Sequence": [
+      {
+        "Cost": 2,
+        "Name": "Demon Skin",
+        "Key": "9",
+        "WhenUsable": true,
+        "InCombat": "i dont care",
+        "Requirement": "!Demon Skin && !Demon Armor && Level < 20"
+      },
+      {
+        "Cost": 2,
+        "Name": "Demon Armor",
+        "Key": "9",
+        "WhenUsable": true,
+        "InCombat": "i dont care",
+        "Requirement": "!Demon Armor && !Fel Armor && Level >= 20 && Level < 62"
+      },
+      {
+        "Cost": 2,
+        "Name": "Fel Armor",
+        "Key": "9",
+        "WhenUsable": true,
+        "InCombat": "i dont care",
+        "Requirement": "!Fel Armor && Level >= 62"
+      },
+      {
+        "Name": "Life Tap",
+        "Key": "-",
+        "WhenUsable": true,
+        "Requirement": "Mana% < 30 && Health% > LIFETAP_HP && !InCombat",
+        "Cost": 3
+      },
+      {
+        "Name": "Food",
+        "Key": "=",
+        "Requirement": "Health% < FOOD_HP && !InCombat",
+        "Cost": 4
+      }
+    ]
+  },
+
+  "NPC": {
+    "Sequence": [
+      {
+        "Name": "Repair",
+        "Key": "C",
+        "Requirement": "Durability% < 40",
+        "Cost": 6
+      },
+      {
+        "Name": "Sell",
+        "Key": "C",
+        "Requirements": [
+          "BagFullAny",
+          "BagGreyItem"
+        ],
+        "Cost": 6
+      }
+    ]
+  }
+}

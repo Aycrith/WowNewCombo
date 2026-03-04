@@ -44,17 +44,15 @@ public sealed partial class Navigation : IDisposable
     private readonly IPPather pather;
     private readonly IMountHandler mountHandler;
     private readonly AreaDB areaDB;
-    private readonly OscillationDetector oscillationDetector;
     private readonly RouteRehabilitationCoordinator routeRehabCoordinator;
     private readonly IRouteRerouter? routeRerouter;
-    private readonly HumanizedMover humanizedMover;
     private readonly FeatureFlagService? featureFlagService;
     private readonly GoapCurrentGoalState? goapCurrentGoalState;
 
     private const float MinDistanceMount = 10;
     private readonly float MaxDistance = 200;
     private readonly float IndoorMinDistance = 1f;
-    private readonly float OutDoorMinDistance = 3f;
+    private readonly float OutDoorMinDistance = 10f;
 
     private float AvgDistance = 200_0000;
     private float lastWorldDistance = float.MaxValue;
@@ -62,8 +60,8 @@ public sealed partial class Navigation : IDisposable
     /// <summary>Minimum angle in radians (~5.14 degrees) before triggering turn adjustment. Prevents over-correction on minor heading deviations.</summary>
     private const float minAngleToTurn = PI / 35f;
 
-    /// <summary>Minimum angle in radians (90 degrees) before stopping to turn. Ensures character stops for large direction changes.</summary>
-    private const float minAngleToStopBeforeTurn = PI / 2f;
+    /// <summary>Minimum angle in radians (60 degrees) before stopping to turn. Matches upstream threshold for responsive turning.</summary>
+    private const float minAngleToStopBeforeTurn = PI / 3f;
 
     private readonly Stack<Vector3> wayPoints = new();
     private readonly Stack<Vector3> routeToNextWaypoint = new();
@@ -193,10 +191,7 @@ public sealed partial class Navigation : IDisposable
         this.featureFlagService = featureFlagService;
         this.goapCurrentGoalState = goapCurrentGoalState;
 
-        // Initialize extracted helper classes
-        oscillationDetector = new OscillationDetector();
         routeRehabCoordinator = new RouteRehabilitationCoordinator(routeRehabilitator);
-        humanizedMover = new HumanizedMover(humanizationProvider);
 
         patherName = pather.GetType().Name;
         navSoakMetricsService?.AttachRuntimeSources(stuckDetector, this);
@@ -311,9 +306,6 @@ public sealed partial class Navigation : IDisposable
                     if (debug)
                         LogDebug($"Reached wayPoint! Distance: {worldDistance} -- Remains: {wayPoints.Count}");
 
-                    // Phase 3: Humanization - Add micro-pause between waypoints
-                    ApplyWaypointDelay();
-
                     OnWayPointReached?.Invoke();
                 }
             }
@@ -400,8 +392,8 @@ public sealed partial class Navigation : IDisposable
     {
         active = false;
 
-        if (pather.GetType() == typeof(RemotePathingAPIV3))
-            routeToNextWaypoint.Clear();
+        wayPoints.Clear();
+        routeToNextWaypoint.Clear();
 
         ResetStuckParameters();
     }
@@ -789,7 +781,7 @@ public sealed partial class Navigation : IDisposable
             // a near-zero or backward vector from slight overshoot.
             if (routeToNextWaypoint.Count >= 2 &&
                 TryGetUpcomingRoutePoints(out Vector3 curr, out Vector3 next) &&
-                playerW.WorldDistanceXYTo(curr) > OutDoorMinDistance &&
+                playerW.WorldDistanceXYTo(curr) > 1f &&
                 IsSharpTurn(playerW, curr, next, SimplifyPreserveTurnRadians))
             {
                 break;
@@ -836,10 +828,6 @@ public sealed partial class Navigation : IDisposable
             }
 
             playerDirection.SetDirection(heading, routeToNextWaypoint.Peek(), steeringIgnoreDistance, token);
-
-            // Reset failed turn counter on each successful heading adjustment
-            // to avoid false positives accumulating across unrelated steering calls.
-            playerDirection.ResetFailedTurnCounter();
         }
     }
 
@@ -1735,15 +1723,6 @@ public sealed partial class Navigation : IDisposable
     #endregion
 
     #region Humanization
-
-    /// <summary>
-    /// Applies a micro-pause delay when reaching waypoints to simulate human behavior.
-    /// Humans naturally pause briefly at decision points.
-    /// </summary>
-    private void ApplyWaypointDelay()
-    {
-        humanizedMover.ApplyWaypointDelay(token);
-    }
 
     #endregion
 }

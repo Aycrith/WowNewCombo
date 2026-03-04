@@ -297,7 +297,12 @@ public sealed partial class CastingHandler
         if (!playerReader.IsCasting() && bits.Moving())
         {
             stopMoving.Stop();
-            wait.Update(token);
+            // Wait for client-side moving bit to clear (normally <30ms), then
+            // add a server-sync delay. The server needs ~75ms beyond the client
+            // to process the movement stop — pressing the cast key too soon
+            // causes SPELL_FAILED_MOVING even though bits.Moving() is false.
+            wait.Until(200, () => !bits.Moving());
+            wait.Fixed(75);
         }
 
         bool beforeUsable = usableAction.Is(item);
@@ -331,9 +336,17 @@ public sealed partial class CastingHandler
         }
 
         elapsedMs = WaitTilUIErrorTimeChange(
-            playerReader.DoubleNetworkLatency,
+            // The WoW client fires addon events at the frame rate (~16.7ms @ 60fps).
+            // The interrupt watchdog cancels its token on every Set() wake-up, so
+            // using the interrupt token here exits before the first WoW frame update.
+            // CancellationToken.None ensures we wait the full minimum window so the
+            // addon has time to encode any new UNIT_SPELLCAST_* event. Legitimate
+            // interrupts (mob dies, out of range) still fire UIError time changes
+            // and exit early via the interrupt condition — only no-event cases
+            // time out at the full 50ms.
+            Max(playerReader.DoubleNetworkLatency, 50),
             beforeCastEventTime,
-            wait, playerReader, token);
+            wait, playerReader, CancellationToken.None);
 
         if (DEBUG && Log && item.Log)
             LogCastbarUsableChange(logger, item.Name,
@@ -473,6 +486,15 @@ public sealed partial class CastingHandler
 
         if (bits.Shoot())
         {
+            // Wand/Shoot is already auto-firing. If the action we're about to prepare IS
+            // the wand toggle itself, pressing it again would stop the wand. Return false
+            // to skip re-pressing — the auto-shot will continue on its own.
+            if (item.Name.Equals("Shoot", StringComparison.OrdinalIgnoreCase) ||
+                item.Name.Equals("Throw", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
             input.PressStopAttack();
             input.PressStopAttack();
 
@@ -513,13 +535,26 @@ public sealed partial class CastingHandler
             {
                 stopMoving.Stop();
                 wait.Update(token);
+
+                // If still moving after stop attempt, try again —
+                // click-to-move requires more aggressive cancellation.
+                if (bits.Moving())
+                {
+                    stopMoving.StopForward();
+                    wait.Update(token);
+                }
             }
             int delay = Random.Shared.Next(item.BeforeCastDelay, item.BeforeCastMaxDelay);
 
             if (Log && item.Log)
                 LogBeforeCastDelay(logger, item.Name, delay);
 
-            wait.Until(delay, token);
+            // Use non-cancellable wait for BeforeCastDelay.
+            // The upstream used Thread.Sleep(sleepBeforeCast) which was
+            // non-cancellable and reliable. The cancellable token version
+            // exits in ~13ms when InterruptWatchdog fires prematurely,
+            // preventing the character from actually stopping before cast.
+            wait.Fixed(delay);
         }
 
         return true;
